@@ -2,4 +2,7 @@
 build/
 third_party/libs/linux/x64/libtcmalloc_minimal.a
 third_party/libs/linux/x86/libtcmalloc_minimal.a
+third_party/libs/macos/x64/libtcmalloc_minimal.a
+third_party/libs/macos/x86/libtcmalloc_minimal.a
 tools/testing/bin/linux/dart
+tools/testing/bin/macos/dart
