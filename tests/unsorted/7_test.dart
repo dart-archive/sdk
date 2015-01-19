@@ -1,0 +1,24 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+import 'package:expect/expect.dart';
+
+class A {
+  foo(a, b, c) {
+    Expect.equals(1, a);
+    Expect.equals(2, b);
+    Expect.equals(3, c);
+  }
+}
+
+method(a, b, c) {
+  Expect.equals(1, a);
+  Expect.equals(2, b);
+  Expect.equals(3, c);
+}
+
+main() {
+  method(1, 2, 3);
+  new A().foo(1, 2, 3);
+}

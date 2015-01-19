@@ -1,0 +1,66 @@
+# Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+# SCons build description file.
+# See http://scons.org/.
+
+import os
+from os.path import join
+
+# Import the compilation context from the calling SConstruct file.
+Import("context")
+
+# Setup shorthands.
+env = context.environment
+config = context.configuration
+files = context.files["compiler"]
+shared = context.shared["objects"]
+test_main_object = context.shared["test_main_object"]
+
+# Filter out header files from lists.
+def FilterSourceFiles(files):
+  return [ f for f in files if not f.endswith(".h") ]
+
+# Setup compilation of the library.
+library_files = FilterSourceFiles(files["library"][config])
+library = env.Library("fletch", library_files + shared)
+
+# Setup compilation of the main program.
+programs = []
+program_files = FilterSourceFiles(files["main"][config])
+program_object = env.Object(program_files)
+programs.append({ "name": "fletchc",
+                  "objects": [ program_object, library ]})
+
+# Setup compilation of the scan program.
+program_files = FilterSourceFiles(files["scan"][config])
+program_object = env.Object(program_files)
+programs.append({ "name": "fletchc_scan",
+                  "objects": [ program_object, library ]})
+
+# Setup compilation of the bench program.
+program_files = FilterSourceFiles(files["bench"][config])
+program_object = env.Object(program_files)
+programs.append({ "name": "bench",
+                  "objects": [ program_object, library ]})
+
+# Setup compilation of the print program.
+program_files = FilterSourceFiles(files["print"][config])
+program_object = env.Object(program_files)
+programs.append({ "name": "fletchc_print",
+                  "objects": [ program_object, library ]})
+
+# Setup compilation of the C++ tests.
+test_env = env.Clone()
+test_env.Append(CPPDEFINES=["TESTING"])
+
+test_files = FilterSourceFiles(files["test"][config])
+test_objects = [ test_env.Object(test) for test in test_files ]
+tests = [ test_env.Program("run_tests",
+                           [ test_main_object, test_objects, library ]) ]
+
+# Let the result of building a variant be the list of targets
+# including all C++ tests.
+result = { "programs": programs, "tests": tests }
+Return("result")

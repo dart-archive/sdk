@@ -1,0 +1,68 @@
+# Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+# SCons build description file.
+# See http://scons.org/.
+
+import os
+from os.path import join
+
+# Import the compilation context from the calling SConstruct file.
+Import("context")
+
+# Setup shorthands.
+env = context.environment
+config = context.configuration
+files = context.files["vm"]
+double_conversion_library = context.double_conversion_library
+shared = context.shared["objects"]
+test_main_object = context.shared["test_main_object"]
+
+# Filter out header files from lists.
+def FilterSourceFiles(files):
+  return [ f for f in files if not f.endswith(".h") ]
+
+# Helper functions for the tests generator action.
+def GenerateAssembly(env, target, source):
+  return os.system(str(source[0]) + " > " + str(target[0]))
+
+def ShowAssemblyGeneration(target, source, env):
+  print "Generating assembly: " + str(source[0]) + " > " + str(target[0])
+
+# Setup compilation of the library.
+library_files = FilterSourceFiles(files["library"][config])
+library = env.Library("vm", library_files + shared)
+
+# Setup compilation of the generator program.
+generator_files = FilterSourceFiles(files["generator"][config])
+generator = env.Program("generator", [ generator_files, library ])
+action = Action(GenerateAssembly, ShowAssemblyGeneration)
+generated_file = env.Command("generated.S", generator, action)
+generated_object = env.Object(generated_file)
+
+# Setup compilation of the main program.
+vm_objects = [ generated_object, library, double_conversion_library ]
+programs = []
+program_files = FilterSourceFiles(files["main"][config])
+program_object = env.Object(program_files)
+programs.append({ "name": "fletch",
+                  "objects": [ program_object, vm_objects ] });
+
+# Setup compilation of the C++ tests.
+test_env = env.Clone()
+test_env.Append(CPPDEFINES=["TESTING"])
+
+test_files = FilterSourceFiles(files["test"][config])
+test_objects = [ test_env.Object(test) for test in test_files ]
+tests = [ test_env.Program("run_tests",
+                           [ test_main_object,
+                             test_objects,
+                             library,
+                             double_conversion_library,
+                             generated_object ]) ]
+
+# Let the result of building a variant be the list of targets
+# including all C++ tests.
+result = { "programs": programs, "tests": tests, "vm_objects": vm_objects }
+Return("result")

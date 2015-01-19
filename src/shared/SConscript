@@ -1,0 +1,44 @@
+# Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+# SCons build description file.
+# See http://scons.org/.
+
+import os
+from os.path import join
+
+# Import the compilation context from the calling SConstruct file.
+Import("context")
+
+# Setup shorthands.
+env = context.environment
+config = context.configuration
+files = context.files["shared"]
+
+# Filter out header files from lists.
+def FilterSourceFiles(files):
+  return [ f for f in files if not f.endswith(".h") ]
+
+# Setup compilation of the library.
+library_files = FilterSourceFiles(files["library"][config])
+library_objects = [ env.Object(f) for f in library_files ]
+library = env.Library("shared", library_objects)
+
+# Setup compilation of the C++ tests.
+test_env = env.Clone()
+test_env.Append(CPPDEFINES=["TESTING"])
+
+test_files = FilterSourceFiles(files["test"][config])
+test_objects = [ test_env.Object(test) for test in test_files ]
+test_main_object = test_env.Object(files["test_main"][config])
+tests = [ test_env.Program("run_tests",
+                           [ test_main_object, test_objects, library ]) ]
+
+# Let the result of building a variant be the list of targets
+# including all C++ tests.
+result = { "programs": [],
+           "tests": tests,
+           "objects": library_objects,
+           "test_main_object": test_main_object }
+Return("result")

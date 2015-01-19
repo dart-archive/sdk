@@ -1,0 +1,190 @@
+# Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+# This file contains the source file lists for the different
+# parts and configurations of Fletch.
+
+##############################################################################
+##############################################################################
+
+MAIN_SOURCE_FILES_COMMON = Split("""
+    main.cc
+""")
+
+GENERATOR_SOURCE_FILES_COMMON = Split("""
+    generator.cc
+    generator.h
+""")
+
+GENERATOR_SOURCE_FILES_X86 = Split("""
+    interpreter_x86.cc
+    natives_x86.cc
+""")
+
+GENERATOR_SOURCE_FILES_X64 = Split("""
+    natives_x64.cc
+""")
+
+LIBRARY_SOURCE_FILES_COMMON = Split("""
+    assembler.h
+    event_handler.cc
+    event_handler.h
+    fletch.cc
+    heap.cc
+    heap.h
+    interpreter.cc
+    interpreter.h
+    intrinsics.cc
+    intrinsics.h
+    list.h
+    lookup_cache.cc
+    lookup_cache.h
+    natives.cc
+    natives.h
+    object.cc
+    object.h
+    object_list.cc
+    object_list.h
+    object_map.cc
+    object_map.h
+    object_memory.cc
+    object_memory.h
+    port.cc
+    port.h
+    process.cc
+    process.h
+    program.cc
+    program.h
+    platform.h
+    process_queue.h
+    scheduler.cc
+    scheduler.h
+    service_api_impl.cc
+    service_api_impl.h
+    session.cc
+    session.h
+    snapshot.cc
+    snapshot.h
+    stack_walker.cc
+    stack_walker.h
+    thread.h
+    thread_pool.cc
+    thread_pool.h
+    weak_pointer.cc
+    weak_pointer.h
+""")
+
+LIBRARY_SOURCE_FILES_X86 = Split("""
+    assembler_x86.cc
+    assembler_x86.h
+""")
+
+LIBRARY_SOURCE_FILES_X64 = Split("""
+    assembler_x64.cc
+    assembler_x64.h
+""")
+
+LIBRARY_SOURCE_FILES_LINUX = Split("""
+    event_handler_linux.cc
+    platform_posix.cc
+    thread_posix.cc
+""")
+
+LIBRARY_SOURCE_FILES_MACOS = Split("""
+    event_handler_macos.cc
+    platform_posix.cc
+    thread_posix.cc
+""")
+
+LIBRARY_SOURCE_FILES_X86_LINUX = Split("""
+    assembler_x86_linux.cc
+""")
+
+LIBRARY_SOURCE_FILES_X86_MACOS = Split("""
+    assembler_x86_macos.cc
+""")
+
+LIBRARY_SOURCE_FILES_X64_LINUX = Split("""
+    assembler_x64_linux.cc
+""")
+
+LIBRARY_SOURCE_FILES_X64_MACOS = Split("""
+    assembler_x64_macos.cc
+""")
+
+TEST_SOURCE_FILES_COMMON = Split("""
+    foreign_ports_test.cc
+    object_test.cc
+    object_map_test.cc
+    object_memory_test.cc
+    platform_test.cc
+""")
+
+TEST_SOURCE_FILES_X86 = Split("""
+""")
+
+TEST_SOURCE_FILES_X64 = Split("""
+""")
+
+##############################################################################
+##############################################################################
+
+MAIN_SOURCE_FILES = {
+    'arch:x86,os:linux': MAIN_SOURCE_FILES_COMMON,
+    'arch:x86,os:macos': MAIN_SOURCE_FILES_COMMON,
+    'arch:x64,os:linux': MAIN_SOURCE_FILES_COMMON,
+    'arch:x64,os:macos': MAIN_SOURCE_FILES_COMMON
+}
+
+GENERATOR_SOURCE_FILES = {
+    'arch:x86,os:linux': GENERATOR_SOURCE_FILES_COMMON +
+                         GENERATOR_SOURCE_FILES_X86,
+    'arch:x86,os:macos': GENERATOR_SOURCE_FILES_COMMON +
+                         GENERATOR_SOURCE_FILES_X86,
+    'arch:x64,os:linux': GENERATOR_SOURCE_FILES_COMMON +
+                         GENERATOR_SOURCE_FILES_X64,
+    'arch:x64,os:macos': GENERATOR_SOURCE_FILES_COMMON +
+                         GENERATOR_SOURCE_FILES_X64,
+}
+
+LIBRARY_SOURCE_FILES = {
+    'arch:x86,os:linux': LIBRARY_SOURCE_FILES_COMMON +
+                         LIBRARY_SOURCE_FILES_X86 +
+                         LIBRARY_SOURCE_FILES_X86_LINUX +
+                         LIBRARY_SOURCE_FILES_LINUX,
+    'arch:x86,os:macos': LIBRARY_SOURCE_FILES_COMMON +
+                         LIBRARY_SOURCE_FILES_X86 +
+                         LIBRARY_SOURCE_FILES_X86_MACOS +
+                         LIBRARY_SOURCE_FILES_MACOS,
+    'arch:x64,os:linux': LIBRARY_SOURCE_FILES_COMMON +
+                         LIBRARY_SOURCE_FILES_X64 +
+                         LIBRARY_SOURCE_FILES_X64_LINUX +
+                         LIBRARY_SOURCE_FILES_LINUX,
+    'arch:x64,os:macos': LIBRARY_SOURCE_FILES_COMMON +
+                         LIBRARY_SOURCE_FILES_X64 +
+                         LIBRARY_SOURCE_FILES_X64_MACOS +
+                         LIBRARY_SOURCE_FILES_MACOS
+}
+
+TEST_SOURCE_FILES = {
+    'arch:x86,os:linux': TEST_SOURCE_FILES_COMMON +
+                         TEST_SOURCE_FILES_X86,
+    'arch:x86,os:macos': TEST_SOURCE_FILES_COMMON +
+                         TEST_SOURCE_FILES_X86,
+    'arch:x64,os:linux': TEST_SOURCE_FILES_COMMON +
+                         TEST_SOURCE_FILES_X64,
+    'arch:x64,os:macos': TEST_SOURCE_FILES_COMMON +
+                         TEST_SOURCE_FILES_X64
+}
+
+##############################################################################
+##############################################################################
+
+FILES = {
+    'main'          : MAIN_SOURCE_FILES,
+    'generator'     : GENERATOR_SOURCE_FILES,
+    'library'       : LIBRARY_SOURCE_FILES,
+    'test'          : TEST_SOURCE_FILES,
+}
+Return("FILES")
