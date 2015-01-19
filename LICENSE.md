@@ -1,4 +1,4 @@
-Copyright (c) 2015, the Dart project authors.
+Copyright (c) 2015, the Fletch project authors.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,7 +11,7 @@ modification, are permitted provided that the following conditions are met:
   this list of conditions and the following disclaimer in the documentation
   and/or other materials provided with the distribution.
 
-* Neither the name of {{{project}}} nor the names of its
+* Neither the names of Fletch and Dart nor the names of its
   contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
