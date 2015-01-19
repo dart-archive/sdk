@@ -1,5 +1,6 @@
 .sconsign.dblite
 build/
+packages
 third_party/libs/linux/x64/libtcmalloc_minimal.a
 third_party/libs/linux/x86/libtcmalloc_minimal.a
 third_party/libs/macos/x64/libtcmalloc_minimal.a
