@@ -11,7 +11,7 @@ hooks = [
                 '--no_resume',
                 '--platform=linux*',
                 '--bucket', 'dart-dependencies-fletch',
-                '-s', 'trunk/third_party/libs/linux/x64/libtcmalloc_minimal.a.sha1',
+                '-s', 'fletch/third_party/libs/linux/x64/libtcmalloc_minimal.a.sha1',
     ],
   },
   {
@@ -22,7 +22,7 @@ hooks = [
                 '--no_resume',
                 '--platform=linux*',
                 '--bucket', 'dart-dependencies-fletch',
-                '-s', 'trunk/third_party/libs/linux/x86/libtcmalloc_minimal.a.sha1',
+                '-s', 'fletch/third_party/libs/linux/x86/libtcmalloc_minimal.a.sha1',
     ],
   },
   {
@@ -33,7 +33,7 @@ hooks = [
                 '--no_resume',
                 '--platform=darwin',
                 '--bucket', 'dart-dependencies-fletch',
-                '-s', 'trunk/third_party/libs/macos/x64/libtcmalloc_minimal.a.sha1',
+                '-s', 'fletch/third_party/libs/macos/x64/libtcmalloc_minimal.a.sha1',
     ],
   },
   {
@@ -44,7 +44,7 @@ hooks = [
                 '--no_resume',
                 '--platform=darwin',
                 '--bucket', 'dart-dependencies-fletch',
-                '-s', 'trunk/third_party/libs/macos/x86/libtcmalloc_minimal.a.sha1',
+                '-s', 'fletch/third_party/libs/macos/x86/libtcmalloc_minimal.a.sha1',
     ],
   },
   {
@@ -55,7 +55,7 @@ hooks = [
                 '--no_resume',
                 '--platform=linux*',
                 '--bucket', 'dart-dependencies-fletch',
-                '-s', 'trunk/tools/testing/bin/linux/dart.sha1',
+                '-s', 'fletch/tools/testing/bin/linux/dart.sha1',
     ],
   },
   {
@@ -66,7 +66,7 @@ hooks = [
                 '--no_resume',
                 '--platform=darwin',
                 '--bucket', 'dart-dependencies-fletch',
-                '-s', 'trunk/tools/testing/bin/macos/dart.sha1',
+                '-s', 'fletch/tools/testing/bin/macos/dart.sha1',
     ],
   },
 ]
