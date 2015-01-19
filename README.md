@@ -12,8 +12,9 @@ more work, but don't expect to be able to build products on top of it.
 ## Contributing
 
 To give us feedback, please
-[file issues on GitHub](https://github.com/dart-lang/fletch/issues).
-We also welcome contributions - just sign our
+[file issues on GitHub](https://github.com/dart-lang/fletch/issues) or join our
+[mailing list](https://groups.google.com/forum/#!forum/fletch) and post there.
+We also welcome contributions; just sign our
 [CLA](https://developers.google.com/open-source/cla/individual),
 fork our repository, and start sending us pull requests.
 
