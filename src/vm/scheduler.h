@@ -57,9 +57,9 @@ class Scheduler {
   ThreadPool thread_pool_;
   Monitor* preempt_monitor_;
   std::atomic<int> processes_;
-  std::atomic<int> queued_processes_;
   std::atomic<int> sleeping_threads_;
   std::atomic<int> thread_count_;
+  std::atomic<ThreadState*> idle_threads_;
   std::atomic<ThreadState*>* threads_;
   std::unordered_map<Program*, ProcessList> stopped_processes_map_;
   ProcessQueue* startup_queue_;
@@ -73,6 +73,8 @@ class Scheduler {
   void EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
                                       Process* process);
 
+  void PushIdleThread(ThreadState* thread_state);
+  ThreadState* PopIdleThread();
   void RunInThread();
 
   // Interpret [process] as thread [thread] with id [thread_id]. Returns the
@@ -90,7 +92,10 @@ class Scheduler {
   // empty. Returns false if the operation should be retried.
   bool TryDequeueFromAnyThread(Process** process, int start_id = 0);
   void EnqueueOnThread(ThreadState* thread_state, Process* process);
-  void EnqueueOnAnyThread(Process* process, int start_id = 0);
+  // Returns true if it was able to enqueue the process on an idle thread.
+  bool TryEnqueueOnIdleThread(Process* process);
+  // Returns true if it was able to enqueue the process on an idle thread.
+  bool EnqueueOnAnyThread(Process* process, int start_id = 0);
 
   static void RunThread(void* data);
 };

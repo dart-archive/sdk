@@ -39,12 +39,16 @@ class ThreadState {
 
   Monitor* idle_monitor() const { return idle_monitor_; }
 
+  ThreadState* next_idle_thread() const { return next_idle_thread_; }
+  void set_next_idle_thread(ThreadState* value) { next_idle_thread_ = value; }
+
  private:
   int thread_id_;
   const ThreadIdentifier thread_;
   ProcessQueue* const queue_;
   LookupCache* const cache_;
   Monitor* idle_monitor_;
+  std::atomic<ThreadState*> next_idle_thread_;
 };
 
 class Process {

@@ -16,7 +16,7 @@ class ThreadState;
 
 class ProcessQueue {
  public:
-  ProcessQueue() : head_(NULL), tail_(NULL) { }
+  ProcessQueue() : head_(NULL), tail_(NULL), size_(0) { }
 
   // Try to enqueue [entry].
   // Returns false if it was not possible to modify the queue. The operation
@@ -36,6 +36,7 @@ class ProcessQueue {
     }
     ASSERT(head != SentinelValue());
     ASSERT(head_ == SentinelValue());
+    ++size_;
     entry->queue_ = this;
     if (was_empty != NULL) *was_empty = head == NULL;
     if (head != NULL) {
@@ -65,6 +66,7 @@ class ProcessQueue {
     }
     ASSERT(head != SentinelValue());
     ASSERT(head_ == SentinelValue());
+    --size_;
     if (tail_ == head) {
       tail_ = NULL;
     }
@@ -106,6 +108,7 @@ class ProcessQueue {
       head_ = head;
       return false;
     }
+    --size_;
     // At this point, the entry is 'taken' (marked as running) and can now
     // safely be removed from the queue.
     if (head == entry) {
@@ -130,10 +133,13 @@ class ProcessQueue {
     return true;
   }
 
+  bool is_empty() const { return size_ == 0; }
+
  private:
   static const word kSentinel = 1;
   std::atomic<Process*> head_;
   std::atomic<Process*> tail_;
+  std::atomic<int> size_;
 
   Process* SentinelValue() const {
     return reinterpret_cast<Process*>(kSentinel);

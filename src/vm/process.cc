@@ -76,7 +76,8 @@ ThreadState::ThreadState()
       thread_(ThreadIdentifier::SELF),
       queue_(new ProcessQueue()),
       cache_(new LookupCache()),
-      idle_monitor_(Platform::CreateMonitor()) {
+      idle_monitor_(Platform::CreateMonitor()),
+      next_idle_thread_(NULL) {
 }
 
 ThreadState::~ThreadState() {
