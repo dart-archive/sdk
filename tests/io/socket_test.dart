@@ -11,6 +11,7 @@ void main() {
   testBindListen();
   testConnect();
   testReadWrite();
+  testSpawnAccept();
 }
 
 void testLookup() {
@@ -52,6 +53,27 @@ void testReadWrite() {
   Expect.equals(0, client.available);
 
   client.close();
+  socket.close();
+  server.close();
+}
+
+void spawnAcceptCallback(Socket client) {
+  Expect.equals(256, client.read(256).length);
+  client.write(new io.ByteBuffer(256));
+  Expect.equals(0, client.available);
+
+  client.close();
+}
+
+void testSpawnAccept() {
+  var server = new io.ServerSocket("127.0.0.1", 0);
+  var socket = new io.Socket.connect("127.0.0.1", server.port);
+  server.spawnAccept(spawnAcceptCallback);
+
+  socket.write(new io.ByteBuffer(256));
+  Expect.equals(256, socket.read(256).length);
+  Expect.equals(0, socket.available);
+
   socket.close();
   server.close();
 }

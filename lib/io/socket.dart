@@ -47,21 +47,12 @@ class Socket extends _SocketBase {
     }
   }
 
-  Socket.fromFd(fd) {
+  Socket._fromFd(fd) {
     // Be sure it's not in the event handler.
     _fd = fd;
     if (sys.addToEventHandler(_fd) == -1) {
       _error("Failed to assign socket to event handler");
     }
-  }
-
-  int detachFd() {
-    int fd = _fd;
-    if (fd == -1 || sys.removeFromEventHandler(fd) == -1) {
-      _error("Failed to detach file descriptor");
-    }
-    _fd = -1;
-    return fd;
   }
 
   /**
@@ -163,19 +154,48 @@ class ServerSocket extends _SocketBase {
     return value;
   }
 
+  static void _callAcceptCallback(port) {
+    var channel = new Channel();
+    port.send(new Port(channel));
+    var fn = channel.receive();
+    int client = channel.receive();
+    fn(new Socket._fromFd(client));
+  }
+
+  /**
+   * Accept the incoming socket. This function will block until a socket is
+   * accepted.
+   * A new process will be spawned and the [fn] function called on that process
+   * with the new socket as argument.
+   */
+  void spawnAccept(void fn(Socket socket)) {
+    int client = _accept();
+    // TODO(ajohnsen): This is a bit slow. Change to sending a blob of data
+    // containing the two entries, once we have support for that.
+    var channel = new Channel();
+    Process.spawn(_callAcceptCallback, new Port(channel));
+    var port = channel.receive();
+    port.send(fn);
+    port.send(client);
+  }
+
   /**
    * Accept the incoming socket. This function will block until a socket is
    * accepted.
    */
   Socket accept() {
+    return new Socket._fromFd(_accept());
+  }
+
+  int _accept() {
     int events = waitForFd(_fd, READ_EVENT);
-    if (events == READ_EVENT) {
-      int client = sys.accept(_fd);
-      if (client == -1) _error("Failed to accept socket");
-      sys.setBlocking(client, false);
-      return new Socket.fromFd(client);
+    if (events != READ_EVENT) {
+      _error("Server socket closed while receiving socket");
     }
-    _error("Server socket closed while receiving socket");
+    int client = sys.accept(_fd);
+    if (client == -1) _error("Failed to accept socket");
+    sys.setBlocking(client, false);
+    return client;
   }
 }
 
