@@ -22,3 +22,25 @@ fork our repository, and start sending us pull requests.
 ## License
 
 Fletch is available under the *Modified BSD license*. For all the details, see the separate [license](LICENSE.md) file.
+
+
+## Build Instructions
+
+Fletch uses the Chromium gclient tool for managing dependencies (install
+[depot_tools](http://www.chromium.org/developers/how-tos/install-depot-tools) to get gclient)
+and the [scons](http://www.scons.org/) build system for building.
+
+Setup Fletch repo (assumes that you have GitHub ssh keys setup):
+
+    $ mkdir fletch-repo
+    $ gclient config git@github.com:dart-lang/fletch.git
+    $ gclient sync
+    $ cd fletch
+
+Build Fletch:
+
+    $ scons
+
+Test Fletch:
+
+    $ ./tools/test.py
