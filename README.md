@@ -9,6 +9,14 @@ Fletch is very much incomplete. We'd be very happy to hear about things that wor
 more work, but don't expect to be able to build products on top of it.
 
 
+## Trying it out
+
+To try out Fletch, you need to first [build it](https://github.com/dart-lang/fletch/wiki/Building). 
+Once you have a working `fletch` executable, running Dart code on top of it is as easy as typing:
+
+    $ fletch hello.dart
+
+
 ## Contributing
 
 To give us feedback, please
@@ -22,25 +30,3 @@ fork our repository, and start sending us pull requests.
 ## License
 
 Fletch is available under the *Modified BSD license*. For all the details, see the separate [license](LICENSE.md) file.
-
-
-## Build Instructions (Mac and Linux only)
-
-Fletch uses the Chromium gclient tool for managing dependencies (install
-[depot_tools](http://www.chromium.org/developers/how-tos/install-depot-tools) to get gclient)
-and the [scons](http://www.scons.org/) build system for building.
-
-Setup Fletch repo (assumes that you have GitHub ssh keys setup):
-
-    $ mkdir fletch-repo
-    $ gclient config git@github.com:dart-lang/fletch.git
-    $ gclient sync
-    $ cd fletch
-
-Build Fletch:
-
-    $ scons
-
-Test Fletch:
-
-    $ ./tools/test.py
