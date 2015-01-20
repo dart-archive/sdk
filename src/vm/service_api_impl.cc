@@ -12,7 +12,7 @@ namespace fletch {
 
 class ServiceRegistry {
  public:
-  ServiceRegistry() : monitor_(Platform::CreateMonitor()) { }
+  ServiceRegistry() : monitor_(Platform::CreateMonitor()), service_(NULL) { }
 
   ~ServiceRegistry() { delete service_; }
 
