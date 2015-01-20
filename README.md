@@ -24,7 +24,7 @@ fork our repository, and start sending us pull requests.
 Fletch is available under the *Modified BSD license*. For all the details, see the separate [license](LICENSE.md) file.
 
 
-## Build Instructions
+## Build Instructions (Mac and Linux only)
 
 Fletch uses the Chromium gclient tool for managing dependencies (install
 [depot_tools](http://www.chromium.org/developers/how-tos/install-depot-tools) to get gclient)
