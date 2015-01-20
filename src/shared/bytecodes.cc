@@ -24,8 +24,8 @@ class StdoutWriter : public Bytecode::Writer {
 };
 
 int Bytecode::Print(uint8* bcp, Writer* writer) {
-  StdoutWriter stdout;
-  if (writer == NULL) writer = &stdout;
+  StdoutWriter stdout_writer;
+  if (writer == NULL) writer = &stdout_writer;
 
   Opcode opcode = static_cast<Opcode>(*bcp);
   const char* bytecode_format = BytecodeFormat(opcode);

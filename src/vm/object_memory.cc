@@ -15,7 +15,6 @@
 
 namespace fletch {
 
-
 static Smi* chunk_end_sentinel() { return Smi::zero(); }
 
 static bool HasSentinelAt(uword address) {
@@ -213,7 +212,14 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
 
   size = Utils::RoundUp(size, kPageSize);
   void* memory;
+#ifdef ANDROID
+  // posix_memalign doesn't exist on Android. We fallback to
+  // memalign.
+  memory = memalign(kPageSize, size);
+  if (memory == NULL) return NULL;
+#else
   if (posix_memalign(&memory, kPageSize, size) != 0) return NULL;
+#endif
 
   uword base = reinterpret_cast<uword>(memory);
   Chunk* chunk = new Chunk(owner, base, size);

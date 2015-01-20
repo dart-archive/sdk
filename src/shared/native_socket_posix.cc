@@ -4,8 +4,8 @@
 
 #include "src/shared/native_socket.h"
 
+#include <arpa/inet.h>
 #include <errno.h>
-#include <ifaddrs.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <netdb.h>

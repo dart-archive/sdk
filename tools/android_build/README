@@ -1,0 +1,9 @@
+In order to build a static Fletch library for Android, download the
+Android NDK and run:
+
+    NDK_PROJECT_PATH=. ndk-build 
+
+in this directory.
+
+TODO(ager): Currently, this is hardcoded for 32-bit systems and
+probably doesn't work for 64-bit versions.

@@ -5,26 +5,20 @@
 #include "src/shared/assert.h"
 
 #include <stdarg.h>
+
 #include <cstdlib>
-#include <sstream>
-#include <string>
 
 namespace fletch {
 
 void DynamicAssertionHelper::Fail(const char* format, ...) {
-  std::stringstream stream;
-  stream << file_ << ":" << line_ << ": error: ";
-
+  // Print out the error.
+  fprintf(stderr, "%s:%d: error: ", file_, line_);
   va_list arguments;
   va_start(arguments, format);
   char buffer[KB];
   vsnprintf(buffer, sizeof(buffer), format, arguments);
   va_end(arguments);
-  stream << buffer << std::endl;
-
-  // Get the message from the string stream and dump it on stderr.
-  std::string message = stream.str();
-  fprintf(stderr, "%s", message.c_str());
+  fprintf(stderr, "%s\n", buffer);
 
   // In case of failed assertions, abort right away. Otherwise, wait
   // until the program is exiting before producing a non-zero exit

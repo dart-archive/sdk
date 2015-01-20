@@ -10,6 +10,13 @@
 
 #include "src/vm/thread.h"
 
+// Some versions of android sys/epoll does not define
+// EPOLLRDHUP. However, it works as intended, so we just
+// define it if it is not there.
+#if !defined(EPOLLRDHUP)
+#define EPOLLRDHUP 0x2000
+#endif  // !defined(EPOLLRDHUP)
+
 namespace fletch {
 
 int EventHandler::Create() {
