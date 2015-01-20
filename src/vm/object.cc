@@ -292,6 +292,7 @@ char* String::ToCString() {
     }
     result[i] = c;
   }
+  result[len] = '\0';
   return result;
 }
 
