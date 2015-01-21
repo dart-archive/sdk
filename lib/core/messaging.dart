@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+part of dart.core;
+
 // Ports allow you to send messages to a channel. Ports are
 // are transferable and can be sent between processes.
 class Port {

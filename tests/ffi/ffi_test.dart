@@ -5,7 +5,8 @@
 import 'dart:ffi';
 import "package:expect/expect.dart";
 
-bool isIndexOutOfBounds(e) => e is RangeError;
+bool isRangeError(e) => e is RangeError;
+bool isArgumentError(e) => e is ArgumentError;
 
 main() {
   testLookup();
@@ -24,13 +25,13 @@ testLookup() {
 
   Expect.throws(
       () => Foreign.lookup('qsort', library: 'does-not-exist'),
-      isIndexOutOfBounds);
+      isArgumentError);
   Expect.throws(
       () => Foreign.lookup('does-not-exist'),
-      isIndexOutOfBounds);
+      isArgumentError);
   Expect.throws(
       () => Foreign.lookup('does-not-exist', library: null),
-      isIndexOutOfBounds);
+      isArgumentError);
 }
 
 testICall() {
@@ -58,12 +59,12 @@ testAllocate(bool finalized) {
     : new Foreign.allocated(size);
   Expect.isTrue(memory.value != 0);
 
-  Expect.throws(() => memory.getUint8(-100), isIndexOutOfBounds);
-  Expect.throws(() => memory.getUint8(-1), isIndexOutOfBounds);
-  Expect.throws(() => memory.getUint8(10), isIndexOutOfBounds);
-  Expect.throws(() => memory.getUint8(100), isIndexOutOfBounds);
+  Expect.throws(() => memory.getUint8(-100), isRangeError);
+  Expect.throws(() => memory.getUint8(-1), isRangeError);
+  Expect.throws(() => memory.getUint8(10), isRangeError);
+  Expect.throws(() => memory.getUint8(100), isRangeError);
 
-  Expect.throws(() => memory.getUint32(7), isIndexOutOfBounds);
+  Expect.throws(() => memory.getUint32(7), isRangeError);
 
   Expect.equals(0, memory.getUint32(6));
 

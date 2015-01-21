@@ -164,7 +164,7 @@ class Foreign {
   // Helper for checking bounds and computing derived
   // address for memory address functionality.
   int _computeAddress(int offset, int n) {
-    if (offset < 0 || offset + n > _size) throw new RangeError();
+    if (offset < 0 || offset + n > _size) throw new IndexError(offset, this);
     return _value + offset;
   }
 
@@ -178,7 +178,7 @@ class Foreign {
 
   // Natives needed for FFI support.
   static int _lookup(String name, String library) native catch (error) {
-    throw (error != _indexOutOfBounds) ? error : new RangeError();
+    throw (error != _indexOutOfBounds) ? error : new ArgumentError();
   }
 
   static int _call$0(int address) native;

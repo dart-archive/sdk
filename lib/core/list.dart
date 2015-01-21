@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+part of dart.core;
+
 class List {
   factory List([int count]) {
     if (identical(count, null)) return new _GrowableList();
@@ -38,7 +40,7 @@ class _ConstantList {
       case _wrongArgumentType:
         throw new ArgumentError();
       case _indexOutOfBounds:
-        throw new RangeError();
+        throw new IndexError(index, this);
     }
   }
 
@@ -72,7 +74,7 @@ class _FixedList extends _ConstantList {
       case _wrongArgumentType:
         throw new ArgumentError();
       case _indexOutOfBounds:
-        throw new RangeError();
+        throw new IndexError(index, this);
     }
   }
 }
@@ -133,14 +135,14 @@ class _GrowableList {
   }
 
   removeAt(int index) {
-    if (index >= length) throw "RangeError";
+    if (index >= length) throw new IndexError(index, this);
     var result = _list[index];
     _shiftDown(index);
     return result;
   }
 
   removeLast() {
-    if (length == 0) throw "RangeError";
+    if (length == 0) throw new IndexError(length - 1, this);
     --length;
     var result = _list[length];
     _list[length] = null;
@@ -155,12 +157,12 @@ class _GrowableList {
   }
 
   operator[](int index) {
-    if (index >= length) throw "RangeError";
+    if (index >= length) throw new IndexError(index, this);
     return _list[index];
   }
 
   operator[]=(int index, value) {
-    if (index >= length) throw "RangeError";
+    if (index >= length) throw new IndexError(index, this);
     return _list[index] = value;
   }
 
@@ -186,9 +188,9 @@ class _GrowableList {
   }
 }
 
-class Iterator {
+abstract class Iterator<T> {
   bool moveNext();
-  get current;
+  T get current;
 }
 
 class _ListIterator implements Iterator {

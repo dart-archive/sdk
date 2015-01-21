@@ -213,7 +213,7 @@ class PosixSystem implements System {
   }
 
   void _rangeCheck(ByteBuffer buffer, int length) {
-    if (buffer.length < length) throw new RangeError();
+    if (buffer.length < length) throw new IndexError(length, buffer);
   }
 
   Foreign _createSocketAddress(InternetAddress address, int port) {

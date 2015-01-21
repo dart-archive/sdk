@@ -6,6 +6,8 @@ library dart.core;
 
 import 'dart:ffi';
 
+part 'annotations.dart';
+part 'comparable.dart';
 part 'coroutine.dart';
 part 'double.dart';
 part 'error.dart';
@@ -18,8 +20,13 @@ part 'print.dart';
 part 'process.dart';
 part 'string.dart';
 part 'thread.dart';
+part 'unimplemented.dart';
 
-external bool identical(a, b);
+external bool identical(Object a, Object b);
+
+int identityHashCode(Object object) {
+  throw new UnimplementedError("identityHashCode");
+}
 
 class Object {
   // TODO(ajohnsen): Handle this in const_interpreter.cc?
@@ -48,11 +55,13 @@ class Object {
   bool _compareEqFromDouble(double other) => false;
 }
 
-class Comparable<T> {
-  int compareTo(T other);
+class Pattern {
 }
 
-class Pattern {
+class Function {
+  static apply(Function function, List positionalArguments, [Map<Symbol, dynamic> namedArguments]) {
+    throw new UnimplementedError("Function.apply");
+  }
 }
 
 class Null {
@@ -121,4 +130,7 @@ class _Type implements Type {
   final String _name;
   const _Type(this._name);
   String toString() => _name;
+}
+
+class StackTrace {
 }

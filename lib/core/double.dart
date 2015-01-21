@@ -120,7 +120,7 @@ class double extends num {
       digits = -1;
     } else {
       if (digits is! int) throw new ArgumentError();
-      if (digits < 0 || digits > 20) throw new RangeError();
+      if (digits < 0 || digits > 20) throw new RangeError.range(digits, 0, 20);
     }
     if (isNaN) return "NaN";
     if (this == double.INFINITY) return "Infinity";
@@ -131,7 +131,7 @@ class double extends num {
 
   String toStringAsFixed(int digits) {
     if (digits is! int) throw new ArgumentError();
-    if (digits < 0 || digits > 20) throw new RangeError();
+    if (digits < 0 || digits > 20) throw new RangeError.range(digits, 0, 20);
     if (isNaN) return "NaN";
     if (this >= 1e21 || this <= -1e21) return toString();
     return _toStringAsFixed(digits);
@@ -139,7 +139,7 @@ class double extends num {
 
   String toStringAsPrecision(int digits) {
     if (digits is! int) throw new ArgumentError();
-    if (digits < 1 || digits > 21) throw new RangeError();
+    if (digits < 1 || digits > 21) throw new RangeError.range(digits, 1, 21);
     if (isNaN) return "NaN";
     if (this == double.INFINITY) return "Infinity";
     if (this == -double.INFINITY) return "-Infinity";

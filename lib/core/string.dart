@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+part of dart.core;
+
 class String implements Comparable<String>, Pattern {
 
   int get length native;
@@ -32,7 +34,7 @@ class String implements Comparable<String>, Pattern {
       case _wrongArgumentType:
         throw new ArgumentError();
       case _indexOutOfBounds:
-        throw new RangeError();
+        throw new IndexError(index, this);
     }
   }
 
@@ -41,7 +43,7 @@ class String implements Comparable<String>, Pattern {
       case _wrongArgumentType:
         throw new ArgumentError();
       case _indexOutOfBounds:
-        throw new RangeError();
+        throw new IndexError(start, this);
     }
   }
 }
