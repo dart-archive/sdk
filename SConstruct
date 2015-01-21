@@ -162,15 +162,20 @@ def DefineVariant(name, *modifiers):
   shared = DefineVariantComponent(context, 'shared')
   context.shared = shared
 
-  double_conversion_library = SConscript(
+  double_conversion_objects = SConscript(
       join("third_party", "double-conversion", "SConscript"),
       variant_dir=join("build", "double_conversion", context.directory),
       exports="context",
       duplicate=0);
-  context.double_conversion_library = double_conversion_library
+  context.double_conversion_objects = double_conversion_objects
 
   compiler = DefineVariantComponent(context, 'compiler')
   vm = DefineVariantComponent(context, 'vm')
+
+  vm_library_name = "build/%s/lib/fletch" % (context.directory)
+  vm_static_library = context.environment.StaticLibrary(
+    vm_library_name,
+    vm["vm_library_objects"])
 
   echo_service_tests = SConscript(
       join("tests", "service_tests", "echo", "SConscript"),
@@ -178,9 +183,11 @@ def DefineVariant(name, *modifiers):
       exports="context",
       duplicate=0);
 
-  echo_service_test = { "name": "echo_service_test",
-                        "objects": echo_service_tests["objects"] +
-                                   vm["vm_objects"] }
+  echo_service_test = {
+       "name": "echo_service_test",
+       "objects": echo_service_tests["objects"] + [vm_static_library],
+       "env": "default"
+     }
 
   program_definitions = compiler["programs"]
   program_definitions += vm["programs"]
@@ -195,18 +202,20 @@ def DefineVariant(name, *modifiers):
   if common["os"] == "macos":
     objc_echo_service_test = { "name": "objc_echo_service_test",
                                "objects": echo_service_tests["objc_objects"] +
-                                          vm["vm_objects"] }
+                                          [vm_static_library],
+                               "env": "objc" }
     objc_program_definitions += [ objc_echo_service_test ]
 
   programs = []
 
   for program in program_definitions:
     name = "build/%s/%s" % (context.directory, program["name"])
-    programs.append(context.environment.Program(name, program["objects"]))
-
-  for program in objc_program_definitions:
-    name = "build/%s/%s" % (context.directory, program["name"])
-    programs.append(objc_env.Program(name, program["objects"]))
+    env = context.environment
+    if program["env"] == "objc":
+        env = objc_env
+    elif program["env"] != "default":
+        raise "unknown environment"
+    programs.append(env.Program(name, program["objects"]))
 
   test_targets = compiler["tests"] + vm["tests"] + shared["tests"]
   # For now, we always run the C++ tests. We could consider adding a

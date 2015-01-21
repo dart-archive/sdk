@@ -15,9 +15,8 @@ Import("context")
 env = context.environment
 config = context.configuration
 files = [ "src/" + file for file in context.files["double_conversion"] ]
-shared = context.shared["objects"]
 
 # Setup compilation of the library.
-library = env.Library("double_conversion", files)
+objects = [ env.Object(file) for file in files ]
 
-Return("library")
+Return("objects")

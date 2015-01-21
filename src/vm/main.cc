@@ -6,28 +6,15 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "include/fletch_api.h"
+
 #include "src/shared/connection.h"
 #include "src/shared/flags.h"
-#include "src/shared/fletch.h"
 #include "src/shared/native_process.h"
 
-#include "src/vm/platform.h"
-#include "src/vm/program.h"
 #include "src/vm/session.h"
-#include "src/vm/snapshot.h"
 
 namespace fletch {
-
-static bool IsSnapshot(List<uint8> snapshot) {
-  return snapshot.length() > 2 && snapshot[0] == 0xbe && snapshot[1] == 0xef;
-}
-
-static Program* ReadFromSnapshot(List<uint8> snapshot) {
-  ASSERT(IsSnapshot(snapshot));
-  SnapshotReader reader(snapshot);
-  Program* program = reader.ReadProgram();
-  return program;
-}
 
 static bool RunBridgeSession(int port) {
   Connection* connection = Connection::Connect("127.0.0.1", port);
@@ -71,7 +58,7 @@ static bool RunSession(const char* argv0,
 
 static int Main(int argc, char** argv) {
   Flags::ExtractFromCommandLine(&argc, argv);
-  Fletch::Setup();
+  FletchSetup();
 
   if (argc > 3) {
     FATAL("Too many arguments.");
@@ -102,13 +89,8 @@ static int Main(int argc, char** argv) {
 
   // Check if we're passed an snapshot file directly.
   if (!compile) {
-    List<uint8> snapshot = Platform::LoadFile(input);
-    if (IsSnapshot(snapshot)) {
-      Program* program = ReadFromSnapshot(snapshot);
-      success = program->RunMainInNewProcess();
-      interactive = false;
-    }
-    snapshot.Delete();
+    FletchRunSnapshotFromFile(input);
+    interactive = false;
   }
 
   // If we haven't already run from a snapshot, we start an
@@ -122,7 +104,7 @@ static int Main(int argc, char** argv) {
     }
   }
 
-  Fletch::TearDown();
+  FletchTearDown();
   return success ? 0 : 1;
 }
 

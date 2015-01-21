@@ -15,7 +15,7 @@ Import("context")
 env = context.environment
 config = context.configuration
 files = context.files["vm"]
-double_conversion_library = context.double_conversion_library
+double_conversion_objects = context.double_conversion_objects
 shared = context.shared["objects"]
 test_main_object = context.shared["test_main_object"]
 
@@ -32,22 +32,25 @@ def ShowAssemblyGeneration(target, source, env):
 
 # Setup compilation of the library.
 library_files = FilterSourceFiles(files["library"][config])
-library = env.Library("vm", library_files + shared)
+library_objects = [ env.Object(file) for file in library_files ]
+library_objects += shared
+library_objects += double_conversion_objects
 
 # Setup compilation of the generator program.
 generator_files = FilterSourceFiles(files["generator"][config])
-generator = env.Program("generator", [ generator_files, library ])
+generator = env.Program("generator", [ generator_files, library_objects ])
 action = Action(GenerateAssembly, ShowAssemblyGeneration)
 generated_file = env.Command("generated.S", generator, action)
 generated_object = env.Object(generated_file)
 
 # Setup compilation of the main program.
-vm_objects = [ generated_object, library, double_conversion_library ]
+library_objects += generated_object
 programs = []
 program_files = FilterSourceFiles(files["main"][config])
 program_object = env.Object(program_files)
 programs.append({ "name": "fletch",
-                  "objects": [ program_object, vm_objects ] });
+                  "objects": [ program_object, library_objects ],
+                  "env": "default" });
 
 # Setup compilation of the C++ tests.
 test_env = env.Clone()
@@ -58,11 +61,12 @@ test_objects = [ test_env.Object(test) for test in test_files ]
 tests = [ test_env.Program("run_tests",
                            [ test_main_object,
                              test_objects,
-                             library,
-                             double_conversion_library,
-                             generated_object ]) ]
+                             library_objects ]) ]
 
 # Let the result of building a variant be the list of targets
 # including all C++ tests.
-result = { "programs": programs, "tests": tests, "vm_objects": vm_objects }
+result = { "programs": programs,
+           "tests": tests,
+           "vm_library_objects": library_objects }
+
 Return("result")

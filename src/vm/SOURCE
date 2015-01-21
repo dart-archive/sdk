@@ -31,6 +31,8 @@ LIBRARY_SOURCE_FILES_COMMON = Split("""
     event_handler.cc
     event_handler.h
     fletch.cc
+    fletch_api_impl.cc
+    fletch_api_impl.h
     heap.cc
     heap.h
     interpreter.cc

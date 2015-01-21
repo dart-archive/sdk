@@ -31,25 +31,29 @@ programs = []
 program_files = FilterSourceFiles(files["main"][config])
 program_object = env.Object(program_files)
 programs.append({ "name": "fletchc",
-                  "objects": [ program_object, library ]})
+                  "objects": [ program_object, library ],
+                  "env": "default" })
 
 # Setup compilation of the scan program.
 program_files = FilterSourceFiles(files["scan"][config])
 program_object = env.Object(program_files)
 programs.append({ "name": "fletchc_scan",
-                  "objects": [ program_object, library ]})
+                  "objects": [ program_object, library ],
+                  "env": "default" })
 
 # Setup compilation of the bench program.
 program_files = FilterSourceFiles(files["bench"][config])
 program_object = env.Object(program_files)
 programs.append({ "name": "bench",
-                  "objects": [ program_object, library ]})
+                  "objects": [ program_object, library ],
+                  "env": "default" })
 
 # Setup compilation of the print program.
 program_files = FilterSourceFiles(files["print"][config])
 program_object = env.Object(program_files)
 programs.append({ "name": "fletchc_print",
-                  "objects": [ program_object, library ]})
+                  "objects": [ program_object, library ],
+                  "env": "default" })
 
 # Setup compilation of the C++ tests.
 test_env = env.Clone()

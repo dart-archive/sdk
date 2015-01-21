@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := Fletch
+LOCAL_MODULE := fletch
 LOCAL_CFLAGS := -DFLETCH32 -DANDROID -I../../ -std=c++11
 
 LOCAL_SRC_FILES := \
@@ -14,6 +14,7 @@ LOCAL_SRC_FILES := \
 	../../../src/shared/native_socket_posix.cc \
 	../../../src/shared/bytecodes.cc \
 	../../../src/vm/event_handler.cc \
+	../../../src/vm/fletch_api_impl.cc \
 	../../../src/vm/scheduler.cc \
 	../../../src/vm/platform_posix.cc \
 	../../../src/vm/intrinsics.cc \
