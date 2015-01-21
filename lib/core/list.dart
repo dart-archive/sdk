@@ -4,38 +4,189 @@
 
 part of dart.core;
 
-class List {
-  factory List([int count]) {
-    if (identical(count, null)) return new _GrowableList();
-    return new _FixedList(count);
+// Matches dart:core on Jan 21, 2015.
+abstract class List<E> implements Iterable<E> {
+  factory List([int length]) {
+    return (length == null) ? new _GrowableList() : new _FixedList(length);
   }
+
+  factory List.filled(int length, E fill) {
+    throw new UnimplementedError("List.filled");
+  }
+
+  factory List.from(Iterable other, { bool growable: true }) {
+    throw new UnimplementedError("List.from");
+  }
+
+
+  factory List.generate(int length, E generator(int index),
+                       { bool growable: true }) {
+    throw new UnimplementedError("List.generate");
+  }
+
+  E operator[](int index);
+
+  void operator[]=(int index, E value);
+
+  int get length;
+
+  void set length(int newLength);
+
+  void add(E value);
+
+  void addAll(Iterable<E> iterable);
+
+  Iterable<E> get reversed;
+
+  void sort([int compare(E a, E b)]);
+
+  void shuffle([Random random]);
+
+  int indexOf(E element, [int start = 0]);
+
+  int lastIndexOf(E element, [int start]);
+
+  void clear();
+
+  void insert(int index, E element);
+
+  void insertAll(int index, Iterable<E> iterable);
+
+  void setAll(int index, Iterable<E> iterable);
+
+  bool remove(Object value);
+
+  E removeAt(int index);
+
+  E removeLast();
+
+  void removeWhere(bool test(E element));
+
+  void retainWhere(bool test(E element));
+
+  List<E> sublist(int start, [int end]);
+
+  Iterable<E> getRange(int start, int end);
+
+  void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]);
+
+  void removeRange(int start, int end);
+
+  void fillRange(int start, int end, [E fillValue]);
+
+  void replaceRange(int start, int end, Iterable<E> replacement);
+
+  Map<int, E> asMap();
 }
 
-class _ConstantList {
+class _ConstantList<E> implements List<E> {
   final _list;
 
-  _ConstantList(int count) : this._list = _new(count);
+  _ConstantList(int length) : this._list = _new(length);
 
-  Iterator get iterator => new _ListIterator(this);
+  Iterator<E> get iterator => new _ListIterator(this);
 
-  int get length native;
-  int get isEmpty => length == 0;
-  int get isNotEmpty => length != 0;
-
-  void add(value) { throw "add not supported on fixed-size List"; }
-  void addAll(iterable) { throw "addAll not supported on fixed-size List"; }
-  bool remove(value) { throw "remove not supported on fixed-size List"; }
-  removeAt(int index) { throw "removeAt not supported on fixed-size List"; }
-  removeLast() { throw "removeAt not supported on fixed-size List"; }
-  void clear() { throw "clear not supported on fixed-size List"; }
-  void removeWhere(bool test(element)) {
-    throw "removeWhere not supported on fixed-size List";
+  Iterable map(f(E element)) {
+    throw new UnimplementedError("_ConstantList.map");
   }
 
-  get first => this[0];
-  get last => this[length - 1];
+  Iterable<E> where(bool test(E element)) {
+    throw new UnimplementedError("_ConstantList.where");
+  }
 
-  operator[](int index) native catch (error) {
+  Iterable expand(Iterable f(E element)) {
+    throw new UnimplementedError("_ConstantList.expand");
+  }
+
+  bool contains(Object element) {
+    for (int i = 0; i < length; i++) {
+      if (this[i] == element) return true;
+    }
+    return false;
+  }
+
+  void forEach(void f(E element)) {
+    for (int i = 0; i < length; i++) {
+      f(this[i]);
+    }
+  }
+
+  E reduce(E combine(E value, E element)) {
+    throw new UnimplementedError("_ConstantList.reduce");
+  }
+
+  dynamic fold(var initialValue,
+               dynamic combine(var previousValue, E element)) {
+    throw new UnimplementedError("_ConstantList.fold");
+  }
+
+  bool every(bool test(E element)) {
+    throw new UnimplementedError("_ConstantList.every");
+  }
+
+  String join([String separator = ""]) {
+    StringBuffer buffer = new StringBuffer();
+    buffer.writeAll(this, separator);
+    return buffer.toString();
+  }
+
+  bool any(bool test(E element)) {
+    throw new UnimplementedError("_ConstantList.any");
+  }
+
+  List<E> toList({ bool growable: true }) {
+    throw new UnimplementedError("_ConstantList.toList");
+  }
+
+  Set<E> toSet() {
+    throw new UnimplementedError("_ConstantList.toSet");
+  }
+
+  int get length native;
+
+  int get isEmpty => length == 0;
+
+  int get isNotEmpty => length != 0;
+
+  Iterable<E> take(int n) {
+    throw new UnimplementedError("_ConstantList.take");
+  }
+
+  Iterable<E> takeWhile(bool test(E value)) {
+    throw new UnimplementedError("_ConstantList.takeWhile");
+  }
+
+  Iterable<E> skip(int n) {
+    throw new UnimplementedError("_ConstantList.skip");
+  }
+
+  Iterable<E> skipWhile(bool test(E value)) {
+    throw new UnimplementedError("_ConstantList.skipWhile");
+  }
+
+  E get first => this[0];
+
+  E get last => this[length - 1];
+
+  E get single {
+    throw new UnimplementedError("_ConstantList.single");
+  }
+
+  E firstWhere(bool test(E element), { E orElse() }) {
+    throw new UnimplementedError("_ConstantList.firstWhere");
+  }
+
+  E lastWhere(bool test(E element), {E orElse()}) {
+    throw new UnimplementedError("_ConstantList.lastWhere");
+  }
+
+  E singleWhere(bool test(E element)) {
+    throw new UnimplementedError("_ConstantList.singleWhere");
+  }
+
+  E elementAt(int index) => this[index];
+
+  E operator[](int index) native catch (error) {
     switch (error) {
       case _wrongArgumentType:
         throw new ArgumentError();
@@ -44,18 +195,82 @@ class _ConstantList {
     }
   }
 
-  operator[]=(int index, value) { throw "[]= not supported on a const List"; }
-
-  String toString() => "List";
-
-  bool contains(value) {
-    for (int i = 0; i < length; i++) {
-      if (this[i] == value) return true;
-    }
-    return false;
+  void operator[]=(int index, E value) {
+    throw new UnsupportedError("Cannot modify an unmodifiable list");
   }
 
-  List sublist(int start, int end) {
+  void set length(int newLength) {
+    throw new UnsupportedError("Cannot change length of fixed-length list");
+  }
+
+  void add(E value) {
+    throw new UnsupportedError("Cannot add to fixed-length list");
+  }
+
+  void addAll(Iterable<E> iterable) {
+    throw new UnsupportedError("Cannot add to fixed-length list");
+  }
+
+  Iterable<E> get reversed {
+    throw new UnimplementedError("_ConstantList.reversed");
+  }
+
+  void sort([int compare(E a, E b)]) {
+    throw new UnsupportedError("Cannot modify an unmodifiable list");
+  }
+
+  void shuffle([Random random]) {
+    throw new UnsupportedError("Cannot modify an unmodifiable list");
+  }
+
+  int indexOf(E element, [int start = 0]) {
+    for (int i = start; i < length; i++) {
+      if (this[i] == element) return i;
+    }
+    return -1;
+  }
+
+  int lastIndexOf(E element, [int start]) {
+    throw new UnimplementedError("_ConstantList.lastIndexOf");
+  }
+
+  void clear() {
+    throw new UnsupportedError("Cannot remove from fixed-length list");
+  }
+
+  void insert(int index, E element) {
+    throw new UnsupportedError("Cannot add to fixed-length list");
+  }
+
+  void insertAll(int index, Iterable<E> iterable) {
+    throw new UnsupportedError("Cannot add to fixed-length list");
+  }
+
+  void setAll(int index, Iterable<E> iterable) {
+    throw new UnsupportedError("Cannot add to fixed-length list");
+  }
+
+  bool remove(Object value) {
+    throw new UnsupportedError("Cannot remove from fixed-length list");
+  }
+
+  E removeAt(int index) {
+    throw new UnsupportedError("Cannot remove from fixed-length list");
+  }
+
+  E removeLast() {
+    throw new UnsupportedError("Cannot remove from fixed-length list");
+  }
+
+  void removeWhere(bool test(E element)) {
+    throw new UnsupportedError("Cannot remove from fixed-length list");
+  }
+
+  void retainWhere(bool test(E element)) {
+    throw new UnsupportedError("Cannot remove from fixed-length list");
+  }
+
+  List<E> sublist(int start, [int end]) {
     var result = new List();
     for (int i = start; i < end; i++) {
       result.add(this[i]);
@@ -63,13 +278,55 @@ class _ConstantList {
     return result;
   }
 
-  static _new(int count) native;
+  Iterable<E> getRange(int start, int end) {
+    throw new UnimplementedError("_ConstantList.getRange");
+  }
+
+  void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
+    throw new UnsupportedError("Cannot modify an unmodifiable list");
+  }
+
+  void removeRange(int start, int end) {
+    throw new UnsupportedError("Cannot remove from fixed-length list");
+  }
+
+  void fillRange(int start, int end, [E fillValue]) {
+    throw new UnsupportedError("Cannot modify an unmodifiable list");
+  }
+
+  void replaceRange(int start, int end, Iterable<E> replacement) {
+    throw new UnsupportedError("Cannot remove from fixed-length list");
+  }
+
+  Map<int, E> asMap() {
+    throw new UnimplementedError("_ConstantList.asMap");
+  }
+
+  String toString() => "List";
+
+  static _ConstantList _new(int length) native;
 }
 
-class _FixedList extends _ConstantList {
-  _FixedList([int count]) : super(count);
+class _FixedList<E> extends _ConstantList<E> {
+  _FixedList([int length]) : super(length);
 
-  operator[]=(int index, value) native catch (error) {
+  void sort([int compare(E a, E b)]) {
+    throw new UnimplementedError("_FixedList.sort");
+  }
+
+  void shuffle([Random random]) {
+    throw new UnimplementedError("_FixedList.shuffle");
+  }
+
+  void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
+    throw new UnimplementedError("_FixedList.setRange");
+  }
+
+  void fillRange(int start, int end, [E fillValue]) {
+    throw new UnimplementedError("_FixedList.fillRange");
+  }
+
+  E operator[]=(int index, value) native catch (error) {
     switch (error) {
       case _wrongArgumentType:
         throw new ArgumentError();
@@ -79,19 +336,257 @@ class _FixedList extends _ConstantList {
   }
 }
 
-class _GrowableList {
-  var length;
-  var _list;
+class _GrowableList<E> implements List<E> {
+  int _length;
+  _FixedList _list;
 
-  _GrowableList() : length = 0, _list = new _FixedList(4);
+  _GrowableList() : _length = 0, _list = new _FixedList(4);
 
-  Iterator get iterator => new _ListIterator(this);
+  Iterator<E> get iterator => new _ListIterator(this);
 
-  int get isEmpty => length == 0;
-  int get isNotEmpty => length != 0;
+  Iterable map(f(E element)) {
+    throw new UnimplementedError("_GrowableList.map");
+  }
 
-  get first => this[0];
-  get last => this[length - 1];
+  Iterable<E> where(bool test(E element)) {
+    throw new UnimplementedError("_GrowableList.where");
+  }
+
+  Iterable expand(Iterable f(E element)) {
+    throw new UnimplementedError("_GrowableList.expand");
+  }
+
+  bool contains(Object element) {
+    for (int i = 0; i < length; i++) {
+      if (this[i] == element) return true;
+    }
+    return false;
+  }
+
+  void forEach(void f(E element)) {
+    for (int i = 0; i < length; i++) {
+      f(this[i]);
+    }
+  }
+
+  E reduce(E combine(E value, E element)) {
+    throw new UnimplementedError("_GrowableList.reduce");
+  }
+
+  dynamic fold(var initialValue,
+               dynamic combine(var previousValue, E element)) {
+    throw new UnimplementedError("_GrowableList.fold");
+  }
+
+  bool every(bool test(E element)) {
+    throw new UnimplementedError("_GrowableList.every");
+  }
+
+  String join([String separator = ""]) {
+    StringBuffer buffer = new StringBuffer();
+    buffer.writeAll(this, separator);
+    return buffer.toString();
+  }
+
+  bool any(bool test(E element)) {
+    throw new UnimplementedError("_GrowableList.any");
+  }
+
+  List<E> toList({ bool growable: true }) {
+    throw new UnimplementedError("_GrowableList.toList");
+  }
+
+  Set<E> toSet() {
+    throw new UnimplementedError("_GrowableList.toSet");
+  }
+
+  int get length => _length;
+
+  int get isEmpty => _length == 0;
+
+  int get isNotEmpty => _length != 0;
+
+  Iterable<E> take(int n) {
+    throw new UnimplementedError("_GrowableList.take");
+  }
+
+  Iterable<E> takeWhile(bool test(E value)) {
+    throw new UnimplementedError("_GrowableList.takeWhile");
+  }
+
+  Iterable<E> skip(int n) {
+    throw new UnimplementedError("_GrowableList.skip");
+  }
+
+  Iterable<E> skipWhile(bool test(E value)) {
+    throw new UnimplementedError("_GrowableList.skipWhile");
+  }
+
+  E get first => this[0];
+
+  E get last => this[_length - 1];
+
+  E get single {
+    throw new UnimplementedError("_GrowableList.single");
+  }
+
+  E firstWhere(bool test(E element), { E orElse() }) {
+    throw new UnimplementedError("_GrowableList.firstWhere");
+  }
+
+  E lastWhere(bool test(E element), {E orElse()}) {
+    throw new UnimplementedError("_GrowableList.lastWhere");
+  }
+
+  E singleWhere(bool test(E element)) {
+    throw new UnimplementedError("_GrowableList.singleWhere");
+  }
+
+  E elementAt(int index) => this[index];
+
+  E operator[](int index) {
+    if (index >= length) throw new IndexError(index, this);
+    return _list[index];
+  }
+
+  void operator[]=(int index, value) {
+    if (index >= length) throw new IndexError(index, this);
+    return _list[index] = value;
+  }
+
+  void set length(int newLength) {
+    if (newLength > _list.length) {
+      _grow(newLength);
+    }
+    _length = newLength;
+  }
+
+  void add(E value) {
+    if (_length >= _list.length) {
+      _grow(_length + 1);
+    }
+    _list[_length++] = value;
+  }
+
+  void addAll(Iterable<E> iterable) {
+    iterable.forEach((E each) {
+      add(each);
+    });
+  }
+
+  Iterable<E> get reversed {
+    throw new UnimplementedError("_GrowableList.reversed");
+  }
+
+  void sort([int compare(E a, E b)]) {
+    throw new UnimplementedError("_GrowableList.sort");
+  }
+
+  void shuffle([Random random]) {
+    throw new UnimplementedError("_GrowableList.shuffle");
+  }
+
+  int indexOf(E element, [int start = 0]) {
+    for (int i = start; i < length; i++) {
+      if (this[i] == element) return i;
+    }
+    return -1;
+  }
+
+  int lastIndexOf(E element, [int start]) {
+    throw new UnimplementedError("_GrowableList.lastIndexOf");
+  }
+
+  void clear() {
+    if (_length != 0) {
+      _length = 0;
+      _list = new _FixedList(4);
+    }
+  }
+
+  void insert(int index, E element) {
+    throw new UnimplementedError("_GrowableList.insert");
+  }
+
+  void insertAll(int index, Iterable<E> iterable) {
+    throw new UnimplementedError("_GrowableList.insertAll");
+  }
+
+  void setAll(int index, Iterable<E> iterable) {
+    throw new UnimplementedError("_GrowableList.setAll");
+  }
+
+  bool remove(Object value) {
+    for (int i = 0; i < length; ++i) {
+      if (_list[i] == value) {
+        _shiftDown(i);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  E removeAt(int index) {
+    if (index >= length) throw new IndexError(index, this);
+    E result = _list[index];
+    _shiftDown(index);
+    return result;
+
+  }
+
+  E removeLast() {
+    if (length == 0) throw new IndexError(length - 1, this);
+    --length;
+    E result = _list[length];
+    _list[length] = null;
+    return result;
+  }
+
+  void removeWhere(bool test(E element)) {
+    for (int i = 0; i < _length; i++) {
+      if (test(this[i])) removeAt(i);
+    }
+  }
+
+  void retainWhere(bool test(E element)) {
+    for (int i = 0; i < _length; i++) {
+      if (!test(this[i])) removeAt(i);
+    }
+  }
+
+  List<E> sublist(int start, [int end]) {
+    var result = new List();
+    for (int i = start; i < end; i++) {
+      result.add(this[i]);
+    }
+    return result;
+  }
+
+  Iterable<E> getRange(int start, int end) {
+    throw new UnimplementedError("_GrowableList.getRange");
+  }
+
+  void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
+    throw new UnimplementedError("_GrowableList.setRange");
+  }
+
+  void removeRange(int start, int end) {
+    throw new UnimplementedError("_GrowableList.removeRange");
+  }
+
+  void fillRange(int start, int end, [E fillValue]) {
+    throw new UnimplementedError("_GrowableList.fillRange");
+  }
+
+  void replaceRange(int start, int end, Iterable<E> replacement) {
+    throw new UnimplementedError("_GrowableList.replaceRange");
+  }
+
+  Map<int, E> asMap() {
+    throw new UnimplementedError("_GrowableList.asMap");
+  }
+
+  String toString() => "List";
 
   void _grow(minSize) {
     // TODO(ager): play with heuristics here.
@@ -102,19 +597,6 @@ class _GrowableList {
     _list = newList;
   }
 
-  void add(value) {
-    if (length >= _list.length) {
-      _grow(length + 1);
-    }
-    _list[length++] = value;
-  }
-
-  void addAll(iterable) {
-    for (int i = 0; i < iterable.length; ++i) {
-      add(iterable[i]);
-    }
-  }
-
   void _shiftDown(int i) {
     for (int j = i + 1; j < length; ++j, ++i) {
       _list[i] = _list[j];
@@ -122,90 +604,24 @@ class _GrowableList {
     --length;
     _list[length] = null;
   }
-
-  bool remove(value) {
-    int i = 0;
-    for (; i < length; ++i) {
-      if (_list[i] == value) {
-        _shiftDown(i);
-        return true;
-      }
-    }
-    return false;
-  }
-
-  removeAt(int index) {
-    if (index >= length) throw new IndexError(index, this);
-    var result = _list[index];
-    _shiftDown(index);
-    return result;
-  }
-
-  removeLast() {
-    if (length == 0) throw new IndexError(length - 1, this);
-    --length;
-    var result = _list[length];
-    _list[length] = null;
-    return result;
-  }
-
-  void clear() {
-    if (length != 0) {
-      length = 0;
-      _list = new _GrowableList();
-    }
-  }
-
-  operator[](int index) {
-    if (index >= length) throw new IndexError(index, this);
-    return _list[index];
-  }
-
-  operator[]=(int index, value) {
-    if (index >= length) throw new IndexError(index, this);
-    return _list[index] = value;
-  }
-
-  removeWhere(bool test(element)) {
-    for (int i = 0; i < length; i++) {
-      if (test(this[i])) removeAt(i);
-    }
-  }
-
-  bool contains(value) {
-    for (int i = 0; i < length; i++) {
-      if (this[i] == value) return true;
-    }
-    return false;
-  }
-
-  List sublist(int start, int end) {
-    var result = new List();
-    for (int i = start; i < end; i++) {
-      result.add(this[i]);
-    }
-    return result;
-  }
 }
 
-abstract class Iterator<T> {
-  bool moveNext();
-  T get current;
-}
-
-class _ListIterator implements Iterator {
+class _ListIterator<E> implements Iterator<E> {
   final List _list;
+
   int _index = -1;
-  var current;
+  E _current;
 
   _ListIterator(this._list);
 
+  E get current => _current;
+
   bool moveNext() {
     if (++_index < _list.length) {
-      current = _list[_index];
+      _current = _list[_index];
       return true;
     }
-    current = null;
+    _current = null;
     return false;
   }
 }

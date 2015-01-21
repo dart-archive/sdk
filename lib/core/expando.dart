@@ -5,11 +5,15 @@
 part of dart.core;
 
 // Matches dart:core on Jan 21, 2015.
-typedef int Comparator<T>(T a, T b);
+class Expando<T> {
+  final String name;
+  Expando(this.name);
 
-// Matches dart:core on Jan 21, 2015.
-abstract class Comparable<T> {
-  int compareTo(T other);
+  T operator[](Object object) {
+    throw new UnimplementedError("Expando.[]");
+  }
 
-  static int compare(Comparable a, Comparable b) => a.compareTo(b);
+  void operator[]=(Object object, T value) {
+    throw new UnimplementedError("Expando.[]=");
+  }
 }

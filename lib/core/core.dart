@@ -11,7 +11,9 @@ part 'comparable.dart';
 part 'coroutine.dart';
 part 'double.dart';
 part 'error.dart';
+part 'expando.dart';
 part 'integer.dart';
+part 'iterable.dart';
 part 'list.dart';
 part 'map.dart';
 part 'messaging.dart';
@@ -20,10 +22,13 @@ part 'print.dart';
 part 'process.dart';
 part 'string.dart';
 part 'thread.dart';
+part 'time.dart';
 part 'unimplemented.dart';
 
+// Matches dart:core on Jan 21, 2015.
 external bool identical(Object a, Object b);
 
+// Matches dart:core on Jan 21, 2015.
 int identityHashCode(Object object) {
   throw new UnimplementedError("identityHashCode");
 }
@@ -58,10 +63,30 @@ class Object {
 class Pattern {
 }
 
-class Function {
-  static apply(Function function, List positionalArguments, [Map<Symbol, dynamic> namedArguments]) {
+// Matches dart:core on Jan 21, 2015.
+abstract class Function {
+  static apply(Function function,
+               List positionalArguments,
+              [Map<Symbol, dynamic> namedArguments]) {
     throw new UnimplementedError("Function.apply");
   }
+}
+
+// Matches dart:core on Jan 21, 2015.
+abstract class Invocation {
+  bool get isAccessor;
+
+  bool get isGetter;
+
+  bool get isMethod;
+
+  bool get isSetter;
+
+  Symbol get memberName;
+
+  Map<Symbol, dynamic> get namedArguments;
+
+  List get positionalArguments;
 }
 
 class Null {
@@ -82,44 +107,6 @@ class Symbol {
   }
 
   String toString() => _name;
-}
-
-class Stopwatch {
-  int _start;
-  int _stop;
-
-  int get frequency => _cachedFrequency;
-  bool get isRunning => _start != null && _stop == null;
-
-  int get elapsedTicks {
-    if (_start == null) return 0;
-    return (_stop == null) ? (_now() - _start) : (_stop - _start);
-  }
-
-  int get elapsedMilliseconds => (elapsedTicks * 1000) ~/ frequency;
-  int get elapsedMicroseconds => (elapsedTicks * 1000000) ~/ frequency;
-
-  void start() {
-    if (isRunning) return;
-    if (_start == null) {
-      // This stopwatch has never been started.
-      _start = _now();
-    } else {
-      // Restart this stopwatch. Prepend the elapsed time to the current
-      // start time.
-      _start = _now() - (_stop - _start);
-      _stop = null;
-    }
-  }
-
-  void stop() {
-    if (!isRunning) return;
-    _stop = _now();
-  }
-
-  static final int _cachedFrequency = _frequency();
-  static int _frequency() native;
-  static int _now() native;
 }
 
 class Type {

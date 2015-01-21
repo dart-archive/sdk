@@ -4,37 +4,6 @@
 
 part of dart.core;
 
-abstract class BidirectionalIterator<T> extends Iterator<T> {
-  bool movePrevious();
-}
-
-class DateTime {
-  factory DateTime(int year, [int month=1, int day=1, int hour=0, int minute=0, int second=0, int millisecond=0])
-      => throw new UnimplementedError("DateTime");
-  DateTime.fromMillisecondsSinceEpoch(int millisecondsSinceEpoch, {bool isUtc: false})
-      => throw new UnimplementedError("DateTime.fromMillisecondsSinceEpoch");
-  DateTime.now()
-      => throw new UnimplementedError("DateTime.now");
-  DateTime.utc(int year, [int month=1, int day=1, int hour=0, int minute=0, int second=0, int millisecond=0])
-      => throw new UnimplementedError("DateTime.utc");
-}
-
-class Duration {
-  const Duration({int days: 0, int hours: 0, int minutes: 0, int seconds: 0, int milliseconds: 0, int microseconds: 0});
-}
-
-class Expando {
-  factory Expando([String name])
-      => throw new UnimplementedError("Expando");
-}
-
-class Invocation {
-  Invocation._internal();
-}
-
-abstract class Iterable<E> {
-}
-
 abstract class Match {
 }
 

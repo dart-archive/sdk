@@ -76,7 +76,6 @@ closure_type_test/01: Fail
 closure_type_test/none: Fail
 closure_type_variable_test: Fail
 closure_with_super_field_test: Fail
-closure_with_super_send_test: Fail
 closures_initializer2_test: Fail
 closures_initializer_test: Fail
 comparison_test: Fail
@@ -139,6 +138,7 @@ const_map2_test/none: Fail
 const_map3_test/00: MissingCompileTimeError
 const_map4_test: Fail
 const_map_test: Fail
+const_named_test: Crash
 const_nested_test: Crash
 const_optional_args_negative_test: Fail
 const_switch2_test/01: MissingCompileTimeError
@@ -515,7 +515,6 @@ issue10561_test: CompileTimeError
 issue10747_test: Fail
 issue12023_test: Fail
 issue12284_test: Crash
-issue12336_test: Fail
 issue13474_test: Fail
 issue14014_2_test: Crash
 issue14014_3_test: Fail
@@ -525,7 +524,6 @@ issue15720_test: Fail
 issue4157508_test: Fail
 issue4515170_test: Crash
 issue7513_test: Fail
-issue7525_test: Fail
 issue9949_test: CompileTimeError
 label_test: Fail
 large_class_declaration_test: Crash
@@ -540,7 +538,6 @@ library_prefixes_test: CompileTimeError
 library_same_name_used_test: Crash
 list_is_test: Fail
 list_literal2_negative_test: Fail
-list_literal3_test: Fail
 list_literal4_test: Fail
 list_literal_syntax_test/00: MissingCompileTimeError
 list_literal_syntax_test/04: MissingCompileTimeError
@@ -847,7 +844,6 @@ regress_13462_1_test: CompileTimeError
 regress_14348_test: CompileTimeError
 regress_18535_test: CompileTimeError
 regress_20394_test/01: MissingCompileTimeError
-regress_20840_test: Fail
 regress_r24720_test: Crash
 reify_typevar_test: Fail
 runtime_type_test: Fail
@@ -991,7 +987,6 @@ issue10783_test: Fail
 issue10783_test: Crash
 
 [ $mode == debug ]
-const_named_test: Crash
 duplicate_constructor_test/01: Crash
 duplicate_import_prefix_test: Crash
 field_initialization_order_test: Fail
@@ -1004,7 +999,6 @@ regress_19413_test/none: Crash
 try_catch_syntax_test/05: Crash
 
 [ $mode == release ]
-const_named_test: Fail
 body_less_constructor_wrong_arg_negative_test: Fail
 duplicate_constructor_test/01: MissingCompileTimeError
 field_initialization_order_test: Fail

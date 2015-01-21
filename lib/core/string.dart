@@ -56,5 +56,9 @@ class StringBuffer {
     _buffer += o.toString();
   }
 
+  void writeAll(Iterable objects, [String separator=""]) {
+    throw new UnimplementedError("StringBuffer.writeAll");
+  }
+
   String toString() => _buffer;
 }

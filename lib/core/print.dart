@@ -4,7 +4,8 @@
 
 part of dart.core;
 
-void print(object) {
+// Matches dart:core on Jan 21, 2015.
+void print(Object object) {
   _printString(object.toString());
 }
 
