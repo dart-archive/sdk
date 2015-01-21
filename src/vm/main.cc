@@ -56,6 +56,10 @@ static bool RunSession(const char* argv0,
   return success;
 }
 
+static bool IsSnapshot(List<uint8> snapshot) {
+  return snapshot.length() > 2 && snapshot[0] == 0xbe && snapshot[1] == 0xef;
+}
+
 static int Main(int argc, char** argv) {
   Flags::ExtractFromCommandLine(&argc, argv);
   FletchSetup();
@@ -89,8 +93,12 @@ static int Main(int argc, char** argv) {
 
   // Check if we're passed an snapshot file directly.
   if (!compile) {
-    FletchRunSnapshotFromFile(input);
-    interactive = false;
+    List<uint8> bytes = Platform::LoadFile(input);
+    if (IsSnapshot(bytes)) {
+      FletchRunSnapshot(bytes.data(), bytes.length());
+      interactive = false;
+    }
+    bytes.Delete();
   }
 
   // If we haven't already run from a snapshot, we start an
