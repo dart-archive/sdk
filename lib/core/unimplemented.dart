@@ -4,40 +4,23 @@
 
 part of dart.core;
 
-abstract class Match {
-}
-
-class RegExp {
-  factory RegExp(String source, {bool multiLine: false, bool caseSensitive: true})
-      => throw new UnimplementedError("RegExp");
-}
-
-class RuneIterator implements BidirectionalIterator<int> {
-  factory RuneIterator(String string)
-      => throw new UnimplementedError("RuneIterator");
-  factory RuneIterator.at(String string, int index)
-      => throw new UnimplementedError("RuneIterator.at");
-}
-
-class Runes {
-  factory Runes(String string)
-      => throw new UnimplementedError("Runes");
-}
-
-class Set {
-  factory Set()
-      => throw new UnimplementedError("Set");
-  factory Set.from(Iterable<E> other)
-      => throw new UnimplementedError("Set.from");
-  factory Set.identity()
-      => throw new UnimplementedError("Set.identity");
-}
-
+// Matches dart:core on Jan 21, 2015.
 abstract class Sink<T> {
+  void add(T data);
+  void close();
 }
 
+// Matches dart:core on Jan 21, 2015.
 abstract class StringSink {
+  void write(Object obj);
+
+  void writeAll(Iterable objects, [String separator=""]);
+
+  void writeCharCode(int charCode);
+
+  void writeln([Object obj=""]);
 }
+
 
 class Uri {
   factory Uri({String scheme: "", String userInfo: "", String host, int port, String path, Iterable<String> pathSegments, String query, Map<String, String> queryParameters, String fragment})

@@ -20,6 +20,9 @@ part 'messaging.dart';
 part 'num.dart';
 part 'print.dart';
 part 'process.dart';
+part 'regexp.dart';
+part 'runes.dart';
+part 'set.dart';
 part 'string.dart';
 part 'thread.dart';
 part 'time.dart';
@@ -33,14 +36,25 @@ int identityHashCode(Object object) {
   throw new UnimplementedError("identityHashCode");
 }
 
+// Matches dart:core on Jan 21, 2015.
 class Object {
-  // TODO(ajohnsen): Handle this in const_interpreter.cc?
   const Object();
 
+  int get hashCode {
+    throw new UnimplementedError("Object.hashCode");
+  }
+
+  Type get runtimeType {
+    throw new UnimplementedError("Object.runtimeType");
+  }
+
   bool operator ==(other) => identical(this, other);
+
   String toString() => "an object";
 
-  noSuchMethod(invocation) {
+  noSuchMethod(Invocation invocation) {
+    // TODO(kasperl): Extract information from the invocation
+    // so we can construct the right NoSuchMethodError.
     throw new NoSuchMethodError._empty();
   }
 
@@ -58,9 +72,6 @@ class Object {
 
   bool _compareEqFromInteger(int other) => false;
   bool _compareEqFromDouble(double other) => false;
-}
-
-class Pattern {
 }
 
 // Matches dart:core on Jan 21, 2015.
@@ -89,35 +100,44 @@ abstract class Invocation {
   List get positionalArguments;
 }
 
+// Matches dart:core on Jan 21, 2015.
 class Null {
   String toString() => "null";
 }
 
+// Matches dart:core on Jan 21, 2015.
 class bool {
+  // TODO(kasperl): We cannot express this.
+  // const bool.fromEnvironment(String name, {bool defaultValue: false});
+
   String toString() => this ? "true" : "false";
 }
 
+// Matches dart:core on Jan 21, 2015.
 class Symbol {
   final String _name;
-
   const Symbol(String name) : _name = name;
 
   bool operator ==(Symbol other) {
     return _name == other._name;
   }
 
+  int get hashCode => _name.hashCode;
+
   String toString() => _name;
 }
 
+// Matches dart:core on Jan 21, 2015.
 class Type {
   Type._internal();
+}
+
+// Matches dart:core on Jan 21, 2015.
+class StackTrace {
 }
 
 class _Type implements Type {
   final String _name;
   const _Type(this._name);
   String toString() => _name;
-}
-
-class StackTrace {
 }
