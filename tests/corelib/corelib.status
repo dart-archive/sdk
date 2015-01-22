@@ -257,7 +257,6 @@ regexp/norepeat_test: Fail
 regexp/overflow_test: Fail
 regexp/parentheses_test: Fail
 regexp/pcre-test-4_test: Fail
-regexp/pcre_test: Fail
 regexp/quantified-assertions_test: Fail
 regexp/range-bound-ffff_test: Fail
 regexp/range-out-of-order_test: Fail
@@ -355,3 +354,9 @@ list_reversed_test: Crash
 [ $mode == release ]
 list_map_test: Fail
 list_reversed_test: Fail
+
+[ $arch == ia32 ]
+regexp/pcre_test: Fail
+
+[ $arch == x64 ]
+regexp/pcre_test: Crash
