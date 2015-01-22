@@ -2790,8 +2790,7 @@ int Compiler::GetNamedStaticMethodStub(MethodNode* method,
     return named_map->Lookup(stub_name->id());
   }
 
-  bool with_this = method->owner()->IsClass() &&
-    !method->modifiers().is_static();
+  bool with_this = HasThisArgument(method);
 
   Emitter emitter(zone(), num_arguments + (with_this ? 1 : 0));
 
