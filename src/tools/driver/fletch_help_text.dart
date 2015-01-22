@@ -11,9 +11,6 @@ Common commands:
   help <command>   - show detailed help for a command.
   init <path       - create/connect to a Fletch project.
   show <thing>     - show details about the things in the project.
-
-Extended commands:
-  logcat <command> - manage logs for Fletch operations
 ''';
 
 const INIT_HELP_TEXT = r'''

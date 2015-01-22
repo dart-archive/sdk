@@ -15,7 +15,7 @@ main(args) {
   final commandHandlers = {
      "help" : help,
      "show" : show,
-     "init" : init,
+     "init" : init
   };
 
   if (!commandHandlers.containsKey(command)) {
