@@ -11,7 +11,13 @@ abstract class List<E> implements Iterable<E> {
   }
 
   factory List.filled(int length, E fill) {
-    throw new UnimplementedError("List.filled");
+    var result = new List<E>(length);
+    if (fill != null) {
+      for (var i = 0; i < length; ++i) {
+        result[i] = fill;
+      }
+    }
+    return result;
   }
 
   factory List.from(Iterable other, { bool growable: true }) {
@@ -21,7 +27,17 @@ abstract class List<E> implements Iterable<E> {
 
   factory List.generate(int length, E generator(int index),
                        { bool growable: true }) {
-    throw new UnimplementedError("List.generate");
+    var result;
+    if (growable) {
+      result = <E>[];
+      result.length = length;
+    } else {
+      result = new List<E>(length);
+    }
+    for (var i = 0; i < length; ++i) {
+      result[i] = generator(i);
+    }
+    return result;
   }
 
   E operator[](int index);
@@ -112,16 +128,27 @@ class _ConstantList<E> implements List<E> {
   }
 
   E reduce(E combine(E value, E element)) {
-    throw new UnimplementedError("_ConstantList.reduce");
+    if (length == 0) throw new StateError("No element");
+    var value = this[0];
+    for (int i = 1; i < length; i++) {
+      value = combine(value, this[i]);
+    }
+    return value;
   }
 
   dynamic fold(var initialValue,
                dynamic combine(var previousValue, E element)) {
-    throw new UnimplementedError("_ConstantList.fold");
+    for (int i = 0; i < length; i++) {
+      initialValue = combine(initialValue, this[i]);
+    }
+    return initialValue;
   }
 
   bool every(bool test(E element)) {
-    throw new UnimplementedError("_ConstantList.every");
+    for (int i = 0; i < length; i++) {
+      if (!test(this[i])) return false;
+    }
+    return true;
   }
 
   String join([String separator = ""]) {
@@ -131,11 +158,24 @@ class _ConstantList<E> implements List<E> {
   }
 
   bool any(bool test(E element)) {
-    throw new UnimplementedError("_ConstantList.any");
+    for (int i = 0; i < length; i++) {
+      if (test(this[i])) return true;
+    }
+    return false;
   }
 
   List<E> toList({ bool growable: true }) {
-    throw new UnimplementedError("_ConstantList.toList");
+    var result;
+    if (growable) {
+      result = <E>[];
+      result.length = length;
+    } else {
+      result = new List<E>(length);
+    }
+    for (int i = 0; i < length; i++) {
+      list[i] = this[i];
+    }
+    return result;
   }
 
   Set<E> toSet() {
@@ -164,9 +204,15 @@ class _ConstantList<E> implements List<E> {
     throw new UnimplementedError("_ConstantList.skipWhile");
   }
 
-  E get first => this[0];
+  E get first {
+    if (length == 0) throw new StateError("No element");
+    return this[0];
+  }
 
-  E get last => this[length - 1];
+  E get last {
+    if (length == 0) throw new StateError("No element");
+    return this[length - 1];
+  }
 
   E get single {
     throw new UnimplementedError("_ConstantList.single");
@@ -224,6 +270,8 @@ class _ConstantList<E> implements List<E> {
   }
 
   int indexOf(E element, [int start = 0]) {
+    if (start >= length) return -1;
+    if (start < 0) start = 0;
     for (int i = start; i < length; i++) {
       if (this[i] == element) return i;
     }
@@ -231,7 +279,15 @@ class _ConstantList<E> implements List<E> {
   }
 
   int lastIndexOf(E element, [int start]) {
-    throw new UnimplementedError("_ConstantList.lastIndexOf");
+    if (start == null) start = length - 1;
+    if (start < 0) return -1;
+    if (start >= length) start = length - 1;
+    for (int i = start; i >= 0; i--) {
+      if (this[i] == element) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   void clear() {
@@ -323,7 +379,10 @@ class _FixedList<E> extends _ConstantList<E> {
   }
 
   void fillRange(int start, int end, [E fillValue]) {
-    throw new UnimplementedError("_FixedList.fillRange");
+    RangeError.checkValidRange(start, end, length);
+    for (int i = start; i < end; i++) {
+      this[i] = fillValue;
+    }
   }
 
   E operator[]=(int index, value) native catch (error) {
@@ -370,16 +429,27 @@ class _GrowableList<E> implements List<E> {
   }
 
   E reduce(E combine(E value, E element)) {
-    throw new UnimplementedError("_GrowableList.reduce");
+    if (length == 0) throw new StateError("No element");
+    var value = this[0];
+    for (int i = 1; i < length; i++) {
+      value = combine(value, this[i]);
+    }
+    return value;
   }
 
   dynamic fold(var initialValue,
                dynamic combine(var previousValue, E element)) {
-    throw new UnimplementedError("_GrowableList.fold");
+    for (int i = 0; i < length; i++) {
+      initialValue = combine(initialValue, this[i]);
+    }
+    return initialValue;
   }
 
   bool every(bool test(E element)) {
-    throw new UnimplementedError("_GrowableList.every");
+    for (int i = 0; i < length; i++) {
+      if (!test(this[i])) return false;
+    }
+    return true;
   }
 
   String join([String separator = ""]) {
@@ -389,11 +459,24 @@ class _GrowableList<E> implements List<E> {
   }
 
   bool any(bool test(E element)) {
-    throw new UnimplementedError("_GrowableList.any");
+    for (int i = 0; i < length; i++) {
+      if (test(this[i])) return true;
+    }
+    return false;
   }
 
   List<E> toList({ bool growable: true }) {
-    throw new UnimplementedError("_GrowableList.toList");
+    var result;
+    if (growable) {
+      result = <E>[];
+      result.length = length;
+    } else {
+      result = new List<E>(length);
+    }
+    for (int i = 0; i < length; i++) {
+      list[i] = this[i];
+    }
+    return result;
   }
 
   Set<E> toSet() {
@@ -422,9 +505,15 @@ class _GrowableList<E> implements List<E> {
     throw new UnimplementedError("_GrowableList.skipWhile");
   }
 
-  E get first => this[0];
+  E get first {
+    if (length == 0) throw new StateError("No element");
+    return this[0];
+  }
 
-  E get last => this[_length - 1];
+  E get last {
+    if (length == 0) throw new StateError("No element");
+    return this[length - 1];
+  }
 
   E get single {
     throw new UnimplementedError("_GrowableList.single");
@@ -487,6 +576,8 @@ class _GrowableList<E> implements List<E> {
   }
 
   int indexOf(E element, [int start = 0]) {
+    if (start >= length) return -1;
+    if (start < 0) start = 0;
     for (int i = start; i < length; i++) {
       if (this[i] == element) return i;
     }
@@ -494,7 +585,15 @@ class _GrowableList<E> implements List<E> {
   }
 
   int lastIndexOf(E element, [int start]) {
-    throw new UnimplementedError("_GrowableList.lastIndexOf");
+    if (start == null) start = length - 1;
+    if (start < 0) return -1;
+    if (start >= length) start = length - 1;
+    for (int i = start; i >= 0; i--) {
+      if (this[i] == element) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   void clear() {
@@ -571,11 +670,18 @@ class _GrowableList<E> implements List<E> {
   }
 
   void removeRange(int start, int end) {
-    throw new UnimplementedError("_GrowableList.removeRange");
+    RangeError.checkValidRange(start, end, length);
+    for (int i = 0; i < length - end; i++) {
+      this[start + i] = this[end + i];
+    }
+    length -= (end - start);
   }
 
   void fillRange(int start, int end, [E fillValue]) {
-    throw new UnimplementedError("_GrowableList.fillRange");
+    RangeError.checkValidRange(start, end, length);
+    for (int i = start; i < end; i++) {
+      this[i] = fillValue;
+    }
   }
 
   void replaceRange(int start, int end, Iterable<E> replacement) {
