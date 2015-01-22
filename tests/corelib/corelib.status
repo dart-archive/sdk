@@ -125,12 +125,10 @@ iterable_contains2_test: Fail
 iterable_contains_test: CompileTimeError
 iterable_element_at_test: Fail
 iterable_expand_test: CompileTimeError
-iterable_first_test: Fail
 iterable_first_where_test: Fail
 iterable_fold_test: CompileTimeError
 iterable_generate_test: Crash
 iterable_join_test: Fail
-iterable_last_test: Fail
 iterable_last_where_test: Fail
 iterable_length_test: CompileTimeError
 iterable_mapping_test: Fail
