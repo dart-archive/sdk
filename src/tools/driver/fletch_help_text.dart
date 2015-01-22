@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+library fletch_driver.help_text;
+
 const HELP_TEXT = r'''
 Usage: fletch command
 
@@ -31,6 +33,16 @@ Supported things:
   class[es]
   method[s]
   poi
+''';
+
+const LOGCAT_HELP_TEXT = r'''
+Usage fletch logcat <command>
+
+Manages information logged by Fletch
+
+Commands:
+  start <port_number> <path>
+      - start a logcat server on the specified port and target
 ''';
 
 const FAIL_HELP_TEXT = r'''
