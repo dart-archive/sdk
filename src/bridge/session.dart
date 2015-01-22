@@ -12,6 +12,10 @@ part 'program_model.dart';
 part 'stack_trace.dart';
 part 'utils.dart';
 
+// To make it easy to bootstrap a new bytecode compiler, we allow running
+// with a super small library implementation.
+const SIMPLE_SYSTEM = const bool.fromEnvironment("simple-system");
+
 class Command {
   final Opcode opcode;
   final List buffer;
@@ -287,6 +291,9 @@ class Session {
             _model.methodNameMap[selector.id] = method.name;
           }
           _classConstruction = false;
+          break;
+        case Opcode.RunMain:
+          if (SIMPLE_SYSTEM) _model.dumpMethods();
           break;
         default:
           break;

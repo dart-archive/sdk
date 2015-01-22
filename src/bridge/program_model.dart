@@ -25,6 +25,19 @@ class Method {
   final List<int> bytecodes;
 
   Method(this.name, this.bytecodes);
+
+  void dump(int index, ProgramModel model) {
+    print("method @$index: $name");
+    var i = 0;
+    while (i < bytecodes.length) {
+      var current = _bytecodes[bytecodes[i]];
+      var bytecodeString = current.toString(i, bytecodes, model);
+      i += current.size;
+      print("$bytecodeString");
+      if (current == _bytecodes.last) break;
+    }
+    print("");
+  }
 }
 
 class Class {
@@ -57,4 +70,10 @@ class ProgramModel {
   ProgramModel() { }
 
   Map lookupMap(int id) => _mapsMap[id];
+
+  void dumpMethods() {
+    methodMap.forEach((int index, Method method) {
+      method.dump(index, this);
+    });
+  }
 }

@@ -24,10 +24,13 @@ void Compile(const char* lib, const char* uri, int port, const char* out) {
   Builder builder(&zone, connection);
   Compiler compiler(&zone, &builder, lib);
 
-  LibraryElement* root = compiler.loader()->LoadLibrary(uri, uri);
-  if (root == NULL) {
-    Location location;
-    builder.ReportError(location, "Cannot load code.");
+  LibraryElement* root = NULL;
+  if (!Flags::IsOn("simple-system")) {
+    root = compiler.loader()->LoadLibrary(uri, uri);
+    if (root == NULL) {
+      Location location;
+      builder.ReportError(location, "Cannot load code.");
+    }
   }
 
   Session session(connection);

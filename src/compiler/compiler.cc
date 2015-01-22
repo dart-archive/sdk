@@ -545,56 +545,70 @@ Compiler::Compiler(Zone* zone, Builder* builder, const char* library_root)
 
 void Compiler::CompileLibrary(LibraryElement* element,
                               CompilerConsumer* consumer) {
+  bool use_simple_system = Flags::IsOn("simple-system");
   consumer_ = consumer;
 
   // Load main through 'dart:system's _entry method.
-  LibraryElement* system = loader_.FetchLibrary("dart:system");
-  system->AddImportOf(element);
+  LibraryElement* system;
+  if (use_simple_system) {
+    ASSERT(element == NULL);
+    const char* uri = OS::UriResolve(
+        loader_.library_root(),
+        "simple_system/system.dart",
+        builder()->zone());
+    system = loader_.LoadLibrary("dart:system", uri);
+  } else {
+    system = loader_.FetchLibrary("dart:system");
+    system->AddImportOf(element);
+  }
 
-  const char* entry_name = Flags::IsOn("scheduler")
-      ? "_entryScheduler"
-      : "_entry";
-  IdentifierNode* entry_identifier = builder()->Canonicalize(entry_name);
+  IdentifierNode* entry_identifier = builder()->Canonicalize("_entry");
   Scope* system_scope = system->library()->scope();
   MemberEntry* entry = system_scope->Lookup(entry_identifier)->AsMember();
   ASSERT(entry != NULL);
   int entry_id = Enqueue(entry->member()->AsMethod());
 
-  // Verify that main is valid.
-  IdentifierNode* main_identifier = builder()->Canonicalize("main");
-  ScopeEntry* main_entry = system_scope->Lookup(main_identifier);
-  if (main_entry == NULL) {
-    Error(Location(), "Unable to locate main");
+  int main_arity = 0;
+  if (!use_simple_system) {
+    // Verify that main is valid.
+    IdentifierNode* main_identifier = builder()->Canonicalize("main");
+    ScopeEntry* main_entry = system_scope->Lookup(main_identifier);
+    if (main_entry == NULL) {
+      Error(Location(), "Unable to locate main");
+    }
+    TreeNode* node = main_entry->AsMember()->member();
+    if (node == NULL) {
+      Error(Location(), "main can not be a setter");
+    }
+    MethodNode* main = node->AsMethod();
+    if (main == NULL || main->modifiers().is_get()) {
+      Error(Location(), "main must be a method");
+    }
+    main_arity = main->parameters().length();
   }
-  TreeNode* node = main_entry->AsMember()->member();
-  if (node == NULL) {
-    Error(Location(), "main can not be a setter");
-  }
-  MethodNode* main = node->AsMethod();
-  if (main == NULL || main->modifiers().is_get()) {
-    Error(Location(), "main must be a method");
-  }
-  int main_arity = main->parameters().length();
 
   static const int kObjectClassId = 0;
   consumer->Initialize(kObjectClassId);
-  int object_class_id = EnqueueCoreClass("Object")->id();
-  ASSERT(object_class_id == kObjectClassId);
 
-  EnqueueCoreClass("bool");
-  EnqueueCoreClass("Null");
-  EnqueueCoreClass("double");
-  EnqueueCoreClass("_Smi");
-  EnqueueCoreClass("_Mint");
-  EnqueueCoreClass("List");
-  EnqueueCoreClass("_ConstantList");
-  EnqueueCoreClass("_ConstantMap");
-  EnqueueCoreClass("String");
+  if (!use_simple_system) {
+    int object_class_id = EnqueueCoreClass("Object")->id();
+    ASSERT(object_class_id == kObjectClassId);
 
-  EnqueueSelectorId(Names::kNoSuchMethod);
-  EnqueueSelectorId(Names::kNoSuchMethodTrampoline);
-  EnqueueSelectorId(Names::kYield);
-  EnqueueSelectorId(Names::kCoroutineStart);
+    EnqueueCoreClass("bool");
+    EnqueueCoreClass("Null");
+    EnqueueCoreClass("double");
+    EnqueueCoreClass("_Smi");
+    EnqueueCoreClass("_Mint");
+    EnqueueCoreClass("List");
+    EnqueueCoreClass("_ConstantList");
+    EnqueueCoreClass("_ConstantMap");
+    EnqueueCoreClass("String");
+
+    EnqueueSelectorId(Names::kNoSuchMethod);
+    EnqueueSelectorId(Names::kNoSuchMethodTrampoline);
+    EnqueueSelectorId(Names::kYield);
+    EnqueueSelectorId(Names::kCoroutineStart);
+  }
 
   ProcessQueue();
 

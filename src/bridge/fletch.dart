@@ -15,7 +15,13 @@ addCompilerOutput(stream) {
 }
 
 main(args) {
-  if (args.length != 1) {
+  if (SIMPLE_SYSTEM) {
+    if (args.length != 0) {
+      print('usage: fletch.dart');
+      print("Don't pass a <file> when running the simple system.");
+      exit(1);
+    }
+  } else if (args.length != 1) {
     print('usage: fletch.dart <file>');
     exit(1);
   }
@@ -27,12 +33,14 @@ main(args) {
   var compiler = "$buildDir/fletchc";
   var vm = "$buildDir/fletch";
 
-  var testFile = args[0];
+  var testFile = SIMPLE_SYSTEM ? '<dummy.dart>' : args[0];
   ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0).then((server) {
     var portArgument = '--port=${server.port}';
     var bridgeArgument = "-Xbridge-connection";
     var connectionIterator = new StreamIterator(server);
-    Process.start(compiler, [testFile, portArgument, bridgeArgument])
+    var compilerArgs = [testFile, portArgument, bridgeArgument];
+    if (SIMPLE_SYSTEM) compilerArgs.add("-Xsimple-system");
+    Process.start(compiler, compilerArgs)
       .then((compilerProcess) {
         compilerProcess.stdout.listen(addCompilerOutput(stdout));
         compilerProcess.stderr.listen(addCompilerOutput(stderr));

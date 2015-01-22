@@ -59,20 +59,24 @@ LibraryElement* LibraryLoader::LoadLibrary(
     printf("Loaded '%s' as %i\n", library_name, id);
   }
 
-  // Add implicit import of dart:core.
-  if (strcmp(library_name, "dart:core") != 0) {
-    const char* core_source_uri =
-        OS::UriResolve(library_root(), "core/core.dart", builder()->zone());
-    LibraryElement* core = LoadLibrary("dart:core", core_source_uri);
-    element->AddImportOf(core);
-  }
+  if (!Flags::IsOn("simple-system")) {
+    // Add implicit import of dart:core.
+    if (strcmp(library_name, "dart:core") != 0) {
+      const char* core_source_uri =
+          OS::UriResolve(library_root(), "core/core.dart", builder()->zone());
+      LibraryElement* core = LoadLibrary("dart:core", core_source_uri);
+      element->AddImportOf(core);
+    }
 
-  // Add implicit import of dart:system in dart:*.
-  if (strncmp(library_name, "dart:", 5) == 0) {
-    const char* system_source_uri =
-        OS::UriResolve(library_root(), "system/system.dart", builder()->zone());
-    LibraryElement* system = LoadLibrary("dart:system", system_source_uri);
-    element->AddImportOf(system);
+    // Add implicit import of dart:system in dart:*.
+    if (strncmp(library_name, "dart:", 5) == 0) {
+      const char* system_source_uri = OS::UriResolve(
+          library_root(),
+          "system/system.dart",
+          builder()->zone());
+      LibraryElement* system = LoadLibrary("dart:system", system_source_uri);
+      element->AddImportOf(system);
+    }
   }
 
   CompilationUnitNode* unit = library->unit();
