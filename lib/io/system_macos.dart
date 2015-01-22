@@ -39,7 +39,7 @@ class KEvent extends Struct {
   KEvent() : super.finalize(6);
 
   void clear() {
-    for (int i = 0; i < size; i += wordSize) setWord(i, 0);
+    for (int i = 0; i < length; i += wordSize) setWord(i, 0);
   }
 
   get ident => getWord(0);
