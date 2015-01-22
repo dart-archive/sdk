@@ -7,6 +7,7 @@
 #include "src/shared/fletch.h"
 #include "src/shared/assert.h"
 
+#include "src/vm/ffi.h"
 #include "src/vm/list.h"
 #include "src/vm/program.h"
 #include "src/vm/snapshot.h"
@@ -52,4 +53,8 @@ void FletchRunSnapshot(unsigned char* snapshot, int length) {
 
 void FletchRunSnapshotFromFile(const char* path) {
   fletch::RunShapshotFromFile(path);
+}
+
+void FletchAddDefaultSharedLibrary(const char* library) {
+  fletch::ForeignFunctionInterface::AddDefaultSharedLibrary(library);
 }

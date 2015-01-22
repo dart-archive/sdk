@@ -14,6 +14,7 @@ LOCAL_SRC_FILES := \
 	../../../src/shared/native_socket_posix.cc \
 	../../../src/shared/bytecodes.cc \
 	../../../src/vm/event_handler.cc \
+	../../../src/vm/ffi.cc \
 	../../../src/vm/fletch_api_impl.cc \
 	../../../src/vm/scheduler.cc \
 	../../../src/vm/platform_posix.cc \
@@ -47,4 +48,4 @@ LOCAL_SRC_FILES := \
 	../../../third_party/double-conversion/src/bignum.cc \
 	../../../third_party/double-conversion/src/diy-fp.cc \
 
-include $(BUILD_SHARED_LIBRARY)
+include $(BUILD_STATIC_LIBRARY)

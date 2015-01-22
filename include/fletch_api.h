@@ -27,4 +27,12 @@ FLETCH_EXPORT void FletchRunSnapshot(unsigned char* snapshot, int length);
 // process.
 FLETCH_EXPORT void FletchRunSnapshotFromFile(const char* path);
 
+// Add a default shared library for the dart:ffi foreign lookups.
+// More than one default shared library can be added. The libraries
+// are used for foreign lookups where no library has been specified.
+// The libraries are searched in the order in which they are added.
+// The library string must be null-terminated and Fletch does not
+// take over ownership of the passed in string.
+FLETCH_EXPORT void FletchAddDefaultSharedLibrary(const char* library);
+
 #endif  // INCLUDE_SERVICE_API_H_
