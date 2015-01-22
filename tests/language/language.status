@@ -466,7 +466,7 @@ illegal_initializer_test/none: Crash
 implicit_closure_test: Fail
 implicit_this_test/02: Fail
 implied_interface_test: Fail
-import_collection_no_prefix_test: CompileTimeError
+import_collection_no_prefix_test: Fail
 import_combinators_negative_test: Fail
 import_combinators_test: Fail
 import_core_prefix_test: CompileTimeError
@@ -970,7 +970,7 @@ vm/optimized_guarded_field_isolates_test: CompileTimeError
 vm/optimized_guarded_field_test: CompileTimeError
 vm/reflect_core_vm_test: CompileTimeError
 vm/regress_14903_test: CompileTimeError
-vm/regress_16873_test: CompileTimeError
+vm/regress_16873_test: Fail
 vm/reusable_boxes_test: CompileTimeError
 vm/store_to_load_forwarding_phis_vm_test: CompileTimeError
 vm/type_cast_vm_test: CompileTimeError
@@ -1016,9 +1016,6 @@ compile_time_constant_k_test/03: Fail
 constructor6_test: Fail
 function_literals2_test: Fail
 inferrer_synthesized_constructor_test: Fail
-
-[ $asan && $arch == x64 && $mode == release ]
-issue4295001_test: Fail
 
 [ $asan && $mode == debug ]
 gc_test: Pass, Slow

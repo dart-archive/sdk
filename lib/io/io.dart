@@ -71,5 +71,5 @@ class ByteBuffer {
   ByteBuffer.withOffset(ByteBuffer buffer, this.offset)
       : _foreign = buffer._foreign;
 
-  int get length => _foreign.size - offset;
+  int get length => _foreign.length - offset;
 }

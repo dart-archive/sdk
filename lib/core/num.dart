@@ -4,6 +4,7 @@
 
 part of dart.core;
 
+// Matches dart:core on Jan 21, 2015.
 abstract class num implements Comparable<num> {
   int compareTo(num other) {
     if (this == other) {
@@ -15,30 +16,71 @@ abstract class num implements Comparable<num> {
     }
   }
 
-  bool get isFinite;
-  bool get isInfinite;
-  bool get isNaN;
-  bool get isNegative;
+  num operator +(num other);
 
-  double toDouble();
-  int toInt();
+  num operator -(num other);
 
-  num abs();
+  num operator *(num other);
+
+  num operator %(num other);
+
+  double operator /(num other);
+
+  int operator ~/(num other);
+
+  num operator -();
+
   num remainder(num other);
 
-  int ceil();
-  double ceilToDouble();
+  bool operator <(num other);
 
-  int floor();
-  double floorToDouble();
+  bool operator <=(num other);
+
+  bool operator >(num other);
+
+  bool operator >=(num other);
+
+  bool get isNaN;
+
+  bool get isNegative;
+
+  bool get isInfinite;
+
+  bool get isFinite;
+
+  num abs();
+
+  num get sign;
 
   int round();
-  double roundToDouble();
+
+  int floor();
+
+  int ceil();
 
   int truncate();
+
+  double roundToDouble();
+
+  double floorToDouble();
+
+  double ceilToDouble();
+
   double truncateToDouble();
 
+  num clamp(num lowerLimit, num upperLimit);
+
+  int toInt();
+
+  double toDouble();
+
   String toStringAsFixed(int fractionDigits);
+
   String toStringAsExponential([int fractionDigits]);
+
   String toStringAsPrecision(int precision);
+
+  static num parse(String input, [num onError(String input)]) {
+    throw new UnimplementedError("num.parse");
+  }
 }

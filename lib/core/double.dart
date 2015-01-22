@@ -4,10 +4,15 @@
 
 part of dart.core;
 
+// Matches dart:core on Jan 21, 2015.
 class double extends num {
   static const double NAN = 0.0 / 0.0;
   static const double INFINITY = 1.0 / 0.0;
   static const double NEGATIVE_INFINITY = -INFINITY;
+
+  // TODO(kasperl): The scanner cannot deal with these yet.
+  // static const double MIN_POSITIVE = 5e-324;
+  // static const double MAX_FINITE = 1.7976931348623157e+308;
 
   num operator -() native;
 
@@ -101,10 +106,14 @@ class double extends num {
     return (this == double.INFINITY || this == -double.INFINITY) && !isNaN;
   }
 
-  int get sign {
+  double get sign {
     if (this > 0.0) return 1.0;
     if (this < 0.0) return -1.0;
     return this;
+  }
+
+  num clamp(num lowerLimit, num upperLimit) {
+    throw new UnimplementedError("double.clamp");
   }
 
   double toDouble() => this;
@@ -144,6 +153,10 @@ class double extends num {
     if (this == double.INFINITY) return "Infinity";
     if (this == -double.INFINITY) return "-Infinity";
     return _toStringAsPrecision(digits);
+  }
+
+  static double parse(String source, [double onError(String source)]) {
+    throw new UnimplementedError("double.parse");
   }
 
   String _toStringAsExponential(int digits) native;

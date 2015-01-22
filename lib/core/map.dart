@@ -105,40 +105,6 @@ class _ConstantMap<K, V> implements Map<K, V> {
   bool get isNotEmpty => _keys.isEmpty;
 }
 
-class LinkedHashMap<K, V> extends _ConstantMap<K, V> {
-  void operator[]=(K key, V value) {
-    int index = _keys.indexOf(key);
-    if (index >= 0) {
-      _values[index] = value;
-    } else {
-      _keys.add(key);
-      _values.add(value);
-    }
-  }
-
-  V putIfAbsent(K key, V ifAbsent()) {
-    throw new UnimplementedError("LinkedHashMap.putIfAbsent");
-  }
-
-  void addAll(Map<K, V> other) {
-    other.forEach((K key, V value) {
-      this[key] = value;
-    });
-  }
-
-  V remove(Object key) {
-    int index = _keys.indexOf(key);
-    if (index < 0) return null;
-    _keys.removeAt(index);
-    return _values.removeAt(index);
-  }
-
-  void clear() {
-    _keys.clear();
-    _values.clear();
-  }
-}
-
 class _MapIterable<E> implements Iterable<E> {
   final _list;
   _MapIterable(this._list);

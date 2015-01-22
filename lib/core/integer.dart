@@ -4,13 +4,24 @@
 
 part of dart.core;
 
-class int extends num {
-  bool get isOdd => (this & 1) == 1;
-  bool get isEven => (this & 1) == 0;
+// Matches dart:core on Jan 21, 2015.
+abstract class int extends num {
+  // TODO(kasperl): We cannot express this.
+  // const factory int.fromEnvironment(String name, {int defaultValue});
+
+  num remainder(num other) {
+    return this - (this ~/ other) * other;
+  }
+
   bool get isNaN => false;
+
   bool get isNegative => this < 0;
-  bool get isFinite => true;
+
   bool get isInfinite => false;
+
+  bool get isFinite => true;
+
+  int abs() => isNegative ? -this : this;
 
   int get sign {
     if (this > 0) return 1;
@@ -18,32 +29,77 @@ class int extends num {
     return 0;
   }
 
-  int toInt() => this;
-
-  String toStringAsExponential([int digits]) {
-    return toDouble().toStringAsExponential(digits);
-  }
-
-  String toStringAsFixed(int digits) => toDouble().toStringAsFixed(digits);
-
-  String toStringAsPrecision(int digits) {
-    return toDouble().toStringAsPrecision(digits);
-  }
-
-  int abs() => isNegative ? -this : this;
-  int remainder(num other) => this - (this ~/ other) * other;
-
   int round() => this;
-  double roundToDouble() => this.toDouble();
 
   int floor() => this;
-  double floorToDouble() => this.toDouble();
 
   int ceil() => this;
-  double ceilToDouble() => this.toDouble();
 
   int truncate() => this;
+
+  double roundToDouble() => this.toDouble();
+
+  double floorToDouble() => this.toDouble();
+
+  double ceilToDouble() => this.toDouble();
+
   double truncateToDouble() => this.toDouble();
+
+  num clamp(num lowerLimit, num upperLimit) {
+    throw new UnimplementedError("int.clamp");
+  }
+
+  int toInt() => this;
+
+  String toStringAsFixed(int fractionDigits) {
+    return toDouble().toStringAsFixed(fractionDigits);
+  }
+
+  String toStringAsExponential([int fractionDigits]) {
+    return toDouble().toStringAsExponential(fractionDigits);
+  }
+
+  String toStringAsPrecision(int precision) {
+    return toDouble().toStringAsPrecision(fractionDigits);
+  }
+
+  static int parse(String source, {int radix, int onError(String source)}) {
+    throw new UnimplementedError("int.parse");
+  }
+
+  int operator &(int other);
+
+  int operator |(int other);
+
+  int operator ^(int other);
+
+  int operator ~();
+
+  int operator <<(int shiftAmount);
+
+  int operator >>(int shiftAmount);
+
+  bool get isOdd => (this & 1) == 1;
+
+  bool get isEven => (this & 1) == 0;
+
+  int get bitLength {
+    throw new UnimplementedError("int.bitLength");
+  }
+
+  int toUnsigned(int width) {
+    throw new UnimplementedError("int.toUnsigned");
+  }
+
+  int toSigned(int width) {
+    throw new UnimplementedError("int.toSigned");
+  }
+
+  int operator -();
+
+  String toRadixString(int radix) {
+    throw new UnimplementedError("int.toRadixString");
+  }
 
   double _addFromDouble(double other) => other + toDouble();
   double _subFromDouble(double other) => other - toDouble();
@@ -98,7 +154,7 @@ class _Smi extends int {
     return other._divFromInteger(this);
   }
 
-  num operator ~/(num other) native catch (error) {
+  int operator ~/(num other) native catch (error) {
     switch (error) {
       case _wrongArgumentType:
         return other._truncDivFromInteger(this);
@@ -280,7 +336,6 @@ class _Mint extends int {
     // TODO(kasperl): Check error.
     return other._compareGeFromInteger(this);
   }
-
 
   int _addFromInteger(int other) => other._toMint() + this;
   int _subFromInteger(int other) => other._toMint() - this;

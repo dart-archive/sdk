@@ -15,22 +15,22 @@ class Foreign {
   static final Foreign NULL = new Foreign();
 
   int _value;
-  int _size;
+  int _length;
 
-  Foreign() : _value = 0, _size = 0;
+  Foreign() : _value = 0, _length = 0;
 
-  Foreign.allocated(this._size) {
-    _value = _allocate(_size);
+  Foreign.allocated(this._length) {
+    _value = _allocate(_length);
   }
 
-  Foreign.allocatedFinalize(this._size) {
-    _value = _allocate(_size);
+  Foreign.allocatedFinalize(this._length) {
+    _value = _allocate(_length);
     _markForFinalization();
   }
 
-  Foreign.fromAddress(this._value, this._size);
+  Foreign.fromAddress(this._value, this._length);
 
-  Foreign.fromAddressFinalize(this._value, this._size) {
+  Foreign.fromAddressFinalize(this._value, this._length) {
     _markForFinalization();
   }
 
@@ -52,7 +52,7 @@ class Foreign {
   static final int platform = _platform();
 
   int get value => _value;
-  int get size => _size;
+  int get length => _length;
 
   int getInt8(int offset)
       => _getInt8(_computeAddress(offset, 1));
@@ -105,9 +105,9 @@ class Foreign {
   }
 
   void free() {
-    if (_size > 0) _free(_value);
+    if (_length > 0) _free(_value);
     _value = 0;
-    _size = 0;
+    _length = 0;
   }
 
   // Support for calling foreign functions that return
@@ -164,7 +164,7 @@ class Foreign {
   // Helper for checking bounds and computing derived
   // address for memory address functionality.
   int _computeAddress(int offset, int n) {
-    if (offset < 0 || offset + n > _size) throw new IndexError(offset, this);
+    if (offset < 0 || offset + n > _length) throw new IndexError(offset, this);
     return _value + offset;
   }
 
@@ -189,7 +189,7 @@ class Foreign {
   static int _call$5(int address, a0, a1, a2, a3, a4) native;
   static int _call$6(int address, a0, a1, a2, a3, a4, a5) native;
 
-  static int _allocate(int size) native;
+  static int _allocate(int length) native;
   static void _free(int address) native;
   void _markForFinalization() native;
 

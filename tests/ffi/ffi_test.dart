@@ -53,10 +53,10 @@ testPCall() {
 }
 
 testAllocate(bool finalized) {
-  int size = 10;
+  int length = 10;
   Foreign memory = finalized
-    ? new Foreign.allocatedFinalize(size)
-    : new Foreign.allocated(size);
+    ? new Foreign.allocatedFinalize(length)
+    : new Foreign.allocated(length);
   Expect.isTrue(memory.value != 0);
 
   Expect.throws(() => memory.getUint8(-100), isRangeError);
@@ -68,12 +68,12 @@ testAllocate(bool finalized) {
 
   Expect.equals(0, memory.getUint32(6));
 
-  for (int i = 0; i < size; i++) {
+  for (int i = 0; i < length; i++) {
     Expect.equals(0, memory.getUint8(i));
     Expect.equals(i, memory.setUint8(i, i));
   }
 
-  for (int i = 0; i < size; i++) {
+  for (int i = 0; i < length; i++) {
     Expect.equals(i, memory.getUint8(i));
   }
 

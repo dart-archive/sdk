@@ -888,8 +888,8 @@ NATIVE(ForeignLookup) {
 }
 
 NATIVE(ForeignAllocate) {
-  word size = AsForeignWord(arguments[0]);
-  void* result = calloc(1, size);
+  word length = AsForeignWord(arguments[0]);
+  void* result = calloc(1, length);
   return process->ToInteger(reinterpret_cast<intptr_t>(result));
 }
 

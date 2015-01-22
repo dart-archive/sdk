@@ -5,12 +5,14 @@
 library dart.core;
 
 import 'dart:ffi';
+import 'dart:collection';
 
 part 'annotations.dart';
 part 'comparable.dart';
 part 'coroutine.dart';
 part 'double.dart';
-part 'error.dart';
+part 'errors.dart';
+part 'exceptions.dart';
 part 'expando.dart';
 part 'integer.dart';
 part 'iterable.dart';
@@ -23,10 +25,11 @@ part 'process.dart';
 part 'regexp.dart';
 part 'runes.dart';
 part 'set.dart';
+part 'sink.dart';
 part 'string.dart';
 part 'thread.dart';
 part 'time.dart';
-part 'unimplemented.dart';
+part 'uri.dart';
 
 // Matches dart:core on Jan 21, 2015.
 external bool identical(Object a, Object b);

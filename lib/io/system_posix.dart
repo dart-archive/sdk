@@ -127,7 +127,7 @@ class PosixSystem implements System {
 
   int bind(int fd, InternetAddress address, int port) {
     Foreign sockaddr = _createSocketAddress(address, port);
-    int status = _retry(() => _bind.icall$3(fd, sockaddr, sockaddr.size));
+    int status = _retry(() => _bind.icall$3(fd, sockaddr, sockaddr.length));
     sockaddr.free();
     return status;
   }
@@ -158,7 +158,7 @@ class PosixSystem implements System {
 
   int connect(int fd, InternetAddress address, int port) {
     Foreign sockaddr = _createSocketAddress(address, port);
-    int status = _retry(() => _connect.icall$3(fd, sockaddr, sockaddr.size));
+    int status = _retry(() => _connect.icall$3(fd, sockaddr, sockaddr.length));
     sockaddr.free();
     return status;
   }
