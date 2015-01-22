@@ -6,15 +6,7 @@ part of dart.core;
 
 // Matches dart:core on Jan 21, 2015.
 abstract class num implements Comparable<num> {
-  int compareTo(num other) {
-    if (this == other) {
-      return 0;
-    } else if (this < other) {
-      return -1;
-    } else {
-      return 1;
-    }
-  }
+  int compareTo(num other);
 
   num operator +(num other);
 

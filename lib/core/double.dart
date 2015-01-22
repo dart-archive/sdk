@@ -14,6 +14,21 @@ class double extends num {
   // static const double MIN_POSITIVE = 5e-324;
   // static const double MAX_FINITE = 1.7976931348623157e+308;
 
+  int compareTo(num other) {
+    if (this < other) return -1;
+    if (this > other) return 1;
+    if (this == other) {
+      if (this == 0.0) {
+        var negative = isNegative;
+        if (negative == other.isNegative) return 0;
+        return negative ? -1 : 1;
+      }
+      return 0;
+    }
+    if (isNaN) return other.isNaN ? 0 : 1;
+    return -1;
+  }
+
   num operator -() native;
 
   num operator +(num other) native catch (error) {
@@ -45,7 +60,7 @@ class double extends num {
       case _wrongArgumentType:
         return other._truncDivFromDouble(this);
       case _indexOutOfBounds:
-        throw new UnsupportedError();
+        throw new UnsupportedError("double.~/ $this");
     }
   }
 
@@ -83,16 +98,25 @@ class double extends num {
     return other._remainderFromDouble(this);
   }
 
-  int round() native;
+  int round() native catch (error) {
+    throw new UnsupportedError("double.round $this");
+  }
+
+  int floor() native catch (error) {
+    throw new UnsupportedError("double.floor $this");
+  }
+
+  int ceil() native catch (error) {
+    throw new UnsupportedError("double.ceil $this");
+  }
+
+  int truncate() native catch (error) {
+    throw new UnsupportedError("double.truncate $this");
+  }
+
   double roundToDouble() native;
-
-  int floor() native;
   double floorToDouble() native;
-
-  int ceil() native;
   double ceilToDouble() native;
-
-  int truncate() native;
   double truncateToDouble() native;
 
   bool get isNaN native;
@@ -119,7 +143,7 @@ class double extends num {
   double toDouble() => this;
 
   int toInt() native catch (error) {
-    throw new UnsupportedError();
+    throw new UnsupportedError("double.toInt $this");
   }
 
   String toString() native;

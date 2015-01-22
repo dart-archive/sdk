@@ -502,8 +502,9 @@ NATIVE(DoubleIsNegative) {
 }
 
 NATIVE(DoubleCeil) {
-  Double* x = Double::cast(arguments[0]);
-  return process->ToInteger(static_cast<int64>(ceil(x->value())));
+  double value = Double::cast(arguments[0])->value();
+  if (isnan(value) || isinf(value)) return Failure::index_out_of_bounds();
+  return process->ToInteger(static_cast<int64>(ceil(value)));
 }
 
 NATIVE(DoubleCeilToDouble) {
@@ -512,8 +513,9 @@ NATIVE(DoubleCeilToDouble) {
 }
 
 NATIVE(DoubleRound) {
-  Double* x = Double::cast(arguments[0]);
-  return process->ToInteger(static_cast<int64>(round(x->value())));
+  double value = Double::cast(arguments[0])->value();
+  if (isnan(value) || isinf(value)) return Failure::index_out_of_bounds();
+  return process->ToInteger(static_cast<int64>(round(value)));
 }
 
 NATIVE(DoubleRoundToDouble) {
@@ -522,8 +524,9 @@ NATIVE(DoubleRoundToDouble) {
 }
 
 NATIVE(DoubleFloor) {
-  Double* x = Double::cast(arguments[0]);
-  return process->ToInteger(static_cast<int64>(floor(x->value())));
+  double value = Double::cast(arguments[0])->value();
+  if (isnan(value) || isinf(value)) return Failure::index_out_of_bounds();
+  return process->ToInteger(static_cast<int64>(floor(value)));
 }
 
 NATIVE(DoubleFloorToDouble) {
@@ -532,8 +535,9 @@ NATIVE(DoubleFloorToDouble) {
 }
 
 NATIVE(DoubleTruncate) {
-  Double* x = Double::cast(arguments[0]);
-  return process->ToInteger(static_cast<int64>(trunc(x->value())));
+  double value = Double::cast(arguments[0])->value();
+  if (isnan(value) || isinf(value)) return Failure::index_out_of_bounds();
+  return process->ToInteger(static_cast<int64>(trunc(value)));
 }
 
 NATIVE(DoubleTruncateToDouble) {
