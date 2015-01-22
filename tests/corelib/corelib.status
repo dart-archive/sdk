@@ -360,3 +360,6 @@ regexp/pcre_test: Fail
 
 [ $arch == x64 ]
 regexp/pcre_test: Crash
+
+[ $arch == x64 && $asan ]
+regexp/pcre_test: CompileTimeError
