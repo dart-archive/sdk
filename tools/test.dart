@@ -50,6 +50,7 @@ import "testing/dart/utils.dart";
  * moved to here, if possible.
 */
 final TEST_SUITE_DIRECTORIES = [
+    new Path('tests/corelib'),
     new Path('tests/coroutine'),
     new Path('tests/ffi'),
     new Path('tests/io'),
