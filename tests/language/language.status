@@ -1017,5 +1017,8 @@ constructor6_test: Fail
 function_literals2_test: Fail
 inferrer_synthesized_constructor_test: Fail
 
+[ $asan && $arch == x64 && $mode == release ]
+issue4295001_test: Fail
+
 [ $asan && $mode == debug ]
 gc_test: Pass, Slow
