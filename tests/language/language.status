@@ -82,7 +82,6 @@ closure_type_variable_test: Fail
 closure_with_super_field_test: Fail
 closures_initializer2_test: Fail
 closures_initializer_test: Fail
-comparison_test: Fail
 compile_time_constant10_test/01: Crash
 compile_time_constant10_test/02: Crash
 compile_time_constant10_test/none: Crash

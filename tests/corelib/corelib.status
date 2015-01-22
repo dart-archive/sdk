@@ -183,8 +183,6 @@ map_values3_test: Fail
 map_values4_test: Fail
 map_values_test: Fail
 maps_test: Fail
-nan_infinity_test/01: Fail
-nan_infinity_test/none: Fail
 null_test: Fail
 num_clamp_test: Fail
 num_parse_test/01: CompileTimeError

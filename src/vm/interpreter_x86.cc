@@ -983,6 +983,38 @@ void InterpreterGeneratorX86::DoCoroutineChange() {
 void InterpreterGeneratorX86::DoIdentical() {
   LoadLocal(EAX, 0);
   LoadLocal(EBX, 1);
+
+  // TODO(ager): For now we bail out if we have two doubles or two
+  // large integers and let the slow interpreter deal with it. These
+  // cases could be dealt with directly here instead.
+  Label fast_case;
+  Label bail_out;
+
+  // If either is a smi they are not both doubles or large integers.
+  __ testl(EAX, Immediate(Smi::kTagMask));
+  __ j(ZERO, &fast_case);
+  __ testl(EBX, Immediate(Smi::kTagMask));
+  __ j(ZERO, &fast_case);
+
+  // If they do not have the same type they are not both double or
+  // large integers.
+  __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
+  __ movl(ECX, Address(ECX, Class::kInstanceFormatOffset - HeapObject::kTag));
+  __ movl(EDX, Address(EBX, HeapObject::kClassOffset - HeapObject::kTag));
+  __ cmpl(ECX, Address(EDX, Class::kInstanceFormatOffset - HeapObject::kTag));
+  __ j(NOT_EQUAL, &fast_case);
+
+  int double_type = InstanceFormat::DOUBLE_TYPE;
+  int large_integer_type = InstanceFormat::LARGE_INTEGER_TYPE;
+  int type_field_shift = InstanceFormat::TypeField::shift();
+
+  __ andl(ECX, Immediate(InstanceFormat::TypeField::mask()));
+  __ cmpl(ECX, Immediate(double_type << type_field_shift));
+  __ j(EQUAL, &bail_out);
+  __ cmpl(ECX, Immediate(large_integer_type << type_field_shift));
+  __ j(EQUAL, &bail_out);
+
+  __ Bind(&fast_case);
   __ movl(ECX, Address(EBP, Process::ProgramOffset()));
 
   Label true_case;
@@ -999,6 +1031,10 @@ void InterpreterGeneratorX86::DoIdentical() {
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(kIdenticalLength);
+
+  __ Bind(&bail_out);
+  __ movl(EAX, Immediate(-1));
+  __ jmp(&done_);
 }
 
 void InterpreterGeneratorX86::DoEnterNoSuchMethod() {

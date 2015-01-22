@@ -4,6 +4,7 @@
 
 #include "src/vm/interpreter.h"
 
+#include <math.h>
 #include <stdlib.h>
 
 #include "src/shared/bytecodes.h"
@@ -639,7 +640,24 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
   OPCODE_END();
 
   OPCODE_BEGIN(Identical);
-    bool identical = Local(0) == Local(1);
+    Object* left = Local(0);
+    Object* right = Local(1);
+    bool identical;
+    if (left->IsDouble() && right->IsDouble()) {
+      double left_value = Double::cast(left)->value();
+      double right_value = Double::cast(right)->value();
+      if (isnan(left_value) && isnan(right_value)) {
+        identical = true;
+      } else {
+        identical = (left_value == right_value);
+      }
+    } else if (left->IsLargeInteger() && right->IsLargeInteger()) {
+      int64 left_value = LargeInteger::cast(left)->value();
+      int64 right_value = LargeInteger::cast(right)->value();
+      identical = (left_value == right_value);
+    } else {
+      identical = (Local(0) == Local(1));
+    }
     Drop(1);
     SetTop(ToBool(identical));
     Advance(kIdenticalLength);
