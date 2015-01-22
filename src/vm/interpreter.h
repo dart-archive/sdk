@@ -73,6 +73,10 @@ extern "C" Object* HandleObjectFromFailure(Process* process, Failure* failure);
 
 extern "C" void HandleCoroutineChange(Process* process, Coroutine* coroutine);
 
+extern "C" Object* HandleIdentical(Process* process,
+                                   Object* left,
+                                   Object* right);
+
 extern "C" LookupCache::Entry* HandleLookupEntry(Process* process,
                                                  LookupCache::Entry* primary,
                                                  Class* clazz,

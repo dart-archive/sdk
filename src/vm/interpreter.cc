@@ -640,26 +640,9 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
   OPCODE_END();
 
   OPCODE_BEGIN(Identical);
-    Object* left = Local(0);
-    Object* right = Local(1);
-    bool identical;
-    if (left->IsDouble() && right->IsDouble()) {
-      double left_value = Double::cast(left)->value();
-      double right_value = Double::cast(right)->value();
-      if (isnan(left_value) && isnan(right_value)) {
-        identical = true;
-      } else {
-        identical = (left_value == right_value);
-      }
-    } else if (left->IsLargeInteger() && right->IsLargeInteger()) {
-      int64 left_value = LargeInteger::cast(left)->value();
-      int64 right_value = LargeInteger::cast(right)->value();
-      identical = (left_value == right_value);
-    } else {
-      identical = (Local(0) == Local(1));
-    }
+    Object* result = HandleIdentical(process(), Local(1), Local(0));
     Drop(1);
-    SetTop(ToBool(identical));
+    SetTop(result);
     Advance(kIdenticalLength);
   OPCODE_END();
 
@@ -814,6 +797,27 @@ Object* HandleAllocateBoxed(Process* process, Object* value) {
 
 void HandleCoroutineChange(Process* process, Coroutine* coroutine) {
   process->UpdateCoroutine(coroutine);
+}
+
+Object* HandleIdentical(Process* process, Object* left, Object* right) {
+  bool identical;
+  if (left->IsDouble() && right->IsDouble()) {
+    double left_value = Double::cast(left)->value();
+    double right_value = Double::cast(right)->value();
+    if (isnan(left_value) && isnan(right_value)) {
+      identical = true;
+    } else {
+      identical = (left_value == right_value);
+    }
+  } else if (left->IsLargeInteger() && right->IsLargeInteger()) {
+    int64 left_value = LargeInteger::cast(left)->value();
+    int64 right_value = LargeInteger::cast(right)->value();
+    identical = (left_value == right_value);
+  } else {
+    identical = (left == right);
+  }
+  Program* program = process->program();
+  return identical ? program->true_object() : program->false_object();
 }
 
 LookupCache::Entry* HandleLookupEntry(Process* process,

@@ -1028,13 +1028,19 @@ void InterpreterGeneratorX86::DoIdentical() {
 
   __ Bind(&true_case);
   __ movl(EAX, Address(ECX, Program::true_object_offset()));
+
+  Label done;
+  __ Bind(&done);
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(kIdenticalLength);
 
   __ Bind(&bail_out);
-  __ movl(EAX, Immediate(-1));
-  __ jmp(&done_);
+  __ movl(Address(ESP, 0 * kWordSize), EBP);
+  __ movl(Address(ESP, 1 * kWordSize), EBX);
+  __ movl(Address(ESP, 2 * kWordSize), EAX);
+  __ call("HandleIdentical");
+  __ jmp(&done);
 }
 
 void InterpreterGeneratorX86::DoEnterNoSuchMethod() {
