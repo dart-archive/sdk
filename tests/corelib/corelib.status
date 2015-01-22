@@ -96,8 +96,8 @@ growable_list_test: CompileTimeError
 has_next_iterator_test: Fail
 hash_map2_internal_test: Crash
 hash_map2_test: Crash
-hash_set_test/01: Crash
-hash_set_test/none: Crash
+hash_set_test/01: Fail
+hash_set_test/none: Fail
 hashcode_boxed_test: Fail
 hashcode_test: Crash
 hidden_library2_test/none: Fail
@@ -281,11 +281,10 @@ safe_to_string_test: Fail
 set_containsAll_test: Fail
 set_contains_test: Fail
 set_intersection_test: Fail
-set_iterator_test: Fail
 set_removeAll_test: Fail
 set_remove_test: Fail
 set_retainAll_test: Fail
-set_test: Crash
+set_test: Fail
 set_to_string_test: Fail
 shuffle_test: CompileTimeError
 sort_test: Fail

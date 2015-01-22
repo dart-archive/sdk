@@ -18,7 +18,12 @@ class LinkedHashMap<K, V> extends _ConstantMap<K, V> {
   }
 
   V putIfAbsent(K key, V ifAbsent()) {
-    throw new UnimplementedError("LinkedHashMap.putIfAbsent");
+    V result = this[key];
+    if (result == null && !containsKey(key)) {
+      result = ifAbsent();
+      this[key] = result;
+    }
+    return result;
   }
 
   void addAll(Map<K, V> other) {

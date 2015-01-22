@@ -5,6 +5,10 @@
 # This directory contains tests that are intended to show the
 # current state of the language.
 
+# Skipped test.
+vm/regress_16873_test: Skip  # O(n^2) because of LinkedHashSet impl.
+
+# Other tests.
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
 abstract_runtime_error_test/03: Fail
@@ -356,7 +360,6 @@ fixed_type_variable_test/04: Fail
 fixed_type_variable_test/05: Fail
 fixed_type_variable_test/06: Fail
 for2_test: Fail
-for_in2_test: Fail
 forwarding_factory_constructor_default_values_test: Fail
 full_stacktrace1_test: Fail
 full_stacktrace2_test: Fail
@@ -588,7 +591,6 @@ map_literal6_test: Fail
 map_literal7_test: Fail
 map_literal8_test: Fail
 map_literal_syntax_test: Fail
-map_test: Fail
 metadata_test: CompileTimeError
 method_binding_test: Crash
 method_invocation_test: Fail
@@ -917,7 +919,6 @@ switch_try_catch_test: CompileTimeError
 symbol_literal_test/01: CompileTimeError
 symbol_literal_test/none: CompileTimeError
 syntax_test/59: MissingCompileTimeError
-temp_mangling_test: Fail
 top_level_in_initializer_test: Fail
 try_catch_optimized1_test: Fail
 try_catch_syntax_test/17: MissingCompileTimeError
@@ -970,7 +971,6 @@ vm/optimized_guarded_field_isolates_test: CompileTimeError
 vm/optimized_guarded_field_test: CompileTimeError
 vm/reflect_core_vm_test: CompileTimeError
 vm/regress_14903_test: CompileTimeError
-vm/regress_16873_test: Fail
 vm/reusable_boxes_test: CompileTimeError
 vm/store_to_load_forwarding_phis_vm_test: CompileTimeError
 vm/type_cast_vm_test: CompileTimeError

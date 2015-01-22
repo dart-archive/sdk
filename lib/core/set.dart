@@ -12,9 +12,7 @@ abstract class Set<E> implements Iterable<E> {
     throw new UnimplementedError("Set.identity");
   }
 
-  factory Set.from(Iterable<E> other) {
-    throw new UnimplementedError("Set.from");
-  }
+  factory Set.from(Iterable<E> other) => new LinkedHashSet.from(other);
 
   bool add(E value);
 

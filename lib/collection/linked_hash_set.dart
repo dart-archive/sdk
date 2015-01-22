@@ -5,9 +5,15 @@
 part of dart.collection;
 
 class LinkedHashSet<E> implements Set<E> {
-  Iterator<E> get iterator {
-    throw new UnimplementedError("LinkedHashSet.iterator");
+  final List _values = [];
+
+  LinkedHashSet();
+
+  LinkedHashSet.from(Iterable<E> other) {
+    addAll(other);
   }
+
+  Iterator<E> get iterator => _values.iterator;
 
   Iterable map(f(E element)) {
     throw new UnimplementedError("LinkedHashSet.map");
@@ -22,16 +28,18 @@ class LinkedHashSet<E> implements Set<E> {
   }
 
   bool contains(Object element) {
-    throw new UnimplementedError("LinkedHashSet.contains");
+    int index = _values.indexOf(element);
+    return index >= 0;
   }
 
   void forEach(void f(E element)) {
-    throw new UnimplementedError("LinkedHashSet.forEach");
+    _values.forEach(f);
   }
 
   E reduce(E combine(E value, E element)) {
     throw new UnimplementedError("LinkedHashSet.reduce");
   }
+
   dynamic fold(var initialValue,
                dynamic combine(var previousValue, E element)) {
     throw new UnimplementedError("LinkedHashSet.fold");
@@ -51,25 +59,15 @@ class LinkedHashSet<E> implements Set<E> {
     throw new UnimplementedError("LinkedHashSet.any");
   }
 
-  List<E> toList({ bool growable: true }) {
-    throw new UnimplementedError("LinkedHashSet.toList");
-  }
+  List<E> toList({ bool growable: true }) => _values.toList(growable);
 
-  Set<E> toSet() {
-    throw new UnimplementedError("LinkedHashSet.toSet");
-  }
+  Set<E> toSet() => new LinkedHashSet.from(this);
 
-  int get length {
-    throw new UnimplementedError("LinkedHashSet.length");
-  }
+  int get length => _values.length;
 
-  bool get isEmpty {
-    throw new UnimplementedError("LinkedHashSet.isEmpty");
-  }
+  bool get isEmpty => _values.isEmpty;
 
-  bool get isNotEmpty {
-    throw new UnimplementedError("LinkedHashSet.isNotEmpty");
-  }
+  bool get isNotEmpty => _values.isNotEmpty;
 
   Iterable<E> take(int n) {
     throw new UnimplementedError("LinkedHashSet.take");
@@ -87,13 +85,9 @@ class LinkedHashSet<E> implements Set<E> {
     throw new UnimplementedError("LinkedHashSet.skipWhile");
   }
 
-  E get first {
-    throw new UnimplementedError("LinkedHashSet.first");
-  }
+  E get first => _values.first;
 
-  E get last {
-    throw new UnimplementedError("LinkedHashSet.last");
-  }
+  E get last => _values.last;
 
   E get single {
     throw new UnimplementedError("LinkedHashSet.single");
@@ -111,28 +105,32 @@ class LinkedHashSet<E> implements Set<E> {
     throw new UnimplementedError("LinkedHashSet.singleWhere");
   }
 
-  E elementAt(int index) {
-    throw new UnimplementedError("LinkedHashSet.elementAt");
-  }
+  E elementAt(int index) => _values[index];
 
   bool add(E value) {
-    throw new UnimplementedError("LinkedHashSet.add");
+    int index = _values.indexOf(value);
+    if (index >= 0) return false;
+    _values.add(value);
+    return true;
   }
 
   void addAll(Iterable<E> elements) {
-    throw new UnimplementedError("LinkedHashSet.addAll");
+    elements.forEach((E each) {
+      add(each);
+    });
   }
 
-  bool remove(Object value) {
-    throw new UnimplementedError("LinkedHashSet.remove");
-  }
+  bool remove(Object value) => _values.remove(value);
 
   E lookup(Object object) {
-    throw new UnimplementedError("LinkedHashSet.lookup");
+    int index = _values.indexOf(object);
+    return (index < 0) ? null : _values[index];
   }
 
   void removeAll(Iterable<Object> elements) {
-    throw new UnimplementedError("LinkedHashSet.removeAll");
+    elements.forEach((E each) {
+      remove(each);
+    });
   }
 
   void retainAll(Iterable<Object> elements) {
@@ -164,6 +162,6 @@ class LinkedHashSet<E> implements Set<E> {
   }
 
   void clear() {
-    throw new UnimplementedError("LinkedHashSet.clear");
+    _values.clear();
   }
 }
