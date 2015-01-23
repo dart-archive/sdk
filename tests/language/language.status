@@ -492,7 +492,6 @@ int_test: Fail
 interceptor2_test: Fail
 interceptor3_test: Fail
 interceptor5_test: Crash
-interceptor9_test: CompileTimeError
 interface2_negative_test: Fail
 interface_cycle_test/01: MissingCompileTimeError
 interface_cycle_test/02: MissingCompileTimeError
@@ -530,7 +529,7 @@ issue9949_test: CompileTimeError
 label_test: Fail
 large_class_declaration_test: Crash
 lazy_static3_test: Fail
-left_shift_test: Crash
+left_shift_test: Fail
 library_ambiguous_test/00: Fail
 library_ambiguous_test/01: Fail
 library_ambiguous_test/02: Fail
@@ -771,7 +770,7 @@ null_test/none: CompileTimeError
 number_identifier_test/02: MissingCompileTimeError
 number_identifier_test/03: MissingCompileTimeError
 number_identifier_test/04: MissingCompileTimeError
-number_identity2_test: CompileTimeError
+number_identity2_test: Fail
 number_identity_test: Fail
 on_catch_malformed_type_test: Fail
 operator1_negative_test: Fail
@@ -960,21 +959,21 @@ typevariable_substitution2_test/01: CompileTimeError
 typevariable_substitution2_test/02: CompileTimeError
 unicode_bom_middle_test: Fail
 unicode_hash_test: Fail
-vm/allocation_sinking_vm_test: CompileTimeError
-vm/load_to_load_forwarding_vm_test: CompileTimeError
+vm/allocation_sinking_vm_test: Crash
+vm/load_to_load_forwarding_vm_test: Fail
 vm/math_vm_test: Fail
 vm/no_such_method_error_message_vm_test: Fail
 vm/null_hashcode_optimized_vm_test: Fail
 vm/optimization_test: Fail
 vm/optimized_guarded_field_isolates_test: CompileTimeError
-vm/optimized_guarded_field_test: CompileTimeError
+vm/optimized_guarded_field_test: Fail
 vm/reflect_core_vm_test: CompileTimeError
 vm/regress_14903_test: CompileTimeError
-vm/reusable_boxes_test: CompileTimeError
+vm/reusable_boxes_test: Fail
 vm/store_to_load_forwarding_phis_vm_test: CompileTimeError
 vm/type_cast_vm_test: CompileTimeError
 vm/type_vm_test: Fail
-vm/typed_data_polymorphic_view_test: CompileTimeError
+vm/typed_data_polymorphic_view_test: Fail
 
 [ $arch == ia32 ]
 bit_shift_test: Fail

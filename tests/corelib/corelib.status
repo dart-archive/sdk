@@ -6,7 +6,7 @@ apply2_test: Fail
 apply3_test: CompileTimeError
 apply_test: Fail
 big_integer_arith_vm_test: CompileTimeError
-big_integer_huge_mul_vm_test: Crash
+big_integer_huge_mul_vm_test: Fail
 big_integer_parsed_arith_vm_test: Fail
 big_integer_parsed_div_rem_vm_test: Fail
 big_integer_parsed_mul_div_vm_test: Fail
@@ -94,7 +94,7 @@ hash_map2_test: Crash
 hash_set_test/01: Fail
 hash_set_test/none: Fail
 hashcode_boxed_test: Fail
-hashcode_test: Crash
+hashcode_test: CompileTimeError
 hidden_library2_test/none: Fail
 indexed_list_access_test: Fail
 int_ceil_test: CompileTimeError
@@ -128,9 +128,9 @@ iterable_last_where_test: Fail
 iterable_length_test: CompileTimeError
 iterable_mapping_test: Fail
 iterable_reduce_test: CompileTimeError
-iterable_return_type_test/01: CompileTimeError
-iterable_return_type_test/02: CompileTimeError
-iterable_return_type_test/none: CompileTimeError
+iterable_return_type_test/01: Fail
+iterable_return_type_test/02: Fail
+iterable_return_type_test/none: Fail
 iterable_single_test: Fail
 iterable_single_where_test: Fail
 iterable_skip_test: Fail
@@ -272,7 +272,7 @@ set_remove_test: Fail
 set_retainAll_test: Fail
 set_test: Fail
 set_to_string_test: Fail
-shuffle_test: CompileTimeError
+shuffle_test: Fail
 sort_test: Fail
 splay_tree_from_iterable_test: Crash
 splay_tree_from_iterables_test: Fail
@@ -290,7 +290,7 @@ string_from_environment2_test: Crash
 string_from_environment_test: Crash
 string_from_list_test: Fail
 string_fromcharcode_test: Fail
-string_fromcharcodes_test: CompileTimeError
+string_fromcharcodes_test: Fail
 string_operations_with_null_test: Fail
 string_pattern_test: Fail
 string_replace_all_test: Fail

@@ -275,6 +275,22 @@ void ScopeResolver::DoThis(ThisNode* node) {
   MarkCaptured(entry->AsDeclaration(), true);
 }
 
+void ScopeResolver::DoLiteralList(LiteralListNode* node) {
+  List<ExpressionNode*> elements = node->elements();
+  for (int i = 0; i < elements.length(); i++) {
+    elements[i]->Accept(this);
+  }
+}
+
+void ScopeResolver::DoLiteralMap(LiteralMapNode* node) {
+  List<ExpressionNode*> keys = node->keys();
+  List<ExpressionNode*> values = node->values();
+  for (int i = 0; i < keys.length(); i++) {
+    keys[i]->Accept(this);
+    values[i]->Accept(this);
+  }
+}
+
 void ScopeResolver::DoStringInterpolation(StringInterpolationNode* node) {
   List<ExpressionNode*> expressions = node->expressions();
   for (int i = 0; i < expressions.length(); i++) {

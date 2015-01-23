@@ -51,6 +51,8 @@ class ScopeResolver : private TreeVisitor {
   void DoIndex(IndexNode* node);
   void DoNew(NewNode* node);
   void DoThis(ThisNode* node);
+  void DoLiteralList(LiteralListNode* node);
+  void DoLiteralMap(LiteralMapNode* node);
 
   void DoStringInterpolation(StringInterpolationNode* node);
 

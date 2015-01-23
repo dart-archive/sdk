@@ -318,7 +318,10 @@ class _Mint extends int {
   }
 
   int operator <<(int other) native catch (error) {
-    // TODO(kasperl): Check error.
+    if (error == _wrongArgumentType && other is _Mint) {
+      // TODO(ajohnsen): Add bigint support.
+      throw new UnimplementedError("Overflow to big integer");
+    }
     return other._bitShlFromInteger(this);
   }
 
