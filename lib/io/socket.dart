@@ -6,6 +6,21 @@ part of dart.io;
 
 class _SocketBase {
   int _fd = -1;
+  var _channel;
+  var _port;
+
+  void _addSocketToEventHandler() {
+    if (sys.addToEventHandler(_fd) == -1) {
+      _error("Failed to assign socket to event handler");
+    }
+    _channel = new Channel();
+    _port = new Port(_channel);
+  }
+
+  int _waitFor(int mask) {
+    sys.setPortForNextEvent(_fd, _port, mask);
+    return _channel.receive();
+  }
 
   /**
    * Close the socket. Operations on the socket are invalid after a call to
@@ -13,6 +28,7 @@ class _SocketBase {
    */
   void close() {
     if (_fd != -1) {
+      _port.close();
       sys.close(_fd);
       _fd = -1;
     }
@@ -38,10 +54,8 @@ class Socket extends _SocketBase {
         sys.errno() != Errno.EAGAIN) {
       _error("Failed to connect to $host:$port");
     }
-    if (sys.addToEventHandler(_fd) == -1) {
-      _error("Failed to assign socket to event handler");
-    }
-    int events = waitForFd(_fd, WRITE_EVENT);
+    _addSocketToEventHandler();
+    int events = _waitFor(WRITE_EVENT);
     if (events != WRITE_EVENT) {
       _error("Failed to connect to $host:$port");
     }
@@ -50,9 +64,7 @@ class Socket extends _SocketBase {
   Socket._fromFd(fd) {
     // Be sure it's not in the event handler.
     _fd = fd;
-    if (sys.addToEventHandler(_fd) == -1) {
-      _error("Failed to assign socket to event handler");
-    }
+    _addSocketToEventHandler();
   }
 
   /**
@@ -75,7 +87,7 @@ class Socket extends _SocketBase {
     ByteBuffer buffer = new ByteBuffer._create(bytes);
     int offset = 0;
     while (offset < bytes) {
-      int events = waitForFd(_fd, READ_EVENT);
+      int events = _waitFor(READ_EVENT);
       int read = 0;
       if ((events & READ_EVENT) != 0) {
         read = sys.read(_fd, buffer, offset, bytes - offset);
@@ -111,7 +123,7 @@ class Socket extends _SocketBase {
       }
       offset += wrote;
       if (offset == bytes) return;
-      int events = waitForFd(_fd, WRITE_EVENT);
+      int events = _waitFor(WRITE_EVENT);
       if ((events & ERROR_EVENT) != 0) {
         _error("Failed to write to socket");
       }
@@ -135,9 +147,7 @@ class ServerSocket extends _SocketBase {
       _error("Failed to bind to $host:$port");
     }
     if (sys.listen(_fd) == -1) _error("Failed to listen on $host:$port");
-    if (sys.addToEventHandler(_fd) == -1) {
-      _error("Failed to assign socket to event handler");
-    }
+    _addSocketToEventHandler();
   }
 
   /**
@@ -185,7 +195,7 @@ class ServerSocket extends _SocketBase {
   }
 
   int _accept() {
-    int events = waitForFd(_fd, READ_EVENT);
+    int events = _waitFor(READ_EVENT);
     if (events != READ_EVENT) {
       _error("Server socket closed while receiving socket");
     }

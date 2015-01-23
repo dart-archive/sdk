@@ -2,5 +2,5 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-[ $asan && $mode == debug ]
+[ $mode == debug ]
 socket_test: Pass, Slow

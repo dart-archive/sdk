@@ -37,25 +37,6 @@ int setBlocking(int fd, bool blocking) => sys.setBlocking(fd, blocking);
 void sleep(int milliseconds) => sys.sleep(milliseconds);
 Errno errno() => sys.errno();
 
-
-const int READ_EVENT        = 1 << 0;
-const int WRITE_EVENT       = 1 << 1;
-const int CLOSE_EVENT       = 1 << 2;
-const int ERROR_EVENT       = 1 << 3;
-
-class FDEvent {
-  final int fd;
-  final int events;
-  const FDEvent(this.fd, this.events);
-}
-
-int waitForFd(int fd, int mask, [var channel = null]) {
-  if (channel == null) channel = new Channel();
-  sys.setPortForNextEvent(fd, new Port(channel), mask);
-  int events = channel.receive();
-  return events;
-}
-
 class InternetAddress {
   final List<int> _bytes;
   InternetAddress._internal(this._bytes);

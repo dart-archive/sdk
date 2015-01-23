@@ -11,6 +11,11 @@ part 'system_linux.dart';
 part 'system_macos.dart';
 part 'system_posix.dart';
 
+const int READ_EVENT        = 1 << 0;
+const int WRITE_EVENT       = 1 << 1;
+const int CLOSE_EVENT       = 1 << 2;
+const int ERROR_EVENT       = 1 << 3;
+
 final System sys = getSystem();
 
 System getSystem() {
