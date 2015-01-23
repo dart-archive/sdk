@@ -3,7 +3,8 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:io';
-import 'BenchmarkBase.dart';
+import 'dart:typed_data';
+import '../BenchmarkBase.dart';
 
 const int MESSAGE_SIZE = 256;
 const int PING_PONG_COUNT = 1000;
@@ -21,7 +22,7 @@ class SocketBenchmark extends BenchmarkBase {
       this.clients = clients;
 
   static void acceptProcess(Socket socket) {
-    var buffer = new ByteBuffer(MESSAGE_SIZE);
+    var buffer = new Uint8List(MESSAGE_SIZE).buffer;
     while (true) {
       if (socket.read(MESSAGE_SIZE) == null) break;
       socket.write(buffer);
@@ -79,7 +80,7 @@ class SocketBenchmark extends BenchmarkBase {
 
     var socket = new Socket.connect("127.0.0.1", channel.receive());
     port = channel.receive();
-    var buffer = new ByteBuffer(MESSAGE_SIZE);
+    var buffer = new Uint8List(MESSAGE_SIZE).buffer;
     for (int i = 0; i < PING_PONG_COUNT; i++) {
       socket.write(buffer);
       if (socket.read(MESSAGE_SIZE) == null) throw "Bad socket response";
