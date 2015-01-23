@@ -5,6 +5,7 @@
 library dart.io;
 
 import 'dart:ffi';
+import 'dart:typed_data';
 
 // The system library exposes a static 'sys' object for all system calls.
 import 'system.dart';
@@ -24,11 +25,11 @@ int connect(int fd, InternetAddress address, int port) {
   return sys.connect(fd, address, port);
 }
 int available(int fd) => sys.available(fd);
-int read(int fd, ByteBuffer buffer, int count) {
-  return sys.read(fd, buffer, count);
+int read(int fd, ByteBuffer buffer, int offset, int length) {
+  return sys.read(fd, buffer, offset, length);
 }
-int write(int fd, ByteBuffer buffer, int count) {
-  return sys.write(fd, buffer, count);
+int write(int fd, ByteBuffer buffer, int offset, int length) {
+  return sys.write(fd, buffer, offset, length);
 }
 int close(int fd) => sys.close(fd);
 int setBlocking(int fd, bool blocking) => sys.setBlocking(fd, blocking);
@@ -58,18 +59,4 @@ int waitForFd(int fd, int mask, [var channel = null]) {
 class InternetAddress {
   final List<int> _bytes;
   InternetAddress._internal(this._bytes);
-}
-
-class ByteBuffer {
-  final Foreign _foreign;
-  final int offset;
-
-  ByteBuffer(int bytes)
-      : _foreign = new Foreign.allocated(bytes),
-        offset = 0;
-
-  ByteBuffer.withOffset(ByteBuffer buffer, this.offset)
-      : _foreign = buffer._foreign;
-
-  int get length => _foreign.length - offset;
 }

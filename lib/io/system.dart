@@ -31,8 +31,8 @@ abstract class System {
   int port(int fd);
   int connect(int fd, InternetAddress address, int port);
   int available(int fd);
-  int read(int fd, ByteBuffer buffer, int count);
-  int write(int fd, ByteBuffer buffer, int count);
+  int read(int fd, ByteBuffer buffer, int offset, int length);
+  int write(int fd, ByteBuffer buffer, int offset, int length);
   int close(int fd);
   void sleep(int milliseconds);
   Errno errno();

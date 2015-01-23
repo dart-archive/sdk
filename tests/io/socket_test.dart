@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:io' as io;
+import 'dart:typed_data';
 
 import 'package:expect/expect.dart';
 
@@ -12,6 +13,7 @@ void main() {
   testConnect();
   testReadWrite();
   testSpawnAccept();
+  testLargeChunk();
 }
 
 void testLookup() {
@@ -36,18 +38,34 @@ void testConnect() {
   server.close();
 }
 
+createBuffer(int length) {
+  var list = new Uint8List(length);
+  for (int i = 0; i < length; i++) {
+    list[i] = i & 0xFF;
+  }
+  return list.buffer;
+}
+
+void validateBuffer(buffer, int length) {
+  Expect.equals(length, buffer.lengthInBytes);
+  var list = new Uint8List.view(buffer);
+  for (int i = 0; i < length; i++) {
+    Expect.equals(i & 0xFF, list[i]);
+  }
+}
+
+const CHUNK_SIZE = 256;
+
 void testReadWrite() {
   var server = new io.ServerSocket("127.0.0.1", 0);
   var socket = new io.Socket.connect("127.0.0.1", server.port);
   var client = server.accept();
 
-  socket.write(new io.ByteBuffer(256));
-  Expect.equals(256, client.read(256).length);
+  socket.write(createBuffer(CHUNK_SIZE));
+  validateBuffer(client.read(CHUNK_SIZE), CHUNK_SIZE);
 
-  client.write(new io.ByteBuffer(256));
-  Expect.equals(256, socket.read(256).length);
-
-  // TODO(ajohnsen): Validate the data.
+  client.write(createBuffer(CHUNK_SIZE));
+  validateBuffer(socket.read(CHUNK_SIZE), CHUNK_SIZE);
 
   Expect.equals(0, socket.available);
   Expect.equals(0, client.available);
@@ -58,8 +76,8 @@ void testReadWrite() {
 }
 
 void spawnAcceptCallback(Socket client) {
-  Expect.equals(256, client.read(256).length);
-  client.write(new io.ByteBuffer(256));
+  validateBuffer(client.read(CHUNK_SIZE), CHUNK_SIZE);
+  client.write(createBuffer(CHUNK_SIZE));
   Expect.equals(0, client.available);
 
   client.close();
@@ -70,8 +88,32 @@ void testSpawnAccept() {
   var socket = new io.Socket.connect("127.0.0.1", server.port);
   server.spawnAccept(spawnAcceptCallback);
 
-  socket.write(new io.ByteBuffer(256));
-  Expect.equals(256, socket.read(256).length);
+  socket.write(createBuffer(CHUNK_SIZE));
+  validateBuffer(socket.read(CHUNK_SIZE), CHUNK_SIZE);
+  Expect.equals(0, socket.available);
+
+  socket.close();
+  server.close();
+}
+
+const LARGE_CHUNK_SIZE = 1024 * 1024;
+
+void largeChunkClient(Socket client) {
+  validateBuffer(client.read(LARGE_CHUNK_SIZE), LARGE_CHUNK_SIZE);
+  client.write(createBuffer(LARGE_CHUNK_SIZE));
+  Expect.equals(0, client.available);
+
+  client.close();
+}
+
+void testLargeChunk() {
+  var server = new io.ServerSocket("127.0.0.1", 0);
+  var socket = new io.Socket.connect("127.0.0.1", server.port);
+  server.spawnAccept(largeChunkClient);
+
+  socket.write(createBuffer(LARGE_CHUNK_SIZE));
+  validateBuffer(socket.read(LARGE_CHUNK_SIZE), LARGE_CHUNK_SIZE);
+
   Expect.equals(0, socket.available);
 
   socket.close();

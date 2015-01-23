@@ -72,14 +72,13 @@ class Socket extends _SocketBase {
    * Returns `null` if the socket was closed for reading.
    */
   ByteBuffer read(int bytes) {
-    var result = new ByteBuffer(bytes);
-    var buffer = result;
+    ByteBuffer buffer = new ByteBuffer._create(bytes);
     int offset = 0;
     while (offset < bytes) {
       int events = waitForFd(_fd, READ_EVENT);
       int read = 0;
       if ((events & READ_EVENT) != 0) {
-        read = sys.read(_fd, buffer, bytes - offset);
+        read = sys.read(_fd, buffer, offset, bytes - offset);
       }
       if (read == 0 || (events & CLOSE_EVENT) != 0) {
         if (offset + read < bytes) return null;
@@ -88,9 +87,8 @@ class Socket extends _SocketBase {
         _error("Failed to read from socket");
       }
       offset += read;
-      buffer = new ByteBuffer.withOffset(buffer, offset);
     }
-    return result;
+    return buffer;
   }
 
   /**
@@ -105,15 +103,14 @@ class Socket extends _SocketBase {
    */
   void write(ByteBuffer buffer) {
     int offset = 0;
-    int bytes = buffer.length;
+    int bytes = buffer.lengthInBytes;
     while (true) {
-      int wrote = sys.write(_fd, buffer, bytes - offset);
+      int wrote = sys.write(_fd, buffer, offset, bytes - offset);
       if (wrote == -1) {
         _error("Failed to write to socket");
       }
       offset += wrote;
-      if (offset == wrote) return;
-      buffer = new ByteBuffer.withOffset(buffer, offset);
+      if (offset == bytes) return;
       int events = waitForFd(_fd, WRITE_EVENT);
       if ((events & ERROR_EVENT) != 0) {
         _error("Failed to write to socket");

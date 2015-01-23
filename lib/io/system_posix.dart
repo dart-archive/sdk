@@ -183,16 +183,16 @@ class PosixSystem implements System {
     return available;
   }
 
-  int read(int fd, ByteBuffer buffer, int count) {
-    _rangeCheck(buffer, count);
-    var address = buffer._foreign.value + buffer.offset;
-    return _retry(() => _read.icall$3(fd, address, count));
+  int read(int fd, ByteBuffer buffer, int offset, int length) {
+    _rangeCheck(buffer, offset, length);
+    var address = buffer._foreign.value + offset;
+    return _retry(() => _read.icall$3(fd, address, length));
   }
 
-  int write(int fd, ByteBuffer buffer, int count) {
-    _rangeCheck(buffer, count);
-    var address = buffer._foreign.value + buffer.offset;
-    return _retry(() => _write.icall$3(fd, address, count));
+  int write(int fd, ByteBuffer buffer, int offset, int length) {
+    _rangeCheck(buffer, offset, length);
+    var address = buffer._foreign.value + offset;
+    return _retry(() => _write.icall$3(fd, address, length));
   }
 
   int close(int fd) {
@@ -212,8 +212,10 @@ class PosixSystem implements System {
     return Errno.from(Foreign._errno());
   }
 
-  void _rangeCheck(ByteBuffer buffer, int length) {
-    if (buffer.length < length) throw new IndexError(length, buffer);
+  static void _rangeCheck(ByteBuffer buffer, int offset, int length) {
+    if (buffer.lengthInBytes < offset + length) {
+      throw new IndexError(length, buffer);
+    }
   }
 
   Foreign _createSocketAddress(InternetAddress address, int port) {
