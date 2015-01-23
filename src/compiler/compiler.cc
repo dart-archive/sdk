@@ -81,6 +81,7 @@ class ValueVisitor : public TreeVisitor {
   void DoNull(NullNode* node);
 
   void DoParenthesized(ParenthesizedNode* node);
+  void DoAssert(AssertNode* node);
   void DoAssign(AssignNode* node);
   void DoUnary(UnaryNode* node);
   void DoBinary(BinaryNode* node);
@@ -1618,6 +1619,10 @@ void ValueVisitor::DoNull(NullNode* node) {
 
 void ValueVisitor::DoParenthesized(ParenthesizedNode* node) {
   node->expression()->Accept(this);
+}
+
+void ValueVisitor::DoAssert(AssertNode* node) {
+  // We do not have a checked mode, so asserts are just ignored.
 }
 
 void ValueVisitor::DoAssign(AssignNode* node) {

@@ -118,7 +118,7 @@ iterable_contains_test: CompileTimeError
 iterable_element_at_test: Fail
 iterable_expand_test: CompileTimeError
 iterable_fold_test: CompileTimeError
-iterable_generate_test: Crash
+iterable_generate_test: Fail
 iterable_join_test: Fail
 iterable_mapping_test: Fail
 iterable_reduce_test: CompileTimeError
@@ -254,7 +254,7 @@ set_test: Fail
 set_to_string_test: Fail
 shuffle_test: Fail
 sort_test: Fail
-splay_tree_from_iterable_test: Crash
+splay_tree_from_iterable_test: Fail
 splay_tree_from_iterables_test: Fail
 splay_tree_test: Fail
 stopwatch2_test: Fail

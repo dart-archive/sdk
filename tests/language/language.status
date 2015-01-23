@@ -15,8 +15,7 @@ abstract_runtime_error_test/03: Fail
 abstract_runtime_error_test/none: Fail
 adjacent_const_string_literals_test: Crash
 arithmetic_test: Fail
-assert_with_type_test_or_cast_test: Crash
-assertion_test: Crash
+assertion_test: Fail
 async_backwards_compatibility_1_test: CompileTimeError
 async_control_structures_test: CompileTimeError
 async_test/none: CompileTimeError
@@ -557,7 +556,7 @@ main_test/45: Crash
 malbounded_type_cast_test: Fail
 malbounded_type_test_test/01: Fail
 malbounded_type_test_test/04: Fail
-malformed2_test/00: Crash
+malformed2_test/00: Fail
 malformed_inheritance_test/03: MissingCompileTimeError
 malformed_inheritance_test/04: Fail
 malformed_inheritance_test/05: MissingCompileTimeError
@@ -913,7 +912,7 @@ type_check_const_function_typedef2_test/none: Crash
 type_check_const_function_typedef_test: Crash
 type_check_test: Fail
 type_checks_in_factory_method_test: Fail
-type_error_test: Crash
+type_error_test: CompileTimeError
 type_parameter_literal_test: Fail
 type_parameter_test/01: Fail
 type_parameter_test/02: Fail
