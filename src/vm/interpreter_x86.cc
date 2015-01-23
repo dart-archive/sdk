@@ -169,7 +169,9 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
 
   virtual void DoProcessYield();
   virtual void DoCoroutineChange();
+
   virtual void DoIdentical();
+  virtual void DoIdenticalNonNumeric();
 
   virtual void DoEnterNoSuchMethod();
   virtual void DoExitNoSuchMethod();
@@ -177,6 +179,7 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoFrameSize();
   virtual void DoMethodEnd();
 
+  virtual void DoIntrinsicObjectEquals();
   virtual void DoIntrinsicGetField();
   virtual void DoIntrinsicSetField();
   virtual void DoIntrinsicListIndexGet();
@@ -1043,6 +1046,27 @@ void InterpreterGeneratorX86::DoIdentical() {
   __ jmp(&done);
 }
 
+void InterpreterGeneratorX86::DoIdenticalNonNumeric() {
+  LoadLocal(EAX, 0);
+  LoadLocal(EBX, 1);
+  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
+
+  Label true_case;
+  __ cmpl(EAX, EBX);
+  __ j(EQUAL, &true_case);
+
+  __ movl(EAX, Address(ECX, Program::false_object_offset()));
+  StoreLocal(EAX, 1);
+  Drop(1);
+  Dispatch(kIdenticalNonNumericLength);
+
+  __ Bind(&true_case);
+  __ movl(EAX, Address(ECX, Program::true_object_offset()));
+  StoreLocal(EAX, 1);
+  Drop(1);
+  Dispatch(kIdenticalNonNumericLength);
+}
+
 void InterpreterGeneratorX86::DoEnterNoSuchMethod() {
   // Load the return address from the stack.
   LoadLocal(EAX, 0);
@@ -1103,6 +1127,26 @@ void InterpreterGeneratorX86::DoMethodEnd() {
   __ int3();
 }
 
+void InterpreterGeneratorX86::DoIntrinsicObjectEquals() {
+  Label true_case;
+  LoadLocal(EAX, 0);
+  LoadLocal(EBX, 1);
+  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
+
+  __ cmpl(EAX, EBX);
+  __ j(EQUAL, &true_case);
+
+  __ movl(EAX, Address(ECX, Program::false_object_offset()));
+  StoreLocal(EAX, 1);
+  Drop(1);
+  Dispatch(kInvokeMethodLength);
+
+  __ Bind(&true_case);
+  __ movl(EAX, Address(ECX, Program::true_object_offset()));
+  StoreLocal(EAX, 1);
+  Drop(1);
+  Dispatch(kInvokeMethodLength);
+}
 
 void InterpreterGeneratorX86::DoIntrinsicGetField() {
   __ movzbl(EBX, Address(EAX, 2 + Function::kSize - HeapObject::kTag));

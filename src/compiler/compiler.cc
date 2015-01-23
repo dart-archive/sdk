@@ -1050,6 +1050,14 @@ void Compiler::CompileMethod(MethodNode* method,
         break;
       }
 
+      case Names::kEquals: {
+        emitter->LoadParameter(0);
+        emitter->LoadParameter(1);
+        emitter->IdenticalNonNumeric();
+        emitter->Return();
+        break;
+      }
+
       // This method is needed, if the identical is used through a tearoff.
       case Names::kIdentical: {
         emitter->LoadParameter(0);
@@ -1702,7 +1710,7 @@ void ValueVisitor::DoBinary(BinaryNode* node) {
       node->left()->Accept(this);
       node->right()->Accept(this);
       if (node->left()->IsNull() || node->right()->IsNull()) {
-        emitter()->Identical();
+        emitter()->IdenticalNonNumeric();
       } else {
         IdentifierNode* name = builder()->OperatorName(kEQ);
         compiler()->EnqueueInvokeSelector(name, 1);

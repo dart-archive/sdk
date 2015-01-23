@@ -100,7 +100,9 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
                                                                              \
   V(ProcessYield,          "",   1,        0, "process yield")               \
   V(CoroutineChange,       "",   1,       -1, "coroutine change")            \
+                                                                             \
   V(Identical,             "",   1,       -1, "identical")                   \
+  V(IdenticalNonNumeric,   "",   1,       -1, "identical non numeric")       \
                                                                              \
   V(EnterNoSuchMethod,     "",   1,        3, "enter noSuchMethod")          \
   V(ExitNoSuchMethod,      "",   1,       -1, "exit noSuchMethod")           \

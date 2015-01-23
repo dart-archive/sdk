@@ -382,6 +382,11 @@ void Emitter::Identical() {
   StackSizeChange(-1);
 }
 
+void Emitter::IdenticalNonNumeric() {
+  EmitOpcode(kIdenticalNonNumeric);
+  StackSizeChange(-1);
+}
+
 void Emitter::EnterNoSuchMethod() {
   EmitOpcode(kEnterNoSuchMethod);
 }

@@ -50,7 +50,7 @@ class Object {
     throw new UnimplementedError("Object.runtimeType");
   }
 
-  bool operator ==(other) => identical(this, other);
+  external bool operator ==(other);
 
   String toString() => "an object";
 

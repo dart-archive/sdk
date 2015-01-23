@@ -646,6 +646,13 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     Advance(kIdenticalLength);
   OPCODE_END();
 
+  OPCODE_BEGIN(IdenticalNonNumeric);
+    bool identical = Local(0) == Local(1);
+    Drop(1);
+    SetTop(ToBool(identical));
+    Advance(kIdenticalNonNumericLength);
+  OPCODE_END();
+
   OPCODE_BEGIN(EnterNoSuchMethod);
     uint8* return_address = reinterpret_cast<uint8*>(Local(0));
     int selector = Utils::ReadInt32(return_address - 4);

@@ -225,6 +225,12 @@ void* Function::ComputeIntrinsic() {
       bytecodes[1] == kLoadField &&
       bytecodes[3] == kReturn) {
     return reinterpret_cast<void*>(&Intrinsic_GetField);
+  } else if (length >= 4 &&
+             bytecodes[0] == kLoadLocal2 &&
+             bytecodes[1] == kLoadLocal2 &&
+             bytecodes[2] == kIdenticalNonNumeric &&
+             bytecodes[3] == kReturn) {
+    return reinterpret_cast<void*>(&Intrinsic_ObjectEquals);
   } else if (length >= 5 &&
              bytecodes[0] == kLoadLocal2 &&
              bytecodes[1] == kLoadLocal2 &&

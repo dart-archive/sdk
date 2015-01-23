@@ -8,6 +8,7 @@
 namespace fletch {
 
 #define INTRINSICS_DO(V)      \
+  V(ObjectEquals)             \
   V(GetField)                 \
   V(SetField)                 \
   V(ListIndexGet)             \

@@ -115,7 +115,9 @@ class Emitter : public StackAllocated {
 
   void ProcessYield();
   void CoroutineChange();
+
   void Identical();
+  void IdenticalNonNumeric();
 
   void EnterNoSuchMethod();
   void ExitNoSuchMethod();

@@ -114,6 +114,7 @@ const List<Bytecode> _bytecodes = const [
   const Bytecode("process yield", 1),
   const Bytecode("coroutine change", 1),
   const Bytecode("identical", 1),
+  const Bytecode("identical non numeric", 1),
   const Bytecode("enter noSuchMethod", 1),
   const Bytecode("exit noSuchMethod", 1),
   const Bytecode("frame size %b", 2),
