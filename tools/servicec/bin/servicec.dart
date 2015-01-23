@@ -8,5 +8,7 @@ import 'package:args/args.dart';
 main(List<String> arguments) {
   ArgParser parser = new ArgParser();
   ArgResults results = parser.parse(arguments);
-  servicec.compile();
+  for (String path in results.rest) {
+    servicec.compile(path);
+  }
 }

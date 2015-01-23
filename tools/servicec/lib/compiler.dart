@@ -4,20 +4,18 @@
 
 library servicec.compiler;
 
+import 'dart:io';
+import 'dart:convert';
+
 import 'src/parser.dart';
 import 'src/pretty_printer.dart';
 
-const String INPUT = """
-service EchoService {
-  Echo(Int32): Int32;
-  Gecho(UInt16): Text;
-}
-""";
+void compile(String path) {
+  List<int> bytes = new File(path).readAsBytesSync();
+  String input = UTF8.decode(bytes);
 
-compile() {
-  Unit unit = parseUnit(INPUT);
+  Unit unit = parseUnit(input);
   PrettyPrinter printer = new PrettyPrinter()
       ..visit(unit);
   print(printer.buffer);
 }
-
