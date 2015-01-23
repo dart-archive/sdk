@@ -8,14 +8,14 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'src/parser.dart';
-import 'src/pretty_printer.dart';
+import 'src/plugins/cc.dart' as cc;
 
 void compile(String path) {
   List<int> bytes = new File(path).readAsBytesSync();
   String input = UTF8.decode(bytes);
 
   Unit unit = parseUnit(input);
-  PrettyPrinter printer = new PrettyPrinter()
-      ..visit(unit);
-  print(printer.buffer);
+  // TODO(kasperl): Perform static semantic analysis.
+  String output = cc.generateHeaderFile(path, unit);
+  stdout.write(output);
 }
