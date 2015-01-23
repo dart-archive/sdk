@@ -992,8 +992,6 @@ ref_before_declaration_test/06: MissingCompileTimeError
 regress_19413_test/01: Fail
 
 [ $asan ]
-compile_time_constant_a_test: Fail
-compile_time_constant_b_test: Fail
 compile_time_constant_k_test/01: Fail
 compile_time_constant_k_test/02: Fail
 compile_time_constant_k_test/03: Fail
