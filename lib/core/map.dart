@@ -18,11 +18,33 @@ abstract class Map<K, V> {
 
   factory Map.fromIterable(Iterable iterable,
       {K key(element), V value(element)}) {
-    throw new UnimplementedError("Map.fromIterable");
+    var map = new Map<K, V>();
+    if (key == null) key = (x) => x;
+    if (value == null) value = (x) => x;
+    for (var e in iterable) map[key(e)] = value(e);
+    return map;
   }
 
   factory Map.fromIterables(Iterable<K> keys, Iterable<V> values) {
-    throw new UnimplementedError("Map.fromIterables");
+    var map = new Map<K, V>();
+
+    Iterator keyIterator = keys.iterator;
+    Iterator valueIterator = values.iterator;
+
+    bool hasNextKey = keyIterator.moveNext();
+    bool hasNextValue = valueIterator.moveNext();
+
+    while (hasNextKey && hasNextValue) {
+      map[keyIterator.current] = valueIterator.current;
+      hasNextKey = keyIterator.moveNext();
+      hasNextValue = valueIterator.moveNext();
+    }
+
+    if (hasNextKey || hasNextValue) {
+      throw new ArgumentError("Iterables do not have same length.");
+    }
+
+    return map;
   }
 
   bool containsValue(Object value);
