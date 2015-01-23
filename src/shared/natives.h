@@ -150,6 +150,12 @@ namespace fletch {
   N(ForeignSetUint32,            "Foreign", "_setUint32")                \
   N(ForeignSetUint64,            "Foreign", "_setUint64")                \
                                                                          \
+  N(ForeignGetFloat32,            "Foreign", "_getFloat32")              \
+  N(ForeignGetFloat64,            "Foreign", "_getFloat64")              \
+                                                                         \
+  N(ForeignSetFloat32,            "Foreign", "_setFloat32")              \
+  N(ForeignSetFloat64,            "Foreign", "_setFloat64")              \
+                                                                         \
   N(StringAdd,                   "String", "+")                          \
   N(StringCodeUnitAt,            "String", "codeUnitAt")                 \
   N(StringEqual,                 "String", "==")                         \

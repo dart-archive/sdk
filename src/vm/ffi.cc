@@ -215,7 +215,7 @@ NATIVE(ForeignCall6) {
   return process->ToInteger(result);
 }
 
-#define DEFINE_FOREIGN_ACCESSORS(suffix, type)                           \
+#define DEFINE_FOREIGN_ACCESSORS_INTEGER(suffix, type)                   \
                                                                          \
 NATIVE(ForeignGet##suffix) {                                             \
   type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0]));  \
@@ -224,20 +224,41 @@ NATIVE(ForeignGet##suffix) {                                             \
                                                                          \
 NATIVE(ForeignSet##suffix) {                                             \
   Object* value = arguments[1];                                          \
+  if (!value->IsSmi() && !value->IsLargeInteger()) {                     \
+    return Failure::wrong_argument_type();                               \
+  }                                                                      \
   type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0]));  \
   *address = AsForeignWord(value);                                       \
   return value;                                                          \
 }
 
-DEFINE_FOREIGN_ACCESSORS(Int8, int8)
-DEFINE_FOREIGN_ACCESSORS(Int16, int16)
-DEFINE_FOREIGN_ACCESSORS(Int32, int32)
-DEFINE_FOREIGN_ACCESSORS(Int64, int64)
+DEFINE_FOREIGN_ACCESSORS_INTEGER(Int8, int8)
+DEFINE_FOREIGN_ACCESSORS_INTEGER(Int16, int16)
+DEFINE_FOREIGN_ACCESSORS_INTEGER(Int32, int32)
+DEFINE_FOREIGN_ACCESSORS_INTEGER(Int64, int64)
 
-DEFINE_FOREIGN_ACCESSORS(Uint8, uint8)
-DEFINE_FOREIGN_ACCESSORS(Uint16, uint16)
-DEFINE_FOREIGN_ACCESSORS(Uint32, uint32)
-DEFINE_FOREIGN_ACCESSORS(Uint64, uint64)
+DEFINE_FOREIGN_ACCESSORS_INTEGER(Uint8, uint8)
+DEFINE_FOREIGN_ACCESSORS_INTEGER(Uint16, uint16)
+DEFINE_FOREIGN_ACCESSORS_INTEGER(Uint32, uint32)
+DEFINE_FOREIGN_ACCESSORS_INTEGER(Uint64, uint64)
+
+#define DEFINE_FOREIGN_ACCESSORS_DOUBLE(suffix, type)                    \
+                                                                         \
+NATIVE(ForeignGet##suffix) {                                             \
+  type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0]));  \
+  return process->NewDouble(static_cast<double>(*address));              \
+}                                                                        \
+                                                                         \
+NATIVE(ForeignSet##suffix) {                                             \
+  Object* value = arguments[1];                                          \
+  if (!value->IsDouble()) return Failure::wrong_argument_type();         \
+  type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0]));  \
+  *address = Double::cast(value)->value();                               \
+  return value;                                                          \
+}
+
+DEFINE_FOREIGN_ACCESSORS_DOUBLE(Float32, float)
+DEFINE_FOREIGN_ACCESSORS_DOUBLE(Float64, double)
 
 #undef DEFINE_FOREIGN_ACCESSORS
 

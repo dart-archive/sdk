@@ -66,6 +66,11 @@ testAllocate(bool finalized) {
 
   Expect.throws(() => memory.getUint32(7), isRangeError);
 
+  Expect.throws(() => memory.setUint32(0, 0.0), isArgumentError);
+  Expect.throws(() => memory.setUint32(0, new Object()), isArgumentError);
+  Expect.throws(() => memory.setFloat32(0, 0), isArgumentError);
+  Expect.throws(() => memory.setFloat32(0, new Object()), isArgumentError);
+
   Expect.equals(0, memory.getUint32(6));
 
   for (int i = 0; i < length; i++) {
@@ -76,6 +81,20 @@ testAllocate(bool finalized) {
   for (int i = 0; i < length; i++) {
     Expect.equals(i, memory.getUint8(i));
   }
+
+  for (int i = 0; i < 8; i++) {
+    memory.setUint8(i, 0);
+  }
+
+  Expect.equals(0.0, memory.getFloat32(0));
+  Expect.equals(0.0, memory.getFloat32(4));
+  Expect.equals(0.0, memory.getFloat64(0));
+
+  memory.setFloat32(0, 1.0);
+  Expect.equals(1.0, memory.getFloat32(0));
+
+  memory.setFloat64(0, 2.0);
+  Expect.equals(2.0, memory.getFloat64(0));
 
   if (!finalized) {
     memory.free();

@@ -90,6 +90,16 @@ class Foreign {
   int setUint64(int offset, int value)
       => _setUint64(_computeAddress(offset, 8), value);
 
+  double getFloat32(int offset)
+      => _getFloat32(_computeAddress(offset, 4));
+  double getFloat64(int offset)
+      => _getFloat64(_computeAddress(offset, 8));
+
+  double setFloat32(int offset, double value)
+      => _setFloat32(_computeAddress(offset, 4), value);
+  double setFloat64(int offset, double value)
+      => _setFloat64(_computeAddress(offset, 8), value);
+
   void copyBytesToList(List<int> list, int from, int to, int listOffset) {
     int length = to - from;
     for (int i = 0; i < length; i++) {
@@ -198,20 +208,46 @@ class Foreign {
   static int _getInt32(int address) native;
   static int _getInt64(int address) native;
 
-  static int _setInt8(int address, int value) native;
-  static int _setInt16(int address, int value) native;
-  static int _setInt32(int address, int value) native;
-  static int _setInt64(int address, int value) native;
+  static int _setInt8(int address, int value) native catch (error) {
+    throw new ArgumentError();
+  }
+  static int _setInt16(int address, int value) native catch (error) {
+    throw new ArgumentError();
+  }
+  static int _setInt32(int address, int value) native catch (error) {
+    throw new ArgumentError();
+  }
+  static int _setInt64(int address, int value) native catch (error) {
+    throw new ArgumentError();
+  }
 
   static int _getUint8(int address) native;
   static int _getUint16(int address) native;
   static int _getUint32(int address) native;
   static int _getUint64(int address) native;
 
-  static int _setUint8(int address, int value) native;
-  static int _setUint16(int address, int value) native;
-  static int _setUint32(int address, int value) native;
-  static int _setUint64(int address, int value) native;
+  static int _setUint8(int address, int value) native catch (error) {
+    throw new ArgumentError();
+  }
+  static int _setUint16(int address, int value) native catch (error) {
+    throw new ArgumentError();
+  }
+  static int _setUint32(int address, int value) native catch (error) {
+    throw new ArgumentError();
+  }
+  static int _setUint64(int address, int value) native catch (error) {
+    throw new ArgumentError();
+  }
+
+  static double _getFloat32(int address) native;
+  static double _getFloat64(int address) native;
+
+  static double _setFloat32(int address, double value) native catch (error) {
+    throw new ArgumentError();
+  }
+  static double _setFloat64(int address, double value) native catch (error) {
+    throw new ArgumentError();
+  }
 
   static int _bitsPerMachineWord() native;
   static int _errno() native;
