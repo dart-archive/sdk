@@ -456,7 +456,6 @@ getter_override_test/01: MissingCompileTimeError
 getter_override_test/02: MissingCompileTimeError
 getter_setter_order_test: Fail
 guess_cid_test: Fail
-hash_code_mangling_test: Fail
 hash_map_null_key_foreach_test: Fail
 hidden_import_test/01: CompileTimeError
 hidden_import_test/02: CompileTimeError
@@ -753,7 +752,6 @@ nested_switch_label_test: CompileTimeError
 no_main_test/01: CompileTimeError
 no_such_method2_test: Fail
 no_such_method_dispatcher_test: Fail
-no_such_method_empty_selector_test: Fail
 no_such_method_test: CompileTimeError
 non_const_constructor_without_body_test: Crash
 non_parameterized_factory2_test: Crash
@@ -765,7 +763,6 @@ not_enough_positional_arguments_test/02: CompileTimeError
 not_enough_positional_arguments_test/05: CompileTimeError
 null2_test: Fail
 null_is2_test: Fail
-null_method_test: Fail
 null_test/none: CompileTimeError
 number_identifier_test/02: MissingCompileTimeError
 number_identifier_test/03: MissingCompileTimeError
@@ -847,7 +844,6 @@ regress_20394_test/01: MissingCompileTimeError
 regress_r24720_test: Crash
 reify_typevar_test: Fail
 runtime_type_test: Fail
-savannah_test: Fail
 scope_variable_test/01: MissingCompileTimeError
 script1_negative_test: Fail
 script2_negative_test: Fail
@@ -963,7 +959,6 @@ vm/allocation_sinking_vm_test: Crash
 vm/load_to_load_forwarding_vm_test: Fail
 vm/math_vm_test: Fail
 vm/no_such_method_error_message_vm_test: Fail
-vm/null_hashcode_optimized_vm_test: Fail
 vm/optimization_test: Fail
 vm/optimized_guarded_field_isolates_test: CompileTimeError
 vm/optimized_guarded_field_test: Fail

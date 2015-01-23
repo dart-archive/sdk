@@ -45,9 +45,8 @@ abstract class String implements Comparable<String>, Pattern {
 
   int get length native;
 
-  int get hashCode {
-    throw new UnimplementedError("String.hashCode");
-  }
+  // TODO(kasperl): This is a really bad hash code.
+  int get hashCode => length;
 
   bool operator ==(Object other) native;
 

@@ -43,9 +43,8 @@ int identityHashCode(Object object) {
 class Object {
   const Object();
 
-  int get hashCode {
-    throw new UnimplementedError("Object.hashCode");
-  }
+  // TODO(kasperl): This is a really bad hash code.
+  int get hashCode => 0;
 
   Type get runtimeType {
     throw new UnimplementedError("Object.runtimeType");
@@ -105,6 +104,8 @@ abstract class Invocation {
 
 // Matches dart:core on Jan 21, 2015.
 class Null {
+  int get hashCode => 2011;
+
   String toString() => "null";
 }
 
@@ -112,6 +113,8 @@ class Null {
 class bool {
   // TODO(kasperl): We cannot express this.
   // const bool.fromEnvironment(String name, {bool defaultValue: false});
+
+  int get hashCode => this ? 1231 : 1237;
 
   String toString() => this ? "true" : "false";
 }

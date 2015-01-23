@@ -14,7 +14,6 @@ bit_twiddling_bigint_test: CompileTimeError
 bit_twiddling_test: CompileTimeError
 bool_from_environment_default_value_test: CompileTimeError
 bool_from_environment_test: Crash
-bool_hashcode_test: Fail
 collection_from_test: Fail
 collection_length_test: Fail
 collection_removes_test: CompileTimeError

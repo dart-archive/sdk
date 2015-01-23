@@ -21,9 +21,10 @@ abstract class List<E> implements Iterable<E> {
   }
 
   factory List.from(Iterable other, { bool growable: true }) {
-    throw new UnimplementedError("List.from");
+    List result = [];
+    other.forEach((each) => result.add(each));
+    return growable ? result : result.toList(false);
   }
-
 
   factory List.generate(int length, E generator(int index),
                        { bool growable: true }) {
@@ -178,9 +179,7 @@ class _ConstantList<E> implements List<E> {
     return result;
   }
 
-  Set<E> toSet() {
-    throw new UnimplementedError("_ConstantList.toSet");
-  }
+  Set<E> toSet() => new Set<E>.from(this);
 
   int get length native;
 

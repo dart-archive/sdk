@@ -14,6 +14,8 @@ class double extends num {
   // static const double MIN_POSITIVE = 5e-324;
   // static const double MAX_FINITE = 1.7976931348623157e+308;
 
+  int get hashCode => truncate();
+
   int compareTo(num other) {
     if (this < other) return -1;
     if (this > other) return 1;
@@ -142,9 +144,7 @@ class double extends num {
 
   double toDouble() => this;
 
-  int toInt() native catch (error) {
-    throw new UnsupportedError("double.toInt $this");
-  }
+  int toInt() => truncate();
 
   String toString() native;
 

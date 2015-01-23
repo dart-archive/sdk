@@ -9,6 +9,8 @@ abstract class int extends num {
   // TODO(kasperl): We cannot express this.
   // const factory int.fromEnvironment(String name, {int defaultValue});
 
+  int get hashCode => this;
+
   int compareTo(num other) {
     if (this == other) {
       return 0;
