@@ -9,3 +9,9 @@ tools/testing/bin/linux/dart
 tools/testing/bin/macos/dart
 *.pyc
 .flaky.log
+out/
+xcodebuild/
+fletch.xcodeproj/
+src/compiler/compiler.xcodeproj/
+src/shared/shared.xcodeproj/
+src/vm/vm.xcodeproj/
