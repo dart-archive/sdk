@@ -23,19 +23,19 @@ class Expect {
     }
   }
 
-  static void isTrue(value) {
+  static void isTrue(value, [String msg = null]) {
     equals(true, value);
   }
 
-  static void isFalse(value) {
+  static void isFalse(value, [String msg = null]) {
     equals(false, value);
   }
 
-  static void isNull(value) {
+  static void isNull(value, [String msg = null]) {
     equals(null, value);
   }
 
-  static void isNotNull(value) {
+  static void isNotNull(value, [String msg = null]) {
     notEquals(null, value);
   }
 

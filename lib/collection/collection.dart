@@ -4,5 +4,6 @@
 
 library dart.collection;
 
+part 'iterable.dart';
 part 'linked_hash_map.dart';
 part 'linked_hash_set.dart';

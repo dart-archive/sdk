@@ -96,112 +96,22 @@ abstract class List<E> implements Iterable<E> {
   Map<int, E> asMap();
 }
 
-class _ConstantList<E> implements List<E> {
+class _ConstantList<E> extends IterableBase<E> implements List<E> {
   final _list;
 
   _ConstantList(int length) : this._list = _new(length);
 
   Iterator<E> get iterator => new _ListIterator(this);
 
-  Iterable map(f(E element)) {
-    throw new UnimplementedError("_ConstantList.map");
-  }
-
-  Iterable<E> where(bool test(E element)) {
-    throw new UnimplementedError("_ConstantList.where");
-  }
-
   Iterable expand(Iterable f(E element)) {
     throw new UnimplementedError("_ConstantList.expand");
   }
-
-  bool contains(Object element) {
-    for (int i = 0; i < length; i++) {
-      if (this[i] == element) return true;
-    }
-    return false;
-  }
-
-  void forEach(void f(E element)) {
-    for (int i = 0; i < length; i++) {
-      f(this[i]);
-    }
-  }
-
-  E reduce(E combine(E value, E element)) {
-    if (length == 0) throw new StateError("No element");
-    var value = this[0];
-    for (int i = 1; i < length; i++) {
-      value = combine(value, this[i]);
-    }
-    return value;
-  }
-
-  dynamic fold(var initialValue,
-               dynamic combine(var previousValue, E element)) {
-    for (int i = 0; i < length; i++) {
-      initialValue = combine(initialValue, this[i]);
-    }
-    return initialValue;
-  }
-
-  bool every(bool test(E element)) {
-    for (int i = 0; i < length; i++) {
-      if (!test(this[i])) return false;
-    }
-    return true;
-  }
-
-  String join([String separator = ""]) {
-    StringBuffer buffer = new StringBuffer();
-    buffer.writeAll(this, separator);
-    return buffer.toString();
-  }
-
-  bool any(bool test(E element)) {
-    for (int i = 0; i < length; i++) {
-      if (test(this[i])) return true;
-    }
-    return false;
-  }
-
-  List<E> toList({ bool growable: true }) {
-    var result;
-    if (growable) {
-      result = <E>[];
-      result.length = length;
-    } else {
-      result = new List<E>(length);
-    }
-    for (int i = 0; i < length; i++) {
-      list[i] = this[i];
-    }
-    return result;
-  }
-
-  Set<E> toSet() => new Set<E>.from(this);
 
   int get length native;
 
   int get isEmpty => length == 0;
 
   int get isNotEmpty => length != 0;
-
-  Iterable<E> take(int n) {
-    throw new UnimplementedError("_ConstantList.take");
-  }
-
-  Iterable<E> takeWhile(bool test(E value)) {
-    throw new UnimplementedError("_ConstantList.takeWhile");
-  }
-
-  Iterable<E> skip(int n) {
-    throw new UnimplementedError("_ConstantList.skip");
-  }
-
-  Iterable<E> skipWhile(bool test(E value)) {
-    throw new UnimplementedError("_ConstantList.skipWhile");
-  }
 
   E get first {
     if (length == 0) throw new StateError("No element");
@@ -214,19 +124,9 @@ class _ConstantList<E> implements List<E> {
   }
 
   E get single {
-    throw new UnimplementedError("_ConstantList.single");
-  }
-
-  E firstWhere(bool test(E element), { E orElse() }) {
-    throw new UnimplementedError("_ConstantList.firstWhere");
-  }
-
-  E lastWhere(bool test(E element), {E orElse()}) {
-    throw new UnimplementedError("_ConstantList.lastWhere");
-  }
-
-  E singleWhere(bool test(E element)) {
-    throw new UnimplementedError("_ConstantList.singleWhere");
+    if (length == 0) throw new StateError("No element");
+    if (length != 1) throw new StateError("Too many elements");
+    return this[0];
   }
 
   E elementAt(int index) => this[index];
@@ -394,7 +294,7 @@ class _FixedList<E> extends _ConstantList<E> {
   }
 }
 
-class _GrowableList<E> implements List<E> {
+class _GrowableList<E> extends IterableBase<E> implements List<E> {
   int _length;
   _FixedList _list;
 
@@ -402,84 +302,8 @@ class _GrowableList<E> implements List<E> {
 
   Iterator<E> get iterator => new _ListIterator(this);
 
-  Iterable map(f(E element)) {
-    throw new UnimplementedError("_GrowableList.map");
-  }
-
-  Iterable<E> where(bool test(E element)) {
-    throw new UnimplementedError("_GrowableList.where");
-  }
-
   Iterable expand(Iterable f(E element)) {
     throw new UnimplementedError("_GrowableList.expand");
-  }
-
-  bool contains(Object element) {
-    for (int i = 0; i < length; i++) {
-      if (this[i] == element) return true;
-    }
-    return false;
-  }
-
-  void forEach(void f(E element)) {
-    for (int i = 0; i < length; i++) {
-      f(this[i]);
-    }
-  }
-
-  E reduce(E combine(E value, E element)) {
-    if (length == 0) throw new StateError("No element");
-    var value = this[0];
-    for (int i = 1; i < length; i++) {
-      value = combine(value, this[i]);
-    }
-    return value;
-  }
-
-  dynamic fold(var initialValue,
-               dynamic combine(var previousValue, E element)) {
-    for (int i = 0; i < length; i++) {
-      initialValue = combine(initialValue, this[i]);
-    }
-    return initialValue;
-  }
-
-  bool every(bool test(E element)) {
-    for (int i = 0; i < length; i++) {
-      if (!test(this[i])) return false;
-    }
-    return true;
-  }
-
-  String join([String separator = ""]) {
-    StringBuffer buffer = new StringBuffer();
-    buffer.writeAll(this, separator);
-    return buffer.toString();
-  }
-
-  bool any(bool test(E element)) {
-    for (int i = 0; i < length; i++) {
-      if (test(this[i])) return true;
-    }
-    return false;
-  }
-
-  List<E> toList({ bool growable: true }) {
-    var result;
-    if (growable) {
-      result = <E>[];
-      result.length = length;
-    } else {
-      result = new List<E>(length);
-    }
-    for (int i = 0; i < length; i++) {
-      list[i] = this[i];
-    }
-    return result;
-  }
-
-  Set<E> toSet() {
-    throw new UnimplementedError("_GrowableList.toSet");
   }
 
   int get length => _length;
@@ -487,22 +311,6 @@ class _GrowableList<E> implements List<E> {
   int get isEmpty => _length == 0;
 
   int get isNotEmpty => _length != 0;
-
-  Iterable<E> take(int n) {
-    throw new UnimplementedError("_GrowableList.take");
-  }
-
-  Iterable<E> takeWhile(bool test(E value)) {
-    throw new UnimplementedError("_GrowableList.takeWhile");
-  }
-
-  Iterable<E> skip(int n) {
-    throw new UnimplementedError("_GrowableList.skip");
-  }
-
-  Iterable<E> skipWhile(bool test(E value)) {
-    throw new UnimplementedError("_GrowableList.skipWhile");
-  }
 
   E get first {
     if (length == 0) throw new StateError("No element");
@@ -515,19 +323,9 @@ class _GrowableList<E> implements List<E> {
   }
 
   E get single {
-    throw new UnimplementedError("_GrowableList.single");
-  }
-
-  E firstWhere(bool test(E element), { E orElse() }) {
-    throw new UnimplementedError("_GrowableList.firstWhere");
-  }
-
-  E lastWhere(bool test(E element), {E orElse()}) {
-    throw new UnimplementedError("_GrowableList.lastWhere");
-  }
-
-  E singleWhere(bool test(E element)) {
-    throw new UnimplementedError("_GrowableList.singleWhere");
+    if (length == 0) throw new StateError("No element");
+    if (length != 1) throw new StateError("Too many elements");
+    return this[0];
   }
 
   E elementAt(int index) => this[index];

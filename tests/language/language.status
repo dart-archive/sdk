@@ -90,9 +90,7 @@ compile_time_constant3_test: Crash
 compile_time_constant5_test: Crash
 compile_time_constant6_test: Crash
 compile_time_constant8_test: Fail
-compile_time_constant_a_test: Fail
 compile_time_constant_arguments_test/none: CompileTimeError
-compile_time_constant_b_test: Fail
 compile_time_constant_c_test/02: Crash
 compile_time_constant_checked2_test/03: Crash
 compile_time_constant_checked3_test/03: Crash
@@ -437,7 +435,6 @@ generic_field_mixin2_test: Fail
 generic_field_mixin3_test: Fail
 generic_field_mixin4_test: Fail
 generic_field_mixin5_test: Fail
-generic_field_mixin6_test/01: Fail
 generic_field_mixin_test: Fail
 generic_inheritance_test: Fail
 generic_instanceof2_test: Fail
@@ -456,7 +453,6 @@ getter_override_test/01: MissingCompileTimeError
 getter_override_test/02: MissingCompileTimeError
 getter_setter_order_test: Fail
 guess_cid_test: Fail
-hash_map_null_key_foreach_test: Fail
 hidden_import_test/01: CompileTimeError
 hidden_import_test/02: CompileTimeError
 hidden_import_test/none: CompileTimeError
@@ -519,7 +515,6 @@ issue13474_test: Fail
 issue14014_2_test: Crash
 issue14014_3_test: Fail
 issue14014_test: Crash
-issue14242_test: Fail
 issue15720_test: Fail
 issue4157508_test: Fail
 issue4515170_test: Crash
@@ -580,7 +575,6 @@ malformed_test/none: Crash
 many_generic_instanceof_test: Fail
 many_named_arguments_test: Fail
 many_overridden_no_such_method_test: CompileTimeError
-map_literal10_test: Fail
 map_literal2_negative_test: Fail
 map_literal3_test: Fail
 map_literal4_test: Fail
@@ -746,7 +740,6 @@ named_parameters_type_test/01: Fail
 named_parameters_type_test/02: Fail
 named_parameters_type_test/03: Fail
 named_parameters_with_conversions_test: Fail
-named_parameters_with_dollars_test: Fail
 namer2_test: Fail
 nested_switch_label_test: CompileTimeError
 no_main_test/01: CompileTimeError
@@ -777,7 +770,6 @@ optimized_string_charat_test: Fail
 optimized_string_charcodeat_test: Fail
 optional_named_parameters_test/02: Fail
 optional_named_parameters_test/04: Fail
-ordered_maps_test: Fail
 osr_test: CompileTimeError
 overridden_no_such_method_test: CompileTimeError
 override_field_method1_negative_test: Fail
@@ -870,7 +862,6 @@ string_interpolation9_test/19: MissingCompileTimeError
 string_interpolation9_test/4: MissingCompileTimeError
 string_interpolation9_test/9: MissingCompileTimeError
 string_interpolation_newline_test: Fail
-string_join_test: Fail
 string_test: Fail
 string_unicode1_negative_test: Fail
 string_unicode2_negative_test: Fail

@@ -4,7 +4,7 @@
 
 part of dart.collection;
 
-class LinkedHashSet<E> implements Set<E> {
+class LinkedHashSet<E> extends IterableBase<E> implements Set<E> {
   final List _values = [];
 
   LinkedHashSet();
@@ -14,50 +14,6 @@ class LinkedHashSet<E> implements Set<E> {
   }
 
   Iterator<E> get iterator => _values.iterator;
-
-  Iterable map(f(E element)) {
-    throw new UnimplementedError("LinkedHashSet.map");
-  }
-
-  Iterable<E> where(bool test(E element)) {
-    throw new UnimplementedError("LinkedHashSet.where");
-  }
-
-  Iterable expand(Iterable f(E element)) {
-    throw new UnimplementedError("LinkedHashSet.expand");
-  }
-
-  bool contains(Object element) {
-    int index = _values.indexOf(element);
-    return index >= 0;
-  }
-
-  void forEach(void f(E element)) {
-    _values.forEach(f);
-  }
-
-  E reduce(E combine(E value, E element)) {
-    throw new UnimplementedError("LinkedHashSet.reduce");
-  }
-
-  dynamic fold(var initialValue,
-               dynamic combine(var previousValue, E element)) {
-    throw new UnimplementedError("LinkedHashSet.fold");
-  }
-
-  bool every(bool test(E element)) {
-    throw new UnimplementedError("LinkedHashSet.every");
-  }
-
-  String join([String separator = ""]) {
-    StringBuffer buffer = new StringBuffer();
-    buffer.writeAll(this, separator);
-    return buffer.toString();
-  }
-
-  bool any(bool test(E element)) {
-    throw new UnimplementedError("LinkedHashSet.any");
-  }
 
   List<E> toList({ bool growable: true }) => _values.toList(growable);
 
@@ -69,41 +25,9 @@ class LinkedHashSet<E> implements Set<E> {
 
   bool get isNotEmpty => _values.isNotEmpty;
 
-  Iterable<E> take(int n) {
-    throw new UnimplementedError("LinkedHashSet.take");
-  }
-
-  Iterable<E> takeWhile(bool test(E value)) {
-    throw new UnimplementedError("LinkedHashSet.takeWhile");
-  }
-
-  Iterable<E> skip(int n) {
-    throw new UnimplementedError("LinkedHashSet.skip");
-  }
-
-  Iterable<E> skipWhile(bool test(E value)) {
-    throw new UnimplementedError("LinkedHashSet.skipWhile");
-  }
-
   E get first => _values.first;
 
   E get last => _values.last;
-
-  E get single {
-    throw new UnimplementedError("LinkedHashSet.single");
-  }
-
-  E firstWhere(bool test(E element), { E orElse() }) {
-    throw new UnimplementedError("LinkedHashSet.firstWhere");
-  }
-
-  E lastWhere(bool test(E element), {E orElse()}) {
-    throw new UnimplementedError("LinkedHashSet.lastWhere");
-  }
-
-  E singleWhere(bool test(E element)) {
-    throw new UnimplementedError("LinkedHashSet.singleWhere");
-  }
 
   E elementAt(int index) => _values[index];
 
