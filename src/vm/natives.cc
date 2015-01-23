@@ -290,7 +290,10 @@ NATIVE(MintMod) {
   Object* y = arguments[1];
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
-  if (y_value == 0) return Failure::index_out_of_bounds();
+  if (y_value == 0 ||
+      (y_value == -1 && x->value() == (-1LL << 63))) {
+    return Failure::index_out_of_bounds();
+  }
   return process->ToInteger(x->value() % y_value);
 }
 
@@ -307,7 +310,10 @@ NATIVE(MintTruncDiv) {
   Object* y = arguments[1];
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
-  if (y_value == 0) return Failure::index_out_of_bounds();
+  if (y_value == 0 ||
+      (y_value == -1 && x->value() == (-1LL << 63))) {
+    return Failure::index_out_of_bounds();
+  }
   return process->ToInteger(x->value() / y_value);
 }
 
