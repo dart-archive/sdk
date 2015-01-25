@@ -41,7 +41,7 @@ Usage fletch logcat <command>
 Manages information logged by Fletch
 
 Commands:
-  start <port_number> <path>
+  start <port number> <path>
       - start a logcat server on the specified port and target
 ''';
 
