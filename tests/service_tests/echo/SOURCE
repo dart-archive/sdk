@@ -17,7 +17,7 @@ TEST_SOURCE_FILES = Split("""
 """)
 
 OBJC_TEST_SOURCE_FILES = Split("""
-    echo.mm
+    objc_echo.mm
     objc/echo_service.h
     objc/echo_service.m
 """)
