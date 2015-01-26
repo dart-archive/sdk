@@ -3,6 +3,11 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 {
+  'target_defaults': {
+    'include_dirs': [
+      '../../',
+    ],
+  },
   'targets': [
     {
       'target_name': 'fletch_shared',
@@ -19,8 +24,25 @@
         'test_case.cc',
         'utils.cc',
       ],
-      'include_dirs': [
-        '../../',
+    },
+    {
+      'target_name': 'shared_run_tests',
+      'type': 'executable',
+      'dependencies': [
+        'fletch_shared',
+      ],
+      'defines': [
+        'TESTING',
+      ],
+      'sources': [
+        # TODO(ahe): Add header (.h) files.
+        'assert_test.cc',
+        'flags_test.cc',
+        'globals_test.cc',
+        'utils_test.cc',
+
+        'fletch.cc',
+        'test_main.cc',
       ],
     },
   ],

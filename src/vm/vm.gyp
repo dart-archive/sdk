@@ -3,10 +3,18 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 {
+  'target_defaults': {
+    'include_dirs': [
+      '../../',
+    ],
+  },
   'targets': [
     {
       'target_name': 'fletch_vm',
       'type': 'static_library',
+      'dependencies': [
+        '../shared/shared.gyp:fletch_shared',
+      ],
       'sources': [
         # TODO(ahe): Add header (.h) files.
         'assembler_x86.cc',
@@ -38,16 +46,7 @@
         'thread_posix.cc',
         'weak_pointer.cc',
 
-        # TODO(ahe): Depend on libfletch_shared instead.
-        '../shared/assert.cc',
-        '../shared/bytecodes.cc',
-        '../shared/connection.cc',
-        '../shared/flags.cc',
-        '../shared/native_process_posix.cc',
-        '../shared/native_socket_macos.cc',
-        '../shared/native_socket_posix.cc',
-        '../shared/test_case.cc',
-        '../shared/utils.cc',
+        '<(INTERMEDIATE_DIR)/generated.S',
 
         # TODO(ahe): Create GYP file for double-conversion instead.
         '../../third_party/double-conversion/src/bignum-dtoa.cc',
@@ -58,19 +57,31 @@
         '../../third_party/double-conversion/src/fast-dtoa.cc',
         '../../third_party/double-conversion/src/fixed-dtoa.cc',
         '../../third_party/double-conversion/src/strtod.cc',
-
-        # TODO(ahe): Generate generated.o.
-        # 'vm/generated.o',
       ],
-      'include_dirs': [
-        '../../',
+      'actions': [
+        {
+          'action_name': 'generate_generated_S',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'fletch_vm_generator'
+            '<(EXECUTABLE_SUFFIX)',
+          ],
+          'outputs': [
+            '<(INTERMEDIATE_DIR)/generated.S',
+          ],
+          'action': [
+            # TODO(ahe): Change generator to accept command line argument for
+            # output file. Using file redirection may not work well on Windows.
+            'bash', '-c', '<(_inputs) > <(_outputs)',
+          ],
+        },
       ],
     },
     {
       'target_name': 'fletch_vm_generator',
       'type': 'executable',
-      'include_dirs': [
-        '../../',
+      'dependencies': [
+        '../shared/shared.gyp:fletch_shared',
       ],
       'sources': [
         # TODO(ahe): Add header (.h) files.
@@ -108,16 +119,6 @@
         'thread_posix.cc',
         'weak_pointer.cc',
 
-        '../shared/assert.cc',
-        '../shared/bytecodes.cc',
-        '../shared/connection.cc',
-        '../shared/flags.cc',
-        '../shared/native_process_posix.cc',
-        '../shared/native_socket_macos.cc',
-        '../shared/native_socket_posix.cc',
-        '../shared/test_case.cc',
-        '../shared/utils.cc',
-
         '../../third_party/double-conversion/src/bignum-dtoa.cc',
         '../../third_party/double-conversion/src/bignum.cc',
         '../../third_party/double-conversion/src/cached-powers.cc',
@@ -127,15 +128,39 @@
         '../../third_party/double-conversion/src/fixed-dtoa.cc',
         '../../third_party/double-conversion/src/strtod.cc',
       ],
+    },
+    {
+      'target_name': 'fletch',
+      'type': 'executable',
+      'dependencies': [
+        'fletch_vm',
+      ],
+      'sources': [
+        # TODO(ahe): Add header (.h) files.
+        'main.cc',
+      ],
+    },
+    {
+      'target_name': 'vm_run_tests',
+      'type': 'executable',
+      'dependencies': [
+        'fletch_vm',
+      ],
+      'defines': [
+        'TESTING',
+        # TODO(ahe): Remove this when GYP is the default.
+        'GYP',
+      ],
+      'sources': [
+        # TODO(ahe): Add header (.h) files.
+        'foreign_ports_test.cc',
+        'object_map_test.cc',
+        'object_memory_test.cc',
+        'object_test.cc',
+        'platform_test.cc',
 
-      # TODO(ahe): Add these options to linker:
-      # -m32
-      # -rdynamic
-      # -Lthird_party/libs/macos/x86
-      # ... o files ...
-      # -ltcmalloc_minimal
-      # -lpthread
-      # -ldl
+        '../shared/test_main.cc',
+      ],
     },
   ],
 }

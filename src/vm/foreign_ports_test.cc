@@ -34,23 +34,31 @@ static void RunDartFile() {
 
   // Prepare the compiler argument.
   char* executable = Flags::executable();
-  bool release = strstr(executable, "release") != NULL;
-  bool x64 = strstr(executable, "x64") != NULL;
-  Platform::OperatingSystem os = Platform::OS();
   char* dir = dirname(executable);
   int path_length = strlen(dir) + 33;
   char* compiler = static_cast<char*>(malloc(path_length));
+#ifdef GYP
+  snprintf(compiler, path_length, "%s/fletchc", dir);
+#else
+  bool release = strstr(executable, "release") != NULL;
+  bool x64 = strstr(executable, "x64") != NULL;
+  Platform::OperatingSystem os = Platform::OS();
   snprintf(compiler, path_length, "%s/../../%s_%s_%s/fletchc",
            dir,
            os == Platform::kLinux ? "linux" : "macos",
            release ? "release" : "debug",
            x64 ? "x64" : "x86");
+#endif
 
   // Prepare the dart file argument.
+#ifdef GYP
+  const char* dart_file = "src/vm/foreign_ports_test.dart";
+#else
   const char* dart_file_suffix = "/../../../src/vm/foreign_ports_test.dart";
   path_length = strlen(dir) + strlen(dart_file_suffix) + 1;
   char* dart_file = static_cast<char*>(malloc(path_length));
   snprintf(dart_file, path_length, "%s%s", dir, dart_file_suffix);
+#endif
 
   // Prepare the port argument.
   char port[256];
@@ -68,7 +76,9 @@ static void RunDartFile() {
 
   process.Wait();
   free(compiler);
+#ifndef GYP
   free(dart_file);
+#endif
 }
 
 TEST_EXPORT(int PostPortToExternalCode(Port* p) {

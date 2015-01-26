@@ -46,5 +46,8 @@
         },
       },
     },
+    # TODO(ahe): These flags should be incorporated in all executables:
+    # LINKER_FLAGS=-m32 -rdynamic -Lthird_party/libs/macos/x86
+    # LIBS=-ltcmalloc_minimal -lpthread -ldl
   },
 }

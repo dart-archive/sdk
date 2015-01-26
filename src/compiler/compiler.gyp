@@ -3,6 +3,11 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 {
+  'target_defaults': {
+    'include_dirs': [
+      '../../',
+    ],
+  },
   'targets': [
     {
       'target_name': 'fletch_compiler',
@@ -43,8 +48,71 @@
         '../shared/test_case.cc',
         '../shared/utils.cc',
       ],
-      'include_dirs': [
-        '../../',
+    },
+    {
+      'target_name': 'fletchc',
+      'type': 'executable',
+      'dependencies': [
+        'fletch_compiler',
+      ],
+      'sources': [
+        # TODO(ahe): Add header (.h) files.
+        'main.cc',
+      ],
+    },
+    {
+      'target_name': 'fletchc_scan',
+      'type': 'executable',
+      'dependencies': [
+        'fletch_compiler',
+      ],
+      'sources': [
+        # TODO(ahe): Add header (.h) files.
+        'scan.cc',
+      ],
+    },
+    {
+      'target_name': 'bench',
+      'type': 'executable',
+      'dependencies': [
+        'fletch_compiler',
+      ],
+      'sources': [
+        # TODO(ahe): Add header (.h) files.
+        'bench.cc',
+      ],
+    },
+    {
+      'target_name': 'fletchc_print',
+      'type': 'executable',
+      'dependencies': [
+        'fletch_compiler',
+      ],
+      'sources': [
+        # TODO(ahe): Add header (.h) files.
+        'print.cc',
+      ],
+    },
+    {
+      'target_name': 'compiler_run_tests',
+      'type': 'executable',
+      'dependencies': [
+        'fletch_compiler',
+      ],
+      'defines': [
+        'TESTING',
+      ],
+      'sources': [
+        # TODO(ahe): Add header (.h) files.
+        'builder_test.cc',
+        'compiler_test.cc',
+        'list_test.cc',
+        'parser_test.cc',
+        'scanner_test.cc',
+        'zone_test.cc',
+
+        # TODO(ahe): Depend on library?
+        '../shared/test_main.cc',
       ],
     },
   ],
