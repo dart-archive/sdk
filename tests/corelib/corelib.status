@@ -87,7 +87,6 @@ from_environment_const_type_undefined_test/15: CompileTimeError
 from_environment_const_type_undefined_test/16: CompileTimeError
 from_environment_const_type_undefined_test/none: CompileTimeError
 growable_list_test: CompileTimeError
-has_next_iterator_test: Fail
 hash_map2_internal_test: Crash
 hash_map2_test: Crash
 hash_set_test/01: Fail
