@@ -5,7 +5,6 @@
 library servicec.plugins.cc;
 
 import 'dart:core' hide Type;
-import 'dart:io';
 
 import 'package:path/path.dart' show basenameWithoutExtension, join;
 
