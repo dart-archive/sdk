@@ -21,7 +21,7 @@ static void Callback(ServiceApiValueType result, void* data) {
 
 + (void)Setup {
   service_id = kNoServiceId;
-  service_id = ServiceApiLookup("Echo");
+  service_id = ServiceApiLookup("EchoService");
 }
 
 + (void)TearDown {

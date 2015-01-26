@@ -2,31 +2,27 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// TODO(ager): This file should be auto-generated from something like.
-//
-// service Echo {
-//   echo(int32) : int32;
-// }
+// Generated file. Do not edit.
 
-#include "tests/service_tests/echo/echo_service.h"
+#include "echo_service.h"
 
-static const MethodId kEchoMethodId = reinterpret_cast<MethodId>(1);
-static ServiceId service_id = kNoServiceId;
+static ServiceId _service_id = kNoServiceId;
 
 void EchoService::Setup() {
-  service_id = ServiceApiLookup("Echo");
+  _service_id = ServiceApiLookup("EchoService");
 }
 
 void EchoService::TearDown() {
-  ServiceApiTerminate(service_id);
-  service_id = kNoServiceId;
+  ServiceApiTerminate(_service_id);
+  _service_id = kNoServiceId;
 }
+
+static const MethodId _kEchoId = reinterpret_cast<MethodId>(1);
 
 ServiceApiValueType EchoService::Echo(ServiceApiValueType arg) {
-  return ServiceApiInvoke(service_id, kEchoMethodId, arg);
+  return ServiceApiInvoke(_service_id, _kEchoId, arg);
 }
 
-void EchoService::EchoAsync(ServiceApiValueType arg,
-                            ServiceApiCallback callback) {
-  ServiceApiInvokeAsync(service_id, kEchoMethodId, arg, callback, NULL);
+void EchoService::EchoAsync(ServiceApiValueType arg, ServiceApiCallback cb) {
+  ServiceApiInvokeAsync(_service_id, _kEchoId, arg, cb, NULL);
 }

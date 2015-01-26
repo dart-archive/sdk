@@ -10,12 +10,12 @@ import 'dart:convert';
 import 'src/parser.dart';
 import 'src/plugins/cc.dart' as cc;
 
-void compile(String path) {
+void compile(String path, String outputDirectory) {
   List<int> bytes = new File(path).readAsBytesSync();
   String input = UTF8.decode(bytes);
 
   Unit unit = parseUnit(input);
   // TODO(kasperl): Perform static semantic analysis.
-  String output = cc.generateHeaderFile(path, unit);
-  stdout.write(output);
+  cc.generateHeaderFile(path, unit, outputDirectory);
+  cc.generateImplementationFile(path, unit, outputDirectory);
 }

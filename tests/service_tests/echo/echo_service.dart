@@ -28,7 +28,7 @@ abstract class EchoService {
     if (_implementation != null) throw new UnsupportedError();
     _implementation = impl;
     _terminated = false;
-    Service.register('Echo', _port);
+    Service.register('EchoService', _port);
   }
 
   static void handleNextEvent() {
