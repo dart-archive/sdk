@@ -348,10 +348,14 @@ class _GrowableList<E> extends IterableBase<E> implements List<E> {
   }
 
   void add(E value) {
-    if (_length >= _list.length) {
-      _grow(_length + 1);
+    List list = _list;
+    int length = _length;
+    int newLength = length + 1;
+    if (length >= list.length) {
+      list = _grow(newLength);
     }
-    _list[_length++] = value;
+    list[length] = value;
+    _length = newLength;
   }
 
   void addAll(Iterable<E> iterable) {
@@ -413,9 +417,11 @@ class _GrowableList<E> extends IterableBase<E> implements List<E> {
   }
 
   bool remove(Object value) {
+    List list = _list;
+    int length = _length;
     for (int i = 0; i < length; ++i) {
-      if (_list[i] == value) {
-        _shiftDown(i);
+      if (list[i] == value) {
+        _shiftDown(i, length);
         return true;
       }
     }
@@ -423,18 +429,20 @@ class _GrowableList<E> extends IterableBase<E> implements List<E> {
   }
 
   E removeAt(int index) {
+    int length = _length;
     if (index >= length) throw new IndexError(index, this);
     E result = _list[index];
-    _shiftDown(index);
+    _shiftDown(index, length);
     return result;
-
   }
 
   E removeLast() {
-    if (length == 0) throw new IndexError(length - 1, this);
-    --length;
-    E result = _list[length];
-    _list[length] = null;
+    int index = _length - 1;
+    if (index < 0) throw new IndexError(index, this);
+    List list = _list;
+    E result = list[index];
+    list[index] = null;
+    _length = index;
     return result;
   }
 
@@ -491,21 +499,25 @@ class _GrowableList<E> extends IterableBase<E> implements List<E> {
 
   String toString() => "List";
 
-  void _grow(minSize) {
+  _FixedList _grow(minSize) {
     // TODO(ager): play with heuristics here.
     var newList = new _FixedList(minSize + (minSize >> 2));
     for (int i = 0; i < _list.length; ++i) {
       newList[i] = _list[i];
     }
-    _list = newList;
+    return _list = newList;
   }
 
-  void _shiftDown(int i) {
-    for (int j = i + 1; j < length; ++j, ++i) {
-      _list[i] = _list[j];
-    }
+  void _shiftDown(int i, int length) {
+    List list = _list;
     --length;
-    _list[length] = null;
+    while (i < length) {
+      int j = i + 1;
+      list[i] = list[j];
+      i = j;
+    }
+    _length = length;
+    list[length] = null;
   }
 }
 
