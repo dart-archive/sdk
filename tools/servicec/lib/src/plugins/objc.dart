@@ -9,8 +9,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' show basenameWithoutExtension, join;
 
-import '../parser.dart';
 import '../emitter.dart';
+import '../parser.dart';
 
 const COPYRIGHT = """
 // Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
@@ -18,11 +18,15 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
+const String _type = 'ServiceApiValueType';
+const String _ctype = 'ServiceApiCallback';
+const String _btype = 'ServiceApiBlock';
+
 void generateHeaderFile(String path, Unit unit, String outputDirectory) {
   _HeaderVisitor visitor = new _HeaderVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
-  String directory = join(outputDirectory, "cc");
+  String directory = join(outputDirectory, 'objc');
   writeToFile(directory, path, "h", contents);
 }
 
@@ -32,8 +36,8 @@ void generateImplementationFile(String path,
   _ImplementationVisitor visitor = new _ImplementationVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
-  String directory = join(outputDirectory, "cc");
-  writeToFile(directory, path, "cc", contents);
+  String directory = join(outputDirectory, 'objc');
+  writeToFile(directory, path, "m", contents);
 }
 
 class _HeaderVisitor extends Visitor {
@@ -43,48 +47,42 @@ class _HeaderVisitor extends Visitor {
 
   visit(Node node) => node.accept(this);
 
-  String computeHeaderGuard() {
-    String base = basenameWithoutExtension(path).toUpperCase();
-    return '${base}_H';
-  }
-
   visitUnit(Unit node) {
-    String headerGuard = computeHeaderGuard();
     buffer.writeln(COPYRIGHT);
 
     buffer.writeln('// Generated file. Do not edit.');
     buffer.writeln();
 
-    buffer.writeln('#ifndef $headerGuard');
-    buffer.writeln('#define $headerGuard');
+    buffer.writeln('#include <Foundation/Foundation.h>');
     buffer.writeln();
 
     buffer.writeln('#include "include/service_api.h"');
+    buffer.writeln();
+
+    buffer.writeln('typedef void (^ServiceApiBlock)(ServiceApiValueType);');
 
     node.services.forEach(visit);
-
-    buffer.writeln();
-    buffer.writeln('#endif  // $headerGuard');
   }
 
   visitService(Service node) {
     buffer.writeln();
-    buffer.writeln('class ${node.name} {');
-    buffer.writeln(' public:');
-    buffer.writeln('  static void Setup();');
-    buffer.writeln('  static void TearDown();');
+    buffer.writeln('@interface ${node.name} : NSObject');
+    buffer.writeln();
+    buffer.writeln('+ (void)Setup;');
+    buffer.writeln('+ (void)TearDown;');
+    buffer.writeln();
 
     node.methods.forEach(visit);
 
-    buffer.writeln('};');
+    buffer.writeln();
+    buffer.writeln('@end');
   }
 
   visitMethod(Method node) {
-    const String type = 'ServiceApiValueType';
-    const String ctype = 'ServiceApiCallback';
     String name = node.name;
-    buffer.writeln('  static $type $name($type arg);');
-    buffer.writeln('  static void ${name}Async($type arg, $ctype callback);');
+    buffer.writeln('+ ($_type)$name:($_type)arg;');
+    buffer.writeln('+ (void)${name}Async:($_type)arg WithCallback:($_ctype)cb;');
+    buffer.writeln('+ (void)${name}Async:($_type)arg WithBlock:($_btype)block;');
   }
 
   visitType(Type node) {
@@ -116,48 +114,66 @@ class _ImplementationVisitor extends Visitor {
     buffer.writeln();
 
     buffer.writeln('#include "$headerFile"');
+    buffer.writeln();
+
+    buffer.writeln('static void _BlockCallback($_type result, void* data) {');
+    buffer.writeln('  ((ServiceApiBlock)data)(result);');
+    buffer.writeln('}');
 
     node.services.forEach(visit);
   }
 
   visitService(Service node) {
     buffer.writeln();
-    buffer.writeln('static ServiceId _service_id = kNoServiceId;');
+    buffer.writeln('static ServiceId _service_id;');
 
     serviceName = node.name;
 
     buffer.writeln();
-    buffer.writeln('void ${serviceName}::Setup() {');
+    buffer.writeln('@implementation $serviceName');
+
+    buffer.writeln();
+    buffer.writeln('+ (void)Setup {');
+    buffer.writeln('  _service_id = kNoServiceId;');
     buffer.writeln('  _service_id = ServiceApiLookup("$serviceName");');
     buffer.writeln('}');
 
     buffer.writeln();
-    buffer.writeln('void ${serviceName}::TearDown() {');
+    buffer.writeln('+ (void)TearDown {');
     buffer.writeln('  ServiceApiTerminate(_service_id);');
     buffer.writeln('  _service_id = kNoServiceId;');
     buffer.writeln('}');
 
     node.methods.forEach(visit);
+
+    buffer.writeln();
+    buffer.writeln('@end');
   }
 
   visitMethod(Method node) {
-    const String type = 'ServiceApiValueType';
-    const String ctype = 'ServiceApiCallback';
     String name = node.name;
     String id = '_k${name}Id';
+    String sid = '_service_id';
 
     buffer.writeln();
-    buffer.write('static const MethodId $id = ');
-    buffer.writeln('reinterpret_cast<MethodId>(${methodId++});');
+    buffer.writeln('static const MethodId $id = (MethodId)${methodId++};');
 
     buffer.writeln();
-    buffer.writeln('$type $serviceName::$name($type arg) {');
-    buffer.writeln('  return ServiceApiInvoke(_service_id, $id, arg);');
+    buffer.writeln('+ ($_type)$name:($_type)arg {');
+    buffer.writeln('  return ServiceApiInvoke($sid, $id, arg);');
     buffer.writeln('}');
 
     buffer.writeln();
-    buffer.writeln('void $serviceName::${name}Async($type arg, $ctype cb) {');
-    buffer.writeln('  ServiceApiInvokeAsync(_service_id, $id, arg, cb, NULL);');
+    buffer.writeln('+ (void)${name}Async:($_type)arg '
+                   'WithCallback:($_ctype)cb {');
+    buffer.writeln('  ServiceApiInvokeAsync($sid, $id, arg, cb, (void*)0);');
+    buffer.writeln('}');
+
+    buffer.writeln();
+    buffer.writeln('+ (void)${name}Async:($_type)arg '
+                   'WithBlock:($_btype)block {');
+    buffer.writeln('  ServiceApiInvokeAsync($sid, $id, arg, '
+                   '_BlockCallback, (void*)block);');
     buffer.writeln('}');
   }
 

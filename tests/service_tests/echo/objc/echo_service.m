@@ -2,45 +2,40 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// TODO(ager): This file should be auto-generated from something like.
-//
-// service EchoService {
-//   Echo(int32) : int32;
-// }
+// Generated file. Do not edit.
 
 #include "echo_service.h"
 
-static const MethodId kEchoMethodId = (MethodId)1;
-static ServiceId service_id;
-
-static void Callback(ServiceApiValueType result, void* data) {
+static void _BlockCallback(ServiceApiValueType result, void* data) {
   ((ServiceApiBlock)data)(result);
 }
+
+static ServiceId _service_id;
 
 @implementation EchoService
 
 + (void)Setup {
-  service_id = kNoServiceId;
-  service_id = ServiceApiLookup("EchoService");
+  _service_id = kNoServiceId;
+  _service_id = ServiceApiLookup("EchoService");
 }
 
 + (void)TearDown {
-  ServiceApiTerminate(service_id);
-  service_id = kNoServiceId;
+  ServiceApiTerminate(_service_id);
+  _service_id = kNoServiceId;
 }
+
+static const MethodId _kEchoId = (MethodId)1;
 
 + (ServiceApiValueType)Echo:(ServiceApiValueType)arg {
-  return ServiceApiInvoke(service_id, kEchoMethodId, arg);
+  return ServiceApiInvoke(_service_id, _kEchoId, arg);
 }
 
-+ (void)EchoAsync:(ServiceApiValueType)arg
-        WithCallback:(ServiceApiCallback)callback {
-  ServiceApiInvokeAsync(service_id, kEchoMethodId, arg, callback, (void*)0);
++ (void)EchoAsync:(ServiceApiValueType)arg WithCallback:(ServiceApiCallback)cb {
+  ServiceApiInvokeAsync(_service_id, _kEchoId, arg, cb, (void*)0);
 }
 
-+ (void)EchoAsync:(ServiceApiValueType)arg
-        WithBlock:(ServiceApiBlock)block {
-  ServiceApiInvokeAsync(service_id, kEchoMethodId, arg, Callback, (void*)block);
++ (void)EchoAsync:(ServiceApiValueType)arg WithBlock:(ServiceApiBlock)block {
+  ServiceApiInvokeAsync(_service_id, _kEchoId, arg, _BlockCallback, (void*)block);
 }
 
 @end

@@ -6,7 +6,7 @@ library servicec.plugins.dart;
 
 import 'dart:core' hide Type;
 
-import 'package:path/path.dart' show basenameWithoutExtension;
+import 'package:path/path.dart' show basenameWithoutExtension, join;
 
 import '../parser.dart';
 import '../emitter.dart';
@@ -21,7 +21,8 @@ void generate(String path, Unit unit, String outputDirectory) {
   _DartVisitor visitor = new _DartVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
-  writeToFile(outputDirectory, path, "dart", contents);
+  String directory = join(outputDirectory, 'dart');
+  writeToFile(directory, path, "dart", contents);
 }
 
 class _DartVisitor extends Visitor {

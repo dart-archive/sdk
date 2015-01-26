@@ -2,11 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// TODO(ager): This file should be auto-generated from something like.
-//
-// service EchoService {
-//   Echo(int32) : int32;
-// }
+// Generated file. Do not edit.
 
 #include <Foundation/Foundation.h>
 
@@ -18,10 +14,9 @@ typedef void (^ServiceApiBlock)(ServiceApiValueType);
 
 + (void)Setup;
 + (void)TearDown;
+
 + (ServiceApiValueType)Echo:(ServiceApiValueType)arg;
-+ (void)EchoAsync:(ServiceApiValueType)arg
-        WithCallback:(ServiceApiCallback)callback;
-+ (void)EchoAsync:(ServiceApiValueType)arg
-        WithBlock:(ServiceApiBlock)block;
++ (void)EchoAsync:(ServiceApiValueType)arg WithCallback:(ServiceApiCallback)cb;
++ (void)EchoAsync:(ServiceApiValueType)arg WithBlock:(ServiceApiBlock)block;
 
 @end

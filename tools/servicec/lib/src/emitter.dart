@@ -13,12 +13,11 @@ void writeToFile(String outputDirectory,
                  String extension,
                  String contents) {
   // Create 'cc' output directory if it doesn't already exist.
-  String directory = join(outputDirectory, 'dart');
-  new Directory(directory).createSync();
+  new Directory(outputDirectory).createSync();
   // Write contents of the file.
   String base = basenameWithoutExtension(path);
   String headerFile = '$base.$extension';
-  String headerFilePath = join(directory, headerFile);
+  String headerFilePath = join(outputDirectory, headerFile);
   new File(headerFilePath).writeAsStringSync(contents);
 }
 

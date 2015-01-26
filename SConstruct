@@ -197,14 +197,12 @@ def DefineVariant(name, *modifiers):
   objc_env = context.environment.Clone()
   objc_env.Append(LINKFLAGS=["-framework", "Foundation", "-Wl,-no_pie"])
 
-  objc_program_definitions = []
-
   if common["os"] == "macos":
     objc_echo_service_test = { "name": "objc_echo_service_test",
                                "objects": echo_service_tests["objc_objects"] +
                                           [vm_static_library],
                                "env": "objc" }
-    objc_program_definitions += [ objc_echo_service_test ]
+    program_definitions += [ objc_echo_service_test ]
 
   programs = []
 
