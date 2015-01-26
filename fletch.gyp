@@ -132,31 +132,40 @@
       # names.
       'type': 'none',
       'dependencies': [
+        'src/vm/vm.gyp:fletch',
         'tests/service_tests/service_tests.gyp:echo_service_test',
       ],
       'actions': [
-        # TODO(ahe): This test requires a snapshot that I haven't figured out
-        # how to build yet.
-        # From ager:
-        #     ./build/linux_debug_x86/fletch \
-        #         tests/service_tests/echo/echo.dart \
-        #         --out=echo.snapshot
-        # {
-        #   'action_name': 'run_echo_service_test',
-        #   'inputs': [
-        #     '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-        #     'echo_service_test'
-        #     '<(EXECUTABLE_SUFFIX)',
-        #   ],
-        #   'outputs': [
-        #     '<(PRODUCT_DIR)/test_outcomes/echo_service_test.pass',
-        #   ],
-        #   'action': [
-        #     "bash", "-c",
-        #     "<(_inputs) && LANG=POSIX date '+Test passed on %+' > "
-        #     "<(_outputs)",
-        #   ],
-        # },
+        {
+          'action_name': 'generate_echo_snapshot',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            'tests/service_tests/echo/echo.dart',
+          ],
+          'outputs': [
+            '<(INTERMEDIATE_DIR)/echo.snapshot',
+          ],
+          'action': [
+            '<@(_inputs)', '--out=<(INTERMEDIATE_DIR)/echo.snapshot',
+          ],
+        },
+        {
+          'action_name': 'run_echo_service_test',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'echo_service_test'
+            '<(EXECUTABLE_SUFFIX)',
+            '<(INTERMEDIATE_DIR)/echo.snapshot',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/test_outcomes/echo_service_test.pass',
+          ],
+          'action': [
+            "bash", "-c",
+            "<(_inputs) && LANG=POSIX date '+Test passed on %+' > "
+            "<(_outputs)",
+          ],
+        },
       ],
     },
   ],

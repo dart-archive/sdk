@@ -7,13 +7,31 @@
     'include_dirs': [
       '../../',
     ],
+    'actions': [
+      {
+        # TODO(ahe): Move to .gypi file that is included by the other .gyp
+        # files.
+        'action_name': 'lint_>(_target_name)',
+        'inputs': [
+          '../../third_party/cpplint/cpplint.py',
+          '>@(_sources)',
+        ],
+        'outputs': [ '>(INTERMEDIATE_DIR)/lint_>(_target_name).log' ],
+        'action': [
+          "bash", "-c",
+          "python >(_inputs) && "
+          "LANG=POSIX date '+Lint checked on %+' > <(_outputs)",
+        ],
+      },
+    ]
   },
   'targets': [
     {
-      'target_name': 'fletch_vm',
+      'target_name': 'fletch_vm_base',
       'type': 'static_library',
       'dependencies': [
         '../shared/shared.gyp:fletch_shared',
+        '../double_conversion.gyp:double_conversion',
       ],
       'sources': [
         # TODO(ahe): Add header (.h) files.
@@ -45,18 +63,18 @@
         'thread_pool.cc',
         'thread_posix.cc',
         'weak_pointer.cc',
-
+      ],
+    },
+    {
+      'target_name': 'fletch_vm',
+      'type': 'static_library',
+      'dependencies': [
+        'fletch_vm_base',
+        '../shared/shared.gyp:fletch_shared',
+        '../double_conversion.gyp:double_conversion',
+      ],
+      'sources': [
         '<(INTERMEDIATE_DIR)/generated.S',
-
-        # TODO(ahe): Create GYP file for double-conversion instead.
-        '../../third_party/double-conversion/src/bignum-dtoa.cc',
-        '../../third_party/double-conversion/src/bignum.cc',
-        '../../third_party/double-conversion/src/cached-powers.cc',
-        '../../third_party/double-conversion/src/diy-fp.cc',
-        '../../third_party/double-conversion/src/double-conversion.cc',
-        '../../third_party/double-conversion/src/fast-dtoa.cc',
-        '../../third_party/double-conversion/src/fixed-dtoa.cc',
-        '../../third_party/double-conversion/src/strtod.cc',
       ],
       'actions': [
         {
@@ -81,52 +99,13 @@
       'target_name': 'fletch_vm_generator',
       'type': 'executable',
       'dependencies': [
+        'fletch_vm_base',
         '../shared/shared.gyp:fletch_shared',
+        '../double_conversion.gyp:double_conversion',
       ],
       'sources': [
         # TODO(ahe): Add header (.h) files.
         'generator.cc',
-
-        # TODO(ahe): Depend on libfletch_vm instead.
-        'assembler_x86.cc',
-        'assembler_x86_macos.cc',
-        'event_handler.cc',
-        'event_handler_macos.cc',
-        'ffi.cc',
-        'fletch.cc',
-        'fletch_api_impl.cc',
-        'heap.cc',
-        'interpreter.cc',
-        'interpreter_x86.cc',
-        'intrinsics.cc',
-        'lookup_cache.cc',
-        'natives.cc',
-        'natives_x86.cc',
-        'object.cc',
-        'object_list.cc',
-        'object_map.cc',
-        'object_memory.cc',
-        'platform_posix.cc',
-        'port.cc',
-        'process.cc',
-        'program.cc',
-        'scheduler.cc',
-        'service_api_impl.cc',
-        'session.cc',
-        'snapshot.cc',
-        'stack_walker.cc',
-        'thread_pool.cc',
-        'thread_posix.cc',
-        'weak_pointer.cc',
-
-        '../../third_party/double-conversion/src/bignum-dtoa.cc',
-        '../../third_party/double-conversion/src/bignum.cc',
-        '../../third_party/double-conversion/src/cached-powers.cc',
-        '../../third_party/double-conversion/src/diy-fp.cc',
-        '../../third_party/double-conversion/src/double-conversion.cc',
-        '../../third_party/double-conversion/src/fast-dtoa.cc',
-        '../../third_party/double-conversion/src/fixed-dtoa.cc',
-        '../../third_party/double-conversion/src/strtod.cc',
       ],
     },
     {
