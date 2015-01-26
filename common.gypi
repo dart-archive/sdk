@@ -14,7 +14,7 @@
   },
   'target_defaults': {
     'configurations': {
-      'Default': {
+      'ReleaseIA32': {
         'defines': [
           'FLETCH32',
           'NDEBUG', # TODO(ahe): Is this necessary/used?

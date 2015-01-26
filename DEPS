@@ -2,6 +2,21 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
+
+vars = {
+  # Use this googlecode_url variable only if there is an internal mirror for it.
+  # If you do not know, use the full path while defining your new deps entry.
+  "googlecode_url": "http://%s.googlecode.com/svn",
+
+  "gyp_rev": "@1752",
+}
+
+deps = {
+  # Stuff needed for GYP to run.
+  "fletch/third_party/gyp":
+      (Var("googlecode_url") % "gyp") + "/trunk" + Var("gyp_rev"),
+}
+
 hooks = [
   {
     'name': 'libtcmalloc_minimal_linux_x64',
