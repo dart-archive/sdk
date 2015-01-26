@@ -11,8 +11,6 @@
 #include "include/fletch_api.h"
 #include "include/service_api.h"
 
-#include "tests/service_tests/echo/echo_service.h"
-
 static const int kDone = 1;
 
 static pthread_mutex_t mutex;

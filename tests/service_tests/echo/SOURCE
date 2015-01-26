@@ -12,14 +12,14 @@ SHARED_SOURCE_FILES = Split("""
 
 TEST_SOURCE_FILES = Split("""
     echo.cc
-    echo_service.h
-    echo_service.cc
+    cc/echo_service.h
+    cc/echo_service.cc
 """)
 
 OBJC_TEST_SOURCE_FILES = Split("""
-    objc_echo.mm
-    objc_echo_service.h
-    objc_echo_service.m
+    echo.mm
+    objc/echo_service.h
+    objc/echo_service.m
 """)
 
 

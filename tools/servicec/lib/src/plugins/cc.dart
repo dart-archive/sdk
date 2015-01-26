@@ -22,9 +22,13 @@ void _writeToFile(String outputDirectory,
                   String path,
                   String extension,
                   String contents) {
+  // Create 'cc' output directory if it doesn't already exist.
+  String directory = join(outputDirectory, 'cc');
+  new Directory(directory).createSync();
+  // Write contents of the file.
   String base = basenameWithoutExtension(path);
   String headerFile = '$base.$extension';
-  String headerFilePath = join(outputDirectory, headerFile);
+  String headerFilePath = join(directory, headerFile);
   new File(headerFilePath).writeAsStringSync(contents);
 }
 

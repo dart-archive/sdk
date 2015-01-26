@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'echo_service.dart';
+import 'dart/echo_service.dart';
 
 // TODO(ager): Compiler doesn't like implements here.
 class EchoImpl extends EchoService {

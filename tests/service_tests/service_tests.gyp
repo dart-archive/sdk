@@ -18,8 +18,8 @@
       'sources': [
         # TODO(ahe): Add header (.h) files.
         'echo/echo.cc',
-        'echo/echo_service.cc',
         'echo/echo_shared.cc',
+        'echo/cc/echo_service.cc',
       ],
     },
   ],

@@ -8,7 +8,7 @@
 //   Echo(int32) : int32;
 // }
 
-#include "tests/service_tests/echo/objc_echo_service.h"
+#include "echo_service.h"
 
 static const MethodId kEchoMethodId = (MethodId)1;
 static ServiceId service_id;

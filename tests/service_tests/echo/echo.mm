@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#include "tests/service_tests/echo/echo_shared.h"
-#include "tests/service_tests/echo/objc_echo_service.h"
+#include "echo_shared.h"
+#include "objc/echo_service.h"
 
 static void Callback(ServiceApiValueType result, void* data) {
   NSLog([NSString stringWithFormat:@"ObjC: async result %d\n", result]);
