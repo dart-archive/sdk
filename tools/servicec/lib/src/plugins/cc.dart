@@ -7,10 +7,10 @@ library servicec.plugins.cc;
 import 'dart:core' hide Type;
 import 'dart:io';
 
-import 'package:path/path.dart' show basenameWithoutExtension, join;
-import 'package:strings/strings.dart' as strings;  // TODO(kasperl): Use this.
+import 'package:path/path.dart' show basenameWithoutExtension;
 
 import '../parser.dart';
+import '../emitter.dart';
 
 const COPYRIGHT = """
 // Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
@@ -18,25 +18,11 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
-void _writeToFile(String outputDirectory,
-                  String path,
-                  String extension,
-                  String contents) {
-  // Create 'cc' output directory if it doesn't already exist.
-  String directory = join(outputDirectory, 'cc');
-  new Directory(directory).createSync();
-  // Write contents of the file.
-  String base = basenameWithoutExtension(path);
-  String headerFile = '$base.$extension';
-  String headerFilePath = join(directory, headerFile);
-  new File(headerFilePath).writeAsStringSync(contents);
-}
-
 void generateHeaderFile(String path, Unit unit, String outputDirectory) {
   _HeaderVisitor visitor = new _HeaderVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
-  _writeToFile(outputDirectory, path, "h", contents);
+  writeToFile(outputDirectory, path, "h", contents);
 }
 
 void generateImplementationFile(String path,
@@ -45,7 +31,7 @@ void generateImplementationFile(String path,
   _ImplementationVisitor visitor = new _ImplementationVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
-  _writeToFile(outputDirectory, path, "cc", contents);
+  writeToFile(outputDirectory, path, "cc", contents);
 }
 
 class _HeaderVisitor extends Visitor {

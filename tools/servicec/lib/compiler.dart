@@ -9,6 +9,7 @@ import 'dart:convert';
 
 import 'src/parser.dart';
 import 'src/plugins/cc.dart' as cc;
+import 'src/plugins/dart.dart' as dart;
 
 void compile(String path, String outputDirectory) {
   List<int> bytes = new File(path).readAsBytesSync();
@@ -16,6 +17,9 @@ void compile(String path, String outputDirectory) {
 
   Unit unit = parseUnit(input);
   // TODO(kasperl): Perform static semantic analysis.
+
   cc.generateHeaderFile(path, unit, outputDirectory);
   cc.generateImplementationFile(path, unit, outputDirectory);
+
+  dart.generate(path, unit, outputDirectory);
 }
