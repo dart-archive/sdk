@@ -42,33 +42,44 @@ def SetupEnvironment(config):
   if config.system == 'mac':
     mac_library_path = "third_party/clang/mac/lib/clang/3.6.0/lib/darwin"
     os.environ['DYLD_LIBRARY_PATH'] = '%s/%s' % (FLETCH_PATH, mac_library_path)
-    
+
 
 def Steps(config):
   SetupEnvironment(config)
   # gcc on mac is just an alias for clang.
   run_gcc = config.system == 'linux'
+  gyp_build = config.system == 'mac'
   # This makes us work from whereever we are called, and restores CWD in exit.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
     if run_gcc:
       with bot.BuildStep('Build (gcc)'):
         Run(['python', 'third_party/scons/scons.py',
              '-j%s' % utils.GuessCpus()])
-      RunTests('gcc');
+      RunTests('gcc')
       with bot.BuildStep('Build (gcc+asan)'):
         Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
             'asan=true'])
-      RunTests('gcc', asan=True);
+      RunTests('gcc', asan=True)
     with bot.BuildStep('Build (clang)'):
       Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
            'clang=true'])
-    RunTests('clang');
+    RunTests('clang')
     with bot.BuildStep('Build (clang+asan)'):
       Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
            'clang=true', 'asan=true'])
     # Asan debug mode takes a long time on mac.
     modes = ['release'] if config.system == 'mac' else ['release', 'debug']
-    RunTests('clang', asan=True, modes=modes);
+    RunTests('clang', asan=True, modes=modes)
+    if gyp_build:
+      with bot.BuildStep('ninja DebugIA32'):
+        Run(['ninja', '-v', '-C', 'out/DebugIA32'])
+      with bot.BuildStep('ninja ReleaseIA32'):
+        Run(['ninja', '-v', '-C', 'out/ReleaseIA32'])
+      with bot.BuildStep('ninja DebugX64'):
+        Run(['ninja', '-v', '-C', 'out/DebugX64'])
+      with bot.BuildStep('ninja ReleaseX64'):
+        Run(['ninja', '-v', '-C', 'out/ReleaseX64'])
+
 
 def RunTests(name, asan=False, modes=None):
   asan_str = '-asan' if asan else ''

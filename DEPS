@@ -84,4 +84,15 @@ hooks = [
                 '-s', 'fletch/tools/testing/bin/macos/dart.sha1',
     ],
   },
+  {
+    'name': 'GYP',
+    'pattern': '.',
+    'action': [
+      'fletch/third_party/gyp/gyp',
+      '--depth=fletch',
+      '-Ifletch/common.gypi',
+      '--format=ninja',
+      'fletch/fletch.gyp',
+    ],
+  },
 ]
