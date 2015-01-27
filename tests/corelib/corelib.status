@@ -114,12 +114,10 @@ integer_to_string_test/01: CompileTimeError
 integer_to_string_test/none: Fail
 is_operator_basic_types_test: Fail
 iterable_contains_test: CompileTimeError
-iterable_element_at_test: Fail
 iterable_expand_test: CompileTimeError
 iterable_fold_test: CompileTimeError
 iterable_generate_test: Fail
 iterable_join_test: Fail
-iterable_mapping_test: Fail
 iterable_reduce_test: CompileTimeError
 iterable_return_type_test/01: Fail
 iterable_return_type_test/02: Fail

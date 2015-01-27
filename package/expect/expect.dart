@@ -23,6 +23,39 @@ class Expect {
     }
   }
 
+  static void setEquals(Iterable expected,
+                        Iterable actual,
+                        [String reason = null]) {
+    final missingSet = new Set.from(expected);
+    missingSet.removeAll(actual);
+    final extraSet = new Set.from(actual);
+    extraSet.removeAll(expected);
+
+    if (extraSet.isEmpty && missingSet.isEmpty) return;
+
+    String msg = reason == null ? '' : '$reason';
+
+    StringBuffer sb = new StringBuffer('Expect.setEquals($msg) fails');
+    // Report any missing items.
+    if (!missingSet.isEmpty) {
+      sb.write('\nExpected collection does not contain: ');
+    }
+
+    for (final val in missingSet) {
+      sb.write('$val ');
+    }
+
+    // Report any extra items.
+    if (!extraSet.isEmpty) {
+      sb.write('\nExpected collection should not contain: ');
+    }
+
+    for (final val in extraSet) {
+      sb.write('$val ');
+    }
+    throw sb.toString();
+  }
+
   static void isTrue(value, [String msg = null]) {
     equals(true, value);
   }

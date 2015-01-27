@@ -29,7 +29,10 @@ class LinkedHashSet<E> extends IterableBase<E> implements Set<E> {
 
   E get last => _values.last;
 
-  E elementAt(int index) => _values[index];
+  E elementAt(int index) {
+    if (index is! int) throw new ArgumentError('$index');
+    return _values[index];
+  }
 
   bool add(E value) {
     int index = _values.indexOf(value);

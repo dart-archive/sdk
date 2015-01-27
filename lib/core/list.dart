@@ -129,7 +129,10 @@ class _ConstantList<E> extends IterableBase<E> implements List<E> {
     return this[0];
   }
 
-  E elementAt(int index) => this[index];
+  E elementAt(int index) {
+    if (index is! int) throw new ArgumentError('$index');
+    return this[index];
+  }
 
   E operator[](int index) native catch (error) {
     switch (error) {
@@ -328,7 +331,10 @@ class _GrowableList<E> extends IterableBase<E> implements List<E> {
     return this[0];
   }
 
-  E elementAt(int index) => this[index];
+  E elementAt(int index) {
+    if (index is! int) throw new ArgumentError('$index');
+    return this[index];
+  }
 
   E operator[](int index) {
     if (index >= length) throw new IndexError(index, this);
