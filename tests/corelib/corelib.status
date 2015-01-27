@@ -225,10 +225,9 @@ regexp/parentheses_test: Fail
 regexp/pcre-test-4_test: Fail
 regexp/quantified-assertions_test: Fail
 regexp/range-bound-ffff_test: Fail
-regexp/range-out-of-order_test: Fail
 regexp/ranges-and-escaped-hyphens_test: Fail
 regexp/regexp_kde_test: Fail
-regexp/regexp_test: Crash
+regexp/regexp_test: Fail
 regexp/regress-6-9-regexp_test: Fail
 regexp/regress-regexp-codeflush_test: Fail
 regexp/regress-regexp-construct-result_test: Fail

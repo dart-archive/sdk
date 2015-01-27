@@ -11,8 +11,6 @@ vm/regress_16873_test: Skip  # O(n^2) because of LinkedHashSet impl.
 # Other tests.
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
-abstract_runtime_error_test/03: Fail
-abstract_runtime_error_test/none: Fail
 adjacent_const_string_literals_test: Crash
 arithmetic_test: Fail
 assertion_test: Fail
@@ -50,7 +48,6 @@ call_closurization_test: Fail
 call_nonexistent_static_test/06: CompileTimeError
 call_operator_test: Fail
 call_through_getter_test: Fail
-call_through_null_getter_test: Fail
 call_with_no_such_method_test: CompileTimeError
 canonical_const3_test: Crash
 cast_test/04: Fail
@@ -176,7 +173,6 @@ constant_locals_test/02: MissingCompileTimeError
 constant_locals_test/03: MissingCompileTimeError
 constant_locals_test/04: MissingCompileTimeError
 constant_locals_test/05: MissingCompileTimeError
-constant_string_interpolation_test: Fail
 constant_type_literal_test/01: MissingCompileTimeError
 constructor6_test: Crash
 constructor_named_arguments_test/01: Crash
@@ -271,7 +267,6 @@ equality_test: Fail
 error_stacktrace_test: Fail
 evaluation_redirecting_constructor_test: Crash
 exception_test: Fail
-expect_test: Fail
 export_cyclic_test: Fail
 export_double_same_main_test: CompileTimeError
 export_main_test: CompileTimeError
@@ -517,7 +512,6 @@ issue14014_test: Crash
 issue15720_test: Fail
 issue4157508_test: Fail
 issue4515170_test: Crash
-issue7513_test: Fail
 issue9949_test: CompileTimeError
 label_test: Fail
 large_class_declaration_test: Crash
@@ -854,7 +848,6 @@ static_final_field2_test/02: Crash
 string_escape4_negative_test: Fail
 string_escapes_test: Fail
 string_interpolate1_negative_test: Fail
-string_interpolate_null_test: Fail
 string_interpolation8_test: Crash
 string_interpolation9_test/14: MissingCompileTimeError
 string_interpolation9_test/19: MissingCompileTimeError
@@ -949,7 +942,6 @@ vm/allocation_sinking_vm_test: Crash
 vm/load_to_load_forwarding_vm_test: Fail
 vm/math_vm_test: Fail
 vm/no_such_method_error_message_vm_test: Fail
-vm/optimization_test: Fail
 vm/optimized_guarded_field_isolates_test: CompileTimeError
 vm/optimized_guarded_field_test: Fail
 vm/reflect_core_vm_test: CompileTimeError
