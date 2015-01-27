@@ -51,7 +51,7 @@ common = Environment(
   WARNINGFLAGS = ["-Wall", "-W", "-Werror", "-Wno-unused-parameter", "-Wno-format",
                   "-Wno-non-virtual-dtor"],
   CXXFLAGS     = ["$DIALECTFLAGS", "$WARNINGFLAGS", "-fno-rtti", "-fno-exceptions",
-                  "-fdata-sections", "-ffunction-sections", "-std=c++11"],
+                  "-fdata-sections", "-ffunction-sections", "-fPIC", "-std=c++11"],
   CCFLAGS      = ["$MODEL"],
   LINKFLAGS    = ["$MODEL"],
   ASPPFLAGS    = ["$MODEL"],

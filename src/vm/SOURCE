@@ -54,13 +54,13 @@ LIBRARY_SOURCE_FILES_COMMON = Split("""
     object_map.h
     object_memory.cc
     object_memory.h
+    platform.h
     port.cc
     port.h
     process.cc
     process.h
     program.cc
     program.h
-    platform.h
     process_queue.h
     scheduler.cc
     scheduler.h
