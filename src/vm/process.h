@@ -158,7 +158,7 @@ class Process {
   // Thread-safe way of adding an 'object' at the end of the process'
   // message queue. Returns false if the object is of wrong type.
   bool Enqueue(Port* port, Object* object);
-  bool EnqueueForeign(Port* port, void* foreign, int foreign_size);
+  bool EnqueueForeign(Port* port, void* foreign, int size, bool finalized);
 
   // Thread-safe way of asking if the message queue of [this] process is empty.
   bool IsQueueEmpty() const { return last_message_ == NULL; }

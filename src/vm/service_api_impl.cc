@@ -59,8 +59,13 @@ void PostResultToService(ServiceRequest* request) {
   if (service != NULL) {
     service->PostResult(request->argument);
   } else {
-    ASSERT(request->callback != NULL);
-    request->callback(request->argument, request->data);
+    ServiceApiValueType argument = request->argument;
+    void* data = request->data;
+    ServiceApiCallback callback = request->callback;
+    ASSERT(callback != NULL);
+
+    free(request);
+    callback(argument, data);
   }
 }
 
@@ -85,7 +90,7 @@ void Service::PostResult(int result) {
   result_monitor_->Notify();
 }
 
-int Service::WaitForResult() {
+ServiceApiValueType Service::WaitForResult() {
   ScopedMonitorLock lock(result_monitor_);
   while (!has_result_) result_monitor_->Wait();
   has_result_ = false;
@@ -96,13 +101,12 @@ ServiceApiValueType Service::Invoke(int id, ServiceApiValueType arg) {
   port_->Lock();
   Process* process = port_->process();
   if (process != NULL) {
-    ServiceRequest* request =
-        reinterpret_cast<ServiceRequest*>(malloc(sizeof(ServiceRequest)));
-    request->method_id = id;
-    request->argument = arg;
-    request->service = this;
-    request->callback = NULL;
-    process->EnqueueForeign(port_, request, sizeof(*request));
+    ServiceRequest request;
+    request.method_id = id;
+    request.argument = arg;
+    request.service = this;
+    request.callback = NULL;
+    process->EnqueueForeign(port_, &request, sizeof(request), false);
     process->program()->scheduler()->ResumeProcess(process);
   }
   port_->Unlock();
@@ -123,7 +127,7 @@ void Service::InvokeAsync(int id,
     request->service = NULL;
     request->callback = callback;
     request->data = data;
-    process->EnqueueForeign(port_, request, sizeof(*request));
+    process->EnqueueForeign(port_, request, sizeof(*request), false);
     process->program()->scheduler()->ResumeProcess(process);
   }
   port_->Unlock();
@@ -161,8 +165,8 @@ ServiceId ServiceApiLookup(const char* name) {
 }
 
 ServiceApiValueType ServiceApiInvoke(ServiceId service_id,
-                                        MethodId method,
-                                        ServiceApiValueType argument) {
+                                     MethodId method,
+                                     ServiceApiValueType argument) {
   fletch::Service* service = reinterpret_cast<fletch::Service*>(service_id);
   intptr_t method_id = reinterpret_cast<intptr_t>(method);
   return service->Invoke(method_id, argument);

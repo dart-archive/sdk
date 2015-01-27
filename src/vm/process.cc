@@ -26,7 +26,8 @@ class PortQueue {
     PORT,
     LARGE_INTEGER,
     OBJECT,
-    FOREIGN
+    FOREIGN,
+    FOREIGN_FINALIZED
   };
 
   PortQueue(Port* port, int64 value, int size, Kind kind)
@@ -479,10 +480,15 @@ bool Process::Enqueue(Port* port, Object* message) {
   return true;
 }
 
-bool Process::EnqueueForeign(Port* port, void* foreign, int foreign_size) {
+bool Process::EnqueueForeign(Port* port,
+                             void* foreign,
+                             int size,
+                             bool finalized) {
+  PortQueue::Kind kind = finalized
+      ? PortQueue::FOREIGN_FINALIZED
+      : PortQueue::FOREIGN;
   uword address = reinterpret_cast<uword>(foreign);
-  PortQueue* entry =
-      new PortQueue(port, address, foreign_size, PortQueue::FOREIGN);
+  PortQueue* entry = new PortQueue(port, address, size, kind);
   EnqueueEntry(entry);
   return true;
 }
@@ -640,7 +646,8 @@ NATIVE(ProcessQueueGetMessage) {
       if (result == Failure::retry_after_gc()) return result;
       break;
 
-    case PortQueue::FOREIGN: {
+    case PortQueue::FOREIGN:
+    case PortQueue::FOREIGN_FINALIZED: {
       Class* foreign_class = process->program()->foreign_class();
       ASSERT(foreign_class->NumberOfInstanceFields() == 2);
       Object* object = process->NewInstance(foreign_class);
@@ -653,7 +660,9 @@ NATIVE(ProcessQueueGetMessage) {
       if (object == Failure::retry_after_gc()) return object;
       foreign->SetInstanceField(0, object);
       foreign->SetInstanceField(1, Smi::FromWord(queue->size()));
-      process->RegisterFinalizer(foreign, Process::FinalizeForeign);
+      if (kind == PortQueue::FOREIGN_FINALIZED) {
+        process->RegisterFinalizer(foreign, Process::FinalizeForeign);
+      }
       result = foreign;
       break;
     }

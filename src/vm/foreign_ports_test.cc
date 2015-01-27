@@ -110,7 +110,7 @@ static void PostToPort() {
   if (process != NULL) {
     int* i = reinterpret_cast<int*>(malloc(sizeof(int)));
     *i = 42;
-    bool result = process->EnqueueForeign(port, i, sizeof(*i));
+    bool result = process->EnqueueForeign(port, i, sizeof(*i), true);
     process->program()->scheduler()->ResumeProcess(process);
     EXPECT_EQ(true, result);
   }
