@@ -14,11 +14,10 @@
   },
   'target_defaults': {
     'configurations': {
-      'ReleaseIA32': {
-        'defines': [
-          'FLETCH32',
-          'NDEBUG', # TODO(ahe): Is this necessary/used?
-        ],
+
+      'fletch_base': {
+        'abstract': 1,
+
         'xcode_settings': {
           # Settings for Xcode and ninja. Huh? Yeah, GYP is awesome!
 
@@ -28,13 +27,11 @@
           'GCC_ENABLE_CPP_RTTI': 'NO', # -fno-rtti
           'GCC_ENABLE_CPP_EXCEPTIONS': 'NO', # -fno-exceptions
 
-
           'OTHER_CPLUSPLUSFLAGS' : [
             '-std=c++11',
             '-stdlib=libc++',
             '-fdata-sections',
             '-ffunction-sections',
-            '-m32',
             '-O3',
             '-fomit-frame-pointer',
           ],
@@ -45,9 +42,78 @@
           ],
         },
       },
+
+      'fletch_release': {
+        'abstract': 1,
+
+        'defines': [
+          'NDEBUG', # TODO(ahe): Is this necessary/used?
+        ],
+
+        'xcode_settings': { # And ninja.
+          'OTHER_CPLUSPLUSFLAGS' : [
+            '-O3',
+          ],
+        },
+      },
+
+      'fletch_debug': {
+        'abstract': 1,
+
+        'defines': [
+          'DEBUG',
+        ],
+
+        'xcode_settings': { # And ninja.
+          'OTHER_CPLUSPLUSFLAGS' : [
+            '-g',
+            '-O0',
+          ],
+        },
+      },
+
+      'fletch_ia32': {
+        'abstract': 1,
+
+        'defines': [
+          'FLETCH32',
+        ],
+
+        'xcode_settings': { # And ninja.
+          'ARCHS': [ 'i386' ],
+        },
+      },
+
+      'fletch_x64': {
+        'abstract': 1,
+
+        'defines': [
+          'FLETCH64',
+        ],
+
+        'xcode_settings': { # And ninja.
+          'ARCHS': [ 'x86_64' ],
+        },
+      },
+
+      'ReleaseIA32': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
+      },
+
+      'ReleaseX64': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_x64' ],
+      },
+
+      'DebugIA32': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
+      },
+
+      'DebugX64': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_x64' ],
+      },
     },
     # TODO(ahe): These flags should be incorporated in all executables:
-    # LINKER_FLAGS=-m32 -rdynamic -Lthird_party/libs/macos/x86
+    # LINKER_FLAGS=-rdynamic -Lthird_party/libs/macos/x86
     # LIBS=-ltcmalloc_minimal -lpthread -ldl
   },
 }

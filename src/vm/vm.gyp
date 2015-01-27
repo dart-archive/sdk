@@ -37,6 +37,8 @@
         # TODO(ahe): Add header (.h) files.
         'assembler_x86.cc',
         'assembler_x86_macos.cc',
+        'assembler_x64.cc',
+        'assembler_x64_macos.cc',
         'event_handler.cc',
         'event_handler_macos.cc',
         'ffi.cc',

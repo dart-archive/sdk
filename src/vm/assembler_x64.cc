@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#if defined(FLETCH64)
+
 #include <stdarg.h>
 #include "src/vm/assembler.h"
 
@@ -176,3 +178,5 @@ int Assembler::ComputeLabelPosition(Label* label) {
 }
 
 }  // namespace fletch
+
+#endif  // defined FLETCH64
