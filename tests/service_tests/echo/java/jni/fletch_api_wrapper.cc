@@ -2,21 +2,25 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#include "fletch_api_wrapper.h"
+#include <jni.h>
 
 #include "fletch_api.h"
 
-void Java_fletch_FletchApi_Setup(JNIEnv*, jclass) {
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+JNIEXPORT void JNICALL Java_fletch_FletchApi_Setup(JNIEnv*, jclass) {
   FletchSetup();
 }
 
-void Java_fletch_FletchApi_TearDown(JNIEnv*, jclass) {
+JNIEXPORT void JNICALL Java_fletch_FletchApi_TearDown(JNIEnv*, jclass) {
   FletchTearDown();
 }
 
-void Java_fletch_FletchApi_RunSnapshot(JNIEnv* env,
-                                       jclass,
-                                       jbyteArray snapshot) {
+JNIEXPORT void JNICALL Java_fletch_FletchApi_RunSnapshot(JNIEnv* env,
+                                                         jclass,
+                                                         jbyteArray snapshot) {
   // TODO(ager): Avoid copying the snapshot. You can easily get a file
   // path from an Android resource so we copy for now. The long term
   // solution should probably be to compile the snapshot into the
@@ -29,10 +33,13 @@ void Java_fletch_FletchApi_RunSnapshot(JNIEnv* env,
   delete copy;
 }
 
-void Java_fletch_FletchApi_AddDefaultSharedLibrary(JNIEnv* env,
-                                                   jclass,
-                                                   jstring str) {
+JNIEXPORT void JNICALL Java_fletch_FletchApi_AddDefaultSharedLibrary(
+    JNIEnv* env, jclass, jstring str) {
   const char* library = env->GetStringUTFChars(str, 0);
   FletchAddDefaultSharedLibrary(library);
   env->ReleaseStringUTFChars(str, library);
 }
+
+#ifdef __cplusplus
+}
+#endif
