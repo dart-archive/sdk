@@ -76,7 +76,7 @@
         ],
 
         'xcode_settings': { # And ninja.
-          'OTHER_CPLUSPLUSFLAGS' : [
+          'OTHER_CPLUSPLUSFLAGS': [
             '-g',
             '-O0',
           ],
@@ -107,20 +107,60 @@
         },
       },
 
+      'fletch_asan': {
+        'abstract': 1,
+
+        'xcode_settings': { # And ninja.
+          'OTHER_CPLUSPLUSFLAGS': [
+            '-g3',
+            '-fsanitize=address',
+          ],
+
+          'OTHER_LDFLAGS': [
+            '-fsanitize=address',
+          ],
+        },
+      },
+
       'ReleaseIA32': {
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
+      },
+
+
+      'ReleaseIA32Asan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_asan',
+        ],
       },
 
       'ReleaseX64': {
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_x64' ],
       },
 
+      'ReleaseX64Asan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_x64', 'fletch_asan',
+        ],
+      },
+
       'DebugIA32': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32', ],
+      },
+
+      'DebugIA32Asan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_asan',
+        ],
       },
 
       'DebugX64': {
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_x64' ],
+      },
+
+      'DebugX64Asan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_x64', 'fletch_asan',
+        ],
       },
     },
     # TODO(ahe): These flags should be incorporated in all executables:
