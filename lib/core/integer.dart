@@ -13,8 +13,11 @@ abstract class int extends num {
 
   int compareTo(num other) {
     if (this == other) {
+      if (this == 0 && other is double) return other.isNegative ? 1 : 0;
       return 0;
     } else if (this < other) {
+      return -1;
+    } else if (other.isNaN) {
       return -1;
     } else {
       return 1;

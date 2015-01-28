@@ -35,7 +35,18 @@ abstract class String implements Comparable<String>, Pattern {
   // const String.fromEnvironment(String name, {String defaultValue});
 
   int compareTo(String other) {
-    throw new UnimplementedError("String.compareTo");
+    int thisLength = this.length;
+    int otherLength = other.length;
+    int length = (thisLength < otherLength) ? thisLength : otherLength;
+    for (int i = 0; i < length; i++) {
+      int thisCodeUnit = this.codeUnitAt(i);
+      int otherCodeUnit = other.codeUnitAt(i);
+      if (thisCodeUnit < otherCodeUnit) return -1;
+      if (thisCodeUnit > otherCodeUnit) return 1;
+    }
+    if (thisLength < otherLength) return -1;
+    if (thisLength > otherLength) return 1;
+    return 0;
   }
 
   Iterable<Match> allMatches(String string, [int start=0]) {

@@ -20,7 +20,6 @@ collection_removes_test: CompileTimeError
 collection_test: Fail
 collection_to_string_test: Fail
 compare_to2_test: CompileTimeError
-compare_to_test: Fail
 core_runtime_types_test: Fail
 date_time2_test: Fail
 date_time3_test: Fail
