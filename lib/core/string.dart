@@ -28,7 +28,9 @@ abstract class String implements Comparable<String>, Pattern {
   }
 
   factory String.fromCharCode(int charCode) {
-    throw new UnimplementedError("String.fromCharCode");
+    String result = _create(1);
+    result._setCodeUnitAt(0, charCode);
+    return result;
   }
 
   // TODO(kasperl): We cannot express this.
@@ -208,11 +210,19 @@ class StringBuffer implements StringSink {
   }
 
   void writeAll(Iterable objects, [String separator=""]) {
-    throw new UnimplementedError("StringBuffer.writeAll");
+    bool first = true;
+    objects.forEach((object) {
+      write(object);
+      if (first) {
+        first = false;
+      } else if (separator.isNotEmpty) {
+        write(separator);
+      }
+    });
   }
 
   void writeCharCode(int charCode) {
-    throw new UnimplementedError("StringBuffer.writeCharCode");
+    write(new String.fromCharCode(charCode));
   }
 
   void writeln([Object obj=""]) {
