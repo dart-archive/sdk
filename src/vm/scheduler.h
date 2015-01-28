@@ -12,6 +12,7 @@
 namespace fletch {
 
 class Object;
+class Port;
 class Process;
 class ProcessQueue;
 class Program;
@@ -45,6 +46,14 @@ class Scheduler {
   // nothing. This function is thread safe.
   void ResumeProcess(Process* process);
 
+  // Run the [process] on the current thread if possible.
+  // The [port] must be locked, and will be unlocked by this method.
+  // Returns false if [process] is already scheduled or running.
+  // TODO(ajohnsen): This could be improved by taking a Port and a 'message',
+  // and avoid the extra allocation on the process queue (in the case where it's
+  // empty).
+  bool RunProcessOnCurrentThread(Process* process, Port* port);
+
   bool Run();
 
  private:
@@ -77,6 +86,8 @@ class Scheduler {
   ThreadState* PopIdleThread();
   void RunInThread();
 
+  void SetCurrentProcessForThread(int thread_id, Process* process);
+  void ClearCurrentProcessForThread(int thread_id, Process* process);
   // Interpret [process] as thread [thread] with id [thread_id]. Returns the
   // next Process that should be run on this thraed.
   Process* InterpretProcess(Process* process, ThreadState* thread_state);

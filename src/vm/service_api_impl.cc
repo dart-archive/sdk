@@ -89,8 +89,13 @@ void Service::PostResult() {
 }
 
 void Service::WaitForResult() {
-  ScopedMonitorLock lock(result_monitor_);
-  while (!has_result_) result_monitor_->Wait();
+  // TODO(ajohnsen): Make it work for multiple sync calls at the same time.
+  // Double-checked locking to avoid monitors in the case where the calling
+  // thread is used by the Scheduler to handle the message.
+  if (!has_result_) {
+    ScopedMonitorLock lock(result_monitor_);
+    while (!has_result_) result_monitor_->Wait();
+  }
   has_result_ = false;
 }
 
@@ -123,9 +128,10 @@ void Service::InvokeX(int id, void* buffer, int size) {
     request->service = this;
     request->callback = NULL;
     process->EnqueueForeign(port_, buffer, size, false);
-    process->program()->scheduler()->ResumeProcess(process);
+    process->program()->scheduler()->RunProcessOnCurrentThread(process, port_);
+  } else {
+    port_->Unlock();
   }
-  port_->Unlock();
   WaitForResult();
 }
 

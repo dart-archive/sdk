@@ -155,6 +155,22 @@ void Scheduler::ResumeProcess(Process* process) {
   EnqueueOnAnyThread(process, 0);
 }
 
+bool Scheduler::RunProcessOnCurrentThread(Process* process, Port* port) {
+  ASSERT(port->IsLocked());
+  if (!process->ChangeState(Process::kSleeping, Process::kRunning)) {
+    port->Unlock();
+    return false;
+  }
+  port->Unlock();
+  // TODO(ajohnsen): This thread_state is only used for lookup cache. Consider
+  // having a pool of 'queue-less' thread states that can be reused.
+  ThreadState thread_state;
+  process = InterpretProcess(process, &thread_state);
+  if (process != NULL) EnqueueOnAnyThread(process);
+  ASSERT(thread_state.queue()->is_empty());
+  return true;
+}
+
 bool Scheduler::Run() {
   // Start initial thread.
   while (!thread_pool_.TryStartThread(RunThread, this, 1)) { }
@@ -259,7 +275,6 @@ void Scheduler::RunInThread() {
       preempt_monitor_->Lock();
       preempt_monitor_->Notify();
       preempt_monitor_->Unlock();
-      NotifyAllThreads();
       break;
     } else if (pause_) {
       thread_state->cache()->Clear();
@@ -291,20 +306,14 @@ void Scheduler::RunInThread() {
   ThreadExit(thread_state);
 }
 
-Process* Scheduler::InterpretProcess(Process* process,
-                                     ThreadState* thread_state) {
-  Program* program = process->program();
-
-  int thread_id = thread_state->thread_id();
+void Scheduler::SetCurrentProcessForThread(int thread_id, Process* process) {
+  if (thread_id == -1) return;
   ASSERT(current_processes_[thread_id] == NULL);
   current_processes_[thread_id] = process;
+}
 
-  // Mark the process as owned by the current thread while interpreting.
-  process->set_thread_state(thread_state);
-  Interpreter interpreter(process);
-  interpreter.Run();
-  process->set_thread_state(NULL);
-
+void Scheduler::ClearCurrentProcessForThread(int thread_id, Process* process) {
+  if (thread_id == -1) return;
   while (true) {
     // Take value at each attempt, as value will be overriden on failure.
     Process* value = process;
@@ -312,10 +321,28 @@ Process* Scheduler::InterpretProcess(Process* process,
       break;
     }
   }
+}
+
+Process* Scheduler::InterpretProcess(Process* process,
+                                     ThreadState* thread_state) {
+  Program* program = process->program();
+
+  int thread_id = thread_state->thread_id();
+  SetCurrentProcessForThread(thread_id, process);
+
+  // Mark the process as owned by the current thread while interpreting.
+  process->set_thread_state(thread_state);
+  Interpreter interpreter(process);
+  interpreter.Run();
+  process->set_thread_state(NULL);
+
+  ClearCurrentProcessForThread(thread_id, process);
 
   if (interpreter.isTerminated()) {
     delete process;
-    if (--processes_ != 0) {
+    if (--processes_ == 0) {
+      NotifyAllThreads();
+    } else {
       if (Flags::IsOn("gc-on-delete")) {
         sleeping_threads_++;
         thread_state->cache()->Clear();
@@ -465,6 +492,10 @@ bool Scheduler::TryDequeueFromAnyThread(Process** process, int start_id) {
 }
 
 void Scheduler::EnqueueOnThread(ThreadState* thread_state, Process* process) {
+  if (thread_state->thread_id() == -1) {
+    EnqueueOnAnyThread(process);
+    return;
+  }
   while (!thread_state->queue()->TryEnqueue(process)) {
     int count = thread_count_;
     for (int i = 0; i < count; i++) {
