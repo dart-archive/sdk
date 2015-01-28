@@ -14,6 +14,7 @@ void main() {
   testReadWrite();
   testSpawnAccept();
   testLargeChunk();
+  testShutdown();
 }
 
 void testLookup() {
@@ -116,6 +117,34 @@ void testLargeChunk() {
 
   Expect.equals(0, socket.available);
 
+  socket.close();
+  server.close();
+}
+
+bool isSocketException(e) => e is SocketException;
+
+void testShutdown() {
+  var server = new io.ServerSocket("127.0.0.1", 0);
+  var socket = new io.Socket.connect("127.0.0.1", server.port);
+  var client = server.accept();
+
+  socket.write(createBuffer(CHUNK_SIZE));
+  socket.shutdownWrite();
+
+  validateBuffer(client.read(CHUNK_SIZE), CHUNK_SIZE);
+  Expect.equals(null, client.read(CHUNK_SIZE));
+  client.write(createBuffer(CHUNK_SIZE));
+  client.shutdownWrite();
+
+  validateBuffer(socket.read(CHUNK_SIZE), CHUNK_SIZE);
+  Expect.equals(null, socket.read(CHUNK_SIZE));
+
+  Expect.throws(() => client.write(createBuffer(CHUNK_SIZE)),
+                isSocketException);
+  Expect.throws(() => socket.write(createBuffer(CHUNK_SIZE)),
+                isSocketException);
+
+  client.close();
   socket.close();
   server.close();
 }

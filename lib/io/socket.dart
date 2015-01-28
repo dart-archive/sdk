@@ -129,6 +129,16 @@ class Socket extends _SocketBase {
       }
     }
   }
+
+  /**
+   * Close the socket for writing. After the socket is closed for writing,
+   * [write] to the socket will fail.
+   */
+  void shutdownWrite() {
+    if (sys.shutdown(_fd, SHUT_WR) == -1) {
+      _error("Failed to shutdown socket for writing");
+    }
+  }
 }
 
 class ServerSocket extends _SocketBase {

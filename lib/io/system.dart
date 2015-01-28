@@ -16,6 +16,10 @@ const int WRITE_EVENT       = 1 << 1;
 const int CLOSE_EVENT       = 1 << 2;
 const int ERROR_EVENT       = 1 << 3;
 
+const int SHUT_RD   = 0;
+const int SHUT_WR   = 1;
+const int SHUT_RDWR = 2;
+
 final System sys = getSystem();
 
 System getSystem() {
@@ -38,6 +42,7 @@ abstract class System {
   int available(int fd);
   int read(int fd, ByteBuffer buffer, int offset, int length);
   int write(int fd, ByteBuffer buffer, int offset, int length);
+  int shutdown(int fd, int how);
   int close(int fd);
   void sleep(int milliseconds);
   Errno errno();

@@ -9,6 +9,7 @@ class Errno {
   static const EINTR = const Errno(4, "EINTR");
   static const EEXIST = const Errno(17, "EEXIST");
   static const EINVAL = const Errno(22, "EINVAL");
+  static const EPIPE = const Errno(32, "EPIPE");
   static const EAGAIN = const Errno(115, "EAGAIN");
 
   final int value;
@@ -24,6 +25,7 @@ class Errno {
       case EINTR.value: return EINTR;
       case EEXIST.value: return EEXIST;
       case EINVAL.value: return EINVAL;
+      case EPIPE.value: return EPIPE;
       case EAGAIN.value: return EAGAIN;
 
       default:

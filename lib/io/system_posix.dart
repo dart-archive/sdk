@@ -74,6 +74,7 @@ class PosixSystem implements System {
   static final Foreign _listen = Foreign.lookup("listen");
   static final Foreign _nanosleep = Foreign.lookup("nanosleep");
   static final Foreign _read = Foreign.lookup("read");
+  static final Foreign _shutdown = Foreign.lookup("shutdown");
   static final Foreign _socket = Foreign.lookup("socket");
   static final Foreign _write = Foreign.lookup("write");
 
@@ -193,6 +194,10 @@ class PosixSystem implements System {
     _rangeCheck(buffer, offset, length);
     var address = buffer._foreign.value + offset;
     return _retry(() => _write.icall$3(fd, address, length));
+  }
+
+  int shutdown(int fd, int how) {
+    return _retry(() => _shutdown.icall$2(fd, how));
   }
 
   int close(int fd) {
