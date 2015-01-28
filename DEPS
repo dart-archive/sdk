@@ -8,13 +8,47 @@ vars = {
   # If you do not know, use the full path while defining your new deps entry.
   "googlecode_url": "http://%s.googlecode.com/svn",
 
+  # TODO(ahe): Remove this when scons is gone.
+  "chromium_url": "https://src.chromium.org/svn",
+
+  "clang_rev": "@43229",
   "gyp_rev": "@1752",
+  "scons_rev": "@65044", # TODO(ahe): Remove this when scons is gone.
 }
 
 deps = {
   # Stuff needed for GYP to run.
   "fletch/third_party/gyp":
       (Var("googlecode_url") % "gyp") + "/trunk" + Var("gyp_rev"),
+
+}
+
+# To include Mac deps on other OSes, add this to your .gclient file:
+#
+#     target_os = [ "mac" ]
+#
+# To ignore the host OS, add this:
+#
+#     target_os_only = True
+deps_os = {
+  "android": {
+  },
+
+  "mac": {
+    "fletch/third_party/clang":
+      ((Var("googlecode_url") % "dart") + "/third_party/clang" +
+       Var("clang_rev")),
+
+    # TODO(ahe): Remove this dependency once everything is GYPified.
+    "fletch/third_party/scons":
+      Var("chromium_url") + "/trunk/src/third_party/scons" + Var("scons_rev"),
+  },
+
+  "unix": {
+  },
+
+  "win": {
+  },
 }
 
 hooks = [
