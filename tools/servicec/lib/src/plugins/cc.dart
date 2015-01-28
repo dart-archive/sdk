@@ -35,12 +35,48 @@ void generateImplementationFile(String path,
   writeToFile(directory, path, "cc", contents);
 }
 
-class _HeaderVisitor extends Visitor {
+abstract class CcVisitor extends Visitor {
   final String path;
   final StringBuffer buffer = new StringBuffer();
-  _HeaderVisitor(this.path);
+  CcVisitor(this.path);
 
   visit(Node node) => node.accept(this);
+
+  visitFormal(Formal node) {
+    visit(node.type);
+    buffer.write(' ${node.name}');
+  }
+
+  visitType(Type node) {
+    Map<String, String> types = const { 'Int32': 'int' };
+    String type = types[node.identifier];
+    buffer.write(type);
+  }
+
+  visitArguments(List<Formal> formals) {
+    bool first = true;
+    formals.forEach((Formal formal) {
+      if (!first) buffer.write(', ');
+      first = false;
+      visit(formal);
+    });
+  }
+
+  visitMethodBody(String id, List<Formal> arguments) {
+    // TODO(kasperl): For now, we only deal with one argument. Fix this.
+    String argumentName = arguments.single.name;
+    int size = 32 + arguments.length * 4;
+
+    buffer.writeln('  char _bits[$size];');
+    buffer.writeln('  char* _buffer = _bits;');
+    buffer.writeln('  *reinterpret_cast<int*>(_buffer + 32) = $argumentName;');
+    buffer.writeln('  ServiceApiInvokeX(_service_id, $id, _buffer, $size);');
+    buffer.writeln('  return *reinterpret_cast<int*>(_buffer + 32);');
+  }
+}
+
+class _HeaderVisitor extends CcVisitor {
+  _HeaderVisitor(String path) : super(path);
 
   String computeHeaderGuard() {
     String base = basenameWithoutExtension(path).toUpperCase();
@@ -79,28 +115,24 @@ class _HeaderVisitor extends Visitor {
   }
 
   visitMethod(Method node) {
-    const String type = 'ServiceApiValueType';
-    const String ctype = 'ServiceApiCallback';
-    String name = node.name;
-    buffer.writeln('  static $type $name($type arg);');
-    buffer.writeln('  static void ${name}Async($type arg, $ctype callback);');
-  }
+    buffer.write('  static ');
+    visit(node.returnType);
+    buffer.write(' ${node.name}(');
+    visitArguments(node.arguments);
+    buffer.writeln(');');
 
-  visitType(Type node) {
-    throw new Exception("Not used.");
+    buffer.write('  static void ${node.name}Async(');
+    visitArguments(node.arguments);
+    if (node.arguments.isNotEmpty) buffer.write(', ');
+    buffer.writeln('ServiceApiCallback callback);');
   }
 }
 
-class _ImplementationVisitor extends Visitor {
-  final String path;
-  final StringBuffer buffer = new StringBuffer();
-
+class _ImplementationVisitor extends CcVisitor {
   int methodId = 1;
   String serviceName;
 
-  _ImplementationVisitor(this.path);
-
-  visit(Node node) => node.accept(this);
+  _ImplementationVisitor(String path) : super(path);
 
   String computeHeaderFile() {
     String base = basenameWithoutExtension(path);
@@ -150,17 +182,16 @@ class _ImplementationVisitor extends Visitor {
     buffer.writeln('reinterpret_cast<MethodId>(${methodId++});');
 
     buffer.writeln();
-    buffer.writeln('$type $serviceName::$name($type arg) {');
-    buffer.writeln('  return ServiceApiInvoke(_service_id, $id, arg);');
+    visit(node.returnType);
+    buffer.write(' $serviceName::${name}(');
+    visitArguments(node.arguments);
+    buffer.writeln(') {');
+    visitMethodBody(id, node.arguments);
     buffer.writeln('}');
 
     buffer.writeln();
     buffer.writeln('void $serviceName::${name}Async($type arg, $ctype cb) {');
     buffer.writeln('  ServiceApiInvokeAsync(_service_id, $id, arg, cb, NULL);');
     buffer.writeln('}');
-  }
-
-  visitType(Type node) {
-    throw new Exception("Not used.");
   }
 }

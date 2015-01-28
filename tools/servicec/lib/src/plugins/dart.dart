@@ -93,8 +93,8 @@ class _DartVisitor extends Visitor {
     buffer.writeln('        _terminated = true;');
     buffer.writeln('        _postResult.icall\$1(request);');
     buffer.writeln('        break;');
-    String getInt = 'request.getInt32(4)';
-    String setInt = 'request.setInt32(4, result)';
+    String getInt = 'request.getInt32(32)';
+    String setInt = 'request.setInt32(32, result)';
     for (int i = 0; i < methods.length; ++i) {
       buffer.writeln('      case ${methodIds[i]}:');
       buffer.writeln('        var result = _impl.${methods[i]}($getInt);');
@@ -121,6 +121,10 @@ class _DartVisitor extends Visitor {
     String methodName = node.name;
     methods.add(methodName);
     buffer.writeln('  int $methodName(int argument);');
+  }
+
+  visitFormal(Formal node) {
+    throw new Exception("Not used.");
   }
 
   visitType(Type node) {

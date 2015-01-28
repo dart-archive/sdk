@@ -16,6 +16,7 @@ abstract class Visitor {
   visitUnit(Unit node);
   visitService(Service service);
   visitMethod(Method method);
+  visitFormal(Formal formal);
   visitType(Type type);
 }
 
@@ -36,11 +37,18 @@ class Service extends Node {
   accept(Visitor visitor) => visitor.visitService(this);
 }
 
+class Formal extends Node {
+  final Type type;
+  final String name;
+  Formal(this.type, this.name);
+  accept(Visitor visitor) => visitor.visitFormal(this);
+}
+
 class Method extends Node {
   final String name;
-  final Type argumentType;
+  final List<Formal> arguments;
   final Type returnType;
-  Method(this.name, this.argumentType, this.returnType);
+  Method(this.name, this.arguments, this.returnType);
   accept(Visitor visitor) => visitor.visitMethod(this);
 }
 
@@ -59,9 +67,11 @@ class _ServiceParserDefinition extends ServiceGrammarDefinition {
   service() => super.service()
       .map((each) => new Service(each[1], each[3]));
   method() => super.method()
-      .map((each) => new Method(each[1], each[3][0], each[0]));
+      .map((each) => new Method(each[1], each[3], each[0]));
   type() => super.type()
       .map((each) => new Type(each));
+  formal() => super.formal()
+      .map((each) => new Formal(each[0], each[1]));
   identifier() => super.identifier()
       .flatten().map((each) => each.trim());
 }

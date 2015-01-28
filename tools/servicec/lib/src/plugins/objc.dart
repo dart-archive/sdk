@@ -10,6 +10,7 @@ import 'package:path/path.dart' show basenameWithoutExtension, join;
 
 import '../emitter.dart';
 import '../parser.dart';
+import 'cc.dart' show CcVisitor;
 
 const COPYRIGHT = """
 // Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
@@ -39,10 +40,8 @@ void generateImplementationFile(String path,
   writeToFile(directory, path, "m", contents);
 }
 
-class _HeaderVisitor extends Visitor {
-  final String path;
-  final StringBuffer buffer = new StringBuffer();
-  _HeaderVisitor(this.path);
+class _HeaderVisitor extends CcVisitor {
+  _HeaderVisitor(String path) : super(path);
 
   visit(Node node) => node.accept(this);
 
@@ -84,19 +83,20 @@ class _HeaderVisitor extends Visitor {
     buffer.writeln('+ (void)${name}Async:($_type)arg WithBlock:($_btype)block;');
   }
 
+  visitFormal(Formal node) {
+    throw new Exception("Not used.");
+  }
+
   visitType(Type node) {
     throw new Exception("Not used.");
   }
 }
 
-class _ImplementationVisitor extends Visitor {
-  final String path;
-  final StringBuffer buffer = new StringBuffer();
-
+class _ImplementationVisitor extends CcVisitor {
   int methodId = 1;
   String serviceName;
 
-  _ImplementationVisitor(this.path);
+  _ImplementationVisitor(String path) : super(path);
 
   visit(Node node) => node.accept(this);
 
@@ -158,8 +158,12 @@ class _ImplementationVisitor extends Visitor {
     buffer.writeln('static const MethodId $id = (MethodId)${methodId++};');
 
     buffer.writeln();
-    buffer.writeln('+ ($_type)$name:($_type)arg {');
-    buffer.writeln('  return ServiceApiInvoke($sid, $id, arg);');
+    buffer.write('+ (');
+    visit(node.returnType);
+    buffer.write(')$name:');
+    visit(node.arguments.single);
+    buffer.writeln(' {');
+    visitMethodBody(id, node.arguments);
     buffer.writeln('}');
 
     buffer.writeln();
@@ -176,7 +180,9 @@ class _ImplementationVisitor extends Visitor {
     buffer.writeln('}');
   }
 
-  visitType(Type node) {
-    throw new Exception("Not used.");
+  visitFormal(Formal node) {
+    buffer.write('(');
+    visit(node.type);
+    buffer.write(')${node.name}');
   }
 }

@@ -13,8 +13,8 @@ class EchoService {
  public:
   static void Setup();
   static void TearDown();
-  static ServiceApiValueType Echo(ServiceApiValueType arg);
-  static void EchoAsync(ServiceApiValueType arg, ServiceApiCallback callback);
+  static int Echo(int n);
+  static void EchoAsync(int n, ServiceApiCallback callback);
 };
 
 #endif  // ECHO_SERVICE_H

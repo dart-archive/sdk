@@ -38,6 +38,11 @@ FLETCH_EXPORT ServiceApiValueType ServiceApiInvoke(
     MethodId method,
     ServiceApiValueType arg);
 
+FLETCH_EXPORT void ServiceApiInvokeX(ServiceId service,
+                                     MethodId method,
+                                     void* buffer,
+                                     int size);
+
 FLETCH_EXPORT void ServiceApiInvokeAsync(ServiceId service,
                                          MethodId method,
                                          ServiceApiValueType arg,

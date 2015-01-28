@@ -40,8 +40,8 @@ abstract class EchoService {
         _postResult.icall$1(request);
         break;
       case _ECHO_METHOD_ID:
-        var result = _impl.Echo(request.getInt32(4));
-        request.setInt32(4, result);
+        var result = _impl.Echo(request.getInt32(32));
+        request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
       default:

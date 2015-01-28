@@ -26,8 +26,12 @@ static ServiceId _service_id;
 
 static const MethodId _kEchoId = (MethodId)1;
 
-+ (ServiceApiValueType)Echo:(ServiceApiValueType)arg {
-  return ServiceApiInvoke(_service_id, _kEchoId, arg);
++ (int)Echo:(int)n {
+  char _bits[36];
+  char* _buffer = _bits;
+  *reinterpret_cast<int*>(_buffer + 32) = n;
+  ServiceApiInvokeX(_service_id, _kEchoId, _buffer, 36);
+  return *reinterpret_cast<int*>(_buffer + 32);
 }
 
 + (void)EchoAsync:(ServiceApiValueType)arg WithCallback:(ServiceApiCallback)cb {

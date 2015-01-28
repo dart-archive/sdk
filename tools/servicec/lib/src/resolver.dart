@@ -2,14 +2,16 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library servicec.pretty_printer;
+library servicec.resolver;
 
 import 'parser.dart';
 import 'dart:core' hide Type;
 
-class PrettyPrinter implements Visitor {
-  final StringBuffer buffer = new StringBuffer();
+void resolve(Unit unit) {
+  new Resolver().visit(unit);
+}
 
+class Resolver implements Visitor {
   visit(Node node) => node.accept(this);
 
   visitUnit(Unit node) {
@@ -17,30 +19,22 @@ class PrettyPrinter implements Visitor {
   }
 
   visitService(Service node) {
-    buffer.writeln("service ${node.name} {");
     node.methods.forEach(visit);
-    buffer.writeln("}");
   }
 
   visitMethod(Method node) {
-    buffer.write("  ");
+    node.arguments.forEach(visit);
     visit(node.returnType);
-    buffer.write(" ${node.name}(");
-    bool first = true;
-    node.arguments.forEach((Formal formal) {
-      if (!first) buffer.write(", ");
-      first = false;
-      visit(formal);
-    });
-    buffer.writeln(");");
   }
 
   visitFormal(Formal node) {
     visit(node.type);
-    buffer.write(" ${node.name}");
   }
 
   visitType(Type node) {
-    buffer.write(node.identifier);
+    String type = node.identifier;
+    if (type != 'Int32') {
+      throw new UnsupportedError("Cannot deal with type $type");
+    }
   }
 }

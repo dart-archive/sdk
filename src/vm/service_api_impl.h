@@ -17,28 +17,32 @@ struct ServiceRequest;
 // probably post a callback into dart? Fix the service param;
 // for now it is a pointer to a pointer so we can post something
 // into dart that dart can free.
-extern "C" void PostResultToService(ServiceRequest* request);
+extern "C" void PostResultToService(char* buffer);
 
 class Service {
  public:
   Service(char* name, Port* port);
   ~Service();
+
   ServiceApiValueType Invoke(int id, ServiceApiValueType argument);
+
+  void InvokeX(int id, void* buffer, int size);
+
   void InvokeAsync(int id,
                    ServiceApiValueType argument,
                    ServiceApiCallback callback,
                    void* data);
+
   char* name() const { return name_; }
 
  private:
-  friend void PostResultToService(ServiceRequest* request);
+  friend void PostResultToService(char* buffer);
 
-  void PostResult(ServiceApiValueType result);
-  ServiceApiValueType WaitForResult();
+  void PostResult();
+  void WaitForResult();
 
   Monitor* const result_monitor_;
   bool has_result_;
-  ServiceApiValueType result_;
 
   char* const name_;
   Port* const port_;

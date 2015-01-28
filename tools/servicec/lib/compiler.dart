@@ -8,6 +8,9 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'src/parser.dart';
+import 'src/pretty_printer.dart';
+import 'src/resolver.dart';
+
 import 'src/plugins/cc.dart' as cc;
 import 'src/plugins/dart.dart' as dart;
 import 'src/plugins/objc.dart' as objc;
@@ -17,7 +20,8 @@ void compile(String path, String outputDirectory) {
   String input = UTF8.decode(bytes);
 
   Unit unit = parseUnit(input);
-  // TODO(kasperl): Perform static semantic analysis.
+  resolve(unit);
+  dump(path, unit);
 
   cc.generateHeaderFile(path, unit, outputDirectory);
   cc.generateImplementationFile(path, unit, outputDirectory);
@@ -26,4 +30,14 @@ void compile(String path, String outputDirectory) {
 
   objc.generateHeaderFile(path, unit, outputDirectory);
   objc.generateImplementationFile(path, unit, outputDirectory);
+}
+
+void dump(String path, Unit unit) {
+  String banner = "Parsed IDL for $path";
+  print(banner);
+  print('-' * banner.length);
+  var printer = new PrettyPrinter();
+  printer.visit(unit);
+  String printed = printer.buffer.toString().replaceAll('\n', '\n  ');
+  print('  $printed');
 }
