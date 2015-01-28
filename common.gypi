@@ -13,36 +13,13 @@
       '-Wextra', # Also known as -W.
       '-Wno-unused-parameter',
     ],
-
-    'conditions': [
-      [ 'OS=="linux"', {
-        'clang_path%': 'third_party/clang/linux/bin/clang',
-        'clangxx_path%': 'third_party/clang/linux/bin/clang++',
-        'clang_asan_rt_path%': '.',
-        'mac_sdk%': [],
-      } ],
-      [ 'OS=="mac"', {
-        'clang_path%': 'third_party/clang/mac/bin/clang',
-        'clangxx_path%': 'third_party/clang/mac/bin/clang++',
-        'clang_asan_rt_path%':
-          '>(DEPTH)/third_party/clang/mac/lib/clang/3.6.0/'
-          'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
-        'mac_sdk%': [ '<!(xcrun --show-sdk-path)' ],
-      } ],
-      [ 'OS=="win"', {
-       'clang_path%': 'clang',
-        'clangxx_path%': 'clang++',
-        'clang_asan_rt_path%': '.',
-        'mac_sdk%': [ '' ],
-      } ],
-    ],
   },
 
-  'conditions': [['clang==1 or OS=="mac"', {
+  'conditions': [['clang==1', {
     'make_global_settings': [
-      [ 'CC', '<(clang_path)' ],
-      [ 'CXX', '<(clangxx_path)' ],
-      [ 'LINK', '<(clang_path)' ],
+      [ 'CC', '/usr/bin/clang++' ],
+      [ 'CXX', '/usr/bin/clang++' ],
+      [ 'LINK', '/usr/bin/clang++' ],
     ],
   }]],
 
@@ -68,8 +45,6 @@
             '-ffunction-sections',
             '-O3',
             '-fomit-frame-pointer',
-            '-isysroot',
-            '<@(mac_sdk)',
           ],
           'WARNING_CFLAGS': [
             '<@(common_gcc_warning_flags)',
@@ -139,16 +114,10 @@
           'OTHER_CPLUSPLUSFLAGS': [
             '-g3',
             '-fsanitize=address',
-            '-fsanitize-undefined-trap-on-error',
           ],
 
           'OTHER_LDFLAGS': [
-            # GYP's xcode_emulation for ninja passes OTHER_LDFLAGS to libtool,
-            # which doesn't undertand -fsanitize=address. The effect of
-            # -fsanitize=address linker option appears to be linking against
-            # one .dylib file. When this dylib file is added to libtool,
-            # libtool only warns but otherwise works as expected.
-            '<(clang_asan_rt_path)',
+            '-fsanitize=address',
           ],
         },
       },
