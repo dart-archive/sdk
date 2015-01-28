@@ -109,7 +109,7 @@ abstract class CcVisitor extends Visitor {
       buffer.write('  ServiceApiInvokeAsyncX(_service_id, $id, $callback, ');
       buffer.writeln('_buffer, kSize);');
     } else {
-      buffer.writeln('  ServiceApiInvokeX(_service_id, $id, _buffer, kSize);');
+      buffer.writeln('  ServiceApiInvoke(_service_id, $id, _buffer, kSize);');
       buffer.writeln('  return *${pointerToArgument(0)};');
     }
   }

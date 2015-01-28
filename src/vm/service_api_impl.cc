@@ -8,6 +8,8 @@
 #include "src/vm/port.h"
 #include "src/vm/process.h"
 
+static const int kRequestHeaderSize = 32;
+
 namespace fletch {
 
 class ServiceRegistry {
@@ -69,7 +71,7 @@ void PostResultToService(char* buffer) {
         reinterpret_cast<ServiceApiCallback>(request->callback);
     ASSERT(callback != NULL);
 
-    int result = *reinterpret_cast<int*>(buffer + 32);
+    int result = *reinterpret_cast<int*>(buffer + kRequestHeaderSize);
     void* data = request->data;
 
     free(request);
@@ -107,26 +109,6 @@ void Service::WaitForResult() {
   has_result_ = false;
 }
 
-ServiceApiValueType Service::Invoke(int id, ServiceApiValueType arg) {
-  char bits[32 + 4];
-  char* buffer = bits;
-  *reinterpret_cast<int*>(buffer + 32) = arg;
-
-  port_->Lock();
-  Process* process = port_->process();
-  if (process != NULL) {
-    ServiceRequest* request = reinterpret_cast<ServiceRequest*>(buffer);
-    request->method_id = id;
-    request->service = this;
-    request->callback = NULL;
-    process->EnqueueForeign(port_, buffer, sizeof(bits), false);
-    process->program()->scheduler()->ResumeProcess(process);
-  }
-  port_->Unlock();
-  WaitForResult();
-  return *reinterpret_cast<int*>(buffer + 32);
-}
-
 void Service::InvokeAsync(int id,
                           ServiceApiValueType arg,
                           ServiceApiCallback callback,
@@ -134,9 +116,9 @@ void Service::InvokeAsync(int id,
   port_->Lock();
   Process* process = port_->process();
   if (process != NULL) {
-    int size = 32 + 4;
+    int size = kRequestHeaderSize + 4;
     char* buffer = reinterpret_cast<char*>(malloc(size));
-    *reinterpret_cast<int*>(buffer + 32) = arg;
+    *reinterpret_cast<int*>(buffer + kRequestHeaderSize) = arg;
 
     ServiceRequest* request = reinterpret_cast<ServiceRequest*>(buffer);
     request->method_id = id;
@@ -149,7 +131,7 @@ void Service::InvokeAsync(int id,
   port_->Unlock();
 }
 
-void Service::InvokeX(int id, void* buffer, int size) {
+void Service::Invoke(int id, void* buffer, int size) {
   port_->Lock();
   Process* process = port_->process();
   if (process != NULL) {
@@ -214,14 +196,6 @@ ServiceId ServiceApiLookup(const char* name) {
   return reinterpret_cast<ServiceId>(service);
 }
 
-ServiceApiValueType ServiceApiInvoke(ServiceId service_id,
-                                     MethodId method,
-                                     ServiceApiValueType argument) {
-  fletch::Service* service = reinterpret_cast<fletch::Service*>(service_id);
-  intptr_t method_id = reinterpret_cast<intptr_t>(method);
-  return service->Invoke(method_id, argument);
-}
-
 void ServiceApiInvokeAsync(ServiceId service_id,
                            MethodId method,
                            ServiceApiValueType argument,
@@ -232,13 +206,13 @@ void ServiceApiInvokeAsync(ServiceId service_id,
   service->InvokeAsync(method_id, argument, callback, data);
 }
 
-void ServiceApiInvokeX(ServiceId service_id,
-                       MethodId method,
-                       void* buffer,
-                       int size) {
+void ServiceApiInvoke(ServiceId service_id,
+                      MethodId method,
+                      void* buffer,
+                      int size) {
   fletch::Service* service = reinterpret_cast<fletch::Service*>(service_id);
   intptr_t method_id = reinterpret_cast<intptr_t>(method);
-  service->InvokeX(method_id, buffer, size);
+  service->Invoke(method_id, buffer, size);
 }
 
 void ServiceApiInvokeAsyncX(ServiceId service_id,
@@ -252,7 +226,8 @@ void ServiceApiInvokeAsyncX(ServiceId service_id,
 }
 
 void ServiceApiTerminate(ServiceId service_id) {
-  ServiceApiInvoke(service_id, kTerminateMethodId, 0);
+  char buffer[kRequestHeaderSize];
+  ServiceApiInvoke(service_id, kTerminateMethodId, buffer, sizeof(buffer));
   fletch::Service* service = reinterpret_cast<fletch::Service*>(service_id);
   fletch::service_registry->Unregister(service);
 }

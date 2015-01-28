@@ -29,7 +29,7 @@ JNIEXPORT jint JNICALL Java_fletch_EchoService_Echo(JNIEnv*, jclass, jint n) {
   char _bits[kSize];
   char* _buffer = _bits;
   *reinterpret_cast<int*>(_buffer + 32) = n;
-  ServiceApiInvokeX(_service_id, _kEchoId, _buffer, kSize);
+  ServiceApiInvoke(_service_id, _kEchoId, _buffer, kSize);
   return *reinterpret_cast<int*>(_buffer + 32);
 }
 
@@ -41,7 +41,7 @@ JNIEXPORT jint JNICALL Java_fletch_EchoService_Sum(JNIEnv*, jclass, jint x, jint
   char* _buffer = _bits;
   *reinterpret_cast<int*>(_buffer + 32) = x;
   *reinterpret_cast<int*>(_buffer + 36) = y;
-  ServiceApiInvokeX(_service_id, _kSumId, _buffer, kSize);
+  ServiceApiInvoke(_service_id, _kSumId, _buffer, kSize);
   return *reinterpret_cast<int*>(_buffer + 32);
 }
 

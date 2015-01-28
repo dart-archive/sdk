@@ -34,10 +34,10 @@ FLETCH_EXPORT void ServiceApiTearDown();
 
 FLETCH_EXPORT ServiceId ServiceApiLookup(const char* name);
 
-FLETCH_EXPORT ServiceApiValueType ServiceApiInvoke(
-    ServiceId service,
-    MethodId method,
-    ServiceApiValueType arg);
+FLETCH_EXPORT void ServiceApiInvoke(ServiceId service,
+                                    MethodId method,
+                                    void* buffer,
+                                    int size);
 
 FLETCH_EXPORT void ServiceApiInvokeAsync(ServiceId service,
                                          MethodId method,
@@ -46,11 +46,6 @@ FLETCH_EXPORT void ServiceApiInvokeAsync(ServiceId service,
                                          void* data);
 
 // New (preferred) API.
-
-FLETCH_EXPORT void ServiceApiInvokeX(ServiceId service,
-                                     MethodId method,
-                                     void* buffer,
-                                     int size);
 
 FLETCH_EXPORT void ServiceApiInvokeAsyncX(ServiceId service,
                                           MethodId method,
