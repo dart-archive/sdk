@@ -8,7 +8,14 @@ part of dart.core;
 abstract class String implements Comparable<String>, Pattern {
   factory String.fromCharCodes(Iterable<int> charCodes,
                                [int start = 0, int end]) {
-    throw new UnimplementedError("String.fromCharCodes");
+    if (end == null) end = charCodes.length;
+    int length = end - start;
+    if (length < 0) throw new RangeError.range(start, 0, length);
+    var str = _create(length);
+    for (int i = 0; i < length; i++) {
+      str._setCodeUnitAt(i, charCodes[start + i]);
+    }
+    return str;
   }
 
   factory String.fromCharCode(int charCode) {
@@ -154,6 +161,17 @@ abstract class String implements Comparable<String>, Pattern {
         throw new IndexError(start, this);
     }
   }
+
+  String _setCodeUnitAt(int index, int value) native catch (error) {
+    switch (error) {
+      case _wrongArgumentType:
+        throw new ArgumentError();
+      case _indexOutOfBounds:
+        throw new IndexError(index, this);
+    }
+  }
+
+  static String _create(int length) native;
 }
 
 // Matches dart:core on Jan 21, 2015.

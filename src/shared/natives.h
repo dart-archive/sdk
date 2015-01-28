@@ -158,8 +158,10 @@ namespace fletch {
                                                                          \
   N(StringAdd,                   "String", "+")                          \
   N(StringCodeUnitAt,            "String", "codeUnitAt")                 \
+  N(StringCreate,                "String", "_create")                    \
   N(StringEqual,                 "String", "==")                         \
   N(StringLength,                "String", "length")                     \
+  N(StringSetCodeUnitAt,         "String", "_setCodeUnitAt")             \
   N(StringSubstring,             "String", "_substring")                 \
                                                                          \
   N(PortCreate,                  "Port", "_create")                      \

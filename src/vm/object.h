@@ -568,6 +568,7 @@ class String: public BaseArray {
  public:
   // Access to individual chars.
   inline char get_char(int offset);
+  inline void set_char(int offset, char value);
 
   inline static String* cast(Object* value);
 
@@ -614,7 +615,6 @@ class String: public BaseArray {
  private:
   // Only Heap should initialize objects.
   inline void Initialize(int size, int length);
-  inline void set_char(int offset, char value);
   inline char* address_for(int offset);
   friend class Heap;
   friend class Program;

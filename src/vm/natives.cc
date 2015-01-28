@@ -890,10 +890,38 @@ NATIVE(StringCodeUnitAt) {
   return process->ToInteger(x->get_char(index));
 }
 
+NATIVE(StringCreate) {
+  Object* z = arguments[0];
+  if (!z->IsSmi()) return Failure::wrong_argument_type();
+  word length = Smi::cast(z)->value();
+  if (length < 0) return Failure::index_out_of_bounds();
+  List<char> chars = List<char>::New(length);
+  for (int i = 0; i < length; i++) {
+    chars[i] = 0;
+  }
+  Object* result = process->NewString(List<const char>(chars));
+  chars.Delete();
+  return result;
+}
+
 NATIVE(StringEqual) {
   String* x = String::cast(arguments[0]);
   Object* y = arguments[1];
   return ToBool(process, y->IsString() && x->Equals(String::cast(y)));
+}
+
+NATIVE(StringSetCodeUnitAt) {
+  String* x = String::cast(arguments[0]);
+  Object* y = arguments[1];
+  if (!y->IsSmi()) return Failure::wrong_argument_type();
+  word index = Smi::cast(y)->value();
+  if (index < 0) return Failure::index_out_of_bounds();
+  Object* z = arguments[2];
+  if (!z->IsSmi()) return Failure::wrong_argument_type();
+  word value = Smi::cast(z)->value();
+  if (value < 0 || value > 255) return Failure::wrong_argument_type();
+  x->set_char(index, value);
+  return process->program()->null_object();
 }
 
 NATIVE(StringSubstring) {
