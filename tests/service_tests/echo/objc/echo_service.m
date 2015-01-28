@@ -42,4 +42,6 @@ static const MethodId _kEchoId = (MethodId)1;
   ServiceApiInvokeAsync(_service_id, _kEchoId, arg, _BlockCallback, (void*)block);
 }
 
+static const MethodId _kSumId = (MethodId)2;
+
 @end

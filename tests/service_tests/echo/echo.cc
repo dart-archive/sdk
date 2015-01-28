@@ -23,6 +23,8 @@ static void InteractWithService() {
   printf("C: async call with argument 4\n");
   result = EchoService::Echo(5);
   printf("C: result %d\n", result);
+  result = EchoService::Sum(3, 4);
+  printf("C: result of sum(3, 4) is %d\n", result);
   EchoService::TearDown();
 }
 

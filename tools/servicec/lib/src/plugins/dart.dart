@@ -28,7 +28,7 @@ void generate(String path, Unit unit, String outputDirectory) {
 class _DartVisitor extends Visitor {
   final String path;
   final StringBuffer buffer = new StringBuffer();
-  final List<String> methods = new List();
+  final List<Method> methods = new List();
   _DartVisitor(this.path);
 
   visit(Node node) => node.accept(this);
@@ -82,8 +82,8 @@ class _DartVisitor extends Visitor {
     buffer.writeln('    return !_terminated;');
     buffer.writeln('  }');
 
-    List<String> methodIds
-        = methods.map((name) => '_${name.toUpperCase()}_METHOD_ID').toList();
+    List<String> methodIds = methods.map(
+        (method) => '_${method.name.toUpperCase()}_METHOD_ID').toList();
 
     buffer.writeln();
     buffer.writeln('  static void handleNextEvent() {');
@@ -93,12 +93,20 @@ class _DartVisitor extends Visitor {
     buffer.writeln('        _terminated = true;');
     buffer.writeln('        _postResult.icall\$1(request);');
     buffer.writeln('        break;');
-    String getInt = 'request.getInt32(32)';
-    String setInt = 'request.setInt32(32, result)';
+
+    String getInt(int index) => 'request.getInt32(${32 + index * 4})';
+    String setInt(int index) => 'request.setInt32(${32 + index * 4}, result)';
+
     for (int i = 0; i < methods.length; ++i) {
+      Method method = methods[i];
       buffer.writeln('      case ${methodIds[i]}:');
-      buffer.writeln('        var result = _impl.${methods[i]}($getInt);');
-      buffer.writeln('        $setInt;');
+      buffer.write('        var result = _impl.${method.name}(');
+      for (int i = 0; i < method.arguments.length; i++) {
+        if (i != 0) buffer.write(', ');
+        buffer.write(getInt(i));
+      }
+      buffer.writeln(');');
+      buffer.writeln('        ${setInt(0)};');
       buffer.writeln('        _postResult.icall\$1(request);');
       buffer.writeln('        break;');
     }
@@ -118,17 +126,26 @@ class _DartVisitor extends Visitor {
   }
 
   visitMethod(Method node) {
-    String methodName = node.name;
-    methods.add(methodName);
-    buffer.writeln('  int $methodName(int argument);');
+    methods.add(node);
+    buffer.write('  int ${node.name}(');
+    bool first = true;
+    node.arguments.forEach((Formal formal) {
+      if (!first) buffer.write(', ');
+      first = false;
+      visit(formal);
+    });
+    buffer.writeln(');');
   }
 
   visitFormal(Formal node) {
-    throw new Exception("Not used.");
+    visit(node.type);
+    buffer.write(' ${node.name}');
   }
 
   visitType(Type node) {
-    throw new Exception("Not used.");
+    Map<String, String> types = const { 'Int32': 'int' };
+    String type = types[node.identifier];
+    buffer.write(type);
   }
 }
 

@@ -17,7 +17,8 @@ bool _terminated = false;
 EchoService _impl;
 
 abstract class EchoService {
-  int Echo(int argument);
+  int Echo(int n);
+  int Sum(int x, int y);
 
   static void initialize(EchoService impl) {
     if (_impl != null) {
@@ -44,6 +45,11 @@ abstract class EchoService {
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
+      case _SUM_METHOD_ID:
+        var result = _impl.Sum(request.getInt32(32), request.getInt32(36));
+        request.setInt32(32, result);
+        _postResult.icall$1(request);
+        break;
       default:
         throw UnsupportedError();
     }
@@ -51,4 +57,5 @@ abstract class EchoService {
 
   const int _TERMINATE_METHOD_ID = 0;
   const int _ECHO_METHOD_ID = 1;
+  const int _SUM_METHOD_ID = 2;
 }

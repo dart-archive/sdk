@@ -77,6 +77,8 @@ class _HeaderVisitor extends CcVisitor {
   }
 
   visitMethod(Method node) {
+    if (node.arguments.length != 1) return;
+
     String name = node.name;
     buffer.writeln('+ ($_type)$name:($_type)arg;');
     buffer.writeln('+ (void)${name}Async:($_type)arg WithCallback:($_ctype)cb;');
@@ -156,6 +158,8 @@ class _ImplementationVisitor extends CcVisitor {
 
     buffer.writeln();
     buffer.writeln('static const MethodId $id = (MethodId)${methodId++};');
+
+    if (node.arguments.length != 1) return;
 
     buffer.writeln();
     buffer.write('+ (');

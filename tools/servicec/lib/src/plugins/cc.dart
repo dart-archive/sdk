@@ -63,15 +63,21 @@ abstract class CcVisitor extends Visitor {
   }
 
   visitMethodBody(String id, List<Formal> arguments) {
-    // TODO(kasperl): For now, we only deal with one argument. Fix this.
-    String argumentName = arguments.single.name;
-    int size = 32 + arguments.length * 4;
+    const int REQUEST_HEADER_SIZE = 32;
+    final int size = REQUEST_HEADER_SIZE + (arguments.length * 4);
+    String pointerToArgument(int index) {
+      int offset = REQUEST_HEADER_SIZE + index * 4;
+      return 'reinterpret_cast<int*>(_buffer + $offset)';
+    }
 
     buffer.writeln('  char _bits[$size];');
     buffer.writeln('  char* _buffer = _bits;');
-    buffer.writeln('  *reinterpret_cast<int*>(_buffer + 32) = $argumentName;');
+    for (int i = 0; i < arguments.length; i++) {
+      String name = arguments[i].name;
+      buffer.writeln('  *${pointerToArgument(i)} = $name;');
+    }
     buffer.writeln('  ServiceApiInvokeX(_service_id, $id, _buffer, $size);');
-    buffer.writeln('  return *reinterpret_cast<int*>(_buffer + 32);');
+    buffer.writeln('  return *${pointerToArgument(0)};');
   }
 }
 
@@ -120,6 +126,8 @@ class _HeaderVisitor extends CcVisitor {
     buffer.write(' ${node.name}(');
     visitArguments(node.arguments);
     buffer.writeln(');');
+
+    if (node.arguments.length != 1) return;
 
     buffer.write('  static void ${node.name}Async(');
     visitArguments(node.arguments);
@@ -188,6 +196,8 @@ class _ImplementationVisitor extends CcVisitor {
     buffer.writeln(') {');
     visitMethodBody(id, node.arguments);
     buffer.writeln('}');
+
+    if (node.arguments.length != 1) return;
 
     buffer.writeln();
     buffer.writeln('void $serviceName::${name}Async($type arg, $ctype cb) {');

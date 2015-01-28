@@ -30,3 +30,14 @@ int EchoService::Echo(int n) {
 void EchoService::EchoAsync(ServiceApiValueType arg, ServiceApiCallback cb) {
   ServiceApiInvokeAsync(_service_id, _kEchoId, arg, cb, NULL);
 }
+
+static const MethodId _kSumId = reinterpret_cast<MethodId>(2);
+
+int EchoService::Sum(int x, int y) {
+  char _bits[40];
+  char* _buffer = _bits;
+  *reinterpret_cast<int*>(_buffer + 32) = x;
+  *reinterpret_cast<int*>(_buffer + 36) = y;
+  ServiceApiInvokeX(_service_id, _kSumId, _buffer, 40);
+  return *reinterpret_cast<int*>(_buffer + 32);
+}
