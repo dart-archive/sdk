@@ -18,7 +18,6 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
-const String _type = 'ServiceApiValueType';
 const String _ctype = 'ServiceApiCallback';
 const String _btype = 'ServiceApiBlock';
 
@@ -45,7 +44,17 @@ void _generateImplementationFile(String path,
   writeToFile(directory, path, "m", contents);
 }
 
-class _HeaderVisitor extends CcVisitor {
+abstract class _ObjcVisitor extends CcVisitor {
+  _ObjcVisitor(String path) : super(path);
+
+  visitFormal(Formal node) {
+    buffer.write('(');
+    visit(node.type);
+    buffer.write(')${node.name}');
+  }
+}
+
+class _HeaderVisitor extends _ObjcVisitor {
   _HeaderVisitor(String path) : super(path);
 
   visit(Node node) => node.accept(this);
@@ -57,12 +66,6 @@ class _HeaderVisitor extends CcVisitor {
     buffer.writeln();
 
     buffer.writeln('#include <Foundation/Foundation.h>');
-    buffer.writeln();
-
-    buffer.writeln('#include "include/service_api.h"');
-    buffer.writeln();
-
-    buffer.writeln('typedef void (^ServiceApiBlock)(ServiceApiValueType);');
 
     node.services.forEach(visit);
   }
@@ -85,21 +88,23 @@ class _HeaderVisitor extends CcVisitor {
     if (node.arguments.length != 1) return;
 
     String name = node.name;
-    buffer.writeln('+ ($_type)$name:($_type)arg;');
-    buffer.writeln('+ (void)${name}Async:($_type)arg WithCallback:($_ctype)cb;');
-    buffer.writeln('+ (void)${name}Async:($_type)arg WithBlock:($_btype)block;');
-  }
+    buffer.write('+ (');
+    visit(node.returnType);
+    buffer.write(')$name:');
+    visit(node.arguments.single);
+    buffer.writeln(';');
 
-  visitFormal(Formal node) {
-    throw new Exception("Not used.");
-  }
+    buffer.write('+ (void)${name}Async:');
+    visit(node.arguments.single);
+    buffer.writeln(' WithCallback:(void (*)(int))callback;');
 
-  visitType(Type node) {
-    throw new Exception("Not used.");
+    buffer.write('+ (void)${name}Async:');
+    visit(node.arguments.single);
+    buffer.writeln(' WithBlock:(void (^)(int))callback;');
   }
 }
 
-class _ImplementationVisitor extends CcVisitor {
+class _ImplementationVisitor extends _ObjcVisitor {
   int methodId = 1;
   String serviceName;
 
@@ -120,11 +125,7 @@ class _ImplementationVisitor extends CcVisitor {
     buffer.writeln();
 
     buffer.writeln('#include "$headerFile"');
-    buffer.writeln();
-
-    buffer.writeln('static void _BlockCallback($_type result, void* data) {');
-    buffer.writeln('  ((ServiceApiBlock)data)(result);');
-    buffer.writeln('}');
+    buffer.writeln('#include "include/service_api.h"');
 
     node.services.forEach(visit);
   }
@@ -159,12 +160,12 @@ class _ImplementationVisitor extends CcVisitor {
   visitMethod(Method node) {
     String name = node.name;
     String id = '_k${name}Id';
-    String sid = '_service_id';
 
     buffer.writeln();
     buffer.writeln('static const MethodId $id = (MethodId)${methodId++};');
 
-    if (node.arguments.length != 1) return;
+    int arity = node.arguments.length;
+    if (arity != 1) return;
 
     buffer.writeln();
     buffer.write('+ (');
@@ -175,23 +176,41 @@ class _ImplementationVisitor extends CcVisitor {
     visitMethodBody(id, node.arguments, cStyle: true);
     buffer.writeln('}');
 
+    String callback = ensureCallback(node.returnType, node.arguments, false);
     buffer.writeln();
-    buffer.writeln('+ (void)${name}Async:($_type)arg '
-                   'WithCallback:($_ctype)cb {');
-    buffer.writeln('  ServiceApiInvokeAsync($sid, $id, arg, cb, (void*)0);');
+    buffer.write('+ (void)${name}Async:');
+    visit(node.arguments.single);
+    buffer.writeln(' WithCallback:(void (*)(int))callback {');
+    visitMethodBody(id, node.arguments, cStyle: true, callback: callback);
     buffer.writeln('}');
 
+    callback = ensureCallback(node.returnType, node.arguments, true);
     buffer.writeln();
-    buffer.writeln('+ (void)${name}Async:($_type)arg '
-                   'WithBlock:($_btype)block {');
-    buffer.writeln('  ServiceApiInvokeAsync($sid, $id, arg, '
-                   '_BlockCallback, (void*)block);');
+    buffer.write('+ (void)${name}Async:');
+    visit(node.arguments.single);
+    buffer.writeln(' WithBlock:(void (^)(int))callback {');
+    visitMethodBody(id, node.arguments, cStyle: true, callback: callback);
     buffer.writeln('}');
   }
 
-  visitFormal(Formal node) {
-    buffer.write('(');
-    visit(node.type);
-    buffer.write(')${node.name}');
+  final Map<String, String> callbacks = {};
+  String ensureCallback(Type type, List<Formal> arguments, bool block) {
+    String suffix = block ? "_Block" : "";
+    String key = '${type.identifier}_${arguments.length}$suffix';
+    return callbacks.putIfAbsent(key, () {
+      String cast(String type) => CcVisitor.cast(type, true);
+      String name = 'Unwrap_$key';
+      buffer.writeln();
+      buffer.writeln('static void $name(void* raw) {');
+      buffer.writeln('  typedef void (${block ? "^" : "*"}cbt)(int);');
+      buffer.writeln('  char* buffer = ${cast('char*')}(raw);');
+      buffer.writeln('  int result = *${cast('int*')}(buffer + 32);');
+      int offset = 32 + (arguments.length * 4);
+      buffer.writeln('  cbt callback = *${cast('cbt*')}(buffer + $offset);');
+      buffer.writeln('  free(buffer);');
+      buffer.writeln('  callback(result);');
+      buffer.writeln('}');
+      return name;
+    });
   }
 }

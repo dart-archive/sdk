@@ -106,7 +106,7 @@ abstract class CcVisitor extends Visitor {
     if (async) {
       String dataArgument = pointerToArgument(arity, 'void*');
       buffer.writeln('  *$dataArgument = ${cast("void*")}(callback);');
-      buffer.write('  ServiceApiInvokeAsyncX(_service_id, $id, $callback, ');
+      buffer.write('  ServiceApiInvokeAsync(_service_id, $id, $callback, ');
       buffer.writeln('_buffer, kSize);');
     } else {
       buffer.writeln('  ServiceApiInvoke(_service_id, $id, _buffer, kSize);');
@@ -132,9 +132,6 @@ class _HeaderVisitor extends CcVisitor {
 
     buffer.writeln('#ifndef $headerGuard');
     buffer.writeln('#define $headerGuard');
-    buffer.writeln();
-
-    buffer.writeln('#include "include/service_api.h"');
 
     node.services.forEach(visit);
 
@@ -189,6 +186,7 @@ class _ImplementationVisitor extends CcVisitor {
     buffer.writeln();
 
     buffer.writeln('#include "$headerFile"');
+    buffer.writeln('#include "include/service_api.h"');
     buffer.writeln('#include <stdlib.h>');
 
     node.services.forEach(visit);

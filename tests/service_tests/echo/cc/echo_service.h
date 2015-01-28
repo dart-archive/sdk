@@ -7,8 +7,6 @@
 #ifndef ECHO_SERVICE_H
 #define ECHO_SERVICE_H
 
-#include "include/service_api.h"
-
 class EchoService {
  public:
   static void Setup();

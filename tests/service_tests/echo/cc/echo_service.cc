@@ -5,6 +5,7 @@
 // Generated file. Do not edit.
 
 #include "echo_service.h"
+#include "include/service_api.h"
 #include <stdlib.h>
 
 static ServiceId _service_id = kNoServiceId;
@@ -43,7 +44,7 @@ void EchoService::EchoAsync(int n, void (*callback)(int)) {
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int*>(_buffer + 32) = n;
   *reinterpret_cast<void**>(_buffer + 36) = reinterpret_cast<void*>(callback);
-  ServiceApiInvokeAsyncX(_service_id, _kEchoId, Unwrap_Int32_1, _buffer, kSize);
+  ServiceApiInvokeAsync(_service_id, _kEchoId, Unwrap_Int32_1, _buffer, kSize);
 }
 
 static const MethodId _kSumId = reinterpret_cast<MethodId>(2);
@@ -73,5 +74,5 @@ void EchoService::SumAsync(int x, int y, void (*callback)(int)) {
   *reinterpret_cast<int*>(_buffer + 32) = x;
   *reinterpret_cast<int*>(_buffer + 36) = y;
   *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
-  ServiceApiInvokeAsyncX(_service_id, _kSumId, Unwrap_Int32_2, _buffer, kSize);
+  ServiceApiInvokeAsync(_service_id, _kSumId, Unwrap_Int32_2, _buffer, kSize);
 }

@@ -16,10 +16,7 @@
 typedef void* ServiceId;
 typedef void* MethodId;
 
-typedef int ServiceApiValueType;
-
-typedef void (*ServiceApiCallback)(ServiceApiValueType result, void* data);
-typedef void (*ServiceApiCallbackX)(void* buffer);
+typedef void (*ServiceApiCallback)(void* buffer);
 
 static const ServiceId kNoServiceId = NULL;
 static const MethodId kTerminateMethodId = NULL;
@@ -41,17 +38,9 @@ FLETCH_EXPORT void ServiceApiInvoke(ServiceId service,
 
 FLETCH_EXPORT void ServiceApiInvokeAsync(ServiceId service,
                                          MethodId method,
-                                         ServiceApiValueType arg,
                                          ServiceApiCallback callback,
-                                         void* data);
-
-// New (preferred) API.
-
-FLETCH_EXPORT void ServiceApiInvokeAsyncX(ServiceId service,
-                                          MethodId method,
-                                          ServiceApiCallbackX callback,
-                                          void* buffer,
-                                          int size);
+                                         void* buffer,
+                                         int size);
 
 FLETCH_EXPORT void ServiceApiTerminate(ServiceId service);
 

@@ -6,17 +6,13 @@
 
 #include <Foundation/Foundation.h>
 
-#include "include/service_api.h"
-
-typedef void (^ServiceApiBlock)(ServiceApiValueType);
-
 @interface EchoService : NSObject
 
 + (void)Setup;
 + (void)TearDown;
 
-+ (ServiceApiValueType)Echo:(ServiceApiValueType)arg;
-+ (void)EchoAsync:(ServiceApiValueType)arg WithCallback:(ServiceApiCallback)cb;
-+ (void)EchoAsync:(ServiceApiValueType)arg WithBlock:(ServiceApiBlock)block;
++ (int)Echo:(int)n;
++ (void)EchoAsync:(int)n WithCallback:(void (*)(int))callback;
++ (void)EchoAsync:(int)n WithBlock:(void (^)(int))callback;
 
 @end

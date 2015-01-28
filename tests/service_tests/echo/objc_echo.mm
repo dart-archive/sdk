@@ -5,7 +5,7 @@
 #include "echo_shared.h"
 #include "objc/echo_service.h"
 
-static void Callback(ServiceApiValueType result, void* data) {
+static void Callback(int result) {
   NSLog([NSString stringWithFormat:@"ObjC: async result %d\n", result]);
 }
 
@@ -18,7 +18,7 @@ static void InteractWithService() {
   NSLog(@"ObjC: async call with argument 3\n");
   [EchoService EchoAsync:3 WithCallback:Callback];
   NSLog(@"ObjC: async call with argument 4\n");
-  [EchoService EchoAsync:4 WithBlock:^(ServiceApiValueType res) {
+  [EchoService EchoAsync:4 WithBlock:^(int res) {
     NSLog([NSString stringWithFormat:@"ObjC: async block result %d\n", res]);
   }];
   result = [EchoService Echo:5];
