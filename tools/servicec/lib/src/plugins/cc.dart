@@ -62,12 +62,14 @@ abstract class CcVisitor extends Visitor {
     });
   }
 
-  visitMethodBody(String id, List<Formal> arguments) {
+  visitMethodBody(String id, List<Formal> arguments, {bool cStyle: false}) {
     const int REQUEST_HEADER_SIZE = 32;
     final int size = REQUEST_HEADER_SIZE + (arguments.length * 4);
     String pointerToArgument(int index) {
       int offset = REQUEST_HEADER_SIZE + index * 4;
-      return 'reinterpret_cast<int*>(_buffer + $offset)';
+      return cStyle
+          ? '(int*)(_buffer + $offset)'
+          : 'reinterpret_cast<int*>(_buffer + $offset)';
     }
 
     buffer.writeln('  char _bits[$size];');

@@ -167,7 +167,7 @@ class _ImplementationVisitor extends CcVisitor {
     buffer.write(')$name:');
     visit(node.arguments.single);
     buffer.writeln(' {');
-    visitMethodBody(id, node.arguments);
+    visitMethodBody(id, node.arguments, cStyle: true);
     buffer.writeln('}');
 
     buffer.writeln();
