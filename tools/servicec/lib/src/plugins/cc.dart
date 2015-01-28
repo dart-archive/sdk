@@ -17,7 +17,12 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
-void generateHeaderFile(String path, Unit unit, String outputDirectory) {
+void generate(String path, Unit unit, String outputDirectory) {
+  _generateHeaderFile(path, unit, outputDirectory);
+  _generateImplementationFile(path, unit, outputDirectory);
+}
+
+void _generateHeaderFile(String path, Unit unit, String outputDirectory) {
   _HeaderVisitor visitor = new _HeaderVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
@@ -25,9 +30,9 @@ void generateHeaderFile(String path, Unit unit, String outputDirectory) {
   writeToFile(directory, path, "h", contents);
 }
 
-void generateImplementationFile(String path,
-                                Unit unit,
-                                String outputDirectory) {
+void _generateImplementationFile(String path,
+                                 Unit unit,
+                                 String outputDirectory) {
   _ImplementationVisitor visitor = new _ImplementationVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();

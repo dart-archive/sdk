@@ -37,4 +37,4 @@ test: all
 	LD_LIBRARY_PATH=jni java -cp fletch/EchoService.jar:. Echo echo.snapshot
 
 clean:
-	rm fletch/*.class jni/*.o jni/*.so *.class
+	rm fletch/*.class jni/*.o jni/*.so *.class echo.snapshot

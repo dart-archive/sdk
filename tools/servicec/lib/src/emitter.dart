@@ -13,7 +13,7 @@ void writeToFile(String outputDirectory,
                  String extension,
                  String contents) {
   // Create 'cc' output directory if it doesn't already exist.
-  new Directory(outputDirectory).createSync();
+  new Directory(outputDirectory).createSync(recursive: true);
   // Write contents of the file.
   String base = basenameWithoutExtension(path);
   String headerFile = '$base.$extension';

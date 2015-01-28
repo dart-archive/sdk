@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+// Generated file. Do not edit.
+
 #include <jni.h>
 
 #include "fletch_api.h"
@@ -21,11 +23,6 @@ JNIEXPORT void JNICALL Java_fletch_FletchApi_TearDown(JNIEnv*, jclass) {
 JNIEXPORT void JNICALL Java_fletch_FletchApi_RunSnapshot(JNIEnv* env,
                                                          jclass,
                                                          jbyteArray snapshot) {
-  // TODO(ager): Avoid copying the snapshot. You can easily get a file
-  // path from an Android resource so we copy for now. The long term
-  // solution should probably be to compile the snapshot into the
-  // fletch library and run the snapshot that has been compiled into
-  // the library with no copying.
   int len = env->GetArrayLength(snapshot);
   unsigned char* copy = new unsigned char[len];
   env->GetByteArrayRegion(snapshot, 0, len, reinterpret_cast<jbyte*>(copy));

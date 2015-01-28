@@ -13,6 +13,7 @@ import 'src/resolver.dart';
 
 import 'src/plugins/cc.dart' as cc;
 import 'src/plugins/dart.dart' as dart;
+import 'src/plugins/java.dart' as java;
 import 'src/plugins/objc.dart' as objc;
 
 void compile(String path, String outputDirectory) {
@@ -23,13 +24,10 @@ void compile(String path, String outputDirectory) {
   resolve(unit);
   dump(path, unit);
 
-  cc.generateHeaderFile(path, unit, outputDirectory);
-  cc.generateImplementationFile(path, unit, outputDirectory);
-
+  cc.generate(path, unit, outputDirectory);
   dart.generate(path, unit, outputDirectory);
-
-  objc.generateHeaderFile(path, unit, outputDirectory);
-  objc.generateImplementationFile(path, unit, outputDirectory);
+  java.generate(path, unit, outputDirectory);
+  objc.generate(path, unit, outputDirectory);
 }
 
 void dump(String path, Unit unit) {

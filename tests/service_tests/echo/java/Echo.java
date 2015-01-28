@@ -50,6 +50,8 @@ class Echo {
     System.out.println("Java: result " + result);
     result = EchoService.Echo(2);
     System.out.println("Java: result " + result);
+    result = EchoService.Sum(3, 4);
+    System.out.println("Java: result of sum(3, 4) is " + result);
     // TODO(ager): Async API.
     EchoService.TearDown();
   }

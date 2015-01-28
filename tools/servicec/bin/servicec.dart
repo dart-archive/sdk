@@ -16,6 +16,10 @@ main(List<String> arguments) {
     print("Output directory '$outputDirectory' does not exist.");
     exit(1);
   }
+  if (results.rest.isEmpty) {
+    print("No input files.");
+    exit(1);
+  }
   for (String path in results.rest) {
     servicec.compile(path, outputDirectory);
   }
