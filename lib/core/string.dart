@@ -10,10 +10,19 @@ abstract class String implements Comparable<String>, Pattern {
                                [int start = 0, int end]) {
     if (end == null) end = charCodes.length;
     int length = end - start;
-    if (length < 0) throw new RangeError.range(start, 0, length);
+    if (start < 0 || length < 0) throw new RangeError.range(start, 0, length);
     var str = _create(length);
-    for (int i = 0; i < length; i++) {
-      str._setCodeUnitAt(i, charCodes[start + i]);
+    if (charCodes is List) {
+      for (int i = 0; i < length; i++) {
+        str._setCodeUnitAt(i, charCodes[start + i]);
+      }
+    } else {
+      int i = -start;
+      charCodes.forEach((value) {
+        if (i >= 0 && i < length) str._setCodeUnitAt(i, value);
+        i++;
+      });
+      if (i < length) throw new RangeError.range(start, 0, length);
     }
     return str;
   }
