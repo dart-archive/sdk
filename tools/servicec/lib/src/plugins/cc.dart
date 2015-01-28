@@ -45,6 +45,10 @@ abstract class CcVisitor extends Visitor {
   final StringBuffer buffer = new StringBuffer();
   CcVisitor(this.path);
 
+  static String cast(String type, bool cStyle) => cStyle
+      ? '($type)'
+      : 'reinterpret_cast<$type>';
+
   visit(Node node) => node.accept(this);
 
   visitFormal(Formal node) {
@@ -67,24 +71,47 @@ abstract class CcVisitor extends Visitor {
     });
   }
 
-  visitMethodBody(String id, List<Formal> arguments, {bool cStyle: false}) {
+  visitMethodBody(String id, List<Formal> arguments,
+                  {bool cStyle: false, String callback}) {
+    final bool async = callback != null;
     const int REQUEST_HEADER_SIZE = 32;
-    final int size = REQUEST_HEADER_SIZE + (arguments.length * 4);
-    String pointerToArgument(int index) {
-      int offset = REQUEST_HEADER_SIZE + index * 4;
-      return cStyle
-          ? '(int*)(_buffer + $offset)'
-          : 'reinterpret_cast<int*>(_buffer + $offset)';
+    int size = REQUEST_HEADER_SIZE + (arguments.length * 4);
+    if (async) {
+      buffer.writeln('  static const int kSize = ${size} + sizeof(void*);');
+    } else {
+      buffer.writeln('  static const int kSize = ${size};');
     }
 
-    buffer.writeln('  char _bits[$size];');
-    buffer.writeln('  char* _buffer = _bits;');
-    for (int i = 0; i < arguments.length; i++) {
+    String cast(String type) => CcVisitor.cast(type, cStyle);
+
+    String pointerToArgument(int index, [String type = 'int']) {
+      int offset = REQUEST_HEADER_SIZE + index * 4;
+      String prefix = cast('$type*');
+      return '$prefix(_buffer + $offset)';
+   }
+
+    if (async) {
+      buffer.writeln('  char* _buffer = ${cast("char*")}(malloc(kSize));');
+    } else {
+      buffer.writeln('  char _bits[kSize];');
+      buffer.writeln('  char* _buffer = _bits;');
+    }
+
+    int arity = arguments.length;
+    for (int i = 0; i < arity; i++) {
       String name = arguments[i].name;
       buffer.writeln('  *${pointerToArgument(i)} = $name;');
     }
-    buffer.writeln('  ServiceApiInvokeX(_service_id, $id, _buffer, $size);');
-    buffer.writeln('  return *${pointerToArgument(0)};');
+
+    if (async) {
+      String dataArgument = pointerToArgument(arity, 'void*');
+      buffer.writeln('  *$dataArgument = ${cast("void*")}(callback);');
+      buffer.write('  ServiceApiInvokeAsyncX(_service_id, $id, $callback, ');
+      buffer.writeln('_buffer, kSize);');
+    } else {
+      buffer.writeln('  ServiceApiInvokeX(_service_id, $id, _buffer, kSize);');
+      buffer.writeln('  return *${pointerToArgument(0)};');
+    }
   }
 }
 
@@ -134,12 +161,12 @@ class _HeaderVisitor extends CcVisitor {
     visitArguments(node.arguments);
     buffer.writeln(');');
 
-    if (node.arguments.length != 1) return;
-
     buffer.write('  static void ${node.name}Async(');
     visitArguments(node.arguments);
     if (node.arguments.isNotEmpty) buffer.write(', ');
-    buffer.writeln('ServiceApiCallback callback);');
+    buffer.write('void (*callback)(');
+    visit(node.returnType);
+    buffer.writeln('));');
   }
 }
 
@@ -162,6 +189,7 @@ class _ImplementationVisitor extends CcVisitor {
     buffer.writeln();
 
     buffer.writeln('#include "$headerFile"');
+    buffer.writeln('#include <stdlib.h>');
 
     node.services.forEach(visit);
   }
@@ -187,8 +215,6 @@ class _ImplementationVisitor extends CcVisitor {
   }
 
   visitMethod(Method node) {
-    const String type = 'ServiceApiValueType';
-    const String ctype = 'ServiceApiCallback';
     String name = node.name;
     String id = '_k${name}Id';
 
@@ -204,11 +230,37 @@ class _ImplementationVisitor extends CcVisitor {
     visitMethodBody(id, node.arguments);
     buffer.writeln('}');
 
-    if (node.arguments.length != 1) return;
+    String callback = ensureCallback(node.returnType, node.arguments);
 
     buffer.writeln();
-    buffer.writeln('void $serviceName::${name}Async($type arg, $ctype cb) {');
-    buffer.writeln('  ServiceApiInvokeAsync(_service_id, $id, arg, cb, NULL);');
+    buffer.write('void $serviceName::${name}Async(');
+    visitArguments(node.arguments);
+    if (node.arguments.isNotEmpty) buffer.write(', ');
+    buffer.write('void (*callback)(');
+    visit(node.returnType);
+    buffer.writeln(')) {');
+    visitMethodBody(id, node.arguments, callback: callback);
     buffer.writeln('}');
+  }
+
+  final Map<String, String> callbacks = {};
+  String ensureCallback(Type type, List<Formal> arguments,
+                        {bool cStyle: false}) {
+    String key = '${type.identifier}_${arguments.length}';
+    return callbacks.putIfAbsent(key, () {
+      String cast(String type) => CcVisitor.cast(type, cStyle);
+      String name = 'Unwrap_$key';
+      buffer.writeln();
+      buffer.writeln('static void $name(void* raw) {');
+      buffer.writeln('  typedef void (*cbt)(int);');
+      buffer.writeln('  char* buffer = ${cast('char*')}(raw);');
+      buffer.writeln('  int result = *${cast('int*')}(buffer + 32);');
+      int offset = 32 + (arguments.length * 4);
+      buffer.writeln('  cbt callback = *${cast('cbt*')}(buffer + $offset);');
+      buffer.writeln('  free(buffer);');
+      buffer.writeln('  callback(result);');
+      buffer.writeln('}');
+      return name;
+    });
   }
 }

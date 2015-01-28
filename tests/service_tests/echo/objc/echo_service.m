@@ -27,10 +27,11 @@ static ServiceId _service_id;
 static const MethodId _kEchoId = (MethodId)1;
 
 + (int)Echo:(int)n {
-  char _bits[36];
+  static const int kSize = 36;
+  char _bits[kSize];
   char* _buffer = _bits;
   *(int*)(_buffer + 32) = n;
-  ServiceApiInvokeX(_service_id, _kEchoId, _buffer, 36);
+  ServiceApiInvokeX(_service_id, _kEchoId, _buffer, kSize);
   return *(int*)(_buffer + 32);
 }
 

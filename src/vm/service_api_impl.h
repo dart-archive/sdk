@@ -26,12 +26,17 @@ class Service {
 
   ServiceApiValueType Invoke(int id, ServiceApiValueType argument);
 
-  void InvokeX(int id, void* buffer, int size);
-
   void InvokeAsync(int id,
                    ServiceApiValueType argument,
                    ServiceApiCallback callback,
                    void* data);
+
+  void InvokeX(int id, void* buffer, int size);
+
+  void InvokeAsyncX(int id,
+                    ServiceApiCallbackX callback,
+                    void* buffer,
+                    int size);
 
   char* name() const { return name_; }
 

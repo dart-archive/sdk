@@ -14,8 +14,9 @@ class EchoService {
   static void Setup();
   static void TearDown();
   static int Echo(int n);
-  static void EchoAsync(int n, ServiceApiCallback callback);
+  static void EchoAsync(int n, void (*callback)(int));
   static int Sum(int x, int y);
+  static void SumAsync(int x, int y, void (*callback)(int));
 };
 
 #endif  // ECHO_SERVICE_H

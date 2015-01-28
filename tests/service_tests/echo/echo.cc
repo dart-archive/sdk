@@ -7,8 +7,12 @@
 
 #include <cstdio>
 
-static void Callback(ServiceApiValueType result, void* data) {
-  printf("C: async result %d\n", result);
+static void EchoCallback(int result) {
+  printf("C: echo async result %d\n", result);
+}
+
+static void SumCallback(int result) {
+  printf("C: sum async result %d\n", result);
 }
 
 static void InteractWithService() {
@@ -17,12 +21,13 @@ static void InteractWithService() {
   printf("C: result %d\n", result);
   result = EchoService::Echo(2);
   printf("C: result %d\n", result);
-  EchoService::EchoAsync(3, Callback);
+  EchoService::EchoAsync(3, EchoCallback);
   printf("C: async call with argument 3\n");
-  EchoService::EchoAsync(4, Callback);
+  EchoService::EchoAsync(4, EchoCallback);
   printf("C: async call with argument 4\n");
   result = EchoService::Echo(5);
   printf("C: result %d\n", result);
+  EchoService::SumAsync(5, 8, SumCallback);
   result = EchoService::Sum(3, 4);
   printf("C: result of sum(3, 4) is %d\n", result);
   EchoService::TearDown();

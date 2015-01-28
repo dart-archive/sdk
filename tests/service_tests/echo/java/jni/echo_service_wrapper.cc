@@ -25,21 +25,23 @@ JNIEXPORT void JNICALL Java_fletch_EchoService_TearDown(JNIEnv*, jclass) {
 static const MethodId _kEchoId = reinterpret_cast<MethodId>(1);
 
 JNIEXPORT jint JNICALL Java_fletch_EchoService_Echo(JNIEnv*, jclass, jint n) {
-  char _bits[36];
+  static const int kSize = 36;
+  char _bits[kSize];
   char* _buffer = _bits;
   *reinterpret_cast<int*>(_buffer + 32) = n;
-  ServiceApiInvokeX(_service_id, _kEchoId, _buffer, 36);
+  ServiceApiInvokeX(_service_id, _kEchoId, _buffer, kSize);
   return *reinterpret_cast<int*>(_buffer + 32);
 }
 
 static const MethodId _kSumId = reinterpret_cast<MethodId>(2);
 
 JNIEXPORT jint JNICALL Java_fletch_EchoService_Sum(JNIEnv*, jclass, jint x, jint y) {
-  char _bits[40];
+  static const int kSize = 40;
+  char _bits[kSize];
   char* _buffer = _bits;
   *reinterpret_cast<int*>(_buffer + 32) = x;
   *reinterpret_cast<int*>(_buffer + 36) = y;
-  ServiceApiInvokeX(_service_id, _kSumId, _buffer, 40);
+  ServiceApiInvokeX(_service_id, _kSumId, _buffer, kSize);
   return *reinterpret_cast<int*>(_buffer + 32);
 }
 
