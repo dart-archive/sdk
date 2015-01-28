@@ -40,7 +40,7 @@ static void Unwrap_Int32_1(void* raw) {
 }
 
 void EchoService::EchoAsync(int n, void (*callback)(int)) {
-  static const int kSize = 36 + sizeof(void*);
+  static const int kSize = 36 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int*>(_buffer + 32) = n;
   *reinterpret_cast<void**>(_buffer + 36) = reinterpret_cast<void*>(callback);
@@ -69,7 +69,7 @@ static void Unwrap_Int32_2(void* raw) {
 }
 
 void EchoService::SumAsync(int x, int y, void (*callback)(int)) {
-  static const int kSize = 40 + sizeof(void*);
+  static const int kSize = 40 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int*>(_buffer + 32) = x;
   *reinterpret_cast<int*>(_buffer + 36) = y;

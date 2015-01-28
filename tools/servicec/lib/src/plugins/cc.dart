@@ -72,22 +72,26 @@ abstract class CcVisitor extends Visitor {
   }
 
   visitMethodBody(String id, List<Formal> arguments,
-                  {bool cStyle: false, String callback}) {
+                  {bool cStyle: false,
+                   List<String> extraArguments: const [],
+                   String callback}) {
     final bool async = callback != null;
     const int REQUEST_HEADER_SIZE = 32;
     int size = REQUEST_HEADER_SIZE + (arguments.length * 4);
     if (async) {
-      buffer.writeln('  static const int kSize = ${size} + sizeof(void*);');
+      buffer.write('  static const int kSize = ');
+      buffer.writeln('${size} + ${extraArguments.length + 1} * sizeof(void*);');
     } else {
       buffer.writeln('  static const int kSize = ${size};');
     }
 
     String cast(String type) => CcVisitor.cast(type, cStyle);
 
-    String pointerToArgument(int index, [String type = 'int']) {
+    String pointerToArgument(int index, int pointers, [String type = 'int']) {
       int offset = REQUEST_HEADER_SIZE + index * 4;
       String prefix = cast('$type*');
-      return '$prefix(_buffer + $offset)';
+      if (pointers == 0) return '$prefix(_buffer + $offset)';
+      return '$prefix(_buffer + $offset + $pointers * sizeof(void*))';
    }
 
     if (async) {
@@ -100,17 +104,22 @@ abstract class CcVisitor extends Visitor {
     int arity = arguments.length;
     for (int i = 0; i < arity; i++) {
       String name = arguments[i].name;
-      buffer.writeln('  *${pointerToArgument(i)} = $name;');
+      buffer.writeln('  *${pointerToArgument(i, 0)} = $name;');
     }
 
     if (async) {
-      String dataArgument = pointerToArgument(arity, 'void*');
+      String dataArgument = pointerToArgument(arity, 0, 'void*');
       buffer.writeln('  *$dataArgument = ${cast("void*")}(callback);');
+      for (int i = 0; i < extraArguments.length; i++) {
+        String dataArgument = pointerToArgument(arity, 1, 'void*');
+        String arg = extraArguments[i];
+        buffer.writeln('  *$dataArgument = ${cast("void*")}($arg);');
+      }
       buffer.write('  ServiceApiInvokeAsync(_service_id, $id, $callback, ');
       buffer.writeln('_buffer, kSize);');
     } else {
       buffer.writeln('  ServiceApiInvoke(_service_id, $id, _buffer, kSize);');
-      buffer.writeln('  return *${pointerToArgument(0)};');
+      buffer.writeln('  return *${pointerToArgument(0, 0)};');
     }
   }
 }

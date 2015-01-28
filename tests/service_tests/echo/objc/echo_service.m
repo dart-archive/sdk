@@ -42,7 +42,7 @@ static void Unwrap_Int32_1(void* raw) {
 }
 
 + (void)EchoAsync:(int)n WithCallback:(void (*)(int))callback {
-  static const int kSize = 36 + sizeof(void*);
+  static const int kSize = 36 + 1 * sizeof(void*);
   char* _buffer = (char*)(malloc(kSize));
   *(int*)(_buffer + 32) = n;
   *(void**)(_buffer + 36) = (void*)(callback);
@@ -59,7 +59,7 @@ static void Unwrap_Int32_1_Block(void* raw) {
 }
 
 + (void)EchoAsync:(int)n WithBlock:(void (^)(int))callback {
-  static const int kSize = 36 + sizeof(void*);
+  static const int kSize = 36 + 1 * sizeof(void*);
   char* _buffer = (char*)(malloc(kSize));
   *(int*)(_buffer + 32) = n;
   *(void**)(_buffer + 36) = (void*)(callback);

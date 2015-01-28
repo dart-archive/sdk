@@ -103,6 +103,25 @@ JNIEXPORT void JNICALL Java_fletch_FletchServiceApi_TearDown(JNIEnv*, jclass) {
 #endif
 """;
 
+const JNI_ATTACH_DETACH = """
+static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
+  void* result = NULL;
+  if (vm->AttachCurrentThread(&result, NULL) != JNI_OK) {
+    // TODO(ager): Nicer error recovery?
+    printf("Failed to attach callback thread to Java VM.");
+    exit(1);
+  }
+  return reinterpret_cast<JNIEnv*>(result);
+}
+
+static void detachCurrentThread(JavaVM* vm) {
+  if (vm->DetachCurrentThread() != JNI_OK) {
+    // TODO(ager): Nicer error recovery?
+    printf("Failed to detach callback thread from Java VM.");
+    exit(1);
+  }
+}""";
+
 void generate(String path, Unit unit, String outputDirectory) {
   _generateFletchApis(outputDirectory);
   _generateServiceJava(path, unit, outputDirectory);
@@ -188,11 +207,24 @@ class _JavaVisitor extends Visitor {
   }
 
   visitMethod(Method node) {
+    String name = node.name;
+    buffer.writeln();
+    buffer.writeln('  public static abstract class ${name}Callback {');
+    buffer.write('    public abstract void handle(');
+    visit(node.returnType);
+    buffer.writeln(' result);');
+    buffer.writeln('  }');
+
+    buffer.writeln();
     buffer.write('  public static native ');
     visit(node.returnType);
-    buffer.write(' ${node.name}(');
+    buffer.write(' ${name}(');
     visitArguments(node.arguments);
     buffer.writeln(');');
+    buffer.write('  public static native void ${name}Async(');
+    visitArguments(node.arguments);
+    if (!node.arguments.isEmpty) buffer.write(', ');
+    buffer.writeln('${name}Callback callback);');
   }
 
   visitArguments(List<Formal> formals) {
@@ -227,6 +259,7 @@ class _JniVisitor extends CcVisitor {
   visitUnit(Unit node) {
     buffer.writeln(HEADER);
     buffer.writeln('#include <jni.h>');
+    buffer.writeln('#include <stdlib.h>');
     buffer.writeln();
     buffer.writeln('#include "service_api.h"');
     node.services.forEach(visit);
@@ -256,6 +289,9 @@ class _JniVisitor extends CcVisitor {
     buffer.writeln('  ServiceApiTerminate(_service_id);');
     buffer.writeln('}');
 
+    buffer.writeln();
+    buffer.writeln(JNI_ATTACH_DETACH);
+
     node.methods.forEach(visit);
 
     buffer.writeln();
@@ -281,11 +317,58 @@ class _JniVisitor extends CcVisitor {
     buffer.writeln(') {');
     visitMethodBody(id, node.arguments);
     buffer.writeln('}');
+
+    String callback = ensureCallback(node.returnType, node.arguments);
+
+    buffer.writeln();
+    buffer.write('JNIEXPORT void JNICALL ');
+    buffer.write('Java_fletch_${serviceName}_${name}Async(');
+    buffer.write('JNIEnv* _env, jclass, ');
+    visitArguments(node.arguments);
+    buffer.writeln(', jobject _callback) {');
+    buffer.writeln('  jobject callback = _env->NewGlobalRef(_callback);');
+    buffer.writeln('  JavaVM* vm;');
+    buffer.writeln('  _env->GetJavaVM(&vm);');
+    visitMethodBody(id,
+                    node.arguments,
+                    extraArguments: [ 'vm' ],
+                    callback: callback);
+    buffer.writeln('}');
   }
 
   visitType(Type node) {
     Map<String, String> types = const { 'Int32': 'jint' };
     String type = types[node.identifier];
     buffer.write(type);
+  }
+
+  final Map<String, String> callbacks = {};
+  String ensureCallback(Type type, List<Formal> arguments,
+                        {bool cStyle: false}) {
+    String key = '${type.identifier}_${arguments.length}';
+    return callbacks.putIfAbsent(key, () {
+      String cast(String type) => CcVisitor.cast(type, cStyle);
+      String name = 'Unwrap_$key';
+      buffer.writeln();
+      buffer.writeln('static void $name(void* raw) {');
+      buffer.writeln('  char* buffer = ${cast('char*')}(raw);');
+      buffer.writeln('  int result = *${cast('int*')}(buffer + 32);');
+      int offset = 32 + (arguments.length * 4);
+      buffer.write('  jobject callback = *${cast('jobject*')}');
+      buffer.writeln('(buffer + $offset);');
+      buffer.write('  JavaVM* vm = *${cast('JavaVM**')}');
+      buffer.writeln('(buffer + $offset + sizeof(void*));');
+      buffer.writeln('  JNIEnv* env = attachCurrentThreadAndGetEnv(vm);');
+      buffer.writeln('  jclass clazz = env->GetObjectClass(callback);');
+      buffer.write('  jmethodID methodId = env->GetMethodID');
+      // TODO(ager): For now the return type is hard-coded to int.
+      buffer.writeln('(clazz, "handle", "(I)V");');
+      buffer.writeln('  env->CallVoidMethod(callback, methodId, result);');
+      buffer.writeln('  env->DeleteGlobalRef(callback);');
+      buffer.writeln('  detachCurrentThread(vm);');
+      buffer.writeln('  free(buffer);');
+      buffer.writeln('}');
+      return name;
+    });
   }
 }
