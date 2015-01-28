@@ -18,3 +18,5 @@ src/vm/vm.xcodeproj/
 third_party/gyp/
 src/double_conversion.xcodeproj/
 tests/service_tests/service_tests.xcodeproj/
+clang_out/
+.DS_Store

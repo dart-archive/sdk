@@ -6,12 +6,23 @@
 
 {
   'variables': {
+    'clang%': '0',
+
     'common_gcc_warning_flags': [
       '-Wall',
       '-Wextra', # Also known as -W.
       '-Wno-unused-parameter',
     ],
   },
+
+  'conditions': [['clang==1', {
+    'make_global_settings': [
+      [ 'CC', '/usr/bin/clang++' ],
+      [ 'CXX', '/usr/bin/clang++' ],
+      [ 'LINK', '/usr/bin/clang++' ],
+    ],
+  }]],
+
   'target_defaults': {
     'configurations': {
 
