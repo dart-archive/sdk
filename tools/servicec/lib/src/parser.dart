@@ -59,9 +59,9 @@ class _ServiceParserDefinition extends ServiceGrammarDefinition {
   service() => super.service()
       .map((each) => new Service(each[1], each[3]));
   method() => super.method()
-      .map((each) => new Method(each[0], each[2], each[5]));
+      .map((each) => new Method(each[1], each[3][0], each[0]));
   type() => super.type()
       .map((each) => new Type(each));
   identifier() => super.identifier()
-      .flatten();
+      .flatten().map((each) => each.trim());
 }

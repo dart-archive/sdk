@@ -32,17 +32,22 @@ class ServiceGrammarDefinition extends GrammarDefinition {
       & ref(method).star()
       & ref(token, '}');
 
-  method() => ref(identifier)
+  method() => ref(type)
+      & ref(identifier)
       & ref(token, '(')
-      & ref(type)  // TODO(kasperl): Allow zero or many argument.
+      & ref(formals)
       & ref(token, ')')
-      & ref(token, ':')
-      & ref(type)
       & ref(token, ';');
+
+  formals() => ref(formal)
+      .separatedBy(ref(token, ','), includeSeparators: false);
+
+  formal() => ref(type)
+      & ref(identifier);
 
   type() => ref(identifier);
 
-  identifier() => ref(IDENTIFIER);
+  identifier() => ref(IDENTIFIER).trim(ref(HIDDEN));
 
 
   // -----------------------------------------------------------------

@@ -3,5 +3,5 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 service EchoService {
-  Echo(Int32) :Int32;
+  Int32 Echo(Int32 n);
 }
