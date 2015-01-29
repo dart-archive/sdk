@@ -66,6 +66,4 @@ static void Unwrap_Int32_1_Block(void* raw) {
   ServiceApiInvokeAsync(_service_id, _kEchoId, Unwrap_Int32_1_Block, _buffer, kSize);
 }
 
-static const MethodId _kSumId = (MethodId)2;
-
 @end

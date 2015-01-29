@@ -158,11 +158,11 @@ class _ImplementationVisitor extends _ObjcVisitor {
     String name = node.name;
     String id = '_k${name}Id';
 
-    buffer.writeln();
-    buffer.writeln('static const MethodId $id = (MethodId)${methodId++};');
-
     int arity = node.arguments.length;
     if (arity != 1) return;
+
+    buffer.writeln();
+    buffer.writeln('static const MethodId $id = (MethodId)${methodId++};');
 
     buffer.writeln();
     buffer.write('+ (');

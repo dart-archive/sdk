@@ -13,6 +13,7 @@
       '-Wextra', # Also known as -W.
       '-Wno-unused-parameter',
       '-Wno-format',
+      '-Wno-comment',
     ],
 
     'common_gcc_cflags': [
@@ -26,8 +27,8 @@
 
     'conditions': [
       [ 'OS=="linux"', {
-        'clang_path%': 'third_party/clang/linux/bin/clang',
-        'clangxx_path%': 'third_party/clang/linux/bin/clang++',
+        'clang_path%': '/usr/bin/env clang',
+        'clangxx_path%': '/usr/bin/env clang++',
         'clang_asan_rt_path%': '.',
         'mac_sdk%': [],
       }],
