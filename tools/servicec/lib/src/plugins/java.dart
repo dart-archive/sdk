@@ -5,8 +5,9 @@
 library servicec.plugins.java;
 
 import 'dart:core' hide Type;
+import 'dart:io';
 
-import 'package:path/path.dart' show basenameWithoutExtension, join;
+import 'package:path/path.dart';
 import 'package:strings/strings.dart' as strings;
 
 import '../emitter.dart';
@@ -20,6 +21,14 @@ const HEADER = """
 // BSD-style license that can be found in the LICENSE.md file.
 
 // Generated file. Do not edit.
+""";
+
+const HEADER_MK = """
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+# Generated file. Do not edit.
 """;
 
 const FLETCH_API_JAVA = """
@@ -124,6 +133,7 @@ void generate(String path, Unit unit, String outputDirectory) {
   _generateFletchApis(outputDirectory);
   _generateServiceJava(path, unit, outputDirectory);
   _generateServiceJni(path, unit, outputDirectory);
+  _generateServiceJniMakeFiles(path, unit, outputDirectory);
 }
 
 void _generateFletchApis(String outputDirectory) {
@@ -378,4 +388,73 @@ class _JniVisitor extends CcVisitor {
       return name;
     });
   }
+}
+
+void _generateServiceJniMakeFiles(String path, Unit unit, String outputDirectory) {
+  String out = join(outputDirectory, 'java');
+  String scriptFile = new File.fromUri(Platform.script).path;
+  Strint scriptDir = dirname(scriptFile);
+  String fletchLibraryBuildDir = join(scriptDir,
+                                      '..',
+                                      '..',
+                                      'android_build',
+                                      'jni');
+
+  String fletchIncludeDir = join(scriptDir,
+                                 '..',
+                                 '..',
+                                 '..',
+                                 'include');
+
+  String modulePath = relative(fletchLibraryBuildDir, from: out);
+  String includePath = relative(fletchIncludeDir, from: out);
+
+  StringBuffer buffer = new StringBuffer(HEADER_MK);
+
+  buffer.writeln();
+  buffer.writeln('LOCAL_PATH := \$(call my-dir)');
+
+  buffer.writeln();
+  buffer.writeln('include \$(CLEAR_VARS)');
+  buffer.writeln('LOCAL_MODULE := fletch');
+  buffer.writeln('LOCAL_CFLAGS := -DFLETCH32 -DANDROID');
+  buffer.writeln('LOCAL_LDLIBS := -llog -ldl -rdynamic');
+
+  buffer.writeln();
+  buffer.writeln('LOCAL_SRC_FILES := \\');
+  buffer.writeln('\tfletch_api_wrapper.cc \\');
+  buffer.writeln('\tfletch_service_api_wrapper.cc \\');
+
+  if (unit.services.length > 1) {
+    print('Java plugin: multiple services in one file is not supported.');
+  }
+  String serviceName = unit.services.first.name;
+  String file = '${strings.underscore(serviceName)}_wrapper';
+
+  buffer.writeln('\t${file}.cc');
+
+  buffer.writeln();
+  buffer.writeln('LOCAL_C_INCLUDES += \$(LOCAL_PATH)');
+  buffer.writeln('LOCAL_C_INCLUDES += ${includePath}');
+  buffer.writeln('LOCAL_STATIC_LIBRARIES := fletch-library');
+
+  buffer.writeln();
+  buffer.writeln('include \$(BUILD_SHARED_LIBRARY)');
+
+  buffer.writeln();
+  buffer.writeln('\$(call import-module, ${modulePath})');
+
+  writeToFile(join(out, 'jni'),
+              'Android',
+              'mk',
+               buffer.toString());
+
+  buffer = new StringBuffer(HEADER_MK);
+  buffer.writeln('APP_STL := gnustl_static');
+  buffer.writeln('APP_ABI := all');
+  writeToFile(join(out, 'jni'),
+              'Application',
+              'mk',
+               buffer.toString());
+
 }

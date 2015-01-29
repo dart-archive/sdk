@@ -1,10 +1,11 @@
-# Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
-# BSD-style license that can be found in the LICENSE file.
+# BSD-style license that can be found in the LICENSE.md file.
+
+# Generated file. Do not edit.
 
 LOCAL_PATH := $(call my-dir)
 
-# Service shared library.
 include $(CLEAR_VARS)
 LOCAL_MODULE := fletch
 LOCAL_CFLAGS := -DFLETCH32 -DANDROID
