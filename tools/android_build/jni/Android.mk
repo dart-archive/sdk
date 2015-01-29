@@ -5,8 +5,8 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := fletch
-LOCAL_CFLAGS := -DFLETCH32 -DANDROID -I../../ -std=c++11 -fno-stack-protector
+LOCAL_MODULE := fletch-library
+LOCAL_CFLAGS := -DFLETCH32 -DANDROID -I$(LOCAL_PATH)/../../../ -std=c++11
 
 LOCAL_SRC_FILES := \
 	../../../src/shared/assert.cc \

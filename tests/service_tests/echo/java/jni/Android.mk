@@ -1,10 +1,8 @@
-LOCAL_PATH := $(call my-dir)
+# Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE file.
 
-# Fletch static library.
-include $(CLEAR_VARS)
-LOCAL_MODULE := fletch-library
-LOCAL_SRC_FILES := ../../../../../tools/android_build/obj/local/$(TARGET_ARCH_ABI)/libfletch.a
-include $(PREBUILT_STATIC_LIBRARY)
+LOCAL_PATH := $(call my-dir)
 
 # Service shared library.
 include $(CLEAR_VARS)
@@ -22,3 +20,5 @@ LOCAL_C_INCLUDES += ../../../../include
 LOCAL_STATIC_LIBRARIES := fletch-library
 
 include $(BUILD_SHARED_LIBRARY)
+
+$(call import-module, ../../../../tools/android_build/jni)
