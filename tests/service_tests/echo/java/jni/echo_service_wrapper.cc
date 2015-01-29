@@ -13,6 +13,12 @@
 extern "C" {
 #endif
 
+#ifdef ANDROID
+  typedef JNIEnv* AttachEnvType;
+#else
+  typedef void* AttachEnvType;
+#endif
+
 static ServiceId _service_id = kNoServiceId;
 
 JNIEXPORT void JNICALL Java_fletch_EchoService_Setup(JNIEnv*, jclass) {
@@ -24,10 +30,9 @@ JNIEXPORT void JNICALL Java_fletch_EchoService_TearDown(JNIEnv*, jclass) {
 }
 
 static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
-  void* result = NULL;
+  AttachEnvType result = NULL;
   if (vm->AttachCurrentThread(&result, NULL) != JNI_OK) {
     // TODO(ager): Nicer error recovery?
-    printf("Failed to attach callback thread to Java VM.");
     exit(1);
   }
   return reinterpret_cast<JNIEnv*>(result);
@@ -36,7 +41,6 @@ static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
 static void detachCurrentThread(JavaVM* vm) {
   if (vm->DetachCurrentThread() != JNI_OK) {
     // TODO(ager): Nicer error recovery?
-    printf("Failed to detach callback thread from Java VM.");
     exit(1);
   }
 }

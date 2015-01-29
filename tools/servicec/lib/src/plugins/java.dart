@@ -105,10 +105,9 @@ JNIEXPORT void JNICALL Java_fletch_FletchServiceApi_TearDown(JNIEnv*, jclass) {
 
 const JNI_ATTACH_DETACH = """
 static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
-  void* result = NULL;
+  AttachEnvType result = NULL;
   if (vm->AttachCurrentThread(&result, NULL) != JNI_OK) {
     // TODO(ager): Nicer error recovery?
-    printf("Failed to attach callback thread to Java VM.");
     exit(1);
   }
   return reinterpret_cast<JNIEnv*>(result);
@@ -117,7 +116,6 @@ static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
 static void detachCurrentThread(JavaVM* vm) {
   if (vm->DetachCurrentThread() != JNI_OK) {
     // TODO(ager): Nicer error recovery?
-    printf("Failed to detach callback thread from Java VM.");
     exit(1);
   }
 }""";
@@ -272,6 +270,15 @@ class _JniVisitor extends CcVisitor {
 
     buffer.writeln('#ifdef __cplusplus');
     buffer.writeln('extern "C" {');
+    buffer.writeln('#endif');
+
+    // TODO(ager): Get rid of this if we can. For some reason
+    // the jni.h header that is used by the NDK differs.
+    buffer.writeln();
+    buffer.writeln('#ifdef ANDROID');
+    buffer.writeln('  typedef JNIEnv* AttachEnvType;');
+    buffer.writeln('#else');
+    buffer.writeln('  typedef void* AttachEnvType;');
     buffer.writeln('#endif');
 
     buffer.writeln();
