@@ -223,6 +223,23 @@
         ],
       },
     },
+
+    'target_conditions': [
+      # Exclude sources that do not match the platform.
+      ['OS!="mac"', {
+        'sources/': [
+          ['exclude', '_macos(_test)?\\.(h|cc|mm?)$' ], ],
+      }],
+      ['OS!="linux"', {
+        'sources/': [
+          ['exclude', '_linux(_test)?\\.(h|cc|mm?)$' ], ],
+      }],
+      ['OS!="linux" and OS!="mac"', {
+        'sources/': [
+          ['exclude', '_posix(_test)?\\.(h|cc|mm?)$' ], ],
+      }],
+    ],
+
     # TODO(ahe): These flags should be incorporated in all executables:
     # LINKER_FLAGS=-rdynamic -Lthird_party/libs/macos/x86
     # LIBS=-ltcmalloc_minimal -lpthread -ldl

@@ -25,19 +25,6 @@
         'test_case.cc',
         'utils.cc',
       ],
-      'conditions': [
-        # TODO(ahe): Generalize source filters.
-        [ 'OS != "mac"', {
-          'sources!': [
-            'native_socket_macos.cc',
-          ],
-        }],
-        [ 'OS != "linux"', {
-          'sources!': [
-            'native_socket_linux.cc',
-          ],
-        }],
-      ],
     },
     {
       'target_name': 'shared_run_tests',

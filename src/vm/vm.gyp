@@ -69,23 +69,6 @@
         'thread_posix.cc',
         'weak_pointer.cc',
       ],
-      'conditions': [
-        # TODO(ahe): Generalize source filters.
-        [ 'OS != "mac"', {
-          'sources!': [
-            'assembler_x86_macos.cc',
-            'assembler_x64_macos.cc',
-            'event_handler_macos.cc',
-          ],
-        }],
-        [ 'OS != "linux"', {
-          'sources!': [
-            'assembler_x86_linux.cc',
-            'assembler_x64_linux.cc',
-            'event_handler_linux.cc',
-          ],
-        }],
-      ],
       'link_settings': {
         'libraries': [ '-lpthread', '-ldl', '-rdynamic' ],
       },

@@ -12,6 +12,9 @@
     {
       'target_name': 'fletch_compiler',
       'type': 'static_library',
+      'dependencies': [
+        '../shared/shared.gyp:fletch_shared',
+      ],
       'sources': [
         # TODO(ahe): Add header (.h) files.
         'allocation.cc',
@@ -36,17 +39,6 @@
         'tokens.cc',
         'tree.cc',
         'zone.cc',
-
-        # TODO(ahe): Depend on libfletch_shared instead.
-        '../shared/assert.cc',
-        '../shared/bytecodes.cc',
-        '../shared/connection.cc',
-        '../shared/flags.cc',
-        '../shared/native_process_posix.cc',
-        '../shared/native_socket_macos.cc',
-        '../shared/native_socket_posix.cc',
-        '../shared/test_case.cc',
-        '../shared/utils.cc',
       ],
     },
     {
