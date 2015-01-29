@@ -41,12 +41,12 @@ abstract class PersonCounter {
         _postResult.icall$1(request);
         break;
       case _GET_AGE_METHOD_ID:
-        var result = _impl.GetAge(new Person._(request, 32));
+        var result = _impl.GetAge(getRoot(request));
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
       case _COUNT_METHOD_ID:
-        var result = _impl.Count(new Person._(request, 32));
+        var result = _impl.Count(getRoot(request));
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
@@ -60,33 +60,83 @@ abstract class PersonCounter {
   const int _COUNT_METHOD_ID = 2;
 }
 
+Person getRoot(Foreign request) {
+  if (request.getInt32(32) == 1) {
+    return getSegmentedRoot(request);
+  } else {
+    MessageReader reader = new MessageReader();
+    Segment segment = new Segment(reader, request);
+    reader.segments.add(segment);
+    return new Person._(segment, 40);
+  }
+}
+
+Person getSegmentedRoot(Foreign request) {
+  MessageReader reader = new MessageReader();
+  int segments = request.getInt32(40);
+  int offset = 40 + 8;
+  for (int i = 0; i < segments; i++) {
+    int address = (Foreign.bitsPerMachineWord == 32)
+        ? request.getUint32(offset)
+        : request.getUint64(offset);
+    int size = request.getInt32(offset + 8);
+    Foreign memory = new Foreign.fromAddress(address, size);
+    Segment segment = new Segment(reader, memory);
+    reader.segments.add(segment);
+    offset += 16;
+  }
+  // Read segments.
+  return new Person._(reader.segments.first, 40);
+}
+
+class MessageReader {
+  final List<Segment> segments = [];
+  MessageReader();
+
+  Segment getSegment(int id) => segments[id];
+}
+
+class Segment {
+  final MessageReader reader;
+  final Foreign memory;
+  Segment(this.reader, this.memory);
+}
+
 class Person {
   const int _kAgeOffset = 0;
   const int _kChildrenOffset = 8;
   const int _kSize = 16;
 
-  Foreign _memory;
-  int _offset;
-  Person._(this._memory, this._offset);
+  final Segment _segment;
+  final int _offset;
+  Person._(this._segment, this._offset);
 
-  int get age => _memory.getInt32(_offset + _kAgeOffset);
+  int get age => _segment.memory.getInt32(_offset + _kAgeOffset);
 
   List<Person> get children {
-    Foreign memory = _memory;
+    Segment segment = _segment;
     int offset = _offset + _kChildrenOffset;
-    int lo = memory.getInt32(offset + 0);
-    int hi = memory.getInt32(offset + 4);
-    return new _PersonList(memory, lo, hi);
+    while (true) {
+      Foreign memory = segment.memory;
+      int lo = memory.getInt32(offset + 0);
+      int hi = memory.getInt32(offset + 4);
+      if ((lo & 1) == 0) {
+        return new _PersonList(segment, lo >> 1, hi);
+      } else {
+        segment = segment.reader.getSegment(hi);
+        offset = lo >> 1;
+      }
+    }
   }
 }
 
 class _PersonList implements List<Person> {
-  Foreign _memory;
+  Segment _segment;
   int _offset;
   int _length;
-  _PersonList(this._memory, this._offset, this._length);
+  _PersonList(this._segment, this._offset, this._length);
 
   int get length => _length;
   Person operator[](int index) =>
-      new Person._(_memory, _offset + index * Person._kSize);
+      new Person._(_segment, _offset + index * Person._kSize);
 }

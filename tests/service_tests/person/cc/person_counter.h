@@ -7,8 +7,12 @@
 #ifndef PERSON_COUNTER_H
 #define PERSON_COUNTER_H
 
-class Person;
+#include <stddef.h>
+
+class PersonBuilder;
 class Segment;
+class MessageBuilder;
+class BuilderSegment;
 
 class PersonCounter {
  public:
@@ -16,8 +20,11 @@ class PersonCounter {
   static void TearDown();
 
   // TODO(kasperl): Add async variants.
-  static int GetAge(Person person);
-  static int Count(Person person);
+
+  // Not quite sure if these methods should take builder or reader
+  // views. Somehow the separation isn't very nice yet.
+  static int GetAge(PersonBuilder person);
+  static int Count(PersonBuilder person);
 };
 
 class Person {
@@ -32,9 +39,6 @@ class Person {
 
   inline int age() const;
 
-  Segment* segment() const { return segment_; }
-  int offset() const { return offset_; }
-
  private:
   Segment* const segment_;
   const int offset_;
@@ -47,7 +51,7 @@ class Builder {
 template<typename T>
 class List : public Builder {
  public:
-  List(Segment* segment, int offset)
+  List(BuilderSegment* segment, int offset)
       : segment_(segment), offset_(offset) {
   }
 
@@ -57,7 +61,7 @@ class List : public Builder {
   }
 
  private:
-  Segment* const segment_;
+  BuilderSegment* const segment_;
   const int offset_;
 };
 
@@ -65,7 +69,7 @@ class PersonBuilder : public Builder {
  public:
   static const int kSize = Person::kSize;
 
-  PersonBuilder(Segment* segment, int offset)
+  PersonBuilder(BuilderSegment* segment, int offset)
       : segment_(segment), offset_(offset) {
   }
 
@@ -73,39 +77,74 @@ class PersonBuilder : public Builder {
 
   List<PersonBuilder> NewChildren(int length);
 
+  BuilderSegment* segment() const { return segment_; }
+  int offset() const { return offset_; }
+
  private:
-  Segment* const segment_;
+  BuilderSegment* const segment_;
   const int offset_;
 };
 
 class Segment {
  public:
-  explicit Segment(int capacity);
-  ~Segment();
+  Segment(char* memory, int size);
+
+  int size() const { return size_; }
 
   void* At(int offset) const { return memory_ + offset; }
 
-  int Allocate(int size);
-  int used() const { return used_; }
+ protected:
+  char* memory() const { return memory_; }
 
  private:
   char* const memory_;
-  const int capacity_;
+  const int size_;
+};
 
+class BuilderSegment : public Segment {
+ public:
+  int Allocate(int bytes);
+
+  int id() const { return id_; }
+  int used() const { return used_; }
+  MessageBuilder* builder() const { return builder_; }
+
+  BuilderSegment* next() const { return next_; }
+  bool HasNext() const { return next_ != NULL; }
+  bool HasSpaceForBytes(int bytes) const { return used_ + bytes <= size(); }
+
+ private:
+  BuilderSegment(MessageBuilder* builder, int id, int capacity);
+  ~BuilderSegment();
+
+  MessageBuilder* const builder_;
+  const int id_;
+  BuilderSegment* next_;
   int used_;
+
+  void set_next(BuilderSegment* segment) { next_ = segment; }
+
+  friend class MessageBuilder;
 };
 
 class MessageBuilder {
  public:
   explicit MessageBuilder(int space);
 
+  BuilderSegment* first() { return &first_; }
+  int segments() const { return segments_; }
+
   Person Root();
   PersonBuilder NewRoot();
 
-  Segment* segment() { return &segment_; }
+  int ComputeUsed() const;
+
+  BuilderSegment* FindSegmentForBytes(int bytes);
 
  private:
-  Segment segment_;
+  BuilderSegment first_;
+  BuilderSegment* last_;
+  int segments_;
 };
 
 int Person::age() const {

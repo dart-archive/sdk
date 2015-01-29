@@ -29,18 +29,18 @@ static void BuildPerson(PersonBuilder person, int n) {
 static void InteractWithService() {
   PersonCounter::Setup();
 
-  MessageBuilder builder(20 * 1024 * 1024);
+  MessageBuilder builder(8192);
 
   uint64_t start = GetMicroseconds();
-  BuildPerson(builder.NewRoot(), 20);
+  PersonBuilder person = builder.NewRoot();
+  BuildPerson(person, 20);
   uint64_t end = GetMicroseconds();
 
-  int used = builder.segment()->used();
+  int used = builder.ComputeUsed();
   int building_us = static_cast<int>(end - start);
   printf("Building took %.2f ms.\n", building_us / 1000.0);
   printf("    - %.2f MB/s\n", static_cast<double>(used) / building_us);
 
-  Person person = builder.Root();
   int age = PersonCounter::GetAge(person);
   start = GetMicroseconds();
   int count = PersonCounter::Count(person);

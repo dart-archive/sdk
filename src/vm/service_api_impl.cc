@@ -51,7 +51,6 @@ struct ServiceRequest {
   int method_id;
   Service* service;
   void* callback;
-  void* data;  // TODO(kasperl): Only used by old API.
 };
 
 __attribute__((visibility("default")))
