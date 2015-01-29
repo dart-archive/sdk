@@ -20,9 +20,23 @@
         'flags.cc',
         'native_process_posix.cc',
         'native_socket_macos.cc',
+        'native_socket_linux.cc',
         'native_socket_posix.cc',
         'test_case.cc',
         'utils.cc',
+      ],
+      'conditions': [
+        # TODO(ahe): Generalize source filters.
+        [ 'OS != "mac"', {
+          'sources!': [
+            'native_socket_macos.cc',
+          ],
+        }],
+        [ 'OS != "linux"', {
+          'sources!': [
+            'native_socket_linux.cc',
+          ],
+        }],
       ],
     },
     {

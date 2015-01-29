@@ -12,6 +12,16 @@
       '-Wall',
       '-Wextra', # Also known as -W.
       '-Wno-unused-parameter',
+      '-Wno-format',
+    ],
+
+    'common_gcc_cflags': [
+      '-std=c++11',
+      '-fdata-sections',
+      '-ffunction-sections',
+      '-O3',
+      '-fomit-frame-pointer',
+      '-fPIC',
     ],
 
     'conditions': [
@@ -62,12 +72,8 @@
           'GCC_ENABLE_CPP_EXCEPTIONS': 'NO', # -fno-exceptions
 
           'OTHER_CPLUSPLUSFLAGS' : [
-            '-std=c++11',
+            '<@(common_gcc_cflags)',
             '-stdlib=libc++',
-            '-fdata-sections',
-            '-ffunction-sections',
-            '-O3',
-            '-fomit-frame-pointer',
             '-isysroot',
             '<@(mac_sdk)',
           ],
@@ -77,6 +83,15 @@
             '-Wno-format',
           ],
         },
+
+        'cflags': [
+          '<@(common_gcc_warning_flags)',
+          '-Wno-non-virtual-dtor',
+          '-Werror',
+          '<@(common_gcc_cflags)',
+          '-fno-rtti',
+          '-fno-exceptions',
+        ],
       },
 
       'fletch_release': {
@@ -113,6 +128,14 @@
 
         'defines': [
           'FLETCH32',
+        ],
+
+        'cflags': [
+          '-m32',
+        ],
+
+        'ldflags': [
+          '-m32',
         ],
 
         'xcode_settings': { # And ninja.
