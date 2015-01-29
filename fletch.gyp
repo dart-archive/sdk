@@ -168,7 +168,7 @@
             '<(SHARED_INTERMEDIATE_DIR)/echo.snapshot',
           ],
           'action': [
-            '<@(_inputs)', '--out=<(SHARED_INTERMEDIATE_DIR)/echo.snapshot',
+            '<@(_command)', '--out=<(SHARED_INTERMEDIATE_DIR)/echo.snapshot',
           ],
         },
         {
