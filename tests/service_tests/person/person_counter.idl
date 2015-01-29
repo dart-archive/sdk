@@ -3,9 +3,11 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 service PersonCounter {
-  int Count(Person person);
+  Int32 GetAge(Person person);
+  Int32 Count(Person person);
 }
 
 struct Person {
+  Int32 age;
   List<Person> children;
 }

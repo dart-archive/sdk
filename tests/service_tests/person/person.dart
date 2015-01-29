@@ -6,8 +6,14 @@ import 'dart/person_counter.dart';
 
 // TODO(ager): Compiler doesn't like implements here.
 class PersonCounterImpl extends PersonCounter {
+  int GetAge(Person person) {
+    return person.age;
+  }
+
   int Count(Person person) {
-    return 42;
+    int sum = 1;
+    for (Person child in person.children) sum += Count(child);
+    return sum;
   }
 }
 

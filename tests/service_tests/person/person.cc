@@ -9,7 +9,12 @@
 
 static void InteractWithService() {
   PersonCounter::Setup();
-  printf("Counting: %d\n", PersonCounter::Count(new Person()));
+
+  MessageBuilder builder;
+  PersonBuilder person = builder.NewRoot();
+  person.set_age(42);
+  printf("Age: %d\n", PersonCounter::GetAge(builder.Root()));
+
   PersonCounter::TearDown();
 }
 

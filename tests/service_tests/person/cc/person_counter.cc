@@ -19,13 +19,46 @@ void PersonCounter::TearDown() {
   _service_id = kNoServiceId;
 }
 
-static const MethodId _kCountId = reinterpret_cast<MethodId>(1);
+static const MethodId _kGetAgeId = reinterpret_cast<MethodId>(1);
 
-int PersonCounter::Count(Person* person) {
-  static const int kSize = 36;
-  char _bits[kSize];
-  char* _buffer = _bits;
-  // *reinterpret_cast<int*>(_buffer + 32) = n;
-  ServiceApiInvoke(_service_id, _kCountId, _buffer, kSize);
-  return *reinterpret_cast<int*>(_buffer + 32);
+int PersonCounter::GetAge(Person person) {
+  static const int kSize = 32 + Person::kSize;
+  int offset = person.offset() - 32;
+  char* buffer = reinterpret_cast<char*>(person.segment()->At(offset));
+  ServiceApiInvoke(_service_id, _kGetAgeId, buffer, kSize);
+  return *reinterpret_cast<int*>(buffer + 32);
+}
+
+MessageBuilder::MessageBuilder()
+    : segment_(8192) {
+}
+
+Person MessageBuilder::Root() {
+  // TODO(kasperl): Mark the person as a root somehow so we know
+  // it has a "header" before it.
+  return Person(&segment_, 32);
+}
+
+PersonBuilder MessageBuilder::NewRoot() {
+  int offset = segment_.Allocate(32 + Person::kSize);
+  return PersonBuilder(&segment_, offset + 32);
+}
+
+Segment::Segment(int capacity)
+    : memory_(static_cast<char*>(malloc(capacity))),
+      capacity_(capacity),
+      used_(0) {
+}
+
+Segment::~Segment() {
+  free(memory_);
+}
+
+int Segment::Allocate(int size) {
+  if (used_ + size > capacity_) {
+    return -1;
+  }
+  int result = used_;
+  used_ += size;
+  return result;
 }
