@@ -88,6 +88,10 @@ files = {
                                             "service_tests",
                                             "echo",
                                             "SOURCE")),
+  'person_service_test' : SConscript(join("tests",
+                                          "service_tests",
+                                          "person",
+                                          "SOURCE")),
   'double_conversion' : SConscript(join("third_party",
                                         "double-conversion",
                                         "src",
@@ -189,10 +193,22 @@ def DefineVariant(name, *modifiers):
        "env": "default"
      }
 
+  person_service_tests = SConscript(
+      join("tests", "service_tests", "person", "SConscript"),
+      variant_dir=join("build", "service_tests", "person", context.directory),
+      exports="context",
+      duplicate=0);
+
+  person_service_test = {
+       "name": "person_service_test",
+       "objects": person_service_tests["objects"] + [vm_static_library],
+       "env": "default"
+     }
+
   program_definitions = compiler["programs"]
   program_definitions += vm["programs"]
   program_definitions += shared["programs"]
-  program_definitions += [ echo_service_test ]
+  program_definitions += [ echo_service_test, person_service_test ]
 
   objc_env = context.environment.Clone()
   objc_env.Append(LINKFLAGS=["-framework", "Foundation", "-Wl,-no_pie"])
