@@ -216,7 +216,7 @@ class ServerSocket extends _SocketBase {
   }
 }
 
-class SocketException {
+class SocketException implements Exception {
   final String message;
   final Errno errno;
   SocketException(this.message, this.errno);

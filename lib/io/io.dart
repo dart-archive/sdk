@@ -11,6 +11,7 @@ import 'dart:typed_data';
 import 'system.dart';
 
 part 'errno.dart';
+part 'file.dart';
 part 'socket.dart';
 
 int socket() => sys.socket();
