@@ -61,10 +61,32 @@ abstract class PersonCounter {
 }
 
 class Person {
+  const int _kAgeOffset = 0;
+  const int _kChildrenOffset = 8;
+  const int _kSize = 16;
+
   Foreign _memory;
   int _offset;
   Person._(this._memory, this._offset);
 
-  int get age => _memory.getInt32(_offset);
-  List<Person> get children => const [];
+  int get age => _memory.getInt32(_offset + _kAgeOffset);
+
+  List<Person> get children {
+    Foreign memory = _memory;
+    int offset = _offset + _kChildrenOffset;
+    int lo = memory.getInt32(offset + 0);
+    int hi = memory.getInt32(offset + 4);
+    return new _PersonList(memory, lo, hi);
+  }
+}
+
+class _PersonList implements List<Person> {
+  Foreign _memory;
+  int _offset;
+  int _length;
+  _PersonList(this._memory, this._offset, this._length);
+
+  int get length => _length;
+  Person operator[](int index) =>
+      new Person._(_memory, _offset + index * Person._kSize);
 }

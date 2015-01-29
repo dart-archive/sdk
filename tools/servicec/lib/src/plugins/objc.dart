@@ -18,9 +18,6 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
-const String _ctype = 'ServiceApiCallback';
-const String _btype = 'ServiceApiBlock';
-
 void generate(String path, Unit unit, String outputDirectory) {
   _generateHeaderFile(path, unit, outputDirectory);
   _generateImplementationFile(path, unit, outputDirectory);

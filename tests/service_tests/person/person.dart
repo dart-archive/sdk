@@ -12,7 +12,8 @@ class PersonCounterImpl extends PersonCounter {
 
   int Count(Person person) {
     int sum = 1;
-    for (Person child in person.children) sum += Count(child);
+    List<Person> children = person.children;
+    for (int i = 0; i < children.length; i++) sum += Count(children[i]);
     return sum;
   }
 }

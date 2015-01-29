@@ -20,17 +20,24 @@ void PersonCounter::TearDown() {
 }
 
 static const MethodId _kGetAgeId = reinterpret_cast<MethodId>(1);
+static const MethodId _kCountId = reinterpret_cast<MethodId>(2);
 
 int PersonCounter::GetAge(Person person) {
-  static const int kSize = 32 + Person::kSize;
   int offset = person.offset() - 32;
   char* buffer = reinterpret_cast<char*>(person.segment()->At(offset));
-  ServiceApiInvoke(_service_id, _kGetAgeId, buffer, kSize);
+  ServiceApiInvoke(_service_id, _kGetAgeId, buffer, person.segment()->used());
   return *reinterpret_cast<int*>(buffer + 32);
 }
 
-MessageBuilder::MessageBuilder()
-    : segment_(8192) {
+int PersonCounter::Count(Person person) {
+  int offset = person.offset() - 32;
+  char* buffer = reinterpret_cast<char*>(person.segment()->At(offset));
+  ServiceApiInvoke(_service_id, _kCountId, buffer, person.segment()->used());
+  return *reinterpret_cast<int*>(buffer + 32);
+}
+
+MessageBuilder::MessageBuilder(int space)
+    : segment_(space) {
 }
 
 Person MessageBuilder::Root() {
@@ -56,9 +63,21 @@ Segment::~Segment() {
 
 int Segment::Allocate(int size) {
   if (used_ + size > capacity_) {
+    abort();  // Cannot deal with this yet.
     return -1;
   }
   int result = used_;
   used_ += size;
   return result;
+}
+
+List<PersonBuilder> PersonBuilder::NewChildren(int length) {
+  int offset = offset_ + Person::kChildrenOffset;
+  int* lo = reinterpret_cast<int*>(segment_->At(offset + 0));
+  int* hi = reinterpret_cast<int*>(segment_->At(offset + 4));
+
+  int list = segment_->Allocate(PersonBuilder::kSize * length);
+  *lo = list;
+  *hi = length;
+  return List<PersonBuilder>(segment_, list);
 }

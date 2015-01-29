@@ -15,13 +15,16 @@ class PersonCounter {
   static void Setup();
   static void TearDown();
 
+  // TODO(kasperl): Add async variants.
   static int GetAge(Person person);
-  // TODO(kasperl): Add async variant.
+  static int Count(Person person);
 };
 
 class Person {
  public:
-  static const int kSize = 4;
+  static const int kAgeOffset = 0;
+  static const int kChildrenOffset = 8;
+  static const int kSize = 16;
 
   Person(Segment* segment, int offset)
       : segment_(segment), offset_(offset) {
@@ -37,13 +40,38 @@ class Person {
   const int offset_;
 };
 
-class PersonBuilder {
+class Builder {
+  // TODO(kasperl): Put the segment and offset up here.
+};
+
+template<typename T>
+class List : public Builder {
  public:
+  List(Segment* segment, int offset)
+      : segment_(segment), offset_(offset) {
+  }
+
+  T operator[](int index) {
+    // TODO(kasperl): Bounds check?
+    return T(segment_, offset_ + (index * T::kSize));
+  }
+
+ private:
+  Segment* const segment_;
+  const int offset_;
+};
+
+class PersonBuilder : public Builder {
+ public:
+  static const int kSize = Person::kSize;
+
   PersonBuilder(Segment* segment, int offset)
       : segment_(segment), offset_(offset) {
   }
 
   inline void set_age(int value);
+
+  List<PersonBuilder> NewChildren(int length);
 
  private:
   Segment* const segment_;
@@ -58,6 +86,7 @@ class Segment {
   void* At(int offset) const { return memory_ + offset; }
 
   int Allocate(int size);
+  int used() const { return used_; }
 
  private:
   char* const memory_;
@@ -68,22 +97,26 @@ class Segment {
 
 class MessageBuilder {
  public:
-  MessageBuilder();
+  explicit MessageBuilder(int space);
 
   Person Root();
   PersonBuilder NewRoot();
+
+  Segment* segment() { return &segment_; }
 
  private:
   Segment segment_;
 };
 
 int Person::age() const {
-  int* pointer = reinterpret_cast<int*>(segment_->At(offset_));
+  int offset = offset_ + Person::kAgeOffset;
+  int* pointer = reinterpret_cast<int*>(segment_->At(offset));
   return *pointer;
 }
 
 void PersonBuilder::set_age(int value) {
-  int* pointer = reinterpret_cast<int*>(segment_->At(offset_));
+  int offset = offset_ + Person::kAgeOffset;
+  int* pointer = reinterpret_cast<int*>(segment_->At(offset));
   *pointer = value;
 }
 
