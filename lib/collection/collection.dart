@@ -8,3 +8,4 @@ part 'iterable.dart';
 part 'iterator.dart';
 part 'linked_hash_map.dart';
 part 'linked_hash_set.dart';
+part 'queue.dart';

@@ -96,6 +96,32 @@ abstract class List<E> implements Iterable<E> {
   Map<int, E> asMap();
 }
 
+class _Lists {
+  static void setRange(List list,
+                       int start,
+                       int end,
+                       Iterable iterable,
+                       int skipCount) {
+    int length = list.length;
+    if (start < 0 || start > length) {
+      throw new RangeError.range(start, 0, length);
+    }
+    if (end < start || end > length) {
+      throw new RangeError.range(end, start, length);
+    }
+    if ((end - start) == 0) return;
+    Iterator it = iterable.iterator;
+    while (skipCount > 0) {
+      if (!it.moveNext()) return;
+      skipCount--;
+    }
+    for (int i = start; i < end; i++) {
+      if (!it.moveNext()) return;
+      list[i] = it.current;
+    }
+  }
+}
+
 class _ConstantList<E> extends IterableBase<E> implements List<E> {
   final _list;
 
@@ -277,7 +303,7 @@ class _FixedList<E> extends _ConstantList<E> {
   }
 
   void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
-    throw new UnimplementedError("_FixedList.setRange");
+    _Lists.setRange(this, start, end, iterable, skipCount);
   }
 
   void fillRange(int start, int end, [E fillValue]) {
@@ -477,7 +503,7 @@ class _GrowableList<E> extends IterableBase<E> implements List<E> {
   }
 
   void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
-    throw new UnimplementedError("_GrowableList.setRange");
+    _Lists.setRange(this, start, end, iterable, skipCount);
   }
 
   void removeRange(int start, int end) {
