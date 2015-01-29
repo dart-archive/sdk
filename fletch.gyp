@@ -3,6 +3,10 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 {
+  'variables': {
+    'mac_asan_dylib': '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
+  },
+
   # SCons translation:
   # compiler/libfletch.a is now src/compiler/compiler.gyp:fletch_compiler.
   # lib/libfletch.a is now src/vm/vm.gyp:fletch_vm.
@@ -52,21 +56,26 @@
       'type': 'none',
       'dependencies': [
         'src/compiler/compiler.gyp:compiler_run_tests',
+        'copy_asan',
       ],
       'actions': [
         {
           'action_name': 'run_compiler_tests',
-          'inputs': [
+          'command': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
             'compiler_run_tests'
             '<(EXECUTABLE_SUFFIX)',
+          ],
+          'inputs': [
+            '<@(_command)',
+            '<(mac_asan_dylib)',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/test_outcomes/compiler_run_tests.pass',
           ],
           'action': [
             "bash", "-c",
-            "<(_inputs) && LANG=POSIX date '+Test passed on %+' > <(_outputs)",
+            "<(_command) && LANG=POSIX date '+Test passed on %+' > <(_outputs)",
           ],
         },
       ],
@@ -79,21 +88,26 @@
       'type': 'none',
       'dependencies': [
         'src/shared/shared.gyp:shared_run_tests',
+        'copy_asan',
       ],
       'actions': [
         {
           'action_name': 'run_shared_tests',
-          'inputs': [
+          'command': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
             'shared_run_tests'
             '<(EXECUTABLE_SUFFIX)',
+          ],
+          'inputs': [
+            '<@(_command)',
+            '<(mac_asan_dylib)',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/test_outcomes/shared_run_tests.pass',
           ],
           'action': [
             "bash", "-c",
-            "<(_inputs) && LANG=POSIX date '+Test passed on %+' > <(_outputs)",
+            "<(_command) && LANG=POSIX date '+Test passed on %+' > <(_outputs)",
           ],
         },
       ],
@@ -110,17 +124,21 @@
       'actions': [
         {
           'action_name': 'run_vm_tests',
-          'inputs': [
+          'command': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
             'vm_run_tests'
             '<(EXECUTABLE_SUFFIX)',
+          ],
+          'inputs': [
+            '<@(_command)',
+            '<(mac_asan_dylib)',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/test_outcomes/vm_run_tests.pass',
           ],
           'action': [
             "bash", "-c",
-            "<(_inputs) && LANG=POSIX date '+Test passed on %+' > <(_outputs)",
+            "<(_command) && LANG=POSIX date '+Test passed on %+' > <(_outputs)",
           ],
         },
       ],
@@ -138,15 +156,19 @@
       'actions': [
         {
           'action_name': 'generate_echo_snapshot',
-          'inputs': [
+          'command': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
             'tests/service_tests/echo/echo.dart',
+          ],
+          'inputs': [
+            '<@(_command)',
+            '<(mac_asan_dylib)',
           ],
           'outputs': [
             '<(INTERMEDIATE_DIR)/echo.snapshot',
           ],
           'action': [
-            '<@(_inputs)', '--out=<(INTERMEDIATE_DIR)/echo.snapshot',
+            '<@(_command)', '--out=<(INTERMEDIATE_DIR)/echo.snapshot',
           ],
         },
         {
@@ -166,6 +188,40 @@
             "<(_outputs)",
           ],
         },
+      ],
+    },
+    {
+      'target_name': 'copy_asan',
+      'type': 'none',
+      'conditions': [
+        [ 'OS=="mac"', {
+          'copies': [
+            {
+              # The asan dylib file sets its install name as
+              # @executable_path/..., and by copying to PRODUCT_DIR, we avoid
+              # having to set DYLD_LIBRARY_PATH.
+              'destination': '<(PRODUCT_DIR)',
+              'files': [
+                'third_party/clang/mac/lib/clang/3.6.0/'
+                'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
+              ],
+            },
+          ],
+        }, { # OS!="mac"
+          'actions': [
+            {
+              'action_name': 'touch_asan_dylib',
+              'inputs': [
+              ],
+              'outputs': [
+                '<(mac_asan_dylib)',
+              ],
+              'action': [
+                'touch', '<@(_outputs)'
+              ],
+            },
+          ],
+        }],
       ],
     },
   ],
