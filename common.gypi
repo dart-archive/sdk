@@ -72,12 +72,17 @@
           'GCC_ENABLE_CPP_RTTI': 'NO', # -fno-rtti
           'GCC_ENABLE_CPP_EXCEPTIONS': 'NO', # -fno-exceptions
 
-          'OTHER_CPLUSPLUSFLAGS' : [
-            '<@(common_gcc_cflags)',
-            '-stdlib=libc++',
+          'OTHER_CFLAGS' : [
             '-isysroot',
             '<@(mac_sdk)',
           ],
+
+          'OTHER_CPLUSPLUSFLAGS' : [
+            '<@(common_gcc_cflags)',
+            '-stdlib=libc++',
+            '<@(_OTHER_CFLAGS)',
+          ],
+
           'WARNING_CFLAGS': [
             '<@(common_gcc_warning_flags)',
             '-Wtrigraphs', # Disable Xcode default.
