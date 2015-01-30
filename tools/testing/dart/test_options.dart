@@ -450,7 +450,16 @@ Note: currently only implemented for dart2js.''',
               ['--asan'],
               [],
               false,
-              type: 'bool'),];
+              type: 'bool'),
+          new _TestOptionSpecification(
+              // TODO(ahe): Remove this option.
+              'no_scons',
+              'Temporary option to expect output from ninja, not SCons.',
+              ['--no-scons'],
+              [],
+              false,
+              type: 'bool'),
+          ];
   }
 
 
