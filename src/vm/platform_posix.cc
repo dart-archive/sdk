@@ -131,10 +131,10 @@ bool VirtualMemory::Uncommit(uword address, int size) {
               kMmapFd, kMmapFdOffset) != MAP_FAILED;
 }
 
-class LinuxMutex : public Mutex {
+class PosixMutex : public Mutex {
  public:
-  LinuxMutex() { pthread_mutex_init(&mutex_, NULL);  }
-  ~LinuxMutex() { pthread_mutex_destroy(&mutex_); }
+  PosixMutex() { pthread_mutex_init(&mutex_, NULL);  }
+  ~PosixMutex() { pthread_mutex_destroy(&mutex_); }
 
   int Lock() { return pthread_mutex_lock(&mutex_); }
   int Unlock() { return pthread_mutex_unlock(&mutex_); }
@@ -152,40 +152,17 @@ class LinuxMutex : public Mutex {
 };
 
 Mutex* Platform::CreateMutex() {
-  return new LinuxMutex();
+  return new PosixMutex();
 }
 
-class LinuxSemaphore : public Semaphore {
+class PosixMonitor : public Monitor {
  public:
-  explicit LinuxSemaphore(int count) { sem_init(&sem_, 0, count); }
-  ~LinuxSemaphore() { sem_destroy(&sem_); }
-
-  void Wait();
-  void Signal() { sem_post(&sem_); }
-
- private:
-  sem_t sem_;
-};
-
-void LinuxSemaphore::Wait() {
-  while (true) {
-    int result = sem_wait(&sem_);
-    if (result == 0) return;  // Successfully got semaphore.
-  }
-}
-
-Semaphore* Platform::CreateSemaphore(int count) {
-  return new LinuxSemaphore(count);
-}
-
-class LinuxMonitor : public Monitor {
- public:
-  LinuxMonitor() {
+  PosixMonitor() {
     pthread_mutex_init(&mutex_, NULL);
     pthread_cond_init(&cond_, NULL);
   }
 
-  ~LinuxMonitor() {
+  ~PosixMonitor() {
     pthread_mutex_destroy(&mutex_);
     pthread_cond_destroy(&cond_);
   }
@@ -212,7 +189,7 @@ class LinuxMonitor : public Monitor {
 };
 
 Monitor* Platform::CreateMonitor() {
-  return new LinuxMonitor();
+  return new PosixMonitor();
 }
 
 }  // namespace fletch

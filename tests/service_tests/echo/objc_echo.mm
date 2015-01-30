@@ -5,24 +5,36 @@
 #include "echo_shared.h"
 #include "objc/echo_service.h"
 
-static void Callback(int result) {
-  NSLog([NSString stringWithFormat:@"ObjC: async result %d\n", result]);
+static void EchoCallback(int result) {
+  NSLog([NSString stringWithFormat: @"ObjC: async result %d\n", result]);
+}
+
+static void SumCallback(int result) {
+  NSLog([NSString stringWithFormat: @"ObjC: sum async result %d\n", result]);
 }
 
 static void InteractWithService() {
   [EchoService Setup];
-  NSInteger result = [EchoService Echo:1];
-  NSLog([NSString stringWithFormat:@"ObjC: result %d\n", result]);
-  result = [EchoService Echo:2];
-  NSLog([NSString stringWithFormat:@"ObjC: result %d\n", result]);
+  NSInteger result = [EchoService Echo: 1];
+  NSLog([NSString stringWithFormat: @"ObjC: result %d\n", result]);
+  result = [EchoService Echo: 2];
+  NSLog([NSString stringWithFormat: @"ObjC: result %d\n", result]);
   NSLog(@"ObjC: async call with argument 3\n");
-  [EchoService EchoAsync:3 WithCallback:Callback];
+  [EchoService EchoAsync: 3 withCallback: EchoCallback];
   NSLog(@"ObjC: async call with argument 4\n");
-  [EchoService EchoAsync:4 WithBlock:^(int res) {
-    NSLog([NSString stringWithFormat:@"ObjC: async block result %d\n", res]);
+  [EchoService EchoAsync: 4 withBlock: ^(int res) {
+    NSLog([NSString stringWithFormat: @"ObjC: async block result %d\n", res]);
   }];
-  result = [EchoService Echo:5];
-  NSLog([NSString stringWithFormat:@"ObjC: result %d\n", result]);
+  result = [EchoService Echo: 5];
+  NSLog([NSString stringWithFormat: @"ObjC: result %d\n", result]);
+  result = [EchoService Sum: 3 with: 4];
+  NSLog([NSString stringWithFormat: @"ObjC: result of sum(3, 4) is %d\n",
+                  result]);
+  [EchoService SumAsync: 3 with: 4 withCallback: SumCallback];
+  [EchoService SumAsync: 3 with: 4 withBlock: ^(int res) {
+    NSLog([NSString stringWithFormat: @"ObjC: async sum block result %d\n",
+                    res]);
+  }];
   [EchoService TearDown];
 }
 

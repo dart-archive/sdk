@@ -41,7 +41,7 @@ static void Unwrap_Int32_1(void* raw) {
   callback(result);
 }
 
-+ (void)EchoAsync:(int)n WithCallback:(void (*)(int))callback {
++ (void)EchoAsync:(int)n withCallback:(void (*)(int))callback {
   static const int kSize = 36 + 1 * sizeof(void*);
   char* _buffer = (char*)(malloc(kSize));
   *(int*)(_buffer + 32) = n;
@@ -58,12 +58,60 @@ static void Unwrap_Int32_1_Block(void* raw) {
   callback(result);
 }
 
-+ (void)EchoAsync:(int)n WithBlock:(void (^)(int))callback {
++ (void)EchoAsync:(int)n withBlock:(void (^)(int))callback {
   static const int kSize = 36 + 1 * sizeof(void*);
   char* _buffer = (char*)(malloc(kSize));
   *(int*)(_buffer + 32) = n;
   *(void**)(_buffer + 36) = (void*)(callback);
   ServiceApiInvokeAsync(_service_id, _kEchoId, Unwrap_Int32_1_Block, _buffer, kSize);
+}
+
+static const MethodId _kSumId = (MethodId)2;
+
++ (int)Sum:(int)x with:(int)y {
+  static const int kSize = 40;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  *(int*)(_buffer + 32) = x;
+  *(int*)(_buffer + 36) = y;
+  ServiceApiInvoke(_service_id, _kSumId, _buffer, kSize);
+  return *(int*)(_buffer + 32);
+}
+
+static void Unwrap_Int32_2(void* raw) {
+  typedef void (*cbt)(int);
+  char* buffer = (char*)(raw);
+  int result = *(int*)(buffer + 32);
+  cbt callback = *(cbt*)(buffer + 40);
+  free(buffer);
+  callback(result);
+}
+
++ (void)SumAsync:(int)x with:(int)y withCallback:(void (*)(int))callback {
+  static const int kSize = 40 + 1 * sizeof(void*);
+  char* _buffer = (char*)(malloc(kSize));
+  *(int*)(_buffer + 32) = x;
+  *(int*)(_buffer + 36) = y;
+  *(void**)(_buffer + 40) = (void*)(callback);
+  ServiceApiInvokeAsync(_service_id, _kSumId, Unwrap_Int32_2, _buffer, kSize);
+}
+
+static void Unwrap_Int32_2_Block(void* raw) {
+  typedef void (^cbt)(int);
+  char* buffer = (char*)(raw);
+  int result = *(int*)(buffer + 32);
+  cbt callback = *(cbt*)(buffer + 40);
+  free(buffer);
+  callback(result);
+}
+
++ (void)SumAsync:(int)x with:(int)y withBlock:(void (^)(int))callback {
+  static const int kSize = 40 + 1 * sizeof(void*);
+  char* _buffer = (char*)(malloc(kSize));
+  *(int*)(_buffer + 32) = x;
+  *(int*)(_buffer + 36) = y;
+  *(void**)(_buffer + 40) = (void*)(callback);
+  ServiceApiInvokeAsync(_service_id, _kSumId, Unwrap_Int32_2_Block, _buffer, kSize);
 }
 
 @end

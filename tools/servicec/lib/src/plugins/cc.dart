@@ -63,12 +63,7 @@ abstract class CcVisitor extends Visitor {
   }
 
   visitArguments(List<Formal> formals) {
-    bool first = true;
-    formals.forEach((Formal formal) {
-      if (!first) buffer.write(', ');
-      first = false;
-      visit(formal);
-    });
+    visitNodes(formals, (first) => first ? '' : ', ');
   }
 
   visitMethodBody(String id, List<Formal> arguments,

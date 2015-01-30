@@ -38,10 +38,6 @@ class Platform {
   // Use delete to reclaim the storage for the returned Mutex.
   static Mutex* CreateMutex();
 
-  // Factory method for creating platform dependent Semaphore.
-  // Use delete to reclaim the storage for the returned Semaphore.
-  static Semaphore* CreateSemaphore(int count);
-
   // Use delete to reclaim the storage for the returned Monitor.
   static Monitor* CreateMonitor();
 
@@ -131,23 +127,6 @@ class ScopedLock {
  private:
   Mutex* const mutex_;
   DISALLOW_COPY_AND_ASSIGN(ScopedLock);
-};
-
-// A semaphore object is a synchronization object that maintains a count. The
-// count is decremented each time a thread completes a wait for the semaphore
-// object and incremented each time a thread signals the semaphore. When the
-// count reaches zero,  threads waiting for the semaphore blocks until the
-// count becomes non-zero.
-class Semaphore {
- public:
-  virtual ~Semaphore() {}
-
-  // Suspends the calling thread until the counter is non-zero
-  // and then decrements the semaphore counter.
-  virtual void Wait() = 0;
-
-  // Increments the semaphore counter.
-  virtual void Signal() = 0;
 };
 
 class Monitor {

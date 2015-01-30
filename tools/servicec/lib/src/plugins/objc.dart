@@ -49,6 +49,10 @@ abstract class _ObjcVisitor extends CcVisitor {
     visit(node.type);
     buffer.write(')${node.name}');
   }
+
+  visitArguments(List<Formals> arguments) {
+    visitNodes(arguments, (first) => first ? ':' : ' with:');
+  }
 }
 
 class _HeaderVisitor extends _ObjcVisitor {
@@ -82,22 +86,22 @@ class _HeaderVisitor extends _ObjcVisitor {
   }
 
   visitMethod(Method node) {
-    if (node.arguments.length != 1) return;
-
     String name = node.name;
     buffer.write('+ (');
     visit(node.returnType);
-    buffer.write(')$name:');
-    visit(node.arguments.single);
+    buffer.write(')${name}');
+    visitArguments(node.arguments);
     buffer.writeln(';');
 
-    buffer.write('+ (void)${name}Async:');
-    visit(node.arguments.single);
-    buffer.writeln(' WithCallback:(void (*)(int))callback;');
+    // TODO(ager): Methods with no arguments and a callback.
+    buffer.write('+ (void)${name}Async');
+    visitArguments(node.arguments);
+    buffer.writeln(' withCallback:(void (*)(int))callback;');
 
-    buffer.write('+ (void)${name}Async:');
-    visit(node.arguments.single);
-    buffer.writeln(' WithBlock:(void (^)(int))callback;');
+    // TODO(ager): Methods with no arguments and a callback.
+    buffer.write('+ (void)${name}Async');
+    visitArguments(node.arguments);
+    buffer.writeln(' withBlock:(void (^)(int))callback;');
   }
 }
 
@@ -159,7 +163,6 @@ class _ImplementationVisitor extends _ObjcVisitor {
     String id = '_k${name}Id';
 
     int arity = node.arguments.length;
-    if (arity != 1) return;
 
     buffer.writeln();
     buffer.writeln('static const MethodId $id = (MethodId)${methodId++};');
@@ -167,25 +170,25 @@ class _ImplementationVisitor extends _ObjcVisitor {
     buffer.writeln();
     buffer.write('+ (');
     visit(node.returnType);
-    buffer.write(')$name:');
-    visit(node.arguments.single);
+    buffer.write(')$name');
+    visitArguments(node.arguments);
     buffer.writeln(' {');
     visitMethodBody(id, node.arguments, cStyle: true);
     buffer.writeln('}');
 
     String callback = ensureCallback(node.returnType, node.arguments, false);
     buffer.writeln();
-    buffer.write('+ (void)${name}Async:');
-    visit(node.arguments.single);
-    buffer.writeln(' WithCallback:(void (*)(int))callback {');
+    buffer.write('+ (void)${name}Async');
+    visitArguments(node.arguments);
+    buffer.writeln(' withCallback:(void (*)(int))callback {');
     visitMethodBody(id, node.arguments, cStyle: true, callback: callback);
     buffer.writeln('}');
 
     callback = ensureCallback(node.returnType, node.arguments, true);
     buffer.writeln();
-    buffer.write('+ (void)${name}Async:');
-    visit(node.arguments.single);
-    buffer.writeln(' WithBlock:(void (^)(int))callback {');
+    buffer.write('+ (void)${name}Async');
+    visitArguments(node.arguments);
+    buffer.writeln(' withBlock:(void (^)(int))callback {');
     visitMethodBody(id, node.arguments, cStyle: true, callback: callback);
     buffer.writeln('}');
   }

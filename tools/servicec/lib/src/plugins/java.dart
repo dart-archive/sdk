@@ -236,12 +236,7 @@ class _JavaVisitor extends Visitor {
   }
 
   visitArguments(List<Formal> formals) {
-    bool first = true;
-    formals.forEach((Formal formal) {
-      if (!first) buffer.write(', ');
-      first = false;
-      visit(formal);
-    });
+    visitNodes(formals, (first) => first ? '' : ', ');
   }
 
   visitFormal(Formal node) {

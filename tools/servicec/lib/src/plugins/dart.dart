@@ -128,12 +128,7 @@ class _DartVisitor extends Visitor {
   visitMethod(Method node) {
     methods.add(node);
     buffer.write('  int ${node.name}(');
-    bool first = true;
-    node.arguments.forEach((Formal formal) {
-      if (!first) buffer.write(', ');
-      first = false;
-      visit(formal);
-    });
+    visitNodes(node.arguments, (first) => first ? '' : ', ');
     buffer.writeln(');');
   }
 

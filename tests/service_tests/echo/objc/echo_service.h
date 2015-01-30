@@ -12,7 +12,10 @@
 + (void)TearDown;
 
 + (int)Echo:(int)n;
-+ (void)EchoAsync:(int)n WithCallback:(void (*)(int))callback;
-+ (void)EchoAsync:(int)n WithBlock:(void (^)(int))callback;
++ (void)EchoAsync:(int)n withCallback:(void (*)(int))callback;
++ (void)EchoAsync:(int)n withBlock:(void (^)(int))callback;
++ (int)Sum:(int)x with:(int)y;
++ (void)SumAsync:(int)x with:(int)y withCallback:(void (*)(int))callback;
++ (void)SumAsync:(int)x with:(int)y withBlock:(void (^)(int))callback;
 
 @end

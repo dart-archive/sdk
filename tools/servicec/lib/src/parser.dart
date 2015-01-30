@@ -18,6 +18,14 @@ abstract class Visitor {
   visitMethod(Method method);
   visitFormal(Formal formal);
   visitType(Type type);
+  visitNodes(List<Node> nodes, void separatedBy(bool first)) {
+    bool first = true;
+    for (int i = 0; i < nodes.length; i++) {
+      buffer.write(separatedBy(first));
+      if (first) first = false;
+      visit(nodes[i]);
+    }
+  }
 }
 
 abstract class Node {
