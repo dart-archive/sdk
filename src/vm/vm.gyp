@@ -70,7 +70,13 @@
         'weak_pointer.cc',
       ],
       'link_settings': {
-        'libraries': [ '-lpthread', '-ldl', '-rdynamic' ],
+        'libraries': [
+          '-ltcmalloc_minimal',
+          '-lpthread',
+          '-ldl',
+          # TODO(ahe): Not sure this option works as intended on Mac.
+          '-rdynamic',
+        ],
       },
     },
     {

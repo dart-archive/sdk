@@ -31,6 +31,7 @@
         'clangxx_path%': '/usr/bin/env clang++',
         'clang_asan_rt_path%': '.',
         'mac_sdk%': [],
+        'third_party_libs_path%': '>(DEPTH)/third_party/libs/linux',
       }],
       [ 'OS=="mac"', {
         'clang_path%': 'third_party/clang/mac/bin/clang',
@@ -39,12 +40,14 @@
           '>(DEPTH)/third_party/clang/mac/lib/clang/3.6.0/'
           'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
         'mac_sdk%': [ '<!(xcrun --show-sdk-path)' ],
+        'third_party_libs_path%': '>(DEPTH)/third_party/libs/macos',
       }],
       [ 'OS=="win"', {
        'clang_path%': 'clang',
         'clangxx_path%': 'clang++',
         'clang_asan_rt_path%': '.',
         'mac_sdk%': [ '' ],
+        'third_party_libs_path%': '>(DEPTH)/third_party/libs/windows',
       }],
     ],
   },
@@ -142,10 +145,15 @@
 
         'ldflags': [
           '-m32',
+          '-L<(third_party_libs_path)/x86',
         ],
 
         'xcode_settings': { # And ninja.
           'ARCHS': [ 'i386' ],
+
+          'LIBRARY_SEARCH_PATHS': [
+            '<(third_party_libs_path)/x86',
+          ],
         },
       },
 
@@ -156,8 +164,16 @@
           'FLETCH64',
         ],
 
+        'ldflags': [
+          '-L<(third_party_libs_path)/x64',
+        ],
+
         'xcode_settings': { # And ninja.
           'ARCHS': [ 'x86_64' ],
+
+          'LIBRARY_SEARCH_PATHS': [
+            '<(third_party_libs_path)/x64',
+          ],
         },
       },
 
@@ -239,9 +255,5 @@
           ['exclude', '_posix(_test)?\\.(h|cc|mm?)$' ], ],
       }],
     ],
-
-    # TODO(ahe): These flags should be incorporated in all executables:
-    # LINKER_FLAGS=-rdynamic -Lthird_party/libs/macos/x86
-    # LIBS=-ltcmalloc_minimal -lpthread -ldl
   },
 }
