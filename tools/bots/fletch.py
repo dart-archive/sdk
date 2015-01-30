@@ -48,9 +48,10 @@ def Steps(config):
   SetupEnvironment(config)
   # gcc on mac is just an alias for clang.
   run_gcc = config.system == 'linux'
-  gyp_build = config.system == 'mac'
+  gyp_build = True
   # This makes us work from whereever we are called, and restores CWD in exit.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
+    Run(['rm', '-rf', 'build'])
 
     if gyp_build:
       with bot.BuildStep('ninja DebugIA32'):
@@ -88,6 +89,7 @@ def Steps(config):
 
 def RunTests(name, asan=False, modes=None, scons=True):
   asan_str = '-asan' if asan else ''
+  scons_str = '-scons' if scons else '-GYP'
   modes = modes or ['release', 'debug']
   for mode in modes:
     with bot.BuildStep('Test (%s%s-%s)' % (name, asan_str, mode),
