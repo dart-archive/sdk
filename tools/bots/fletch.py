@@ -51,7 +51,6 @@ def Steps(config):
   gyp_build = True
   # This makes us work from whereever we are called, and restores CWD in exit.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
-    Run(['rm', '-rf', 'build'])
 
     if gyp_build:
       with bot.BuildStep('ninja DebugIA32'):
@@ -92,7 +91,7 @@ def RunTests(name, asan=False, modes=None, scons=True):
   scons_str = '-scons' if scons else '-GYP'
   modes = modes or ['release', 'debug']
   for mode in modes:
-    with bot.BuildStep('Test (%s%s-%s)' % (name, asan_str, mode),
+    with bot.BuildStep('Test (%s%s%s-%s)' % (name, scons_str, asan_str, mode),
                        swallow_error=True):
       args = ['python', 'tools/test.py', '-m%s' % mode, '-aia32,x64',
               '--time', '--report', '--progress=buildbot']
