@@ -40,5 +40,19 @@
         'libraries': ['-framework Foundation'],
       },
     },
+    {
+      'target_name': 'person_service_test',
+      'type': 'executable',
+      'dependencies': [
+        '../../src/vm/vm.gyp:fletch_vm',
+      ],
+      'sources': [
+        'person/cc/person_counter.cc',
+        'person/cc/person_counter.h',
+        'person/person.cc',
+        'person/person_shared.cc',
+        'person/person_shared.h',
+      ],
+    },
   ],
 }

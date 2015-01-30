@@ -191,6 +191,53 @@
       ],
     },
     {
+      'target_name': 'run_person_service_test',
+      # Note: this target_name needs to be different from its dependency.
+      # This is due to the ninja GYP generator which doesn't generate unique
+      # names.
+      'type': 'none',
+      'dependencies': [
+        'src/vm/vm.gyp:fletch',
+        'tests/service_tests/service_tests.gyp:person_service_test',
+      ],
+      'actions': [
+        {
+          'action_name': 'generate_person_snapshot',
+          'command': [
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            'tests/service_tests/person/person.dart',
+          ],
+          'inputs': [
+            '<@(_command)',
+            '<(mac_asan_dylib)',
+          ],
+          'outputs': [
+            '<(SHARED_INTERMEDIATE_DIR)/person.snapshot',
+          ],
+          'action': [
+            '<@(_command)', '--out=<(SHARED_INTERMEDIATE_DIR)/person.snapshot',
+          ],
+        },
+        {
+          'action_name': 'run_person_service_test',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'person_service_test'
+            '<(EXECUTABLE_SUFFIX)',
+            '<(SHARED_INTERMEDIATE_DIR)/person.snapshot',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/test_outcomes/person_service_test.pass',
+          ],
+          'action': [
+            "bash", "-c",
+            "<(_inputs) && LANG=POSIX date '+Test passed on %+' > "
+            "<(_outputs)",
+          ],
+        },
+      ],
+    },
+    {
       'target_name': 'copy_asan',
       'type': 'none',
       'conditions': [
