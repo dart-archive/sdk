@@ -51,25 +51,7 @@ def Steps(config):
   gyp_build = config.system == 'mac'
   # This makes us work from whereever we are called, and restores CWD in exit.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
-    if run_gcc:
-      with bot.BuildStep('Build (gcc)'):
-        Run(['python', 'third_party/scons/scons.py',
-             '-j%s' % utils.GuessCpus()])
-      RunTests('gcc')
-      with bot.BuildStep('Build (gcc+asan)'):
-        Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
-            'asan=true'])
-      RunTests('gcc', asan=True)
-    with bot.BuildStep('Build (clang)'):
-      Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
-           'clang=true'])
-    RunTests('clang')
-    with bot.BuildStep('Build (clang+asan)'):
-      Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
-           'clang=true', 'asan=true'])
-    # Asan debug mode takes a long time on mac.
-    modes = ['release'] if config.system == 'mac' else ['release', 'debug']
-    RunTests('clang', asan=True, modes=modes)
+
     if gyp_build:
       with bot.BuildStep('ninja DebugIA32'):
         Run(['ninja', '-v', '-C', 'out/DebugIA32'])
@@ -80,8 +62,31 @@ def Steps(config):
       with bot.BuildStep('ninja ReleaseX64'):
         Run(['ninja', '-v', '-C', 'out/ReleaseX64'])
 
+    if run_gcc:
+      with bot.BuildStep('Build (gcc)'):
+        Run(['python', 'third_party/scons/scons.py',
+             '-j%s' % utils.GuessCpus()])
+      RunTests('gcc')
+      with bot.BuildStep('Build (gcc+asan)'):
+        Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
+            'asan=true'])
+      RunTests('gcc', asan=True)
 
-def RunTests(name, asan=False, modes=None):
+    with bot.BuildStep('Build (clang)'):
+      Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
+           'clang=true'])
+    RunTests('clang')
+    RunTests('clang', scons=False)
+    with bot.BuildStep('Build (clang+asan)'):
+      Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
+           'clang=true', 'asan=true'])
+    # Asan debug mode takes a long time on mac.
+    modes = ['release'] if config.system == 'mac' else ['release', 'debug']
+    RunTests('clang', asan=True, modes=modes)
+    RunTests('clang', asan=True, modes=modes, scons=False)
+
+
+def RunTests(name, asan=False, modes=None, scons=True):
   asan_str = '-asan' if asan else ''
   modes = modes or ['release', 'debug']
   for mode in modes:
@@ -91,6 +96,8 @@ def RunTests(name, asan=False, modes=None):
               '--time', '--report', '--progress=buildbot']
       if asan:
         args.extend(['--asan', '--builder-tag=asan'])
+      if not scons:
+        args.extend(['--no-scons', '--builder-tag=ninja'])
       Run(args)
 
 if __name__ == '__main__':
