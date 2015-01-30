@@ -9,6 +9,8 @@ import sys
 
 def Main():
   # Clean ninja output.
+  # TODO(ahe): Clobber build is called at wrong time: ninja generates its build
+  # files in "out". This command should be called before gclient runhooks.
   shutil.rmtree("out", ignore_errors=True)
   # Clean scons output.
   shutil.rmtree("build", ignore_errors=True)

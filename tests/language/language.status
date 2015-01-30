@@ -958,13 +958,19 @@ bit_shift_test: Fail
 [ $arch == ia32 || $mode == release ]
 issue10783_test: Fail
 
-[ $arch == x64 && $mode == debug ]
+[ $arch == x64 && $mode == debug && $scons ]
 issue10783_test: Crash
 
+[ $arch == x64 && $mode == debug && $ninja ]
+issue10783_test: Fail
+
 [ $mode == debug ]
+field_initialization_order_test: Fail
+
+
+[ $mode == debug && $scons ]
 duplicate_constructor_test/01: Crash
 duplicate_import_prefix_test: Crash
-field_initialization_order_test: Fail
 issue4295001_test: Crash
 prefix101_test: Crash
 prefix3_negative_test: Crash
@@ -972,6 +978,14 @@ ref_before_declaration_test/06: Crash
 regress_19413_test/01: Crash
 regress_19413_test/none: Crash
 try_catch_syntax_test/05: Crash
+
+[ $mode == debug && $ninja ]
+duplicate_constructor_test/01: Fail
+prefix101_test: Fail
+prefix3_negative_test: Fail
+ref_before_declaration_test/06: Fail
+regress_19413_test/01: Fail
+
 
 [ $mode == release ]
 body_less_constructor_wrong_arg_negative_test: Fail
@@ -990,7 +1004,7 @@ constructor6_test: Fail
 function_literals2_test: Fail
 inferrer_synthesized_constructor_test: Fail
 
-[ $asan && $arch == x64 && $mode == release ]
+[ $scons && $asan && $arch == x64 && $mode == release ]
 issue4295001_test: Fail
 
 [ $asan && $mode == debug ]

@@ -304,7 +304,11 @@ uri_query_test: Crash
 uri_scheme_test: Fail
 uri_test: CompileTimeError
 
-[ $mode == debug ]
+[ $mode == debug && $ninja ]
+list_map_test: Fail
+list_reversed_test: Fail
+
+[ $mode == debug && $scons ]
 list_map_test: Crash
 list_reversed_test: Crash
 

@@ -405,14 +405,6 @@ Note: currently only implemented for dart2js.''',
               [],
               null),
           new _TestOptionSpecification(
-              'builder_tag',
-              'Machine specific options that is not captured by the regular '
-              'test options. Used to be able to make sane updates to the '
-              'status files.',
-              ['--builder-tag'],
-              [],
-              ''),
-          new _TestOptionSpecification(
               'vm_options',
               'Extra options to send to the vm when running',
               ['--vm-options'],
@@ -708,6 +700,8 @@ Note: currently only implemented for dart2js.''',
     configuration['host_unchecked'] = !configuration['host_checked'];
     configuration['unminified'] = !configuration['minified'];
     configuration['nocsp'] = !configuration['csp'];
+    configuration['scons'] = !configuration['no_scons'];
+    configuration['ninja'] = configuration['no_scons'];
 
     String runtime = configuration['runtime'];
     if (runtime == 'firefox') {

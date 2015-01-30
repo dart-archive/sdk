@@ -88,7 +88,7 @@ def Steps(config):
 
 def RunTests(name, asan=False, modes=None, scons=True):
   asan_str = '-asan' if asan else ''
-  scons_str = '-scons' if scons else '-GYP'
+  scons_str = '-scons' if scons else '-ninja'
   modes = modes or ['release', 'debug']
   for mode in modes:
     with bot.BuildStep('Test (%s%s%s-%s)' % (name, scons_str, asan_str, mode),
@@ -96,9 +96,10 @@ def RunTests(name, asan=False, modes=None, scons=True):
       args = ['python', 'tools/test.py', '-m%s' % mode, '-aia32,x64',
               '--time', '--report', '--progress=buildbot']
       if asan:
-        args.extend(['--asan', '--builder-tag=asan'])
+        args.extend(['--asan'])
       if not scons:
-        args.extend(['--no-scons', '--builder-tag=ninja'])
+        args.extend(['--no-scons'])
+
       Run(args)
 
 if __name__ == '__main__':

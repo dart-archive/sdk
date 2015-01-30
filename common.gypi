@@ -20,8 +20,6 @@
       '-std=c++11',
       '-fdata-sections',
       '-ffunction-sections',
-      '-O3',
-      '-fomit-frame-pointer',
       '-fPIC',
     ],
 
@@ -113,8 +111,14 @@
         'xcode_settings': { # And ninja.
           'OTHER_CPLUSPLUSFLAGS' : [
             '-O3',
+            '-fomit-frame-pointer',
           ],
         },
+
+        'cflags': [
+          '-O3',
+          '-fomit-frame-pointer',
+        ],
       },
 
       'fletch_debug': {
@@ -130,6 +134,11 @@
             '-O0',
           ],
         },
+
+        'cflags': [
+          '-g',
+          '-O0',
+        ],
       },
 
       'fletch_ia32': {
