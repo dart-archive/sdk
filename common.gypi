@@ -87,7 +87,6 @@
           'WARNING_CFLAGS': [
             '<@(common_gcc_warning_flags)',
             '-Wtrigraphs', # Disable Xcode default.
-            '-Wno-format',
           ],
         },
 
@@ -129,9 +128,10 @@
         ],
 
         'xcode_settings': { # And ninja.
+          'GCC_OPTIMIZATION_LEVEL': '0',
+
           'OTHER_CPLUSPLUSFLAGS': [
             '-g',
-            '-O0',
           ],
         },
 
@@ -229,22 +229,22 @@
       },
 
       'DebugIA32': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32', ],
+        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_ia32', ],
       },
 
       'DebugIA32Asan': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_asan',
+          'fletch_base', 'fletch_debug', 'fletch_ia32', 'fletch_asan',
         ],
       },
 
       'DebugX64': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_x64' ],
+        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_x64' ],
       },
 
       'DebugX64Asan': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_x64', 'fletch_asan',
+          'fletch_base', 'fletch_debug', 'fletch_x64', 'fletch_asan',
         ],
       },
     },
