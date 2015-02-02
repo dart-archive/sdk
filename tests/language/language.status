@@ -5,9 +5,6 @@
 # This directory contains tests that are intended to show the
 # current state of the language.
 
-# Skipped test.
-vm/regress_16873_test: Skip  # O(n^2) because of LinkedHashSet impl.
-
 # Other tests.
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail

@@ -2,10 +2,6 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-# Takes too long because of use of LinkedHashSet implementation with is
-# quadratic in the number of elements.
-queue_test: Skip
-
 apply2_test: Fail
 apply3_test: CompileTimeError
 apply_test: Fail

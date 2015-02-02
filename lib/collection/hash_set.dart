@@ -4,36 +4,29 @@
 
 part of dart.collection;
 
-class LinkedHashSet<E> extends IterableBase<E> implements Set<E> {
+class HashSet<E> extends IterableBase<E> implements Set<E> {
   static const int _INITIAL_SIZE = 8;
 
-  _Node _sentinel = new _Node(null);
   List _buckets;
   int _elements;
 
-  LinkedHashSet()
+  HashSet()
     : _buckets = new List<E>(_INITIAL_SIZE),
-      _elements = 0 {
-    _sentinel.previousLink = _sentinel;
-    _sentinel.nextLink = _sentinel;
-  }
+      _elements = 0;
 
-  LinkedHashSet._(int buckets)
+  HashSet._(int buckets)
     : _buckets = new List<E>(buckets),
-      _elements = 0 {
-    _sentinel.previousLink = _sentinel;
-    _sentinel.nextLink = _sentinel;
-  }
+      _elements = 0;
 
-  factory LinkedHashSet.from(Iterable<E> other) {
-    var result = new LinkedHashSet();
+  factory HashSet.from(Iterable<E> other) {
+    var result = new HashSet();
     result.addAll(other);
     return result;
   }
 
-  Iterator<E> get iterator => new _LinkedHashSetIterator(this);
+  Iterator<E> get iterator => new _HashSetIterator(this);
 
-  Set<E> toSet() => new LinkedHashSet.from(this);
+  Set<E> toSet() => new HashSet.from(this);
 
   int get length => _elements;
 
@@ -44,10 +37,9 @@ class LinkedHashSet<E> extends IterableBase<E> implements Set<E> {
   bool add(E value) {
     var bucketCount = _buckets.length;
     if (_elements > (bucketCount - (bucketCount >> 2))) {
-      var rehashed = new LinkedHashSet<E>._(bucketCount * 2);
+      var rehashed = new HashSet<E>._(bucketCount * 2);
       rehashed.addAll(this);
       _buckets = rehashed._buckets;
-      _sentinel = rehashed._sentinel;
       bucketCount = bucketCount * 2;
     }
     var hash = value.hashCode.abs();
@@ -59,14 +51,9 @@ class LinkedHashSet<E> extends IterableBase<E> implements Set<E> {
       }
       node = node.next;
     }
-    node = new _Node(value);
+    node = new _HashSetNode(value);
     node.next = _buckets[index];
     _buckets[index] = node;
-    var sentinel = _sentinel;
-    node.nextLink = sentinel;
-    node.previousLink = sentinel.previousLink;
-    sentinel.previousLink.nextLink = node;
-    sentinel.previousLink = node;
     ++_elements;
     return true;
   }
@@ -90,8 +77,6 @@ class LinkedHashSet<E> extends IterableBase<E> implements Set<E> {
           previous.next = node.next;
         }
         --_elements;
-        node.previousLink.nextLink = node.nextLink;
-        node.nextLink.previousLink = node.previousLink;
         return true;
       }
       previous = node;
@@ -120,31 +105,31 @@ class LinkedHashSet<E> extends IterableBase<E> implements Set<E> {
   }
 
   void retainAll(Iterable<Object> elements) {
-    throw new UnimplementedError("LinkedHashSet.retainAll");
+    throw new UnimplementedError("HashSet.retainAll");
   }
 
   void removeWhere(bool test(E element)) {
-    throw new UnimplementedError("LinkedHashSet.removeWhere");
+    throw new UnimplementedError("HashSet.removeWhere");
   }
 
   void retainWhere(bool test(E element)) {
-    throw new UnimplementedError("LinkedHashSet.retainWhere");
+    throw new UnimplementedError("HashSet.retainWhere");
   }
 
   bool containsAll(Iterable<Object> other) {
-    throw new UnimplementedError("LinkedHashSet.containsAll");
+    throw new UnimplementedError("HashSet.containsAll");
   }
 
   Set<E> intersection(Set<Object> other) {
-    throw new UnimplementedError("LinkedHashSet.intersection");
+    throw new UnimplementedError("HashSet.intersection");
   }
 
   Set<E> union(Set<E> other) {
-    throw new UnimplementedError("LinkedHashSet.union");
+    throw new UnimplementedError("HashSet.union");
   }
 
   Set<E> difference(Set<E> other) {
-    throw new UnimplementedError("LinkedHashSet.difference");
+    throw new UnimplementedError("HashSet.difference");
   }
 
   void clear() {
@@ -153,36 +138,36 @@ class LinkedHashSet<E> extends IterableBase<E> implements Set<E> {
   }
 }
 
-class _Node<E> {
+class _HashSetNode<E> {
   final E value;
-  _Node next;
+  _HashSetNode next;
 
-  _Node nextLink;
-  _Node previousLink;
-
-  _Node(this.value);
+  _HashSetNode(this.value);
 }
 
-class _LinkedHashSetIterator<E> implements Iterator<E> {
-  // TODO(ager): Deal with concurrent modification errors.
-  final LinkedHashSet _set;
-  _Node<E> _next;
-  E _current;
+class _HashSetIterator<E> implements Iterator<E> {
+  final HashSet _set;
 
-  _LinkedHashSetIterator(this._set) {
-    _next = _set._sentinel.nextLink;
-  }
+  int _index = -1;
+  _HashSetNode<E> _current;
+
+  _HashSetIterator(this._set);
 
   bool moveNext() {
-    var next = _next;
-    if (identical(next, _set._sentinel)) {
-      _current = null;
-      return false;
+    if (_current != null) {
+      _current = _current.next;
+      if (_current != null) return true;
     }
-    _current = next.value;
-    _next = next.nextLink;
-    return true;
+    _index++;
+    int limit = _set._buckets.length;
+    for (; _index < limit; _index++) {
+      if (_set._buckets[_index] != null) {
+        _current = _set._buckets[_index];
+        return true;
+      }
+    }
+    return false;
   }
 
-  E get current => _current;
+  E get current => (_current != null) ? _current.value : null;
 }
