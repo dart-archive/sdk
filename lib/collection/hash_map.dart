@@ -4,26 +4,19 @@
 
 part of dart.collection;
 
-class LinkedHashMap<K, V> implements Map<K, V> {
+class HashMap<K, V> implements Map<K, V> {
   static const int _INITIAL_SIZE = 8;
 
-  _LinkedHashMapNode _sentinel = new _LinkedHashMapNode(null, null);
   List _buckets;
   int _elements = 0;
 
   // TODO(ager): Other versions of constructors. Parameterization with
   // comparison etc.
-  LinkedHashMap() : _buckets = new List(_INITIAL_SIZE) {
-    _sentinel.previousLink = _sentinel;
-    _sentinel.nextLink = _sentinel;
-  }
+  HashMap() : _buckets = new List(_INITIAL_SIZE);
 
-  LinkedHashMap._(int buckets) : _buckets = new List(buckets) {
-    _sentinel.previousLink = _sentinel;
-    _sentinel.nextLink = _sentinel;
-  }
+  HashMap._(int buckets) : _buckets = new List(buckets);
 
-  _LinkedHashMapNode<K, V> _lookup(K key) {
+  _HashMapNode<K, V> _lookup(K key) {
     var hash = key.hashCode.abs();
     var index = hash % _buckets.length;
     var node = _buckets[index];
@@ -52,10 +45,9 @@ class LinkedHashMap<K, V> implements Map<K, V> {
   void _resizeIfNeeded() {
     var bucketCount = _buckets.length;
     if (_elements > (bucketCount - (bucketCount >> 2))) {
-      var rehashed = new LinkedHashMap<K, V>._(bucketCount * 2);
+      var rehashed = new HashMap<K, V>._(bucketCount * 2);
       rehashed.addAll(this);
       _buckets = rehashed._buckets;
-      _sentinel = rehashed._sentinel;
       bucketCount = bucketCount * 2;
     }
   }
@@ -72,14 +64,9 @@ class LinkedHashMap<K, V> implements Map<K, V> {
     if (node != null) {
       node.value = value;
     } else {
-      var node = new _LinkedHashMapNode(key, value);
+      var node = new _HashMapNode(key, value);
       node.next = _buckets[index];
       _buckets[index] = node;
-      var sentinel = _sentinel;
-      node.nextLink = sentinel;
-      node.previousLink = sentinel.previousLink;
-      sentinel.previousLink.nextLink = node;
-      sentinel.previousLink = node;
       ++_elements;
     }
   }
@@ -110,8 +97,6 @@ class LinkedHashMap<K, V> implements Map<K, V> {
           previous.next = node.next;
         }
         --_elements;
-        node.previousLink.nextLink = node.nextLink;
-        node.nextLink.previousLink = node.previousLink;
         return node.value;
       }
       previous = node;
@@ -121,8 +106,6 @@ class LinkedHashMap<K, V> implements Map<K, V> {
   }
 
   void clear() {
-    _sentinel.nextLink = _sentinel;
-    _sentinel.previousLink = _sentinel;
     _buckets = new List(_INITIAL_SIZE);
     _elements = 0;
   }
@@ -133,9 +116,9 @@ class LinkedHashMap<K, V> implements Map<K, V> {
     }
   }
 
-  Iterable<K> get keys => new _LinkedKeyIterable(this);
+  Iterable<K> get keys => new _KeyIterable(this);
 
-  Iterable<V> get values => new _LinkedValueIterable(this);
+  Iterable<V> get values => new _ValueIterable(this);
 
   int get length => _elements;
 
@@ -144,72 +127,58 @@ class LinkedHashMap<K, V> implements Map<K, V> {
   bool get isNotEmpty => !isEmpty;
 }
 
-class _LinkedHashMapNode<K, V> {
+class _HashMapNode<K, V> {
   final K key;
   V value;
-  _LinkedHashMapNode next;
+  _HashMapNode next;
 
-  _LinkedHashMapNode nextLink;
-  _LinkedHashMapNode previousLink;
-
-  _LinkedHashMapNode(this.key, this.value);
+  _HashMapNode(this.key, this.value);
 }
 
-class _LinkedKeyIterable<K, V> extends IterableBase<K> implements Iterable<K> {
-  final LinkedHashMap<K, V> _map;
-  _LinkedKeyIterable(this._map);
-  Iterator<K> get iterator => new _LinkedKeyIterator<K, V>(_map);
-}
+class _HashNodeIterator<K, V> {
+  final HashMap<K, V> _map;
+  int _index = -1;
+  _HashMapNode<K, V> _current;
 
-class _LinkedKeyIterator<K, V> implements Iterator<K> {
-  final LinkedHashMap<K, V> _map;
-  _LinkedHashMapNode<K, V> _next;
-  K _current;
-
-  _LinkedKeyIterator(this._map) {
-    _next = _map._sentinel.nextLink;
-  }
+  _HashNodeIterator(this._map);
 
   bool moveNext() {
-    var next = _next;
-    if (identical(_next, _map._sentinel)) {
-      _current = null;
-      return false;
+    if (_current != null) {
+      _current = _current.next;
+      if (_current != null) return true;
     }
-    _current = next.key;
-    _next = next.nextLink;
-    return true;
+    _index++;
+    int limit = _map._buckets.length;
+    for (; _index < limit; _index++) {
+      if (_map._buckets[_index] != null) {
+        _current = _map._buckets[_index];
+        return true;
+      }
+    }
+    return false;
   }
-
-  K get current => _current;
 }
 
-class _LinkedValueIterable<K, V>
-    extends IterableBase<V> implements Iterable<V> {
-  final LinkedHashMap<K, V> _map;
-  _LinkedValueIterable(this._map);
-  Iterator<V> get iterator => new _LinkedValueIterator<K, V>(_map);
+class _KeyIterable<K, V> extends IterableBase<K> implements Iterable<K> {
+  final HashMap<K, V> _map;
+  _KeyIterable(this._map);
+  Iterator<K> get iterator => new _KeyIterator<K, V>(_map);
 }
 
-class _LinkedValueIterator<K, V> implements Iterator<V> {
-  final LinkedHashMap<K, V> _map;
-  _LinkedHashMapNode<K, V> _next;
-  V _current;
+class _KeyIterator<K, V>
+    extends _HashNodeIterator<K, V> implements Iterator<K> {
+  _KeyIterator(HashMap<K, V> map) : super(map);
+  K get current => (_current != null) ? _current.key : null;
+}
 
-  _LinkedValueIterator(this._map) {
-    _next = _map._sentinel.nextLink;
-  }
+class _ValueIterable<K, V> extends IterableBase<V> implements Iterable<V> {
+  final HashMap<K, V> _map;
+  _ValueIterable(this._map);
+  Iterator<V> get iterator => new _ValueIterator<K, V>(_map);
+}
 
-  bool moveNext() {
-    var next = _next;
-    if (identical(_next, _map._sentinel)) {
-      _current = null;
-      return false;
-    }
-    _current = next.value;
-    _next = next.nextLink;
-    return true;
-  }
-
-  V get current => _current;
+class _ValueIterator<K, V>
+    extends _HashNodeIterator<K, V> implements Iterator<V> {
+  _ValueIterator(HashMap<K, V> map) : super(map);
+  V get current => (_current != null) ? _current.value : null;
 }
