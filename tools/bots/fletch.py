@@ -48,6 +48,9 @@ def Steps(config):
   SetupEnvironment(config)
   # gcc on mac is just an alias for clang.
   run_gcc = config.system == 'linux'
+
+  mac = config.system == 'mac'
+
   # This makes us work from whereever we are called, and restores CWD in exit.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
 
@@ -69,41 +72,47 @@ def Steps(config):
       with bot.BuildStep('Build (gcc)'):
         Run(['python', 'third_party/scons/scons.py',
              '-j%s' % utils.GuessCpus()])
-      RunTests('gcc')
+      RunTests('gcc', mac=mac)
       with bot.BuildStep('Build (gcc+asan)'):
         Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
             'asan=true'])
-      RunTests('gcc', asan=True)
+      RunTests('gcc', asan=True, mac=mac)
 
     with bot.BuildStep('Build (clang)'):
       Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
            'clang=true'])
-    RunTests('clang')
-    RunTests('clang', scons=False)
+    RunTests('clang', mac=mac)
+    RunTests('clang', scons=False, mac=mac)
     with bot.BuildStep('Build (clang+asan)'):
       Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
            'clang=true', 'asan=true'])
     # Asan debug mode takes a long time on mac.
     modes = ['release'] if config.system == 'mac' else ['release', 'debug']
-    RunTests('clang', asan=True, modes=modes)
-    RunTests('clang', asan=True, modes=modes, scons=False)
+    RunTests('clang', asan=True, modes=modes, mac=mac)
+    RunTests('clang', asan=True, modes=modes, scons=False, mac=mac)
 
 
-def RunTests(name, asan=False, modes=None, scons=True):
+def RunTests(name, asan=False, modes=None, scons=True, mac=False):
   asan_str = '-asan' if asan else ''
   scons_str = '-scons' if scons else '-ninja'
   modes = modes or ['release', 'debug']
   for mode in modes:
-    with bot.BuildStep('Test (%s%s%s-%s)' % (name, scons_str, asan_str, mode),
-                       swallow_error=True):
-      args = ['python', 'tools/test.py', '-m%s' % mode, '-aia32,x64',
-              '--time', '--report', '--progress=buildbot']
-      if asan:
-        args.extend(['--asan'])
-      if not scons:
-        args.extend(['--no-scons'])
+    for arch in ['ia32' , 'x64']:
+      with bot.BuildStep(
+          'Test (%s%s%s-%s-%s)' % (name, scons_str, asan_str, mode, arch),
+          swallow_error=True):
+        args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
+                '--time', '--report', '--progress=buildbot']
+        if asan:
+          args.append('--asan')
+          if arch == 'x64' and mac:
+            # On Mac x64, asan seems to be bound by a syscall that doesn't
+            # parallelize.
+            args.append('-j1')
+        if not scons:
+          args.append('--no-scons')
 
-      Run(args)
+        Run(args)
 
 if __name__ == '__main__':
   bot.RunBot(Config, Steps, build_step=None)
