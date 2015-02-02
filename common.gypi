@@ -28,7 +28,6 @@
         'clang_path%': '/usr/bin/env clang',
         'clangxx_path%': '/usr/bin/env clang++',
         'clang_asan_rt_path%': '.',
-        'mac_sdk%': [],
         'third_party_libs_path%': '>(DEPTH)/third_party/libs/linux',
       }],
       [ 'OS=="mac"', {
@@ -37,14 +36,12 @@
         'clang_asan_rt_path%':
           '>(DEPTH)/third_party/clang/mac/lib/clang/3.6.0/'
           'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
-        'mac_sdk%': [ '<!(xcrun --show-sdk-path)' ],
         'third_party_libs_path%': '>(DEPTH)/third_party/libs/macos',
       }],
       [ 'OS=="win"', {
        'clang_path%': 'clang',
         'clangxx_path%': 'clang++',
         'clang_asan_rt_path%': '.',
-        'mac_sdk%': [ '' ],
         'third_party_libs_path%': '>(DEPTH)/third_party/libs/windows',
       }],
     ],
@@ -73,15 +70,9 @@
           'GCC_ENABLE_CPP_RTTI': 'NO', # -fno-rtti
           'GCC_ENABLE_CPP_EXCEPTIONS': 'NO', # -fno-exceptions
 
-          'OTHER_CFLAGS' : [
-            '-isysroot',
-            '<@(mac_sdk)',
-          ],
-
           'OTHER_CPLUSPLUSFLAGS' : [
             '<@(common_gcc_cflags)',
             '-stdlib=libc++',
-            '<@(_OTHER_CFLAGS)',
           ],
 
           'WARNING_CFLAGS': [

@@ -16,23 +16,33 @@ endif
 # TODO(ahe): Change to out/clang after fixing echo service test.
 CLANG_OUT=clang_out
 
+OS := $(shell uname -s)
+
 all: DebugIA32 DebugX64 ReleaseIA32 ReleaseX64
 
-DebugIA32: out/DebugIA32/build.ninja $(CLANG_OUT)/DebugIA32/build.ninja
+DebugIA32: out/DebugIA32/build.ninja $(CLANG_OUT)/DebugIA32/build.ninja /usr/include/stdio.h
 	$(quiet)ninja $(ninja_verbose) -C out/DebugIA32
+ifeq ($(OS),Linux)
 	$(quiet)ninja $(ninja_verbose) -C $(CLANG_OUT)/DebugIA32
+endif
 
-ReleaseIA32: out/ReleaseIA32/build.ninja $(CLANG_OUT)/ReleaseIA32/build.ninja
+ReleaseIA32: out/ReleaseIA32/build.ninja $(CLANG_OUT)/ReleaseIA32/build.ninja /usr/include/stdio.h
 	$(quiet)ninja $(ninja_verbose) -C out/ReleaseIA32
+ifeq ($(OS),Linux)
 	$(quiet)ninja $(ninja_verbose) -C $(CLANG_OUT)/ReleaseIA32
+endif
 
-DebugX64: out/DebugX64/build.ninja $(CLANG_OUT)/DebugX64/build.ninja
+DebugX64: out/DebugX64/build.ninja $(CLANG_OUT)/DebugX64/build.ninja /usr/include/stdio.h
 	$(quiet)ninja $(ninja_verbose) -C out/DebugX64
+ifeq ($(OS),Linux)
 	$(quiet)ninja $(ninja_verbose) -C $(CLANG_OUT)/DebugX64
+endif
 
-ReleaseX64: out/ReleaseX64/build.ninja $(CLANG_OUT)/ReleaseX64/build.ninja
+ReleaseX64: out/ReleaseX64/build.ninja $(CLANG_OUT)/ReleaseX64/build.ninja /usr/include/stdio.h
 	$(quiet)ninja $(ninja_verbose) -C out/ReleaseX64
+ifeq ($(OS),Linux)
 	$(quiet)ninja $(ninja_verbose) -C $(CLANG_OUT)/ReleaseX64
+endif
 
 gyp_files = \
   common.gypi \
@@ -52,5 +62,10 @@ $(CLANG_OUT)/ReleaseIA32/build.ninja $(CLANG_OUT)/DebugIA32/build.ninja $(CLANG_
 	$(quiet)./third_party/gyp/gyp $(gyp_verbose) --depth=. -Icommon.gypi \
 		-Dclang=1 -Goutput_dir=$(CLANG_OUT) \
 		--format=ninja fletch.gyp
+
+ifeq ($(OS),Darwin)
+/usr/include/stdio.h:
+	xcode-select --install
+endif
 
 .PHONY: all DebugIA32 DebugX64 ReleaseIA32 ReleaseX64

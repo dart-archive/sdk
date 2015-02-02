@@ -2111,6 +2111,10 @@ class TestUtils {
     // in the build_directory).
     var normal = '$mode$arch';
     var cross = '${mode}X$arch';
+    if (configuration['asan']) {
+      normal = '${normal}Asan';
+      cross = '${cross}Asan';
+    }
     var outDir = outputDir(configuration);
     var normalDir = new Directory(new Path('$outDir$normal').toNativePath());
     var crossDir = new Directory(new Path('$outDir$cross').toNativePath());

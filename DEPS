@@ -125,8 +125,24 @@ hooks = [
       'fletch/third_party/gyp/gyp',
       '--depth=fletch',
       '-Ifletch/common.gypi',
+      '-Dclang=0',
+      '-Goutput_dir=out',
       '--format=ninja',
       'fletch/fletch.gyp',
+    ],
+  },
+  {
+    'name': 'GYP_clang',
+    'pattern': '.',
+    'action': [
+      'fletch/third_party/gyp/gyp',
+      '--depth=fletch',
+      '-Ifletch/common.gypi',
+      '-Dclang=1',
+      '-Goutput_dir=clang_out',
+      '--format=ninja',
+      'fletch/fletch.gyp',
+
     ],
   },
 ]

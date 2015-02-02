@@ -48,19 +48,22 @@ def Steps(config):
   SetupEnvironment(config)
   # gcc on mac is just an alias for clang.
   run_gcc = config.system == 'linux'
-  gyp_build = True
   # This makes us work from whereever we are called, and restores CWD in exit.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
 
-    if gyp_build:
-      with bot.BuildStep('ninja DebugIA32'):
-        Run(['ninja', '-v', '-C', 'out/DebugIA32'])
-      with bot.BuildStep('ninja ReleaseIA32'):
-        Run(['ninja', '-v', '-C', 'out/ReleaseIA32'])
-      with bot.BuildStep('ninja DebugX64'):
-        Run(['ninja', '-v', '-C', 'out/DebugX64'])
-      with bot.BuildStep('ninja ReleaseX64'):
-        Run(['ninja', '-v', '-C', 'out/ReleaseX64'])
+    for build_conf in ['DebugIA32', 'ReleaseIA32', 'DebugX64', 'ReleaseX64']:
+      with bot.BuildStep('ninja %s' % build_conf):
+        Run(['ninja', '-v', '-C', 'out/%s' % build_conf])
+      with bot.BuildStep('ninja %sAsan' % build_conf):
+        Run(['ninja', '-v', '-C', 'out/%sAsan' % build_conf])
+      if run_gcc:
+        # TODO(ahe): Rename something. It is confusing that the extra step is
+        # running clang when the variable is called "run_gcc". The default
+        # build is gcc on Linux, and clang on Mac, and there's no gcc on Mac.
+        with bot.BuildStep('ninja clang %s' % build_conf):
+          Run(['ninja', '-v', '-C', 'clang_out/%s' % build_conf])
+        with bot.BuildStep('ninja clang %sAsan' % build_conf):
+          Run(['ninja', '-v', '-C', 'clang_out/%sAsan' % build_conf])
 
     if run_gcc:
       with bot.BuildStep('Build (gcc)'):
