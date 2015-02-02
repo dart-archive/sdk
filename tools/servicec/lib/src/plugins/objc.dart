@@ -9,7 +9,7 @@ import 'dart:core' hide Type;
 import 'package:path/path.dart' show basenameWithoutExtension, join;
 
 import '../emitter.dart';
-import '../parser.dart';
+import 'shared.dart';
 import 'cc.dart' show CcVisitor;
 
 const COPYRIGHT = """
@@ -45,9 +45,9 @@ abstract class _ObjcVisitor extends CcVisitor {
   _ObjcVisitor(String path) : super(path);
 
   visitFormal(Formal node) {
-    buffer.write('(');
+    write('(');
     visit(node.type);
-    buffer.write(')${node.name}');
+    write(')${node.name}');
   }
 
   visitArguments(List<Formals> arguments) {
@@ -61,47 +61,47 @@ class _HeaderVisitor extends _ObjcVisitor {
   visit(Node node) => node.accept(this);
 
   visitUnit(Unit node) {
-    buffer.writeln(COPYRIGHT);
+    writeln(COPYRIGHT);
 
-    buffer.writeln('// Generated file. Do not edit.');
-    buffer.writeln();
+    writeln('// Generated file. Do not edit.');
+    writeln();
 
-    buffer.writeln('#include <Foundation/Foundation.h>');
+    writeln('#include <Foundation/Foundation.h>');
 
     node.services.forEach(visit);
   }
 
   visitService(Service node) {
-    buffer.writeln();
-    buffer.writeln('@interface ${node.name} : NSObject');
-    buffer.writeln();
-    buffer.writeln('+ (void)Setup;');
-    buffer.writeln('+ (void)TearDown;');
-    buffer.writeln();
+    writeln();
+    writeln('@interface ${node.name} : NSObject');
+    writeln();
+    writeln('+ (void)Setup;');
+    writeln('+ (void)TearDown;');
+    writeln();
 
     node.methods.forEach(visit);
 
-    buffer.writeln();
-    buffer.writeln('@end');
+    writeln();
+    writeln('@end');
   }
 
   visitMethod(Method node) {
     String name = node.name;
-    buffer.write('+ (');
+    write('+ (');
     visit(node.returnType);
-    buffer.write(')${name}');
+    write(')${name}');
     visitArguments(node.arguments);
-    buffer.writeln(';');
+    writeln(';');
 
     // TODO(ager): Methods with no arguments and a callback.
-    buffer.write('+ (void)${name}Async');
+    write('+ (void)${name}Async');
     visitArguments(node.arguments);
-    buffer.writeln(' withCallback:(void (*)(int))callback;');
+    writeln(' withCallback:(void (*)(int))callback;');
 
     // TODO(ager): Methods with no arguments and a callback.
-    buffer.write('+ (void)${name}Async');
+    write('+ (void)${name}Async');
     visitArguments(node.arguments);
-    buffer.writeln(' withBlock:(void (^)(int))callback;');
+    writeln(' withBlock:(void (^)(int))callback;');
   }
 }
 
@@ -120,42 +120,42 @@ class _ImplementationVisitor extends _ObjcVisitor {
 
   visitUnit(Unit node) {
     String headerFile = computeHeaderFile();
-    buffer.writeln(COPYRIGHT);
+    writeln(COPYRIGHT);
 
-    buffer.writeln('// Generated file. Do not edit.');
-    buffer.writeln();
+    writeln('// Generated file. Do not edit.');
+    writeln();
 
-    buffer.writeln('#include "$headerFile"');
-    buffer.writeln('#include "include/service_api.h"');
+    writeln('#include "$headerFile"');
+    writeln('#include "include/service_api.h"');
 
     node.services.forEach(visit);
   }
 
   visitService(Service node) {
-    buffer.writeln();
-    buffer.writeln('static ServiceId _service_id;');
+    writeln();
+    writeln('static ServiceId _service_id;');
 
     serviceName = node.name;
 
-    buffer.writeln();
-    buffer.writeln('@implementation $serviceName');
+    writeln();
+    writeln('@implementation $serviceName');
 
-    buffer.writeln();
-    buffer.writeln('+ (void)Setup {');
-    buffer.writeln('  _service_id = kNoServiceId;');
-    buffer.writeln('  _service_id = ServiceApiLookup("$serviceName");');
-    buffer.writeln('}');
+    writeln();
+    writeln('+ (void)Setup {');
+    writeln('  _service_id = kNoServiceId;');
+    writeln('  _service_id = ServiceApiLookup("$serviceName");');
+    writeln('}');
 
-    buffer.writeln();
-    buffer.writeln('+ (void)TearDown {');
-    buffer.writeln('  ServiceApiTerminate(_service_id);');
-    buffer.writeln('  _service_id = kNoServiceId;');
-    buffer.writeln('}');
+    writeln();
+    writeln('+ (void)TearDown {');
+    writeln('  ServiceApiTerminate(_service_id);');
+    writeln('  _service_id = kNoServiceId;');
+    writeln('}');
 
     node.methods.forEach(visit);
 
-    buffer.writeln();
-    buffer.writeln('@end');
+    writeln();
+    writeln('@end');
   }
 
   visitMethod(Method node) {
@@ -164,33 +164,33 @@ class _ImplementationVisitor extends _ObjcVisitor {
 
     int arity = node.arguments.length;
 
-    buffer.writeln();
-    buffer.writeln('static const MethodId $id = (MethodId)${methodId++};');
+    writeln();
+    writeln('static const MethodId $id = (MethodId)${methodId++};');
 
-    buffer.writeln();
-    buffer.write('+ (');
+    writeln();
+    write('+ (');
     visit(node.returnType);
-    buffer.write(')$name');
+    write(')$name');
     visitArguments(node.arguments);
-    buffer.writeln(' {');
+    writeln(' {');
     visitMethodBody(id, node.arguments, cStyle: true);
-    buffer.writeln('}');
+    writeln('}');
 
     String callback = ensureCallback(node.returnType, node.arguments, false);
-    buffer.writeln();
-    buffer.write('+ (void)${name}Async');
+    writeln();
+    write('+ (void)${name}Async');
     visitArguments(node.arguments);
-    buffer.writeln(' withCallback:(void (*)(int))callback {');
+    writeln(' withCallback:(void (*)(int))callback {');
     visitMethodBody(id, node.arguments, cStyle: true, callback: callback);
-    buffer.writeln('}');
+    writeln('}');
 
     callback = ensureCallback(node.returnType, node.arguments, true);
-    buffer.writeln();
-    buffer.write('+ (void)${name}Async');
+    writeln();
+    write('+ (void)${name}Async');
     visitArguments(node.arguments);
-    buffer.writeln(' withBlock:(void (^)(int))callback {');
+    writeln(' withBlock:(void (^)(int))callback {');
     visitMethodBody(id, node.arguments, cStyle: true, callback: callback);
-    buffer.writeln('}');
+    writeln('}');
   }
 
   final Map<String, String> callbacks = {};
@@ -200,16 +200,16 @@ class _ImplementationVisitor extends _ObjcVisitor {
     return callbacks.putIfAbsent(key, () {
       String cast(String type) => CcVisitor.cast(type, true);
       String name = 'Unwrap_$key';
-      buffer.writeln();
-      buffer.writeln('static void $name(void* raw) {');
-      buffer.writeln('  typedef void (${block ? "^" : "*"}cbt)(int);');
-      buffer.writeln('  char* buffer = ${cast('char*')}(raw);');
-      buffer.writeln('  int result = *${cast('int*')}(buffer + 32);');
+      writeln();
+      writeln('static void $name(void* raw) {');
+      writeln('  typedef void (${block ? "^" : "*"}cbt)(int);');
+      writeln('  char* buffer = ${cast('char*')}(raw);');
+      writeln('  int result = *${cast('int*')}(buffer + 32);');
       int offset = 32 + (arguments.length * 4);
-      buffer.writeln('  cbt callback = *${cast('cbt*')}(buffer + $offset);');
-      buffer.writeln('  free(buffer);');
-      buffer.writeln('  callback(result);');
-      buffer.writeln('}');
+      writeln('  cbt callback = *${cast('cbt*')}(buffer + $offset);');
+      writeln('  free(buffer);');
+      writeln('  callback(result);');
+      writeln('}');
       return name;
     });
   }

@@ -8,7 +8,7 @@ import 'dart:core' hide Type;
 
 import 'package:path/path.dart' show basenameWithoutExtension, join;
 
-import '../parser.dart';
+import 'shared.dart';
 import '../emitter.dart';
 
 const COPYRIGHT = """
@@ -40,10 +40,8 @@ void _generateImplementationFile(String path,
   writeToFile(directory, path, "cc", contents);
 }
 
-abstract class CcVisitor extends Visitor {
-  final String path;
-  final StringBuffer buffer = new StringBuffer();
-  CcVisitor(this.path);
+abstract class CcVisitor extends CodeGenerationVisitor {
+  CcVisitor(String path) : super(path);
 
   static String cast(String type, bool cStyle) => cStyle
       ? '($type)'
@@ -53,13 +51,13 @@ abstract class CcVisitor extends Visitor {
 
   visitFormal(Formal node) {
     visit(node.type);
-    buffer.write(' ${node.name}');
+    write(' ${node.name}');
   }
 
   visitType(Type node) {
     Map<String, String> types = const { 'Int32': 'int' };
     String type = types[node.identifier];
-    buffer.write(type);
+    write(type);
   }
 
   visitArguments(List<Formal> formals) {
@@ -74,10 +72,10 @@ abstract class CcVisitor extends Visitor {
     const int REQUEST_HEADER_SIZE = 32;
     int size = REQUEST_HEADER_SIZE + (arguments.length * 4);
     if (async) {
-      buffer.write('  static const int kSize = ');
-      buffer.writeln('${size} + ${extraArguments.length + 1} * sizeof(void*);');
+      write('  static const int kSize = ');
+      writeln('${size} + ${extraArguments.length + 1} * sizeof(void*);');
     } else {
-      buffer.writeln('  static const int kSize = ${size};');
+      writeln('  static const int kSize = ${size};');
     }
 
     String cast(String type) => CcVisitor.cast(type, cStyle);
@@ -90,31 +88,31 @@ abstract class CcVisitor extends Visitor {
    }
 
     if (async) {
-      buffer.writeln('  char* _buffer = ${cast("char*")}(malloc(kSize));');
+      writeln('  char* _buffer = ${cast("char*")}(malloc(kSize));');
     } else {
-      buffer.writeln('  char _bits[kSize];');
-      buffer.writeln('  char* _buffer = _bits;');
+      writeln('  char _bits[kSize];');
+      writeln('  char* _buffer = _bits;');
     }
 
     int arity = arguments.length;
     for (int i = 0; i < arity; i++) {
       String name = arguments[i].name;
-      buffer.writeln('  *${pointerToArgument(i, 0)} = $name;');
+      writeln('  *${pointerToArgument(i, 0)} = $name;');
     }
 
     if (async) {
       String dataArgument = pointerToArgument(arity, 0, 'void*');
-      buffer.writeln('  *$dataArgument = ${cast("void*")}(callback);');
+      writeln('  *$dataArgument = ${cast("void*")}(callback);');
       for (int i = 0; i < extraArguments.length; i++) {
         String dataArgument = pointerToArgument(arity, 1, 'void*');
         String arg = extraArguments[i];
-        buffer.writeln('  *$dataArgument = ${cast("void*")}($arg);');
+        writeln('  *$dataArgument = ${cast("void*")}($arg);');
       }
-      buffer.write('  ServiceApiInvokeAsync(_service_id, $id, $callback, ');
-      buffer.writeln('_buffer, kSize);');
+      write('  ServiceApiInvokeAsync(_service_id, $id, $callback, ');
+      writeln('_buffer, kSize);');
     } else {
-      buffer.writeln('  ServiceApiInvoke(_service_id, $id, _buffer, kSize);');
-      buffer.writeln('  return *${pointerToArgument(0, 0)};');
+      writeln('  ServiceApiInvoke(_service_id, $id, _buffer, kSize);');
+      writeln('  return *${pointerToArgument(0, 0)};');
     }
   }
 }
@@ -129,45 +127,45 @@ class _HeaderVisitor extends CcVisitor {
 
   visitUnit(Unit node) {
     String headerGuard = computeHeaderGuard();
-    buffer.writeln(COPYRIGHT);
+    writeln(COPYRIGHT);
 
-    buffer.writeln('// Generated file. Do not edit.');
-    buffer.writeln();
+    writeln('// Generated file. Do not edit.');
+    writeln();
 
-    buffer.writeln('#ifndef $headerGuard');
-    buffer.writeln('#define $headerGuard');
+    writeln('#ifndef $headerGuard');
+    writeln('#define $headerGuard');
 
     node.services.forEach(visit);
 
-    buffer.writeln();
-    buffer.writeln('#endif  // $headerGuard');
+    writeln();
+    writeln('#endif  // $headerGuard');
   }
 
   visitService(Service node) {
-    buffer.writeln();
-    buffer.writeln('class ${node.name} {');
-    buffer.writeln(' public:');
-    buffer.writeln('  static void Setup();');
-    buffer.writeln('  static void TearDown();');
+    writeln();
+    writeln('class ${node.name} {');
+    writeln(' public:');
+    writeln('  static void Setup();');
+    writeln('  static void TearDown();');
 
     node.methods.forEach(visit);
 
-    buffer.writeln('};');
+    writeln('};');
   }
 
   visitMethod(Method node) {
-    buffer.write('  static ');
+    write('  static ');
     visit(node.returnType);
-    buffer.write(' ${node.name}(');
+    write(' ${node.name}(');
     visitArguments(node.arguments);
-    buffer.writeln(');');
+    writeln(');');
 
-    buffer.write('  static void ${node.name}Async(');
+    write('  static void ${node.name}Async(');
     visitArguments(node.arguments);
-    if (node.arguments.isNotEmpty) buffer.write(', ');
-    buffer.write('void (*callback)(');
+    if (node.arguments.isNotEmpty) write(', ');
+    write('void (*callback)(');
     visit(node.returnType);
-    buffer.writeln('));');
+    writeln('));');
   }
 }
 
@@ -184,34 +182,34 @@ class _ImplementationVisitor extends CcVisitor {
 
   visitUnit(Unit node) {
     String headerFile = computeHeaderFile();
-    buffer.writeln(COPYRIGHT);
+    writeln(COPYRIGHT);
 
-    buffer.writeln('// Generated file. Do not edit.');
-    buffer.writeln();
+    writeln('// Generated file. Do not edit.');
+    writeln();
 
-    buffer.writeln('#include "$headerFile"');
-    buffer.writeln('#include "include/service_api.h"');
-    buffer.writeln('#include <stdlib.h>');
+    writeln('#include "$headerFile"');
+    writeln('#include "include/service_api.h"');
+    writeln('#include <stdlib.h>');
 
     node.services.forEach(visit);
   }
 
   visitService(Service node) {
-    buffer.writeln();
-    buffer.writeln('static ServiceId _service_id = kNoServiceId;');
+    writeln();
+    writeln('static ServiceId _service_id = kNoServiceId;');
 
     serviceName = node.name;
 
-    buffer.writeln();
-    buffer.writeln('void ${serviceName}::Setup() {');
-    buffer.writeln('  _service_id = ServiceApiLookup("$serviceName");');
-    buffer.writeln('}');
+    writeln();
+    writeln('void ${serviceName}::Setup() {');
+    writeln('  _service_id = ServiceApiLookup("$serviceName");');
+    writeln('}');
 
-    buffer.writeln();
-    buffer.writeln('void ${serviceName}::TearDown() {');
-    buffer.writeln('  ServiceApiTerminate(_service_id);');
-    buffer.writeln('  _service_id = kNoServiceId;');
-    buffer.writeln('}');
+    writeln();
+    writeln('void ${serviceName}::TearDown() {');
+    writeln('  ServiceApiTerminate(_service_id);');
+    writeln('  _service_id = kNoServiceId;');
+    writeln('}');
 
     node.methods.forEach(visit);
   }
@@ -220,29 +218,29 @@ class _ImplementationVisitor extends CcVisitor {
     String name = node.name;
     String id = '_k${name}Id';
 
-    buffer.writeln();
-    buffer.write('static const MethodId $id = ');
-    buffer.writeln('reinterpret_cast<MethodId>(${methodId++});');
+    writeln();
+    write('static const MethodId $id = ');
+    writeln('reinterpret_cast<MethodId>(${methodId++});');
 
-    buffer.writeln();
+    writeln();
     visit(node.returnType);
-    buffer.write(' $serviceName::${name}(');
+    write(' $serviceName::${name}(');
     visitArguments(node.arguments);
-    buffer.writeln(') {');
+    writeln(') {');
     visitMethodBody(id, node.arguments);
-    buffer.writeln('}');
+    writeln('}');
 
     String callback = ensureCallback(node.returnType, node.arguments);
 
-    buffer.writeln();
-    buffer.write('void $serviceName::${name}Async(');
+    writeln();
+    write('void $serviceName::${name}Async(');
     visitArguments(node.arguments);
-    if (node.arguments.isNotEmpty) buffer.write(', ');
-    buffer.write('void (*callback)(');
+    if (node.arguments.isNotEmpty) write(', ');
+    write('void (*callback)(');
     visit(node.returnType);
-    buffer.writeln(')) {');
+    writeln(')) {');
     visitMethodBody(id, node.arguments, callback: callback);
-    buffer.writeln('}');
+    writeln('}');
   }
 
   final Map<String, String> callbacks = {};
@@ -252,16 +250,16 @@ class _ImplementationVisitor extends CcVisitor {
     return callbacks.putIfAbsent(key, () {
       String cast(String type) => CcVisitor.cast(type, cStyle);
       String name = 'Unwrap_$key';
-      buffer.writeln();
-      buffer.writeln('static void $name(void* raw) {');
-      buffer.writeln('  typedef void (*cbt)(int);');
-      buffer.writeln('  char* buffer = ${cast('char*')}(raw);');
-      buffer.writeln('  int result = *${cast('int*')}(buffer + 32);');
+      writeln();
+      writeln('static void $name(void* raw) {');
+      writeln('  typedef void (*cbt)(int);');
+      writeln('  char* buffer = ${cast('char*')}(raw);');
+      writeln('  int result = *${cast('int*')}(buffer + 32);');
       int offset = 32 + (arguments.length * 4);
-      buffer.writeln('  cbt callback = *${cast('cbt*')}(buffer + $offset);');
-      buffer.writeln('  free(buffer);');
-      buffer.writeln('  callback(result);');
-      buffer.writeln('}');
+      writeln('  cbt callback = *${cast('cbt*')}(buffer + $offset);');
+      writeln('  free(buffer);');
+      writeln('  callback(result);');
+      writeln('}');
       return name;
     });
   }

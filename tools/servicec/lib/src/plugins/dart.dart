@@ -8,7 +8,7 @@ import 'dart:core' hide Type;
 
 import 'package:path/path.dart' show basenameWithoutExtension, join;
 
-import '../parser.dart';
+import 'shared.dart';
 import '../emitter.dart';
 
 const COPYRIGHT = """
@@ -25,32 +25,30 @@ void generate(String path, Unit unit, String outputDirectory) {
   writeToFile(directory, path, "dart", contents);
 }
 
-class _DartVisitor extends Visitor {
-  final String path;
-  final StringBuffer buffer = new StringBuffer();
+class _DartVisitor extends CodeGenerationVisitor {
   final List<Method> methods = new List();
-  _DartVisitor(this.path);
+  _DartVisitor(String path) : super(path);
 
   visit(Node node) => node.accept(this);
 
   visitUnit(Unit node) {
-    buffer.writeln(COPYRIGHT);
+    writeln(COPYRIGHT);
 
-    buffer.writeln('// Generated file. Do not edit.');
-    buffer.writeln();
+    writeln('// Generated file. Do not edit.');
+    writeln();
 
     String libraryName = basenameWithoutExtension(path);
-    buffer.writeln('library $libraryName;');
-    buffer.writeln();
+    writeln('library $libraryName;');
+    writeln();
 
-    buffer.writeln('import "dart:ffi";');
-    buffer.writeln('import "dart:service" as service;');
-    buffer.writeln();
+    writeln('import "dart:ffi";');
+    writeln('import "dart:service" as service;');
+    writeln();
 
-    buffer.writeln('final Channel _channel = new Channel();');
-    buffer.writeln('final Port _port = new Port(_channel);');
-    buffer.write('final Foreign _postResult = ');
-    buffer.writeln('Foreign.lookup("PostResultToService");');
+    writeln('final Channel _channel = new Channel();');
+    writeln('final Port _port = new Port(_channel);');
+    write('final Foreign _postResult = ');
+    writeln('Foreign.lookup("PostResultToService");');
 
     node.services.forEach(visit);
   }
@@ -58,89 +56,89 @@ class _DartVisitor extends Visitor {
   visitService(Service node) {
     String serviceName = node.name;
 
-    buffer.writeln();
-    buffer.writeln('bool _terminated = false;');
-    buffer.writeln('$serviceName _impl;');
+    writeln();
+    writeln('bool _terminated = false;');
+    writeln('$serviceName _impl;');
 
-    buffer.writeln();
-    buffer.writeln('abstract class $serviceName {');
+    writeln();
+    writeln('abstract class $serviceName {');
 
     node.methods.forEach(visit);
 
-    buffer.writeln();
-    buffer.writeln('  static void initialize($serviceName impl) {');
-    buffer.writeln('    if (_impl != null) {');
-    buffer.writeln('      throw new UnsupportedError();');
-    buffer.writeln('    }');
-    buffer.writeln('    _impl = impl;');
-    buffer.writeln('    _terminated = false;');
-    buffer.writeln('    service.register("$serviceName", _port);');
-    buffer.writeln('  }');
+    writeln();
+    writeln('  static void initialize($serviceName impl) {');
+    writeln('    if (_impl != null) {');
+    writeln('      throw new UnsupportedError();');
+    writeln('    }');
+    writeln('    _impl = impl;');
+    writeln('    _terminated = false;');
+    writeln('    service.register("$serviceName", _port);');
+    writeln('  }');
 
-    buffer.writeln();
-    buffer.writeln('  static bool hasNextEvent() {');
-    buffer.writeln('    return !_terminated;');
-    buffer.writeln('  }');
+    writeln();
+    writeln('  static bool hasNextEvent() {');
+    writeln('    return !_terminated;');
+    writeln('  }');
 
     List<String> methodIds = methods.map(
         (method) => '_${method.name.toUpperCase()}_METHOD_ID').toList();
 
-    buffer.writeln();
-    buffer.writeln('  static void handleNextEvent() {');
-    buffer.writeln('    var request = _channel.receive();');
-    buffer.writeln('    switch (request.getInt32(0)) {');
-    buffer.writeln('      case _TERMINATE_METHOD_ID:');
-    buffer.writeln('        _terminated = true;');
-    buffer.writeln('        _postResult.icall\$1(request);');
-    buffer.writeln('        break;');
+    writeln();
+    writeln('  static void handleNextEvent() {');
+    writeln('    var request = _channel.receive();');
+    writeln('    switch (request.getInt32(0)) {');
+    writeln('      case _TERMINATE_METHOD_ID:');
+    writeln('        _terminated = true;');
+    writeln('        _postResult.icall\$1(request);');
+    writeln('        break;');
 
     String getInt(int index) => 'request.getInt32(${32 + index * 4})';
     String setInt(int index) => 'request.setInt32(${32 + index * 4}, result)';
 
     for (int i = 0; i < methods.length; ++i) {
       Method method = methods[i];
-      buffer.writeln('      case ${methodIds[i]}:');
-      buffer.write('        var result = _impl.${method.name}(');
+      writeln('      case ${methodIds[i]}:');
+      write('        var result = _impl.${method.name}(');
       for (int i = 0; i < method.arguments.length; i++) {
-        if (i != 0) buffer.write(', ');
-        buffer.write(getInt(i));
+        if (i != 0) write(', ');
+        write(getInt(i));
       }
-      buffer.writeln(');');
-      buffer.writeln('        ${setInt(0)};');
-      buffer.writeln('        _postResult.icall\$1(request);');
-      buffer.writeln('        break;');
+      writeln(');');
+      writeln('        ${setInt(0)};');
+      writeln('        _postResult.icall\$1(request);');
+      writeln('        break;');
     }
-    buffer.writeln('      default:');
-    buffer.writeln('        throw UnsupportedError();');
-    buffer.writeln('    }');
-    buffer.writeln('  }');
+    writeln('      default:');
+    writeln('        throw UnsupportedError();');
+    writeln('    }');
+    writeln('  }');
 
-    buffer.writeln();
+    writeln();
     int nextId = 0;
-    buffer.writeln('  const int _TERMINATE_METHOD_ID = ${nextId++};');
+    writeln('  const int _TERMINATE_METHOD_ID = ${nextId++};');
     for (String id in methodIds) {
-      buffer.writeln('  const int $id = ${nextId++};');
+      writeln('  const int $id = ${nextId++};');
     }
 
-    buffer.writeln('}');
+    writeln('}');
   }
 
   visitMethod(Method node) {
     methods.add(node);
-    buffer.write('  int ${node.name}(');
+    write('  int ${node.name}(');
     visitNodes(node.arguments, (first) => first ? '' : ', ');
-    buffer.writeln(');');
+    writeln(');');
   }
 
   visitFormal(Formal node) {
     visit(node.type);
-    buffer.write(' ${node.name}');
+    write(' ${node.name}');
   }
 
   visitType(Type node) {
     Map<String, String> types = const { 'Int32': 'int' };
     String type = types[node.identifier];
-    buffer.write(type);
+    write(type);
   }
 }
 

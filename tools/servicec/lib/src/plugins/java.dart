@@ -10,8 +10,8 @@ import 'dart:io';
 import 'package:path/path.dart';
 import 'package:strings/strings.dart' as strings;
 
+import 'shared.dart';
 import '../emitter.dart';
-import '../parser.dart';
 
 import 'cc.dart' show CcVisitor;
 
@@ -191,48 +191,45 @@ void _generateServiceJni(String path, Unit unit, String outputDirectory) {
   writeToFile(directory, file, "cc", contents);
 }
 
-class _JavaVisitor extends Visitor {
-  final String path;
-  final StringBuffer buffer = new StringBuffer();
-
-  _JavaVisitor(this.path);
+class _JavaVisitor extends CodeGenerationVisitor {
+  _JavaVisitor(String path) : super(path);
 
   visit(Node node) => node.accept(this);
 
   visitUnit(Unit node) {
-    buffer.writeln(HEADER);
-    buffer.writeln('package fletch;');
+    writeln(HEADER);
+    writeln('package fletch;');
     node.services.forEach(visit);
   }
 
   visitService(Service node) {
-    buffer.writeln();
-    buffer.writeln('public class ${node.name} {');
-    buffer.writeln('  public static native void Setup();');
-    buffer.writeln('  public static native void TearDown();');
+    writeln();
+    writeln('public class ${node.name} {');
+    writeln('  public static native void Setup();');
+    writeln('  public static native void TearDown();');
     node.methods.forEach(visit);
-    buffer.writeln('}');
+    writeln('}');
   }
 
   visitMethod(Method node) {
     String name = node.name;
-    buffer.writeln();
-    buffer.writeln('  public static abstract class ${name}Callback {');
-    buffer.write('    public abstract void handle(');
+    writeln();
+    writeln('  public static abstract class ${name}Callback {');
+    write('    public abstract void handle(');
     visit(node.returnType);
-    buffer.writeln(' result);');
-    buffer.writeln('  }');
+    writeln(' result);');
+    writeln('  }');
 
-    buffer.writeln();
-    buffer.write('  public static native ');
+    writeln();
+    write('  public static native ');
     visit(node.returnType);
-    buffer.write(' ${name}(');
+    write(' ${name}(');
     visitArguments(node.arguments);
-    buffer.writeln(');');
-    buffer.write('  public static native void ${name}Async(');
+    writeln(');');
+    write('  public static native void ${name}Async(');
     visitArguments(node.arguments);
-    if (!node.arguments.isEmpty) buffer.write(', ');
-    buffer.writeln('${name}Callback callback);');
+    if (!node.arguments.isEmpty) write(', ');
+    writeln('${name}Callback callback);');
   }
 
   visitArguments(List<Formal> formals) {
@@ -241,13 +238,13 @@ class _JavaVisitor extends Visitor {
 
   visitFormal(Formal node) {
     visit(node.type);
-    buffer.write(' ${node.name}');
+    write(' ${node.name}');
   }
 
   visitType(Type node) {
     Map<String, String> types = const { 'Int32': 'int' };
     String type = types[node.identifier];
-    buffer.write(type);
+    write(type);
   }
 }
 
@@ -260,98 +257,98 @@ class _JniVisitor extends CcVisitor {
   visit(Node node) => node.accept(this);
 
   visitUnit(Unit node) {
-    buffer.writeln(HEADER);
-    buffer.writeln('#include <jni.h>');
-    buffer.writeln('#include <stdlib.h>');
-    buffer.writeln();
-    buffer.writeln('#include "service_api.h"');
+    writeln(HEADER);
+    writeln('#include <jni.h>');
+    writeln('#include <stdlib.h>');
+    writeln();
+    writeln('#include "service_api.h"');
     node.services.forEach(visit);
   }
 
   visitService(Service node) {
     serviceName = node.name;
 
-    buffer.writeln();
+    writeln();
 
-    buffer.writeln('#ifdef __cplusplus');
-    buffer.writeln('extern "C" {');
-    buffer.writeln('#endif');
+    writeln('#ifdef __cplusplus');
+    writeln('extern "C" {');
+    writeln('#endif');
 
     // TODO(ager): Get rid of this if we can. For some reason
     // the jni.h header that is used by the NDK differs.
-    buffer.writeln();
-    buffer.writeln('#ifdef ANDROID');
-    buffer.writeln('  typedef JNIEnv* AttachEnvType;');
-    buffer.writeln('#else');
-    buffer.writeln('  typedef void* AttachEnvType;');
-    buffer.writeln('#endif');
+    writeln();
+    writeln('#ifdef ANDROID');
+    writeln('  typedef JNIEnv* AttachEnvType;');
+    writeln('#else');
+    writeln('  typedef void* AttachEnvType;');
+    writeln('#endif');
 
-    buffer.writeln();
-    buffer.writeln('static ServiceId _service_id = kNoServiceId;');
+    writeln();
+    writeln('static ServiceId _service_id = kNoServiceId;');
 
-    buffer.writeln();
-    buffer.write('JNIEXPORT void JNICALL Java_fletch_');
-    buffer.writeln('${serviceName}_Setup(JNIEnv*, jclass) {');
-    buffer.writeln('  _service_id = ServiceApiLookup("$serviceName");');
-    buffer.writeln('}');
+    writeln();
+    write('JNIEXPORT void JNICALL Java_fletch_');
+    writeln('${serviceName}_Setup(JNIEnv*, jclass) {');
+    writeln('  _service_id = ServiceApiLookup("$serviceName");');
+    writeln('}');
 
-    buffer.writeln();
-    buffer.write('JNIEXPORT void JNICALL Java_fletch_');
-    buffer.writeln('${serviceName}_TearDown(JNIEnv*, jclass) {');
-    buffer.writeln('  ServiceApiTerminate(_service_id);');
-    buffer.writeln('}');
+    writeln();
+    write('JNIEXPORT void JNICALL Java_fletch_');
+    writeln('${serviceName}_TearDown(JNIEnv*, jclass) {');
+    writeln('  ServiceApiTerminate(_service_id);');
+    writeln('}');
 
-    buffer.writeln();
-    buffer.writeln(JNI_ATTACH_DETACH);
+    writeln();
+    writeln(JNI_ATTACH_DETACH);
 
     node.methods.forEach(visit);
 
-    buffer.writeln();
-    buffer.writeln('#ifdef __cplusplus');
-    buffer.writeln('}');
-    buffer.writeln('#endif');
+    writeln();
+    writeln('#ifdef __cplusplus');
+    writeln('}');
+    writeln('#endif');
   }
 
   visitMethod(Method node) {
     String name = node.name;
     String id = '_k${name}Id';
 
-    buffer.writeln();
-    buffer.write('static const MethodId $id = ');
-    buffer.writeln('reinterpret_cast<MethodId>(${methodId++});');
+    writeln();
+    write('static const MethodId $id = ');
+    writeln('reinterpret_cast<MethodId>(${methodId++});');
 
-    buffer.writeln();
-    buffer.write('JNIEXPORT ');
+    writeln();
+    write('JNIEXPORT ');
     visit(node.returnType);
-    buffer.write(' JNICALL Java_fletch_${serviceName}_${name}(');
-    buffer.write('JNIEnv*, jclass, ');
+    write(' JNICALL Java_fletch_${serviceName}_${name}(');
+    write('JNIEnv*, jclass, ');
     visitArguments(node.arguments);
-    buffer.writeln(') {');
+    writeln(') {');
     visitMethodBody(id, node.arguments);
-    buffer.writeln('}');
+    writeln('}');
 
     String callback = ensureCallback(node.returnType, node.arguments);
 
-    buffer.writeln();
-    buffer.write('JNIEXPORT void JNICALL ');
-    buffer.write('Java_fletch_${serviceName}_${name}Async(');
-    buffer.write('JNIEnv* _env, jclass, ');
+    writeln();
+    write('JNIEXPORT void JNICALL ');
+    write('Java_fletch_${serviceName}_${name}Async(');
+    write('JNIEnv* _env, jclass, ');
     visitArguments(node.arguments);
-    buffer.writeln(', jobject _callback) {');
-    buffer.writeln('  jobject callback = _env->NewGlobalRef(_callback);');
-    buffer.writeln('  JavaVM* vm;');
-    buffer.writeln('  _env->GetJavaVM(&vm);');
+    writeln(', jobject _callback) {');
+    writeln('  jobject callback = _env->NewGlobalRef(_callback);');
+    writeln('  JavaVM* vm;');
+    writeln('  _env->GetJavaVM(&vm);');
     visitMethodBody(id,
                     node.arguments,
                     extraArguments: [ 'vm' ],
                     callback: callback);
-    buffer.writeln('}');
+    writeln('}');
   }
 
   visitType(Type node) {
     Map<String, String> types = const { 'Int32': 'jint' };
     String type = types[node.identifier];
-    buffer.write(type);
+    write(type);
   }
 
   final Map<String, String> callbacks = {};
@@ -361,25 +358,25 @@ class _JniVisitor extends CcVisitor {
     return callbacks.putIfAbsent(key, () {
       String cast(String type) => CcVisitor.cast(type, cStyle);
       String name = 'Unwrap_$key';
-      buffer.writeln();
-      buffer.writeln('static void $name(void* raw) {');
-      buffer.writeln('  char* buffer = ${cast('char*')}(raw);');
-      buffer.writeln('  int result = *${cast('int*')}(buffer + 32);');
+      writeln();
+      writeln('static void $name(void* raw) {');
+      writeln('  char* buffer = ${cast('char*')}(raw);');
+      writeln('  int result = *${cast('int*')}(buffer + 32);');
       int offset = 32 + (arguments.length * 4);
-      buffer.write('  jobject callback = *${cast('jobject*')}');
-      buffer.writeln('(buffer + $offset);');
-      buffer.write('  JavaVM* vm = *${cast('JavaVM**')}');
-      buffer.writeln('(buffer + $offset + sizeof(void*));');
-      buffer.writeln('  JNIEnv* env = attachCurrentThreadAndGetEnv(vm);');
-      buffer.writeln('  jclass clazz = env->GetObjectClass(callback);');
-      buffer.write('  jmethodID methodId = env->GetMethodID');
+      write('  jobject callback = *${cast('jobject*')}');
+      writeln('(buffer + $offset);');
+      write('  JavaVM* vm = *${cast('JavaVM**')}');
+      writeln('(buffer + $offset + sizeof(void*));');
+      writeln('  JNIEnv* env = attachCurrentThreadAndGetEnv(vm);');
+      writeln('  jclass clazz = env->GetObjectClass(callback);');
+      write('  jmethodID methodId = env->GetMethodID');
       // TODO(ager): For now the return type is hard-coded to int.
-      buffer.writeln('(clazz, "handle", "(I)V");');
-      buffer.writeln('  env->CallVoidMethod(callback, methodId, result);');
-      buffer.writeln('  env->DeleteGlobalRef(callback);');
-      buffer.writeln('  detachCurrentThread(vm);');
-      buffer.writeln('  free(buffer);');
-      buffer.writeln('}');
+      writeln('(clazz, "handle", "(I)V");');
+      writeln('  env->CallVoidMethod(callback, methodId, result);');
+      writeln('  env->DeleteGlobalRef(callback);');
+      writeln('  detachCurrentThread(vm);');
+      writeln('  free(buffer);');
+      writeln('}');
       return name;
     });
   }
