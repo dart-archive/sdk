@@ -5,29 +5,52 @@
 part of dart.io;
 
 class File {
-  static const int READ   = 1 << 1;
-  static const int WRITE  = 1 << 2;
-  static const int APPEND = 1 << 3;
+  static const int READ   = 0;
+  static const int WRITE  = 1;
+  static const int APPEND = 2;
+
+  final String path;
+  int _fd = -1;
 
   /**
-   * Create a new File object, to work on the specified [file].
-   *
+   * Create a new File object, to work on the specified [path].
    */
-  File(String name);
+  File(this.path);
 
   /**
-   * Create a new, opened File object, to work on the specified [file].
+   * Create a new, opened File object, to work on the specified [path].
    *
    * A [FileException] is thrown if it was unable to open the specified file.
    */
-  factory File.opened(String name, {int mode: READ});
+  factory File.opened(String path, {int mode: READ}) {
+    File file = new File(path);
+    file.open(mode: mode);
+    return file;
+  }
+
+  /**
+   * Create and open a temporary file, using [path] as template.
+   */
+  factory File.temporary(String path) {
+    TempFile temp = sys.mkstemp(path);
+    int fd = temp.fd;
+    if (fd == -1) _error("Failed to create temporary file from '$path'");
+    File file = new File(temp.path);
+    file._fd = fd;
+    return file;
+  }
 
   /**
    * Open the file pointed to by this file object.
    *
    * A [FileException] is thrown if it was unable to open the specified file.
    */
-  void open({int mode: READ});
+  void open({int mode: READ}) {
+    if (mode < 0 || mode > 2) throw ArgumentError("Invalid open mode: $mode");
+    int fd = sys.open(path, mode == WRITE, mode == APPEND);
+    if (fd == -1) _error("Failed to open file '$path'");
+    _fd = fd;
+  }
 
   /**
    * Write [buffer] to the file. The file must have been opened with [WRITE]
@@ -63,8 +86,47 @@ class File {
   /**
    * Close the file.
    */
-  void close();
+  void close() {
+    _close();
+  }
+
+  /**
+   * Returns true if the file is currently open.
+   */
+  bool get isOpen => _fd != -1;
+
+  /**
+   * Returns true if the file exists.
+   */
+  bool get exists => sys.access(path) == 0;
+
+  /**
+   * Removes the file.
+   *
+   * If the file is open, it will be closed before removed.
+   */
+  void remove() {
+    _close();
+    if (sys.unlink(path) == -1) _error("Failed to remove file");
+  }
+
+  void _close() {
+    if (_fd != -1) {
+      sys.close(_fd);
+      _fd = -1;
+    }
+  }
+
+  void _error(String message) {
+    _close();
+    throw new FileException(message);
+  }
 }
 
 class FileException implements Exception {
+  final String message;
+
+  FileException(this.message);
+
+  String toString() => "FileException: $message";
 }

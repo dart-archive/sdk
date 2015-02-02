@@ -59,9 +59,13 @@ class KEvent extends Struct {
 
 class MacOSSystem extends PosixSystem {
   static final Foreign _kevent = Foreign.lookup("kevent");
+  static final Foreign _openMac = Foreign.lookup("open");
+
   final KEvent _kEvent = new KEvent();
 
   int get FIONREAD => 0x4004667f;
+
+  Foreign get _open => _openMac;
 
   int _setEvents(bool read, bool write) {
     int eh = System.eventHandler;

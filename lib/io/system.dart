@@ -16,6 +16,12 @@ const int WRITE_EVENT       = 1 << 1;
 const int CLOSE_EVENT       = 1 << 2;
 const int ERROR_EVENT       = 1 << 3;
 
+const int O_RDONLY  = 0;
+const int O_RDWR    = 2;
+const int O_CREAT   = 64;
+const int O_TRUNC   = 512;
+const int O_CLOEXEC = 524288;
+
 const int SHUT_RD   = 0;
 const int SHUT_WR   = 1;
 const int SHUT_RDWR = 2;
@@ -31,9 +37,21 @@ System getSystem() {
   }
 }
 
+// The result of opening a temporary file is both the file descriptor and the
+// path.
+class TempFile {
+  final int fd;
+  final String path;
+  TempFile(this.fd, this.path);
+}
+
 abstract class System {
   int socket();
   InternetAddress lookup(String host);
+  int open(String path, bool write, bool append);
+  TempFile mkstemp(String path);
+  int access(String path);
+  int unlink(String path);
   int bind(int fd, InternetAddress address, int port);
   int listen(int fd);
   int accept(int fd);

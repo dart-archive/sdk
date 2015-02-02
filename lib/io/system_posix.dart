@@ -61,8 +61,9 @@ abstract class AddrInfo extends Struct {
   AddrInfo get ai_next;
 }
 
-class PosixSystem implements System {
+abstract class PosixSystem implements System {
   static final Foreign _accept = Foreign.lookup("accept");
+  static final Foreign _access = Foreign.lookup("access");
   static final Foreign _bind = Foreign.lookup("bind");
   static final Foreign _close = Foreign.lookup("close");
   static final Foreign _connect = Foreign.lookup("connect");
@@ -72,13 +73,17 @@ class PosixSystem implements System {
   static final Foreign _getsockname = Foreign.lookup("getsockname");
   static final Foreign _ioctl = Foreign.lookup("ioctl");
   static final Foreign _listen = Foreign.lookup("listen");
+  static final Foreign _mkstemp = Foreign.lookup("mkstemp");
   static final Foreign _nanosleep = Foreign.lookup("nanosleep");
   static final Foreign _read = Foreign.lookup("read");
   static final Foreign _shutdown = Foreign.lookup("shutdown");
   static final Foreign _socket = Foreign.lookup("socket");
+  static final Foreign _unlink = Foreign.lookup("unlink");
   static final Foreign _write = Foreign.lookup("write");
 
   int get FIONREAD;
+
+  Foreign get _open;
 
   int socket() {
     return _retry(() => _socket.icall$3(AF_INET, SOCK_STREAM, 0));
@@ -124,6 +129,45 @@ class PosixSystem implements System {
     result.free();
     if (status != 0) throw "Failed to call 'getaddrinfo': ${errno()}";
     return address;
+  }
+
+  int open(String path, bool write, bool append) {
+    int flags = O_RDONLY;
+    if (write || append) {
+      flags = O_RDWR | O_CREAT;
+      if (append) flags = flags | O_TRUNC;
+    }
+    flags |= O_CLOEXEC;
+    Foreign cPath = new Foreign.fromString(path);
+    int fd = _retry(() => _open.icall$2(cPath, flags));
+    cPath.free();
+    return fd;
+  }
+
+  TempFile mkstemp(String path) {
+    Foreign cPath = new Foreign.fromString(path + "XXXXXX");
+    int result = _retry(() => _mkstemp.icall$1(cPath));
+    if (result != -1) {
+      var bytes = new List(cPath.length - 1);
+      cPath.copyBytesToList(bytes, 0, cPath.length - 1, 0);
+      path = new String.fromCharCodes(bytes);
+    }
+    cPath.free();
+    return new TempFile(result, path);
+  }
+
+  int access(String path) {
+    Foreign cPath = new Foreign.fromString(path);
+    int result = _retry(() => _access.icall$2(cPath, 0));
+    cPath.free();
+    return result;
+  }
+
+  int unlink(String path) {
+    Foreign cPath = new Foreign.fromString(path);
+    int result = _retry(() => _unlink.icall$1(cPath));
+    cPath.free();
+    return result;
   }
 
   int bind(int fd, InternetAddress address, int port) {

@@ -97,7 +97,6 @@ ScopeEntry* Resolver::ResolveDotEntry(DotNode* node, Scope* scope) {
   } else {
     return NULL;
   }
-  UNIMPLEMENTED();
   return NULL;
 }
 
