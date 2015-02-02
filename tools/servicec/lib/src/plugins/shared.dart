@@ -13,9 +13,13 @@ abstract class CodeGenerationVisitor extends Visitor {
   CodeGenerationVisitor(this.path);
 
   void write(String s) => buffer.write(s);
-  void writeln([String s]) => buffer.writeln(s);
+  void writeln([String s = '']) => buffer.writeln(s);
 
   visit(Node node) => node.accept(this);
+
+  visitStruct(Struct node) {
+    // TODO(kasper): Stop ignoring this.
+  }
 
   visitNodes(List<Node> nodes, String separatedBy(bool first)) {
     bool first = true;

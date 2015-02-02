@@ -16,7 +16,11 @@ class ServiceGrammarDefinition extends GrammarDefinition {
   // -----------------------------------------------------------------
   // Keyword definitions.
   // -----------------------------------------------------------------
+  LIST() => ref(token, 'List');
+
   SERVICE() => ref(token, 'service');
+
+  STRUCT() => ref(token, 'struct');
 
 
   // -----------------------------------------------------------------
@@ -24,7 +28,7 @@ class ServiceGrammarDefinition extends GrammarDefinition {
   // -----------------------------------------------------------------
   start() => ref(unit).end();
 
-  unit() => ref(service).star();
+  unit() => (ref(service) | ref(struct)).star();
 
   service() => ref(SERVICE)
       & ref(identifier)
@@ -39,13 +43,32 @@ class ServiceGrammarDefinition extends GrammarDefinition {
       & ref(token, ')')
       & ref(token, ';');
 
+  struct() => ref(STRUCT)
+      & ref(identifier)
+      & ref(token, '{')
+      & ref(slots)
+      & ref(token, '}');
+
+  slots() => ref(slot).star();
+
+  slot() => ref(formal)
+      & ref(token, ';');
+
   formals() => ref(formal)
       .separatedBy(ref(token, ','), includeSeparators: false);
 
   formal() => ref(type)
       & ref(identifier);
 
-  type() => ref(identifier);
+  type() => ref(listType)
+      | ref(simpleType);
+
+  simpleType() => ref(identifier);
+
+  listType() => ref(LIST)
+      & ref(token, '<')
+      & ref(identifier)
+      & ref(token, '>');
 
   identifier() => ref(IDENTIFIER).trim(ref(HIDDEN));
 

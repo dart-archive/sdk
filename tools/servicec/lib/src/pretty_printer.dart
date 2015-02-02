@@ -7,13 +7,14 @@ library servicec.pretty_printer;
 import 'parser.dart';
 import 'dart:core' hide Type;
 
-class PrettyPrinter implements Visitor {
+class PrettyPrinter extends Visitor {
   final StringBuffer buffer = new StringBuffer();
 
   visit(Node node) => node.accept(this);
 
   visitUnit(Unit node) {
     node.services.forEach(visit);
+    node.structs.forEach(visit);
   }
 
   visitService(Service node) {
@@ -35,12 +36,24 @@ class PrettyPrinter implements Visitor {
     buffer.writeln(");");
   }
 
+  visitStruct(Struct node) {
+    buffer.writeln("struct ${node.name} {");
+    for (Formal slot in node.slots) {
+      buffer.write("  ");
+      visit(slot);
+      buffer.writeln(";");
+    }
+    buffer.writeln("}");
+  }
+
   visitFormal(Formal node) {
     visit(node.type);
     buffer.write(" ${node.name}");
   }
 
   visitType(Type node) {
+    if (node.isList) buffer.write("List<");
     buffer.write(node.identifier);
+    if (node.isList) buffer.write(">");
   }
 }

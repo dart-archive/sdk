@@ -53,9 +53,14 @@ abstract class CcVisitor extends CodeGenerationVisitor {
   }
 
   visitType(Type node) {
-    Map<String, String> types = const { 'Int32': 'int' };
-    String type = types[node.identifier];
-    write(type);
+    Node resolved = node.resolved;
+    if (resolved != null) {
+      write('${node.identifier}Builder');
+    } else {
+      Map<String, String> types = const { 'Int32': 'int' };
+      String type = types[node.identifier];
+      write(type);
+    }
   }
 
   visitArguments(List<Formal> formals) {

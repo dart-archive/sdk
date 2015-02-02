@@ -15,6 +15,7 @@ Unit parseUnit(String input) {
 abstract class Visitor {
   visitUnit(Unit node);
   visitService(Service service);
+  visitStruct(Struct struct);
   visitMethod(Method method);
   visitFormal(Formal formal);
   visitType(Type type);
@@ -26,7 +27,8 @@ abstract class Node {
 
 class Unit extends Node {
   final List<Service> services;
-  Unit(this.services);
+  final List<Struct> structs;
+  Unit(this.services, this.structs);
   accept(Visitor visitor) => visitor.visitUnit(this);
 }
 
@@ -35,6 +37,13 @@ class Service extends Node {
   final List<Method> methods;
   Service(this.name, this.methods);
   accept(Visitor visitor) => visitor.visitService(this);
+}
+
+class Struct extends Node {
+  final String name;
+  final List<Formal> slots;
+  Struct(this.name, this.slots);
+  accept(Visitor visitor) => visitor.visitStruct(this);
 }
 
 class Formal extends Node {
@@ -54,22 +63,30 @@ class Method extends Node {
 
 class Type extends Node {
   final String identifier;
-  Type(this.identifier);
+  final bool isList;
+  Node resolved;
+  Type(this.identifier, this.isList);
   accept(Visitor visitor) => visitor.visitType(this);
 }
-
 
 // --------------------------------------------------------------
 
 class _ServiceParserDefinition extends ServiceGrammarDefinition {
   unit() => super.unit()
-      .map((each) => new Unit(each));
+      .map((each) => new Unit(each.where((e) => e is Service).toList(),
+                              each.where((e) => e is Struct).toList()));
   service() => super.service()
       .map((each) => new Service(each[1], each[3]));
+  struct() => super.struct()
+      .map((each) => new Struct(each[1], each[3]));
   method() => super.method()
       .map((each) => new Method(each[1], each[3], each[0]));
-  type() => super.type()
-      .map((each) => new Type(each));
+  simpleType() => super.simpleType()
+      .map((each) => new Type(each, false));
+  listType() => super.listType()
+      .map((each) => new Type(each[2], true));
+  slot() => super.slot()
+     .map((each) => each[0]);
   formal() => super.formal()
       .map((each) => new Formal(each[0], each[1]));
   identifier() => super.identifier()
