@@ -14,6 +14,8 @@ TEST_SOURCE_FILES = Split("""
     person.cc
     cc/person_counter.h
     cc/person_counter.cc
+    cc/struct.h
+    cc/struct.cc
 """)
 
 

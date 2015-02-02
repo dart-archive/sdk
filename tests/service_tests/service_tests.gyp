@@ -49,6 +49,8 @@
       'sources': [
         'person/cc/person_counter.cc',
         'person/cc/person_counter.h',
+        'person/cc/struct.cc',
+        'person/cc/struct.h',
         'person/person.cc',
         'person/person_shared.cc',
         'person/person_shared.h',

@@ -32,7 +32,7 @@ static void InteractWithService() {
   MessageBuilder builder(8192);
 
   uint64_t start = GetMicroseconds();
-  PersonBuilder person = builder.NewRoot();
+  PersonBuilder person = builder.NewRoot<PersonBuilder>();
   BuildPerson(person, 20);
   uint64_t end = GetMicroseconds();
 
