@@ -1,15 +1,60 @@
 **class Scheduler**
 
+The scheduler has two basic operations for Process:
+
+- `SpawnProcess` - Spawn a new process and enqueue it on a thread.
+- `SendToProcess` - While executing a process, attempt to wake up a target
+  process on the current thread. Returns the process the thread should continue
+  to execute immediately - or Null if next in queue.
+
 *Fields*
 
 * `Array Threads` - Non-growable list of `Thread`s.
 * `Stack IdleThreads` - List of idle `Thread`s.
 
-```
-EnqueueOnThread
+```python
+SpawnProcess()
+  P <- new Process()
+  EnqueueOnAnyThread(P)
 ```
 
+```python
+SendToProcess(Current, Target)
+  if Target.ChangeState(Sleeping, Running) {
+    Current.ChangeState(Running, Ready)
+    EnqueueOnAnyThread(Current)
+    return Target
+  } else {
+    TargetThread <- Target.OwnerThread
+    if TargetThread != Null and TargetThread->TryDequeueEntry(Target) {
+      Current.ChangeState(Running, Ready)
+      EnqueueOnAnyThread(Current)
+      return Target
+    }
+  }
+  Current.ChangeState(Running, Ready)
+  EnqueueOnAnyThread(Current)
+  return Null
 ```
+
+```python
+RunThread(T) {
+  while True {
+    T.Wait()
+    while True {
+      P <- DequeueFromThread(T)
+      while P != Null: P <= Execute(P)
+    }
+  }
+}
+```
+
+```python
+Execute(P)
+  # May call SpawnProcess and SendToProcess.
+```
+
+```python
 EnqueueOnAnyThread(P) {
   if TryEnqueueOnIdleThread(P): return True
   while True {
@@ -23,7 +68,7 @@ EnqueueOnAnyThread(P) {
 }
 ```
 
-```
+```python
 TryEnqueueOnIdleThread(P) {
   while True {
     T <- IdleThreads.Pop()  # Is really a CAS, linked-list through Threads
@@ -35,7 +80,7 @@ TryEnqueueOnIdleThread(P) {
 }
 ```
 
-```
+```python
 TryDequeueFromAnyThread() {
   for each T in Threads {
     Success, P <- T.TryDequeue()
@@ -45,7 +90,7 @@ TryDequeueFromAnyThread() {
 }
 ```
 
-```
+```python
 DequeueFromThread(T) {
   while True {
     Success, P <- T.TryDequeue()
@@ -67,14 +112,14 @@ Each Thread has a queue of scheduled processes, with 3 simple commands:
 
 _Fields_
 
-- `Process Head` - Head of queue
-- `Process Tail` - Tail/end of queue
+- `Atomic<Process> Head` - Head of queue
+- `Atomic<Process> Tail` - Tail/end of queue
 - `Process Sentinel` - Non-Null & unique Process value.
 - `Monitor IdleMonitor`
 
 _Members_
 
-```
+```python
 TryEnqueue(P) {
   H <- Head
   while True {
@@ -96,12 +141,12 @@ TryEnqueue(P) {
 }
 ```
 
-```
+```python
 TryDequeue() {
   H <- Head
   while True {
-    if H == Sentinel: return False, Null
-    if H == Null: return True, Null
+    if H = Sentinel: return False, Null
+    if H = Null: return True, Null
     if Head.CompareAndSwap(H, Sentinel): break
     H <- Head
   }
@@ -109,29 +154,64 @@ TryDequeue() {
   Next <- H.Next
   if next != Null: Next.Previous <- Null
   H.ChangeState(Ready, Running)
-  H.Queue <- Null
+  H.OwnerThread <- Null
   H.Next <- Null
-  Head = Next;
+  Head <- Next;
   return True, H
 }
 ```
 
-```
-IsEmpty {
-  return Head == Null;
-}
-
-```
-
-```
+```python
 TryDequeueEntry(P)
-  TODO(ajohnsen): Add.
+  H <- Head
+  while True {
+    if H = Sentinel or H = Null: return False
+    if Head.CompareAndSwap(H, Sentinel): break
+    H <- Head
+  }
+  if P.OwnerThread != This or !H.ChangeState(Ready, Running) {
+    Head <- H
+    return False
+  }
+  if H = P {
+    if H = Tail: Tail <- Null
+    Head <- Head.Next
+  } else {
+    Next <- P.Next
+    Previous <- P.Previous
+    Previous.Next <- Next
+    if Next = Null {
+      Tail <- Prev
+    } else {
+      Next.Previous <- Previous
+    }
+  }
+  P.OwnerThread <- Null
+  P.Next <- Null
+  P.Previous <- Null
+  Head <- H
+  return True
+}
 ```
 
+```python
+IsEmpty {
+  return Head = Null;
+}
 ```
+
+```python
 Wakeup() {
   IdleMonitor.Lock();
   IdleMonitor.Notify();
+  IdleMonitor.Unlock();
+}
+```
+
+```python
+Wait() {
+  IdleMonitor.Lock();
+  while IsEmpty: IdleMonitor.Wait();
   IdleMonitor.Unlock();
 }
 ```
@@ -140,6 +220,6 @@ Wakeup() {
 
 *Fields*
 
-- `Thread OwnerThread`
-- `Process Next`
-- `Process Previous`
+- `Atomic<Thread> OwnerThread`
+- `Atomic<Process> Next`
+- `Atomic<Process> Previous`
