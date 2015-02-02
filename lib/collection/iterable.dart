@@ -12,7 +12,7 @@ abstract class IterableBase<E> implements Iterable<E> {
   Iterable<E> where(bool f(E element)) => new _WhereIterable<E>(this, f);
 
   Iterable expand(Iterable f(E element)) {
-    return new ExpandIterable<E, dynamic>(this, f);
+    return new _ExpandIterable<E, dynamic>(this, f);
   }
 
   bool contains(Object element) {
@@ -29,7 +29,7 @@ abstract class IterableBase<E> implements Iterable<E> {
   E reduce(E combine(E value, E element)) {
     Iterator<E> iterator = this.iterator;
     if (!iterator.moveNext()) {
-      throw IterableElementError.noElement();
+      throw _IterableErrors.noElement();
     }
     E value = iterator.current;
     while (iterator.moveNext()) {
@@ -189,6 +189,12 @@ abstract class IterableBase<E> implements Iterable<E> {
     }
     throw new RangeError.index(index, this, "index", null, elementIndex);
   }
+
+  static String iterableToFullString(Iterable iterable,
+                                     [String leftDelimiter = '(',
+                                      String rightDelimiter = ')']) {
+    throw new UnimplementedError('IterableBase.iterableToFullString');
+  }
 }
 
 typedef T _Transformation<S, T>(S value);
@@ -234,6 +240,8 @@ class _MappedIterator<S, T> extends Iterator<T> {
 
   T get current => _current;
 }
+
+typedef bool _ElementPredicate<E>(E arg);
 
 class _WhereIterable<E> extends IterableBase<E> {
   final Iterable<E> _iterable;
@@ -283,9 +291,6 @@ class _ExpandIterator<S, T> implements Iterator<T> {
   T _current;
 
   _ExpandIterator(this._iterator, Iterable<T> this._f(S element));
-
-  void _nextExpansion() {
-  }
 
   T get current => _current;
 
@@ -454,6 +459,7 @@ class _SkipWhileIterator<E> extends Iterator<E> {
 }
 
 class _EmptyIterator<E> implements Iterator<E> {
+  const _EmptyIterator();
   bool moveNext() => false;
   E get current => null;
 }

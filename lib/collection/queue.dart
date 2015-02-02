@@ -516,7 +516,6 @@ class ListQueue<E> extends IterableBase<E> implements Queue<E> {
   }
 
   void _filterWhere(bool test(E element), bool removeMatching) {
-    int index = _head;
     int modificationCount = _modificationCount;
     int i = _head;
     while (i != _tail) {

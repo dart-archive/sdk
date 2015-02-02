@@ -9,18 +9,14 @@ class LinkedHashSet<E> extends IterableBase<E> implements Set<E> {
 
   _Node _sentinel = new _Node(null);
   List _buckets;
-  int _elements;
+  int _elements = 0;
 
-  LinkedHashSet()
-    : _buckets = new List<E>(_INITIAL_SIZE),
-      _elements = 0 {
+  LinkedHashSet() : _buckets = new List(_INITIAL_SIZE) {
     _sentinel.previousLink = _sentinel;
     _sentinel.nextLink = _sentinel;
   }
 
-  LinkedHashSet._(int buckets)
-    : _buckets = new List<E>(buckets),
-      _elements = 0 {
+  LinkedHashSet._(int buckets) : _buckets = new List(buckets) {
     _sentinel.previousLink = _sentinel;
     _sentinel.nextLink = _sentinel;
   }
@@ -148,7 +144,9 @@ class LinkedHashSet<E> extends IterableBase<E> implements Set<E> {
   }
 
   void clear() {
-    _buckets = new List<E>(_INITIAL_SIZE);
+    _sentinel.nextLink = _sentinel;
+    _sentinel.previousLink = _sentinel;
+    _buckets = new List(_INITIAL_SIZE);
     _elements = 0;
   }
 }

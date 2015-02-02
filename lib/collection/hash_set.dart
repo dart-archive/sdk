@@ -8,15 +8,11 @@ class HashSet<E> extends IterableBase<E> implements Set<E> {
   static const int _INITIAL_SIZE = 8;
 
   List _buckets;
-  int _elements;
+  int _elements = 0;
 
-  HashSet()
-    : _buckets = new List<E>(_INITIAL_SIZE),
-      _elements = 0;
+  HashSet() : _buckets = new List(_INITIAL_SIZE);
 
-  HashSet._(int buckets)
-    : _buckets = new List<E>(buckets),
-      _elements = 0;
+  HashSet._(int buckets) : _buckets = new List(buckets);
 
   factory HashSet.from(Iterable<E> other) {
     var result = new HashSet();
@@ -133,7 +129,7 @@ class HashSet<E> extends IterableBase<E> implements Set<E> {
   }
 
   void clear() {
-    _buckets = new List<E>(_INITIAL_SIZE);
+    _buckets = new List(_INITIAL_SIZE);
     _elements = 0;
   }
 }
