@@ -194,8 +194,6 @@ void _generateServiceJni(String path, Unit unit, String outputDirectory) {
 class _JavaVisitor extends CodeGenerationVisitor {
   _JavaVisitor(String path) : super(path);
 
-  visit(Node node) => node.accept(this);
-
   visitUnit(Unit node) {
     writeln(HEADER);
     writeln('package fletch;');
@@ -253,8 +251,6 @@ class _JniVisitor extends CcVisitor {
   String serviceName;
 
   _JniVisitor(String path) : super(path);
-
-  visit(Node node) => node.accept(this);
 
   visitUnit(Unit node) {
     writeln(HEADER);
@@ -385,7 +381,7 @@ class _JniVisitor extends CcVisitor {
 void _generateServiceJniMakeFiles(String path, Unit unit, String outputDirectory) {
   String out = join(outputDirectory, 'java');
   String scriptFile = new File.fromUri(Platform.script).path;
-  Strint scriptDir = dirname(scriptFile);
+  String scriptDir = dirname(scriptFile);
   String fletchLibraryBuildDir = join(scriptDir,
                                       '..',
                                       '..',

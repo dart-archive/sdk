@@ -50,15 +50,13 @@ abstract class _ObjcVisitor extends CcVisitor {
     write(')${node.name}');
   }
 
-  visitArguments(List<Formals> arguments) {
+  visitArguments(List<Formal> arguments) {
     visitNodes(arguments, (first) => first ? ':' : ' with:');
   }
 }
 
 class _HeaderVisitor extends _ObjcVisitor {
   _HeaderVisitor(String path) : super(path);
-
-  visit(Node node) => node.accept(this);
 
   visitUnit(Unit node) {
     writeln(COPYRIGHT);
@@ -111,8 +109,6 @@ class _ImplementationVisitor extends _ObjcVisitor {
 
   _ImplementationVisitor(String path) : super(path);
 
-  visit(Node node) => node.accept(this);
-
   String computeHeaderFile() {
     String base = basenameWithoutExtension(path);
     return '$base.h';
@@ -161,8 +157,6 @@ class _ImplementationVisitor extends _ObjcVisitor {
   visitMethod(Method node) {
     String name = node.name;
     String id = '_k${name}Id';
-
-    int arity = node.arguments.length;
 
     writeln();
     writeln('static const MethodId $id = (MethodId)${methodId++};');

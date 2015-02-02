@@ -47,8 +47,6 @@ abstract class CcVisitor extends CodeGenerationVisitor {
       ? '($type)'
       : 'reinterpret_cast<$type>';
 
-  visit(Node node) => node.accept(this);
-
   visitFormal(Formal node) {
     visit(node.type);
     write(' ${node.name}');

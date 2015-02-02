@@ -29,8 +29,6 @@ class _DartVisitor extends CodeGenerationVisitor {
   final List<Method> methods = new List();
   _DartVisitor(String path) : super(path);
 
-  visit(Node node) => node.accept(this);
-
   visitUnit(Unit node) {
     writeln(COPYRIGHT);
 

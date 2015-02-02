@@ -5,6 +5,7 @@
 library servicec.plugins;
 
 import '../parser.dart';
+export '../parser.dart';
 
 abstract class CodeGenerationVisitor extends Visitor {
   final String path;
@@ -13,6 +14,8 @@ abstract class CodeGenerationVisitor extends Visitor {
 
   void write(String s) => buffer.write(s);
   void writeln([String s]) => buffer.writeln(s);
+
+  visit(Node node) => node.accept(this);
 
   visitNodes(List<Node> nodes, String separatedBy(bool first)) {
     bool first = true;
