@@ -288,7 +288,7 @@ symbol_test/none: CompileTimeError
 throw_half_surrogate_pair_test/none: Fail
 unicode2_test: Fail
 unicode_test: Fail
-uri_base_test: Crash
+uri_base_test: Fail
 uri_file_test: Fail
 uri_http_test: Fail
 uri_ipv4_test: Fail

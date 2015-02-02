@@ -477,7 +477,7 @@ int2_test: Fail
 int_test: Fail
 interceptor2_test: Fail
 interceptor3_test: Fail
-interceptor5_test: Crash
+interceptor5_test: Fail
 interface2_negative_test: Fail
 interface_cycle_test/01: MissingCompileTimeError
 interface_cycle_test/02: MissingCompileTimeError
@@ -839,7 +839,6 @@ stacktrace_rethrow_error_test/none: Fail
 stacktrace_rethrow_error_test/withtraceparameter: Fail
 stacktrace_rethrow_nonerror_test: Fail
 stacktrace_test: Fail
-static_closure_identical_test: Crash
 static_final_field2_test/01: Fail
 static_final_field2_test/02: Crash
 string_escape4_negative_test: Fail
