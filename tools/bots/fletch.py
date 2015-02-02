@@ -97,7 +97,7 @@ def RunTests(name, asan=False, modes=None, scons=True, mac=False):
   scons_str = '-scons' if scons else '-ninja'
   modes = modes or ['release', 'debug']
   for mode in modes:
-    for arch in ['ia32' , 'x64']:
+    for arch in ['ia32', 'x64']:
       with bot.BuildStep(
           'Test (%s%s%s-%s-%s)' % (name, scons_str, asan_str, mode, arch),
           swallow_error=True):
