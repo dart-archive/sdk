@@ -405,6 +405,14 @@ Note: currently only implemented for dart2js.''',
               [],
               null),
           new _TestOptionSpecification(
+              'builder_tag',
+              'Sets the value of $builder_tag in status file expressions. '
+              'Used for custom configurations on builder machine, for example, '
+              'a Windows machine with Russian locale.',
+              ['--builder-tag'],
+              [],
+              ''),
+          new _TestOptionSpecification(
               'vm_options',
               'Extra options to send to the vm when running',
               ['--vm-options'],
