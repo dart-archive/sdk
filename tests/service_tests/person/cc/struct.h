@@ -15,6 +15,7 @@ class MessageBuilder;
 class Segment {
  public:
   Segment(char* memory, int size);
+  virtual ~Segment();
 
   void* At(int offset) const { return memory_ + offset; }
 
@@ -41,7 +42,7 @@ class BuilderSegment : public Segment {
 
  private:
   BuilderSegment(MessageBuilder* builder, int id, int capacity);
-  ~BuilderSegment();
+  virtual ~BuilderSegment();
 
   MessageBuilder* const builder_;
   const int id_;
@@ -79,6 +80,9 @@ class Reader {
  public:
   Segment* segment() const { return segment_; }
   int offset() const { return offset_; }
+
+  // TODO(ager): Delete should only be possible on root readers.
+  void Delete() { delete segment_; }
 
  protected:
   Reader(Segment* segment, int offset)

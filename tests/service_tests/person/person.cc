@@ -47,6 +47,7 @@ static void InteractWithService() {
   end = GetMicroseconds();
   AgeStats stats = PersonCounter::GetAgeStats(person);
   printf("AgeStats avg: %d sum: %d\n", stats.averageAge(), stats.sum());
+  stats.Delete();
   int reading_us = static_cast<int>(end - start);
   printf("Reading took %.2f us.\n", reading_us / 1000.0);
   printf("    - %.2f MB/s\n", static_cast<double>(used) / reading_us);

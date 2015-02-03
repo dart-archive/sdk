@@ -42,6 +42,10 @@ Segment::Segment(char* memory, int size)
       size_(size) {
 }
 
+Segment::~Segment() {
+  free(memory_);
+}
+
 BuilderSegment::BuilderSegment(MessageBuilder* builder, int id, int capacity)
     : Segment(static_cast<char*>(calloc(capacity, 1)), capacity),
       builder_(builder),
@@ -51,7 +55,6 @@ BuilderSegment::BuilderSegment(MessageBuilder* builder, int id, int capacity)
 }
 
 BuilderSegment::~BuilderSegment() {
-  free(memory());
   if (next_ != NULL) {
     delete next_;
     next_ = NULL;
