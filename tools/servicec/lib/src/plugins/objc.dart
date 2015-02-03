@@ -9,6 +9,8 @@ import 'dart:core' hide Type;
 import 'package:path/path.dart' show basenameWithoutExtension, join;
 
 import '../emitter.dart';
+import '../struct_layout.dart';
+
 import 'shared.dart';
 import 'cc.dart' show CcVisitor;
 
@@ -163,39 +165,39 @@ class _ImplementationVisitor extends _ObjcVisitor {
 
     if (node.inputKind != InputKind.PRIMITIVES) return;  // Not handled yet.
 
+    StructLayout layout = node.inputPrimitiveStructLayout;
     writeln();
     write('+ (');
     visit(node.returnType);
     write(')$name');
     visitArguments(node.arguments);
     writeln(' {');
-    visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout,
-        cStyle: true);
+    visitMethodBody(id, node.arguments, layout, cStyle: true);
     writeln('}');
 
-    String callback = ensureCallback(node.returnType, node.arguments, false);
+    String callback = ensureCallback(node.returnType, layout, false);
     writeln();
     write('+ (void)${name}Async');
     visitArguments(node.arguments);
     writeln(' withCallback:(void (*)(int))callback {');
-    visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout,
+    visitMethodBody(id, node.arguments, layout,
         cStyle: true, callback: callback);
     writeln('}');
 
-    callback = ensureCallback(node.returnType, node.arguments, true);
+    callback = ensureCallback(node.returnType, layout, true);
     writeln();
     write('+ (void)${name}Async');
     visitArguments(node.arguments);
     writeln(' withBlock:(void (^)(int))callback {');
-    visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout,
+    visitMethodBody(id, node.arguments, layout,
         cStyle: true, callback: callback);
     writeln('}');
   }
 
   final Map<String, String> callbacks = {};
-  String ensureCallback(Type type, List<Formal> arguments, bool block) {
+  String ensureCallback(Type type, StructLayout layout, bool block) {
     String suffix = block ? "_Block" : "";
-    String key = '${type.identifier}_${arguments.length}$suffix';
+    String key = '${type.identifier}_${layout.size}$suffix';
     return callbacks.putIfAbsent(key, () {
       String cast(String type) => CcVisitor.cast(type, true);
       String name = 'Unwrap_$key';
@@ -204,7 +206,7 @@ class _ImplementationVisitor extends _ObjcVisitor {
       writeln('  typedef void (${block ? "^" : "*"}cbt)(int);');
       writeln('  char* buffer = ${cast('char*')}(raw);');
       writeln('  int result = *${cast('int*')}(buffer + 32);');
-      int offset = 32 + (arguments.length * 4);
+      int offset = 32 + layout.size;
       writeln('  cbt callback = *${cast('cbt*')}(buffer + $offset);');
       writeln('  free(buffer);');
       writeln('  callback(result);');
