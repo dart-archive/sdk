@@ -152,6 +152,9 @@ class ServerSocket extends _SocketBase {
     if (address == null) _error("Failed to lookup address '$host'");
     _fd = sys.socket();
     if (_fd == -1) _error("Failed to create socket");
+    if (sys.setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, 1) == -1) {
+      _error("Failed to set socket option");
+    }
     sys.setBlocking(_fd, false);
     if (sys.bind(_fd, address, port) == -1) {
       _error("Failed to bind to $host:$port");

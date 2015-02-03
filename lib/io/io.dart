@@ -20,6 +20,9 @@ int bind(int fd, InternetAddress address, int port) {
   return sys.bind(fd, address, port);
 }
 int listen(int fd) => sys.listen(fd);
+int setsockopt(int fd, int level, int optname, int value) {
+  return sys.setsockopt(fd, level, optname, value);
+}
 int accept(int fd) => sys.accept(fd);
 int port(int fd) => sys.port(fd);
 int connect(int fd, InternetAddress address, int port) {

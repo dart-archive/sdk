@@ -26,6 +26,10 @@ const int SHUT_RD   = 0;
 const int SHUT_WR   = 1;
 const int SHUT_RDWR = 2;
 
+const int SOL_SOCKET = 1;
+
+const int SO_REUSEADDR = 2;
+
 final System sys = getSystem();
 
 System getSystem() {
@@ -54,6 +58,7 @@ abstract class System {
   int unlink(String path);
   int bind(int fd, InternetAddress address, int port);
   int listen(int fd);
+  int setsockopt(int fd, int level, int optname, int value);
   int accept(int fd);
   int port(int fd);
   int connect(int fd, InternetAddress address, int port);

@@ -76,6 +76,7 @@ abstract class PosixSystem implements System {
   static final Foreign _mkstemp = Foreign.lookup("mkstemp");
   static final Foreign _nanosleep = Foreign.lookup("nanosleep");
   static final Foreign _read = Foreign.lookup("read");
+  static final Foreign _setsockopt = Foreign.lookup("setsockopt");
   static final Foreign _shutdown = Foreign.lookup("shutdown");
   static final Foreign _socket = Foreign.lookup("socket");
   static final Foreign _unlink = Foreign.lookup("unlink");
@@ -179,6 +180,18 @@ abstract class PosixSystem implements System {
 
   int listen(int fd) {
     return _retry(() => _listen.icall$2(fd, 128));
+  }
+
+  int setsockopt(int fd, int level, int optname, int value) {
+    Struct32 opt = new Struct32(1);
+    opt.setField(0, value);
+    int result = _retry(() => _setsockopt.icall$5(fd,
+                                                  level,
+                                                  optname,
+                                                  opt,
+                                                  opt.length));
+    opt.free();
+    return result;
   }
 
   int accept(int fd) {
