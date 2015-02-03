@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#if defined(FLETCH32)
+
 #include "src/vm/assembler.h"
 #include "src/vm/generator.h"
 #include "src/vm/object.h"
@@ -19,3 +21,5 @@ GENERATE_NATIVE(SmiNegate) {
 }
 
 }  // namespace fletch
+
+#endif  // defined FLETCH32

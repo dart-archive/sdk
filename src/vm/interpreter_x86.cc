@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#if defined(FLETCH32)
+
 #include "src/shared/bytecodes.h"
 #include "src/shared/names.h"
 #include "src/shared/selectors.h"
@@ -1594,3 +1596,5 @@ void InterpreterGeneratorX86::RestoreState() {
 }
 
 }  // namespace fletch
+
+#endif  // defined FLETCH32
