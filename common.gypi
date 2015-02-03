@@ -25,37 +25,30 @@
 
     'conditions': [
       [ 'OS=="linux"', {
-        'clang_path%': '/usr/bin/env clang',
-        'clangxx_path%': '/usr/bin/env clang++',
         'clang_asan_rt_path%': '.',
         'third_party_libs_path%': '>(DEPTH)/third_party/libs/linux',
       }],
       [ 'OS=="mac"', {
-        'clang_path%': 'third_party/clang/mac/bin/clang',
-        'clangxx_path%': 'third_party/clang/mac/bin/clang++',
         'clang_asan_rt_path%':
           '>(DEPTH)/third_party/clang/mac/lib/clang/3.6.0/'
           'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
         'third_party_libs_path%': '>(DEPTH)/third_party/libs/macos',
       }],
       [ 'OS=="win"', {
-       'clang_path%': 'clang',
-        'clangxx_path%': 'clang++',
         'clang_asan_rt_path%': '.',
         'third_party_libs_path%': '>(DEPTH)/third_party/libs/windows',
       }],
     ],
   },
 
-  'conditions': [['clang==1 or OS=="mac"', {
-    'make_global_settings': [
-      [ 'CC', '<(clang_path)' ],
-      [ 'CXX', '<(clangxx_path)' ],
-      [ 'LINK', '<(clang_path)' ],
-    ],
-  }]],
+  'make_global_settings': [
+    [ 'CC', 'tools/cc_wrapper.py' ],
+    [ 'CXX', 'tools/cxx_wrapper.py' ],
+    [ 'LINK', 'tools/cc_wrapper.py' ],
+  ],
 
   'target_defaults': {
+
     'configurations': {
 
       'fletch_base': {
@@ -189,11 +182,28 @@
 
           'OTHER_LDFLAGS': [
             # GYP's xcode_emulation for ninja passes OTHER_LDFLAGS to libtool,
-            # which doesn't undertand -fsanitize=address. The effect of
-            # -fsanitize=address linker option appears to be linking against
-            # one .dylib file. When this dylib file is added to libtool,
-            # libtool only warns but otherwise works as expected.
-            '<(clang_asan_rt_path)',
+            # which doesn't understand -fsanitize=address. The fake library
+            # search path is recognized by cxx_wrapper.py and cc_wrapper.py,
+            # which will pass the correct options to the linker.
+            '-L/FLETCH_ASAN',
+          ],
+        },
+      },
+
+      'fletch_clang': {
+        'abstract': 1,
+
+        'defines': [
+          # Recognized by cxx_wrapper.py and cc_wrapper.py and causes them to
+          # invoke clang.
+          'FLETCH_CLANG',
+        ],
+
+        'xcode_settings': { # And ninja.
+          'OTHER_LDFLAGS': [
+            # Recognized by cxx_wrapper.py and cc_wrapper.py and causes them to
+            # invoke clang.
+            '-L/FLETCH_CLANG',
           ],
         },
       },
@@ -236,6 +246,59 @@
       'DebugX64Asan': {
         'inherit_from': [
           'fletch_base', 'fletch_debug', 'fletch_x64', 'fletch_asan',
+        ],
+      },
+
+      'ReleaseIA32Clang': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_clang',
+        ],
+      },
+
+
+      'ReleaseIA32ClangAsan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_asan',
+          'fletch_clang',
+        ],
+      },
+
+      'ReleaseX64Clang': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_x64', 'fletch_clang',
+        ],
+      },
+
+      'ReleaseX64ClangAsan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_x64', 'fletch_asan',
+          'fletch_clang',
+        ],
+      },
+
+      'DebugIA32Clang': {
+        'inherit_from': [
+          'fletch_base', 'fletch_debug', 'fletch_ia32', 'fletch_clang',
+        ],
+      },
+
+      'DebugIA32ClangAsan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_debug', 'fletch_ia32', 'fletch_asan',
+          'fletch_clang',
+        ],
+      },
+
+      'DebugX64Clang': {
+        'inherit_from': [
+          'fletch_base', 'fletch_debug', 'fletch_x64', 'fletch_clang',
+        ],
+      },
+
+      'DebugX64ClangAsan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_debug', 'fletch_x64', 'fletch_asan',
+          'fletch_clang',
         ],
       },
     },
