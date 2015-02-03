@@ -181,6 +181,8 @@
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
             'fletchc'
             '<(EXECUTABLE_SUFFIX)',
+            # TODO(ahe): Also depend on .dart files in the core libraries.
+            'tests/service_tests/echo/dart/echo_service.dart',
           ],
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/echo.snapshot',
@@ -233,6 +235,9 @@
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
             'fletchc'
             '<(EXECUTABLE_SUFFIX)',
+            # TODO(ahe): Also depend on .dart files in the core libraries.
+            'tests/service_tests/person/dart/person_counter.dart',
+            'tests/service_tests/person/dart/struct.dart',
           ],
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/person.snapshot',
