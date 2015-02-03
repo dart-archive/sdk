@@ -9,7 +9,9 @@ import 'dart:core' hide Type;
 import 'package:path/path.dart' show basenameWithoutExtension, join;
 
 import 'shared.dart';
+
 import '../emitter.dart';
+import '../struct_layout.dart';
 
 const COPYRIGHT = """
 // Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
@@ -139,6 +141,7 @@ class _HeaderVisitor extends CcVisitor {
     writeln('#define $headerGuard');
 
     node.services.forEach(visit);
+    node.structs.forEach(visit);
 
     writeln();
     writeln('#endif  // $headerGuard');
@@ -163,12 +166,42 @@ class _HeaderVisitor extends CcVisitor {
     visitArguments(node.arguments);
     writeln(');');
 
+    // TODO(kasperl): Cannot deal with async methods accepting structs yet.
+    if (node.arguments.any((e) => e.type.identifier != 'Int32')) return;
+
     write('  static void ${node.name}Async(');
     visitArguments(node.arguments);
     if (node.arguments.isNotEmpty) write(', ');
     write('void (*callback)(');
     visit(node.returnType);
     writeln('));');
+  }
+
+  visitStruct(Struct node) {
+    String name = node.name;
+    StructLayout layout = new StructLayout(node);
+
+    writeln();
+    writeln('class $name : public Reader {');
+    writeln(' public:');
+
+    writeln('  $name(Segment* segment, int offset) '
+            ': Reader(segment, offset) { }');
+    writeln('  static const int kSize = ${layout.size};');
+
+    for (StructSlot slot in layout.slots) {
+      Type type = slot.slot.type;
+      if (type.identifier != 'Int32') continue;  // TODO(kasperl): Don't skip.
+
+      write('  ');
+      visit(type);
+
+      write(' ${slot.slot.name}() const { return *PointerTo<');
+      visit(type);
+      writeln('>(${slot.offset}); }');
+    }
+
+    writeln('}');
   }
 }
 

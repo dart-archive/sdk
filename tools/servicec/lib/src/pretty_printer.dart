@@ -5,6 +5,8 @@
 library servicec.pretty_printer;
 
 import 'parser.dart';
+import 'struct_layout.dart';
+
 import 'dart:core' hide Type;
 
 class PrettyPrinter extends Visitor {
@@ -37,11 +39,12 @@ class PrettyPrinter extends Visitor {
   }
 
   visitStruct(Struct node) {
-    buffer.writeln("struct ${node.name} {");
+    StructLayout layout = new StructLayout(node);
+    buffer.writeln("struct ${node.name} {  // size = ${layout.size} bytes");
     for (Formal slot in node.slots) {
       buffer.write("  ");
       visit(slot);
-      buffer.writeln(";");
+      buffer.writeln(";  // offset = ${layout[slot].offset}");
     }
     buffer.writeln("}");
   }
