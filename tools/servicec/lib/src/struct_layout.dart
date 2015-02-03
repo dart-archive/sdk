@@ -5,6 +5,8 @@
 library servicec.struct_builder;
 
 import 'parser.dart';
+import 'primitives.dart' as primitives;
+
 import 'dart:collection';
 import 'dart:core' hide Type;
 
@@ -27,6 +29,14 @@ class StructLayout {
     StructLayout result = new StructLayout._(
         builder.slots, _roundUp(builder.used, 8));
     _cache[name] = result;
+    return result;
+  }
+
+  factory StructLayout.forArguments(List<Formal> arguments) {
+    _StructBuilder builder = new _StructBuilder();
+    arguments.forEach(builder.addSlot);
+    StructLayout result = new StructLayout._(
+        builder.slots, _roundUp(builder.used, 8));
     return result;
   }
 
@@ -54,8 +64,7 @@ class _StructBuilder {
   }
 
   int computeSize(Type type) {
-    if (type.identifier == 'Int32') return 4;
-    else return 8;
+    return (type.isPrimitive) ? primitives.size(type.primitiveType) : 8;
   }
 
   int computeAlignment(Type type) {

@@ -46,6 +46,12 @@ void _generateImplementationFile(String path,
 abstract class CcVisitor extends CodeGenerationVisitor {
   CcVisitor(String path) : super(path);
 
+  static const int REQUEST_HEADER_SIZE = 32;
+  static const PRIMITIVE_TYPES = const <String, String> {
+    'Int16': 'short',
+    'Int32': 'int',
+  };
+
   static String cast(String type, bool cStyle) => cStyle
       ? '($type)'
       : 'reinterpret_cast<$type>';
@@ -60,8 +66,7 @@ abstract class CcVisitor extends CodeGenerationVisitor {
     if (resolved != null) {
       write('${node.identifier}Builder');
     } else {
-      Map<String, String> types = const { 'Int32': 'int' };
-      String type = types[node.identifier];
+      String type = PRIMITIVE_TYPES[node.identifier];
       write(type);
     }
   }
@@ -70,13 +75,14 @@ abstract class CcVisitor extends CodeGenerationVisitor {
     visitNodes(formals, (first) => first ? '' : ', ');
   }
 
-  visitMethodBody(String id, List<Formal> arguments,
+  visitMethodBody(String id,
+                  List<Formal> arguments,
+                  StructLayout layout,
                   {bool cStyle: false,
                    List<String> extraArguments: const [],
                    String callback}) {
     final bool async = callback != null;
-    const int REQUEST_HEADER_SIZE = 32;
-    int size = REQUEST_HEADER_SIZE + (arguments.length * 4);
+    int size = REQUEST_HEADER_SIZE + layout.size;
     if (async) {
       write('  static const int kSize = ');
       writeln('${size} + ${extraArguments.length + 1} * sizeof(void*);');
@@ -86,8 +92,8 @@ abstract class CcVisitor extends CodeGenerationVisitor {
 
     String cast(String type) => CcVisitor.cast(type, cStyle);
 
-    String pointerToArgument(int index, int pointers, [String type = 'int']) {
-      int offset = REQUEST_HEADER_SIZE + index * 4;
+    String pointerToArgument(int offset, int pointers, String type) {
+      offset += REQUEST_HEADER_SIZE;
       String prefix = cast('$type*');
       if (pointers == 0) return '$prefix(_buffer + $offset)';
       return '$prefix(_buffer + $offset + $pointers * sizeof(void*))';
@@ -103,14 +109,16 @@ abstract class CcVisitor extends CodeGenerationVisitor {
     int arity = arguments.length;
     for (int i = 0; i < arity; i++) {
       String name = arguments[i].name;
-      writeln('  *${pointerToArgument(i, 0)} = $name;');
+      int offset = layout[arguments[i]].offset;
+      String type = PRIMITIVE_TYPES[arguments[i].type.identifier];
+      writeln('  *${pointerToArgument(offset, 0, type)} = $name;');
     }
 
     if (async) {
-      String dataArgument = pointerToArgument(arity, 0, 'void*');
+      String dataArgument = pointerToArgument(layout.size, 0, 'void*');
       writeln('  *$dataArgument = ${cast("void*")}(callback);');
       for (int i = 0; i < extraArguments.length; i++) {
-        String dataArgument = pointerToArgument(arity, 1, 'void*');
+        String dataArgument = pointerToArgument(layout.size, 1, 'void*');
         String arg = extraArguments[i];
         writeln('  *$dataArgument = ${cast("void*")}($arg);');
       }
@@ -118,7 +126,7 @@ abstract class CcVisitor extends CodeGenerationVisitor {
       writeln('_buffer, kSize);');
     } else {
       writeln('  ServiceApiInvoke(_service_id, $id, _buffer, kSize);');
-      writeln('  return *${pointerToArgument(0, 0)};');
+      writeln('  return *${pointerToArgument(0, 0, 'int')};');
     }
   }
 }
@@ -179,7 +187,7 @@ class _HeaderVisitor extends CcVisitor {
     writeln(');');
 
     // TODO(kasperl): Cannot deal with async methods accepting structs yet.
-    if (node.arguments.any((e) => e.type.identifier != 'Int32')) return;
+    if (node.inputKind == InputKind.STRUCT) return;
 
     write('  static void ${node.name}Async(');
     visitArguments(node.arguments);
@@ -208,7 +216,7 @@ class _HeaderVisitor extends CcVisitor {
 
     for (StructSlot slot in layout.slots) {
       Type type = slot.slot.type;
-      if (type.identifier != 'Int32') continue;  // TODO(kasperl): Don't skip.
+      if (!type.isPrimitive) continue;  // TODO(kasperl): Don't skip.
 
       write('  ');
       visit(type);
@@ -246,7 +254,7 @@ class _HeaderVisitor extends CcVisitor {
         write('  List<');
         visit(slotType);
         writeln('> New$camel(int length);');
-      } else if (slotType.identifier == 'Int32') {
+      } else if (slotType.isPrimitive) {
         write('  void set_${slot.slot.name}(');
         visit(slotType);
         write(' value) { *PointerTo<');
@@ -340,7 +348,7 @@ class _ImplementationVisitor extends CcVisitor {
     write('static const MethodId $id = ');
     writeln('reinterpret_cast<MethodId>(${methodId++});');
 
-    if (node.arguments.any((e) => e.type.identifier != 'Int32')) {
+    if (node.inputKind == InputKind.STRUCT) {
       writeln();
       visit(node.returnType);
       write(' $serviceName::${name}(');
@@ -351,15 +359,18 @@ class _ImplementationVisitor extends CcVisitor {
       writeln('}');
 
     } else {
+      assert(node.inputKind == InputKind.PRIMITIVES);
+
       writeln();
       visit(node.returnType);
       write(' $serviceName::${name}(');
       visitArguments(node.arguments);
       writeln(') {');
-      visitMethodBody(id, node.arguments);
+      visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout);
       writeln('}');
 
-      String callback = ensureCallback(node.returnType, node.arguments);
+      String callback = ensureCallback(node.returnType,
+          node.inputPrimitiveStructLayout);
 
       writeln();
       write('void $serviceName::${name}Async(');
@@ -368,15 +379,17 @@ class _ImplementationVisitor extends CcVisitor {
       write('void (*callback)(');
       visit(node.returnType);
       writeln(')) {');
-      visitMethodBody(id, node.arguments, callback: callback);
+      visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout,
+          callback: callback);
       writeln('}');
     }
   }
 
   final Map<String, String> callbacks = {};
-  String ensureCallback(Type type, List<Formal> arguments,
+  String ensureCallback(Type type,
+                        StructLayout layout,
                         {bool cStyle: false}) {
-    String key = '${type.identifier}_${arguments.length}';
+    String key = '${type.identifier}_${layout.size}';
     return callbacks.putIfAbsent(key, () {
       String cast(String type) => CcVisitor.cast(type, cStyle);
       String name = 'Unwrap_$key';
@@ -384,8 +397,9 @@ class _ImplementationVisitor extends CcVisitor {
       writeln('static void $name(void* raw) {');
       writeln('  typedef void (*cbt)(int);');
       writeln('  char* buffer = ${cast('char*')}(raw);');
-      writeln('  int result = *${cast('int*')}(buffer + 32);');
-      int offset = 32 + (arguments.length * 4);
+      int offset = CcVisitor.REQUEST_HEADER_SIZE;
+      writeln('  int result = *${cast('int*')}(buffer + $offset);');
+      offset += layout.size;
       writeln('  cbt callback = *${cast('cbt*')}(buffer + $offset);');
       writeln('  free(buffer);');
       writeln('  callback(result);');

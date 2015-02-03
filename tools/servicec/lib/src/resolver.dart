@@ -4,8 +4,11 @@
 
 library servicec.resolver;
 
-import 'parser.dart';
 import 'dart:core' hide Type;
+
+import 'parser.dart';
+import 'primitives.dart' as primitives;
+import 'struct_layout.dart';
 
 void resolve(Unit unit) {
   Definer definer = new Definer();
@@ -38,12 +41,48 @@ class Resolver extends ResolutionVisitor {
   final Map<String, Node> definitions;
   Resolver(this.definitions);
 
+
+  visitMethod(Method node) {
+    super.visitMethod(node);
+
+    if (node.returnType.isPrimitive) {
+      node.outputKind = OutputKind.PRIMITIVE;
+    } else {
+      node.outputKind = OutputKind.STRUCT;
+    }
+
+    List<Formal> arguments = node.arguments;
+    if (arguments.length == 1) {
+      node.inputKind = arguments[0].type.isPrimitive
+          ? InputKind.PRIMITIVES
+          : InputKind.STRUCT;
+    } else if (arguments.any((Formal each) => !each.type.isPrimitive)) {
+      throw new UnsupportedError("Methods accepting multiple arguments can "
+                                 "only take primitive values.");
+    } else {
+      node.inputKind = InputKind.PRIMITIVES;
+    }
+
+    if (node.inputKind == InputKind.PRIMITIVES) {
+      StructLayout layout = new StructLayout.forArguments(arguments);
+      node.inputPrimitiveStructLayout = layout;
+    }
+  }
+
   visitType(Type node) {
-    String type = node.identifier;
-    if (definitions.containsKey(type)) {
-      node.resolved = definitions[type];
-    } else if (type != 'Int32') {
-      throw new UnsupportedError("Cannot deal with type $type");
+    primitives.PrimitiveType primitiveType = primitives.lookup(node.identifier);
+    if (primitiveType != null) {
+      if (node.isList) {
+        throw new UnsupportedError("Cannot deal with primtive lists yet");
+      }
+      node.primitiveType = primitiveType;
+    } else {
+      String type = node.identifier;
+      if (definitions.containsKey(type)) {
+        node.resolved = definitions[type];
+      } else {
+        throw new UnsupportedError("Cannot deal with type $type");
+      }
     }
   }
 }

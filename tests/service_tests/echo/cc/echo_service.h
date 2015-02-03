@@ -13,8 +13,8 @@ class EchoService {
   static void TearDown();
   static int Echo(int n);
   static void EchoAsync(int n, void (*callback)(int));
-  static int Sum(int x, int y);
-  static void SumAsync(int x, int y, void (*callback)(int));
+  static int Sum(short x, int y);
+  static void SumAsync(short x, int y, void (*callback)(int));
 };
 
 #endif  // ECHO_SERVICE_H

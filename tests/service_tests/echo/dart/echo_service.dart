@@ -46,7 +46,7 @@ abstract class EchoService {
         _postResult.icall$1(request);
         break;
       case _SUM_METHOD_ID:
-        var result = _impl.Sum(request.getInt32(32), request.getInt32(36));
+        var result = _impl.Sum(request.getInt16(32), request.getInt32(36));
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;

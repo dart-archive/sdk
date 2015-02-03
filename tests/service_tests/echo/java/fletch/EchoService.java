@@ -21,6 +21,6 @@ public class EchoService {
     public abstract void handle(int result);
   }
 
-  public static native int Sum(int x, int y);
-  public static native void SumAsync(int x, int y, SumCallback callback);
+  public static native int Sum(short x, int y);
+  public static native void SumAsync(short x, int y, SumCallback callback);
 }

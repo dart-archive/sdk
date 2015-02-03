@@ -161,13 +161,16 @@ class _ImplementationVisitor extends _ObjcVisitor {
     writeln();
     writeln('static const MethodId $id = (MethodId)${methodId++};');
 
+    if (node.inputKind != InputKind.PRIMITIVES) return;  // Not handled yet.
+
     writeln();
     write('+ (');
     visit(node.returnType);
     write(')$name');
     visitArguments(node.arguments);
     writeln(' {');
-    visitMethodBody(id, node.arguments, cStyle: true);
+    visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout,
+        cStyle: true);
     writeln('}');
 
     String callback = ensureCallback(node.returnType, node.arguments, false);
@@ -175,7 +178,8 @@ class _ImplementationVisitor extends _ObjcVisitor {
     write('+ (void)${name}Async');
     visitArguments(node.arguments);
     writeln(' withCallback:(void (*)(int))callback {');
-    visitMethodBody(id, node.arguments, cStyle: true, callback: callback);
+    visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout,
+        cStyle: true, callback: callback);
     writeln('}');
 
     callback = ensureCallback(node.returnType, node.arguments, true);
@@ -183,7 +187,8 @@ class _ImplementationVisitor extends _ObjcVisitor {
     write('+ (void)${name}Async');
     visitArguments(node.arguments);
     writeln(' withBlock:(void (^)(int))callback {');
-    visitMethodBody(id, node.arguments, cStyle: true, callback: callback);
+    visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout,
+        cStyle: true, callback: callback);
     writeln('}');
   }
 

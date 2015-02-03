@@ -12,6 +12,7 @@ import 'package:strings/strings.dart' as strings;
 
 import 'shared.dart';
 import '../emitter.dart';
+import '../struct_layout.dart';
 
 import 'cc.dart' show CcVisitor;
 
@@ -240,7 +241,10 @@ class _JavaVisitor extends CodeGenerationVisitor {
   }
 
   visitType(Type node) {
-    Map<String, String> types = const { 'Int32': 'int' };
+    Map<String, String> types = const {
+      'Int16': 'short',
+      'Int32': 'int',
+    };
     String type = types[node.identifier];
     write(type);
   }
@@ -313,6 +317,8 @@ class _JniVisitor extends CcVisitor {
     write('static const MethodId $id = ');
     writeln('reinterpret_cast<MethodId>(${methodId++});');
 
+    if (node.inputKind != InputKind.PRIMITIVES) return;  // Not handled yet.
+
     writeln();
     write('JNIEXPORT ');
     visit(node.returnType);
@@ -320,10 +326,11 @@ class _JniVisitor extends CcVisitor {
     write('JNIEnv*, jclass, ');
     visitArguments(node.arguments);
     writeln(') {');
-    visitMethodBody(id, node.arguments);
+    visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout);
     writeln('}');
 
-    String callback = ensureCallback(node.returnType, node.arguments);
+    String callback = ensureCallback(node.returnType,
+        node.inputPrimitiveStructLayout);
 
     writeln();
     write('JNIEXPORT void JNICALL ');
@@ -336,21 +343,26 @@ class _JniVisitor extends CcVisitor {
     writeln('  _env->GetJavaVM(&vm);');
     visitMethodBody(id,
                     node.arguments,
+                    node.inputPrimitiveStructLayout,
                     extraArguments: [ 'vm' ],
                     callback: callback);
     writeln('}');
   }
 
   visitType(Type node) {
-    Map<String, String> types = const { 'Int32': 'jint' };
+    Map<String, String> types = const {
+      'Int16': 'jshort',
+      'Int32': 'jint'
+    };
     String type = types[node.identifier];
     write(type);
   }
 
   final Map<String, String> callbacks = {};
-  String ensureCallback(Type type, List<Formal> arguments,
+  String ensureCallback(Type type,
+                        StructLayout layout,
                         {bool cStyle: false}) {
-    String key = '${type.identifier}_${arguments.length}';
+    String key = '${type.identifier}_${layout.size}';
     return callbacks.putIfAbsent(key, () {
       String cast(String type) => CcVisitor.cast(type, cStyle);
       String name = 'Unwrap_$key';
@@ -358,7 +370,7 @@ class _JniVisitor extends CcVisitor {
       writeln('static void $name(void* raw) {');
       writeln('  char* buffer = ${cast('char*')}(raw);');
       writeln('  int result = *${cast('int*')}(buffer + 32);');
-      int offset = 32 + (arguments.length * 4);
+      int offset = 32 + layout.size;
       write('  jobject callback = *${cast('jobject*')}');
       writeln('(buffer + $offset);');
       write('  JavaVM* vm = *${cast('JavaVM**')}');

@@ -22,7 +22,7 @@ void EchoService::TearDown() {
 static const MethodId _kEchoId = reinterpret_cast<MethodId>(1);
 
 int EchoService::Echo(int n) {
-  static const int kSize = 36;
+  static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
   *reinterpret_cast<int*>(_buffer + 32) = n;
@@ -30,36 +30,7 @@ int EchoService::Echo(int n) {
   return *reinterpret_cast<int*>(_buffer + 32);
 }
 
-static void Unwrap_Int32_1(void* raw) {
-  typedef void (*cbt)(int);
-  char* buffer = reinterpret_cast<char*>(raw);
-  int result = *reinterpret_cast<int*>(buffer + 32);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 36);
-  free(buffer);
-  callback(result);
-}
-
-void EchoService::EchoAsync(int n, void (*callback)(int)) {
-  static const int kSize = 36 + 1 * sizeof(void*);
-  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int*>(_buffer + 32) = n;
-  *reinterpret_cast<void**>(_buffer + 36) = reinterpret_cast<void*>(callback);
-  ServiceApiInvokeAsync(_service_id, _kEchoId, Unwrap_Int32_1, _buffer, kSize);
-}
-
-static const MethodId _kSumId = reinterpret_cast<MethodId>(2);
-
-int EchoService::Sum(int x, int y) {
-  static const int kSize = 40;
-  char _bits[kSize];
-  char* _buffer = _bits;
-  *reinterpret_cast<int*>(_buffer + 32) = x;
-  *reinterpret_cast<int*>(_buffer + 36) = y;
-  ServiceApiInvoke(_service_id, _kSumId, _buffer, kSize);
-  return *reinterpret_cast<int*>(_buffer + 32);
-}
-
-static void Unwrap_Int32_2(void* raw) {
+static void Unwrap_Int32_8(void* raw) {
   typedef void (*cbt)(int);
   char* buffer = reinterpret_cast<char*>(raw);
   int result = *reinterpret_cast<int*>(buffer + 32);
@@ -68,11 +39,31 @@ static void Unwrap_Int32_2(void* raw) {
   callback(result);
 }
 
-void EchoService::SumAsync(int x, int y, void (*callback)(int)) {
+void EchoService::EchoAsync(int n, void (*callback)(int)) {
   static const int kSize = 40 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int*>(_buffer + 32) = x;
+  *reinterpret_cast<int*>(_buffer + 32) = n;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  ServiceApiInvokeAsync(_service_id, _kEchoId, Unwrap_Int32_8, _buffer, kSize);
+}
+
+static const MethodId _kSumId = reinterpret_cast<MethodId>(2);
+
+int EchoService::Sum(short x, int y) {
+  static const int kSize = 40;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  *reinterpret_cast<short*>(_buffer + 32) = x;
+  *reinterpret_cast<int*>(_buffer + 36) = y;
+  ServiceApiInvoke(_service_id, _kSumId, _buffer, kSize);
+  return *reinterpret_cast<int*>(_buffer + 32);
+}
+
+void EchoService::SumAsync(short x, int y, void (*callback)(int)) {
+  static const int kSize = 40 + 1 * sizeof(void*);
+  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
+  *reinterpret_cast<short*>(_buffer + 32) = x;
   *reinterpret_cast<int*>(_buffer + 36) = y;
   *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
-  ServiceApiInvokeAsync(_service_id, _kSumId, Unwrap_Int32_2, _buffer, kSize);
+  ServiceApiInvokeAsync(_service_id, _kSumId, Unwrap_Int32_8, _buffer, kSize);
 }

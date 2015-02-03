@@ -6,6 +6,8 @@ library servicec.parser;
 
 import 'package:petitparser/petitparser.dart';
 import 'grammar.dart';
+import 'primitives.dart' as primitives;
+import 'struct_layout.dart';
 
 Unit parseUnit(String input) {
   Parser parser = new GrammarParser(new _ServiceParserDefinition());
@@ -19,6 +21,16 @@ abstract class Visitor {
   visitMethod(Method method);
   visitFormal(Formal formal);
   visitType(Type type);
+}
+
+enum InputKind {
+  PRIMITIVES,
+  STRUCT
+}
+
+enum OutputKind {
+  PRIMITIVE,
+  STRUCT
 }
 
 abstract class Node {
@@ -58,14 +70,27 @@ class Method extends Node {
   final List<Formal> arguments;
   final Type returnType;
   Method(this.name, this.arguments, this.returnType);
+
+  // Set by the resolver.
+  OutputKind outputKind;
+
+  InputKind inputKind;
+  StructLayout inputPrimitiveStructLayout;
+
   accept(Visitor visitor) => visitor.visitMethod(this);
 }
 
 class Type extends Node {
   final String identifier;
   final bool isList;
-  Node resolved;
   Type(this.identifier, this.isList);
+
+  // Set by the resolver.
+  Node resolved;
+  primitives.PrimitiveType primitiveType;
+
+  bool get isPrimitive => primitiveType != null;
+
   accept(Visitor visitor) => visitor.visitType(this);
 }
 

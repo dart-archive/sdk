@@ -32,6 +32,11 @@ class _DartVisitor extends CodeGenerationVisitor {
   final List<Method> methods = new List();
   _DartVisitor(String path) : super(path);
 
+  static Map<String, String> _GETTERS = const {
+    'Int16': 'getInt16',
+    'Int32': 'getInt32',
+  };
+
   visitUnit(Unit node) {
     writeln(COPYRIGHT);
 
@@ -112,21 +117,26 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('        _postResult.icall\$1(request);');
     writeln('        break;');
 
-    String getInt(int index) => 'request.getInt32(${32 + index * 4})';
     String setInt(int index) => 'request.setInt32(${32 + index * 4}, result)';
 
     for (int i = 0; i < methods.length; ++i) {
       Method method = methods[i];
       writeln('      case ${methodIds[i]}:');
       write('        var result = _impl.${method.name}(');
-      if (method.arguments.any((e) => e.type.identifier != 'Int32')) {
+      if (method.inputKind == InputKind.STRUCT) {
         write('getRoot(new ');
         visit(method.arguments.single.type);
         write('(), request)');
       } else {
+        assert(method.inputKind == InputKind.PRIMITIVES);
+        StructLayout inputLayout = method.inputPrimitiveStructLayout;
+
         for (int i = 0; i < method.arguments.length; i++) {
           if (i != 0) write(', ');
-          write(getInt(i));
+          Formal argument = method.arguments[i];
+          String getter = _GETTERS[argument.type.identifier];
+          int offset = inputLayout[argument].offset + 32;
+          write('request.$getter($offset)');
         }
       }
       writeln(');');
@@ -164,12 +174,13 @@ class _DartVisitor extends CodeGenerationVisitor {
         write('> get ${slot.slot.name} => ');
         neededListTypes.add(type);
         writeln('readList(new _${type.identifier}List(), ${slot.offset});');
-      } else if (type.identifier == 'Int32') {
+      } else if (type.isPrimitive) {
+        String getter = _GETTERS[type.identifier];
+        String offset = '_offset + ${slot.offset}';
+
         write('  ');
         visit(type);
-        writeln(' get ${slot.slot.name} => _segment.memory.'
-                'getInt32(_offset + ${slot.offset});');
-
+        writeln(' get ${slot.slot.name} => _segment.memory.$getter($offset);');
       }
     }
 
@@ -193,7 +204,10 @@ class _DartVisitor extends CodeGenerationVisitor {
     if (resolved != null) {
       write(node.identifier);
     } else {
-      Map<String, String> types = const { 'Int32': 'int' };
+      Map<String, String> types = const {
+        'Int16': 'int',
+        'Int32': 'int'
+      };
       String type = types[node.identifier];
       write(type);
     }
