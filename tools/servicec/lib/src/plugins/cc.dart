@@ -61,10 +61,10 @@ abstract class CcVisitor extends CodeGenerationVisitor {
     write(' ${node.name}');
   }
 
-  visitType(Type node) {
+  visitType(Type node, {bool returnType: false}) {
     Node resolved = node.resolved;
     if (resolved != null) {
-      write('${node.identifier}Builder');
+      write('${node.identifier}${returnType ? "" : "Builder"}');
     } else {
       String type = PRIMITIVE_TYPES[node.identifier];
       write(type);
@@ -181,7 +181,7 @@ class _HeaderVisitor extends CcVisitor {
 
   visitMethod(Method node) {
     write('  static ');
-    visit(node.returnType);
+    visitType(node.returnType, returnType: true);
     write(' ${node.name}(');
     visitArguments(node.arguments);
     writeln(');');
@@ -350,18 +350,30 @@ class _ImplementationVisitor extends CcVisitor {
 
     if (node.inputKind == InputKind.STRUCT) {
       writeln();
-      visit(node.returnType);
+      visitType(node.returnType, returnType: true);
       write(' $serviceName::${name}(');
       visitArguments(node.arguments);
       writeln(') {');
-      writeln('  return ${node.arguments.single.name}.'
-              'InvokeMethod(_service_id, $id);');
+      if (node.outputKind == OutputKind.STRUCT) {
+        writeln('  int64_t result = ${node.arguments.single.name}.'
+                'InvokeMethod(_service_id, $id);');
+        writeln('  char* memory = reinterpret_cast<char*>(result);');
+        StructLayout resultLayout =
+            new StructLayout(node.returnType.resolved);
+        int size = resultLayout.size;
+        writeln('  Segment* segment = new Segment(memory, $size);');
+        writeln('  return ${node.returnType.identifier}(segment, 0);');
+      } else {
+        writeln('  return ${node.arguments.single.name}.'
+                'InvokeMethod(_service_id, $id);');
+      }
       writeln('}');
 
     } else {
       assert(node.inputKind == InputKind.PRIMITIVES);
 
       writeln();
+      // TODO(ager): Deal with struct return types.
       visit(node.returnType);
       write(' $serviceName::${name}(');
       visitArguments(node.arguments);

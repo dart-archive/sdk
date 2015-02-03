@@ -37,6 +37,11 @@ class _DartVisitor extends CodeGenerationVisitor {
     'Int32': 'getInt32',
   };
 
+  static Map<String, String> _SETTERS = const {
+    'Int16': 'setInt16',
+    'Int32': 'setInt32',
+  };
+
   visitUnit(Unit node) {
     writeln(COPYRIGHT);
 
@@ -73,6 +78,25 @@ class _DartVisitor extends CodeGenerationVisitor {
               'readListElement(new $name(), index, $targetSize);');
 
       writeln('}');
+    }
+  }
+
+  writeImplCall(Method method) {
+    write('_impl.${method.name}(');
+    if (method.inputKind == InputKind.STRUCT) {
+      write('getRoot(new ');
+      visit(method.arguments.single.type);
+      write('(), request)');
+    } else {
+      assert(method.inputKind == InputKind.PRIMITIVES);
+      StructLayout inputLayout = method.inputPrimitiveStructLayout;
+      for (int i = 0; i < method.arguments.length; i++) {
+        if (i != 0) write(', ');
+        Formal argument = method.arguments[i];
+        String getter = _GETTERS[argument.type.identifier];
+        int offset = inputLayout[argument].offset + 32;
+        write('request.$getter($offset)');
+      }
     }
   }
 
@@ -117,30 +141,32 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('        _postResult.icall\$1(request);');
     writeln('        break;');
 
-    String setInt(int index) => 'request.setInt32(${32 + index * 4}, result)';
+    String setInt32() => 'request.setInt32(32, result)';
+    String setInt64() => 'request.setInt64(32, result)';
 
     for (int i = 0; i < methods.length; ++i) {
       Method method = methods[i];
       writeln('      case ${methodIds[i]}:');
-      write('        var result = _impl.${method.name}(');
-      if (method.inputKind == InputKind.STRUCT) {
-        write('getRoot(new ');
-        visit(method.arguments.single.type);
-        write('(), request)');
+      Node resolvedReturnType = method.returnType.resolved;
+      if (resolvedReturnType == null) {
+        write('        var result = ');
+        writeImplCall(method);
+        writeln(');');
+        writeln('        ${setInt32()};');
       } else {
-        assert(method.inputKind == InputKind.PRIMITIVES);
-        StructLayout inputLayout = method.inputPrimitiveStructLayout;
-
-        for (int i = 0; i < method.arguments.length; i++) {
-          if (i != 0) write(', ');
-          Formal argument = method.arguments[i];
-          String getter = _GETTERS[argument.type.identifier];
-          int offset = inputLayout[argument].offset + 32;
-          write('request.$getter($offset)');
-        }
+        StructLayout resultLayout = new StructLayout(resolvedReturnType);
+        int size = resultLayout.size;
+        writeln('        MessageBuilder mb = new MessageBuilder($size);');
+        String builderName = '${method.returnType.identifier}Builder';
+        writeln('        $builderName builder = '
+                'mb.NewRoot(new $builderName(), $size);');
+        write('        ');
+        writeImplCall(method);
+        write('${method.arguments.length > 0 ? ", " : ""}builder');
+        writeln(');');
+        writeln('        var result = builder._segment._memory.value;');
+        writeln('        ${setInt64()};');
       }
-      writeln(');');
-      writeln('        ${setInt(0)};');
       writeln('        _postResult.icall\$1(request);');
       writeln('        break;');
     }
@@ -164,10 +190,8 @@ class _DartVisitor extends CodeGenerationVisitor {
 
     writeln();
     writeln('class ${node.name} extends Reader {');
-
     for (StructSlot slot in layout.slots) {
       Type type = slot.slot.type;
-
       if (type.isList) {
         write('  List<');
         visit(type);
@@ -183,14 +207,35 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln(' get ${slot.slot.name} => _segment.memory.$getter($offset);');
       }
     }
+    writeln('}');
 
+    writeln();
+    writeln('class ${node.name}Builder extends Builder {');
+    for (StructSlot slot in layout.slots) {
+      Type type = slot.slot.type;
+      // TODO(ager): Support lists.
+      if (type.isList) continue;
+      String setter = _SETTERS[type.identifier];
+      writeln('  void set ${slot.slot.name}(int value) => '
+              '$setter(${slot.offset}, value);');
+    }
     writeln('}');
   }
 
   visitMethod(Method node) {
     methods.add(node);
-    write('  int ${node.name}(');
-    visitNodes(node.arguments, (first) => first ? '' : ', ');
+    if (node.outputKind == OutputKind.STRUCT) {
+      String builderName = '${node.returnType.identifier}Builder';
+      write('  void ${node.name}(');
+      visitNodes(node.arguments, (first) => first ? '' : ', ');
+      write('${node.arguments.length > 0 ? ", " : ""}$builderName result');
+    } else {
+      assert(node.outputKind == OutputKind.PRIMITIVE);
+      write('  ');
+      visit(node.returnType);
+      write(' ${node.name}(');
+      visitNodes(node.arguments, (first) => first ? '' : ', ');
+    }
     writeln(');');
   }
 

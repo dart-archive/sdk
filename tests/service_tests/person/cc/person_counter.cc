@@ -8,37 +8,39 @@
 #include "include/service_api.h"
 #include <stdlib.h>
 
-static ServiceId service_id_ = kNoServiceId;
+static ServiceId _service_id = kNoServiceId;
 
 void PersonCounter::Setup() {
-  service_id_ = ServiceApiLookup("PersonCounter");
+  _service_id = ServiceApiLookup("PersonCounter");
 }
 
 void PersonCounter::TearDown() {
-  ServiceApiTerminate(service_id_);
-  service_id_ = kNoServiceId;
+  ServiceApiTerminate(_service_id);
+  _service_id = kNoServiceId;
 }
 
 static const MethodId _kGetAgeId = reinterpret_cast<MethodId>(1);
-static const MethodId _kCountId = reinterpret_cast<MethodId>(2);
-static const MethodId _kGetAgeStatsId = reinterpret_cast<MethodId>(3);
 
 int PersonCounter::GetAge(PersonBuilder person) {
-  return person.InvokeMethod(service_id_, _kGetAgeId);
+  return person.InvokeMethod(_service_id, _kGetAgeId);
 }
 
+static const MethodId _kGetAgeStatsId = reinterpret_cast<MethodId>(2);
+
 AgeStats PersonCounter::GetAgeStats(PersonBuilder person) {
-  int64_t result = person.InvokeMethod(service_id_, _kGetAgeStatsId);
+  int64_t result = person.InvokeMethod(_service_id, _kGetAgeStatsId);
   char* memory = reinterpret_cast<char*>(result);
-  Segment* segment = new Segment(memory, AgeStats::kSize);
+  Segment* segment = new Segment(memory, 8);
   return AgeStats(segment, 0);
 }
 
+static const MethodId _kCountId = reinterpret_cast<MethodId>(3);
+
 int PersonCounter::Count(PersonBuilder person) {
-  return person.InvokeMethod(service_id_, _kCountId);
+  return person.InvokeMethod(_service_id, _kCountId);
 }
 
 List<PersonBuilder> PersonBuilder::NewChildren(int length) {
-  Builder result = NewList(Person::kChildrenOffset, length, Person::kSize);
+  Builder result = NewList(8, length, 16);
   return List<PersonBuilder>(result);
 }
