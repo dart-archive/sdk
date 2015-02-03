@@ -65,6 +65,10 @@ class MacOSSystem extends PosixSystem {
 
   int get FIONREAD => 0x4004667f;
 
+  int get SOL_SOCKET => 0xffff;
+
+  int get SO_REUSEADDR => 0x4;
+
   Foreign get _open => _openMac;
 
   int _setEvents(bool read, bool write) {

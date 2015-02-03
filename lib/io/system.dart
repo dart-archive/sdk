@@ -26,10 +26,6 @@ const int SHUT_RD   = 0;
 const int SHUT_WR   = 1;
 const int SHUT_RDWR = 2;
 
-const int SOL_SOCKET = 1;
-
-const int SO_REUSEADDR = 2;
-
 final System sys = getSystem();
 
 System getSystem() {
@@ -69,6 +65,9 @@ abstract class System {
   int close(int fd);
   void sleep(int milliseconds);
   Errno errno();
+
+  int setBlocking(int fd, bool blocking);
+  int setReuseaddr(int fd);
 
   static int eventHandler = _getEventHandler();
   static int _getEventHandler() native;

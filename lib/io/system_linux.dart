@@ -53,6 +53,10 @@ class LinuxSystem extends PosixSystem {
 
   int get FIONREAD => 0x541B;
 
+  int get SOL_SOCKET => 1;
+
+  int get SO_REUSEADDR => 2;
+
   Foreign get _open => _openLinux;
 
   int addToEventHandler(int fd) {

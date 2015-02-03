@@ -84,6 +84,10 @@ abstract class PosixSystem implements System {
 
   int get FIONREAD;
 
+  int get SOL_SOCKET;
+
+  int get SO_REUSEADDR;
+
   Foreign get _open;
 
   int socket() {
@@ -230,6 +234,10 @@ abstract class PosixSystem implements System {
       flags |= O_NONBLOCK;
     }
     return _retry(() => _fcntl.icall$3(fd, F_SETFL, flags));
+  }
+  
+  int setReuseaddr(int fd) {
+    return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 1);
   }
 
   int available(int fd) {
