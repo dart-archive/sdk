@@ -13,28 +13,30 @@ The scheduler has two basic operations for Process:
 * `Stack IdleThreads` - List of idle `Thread`s.
 
 ```python
-SpawnProcess()
+SpawnProcess() {
   P <- new Process()
   EnqueueOnAnyThread(P)
+}
 ```
 
 ```python
-SendToProcess(Current, Target)
+SendToProcess(Current, Target) {
   if Target.ChangeState(Sleeping, Running) {
-    Current.ChangeState(Running, Ready)
+    Current.ChangeState(Running, Queued)
     EnqueueOnAnyThread(Current)
     return Target
   } else {
     TargetThread <- Target.OwnerThread
-    if TargetThread != Null and TargetThread->TryDequeueEntry(Target) {
-      Current.ChangeState(Running, Ready)
+    if TargetThread != Null and TargetThread.TryDequeueEntry(Target) {
+      Current.ChangeState(Running, Queued)
       EnqueueOnAnyThread(Current)
       return Target
     }
   }
-  Current.ChangeState(Running, Ready)
+  Current.ChangeState(Running, Queued)
   EnqueueOnAnyThread(Current)
   return Null
+}
 ```
 
 ```python
@@ -60,7 +62,7 @@ EnqueueOnAnyThread(P) {
   while True {
     for T in Threads {
       Empty <- T.IsEmpty()
-      If T.TryEnqueue(P) {
+      if T.TryEnqueue(P) {
         if Empty: T.Wakeup(): return False
       }
     }
@@ -121,6 +123,7 @@ _Members_
 
 ```python
 TryEnqueue(P) {
+  INVARIANT(P.State = Queued)
   H <- Head
   while True {
     if H = Sentinel: return False
@@ -150,10 +153,11 @@ TryDequeue() {
     if Head.CompareAndSwap(H, Sentinel): break
     H <- Head
   }
+  INVARIANT(H unreachable from other threads)
   if Tail = H: Tail <- Null
   Next <- H.Next
   if next != Null: Next.Previous <- Null
-  H.ChangeState(Ready, Running)
+  H.ChangeState(Queued, Running)
   H.OwnerThread <- Null
   H.Next <- Null
   Head <- Next;
@@ -169,10 +173,11 @@ TryDequeueEntry(P)
     if Head.CompareAndSwap(H, Sentinel): break
     H <- Head
   }
-  if P.OwnerThread != This or !H.ChangeState(Ready, Running) {
+  if P.OwnerThread != This or !P.ChangeState(Queued, Running) {
     Head <- H
     return False
   }
+  INVARIANT(P unreachable from other threads)
   if H = P {
     if H = Tail: Tail <- Null
     Head <- Head.Next
@@ -202,6 +207,7 @@ IsEmpty {
 
 ```python
 Wakeup() {
+  # The 'value' changed under the lock is an insertion into the queue.
   IdleMonitor.Lock();
   IdleMonitor.Notify();
   IdleMonitor.Unlock();
@@ -218,8 +224,29 @@ Wait() {
 
 **class Process**
 
+The process transition in state as follows:
+
+![Process states](states.png)
+
 *Fields*
 
 - `Atomic<Thread> OwnerThread`
 - `Atomic<Process> Next`
 - `Atomic<Process> Previous`
+- `Atomic<Queued|Running> State`
+
+```python
+ChangeState(From, To) {
+  if From = Running {
+    INVARIANT(State = Running)
+    State <- To
+    return True
+  }
+  S <- State
+  while S = From {
+    if State.CompareAndSwap(S, To): return True
+    S <- State
+  }
+  return False
+}
+```

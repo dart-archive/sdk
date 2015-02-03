@@ -1,0 +1,13 @@
+
+digraph {
+  shape=square
+  RunningQueued [label="Dequeing\nState set to Running"];
+  Running [label="Running\nState set to Running"];
+  QueuedOwner [label="Queued\nOwner set to thread"];
+  Queued [label="Enqueuing\nState set to Queued"];
+
+  Running -> Queued [label="Pending success enqueue"];
+  Queued -> QueuedOwner [label="Success enqueue"];
+  QueuedOwner -> RunningQueued [label="Partial dequeue"];
+  RunningQueued -> Running [label="Complete dequeue"];
+}
