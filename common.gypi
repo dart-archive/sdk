@@ -26,17 +26,17 @@
     'conditions': [
       [ 'OS=="linux"', {
         'clang_asan_rt_path%': '.',
-        'third_party_libs_path%': '>(DEPTH)/third_party/libs/linux',
+        'third_party_libs_path%': '<(DEPTH)/third_party/libs/linux',
       }],
       [ 'OS=="mac"', {
         'clang_asan_rt_path%':
-          '>(DEPTH)/third_party/clang/mac/lib/clang/3.6.0/'
+          '<(DEPTH)/third_party/clang/mac/lib/clang/3.6.0/'
           'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
-        'third_party_libs_path%': '>(DEPTH)/third_party/libs/macos',
+        'third_party_libs_path%': '<(DEPTH)/third_party/libs/macos',
       }],
       [ 'OS=="win"', {
         'clang_asan_rt_path%': '.',
-        'third_party_libs_path%': '>(DEPTH)/third_party/libs/windows',
+        'third_party_libs_path%': '<(DEPTH)/third_party/libs/windows',
       }],
     ],
   },

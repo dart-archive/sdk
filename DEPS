@@ -17,6 +17,9 @@ deps = {
   "fletch/third_party/gyp":
       (Var("googlecode_url") % "gyp") + "/trunk" + Var("gyp_rev"),
 
+  "fletch/third_party/clang":
+      ((Var("googlecode_url") % "dart") + "/third_party/clang" +
+       Var("clang_rev")),
 }
 
 # To include Mac deps on other OSes, add this to your .gclient file:
@@ -31,9 +34,6 @@ deps_os = {
   },
 
   "mac": {
-    "fletch/third_party/clang":
-      ((Var("googlecode_url") % "dart") + "/third_party/clang" +
-       Var("clang_rev")),
   },
 
   "unix": {
