@@ -34,6 +34,36 @@ class PersonBuilder : public Builder {
   List<PersonBuilder> NewChildren(int length);
 };
 
+class AgeStats : public Reader {
+ public:
+  static const int kAverageAgeOffset = 0;
+  static const int kSumOffset = 8;
+  static const int kSize = 16;
+
+  AgeStats(Segment* segment, int offset) : Reader(segment, offset) { }
+
+  int averageAge() const { return *PointerTo<int>(kAverageAgeOffset); }
+  int sum() const { return *PointerTo<int>(kSumOffset); }
+};
+
+class AgeStatsBuilder : public Builder {
+ public:
+  static const int kSize = AgeStats::kSize;
+
+  explicit AgeStatsBuilder(const Builder& builder)
+      : Builder(builder) { }
+  AgeStatsBuilder(BuilderSegment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  void set_average_age(int value) {
+    *PointerTo<int>(AgeStats::kAverageAgeOffset) = value;
+  }
+
+  void set_median_age(int value) {
+    *PointerTo<int>(AgeStats::kAverageAgeOffset) = value;
+  }
+};
+
 class PersonCounter {
  public:
   static void Setup();
@@ -44,6 +74,7 @@ class PersonCounter {
   // Not quite sure if these methods should take builder or reader
   // views. Somehow the separation isn't very nice yet.
   static int GetAge(PersonBuilder person);
+  static AgeStats GetAgeStats(PersonBuilder person);
   static int Count(PersonBuilder person);
 };
 

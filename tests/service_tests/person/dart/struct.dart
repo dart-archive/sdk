@@ -85,3 +85,47 @@ class ListReader extends Reader {
     return reader;
   }
 }
+
+class BuilderSegment {
+  final Foreign _memory;
+  int _id;
+  int _used = 0;
+
+  BuilderSegment(this._id, int space) : _memory = new Foreign.allocated(space);
+
+  bool HasSpaceForBytes(int bytes) => _used + bytes <= _memory.length;
+
+  int Allocate(int bytes) {
+    if (!HasSpaceForBytes(bytes)) return -1;
+    var result = _used;
+    _used += bytes;
+    return result;
+  }
+
+  void setInt32(int offset, int value) {
+    _memory.setInt32(offset, value);
+  }
+}
+
+class MessageBuilder {
+  final BuilderSegment _first;
+  int _segments = 1;
+
+  MessageBuilder(int space) : _first = new BuilderSegment(0, space);
+
+  Builder NewRoot(Builder builder, int size) {
+    int offset = _first.Allocate(size);
+    builder._segment = _first;
+    builder._offset = offset;
+    return builder;
+  }
+}
+
+class Builder {
+  BuilderSegment _segment;
+  int _offset;
+
+  void setInt32(int offset, int value) {
+    _segment.setInt32(offset + _offset, value);
+  }
+}

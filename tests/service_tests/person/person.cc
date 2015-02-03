@@ -29,11 +29,11 @@ static void BuildPerson(PersonBuilder person, int n) {
 static void InteractWithService() {
   PersonCounter::Setup();
 
-  MessageBuilder builder(8192);
+  MessageBuilder builder(512);
 
   uint64_t start = GetMicroseconds();
   PersonBuilder person = builder.NewRoot<PersonBuilder>();
-  BuildPerson(person, 20);
+  BuildPerson(person, 5);
   uint64_t end = GetMicroseconds();
 
   int used = builder.ComputeUsed();
@@ -45,6 +45,8 @@ static void InteractWithService() {
   start = GetMicroseconds();
   int count = PersonCounter::Count(person);
   end = GetMicroseconds();
+  AgeStats stats = PersonCounter::GetAgeStats(person);
+  printf("AgeStats avg: %d sum: %d\n", stats.averageAge(), stats.sum());
   int reading_us = static_cast<int>(end - start);
   printf("Reading took %.2f us.\n", reading_us / 1000.0);
   printf("    - %.2f MB/s\n", static_cast<double>(used) / reading_us);

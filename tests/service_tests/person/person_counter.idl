@@ -4,7 +4,13 @@
 
 service PersonCounter {
   Int32 GetAge(Person person);
+  AgeStats GetAgeStats(Person person);
   Int32 Count(Person person);
+}
+
+struct AgeStats {
+  Int32 averageAge;
+  Int32 sum;
 }
 
 struct Person {
