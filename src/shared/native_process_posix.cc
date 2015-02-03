@@ -5,6 +5,7 @@
 #include "src/shared/native_process.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -33,15 +34,31 @@ NativeProcess::~NativeProcess() {
 }
 
 int NativeProcess::Start() {
+  int fds[2];
+  if (TEMP_FAILURE_RETRY(pipe(fds)) == -1) UNREACHABLE();
   int pid = TEMP_FAILURE_RETRY(fork());
   if (pid < 0) UNREACHABLE();
   if (pid == 0) {
+    TEMP_FAILURE_RETRY(close(fds[0]));
+    if (TEMP_FAILURE_RETRY(fcntl(fds[1], F_SETFD, O_CLOEXEC)) == -1) {
+      UNREACHABLE();
+    }
     // Child.
     execvp(executable_, const_cast<char**>(argv_));
+    uint8 value = 1;
+    TEMP_FAILURE_RETRY(write(fds[1], &value, sizeof(value)));
     perror("execvp failed");
     UNIMPLEMENTED();
   }
   // Parent
+  TEMP_FAILURE_RETRY(close(fds[1]));
+  uint8 value = 0;
+  int size = TEMP_FAILURE_RETRY(read(fds[0], &value, sizeof(value)));
+  if (size != 0) {
+    perror("execvp failed");
+    UNIMPLEMENTED();
+  }
+  TEMP_FAILURE_RETRY(close(fds[0]));
   data_->pid = pid;
   return pid;
 }
