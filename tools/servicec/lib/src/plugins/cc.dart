@@ -7,6 +7,7 @@ library servicec.plugins.cc;
 import 'dart:core' hide Type;
 
 import 'package:path/path.dart' show basenameWithoutExtension, join;
+import 'package:strings/strings.dart' as strings;
 
 import 'shared.dart';
 
@@ -140,6 +141,17 @@ class _HeaderVisitor extends CcVisitor {
     writeln('#ifndef $headerGuard');
     writeln('#define $headerGuard');
 
+    if (node.structs.isNotEmpty) {
+      writeln();
+      writeln('#include "struct.h"');
+    }
+
+    if (node.structs.isNotEmpty) writeln();
+    for (Struct struct in node.structs) {
+      writeln('class ${struct.name};');
+      writeln('class ${struct.name}Builder;');
+    }
+
     node.services.forEach(visit);
     node.structs.forEach(visit);
 
@@ -178,6 +190,11 @@ class _HeaderVisitor extends CcVisitor {
   }
 
   visitStruct(Struct node) {
+    writeReader(node);
+    writeBuilder(node);
+  }
+
+  void writeReader(Struct node) {
     String name = node.name;
     StructLayout layout = new StructLayout(node);
 
@@ -185,9 +202,9 @@ class _HeaderVisitor extends CcVisitor {
     writeln('class $name : public Reader {');
     writeln(' public:');
 
-    writeln('  $name(Segment* segment, int offset) '
-            ': Reader(segment, offset) { }');
-    writeln('  static const int kSize = ${layout.size};');
+    writeln('  $name(Segment* segment, int offset)');
+    writeln('      : Reader(segment, offset) { }');
+    writeln();
 
     for (StructSlot slot in layout.slots) {
       Type type = slot.slot.type;
@@ -201,7 +218,44 @@ class _HeaderVisitor extends CcVisitor {
       writeln('>(${slot.offset}); }');
     }
 
-    writeln('}');
+    writeln('};');
+  }
+
+  void writeBuilder(Struct node) {
+    String name = "${node.name}Builder";
+    StructLayout layout = new StructLayout(node);
+
+    writeln();
+    writeln('class $name : public Builder {');
+    writeln(' public:');
+    writeln('  static const int kSize = ${layout.size};');
+    writeln();
+
+    writeln('  explicit $name(const Builder& builder)');
+    writeln('      : Builder(builder) { }');
+    writeln('  $name(BuilderSegment* segment, int offset)');
+    writeln('      : Builder(segment, offset) { }');
+    writeln();
+
+    for (StructSlot slot in layout.slots) {
+      String slotName = slot.slot.name;
+      Type slotType = slot.slot.type;
+
+      if (slotType.isList) {
+        String camel = strings.camelize(strings.underscore(slotName));
+        write('  List<');
+        visit(slotType);
+        writeln('> New$camel(int length);');
+      } else if (slotType.identifier == 'Int32') {
+        write('  void set_${slot.slot.name}(');
+        visit(slotType);
+        write(' value) { *PointerTo<');
+        visit(slotType);
+        writeln('>(${slot.offset}) = value; }');
+      }
+    }
+
+    writeln('};');
   }
 }
 
@@ -228,6 +282,7 @@ class _ImplementationVisitor extends CcVisitor {
     writeln('#include <stdlib.h>');
 
     node.services.forEach(visit);
+    node.structs.forEach(visit);
   }
 
   visitService(Service node) {
@@ -250,6 +305,33 @@ class _ImplementationVisitor extends CcVisitor {
     node.methods.forEach(visit);
   }
 
+  visitStruct(Struct node) {
+    writeBuilder(node);
+  }
+
+  void writeBuilder(Struct node) {
+    String name = "${node.name}Builder";
+    StructLayout layout = new StructLayout(node);
+
+    for (StructSlot slot in layout.slots) {
+      String slotName = slot.slot.name;
+      Type slotType = slot.slot.type;
+
+      if (slotType.isList) {
+        writeln();
+        String camel = strings.camelize(strings.underscore(slotName));
+        write('List<');
+        visit(slotType);
+        writeln('> $name::New$camel(int length) {');
+        StructLayout targetLayout = new StructLayout(slot.slot.type.resolved);
+        int size = targetLayout.size;
+        writeln('  Builder result = NewList(${slot.offset}, length, $size);');
+        writeln('  return List<$name>(result);');
+        writeln('}');
+      }
+    }
+  }
+
   visitMethod(Method node) {
     String name = node.name;
     String id = '_k${name}Id';
@@ -258,25 +340,37 @@ class _ImplementationVisitor extends CcVisitor {
     write('static const MethodId $id = ');
     writeln('reinterpret_cast<MethodId>(${methodId++});');
 
-    writeln();
-    visit(node.returnType);
-    write(' $serviceName::${name}(');
-    visitArguments(node.arguments);
-    writeln(') {');
-    visitMethodBody(id, node.arguments);
-    writeln('}');
+    if (node.arguments.any((e) => e.type.identifier != 'Int32')) {
+      writeln();
+      visit(node.returnType);
+      write(' $serviceName::${name}(');
+      visitArguments(node.arguments);
+      writeln(') {');
+      writeln('  return ${node.arguments.single.name}.'
+              'InvokeMethod(_service_id, $id);');
+      writeln('}');
 
-    String callback = ensureCallback(node.returnType, node.arguments);
+    } else {
+      writeln();
+      visit(node.returnType);
+      write(' $serviceName::${name}(');
+      visitArguments(node.arguments);
+      writeln(') {');
+      visitMethodBody(id, node.arguments);
+      writeln('}');
 
-    writeln();
-    write('void $serviceName::${name}Async(');
-    visitArguments(node.arguments);
-    if (node.arguments.isNotEmpty) write(', ');
-    write('void (*callback)(');
-    visit(node.returnType);
-    writeln(')) {');
-    visitMethodBody(id, node.arguments, callback: callback);
-    writeln('}');
+      String callback = ensureCallback(node.returnType, node.arguments);
+
+      writeln();
+      write('void $serviceName::${name}Async(');
+      visitArguments(node.arguments);
+      if (node.arguments.isNotEmpty) write(', ');
+      write('void (*callback)(');
+      visit(node.returnType);
+      writeln(')) {');
+      visitMethodBody(id, node.arguments, callback: callback);
+      writeln('}');
+    }
   }
 
   final Map<String, String> callbacks = {};

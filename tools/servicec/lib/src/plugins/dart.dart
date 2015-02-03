@@ -7,9 +7,11 @@ library servicec.plugins.dart;
 import 'dart:core' hide Type;
 
 import 'package:path/path.dart' show basenameWithoutExtension, join;
+import 'package:strings/strings.dart' as strings;
 
 import 'shared.dart';
 import '../emitter.dart';
+import '../struct_layout.dart';
 
 const COPYRIGHT = """
 // Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
@@ -26,6 +28,7 @@ void generate(String path, Unit unit, String outputDirectory) {
 }
 
 class _DartVisitor extends CodeGenerationVisitor {
+  final Set<Type> neededListTypes = new Set<Type>();
   final List<Method> methods = new List();
   _DartVisitor(String path) : super(path);
 
@@ -41,6 +44,9 @@ class _DartVisitor extends CodeGenerationVisitor {
 
     writeln('import "dart:ffi";');
     writeln('import "dart:service" as service;');
+    if (node.structs.isNotEmpty) {
+      writeln('import "struct.dart";');
+    }
     writeln();
 
     writeln('final Channel _channel = new Channel();');
@@ -49,6 +55,20 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('Foreign.lookup("PostResultToService");');
 
     node.services.forEach(visit);
+    node.structs.forEach(visit);
+
+    for (Type listType in neededListTypes) {
+      writeln('');
+      String name = listType.identifier;
+      writeln('class _${name}List extends ListReader implements List<$name> {');
+
+      StructLayout targetLayout = new StructLayout(listType.resolved);
+      int targetSize = targetLayout.size;
+      writeln('  $name operator[](int index) => '
+              'readListElement(new $name(), index, $targetSize);');
+
+      writeln('}');
+    }
   }
 
   visitService(Service node) {
@@ -78,8 +98,10 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('    return !_terminated;');
     writeln('  }');
 
-    List<String> methodIds = methods.map(
-        (method) => '_${method.name.toUpperCase()}_METHOD_ID').toList();
+
+    List<String> methodIds = methods.map((method) =>
+        '_${strings.underscore(method.name).toUpperCase()}_METHOD_ID')
+        .toList();
 
     writeln();
     writeln('  static void handleNextEvent() {');
@@ -97,9 +119,15 @@ class _DartVisitor extends CodeGenerationVisitor {
       Method method = methods[i];
       writeln('      case ${methodIds[i]}:');
       write('        var result = _impl.${method.name}(');
-      for (int i = 0; i < method.arguments.length; i++) {
-        if (i != 0) write(', ');
-        write(getInt(i));
+      if (method.arguments.any((e) => e.type.identifier != 'Int32')) {
+        write('getRoot(new ');
+        visit(method.arguments.single.type);
+        write('(), request)');
+      } else {
+        for (int i = 0; i < method.arguments.length; i++) {
+          if (i != 0) write(', ');
+          write(getInt(i));
+        }
       }
       writeln(');');
       writeln('        ${setInt(0)};');
@@ -121,6 +149,33 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('}');
   }
 
+  visitStruct(Struct node) {
+    StructLayout layout = new StructLayout(node);
+
+    writeln();
+    writeln('class ${node.name} extends Reader {');
+
+    for (StructSlot slot in layout.slots) {
+      Type type = slot.slot.type;
+
+      if (type.isList) {
+        write('  List<');
+        visit(type);
+        write('> get ${slot.slot.name} => ');
+        neededListTypes.add(type);
+        writeln('readList(new _${type.identifier}List(), ${slot.offset});');
+      } else if (type.identifier == 'Int32') {
+        write('  ');
+        visit(type);
+        writeln(' get ${slot.slot.name} => _segment.memory.'
+                'getInt32(_offset + ${slot.offset});');
+
+      }
+    }
+
+    writeln('}');
+  }
+
   visitMethod(Method node) {
     methods.add(node);
     write('  int ${node.name}(');
@@ -134,9 +189,14 @@ class _DartVisitor extends CodeGenerationVisitor {
   }
 
   visitType(Type node) {
-    Map<String, String> types = const { 'Int32': 'int' };
-    String type = types[node.identifier];
-    write(type);
+    Node resolved = node.resolved;
+    if (resolved != null) {
+      write(node.identifier);
+    } else {
+      Map<String, String> types = const { 'Int32': 'int' };
+      String type = types[node.identifier];
+      write(type);
+    }
   }
 }
 
