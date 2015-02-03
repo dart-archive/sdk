@@ -951,15 +951,11 @@ vm/typed_data_polymorphic_view_test: Fail
 [ $arch == ia32 ]
 bit_shift_test: Fail
 
-[ ( $arch == ia32 || $mode == release ) && $scons ]
+[ ( $arch == ia32 || $mode == release ) ]
 issue10783_test: Fail
 
 [ $arch == x64 && $mode == debug ]
 issue10783_test: Crash
-
-[ $arch == ia32 && $mode == debug && $ninja ]
-issue10783_test: Crash
-
 
 [ $mode == debug ]
 duplicate_constructor_test/01: Crash

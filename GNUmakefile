@@ -13,36 +13,41 @@ else
   ninja_verbose=-v
 endif
 
-# TODO(ahe): Change to out/clang after fixing echo service test.
-CLANG_OUT=clang_out
-
 OS := $(shell uname -s)
 
 all: DebugIA32 DebugX64 ReleaseIA32 ReleaseX64
 
-DebugIA32: out/DebugIA32/build.ninja $(CLANG_OUT)/DebugIA32/build.ninja /usr/include/stdio.h
+DebugIA32: out/DebugIA32/build.ninja out/DebugIA32Clang/build.ninja /usr/include/stdio.h
+ifeq ($(OS),Linux)
 	$(quiet)ninja $(ninja_verbose) -C out/DebugIA32
-ifeq ($(OS),Linux)
-	$(quiet)ninja $(ninja_verbose) -C $(CLANG_OUT)/DebugIA32
+	$(quiet)ninja $(ninja_verbose) -C out/DebugIA32Asan
 endif
+	$(quiet)ninja $(ninja_verbose) -C out/DebugIA32Clang
+	$(quiet)ninja $(ninja_verbose) -C out/DebugIA32ClangAsan
 
-ReleaseIA32: out/ReleaseIA32/build.ninja $(CLANG_OUT)/ReleaseIA32/build.ninja /usr/include/stdio.h
+ReleaseIA32: out/ReleaseIA32/build.ninja out/ReleaseIA32Clang/build.ninja /usr/include/stdio.h
+ifeq ($(OS),Linux)
 	$(quiet)ninja $(ninja_verbose) -C out/ReleaseIA32
-ifeq ($(OS),Linux)
-	$(quiet)ninja $(ninja_verbose) -C $(CLANG_OUT)/ReleaseIA32
+	$(quiet)ninja $(ninja_verbose) -C out/ReleaseIA32Asan
 endif
+	$(quiet)ninja $(ninja_verbose) -C out/ReleaseIA32Clang
+	$(quiet)ninja $(ninja_verbose) -C out/ReleaseIA32ClangAsan
 
-DebugX64: out/DebugX64/build.ninja $(CLANG_OUT)/DebugX64/build.ninja /usr/include/stdio.h
+DebugX64: out/DebugX64/build.ninja out/DebugX64Clang/build.ninja /usr/include/stdio.h
+ifeq ($(OS),Linux)
 	$(quiet)ninja $(ninja_verbose) -C out/DebugX64
-ifeq ($(OS),Linux)
-	$(quiet)ninja $(ninja_verbose) -C $(CLANG_OUT)/DebugX64
+	$(quiet)ninja $(ninja_verbose) -C out/DebugX64Asan
 endif
+	$(quiet)ninja $(ninja_verbose) -C out/DebugX64Clang
+	$(quiet)ninja $(ninja_verbose) -C out/DebugX64ClangAsan
 
-ReleaseX64: out/ReleaseX64/build.ninja $(CLANG_OUT)/ReleaseX64/build.ninja /usr/include/stdio.h
-	$(quiet)ninja $(ninja_verbose) -C out/ReleaseX64
+ReleaseX64: out/ReleaseX64/build.ninja out/ReleaseX64Clang/build.ninja /usr/include/stdio.h
 ifeq ($(OS),Linux)
-	$(quiet)ninja $(ninja_verbose) -C $(CLANG_OUT)/ReleaseX64
+	$(quiet)ninja $(ninja_verbose) -C out/ReleaseX64
+	$(quiet)ninja $(ninja_verbose) -C out/ReleaseX64Asan
 endif
+	$(quiet)ninja $(ninja_verbose) -C out/ReleaseX64Clang
+	$(quiet)ninja $(ninja_verbose) -C out/ReleaseX64ClangAsan
 
 gyp_files = \
   common.gypi \
@@ -56,11 +61,6 @@ gyp_files = \
 out/ReleaseIA32/build.ninja out/DebugIA32/build.ninja out/ReleaseX64/build.ninja out/DebugX64/build.ninja: $(gyp_files)
 	$(quiet)./third_party/gyp/gyp $(gyp_verbose) --depth=. -Icommon.gypi \
 		-Dclang=0 -Goutput_dir=out \
-		--format=ninja fletch.gyp
-
-$(CLANG_OUT)/ReleaseIA32/build.ninja $(CLANG_OUT)/DebugIA32/build.ninja $(CLANG_OUT)/ReleaseX64/build.ninja $(CLANG_OUT)/DebugX64/build.ninja: $(gyp_files)
-	$(quiet)./third_party/gyp/gyp $(gyp_verbose) --depth=. -Icommon.gypi \
-		-Dclang=1 -Goutput_dir=$(CLANG_OUT) \
 		--format=ninja fletch.gyp
 
 ifeq ($(OS),Darwin)

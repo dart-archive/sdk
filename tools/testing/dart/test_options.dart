@@ -452,10 +452,9 @@ Note: currently only implemented for dart2js.''',
               false,
               type: 'bool'),
           new _TestOptionSpecification(
-              // TODO(ahe): Remove this option.
-              'no_scons',
-              'Temporary option to expect output from ninja, not SCons.',
-              ['--no-scons'],
+              'clang',
+              'Use clang build instead of gcc.',
+              ['--clang'],
               [],
               false,
               type: 'bool'),
@@ -708,8 +707,6 @@ Note: currently only implemented for dart2js.''',
     configuration['host_unchecked'] = !configuration['host_checked'];
     configuration['unminified'] = !configuration['minified'];
     configuration['nocsp'] = !configuration['csp'];
-    configuration['scons'] = !configuration['no_scons'];
-    configuration['ninja'] = configuration['no_scons'];
 
     String runtime = configuration['runtime'];
     if (runtime == 'firefox') {

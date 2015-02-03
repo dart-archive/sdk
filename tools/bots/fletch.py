@@ -46,74 +46,72 @@ def SetupEnvironment(config):
 
 def Steps(config):
   SetupEnvironment(config)
-  # gcc on mac is just an alias for clang.
-  run_gcc = config.system == 'linux'
+  if config.system == 'mac':
+    # gcc on mac is just an alias for clang.
+    compiler_variants = ['Clang']
+  else:
+    compiler_variants = ['', 'Clang']
 
   mac = config.system == 'mac'
 
   # This makes us work from whereever we are called, and restores CWD in exit.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
 
-    for build_conf in ['DebugIA32', 'ReleaseIA32', 'DebugX64', 'ReleaseX64']:
-      with bot.BuildStep('ninja %s' % build_conf):
-        Run(['ninja', '-v', '-C', 'out/%s' % build_conf])
-      with bot.BuildStep('ninja %sAsan' % build_conf):
-        Run(['ninja', '-v', '-C', 'out/%sAsan' % build_conf])
-      if run_gcc:
-        # TODO(ahe): Rename something. It is confusing that the extra step is
-        # running clang when the variable is called "run_gcc". The default
-        # build is gcc on Linux, and clang on Mac, and there's no gcc on Mac.
-        with bot.BuildStep('ninja clang %s' % build_conf):
-          Run(['ninja', '-v', '-C', 'clang_out/%s' % build_conf])
-        with bot.BuildStep('ninja clang %sAsan' % build_conf):
-          Run(['ninja', '-v', '-C', 'clang_out/%sAsan' % build_conf])
+    configurations = []
 
-    if run_gcc:
-      with bot.BuildStep('Build (gcc)'):
-        Run(['python', 'third_party/scons/scons.py',
-             '-j%s' % utils.GuessCpus()])
-      RunTests('gcc', mac=mac)
-      with bot.BuildStep('Build (gcc+asan)'):
-        Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
-            'asan=true'])
-      RunTests('gcc', asan=True, mac=mac)
+    for asan_variant in ['', 'Asan']:
+      for compiler_variant in compiler_variants:
+        for mode in ['Debug', 'Release']:
+          for arch in ['IA32', 'X64']:
+            build_conf = '%(mode)s%(arch)s%(clang)s%(asan)s' % {
+              'mode': mode,
+              'arch': arch,
+              'clang': compiler_variant,
+              'asan': asan_variant,
+            }
+            configurations.append({
+              'build_conf': build_conf,
+              'build_dir': 'out/%s' % build_conf,
+              'clang': bool(compiler_variant),
+              'asan': bool(asan_variant),
+              'mode': mode.lower(),
+              'arch': arch.lower(),
+            })
 
-    with bot.BuildStep('Build (clang)'):
-      Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
-           'clang=true'])
-    RunTests('clang', mac=mac)
-    RunTests('clang', scons=False, mac=mac)
-    with bot.BuildStep('Build (clang+asan)'):
-      Run(['python', 'third_party/scons/scons.py', '-j%s' % utils.GuessCpus(),
-           'clang=true', 'asan=true'])
-    # Asan debug mode takes a long time on mac.
-    modes = ['release'] if config.system == 'mac' else ['release', 'debug']
-    RunTests('clang', asan=True, modes=modes, mac=mac)
-    RunTests('clang', asan=True, modes=modes, scons=False, mac=mac)
+    for configuration in configurations:
+      with bot.BuildStep('Build %s' % configuration['build_conf']):
+        Run(['ninja', '-v', '-C', configuration['build_dir']])
+
+    for configuration in configurations:
+      if mac and configuration['mode'] == 'debug' and configuration['asan']:
+        # Asan debug mode takes a long time on mac.
+        pass
+      else:
+        RunTests(
+          configuration['build_conf'],
+          configuration['mode'],
+          configuration['arch'],
+          mac=mac,
+          clang=configuration['clang'],
+          asan=configuration['asan'])
 
 
-def RunTests(name, asan=False, modes=None, scons=True, mac=False):
-  asan_str = '-asan' if asan else ''
-  scons_str = '-scons' if scons else '-ninja'
-  modes = modes or ['release', 'debug']
-  for mode in modes:
-    for arch in ['ia32', 'x64']:
-      with bot.BuildStep(
-          'Test (%s%s%s-%s-%s)' % (name, scons_str, asan_str, mode, arch),
-          swallow_error=True):
-        args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
-                '--time', '--report', '--progress=buildbot']
-        if asan:
-          args.append('--asan')
-          if arch == 'x64' and mac:
-            # On Mac x64, asan seems to be bound by a syscall that doesn't
-            # parallelize. Limiting to two cores appears to be optimal, both
-            # for build bot virtual machines and physical machines.
-            args.append('-j2')
-        if not scons:
-          args.append('--no-scons')
+def RunTests(name, mode, arch, mac=False, clang=True, asan=False):
+  with bot.BuildStep('Test %s' % name, swallow_error=True):
+    args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
+            '--time', '--report', '--progress=buildbot']
+    if asan:
+      args.append('--asan')
+      if arch == 'x64' and mac:
+        # On Mac x64, asan seems to be bound by a syscall that doesn't
+        # parallelize. Limiting to two cores appears to be optimal, both
+        # for build bot virtual machines and physical machines.
+        args.append('-j2')
 
-        Run(args)
+    if clang:
+      args.append('--clang')
+
+    Run(args)
 
 if __name__ == '__main__':
   bot.RunBot(Config, Steps, build_step=None)

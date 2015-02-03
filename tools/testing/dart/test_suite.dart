@@ -2059,8 +2059,7 @@ class TestUtils {
   }
 
   static String outputDir(Map configuration) {
-    bool scons = !configuration['no_scons'];
-    return scons ? 'build/' : 'out/';
+    return 'out/';
   }
 
   static List<String> standardOptions(Map configuration) {
@@ -2111,6 +2110,10 @@ class TestUtils {
     // in the build_directory).
     var normal = '$mode$arch';
     var cross = '${mode}X$arch';
+    if (configuration['clang']) {
+      normal = '${normal}Clang';
+      cross = '${cross}Clang';
+    }
     if (configuration['asan']) {
       normal = '${normal}Asan';
       cross = '${cross}Asan';
@@ -2129,9 +2132,6 @@ class TestUtils {
   }
 
   static String configurationDir(Map configuration) {
-    if (!configuration['no_scons']) {
-      return configurationDir_SCONS(configuration);
-    }
     // For regular dart checkouts, the configDir by default is mode+arch.
     // For Dartium, the configDir by default is mode (as defined by the Chrome
     // build setup). We can detect this because in the dartium checkout, the
@@ -2143,14 +2143,6 @@ class TestUtils {
     } else {
       return mode;
     }
-  }
-
-  static String configurationDir_SCONS(Map configuration) {
-    // TODO(ahe): Delete this method.
-    var platform = Platform.isLinux ? 'linux' : 'macos';
-    var arch = configuration['arch'].toLowerCase();
-    if (arch == 'ia32') arch = 'x86';
-    return '${platform}_${configuration['mode']}_$arch';
   }
 
   /**

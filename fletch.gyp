@@ -56,6 +56,7 @@
       'type': 'none',
       'dependencies': [
         'src/compiler/compiler.gyp:compiler_run_tests',
+        'src/compiler/compiler.gyp:fletchc',
         'copy_asan',
       ],
       'actions': [
@@ -69,6 +70,9 @@
           'inputs': [
             '<@(_command)',
             '<(mac_asan_dylib)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'fletchc'
+            '<(EXECUTABLE_SUFFIX)',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/test_outcomes/compiler_run_tests.pass',
@@ -88,6 +92,7 @@
       'type': 'none',
       'dependencies': [
         'src/shared/shared.gyp:shared_run_tests',
+        'src/compiler/compiler.gyp:fletchc',
         'copy_asan',
       ],
       'actions': [
@@ -101,6 +106,9 @@
           'inputs': [
             '<@(_command)',
             '<(mac_asan_dylib)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'fletchc'
+            '<(EXECUTABLE_SUFFIX)',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/test_outcomes/shared_run_tests.pass',
@@ -120,6 +128,8 @@
       'type': 'none',
       'dependencies': [
         'src/vm/vm.gyp:vm_run_tests',
+        'src/compiler/compiler.gyp:fletchc',
+        'copy_asan',
       ],
       'actions': [
         {
@@ -132,6 +142,9 @@
           'inputs': [
             '<@(_command)',
             '<(mac_asan_dylib)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'fletchc'
+            '<(EXECUTABLE_SUFFIX)',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/test_outcomes/vm_run_tests.pass',
@@ -152,6 +165,8 @@
       'dependencies': [
         'src/vm/vm.gyp:fletch',
         'tests/service_tests/service_tests.gyp:echo_service_test',
+        'src/compiler/compiler.gyp:fletchc',
+        'copy_asan',
       ],
       'actions': [
         {
@@ -163,6 +178,9 @@
           'inputs': [
             '<@(_command)',
             '<(mac_asan_dylib)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'fletchc'
+            '<(EXECUTABLE_SUFFIX)',
           ],
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/echo.snapshot',
@@ -199,6 +217,8 @@
       'dependencies': [
         'src/vm/vm.gyp:fletch',
         'tests/service_tests/service_tests.gyp:person_service_test',
+        'src/compiler/compiler.gyp:fletchc',
+        'copy_asan',
       ],
       'actions': [
         {
@@ -210,6 +230,9 @@
           'inputs': [
             '<@(_command)',
             '<(mac_asan_dylib)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'fletchc'
+            '<(EXECUTABLE_SUFFIX)',
           ],
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/person.snapshot',
