@@ -21,9 +21,17 @@ void PersonCounter::TearDown() {
 
 static const MethodId _kGetAgeId = reinterpret_cast<MethodId>(1);
 static const MethodId _kCountId = reinterpret_cast<MethodId>(2);
+static const MethodId _kGetAgeStatsId = reinterpret_cast<MethodId>(3);
 
 int PersonCounter::GetAge(PersonBuilder person) {
   return person.InvokeMethod(service_id_, _kGetAgeId);
+}
+
+AgeStats PersonCounter::GetAgeStats(PersonBuilder person) {
+  int64_t result = person.InvokeMethod(service_id_, _kGetAgeStatsId);
+  char* memory = reinterpret_cast<char*>(result);
+  Segment* segment = new Segment(memory, AgeStats::kSize);
+  return AgeStats(segment, 0);
 }
 
 int PersonCounter::Count(PersonBuilder person) {
