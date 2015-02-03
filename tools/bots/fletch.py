@@ -107,8 +107,9 @@ def RunTests(name, asan=False, modes=None, scons=True, mac=False):
           args.append('--asan')
           if arch == 'x64' and mac:
             # On Mac x64, asan seems to be bound by a syscall that doesn't
-            # parallelize.
-            args.append('-j1')
+            # parallelize. Limiting to two cores appears to be optimal, both
+            # for build bot virtual machines and physical machines.
+            args.append('-j2')
         if not scons:
           args.append('--no-scons')
 
