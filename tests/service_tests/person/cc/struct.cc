@@ -65,16 +65,16 @@ int BuilderSegment::Allocate(int bytes) {
   return result;
 }
 
-int64_t Builder::InvokeMethod(ServiceId service, MethodId method) {
+int Builder::InvokeMethod(ServiceId service, MethodId method) {
   BuilderSegment* segment = this->segment();
   if (!segment->HasNext()) {
     int offset = this->offset() - 40;
     char* buffer = reinterpret_cast<char*>(segment->At(offset));
 
     // Mark the request as being non-segmented.
-    *reinterpret_cast<int64_t*>(buffer + 32) = 0;
+    *reinterpret_cast<int*>(buffer + 32) = 0;
     ServiceApiInvoke(service, method, buffer, segment->used());
-    return *reinterpret_cast<int64_t*>(buffer + 32);
+    return *reinterpret_cast<int*>(buffer + 32);
   }
 
   // The struct consists of multiple segments, so we send a
@@ -83,7 +83,7 @@ int64_t Builder::InvokeMethod(ServiceId service, MethodId method) {
   int segments = segment->builder()->segments();
   int size = 40 + 8 + (segments * 16);
   char* buffer = reinterpret_cast<char*>(malloc(size));
-  *reinterpret_cast<int64_t*>(buffer + 40) = segments;
+  *reinterpret_cast<int*>(buffer + 40) = segments;
   int offset = 40 + 8;
   do {
     *reinterpret_cast<void**>(buffer + offset) = segment->At(0);
@@ -93,9 +93,9 @@ int64_t Builder::InvokeMethod(ServiceId service, MethodId method) {
   } while (segment != NULL);
 
   // Mark the request as being segmented.
-  *reinterpret_cast<int64_t*>(buffer + 32) = 1;
+  *reinterpret_cast<int*>(buffer + 32) = 1;
   ServiceApiInvoke(service, method, buffer, size);
-  int result = *reinterpret_cast<int64_t*>(buffer + 32);
+  int result = *reinterpret_cast<int*>(buffer + 32);
   free(buffer);
   return result;
 }

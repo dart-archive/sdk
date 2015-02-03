@@ -10,22 +10,6 @@ class PersonCounterImpl extends PersonCounter {
     return person.age;
   }
 
-  int _SumAges(Person person) {
-    int sum = GetAge(person);
-    List<Person> children = person.children;
-    for (int i = 0; i < children.length; i++) {
-      sum += _SumAges(children[i]);
-    }
-    return sum;
-  }
-
-  void GetAgeStats(Person person, AgeStatsBuilder builder) {
-    int sum = _SumAges(person);
-    int count = Count(person);
-    builder.averageAge = (sum / count).round();
-    builder.sum = sum;
-  }
-
   int Count(Person person) {
     int sum = 1;
     List<Person> children = person.children;

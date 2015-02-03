@@ -7,8 +7,6 @@
 
 #include "include/service_api.h"
 
-#include <inttypes.h>
-
 class Builder;
 class MessageBuilder;
 
@@ -102,7 +100,7 @@ class Builder {
   BuilderSegment* segment() const { return segment_; }
   int offset() const { return offset_; }
 
-  int64_t InvokeMethod(ServiceId service, MethodId method);
+  int InvokeMethod(ServiceId service, MethodId method);
 
  protected:
   Builder(BuilderSegment* segment, int offset)
