@@ -40,7 +40,22 @@ AgeStats PersonCounter::GetAgeStats(PersonBuilder person) {
   return AgeStats(segment, 0);
 }
 
-static const MethodId _kCountId = reinterpret_cast<MethodId>(4);
+static const MethodId _kCreateAgeStatsId = reinterpret_cast<MethodId>(4);
+
+AgeStats PersonCounter::CreateAgeStats(int averageAge, int sum) {
+  static const int kSize = 40;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  *reinterpret_cast<int*>(_buffer + 32) = averageAge;
+  *reinterpret_cast<int*>(_buffer + 36) = sum;
+  ServiceApiInvoke(_service_id, _kCreateAgeStatsId, _buffer, kSize);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
+  char* memory = reinterpret_cast<char*>(result);
+  Segment* segment = new Segment(memory, 8);
+  return AgeStats(segment, 0);
+}
+
+static const MethodId _kCountId = reinterpret_cast<MethodId>(5);
 
 int PersonCounter::Count(PersonBuilder person) {
   return person.InvokeMethod(_service_id, _kCountId);

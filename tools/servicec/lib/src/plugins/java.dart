@@ -326,7 +326,7 @@ class _JniVisitor extends CcVisitor {
     write('JNIEnv*, jclass, ');
     visitArguments(node.arguments);
     writeln(') {');
-    visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout);
+    visitMethodBody(id, node);
     writeln('}');
 
     String callback = ensureCallback(node.returnType,
@@ -342,8 +342,7 @@ class _JniVisitor extends CcVisitor {
     writeln('  JavaVM* vm;');
     writeln('  _env->GetJavaVM(&vm);');
     visitMethodBody(id,
-                    node.arguments,
-                    node.inputPrimitiveStructLayout,
+                    node,
                     extraArguments: [ 'vm' ],
                     callback: callback);
     writeln('}');

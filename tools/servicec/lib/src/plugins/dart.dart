@@ -266,4 +266,3 @@ class _DartVisitor extends CodeGenerationVisitor {
     }
   }
 }
-

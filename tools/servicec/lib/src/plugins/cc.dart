@@ -86,11 +86,13 @@ abstract class CcVisitor extends CodeGenerationVisitor {
   }
 
   visitMethodBody(String id,
-                  List<Formal> arguments,
-                  StructLayout layout,
+                  Method method,
                   {bool cStyle: false,
                    List<String> extraArguments: const [],
                    String callback}) {
+    List<Formal> arguments = method.arguments;
+    assert(method.inputKind == InputKind.PRIMITIVES);
+    StructLayout layout = method.inputPrimitiveStructLayout;
     final bool async = callback != null;
     int size = REQUEST_HEADER_SIZE + layout.size;
     if (async) {
@@ -136,7 +138,16 @@ abstract class CcVisitor extends CodeGenerationVisitor {
       writeln('_buffer, kSize);');
     } else {
       writeln('  ServiceApiInvoke(_service_id, $id, _buffer, kSize);');
-      writeln('  return *${pointerToArgument(0, 0, 'int')};');
+      if (method.outputKind == OutputKind.STRUCT) {
+        writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
+        writeln('  char* memory = reinterpret_cast<char*>(result);');
+        StructLayout resultLayout = new StructLayout(method.returnType.resolved);
+        int size = resultLayout.size;
+        writeln('  Segment* segment = new Segment(memory, $size);');
+        writeln('  return ${method.returnType.identifier}(segment, 0);');
+      } else {
+        writeln('  return *${pointerToArgument(0, 0, 'int')};');
+      }
     }
   }
 }
@@ -197,7 +208,8 @@ class _HeaderVisitor extends CcVisitor {
     writeln(');');
 
     // TODO(kasperl): Cannot deal with async methods accepting structs yet.
-    if (node.inputKind == InputKind.STRUCT) return;
+    if (node.inputKind == InputKind.STRUCT ||
+        node.outputKind == OutputKind.STRUCT) return;
 
     write('  static void ${node.name}Async(');
     visitArguments(node.arguments);
@@ -377,18 +389,19 @@ class _ImplementationVisitor extends CcVisitor {
     write('static const MethodId $id = ');
     writeln('reinterpret_cast<MethodId>(${methodId++});');
 
+    writeln();
+    writeReturnType(node.returnType);
+    write(' $serviceName::${name}(');
+    visitArguments(node.arguments);
+    writeln(') {');
+
     if (node.inputKind == InputKind.STRUCT) {
-      writeln();
-      writeReturnType(node.returnType);
-      write(' $serviceName::${name}(');
-      visitArguments(node.arguments);
-      writeln(') {');
       if (node.outputKind == OutputKind.STRUCT) {
         writeln('  int64_t result = ${node.arguments.single.name}.'
                 'InvokeMethod(_service_id, $id);');
         writeln('  char* memory = reinterpret_cast<char*>(result);');
-        StructLayout resultLayout =
-            new StructLayout(node.returnType.resolved);
+        Struct resultStruct = node.returnType.resolved;
+        StructLayout resultLayout = resultStruct.layout;
         int size = resultLayout.size;
         writeln('  Segment* segment = new Segment(memory, $size);');
         writeln('  return ${node.returnType.identifier}(segment, 0);');
@@ -401,14 +414,11 @@ class _ImplementationVisitor extends CcVisitor {
     } else {
       assert(node.inputKind == InputKind.PRIMITIVES);
 
-      writeln();
-      // TODO(ager): Deal with struct return types.
-      writeReturnType(node.returnType);
-      write(' $serviceName::${name}(');
-      visitArguments(node.arguments);
-      writeln(') {');
-      visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout);
+      visitMethodBody(id, node);
       writeln('}');
+
+      // TODO(ager): Deal with struct return in async version.
+      if (node.outputKind == OutputKind.STRUCT) return;
 
       String callback = ensureCallback(node.returnType,
           node.inputPrimitiveStructLayout);
@@ -420,8 +430,7 @@ class _ImplementationVisitor extends CcVisitor {
       write('void (*callback)(');
       writeReturnType(node.returnType);
       writeln(')) {');
-      visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout,
-          callback: callback);
+      visitMethodBody(id, node, callback: callback);
       writeln('}');
     }
   }

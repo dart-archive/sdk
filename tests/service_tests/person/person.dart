@@ -30,6 +30,11 @@ class PersonCounterImpl extends PersonCounter {
     builder.sum = sum;
   }
 
+  void CreateAgeStats(int avg, int sum, AgeStatsBuilder builder) {
+    builder.averageAge = avg;
+    builder.sum = sum;
+  }
+
   int Count(Person person) {
     int sum = 1;
     List<Person> children = person.children;

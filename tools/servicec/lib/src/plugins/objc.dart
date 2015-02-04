@@ -172,7 +172,7 @@ class _ImplementationVisitor extends _ObjcVisitor {
     write(')$name');
     visitArguments(node.arguments);
     writeln(' {');
-    visitMethodBody(id, node.arguments, layout, cStyle: true);
+    visitMethodBody(id, node, cStyle: true);
     writeln('}');
 
     String callback = ensureCallback(node.returnType, layout, false);
@@ -180,8 +180,7 @@ class _ImplementationVisitor extends _ObjcVisitor {
     write('+ (void)${name}Async');
     visitArguments(node.arguments);
     writeln(' withCallback:(void (*)(int))callback {');
-    visitMethodBody(id, node.arguments, layout,
-        cStyle: true, callback: callback);
+    visitMethodBody(id, node, cStyle: true, callback: callback);
     writeln('}');
 
     callback = ensureCallback(node.returnType, layout, true);
@@ -189,8 +188,7 @@ class _ImplementationVisitor extends _ObjcVisitor {
     write('+ (void)${name}Async');
     visitArguments(node.arguments);
     writeln(' withBlock:(void (^)(int))callback {');
-    visitMethodBody(id, node.arguments, layout,
-        cStyle: true, callback: callback);
+    visitMethodBody(id, node, cStyle: true, callback: callback);
     writeln('}');
   }
 

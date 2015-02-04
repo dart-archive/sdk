@@ -21,6 +21,7 @@ abstract class PersonCounter {
   int GetAge(Person person);
   int GetBoxedAge(PersonBox box);
   void GetAgeStats(Person person, AgeStatsBuilder result);
+  void CreateAgeStats(int averageAge, int sum, AgeStatsBuilder result);
   int Count(Person person);
 
   static void initialize(PersonCounter impl) {
@@ -61,6 +62,14 @@ abstract class PersonCounter {
         request.setInt64(32, result);
         _postResult.icall$1(request);
         break;
+      case _CREATE_AGE_STATS_METHOD_ID:
+        MessageBuilder mb = new MessageBuilder(8);
+        AgeStatsBuilder builder = mb.NewRoot(new AgeStatsBuilder(), 8);
+        _impl.CreateAgeStats(request.getInt32(32), request.getInt32(36), builder);
+        var result = builder._segment._memory.value;
+        request.setInt64(32, result);
+        _postResult.icall$1(request);
+        break;
       case _COUNT_METHOD_ID:
         var result = _impl.Count(getRoot(new Person(), request));
         request.setInt32(32, result);
@@ -75,7 +84,8 @@ abstract class PersonCounter {
   const int _GET_AGE_METHOD_ID = 1;
   const int _GET_BOXED_AGE_METHOD_ID = 2;
   const int _GET_AGE_STATS_METHOD_ID = 3;
-  const int _COUNT_METHOD_ID = 4;
+  const int _CREATE_AGE_STATS_METHOD_ID = 4;
+  const int _COUNT_METHOD_ID = 5;
 }
 
 class AgeStats extends Reader {
