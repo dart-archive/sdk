@@ -9,6 +9,7 @@ import 'package:expect/expect.dart';
 
 void main() {
   testOpen();
+  testSeek();
 }
 
 bool isFileException(e) => e is FileException;
@@ -28,4 +29,15 @@ void testOpen() {
   Expect.isFalse(file.isOpen);
   file.remove();
   Expect.isFalse(file.exists);
+}
+
+void testSeek() {
+  var file = new File.temporary("/tmp/file_seek_test");
+  Expect.isTrue(file.isOpen);
+  Expect.equals(0, file.position);
+  Expect.equals(0, file.length);
+  file.position = 0;
+  Expect.equals(0, file.position);
+  Expect.throws(() => file.position = 1, isFileException);
+  Expect.isFalse(file.isOpen);
 }

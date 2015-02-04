@@ -215,6 +215,19 @@ NATIVE(ForeignCall6) {
   return process->ToInteger(result);
 }
 
+typedef int64 (*LF4)(word, word, word, word);
+
+NATIVE(ForeignLCall4) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  word a2 = AsForeignWord(arguments[3]);
+  word a3 = AsForeignWord(arguments[4]);
+  LF4 function = reinterpret_cast<LF4>(address);
+  int64 result = function(a0, a1, a2, a3);
+  return process->ToInteger(result);
+}
+
 #define DEFINE_FOREIGN_ACCESSORS_INTEGER(suffix, type)                   \
                                                                          \
 NATIVE(ForeignGet##suffix) {                                             \

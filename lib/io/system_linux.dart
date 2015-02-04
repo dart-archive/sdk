@@ -47,6 +47,7 @@ class EpollEvent extends Struct {
 
 class LinuxSystem extends PosixSystem {
   static final Foreign _epollCtl = Foreign.lookup("epoll_ctl");
+  static final Foreign _lseekLinux = Foreign.lookup("lseek64");
   static final Foreign _openLinux = Foreign.lookup("open64");
 
   final EpollEvent _epollEvent = new EpollEvent();
@@ -57,6 +58,7 @@ class LinuxSystem extends PosixSystem {
 
   int get SO_REUSEADDR => 2;
 
+  Foreign get _lseek => _lseekLinux;
   Foreign get _open => _openLinux;
 
   int addToEventHandler(int fd) {

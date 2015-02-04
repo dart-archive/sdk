@@ -26,6 +26,10 @@ const int SHUT_RD   = 0;
 const int SHUT_WR   = 1;
 const int SHUT_RDWR = 2;
 
+const int SEEK_SET = 0;
+const int SEEK_CUR = 1;
+const int SEEK_END = 2;
+
 final System sys = getSystem();
 
 System getSystem() {

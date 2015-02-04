@@ -121,7 +121,7 @@ class Foreign {
   }
 
   // Support for calling foreign functions that return
-  // machine words as immediate integer values.
+  // machine words as immediate integer value.
   int icall$0() => _call$0(_value);
   int icall$1(a0) => _call$1(_value, _convert(a0));
   int icall$2(a0, a1) => _call$2(_value, _convert(a0), _convert(a1));
@@ -151,6 +151,16 @@ class Foreign {
                    _convert(a3),
                    _convert(a4),
                    _convert(a5));
+  }
+
+  // Support for calling foreign functions that return
+  // a 64 bit integer value.
+  int lcall$4(a0, a1, a2, a3) {
+    return _lcall$4(_value,
+                    _convert(a0),
+                    _convert(a1),
+                    _convert(a2),
+                    _convert(a3));
   }
 
   // Support for calling foreign functions that return
@@ -198,6 +208,8 @@ class Foreign {
   static int _call$4(int address, a0, a1, a2, a3) native;
   static int _call$5(int address, a0, a1, a2, a3, a4) native;
   static int _call$6(int address, a0, a1, a2, a3, a4, a5) native;
+
+  static int _lcall$4(int address, a0, a1, a2, a3) native;
 
   static int _allocate(int length) native;
   static void _free(int address) native;

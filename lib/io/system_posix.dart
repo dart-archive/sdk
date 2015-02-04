@@ -89,6 +89,7 @@ abstract class PosixSystem implements System {
   int get SO_REUSEADDR;
 
   Foreign get _open;
+  Foreign get _lseek;
 
   int socket() {
     return _retry(() => _socket.icall$3(AF_INET, SOCK_STREAM, 0));
@@ -147,6 +148,15 @@ abstract class PosixSystem implements System {
     int fd = _retry(() => _open.icall$2(cPath, flags));
     cPath.free();
     return fd;
+  }
+
+  int lseek(int fd, int offset, int whence) {
+    int low = offset & 0xFFFFFFFF;
+    int high = offset >> 32;
+    return _retry(() => _lseek.lcall$4(fd,
+                                       high,
+                                       low,
+                                       whence));
   }
 
   TempFile mkstemp(String path) {
