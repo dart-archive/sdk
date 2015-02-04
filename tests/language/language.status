@@ -951,12 +951,6 @@ vm/typed_data_polymorphic_view_test: Fail
 [ $arch == ia32 ]
 bit_shift_test: Fail
 
-[ ( $arch == ia32 || $mode == release ) ]
-issue10783_test: Fail
-
-[ $arch == x64 && $mode == debug ]
-issue10783_test: Crash
-
 [ $mode == debug ]
 duplicate_constructor_test/01: Crash
 duplicate_import_prefix_test: Crash
@@ -988,3 +982,21 @@ inferrer_synthesized_constructor_test: Fail
 
 [ $asan && $mode == debug ]
 gc_test: Pass, Slow
+
+
+# TODO(kasperl): Once we switch the generated interpreter on for the IA32
+# builds in the GYP-based build system, this test will start failing rather
+# than crashing again in debug mode -- it crashes due to an assert that's
+# hit in the C++ implementation of the interpreter.
+#
+# Old status:
+# [ ( $arch == ia32 || $mode == release ) ]
+# issue10783_test: Fail
+# [ $arch == x64 && $mode == debug ]
+# issue10783_test: Crash
+#
+# New status:
+[ $mode == release ]
+issue10783_test: Fail
+[ $mode == debug ]
+issue10783_test: Crash
