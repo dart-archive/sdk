@@ -103,23 +103,46 @@ int64_t Builder::InvokeMethod(ServiceId service, MethodId method) {
   return result;
 }
 
-Builder Builder::NewList(int offset, int length, int size) {
+Builder Builder::NewStruct(int offset, int size) {
   offset += this->offset();
-  int bytes = size * length;
   BuilderSegment* segment = this->segment();
   while (true) {
     int* lo = reinterpret_cast<int*>(segment->At(offset + 0));
     int* hi = reinterpret_cast<int*>(segment->At(offset + 4));
-    int list = segment->Allocate(bytes);
-    if (list >= 0) {
-      *lo = (list << 1) | 0;
-      *hi = length;
-      return Builder(segment, list);
+    int result = segment->Allocate(size);
+    if (result >= 0) {
+      *lo = (result << 2) | 0;
+      *hi = 0;
+      return Builder(segment, result);
     }
 
-    BuilderSegment* other = segment->builder()->FindSegmentForBytes(bytes + 8);
+    BuilderSegment* other = segment->builder()->FindSegmentForBytes(size + 8);
     int target = other->Allocate(8);
-    *lo = (target << 1) | 1;
+    *lo = (target << 2) | 3;
+    *hi = other->id();
+
+    segment = other;
+    offset = target;
+  }
+}
+
+Builder Builder::NewList(int offset, int length, int size) {
+  offset += this->offset();
+  size *= length;
+  BuilderSegment* segment = this->segment();
+  while (true) {
+    int* lo = reinterpret_cast<int*>(segment->At(offset + 0));
+    int* hi = reinterpret_cast<int*>(segment->At(offset + 4));
+    int result = segment->Allocate(size);
+    if (result >= 0) {
+      *lo = (result << 2) | 1;
+      *hi = length;
+      return Builder(segment, result);
+    }
+
+    BuilderSegment* other = segment->builder()->FindSegmentForBytes(size + 8);
+    int target = other->Allocate(8);
+    *lo = (target << 2) | 3;
     *hi = other->id();
 
     segment = other;

@@ -10,6 +10,10 @@ class PersonCounterImpl extends PersonCounter {
     return person.age;
   }
 
+  int GetBoxedAge(PersonBox box) {
+    return box.person.age;
+  }
+
   int _SumAges(Person person) {
     int sum = GetAge(person);
     List<Person> children = person.children;

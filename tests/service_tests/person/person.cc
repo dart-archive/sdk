@@ -26,9 +26,7 @@ static void BuildPerson(PersonBuilder person, int n) {
   }
 }
 
-static void InteractWithService() {
-  PersonCounter::Setup();
-
+static void RunPersonTests() {
   MessageBuilder builder(512);
 
   uint64_t start = GetMicroseconds();
@@ -53,7 +51,22 @@ static void InteractWithService() {
   printf("    - %.2f MB/s\n", static_cast<double>(used) / reading_us);
 
   printf("Verification: age = %d, count = %d\n", age, count);
+}
 
+static void RunPersonBoxTests() {
+  MessageBuilder builder(512);
+
+  PersonBoxBuilder box = builder.NewRoot<PersonBoxBuilder>();
+  PersonBuilder person = box.NewPerson();
+  person.set_age(87);
+  int age = PersonCounter::GetBoxedAge(box);
+  printf("Verification: age = %d\n", age);
+}
+
+static void InteractWithService() {
+  PersonCounter::Setup();
+  RunPersonTests();
+  RunPersonBoxTests();
   PersonCounter::TearDown();
 }
 

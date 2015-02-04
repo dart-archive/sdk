@@ -39,7 +39,7 @@ class PrettyPrinter extends Visitor {
   }
 
   visitStruct(Struct node) {
-    StructLayout layout = new StructLayout(node);
+    StructLayout layout = node.layout;
     buffer.writeln("struct ${node.name} {  // size = ${layout.size} bytes");
     for (Formal slot in node.slots) {
       buffer.write("  ");

@@ -204,7 +204,7 @@ class _HeaderVisitor extends CcVisitor {
 
   void writeReader(Struct node) {
     String name = node.name;
-    StructLayout layout = new StructLayout(node);
+    StructLayout layout = node.layout;
 
     writeln();
     writeln('class $name : public Reader {');
@@ -231,7 +231,7 @@ class _HeaderVisitor extends CcVisitor {
 
   void writeBuilder(Struct node) {
     String name = "${node.name}Builder";
-    StructLayout layout = new StructLayout(node);
+    StructLayout layout = node.layout;
 
     writeln();
     writeln('class $name : public Builder {');
@@ -260,6 +260,11 @@ class _HeaderVisitor extends CcVisitor {
         write(' value) { *PointerTo<');
         visit(slotType);
         writeln('>(${slot.offset}) = value; }');
+      } else {
+        String camel = strings.camelize(strings.underscore(slotName));
+        write('  ');
+        visit(slotType);
+        writeln(' New$camel();');
       }
     }
 
@@ -319,7 +324,7 @@ class _ImplementationVisitor extends CcVisitor {
 
   void writeBuilder(Struct node) {
     String name = "${node.name}Builder";
-    StructLayout layout = new StructLayout(node);
+    StructLayout layout = node.layout;
 
     for (StructSlot slot in layout.slots) {
       String slotName = slot.slot.name;
@@ -331,10 +336,24 @@ class _ImplementationVisitor extends CcVisitor {
         write('List<');
         visit(slotType);
         writeln('> $name::New$camel(int length) {');
-        StructLayout targetLayout = new StructLayout(slot.slot.type.resolved);
-        int size = targetLayout.size;
+        Struct element = slot.slot.type.resolved;
+        StructLayout elementLayout = element.layout;
+        int size = elementLayout.size;
         writeln('  Builder result = NewList(${slot.offset}, length, $size);');
         writeln('  return List<$name>(result);');
+        writeln('}');
+      } else if (!slotType.isPrimitive) {
+        writeln();
+        String camel = strings.camelize(strings.underscore(slotName));
+        visit(slotType);
+        writeln(' $name::New$camel() {');
+        Struct element = slot.slot.type.resolved;
+        StructLayout elementLayout = element.layout;
+        int size = elementLayout.size;
+        writeln('  Builder result = NewStruct(${slot.offset}, $size);');
+        write('  return ');
+        visit(slotType);
+        writeln('(result);');
         writeln('}');
       }
     }

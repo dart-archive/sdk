@@ -10,8 +10,6 @@ import 'primitives.dart' as primitives;
 import 'dart:collection';
 import 'dart:core' hide Type;
 
-final Map<String, StructLayout> _cache = <String, StructLayout>{};
-
 int _roundUp(int n, int alignment) {
   return (n + alignment - 1) & ~(alignment - 1);
 }
@@ -22,13 +20,10 @@ class StructLayout {
   StructLayout._(this._slots, this.size);
 
   factory StructLayout(Struct struct) {
-    String name = struct.name;
-    if (_cache.containsKey(name)) return _cache[name];
     _StructBuilder builder = new _StructBuilder();
     struct.slots.forEach(builder.addSlot);
     StructLayout result = new StructLayout._(
         builder.slots, _roundUp(builder.used, 8));
-    _cache[name] = result;
     return result;
   }
 

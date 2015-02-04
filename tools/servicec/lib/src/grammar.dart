@@ -39,7 +39,7 @@ class ServiceGrammarDefinition extends GrammarDefinition {
   method() => ref(type)
       & ref(identifier)
       & ref(token, '(')
-      & ref(formals)
+      & ref(formals).optional(const [])
       & ref(token, ')')
       & ref(token, ';');
 

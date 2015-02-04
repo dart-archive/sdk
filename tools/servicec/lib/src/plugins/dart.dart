@@ -72,10 +72,11 @@ class _DartVisitor extends CodeGenerationVisitor {
       String name = listType.identifier;
       writeln('class _${name}List extends ListReader implements List<$name> {');
 
-      StructLayout targetLayout = new StructLayout(listType.resolved);
-      int targetSize = targetLayout.size;
+      Struct element = listType.resolved;
+      StructLayout elementLayout = element.layout;
+      int elementSize = elementLayout.size;
       writeln('  $name operator[](int index) => '
-              'readListElement(new $name(), index, $targetSize);');
+              'readListElement(new $name(), index, $elementSize);');
 
       writeln('}');
     }
@@ -186,7 +187,7 @@ class _DartVisitor extends CodeGenerationVisitor {
   }
 
   visitStruct(Struct node) {
-    StructLayout layout = new StructLayout(node);
+    StructLayout layout = node.layout;
 
     writeln();
     writeln('class ${node.name} extends Reader {');
@@ -205,6 +206,13 @@ class _DartVisitor extends CodeGenerationVisitor {
         write('  ');
         visit(type);
         writeln(' get ${slot.slot.name} => _segment.memory.$getter($offset);');
+      } else {
+        write('  ');
+        visit(type);
+        write(' get ${slot.slot.name} => ');
+        write('readStruct(new ');
+        visit(type);
+        writeln('(), ${slot.offset});');
       }
     }
     writeln('}');
@@ -213,8 +221,8 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('class ${node.name}Builder extends Builder {');
     for (StructSlot slot in layout.slots) {
       Type type = slot.slot.type;
-      // TODO(ager): Support lists.
-      if (type.isList) continue;
+      // TODO(ager): Support lists and structs.
+      if (!type.isPrimitive) continue;
       String setter = _SETTERS[type.identifier];
       writeln('  void set ${slot.slot.name}(int value) => '
               '$setter(${slot.offset}, value);');

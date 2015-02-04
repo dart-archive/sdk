@@ -55,6 +55,27 @@ class Reader {
   Segment _segment;
   int _offset;
 
+  readStruct(Reader reader, int offset) {
+    Segment segment = _segment;
+    offset += _offset;
+    while (true) {
+      Foreign memory = segment.memory;
+      int lo = memory.getInt32(offset + 0);
+      int hi = memory.getInt32(offset + 4);
+      int tag = lo & 3;
+      if (tag == 0) {
+        // TODO(kasperl): We need to figure out what to do about
+        // uninitialized structs.
+        reader._segment = segment;
+        reader._offset = lo >> 2;
+        return reader;
+      } else {
+        segment = segment.reader.getSegment(hi);
+        offset = lo >> 2;
+      }
+    }
+  }
+
   readList(ListReader reader, int offset) {
     Segment segment = _segment;
     offset += _offset;
@@ -62,14 +83,20 @@ class Reader {
       Foreign memory = segment.memory;
       int lo = memory.getInt32(offset + 0);
       int hi = memory.getInt32(offset + 4);
-      if ((lo & 1) == 0) {
+      int tag = lo & 3;
+      if (tag == 0) {
+        // If the list hasn't been initialized, then
+        // we return an empty list.
+        reader._length = 0;
+        return reader;
+      } else if (tag == 1) {
         reader._segment = segment;
-        reader._offset = lo >> 1;
+        reader._offset = lo >> 2;
         reader._length = hi;
         return reader;
       } else {
         segment = segment.reader.getSegment(hi);
-        offset = lo >> 1;
+        offset = lo >> 2;
       }
     }
   }

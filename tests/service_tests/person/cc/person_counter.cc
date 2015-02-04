@@ -25,7 +25,13 @@ int PersonCounter::GetAge(PersonBuilder person) {
   return person.InvokeMethod(_service_id, _kGetAgeId);
 }
 
-static const MethodId _kGetAgeStatsId = reinterpret_cast<MethodId>(2);
+static const MethodId _kGetBoxedAgeId = reinterpret_cast<MethodId>(2);
+
+int PersonCounter::GetBoxedAge(PersonBoxBuilder box) {
+  return box.InvokeMethod(_service_id, _kGetBoxedAgeId);
+}
+
+static const MethodId _kGetAgeStatsId = reinterpret_cast<MethodId>(3);
 
 AgeStats PersonCounter::GetAgeStats(PersonBuilder person) {
   int64_t result = person.InvokeMethod(_service_id, _kGetAgeStatsId);
@@ -34,7 +40,7 @@ AgeStats PersonCounter::GetAgeStats(PersonBuilder person) {
   return AgeStats(segment, 0);
 }
 
-static const MethodId _kCountId = reinterpret_cast<MethodId>(3);
+static const MethodId _kCountId = reinterpret_cast<MethodId>(4);
 
 int PersonCounter::Count(PersonBuilder person) {
   return person.InvokeMethod(_service_id, _kCountId);
@@ -43,4 +49,9 @@ int PersonCounter::Count(PersonBuilder person) {
 List<PersonBuilder> PersonBuilder::NewChildren(int length) {
   Builder result = NewList(8, length, 16);
   return List<PersonBuilder>(result);
+}
+
+PersonBuilder PersonBoxBuilder::NewPerson() {
+  Builder result = NewStruct(0, 16);
+  return PersonBuilder(result);
 }

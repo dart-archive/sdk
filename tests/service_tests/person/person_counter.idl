@@ -4,6 +4,7 @@
 
 service PersonCounter {
   Int32 GetAge(Person person);
+  Int32 GetBoxedAge(PersonBox box);
   AgeStats GetAgeStats(Person person);
   Int32 Count(Person person);
 }
@@ -16,4 +17,8 @@ struct AgeStats {
 struct Person {
   Int32 age;
   List<Person> children;
+}
+
+struct PersonBox {
+  Person person;
 }

@@ -69,6 +69,11 @@ class Resolver extends ResolutionVisitor {
     }
   }
 
+  visitStruct(Struct node) {
+    super.visitStruct(node);
+    node.layout = new StructLayout(node);
+  }
+
   visitType(Type node) {
     primitives.PrimitiveType primitiveType = primitives.lookup(node.identifier);
     if (primitiveType != null) {

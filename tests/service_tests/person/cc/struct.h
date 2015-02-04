@@ -117,6 +117,7 @@ class Builder {
     return reinterpret_cast<T*>(segment()->At(offset() + n));
   }
 
+  Builder NewStruct(int offset, int size);
   Builder NewList(int offset, int length, int size);
 
  private:

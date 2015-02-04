@@ -55,6 +55,10 @@ class Struct extends Node {
   final String name;
   final List<Formal> slots;
   Struct(this.name, this.slots);
+
+  // Set by the resolver.
+  StructLayout layout;
+
   accept(Visitor visitor) => visitor.visitStruct(this);
 }
 

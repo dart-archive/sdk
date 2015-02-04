@@ -13,12 +13,15 @@ class AgeStats;
 class AgeStatsBuilder;
 class Person;
 class PersonBuilder;
+class PersonBox;
+class PersonBoxBuilder;
 
 class PersonCounter {
  public:
   static void Setup();
   static void TearDown();
   static int GetAge(PersonBuilder person);
+  static int GetBoxedAge(PersonBoxBuilder box);
   static AgeStats GetAgeStats(PersonBuilder person);
   static int Count(PersonBuilder person);
 };
@@ -64,6 +67,25 @@ class PersonBuilder : public Builder {
 
   void set_age(int value) { *PointerTo<int>(0) = value; }
   List<PersonBuilder> NewChildren(int length);
+};
+
+class PersonBox : public Reader {
+ public:
+  PersonBox(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+};
+
+class PersonBoxBuilder : public Builder {
+ public:
+  static const int kSize = 8;
+
+  explicit PersonBoxBuilder(const Builder& builder)
+      : Builder(builder) { }
+  PersonBoxBuilder(BuilderSegment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  PersonBuilder NewPerson();
 };
 
 #endif  // PERSON_COUNTER_H
