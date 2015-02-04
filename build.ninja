@@ -1,0 +1,35 @@
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+rule gyp
+  command = $
+    ./third_party/gyp/gyp --depth=. -Icommon.gypi $
+        -Goutput_dir=out $
+        --format=ninja fletch.gyp
+
+build $
+    out/DebugIA32/build.ninja $
+    out/DebugIA32Asan/build.ninja $
+    out/DebugIA32Clang/build.ninja $
+    out/DebugIA32ClangAsan/build.ninja $
+    out/DebugX64/build.ninja $
+    out/DebugX64Asan/build.ninja $
+    out/DebugX64Clang/build.ninja $
+    out/DebugX64ClangAsan/build.ninja $
+    out/ReleaseIA32/build.ninja $
+    out/ReleaseIA32Asan/build.ninja $
+    out/ReleaseIA32Clang/build.ninja $
+    out/ReleaseIA32ClangAsan/build.ninja $
+    out/ReleaseX64/build.ninja $
+    out/ReleaseX64Asan/build.ninja $
+    out/ReleaseX64Clang/build.ninja $
+    out/ReleaseX64ClangAsan/build.ninja: $
+    gyp $
+        common.gypi $
+        fletch.gyp $
+        src/compiler/compiler.gyp $
+        src/double_conversion.gyp $
+        src/shared/shared.gyp $
+        src/vm/vm.gyp $
+        tests/service_tests/service_tests.gyp

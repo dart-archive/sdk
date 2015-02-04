@@ -57,6 +57,9 @@ def Steps(config):
   # This makes us work from whereever we are called, and restores CWD in exit.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
 
+    with bot.BuildStep('GYP'):
+      Run(['ninja', '-v'])
+
     configurations = []
 
     for asan_variant in ['', 'Asan']:

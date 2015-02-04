@@ -114,13 +114,7 @@ hooks = [
     'name': 'GYP',
     'pattern': '.',
     'action': [
-      'fletch/third_party/gyp/gyp',
-      '--depth=fletch',
-      '-Ifletch/common.gypi',
-      '-Dclang=0',
-      '-Goutput_dir=out',
-      '--format=ninja',
-      'fletch/fletch.gyp',
+      'ninja', '-C', 'fletch',
     ],
   },
 ]
