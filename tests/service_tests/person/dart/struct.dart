@@ -114,11 +114,14 @@ class ListReader extends Reader {
 }
 
 class BuilderSegment {
+  final MessageBuilder _builder;
   final Foreign _memory;
   int _id;
   int _used = 0;
+  BuilderSegment _next;
 
-  BuilderSegment(this._id, int space) : _memory = new Foreign.allocated(space);
+  BuilderSegment(this._builder, this._id, int space)
+      : _memory = new Foreign.allocated(space);
 
   bool HasSpaceForBytes(int bytes) => _used + bytes <= _memory.length;
 
@@ -135,16 +138,29 @@ class BuilderSegment {
 }
 
 class MessageBuilder {
-  final BuilderSegment _first;
+  BuilderSegment _first;
+  BuilderSegment _last;
   int _segments = 1;
 
-  MessageBuilder(int space) : _first = new BuilderSegment(0, space);
+  MessageBuilder(int space) {
+    _first = new BuilderSegment(this, 0, space);
+    _last = _first;
+  }
 
   Builder NewRoot(Builder builder, int size) {
     int offset = _first.Allocate(size);
     builder._segment = _first;
     builder._offset = offset;
     return builder;
+  }
+
+  BuilderSegment FindSegmentForBytes(int bytes) {
+    if (_last.HasSpaceForBytes(bytes)) return _last;
+    int capacity = (bytes > 8192) ? bytes : 8192;
+    BuilderSegment segment = new BuilderSegment(this, _segments++, capacity);
+    _last._next = segment;
+    _last = segment;
+    return segment;
   }
 }
 
@@ -154,5 +170,49 @@ class Builder {
 
   void setInt32(int offset, int value) {
     _segment.setInt32(offset + _offset, value);
+  }
+
+  Builder NewStruct(Builder builder, int offset, int size) {
+    // TODO(ager): Support struct building.
+    return null;
+  }
+
+  ListBuilder NewList(ListBuilder list,
+                      int offset,
+                      int length,
+                      int size) {
+    list._length = length;
+    offset += _offset;
+    size *= length;
+    BuilderSegment segment = _segment;
+    while (true) {
+      int result = segment.Allocate(size);
+      if (result >= 0) {
+        segment.setInt32(offset + 0, (result << 2) | 1);
+        segment.setInt32(offset + 4, length);
+        list._segment = segment;
+        list._offset = result;
+        return list;
+      }
+
+      BuilderSegment other = segment._builder.FindSegmentForBytes(size + 8);
+      int target = other.Allocate(8);
+      segment.setInt32(offset + 0, (target << 2) | 3);
+      segment.setInt32(offset + 4, other._id);
+
+      segment = other;
+      offset = target;
+    }
+  }
+}
+
+class ListBuilder extends Builder {
+  int _length;
+  int get length => _length;
+
+  readListElement(Builder builder, int index, int size) {
+    builder._segment = _segment;
+    builder._offset = _offset + index * size;
+    return builder;
   }
 }

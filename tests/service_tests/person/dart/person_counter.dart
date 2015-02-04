@@ -22,6 +22,7 @@ abstract class PersonCounter {
   int GetBoxedAge(PersonBox box);
   void GetAgeStats(Person person, AgeStatsBuilder result);
   void CreateAgeStats(int averageAge, int sum, AgeStatsBuilder result);
+  void CreatePerson(int children, PersonBuilder result);
   int Count(Person person);
 
   static void initialize(PersonCounter impl) {
@@ -70,6 +71,14 @@ abstract class PersonCounter {
         request.setInt64(32, result);
         _postResult.icall$1(request);
         break;
+      case _CREATE_PERSON_METHOD_ID:
+        MessageBuilder mb = new MessageBuilder(16);
+        PersonBuilder builder = mb.NewRoot(new PersonBuilder(), 16);
+        _impl.CreatePerson(request.getInt32(32), builder);
+        var result = builder._segment._memory.value;
+        request.setInt64(32, result);
+        _postResult.icall$1(request);
+        break;
       case _COUNT_METHOD_ID:
         var result = _impl.Count(getRoot(new Person(), request));
         request.setInt32(32, result);
@@ -85,7 +94,8 @@ abstract class PersonCounter {
   const int _GET_BOXED_AGE_METHOD_ID = 2;
   const int _GET_AGE_STATS_METHOD_ID = 3;
   const int _CREATE_AGE_STATS_METHOD_ID = 4;
-  const int _COUNT_METHOD_ID = 5;
+  const int _CREATE_PERSON_METHOD_ID = 5;
+  const int _COUNT_METHOD_ID = 6;
 }
 
 class AgeStats extends Reader {
@@ -105,6 +115,9 @@ class Person extends Reader {
 
 class PersonBuilder extends Builder {
   void set age(int value) => setInt32(0, value);
+  List<PersonBuilder> NewChildren(int length) {
+    return NewList(new _PersonBuilderList(), 8, length, 16);
+  }
 }
 
 class PersonBox extends Reader {
@@ -112,8 +125,13 @@ class PersonBox extends Reader {
 }
 
 class PersonBoxBuilder extends Builder {
+  Person NewPerson() => NewStruct(0, 16);
 }
 
 class _PersonList extends ListReader implements List<Person> {
   Person operator[](int index) => readListElement(new Person(), index, 16);
+}
+
+class _PersonBuilderList extends ListBuilder implements List<PersonBuilder> {
+  PersonBuilder operator[](int index) => readListElement(new PersonBuilder(), index, 16);
 }

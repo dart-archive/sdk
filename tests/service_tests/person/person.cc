@@ -51,6 +51,10 @@ static void RunPersonTests() {
          stats2.averageAge(),
          stats2.sum());
   stats2.Delete();
+  Person generated = PersonCounter::CreatePerson(10);
+  printf("Generate age: %d\n", generated.age());
+  generated.Delete();
+  // TODO(ager): Read result.
   int reading_us = static_cast<int>(end - start);
   printf("Reading took %.2f us.\n", reading_us / 1000.0);
   printf("    - %.2f MB/s\n", static_cast<double>(used) / reading_us);

@@ -277,7 +277,7 @@ class _HeaderVisitor extends CcVisitor {
         writeType(slotType);
         writeln('> New$camel(int length);');
       } else if (slotType.isPrimitive) {
-        write('  void set_${slot.slot.name}(');
+        write('  void set_${slotName}(');
         writeType(slotType);
         write(' value) { *PointerTo<');
         writeType(slotType);

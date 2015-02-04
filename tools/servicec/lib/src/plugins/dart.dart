@@ -68,16 +68,22 @@ class _DartVisitor extends CodeGenerationVisitor {
     node.structs.forEach(visit);
 
     for (Type listType in neededListTypes) {
-      writeln('');
       String name = listType.identifier;
-      writeln('class _${name}List extends ListReader implements List<$name> {');
-
       Struct element = listType.resolved;
       StructLayout elementLayout = element.layout;
       int elementSize = elementLayout.size;
+
+      writeln();
+      writeln('class _${name}List extends ListReader implements List<$name> {');
       writeln('  $name operator[](int index) => '
               'readListElement(new $name(), index, $elementSize);');
+      writeln('}');
 
+      writeln();
+      writeln('class _${name}BuilderList extends ListBuilder '
+              'implements List<${name}Builder> {');
+      writeln('  ${name}Builder operator[](int index) => '
+              'readListElement(new ${name}Builder(), index, $elementSize);');
       writeln('}');
     }
   }
@@ -220,12 +226,35 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln();
     writeln('class ${node.name}Builder extends Builder {');
     for (StructSlot slot in layout.slots) {
-      Type type = slot.slot.type;
-      // TODO(ager): Support lists and structs.
-      if (!type.isPrimitive) continue;
-      String setter = _SETTERS[type.identifier];
-      writeln('  void set ${slot.slot.name}(int value) => '
-              '$setter(${slot.offset}, value);');
+      String slotName = slot.slot.name;
+      Type slotType = slot.slot.type;
+      if (slotType.isList) {
+        String camel = strings.camelize(strings.underscore(slotName));
+        write('  List<');
+        writeReturnType(slotType);
+        writeln('> New$camel(int length) {');
+        Struct element = slotType.resolved;
+        StructLayout elementLayout = element.layout;
+        int size = elementLayout.size;
+        write('    return NewList(new _');
+        writeReturnType(slotType);
+        writeln('List(), ${slot.offset}, length, $size);');
+        writeln('  }');
+      } else if (slotType.isPrimitive) {
+        String setter = _SETTERS[slotType.identifier];
+        write('  void set ${slotName}(');
+        writeType(slotType);
+        writeln(' value) => $setter(${slot.offset}, value);');
+      } else {
+        String camel = strings.camelize(strings.underscore(slotName));
+        write('  ');
+        writeType(slotType);
+        write(' New$camel() => ');
+        Struct element = slotType.resolved;
+        StructLayout elementLayout = element.layout;
+        int size = elementLayout.size;
+        writeln('NewStruct(${slot.offset}, $size);');
+      }
     }
     writeln('}');
   }
@@ -252,6 +281,11 @@ class _DartVisitor extends CodeGenerationVisitor {
     write(' ${node.name}');
   }
 
+  static const Map<String, String> _types = const {
+    'Int16': 'int',
+    'Int32': 'int'
+  };
+
   void writeType(Type node) {
     Node resolved = node.resolved;
     if (resolved != null) {
@@ -261,8 +295,19 @@ class _DartVisitor extends CodeGenerationVisitor {
         'Int16': 'int',
         'Int32': 'int'
       };
-      String type = types[node.identifier];
+      String type = _types[node.identifier];
       write(type);
     }
   }
+
+  void writeReturnType(Type node) {
+    Node resolved = node.resolved;
+    if (resolved != null) {
+      write('${node.identifier}Builder');
+    } else {
+      String type = _types[node.identifier];
+      write(type);
+    }
+  }
+
 }

@@ -24,6 +24,7 @@ class PersonCounter {
   static int GetBoxedAge(PersonBoxBuilder box);
   static AgeStats GetAgeStats(PersonBuilder person);
   static AgeStats CreateAgeStats(int averageAge, int sum);
+  static Person CreatePerson(int children);
   static int Count(PersonBuilder person);
 };
 
