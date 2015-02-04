@@ -27,7 +27,7 @@ class PrettyPrinter extends Visitor {
 
   visitMethod(Method node) {
     buffer.write("  ");
-    visit(node.returnType);
+    writeType(node.returnType);
     buffer.write(" ${node.name}(");
     bool first = true;
     node.arguments.forEach((Formal formal) {
@@ -50,11 +50,11 @@ class PrettyPrinter extends Visitor {
   }
 
   visitFormal(Formal node) {
-    visit(node.type);
+    writeType(node.type);
     buffer.write(" ${node.name}");
   }
 
-  visitType(Type node) {
+  void writeType(Type node) {
     if (node.isList) buffer.write("List<");
     buffer.write(node.identifier);
     if (node.isList) buffer.write(">");

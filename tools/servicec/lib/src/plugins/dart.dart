@@ -86,7 +86,7 @@ class _DartVisitor extends CodeGenerationVisitor {
     write('_impl.${method.name}(');
     if (method.inputKind == InputKind.STRUCT) {
       write('getRoot(new ');
-      visit(method.arguments.single.type);
+      writeType(method.arguments.single.type);
       write('(), request)');
     } else {
       assert(method.inputKind == InputKind.PRIMITIVES);
@@ -195,7 +195,7 @@ class _DartVisitor extends CodeGenerationVisitor {
       Type type = slot.slot.type;
       if (type.isList) {
         write('  List<');
-        visit(type);
+        writeType(type);
         write('> get ${slot.slot.name} => ');
         neededListTypes.add(type);
         writeln('readList(new _${type.identifier}List(), ${slot.offset});');
@@ -204,14 +204,14 @@ class _DartVisitor extends CodeGenerationVisitor {
         String offset = '_offset + ${slot.offset}';
 
         write('  ');
-        visit(type);
+        writeType(type);
         writeln(' get ${slot.slot.name} => _segment.memory.$getter($offset);');
       } else {
         write('  ');
-        visit(type);
+        writeType(type);
         write(' get ${slot.slot.name} => ');
         write('readStruct(new ');
-        visit(type);
+        writeType(type);
         writeln('(), ${slot.offset});');
       }
     }
@@ -240,7 +240,7 @@ class _DartVisitor extends CodeGenerationVisitor {
     } else {
       assert(node.outputKind == OutputKind.PRIMITIVE);
       write('  ');
-      visit(node.returnType);
+      writeType(node.returnType);
       write(' ${node.name}(');
       visitNodes(node.arguments, (first) => first ? '' : ', ');
     }
@@ -248,11 +248,11 @@ class _DartVisitor extends CodeGenerationVisitor {
   }
 
   visitFormal(Formal node) {
-    visit(node.type);
+    writeType(node.type);
     write(' ${node.name}');
   }
 
-  visitType(Type node) {
+  void writeType(Type node) {
     Node resolved = node.resolved;
     if (resolved != null) {
       write(node.identifier);

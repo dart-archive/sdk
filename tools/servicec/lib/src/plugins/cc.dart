@@ -57,14 +57,24 @@ abstract class CcVisitor extends CodeGenerationVisitor {
       : 'reinterpret_cast<$type>';
 
   visitFormal(Formal node) {
-    visit(node.type);
+    writeType(node.type);
     write(' ${node.name}');
   }
 
-  visitType(Type node, {bool returnType: false}) {
+  void writeType(Type node) {
     Node resolved = node.resolved;
     if (resolved != null) {
-      write('${node.identifier}${returnType ? "" : "Builder"}');
+      write('${node.identifier}Builder');
+    } else {
+      String type = PRIMITIVE_TYPES[node.identifier];
+      write(type);
+    }
+  }
+
+  void writeReturnType(Type node) {
+    Node resolved = node.resolved;
+    if (resolved != null) {
+      write('${node.identifier}');
     } else {
       String type = PRIMITIVE_TYPES[node.identifier];
       write(type);
@@ -181,7 +191,7 @@ class _HeaderVisitor extends CcVisitor {
 
   visitMethod(Method node) {
     write('  static ');
-    visitType(node.returnType, returnType: true);
+    writeReturnType(node.returnType);
     write(' ${node.name}(');
     visitArguments(node.arguments);
     writeln(');');
@@ -193,7 +203,7 @@ class _HeaderVisitor extends CcVisitor {
     visitArguments(node.arguments);
     if (node.arguments.isNotEmpty) write(', ');
     write('void (*callback)(');
-    visit(node.returnType);
+    writeReturnType(node.returnType);
     writeln('));');
   }
 
@@ -219,10 +229,10 @@ class _HeaderVisitor extends CcVisitor {
       if (!type.isPrimitive) continue;  // TODO(kasperl): Don't skip.
 
       write('  ');
-      visit(type);
+      writeType(type);
 
       write(' ${slot.slot.name}() const { return *PointerTo<');
-      visit(type);
+      writeType(type);
       writeln('>(${slot.offset}); }');
     }
 
@@ -252,18 +262,18 @@ class _HeaderVisitor extends CcVisitor {
       if (slotType.isList) {
         String camel = strings.camelize(strings.underscore(slotName));
         write('  List<');
-        visit(slotType);
+        writeType(slotType);
         writeln('> New$camel(int length);');
       } else if (slotType.isPrimitive) {
         write('  void set_${slot.slot.name}(');
-        visit(slotType);
+        writeType(slotType);
         write(' value) { *PointerTo<');
-        visit(slotType);
+        writeType(slotType);
         writeln('>(${slot.offset}) = value; }');
       } else {
         String camel = strings.camelize(strings.underscore(slotName));
         write('  ');
-        visit(slotType);
+        writeType(slotType);
         writeln(' New$camel();');
       }
     }
@@ -334,7 +344,7 @@ class _ImplementationVisitor extends CcVisitor {
         writeln();
         String camel = strings.camelize(strings.underscore(slotName));
         write('List<');
-        visit(slotType);
+        writeType(slotType);
         writeln('> $name::New$camel(int length) {');
         Struct element = slot.slot.type.resolved;
         StructLayout elementLayout = element.layout;
@@ -345,14 +355,14 @@ class _ImplementationVisitor extends CcVisitor {
       } else if (!slotType.isPrimitive) {
         writeln();
         String camel = strings.camelize(strings.underscore(slotName));
-        visit(slotType);
+        writeType(slotType);
         writeln(' $name::New$camel() {');
         Struct element = slot.slot.type.resolved;
         StructLayout elementLayout = element.layout;
         int size = elementLayout.size;
         writeln('  Builder result = NewStruct(${slot.offset}, $size);');
         write('  return ');
-        visit(slotType);
+        writeType(slotType);
         writeln('(result);');
         writeln('}');
       }
@@ -369,7 +379,7 @@ class _ImplementationVisitor extends CcVisitor {
 
     if (node.inputKind == InputKind.STRUCT) {
       writeln();
-      visitType(node.returnType, returnType: true);
+      writeReturnType(node.returnType);
       write(' $serviceName::${name}(');
       visitArguments(node.arguments);
       writeln(') {');
@@ -393,7 +403,7 @@ class _ImplementationVisitor extends CcVisitor {
 
       writeln();
       // TODO(ager): Deal with struct return types.
-      visit(node.returnType);
+      writeReturnType(node.returnType);
       write(' $serviceName::${name}(');
       visitArguments(node.arguments);
       writeln(') {');
@@ -408,7 +418,7 @@ class _ImplementationVisitor extends CcVisitor {
       visitArguments(node.arguments);
       if (node.arguments.isNotEmpty) write(', ');
       write('void (*callback)(');
-      visit(node.returnType);
+      writeReturnType(node.returnType);
       writeln(')) {');
       visitMethodBody(id, node.arguments, node.inputPrimitiveStructLayout,
           callback: callback);

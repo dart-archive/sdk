@@ -20,7 +20,6 @@ abstract class Visitor {
   visitStruct(Struct struct);
   visitMethod(Method method);
   visitFormal(Formal formal);
-  visitType(Type type);
 }
 
 enum InputKind {
@@ -84,7 +83,7 @@ class Method extends Node {
   accept(Visitor visitor) => visitor.visitMethod(this);
 }
 
-class Type extends Node {
+class Type {
   final String identifier;
   final bool isList;
   Type(this.identifier, this.isList);
@@ -94,8 +93,6 @@ class Type extends Node {
   primitives.PrimitiveType primitiveType;
 
   bool get isPrimitive => primitiveType != null;
-
-  accept(Visitor visitor) => visitor.visitType(this);
 }
 
 // --------------------------------------------------------------

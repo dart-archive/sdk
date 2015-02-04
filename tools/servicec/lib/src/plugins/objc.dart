@@ -48,7 +48,7 @@ abstract class _ObjcVisitor extends CcVisitor {
 
   visitFormal(Formal node) {
     write('(');
-    visit(node.type);
+    writeType(node.type);
     write(')${node.name}');
   }
 
@@ -88,7 +88,7 @@ class _HeaderVisitor extends _ObjcVisitor {
   visitMethod(Method node) {
     String name = node.name;
     write('+ (');
-    visit(node.returnType);
+    writeType(node.returnType);
     write(')${name}');
     visitArguments(node.arguments);
     writeln(';');
@@ -168,7 +168,7 @@ class _ImplementationVisitor extends _ObjcVisitor {
     StructLayout layout = node.inputPrimitiveStructLayout;
     writeln();
     write('+ (');
-    visit(node.returnType);
+    writeType(node.returnType);
     write(')$name');
     visitArguments(node.arguments);
     writeln(' {');

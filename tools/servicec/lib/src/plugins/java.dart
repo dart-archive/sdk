@@ -215,13 +215,13 @@ class _JavaVisitor extends CodeGenerationVisitor {
     writeln();
     writeln('  public static abstract class ${name}Callback {');
     write('    public abstract void handle(');
-    visit(node.returnType);
+    writeType(node.returnType);
     writeln(' result);');
     writeln('  }');
 
     writeln();
     write('  public static native ');
-    visit(node.returnType);
+    writeType(node.returnType);
     write(' ${name}(');
     visitArguments(node.arguments);
     writeln(');');
@@ -236,11 +236,11 @@ class _JavaVisitor extends CodeGenerationVisitor {
   }
 
   visitFormal(Formal node) {
-    visit(node.type);
+    writeType(node.type);
     write(' ${node.name}');
   }
 
-  visitType(Type node) {
+  void writeType(Type node) {
     Map<String, String> types = const {
       'Int16': 'short',
       'Int32': 'int',
@@ -321,7 +321,7 @@ class _JniVisitor extends CcVisitor {
 
     writeln();
     write('JNIEXPORT ');
-    visit(node.returnType);
+    writeType(node.returnType);
     write(' JNICALL Java_fletch_${serviceName}_${name}(');
     write('JNIEnv*, jclass, ');
     visitArguments(node.arguments);
@@ -349,7 +349,7 @@ class _JniVisitor extends CcVisitor {
     writeln('}');
   }
 
-  visitType(Type node) {
+  void writeType(Type node) {
     Map<String, String> types = const {
       'Int16': 'jshort',
       'Int32': 'jint'

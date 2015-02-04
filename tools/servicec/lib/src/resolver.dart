@@ -74,7 +74,7 @@ class Resolver extends ResolutionVisitor {
     node.layout = new StructLayout(node);
   }
 
-  visitType(Type node) {
+  void resolveType(Type node) {
     primitives.PrimitiveType primitiveType = primitives.lookup(node.identifier);
     if (primitiveType != null) {
       if (node.isList) {
@@ -110,13 +110,13 @@ class ResolutionVisitor extends Visitor {
 
   visitMethod(Method node) {
     node.arguments.forEach(visit);
-    visit(node.returnType);
+    resolveType(node.returnType);
   }
 
   visitFormal(Formal node) {
-    visit(node.type);
+    resolveType(node.type);
   }
 
-  visitType(Type node) {
+  void resolveType(Type node) {
   }
 }
