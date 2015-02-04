@@ -55,8 +55,8 @@ final TEST_SUITE_DIRECTORIES = [
     new Path('tests/ffi'),
     new Path('tests/io'),
     new Path('tests/isolate'),
-    new Path('tests/language'),
     new Path('tests/unsorted'),
+    new Path('tests/language'),
 ];
 
 void testConfigurations(List<Map> configurations) {
