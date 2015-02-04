@@ -83,8 +83,8 @@ def Steps(config):
         Run(['ninja', '-v', '-C', configuration['build_dir']])
 
     for configuration in configurations:
-      if mac and configuration['mode'] == 'debug' and configuration['asan']:
-        # Asan debug mode takes a long time on mac.
+      if mac and configuration['arch'] == 'x64' and configuration['asan']:
+        # Asan/x64 takes a long time on mac.
         pass
       else:
         RunTests(
@@ -102,11 +102,6 @@ def RunTests(name, mode, arch, mac=False, clang=True, asan=False):
             '--time', '--report', '--progress=buildbot']
     if asan:
       args.append('--asan')
-      if arch == 'x64' and mac:
-        # On Mac x64, asan seems to be bound by a syscall that doesn't
-        # parallelize. Limiting to two cores appears to be optimal, both
-        # for build bot virtual machines and physical machines.
-        args.append('-j2')
 
     if clang:
       args.append('--clang')
