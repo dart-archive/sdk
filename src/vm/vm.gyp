@@ -81,6 +81,22 @@
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
       ],
+
+      # TODO(kasperl): Remove the below conditions when we no longer use weak
+      # symbols.
+      'conditions': [
+        [ 'OS=="linux"', {
+          'link_settings': {
+            'ldflags': [
+              '-Wl,--whole-archive',
+            ],
+            'libraries': [
+              '-Wl,--no-whole-archive',
+            ],
+          },
+        }],
+      ],
+
       'sources': [
         '<(INTERMEDIATE_DIR)/generated.S',
       ],
