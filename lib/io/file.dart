@@ -46,6 +46,7 @@ class File {
    * A [FileException] is thrown if it was unable to open the specified file.
    */
   void open({int mode: READ}) {
+    if (_fd != -1) _error("File is already opened");
     if (mode < 0 || mode > 2) throw ArgumentError("Invalid open mode: $mode");
     int fd = sys.open(path, mode == WRITE, mode == APPEND);
     if (fd == -1) _error("Failed to open file '$path'");
@@ -56,12 +57,27 @@ class File {
    * Write [buffer] to the file. The file must have been opened with [WRITE]
    * permissions.
    */
-  void write(ByteBuffer buffer);
+  void write(ByteBuffer buffer) {
+    int result = sys.write(_fd, buffer, 0, buffer.lengthInBytes);
+    if (result != buffer.lengthInBytes) _error("Failed to write buffer");
+  }
 
   /**
    * Read up to [maxBytes] from the file.
    */
-  ByteBuffer read(int maxBytes);
+  ByteBuffer read(int maxBytes) {
+    Uint8List list = new Uint8List(maxBytes);
+    ByteBuffer buffer = list.buffer;
+    int result = sys.read(_fd, buffer, 0, maxBytes);
+    if (result == -1) _error("Failed to read from file");
+    if (result < maxBytes) {
+      Uint8List truncated = new Uint8List(result);
+      ByteBuffer newBuffer = truncated.buffer;
+      sys.memcpy(newBuffer, 0, buffer, 0, result);
+      buffer = newBuffer;
+    }
+    return buffer;
+  }
 
   /**
    * Get the current position within the file.
@@ -77,7 +93,7 @@ class File {
    */
   void set position(int value) {
     if (sys.lseek(_fd, value, SEEK_SET) != value) {
-      _error("Failed to seek file to $value");
+      _error("Failed to set file offset to '$value'");
     }
   }
 

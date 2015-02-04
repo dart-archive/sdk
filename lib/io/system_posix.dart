@@ -73,6 +73,7 @@ abstract class PosixSystem implements System {
   static final Foreign _getsockname = Foreign.lookup("getsockname");
   static final Foreign _ioctl = Foreign.lookup("ioctl");
   static final Foreign _listen = Foreign.lookup("listen");
+  static final Foreign _memcpy = Foreign.lookup("memcpy");
   static final Foreign _mkstemp = Foreign.lookup("mkstemp");
   static final Foreign _nanosleep = Foreign.lookup("nanosleep");
   static final Foreign _read = Foreign.lookup("read");
@@ -151,12 +152,14 @@ abstract class PosixSystem implements System {
   }
 
   int lseek(int fd, int offset, int whence) {
-    int low = offset & 0xFFFFFFFF;
-    int high = offset >> 32;
-    return _retry(() => _lseek.lcall$4(fd,
-                                       high,
-                                       low,
-                                       whence));
+    if (Foreign.bitsPerMachineWord == 32) {
+      int low = offset & 0xFFFFFFFF;
+      // TODO(ajohnsen): We do not support shift of 32+ on ia32.
+      int high = (offset >> 16) >> 16;
+      return _retry(() => _lseek.lcall$4(fd, low, high, whence));
+    } else {
+      return _retry(() => _lseek.icall$3(fd, offset, whence));
+    }
   }
 
   TempFile mkstemp(String path) {
@@ -269,6 +272,16 @@ abstract class PosixSystem implements System {
     _rangeCheck(buffer, offset, length);
     var address = buffer._foreign.value + offset;
     return _retry(() => _write.icall$3(fd, address, length));
+  }
+
+  void memcpy(ByteBuffer dest,
+              int destOffset,
+              ByteBuffer src,
+              srcOffset,
+              int length) {
+    var destAddress = dest._foreign.value + destOffset;
+    var srcAddress = src._foreign.value + srcOffset;
+    _memcpy.icall$3(destAddress, srcAddress, length);
   }
 
   int shutdown(int fd, int how) {
