@@ -815,7 +815,9 @@ class TestCase extends UniqueObject {
     final mode = configuration['mode'];
     final arch = configuration['arch'];
     final checked = configuration['checked'] ? '-checked' : '';
-    return "$compiler-$runtime$checked ${mode}_$arch";
+    final clang = configuration['clang'] ? '_clang' : '';
+    final asan = configuration['asan'] ? '_asan' : '';
+    return "$compiler-$runtime$checked ${mode}_$arch$clang$asan";
   }
 
   List<String> get batchTestArguments {

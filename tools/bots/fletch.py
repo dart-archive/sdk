@@ -99,7 +99,7 @@ def Steps(config):
 def RunTests(name, mode, arch, mac=False, clang=True, asan=False):
   with bot.BuildStep('Test %s' % name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
-            '--time', '--report', '--progress=buildbot']
+            '--time', '--report', '-pbuildbot', '--step_name=test_%s' % name]
     if asan:
       args.append('--asan')
 

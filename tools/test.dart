@@ -107,6 +107,8 @@ void testConfigurations(List<Map> configurations) {
       List settings = ['compiler', 'runtime', 'mode', 'arch']
           .map((name) => conf[name]).toList();
       if (conf['checked']) settings.add('checked');
+      if (conf['clang']) settings.add('clang');
+      if (conf['asan']) settings.add('asan');
       output_words.add(settings.join('_'));
     }
     print(output_words.join(' '));

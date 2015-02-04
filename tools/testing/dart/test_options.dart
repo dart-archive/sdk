@@ -456,7 +456,7 @@ Note: currently only implemented for dart2js.''',
               'Use clang build instead of gcc.',
               ['--clang'],
               [],
-              false,
+              Platform.operatingSystem == "macos",
               type: 'bool'),
           ];
   }
