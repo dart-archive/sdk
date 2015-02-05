@@ -33,10 +33,7 @@ const List<Instruction> instructions = const <Instruction>[
     const Pad(2), _, _, _, const Pad(1), _, _, _, _, _, _, _, const Pad(1), _,
     _, _, const Pad(14), _, const Pad(12), _, _, _, const Pad(10),
     const Pad(2), _, _, _, const Pad(2), _, _, _, _, _, _, _,
-    const Pad(15), _, _, _, // Packet length - 1 in little endian.
-    const Pad(17), // Opcode.PushNewString
-    const Pad(11), _, _, _, // String length in little endian.
-    const Constant("Hej Verden!"),
+    const PushNewString("Hej Verden!"),
     const Pad(12), _, _, _, const Pad(10),
     const Pad(2), _, _, _, const Pad(3), _, _, _, _, _, _, _, const Pad(12), _,
     _, _, const Pad(9), _, _, _, _, _, _, _, _, _, _, _, _, const Pad(12), _,

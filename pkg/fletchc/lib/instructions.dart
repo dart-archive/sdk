@@ -10,6 +10,11 @@ import 'dart:async' show
 import 'dart:convert' show
     UTF8;
 
+import 'dart:typed_data' show
+    ByteData,
+    Endianness,
+    Uint8List;
+
 /// A generalization of reflective opcodes and bytecodes.
 abstract class Instruction {
   const Instruction();
@@ -17,19 +22,8 @@ abstract class Instruction {
   void addTo(StreamSink<List<int>> sink);
 }
 
-/// A code that can be used in a method body.
-abstract class ByteCode extends Instruction {
-  const ByteCode();
-}
-
-/// A reflective opcode for the fletch VM, for example, Opcode.NewMap.
-abstract class Opcode extends Instruction {
-  // TODO(ahe): Copy enum Opcode from ../../../src/bridge/opcodes.dart.
-  const Opcode();
-}
-
 /// One byte of padding.
-class Pad extends ByteCode {
+class Pad extends Instruction {
   final int byte;
 
   const Pad([this.byte = 0]);
@@ -39,16 +33,81 @@ class Pad extends ByteCode {
   }
 }
 
-class Constant extends Instruction {
-  final value;
+class Command extends Instruction {
+  final Opcode opcode;
 
-  const Constant(this.value);
+  const Command(this.opcode);
+}
+
+class PushNewString extends Command {
+  final String value;
+
+  const PushNewString(this.value)
+      : super(Opcode.PushNewString);
 
   void addTo(StreamSink<List<int>> sink) {
-    if (value is String) {
-      sink.add(UTF8.encode(value));
-    } else {
-      throw "Unknown constant value ${value} (${value.runtimeType}).";
+    List<int> payload = UTF8.encode(value);
+    int header = 4 /* 32 bit uint */ + 1 /* Opcode */ + 4 /* 32 bit unit */;
+    Uint8List list = new Uint8List(header + payload.length);
+    ByteData view = new ByteData.view(list.buffer);
+    view.setUint32(0, payload.length + 4, Endianness.LITTLE_ENDIAN);
+    view.setUint8(4, opcode.index);
+    view.setUint32(5, payload.length, Endianness.LITTLE_ENDIAN);
+    for (int i = 0; i < payload.length; i++) {
+      list[i + header] = payload[i];
     }
+    sink.add(list);
   }
+}
+
+enum Opcode {
+  // Session opcodes.
+  // TODO(ahe): Understand what "Session opcodes" mean and turn it into a
+  // proper documentation comment.
+  ConnectionError,
+  CompilerError,
+  SessionEnd,
+  ForceTermination,
+
+  RunMain,
+  WriteSnapshot,
+  CollectGarbage,
+
+  NewMap,
+  DeleteMap,
+  PushFromMap,
+  PopToMap,
+
+  Dup,
+  Drop,
+  PushNull,
+  PushBoolean,
+  PushNewInteger,
+  PushNewDouble,
+  PushNewString,
+  PushNewInstance,
+  PushNewArray,
+  PushNewFunction,
+  PushNewInitializer,
+  PushNewClass,
+  PushBuiltinClass,
+  PushConstantList,
+  PushConstantMap,
+
+  PushNewName,
+
+  ChangeSuperClass,
+  ChangeMethodTable,
+  ChangeMethodLiteral,
+  ChangeStatics,
+  CommitChanges,
+  DiscardChange,
+
+  UncaughtException,
+
+  MapLookup,
+  ObjectId,
+
+  PopInteger,
+  Integer
 }
