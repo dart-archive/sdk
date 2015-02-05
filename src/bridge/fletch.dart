@@ -7,6 +7,8 @@ import 'dart:io';
 
 import 'session.dart';
 
+const String BUILD_DIR = const String.fromEnvironment("build-dir");
+
 addCompilerOutput(stream) {
   return (d) {
     stream.write("compiler: ");
@@ -26,10 +28,14 @@ main(args) {
     exit(1);
   }
 
-  // Locate the compiler and vm executables relative to this script's uri.
   var scriptUri = Platform.script;
-  var os = Platform.operatingSystem;
-  var buildDir = scriptUri.resolve("../../build/${os}_debug_x86").toFilePath();
+  var buildDir;
+  if (BUILD_DIR == null) {
+    // Locate the compiler and vm executables relative to this script's uri.
+    buildDir = scriptUri.resolve("../../out/DebugIA32Clang").toFilePath();
+  } else {
+    buildDir = Uri.base.resolve(BUILD_DIR).toFilePath();
+  }
   var compiler = "$buildDir/fletchc";
   var vm = "$buildDir/fletch";
 
