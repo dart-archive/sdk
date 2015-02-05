@@ -33,8 +33,7 @@ const List<int> HELLO_WORLD = const <int>[
 
 main(args) async {
   if (args.length != 0) {
-    print('usage: fletchx.dart');
-    print("Don't pass a <file> when running the simple system.");
+    print('usage: fletchc.dart');
     exit(1);
   }
 
@@ -42,7 +41,7 @@ main(args) async {
   var buildDir;
   if (BUILD_DIR == null) {
     // Locate the vm executable relative to this script's uri.
-    buildDir = scriptUri.resolve("../../out/DebugIA32Clang").toFilePath();
+    buildDir = scriptUri.resolve("../../../out/DebugIA32Clang").toFilePath();
   } else {
     buildDir = Uri.base.resolve(BUILD_DIR).toFilePath();
   }
