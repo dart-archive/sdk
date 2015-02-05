@@ -15,6 +15,10 @@ class Person;
 class PersonBuilder;
 class PersonBox;
 class PersonBoxBuilder;
+class Node;
+class NodeBuilder;
+class Cons;
+class ConsBuilder;
 
 class PersonCounter {
  public:
@@ -26,6 +30,7 @@ class PersonCounter {
   static AgeStats CreateAgeStats(int averageAge, int sum);
   static Person CreatePerson(int children);
   static int Count(PersonBuilder person);
+  static int Depth(NodeBuilder node);
 };
 
 class AgeStats : public Reader {
@@ -88,6 +93,52 @@ class PersonBoxBuilder : public Builder {
       : Builder(segment, offset) { }
 
   PersonBuilder NewPerson();
+};
+
+class Node : public Reader {
+ public:
+  Node(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+  short tag() const { return *PointerTo<short>(0); }
+  bool is_num() const { return 1 == tag(); }
+  int num() const { return *PointerTo<int>(8); }
+};
+
+class NodeBuilder : public Builder {
+ public:
+  static const int kSize = 16;
+
+  explicit NodeBuilder(const Builder& builder)
+      : Builder(builder) { }
+  NodeBuilder(BuilderSegment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  void set_tag(short value) { *PointerTo<short>(0) = value; }
+  void mark_num() { set_tag(1); }
+  void set_num(int value) { *PointerTo<int>(8) = value; }
+  void mark_cons() { set_tag(2); }
+  ConsBuilder NewCons();
+};
+
+class Cons : public Reader {
+ public:
+  Cons(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+};
+
+class ConsBuilder : public Builder {
+ public:
+  static const int kSize = 16;
+
+  explicit ConsBuilder(const Builder& builder)
+      : Builder(builder) { }
+  ConsBuilder(BuilderSegment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  NodeBuilder NewFst();
+  NodeBuilder NewSnd();
 };
 
 #endif  // PERSON_COUNTER_H

@@ -198,26 +198,35 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln();
     writeln('class ${node.name} extends Reader {');
     for (StructSlot slot in layout.slots) {
-      Type type = slot.slot.type;
-      if (type.isList) {
+      String slotName = slot.slot.name;
+      Type slotType = slot.slot.type;
+
+      if (slot.isUnionSlot) {
+        String camel = strings.camelize(strings.underscore(slotName));
+        String tagName = slot.union.tag.name;
+        int tag = slot.unionTag;
+        writeln('  bool get is$camel => $tag == this.$tagName;');
+      }
+
+      if (slotType.isList) {
         write('  List<');
-        writeType(type);
-        write('> get ${slot.slot.name} => ');
-        neededListTypes.add(type);
-        writeln('readList(new _${type.identifier}List(), ${slot.offset});');
-      } else if (type.isPrimitive) {
-        String getter = _GETTERS[type.identifier];
+        writeType(slotType);
+        write('> get $slotName => ');
+        neededListTypes.add(slotType);
+        writeln('readList(new _${slotType.identifier}List(), ${slot.offset});');
+      } else if (slotType.isPrimitive) {
+        String getter = _GETTERS[slotType.identifier];
         String offset = '_offset + ${slot.offset}';
 
         write('  ');
-        writeType(type);
-        writeln(' get ${slot.slot.name} => _segment.memory.$getter($offset);');
+        writeType(slotType);
+        writeln(' get $slotName => _segment.memory.$getter($offset);');
       } else {
         write('  ');
-        writeType(type);
-        write(' get ${slot.slot.name} => ');
+        writeType(slotType);
+        write(' get $slotName => ');
         write('readStruct(new ');
-        writeType(type);
+        writeType(slotType);
         writeln('(), ${slot.offset});');
       }
     }
@@ -228,8 +237,9 @@ class _DartVisitor extends CodeGenerationVisitor {
     for (StructSlot slot in layout.slots) {
       String slotName = slot.slot.name;
       Type slotType = slot.slot.type;
+
+      String camel = strings.camelize(strings.underscore(slotName));
       if (slotType.isList) {
-        String camel = strings.camelize(strings.underscore(slotName));
         write('  List<');
         writeReturnType(slotType);
         writeln('> New$camel(int length) {');
@@ -246,7 +256,6 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeType(slotType);
         writeln(' value) => $setter(${slot.offset}, value);');
       } else {
-        String camel = strings.camelize(strings.underscore(slotName));
         write('  ');
         writeType(slotType);
         write(' New$camel() => ');
@@ -257,6 +266,10 @@ class _DartVisitor extends CodeGenerationVisitor {
       }
     }
     writeln('}');
+  }
+
+  visitUnion(Union node) {
+    // Ignored for now.
   }
 
   visitMethod(Method node) {
@@ -291,10 +304,6 @@ class _DartVisitor extends CodeGenerationVisitor {
     if (resolved != null) {
       write(node.identifier);
     } else {
-      Map<String, String> types = const {
-        'Int16': 'int',
-        'Int32': 'int'
-      };
       String type = _types[node.identifier];
       write(type);
     }

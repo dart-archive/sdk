@@ -64,8 +64,8 @@ class Reader {
       int hi = memory.getInt32(offset + 4);
       int tag = lo & 3;
       if (tag == 0) {
-        // TODO(kasperl): We need to figure out what to do about
-        // uninitialized structs.
+        throw new UnimplementedError("Cannot read uninitialized structs");
+      } else if (tag == 1) {
         reader._segment = segment;
         reader._offset = lo >> 2;
         return reader;
@@ -89,7 +89,7 @@ class Reader {
         // we return an empty list.
         reader._length = 0;
         return reader;
-      } else if (tag == 1) {
+      } else if (tag == 2) {
         reader._segment = segment;
         reader._offset = lo >> 2;
         reader._length = hi;

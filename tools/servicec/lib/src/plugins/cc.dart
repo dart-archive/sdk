@@ -56,6 +56,10 @@ abstract class CcVisitor extends CodeGenerationVisitor {
       ? '($type)'
       : 'reinterpret_cast<$type>';
 
+  visitUnion(Union node) {
+    throw "Unreachable";
+  }
+
   visitFormal(Formal node) {
     writeType(node.type);
     write(' ${node.name}');
@@ -237,14 +241,21 @@ class _HeaderVisitor extends CcVisitor {
     writeln();
 
     for (StructSlot slot in layout.slots) {
-      Type type = slot.slot.type;
-      if (!type.isPrimitive) continue;  // TODO(kasperl): Don't skip.
+      Type slotType = slot.slot.type;
+      if (!slotType.isPrimitive) continue;  // TODO(kasperl): Don't skip.
+
+      String slotName = slot.slot.name;
+
+      if (slot.isUnionSlot) {
+        String tagName = slot.union.tag.name;
+        int tag = slot.unionTag;
+        writeln('  bool is_$slotName() const { return $tag == $tagName(); }');
+      }
 
       write('  ');
-      writeType(type);
-
-      write(' ${slot.slot.name}() const { return *PointerTo<');
-      writeType(type);
+      writeType(slotType);
+      write(' $slotName() const { return *PointerTo<');
+      writeType(slotType);
       writeln('>(${slot.offset}); }');
     }
 
@@ -270,6 +281,12 @@ class _HeaderVisitor extends CcVisitor {
     for (StructSlot slot in layout.slots) {
       String slotName = slot.slot.name;
       Type slotType = slot.slot.type;
+
+      if (slot.isUnionSlot) {
+        String tagName = slot.union.tag.name;
+        int tag = slot.unionTag;
+        writeln('  void mark_$slotName() { set_$tagName($tag); }');
+      }
 
       if (slotType.isList) {
         String camel = strings.camelize(strings.underscore(slotName));

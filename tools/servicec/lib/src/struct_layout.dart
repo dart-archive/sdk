@@ -21,7 +21,12 @@ class StructLayout {
 
   factory StructLayout(Struct struct) {
     _StructBuilder builder = new _StructBuilder();
+
     struct.slots.forEach(builder.addSlot);
+    if (struct.unions.isNotEmpty) {
+      builder.addUnionSlots(struct.unions.single);
+    }
+
     StructLayout result = new StructLayout._(
         builder.slots, _roundUp(builder.used, 8));
     return result;
@@ -43,19 +48,55 @@ class StructSlot {
   final Formal slot;
   final int offset;
   final int size;
-  StructSlot(this.slot, this.offset, this.size);
+
+  final Union union;
+  final int unionTag;
+
+  StructSlot(this.slot, this.offset, this.size, this.union, this.unionTag);
+
+  bool get isUnionSlot => union != null;
 }
 
 class _StructBuilder {
   final Map<String, StructSlot> slots = new LinkedHashMap<String, StructSlot>();
   int used = 0;
 
-  void addSlot(Formal formal) {
-    Type type = formal.type;
+  void addSlot(Formal slot) {
+    Type type = slot.type;
     int size = computeSize(type);
     used = _roundUp(used, computeAlignment(type));
-    slots[formal.name] = new StructSlot(formal, used, size);
+    _defineSlot(slot, size, null, -1);
     used += size;
+  }
+
+  void addUnionSlots(Union union) {
+    List<Formal> unionSlots = union.slots;
+    if (unionSlots.isEmpty) return;
+
+    int unionSize = 0;
+    int unionAlignment = 0;
+    unionSlots.forEach((Formal slot) {
+      Type type = slot.type;
+      int size = computeSize(type);
+      if (size > unionSize) unionSize = size;
+      int alignment = computeAlignment(type);
+      if (alignment > unionAlignment) unionAlignment = size;
+    });
+
+    int tag = 1;
+    used = _roundUp(used, unionAlignment);
+    unionSlots.forEach((Formal slot) {
+      _defineSlot(slot, computeSize(slot.type), union, tag++);
+    });
+    used += unionSize;
+  }
+
+  void _defineSlot(Formal slot, int size, Union union, int unionTag) {
+    String name = slot.name;
+    if (slots.containsKey(name)) {
+      throw new UnsupportedError("Duplicate slot '$name' in struct.");
+    }
+    slots[name] = new StructSlot(slot, used, size, union, unionTag);
   }
 
   int computeSize(Type type) {

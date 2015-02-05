@@ -24,6 +24,7 @@ abstract class PersonCounter {
   void CreateAgeStats(int averageAge, int sum, AgeStatsBuilder result);
   void CreatePerson(int children, PersonBuilder result);
   int Count(Person person);
+  int Depth(Node node);
 
   static void initialize(PersonCounter impl) {
     if (_impl != null) {
@@ -84,6 +85,11 @@ abstract class PersonCounter {
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
+      case _DEPTH_METHOD_ID:
+        var result = _impl.Depth(getRoot(new Node(), request));
+        request.setInt32(32, result);
+        _postResult.icall$1(request);
+        break;
       default:
         throw UnsupportedError();
     }
@@ -96,6 +102,7 @@ abstract class PersonCounter {
   const int _CREATE_AGE_STATS_METHOD_ID = 4;
   const int _CREATE_PERSON_METHOD_ID = 5;
   const int _COUNT_METHOD_ID = 6;
+  const int _DEPTH_METHOD_ID = 7;
 }
 
 class AgeStats extends Reader {
@@ -126,6 +133,30 @@ class PersonBox extends Reader {
 
 class PersonBoxBuilder extends Builder {
   Person NewPerson() => NewStruct(0, 16);
+}
+
+class Node extends Reader {
+  int get tag => _segment.memory.getInt16(_offset + 0);
+  bool get isNum => 1 == this.tag;
+  int get num => _segment.memory.getInt32(_offset + 8);
+  bool get isCons => 2 == this.tag;
+  Cons get cons => readStruct(new Cons(), 8);
+}
+
+class NodeBuilder extends Builder {
+  void set tag(int value) => setInt16(0, value);
+  void set num(int value) => setInt32(8, value);
+  Cons NewCons() => NewStruct(8, 16);
+}
+
+class Cons extends Reader {
+  Node get fst => readStruct(new Node(), 0);
+  Node get snd => readStruct(new Node(), 8);
+}
+
+class ConsBuilder extends Builder {
+  Node NewFst() => NewStruct(0, 16);
+  Node NewSnd() => NewStruct(8, 16);
 }
 
 class _PersonList extends ListReader implements List<Person> {

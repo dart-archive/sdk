@@ -47,6 +47,13 @@ class PersonCounterImpl extends PersonCounter {
     for (int i = 0; i < children.length; i++) sum += Count(children[i]);
     return sum;
   }
+
+  int Depth(Node node) {
+    if (node.isNum) return 1;
+    int left = Depth(node.cons.fst);
+    int right = Depth(node.cons.snd);
+    return (left > right) ? left + 1 : right + 1;
+  }
 }
 
 main() {

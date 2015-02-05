@@ -9,6 +9,8 @@ service PersonCounter {
   AgeStats CreateAgeStats(Int32 averageAge, Int32 sum);
   Person CreatePerson(Int32 children);
   Int32 Count(Person person);
+
+  Int32 Depth(Node node);
 }
 
 struct AgeStats {
@@ -23,4 +25,16 @@ struct Person {
 
 struct PersonBox {
   Person person;
+}
+
+struct Node {
+  union {
+    Int32 num;
+    Cons cons;  // <--- this is a candidate for struct inlining.
+  }
+}
+
+struct Cons {
+  Node fst;
+  Node snd;
 }

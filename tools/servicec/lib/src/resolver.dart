@@ -41,7 +41,6 @@ class Resolver extends ResolutionVisitor {
   final Map<String, Node> definitions;
   Resolver(this.definitions);
 
-
   visitMethod(Method node) {
     super.visitMethod(node);
 
@@ -70,6 +69,14 @@ class Resolver extends ResolutionVisitor {
   }
 
   visitStruct(Struct node) {
+    if (node.unions.isNotEmpty) {
+      if (node.unions.length != 1) {
+        throw new UnsupportedError("Structs can have at most one union");
+      }
+      Union union = node.unions.single;
+      union.struct = node;
+      node.slots.add(union.tag);
+    }
     super.visitStruct(node);
     node.layout = new StructLayout(node);
   }
@@ -105,6 +112,11 @@ class ResolutionVisitor extends Visitor {
   }
 
   visitStruct(Struct node) {
+    node.slots.forEach(visit);
+    node.unions.forEach(visit);
+  }
+
+  visitUnion(Union node) {
     node.slots.forEach(visit);
   }
 

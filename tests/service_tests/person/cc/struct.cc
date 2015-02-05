@@ -111,7 +111,7 @@ Builder Builder::NewStruct(int offset, int size) {
     int* hi = reinterpret_cast<int*>(segment->At(offset + 4));
     int result = segment->Allocate(size);
     if (result >= 0) {
-      *lo = (result << 2) | 0;
+      *lo = (result << 2) | 1;
       *hi = 0;
       return Builder(segment, result);
     }
@@ -135,7 +135,7 @@ Builder Builder::NewList(int offset, int length, int size) {
     int* hi = reinterpret_cast<int*>(segment->At(offset + 4));
     int result = segment->Allocate(size);
     if (result >= 0) {
-      *lo = (result << 2) | 1;
+      *lo = (result << 2) | 2;
       *hi = length;
       return Builder(segment, result);
     }

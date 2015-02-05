@@ -46,7 +46,19 @@ class PrettyPrinter extends Visitor {
       visit(slot);
       buffer.writeln(";  // offset = ${layout[slot].offset}");
     }
+    node.unions.forEach(visit);
     buffer.writeln("}");
+  }
+
+  visitUnion(Union node) {
+    StructLayout layout = node.struct.layout;
+    buffer.writeln("  union {");
+    for (Formal slot in node.slots) {
+      buffer.write("    ");
+      visit(slot);
+      buffer.writeln(";  // offset = ${layout[slot].offset}");
+    }
+    buffer.writeln("  }");
   }
 
   visitFormal(Formal node) {

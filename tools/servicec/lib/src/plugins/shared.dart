@@ -21,6 +21,10 @@ abstract class CodeGenerationVisitor extends Visitor {
     // TODO(kasper): Stop ignoring this.
   }
 
+  visitUnion(Union node) {
+    // TODO(kasper): Stop ignoring this.
+  }
+
   visitNodes(List<Node> nodes, String separatedBy(bool first)) {
     bool first = true;
     for (int i = 0; i < nodes.length; i++) {

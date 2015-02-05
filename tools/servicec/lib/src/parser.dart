@@ -18,6 +18,7 @@ abstract class Visitor {
   visitUnit(Unit node);
   visitService(Service service);
   visitStruct(Struct struct);
+  visitUnion(Union union);
   visitMethod(Method method);
   visitFormal(Formal formal);
 }
@@ -53,12 +54,24 @@ class Service extends Node {
 class Struct extends Node {
   final String name;
   final List<Formal> slots;
-  Struct(this.name, this.slots);
+  final List<Union> unions;
+  Struct(this.name, this.slots, this.unions);
 
   // Set by the resolver.
   StructLayout layout;
 
   accept(Visitor visitor) => visitor.visitStruct(this);
+}
+
+class Union extends Node {
+  final List<Formal> slots;
+  final Formal tag;
+  Union(this.slots) : tag = new Formal(new Type("Int16", false), "tag");
+
+  // Set by the resolver.
+  Struct struct;
+
+  accept(Visitor visitor) => visitor.visitUnion(this);
 }
 
 class Formal extends Node {
@@ -104,13 +117,17 @@ class _ServiceParserDefinition extends ServiceGrammarDefinition {
   service() => super.service()
       .map((each) => new Service(each[1], each[3]));
   struct() => super.struct()
-      .map((each) => new Struct(each[1], each[3]));
+      .map((each) => new Struct(each[1],
+          each[3].where((e) => e is Formal).toList(),
+          each[3].where((e) => e is Union).toList()));
   method() => super.method()
       .map((each) => new Method(each[1], each[3], each[0]));
   simpleType() => super.simpleType()
       .map((each) => new Type(each, false));
   listType() => super.listType()
       .map((each) => new Type(each[2], true));
+  union() => super.union()
+      .map((each) => new Union(each[2]));
   slot() => super.slot()
      .map((each) => each[0]);
   formal() => super.formal()

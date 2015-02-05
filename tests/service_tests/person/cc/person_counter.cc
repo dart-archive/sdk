@@ -75,6 +75,12 @@ int PersonCounter::Count(PersonBuilder person) {
   return person.InvokeMethod(_service_id, _kCountId);
 }
 
+static const MethodId _kDepthId = reinterpret_cast<MethodId>(7);
+
+int PersonCounter::Depth(NodeBuilder node) {
+  return node.InvokeMethod(_service_id, _kDepthId);
+}
+
 List<PersonBuilder> PersonBuilder::NewChildren(int length) {
   Builder result = NewList(8, length, 16);
   return List<PersonBuilder>(result);
@@ -83,4 +89,19 @@ List<PersonBuilder> PersonBuilder::NewChildren(int length) {
 PersonBuilder PersonBoxBuilder::NewPerson() {
   Builder result = NewStruct(0, 16);
   return PersonBuilder(result);
+}
+
+ConsBuilder NodeBuilder::NewCons() {
+  Builder result = NewStruct(8, 16);
+  return ConsBuilder(result);
+}
+
+NodeBuilder ConsBuilder::NewFst() {
+  Builder result = NewStruct(0, 16);
+  return NodeBuilder(result);
+}
+
+NodeBuilder ConsBuilder::NewSnd() {
+  Builder result = NewStruct(8, 16);
+  return NodeBuilder(result);
 }

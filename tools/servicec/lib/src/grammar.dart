@@ -22,6 +22,8 @@ class ServiceGrammarDefinition extends GrammarDefinition {
 
   STRUCT() => ref(token, 'struct');
 
+  UNION() => ref(token, 'union');
+
 
   // -----------------------------------------------------------------
   // Grammar productions.
@@ -46,13 +48,16 @@ class ServiceGrammarDefinition extends GrammarDefinition {
   struct() => ref(STRUCT)
       & ref(identifier)
       & ref(token, '{')
-      & ref(slots)
+      & (ref(slot) | ref(union)).star()
       & ref(token, '}');
-
-  slots() => ref(slot).star();
 
   slot() => ref(formal)
       & ref(token, ';');
+
+  union() => ref(UNION)
+      & ref(token, '{')
+      & ref(slot).star()
+      & ref(token, '}');
 
   formals() => ref(formal)
       .separatedBy(ref(token, ','), includeSeparators: false);

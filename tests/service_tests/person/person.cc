@@ -68,14 +68,37 @@ static void RunPersonBoxTests() {
   PersonBoxBuilder box = builder.NewRoot<PersonBoxBuilder>();
   PersonBuilder person = box.NewPerson();
   person.set_age(87);
+
   int age = PersonCounter::GetBoxedAge(box);
   printf("Verification: age = %d\n", age);
+}
+
+static void BuildNode(NodeBuilder node, int n) {
+  if (n > 1) {
+    node.mark_cons();
+    ConsBuilder cons = node.NewCons();
+    BuildNode(cons.NewFst(), n - 1);
+    BuildNode(cons.NewSnd(), n - 1);
+  } else {
+    node.mark_num();
+    node.set_num(42);
+  }
+}
+
+static void RunNodeTests() {
+  MessageBuilder builder(512);
+
+  NodeBuilder root = builder.NewRoot<NodeBuilder>();
+  BuildNode(root, 10);
+  int depth = PersonCounter::Depth(root);
+  printf("Verification: depth = %d\n", depth);
 }
 
 static void InteractWithService() {
   PersonCounter::Setup();
   RunPersonTests();
   RunPersonBoxTests();
+  RunNodeTests();
   PersonCounter::TearDown();
 }
 
