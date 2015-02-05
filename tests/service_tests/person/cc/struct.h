@@ -11,26 +11,46 @@
 
 class Builder;
 class MessageBuilder;
+class MessageReader;
 
 class Segment {
  public:
+  Segment(MessageReader* reader);
   Segment(char* memory, int size);
   virtual ~Segment();
 
   void* At(int offset) const { return memory_ + offset; }
+  MessageReader* reader() const { return reader_; }
 
- protected:
   char* memory() const { return memory_; }
   int size() const { return size_; }
 
  private:
-  char* const memory_;
-  const int size_;
+  MessageReader* reader_;
+  char* memory_;
+  int size_;
+};
+
+class MessageReader {
+ public:
+  MessageReader(int segments, char* memory);
+  ~MessageReader();
+  Segment* GetSegment(int id) { return segments_[id]; }
+
+  static Segment* GetRootSegment(char* memory, int size);
+
+ private:
+  int segment_count_;
+  Segment** segments_;
 };
 
 class BuilderSegment : public Segment {
  public:
+  virtual ~BuilderSegment();
+
   int Allocate(int bytes);
+
+  void* At(int offset) const { return memory() + offset; }
 
   int id() const { return id_; }
   int used() const { return used_; }
@@ -42,7 +62,6 @@ class BuilderSegment : public Segment {
 
  private:
   BuilderSegment(MessageBuilder* builder, int id, int capacity);
-  virtual ~BuilderSegment();
 
   MessageBuilder* const builder_;
   const int id_;
@@ -76,8 +95,34 @@ class MessageBuilder {
   Builder InternalNewRoot(int size);
 };
 
+class Reader;
+
+template<typename T>
+class List {
+ public:
+  inline List(const Reader& reader, int length);
+
+  List(Segment* segment, int offset, int length)
+      : segment_(segment), offset_(offset), length_(length) { }
+
+  int length() const { return length_; }
+
+  T operator[](int index) {
+    // TODO(kasperl): Bounds check?
+    return T(segment_, offset_ + (index * T::kSize));
+  }
+
+ private:
+  Segment* segment_;
+  int offset_;
+  int length_;
+};
+
 class Reader {
  public:
+  Reader(const Reader& reader)
+      : segment_(reader.segment()), offset_(reader.offset()) { }
+
   Segment* segment() const { return segment_; }
   int offset() const { return offset_; }
 
@@ -93,9 +138,32 @@ class Reader {
     return reinterpret_cast<T*>(segment()->At(offset() + n));
   }
 
+  template<typename T>
+  List<T> ReadList(int offset) const {
+    Segment* segment = segment_;
+    offset += offset_;
+    while (true) {
+      char* memory = segment->memory();
+      int lo = *reinterpret_cast<int*>(memory + offset + 0);
+      int hi = *reinterpret_cast<int*>(memory + offset + 4);
+      int tag = lo & 3;
+      if (tag == 0) {
+        // Uninitialized, return empty list.
+        return List<T>(NULL, 0, 0);
+      } else if (tag == 1) {
+        return List<T>(segment, lo >> 2, hi);
+      } else {
+        segment = segment->reader()->GetSegment(hi);
+        offset = lo >> 2;
+      }
+    }
+  }
+
  private:
   Segment* const segment_;
   const int offset_;
+
+  friend class Builder;
 };
 
 class Builder {
@@ -109,8 +177,8 @@ class Builder {
   int64_t InvokeMethod(ServiceId service, MethodId method);
 
  protected:
-  Builder(BuilderSegment* segment, int offset)
-      : segment_(segment), offset_(offset) { }
+  Builder(Segment* segment, int offset)
+      : segment_(static_cast<BuilderSegment*>(segment)), offset_(offset) { }
 
   template<typename T>
   T* PointerTo(int n) {
@@ -118,7 +186,7 @@ class Builder {
   }
 
   Builder NewStruct(int offset, int size);
-  Builder NewList(int offset, int length, int size);
+  Reader NewList(int offset, int length, int size);
 
  private:
   BuilderSegment* const segment_;
@@ -128,18 +196,10 @@ class Builder {
 };
 
 template<typename T>
-class List : public Builder {
- public:
-  explicit List(const Builder& builder)
-      : Builder(builder) { }
+List<T>::List(const Reader& reader, int length)
+      : segment_(reader.segment()),
+        offset_(reader.offset()),
+        length_(length) { }
 
-  List(BuilderSegment* segment, int offset)
-      : Builder(segment, offset) { }
-
-  T operator[](int index) {
-    // TODO(kasperl): Bounds check?
-    return T(segment(), offset() + (index * T::kSize));
-  }
-};
 
 #endif  // STRUCT_H_

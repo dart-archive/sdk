@@ -147,8 +147,9 @@ abstract class CcVisitor extends CodeGenerationVisitor {
         writeln('  char* memory = reinterpret_cast<char*>(result);');
         StructLayout resultLayout = new StructLayout(method.returnType.resolved);
         int size = resultLayout.size;
-        writeln('  Segment* segment = new Segment(memory, $size);');
-        writeln('  return ${method.returnType.identifier}(segment, 0);');
+        writeln('  Segment* segment = '
+                'MessageReader::GetRootSegment(memory, $size);');
+        writeln('  return ${method.returnType.identifier}(segment, 8);');
       } else {
         writeln('  return *${pointerToArgument(0, 0, 'int')};');
       }
@@ -235,6 +236,7 @@ class _HeaderVisitor extends CcVisitor {
     writeln();
     writeln('class $name : public Reader {');
     writeln(' public:');
+    writeln('  static const int kSize = ${layout.size};');
 
     writeln('  $name(Segment* segment, int offset)');
     writeln('      : Reader(segment, offset) { }');
@@ -242,7 +244,9 @@ class _HeaderVisitor extends CcVisitor {
 
     for (StructSlot slot in layout.slots) {
       Type slotType = slot.slot.type;
-      if (!slotType.isPrimitive) continue;  // TODO(kasperl): Don't skip.
+
+      // TODO(kasperl): Don't skip.
+      if (!(slotType.isPrimitive || slotType.isList)) continue;
 
       String slotName = slot.slot.name;
 
@@ -252,11 +256,20 @@ class _HeaderVisitor extends CcVisitor {
         writeln('  bool is_$slotName() const { return $tag == $tagName(); }');
       }
 
-      write('  ');
-      writeType(slotType);
-      write(' $slotName() const { return *PointerTo<');
-      writeType(slotType);
-      writeln('>(${slot.offset}); }');
+      if (slotType.isPrimitive) {
+        write('  ');
+        writeType(slotType);
+        write(' ${slot.slot.name}() const { return *PointerTo<');
+        writeType(slotType);
+        writeln('>(${slot.offset}); }');
+      } else if (slotType.isList) {
+        write('  ');
+        write('List<');
+        writeReturnType(slotType);
+        write('> ${slot.slot.name}() const { return ReadList<');
+        writeReturnType(slotType);
+        writeln('>(${slot.offset}); }');
+      }
     }
 
     writeln('};');
@@ -274,7 +287,7 @@ class _HeaderVisitor extends CcVisitor {
 
     writeln('  explicit $name(const Builder& builder)');
     writeln('      : Builder(builder) { }');
-    writeln('  $name(BuilderSegment* segment, int offset)');
+    writeln('  $name(Segment* segment, int offset)');
     writeln('      : Builder(segment, offset) { }');
     writeln();
 
@@ -378,8 +391,8 @@ class _ImplementationVisitor extends CcVisitor {
         Struct element = slot.slot.type.resolved;
         StructLayout elementLayout = element.layout;
         int size = elementLayout.size;
-        writeln('  Builder result = NewList(${slot.offset}, length, $size);');
-        writeln('  return List<$name>(result);');
+        writeln('  Reader result = NewList(${slot.offset}, length, $size);');
+        writeln('  return List<$name>(result, length);');
         writeln('}');
       } else if (!slotType.isPrimitive) {
         writeln();
@@ -420,7 +433,8 @@ class _ImplementationVisitor extends CcVisitor {
         Struct resultStruct = node.returnType.resolved;
         StructLayout resultLayout = resultStruct.layout;
         int size = resultLayout.size;
-        writeln('  Segment* segment = new Segment(memory, $size);');
+        writeln('  Segment* segment = '
+                'MessageReader::GetRootSegment(memory, $size);');
         writeln('  return ${node.returnType.identifier}(segment, 0);');
       } else {
         writeln('  return ${node.arguments.single.name}.'

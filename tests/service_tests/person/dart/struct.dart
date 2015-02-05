@@ -38,6 +38,32 @@ Reader getSegmentedRoot(Reader reader, Foreign request) {
   return reader;
 }
 
+int getResultMessage(Builder builder) {
+  BuilderSegment segment = builder._segment;
+  if (segment._next == null) {
+    // Mark result as being non-segmented.
+    segment.setInt32(0, 0);
+    return segment._memory.value;
+  }
+
+  // The result is a segmented message. Build a memory block that
+  // contains the addresses and sizes of all of them.
+  int segments = segment._builder._segments;
+  int size = 8 + (segments * 16);
+  Foreign buffer = new Foreign.allocated(size);
+  // Mark the result as being segmented.
+  buffer.setInt32(0, 1);
+  buffer.setInt32(4, segments);
+  int offset = 8;
+  do {
+    buffer.setInt64(offset, segment._memory.value);
+    buffer.setInt32(offset + 8, segment._used);
+    segment = segment._next;
+    offset += 16;
+  } while (segment != null);
+  return buffer.value;
+}
+
 class MessageReader {
   final List<Segment> segments = [];
   MessageReader();
@@ -135,6 +161,10 @@ class BuilderSegment {
   void setInt32(int offset, int value) {
     _memory.setInt32(offset, value);
   }
+
+  void setInt64(int offset, int value) {
+    _memory.setInt64(offset, value);
+  }
 }
 
 class MessageBuilder {
@@ -148,9 +178,9 @@ class MessageBuilder {
   }
 
   Builder NewRoot(Builder builder, int size) {
-    int offset = _first.Allocate(size);
+    int offset = _first.Allocate(8 + size);
     builder._segment = _first;
-    builder._offset = offset;
+    builder._offset = offset + 8;
     return builder;
   }
 

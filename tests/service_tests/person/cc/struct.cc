@@ -37,17 +37,59 @@ BuilderSegment* MessageBuilder::FindSegmentForBytes(int bytes) {
   return segment;
 }
 
+MessageReader::MessageReader(int segments, char* memory)
+    : segment_count_(segments),
+      segments_(new Segment*[segments]) {
+  for (int i = 0; i < segments; i++) {
+    int64_t addr = *reinterpret_cast<int64_t*>(memory + (i * 16));
+    int size = *reinterpret_cast<int*>(memory + 8 + (i * 16));
+    segments_[i] = new Segment(reinterpret_cast<char*>(addr), size);
+  }
+}
+
+MessageReader::~MessageReader() {
+  for (int i = 0; i < segment_count_; ++i) {
+    delete segments_[i];
+  }
+  delete[] segments_;
+}
+
+Segment* MessageReader::GetRootSegment(char* memory, int size) {
+  // TODO(ager): Just have the segment count instead of a separate
+  // segmented marker.
+  bool segmented = (*reinterpret_cast<int*>(memory) == 1);
+  if (segmented) {
+    int segments = *reinterpret_cast<int*>(memory + 4);
+    MessageReader* reader = new MessageReader(segments, memory + 8);
+    return new Segment(reader);
+  } else {
+    return new Segment(memory, size);
+  }
+}
+
 Segment::Segment(char* memory, int size)
-    : memory_(memory),
+    : reader_(NULL),
+      memory_(memory),
       size_(size) {
 }
 
+Segment::Segment(MessageReader* reader)
+    : reader_(reader) {
+  Segment* first = reader->GetSegment(0);
+  memory_ = first->memory();
+  size_ = first->size();
+}
+
 Segment::~Segment() {
-  free(memory_);
+  if (reader_ != NULL) {
+    delete reader_;
+  } else {
+    free(memory_);
+  }
 }
 
 BuilderSegment::BuilderSegment(MessageBuilder* builder, int id, int capacity)
-    : Segment(static_cast<char*>(calloc(capacity, 1)), capacity),
+    : Segment(reinterpret_cast<char*>(calloc(capacity, 1)), capacity),
       builder_(builder),
       id_(id),
       next_(NULL),
@@ -126,7 +168,7 @@ Builder Builder::NewStruct(int offset, int size) {
   }
 }
 
-Builder Builder::NewList(int offset, int length, int size) {
+Reader Builder::NewList(int offset, int length, int size) {
   offset += this->offset();
   size *= length;
   BuilderSegment* segment = this->segment();
@@ -137,7 +179,7 @@ Builder Builder::NewList(int offset, int length, int size) {
     if (result >= 0) {
       *lo = (result << 2) | 2;
       *hi = length;
-      return Builder(segment, result);
+      return Reader(segment, result);
     }
 
     BuilderSegment* other = segment->builder()->FindSegmentForBytes(size + 8);

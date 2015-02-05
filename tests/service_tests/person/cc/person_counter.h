@@ -35,6 +35,7 @@ class PersonCounter {
 
 class AgeStats : public Reader {
  public:
+  static const int kSize = 8;
   AgeStats(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
@@ -48,7 +49,7 @@ class AgeStatsBuilder : public Builder {
 
   explicit AgeStatsBuilder(const Builder& builder)
       : Builder(builder) { }
-  AgeStatsBuilder(BuilderSegment* segment, int offset)
+  AgeStatsBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
   void set_averageAge(int value) { *PointerTo<int>(0) = value; }
@@ -57,10 +58,12 @@ class AgeStatsBuilder : public Builder {
 
 class Person : public Reader {
  public:
+  static const int kSize = 16;
   Person(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
   int age() const { return *PointerTo<int>(0); }
+  List<Person> children() const { return ReadList<Person>(8); }
 };
 
 class PersonBuilder : public Builder {
@@ -69,7 +72,7 @@ class PersonBuilder : public Builder {
 
   explicit PersonBuilder(const Builder& builder)
       : Builder(builder) { }
-  PersonBuilder(BuilderSegment* segment, int offset)
+  PersonBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
   void set_age(int value) { *PointerTo<int>(0) = value; }
@@ -78,6 +81,7 @@ class PersonBuilder : public Builder {
 
 class PersonBox : public Reader {
  public:
+  static const int kSize = 8;
   PersonBox(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
@@ -89,7 +93,7 @@ class PersonBoxBuilder : public Builder {
 
   explicit PersonBoxBuilder(const Builder& builder)
       : Builder(builder) { }
-  PersonBoxBuilder(BuilderSegment* segment, int offset)
+  PersonBoxBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
   PersonBuilder NewPerson();
@@ -97,6 +101,7 @@ class PersonBoxBuilder : public Builder {
 
 class Node : public Reader {
  public:
+  static const int kSize = 16;
   Node(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
@@ -111,7 +116,7 @@ class NodeBuilder : public Builder {
 
   explicit NodeBuilder(const Builder& builder)
       : Builder(builder) { }
-  NodeBuilder(BuilderSegment* segment, int offset)
+  NodeBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
   void set_tag(short value) { *PointerTo<short>(0) = value; }
@@ -123,6 +128,7 @@ class NodeBuilder : public Builder {
 
 class Cons : public Reader {
  public:
+  static const int kSize = 16;
   Cons(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
@@ -134,7 +140,7 @@ class ConsBuilder : public Builder {
 
   explicit ConsBuilder(const Builder& builder)
       : Builder(builder) { }
-  ConsBuilder(BuilderSegment* segment, int offset)
+  ConsBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
   NodeBuilder NewFst();

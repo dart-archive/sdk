@@ -57,26 +57,26 @@ abstract class PersonCounter {
         _postResult.icall$1(request);
         break;
       case _GET_AGE_STATS_METHOD_ID:
-        MessageBuilder mb = new MessageBuilder(8);
+        MessageBuilder mb = new MessageBuilder(16);
         AgeStatsBuilder builder = mb.NewRoot(new AgeStatsBuilder(), 8);
         _impl.GetAgeStats(getRoot(new Person(), request), builder);
-        var result = builder._segment._memory.value;
+        var result = getResultMessage(builder);
         request.setInt64(32, result);
         _postResult.icall$1(request);
         break;
       case _CREATE_AGE_STATS_METHOD_ID:
-        MessageBuilder mb = new MessageBuilder(8);
+        MessageBuilder mb = new MessageBuilder(16);
         AgeStatsBuilder builder = mb.NewRoot(new AgeStatsBuilder(), 8);
         _impl.CreateAgeStats(request.getInt32(32), request.getInt32(36), builder);
-        var result = builder._segment._memory.value;
+        var result = getResultMessage(builder);
         request.setInt64(32, result);
         _postResult.icall$1(request);
         break;
       case _CREATE_PERSON_METHOD_ID:
-        MessageBuilder mb = new MessageBuilder(16);
+        MessageBuilder mb = new MessageBuilder(24);
         PersonBuilder builder = mb.NewRoot(new PersonBuilder(), 16);
         _impl.CreatePerson(request.getInt32(32), builder);
-        var result = builder._segment._memory.value;
+        var result = getResultMessage(builder);
         request.setInt64(32, result);
         _postResult.icall$1(request);
         break;

@@ -36,7 +36,7 @@ static const MethodId _kGetAgeStatsId = reinterpret_cast<MethodId>(3);
 AgeStats PersonCounter::GetAgeStats(PersonBuilder person) {
   int64_t result = person.InvokeMethod(_service_id, _kGetAgeStatsId);
   char* memory = reinterpret_cast<char*>(result);
-  Segment* segment = new Segment(memory, 8);
+  Segment* segment = MessageReader::GetRootSegment(memory, 8);
   return AgeStats(segment, 0);
 }
 
@@ -51,8 +51,8 @@ AgeStats PersonCounter::CreateAgeStats(int averageAge, int sum) {
   ServiceApiInvoke(_service_id, _kCreateAgeStatsId, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
   char* memory = reinterpret_cast<char*>(result);
-  Segment* segment = new Segment(memory, 8);
-  return AgeStats(segment, 0);
+  Segment* segment = MessageReader::GetRootSegment(memory, 8);
+  return AgeStats(segment, 8);
 }
 
 static const MethodId _kCreatePersonId = reinterpret_cast<MethodId>(5);
@@ -65,8 +65,8 @@ Person PersonCounter::CreatePerson(int children) {
   ServiceApiInvoke(_service_id, _kCreatePersonId, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
   char* memory = reinterpret_cast<char*>(result);
-  Segment* segment = new Segment(memory, 16);
-  return Person(segment, 0);
+  Segment* segment = MessageReader::GetRootSegment(memory, 16);
+  return Person(segment, 8);
 }
 
 static const MethodId _kCountId = reinterpret_cast<MethodId>(6);
@@ -82,8 +82,8 @@ int PersonCounter::Depth(NodeBuilder node) {
 }
 
 List<PersonBuilder> PersonBuilder::NewChildren(int length) {
-  Builder result = NewList(8, length, 16);
-  return List<PersonBuilder>(result);
+  Reader result = NewList(8, length, 16);
+  return List<PersonBuilder>(result, length);
 }
 
 PersonBuilder PersonBoxBuilder::NewPerson() {

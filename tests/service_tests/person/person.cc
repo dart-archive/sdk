@@ -53,8 +53,14 @@ static void RunPersonTests() {
   stats2.Delete();
   Person generated = PersonCounter::CreatePerson(10);
   printf("Generate age: %d\n", generated.age());
+  List<Person> children = generated.children();
+  printf("Generated children: %d ages: [ ", children.length());
+  for (int i = 0; i < children.length(); i++) {
+    if (i != 0) printf(", ");
+    printf("%d", children[i].age());
+  }
+  printf("]\n");
   generated.Delete();
-  // TODO(ager): Read result.
   int reading_us = static_cast<int>(end - start);
   printf("Reading took %.2f us.\n", reading_us / 1000.0);
   printf("    - %.2f MB/s\n", static_cast<double>(used) / reading_us);

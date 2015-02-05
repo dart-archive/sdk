@@ -38,7 +38,9 @@ class PersonCounterImpl extends PersonCounter {
   void CreatePerson(int numChildren, PersonBuilder result) {
     result.age = 42;
     List<PersonBuilder> children = result.NewChildren(numChildren);
-    for (int i = 0; i < children.length; ++i) children[i].age = 12;
+    for (int i = 0; i < children.length; ++i) {
+      children[i].age = 12 + (i * 2);
+    }
   }
 
   int Count(Person person) {

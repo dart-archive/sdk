@@ -163,7 +163,7 @@ class _DartVisitor extends CodeGenerationVisitor {
       } else {
         StructLayout resultLayout = new StructLayout(resolvedReturnType);
         int size = resultLayout.size;
-        writeln('        MessageBuilder mb = new MessageBuilder($size);');
+        writeln('        MessageBuilder mb = new MessageBuilder(${size + 8});');
         String builderName = '${method.returnType.identifier}Builder';
         writeln('        $builderName builder = '
                 'mb.NewRoot(new $builderName(), $size);');
@@ -171,7 +171,7 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeImplCall(method);
         write('${method.arguments.length > 0 ? ", " : ""}builder');
         writeln(');');
-        writeln('        var result = builder._segment._memory.value;');
+        writeln('        var result = getResultMessage(builder);');
         writeln('        ${setInt64()};');
       }
       writeln('        _postResult.icall\$1(request);');
