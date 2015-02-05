@@ -42,6 +42,7 @@ SendToProcess(Current, Target) {
 ```python
 RunThread(T) {
   while True {
+    IdleThreads.Push(T)
     T.Wait()
     while True {
       P <- DequeueFromThread(T)
@@ -61,9 +62,10 @@ EnqueueOnAnyThread(P) {
   if TryEnqueueOnIdleThread(P): return True
   while True {
     for T in Threads {
-      Empty <- T.IsEmpty()
-      if T.TryEnqueue(P) {
-        if Empty: T.Wakeup(): return False
+      Success, WasEmpty <- T.TryEnqueue(P)
+      if Success {
+        if WasEmpty: T.Wakeup()
+        return False
       }
     }
   }
@@ -75,7 +77,8 @@ TryEnqueueOnIdleThread(P) {
   while True {
     T <- IdleThreads.Pop()  # Is really a CAS, linked-list through Threads
     if T = Null: return False
-    if !T.TryEnqueue(P): continue
+    Success, WasEmpty <- T.TryEnqueue(P)
+    if !Success: continue
     T.Wakeup()
     return True
   }
@@ -126,7 +129,7 @@ TryEnqueue(P) {
   INVARIANT(P.State = Queued)
   H <- Head
   while True {
-    if H = Sentinel: return False
+    if H = Sentinel: return False, False
     if Head.CompareAndSwap(H, Sentinel): break
     H <- Head
   }
@@ -140,7 +143,7 @@ TryEnqueue(P) {
     Tail <- P
     Head <- P
   }
-  return True
+  return True, H = Null
 }
 ```
 
