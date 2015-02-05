@@ -48,7 +48,6 @@ error_stack_trace1_test: Fail
 error_stack_trace2_test: Fail
 error_stack_trace_test: Fail
 expando_test: Fail
-expression_test: Fail
 for_in_test: Fail
 format_exception_test: Fail
 from_environment_const_type_test/01: Crash
@@ -136,8 +135,10 @@ list_get_range_test: Fail
 list_insert_all_test: CompileTimeError
 list_insert_test: CompileTimeError
 list_iterators_test: Fail
+list_map_test: Fail
 list_removeat_test: CompileTimeError
 list_replace_range_test: CompileTimeError
+list_reversed_test: Fail
 list_set_all_test: CompileTimeError
 list_set_range_test: Fail
 list_sort_test: Fail
@@ -299,14 +300,6 @@ uri_path_test: Fail
 uri_query_test: Crash
 uri_scheme_test: Fail
 uri_test: CompileTimeError
-
-[ $mode == debug ]
-list_map_test: Crash
-list_reversed_test: Crash
-
-[ $mode == release ]
-list_map_test: Fail
-list_reversed_test: Fail
 
 [ $arch == ia32 ]
 regexp/pcre_test: Fail

@@ -44,6 +44,7 @@ built_in_identifier_prefix_test: CompileTimeError
 call_closurization_test: Fail
 call_nonexistent_static_test/06: CompileTimeError
 call_operator_test: Fail
+call_test: Fail
 call_through_getter_test: Fail
 call_with_no_such_method_test: CompileTimeError
 canonical_const3_test: Crash
@@ -63,7 +64,6 @@ class_cycle_test/02: MissingCompileTimeError
 class_cycle_test/03: MissingCompileTimeError
 class_syntax2_test: Fail
 class_test: Fail
-closure6_test: Fail
 closure_cycles_test: CompileTimeError
 closure_in_constructor_test: Fail
 closure_in_field_initializer_test: Crash
@@ -398,7 +398,7 @@ function_subtype_top_level0_test: Fail
 function_subtype_top_level1_test: Fail
 function_subtype_typearg0_test: Fail
 function_syntax_test/none: Fail
-function_test: Fail
+function_test: Crash
 function_type2_test: Crash
 function_type_alias2_test: Fail
 function_type_alias3_test: Fail
@@ -813,6 +813,7 @@ ref_before_declaration_test/02: MissingCompileTimeError
 ref_before_declaration_test/03: MissingCompileTimeError
 ref_before_declaration_test/04: MissingCompileTimeError
 ref_before_declaration_test/05: MissingCompileTimeError
+ref_before_declaration_test/06: MissingCompileTimeError
 ref_before_declaration_test/07: MissingCompileTimeError
 reg_ex2_test: Fail
 reg_exp2_test: Fail
@@ -862,8 +863,6 @@ super_closure_test: Crash
 super_first_constructor_test: Crash
 super_getter_setter_test: CompileTimeError
 super_implicit_closure_test: Crash
-super_operator_index3_test: Fail
-super_operator_index4_test: Fail
 super_operator_index5_test: CompileTimeError
 super_operator_index6_test: CompileTimeError
 super_operator_index7_test: CompileTimeError

@@ -111,7 +111,7 @@ TEST_CASE(PopDot) {
   Zone zone;
 
   EXPECT_STREQ(
-    "load local 1;invoke 61696;pop;load literal null;return 1 1;method end 11;",
+    "load local 1;invoke 62720;pop;load literal null;return 1 1;method end 11;",
     Compile(&zone, "foo(x) { x.y; }"));
 }
 
@@ -119,14 +119,14 @@ TEST_CASE(PopInvoke) {
   Zone zone;
 
   EXPECT_STREQ(
-    "load local 1;invoke 61440;pop;load literal null;return 1 1;method end 11;",
+    "load local 1;invoke 62464;pop;load literal null;return 1 1;method end 11;",
     Compile(&zone, "foo(x) { x.y(); }"));
   EXPECT_STREQ(
-    "load local 1;load literal 1;invoke 61441;pop;load literal null;return 1 1;"
+    "load local 1;load literal 1;invoke 62465;pop;load literal null;return 1 1;"
     "method end 12;",
     Compile(&zone, "foo(x) { x.y(1); }"));
   EXPECT_STREQ(
-    "load local 1;load literal 1;load literal 2;invoke 61442;pop;"
+    "load local 1;load literal 1;load literal 2;invoke 62466;pop;"
     "load literal null;return 1 1;method end 14;",
     Compile(&zone, "foo(x) { x.y(1, 2); }"));
 }
@@ -140,7 +140,7 @@ TEST_CASE(If) {
     Compile(&zone, "foo(x) { if (x) return 42; }"));
   EXPECT_STREQ(
     "load local 1;branch if false +15;load literal 42;"
-    "return 1 1;branch +13;load local 1;load literal 1;invoke 61441;pop;"
+    "return 1 1;branch +13;load local 1;load literal 1;invoke 62465;pop;"
     "load literal null;return 1 1;method end 28;",
     Compile(&zone, "foo(x) { if (x) return 42; else x.y(1); }"));
 }

@@ -43,6 +43,8 @@ namespace fletch {
   N(BitShr,                 ">>")                       \
   N(BitShl,                 "<<")                       \
                                                         \
+  N(IndexAssign,            "[]=")                      \
+                                                        \
   N(NoSuchMethod,           "_noSuchMethod")            \
   N(NoSuchMethodTrampoline, "_noSuchMethodTrampoline")  \
   N(Yield,                  "_yield")                   \

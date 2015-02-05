@@ -338,7 +338,7 @@ List<VariableDeclarationNode*> ScopeResolver::DoFunction(
         VariableDeclarationNode(this_name_, NULL, Modifiers());
     DeclarationEntry* entry = new(zone()) DeclarationEntry(var);
     var->set_entry(entry);
-    scope()->AddLocalVariable(this_name_, entry);
+    scope()->Add(this_name_, entry);
     entry->set_index(-1);
   }
   for (int i = 0; i < parameters.length(); i++) {

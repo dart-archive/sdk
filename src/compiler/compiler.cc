@@ -345,6 +345,15 @@ static bool IsEmptyBody(TreeNode* node) {
   return false;
 }
 
+static int ArgumentAsResult(MethodNode* method) {
+  if (method->modifiers().is_set()) return 0;
+  if (GetLastIdentifier(method->name())->id() == Names::kIndexAssign &&
+      !method->modifiers().is_native()) {
+    return 1;
+  }
+  return -1;
+}
+
 class IsSelector : public ZoneAllocated {
  public:
   explicit IsSelector(Zone* zone) : classes_(zone), selector_(NULL) { }
@@ -1022,8 +1031,7 @@ void Compiler::EnqueueInvokeSelector(IdentifierNode* node,
 void Compiler::CompileMethod(MethodNode* method,
                              Emitter* emitter) {
   if (Flags::IsOn("trace-compiler")) {
-    // TODO(ajohnsen): Handle qualified constructor names.
-    const char* name = method->name()->AsIdentifier()->value();
+    const char* name = GetLastIdentifier(method->name())->value();
     TreeNode* owner = method->owner();
     if (owner != NULL && owner->IsClass()) {
       printf("Compiling %s.%s\n", owner->AsClass()->name()->value(), name);
@@ -1130,9 +1138,10 @@ void Compiler::CompileFunction(
 
   ValueVisitor visitor(this, emitter, &scope);
   // Setters should store the value, so it can be returned later on.
-  if (CurrentMethod()->modifiers().is_set()) {
+  int result_index = ArgumentAsResult(CurrentMethod());
+  if (result_index >= 0) {
     stack_parameters++;
-    emitter->LoadParameter(has_this ? 1 : 0);
+    emitter->LoadParameter((has_this ? 1 : 0) + result_index);
   }
 
   for (int i = 0; i < parameters.length(); i++) {
@@ -1579,7 +1588,7 @@ void ValueVisitor::EmitReturn() {
   }
 
   // Setters has the original value stored at position 0.
-  if (compiler()->CurrentMethod()->modifiers().is_set()) {
+  if (ArgumentAsResult(compiler()->CurrentMethod()) >= 0) {
     emitter()->Pop();
     emitter()->LoadLocal(0);
   }
@@ -1934,7 +1943,7 @@ void ValueVisitor::DoClosure(IdentifierNode* name,
   int self = -1;
   for (int i = 0; i < captured.length(); i++) {
     VariableDeclarationNode* var = captured[i];
-    if (var->name() == name) {
+    if (var->name()->id() == name->id()) {
       // TODO(ajohnsen): When shadowing, can this go wrong?
       ASSERT(self == -1);
       self = i;
@@ -1946,7 +1955,8 @@ void ValueVisitor::DoClosure(IdentifierNode* name,
     if (index < 0) {
       DoThis(NULL);
     } else {
-      emitter()->LoadLocal(index);
+      int real_index = scope()->Lookup(var->name())->AsDeclaration()->index();
+      emitter()->LoadLocal(real_index);
     }
   }
   int class_id = compiler()->AddClass(clazz, NULL);
