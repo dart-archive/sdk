@@ -3255,10 +3255,16 @@ int Compiler::CompileConstructor(CompiledClass* clazz,
     }
   }
 
+  ScopeResolver resolver(zone(), class_node->scope(), this_name());
+  resolver.ResolveMethod(constructor, true);
+
   // Start by loading the parameters onto the stack.
   for (int i = 0; i < parameters.length(); i++) {
     emitter.LoadParameter(i);
-    // TODO(ajohnsen): Handle captured.
+    DeclarationEntry* entry = parameters[i]->entry();
+    if (entry != NULL && entry->IsCapturedByReference()) {
+      emitter.AllocateBoxed();
+    }
   }
 
   // Recursively visit the class and all super classes, and emit initializers
@@ -3292,6 +3298,7 @@ int Compiler::CompileConstructor(CompiledClass* clazz,
       // Dup the allocated class.
       emitter.Dup();
       for (int j = 0; j < parameters.length(); j++) {
+        // TODO(ajohnsen): Make sure to pass as unboxed.
         emitter.LoadLocal(params_offset + j);
       }
       emitter.InvokeStatic(1 + parameters.length(), constructor->id());

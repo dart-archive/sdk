@@ -171,7 +171,7 @@ constant_locals_test/03: MissingCompileTimeError
 constant_locals_test/04: MissingCompileTimeError
 constant_locals_test/05: MissingCompileTimeError
 constant_type_literal_test/01: MissingCompileTimeError
-constructor6_test: Crash
+constructor6_test: CompileTimeError
 constructor_named_arguments_test/01: Crash
 constructor_named_arguments_test/none: Crash
 constructor_redirect1_negative_test: Crash
@@ -353,7 +353,6 @@ full_stacktrace1_test: Fail
 full_stacktrace2_test: Fail
 full_stacktrace3_test: Fail
 function_field_test: Fail
-function_literals2_test: Crash
 function_propagation_test: Fail
 function_subtype0_test: Fail
 function_subtype1_test: Fail
@@ -398,8 +397,6 @@ function_subtype_top_level0_test: Fail
 function_subtype_top_level1_test: Fail
 function_subtype_typearg0_test: Fail
 function_syntax_test/none: Fail
-function_test: Crash
-function_type2_test: Crash
 function_type_alias2_test: Fail
 function_type_alias3_test: Fail
 function_type_alias4_test: Fail
@@ -503,9 +500,7 @@ issue10747_test: Fail
 issue12023_test: Fail
 issue12284_test: Crash
 issue13474_test: Fail
-issue14014_2_test: Crash
 issue14014_3_test: Fail
-issue14014_test: Crash
 issue15720_test: Fail
 issue4157508_test: Fail
 issue4515170_test: Crash
@@ -784,8 +779,8 @@ prefix10_negative_test: Fail
 prefix11_negative_test: Fail
 prefix12_negative_test: Fail
 prefix13_negative_test: Crash
-prefix15_negative_test: Crash
 prefix14_test: Crash
+prefix15_negative_test: Crash
 prefix15_test: Crash
 prefix16_test: Crash
 prefix21_test: Fail
@@ -960,7 +955,6 @@ issue10783_test: Crash
 duplicate_constructor_test/01: Crash
 duplicate_import_prefix_test: Crash
 field_initialization_order_test: Fail
-issue4295001_test: Crash
 prefix101_test: Crash
 prefix3_negative_test: Crash
 ref_before_declaration_test/06: Crash
@@ -981,7 +975,6 @@ regress_19413_test/01: Fail
 compile_time_constant_k_test/01: Fail
 compile_time_constant_k_test/02: Fail
 compile_time_constant_k_test/03: Fail
-constructor6_test: Fail
 function_literals2_test: Fail
 inferrer_synthesized_constructor_test: Fail
 

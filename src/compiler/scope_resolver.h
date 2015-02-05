@@ -17,7 +17,7 @@ class ScopeResolver : private TreeVisitor {
  public:
   explicit ScopeResolver(Zone* zone, Scope* scope, IdentifierNode* this_name);
 
-  void ResolveMethod(MethodNode* node);
+  void ResolveMethod(MethodNode* node, bool constructor = false);
 
  private:
   void DoMethod(MethodNode* node);

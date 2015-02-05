@@ -698,6 +698,7 @@ void Parser::ParseFor() {
       return;
     }
     Modifiers modifiers;
+    modifiers.set_by_value();
     if (token == kFINAL) modifiers.set_final();
     ParseVariableDeclarationStatementRest(modifiers, false);
   } else {

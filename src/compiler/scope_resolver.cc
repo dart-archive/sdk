@@ -16,7 +16,7 @@ ScopeResolver::ScopeResolver(Zone* zone,
     , functions_(zone) {
 }
 
-void ScopeResolver::ResolveMethod(MethodNode* node) {
+void ScopeResolver::ResolveMethod(MethodNode* node, bool constructor) {
   TreeNode* body = node->body();
   if (body != NULL) {
     if (!body->IsBlock() && !body->IsExpression()) body = NULL;
@@ -28,13 +28,23 @@ void ScopeResolver::ResolveMethod(MethodNode* node) {
 
   Scope scope(zone(), 0, NULL);
   scope_ = &scope;
-  DoFunction(node->parameters(), body, has_this);
-  List<TreeNode*> initializers = node->initializers();
-  for (int i = 0; i < initializers.length(); i++) {
-    AssignNode* assign = initializers[i]->AsAssign();
-    if (assign != NULL) {
-      DoFunction(node->parameters(), assign->value(), has_this);
+  if (constructor) {
+    List<TreeNode*> initializers = node->initializers();
+    for (int i = 0; i < initializers.length(); i++) {
+      AssignNode* assign = initializers[i]->AsAssign();
+      if (assign != NULL) {
+        DoFunction(node->parameters(), assign->value(), has_this);
+      }
+      InvokeNode* invoke = initializers[i]->AsInvoke();
+      if (invoke != NULL) {
+        List<ExpressionNode*> arguments = invoke->arguments();
+        for (int j = 0; j < arguments.length(); j++) {
+          DoFunction(node->parameters(), arguments[j], has_this);
+        }
+      }
     }
+  } else {
+    DoFunction(node->parameters(), body, has_this);
   }
   scope_ = NULL;
 }
@@ -209,7 +219,7 @@ void ScopeResolver::DoIdentifier(IdentifierNode* node) {
   DeclarationEntry* declaration = entry->AsDeclaration();
   VariableDeclarationNode* var = declaration->node()->AsVariableDeclaration();
   ASSERT(var != NULL);
-  bool by_value = false;
+  bool by_value = var->modifiers().is_by_value();
   // Found, but not in function.
   if (var->entry() == NULL) {
     if (var->modifiers().is_static()) return;
@@ -344,9 +354,12 @@ List<VariableDeclarationNode*> ScopeResolver::DoFunction(
   for (int i = 0; i < parameters.length(); i++) {
     VariableDeclarationNode* var = parameters[i];
     if (var->modifiers().is_this()) continue;
+    bool was_captured = var->entry() != NULL &&
+        var->entry()->IsCapturedByReference();
     DeclarationEntry* entry = new(zone()) DeclarationEntry(var);
     var->set_entry(entry);
     scope()->AddLocalVariable(var->name(), entry);
+    if (was_captured) entry->MarkCapturedByReference();
   }
   if (body != NULL) body->Accept(this);
   scope_ = nested.outer();

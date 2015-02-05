@@ -130,6 +130,7 @@ class Modifiers {
     kNATIVE       = 1 << 10,
     // Internal markers.
     kCONSTRUCTOR  = 1 << 11,
+    kBY_VALUE     = 1 << 12,
   };
 
   Modifiers() : value_(0) {}
@@ -169,6 +170,9 @@ class Modifiers {
 
   void set_native() { value_ |= kNATIVE; }
   bool is_native() const { return (value_ & kNATIVE) != 0; }
+
+  void set_by_value() { value_ |= kBY_VALUE; }
+  bool is_by_value() const { return (value_ & kBY_VALUE) != 0; }
 
  private:
   int value_;
