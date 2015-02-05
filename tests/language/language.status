@@ -975,8 +975,10 @@ regress_19413_test/01: Fail
 compile_time_constant_k_test/01: Fail
 compile_time_constant_k_test/02: Fail
 compile_time_constant_k_test/03: Fail
-function_literals2_test: Fail
 inferrer_synthesized_constructor_test: Fail
+
+[ $arch == x64 && $mode == debug ]
+issue4295001_test: Crash
 
 [ $asan && $mode == debug ]
 gc_test: Pass, Slow
