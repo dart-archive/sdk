@@ -39,5 +39,5 @@ main(args) async {
   assert(hasValue);
   var vmSocket = connectionIterator.current;
   server.close();
-  vmSocket.add(hello_world.instructions.map((i) => i.byte).toList());
+  hello_world.instructions.forEach((i) => i.addTo(vmSocket));
 }

@@ -4,9 +4,17 @@
 
 library fletchc.instructions;
 
+import 'dart:async' show
+    StreamSink;
+
+import 'dart:convert' show
+    UTF8;
+
 /// A generalization of reflective opcodes and bytecodes.
 abstract class Instruction {
   const Instruction();
+
+  void addTo(StreamSink<List<int>> sink);
 }
 
 /// A code that can be used in a method body.
@@ -25,4 +33,22 @@ class Pad extends ByteCode {
   final int byte;
 
   const Pad([this.byte = 0]);
+
+  void addTo(StreamSink<List<int>> sink) {
+    sink.add([byte]);
+  }
+}
+
+class Constant extends Instruction {
+  final value;
+
+  const Constant(this.value);
+
+  void addTo(StreamSink<List<int>> sink) {
+    if (value is String) {
+      sink.add(UTF8.encode(value));
+    } else {
+      throw "Unknown constant value ${value} (${value.runtimeType}).";
+    }
+  }
 }
