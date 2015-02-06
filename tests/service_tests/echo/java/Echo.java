@@ -56,13 +56,13 @@ class Echo {
       }
     });
     System.out.println("Java: async echo call with argument " + 3);
-    EchoService.SumAsync(3, 4, new EchoService.SumCallback() {
+    EchoService.SumAsync((short) 3, 4, new EchoService.SumCallback() {
       public void handle(int result) {
         System.out.println("Java: async sum result " + result);
       }
     });
     System.out.println("Java: async sum call with arguments " + 3 + " " + 4);
-    result = EchoService.Sum(3, 4);
+    result = EchoService.Sum((short) 3, 4);
     System.out.println("Java: result of sum(3, 4) is " + result);
 
     EchoService.TearDown();
