@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.instructions;
+library fletchc.commands;
 
 import 'dart:async' show
     StreamSink;
@@ -15,25 +15,7 @@ import 'dart:typed_data' show
     Endianness,
     Uint8List;
 
-/// A generalization of reflective opcodes and bytecodes.
-abstract class Instruction {
-  const Instruction();
-
-  void addTo(StreamSink<List<int>> sink);
-}
-
-/// One byte of padding.
-class Pad extends Instruction {
-  final int byte;
-
-  const Pad([this.byte = 0]);
-
-  void addTo(StreamSink<List<int>> sink) {
-    sink.add([byte]);
-  }
-}
-
-class Command extends Instruction {
+class Command {
   final Opcode opcode;
 
   const Command(this.opcode);
@@ -53,6 +35,25 @@ class PushNewString extends Command {
     view.setUint32(0, payload.length + 4, Endianness.LITTLE_ENDIAN);
     view.setUint8(4, opcode.index);
     view.setUint32(5, payload.length, Endianness.LITTLE_ENDIAN);
+    for (int i = 0; i < payload.length; i++) {
+      list[i + header] = payload[i];
+    }
+    sink.add(list);
+  }
+}
+
+class Generic extends Command {
+  final List<int> payload;
+
+  const Generic(Opcode opcode, this.payload)
+      : super(opcode);
+
+  void addTo(StreamSink<List<int>> sink) {
+    int header = 4 /* 32 bit uint */ + 1 /* Opcode */;
+    Uint8List list = new Uint8List(header + payload.length);
+    ByteData view = new ByteData.view(list.buffer);
+    view.setUint32(0, payload.length, Endianness.LITTLE_ENDIAN);
+    view.setUint8(4, opcode.index);
     for (int i = 0; i < payload.length; i++) {
       list[i + header] = payload[i];
     }

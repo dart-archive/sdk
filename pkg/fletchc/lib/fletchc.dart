@@ -5,7 +5,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'hello_world_instructions.dart' as hello_world show instructions;
+import 'hello_world_commands.dart' as hello_world show commands;
 
 const String BUILD_DIR = const String.fromEnvironment("build-dir");
 
@@ -39,5 +39,5 @@ main(args) async {
   assert(hasValue);
   var vmSocket = connectionIterator.current;
   server.close();
-  hello_world.instructions.forEach((i) => i.addTo(vmSocket));
+  hello_world.commands.forEach((command) => command.addTo(vmSocket));
 }
