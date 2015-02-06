@@ -117,7 +117,7 @@ class Socket extends _SocketBase {
       buffer = new ByteBuffer._create(available);
       read = sys.read(_fd, buffer, 0, available);
     }
-    if (read == 0 || (events & CLOSE_EVENT) != 0) return null;
+    if (read == 0 && (events & CLOSE_EVENT) != 0) return null;
     if (read < 0 || (events & ERROR_EVENT) != 0) {
       _error("Failed to read from socket");
     }
