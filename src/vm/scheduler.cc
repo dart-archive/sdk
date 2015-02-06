@@ -16,6 +16,8 @@
 
 namespace fletch {
 
+ThreadState* const kEmptyThreadState = reinterpret_cast<ThreadState*>(1);
+
 Scheduler::Scheduler()
     : max_threads_(Platform::GetNumberOfHardwareThreads()),
       thread_pool_(max_threads_),
@@ -23,7 +25,7 @@ Scheduler::Scheduler()
       processes_(0),
       sleeping_threads_(0),
       thread_count_(0),
-      idle_threads_(NULL),
+      idle_threads_(kEmptyThreadState),
       threads_(new std::atomic<ThreadState*>[max_threads_]),
       startup_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
@@ -246,9 +248,10 @@ void Scheduler::PushIdleThread(ThreadState* thread_state) {
 
 ThreadState* Scheduler::PopIdleThread() {
   ThreadState* idle_threads = idle_threads_;
-  while (idle_threads != NULL) {
-    if (idle_threads_.compare_exchange_weak(idle_threads,
-                                            idle_threads->next_idle_thread())) {
+  while (idle_threads != kEmptyThreadState) {
+    ThreadState* next = idle_threads->next_idle_thread();
+    if (idle_threads_.compare_exchange_weak(idle_threads, next)) {
+      idle_threads->set_next_idle_thread(NULL);
       return idle_threads;
     }
   }
@@ -511,7 +514,6 @@ bool Scheduler::TryEnqueueOnIdleThread(Process* process) {
   while (true) {
     ThreadState* thread_state = PopIdleThread();
     if (thread_state == NULL) return false;
-    thread_state->set_next_idle_thread(NULL);
     bool was_empty = false;
     if (!thread_state->queue()->TryEnqueue(process, &was_empty)) {
       // Turns out someone else tried to spin it up. Take another one.

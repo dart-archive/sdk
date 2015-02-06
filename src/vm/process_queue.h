@@ -25,17 +25,17 @@ class ProcessQueue {
   // [entry] will have its queue_ set to this.
   bool TryEnqueue(Process* entry, bool* was_empty = NULL) {
     ASSERT(entry != NULL);
-    ASSERT(entry != SentinelValue());
+    ASSERT(entry != kSentinel);
     ASSERT(entry->queue_next_ == NULL);
     ASSERT(entry->queue_previous_ == NULL);
     ASSERT(entry->queue_ == NULL);
     Process* head = head_;
     while (true) {
-      if (head == SentinelValue()) return false;
-      if (head_.compare_exchange_weak(head, SentinelValue())) break;
+      if (head == kSentinel) return false;
+      if (head_.compare_exchange_weak(head, kSentinel)) break;
     }
-    ASSERT(head != SentinelValue());
-    ASSERT(head_ == SentinelValue());
+    ASSERT(head != kSentinel);
+    ASSERT(head_ == kSentinel);
     ++size_;
     entry->queue_ = this;
     if (was_empty != NULL) *was_empty = head == NULL;
@@ -60,12 +60,12 @@ class ProcessQueue {
     ASSERT(*entry == NULL);
     Process* head = head_;
     while (true) {
-      if (head == SentinelValue()) return false;
+      if (head == kSentinel) return false;
       if (head == NULL) return true;
-      if (head_.compare_exchange_weak(head, SentinelValue())) break;
+      if (head_.compare_exchange_weak(head, kSentinel)) break;
     }
-    ASSERT(head != SentinelValue());
-    ASSERT(head_ == SentinelValue());
+    ASSERT(head != kSentinel);
+    ASSERT(head_ == kSentinel);
     --size_;
     if (tail_ == head) {
       tail_ = NULL;
@@ -93,11 +93,11 @@ class ProcessQueue {
     ASSERT(entry != NULL);
     Process* head = head_;
     while (true) {
-      if (head == SentinelValue() || head == NULL) return false;
-      if (head_.compare_exchange_weak(head, SentinelValue())) break;
+      if (head == kSentinel || head == NULL) return false;
+      if (head_.compare_exchange_weak(head, kSentinel)) break;
     }
-    ASSERT(head != SentinelValue());
-    ASSERT(head_ == SentinelValue());
+    ASSERT(head != kSentinel);
+    ASSERT(head_ == kSentinel);
     if (entry->queue_ != this) {
       head_ = head;
       return false;
@@ -136,14 +136,11 @@ class ProcessQueue {
   bool is_empty() const { return size_ == 0; }
 
  private:
-  static const word kSentinel = 1;
+  Process* const kSentinel = reinterpret_cast<Process*>(1);
+
   std::atomic<Process*> head_;
   std::atomic<Process*> tail_;
   std::atomic<int> size_;
-
-  Process* SentinelValue() const {
-    return reinterpret_cast<Process*>(kSentinel);
-  }
 };
 
 }  // namespace fletch
