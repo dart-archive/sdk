@@ -79,7 +79,8 @@ abstract class int extends num {
   }
 
   static int parse(String source, {int radix, int onError(String source)}) {
-    throw new UnimplementedError("int.parse");
+    if (radix == null) radix = 0;
+    return _parse(source, radix);
   }
 
   int operator &(int other);
@@ -130,6 +131,15 @@ abstract class int extends num {
   bool _compareGeFromDouble(double other) => other >= toDouble();
 
   double _remainderFromDouble(double other) => other.remainder(toDouble());
+
+  static int _parse(String source, int radix) native catch (error) {
+    switch (error) {
+      case _wrongArgumentType:
+        throw ArgumentError();
+      case _indexOutOfBounds:
+        throw FormatException("Invalud number", source);
+    }
+  }
 }
 
 class _Smi extends int {

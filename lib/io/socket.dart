@@ -108,7 +108,21 @@ class Socket extends _SocketBase {
    * Will block until some bytes are available.
    * Returns `null` if the socket was closed for reading.
    */
-  ByteBuffer readNext();
+  ByteBuffer readNext() {
+    int events = _waitFor(READ_EVENT);
+    int read = 0;
+    ByteBuffer buffer;
+    if ((events & READ_EVENT) != 0) {
+      int available = this.available;
+      buffer = new ByteBuffer._create(available);
+      read = sys.read(_fd, buffer, 0, available);
+    }
+    if (read == 0 || (events & CLOSE_EVENT) != 0) return null;
+    if (read < 0 || (events & ERROR_EVENT) != 0) {
+      _error("Failed to read from socket");
+    }
+    return buffer;
+  }
 
   /**
    * Write [buffer] on the socket. Will block until all of [buffer] is written.

@@ -17,6 +17,34 @@ class Uint8List extends TypedData implements List<int> {
     _foreign.setUint8(offsetInBytes + index, value);
   }
 
+  void setRange(int start, int end, Iterable iterable, [int skipCount = 0]) {
+    int length = this.length;
+    if (start < 0 || start > length) {
+      throw new RangeError.range(start, 0, length);
+    }
+    if (end < start || end > length) {
+      throw new RangeError.range(end, start, length);
+    }
+    if ((end - start) == 0) return;
+    if (iterable is List) {
+      // TODO(ajohnsen): Use memcpy for Uint8List
+      int count = end - start;
+      for (int i = 0; i < count; i++) {
+        this[start + i] = iterable[skipCount + i];
+      }
+    } else {
+      Iterator it = iterable.iterator;
+      while (skipCount > 0) {
+        if (!it.moveNext()) return;
+        skipCount--;
+      }
+      for (int i = start; i < end; i++) {
+        if (!it.moveNext()) return;
+        this[i] = it.current;
+      }
+    }
+  }
+
   int get length => lengthInBytes;
   int get elementSizeInBytes => 1;
 }

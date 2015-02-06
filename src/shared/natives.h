@@ -13,6 +13,8 @@ namespace fletch {
   N(ExposeGC,                    "<none>", "_exposeGC")                  \
   N(GC,                          "<none>", "_gc")                        \
                                                                          \
+  N(IntParse,                    "int",    "_parse")                     \
+                                                                         \
   N(SmiToDouble,                 "_Smi",   "toDouble")                   \
   N(SmiToString,                 "_Smi",   "toString")                   \
   N(SmiToMint,                   "_Smi",   "_toMint")                    \

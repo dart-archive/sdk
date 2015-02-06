@@ -59,6 +59,20 @@ NATIVE(GC) {
   return process->program()->null_object();
 }
 
+NATIVE(IntParse) {
+  Object* x = arguments[0];
+  if (!x->IsString()) return Failure::wrong_argument_type();
+  String* str = String::cast(x);
+  Object* y = arguments[1];
+  if (!y->IsSmi()) return Failure::wrong_argument_type();
+  Smi* radix = Smi::cast(y);
+  char* chars = str->ToCString();
+  int64 result = strtoll(chars, NULL, radix->value());
+  free(chars);
+  if (errno == ERANGE) return Failure::index_out_of_bounds();
+  return process->ToInteger(result);
+}
+
 NATIVE(SmiToDouble) {
   Smi* x = Smi::cast(arguments[0]);
   return process->NewDouble(static_cast<double>(x->value()));

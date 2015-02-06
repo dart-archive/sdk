@@ -497,7 +497,6 @@ is_operator_test: Fail
 isnot_malformed_type_test: Fail
 issue10561_test: CompileTimeError
 issue10747_test: Fail
-issue12023_test: Fail
 issue12284_test: Crash
 issue13474_test: Fail
 issue14014_3_test: Fail
@@ -794,7 +793,6 @@ private_mixin2_test: Fail
 private_test: Fail
 pure_function2_test: Fail
 range_analysis3_test: Fail
-recursive_calls_test: Fail
 redirecting_factory_default_values_test/01: MissingCompileTimeError
 redirecting_factory_default_values_test/02: MissingCompileTimeError
 redirecting_factory_default_values_test/none: Fail
