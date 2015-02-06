@@ -238,11 +238,19 @@ class _DartVisitor extends CodeGenerationVisitor {
       String slotName = slot.slot.name;
       Type slotType = slot.slot.type;
 
+      String updateTag = '';
+      if (slot.isUnionSlot) {
+        String tagName = slot.union.tag.name;
+        int tag = slot.unionTag;
+        updateTag = '    $tagName = $tag;\n';
+      }
+
       String camel = strings.camelize(strings.underscore(slotName));
       if (slotType.isList) {
         write('  List<');
         writeReturnType(slotType);
         writeln('> New$camel(int length) {');
+        write(updateTag);
         Struct element = slotType.resolved;
         StructLayout elementLayout = element.layout;
         int size = elementLayout.size;
@@ -254,15 +262,22 @@ class _DartVisitor extends CodeGenerationVisitor {
         String setter = _SETTERS[slotType.identifier];
         write('  void set ${slotName}(');
         writeType(slotType);
-        writeln(' value) => $setter(${slot.offset}, value);');
+        writeln(' value) {');
+        write(updateTag);
+        writeln('    $setter(${slot.offset}, value);');
+        writeln('  }');
       } else {
         write('  ');
-        writeType(slotType);
-        write(' New$camel() => ');
+        writeReturnType(slotType);
+        writeln(' New$camel() {');
+        write(updateTag);
         Struct element = slotType.resolved;
         StructLayout elementLayout = element.layout;
         int size = elementLayout.size;
-        writeln('NewStruct(${slot.offset}, $size);');
+        write('    return NewStruct(new ');
+        writeReturnType(slotType);
+        writeln('(), ${slot.offset}, $size);');
+        writeln('  }');
       }
     }
     writeln('}');

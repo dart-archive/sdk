@@ -69,13 +69,27 @@ Person PersonCounter::CreatePerson(int children) {
   return Person(segment, 8);
 }
 
-static const MethodId _kCountId = reinterpret_cast<MethodId>(6);
+static const MethodId _kCreateNodeId = reinterpret_cast<MethodId>(6);
+
+Node PersonCounter::CreateNode(int depth) {
+  static const int kSize = 40;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  *reinterpret_cast<int*>(_buffer + 32) = depth;
+  ServiceApiInvoke(_service_id, _kCreateNodeId, _buffer, kSize);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
+  char* memory = reinterpret_cast<char*>(result);
+  Segment* segment = MessageReader::GetRootSegment(memory, 16);
+  return Node(segment, 8);
+}
+
+static const MethodId _kCountId = reinterpret_cast<MethodId>(7);
 
 int PersonCounter::Count(PersonBuilder person) {
   return person.InvokeMethod(_service_id, _kCountId);
 }
 
-static const MethodId _kDepthId = reinterpret_cast<MethodId>(7);
+static const MethodId _kDepthId = reinterpret_cast<MethodId>(8);
 
 int PersonCounter::Depth(NodeBuilder node) {
   return node.InvokeMethod(_service_id, _kDepthId);
@@ -91,11 +105,15 @@ PersonBuilder PersonBoxBuilder::NewPerson() {
   return PersonBuilder(result);
 }
 
+Person PersonBox::person() const { return ReadStruct<Person>(0); }
+
 ConsBuilder NodeBuilder::NewCons() {
   set_tag(2);
   Builder result = NewStruct(8, 16);
   return ConsBuilder(result);
 }
+
+Cons Node::cons() const { return ReadStruct<Cons>(8); }
 
 NodeBuilder ConsBuilder::NewFst() {
   Builder result = NewStruct(0, 16);
@@ -106,3 +124,7 @@ NodeBuilder ConsBuilder::NewSnd() {
   Builder result = NewStruct(8, 16);
   return NodeBuilder(result);
 }
+
+Node Cons::fst() const { return ReadStruct<Node>(0); }
+
+Node Cons::snd() const { return ReadStruct<Node>(8); }

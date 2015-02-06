@@ -29,6 +29,7 @@ class PersonCounter {
   static AgeStats GetAgeStats(PersonBuilder person);
   static AgeStats CreateAgeStats(int averageAge, int sum);
   static Person CreatePerson(int children);
+  static Node CreateNode(int depth);
   static int Count(PersonBuilder person);
   static int Depth(NodeBuilder node);
 };
@@ -85,6 +86,7 @@ class PersonBox : public Reader {
   PersonBox(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
+  Person person() const;
 };
 
 class PersonBoxBuilder : public Builder {
@@ -108,6 +110,8 @@ class Node : public Reader {
   short tag() const { return *PointerTo<short>(0); }
   bool is_num() const { return 1 == tag(); }
   int num() const { return *PointerTo<int>(8); }
+  bool is_cons() const { return 2 == tag(); }
+  Cons cons() const;
 };
 
 class NodeBuilder : public Builder {
@@ -130,6 +134,8 @@ class Cons : public Reader {
   Cons(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
+  Node fst() const;
+  Node snd() const;
 };
 
 class ConsBuilder : public Builder {

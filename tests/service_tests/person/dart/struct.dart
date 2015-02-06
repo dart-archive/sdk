@@ -158,6 +158,10 @@ class BuilderSegment {
     return result;
   }
 
+  void setInt16(int offset, inv value) {
+    _memory.setInt16(offset, value);
+  }
+
   void setInt32(int offset, int value) {
     _memory.setInt32(offset, value);
   }
@@ -198,13 +202,35 @@ class Builder {
   BuilderSegment _segment;
   int _offset;
 
+  void setInt16(int offset, int value) {
+    _segment.setInt16(offset + _offset, value);
+  }
+
   void setInt32(int offset, int value) {
     _segment.setInt32(offset + _offset, value);
   }
 
   Builder NewStruct(Builder builder, int offset, int size) {
-    // TODO(ager): Support struct building.
-    return null;
+    offset += _offset;
+    BuilderSegment segment = _segment;
+    while (true) {
+      int result = segment.Allocate(size);
+      if (result >= 0) {
+        segment.setInt32(offset + 0, (result << 2) | 1);
+        segment.setInt32(offset + 4, 0);
+        builder._segment = segment;
+        builder._offset = result;
+        return builder;
+      }
+
+      BuilderSegment other = segment._builder.FindSegmentForBytes(size + 8);
+      int target = other.Allocate(8);
+      segment.setInt32(offset + 0, (target << 2) | 3);
+      segment.setInt32(offset + 4, other._id);
+
+      segment = other;
+      offset = target;
+    }
   }
 
   ListBuilder NewList(ListBuilder list,

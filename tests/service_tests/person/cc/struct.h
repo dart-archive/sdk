@@ -8,6 +8,7 @@
 #include "include/service_api.h"
 
 #include <inttypes.h>
+#include <stdlib.h>
 
 class Builder;
 class MessageBuilder;
@@ -16,6 +17,7 @@ class MessageReader;
 class Segment {
  public:
   Segment(MessageReader* reader);
+  Segment(MessageReader* reader, char* memory, int size);
   Segment(char* memory, int size);
   virtual ~Segment();
 
@@ -29,6 +31,7 @@ class Segment {
   MessageReader* reader_;
   char* memory_;
   int size_;
+  bool is_root_;
 };
 
 class MessageReader {
@@ -136,6 +139,27 @@ class Reader {
   template<typename T>
   const T* PointerTo(int n) const {
     return reinterpret_cast<T*>(segment()->At(offset() + n));
+  }
+
+  template<typename T>
+  T ReadStruct(int offset) const {
+    Segment* segment = segment_;
+    offset += offset_;
+    while (true) {
+      char* memory = segment->memory();
+      int lo = *reinterpret_cast<int*>(memory + offset + 0);
+      int hi = *reinterpret_cast<int*>(memory + offset + 4);
+      int tag = lo & 3;
+      if (tag == 0) {
+        // Cannot read uninitialized structs.
+        abort();
+      } else if (tag == 1) {
+        return T(segment, lo >> 2);
+      } else {
+        segment = segment->reader()->GetSegment(hi);
+        offset = lo >> 2;
+      }
+    }
   }
 
   template<typename T>

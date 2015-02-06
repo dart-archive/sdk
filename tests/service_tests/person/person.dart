@@ -43,6 +43,16 @@ class PersonCounterImpl extends PersonCounter {
     }
   }
 
+  void CreateNode(int depth, NodeBuilder result) {
+    if (depth > 1) {
+      ConsBuilder cons = result.NewCons();
+      CreateNode(depth - 1, cons.NewFst());
+      CreateNode(depth - 1, cons.NewSnd());
+    } else {
+      result.num = 42;
+    }
+  }
+
   int Count(Person person) {
     int sum = 1;
     List<Person> children = person.children;

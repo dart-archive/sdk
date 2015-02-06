@@ -26,6 +26,13 @@ static void BuildPerson(PersonBuilder person, int n) {
   }
 }
 
+static int Depth(Node node) {
+  if (node.is_num()) return 1;
+  int left = Depth(node.cons().fst());
+  int right = Depth(node.cons().snd());
+  return 1 + ((left > right) ? left : right);
+}
+
 static void RunPersonTests() {
   MessageBuilder builder(512);
 
@@ -61,6 +68,10 @@ static void RunPersonTests() {
   }
   printf("]\n");
   generated.Delete();
+  Node node = PersonCounter::CreateNode(10);
+  int depth = Depth(node);
+  printf("Generated Node in Dart with depth: %d\n", depth);
+  node.Delete();
   int reading_us = static_cast<int>(end - start);
   printf("Reading took %.2f us.\n", reading_us / 1000.0);
   printf("    - %.2f MB/s\n", static_cast<double>(used) / reading_us);

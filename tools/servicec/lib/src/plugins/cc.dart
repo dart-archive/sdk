@@ -245,9 +245,6 @@ class _HeaderVisitor extends CcVisitor {
     for (StructSlot slot in layout.slots) {
       Type slotType = slot.slot.type;
 
-      // TODO(kasperl): Don't skip.
-      if (!(slotType.isPrimitive || slotType.isList)) continue;
-
       String slotName = slot.slot.name;
 
       if (slot.isUnionSlot) {
@@ -269,6 +266,10 @@ class _HeaderVisitor extends CcVisitor {
         write('> ${slot.slot.name}() const { return ReadList<');
         writeReturnType(slotType);
         writeln('>(${slot.offset}); }');
+      } else {
+        write('  ');
+        writeReturnType(slotType);
+        writeln(' ${slot.slot.name}() const;');
       }
     }
 
@@ -371,6 +372,7 @@ class _ImplementationVisitor extends CcVisitor {
 
   visitStruct(Struct node) {
     writeBuilder(node);
+    writeReader(node);
   }
 
   void writeBuilder(Struct node) {
@@ -415,6 +417,24 @@ class _ImplementationVisitor extends CcVisitor {
         writeType(slotType);
         writeln('(result);');
         writeln('}');
+      }
+    }
+  }
+
+  void writeReader(Struct node) {
+    String name = "${node.name}";
+    StructLayout layout = node.layout;
+
+    for (StructSlot slot in layout.slots) {
+      String slotName = slot.slot.name;
+      Type slotType = slot.slot.type;
+
+      if (!slotType.isPrimitive && !slotType.isList) {
+        writeln();
+        writeReturnType(slotType);
+        write(' $name::$slotName() const { return ReadStruct<');
+        writeReturnType(slotType);
+        writeln('>(${slot.offset}); }');
       }
     }
   }

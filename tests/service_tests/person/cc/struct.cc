@@ -43,7 +43,7 @@ MessageReader::MessageReader(int segments, char* memory)
   for (int i = 0; i < segments; i++) {
     int64_t addr = *reinterpret_cast<int64_t*>(memory + (i * 16));
     int size = *reinterpret_cast<int*>(memory + 8 + (i * 16));
-    segments_[i] = new Segment(reinterpret_cast<char*>(addr), size);
+    segments_[i] = new Segment(this, reinterpret_cast<char*>(addr), size);
   }
 }
 
@@ -70,18 +70,27 @@ Segment* MessageReader::GetRootSegment(char* memory, int size) {
 Segment::Segment(char* memory, int size)
     : reader_(NULL),
       memory_(memory),
-      size_(size) {
+      size_(size),
+      is_root_(false) {
+}
+
+Segment::Segment(MessageReader* reader, char* memory, int size)
+    : reader_(reader),
+      memory_(memory),
+      size_(size),
+      is_root_(false) {
 }
 
 Segment::Segment(MessageReader* reader)
-    : reader_(reader) {
+    : reader_(reader),
+      is_root_(true) {
   Segment* first = reader->GetSegment(0);
   memory_ = first->memory();
   size_ = first->size();
 }
 
 Segment::~Segment() {
-  if (reader_ != NULL) {
+  if (is_root_) {
     delete reader_;
   } else {
     free(memory_);

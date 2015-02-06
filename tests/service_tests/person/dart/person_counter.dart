@@ -23,6 +23,7 @@ abstract class PersonCounter {
   void GetAgeStats(Person person, AgeStatsBuilder result);
   void CreateAgeStats(int averageAge, int sum, AgeStatsBuilder result);
   void CreatePerson(int children, PersonBuilder result);
+  void CreateNode(int depth, NodeBuilder result);
   int Count(Person person);
   int Depth(Node node);
 
@@ -80,6 +81,14 @@ abstract class PersonCounter {
         request.setInt64(32, result);
         _postResult.icall$1(request);
         break;
+      case _CREATE_NODE_METHOD_ID:
+        MessageBuilder mb = new MessageBuilder(24);
+        NodeBuilder builder = mb.NewRoot(new NodeBuilder(), 16);
+        _impl.CreateNode(request.getInt32(32), builder);
+        var result = getResultMessage(builder);
+        request.setInt64(32, result);
+        _postResult.icall$1(request);
+        break;
       case _COUNT_METHOD_ID:
         var result = _impl.Count(getRoot(new Person(), request));
         request.setInt32(32, result);
@@ -101,8 +110,9 @@ abstract class PersonCounter {
   const int _GET_AGE_STATS_METHOD_ID = 3;
   const int _CREATE_AGE_STATS_METHOD_ID = 4;
   const int _CREATE_PERSON_METHOD_ID = 5;
-  const int _COUNT_METHOD_ID = 6;
-  const int _DEPTH_METHOD_ID = 7;
+  const int _CREATE_NODE_METHOD_ID = 6;
+  const int _COUNT_METHOD_ID = 7;
+  const int _DEPTH_METHOD_ID = 8;
 }
 
 class AgeStats extends Reader {
@@ -111,8 +121,12 @@ class AgeStats extends Reader {
 }
 
 class AgeStatsBuilder extends Builder {
-  void set averageAge(int value) => setInt32(0, value);
-  void set sum(int value) => setInt32(4, value);
+  void set averageAge(int value) {
+    setInt32(0, value);
+  }
+  void set sum(int value) {
+    setInt32(4, value);
+  }
 }
 
 class Person extends Reader {
@@ -121,7 +135,9 @@ class Person extends Reader {
 }
 
 class PersonBuilder extends Builder {
-  void set age(int value) => setInt32(0, value);
+  void set age(int value) {
+    setInt32(0, value);
+  }
   List<PersonBuilder> NewChildren(int length) {
     return NewList(new _PersonBuilderList(), 8, length, 16);
   }
@@ -132,7 +148,9 @@ class PersonBox extends Reader {
 }
 
 class PersonBoxBuilder extends Builder {
-  Person NewPerson() => NewStruct(0, 16);
+  PersonBuilder NewPerson() {
+    return NewStruct(new PersonBuilder(), 0, 16);
+  }
 }
 
 class Node extends Reader {
@@ -144,9 +162,17 @@ class Node extends Reader {
 }
 
 class NodeBuilder extends Builder {
-  void set tag(int value) => setInt16(0, value);
-  void set num(int value) => setInt32(8, value);
-  Cons NewCons() => NewStruct(8, 16);
+  void set tag(int value) {
+    setInt16(0, value);
+  }
+  void set num(int value) {
+    tag = 1;
+    setInt32(8, value);
+  }
+  ConsBuilder NewCons() {
+    tag = 2;
+    return NewStruct(new ConsBuilder(), 8, 16);
+  }
 }
 
 class Cons extends Reader {
@@ -155,8 +181,12 @@ class Cons extends Reader {
 }
 
 class ConsBuilder extends Builder {
-  Node NewFst() => NewStruct(0, 16);
-  Node NewSnd() => NewStruct(8, 16);
+  NodeBuilder NewFst() {
+    return NewStruct(new NodeBuilder(), 0, 16);
+  }
+  NodeBuilder NewSnd() {
+    return NewStruct(new NodeBuilder(), 8, 16);
+  }
 }
 
 class _PersonList extends ListReader implements List<Person> {
