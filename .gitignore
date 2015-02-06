@@ -1,4 +1,3 @@
-.sconsign.dblite
 packages
 third_party/libs/linux/x64/libtcmalloc_minimal.a
 third_party/libs/linux/x86/libtcmalloc_minimal.a
@@ -19,4 +18,5 @@ src/double_conversion.xcodeproj/
 tests/service_tests/service_tests.xcodeproj/
 .DS_Store
 third_party/clang/
-third_party/scons/
+.ninja_deps
+.ninja_log
