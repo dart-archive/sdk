@@ -120,9 +120,7 @@ class NodeBuilder : public Builder {
       : Builder(segment, offset) { }
 
   void set_tag(short value) { *PointerTo<short>(0) = value; }
-  void mark_num() { set_tag(1); }
-  void set_num(int value) { *PointerTo<int>(8) = value; }
-  void mark_cons() { set_tag(2); }
+  void set_num(int value) { set_tag(1); *PointerTo<int>(8) = value; }
   ConsBuilder NewCons();
 };
 

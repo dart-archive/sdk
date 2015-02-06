@@ -295,25 +295,24 @@ class _HeaderVisitor extends CcVisitor {
       String slotName = slot.slot.name;
       Type slotType = slot.slot.type;
 
-      if (slot.isUnionSlot) {
-        String tagName = slot.union.tag.name;
-        int tag = slot.unionTag;
-        writeln('  void mark_$slotName() { set_$tagName($tag); }');
-      }
-
+      String camel = strings.camelize(strings.underscore(slotName));
       if (slotType.isList) {
-        String camel = strings.camelize(strings.underscore(slotName));
         write('  List<');
         writeType(slotType);
         writeln('> New$camel(int length);');
       } else if (slotType.isPrimitive) {
         write('  void set_${slotName}(');
         writeType(slotType);
-        write(' value) { *PointerTo<');
+        write(' value) { ');
+        if (slot.isUnionSlot) {
+          String tagName = slot.union.tag.name;
+          int tag = slot.unionTag;
+          write('set_$tagName($tag); ');
+        }
+        write('*PointerTo<');
         writeType(slotType);
         writeln('>(${slot.offset}) = value; }');
       } else {
-        String camel = strings.camelize(strings.underscore(slotName));
         write('  ');
         writeType(slotType);
         writeln(' New$camel();');
@@ -382,6 +381,13 @@ class _ImplementationVisitor extends CcVisitor {
       String slotName = slot.slot.name;
       Type slotType = slot.slot.type;
 
+      String updateTag = '';
+      if (slot.isUnionSlot) {
+        String tagName = slot.union.tag.name;
+        int tag = slot.unionTag;
+        updateTag = '  set_$tagName($tag);\n';
+      }
+
       if (slotType.isList) {
         writeln();
         String camel = strings.camelize(strings.underscore(slotName));
@@ -391,6 +397,7 @@ class _ImplementationVisitor extends CcVisitor {
         Struct element = slot.slot.type.resolved;
         StructLayout elementLayout = element.layout;
         int size = elementLayout.size;
+        write(updateTag);
         writeln('  Reader result = NewList(${slot.offset}, length, $size);');
         writeln('  return List<$name>(result, length);');
         writeln('}');
@@ -402,6 +409,7 @@ class _ImplementationVisitor extends CcVisitor {
         Struct element = slot.slot.type.resolved;
         StructLayout elementLayout = element.layout;
         int size = elementLayout.size;
+        write(updateTag);
         writeln('  Builder result = NewStruct(${slot.offset}, $size);');
         write('  return ');
         writeType(slotType);

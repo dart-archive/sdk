@@ -81,12 +81,10 @@ static void RunPersonBoxTests() {
 
 static void BuildNode(NodeBuilder node, int n) {
   if (n > 1) {
-    node.mark_cons();
     ConsBuilder cons = node.NewCons();
     BuildNode(cons.NewFst(), n - 1);
     BuildNode(cons.NewSnd(), n - 1);
   } else {
-    node.mark_num();
     node.set_num(42);
   }
 }

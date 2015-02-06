@@ -92,6 +92,7 @@ PersonBuilder PersonBoxBuilder::NewPerson() {
 }
 
 ConsBuilder NodeBuilder::NewCons() {
+  set_tag(2);
   Builder result = NewStruct(8, 16);
   return ConsBuilder(result);
 }
