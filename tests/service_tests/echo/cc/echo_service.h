@@ -7,14 +7,16 @@
 #ifndef ECHO_SERVICE_H
 #define ECHO_SERVICE_H
 
+#include <inttypes.h>
+
 class EchoService {
  public:
   static void Setup();
   static void TearDown();
-  static int Echo(int n);
-  static void EchoAsync(int n, void (*callback)(int));
-  static int Sum(short x, int y);
-  static void SumAsync(short x, int y, void (*callback)(int));
+  static int32_t Echo(int32_t n);
+  static void EchoAsync(int32_t n, void (*callback)(int32_t));
+  static int32_t Sum(int16_t x, int32_t y);
+  static void SumAsync(int16_t x, int32_t y, void (*callback)(int32_t));
 };
 
 #endif  // ECHO_SERVICE_H

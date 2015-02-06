@@ -3,24 +3,24 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 service PersonCounter {
-  Int32 GetAge(Person person);
-  Int32 GetBoxedAge(PersonBox box);
+  int32 GetAge(Person person);
+  int32 GetBoxedAge(PersonBox box);
   AgeStats GetAgeStats(Person person);
-  AgeStats CreateAgeStats(Int32 averageAge, Int32 sum);
-  Person CreatePerson(Int32 children);
-  Node CreateNode(Int32 depth);
-  Int32 Count(Person person);
+  AgeStats CreateAgeStats(int32 averageAge, int32 sum);
+  Person CreatePerson(int32 children);
+  Node CreateNode(int32 depth);
+  int32 Count(Person person);
 
-  Int32 Depth(Node node);
+  int32 Depth(Node node);
 }
 
 struct AgeStats {
-  Int32 averageAge;
-  Int32 sum;
+  int32 averageAge;
+  int32 sum;
 }
 
 struct Person {
-  Int32 age;
+  int32 age;
   List<Person> children;
 }
 
@@ -30,7 +30,7 @@ struct PersonBox {
 
 struct Node {
   union {
-    Int32 num;
+    int32 num;
     Cons cons;  // <--- this is a candidate for struct inlining.
   }
 }

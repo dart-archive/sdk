@@ -33,13 +33,33 @@ class _DartVisitor extends CodeGenerationVisitor {
   _DartVisitor(String path) : super(path);
 
   static Map<String, String> _GETTERS = const {
-    'Int16': 'getInt16',
-    'Int32': 'getInt32',
+    'uint8'   : 'getUint8',
+    'uint16'  : 'getUint16',
+    'uint32'  : 'getUint32',
+    'uint64'  : 'getUint64',
+
+    'int8'    : 'getInt8',
+    'int16'   : 'getInt16',
+    'int32'   : 'getInt32',
+    'int64'   : 'getInt64',
+
+    'float32' : 'getFloat32',
+    'float64' : 'getFloat64',
   };
 
   static Map<String, String> _SETTERS = const {
-    'Int16': 'setInt16',
-    'Int32': 'setInt32',
+    'uint8'   : 'setUint8',
+    'uint16'  : 'setUint16',
+    'uint32'  : 'setUint32',
+    'uint64'  : 'setUint64',
+
+    'int8'    : 'setInt8',
+    'int16'   : 'setInt16',
+    'int32'   : 'setInt32',
+    'int64'   : 'setInt64',
+
+    'float32' : 'setFloat32',
+    'float64' : 'setFloat64',
   };
 
   visitUnit(Unit node) {
@@ -310,8 +330,20 @@ class _DartVisitor extends CodeGenerationVisitor {
   }
 
   static const Map<String, String> _types = const {
-    'Int16': 'int',
-    'Int32': 'int'
+    'bool'    : 'bool',
+
+    'uint8'   : 'int',
+    'uint16'  : 'int',
+    'uint32'  : 'int',
+    'uint64'  : 'int',
+
+    'int8'    : 'int',
+    'int16'   : 'int',
+    'int32'   : 'int',
+    'int64'   : 'int',
+
+    'float32' : 'double',
+    'float64' : 'double',
   };
 
   void writeType(Type node) {

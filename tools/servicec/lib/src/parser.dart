@@ -66,7 +66,7 @@ class Struct extends Node {
 class Union extends Node {
   final List<Formal> slots;
   final Formal tag;
-  Union(this.slots) : tag = new Formal(new Type("Int16", false), "tag");
+  Union(this.slots) : tag = new Formal(new Type("uint16", false), "tag");
 
   // Set by the resolver.
   Struct struct;

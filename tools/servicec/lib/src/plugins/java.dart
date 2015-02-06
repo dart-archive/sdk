@@ -242,8 +242,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
   void writeType(Type node) {
     Map<String, String> types = const {
-      'Int16': 'short',
-      'Int32': 'int',
+      'int16': 'short',
+      'int32': 'int',
     };
     String type = types[node.identifier];
     write(type);
@@ -350,8 +350,8 @@ class _JniVisitor extends CcVisitor {
 
   void writeType(Type node) {
     Map<String, String> types = const {
-      'Int16': 'jshort',
-      'Int32': 'jint'
+      'int16': 'jshort',
+      'int32': 'jint'
     };
     String type = types[node.identifier];
     write(type);

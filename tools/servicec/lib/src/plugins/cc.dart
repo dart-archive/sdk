@@ -48,8 +48,20 @@ abstract class CcVisitor extends CodeGenerationVisitor {
 
   static const int REQUEST_HEADER_SIZE = 32;
   static const PRIMITIVE_TYPES = const <String, String> {
-    'Int16': 'short',
-    'Int32': 'int',
+    'bool'    : 'bool',
+
+    'uint8'   : 'uint8_t',
+    'uint16'  : 'uint16_t',
+    'uint32'  : 'uint32_t',
+    'uint64'  : 'uint64_t',
+
+    'int8'    : 'int8_t',
+    'int16'   : 'int16_t',
+    'int32'   : 'int32_t',
+    'int64'   : 'int64_t',
+
+    'float32' : 'float',
+    'float64' : 'double',
   };
 
   static String cast(String type, bool cStyle) => cStyle
@@ -175,8 +187,9 @@ class _HeaderVisitor extends CcVisitor {
     writeln('#ifndef $headerGuard');
     writeln('#define $headerGuard');
 
+    writeln();
+    writeln('#include <inttypes.h>');
     if (node.structs.isNotEmpty) {
-      writeln();
       writeln('#include "struct.h"');
     }
 

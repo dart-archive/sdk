@@ -21,13 +21,13 @@ void PersonCounter::TearDown() {
 
 static const MethodId _kGetAgeId = reinterpret_cast<MethodId>(1);
 
-int PersonCounter::GetAge(PersonBuilder person) {
+int32_t PersonCounter::GetAge(PersonBuilder person) {
   return person.InvokeMethod(_service_id, _kGetAgeId);
 }
 
 static const MethodId _kGetBoxedAgeId = reinterpret_cast<MethodId>(2);
 
-int PersonCounter::GetBoxedAge(PersonBoxBuilder box) {
+int32_t PersonCounter::GetBoxedAge(PersonBoxBuilder box) {
   return box.InvokeMethod(_service_id, _kGetBoxedAgeId);
 }
 
@@ -42,12 +42,12 @@ AgeStats PersonCounter::GetAgeStats(PersonBuilder person) {
 
 static const MethodId _kCreateAgeStatsId = reinterpret_cast<MethodId>(4);
 
-AgeStats PersonCounter::CreateAgeStats(int averageAge, int sum) {
+AgeStats PersonCounter::CreateAgeStats(int32_t averageAge, int32_t sum) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int*>(_buffer + 32) = averageAge;
-  *reinterpret_cast<int*>(_buffer + 36) = sum;
+  *reinterpret_cast<int32_t*>(_buffer + 32) = averageAge;
+  *reinterpret_cast<int32_t*>(_buffer + 36) = sum;
   ServiceApiInvoke(_service_id, _kCreateAgeStatsId, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
   char* memory = reinterpret_cast<char*>(result);
@@ -57,11 +57,11 @@ AgeStats PersonCounter::CreateAgeStats(int averageAge, int sum) {
 
 static const MethodId _kCreatePersonId = reinterpret_cast<MethodId>(5);
 
-Person PersonCounter::CreatePerson(int children) {
+Person PersonCounter::CreatePerson(int32_t children) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int*>(_buffer + 32) = children;
+  *reinterpret_cast<int32_t*>(_buffer + 32) = children;
   ServiceApiInvoke(_service_id, _kCreatePersonId, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
   char* memory = reinterpret_cast<char*>(result);
@@ -71,11 +71,11 @@ Person PersonCounter::CreatePerson(int children) {
 
 static const MethodId _kCreateNodeId = reinterpret_cast<MethodId>(6);
 
-Node PersonCounter::CreateNode(int depth) {
+Node PersonCounter::CreateNode(int32_t depth) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int*>(_buffer + 32) = depth;
+  *reinterpret_cast<int32_t*>(_buffer + 32) = depth;
   ServiceApiInvoke(_service_id, _kCreateNodeId, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
   char* memory = reinterpret_cast<char*>(result);
@@ -85,13 +85,13 @@ Node PersonCounter::CreateNode(int depth) {
 
 static const MethodId _kCountId = reinterpret_cast<MethodId>(7);
 
-int PersonCounter::Count(PersonBuilder person) {
+int32_t PersonCounter::Count(PersonBuilder person) {
   return person.InvokeMethod(_service_id, _kCountId);
 }
 
 static const MethodId _kDepthId = reinterpret_cast<MethodId>(8);
 
-int PersonCounter::Depth(NodeBuilder node) {
+int32_t PersonCounter::Depth(NodeBuilder node) {
   return node.InvokeMethod(_service_id, _kDepthId);
 }
 

@@ -154,7 +154,7 @@ class PersonBoxBuilder extends Builder {
 }
 
 class Node extends Reader {
-  int get tag => _segment.memory.getInt16(_offset + 0);
+  int get tag => _segment.memory.getUint16(_offset + 0);
   bool get isNum => 1 == this.tag;
   int get num => _segment.memory.getInt32(_offset + 8);
   bool get isCons => 2 == this.tag;
@@ -163,7 +163,7 @@ class Node extends Reader {
 
 class NodeBuilder extends Builder {
   void set tag(int value) {
-    setInt16(0, value);
+    setUint16(0, value);
   }
   void set num(int value) {
     tag = 1;

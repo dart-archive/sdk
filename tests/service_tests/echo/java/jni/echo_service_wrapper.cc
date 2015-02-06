@@ -51,12 +51,12 @@ JNIEXPORT jint JNICALL Java_fletch_EchoService_Echo(JNIEnv*, jclass, jint n) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int*>(_buffer + 32) = n;
+  *reinterpret_cast<int32_t*>(_buffer + 32) = n;
   ServiceApiInvoke(_service_id, _kEchoId, _buffer, kSize);
   return *reinterpret_cast<int*>(_buffer + 32);
 }
 
-static void Unwrap_Int32_8(void* raw) {
+static void Unwrap_int32_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
   int result = *reinterpret_cast<int*>(buffer + 32);
   jobject callback = *reinterpret_cast<jobject*>(buffer + 40);
@@ -76,10 +76,10 @@ JNIEXPORT void JNICALL Java_fletch_EchoService_EchoAsync(JNIEnv* _env, jclass, j
   _env->GetJavaVM(&vm);
   static const int kSize = 40 + 2 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int*>(_buffer + 32) = n;
+  *reinterpret_cast<int32_t*>(_buffer + 32) = n;
   *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
   *reinterpret_cast<void**>(_buffer + 40 + 1 * sizeof(void*)) = reinterpret_cast<void*>(vm);
-  ServiceApiInvokeAsync(_service_id, _kEchoId, Unwrap_Int32_8, _buffer, kSize);
+  ServiceApiInvokeAsync(_service_id, _kEchoId, Unwrap_int32_8, _buffer, kSize);
 }
 
 static const MethodId _kSumId = reinterpret_cast<MethodId>(2);
@@ -88,8 +88,8 @@ JNIEXPORT jint JNICALL Java_fletch_EchoService_Sum(JNIEnv*, jclass, jshort x, ji
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<short*>(_buffer + 32) = x;
-  *reinterpret_cast<int*>(_buffer + 36) = y;
+  *reinterpret_cast<int16_t*>(_buffer + 32) = x;
+  *reinterpret_cast<int32_t*>(_buffer + 36) = y;
   ServiceApiInvoke(_service_id, _kSumId, _buffer, kSize);
   return *reinterpret_cast<int*>(_buffer + 32);
 }
@@ -100,11 +100,11 @@ JNIEXPORT void JNICALL Java_fletch_EchoService_SumAsync(JNIEnv* _env, jclass, js
   _env->GetJavaVM(&vm);
   static const int kSize = 40 + 2 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<short*>(_buffer + 32) = x;
-  *reinterpret_cast<int*>(_buffer + 36) = y;
+  *reinterpret_cast<int16_t*>(_buffer + 32) = x;
+  *reinterpret_cast<int32_t*>(_buffer + 36) = y;
   *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
   *reinterpret_cast<void**>(_buffer + 40 + 1 * sizeof(void*)) = reinterpret_cast<void*>(vm);
-  ServiceApiInvokeAsync(_service_id, _kSumId, Unwrap_Int32_8, _buffer, kSize);
+  ServiceApiInvokeAsync(_service_id, _kSumId, Unwrap_int32_8, _buffer, kSize);
 }
 
 #ifdef __cplusplus

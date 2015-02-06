@@ -158,7 +158,11 @@ class BuilderSegment {
     return result;
   }
 
-  void setInt16(int offset, inv value) {
+  void setUint16(int offset, int value) {
+    _memory.setUint16(offset, value);
+  }
+
+  void setInt16(int offset, int value) {
     _memory.setInt16(offset, value);
   }
 
@@ -201,6 +205,10 @@ class MessageBuilder {
 class Builder {
   BuilderSegment _segment;
   int _offset;
+
+  void setUint16(int offset, int value) {
+    _segment.setUint16(offset + _offset, value);
+  }
 
   void setInt16(int offset, int value) {
     _segment.setInt16(offset + _offset, value);
