@@ -122,10 +122,10 @@ class AgeStats extends Reader {
 
 class AgeStatsBuilder extends Builder {
   void set averageAge(int value) {
-    setInt32(0, value);
+    _segment.memory.setInt32(_offset + 0, value);
   }
   void set sum(int value) {
-    setInt32(4, value);
+    _segment.memory.setInt32(_offset + 4, value);
   }
 }
 
@@ -136,7 +136,7 @@ class Person extends Reader {
 
 class PersonBuilder extends Builder {
   void set age(int value) {
-    setInt32(0, value);
+    _segment.memory.setInt32(_offset + 0, value);
   }
   List<PersonBuilder> NewChildren(int length) {
     return NewList(new _PersonBuilderList(), 8, length, 16);
@@ -163,11 +163,11 @@ class Node extends Reader {
 
 class NodeBuilder extends Builder {
   void set tag(int value) {
-    setUint16(0, value);
+    _segment.memory.setUint16(_offset + 0, value);
   }
   void set num(int value) {
     tag = 1;
-    setInt32(8, value);
+    _segment.memory.setInt32(_offset + 8, value);
   }
   ConsBuilder NewCons() {
     tag = 2;

@@ -42,8 +42,9 @@ int getResultMessage(Builder builder) {
   BuilderSegment segment = builder._segment;
   if (segment._next == null) {
     // Mark result as being non-segmented.
-    segment.setInt32(0, 0);
-    return segment._memory.value;
+    Foreign memory = segment.memory;
+    memory.setInt32(0, 0);
+    return memory.value;
   }
 
   // The result is a segmented message. Build a memory block that
@@ -56,7 +57,7 @@ int getResultMessage(Builder builder) {
   buffer.setInt32(4, segments);
   int offset = 8;
   do {
-    buffer.setInt64(offset, segment._memory.value);
+    buffer.setInt64(offset, segment.memory.value);
     buffer.setInt32(offset + 8, segment._used);
     segment = segment._next;
     offset += 16;
@@ -141,37 +142,21 @@ class ListReader extends Reader {
 
 class BuilderSegment {
   final MessageBuilder _builder;
-  final Foreign _memory;
+  final Foreign memory;
   int _id;
   int _used = 0;
   BuilderSegment _next;
 
   BuilderSegment(this._builder, this._id, int space)
-      : _memory = new Foreign.allocated(space);
+      : memory = new Foreign.allocated(space);
 
-  bool HasSpaceForBytes(int bytes) => _used + bytes <= _memory.length;
+  bool HasSpaceForBytes(int bytes) => _used + bytes <= memory.length;
 
   int Allocate(int bytes) {
     if (!HasSpaceForBytes(bytes)) return -1;
     var result = _used;
     _used += bytes;
     return result;
-  }
-
-  void setUint16(int offset, int value) {
-    _memory.setUint16(offset, value);
-  }
-
-  void setInt16(int offset, int value) {
-    _memory.setInt16(offset, value);
-  }
-
-  void setInt32(int offset, int value) {
-    _memory.setInt32(offset, value);
-  }
-
-  void setInt64(int offset, int value) {
-    _memory.setInt64(offset, value);
   }
 }
 
@@ -206,26 +191,15 @@ class Builder {
   BuilderSegment _segment;
   int _offset;
 
-  void setUint16(int offset, int value) {
-    _segment.setUint16(offset + _offset, value);
-  }
-
-  void setInt16(int offset, int value) {
-    _segment.setInt16(offset + _offset, value);
-  }
-
-  void setInt32(int offset, int value) {
-    _segment.setInt32(offset + _offset, value);
-  }
-
   Builder NewStruct(Builder builder, int offset, int size) {
     offset += _offset;
     BuilderSegment segment = _segment;
     while (true) {
       int result = segment.Allocate(size);
+      Foreign memory = segment.memory;
       if (result >= 0) {
-        segment.setInt32(offset + 0, (result << 2) | 1);
-        segment.setInt32(offset + 4, 0);
+        memory.setInt32(offset + 0, (result << 2) | 1);
+        memory.setInt32(offset + 4, 0);
         builder._segment = segment;
         builder._offset = result;
         return builder;
@@ -233,8 +207,8 @@ class Builder {
 
       BuilderSegment other = segment._builder.FindSegmentForBytes(size + 8);
       int target = other.Allocate(8);
-      segment.setInt32(offset + 0, (target << 2) | 3);
-      segment.setInt32(offset + 4, other._id);
+      memory.setInt32(offset + 0, (target << 2) | 3);
+      memory.setInt32(offset + 4, other._id);
 
       segment = other;
       offset = target;
@@ -251,9 +225,10 @@ class Builder {
     BuilderSegment segment = _segment;
     while (true) {
       int result = segment.Allocate(size);
+      Foreign memory = segment.memory;
       if (result >= 0) {
-        segment.setInt32(offset + 0, (result << 2) | 1);
-        segment.setInt32(offset + 4, length);
+        memory.setInt32(offset + 0, (result << 2) | 1);
+        memory.setInt32(offset + 4, length);
         list._segment = segment;
         list._offset = result;
         return list;
@@ -261,8 +236,8 @@ class Builder {
 
       BuilderSegment other = segment._builder.FindSegmentForBytes(size + 8);
       int target = other.Allocate(8);
-      segment.setInt32(offset + 0, (target << 2) | 3);
-      segment.setInt32(offset + 4, other._id);
+      memory.setInt32(offset + 0, (target << 2) | 3);
+      memory.setInt32(offset + 4, other._id);
 
       segment = other;
       offset = target;

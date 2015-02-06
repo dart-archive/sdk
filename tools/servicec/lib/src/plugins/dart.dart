@@ -284,7 +284,8 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeType(slotType);
         writeln(' value) {');
         write(updateTag);
-        writeln('    $setter(${slot.offset}, value);');
+        String offset = '_offset + ${slot.offset}';
+        writeln('    _segment.memory.$setter($offset, value);');
         writeln('  }');
       } else {
         write('  ');
