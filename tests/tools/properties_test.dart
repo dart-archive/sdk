@@ -3,18 +3,21 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'package:expect/expect.dart';
-import '../../src/tools/driver/properties.dart' as props;
+import '../../src/tools/driver/properties.dart' as properies;
+import '../../src/tools/driver/property_managers.dart' as managers;
+
 
 main() {
-  String path = "p";
-  String name = "n";
-  String value = "v";
+  testGlobalProperties();
+}
 
-  props.useMemoryBackedProperties();
+testGlobalProperties() {
+  properies.global = new properies.Properties("/");
+  properies.global.manager = new managers.MemoryBasedPropertyManager();
 
-  Expect.isNull(props.getProperty(path, name));
-  props.setProperty(path, name, value);
-  Expect.equals(value, props.getProperty(path, name));
+  Expect.isNull(properies.global.serverPortNumber);
 
-  Expect.isNull(props.getProperty(path, "unknown_name"));
+  int value = 2000;
+  properies.global.serverPortNumber = value;
+  Expect.equals(value, properies.global.serverPortNumber);
 }

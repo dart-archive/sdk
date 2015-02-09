@@ -3,26 +3,30 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 /**
- * Provides an extensible key-value map for storing properties such as the
- * connection port.
+ * Stores a set of global properties for use by the command line
+ * driver tools.
  *
- * It is intended for use by the command line driver tools. The default
- * implementation is a non-caching file based store.
+ * The default implementation is a non-caching file based store.
  */
 library driver.properties;
 
 import 'property_managers.dart';
 
-PropertyManager _manager = new FileBasedPropertyManager();
+Properties global;
 
-String getProperty(String path, String name) {
-  return _manager.getProperty(path, name);
-}
+class Properties {
+  static const String _SERVER_PORT_NUM_NAME = "serverPortNumber";
+  PropertyManager manager = new FileBasedPropertyManager();
+  String path;
 
-void setProperty(String path, String name, String value) {
-  _manager.setProperty(path, name, value);
-}
+  Properties(this.path);
 
-void useMemoryBackedProperties() {
-  _manager = new MemoryBasedPropertyManager();
+  int get serverPortNumber {
+    String port = manager.getProperty(path, _SERVER_PORT_NUM_NAME);
+    return port != null ? int.parse(port) : null;
+  }
+
+  void set serverPortNumber(int value) {
+    manager.setProperty(path, _SERVER_PORT_NUM_NAME, value.toString());
+  }
 }
