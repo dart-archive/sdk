@@ -36,8 +36,8 @@ static const MethodId kGetAgeStatsId_ = reinterpret_cast<MethodId>(3);
 AgeStats PersonCounter::getAgeStats(PersonBuilder person) {
   int64_t result = person.InvokeMethod(service_id_, kGetAgeStatsId_);
   char* memory = reinterpret_cast<char*>(result);
-  Segment* segment = MessageReader::GetRootSegment(memory, 8);
-  return AgeStats(segment, 0);
+  Segment* segment = MessageReader::GetRootSegment(memory);
+  return AgeStats(segment, 8);
 }
 
 static const MethodId kCreateAgeStatsId_ = reinterpret_cast<MethodId>(4);
@@ -51,7 +51,7 @@ AgeStats PersonCounter::createAgeStats(int32_t averageAge, int32_t sum) {
   ServiceApiInvoke(service_id_, kCreateAgeStatsId_, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
   char* memory = reinterpret_cast<char*>(result);
-  Segment* segment = MessageReader::GetRootSegment(memory, 8);
+  Segment* segment = MessageReader::GetRootSegment(memory);
   return AgeStats(segment, 8);
 }
 
@@ -65,7 +65,7 @@ Person PersonCounter::createPerson(int32_t children) {
   ServiceApiInvoke(service_id_, kCreatePersonId_, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
   char* memory = reinterpret_cast<char*>(result);
-  Segment* segment = MessageReader::GetRootSegment(memory, 16);
+  Segment* segment = MessageReader::GetRootSegment(memory);
   return Person(segment, 8);
 }
 
@@ -79,7 +79,7 @@ Node PersonCounter::createNode(int32_t depth) {
   ServiceApiInvoke(service_id_, kCreateNodeId_, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
   char* memory = reinterpret_cast<char*>(result);
-  Segment* segment = MessageReader::GetRootSegment(memory, 16);
+  Segment* segment = MessageReader::GetRootSegment(memory);
   return Node(segment, 8);
 }
 

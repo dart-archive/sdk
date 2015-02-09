@@ -44,6 +44,7 @@ int getResultMessage(Builder builder) {
     // Mark result as being non-segmented.
     Foreign memory = segment.memory;
     memory.setInt32(0, 0);
+    memory.setInt32(4, memory.length);
     return memory.value;
   }
 

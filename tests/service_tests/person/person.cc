@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#include "src/shared/assert.h"
 #include "person_shared.h"
 #include "cc/person_counter.h"
 
@@ -44,40 +45,47 @@ static void RunPersonTests() {
   int used = builder.ComputeUsed();
   int building_us = static_cast<int>(end - start);
   printf("Generated size: %i bytes\n", used);
-  printf("Building took %i us.\n", building_us);
+  printf("Building (c++) took %i us.\n", building_us);
   printf("    - %.2f MB/s\n", static_cast<double>(used) / building_us);
 
   int age = PersonCounter::getAge(person);
+  ASSERT(age == 140);
   start = GetMicroseconds();
   int count = PersonCounter::count(person);
   end = GetMicroseconds();
+  ASSERT(count == 127);
+  int reading_us = static_cast<int>(end - start);
+  printf("Reading (fletch) took %i us.\n", reading_us);
+  printf("    - %.2f MB/s\n", static_cast<double>(used) / reading_us);
+
   AgeStats stats = PersonCounter::getAgeStats(person);
-  printf("AgeStats avg: %d sum: %d\n", stats.getAverageAge(), stats.getSum());
+  ASSERT(stats.getAverageAge() == 39);
+  ASSERT(stats.getSum() == 4940);
   stats.Delete();
   AgeStats stats2 = PersonCounter::createAgeStats(42, 42);
-  printf("AgeStats create avg: %d sum: %d \n",
-         stats2.getAverageAge(),
-         stats2.getSum());
+  ASSERT(stats2.getAverageAge() == 42);
+  ASSERT(stats2.getSum() == 42);
   stats2.Delete();
   Person generated = PersonCounter::createPerson(10);
-  printf("Generate age: %d\n", generated.getAge());
+
+  ASSERT(generated.getAge() == 42);
   List<Person> children = generated.getChildren();
-  printf("Generated children: %d ages: [ ", children.length());
+  ASSERT(children.length() == 10);
   for (int i = 0; i < children.length(); i++) {
-    if (i != 0) printf(", ");
-    printf("%d", children[i].getAge());
+    ASSERT(children[i].getAge() == 12 + i * 2);
   }
-  printf("]\n");
   generated.Delete();
+  start = GetMicroseconds();
   Node node = PersonCounter::createNode(10);
+  end = GetMicroseconds();
+  building_us = static_cast<int>(end - start);
+  used = node.ComputeUsed();
+  printf("Generated size: %i bytes\n", used);
+  printf("Building (fletch) took %i us.\n", building_us);
+  printf("    - %.2f MB/s\n", static_cast<double>(used) / building_us);
   int depth = Depth(node);
   printf("Generated Node in Dart with depth: %d\n", depth);
   node.Delete();
-  int reading_us = static_cast<int>(end - start);
-  printf("Reading took %i us.\n", reading_us);
-  printf("    - %.2f MB/s\n", static_cast<double>(used) / reading_us);
-
-  printf("Verification: age = %d, count = %d\n", age, count);
 }
 
 static void RunPersonBoxTests() {
@@ -88,7 +96,7 @@ static void RunPersonBoxTests() {
   person.setAge(87);
 
   int age = PersonCounter::getBoxedAge(box);
-  printf("Verification: age = %d\n", age);
+  ASSERT(age == 87);
 }
 
 static void BuildNode(NodeBuilder node, int n) {
@@ -107,7 +115,7 @@ static void RunNodeTests() {
   NodeBuilder root = builder.initRoot<NodeBuilder>();
   BuildNode(root, 10);
   int depth = PersonCounter::depth(root);
-  printf("Verification: depth = %d\n", depth);
+  ASSERT(depth == 10);
 }
 
 static void InteractWithService() {

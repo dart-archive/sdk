@@ -54,7 +54,7 @@ MessageReader::~MessageReader() {
   delete[] segments_;
 }
 
-Segment* MessageReader::GetRootSegment(char* memory, int size) {
+Segment* MessageReader::GetRootSegment(char* memory) {
   // TODO(ager): Just have the segment count instead of a separate
   // segmented marker.
   bool segmented = (*reinterpret_cast<int*>(memory) == 1);
@@ -63,6 +63,7 @@ Segment* MessageReader::GetRootSegment(char* memory, int size) {
     MessageReader* reader = new MessageReader(segments, memory + 8);
     return new Segment(reader);
   } else {
+    int size = *reinterpret_cast<int*>(memory + 4);
     return new Segment(memory, size);
   }
 }
@@ -199,4 +200,13 @@ Reader Builder::NewList(int offset, int length, int size) {
     segment = other;
     offset = target;
   }
+}
+
+int Reader::ComputeUsed() const {
+  MessageReader* reader = segment_->reader();
+  int used = 0;
+  for (int i = 0; i < reader->segment_count(); i++) {
+    used += reader->GetSegment(i)->size();
+  }
+  return used;
 }

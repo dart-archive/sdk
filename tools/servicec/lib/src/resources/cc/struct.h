@@ -38,9 +38,10 @@ class MessageReader {
  public:
   MessageReader(int segments, char* memory);
   ~MessageReader();
+  int segment_count() const { return segment_count_; }
   Segment* GetSegment(int id) { return segments_[id]; }
 
-  static Segment* GetRootSegment(char* memory, int size);
+  static Segment* GetRootSegment(char* memory);
 
  private:
   int segment_count_;
@@ -128,6 +129,8 @@ class Reader {
 
   Segment* segment() const { return segment_; }
   int offset() const { return offset_; }
+
+  int ComputeUsed() const;
 
   // TODO(ager): Delete should only be possible on root readers.
   void Delete() { delete segment_; }

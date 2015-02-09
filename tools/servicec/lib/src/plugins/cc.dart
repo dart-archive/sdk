@@ -25,6 +25,8 @@ const List<String> RESOURCES = const [
   "struct.cc",
 ];
 
+const int RESPONSE_HEADER_SIZE = 8;
+
 void generate(String path, Unit unit, String outputDirectory) {
   String directory = join(outputDirectory, "cc");
   _generateHeaderFile(path, unit, directory);
@@ -168,11 +170,13 @@ abstract class CcVisitor extends CodeGenerationVisitor {
       if (method.outputKind == OutputKind.STRUCT) {
         writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
         writeln('  char* memory = reinterpret_cast<char*>(result);');
-        StructLayout resultLayout = new StructLayout(method.returnType.resolved);
+        Struct resultStruct = method.returnType.resolved;
+        Struct resultLayout = resultStruct.layout;
         int size = resultLayout.size;
-        writeln('  Segment* segment = '
-                'MessageReader::GetRootSegment(memory, $size);');
-        writeln('  return ${method.returnType.identifier}(segment, 8);');
+        // TODO(ajohnsen): Do range-check between size and segment size.
+        writeln('  Segment* segment = MessageReader::GetRootSegment(memory);');
+        writeln('  return ${method.returnType.identifier}'
+                '(segment, $RESPONSE_HEADER_SIZE);');
       } else {
         writeln('  return *${pointerToArgument(0, 0, 'int')};');
       }
@@ -484,9 +488,10 @@ class _ImplementationVisitor extends CcVisitor {
         Struct resultStruct = node.returnType.resolved;
         StructLayout resultLayout = resultStruct.layout;
         int size = resultLayout.size;
-        writeln('  Segment* segment = '
-                'MessageReader::GetRootSegment(memory, $size);');
-        writeln('  return ${node.returnType.identifier}(segment, 0);');
+        // TODO(ajohnsen): Do range-check between size and segment size.
+        writeln('  Segment* segment = MessageReader::GetRootSegment(memory);');
+        writeln('  return ${node.returnType.identifier}'
+                '(segment, $RESPONSE_HEADER_SIZE);');
       } else {
         writeln('  return ${node.arguments.single.name}.'
                 'InvokeMethod(service_id_, $id);');
