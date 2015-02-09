@@ -15,8 +15,6 @@ class EchoService {
   static void tearDown();
   static int32_t echo(int32_t n);
   static void echoAsync(int32_t n, void (*callback)(int32_t));
-  static int32_t sum(int16_t x, int32_t y);
-  static void sumAsync(int16_t x, int32_t y, void (*callback)(int32_t));
 };
 
 #endif  // ECHO_SERVICE_H

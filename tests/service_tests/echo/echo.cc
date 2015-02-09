@@ -2,34 +2,62 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#include "src/shared/assert.h"
+#include "src/vm/platform.h"
 #include "echo_shared.h"
 #include "cc/echo_service.h"
 
 #include <cstdio>
+#include <sys/time.h>
+
+const int kCallCount = 10000;
+
+static fletch::Monitor* monitor = fletch::Platform::CreateMonitor();
+
+static bool async_done = false;
 
 static void EchoCallback(int result) {
-  printf("C: echo async result %d\n", result);
+  if (result < kCallCount) {
+    EchoService::echoAsync(result + 1, EchoCallback);
+  } else {
+    monitor->Lock();
+    async_done = true;
+    monitor->Notify();
+    monitor->Unlock();
+  }
 }
 
-static void SumCallback(int result) {
-  printf("C: sum async result %d\n", result);
+static uint64_t GetMicroseconds() {
+  struct timeval tv;
+  if (gettimeofday(&tv, NULL) < 0) return -1;
+  uint64_t result = tv.tv_sec * 1000000LL;
+  result += tv.tv_usec;
+  return result;
 }
 
 static void InteractWithService() {
   EchoService::setup();
-  int result = EchoService::echo(1);
-  printf("C: result %d\n", result);
-  result = EchoService::echo(2);
-  printf("C: result %d\n", result);
-  EchoService::echoAsync(3, EchoCallback);
-  printf("C: async call with argument 3\n");
-  EchoService::echoAsync(4, EchoCallback);
-  printf("C: async call with argument 4\n");
-  result = EchoService::echo(5);
-  printf("C: result %d\n", result);
-  EchoService::sumAsync(5, 8, SumCallback);
-  result = EchoService::sum(3, 4);
-  printf("C: result of sum(3, 4) is %d\n", result);
+  uint64_t start = GetMicroseconds();
+  for (int i = 0; i < kCallCount; i++) {
+    int result = EchoService::echo(i);
+    ASSERT(result == i);
+  }
+  uint64_t end = GetMicroseconds();
+  int sync_us = static_cast<int>(end - start);
+  printf("Sync call took %.2f us.\n",
+         static_cast<double>(sync_us) / kCallCount);
+  printf("    - %.2f calls/s\n", (1000000.0 / sync_us) * kCallCount);
+
+  start = GetMicroseconds();
+  EchoService::echoAsync(0, EchoCallback);
+  monitor->Lock();
+  while (!async_done) monitor->Wait();
+  monitor->Unlock();
+  end = GetMicroseconds();
+  int async_us = static_cast<int>(end - start);
+  printf("Async call took %.2f us.\n",
+         static_cast<double>(async_us) / kCallCount);
+  printf("    - %.2f calls/s\n", (1000000.0 / async_us) * kCallCount);
   EchoService::tearDown();
 }
 

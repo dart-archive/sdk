@@ -46,24 +46,3 @@ void EchoService::echoAsync(int32_t n, void (*callback)(int32_t)) {
   *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
   ServiceApiInvokeAsync(service_id_, kEchoId_, Unwrap_int32_8, _buffer, kSize);
 }
-
-static const MethodId kSumId_ = reinterpret_cast<MethodId>(2);
-
-int32_t EchoService::sum(int16_t x, int32_t y) {
-  static const int kSize = 40;
-  char _bits[kSize];
-  char* _buffer = _bits;
-  *reinterpret_cast<int16_t*>(_buffer + 32) = x;
-  *reinterpret_cast<int32_t*>(_buffer + 36) = y;
-  ServiceApiInvoke(service_id_, kSumId_, _buffer, kSize);
-  return *reinterpret_cast<int*>(_buffer + 32);
-}
-
-void EchoService::sumAsync(int16_t x, int32_t y, void (*callback)(int32_t)) {
-  static const int kSize = 40 + 1 * sizeof(void*);
-  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int16_t*>(_buffer + 32) = x;
-  *reinterpret_cast<int32_t*>(_buffer + 36) = y;
-  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
-  ServiceApiInvokeAsync(service_id_, kSumId_, Unwrap_int32_8, _buffer, kSize);
-}

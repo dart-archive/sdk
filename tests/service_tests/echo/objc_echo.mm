@@ -9,10 +9,6 @@ static void EchoCallback(int result) {
   NSLog([NSString stringWithFormat: @"ObjC: async result %d\n", result]);
 }
 
-static void SumCallback(int result) {
-  NSLog([NSString stringWithFormat: @"ObjC: sum async result %d\n", result]);
-}
-
 static void InteractWithService() {
   [EchoService Setup];
   NSInteger result = [EchoService echo: 1];
@@ -27,14 +23,6 @@ static void InteractWithService() {
   }];
   result = [EchoService echo: 5];
   NSLog([NSString stringWithFormat: @"ObjC: result %d\n", result]);
-  result = [EchoService sum: 3 with: 4];
-  NSLog([NSString stringWithFormat: @"ObjC: result of sum(3, 4) is %d\n",
-                  result]);
-  [EchoService sumAsync: 3 with: 4 withCallback: SumCallback];
-  [EchoService sumAsync: 3 with: 4 withBlock: ^(int res) {
-    NSLog([NSString stringWithFormat: @"ObjC: async sum block result %d\n",
-                    res]);
-  }];
   [EchoService TearDown];
 }
 

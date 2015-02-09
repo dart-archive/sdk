@@ -5,15 +5,7 @@
 import 'dart/echo_service.dart';
 
 class EchoImpl implements EchoService {
-  int echo(int n) {
-    print("Dart: echo called with argument $n");
-    return n;
-  }
-
-  int sum(int x, int y) {
-    print("Dart: sum called with $x and $y");
-    return x + y;
-  }
+  int echo(int n) => n;
 }
 
 main() {
