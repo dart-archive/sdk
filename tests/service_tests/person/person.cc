@@ -38,12 +38,13 @@ static void RunPersonTests() {
 
   uint64_t start = GetMicroseconds();
   PersonBuilder person = builder.initRoot<PersonBuilder>();
-  BuildPerson(person, 5);
+  BuildPerson(person, 7);
   uint64_t end = GetMicroseconds();
 
   int used = builder.ComputeUsed();
   int building_us = static_cast<int>(end - start);
-  printf("Building took %.2f ms.\n", building_us / 1000.0);
+  printf("Generated size: %i bytes\n", used);
+  printf("Building took %i us.\n", building_us);
   printf("    - %.2f MB/s\n", static_cast<double>(used) / building_us);
 
   int age = PersonCounter::getAge(person);
@@ -73,7 +74,7 @@ static void RunPersonTests() {
   printf("Generated Node in Dart with depth: %d\n", depth);
   node.Delete();
   int reading_us = static_cast<int>(end - start);
-  printf("Reading took %.2f us.\n", reading_us / 1000.0);
+  printf("Reading took %i us.\n", reading_us);
   printf("    - %.2f MB/s\n", static_cast<double>(used) / reading_us);
 
   printf("Verification: age = %d, count = %d\n", age, count);
