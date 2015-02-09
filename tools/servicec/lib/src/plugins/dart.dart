@@ -5,8 +5,9 @@
 library servicec.plugins.dart;
 
 import 'dart:core' hide Type;
+import 'dart:io' show Platform, File;
 
-import 'package:path/path.dart' show basenameWithoutExtension, join;
+import 'package:path/path.dart' show basenameWithoutExtension, join, dirname;
 import 'package:strings/strings.dart' as strings;
 
 import 'shared.dart';
@@ -19,12 +20,25 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
+const List<String> RESOURCES = const [
+  "struct.dart",
+];
+
 void generate(String path, Unit unit, String outputDirectory) {
   _DartVisitor visitor = new _DartVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
   String directory = join(outputDirectory, 'dart');
-  writeToFile(directory, path, "dart", contents);
+  writeToFile(directory, path, contents, extension: 'dart');
+
+  String resourcesDirectory = join(dirname(Platform.script.path),
+      '..', 'lib', 'src', 'resources', 'dart');
+  for (String resource in RESOURCES) {
+    String resourcePath = join(resourcesDirectory, resource);
+    File file = new File(resourcePath);
+    String contents = file.readAsStringSync();
+    writeToFile(directory, resource, contents);
+  }
 }
 
 class _DartVisitor extends CodeGenerationVisitor {

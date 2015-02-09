@@ -5,8 +5,9 @@
 library servicec.plugins.cc;
 
 import 'dart:core' hide Type;
+import 'dart:io' show Platform, File;
 
-import 'package:path/path.dart' show basenameWithoutExtension, join;
+import 'package:path/path.dart' show basenameWithoutExtension, join, dirname;
 
 import 'shared.dart';
 
@@ -19,27 +20,38 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
+const List<String> RESOURCES = const [
+  "struct.h",
+  "struct.cc",
+];
+
 void generate(String path, Unit unit, String outputDirectory) {
-  _generateHeaderFile(path, unit, outputDirectory);
-  _generateImplementationFile(path, unit, outputDirectory);
+  String directory = join(outputDirectory, "cc");
+  _generateHeaderFile(path, unit, directory);
+  _generateImplementationFile(path, unit, directory);
+
+  String resourcesDirectory = join(dirname(Platform.script.path),
+      '..', 'lib', 'src', 'resources', 'cc');
+  for (String resource in RESOURCES) {
+    String resourcePath = join(resourcesDirectory, resource);
+    File file = new File(resourcePath);
+    String contents = file.readAsStringSync();
+    writeToFile(directory, resource, contents);
+  }
 }
 
-void _generateHeaderFile(String path, Unit unit, String outputDirectory) {
+void _generateHeaderFile(String path, Unit unit, String directory) {
   _HeaderVisitor visitor = new _HeaderVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
-  String directory = join(outputDirectory, "cc");
-  writeToFile(directory, path, "h", contents);
+  writeToFile(directory, path, contents, extension: 'h');
 }
 
-void _generateImplementationFile(String path,
-                                 Unit unit,
-                                 String outputDirectory) {
+void _generateImplementationFile(String path, Unit unit, String directory) {
   _ImplementationVisitor visitor = new _ImplementationVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
-  String directory = join(outputDirectory, "cc");
-  writeToFile(directory, path, "cc", contents);
+  writeToFile(directory, path, contents, extension: 'cc');
 }
 
 abstract class CcVisitor extends CodeGenerationVisitor {

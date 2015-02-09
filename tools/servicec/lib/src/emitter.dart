@@ -10,14 +10,17 @@ import 'package:path/path.dart' show basenameWithoutExtension, join;
 
 void writeToFile(String outputDirectory,
                  String path,
-                 String extension,
-                 String contents) {
+                 String contents,
+                 {String extension}) {
   // Create 'cc' output directory if it doesn't already exist.
   new Directory(outputDirectory).createSync(recursive: true);
   // Write contents of the file.
-  String base = basenameWithoutExtension(path);
-  String headerFile = '$base.$extension';
-  String headerFilePath = join(outputDirectory, headerFile);
-  new File(headerFilePath).writeAsStringSync(contents);
+  String fileName = path;
+  if (extension != null) {
+    String base = basenameWithoutExtension(path);
+    fileName = '$base.$extension';
+  }
+  String filePath = join(outputDirectory, fileName);
+  new File(filePath).writeAsStringSync(contents);
 }
 

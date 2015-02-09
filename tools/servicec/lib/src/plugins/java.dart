@@ -144,25 +144,26 @@ void _generateFletchApis(String outputDirectory) {
   StringBuffer buffer = new StringBuffer(HEADER);
   buffer.writeln();
   buffer.write(FLETCH_API_JAVA);
-  writeToFile(fletchDirectory, 'FletchApi', 'java', buffer.toString());
+  writeToFile(fletchDirectory, 'FletchApi', buffer.toString(),
+      extension: 'java');
 
   buffer = new StringBuffer(HEADER);
   buffer.writeln();
   buffer.write(FLETCH_SERVICE_API_JAVA);
-  writeToFile(fletchDirectory, 'FletchServiceApi', 'java', buffer.toString());
+  writeToFile(fletchDirectory, 'FletchServiceApi', buffer.toString(),
+      extension: 'java');
 
   buffer = new StringBuffer(HEADER);
   buffer.writeln();
   buffer.write(FLETCH_API_JAVA_IMPL);
-  writeToFile(jniDirectory, 'fletch_api_wrapper', 'cc', buffer.toString());
+  writeToFile(jniDirectory, 'fletch_api_wrapper', buffer.toString(),
+      extension: 'cc');
 
   buffer = new StringBuffer(HEADER);
   buffer.writeln();
   buffer.write(FLETCH_SERVICE_API_JAVA_IMPL);
-  writeToFile(jniDirectory,
-              'fletch_service_api_wrapper',
-              'cc',
-              buffer.toString());
+  writeToFile(jniDirectory, 'fletch_service_api_wrapper', buffer.toString(),
+      extension: 'cc');
 }
 
 void _generateServiceJava(String path, Unit unit, String outputDirectory) {
@@ -175,7 +176,7 @@ void _generateServiceJava(String path, Unit unit, String outputDirectory) {
     print('Java plugin: multiple services in one file is not supported.');
   }
   String serviceName = unit.services.first.name;
-  writeToFile(directory, serviceName, "java", contents);
+  writeToFile(directory, serviceName, contents, extension: 'java');
 }
 
 void _generateServiceJni(String path, Unit unit, String outputDirectory) {
@@ -189,7 +190,7 @@ void _generateServiceJni(String path, Unit unit, String outputDirectory) {
   }
   String serviceName = unit.services.first.name;
   String file = '${strings.underscore(serviceName)}_wrapper';
-  writeToFile(directory, file, "cc", contents);
+  writeToFile(directory, file, contents, extension: 'cc');
 }
 
 class _JavaVisitor extends CodeGenerationVisitor {
@@ -443,17 +444,13 @@ void _generateServiceJniMakeFiles(String path, Unit unit, String outputDirectory
   buffer.writeln();
   buffer.writeln('\$(call import-module, ${modulePath})');
 
-  writeToFile(join(out, 'jni'),
-              'Android',
-              'mk',
-               buffer.toString());
+  writeToFile(join(out, 'jni'), 'Android', buffer.toString(),
+      extension: 'mk');
 
   buffer = new StringBuffer(HEADER_MK);
   buffer.writeln('APP_STL := gnustl_static');
   buffer.writeln('APP_ABI := all');
-  writeToFile(join(out, 'jni'),
-              'Application',
-              'mk',
-               buffer.toString());
+  writeToFile(join(out, 'jni'), 'Application', buffer.toString(),
+      extension: 'mk');
 
 }

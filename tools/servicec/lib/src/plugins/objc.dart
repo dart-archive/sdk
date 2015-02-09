@@ -30,7 +30,7 @@ void _generateHeaderFile(String path, Unit unit, String outputDirectory) {
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
   String directory = join(outputDirectory, 'objc');
-  writeToFile(directory, path, "h", contents);
+  writeToFile(directory, path, contents, extension: 'h');
 }
 
 void _generateImplementationFile(String path,
@@ -40,7 +40,7 @@ void _generateImplementationFile(String path,
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
   String directory = join(outputDirectory, 'objc');
-  writeToFile(directory, path, "m", contents);
+  writeToFile(directory, path, contents, extension: 'm');
 }
 
 abstract class _ObjcVisitor extends CcVisitor {
