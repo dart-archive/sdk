@@ -7,18 +7,18 @@
 #include "echo_service.h"
 #include "include/service_api.h"
 
-static ServiceId _service_id;
+static ServiceId service_id_;
 
 @implementation EchoService
 
 + (void)Setup {
-  _service_id = kNoServiceId;
-  _service_id = ServiceApiLookup("EchoService");
+  service_id_ = kNoServiceId;
+  service_id_ = ServiceApiLookup("EchoService");
 }
 
 + (void)TearDown {
-  ServiceApiTerminate(_service_id);
-  _service_id = kNoServiceId;
+  ServiceApiTerminate(service_id_);
+  service_id_ = kNoServiceId;
 }
 
 static const MethodId kEchoId_ = (MethodId)1;

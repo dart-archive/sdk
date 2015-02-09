@@ -131,7 +131,7 @@ class _ImplementationVisitor extends _ObjcVisitor {
 
   visitService(Service node) {
     writeln();
-    writeln('static ServiceId _service_id;');
+    writeln('static ServiceId service_id_;');
 
     serviceName = node.name;
 
@@ -140,14 +140,14 @@ class _ImplementationVisitor extends _ObjcVisitor {
 
     writeln();
     writeln('+ (void)Setup {');
-    writeln('  _service_id = kNoServiceId;');
-    writeln('  _service_id = ServiceApiLookup("$serviceName");');
+    writeln('  service_id_ = kNoServiceId;');
+    writeln('  service_id_ = ServiceApiLookup("$serviceName");');
     writeln('}');
 
     writeln();
     writeln('+ (void)TearDown {');
-    writeln('  ServiceApiTerminate(_service_id);');
-    writeln('  _service_id = kNoServiceId;');
+    writeln('  ServiceApiTerminate(service_id_);');
+    writeln('  service_id_ = kNoServiceId;');
     writeln('}');
 
     node.methods.forEach(visit);
