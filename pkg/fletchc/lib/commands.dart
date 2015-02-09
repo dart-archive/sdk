@@ -61,6 +61,25 @@ class Generic extends Command {
   }
 }
 
+class PopToMap extends Command {
+  final int map;
+  final int index;
+
+  const PopToMap(this.map, this.index)
+      : super(Opcode.PopToMap);
+
+  void addTo(StreamSink<List<int>> sink) {
+    int header = 4 /* 32 bit uint */ + 1 /* Opcode */;
+    Uint8List list = new Uint8List(header + 12);
+    ByteData view = new ByteData.view(list.buffer);
+    view.setUint32(0, 12, Endianness.LITTLE_ENDIAN);
+    view.setUint8(4, opcode.index);
+    view.setUint32(header, map, Endianness.LITTLE_ENDIAN);
+    view.setUint64(header + 4, index, Endianness.LITTLE_ENDIAN);
+    sink.add(list);
+  }
+}
+
 enum Opcode {
   // Session opcodes.
   // TODO(ahe): Understand what "Session opcodes" mean and turn it into a

@@ -23,9 +23,7 @@ const List<Command> commands = const <Command>[
             0
         ]),
 
-    const Generic(
-        Opcode.PopToMap,
-        const [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    const PopToMap(0, 0),
 
     const Generic(
         Opcode.PushNewFunction,
@@ -34,9 +32,7 @@ const List<Command> commands = const <Command>[
             0, 0, 0, 0
         ]),
 
-    const Generic(
-        Opcode.PopToMap,
-        const [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]),
+    const PopToMap(0, 1),
 
     const Generic(
         Opcode.PushNewFunction,
@@ -46,9 +42,7 @@ const List<Command> commands = const <Command>[
             0, 0, 0, 0
         ]),
 
-    const Generic(
-        Opcode.PopToMap,
-        const [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]),
+    const PopToMap(0, 2),
 
     const Generic(
         Opcode.ChangeStatics,
@@ -58,31 +52,23 @@ const List<Command> commands = const <Command>[
         Opcode.PushNull,
         const []),
 
-    const Generic(
-        Opcode.PopToMap,
-        const [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    const PopToMap(2, 0),
 
     const Generic(
         Opcode.PushBoolean,
         const [1]),
 
-    const Generic(
-        Opcode.PopToMap,
-        const [2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]),
+    const PopToMap(2, 1),
 
     const Generic(
         Opcode.PushBoolean,
         const [0]),
 
-    const Generic(
-        Opcode.PopToMap,
-        const [2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]),
+    const PopToMap(2, 2),
 
     const PushNewString("Hej Verden!"),
 
-    const Generic(
-        Opcode.PopToMap,
-        const [2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0]),
+    const PopToMap(2, 3),
 
     const Generic(
         Opcode.PushFromMap,
