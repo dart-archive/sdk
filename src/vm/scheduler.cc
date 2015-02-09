@@ -27,6 +27,7 @@ Scheduler::Scheduler()
       thread_count_(0),
       idle_threads_(kEmptyThreadState),
       threads_(new std::atomic<ThreadState*>[max_threads_]),
+      temporary_thread_states_(NULL),
       startup_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
       pause_(false),
@@ -101,6 +102,8 @@ bool Scheduler::StopProgram(Program* program) {
     to_enqueue = next;
   }
 
+  FlushCacheInThreadStates();
+
   pause_ = false;
   pause_monitor_->Unlock();
   NotifyAllThreads();
@@ -164,12 +167,17 @@ bool Scheduler::RunProcessOnCurrentThread(Process* process, Port* port) {
     return false;
   }
   port->Unlock();
-  // TODO(ajohnsen): This thread_state is only used for lookup cache. Consider
-  // having a pool of 'queue-less' thread states that can be reused.
-  ThreadState thread_state;
-  process = InterpretProcess(process, &thread_state);
+
+  // TODO(ajohnsen): It's important that the thread state caches are cleared
+  // when any Program changes. I'm not convinced this is the case.
+  ThreadState* thread_state = TakeThreadState();
+
+  // Use the temp thread state to run he process.
+  process = InterpretProcess(process, thread_state);
   if (process != NULL) EnqueueOnAnyThread(process);
-  ASSERT(thread_state.queue()->is_empty());
+  ASSERT(thread_state->queue()->is_empty());
+
+  ReturnThreadState(thread_state);
   return true;
 }
 
@@ -442,6 +450,40 @@ void Scheduler::NotifyAllThreads() {
       thread_state->idle_monitor()->Notify();
       thread_state->idle_monitor()->Unlock();
     }
+  }
+}
+
+ThreadState* Scheduler::TakeThreadState() {
+  // Try to get an existing thread state.
+  ThreadState* thread_state = temporary_thread_states_;
+  while (thread_state != NULL) {
+    ThreadState* next = thread_state->next_idle_thread();
+    if (temporary_thread_states_.compare_exchange_weak(thread_state, next)) {
+      thread_state->set_next_idle_thread(NULL);
+      return thread_state;
+    }
+  }
+
+  // If none was available, create a new one.
+  return new ThreadState();
+}
+
+void Scheduler::ReturnThreadState(ThreadState* thread_state) {
+  // Return the thread state to the temp pool.
+  ThreadState* next = temporary_thread_states_;
+  while (true) {
+    thread_state->set_next_idle_thread(next);
+    if (temporary_thread_states_.compare_exchange_weak(next, thread_state)) {
+      break;
+    }
+  }
+}
+
+void Scheduler::FlushCacheInThreadStates() {
+  ThreadState* temp = temporary_thread_states_;
+  while (temp != NULL) {
+    temp->cache()->Clear();
+    temp = temp->next_idle_thread();
   }
 }
 

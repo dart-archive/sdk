@@ -70,6 +70,7 @@ class Scheduler {
   std::atomic<int> thread_count_;
   std::atomic<ThreadState*> idle_threads_;
   std::atomic<ThreadState*>* threads_;
+  std::atomic<ThreadState*> temporary_thread_states_;
   std::unordered_map<Program*, ProcessList> stopped_processes_map_;
   ProcessQueue* startup_queue_;
 
@@ -94,6 +95,10 @@ class Scheduler {
   void ThreadEnter(ThreadState* thread_state);
   void ThreadExit(ThreadState* thread_state);
   void NotifyAllThreads();
+
+  ThreadState* TakeThreadState();
+  void ReturnThreadState(ThreadState* thread_state);
+  void FlushCacheInThreadStates();
 
   // Dequeue from [thread_state]. If [process] is [NULL] after a call to
   // DequeueFromThread, the [thread_state] is empty. Note that DequeueFromThread
