@@ -16,7 +16,7 @@ import 'dart:typed_data' show
     Uint8List;
 
 class CommandBuffer {
-  static const int headerSize = 5 /* 32 bit package length + 1 byte opcode */;
+  static const int headerSize = 5 /* 32 bit package length + 1 byte code */;
 
   int position = headerSize;
 
@@ -54,26 +54,26 @@ class CommandBuffer {
     position += value.length;
   }
 
-  void sendOn(StreamSink<List<int>> sink, Opcode opcode) {
+  void sendOn(StreamSink<List<int>> sink, CommandCode code) {
     view.setUint32(0, position - headerSize, Endianness.LITTLE_ENDIAN);
-    view.setUint8(4, opcode.index);
+    view.setUint8(4, code.index);
     sink.add(list.sublist(0, position));
     position = headerSize;
   }
 }
 
 class Command {
-  final Opcode opcode;
+  final CommandCode code;
 
   static final _buffer = new CommandBuffer();
 
-  const Command(this.opcode);
+  const Command(this.code);
 
   /// Shared command buffer. Not safe to use in asynchronous operations.
   CommandBuffer get buffer => _buffer;
 
   void addTo(StreamSink<List<int>> sink) {
-    buffer.sendOn(sink, opcode);
+    buffer.sendOn(sink, code);
   }
 }
 
@@ -81,27 +81,27 @@ class PushNewString extends Command {
   final String value;
 
   const PushNewString(this.value)
-      : super(Opcode.PushNewString);
+      : super(CommandCode.PushNewString);
 
   void addTo(StreamSink<List<int>> sink) {
     List<int> payload = UTF8.encode(value);
     buffer
         ..addUint32(payload.length)
         ..addUint8List(payload)
-        ..sendOn(sink, opcode);
+        ..sendOn(sink, code);
   }
 }
 
 class Generic extends Command {
   final List<int> payload;
 
-  const Generic(Opcode opcode, this.payload)
-      : super(opcode);
+  const Generic(CommandCode code, this.payload)
+      : super(code);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
         ..addUint8List(payload)
-        ..sendOn(sink, opcode);
+        ..sendOn(sink, code);
   }
 }
 
@@ -109,12 +109,12 @@ class NewMap extends Command {
   final MapId map;
 
   const NewMap(this.map)
-      : super(Opcode.NewMap);
+      : super(CommandCode.NewMap);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
         ..addUint32(map.index)
-        ..sendOn(sink, opcode);
+        ..sendOn(sink, code);
   }
 }
 
@@ -122,42 +122,42 @@ abstract class MapAccess extends Command {
   final MapId map;
   final int index;
 
-  const MapAccess(this.map, this.index, Opcode opcode)
-      : super(opcode);
+  const MapAccess(this.map, this.index, CommandCode code)
+      : super(code);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
         ..addUint32(map.index)
         ..addUint64(index)
-        ..sendOn(sink, opcode);
+        ..sendOn(sink, code);
   }
 }
 
 class PopToMap extends MapAccess {
   const PopToMap(MapId map, int index)
-      : super(map, index, Opcode.PopToMap);
+      : super(map, index, CommandCode.PopToMap);
 }
 
 class PushFromMap extends MapAccess {
   const PushFromMap(MapId map, int index)
-      : super(map, index, Opcode.PushFromMap);
+      : super(map, index, CommandCode.PushFromMap);
 }
 
 class PushNull extends Command {
   const PushNull()
-      : super(Opcode.PushNull);
+      : super(CommandCode.PushNull);
 }
 
 class PushBoolean extends Command {
   final bool value;
 
   const PushBoolean(this.value)
-      : super(Opcode.PushBoolean);
+      : super(CommandCode.PushBoolean);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
         ..addUint8(value ? 1 : 0)
-        ..sendOn(sink, opcode);
+        ..sendOn(sink, code);
   }
 }
 
@@ -169,7 +169,7 @@ class PushNewFunction extends Command {
   final List<int> bytecodes;
 
   const PushNewFunction(this.arity, this.literals, this.bytecodes)
-      : super(Opcode.PushNewFunction);
+      : super(CommandCode.PushNewFunction);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
@@ -177,7 +177,7 @@ class PushNewFunction extends Command {
         ..addUint32(literals)
         ..addUint32(bytecodes.length)
         ..addUint8List(bytecodes)
-        ..sendOn(sink, opcode);
+        ..sendOn(sink, code);
   }
 }
 
@@ -185,12 +185,12 @@ class ChangeStatics extends Command {
   final int count;
 
   const ChangeStatics(this.count)
-      : super(Opcode.ChangeStatics);
+      : super(CommandCode.ChangeStatics);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
         ..addUint32(count)
-        ..sendOn(sink, opcode);
+        ..sendOn(sink, code);
   }
 }
 
@@ -198,12 +198,12 @@ class ChangeMethodLiteral extends Command {
   final int index;
 
   const ChangeMethodLiteral(this.index)
-      : super(Opcode.ChangeMethodLiteral);
+      : super(CommandCode.ChangeMethodLiteral);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
         ..addUint32(index)
-        ..sendOn(sink, opcode);
+        ..sendOn(sink, code);
   }
 }
 
@@ -211,12 +211,12 @@ class CommitChanges extends Command {
   final int count;
 
   const CommitChanges(this.count)
-      : super(Opcode.CommitChanges);
+      : super(CommandCode.CommitChanges);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
         ..addUint32(count)
-        ..sendOn(sink, opcode);
+        ..sendOn(sink, code);
   }
 }
 
@@ -224,29 +224,30 @@ class PushNewInteger extends Command {
   final int value;
 
   const PushNewInteger(this.value)
-      : super(Opcode.PushNewInteger);
+      : super(CommandCode.PushNewInteger);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
         ..addUint64(value)
-        ..sendOn(sink, opcode);
+        ..sendOn(sink, code);
   }
 }
 
 class RunMain extends Command {
   const RunMain()
-      : super(Opcode.RunMain);
+      : super(CommandCode.RunMain);
 }
 
 class SessionEnd extends Command {
   const SessionEnd()
-      : super(Opcode.SessionEnd);
+      : super(CommandCode.SessionEnd);
 }
 
-enum Opcode {
+enum CommandCode {
   // Session opcodes.
   // TODO(ahe): Understand what "Session opcodes" mean and turn it into a
-  // proper documentation comment.
+  // proper documentation comment (the comment was copied from
+  // src/bridge/opcodes.dart).
   ConnectionError,
   CompilerError,
   SessionEnd,
