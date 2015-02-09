@@ -7,122 +7,75 @@ library fletch.hello_world_commands;
 import 'commands.dart';
 
 const List<Command> commands = const <Command>[
-    const Generic(Opcode.NewMap, const [1, 0, 0, 0]),
-    const Generic(Opcode.NewMap, const [0, 0, 0, 0]),
-    const Generic(Opcode.NewMap, const [2, 0, 0, 0]),
+    const NewMap(MapId.methods),
+    const NewMap(MapId.constants),
 
-    const Generic(Opcode.PushNull, const []),
-    const Generic(Opcode.PushNull, const []),
-    const Generic(Opcode.PushNull, const []),
+    const PushNull(),
+    const PushNull(),
+    const PushNull(),
 
-    const Generic(
-        Opcode.PushNewFunction,
+    const PushNewFunction(
+        1, 3,
         const [
-            1, 0, 0, 0, 3, 0, 0, 0, 31, 0, 0, 0, 9, 0, 0, 0, 0, 23, 1, 0, 0, 0,
-            45, 18, 23, 2, 0, 0, 0, 45, 14, 46, 1, 1, 71, 22, 0, 0, 0, 0, 0, 0,
-            0
+            9, 0, 0, 0, 0, 23, 1, 0, 0, 0, 45, 18, 23, 2, 0, 0, 0, 45, 14, 46,
+            1, 1, 71, 22, 0, 0, 0, 0, 0, 0, 0
         ]),
 
-    const PopToMap(0, 0),
+    const PopToMap(MapId.methods, 0),
 
-    const Generic(
-        Opcode.PushNewFunction,
-        const [
-            1, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 26, 1, 0, 61, 71, 4, 0, 0, 0,
-            0, 0, 0, 0
-        ]),
+    const PushNewFunction(
+        1, 0, const [26, 1, 0, 61, 71, 4, 0, 0, 0, 0, 0, 0, 0]),
 
-    const PopToMap(0, 1),
+    const PopToMap(MapId.methods, 1),
 
-    const Generic(
-        Opcode.PushNewFunction,
+    const PushNewFunction(
+        1, 0, const [26, 1, 1, 61, 71, 4, 0, 0, 0, 0, 0, 0, 0]),
 
-        const [
-            1, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 26, 1, 1, 61, 71, 4, 0, 0, 0,
-            0, 0, 0, 0
-        ]),
+    const PopToMap(MapId.methods, 2),
 
-    const PopToMap(0, 2),
+    const ChangeStatics(0),
 
-    const Generic(
-        Opcode.ChangeStatics,
-        const [0, 0, 0, 0]),
+    const PushNull(),
 
-    const Generic(
-        Opcode.PushNull,
-        const []),
+    const PopToMap(MapId.constants, 0),
 
-    const PopToMap(2, 0),
+    const PushBoolean(true),
 
-    const Generic(
-        Opcode.PushBoolean,
-        const [1]),
+    const PopToMap(MapId.constants, 1),
 
-    const PopToMap(2, 1),
+    const PushBoolean(false),
 
-    const Generic(
-        Opcode.PushBoolean,
-        const [0]),
-
-    const PopToMap(2, 2),
+    const PopToMap(MapId.constants, 2),
 
     const PushNewString("Hej Verden!"),
 
-    const PopToMap(2, 3),
+    const PopToMap(MapId.constants, 3),
 
-    const Generic(
-        Opcode.PushFromMap,
-        const [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    const PushFromMap(MapId.methods, 0),
 
-    const Generic(
-        Opcode.PushFromMap,
-        const [2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0]),
+    const PushFromMap(MapId.constants, 3),
 
-    const Generic(
-        Opcode.ChangeMethodLiteral,
-        const [0, 0, 0, 0]),
+    const ChangeMethodLiteral(0),
 
-    const Generic(
-        Opcode.PushFromMap,
-        const [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    const PushFromMap(MapId.methods, 0),
 
-    const Generic(
-        Opcode.PushFromMap,
-        const [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]),
+    const PushFromMap(MapId.methods, 1),
 
-    const Generic(
-        Opcode.ChangeMethodLiteral,
-        const [1, 0, 0, 0]),
+    const ChangeMethodLiteral(1),
 
-    const Generic(
-        Opcode.PushFromMap,
-        const [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    const PushFromMap(MapId.methods, 0),
 
-    const Generic(
-        Opcode.PushFromMap,
-        const [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]),
+    const PushFromMap(MapId.methods, 2),
 
-    const Generic(
-        Opcode.ChangeMethodLiteral,
-        const [2, 0, 0, 0]),
+    const ChangeMethodLiteral(2),
 
-    const Generic(
-        Opcode.CommitChanges,
-        const [4, 0, 0, 0]),
+    const CommitChanges(4),
 
-    const Generic(
-        Opcode.PushNewInteger,
-        const [0, 0, 0, 0, 0, 0, 0, 0]),
+    const PushNewInteger(0),
 
-    const Generic(
-        Opcode.PushFromMap,
-        const [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    const PushFromMap(MapId.methods, 0),
 
-    const Generic(
-        Opcode.RunMain,
-        const []),
+    const RunMain(),
 
-    const Generic(
-        Opcode.SessionEnd,
-        const []),
+    const SessionEnd(),
 ];
