@@ -84,7 +84,7 @@ class MessageBuilder {
   int segments() const { return segments_; }
 
   template<typename T>
-  T NewRoot() { return T(InternalNewRoot(T::kSize)); }
+  T initRoot() { return T(InternalInitRoot(T::kSize)); }
 
   int ComputeUsed() const;
 
@@ -95,7 +95,7 @@ class MessageBuilder {
   BuilderSegment* last_;
   int segments_;
 
-  Builder InternalNewRoot(int size);
+  Builder InternalInitRoot(int size);
 };
 
 class Reader;

@@ -158,7 +158,8 @@ class _ImplementationVisitor extends _ObjcVisitor {
 
   visitMethod(Method node) {
     String name = node.name;
-    String id = '_k${name}Id';
+    String camel = camelize(name);
+    String id = 'k${camel}Id_';
 
     writeln();
     writeln('static const MethodId $id = (MethodId)${methodId++};');

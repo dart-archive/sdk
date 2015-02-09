@@ -10,17 +10,17 @@ public class EchoService {
   public static native void Setup();
   public static native void TearDown();
 
-  public static abstract class EchoCallback {
+  public static abstract class echoCallback {
     public abstract void handle(int result);
   }
 
-  public static native int Echo(int n);
-  public static native void EchoAsync(int n, EchoCallback callback);
+  public static native int echo(int n);
+  public static native void echoAsync(int n, echoCallback callback);
 
-  public static abstract class SumCallback {
+  public static abstract class sumCallback {
     public abstract void handle(int result);
   }
 
-  public static native int Sum(short x, int y);
-  public static native void SumAsync(short x, int y, SumCallback callback);
+  public static native int sum(short x, int y);
+  public static native void sumAsync(short x, int y, sumCallback callback);
 }

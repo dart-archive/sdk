@@ -7,7 +7,6 @@ library servicec.plugins.cc;
 import 'dart:core' hide Type;
 
 import 'package:path/path.dart' show basenameWithoutExtension, join;
-import 'package:strings/strings.dart' as strings;
 
 import 'shared.dart';
 
@@ -150,10 +149,10 @@ abstract class CcVisitor extends CodeGenerationVisitor {
         String arg = extraArguments[i];
         writeln('  *$dataArgument = ${cast("void*")}($arg);');
       }
-      write('  ServiceApiInvokeAsync(_service_id, $id, $callback, ');
+      write('  ServiceApiInvokeAsync(service_id_, $id, $callback, ');
       writeln('_buffer, kSize);');
     } else {
-      writeln('  ServiceApiInvoke(_service_id, $id, _buffer, kSize);');
+      writeln('  ServiceApiInvoke(service_id_, $id, _buffer, kSize);');
       if (method.outputKind == OutputKind.STRUCT) {
         writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
         writeln('  char* memory = reinterpret_cast<char*>(result);');
@@ -210,8 +209,8 @@ class _HeaderVisitor extends CcVisitor {
     writeln();
     writeln('class ${node.name} {');
     writeln(' public:');
-    writeln('  static void Setup();');
-    writeln('  static void TearDown();');
+    writeln('  static void setup();');
+    writeln('  static void tearDown();');
 
     node.methods.forEach(visit);
 
@@ -257,32 +256,31 @@ class _HeaderVisitor extends CcVisitor {
 
     for (StructSlot slot in layout.slots) {
       Type slotType = slot.slot.type;
-
-      String slotName = slot.slot.name;
+      String camel = camelize(slot.slot.name);
 
       if (slot.isUnionSlot) {
-        String tagName = slot.union.tag.name;
+        String tagName = camelize(slot.union.tag.name);
         int tag = slot.unionTag;
-        writeln('  bool is_$slotName() const { return $tag == $tagName(); }');
+        writeln('  bool is$camel() const { return $tag == get$tagName(); }');
       }
 
       if (slotType.isPrimitive) {
         write('  ');
         writeType(slotType);
-        write(' ${slot.slot.name}() const { return *PointerTo<');
+        write(' get$camel() const { return *PointerTo<');
         writeType(slotType);
         writeln('>(${slot.offset}); }');
       } else if (slotType.isList) {
         write('  ');
         write('List<');
         writeReturnType(slotType);
-        write('> ${slot.slot.name}() const { return ReadList<');
+        write('> get$camel() const { return ReadList<');
         writeReturnType(slotType);
         writeln('>(${slot.offset}); }');
       } else {
         write('  ');
         writeReturnType(slotType);
-        writeln(' ${slot.slot.name}() const;');
+        writeln(' get$camel() const;');
       }
     }
 
@@ -309,19 +307,19 @@ class _HeaderVisitor extends CcVisitor {
       String slotName = slot.slot.name;
       Type slotType = slot.slot.type;
 
-      String camel = strings.camelize(strings.underscore(slotName));
+      String camel = camelize(slotName);
       if (slotType.isList) {
         write('  List<');
         writeType(slotType);
-        writeln('> New$camel(int length);');
+        writeln('> init$camel(int length);');
       } else if (slotType.isPrimitive) {
-        write('  void set_${slotName}(');
+        write('  void set$camel(');
         writeType(slotType);
         write(' value) { ');
         if (slot.isUnionSlot) {
-          String tagName = slot.union.tag.name;
+          String tagName = camelize(slot.union.tag.name);
           int tag = slot.unionTag;
-          write('set_$tagName($tag); ');
+          write('set$tagName($tag); ');
         }
         write('*PointerTo<');
         writeType(slotType);
@@ -329,7 +327,7 @@ class _HeaderVisitor extends CcVisitor {
       } else {
         write('  ');
         writeType(slotType);
-        writeln(' New$camel();');
+        writeln(' init$camel();');
       }
     }
 
@@ -365,19 +363,19 @@ class _ImplementationVisitor extends CcVisitor {
 
   visitService(Service node) {
     writeln();
-    writeln('static ServiceId _service_id = kNoServiceId;');
+    writeln('static ServiceId service_id_ = kNoServiceId;');
 
     serviceName = node.name;
 
     writeln();
-    writeln('void ${serviceName}::Setup() {');
-    writeln('  _service_id = ServiceApiLookup("$serviceName");');
+    writeln('void ${serviceName}::setup() {');
+    writeln('  service_id_ = ServiceApiLookup("$serviceName");');
     writeln('}');
 
     writeln();
-    writeln('void ${serviceName}::TearDown() {');
-    writeln('  ServiceApiTerminate(_service_id);');
-    writeln('  _service_id = kNoServiceId;');
+    writeln('void ${serviceName}::tearDown() {');
+    writeln('  ServiceApiTerminate(service_id_);');
+    writeln('  service_id_ = kNoServiceId;');
     writeln('}');
 
     node.methods.forEach(visit);
@@ -398,17 +396,17 @@ class _ImplementationVisitor extends CcVisitor {
 
       String updateTag = '';
       if (slot.isUnionSlot) {
-        String tagName = slot.union.tag.name;
+        String tagName = camelize(slot.union.tag.name);
         int tag = slot.unionTag;
-        updateTag = '  set_$tagName($tag);\n';
+        updateTag = '  set$tagName($tag);\n';
       }
 
+      String camel = camelize(slotName);
       if (slotType.isList) {
         writeln();
-        String camel = strings.camelize(strings.underscore(slotName));
         write('List<');
         writeType(slotType);
-        writeln('> $name::New$camel(int length) {');
+        writeln('> $name::init$camel(int length) {');
         Struct element = slot.slot.type.resolved;
         StructLayout elementLayout = element.layout;
         int size = elementLayout.size;
@@ -418,9 +416,8 @@ class _ImplementationVisitor extends CcVisitor {
         writeln('}');
       } else if (!slotType.isPrimitive) {
         writeln();
-        String camel = strings.camelize(strings.underscore(slotName));
         writeType(slotType);
-        writeln(' $name::New$camel() {');
+        writeln(' $name::init$camel() {');
         Struct element = slot.slot.type.resolved;
         StructLayout elementLayout = element.layout;
         int size = elementLayout.size;
@@ -442,10 +439,11 @@ class _ImplementationVisitor extends CcVisitor {
       String slotName = slot.slot.name;
       Type slotType = slot.slot.type;
 
+      String camel = camelize(slotName);
       if (!slotType.isPrimitive && !slotType.isList) {
         writeln();
         writeReturnType(slotType);
-        write(' $name::$slotName() const { return ReadStruct<');
+        write(' $name::get$camel() const { return ReadStruct<');
         writeReturnType(slotType);
         writeln('>(${slot.offset}); }');
       }
@@ -454,7 +452,7 @@ class _ImplementationVisitor extends CcVisitor {
 
   visitMethod(Method node) {
     String name = node.name;
-    String id = '_k${name}Id';
+    String id = 'k${camelize(name)}Id_';
 
     writeln();
     write('static const MethodId $id = ');
@@ -469,7 +467,7 @@ class _ImplementationVisitor extends CcVisitor {
     if (node.inputKind == InputKind.STRUCT) {
       if (node.outputKind == OutputKind.STRUCT) {
         writeln('  int64_t result = ${node.arguments.single.name}.'
-                'InvokeMethod(_service_id, $id);');
+                'InvokeMethod(service_id_, $id);');
         writeln('  char* memory = reinterpret_cast<char*>(result);');
         Struct resultStruct = node.returnType.resolved;
         StructLayout resultLayout = resultStruct.layout;
@@ -479,7 +477,7 @@ class _ImplementationVisitor extends CcVisitor {
         writeln('  return ${node.returnType.identifier}(segment, 0);');
       } else {
         writeln('  return ${node.arguments.single.name}.'
-                'InvokeMethod(_service_id, $id);');
+                'InvokeMethod(service_id_, $id);');
       }
       writeln('}');
 

@@ -3,6 +3,6 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 service EchoService {
-  int32 Echo(int32 n);
-  int32 Sum(int16 x, int32 y);
+  int32 echo(int32 n);
+  int32 sum(int16 x, int32 y);
 }

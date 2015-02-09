@@ -186,7 +186,7 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln('        MessageBuilder mb = new MessageBuilder(${size + 8});');
         String builderName = '${method.returnType.identifier}Builder';
         writeln('        $builderName builder = '
-                'mb.NewRoot(new $builderName(), $size);');
+                'mb.initRoot(new $builderName(), $size);');
         write('        ');
         writeImplCall(method);
         write('${method.arguments.length > 0 ? ", " : ""}builder');
@@ -222,7 +222,7 @@ class _DartVisitor extends CodeGenerationVisitor {
       Type slotType = slot.slot.type;
 
       if (slot.isUnionSlot) {
-        String camel = strings.camelize(strings.underscore(slotName));
+        String camel = camelize(slotName);
         String tagName = slot.union.tag.name;
         int tag = slot.unionTag;
         writeln('  bool get is$camel => $tag == this.$tagName;');
@@ -265,11 +265,11 @@ class _DartVisitor extends CodeGenerationVisitor {
         updateTag = '    $tagName = $tag;\n';
       }
 
-      String camel = strings.camelize(strings.underscore(slotName));
+      String camel = camelize(slotName);
       if (slotType.isList) {
         write('  List<');
         writeReturnType(slotType);
-        writeln('> New$camel(int length) {');
+        writeln('> init$camel(int length) {');
         write(updateTag);
         Struct element = slotType.resolved;
         StructLayout elementLayout = element.layout;
@@ -290,7 +290,7 @@ class _DartVisitor extends CodeGenerationVisitor {
       } else {
         write('  ');
         writeReturnType(slotType);
-        writeln(' New$camel() {');
+        writeln(' init$camel() {');
         write(updateTag);
         Struct element = slotType.resolved;
         StructLayout elementLayout = element.layout;

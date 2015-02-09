@@ -17,8 +17,8 @@ bool _terminated = false;
 EchoService _impl;
 
 abstract class EchoService {
-  int Echo(int n);
-  int Sum(int x, int y);
+  int echo(int n);
+  int sum(int x, int y);
 
   static void initialize(EchoService impl) {
     if (_impl != null) {
@@ -41,12 +41,12 @@ abstract class EchoService {
         _postResult.icall$1(request);
         break;
       case _ECHO_METHOD_ID:
-        var result = _impl.Echo(request.getInt32(32));
+        var result = _impl.echo(request.getInt32(32));
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
       case _SUM_METHOD_ID:
-        var result = _impl.Sum(request.getInt16(32), request.getInt32(36));
+        var result = _impl.sum(request.getInt16(32), request.getInt32(36));
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;

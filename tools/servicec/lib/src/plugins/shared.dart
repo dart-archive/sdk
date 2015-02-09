@@ -4,6 +4,8 @@
 
 library servicec.plugins.shared;
 
+import 'package:strings/strings.dart' as strings;
+
 import '../parser.dart';
 export '../parser.dart';
 
@@ -14,6 +16,10 @@ abstract class CodeGenerationVisitor extends Visitor {
 
   void write(String s) => buffer.write(s);
   void writeln([String s = '']) => buffer.writeln(s);
+
+  String camelize(String name) {
+    return strings.camelize(strings.underscore(name));
+  }
 
   visit(Node node) => node.accept(this);
 

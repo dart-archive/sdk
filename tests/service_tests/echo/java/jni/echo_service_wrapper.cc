@@ -45,14 +45,14 @@ static void detachCurrentThread(JavaVM* vm) {
   }
 }
 
-static const MethodId _kEchoId = reinterpret_cast<MethodId>(1);
+static const MethodId _kechoId = reinterpret_cast<MethodId>(1);
 
-JNIEXPORT jint JNICALL Java_fletch_EchoService_Echo(JNIEnv*, jclass, jint n) {
+JNIEXPORT jint JNICALL Java_fletch_EchoService_echo(JNIEnv*, jclass, jint n) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
   *reinterpret_cast<int32_t*>(_buffer + 32) = n;
-  ServiceApiInvoke(_service_id, _kEchoId, _buffer, kSize);
+  ServiceApiInvoke(service_id_, _kechoId, _buffer, kSize);
   return *reinterpret_cast<int*>(_buffer + 32);
 }
 
@@ -70,7 +70,7 @@ static void Unwrap_int32_8(void* raw) {
   free(buffer);
 }
 
-JNIEXPORT void JNICALL Java_fletch_EchoService_EchoAsync(JNIEnv* _env, jclass, jint n, jobject _callback) {
+JNIEXPORT void JNICALL Java_fletch_EchoService_echoAsync(JNIEnv* _env, jclass, jint n, jobject _callback) {
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
@@ -79,22 +79,22 @@ JNIEXPORT void JNICALL Java_fletch_EchoService_EchoAsync(JNIEnv* _env, jclass, j
   *reinterpret_cast<int32_t*>(_buffer + 32) = n;
   *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
   *reinterpret_cast<void**>(_buffer + 40 + 1 * sizeof(void*)) = reinterpret_cast<void*>(vm);
-  ServiceApiInvokeAsync(_service_id, _kEchoId, Unwrap_int32_8, _buffer, kSize);
+  ServiceApiInvokeAsync(service_id_, _kechoId, Unwrap_int32_8, _buffer, kSize);
 }
 
-static const MethodId _kSumId = reinterpret_cast<MethodId>(2);
+static const MethodId _ksumId = reinterpret_cast<MethodId>(2);
 
-JNIEXPORT jint JNICALL Java_fletch_EchoService_Sum(JNIEnv*, jclass, jshort x, jint y) {
+JNIEXPORT jint JNICALL Java_fletch_EchoService_sum(JNIEnv*, jclass, jshort x, jint y) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
   *reinterpret_cast<int16_t*>(_buffer + 32) = x;
   *reinterpret_cast<int32_t*>(_buffer + 36) = y;
-  ServiceApiInvoke(_service_id, _kSumId, _buffer, kSize);
+  ServiceApiInvoke(service_id_, _ksumId, _buffer, kSize);
   return *reinterpret_cast<int*>(_buffer + 32);
 }
 
-JNIEXPORT void JNICALL Java_fletch_EchoService_SumAsync(JNIEnv* _env, jclass, jshort x, jint y, jobject _callback) {
+JNIEXPORT void JNICALL Java_fletch_EchoService_sumAsync(JNIEnv* _env, jclass, jshort x, jint y, jobject _callback) {
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
@@ -104,7 +104,7 @@ JNIEXPORT void JNICALL Java_fletch_EchoService_SumAsync(JNIEnv* _env, jclass, js
   *reinterpret_cast<int32_t*>(_buffer + 36) = y;
   *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
   *reinterpret_cast<void**>(_buffer + 40 + 1 * sizeof(void*)) = reinterpret_cast<void*>(vm);
-  ServiceApiInvokeAsync(_service_id, _kSumId, Unwrap_int32_8, _buffer, kSize);
+  ServiceApiInvokeAsync(service_id_, _ksumId, Unwrap_int32_8, _buffer, kSize);
 }
 
 #ifdef __cplusplus

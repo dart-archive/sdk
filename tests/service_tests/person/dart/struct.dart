@@ -170,7 +170,7 @@ class MessageBuilder {
     _last = _first;
   }
 
-  Builder NewRoot(Builder builder, int size) {
+  Builder initRoot(Builder builder, int size) {
     int offset = _first.Allocate(8 + size);
     builder._segment = _first;
     builder._offset = offset + 8;

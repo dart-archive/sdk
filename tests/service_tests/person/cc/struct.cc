@@ -23,7 +23,7 @@ int MessageBuilder::ComputeUsed() const {
   return result;
 }
 
-Builder MessageBuilder::InternalNewRoot(int size) {
+Builder MessageBuilder::InternalInitRoot(int size) {
   int offset = first_.Allocate(32 + 8 + size);
   return Builder(&first_, offset + 32 + 8);
 }

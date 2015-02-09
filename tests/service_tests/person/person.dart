@@ -6,64 +6,64 @@ import 'dart/person_counter.dart';
 
 // TODO(ager): Compiler doesn't like implements here.
 class PersonCounterImpl extends PersonCounter {
-  int GetAge(Person person) {
+  int getAge(Person person) {
     return person.age;
   }
 
-  int GetBoxedAge(PersonBox box) {
+  int getBoxedAge(PersonBox box) {
     return box.person.age;
   }
 
-  int _SumAges(Person person) {
-    int sum = GetAge(person);
+  int _sumAges(Person person) {
+    int sum = getAge(person);
     List<Person> children = person.children;
     for (int i = 0; i < children.length; i++) {
-      sum += _SumAges(children[i]);
+      sum += _sumAges(children[i]);
     }
     return sum;
   }
 
-  void GetAgeStats(Person person, AgeStatsBuilder result) {
-    int sum = _SumAges(person);
-    int count = Count(person);
+  void getAgeStats(Person person, AgeStatsBuilder result) {
+    int sum = _sumAges(person);
+    int count = count(person);
     result.averageAge = (sum / count).round();
     result.sum = sum;
   }
 
-  void CreateAgeStats(int avg, int sum, AgeStatsBuilder result) {
+  void createAgeStats(int avg, int sum, AgeStatsBuilder result) {
     result.averageAge = avg;
     result.sum = sum;
   }
 
-  void CreatePerson(int numChildren, PersonBuilder result) {
+  void createPerson(int numChildren, PersonBuilder result) {
     result.age = 42;
-    List<PersonBuilder> children = result.NewChildren(numChildren);
+    List<PersonBuilder> children = result.initChildren(numChildren);
     for (int i = 0; i < children.length; ++i) {
       children[i].age = 12 + (i * 2);
     }
   }
 
-  void CreateNode(int depth, NodeBuilder result) {
+  void createNode(int depth, NodeBuilder result) {
     if (depth > 1) {
-      ConsBuilder cons = result.NewCons();
-      CreateNode(depth - 1, cons.NewFst());
-      CreateNode(depth - 1, cons.NewSnd());
+      ConsBuilder cons = result.initCons();
+      createNode(depth - 1, cons.initFst());
+      createNode(depth - 1, cons.initSnd());
     } else {
       result.num = 42;
     }
   }
 
-  int Count(Person person) {
+  int count(Person person) {
     int sum = 1;
     List<Person> children = person.children;
-    for (int i = 0; i < children.length; i++) sum += Count(children[i]);
+    for (int i = 0; i < children.length; i++) sum += count(children[i]);
     return sum;
   }
 
-  int Depth(Node node) {
+  int depth(Node node) {
     if (node.isNum) return 1;
-    int left = Depth(node.cons.fst);
-    int right = Depth(node.cons.snd);
+    int left = depth(node.cons.fst);
+    int right = depth(node.cons.snd);
     return (left > right) ? left + 1 : right + 1;
   }
 }

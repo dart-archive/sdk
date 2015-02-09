@@ -16,21 +16,21 @@ static void SumCallback(int result) {
 }
 
 static void InteractWithService() {
-  EchoService::Setup();
-  int result = EchoService::Echo(1);
+  EchoService::setup();
+  int result = EchoService::echo(1);
   printf("C: result %d\n", result);
-  result = EchoService::Echo(2);
+  result = EchoService::echo(2);
   printf("C: result %d\n", result);
-  EchoService::EchoAsync(3, EchoCallback);
+  EchoService::echoAsync(3, EchoCallback);
   printf("C: async call with argument 3\n");
-  EchoService::EchoAsync(4, EchoCallback);
+  EchoService::echoAsync(4, EchoCallback);
   printf("C: async call with argument 4\n");
-  result = EchoService::Echo(5);
+  result = EchoService::echo(5);
   printf("C: result %d\n", result);
-  EchoService::SumAsync(5, 8, SumCallback);
-  result = EchoService::Sum(3, 4);
+  EchoService::sumAsync(5, 8, SumCallback);
+  result = EchoService::sum(3, 4);
   printf("C: result of sum(3, 4) is %d\n", result);
-  EchoService::TearDown();
+  EchoService::tearDown();
 }
 
 int main(int argc, char** argv) {

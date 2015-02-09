@@ -4,14 +4,13 @@
 
 import 'dart/echo_service.dart';
 
-// TODO(ager): Compiler doesn't like implements here.
-class EchoImpl extends EchoService {
-  int Echo(int n) {
+class EchoImpl implements EchoService {
+  int echo(int n) {
     print("Dart: echo called with argument $n");
     return n;
   }
 
-  int Sum(int x, int y) {
+  int sum(int x, int y) {
     print("Dart: sum called with $x and $y");
     return x + y;
   }

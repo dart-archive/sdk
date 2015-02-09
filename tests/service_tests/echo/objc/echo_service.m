@@ -21,14 +21,14 @@ static ServiceId _service_id;
   _service_id = kNoServiceId;
 }
 
-static const MethodId _kEchoId = (MethodId)1;
+static const MethodId kEchoId_ = (MethodId)1;
 
-+ (int32_t)Echo:(int32_t)n {
++ (int32_t)echo:(int32_t)n {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
   *(int32_t*)(_buffer + 32) = n;
-  ServiceApiInvoke(_service_id, _kEchoId, _buffer, kSize);
+  ServiceApiInvoke(service_id_, kEchoId_, _buffer, kSize);
   return *(int*)(_buffer + 32);
 }
 
@@ -41,12 +41,12 @@ static void Unwrap_int32_8(void* raw) {
   callback(result);
 }
 
-+ (void)EchoAsync:(int32_t)n withCallback:(void (*)(int))callback {
++ (void)echoAsync:(int32_t)n withCallback:(void (*)(int))callback {
   static const int kSize = 40 + 1 * sizeof(void*);
   char* _buffer = (char*)(malloc(kSize));
   *(int32_t*)(_buffer + 32) = n;
   *(void**)(_buffer + 40) = (void*)(callback);
-  ServiceApiInvokeAsync(_service_id, _kEchoId, Unwrap_int32_8, _buffer, kSize);
+  ServiceApiInvokeAsync(service_id_, kEchoId_, Unwrap_int32_8, _buffer, kSize);
 }
 
 static void Unwrap_int32_8_Block(void* raw) {
@@ -58,42 +58,42 @@ static void Unwrap_int32_8_Block(void* raw) {
   callback(result);
 }
 
-+ (void)EchoAsync:(int32_t)n withBlock:(void (^)(int))callback {
++ (void)echoAsync:(int32_t)n withBlock:(void (^)(int))callback {
   static const int kSize = 40 + 1 * sizeof(void*);
   char* _buffer = (char*)(malloc(kSize));
   *(int32_t*)(_buffer + 32) = n;
   *(void**)(_buffer + 40) = (void*)(callback);
-  ServiceApiInvokeAsync(_service_id, _kEchoId, Unwrap_int32_8_Block, _buffer, kSize);
+  ServiceApiInvokeAsync(service_id_, kEchoId_, Unwrap_int32_8_Block, _buffer, kSize);
 }
 
-static const MethodId _kSumId = (MethodId)2;
+static const MethodId kSumId_ = (MethodId)2;
 
-+ (int32_t)Sum:(int16_t)x with:(int32_t)y {
++ (int32_t)sum:(int16_t)x with:(int32_t)y {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
   *(int16_t*)(_buffer + 32) = x;
   *(int32_t*)(_buffer + 36) = y;
-  ServiceApiInvoke(_service_id, _kSumId, _buffer, kSize);
+  ServiceApiInvoke(service_id_, kSumId_, _buffer, kSize);
   return *(int*)(_buffer + 32);
 }
 
-+ (void)SumAsync:(int16_t)x with:(int32_t)y withCallback:(void (*)(int))callback {
++ (void)sumAsync:(int16_t)x with:(int32_t)y withCallback:(void (*)(int))callback {
   static const int kSize = 40 + 1 * sizeof(void*);
   char* _buffer = (char*)(malloc(kSize));
   *(int16_t*)(_buffer + 32) = x;
   *(int32_t*)(_buffer + 36) = y;
   *(void**)(_buffer + 40) = (void*)(callback);
-  ServiceApiInvokeAsync(_service_id, _kSumId, Unwrap_int32_8, _buffer, kSize);
+  ServiceApiInvokeAsync(service_id_, kSumId_, Unwrap_int32_8, _buffer, kSize);
 }
 
-+ (void)SumAsync:(int16_t)x with:(int32_t)y withBlock:(void (^)(int))callback {
++ (void)sumAsync:(int16_t)x with:(int32_t)y withBlock:(void (^)(int))callback {
   static const int kSize = 40 + 1 * sizeof(void*);
   char* _buffer = (char*)(malloc(kSize));
   *(int16_t*)(_buffer + 32) = x;
   *(int32_t*)(_buffer + 36) = y;
   *(void**)(_buffer + 40) = (void*)(callback);
-  ServiceApiInvokeAsync(_service_id, _kSumId, Unwrap_int32_8_Block, _buffer, kSize);
+  ServiceApiInvokeAsync(service_id_, kSumId_, Unwrap_int32_8_Block, _buffer, kSize);
 }
 
 @end

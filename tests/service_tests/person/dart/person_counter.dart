@@ -18,14 +18,14 @@ bool _terminated = false;
 PersonCounter _impl;
 
 abstract class PersonCounter {
-  int GetAge(Person person);
-  int GetBoxedAge(PersonBox box);
-  void GetAgeStats(Person person, AgeStatsBuilder result);
-  void CreateAgeStats(int averageAge, int sum, AgeStatsBuilder result);
-  void CreatePerson(int children, PersonBuilder result);
-  void CreateNode(int depth, NodeBuilder result);
-  int Count(Person person);
-  int Depth(Node node);
+  int getAge(Person person);
+  int getBoxedAge(PersonBox box);
+  void getAgeStats(Person person, AgeStatsBuilder result);
+  void createAgeStats(int averageAge, int sum, AgeStatsBuilder result);
+  void createPerson(int children, PersonBuilder result);
+  void createNode(int depth, NodeBuilder result);
+  int count(Person person);
+  int depth(Node node);
 
   static void initialize(PersonCounter impl) {
     if (_impl != null) {
@@ -48,54 +48,54 @@ abstract class PersonCounter {
         _postResult.icall$1(request);
         break;
       case _GET_AGE_METHOD_ID:
-        var result = _impl.GetAge(getRoot(new Person(), request));
+        var result = _impl.getAge(getRoot(new Person(), request));
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
       case _GET_BOXED_AGE_METHOD_ID:
-        var result = _impl.GetBoxedAge(getRoot(new PersonBox(), request));
+        var result = _impl.getBoxedAge(getRoot(new PersonBox(), request));
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
       case _GET_AGE_STATS_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(16);
-        AgeStatsBuilder builder = mb.NewRoot(new AgeStatsBuilder(), 8);
-        _impl.GetAgeStats(getRoot(new Person(), request), builder);
+        AgeStatsBuilder builder = mb.initRoot(new AgeStatsBuilder(), 8);
+        _impl.getAgeStats(getRoot(new Person(), request), builder);
         var result = getResultMessage(builder);
         request.setInt64(32, result);
         _postResult.icall$1(request);
         break;
       case _CREATE_AGE_STATS_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(16);
-        AgeStatsBuilder builder = mb.NewRoot(new AgeStatsBuilder(), 8);
-        _impl.CreateAgeStats(request.getInt32(32), request.getInt32(36), builder);
+        AgeStatsBuilder builder = mb.initRoot(new AgeStatsBuilder(), 8);
+        _impl.createAgeStats(request.getInt32(32), request.getInt32(36), builder);
         var result = getResultMessage(builder);
         request.setInt64(32, result);
         _postResult.icall$1(request);
         break;
       case _CREATE_PERSON_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(24);
-        PersonBuilder builder = mb.NewRoot(new PersonBuilder(), 16);
-        _impl.CreatePerson(request.getInt32(32), builder);
+        PersonBuilder builder = mb.initRoot(new PersonBuilder(), 16);
+        _impl.createPerson(request.getInt32(32), builder);
         var result = getResultMessage(builder);
         request.setInt64(32, result);
         _postResult.icall$1(request);
         break;
       case _CREATE_NODE_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(24);
-        NodeBuilder builder = mb.NewRoot(new NodeBuilder(), 16);
-        _impl.CreateNode(request.getInt32(32), builder);
+        NodeBuilder builder = mb.initRoot(new NodeBuilder(), 16);
+        _impl.createNode(request.getInt32(32), builder);
         var result = getResultMessage(builder);
         request.setInt64(32, result);
         _postResult.icall$1(request);
         break;
       case _COUNT_METHOD_ID:
-        var result = _impl.Count(getRoot(new Person(), request));
+        var result = _impl.count(getRoot(new Person(), request));
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
       case _DEPTH_METHOD_ID:
-        var result = _impl.Depth(getRoot(new Node(), request));
+        var result = _impl.depth(getRoot(new Node(), request));
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
@@ -138,7 +138,7 @@ class PersonBuilder extends Builder {
   void set age(int value) {
     _segment.memory.setInt32(_offset + 0, value);
   }
-  List<PersonBuilder> NewChildren(int length) {
+  List<PersonBuilder> initChildren(int length) {
     return NewList(new _PersonBuilderList(), 8, length, 16);
   }
 }
@@ -148,7 +148,7 @@ class PersonBox extends Reader {
 }
 
 class PersonBoxBuilder extends Builder {
-  PersonBuilder NewPerson() {
+  PersonBuilder initPerson() {
     return NewStruct(new PersonBuilder(), 0, 16);
   }
 }
@@ -169,7 +169,7 @@ class NodeBuilder extends Builder {
     tag = 1;
     _segment.memory.setInt32(_offset + 8, value);
   }
-  ConsBuilder NewCons() {
+  ConsBuilder initCons() {
     tag = 2;
     return NewStruct(new ConsBuilder(), 8, 16);
   }
@@ -181,10 +181,10 @@ class Cons extends Reader {
 }
 
 class ConsBuilder extends Builder {
-  NodeBuilder NewFst() {
+  NodeBuilder initFst() {
     return NewStruct(new NodeBuilder(), 0, 16);
   }
-  NodeBuilder NewSnd() {
+  NodeBuilder initSnd() {
     return NewStruct(new NodeBuilder(), 8, 16);
   }
 }

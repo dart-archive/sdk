@@ -8,123 +8,123 @@
 #include "include/service_api.h"
 #include <stdlib.h>
 
-static ServiceId _service_id = kNoServiceId;
+static ServiceId service_id_ = kNoServiceId;
 
-void PersonCounter::Setup() {
-  _service_id = ServiceApiLookup("PersonCounter");
+void PersonCounter::setup() {
+  service_id_ = ServiceApiLookup("PersonCounter");
 }
 
-void PersonCounter::TearDown() {
-  ServiceApiTerminate(_service_id);
-  _service_id = kNoServiceId;
+void PersonCounter::tearDown() {
+  ServiceApiTerminate(service_id_);
+  service_id_ = kNoServiceId;
 }
 
-static const MethodId _kGetAgeId = reinterpret_cast<MethodId>(1);
+static const MethodId kGetAgeId_ = reinterpret_cast<MethodId>(1);
 
-int32_t PersonCounter::GetAge(PersonBuilder person) {
-  return person.InvokeMethod(_service_id, _kGetAgeId);
+int32_t PersonCounter::getAge(PersonBuilder person) {
+  return person.InvokeMethod(service_id_, kGetAgeId_);
 }
 
-static const MethodId _kGetBoxedAgeId = reinterpret_cast<MethodId>(2);
+static const MethodId kGetBoxedAgeId_ = reinterpret_cast<MethodId>(2);
 
-int32_t PersonCounter::GetBoxedAge(PersonBoxBuilder box) {
-  return box.InvokeMethod(_service_id, _kGetBoxedAgeId);
+int32_t PersonCounter::getBoxedAge(PersonBoxBuilder box) {
+  return box.InvokeMethod(service_id_, kGetBoxedAgeId_);
 }
 
-static const MethodId _kGetAgeStatsId = reinterpret_cast<MethodId>(3);
+static const MethodId kGetAgeStatsId_ = reinterpret_cast<MethodId>(3);
 
-AgeStats PersonCounter::GetAgeStats(PersonBuilder person) {
-  int64_t result = person.InvokeMethod(_service_id, _kGetAgeStatsId);
+AgeStats PersonCounter::getAgeStats(PersonBuilder person) {
+  int64_t result = person.InvokeMethod(service_id_, kGetAgeStatsId_);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory, 8);
   return AgeStats(segment, 0);
 }
 
-static const MethodId _kCreateAgeStatsId = reinterpret_cast<MethodId>(4);
+static const MethodId kCreateAgeStatsId_ = reinterpret_cast<MethodId>(4);
 
-AgeStats PersonCounter::CreateAgeStats(int32_t averageAge, int32_t sum) {
+AgeStats PersonCounter::createAgeStats(int32_t averageAge, int32_t sum) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
   *reinterpret_cast<int32_t*>(_buffer + 32) = averageAge;
   *reinterpret_cast<int32_t*>(_buffer + 36) = sum;
-  ServiceApiInvoke(_service_id, _kCreateAgeStatsId, _buffer, kSize);
+  ServiceApiInvoke(service_id_, kCreateAgeStatsId_, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory, 8);
   return AgeStats(segment, 8);
 }
 
-static const MethodId _kCreatePersonId = reinterpret_cast<MethodId>(5);
+static const MethodId kCreatePersonId_ = reinterpret_cast<MethodId>(5);
 
-Person PersonCounter::CreatePerson(int32_t children) {
+Person PersonCounter::createPerson(int32_t children) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
   *reinterpret_cast<int32_t*>(_buffer + 32) = children;
-  ServiceApiInvoke(_service_id, _kCreatePersonId, _buffer, kSize);
+  ServiceApiInvoke(service_id_, kCreatePersonId_, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory, 16);
   return Person(segment, 8);
 }
 
-static const MethodId _kCreateNodeId = reinterpret_cast<MethodId>(6);
+static const MethodId kCreateNodeId_ = reinterpret_cast<MethodId>(6);
 
-Node PersonCounter::CreateNode(int32_t depth) {
+Node PersonCounter::createNode(int32_t depth) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
   *reinterpret_cast<int32_t*>(_buffer + 32) = depth;
-  ServiceApiInvoke(_service_id, _kCreateNodeId, _buffer, kSize);
+  ServiceApiInvoke(service_id_, kCreateNodeId_, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory, 16);
   return Node(segment, 8);
 }
 
-static const MethodId _kCountId = reinterpret_cast<MethodId>(7);
+static const MethodId kCountId_ = reinterpret_cast<MethodId>(7);
 
-int32_t PersonCounter::Count(PersonBuilder person) {
-  return person.InvokeMethod(_service_id, _kCountId);
+int32_t PersonCounter::count(PersonBuilder person) {
+  return person.InvokeMethod(service_id_, kCountId_);
 }
 
-static const MethodId _kDepthId = reinterpret_cast<MethodId>(8);
+static const MethodId kDepthId_ = reinterpret_cast<MethodId>(8);
 
-int32_t PersonCounter::Depth(NodeBuilder node) {
-  return node.InvokeMethod(_service_id, _kDepthId);
+int32_t PersonCounter::depth(NodeBuilder node) {
+  return node.InvokeMethod(service_id_, kDepthId_);
 }
 
-List<PersonBuilder> PersonBuilder::NewChildren(int length) {
+List<PersonBuilder> PersonBuilder::initChildren(int length) {
   Reader result = NewList(8, length, 16);
   return List<PersonBuilder>(result, length);
 }
 
-PersonBuilder PersonBoxBuilder::NewPerson() {
+PersonBuilder PersonBoxBuilder::initPerson() {
   Builder result = NewStruct(0, 16);
   return PersonBuilder(result);
 }
 
-Person PersonBox::person() const { return ReadStruct<Person>(0); }
+Person PersonBox::getPerson() const { return ReadStruct<Person>(0); }
 
-ConsBuilder NodeBuilder::NewCons() {
-  set_tag(2);
+ConsBuilder NodeBuilder::initCons() {
+  setTag(2);
   Builder result = NewStruct(8, 16);
   return ConsBuilder(result);
 }
 
-Cons Node::cons() const { return ReadStruct<Cons>(8); }
+Cons Node::getCons() const { return ReadStruct<Cons>(8); }
 
-NodeBuilder ConsBuilder::NewFst() {
+NodeBuilder ConsBuilder::initFst() {
   Builder result = NewStruct(0, 16);
   return NodeBuilder(result);
 }
 
-NodeBuilder ConsBuilder::NewSnd() {
+NodeBuilder ConsBuilder::initSnd() {
   Builder result = NewStruct(8, 16);
   return NodeBuilder(result);
 }
 
-Node Cons::fst() const { return ReadStruct<Node>(0); }
+Node Cons::getFst() const { return ReadStruct<Node>(0); }
 
-Node Cons::snd() const { return ReadStruct<Node>(8); }
+Node Cons::getSnd() const { return ReadStruct<Node>(8); }

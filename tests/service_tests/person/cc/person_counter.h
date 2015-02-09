@@ -23,16 +23,16 @@ class ConsBuilder;
 
 class PersonCounter {
  public:
-  static void Setup();
-  static void TearDown();
-  static int32_t GetAge(PersonBuilder person);
-  static int32_t GetBoxedAge(PersonBoxBuilder box);
-  static AgeStats GetAgeStats(PersonBuilder person);
-  static AgeStats CreateAgeStats(int32_t averageAge, int32_t sum);
-  static Person CreatePerson(int32_t children);
-  static Node CreateNode(int32_t depth);
-  static int32_t Count(PersonBuilder person);
-  static int32_t Depth(NodeBuilder node);
+  static void setup();
+  static void tearDown();
+  static int32_t getAge(PersonBuilder person);
+  static int32_t getBoxedAge(PersonBoxBuilder box);
+  static AgeStats getAgeStats(PersonBuilder person);
+  static AgeStats createAgeStats(int32_t averageAge, int32_t sum);
+  static Person createPerson(int32_t children);
+  static Node createNode(int32_t depth);
+  static int32_t count(PersonBuilder person);
+  static int32_t depth(NodeBuilder node);
 };
 
 class AgeStats : public Reader {
@@ -41,8 +41,8 @@ class AgeStats : public Reader {
   AgeStats(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
-  int32_t averageAge() const { return *PointerTo<int32_t>(0); }
-  int32_t sum() const { return *PointerTo<int32_t>(4); }
+  int32_t getAverageAge() const { return *PointerTo<int32_t>(0); }
+  int32_t getSum() const { return *PointerTo<int32_t>(4); }
 };
 
 class AgeStatsBuilder : public Builder {
@@ -54,8 +54,8 @@ class AgeStatsBuilder : public Builder {
   AgeStatsBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
-  void set_averageAge(int32_t value) { *PointerTo<int32_t>(0) = value; }
-  void set_sum(int32_t value) { *PointerTo<int32_t>(4) = value; }
+  void setAverageAge(int32_t value) { *PointerTo<int32_t>(0) = value; }
+  void setSum(int32_t value) { *PointerTo<int32_t>(4) = value; }
 };
 
 class Person : public Reader {
@@ -64,8 +64,8 @@ class Person : public Reader {
   Person(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
-  int32_t age() const { return *PointerTo<int32_t>(0); }
-  List<Person> children() const { return ReadList<Person>(8); }
+  int32_t getAge() const { return *PointerTo<int32_t>(0); }
+  List<Person> getChildren() const { return ReadList<Person>(8); }
 };
 
 class PersonBuilder : public Builder {
@@ -77,8 +77,8 @@ class PersonBuilder : public Builder {
   PersonBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
-  void set_age(int32_t value) { *PointerTo<int32_t>(0) = value; }
-  List<PersonBuilder> NewChildren(int length);
+  void setAge(int32_t value) { *PointerTo<int32_t>(0) = value; }
+  List<PersonBuilder> initChildren(int length);
 };
 
 class PersonBox : public Reader {
@@ -87,7 +87,7 @@ class PersonBox : public Reader {
   PersonBox(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
-  Person person() const;
+  Person getPerson() const;
 };
 
 class PersonBoxBuilder : public Builder {
@@ -99,7 +99,7 @@ class PersonBoxBuilder : public Builder {
   PersonBoxBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
-  PersonBuilder NewPerson();
+  PersonBuilder initPerson();
 };
 
 class Node : public Reader {
@@ -108,11 +108,11 @@ class Node : public Reader {
   Node(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
-  uint16_t tag() const { return *PointerTo<uint16_t>(0); }
-  bool is_num() const { return 1 == tag(); }
-  int32_t num() const { return *PointerTo<int32_t>(8); }
-  bool is_cons() const { return 2 == tag(); }
-  Cons cons() const;
+  uint16_t getTag() const { return *PointerTo<uint16_t>(0); }
+  bool isNum() const { return 1 == getTag(); }
+  int32_t getNum() const { return *PointerTo<int32_t>(8); }
+  bool isCons() const { return 2 == getTag(); }
+  Cons getCons() const;
 };
 
 class NodeBuilder : public Builder {
@@ -124,9 +124,9 @@ class NodeBuilder : public Builder {
   NodeBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
-  void set_tag(uint16_t value) { *PointerTo<uint16_t>(0) = value; }
-  void set_num(int32_t value) { set_tag(1); *PointerTo<int32_t>(8) = value; }
-  ConsBuilder NewCons();
+  void setTag(uint16_t value) { *PointerTo<uint16_t>(0) = value; }
+  void setNum(int32_t value) { setTag(1); *PointerTo<int32_t>(8) = value; }
+  ConsBuilder initCons();
 };
 
 class Cons : public Reader {
@@ -135,8 +135,8 @@ class Cons : public Reader {
   Cons(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
-  Node fst() const;
-  Node snd() const;
+  Node getFst() const;
+  Node getSnd() const;
 };
 
 class ConsBuilder : public Builder {
@@ -148,8 +148,8 @@ class ConsBuilder : public Builder {
   ConsBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
-  NodeBuilder NewFst();
-  NodeBuilder NewSnd();
+  NodeBuilder initFst();
+  NodeBuilder initSnd();
 };
 
 #endif  // PERSON_COUNTER_H

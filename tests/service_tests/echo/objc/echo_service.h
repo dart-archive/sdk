@@ -11,11 +11,11 @@
 + (void)Setup;
 + (void)TearDown;
 
-+ (int32_t)Echo:(int32_t)n;
-+ (void)EchoAsync:(int32_t)n withCallback:(void (*)(int))callback;
-+ (void)EchoAsync:(int32_t)n withBlock:(void (^)(int))callback;
-+ (int32_t)Sum:(int16_t)x with:(int32_t)y;
-+ (void)SumAsync:(int16_t)x with:(int32_t)y withCallback:(void (*)(int))callback;
-+ (void)SumAsync:(int16_t)x with:(int32_t)y withBlock:(void (^)(int))callback;
++ (int32_t)echo:(int32_t)n;
++ (void)echoAsync:(int32_t)n withCallback:(void (*)(int))callback;
++ (void)echoAsync:(int32_t)n withBlock:(void (^)(int))callback;
++ (int32_t)sum:(int16_t)x with:(int32_t)y;
++ (void)sumAsync:(int16_t)x with:(int32_t)y withCallback:(void (*)(int))callback;
++ (void)sumAsync:(int16_t)x with:(int32_t)y withBlock:(void (^)(int))callback;
 
 @end
