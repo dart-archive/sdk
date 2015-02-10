@@ -4,7 +4,7 @@
 
 rule gyp
   command = $
-    ./third_party/gyp/gyp --depth=. -Icommon.gypi $
+    ../third_party/gyp/gyp --depth=. -Icommon.gypi $
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 

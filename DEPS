@@ -14,10 +14,10 @@ vars = {
 
 deps = {
   # Stuff needed for GYP to run.
-  "fletch/third_party/gyp":
+  "third_party/gyp":
       (Var("googlecode_url") % "gyp") + "/trunk" + Var("gyp_rev"),
 
-  "fletch/third_party/clang":
+  "third_party/clang":
       ((Var("googlecode_url") % "dart") + "/third_party/clang" +
        Var("clang_rev")),
 }
@@ -45,69 +45,33 @@ deps_os = {
 
 hooks = [
   {
-    'name': 'libtcmalloc_minimal_linux_x64',
+    'name': 'third_party_libs',
     'pattern': '.',
-    'action': [ 'download_from_google_storage',
-                '--no_auth',
-                '--no_resume',
-                '--platform=linux*',
-                '--bucket', 'dart-dependencies-fletch',
-                '-s', 'fletch/third_party/libs/linux/x64/libtcmalloc_minimal.a.sha1',
+    'action': [
+      # TODO(ahe): Rename files to use "--auto-platform".
+      'download_from_google_storage',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dart-dependencies-fletch',
+      '-d',
+      '-r',
+      'fletch/third_party/libs',
     ],
   },
   {
-    'name': 'libtcmalloc_minimal_linux_x86',
+    'name': 'dart_test_binary',
     'pattern': '.',
-    'action': [ 'download_from_google_storage',
-                '--no_auth',
-                '--no_resume',
-                '--platform=linux*',
-                '--bucket', 'dart-dependencies-fletch',
-                '-s', 'fletch/third_party/libs/linux/x86/libtcmalloc_minimal.a.sha1',
-    ],
-  },
-  {
-    'name': 'libtcmalloc_minimal_macos_x64',
-    'pattern': '.',
-    'action': [ 'download_from_google_storage',
-                '--no_auth',
-                '--no_resume',
-                '--platform=darwin',
-                '--bucket', 'dart-dependencies-fletch',
-                '-s', 'fletch/third_party/libs/macos/x64/libtcmalloc_minimal.a.sha1',
-    ],
-  },
-  {
-    'name': 'libtcmalloc_minimal_macos_x86',
-    'pattern': '.',
-    'action': [ 'download_from_google_storage',
-                '--no_auth',
-                '--no_resume',
-                '--platform=darwin',
-                '--bucket', 'dart-dependencies-fletch',
-                '-s', 'fletch/third_party/libs/macos/x86/libtcmalloc_minimal.a.sha1',
-    ],
-  },
-  {
-    'name': 'dart_test_binary_linux',
-    'pattern': '.',
-    'action': [ 'download_from_google_storage',
-                '--no_auth',
-                '--no_resume',
-                '--platform=linux*',
-                '--bucket', 'dart-dependencies-fletch',
-                '-s', 'fletch/tools/testing/bin/linux/dart.sha1',
-    ],
-  },
-  {
-    'name': 'dart_test_binary_macos',
-    'pattern': '.',
-    'action': [ 'download_from_google_storage',
-                '--no_auth',
-                '--no_resume',
-                '--platform=darwin',
-                '--bucket', 'dart-dependencies-fletch',
-                '-s', 'fletch/tools/testing/bin/macos/dart.sha1',
+    'action': [
+      # TODO(ahe): Rename files to use "--auto-platform".
+      'download_from_google_storage',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dart-dependencies-fletch',
+      '-d',
+      '-r',
+      'fletch/tools/testing/bin',
     ],
   },
   {

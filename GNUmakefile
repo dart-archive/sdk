@@ -59,7 +59,7 @@ gyp_files = \
   tests/service_tests/service_tests.gyp
 
 out/ReleaseIA32/build.ninja out/DebugIA32/build.ninja out/ReleaseX64/build.ninja out/DebugX64/build.ninja: $(gyp_files)
-	$(quiet)./third_party/gyp/gyp $(gyp_verbose) --depth=. -Icommon.gypi \
+	$(quiet)../third_party/gyp/gyp $(gyp_verbose) --depth=. -Icommon.gypi \
 		-Dclang=0 -Goutput_dir=out \
 		--format=ninja fletch.gyp
 

@@ -11,11 +11,12 @@ import utils
 
 def invoke_clang(args):
   fletch_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+  fletch_root = os.path.dirname(fletch_path)
   os_name = utils.GuessOS()
   if os_name == "macos":
     os_name = "mac"
   clang_bin = os.path.join(
-    fletch_path, "third_party", "clang", os_name, "bin", "clang")
+    fletch_root, "third_party", "clang", os_name, "bin", "clang")
   print clang_bin
   args.insert(0, clang_bin)
   os.execv(clang_bin, args)
