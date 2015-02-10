@@ -9,6 +9,7 @@ vars = {
   "googlecode_url": "http://%s.googlecode.com/svn",
 
   "clang_rev": "@43229",
+  "dart_rev": "@43639",
   "gyp_rev": "@1752",
 }
 
@@ -20,6 +21,10 @@ deps = {
   "third_party/clang":
       ((Var("googlecode_url") % "dart") + "/third_party/clang" +
        Var("clang_rev")),
+
+  "dart":
+      ((Var("googlecode_url") % "dart") + "/branches/bleeding_edge/dart" +
+       Var("dart_rev")),
 }
 
 # To include Mac deps on other OSes, add this to your .gclient file:
