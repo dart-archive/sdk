@@ -16,7 +16,8 @@ import 'dart:typed_data' show
     Uint8List;
 
 import 'bytecodes.dart' show
-    Bytecode;
+    Bytecode,
+    MethodEnd;
 
 class CommandBuffer {
   static const int headerSize = 5 /* 32 bit package length + 1 byte code */;
@@ -185,7 +186,7 @@ class PushNewFunction extends Command {
   const PushNewFunction(this.arity, this.literals, this.bytecodes)
       : super(CommandCode.PushNewFunction);
 
-  List<int> computeBytes() {
+  List<int> computeBytes(List<Bytecode> bytecodes) {
     BytecodeSink sink = new BytecodeSink();
     for (Bytecode bytecode in bytecodes) {
       bytecode.addTo(sink);
@@ -194,12 +195,15 @@ class PushNewFunction extends Command {
   }
 
   void addTo(StreamSink<List<int>> sink) {
-    List<int> bytes = computeBytes();
+    List<int> bytes = computeBytes(bytecodes);
+    MethodEnd end = new MethodEnd(bytes.length);
     buffer
         ..addUint32(arity)
         ..addUint32(literals)
-        ..addUint32(bytes.length)
+        ..addUint32(bytes.length + end.size + 4 /* Try-catch blocks. */)
         ..addUint8List(bytes)
+        ..addUint8List(computeBytes([end]))
+        ..addUint32(0 /* No try-catch blocks. */)
         ..sendOn(sink, code);
   }
 }

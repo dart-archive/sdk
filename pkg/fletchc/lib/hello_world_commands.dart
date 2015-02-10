@@ -23,7 +23,6 @@ const List<Command> commands = const <Command>[
         const <Bytecode>[
             const InvokeNative(1, 0),
             const Throw(),
-            const MethodEnd(4),
         ]),
 
     // method @2: _halt
@@ -32,7 +31,6 @@ const List<Command> commands = const <Command>[
         const <Bytecode>[
             const InvokeNative(1, 1),
             const Throw(),
-            const MethodEnd(4),
         ]),
 
     // method @0: _entry
@@ -47,7 +45,6 @@ const List<Command> commands = const <Command>[
             const Pop(),
             const LoadLiteralNull(),
             const Return(1, 1),
-            const MethodEnd(22),
         ]),
 
     const RunMain(),

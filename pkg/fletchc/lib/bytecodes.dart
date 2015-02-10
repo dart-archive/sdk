@@ -74,7 +74,6 @@ class BytecodeBuffer {
   }
 
   void sendOn(Sink<List<int>> sink) {
-    addUint32(0); // TODO(ahe): Not sure what this is for.
     sink.add(list.sublist(0, position));
     position = 0;
   }
