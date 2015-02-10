@@ -102,6 +102,7 @@ void doBytecodes(V(String name, String format, int size, spDiff,
   V("LoadLiteral0",          "",   1,        1, "load literal 0");
   V("LoadLiteral1",          "",   1,        1, "load literal 1");
   V("LoadLiteral",           "B",  2,        1, "load literal %d");
+  // TODO(ahe): The argument to LoadLiteralWide is probably signed.
   V("LoadLiteralWide",       "I",  5,        1, "load literal %d");
 
   V("InvokeMethod",          "I",  5, kVarDiff, "invoke %d");

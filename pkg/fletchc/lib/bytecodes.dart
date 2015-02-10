@@ -74,6 +74,7 @@ class BytecodeBuffer {
   }
 
   void sendOn(Sink<List<int>> sink) {
+    // TODO(ahe): Avoid all the copying, redesign this method.
     sink.add(list.sublist(0, position));
     position = 0;
   }

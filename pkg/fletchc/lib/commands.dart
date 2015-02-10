@@ -41,6 +41,8 @@ class CommandBuffer {
   }
 
   void addUint32(int value) {
+    // TODO(ahe): The C++ appears to often read 32-bit values into a signed
+    // integer. Figure which is signed and which is unsigned.
     growBytes(4);
     view.setUint32(position, value, Endianness.LITTLE_ENDIAN);
     position += 4;
