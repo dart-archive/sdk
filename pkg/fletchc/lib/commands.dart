@@ -15,6 +15,9 @@ import 'dart:typed_data' show
     Endianness,
     Uint8List;
 
+import 'bytecodes.dart' show
+    Bytecode;
+
 class CommandBuffer {
   static const int headerSize = 5 /* 32 bit package length + 1 byte code */;
 
@@ -161,22 +164,42 @@ class PushBoolean extends Command {
   }
 }
 
+class BytecodeSink implements Sink<List<int>> {
+  List<int> bytes = <int>[];
+
+  void add(List<int> data) {
+    bytes.addAll(data);
+  }
+
+  void close() {
+  }
+}
+
 class PushNewFunction extends Command {
   final int arity;
 
   final int literals;
 
-  final List<int> bytecodes;
+  final List<Bytecode> bytecodes;
 
   const PushNewFunction(this.arity, this.literals, this.bytecodes)
       : super(CommandCode.PushNewFunction);
 
+  List<int> computeBytes() {
+    BytecodeSink sink = new BytecodeSink();
+    for (Bytecode bytecode in bytecodes) {
+      bytecode.addTo(sink);
+    }
+    return sink.bytes;
+  }
+
   void addTo(StreamSink<List<int>> sink) {
+    List<int> bytes = computeBytes();
     buffer
         ..addUint32(arity)
         ..addUint32(literals)
-        ..addUint32(bytecodes.length)
-        ..addUint8List(bytecodes)
+        ..addUint32(bytes.length)
+        ..addUint8List(bytes)
         ..sendOn(sink, code);
   }
 }
