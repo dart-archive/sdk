@@ -12,6 +12,7 @@ import 'package:path/path.dart' show basenameWithoutExtension, join, dirname;
 import 'shared.dart';
 
 import '../emitter.dart';
+import '../primitives.dart';
 import '../struct_layout.dart';
 
 const COPYRIGHT = """
@@ -170,9 +171,6 @@ abstract class CcVisitor extends CodeGenerationVisitor {
       if (method.outputKind == OutputKind.STRUCT) {
         writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
         writeln('  char* memory = reinterpret_cast<char*>(result);');
-        Struct resultStruct = method.returnType.resolved;
-        Struct resultLayout = resultStruct.layout;
-        int size = resultLayout.size;
         // TODO(ajohnsen): Do range-check between size and segment size.
         writeln('  Segment* segment = MessageReader::GetRootSegment(memory);');
         writeln('  return ${method.returnType.identifier}'
@@ -284,8 +282,12 @@ class _HeaderVisitor extends CcVisitor {
         write('  ');
         writeType(slotType);
         write(' get$camel() const { return *PointerTo<');
-        writeType(slotType);
-        writeln('>(${slot.offset}); }');
+        if (slotType.primitiveType == PrimitiveType.BOOL) {
+          writeln('uint8_t>(${slot.offset}) != 0; }');
+        } else {
+          writeType(slotType);
+          writeln('>(${slot.offset}); }');
+        }
       } else if (slotType.isList) {
         write('  ');
         write('List<');
@@ -338,8 +340,12 @@ class _HeaderVisitor extends CcVisitor {
           write('set$tagName($tag); ');
         }
         write('*PointerTo<');
-        writeType(slotType);
-        writeln('>(${slot.offset}) = value; }');
+        if (slotType.primitiveType == PrimitiveType.BOOL) {
+          writeln('uint8_t>(${slot.offset}) = value ? 1 : 0; }');
+        } else {
+          writeType(slotType);
+          writeln('>(${slot.offset}) = value; }');
+        }
       } else {
         write('  ');
         writeType(slotType);
@@ -485,9 +491,6 @@ class _ImplementationVisitor extends CcVisitor {
         writeln('  int64_t result = ${node.arguments.single.name}.'
                 'InvokeMethod(service_id_, $id);');
         writeln('  char* memory = reinterpret_cast<char*>(result);');
-        Struct resultStruct = node.returnType.resolved;
-        StructLayout resultLayout = resultStruct.layout;
-        int size = resultLayout.size;
         // TODO(ajohnsen): Do range-check between size and segment size.
         writeln('  Segment* segment = MessageReader::GetRootSegment(memory);');
         writeln('  return ${node.returnType.identifier}'

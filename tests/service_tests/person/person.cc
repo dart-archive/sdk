@@ -105,6 +105,7 @@ static void BuildNode(NodeBuilder node, int n) {
     BuildNode(cons.initFst(), n - 1);
     BuildNode(cons.initSnd(), n - 1);
   } else {
+    node.setCond(true);
     node.setNum(42);
   }
 }

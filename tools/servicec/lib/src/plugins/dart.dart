@@ -13,6 +13,7 @@ import 'package:strings/strings.dart' as strings;
 import 'shared.dart';
 import '../emitter.dart';
 import '../struct_layout.dart';
+import '../primitives.dart';
 
 const COPYRIGHT = """
 // Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
@@ -47,6 +48,8 @@ class _DartVisitor extends CodeGenerationVisitor {
   _DartVisitor(String path) : super(path);
 
   static Map<String, String> _GETTERS = const {
+    'bool'    : 'getUint8',
+
     'uint8'   : 'getUint8',
     'uint16'  : 'getUint16',
     'uint32'  : 'getUint32',
@@ -62,6 +65,8 @@ class _DartVisitor extends CodeGenerationVisitor {
   };
 
   static Map<String, String> _SETTERS = const {
+    'bool'    : 'setUint8',
+
     'uint8'   : 'setUint8',
     'uint16'  : 'setUint16',
     'uint32'  : 'setUint32',
@@ -254,7 +259,11 @@ class _DartVisitor extends CodeGenerationVisitor {
 
         write('  ');
         writeType(slotType);
-        writeln(' get $slotName => _segment.memory.$getter($offset);');
+        if (slotType.primitiveType == PrimitiveType.BOOL) {
+          writeln(' get $slotName => _segment.memory.$getter($offset) != 0;');
+        } else {
+          writeln(' get $slotName => _segment.memory.$getter($offset);');
+        }
       } else {
         write('  ');
         writeType(slotType);
@@ -299,7 +308,11 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln(' value) {');
         write(updateTag);
         String offset = '_offset + ${slot.offset}';
-        writeln('    _segment.memory.$setter($offset, value);');
+        if (slotType.primitiveType == PrimitiveType.BOOL) {
+          writeln('    _segment.memory.$setter($offset, value ? 1 : 0);');
+        } else {
+          writeln('    _segment.memory.$setter($offset, value);');
+        }
         writeln('  }');
       } else {
         write('  ');

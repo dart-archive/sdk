@@ -49,6 +49,7 @@ class PersonCounterImpl extends PersonCounter {
       createNode(depth - 1, cons.initFst());
       createNode(depth - 1, cons.initSnd());
     } else {
+      result.cond = true;
       result.num = 42;
     }
   }
@@ -61,7 +62,10 @@ class PersonCounterImpl extends PersonCounter {
   }
 
   int depth(Node node) {
-    if (node.isNum) return 1;
+    if (node.isNum) {
+      if (node.isCond) throw new StateError("Cannot be both num and cond.");
+      return 1;
+    }
     int left = depth(node.cons.fst);
     int right = depth(node.cons.snd);
     return (left > right) ? left + 1 : right + 1;

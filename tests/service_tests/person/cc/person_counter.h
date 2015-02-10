@@ -111,7 +111,9 @@ class Node : public Reader {
   uint16_t getTag() const { return *PointerTo<uint16_t>(0); }
   bool isNum() const { return 1 == getTag(); }
   int32_t getNum() const { return *PointerTo<int32_t>(8); }
-  bool isCons() const { return 2 == getTag(); }
+  bool isCond() const { return 2 == getTag(); }
+  bool getCond() const { return *PointerTo<uint8_t>(8) != 0; }
+  bool isCons() const { return 3 == getTag(); }
   Cons getCons() const;
 };
 
@@ -126,6 +128,7 @@ class NodeBuilder : public Builder {
 
   void setTag(uint16_t value) { *PointerTo<uint16_t>(0) = value; }
   void setNum(int32_t value) { setTag(1); *PointerTo<int32_t>(8) = value; }
+  void setCond(bool value) { setTag(2); *PointerTo<uint8_t>(8) = value ? 1 : 0; }
   ConsBuilder initCons();
 };
 

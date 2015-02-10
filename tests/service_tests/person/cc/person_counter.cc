@@ -108,7 +108,7 @@ PersonBuilder PersonBoxBuilder::initPerson() {
 Person PersonBox::getPerson() const { return ReadStruct<Person>(0); }
 
 ConsBuilder NodeBuilder::initCons() {
-  setTag(2);
+  setTag(3);
   Builder result = NewStruct(8, 16);
   return ConsBuilder(result);
 }

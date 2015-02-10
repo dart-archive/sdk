@@ -157,7 +157,9 @@ class Node extends Reader {
   int get tag => _segment.memory.getUint16(_offset + 0);
   bool get isNum => 1 == this.tag;
   int get num => _segment.memory.getInt32(_offset + 8);
-  bool get isCons => 2 == this.tag;
+  bool get isCond => 2 == this.tag;
+  bool get cond => _segment.memory.getUint8(_offset + 8) != 0;
+  bool get isCons => 3 == this.tag;
   Cons get cons => readStruct(new Cons(), 8);
 }
 
@@ -169,8 +171,12 @@ class NodeBuilder extends Builder {
     tag = 1;
     _segment.memory.setInt32(_offset + 8, value);
   }
-  ConsBuilder initCons() {
+  void set cond(bool value) {
     tag = 2;
+    _segment.memory.setUint8(_offset + 8, value ? 1 : 0);
+  }
+  ConsBuilder initCons() {
+    tag = 3;
     return NewStruct(new ConsBuilder(), 8, 16);
   }
 }
