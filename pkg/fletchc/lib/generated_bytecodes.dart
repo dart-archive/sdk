@@ -102,7 +102,6 @@ class LoadLocal0 extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class LoadLocal1 extends Bytecode {
@@ -126,7 +125,6 @@ class LoadLocal1 extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class LoadLocal2 extends Bytecode {
@@ -150,7 +148,6 @@ class LoadLocal2 extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class LoadLocal extends Bytecode {
@@ -176,7 +173,6 @@ class LoadLocal extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class LoadBoxed extends Bytecode {
@@ -202,7 +198,6 @@ class LoadBoxed extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class LoadStatic extends Bytecode {
@@ -228,7 +223,6 @@ class LoadStatic extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class LoadStaticInit extends Bytecode {
@@ -254,7 +248,6 @@ class LoadStaticInit extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class LoadField extends Bytecode {
@@ -280,7 +273,6 @@ class LoadField extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class LoadConst extends Bytecode {
@@ -306,7 +298,6 @@ class LoadConst extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class LoadConstUnfold extends Bytecode {
@@ -332,7 +323,6 @@ class LoadConstUnfold extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class StoreLocal extends Bytecode {
@@ -358,7 +348,6 @@ class StoreLocal extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class StoreBoxed extends Bytecode {
@@ -384,7 +373,6 @@ class StoreBoxed extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class StoreStatic extends Bytecode {
@@ -410,7 +398,6 @@ class StoreStatic extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class StoreField extends Bytecode {
@@ -436,7 +423,6 @@ class StoreField extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class LoadLiteralNull extends Bytecode {
@@ -460,7 +446,6 @@ class LoadLiteralNull extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class LoadLiteralTrue extends Bytecode {
@@ -484,7 +469,6 @@ class LoadLiteralTrue extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class LoadLiteralFalse extends Bytecode {
@@ -508,7 +492,6 @@ class LoadLiteralFalse extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class LoadLiteral0 extends Bytecode {
@@ -532,7 +515,6 @@ class LoadLiteral0 extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class LoadLiteral1 extends Bytecode {
@@ -556,7 +538,6 @@ class LoadLiteral1 extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class LoadLiteral extends Bytecode {
@@ -582,7 +563,6 @@ class LoadLiteral extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class LoadLiteralWide extends Bytecode {
@@ -608,7 +588,6 @@ class LoadLiteralWide extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeMethod extends Bytecode {
@@ -634,7 +613,6 @@ class InvokeMethod extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeStatic extends Bytecode {
@@ -660,7 +638,6 @@ class InvokeStatic extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeStaticUnfold extends Bytecode {
@@ -686,7 +663,6 @@ class InvokeStaticUnfold extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeFactory extends Bytecode {
@@ -712,7 +688,6 @@ class InvokeFactory extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeFactoryUnfold extends Bytecode {
@@ -738,7 +713,6 @@ class InvokeFactoryUnfold extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeNative extends Bytecode {
@@ -766,7 +740,6 @@ class InvokeNative extends Bytecode {
         ..addUint8(uint8Argument1)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeNativeYield extends Bytecode {
@@ -794,7 +767,6 @@ class InvokeNativeYield extends Bytecode {
         ..addUint8(uint8Argument1)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeTest extends Bytecode {
@@ -820,7 +792,6 @@ class InvokeTest extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeEq extends Bytecode {
@@ -846,7 +817,6 @@ class InvokeEq extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeLt extends Bytecode {
@@ -872,7 +842,6 @@ class InvokeLt extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeLe extends Bytecode {
@@ -898,7 +867,6 @@ class InvokeLe extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeGt extends Bytecode {
@@ -924,7 +892,6 @@ class InvokeGt extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeGe extends Bytecode {
@@ -950,7 +917,6 @@ class InvokeGe extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeAdd extends Bytecode {
@@ -976,7 +942,6 @@ class InvokeAdd extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeSub extends Bytecode {
@@ -1002,7 +967,6 @@ class InvokeSub extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeMod extends Bytecode {
@@ -1028,7 +992,6 @@ class InvokeMod extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeMul extends Bytecode {
@@ -1054,7 +1017,6 @@ class InvokeMul extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeTruncDiv extends Bytecode {
@@ -1080,7 +1042,6 @@ class InvokeTruncDiv extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeBitNot extends Bytecode {
@@ -1106,7 +1067,6 @@ class InvokeBitNot extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeBitAnd extends Bytecode {
@@ -1132,7 +1092,6 @@ class InvokeBitAnd extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeBitOr extends Bytecode {
@@ -1158,7 +1117,6 @@ class InvokeBitOr extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeBitXor extends Bytecode {
@@ -1184,7 +1142,6 @@ class InvokeBitXor extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeBitShr extends Bytecode {
@@ -1210,7 +1167,6 @@ class InvokeBitShr extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class InvokeBitShl extends Bytecode {
@@ -1236,7 +1192,6 @@ class InvokeBitShl extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class Pop extends Bytecode {
@@ -1260,7 +1215,6 @@ class Pop extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class Return extends Bytecode {
@@ -1288,7 +1242,6 @@ class Return extends Bytecode {
         ..addUint8(uint8Argument1)
         ..sendOn(sink);
   }
-
 }
 
 class BranchLong extends Bytecode {
@@ -1314,7 +1267,6 @@ class BranchLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class BranchIfTrueLong extends Bytecode {
@@ -1340,7 +1292,6 @@ class BranchIfTrueLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class BranchIfFalseLong extends Bytecode {
@@ -1366,7 +1317,6 @@ class BranchIfFalseLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class BranchBack extends Bytecode {
@@ -1392,7 +1342,6 @@ class BranchBack extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class BranchBackIfTrue extends Bytecode {
@@ -1418,7 +1367,6 @@ class BranchBackIfTrue extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class BranchBackIfFalse extends Bytecode {
@@ -1444,7 +1392,6 @@ class BranchBackIfFalse extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class BranchBackLong extends Bytecode {
@@ -1470,7 +1417,6 @@ class BranchBackLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class BranchBackIfTrueLong extends Bytecode {
@@ -1496,7 +1442,6 @@ class BranchBackIfTrueLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class BranchBackIfFalseLong extends Bytecode {
@@ -1522,7 +1467,6 @@ class BranchBackIfFalseLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class Allocate extends Bytecode {
@@ -1548,7 +1492,6 @@ class Allocate extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class AllocateUnfold extends Bytecode {
@@ -1574,7 +1517,6 @@ class AllocateUnfold extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class AllocateBoxed extends Bytecode {
@@ -1598,7 +1540,6 @@ class AllocateBoxed extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class Negate extends Bytecode {
@@ -1622,7 +1563,6 @@ class Negate extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class StackOverflowCheck extends Bytecode {
@@ -1646,7 +1586,6 @@ class StackOverflowCheck extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class Throw extends Bytecode {
@@ -1670,7 +1609,6 @@ class Throw extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class SubroutineCall extends Bytecode {
@@ -1698,7 +1636,6 @@ class SubroutineCall extends Bytecode {
         ..addUint32(uint32Argument1)
         ..sendOn(sink);
   }
-
 }
 
 class SubroutineReturn extends Bytecode {
@@ -1722,7 +1659,6 @@ class SubroutineReturn extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class ProcessYield extends Bytecode {
@@ -1746,7 +1682,6 @@ class ProcessYield extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class CoroutineChange extends Bytecode {
@@ -1770,7 +1705,6 @@ class CoroutineChange extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class Identical extends Bytecode {
@@ -1794,7 +1728,6 @@ class Identical extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class IdenticalNonNumeric extends Bytecode {
@@ -1818,7 +1751,6 @@ class IdenticalNonNumeric extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class EnterNoSuchMethod extends Bytecode {
@@ -1842,7 +1774,6 @@ class EnterNoSuchMethod extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class ExitNoSuchMethod extends Bytecode {
@@ -1866,7 +1797,6 @@ class ExitNoSuchMethod extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
-
 }
 
 class FrameSize extends Bytecode {
@@ -1892,7 +1822,6 @@ class FrameSize extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
-
 }
 
 class MethodEnd extends Bytecode {
@@ -1918,5 +1847,4 @@ class MethodEnd extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
-
 }
