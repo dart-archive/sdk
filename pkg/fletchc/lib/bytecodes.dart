@@ -26,7 +26,8 @@ abstract class Bytecode {
 
   int get size;
 
-  int get spDiff;
+  /// The effect on stack size.
+  int get stackPointerDifference;
 
   String get formatString;
 

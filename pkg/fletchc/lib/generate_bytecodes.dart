@@ -58,7 +58,7 @@ ${
 
   int get size => $size;
 
-  int get spDiff => $spDiff;
+  int get stackPointerDifference => $spDiff;
 
   String get formatString => '$formatString';
 

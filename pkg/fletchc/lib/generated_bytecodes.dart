@@ -93,7 +93,7 @@ class LoadLocal0 extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load local 0';
 
@@ -116,7 +116,7 @@ class LoadLocal1 extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load local 1';
 
@@ -139,7 +139,7 @@ class LoadLocal2 extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load local 2';
 
@@ -163,7 +163,7 @@ class LoadLocal extends Bytecode {
 
   int get size => 2;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load local %d';
 
@@ -188,7 +188,7 @@ class LoadBoxed extends Bytecode {
 
   int get size => 2;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load boxed %d';
 
@@ -213,7 +213,7 @@ class LoadStatic extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load static %d';
 
@@ -238,7 +238,7 @@ class LoadStaticInit extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load static init %d';
 
@@ -263,7 +263,7 @@ class LoadField extends Bytecode {
 
   int get size => 2;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'load field %d';
 
@@ -288,7 +288,7 @@ class LoadConst extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load const %d';
 
@@ -313,7 +313,7 @@ class LoadConstUnfold extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load const @%d';
 
@@ -338,7 +338,7 @@ class StoreLocal extends Bytecode {
 
   int get size => 2;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'store local %d';
 
@@ -363,7 +363,7 @@ class StoreBoxed extends Bytecode {
 
   int get size => 2;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'store boxed %d';
 
@@ -388,7 +388,7 @@ class StoreStatic extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'store static %d';
 
@@ -413,7 +413,7 @@ class StoreField extends Bytecode {
 
   int get size => 2;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'store field %d';
 
@@ -437,7 +437,7 @@ class LoadLiteralNull extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load literal null';
 
@@ -460,7 +460,7 @@ class LoadLiteralTrue extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load literal true';
 
@@ -483,7 +483,7 @@ class LoadLiteralFalse extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load literal false';
 
@@ -506,7 +506,7 @@ class LoadLiteral0 extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load literal 0';
 
@@ -529,7 +529,7 @@ class LoadLiteral1 extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load literal 1';
 
@@ -553,7 +553,7 @@ class LoadLiteral extends Bytecode {
 
   int get size => 2;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load literal %d';
 
@@ -578,7 +578,7 @@ class LoadLiteralWide extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'load literal %d';
 
@@ -603,7 +603,7 @@ class InvokeMethod extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => VAR_DIFF;
+  int get stackPointerDifference => VAR_DIFF;
 
   String get formatString => 'invoke %d';
 
@@ -628,7 +628,7 @@ class InvokeStatic extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => VAR_DIFF;
+  int get stackPointerDifference => VAR_DIFF;
 
   String get formatString => 'invoke static %d';
 
@@ -653,7 +653,7 @@ class InvokeStaticUnfold extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => VAR_DIFF;
+  int get stackPointerDifference => VAR_DIFF;
 
   String get formatString => 'invoke static @%d';
 
@@ -678,7 +678,7 @@ class InvokeFactory extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => VAR_DIFF;
+  int get stackPointerDifference => VAR_DIFF;
 
   String get formatString => 'invoke factory %d';
 
@@ -703,7 +703,7 @@ class InvokeFactoryUnfold extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => VAR_DIFF;
+  int get stackPointerDifference => VAR_DIFF;
 
   String get formatString => 'invoke factory @%d';
 
@@ -729,7 +729,7 @@ class InvokeNative extends Bytecode {
 
   int get size => 3;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'invoke native %d %d';
 
@@ -756,7 +756,7 @@ class InvokeNativeYield extends Bytecode {
 
   int get size => 3;
 
-  int get spDiff => 1;
+  int get stackPointerDifference => 1;
 
   String get formatString => 'invoke native yield %d %d';
 
@@ -782,7 +782,7 @@ class InvokeTest extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'invoke test %d';
 
@@ -807,7 +807,7 @@ class InvokeEq extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke eq';
 
@@ -832,7 +832,7 @@ class InvokeLt extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke lt';
 
@@ -857,7 +857,7 @@ class InvokeLe extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke le';
 
@@ -882,7 +882,7 @@ class InvokeGt extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke gt';
 
@@ -907,7 +907,7 @@ class InvokeGe extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke ge';
 
@@ -932,7 +932,7 @@ class InvokeAdd extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke add';
 
@@ -957,7 +957,7 @@ class InvokeSub extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke sub';
 
@@ -982,7 +982,7 @@ class InvokeMod extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke mod';
 
@@ -1007,7 +1007,7 @@ class InvokeMul extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke mul';
 
@@ -1032,7 +1032,7 @@ class InvokeTruncDiv extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke trunc div';
 
@@ -1057,7 +1057,7 @@ class InvokeBitNot extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'invoke bit not';
 
@@ -1082,7 +1082,7 @@ class InvokeBitAnd extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke bit and';
 
@@ -1107,7 +1107,7 @@ class InvokeBitOr extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke bit or';
 
@@ -1132,7 +1132,7 @@ class InvokeBitXor extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke bit xor';
 
@@ -1157,7 +1157,7 @@ class InvokeBitShr extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke bit shr';
 
@@ -1182,7 +1182,7 @@ class InvokeBitShl extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'invoke bit shl';
 
@@ -1206,7 +1206,7 @@ class Pop extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'pop';
 
@@ -1231,7 +1231,7 @@ class Return extends Bytecode {
 
   int get size => 3;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'return %d %d';
 
@@ -1257,7 +1257,7 @@ class BranchLong extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'branch +%d';
 
@@ -1282,7 +1282,7 @@ class BranchIfTrueLong extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'branch if true +%d';
 
@@ -1307,7 +1307,7 @@ class BranchIfFalseLong extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'branch if false +%d';
 
@@ -1332,7 +1332,7 @@ class BranchBack extends Bytecode {
 
   int get size => 2;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'branch -%d';
 
@@ -1357,7 +1357,7 @@ class BranchBackIfTrue extends Bytecode {
 
   int get size => 2;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'branch if true -%d';
 
@@ -1382,7 +1382,7 @@ class BranchBackIfFalse extends Bytecode {
 
   int get size => 2;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'branch if false -%d';
 
@@ -1407,7 +1407,7 @@ class BranchBackLong extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'branch -%d';
 
@@ -1432,7 +1432,7 @@ class BranchBackIfTrueLong extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'branch if true -%d';
 
@@ -1457,7 +1457,7 @@ class BranchBackIfFalseLong extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'branch if false -%d';
 
@@ -1482,7 +1482,7 @@ class Allocate extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => VAR_DIFF;
+  int get stackPointerDifference => VAR_DIFF;
 
   String get formatString => 'allocate %d';
 
@@ -1507,7 +1507,7 @@ class AllocateUnfold extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => VAR_DIFF;
+  int get stackPointerDifference => VAR_DIFF;
 
   String get formatString => 'allocate @%d';
 
@@ -1531,7 +1531,7 @@ class AllocateBoxed extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'allocate boxed';
 
@@ -1554,7 +1554,7 @@ class Negate extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'negate';
 
@@ -1577,7 +1577,7 @@ class StackOverflowCheck extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'stack overflow check';
 
@@ -1600,7 +1600,7 @@ class Throw extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'throw';
 
@@ -1625,7 +1625,7 @@ class SubroutineCall extends Bytecode {
 
   int get size => 9;
 
-  int get spDiff => VAR_DIFF;
+  int get stackPointerDifference => VAR_DIFF;
 
   String get formatString => 'subroutine call +%d -%d';
 
@@ -1650,7 +1650,7 @@ class SubroutineReturn extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'subroutine return';
 
@@ -1673,7 +1673,7 @@ class ProcessYield extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'process yield';
 
@@ -1696,7 +1696,7 @@ class CoroutineChange extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'coroutine change';
 
@@ -1719,7 +1719,7 @@ class Identical extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'identical';
 
@@ -1742,7 +1742,7 @@ class IdenticalNonNumeric extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'identical non numeric';
 
@@ -1765,7 +1765,7 @@ class EnterNoSuchMethod extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => 3;
+  int get stackPointerDifference => 3;
 
   String get formatString => 'enter noSuchMethod';
 
@@ -1788,7 +1788,7 @@ class ExitNoSuchMethod extends Bytecode {
 
   int get size => 1;
 
-  int get spDiff => -1;
+  int get stackPointerDifference => -1;
 
   String get formatString => 'exit noSuchMethod';
 
@@ -1812,7 +1812,7 @@ class FrameSize extends Bytecode {
 
   int get size => 2;
 
-  int get spDiff => VAR_DIFF;
+  int get stackPointerDifference => VAR_DIFF;
 
   String get formatString => 'frame size %d';
 
@@ -1837,7 +1837,7 @@ class MethodEnd extends Bytecode {
 
   int get size => 5;
 
-  int get spDiff => 0;
+  int get stackPointerDifference => 0;
 
   String get formatString => 'method end %d';
 
