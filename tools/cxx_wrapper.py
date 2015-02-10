@@ -27,6 +27,11 @@ def invoke_gcc(args):
   os.execv("/usr/bin/g++", args)
 
 
+def invoke_gcc_arm(args):
+  args.insert(0, "arm-linux-gnueabihf-g++-4.8")
+  os.execv("/usr/bin/arm-linux-gnueabihf-g++-4.8", args)
+
+
 def main():
   args = sys.argv[1:]
   if "-L/FLETCH_ASAN" in args:
@@ -39,6 +44,11 @@ def main():
   elif "-L/FLETCH_CLANG" in args:
     args.remove("-L/FLETCH_CLANG")
     invoke_clang(args)
+  elif "-DFLETCH_ARM" in args:
+    invoke_gcc_arm(args)
+  elif "-L/FLETCH_ARM" in args:
+    args.remove("-L/FLETCH_ARM")
+    invoke_gcc_arm(args)
   else:
     invoke_gcc(args)
 

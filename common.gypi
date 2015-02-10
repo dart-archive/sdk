@@ -130,6 +130,7 @@
 
         'defines': [
           'FLETCH32',
+          'FLETCH_IA32',
         ],
 
         'cflags': [
@@ -155,6 +156,7 @@
 
         'defines': [
           'FLETCH64',
+          'FLETCH_X64',
         ],
 
         'ldflags': [
@@ -166,6 +168,31 @@
 
           'LIBRARY_SEARCH_PATHS': [
             '<(third_party_libs_path)/x64',
+          ],
+        },
+      },
+
+      'fletch_arm': {
+        'abstract': 1,
+
+        'defines': [
+          'FLETCH32',
+          'FLETCH_ARM',
+        ],
+
+        'cflags': [
+        ],
+
+        'ldflags': [
+          '-L<(third_party_libs_path)/arm',
+          '-L/FLETCH_ARM',
+        ],
+
+        'xcode_settings': { # And ninja.
+          'ARCHS': [ 'armv7' ],
+
+          'LIBRARY_SEARCH_PATHS': [
+            '<(third_party_libs_path)/arm',
           ],
         },
       },
@@ -212,7 +239,6 @@
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
       },
 
-
       'ReleaseIA32Asan': {
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_asan',
@@ -254,7 +280,6 @@
           'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_clang',
         ],
       },
-
 
       'ReleaseIA32ClangAsan': {
         'inherit_from': [
@@ -300,6 +325,10 @@
           'fletch_base', 'fletch_debug', 'fletch_x64', 'fletch_asan',
           'fletch_clang',
         ],
+      },
+
+      'DebugARM': {
+        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_arm' ],
       },
     },
 
