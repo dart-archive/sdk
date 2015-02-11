@@ -9,7 +9,7 @@ vars = {
   "googlecode_url": "http://%s.googlecode.com/svn",
 
   "clang_rev": "@43229",
-  "dart_rev": "@43639",
+  "dart_rev": "@43635",
   "gyp_rev": "@1752",
 }
 
