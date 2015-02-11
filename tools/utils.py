@@ -549,18 +549,24 @@ def DartBinary():
   tools_dir = os.path.dirname(os.path.realpath(__file__))
   dart_binary_prefix = os.path.join(tools_dir, 'testing', 'bin')
   if IsWindows():
-    return os.path.join(dart_binary_prefix, 'windows', 'dart.exe')
+    return os.path.join(dart_binary_prefix, 'win', 'dart.exe')
   else:
     arch = GuessArchitecture()
     system = GuessOS()
+    dart_binary = 'dart'
+    os_path = system
+
     if arch == 'arm':
-      return os.path.join(dart_binary_prefix, system, 'dart-arm')
+      dart_binary = 'dart-arm'
     elif arch == 'arm64':
-      return os.path.join(dart_binary_prefix, system, 'dart-arm64')
+      dart_binary = 'dart-arm64'
     elif arch == 'mips':
-      return os.path.join(dart_binary_prefix, system, 'dart-mips')
-    else:
-      return os.path.join(dart_binary_prefix, system, 'dart')
+      dart_binary = 'dart-mips'
+
+    if system == 'macos':
+      os_path = 'mac'
+
+    return os.path.join(dart_binary_prefix, os_path, dart_binary)
 
 
 def DartSdkBinary():

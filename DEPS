@@ -53,7 +53,6 @@ hooks = [
     'name': 'third_party_libs',
     'pattern': '.',
     'action': [
-      # TODO(ahe): Rename files to use "--auto-platform".
       'download_from_google_storage',
       '--no_auth',
       '--no_resume',
@@ -61,6 +60,7 @@ hooks = [
       'dart-dependencies-fletch',
       '-d',
       '-r',
+      '--auto_platform',
       'fletch/third_party/libs',
     ],
   },
@@ -68,7 +68,6 @@ hooks = [
     'name': 'dart_test_binary',
     'pattern': '.',
     'action': [
-      # TODO(ahe): Rename files to use "--auto-platform".
       'download_from_google_storage',
       '--no_auth',
       '--no_resume',
@@ -76,6 +75,7 @@ hooks = [
       'dart-dependencies-fletch',
       '-d',
       '-r',
+      '--auto_platform',
       'fletch/tools/testing/bin',
     ],
   },
