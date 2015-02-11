@@ -102,6 +102,8 @@ class LoadLocal0 extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'load local 0';
 }
 
 class LoadLocal1 extends Bytecode {
@@ -125,6 +127,8 @@ class LoadLocal1 extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'load local 1';
 }
 
 class LoadLocal2 extends Bytecode {
@@ -148,6 +152,8 @@ class LoadLocal2 extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'load local 2';
 }
 
 class LoadLocal extends Bytecode {
@@ -173,6 +179,8 @@ class LoadLocal extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'load local ${uint8Argument0}';
 }
 
 class LoadBoxed extends Bytecode {
@@ -198,6 +206,8 @@ class LoadBoxed extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'load boxed ${uint8Argument0}';
 }
 
 class LoadStatic extends Bytecode {
@@ -223,6 +233,8 @@ class LoadStatic extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'load static ${uint32Argument0}';
 }
 
 class LoadStaticInit extends Bytecode {
@@ -248,6 +260,8 @@ class LoadStaticInit extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'load static init ${uint32Argument0}';
 }
 
 class LoadField extends Bytecode {
@@ -273,6 +287,8 @@ class LoadField extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'load field ${uint8Argument0}';
 }
 
 class LoadConst extends Bytecode {
@@ -298,6 +314,8 @@ class LoadConst extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'load const ${uint32Argument0}';
 }
 
 class LoadConstUnfold extends Bytecode {
@@ -323,6 +341,8 @@ class LoadConstUnfold extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'load const @${uint32Argument0}';
 }
 
 class StoreLocal extends Bytecode {
@@ -348,6 +368,8 @@ class StoreLocal extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'store local ${uint8Argument0}';
 }
 
 class StoreBoxed extends Bytecode {
@@ -373,6 +395,8 @@ class StoreBoxed extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'store boxed ${uint8Argument0}';
 }
 
 class StoreStatic extends Bytecode {
@@ -398,6 +422,8 @@ class StoreStatic extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'store static ${uint32Argument0}';
 }
 
 class StoreField extends Bytecode {
@@ -423,6 +449,8 @@ class StoreField extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'store field ${uint8Argument0}';
 }
 
 class LoadLiteralNull extends Bytecode {
@@ -446,6 +474,8 @@ class LoadLiteralNull extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'load literal null';
 }
 
 class LoadLiteralTrue extends Bytecode {
@@ -469,6 +499,8 @@ class LoadLiteralTrue extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'load literal true';
 }
 
 class LoadLiteralFalse extends Bytecode {
@@ -492,6 +524,8 @@ class LoadLiteralFalse extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'load literal false';
 }
 
 class LoadLiteral0 extends Bytecode {
@@ -515,6 +549,8 @@ class LoadLiteral0 extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'load literal 0';
 }
 
 class LoadLiteral1 extends Bytecode {
@@ -538,6 +574,8 @@ class LoadLiteral1 extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'load literal 1';
 }
 
 class LoadLiteral extends Bytecode {
@@ -563,6 +601,8 @@ class LoadLiteral extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'load literal ${uint8Argument0}';
 }
 
 class LoadLiteralWide extends Bytecode {
@@ -588,6 +628,8 @@ class LoadLiteralWide extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'load literal ${uint32Argument0}';
 }
 
 class InvokeMethod extends Bytecode {
@@ -613,6 +655,8 @@ class InvokeMethod extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke ${uint32Argument0}';
 }
 
 class InvokeStatic extends Bytecode {
@@ -638,6 +682,8 @@ class InvokeStatic extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke static ${uint32Argument0}';
 }
 
 class InvokeStaticUnfold extends Bytecode {
@@ -663,6 +709,8 @@ class InvokeStaticUnfold extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke static @${uint32Argument0}';
 }
 
 class InvokeFactory extends Bytecode {
@@ -688,6 +736,8 @@ class InvokeFactory extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke factory ${uint32Argument0}';
 }
 
 class InvokeFactoryUnfold extends Bytecode {
@@ -713,6 +763,8 @@ class InvokeFactoryUnfold extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke factory @${uint32Argument0}';
 }
 
 class InvokeNative extends Bytecode {
@@ -740,6 +792,8 @@ class InvokeNative extends Bytecode {
         ..addUint8(uint8Argument1)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke native ${uint8Argument0} ${uint8Argument1}';
 }
 
 class InvokeNativeYield extends Bytecode {
@@ -767,6 +821,8 @@ class InvokeNativeYield extends Bytecode {
         ..addUint8(uint8Argument1)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke native yield ${uint8Argument0} ${uint8Argument1}';
 }
 
 class InvokeTest extends Bytecode {
@@ -792,6 +848,8 @@ class InvokeTest extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke test ${uint32Argument0}';
 }
 
 class InvokeEq extends Bytecode {
@@ -817,6 +875,8 @@ class InvokeEq extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke eq${uint32Argument0}';
 }
 
 class InvokeLt extends Bytecode {
@@ -842,6 +902,8 @@ class InvokeLt extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke lt${uint32Argument0}';
 }
 
 class InvokeLe extends Bytecode {
@@ -867,6 +929,8 @@ class InvokeLe extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke le${uint32Argument0}';
 }
 
 class InvokeGt extends Bytecode {
@@ -892,6 +956,8 @@ class InvokeGt extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke gt${uint32Argument0}';
 }
 
 class InvokeGe extends Bytecode {
@@ -917,6 +983,8 @@ class InvokeGe extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke ge${uint32Argument0}';
 }
 
 class InvokeAdd extends Bytecode {
@@ -942,6 +1010,8 @@ class InvokeAdd extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke add${uint32Argument0}';
 }
 
 class InvokeSub extends Bytecode {
@@ -967,6 +1037,8 @@ class InvokeSub extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke sub${uint32Argument0}';
 }
 
 class InvokeMod extends Bytecode {
@@ -992,6 +1064,8 @@ class InvokeMod extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke mod${uint32Argument0}';
 }
 
 class InvokeMul extends Bytecode {
@@ -1017,6 +1091,8 @@ class InvokeMul extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke mul${uint32Argument0}';
 }
 
 class InvokeTruncDiv extends Bytecode {
@@ -1042,6 +1118,8 @@ class InvokeTruncDiv extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke trunc div${uint32Argument0}';
 }
 
 class InvokeBitNot extends Bytecode {
@@ -1067,6 +1145,8 @@ class InvokeBitNot extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke bit not${uint32Argument0}';
 }
 
 class InvokeBitAnd extends Bytecode {
@@ -1092,6 +1172,8 @@ class InvokeBitAnd extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke bit and${uint32Argument0}';
 }
 
 class InvokeBitOr extends Bytecode {
@@ -1117,6 +1199,8 @@ class InvokeBitOr extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke bit or${uint32Argument0}';
 }
 
 class InvokeBitXor extends Bytecode {
@@ -1142,6 +1226,8 @@ class InvokeBitXor extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke bit xor${uint32Argument0}';
 }
 
 class InvokeBitShr extends Bytecode {
@@ -1167,6 +1253,8 @@ class InvokeBitShr extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke bit shr${uint32Argument0}';
 }
 
 class InvokeBitShl extends Bytecode {
@@ -1192,6 +1280,8 @@ class InvokeBitShl extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'invoke bit shl${uint32Argument0}';
 }
 
 class Pop extends Bytecode {
@@ -1215,6 +1305,8 @@ class Pop extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'pop';
 }
 
 class Return extends Bytecode {
@@ -1242,6 +1334,8 @@ class Return extends Bytecode {
         ..addUint8(uint8Argument1)
         ..sendOn(sink);
   }
+
+  String toString() => 'return ${uint8Argument0} ${uint8Argument1}';
 }
 
 class BranchLong extends Bytecode {
@@ -1267,6 +1361,8 @@ class BranchLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'branch +${uint32Argument0}';
 }
 
 class BranchIfTrueLong extends Bytecode {
@@ -1292,6 +1388,8 @@ class BranchIfTrueLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'branch if true +${uint32Argument0}';
 }
 
 class BranchIfFalseLong extends Bytecode {
@@ -1317,6 +1415,8 @@ class BranchIfFalseLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'branch if false +${uint32Argument0}';
 }
 
 class BranchBack extends Bytecode {
@@ -1342,6 +1442,8 @@ class BranchBack extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'branch -${uint8Argument0}';
 }
 
 class BranchBackIfTrue extends Bytecode {
@@ -1367,6 +1469,8 @@ class BranchBackIfTrue extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'branch if true -${uint8Argument0}';
 }
 
 class BranchBackIfFalse extends Bytecode {
@@ -1392,6 +1496,8 @@ class BranchBackIfFalse extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'branch if false -${uint8Argument0}';
 }
 
 class BranchBackLong extends Bytecode {
@@ -1417,6 +1523,8 @@ class BranchBackLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'branch -${uint32Argument0}';
 }
 
 class BranchBackIfTrueLong extends Bytecode {
@@ -1442,6 +1550,8 @@ class BranchBackIfTrueLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'branch if true -${uint32Argument0}';
 }
 
 class BranchBackIfFalseLong extends Bytecode {
@@ -1467,6 +1577,8 @@ class BranchBackIfFalseLong extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'branch if false -${uint32Argument0}';
 }
 
 class Allocate extends Bytecode {
@@ -1492,6 +1604,8 @@ class Allocate extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'allocate ${uint32Argument0}';
 }
 
 class AllocateUnfold extends Bytecode {
@@ -1517,6 +1631,8 @@ class AllocateUnfold extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'allocate @${uint32Argument0}';
 }
 
 class AllocateBoxed extends Bytecode {
@@ -1540,6 +1656,8 @@ class AllocateBoxed extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'allocate boxed';
 }
 
 class Negate extends Bytecode {
@@ -1563,6 +1681,8 @@ class Negate extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'negate';
 }
 
 class StackOverflowCheck extends Bytecode {
@@ -1586,6 +1706,8 @@ class StackOverflowCheck extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'stack overflow check';
 }
 
 class Throw extends Bytecode {
@@ -1609,6 +1731,8 @@ class Throw extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'throw';
 }
 
 class SubroutineCall extends Bytecode {
@@ -1636,6 +1760,8 @@ class SubroutineCall extends Bytecode {
         ..addUint32(uint32Argument1)
         ..sendOn(sink);
   }
+
+  String toString() => 'subroutine call +${uint32Argument0} -${uint32Argument1}';
 }
 
 class SubroutineReturn extends Bytecode {
@@ -1659,6 +1785,8 @@ class SubroutineReturn extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'subroutine return';
 }
 
 class ProcessYield extends Bytecode {
@@ -1682,6 +1810,8 @@ class ProcessYield extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'process yield';
 }
 
 class CoroutineChange extends Bytecode {
@@ -1705,6 +1835,8 @@ class CoroutineChange extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'coroutine change';
 }
 
 class Identical extends Bytecode {
@@ -1728,6 +1860,8 @@ class Identical extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'identical';
 }
 
 class IdenticalNonNumeric extends Bytecode {
@@ -1751,6 +1885,8 @@ class IdenticalNonNumeric extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'identical non numeric';
 }
 
 class EnterNoSuchMethod extends Bytecode {
@@ -1774,6 +1910,8 @@ class EnterNoSuchMethod extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'enter noSuchMethod';
 }
 
 class ExitNoSuchMethod extends Bytecode {
@@ -1797,6 +1935,8 @@ class ExitNoSuchMethod extends Bytecode {
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
+
+  String toString() => 'exit noSuchMethod';
 }
 
 class FrameSize extends Bytecode {
@@ -1822,6 +1962,8 @@ class FrameSize extends Bytecode {
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'frame size ${uint8Argument0}';
 }
 
 class MethodEnd extends Bytecode {
@@ -1847,4 +1989,6 @@ class MethodEnd extends Bytecode {
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
+
+  String toString() => 'method end ${uint32Argument0}';
 }

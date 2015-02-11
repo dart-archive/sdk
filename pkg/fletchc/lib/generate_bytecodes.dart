@@ -42,6 +42,23 @@ part of fletch.bytecodes;
         throw "Unknown format: $code";
     }
   }
+
+  String toStringExpression = formatString;
+  if (!fields.isEmpty) {
+    List<String> parts = formatString.split("%d");
+    StringBuffer buffer = new StringBuffer();
+    Iterator iterator = fields.iterator;
+    for (String part in parts) {
+      buffer.write(part);
+      if (iterator.moveNext()) {
+        buffer.write(r'${');
+        buffer.write(iterator.current);
+        buffer.write('}');
+      }
+    }
+    toStringExpression = '$buffer';
+  }
+
 print("""
 
 class $name extends Bytecode {
@@ -69,6 +86,8 @@ ${
   encode.join("")
 }        ..sendOn(sink);
   }
+
+  String toString() => '$toStringExpression';
 }""");
   });
 }
