@@ -10,9 +10,10 @@ Usage: fletch command
 Manages, edits, runs and closes Fletch projects and programs.
 
 Common commands:
-  help <command>   - show detailed help for a command.
-  init <path       - create/connect to a Fletch project.
-  show <thing>     - show details about the things in the project.
+  help  <command>     - show detailed help for a command.
+  init  <path>        - create/connect to a Fletch project.
+  show  <thing>       - show details about the thing.
+  start <entrypoint>  - start running at the entrypoint.
 ''';
 
 const INIT_HELP_TEXT = r'''
@@ -33,6 +34,13 @@ Supported things:
   class[es]
   method[s]
   poi
+''';
+
+const START_HELP_TEXT = r'''
+Usage fletch start [entrypoint]
+
+Begin execution at the specified entrypoint. If no entrypoint is specified 
+main is executed if it is present and unique.
 ''';
 
 const LOGCAT_HELP_TEXT = r'''

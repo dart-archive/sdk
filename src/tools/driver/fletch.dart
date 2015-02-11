@@ -4,6 +4,7 @@
 
 import 'dart:io';
 import 'help_text.dart';
+import 'start.dart' as startImpl;
 
 main(args) {
   if (args.length == 0) {
@@ -15,7 +16,8 @@ main(args) {
   final commandHandlers = {
      "help" : help,
      "show" : show,
-     "init" : init
+     "init" : init,
+     "start" : start
   };
 
   if (!commandHandlers.containsKey(command)) {
@@ -39,7 +41,11 @@ void help(args) {
     case "show":
       print(SHOW_HELP_TEXT);
       break;
-
+    
+    case "start":
+      print(START_HELP_TEXT);
+      break;
+    
     default:
       failAndHelp(args, "Unrecognized command: ${args[1]}");
   }
@@ -57,4 +63,8 @@ void init(args) {
 
 void show(args) {
   print("SHOW COMMAND IMPL");
+}
+
+void start(args) {
+  startImpl.start(args);
 }

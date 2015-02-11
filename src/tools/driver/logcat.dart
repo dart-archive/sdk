@@ -14,6 +14,11 @@ main(List<String> args) {
   LogcatServer.performFromArgs(args);
 }
 
+class Logger {
+  // This method needs migrating to call the log server.
+  static void log(message) => print(message);
+}
+
 class LogcatServer {
   static performFromArgs(List<String> args) {
     if (args.length != 3) {
