@@ -8,10 +8,8 @@ import 'compiler.dart' show
     FletchCompiler;
 
 main(List<String> arguments) {
-  Uri script = Uri.base.resolve(arguments.single);
-  Uri packageRoot = script.resolve('packages/');
   FletchCompiler compiler = new FletchCompiler(
-      packageRoot: packageRoot,
+      script: arguments.single,
       options: ['--verbose']);
-  compiler.run(script);
+  compiler.run();
 }

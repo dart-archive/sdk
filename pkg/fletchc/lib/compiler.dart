@@ -28,17 +28,22 @@ import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
 import 'src/fletch_compiler.dart' as implementation;
 
+const String StringOrUri = "String or Uri";
+
 class FletchCompiler {
   final implementation.FletchCompiler _compiler;
 
-  FletchCompiler._(this._compiler);
+  final Uri script;
+
+  FletchCompiler._(this._compiler, this.script);
 
   factory FletchCompiler(
       {CompilerInputProvider provider,
        CompilerOutputProvider outputProvider,
        DiagnosticHandler handler,
-       /* String or Uri */ libraryRoot,
-       /* String or Uri */ packageRoot,
+       @StringOrUri libraryRoot,
+       @StringOrUri packageRoot,
+       @StringOrUri script,
        List<String> options,
        Map<String, dynamic> environment}) {
     if (options == null) {
@@ -65,17 +70,29 @@ class FletchCompiler {
       outputProvider = new OutputProvider();
     }
 
+    libraryRoot = _computedValidatedUri(
+        libraryRoot, name: 'libraryRoot', ensureTrailingSlash: true);
     if (libraryRoot == null) {
       libraryRoot = _guessLibraryRoot();
       if (libraryRoot == null) {
         throw new StateError("Unable to guess libraryRoot.");
       }
+    } else if (!_looksLikeLibraryRoot(libraryRoot)) {
+      throw new ArgumentError(
+          "[libraryRoot]: Dart SDK library not found in '$libraryRoot'.");
     }
 
+    script = _computedValidatedUri(script, name: 'script');
+
+    packageRoot = _computedValidatedUri(
+        packageRoot, name: 'packageRoot', ensureTrailingSlash: true);
     if (packageRoot == null) {
-      packageRoot = Uri.base.resolve('packages/');
+      if (script != null) {
+        packageRoot = script.resolve('packages/');
+      } else {
+        packageRoot = Uri.base.resolve('packages/');
+      }
     }
-
 
     if (environment == null) {
       environment = <String, dynamic>{};
@@ -93,23 +110,18 @@ class FletchCompiler {
     compiler.log("Using library root: $libraryRoot");
     compiler.log("Using package root: $packageRoot");
 
-    return new FletchCompiler._(compiler);
+    return new FletchCompiler._(compiler, script);
   }
 
-  void run(Uri script) {
+  void run([@StringOrUri script]) {
+    script = _computedValidatedUri(script, name: 'script');
+    if (script == null) {
+      script = this.script;
+    }
+    if (script == null) {
+      throw new StateError("No [script] provided.");
+    }
     _compiler.run(script);
-  }
-
-  static Uri _guessLibraryRoot() {
-    Uri guess = new Uri.file(Platform.executable).resolve('../');
-    if (_looksLikeLibraryRoot(guess)) {
-      return _resolveSymbolicLinks(guess);
-    }
-    guess = guess.resolve('../sdk/');
-    if (_looksLikeLibraryRoot(guess)) {
-      return _resolveSymbolicLinks(guess);
-    }
-    return null;
   }
 }
 
@@ -128,4 +140,35 @@ Uri _resolveSymbolicLinks(Uri uri) {
 bool _looksLikeLibraryRoot(Uri uri) {
   String expectedFile = 'lib/_internal/libraries.dart';
   return new File.fromUri(uri.resolve(expectedFile)).existsSync();
+}
+
+Uri _computedValidatedUri(
+    @StringOrUri stringOrUri,
+    {String name,
+     bool ensureTrailingSlash: false}) {
+  assert(name != null);
+  if (stringOrUri == null) {
+    return null;
+  } else if (stringOrUri is String) {
+    if (ensureTrailingSlash) {
+      stringOrUri = appendSlash(stringOrUri);
+    }
+    return Uri.base.resolve(stringOrUri);
+  } else if (stringOrUri is Uri) {
+    return Uri.base.resolveUri(stringOrUri);
+  } else {
+    throw new ArgumentError("[$name] should be a String or a Uri.");
+  }
+}
+
+Uri _guessLibraryRoot() {
+  Uri guess = new Uri.file(Platform.executable).resolve('../');
+  if (_looksLikeLibraryRoot(guess)) {
+    return _resolveSymbolicLinks(guess);
+  }
+  guess = guess.resolve('../sdk/');
+  if (_looksLikeLibraryRoot(guess)) {
+    return _resolveSymbolicLinks(guess);
+  }
+  return null;
 }

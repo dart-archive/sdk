@@ -10,6 +10,9 @@ import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
 import 'package:sharedfrontend/elements.dart' as elements;
 
+import 'package:compiler/src/elements/modelx.dart' show
+    LibraryElementX;
+
 import 'fletch_context.dart';
 
 part 'fletch_compiler_hack.dart';
@@ -48,7 +51,7 @@ class FletchCompiler extends FletchCompilerHack {
     mainFunction = mainApp.findLocal("_entry");
   }
 
-  void onLibraryCreated(elements.LibraryElement library) {
+  void onLibraryCreated(LibraryElementX library) {
     // TODO(ahe): Remove this.
     library.canUseNative = true;
     super.onLibraryCreated(library);

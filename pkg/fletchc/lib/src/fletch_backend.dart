@@ -8,11 +8,16 @@ import 'package:compiler/src/dart2jslib.dart' show
     Backend,
     BackendConstantEnvironment,
     CodegenWorkItem,
+    CompilerTask,
     ConstantCompilerTask,
     ConstantSystem,
     MessageKind,
     Registry,
     ResolutionEnqueuer;
+
+import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
+    FunctionElement;
 
 import '../bytecodes.dart' show Bytecode;
 
@@ -43,6 +48,14 @@ class FletchBackend extends Backend {
 
   ConstantCompilerTask get constantCompilerTask {
     throw new UnsupportedError("get constantCompilerTask");
+  }
+
+  bool classNeedsRti(ClassElement cls) {
+    throw new UnsupportedError("classNeedsRti");
+  }
+
+  bool methodNeedsRti(FunctionElement function) {
+    throw new UnsupportedError("methodNeedsRti");
   }
 
   void enqueueHelpers(
