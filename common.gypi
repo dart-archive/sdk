@@ -204,11 +204,13 @@
         'target_conditions': [
           ['_toolset=="target"', {
               'defines': [
-                'FLETCH_ARM',  # Use cross compiler.
+                # Fake define intercepted by cc_wrapper.py.
+                'FLETCH_ARM',
               ],
 
               'ldflags': [
                 '-L<(third_party_libs_path)/arm',
+                # Fake define intercepted by cc_wrapper.py.
                 '-L/FLETCH_ARM',
                 '-static-libstdc++',
               ],
