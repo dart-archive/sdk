@@ -125,6 +125,10 @@ NATIVE(ForeignPlatform) {
   return Smi::FromWord(Platform::OS());
 }
 
+NATIVE(ForeignArchitecture) {
+  return Smi::FromWord(Platform::Arch());
+}
+
 NATIVE(ForeignConvertPort) {
   if (!arguments[0]->IsInstance()) return Smi::zero();
   Instance* instance = Instance::cast(arguments[0]);

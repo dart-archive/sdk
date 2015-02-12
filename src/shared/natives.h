@@ -122,6 +122,7 @@ namespace fletch {
   N(ForeignBitsPerWord,          "Foreign", "_bitsPerMachineWord")       \
   N(ForeignErrno,                "Foreign", "_errno")                    \
   N(ForeignPlatform,             "Foreign", "_platform")                 \
+  N(ForeignArchitecture,         "Foreign", "_architecture")             \
   N(ForeignConvertPort,          "Foreign", "_convertPort")              \
                                                                          \
   N(ForeignCall0,                "Foreign", "_call$0")                   \

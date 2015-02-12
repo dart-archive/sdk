@@ -4,6 +4,7 @@
 
 rule gyp
   command = $
+    GYP_CROSSCOMPILE=1 $
     ../third_party/gyp/gyp --depth=. -Icommon.gypi $
         -Goutput_dir=out $
         --format=ninja fletch.gyp
@@ -17,6 +18,8 @@ build $
     out/DebugX64Asan/build.ninja $
     out/DebugX64Clang/build.ninja $
     out/DebugX64ClangAsan/build.ninja $
+    out/DebugARM/build.ninja $
+    out/DebugXARM/build.ninja $
     out/ReleaseIA32/build.ninja $
     out/ReleaseIA32Asan/build.ninja $
     out/ReleaseIA32Clang/build.ninja $
@@ -24,7 +27,9 @@ build $
     out/ReleaseX64/build.ninja $
     out/ReleaseX64Asan/build.ninja $
     out/ReleaseX64Clang/build.ninja $
-    out/ReleaseX64ClangAsan/build.ninja: $
+    out/ReleaseX64ClangAsan/build.ninja $
+    out/ReleaseARM/build.ninja $
+    out/ReleaseXARM/build.ninja: $
     gyp $
         common.gypi $
         fletch.gyp $

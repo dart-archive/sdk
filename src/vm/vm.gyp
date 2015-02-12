@@ -29,6 +29,7 @@
     {
       'target_name': 'fletch_vm_base',
       'type': 'static_library',
+      'toolsets': ['target', 'host'],
       'dependencies': [
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
@@ -122,6 +123,7 @@
     {
       'target_name': 'fletch_vm_generator',
       'type': 'executable',
+      'toolsets': ['host'],
       'dependencies': [
         'fletch_vm_base',
         '../shared/shared.gyp:fletch_shared',
@@ -129,6 +131,7 @@
       ],
       'sources': [
         # TODO(ahe): Add header (.h) files.
+        'assembler_arm_linux.cc',
         'assembler_x64.cc',
         'assembler_x64_linux.cc',
         'assembler_x64_macos.cc',

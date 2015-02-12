@@ -12,6 +12,7 @@
     {
       'target_name': 'fletch_shared',
       'type': 'static_library',
+      'toolsets': ['target', 'host'],
       'sources': [
         # TODO(ahe): Add header (.h) files.
         'assert.cc',

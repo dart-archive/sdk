@@ -9,8 +9,13 @@ library dart.ffi;
 
 class Foreign {
   static const int UNKNOWN = 0;
+
   static const int LINUX   = 1;
   static const int MACOS   = 2;
+
+  static const int IA32    = 1;
+  static const int X64     = 2;
+  static const int ARM     = 3;
 
   static final Foreign NULL = new Foreign();
 
@@ -50,6 +55,7 @@ class Foreign {
   // TODO(kasperl): Not quite sure where this fits in.
   static final int bitsPerMachineWord = _bitsPerMachineWord();
   static final int platform = _platform();
+  static final int architecture = _architecture();
 
   int get value => _value;
   int get length => _length;
@@ -264,5 +270,6 @@ class Foreign {
   static int _bitsPerMachineWord() native;
   static int _errno() native;
   static int _platform() native;
+  static int _architecture() native;
   static int _convertPort(Port port) native;
 }

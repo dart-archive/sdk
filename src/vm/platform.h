@@ -20,9 +20,16 @@ class Monitor;
 class Platform {
  public:
   enum OperatingSystem {
-    kUnknown = 0,
-    kLinux   = 1,
-    kMacOS   = 2,
+    kUnknownOS = 0,
+    kLinux     = 1,
+    kMacOS     = 2,
+  };
+
+  enum Architecture {
+    kUnknownArch = 0,
+    kIA32        = 1,
+    kX64         = 2,
+    kARM         = 3,
   };
 
   // Initialize the Platform class.
@@ -62,7 +69,19 @@ class Platform {
 #elif defined(__APPLE__)
     return kMacOS;
 #else
-    return kUnknown;
+    return kUnknownOS;
+#endif
+  }
+
+  static Architecture Arch() {
+#if defined(FLETCH_TARGET_IA32)
+    return kIA32;
+#elif defined(FLETCH_TARGET_X64)
+    return kX64;
+#elif defined(FLETCH_TARGET_ARM)
+    return kARM;
+#else
+    return kUnknownArch;
 #endif
   }
 };

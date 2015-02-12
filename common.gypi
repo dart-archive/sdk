@@ -130,7 +130,7 @@
 
         'defines': [
           'FLETCH32',
-          'FLETCH_IA32',
+          'FLETCH_TARGET_IA32',
         ],
 
         'cflags': [
@@ -156,7 +156,7 @@
 
         'defines': [
           'FLETCH64',
-          'FLETCH_X64',
+          'FLETCH_TARGET_X64',
         ],
 
         'ldflags': [
@@ -177,15 +177,11 @@
 
         'defines': [
           'FLETCH32',
-          'FLETCH_ARM',
-        ],
-
-        'cflags': [
+          'FLETCH_TARGET_ARM',
         ],
 
         'ldflags': [
           '-L<(third_party_libs_path)/arm',
-          '-L/FLETCH_ARM',
         ],
 
         'xcode_settings': { # And ninja.
@@ -195,6 +191,49 @@
             '<(third_party_libs_path)/arm',
           ],
         },
+      },
+
+      'fletch_xarm': {
+        'abstract': 1,
+
+        'defines': [
+          'FLETCH32',
+          'FLETCH_TARGET_ARM',
+        ],
+
+        'target_conditions': [
+          ['_toolset=="target"', {
+              'defines': [
+                'FLETCH_ARM',  # Use cross compiler.
+              ],
+
+              'ldflags': [
+                '-L<(third_party_libs_path)/arm',
+                '-L/FLETCH_ARM',
+                '-static-libstdc++',
+              ],
+
+              'xcode_settings': { # And ninja.
+                'ARCHS': [ 'armv7' ],
+
+                'LIBRARY_SEARCH_PATHS': [
+                  '<(third_party_libs_path)/arm',
+                ],
+              },
+            },
+          ],
+
+          ['_toolset=="host"', {
+              # Compile host targets as IA32, to get same word size.
+              'inherit_from': [ 'fletch_ia32' ],
+
+              # Undefine IA32 target and using existing ARM target.
+              'defines!': [
+                'FLETCH_TARGET_IA32',
+              ],
+            },
+          ],
+        ],
       },
 
       'fletch_asan': {
@@ -329,6 +368,18 @@
 
       'DebugARM': {
         'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_arm' ],
+      },
+
+      'ReleaseARM': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_arm' ],
+      },
+
+      'DebugXARM': {
+        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_xarm' ],
+      },
+
+      'ReleaseXARM': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm' ],
       },
     },
 

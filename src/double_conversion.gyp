@@ -12,6 +12,7 @@
     {
       'target_name': 'double_conversion',
       'type': 'static_library',
+      'toolsets': ['target', 'host'],
       'sources': [
         # TODO(ahe): Include header (.h) files.
         '../third_party/double-conversion/src/bignum-dtoa.cc',

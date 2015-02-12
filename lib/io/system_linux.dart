@@ -35,14 +35,17 @@ class LinuxAddrInfo extends AddrInfo {
   }
 }
 
-class EpollEvent extends Struct {
-  EpollEvent() : super.finalize(2);
+class EpollEvent extends Foreign {
+  // epoll_event is packed on ia32/x64, but not on arm.
+  static int eventSize = Foreign.architecture == Foreign.ARM ? 8 : 4;
 
-  int get events => getWord(0);
-  void set events(int value) { setWord(0, value); }
+  EpollEvent() : super.allocatedFinalize(eventSize + 8);
 
-  int get data => getWord(4);
-  void set data(int value) { setWord(4, value); }
+  int get events => getInt32(0);
+  void set events(int value) => setInt32(0, value);
+
+  int get data => getInt64(eventSize);
+  void set data(int value) => setInt64(eventSize, value);
 }
 
 class LinuxSystem extends PosixSystem {
