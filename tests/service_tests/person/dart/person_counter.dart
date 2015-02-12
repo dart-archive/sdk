@@ -74,8 +74,8 @@ abstract class PersonCounter {
         _postResult.icall$1(request);
         break;
       case _CREATE_PERSON_METHOD_ID:
-        MessageBuilder mb = new MessageBuilder(24);
-        PersonBuilder builder = mb.initRoot(new PersonBuilder(), 16);
+        MessageBuilder mb = new MessageBuilder(32);
+        PersonBuilder builder = mb.initRoot(new PersonBuilder(), 24);
         _impl.createPerson(request.getInt32(32), builder);
         var result = getResultMessage(builder);
         request.setInt64(32, result);
@@ -130,16 +130,20 @@ class AgeStatsBuilder extends Builder {
 }
 
 class Person extends Reader {
-  int get age => _segment.memory.getInt32(_offset + 0);
-  List<Person> get children => readList(new _PersonList(), 8);
+  List<int> get name => readList(new _uint8List(), 0);
+  int get age => _segment.memory.getInt32(_offset + 8);
+  List<Person> get children => readList(new _PersonList(), 16);
 }
 
 class PersonBuilder extends Builder {
+  List<int> initName(int length) {
+    return NewList(new _uint8BuilderList(), 0, length, 1);
+  }
   void set age(int value) {
-    _segment.memory.setInt32(_offset + 0, value);
+    _segment.memory.setInt32(_offset + 8, value);
   }
   List<PersonBuilder> initChildren(int length) {
-    return NewList(new _PersonBuilderList(), 8, length, 16);
+    return NewList(new _PersonBuilderList(), 16, length, 24);
   }
 }
 
@@ -149,7 +153,7 @@ class PersonBox extends Reader {
 
 class PersonBoxBuilder extends Builder {
   PersonBuilder initPerson() {
-    return NewStruct(new PersonBuilder(), 0, 16);
+    return NewStruct(new PersonBuilder(), 0, 24);
   }
 }
 
@@ -199,10 +203,19 @@ class ConsBuilder extends Builder {
   }
 }
 
+class _uint8List extends ListReader implements List<uint8> {
+  int operator[](int index) => _segment.memory.getUint8(_offset + index * 1);
+}
+
+class _uint8BuilderList extends ListBuilder implements List<uint8> {
+  int operator[](int index) => _segment.memory.getUint8(_offset + index * 1);
+  void operator[]=(int index, int value) => _segment.memory.setUint8(_offset + index * 1, value);
+}
+
 class _PersonList extends ListReader implements List<Person> {
-  Person operator[](int index) => readListElement(new Person(), index, 16);
+  Person operator[](int index) => readListElement(new Person(), index, 24);
 }
 
 class _PersonBuilderList extends ListBuilder implements List<PersonBuilder> {
-  PersonBuilder operator[](int index) => readListElement(new PersonBuilder(), index, 16);
+  PersonBuilder operator[](int index) => readListElement(new PersonBuilder(), index, 24);
 }

@@ -104,8 +104,6 @@ class Reader;
 template<typename T>
 class List {
  public:
-  inline List(const Reader& reader, int length);
-
   List(Segment* segment, int offset, int length)
       : segment_(segment), offset_(offset), length_(length) { }
 
@@ -121,6 +119,50 @@ class List {
   int offset_;
   int length_;
 };
+
+template<typename T>
+class PrimitiveList {
+ public:
+  PrimitiveList(Segment* segment, int offset, int length)
+      : data_(reinterpret_cast<T*>(segment->At(offset))),
+        length_(length) { }
+
+  int length() const { return length_; }
+
+  T& operator[](int index) {
+    // TODO(kasperl): Bounds check?
+    return data_[index];
+  }
+
+ private:
+  T* const data_;
+  const int length_;
+};
+
+#define PRIMITIVE_LIST(T)                                \
+template<>                                               \
+class List<T> : public PrimitiveList<T> {                \
+ public:                                                 \
+  List(Segment* segment, int offset, int length)         \
+      : PrimitiveList(segment, offset, length) { }       \
+};
+
+// TODO(kasperl): Support List<bool>.
+
+PRIMITIVE_LIST(uint8_t)
+PRIMITIVE_LIST(uint16_t)
+PRIMITIVE_LIST(uint32_t)
+PRIMITIVE_LIST(uint64_t)
+
+PRIMITIVE_LIST(int8_t)
+PRIMITIVE_LIST(int16_t)
+PRIMITIVE_LIST(int32_t)
+PRIMITIVE_LIST(int64_t)
+
+PRIMITIVE_LIST(float)
+PRIMITIVE_LIST(double)
+
+#undef PRIMITIVE_LIST
 
 class Reader {
  public:
@@ -221,12 +263,5 @@ class Builder {
 
   friend class MessageBuilder;
 };
-
-template<typename T>
-List<T>::List(const Reader& reader, int length)
-      : segment_(reader.segment()),
-        offset_(reader.offset()),
-        length_(length) { }
-
 
 #endif  // STRUCT_H_

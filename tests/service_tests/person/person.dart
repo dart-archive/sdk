@@ -41,6 +41,8 @@ class PersonCounterImpl extends PersonCounter {
     for (int i = 0; i < children.length; ++i) {
       children[i].age = 12 + (i * 2);
     }
+    List<int> name = result.initName(1);
+    name[0] = 11;
   }
 
   void createNode(int depth, NodeBuilder result) {

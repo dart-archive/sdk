@@ -95,13 +95,18 @@ int32_t PersonCounter::depth(NodeBuilder node) {
   return node.InvokeMethod(service_id_, kDepthId_);
 }
 
+List<uint8_t> PersonBuilder::initName(int length) {
+  Reader result = NewList(0, length, 1);
+  return List<uint8_t>(result.segment(), result.offset(), length);
+}
+
 List<PersonBuilder> PersonBuilder::initChildren(int length) {
-  Reader result = NewList(8, length, 16);
-  return List<PersonBuilder>(result, length);
+  Reader result = NewList(16, length, 24);
+  return List<PersonBuilder>(result.segment(), result.offset(), length);
 }
 
 PersonBuilder PersonBoxBuilder::initPerson() {
-  Builder result = NewStruct(0, 16);
+  Builder result = NewStruct(0, 24);
   return PersonBuilder(result);
 }
 

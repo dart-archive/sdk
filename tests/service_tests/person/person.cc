@@ -66,9 +66,12 @@ static void RunPersonTests() {
   ASSERT(stats2.getAverageAge() == 42);
   ASSERT(stats2.getSum() == 42);
   stats2.Delete();
-  Person generated = PersonCounter::createPerson(10);
 
+  Person generated = PersonCounter::createPerson(10);
   ASSERT(generated.getAge() == 42);
+  ASSERT(generated.getName().length() == 1);
+  ASSERT(generated.getName()[0] == 11);
+
   List<Person> children = generated.getChildren();
   ASSERT(children.length() == 10);
   for (int i = 0; i < children.length(); i++) {
@@ -94,6 +97,8 @@ static void RunPersonBoxTests() {
   PersonBoxBuilder box = builder.initRoot<PersonBoxBuilder>();
   PersonBuilder person = box.initPerson();
   person.setAge(87);
+  List<uint8_t> name = person.initName(1);
+  name[0] = 99;
 
   int age = PersonCounter::getBoxedAge(box);
   ASSERT(age == 87);

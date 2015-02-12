@@ -123,9 +123,6 @@ class Resolver extends ResolutionVisitor {
   void resolveType(Type node) {
     primitives.PrimitiveType primitiveType = primitives.lookup(node.identifier);
     if (primitiveType != null) {
-      if (node.isList) {
-        throw new UnsupportedError("Cannot deal with primitive lists yet");
-      }
       node.primitiveType = primitiveType;
     } else {
       String type = node.identifier;

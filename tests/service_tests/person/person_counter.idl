@@ -20,6 +20,7 @@ struct AgeStats {
 }
 
 struct Person {
+  List<uint8> name;
   int32 age;
   List<Person> children;
 }

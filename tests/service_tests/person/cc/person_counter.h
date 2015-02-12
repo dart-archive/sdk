@@ -60,24 +60,26 @@ class AgeStatsBuilder : public Builder {
 
 class Person : public Reader {
  public:
-  static const int kSize = 16;
+  static const int kSize = 24;
   Person(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
-  int32_t getAge() const { return *PointerTo<int32_t>(0); }
-  List<Person> getChildren() const { return ReadList<Person>(8); }
+  List<uint8_t> getName() const { return ReadList<uint8_t>(0); }
+  int32_t getAge() const { return *PointerTo<int32_t>(8); }
+  List<Person> getChildren() const { return ReadList<Person>(16); }
 };
 
 class PersonBuilder : public Builder {
  public:
-  static const int kSize = 16;
+  static const int kSize = 24;
 
   explicit PersonBuilder(const Builder& builder)
       : Builder(builder) { }
   PersonBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
-  void setAge(int32_t value) { *PointerTo<int32_t>(0) = value; }
+  List<uint8_t> initName(int length);
+  void setAge(int32_t value) { *PointerTo<int32_t>(8) = value; }
   List<PersonBuilder> initChildren(int length);
 };
 

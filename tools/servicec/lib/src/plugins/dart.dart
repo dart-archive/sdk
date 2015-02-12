@@ -13,7 +13,7 @@ import 'package:strings/strings.dart' as strings;
 import 'shared.dart';
 import '../emitter.dart';
 import '../struct_layout.dart';
-import '../primitives.dart';
+import '../primitives.dart' as primitives;
 
 const COPYRIGHT = """
 // Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
@@ -108,22 +108,49 @@ class _DartVisitor extends CodeGenerationVisitor {
 
     for (Type listType in neededListTypes) {
       String name = listType.identifier;
-      Struct element = listType.resolved;
-      StructLayout elementLayout = element.layout;
-      int elementSize = elementLayout.size;
+      if (listType.isPrimitive) {
+        int elementSize = primitives.size(listType.primitiveType);
+        String getter = '_segment.memory.${_GETTERS[name]}';
+        String setter = '_segment.memory.${_SETTERS[name]}';
+        String offset = '_offset + index * $elementSize';
 
-      writeln();
-      writeln('class _${name}List extends ListReader implements List<$name> {');
-      writeln('  $name operator[](int index) => '
-              'readListElement(new $name(), index, $elementSize);');
-      writeln('}');
+        writeln();
+        writeln('class _${name}List extends ListReader '
+                'implements List<$name> {');
+        write('  ');
+        writeType(listType);
+        writeln(' operator[](int index) => $getter($offset);');
+        writeln('}');
 
-      writeln();
-      writeln('class _${name}BuilderList extends ListBuilder '
-              'implements List<${name}Builder> {');
-      writeln('  ${name}Builder operator[](int index) => '
-              'readListElement(new ${name}Builder(), index, $elementSize);');
-      writeln('}');
+        writeln();
+        writeln('class _${name}BuilderList extends ListBuilder '
+                'implements List<$name> {');
+        write('  ');
+        writeType(listType);
+        writeln(' operator[](int index) => $getter($offset);');
+        write('  void operator[]=(int index, ');
+        writeType(listType);
+        writeln(' value) => $setter($offset, value);');
+        writeln('}');
+      } else {
+        Struct element = listType.resolved;
+        StructLayout elementLayout = element.layout;
+        int elementSize = elementLayout.size;
+
+        writeln();
+        writeln('class _${name}List extends ListReader '
+                'implements List<$name> {');
+        writeln('  $name operator[](int index) => '
+                'readListElement(new $name(), index, $elementSize);');
+        writeln('}');
+
+        writeln();
+        writeln('class _${name}BuilderList extends ListBuilder '
+                'implements List<${name}Builder> {');
+        writeln('  ${name}Builder operator[](int index) => '
+                'readListElement(new ${name}Builder(), index, $elementSize);');
+        writeln('}');
+      }
     }
   }
 
@@ -259,7 +286,7 @@ class _DartVisitor extends CodeGenerationVisitor {
 
         write('  ');
         writeType(slotType);
-        if (slotType.primitiveType == PrimitiveType.BOOL) {
+        if (slotType.primitiveType == primitives.PrimitiveType.BOOL) {
           writeln(' get $slotName => _segment.memory.$getter($offset) != 0;');
         } else {
           writeln(' get $slotName => _segment.memory.$getter($offset);');
@@ -302,11 +329,20 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeReturnType(slotType);
         writeln('> init$camel(int length) {');
         write(updateTag);
-        Struct element = slotType.resolved;
-        StructLayout elementLayout = element.layout;
-        int size = elementLayout.size;
+        int size = 0;
+        if (slotType.isPrimitive) {
+          size = primitives.size(slotType.primitiveType);
+        } else {
+          Struct element = slotType.resolved;
+          StructLayout elementLayout = element.layout;
+          size = elementLayout.size;
+        }
         write('    return NewList(new _');
-        writeReturnType(slotType);
+        if (slotType.isPrimitive) {
+          write('${slotType.identifier}Builder');
+        } else {
+          writeReturnType(slotType);
+        }
         writeln('List(), ${slot.offset}, length, $size);');
         writeln('  }');
       } else if (slotType.isPrimitive) {
@@ -316,7 +352,7 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln(' value) {');
         write(updateTag);
         String offset = '_offset + ${slot.offset}';
-        if (slotType.primitiveType == PrimitiveType.BOOL) {
+        if (slotType.primitiveType == primitives.PrimitiveType.BOOL) {
           writeln('    _segment.memory.$setter($offset, value ? 1 : 0);');
         } else {
           writeln('    _segment.memory.$setter($offset, value);');

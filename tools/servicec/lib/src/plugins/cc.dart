@@ -12,7 +12,7 @@ import 'package:path/path.dart' show basenameWithoutExtension, join, dirname;
 import 'shared.dart';
 
 import '../emitter.dart';
-import '../primitives.dart';
+import '../primitives.dart' as primitives;
 import '../struct_layout.dart';
 
 const COPYRIGHT = """
@@ -278,23 +278,24 @@ class _HeaderVisitor extends CcVisitor {
         writeln('  bool is$camel() const { return $tag == get$tagName(); }');
       }
 
-      if (slotType.isPrimitive) {
+      if (slotType.isList) {
+        write('  ');
+        write('List<');
+        writeReturnType(slotType);
+        write('> get$camel() const { ');
+        write('return ReadList<');
+        writeReturnType(slotType);
+        writeln('>(${slot.offset}); }');
+      } else if (slotType.isPrimitive) {
         write('  ');
         writeType(slotType);
         write(' get$camel() const { return *PointerTo<');
-        if (slotType.primitiveType == PrimitiveType.BOOL) {
+        if (slotType.primitiveType == primitives.PrimitiveType.BOOL) {
           writeln('uint8_t>(${slot.offset}) != 0; }');
         } else {
           writeType(slotType);
           writeln('>(${slot.offset}); }');
         }
-      } else if (slotType.isList) {
-        write('  ');
-        write('List<');
-        writeReturnType(slotType);
-        write('> get$camel() const { return ReadList<');
-        writeReturnType(slotType);
-        writeln('>(${slot.offset}); }');
       } else {
         write('  ');
         writeReturnType(slotType);
@@ -340,7 +341,7 @@ class _HeaderVisitor extends CcVisitor {
           write('set$tagName($tag); ');
         }
         write('*PointerTo<');
-        if (slotType.primitiveType == PrimitiveType.BOOL) {
+        if (slotType.primitiveType == primitives.PrimitiveType.BOOL) {
           writeln('uint8_t>(${slot.offset}) = value ? 1 : 0; }');
         } else {
           writeType(slotType);
@@ -429,12 +430,19 @@ class _ImplementationVisitor extends CcVisitor {
         write('List<');
         writeType(slotType);
         writeln('> $name::init$camel(int length) {');
-        Struct element = slot.slot.type.resolved;
-        StructLayout elementLayout = element.layout;
-        int size = elementLayout.size;
         write(updateTag);
+        int size = 0;
+        if (slotType.isPrimitive) {
+          size = primitives.size(slotType.primitiveType);
+        } else {
+          Struct element = slot.slot.type.resolved;
+          StructLayout elementLayout = element.layout;
+          size = elementLayout.size;
+        }
         writeln('  Reader result = NewList(${slot.offset}, length, $size);');
-        writeln('  return List<$name>(result, length);');
+        write('  return List<');
+        writeType(slotType);
+        writeln('>(result.segment(), result.offset(), length);');
         writeln('}');
       } else if (!slotType.isPrimitive) {
         writeln();
