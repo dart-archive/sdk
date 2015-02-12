@@ -4,6 +4,18 @@
 
 library fletchc.fletch_context;
 
+import 'package:compiler/src/tree/tree.dart' show
+    Node;
+
+import 'package:compiler/src/resolution/resolution.dart' show
+    TreeElements;
+
+import 'package:compiler/src/constants/expressions.dart' show
+    ConstantExpression;
+
+import 'package:compiler/src/dart2jslib.dart' show
+    DartConstantCompiler;
+
 import 'fletch_compiler.dart' show
     FletchCompiler;
 
@@ -33,4 +45,16 @@ class FletchContext {
   FletchContext(this.compiler);
 
   FletchBackend get backend => compiler.backend;
+
+  /// If [isConst] is true, a compile-time error is reported.
+  ConstantExpression compileConstant(
+      Node node,
+      TreeElements elements,
+      {bool isConst}) {
+    assert(isConst != null);
+    DartConstantCompiler constantCompiler =
+        backend.constantCompilerTask.constantCompiler;
+    return constantCompiler.compileNodeWithDefinitions(
+        node, elements, isConst: isConst);
+  }
 }

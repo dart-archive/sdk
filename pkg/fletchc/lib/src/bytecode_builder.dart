@@ -7,6 +7,15 @@ library fletchc.bytecode_builder;
 import 'package:semantic_visitor/semantic_visitor.dart' show
     SemanticVisitor;
 
+import 'package:compiler/src/constants/expressions.dart' show
+    ConstantExpression;
+
+import 'package:compiler/src/constants/values.dart' show
+    ConstantValue;
+
+import 'package:compiler/src/dart2jslib.dart' show
+    Registry;
+
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
@@ -18,18 +27,54 @@ import 'fletch_context.dart';
 
 import '../bytecodes.dart';
 
+import 'fletch_function_constant.dart' show
+    FletchFunctionConstant;
+
 class BytecodeBuilder extends SemanticVisitor {
   final FletchContext context;
 
+  final Registry registry;
+
   final List<Bytecode> bytecodes = <Bytecode>[];
 
-  final Map<dynamic, int> constants = <dynamic, int>{};
+  final Map<ConstantValue, int> constants = <ConstantValue, int>{};
 
-  BytecodeBuilder(this.context, element)
-      : super(element.resolvedAst.elements);
+  final Map<Element, ConstantValue> functionConstantValues =
+      <Element, ConstantValue>{};
 
-  int allocateConstant(constant) {
+  BytecodeBuilder(this.context, TreeElements elements, this.registry)
+      : super(elements);
+
+  ConstantExpression compileConstant(Node node, {bool isConst}) {
+    return context.compileConstant(node, elements, isConst: isConst);
+  }
+
+  int allocateConstant(ConstantValue constant) {
     return constants.putIfAbsent(constant, () => constants.length);
+  }
+
+  int allocateConstantFromFunction(FunctionElement function) {
+    FletchFunctionConstant constant =
+        functionConstantValues.putIfAbsent(
+            function, () => new FletchFunctionConstant(function));
+    return allocateConstant(constant);
+  }
+
+  int allocateConstantFromNode(Node node) {
+    ConstantExpression expression = compileConstant(node, isConst: false);
+    return allocateConstant(expression.value);
+  }
+
+  void loadConst(int id) {
+    bytecodes.add(new LoadConstUnfold(id));
+  }
+
+  void invokeStatic(int id) {
+    bytecodes.add(new InvokeStaticUnfold(id));
+  }
+
+  void pop() {
+    bytecodes.add(new Pop());
   }
 
   void visitStaticMethodInvocation(
@@ -38,18 +83,16 @@ class BytecodeBuilder extends SemanticVisitor {
       NodeList arguments,
       Selector selector) {
     arguments.accept(this);
-    int id = allocateConstant(element);
-    bytecodes.add(new InvokeStaticUnfold(id));
+    registry.registerStaticInvocation(element);
+    invokeStatic(allocateConstantFromFunction(element));
+  }
+
+  void visitLiteral(Literal node) {
+    loadConst(allocateConstantFromNode(node));
   }
 
   void visitLiteralString(LiteralString node) {
-    int id = allocateConstant(node.dartString.slowToString());
-    bytecodes.add(new LoadConstUnfold(id));
-  }
-
-  void visitLiteralInt(LiteralInt node) {
-    int id = allocateConstant(node.value);
-    bytecodes.add(new LoadConstUnfold(id));
+    loadConst(allocateConstantFromNode(node));
   }
 
   void visitFunctionExpression(FunctionExpression node) {
@@ -66,7 +109,7 @@ class BytecodeBuilder extends SemanticVisitor {
 
   void visitExpressionStatement(ExpressionStatement node) {
     node.visitChildren(this);
-    bytecodes.add(const Pop());
+    pop();
   }
 
   void visitParameterAccess(

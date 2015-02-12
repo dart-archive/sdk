@@ -16,18 +16,30 @@ import 'package:compiler/src/dart2jslib.dart' show
     ResolutionEnqueuer;
 
 import 'package:compiler/src/elements/elements.dart' show
+    Element,
     ClassElement,
     FunctionElement;
 
-import '../bytecodes.dart' show Bytecode;
+import 'package:compiler/src/dart_backend/dart_backend.dart' show
+    DartConstantTask;
+
+import 'package:compiler/src/constants/values.dart' show
+    ConstantValue;
+
+import '../bytecodes.dart' show
+    Bytecode,
+    InvokeNative;
 
 import 'fletch_context.dart';
 
 class FletchBackend extends Backend {
   final FletchContext context;
 
+  final DartConstantTask constantCompilerTask;
+
   FletchBackend(FletchCompiler compiler)
       : this.context = compiler.context,
+        this.constantCompilerTask = new DartConstantTask(compiler),
         super(compiler) {
     context.resolutionCallbacks = new FletchResolutionCallbacks(context);
   }
@@ -39,24 +51,14 @@ class FletchBackend extends Backend {
   List<CompilerTask> get tasks => <CompilerTask>[];
 
   ConstantSystem get constantSystem {
-    throw new UnsupportedError("get constantSystem");
+    return constantCompilerTask.constantCompiler.constantSystem;
   }
 
-  BackendConstantEnvironment get constants {
-    throw new UnsupportedError("get constants");
-  }
+  BackendConstantEnvironment get constants => constantCompilerTask;
 
-  ConstantCompilerTask get constantCompilerTask {
-    throw new UnsupportedError("get constantCompilerTask");
-  }
+  bool classNeedsRti(ClassElement cls) => false;
 
-  bool classNeedsRti(ClassElement cls) {
-    throw new UnsupportedError("classNeedsRti");
-  }
-
-  bool methodNeedsRti(FunctionElement function) {
-    throw new UnsupportedError("methodNeedsRti");
-  }
+  bool methodNeedsRti(FunctionElement function) => false;
 
   void enqueueHelpers(
       ResolutionEnqueuer world,
@@ -64,21 +66,24 @@ class FletchBackend extends Backend {
   }
 
   void codegen(CodegenWorkItem work) {
-  }
-
-  bool get canHandleCompilationFailed => true;
-
-  int assembleProgram() {
     compiler.reportHint(
-        compiler.mainFunction,
+        work.element,
         MessageKind.GENERIC,
         {'text': 'Compiling ${compiler.mainFunction.name}'});
 
+    if (isNative(work.element)) {
+      return codegenNative(work);
+    }
+
     BytecodeBuilder builder =
-        new BytecodeBuilder(context, compiler.mainFunction);
-    compiler.mainFunction.node.accept(builder);
+        new BytecodeBuilder(context, work.resolutionTree, work.registry);
+    work.element.node.accept(builder);
+
     print("Constants");
     builder.constants.forEach((constant, int index) {
+      if (constant is ConstantValue) {
+        constant = constant.toStructuredString();
+      }
       print("  #$index: $constant");
     });
 
@@ -89,4 +94,34 @@ class FletchBackend extends Backend {
       offset += bytecode.size;
     }
   }
+
+  void codegenNative(CodegenWorkItem work) {
+    // TODO(ahe): A native function can have a body which is considered an
+    // exception handler. That body should also be compiled.
+    Bytecode bytecode = natives[work.element.name];
+    print("  0: $bytecode");
+  }
+
+  bool isNative(Element element) {
+    if (element is FunctionElement) {
+      if (element.hasNode) {
+        return
+            identical('native', element.node.body.getBeginToken().stringValue);
+      }
+    }
+    return false;
+  }
+
+  bool get canHandleCompilationFailed => true;
+
+  int assembleProgram() {
+    // TODO(ahe): This would be a good place to send code to the VM.
+    return 0;
+  }
 }
+
+const Map<String, InvokeNative> natives = const <String, InvokeNative>{
+  "_printString": const InvokeNative(1, 0),
+  "_halt": const InvokeNative(1, 1),
+};
+
