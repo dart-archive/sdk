@@ -45,7 +45,7 @@ Entrypoints:
 ''');
   } else if (args.length == 3) {
     print ('''
-Entrypoint (main, main.dart - line 34):
+Entrypoint  (main, main.dart - line 34):
 
   library app;
 
@@ -69,7 +69,31 @@ void _showClasses(List<String> args) {
 }
 
 void _showDiffs(List<String> args) {
-  print("TODO");
+  _log("Showing diffs");
+  if (args.length == 2) {
+    print ('''
+Diffs:
+  1.   main.dart/main                         (Changed 3 lines)
+  2.   lib/view/display.dart/colorProp._red   (Changed 1 line)
+  3.   lib/view/display.dart/oldStuff         (Deleted 32 lines)
+''');
+  } else if (args.length == 3) {
+    print ('''
+Diff        (colorProp._red, lib/view/display.dart - line 23):
+
+1c1
+< double _red = 0.233;
+---
+> double _red = 0.8;
+
+  Changes made: 12 Feb 2015 14:24
+  To apply type "fletch apply colorProp._red" or
+                "fletch apply *"
+''');
+  } else {
+    print(help.SHOW_HELP_TEXT);
+    io.exit(1);
+  }
 }
 
 void _handleUnknownThing(List<String> args) {

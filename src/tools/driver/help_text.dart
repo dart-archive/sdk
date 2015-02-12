@@ -30,8 +30,9 @@ Shows information about things in the project. If no name is given all the
 things are listed, otherwise detail about the specific thing is listed.
 
 Supported things:
-  entrypoint[s]
   class[es]
+  diff[s]
+  entrypoint[s]
   method[s]
   poi
 ''';
