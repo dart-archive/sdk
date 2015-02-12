@@ -68,11 +68,12 @@ class ServiceGrammarDefinition extends GrammarDefinition {
   type() => ref(listType)
       | ref(simpleType);
 
-  simpleType() => ref(identifier);
+  simpleType() => ref(identifier)
+      & ref(token, '*').optional(null).map((e) => e != null);
 
   listType() => ref(LIST)
       & ref(token, '<')
-      & ref(identifier)
+      & ref(simpleType)  // TODO(kasperl): Make this a general type instead.
       & ref(token, '>');
 
   identifier() => ref(IDENTIFIER).trim(ref(HIDDEN));

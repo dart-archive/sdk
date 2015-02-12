@@ -13,7 +13,9 @@ import 'struct_layout.dart';
 void resolve(Unit unit) {
   Definer definer = new Definer();
   definer.visit(unit);
-  new Resolver(definer.definitions).visit(unit);
+  Resolver resolver = new Resolver(definer.definitions);
+  resolver.visit(unit);
+  resolver.resolveAllStructs();
 }
 
 class Definer extends ResolutionVisitor {
@@ -39,7 +41,26 @@ class Definer extends ResolutionVisitor {
 
 class Resolver extends ResolutionVisitor {
   final Map<String, Node> definitions;
+  final Map<Struct, Set<Struct>> dependencyMap = <Struct, Set<Struct>>{};
   Resolver(this.definitions);
+
+  void resolveAllStructs() {
+    for (Struct struct in dependencyMap.keys) {
+      resolveStruct(struct, new Set<Struct>());
+    }
+  }
+
+  void resolveStruct(Struct struct, Set<Struct> visited) {
+    if (visited.contains(struct)) {
+      if (struct.layout != null) return;
+      throw new UnsupportedError("Cyclic struct graph at ${struct.name}.");
+    }
+
+    visited.add(struct);
+    Set<Struct> dependencies = dependencyMap[struct];
+    dependencies.forEach((Struct each) { resolveStruct(each, visited); });
+    struct.layout = new StructLayout(struct);
+  }
 
   visitMethod(Method node) {
     super.visitMethod(node);
@@ -48,9 +69,16 @@ class Resolver extends ResolutionVisitor {
       node.outputKind = OutputKind.PRIMITIVE;
     } else {
       node.outputKind = OutputKind.STRUCT;
+      if (!node.returnType.isPointer) {
+        throw new UnsupportedError("Cannot return structs by value.");
+      }
     }
 
     List<Formal> arguments = node.arguments;
+    if (arguments.any((e) => !e.type.isPrimitive && !e.type.isPointer)) {
+      throw new UnsupportedError("Cannot pass structs by value as arguments.");
+    }
+
     if (arguments.length == 1) {
       node.inputKind = arguments[0].type.isPrimitive
           ? InputKind.PRIMITIVES
@@ -69,6 +97,18 @@ class Resolver extends ResolutionVisitor {
   }
 
   visitStruct(Struct node) {
+    super.visitStruct(node);
+
+    Iterable<Struct> computeDependencies(Iterable<Formal> slots) {
+      return slots
+          .where((Formal slot) => !slot.type.isPointer)
+          .where((Formal slot) => !slot.type.isPrimitive && !slot.type.isList)
+          .map((Formal slot) => definitions[slot.type.identifier]);
+    }
+
+    Set<Struct> dependencies = dependencyMap[node] =
+        computeDependencies(node.slots).toSet();
+
     if (node.unions.isNotEmpty) {
       if (node.unions.length != 1) {
         throw new UnsupportedError("Structs can have at most one union");
@@ -76,16 +116,15 @@ class Resolver extends ResolutionVisitor {
       Union union = node.unions.single;
       union.struct = node;
       node.slots.add(union.tag);
+      dependencies.addAll(computeDependencies(union.slots));
     }
-    super.visitStruct(node);
-    node.layout = new StructLayout(node);
   }
 
   void resolveType(Type node) {
     primitives.PrimitiveType primitiveType = primitives.lookup(node.identifier);
     if (primitiveType != null) {
       if (node.isList) {
-        throw new UnsupportedError("Cannot deal with primtive lists yet");
+        throw new UnsupportedError("Cannot deal with primitive lists yet");
       }
       node.primitiveType = primitiveType;
     } else {
@@ -94,6 +133,20 @@ class Resolver extends ResolutionVisitor {
         node.resolved = definitions[type];
       } else {
         throw new UnsupportedError("Cannot deal with type $type");
+      }
+    }
+  }
+
+  visitFormal(Formal node) {
+    super.visitFormal(node);
+    if (node.type.isList) {
+      ListType listType = node.type;
+      if (listType.elementType.isPointer) {
+        throw new UnsupportedError("Cannot handle lists of pointers");
+      }
+    } else if (node.type.isPointer) {
+      if (node.type.isPrimitive) {
+        throw new UnsupportedError("Cannot handle pointers to primitive types");
       }
     }
   }
@@ -117,6 +170,7 @@ class ResolutionVisitor extends Visitor {
   }
 
   visitUnion(Union node) {
+    visit(node.tag);
     node.slots.forEach(visit);
   }
 

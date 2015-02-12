@@ -82,8 +82,8 @@ abstract class PersonCounter {
         _postResult.icall$1(request);
         break;
       case _CREATE_NODE_METHOD_ID:
-        MessageBuilder mb = new MessageBuilder(24);
-        NodeBuilder builder = mb.initRoot(new NodeBuilder(), 16);
+        MessageBuilder mb = new MessageBuilder(32);
+        NodeBuilder builder = mb.initRoot(new NodeBuilder(), 24);
         _impl.createNode(request.getInt32(32), builder);
         var result = getResultMessage(builder);
         request.setInt64(32, result);
@@ -160,7 +160,9 @@ class Node extends Reader {
   bool get isCond => 2 == this.tag;
   bool get cond => _segment.memory.getUint8(_offset + 8) != 0;
   bool get isCons => 3 == this.tag;
-  Cons get cons => readStruct(new Cons(), 8);
+  Cons get cons => new Cons()
+      .._segment = _segment
+      .._offset = _offset + 8;
 }
 
 class NodeBuilder extends Builder {
@@ -177,7 +179,9 @@ class NodeBuilder extends Builder {
   }
   ConsBuilder initCons() {
     tag = 3;
-    return NewStruct(new ConsBuilder(), 8, 16);
+    return new ConsBuilder()
+        .._segment = _segment
+        .._offset = _offset + 8;
   }
 }
 
@@ -188,10 +192,10 @@ class Cons extends Reader {
 
 class ConsBuilder extends Builder {
   NodeBuilder initFst() {
-    return NewStruct(new NodeBuilder(), 0, 16);
+    return NewStruct(new NodeBuilder(), 0, 24);
   }
   NodeBuilder initSnd() {
-    return NewStruct(new NodeBuilder(), 8, 16);
+    return NewStruct(new NodeBuilder(), 8, 24);
   }
 }
 

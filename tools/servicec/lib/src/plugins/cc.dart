@@ -444,10 +444,16 @@ class _ImplementationVisitor extends CcVisitor {
         StructLayout elementLayout = element.layout;
         int size = elementLayout.size;
         write(updateTag);
-        writeln('  Builder result = NewStruct(${slot.offset}, $size);');
-        write('  return ');
-        writeType(slotType);
-        writeln('(result);');
+        if (!slotType.isPointer) {
+          write('  return ');
+          writeType(slotType);
+          writeln('(segment(), offset() + ${slot.offset});');
+        } else {
+          writeln('  Builder result = NewStruct(${slot.offset}, $size);');
+          write('  return ');
+          writeType(slotType);
+          writeln('(result);');
+        }
         writeln('}');
       }
     }
@@ -465,9 +471,15 @@ class _ImplementationVisitor extends CcVisitor {
       if (!slotType.isPrimitive && !slotType.isList) {
         writeln();
         writeReturnType(slotType);
-        write(' $name::get$camel() const { return ReadStruct<');
-        writeReturnType(slotType);
-        writeln('>(${slot.offset}); }');
+        write(' $name::get$camel() const { return ');
+        if (!slotType.isPointer) {
+          writeReturnType(slotType);
+          writeln('(segment(), offset() + ${slot.offset}); }');
+        } else {
+          write('ReadStruct<');
+          writeReturnType(slotType);
+          writeln('>(${slot.offset}); }');
+        }
       }
     }
   }

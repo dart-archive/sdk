@@ -10,6 +10,8 @@ import 'primitives.dart' as primitives;
 import 'dart:collection';
 import 'dart:core' hide Type;
 
+const int POINTER_SIZE = 8;
+
 int _roundUp(int n, int alignment) {
   return (n + alignment - 1) & ~(alignment - 1);
 }
@@ -28,7 +30,7 @@ class StructLayout {
     }
 
     StructLayout result = new StructLayout._(
-        builder.slots, _roundUp(builder.used, 8));
+        builder.slots, _roundUp(builder.used, POINTER_SIZE));
     return result;
   }
 
@@ -36,7 +38,7 @@ class StructLayout {
     _StructBuilder builder = new _StructBuilder();
     arguments.forEach(builder.addSlot);
     StructLayout result = new StructLayout._(
-        builder.slots, _roundUp(builder.used, 8));
+        builder.slots, _roundUp(builder.used, POINTER_SIZE));
     return result;
   }
 
@@ -80,13 +82,14 @@ class _StructBuilder {
       int size = computeSize(type);
       if (size > unionSize) unionSize = size;
       int alignment = computeAlignment(type);
-      if (alignment > unionAlignment) unionAlignment = size;
+      if (alignment > unionAlignment) unionAlignment = alignment;
     });
 
     int tag = 1;
     used = _roundUp(used, unionAlignment);
     unionSlots.forEach((Formal slot) {
-      _defineSlot(slot, computeSize(slot.type), union, tag++);
+      Type type = slot.type;
+      _defineSlot(slot, computeSize(type), union, tag++);
     });
     used += unionSize;
   }
@@ -100,10 +103,17 @@ class _StructBuilder {
   }
 
   int computeSize(Type type) {
-    return (type.isPrimitive) ? primitives.size(type.primitiveType) : 8;
+    if (type.isPrimitive) return primitives.size(type.primitiveType);
+    if (type.isPointer || type.isList) return POINTER_SIZE;
+
+    Struct struct = type.resolved;
+    StructLayout layout = struct.layout;
+    return _roundUp(layout.size, POINTER_SIZE);
   }
 
   int computeAlignment(Type type) {
-    return computeSize(type);
+    return (type.isPrimitive)
+        ? primitives.size(type.primitiveType)
+        : POINTER_SIZE;
   }
 }

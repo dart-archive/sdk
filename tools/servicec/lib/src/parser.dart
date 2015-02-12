@@ -66,7 +66,7 @@ class Struct extends Node {
 class Union extends Node {
   final List<Formal> slots;
   final Formal tag;
-  Union(this.slots) : tag = new Formal(new Type("uint16", false), "tag");
+  Union(this.slots) : tag = new Formal(new SimpleType("uint16", false), "tag");
 
   // Set by the resolver.
   Struct struct;
@@ -78,6 +78,7 @@ class Formal extends Node {
   final Type type;
   final String name;
   Formal(this.type, this.name);
+
   accept(Visitor visitor) => visitor.visitFormal(this);
 }
 
@@ -96,16 +97,35 @@ class Method extends Node {
   accept(Visitor visitor) => visitor.visitMethod(this);
 }
 
-class Type {
-  final String identifier;
-  final bool isList;
-  Type(this.identifier, this.isList);
+abstract class Type {
+  bool get isPointer;
+  bool get isList;
+  bool get isPrimitive => primitiveType != null;
+
+  // TODO(kasperl): Get rid of this.
+  String get identifier;
 
   // Set by the resolver.
   Node resolved;
   primitives.PrimitiveType primitiveType;
+}
 
-  bool get isPrimitive => primitiveType != null;
+class SimpleType extends Type {
+  final String identifier;
+  final bool isPointer;
+  SimpleType(this.identifier, this.isPointer);
+
+  bool get isList => false;
+}
+
+class ListType extends Type {
+  final SimpleType elementType;
+  ListType(this.elementType);
+
+  bool get isPointer => false;
+  bool get isList => true;
+
+  String get identifier => elementType.identifier;
 }
 
 // --------------------------------------------------------------
@@ -123,9 +143,9 @@ class _ServiceParserDefinition extends ServiceGrammarDefinition {
   method() => super.method()
       .map((each) => new Method(each[1], each[3], each[0]));
   simpleType() => super.simpleType()
-      .map((each) => new Type(each, false));
+      .map((each) => new SimpleType(each[0], each[1]));
   listType() => super.listType()
-      .map((each) => new Type(each[2], true));
+      .map((each) => new ListType(each[2]));
   union() => super.union()
       .map((each) => new Union(each[2]));
   slot() => super.slot()

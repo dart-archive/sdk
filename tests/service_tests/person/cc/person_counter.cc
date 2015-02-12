@@ -109,19 +109,18 @@ Person PersonBox::getPerson() const { return ReadStruct<Person>(0); }
 
 ConsBuilder NodeBuilder::initCons() {
   setTag(3);
-  Builder result = NewStruct(8, 16);
-  return ConsBuilder(result);
+  return ConsBuilder(segment(), offset() + 8);
 }
 
-Cons Node::getCons() const { return ReadStruct<Cons>(8); }
+Cons Node::getCons() const { return Cons(segment(), offset() + 8); }
 
 NodeBuilder ConsBuilder::initFst() {
-  Builder result = NewStruct(0, 16);
+  Builder result = NewStruct(0, 24);
   return NodeBuilder(result);
 }
 
 NodeBuilder ConsBuilder::initSnd() {
-  Builder result = NewStruct(8, 16);
+  Builder result = NewStruct(8, 24);
   return NodeBuilder(result);
 }
 

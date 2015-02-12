@@ -268,9 +268,17 @@ class _DartVisitor extends CodeGenerationVisitor {
         write('  ');
         writeType(slotType);
         write(' get $slotName => ');
-        write('readStruct(new ');
-        writeType(slotType);
-        writeln('(), ${slot.offset});');
+        if (!slotType.isPointer) {
+          write('new ');
+          writeType(slotType);
+          writeln('()');
+          writeln('      .._segment = _segment');
+          writeln('      .._offset = _offset + ${slot.offset};');
+        } else {
+          write('readStruct(new ');
+          writeType(slotType);
+          writeln('(), ${slot.offset});');
+        }
       }
     }
     writeln('}');
@@ -319,12 +327,20 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeReturnType(slotType);
         writeln(' init$camel() {');
         write(updateTag);
-        Struct element = slotType.resolved;
-        StructLayout elementLayout = element.layout;
-        int size = elementLayout.size;
-        write('    return NewStruct(new ');
-        writeReturnType(slotType);
-        writeln('(), ${slot.offset}, $size);');
+        if (!slotType.isPointer) {
+          write('    return new ');
+          writeReturnType(slotType);
+          writeln('()');
+          writeln('        .._segment = _segment');
+          writeln('        .._offset = _offset + ${slot.offset};');
+        } else {
+          Struct element = slotType.resolved;
+          StructLayout elementLayout = element.layout;
+          int size = elementLayout.size;
+          write('    return NewStruct(new ');
+          writeReturnType(slotType);
+          writeln('(), ${slot.offset}, $size);');
+        }
         writeln('  }');
       }
     }

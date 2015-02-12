@@ -104,7 +104,7 @@ class PersonBoxBuilder : public Builder {
 
 class Node : public Reader {
  public:
-  static const int kSize = 16;
+  static const int kSize = 24;
   Node(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
@@ -119,7 +119,7 @@ class Node : public Reader {
 
 class NodeBuilder : public Builder {
  public:
-  static const int kSize = 16;
+  static const int kSize = 24;
 
   explicit NodeBuilder(const Builder& builder)
       : Builder(builder) { }
