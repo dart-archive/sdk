@@ -5,6 +5,7 @@
 import 'dart:io';
 import 'help_text.dart';
 import 'start.dart' as startImpl;
+import 'show.dart' as showImpl;
 
 main(args) {
   if (args.length == 0) {
@@ -62,7 +63,7 @@ void init(args) {
 }
 
 void show(args) {
-  print("SHOW COMMAND IMPL");
+  showImpl.show(args);
 }
 
 void start(args) {
