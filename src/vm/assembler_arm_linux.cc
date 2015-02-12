@@ -10,7 +10,7 @@
 namespace fletch {
 
 void Assembler::Bind(const char* name) {
-  printf("\n\t.text\n\t.align 16,0x90\n\t.global %s\n%s:\n", name, name);
+  UNIMPLEMENTED();
 }
 
 }  // namespace fletch
