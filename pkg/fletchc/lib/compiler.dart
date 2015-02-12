@@ -6,6 +6,7 @@ library fletchc.compiler;
 
 import 'dart:io' show
     File,
+    Link,
     Platform;
 
 import 'package:compiler/compiler.dart' show
@@ -162,7 +163,7 @@ Uri _computedValidatedUri(
 }
 
 Uri _guessLibraryRoot() {
-  Uri guess = new Uri.file(Platform.executable).resolve('../');
+  Uri guess = _executable.resolve('../');
   if (_looksLikeLibraryRoot(guess)) {
     return _resolveSymbolicLinks(guess);
   }
@@ -171,4 +172,13 @@ Uri _guessLibraryRoot() {
     return _resolveSymbolicLinks(guess);
   }
   return null;
+}
+
+Uri get _executable {
+  // TODO(ajohnsen): This is a workaround for #16994. Clean up this code once
+  // the bug is fixed.
+  if (Platform.isLinux) {
+    return new Uri.file(new Link('/proc/self/exe').targetSync());
+  }
+  new Uri.file(Platform.executable);
 }
