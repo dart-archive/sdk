@@ -31,6 +31,7 @@ import '../bytecodes.dart' show
     InvokeNative;
 
 import 'fletch_context.dart';
+import 'function_compiler.dart';
 
 class FletchBackend extends Backend {
   final FletchContext context;
@@ -69,18 +70,18 @@ class FletchBackend extends Backend {
     compiler.reportHint(
         work.element,
         MessageKind.GENERIC,
-        {'text': 'Compiling ${compiler.mainFunction.name}'});
+        {'text': 'Compiling ${work.element.name}'});
 
     if (isNative(work.element)) {
       return codegenNative(work);
     }
 
-    BytecodeBuilder builder =
-        new BytecodeBuilder(context, work.resolutionTree, work.registry);
-    work.element.node.accept(builder);
+    FunctionCompiler functionCompiler =
+        new FunctionCompiler(context, work.resolutionTree, work.registry);
+    functionCompiler.compileFunction(work.element.node);
 
     print("Constants");
-    builder.constants.forEach((constant, int index) {
+    functionCompiler.constants.forEach((constant, int index) {
       if (constant is ConstantValue) {
         constant = constant.toStructuredString();
       }
@@ -89,7 +90,7 @@ class FletchBackend extends Backend {
 
     print("Bytecodes:");
     int offset = 0;
-    for (Bytecode bytecode in builder.bytecodes) {
+    for (Bytecode bytecode in functionCompiler.builder.bytecodes) {
       print("  $offset: $bytecode");
       offset += bytecode.size;
     }
