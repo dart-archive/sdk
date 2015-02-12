@@ -249,7 +249,6 @@ splay_tree_from_iterable_test: Fail
 splay_tree_from_iterables_test: Fail
 splay_tree_test: Fail
 stopwatch2_test: Fail
-stopwatch_test: Fail
 string_buffer_test: Fail
 string_case_test/01: Fail
 string_case_test/02: Fail

@@ -273,7 +273,7 @@ class Stopwatch {
   bool get isRunning => _start != null && _stop == null;
 
   Duration get elapsed {
-    throw new UnimplementedError("Stopwatch.elapsed");
+    return new Duration(microseconds: elapsedMicroseconds);
   }
 
   int get elapsedMicroseconds => (elapsedTicks * 1000000) ~/ frequency;
@@ -304,7 +304,15 @@ class Stopwatch {
   }
 
   void reset() {
-    throw new UnimplementedError("Stopwatch.reset");
+    if (_start == null) return;
+    // If [_start] is not null, then the stopwatch had already been started. It
+    // may running right now.
+    _start = _now();
+    if (_stop != null) {
+      // The watch is not running. So simply set the [_stop] to [_start] thus
+      // having an elapsed time of 0.
+      _stop = _start;
+    }
   }
 
   static final int _cachedFrequency = _frequency();
