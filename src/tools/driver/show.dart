@@ -65,7 +65,38 @@ Entrypoint  (main, main.dart - line 34):
 }
 
 void _showClasses(List<String> args) {
-  print("TODO");
+  _log("Showing classes");
+  if (args.length == 2) {
+    print('''
+Classes (showing 4/4):
+  1.   ProgramImpl          (main.dart)
+  2.   ColorProp            (lib/view/display.dart)
+  3.   Display              (lib/view/display.dart)
+  4.   OldStuff             (lib/view/display.dart)
+''');
+  } else if (args.length == 3) {
+    print('''
+Classes containing 'color':
+  ColorProp                 (lib/view/display.dart, line 53)
+
+Constructors:
+  ColorProp(double red, double green, double blue)
+  ColorProp.black()
+  ColorProp.white()
+  ColorProp.fromHSV(double h, double s, double v)
+
+Methods:
+  HSVColor toHSV()
+
+Properties:
+  double red
+  double green
+  double blue
+''');
+  } else {
+    print(help.SHOW_HELP_TEXT);
+    io.exit(1);
+  }
 }
 
 void _showDiffs(List<String> args) {
