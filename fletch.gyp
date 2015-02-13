@@ -51,6 +51,7 @@
     {
       'target_name': 'natives_json',
       'type': 'none',
+      'toolsets': ['host'],
       'dependencies': [
         'src/shared/shared.gyp:natives_json',
       ],
