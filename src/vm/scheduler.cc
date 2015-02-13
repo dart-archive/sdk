@@ -241,11 +241,8 @@ void Scheduler::EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
 
 void Scheduler::PushIdleThread(ThreadState* thread_state) {
   // Add thread_state to idle_threads_, if it is not already in it.
+  if (thread_state->next_idle_thread() != NULL) return;
   ThreadState* idle_threads = idle_threads_;
-  if (idle_threads == thread_state ||
-      thread_state->next_idle_thread() != NULL) {
-    return;
-  }
   while (true) {
     thread_state->set_next_idle_thread(idle_threads);
     if (idle_threads_.compare_exchange_weak(idle_threads, thread_state)) {
@@ -258,7 +255,9 @@ ThreadState* Scheduler::PopIdleThread() {
   ThreadState* idle_threads = idle_threads_;
   while (idle_threads != kEmptyThreadState) {
     ThreadState* next = idle_threads->next_idle_thread();
-    if (idle_threads_.compare_exchange_weak(idle_threads, next)) {
+    if (next == NULL) {
+      idle_threads = idle_threads_;
+    } else if (idle_threads_.compare_exchange_weak(idle_threads, next)) {
       idle_threads->set_next_idle_thread(NULL);
       return idle_threads;
     }
