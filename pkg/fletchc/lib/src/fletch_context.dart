@@ -37,10 +37,18 @@ export 'fletch_resolution_callbacks.dart' show
 export 'bytecode_builder.dart' show
     BytecodeBuilder;
 
+import 'fletch_native_descriptor.dart' show
+    FletchNativeDescriptor;
+
+export 'fletch_native_descriptor.dart' show
+    FletchNativeDescriptor;
+
 class FletchContext {
   final FletchCompiler compiler;
 
   FletchResolutionCallbacks resolutionCallbacks;
+
+  Map<String, FletchNativeDescriptor> nativeDescriptors;
 
   FletchContext(this.compiler);
 

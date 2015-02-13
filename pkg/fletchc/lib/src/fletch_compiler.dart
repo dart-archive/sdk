@@ -24,6 +24,8 @@ const EXTRA_DART2JS_OPTIONS = const <String>[
 ];
 
 class FletchCompiler extends FletchCompilerHack {
+  final Uri fletchVm;
+
   FletchContext internalContext;
 
   FletchCompiler(
@@ -33,7 +35,8 @@ class FletchCompiler extends FletchCompilerHack {
       Uri libraryRoot,
       Uri packageRoot,
       List<String> options,
-      Map<String, dynamic> environment)
+      Map<String, dynamic> environment,
+      this.fletchVm)
       : super(
           provider, outputProvider, handler, libraryRoot, packageRoot,
           EXTRA_DART2JS_OPTIONS.toList()..addAll(options), environment);

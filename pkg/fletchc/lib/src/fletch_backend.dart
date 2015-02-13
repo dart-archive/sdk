@@ -97,10 +97,18 @@ class FletchBackend extends Backend {
   }
 
   void codegenNative(CodegenWorkItem work) {
+    String name = work.element.name;
+    FletchNativeDescriptor descriptor = context.nativeDescriptors[name];
+    if (descriptor == null) {
+      throw "Unsupported native function: $name";
+    }
+    int arity = work.element.functionSignature.parameterCount;
+
+    Bytecode bytecode = new InvokeNative(arity, descriptor.index);
+    print("  0: $bytecode // $descriptor");
+
     // TODO(ahe): A native function can have a body which is considered an
     // exception handler. That body should also be compiled.
-    Bytecode bytecode = natives[work.element.name];
-    print("  0: $bytecode");
   }
 
   bool isNative(Element element) {
@@ -120,9 +128,3 @@ class FletchBackend extends Backend {
     return 0;
   }
 }
-
-const Map<String, InvokeNative> natives = const <String, InvokeNative>{
-  "_printString": const InvokeNative(1, 0),
-  "_halt": const InvokeNative(1, 1),
-};
-

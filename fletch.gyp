@@ -49,6 +49,13 @@
       ],
     },
     {
+      'target_name': 'natives_json',
+      'type': 'none',
+      'dependencies': [
+        'src/shared/shared.gyp:natives_json',
+      ],
+    },
+    {
       'target_name': 'run_compiler_tests',
       # Note: this target_name needs to be different from its dependency.
       # This is due to the ninja GYP generator which doesn't generate unique

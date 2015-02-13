@@ -47,5 +47,41 @@
         'test_main.cc',
       ],
     },
+    {
+      'target_name': 'natives_to_json',
+      'type': 'executable',
+      'toolsets': ['host'],
+      'dependencies': [
+        'fletch_shared',
+      ],
+      'sources': [
+        'natives_to_json.cc',
+      ],
+    },
+    {
+      'target_name': 'natives_json',
+      'type': 'none',
+      'toolsets': ['host'],
+      'dependencies': [
+        'natives_to_json',
+      ],
+      'actions': [
+        {
+          'action_name': 'make_natives_json',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'natives_to_json'
+            '<(EXECUTABLE_SUFFIX)',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/natives.json',
+          ],
+          'action': [
+            '<@(_inputs)',
+            '<@(_outputs)',
+          ],
+        }
+      ],
+    }
   ],
 }
