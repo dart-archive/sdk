@@ -47,6 +47,8 @@ class FunctionCompiler extends SemanticVisitor {
       <Element, ConstantValue>{};
 
   VisitState visitState;
+  BytecodeLabel trueLabel;
+  BytecodeLabel falseLabel;
 
   FunctionCompiler(this.context, TreeElements elements, this.registry)
       : super(elements);
@@ -101,22 +103,28 @@ class FunctionCompiler extends SemanticVisitor {
 
   // Visit the expression [node] with the result being a branch to either
   // [trueLabel] or [falseLabel].
-  void visitForTest(Node node, trueLabel, falseLabel) {
-    internalError(node, "[visitForTest] isn't implemented.");
+  void visitForTest(
+      Node node,
+      BytecodeLabel trueLabel,
+      BytecodeLabel falseLabel) {
+    VisitState oldState = visitState;
+    visitState = VisitState.Test;
+    BytecodeLabel oldTrueLabel = this.trueLabel;
+    this.trueLabel = trueLabel;
+    BytecodeLabel oldFalseLabel = this.falseLabel;
+    this.falseLabel = falseLabel;
+    node.accept(this);
+    visitState = oldState;
+    this.trueLabel = oldTrueLabel;
+    this.falseLabel = oldFalseLabel;
   }
 
   void applyVisitState() {
-    switch (visitState) {
-      case VisitState.Value:
-        break;
-
-      case VisitState.Effect:
-        builder.pop();
-        break;
-
-      case VisitState.Test:
-        throw new UnimplementedError("VisitState.Test");
-        break;
+    if (visitState == VisitState.Effect) {
+      builder.pop();
+    } else if (visitState == VisitState.Test) {
+      builder.branchIfTrue(trueLabel);
+      builder.branch(falseLabel);
     }
   }
 
@@ -133,15 +141,26 @@ class FunctionCompiler extends SemanticVisitor {
   }
 
   void visitLiteral(Literal node) {
-    if (visitState == VisitState.Effect) return;
-    builder.loadConst(allocateConstantFromNode(node));
-    applyVisitState();
+    if (visitState == VisitState.Value) {
+      builder.loadConst(allocateConstantFromNode(node));
+    } else if (visitState == VisitState.Test) {
+      var expression = compileConstant(node, isConst: false);
+      bool isTrue = expression != null && expression.value.isTrue;
+      builder.branch(isTrue ? trueLabel : falseLabel);
+    }
   }
 
   void visitLiteralString(LiteralString node) {
-    if (visitState == VisitState.Effect) return;
-    builder.loadConst(allocateConstantFromNode(node));
-    applyVisitState();
+    if (visitState == VisitState.Value) {
+      builder.loadConst(allocateConstantFromNode(node));
+    } else if (visitState == VisitState.Test) {
+      builder.branch(falseLabel);
+    }
+  }
+
+  void visitParenthesizedExpression(Node node) {
+    // Visit expression in the same VisitState.
+    node.expression.accept(this);
   }
 
   void visitBlock(Block node) {
@@ -150,6 +169,27 @@ class FunctionCompiler extends SemanticVisitor {
 
   void visitExpressionStatement(ExpressionStatement node) {
     visitForEffect(node.expression);
+  }
+
+  void visitStatement(Node node) {
+    internalError(node, "Missing visit of statement: ${node.runtimeType}");
+  }
+
+  void visitIf(If node) {
+    BytecodeLabel ifTrue = new BytecodeLabel();
+    BytecodeLabel ifFalse = new BytecodeLabel();
+    visitForTest(node.condition, ifTrue, ifFalse);
+    builder.bind(ifTrue);
+    node.thenPart.accept(this);
+    if (node.hasElsePart) {
+      BytecodeLabel end = new BytecodeLabel();
+      builder.branch(end);
+      builder.bind(ifFalse);
+      node.elsePart.accept(this);
+      builder.bind(end);
+    } else {
+      builder.bind(ifFalse);
+    }
   }
 
   void visitFunctionExpression(FunctionExpression node) {
