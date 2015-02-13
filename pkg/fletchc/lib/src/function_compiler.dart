@@ -28,6 +28,12 @@ import 'fletch_context.dart';
 import 'fletch_function_constant.dart' show
     FletchFunctionConstant;
 
+enum VisitState {
+  Value,
+  Effect,
+  Test,
+}
+
 class FunctionCompiler extends SemanticVisitor {
   final FletchContext context;
 
@@ -39,6 +45,8 @@ class FunctionCompiler extends SemanticVisitor {
 
   final Map<Element, ConstantValue> functionConstantValues =
       <Element, ConstantValue>{};
+
+  VisitState visitState;
 
   FunctionCompiler(this.context, TreeElements elements, this.registry)
       : super(elements);
@@ -77,13 +85,18 @@ class FunctionCompiler extends SemanticVisitor {
 
   // Visit the expression [node] with the result pushed on top of the stack.
   void visitForValue(Node node) {
+    VisitState oldState = visitState;
+    visitState = VisitState.Value;
     node.accept(this);
+    visitState = oldState;
   }
 
   // Visit the expression [node] without the result pushed on top of the stack.
   void visitForEffect(Node node) {
+    VisitState oldState = visitState;
+    visitState = VisitState.Effect;
     node.accept(this);
-    builder.pop();
+    visitState = oldState;
   }
 
   // Visit the expression [node] with the result being a branch to either
@@ -92,32 +105,47 @@ class FunctionCompiler extends SemanticVisitor {
     internalError(node, "[visitForTest] isn't implemented.");
   }
 
+  void applyVisitState() {
+    switch (visitState) {
+      case VisitState.Value:
+        break;
+
+      case VisitState.Effect:
+        builder.pop();
+        break;
+
+      case VisitState.Test:
+        throw new UnimplementedError("VisitState.Test");
+        break;
+    }
+  }
+
   void visitStaticMethodInvocation(
       Send node,
       /* MethodElement */ element,
       NodeList arguments,
       Selector selector) {
-    visitForValue(arguments);
+    for (Node argument in arguments) visitForValue(argument);
     registry.registerStaticInvocation(element);
-    builder.invokeStatic(
-        allocateConstantFromFunction(element),
-        arguments.slowLength());
+    int methodId = allocateConstantFromFunction(element);
+    builder.invokeStatic(methodId, arguments.slowLength());
+    applyVisitState();
   }
 
   void visitLiteral(Literal node) {
+    if (visitState == VisitState.Effect) return;
     builder.loadConst(allocateConstantFromNode(node));
+    applyVisitState();
   }
 
   void visitLiteralString(LiteralString node) {
+    if (visitState == VisitState.Effect) return;
     builder.loadConst(allocateConstantFromNode(node));
+    applyVisitState();
   }
 
   void visitBlock(Block node) {
-    node.visitChildren(this);
-  }
-
-  void visitNodeList(NodeList node) {
-    node.visitChildren(this);
+    for (Node statement in node.statements) statement.accept(this);
   }
 
   void visitExpressionStatement(ExpressionStatement node) {
