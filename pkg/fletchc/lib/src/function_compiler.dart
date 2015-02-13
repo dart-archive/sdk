@@ -50,8 +50,8 @@ class FunctionCompiler extends SemanticVisitor {
   void compileFunction(FunctionExpression node) {
     node.body.accept(this);
 
-    // Emit implicit return if none is present.
-    if (!builder.endsWithReturn) {
+    // Emit implicit 'return null' if no terminator is present.
+    if (!builder.endsWithTerminator) {
       builder.loadLiteralNull();
       builder.ret();
     }

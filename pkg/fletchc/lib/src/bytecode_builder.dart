@@ -9,40 +9,55 @@ import '../bytecodes.dart';
 class BytecodeBuilder {
   final List<Bytecode> bytecodes = <Bytecode>[];
 
+  int byteSize = 0;
   int stackSize = 0;
 
   void loadConst(int id) {
-    bytecodes.add(new LoadConstUnfold(id));
-    stackSize += 1;
+    internalAdd(new LoadConstUnfold(id));
   }
 
   void loadLiteralNull() {
-    bytecodes.add(new LoadLiteralNull());
-    stackSize += 1;
+    internalAdd(new LoadLiteralNull());
   }
 
   void invokeStatic(int id, int arguments) {
-    bytecodes.add(new InvokeStaticUnfold(id));
-    stackSize += 1 - arguments;
+    internalAddStackPointerDifference(
+        new InvokeStaticUnfold(id),
+        1 - arguments);
   }
 
   void pop() {
-    bytecodes.add(new Pop());
-    stackSize -= 1;
+    internalAdd(new Pop());
   }
 
   void ret() {
-    assert(stackSize > 0);
-    // TODO(ajohnsen): Set argument count.
-    bytecodes.add(new Return(stackSize - 1, 0));
-    stackSize -= 1;
+    if (stackSize <= 0) throw "Bad stackSize for return bytecode: $stackSize";
+    // TODO(ajohnsen): Set correct argument count (second argument to Return).
+    internalAdd(new Return(stackSize - 1, 0));
   }
 
-  bool get endsWithReturn => bytecodes.isNotEmpty && bytecodes.last is Return;
+  bool get endsWithTerminator {
+    if (bytecodes.isEmpty) return false;
+    Opcode opcode = bytecodes.last.opcode;
+    return opcode == Opcode.Return || opcode == Opcode.Throw;
+  }
 
   void methodEnd() {
-    int size = 0;
-    for (var bytecode in bytecodes) size += bytecode.size;
-    bytecodes.add(new MethodEnd(size));
+    internalAdd(new MethodEnd(byteSize));
+  }
+
+  void internalAdd(Bytecode bytecode) {
+    internalAddStackPointerDifference(
+        bytecode,
+        bytecode.stackPointerDifference);
+  }
+
+  void internalAddStackPointerDifference(
+      Bytecode bytecode,
+      int stackPointerDifference) {
+    assert(stackPointerDifference != VAR_DIFF);
+    bytecodes.add(bytecode);
+    stackSize += stackPointerDifference;
+    byteSize += bytecode.size;
   }
 }

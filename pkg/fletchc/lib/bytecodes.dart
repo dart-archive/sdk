@@ -11,7 +11,7 @@ import 'dart:typed_data' show
 
 part 'generated_bytecodes.dart';
 
-const int VAR_DIFF = 0x7FFFFFFF;
+const int VAR_DIFF = 0x3FFFFFFF;
 
 abstract class Bytecode {
   static final BytecodeBuffer _buffer = new BytecodeBuffer();
