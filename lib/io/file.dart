@@ -10,22 +10,18 @@ class File {
   static const int APPEND = 2;
 
   final String path;
-  int _fd = -1;
-
-  /**
-   * Create a new File object, to work on the specified [path].
-   */
-  File(this.path);
+  int _fd;
 
   /**
    * Create a new, opened File object, to work on the specified [path].
    *
    * A [FileException] is thrown if it was unable to open the specified file.
    */
-  factory File.opened(String path, {int mode: READ}) {
-    File file = new File(path);
-    file.open(mode: mode);
-    return file;
+  factory File.open(String path, {int mode: READ}) {
+    if (mode < 0 || mode > 2) throw ArgumentError("Invalid open mode: $mode");
+    int fd = sys.open(path, mode == WRITE, mode == APPEND);
+    if (fd == -1) throw new FileException("Failed to open file '$path'");
+    return new File._(path, fd);
   }
 
   /**
@@ -34,24 +30,13 @@ class File {
   factory File.temporary(String path) {
     TempFile temp = sys.mkstemp(path);
     int fd = temp.fd;
-    if (fd == -1) _error("Failed to create temporary file from '$path'");
-    File file = new File(temp.path);
-    file._fd = fd;
-    return file;
+    if (fd == -1) {
+      throw new FileException("Failed to create temporary file from '$path'");
+    }
+    return new File._(temp.path, fd);
   }
 
-  /**
-   * Open the file pointed to by this file object.
-   *
-   * A [FileException] is thrown if it was unable to open the specified file.
-   */
-  void open({int mode: READ}) {
-    if (_fd != -1) _error("File is already opened");
-    if (mode < 0 || mode > 2) throw ArgumentError("Invalid open mode: $mode");
-    int fd = sys.open(path, mode == WRITE, mode == APPEND);
-    if (fd == -1) _error("Failed to open file '$path'");
-    _fd = fd;
-  }
+  File._(this.path, this._fd);
 
   /**
    * Write [buffer] to the file. The file must have been opened with [WRITE]
@@ -125,21 +110,6 @@ class File {
    */
   bool get isOpen => _fd != -1;
 
-  /**
-   * Returns true if the file exists.
-   */
-  bool get exists => sys.access(path) == 0;
-
-  /**
-   * Removes the file.
-   *
-   * If the file is open, it will be closed before removed.
-   */
-  void remove() {
-    _close();
-    if (sys.unlink(path) == -1) _error("Failed to remove file");
-  }
-
   void _close() {
     if (_fd != -1) {
       sys.close(_fd);
@@ -151,6 +121,19 @@ class File {
     _close();
     throw new FileException(message);
   }
+
+  /**
+   * Delete the file at [path] from disk.
+   */
+  static void delete(String path) {
+    if (sys.unlink(path) == -1) _error("Failed to remove file");
+  }
+
+  /**
+   * Returns true if the file exists.
+   */
+  // TODO(ajohnsen): This is the wrong implementation.
+  static bool existsAsFile(String path) => sys.access(path) == 0;
 }
 
 class FileException implements Exception {

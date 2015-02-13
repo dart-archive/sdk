@@ -502,7 +502,6 @@ issue13474_test: Fail
 issue14014_3_test: Fail
 issue15720_test: Fail
 issue4157508_test: Fail
-issue4515170_test: Crash
 issue9949_test: CompileTimeError
 label_test: Fail
 large_class_declaration_test: Crash

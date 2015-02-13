@@ -145,7 +145,8 @@ class ValueVisitor : public TreeVisitor {
   void HandleUnresolved(IdentifierNode* name);
 
   bool LoadPositionalArguments(List<ExpressionNode*> arguments,
-                               List<VariableDeclarationNode*> parameters);
+                               List<VariableDeclarationNode*> parameters,
+                               Scope* callee_scope);
 
   int LoadNamedArguments(MethodNode* method,
                          List<ExpressionNode*> arguments,
@@ -2520,13 +2521,14 @@ void ValueVisitor::InvokeStatic(MethodNode* node,
     DoThis(NULL);
   }
 
+  Scope* callee_scope = node->GetOwnerScope();
   List<VariableDeclarationNode*> parameters = node->parameters();
   if (node->modifiers().is_external()) {
     int name_id = node->name()->AsIdentifier()->id();
     if (name_id == Names::kCoroutineChange) {
       ASSERT(named_arguments.is_empty());
       ASSERT(arguments.length() == 2);
-      LoadPositionalArguments(arguments, parameters);
+      LoadPositionalArguments(arguments, parameters, callee_scope);
       emitter()->CoroutineChange();
       return;
     }
@@ -2534,7 +2536,7 @@ void ValueVisitor::InvokeStatic(MethodNode* node,
     if (name_id == Names::kIdentical) {
       ASSERT(named_arguments.is_empty());
       ASSERT(arguments.length() == 2);
-      LoadPositionalArguments(arguments, parameters);
+      LoadPositionalArguments(arguments, parameters, callee_scope);
       emitter()->Identical();
       return;
     }
@@ -2549,7 +2551,7 @@ void ValueVisitor::InvokeStatic(MethodNode* node,
       emitter()->InvokeStatic(argument_count, stub_id);
       return;
     }
-  } else if (LoadPositionalArguments(arguments, parameters)) {
+  } else if (LoadPositionalArguments(arguments, parameters, callee_scope)) {
     int argument_count = parameters.length();
     if (with_this) argument_count++;
     emitter()->InvokeStatic(argument_count, id);
@@ -2591,7 +2593,7 @@ void ValueVisitor::InvokeConstructor(ClassNode* clazz,
       emitter()->InvokeFactory(arguments.length(), stub_id);
       return;
     }
-  } else if (LoadPositionalArguments(arguments, parameters)) {
+  } else if (LoadPositionalArguments(arguments, parameters, clazz->scope())) {
     emitter()->InvokeFactory(parameters.length(), id);
     return;
   }
@@ -2615,13 +2617,14 @@ void ValueVisitor::HandleUnresolved(IdentifierNode* name) {
 
 bool ValueVisitor::LoadPositionalArguments(
     List<ExpressionNode*> arguments,
-    List<VariableDeclarationNode*> parameters) {
+    List<VariableDeclarationNode*> parameters,
+    Scope* callee_scope) {
   int pos_index = 0;
   for (int i = 0; i < parameters.length(); i++) {
     VariableDeclarationNode* parameter = parameters[i];
     if (parameter->modifiers().is_named()) {
       if (parameter->has_initializer()) {
-        LoadConst(parameter->value(), scope());
+        LoadConst(parameter->value(), callee_scope);
       } else {
         LoadNull();
       }
@@ -2635,7 +2638,7 @@ bool ValueVisitor::LoadPositionalArguments(
     if (parameter->modifiers().is_positional() &&
         pos_index >= arguments.length()) {
       if (parameter->has_initializer()) {
-        LoadConst(parameter->value(), scope());
+        LoadConst(parameter->value(), callee_scope);
       } else {
         LoadNull();
       }

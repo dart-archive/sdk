@@ -16,20 +16,16 @@ void main() {
 bool isFileException(e) => e is FileException;
 
 void testOpen() {
-  final String path = '/tmp/__fletch_dart_io_non_exist_file__';
-  var file = new File(path);
-  Expect.isFalse(file.isOpen);
-  Expect.isFalse(file.exists);
-  Expect.equals(path, file.path);
-  Expect.throws(file.open, isFileException);
+  String path = '/tmp/__fletch_dart_io_non_exist_file__';
+  Expect.throws(() => new File.open(path), isFileException);
 
-  file = new File.temporary("/tmp/file_test");
+  var file = new File.temporary("/tmp/file_test");
   Expect.isTrue(file.isOpen);
-  Expect.isTrue(file.exists);
+  Expect.isTrue(File.existsAsFile(file.path));
   file.close();
   Expect.isFalse(file.isOpen);
-  file.remove();
-  Expect.isFalse(file.exists);
+  File.delete(file.path);
+  Expect.isFalse(File.existsAsFile(file.path));
 }
 
 void testReadWrite() {
@@ -54,8 +50,7 @@ void testReadWrite() {
 
   file.close();
   Expect.isFalse(file.isOpen);
-  file.remove();
-  Expect.isFalse(file.exists);
+  File.delete(file.path);
 }
 
 void testSeek() {
@@ -70,6 +65,5 @@ void testSeek() {
   Expect.equals(0, file.length);
 
   file.close();
-  file.remove();
-  Expect.isFalse(file.exists);
+  File.delete(file.path);
 }
