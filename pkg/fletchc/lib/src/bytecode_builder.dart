@@ -49,8 +49,16 @@ class BytecodeBuilder {
     internalAdd(new LoadConstUnfold(id));
   }
 
+  void loadStatic(int index) {
+    internalAdd(new LoadStatic(index));
+  }
+
   void loadLiteralNull() {
     internalAdd(new LoadLiteralNull());
+  }
+
+  void storeStatic(int index) {
+    internalAdd(new StoreStatic(index));
   }
 
   void invokeStatic(int id, int arguments) {

@@ -7,6 +7,10 @@ library fletchc.fletch_context;
 import 'package:compiler/src/tree/tree.dart' show
     Node;
 
+import 'package:compiler/src/elements/elements.dart' show
+    Element,
+    FieldElement;
+
 import 'package:compiler/src/resolution/resolution.dart' show
     TreeElements;
 
@@ -51,9 +55,15 @@ class FletchContext {
 
   Map<String, FletchNativeDescriptor> nativeDescriptors;
 
+  Map<FieldElement, int> staticIndices = new Map<FieldElement, int>();
+
   FletchContext(this.compiler);
 
   FletchBackend get backend => compiler.backend;
+
+  int getStaticFieldIndex(FieldElement element, Element referrer) {
+    return staticIndices.putIfAbsent(element, () => staticIndices.length);
+  }
 
   /// If [isConst] is true, a compile-time error is reported.
   ConstantExpression compileConstant(

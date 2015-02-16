@@ -144,10 +144,34 @@ class FunctionCompiler extends SemanticVisitor {
       /* MethodElement */ element,
       NodeList arguments,
       Selector selector) {
-    for (Node argument in arguments) visitForValue(argument);
+    for (Node argument in arguments) {
+      visitForValue(argument);
+    }
     registry.registerStaticInvocation(element);
     int methodId = allocateConstantFromFunction(element);
     builder.invokeStatic(methodId, arguments.slowLength());
+    applyVisitState();
+  }
+
+  void visitStaticFieldAssignment(
+      SendSet node,
+      FieldElement element,
+      Node rhs) {
+    visitForValue(rhs);
+    int index = context.getStaticFieldIndex(element, function);
+    builder.storeStatic(index);
+    applyVisitState();
+  }
+
+  void visitStaticFieldAccess(
+      Send node,
+      FieldElement element) {
+    Expression initializer = element.initializer;
+    if (initializer != null) {
+      internalError(node, "Static field initializer is not implemented");
+    }
+    int index = context.getStaticFieldIndex(element, function);
+    builder.loadStatic(index);
     applyVisitState();
   }
 
@@ -175,7 +199,9 @@ class FunctionCompiler extends SemanticVisitor {
   }
 
   void visitBlock(Block node) {
-    for (Node statement in node.statements) statement.accept(this);
+    for (Node statement in node.statements) {
+      statement.accept(this);
+    }
   }
 
   void visitExpressionStatement(ExpressionStatement node) {
@@ -323,21 +349,6 @@ class FunctionCompiler extends SemanticVisitor {
       Selector selector) {
     internalError(
         node, "[visitDynamicInvocation] isn't implemented.");
-  }
-
-  void visitStaticFieldAccess(
-      Send node,
-      FieldElement element) {
-    internalError(
-        node, "[visitStaticFieldAccess] isn't implemented.");
-  }
-
-  void visitStaticFieldAssignment(
-      SendSet node,
-      FieldElement element,
-      Node rhs) {
-    internalError(
-        node, "[visitStaticFieldAssignment] isn't implemented.");
   }
 
   void visitStaticFieldInvocation(
