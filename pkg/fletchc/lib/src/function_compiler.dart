@@ -28,6 +28,9 @@ import 'fletch_context.dart';
 import 'fletch_function_constant.dart' show
     FletchFunctionConstant;
 
+import '../bytecodes.dart' show
+    Bytecode;
+
 enum VisitState {
   Value,
   Effect,
@@ -528,5 +531,28 @@ class FunctionCompiler extends SemanticVisitor {
 
   void internalError(Spannable spannable, String reason) {
     context.compiler.internalError(spannable, reason);
+  }
+
+  String toString() => "FunctionCompiler(${function.name})";
+
+  String verboseToString() {
+    StringBuffer sb = new StringBuffer();
+
+    sb.writeln("Constants:");
+    constants.forEach((constant, int index) {
+      if (constant is ConstantValue) {
+        constant = constant.toStructuredString();
+      }
+      sb.writeln("  #$index: $constant");
+    });
+
+    sb.writeln("Bytecodes:");
+    int offset = 0;
+    for (Bytecode bytecode in builder.bytecodes) {
+      sb.writeln("  $offset: $bytecode");
+      offset += bytecode.size;
+    }
+
+    return '$sb';
   }
 }

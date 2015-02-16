@@ -30,7 +30,6 @@ import 'package:compiler/src/constants/values.dart' show
     ConstantValue;
 
 import '../bytecodes.dart' show
-    Bytecode,
     InvokeNative;
 
 import 'package:compiler/src/resolution/resolution.dart' show
@@ -119,6 +118,10 @@ class FletchBackend extends Backend {
     compiledFunctions[function] = functionCompiler;
 
     allocateMethodId(function);
+
+    if (compiler.verbose) {
+      print(functionCompiler.verboseToString());
+    }
   }
 
   void codegenNativeFunction(

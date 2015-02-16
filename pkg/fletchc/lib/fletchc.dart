@@ -12,9 +12,10 @@ import 'compiler.dart' show
     FletchCompiler;
 
 main(List<String> arguments) async {
-  FletchCompiler compiler = new FletchCompiler(
-      // options: ['--verbose'],
-      script: arguments.single);
+  List<String> options = const bool.fromEnvironment("fletchc-verbose")
+      ? <String>['--verbose'] : <String>[];
+  FletchCompiler compiler =
+      new FletchCompiler(options: options, script: arguments.single);
   List commands = await compiler.run().catchError((e, trace) {
     // TODO(ahe): Remove this catchError block when this bug is fixed:
     // https://code.google.com/p/dart/issues/detail?id=22437.
