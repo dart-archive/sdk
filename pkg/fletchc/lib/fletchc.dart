@@ -15,7 +15,13 @@ main(List<String> arguments) async {
   FletchCompiler compiler = new FletchCompiler(
       // options: ['--verbose'],
       script: arguments.single);
-  List commands = await compiler.run();
+  List commands = await compiler.run().catchError((e, trace) {
+    // TODO(ahe): Remove this catchError block when this bug is fixed:
+    // https://code.google.com/p/dart/issues/detail?id=22437.
+    print(e);
+    print(trace);
+    exit(1);
+  });
 
   var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
   var portArgument = '--port=${server.port}';

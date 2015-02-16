@@ -33,6 +33,8 @@ import '../bytecodes.dart' show
     Bytecode,
     InvokeNative;
 
+import 'package:compiler/src/resolution/resolution.dart' show
+    TreeElements;
 
 import 'fletch_function_constant.dart' show
     FletchFunctionConstant;
@@ -84,49 +86,60 @@ class FletchBackend extends Backend {
   }
 
   void codegen(CodegenWorkItem work) {
+    Element element = work.element;
     if (compiler.verbose) {
       compiler.reportHint(
-          work.element,
-          MessageKind.GENERIC,
-          {'text': 'Compiling ${work.element.name}'});
+          element, MessageKind.GENERIC, {'text': 'Compiling ${element.name}'});
     }
 
-    FunctionElement function = work.element;
+    if (element.isFunction) {
+      codegenFunction(element, work.resolutionTree, work.registry);
+    } else {
+      compiler.internalError(
+          element, "Uninimplemented element kind: ${element.kind}");
+    }
+  }
+
+  void codegenFunction(
+      FunctionElement function,
+      TreeElements elements,
+      Registry registry) {
     FunctionCompiler functionCompiler = new FunctionCompiler(
         context,
-        work.resolutionTree,
-        work.registry,
+        elements,
+        registry,
         function);
 
-    if (isNative(work.element)) {
-      codegenNative(work, functionCompiler);
+    if (isNative(function)) {
+      codegenNativeFunction(function, functionCompiler);
     } else {
       functionCompiler.compile();
     }
 
-    compiledFunctions[work.element] = functionCompiler;
+    compiledFunctions[function] = functionCompiler;
 
-    allocateMethodId(work.element);
+    allocateMethodId(function);
   }
 
-  void codegenNative(CodegenWorkItem work, FunctionCompiler functionCompiler) {
-    FunctionElement element = work.element;
-    String name = element.name;
+  void codegenNativeFunction(
+      FunctionElement function,
+      FunctionCompiler functionCompiler) {
+    String name = function.name;
 
     FletchNativeDescriptor descriptor = context.nativeDescriptors[name];
     if (descriptor == null) {
       throw "Unsupported native function: $name";
     }
 
-    int arity = element.functionSignature.parameterCount;
+    int arity = function.functionSignature.parameterCount;
     functionCompiler.builder.invokeNative(arity, descriptor.index);
 
-    Return returnNode = element.node.body.asReturn();
+    Return returnNode = function.node.body.asReturn();
     if (returnNode != null && !returnNode.hasExpression) {
       // A native method without a body.
       functionCompiler.builder.emitThrow();
     } else {
-      functionCompiler.compileFunction(element.node);
+      functionCompiler.compile();
     }
   }
 

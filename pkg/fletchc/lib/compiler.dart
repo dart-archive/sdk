@@ -34,6 +34,9 @@ import 'package:compiler/src/filenames.dart' show
 import 'src/fletch_native_descriptor.dart' show
     FletchNativeDescriptor;
 
+import 'src/fletch_backend.dart' show
+    FletchBackend;
+
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
 import 'src/fletch_compiler.dart' as implementation;
@@ -172,7 +175,8 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
         data = UTF8.decode(data);
       }
       _compiler.context.nativeDescriptors = FletchNativeDescriptor.decode(data);
-      return _compiler.run(script).then((_) => _compiler.backend.commands);
+      FletchBackend backend = _compiler.backend;
+      return _compiler.run(script).then((_) => backend.commands);
     });
   }
 
