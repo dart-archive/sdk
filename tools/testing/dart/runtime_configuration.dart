@@ -55,6 +55,9 @@ class RuntimeConfiguration {
       case 'vm':
         return new StandaloneDartRuntimeConfiguration();
 
+      case 'fletchc':
+        return new FletchcRuntimeConfiguration();
+
       case 'drt':
         return new DrtRuntimeConfiguration();
 
@@ -214,18 +217,28 @@ class StandaloneDartRuntimeConfiguration extends DartVmRuntimeConfiguration {
     if (script != null && type != 'application/dart') {
       throw "Dart VM cannot run files of type '$type'.";
     }
-    var binDir = suite.buildDir;
-    return <Command>[
-        commandBuilder.getProcessCommand(
-            "fletch",
-            "$binDir/fletch",
-            arguments),
-        commandBuilder.getProcessCommand(
-            "fletch",
-            "$binDir/fletch",
-            ["-Xunfold-program"]..addAll(arguments))];
     return <Command>[commandBuilder.getVmCommand(
           suite.dartVmBinaryFileName, arguments, environmentOverrides)];
+  }
+}
+
+class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
+  List<Command> computeRuntimeCommands(
+      TestSuite suite,
+      CommandBuilder commandBuilder,
+      CommandArtifact artifact,
+      List<String> arguments,
+      Map<String, String> environmentOverrides) {
+    String script = artifact.filename;
+    String type = artifact.mimeType;
+    if (script != null && type != 'application/dart') {
+      throw "Dart VM cannot run files of type '$type'.";
+    }
+    var binDir = suite.buildDir;
+    var args = ["-c", "-p", "package", "pkg/fletchc/lib/fletchc.dart"];
+    args.addAll(arguments);
+    return <Command>[commandBuilder.getVmCommand(
+          suite.dartVmBinaryFileName, args, environmentOverrides)];
   }
 }
 

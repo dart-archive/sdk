@@ -100,7 +100,8 @@ class TestOptionsParser {
               ['vm', 'd8', 'jsshell', 'drt', 'dartium', 'ff', 'firefox',
                'chrome', 'safari', 'ie9', 'ie10', 'ie11', 'opera',
                'chromeOnAndroid', 'safarimobilesim',
-               'ContentShellOnAndroid', 'DartiumOnAndroid', 'none'],
+               'ContentShellOnAndroid', 'DartiumOnAndroid', 'none',
+               'fletchc'],
               'vm'),
           new _TestOptionSpecification(
               'arch',
@@ -650,6 +651,8 @@ Note: currently only implemented for dart2js.''',
         validRuntimes = const ['none'];
         break;
       case 'none':
+        validRuntimes = const ['fletchc'];
+        break;
       case 'fletch':
         validRuntimes = const ['vm', 'drt', 'dartium',
                                'ContentShellOnAndroid', 'DartiumOnAndroid'];
