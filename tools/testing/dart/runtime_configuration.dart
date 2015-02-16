@@ -217,8 +217,16 @@ class StandaloneDartRuntimeConfiguration extends DartVmRuntimeConfiguration {
     if (script != null && type != 'application/dart') {
       throw "Dart VM cannot run files of type '$type'.";
     }
-    return <Command>[commandBuilder.getVmCommand(
-          suite.dartVmBinaryFileName, arguments, environmentOverrides)];
+    var binDir = suite.buildDir;
+    return <Command>[
+        commandBuilder.getProcessCommand(
+            "fletch",
+            "$binDir/fletch",
+            arguments),
+        commandBuilder.getProcessCommand(
+            "fletch",
+            "$binDir/fletch",
+            ["-Xunfold-program"]..addAll(arguments))];
   }
 }
 
