@@ -21,8 +21,8 @@ abstract class AccessSemanticMixin {
   AccessSemantics handleStaticallyResolvedAccess(Send node, Element element) {
     String name = node.selector.asIdentifier().source;
     bool isWrite = node.asSendSet() != null;
-    bool isInvoke = !node.isPropertyAccess;
     bool isRead = !isWrite;
+    bool isInvoke = isRead && !node.isPropertyAccess;
 
     if (element.isParameter) {
       return new AccessSemantics.parameter(
@@ -102,13 +102,12 @@ abstract class AccessSemanticMixin {
     }
   }
 
-
   AccessSemantics handleSend(Send node) {
     // TODO(johnniwinther): Refactor this method to match [AccessSemantics]
     // more than [ResolvedVisitor] structure.
     bool isWrite = node.asSendSet() != null;
-    bool isInvoke = !node.isPropertyAccess;
     bool isRead = !isWrite;
+    bool isInvoke = isRead && !node.isPropertyAccess;
 
     Element element = elements[node];
     if (elements.isAssert(node)) {
@@ -153,7 +152,7 @@ abstract class AccessSemanticMixin {
     } else if (node.isOperator) {
       // TODO(johnniwinther): Handle operators.
       return internalError(node, "Operators unsupported.");
-    } else if (node.isPropertyAccess) {
+    } else if (!isInvoke) {
       String name = node.selector.asIdentifier().source;
       if (!Elements.isUnresolved(element) && element.impliesType) {
         // Prefix of a static access.
