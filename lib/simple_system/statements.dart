@@ -10,6 +10,12 @@ _entry(int mainArity) {
     }
   } else {
   }
+  while (false) {
+    _printString("while");
+  }
+  do {
+    _printString("do");
+  } while (false);
   _halt(1);
 }
 

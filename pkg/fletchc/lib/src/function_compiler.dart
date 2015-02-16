@@ -192,6 +192,27 @@ class FunctionCompiler extends SemanticVisitor {
     }
   }
 
+  void visitWhile(While node) {
+    BytecodeLabel start = new BytecodeLabel();
+    BytecodeLabel ifTrue = new BytecodeLabel();
+    BytecodeLabel end = new BytecodeLabel();
+    builder.bind(start);
+    visitForTest(node.condition, ifTrue, end);
+    builder.bind(ifTrue);
+    node.body.accept(this);
+    builder.branch(start);
+    builder.bind(end);
+  }
+
+  void visitDoWhile(DoWhile node) {
+    BytecodeLabel start = new BytecodeLabel();
+    BytecodeLabel end = new BytecodeLabel();
+    builder.bind(start);
+    node.body.accept(this);
+    visitForTest(node.condition, start, end);
+    builder.bind(end);
+  }
+
   void visitFunctionExpression(FunctionExpression node) {
     internalError(
         node, "[visitFunctionExpression] isn't implemented.");
