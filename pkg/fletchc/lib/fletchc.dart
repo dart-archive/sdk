@@ -25,11 +25,15 @@ main(List<String> arguments) async {
   });
 
   var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
-  var portArgument = '--port=${server.port}';
+
+  List<String> vmOptions = <String>[
+      '--port=${server.port}',
+  ];
+
   var connectionIterator = new StreamIterator(server);
 
-  var vmProcess = await Process.start(
-      compiler.fletchVm.toFilePath(), [portArgument]);
+  var vmProcess =
+      await Process.start(compiler.fletchVm.toFilePath(), vmOptions);
 
   vmProcess.stdout.listen(stdout.add);
   vmProcess.stderr.listen(stderr.add);
