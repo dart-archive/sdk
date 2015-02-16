@@ -13,6 +13,13 @@ import 'package:compiler/src/constants/values.dart' show
 import 'package:compiler/src/elements/elements.dart' show
     FunctionElement;
 
+import 'package:compiler/src/core_types.dart' show
+    CoreTypes;
+
+import 'package:compiler/src/dart_types.dart' show
+    DartType,
+    DynamicType;
+
 class FletchFunctionConstant extends ConstantValue {
   final FunctionElement element;
 

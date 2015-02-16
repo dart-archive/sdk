@@ -166,7 +166,7 @@ class FunctionCompiler extends SemanticVisitor {
     }
   }
 
-  void visitParenthesizedExpression(Node node) {
+  void visitParenthesizedExpression(ParenthesizedExpression node) {
     // Visit expression in the same VisitState.
     node.expression.accept(this);
   }

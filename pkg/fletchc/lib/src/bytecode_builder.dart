@@ -156,4 +156,12 @@ class BytecodeBuilder {
     stackSize += stackPointerDifference;
     byteSize += bytecode.size;
   }
+
+  void invokeNative(int arity, int index) {
+    internalAdd(new InvokeNative(arity, index));
+  }
+
+  void emitThrow() {
+    internalAdd(const Throw());
+  }
 }

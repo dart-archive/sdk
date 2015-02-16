@@ -15,6 +15,9 @@ import 'package:compiler/src/dart2jslib.dart' show
     Registry,
     ResolutionEnqueuer;
 
+import 'package:compiler/src/tree/tree.dart' show
+    Return;
+
 import 'package:compiler/src/elements/elements.dart' show
     Element,
     ClassElement,
@@ -30,13 +33,27 @@ import '../bytecodes.dart' show
     Bytecode,
     InvokeNative;
 
+
+import 'fletch_function_constant.dart' show
+    FletchFunctionConstant;
+
 import 'fletch_context.dart';
+
 import 'function_compiler.dart';
+
+import '../commands.dart';
 
 class FletchBackend extends Backend {
   final FletchContext context;
 
   final DartConstantTask constantCompilerTask;
+
+  final Map<FunctionElement, int> methodIds = <FunctionElement, int>{};
+
+  final Map<FunctionElement, FunctionCompiler> compiledFunctions =
+      <FunctionElement, FunctionCompiler>{};
+
+  List<Command> commands;
 
   FletchBackend(FletchCompiler compiler)
       : this.context = compiler.context,
@@ -67,13 +84,11 @@ class FletchBackend extends Backend {
   }
 
   void codegen(CodegenWorkItem work) {
-    compiler.reportHint(
-        work.element,
-        MessageKind.GENERIC,
-        {'text': 'Compiling ${work.element.name}'});
-
-    if (isNative(work.element)) {
-      return codegenNative(work);
+    if (compiler.verbose) {
+      compiler.reportHint(
+          work.element,
+          MessageKind.GENERIC,
+          {'text': 'Compiling ${work.element.name}'});
     }
 
     FunctionElement function = work.element;
@@ -83,37 +98,36 @@ class FletchBackend extends Backend {
         work.registry,
         function);
 
-    functionCompiler.compile();
-
-    print("Constants");
-    functionCompiler.constants.forEach((constant, int index) {
-      if (constant is ConstantValue) {
-        constant = constant.toStructuredString();
-      }
-      print("  #$index: $constant");
-    });
-
-    print("Bytecodes:");
-    int offset = 0;
-    for (Bytecode bytecode in functionCompiler.builder.bytecodes) {
-      print("  $offset: $bytecode");
-      offset += bytecode.size;
+    if (isNative(work.element)) {
+      codegenNative(work, functionCompiler);
+    } else {
+      functionCompiler.compile();
     }
+
+    compiledFunctions[work.element] = functionCompiler;
+
+    allocateMethodId(work.element);
   }
 
-  void codegenNative(CodegenWorkItem work) {
-    String name = work.element.name;
+  void codegenNative(CodegenWorkItem work, FunctionCompiler functionCompiler) {
+    FunctionElement element = work.element;
+    String name = element.name;
+
     FletchNativeDescriptor descriptor = context.nativeDescriptors[name];
     if (descriptor == null) {
       throw "Unsupported native function: $name";
     }
-    int arity = work.element.functionSignature.parameterCount;
 
-    Bytecode bytecode = new InvokeNative(arity, descriptor.index);
-    print("  0: $bytecode // $descriptor");
+    int arity = element.functionSignature.parameterCount;
+    functionCompiler.builder.invokeNative(arity, descriptor.index);
 
-    // TODO(ahe): A native function can have a body which is considered an
-    // exception handler. That body should also be compiled.
+    Return returnNode = element.node.body.asReturn();
+    if (returnNode != null && !returnNode.hasExpression) {
+      // A native method without a body.
+      functionCompiler.builder.emitThrow();
+    } else {
+      functionCompiler.compileFunction(element.node);
+    }
   }
 
   bool isNative(Element element) {
@@ -129,7 +143,79 @@ class FletchBackend extends Backend {
   bool get canHandleCompilationFailed => true;
 
   int assembleProgram() {
-    // TODO(ahe): This would be a good place to send code to the VM.
+    List<Command> commands = <Command>[
+        const NewMap(MapId.methods),
+    ];
+
+    List<Function> deferredActions = <Function>[];
+
+    void pushNewFunction(
+        FunctionElement function,
+        FunctionCompiler functionCompiler) {
+      int arity = function.functionSignature.parameterCount;
+      int constantCount = functionCompiler.constants.length;
+      int methodId = allocateMethodId(function);
+
+      functionCompiler.constants.forEach((constant, int index) {
+        if (constant is ConstantValue) {
+          if (constant.isInt) {
+            commands.add(new PushNewInteger(constant.primitiveValue));
+          } else if (constant.isString) {
+            commands.add(
+                new PushNewString(constant.primitiveValue.slowToString()));
+          } else if (constant is FletchFunctionConstant) {
+            commands.add(const PushNull());
+            deferredActions.add(() {
+              int referredMethodId = allocateMethodId(constant.element);
+              commands
+                  ..add(new PushFromMap(MapId.methods, methodId))
+                  ..add(new PushFromMap(MapId.methods, referredMethodId))
+                  ..add(new ChangeMethodLiteral(index));
+            });
+          } else {
+            throw "Unsupported constant: ${constant.toStructuredString()}";
+          }
+        } else {
+          throw "Unsupported constant: ${constant.runtimeType}";
+        }
+      });
+
+      commands.add(
+          new PushNewFunction(
+              arity, constantCount, functionCompiler.builder.bytecodes));
+
+      commands.add(new PopToMap(MapId.methods, methodId));
+    }
+
+    compiledFunctions.forEach(pushNewFunction);
+
+    int changes = 0;
+    for (Function action in deferredActions) {
+      action();
+      changes++;
+    }
+
+    commands.add(const ChangeStatics(0));
+    changes++;
+
+    commands.add(new CommitChanges(changes));
+
+    commands.add(const PushNewInteger(0));
+
+    commands.add(
+        new PushFromMap(
+            MapId.methods, allocateMethodId(compiler.mainFunction)));
+
+    commands.add(const RunMain());
+
+    commands.add(const SessionEnd());
+
+    this.commands = commands;
+
     return 0;
+  }
+
+  int allocateMethodId(FunctionElement element) {
+    return methodIds.putIfAbsent(element, () => methodIds.length);
   }
 }

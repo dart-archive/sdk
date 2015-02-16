@@ -172,9 +172,11 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
         data = UTF8.decode(data);
       }
       _compiler.context.nativeDescriptors = FletchNativeDescriptor.decode(data);
-      return _compiler.run(script);
+      return _compiler.run(script).then((_) => _compiler.backend.commands);
     });
   }
+
+  Uri get fletchVm => _compiler.fletchVm;
 }
 
 /// Resolves any symbolic links in [uri] if its scheme is "file". Otherwise
