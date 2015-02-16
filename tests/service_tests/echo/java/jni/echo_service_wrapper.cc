@@ -19,14 +19,14 @@ extern "C" {
   typedef void* AttachEnvType;
 #endif
 
-static ServiceId _service_id = kNoServiceId;
+static ServiceId service_id_ = kNoServiceId;
 
 JNIEXPORT void JNICALL Java_fletch_EchoService_Setup(JNIEnv*, jclass) {
-  _service_id = ServiceApiLookup("EchoService");
+  service_id_ = ServiceApiLookup("EchoService");
 }
 
 JNIEXPORT void JNICALL Java_fletch_EchoService_TearDown(JNIEnv*, jclass) {
-  ServiceApiTerminate(_service_id);
+  ServiceApiTerminate(service_id_);
 }
 
 static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {

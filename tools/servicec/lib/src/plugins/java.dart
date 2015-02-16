@@ -285,18 +285,18 @@ class _JniVisitor extends CcVisitor {
     writeln('#endif');
 
     writeln();
-    writeln('static ServiceId _service_id = kNoServiceId;');
+    writeln('static ServiceId service_id_ = kNoServiceId;');
 
     writeln();
     write('JNIEXPORT void JNICALL Java_fletch_');
     writeln('${serviceName}_Setup(JNIEnv*, jclass) {');
-    writeln('  _service_id = ServiceApiLookup("$serviceName");');
+    writeln('  service_id_ = ServiceApiLookup("$serviceName");');
     writeln('}');
 
     writeln();
     write('JNIEXPORT void JNICALL Java_fletch_');
     writeln('${serviceName}_TearDown(JNIEnv*, jclass) {');
-    writeln('  ServiceApiTerminate(_service_id);');
+    writeln('  ServiceApiTerminate(service_id_);');
     writeln('}');
 
     writeln();

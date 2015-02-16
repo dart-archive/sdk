@@ -34,8 +34,8 @@ fletch/FletchServiceApi.class: fletch/FletchServiceApi.java
 jni/libfletch_vm.a: ${FLETCH_BASE_LIB} ${FLETCH_LIB} ${FLETCH_SHARED_LIB} ${FLETCH_DOUBLE_LIB}
 	echo -e "create jni/libfletch_vm.a\naddlib ${FLETCH_BASE_LIB}\naddlib ${FLETCH_LIB}\naddlib ${FLETCH_SHARED_LIB}\naddlib ${FLETCH_DOUBLE_LIB}\nsave\nend" | ar -M
 
-jni/libfletch.so: jni/libfletch_vm.a jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/echo_service_wrapper.o
-	g++ -shared -o $@ $^ ${FLETCH_BASE_LIB} -rdynamic -ldl -lpthread -ldl -lstdc++
+jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/echo_service_wrapper.o jni/libfletch_vm.a
+	g++ -shared -o $@ $^ -rdynamic -ldl -lpthread -ldl -lstdc++
 
 echo.snapshot: ../echo.dart
 	${FLETCH_BUILD_DIR}/fletch $< --out=$@

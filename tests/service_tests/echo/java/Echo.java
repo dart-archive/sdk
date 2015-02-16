@@ -46,11 +46,11 @@ class Echo {
     EchoService.Setup();
 
     // Interact with the service.
-    int result = EchoService.Echo(1);
+    int result = EchoService.echo(1);
     System.out.println("Java: result " + result);
-    result = EchoService.Echo(2);
+    result = EchoService.echo(2);
     System.out.println("Java: result " + result);
-    EchoService.EchoAsync(3, new EchoService.EchoCallback() {
+    EchoService.echoAsync(3, new EchoService.echoCallback() {
       public void handle(int result) {
         System.out.println("Java: async echo result " + result);
       }
