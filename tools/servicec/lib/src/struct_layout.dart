@@ -9,6 +9,7 @@ import 'primitives.dart' as primitives;
 
 import 'dart:collection';
 import 'dart:core' hide Type;
+import 'dart:math' show max;
 
 const int POINTER_SIZE = 8;
 
@@ -37,8 +38,10 @@ class StructLayout {
   factory StructLayout.forArguments(List<Formal> arguments) {
     _StructBuilder builder = new _StructBuilder();
     arguments.forEach(builder.addSlot);
-    StructLayout result = new StructLayout._(
-        builder.slots, _roundUp(builder.used, POINTER_SIZE));
+    // Make sure the request has enough room for the reply which is
+    // either a pointer or a primitive.
+    int size = max(_roundUp(builder.used, POINTER_SIZE), POINTER_SIZE);
+    StructLayout result = new StructLayout._(builder.slots, size);
     return result;
   }
 
