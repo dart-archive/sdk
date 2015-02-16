@@ -8,8 +8,6 @@ import 'package:compiler/compiler.dart' as api;
 
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
-import 'package:sharedfrontend/elements.dart' as elements;
-
 import 'package:compiler/src/elements/modelx.dart' show
     LibraryElementX;
 

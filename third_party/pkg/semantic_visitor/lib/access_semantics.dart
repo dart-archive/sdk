@@ -5,9 +5,12 @@
 /**
  * Code for classifying the semantics of identifiers appearing in a Dart file.
  */
-library sharedfrontend.access_semantics;
+library dart2js.access_semantics;
 
-import '../elements.dart';
+import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
+    Element,
+    LibraryElement;
 
 /**
  * Enum representing the different kinds of destinations which a property

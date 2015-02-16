@@ -4,7 +4,7 @@
 
 library dart2js.semantics_visitor;
 
-import 'package:sharedfrontend/src/access_semantics.dart';
+import 'access_semantics.dart';
 
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/resolution/resolution.dart';
