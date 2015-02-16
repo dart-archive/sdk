@@ -224,8 +224,6 @@ class FletchBackend extends Backend {
 
     commands.add(const RunMain());
 
-    commands.add(const SessionEnd());
-
     this.commands = commands;
 
     return 0;

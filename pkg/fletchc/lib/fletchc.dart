@@ -31,6 +31,7 @@ main(List<String> arguments) async {
 
   var vmProcess = await Process.start(
       compiler.fletchVm.toFilePath(), [portArgument, bridgeArgument]);
+
   vmProcess.stdout.listen(stdout.add);
   vmProcess.stderr.listen(stderr.add);
 
@@ -38,5 +39,10 @@ main(List<String> arguments) async {
   assert(hasValue);
   var vmSocket = connectionIterator.current;
   server.close();
+
+  vmSocket.listen(null);
   commands.forEach((command) => command.addTo(vmSocket));
+  vmSocket.close();
+
+  exitCode = await vmProcess.exitCode;
 }
