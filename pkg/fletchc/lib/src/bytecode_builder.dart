@@ -38,8 +38,12 @@ class BytecodeLabel {
 class BytecodeBuilder {
   final List<Bytecode> bytecodes = <Bytecode>[];
 
+  final int functionArity;
+
   int byteSize = 0;
   int stackSize = 0;
+
+  BytecodeBuilder(this.functionArity);
 
   void loadConst(int id) {
     internalAdd(new LoadConstUnfold(id));
@@ -61,8 +65,7 @@ class BytecodeBuilder {
 
   void ret() {
     if (stackSize <= 0) throw "Bad stackSize for return bytecode: $stackSize";
-    // TODO(ajohnsen): Set correct argument count (second argument to Return).
-    internalAdd(new Return(stackSize - 1, 0));
+    internalAdd(new Return(stackSize - 1, functionArity));
   }
 
   void bind(BytecodeLabel label) {

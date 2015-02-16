@@ -39,7 +39,9 @@ class FunctionCompiler extends SemanticVisitor {
 
   final Registry registry;
 
-  final BytecodeBuilder builder = new BytecodeBuilder();
+  final BytecodeBuilder builder;
+
+  final FunctionElement function;
 
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
 
@@ -50,15 +52,21 @@ class FunctionCompiler extends SemanticVisitor {
   BytecodeLabel trueLabel;
   BytecodeLabel falseLabel;
 
-  FunctionCompiler(this.context, TreeElements elements, this.registry)
-      : super(elements);
+  FunctionCompiler(this.context,
+                   TreeElements elements,
+                   this.registry,
+                   FunctionElement function)
+      : super(elements),
+        function = function,
+        builder = new BytecodeBuilder(
+            function.functionSignature.parameterCount);
 
   ConstantExpression compileConstant(Node node, {bool isConst}) {
     return context.compileConstant(node, elements, isConst: isConst);
   }
 
-  void compileFunction(FunctionExpression node) {
-    node.body.accept(this);
+  void compile() {
+    function.node.body.accept(this);
 
     // Emit implicit 'return null' if no terminator is present.
     if (!builder.endsWithTerminator) {

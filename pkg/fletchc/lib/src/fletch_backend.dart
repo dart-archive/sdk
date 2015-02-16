@@ -76,9 +76,14 @@ class FletchBackend extends Backend {
       return codegenNative(work);
     }
 
-    FunctionCompiler functionCompiler =
-        new FunctionCompiler(context, work.resolutionTree, work.registry);
-    functionCompiler.compileFunction(work.element.node);
+    FunctionElement function = work.element;
+    FunctionCompiler functionCompiler = new FunctionCompiler(
+        context,
+        work.resolutionTree,
+        work.registry,
+        function);
+
+    functionCompiler.compile();
 
     print("Constants");
     functionCompiler.constants.forEach((constant, int index) {
