@@ -115,12 +115,35 @@ class SimpleType extends Type {
   final bool isPointer;
   SimpleType(this.identifier, this.isPointer);
 
+  int get hashCode {
+    int hash = identifier.hashCode;
+    if (isPointer) {
+      hash = hash ^ ((hash >> 16) | (hash << 16));
+    }
+    return hash;
+  }
+
+  bool operator==(Object other) {
+    if (other is! Type || other.isList) return false;
+    return identifier == other.identifier && isPointer == other.isPointer;
+  }
+
   bool get isList => false;
 }
 
 class ListType extends Type {
   final SimpleType elementType;
   ListType(this.elementType);
+
+  int get hashCode {
+    int hash = elementType.hashCode;
+    return ((hash >> 16) | (hash << 16));
+  }
+
+  bool operator==(Object other) {
+    if (other is! Type || !other.isList) return false;
+    return elementType == other.elementType;
+  }
 
   bool get isPointer => false;
   bool get isList => true;
