@@ -308,41 +308,4 @@
       ],
     },
   ],
-  'conditions': [
-    [ 'OS == "mac"', {
-       'targets': [
-          {
-            'target_name': 'run_objc_echo_service_test',
-            # Note: this target_name needs to be different from its dependency.
-            # This is due to the ninja GYP generator which doesn't generate
-            # unique names.
-            'type': 'none',
-            'dependencies': [
-              'run_echo_service_test', # For snapshot generation.
-              'src/vm/vm.gyp:fletch',
-              'tests/service_tests/service_tests.gyp:objc_echo_service_test',
-            ],
-            'actions': [
-              {
-                'action_name': 'run_objc_echo_service_test',
-                'inputs': [
-                  '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-                  'objc_echo_service_test'
-                  '<(EXECUTABLE_SUFFIX)',
-                  '<(SHARED_INTERMEDIATE_DIR)/echo.snapshot',
-                ],
-                'outputs': [
-                  '<(PRODUCT_DIR)/test_outcomes/objc_echo_service_test.pass',
-                ],
-                'action': [
-                  "bash", "-c",
-                  "<(_inputs) && LANG=POSIX date '+Test passed on %+' > "
-                  "<(_outputs)",
-                ],
-              },
-            ],
-          },
-       ],
-    }],
-  ],
 }

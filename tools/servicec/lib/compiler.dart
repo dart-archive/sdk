@@ -14,7 +14,6 @@ import 'src/resolver.dart';
 import 'src/plugins/cc.dart' as cc;
 import 'src/plugins/dart.dart' as dart;
 import 'src/plugins/java.dart' as java;
-import 'src/plugins/objc.dart' as objc;
 
 void compile(String path, String outputDirectory) {
   List<int> bytes = new File(path).readAsBytesSync();
@@ -27,7 +26,6 @@ void compile(String path, String outputDirectory) {
   cc.generate(path, unit, outputDirectory);
   dart.generate(path, unit, outputDirectory);
   java.generate(path, unit, outputDirectory);
-  objc.generate(path, unit, outputDirectory);
 }
 
 void dump(String path, Unit unit) {

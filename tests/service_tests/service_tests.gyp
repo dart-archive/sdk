@@ -24,23 +24,6 @@
       ],
     },
     {
-      'target_name': 'objc_echo_service_test',
-      'type': 'executable',
-      'dependencies': [
-        '../../src/vm/vm.gyp:fletch_vm',
-      ],
-      'sources': [
-        'echo/objc_echo.mm',
-        'echo/echo_shared.cc',
-        'echo/echo_shared.h',
-        'echo/objc/echo_service.m',
-        'echo/objc/echo_service.h',
-      ],
-      'link_settings': {
-        'libraries': ['-framework Foundation'],
-      },
-    },
-    {
       'target_name': 'person_service_test',
       'type': 'executable',
       'dependencies': [
