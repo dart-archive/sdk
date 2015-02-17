@@ -7,12 +7,12 @@ library dart.system;
 var a;
 
 _entry(int mainArity) {
-  a = 1;
-  _halt(a);
+  a = a;
+  _yield(true);
 }
 
 void foo(x) {
 }
 
-_halt(int code) native;
+external _yield(bool halt);
 _printString(String s) native;

@@ -57,6 +57,14 @@ class BytecodeBuilder {
     internalAdd(new LoadLiteralNull());
   }
 
+  void loadLiteralTrue() {
+    internalAdd(new LoadLiteralTrue());
+  }
+
+  void loadLiteralFalse() {
+    internalAdd(new LoadLiteralFalse());
+  }
+
   void storeStatic(int index) {
     internalAdd(new StoreStatic(index));
   }
@@ -148,6 +156,10 @@ class BytecodeBuilder {
 
   void methodEnd() {
     internalAdd(new MethodEnd(byteSize));
+  }
+
+  void processYield() {
+    internalAdd(new ProcessYield());
   }
 
   void internalAdd(Bytecode bytecode) {

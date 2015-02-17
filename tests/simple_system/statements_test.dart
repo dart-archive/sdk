@@ -16,11 +16,11 @@ _entry(int mainArity) {
   do {
     _printString("do");
   } while (false);
-  _halt(1);
+  _yield(true);
 }
 
 void foo(x) {
 }
 
-_halt(int code) native;
+external _yield(bool halt);
 _printString(String s) native;

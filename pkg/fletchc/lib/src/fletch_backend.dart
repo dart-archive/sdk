@@ -111,6 +111,8 @@ class FletchBackend extends Backend {
 
     if (isNative(function)) {
       codegenNativeFunction(function, functionCompiler);
+    } else if (isExternal(function)) {
+      codegenExternalFunction(function, functionCompiler);
     } else {
       functionCompiler.compile();
     }
@@ -146,6 +148,19 @@ class FletchBackend extends Backend {
     }
   }
 
+  void codegenExternalFunction(
+      FunctionElement function,
+      FunctionCompiler functionCompiler) {
+    if (function.name == "_yield") {
+      // TODO(ajohnsen): Load argument 0 instead of literal true.
+      functionCompiler.builder.loadLiteralTrue();
+      functionCompiler.builder.processYield();
+      functionCompiler.builder.ret();
+      return;
+    }
+    throw "Unhandled external: $function";
+  }
+
   bool isNative(Element element) {
     if (element is FunctionElement) {
       if (element.hasNode) {
@@ -153,6 +168,11 @@ class FletchBackend extends Backend {
             identical('native', element.node.body.getBeginToken().stringValue);
       }
     }
+    return false;
+  }
+
+  bool isExternal(Element element) {
+    if (element is FunctionElement) return element.isExternal;
     return false;
   }
 
@@ -176,6 +196,10 @@ class FletchBackend extends Backend {
         if (constant is ConstantValue) {
           if (constant.isInt) {
             commands.add(new PushNewInteger(constant.primitiveValue));
+          } else if (constant.isTrue) {
+            commands.add(new PushBoolean(true));
+          } else if (constant.isFalse) {
+            commands.add(new PushBoolean(false));
           } else if (constant.isString) {
             commands.add(
                 new PushNewString(constant.primitiveValue.slowToString()));
