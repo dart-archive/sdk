@@ -121,6 +121,52 @@
       ],
     },
     {
+      'target_name': 'libfletch',
+      'type': 'none',
+      'dependencies': [
+        'fletch_vm',
+        'fletch_vm_base',
+        '../shared/shared.gyp:fletch_shared',
+        '../double_conversion.gyp:double_conversion',
+      ],
+      'sources': [
+        # TODO(ager): Lint target default requires a source file. Not
+        # sure how to work around that.
+        'assembler.h',
+      ],
+      'actions': [
+        {
+          'action_name': 'generate_libfletch',
+          'conditions': [
+            [ 'OS=="linux"', {
+              'inputs': [
+                '../../tools/library_combiner.py',
+                '<(PRODUCT_DIR)/obj/src/vm/libfletch_vm.a',
+                '<(PRODUCT_DIR)/obj/src/vm/libfletch_vm_base.a',
+                '<(PRODUCT_DIR)/obj/src/shared/libfletch_shared.a',
+                '<(PRODUCT_DIR)/obj/src/libdouble_conversion.a',
+              ],
+            }],
+            [ 'OS=="mac"', {
+              'inputs': [
+                '../../tools/library_combiner.py',
+                '<(PRODUCT_DIR)/libfletch_vm.a',
+                '<(PRODUCT_DIR)/libfletch_vm_base.a',
+                '<(PRODUCT_DIR)/libfletch_shared.a',
+                '<(PRODUCT_DIR)/libdouble_conversion.a',
+              ],
+            }],
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/libfletch.a',
+          ],
+          'action': [
+            'bash', '-c', 'python <(_inputs) <(_outputs)',
+          ]
+        },
+      ]
+    },
+    {
       'target_name': 'fletch_vm_generator',
       'type': 'executable',
       'toolsets': ['host'],
@@ -148,7 +194,7 @@
       'target_name': 'fletch',
       'type': 'executable',
       'dependencies': [
-        'fletch_vm',
+        'libfletch',
       ],
       'sources': [
         # TODO(ahe): Add header (.h) files.
@@ -159,7 +205,7 @@
       'target_name': 'vm_run_tests',
       'type': 'executable',
       'dependencies': [
-        'fletch_vm',
+        'libfletch',
       ],
       'defines': [
         'TESTING',
