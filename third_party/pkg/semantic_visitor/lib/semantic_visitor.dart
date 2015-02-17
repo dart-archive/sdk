@@ -258,16 +258,16 @@ abstract class SemanticVisitor<R> extends Visitor<R> with AccessSemanticMixin {
         break;
       case AccessKind.LOCAL_VARIABLE:
         if (semantics.isInvoke) {
-          return visitParameterInvocation(
+          return visitLocalVariableInvocation(
               node,
               semantics.element,
               node.argumentsNode,
               elements.getSelector(node));
         } else if (semantics.isWrite) {
-          return visitParameterAssignment(
+          return visitLocalVariableAssignment(
               node, semantics.element, node.arguments.single);
         } else {
-          return visitParameterAccess(node, semantics.element);
+          return visitLocalVariableAccess(node, semantics.element);
         }
         break;
       case AccessKind.LOCAL_FUNCTION:

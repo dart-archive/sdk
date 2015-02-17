@@ -4,6 +4,10 @@
 
 library fletchc.fletch_compiler;
 
+import 'package:_internal/libraries.dart' show
+    LIBRARIES,
+    LibraryInfo;
+
 import 'package:compiler/compiler.dart' as api;
 
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
@@ -21,7 +25,14 @@ const EXTRA_DART2JS_OPTIONS = const <String>[
     '--output-type=dart',
 ];
 
+const FLETCH_PATCHES = const <String, String>{
+  "core": "core/core_patch.dart",
+  "_internal": "internal/internal_patch.dart",
+};
+
 class FletchCompiler extends FletchCompilerHack {
+  final Map<String, LibraryInfo> fletchLibraries = <String, LibraryInfo>{};
+
   final Uri fletchVm;
 
   FletchContext internalContext;
@@ -57,4 +68,30 @@ class FletchCompiler extends FletchCompilerHack {
     library.canUseNative = true;
     super.onLibraryCreated(library);
   }
+
+  String fletchPatchLibraryFor(String name) => FLETCH_PATCHES[name];
+
+  LibraryInfo lookupLibraryInfo(String name) {
+    return fletchLibraries.putIfAbsent(name, () {
+      LibraryInfo info = LIBRARIES[name];
+      if (info == null) return null;
+      return new LibraryInfo(
+          info.path,
+          category: info.category,
+          dart2jsPath: info.dart2jsPath,
+          dart2jsPatchPath: fletchPatchLibraryFor(name),
+          implementation: info.implementation,
+          documented: info.documented,
+          maturity: info.maturity,
+          platforms: info.platforms);
+    });
+  }
+
+  Uri resolvePatchUri(String dartLibraryPath) {
+    String patchPath = lookupPatchPath(dartLibraryPath);
+    if (patchPath == null) return null;
+    return Uri.base.resolve(patchPath);
+  }
+
+  bool inUserCode(element, {bool assumeInUserCode: false}) => true;
 }

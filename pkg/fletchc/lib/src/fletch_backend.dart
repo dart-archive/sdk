@@ -4,6 +4,9 @@
 
 library fletchc.fletch_backend;
 
+import 'dart:async' show
+    Future;
+
 import 'package:compiler/src/dart2jslib.dart' show
     Backend,
     BackendConstantEnvironment,
@@ -11,6 +14,7 @@ import 'package:compiler/src/dart2jslib.dart' show
     CompilerTask,
     ConstantCompilerTask,
     ConstantSystem,
+    Enqueuer,
     MessageKind,
     Registry,
     ResolutionEnqueuer;
@@ -19,9 +23,13 @@ import 'package:compiler/src/tree/tree.dart' show
     Return;
 
 import 'package:compiler/src/elements/elements.dart' show
-    Element,
     ClassElement,
-    FunctionElement;
+    Element,
+    FunctionElement,
+    LibraryElement;
+
+import 'package:compiler/src/elements/modelx.dart' show
+    FunctionElementX;
 
 import 'package:compiler/src/dart_backend/dart_backend.dart' show
     DartConstantTask;
@@ -34,6 +42,9 @@ import '../bytecodes.dart' show
 
 import 'package:compiler/src/resolution/resolution.dart' show
     TreeElements;
+
+import 'package:compiler/src/library_loader.dart' show
+    LibraryLoader;
 
 import 'fletch_function_constant.dart' show
     FletchFunctionConstant;
@@ -82,6 +93,19 @@ class FletchBackend extends Backend {
   void enqueueHelpers(
       ResolutionEnqueuer world,
       Registry registry) {
+    compiler.patchAnnotationClass = patchAnnotationClass;
+  }
+
+  /// Class of annotations to mark patches in patch files.
+  ///
+  /// The patch parser (pkg/compiler/lib/src/patch_parser.dart). The patch
+  /// parser looks for an annotation on the form "@patch", where "patch" is
+  /// compile-time constant instance of [patchAnnotationClass].
+  ClassElement get patchAnnotationClass {
+    // TODO(ahe): Introduce a proper constant class to identify constants. For
+    // now, we simply put "const patch = "patch";" in the beginning of patch
+    // files.
+    return stringImplementation;
   }
 
   void codegen(CodegenWorkItem work) {
@@ -92,7 +116,10 @@ class FletchBackend extends Backend {
     }
 
     if (element.isFunction) {
-      codegenFunction(element, work.resolutionTree, work.registry);
+      compiler.withCurrentElement(element.implementation, () {
+        codegenFunction(
+            element.implementation, work.resolutionTree, work.registry);
+      });
     } else {
       compiler.internalError(
           element, "Uninimplemented element kind: ${element.kind}");
@@ -255,5 +282,36 @@ class FletchBackend extends Backend {
 
   int allocateMethodId(FunctionElement element) {
     return methodIds.putIfAbsent(element, () => methodIds.length);
+  }
+
+  Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
+    if (library.isPlatformLibrary && !library.isPatched) {
+      // Apply patch, if any.
+      Uri patchUri = compiler.resolvePatchUri(library.canonicalUri.path);
+      if (patchUri != null) {
+        return compiler.patchParser.patchLibrary(loader, patchUri, library);
+      }
+    }
+  }
+
+  /// Return non-null to enable patching. Possible return values are 'new' and
+  /// 'old'. Referring to old and new emitter. Since the new emitter is the
+  /// future, we assume 'old' will go away. So it seems the best option for
+  /// Fletch is 'new'.
+  String get patchVersion => 'new';
+
+  FunctionElement resolveExternalFunction(FunctionElement element) {
+    if (element.isPatched) {
+      FunctionElementX patch = element.patch;
+      compiler.withCurrentElement(patch, () {
+        patch.parseNode(compiler);
+        patch.computeType(compiler);
+      });
+      element = patch;
+    } else {
+      compiler.reportError(
+         element, MessageKind.PATCH_EXTERNAL_WITHOUT_IMPLEMENTATION);
+    }
+    return element;
   }
 }

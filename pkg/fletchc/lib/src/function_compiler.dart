@@ -14,6 +14,7 @@ import 'package:compiler/src/constants/values.dart' show
     ConstantValue;
 
 import 'package:compiler/src/dart2jslib.dart' show
+    MessageKind,
     Registry;
 
 import 'package:compiler/src/elements/elements.dart';
@@ -139,6 +140,17 @@ class FunctionCompiler extends SemanticVisitor {
     }
   }
 
+  // TODO(ahe): Remove this method when operators are supported in
+  // AccessSemantics.
+  void visitSend(Send node) {
+    if (node.isOperator) {
+      generateUnimplementedError(
+          node, "[visitSend] for operators isn't implemented.");
+    } else {
+      return super.visitSend(node);
+    }
+  }
+
   void visitStaticMethodInvocation(
       Send node,
       /* MethodElement */ element,
@@ -209,7 +221,11 @@ class FunctionCompiler extends SemanticVisitor {
   }
 
   void visitStatement(Node node) {
-    internalError(node, "Missing visit of statement: ${node.runtimeType}");
+    Visitstate oldState = visitState;
+    visitState = Visitstate.Effect;
+    generateUnimplementedError(
+        node, "Missing visit of statement: ${node.runtimeType}");
+    visitState = oldState;
   }
 
   void visitIf(If node) {
@@ -250,15 +266,21 @@ class FunctionCompiler extends SemanticVisitor {
     builder.bind(end);
   }
 
+  void visitVariableDefinitions(VariableDefinitions node) {
+    for (Node node in node.definitions.nodes) {
+      visitForEffect(node);
+    }
+  }
+
   void visitFunctionExpression(FunctionExpression node) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitFunctionExpression] isn't implemented.");
   }
 
   void visitParameterAccess(
       Send node,
       ParameterElement element) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitParameterAccess] isn't implemented.");
   }
 
@@ -266,7 +288,7 @@ class FunctionCompiler extends SemanticVisitor {
       SendSet node,
       ParameterElement element,
       Node rhs) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitParameterAssignment] isn't implemented.");
   }
 
@@ -275,14 +297,14 @@ class FunctionCompiler extends SemanticVisitor {
       ParameterElement element,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitParameterInvocation] isn't implemented.");
   }
 
   void visitLocalVariableAccess(
       Send node,
       LocalVariableElement element) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitLocalVariableAccess] isn't implemented.");
   }
 
@@ -290,7 +312,7 @@ class FunctionCompiler extends SemanticVisitor {
       SendSet node,
       LocalVariableElement element,
       Node rhs) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitLocalVariableAssignment] isn't implemented.");
   }
 
@@ -299,14 +321,14 @@ class FunctionCompiler extends SemanticVisitor {
       LocalVariableElement element,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitLocalVariableInvocation] isn't implemented.");
   }
 
   void visitLocalFunctionAccess(
       Send node,
       LocalFunctionElement element) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitLocalFunctionAccess] isn't implemented.");
   }
 
@@ -315,7 +337,7 @@ class FunctionCompiler extends SemanticVisitor {
       LocalFunctionElement element,
       Node rhs,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitLocalFunctionAssignment] isn't implemented.");
   }
 
@@ -324,14 +346,14 @@ class FunctionCompiler extends SemanticVisitor {
       LocalFunctionElement element,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitLocalFunctionInvocation] isn't implemented.");
   }
 
   void visitDynamicAccess(
       Send node,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitDynamicAccess] isn't implemented.");
   }
 
@@ -339,7 +361,7 @@ class FunctionCompiler extends SemanticVisitor {
       SendSet node,
       Selector selector,
       Node rhs) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitDynamicAssignment] isn't implemented.");
   }
 
@@ -347,7 +369,7 @@ class FunctionCompiler extends SemanticVisitor {
       Send node,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitDynamicInvocation] isn't implemented.");
   }
 
@@ -356,21 +378,21 @@ class FunctionCompiler extends SemanticVisitor {
       FieldElement element,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitStaticFieldInvocation] isn't implemented.");
   }
 
   void visitStaticMethodAccess(
       Send node,
       MethodElement element) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitStaticMethodAccess] isn't implemented.");
   }
 
   void visitStaticPropertyAccess(
       Send node,
       FunctionElement element) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitStaticPropertyAccess] isn't implemented.");
   }
 
@@ -378,7 +400,7 @@ class FunctionCompiler extends SemanticVisitor {
       SendSet node,
       FunctionElement element,
       Node rhs) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitStaticPropertyAssignment] isn't implemented.");
   }
 
@@ -387,14 +409,14 @@ class FunctionCompiler extends SemanticVisitor {
       FieldElement element,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitStaticPropertyInvocation] isn't implemented.");
   }
 
   void visitTopLevelFieldAccess(
       Send node,
       FieldElement element) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelFieldAccess] isn't implemented.");
   }
 
@@ -402,7 +424,7 @@ class FunctionCompiler extends SemanticVisitor {
       SendSet node,
       FieldElement element,
       Node rhs) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelFieldAssignment] isn't implemented.");
   }
 
@@ -411,14 +433,14 @@ class FunctionCompiler extends SemanticVisitor {
       FieldElement element,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelFieldInvocation] isn't implemented.");
   }
 
   void visitTopLevelMethodAccess(
       Send node,
       MethodElement element) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelMethodAccess] isn't implemented.");
   }
 
@@ -427,14 +449,14 @@ class FunctionCompiler extends SemanticVisitor {
       MethodElement element,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelMethodInvocation] isn't implemented.");
   }
 
   void visitTopLevelPropertyAccess(
       Send node,
       FunctionElement element) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelPropertyAccess] isn't implemented.");
   }
 
@@ -442,7 +464,7 @@ class FunctionCompiler extends SemanticVisitor {
       SendSet node,
       FunctionElement element,
       Node rhs) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelPropertyAssignment] isn't implemented.");
   }
 
@@ -451,14 +473,14 @@ class FunctionCompiler extends SemanticVisitor {
       FieldElement element,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelPropertyInvocation] isn't implemented.");
   }
 
   void visitClassTypeLiteralAccess(
       Send node,
       ClassElement element) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitClassTypeLiteralAccess] isn't implemented.");
   }
 
@@ -467,7 +489,7 @@ class FunctionCompiler extends SemanticVisitor {
       ClassElement element,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitClassTypeLiteralInvocation] isn't implemented.");
   }
 
@@ -475,14 +497,14 @@ class FunctionCompiler extends SemanticVisitor {
       SendSet node,
       ClassElement element,
       Node rhs) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitClassTypeLiteralAssignment] isn't implemented.");
   }
 
   void visitTypedefTypeLiteralAccess(
       Send node,
       TypedefElement element) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTypedefTypeLiteralAccess] isn't implemented.");
   }
 
@@ -491,7 +513,7 @@ class FunctionCompiler extends SemanticVisitor {
       TypedefElement element,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTypedefTypeLiteralInvocation] isn't implemented.");
   }
 
@@ -499,14 +521,14 @@ class FunctionCompiler extends SemanticVisitor {
       SendSet node,
       TypedefElement element,
       Node rhs) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTypedefTypeLiteralAssignment] isn't implemented.");
   }
 
   void visitTypeVariableTypeLiteralAccess(
       Send node,
       TypeVariableElement element) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTypeVariableTypeLiteralAccess] isn't implemented.");
   }
 
@@ -515,7 +537,7 @@ class FunctionCompiler extends SemanticVisitor {
       TypeVariableElement element,
       NodeList arguments,
       Selector selector) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTypeVariableTypeLiteralInvocation] isn't implemented.");
   }
 
@@ -523,25 +545,33 @@ class FunctionCompiler extends SemanticVisitor {
       SendSet node,
       TypeVariableElement element,
       Node rhs) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitTypeVariableTypeLiteralAssignment] isn't implemented.");
   }
 
   void visitDynamicTypeLiteralAccess(
       Send node) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitDynamicTypeLiteralAccess] isn't implemented.");
   }
 
   void visitAssert(
       Send node,
       Node expression) {
-    internalError(
+    generateUnimplementedError(
         node, "[visitAssert] isn't implemented.");
   }
 
   void internalError(Spannable spannable, String reason) {
     context.compiler.internalError(spannable, reason);
+  }
+
+  void generateUnimplementedError(Spannable spannable, String reason) {
+    context.compiler.reportError(
+        spannable, MessageKind.GENERIC, {'text': reason});
+    // TODO(ahe): Throw an exception here.
+    builder.loadLiteralNull();
+    applyVisitState();
   }
 
   String toString() => "FunctionCompiler(${function.name})";
