@@ -178,6 +178,7 @@
       'sources': [
         # TODO(ahe): Add header (.h) files.
         'assembler_arm_linux.cc',
+        'assembler_arm_macos.cc',
         'assembler_x64.cc',
         'assembler_x64_linux.cc',
         'assembler_x64_macos.cc',

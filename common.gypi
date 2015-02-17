@@ -203,9 +203,15 @@
 
         'target_conditions': [
           ['_toolset=="target"', {
-              'defines': [
-                # Fake define intercepted by cc_wrapper.py.
-                'FLETCH_ARM',
+              'conditions': [
+                ['OS=="linux"', {
+                  'defines': [
+                    # Fake define intercepted by cc_wrapper.py to change the
+                    # compiler binary to an ARM cross compiler. This is only needed
+                    # on linux.
+                    'FLETCH_ARM',
+                   ],
+                 }],
               ],
 
               'ldflags': [
@@ -220,6 +226,17 @@
 
                 'LIBRARY_SEARCH_PATHS': [
                   '<(third_party_libs_path)/arm',
+                ],
+
+                # TODO(ager): Do not hard code the xcode sdk.
+                'OTHER_CPLUSPLUSFLAGS' : [
+                  '-isysroot',
+                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk',
+                ],
+
+                'OTHER_CFLAGS' : [
+                  '-isysroot',
+                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk',
                 ],
               },
             },
