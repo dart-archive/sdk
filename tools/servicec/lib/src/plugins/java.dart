@@ -325,7 +325,8 @@ class _JniVisitor extends CcVisitor {
     write('JNIEXPORT ');
     writeType(node.returnType);
     write(' JNICALL Java_fletch_${serviceName}_${name}(');
-    write('JNIEnv*, jclass, ');
+    write('JNIEnv*, jclass');
+    if (!node.arguments.isEmpty) write(', ');
     visitArguments(node.arguments);
     writeln(') {');
     visitMethodBody(id, node);
@@ -337,7 +338,8 @@ class _JniVisitor extends CcVisitor {
     writeln();
     write('JNIEXPORT void JNICALL ');
     write('Java_fletch_${serviceName}_${name}Async(');
-    write('JNIEnv* _env, jclass, ');
+    write('JNIEnv* _env, jclass');
+    if (!node.arguments.isEmpty) write(', ');
     visitArguments(node.arguments);
     writeln(', jobject _callback) {');
     writeln('  jobject callback = _env->NewGlobalRef(_callback);');

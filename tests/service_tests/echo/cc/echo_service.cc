@@ -27,13 +27,13 @@ int32_t EchoService::echo(int32_t n) {
   char* _buffer = _bits;
   *reinterpret_cast<int32_t*>(_buffer + 32) = n;
   ServiceApiInvoke(service_id_, kEchoId_, _buffer, kSize);
-  return *reinterpret_cast<int*>(_buffer + 32);
+  return *reinterpret_cast<int64_t*>(_buffer + 32);
 }
 
 static void Unwrap_int32_8(void* raw) {
   typedef void (*cbt)(int);
   char* buffer = reinterpret_cast<char*>(raw);
-  int result = *reinterpret_cast<int*>(buffer + 32);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 32);
   cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
   free(buffer);
   callback(result);
@@ -54,7 +54,7 @@ int32_t EchoService::ping() {
   char _bits[kSize];
   char* _buffer = _bits;
   ServiceApiInvoke(service_id_, kPingId_, _buffer, kSize);
-  return *reinterpret_cast<int*>(_buffer + 32);
+  return *reinterpret_cast<int64_t*>(_buffer + 32);
 }
 
 void EchoService::pingAsync(void (*callback)(int32_t)) {

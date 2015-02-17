@@ -29,7 +29,7 @@ static const MethodId kEchoId_ = (MethodId)1;
   char* _buffer = _bits;
   *(int32_t*)(_buffer + 32) = n;
   ServiceApiInvoke(service_id_, kEchoId_, _buffer, kSize);
-  return *(int*)(_buffer + 32);
+  return *(int64_t*)(_buffer + 32);
 }
 
 static void Unwrap_int32_8(void* raw) {
@@ -73,7 +73,7 @@ static const MethodId kPingId_ = (MethodId)2;
   char _bits[kSize];
   char* _buffer = _bits;
   ServiceApiInvoke(service_id_, kPingId_, _buffer, kSize);
-  return *(int*)(_buffer + 32);
+  return *(int64_t*)(_buffer + 32);
 }
 
 + (void)pingAsyncWithCallback:(void (*)(int))callback {

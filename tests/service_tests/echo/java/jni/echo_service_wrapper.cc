@@ -53,7 +53,7 @@ JNIEXPORT jint JNICALL Java_fletch_EchoService_echo(JNIEnv*, jclass, jint n) {
   char* _buffer = _bits;
   *reinterpret_cast<int32_t*>(_buffer + 32) = n;
   ServiceApiInvoke(service_id_, _kechoId, _buffer, kSize);
-  return *reinterpret_cast<int*>(_buffer + 32);
+  return *reinterpret_cast<int64_t*>(_buffer + 32);
 }
 
 static void Unwrap_int32_8(void* raw) {
@@ -84,15 +84,15 @@ JNIEXPORT void JNICALL Java_fletch_EchoService_echoAsync(JNIEnv* _env, jclass, j
 
 static const MethodId _kpingId = reinterpret_cast<MethodId>(2);
 
-JNIEXPORT jint JNICALL Java_fletch_EchoService_ping(JNIEnv*, jclass, ) {
+JNIEXPORT jint JNICALL Java_fletch_EchoService_ping(JNIEnv*, jclass) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
   ServiceApiInvoke(service_id_, _kpingId, _buffer, kSize);
-  return *reinterpret_cast<int*>(_buffer + 32);
+  return *reinterpret_cast<int64_t*>(_buffer + 32);
 }
 
-JNIEXPORT void JNICALL Java_fletch_EchoService_pingAsync(JNIEnv* _env, jclass, , jobject _callback) {
+JNIEXPORT void JNICALL Java_fletch_EchoService_pingAsync(JNIEnv* _env, jclass, jobject _callback) {
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
