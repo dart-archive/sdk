@@ -220,14 +220,18 @@ class _DartVisitor extends CodeGenerationVisitor {
     for (int i = 0; i < methods.length; ++i) {
       Method method = methods[i];
       writeln('      case ${methodIds[i]}:');
-      Node resolvedReturnType = method.returnType.resolved;
-      if (resolvedReturnType == null) {
+      if (method.returnType.isVoid) {
+        write('        ');
+        writeImplCall(method);
+        writeln(');');
+      } else if (method.returnType.isPrimitive) {
         write('        var result = ');
         writeImplCall(method);
         writeln(');');
         writeln('        ${setInt32()};');
       } else {
-        StructLayout resultLayout = new StructLayout(resolvedReturnType);
+        Struct resultType = method.returnType.resolved;
+        StructLayout resultLayout = new StructLayout(resultType);
         int size = resultLayout.size;
         writeln('        MessageBuilder mb = new MessageBuilder(${size + 8});');
         String builderName = '${method.returnType.identifier}Builder';
@@ -280,6 +284,8 @@ class _DartVisitor extends CodeGenerationVisitor {
         write('> get $slotName => ');
         neededListTypes.add(slotType);
         writeln('readList(new _${slotType.identifier}List(), ${slot.offset});');
+      } else if (slotType.isVoid) {
+        // No getters for void slots.
       } else if (slotType.isPrimitive) {
         String getter = _GETTERS[slotType.identifier];
         String offset = '_offset + ${slot.offset}';
@@ -345,6 +351,10 @@ class _DartVisitor extends CodeGenerationVisitor {
         }
         writeln('List(), ${slot.offset}, length, $size);');
         writeln('  }');
+      } else if (slotType.isVoid) {
+        writeln('  void set$camel() {');
+        write(updateTag);
+        writeln('  }');
       } else if (slotType.isPrimitive) {
         String setter = _SETTERS[slotType.identifier];
         write('  void set ${slotName}(');
@@ -352,7 +362,7 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln(' value) {');
         write(updateTag);
         String offset = '_offset + ${slot.offset}';
-        if (slotType.primitiveType == primitives.PrimitiveType.BOOL) {
+        if (slotType.isBool) {
           writeln('    _segment.memory.$setter($offset, value ? 1 : 0);');
         } else {
           writeln('    _segment.memory.$setter($offset, value);');
@@ -410,6 +420,7 @@ class _DartVisitor extends CodeGenerationVisitor {
   }
 
   static const Map<String, String> _types = const {
+    'void'    : 'void',
     'bool'    : 'bool',
 
     'uint8'   : 'int',

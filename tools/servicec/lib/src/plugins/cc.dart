@@ -62,6 +62,7 @@ abstract class CcVisitor extends CodeGenerationVisitor {
 
   static const int REQUEST_HEADER_SIZE = 32;
   static const PRIMITIVE_TYPES = const <String, String> {
+    'void'    : 'void',
     'bool'    : 'bool',
 
     'uint8'   : 'uint8_t',
@@ -175,8 +176,8 @@ abstract class CcVisitor extends CodeGenerationVisitor {
         writeln('  Segment* segment = MessageReader::GetRootSegment(memory);');
         writeln('  return ${method.returnType.identifier}'
                 '(segment, $RESPONSE_HEADER_SIZE);');
-      } else {
-        writeln('  return *${pointerToArgument(0, 0, 'int')};');
+      } else if (!method.returnType.isVoid) {
+        writeln('  return *${pointerToArgument(0, 0, 'int64_t')};');
       }
     }
   }
@@ -246,7 +247,9 @@ class _HeaderVisitor extends CcVisitor {
     visitArguments(node.arguments);
     if (node.arguments.isNotEmpty) write(', ');
     write('void (*callback)(');
-    writeReturnType(node.returnType);
+    if (!node.returnType.isVoid) {
+      writeReturnType(node.returnType);
+    }
     writeln('));');
   }
 
@@ -286,11 +289,13 @@ class _HeaderVisitor extends CcVisitor {
         write('return ReadList<');
         writeReturnType(slotType);
         writeln('>(${slot.offset}); }');
+      } else if (slotType.isVoid) {
+        // No getters for void slots.
       } else if (slotType.isPrimitive) {
         write('  ');
         writeType(slotType);
         write(' get$camel() const { return *PointerTo<');
-        if (slotType.primitiveType == primitives.PrimitiveType.BOOL) {
+        if (slotType.isBool) {
           writeln('uint8_t>(${slot.offset}) != 0; }');
         } else {
           writeType(slotType);
@@ -331,6 +336,11 @@ class _HeaderVisitor extends CcVisitor {
         write('  List<');
         writeType(slotType);
         writeln('> init$camel(int length);');
+      } else if (slotType.isVoid) {
+        assert(slot.isUnionSlot);
+        String tagName = camelize(slot.union.tag.name);
+        int tag = slot.unionTag;
+        writeln('  void set$camel() { set$tagName($tag); }');
       } else if (slotType.isPrimitive) {
         write('  void set$camel(');
         writeType(slotType);
@@ -341,7 +351,7 @@ class _HeaderVisitor extends CcVisitor {
           write('set$tagName($tag); ');
         }
         write('*PointerTo<');
-        if (slotType.primitiveType == primitives.PrimitiveType.BOOL) {
+        if (slotType.isBool) {
           writeln('uint8_t>(${slot.offset}) = value ? 1 : 0; }');
         } else {
           writeType(slotType);
@@ -516,8 +526,10 @@ class _ImplementationVisitor extends CcVisitor {
         writeln('  return ${node.returnType.identifier}'
                 '(segment, $RESPONSE_HEADER_SIZE);');
       } else {
-        writeln('  return ${node.arguments.single.name}.'
-                'InvokeMethod(service_id_, $id);');
+        String argumentName = node.arguments.single.name;
+        write('  ');
+        if (!node.returnType.isVoid) write('return ');
+        writeln('$argumentName.InvokeMethod(service_id_, $id);');
       }
       writeln('}');
 
@@ -538,7 +550,9 @@ class _ImplementationVisitor extends CcVisitor {
       visitArguments(node.arguments);
       if (node.arguments.isNotEmpty) write(', ');
       write('void (*callback)(');
-      writeReturnType(node.returnType);
+      if (!node.returnType.isVoid) {
+        writeReturnType(node.returnType);
+      }
       writeln(')) {');
       visitMethodBody(id, node, callback: callback);
       writeln('}');
@@ -555,14 +569,24 @@ class _ImplementationVisitor extends CcVisitor {
       String name = 'Unwrap_$key';
       writeln();
       writeln('static void $name(void* raw) {');
-      writeln('  typedef void (*cbt)(int);');
+      if (type.isVoid) {
+        writeln('  typedef void (*cbt)();');
+      } else {
+        writeln('  typedef void (*cbt)(int);');
+      }
       writeln('  char* buffer = ${cast('char*')}(raw);');
       int offset = CcVisitor.REQUEST_HEADER_SIZE;
-      writeln('  int result = *${cast('int*')}(buffer + $offset);');
+      if (!type.isVoid) {
+        writeln('  int64_t result = *${cast('int64_t*')}(buffer + $offset);');
+      }
       offset += layout.size;
       writeln('  cbt callback = *${cast('cbt*')}(buffer + $offset);');
       writeln('  free(buffer);');
-      writeln('  callback(result);');
+      if (type.isVoid) {
+        writeln('  callback();');
+      } else {
+        writeln('  callback(result);');
+      }
       writeln('}');
       return name;
     });

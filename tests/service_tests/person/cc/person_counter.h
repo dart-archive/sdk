@@ -33,6 +33,8 @@ class PersonCounter {
   static Node createNode(int32_t depth);
   static int32_t count(PersonBuilder person);
   static int32_t depth(NodeBuilder node);
+  static void foo();
+  static void fooAsync(void (*callback)());
 };
 
 class AgeStats : public Reader {
@@ -117,6 +119,7 @@ class Node : public Reader {
   bool getCond() const { return *PointerTo<uint8_t>(8) != 0; }
   bool isCons() const { return 3 == getTag(); }
   Cons getCons() const;
+  bool isNil() const { return 4 == getTag(); }
 };
 
 class NodeBuilder : public Builder {
@@ -132,6 +135,7 @@ class NodeBuilder : public Builder {
   void setNum(int32_t value) { setTag(1); *PointerTo<int32_t>(8) = value; }
   void setCond(bool value) { setTag(2); *PointerTo<uint8_t>(8) = value ? 1 : 0; }
   ConsBuilder initCons();
+  void setNil() { setTag(4); }
 };
 
 class Cons : public Reader {

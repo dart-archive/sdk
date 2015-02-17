@@ -5,6 +5,7 @@
 library servicec.primitives;
 
 enum PrimitiveType {
+  VOID,
   BOOL,
 
   UINT8,
@@ -23,6 +24,8 @@ enum PrimitiveType {
 
 int size(PrimitiveType type) {
   switch (type) {
+    case PrimitiveType.VOID: return 0;
+
     case PrimitiveType.BOOL:
     case PrimitiveType.INT8:
     case PrimitiveType.UINT8: return 1;
@@ -43,6 +46,7 @@ int size(PrimitiveType type) {
 
 PrimitiveType lookup(String identifier) {
   Map<String, PrimitiveType> types = const {
+    'void'    : PrimitiveType.VOID,
     'bool'    : PrimitiveType.BOOL,
 
     'uint8'   : PrimitiveType.UINT8,

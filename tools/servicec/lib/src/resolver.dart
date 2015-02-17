@@ -79,6 +79,10 @@ class Resolver extends ResolutionVisitor {
       throw new UnsupportedError("Cannot pass structs by value as arguments.");
     }
 
+    if (arguments.any((e) => e.type.isVoid)) {
+      throw new UnsupportedError("Cannot pass void as argument.");
+    }
+
     if (arguments.length == 1) {
       node.inputKind = arguments[0].type.isPrimitive
           ? InputKind.PRIMITIVES
@@ -108,6 +112,10 @@ class Resolver extends ResolutionVisitor {
 
     Set<Struct> dependencies = dependencyMap[node] =
         computeDependencies(node.slots).toSet();
+
+    if (node.slots.any((Formal slot) => slot.type.isVoid)) {
+      throw new UnsupportedError("Cannot have void slots in struct");
+    }
 
     if (node.unions.isNotEmpty) {
       if (node.unions.length != 1) {

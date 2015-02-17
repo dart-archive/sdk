@@ -34,6 +34,10 @@ static int Depth(Node node) {
   return 1 + ((left > right) ? left : right);
 }
 
+static void FooCallback() {
+  printf("Callback for foo!\n");
+}
+
 static void RunPersonTests() {
   MessageBuilder builder(512);
 
@@ -89,6 +93,9 @@ static void RunPersonTests() {
   int depth = Depth(node);
   printf("Generated Node in Dart with depth: %d\n", depth);
   node.Delete();
+
+  PersonCounter::foo();
+  PersonCounter::fooAsync(FooCallback);
 }
 
 static void RunPersonBoxTests() {

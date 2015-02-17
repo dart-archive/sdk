@@ -72,6 +72,10 @@ class PersonCounterImpl extends PersonCounter {
     int right = depth(node.cons.snd);
     return (left > right) ? left + 1 : right + 1;
   }
+
+  void foo() {
+    print('Foo!');
+  }
 }
 
 main() {

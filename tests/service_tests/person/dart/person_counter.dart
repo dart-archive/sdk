@@ -26,6 +26,7 @@ abstract class PersonCounter {
   void createNode(int depth, NodeBuilder result);
   int count(Person person);
   int depth(Node node);
+  void foo();
 
   static void initialize(PersonCounter impl) {
     if (_impl != null) {
@@ -99,6 +100,10 @@ abstract class PersonCounter {
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
+      case _FOO_METHOD_ID:
+        _impl.foo();
+        _postResult.icall$1(request);
+        break;
       default:
         throw UnsupportedError();
     }
@@ -113,6 +118,7 @@ abstract class PersonCounter {
   const int _CREATE_NODE_METHOD_ID = 6;
   const int _COUNT_METHOD_ID = 7;
   const int _DEPTH_METHOD_ID = 8;
+  const int _FOO_METHOD_ID = 9;
 }
 
 class AgeStats extends Reader {
@@ -167,6 +173,7 @@ class Node extends Reader {
   Cons get cons => new Cons()
       .._segment = _segment
       .._offset = _offset + 8;
+  bool get isNil => 4 == this.tag;
 }
 
 class NodeBuilder extends Builder {
@@ -186,6 +193,9 @@ class NodeBuilder extends Builder {
     return new ConsBuilder()
         .._segment = _segment
         .._offset = _offset + 8;
+  }
+  void setNil() {
+    tag = 4;
   }
 }
 

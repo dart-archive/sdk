@@ -12,6 +12,7 @@ service PersonCounter {
   int32 count(Person* person);
 
   int32 depth(Node* node);
+  void foo();
 }
 
 struct AgeStats {
@@ -34,6 +35,7 @@ struct Node {
     int32 num;
     bool cond;
     Cons cons;
+    void nil;
   }
 }
 

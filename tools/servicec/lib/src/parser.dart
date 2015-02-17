@@ -100,7 +100,11 @@ class Method extends Node {
 abstract class Type {
   bool get isPointer;
   bool get isList;
+
   bool get isPrimitive => primitiveType != null;
+
+  bool get isVoid => primitiveType == primitives.PrimitiveType.VOID;
+  bool get isBool => primitiveType == primitives.PrimitiveType.BOOL;
 
   // TODO(kasperl): Get rid of this.
   String get identifier;
