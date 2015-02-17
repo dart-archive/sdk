@@ -6,6 +6,7 @@ import 'dart/echo_service.dart';
 
 class EchoImpl implements EchoService {
   int echo(int n) => n;
+  int ping() => 42;
 }
 
 main() {

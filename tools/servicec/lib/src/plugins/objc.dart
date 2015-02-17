@@ -93,15 +93,22 @@ class _HeaderVisitor extends _ObjcVisitor {
     visitArguments(node.arguments);
     writeln(';');
 
-    // TODO(ager): Methods with no arguments and a callback.
     write('+ (void)${name}Async');
     visitArguments(node.arguments);
-    writeln(' withCallback:(void (*)(int))callback;');
+    if (node.arguments.isEmpty) {
+      writeln('WithCallback:(void (*)(int))callback;');
+    } else {
+      writeln(' withCallback:(void (*)(int))callback;');
+    }
 
     // TODO(ager): Methods with no arguments and a callback.
     write('+ (void)${name}Async');
     visitArguments(node.arguments);
-    writeln(' withBlock:(void (^)(int))callback;');
+    if (node.arguments.isEmpty) {
+      writeln('WithBlock:(void (^)(int))callback;');
+    } else {
+      writeln(' withBlock:(void (^)(int))callback;');
+    }
   }
 }
 
@@ -180,7 +187,11 @@ class _ImplementationVisitor extends _ObjcVisitor {
     writeln();
     write('+ (void)${name}Async');
     visitArguments(node.arguments);
-    writeln(' withCallback:(void (*)(int))callback {');
+    if (node.arguments.isEmpty) {
+      writeln('WithCallback:(void (*)(int))callback {');
+    } else {
+      writeln(' withCallback:(void (*)(int))callback {');
+    }
     visitMethodBody(id, node, cStyle: true, callback: callback);
     writeln('}');
 
@@ -188,7 +199,11 @@ class _ImplementationVisitor extends _ObjcVisitor {
     writeln();
     write('+ (void)${name}Async');
     visitArguments(node.arguments);
-    writeln(' withBlock:(void (^)(int))callback {');
+    if (node.arguments.isEmpty) {
+      writeln('WithBlock:(void (^)(int))callback {');
+    } else {
+      writeln(' withBlock:(void (^)(int))callback {');
+    }
     visitMethodBody(id, node, cStyle: true, callback: callback);
     writeln('}');
   }

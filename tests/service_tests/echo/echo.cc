@@ -27,6 +27,10 @@ static void EchoCallback(int result) {
   }
 }
 
+static void PingCallback(int result) {
+  printf("Ping async result: %d\n", result);
+}
+
 static uint64_t GetMicroseconds() {
   struct timeval tv;
   if (gettimeofday(&tv, NULL) < 0) return -1;
@@ -58,6 +62,12 @@ static void InteractWithService() {
   printf("Async call took %.2f us.\n",
          static_cast<double>(async_us) / kCallCount);
   printf("    - %.2f calls/s\n", (1000000.0 / async_us) * kCallCount);
+
+  int result = EchoService::ping();
+  printf("Ping result: %d\n", result);
+  printf("Async ping call\n");
+  EchoService::pingAsync(PingCallback);
+
   EchoService::tearDown();
 }
 

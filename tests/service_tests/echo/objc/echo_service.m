@@ -66,4 +66,28 @@ static void Unwrap_int32_8_Block(void* raw) {
   ServiceApiInvokeAsync(service_id_, kEchoId_, Unwrap_int32_8_Block, _buffer, kSize);
 }
 
+static const MethodId kPingId_ = (MethodId)2;
+
++ (int32_t)ping {
+  static const int kSize = 40;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  ServiceApiInvoke(service_id_, kPingId_, _buffer, kSize);
+  return *(int*)(_buffer + 32);
+}
+
++ (void)pingAsyncWithCallback:(void (*)(int))callback {
+  static const int kSize = 40 + 1 * sizeof(void*);
+  char* _buffer = (char*)(malloc(kSize));
+  *(void**)(_buffer + 40) = (void*)(callback);
+  ServiceApiInvokeAsync(service_id_, kPingId_, Unwrap_int32_8, _buffer, kSize);
+}
+
++ (void)pingAsyncWithBlock:(void (^)(int))callback {
+  static const int kSize = 40 + 1 * sizeof(void*);
+  char* _buffer = (char*)(malloc(kSize));
+  *(void**)(_buffer + 40) = (void*)(callback);
+  ServiceApiInvokeAsync(service_id_, kPingId_, Unwrap_int32_8_Block, _buffer, kSize);
+}
+
 @end

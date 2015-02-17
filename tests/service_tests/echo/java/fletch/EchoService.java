@@ -10,10 +10,17 @@ public class EchoService {
   public static native void Setup();
   public static native void TearDown();
 
-  public static abstract class echoCallback {
+  public static abstract class EchoCallback {
     public abstract void handle(int result);
   }
 
   public static native int echo(int n);
-  public static native void echoAsync(int n, echoCallback callback);
+  public static native void echoAsync(int n, EchoCallback callback);
+
+  public static abstract class PingCallback {
+    public abstract void handle(int result);
+  }
+
+  public static native int ping();
+  public static native void pingAsync(PingCallback callback);
 }

@@ -50,11 +50,20 @@ class Echo {
     System.out.println("Java: result " + result);
     result = EchoService.echo(2);
     System.out.println("Java: result " + result);
-    EchoService.echoAsync(3, new EchoService.echoCallback() {
+    EchoService.echoAsync(3, new EchoService.EchoCallback() {
       public void handle(int result) {
         System.out.println("Java: async echo result " + result);
       }
     });
+
+    result = EchoService.ping();
+    System.out.println("Java: result " + result);
+    EchoService.pingAsync(new EchoService.PingCallback() {
+      public void handle(int result) {
+        System.out.println("Java: async ping result " + result);
+      }
+    });
+
     EchoService.TearDown();
   }
 

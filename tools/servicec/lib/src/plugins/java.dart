@@ -213,8 +213,9 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
   visitMethod(Method node) {
     String name = node.name;
+    String camelName = strings.camelize(name);
     writeln();
-    writeln('  public static abstract class ${name}Callback {');
+    writeln('  public static abstract class ${camelName}Callback {');
     write('    public abstract void handle(');
     writeType(node.returnType);
     writeln(' result);');
@@ -229,7 +230,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
     write('  public static native void ${name}Async(');
     visitArguments(node.arguments);
     if (!node.arguments.isEmpty) write(', ');
-    writeln('${name}Callback callback);');
+    writeln('${camelName}Callback callback);');
   }
 
   visitArguments(List<Formal> formals) {

@@ -23,6 +23,14 @@ static void InteractWithService() {
   }];
   result = [EchoService echo: 5];
   NSLog([NSString stringWithFormat: @"ObjC: result %d\n", result]);
+  result = [EchoService ping];
+  NSLog([NSString stringWithFormat: @"ObjC: ping result %d\n", result]);
+  NSLog(@"ObjC: async ping call\n");
+  [EchoService pingAsyncWithCallback: EchoCallback];
+  NSLog(@"ObjC: async ping call with block\n");
+  [EchoService pingAsyncWithBlock: ^(int res) {
+    NSLog([NSString stringWithFormat: @"ObjC: async block result %d\n", res]);
+  }];
   [EchoService TearDown];
 }
 

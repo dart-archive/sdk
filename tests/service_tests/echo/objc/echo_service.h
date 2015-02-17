@@ -14,5 +14,8 @@
 + (int32_t)echo:(int32_t)n;
 + (void)echoAsync:(int32_t)n withCallback:(void (*)(int))callback;
 + (void)echoAsync:(int32_t)n withBlock:(void (^)(int))callback;
++ (int32_t)ping;
++ (void)pingAsyncWithCallback:(void (*)(int))callback;
++ (void)pingAsyncWithBlock:(void (^)(int))callback;
 
 @end
