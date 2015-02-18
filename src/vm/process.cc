@@ -80,6 +80,10 @@ ThreadState::ThreadState()
       next_idle_thread_(NULL) {
 }
 
+void ThreadState::AttachToCurrentThread() {
+  thread_ = ThreadIdentifier();
+}
+
 ThreadState::~ThreadState() {
   delete idle_monitor_;
   delete queue_;

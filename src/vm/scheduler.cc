@@ -172,6 +172,10 @@ bool Scheduler::RunProcessOnCurrentThread(Process* process, Port* port) {
   // when any Program changes. I'm not convinced this is the case.
   ThreadState* thread_state = TakeThreadState();
 
+  // This thread-state moves between threads. Attach thread-state to current
+  // thread.
+  thread_state->AttachToCurrentThread();
+
   // Use the temp thread state to run he process.
   process = InterpretProcess(process, thread_state);
   if (process != NULL) EnqueueOnAnyThread(process);

@@ -7,6 +7,7 @@
 
 #include "src/shared/assert.h"
 #include "src/vm/platform.h"
+#include "src/vm/thread_pool.h"
 
 #include "cc/performance_service.h"
 
@@ -112,6 +113,26 @@ static void RunTreeTests() {
   generated.Delete();
 }
 
+void EchoInThread(void* data) {
+  int value = reinterpret_cast<int>(data);
+  for (int i = 0; i < 64; i++) {
+    int result = PerformanceService::echo(value + i);
+    ASSERT(result == value + i);
+  }
+}
+
+static void RunThreadTests() {
+  const int kThreadCount = 32;
+  fletch::ThreadPool thread_pool(kThreadCount);
+  for (int i = 0; i < kThreadCount; i++) {
+    while (!thread_pool.TryStartThread(EchoInThread,
+                                       reinterpret_cast<void*>(i),
+                                       kThreadCount)) {
+    }
+  }
+  thread_pool.JoinAll();
+}
+
 static void ChangeStatusAndNotify(int new_status) {
   pthread_mutex_lock(&mutex);
   status = new_status;
@@ -165,6 +186,7 @@ int main(int argc, char** argv) {
   SetupPerformanceTest(argc, argv);
   RunEchoTests();
   RunTreeTests();
+  RunThreadTests();
   TearDownPerformanceTest();
   return 0;
 }

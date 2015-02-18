@@ -36,11 +36,10 @@ class Service {
  private:
   friend void PostResultToService(char* buffer);
 
-  void PostResult();
-  void WaitForResult();
+  void NotifyResult(ServiceRequest* request);
+  void WaitForResult(ServiceRequest* request);
 
   Monitor* const result_monitor_;
-  bool has_result_;
 
   char* const name_;
   Port* const port_;

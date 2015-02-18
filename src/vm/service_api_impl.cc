@@ -7,6 +7,7 @@
 #include "src/vm/natives.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
+#include "src/vm/thread.h"
 
 static const int kRequestHeaderSize = 32;
 
@@ -49,6 +50,8 @@ static ServiceRegistry* service_registry = NULL;
 
 struct ServiceRequest {
   int method_id;
+  bool has_result;
+  ThreadIdentifier thread;
   Service* service;
   void* callback;
 };
@@ -57,7 +60,7 @@ __attribute__((visibility("default")))
 void PostResultToService(char* buffer) {
   ServiceRequest* request = reinterpret_cast<ServiceRequest*>(buffer);
   if (request->callback == NULL) {
-    request->service->PostResult();
+    request->service->NotifyResult(request);
   } else {
     ServiceApiCallback callback =
         reinterpret_cast<ServiceApiCallback>(request->callback);
@@ -68,7 +71,6 @@ void PostResultToService(char* buffer) {
 
 Service::Service(char* name, Port* port)
     : result_monitor_(Platform::CreateMonitor()),
-      has_result_(false),
       name_(name),
       port_(port) {
   port_->IncrementRef();
@@ -79,37 +81,40 @@ Service::~Service() {
   delete result_monitor_;
 }
 
-void Service::PostResult() {
+void Service::NotifyResult(ServiceRequest* request) {
+  request->has_result = true;
+  if (Thread::IsCurrent(&request->thread)) return;
   ScopedMonitorLock lock(result_monitor_);
-  has_result_ = true;
-  result_monitor_->Notify();
+  result_monitor_->NotifyAll();
 }
 
-void Service::WaitForResult() {
-  // TODO(ajohnsen): Make it work for multiple sync calls at the same time.
+void Service::WaitForResult(ServiceRequest* request) {
   // Double-checked locking to avoid monitors in the case where the calling
   // thread is used by the Scheduler to handle the message.
-  if (!has_result_) {
+  if (!request->has_result) {
     ScopedMonitorLock lock(result_monitor_);
-    while (!has_result_) result_monitor_->Wait();
+    while (!request->has_result) result_monitor_->Wait();
   }
-  has_result_ = false;
 }
 
 void Service::Invoke(int id, void* buffer, int size) {
   port_->Lock();
   Process* process = port_->process();
-  if (process != NULL) {
-    ServiceRequest* request = reinterpret_cast<ServiceRequest*>(buffer);
-    request->method_id = id;
-    request->service = this;
-    request->callback = NULL;
-    process->EnqueueForeign(port_, buffer, size, false);
-    process->program()->scheduler()->RunProcessOnCurrentThread(process, port_);
-  } else {
+  if (process == NULL) {
+    // TODO(ajohnsen): Report error - service disappeared while sending.
     port_->Unlock();
+    return;
   }
-  WaitForResult();
+  ASSERT(sizeof(ServiceRequest) <= kRequestHeaderSize);
+  ServiceRequest* request = reinterpret_cast<ServiceRequest*>(buffer);
+  request->method_id = id;
+  request->has_result = false;
+  request->thread = ThreadIdentifier();
+  request->service = this;
+  request->callback = NULL;
+  process->EnqueueForeign(port_, buffer, size, false);
+  process->program()->scheduler()->RunProcessOnCurrentThread(process, port_);
+  WaitForResult(request);
 }
 
 void Service::InvokeAsync(int id,
@@ -118,13 +123,18 @@ void Service::InvokeAsync(int id,
                           int size) {
   port_->Lock();
   Process* process = port_->process();
-  if (process != NULL) {
-    ServiceRequest* request = reinterpret_cast<ServiceRequest*>(buffer);
-    request->method_id = id;
-    request->callback = reinterpret_cast<void*>(callback);
-    process->EnqueueForeign(port_, buffer, size, false);
-    process->program()->scheduler()->ResumeProcess(process);
+  if (process == NULL) {
+    // TODO(ajohnsen): Report error - service disappeared while sending.
+    port_->Unlock();
+    return;
   }
+  ASSERT(sizeof(ServiceRequest) <= kRequestHeaderSize);
+  ServiceRequest* request = reinterpret_cast<ServiceRequest*>(buffer);
+  request->method_id = id;
+  request->has_result = false;
+  request->callback = reinterpret_cast<void*>(callback);
+  process->EnqueueForeign(port_, buffer, size, false);
+  process->program()->scheduler()->ResumeProcess(process);
   port_->Unlock();
 }
 

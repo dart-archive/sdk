@@ -33,6 +33,9 @@ class ThreadState {
 
   const ThreadIdentifier* thread() const { return &thread_; }
 
+  // Update the thread field to point to the current thread.
+  void AttachToCurrentThread();
+
   ProcessQueue* queue() { return queue_; }
 
   LookupCache* cache() const { return cache_; }
@@ -44,7 +47,7 @@ class ThreadState {
 
  private:
   int thread_id_;
-  const ThreadIdentifier thread_;
+  ThreadIdentifier thread_;
   ProcessQueue* const queue_;
   LookupCache* const cache_;
   Monitor* idle_monitor_;
