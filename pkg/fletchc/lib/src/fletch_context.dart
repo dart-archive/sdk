@@ -7,6 +7,9 @@ library fletchc.fletch_context;
 import 'package:compiler/src/tree/tree.dart' show
     Node;
 
+import 'package:compiler/src/universe/universe.dart' show
+    Selector;
+
 import 'package:compiler/src/elements/elements.dart' show
     Element,
     FieldElement;
@@ -57,12 +60,31 @@ class FletchContext {
 
   Map<FieldElement, int> staticIndices = new Map<FieldElement, int>();
 
+  Map<String, id> symbolIds = new Map<String, id>();
+  Map<Selector, String> selectorToSymbol = new Map<Selector, String>();
+
   FletchContext(this.compiler);
 
   FletchBackend get backend => compiler.backend;
 
   int getStaticFieldIndex(FieldElement element, Element referrer) {
     return staticIndices.putIfAbsent(element, () => staticIndices.length);
+  }
+
+  String getSymbolFromSelector(Selector selector) {
+    return selectorToSymbol.putIfAbsent(selector, () {
+        StringBuffer buffer = new StringBuffer();
+        buffer.write(selector.name);
+        for (String namedArgument in selector.namedArguments) {
+          buffer.write(":");
+          buffer.write(namedArgument);
+        }
+        return buffer.toString();
+      });
+  }
+
+  int getSymbolId(String symbol) {
+    return symbolIds.putIfAbsent(symbol, () => symbolIds.length);
   }
 
   /// If [isConst] is true, a compile-time error is reported.

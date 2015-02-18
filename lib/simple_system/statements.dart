@@ -4,9 +4,17 @@
 
 library dart.system;
 
+class A {
+  void a() {
+  }
+}
+
+var a;
+
 _entry(int mainArity) {
   if (true) {
     if (false) {
+      a.a(foo: true);
     }
   } else {
   }

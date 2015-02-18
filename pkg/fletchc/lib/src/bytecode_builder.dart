@@ -89,10 +89,14 @@ class BytecodeBuilder {
     internalAdd(new StoreStatic(index));
   }
 
-  void invokeStatic(int id, int arguments) {
+  void invokeStatic(int id, int arity) {
     internalAddStackPointerDifference(
         new InvokeStaticUnfold(id),
-        1 - arguments);
+        1 - arity);
+  }
+
+  void invokeMethod(int selector, int arity) {
+    internalAddStackPointerDifference(new InvokeMethod(selector), -arity);
   }
 
   void pop() {

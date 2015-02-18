@@ -32,6 +32,8 @@ import 'fletch_function_constant.dart' show
 import '../bytecodes.dart' show
     Bytecode;
 
+import 'fletch_selector.dart';
+
 enum VisitState {
   Value,
   Effect,
@@ -101,6 +103,14 @@ class FunctionCompiler extends SemanticVisitor {
     return allocateConstant(expression.value);
   }
 
+  void invokeMethod(Selector selector) {
+    String symbol = context.getSymbolFromSelector(selector);
+    int id = context.getSymbolId(symbol);
+    int arity = selector.argumentCount;
+    int fletchSelector = FletchSelector.encodeMethod(id, arity);
+    builder.invokeMethod(fletchSelector, arity);
+  }
+
   // Visit the expression [node] with the result pushed on top of the stack.
   void visitForValue(Node node) {
     VisitState oldState = visitState;
@@ -166,6 +176,18 @@ class FunctionCompiler extends SemanticVisitor {
     registry.registerStaticInvocation(element);
     int methodId = allocateConstantFromFunction(element);
     builder.invokeStatic(methodId, arguments.slowLength());
+    applyVisitState();
+  }
+
+  void visitDynamicInvocation(
+      Send node,
+      NodeList arguments,
+      Selector selector) {
+    visitForValue(node.receiver);
+    for (Node argument in arguments) {
+      visitForValue(argument);
+    }
+    invokeMethod(selector);
     applyVisitState();
   }
 
@@ -395,14 +417,6 @@ class FunctionCompiler extends SemanticVisitor {
       Node rhs) {
     generateUnimplementedError(
         node, "[visitDynamicAssignment] isn't implemented.");
-  }
-
-  void visitDynamicInvocation(
-      Send node,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitDynamicInvocation] isn't implemented.");
   }
 
   void visitStaticFieldInvocation(
