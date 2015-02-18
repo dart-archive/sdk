@@ -19,6 +19,8 @@
         'performance/performance_test.cc',
         'performance/cc/performance_service.cc',
         'performance/cc/performance_service.h',
+        'performance/cc/struct.cc',
+        'performance/cc/struct.h',
       ],
     },
     {

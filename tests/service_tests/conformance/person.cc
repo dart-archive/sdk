@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#define TESTING
+
 #include "src/shared/assert.h"
 #include "person_shared.h"
 #include "cc/person_counter.h"
@@ -9,14 +11,6 @@
 #include <cstdio>
 #include <stdint.h>
 #include <sys/time.h>
-
-static uint64_t GetMicroseconds() {
-  struct timeval tv;
-  if (gettimeofday(&tv, NULL) < 0) return -1;
-  uint64_t result = tv.tv_sec * 1000000LL;
-  result += tv.tv_usec;
-  return result;
-}
 
 static void BuildPerson(PersonBuilder person, int n) {
   person.setAge(n * 20);
@@ -35,73 +29,56 @@ static int Depth(Node node) {
 }
 
 static void FooCallback() {
-  printf("Callback for foo!\n");
 }
 
 static void PingCallback(int result) {
-  printf("Ping async result: %d\n", result);
+  EXPECT_EQ(42, result);
 }
 
 static void RunPersonTests() {
   MessageBuilder builder(512);
 
-  uint64_t start = GetMicroseconds();
   PersonBuilder person = builder.initRoot<PersonBuilder>();
   BuildPerson(person, 7);
-  uint64_t end = GetMicroseconds();
-
-  int used = builder.ComputeUsed();
-  int building_us = static_cast<int>(end - start);
-  printf("Generated size: %i bytes\n", used);
-  printf("Building (c++) took %i us.\n", building_us);
-  printf("    - %.2f MB/s\n", static_cast<double>(used) / building_us);
+  EXPECT_EQ(3120, builder.ComputeUsed());
 
   int age = PersonCounter::getAge(person);
-  ASSERT(age == 140);
-  start = GetMicroseconds();
+  EXPECT_EQ(140, age);
   int count = PersonCounter::count(person);
-  end = GetMicroseconds();
-  ASSERT(count == 127);
-  int reading_us = static_cast<int>(end - start);
-  printf("Reading (fletch) took %i us.\n", reading_us);
-  printf("    - %.2f MB/s\n", static_cast<double>(used) / reading_us);
+  EXPECT_EQ(127, count);
 
   AgeStats stats = PersonCounter::getAgeStats(person);
-  ASSERT(stats.getAverageAge() == 39);
-  ASSERT(stats.getSum() == 4940);
+  EXPECT_EQ(39, stats.getAverageAge());
+  EXPECT_EQ(4940, stats.getSum());
   stats.Delete();
+
   AgeStats stats2 = PersonCounter::createAgeStats(42, 42);
-  ASSERT(stats2.getAverageAge() == 42);
-  ASSERT(stats2.getSum() == 42);
+  EXPECT_EQ(42, stats2.getAverageAge());
+  EXPECT_EQ(42, stats2.getSum());
   stats2.Delete();
 
   Person generated = PersonCounter::createPerson(10);
-  ASSERT(generated.getAge() == 42);
-  ASSERT(generated.getName().length() == 1);
-  ASSERT(generated.getName()[0] == 11);
+  EXPECT_EQ(42, generated.getAge());
+  EXPECT_EQ(1, generated.getName().length());
+  EXPECT_EQ(11, generated.getName()[0]);
 
   List<Person> children = generated.getChildren();
-  ASSERT(children.length() == 10);
+  EXPECT_EQ(10, children.length());
   for (int i = 0; i < children.length(); i++) {
-    ASSERT(children[i].getAge() == 12 + i * 2);
+    EXPECT_EQ(12 + i * 2, children[i].getAge());
   }
   generated.Delete();
-  start = GetMicroseconds();
+
   Node node = PersonCounter::createNode(10);
-  end = GetMicroseconds();
-  building_us = static_cast<int>(end - start);
-  used = node.ComputeUsed();
-  printf("Generated size: %i bytes\n", used);
-  printf("Building (fletch) took %i us.\n", building_us);
-  printf("    - %.2f MB/s\n", static_cast<double>(used) / building_us);
-  int depth = Depth(node);
-  printf("Generated Node in Dart with depth: %d\n", depth);
+  EXPECT_EQ(24680, node.ComputeUsed());
+
+  EXPECT_EQ(10, Depth(node));
   node.Delete();
 
   PersonCounter::foo();
   PersonCounter::fooAsync(FooCallback);
 
-  printf("Ping result = %d\n", PersonCounter::ping());
+  EXPECT_EQ(42, PersonCounter::ping());
   PersonCounter::pingAsync(PingCallback);
 }
 
@@ -115,7 +92,7 @@ static void RunPersonBoxTests() {
   name[0] = 99;
 
   int age = PersonCounter::getBoxedAge(box);
-  ASSERT(age == 87);
+  EXPECT_EQ(87, age);
 }
 
 static void BuildNode(NodeBuilder node, int n) {
@@ -135,7 +112,7 @@ static void RunNodeTests() {
   NodeBuilder root = builder.initRoot<NodeBuilder>();
   BuildNode(root, 10);
   int depth = PersonCounter::depth(root);
-  ASSERT(depth == 10);
+  EXPECT_EQ(10, depth);
 }
 
 static void InteractWithService() {

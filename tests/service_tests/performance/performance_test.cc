@@ -67,6 +67,51 @@ static void RunEchoTests() {
   printf("    - %.2f calls/s\n", (1000000.0 / async_us) * kCallCount);
 }
 
+static int CountTreeNodes(TreeNode node) {
+  int sum = 1;
+  List<TreeNode> children = node.getChildren();
+  for (int i = 0; i < children.length(); i++) {
+    sum += CountTreeNodes(children[i]);
+  }
+  return sum;
+}
+
+static void BuildTree(int n, TreeNodeBuilder node) {
+  if (n > 1) {
+    List<TreeNodeBuilder> children = node.initChildren(2);
+    BuildTree(n - 1, children[0]);
+    BuildTree(n - 1, children[1]);
+  }
+}
+
+static void RunTreeTests() {
+  const int kTreeDepth = 7;
+  MessageBuilder builder(8192);
+
+  uint64_t start = GetMicroseconds();
+  TreeNodeBuilder built = builder.initRoot<TreeNodeBuilder>();
+  BuildTree(kTreeDepth, built);
+  uint64_t end = GetMicroseconds();
+  printf("Building (C++) took %d us.\n", static_cast<int>(end - start));
+
+  start = GetMicroseconds();
+  PerformanceService::countTreeNodes(built);
+  end = GetMicroseconds();
+  printf("Counting (Dart) took %d us.\n", static_cast<int>(end - start));
+
+  start = GetMicroseconds();
+  TreeNode generated = PerformanceService::buildTree(kTreeDepth);
+  end = GetMicroseconds();
+  printf("Building (Dart) took %d us.\n", static_cast<int>(end - start));
+
+  start = GetMicroseconds();
+  CountTreeNodes(generated);
+  end = GetMicroseconds();
+  printf("Counting (C++) took %d us.\n", static_cast<int>(end - start));
+
+  generated.Delete();
+}
+
 static void ChangeStatusAndNotify(int new_status) {
   pthread_mutex_lock(&mutex);
   status = new_status;
@@ -119,6 +164,7 @@ int main(int argc, char** argv) {
   }
   SetupPerformanceTest(argc, argv);
   RunEchoTests();
+  RunTreeTests();
   TearDownPerformanceTest();
   return 0;
 }

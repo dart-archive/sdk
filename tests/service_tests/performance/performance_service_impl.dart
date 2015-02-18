@@ -6,6 +6,23 @@ import 'dart/performance_service.dart';
 
 class PerformanceServiceImpl implements PerformanceService {
   int echo(int n) => n;
+
+  int countTreeNodes(TreeNode node) {
+    int sum = 1;
+    List<Node> children = node.children;
+    for (int i = 0; i < children.length; i++) {
+      sum += countTreeNodes(children[i]);
+    }
+    return sum;
+  }
+
+  void buildTree(int n, TreeNodeBuilder node) {
+    if (n > 1) {
+      List<TreeNodeBuilder> children = node.initChildren(2);
+      buildTree(n - 1, children[0]);
+      buildTree(n - 1, children[1]);
+    }
+  }
 }
 
 main() {

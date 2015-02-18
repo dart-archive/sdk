@@ -191,6 +191,7 @@
             '<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'tests/service_tests/performance/dart/performance_service.dart',
+            'tests/service_tests/performance/dart/struct.dart',
           ],
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/service_performance.snapshot',
