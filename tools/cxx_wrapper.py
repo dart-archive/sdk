@@ -33,6 +33,11 @@ def invoke_gcc_arm(args):
   os.execv("/usr/bin/arm-linux-gnueabihf-g++-4.8", args)
 
 
+def invoke_gcc_arm64(args):
+  args.insert(0, "aarch64-linux-gnu-g++-4.8")
+  os.execv("/usr/bin/aarch64-linux-gnu-g++-4.8", args)
+
+
 def main():
   args = sys.argv[1:]
   if "-L/FLETCH_ASAN" in args:
@@ -50,6 +55,11 @@ def main():
   elif "-L/FLETCH_ARM" in args:
     args.remove("-L/FLETCH_ARM")
     invoke_gcc_arm(args)
+  elif "-DFLETCH_ARM64" in args:
+    invoke_gcc_arm64(args)
+  elif "-L/FLETCH_ARM64" in args:
+    args.remove("-L/FLETCH_ARM64")
+    invoke_gcc_arm64(args)
   else:
     invoke_gcc(args)
 

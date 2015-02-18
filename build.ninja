@@ -20,6 +20,7 @@ build $
     out/DebugX64ClangAsan/build.ninja $
     out/DebugARM/build.ninja $
     out/DebugXARM/build.ninja $
+    out/DebugXARM64/build.ninja $
     out/ReleaseIA32/build.ninja $
     out/ReleaseIA32Asan/build.ninja $
     out/ReleaseIA32Clang/build.ninja $
@@ -29,7 +30,8 @@ build $
     out/ReleaseX64Clang/build.ninja $
     out/ReleaseX64ClangAsan/build.ninja $
     out/ReleaseARM/build.ninja $
-    out/ReleaseXARM/build.ninja: $
+    out/ReleaseXARM/build.ninja $
+    out/ReleaseXARM64/build.ninja: $
     gyp $
         common.gypi $
         fletch.gyp $

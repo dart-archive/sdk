@@ -207,8 +207,8 @@
                 ['OS=="linux"', {
                   'defines': [
                     # Fake define intercepted by cc_wrapper.py to change the
-                    # compiler binary to an ARM cross compiler. This is only needed
-                    # on linux.
+                    # compiler binary to an ARM cross compiler. This is only
+                    # needed on linux.
                     'FLETCH_ARM',
                    ],
                  }],
@@ -249,6 +249,68 @@
               # Undefine IA32 target and using existing ARM target.
               'defines!': [
                 'FLETCH_TARGET_IA32',
+              ],
+            },
+          ],
+        ],
+      },
+
+      'fletch_xarm64': {
+        'abstract': 1,
+
+        'defines': [
+          'FLETCH64',
+          'FLETCH_TARGET_ARM64',
+        ],
+
+        'target_conditions': [
+          ['_toolset=="target"', {
+              'conditions': [
+                ['OS=="linux"', {
+                  'defines': [
+                    # Fake define intercepted by cc_wrapper.py to change the
+                    # compiler binary to an ARM64 cross compiler. This is only
+                    # needed on linux.
+                    'FLETCH_ARM64',
+                   ],
+                 }],
+              ],
+
+              'ldflags': [
+                '-L<(third_party_libs_path)/arm64',
+                # Fake define intercepted by cc_wrapper.py.
+                '-L/FLETCH_ARM64',
+                '-static-libstdc++',
+              ],
+
+              'xcode_settings': { # And ninja.
+                'ARCHS': [ 'arm64' ],
+
+                'LIBRARY_SEARCH_PATHS': [
+                  '<(third_party_libs_path)/arm64',
+                ],
+
+                # TODO(ager): Do not hard code the xcode sdk.
+                'OTHER_CPLUSPLUSFLAGS' : [
+                  '-isysroot',
+                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk',
+                ],
+
+                'OTHER_CFLAGS' : [
+                  '-isysroot',
+                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk',
+                ],
+              },
+            },
+          ],
+
+          ['_toolset=="host"', {
+              # Compile host targets as X64, to get same word size.
+              'inherit_from': [ 'fletch_x64' ],
+
+              # Undefine X64 target and using existing ARM target.
+              'defines!': [
+                'FLETCH_TARGET_X64',
               ],
             },
           ],
@@ -399,6 +461,14 @@
 
       'ReleaseXARM': {
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm' ],
+      },
+
+      'DebugXARM64': {
+        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_xarm64' ],
+      },
+
+      'ReleaseXARM64': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm64' ],
       },
     },
 
