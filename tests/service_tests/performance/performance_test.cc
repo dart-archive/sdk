@@ -114,7 +114,7 @@ static void RunTreeTests() {
 }
 
 void EchoInThread(void* data) {
-  int value = reinterpret_cast<int>(data);
+  word value = reinterpret_cast<word>(data);
   for (int i = 0; i < 64; i++) {
     int result = PerformanceService::echo(value + i);
     ASSERT(result == value + i);
