@@ -52,9 +52,13 @@ class FunctionCompiler extends SemanticVisitor {
   final Map<Element, ConstantValue> functionConstantValues =
       <Element, ConstantValue>{};
 
+  final Map<Element, int> scope = <Element, int>{};
+
   VisitState visitState;
   BytecodeLabel trueLabel;
   BytecodeLabel falseLabel;
+
+  int blockLocals = 0;
 
   FunctionCompiler(this.context,
                    TreeElements elements,
@@ -210,10 +214,44 @@ class FunctionCompiler extends SemanticVisitor {
     node.expression.accept(this);
   }
 
+  void visitLocalVariableAccess(
+      Send node,
+      LocalVariableElement element) {
+    int slot = scope[element];
+    builder.loadSlot(slot);
+    applyVisitState();
+  }
+
+  void visitLocalVariableAssignment(
+      SendSet node,
+      LocalVariableElement element,
+      Node rhs) {
+    visitForValue(rhs);
+    int slot = scope[element];
+    builder.storeSlot(slot);
+    applyVisitState();
+  }
+
   void visitBlock(Block node) {
+    int oldBlockLocals = blockLocals;
+    blockLocals = 0;
+    int stackSize = builder.stackSize;
+
     for (Node statement in node.statements) {
       statement.accept(this);
     }
+
+    int stackSizeDifference = builder.stackSize - stackSize;
+    if (stackSizeDifference != blockLocals) {
+      throw "Unbalanced number of block locals and stack slots used by block.";
+    }
+
+    for (int i = 0; i < blockLocals; i++) {
+      // TODO(ajohnsen): Pop range bytecode?
+      builder.pop();
+    }
+
+    blockLocals = oldBlockLocals;
   }
 
   void visitExpressionStatement(ExpressionStatement node) {
@@ -267,8 +305,17 @@ class FunctionCompiler extends SemanticVisitor {
   }
 
   void visitVariableDefinitions(VariableDefinitions node) {
-    for (Node node in node.definitions.nodes) {
-      visitForEffect(node);
+    for (Node definition in node.definitions) {
+      int slot = builder.stackSize;
+      LocalVariableElement element = elements[definition];
+      Expression initializer = element.initializer;
+      if (initializer == null) {
+        builder.loadLiteralNull();
+      } else {
+        visitForValue(initializer);
+      }
+      scope[element] = slot;
+      blockLocals++;
     }
   }
 
@@ -299,21 +346,6 @@ class FunctionCompiler extends SemanticVisitor {
       Selector selector) {
     generateUnimplementedError(
         node, "[visitParameterInvocation] isn't implemented.");
-  }
-
-  void visitLocalVariableAccess(
-      Send node,
-      LocalVariableElement element) {
-    generateUnimplementedError(
-        node, "[visitLocalVariableAccess] isn't implemented.");
-  }
-
-  void visitLocalVariableAssignment(
-      SendSet node,
-      LocalVariableElement element,
-      Node rhs) {
-    generateUnimplementedError(
-        node, "[visitLocalVariableAssignment] isn't implemented.");
   }
 
   void visitLocalVariableInvocation(

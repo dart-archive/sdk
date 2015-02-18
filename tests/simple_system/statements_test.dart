@@ -5,7 +5,10 @@
 library dart.system;
 
 _entry(int mainArity) {
-  if (true) {
+  var x = true;
+  x = 4;
+  if (x) {
+    var y;
     if (false) {
     }
   } else {

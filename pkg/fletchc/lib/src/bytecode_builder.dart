@@ -49,6 +49,16 @@ class BytecodeBuilder {
     internalAdd(new LoadConstUnfold(id));
   }
 
+  void loadLocal(int offset) {
+    assert(offset >= 0);
+    internalAdd(new LoadLocal(offset));
+  }
+
+  void loadSlot(int slot) {
+    int offset = stackSize - slot - 1;
+    loadLocal(offset);
+  }
+
   void loadStatic(int index) {
     internalAdd(new LoadStatic(index));
   }
@@ -63,6 +73,16 @@ class BytecodeBuilder {
 
   void loadLiteralFalse() {
     internalAdd(new LoadLiteralFalse());
+  }
+
+  void storeLocal(int offset) {
+    assert(offset >= 0);
+    internalAdd(new StoreLocal(offset));
+  }
+
+  void storeSlot(int slot) {
+    int offset = stackSize - slot - 1;
+    storeLocal(offset);
   }
 
   void storeStatic(int index) {
@@ -86,11 +106,9 @@ class BytecodeBuilder {
 
   void bind(BytecodeLabel label) {
     assert(label.position == -1);
-    // If the last bytecode is a branch to this label, simply pop the bytecode.
-    while (bytecodes.isNotEmpty && label.lastIndex == bytecodes.length - 1) {
-      bytecodes.removeLast();
-      label.removeLastUsage();
-    }
+    // TODO(ajohnsen): If the previous bytecode is a branch to this label,
+    // consider popping it - if no other binds has happened at this bytecode
+    // index.
     int position = byteSize;
     label.forEach((int index) {
       var bytecode = bytecodes[index];
