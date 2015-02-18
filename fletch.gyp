@@ -276,6 +276,65 @@
       ],
     },
     {
+      'target_name': 'run_todomvc_sample',
+      # Note: this target_name needs to be different from its dependency.
+      # This is due to the ninja GYP generator which doesn't generate unique
+      # names.
+      'type': 'none',
+      'dependencies': [
+        'src/vm/vm.gyp:fletch',
+        'samples/todomvc/todomvc.gyp:todomvc_sample',
+        'src/compiler/compiler.gyp:fletchc',
+        'copy_asan',
+      ],
+      'actions': [
+        {
+          'action_name': 'generate_todomvc_snapshot',
+          'command': [
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            'samples/todomvc/src/todomvc.dart',
+          ],
+          'inputs': [
+            '<@(_command)',
+            '<(mac_asan_dylib)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'fletchc'
+            '<(EXECUTABLE_SUFFIX)',
+            # TODO(ahe): Also depend on .dart files in the core libraries.
+            'samples/todomvc/src/model.dart',
+            'samples/todomvc/src/todomvc_impl.dart',
+            'samples/todomvc/src/dart/struct.dart',
+            'samples/todomvc/src/dart/todomvc_service.dart',
+            'samples/todomvc/src/dart/todomvc_presenter.dart',
+            'samples/todomvc/src/dart/todomvc_presenter_model.dart',
+          ],
+          'outputs': [
+            '<(SHARED_INTERMEDIATE_DIR)/todomvc.snapshot',
+          ],
+          'action': [
+            '<@(_command)', '--out=<(SHARED_INTERMEDIATE_DIR)/todomvc.snapshot',
+          ],
+        },
+        {
+          'action_name': 'run_todomvc_sample',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'todomvc_sample'
+            '<(EXECUTABLE_SUFFIX)',
+            '<(SHARED_INTERMEDIATE_DIR)/todomvc.snapshot',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/test_outcomes/todomvc_sample.pass',
+          ],
+          'action': [
+            "bash", "-c",
+            "<(_inputs) && LANG=POSIX date '+Test passed on %+' > "
+            "<(_outputs)",
+          ],
+        },
+      ],
+    },
+    {
       'target_name': 'copy_asan',
       'type': 'none',
       'conditions': [

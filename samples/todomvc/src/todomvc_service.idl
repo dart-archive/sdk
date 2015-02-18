@@ -1,0 +1,45 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+service TodoMVCService {
+  void createItem(Str* title);
+  void deleteItem(int32 id);
+  void completeItem(int32 id);
+  void clearItems();
+
+  // Synchronization should be considered internal.
+  PatchSet* sync();
+}
+
+// Primary structures.
+
+struct Node {
+  union {
+    void nil;
+    int32 num;
+    bool bool;
+    Str str;
+    Cons cons;
+  }
+}
+
+struct Cons {
+  Node* fst;
+  Node* snd;
+}
+
+// Utility structures.
+
+struct Str {
+  List<uint8> chars;
+}
+
+struct Patch {
+  List<uint8> path;
+  Node content;
+}
+
+struct PatchSet {
+  List<Patch> patches;
+}
