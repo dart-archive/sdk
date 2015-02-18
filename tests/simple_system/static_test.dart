@@ -2,19 +2,17 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library dart.system;
+library static_test;
 
 var a;
 
-_entry(int mainArity) {
+main() {
   setA("foo");
   _printString(a);
-  _yield(true);
 }
 
 void setA(x) {
   a = x;
 }
 
-external _yield(bool halt);
 _printString(String s) native;

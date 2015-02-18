@@ -4,10 +4,19 @@
 
 library dart.system;
 
-_entry(int mainArity) {
-  _printString("Hello, World");
-  _halt(1);
+/// This is a magic method recognized by the compiler, and references to it
+/// will be substituted for the actual main method.
+/// [arguments] is supposed to be a List<String> with command line arguments.
+/// [isolateArgument] is an extra argument that can be passed via
+/// [Isolate.spawnUri].
+external invokeMain([arguments, isolateArgument]);
+
+/// This is the main entry point for a Fletch program, and it takes care of
+/// calling "main" and exiting the VM when "main" is done.
+entry(int mainArity) {
+  invokeMain();
+  yield(true);
 }
 
-_halt(int code) native;
-_printString(String s) native;
+/// Exits the VM cleanly.
+external yield(bool halt);

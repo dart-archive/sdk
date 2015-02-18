@@ -2,9 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library dart.system;
+library statements_test;
 
-_entry(int mainArity) {
+main() {
   var x = true;
   x = 4;
   if (x) {
@@ -19,11 +19,6 @@ _entry(int mainArity) {
   do {
     _printString("do");
   } while (false);
-  _yield(true);
 }
 
-void foo(x) {
-}
-
-external _yield(bool halt);
 _printString(String s) native;

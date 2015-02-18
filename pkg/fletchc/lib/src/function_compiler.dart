@@ -184,6 +184,17 @@ class FunctionCompiler extends SemanticVisitor {
       /* MethodElement */ element,
       NodeList arguments,
       Selector selector) {
+    if (element.isExternal) {
+      if (element == context.compiler.backend.fletchExternalInvokeMain) {
+        element = context.compiler.mainFunction;
+      } else if (element == context.compiler.backend.fletchExternalYield) {
+        // Handled elsewhere.
+      } else {
+        generateUnimplementedError(
+            node, "External function ${element.name} not implemented yet.");
+        return;
+      }
+    }
     for (Node argument in arguments) {
       visitForValue(argument);
     }
@@ -227,13 +238,34 @@ class FunctionCompiler extends SemanticVisitor {
     applyVisitState();
   }
 
+  void visitLiteralNull(LiteralNull node) {
+    if (visitState == VisitState.Value) {
+      builder.loadLiteralNull();
+    } else if (visitState == VisitState.Test) {
+      builder.branch(falseLabel);
+    }
+  }
+
+  void visitLiteralBool(LiteralBool node) {
+    var expression = compileConstant(node, isConst: false);
+    bool isTrue = expression != null && expression.value.isTrue;
+
+    if (visitState == VisitState.Value) {
+      if (isTrue) {
+        builder.loadLiteralTrue();
+      } else {
+        builder.loadLiteralFalse();
+      }
+    } else if (visitState == VisitState.Test) {
+      builder.branch(isTrue ? trueLabel : falseLabel);
+    }
+  }
+
   void visitLiteral(Literal node) {
     if (visitState == VisitState.Value) {
       builder.loadConst(allocateConstantFromNode(node));
     } else if (visitState == VisitState.Test) {
-      var expression = compileConstant(node, isConst: false);
-      bool isTrue = expression != null && expression.value.isTrue;
-      builder.branch(isTrue ? trueLabel : falseLabel);
+      builder.branch(falseLabel);
     }
   }
 
@@ -307,12 +339,24 @@ class FunctionCompiler extends SemanticVisitor {
     visitForEffect(node.expression);
   }
 
+  void visitThrow(Throw node) {
+    visitForValue(node.expression);
+    builder.emitThrow();
+    // TODO(ahe): It seems suboptimal that each throw is followed by a pop.
+    applyVisitState();
+  }
+
   void visitStatement(Node node) {
     Visitstate oldState = visitState;
-    visitState = Visitstate.Effect;
+    visitState = VisitState.Effect;
     generateUnimplementedError(
         node, "Missing visit of statement: ${node.runtimeType}");
     visitState = oldState;
+  }
+
+  void visitExpression(Expression node) {
+    generateUnimplementedError(
+        node, "Missing visit of expression: ${node.runtimeType}");
   }
 
   void visitIf(If node) {

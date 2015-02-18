@@ -15,6 +15,9 @@ import 'package:compiler/src/apiimpl.dart' as apiimpl;
 import 'package:compiler/src/elements/modelx.dart' show
     LibraryElementX;
 
+import 'package:compiler/src/util/uri_extras.dart' show
+    relativize;
+
 import 'fletch_context.dart';
 
 part 'fletch_compiler_hack.dart';
@@ -28,6 +31,17 @@ const EXTRA_DART2JS_OPTIONS = const <String>[
 const FLETCH_PATCHES = const <String, String>{
   "core": "core/core_patch.dart",
   "_internal": "internal/internal_patch.dart",
+};
+
+const FLETCH_PLATFORM = 3;
+
+const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
+  "_fletch_system": const LibraryInfo(
+      "simple_system/system.dart",
+      category: "Internal",
+      documented: false,
+      platforms: FLETCH_PLATFORM),
+
 };
 
 class FletchCompiler extends FletchCompilerHack {
@@ -57,12 +71,6 @@ class FletchCompiler extends FletchCompilerHack {
     return internalContext;
   }
 
-  void computeMain() {
-    if (mainApp == null) return;
-
-    mainFunction = mainApp.findLocal("_entry");
-  }
-
   void onLibraryCreated(LibraryElementX library) {
     // TODO(ahe): Remove this.
     library.canUseNative = true;
@@ -74,7 +82,9 @@ class FletchCompiler extends FletchCompilerHack {
   LibraryInfo lookupLibraryInfo(String name) {
     return fletchLibraries.putIfAbsent(name, () {
       LibraryInfo info = LIBRARIES[name];
-      if (info == null) return null;
+      if (info == null) {
+        return computeFletchLibraryInfo(name);
+      }
       return new LibraryInfo(
           info.path,
           category: info.category,
@@ -85,6 +95,24 @@ class FletchCompiler extends FletchCompilerHack {
           maturity: info.maturity,
           platforms: info.platforms);
     });
+  }
+
+  LibraryInfo computeFletchLibraryInfo(String name) {
+    LibraryInfo info = FLETCH_LIBRARIES[name];
+    if (info == null) return null;
+    // Since this LibraryInfo is completely internal to Fletch, there's no need
+    // for dart2js extensions and patches.
+    assert(info.dart2jsPath == null);
+    assert(info.dart2jsPatchPath == null);
+    String path = relativize(
+        libraryRoot, Uri.base.resolve("lib/${info.path}"), false);
+    return new LibraryInfo(
+        '../$path',
+        category: info.category,
+        implementation: info.implementation,
+        documented: info.documented,
+        maturity: info.maturity,
+        platforms: info.platforms);
   }
 
   Uri resolvePatchUri(String dartLibraryPath) {

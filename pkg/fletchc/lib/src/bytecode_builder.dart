@@ -51,7 +51,19 @@ class BytecodeBuilder {
 
   void loadLocal(int offset) {
     assert(offset >= 0);
-    internalAdd(new LoadLocal(offset));
+    Bytecode bytecode;
+    switch (offset) {
+      case 0:
+        bytecode = const LoadLocal0();
+        break;
+      case 1:
+        bytecode = const LoadLocal1();
+        break;
+      default:
+        bytecode = new Loadlocal(offset);
+        break;
+    }
+    internalAdd(bytecode);
   }
 
   void loadSlot(int slot) {

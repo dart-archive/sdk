@@ -65,7 +65,17 @@ class FletchBackend extends Backend {
   final Map<FunctionElement, FunctionCompiler> compiledFunctions =
       <FunctionElement, FunctionCompiler>{};
 
+  final Set<FunctionElement> externals = new Set<FunctionElement>();
+
   List<Command> commands;
+
+  LibraryElement fletchSystemLibrary;
+
+  FunctionElement fletchSystemEntry;
+
+  FunctionElement fletchExternalInvokeMain;
+
+  FunctionElement fletchExternalYield;
 
   FletchBackend(FletchCompiler compiler)
       : this.context = compiler.context,
@@ -94,6 +104,29 @@ class FletchBackend extends Backend {
       ResolutionEnqueuer world,
       Registry registry) {
     compiler.patchAnnotationClass = patchAnnotationClass;
+
+    FunctionElement findHelper(String name) {
+      FunctionElement helper = fletchSystemLibrary.findLocal(name);
+      if (helper == null) {
+        compiler.reportError(
+            fletchSystemLibrary, MessageKind.GENERIC,
+            {'text': "Required implementation method '$name' not found."});
+      }
+      return helper;
+    }
+
+    FunctionElement findExternal(String name) {
+      FunctionElement helper = findHelper(name);
+      externals.add(helper);
+      return helper;
+    }
+
+    fletchSystemEntry = findHelper('entry');
+    if (fletchSystemEntry != null) {
+      world.registerStaticUse(fletchSystemEntry);
+    }
+    fletchExternalInvokeMain = findExternal('invokeMain');
+    fletchExternalYield = findExternal('yield');
   }
 
   /// Class of annotations to mark patches in patch files.
@@ -110,6 +143,9 @@ class FletchBackend extends Backend {
 
   void codegen(CodegenWorkItem work) {
     Element element = work.element;
+    // TODO(ahe): Investigate why this check is needed. Is there something
+    // we're not telling the enqueuer?
+    if (compiledFunctions[element] != null) return;
     if (compiler.verbose) {
       compiler.reportHint(
           element, MessageKind.GENERIC, {'text': 'Compiling ${element.name}'});
@@ -130,6 +166,10 @@ class FletchBackend extends Backend {
       FunctionElement function,
       TreeElements elements,
       Registry registry) {
+    if (function == compiler.mainFunction) {
+      registry.registerStaticInvocation(fletchSystemEntry);
+    }
+
     FunctionCompiler functionCompiler = new FunctionCompiler(
         context,
         elements,
@@ -180,16 +220,43 @@ class FletchBackend extends Backend {
   void codegenExternalFunction(
       FunctionElement function,
       FunctionCompiler functionCompiler) {
-    if (function.name == "_yield") {
-      // TODO(ajohnsen): Load argument 0 instead of literal true.
-      functionCompiler.builder
-          ..loadLiteralTrue()
-          ..processYield()
-          ..ret()
-          ..methodEnd();
-      return;
+    if (function == fletchExternalYield) {
+      codegenExternalYield(function, functionCompiler);
+    } else if (function == fletchExternalInvokeMain) {
+      codegenExternalInvokeMain(function, functionCompiler);
+    } else {
+      compiler.internalError(function, "Unhandled external function.");
     }
-    throw "Unhandled external: $function";
+  }
+
+  void codegenExternalYield(
+      FunctionElement function,
+      FunctionCompiler functionCompiler) {
+    functionCompiler.builder
+        ..loadLocal(1)
+        ..processYield()
+        ..ret()
+        ..methodEnd();
+  }
+
+  void codegenExternalInvokeMain(
+      FunctionElement function,
+      FunctionCompiler functionCompiler) {
+    // TODO(ahe): This code shouldn't normally be called, only if invokeMain is
+    // torn off.
+    FunctionElement main = compiler.mainFunction;
+    int mainArity = main.functionSignature.parameterCount;
+    registry.registerStaticInvocation(main);
+    int methodId = allocateConstantFromFunction(main);
+    if (mainArity == 0) {
+    } else {
+      // TODO(ahe): Push arguments on stack.
+      compiler.internalError(main, "Arguments to main not implemented yet.");
+    }
+    functionCompiler.builder
+        ..invokeStatic(methodId, mainArity)
+        ..ret()
+        ..methodEnd();
   }
 
   bool isNative(Element element) {
@@ -279,7 +346,7 @@ class FletchBackend extends Backend {
 
     commands.add(
         new PushFromMap(
-            MapId.methods, allocateMethodId(compiler.mainFunction)));
+            MapId.methods, allocateMethodId(fletchSystemEntry)));
 
     commands.add(const RunMain());
 
@@ -300,6 +367,10 @@ class FletchBackend extends Backend {
         return compiler.patchParser.patchLibrary(loader, patchUri, library);
       }
     }
+
+    if (Uri.parse('dart:_fletch_system') == library.canonicalUri) {
+      fletchSystemLibrary = library;
+    }
   }
 
   /// Return non-null to enable patching. Possible return values are 'new' and
@@ -316,10 +387,11 @@ class FletchBackend extends Backend {
         patch.computeType(compiler);
       });
       element = patch;
+    } else if (externals.contains(element)) {
+      // Nothing needed for now.
     } else {
-      // TODO(ahe): In my next CL, I'll be able to reenable this error.
-      // compiler.reportError(
-      //    element, MessageKind.PATCH_EXTERNAL_WITHOUT_IMPLEMENTATION);
+      compiler.reportError(
+          element, MessageKind.PATCH_EXTERNAL_WITHOUT_IMPLEMENTATION);
     }
     return element;
   }

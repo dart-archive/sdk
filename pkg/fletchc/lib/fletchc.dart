@@ -49,4 +49,7 @@ main(List<String> arguments) async {
   vmSocket.close();
 
   exitCode = await vmProcess.exitCode;
+  if (exitCode != 0) {
+    print("Non-zero exit code from VM ($exitCode).");
+  }
 }
