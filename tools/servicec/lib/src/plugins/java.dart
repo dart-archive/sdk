@@ -212,6 +212,9 @@ class _JavaVisitor extends CodeGenerationVisitor {
   }
 
   visitMethod(Method node) {
+    if (node.inputKind != InputKind.PRIMITIVES) return;
+    if (node.outputKind != OutputKind.PRIMITIVE) return;
+
     String name = node.name;
     String camelName = strings.camelize(name);
     writeln();
@@ -320,6 +323,7 @@ class _JniVisitor extends CcVisitor {
     writeln('reinterpret_cast<MethodId>(${methodId++});');
 
     if (node.inputKind != InputKind.PRIMITIVES) return;  // Not handled yet.
+    if (node.outputKind != OutputKind.PRIMITIVE) return;
 
     writeln();
     write('JNIEXPORT ');

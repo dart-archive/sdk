@@ -11,6 +11,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 class PerformanceTest {
+  static final int CALL_COUNT = 10000;
+
   public static void main(String args[]) {
     // Expecting a snapshot of the dart service code on the command line.
     if (args.length != 1) {
@@ -42,21 +44,57 @@ class PerformanceTest {
       System.exit(1);
     }
 
-    // Setup the performance service.
+    // Run performance tests.
     PerformanceService.Setup();
-
-    // Interact with the service.
-    int result = PerformanceService.echo(1);
-    System.out.println("Java: result " + result);
-    result = PerformanceService.echo(2);
-    System.out.println("Java: result " + result);
-    PerformanceService.echoAsync(3, new PerformanceService.EchoCallback() {
-      public void handle(int result) {
-        System.out.println("Java: async echo result " + result);
-      }
-    });
-
+    runEcho();
+    runAsyncEcho();
     PerformanceService.TearDown();
   }
 
+  private static void runEcho() {
+    long start = System.currentTimeMillis();
+    for (int i = 0; i < CALL_COUNT; i++) {
+      int result = PerformanceService.echo(i);
+      if (i != result) throw new RuntimeException("Wrong result");
+    }
+    long end = System.currentTimeMillis();
+    double us = (end - start) * 1000.0 / CALL_COUNT;
+    System.out.println("Sync call took " + us + " us.");
+  }
+
+  private static void runAsyncEcho() {
+    final Object monitor = new Object();
+    final PerformanceService.EchoCallback[] callback =
+      new PerformanceService.EchoCallback[1];
+
+    final long start = System.currentTimeMillis();
+    callback[0] = new PerformanceService.EchoCallback() {
+      public void handle(int i) {
+        if (i < CALL_COUNT) {
+          PerformanceService.echoAsync(i + 1, callback[0]);
+        } else {
+          synchronized (monitor) {
+            monitor.notify();
+          }
+        }
+      }
+    };
+
+    synchronized (monitor) {
+      boolean done = false;
+      PerformanceService.echoAsync(0, callback[0]);
+      while (!done) {
+        try {
+          monitor.wait();
+          done = true;
+        } catch (InterruptedException e) {
+          // Ignored.
+        }
+      }
+    }
+
+    long end = System.currentTimeMillis();
+    double us = (end - start) * 1000.0 / CALL_COUNT;
+    System.out.println("Async call took " + us + " us.");
+  }
 }
