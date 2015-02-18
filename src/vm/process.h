@@ -222,8 +222,12 @@ class Process {
   // Fields used by ProcessQueue, when holding the Process.
   friend class ProcessQueue;
   std::atomic<ProcessQueue*> queue_;
-  std::atomic<Process*> queue_next_;
-  std::atomic<Process*> queue_previous_;
+  // While the ProcessQueue is lock-free, we have an 'atomic lock' on the
+  // head_ element. That will ensure we have the right memory order on
+  // queue_next_/queue_previous_, as they are always read/modified while
+  // head_ is 'locked'.
+  Process* queue_next_;
+  Process* queue_previous_;
 
   // Linked list of ports owned by this process.
   Port* ports_;
