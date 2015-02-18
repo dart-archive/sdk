@@ -177,7 +177,7 @@ static void InteractWithService() {
   while (running) {
     printf("todo> ");
     char buffer[256];
-    int parsed_command = scanf("%255s", &buffer);
+    int parsed_command = scanf("%255s", buffer);
     if (parsed_command != 1 || is(buffer, "quit")) {
       running = false;
       break;

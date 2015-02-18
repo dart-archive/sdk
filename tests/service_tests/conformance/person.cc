@@ -38,6 +38,10 @@ static void FooCallback() {
   printf("Callback for foo!\n");
 }
 
+static void PingCallback(int result) {
+  printf("Ping async result: %d\n", result);
+}
+
 static void RunPersonTests() {
   MessageBuilder builder(512);
 
@@ -96,6 +100,9 @@ static void RunPersonTests() {
 
   PersonCounter::foo();
   PersonCounter::fooAsync(FooCallback);
+
+  printf("Ping result = %d\n", PersonCounter::ping());
+  PersonCounter::pingAsync(PingCallback);
 }
 
 static void RunPersonBoxTests() {

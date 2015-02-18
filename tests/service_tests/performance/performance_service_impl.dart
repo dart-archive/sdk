@@ -6,7 +6,6 @@ import 'dart/performance_service.dart';
 
 class PerformanceServiceImpl implements PerformanceService {
   int echo(int n) => n;
-  int ping() => 42;
 }
 
 main() {

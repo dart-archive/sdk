@@ -119,6 +119,32 @@ void PersonCounter::fooAsync(void (*callback)()) {
   ServiceApiInvokeAsync(service_id_, kFooId_, Unwrap_void_8, _buffer, kSize);
 }
 
+static const MethodId kPingId_ = reinterpret_cast<MethodId>(10);
+
+int32_t PersonCounter::ping() {
+  static const int kSize = 40;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  ServiceApiInvoke(service_id_, kPingId_, _buffer, kSize);
+  return *reinterpret_cast<int64_t*>(_buffer + 32);
+}
+
+static void Unwrap_int32_8(void* raw) {
+  typedef void (*cbt)(int);
+  char* buffer = reinterpret_cast<char*>(raw);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 32);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  free(buffer);
+  callback(result);
+}
+
+void PersonCounter::pingAsync(void (*callback)(int32_t)) {
+  static const int kSize = 40 + 1 * sizeof(void*);
+  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  ServiceApiInvokeAsync(service_id_, kPingId_, Unwrap_int32_8, _buffer, kSize);
+}
+
 List<uint8_t> PersonBuilder::initName(int length) {
   Reader result = NewList(0, length, 1);
   return List<uint8_t>(result.segment(), result.offset(), length);

@@ -67,17 +67,6 @@ static void RunEchoTests() {
   printf("    - %.2f calls/s\n", (1000000.0 / async_us) * kCallCount);
 }
 
-static void PingCallback(int result) {
-  printf("Ping async result: %d\n", result);
-}
-
-static void RunPingTests() {
-  int result = PerformanceService::ping();
-  printf("Ping result: %d\n", result);
-  printf("Async ping call\n");
-  PerformanceService::pingAsync(PingCallback);
-}
-
 static void ChangeStatusAndNotify(int new_status) {
   pthread_mutex_lock(&mutex);
   status = new_status;
@@ -130,7 +119,6 @@ int main(int argc, char** argv) {
   }
   SetupPerformanceTest(argc, argv);
   RunEchoTests();
-  RunPingTests();
   TearDownPerformanceTest();
   return 0;
 }

@@ -39,6 +39,8 @@ class PersonCounter {
   static int32_t depth(NodeBuilder node);
   static void foo();
   static void fooAsync(void (*callback)());
+  static int32_t ping();
+  static void pingAsync(void (*callback)(int32_t));
 };
 
 class AgeStats : public Reader {

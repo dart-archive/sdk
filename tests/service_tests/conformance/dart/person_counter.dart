@@ -27,6 +27,7 @@ abstract class PersonCounter {
   int count(Person person);
   int depth(Node node);
   void foo();
+  int ping();
 
   static void initialize(PersonCounter impl) {
     if (_impl != null) {
@@ -104,6 +105,11 @@ abstract class PersonCounter {
         _impl.foo();
         _postResult.icall$1(request);
         break;
+      case _PING_METHOD_ID:
+        var result = _impl.ping();
+        request.setInt32(32, result);
+        _postResult.icall$1(request);
+        break;
       default:
         throw UnsupportedError();
     }
@@ -119,6 +125,7 @@ abstract class PersonCounter {
   const int _COUNT_METHOD_ID = 7;
   const int _DEPTH_METHOD_ID = 8;
   const int _FOO_METHOD_ID = 9;
+  const int _PING_METHOD_ID = 10;
 }
 
 class AgeStats extends Reader {

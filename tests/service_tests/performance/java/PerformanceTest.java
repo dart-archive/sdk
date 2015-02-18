@@ -56,14 +56,6 @@ class PerformanceTest {
       }
     });
 
-    result = PerformanceService.ping();
-    System.out.println("Java: result " + result);
-    PerformanceService.pingAsync(new PerformanceService.PingCallback() {
-      public void handle(int result) {
-        System.out.println("Java: async ping result " + result);
-      }
-    });
-
     PerformanceService.TearDown();
   }
 

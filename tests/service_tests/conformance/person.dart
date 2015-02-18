@@ -76,6 +76,8 @@ class PersonCounterImpl extends PersonCounter {
   void foo() {
     print('Foo!');
   }
+
+  int ping() => 42;
 }
 
 main() {

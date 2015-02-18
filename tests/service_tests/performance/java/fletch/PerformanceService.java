@@ -16,11 +16,4 @@ public class PerformanceService {
 
   public static native int echo(int n);
   public static native void echoAsync(int n, EchoCallback callback);
-
-  public static abstract class PingCallback {
-    public abstract void handle(int result);
-  }
-
-  public static native int ping();
-  public static native void pingAsync(PingCallback callback);
 }

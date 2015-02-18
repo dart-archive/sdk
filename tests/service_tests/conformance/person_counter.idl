@@ -13,6 +13,8 @@ service PersonCounter {
 
   int32 depth(Node* node);
   void foo();
+
+  int32 ping();
 }
 
 struct AgeStats {

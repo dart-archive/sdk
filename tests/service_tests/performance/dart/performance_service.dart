@@ -18,7 +18,6 @@ PerformanceService _impl;
 
 abstract class PerformanceService {
   int echo(int n);
-  int ping();
 
   static void initialize(PerformanceService impl) {
     if (_impl != null) {
@@ -45,11 +44,6 @@ abstract class PerformanceService {
         request.setInt32(32, result);
         _postResult.icall$1(request);
         break;
-      case _PING_METHOD_ID:
-        var result = _impl.ping();
-        request.setInt32(32, result);
-        _postResult.icall$1(request);
-        break;
       default:
         throw UnsupportedError();
     }
@@ -57,5 +51,4 @@ abstract class PerformanceService {
 
   const int _TERMINATE_METHOD_ID = 0;
   const int _ECHO_METHOD_ID = 1;
-  const int _PING_METHOD_ID = 2;
 }
