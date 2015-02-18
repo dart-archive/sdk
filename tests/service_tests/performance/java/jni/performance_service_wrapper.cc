@@ -21,11 +21,11 @@ extern "C" {
 
 static ServiceId service_id_ = kNoServiceId;
 
-JNIEXPORT void JNICALL Java_fletch_EchoService_Setup(JNIEnv*, jclass) {
-  service_id_ = ServiceApiLookup("EchoService");
+JNIEXPORT void JNICALL Java_fletch_PerformanceService_Setup(JNIEnv*, jclass) {
+  service_id_ = ServiceApiLookup("PerformanceService");
 }
 
-JNIEXPORT void JNICALL Java_fletch_EchoService_TearDown(JNIEnv*, jclass) {
+JNIEXPORT void JNICALL Java_fletch_PerformanceService_TearDown(JNIEnv*, jclass) {
   ServiceApiTerminate(service_id_);
 }
 
@@ -47,7 +47,7 @@ static void detachCurrentThread(JavaVM* vm) {
 
 static const MethodId _kechoId = reinterpret_cast<MethodId>(1);
 
-JNIEXPORT jint JNICALL Java_fletch_EchoService_echo(JNIEnv*, jclass, jint n) {
+JNIEXPORT jint JNICALL Java_fletch_PerformanceService_echo(JNIEnv*, jclass, jint n) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
@@ -70,7 +70,7 @@ static void Unwrap_int32_8(void* raw) {
   free(buffer);
 }
 
-JNIEXPORT void JNICALL Java_fletch_EchoService_echoAsync(JNIEnv* _env, jclass, jint n, jobject _callback) {
+JNIEXPORT void JNICALL Java_fletch_PerformanceService_echoAsync(JNIEnv* _env, jclass, jint n, jobject _callback) {
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
@@ -84,7 +84,7 @@ JNIEXPORT void JNICALL Java_fletch_EchoService_echoAsync(JNIEnv* _env, jclass, j
 
 static const MethodId _kpingId = reinterpret_cast<MethodId>(2);
 
-JNIEXPORT jint JNICALL Java_fletch_EchoService_ping(JNIEnv*, jclass) {
+JNIEXPORT jint JNICALL Java_fletch_PerformanceService_ping(JNIEnv*, jclass) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
@@ -92,7 +92,7 @@ JNIEXPORT jint JNICALL Java_fletch_EchoService_ping(JNIEnv*, jclass) {
   return *reinterpret_cast<int64_t*>(_buffer + 32);
 }
 
-JNIEXPORT void JNICALL Java_fletch_EchoService_pingAsync(JNIEnv* _env, jclass, jobject _callback) {
+JNIEXPORT void JNICALL Java_fletch_PerformanceService_pingAsync(JNIEnv* _env, jclass, jobject _callback) {
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);

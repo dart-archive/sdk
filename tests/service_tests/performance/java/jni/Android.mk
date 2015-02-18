@@ -14,7 +14,7 @@ LOCAL_LDLIBS := -llog -ldl -rdynamic
 LOCAL_SRC_FILES := \
 	fletch_api_wrapper.cc \
 	fletch_service_api_wrapper.cc \
-	echo_service_wrapper.cc
+	performance_service_wrapper.cc
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)
 LOCAL_C_INCLUDES += ../../../../include

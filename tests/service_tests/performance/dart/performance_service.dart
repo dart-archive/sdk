@@ -4,7 +4,7 @@
 
 // Generated file. Do not edit.
 
-library echo_service;
+library performance_service;
 
 import "dart:ffi";
 import "dart:service" as service;
@@ -14,19 +14,19 @@ final Port _port = new Port(_channel);
 final Foreign _postResult = Foreign.lookup("PostResultToService");
 
 bool _terminated = false;
-EchoService _impl;
+PerformanceService _impl;
 
-abstract class EchoService {
+abstract class PerformanceService {
   int echo(int n);
   int ping();
 
-  static void initialize(EchoService impl) {
+  static void initialize(PerformanceService impl) {
     if (_impl != null) {
       throw new UnsupportedError();
     }
     _impl = impl;
     _terminated = false;
-    service.register("EchoService", _port);
+    service.register("PerformanceService", _port);
   }
 
   static bool hasNextEvent() {

@@ -6,7 +6,7 @@
 
 package fletch;
 
-public class EchoService {
+public class PerformanceService {
   public static native void Setup();
   public static native void TearDown();
 

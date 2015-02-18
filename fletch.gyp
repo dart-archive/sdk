@@ -181,7 +181,7 @@
           'action_name': 'generate_service_performance_snapshot',
           'command': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
-            'tests/service_tests/performance/echo.dart',
+            'tests/service_tests/performance/performance_service_impl.dart',
           ],
           'inputs': [
             '<@(_command)',
@@ -190,7 +190,7 @@
             'fletchc'
             '<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
-            'tests/service_tests/performance/dart/echo_service.dart',
+            'tests/service_tests/performance/dart/performance_service.dart',
           ],
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/service_performance.snapshot',

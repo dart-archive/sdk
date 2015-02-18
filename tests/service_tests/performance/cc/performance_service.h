@@ -4,12 +4,12 @@
 
 // Generated file. Do not edit.
 
-#ifndef ECHO_SERVICE_H
-#define ECHO_SERVICE_H
+#ifndef PERFORMANCE_SERVICE_H
+#define PERFORMANCE_SERVICE_H
 
 #include <inttypes.h>
 
-class EchoService {
+class PerformanceService {
  public:
   static void setup();
   static void tearDown();
@@ -19,4 +19,4 @@ class EchoService {
   static void pingAsync(void (*callback)(int32_t));
 };
 
-#endif  // ECHO_SERVICE_H
+#endif  // PERFORMANCE_SERVICE_H

@@ -16,11 +16,9 @@
         '../../src/vm/vm.gyp:fletch_vm',
       ],
       'sources': [
-        'performance/echo.cc',
-        'performance/echo_shared.cc',
-        'performance/echo_shared.h',
-        'performance/cc/echo_service.cc',
-        'performance/cc/echo_service.h',
+        'performance/performance_test.cc',
+        'performance/cc/performance_service.cc',
+        'performance/cc/performance_service.h',
       ],
     },
     {

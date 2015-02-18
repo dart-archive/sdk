@@ -4,17 +4,17 @@
 
 import fletch.FletchApi;
 import fletch.FletchServiceApi;
-import fletch.EchoService;
+import fletch.PerformanceService;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-class Echo {
+class PerformanceTest {
   public static void main(String args[]) {
     // Expecting a snapshot of the dart service code on the command line.
     if (args.length != 1) {
-      System.out.println("Usage: java Echo <snapshot>");
+      System.out.println("Usage: java PerformanceTest <snapshot>");
       System.exit(1);
     }
 
@@ -42,29 +42,29 @@ class Echo {
       System.exit(1);
     }
 
-    // Setup the echo service.
-    EchoService.Setup();
+    // Setup the performance service.
+    PerformanceService.Setup();
 
     // Interact with the service.
-    int result = EchoService.echo(1);
+    int result = PerformanceService.echo(1);
     System.out.println("Java: result " + result);
-    result = EchoService.echo(2);
+    result = PerformanceService.echo(2);
     System.out.println("Java: result " + result);
-    EchoService.echoAsync(3, new EchoService.EchoCallback() {
+    PerformanceService.echoAsync(3, new PerformanceService.EchoCallback() {
       public void handle(int result) {
         System.out.println("Java: async echo result " + result);
       }
     });
 
-    result = EchoService.ping();
+    result = PerformanceService.ping();
     System.out.println("Java: result " + result);
-    EchoService.pingAsync(new EchoService.PingCallback() {
+    PerformanceService.pingAsync(new PerformanceService.PingCallback() {
       public void handle(int result) {
         System.out.println("Java: async ping result " + result);
       }
     });
 
-    EchoService.TearDown();
+    PerformanceService.TearDown();
   }
 
 }

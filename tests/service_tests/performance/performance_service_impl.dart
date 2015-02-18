@@ -2,17 +2,17 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart/echo_service.dart';
+import 'dart/performance_service.dart';
 
-class EchoImpl implements EchoService {
+class PerformanceServiceImpl implements PerformanceService {
   int echo(int n) => n;
   int ping() => 42;
 }
 
 main() {
-  var impl = new EchoImpl();
-  EchoService.initialize(impl);
-  while (EchoService.hasNextEvent()) {
-    EchoService.handleNextEvent();
+  var impl = new PerformanceServiceImpl();
+  PerformanceService.initialize(impl);
+  while (PerformanceService.hasNextEvent()) {
+    PerformanceService.handleNextEvent();
   }
 }

@@ -4,24 +4,24 @@
 
 // Generated file. Do not edit.
 
-#include "echo_service.h"
+#include "performance_service.h"
 #include "include/service_api.h"
 #include <stdlib.h>
 
 static ServiceId service_id_ = kNoServiceId;
 
-void EchoService::setup() {
-  service_id_ = ServiceApiLookup("EchoService");
+void PerformanceService::setup() {
+  service_id_ = ServiceApiLookup("PerformanceService");
 }
 
-void EchoService::tearDown() {
+void PerformanceService::tearDown() {
   ServiceApiTerminate(service_id_);
   service_id_ = kNoServiceId;
 }
 
 static const MethodId kEchoId_ = reinterpret_cast<MethodId>(1);
 
-int32_t EchoService::echo(int32_t n) {
+int32_t PerformanceService::echo(int32_t n) {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
@@ -39,7 +39,7 @@ static void Unwrap_int32_8(void* raw) {
   callback(result);
 }
 
-void EchoService::echoAsync(int32_t n, void (*callback)(int32_t)) {
+void PerformanceService::echoAsync(int32_t n, void (*callback)(int32_t)) {
   static const int kSize = 40 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int32_t*>(_buffer + 32) = n;
@@ -49,7 +49,7 @@ void EchoService::echoAsync(int32_t n, void (*callback)(int32_t)) {
 
 static const MethodId kPingId_ = reinterpret_cast<MethodId>(2);
 
-int32_t EchoService::ping() {
+int32_t PerformanceService::ping() {
   static const int kSize = 40;
   char _bits[kSize];
   char* _buffer = _bits;
@@ -57,7 +57,7 @@ int32_t EchoService::ping() {
   return *reinterpret_cast<int64_t*>(_buffer + 32);
 }
 
-void EchoService::pingAsync(void (*callback)(int32_t)) {
+void PerformanceService::pingAsync(void (*callback)(int32_t)) {
   static const int kSize = 40 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
