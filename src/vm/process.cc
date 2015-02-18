@@ -74,7 +74,6 @@ class PortQueue {
 
 ThreadState::ThreadState()
     : thread_id_(-1),
-      thread_(ThreadIdentifier::SELF),
       queue_(new ProcessQueue()),
       cache_(new LookupCache()),
       idle_monitor_(Platform::CreateMonitor()),

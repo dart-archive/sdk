@@ -7,38 +7,14 @@
 
 #include "src/shared/globals.h"
 #include "src/vm/platform.h"
+#include "src/vm/thread_posix.h"
 
 namespace fletch {
 
 // A ThreadIdentifier represents a thread identifier for a thread.
 // The ThreadIdentifier does not own the underlying OS handle.
 // Thread handles can be used for referring to threads and testing equality.
-class ThreadIdentifier {
- public:
-  enum Kind { SELF, INVALID };
-  explicit ThreadIdentifier(Kind kind);
-
-  // Destructor.
-  ~ThreadIdentifier();
-
-  // Test for thread running.
-  bool IsSelf() const;
-
-  // Test for valid thread handle.
-  bool IsValid() const;
-
-  // Get platform-specific data.
-  class PlatformData;
-  PlatformData* thread_handle_data() { return data_; }
-
- private:
-  // Initialize the handle to kind.
-  void Initialize(Kind kind);
-
-  PlatformData* data_;  // Captures platform dependent data.
-
-  DISALLOW_COPY_AND_ASSIGN(ThreadIdentifier);
-};
+class ThreadIdentifier;
 
 // Thread are started using the static Thread::Run method.
 class Thread {

@@ -5,52 +5,11 @@
 #include "src/vm/thread.h"
 
 #include <errno.h>
-#include <pthread.h>
 #include <stdio.h>
 
 #include "src/vm/platform.h"
 
 namespace fletch {
-
-// 0 is never a valid thread id on Linux since tids and pids share a
-// name space and pid 0 is reserved (see man 2 kill).
-static const pthread_t kNoThread = static_cast<pthread_t>(0);
-
-class ThreadIdentifier::PlatformData {
- public:
-  explicit PlatformData(ThreadIdentifier::Kind kind) {
-    Initialize(kind);
-  }
-
-  void Initialize(ThreadIdentifier::Kind kind) {
-    switch (kind) {
-    case ThreadIdentifier::SELF: thread_ = pthread_self(); break;
-    case ThreadIdentifier::INVALID: thread_ = kNoThread; break;
-    }
-  }
-
-  pthread_t thread_;  // Thread handle for pthread.
-};
-
-ThreadIdentifier::ThreadIdentifier(Kind kind) {
-  data_ = new PlatformData(kind);
-}
-
-void ThreadIdentifier::Initialize(ThreadIdentifier::Kind kind) {
-  data_->Initialize(kind);
-}
-
-ThreadIdentifier::~ThreadIdentifier() {
-  delete data_;
-}
-
-bool ThreadIdentifier::IsSelf() const {
-  return pthread_equal(data_->thread_, pthread_self());
-}
-
-bool ThreadIdentifier::IsValid() const {
-  return data_->thread_ != kNoThread;
-}
 
 bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
