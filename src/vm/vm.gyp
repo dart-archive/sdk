@@ -78,7 +78,7 @@
       'target_name': 'fletch_vm',
       'type': 'static_library',
       'dependencies': [
-        'fletch_vm_generator',
+        'fletch_vm_generator#host',
         'fletch_vm_base',
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
