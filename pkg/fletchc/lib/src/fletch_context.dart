@@ -87,6 +87,10 @@ class FletchContext {
     return symbolIds.putIfAbsent(symbol, () => symbolIds.length);
   }
 
+  void forEachStatic(f(FieldElement element, int index)) {
+    staticIndices.forEach(f);
+  }
+
   /// If [isConst] is true, a compile-time error is reported.
   ConstantExpression compileConstant(
       Node node,

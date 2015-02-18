@@ -7,11 +7,13 @@ library dart.system;
 var a;
 
 _entry(int mainArity) {
-  a = a;
+  setA("foo");
+  _printString(a);
   _yield(true);
 }
 
-void foo(x) {
+void setA(x) {
+  a = x;
 }
 
 external _yield(bool halt);

@@ -105,7 +105,7 @@ class BytecodeBuilder {
 
   void ret() {
     if (stackSize <= 0) throw "Bad stackSize for return bytecode: $stackSize";
-    internalAdd(new Return(stackSize - 1, functionArity));
+    internalAdd(new Return(stackSize, functionArity));
   }
 
   void bind(BytecodeLabel label) {

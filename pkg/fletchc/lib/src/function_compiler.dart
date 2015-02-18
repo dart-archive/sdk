@@ -76,6 +76,14 @@ class FunctionCompiler extends SemanticVisitor {
   }
 
   void compile() {
+    FunctionSignature functionSignature = function.functionSignature;
+    int parameterCount = functionSignature.parameterCount;
+    int i = 0;
+    functionSignature.orderedForEachParameter((FormalElement parameter) {
+      int slot = i++ - parameterCount - 1;
+      scope[parameter] = slot;
+    });
+
     function.node.body.accept(this);
 
     // Emit implicit 'return null' if no terminator is present.
@@ -254,6 +262,19 @@ class FunctionCompiler extends SemanticVisitor {
     applyVisitState();
   }
 
+  void visitParameterAccess(
+      Send node,
+      ParameterElement element) {
+    visitLocalVariableAccess(node, element);
+  }
+
+  void visitParameterAssignment(
+      SendSet node,
+      ParameterElement element,
+      Node rhs) {
+    visitLocalVariableAssignment(node, element, rhs);
+  }
+
   void visitBlock(Block node) {
     int oldBlockLocals = blockLocals;
     blockLocals = 0;
@@ -344,21 +365,6 @@ class FunctionCompiler extends SemanticVisitor {
   void visitFunctionExpression(FunctionExpression node) {
     generateUnimplementedError(
         node, "[visitFunctionExpression] isn't implemented.");
-  }
-
-  void visitParameterAccess(
-      Send node,
-      ParameterElement element) {
-    generateUnimplementedError(
-        node, "[visitParameterAccess] isn't implemented.");
-  }
-
-  void visitParameterAssignment(
-      SendSet node,
-      ParameterElement element,
-      Node rhs) {
-    generateUnimplementedError(
-        node, "[visitParameterAssignment] isn't implemented.");
   }
 
   void visitParameterInvocation(

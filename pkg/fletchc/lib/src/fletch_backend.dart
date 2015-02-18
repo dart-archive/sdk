@@ -262,7 +262,11 @@ class FletchBackend extends Backend {
       changes++;
     }
 
-    commands.add(const ChangeStatics(0));
+    context.forEachStatic((element, index) {
+      // TODO(ajohnsen): Push initializers.
+      commands.add(const PushNull());
+    });
+    commands.add(new ChangeStatics(context.staticIndices.length));
     changes++;
 
     commands.add(new CommitChanges(changes));
