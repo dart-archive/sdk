@@ -165,23 +165,23 @@
       ],
     },
     {
-      'target_name': 'run_echo_service_test',
+      'target_name': 'run_service_performance_test',
       # Note: this target_name needs to be different from its dependency.
       # This is due to the ninja GYP generator which doesn't generate unique
       # names.
       'type': 'none',
       'dependencies': [
         'src/vm/vm.gyp:fletch',
-        'tests/service_tests/service_tests.gyp:echo_service_test',
+        'tests/service_tests/service_tests.gyp:service_performance_test',
         'src/compiler/compiler.gyp:fletchc',
         'copy_asan',
       ],
       'actions': [
         {
-          'action_name': 'generate_echo_snapshot',
+          'action_name': 'generate_service_performance_snapshot',
           'command': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
-            'tests/service_tests/echo/echo.dart',
+            'tests/service_tests/performance/echo.dart',
           ],
           'inputs': [
             '<@(_command)',
@@ -190,25 +190,26 @@
             'fletchc'
             '<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
-            'tests/service_tests/echo/dart/echo_service.dart',
+            'tests/service_tests/performance/dart/echo_service.dart',
           ],
           'outputs': [
-            '<(SHARED_INTERMEDIATE_DIR)/echo.snapshot',
+            '<(SHARED_INTERMEDIATE_DIR)/service_performance.snapshot',
           ],
           'action': [
-            '<@(_command)', '--out=<(SHARED_INTERMEDIATE_DIR)/echo.snapshot',
+            '<@(_command)',
+            '--out=<(SHARED_INTERMEDIATE_DIR)/service_performance.snapshot',
           ],
         },
         {
-          'action_name': 'run_echo_service_test',
+          'action_name': 'run_service_performance_test',
           'inputs': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'echo_service_test'
+            'service_performance_test'
             '<(EXECUTABLE_SUFFIX)',
-            '<(SHARED_INTERMEDIATE_DIR)/echo.snapshot',
+            '<(SHARED_INTERMEDIATE_DIR)/service_performance.snapshot',
           ],
           'outputs': [
-            '<(PRODUCT_DIR)/test_outcomes/echo_service_test.pass',
+            '<(PRODUCT_DIR)/test_outcomes/service_performance_test.pass',
           ],
           'action': [
             "bash", "-c",
@@ -219,23 +220,23 @@
       ],
     },
     {
-      'target_name': 'run_person_service_test',
+      'target_name': 'run_service_conformance_test',
       # Note: this target_name needs to be different from its dependency.
       # This is due to the ninja GYP generator which doesn't generate unique
       # names.
       'type': 'none',
       'dependencies': [
         'src/vm/vm.gyp:fletch',
-        'tests/service_tests/service_tests.gyp:person_service_test',
+        'tests/service_tests/service_tests.gyp:service_conformance_test',
         'src/compiler/compiler.gyp:fletchc',
         'copy_asan',
       ],
       'actions': [
         {
-          'action_name': 'generate_person_snapshot',
+          'action_name': 'generate_service_conformance_snapshot',
           'command': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
-            'tests/service_tests/person/person.dart',
+            'tests/service_tests/conformance/person.dart',
           ],
           'inputs': [
             '<@(_command)',
@@ -244,26 +245,27 @@
             'fletchc'
             '<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
-            'tests/service_tests/person/dart/person_counter.dart',
-            'tests/service_tests/person/dart/struct.dart',
+            'tests/service_tests/conformance/dart/person_counter.dart',
+            'tests/service_tests/conformance/dart/struct.dart',
           ],
           'outputs': [
-            '<(SHARED_INTERMEDIATE_DIR)/person.snapshot',
+            '<(SHARED_INTERMEDIATE_DIR)/service_conformance.snapshot',
           ],
           'action': [
-            '<@(_command)', '--out=<(SHARED_INTERMEDIATE_DIR)/person.snapshot',
+            '<@(_command)',
+            '--out=<(SHARED_INTERMEDIATE_DIR)/service_conformance.snapshot',
           ],
         },
         {
-          'action_name': 'run_person_service_test',
+          'action_name': 'run_service_conformance_test',
           'inputs': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'person_service_test'
+            'service_conformance_test'
             '<(EXECUTABLE_SUFFIX)',
-            '<(SHARED_INTERMEDIATE_DIR)/person.snapshot',
+            '<(SHARED_INTERMEDIATE_DIR)/service_conformance.snapshot',
           ],
           'outputs': [
-            '<(PRODUCT_DIR)/test_outcomes/person_service_test.pass',
+            '<(PRODUCT_DIR)/test_outcomes/service_conformance_test.pass',
           ],
           'action': [
             "bash", "-c",
