@@ -128,8 +128,9 @@ class SimpleType extends Type {
   }
 
   bool operator==(Object other) {
-    if (other is! Type || other.isList) return false;
-    return identifier == other.identifier && isPointer == other.isPointer;
+    return other is SimpleType
+        && identifier == other.identifier
+        && isPointer == other.isPointer;
   }
 
   bool get isList => false;
@@ -145,8 +146,7 @@ class ListType extends Type {
   }
 
   bool operator==(Object other) {
-    if (other is! Type || !other.isList) return false;
-    return elementType == other.elementType;
+    return other is ListType && elementType == other.elementType;
   }
 
   bool get isPointer => false;

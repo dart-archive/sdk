@@ -14,6 +14,10 @@ class AgeStats;
 class AgeStatsBuilder;
 class Person;
 class PersonBuilder;
+class Large;
+class LargeBuilder;
+class Small;
+class SmallBuilder;
 class PersonBox;
 class PersonBoxBuilder;
 class Node;
@@ -67,8 +71,8 @@ class Person : public Reader {
       : Reader(segment, offset) { }
 
   List<uint8_t> getName() const { return ReadList<uint8_t>(0); }
-  int32_t getAge() const { return *PointerTo<int32_t>(8); }
-  List<Person> getChildren() const { return ReadList<Person>(16); }
+  List<Person> getChildren() const { return ReadList<Person>(8); }
+  int32_t getAge() const { return *PointerTo<int32_t>(16); }
 };
 
 class PersonBuilder : public Builder {
@@ -81,8 +85,52 @@ class PersonBuilder : public Builder {
       : Builder(segment, offset) { }
 
   List<uint8_t> initName(int length);
-  void setAge(int32_t value) { *PointerTo<int32_t>(8) = value; }
   List<PersonBuilder> initChildren(int length);
+  void setAge(int32_t value) { *PointerTo<int32_t>(16) = value; }
+};
+
+class Large : public Reader {
+ public:
+  static const int kSize = 8;
+  Large(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+  Small getS() const;
+  int32_t getY() const { return *PointerTo<int32_t>(4); }
+};
+
+class LargeBuilder : public Builder {
+ public:
+  static const int kSize = 8;
+
+  explicit LargeBuilder(const Builder& builder)
+      : Builder(builder) { }
+  LargeBuilder(Segment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  SmallBuilder initS();
+  void setY(int32_t value) { *PointerTo<int32_t>(4) = value; }
+};
+
+class Small : public Reader {
+ public:
+  static const int kSize = 8;
+  Small(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+  int32_t getX() const { return *PointerTo<int32_t>(0); }
+};
+
+class SmallBuilder : public Builder {
+ public:
+  static const int kSize = 8;
+
+  explicit SmallBuilder(const Builder& builder)
+      : Builder(builder) { }
+  SmallBuilder(Segment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  void setX(int32_t value) { *PointerTo<int32_t>(0) = value; }
 };
 
 class PersonBox : public Reader {
@@ -112,14 +160,14 @@ class Node : public Reader {
   Node(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
-  uint16_t getTag() const { return *PointerTo<uint16_t>(0); }
   bool isNum() const { return 1 == getTag(); }
-  int32_t getNum() const { return *PointerTo<int32_t>(8); }
+  int32_t getNum() const { return *PointerTo<int32_t>(0); }
   bool isCond() const { return 2 == getTag(); }
-  bool getCond() const { return *PointerTo<uint8_t>(8) != 0; }
+  bool getCond() const { return *PointerTo<uint8_t>(0) != 0; }
   bool isCons() const { return 3 == getTag(); }
   Cons getCons() const;
   bool isNil() const { return 4 == getTag(); }
+  uint16_t getTag() const { return *PointerTo<uint16_t>(16); }
 };
 
 class NodeBuilder : public Builder {
@@ -131,11 +179,11 @@ class NodeBuilder : public Builder {
   NodeBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
-  void setTag(uint16_t value) { *PointerTo<uint16_t>(0) = value; }
-  void setNum(int32_t value) { setTag(1); *PointerTo<int32_t>(8) = value; }
-  void setCond(bool value) { setTag(2); *PointerTo<uint8_t>(8) = value ? 1 : 0; }
+  void setNum(int32_t value) { setTag(1); *PointerTo<int32_t>(0) = value; }
+  void setCond(bool value) { setTag(2); *PointerTo<uint8_t>(0) = value ? 1 : 0; }
   ConsBuilder initCons();
   void setNil() { setTag(4); }
+  void setTag(uint16_t value) { *PointerTo<uint16_t>(16) = value; }
 };
 
 class Cons : public Reader {

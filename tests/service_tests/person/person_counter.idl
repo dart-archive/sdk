@@ -26,6 +26,15 @@ struct Person {
   List<Person> children;
 }
 
+struct Large {
+  int32 y;
+  Small s;
+}
+
+struct Small {
+  int32 x;
+}
+
 struct PersonBox {
   Person* person;
 }

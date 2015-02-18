@@ -137,19 +137,47 @@ class AgeStatsBuilder extends Builder {
 
 class Person extends Reader {
   List<int> get name => readList(new _uint8List(), 0);
-  int get age => _segment.memory.getInt32(_offset + 8);
-  List<Person> get children => readList(new _PersonList(), 16);
+  List<Person> get children => readList(new _PersonList(), 8);
+  int get age => _segment.memory.getInt32(_offset + 16);
 }
 
 class PersonBuilder extends Builder {
   List<int> initName(int length) {
     return NewList(new _uint8BuilderList(), 0, length, 1);
   }
-  void set age(int value) {
-    _segment.memory.setInt32(_offset + 8, value);
-  }
   List<PersonBuilder> initChildren(int length) {
-    return NewList(new _PersonBuilderList(), 16, length, 24);
+    return NewList(new _PersonBuilderList(), 8, length, 24);
+  }
+  void set age(int value) {
+    _segment.memory.setInt32(_offset + 16, value);
+  }
+}
+
+class Large extends Reader {
+  Small get s => new Small()
+      .._segment = _segment
+      .._offset = _offset + 0;
+  int get y => _segment.memory.getInt32(_offset + 4);
+}
+
+class LargeBuilder extends Builder {
+  SmallBuilder initS() {
+    return new SmallBuilder()
+        .._segment = _segment
+        .._offset = _offset + 0;
+  }
+  void set y(int value) {
+    _segment.memory.setInt32(_offset + 4, value);
+  }
+}
+
+class Small extends Reader {
+  int get x => _segment.memory.getInt32(_offset + 0);
+}
+
+class SmallBuilder extends Builder {
+  void set x(int value) {
+    _segment.memory.setInt32(_offset + 0, value);
   }
 }
 
@@ -164,38 +192,38 @@ class PersonBoxBuilder extends Builder {
 }
 
 class Node extends Reader {
-  int get tag => _segment.memory.getUint16(_offset + 0);
   bool get isNum => 1 == this.tag;
-  int get num => _segment.memory.getInt32(_offset + 8);
+  int get num => _segment.memory.getInt32(_offset + 0);
   bool get isCond => 2 == this.tag;
-  bool get cond => _segment.memory.getUint8(_offset + 8) != 0;
+  bool get cond => _segment.memory.getUint8(_offset + 0) != 0;
   bool get isCons => 3 == this.tag;
   Cons get cons => new Cons()
       .._segment = _segment
-      .._offset = _offset + 8;
+      .._offset = _offset + 0;
   bool get isNil => 4 == this.tag;
+  int get tag => _segment.memory.getUint16(_offset + 16);
 }
 
 class NodeBuilder extends Builder {
-  void set tag(int value) {
-    _segment.memory.setUint16(_offset + 0, value);
-  }
   void set num(int value) {
     tag = 1;
-    _segment.memory.setInt32(_offset + 8, value);
+    _segment.memory.setInt32(_offset + 0, value);
   }
   void set cond(bool value) {
     tag = 2;
-    _segment.memory.setUint8(_offset + 8, value ? 1 : 0);
+    _segment.memory.setUint8(_offset + 0, value ? 1 : 0);
   }
   ConsBuilder initCons() {
     tag = 3;
     return new ConsBuilder()
         .._segment = _segment
-        .._offset = _offset + 8;
+        .._offset = _offset + 0;
   }
   void setNil() {
     tag = 4;
+  }
+  void set tag(int value) {
+    _segment.memory.setUint16(_offset + 16, value);
   }
 }
 

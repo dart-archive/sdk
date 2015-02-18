@@ -125,9 +125,15 @@ List<uint8_t> PersonBuilder::initName(int length) {
 }
 
 List<PersonBuilder> PersonBuilder::initChildren(int length) {
-  Reader result = NewList(16, length, 24);
+  Reader result = NewList(8, length, 24);
   return List<PersonBuilder>(result.segment(), result.offset(), length);
 }
+
+SmallBuilder LargeBuilder::initS() {
+  return SmallBuilder(segment(), offset() + 0);
+}
+
+Small Large::getS() const { return Small(segment(), offset() + 0); }
 
 PersonBuilder PersonBoxBuilder::initPerson() {
   Builder result = NewStruct(0, 24);
@@ -138,10 +144,10 @@ Person PersonBox::getPerson() const { return ReadStruct<Person>(0); }
 
 ConsBuilder NodeBuilder::initCons() {
   setTag(3);
-  return ConsBuilder(segment(), offset() + 8);
+  return ConsBuilder(segment(), offset() + 0);
 }
 
-Cons Node::getCons() const { return Cons(segment(), offset() + 8); }
+Cons Node::getCons() const { return Cons(segment(), offset() + 0); }
 
 NodeBuilder ConsBuilder::initFst() {
   Builder result = NewStruct(0, 24);
