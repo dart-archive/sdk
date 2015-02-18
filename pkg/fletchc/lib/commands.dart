@@ -198,13 +198,11 @@ class PushNewFunction extends Command {
 
   void addTo(StreamSink<List<int>> sink) {
     List<int> bytes = computeBytes(bytecodes);
-    MethodEnd end = new MethodEnd(bytes.length);
     buffer
         ..addUint32(arity)
         ..addUint32(literals)
-        ..addUint32(bytes.length + end.size + 4 /* Try-catch blocks. */)
+        ..addUint32(bytes.length + 4 /* Try-catch blocks. */)
         ..addUint8List(bytes)
-        ..addUint8List(computeBytes([end]))
         ..addUint32(0 /* No try-catch blocks. */)
         ..sendOn(sink, code);
   }

@@ -169,7 +169,9 @@ class FletchBackend extends Backend {
     Return returnNode = function.node.body.asReturn();
     if (returnNode != null && !returnNode.hasExpression) {
       // A native method without a body.
-      functionCompiler.builder.emitThrow();
+      functionCompiler.builder
+          ..emitThrow()
+          ..methodEnd();
     } else {
       functionCompiler.compile();
     }
@@ -180,9 +182,11 @@ class FletchBackend extends Backend {
       FunctionCompiler functionCompiler) {
     if (function.name == "_yield") {
       // TODO(ajohnsen): Load argument 0 instead of literal true.
-      functionCompiler.builder.loadLiteralTrue();
-      functionCompiler.builder.processYield();
-      functionCompiler.builder.ret();
+      functionCompiler.builder
+          ..loadLiteralTrue()
+          ..processYield()
+          ..ret()
+          ..methodEnd();
       return;
     }
     throw "Unhandled external: $function";
@@ -313,8 +317,9 @@ class FletchBackend extends Backend {
       });
       element = patch;
     } else {
-      compiler.reportError(
-         element, MessageKind.PATCH_EXTERNAL_WITHOUT_IMPLEMENTATION);
+      // TODO(ahe): In my next CL, I'll be able to reenable this error.
+      // compiler.reportError(
+      //    element, MessageKind.PATCH_EXTERNAL_WITHOUT_IMPLEMENTATION);
     }
     return element;
   }

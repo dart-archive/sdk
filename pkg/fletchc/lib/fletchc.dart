@@ -28,6 +28,7 @@ main(List<String> arguments) async {
 
   List<String> vmOptions = <String>[
       '--port=${server.port}',
+      '-Xvalidate-stack',
   ];
 
   var connectionIterator = new StreamIterator(server);

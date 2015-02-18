@@ -99,6 +99,12 @@ class FunctionCompiler extends SemanticVisitor {
     return constants.putIfAbsent(constant, () => constants.length);
   }
 
+  int allocateStringConstant(String string) {
+    return allocateConstant(
+        context.backend.constantSystem.createString(
+            new DartString.literal(string)));
+  }
+
   int allocateConstantFromFunction(FunctionElement function) {
     FletchFunctionConstant constant =
         functionConstantValues.putIfAbsent(
@@ -621,8 +627,8 @@ class FunctionCompiler extends SemanticVisitor {
   void generateUnimplementedError(Spannable spannable, String reason) {
     context.compiler.reportError(
         spannable, MessageKind.GENERIC, {'text': reason});
-    // TODO(ahe): Throw an exception here.
-    builder.loadLiteralNull();
+    builder.loadConst(allocateStringConstant(reason));
+    builder.emitThrow();
     applyVisitState();
   }
 
