@@ -38,13 +38,59 @@ enum Register {
   PC  = 15,
 };
 
+enum ScaleFactor {
+  TIMES_1 = 0,
+  TIMES_2 = 1,
+  TIMES_4 = 2,
+  TIMES_8 = 3
+};
+
+typedef uint32_t RegisterList;
+
 class Immediate {
  public:
-  explicit Immediate(int32 value) : value_(value) { }
-  int32 value() const { return value_; }
+  explicit Immediate(int32_t value) : value_(value) { }
+  int32_t value() const { return value_; }
 
  private:
-  const int32 value_;
+  const int32_t value_;
+};
+
+class Operand {
+ public:
+  Operand(Register reg, ScaleFactor scale) : reg_(reg), scale_(scale) { }
+  Operand(const Operand& other) : reg_(other.reg()), scale_(other.scale()) { }
+
+  Register reg() const { return reg_; }
+  ScaleFactor scale() const { return scale_; }
+
+ private:
+  const Register reg_;
+  const ScaleFactor scale_;
+};
+
+class Address {
+ public:
+  enum Kind { IMMEDIATE, OPERAND };
+
+  Address(Register base, int32_t offset)
+      : base_(base), offset_(offset), operand_(R0, TIMES_1), kind_(IMMEDIATE) {
+  }
+
+  Address(Register base, const Operand& operand)
+      : base_(base), offset_(0), operand_(operand), kind_(OPERAND) {
+  }
+
+  Register base() const { return base_; }
+  int32_t offset() const { return offset_; }
+  const Operand* operand() const { return &operand_; }
+  Kind kind() const { return kind_; }
+
+ private:
+  const Register base_;
+  const int32_t offset_;
+  const Operand operand_;
+  const Kind kind_;
 };
 
 class Label {
@@ -87,11 +133,43 @@ class Label {
 #define INSTRUCTION_2(name, format, t0, t1) \
   void name(t0 a0, t1 a1) { Print(format, Wrap(a0), Wrap(a1)); }
 
+#define INSTRUCTION_3(name, format, t0, t1, t2)                          \
+  void name(t0 a0, t1 a1, t2 a2) {                                       \
+    Print(format, Wrap(a0), Wrap(a1), Wrap(a2) );                        \
+  }
+
 class Assembler {
  public:
+  INSTRUCTION_3(add, "add %r, %r, %r", Register, Register, Register);
+  INSTRUCTION_3(add, "add %r, %r, %i", Register, Register, const Immediate&);
+  INSTRUCTION_3(add, "add %r, %r, %o", Register, Register, const Operand&);
+
+  INSTRUCTION_2(adr, "adr %r, %s", Register, const char*);
+
+  INSTRUCTION_0(bkpt, "bkpt");
+
+  INSTRUCTION_2(ldr, "ldr %r, %a", Register, const Address&);
+
   INSTRUCTION_2(mov, "mov %r, %r", Register, Register);
   INSTRUCTION_2(mov, "mov %r, %i", Register, const Immediate&);
-  INSTRUCTION_0(bkpt, "bkpt");
+
+  INSTRUCTION_1(pop, "pop { %r }", Register);
+  INSTRUCTION_1(pop, "pop { %R }", RegisterList);
+
+  INSTRUCTION_1(push, "push { %r }", Register);
+  INSTRUCTION_1(push, "push { %R }", RegisterList);
+
+  INSTRUCTION_2(ldrb, "ldrb %r, %a", Register, const Address&);
+
+  INSTRUCTION_3(lsl, "lsl %r, %r, %i", Register, Register, const Immediate&);
+  INSTRUCTION_3(lsr, "lsr %r, %r, %i", Register, Register, const Immediate&);
+
+  INSTRUCTION_2(str, "str %r, %a", Register, const Address&);
+
+  INSTRUCTION_3(sub, "sub %r, %r, %i", Register, Register, const Immediate&);
+  INSTRUCTION_3(sub, "sub %r, %r, %r", Register, Register, Register);
+
+  void b(Label* label);
 
   void Align(int alignment);
 
@@ -102,11 +180,17 @@ class Assembler {
 
  private:
   void Print(const char* format, ...);
+  void PrintAddress(const Address* address);
+  void PrintOperand(const Operand* operand);
 
   static int NewLabelPosition();
 
   Register Wrap(Register reg) { return reg; }
+  RegisterList Wrap(RegisterList regs) { return regs; }
+  const char* Wrap(const char* label) { return label; }
   const Immediate* Wrap(const Immediate& immediate) { return &immediate; }
+  const Address* Wrap(const Address& address) { return &address; }
+  const Operand* Wrap(const Operand& operand) { return &operand; }
 };
 
 #undef INSTRUCTION_0

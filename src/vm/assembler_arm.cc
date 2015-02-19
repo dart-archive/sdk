@@ -11,6 +11,11 @@
 
 namespace fletch {
 
+void Assembler::b(Label* label) {
+  if (label->IsUnused()) label->LinkTo(NewLabelPosition());
+  printf("\tb .L%d\n", label->position());
+}
+
 void Assembler::Align(int alignment) {
   printf("\t.align %d\n", alignment);
 }
@@ -21,7 +26,7 @@ void Assembler::Bind(Label* label) {
   } else {
     label->BindTo(label->position());
   }
-  printf("%d:\n", label->position());
+  printf(".L%d:\n", label->position());
 }
 
 static const char* ToString(Register reg) {
@@ -31,6 +36,20 @@ static const char* ToString(Register reg) {
   };
   ASSERT(reg >= R0 && reg <= R15);
   return kRegisterNames[reg];
+}
+
+static void PrintRegisterList(RegisterList regs) {
+  bool first = true;
+  for (int r = 0; r < 16; r++) {
+    if ((regs & (1 << r)) != 0) {
+      if (first) {
+        printf("%s", ToString(static_cast<Register>(r)));
+        first = false;
+      } else {
+        printf(", %s", ToString(static_cast<Register>(r)));
+      }
+    }
+  }
 }
 
 void Assembler::Print(const char* format, ...) {
@@ -46,15 +65,40 @@ void Assembler::Print(const char* format, ...) {
           break;
         }
 
+        case 'a': {
+          const Address* address = va_arg(arguments, const Address*);
+          PrintAddress(address);
+          break;
+        }
+
         case 'r': {
           Register reg = static_cast<Register>(va_arg(arguments, int));
           printf("%s", ToString(reg));
           break;
         }
 
+        case 'R': {
+          RegisterList regs =
+              static_cast<RegisterList>(va_arg(arguments, int32_t));
+          PrintRegisterList(regs);
+          break;
+        }
+
         case 'i': {
           const Immediate* immediate = va_arg(arguments, const Immediate*);
           printf("#%d", immediate->value());
+          break;
+        }
+
+        case 'o': {
+          const Operand* operand = va_arg(arguments, const Operand*);
+          PrintOperand(operand);
+          break;
+        }
+
+        case 's': {
+          const char* label = va_arg(arguments, const char*);
+          printf("%s", label);
           break;
         }
 
@@ -70,6 +114,21 @@ void Assembler::Print(const char* format, ...) {
   }
   va_end(arguments);
   putchar('\n');
+}
+
+void Assembler::PrintAddress(const Address* address) {
+  if (address->kind() == Address::IMMEDIATE) {
+    printf("[%s, #%d]", ToString(address->base()), address->offset());
+  } else {
+    ASSERT(address->kind() == Address::OPERAND);
+    printf("[%s, ", ToString(address->base()));
+    PrintOperand(address->operand());
+    printf("]");
+  }
+}
+
+void Assembler::PrintOperand(const Operand* operand) {
+  printf("%s, lsl #%d", ToString(operand->reg()), operand->scale());
 }
 
 int Assembler::NewLabelPosition() {
