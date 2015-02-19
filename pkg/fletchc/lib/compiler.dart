@@ -46,10 +46,10 @@ const String _SDK_DIR = const String.fromEnvironment("dart-sdk");
 const String _FLETCH_VM = const String.fromEnvironment("fletch-vm");
 
 const List<String> _fletchVmSuggestions = const <String> [
-    'out/DebugIA32Clang/fletch',
-    'out/DebugIA32/fletch',
-    'out/ReleaseIA32Clang/fletch',
-    'out/ReleaseIA32/fletch',
+    'out/DebugX64Clang/fletch',
+    'out/DebugX64/fletch',
+    'out/ReleaseX64Clang/fletch',
+    'out/ReleaseX64/fletch',
 ];
 
 const String StringOrUri = "String or Uri";
@@ -59,7 +59,9 @@ class FletchCompiler {
 
   final Uri script;
 
-  FletchCompiler._(this._compiler, this.script);
+  final bool verbose;
+
+  FletchCompiler._(this._compiler, this.script, this.verbose);
 
   factory FletchCompiler(
       {CompilerInputProvider provider,
@@ -154,7 +156,7 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
     compiler.log("Using library root: $libraryRoot");
     compiler.log("Using package root: $packageRoot");
 
-    return new FletchCompiler._(compiler, script);
+    return new FletchCompiler._(compiler, script, isVerbose);
   }
 
   Future run([@StringOrUri script]) {

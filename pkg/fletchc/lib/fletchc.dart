@@ -33,6 +33,9 @@ main(List<String> arguments) async {
 
   var connectionIterator = new StreamIterator(server);
 
+  if (compiler.verbose) {
+    print("Running '${compiler.fletchVm.toFilePath()} ${vmOptions.join(" ")}'");
+  }
   var vmProcess =
       await Process.start(compiler.fletchVm.toFilePath(), vmOptions);
 

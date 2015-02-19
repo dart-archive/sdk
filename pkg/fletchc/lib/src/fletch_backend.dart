@@ -7,6 +7,9 @@ library fletchc.fletch_backend;
 import 'dart:async' show
     Future;
 
+import 'dart:collection' show
+    SplayTreeMap;
+
 import 'package:compiler/src/dart2jslib.dart' show
     Backend,
     BackendConstantEnvironment,
@@ -51,9 +54,19 @@ import 'fletch_function_constant.dart' show
 
 import 'fletch_context.dart';
 
+import 'fletch_selector.dart';
+
 import 'function_compiler.dart';
 
 import '../commands.dart';
+
+class CompiledClass {
+  final int id;
+  final ClassElement element;
+  final SplayTreeMap<int, int> methodTable = new SplayTreeMap<int, int>();
+
+  CompiledClass(this.id, this.element);
+}
 
 class FletchBackend extends Backend {
   final FletchContext context;
@@ -66,6 +79,11 @@ class FletchBackend extends Backend {
       <FunctionElement, FunctionCompiler>{};
 
   final Set<FunctionElement> externals = new Set<FunctionElement>();
+
+  final Map<ClassElement, int> classIds = <ClassElement, int>{};
+
+  final Map<ClassElement, CompiledClass> compiledClasses =
+      <ClassElement, CompiledClass>{};
 
   List<Command> commands;
 
@@ -82,6 +100,13 @@ class FletchBackend extends Backend {
         this.constantCompilerTask = new DartConstantTask(compiler),
         super(compiler) {
     context.resolutionCallbacks = new FletchResolutionCallbacks(context);
+  }
+
+  CompiledClass registerClassElement(ClassElement element) {
+    return compiledClasses.putIfAbsent(element, () {
+        int id = classIds.putIfAbsent(element, () => classIds.length);
+        return new CompiledClass(id, element);
+      });
   }
 
   FletchResolutionCallbacks get resolutionCallbacks {
@@ -127,6 +152,12 @@ class FletchBackend extends Backend {
     }
     fletchExternalInvokeMain = findExternal('invokeMain');
     fletchExternalYield = findExternal('yield');
+
+    registerClassElement(compiler.objectClass);
+  }
+
+  ClassElement get stringImplementation {
+    return fletchSystemLibrary.findLocal("_StringImpl");
   }
 
   /// Class of annotations to mark patches in patch files.
@@ -138,20 +169,18 @@ class FletchBackend extends Backend {
     // TODO(ahe): Introduce a proper constant class to identify constants. For
     // now, we simply put "const patch = "patch";" in the beginning of patch
     // files.
-    return stringImplementation;
+    return super.stringImplementation;
   }
 
   void codegen(CodegenWorkItem work) {
     Element element = work.element;
-    // TODO(ahe): Investigate why this check is needed. Is there something
-    // we're not telling the enqueuer?
-    if (compiledFunctions[element] != null) return;
+    assert(!compiledFunctions.containsKey(element));
     if (compiler.verbose) {
       compiler.reportHint(
           element, MessageKind.GENERIC, {'text': 'Compiling ${element.name}'});
     }
 
-    if (element.isFunction) {
+    if (element.isFunction || element.isGetter) {
       compiler.withCurrentElement(element.implementation, () {
         codegenFunction(
             element.implementation, work.resolutionTree, work.registry);
@@ -185,8 +214,22 @@ class FletchBackend extends Backend {
     }
 
     compiledFunctions[function] = functionCompiler;
+    // TODO(ahe): Don't do this.
+    compiler.enqueuer.codegen.generatedCode[function] = null;
 
-    allocateMethodId(function);
+    int methodId = allocateMethodId(function);
+
+    if (function.isInstanceMember) {
+      ClassElement enclosingClass = function.enclosingClass;
+      CompiledClass compiledClass = registerClassElement(enclosingClass);
+      String symbol = context.getSymbolFromFunction(function);
+      int id = context.getSymbolId(symbol);
+      int arity = function.functionSignature.parameterCount;
+      SelectorKind kind = function.isGetter ?
+          SelectorKind.Getter : SelectorKind.Method;
+      int fletchSelector = FletchSelector.encode(id, kind, arity);
+      compiledClass.methodTable[fletchSelector] = methodId;
+    }
 
     if (compiler.verbose) {
       print(functionCompiler.verboseToString());
@@ -279,6 +322,7 @@ class FletchBackend extends Backend {
   int assembleProgram() {
     List<Command> commands = <Command>[
         const NewMap(MapId.methods),
+        const NewMap(MapId.classes),
     ];
 
     List<Function> deferredActions = <Function>[];
@@ -328,8 +372,26 @@ class FletchBackend extends Backend {
     compiledFunctions.forEach(pushNewFunction);
 
     int changes = 0;
-    for (Function action in deferredActions) {
-      action();
+
+    for (CompiledClass compiledClass in compiledClasses.values) {
+      ClassElement element = compiledClass.element;
+      if (element == stringImplementation) {
+        commands.add(new PushBuiltinClass(14, 0));
+      } else if (element == compiler.objectClass) {
+        commands.add(new PushBuiltinClass(1, 0));
+      } else {
+        commands.add(new PushNewClass(0));
+      }
+
+      commands.add(const Dup());
+      commands.add(new PopToMap(MapId.classes, compiledClass.id));
+
+      compiledClass.methodTable.forEach((int selector, int methodId) {
+        commands.add(new PushNewInteger(selector));
+        commands.add(new PushFromMap(MapId.methods, methodId));
+      });
+      commands.add(new ChangeMethodTable(compiledClass.methodTable.length));
+
       changes++;
     }
 
@@ -339,6 +401,21 @@ class FletchBackend extends Backend {
     });
     commands.add(new ChangeStatics(context.staticIndices.length));
     changes++;
+
+    for (CompiledClass compiledClass in compiledClasses.values) {
+      ClassElement element = compiledClass.element;
+      if (element == compiler.objectClass) continue;
+      commands.add(new PushFromMap(MapId.classes, compiledClass.id));
+      // TODO(ajohnsen): Don't assume object id is 0.
+      commands.add(new PushFromMap(MapId.classes, 0));
+      commands.add(const ChangeSuperClass());
+      changes++;
+    }
+
+    for (Function action in deferredActions) {
+      action();
+      changes++;
+    }
 
     commands.add(new CommitChanges(changes));
 
@@ -356,6 +433,7 @@ class FletchBackend extends Backend {
   }
 
   int allocateMethodId(FunctionElement element) {
+    element = element.declaration;
     return methodIds.putIfAbsent(element, () => methodIds.length);
   }
 

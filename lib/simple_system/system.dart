@@ -4,6 +4,13 @@
 
 library dart.system;
 
+class _StringImpl implements String {
+  // TODO(ajohnsen): Implement.
+  bool get isEmpty {
+    return true;
+  }
+}
+
 /// This is a magic method recognized by the compiler, and references to it
 /// will be substituted for the actual main method.
 /// [arguments] is supposed to be a List<String> with command line arguments.

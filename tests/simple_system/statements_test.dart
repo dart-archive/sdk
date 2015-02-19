@@ -9,9 +9,9 @@ import 'dart:fletch_natives';
 main() {
   var x = true;
   x = 4;
-  if (x) {
-    var y;
-    if (false) {
+  if ("".isEmpty) {
+    printString("isEmpty");
+    if (x) {
     }
   } else {
   }

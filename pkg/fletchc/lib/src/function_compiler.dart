@@ -69,7 +69,8 @@ class FunctionCompiler extends SemanticVisitor {
       : super(elements),
         function = function,
         builder = new BytecodeBuilder(
-            function.functionSignature.parameterCount);
+            function.functionSignature.parameterCount +
+            (function.isInstanceMember ? 1 : 0));
 
   ConstantExpression compileConstant(Node node, {bool isConst}) {
     return context.compileConstant(node, elements, isConst: isConst);
@@ -118,11 +119,20 @@ class FunctionCompiler extends SemanticVisitor {
   }
 
   void invokeMethod(Selector selector) {
+    registry.registerDynamicInvocation(selector);
     String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
     int arity = selector.argumentCount;
     int fletchSelector = FletchSelector.encodeMethod(id, arity);
     builder.invokeMethod(fletchSelector, arity);
+  }
+
+  void invokeGetter(Selector selector) {
+    registry.registerDynamicGetter(selector);
+    String symbol = context.getSymbolFromSelector(selector);
+    int id = context.getSymbolId(symbol);
+    int fletchSelector = FletchSelector.encodeGetter(id);
+    builder.invokeMethod(fletchSelector, 0);
   }
 
   // Visit the expression [node] with the result pushed on top of the stack.
@@ -216,6 +226,14 @@ class FunctionCompiler extends SemanticVisitor {
     applyVisitState();
   }
 
+  void visitDynamicAccess(
+      Send node,
+      Selector selector) {
+    visitForValue(node.receiver);
+    invokeGetter(selector);
+    applyVisitState();
+  }
+
   void visitStaticFieldAssignment(
       SendSet node,
       FieldElement element,
@@ -272,6 +290,8 @@ class FunctionCompiler extends SemanticVisitor {
   void visitLiteralString(LiteralString node) {
     if (visitState == VisitState.Value) {
       builder.loadConst(allocateConstantFromNode(node));
+      registry.registerInstantiatedClass(
+          context.compiler.backend.stringImplementation);
     } else if (visitState == VisitState.Test) {
       builder.branch(falseLabel);
     }
@@ -313,6 +333,13 @@ class FunctionCompiler extends SemanticVisitor {
     visitLocalVariableAssignment(node, element, rhs);
   }
 
+  void visitThrow(Throw node) {
+    visitForValue(node.expression);
+    builder.emitThrow();
+    // TODO(ahe): It seems suboptimal that each throw is followed by a pop.
+    applyVisitState();
+  }
+
   void visitBlock(Block node) {
     int oldBlockLocals = blockLocals;
     blockLocals = 0;
@@ -339,11 +366,14 @@ class FunctionCompiler extends SemanticVisitor {
     visitForEffect(node.expression);
   }
 
-  void visitThrow(Throw node) {
-    visitForValue(node.expression);
-    builder.emitThrow();
-    // TODO(ahe): It seems suboptimal that each throw is followed by a pop.
-    applyVisitState();
+  void visitReturn(Return node) {
+    Expression expression = node.expression;
+    if (expression == null) {
+      builder.loadLiteralNull();
+    } else {
+      visitForValue(expression);
+    }
+    builder.ret();
   }
 
   void visitStatement(Node node) {
@@ -458,13 +488,6 @@ class FunctionCompiler extends SemanticVisitor {
       Selector selector) {
     generateUnimplementedError(
         node, "[visitLocalFunctionInvocation] isn't implemented.");
-  }
-
-  void visitDynamicAccess(
-      Send node,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitDynamicAccess] isn't implemented.");
   }
 
   void visitDynamicAssignment(

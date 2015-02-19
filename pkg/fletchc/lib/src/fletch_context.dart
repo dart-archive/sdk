@@ -12,7 +12,9 @@ import 'package:compiler/src/universe/universe.dart' show
 
 import 'package:compiler/src/elements/elements.dart' show
     Element,
-    FieldElement;
+    FieldElement,
+    FunctionElement,
+    FunctionSignature;
 
 import 'package:compiler/src/resolution/resolution.dart' show
     TreeElements;
@@ -81,6 +83,19 @@ class FletchContext {
         }
         return buffer.toString();
       });
+  }
+
+  String getSymbolFromFunction(FunctionElement function) {
+    StringBuffer buffer = new StringBuffer();
+    buffer.write(function.name);
+    FunctionSignature functionSignature = function.functionSignature;
+    functionSignature.orderedForEachParameter((ParameterElement parameter) {
+      if (parameter.isNamed) {
+        buffer.write(":");
+        buffer.write(parameter.name);
+      }
+    });
+    return buffer.toString();
   }
 
   int getSymbolId(String symbol) {

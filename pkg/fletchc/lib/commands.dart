@@ -83,6 +83,11 @@ class Command {
   }
 }
 
+class Dup extends Command {
+  const Dup()
+      : super(CommandCode.Dup);
+}
+
 class PushNewString extends Command {
   final String value;
 
@@ -94,6 +99,34 @@ class PushNewString extends Command {
     buffer
         ..addUint32(payload.length)
         ..addUint8List(payload)
+        ..sendOn(sink, code);
+  }
+}
+
+class PushNewClass extends Command {
+  final int fields;
+
+  const PushNewClass(this.fields)
+      : super(CommandCode.PushNewClass);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(fields)
+        ..sendOn(sink, code);
+  }
+}
+
+class PushBuiltinClass extends Command {
+  final int name;
+  final int fields;
+
+  const PushBuiltinClass(this.name, this.fields)
+      : super(CommandCode.PushBuiltinClass);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(name)
+        ..addUint32(fields)
         ..sendOn(sink, code);
   }
 }
@@ -232,6 +265,24 @@ class ChangeMethodLiteral extends Command {
         ..addUint32(index)
         ..sendOn(sink, code);
   }
+}
+
+class ChangeMethodTable extends Command {
+  final int count;
+
+  const ChangeMethodTable(this.count)
+      : super(CommandCode.ChangeMethodTable);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(count)
+        ..sendOn(sink, code);
+  }
+}
+
+class ChangeSuperClass extends Command {
+  const ChangeSuperClass()
+      : super(CommandCode.ChangeSuperClass);
 }
 
 class CommitChanges extends Command {
