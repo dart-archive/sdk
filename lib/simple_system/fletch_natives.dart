@@ -2,17 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library static_test;
+library dart.fletch;
 
-import 'dart:fletch_natives';
+printString(String s) native;
 
-var a;
-
-main() {
-  setA("foo");
-  printString(a);
-}
-
-void setA(x) {
-  a = x;
-}
+halt(int code) native;

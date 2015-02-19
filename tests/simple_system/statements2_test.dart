@@ -2,7 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library dart.system;
+library statements2_test;
+
+import 'dart:fletch_natives';
 
 class A {
   void a() {
@@ -11,7 +13,7 @@ class A {
 
 var a;
 
-_entry(int mainArity) {
+main() {
   if (true) {
     if (false) {
       a.a(foo: true);
@@ -19,16 +21,12 @@ _entry(int mainArity) {
   } else {
   }
   while (false) {
-    _printString("while");
+    printString("while");
   }
   do {
-    _printString("do");
+    printString("do");
   } while (false);
-  _halt(1);
 }
 
 void foo(x) {
 }
-
-_halt(int code) native;
-_printString(String s) native;

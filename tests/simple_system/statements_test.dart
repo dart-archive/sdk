@@ -4,6 +4,8 @@
 
 library statements_test;
 
+import 'dart:fletch_natives';
+
 main() {
   var x = true;
   x = 4;
@@ -14,11 +16,9 @@ main() {
   } else {
   }
   while (false) {
-    _printString("while");
+    printString("while");
   }
   do {
-    _printString("do");
+    printString("do");
   } while (false);
 }
-
-_printString(String s) native;

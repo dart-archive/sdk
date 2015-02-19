@@ -2,11 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'dart:fletch_natives';
+
 const patch = "patch";
 
-@patch
-void printToConsole(String line) {
-  _printString(line);
+@patch void printToConsole(String line) {
+  printString(line);
 }
-
-_printString(String s) native;

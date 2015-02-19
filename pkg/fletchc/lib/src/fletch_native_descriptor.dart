@@ -31,6 +31,14 @@ class FletchNativeDescriptor {
       if (cls == "<none>") {
         cls = null;
         key = name;
+        if (name.startsWith("_")) {
+          // For private top-level methods, create a public version as well.
+          // TODO(ahe): Modify the VM table of natives.
+          String public = name.substring(1);
+          result[public] =
+              new FletchNativeDescriptor(
+                  jsonObject['enum'], cls, public, index);
+        }
       } else {
         key = '$cls.$name';
       }
