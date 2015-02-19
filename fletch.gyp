@@ -277,6 +277,63 @@
       ],
     },
     {
+      'target_name': 'run_myapi_test',
+      # Note: this target_name needs to be different from its dependency.
+      # This is due to the ninja GYP generator which doesn't generate unique
+      # names.
+      'type': 'none',
+      'dependencies': [
+        'src/vm/vm.gyp:fletch',
+        'samples/myapi/myapi.gyp:myapi_test',
+        'src/compiler/compiler.gyp:fletchc',
+        'copy_asan',
+      ],
+      'actions': [
+        {
+          'action_name': 'generate_myapi_snapshot',
+          'command': [
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            'samples/myapi/generated/myapi_service_impl.dart',
+          ],
+          'inputs': [
+            '<@(_command)',
+            '<(mac_asan_dylib)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'fletchc'
+            '<(EXECUTABLE_SUFFIX)',
+            # TODO(ahe): Also depend on .dart files in the core libraries.
+            'samples/myapi/myapi_impl.dart',
+            'samples/myapi/generated/dart/myapi_service.dart',
+            'samples/myapi/generated/dart/struct.dart',
+          ],
+          'outputs': [
+            '<(SHARED_INTERMEDIATE_DIR)/myapi.snapshot',
+          ],
+          'action': [
+            '<@(_command)',
+            '--out=<(SHARED_INTERMEDIATE_DIR)/myapi.snapshot',
+          ],
+        },
+        {
+          'action_name': 'run_myapi_test',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
+            'myapi_test'
+            '<(EXECUTABLE_SUFFIX)',
+            '<(SHARED_INTERMEDIATE_DIR)/myapi.snapshot',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/test_outcomes/myapi_test.pass',
+          ],
+          'action': [
+            "bash", "-c",
+            "<(_inputs) && LANG=POSIX date '+Test passed on %+' > "
+            "<(_outputs)",
+          ],
+        },
+      ],
+    },
+    {
       'target_name': 'run_todomvc_sample',
       # Note: this target_name needs to be different from its dependency.
       # This is due to the ninja GYP generator which doesn't generate unique
