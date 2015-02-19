@@ -28,6 +28,7 @@ Scheduler::Scheduler()
       idle_threads_(kEmptyThreadState),
       threads_(new std::atomic<ThreadState*>[max_threads_]),
       temporary_thread_states_(NULL),
+      foreign_threads_(0),
       startup_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
       pause_(false),
@@ -168,6 +169,8 @@ bool Scheduler::RunProcessOnCurrentThread(Process* process, Port* port) {
   }
   port->Unlock();
 
+  foreign_threads_++;
+
   // TODO(ajohnsen): It's important that the thread state caches are cleared
   // when any Program changes. I'm not convinced this is the case.
   ThreadState* thread_state = TakeThreadState();
@@ -182,6 +185,16 @@ bool Scheduler::RunProcessOnCurrentThread(Process* process, Port* port) {
   ASSERT(thread_state->queue()->is_empty());
 
   ReturnThreadState(thread_state);
+
+  foreign_threads_--;
+  if (processes_ == 0) {
+    // If the last process was delete by this thread, notify the main thread
+    // that it's safe to terminate.
+    preempt_monitor_->Lock();
+    preempt_monitor_->Notify();
+    preempt_monitor_->Unlock();
+  }
+
   return true;
 }
 
@@ -206,6 +219,14 @@ bool Scheduler::Run() {
     thread_index++;
   }
   thread_pool_.JoinAll();
+
+  // Wait for foreign threads to leave the scheduler.
+  preempt_monitor_->Lock();
+  while (foreign_threads_ != 0) {
+    preempt_monitor_->Wait();
+  }
+  preempt_monitor_->Unlock();
+
   return true;
 }
 

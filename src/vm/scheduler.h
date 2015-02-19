@@ -71,6 +71,7 @@ class Scheduler {
   std::atomic<ThreadState*> idle_threads_;
   std::atomic<ThreadState*>* threads_;
   std::atomic<ThreadState*> temporary_thread_states_;
+  std::atomic<int> foreign_threads_;
   std::unordered_map<Program*, ProcessList> stopped_processes_map_;
   ProcessQueue* startup_queue_;
 
