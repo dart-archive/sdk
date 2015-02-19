@@ -8,11 +8,18 @@
 #include "src/shared/globals.h"
 
 #ifdef FLETCH32
-// TODO(kasperl): Of course it's wrong to assume that all 32-bit machines
-// are x86, but this is the way it is for now. Will fix.
-#include "src/vm/assembler_x86.h"
+
+#ifdef FLETCH_TARGET_ARM
+#include "src/vm/assembler_arm.h"
 #else
+#include "src/vm/assembler_x86.h"
+#endif
+
+#else
+
+// TODO(ager): Add arm64 assembler as well.
 #include "src/vm/assembler_x64.h"
+
 #endif
 
 #endif  // SRC_VM_ASSEMBLER_H_

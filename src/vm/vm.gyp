@@ -180,6 +180,7 @@
         # TODO(ahe): Add header (.h) files.
         'assembler_arm64_linux.cc',
         'assembler_arm64_macos.cc',
+        'assembler_arm.cc',
         'assembler_arm_linux.cc',
         'assembler_arm_macos.cc',
         'assembler_x64.cc',
@@ -189,6 +190,7 @@
         'assembler_x86_linux.cc',
         'assembler_x86_macos.cc',
         'generator.cc',
+        'interpreter_arm.cc',
         'interpreter_x86.cc',
         'natives_x64.cc',
         'natives_x86.cc',

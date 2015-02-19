@@ -10,7 +10,14 @@
 namespace fletch {
 
 void Assembler::Bind(const char* name) {
-  UNIMPLEMENTED();
+  putchar('\n');
+  printf("\t.align 4\n");
+  printf("\t.code 32\n");
+  printf("\t.global _%s\n_%s:\n", name, name);
+}
+
+void Assembler::DefineLong(const char* name) {
+  printf("\t.long _%s\n", name);
 }
 
 }  // namespace fletch
