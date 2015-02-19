@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#include "person_shared.h"
+#include "conformance_test_shared.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -48,14 +48,14 @@ static void RunSnapshotInNewThread(char* path) {
   }
 }
 
-void SetupPersonTest(int argc, char** argv) {
+void SetupConformanceTest(int argc, char** argv) {
   pthread_mutex_init(&mutex, NULL);
   pthread_cond_init(&cond, NULL);
   ServiceApiSetup();
   RunSnapshotInNewThread(argv[1]);
 }
 
-void TearDownPersonTest() {
+void TearDownConformanceTest() {
   WaitForStatus(kDone);
   ServiceApiTearDown();
 }

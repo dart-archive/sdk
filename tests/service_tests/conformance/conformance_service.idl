@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-service PersonCounter {
+service ConformanceService {
   int32 getAge(Person* person);
   int32 getBoxedAge(PersonBox* box);
   AgeStats* getAgeStats(Person* person);

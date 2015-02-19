@@ -237,7 +237,7 @@
           'action_name': 'generate_service_conformance_snapshot',
           'command': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
-            'tests/service_tests/conformance/person.dart',
+            'tests/service_tests/conformance/conformance_service_impl.dart',
           ],
           'inputs': [
             '<@(_command)',
@@ -246,7 +246,7 @@
             'fletchc'
             '<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
-            'tests/service_tests/conformance/dart/person_counter.dart',
+            'tests/service_tests/conformance/dart/conformance_service.dart',
             'tests/service_tests/conformance/dart/struct.dart',
           ],
           'outputs': [

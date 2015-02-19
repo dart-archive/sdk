@@ -5,8 +5,8 @@
 #define TESTING
 
 #include "src/shared/assert.h"
-#include "person_shared.h"
-#include "cc/person_counter.h"
+#include "conformance_test_shared.h"
+#include "cc/conformance_service.h"
 
 #include <cstdio>
 #include <stdint.h>
@@ -42,22 +42,22 @@ static void RunPersonTests() {
   BuildPerson(person, 7);
   EXPECT_EQ(3120, builder.ComputeUsed());
 
-  int age = PersonCounter::getAge(person);
+  int age = ConformanceService::getAge(person);
   EXPECT_EQ(140, age);
-  int count = PersonCounter::count(person);
+  int count = ConformanceService::count(person);
   EXPECT_EQ(127, count);
 
-  AgeStats stats = PersonCounter::getAgeStats(person);
+  AgeStats stats = ConformanceService::getAgeStats(person);
   EXPECT_EQ(39, stats.getAverageAge());
   EXPECT_EQ(4940, stats.getSum());
   stats.Delete();
 
-  AgeStats stats2 = PersonCounter::createAgeStats(42, 42);
+  AgeStats stats2 = ConformanceService::createAgeStats(42, 42);
   EXPECT_EQ(42, stats2.getAverageAge());
   EXPECT_EQ(42, stats2.getSum());
   stats2.Delete();
 
-  Person generated = PersonCounter::createPerson(10);
+  Person generated = ConformanceService::createPerson(10);
   EXPECT_EQ(42, generated.getAge());
   EXPECT_EQ(1, generated.getName().length());
   EXPECT_EQ(11, generated.getName()[0]);
@@ -69,17 +69,17 @@ static void RunPersonTests() {
   }
   generated.Delete();
 
-  Node node = PersonCounter::createNode(10);
+  Node node = ConformanceService::createNode(10);
   EXPECT_EQ(24680, node.ComputeUsed());
 
   EXPECT_EQ(10, Depth(node));
   node.Delete();
 
-  PersonCounter::foo();
-  PersonCounter::fooAsync(FooCallback);
+  ConformanceService::foo();
+  ConformanceService::fooAsync(FooCallback);
 
-  EXPECT_EQ(42, PersonCounter::ping());
-  PersonCounter::pingAsync(PingCallback);
+  EXPECT_EQ(42, ConformanceService::ping());
+  ConformanceService::pingAsync(PingCallback);
 }
 
 static void RunPersonBoxTests() {
@@ -91,7 +91,7 @@ static void RunPersonBoxTests() {
   List<uint8_t> name = person.initName(1);
   name[0] = 99;
 
-  int age = PersonCounter::getBoxedAge(box);
+  int age = ConformanceService::getBoxedAge(box);
   EXPECT_EQ(87, age);
 }
 
@@ -111,16 +111,16 @@ static void RunNodeTests() {
 
   NodeBuilder root = builder.initRoot<NodeBuilder>();
   BuildNode(root, 10);
-  int depth = PersonCounter::depth(root);
+  int depth = ConformanceService::depth(root);
   EXPECT_EQ(10, depth);
 }
 
 static void InteractWithService() {
-  PersonCounter::setup();
+  ConformanceService::setup();
   RunPersonTests();
   RunPersonBoxTests();
   RunNodeTests();
-  PersonCounter::tearDown();
+  ConformanceService::tearDown();
 }
 
 int main(int argc, char** argv) {
@@ -128,8 +128,8 @@ int main(int argc, char** argv) {
     printf("Usage: %s <snapshot>\n", argv[0]);
     return 1;
   }
-  SetupPersonTest(argc, argv);
+  SetupConformanceTest(argc, argv);
   InteractWithService();
-  TearDownPersonTest();
+  TearDownConformanceTest();
   return 0;
 }

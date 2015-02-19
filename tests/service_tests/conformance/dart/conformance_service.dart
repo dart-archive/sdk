@@ -4,7 +4,7 @@
 
 // Generated file. Do not edit.
 
-library person_counter;
+library conformance_service;
 
 import "dart:ffi";
 import "dart:service" as service;
@@ -15,9 +15,9 @@ final Port _port = new Port(_channel);
 final Foreign _postResult = Foreign.lookup("PostResultToService");
 
 bool _terminated = false;
-PersonCounter _impl;
+ConformanceService _impl;
 
-abstract class PersonCounter {
+abstract class ConformanceService {
   int getAge(Person person);
   int getBoxedAge(PersonBox box);
   void getAgeStats(Person person, AgeStatsBuilder result);
@@ -29,13 +29,13 @@ abstract class PersonCounter {
   void foo();
   int ping();
 
-  static void initialize(PersonCounter impl) {
+  static void initialize(ConformanceService impl) {
     if (_impl != null) {
       throw new UnsupportedError();
     }
     _impl = impl;
     _terminated = false;
-    service.register("PersonCounter", _port);
+    service.register("ConformanceService", _port);
   }
 
   static bool hasNextEvent() {

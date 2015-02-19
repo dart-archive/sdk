@@ -4,8 +4,8 @@
 
 // Generated file. Do not edit.
 
-#ifndef PERSON_COUNTER_H
-#define PERSON_COUNTER_H
+#ifndef CONFORMANCE_SERVICE_H
+#define CONFORMANCE_SERVICE_H
 
 #include <inttypes.h>
 #include "struct.h"
@@ -25,7 +25,7 @@ class NodeBuilder;
 class Cons;
 class ConsBuilder;
 
-class PersonCounter {
+class ConformanceService {
  public:
   static void setup();
   static void tearDown();
@@ -211,4 +211,4 @@ class ConsBuilder : public Builder {
   NodeBuilder initSnd();
 };
 
-#endif  // PERSON_COUNTER_H
+#endif  // CONFORMANCE_SERVICE_H

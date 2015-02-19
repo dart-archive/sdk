@@ -2,10 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart/person_counter.dart';
+import 'dart/conformance_service.dart';
 
-// TODO(ager): Compiler doesn't like implements here.
-class PersonCounterImpl extends PersonCounter {
+class ConformanceServiceImpl implements ConformanceService {
   int getAge(Person person) {
     return person.age;
   }
@@ -80,9 +79,9 @@ class PersonCounterImpl extends PersonCounter {
 }
 
 main() {
-  var impl = new PersonCounterImpl();
-  PersonCounter.initialize(impl);
-  while (PersonCounter.hasNextEvent()) {
-    PersonCounter.handleNextEvent();
+  var impl = new ConformanceServiceImpl();
+  ConformanceService.initialize(impl);
+  while (ConformanceService.hasNextEvent()) {
+    ConformanceService.handleNextEvent();
   }
 }
