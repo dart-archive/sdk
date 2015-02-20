@@ -11,9 +11,12 @@
 
 namespace fletch {
 
-void Assembler::b(Label* label) {
-  if (label->IsUnused()) label->LinkTo(NewLabelPosition());
-  printf("\tb .L%d\n", label->position());
+static const char* ConditionToString(Condition cond) {
+  static const char* kConditionNames[] = {
+    "eq", "ne", "cs", "cc", "mi", "pl", "vs", "vc", "hi", "ls",
+    "ge", "lt", "gt", "le", ""
+  };
+  return kConditionNames[cond];
 }
 
 void Assembler::Align(int alignment) {
@@ -68,6 +71,19 @@ void Assembler::Print(const char* format, ...) {
         case 'a': {
           const Address* address = va_arg(arguments, const Address*);
           PrintAddress(address);
+          break;
+        }
+
+        case 'c': {
+          Condition condition = static_cast<Condition>(va_arg(arguments, int));
+          printf("%s", ConditionToString(condition));
+          break;
+        }
+
+        case 'l': {
+          Label* label = va_arg(arguments, Label*);
+          if (label->IsUnused()) label->LinkTo(NewLabelPosition());
+          printf(".L%d", label->position());
           break;
         }
 

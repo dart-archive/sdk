@@ -188,8 +188,12 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
 
  private:
   Label done_;
+  Label check_stack_overflow_;
 
   void Bailout();
+
+  void LoadTrue(Register reg);
+  void LoadFalse(Register reg);
 
   void LoadLocal(Register reg, int index);
   void StoreLocal(Register reg, int index);
@@ -197,6 +201,11 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Push(Register reg);
   void Pop(Register reg);
   void Drop(int n);
+
+  void InvokeCompare(Condition condition);
+  void InvokeStatic(bool unfolded);
+
+  void CheckStackOverflow(int size);
 
   void Dispatch(int size);
 
@@ -252,6 +261,11 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   // Restore callee-saved registers and return.
   __ pop(RegisterRange(R4, R11));
   __ mov(PC, LR);
+
+  // Stack overflow handling (slow case).
+  __ Bind(&check_stack_overflow_);
+  // TODO(ager): Implement.
+  Bailout();
 }
 
 void InterpreterGeneratorARM::DoLoadLocal0() {
@@ -259,7 +273,9 @@ void InterpreterGeneratorARM::DoLoadLocal0() {
 }
 
 void InterpreterGeneratorARM::DoLoadLocal1() {
-  Bailout();
+  LoadLocal(R0, 1);
+  Push(R0);
+  Dispatch(kLoadLocal1Length);
 }
 
 void InterpreterGeneratorARM::DoLoadLocal2() {
@@ -287,11 +303,20 @@ void InterpreterGeneratorARM::DoLoadField() {
 }
 
 void InterpreterGeneratorARM::DoLoadConst() {
-  Bailout();
+  __ ldr(R0, Address(R5, 1));
+  __ ldr(R1, Address(R4, Process::ProgramOffset()));
+  __ ldr(R2, Address(R1, Program::ConstantsOffset()));
+  __ add(R2, R2, Immediate(Array::kSize - HeapObject::kTag));
+  __ ldr(R3, Address(R2, Operand(R0, TIMES_4)));
+  Push(R3);
+  Dispatch(kLoadConstLength);
 }
 
 void InterpreterGeneratorARM::DoLoadConstUnfold() {
-  Bailout();
+  __ ldr(R0, Address(R5, 1));
+  __ ldr(R2, Address(R5, Operand(R0, TIMES_1)));
+  Push(R2);
+  Dispatch(kLoadConstUnfoldLength);
 }
 
 void InterpreterGeneratorARM::DoStoreLocal() {
@@ -323,7 +348,9 @@ void InterpreterGeneratorARM::DoLoadLiteralFalse() {
 }
 
 void InterpreterGeneratorARM::DoLoadLiteral0() {
-  Bailout();
+  __ mov(R0, Immediate(reinterpret_cast<int32_t>(Smi::FromWord(0))));
+  Push(R0);
+  Dispatch(kLoadLiteral0Length);
 }
 
 void InterpreterGeneratorARM::DoLoadLiteral1() {
@@ -347,19 +374,19 @@ void InterpreterGeneratorARM::DoInvokeTest() {
 }
 
 void InterpreterGeneratorARM::DoInvokeStatic() {
-  Bailout();
+  InvokeStatic(false);
 }
 
 void InterpreterGeneratorARM::DoInvokeStaticUnfold() {
-  Bailout();
+  InvokeStatic(true);
 }
 
 void InterpreterGeneratorARM::DoInvokeFactory() {
-  Bailout();
+  InvokeStatic(false);
 }
 
 void InterpreterGeneratorARM::DoInvokeFactoryUnfold() {
-  Bailout();
+  InvokeStatic(true);
 }
 
 void InterpreterGeneratorARM::DoInvokeNative() {
@@ -371,23 +398,23 @@ void InterpreterGeneratorARM::DoInvokeNativeYield() {
 }
 
 void InterpreterGeneratorARM::DoInvokeEq() {
-  Bailout();
+  InvokeCompare(EQ);
 }
 
 void InterpreterGeneratorARM::DoInvokeLt() {
-  Bailout();
+  InvokeCompare(LT);
 }
 
 void InterpreterGeneratorARM::DoInvokeLe() {
-  Bailout();
+  InvokeCompare(LE);
 }
 
 void InterpreterGeneratorARM::DoInvokeGt() {
-  Bailout();
+  InvokeCompare(GT);
 }
 
 void InterpreterGeneratorARM::DoInvokeGe() {
-  Bailout();
+  InvokeCompare(GE);
 }
 
 void InterpreterGeneratorARM::DoInvokeAdd() {
@@ -447,11 +474,31 @@ void InterpreterGeneratorARM::DoBranchLong() {
 }
 
 void InterpreterGeneratorARM::DoBranchIfTrueLong() {
-  Bailout();
+  Label branch;
+  Pop(R7);
+  LoadTrue(R0);
+  __ cmp(R7, R0);
+  __ b(EQ, &branch);
+  Dispatch(kBranchIfTrueLongLength);
+
+  __ Bind(&branch);
+  __ ldr(R0, Address(R5, 1));
+  __ add(R5, R5, R0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoBranchIfFalseLong() {
-  Bailout();
+  Label branch;
+  Pop(R7);
+  LoadTrue(R0);
+  __ cmp(R7, R0);
+  __ b(NE, &branch);
+  Dispatch(kBranchIfFalseLongLength);
+
+  __ Bind(&branch);
+  __ ldr(R0, Address(R5, 1));
+  __ add(R5, R5, R0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoBranchBack() {
@@ -571,6 +618,20 @@ void InterpreterGeneratorARM::Bailout() {
   __ b(&done_);
 }
 
+void InterpreterGeneratorARM::LoadTrue(Register reg) {
+  // TODO(ager): Consider setting aside a register for this to avoid
+  // memory trafic?
+  __ ldr(reg, Address(R4, Process::ProgramOffset()));
+  __ ldr(reg, Address(reg, Program::true_object_offset()));
+}
+
+void InterpreterGeneratorARM::LoadFalse(Register reg) {
+  // TODO(ager): Consider setting aside a register for this to avoid
+  // memory trafic?
+  __ ldr(reg, Address(R4, Process::ProgramOffset()));
+  __ ldr(reg, Address(reg, Program::false_object_offset()));
+}
+
 void InterpreterGeneratorARM::Push(Register reg) {
   StoreLocal(reg, -1);
   __ add(R6, R6, Immediate(1 * kWordSize));
@@ -593,13 +654,75 @@ void InterpreterGeneratorARM::Drop(int n) {
   __ sub(R6, R6, Immediate(n * kWordSize));
 }
 
+void InterpreterGeneratorARM::InvokeStatic(bool unfolded) {
+  CheckStackOverflow(0);
+
+  if (unfolded) {
+    __ ldr(R1, Address(R5, 1));
+    __ ldr(R0, Address(R5, Operand(R1, TIMES_1)));
+  } else {
+    __ ldr(R1, Address(R5, 1));
+    __ ldr(R2, Address(R4, Process::ProgramOffset()));
+    __ ldr(R3, Address(R2, Program::StaticMethodsOffset()));
+    __ add(R3, R3, Immediate(Array::kSize - HeapObject::kTag));
+    __ ldr(R0, Address(R3, Operand(R1, TIMES_4)));
+  }
+
+  // Compute and push the return address on the stack.
+  __ add(R1, R5, Immediate(kInvokeStaticLength));
+  Push(R1);
+
+  // Jump to the first bytecode in the target method.
+  __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+  Dispatch(0);
+}
+
+void InterpreterGeneratorARM::InvokeCompare(Condition cond) {
+  LoadLocal(R0, 0);
+  __ tst(R0, Immediate(Smi::kTagMask));
+  __ b(NE, "BC_InvokeMethod");
+  LoadLocal(R1, 1);
+  __ tst(R1, Immediate(Smi::kTagMask));
+  __ b(NE, "BC_InvokeMethod");
+
+  Label true_case;
+  __ cmp(R0, R1);
+  __ b(cond, &true_case);
+
+  LoadFalse(R0);
+  StoreLocal(R0, 1);
+  Drop(1);
+  Dispatch(5);
+
+  __ Bind(&true_case);
+  LoadTrue(R0);
+  StoreLocal(R0, 1);
+  Drop(1);
+  Dispatch(5);
+}
+
+void InterpreterGeneratorARM::CheckStackOverflow(int size) {
+  __ ldr(R0, Address(R4, Process::StackLimitOffset()));
+  __ cmp(R0, R6);
+  if (size == 0) {
+    __ mov(LS, R0, Immediate(0));
+    __ b(LS, &check_stack_overflow_);
+  } else {
+    Label done;
+    __ b(HI, &done);
+    __ mov(R0, Immediate(size));
+    __ b(&check_stack_overflow_);
+    __ Bind(&done);
+  }
+}
+
 void InterpreterGeneratorARM::Dispatch(int size) {
   // Load the next bytecode through R5 and dispatch to it.
   __ ldrb(R7, Address(R5, size));
   if (size > 0) {
     __ add(R5, R5, Immediate(size));
   }
-  __ adr(R8, "InterpretFast_DispatchTable");
+  __ ldr(R8, "InterpretFast_DispatchTable");
   __ ldr(PC, Address(R8, Operand(R7, TIMES_4)));
 }
 

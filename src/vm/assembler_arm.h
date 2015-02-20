@@ -45,6 +45,24 @@ enum ScaleFactor {
   TIMES_8 = 3
 };
 
+enum Condition {
+  EQ =  0,  // equal
+  NE =  1,  // not equal
+  CS =  2,  // carry set/unsigned higher or same
+  CC =  3,  // carry clear/unsigned lower
+  MI =  4,  // minus/negative
+  PL =  5,  // plus/positive or zero
+  VS =  6,  // overflow
+  VC =  7,  // no overflow
+  HI =  8,  // unsigned higher
+  LS =  9,  // unsigned lower or same
+  GE = 10,  // signed greater than or equal
+  LT = 11,  // signed less than
+  GT = 12,  // signed greater than
+  LE = 13,  // signed less than or equal
+  AL = 14,  // always (unconditional)
+};
+
 typedef uint32_t RegisterList;
 
 class Immediate {
@@ -144,14 +162,20 @@ class Assembler {
   INSTRUCTION_3(add, "add %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(add, "add %r, %r, %o", Register, Register, const Operand&);
 
-  INSTRUCTION_2(adr, "adr %r, %s", Register, const char*);
+  INSTRUCTION_1(b, "b =%s", const char*);
+  INSTRUCTION_2(b, "b%c =%s", Condition, const char*);
+  INSTRUCTION_1(b, "b %l", Label*);
+  INSTRUCTION_2(b, "b%c %l", Condition, Label*);
 
   INSTRUCTION_0(bkpt, "bkpt");
+
+  INSTRUCTION_2(cmp, "cmp %r, %r", Register, Register);
 
   INSTRUCTION_2(ldr, "ldr %r, %a", Register, const Address&);
 
   INSTRUCTION_2(mov, "mov %r, %r", Register, Register);
   INSTRUCTION_2(mov, "mov %r, %i", Register, const Immediate&);
+  INSTRUCTION_3(mov, "mov%c %r, %i", Condition, Register, const Immediate&);
 
   INSTRUCTION_1(pop, "pop { %r }", Register);
   INSTRUCTION_1(pop, "pop { %R }", RegisterList);
@@ -159,6 +183,7 @@ class Assembler {
   INSTRUCTION_1(push, "push { %r }", Register);
   INSTRUCTION_1(push, "push { %R }", RegisterList);
 
+  INSTRUCTION_2(ldr, "ldr %r, =%s", Register, const char*);
   INSTRUCTION_2(ldrb, "ldrb %r, %a", Register, const Address&);
 
   INSTRUCTION_3(lsl, "lsl %r, %r, %i", Register, Register, const Immediate&);
@@ -169,7 +194,7 @@ class Assembler {
   INSTRUCTION_3(sub, "sub %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(sub, "sub %r, %r, %r", Register, Register, Register);
 
-  void b(Label* label);
+  INSTRUCTION_2(tst, "tst %r, %i", Register, const Immediate&);
 
   void Align(int alignment);
 
@@ -185,9 +210,11 @@ class Assembler {
 
   static int NewLabelPosition();
 
+  Condition Wrap(Condition condition) { return condition; }
   Register Wrap(Register reg) { return reg; }
   RegisterList Wrap(RegisterList regs) { return regs; }
   const char* Wrap(const char* label) { return label; }
+  Label* Wrap(Label* label) { return label; }
   const Immediate* Wrap(const Immediate& immediate) { return &immediate; }
   const Address* Wrap(const Address& address) { return &address; }
   const Operand* Wrap(const Operand& operand) { return &operand; }
