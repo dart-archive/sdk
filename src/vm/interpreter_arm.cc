@@ -204,6 +204,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Pop(Register reg);
   void Drop(int n);
 
+  void Allocate(bool unfolded);
   void InvokeCompare(Condition condition);
   void InvokeMethod(bool test);
   void InvokeNative(bool yield);
@@ -399,11 +400,17 @@ void InterpreterGeneratorARM::DoLoadLiteral0() {
 }
 
 void InterpreterGeneratorARM::DoLoadLiteral1() {
-  Bailout();
+  __ mov(R0, Immediate(reinterpret_cast<int32_t>(Smi::FromWord(1))));
+  Push(R0);
+  Dispatch(kLoadLiteral1Length);
 }
 
 void InterpreterGeneratorARM::DoLoadLiteral() {
-  Bailout();
+  __ ldrb(R0, Address(R5, 1));
+  __ lsl(R0, R0, Immediate(Smi::kTagSize));
+  ASSERT(Smi::kTag == 0);
+  Push(R0);
+  Dispatch(kLoadLiteralLength);
 }
 
 void InterpreterGeneratorARM::DoLoadLiteralWide() {
@@ -593,11 +600,11 @@ void InterpreterGeneratorARM::DoBranchBackIfFalseLong() {
 }
 
 void InterpreterGeneratorARM::DoAllocate() {
-  Bailout();
+  Allocate(false);
 }
 
 void InterpreterGeneratorARM::DoAllocateUnfold() {
-  Bailout();
+  Allocate(true);
 }
 
 void InterpreterGeneratorARM::DoAllocateBoxed() {
@@ -693,7 +700,12 @@ void InterpreterGeneratorARM::DoIntrinsicObjectEquals() {
 }
 
 void InterpreterGeneratorARM::DoIntrinsicGetField() {
-  Bailout();
+  __ ldrb(R1, Address(R0, 2 + Function::kSize - HeapObject::kTag));
+  LoadLocal(R0, 0);
+  __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ ldr(R0, Address(R0, Operand(R1, TIMES_4)));
+  StoreLocal(R0, 0);
+  Dispatch(kInvokeMethodLength);
 }
 
 void InterpreterGeneratorARM::DoIntrinsicSetField() {
@@ -943,6 +955,50 @@ void InterpreterGeneratorARM::InvokeStatic(bool unfolded) {
   Dispatch(0);
 }
 
+void InterpreterGeneratorARM::Allocate(bool unfolded) {
+  // Load the class into register r7.
+  if (unfolded) {
+    __ ldr(R0, Address(R5, 1));
+    __ ldr(R7, Address(R5, Operand(R0, TIMES_1)));
+  } else {
+    __ ldr(R0, Address(R5, 1));
+    __ ldr(R1, Address(R4, Process::ProgramOffset()));
+    __ ldr(R1, Address(R1, Program::ClassesOffset()));
+    __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
+    __ ldr(R7, Address(R1, Operand(R0, TIMES_4)));
+  }
+
+  // TODO(kasperl): Consider inlining this in the interpreter.
+  __ mov(R0, R4);
+  __ mov(R1, R7);
+  __ bl("HandleAllocate");
+  __ cmp(R0, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
+  __ b(EQ, &gc_);
+
+  __ ldr(R2, Address(R7, Class::kInstanceFormatOffset - HeapObject::kTag));
+  __ ldr(R3, Immediate(InstanceFormat::FixedSizeField::mask()));
+  __ and_(R2, R2, R3);
+  __ lsr(R2, R2, Immediate(InstanceFormat::FixedSizeField::shift()));
+
+  // Compute the address of the first and last instance field.
+  __ sub(R7, R0, Immediate(kWordSize + HeapObject::kTag));
+  __ add(R7, R7, R2);
+  __ add(R8, R0, Immediate(Instance::kSize - HeapObject::kTag));
+
+  Label loop, done;
+  __ Bind(&loop);
+  __ cmp(R8, R7);
+  __ b(HI, &done);
+  Pop(R1);
+  __ str(R1, Address(R7, 0));
+  __ sub(R7, R7, Immediate(1 * kWordSize));
+  __ b(&loop);
+
+  __ Bind(&done);
+  Push(R0);
+  Dispatch(kAllocateLength);
+}
+
 void InterpreterGeneratorARM::InvokeCompare(Condition cond) {
   LoadLocal(R0, 0);
   __ tst(R0, Immediate(Smi::kTagMask));
@@ -952,7 +1008,7 @@ void InterpreterGeneratorARM::InvokeCompare(Condition cond) {
   __ b(NE, "BC_InvokeMethod");
 
   Label true_case;
-  __ cmp(R0, R1);
+  __ cmp(R1, R0);
   __ b(cond, &true_case);
 
   LoadFalse(R0);
