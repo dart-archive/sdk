@@ -189,11 +189,13 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
  private:
   Label done_;
   Label check_stack_overflow_;
+  Label gc_;
 
   void Bailout();
 
   void LoadTrue(Register reg);
   void LoadFalse(Register reg);
+  void LoadNull(Register reg);
 
   void LoadLocal(Register reg, int index);
   void StoreLocal(Register reg, int index);
@@ -203,6 +205,8 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Drop(int n);
 
   void InvokeCompare(Condition condition);
+  void InvokeMethod(bool test);
+  void InvokeNative(bool yield);
   void InvokeStatic(bool unfolded);
 
   void CheckStackOverflow(int size);
@@ -235,7 +239,7 @@ GENERATE(, InterpretFast) {
 
 void InterpreterGeneratorARM::GeneratePrologue() {
   // Push callee-saved registers.
-  __ push(RegisterRange(R4, R11));
+  __ push(RegisterRange(R4, R11) | RegisterRange(LR, LR));
 
   // Setup process pointer in R4.
   __ mov(R4, R0);
@@ -255,21 +259,45 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   SaveState();
 
   // Undo stack padding.
+  Label undo_padding;
+  __ Bind(&undo_padding);
   int padding = ComputeStackPadding(8 * kWordSize, 0);
   if (padding > 0) __ add(SP, SP, Immediate(padding));
 
   // Restore callee-saved registers and return.
-  __ pop(RegisterRange(R4, R11));
-  __ mov(PC, LR);
+  __ pop(RegisterRange(R4, R11) | RegisterRange(LR, LR));
+  __ bx(LR);
+
+  // Handle GC and re-interpret current bytecode.
+  __ Bind(&gc_);
+  SaveState();
+  __ mov(R0, R4);
+  __ bl("HandleGC");
+  RestoreState();
+  Dispatch(0);
 
   // Stack overflow handling (slow case).
+  Label stay_fast;
   __ Bind(&check_stack_overflow_);
-  // TODO(ager): Implement.
-  Bailout();
+  SaveState();
+
+  __ mov(R1, R0);
+  __ mov(R0, R4);
+  __ bl("HandleStackOverflow");
+  __ tst(R0, R0);
+  __ b(NE, &stay_fast);
+  __ mov(R0, Immediate(Interpreter::kInterrupt));
+  __ b(&undo_padding);
+
+  __ Bind(&stay_fast);
+  RestoreState();
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoLoadLocal0() {
-  Bailout();
+  LoadLocal(R0, 0);
+  Push(R0);
+  Dispatch(kLoadLocal0Length);
 }
 
 void InterpreterGeneratorARM::DoLoadLocal1() {
@@ -279,7 +307,9 @@ void InterpreterGeneratorARM::DoLoadLocal1() {
 }
 
 void InterpreterGeneratorARM::DoLoadLocal2() {
-  Bailout();
+  LoadLocal(R0, 2);
+  Push(R0);
+  Dispatch(kLoadLocal2Length);
 }
 
 void InterpreterGeneratorARM::DoLoadLocal() {
@@ -291,7 +321,12 @@ void InterpreterGeneratorARM::DoLoadBoxed() {
 }
 
 void InterpreterGeneratorARM::DoLoadStatic() {
-  Bailout();
+  __ ldr(R0, Address(R5, 1));
+  __ ldr(R1, Address(R4, Process::StaticsOffset()));
+  __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
+  __ ldr(R0, Address(R1, Operand(R0, TIMES_4)));
+  Push(R0);
+  Dispatch(kLoadStaticLength);
 }
 
 void InterpreterGeneratorARM::DoLoadStaticInit() {
@@ -320,7 +355,11 @@ void InterpreterGeneratorARM::DoLoadConstUnfold() {
 }
 
 void InterpreterGeneratorARM::DoStoreLocal() {
-  Bailout();
+  LoadLocal(R1, 0);
+  __ ldrb(R0, Address(R5, 1));
+  __ neg(R0, R0);
+  __ str(R1, Address(R6, Operand(R0, TIMES_4)));
+  Dispatch(kStoreLocalLength);
 }
 
 void InterpreterGeneratorARM::DoStoreBoxed() {
@@ -336,15 +375,21 @@ void InterpreterGeneratorARM::DoStoreField() {
 }
 
 void InterpreterGeneratorARM::DoLoadLiteralNull() {
-  Bailout();
+  LoadNull(R0);
+  Push(R0);
+  Dispatch(kLoadLiteralNullLength);
 }
 
 void InterpreterGeneratorARM::DoLoadLiteralTrue() {
-  Bailout();
+  LoadTrue(R0);
+  Push(R0);
+  Dispatch(kLoadLiteralTrueLength);
 }
 
 void InterpreterGeneratorARM::DoLoadLiteralFalse() {
-  Bailout();
+  LoadFalse(R0);
+  Push(R0);
+  Dispatch(kLoadLiteralFalseLength);
 }
 
 void InterpreterGeneratorARM::DoLoadLiteral0() {
@@ -366,11 +411,11 @@ void InterpreterGeneratorARM::DoLoadLiteralWide() {
 }
 
 void InterpreterGeneratorARM::DoInvokeMethod() {
-  Bailout();
+  InvokeMethod(false);
 }
 
 void InterpreterGeneratorARM::DoInvokeTest() {
-  Bailout();
+  InvokeMethod(true);
 }
 
 void InterpreterGeneratorARM::DoInvokeStatic() {
@@ -390,11 +435,11 @@ void InterpreterGeneratorARM::DoInvokeFactoryUnfold() {
 }
 
 void InterpreterGeneratorARM::DoInvokeNative() {
-  Bailout();
+  InvokeNative(false);
 }
 
 void InterpreterGeneratorARM::DoInvokeNativeYield() {
-  Bailout();
+  InvokeNative(true);
 }
 
 void InterpreterGeneratorARM::DoInvokeEq() {
@@ -462,11 +507,33 @@ void InterpreterGeneratorARM::DoInvokeBitShl() {
 }
 
 void InterpreterGeneratorARM::DoPop() {
-  Bailout();
+  Drop(1);
+  Dispatch(kPopLength);
 }
 
 void InterpreterGeneratorARM::DoReturn() {
-  Bailout();
+  // Get result from stack.
+  LoadLocal(R0, 0);
+
+  // Fetch the number of locals and arguments from the bytecodes.
+  // Unfortunately, we have to negate the counts so we can use them
+  // to index into the stack (grows towards higher addresses).
+  __ ldrb(R1, Address(R5, 1));
+  __ ldrb(R2, Address(R5, 2));
+  __ neg(R1, R1);
+
+  // Load the return address.
+  __ ldr(R5, Address(R6, Operand(R1, TIMES_4)));
+
+  // Drop both locals and arguments except one which we will overwrite
+  // with the result (we've left the return address on the stack).
+  __ sub(R1, R1, R2);
+  __ add(R6, R6, Operand(R1, TIMES_4));
+
+  // Overwrite the first argument (or the return address) with the result
+  // and dispatch to the next bytecode.
+  StoreLocal(R0, 0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoBranchLong() {
@@ -558,7 +625,23 @@ void InterpreterGeneratorARM::DoSubroutineReturn() {
 }
 
 void InterpreterGeneratorARM::DoProcessYield() {
-  Bailout();
+  __ ldr(R1, Address(R4, Process::ProgramOffset()));
+  __ ldr(R2, Address(R1, Program::true_object_offset()));
+  __ ldr(R3, Address(R1, Program::null_object_offset()));
+
+  Label done, yield;
+  LoadLocal(R0, 0);
+  __ cmp(R0, R2);
+  __ b(NE, &yield);
+  __ mov(R0, Immediate(Interpreter::kTerminate));
+  __ b(&done);
+  __ Bind(&yield);
+  __ mov(R0, Immediate(Interpreter::kYield));
+
+  __ Bind(&done);
+  __ add(R5, R5, Immediate(kProcessYieldLength));
+  StoreLocal(R3, 0);
+  __ b(&done_);
 }
 
 void InterpreterGeneratorARM::DoCoroutineChange() {
@@ -570,7 +653,23 @@ void InterpreterGeneratorARM::DoIdentical() {
 }
 
 void InterpreterGeneratorARM::DoIdenticalNonNumeric() {
-  Bailout();
+  LoadLocal(R0, 0);
+  LoadLocal(R1, 1);
+
+  Label true_case;
+  __ cmp(R0, R1);
+  __ b(EQ, &true_case);
+
+  LoadFalse(R0);
+  StoreLocal(R0, 1);
+  Drop(1);
+  Dispatch(kIdenticalNonNumericLength);
+
+  __ Bind(&true_case);
+  LoadTrue(R0);
+  StoreLocal(R0, 1);
+  Drop(1);
+  Dispatch(kIdenticalNonNumericLength);
 }
 
 void InterpreterGeneratorARM::DoEnterNoSuchMethod() {
@@ -632,6 +731,13 @@ void InterpreterGeneratorARM::LoadFalse(Register reg) {
   __ ldr(reg, Address(reg, Program::false_object_offset()));
 }
 
+void InterpreterGeneratorARM::LoadNull(Register reg) {
+  // TODO(ager): Consider setting aside a register for this to avoid
+  // memory trafic?
+  __ ldr(reg, Address(R4, Process::ProgramOffset()));
+  __ ldr(reg, Address(reg, Program::null_object_offset()));
+}
+
 void InterpreterGeneratorARM::Push(Register reg) {
   StoreLocal(reg, -1);
   __ add(R6, R6, Immediate(1 * kWordSize));
@@ -652,6 +758,166 @@ void InterpreterGeneratorARM::StoreLocal(Register reg, int index) {
 
 void InterpreterGeneratorARM::Drop(int n) {
   __ sub(R6, R6, Immediate(n * kWordSize));
+}
+
+void InterpreterGeneratorARM::InvokeMethod(bool test) {
+  if (!test) CheckStackOverflow(0);
+
+  // Get the selector from the bytecodes.
+  __ ldr(R7, Address(R5, 1));
+
+  if (test) {
+    // Get the receiver from the stack.
+    LoadLocal(R1, 0);
+  } else {
+    // Compute the arity from the selector.
+    ASSERT(Selector::ArityField::shift() == 0);
+    __ and_(R2, R7, Immediate(Selector::ArityField::mask()));
+
+    // Get the receiver from the stack.
+    __ neg(R3, R2);
+    __ ldr(R1, Address(R6, Operand(R3, TIMES_4)));
+  }
+
+  // Compute the receiver class.
+  Label smi, probe;
+  ASSERT(Smi::kTag == 0);
+  __ tst(R1, Immediate(Smi::kTagMask));
+  __ b(EQ, &smi);
+  __ ldr(R2, Address(R1, HeapObject::kClassOffset - HeapObject::kTag));
+
+  // Find the entry in the primary lookup cache.
+  Label miss, finish;
+  ASSERT(Utils::IsPowerOfTwo(LookupCache::kPrimarySize));
+  ASSERT(sizeof(LookupCache::Entry) == 1 << 4);
+  __ Bind(&probe);
+  __ eor(R3, R2, R7);
+  __ ldr(R0, Immediate(LookupCache::kPrimarySize - 1));
+  __ and_(R0, R3, R0);
+  __ lsl(R0, R0, Immediate(4));
+  __ ldr(R3, Address(R4, Process::PrimaryLookupCacheOffset()));
+  __ add(R0, R3, R0);
+
+  // Validate the primary entry.
+  __ ldr(R3, Address(R0, OFFSET_OF(LookupCache::Entry, clazz)));
+  __ cmp(R2, R3);
+  __ b(NE, &miss);
+  __ ldr(R3, Address(R0, OFFSET_OF(LookupCache::Entry, selector)));
+  __ cmp(R7, R3);
+  __ b(NE, &miss);
+
+  // At this point, we've got our hands on a valid lookup cache entry.
+  Label intrinsified;
+  __ Bind(&finish);
+  if (test) {
+    __ ldr(R0, Address(R0, OFFSET_OF(LookupCache::Entry, tag)));
+  } else {
+    __ ldr(R7, Address(R0, OFFSET_OF(LookupCache::Entry, tag)));
+    __ ldr(R0, Address(R0, OFFSET_OF(LookupCache::Entry, target)));
+    __ cmp(R7, Immediate(1));
+    __ b(HI, &intrinsified);
+  }
+
+  if (test) {
+    // Materialize either true or false depending on whether or not
+    // we've found a target method.
+    Label found;
+    __ tst(R0, R0);
+    __ b(NE, &found);
+
+    LoadFalse(R0);
+    StoreLocal(R0, 0);
+    Dispatch(kInvokeTestLength);
+
+    __ Bind(&found);
+    LoadTrue(R0);
+    StoreLocal(R0, 0);
+    Dispatch(kInvokeTestLength);
+  } else {
+    // Compute and push the return address on the stack.
+    __ add(R5, R5, Immediate(kInvokeMethodLength));
+    Push(R5);
+
+    // Jump to the first bytecode in the target method.
+    __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+    Dispatch(0);
+  }
+
+  __ Bind(&smi);
+  __ ldr(R3, Address(R4, Process::ProgramOffset()));
+  __ ldr(R2, Address(R3, Program::smi_class_offset()));
+  __ b(&probe);
+
+  if (!test) {
+    __ Bind(&intrinsified);
+    __ mov(PC, R7);
+  }
+
+  // We didn't find a valid entry in primary lookup cache.
+  __ Bind(&miss);
+  // Arguments:
+  // - r0: process
+  // - r1: primary cache entry
+  // - r2: class (already in r2)
+  // - r3: selector
+  __ mov(R1, R0);
+  __ mov(R0, R4);
+  __ mov(R3, R7);
+  __ bl("HandleLookupEntry");
+  __ b(&finish);
+}
+
+void InterpreterGeneratorARM::InvokeNative(bool yield) {
+  __ ldrb(R1, Address(R5, 1));
+  __ neg(R1, R1);
+  __ ldrb(R0, Address(R5, 2));
+
+  // Load native from native table.
+  __ ldr(R8, "kNativeTable");
+  __ ldr(R2, Address(R8, Operand(R0, TIMES_4)));
+
+  // Setup argument (process and pointer to first argument).
+  __ add(R7, R6, Operand(R1, TIMES_4));
+  __ mov(R1, R7);
+  __ mov(R0, R4);
+
+  Label failure;
+  __ blx(R2);
+  __ and_(R1, R0, Immediate(Failure::kTagMask));
+  __ cmp(R1, Immediate(Failure::kTag));
+  __ b(EQ, &failure);
+
+  // Result is in r0. Pointer to first argument is in r7. Load return address.
+  LoadLocal(R5, 0);
+
+  if (yield) {
+    // TODO(ager): Implement.
+    Bailout();
+  } else {
+    // Store the result in the stack and drop the arguments.
+    __ str(R0, Address(R7, 0));
+    __ mov(R6, R7);
+  }
+
+  // Dispatch to return address.
+  Dispatch(0);
+
+  // Failure: Check if it's a request to garbage collect. If not,
+  // just continue running the failure block by dispatching to the
+  // next bytecode.
+  __ Bind(&failure);
+  __ cmp(R0, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
+  __ b(EQ, &gc_);
+
+  // TODO(kasperl): This should be reworked. We shouldn't be calling
+  // through the runtime system for something as simple as converting
+  // a failure object to the corresponding heap object.
+  __ mov(R1, R0);
+  __ mov(R0, R4);
+  __ bl("HandleObjectFromFailure");
+
+  Push(R0);
+  Dispatch(kInvokeNativeLength);
 }
 
 void InterpreterGeneratorARM::InvokeStatic(bool unfolded) {
@@ -724,6 +990,7 @@ void InterpreterGeneratorARM::Dispatch(int size) {
   }
   __ ldr(R8, "InterpretFast_DispatchTable");
   __ ldr(PC, Address(R8, Operand(R7, TIMES_4)));
+  __ GenerateConstantPool();
 }
 
 void InterpreterGeneratorARM::SaveState() {

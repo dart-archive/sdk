@@ -32,6 +32,10 @@ void Assembler::Bind(Label* label) {
   printf(".L%d:\n", label->position());
 }
 
+void Assembler::GenerateConstantPool() {
+  printf(".ltorg\n");
+}
+
 static const char* ToString(Register reg) {
   static const char* kRegisterNames[] = {
     "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8",
@@ -103,6 +107,12 @@ void Assembler::Print(const char* format, ...) {
         case 'i': {
           const Immediate* immediate = va_arg(arguments, const Immediate*);
           printf("#%d", immediate->value());
+          break;
+        }
+
+        case 'I': {
+          const Immediate* immediate = va_arg(arguments, const Immediate*);
+          printf("=%d", immediate->value());
           break;
         }
 

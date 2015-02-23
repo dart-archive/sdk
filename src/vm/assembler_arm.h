@@ -162,6 +162,9 @@ class Assembler {
   INSTRUCTION_3(add, "add %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(add, "add %r, %r, %o", Register, Register, const Operand&);
 
+  INSTRUCTION_3(and_, "and %r, %r, %i", Register, Register, const Immediate&);
+  INSTRUCTION_3(and_, "and %r, %r, %r", Register, Register, Register);
+
   INSTRUCTION_1(b, "b =%s", const char*);
   INSTRUCTION_2(b, "b%c =%s", Condition, const char*);
   INSTRUCTION_1(b, "b %l", Label*);
@@ -169,13 +172,23 @@ class Assembler {
 
   INSTRUCTION_0(bkpt, "bkpt");
 
+  INSTRUCTION_1(bl, "bl %s", const char*);
+  INSTRUCTION_1(blx, "blx %r", Register);
+  INSTRUCTION_1(bx, "bx %r", Register);
+
   INSTRUCTION_2(cmp, "cmp %r, %r", Register, Register);
+  INSTRUCTION_2(cmp, "cmp %r, %i", Register, const Immediate&);
+
+  INSTRUCTION_3(eor, "eor %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_2(ldr, "ldr %r, %a", Register, const Address&);
+  INSTRUCTION_2(ldr, "ldr %r, %I", Register, const Immediate&);
 
   INSTRUCTION_2(mov, "mov %r, %r", Register, Register);
   INSTRUCTION_2(mov, "mov %r, %i", Register, const Immediate&);
   INSTRUCTION_3(mov, "mov%c %r, %i", Condition, Register, const Immediate&);
+
+  INSTRUCTION_2(neg, "neg %r, %r", Register, Register);
 
   INSTRUCTION_1(pop, "pop { %r }", Register);
   INSTRUCTION_1(pop, "pop { %R }", RegisterList);
@@ -195,6 +208,7 @@ class Assembler {
   INSTRUCTION_3(sub, "sub %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_2(tst, "tst %r, %i", Register, const Immediate&);
+  INSTRUCTION_2(tst, "tst %r, %r", Register, Register);
 
   void Align(int alignment);
 
@@ -202,6 +216,8 @@ class Assembler {
   void Bind(Label* label);
 
   void DefineLong(const char* name);
+
+  void GenerateConstantPool();
 
  private:
   void Print(const char* format, ...);
