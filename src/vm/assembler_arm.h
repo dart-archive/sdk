@@ -45,6 +45,11 @@ enum ScaleFactor {
   TIMES_8 = 3
 };
 
+enum ShiftType {
+  LSL,
+  ASR
+};
+
 enum Condition {
   EQ =  0,  // equal
   NE =  1,  // not equal
@@ -76,15 +81,27 @@ class Immediate {
 
 class Operand {
  public:
-  Operand(Register reg, ScaleFactor scale) : reg_(reg), scale_(scale) { }
-  Operand(const Operand& other) : reg_(other.reg()), scale_(other.scale()) { }
+  Operand(Register reg, ScaleFactor scale)
+      : reg_(reg), shift_type_(LSL), shift_amount_(scale) { }
+
+  Operand(const Operand& other)
+      : reg_(other.reg()),
+        shift_type_(other.shift_type()),
+        shift_amount_(other.shift_amount()) { }
+
+  Operand(Register reg, ShiftType shift_type, int shift_amount)
+      : reg_(reg),
+        shift_type_(shift_type),
+        shift_amount_(shift_amount) { }
 
   Register reg() const { return reg_; }
-  ScaleFactor scale() const { return scale_; }
+  ShiftType shift_type() const { return shift_type_; }
+  int shift_amount() const { return shift_amount_; }
 
  private:
   const Register reg_;
-  const ScaleFactor scale_;
+  const ShiftType shift_type_;
+  const int shift_amount_;
 };
 
 class Address {
@@ -153,7 +170,12 @@ class Label {
 
 #define INSTRUCTION_3(name, format, t0, t1, t2)                          \
   void name(t0 a0, t1 a1, t2 a2) {                                       \
-    Print(format, Wrap(a0), Wrap(a1), Wrap(a2) );                        \
+    Print(format, Wrap(a0), Wrap(a1), Wrap(a2));                         \
+  }
+
+#define INSTRUCTION_4(name, format, t0, t1, t2, t3)                      \
+  void name(t0 a0, t1 a1, t2 a2, t3 a3) {                                \
+    Print(format, Wrap(a0), Wrap(a1), Wrap(a2), Wrap(a3));               \
   }
 
 class Assembler {
@@ -161,12 +183,16 @@ class Assembler {
   INSTRUCTION_3(add, "add %r, %r, %r", Register, Register, Register);
   INSTRUCTION_3(add, "add %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(add, "add %r, %r, %o", Register, Register, const Operand&);
+  INSTRUCTION_3(adds, "adds %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_3(and_, "and %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(and_, "and %r, %r, %r", Register, Register, Register);
 
-  INSTRUCTION_1(b, "b =%s", const char*);
-  INSTRUCTION_2(b, "b%c =%s", Condition, const char*);
+  INSTRUCTION_3(asr, "asr %r, %r, %i", Register, Register, const Immediate&);
+  INSTRUCTION_3(asr, "asr %r, %r, %r", Register, Register, Register);
+
+  INSTRUCTION_1(b, "b %s", const char*);
+  INSTRUCTION_2(b, "b%c %s", Condition, const char*);
   INSTRUCTION_1(b, "b %l", Label*);
   INSTRUCTION_2(b, "b%c %l", Condition, Label*);
 
@@ -178,11 +204,17 @@ class Assembler {
 
   INSTRUCTION_2(cmp, "cmp %r, %r", Register, Register);
   INSTRUCTION_2(cmp, "cmp %r, %i", Register, const Immediate&);
+  INSTRUCTION_2(cmp, "cmp %r, %o", Register, const Operand&);
 
   INSTRUCTION_3(eor, "eor %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_2(ldr, "ldr %r, %a", Register, const Address&);
   INSTRUCTION_2(ldr, "ldr %r, %I", Register, const Immediate&);
+  INSTRUCTION_2(ldr, "ldr %r, =%s", Register, const char*);
+  INSTRUCTION_2(ldrb, "ldrb %r, %a", Register, const Address&);
+
+  INSTRUCTION_3(lsl, "lsl %r, %r, %i", Register, Register, const Immediate&);
+  INSTRUCTION_3(lsr, "lsr %r, %r, %i", Register, Register, const Immediate&);
 
   INSTRUCTION_2(mov, "mov %r, %r", Register, Register);
   INSTRUCTION_2(mov, "mov %r, %i", Register, const Immediate&);
@@ -190,22 +222,23 @@ class Assembler {
 
   INSTRUCTION_2(neg, "neg %r, %r", Register, Register);
 
+  INSTRUCTION_3(orr, "orr %r, %r, %r", Register, Register, Register);
+
   INSTRUCTION_1(pop, "pop { %r }", Register);
   INSTRUCTION_1(pop, "pop { %R }", RegisterList);
 
   INSTRUCTION_1(push, "push { %r }", Register);
   INSTRUCTION_1(push, "push { %R }", RegisterList);
 
-  INSTRUCTION_2(ldr, "ldr %r, =%s", Register, const char*);
-  INSTRUCTION_2(ldrb, "ldrb %r, %a", Register, const Address&);
-
-  INSTRUCTION_3(lsl, "lsl %r, %r, %i", Register, Register, const Immediate&);
-  INSTRUCTION_3(lsr, "lsr %r, %r, %i", Register, Register, const Immediate&);
+  INSTRUCTION_4(smull, "smull %r, %r, %r, %r",
+                Register, Register, Register, Register);
 
   INSTRUCTION_2(str, "str %r, %a", Register, const Address&);
+  INSTRUCTION_3(str, "str%c %r, %a", Condition, Register, const Address&);
 
   INSTRUCTION_3(sub, "sub %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(sub, "sub %r, %r, %r", Register, Register, Register);
+  INSTRUCTION_3(subs, "subs %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_2(tst, "tst %r, %i", Register, const Immediate&);
   INSTRUCTION_2(tst, "tst %r, %r", Register, Register);

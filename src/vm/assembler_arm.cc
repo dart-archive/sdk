@@ -153,8 +153,16 @@ void Assembler::PrintAddress(const Address* address) {
   }
 }
 
+static const char* ShiftTypeToString(ShiftType type) {
+  static const char* kShiftNames[] = { "lsl", "asr" };
+  return kShiftNames[type];
+}
+
 void Assembler::PrintOperand(const Operand* operand) {
-  printf("%s, lsl #%d", ToString(operand->reg()), operand->scale());
+  printf("%s, %s #%d",
+         ToString(operand->reg()),
+         ShiftTypeToString(operand->shift_type()),
+         operand->shift_amount());
 }
 
 int Assembler::NewLabelPosition() {
