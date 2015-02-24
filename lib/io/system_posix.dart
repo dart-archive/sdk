@@ -152,14 +152,7 @@ abstract class PosixSystem implements System {
   }
 
   int lseek(int fd, int offset, int whence) {
-    if (Foreign.bitsPerMachineWord == 32) {
-      int low = offset & 0xFFFFFFFF;
-      // TODO(ajohnsen): We do not support shift of 32+ on ia32.
-      int high = (offset >> 16) >> 16;
-      return _retry(() => _lseek.lcall$4(fd, low, high, whence));
-    } else {
-      return _retry(() => _lseek.icall$3(fd, offset, whence));
-    }
+    return _retry(() => _lseek.Lcall$wLw(fd, offset, whence));
   }
 
   TempFile mkstemp(String path) {

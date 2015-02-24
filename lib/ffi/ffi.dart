@@ -159,14 +159,17 @@ class Foreign {
                    _convert(a5));
   }
 
-  // Support for calling foreign functions that return
-  // a 64 bit integer value.
-  int lcall$4(a0, a1, a2, a3) {
-    return _lcall$4(_value,
-                    _convert(a0),
-                    _convert(a1),
-                    _convert(a2),
-                    _convert(a3));
+  // Support for calling foreign functions that
+  //  - Returns a 64 bit integer value.
+  //  - Takes:
+  //    * a word,
+  //    * a 64 bit int
+  //    * a word
+  int Lcall$wLw(a0, a1, a2) {
+    return _Lcall$wLw(_value,
+                      _convert(a0),
+                      _convert(a1),
+                      _convert(a2));
   }
 
   // Support for calling foreign functions that return
@@ -215,7 +218,7 @@ class Foreign {
   static int _call$5(int address, a0, a1, a2, a3, a4) native;
   static int _call$6(int address, a0, a1, a2, a3, a4, a5) native;
 
-  static int _lcall$4(int address, a0, a1, a2, a3) native;
+  static int _Lcall$wLw(int address, a0, a1, a2) native;
 
   static int _allocate(int length) native;
   static void _free(int address) native;

@@ -133,7 +133,7 @@ namespace fletch {
   N(ForeignCall5,                "Foreign", "_call$5")                   \
   N(ForeignCall6,                "Foreign", "_call$6")                   \
                                                                          \
-  N(ForeignLCall4,               "Foreign", "_lcall$4")                  \
+  N(ForeignLCallwLw,             "Foreign", "_Lcall$wLw")                \
                                                                          \
   N(ForeignGetInt8,              "Foreign", "_getInt8")                  \
   N(ForeignGetInt16,             "Foreign", "_getInt16")                 \

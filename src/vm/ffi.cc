@@ -219,16 +219,22 @@ NATIVE(ForeignCall6) {
   return process->ToInteger(result);
 }
 
-typedef int64 (*LF4)(word, word, word, word);
+typedef int64 (*LwLw)(word, int64, word);
 
-NATIVE(ForeignLCall4) {
+static int64 AsInt64Value(Object* object) {
+  if (object->IsSmi()) return Smi::cast(object)->value();
+  if (object->IsLargeInteger()) return LargeInteger::cast(object)->value();
+  UNREACHABLE();
+  return -1;
+}
+
+NATIVE(ForeignLCallwLw) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
-  word a1 = AsForeignWord(arguments[2]);
+  int64 a1 = AsInt64Value(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
-  word a3 = AsForeignWord(arguments[4]);
-  LF4 function = reinterpret_cast<LF4>(address);
-  int64 result = function(a0, a1, a2, a3);
+  LwLw function = reinterpret_cast<LwLw>(address);
+  int64 result = function(a0, a1, a2);
   return process->ToInteger(result);
 }
 
