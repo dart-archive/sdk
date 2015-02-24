@@ -10,9 +10,6 @@ import 'package:semantic_visitor/semantic_visitor.dart' show
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
 
-import 'package:compiler/src/constants/values.dart' show
-    ConstantValue;
-
 import 'package:compiler/src/dart2jslib.dart' show
     MessageKind,
     Registry;
@@ -26,11 +23,15 @@ import 'package:compiler/src/dart_types.dart';
 
 import 'fletch_context.dart';
 
-import 'fletch_function_constant.dart' show
-    FletchFunctionConstant;
+import 'fletch_constants.dart' show
+    CompiledFunctionConstant,
+    FletchClassConstant;
 
 import '../bytecodes.dart' show
     Bytecode;
+
+import 'compiled_function.dart' show
+    CompiledFunction;
 
 import 'fletch_selector.dart';
 
@@ -45,14 +46,9 @@ class FunctionCompiler extends SemanticVisitor {
 
   final Registry registry;
 
-  final BytecodeBuilder builder;
-
   final FunctionElement function;
 
-  final Map<ConstantValue, int> constants = <ConstantValue, int>{};
-
-  final Map<Element, ConstantValue> functionConstantValues =
-      <Element, ConstantValue>{};
+  final CompiledFunction compiledFunction;
 
   final Map<Element, int> scope = <Element, int>{};
 
@@ -68,12 +64,25 @@ class FunctionCompiler extends SemanticVisitor {
                    FunctionElement function)
       : super(elements),
         function = function,
-        builder = new BytecodeBuilder(
+        compiledFunction = new CompiledFunction(
             function.functionSignature.parameterCount +
             (function.isInstanceMember ? 1 : 0));
 
+  BytecodeBuilder get builder => compiledFunction.builder;
+
   ConstantExpression compileConstant(Node node, {bool isConst}) {
     return context.compileConstant(node, elements, isConst: isConst);
+  }
+
+  int allocateConstantFromNode(Node node) {
+    ConstantExpression expression = compileConstant(node, isConst: false);
+    return compiledFunction.allocateConstant(expression.value);
+  }
+
+  int allocateStringConstant(String string) {
+    return compiledFunction.allocateConstant(
+        context.backend.constantSystem.createString(
+            new DartString.literal(string)));
   }
 
   void compile() {
@@ -94,28 +103,6 @@ class FunctionCompiler extends SemanticVisitor {
     }
 
     builder.methodEnd();
-  }
-
-  int allocateConstant(ConstantValue constant) {
-    return constants.putIfAbsent(constant, () => constants.length);
-  }
-
-  int allocateStringConstant(String string) {
-    return allocateConstant(
-        context.backend.constantSystem.createString(
-            new DartString.literal(string)));
-  }
-
-  int allocateConstantFromFunction(FunctionElement function) {
-    FletchFunctionConstant constant =
-        functionConstantValues.putIfAbsent(
-            function, () => new FletchFunctionConstant(function));
-    return allocateConstant(constant);
-  }
-
-  int allocateConstantFromNode(Node node) {
-    ConstantExpression expression = compileConstant(node, isConst: false);
-    return allocateConstant(expression.value);
   }
 
   void invokeMethod(Selector selector) {
@@ -209,7 +196,7 @@ class FunctionCompiler extends SemanticVisitor {
       visitForValue(argument);
     }
     registry.registerStaticInvocation(element);
-    int methodId = allocateConstantFromFunction(element);
+    int methodId = compiledFunction.allocateConstantFromFunction(element);
     builder.invokeStatic(methodId, arguments.slowLength());
     applyVisitState();
   }
@@ -340,6 +327,25 @@ class FunctionCompiler extends SemanticVisitor {
     applyVisitState();
   }
 
+  void visitNewExpression(NewExpression node) {
+    ConstructorElement constructor = elements[node.send];
+    for (Node argument in node.send.arguments) {
+      visitForValue(argument);
+    }
+    registry.registerStaticInvocation(constructor);
+    registry.registerInstantiatedType(elements.getType(node));
+    int constructorId =
+        compiledFunction.allocateConstantFromFunction(constructor);
+    FunctionSignature signature = constructor.functionSignature;
+    builder.invokeStatic(constructorId, signature.parameterCount);
+    applyVisitState();
+  }
+
+  void visitExpression(Expression node) {
+    generateUnimplementedError(
+        node, "Missing visit of expression: ${node.runtimeType}");
+  }
+
   void visitBlock(Block node) {
     int oldBlockLocals = blockLocals;
     blockLocals = 0;
@@ -382,11 +388,6 @@ class FunctionCompiler extends SemanticVisitor {
     generateUnimplementedError(
         node, "Missing visit of statement: ${node.runtimeType}");
     visitState = oldState;
-  }
-
-  void visitExpression(Expression node) {
-    generateUnimplementedError(
-        node, "Missing visit of expression: ${node.runtimeType}");
   }
 
   void visitIf(If node) {
@@ -700,25 +701,4 @@ class FunctionCompiler extends SemanticVisitor {
   }
 
   String toString() => "FunctionCompiler(${function.name})";
-
-  String verboseToString() {
-    StringBuffer sb = new StringBuffer();
-
-    sb.writeln("Constants:");
-    constants.forEach((constant, int index) {
-      if (constant is ConstantValue) {
-        constant = constant.toStructuredString();
-      }
-      sb.writeln("  #$index: $constant");
-    });
-
-    sb.writeln("Bytecodes:");
-    int offset = 0;
-    for (Bytecode bytecode in builder.bytecodes) {
-      sb.writeln("  $offset: $bytecode");
-      offset += bytecode.size;
-    }
-
-    return '$sb';
-  }
 }

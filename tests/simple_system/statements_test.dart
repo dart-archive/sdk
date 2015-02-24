@@ -6,7 +6,14 @@ library statements_test;
 
 import 'dart:fletch_natives';
 
+class A {
+  bool foo() {
+    return false;
+  }
+}
+
 main() {
+  var a = new A();
   var x = true;
   x = 4;
   if ("".isEmpty) {
@@ -15,7 +22,7 @@ main() {
     }
   } else {
   }
-  while (false) {
+  while (a.foo()) {
     printString("while");
   }
   do {

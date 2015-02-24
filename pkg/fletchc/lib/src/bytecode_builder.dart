@@ -182,6 +182,10 @@ class BytecodeBuilder {
     }
   }
 
+  void allocate(int classId, int fields) {
+    internalAddStackPointerDifference(new AllocateUnfold(classId), 1 - fields);
+  }
+
   bool get endsWithTerminator {
     if (bytecodes.isEmpty) return false;
     Opcode opcode = bytecodes.last.opcode;

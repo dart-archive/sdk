@@ -24,8 +24,10 @@ import 'package:compiler/src/tree/tree.dart' show
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
+    ConstructorElement,
     Element,
     FunctionElement,
+    FunctionSignature,
     LibraryElement;
 
 import 'package:compiler/src/elements/modelx.dart' show
@@ -46,8 +48,12 @@ import 'package:compiler/src/resolution/resolution.dart' show
 import 'package:compiler/src/library_loader.dart' show
     LibraryLoader;
 
-import 'fletch_function_constant.dart' show
+import 'fletch_constants.dart' show
+    FletchClassConstant,
     FletchFunctionConstant;
+
+import 'compiled_function.dart' show
+    CompiledFunction;
 
 import 'fletch_context.dart';
 
@@ -61,6 +67,7 @@ class CompiledClass {
   final int id;
   final ClassElement element;
   final Map<int, int> methodTable = <int, int>{};
+  final int fields = 0;
 
   CompiledClass(this.id, this.element);
 }
@@ -72,8 +79,8 @@ class FletchBackend extends Backend {
 
   final Map<FunctionElement, int> methodIds = <FunctionElement, int>{};
 
-  final Map<FunctionElement, FunctionCompiler> compiledFunctions =
-      <FunctionElement, FunctionCompiler>{};
+  final Map<FunctionElement, CompiledFunction> compiledFunctions =
+      <FunctionElement, CompiledFunction>{};
 
   final Set<FunctionElement> externals = new Set<FunctionElement>();
 
@@ -156,20 +163,21 @@ class FletchBackend extends Backend {
 
     registerClassElement(compiler.objectClass);
 
-    ClassElement loadImplClass(String name) {
+    ClassElement loadImplementationClass(String name) {
       var classImpl = fletchSystemLibrary.findLocal(name);
       if (classImpl == null) {
         compiler.internalError(
             fletchSystemLibrary, "Internal class '$name' not found.");
         return null;
       }
+      // TODO(ahe): Register in ResolutionCallbacks.
       registry.registerInstantiatedClass(classImpl);
       return classImpl;
     }
 
-    smiClass = loadImplClass("_Smi");
-    mintClass = loadImplClass("_Mint");
-    stringClass = loadImplClass("String");
+    smiClass = loadImplementationClass("_Smi");
+    mintClass = loadImplementationClass("_Mint");
+    stringClass = loadImplementationClass("String");
   }
 
   ClassElement get stringImplementation => stringClass;
@@ -199,6 +207,8 @@ class FletchBackend extends Backend {
         codegenFunction(
             element.implementation, work.resolutionTree, work.registry);
       });
+    } else if (element.isGenerativeConstructor) {
+      compileConstructor(element);
     } else {
       compiler.internalError(
           element, "Uninimplemented element kind: ${element.kind}");
@@ -227,7 +237,7 @@ class FletchBackend extends Backend {
       functionCompiler.compile();
     }
 
-    compiledFunctions[function] = functionCompiler;
+    compiledFunctions[function] = functionCompiler.compiledFunction;
     // TODO(ahe): Don't do this.
     compiler.enqueuer.codegen.generatedCode[function] = null;
 
@@ -246,7 +256,7 @@ class FletchBackend extends Backend {
     }
 
     if (compiler.verbose) {
-      print(functionCompiler.verboseToString());
+      print(functionCompiler.compiledFunction.verboseToString());
     }
   }
 
@@ -346,12 +356,12 @@ class FletchBackend extends Backend {
 
     void pushNewFunction(
         FunctionElement function,
-        FunctionCompiler functionCompiler) {
+        CompiledFunction compiledFunction) {
       int arity = function.functionSignature.parameterCount;
-      int constantCount = functionCompiler.constants.length;
+      int constantCount = compiledFunction.constants.length;
       int methodId = allocateMethodId(function);
 
-      functionCompiler.constants.forEach((constant, int index) {
+      compiledFunction.constants.forEach((constant, int index) {
         if (constant is ConstantValue) {
           if (constant.isInt) {
             commands.add(new PushNewInteger(constant.primitiveValue));
@@ -371,6 +381,15 @@ class FletchBackend extends Backend {
                   ..add(new PushFromMap(MapId.methods, referredMethodId))
                   ..add(new ChangeMethodLiteral(index));
             });
+          } else if (constant is FletchClassConstant) {
+            commands.add(const PushNull());
+            deferredActions.add(() {
+              int referredClassId = compiledClasses[constant.element].id;
+              commands
+                  ..add(new PushFromMap(MapId.methods, methodId))
+                  ..add(new PushFromMap(MapId.classes, referredClassId))
+                  ..add(new ChangeMethodLiteral(index));
+            });
           } else {
             throw "Unsupported constant: ${constant.toStructuredString()}";
           }
@@ -381,7 +400,7 @@ class FletchBackend extends Backend {
 
       commands.add(
           new PushNewFunction(
-              arity, constantCount, functionCompiler.builder.bytecodes));
+              arity, constantCount, compiledFunction.builder.bytecodes));
 
       commands.add(new PopToMap(MapId.methods, methodId));
     }
@@ -495,5 +514,21 @@ class FletchBackend extends Backend {
           element, MessageKind.PATCH_EXTERNAL_WITHOUT_IMPLEMENTATION);
     }
     return element;
+  }
+
+  void compileConstructor(ConstructorElement constructor) {
+    ClassElement classElement = constructor.enclosingClass;
+    CompiledClass compiledClass = registerClassElement(classElement);
+
+    FunctionSignature signature = constructor.functionSignature;
+    CompiledFunction stub = new CompiledFunction(signature.parameterCount);
+    BytecodeBuilder builder = stub.builder;
+    int classConstant = stub.allocateConstantFromClass(classElement);
+    builder
+        ..allocate(classConstant, compiledClass.fields)
+        ..ret()
+        ..methodEnd();
+
+    compiledFunctions[constructor] = stub;
   }
 }

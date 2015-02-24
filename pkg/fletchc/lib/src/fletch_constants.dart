@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.fletch_function_constant;
+library fletchc.fletch_constants;
 
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
@@ -11,6 +11,7 @@ import 'package:compiler/src/constants/values.dart' show
     ConstantValue;
 
 import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
     FunctionElement;
 
 import 'package:compiler/src/core_types.dart' show
@@ -40,5 +41,26 @@ class FletchFunctionConstant extends ConstantValue {
     // methods than top-levels.
     String enclosing = element.library.getLibraryOrScriptName();
     return 'FletchFunctionConstant($enclosing:${element.name})';
+  }
+}
+
+class FletchClassConstant extends ConstantValue {
+  final ClassElement element;
+
+  FletchClassConstant(this.element);
+
+  DartType getType(CoreTypes types) => const DynamicType();
+
+  List<ConstantValue> getDependencies() => const <ConstantValue>[];
+
+  accept(visitor, arg) {
+    throw new UnsupportedError("FletchClassConstant.accept");
+  }
+
+  String unparse() => toStructuredString();
+
+  String toStructuredString() {
+    String enclosing = element.library.getLibraryOrScriptName();
+    return 'FletchClassConstant($enclosing:${element.name})';
   }
 }
