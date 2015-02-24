@@ -35,6 +35,31 @@ static void PingCallback(int result) {
   EXPECT_EQ(42, result);
 }
 
+static void CreateAgeStatsCallback(AgeStats stats) {
+  EXPECT_EQ(42, stats.getAverageAge());
+  EXPECT_EQ(42, stats.getSum());
+  stats.Delete();
+}
+
+static void CreatePersonCallback(Person generated) {
+  EXPECT_EQ(42, generated.getAge());
+  EXPECT_EQ(1, generated.getName().length());
+  EXPECT_EQ(11, generated.getName()[0]);
+
+  List<Person> children = generated.getChildren();
+  EXPECT_EQ(10, children.length());
+  for (int i = 0; i < children.length(); i++) {
+    EXPECT_EQ(12 + i * 2, children[i].getAge());
+  }
+  generated.Delete();
+}
+
+static void CreateNodeCallback(Node node) {
+  EXPECT_EQ(24680, node.ComputeUsed());
+  EXPECT_EQ(10, Depth(node));
+  node.Delete();
+}
+
 static void RunPersonTests() {
   MessageBuilder builder(512);
 
@@ -57,6 +82,8 @@ static void RunPersonTests() {
   EXPECT_EQ(42, stats2.getSum());
   stats2.Delete();
 
+  ConformanceService::createAgeStatsAsync(42, 42, CreateAgeStatsCallback);
+
   Person generated = ConformanceService::createPerson(10);
   EXPECT_EQ(42, generated.getAge());
   EXPECT_EQ(1, generated.getName().length());
@@ -69,11 +96,15 @@ static void RunPersonTests() {
   }
   generated.Delete();
 
+  ConformanceService::createPersonAsync(10, CreatePersonCallback);
+
   Node node = ConformanceService::createNode(10);
   EXPECT_EQ(24680, node.ComputeUsed());
 
   EXPECT_EQ(10, Depth(node));
   node.Delete();
+
+  ConformanceService::createNodeAsync(10, CreateNodeCallback);
 
   ConformanceService::foo();
   ConformanceService::fooAsync(FooCallback);

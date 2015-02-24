@@ -240,8 +240,7 @@ class _HeaderVisitor extends CcVisitor {
     writeln(');');
 
     // TODO(kasperl): Cannot deal with async methods accepting structs yet.
-    if (node.inputKind == InputKind.STRUCT ||
-        node.outputKind == OutputKind.STRUCT) return;
+    if (node.inputKind == InputKind.STRUCT) return;
 
     write('  static void ${node.name}Async(');
     visitArguments(node.arguments);
@@ -539,9 +538,6 @@ class _ImplementationVisitor extends CcVisitor {
       visitMethodBody(id, node);
       writeln('}');
 
-      // TODO(ager): Deal with struct return in async version.
-      if (node.outputKind == OutputKind.STRUCT) return;
-
       String callback = ensureCallback(node.returnType,
           node.inputPrimitiveStructLayout);
 
@@ -572,12 +568,20 @@ class _ImplementationVisitor extends CcVisitor {
       if (type.isVoid) {
         writeln('  typedef void (*cbt)();');
       } else {
-        writeln('  typedef void (*cbt)(int);');
+        write('  typedef void (*cbt)(');
+        writeReturnType(type);
+        writeln(');');
       }
       writeln('  char* buffer = ${cast('char*')}(raw);');
       int offset = CcVisitor.REQUEST_HEADER_SIZE;
       if (!type.isVoid) {
         writeln('  int64_t result = *${cast('int64_t*')}(buffer + $offset);');
+        if (!type.isPrimitive) {
+          writeln('  char* memory = reinterpret_cast<char*>(result);');
+          writeln('  Segment* segment = '
+                  'MessageReader::GetRootSegment(memory);');
+
+        }
       }
       offset += layout.size;
       writeln('  cbt callback = *${cast('cbt*')}(buffer + $offset);');
@@ -585,7 +589,13 @@ class _ImplementationVisitor extends CcVisitor {
       if (type.isVoid) {
         writeln('  callback();');
       } else {
-        writeln('  callback(result);');
+        if (type.isPrimitive) {
+          writeln('  callback(result);');
+        } else {
+          write('  callback(');
+          writeReturnType(type);
+          writeln('(segment, 8));');
+        }
       }
       writeln('}');
       return name;

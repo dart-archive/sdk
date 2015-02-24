@@ -55,6 +55,26 @@ AgeStats ConformanceService::createAgeStats(int32_t averageAge, int32_t sum) {
   return AgeStats(segment, 8);
 }
 
+static void Unwrap_AgeStats_8(void* raw) {
+  typedef void (*cbt)(AgeStats);
+  char* buffer = reinterpret_cast<char*>(raw);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 32);
+  char* memory = reinterpret_cast<char*>(result);
+  Segment* segment = MessageReader::GetRootSegment(memory);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  free(buffer);
+  callback(AgeStats(segment, 8));
+}
+
+void ConformanceService::createAgeStatsAsync(int32_t averageAge, int32_t sum, void (*callback)(AgeStats)) {
+  static const int kSize = 40 + 1 * sizeof(void*);
+  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
+  *reinterpret_cast<int32_t*>(_buffer + 32) = averageAge;
+  *reinterpret_cast<int32_t*>(_buffer + 36) = sum;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  ServiceApiInvokeAsync(service_id_, kCreateAgeStatsId_, Unwrap_AgeStats_8, _buffer, kSize);
+}
+
 static const MethodId kCreatePersonId_ = reinterpret_cast<MethodId>(5);
 
 Person ConformanceService::createPerson(int32_t children) {
@@ -69,6 +89,25 @@ Person ConformanceService::createPerson(int32_t children) {
   return Person(segment, 8);
 }
 
+static void Unwrap_Person_8(void* raw) {
+  typedef void (*cbt)(Person);
+  char* buffer = reinterpret_cast<char*>(raw);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 32);
+  char* memory = reinterpret_cast<char*>(result);
+  Segment* segment = MessageReader::GetRootSegment(memory);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  free(buffer);
+  callback(Person(segment, 8));
+}
+
+void ConformanceService::createPersonAsync(int32_t children, void (*callback)(Person)) {
+  static const int kSize = 40 + 1 * sizeof(void*);
+  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
+  *reinterpret_cast<int32_t*>(_buffer + 32) = children;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  ServiceApiInvokeAsync(service_id_, kCreatePersonId_, Unwrap_Person_8, _buffer, kSize);
+}
+
 static const MethodId kCreateNodeId_ = reinterpret_cast<MethodId>(6);
 
 Node ConformanceService::createNode(int32_t depth) {
@@ -81,6 +120,25 @@ Node ConformanceService::createNode(int32_t depth) {
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
   return Node(segment, 8);
+}
+
+static void Unwrap_Node_8(void* raw) {
+  typedef void (*cbt)(Node);
+  char* buffer = reinterpret_cast<char*>(raw);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 32);
+  char* memory = reinterpret_cast<char*>(result);
+  Segment* segment = MessageReader::GetRootSegment(memory);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  free(buffer);
+  callback(Node(segment, 8));
+}
+
+void ConformanceService::createNodeAsync(int32_t depth, void (*callback)(Node)) {
+  static const int kSize = 40 + 1 * sizeof(void*);
+  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
+  *reinterpret_cast<int32_t*>(_buffer + 32) = depth;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  ServiceApiInvokeAsync(service_id_, kCreateNodeId_, Unwrap_Node_8, _buffer, kSize);
 }
 
 static const MethodId kCountId_ = reinterpret_cast<MethodId>(7);
@@ -130,7 +188,7 @@ int32_t ConformanceService::ping() {
 }
 
 static void Unwrap_int32_8(void* raw) {
-  typedef void (*cbt)(int);
+  typedef void (*cbt)(int32_t);
   char* buffer = reinterpret_cast<char*>(raw);
   int64_t result = *reinterpret_cast<int64_t*>(buffer + 32);
   cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
