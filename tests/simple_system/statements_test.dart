@@ -7,6 +7,9 @@ library statements_test;
 import 'dart:fletch_natives';
 
 class A {
+  A() {
+  }
+
   bool foo() {
     return false;
   }

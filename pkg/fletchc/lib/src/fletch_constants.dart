@@ -22,9 +22,9 @@ import 'package:compiler/src/dart_types.dart' show
     DynamicType;
 
 class FletchFunctionConstant extends ConstantValue {
-  final FunctionElement element;
+  final int methodId;
 
-  FletchFunctionConstant(this.element);
+  FletchFunctionConstant(this.methodId);
 
   DartType getType(CoreTypes types) => const DynamicType();
 
@@ -37,10 +37,7 @@ class FletchFunctionConstant extends ConstantValue {
   String unparse() => toStructuredString();
 
   String toStructuredString() {
-    // TODO(ahe): Compute nicer names for enclosing, and handle other kinds of
-    // methods than top-levels.
-    String enclosing = element.library.getLibraryOrScriptName();
-    return 'FletchFunctionConstant($enclosing:${element.name})';
+    return 'FletchFunctionConstant($methodId)';
   }
 }
 

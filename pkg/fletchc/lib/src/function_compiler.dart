@@ -58,15 +58,18 @@ class FunctionCompiler extends SemanticVisitor {
 
   int blockLocals = 0;
 
-  FunctionCompiler(this.context,
+  FunctionCompiler(int methodId,
+                   this.context,
                    TreeElements elements,
                    this.registry,
                    FunctionElement function)
       : super(elements),
         function = function,
         compiledFunction = new CompiledFunction(
+            methodId,
             function.functionSignature.parameterCount +
-            (function.isInstanceMember ? 1 : 0));
+            (function.isInstanceMember ||
+             function.isGenerativeConstructor ? 1 : 0));
 
   BytecodeBuilder get builder => compiledFunction.builder;
 
@@ -94,7 +97,10 @@ class FunctionCompiler extends SemanticVisitor {
       scope[parameter] = slot;
     });
 
-    function.node.body.accept(this);
+    Node node = function.node;
+    if (node != null) {
+      node.body.accept(this);
+    }
 
     // Emit implicit 'return null' if no terminator is present.
     if (!builder.endsWithTerminator) {
@@ -196,8 +202,9 @@ class FunctionCompiler extends SemanticVisitor {
       visitForValue(argument);
     }
     registry.registerStaticInvocation(element);
-    int methodId = compiledFunction.allocateConstantFromFunction(element);
-    builder.invokeStatic(methodId, arguments.slowLength());
+    int methodId = context.backend.allocateMethodId(element);
+    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    builder.invokeStatic(constId, arguments.slowLength());
     applyVisitState();
   }
 
@@ -329,15 +336,16 @@ class FunctionCompiler extends SemanticVisitor {
 
   void visitNewExpression(NewExpression node) {
     ConstructorElement constructor = elements[node.send];
+    registry.registerInstantiatedClass(constructor.enclosingClass);
     for (Node argument in node.send.arguments) {
       visitForValue(argument);
     }
+    int constructorId = context.backend.compileConstructor(constructor);
+    int constId = compiledFunction.allocateConstantFromFunction(constructorId);
     registry.registerStaticInvocation(constructor);
     registry.registerInstantiatedType(elements.getType(node));
-    int constructorId =
-        compiledFunction.allocateConstantFromFunction(constructor);
     FunctionSignature signature = constructor.functionSignature;
-    builder.invokeStatic(constructorId, signature.parameterCount);
+    builder.invokeStatic(constId, signature.parameterCount);
     applyVisitState();
   }
 
@@ -366,6 +374,9 @@ class FunctionCompiler extends SemanticVisitor {
     }
 
     blockLocals = oldBlockLocals;
+  }
+
+  void visitEmptyStatement(EmptyStatement node) {
   }
 
   void visitExpressionStatement(ExpressionStatement node) {

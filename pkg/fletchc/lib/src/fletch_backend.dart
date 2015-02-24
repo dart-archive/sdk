@@ -82,12 +82,19 @@ class FletchBackend extends Backend {
   final Map<FunctionElement, CompiledFunction> compiledFunctions =
       <FunctionElement, CompiledFunction>{};
 
+  final Map<ConstructorElement, int> constructorIds =
+      <ConstructorElement, int>{};
+
+  final List<FletchFunction> functions = <FletchFunction>[];
+
   final Set<FunctionElement> externals = new Set<FunctionElement>();
 
   final Map<ClassElement, int> classIds = <ClassElement, int>{};
 
   final Map<ClassElement, CompiledClass> compiledClasses =
       <ClassElement, CompiledClass>{};
+
+  int nextMethodId = 0;
 
   List<Command> commands;
 
@@ -202,13 +209,13 @@ class FletchBackend extends Backend {
           element, MessageKind.GENERIC, {'text': 'Compiling ${element.name}'});
     }
 
-    if (element.isFunction || element.isGetter) {
+    if (element.isFunction ||
+        element.isGetter ||
+        element.isGenerativeConstructor) {
       compiler.withCurrentElement(element.implementation, () {
         codegenFunction(
             element.implementation, work.resolutionTree, work.registry);
       });
-    } else if (element.isGenerativeConstructor) {
-      compileConstructor(element);
     } else {
       compiler.internalError(
           element, "Uninimplemented element kind: ${element.kind}");
@@ -224,6 +231,7 @@ class FletchBackend extends Backend {
     }
 
     FunctionCompiler functionCompiler = new FunctionCompiler(
+        allocateMethodId(function),
         context,
         elements,
         registry,
@@ -237,11 +245,13 @@ class FletchBackend extends Backend {
       functionCompiler.compile();
     }
 
-    compiledFunctions[function] = functionCompiler.compiledFunction;
+    CompiledFunction compiledFunction = functionCompiler.compiledFunction;
+
+    compiledFunctions[function] = compiledFunction;
+    functions.add(compiledFunction);
+
     // TODO(ahe): Don't do this.
     compiler.enqueuer.codegen.generatedCode[function] = null;
-
-    int methodId = allocateMethodId(function);
 
     if (function.isInstanceMember) {
       ClassElement enclosingClass = function.enclosingClass;
@@ -252,7 +262,7 @@ class FletchBackend extends Backend {
       SelectorKind kind = function.isGetter ?
           SelectorKind.Getter : SelectorKind.Method;
       int fletchSelector = FletchSelector.encode(id, kind, arity);
-      compiledClass.methodTable[fletchSelector] = methodId;
+      compiledClass.methodTable[fletchSelector] = compiledFunction.methodId;
     }
 
     if (compiler.verbose) {
@@ -354,12 +364,10 @@ class FletchBackend extends Backend {
 
     List<Function> deferredActions = <Function>[];
 
-    void pushNewFunction(
-        FunctionElement function,
-        CompiledFunction compiledFunction) {
-      int arity = function.functionSignature.parameterCount;
+    void pushNewFunction(CompiledFunction compiledFunction) {
+      int arity = compiledFunction.builder.functionArity;
       int constantCount = compiledFunction.constants.length;
-      int methodId = allocateMethodId(function);
+      int methodId = compiledFunction.methodId;
 
       compiledFunction.constants.forEach((constant, int index) {
         if (constant is ConstantValue) {
@@ -375,10 +383,9 @@ class FletchBackend extends Backend {
           } else if (constant is FletchFunctionConstant) {
             commands.add(const PushNull());
             deferredActions.add(() {
-              int referredMethodId = allocateMethodId(constant.element);
               commands
                   ..add(new PushFromMap(MapId.methods, methodId))
-                  ..add(new PushFromMap(MapId.methods, referredMethodId))
+                  ..add(new PushFromMap(MapId.methods, constant.methodId))
                   ..add(new ChangeMethodLiteral(index));
             });
           } else if (constant is FletchClassConstant) {
@@ -405,7 +412,7 @@ class FletchBackend extends Backend {
       commands.add(new PopToMap(MapId.methods, methodId));
     }
 
-    compiledFunctions.forEach(pushNewFunction);
+    functions.forEach(pushNewFunction);
 
     int changes = 0;
 
@@ -465,7 +472,7 @@ class FletchBackend extends Backend {
 
     commands.add(
         new PushFromMap(
-            MapId.methods, allocateMethodId(fletchSystemEntry)));
+            MapId.methods, allocatedMethodId(fletchSystemEntry)));
 
     commands.add(const RunMain());
 
@@ -476,7 +483,16 @@ class FletchBackend extends Backend {
 
   int allocateMethodId(FunctionElement element) {
     element = element.declaration;
-    return methodIds.putIfAbsent(element, () => methodIds.length);
+    return methodIds.putIfAbsent(element, () => nextMethodId++);
+  }
+
+  int allocatedMethodId(FunctionElement element) {
+    element = element.declaration;
+    int id = methodIds[element];
+    if (id != null) return id;
+    id = constructorIds[element];
+    if (id != null) return id;
+    throw "Use of non-compiled function: $element";
   }
 
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
@@ -516,19 +532,43 @@ class FletchBackend extends Backend {
     return element;
   }
 
-  void compileConstructor(ConstructorElement constructor) {
+  int compileConstructor(ConstructorElement constructor) {
+    if (constructorIds.containsKey(constructor)) {
+      return constructorIds[constructor];
+    }
+
+    if (compiler.verbose) {
+      compiler.reportHint(
+          constructor,
+          MessageKind.GENERIC,
+          {'text': 'Compiling constructor ${constructor.name}'});
+    }
+
     ClassElement classElement = constructor.enclosingClass;
     CompiledClass compiledClass = registerClassElement(classElement);
 
     FunctionSignature signature = constructor.functionSignature;
-    CompiledFunction stub = new CompiledFunction(signature.parameterCount);
+    CompiledFunction stub = new CompiledFunction(
+        nextMethodId++,
+        signature.parameterCount);
     BytecodeBuilder builder = stub.builder;
     int classConstant = stub.allocateConstantFromClass(classElement);
+    int methodId = allocateMethodId(constructor);
+    int constId = stub.allocateConstantFromFunction(methodId);
     builder
         ..allocate(classConstant, compiledClass.fields)
+        ..loadLocal(0)
+        ..invokeStatic(constId, 1 + signature.parameterCount)
+        ..pop()
         ..ret()
         ..methodEnd();
 
-    compiledFunctions[constructor] = stub;
+    if (compiler.verbose) {
+      print(stub.verboseToString());
+    }
+
+    functions.add(stub);
+
+    return stub.methodId;
   }
 }

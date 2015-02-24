@@ -21,25 +21,26 @@ import 'bytecode_builder.dart';
 class CompiledFunction {
   final BytecodeBuilder builder;
 
+  final int methodId;
+
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
 
-  final Map<Element, ConstantValue> functionConstantValues =
-      <Element, ConstantValue>{};
+  final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
 
   final Map<Element, ConstantValue> classConstantValues =
       <Element, ConstantValue>{};
 
-  CompiledFunction(int arity)
+  CompiledFunction(this.methodId, int arity)
       : builder = new BytecodeBuilder(arity);
 
   int allocateConstant(ConstantValue constant) {
     return constants.putIfAbsent(constant, () => constants.length);
   }
 
-  int allocateConstantFromFunction(FunctionElement function) {
+  int allocateConstantFromFunction(int methodId) {
     FletchFunctionConstant constant =
         functionConstantValues.putIfAbsent(
-            function, () => new FletchFunctionConstant(function));
+            methodId, () => new FletchFunctionConstant(methodId));
     return allocateConstant(constant);
   }
 
