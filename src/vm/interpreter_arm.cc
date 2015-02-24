@@ -78,10 +78,10 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
 
   // Registers
   // ---------
-  //   r6: stack pointer (top)
-  //   r5: bytecode pointer
   //   r4: current process
-  //   r9: null
+  //   r5: bytecode pointer
+  //   r6: stack pointer (top)
+  //   r8: null
   //   r10: true
   //   r11: false
 
@@ -245,8 +245,12 @@ void InterpreterGeneratorARM::GeneratePrologue() {
   __ mov(R4, R0);
 
   // Pad the stack to gaurantee the right alignment for calls.
-  int padding = ComputeStackPadding(8 * kWordSize, 0);
+  int padding = ComputeStackPadding(8 * kWordSize, 1 * kWordSize);
   if (padding > 0) __ sub(SP, SP, Immediate(padding));
+
+  // Store the argument target yield address in the extra slot on the
+  // top of the stack.
+  __ str(R1, Address(SP, 0));
 
   // Restore the register state and dispatch to the first bytecode.
   RestoreState();
@@ -261,7 +265,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   // Undo stack padding.
   Label undo_padding;
   __ Bind(&undo_padding);
-  int padding = ComputeStackPadding(8 * kWordSize, 0);
+  int padding = ComputeStackPadding(8 * kWordSize, 1 * kWordSize);
   if (padding > 0) __ add(SP, SP, Immediate(padding));
 
   // Restore callee-saved registers and return.
@@ -444,7 +448,7 @@ void InterpreterGeneratorARM::DoStoreField() {
 }
 
 void InterpreterGeneratorARM::DoLoadLiteralNull() {
-  Push(R9);
+  Push(R8);
   Dispatch(kLoadLiteralNullLength);
 }
 
@@ -945,7 +949,7 @@ void InterpreterGeneratorARM::DoProcessYield() {
 
   __ Bind(&done);
   __ add(R5, R5, Immediate(kProcessYieldLength));
-  StoreLocal(R9, 0);
+  StoreLocal(R8, 0);
   __ b(&done_);
 }
 
@@ -957,8 +961,8 @@ void InterpreterGeneratorARM::DoCoroutineChange() {
   LoadLocal(R1, 1);
 
   // Store null in locals.
-  StoreLocal(R9, 0);
-  StoreLocal(R9, 1);
+  StoreLocal(R8, 0);
+  StoreLocal(R8, 1);
 
   // Perform call preserving argument in R7.
   SaveState();
@@ -1315,8 +1319,8 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
   __ ldrb(R0, Address(R5, 2));
 
   // Load native from native table.
-  __ ldr(R8, "kNativeTable");
-  __ ldr(R2, Address(R8, Operand(R0, TIMES_4)));
+  __ ldr(R9, "kNativeTable");
+  __ ldr(R2, Address(R9, Operand(R0, TIMES_4)));
 
   // Setup argument (process and pointer to first argument).
   __ add(R7, R6, Operand(R1, TIMES_4));
@@ -1334,16 +1338,16 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
 
   if (yield) {
     // Set the result to null and drop the arguments.
-    __ str(R9, Address(R7, 0));
+    __ str(R8, Address(R7, 0));
     __ mov(R6, R7);
 
     // If the result of calling the native is null, we don't yield.
     Label dont_yield;
-    __ cmp(R0, R9);
+    __ cmp(R0, R8);
     __ b(EQ, &dont_yield);
 
     // Yield to the target port.
-    __ ldr(R3, Address(SP, 12 * kWordSize));
+    __ ldr(R3, Address(SP, 0));
     __ str(R0, Address(R3, 0));
     __ mov(R0, Immediate(Interpreter::kTargetYield));
     __ b(&done_);
@@ -1426,11 +1430,11 @@ void InterpreterGeneratorARM::Allocate(bool unfolded) {
   // Compute the address of the first and last instance field.
   __ sub(R7, R0, Immediate(kWordSize + HeapObject::kTag));
   __ add(R7, R7, R2);
-  __ add(R8, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ add(R9, R0, Immediate(Instance::kSize - HeapObject::kTag));
 
   Label loop, done;
   __ Bind(&loop);
-  __ cmp(R8, R7);
+  __ cmp(R9, R7);
   __ b(HI, &done);
   Pop(R1);
   __ str(R1, Address(R7, 0));
@@ -1484,8 +1488,8 @@ void InterpreterGeneratorARM::Dispatch(int size) {
   if (size > 0) {
     __ add(R5, R5, Immediate(size));
   }
-  __ ldr(R8, "InterpretFast_DispatchTable");
-  __ ldr(PC, Address(R8, Operand(R7, TIMES_4)));
+  __ ldr(R9, "InterpretFast_DispatchTable");
+  __ ldr(PC, Address(R9, Operand(R7, TIMES_4)));
   __ GenerateConstantPool();
 }
 
@@ -1513,7 +1517,7 @@ void InterpreterGeneratorARM::RestoreState() {
   // Load constants into registers.
   __ ldr(R10, Address(R4, Process::ProgramOffset()));
   __ ldr(R11, Address(R10, Program::false_object_offset()));
-  __ ldr(R9, Address(R10, Program::null_object_offset()));
+  __ ldr(R8, Address(R10, Program::null_object_offset()));
   __ ldr(R10, Address(R10, Program::true_object_offset()));
 
   // Pop current bytecode pointer from the stack.
