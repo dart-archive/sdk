@@ -16,15 +16,15 @@
         '../../src/vm/vm.gyp:fletch_vm',
       ],
       'sources': [
-        'src/cc/struct.cc',	         # generated
-        'src/cc/struct.h',	         # generated
-        'src/cc/todomvc_presenter.cc',	 # should be generated
-        'src/cc/todomvc_presenter.h',	 # should be generated
-        'src/cc/todomvc_service.cc',     # generated
-        'src/cc/todomvc_service.h',      # generated
-        'src/todomvc.cc',
-        'src/todomvc_shared.cc',
-        'src/todomvc_shared.h',
+        'cc/struct.cc',	         # generated
+        'cc/struct.h',	         # generated
+        'cc/todomvc_presenter.cc',	 # should be generated
+        'cc/todomvc_presenter.h',	 # should be generated
+        'cc/todomvc_service.cc',     # generated
+        'cc/todomvc_service.h',      # generated
+        'todomvc.cc',
+        'todomvc_shared.cc',
+        'todomvc_shared.h',
       ],
     },
   ],

@@ -350,7 +350,7 @@
           'action_name': 'generate_todomvc_snapshot',
           'command': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
-            'samples/todomvc/src/todomvc.dart',
+            'samples/todomvc/todomvc.dart',
           ],
           'inputs': [
             '<@(_command)',
@@ -359,12 +359,12 @@
             'fletchc'
             '<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
-            'samples/todomvc/src/model.dart',
-            'samples/todomvc/src/todomvc_impl.dart',
-            'samples/todomvc/src/dart/struct.dart',
-            'samples/todomvc/src/dart/todomvc_service.dart',
-            'samples/todomvc/src/dart/todomvc_presenter.dart',
-            'samples/todomvc/src/dart/todomvc_presenter_model.dart',
+            'samples/todomvc/model.dart',
+            'samples/todomvc/todomvc_impl.dart',
+            'samples/todomvc/dart/struct.dart',
+            'samples/todomvc/dart/todomvc_service.dart',
+            'samples/todomvc/dart/todomvc_presenter.dart',
+            'samples/todomvc/dart/todomvc_presenter_model.dart',
           ],
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/todomvc.snapshot',
