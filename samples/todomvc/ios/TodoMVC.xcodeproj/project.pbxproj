@@ -19,6 +19,7 @@
 		DAC13F031A9B71F800D3159D /* AddTodoItemViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = DAC13F001A9B71F800D3159D /* AddTodoItemViewController.m */; };
 		DAC13F041A9B71F800D3159D /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = DAC13F021A9B71F800D3159D /* AppDelegate.mm */; };
 		DAC13F071A9B721A00D3159D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DAC13F051A9B721A00D3159D /* Main.storyboard */; };
+		DADB66D71A9CA17500BD8B6E /* todomvc.snapshot in Resources */ = {isa = PBXBuildFile; fileRef = DADB66D61A9CA17500BD8B6E /* todomvc.snapshot */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,6 +56,7 @@
 		DAC13F011A9B71F800D3159D /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		DAC13F021A9B71F800D3159D /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
 		DAC13F061A9B721A00D3159D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		DADB66D61A9CA17500BD8B6E /* todomvc.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; path = todomvc.snapshot; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -93,6 +95,7 @@
 		DAC13EC21A9B6ED000D3159D = {
 			isa = PBXGroup;
 			children = (
+				DADB66D51A9CA17500BD8B6E /* Resources */,
 				DAB201081A9B78C40087F7F9 /* libfletch.a */,
 				DAB200FE1A9B78890087F7F9 /* cc */,
 				DAC13ECD1A9B6ED000D3159D /* TodoMVC */,
@@ -152,6 +155,15 @@
 				DAC13EE91A9B6ED000D3159D /* Info.plist */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		DADB66D51A9CA17500BD8B6E /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				DADB66D61A9CA17500BD8B6E /* todomvc.snapshot */,
+			);
+			name = Resources;
+			path = TodoMVC/Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -234,6 +246,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DADB66D71A9CA17500BD8B6E /* todomvc.snapshot in Resources */,
 				DAC13EDC1A9B6ED000D3159D /* Images.xcassets in Resources */,
 				DAC13F071A9B721A00D3159D /* Main.storyboard in Resources */,
 			);
@@ -387,7 +400,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/zerny/src/fletch/fletch/out/ReleaseXARM64,
+					"$(PROJECT_DIR)/../../../out/ReleaseXARM64",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -408,7 +421,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/zerny/src/fletch/fletch/out/ReleaseXARM64,
+					"$(PROJECT_DIR)/../../../out/ReleaseXARM64",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
