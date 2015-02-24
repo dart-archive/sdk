@@ -14,7 +14,8 @@ import 'package:compiler/src/elements/elements.dart' show
     Element,
     FieldElement,
     FunctionElement,
-    FunctionSignature;
+    FunctionSignature,
+    ParameterElement;
 
 import 'package:compiler/src/resolution/resolution.dart' show
     TreeElements;

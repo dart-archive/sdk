@@ -95,6 +95,10 @@ class FletchBackend extends Backend {
 
   FunctionElement fletchExternalYield;
 
+  ClassElement stringClass;
+  ClassElement smiClass;
+  ClassElement mintClass;
+
   FletchBackend(FletchCompiler compiler)
       : this.context = compiler.context,
         this.constantCompilerTask = new DartConstantTask(compiler),
@@ -154,11 +158,24 @@ class FletchBackend extends Backend {
     fletchExternalYield = findExternal('yield');
 
     registerClassElement(compiler.objectClass);
+
+    ClassElement loadImplClass(String name) {
+      var classImpl = fletchSystemLibrary.findLocal(name);
+      if (classImpl == null) {
+        compiler.internalError(
+            fletchSystemLibrary, "Internal class '$name' not found.");
+        return null;
+      }
+      registry.registerInstantiatedClass(classImpl);
+      return classImpl;
+    }
+
+    smiClass = loadImplClass("_Smi");
+    mintClass = loadImplClass("_Mint");
+    stringClass = loadImplClass("String");
   }
 
-  ClassElement get stringImplementation {
-    return fletchSystemLibrary.findLocal("_StringImpl");
-  }
+  ClassElement get stringImplementation => stringClass;
 
   /// Class of annotations to mark patches in patch files.
   ///
@@ -241,12 +258,15 @@ class FletchBackend extends Backend {
       FunctionCompiler functionCompiler) {
     String name = function.name;
 
+    ClassElement enclosingClass = function.enclosingClass;
+    if (enclosingClass != null) name = '${enclosingClass.name}.$name';
+
     FletchNativeDescriptor descriptor = context.nativeDescriptors[name];
     if (descriptor == null) {
       throw "Unsupported native function: $name";
     }
 
-    int arity = function.functionSignature.parameterCount;
+    int arity = functionCompiler.builder.functionArity;
     functionCompiler.builder.invokeNative(arity, descriptor.index);
 
     Return returnNode = function.node.body.asReturn();
@@ -375,8 +395,12 @@ class FletchBackend extends Backend {
 
     for (CompiledClass compiledClass in compiledClasses.values) {
       ClassElement element = compiledClass.element;
-      if (element == stringImplementation) {
+      if (element == stringClass) {
         commands.add(new PushBuiltinClass(14, 0));
+      } else if (element == smiClass) {
+        commands.add(new PushBuiltinClass(6, 0));
+      } else if (element == mintClass) {
+        commands.add(new PushBuiltinClass(7, 0));
       } else if (element == compiler.objectClass) {
         commands.add(new PushBuiltinClass(1, 0));
       } else {

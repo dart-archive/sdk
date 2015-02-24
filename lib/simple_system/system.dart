@@ -4,12 +4,8 @@
 
 library dart.system;
 
-class _StringImpl implements String {
-  // TODO(ajohnsen): Implement.
-  bool get isEmpty {
-    return true;
-  }
-}
+part 'string.dart';
+part 'integer.dart';
 
 /// This is a magic method recognized by the compiler, and references to it
 /// will be substituted for the actual main method.
