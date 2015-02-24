@@ -7,9 +7,6 @@ library fletchc.fletch_backend;
 import 'dart:async' show
     Future;
 
-import 'dart:collection' show
-    SplayTreeMap;
-
 import 'package:compiler/src/dart2jslib.dart' show
     Backend,
     BackendConstantEnvironment,
@@ -63,7 +60,7 @@ import '../commands.dart';
 class CompiledClass {
   final int id;
   final ClassElement element;
-  final SplayTreeMap<int, int> methodTable = new SplayTreeMap<int, int>();
+  final Map<int, int> methodTable = <int, int>{};
 
   CompiledClass(this.id, this.element);
 }
@@ -410,10 +407,12 @@ class FletchBackend extends Backend {
       commands.add(const Dup());
       commands.add(new PopToMap(MapId.classes, compiledClass.id));
 
-      compiledClass.methodTable.forEach((int selector, int methodId) {
+      Map<int, int> methodTable = compiledClass.methodTable;
+      for (int selector in methodTable.keys.toList()..sort()) {
+        int methodId = methodTable[selector];
         commands.add(new PushNewInteger(selector));
         commands.add(new PushFromMap(MapId.methods, methodId));
-      });
+      }
       commands.add(new ChangeMethodTable(compiledClass.methodTable.length));
 
       changes++;
