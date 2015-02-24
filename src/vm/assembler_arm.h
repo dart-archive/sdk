@@ -196,6 +196,8 @@ class Assembler {
   INSTRUCTION_1(b, "b %l", Label*);
   INSTRUCTION_2(b, "b%c %l", Condition, Label*);
 
+  INSTRUCTION_3(bic, "bic %r, %r, %i", Register, Register, const Immediate&);
+
   INSTRUCTION_0(bkpt, "bkpt");
 
   INSTRUCTION_1(bl, "bl %s", const char*);
@@ -214,11 +216,14 @@ class Assembler {
   INSTRUCTION_2(ldrb, "ldrb %r, %a", Register, const Address&);
 
   INSTRUCTION_3(lsl, "lsl %r, %r, %i", Register, Register, const Immediate&);
+  INSTRUCTION_3(lsl, "lsl %r, %r, %r", Register, Register, Register);
   INSTRUCTION_3(lsr, "lsr %r, %r, %i", Register, Register, const Immediate&);
 
   INSTRUCTION_2(mov, "mov %r, %r", Register, Register);
   INSTRUCTION_2(mov, "mov %r, %i", Register, const Immediate&);
   INSTRUCTION_3(mov, "mov%c %r, %i", Condition, Register, const Immediate&);
+
+  INSTRUCTION_2(mvn, "mvn %r, %r", Register, Register);
 
   INSTRUCTION_2(neg, "neg %r, %r", Register, Register);
 

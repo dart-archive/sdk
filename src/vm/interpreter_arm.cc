@@ -196,8 +196,6 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   Label gc_;
   Label intrinsic_failure_;
 
-  void Bailout();
-
   void LoadLocal(Register reg, int index);
   void StoreLocal(Register reg, int index);
 
@@ -332,7 +330,12 @@ void InterpreterGeneratorARM::DoLoadLocal() {
 }
 
 void InterpreterGeneratorARM::DoLoadBoxed() {
-  Bailout();
+  __ ldrb(R0, Address(R5, 1));
+  __ neg(R0, R0);
+  __ ldr(R1, Address(R6, Operand(R0, TIMES_4)));
+  __ ldr(R0, Address(R1, Boxed::kValueOffset - HeapObject::kTag));
+  Push(R0);
+  Dispatch(kLoadBoxedLength);
 }
 
 void InterpreterGeneratorARM::DoLoadStatic() {
@@ -378,7 +381,12 @@ void InterpreterGeneratorARM::DoLoadStaticInit() {
 }
 
 void InterpreterGeneratorARM::DoLoadField() {
-  Bailout();
+  __ ldrb(R1, Address(R5, 1));
+  LoadLocal(R0, 0);
+  __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ ldr(R0, Address(R0, Operand(R1, TIMES_4)));
+  StoreLocal(R0, 0);
+  Dispatch(kLoadFieldLength);
 }
 
 void InterpreterGeneratorARM::DoLoadConst() {
@@ -407,7 +415,12 @@ void InterpreterGeneratorARM::DoStoreLocal() {
 }
 
 void InterpreterGeneratorARM::DoStoreBoxed() {
-  Bailout();
+  LoadLocal(R2, 0);
+  __ ldrb(R0, Address(R5, 1));
+  __ neg(R0, R0);
+  __ ldr(R1, Address(R6, Operand(R0, TIMES_4)));
+  __ str(R2, Address(R1, Boxed::kValueOffset - HeapObject::kTag));
+  Dispatch(kStoreBoxedLength);
 }
 
 void InterpreterGeneratorARM::DoStoreStatic() {
@@ -420,7 +433,14 @@ void InterpreterGeneratorARM::DoStoreStatic() {
 }
 
 void InterpreterGeneratorARM::DoStoreField() {
-  Bailout();
+  __ ldrb(R1, Address(R5, 1));
+  LoadLocal(R2, 0);
+  LoadLocal(R0, 1);
+  __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ str(R2, Address(R0, Operand(R1, TIMES_4)));
+  StoreLocal(R2, 1);
+  Drop(1);
+  Dispatch(kStoreFieldLength);
 }
 
 void InterpreterGeneratorARM::DoLoadLiteralNull() {
@@ -549,7 +569,9 @@ void InterpreterGeneratorARM::DoInvokeSub() {
 }
 
 void InterpreterGeneratorARM::DoInvokeMod() {
-  Bailout();
+  // TODO(ager): Implement. Probably need to go to floating-point
+  // arithmetic for this on arm.
+  __ b("BC_InvokeMethod");
 }
 
 void InterpreterGeneratorARM::DoInvokeMul() {
@@ -581,7 +603,17 @@ void InterpreterGeneratorARM::DoInvokeTruncDiv() {
 }
 
 void InterpreterGeneratorARM::DoInvokeBitNot() {
-  Bailout();
+  LoadLocal(R0, 0);
+  __ tst(R0, Immediate(Smi::kTagMask));
+  __ b(NE, "BC_InvokeMethod");
+
+  // Move negated.
+  __ mvn(R1, R0);
+  // Bit clear the smi tag bit to smi tag again.
+  __ bic(R1, R1, Immediate(Smi::kTagMask));
+
+  StoreLocal(R1, 0);
+  Dispatch(kInvokeBitNotLength);
 }
 
 void InterpreterGeneratorARM::DoInvokeBitAnd() {
@@ -647,7 +679,30 @@ void InterpreterGeneratorARM::DoInvokeBitShr() {
 }
 
 void InterpreterGeneratorARM::DoInvokeBitShl() {
-  Bailout();
+  LoadLocal(R0, 1);
+  __ tst(R0, Immediate(Smi::kTagMask));
+  __ b(NE, "BC_InvokeMethod");
+  LoadLocal(R1, 0);
+  __ tst(R1, Immediate(Smi::kTagSize));
+  __ b(NE, "BC_InvokeMethod");
+
+  // Untag the shift count, but not the value. If the shift
+  // count is greater than 31 (or negative), the shift is going
+  // to misbehave so we have to guard against that.
+  __ asr(R1, R1, Immediate(1));
+  __ cmp(R1, Immediate(31));
+  __ b(HI, "BC_InvokeMethod");
+
+  // Only allow to shift out "sign bits". If we shift
+  // out any other bit, it's an overflow.
+  __ lsl(R2, R0, R1);
+  __ asr(R3, R2, R1);
+  __ cmp(R3, R0);
+  __ b(NE, "BC_InvokeMethod");
+
+  StoreLocal(R2, 1);
+  Drop(1);
+  Dispatch(kInvokeBitShlLength);
 }
 
 void InterpreterGeneratorARM::DoPop() {
@@ -795,7 +850,13 @@ void InterpreterGeneratorARM::DoAllocateUnfold() {
 }
 
 void InterpreterGeneratorARM::DoAllocateBoxed() {
-  Bailout();
+  LoadLocal(R1, 0);
+  __ mov(R0, R4);
+  __ bl("HandleAllocateBoxed");
+  __ cmp(R0, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
+  __ b(EQ, &gc_);
+  StoreLocal(R0, 0);
+  Dispatch(kAllocateBoxedLength);
 }
 
 void InterpreterGeneratorARM::DoNegate() {
@@ -807,19 +868,69 @@ void InterpreterGeneratorARM::DoNegate() {
 }
 
 void InterpreterGeneratorARM::DoStackOverflowCheck() {
-  Bailout();
+  __ ldr(R0, Address(R5, 1));
+  __ ldr(R1, Address(R4, Process::StackLimitOffset()));
+  __ add(R3, R6, Operand(R0, TIMES_4));
+  __ cmp(R1, R3);
+  __ b(LS, &check_stack_overflow_);
+  Dispatch(kStackOverflowCheckLength);
 }
 
 void InterpreterGeneratorARM::DoThrow() {
-  Bailout();
+  // Load object into callee-save register not touched by
+  // save and restore state.
+  LoadLocal(R7, 0);
+  SaveState();
+
+  // Use the stack to store the stack delta initialized to zero.
+  __ sub(SP, SP, Immediate(8));
+  __ add(R2, SP, Immediate(kWordSize));
+  __ mov(R3, Immediate(0));
+  __ str(R3, Address(R2, 0));
+
+  __ mov(R0, R4);
+  __ mov(R1, R7);
+  __ bl("HandleThrow");
+
+  RestoreState();
+
+  __ ldr(R3, Address(SP, kWordSize));
+  __ add(SP, SP, Immediate(8));
+
+  Label unwind;
+  __ tst(R0, R0);
+  __ b(NE, &unwind);
+  __ mov(R0, Immediate(Interpreter::kUncaughtException));
+  __ b(&done_);
+
+  __ Bind(&unwind);
+  __ neg(R3, R3);
+  __ mov(R5, R0);
+  __ add(R6, R6, Operand(R3, TIMES_4));
+  __ add(R6, R6, Immediate(kWordSize));
+
+  StoreLocal(R7, 0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoSubroutineCall() {
-  Bailout();
+  __ ldr(R0, Address(R5, 1));
+  __ ldr(R1, Address(R5, 5));
+
+  // Push the return delta as a tagged smi.
+  ASSERT(Smi::kTag == 0);
+  __ lsl(R1, R1, Immediate(Smi::kTagSize));
+  Push(R1);
+
+  __ add(R5, R5, R0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoSubroutineReturn() {
-  Bailout();
+  Pop(R0);
+  __ lsr(R0, R0, Immediate(Smi::kTagSize));
+  __ sub(R5, R5, R0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoProcessYield() {
@@ -839,11 +950,78 @@ void InterpreterGeneratorARM::DoProcessYield() {
 }
 
 void InterpreterGeneratorARM::DoCoroutineChange() {
-  Bailout();
+  // Load argument into callee-saved register not touched by
+  // SaveState and RestoreState.
+  LoadLocal(R7, 0);
+  // Load coroutine.
+  LoadLocal(R1, 1);
+
+  // Store null in locals.
+  StoreLocal(R9, 0);
+  StoreLocal(R9, 1);
+
+  // Perform call preserving argument in R7.
+  SaveState();
+  __ mov(R0, R4);
+  __ bl("HandleCoroutineChange");
+  RestoreState();
+
+  // Store argument.
+  StoreLocal(R7, 1);
+  Drop(1);
+
+  Dispatch(kCoroutineChangeLength);
 }
 
 void InterpreterGeneratorARM::DoIdentical() {
-  Bailout();
+  LoadLocal(R0, 0);
+  LoadLocal(R1, 1);
+
+  // TODO(ager): For now we bail out if we have two doubles or two
+  // large integers and let the slow interpreter deal with it. These
+  // cases could be dealt with directly here instead.
+  Label fast_case;
+  Label bail_out;
+
+  // If either is a smi they are not both doubles or large integers.
+  __ tst(R0, Immediate(Smi::kTagMask));
+  __ b(EQ, &fast_case);
+  __ tst(R1, Immediate(Smi::kTagMask));
+  __ b(EQ, &fast_case);
+
+  // If they do not have the same type they are not both double or
+  // large integers.
+  __ ldr(R2, Address(R0, HeapObject::kClassOffset - HeapObject::kTag));
+  __ ldr(R2, Address(R2, Class::kInstanceFormatOffset - HeapObject::kTag));
+  __ ldr(R3, Address(R1, HeapObject::kClassOffset - HeapObject::kTag));
+  __ ldr(R3, Address(R3, Class::kInstanceFormatOffset - HeapObject::kTag));
+  __ cmp(R2, R3);
+  __ b(NE, &fast_case);
+
+  int double_type = InstanceFormat::DOUBLE_TYPE;
+  int large_integer_type = InstanceFormat::LARGE_INTEGER_TYPE;
+  int type_field_shift = InstanceFormat::TypeField::shift();
+
+  __ and_(R2, R2, Immediate(InstanceFormat::TypeField::mask()));
+  __ cmp(R2, Immediate(double_type << type_field_shift));
+  __ b(EQ, &bail_out);
+  __ cmp(R2, Immediate(large_integer_type << type_field_shift));
+  __ b(EQ, &bail_out);
+
+  __ Bind(&fast_case);
+  __ cmp(R1, R0);
+  __ str(EQ, R10, Address(R6, -kWordSize));
+  __ str(NE, R11, Address(R6, -kWordSize));
+  Drop(1);
+  Dispatch(kIdenticalLength);
+
+  __ Bind(&bail_out);
+  __ mov(R2, R0);
+  __ mov(R0, R4);
+  __ bl("HandleIdentical");
+  StoreLocal(R0, 1);
+  Drop(1);
+  Dispatch(kIdenticalLength);
 }
 
 void InterpreterGeneratorARM::DoIdenticalNonNumeric() {
@@ -857,11 +1035,54 @@ void InterpreterGeneratorARM::DoIdenticalNonNumeric() {
 }
 
 void InterpreterGeneratorARM::DoEnterNoSuchMethod() {
-  Bailout();
+  // Load the return address from the stack.
+  LoadLocal(R0, 0);
+
+  // Load the selector indirectly through the return address.
+  __ ldr(R0, Address(R0, -4));
+
+  // Decode the arity from the selector.
+  ASSERT(Selector::ArityField::shift() == 0);
+  __ and_(R1, R0, Immediate(Selector::ArityField::mask()));
+  __ neg(R1, R1);
+
+  // Get the receiver from the stack.
+  __ sub(R3, R6, Immediate(kWordSize));
+  __ ldr(R2, Address(R3, Operand(R1, TIMES_4)));
+
+  // Turn the selector into a smi.
+  ASSERT(Smi::kTag == 0);
+  __ lsl(R0, R0, Immediate(Smi::kTagSize));
+
+  // Push receiver and selector (as a smi) on the stack.
+  Push(R0);
+  Push(R2);
+  Push(R0);
+  Dispatch(kEnterNoSuchMethodLength);
 }
 
 void InterpreterGeneratorARM::DoExitNoSuchMethod() {
-  Bailout();
+  Pop(R0);  // Result.
+  Pop(R1);  // Selector.
+  __ lsr(R1, R1, Immediate(Smi::kTagSize));
+  Pop(R5);
+
+  Label done;
+  __ and_(R2, R1, Immediate(Selector::KindField::mask()));
+  __ cmp(R2, Immediate(Selector::SETTER << Selector::KindField::shift()));
+  __ b(NE, &done);
+  LoadLocal(R0, 0);
+
+  __ Bind(&done);
+  ASSERT(Selector::ArityField::shift() == 0);
+  __ and_(R1, R1, Immediate(Selector::ArityField::mask()));
+  __ neg(R1, R1);
+
+  // Drop the arguments from the stack, but leave the receiver.
+  __ add(R6, R6, Operand(R1, TIMES_4));
+
+  StoreLocal(R0, 0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoFrameSize() {
@@ -967,11 +1188,6 @@ void InterpreterGeneratorARM::DoIntrinsicListLength() {
   Dispatch(kInvokeMethodLength);
 }
 
-void InterpreterGeneratorARM::Bailout() {
-  __ mov(R0, Immediate(-1));
-  __ b(&done_);
-}
-
 void InterpreterGeneratorARM::Push(Register reg) {
   StoreLocal(reg, -1);
   __ add(R6, R6, Immediate(1 * kWordSize));
@@ -1028,9 +1244,8 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   __ eor(R3, R2, R7);
   __ ldr(R0, Immediate(LookupCache::kPrimarySize - 1));
   __ and_(R0, R3, R0);
-  __ lsl(R0, R0, Immediate(4));
   __ ldr(R3, Address(R4, Process::PrimaryLookupCacheOffset()));
-  __ add(R0, R3, R0);
+  __ add(R0, R3, Operand(R0, LSL, 4));
 
   // Validate the primary entry.
   __ ldr(R3, Address(R0, OFFSET_OF(LookupCache::Entry, clazz)));
@@ -1118,8 +1333,21 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
   LoadLocal(R5, 0);
 
   if (yield) {
-    // TODO(ager): Implement.
-    Bailout();
+    // Set the result to null and drop the arguments.
+    __ str(R9, Address(R7, 0));
+    __ mov(R6, R7);
+
+    // If the result of calling the native is null, we don't yield.
+    Label dont_yield;
+    __ cmp(R0, R9);
+    __ b(EQ, &dont_yield);
+
+    // Yield to the target port.
+    __ ldr(R3, Address(SP, 1 * kWordSize));
+    __ str(R0, Address(R3, 0));
+    __ mov(R0, Immediate(Interpreter::kTargetYield));
+    __ b(&done_);
+    __ Bind(&dont_yield);
   } else {
     // Store the result in the stack and drop the arguments.
     __ str(R0, Address(R7, 0));
@@ -1266,21 +1494,21 @@ void InterpreterGeneratorARM::SaveState() {
   Push(R5);
 
   // Update top in the stack. Ugh. Complicated.
-  __ ldr(R7, Address(R4, Process::CoroutineOffset()));
-  __ ldr(R8, Address(R7, Coroutine::kStackOffset - HeapObject::kTag));
-  __ sub(R6, R6, R8);
+  __ ldr(R5, Address(R4, Process::CoroutineOffset()));
+  __ ldr(R5, Address(R5, Coroutine::kStackOffset - HeapObject::kTag));
+  __ sub(R6, R6, R5);
   __ sub(R6, R6, Immediate(Stack::kSize - HeapObject::kTag));
   __ lsr(R6, R6, Immediate(1));
-  __ str(R6, Address(R8, Stack::kTopOffset - HeapObject::kTag));
+  __ str(R6, Address(R5, Stack::kTopOffset - HeapObject::kTag));
 }
 
 void InterpreterGeneratorARM::RestoreState() {
   // Load the current stack pointer into R6.
   __ ldr(R6, Address(R4, Process::CoroutineOffset()));
-  __ ldr(R8, Address(R6, Coroutine::kStackOffset - HeapObject::kTag));
-  __ ldr(R7, Address(R8, Stack::kTopOffset - HeapObject::kTag));
-  __ add(R8, R8, Immediate(Stack::kSize - HeapObject::kTag));
-  __ add(R6, R8, Operand(R7, TIMES_2));
+  __ ldr(R6, Address(R6, Coroutine::kStackOffset - HeapObject::kTag));
+  __ ldr(R5, Address(R6, Stack::kTopOffset - HeapObject::kTag));
+  __ add(R6, R6, Immediate(Stack::kSize - HeapObject::kTag));
+  __ add(R6, R6, Operand(R5, TIMES_2));
 
   // Load constants into registers.
   __ ldr(R10, Address(R4, Process::ProgramOffset()));
