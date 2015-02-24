@@ -1343,7 +1343,7 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
     __ b(EQ, &dont_yield);
 
     // Yield to the target port.
-    __ ldr(R3, Address(SP, 1 * kWordSize));
+    __ ldr(R3, Address(SP, 12 * kWordSize));
     __ str(R0, Address(R3, 0));
     __ mov(R0, Immediate(Interpreter::kTargetYield));
     __ b(&done_);
