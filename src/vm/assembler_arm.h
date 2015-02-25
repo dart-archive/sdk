@@ -257,6 +257,8 @@ class Assembler {
 
   void GenerateConstantPool();
 
+  const char* LabelPrefix();
+
  private:
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);

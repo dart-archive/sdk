@@ -21,6 +21,10 @@ void Assembler::DefineLong(const char* name) {
   printf("\t.long %s\n", name);
 }
 
+const char* Assembler::LabelPrefix() {
+  return "";
+}
+
 }  // namespace fletch
 
 #endif  // defined(FLETCH_TARGET_ARM)

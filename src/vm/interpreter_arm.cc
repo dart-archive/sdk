@@ -64,7 +64,7 @@ INTRINSICS_DO(V)
 #undef V
 
   assembler()->Align(4);
-  printf("\nInterpretFast_DispatchTable:\n");
+  printf("\n%sInterpretFast_DispatchTable:\n", assembler()->LabelPrefix());
 #define V(name, format, size, stack_diff, print)        \
   assembler()->DefineLong("BC_" #name);
   BYTECODES_DO(V)

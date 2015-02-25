@@ -124,7 +124,7 @@ void Assembler::Print(const char* format, ...) {
 
         case 's': {
           const char* label = va_arg(arguments, const char*);
-          printf("%s", label);
+          printf("%s%s", LabelPrefix(), label);
           break;
         }
 
