@@ -24,8 +24,8 @@ int MessageBuilder::ComputeUsed() const {
 }
 
 Builder MessageBuilder::InternalInitRoot(int size) {
-  int offset = first_.Allocate(32 + 8 + size);
-  return Builder(&first_, offset + 32 + 8);
+  int offset = first_.Allocate(40 + 8 + size);
+  return Builder(&first_, offset + 40 + 8);
 }
 
 BuilderSegment* MessageBuilder::FindSegmentForBytes(int bytes) {
@@ -120,22 +120,22 @@ int BuilderSegment::Allocate(int bytes) {
 int64_t Builder::InvokeMethod(ServiceId service, MethodId method) {
   BuilderSegment* segment = this->segment();
   if (!segment->HasNext()) {
-    int offset = this->offset() - 40;
+    int offset = this->offset() - 48;
     char* buffer = reinterpret_cast<char*>(segment->At(offset));
 
     // Mark the request as being non-segmented.
-    *reinterpret_cast<int64_t*>(buffer + 32) = 0;
+    *reinterpret_cast<int64_t*>(buffer + 40) = 0;
     ServiceApiInvoke(service, method, buffer, segment->used());
-    return *reinterpret_cast<int64_t*>(buffer + 32);
+    return *reinterpret_cast<int64_t*>(buffer + 40);
   }
 
   // The struct consists of multiple segments, so we send a
   // memory block that contains the addresses and sizes of
   // all of them.
   int segments = segment->builder()->segments();
-  int size = 40 + (segments * 16);
+  int size = 48 + (segments * 16);
   char* buffer = reinterpret_cast<char*>(malloc(size));
-  int offset = 40;
+  int offset = 48;
   do {
     *reinterpret_cast<void**>(buffer + offset) = segment->At(0);
     *reinterpret_cast<int*>(buffer + offset + 8) = segment->used();
@@ -146,7 +146,7 @@ int64_t Builder::InvokeMethod(ServiceId service, MethodId method) {
   // Mark the request as being segmented.
   *reinterpret_cast<int32_t*>(buffer + 32) = segments;
   ServiceApiInvoke(service, method, buffer, size);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 32);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 40);
   free(buffer);
   return result;
 }

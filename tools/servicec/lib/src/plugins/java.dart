@@ -376,12 +376,12 @@ class _JniVisitor extends CcVisitor {
       writeln();
       writeln('static void $name(void* raw) {');
       writeln('  char* buffer = ${cast('char*')}(raw);');
-      writeln('  int result = *${cast('int*')}(buffer + 32);');
-      int offset = 32 + layout.size;
+      writeln('  int result = *${cast('int*')}(buffer + 40);');
+      int offset = 40 + layout.size;
       write('  jobject callback = *${cast('jobject*')}');
-      writeln('(buffer + $offset);');
+      writeln('(buffer + 32);');
       write('  JavaVM* vm = *${cast('JavaVM**')}');
-      writeln('(buffer + $offset + sizeof(void*));');
+      writeln('(buffer + $offset);');
       writeln('  JNIEnv* env = attachCurrentThreadAndGetEnv(vm);');
       writeln('  jclass clazz = env->GetObjectClass(callback);');
       write('  jmethodID methodId = env->GetMethodID');

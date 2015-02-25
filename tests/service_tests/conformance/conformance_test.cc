@@ -65,7 +65,7 @@ static void RunPersonTests() {
 
   PersonBuilder person = builder.initRoot<PersonBuilder>();
   BuildPerson(person, 7);
-  EXPECT_EQ(3120, builder.ComputeUsed());
+  EXPECT_EQ(3128, builder.ComputeUsed());
 
   int age = ConformanceService::getAge(person);
   EXPECT_EQ(140, age);

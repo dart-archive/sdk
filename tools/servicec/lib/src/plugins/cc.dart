@@ -60,7 +60,7 @@ void _generateImplementationFile(String path, Unit unit, String directory) {
 abstract class CcVisitor extends CodeGenerationVisitor {
   CcVisitor(String path) : super(path);
 
-  static const int REQUEST_HEADER_SIZE = 32;
+  static const int REQUEST_HEADER_SIZE = 40;
   static const PRIMITIVE_TYPES = const <String, String> {
     'void'    : 'void',
     'bool'    : 'bool',
@@ -128,7 +128,7 @@ abstract class CcVisitor extends CodeGenerationVisitor {
     int size = REQUEST_HEADER_SIZE + layout.size;
     if (async) {
       write('  static const int kSize = ');
-      writeln('${size} + ${extraArguments.length + 1} * sizeof(void*);');
+      writeln('${size} + ${extraArguments.length} * sizeof(void*);');
     } else {
       writeln('  static const int kSize = ${size};');
     }
@@ -158,10 +158,10 @@ abstract class CcVisitor extends CodeGenerationVisitor {
     }
 
     if (async) {
-      String dataArgument = pointerToArgument(layout.size, 0, 'void*');
+      String dataArgument = pointerToArgument(-8, 0, 'void*');
       writeln('  *$dataArgument = ${cast("void*")}(callback);');
       for (int i = 0; i < extraArguments.length; i++) {
-        String dataArgument = pointerToArgument(layout.size, 1, 'void*');
+        String dataArgument = pointerToArgument(layout.size, i, 'void*');
         String arg = extraArguments[i];
         writeln('  *$dataArgument = ${cast("void*")}($arg);');
       }
@@ -583,8 +583,7 @@ class _ImplementationVisitor extends CcVisitor {
 
         }
       }
-      offset += layout.size;
-      writeln('  cbt callback = *${cast('cbt*')}(buffer + $offset);');
+      writeln('  cbt callback = *${cast('cbt*')}(buffer + ${offset - 8});');
       writeln('  free(buffer);');
       if (type.isVoid) {
         writeln('  callback();');

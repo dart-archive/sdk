@@ -22,28 +22,28 @@ void PerformanceService::tearDown() {
 static const MethodId kEchoId_ = reinterpret_cast<MethodId>(1);
 
 int32_t PerformanceService::echo(int32_t n) {
-  static const int kSize = 40;
+  static const int kSize = 48;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int32_t*>(_buffer + 32) = n;
+  *reinterpret_cast<int32_t*>(_buffer + 40) = n;
   ServiceApiInvoke(service_id_, kEchoId_, _buffer, kSize);
-  return *reinterpret_cast<int64_t*>(_buffer + 32);
+  return *reinterpret_cast<int64_t*>(_buffer + 40);
 }
 
 static void Unwrap_int32_8(void* raw) {
   typedef void (*cbt)(int32_t);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 32);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 40);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
   free(buffer);
   callback(result);
 }
 
 void PerformanceService::echoAsync(int32_t n, void (*callback)(int32_t)) {
-  static const int kSize = 40 + 1 * sizeof(void*);
+  static const int kSize = 48 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int32_t*>(_buffer + 32) = n;
-  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int32_t*>(_buffer + 40) = n;
+  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
   ServiceApiInvokeAsync(service_id_, kEchoId_, Unwrap_int32_8, _buffer, kSize);
 }
 
@@ -56,12 +56,12 @@ int32_t PerformanceService::countTreeNodes(TreeNodeBuilder node) {
 static const MethodId kBuildTreeId_ = reinterpret_cast<MethodId>(3);
 
 TreeNode PerformanceService::buildTree(int32_t n) {
-  static const int kSize = 40;
+  static const int kSize = 48;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int32_t*>(_buffer + 32) = n;
+  *reinterpret_cast<int32_t*>(_buffer + 40) = n;
   ServiceApiInvoke(service_id_, kBuildTreeId_, _buffer, kSize);
-  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 40);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
   return TreeNode(segment, 8);
@@ -70,19 +70,19 @@ TreeNode PerformanceService::buildTree(int32_t n) {
 static void Unwrap_TreeNode_8(void* raw) {
   typedef void (*cbt)(TreeNode);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 32);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 40);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
   free(buffer);
   callback(TreeNode(segment, 8));
 }
 
 void PerformanceService::buildTreeAsync(int32_t n, void (*callback)(TreeNode)) {
-  static const int kSize = 40 + 1 * sizeof(void*);
+  static const int kSize = 48 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int32_t*>(_buffer + 32) = n;
-  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int32_t*>(_buffer + 40) = n;
+  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
   ServiceApiInvokeAsync(service_id_, kBuildTreeId_, Unwrap_TreeNode_8, _buffer, kSize);
 }
 
