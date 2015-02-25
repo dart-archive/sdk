@@ -49,11 +49,11 @@ abstract class TodoMVCService {
         _postResult.icall$1(request);
         break;
       case _DELETE_ITEM_METHOD_ID:
-        _impl.deleteItem(request.getInt32(32));
+        _impl.deleteItem(request.getInt32(40));
         _postResult.icall$1(request);
         break;
       case _COMPLETE_ITEM_METHOD_ID:
-        _impl.completeItem(request.getInt32(32));
+        _impl.completeItem(request.getInt32(40));
         _postResult.icall$1(request);
         break;
       case _CLEAR_ITEMS_METHOD_ID:
@@ -65,7 +65,7 @@ abstract class TodoMVCService {
         PatchSetBuilder builder = mb.initRoot(new PatchSetBuilder(), 8);
         _impl.sync(builder);
         var result = getResultMessage(builder);
-        request.setInt64(32, result);
+        request.setInt64(40, result);
         _postResult.icall$1(request);
         break;
       default:

@@ -28,74 +28,92 @@ void TodoMVCService::createItem(StrBuilder title) {
 static const MethodId kDeleteItemId_ = reinterpret_cast<MethodId>(2);
 
 void TodoMVCService::deleteItem(int32_t id) {
-  static const int kSize = 40;
+  static const int kSize = 48;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int32_t*>(_buffer + 32) = id;
+  *reinterpret_cast<int32_t*>(_buffer + 40) = id;
   ServiceApiInvoke(service_id_, kDeleteItemId_, _buffer, kSize);
 }
 
 static void Unwrap_void_8(void* raw) {
   typedef void (*cbt)();
   char* buffer = reinterpret_cast<char*>(raw);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
   free(buffer);
   callback();
 }
 
 void TodoMVCService::deleteItemAsync(int32_t id, void (*callback)()) {
-  static const int kSize = 40 + 1 * sizeof(void*);
+  static const int kSize = 48 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int32_t*>(_buffer + 32) = id;
-  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int32_t*>(_buffer + 40) = id;
+  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
   ServiceApiInvokeAsync(service_id_, kDeleteItemId_, Unwrap_void_8, _buffer, kSize);
 }
 
 static const MethodId kCompleteItemId_ = reinterpret_cast<MethodId>(3);
 
 void TodoMVCService::completeItem(int32_t id) {
-  static const int kSize = 40;
+  static const int kSize = 48;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int32_t*>(_buffer + 32) = id;
+  *reinterpret_cast<int32_t*>(_buffer + 40) = id;
   ServiceApiInvoke(service_id_, kCompleteItemId_, _buffer, kSize);
 }
 
 void TodoMVCService::completeItemAsync(int32_t id, void (*callback)()) {
-  static const int kSize = 40 + 1 * sizeof(void*);
+  static const int kSize = 48 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int32_t*>(_buffer + 32) = id;
-  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int32_t*>(_buffer + 40) = id;
+  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
   ServiceApiInvokeAsync(service_id_, kCompleteItemId_, Unwrap_void_8, _buffer, kSize);
 }
 
 static const MethodId kClearItemsId_ = reinterpret_cast<MethodId>(4);
 
 void TodoMVCService::clearItems() {
-  static const int kSize = 40;
+  static const int kSize = 48;
   char _bits[kSize];
   char* _buffer = _bits;
   ServiceApiInvoke(service_id_, kClearItemsId_, _buffer, kSize);
 }
 
 void TodoMVCService::clearItemsAsync(void (*callback)()) {
-  static const int kSize = 40 + 1 * sizeof(void*);
+  static const int kSize = 48 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
   ServiceApiInvokeAsync(service_id_, kClearItemsId_, Unwrap_void_8, _buffer, kSize);
 }
 
 static const MethodId kSyncId_ = reinterpret_cast<MethodId>(5);
 
 PatchSet TodoMVCService::sync() {
-  static const int kSize = 40;
+  static const int kSize = 48;
   char _bits[kSize];
   char* _buffer = _bits;
   ServiceApiInvoke(service_id_, kSyncId_, _buffer, kSize);
-  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 32);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 40);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
   return PatchSet(segment, 8);
+}
+
+static void Unwrap_PatchSet_8(void* raw) {
+  typedef void (*cbt)(PatchSet);
+  char* buffer = reinterpret_cast<char*>(raw);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 40);
+  char* memory = reinterpret_cast<char*>(result);
+  Segment* segment = MessageReader::GetRootSegment(memory);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  free(buffer);
+  callback(PatchSet(segment, 8));
+}
+
+void TodoMVCService::syncAsync(void (*callback)(PatchSet)) {
+  static const int kSize = 48 + 0 * sizeof(void*);
+  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
+  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
+  ServiceApiInvokeAsync(service_id_, kSyncId_, Unwrap_PatchSet_8, _buffer, kSize);
 }
 
 StrBuilder NodeBuilder::initStr() {

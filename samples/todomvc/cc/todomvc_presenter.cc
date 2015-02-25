@@ -9,7 +9,7 @@ static void VoidCallback() {}
 void TodoMVCPresenter::createItem(char* title) {
   int length = 0;
   while (title[length] != '\0') ++length;
-  int size = 32 + 8 + StrBuilder::kSize + length;
+  int size = 40 + 8 + StrBuilder::kSize + length;
   MessageBuilder builder(size);
   StrBuilder str = builder.initRoot<StrBuilder>();
   List<uint8_t> chars = str.initChars(length);

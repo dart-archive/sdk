@@ -6,6 +6,7 @@
 #import "AddTodoItemViewController.h"
 #import "TodoItem.h"
 
+#include "todomvc_service.h"
 #include "todomvc_presenter.h"
 
 // Host-side implementation of the todo-list presenter.
@@ -20,6 +21,20 @@ public:
   }
 
   NSArray* items() { return items_; }
+
+  // Custom iOS createItem to avoid a memcpy of the string.
+  // TODO: Implement direct support for NSString in the IDL compiler.
+  void createItem(NSString* title) {
+    int length = [title length] + 1;
+    // TODO: Avoid manually calculating the message size.
+    int size = 40 + 8 + StrBuilder::kSize + length;
+    MessageBuilder builder(size);
+    StrBuilder str = builder.initRoot<StrBuilder>();
+    encodeStr(title, &str);
+
+    // Should be an async call once supported for strings/structs.
+    TodoMVCService::createItem(str);
+  }
 
 protected:
   // Patch apply callbacks.
@@ -74,17 +89,22 @@ private:
     }
   }
 
+  void encodeStr(NSString* string, StrBuilder* builder) {
+    // Encoded length is string length plus null termination.
+    int length = [string length] + 1;
+    List<uint8_t> chars = builder->initChars(length);
+    [string getCString:reinterpret_cast<char*>(chars.data())
+             maxLength:length
+              encoding:NSASCIIStringEncoding];
+  }
+
   NSString* decodeStr(Str str) {
     List<uint8_t> chars = str.getChars();
     unsigned length = chars.length();
-    unichar* tmp = new unichar[length];
-    for (int i = 0; i < chars.length(); ++i) {
-      tmp[i] = chars[i];
-    }
     return [[NSString alloc]
-            initWithCharactersNoCopy:tmp
-                              length:length
-                        freeWhenDone:YES];
+            initWithBytes:chars.data()
+                   length:length
+                 encoding:NSASCIIStringEncoding];
   }
 
   TodoItem* newItem(const Node& node) {
@@ -117,6 +137,8 @@ private:
 @interface TodoListTableViewController ()
 
 @property TodoMVCPresenterImpl *impl;
+@property int ticks;
+@property NSDate* start;
 
 @end
 
@@ -126,7 +148,16 @@ private:
   [super viewDidLoad];
   // Instantiate host-side implementation of the presenter.
   self.impl = new TodoMVCPresenterImpl(self);
-  // Link display refresh to syncronization of the presenter.
+
+  // Do the initial synchronization before linking to the refresh rate.
+  NSDate* date = [NSDate date];
+  self.impl->sync();
+  double time = -[date timeIntervalSinceNow];
+  NSLog(@"Initial sync: %f s", time);
+
+  self.ticks = 0;
+  self.start = [NSDate date];
+  // Link display refresh to synchronization of the presenter.
   CADisplayLink* link = [CADisplayLink
                          displayLinkWithTarget:self
                                       selector:@selector(refreshDisplay:)];
@@ -135,6 +166,13 @@ private:
 }
 
 - (void)refreshDisplay:(CADisplayLink *)sender {
+  if (++self.ticks % 60 == 0) {
+    double time = -[self.start timeIntervalSinceNow];
+    if (time > 1.1) {
+      NSLog(@"60fps miss: %f s", time);
+    }
+    self.start = [NSDate date];
+  }
   self.impl->sync();
 }
 
@@ -147,11 +185,7 @@ private:
   AddTodoItemViewController *source = [segue sourceViewController];
   TodoItem *item = source.todoItem;
   if (item == nil) return;
-  char title[256];
-  [item.itemName getCString:title
-                  maxLength:256
-                   encoding:NSASCIIStringEncoding];
-  self.impl->createItem(title);
+  self.impl->createItem(item.itemName);
 }
 
 #pragma mark - Table view data source
