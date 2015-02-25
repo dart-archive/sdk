@@ -7,22 +7,22 @@ library struct;
 import "dart:ffi";
 
 Reader getRoot(Reader reader, Foreign request) {
-  if (request.getInt32(32) == 1) {
-    return getSegmentedRoot(reader, request);
-  } else {
+  int segments = request.getInt32(32);
+  if (segments == 0) {
     MessageReader messageReader = new MessageReader();
     Segment segment = new Segment(messageReader, request);
     messageReader.segments.add(segment);
     reader._segment = segment;
     reader._offset = 40;
     return reader;
+  } else {
+    return getSegmentedRoot(reader, request, segments);
   }
 }
 
-Reader getSegmentedRoot(Reader reader, Foreign request) {
+Reader getSegmentedRoot(Reader reader, Foreign request, int segments) {
   MessageReader messageReader = new MessageReader();
-  int segments = request.getInt32(40);
-  int offset = 40 + 8;
+  int offset = 40;
   for (int i = 0; i < segments; i++) {
     int address = (Foreign.bitsPerMachineWord == 32)
         ? request.getUint32(offset)
@@ -54,8 +54,7 @@ int getResultMessage(Builder builder) {
   int size = 8 + (segments * 16);
   Foreign buffer = new Foreign.allocated(size);
   // Mark the result as being segmented.
-  buffer.setInt32(0, 1);
-  buffer.setInt32(4, segments);
+  buffer.setInt32(0, segments);
   int offset = 8;
   do {
     buffer.setInt64(offset, segment.memory.value);

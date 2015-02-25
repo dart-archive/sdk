@@ -21,6 +21,7 @@ class PerformanceService {
   static void echoAsync(int32_t n, void (*callback)(int32_t));
   static int32_t countTreeNodes(TreeNodeBuilder node);
   static TreeNode buildTree(int32_t n);
+  static void buildTreeAsync(int32_t n, void (*callback)(TreeNode));
 };
 
 class TreeNode : public Reader {

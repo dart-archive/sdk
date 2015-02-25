@@ -55,16 +55,13 @@ MessageReader::~MessageReader() {
 }
 
 Segment* MessageReader::GetRootSegment(char* memory) {
-  // TODO(ager): Just have the segment count instead of a separate
-  // segmented marker.
-  bool segmented = (*reinterpret_cast<int*>(memory) == 1);
-  if (segmented) {
-    int segments = *reinterpret_cast<int*>(memory + 4);
+  int32_t segments = *reinterpret_cast<int32_t*>(memory);
+  if (segments == 0) {
+    int32_t size = *reinterpret_cast<int32_t*>(memory + 4);
+    return new Segment(memory, size);
+  } else {
     MessageReader* reader = new MessageReader(segments, memory + 8);
     return new Segment(reader);
-  } else {
-    int size = *reinterpret_cast<int*>(memory + 4);
-    return new Segment(memory, size);
   }
 }
 
@@ -136,10 +133,9 @@ int64_t Builder::InvokeMethod(ServiceId service, MethodId method) {
   // memory block that contains the addresses and sizes of
   // all of them.
   int segments = segment->builder()->segments();
-  int size = 40 + 8 + (segments * 16);
+  int size = 40 + (segments * 16);
   char* buffer = reinterpret_cast<char*>(malloc(size));
-  *reinterpret_cast<int64_t*>(buffer + 40) = segments;
-  int offset = 40 + 8;
+  int offset = 40;
   do {
     *reinterpret_cast<void**>(buffer + offset) = segment->At(0);
     *reinterpret_cast<int*>(buffer + offset + 8) = segment->used();
@@ -148,7 +144,7 @@ int64_t Builder::InvokeMethod(ServiceId service, MethodId method) {
   } while (segment != NULL);
 
   // Mark the request as being segmented.
-  *reinterpret_cast<int64_t*>(buffer + 32) = 1;
+  *reinterpret_cast<int32_t*>(buffer + 32) = segments;
   ServiceApiInvoke(service, method, buffer, size);
   int64_t result = *reinterpret_cast<int64_t*>(buffer + 32);
   free(buffer);
