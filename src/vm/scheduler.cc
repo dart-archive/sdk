@@ -202,6 +202,7 @@ bool Scheduler::Run() {
   // Start initial thread.
   while (!thread_pool_.TryStartThread(RunThread, this, 1)) { }
   int thread_index = 0;
+  uint64 next_preempt = GetNextPreemptTime();
   while (true) {
     preempt_monitor_->Lock();
     // If we are done, bail out.
@@ -209,14 +210,17 @@ bool Scheduler::Run() {
       preempt_monitor_->Unlock();
       break;
     }
-    int milliseconds = GetPreemptInterval();
-    preempt_monitor_->Wait(milliseconds);
+
+    bool preempt = preempt_monitor_->WaitUntil(next_preempt) == ETIMEDOUT;
     preempt_monitor_->Unlock();
 
-    // Clamp the thread_index to the number of current threads.
-    if (thread_index >= thread_count_) thread_index = 0;
-    PreemptThreadProcess(thread_index);
-    thread_index++;
+    if (preempt) {
+      // Clamp the thread_index to the number of current threads.
+      if (thread_index >= thread_count_) thread_index = 0;
+      PreemptThreadProcess(thread_index);
+      thread_index++;
+      next_preempt = GetNextPreemptTime();
+    }
   }
   thread_pool_.JoinAll();
 
@@ -240,10 +244,11 @@ void Scheduler::PreemptThreadProcess(int thread_id) {
   }
 }
 
-int Scheduler::GetPreemptInterval() {
+uint64 Scheduler::GetNextPreemptTime() {
   // Wait between 1 and 100 ms.
   int current_threads = Utils::Maximum<int>(1, thread_count_);
-  return Utils::Maximum(1, 100 / current_threads);
+  uint64 now = Platform::GetMicroseconds();
+  return now + Utils::Maximum(1, 100 / current_threads) * 1000L;
 }
 
 void Scheduler::EnqueueProcessAndNotifyThreads(ThreadState* thread_state,

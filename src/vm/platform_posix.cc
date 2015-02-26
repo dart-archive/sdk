@@ -172,11 +172,15 @@ class PosixMonitor : public Monitor {
 
   int Wait() { return pthread_cond_wait(&cond_, &mutex_); }
 
-  int Wait(int milliseconds) {
+  int Wait(uint64 microseconds) {
+    uint64 us = Platform::GetMicroseconds() + microseconds;
+    return WaitUntil(us);
+  }
+
+  int WaitUntil(uint64 microseconds_since_epoch) {
     timespec ts;
-    uint64 us = Platform::GetMicroseconds() + milliseconds * 1000;
-    ts.tv_sec = us / 1000000;
-    ts.tv_nsec = (us % 1000000) * 1000;
+    ts.tv_sec = microseconds_since_epoch / 1000000;
+    ts.tv_nsec = (microseconds_since_epoch % 1000000) * 1000;
     return pthread_cond_timedwait(&cond_, &mutex_, &ts);
   }
 
