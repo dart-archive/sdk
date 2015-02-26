@@ -218,6 +218,7 @@ regexp/norepeat_test: Fail
 regexp/overflow_test: Fail
 regexp/parentheses_test: Fail
 regexp/pcre-test-4_test: Fail
+regexp/pcre_test: Fail
 regexp/quantified-assertions_test: Fail
 regexp/range-bound-ffff_test: Fail
 regexp/ranges-and-escaped-hyphens_test: Fail
@@ -299,12 +300,3 @@ uri_path_test: Fail
 uri_query_test: Crash
 uri_scheme_test: Fail
 uri_test: CompileTimeError
-
-[ $arch == ia32 ]
-regexp/pcre_test: Fail
-
-[ $arch == x64 ]
-regexp/pcre_test: Crash
-
-[ $arch == x64 && $asan ]
-regexp/pcre_test: CompileTimeError
