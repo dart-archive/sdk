@@ -211,10 +211,10 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     int index = ReadInt32(1);
     Object* value = process()->statics()->get(index);
     if (value->IsInitializer()) {
-      if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
       Function* target = Initializer::cast(value)->function();
       PushReturnAddress(kLoadStaticInitLength);
       Goto(target->bytecode_address_for(0));
+      if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
     } else {
       Push(value);
       Advance(kLoadStaticInitLength);
@@ -306,21 +306,21 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeMethod);
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
     int selector = ReadInt32(1);
     int arity = Selector::ArityField::decode(selector);
     Object* receiver = Local(arity);
     PushReturnAddress(kInvokeMethodLength);
     Function* target = process()->LookupEntry(receiver, selector)->target;
     Goto(target->bytecode_address_for(0));
+    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeStatic);
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
     int index = ReadInt32(1);
     Function* target = program()->static_method_at(index);
     PushReturnAddress(kInvokeStaticLength);
     Goto(target->bytecode_address_for(0));
+    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeFactory);
@@ -328,10 +328,10 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeStaticUnfold);
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
     Function* target = Function::cast(ReadConstant());
     PushReturnAddress(kInvokeStaticLength);
     Goto(target->bytecode_address_for(0));
+    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeFactoryUnfold);

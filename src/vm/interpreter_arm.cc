@@ -370,13 +370,13 @@ void InterpreterGeneratorARM::DoLoadStaticInit() {
   __ b(NE, &done);
 
   // Invoke the initializer function.
-  CheckStackOverflow(0);
   __ ldr(R0, Address(R0, Initializer::kFunctionOffset - HeapObject::kTag));
   __ add(R5, R5, Immediate(kInvokeMethodLength));
   Push(R5);
 
   // Jump to the first bytecode in the initializer function.
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+  CheckStackOverflow(0);
   Dispatch(0);
 
   __ Bind(&done);
@@ -1215,8 +1215,6 @@ void InterpreterGeneratorARM::Drop(int n) {
 }
 
 void InterpreterGeneratorARM::InvokeMethod(bool test) {
-  if (!test) CheckStackOverflow(0);
-
   // Get the selector from the bytecodes.
   __ ldr(R7, Address(R5, 1));
 
@@ -1286,6 +1284,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
 
     // Jump to the first bytecode in the target method.
     __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+    CheckStackOverflow(0);
     Dispatch(0);
   }
 
@@ -1380,8 +1379,6 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
 }
 
 void InterpreterGeneratorARM::InvokeStatic(bool unfolded) {
-  CheckStackOverflow(0);
-
   if (unfolded) {
     __ ldr(R1, Address(R5, 1));
     __ ldr(R0, Address(R5, Operand(R1, TIMES_1)));
@@ -1399,6 +1396,7 @@ void InterpreterGeneratorARM::InvokeStatic(bool unfolded) {
 
   // Jump to the first bytecode in the target method.
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+  CheckStackOverflow(0);
   Dispatch(0);
 }
 

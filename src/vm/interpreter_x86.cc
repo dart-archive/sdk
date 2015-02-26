@@ -360,13 +360,13 @@ void InterpreterGeneratorX86::DoLoadStaticInit() {
   __ j(NOT_EQUAL, &done);
 
   // Invoke the initializer function.
-  CheckStackOverflow(0);
   __ movl(EAX, Address(EAX, Initializer::kFunctionOffset - HeapObject::kTag));
   __ addl(ESI, Immediate(kInvokeMethodLength));
   Push(ESI);
 
   // Jump to the first bytecode in the initializer function.
   __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
+  CheckStackOverflow(0);
   Dispatch(0);
 
   __ Bind(&done);
@@ -1297,8 +1297,6 @@ void InterpreterGeneratorX86::Allocate(bool unfolded) {
 }
 
 void InterpreterGeneratorX86::InvokeMethod(bool test) {
-  if (!test) CheckStackOverflow(0);
-
   // Get the selector from the bytecodes.
   __ movl(EDX, Address(ESI, 1));
 
@@ -1376,6 +1374,7 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
 
     // Jump to the first bytecode in the target method.
     __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
+    CheckStackOverflow(0);
     Dispatch(0);
   }
 
@@ -1400,8 +1399,6 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
 }
 
 void InterpreterGeneratorX86::InvokeStatic(bool unfolded) {
-  CheckStackOverflow(0);
-
   if (unfolded) {
     __ movl(EAX, Address(ESI, 1));
     __ movl(EAX, Address(ESI, EAX, TIMES_1));
@@ -1418,6 +1415,7 @@ void InterpreterGeneratorX86::InvokeStatic(bool unfolded) {
 
   // Jump to the first bytecode in the target method.
   __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
+  CheckStackOverflow(0);
   Dispatch(0);
 }
 
