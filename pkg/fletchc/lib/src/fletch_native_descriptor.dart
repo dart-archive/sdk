@@ -20,13 +20,15 @@ class FletchNativeDescriptor {
 
   String toString() => "FletchNativeDescriptor($enumName, $cls, $name, $index)";
 
-  static Map<String, FletchNativeDescriptor> decode(String jsonData) {
-    List jsonObjects = JSON.decode(jsonData);
-    var result = <String, FletchNativeDescriptor>{};
+  static void decode(
+      String jsonData,
+      Map<String, FletchNativeDescriptor> natives,
+      Map<String, String> names) {
+    Map jsonObjects = JSON.decode(jsonData);
     int index = 0;
-    for (Map jsonObject in jsonObjects) {
-      String cls = jsonObject['class'];
-      String name = jsonObject['name'];
+    for (Map native in jsonObjects['natives']) {
+      String cls = native['class'];
+      String name = native['name'];
       String key;
       if (cls == "<none>") {
         cls = null;
@@ -35,16 +37,18 @@ class FletchNativeDescriptor {
           // For private top-level methods, create a public version as well.
           // TODO(ahe): Modify the VM table of natives.
           String public = name.substring(1);
-          result[public] =
+          natives[public] =
               new FletchNativeDescriptor(
-                  jsonObject['enum'], cls, public, index);
+                  native['enum'], cls, public, index);
         }
       } else {
         key = '$cls.$name';
       }
-      result[key] =
-          new FletchNativeDescriptor(jsonObject['enum'], cls, name, index++);
+      natives[key] =
+          new FletchNativeDescriptor(native['enum'], cls, name, index++);
     }
-    return result;
+    for (Map name in jsonObjects['names']) {
+      names[name['name']] = name['value'];
+    }
   }
 }

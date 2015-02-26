@@ -7,6 +7,7 @@
 
 #include "src/shared/assert.h"
 
+#include "src/shared/names.h"
 #include "src/shared/natives.h"
 
 namespace fletch {
@@ -24,7 +25,7 @@ static int Main(int argc, char** argv) {
   }
 
   const char* prefix = "";
-  fprintf(output, "[\n");
+  fprintf(output, "{\"natives\": [\n");
 #define N(e, c, n) \
   fprintf(output, "%s  {\n", prefix); \
   fprintf(output, "    \"enum\": \"%s\",\n", #e); \
@@ -34,7 +35,18 @@ static int Main(int argc, char** argv) {
   prefix = ",\n";
 NATIVES_DO(N)
 #undef N
+  fprintf(output, "\n], \"names\": [\n");
+  prefix = "";
+#define N(n, v) \
+  fprintf(output, "%s  {\n", prefix); \
+  fprintf(output, "    \"name\": \"%s\",\n", #n); \
+  fprintf(output, "    \"value\": \"%s\"\n", v); \
+  fprintf(output, "  }"); \
+  prefix = ",\n";
+NAMES_LIST(N)
+#undef N
   fprintf(output, "\n]\n");
+  fprintf(output, "}\n");
 
   if (fclose(output) != 0) {
     fprintf(stderr, "%s: Unable to close \"%s\": %s\n",

@@ -61,6 +61,8 @@ class FletchContext {
 
   Map<String, FletchNativeDescriptor> nativeDescriptors;
 
+  Map<String, String> names;
+
   Map<FieldElement, int> staticIndices = new Map<FieldElement, int>();
 
   Map<String, id> symbolIds = new Map<String, id>();
@@ -69,6 +71,14 @@ class FletchContext {
   FletchContext(this.compiler);
 
   FletchBackend get backend => compiler.backend;
+
+  void setNames(Map<String, String> names) {
+    // Generate symbols of the values.
+    for (String name in names.values) {
+      getSymbolId(name);
+    }
+    this.names = names;
+  }
 
   int getStaticFieldIndex(FieldElement element, Element referrer) {
     return staticIndices.putIfAbsent(element, () => staticIndices.length);

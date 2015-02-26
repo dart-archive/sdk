@@ -176,7 +176,12 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
         }
         data = UTF8.decode(data);
       }
-      _compiler.context.nativeDescriptors = FletchNativeDescriptor.decode(data);
+      Map<String, FletchNativeDescriptor> natives =
+          <String, FletchNativeDescriptor>{};
+      Map<String, String> names = <String, String>{};
+      FletchNativeDescriptor.decode(data, natives, names);
+      _compiler.context.nativeDescriptors = natives;
+      _compiler.context.setNames(names);
       FletchBackend backend = _compiler.backend;
       return _compiler.run(script).then((_) => backend.commands);
     });

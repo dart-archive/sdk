@@ -94,6 +94,8 @@ class FletchBackend extends Backend {
   final Map<ClassElement, CompiledClass> compiledClasses =
       <ClassElement, CompiledClass>{};
 
+  final Set<ClassElement> builtinClasses = new Set<ClassElement>();
+
   int nextMethodId = 0;
 
   List<Command> commands;
@@ -168,23 +170,26 @@ class FletchBackend extends Backend {
     fletchExternalInvokeMain = findExternal('invokeMain');
     fletchExternalYield = findExternal('yield');
 
+    builtinClasses.add(compiler.objectClass);
     registerClassElement(compiler.objectClass);
 
-    ClassElement loadImplementationClass(String name) {
+    ClassElement loadBuiltinClass(String name) {
       var classImpl = fletchSystemLibrary.findLocal(name);
       if (classImpl == null) {
         compiler.internalError(
             fletchSystemLibrary, "Internal class '$name' not found.");
         return null;
       }
+      registerClassElement(classImpl);
+      builtinClasses.add(classImpl);
       // TODO(ahe): Register in ResolutionCallbacks.
       registry.registerInstantiatedClass(classImpl);
       return classImpl;
     }
 
-    smiClass = loadImplementationClass("_Smi");
-    mintClass = loadImplementationClass("_Mint");
-    stringClass = loadImplementationClass("String");
+    smiClass = loadBuiltinClass("_Smi");
+    mintClass = loadBuiltinClass("_Mint");
+    stringClass = loadBuiltinClass("String");
   }
 
   ClassElement get stringImplementation => stringClass;
@@ -418,16 +423,11 @@ class FletchBackend extends Backend {
 
     for (CompiledClass compiledClass in compiledClasses.values) {
       ClassElement element = compiledClass.element;
-      if (element == stringClass) {
-        commands.add(new PushBuiltinClass(14, 0));
-      } else if (element == smiClass) {
-        commands.add(new PushBuiltinClass(6, 0));
-      } else if (element == mintClass) {
-        commands.add(new PushBuiltinClass(7, 0));
-      } else if (element == compiler.objectClass) {
-        commands.add(new PushBuiltinClass(1, 0));
+      if (builtinClasses.contains(element)) {
+        int nameId = context.getSymbolId(element.name);
+        commands.add(new PushBuiltinClass(nameId, compiledClass.fields));
       } else {
-        commands.add(new PushNewClass(0));
+        commands.add(new PushNewClass(compiledClass.fields));
       }
 
       commands.add(const Dup());
