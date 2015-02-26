@@ -8,19 +8,5 @@
       '../../',
     ],
   },
-  'targets': [
-    {
-      'target_name': 'buildbot_sample',
-      'type': 'executable',
-      'dependencies': [
-        '../../src/vm/vm.gyp:fletch_vm',
-      ],
-      'sources': [
-        'cc/struct.cc',           # generated
-        'cc/struct.h',            # generated
-        'cc/buildbot_service.cc', # generated
-        'cc/buildbot_service.h',  # generated
-      ],
-    },
-  ],
+  'targets': [],
 }

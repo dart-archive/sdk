@@ -393,62 +393,6 @@
       ],
     },
     {
-      'target_name': 'run_buildbot_sample',
-      # Note: this target_name needs to be different from its dependency.
-      # This is due to the ninja GYP generator which doesn't generate unique
-      # names.
-      'type': 'none',
-      'dependencies': [
-        'src/vm/vm.gyp:fletch',
-        'samples/buildbot/buildbot.gyp:buildbot_sample',
-        'src/compiler/compiler.gyp:fletchc',
-        'copy_asan',
-      ],
-      'actions': [
-        {
-          'action_name': 'generate_buildbot_snapshot',
-          'command': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
-            'samples/buildbot/buildbot.dart',
-          ],
-          'inputs': [
-            '<@(_command)',
-            '<(mac_asan_dylib)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'fletchc'
-            '<(EXECUTABLE_SUFFIX)',
-            # TODO(ahe): Also depend on .dart files in the core libraries.
-	    'samples/buildbot/dart/buildbot_service.dart',
-	    'samples/buildbot/dart/struct.dart',
-            'samples/buildbot/buildbot_impl.dart',
-          ],
-          'outputs': [
-            '<(SHARED_INTERMEDIATE_DIR)/buildbot.snapshot',
-          ],
-          'action': [
-            '<@(_command)', '--out=<(SHARED_INTERMEDIATE_DIR)/buildbot.snapshot',
-          ],
-        },
-        {
-          'action_name': 'run_buildbot_sample',
-          'inputs': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'buildbot_sample'
-            '<(EXECUTABLE_SUFFIX)',
-            '<(SHARED_INTERMEDIATE_DIR)/buildbot.snapshot',
-          ],
-          'outputs': [
-            '<(PRODUCT_DIR)/test_outcomes/buildbot_sample.pass',
-          ],
-          'action': [
-            "bash", "-c",
-            "<(_inputs) && LANG=POSIX date '+Test passed on %+' > "
-            "<(_outputs)",
-          ],
-        },
-      ],
-    },    
-    {
       'target_name': 'copy_asan',
       'type': 'none',
       'conditions': [
