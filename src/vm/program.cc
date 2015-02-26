@@ -712,8 +712,7 @@ bool Program::RunMainInNewProcess() {
   // TODO(ager): GC for testing only.
   CollectGarbage();
 
-  Scheduler scheduler;
-  scheduler.ScheduleProgram(this);
+  if (scheduler() == NULL) return false;
 
   Process* process = SpawnProcess();
   Function* entry = process->entry();
@@ -725,8 +724,8 @@ bool Program::RunMainInNewProcess() {
   stack->set(1, NULL);
   stack->set(2, reinterpret_cast<Object*>(bcp));
   stack->set_top(2);
-  scheduler.EnqueueProcess(process);
-  return scheduler.Run();
+  scheduler()->EnqueueProcess(process);
+  return scheduler()->Run();
 }
 
 void Program::IterateRoots(PointerVisitor* visitor) {

@@ -39,6 +39,7 @@ Session::Session(Connection* connection)
 
 Session::~Session() {
   delete connection_;
+  delete program_->scheduler();
   delete program_;
   delete main_thread_monitor_;
   for (int i = 0; i < maps_.length(); ++i) delete maps_[i];
@@ -47,6 +48,10 @@ Session::~Session() {
 
 void Session::Initialize() {
   program_ = new Program();
+
+  Scheduler* scheduler = new Scheduler();
+  scheduler->ScheduleProgram(program_);
+
   program()->Initialize();
   program()->AddSession(this);
 }
@@ -601,6 +606,11 @@ void Session::CommitChangeStatics(Array* change) {
 }
 
 void Session::CommitChanges(int count) {
+  Scheduler* scheduler = program()->scheduler();
+  if (!scheduler->StopProgram(program())) {
+    FATAL("Failed to stop program, for committing changes\n");
+  }
+
   ASSERT(count == changes_.length());
   for (int i = 0; i < count; i++) {
     Array* array = Array::cast(changes_[i]);
@@ -624,6 +634,8 @@ void Session::CommitChanges(int count) {
     }
   }
   changes_.Clear();
+
+  scheduler->ResumeProgram(program());
 }
 
 void Session::DiscardChanges() {

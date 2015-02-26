@@ -10,6 +10,7 @@
 #include "src/vm/ffi.h"
 #include "src/vm/list.h"
 #include "src/vm/program.h"
+#include "src/vm/scheduler.h"
 #include "src/vm/snapshot.h"
 
 namespace fletch {
@@ -22,6 +23,8 @@ static bool RunSnapshot(List<uint8> bytes) {
   if (IsSnapshot(bytes)) {
     SnapshotReader reader(bytes);
     Program* program = reader.ReadProgram();
+    Scheduler scheduler;
+    scheduler.ScheduleProgram(program);
     bool success = program->RunMainInNewProcess();
     return success;
   }
