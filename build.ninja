@@ -40,5 +40,4 @@ build $
         src/shared/shared.gyp $
         src/vm/vm.gyp $
         tests/service_tests/service_tests.gyp $
-        samples/todomvc/todomvc.gyp $
-        samples/buildbot/buildbot.gyp
+        samples/todomvc/todomvc.gyp
