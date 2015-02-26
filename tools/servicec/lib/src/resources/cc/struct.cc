@@ -144,7 +144,7 @@ int64_t Builder::InvokeMethod(ServiceId service, MethodId method) {
   } while (segment != NULL);
 
   // Mark the request as being segmented.
-  *reinterpret_cast<int32_t*>(buffer + 32) = segments;
+  *reinterpret_cast<int32_t*>(buffer + 40) = segments;
   ServiceApiInvoke(service, method, buffer, size);
   int64_t result = *reinterpret_cast<int64_t*>(buffer + 40);
   free(buffer);

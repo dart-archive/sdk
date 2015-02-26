@@ -127,6 +127,7 @@ class PrimitiveList {
       : data_(reinterpret_cast<T*>(segment->At(offset))),
         length_(length) { }
 
+  T* data() { return data_; }
   int length() const { return length_; }
 
   T& operator[](int index) {

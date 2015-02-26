@@ -7,7 +7,7 @@ library struct;
 import "dart:ffi";
 
 Reader getRoot(Reader reader, Foreign request) {
-  int segments = request.getInt32(32);
+  int segments = request.getInt32(40);
   if (segments == 0) {
     MessageReader messageReader = new MessageReader();
     Segment segment = new Segment(messageReader, request);
