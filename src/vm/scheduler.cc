@@ -4,6 +4,7 @@
 
 #include "src/vm/scheduler.h"
 
+#include <errno.h>
 #include <stdio.h>
 
 #include "src/shared/flags.h"
