@@ -2,136 +2,193 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// TODO(johnniwinther): Temporarily copied from analyzer2dart. Merge when
+// we shared code with the analyzer and this semantic visitor is complete.
+
 /**
  * Code for classifying the semantics of identifiers appearing in a Dart file.
  */
 library dart2js.access_semantics;
 
-import 'package:compiler/src/elements/elements.dart' show
-    ClassElement,
-    Element,
-    LibraryElement;
+import 'package:compiler/src/elements/elements.dart';
+import 'package:compiler/src/tree/tree.dart';
+import 'package:compiler/src/universe/universe.dart';
 
 /**
  * Enum representing the different kinds of destinations which a property
  * access or method or function invocation might refer to.
  */
-class AccessKind {
+enum AccessKind {
   /**
    * The destination of the access is an instance method, property, or field
    * of a class, and thus must be determined dynamically.
    */
-  static const AccessKind DYNAMIC = const AccessKind._('DYNAMIC');
+  DYNAMIC_PROPERTY,
 
   /**
    * The destination of the access is a function that is defined locally within
    * an enclosing function or method.
    */
-  static const AccessKind LOCAL_FUNCTION = const AccessKind._('LOCAL_FUNCTION');
+  LOCAL_FUNCTION,
 
   /**
    * The destination of the access is a variable that is defined locally within
    * an enclosing function or method.
    */
-  static const AccessKind LOCAL_VARIABLE = const AccessKind._('LOCAL_VARIABLE');
+  LOCAL_VARIABLE,
 
   /**
    * The destination of the access is a variable that is defined as a parameter
    * to an enclosing function or method.
    */
-  static const AccessKind PARAMETER = const AccessKind._('PARAMETER');
+  PARAMETER,
 
   /**
    * The destination of the access is a field that is defined statically within
    * a class, or a top level variable within a library.
    */
-  static const AccessKind STATIC_FIELD = const AccessKind._('STATIC_FIELD');
+  STATIC_FIELD,
 
   /**
    * The destination of the access is a method that is defined statically
    * within a class, or at top level within a library.
    */
-  static const AccessKind STATIC_METHOD = const AccessKind._('STATIC_METHOD');
+  STATIC_METHOD,
 
   /**
-   * The destination of the access is a property getter/setter that is defined
+   * The destination of the access is a property getter that is defined
    * statically within a class, or at top level within a library.
    */
-  static const AccessKind STATIC_PROPERTY =
-      const AccessKind._('STATIC_PROPERTY');
+  STATIC_GETTER,
+
+  /**
+   * The destination of the access is a property setter that is defined
+   * statically within a class, or at top level within a library.
+   */
+  STATIC_SETTER,
 
   /**
    * The destination of the access is a field that is defined statically within
    * a class, or a top level variable within a library.
    */
-  static const AccessKind TOPLEVEL_FIELD =
-      const AccessKind._('TOPLEVEL_FIELD');
+  TOPLEVEL_FIELD,
 
   /**
    * The destination of the access is a method that is defined statically
    * within a class, or at top level within a library.
    */
-  static const AccessKind TOPLEVEL_METHOD =
-      const AccessKind._('TOPLEVEL_METHOD');
+  TOPLEVEL_METHOD,
 
   /**
-   * The destination of the access is a property getter/setter that is defined
+   * The destination of the access is a property getter that is defined
    * statically within a class, or at top level within a library.
    */
-  static const AccessKind TOPLEVEL_PROPERTY =
-      const AccessKind._('TOPLEVEL_PROPERTY');
+  TOPLEVEL_GETTER,
+
+  /**
+   * The destination of the access is a property setter that is defined
+   * statically within a class, or at top level within a library.
+   */
+  TOPLEVEL_SETTER,
 
   /**
    * The destination of the access is a toplevel class, or mixin application.
    */
-  static const AccessKind CLASS_TYPE_LITERAL =
-      const AccessKind._('CLASS_TYPE_LITERAL');
+  CLASS_TYPE_LITERAL,
 
   /**
    * The destination of the access is a function typedef.
    */
-  static const AccessKind TYPEDEF_TYPE_LITERAL =
-      const AccessKind._('TYPEDEF_TYPE_LITERAL');
+  TYPEDEF_TYPE_LITERAL,
 
   /**
    * The destination of the access is the built-in type "dynamic".
    */
-  static const AccessKind DYNAMIC_TYPE_LITERAL =
-      const AccessKind._('DYNAMIC_TYPE_LITERAL');
+  DYNAMIC_TYPE_LITERAL,
 
   /**
    * The destination of the access is a type parameter of the enclosing class.
    */
-  static const AccessKind TYPE_PARAMETER_TYPE_LITERAL =
-      const AccessKind._('TYPE_PARAMETER_TYPE_LITERAL');
+  TYPE_PARAMETER_TYPE_LITERAL,
 
   /**
-   * The destination of the access is the super class of the enclosing class.
+   * The destination of the access is a (complex) expression. For instance the
+   * function expression `(){}` in the function expression invocation `(){}()`.
    */
-  static const AccessKind SUPER = const AccessKind._('SUPER');
+  EXPRESSION,
 
-  final String name;
+  /**
+   * The destination of the access is `this` of the enclosing class.
+   */
+  THIS,
 
-  const AccessKind._(this.name);
+  /**
+   * The destination of the access is a property on the enclosing class.
+   */
+  THIS_PROPERTY,
 
-  String toString() => name;
+  /**
+   * The destination of the access is a field of the super class of the
+   * enclosing class.
+   */
+  SUPER_FIELD,
+
+  /**
+   * The destination of the access is a method of the super class of the
+   * enclosing class.
+   */
+  SUPER_METHOD,
+
+  /**
+   * The destination of the access is a getter of the super class of the
+   * enclosing class.
+   */
+  SUPER_GETTER,
+
+  /**
+   * The destination of the access is a setter of the super class of the
+   * enclosing class.
+   */
+  SUPER_SETTER,
+
+  /// Compound access where read and write access different elements.
+  /// See [CompoundAccessKind].
+  COMPOUND,
+}
+
+enum CompoundAccessKind {
+  /// Read from a static getter and write to static setter.
+  STATIC_GETTER_SETTER,
+  /// Read from a static method (closurize) and write to static setter.
+  STATIC_METHOD_SETTER,
+
+  /// Read from a top level getter and write to a top level setter.
+  TOPLEVEL_GETTER_SETTER,
+  /// Read from a top level method (closurize) and write to top level setter.
+  TOPLEVEL_METHOD_SETTER,
+
+  /// Read from one superclass field and write to another.
+  SUPER_FIELD_FIELD,
+  /// Read from a superclass field and write to a superclass setter.
+  SUPER_FIELD_SETTER,
+  /// Read from a superclass getter and write to a superclass setter.
+  SUPER_GETTER_SETTER,
+  /// Read from a superclass method (closurize) and write to a superclass
+  /// setter.
+  SUPER_METHOD_SETTER,
+  /// Read from a superclass getter and write to a superclass field.
+  SUPER_GETTER_FIELD,
 }
 
 /**
  * Data structure used to classify the semantics of a property access or method
  * or function invocation.
  */
-// TODO(paulberry,johnniwinther): Support index operations in AccessSemantics.
 class AccessSemantics {
   /**
    * The kind of access.
    */
   final AccessKind kind;
-
-  /**
-   * The name being used to access the property, method, or function.
-   */
-  final String name;
 
   /**
    * The element being accessed, if statically known.  This will be null if
@@ -164,203 +221,150 @@ class AccessSemantics {
    */
   final /*Expression*/ target;
 
-  /**
-   * True if this is an invocation of a method, or a call on a property.
-   */
-  final bool isInvoke;
-
-  /**
-   * True if this is a read access to a property, or a method tear-off.  Note
-   * that both [isRead] and [isWrite] will be true in the case of a
-   * read-modify-write operation (e.g. "+=").
-   */
-  final bool isRead;
-
-  /**
-   * True if this is a write access to a property, or an (erroneous) attempt to
-   * write to a method.  Note that both [isRead] and [isWrite] will be true in
-   * the case of a read-modify-write operation (e.g. "+=").
-   */
-  final bool isWrite;
-
-  AccessSemantics.dynamic(
-      this.name,
-      this.target,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
-      : kind = AccessKind.DYNAMIC,
+  AccessSemantics.dynamicProperty(this.target)
+      : kind = AccessKind.DYNAMIC_PROPERTY,
         element = null,
         classElement = null;
 
-  AccessSemantics.localFunction(
-      this.name,
-      this.element,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
+  AccessSemantics.localFunction(this.element)
       : kind = AccessKind.LOCAL_FUNCTION,
         classElement = null,
         target = null;
 
-  AccessSemantics.localVariable(
-      this.name,
-      this.element,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
+  AccessSemantics.localVariable(this.element)
       : kind = AccessKind.LOCAL_VARIABLE,
         classElement = null,
         target = null;
 
-  AccessSemantics.parameter(
-      this.name,
-      this.element,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
+  AccessSemantics.parameter(this.element)
       : kind = AccessKind.PARAMETER,
         classElement = null,
         target = null;
 
-  AccessSemantics.staticField(
-      this.name,
-      this.element,
-      this.classElement,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
+  AccessSemantics.staticField(this.element, this.classElement)
       : kind = AccessKind.STATIC_FIELD,
         target = null;
 
-  AccessSemantics.staticMethod(
-      this.name,
-      this.element,
-      this.classElement,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
+  AccessSemantics.staticMethod(this.element, this.classElement)
       : kind = AccessKind.STATIC_METHOD,
         target = null;
 
-  AccessSemantics.staticProperty(
-      this.name,
-      this.element,
-      this.classElement,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
-      : kind = AccessKind.STATIC_PROPERTY,
+  AccessSemantics.staticGetter(this.element, this.classElement)
+      : kind = AccessKind.STATIC_GETTER,
         target = null;
 
-  AccessSemantics.topLevelField(
-      this.name,
-      this.element,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
-      : kind = AccessKind.STATIC_FIELD,
+  AccessSemantics.staticSetter(this.element, this.classElement)
+      : kind = AccessKind.STATIC_SETTER,
+        target = null;
+
+  AccessSemantics.topLevelField(this.element)
+      : kind = AccessKind.TOPLEVEL_FIELD,
         target = null,
         classElement = null;
 
-  AccessSemantics.topLevelMethod(
-      this.name,
-      this.element,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
-      : kind = AccessKind.STATIC_METHOD,
+  AccessSemantics.topLevelMethod(this.element)
+      : kind = AccessKind.TOPLEVEL_METHOD,
         target = null,
         classElement = null;
 
-  AccessSemantics.topLevelProperty(
-      this.name,
-      this.element,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
-      : kind = AccessKind.STATIC_PROPERTY,
+  AccessSemantics.topLevelGetter(this.element)
+      : kind = AccessKind.TOPLEVEL_GETTER,
         target = null,
         classElement = null;
 
-  AccessSemantics.classTypeLiteral(
-      this.name,
-      this.element,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
+  AccessSemantics.topLevelSetter(this.element)
+      : kind = AccessKind.TOPLEVEL_SETTER,
+        target = null,
+        classElement = null;
+
+  AccessSemantics.classTypeLiteral(this.element)
       : kind = AccessKind.CLASS_TYPE_LITERAL,
         classElement = null,
         target = null;
 
-  AccessSemantics.typedefTypeLiteral(
-      this.name,
-      this.element,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
+  AccessSemantics.typedefTypeLiteral(this.element)
       : kind = AccessKind.TYPEDEF_TYPE_LITERAL,
         classElement = null,
         target = null;
 
-  AccessSemantics.dynamicTypeLiteral(
-      this.name,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
+  AccessSemantics.dynamicTypeLiteral()
       : kind = AccessKind.DYNAMIC_TYPE_LITERAL,
         element = null,
         classElement = null,
         target = null;
 
-  AccessSemantics.typeParameterTypeLiteral(
-      this.name,
-      this.element,
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
+  AccessSemantics.typeParameterTypeLiteral(this.element)
       : kind = AccessKind.TYPE_PARAMETER_TYPE_LITERAL,
         classElement = null,
         target = null;
 
-  AccessSemantics.superAccess(
-      {this.isInvoke: false,
-       this.isRead: false,
-       this.isWrite: false})
-      : kind = AccessKind.SUPER,
-        name = 'super',
+  AccessSemantics.expression()
+      : kind = AccessKind.EXPRESSION,
         element = null,
         classElement = null,
         target = null;
+
+  AccessSemantics.thisAccess()
+      : kind = AccessKind.THIS,
+        element = null,
+        classElement = null,
+        target = null;
+
+  AccessSemantics.thisProperty()
+      : kind = AccessKind.THIS_PROPERTY,
+        element = null,
+        classElement = null,
+        target = null;
+
+  AccessSemantics.superField(this.element)
+      : kind = AccessKind.SUPER_FIELD,
+        classElement = null,
+        target = null;
+
+  AccessSemantics.superMethod(this.element)
+      : kind = AccessKind.SUPER_METHOD,
+        classElement = null,
+        target = null;
+
+  AccessSemantics.superGetter(this.element)
+      : kind = AccessKind.SUPER_GETTER,
+        classElement = null,
+        target = null;
+
+  AccessSemantics.superSetter(this.element)
+      : kind = AccessKind.SUPER_SETTER,
+        classElement = null,
+        target = null;
+
+  AccessSemantics._compound(this.element, this.classElement)
+      : this.kind = AccessKind.COMPOUND,
+        this.target = null;
 
   String toString() {
     StringBuffer sb = new StringBuffer();
     sb.write('AccessSemantics[');
     sb.write('kind=$kind,');
-    if (isRead && isWrite) {
-      assert(!isInvoke);
-      sb.write('read/write,');
-    } else if (isRead) {
-      sb.write('read,');
-    } else if (isWrite) {
-      sb.write('write,');
-    } else if (isInvoke) {
-      sb.write('call,');
-    }
     if (element != null) {
       sb.write('element=');
       if (classElement != null) {
         sb.write('${classElement.name}.');
       }
       sb.write('${element}');
-    } else {
-      if (target == null) {
-        sb.write('target=this.$name');
-      } else {
-        sb.write('target=$target.$name');
-      }
     }
     sb.write(']');
     return sb.toString();
   }
+}
+
+class CompoundAccessSemantics extends AccessSemantics {
+  final CompoundAccessKind compoundAccessKind;
+  final Element getter;
+
+  CompoundAccessSemantics(this.compoundAccessKind,
+                          this.getter,
+                          Element setter,
+                          {ClassElement classElement})
+      : super._compound(setter, classElement);
+
+  Element get setter => element;
 }

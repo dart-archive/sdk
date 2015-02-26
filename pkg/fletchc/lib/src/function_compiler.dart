@@ -5,6 +5,7 @@
 library fletchc.expression_visitor;
 
 import 'package:semantic_visitor/semantic_visitor.dart' show
+    SemanticSendVisitor,
     SemanticVisitor;
 
 import 'package:compiler/src/constants/expressions.dart' show
@@ -41,7 +42,7 @@ enum VisitState {
   Test,
 }
 
-class FunctionCompiler extends SemanticVisitor {
+class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   final FletchContext context;
 
   final Registry registry;
@@ -72,6 +73,8 @@ class FunctionCompiler extends SemanticVisitor {
              function.isGenerativeConstructor ? 1 : 0));
 
   BytecodeBuilder get builder => compiledFunction.builder;
+
+  get sendVisitor => this;
 
   ConstantExpression compileConstant(Node node, {bool isConst}) {
     return context.compileConstant(node, elements, isConst: isConst);
@@ -182,11 +185,12 @@ class FunctionCompiler extends SemanticVisitor {
     }
   }
 
-  void visitStaticMethodInvocation(
+  void visitTopLevelFunctionInvoke(
       Send node,
-      /* MethodElement */ element,
+      MethodElement element,
       NodeList arguments,
-      Selector selector) {
+      Selector selector,
+      _) {
     if (element.isExternal) {
       if (element == context.compiler.backend.fletchExternalInvokeMain) {
         element = context.compiler.mainFunction;
@@ -208,11 +212,22 @@ class FunctionCompiler extends SemanticVisitor {
     applyVisitState();
   }
 
-  void visitDynamicInvocation(
+  void visitStaticMethodInvoke(
       Send node,
+      /* MethodElement */ element,
       NodeList arguments,
-      Selector selector) {
-    visitForValue(node.receiver);
+      Selector selector,
+      _) {
+    visitTopLevelFunctionInvoke(node, element, arguments, selector, _);
+  }
+
+  void visitDynamicPropertyInvoke(
+      Send node,
+      Node receiver,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    visitForValue(receiver);
     for (Node argument in arguments) {
       visitForValue(argument);
     }
@@ -220,33 +235,37 @@ class FunctionCompiler extends SemanticVisitor {
     applyVisitState();
   }
 
-  void visitDynamicAccess(
+  void visitDynamicPropertyGet(
       Send node,
-      Selector selector) {
-    visitForValue(node.receiver);
+      Node receiver,
+      Selector selector,
+      _) {
+    visitForValue(receiver);
     invokeGetter(selector);
     applyVisitState();
   }
 
-  void visitStaticFieldAssignment(
-      SendSet node,
-      FieldElement element,
-      Node rhs) {
-    visitForValue(rhs);
-    int index = context.getStaticFieldIndex(element, function);
-    builder.storeStatic(index);
-    applyVisitState();
-  }
-
-  void visitStaticFieldAccess(
+  void visitTopLevelFieldGet(
       Send node,
-      FieldElement element) {
+      FieldElement element,
+      _) {
     Expression initializer = element.initializer;
     if (initializer != null) {
       internalError(node, "Static field initializer is not implemented");
     }
     int index = context.getStaticFieldIndex(element, function);
     builder.loadStatic(index);
+    applyVisitState();
+  }
+
+  void visitTopLevelFieldSet(
+      SendSet node,
+      FieldElement element,
+      Node rhs,
+      _) {
+    visitForValue(rhs);
+    int index = context.getStaticFieldIndex(element, function);
+    builder.storeStatic(index);
     applyVisitState();
   }
 
@@ -296,35 +315,39 @@ class FunctionCompiler extends SemanticVisitor {
     node.expression.accept(this);
   }
 
-  void visitLocalVariableAccess(
+  void visitLocalVariableGet(
       Send node,
-      LocalVariableElement element) {
+      LocalVariableElement element,
+      _) {
     int slot = scope[element];
     builder.loadSlot(slot);
     applyVisitState();
   }
 
-  void visitLocalVariableAssignment(
+  void visitLocalVariableSet(
       SendSet node,
       LocalVariableElement element,
-      Node rhs) {
+      Node rhs,
+      _) {
     visitForValue(rhs);
     int slot = scope[element];
     builder.storeSlot(slot);
     applyVisitState();
   }
 
-  void visitParameterAccess(
+  void visitParameterGet(
       Send node,
-      ParameterElement element) {
-    visitLocalVariableAccess(node, element);
+      ParameterElement element,
+      _) {
+    visitLocalVariableGet(node, element, _);
   }
 
-  void visitParameterAssignment(
+  void visitParameterSet(
       SendSet node,
       ParameterElement element,
-      Node rhs) {
-    visitLocalVariableAssignment(node, element, rhs);
+      Node rhs,
+      _) {
+    visitLocalVariableSet(node, element, rhs, _);
   }
 
   void visitThrow(Throw node) {
