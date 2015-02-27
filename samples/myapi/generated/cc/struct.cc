@@ -41,9 +41,9 @@ MessageReader::MessageReader(int segments, char* memory)
     : segment_count_(segments),
       segments_(new Segment*[segments]) {
   for (int i = 0; i < segments; i++) {
-    int64_t addr = *reinterpret_cast<int64_t*>(memory + (i * 16));
+    int64_t address = *reinterpret_cast<int64_t*>(memory + (i * 16));
     int size = *reinterpret_cast<int*>(memory + 8 + (i * 16));
-    segments_[i] = new Segment(this, reinterpret_cast<char*>(addr), size);
+    segments_[i] = new Segment(this, reinterpret_cast<char*>(address), size);
   }
 }
 

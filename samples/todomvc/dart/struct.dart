@@ -22,7 +22,7 @@ Reader getRoot(Reader reader, Foreign request) {
 
 Reader getSegmentedRoot(Reader reader, Foreign request, int segments) {
   MessageReader messageReader = new MessageReader();
-  int offset = 48;
+  int offset = 56;
   for (int i = 0; i < segments; i++) {
     int address = (Foreign.bitsPerMachineWord == 32)
         ? request.getUint32(offset)

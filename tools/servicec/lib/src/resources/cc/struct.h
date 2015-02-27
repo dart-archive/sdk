@@ -27,6 +27,13 @@ class Segment {
   char* memory() const { return memory_; }
   int size() const { return size_; }
 
+ protected:
+  // Detach the memory from the segment because ownership
+  // has been transferred. Typically, because the message
+  // has been transmitted to Dart in a call and will be
+  // deleted on return.
+  void Detach() { memory_ = NULL; }
+
  private:
   MessageReader* reader_;
   char* memory_;
@@ -55,6 +62,13 @@ class BuilderSegment : public Segment {
   int Allocate(int bytes);
 
   void* At(int offset) const { return memory() + offset; }
+
+  // Detach all builder segments in the current chain because
+  // something else is taking ownership of the memory for the
+  // segments. This happens when built messages are transferred
+  // to Dart in a call. The memory will be freed on method
+  // return in that case.
+  void Detach();
 
   int id() const { return id_; }
   int used() const { return used_; }
@@ -90,6 +104,8 @@ class MessageBuilder {
   int ComputeUsed() const;
 
   BuilderSegment* FindSegmentForBytes(int bytes);
+
+  static void DeleteMessage(char* message);
 
  private:
   BuilderSegment first_;
@@ -245,6 +261,10 @@ class Builder {
   int offset() const { return offset_; }
 
   int64_t InvokeMethod(ServiceId service, MethodId method);
+  void InvokeMethodAsync(ServiceId service,
+                         MethodId method,
+                         ServiceApiCallback api_callback,
+                         void* callback);
 
  protected:
   Builder(Segment* segment, int offset)

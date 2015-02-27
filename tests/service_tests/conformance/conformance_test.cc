@@ -60,57 +60,168 @@ static void CreateNodeCallback(Node node) {
   node.Delete();
 }
 
-static void RunPersonTests() {
-  MessageBuilder builder(512);
-
-  PersonBuilder person = builder.initRoot<PersonBuilder>();
-  BuildPerson(person, 7);
-  EXPECT_EQ(3128, builder.ComputeUsed());
-
-  int age = ConformanceService::getAge(person);
+static void GetAgeCallback(int age) {
   EXPECT_EQ(140, age);
-  int count = ConformanceService::count(person);
-  EXPECT_EQ(127, count);
+}
 
-  AgeStats stats = ConformanceService::getAgeStats(person);
+static void CountCallback(int count) {
+  EXPECT_EQ(127, count);
+}
+
+static void GetAgeStatsCallback(AgeStats stats) {
   EXPECT_EQ(39, stats.getAverageAge());
   EXPECT_EQ(4940, stats.getSum());
   stats.Delete();
+}
 
-  AgeStats stats2 = ConformanceService::createAgeStats(42, 42);
-  EXPECT_EQ(42, stats2.getAverageAge());
-  EXPECT_EQ(42, stats2.getSum());
-  stats2.Delete();
-
-  ConformanceService::createAgeStatsAsync(42, 42, CreateAgeStatsCallback);
-
-  Person generated = ConformanceService::createPerson(10);
-  EXPECT_EQ(42, generated.getAge());
-  EXPECT_EQ(1, generated.getName().length());
-  EXPECT_EQ(11, generated.getName()[0]);
-
-  List<Person> children = generated.getChildren();
-  EXPECT_EQ(10, children.length());
-  for (int i = 0; i < children.length(); i++) {
-    EXPECT_EQ(12 + i * 2, children[i].getAge());
+static void RunPersonTests() {
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    int age = ConformanceService::getAge(person);
+    EXPECT_EQ(140, age);
   }
-  generated.Delete();
 
-  ConformanceService::createPersonAsync(10, CreatePersonCallback);
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    ConformanceService::getAgeAsync(person, GetAgeCallback);
+  }
 
-  Node node = ConformanceService::createNode(10);
-  EXPECT_EQ(24680, node.ComputeUsed());
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    int count = ConformanceService::count(person);
+    EXPECT_EQ(127, count);
+  }
 
-  EXPECT_EQ(10, Depth(node));
-  node.Delete();
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    ConformanceService::countAsync(person, CountCallback);
+  }
 
-  ConformanceService::createNodeAsync(10, CreateNodeCallback);
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    AgeStats stats = ConformanceService::getAgeStats(person);
+    EXPECT_EQ(39, stats.getAverageAge());
+    EXPECT_EQ(4940, stats.getSum());
+    stats.Delete();
+  }
 
-  ConformanceService::foo();
-  ConformanceService::fooAsync(FooCallback);
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    ConformanceService::getAgeStatsAsync(person, GetAgeStatsCallback);
+  }
 
-  EXPECT_EQ(42, ConformanceService::ping());
-  ConformanceService::pingAsync(PingCallback);
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    AgeStats stats2 = ConformanceService::createAgeStats(42, 42);
+    EXPECT_EQ(42, stats2.getAverageAge());
+    EXPECT_EQ(42, stats2.getSum());
+    stats2.Delete();
+  }
+
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    ConformanceService::createAgeStatsAsync(42, 42, CreateAgeStatsCallback);
+  }
+
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    Person generated = ConformanceService::createPerson(10);
+    EXPECT_EQ(42, generated.getAge());
+    EXPECT_EQ(1, generated.getName().length());
+    EXPECT_EQ(11, generated.getName()[0]);
+    List<Person> children = generated.getChildren();
+    EXPECT_EQ(10, children.length());
+    for (int i = 0; i < children.length(); i++) {
+      EXPECT_EQ(12 + i * 2, children[i].getAge());
+    }
+    generated.Delete();
+  }
+
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    ConformanceService::createPersonAsync(10, CreatePersonCallback);
+  }
+
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    Node node = ConformanceService::createNode(10);
+    EXPECT_EQ(24680, node.ComputeUsed());
+    EXPECT_EQ(10, Depth(node));
+    node.Delete();
+  }
+
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    ConformanceService::createNodeAsync(10, CreateNodeCallback);
+  }
+
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    ConformanceService::foo();
+  }
+
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    ConformanceService::fooAsync(FooCallback);
+  }
+
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    EXPECT_EQ(42, ConformanceService::ping());
+  }
+
+  {
+    MessageBuilder builder(512);
+    PersonBuilder person = builder.initRoot<PersonBuilder>();
+    BuildPerson(person, 7);
+    EXPECT_EQ(3128, builder.ComputeUsed());
+    ConformanceService::pingAsync(PingCallback);
+  }
 }
 
 static void RunPersonBoxTests() {

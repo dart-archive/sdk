@@ -60,7 +60,7 @@ void _generateImplementationFile(String path, Unit unit, String directory) {
 abstract class CcVisitor extends CodeGenerationVisitor {
   CcVisitor(String path) : super(path);
 
-  static const int REQUEST_HEADER_SIZE = 40;
+  static const int REQUEST_HEADER_SIZE = 48;
   static const PRIMITIVE_TYPES = const <String, String> {
     'void'    : 'void',
     'bool'    : 'bool',
@@ -116,6 +116,34 @@ abstract class CcVisitor extends CodeGenerationVisitor {
     visitNodes(formals, (first) => first ? '' : ', ');
   }
 
+  visitStructArgumentMethodBody(String id,
+                                Method method,
+                                {String callback}) {
+    bool async = callback != null;
+    String argumentName = method.arguments.single.name;
+    if (method.outputKind == OutputKind.STRUCT) {
+      if (async) {
+        write('  ');
+        writeln('$argumentName.InvokeMethodAsync(service_id_, $id,'
+                ' $callback, reinterpret_cast<void*>(callback));');
+      } else {
+        writeln('  int64_t result = $argumentName.'
+                'InvokeMethod(service_id_, $id);');
+        writeln('  char* memory = reinterpret_cast<char*>(result);');
+        // TODO(ajohnsen): Do range-check between size and segment size.
+        writeln('  Segment* segment = MessageReader::GetRootSegment(memory);');
+        writeln('  return ${method.returnType.identifier}'
+                '(segment, $RESPONSE_HEADER_SIZE);');
+      }
+    } else {
+      write('  ');
+      if (!method.returnType.isVoid && !async) write('return ');
+      String suffix = async ? 'Async' : '';
+      String cb = async ? ', $callback, reinterpret_cast<void*>(callback)' : '';
+      writeln('$argumentName.InvokeMethod$suffix(service_id_, $id$cb);');
+    }
+  }
+
   visitMethodBody(String id,
                   Method method,
                   {bool cStyle: false,
@@ -149,6 +177,9 @@ abstract class CcVisitor extends CodeGenerationVisitor {
       writeln('  char* _buffer = _bits;');
     }
 
+    // Mark the message as being non-segmented.
+    writeln('  *${pointerToArgument(-8, 0, "int64_t")} = 0;');
+
     int arity = arguments.length;
     for (int i = 0; i < arity; i++) {
       String name = arguments[i].name;
@@ -158,7 +189,7 @@ abstract class CcVisitor extends CodeGenerationVisitor {
     }
 
     if (async) {
-      String dataArgument = pointerToArgument(-8, 0, 'void*');
+      String dataArgument = pointerToArgument(-16, 0, 'void*');
       writeln('  *$dataArgument = ${cast("void*")}(callback);');
       for (int i = 0; i < extraArguments.length; i++) {
         String dataArgument = pointerToArgument(layout.size, i, 'void*');
@@ -238,9 +269,6 @@ class _HeaderVisitor extends CcVisitor {
     write(' ${node.name}(');
     visitArguments(node.arguments);
     writeln(');');
-
-    // TODO(kasperl): Cannot deal with async methods accepting structs yet.
-    if (node.inputKind == InputKind.STRUCT) return;
 
     write('  static void ${node.name}Async(');
     visitArguments(node.arguments);
@@ -516,43 +544,40 @@ class _ImplementationVisitor extends CcVisitor {
     writeln(') {');
 
     if (node.inputKind == InputKind.STRUCT) {
-      if (node.outputKind == OutputKind.STRUCT) {
-        writeln('  int64_t result = ${node.arguments.single.name}.'
-                'InvokeMethod(service_id_, $id);');
-        writeln('  char* memory = reinterpret_cast<char*>(result);');
-        // TODO(ajohnsen): Do range-check between size and segment size.
-        writeln('  Segment* segment = MessageReader::GetRootSegment(memory);');
-        writeln('  return ${node.returnType.identifier}'
-                '(segment, $RESPONSE_HEADER_SIZE);');
-      } else {
-        String argumentName = node.arguments.single.name;
-        write('  ');
-        if (!node.returnType.isVoid) write('return ');
-        writeln('$argumentName.InvokeMethod(service_id_, $id);');
-      }
-      writeln('}');
-
+      visitStructArgumentMethodBody(id, node);
     } else {
       assert(node.inputKind == InputKind.PRIMITIVES);
-
       visitMethodBody(id, node);
-      writeln('}');
-
-      String callback = ensureCallback(node.returnType,
-          node.inputPrimitiveStructLayout);
-
-      writeln();
-      write('void $serviceName::${name}Async(');
-      visitArguments(node.arguments);
-      if (node.arguments.isNotEmpty) write(', ');
-      write('void (*callback)(');
-      if (!node.returnType.isVoid) {
-        writeReturnType(node.returnType);
-      }
-      writeln(')) {');
-      visitMethodBody(id, node, callback: callback);
-      writeln('}');
     }
+
+    writeln('}');
+
+    String callback;
+    if (node.inputKind == InputKind.STRUCT) {
+      StructLayout layout = node.arguments.single.type.resolved.layout;
+      callback = ensureCallback(node.returnType, layout);
+    } else {
+      callback =
+          ensureCallback(node.returnType, node.inputPrimitiveStructLayout);
+    }
+
+    writeln();
+    write('void $serviceName::${name}Async(');
+    visitArguments(node.arguments);
+    if (node.arguments.isNotEmpty) write(', ');
+    write('void (*callback)(');
+    if (!node.returnType.isVoid) {
+      writeReturnType(node.returnType);
+    }
+    writeln(')) {');
+
+    if (node.inputKind == InputKind.STRUCT) {
+      visitStructArgumentMethodBody(id, node, callback: callback);
+    } else {
+      visitMethodBody(id, node, callback: callback);
+    }
+
+    writeln('}');
   }
 
   final Map<String, String> callbacks = {};
@@ -580,11 +605,10 @@ class _ImplementationVisitor extends CcVisitor {
           writeln('  char* memory = reinterpret_cast<char*>(result);');
           writeln('  Segment* segment = '
                   'MessageReader::GetRootSegment(memory);');
-
         }
       }
-      writeln('  cbt callback = *${cast('cbt*')}(buffer + ${offset - 8});');
-      writeln('  free(buffer);');
+      writeln('  cbt callback = *${cast('cbt*')}(buffer + 32);');
+      writeln('  MessageBuilder::DeleteMessage(buffer);');
       if (type.isVoid) {
         writeln('  callback();');
       } else {

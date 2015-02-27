@@ -26,6 +26,7 @@ class TodoMVCService {
   static void setup();
   static void tearDown();
   static void createItem(StrBuilder title);
+  static void createItemAsync(StrBuilder title, void (*callback)());
   static void deleteItem(int32_t id);
   static void deleteItemAsync(int32_t id, void (*callback)());
   static void completeItem(int32_t id);

@@ -45,7 +45,7 @@ abstract class BuildBotService {
         PatchSetBuilder builder = mb.initRoot(new PatchSetBuilder(), 8);
         _impl.sync(builder);
         var result = getResultMessage(builder);
-        request.setInt64(40, result);
+        request.setInt64(48, result);
         _postResult.icall$1(request);
         break;
       default:

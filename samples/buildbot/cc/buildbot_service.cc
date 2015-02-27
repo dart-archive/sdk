@@ -22,11 +22,12 @@ void BuildBotService::tearDown() {
 static const MethodId kSyncId_ = reinterpret_cast<MethodId>(1);
 
 PatchSet BuildBotService::sync() {
-  static const int kSize = 48;
+  static const int kSize = 56;
   char _bits[kSize];
   char* _buffer = _bits;
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
   ServiceApiInvoke(service_id_, kSyncId_, _buffer, kSize);
-  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 40);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
   return PatchSet(segment, 8);
@@ -35,17 +36,18 @@ PatchSet BuildBotService::sync() {
 static void Unwrap_PatchSet_8(void* raw) {
   typedef void (*cbt)(PatchSet);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 40);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
   cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
-  free(buffer);
+  MessageBuilder::DeleteMessage(buffer);
   callback(PatchSet(segment, 8));
 }
 
 void BuildBotService::syncAsync(void (*callback)(PatchSet)) {
-  static const int kSize = 48 + 0 * sizeof(void*);
+  static const int kSize = 56 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
   *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
   ServiceApiInvokeAsync(service_id_, kSyncId_, Unwrap_PatchSet_8, _buffer, kSize);
 }

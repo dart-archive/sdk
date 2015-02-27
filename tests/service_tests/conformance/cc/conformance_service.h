@@ -30,8 +30,11 @@ class ConformanceService {
   static void setup();
   static void tearDown();
   static int32_t getAge(PersonBuilder person);
+  static void getAgeAsync(PersonBuilder person, void (*callback)(int32_t));
   static int32_t getBoxedAge(PersonBoxBuilder box);
+  static void getBoxedAgeAsync(PersonBoxBuilder box, void (*callback)(int32_t));
   static AgeStats getAgeStats(PersonBuilder person);
+  static void getAgeStatsAsync(PersonBuilder person, void (*callback)(AgeStats));
   static AgeStats createAgeStats(int32_t averageAge, int32_t sum);
   static void createAgeStatsAsync(int32_t averageAge, int32_t sum, void (*callback)(AgeStats));
   static Person createPerson(int32_t children);
@@ -39,7 +42,9 @@ class ConformanceService {
   static Node createNode(int32_t depth);
   static void createNodeAsync(int32_t depth, void (*callback)(Node));
   static int32_t count(PersonBuilder person);
+  static void countAsync(PersonBuilder person, void (*callback)(int32_t));
   static int32_t depth(NodeBuilder node);
+  static void depthAsync(NodeBuilder node, void (*callback)(int32_t));
   static void foo();
   static void fooAsync(void (*callback)());
   static int32_t ping();

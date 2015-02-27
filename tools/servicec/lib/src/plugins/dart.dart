@@ -167,7 +167,7 @@ class _DartVisitor extends CodeGenerationVisitor {
         if (i != 0) write(', ');
         Formal argument = method.arguments[i];
         String getter = _GETTERS[argument.type.identifier];
-        int offset = inputLayout[argument].offset + 40;
+        int offset = inputLayout[argument].offset + 48;
         write('request.$getter($offset)');
       }
     }
@@ -214,8 +214,8 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('        _postResult.icall\$1(request);');
     writeln('        break;');
 
-    String setInt32() => 'request.setInt32(40, result)';
-    String setInt64() => 'request.setInt64(40, result)';
+    String setInt32() => 'request.setInt32(48, result)';
+    String setInt64() => 'request.setInt64(48, result)';
 
     for (int i = 0; i < methods.length; ++i) {
       Method method = methods[i];

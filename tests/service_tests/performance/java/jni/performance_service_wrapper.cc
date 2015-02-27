@@ -48,19 +48,20 @@ static void detachCurrentThread(JavaVM* vm) {
 static const MethodId _kechoId = reinterpret_cast<MethodId>(1);
 
 JNIEXPORT jint JNICALL Java_fletch_PerformanceService_echo(JNIEnv*, jclass, jint n) {
-  static const int kSize = 48;
+  static const int kSize = 56;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int32_t*>(_buffer + 40) = n;
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 48) = n;
   ServiceApiInvoke(service_id_, _kechoId, _buffer, kSize);
-  return *reinterpret_cast<int64_t*>(_buffer + 40);
+  return *reinterpret_cast<int64_t*>(_buffer + 48);
 }
 
 static void Unwrap_int32_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  int result = *reinterpret_cast<int*>(buffer + 40);
+  int result = *reinterpret_cast<int*>(buffer + 48);
   jobject callback = *reinterpret_cast<jobject*>(buffer + 32);
-  JavaVM* vm = *reinterpret_cast<JavaVM**>(buffer + 48);
+  JavaVM* vm = *reinterpret_cast<JavaVM**>(buffer + 56);
   JNIEnv* env = attachCurrentThreadAndGetEnv(vm);
   jclass clazz = env->GetObjectClass(callback);
   jmethodID methodId = env->GetMethodID(clazz, "handle", "(I)V");
@@ -74,11 +75,12 @@ JNIEXPORT void JNICALL Java_fletch_PerformanceService_echoAsync(JNIEnv* _env, jc
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
-  static const int kSize = 48 + 1 * sizeof(void*);
+  static const int kSize = 56 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int32_t*>(_buffer + 40) = n;
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 48) = n;
   *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
-  *reinterpret_cast<void**>(_buffer + 48) = reinterpret_cast<void*>(vm);
+  *reinterpret_cast<void**>(_buffer + 56) = reinterpret_cast<void*>(vm);
   ServiceApiInvokeAsync(service_id_, _kechoId, Unwrap_int32_8, _buffer, kSize);
 }
 
