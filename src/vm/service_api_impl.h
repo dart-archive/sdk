@@ -21,6 +21,9 @@ extern "C" void PostResultToService(char* buffer);
 
 class Service {
  public:
+  // The name is assumed to be allocated with malloc and the
+  // service takes ownership of the name and deallocates it
+  // with free on service destruction.
   Service(char* name, Port* port);
   ~Service();
 

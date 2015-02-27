@@ -26,6 +26,7 @@ static bool RunSnapshot(List<uint8> bytes) {
     Scheduler scheduler;
     scheduler.ScheduleProgram(program);
     bool success = program->RunMainInNewProcess();
+    delete program;
     return success;
   }
   return false;

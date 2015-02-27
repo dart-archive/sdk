@@ -17,7 +17,10 @@ class ServiceRegistry {
  public:
   ServiceRegistry() : monitor_(Platform::CreateMonitor()), service_(NULL) { }
 
-  ~ServiceRegistry() { delete service_; }
+  ~ServiceRegistry() {
+    delete service_;
+    delete monitor_;
+  }
 
   void Register(Service* service) {
     ScopedMonitorLock lock(monitor_);
@@ -79,6 +82,7 @@ Service::Service(char* name, Port* port)
 Service::~Service() {
   port_->DecrementRef();
   delete result_monitor_;
+  free(name_);
 }
 
 void Service::NotifyResult(ServiceRequest* request) {

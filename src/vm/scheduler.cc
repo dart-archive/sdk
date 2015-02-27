@@ -46,6 +46,12 @@ Scheduler::~Scheduler() {
   delete[] current_processes_;
   delete[] threads_;
   delete startup_queue_;
+  ThreadState* current = temporary_thread_states_;
+  while (current != NULL) {
+    ThreadState* next = current->next_idle_thread();
+    delete current;
+    current = next;
+  }
 }
 
 void Scheduler::ScheduleProgram(Program* program) {
@@ -342,8 +348,6 @@ void Scheduler::RunInThread() {
       }
     }
   }
-  // TODO(ajohnsen): Delete ThreadStates (should happen when all threads are
-  // guaranteed not to run).
   ThreadExit(thread_state);
 }
 
@@ -466,6 +470,7 @@ void Scheduler::ThreadEnter(ThreadState* thread_state) {
 
 void Scheduler::ThreadExit(ThreadState* thread_state) {
   threads_[thread_state->thread_id()] = NULL;
+  ReturnThreadState(thread_state);
   // Notify pause_monitor_ when changing threads_.
   pause_monitor_->Lock();
   pause_monitor_->Notify();
