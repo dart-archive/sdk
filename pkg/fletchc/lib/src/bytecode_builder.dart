@@ -59,15 +59,37 @@ class BytecodeBuilder {
       case 1:
         bytecode = const LoadLocal1();
         break;
+      case 2:
+        bytecode = const LoadLocal2();
+        break;
       default:
-        bytecode = new Loadlocal(offset);
+        bytecode = new LoadLocal(offset);
         break;
     }
     internalAdd(bytecode);
   }
 
+  void dup() {
+    loadLocal(0);
+  }
+
+  /**
+   * A 'slot' is an artificial indexing, that are frame relative. That means
+   * the current frame is indexed by where 0 .. frameSize-1, -1 is the return
+   * address and -1 - functionArity is the first argument, -2 is the last
+   * argument.
+   *
+   * This kind of indexing are sometimes easier to use than stack-relative,
+   * as locals and parameters have a fixed value.
+   */
   void loadSlot(int slot) {
     int offset = stackSize - slot - 1;
+    loadLocal(offset);
+  }
+
+  void loadParameter(int parameter) {
+    assert(parameter >= 0 && parameter < functionArity);
+    int offset = stackSize + functionArity - parameter;
     loadLocal(offset);
   }
 
@@ -92,6 +114,9 @@ class BytecodeBuilder {
     internalAdd(new StoreLocal(offset));
   }
 
+  /**
+   * See loadSlot for information about 'slots'.
+   */
   void storeSlot(int slot) {
     int offset = stackSize - slot - 1;
     storeLocal(offset);

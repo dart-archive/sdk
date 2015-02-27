@@ -20,15 +20,21 @@ import 'package:compiler/src/dart2jslib.dart' show
     ResolutionEnqueuer;
 
 import 'package:compiler/src/tree/tree.dart' show
+    DartString,
+    Expression,
     Return;
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     ConstructorElement,
     Element,
+    FieldElement,
+    FormalElement,
     FunctionElement,
     FunctionSignature,
     LibraryElement;
+
+import 'package:compiler/src/util/util.dart' show Spannable;
 
 import 'package:compiler/src/elements/modelx.dart' show
     FunctionElementX;
@@ -66,10 +72,11 @@ import '../commands.dart';
 class CompiledClass {
   final int id;
   final ClassElement element;
-  final Map<int, int> methodTable = <int, int>{};
-  final int fields = 0;
+  final int fields;
 
-  CompiledClass(this.id, this.element);
+  final Map<int, int> methodTable = <int, int>{};
+
+  CompiledClass(this.id, this.element, this.fields);
 }
 
 class FletchBackend extends Backend {
@@ -122,7 +129,11 @@ class FletchBackend extends Backend {
   CompiledClass registerClassElement(ClassElement element) {
     return compiledClasses.putIfAbsent(element, () {
         int id = classIds.putIfAbsent(element, () => classIds.length);
-        return new CompiledClass(id, element);
+        int fields = 0;
+        element.forEachInstanceField((enclosing, field) {
+          fields++;
+        }, includeSuperAndInjectedMembers: true);
+        return new CompiledClass(id, element, fields);
       });
   }
 
@@ -180,9 +191,11 @@ class FletchBackend extends Backend {
             fletchSystemLibrary, "Internal class '$name' not found.");
         return null;
       }
-      registerClassElement(classImpl);
       builtinClasses.add(classImpl);
-      // TODO(ahe): Register in ResolutionCallbacks.
+      // TODO(ahe): Register in ResolutionCallbacks. The 3 lines below should
+      // not happen at this point in time.
+      classImpl.ensureResolved(compiler);
+      registerClassElement(classImpl);
       registry.registerInstantiatedClass(classImpl);
       return classImpl;
     }
@@ -533,6 +546,8 @@ class FletchBackend extends Backend {
   }
 
   int compileConstructor(ConstructorElement constructor) {
+    // TODO(ajohnsen): Move out to seperate file, and visit super
+    // constructors as well.
     if (constructorIds.containsKey(constructor)) {
       return constructorIds[constructor];
     }
@@ -552,14 +567,63 @@ class FletchBackend extends Backend {
         nextMethodId++,
         signature.parameterCount);
     BytecodeBuilder builder = stub.builder;
+
+    Map<FieldElement, int> scope = <FieldElement, int>{};
+
+    // Initialize all fields (including super-classes).
+    int fieldIndex = 0;
+    classElement.forEachInstanceField(
+        (ClassElement enclosingClass, FieldElement field) {
+          scope[field] = fieldIndex++;
+          Expression initializer = field.initializer;
+          if (initializer == null) {
+            builder.loadLiteralNull();
+          } else {
+            generateUnimplementedError(
+                field,
+                "Unhandled field initializer",
+                stub);
+          }
+        },
+        includeSuperAndInjectedMembers: true);
+
+    int parameterCount = signature.parameterCount;
+
+    int parameterIndex = 0;
+    signature.orderedForEachParameter((FormalElement parameter) {
+      builder.loadParameter(parameterIndex++);
+      if (parameter.isInitializingFormal) {
+        builder.storeSlot(scope[parameter.fieldElement]);
+      }
+    });
+
     int classConstant = stub.allocateConstantFromClass(classElement);
     int methodId = allocateMethodId(constructor);
-    int constId = stub.allocateConstantFromFunction(methodId);
+    int constructorId = stub.allocateConstantFromFunction(methodId);
+
+    // TODO(ajohnsen): Let allocate take an offset to the field stack, so we
+    // don't have to copy all the fields?
+    // Copy all the fields to the end of the stack.
+    for (int i = 0; i < fieldIndex; i++) {
+      builder.loadSlot(i);
+    }
+    assert(fieldIndex == compiledClass.fields);
+    builder.allocate(classConstant, fieldIndex);
+    // The stack is now:
+    //   - Fields
+    //   - Arguments
+    //   - New instance
+    builder.dup();
+    for (int i = 0; i < parameterCount; i++) {
+      builder.loadSlot(fieldIndex + i);
+    }
+    // Invoke the constructor body.
     builder
-        ..allocate(classConstant, compiledClass.fields)
-        ..loadLocal(0)
-        ..invokeStatic(constId, 1 + signature.parameterCount)
-        ..pop()
+        ..invokeStatic(constructorId, 1 + parameterCount)
+        ..pop();
+
+    // Return the instance.
+    builder
         ..ret()
         ..methodEnd();
 
@@ -570,5 +634,18 @@ class FletchBackend extends Backend {
     functions.add(stub);
 
     return stub.methodId;
+  }
+
+  void generateUnimplementedError(
+      Spannable spannable,
+      String reason,
+      CompiledFunction function) {
+    compiler.reportError(
+        spannable, MessageKind.GENERIC, {'text': reason});
+    var constString = constantSystem.createString(
+        new DartString.literal(reason));
+    function
+        ..builder.loadConst(function.allocateConstant(constString))
+        ..builder.emitThrow();
   }
 }

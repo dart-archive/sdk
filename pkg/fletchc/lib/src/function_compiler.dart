@@ -727,10 +727,10 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   }
 
   void generateUnimplementedError(Spannable spannable, String reason) {
-    context.compiler.reportError(
-        spannable, MessageKind.GENERIC, {'text': reason});
-    builder.loadConst(allocateStringConstant(reason));
-    builder.emitThrow();
+    context.compiler.backend.generateUnimplementedError(
+        spannable,
+        reason,
+        compiledFunction);
     applyVisitState();
   }
 

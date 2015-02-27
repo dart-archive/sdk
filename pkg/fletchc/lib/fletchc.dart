@@ -14,8 +14,11 @@ import 'compiler.dart' show
 main(List<String> arguments) async {
   List<String> options = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
-  FletchCompiler compiler =
-      new FletchCompiler(options: options, script: arguments.single);
+  // TODO(ajohnsen): packageRoot should be a command line argument.
+  FletchCompiler compiler = new FletchCompiler(
+      options: options,
+      script: arguments.single,
+      packageRoot: "package/");
   List commands = await compiler.run().catchError((e, trace) {
     // TODO(ahe): Remove this catchError block when this bug is fixed:
     // https://code.google.com/p/dart/issues/detail?id=22437.
