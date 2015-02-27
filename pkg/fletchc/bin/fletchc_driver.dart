@@ -14,15 +14,10 @@ import 'dart:async';
 
 import 'package:fletchc/compiler.dart' show
     FletchCompiler;
+import 'package:fletchc/commands.dart' as commands;
 
 import 'package:compiler/compiler.dart' show
     Diagnostic;
-
-// For the purpose of this prototype keep all the history of previous
-// analyses.
-// TODO(lukechurch): Add an upper limit of the number of previous results. 
-List warnings = [[]];
-List errors = [[]];
 
 main(List<String> args) {
   if (args.length != 2) {
@@ -37,59 +32,26 @@ usage dart fletchc_driver <target file> <path to dart binary>''');
   
   io.File targetFile = new io.File(targetPath);
   print("Startup complete.");
-  targetFile.watch().listen((io.FileSystemEvent fse) { 
-    warnings.add([]);
-    errors.add([]);
-    updateErrorsAndWarnings(targetFile.path).then((_) {
-      int warningsCount = warnings.length;
-      
-      // TODO(lukechurch): Fix this ugly repetitive code.
-      Set newWarnings = diff(
-        warnings[warningsCount-2],
-        warnings[warningsCount-1]);
-      
-      Set fixedWarnings = diff(
-        warnings[warningsCount-1],
-        warnings[warningsCount-2]);
-      
-      Set newErrors = diff(
-        errors[warningsCount-2],
-        errors[warningsCount-1]);
-      
-      Set fixedErrors = diff(
-        errors[warningsCount-1],
-        errors[warningsCount-2]);
-
-      if (fixedWarnings.length > 0) {
-        print ("Fixed: ${fixedWarnings}");
-      }
-      if (fixedErrors.length > 0) {
-        print ("Fixed: ${fixedErrors}");
-      }
-      if (newWarnings.length > 0) {
-        print ("New: ${newWarnings}");
-      }
-      if (newErrors.length > 0) {
-        print ("New: ${newErrors}");
-      }
-       
-      execute(targetFile.path, dartPath);
-    });
-  });
-}
-
-Future updateErrorsAndWarnings(String path) {
-  List<String> options = ["--analyze-only"];
-  FletchCompiler compiler =
-    new FletchCompiler(
-      options: options, 
-      script: path, 
-      handler: diagnosticHandler);
   
-  return compiler.run().catchError((e, trace) {
-    print(e);
-    print(trace);
-    print("The compiler crashed, please try a diffrent program.");
+  // TODO(lukechurch): This causes all sorts of problems with
+  // interleaved errors and output. It needs a rework.
+  targetFile.watch().listen((io.FileSystemEvent fse) { 
+    List<String> options = []; //["--analyze-only"];
+    FletchCompiler compiler =
+      new FletchCompiler(
+        options: options, 
+        script: targetFile.path, 
+        handler: diagnosticHandler);
+      
+    compiler.run()..catchError((e, trace) {
+      print(e);
+      print(trace);
+      print("The compiler crashed, please try a diffrent program.");
+    })..then((cmds) {
+      print ('about to executeCmds');
+      executeCmds(compiler, cmds, compiler.fletchVm.toFilePath());
+    });
+  
   });
 }
 
@@ -108,8 +70,74 @@ Set diff(List previous, List next) {
 void diagnosticHandler(Uri uri, int begin, int end,
                                String message, Diagnostic kind) {
   if (kind == Diagnostic.ERROR) {
-    errors.last.add(message);
+    print("Error: $message");
   } else if (kind == Diagnostic.WARNING) {
-    warnings.last.add(message);
+    print("Warning: $message");
   }
 }
+
+executeCmds(compiler, List cmds, String fletchVmPath) async {
+  print ('executeCmds');
+  var server = await io.ServerSocket.bind(io.InternetAddress.LOOPBACK_IP_V4, 0);
+
+  List<String> vmOptions = <String>[
+    '--port=${server.port}',
+    '-Xvalidate-stack',
+    "-Xbridge-connection"
+  ];
+
+  var connectionIterator = new StreamIterator(server);
+  var vmProcess =
+    await io.Process.start(fletchVmPath, vmOptions);
+
+  vmProcess.stdout.listen(io.stdout.add);
+  vmProcess.stderr.listen(io.stderr.add);
+
+  bool hasValue = await connectionIterator.moveNext();
+  assert(hasValue);
+  var vmSocket = connectionIterator.current;
+  server.close();
+
+  vmSocket.listen(null);
+  
+  var mainFunction = compiler.backdoor.functionElementFromName('main');
+  var fooFunction = compiler.backdoor.functionElementFromName('foo');
+  var barFunction = compiler.backdoor.functionElementFromName('bar');
+  
+  cmds.forEach((command) => command.addTo(vmSocket));
+  
+  bool flipflop = false;
+  Timer t = new Timer.periodic(new Duration(milliseconds: 50), (_) {
+    flipflop = !flipflop;
+    cmds = [];
+    
+    // Retarget the function being executed.
+    cmds.add(new commands.PushFromMap(commands.MapId.methods, 
+        compiler.backdoor.indexForFunctionElement(mainFunction)));
+    if (flipflop) {
+      cmds.add(new commands.PushFromMap(commands.MapId.methods, 
+          compiler.backdoor.indexForFunctionElement(barFunction)));
+    } else {
+      cmds.add(new commands.PushFromMap(commands.MapId.methods, 
+          compiler.backdoor.indexForFunctionElement(fooFunction)));        
+    }
+    
+    // TODO(lukechurch): Compute this number.
+    int constantPoolIndex = 0;
+    cmds.add(new commands.ChangeMethodLiteral(constantPoolIndex));
+    cmds.add(new commands.CommitChanges(1));
+    
+    // Apply the changes.
+    cmds.forEach((command) => command.addTo(vmSocket));
+  });
+  
+  /* Exit handling code. Renable once we have a way of terminating this.
+   * 
+   * var exitCode = await vmProcess.exitCode;
+   * if (exitCode != 0) {
+   *   print("Non-zero exit code from VM ($exitCode).");
+   * }
+   */
+}
+
+

@@ -63,6 +63,8 @@ class FletchCompiler {
 
   FletchCompiler._(this._compiler, this.script, this.verbose);
 
+  Backdoor get backdoor => new Backdoor(this);
+  
   factory FletchCompiler(
       {CompilerInputProvider provider,
        CompilerOutputProvider outputProvider,
@@ -188,6 +190,21 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
   }
 
   Uri get fletchVm => _compiler.fletchVm;
+}
+
+// In this library to allow access to privates.
+// TODO(lukechurch): Delete this class.
+class Backdoor {
+  final FletchCompiler _compiler;
+  
+  Backdoor(this._compiler);
+  
+  functionElementFromName(String name) =>
+        _compiler._compiler.backend.compiledFunctions.keys.where(
+            (f) => f.name == name).single;
+  indexForFunctionElement(var element) =>
+        _compiler._compiler.backend.allocateMethodId(element);
+  
 }
 
 /// Resolves any symbolic links in [uri] if its scheme is "file". Otherwise
