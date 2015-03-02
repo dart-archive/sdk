@@ -4,6 +4,7 @@
 
 #include "src/vm/platform.h"
 
+#include <errno.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <sys/types.h>  // mmap & munmap
@@ -172,16 +173,16 @@ class PosixMonitor : public Monitor {
 
   int Wait() { return pthread_cond_wait(&cond_, &mutex_); }
 
-  int Wait(uint64 microseconds) {
+  bool Wait(uint64 microseconds) {
     uint64 us = Platform::GetMicroseconds() + microseconds;
     return WaitUntil(us);
   }
 
-  int WaitUntil(uint64 microseconds_since_epoch) {
+  bool WaitUntil(uint64 microseconds_since_epoch) {
     timespec ts;
     ts.tv_sec = microseconds_since_epoch / 1000000;
     ts.tv_nsec = (microseconds_since_epoch % 1000000) * 1000;
-    return pthread_cond_timedwait(&cond_, &mutex_, &ts);
+    return pthread_cond_timedwait(&cond_, &mutex_, &ts) == ETIMEDOUT;
   }
 
   int Notify() { return pthread_cond_signal(&cond_); }

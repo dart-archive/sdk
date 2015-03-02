@@ -131,6 +131,8 @@ class Process {
 
   void Preempt();
 
+  void Profile();
+
   Process* next() const { return next_; }
   void set_next(Process* process) { next_ = process; }
 
@@ -199,8 +201,6 @@ class Process {
 
   // Put 'entry' at the end of the port's queue. This function is thread safe.
   void EnqueueEntry(PortQueue* entry);
-
-  static Object** kPreemptMarker;
 
   Heap heap_;
   Program* program_;

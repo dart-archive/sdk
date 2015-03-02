@@ -19,6 +19,9 @@
 
 namespace fletch {
 
+static Object** kPreemptMarker = reinterpret_cast<Object**>(1);
+static Object** kProfileMarker = reinterpret_cast<Object**>(2);
+
 class PortQueue {
  public:
   enum Kind {
@@ -155,9 +158,17 @@ void Process::UpdateCoroutine(Coroutine* coroutine) {
 }
 
 bool Process::HandleStackOverflow(int addition) {
+  Object** current_limit = stack_limit();
+
+  if (current_limit == kProfileMarker) {
+    stack_limit_ = NULL;
+    UpdateStackLimit();
+    return true;
+  }
+
   // When the stack_limit is kPreemptMarker, the process has been explicitly
   // asked to preempt.
-  if (stack_limit() == kPreemptMarker) {
+  if (current_limit == kPreemptMarker) {
     stack_limit_ = NULL;
     UpdateStackLimit();
     return false;
@@ -423,7 +434,12 @@ void Process::Preempt() {
   stack_limit_ = kPreemptMarker;
 }
 
-Object** Process::kPreemptMarker = reinterpret_cast<Object**>(1);
+void Process::Profile() {
+  // Don't override preempt marker.
+  Object** stack_limit = stack_limit_;
+  if (stack_limit_ == kPreemptMarker) return;
+  stack_limit_.compare_exchange_strong(stack_limit, kProfileMarker);
+}
 
 void Process::CookStacks(int number_of_stacks) {
   cooked_stack_deltas_ = List<List<int>>::New(number_of_stacks);

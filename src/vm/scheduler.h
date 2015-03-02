@@ -80,6 +80,7 @@ class Scheduler {
   std::atomic<Process*>* current_processes_;
 
   void PreemptThreadProcess(int thread_id);
+  void ProfileThreadProcess(int thread_id);
   uint64 GetNextPreemptTime();
   void EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
                                       Process* process);

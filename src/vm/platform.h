@@ -154,8 +154,8 @@ class Monitor {
   virtual int Lock() = 0;
   virtual int Unlock() = 0;
   virtual int Wait() = 0;
-  virtual int Wait(uint64 microseconds) = 0;
-  virtual int WaitUntil(uint64 microseconds_since_epoch) = 0;
+  virtual bool Wait(uint64 microseconds) = 0;
+  virtual bool WaitUntil(uint64 microseconds_since_epoch) = 0;
   virtual int Notify() = 0;
   virtual int NotifyAll() = 0;
 };

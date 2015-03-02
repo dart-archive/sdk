@@ -4,7 +4,6 @@
 
 #include "src/vm/scheduler.h"
 
-#include <errno.h>
 #include <stdio.h>
 
 #include "src/shared/flags.h"
@@ -205,30 +204,51 @@ bool Scheduler::RunProcessOnCurrentThread(Process* process, Port* port) {
   return true;
 }
 
+static uint64 ComputeProfileInterval() {
+  int interval = 1000;  // us
+  Flags::IsInt("profile-interval", &interval);
+  return interval;
+}
+
 bool Scheduler::Run() {
+  static const bool kProfile = Flags::IsOn("profile");
+  static const uint64 kProfileIntervalUs = ComputeProfileInterval();
   // Start initial thread.
   while (!thread_pool_.TryStartThread(RunThread, this, 1)) { }
   int thread_index = 0;
   uint64 next_preempt = GetNextPreemptTime();
-  while (true) {
-    preempt_monitor_->Lock();
-    // If we are done, bail out.
-    if (processes_ == 0) {
-      preempt_monitor_->Unlock();
-      break;
-    }
+  // If profile is disabled, next_preempt will always be less than next_profile.
+  uint64 next_profile = kProfile
+      ? Platform::GetMicroseconds() + kProfileIntervalUs
+      : UINT64_MAX;
+  uint64 next_timeout = Utils::Minimum(next_preempt, next_profile);
 
-    bool preempt = preempt_monitor_->WaitUntil(next_preempt) == ETIMEDOUT;
-    preempt_monitor_->Unlock();
+  preempt_monitor_->Lock();
+  while (processes_ > 0) {
+    // If we didn't time out, we were interrupted. In that case, continue.
+    if (!preempt_monitor_->WaitUntil(next_timeout)) continue;
 
-    if (preempt) {
+    bool is_preempt = next_preempt <= next_profile;
+    bool is_profile = next_profile <= next_preempt;
+
+    if (is_preempt) {
       // Clamp the thread_index to the number of current threads.
       if (thread_index >= thread_count_) thread_index = 0;
       PreemptThreadProcess(thread_index);
       thread_index++;
       next_preempt = GetNextPreemptTime();
+      next_timeout = Utils::Minimum(next_preempt, next_profile);
+    }
+
+    if (is_profile) {
+      // Send a profile signal to all running processes.
+      int thread_count = thread_count_;
+      for (int i = 0; i < thread_count; i++) ProfileThreadProcess(i);
+      next_profile += kProfileIntervalUs;
+      next_timeout = Utils::Minimum(next_preempt, next_profile);
     }
   }
+  preempt_monitor_->Unlock();
   thread_pool_.JoinAll();
 
   // Wait for foreign threads to leave the scheduler.
@@ -246,6 +266,16 @@ void Scheduler::PreemptThreadProcess(int thread_id) {
   if (process != NULL) {
     if (current_processes_[thread_id].compare_exchange_strong(process, NULL)) {
       process->Preempt();
+      current_processes_[thread_id] = process;
+    }
+  }
+}
+
+void Scheduler::ProfileThreadProcess(int thread_id) {
+  Process* process = current_processes_[thread_id];
+  if (process != NULL) {
+    if (current_processes_[thread_id].compare_exchange_strong(process, NULL)) {
+      process->Profile();
       current_processes_[thread_id] = process;
     }
   }
