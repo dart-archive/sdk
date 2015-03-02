@@ -243,7 +243,7 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
       throw "Dart VM cannot run files of type '$type'.";
     }
     var binDir = suite.buildDir;
-    var args = ["-c", "-p", "package", "pkg/fletchc/lib/fletchc.dart"];
+    var args = ["-p", "package", "pkg/fletchc/lib/fletchc.dart"];
     args.addAll(arguments);
     return <Command>[commandBuilder.getVmCommand(
           suite.dartVmBinaryFileName, args, environmentOverrides)];

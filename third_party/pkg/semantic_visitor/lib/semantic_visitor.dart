@@ -346,7 +346,7 @@ abstract class SendResolverMixin {
       if (!Elements.isUnresolved(element) && element.impliesType) {
         // Prefix of a static access.
         return null;
-      } else if (element == null) {
+      } else if (element == null || element.isInstanceMember) {
         if (node.receiver == null || node.receiver.isThis()) {
           return new AccessSemantics.thisProperty();
         } else {

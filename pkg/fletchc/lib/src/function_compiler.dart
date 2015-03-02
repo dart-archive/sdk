@@ -272,7 +272,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   void visitThisGet(
       Node node,
       _) {
-    builder.loadSlot(-1 - function.functionSignature.parameterCount);
+    builder.loadParameter(0);
     applyVisitState();
   }
 
@@ -368,6 +368,15 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector selector,
       _) {
     visitForValue(receiver);
+    invokeGetter(selector);
+    applyVisitState();
+  }
+
+  void visitThisPropertyGet(
+      Send node,
+      Selector selector,
+      _) {
+    builder.loadParameter(0);
     invokeGetter(selector);
     applyVisitState();
   }
