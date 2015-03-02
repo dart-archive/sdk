@@ -8,6 +8,9 @@ import 'package:semantic_visitor/semantic_visitor.dart' show
     SemanticSendVisitor,
     SemanticVisitor;
 
+import 'package:semantic_visitor/operators.dart' show
+    BinaryOperator;
+
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
 
@@ -174,15 +177,102 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     }
   }
 
-  // TODO(ahe): Remove this method when operators are supported in
-  // AccessSemantics.
-  void visitSend(Send node) {
-    if (node.isOperator) {
-      generateUnimplementedError(
-          node, "[visitSend] for operators isn't implemented.");
-    } else {
-      return super.visitSend(node);
+  void handleBinaryOperator(
+      Node left,
+      Node right,
+      BinaryOperator operator,
+      _) {
+    visitForValue(left);
+    visitForValue(right);
+    Selector selector = new Selector.binaryOperator(operator.name);
+    invokeMethod(selector);
+  }
+
+  void visitEquals(
+      Send node,
+      Node left,
+      Node right,
+      _) {
+    // TODO(ajohnsen): Inject null check (in callee).
+    handleBinaryOperator(left, right, BinaryOperator.EQ, _);
+    applyVisitState();
+  }
+
+  void visitNotEquals(
+      Send node,
+      Node left,
+      Node right,
+      _) {
+    handleBinaryOperator(left, right, BinaryOperator.EQ, _);
+    builder.negate();
+    applyVisitState();
+  }
+
+  void visitBinary(
+      Send node,
+      Node left,
+      BinaryOperator operator,
+      Node right,
+      _) {
+    handleBinaryOperator(left, right, operator, _);
+    applyVisitState();
+  }
+
+  void visitLazyAnd(
+      Send node,
+      Node left,
+      Node right,
+      _) {
+    BytecodeLabel isFirstTrue = new BytecodeLabel();
+    BytecodeLabel isTrue = new BytecodeLabel();
+    BytecodeLabel isFalse = new BytecodeLabel();
+    BytecodeLabel done = new BytecodeLabel();
+
+    visitForTest(left, isFirstTrue, isFalse);
+
+    builder.bind(isFirstTrue);
+    visitForTest(right, isTrue, isFalse);
+
+    builder.bind(isTrue);
+    builder.loadLiteralTrue();
+    builder.branch(done);
+
+    builder.bind(isFalse);
+    builder.loadLiteralFalse();
+
+    builder.bind(done);
+
+    // The above sequence of branch/loadX makes the stack appear to have grown
+    // by two, while it has actually only grown by one. Fix it.
+    builder.applyFrameSizeFix(-1);
+
+    applyVisitState();
+  }
+
+  void visitIs(
+      Send node,
+      Node expression,
+      DartType type,
+      _) {
+    // TODO(ajohnsen): Implement.
+    builder.loadLiteralFalse();
+    applyVisitState();
+  }
+
+  void visitThisGet(
+      Node node,
+      _) {
+    builder.loadSlot(-1 - function.functionSignature.parameterCount);
+    applyVisitState();
+  }
+
+  void inlineIdenticalCall(NodeList arguments) {
+    assert(arguments.slowLength() == 2);
+    for (Node argument in arguments) {
+      visitForValue(argument);
     }
+    builder.identical();
+    applyVisitState();
   }
 
   void visitTopLevelFunctionInvoke(
@@ -191,6 +281,10 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _) {
+    if (element == context.compiler.identicalFunction) {
+      inlineIdenticalCall(arguments);
+      return;
+    }
     if (element.isExternal) {
       if (element == context.compiler.backend.fletchExternalInvokeMain) {
         element = context.compiler.mainFunction;
@@ -202,17 +296,37 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
         return;
       }
     }
+    int argumentCount = 0;
     for (Node argument in arguments) {
+      argumentCount++;
       visitForValue(argument);
+    }
+    FunctionSignature signature = element.functionSignature;
+    // TODO(ajohnsen): Create a generic way of loading arguments (including
+    // named).
+    if (signature.parameterCount > argumentCount) {
+      int parameterCount = 0;
+      signature.orderedForEachParameter((ParameterElement parameter) {
+        if (parameterCount >= argumentCount) {
+          if (parameter.isOptional) {
+            visitForValue(parameter.initializer);
+          } else {
+            generateUnimplementedError(
+                parameter,
+                "Initializers not implemented");
+          }
+        }
+        parameterCount++;
+      });
     }
     registry.registerStaticInvocation(element);
     int methodId = context.backend.allocateMethodId(element);
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
-    builder.invokeStatic(constId, arguments.slowLength());
+    builder.invokeStatic(constId, signature.parameterCount);
     applyVisitState();
   }
 
-  void visitStaticMethodInvoke(
+  void visitStaticFunctionInvoke(
       Send node,
       /* MethodElement */ element,
       NodeList arguments,

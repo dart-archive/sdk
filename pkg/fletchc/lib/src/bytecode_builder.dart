@@ -45,6 +45,10 @@ class BytecodeBuilder {
 
   BytecodeBuilder(this.functionArity);
 
+  void applyFrameSizeFix(int diff) {
+    stackSize += diff;
+  }
+
   void loadConst(int id) {
     internalAdd(new LoadConstUnfold(id));
   }
@@ -143,6 +147,18 @@ class BytecodeBuilder {
   void ret() {
     if (stackSize <= 0) throw "Bad stackSize for return bytecode: $stackSize";
     internalAdd(new Return(stackSize, functionArity));
+  }
+
+  void identical() {
+    internalAdd(const Identical());
+  }
+
+  void identicalNonNumeric() {
+    internalAdd(const IdenticalNonNumeric());
+  }
+
+  void negate() {
+    internalAdd(const Negate());
   }
 
   void bind(BytecodeLabel label) {

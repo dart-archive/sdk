@@ -184,11 +184,10 @@ class FletchBackend extends Backend {
     builtinClasses.add(compiler.objectClass);
     registerClassElement(compiler.objectClass);
 
-    ClassElement loadBuiltinClass(String name) {
-      var classImpl = fletchSystemLibrary.findLocal(name);
+    ClassElement loadBuiltinClass(String name, LibraryElement library) {
+      var classImpl = library.findLocal(name);
       if (classImpl == null) {
-        compiler.internalError(
-            fletchSystemLibrary, "Internal class '$name' not found.");
+        compiler.internalError(library, "Internal class '$name' not found.");
         return null;
       }
       builtinClasses.add(classImpl);
@@ -200,9 +199,10 @@ class FletchBackend extends Backend {
       return classImpl;
     }
 
-    smiClass = loadBuiltinClass("_Smi");
-    mintClass = loadBuiltinClass("_Mint");
-    stringClass = loadBuiltinClass("String");
+    smiClass = loadBuiltinClass("_Smi", fletchSystemLibrary);
+    mintClass = loadBuiltinClass("_Mint", fletchSystemLibrary);
+    stringClass = loadBuiltinClass("String", fletchSystemLibrary);
+    loadBuiltinClass("bool", compiler.coreLibrary);
   }
 
   ClassElement get stringImplementation => stringClass;
