@@ -62,6 +62,8 @@ struct ConsolePatchSet {
 struct ConsoleNodePatchData {
   union {
     ConsoleNodeData replace;
+    StrData title;
+    StrData status;
   }
 }
 

@@ -114,6 +114,14 @@ class ConsoleNodePatchData extends Reader {
   ConsoleNodeData get replace => new ConsoleNodeData()
       .._segment = _segment
       .._offset = _offset + 0;
+  bool get isTitle => 2 == this.tag;
+  StrData get title => new StrData()
+      .._segment = _segment
+      .._offset = _offset + 0;
+  bool get isStatus => 3 == this.tag;
+  StrData get status => new StrData()
+      .._segment = _segment
+      .._offset = _offset + 0;
   int get tag => _segment.memory.getUint16(_offset + 16);
 }
 
@@ -121,6 +129,18 @@ class ConsoleNodePatchDataBuilder extends Builder {
   ConsoleNodeDataBuilder initReplace() {
     tag = 1;
     return new ConsoleNodeDataBuilder()
+        .._segment = _segment
+        .._offset = _offset + 0;
+  }
+  StrDataBuilder initTitle() {
+    tag = 2;
+    return new StrDataBuilder()
+        .._segment = _segment
+        .._offset = _offset + 0;
+  }
+  StrDataBuilder initStatus() {
+    tag = 3;
+    return new StrDataBuilder()
         .._segment = _segment
         .._offset = _offset + 0;
   }

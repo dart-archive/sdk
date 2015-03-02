@@ -81,7 +81,21 @@ ConsoleNodeDataBuilder ConsoleNodePatchDataBuilder::initReplace() {
   return ConsoleNodeDataBuilder(segment(), offset() + 0);
 }
 
+StrDataBuilder ConsoleNodePatchDataBuilder::initTitle() {
+  setTag(2);
+  return StrDataBuilder(segment(), offset() + 0);
+}
+
+StrDataBuilder ConsoleNodePatchDataBuilder::initStatus() {
+  setTag(3);
+  return StrDataBuilder(segment(), offset() + 0);
+}
+
 ConsoleNodeData ConsoleNodePatchData::getReplace() const { return ConsoleNodeData(segment(), offset() + 0); }
+
+StrData ConsoleNodePatchData::getTitle() const { return StrData(segment(), offset() + 0); }
+
+StrData ConsoleNodePatchData::getStatus() const { return StrData(segment(), offset() + 0); }
 
 List<uint8_t> StrDataBuilder::initChars(int length) {
   Reader result = NewList(0, length, 1);

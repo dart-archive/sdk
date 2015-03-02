@@ -12,12 +12,14 @@ abstract class ConsolePresenterBase {
   ConsoleNode present();
 
   // Refresh a "presentation graph" from a given "previous" state.
-  void refresh(ConsoleNode previous, ConsolePatchSetBuilder builder) {
-    List patches = present().diff(previous);
+  ConsoleNode refresh(ConsoleNode previous, ConsolePatchSetBuilder builder) {
+    ConsoleNode graph = present();
+    List patches = graph.diff(previous);
     int length = patches.length;
     List patchBuilders = builder.initPatches(length);
     for (int i = 0; i < length; ++i) {
       patches[i].serialize(patchBuilders[i]);
     }
+    return graph;
   }
 }

@@ -7,10 +7,11 @@ import 'dart/console_presenter_base.dart';
 import 'dart/presentation_graph.dart' as node;
 
 class ConsolePresenter extends ConsolePresenterBase {
+  int _version = 0;
   Project _project;
   ConsolePresenter(this._project);
 
   ConsoleNode present() =>
     node.console(title: "${_project.name}::${_project.console.title}",
-                 status: _project.console.status);
+                 status: "${_project.console.status} v${++_version}");
 }

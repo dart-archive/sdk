@@ -11,9 +11,25 @@ class ConsoleNode {
   String status;
   ConsoleNode(this.title, this.status);
 
-  // TODO(zerny): implement actual diff'ing
-  List<ConsoleNodePatch> diff(ConsoleNode previous) =>
-    [new ConsoleNodePatch(this)];
+  List<ConsoleNodePatch> diff(ConsoleNode previous) {
+    List<ConsoleNodePatch> patches = new List();
+    diffAt(previous, patches);
+    return patches;
+  }
+
+  void diffAt(ConsoleNode previous,
+              List<ConsoleNodePatch> patches) {
+    if (previous == null || previous is! ConsoleNode) {
+      patches.add(new ConsoleNodeReplacePatch(this));
+      return;
+    }
+    if (this.title != previous.title) {
+      patches.add(new ConsoleNodeTitlePatch(this.title));
+    }
+    if (this.status != previous.status) {
+      patches.add(new ConsoleNodeStatusPatch(this.status));
+    }
+  }
 
   void serialize(ConsoleNodeDataBuilder builder) {
     serializeString(title, builder.initTitle());
@@ -21,11 +37,33 @@ class ConsoleNode {
   }
 }
 
-class ConsoleNodePatch {
+abstract class ConsoleNodePatch {
+  void serialize(ConsoleNodePatchDataBuilder builder);
+}
+
+class ConsoleNodeReplacePatch extends ConsoleNodePatch {
   ConsoleNode node;
-  ConsoleNodePatch(this.node);
+  ConsoleNodeReplacePatch(this.node);
 
   void serialize(ConsoleNodePatchDataBuilder builder) {
     node.serialize(builder.initReplace());
+  }
+}
+
+class ConsoleNodeTitlePatch extends ConsoleNodePatch {
+  String title;
+  ConsoleNodeTitlePatch(this.title);
+
+  void serialize(ConsoleNodePatchDataBuilder builder) {
+    serializeString(title, builder.initTitle());
+  }
+}
+
+class ConsoleNodeStatusPatch extends ConsoleNodePatch {
+  String status;
+  ConsoleNodeStatusPatch(this.status);
+
+  void serialize(ConsoleNodePatchDataBuilder builder) {
+    serializeString(status, builder.initStatus());
   }
 }

@@ -36,6 +36,15 @@
             atNode:(ConsoleNode* __strong *)node {
   if (patch.isReplace()) {
     *node = [[ConsoleNode alloc] initWith: patch.getReplace()];
+  } else {
+    assert(*node);
+    if (patch.isTitle()) {
+      (*node)->_title = [PresenterUtils decodeStrData:patch.getTitle()];
+    } else if (patch.isStatus()) {
+      (*node)->_status = [PresenterUtils decodeStrData:patch.getStatus()];
+    } else {
+      abort();
+    }
   }
 }
 

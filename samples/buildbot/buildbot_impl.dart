@@ -9,6 +9,8 @@ import 'console_presenter.dart';
 class BuildBotImpl extends BuildBotService {
   Project _project;
   ConsolePresenter _presenter;
+  ConsoleNode _presenter_graph = null;
+
   BuildBotImpl() {
     _project = new Project("Dart")
       ..console = new Console(
@@ -20,6 +22,7 @@ class BuildBotImpl extends BuildBotService {
   }
 
   void refresh(PresenterPatchSetBuilder builder) {
-    _presenter.refresh(null, builder.initConsolePatchSet());
+    _presenter_graph = _presenter.refresh(_presenter_graph,
+                                          builder.initConsolePatchSet());
   }
 }

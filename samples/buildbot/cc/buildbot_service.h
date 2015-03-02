@@ -105,6 +105,10 @@ class ConsoleNodePatchData : public Reader {
 
   bool isReplace() const { return 1 == getTag(); }
   ConsoleNodeData getReplace() const;
+  bool isTitle() const { return 2 == getTag(); }
+  StrData getTitle() const;
+  bool isStatus() const { return 3 == getTag(); }
+  StrData getStatus() const;
   uint16_t getTag() const { return *PointerTo<uint16_t>(16); }
 };
 
@@ -118,6 +122,8 @@ class ConsoleNodePatchDataBuilder : public Builder {
       : Builder(segment, offset) { }
 
   ConsoleNodeDataBuilder initReplace();
+  StrDataBuilder initTitle();
+  StrDataBuilder initStatus();
   void setTag(uint16_t value) { *PointerTo<uint16_t>(16) = value; }
 };
 
