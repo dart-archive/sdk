@@ -196,6 +196,28 @@ void _generateServiceJni(String path, Unit unit, String outputDirectory) {
 class _JavaVisitor extends CodeGenerationVisitor {
   _JavaVisitor(String path) : super(path);
 
+  void writeType(Type node) {
+    Map<String, String> types = const {
+      'void' : 'void',
+      'bool' : 'boolean',
+
+      'uint8' : 'unsigned byte',
+      'uint16' : 'unsigned short',
+      'uint32' : 'unsigned int',
+      'uint64' : 'unsigned long',
+
+      'int8' : 'byte',
+      'int16' : 'short',
+      'int32' : 'int',
+      'int64' : 'long',
+
+      'float32' : 'float',
+      'float64' : 'double',
+    };
+    String type = types[node.identifier];
+    write(type);
+  }
+
   visitUnit(Unit node) {
     writeln(HEADER);
     writeln('package fletch;');
@@ -220,8 +242,11 @@ class _JavaVisitor extends CodeGenerationVisitor {
     writeln();
     writeln('  public static abstract class ${camelName}Callback {');
     write('    public abstract void handle(');
-    writeType(node.returnType);
-    writeln(' result);');
+    if (!node.returnType.isVoid) {
+      writeType(node.returnType);
+      write(' result');
+    }
+    writeln(');');
     writeln('  }');
 
     writeln();
@@ -243,15 +268,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
   visitFormal(Formal node) {
     writeType(node.type);
     write(' ${node.name}');
-  }
-
-  void writeType(Type node) {
-    Map<String, String> types = const {
-      'int16': 'short',
-      'int32': 'int',
-    };
-    String type = types[node.identifier];
-    write(type);
   }
 }
 
@@ -358,8 +374,23 @@ class _JniVisitor extends CcVisitor {
 
   void writeType(Type node) {
     Map<String, String> types = const {
-      'int16': 'jshort',
-      'int32': 'jint'
+      'void' : 'void',
+      'bool' : 'jboolean',
+
+      'uint8' : 'jboolean',
+      'uint16' : 'jchar',
+      // TODO(ager): unsigned 32-bit and 64-bit int types do not have
+      // a corresponding jni type.
+      'uint32' : 'unsupported type',
+      'uint64' : 'unsupported type',
+
+      'int8' : 'jbyte',
+      'int16' : 'jshort',
+      'int32' : 'jint',
+      'int64' : 'jlong',
+
+      'float32' : 'jfloat',
+      'float64' : 'jdouble',
     };
     String type = types[node.identifier];
     write(type);
@@ -376,7 +407,9 @@ class _JniVisitor extends CcVisitor {
       writeln();
       writeln('static void $name(void* raw) {');
       writeln('  char* buffer = ${cast('char*')}(raw);');
-      writeln('  int result = *${cast('int*')}(buffer + 48);');
+      if (!type.isVoid) {
+        writeln('  int64_t result = *${cast('int64_t*')}(buffer + 48);');
+      }
       int offset = 48 + layout.size;
       write('  jobject callback = *${cast('jobject*')}');
       writeln('(buffer + 32);');
@@ -385,9 +418,14 @@ class _JniVisitor extends CcVisitor {
       writeln('  JNIEnv* env = attachCurrentThreadAndGetEnv(vm);');
       writeln('  jclass clazz = env->GetObjectClass(callback);');
       write('  jmethodID methodId = env->GetMethodID');
-      // TODO(ager): For now the return type is hard-coded to int.
-      writeln('(clazz, "handle", "(I)V");');
-      writeln('  env->CallVoidMethod(callback, methodId, result);');
+      write('(clazz, "handle", ');
+      if (type.isVoid) {
+        writeln('"()V");');
+        writeln('  env->CallVoidMethod(callback, methodId);');
+      } else {
+        writeln('"(I)V");');
+        writeln('  env->CallVoidMethod(callback, methodId, result);');
+      }
       writeln('  env->DeleteGlobalRef(callback);');
       writeln('  detachCurrentThread(vm);');
       writeln('  free(buffer);');

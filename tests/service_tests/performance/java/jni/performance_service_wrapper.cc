@@ -59,7 +59,7 @@ JNIEXPORT jint JNICALL Java_fletch_PerformanceService_echo(JNIEnv*, jclass, jint
 
 static void Unwrap_int32_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  int result = *reinterpret_cast<int*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
   jobject callback = *reinterpret_cast<jobject*>(buffer + 32);
   JavaVM* vm = *reinterpret_cast<JavaVM**>(buffer + 56);
   JNIEnv* env = attachCurrentThreadAndGetEnv(vm);

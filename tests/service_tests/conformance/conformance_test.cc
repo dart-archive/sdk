@@ -129,29 +129,15 @@ static void RunPersonTests() {
   }
 
   {
-    MessageBuilder builder(512);
-    PersonBuilder person = builder.initRoot<PersonBuilder>();
-    BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
-    AgeStats stats2 = ConformanceService::createAgeStats(42, 42);
-    EXPECT_EQ(42, stats2.getAverageAge());
-    EXPECT_EQ(42, stats2.getSum());
-    stats2.Delete();
+    AgeStats stats = ConformanceService::createAgeStats(42, 42);
+    EXPECT_EQ(42, stats.getAverageAge());
+    EXPECT_EQ(42, stats.getSum());
+    stats.Delete();
   }
 
-  {
-    MessageBuilder builder(512);
-    PersonBuilder person = builder.initRoot<PersonBuilder>();
-    BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
-    ConformanceService::createAgeStatsAsync(42, 42, CreateAgeStatsCallback);
-  }
+  ConformanceService::createAgeStatsAsync(42, 42, CreateAgeStatsCallback);
 
   {
-    MessageBuilder builder(512);
-    PersonBuilder person = builder.initRoot<PersonBuilder>();
-    BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
     Person generated = ConformanceService::createPerson(10);
     EXPECT_EQ(42, generated.getAge());
     EXPECT_EQ(1, generated.getName().length());
@@ -164,64 +150,22 @@ static void RunPersonTests() {
     generated.Delete();
   }
 
-  {
-    MessageBuilder builder(512);
-    PersonBuilder person = builder.initRoot<PersonBuilder>();
-    BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
-    ConformanceService::createPersonAsync(10, CreatePersonCallback);
-  }
+  ConformanceService::createPersonAsync(10, CreatePersonCallback);
 
   {
-    MessageBuilder builder(512);
-    PersonBuilder person = builder.initRoot<PersonBuilder>();
-    BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
     Node node = ConformanceService::createNode(10);
     EXPECT_EQ(24680, node.ComputeUsed());
     EXPECT_EQ(10, Depth(node));
     node.Delete();
   }
 
-  {
-    MessageBuilder builder(512);
-    PersonBuilder person = builder.initRoot<PersonBuilder>();
-    BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
-    ConformanceService::createNodeAsync(10, CreateNodeCallback);
-  }
+  ConformanceService::createNodeAsync(10, CreateNodeCallback);
 
-  {
-    MessageBuilder builder(512);
-    PersonBuilder person = builder.initRoot<PersonBuilder>();
-    BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
-    ConformanceService::foo();
-  }
+  ConformanceService::foo();
+  ConformanceService::fooAsync(FooCallback);
 
-  {
-    MessageBuilder builder(512);
-    PersonBuilder person = builder.initRoot<PersonBuilder>();
-    BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
-    ConformanceService::fooAsync(FooCallback);
-  }
-
-  {
-    MessageBuilder builder(512);
-    PersonBuilder person = builder.initRoot<PersonBuilder>();
-    BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
-    EXPECT_EQ(42, ConformanceService::ping());
-  }
-
-  {
-    MessageBuilder builder(512);
-    PersonBuilder person = builder.initRoot<PersonBuilder>();
-    BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
-    ConformanceService::pingAsync(PingCallback);
-  }
+  EXPECT_EQ(42, ConformanceService::ping());
+  ConformanceService::pingAsync(PingCallback);
 }
 
 static void RunPersonBoxTests() {
