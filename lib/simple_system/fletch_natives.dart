@@ -4,6 +4,9 @@
 
 library dart.fletch;
 
-printString(String s) native;
+import 'dart:_fletch_system'
+    show native;
 
-halt(int code) native;
+@native external printString(String s);
+
+@native external halt(int code);

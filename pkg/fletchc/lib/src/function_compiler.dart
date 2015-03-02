@@ -259,6 +259,16 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void visitAs(
+      Send node,
+      Node expression,
+      DartType type,
+      _) {
+    // TODO(ajohnsen): To actual type check.
+    visitForValue(expression);
+    applyVisitState();
+  }
+
   void visitThisGet(
       Node node,
       _) {
@@ -289,6 +299,9 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       if (element == context.compiler.backend.fletchExternalInvokeMain) {
         element = context.compiler.mainFunction;
       } else if (element == context.compiler.backend.fletchExternalYield) {
+        // Handled elsewhere.
+      } else if (element.library ==
+          context.compiler.backend.fletchNativesLibrary) {
         // Handled elsewhere.
       } else {
         generateUnimplementedError(
@@ -383,6 +396,20 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void visitStringInterpolation(StringInterpolation node) {
+    // TODO(ajohnsen): Cache these in context/backend.
+    Selector toString = new Selector.call('toString', null, 0);
+    Selector concat = new Selector.binaryOperator('+');
+    visitForValue(node.string);
+    for (StringInterpolationPart part in node.parts) {
+      visitForValue(part.expression);
+      invokeMethod(toString);
+      visitForValue(part.string);
+      invokeMethod(concat);
+      invokeMethod(concat);
+    }
+  }
+
   void visitLiteralNull(LiteralNull node) {
     if (visitState == VisitState.Value) {
       builder.loadLiteralNull();
@@ -473,7 +500,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   void visitNewExpression(NewExpression node) {
     ConstructorElement constructor = elements[node.send];
-    registry.registerInstantiatedClass(constructor.enclosingClass);
     for (Node argument in node.send.arguments) {
       visitForValue(argument);
     }

@@ -4,8 +4,16 @@
 
 library dart.system;
 
+import 'dart:core' hide
+    String;
+
+import 'dart:core' as core show
+    String;
+
 part 'string.dart';
 part 'integer.dart';
+
+const native = "native";
 
 /// This is a magic method recognized by the compiler, and references to it
 /// will be substituted for the actual main method.

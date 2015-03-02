@@ -34,7 +34,11 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionSignature,
     LibraryElement;
 
-import 'package:compiler/src/util/util.dart' show Spannable;
+import 'package:compiler/src/universe/universe.dart'
+    show Selector;
+
+import 'package:compiler/src/util/util.dart'
+    show Spannable;
 
 import 'package:compiler/src/elements/modelx.dart' show
     FunctionElementX;
@@ -108,12 +112,15 @@ class FletchBackend extends Backend {
   List<Command> commands;
 
   LibraryElement fletchSystemLibrary;
+  LibraryElement fletchNativesLibrary;
 
   FunctionElement fletchSystemEntry;
 
   FunctionElement fletchExternalInvokeMain;
 
   FunctionElement fletchExternalYield;
+
+  FieldElement fletchNativeElement;
 
   ClassElement stringClass;
   ClassElement smiClass;
@@ -184,6 +191,8 @@ class FletchBackend extends Backend {
     builtinClasses.add(compiler.objectClass);
     registerClassElement(compiler.objectClass);
 
+    fletchNativeElement = fletchSystemLibrary.findLocal('native');
+
     ClassElement loadBuiltinClass(String name, LibraryElement library) {
       var classImpl = library.findLocal(name);
       if (classImpl == null) {
@@ -195,7 +204,10 @@ class FletchBackend extends Backend {
       // not happen at this point in time.
       classImpl.ensureResolved(compiler);
       registerClassElement(classImpl);
-      registry.registerInstantiatedClass(classImpl);
+      world.registerInstantiatedType(classImpl.rawType, registry);
+      // TODO(ahe): This is a hack to let both the world and the codegen know
+      // about the instantiated type.
+      registry.registerInstantiatedType(classImpl.rawType);
       return classImpl;
     }
 
@@ -203,9 +215,14 @@ class FletchBackend extends Backend {
     mintClass = loadBuiltinClass("_Mint", fletchSystemLibrary);
     stringClass = loadBuiltinClass("String", fletchSystemLibrary);
     loadBuiltinClass("bool", compiler.coreLibrary);
+
+    // TODO(ajohnsen): Remoev? - string interpolation does not enqueue '+'.
+    world.registerDynamicInvocation(new Selector.binaryOperator('+'));
   }
 
   ClassElement get stringImplementation => stringClass;
+
+  ClassElement get intImplementation => smiClass;
 
   /// Class of annotations to mark patches in patch files.
   ///
@@ -359,9 +376,14 @@ class FletchBackend extends Backend {
 
   bool isNative(Element element) {
     if (element is FunctionElement) {
-      if (element.hasNode) {
-        return
-            identical('native', element.node.body.getBeginToken().stringValue);
+      for (var metadata in element.metadata) {
+        // TODO(ahe): This code should ensure that @native resolves to precisely
+        // the native variable in fletch:system.
+        if (metadata.constant == null) continue;
+        ConstantValue value = metadata.constant.value;
+        if (!value.isString) continue;
+        if (value.toDartString().slowToString() != 'native') continue;
+        return true;
       }
     }
     return false;
@@ -520,6 +542,9 @@ class FletchBackend extends Backend {
     if (Uri.parse('dart:_fletch_system') == library.canonicalUri) {
       fletchSystemLibrary = library;
     }
+    if (Uri.parse('dart:fletch_natives') == library.canonicalUri) {
+      fletchNativesLibrary = library;
+    }
   }
 
   /// Return non-null to enable patching. Possible return values are 'new' and
@@ -536,6 +561,10 @@ class FletchBackend extends Backend {
         patch.computeType(compiler);
       });
       element = patch;
+    } else if (element.library == fletchSystemLibrary) {
+      // Nothing needed for now.
+    } else if (element.library == fletchNativesLibrary) {
+      // Nothing needed for now.
     } else if (externals.contains(element)) {
       // Nothing needed for now.
     } else {
