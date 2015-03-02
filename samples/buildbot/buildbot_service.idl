@@ -2,26 +2,71 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+
+// Imaginary presenter description:
+//
+//    presenter ConsolePresenter {
+//      ConsoleNode present()
+//    }
+//
+//    node ConsoleNode {
+//      string title;
+//      string status;
+//    }
+//
+// From this description we generate the files:
+//
+//    dart/console_presenter_base.dart
+//    dart/console_node.dart
+//    dart/presentation_graph.dart
+//    dart/presentation_utils.dart
+//
+//    objc/ConsolePresenter.{h,mm}
+//    objc/ConsoleNode.{h,mm}
+//    objc/PresentationUtils.{h,mm}
+//
+// For communtication also we define the service structures below for
+// communtication which results in the files:
+//
+//   dart/buildbot_service.dart
+//   dart/struct.dart
+//
+//   cc/buildbot_service.{h,cc}
+//   cc/struct.{h,cc}
+
+
+// Internal service layer
 service BuildBotService {
-  // Synchronization should be considered internal.
-  PatchSet* sync();
+  PresenterPatchSet* refresh();
 }
 
-// Primary structures.
+struct PresenterPatchSet {
+  union {
+    ConsolePatchSet consolePatchSet;
+  }
+}
 
-struct Node {}
+// Exchange structures.
+
+struct ConsoleNodeData {
+  StrData title;
+  StrData status;
+}
+
+// Patch structures.
+
+struct ConsolePatchSet {
+  List<ConsoleNodePatchData> patches;
+}
+
+struct ConsoleNodePatchData {
+  union {
+    ConsoleNodeData replace;
+  }
+}
 
 // Utility structures.
 
-struct Str {
+struct StrData {
   List<uint8> chars;
-}
-
-struct Patch {
-  List<uint8> path;
-  Node content;
-}
-
-struct PatchSet {
-  List<Patch> patches;
 }

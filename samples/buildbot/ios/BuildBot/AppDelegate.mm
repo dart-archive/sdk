@@ -44,7 +44,7 @@ static dispatch_queue_t queue;
   dispatch_async(queue, ^() {
     [AppDelegate loadAndRunDartSnapshot];
   });
-  // Setup the concrete todo service.
+  // Setup the buildbot-app service.
   BuildBotService::setup();
 
   return YES;

@@ -10,105 +10,136 @@
 #include <inttypes.h>
 #include "struct.h"
 
-class Node;
-class NodeBuilder;
-class Str;
-class StrBuilder;
-class Patch;
-class PatchBuilder;
-class PatchSet;
-class PatchSetBuilder;
+class PresenterPatchSet;
+class PresenterPatchSetBuilder;
+class ConsoleNodeData;
+class ConsoleNodeDataBuilder;
+class ConsolePatchSet;
+class ConsolePatchSetBuilder;
+class ConsoleNodePatchData;
+class ConsoleNodePatchDataBuilder;
+class StrData;
+class StrDataBuilder;
 
 class BuildBotService {
  public:
   static void setup();
   static void tearDown();
-  static PatchSet sync();
-  static void syncAsync(void (*callback)(PatchSet));
+  static PresenterPatchSet refresh();
+  static void refreshAsync(void (*callback)(PresenterPatchSet));
 };
 
-class Node : public Reader {
+class PresenterPatchSet : public Reader {
  public:
-  static const int kSize = 0;
-  Node(Segment* segment, int offset)
+  static const int kSize = 16;
+  PresenterPatchSet(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
+  bool isConsolePatchSet() const { return 1 == getTag(); }
+  ConsolePatchSet getConsolePatchSet() const;
+  uint16_t getTag() const { return *PointerTo<uint16_t>(8); }
 };
 
-class NodeBuilder : public Builder {
+class PresenterPatchSetBuilder : public Builder {
  public:
-  static const int kSize = 0;
+  static const int kSize = 16;
 
-  explicit NodeBuilder(const Builder& builder)
+  explicit PresenterPatchSetBuilder(const Builder& builder)
       : Builder(builder) { }
-  NodeBuilder(Segment* segment, int offset)
+  PresenterPatchSetBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
+  ConsolePatchSetBuilder initConsolePatchSet();
+  void setTag(uint16_t value) { *PointerTo<uint16_t>(8) = value; }
 };
 
-class Str : public Reader {
+class ConsoleNodeData : public Reader {
+ public:
+  static const int kSize = 16;
+  ConsoleNodeData(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+  StrData getTitle() const;
+  StrData getStatus() const;
+};
+
+class ConsoleNodeDataBuilder : public Builder {
+ public:
+  static const int kSize = 16;
+
+  explicit ConsoleNodeDataBuilder(const Builder& builder)
+      : Builder(builder) { }
+  ConsoleNodeDataBuilder(Segment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  StrDataBuilder initTitle();
+  StrDataBuilder initStatus();
+};
+
+class ConsolePatchSet : public Reader {
  public:
   static const int kSize = 8;
-  Str(Segment* segment, int offset)
+  ConsolePatchSet(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+  List<ConsoleNodePatchData> getPatches() const { return ReadList<ConsoleNodePatchData>(0); }
+};
+
+class ConsolePatchSetBuilder : public Builder {
+ public:
+  static const int kSize = 8;
+
+  explicit ConsolePatchSetBuilder(const Builder& builder)
+      : Builder(builder) { }
+  ConsolePatchSetBuilder(Segment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  List<ConsoleNodePatchDataBuilder> initPatches(int length);
+};
+
+class ConsoleNodePatchData : public Reader {
+ public:
+  static const int kSize = 24;
+  ConsoleNodePatchData(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+  bool isReplace() const { return 1 == getTag(); }
+  ConsoleNodeData getReplace() const;
+  uint16_t getTag() const { return *PointerTo<uint16_t>(16); }
+};
+
+class ConsoleNodePatchDataBuilder : public Builder {
+ public:
+  static const int kSize = 24;
+
+  explicit ConsoleNodePatchDataBuilder(const Builder& builder)
+      : Builder(builder) { }
+  ConsoleNodePatchDataBuilder(Segment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  ConsoleNodeDataBuilder initReplace();
+  void setTag(uint16_t value) { *PointerTo<uint16_t>(16) = value; }
+};
+
+class StrData : public Reader {
+ public:
+  static const int kSize = 8;
+  StrData(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
   List<uint8_t> getChars() const { return ReadList<uint8_t>(0); }
 };
 
-class StrBuilder : public Builder {
+class StrDataBuilder : public Builder {
  public:
   static const int kSize = 8;
 
-  explicit StrBuilder(const Builder& builder)
+  explicit StrDataBuilder(const Builder& builder)
       : Builder(builder) { }
-  StrBuilder(Segment* segment, int offset)
+  StrDataBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
   List<uint8_t> initChars(int length);
-};
-
-class Patch : public Reader {
- public:
-  static const int kSize = 8;
-  Patch(Segment* segment, int offset)
-      : Reader(segment, offset) { }
-
-  List<uint8_t> getPath() const { return ReadList<uint8_t>(0); }
-  Node getContent() const;
-};
-
-class PatchBuilder : public Builder {
- public:
-  static const int kSize = 8;
-
-  explicit PatchBuilder(const Builder& builder)
-      : Builder(builder) { }
-  PatchBuilder(Segment* segment, int offset)
-      : Builder(segment, offset) { }
-
-  List<uint8_t> initPath(int length);
-  NodeBuilder initContent();
-};
-
-class PatchSet : public Reader {
- public:
-  static const int kSize = 8;
-  PatchSet(Segment* segment, int offset)
-      : Reader(segment, offset) { }
-
-  List<Patch> getPatches() const { return ReadList<Patch>(0); }
-};
-
-class PatchSetBuilder : public Builder {
- public:
-  static const int kSize = 8;
-
-  explicit PatchSetBuilder(const Builder& builder)
-      : Builder(builder) { }
-  PatchSetBuilder(Segment* segment, int offset)
-      : Builder(segment, offset) { }
-
-  List<PatchBuilder> initPatches(int length);
 };
 
 #endif  // BUILDBOT_SERVICE_H

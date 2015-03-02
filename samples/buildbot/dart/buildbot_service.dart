@@ -18,7 +18,7 @@ bool _terminated = false;
 BuildBotService _impl;
 
 abstract class BuildBotService {
-  void sync(PatchSetBuilder result);
+  void refresh(PresenterPatchSetBuilder result);
 
   static void initialize(BuildBotService impl) {
     if (_impl != null) {
@@ -40,10 +40,10 @@ abstract class BuildBotService {
         _terminated = true;
         _postResult.icall$1(request);
         break;
-      case _SYNC_METHOD_ID:
-        MessageBuilder mb = new MessageBuilder(16);
-        PatchSetBuilder builder = mb.initRoot(new PatchSetBuilder(), 8);
-        _impl.sync(builder);
+      case _REFRESH_METHOD_ID:
+        MessageBuilder mb = new MessageBuilder(24);
+        PresenterPatchSetBuilder builder = mb.initRoot(new PresenterPatchSetBuilder(), 16);
+        _impl.refresh(builder);
         var result = getResultMessage(builder);
         request.setInt64(48, result);
         _postResult.icall$1(request);
@@ -54,51 +54,97 @@ abstract class BuildBotService {
   }
 
   const int _TERMINATE_METHOD_ID = 0;
-  const int _SYNC_METHOD_ID = 1;
+  const int _REFRESH_METHOD_ID = 1;
 }
 
-class Node extends Reader {
+class PresenterPatchSet extends Reader {
+  bool get isConsolePatchSet => 1 == this.tag;
+  ConsolePatchSet get consolePatchSet => new ConsolePatchSet()
+      .._segment = _segment
+      .._offset = _offset + 0;
+  int get tag => _segment.memory.getUint16(_offset + 8);
 }
 
-class NodeBuilder extends Builder {
-}
-
-class Str extends Reader {
-  List<int> get chars => readList(new _uint8List(), 0);
-}
-
-class StrBuilder extends Builder {
-  List<int> initChars(int length) {
-    return NewList(new _uint8BuilderList(), 0, length, 1);
+class PresenterPatchSetBuilder extends Builder {
+  ConsolePatchSetBuilder initConsolePatchSet() {
+    tag = 1;
+    return new ConsolePatchSetBuilder()
+        .._segment = _segment
+        .._offset = _offset + 0;
+  }
+  void set tag(int value) {
+    _segment.memory.setUint16(_offset + 8, value);
   }
 }
 
-class Patch extends Reader {
-  List<int> get path => readList(new _uint8List(), 0);
-  Node get content => new Node()
+class ConsoleNodeData extends Reader {
+  StrData get title => new StrData()
+      .._segment = _segment
+      .._offset = _offset + 0;
+  StrData get status => new StrData()
       .._segment = _segment
       .._offset = _offset + 8;
 }
 
-class PatchBuilder extends Builder {
-  List<int> initPath(int length) {
-    return NewList(new _uint8BuilderList(), 0, length, 1);
+class ConsoleNodeDataBuilder extends Builder {
+  StrDataBuilder initTitle() {
+    return new StrDataBuilder()
+        .._segment = _segment
+        .._offset = _offset + 0;
   }
-  NodeBuilder initContent() {
-    return new NodeBuilder()
+  StrDataBuilder initStatus() {
+    return new StrDataBuilder()
         .._segment = _segment
         .._offset = _offset + 8;
   }
 }
 
-class PatchSet extends Reader {
-  List<Patch> get patches => readList(new _PatchList(), 0);
+class ConsolePatchSet extends Reader {
+  List<ConsoleNodePatchData> get patches => readList(new _ConsoleNodePatchDataList(), 0);
 }
 
-class PatchSetBuilder extends Builder {
-  List<PatchBuilder> initPatches(int length) {
-    return NewList(new _PatchBuilderList(), 0, length, 8);
+class ConsolePatchSetBuilder extends Builder {
+  List<ConsoleNodePatchDataBuilder> initPatches(int length) {
+    return NewList(new _ConsoleNodePatchDataBuilderList(), 0, length, 24);
   }
+}
+
+class ConsoleNodePatchData extends Reader {
+  bool get isReplace => 1 == this.tag;
+  ConsoleNodeData get replace => new ConsoleNodeData()
+      .._segment = _segment
+      .._offset = _offset + 0;
+  int get tag => _segment.memory.getUint16(_offset + 16);
+}
+
+class ConsoleNodePatchDataBuilder extends Builder {
+  ConsoleNodeDataBuilder initReplace() {
+    tag = 1;
+    return new ConsoleNodeDataBuilder()
+        .._segment = _segment
+        .._offset = _offset + 0;
+  }
+  void set tag(int value) {
+    _segment.memory.setUint16(_offset + 16, value);
+  }
+}
+
+class StrData extends Reader {
+  List<int> get chars => readList(new _uint8List(), 0);
+}
+
+class StrDataBuilder extends Builder {
+  List<int> initChars(int length) {
+    return NewList(new _uint8BuilderList(), 0, length, 1);
+  }
+}
+
+class _ConsoleNodePatchDataList extends ListReader implements List<ConsoleNodePatchData> {
+  ConsoleNodePatchData operator[](int index) => readListElement(new ConsoleNodePatchData(), index, 24);
+}
+
+class _ConsoleNodePatchDataBuilderList extends ListBuilder implements List<ConsoleNodePatchDataBuilder> {
+  ConsoleNodePatchDataBuilder operator[](int index) => readListElement(new ConsoleNodePatchDataBuilder(), index, 24);
 }
 
 class _uint8List extends ListReader implements List<uint8> {
@@ -108,12 +154,4 @@ class _uint8List extends ListReader implements List<uint8> {
 class _uint8BuilderList extends ListBuilder implements List<uint8> {
   int operator[](int index) => _segment.memory.getUint8(_offset + index * 1);
   void operator[]=(int index, int value) => _segment.memory.setUint8(_offset + index * 1, value);
-}
-
-class _PatchList extends ListReader implements List<Patch> {
-  Patch operator[](int index) => readListElement(new Patch(), index, 8);
-}
-
-class _PatchBuilderList extends ListBuilder implements List<PatchBuilder> {
-  PatchBuilder operator[](int index) => readListElement(new PatchBuilder(), index, 8);
 }

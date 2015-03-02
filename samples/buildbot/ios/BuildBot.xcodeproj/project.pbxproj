@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DA1B2C9C1AA1B91600A94B70 /* ConsolePresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1B2C9B1AA1B91600A94B70 /* ConsolePresenter.mm */; };
+		DA1B2C9F1AA1BAE700A94B70 /* ConsoleNode.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1B2C9E1AA1BAE700A94B70 /* ConsoleNode.mm */; };
+		DA1B2CA21AA44F8300A94B70 /* PresenterUtils.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1B2CA11AA44F8300A94B70 /* PresenterUtils.mm */; };
 		DA1DEDF51A9F200F0043E9CF /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA1DEDF41A9F200F0043E9CF /* libfletch.a */; };
 		DA1DEDF81A9F20550043E9CF /* buildbot.snapshot in Resources */ = {isa = PBXBuildFile; fileRef = DA1DEDF71A9F20550043E9CF /* buildbot.snapshot */; };
 		DA1DEDFE1A9F20810043E9CF /* buildbot_service.cc in Sources */ = {isa = PBXBuildFile; fileRef = DA1DEDFA1A9F20810043E9CF /* buildbot_service.cc */; };
@@ -30,6 +33,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		DA1B2C9A1AA1B91600A94B70 /* ConsolePresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConsolePresenter.h; sourceTree = "<group>"; };
+		DA1B2C9B1AA1B91600A94B70 /* ConsolePresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ConsolePresenter.mm; sourceTree = "<group>"; };
+		DA1B2C9D1AA1BAE700A94B70 /* ConsoleNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConsoleNode.h; sourceTree = "<group>"; };
+		DA1B2C9E1AA1BAE700A94B70 /* ConsoleNode.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ConsoleNode.mm; sourceTree = "<group>"; };
+		DA1B2CA01AA44F8300A94B70 /* PresenterUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PresenterUtils.h; sourceTree = "<group>"; };
+		DA1B2CA11AA44F8300A94B70 /* PresenterUtils.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PresenterUtils.mm; sourceTree = "<group>"; };
 		DA1DEDF41A9F200F0043E9CF /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfletch.a; path = ../../../out/ReleaseXARM/libfletch.a; sourceTree = "<group>"; };
 		DA1DEDF71A9F20550043E9CF /* buildbot.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; path = buildbot.snapshot; sourceTree = "<group>"; };
 		DA1DEDFA1A9F20810043E9CF /* buildbot_service.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = buildbot_service.cc; sourceTree = "<group>"; };
@@ -69,6 +78,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		DA1B2C951AA1B79500A94B70 /* objc */ = {
+			isa = PBXGroup;
+			children = (
+				DA1B2C9A1AA1B91600A94B70 /* ConsolePresenter.h */,
+				DA1B2C9B1AA1B91600A94B70 /* ConsolePresenter.mm */,
+				DA1B2C9D1AA1BAE700A94B70 /* ConsoleNode.h */,
+				DA1B2C9E1AA1BAE700A94B70 /* ConsoleNode.mm */,
+				DA1B2CA01AA44F8300A94B70 /* PresenterUtils.h */,
+				DA1B2CA11AA44F8300A94B70 /* PresenterUtils.mm */,
+			);
+			name = objc;
+			path = ../objc;
+			sourceTree = "<group>";
+		};
 		DA1DEDF61A9F20550043E9CF /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -93,6 +116,7 @@
 		DA4B88771A9F0BF500EFBB5A = {
 			isa = PBXGroup;
 			children = (
+				DA1B2C951AA1B79500A94B70 /* objc */,
 				DA1DEDF91A9F20810043E9CF /* cc */,
 				DA1DEDF41A9F200F0043E9CF /* libfletch.a */,
 				DA1DEDF61A9F20550043E9CF /* Resources */,
@@ -252,9 +276,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				DA1DEDFE1A9F20810043E9CF /* buildbot_service.cc in Sources */,
+				DA1B2C9F1AA1BAE700A94B70 /* ConsoleNode.mm in Sources */,
 				DA1DEDFF1A9F20810043E9CF /* struct.cc in Sources */,
 				DA4B888C1A9F0BF500EFBB5A /* ViewController.mm in Sources */,
+				DA1B2CA21AA44F8300A94B70 /* PresenterUtils.mm in Sources */,
 				DA4B88891A9F0BF500EFBB5A /* AppDelegate.mm in Sources */,
+				DA1B2C9C1AA1B91600A94B70 /* ConsolePresenter.mm in Sources */,
 				DA4B88861A9F0BF500EFBB5A /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

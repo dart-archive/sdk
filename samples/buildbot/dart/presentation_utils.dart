@@ -2,11 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#import <UIKit/UIKit.h>
-
-@interface ViewController : UIViewController
-
-@property (weak, nonatomic) IBOutlet UILabel *status;
-
-@end
-
+void serializeString(String string, StrDataBuilder builder) {
+  int length = string.length;
+  List<int> chars = builder.initChars(length);
+  for (int i = 0; i < length; ++i) {
+    chars[i] = string.codeUnitAt(i);
+  }
+}

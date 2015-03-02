@@ -2,11 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 
-@interface ViewController : UIViewController
+@class ConsoleNode;
 
-@property (weak, nonatomic) IBOutlet UILabel *status;
+@interface ConsolePresenter : NSObject
+
+@property (readonly) ConsoleNode* root;
+
+- (void)refresh;
 
 @end
-

@@ -4,7 +4,14 @@
 
 #import "ViewController.h"
 
+#import "ConsoleNode.h"
+#import "ConsolePresenter.h"
+
+#include "buildbot_service.h"
+
 @interface ViewController ()
+
+@property ConsolePresenter* presenter;
 
 @end
 
@@ -12,12 +19,28 @@
 
 - (void)viewDidLoad {
   [super viewDidLoad];
-  // Do any additional setup after loading the view, typically from a nib.
+
+  // Attach the console presenter with a 1-second refresh rate.
+  self.presenter = [[ConsolePresenter alloc] init];
+  CADisplayLink* consoleLink =
+    [CADisplayLink
+     displayLinkWithTarget:self
+                  selector:@selector(refreshConsole:)];
+  [consoleLink setFrameInterval:60];
+  [consoleLink addToRunLoop:[NSRunLoop currentRunLoop]
+                    forMode:NSDefaultRunLoopMode];
 }
 
 - (void)didReceiveMemoryWarning {
   [super didReceiveMemoryWarning];
   // Dispose of any resources that can be recreated.
+}
+
+- (void)refreshConsole:(CADisplayLink*)sender {
+  [self.presenter refresh];
+
+  // TODO(zerny): move this to an onChange listener.
+  [self.status setText:[[self.presenter root] status]];
 }
 
 @end

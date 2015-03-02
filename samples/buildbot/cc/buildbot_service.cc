@@ -19,56 +19,71 @@ void BuildBotService::tearDown() {
   service_id_ = kNoServiceId;
 }
 
-static const MethodId kSyncId_ = reinterpret_cast<MethodId>(1);
+static const MethodId kRefreshId_ = reinterpret_cast<MethodId>(1);
 
-PatchSet BuildBotService::sync() {
+PresenterPatchSet BuildBotService::refresh() {
   static const int kSize = 56;
   char _bits[kSize];
   char* _buffer = _bits;
   *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  ServiceApiInvoke(service_id_, kSyncId_, _buffer, kSize);
+  ServiceApiInvoke(service_id_, kRefreshId_, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
-  return PatchSet(segment, 8);
+  return PresenterPatchSet(segment, 8);
 }
 
-static void Unwrap_PatchSet_8(void* raw) {
-  typedef void (*cbt)(PatchSet);
+static void Unwrap_PresenterPatchSet_8(void* raw) {
+  typedef void (*cbt)(PresenterPatchSet);
   char* buffer = reinterpret_cast<char*>(raw);
   int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
   cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback(PatchSet(segment, 8));
+  callback(PresenterPatchSet(segment, 8));
 }
 
-void BuildBotService::syncAsync(void (*callback)(PatchSet)) {
+void BuildBotService::refreshAsync(void (*callback)(PresenterPatchSet)) {
   static const int kSize = 56 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
   *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
-  ServiceApiInvokeAsync(service_id_, kSyncId_, Unwrap_PatchSet_8, _buffer, kSize);
+  ServiceApiInvokeAsync(service_id_, kRefreshId_, Unwrap_PresenterPatchSet_8, _buffer, kSize);
 }
 
-List<uint8_t> StrBuilder::initChars(int length) {
+ConsolePatchSetBuilder PresenterPatchSetBuilder::initConsolePatchSet() {
+  setTag(1);
+  return ConsolePatchSetBuilder(segment(), offset() + 0);
+}
+
+ConsolePatchSet PresenterPatchSet::getConsolePatchSet() const { return ConsolePatchSet(segment(), offset() + 0); }
+
+StrDataBuilder ConsoleNodeDataBuilder::initTitle() {
+  return StrDataBuilder(segment(), offset() + 0);
+}
+
+StrDataBuilder ConsoleNodeDataBuilder::initStatus() {
+  return StrDataBuilder(segment(), offset() + 8);
+}
+
+StrData ConsoleNodeData::getTitle() const { return StrData(segment(), offset() + 0); }
+
+StrData ConsoleNodeData::getStatus() const { return StrData(segment(), offset() + 8); }
+
+List<ConsoleNodePatchDataBuilder> ConsolePatchSetBuilder::initPatches(int length) {
+  Reader result = NewList(0, length, 24);
+  return List<ConsoleNodePatchDataBuilder>(result.segment(), result.offset(), length);
+}
+
+ConsoleNodeDataBuilder ConsoleNodePatchDataBuilder::initReplace() {
+  setTag(1);
+  return ConsoleNodeDataBuilder(segment(), offset() + 0);
+}
+
+ConsoleNodeData ConsoleNodePatchData::getReplace() const { return ConsoleNodeData(segment(), offset() + 0); }
+
+List<uint8_t> StrDataBuilder::initChars(int length) {
   Reader result = NewList(0, length, 1);
   return List<uint8_t>(result.segment(), result.offset(), length);
-}
-
-List<uint8_t> PatchBuilder::initPath(int length) {
-  Reader result = NewList(0, length, 1);
-  return List<uint8_t>(result.segment(), result.offset(), length);
-}
-
-NodeBuilder PatchBuilder::initContent() {
-  return NodeBuilder(segment(), offset() + 8);
-}
-
-Node Patch::getContent() const { return Node(segment(), offset() + 8); }
-
-List<PatchBuilder> PatchSetBuilder::initPatches(int length) {
-  Reader result = NewList(0, length, 8);
-  return List<PatchBuilder>(result.segment(), result.offset(), length);
 }

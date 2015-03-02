@@ -2,11 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 
-@interface ViewController : UIViewController
+#include "buildbot_service.h"
 
-@property (weak, nonatomic) IBOutlet UILabel *status;
+@interface PresenterUtils : NSObject
+
++ (NSString*)decodeStrData:(const StrData&)str;
 
 @end
-
