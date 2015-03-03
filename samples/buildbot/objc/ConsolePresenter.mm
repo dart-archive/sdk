@@ -12,6 +12,7 @@
 - (void)refresh {
   PresenterPatchSet patchSet = BuildBotService::refresh();
   [ConsoleNode applyPatches:patchSet.getConsolePatchSet() atRoot:&_root];
+  patchSet.Delete();
 }
 
 @end

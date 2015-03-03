@@ -15,8 +15,8 @@ class BuildBotImpl extends BuildBotService {
     _project = new Project("Dart")
       ..console = new Console(
           "Main",
-          "http://build.chromium.org/p/client.dart",
-          "http://dart-status.appspot.com");
+          new Resource("build.chromium.org", "/p/client.dart"),
+          new Resource("dart-status.appspot.com", ""));
 
     _presenter = new ConsolePresenter(_project);
   }
