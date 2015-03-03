@@ -45,6 +45,35 @@ static void detachCurrentThread(JavaVM* vm) {
   }
 }
 
+static jobject createByteArray(JNIEnv* env, char* memory, int size) {
+  jbyteArray result = env->NewByteArray(size);
+  jbyte* contents = reinterpret_cast<jbyte*>(memory);
+  env->SetByteArrayRegion(result, 0, size, contents);
+  free(memory);
+  return result;
+}
+
+static jobject createByteArrayArray(JNIEnv* env, char* memory, int size) {
+  jobjectArray array = env->NewObjectArray(size, env->FindClass("[B"), NULL);
+  for (int i = 0; i < size; i++) {
+    int64_t address = *reinterpret_cast<int64_t*>(memory + (i * 16));
+    int size = *reinterpret_cast<int*>(memory + 8 + (i * 16));
+    char* contents = reinterpret_cast<char*>(address);
+    env->SetObjectArrayElement(array, i, createByteArray(env, contents, size));
+  }
+  free(memory);
+  return array;
+}
+
+static jobject getRootSegment(JNIEnv* env, char* memory) {
+  int32_t segments = *reinterpret_cast<int32_t*>(memory);
+  if (segments == 0) {
+    int32_t size = *reinterpret_cast<int32_t*>(memory + 4);
+    return createByteArray(env, memory, size);
+  }
+  return createByteArrayArray(env, memory + 8, segments);
+}
+
 static const MethodId _kgetAgeId = reinterpret_cast<MethodId>(1);
 
 static const MethodId _kgetBoxedAgeId = reinterpret_cast<MethodId>(2);
@@ -53,9 +82,49 @@ static const MethodId _kgetAgeStatsId = reinterpret_cast<MethodId>(3);
 
 static const MethodId _kcreateAgeStatsId = reinterpret_cast<MethodId>(4);
 
+JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_createAgeStats_1raw(JNIEnv* _env, jclass, jint averageAge, jint sum) {
+  static const int kSize = 56;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<jint*>(_buffer + 48) = averageAge;
+  *reinterpret_cast<jint*>(_buffer + 52) = sum;
+  ServiceApiInvoke(service_id_, _kcreateAgeStatsId, _buffer, kSize);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  char* memory = reinterpret_cast<char*>(result);
+  jobject rootSegment = getRootSegment(_env, memory);
+  return rootSegment;
+}
+
 static const MethodId _kcreatePersonId = reinterpret_cast<MethodId>(5);
 
+JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_createPerson_1raw(JNIEnv* _env, jclass, jint children) {
+  static const int kSize = 56;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<jint*>(_buffer + 48) = children;
+  ServiceApiInvoke(service_id_, _kcreatePersonId, _buffer, kSize);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  char* memory = reinterpret_cast<char*>(result);
+  jobject rootSegment = getRootSegment(_env, memory);
+  return rootSegment;
+}
+
 static const MethodId _kcreateNodeId = reinterpret_cast<MethodId>(6);
+
+JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_createNode_1raw(JNIEnv* _env, jclass, jint depth) {
+  static const int kSize = 56;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<jint*>(_buffer + 48) = depth;
+  ServiceApiInvoke(service_id_, _kcreateNodeId, _buffer, kSize);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  char* memory = reinterpret_cast<char*>(result);
+  jobject rootSegment = getRootSegment(_env, memory);
+  return rootSegment;
+}
 
 static const MethodId _kcountId = reinterpret_cast<MethodId>(7);
 
@@ -63,7 +132,7 @@ static const MethodId _kdepthId = reinterpret_cast<MethodId>(8);
 
 static const MethodId _kfooId = reinterpret_cast<MethodId>(9);
 
-JNIEXPORT void JNICALL Java_fletch_ConformanceService_foo(JNIEnv*, jclass) {
+JNIEXPORT void JNICALL Java_fletch_ConformanceService_foo(JNIEnv* _env, jclass) {
   static const int kSize = 56;
   char _bits[kSize];
   char* _buffer = _bits;
@@ -98,7 +167,7 @@ JNIEXPORT void JNICALL Java_fletch_ConformanceService_fooAsync(JNIEnv* _env, jcl
 
 static const MethodId _kpingId = reinterpret_cast<MethodId>(10);
 
-JNIEXPORT jint JNICALL Java_fletch_ConformanceService_ping(JNIEnv*, jclass) {
+JNIEXPORT jint JNICALL Java_fletch_ConformanceService_ping(JNIEnv* _env, jclass) {
   static const int kSize = 56;
   char _bits[kSize];
   char* _buffer = _bits;

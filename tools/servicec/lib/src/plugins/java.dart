@@ -32,6 +32,10 @@ const HEADER_MK = """
 # Generated file. Do not edit.
 """;
 
+const READER_HEADER = """
+package fletch;
+""";
+
 const FLETCH_API_JAVA = """
 package fletch;
 
@@ -113,7 +117,7 @@ JNIEXPORT void JNICALL Java_fletch_FletchServiceApi_TearDown(JNIEnv*, jclass) {
 #endif
 """;
 
-const JNI_ATTACH_DETACH = """
+const JNI_UTILS = """
 static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
   AttachEnvType result = NULL;
   if (vm->AttachCurrentThread(&result, NULL) != JNI_OK) {
@@ -128,13 +132,56 @@ static void detachCurrentThread(JavaVM* vm) {
     // TODO(ager): Nicer error recovery?
     exit(1);
   }
+}
+
+static jobject createByteArray(JNIEnv* env, char* memory, int size) {
+  jbyteArray result = env->NewByteArray(size);
+  jbyte* contents = reinterpret_cast<jbyte*>(memory);
+  env->SetByteArrayRegion(result, 0, size, contents);
+  free(memory);
+  return result;
+}
+
+static jobject createByteArrayArray(JNIEnv* env, char* memory, int size) {
+  jobjectArray array = env->NewObjectArray(size, env->FindClass("[B"), NULL);
+  for (int i = 0; i < size; i++) {
+    int64_t address = *reinterpret_cast<int64_t*>(memory + (i * 16));
+    int size = *reinterpret_cast<int*>(memory + 8 + (i * 16));
+    char* contents = reinterpret_cast<char*>(address);
+    env->SetObjectArrayElement(array, i, createByteArray(env, contents, size));
+  }
+  free(memory);
+  return array;
+}
+
+static jobject getRootSegment(JNIEnv* env, char* memory) {
+  int32_t segments = *reinterpret_cast<int32_t*>(memory);
+  if (segments == 0) {
+    int32_t size = *reinterpret_cast<int32_t*>(memory + 4);
+    return createByteArray(env, memory, size);
+  }
+  return createByteArrayArray(env, memory + 8, segments);
 }""";
+
+const List<String> JAVA_RESOURCES = const [
+  "Reader.java",
+];
 
 void generate(String path, Unit unit, String outputDirectory) {
   _generateFletchApis(outputDirectory);
   _generateServiceJava(path, unit, outputDirectory);
   _generateServiceJni(path, unit, outputDirectory);
   _generateServiceJniMakeFiles(path, unit, outputDirectory);
+
+  String resourcesDirectory = join(dirname(Platform.script.path),
+      '..', 'lib', 'src', 'resources', 'java', 'fletch');
+  String fletchDirectory = join(outputDirectory, 'java', 'fletch');
+  for (String resource in JAVA_RESOURCES) {
+    String resourcePath = join(resourcesDirectory, resource);
+    File file = new File(resourcePath);
+    String contents = file.readAsStringSync();
+    writeToFile(fletchDirectory, resource, contents);
+  }
 }
 
 void _generateFletchApis(String outputDirectory) {
@@ -167,7 +214,7 @@ void _generateFletchApis(String outputDirectory) {
 }
 
 void _generateServiceJava(String path, Unit unit, String outputDirectory) {
-  _JavaVisitor visitor = new _JavaVisitor(path);
+  _JavaVisitor visitor = new _JavaVisitor(path, outputDirectory);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
   String directory = join(outputDirectory, 'java', 'fletch');
@@ -194,33 +241,63 @@ void _generateServiceJni(String path, Unit unit, String outputDirectory) {
 }
 
 class _JavaVisitor extends CodeGenerationVisitor {
-  _JavaVisitor(String path) : super(path);
+  final String outputDirectory;
 
-  void writeType(Type node) {
-    Map<String, String> types = const {
-      'void' : 'void',
-      'bool' : 'boolean',
+  _JavaVisitor(String path, String this.outputDirectory) : super(path);
 
-      'uint8' : 'unsigned byte',
-      'uint16' : 'unsigned short',
-      'uint32' : 'unsigned int',
-      'uint64' : 'unsigned long',
+  static const PRIMITIVE_TYPES = const <String, String> {
+    'void'    : 'void',
+    'bool'    : 'boolean',
 
-      'int8' : 'byte',
-      'int16' : 'short',
-      'int32' : 'int',
-      'int64' : 'long',
+    'uint8'   : 'short',
+    'uint16'  : 'int',
+    'uint32'  : 'long',
+    // TODO(ager): consider how to deal with unsigned 64 bit integers.
 
-      'float32' : 'float',
-      'float64' : 'double',
-    };
-    String type = types[node.identifier];
-    write(type);
+    'int8'    : 'byte',
+    'int16'   : 'short',
+    'int32'   : 'int',
+    'int64'   : 'long',
+
+    'float32' : 'float',
+    'float64' : 'double',
+  };
+
+  String getType(Type node) {
+    Node resolved = node.resolved;
+    if (resolved != null) {
+      return '${node.identifier}Builder';
+    } else {
+      String type = PRIMITIVE_TYPES[node.identifier];
+      return type;
+    }
+  }
+
+  String getReturnType(Type node) {
+    Node resolved = node.resolved;
+    if (resolved != null) {
+      return '${node.identifier}';
+    } else {
+      String type = PRIMITIVE_TYPES[node.identifier];
+      return type;
+    }
+  }
+
+  void writeType(Type node) => write(getType(node));
+  void writeTypeToBuffer(Type node, StringBuffer buffer) {
+    buffer.write(getType(node));
+  }
+
+  void writeReturnType(Type node) => write(getReturnType(node));
+  void writeReturnTypeToBuffer(Type node, StringBuffer buffer) {
+    buffer.write(getReturnType(node));
   }
 
   visitUnit(Unit node) {
     writeln(HEADER);
     writeln('package fletch;');
+    writeln();
+    node.structs.forEach(visit);
     node.services.forEach(visit);
   }
 
@@ -235,30 +312,61 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
   visitMethod(Method node) {
     if (node.inputKind != InputKind.PRIMITIVES) return;
-    if (node.outputKind != OutputKind.PRIMITIVE) return;
 
     String name = node.name;
-    String camelName = strings.camelize(name);
+    String camelName = name.substring(0, 1).toUpperCase() + name.substring(1);
     writeln();
     writeln('  public static abstract class ${camelName}Callback {');
     write('    public abstract void handle(');
     if (!node.returnType.isVoid) {
-      writeType(node.returnType);
+      writeReturnType(node.returnType);
       write(' result');
     }
     writeln(');');
     writeln('  }');
 
     writeln();
-    write('  public static native ');
-    writeType(node.returnType);
-    write(' ${name}(');
+    if (node.outputKind != OutputKind.PRIMITIVE) {
+      write('  private static native Object ${name}_raw(');
+    } else {
+      write('  public static native ');
+      writeReturnType(node.returnType);
+      write(' $name(');
+    }
     visitArguments(node.arguments);
     writeln(');');
     write('  public static native void ${name}Async(');
     visitArguments(node.arguments);
     if (!node.arguments.isEmpty) write(', ');
     writeln('${camelName}Callback callback);');
+
+    if (node.outputKind != OutputKind.PRIMITIVE) {
+      write('  public static ');
+      writeReturnType(node.returnType);
+      write(' ${name}(');
+      visitArguments(node.arguments);
+      writeln(') {');
+      write('    Object rawData = ${name}_raw(');
+      bool first = true;
+      for (int i = 0; i < node.arguments.length; i++) {
+        if (first) {
+          first = false;
+        } else {
+          write(', ');
+        }
+        write(node.arguments[i].name);
+      }
+      writeln(');');
+      writeln('    if (rawData instanceof byte[]) {');
+      write('      return new ');
+      writeReturnType(node.returnType);
+      writeln('((byte[])rawData);');
+      writeln('    }');
+      write('    return new ');
+      writeReturnType(node.returnType);
+      writeln('((byte[][])rawData);');
+      writeln('  }');
+    }
   }
 
   visitArguments(List<Formal> formals) {
@@ -269,9 +377,86 @@ class _JavaVisitor extends CodeGenerationVisitor {
     writeType(node.type);
     write(' ${node.name}');
   }
+
+  visitStruct(Struct node) {
+    writeReader(node);
+    writeBuilder(node);
+  }
+
+  void writeReader(Struct node) {
+    String fletchDirectory = join(outputDirectory, 'java', 'fletch');
+    String name = node.name;
+    StructLayout layout = node.layout;
+
+    writeln('import fletch.$name;');
+
+    StringBuffer buffer = new StringBuffer(HEADER);
+    buffer.writeln();
+    buffer.writeln(READER_HEADER);
+
+    buffer.writeln('public class $name extends Reader {');
+    buffer.writeln('  public $name(byte[] memory) {');
+    buffer.writeln('    super(memory);');
+    buffer.writeln('  }');
+    buffer.writeln();
+    buffer.writeln('  public $name(byte[][] segments) {');
+    buffer.writeln('    super(segments);');
+    buffer.writeln('  }');
+    buffer.writeln();
+
+    for (StructSlot slot in layout.slots) {
+      Type slotType = slot.slot.type;
+      String camel = camelize(slot.slot.name);
+
+      if (slot.isUnionSlot) {
+        String tagName = camelize(slot.union.tag.name);
+        int tag = slot.unionTag;
+        buffer.writeln('  boolean is$camel() { return $tag == get$tagName(); }');
+      }
+
+      if (slotType.isList) {
+        // TODO(ager): implement.
+      } else if (slotType.isVoid) {
+        // No getters for void slots.
+      } else if (slotType.isPrimitive) {
+        buffer.write('  public ');
+        writeTypeToBuffer(slotType, buffer);
+        buffer.write(' get$camel() { return get');
+        buffer.write(camelize(getReturnType(slotType)));
+        buffer.writeln('At(${slot.offset}); }');
+      } else {
+        // TODO(ager): implement.
+      }
+    }
+
+    buffer.writeln('}');
+
+    writeToFile(fletchDirectory, '$name', buffer.toString(),
+                extension: 'java');
+  }
+
+  void writeBuilder(Struct node) {
+    String fletchDirectory = join(outputDirectory, 'java', 'fletch');
+    String name = '${node.name}Builder';
+
+    writeln('import fletch.$name;');
+
+    StringBuffer buffer = new StringBuffer(HEADER);
+    buffer.writeln();
+    buffer.writeln(READER_HEADER);
+
+    buffer.writeln('class $name {');
+    buffer.writeln('}');
+
+    writeToFile(fletchDirectory, '$name', buffer.toString(),
+                extension: 'java');
+  }
 }
 
 class _JniVisitor extends CcVisitor {
+  static const int REQUEST_HEADER_SIZE = 48;
+  static const int RESPONSE_HEADER_SIZE = 8;  
+
   int methodId = 1;
   String serviceName;
 
@@ -319,8 +504,9 @@ class _JniVisitor extends CcVisitor {
     writeln('  ServiceApiTerminate(service_id_);');
     writeln('}');
 
+    // TODO(ager): Put this in resources and copy as a file instead.
     writeln();
-    writeln(JNI_ATTACH_DETACH);
+    writeln(JNI_UTILS);
 
     node.methods.forEach(visit);
 
@@ -339,18 +525,24 @@ class _JniVisitor extends CcVisitor {
     writeln('reinterpret_cast<MethodId>(${methodId++});');
 
     if (node.inputKind != InputKind.PRIMITIVES) return;  // Not handled yet.
-    if (node.outputKind != OutputKind.PRIMITIVE) return;
 
     writeln();
     write('JNIEXPORT ');
-    writeType(node.returnType);
-    write(' JNICALL Java_fletch_${serviceName}_${name}(');
-    write('JNIEnv*, jclass');
+    writeReturnType(node.returnType);
+    if (node.outputKind != OutputKind.PRIMITIVE) {
+      write(' JNICALL Java_fletch_${serviceName}_${name}_1raw(');
+    } else {
+      write(' JNICALL Java_fletch_${serviceName}_${name}(');
+    }
+    write('JNIEnv* _env, jclass');
     if (!node.arguments.isEmpty) write(', ');
     visitArguments(node.arguments);
     writeln(') {');
     visitMethodBody(id, node);
     writeln('}');
+
+    // TODO(ager): Support async variant with output structs.
+    if (node.outputKind != OutputKind.PRIMITIVE) return;
 
     String callback = ensureCallback(node.returnType,
         node.inputPrimitiveStructLayout);
@@ -372,28 +564,104 @@ class _JniVisitor extends CcVisitor {
     writeln('}');
   }
 
+  visitMethodBody(String id,
+                  Method method,
+                  {bool cStyle: false,
+                   List<String> extraArguments: const [],
+                   String callback}) {
+    List<Formal> arguments = method.arguments;
+    assert(method.inputKind == InputKind.PRIMITIVES);
+    StructLayout layout = method.inputPrimitiveStructLayout;
+    final bool async = callback != null;
+    int size = REQUEST_HEADER_SIZE + layout.size;
+    if (async) {
+      write('  static const int kSize = ');
+      writeln('${size} + ${extraArguments.length} * sizeof(void*);');
+    } else {
+      writeln('  static const int kSize = ${size};');
+    }
+
+    String cast(String type) => CcVisitor.cast(type, cStyle);
+
+    String pointerToArgument(int offset, int pointers, String type) {
+      offset += REQUEST_HEADER_SIZE;
+      String prefix = cast('$type*');
+      if (pointers == 0) return '$prefix(_buffer + $offset)';
+      return '$prefix(_buffer + $offset + $pointers * sizeof(void*))';
+   }
+
+    if (async) {
+      writeln('  char* _buffer = ${cast("char*")}(malloc(kSize));');
+    } else {
+      writeln('  char _bits[kSize];');
+      writeln('  char* _buffer = _bits;');
+    }
+
+    // Mark the message as being non-segmented.
+    writeln('  *${pointerToArgument(-8, 0, "int64_t")} = 0;');
+
+    int arity = arguments.length;
+    for (int i = 0; i < arity; i++) {
+      String name = arguments[i].name;
+      int offset = layout[arguments[i]].offset;
+      String type = PRIMITIVE_TYPES[arguments[i].type.identifier];
+      writeln('  *${pointerToArgument(offset, 0, type)} = $name;');
+    }
+
+    if (async) {
+      String dataArgument = pointerToArgument(-16, 0, 'void*');
+      writeln('  *$dataArgument = ${cast("void*")}(callback);');
+      for (int i = 0; i < extraArguments.length; i++) {
+        String dataArgument = pointerToArgument(layout.size, i, 'void*');
+        String arg = extraArguments[i];
+        writeln('  *$dataArgument = ${cast("void*")}($arg);');
+      }
+      write('  ServiceApiInvokeAsync(service_id_, $id, $callback, ');
+      writeln('_buffer, kSize);');
+    } else {
+      writeln('  ServiceApiInvoke(service_id_, $id, _buffer, kSize);');
+      if (method.outputKind == OutputKind.STRUCT) {
+        writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
+        writeln('  char* memory = reinterpret_cast<char*>(result);');
+        // TODO(ajohnsen): Do range-check between size and segment size.
+        writeln('  jobject rootSegment = getRootSegment(_env, memory);');
+        writeln('  return rootSegment;');
+      } else if (!method.returnType.isVoid) {
+        writeln('  return *${pointerToArgument(0, 0, 'int64_t')};');
+      }
+    }
+  }
+
+  static const Map<String, String> PRIMITIVE_TYPES = const {
+    'void' : 'void',
+    'bool' : 'jboolean',
+
+    'uint8' : 'jboolean',
+    'uint16' : 'jchar',
+    // TODO(ager): uint32 and uint64.
+
+    'int8' : 'jbyte',
+    'int16' : 'jshort',
+    'int32' : 'jint',
+    'int64' : 'jlong',
+
+    'float32' : 'jfloat',
+    'float64' : 'jdouble',
+  };
+
   void writeType(Type node) {
-    Map<String, String> types = const {
-      'void' : 'void',
-      'bool' : 'jboolean',
-
-      'uint8' : 'jboolean',
-      'uint16' : 'jchar',
-      // TODO(ager): unsigned 32-bit and 64-bit int types do not have
-      // a corresponding jni type.
-      'uint32' : 'unsupported type',
-      'uint64' : 'unsupported type',
-
-      'int8' : 'jbyte',
-      'int16' : 'jshort',
-      'int32' : 'jint',
-      'int64' : 'jlong',
-
-      'float32' : 'jfloat',
-      'float64' : 'jdouble',
-    };
-    String type = types[node.identifier];
+    String type = PRIMITIVE_TYPES[node.identifier];
     write(type);
+  }
+
+  void writeReturnType(Type node) {
+    Node resolved = node.resolved;
+    if (resolved != null) {
+      write('jobject');
+    } else {
+      String type = PRIMITIVE_TYPES[node.identifier];
+      write(type);
+    }
   }
 
   final Map<String, String> callbacks = {};

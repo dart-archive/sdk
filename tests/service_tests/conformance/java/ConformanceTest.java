@@ -2,9 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import fletch.FletchApi;
-import fletch.FletchServiceApi;
-import fletch.ConformanceService;
+import fletch.*;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -58,5 +56,9 @@ class ConformanceTest {
     ConformanceService.pingAsync(new ConformanceService.PingCallback() {
         public void handle(int result) { assert 42 == result; }
     });
+
+    AgeStats stats = ConformanceService.createAgeStats(42, 42);
+    assert 42 == stats.getAverageAge();
+    assert 42 == stats.getSum();
   }
 }

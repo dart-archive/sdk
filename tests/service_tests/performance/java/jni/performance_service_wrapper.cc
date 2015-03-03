@@ -29,6 +29,25 @@ JNIEXPORT void JNICALL Java_fletch_PerformanceService_TearDown(JNIEnv*, jclass) 
   ServiceApiTerminate(service_id_);
 }
 
+static jobject createByteArray(JNIEnv* env, char* memory, int size) {
+  jbyteArray result = env->NewByteArray(size);
+  jbyte* contents = reinterpret_cast<jbyte*>(memory);
+  env->SetByteArrayRegion(result, 0, size, contents);
+}
+
+static jobject createByteArrayArray(JNIEnv* env, char* memory, int size) {
+  return NULL;
+}
+
+static jobject getRootSegment(JNIEnv* env, char* memory) {
+  int32_t segments = *reinterpret_cast<int32_t*>(memory);
+  if (segments == 0) {
+    int32_t size = *reinterpret_cast<int32_t*>(memory + 4);
+    return createByteArray(env, memory + 8, size - 8);
+  }
+  return createByteArrayArray(env, memory + 8, segments);
+}
+
 static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
   AttachEnvType result = NULL;
   if (vm->AttachCurrentThread(&result, NULL) != JNI_OK) {
@@ -47,12 +66,12 @@ static void detachCurrentThread(JavaVM* vm) {
 
 static const MethodId _kechoId = reinterpret_cast<MethodId>(1);
 
-JNIEXPORT jint JNICALL Java_fletch_PerformanceService_echo(JNIEnv*, jclass, jint n) {
+JNIEXPORT jint JNICALL Java_fletch_PerformanceService_echo(JNIEnv* _env, jclass, jint n) {
   static const int kSize = 56;
   char _bits[kSize];
   char* _buffer = _bits;
   *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = n;
+  *reinterpret_cast<jint*>(_buffer + 48) = n;
   ServiceApiInvoke(service_id_, _kechoId, _buffer, kSize);
   return *reinterpret_cast<int64_t*>(_buffer + 48);
 }
@@ -78,7 +97,7 @@ JNIEXPORT void JNICALL Java_fletch_PerformanceService_echoAsync(JNIEnv* _env, jc
   static const int kSize = 56 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = n;
+  *reinterpret_cast<jint*>(_buffer + 48) = n;
   *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
   *reinterpret_cast<void**>(_buffer + 56) = reinterpret_cast<void*>(vm);
   ServiceApiInvokeAsync(service_id_, _kechoId, Unwrap_int32_8, _buffer, kSize);
@@ -87,6 +106,19 @@ JNIEXPORT void JNICALL Java_fletch_PerformanceService_echoAsync(JNIEnv* _env, jc
 static const MethodId _kcountTreeNodesId = reinterpret_cast<MethodId>(2);
 
 static const MethodId _kbuildTreeId = reinterpret_cast<MethodId>(3);
+
+JNIEXPORT jobject JNICALL Java_fletch_PerformanceService_buildTree(JNIEnv* _env, jclass, jint n) {
+  static const int kSize = 56;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<jint*>(_buffer + 48) = n;
+  ServiceApiInvoke(service_id_, _kbuildTreeId, _buffer, kSize);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  char* memory = reinterpret_cast<char*>(result);
+  jobject rootSegment = getRootSegment(_env, memory);
+  return rootSegment;
+}
 
 #ifdef __cplusplus
 }

@@ -6,6 +6,9 @@
 
 package fletch;
 
+import fletch.TreeNode;
+import fletch.TreeNodeBuilder;
+
 public class PerformanceService {
   public static native void Setup();
   public static native void TearDown();
@@ -16,4 +19,11 @@ public class PerformanceService {
 
   public static native int echo(int n);
   public static native void echoAsync(int n, EchoCallback callback);
+
+  public static abstract class BuildTreeCallback {
+    public abstract void handle(TreeNode result);
+  }
+
+  public static native TreeNode buildTree(int n);
+  public static native void buildTreeAsync(int n, BuildTreeCallback callback);
 }

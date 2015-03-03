@@ -6,9 +6,66 @@
 
 package fletch;
 
+import fletch.AgeStats;
+import fletch.AgeStatsBuilder;
+import fletch.Person;
+import fletch.PersonBuilder;
+import fletch.Large;
+import fletch.LargeBuilder;
+import fletch.Small;
+import fletch.SmallBuilder;
+import fletch.PersonBox;
+import fletch.PersonBoxBuilder;
+import fletch.Node;
+import fletch.NodeBuilder;
+import fletch.Cons;
+import fletch.ConsBuilder;
+
 public class ConformanceService {
   public static native void Setup();
   public static native void TearDown();
+
+  public static abstract class CreateAgeStatsCallback {
+    public abstract void handle(AgeStats result);
+  }
+
+  private static native Object createAgeStats_raw(int averageAge, int sum);
+  public static native void createAgeStatsAsync(int averageAge, int sum, CreateAgeStatsCallback callback);
+  public static AgeStats createAgeStats(int averageAge, int sum) {
+    Object rawData = createAgeStats_raw(averageAge, sum);
+    if (rawData instanceof byte[]) {
+      return new AgeStats((byte[])rawData);
+    }
+    return new AgeStats((byte[][])rawData);
+  }
+
+  public static abstract class CreatePersonCallback {
+    public abstract void handle(Person result);
+  }
+
+  private static native Object createPerson_raw(int children);
+  public static native void createPersonAsync(int children, CreatePersonCallback callback);
+  public static Person createPerson(int children) {
+    Object rawData = createPerson_raw(children);
+    if (rawData instanceof byte[]) {
+      return new Person((byte[])rawData);
+    }
+    return new Person((byte[][])rawData);
+  }
+
+  public static abstract class CreateNodeCallback {
+    public abstract void handle(Node result);
+  }
+
+  private static native Object createNode_raw(int depth);
+  public static native void createNodeAsync(int depth, CreateNodeCallback callback);
+  public static Node createNode(int depth) {
+    Object rawData = createNode_raw(depth);
+    if (rawData instanceof byte[]) {
+      return new Node((byte[])rawData);
+    }
+    return new Node((byte[][])rawData);
+  }
 
   public static abstract class FooCallback {
     public abstract void handle();

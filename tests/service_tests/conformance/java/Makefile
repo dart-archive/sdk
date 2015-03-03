@@ -14,16 +14,61 @@ ConformanceTest.class: ConformanceTest.java
 SnapshotRunner.class: SnapshotRunner.java
 	javac $<
 
-fletch/ConformanceService.jar: fletch/ConformanceService.class fletch/FletchApi.class fletch/FletchServiceApi.class
-	jar cvf $@ $^
+fletch/ConformanceService.jar: fletch/AgeStatsBuilder.class fletch/AgeStats.class fletch/ConformanceService.class fletch/ConsBuilder.class fletch/Cons.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/LargeBuilder.class fletch/Large.class fletch/NodeBuilder.class fletch/Node.class fletch/PersonBoxBuilder.class fletch/PersonBox.class fletch/PersonBuilder.class fletch/Person.class fletch/Reader.class fletch/SmallBuilder.class fletch/Small.class
+	jar cvf $@ fletch/*.class
+
+fletch/AgeStatsBuilder.class: fletch/AgeStatsBuilder.java
+	javac $<
+
+fletch/AgeStats.class: fletch/AgeStats.java
+	javac $<
 
 fletch/ConformanceService.class: fletch/ConformanceService.java
+	javac $<
+
+fletch/ConsBuilder.class: fletch/ConsBuilder.java
+	javac $<
+
+fletch/Cons.class: fletch/Cons.java
 	javac $<
 
 fletch/FletchApi.class: fletch/FletchApi.java
 	javac $<
 
 fletch/FletchServiceApi.class: fletch/FletchServiceApi.java
+	javac $<
+
+fletch/LargeBuilder.class: fletch/LargeBuilder.java
+	javac $<
+
+fletch/Large.class: fletch/Large.java
+	javac $<
+
+fletch/NodeBuilder.class: fletch/NodeBuilder.java
+	javac $<
+
+fletch/Node.class: fletch/Node.java
+	javac $<
+
+fletch/PersonBoxBuilder.class: fletch/PersonBoxBuilder.java
+	javac $<
+
+fletch/PersonBox.class: fletch/PersonBox.java
+	javac $<
+
+fletch/PersonBuilder.class: fletch/PersonBuilder.java
+	javac $<
+
+fletch/Person.class: fletch/Person.java
+	javac $<
+
+fletch/Reader.class: fletch/Reader.java
+	javac $<
+
+fletch/SmallBuilder.class: fletch/SmallBuilder.java
+	javac $<
+
+fletch/Small.class: fletch/Small.java
 	javac $<
 
 jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/conformance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
