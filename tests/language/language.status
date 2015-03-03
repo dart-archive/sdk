@@ -6,6 +6,7 @@
 # current state of the language.
 
 # Other tests.
+[ $compiler == fletch ]
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
 adjacent_const_string_literals_test: Crash
@@ -939,16 +940,16 @@ vm/type_cast_vm_test: CompileTimeError
 vm/type_vm_test: Fail
 vm/typed_data_polymorphic_view_test: Fail
 
-[ $arch == ia32 ]
+[ $compiler == fletch && $arch == ia32 ]
 bit_shift_test: Fail
 
-[ ( $arch == ia32 || $mode == release ) ]
+[ $compiler == fletch && ( $arch == ia32 || $mode == release ) ]
 issue10783_test: Fail
 
-[ $arch == x64 && $mode == debug ]
+[ $compiler == fletch && $arch == x64 && $mode == debug ]
 issue10783_test: Crash
 
-[ $mode == debug ]
+[ $compiler == fletch && $mode == debug ]
 duplicate_constructor_test/01: Crash
 duplicate_import_prefix_test: Crash
 field_initialization_order_test: Fail
@@ -959,7 +960,7 @@ regress_19413_test/01: Crash
 regress_19413_test/none: Crash
 try_catch_syntax_test/05: Crash
 
-[ $mode == release ]
+[ $compiler == fletch && $mode == release ]
 body_less_constructor_wrong_arg_negative_test: Fail
 duplicate_constructor_test/01: MissingCompileTimeError
 field_initialization_order_test: Fail
@@ -968,14 +969,14 @@ prefix3_negative_test: Fail
 ref_before_declaration_test/06: MissingCompileTimeError
 regress_19413_test/01: Fail
 
-[ $asan ]
+[ $compiler == fletch && $asan ]
 compile_time_constant_k_test/01: Fail
 compile_time_constant_k_test/02: Fail
 compile_time_constant_k_test/03: Fail
 inferrer_synthesized_constructor_test: Fail
 
-[ $arch == x64 && $mode == debug ]
+[ $compiler == fletch && $arch == x64 && $mode == debug ]
 issue4295001_test: Crash
 
-[ $asan && $mode == debug ]
+[ $compiler == fletch && $asan && $mode == debug ]
 gc_test: Pass, Slow
