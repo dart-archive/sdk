@@ -14,8 +14,17 @@ ConformanceTest.class: ConformanceTest.java
 SnapshotRunner.class: SnapshotRunner.java
 	javac $<
 
-fletch/ConformanceService.jar: fletch/AgeStatsBuilder.class fletch/AgeStats.class fletch/ConformanceService.class fletch/ConsBuilder.class fletch/Cons.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/LargeBuilder.class fletch/Large.class fletch/NodeBuilder.class fletch/Node.class fletch/PersonBoxBuilder.class fletch/PersonBox.class fletch/PersonBuilder.class fletch/Person.class fletch/PersonList.class fletch/Reader.class fletch/ListReader.class fletch/MessageReader.class fletch/Segment.class fletch/SmallBuilder.class fletch/Small.class fletch/Uint8List.class
+fletch/ConformanceService.jar: fletch/AgeStatsBuilder.class fletch/AgeStats.class fletch/ConformanceService.class fletch/ConsBuilder.class fletch/Cons.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/LargeBuilder.class fletch/Large.class fletch/NodeBuilder.class fletch/Node.class fletch/PersonBoxBuilder.class fletch/PersonBox.class fletch/PersonBuilder.class fletch/Person.class fletch/PersonList.class fletch/PersonListBuilder.class fletch/Reader.class fletch/ListReader.class fletch/MessageReader.class fletch/Segment.class fletch/SmallBuilder.class fletch/Small.class fletch/Uint8List.class fletch/Uint8ListBuilder.class fletch/BuilderSegment.class fletch/Builder.class fletch/MessageBuilder.class
 	jar cvf $@ fletch/*.class
+
+fletch/Builder.class: fletch/Builder.java
+	javac $<
+
+fletch/BuilderSegment.class: fletch/BuilderSegment.java
+	javac $<
+
+fletch/MessageBuilder.class: fletch/MessageBuilder.java
+	javac $<
 
 fletch/AgeStatsBuilder.class: fletch/AgeStatsBuilder.java
 	javac $<
@@ -65,6 +74,9 @@ fletch/Person.class: fletch/Person.java
 fletch/PersonList.class: fletch/PersonList.java
 	javac $<
 
+fletch/PersonListBuilder.class: fletch/PersonListBuilder.java
+	javac $<
+
 fletch/Reader.class: fletch/Reader.java
 	javac $<
 
@@ -84,6 +96,9 @@ fletch/Small.class: fletch/Small.java
 	javac $<
 
 fletch/Uint8List.class: fletch/Uint8List.java
+	javac $<
+
+fletch/Uint8ListBuilder.class: fletch/Uint8ListBuilder.java
 	javac $<
 
 jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/conformance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a

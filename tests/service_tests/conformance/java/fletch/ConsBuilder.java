@@ -6,5 +6,26 @@
 
 package fletch;
 
-class ConsBuilder {
+import java.util.List;
+public class ConsBuilder extends Builder {
+  public static int kSize = 16;
+  public ConsBuilder(BuilderSegment segment, int offset) {
+    super(segment, offset);
+  }
+
+  public ConsBuilder() {
+    super();
+  }
+
+  public NodeBuilder initFst() {
+    NodeBuilder result = new NodeBuilder();
+    newStruct(result, 0, 24);
+    return result;
+  }
+
+  public NodeBuilder initSnd() {
+    NodeBuilder result = new NodeBuilder();
+    newStruct(result, 8, 24);
+    return result;
+  }
 }

@@ -6,20 +6,18 @@
 
 package fletch;
 
-import java.util.List;
-public class PersonBoxBuilder extends Builder {
-  public static int kSize = 8;
-  public PersonBoxBuilder(BuilderSegment segment, int offset) {
-    super(segment, offset);
-  }
+import java.util.AbstractList;
 
-  public PersonBoxBuilder() {
-    super();
-  }
+class PersonListBuilder extends AbstractList<PersonBuilder> {
+  private ListBuilder builder;
 
-  public PersonBuilder initPerson() {
+  public PersonListBuilder(ListBuilder builder) { this.builder = builder; }
+
+  public PersonBuilder get(int index) {
     PersonBuilder result = new PersonBuilder();
-    newStruct(result, 0, 24);
+    builder.readListElement(result, index, 24);
     return result;
   }
+
+  public int size() { return builder.length; }
 }

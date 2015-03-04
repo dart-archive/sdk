@@ -6,5 +6,18 @@
 
 package fletch;
 
-class SmallBuilder {
+import java.util.List;
+public class SmallBuilder extends Builder {
+  public static int kSize = 8;
+  public SmallBuilder(BuilderSegment segment, int offset) {
+    super(segment, offset);
+  }
+
+  public SmallBuilder() {
+    super();
+  }
+
+  public void setX(int value) {
+    segment.buffer().putInt(base + 0, (int)value);
+  }
 }

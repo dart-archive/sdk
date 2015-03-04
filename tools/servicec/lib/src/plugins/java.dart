@@ -165,10 +165,14 @@ static jobject getRootSegment(JNIEnv* env, char* memory) {
 }""";
 
 const List<String> JAVA_RESOURCES = const [
-  "Reader.java",
-  "Segment.java",
+  "Builder.java",
+  "BuilderSegment.java",
+  "ListBuilder.java",
+  "ListReader.java",
+  "MessageBuilder.java",
   "MessageReader.java",
-  "ListReader.java"
+  "Reader.java",
+  "Segment.java"
 ];
 
 void generate(String path, Unit unit, String outputDirectory) {
@@ -265,6 +269,40 @@ class _JavaVisitor extends CodeGenerationVisitor {
     'float64' : 'getDoubleAt',
   };
 
+  static Map<String, String> _SETTERS = const {
+    'bool'    : 'put',
+
+    'uint8'   : 'put',
+    'uint16'  : 'putChar',
+    'uint32'  : 'putInt',
+    // TODO(ager): consider how to deal with unsigned 64-bit integers.
+
+    'int8'    : 'put',
+    'int16'   : 'putShort',
+    'int32'   : 'putInt',
+    'int64'   : 'putLong',
+
+    'float32' : 'putFloat',
+    'float64' : 'pubDouble',
+  };
+
+  static Map<String, String> _SETTER_TYPES = const {
+    'bool'    : 'byte',
+
+    'uint8'   : 'byte',
+    'uint16'  : 'char',
+    'uint32'  : 'int',
+    // TODO(ager): consider how to deal with unsigned 64-bit integers.
+
+    'int8'    : 'byte',
+    'int16'   : 'char',
+    'int32'   : 'int',
+    'int64'   : 'long',
+
+    'float32' : 'float',
+    'float64' : 'double',
+  };
+
   _JavaVisitor(String path, String this.outputDirectory)
     : neededListTypes = new Set<Type>(),
       super(path);
@@ -354,7 +392,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
     writeln();
     node.structs.forEach(visit);
     node.services.forEach(visit);
-    neededListTypes.forEach(writeListImplementation);
+    neededListTypes.forEach(writeListReaderImplementation);
+    neededListTypes.forEach(writeListBuilderImplementation);
   }
 
   visitService(Service node) {
@@ -474,7 +513,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
         String tagName = camelize(slot.union.tag.name);
         int tag = slot.unionTag;
         buffer.writeln();
-        buffer.writeln('  public boolean is$camel() { return $tag == get$tagName(); }');
+        buffer.writeln('  public boolean is$camel() {'
+                       ' return $tag == get$tagName(); }');
       }
 
       if (slotType.isList) {
@@ -539,19 +579,122 @@ class _JavaVisitor extends CodeGenerationVisitor {
   void writeBuilder(Struct node) {
     String fletchDirectory = join(outputDirectory, 'java', 'fletch');
     String name = '${node.name}Builder';
+    StructLayout layout = node.layout;
 
     StringBuffer buffer = new StringBuffer(HEADER);
     buffer.writeln();
     buffer.writeln(READER_HEADER);
 
-    buffer.writeln('class $name {');
+    buffer.write('import java.util.List;');
+    buffer.writeln();
+
+    buffer.writeln('public class $name extends Builder {');
+
+    buffer.writeln('  public static int kSize = ${layout.size};');
+
+    buffer.writeln('  public $name(BuilderSegment segment, int offset) {');
+    buffer.writeln('    super(segment, offset);');
+    buffer.writeln('  }');
+
+    buffer.writeln();
+    buffer.writeln('  public $name() {');
+    buffer.writeln('    super();');
+    buffer.writeln('  }');
+
+
+    for (StructSlot slot in layout.slots) {
+      buffer.writeln();
+      String slotName = slot.slot.name;
+      String camel = camelize(slotName);
+      Type slotType = slot.slot.type;
+
+
+      String updateTag = '';
+      if (slot.isUnionSlot) {
+        String tagName = camelize(slot.union.tag.name);
+        int tag = slot.unionTag;
+        updateTag = '    set$tagName((char)$tag);\n';
+      }
+
+      if (slotType.isList) {
+        String listElement = '';
+        if (slotType.isPrimitive) {
+          listElement = '${getListType(slotType)}';
+        }  else {
+          listElement = '${getListType(slotType)}Builder';
+        }
+        String listBuilder = '';
+        if (slotType.isPrimitive) {
+          listBuilder =  '${camelize(slotType.identifier)}ListBuilder';
+        } else {
+          listBuilder = '${getListType(slotType)}ListBuilder';
+        }
+        buffer.writeln('  public List<$listElement> init$camel(int length) {');
+        buffer.write(updateTag);
+        int size = 0;
+        if (slotType.isPrimitive) {
+          size = primitives.size(slotType.primitiveType);
+        } else {
+          Struct element = slotType.resolved;
+          StructLayout elementLayout = element.layout;
+          size = elementLayout.size;
+        }
+        buffer.writeln('    ListBuilder builder = new ListBuilder();');
+        buffer.writeln('    newList(builder, ${slot.offset}, length, $size);');
+        buffer.writeln('    return new ${listBuilder}(builder);');
+        buffer.writeln('  }');
+      } else if (slotType.isVoid) {
+        assert(slot.isUnionSlot);
+        String tagName = camelize(slot.union.tag.name);
+        int tag = slot.unionTag;
+        buffer.writeln('  public void set$camel() {'
+                       ' set$tagName((char)$tag); }');
+      } else if (slotType.isPrimitive) {
+        String setter = _SETTERS[slotType.identifier];
+        String setterType = _SETTER_TYPES[slotType.identifier];
+        String offset = 'base + ${slot.offset}';
+        buffer.write('  public void set$camel(');
+        writeTypeToBuffer(slotType, buffer);
+        buffer.writeln(' value) {');
+        buffer.write(updateTag);
+        if (slotType.isBool) {
+          buffer.writeln('    segment.buffer().$setter($offset,'
+                         ' (byte)(value ? 1 : 0));');
+        } else {
+          buffer.writeln('    segment.buffer().'
+                         '$setter($offset, (${setterType})value);');
+        }
+        buffer.writeln('  }');
+      } else {
+        buffer.write('  public ');
+        writeTypeToBuffer(slotType, buffer);
+        buffer.writeln(' init$camel() {');
+        buffer.write(updateTag);
+        String builderType = getType(slotType);
+        if (!slotType.isPointer) {
+          buffer.writeln('    $builderType result = new $builderType();');
+          buffer.writeln('    result.segment = segment;');
+          buffer.writeln('    result.base = base + ${slot.offset};');
+          buffer.writeln('    return result;');
+        } else {
+          Struct element = slotType.resolved;
+          StructLayout elementLayout = element.layout;
+          int size = elementLayout.size;
+          buffer.writeln('    $builderType result = new $builderType();');
+          buffer.writeln('    newStruct(result, ${slot.offset}, $size);');
+          buffer.writeln('    return result;');
+        }
+        buffer.writeln('  }');
+      }
+    }
+
     buffer.writeln('}');
 
     writeToFile(fletchDirectory, '$name', buffer.toString(),
                 extension: 'java');
   }
 
-  void writeListImplementation(Type type) {
+  void writeListReaderImplementation(Type type) {
     String fletchDirectory = join(outputDirectory, 'java', 'fletch');
     String name = '${camelize(type.identifier)}List';
 
@@ -572,7 +715,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
       buffer.writeln('  private ListReader reader;');
 
       buffer.writeln();
-      buffer.writeln('  public $name(ListReader reader) { this.reader = reader; }');
+      buffer.writeln('  public $name(ListReader reader) {'
+                     ' this.reader = reader; }');
 
       buffer.writeln();
       buffer.write('  public ');
@@ -594,7 +738,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
       buffer.writeln('  private ListReader reader;');
 
       buffer.writeln();
-      buffer.writeln('  public $name(ListReader reader) { this.reader = reader; }');
+      buffer.writeln('  public $name(ListReader reader) {'
+                     ' this.reader = reader; }');
 
       buffer.writeln();
       buffer.write('  public ');
@@ -605,7 +750,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
       buffer.write(' result = new ');
       writeReturnTypeToBuffer(type, buffer);
       buffer.writeln('();');
-      buffer.writeln('    reader.readListElement(result, index, $elementSize);');
+      buffer.writeln('    reader.readListElement('
+                     'result, index, $elementSize);');
       buffer.writeln('    return result;');
       buffer.writeln('  }');
     }
@@ -618,11 +764,99 @@ class _JavaVisitor extends CodeGenerationVisitor {
     writeToFile(fletchDirectory, '$name', buffer.toString(),
                 extension: 'java');
   }
+
+  void writeListBuilderImplementation(Type type) {
+    String fletchDirectory = join(outputDirectory, 'java', 'fletch');
+    String name = '${camelize(type.identifier)}ListBuilder';
+
+    StringBuffer buffer = new StringBuffer(HEADER);
+    buffer.writeln();
+    buffer.writeln(READER_HEADER);
+
+    buffer.writeln('import java.util.AbstractList;');
+
+    if (type.isPrimitive) {
+      int elementSize = primitives.size(type.primitiveType);
+      String offset = 'index * $elementSize';
+
+      buffer.writeln();
+      buffer.write('class $name extends AbstractList<');
+      writeListTypeToBuffer(type, buffer);
+      buffer.writeln('> {');
+
+      buffer.writeln('  private ListBuilder builder;');
+
+      buffer.writeln();
+      buffer.writeln('  public $name(ListBuilder builder) {'
+                     ' this.builder = builder; }');
+
+      buffer.writeln();
+      buffer.write('  public ');
+      writeListTypeToBuffer(type, buffer);
+      buffer.writeln(' get(int index) {');
+      buffer.write('    ');
+      writeReturnTypeToBuffer(type, buffer);
+      buffer.writeln(' result = '
+                     'builder.${_GETTERS[type.identifier]}($offset);');
+
+      buffer.write('    return new ');
+      writeListTypeToBuffer(type, buffer);
+      buffer.writeln('(result);');
+      buffer.writeln('  }');
+
+      buffer.writeln();
+      String listType = getListType(type);
+      String setter = _SETTERS[type.identifier];
+      String setterType = _SETTER_TYPES[type.identifier];
+      buffer.writeln('  public $listType set(int index, $listType value) {');
+      buffer.write('    builder.segment().buffer().');
+      buffer.writeln('$setter($offset, value.${setterType}Value());');
+      buffer.writeln('    return value;');
+      buffer.writeln('  }');
+    } else {
+      Struct element = type.resolved;
+      StructLayout elementLayout = element.layout;;
+      int elementSize = elementLayout.size;
+
+      buffer.writeln();
+      buffer.write('class $name extends AbstractList<');
+      writeTypeToBuffer(type, buffer);
+      buffer.writeln('> {');
+
+      buffer.writeln('  private ListBuilder builder;');
+
+      buffer.writeln();
+      buffer.writeln('  public $name(ListBuilder builder) {'
+                     ' this.builder = builder; }');
+
+      buffer.writeln();
+      buffer.write('  public ');
+      writeTypeToBuffer(type, buffer);
+      buffer.writeln(' get(int index) {');
+      buffer.write('    ');
+      writeTypeToBuffer(type, buffer);
+      buffer.write(' result = new ');
+      writeTypeToBuffer(type, buffer);
+      buffer.writeln('();');
+      buffer.writeln('    builder.readListElement('
+                     'result, index, $elementSize);');
+      buffer.writeln('    return result;');
+      buffer.writeln('  }');
+    }
+
+    buffer.writeln();
+    buffer.writeln('  public int size() { return builder.length; }');
+
+    buffer.writeln('}');
+
+    writeToFile(fletchDirectory, '$name', buffer.toString(),
+                extension: 'java');
+  }
 }
 
 class _JniVisitor extends CcVisitor {
   static const int REQUEST_HEADER_SIZE = 48;
-  static const int RESPONSE_HEADER_SIZE = 8;  
+  static const int RESPONSE_HEADER_SIZE = 8;
 
   int methodId = 1;
   String serviceName;
@@ -870,7 +1104,9 @@ class _JniVisitor extends CcVisitor {
   }
 }
 
-void _generateServiceJniMakeFiles(String path, Unit unit, String outputDirectory) {
+void _generateServiceJniMakeFiles(String path,
+                                  Unit unit,
+                                  String outputDirectory) {
   String out = join(outputDirectory, 'java');
   String scriptFile = new File.fromUri(Platform.script).path;
   String scriptDir = dirname(scriptFile);

@@ -49,7 +49,22 @@ class ConformanceTest {
     ConformanceService.TearDown();
   }
 
+  private static void buildPerson(PersonBuilder person, int n) {
+    person.setAge(n * 20);
+    if (n > 1) {
+      List<PersonBuilder> children = person.initChildren(2);
+      buildPerson(children.get(0), n - 1);
+      buildPerson(children.get(1), n - 1);
+    }
+  }
+
   private static void runPersonTests() {
+    MessageBuilder builder = new MessageBuilder(512);
+    PersonBuilder person = new PersonBuilder();
+    builder.initRoot(person, PersonBuilder.kSize);
+    buildPerson(person, 7);
+    assert 3128 == builder.computeUsed();
+
     ConformanceService.foo();
     ConformanceService.fooAsync(new ConformanceService.FooCallback() {
         public void handle() { }
@@ -82,7 +97,24 @@ class ConformanceTest {
     return 1 + ((left > right) ? left : right);
   }
 
+  private static void buildNode(NodeBuilder node, int n) {
+    if (n > 1) {
+      ConsBuilder cons = node.initCons();
+      buildNode(cons.initFst(), n - 1);
+      buildNode(cons.initSnd(), n - 1);
+    } else {
+      node.setCond(true);
+      node.setNum(42);
+    }
+  }
+
   private static void runNodeTests() {
+    MessageBuilder builder = new MessageBuilder(512);
+
+    NodeBuilder root = new NodeBuilder();
+    builder.initRoot(root, NodeBuilder.kSize);
+    buildNode(root, 10);
+
     Node node = ConformanceService.createNode(10);
     assert 24680 == node.computeUsed();
     assert 10 == depth(node);

@@ -43,7 +43,7 @@ class Reader {
 
   public short getUnsignedByteAt(int offset) {
     short result = (short)segment.getByteAt(base + offset);
-    return result < 0 ? (short)-result : result;
+    return (short)Math.abs(result);
   }
 
   public Reader readStruct(Reader reader, int offset) {

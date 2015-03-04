@@ -6,5 +6,20 @@
 
 package fletch;
 
-class TreeNodeBuilder {
+import java.util.List;
+public class TreeNodeBuilder extends Builder {
+  public static int kSize = 8;
+  public TreeNodeBuilder(BuilderSegment segment, int offset) {
+    super(segment, offset);
+  }
+
+  public TreeNodeBuilder() {
+    super();
+  }
+
+  public List<TreeNodeBuilder> initChildren(int length) {
+    ListBuilder builder = new ListBuilder();
+    newList(builder, 0, length, 8);
+    return new TreeNodeListBuilder(builder);
+  }
 }

@@ -1,0 +1,47 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+package fletch;
+
+public class MessageBuilder {
+  public MessageBuilder(int space) {
+    segments = 1;
+    first = new BuilderSegment(this, 0, space);
+    last = first;
+  }
+
+  public BuilderSegment first() { return first; }
+
+  public int segments() { return segments; }
+
+  public Builder initRoot(Builder builder, int size) {
+    int offset = first.allocate(48 + size);
+    builder.segment = first;
+    builder.base = offset + 8;
+    return builder;
+  }
+
+  public int computeUsed() {
+    int result = 0;
+    BuilderSegment current = first;
+    while (current != null) {
+      result += current.used();
+      current = current.next();
+    }
+    return result;
+  }
+
+  public BuilderSegment findSegmentForBytes(int bytes) {
+    if (last.hasSpaceForBytes(bytes)) return last;
+    int capacity = (bytes > 8192) ? bytes : 8192;
+    BuilderSegment segment = new BuilderSegment(this, segments++, capacity);
+    last.setNext(segment);
+    last = segment;
+    return segment;
+  }
+
+  private BuilderSegment first;
+  private BuilderSegment last;
+  private int segments;
+};

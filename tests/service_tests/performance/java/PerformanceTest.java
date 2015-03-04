@@ -8,6 +8,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import java.util.List;
+
 class PerformanceTest {
   static final int CALL_COUNT = 10000;
   static final int TREE_DEPTH = 7;
@@ -98,13 +100,32 @@ class PerformanceTest {
     System.out.println("Async call took " + us + " us.");
   }
 
+  private static int countTreeNodes(TreeNode node) {
+    int sum = 1;
+    List<TreeNode> children = node.getChildren();
+    for (int i = 0; i < children.size(); i++) {
+      sum += countTreeNodes(children.get(i));
+    }
+    return sum;
+  }
+
   private static void runTreeTests() {
-    final long start = System.currentTimeMillis();
+    long start = System.currentTimeMillis();
     for (int i = 0; i < CALL_COUNT; i++) {
       TreeNode generated = PerformanceService.buildTree(TREE_DEPTH);
     }
     long end = System.currentTimeMillis();
     double us = (end - start) * 1000.0 / CALL_COUNT;
     System.out.println("Building (Dart) took " + us + " us.");
+
+    TreeNode generated = PerformanceService.buildTree(TREE_DEPTH);
+
+    start = System.currentTimeMillis();
+    for (int i = 0; i < CALL_COUNT; i++) {
+      countTreeNodes(generated);
+    }
+    end = System.currentTimeMillis();
+    us = (end - start) * 1000.0 / CALL_COUNT;
+    System.out.println("Counting (Java) took " + us + " us.");
   }
 }

@@ -14,7 +14,7 @@ PerformanceTest.class: PerformanceTest.java
 SnapshotRunner.class: SnapshotRunner.java
 	javac $<
 
-fletch/PerformanceService.jar: fletch/PerformanceService.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/Reader.class fletch/ListReader.class fletch/Segment.class fletch/MessageReader.class fletch/TreeNode.class fletch/TreeNodeList.class fletch/TreeNodeBuilder.class
+fletch/PerformanceService.jar: fletch/PerformanceService.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/Reader.class fletch/Builder.class fletch/BuilderSegment.class fletch/ListBuilder.class fletch/ListReader.class fletch/Segment.class fletch/MessageReader.class fletch/MessageBuilder.class fletch/TreeNode.class fletch/TreeNodeList.class fletch/TreeNodeListBuilder.class fletch/TreeNodeBuilder.class
 	jar cvf $@ $^
 
 fletch/PerformanceService.class: fletch/PerformanceService.java
@@ -26,10 +26,22 @@ fletch/FletchApi.class: fletch/FletchApi.java
 fletch/FletchServiceApi.class: fletch/FletchServiceApi.java
 	javac $<
 
+fletch/Builder.class: fletch/Builder.java
+	javac $<
+
+fletch/BuilderSegment.class: fletch/BuilderSegment.java
+	javac $<
+
 fletch/Reader.class: fletch/Reader.java
 	javac $<
 
 fletch/ListReader.class: fletch/ListReader.java
+	javac $<
+
+fletch/ListBuilder.class: fletch/ListBuilder.java
+	javac $<
+
+fletch/MessageBuilder.class: fletch/MessageBuilder.java
 	javac $<
 
 fletch/Segment.class: fletch/Segment.java
@@ -42,6 +54,9 @@ fletch/TreeNode.class: fletch/TreeNode.java
 	javac $<
 
 fletch/TreeNodeList.class: fletch/TreeNodeList.java
+	javac $<
+
+fletch/TreeNodeListBuilder.class: fletch/TreeNodeListBuilder.java
 	javac $<
 
 fletch/TreeNodeBuilder.class: fletch/TreeNodeBuilder.java

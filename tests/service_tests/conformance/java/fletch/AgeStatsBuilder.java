@@ -6,5 +6,22 @@
 
 package fletch;
 
-class AgeStatsBuilder {
+import java.util.List;
+public class AgeStatsBuilder extends Builder {
+  public static int kSize = 8;
+  public AgeStatsBuilder(BuilderSegment segment, int offset) {
+    super(segment, offset);
+  }
+
+  public AgeStatsBuilder() {
+    super();
+  }
+
+  public void setAverageAge(int value) {
+    segment.buffer().putInt(base + 0, (int)value);
+  }
+
+  public void setSum(int value) {
+    segment.buffer().putInt(base + 4, (int)value);
+  }
 }
