@@ -165,6 +165,8 @@ static jobject getRootSegment(JNIEnv* env, char* memory) {
 
 const List<String> JAVA_RESOURCES = const [
   "Reader.java",
+  "Segment.java",
+  "MessageReader.java"
 ];
 
 void generate(String path, Unit unit, String outputDirectory) {
@@ -360,11 +362,11 @@ class _JavaVisitor extends CodeGenerationVisitor {
       writeln('    if (rawData instanceof byte[]) {');
       write('      return new ');
       writeReturnType(node.returnType);
-      writeln('((byte[])rawData);');
+      writeln('((byte[])rawData, 8);');
       writeln('    }');
       write('    return new ');
       writeReturnType(node.returnType);
-      writeln('((byte[][])rawData);');
+      writeln('((byte[][])rawData, 8);');
       writeln('  }');
     }
   }
@@ -395,14 +397,19 @@ class _JavaVisitor extends CodeGenerationVisitor {
     buffer.writeln(READER_HEADER);
 
     buffer.writeln('public class $name extends Reader {');
-    buffer.writeln('  public $name(byte[] memory) {');
-    buffer.writeln('    super(memory);');
+    buffer.writeln('  public $name() { }');
+    buffer.writeln();
+    buffer.writeln('  public $name(byte[] memory, int offset) {');
+    buffer.writeln('    super(memory, offset);');
     buffer.writeln('  }');
     buffer.writeln();
-    buffer.writeln('  public $name(byte[][] segments) {');
-    buffer.writeln('    super(segments);');
+    buffer.writeln('  public $name(Segment segment, int offset) {');
+    buffer.writeln('    super(segment, offset);');
     buffer.writeln('  }');
     buffer.writeln();
+    buffer.writeln('  public $name(byte[][] segments, int offset) {');
+    buffer.writeln('    super(segments, offset);');
+    buffer.writeln('  }');
 
     for (StructSlot slot in layout.slots) {
       Type slotType = slot.slot.type;
@@ -411,7 +418,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
       if (slot.isUnionSlot) {
         String tagName = camelize(slot.union.tag.name);
         int tag = slot.unionTag;
-        buffer.writeln('  boolean is$camel() { return $tag == get$tagName(); }');
+        buffer.writeln();
+        buffer.writeln('  public boolean is$camel() { return $tag == get$tagName(); }');
       }
 
       if (slotType.isList) {
@@ -419,13 +427,41 @@ class _JavaVisitor extends CodeGenerationVisitor {
       } else if (slotType.isVoid) {
         // No getters for void slots.
       } else if (slotType.isPrimitive) {
-        buffer.write('  public ');
-        writeTypeToBuffer(slotType, buffer);
-        buffer.write(' get$camel() { return get');
-        buffer.write(camelize(getReturnType(slotType)));
-        buffer.writeln('At(${slot.offset}); }');
+        // TODO(ager): Dealing with unsigned numbers in Java is annoying.
+        buffer.writeln();
+        if (camel == 'Tag') {
+          buffer.writeln('  public int getTag() {');
+          buffer.writeln('    short shortTag = getShortAt(${slot.offset});');
+          buffer.writeln('    int tag = (int)shortTag;');
+          buffer.writeln('    return tag < 0 ? -tag : tag;');
+          buffer.writeln('  }');
+        } else {
+          buffer.write('  public ');
+          writeTypeToBuffer(slotType, buffer);
+          buffer.write(' get$camel() { return get');
+          buffer.write(camelize(getReturnType(slotType)));
+          buffer.writeln('At(${slot.offset}); }');
+        }
       } else {
-        // TODO(ager): implement.
+        buffer.writeln();
+        buffer.write('  public ');
+        writeReturnTypeToBuffer(slotType, buffer);
+        buffer.writeln(' get$camel() {');
+        if (!slotType.isPointer) {
+          buffer.write('    return new ');
+          writeReturnTypeToBuffer(slotType, buffer);
+          buffer.writeln('(segment(), base() + ${slot.offset});');
+        } else {
+          buffer.write('    ');
+          writeReturnTypeToBuffer(slotType, buffer);
+          buffer.write(' reader = new ');
+          writeReturnTypeToBuffer(slotType, buffer);
+          buffer.writeln('();');
+          buffer.write('    return (');
+          writeReturnTypeToBuffer(slotType, buffer);
+          buffer.writeln(')ReadStruct(reader, ${slot.offset});');
+        }
+        buffer.writeln('  }');
       }
     }
 

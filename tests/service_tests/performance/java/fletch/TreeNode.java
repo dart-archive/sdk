@@ -7,12 +7,17 @@
 package fletch;
 
 public class TreeNode extends Reader {
-  public TreeNode(byte[] memory) {
-    super(memory);
+  public TreeNode() { }
+
+  public TreeNode(byte[] memory, int offset) {
+    super(memory, offset);
   }
 
-  public TreeNode(byte[][] segments) {
-    super(segments);
+  public TreeNode(Segment segment, int offset) {
+    super(segment, offset);
   }
 
+  public TreeNode(byte[][] segments, int offset) {
+    super(segments, offset);
+  }
 }

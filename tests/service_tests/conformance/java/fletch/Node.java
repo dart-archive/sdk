@@ -7,19 +7,39 @@
 package fletch;
 
 public class Node extends Reader {
-  public Node(byte[] memory) {
-    super(memory);
+  public Node() { }
+
+  public Node(byte[] memory, int offset) {
+    super(memory, offset);
   }
 
-  public Node(byte[][] segments) {
-    super(segments);
+  public Node(Segment segment, int offset) {
+    super(segment, offset);
   }
 
-  boolean isNum() { return 1 == getTag(); }
+  public Node(byte[][] segments, int offset) {
+    super(segments, offset);
+  }
+
+  public boolean isNum() { return 1 == getTag(); }
+
   public int getNum() { return getIntAt(0); }
-  boolean isCond() { return 2 == getTag(); }
+
+  public boolean isCond() { return 2 == getTag(); }
+
   public boolean getCond() { return getBooleanAt(0); }
-  boolean isCons() { return 3 == getTag(); }
-  boolean isNil() { return 4 == getTag(); }
-  public int getTag() { return getIntAt(16); }
+
+  public boolean isCons() { return 3 == getTag(); }
+
+  public Cons getCons() {
+    return new Cons(segment(), base() + 0);
+  }
+
+  public boolean isNil() { return 4 == getTag(); }
+
+  public int getTag() {
+    short shortTag = getShortAt(16);
+    int tag = (int)shortTag;
+    return tag < 0 ? -tag : tag;
+  }
 }

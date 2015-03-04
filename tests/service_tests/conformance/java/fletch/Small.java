@@ -7,12 +7,18 @@
 package fletch;
 
 public class Small extends Reader {
-  public Small(byte[] memory) {
-    super(memory);
+  public Small() { }
+
+  public Small(byte[] memory, int offset) {
+    super(memory, offset);
   }
 
-  public Small(byte[][] segments) {
-    super(segments);
+  public Small(Segment segment, int offset) {
+    super(segment, offset);
+  }
+
+  public Small(byte[][] segments, int offset) {
+    super(segments, offset);
   }
 
   public int getX() { return getIntAt(0); }

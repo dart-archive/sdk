@@ -43,6 +43,7 @@ class ConformanceTest {
     // Run conformance tests.
     ConformanceService.Setup();
     runPersonTests();
+    runNodeTests();
     ConformanceService.TearDown();
   }
 
@@ -60,5 +61,18 @@ class ConformanceTest {
     AgeStats stats = ConformanceService.createAgeStats(42, 42);
     assert 42 == stats.getAverageAge();
     assert 42 == stats.getSum();
+  }
+
+  private static int depth(Node node) {
+    if (node.isNum()) return 1;
+    int left = depth(node.getCons().getFst());
+    int right = depth(node.getCons().getSnd());
+    return 1 + ((left > right) ? left : right);
+  }
+
+  private static void runNodeTests() {
+    Node node = ConformanceService.createNode(10);
+    assert 24680 == node.computeUsed();
+    assert 10 == depth(node);
   }
 }

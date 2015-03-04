@@ -29,8 +29,8 @@ public class PerformanceService {
   public static TreeNode buildTree(int n) {
     Object rawData = buildTree_raw(n);
     if (rawData instanceof byte[]) {
-      return new TreeNode((byte[])rawData);
+      return new TreeNode((byte[])rawData, 8);
     }
-    return new TreeNode((byte[][])rawData);
+    return new TreeNode((byte[][])rawData, 8);
   }
 }

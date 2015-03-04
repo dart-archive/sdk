@@ -7,12 +7,27 @@
 package fletch;
 
 public class Cons extends Reader {
-  public Cons(byte[] memory) {
-    super(memory);
+  public Cons() { }
+
+  public Cons(byte[] memory, int offset) {
+    super(memory, offset);
   }
 
-  public Cons(byte[][] segments) {
-    super(segments);
+  public Cons(Segment segment, int offset) {
+    super(segment, offset);
   }
 
+  public Cons(byte[][] segments, int offset) {
+    super(segments, offset);
+  }
+
+  public Node getFst() {
+    Node reader = new Node();
+    return (Node)ReadStruct(reader, 0);
+  }
+
+  public Node getSnd() {
+    Node reader = new Node();
+    return (Node)ReadStruct(reader, 8);
+  }
 }

@@ -7,12 +7,18 @@
 package fletch;
 
 public class Person extends Reader {
-  public Person(byte[] memory) {
-    super(memory);
+  public Person() { }
+
+  public Person(byte[] memory, int offset) {
+    super(memory, offset);
   }
 
-  public Person(byte[][] segments) {
-    super(segments);
+  public Person(Segment segment, int offset) {
+    super(segment, offset);
+  }
+
+  public Person(byte[][] segments, int offset) {
+    super(segments, offset);
   }
 
   public int getAge() { return getIntAt(16); }

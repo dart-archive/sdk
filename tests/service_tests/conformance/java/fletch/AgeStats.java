@@ -7,14 +7,21 @@
 package fletch;
 
 public class AgeStats extends Reader {
-  public AgeStats(byte[] memory) {
-    super(memory);
+  public AgeStats() { }
+
+  public AgeStats(byte[] memory, int offset) {
+    super(memory, offset);
   }
 
-  public AgeStats(byte[][] segments) {
-    super(segments);
+  public AgeStats(Segment segment, int offset) {
+    super(segment, offset);
+  }
+
+  public AgeStats(byte[][] segments, int offset) {
+    super(segments, offset);
   }
 
   public int getAverageAge() { return getIntAt(0); }
+
   public int getSum() { return getIntAt(4); }
 }

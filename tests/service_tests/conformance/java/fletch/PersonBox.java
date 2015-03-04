@@ -7,12 +7,22 @@
 package fletch;
 
 public class PersonBox extends Reader {
-  public PersonBox(byte[] memory) {
-    super(memory);
+  public PersonBox() { }
+
+  public PersonBox(byte[] memory, int offset) {
+    super(memory, offset);
   }
 
-  public PersonBox(byte[][] segments) {
-    super(segments);
+  public PersonBox(Segment segment, int offset) {
+    super(segment, offset);
   }
 
+  public PersonBox(byte[][] segments, int offset) {
+    super(segments, offset);
+  }
+
+  public Person getPerson() {
+    Person reader = new Person();
+    return (Person)ReadStruct(reader, 0);
+  }
 }

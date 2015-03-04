@@ -5,27 +5,72 @@
 package fletch;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 class Reader {
-  public Reader(byte[] memory) {
-    this.memory = ByteBuffer.wrap(memory);
-    base = 8;
-    this.memory.order(ByteOrder.LITTLE_ENDIAN);
+  public Reader() { }
+
+  public Reader(byte[] memory, int offset) {
+    segment = new Segment(memory);
+    base = offset;
   }
 
-  public Reader(byte[][] segments) {
-    // TODO(ager): Implement.
+  public Reader(Segment segment, int offset) {
+    this.segment = segment;
+    base = offset;
+  }
+
+  public Reader(byte[][] segments, int offset) {
+    MessageReader reader = new MessageReader(segments);
+    segment = reader.getSegment(0);
+    base = offset;
   }
 
   public int getIntAt(int offset) {
-    return memory.getInt(base + offset);
+    return segment.getIntAt(base + offset);
+  }
+
+  public short getShortAt(int offset) {
+    return segment.getShortAt(base + offset);
   }
 
   public boolean getBooleanAt(int offset) {
-    return memory.get(base + offset) != 0;
+    return segment.getBooleanAt(base + offset);
   }
 
-  private ByteBuffer memory;
+  public Reader ReadStruct(Reader reader, int offset) {
+    Segment s = segment;
+    offset += base;
+    while (true) {
+      ByteBuffer buffer = s.buffer();
+      int lo = buffer.getInt(offset + 0);
+      int hi = buffer.getInt(offset + 4);
+      int tag = lo & 3;
+      if (tag == 0) {
+        // Cannot read uninitialized structs.
+        System.exit(1);
+      } else if (tag == 1) {
+        reader.segment = s;
+        reader.base = lo >> 2;
+        return reader;
+      } else {
+        s = s.reader().getSegment(hi);
+        offset = lo >> 2;
+      }
+    }
+  }
+
+  public int computeUsed() {
+    MessageReader reader = segment.reader();
+    int used = 0;
+    for (int i = 0; i < reader.segmentCount(); i++) {
+      used += reader.getSegment(i).buffer().capacity();
+    }
+    return used;
+  }
+
+  protected Segment segment() { return segment; }
+  protected int base() { return base; }
+
+  private Segment segment;
   private int base;
 }

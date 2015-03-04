@@ -14,7 +14,7 @@ PerformanceTest.class: PerformanceTest.java
 SnapshotRunner.class: SnapshotRunner.java
 	javac $<
 
-fletch/PerformanceService.jar: fletch/PerformanceService.class fletch/FletchApi.class fletch/FletchServiceApi.class
+fletch/PerformanceService.jar: fletch/PerformanceService.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/Reader.class fletch/Segment.class fletch/MessageReader.class fletch/TreeNode.class fletch/TreeNodeBuilder.class
 	jar cvf $@ $^
 
 fletch/PerformanceService.class: fletch/PerformanceService.java
@@ -24,6 +24,21 @@ fletch/FletchApi.class: fletch/FletchApi.java
 	javac $<
 
 fletch/FletchServiceApi.class: fletch/FletchServiceApi.java
+	javac $<
+
+fletch/Reader.class: fletch/Reader.java
+	javac $<
+
+fletch/Segment.class: fletch/Segment.java
+	javac $<
+
+fletch/MessageReader.class: fletch/MessageReader.java
+	javac $<
+
+fletch/TreeNode.class: fletch/TreeNode.java
+	javac $<
+
+fletch/TreeNodeBuilder.class: fletch/TreeNodeBuilder.java
 	javac $<
 
 jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/performance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a

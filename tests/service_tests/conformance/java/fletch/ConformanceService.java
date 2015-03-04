@@ -34,9 +34,9 @@ public class ConformanceService {
   public static AgeStats createAgeStats(int averageAge, int sum) {
     Object rawData = createAgeStats_raw(averageAge, sum);
     if (rawData instanceof byte[]) {
-      return new AgeStats((byte[])rawData);
+      return new AgeStats((byte[])rawData, 8);
     }
-    return new AgeStats((byte[][])rawData);
+    return new AgeStats((byte[][])rawData, 8);
   }
 
   public static abstract class CreatePersonCallback {
@@ -48,9 +48,9 @@ public class ConformanceService {
   public static Person createPerson(int children) {
     Object rawData = createPerson_raw(children);
     if (rawData instanceof byte[]) {
-      return new Person((byte[])rawData);
+      return new Person((byte[])rawData, 8);
     }
-    return new Person((byte[][])rawData);
+    return new Person((byte[][])rawData, 8);
   }
 
   public static abstract class CreateNodeCallback {
@@ -62,9 +62,9 @@ public class ConformanceService {
   public static Node createNode(int depth) {
     Object rawData = createNode_raw(depth);
     if (rawData instanceof byte[]) {
-      return new Node((byte[])rawData);
+      return new Node((byte[])rawData, 8);
     }
-    return new Node((byte[][])rawData);
+    return new Node((byte[][])rawData, 8);
   }
 
   public static abstract class FooCallback {

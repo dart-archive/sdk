@@ -152,15 +152,6 @@ static void RunPersonTests() {
 
   ConformanceService::createPersonAsync(10, CreatePersonCallback);
 
-  {
-    Node node = ConformanceService::createNode(10);
-    EXPECT_EQ(24680, node.ComputeUsed());
-    EXPECT_EQ(10, Depth(node));
-    node.Delete();
-  }
-
-  ConformanceService::createNodeAsync(10, CreateNodeCallback);
-
   ConformanceService::foo();
   ConformanceService::fooAsync(FooCallback);
 
@@ -199,6 +190,13 @@ static void RunNodeTests() {
   BuildNode(root, 10);
   int depth = ConformanceService::depth(root);
   EXPECT_EQ(10, depth);
+
+  Node node = ConformanceService::createNode(10);
+  EXPECT_EQ(24680, node.ComputeUsed());
+  EXPECT_EQ(10, Depth(node));
+  node.Delete();
+
+  ConformanceService::createNodeAsync(10, CreateNodeCallback);
 }
 
 static void InteractWithService() {
