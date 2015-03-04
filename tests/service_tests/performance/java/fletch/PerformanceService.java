@@ -24,6 +24,13 @@ public class PerformanceService {
     public abstract void handle(TreeNode result);
   }
 
-  public static native TreeNode buildTree(int n);
+  private static native Object buildTree_raw(int n);
   public static native void buildTreeAsync(int n, BuildTreeCallback callback);
+  public static TreeNode buildTree(int n) {
+    Object rawData = buildTree_raw(n);
+    if (rawData instanceof byte[]) {
+      return new TreeNode((byte[])rawData);
+    }
+    return new TreeNode((byte[][])rawData);
+  }
 }

@@ -145,8 +145,8 @@ static jobject createByteArray(JNIEnv* env, char* memory, int size) {
 static jobject createByteArrayArray(JNIEnv* env, char* memory, int size) {
   jobjectArray array = env->NewObjectArray(size, env->FindClass("[B"), NULL);
   for (int i = 0; i < size; i++) {
-    int64_t address = *reinterpret_cast<int64_t*>(memory + (i * 16));
-    int size = *reinterpret_cast<int*>(memory + 8 + (i * 16));
+    int64_t address = *reinterpret_cast<int64_t*>(memory + 8 + (i * 16));
+    int size = *reinterpret_cast<int*>(memory + 16 + (i * 16));
     char* contents = reinterpret_cast<char*>(address);
     env->SetObjectArrayElement(array, i, createByteArray(env, contents, size));
   }
@@ -160,7 +160,7 @@ static jobject getRootSegment(JNIEnv* env, char* memory) {
     int32_t size = *reinterpret_cast<int32_t*>(memory + 4);
     return createByteArray(env, memory, size);
   }
-  return createByteArrayArray(env, memory + 8, segments);
+  return createByteArrayArray(env, memory, segments);
 }""";
 
 const List<String> JAVA_RESOURCES = const [

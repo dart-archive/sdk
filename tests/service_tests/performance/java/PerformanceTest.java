@@ -2,9 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import fletch.FletchApi;
-import fletch.FletchServiceApi;
-import fletch.PerformanceService;
+import fletch.*;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -12,6 +10,7 @@ import java.io.IOException;
 
 class PerformanceTest {
   static final int CALL_COUNT = 10000;
+  static final int TREE_DEPTH = 7;
 
   public static void main(String args[]) {
     // Expecting a snapshot of the dart service code on the command line.
@@ -48,6 +47,7 @@ class PerformanceTest {
     PerformanceService.Setup();
     runEcho();
     runAsyncEcho();
+    runTreeTests();
     PerformanceService.TearDown();
   }
 
@@ -96,5 +96,15 @@ class PerformanceTest {
     long end = System.currentTimeMillis();
     double us = (end - start) * 1000.0 / CALL_COUNT;
     System.out.println("Async call took " + us + " us.");
+  }
+
+  private static void runTreeTests() {
+    final long start = System.currentTimeMillis();
+    for (int i = 0; i < CALL_COUNT; i++) {
+      TreeNode generated = PerformanceService.buildTree(TREE_DEPTH);
+    }
+    long end = System.currentTimeMillis();
+    double us = (end - start) * 1000.0 / CALL_COUNT;
+    System.out.println("Building (Dart) took " + us + " us.");
   }
 }

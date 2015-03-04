@@ -29,25 +29,6 @@ JNIEXPORT void JNICALL Java_fletch_PerformanceService_TearDown(JNIEnv*, jclass) 
   ServiceApiTerminate(service_id_);
 }
 
-static jobject createByteArray(JNIEnv* env, char* memory, int size) {
-  jbyteArray result = env->NewByteArray(size);
-  jbyte* contents = reinterpret_cast<jbyte*>(memory);
-  env->SetByteArrayRegion(result, 0, size, contents);
-}
-
-static jobject createByteArrayArray(JNIEnv* env, char* memory, int size) {
-  return NULL;
-}
-
-static jobject getRootSegment(JNIEnv* env, char* memory) {
-  int32_t segments = *reinterpret_cast<int32_t*>(memory);
-  if (segments == 0) {
-    int32_t size = *reinterpret_cast<int32_t*>(memory + 4);
-    return createByteArray(env, memory + 8, size - 8);
-  }
-  return createByteArrayArray(env, memory + 8, segments);
-}
-
 static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
   AttachEnvType result = NULL;
   if (vm->AttachCurrentThread(&result, NULL) != JNI_OK) {
@@ -62,6 +43,35 @@ static void detachCurrentThread(JavaVM* vm) {
     // TODO(ager): Nicer error recovery?
     exit(1);
   }
+}
+
+static jobject createByteArray(JNIEnv* env, char* memory, int size) {
+  jbyteArray result = env->NewByteArray(size);
+  jbyte* contents = reinterpret_cast<jbyte*>(memory);
+  env->SetByteArrayRegion(result, 0, size, contents);
+  free(memory);
+  return result;
+}
+
+static jobject createByteArrayArray(JNIEnv* env, char* memory, int size) {
+  jobjectArray array = env->NewObjectArray(size, env->FindClass("[B"), NULL);
+  for (int i = 0; i < size; i++) {
+    int64_t address = *reinterpret_cast<int64_t*>(memory + 8 + (i * 16));
+    int size = *reinterpret_cast<int*>(memory + 16 + (i * 16));
+    char* contents = reinterpret_cast<char*>(address);
+    env->SetObjectArrayElement(array, i, createByteArray(env, contents, size));
+  }
+  free(memory);
+  return array;
+}
+
+static jobject getRootSegment(JNIEnv* env, char* memory) {
+  int32_t segments = *reinterpret_cast<int32_t*>(memory);
+  if (segments == 0) {
+    int32_t size = *reinterpret_cast<int32_t*>(memory + 4);
+    return createByteArray(env, memory, size);
+  }
+  return createByteArrayArray(env, memory, segments);
 }
 
 static const MethodId _kechoId = reinterpret_cast<MethodId>(1);
@@ -107,7 +117,7 @@ static const MethodId _kcountTreeNodesId = reinterpret_cast<MethodId>(2);
 
 static const MethodId _kbuildTreeId = reinterpret_cast<MethodId>(3);
 
-JNIEXPORT jobject JNICALL Java_fletch_PerformanceService_buildTree(JNIEnv* _env, jclass, jint n) {
+JNIEXPORT jobject JNICALL Java_fletch_PerformanceService_buildTree_1raw(JNIEnv* _env, jclass, jint n) {
   static const int kSize = 56;
   char _bits[kSize];
   char* _buffer = _bits;
