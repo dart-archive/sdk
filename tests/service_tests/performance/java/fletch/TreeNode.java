@@ -6,6 +6,8 @@
 
 package fletch;
 
+import java.util.List;
+
 public class TreeNode extends Reader {
   public TreeNode() { }
 
@@ -19,5 +21,11 @@ public class TreeNode extends Reader {
 
   public TreeNode(byte[][] segments, int offset) {
     super(segments, offset);
+  }
+
+  public List<TreeNode> getChildren() {
+    ListReader reader = new ListReader();
+    readList(reader, 0);
+    return new TreeNodeList(reader);
   }
 }

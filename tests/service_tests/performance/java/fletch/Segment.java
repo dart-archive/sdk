@@ -30,6 +30,14 @@ class Segment {
     return buffer.getShort(offset);
   }
 
+  public char getCharAt(int offset) {
+    return buffer.getChar(offset);
+  }
+
+  public byte getByteAt(int offset) {
+    return buffer.get(offset);
+  }
+
   public boolean getBooleanAt(int offset) {
     return buffer.get(offset) != 0;
   }

@@ -6,6 +6,8 @@
 
 package fletch;
 
+import java.util.List;
+
 public class Cons extends Reader {
   public Cons() { }
 
@@ -23,11 +25,11 @@ public class Cons extends Reader {
 
   public Node getFst() {
     Node reader = new Node();
-    return (Node)ReadStruct(reader, 0);
+    return (Node)readStruct(reader, 0);
   }
 
   public Node getSnd() {
     Node reader = new Node();
-    return (Node)ReadStruct(reader, 8);
+    return (Node)readStruct(reader, 8);
   }
 }

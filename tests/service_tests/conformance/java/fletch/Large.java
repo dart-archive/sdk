@@ -6,6 +6,8 @@
 
 package fletch;
 
+import java.util.List;
+
 public class Large extends Reader {
   public Large() { }
 
@@ -22,7 +24,7 @@ public class Large extends Reader {
   }
 
   public Small getS() {
-    return new Small(segment(), base() + 0);
+    return new Small(segment, base + 0);
   }
 
   public int getY() { return getIntAt(4); }

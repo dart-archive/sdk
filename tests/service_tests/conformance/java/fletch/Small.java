@@ -6,6 +6,8 @@
 
 package fletch;
 
+import java.util.List;
+
 public class Small extends Reader {
   public Small() { }
 

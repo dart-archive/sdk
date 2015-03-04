@@ -6,6 +6,8 @@
 
 package fletch;
 
+import java.util.List;
+
 public class Person extends Reader {
   public Person() { }
 
@@ -19,6 +21,18 @@ public class Person extends Reader {
 
   public Person(byte[][] segments, int offset) {
     super(segments, offset);
+  }
+
+  public List<Short> getName() {
+    ListReader reader = new ListReader();
+    readList(reader, 0);
+    return new Uint8List(reader);
+  }
+
+  public List<Person> getChildren() {
+    ListReader reader = new ListReader();
+    readList(reader, 8);
+    return new PersonList(reader);
   }
 
   public int getAge() { return getIntAt(16); }

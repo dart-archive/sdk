@@ -6,8 +6,6 @@
 
 package fletch;
 
-import fletch.TreeNode;
-import fletch.TreeNodeBuilder;
 
 public class PerformanceService {
   public static native void Setup();

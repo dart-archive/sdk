@@ -6,6 +6,8 @@
 
 package fletch;
 
+import java.util.List;
+
 public class Node extends Reader {
   public Node() { }
 
@@ -32,7 +34,7 @@ public class Node extends Reader {
   public boolean isCons() { return 3 == getTag(); }
 
   public Cons getCons() {
-    return new Cons(segment(), base() + 0);
+    return new Cons(segment, base + 0);
   }
 
   public boolean isNil() { return 4 == getTag(); }

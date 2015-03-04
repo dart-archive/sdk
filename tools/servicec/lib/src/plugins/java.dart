@@ -13,6 +13,7 @@ import 'package:strings/strings.dart' as strings;
 import 'shared.dart';
 import '../emitter.dart';
 import '../struct_layout.dart';
+import '../primitives.dart' as primitives;
 
 import 'cc.dart' show CcVisitor;
 
@@ -166,7 +167,8 @@ static jobject getRootSegment(JNIEnv* env, char* memory) {
 const List<String> JAVA_RESOURCES = const [
   "Reader.java",
   "Segment.java",
-  "MessageReader.java"
+  "MessageReader.java",
+  "ListReader.java"
 ];
 
 void generate(String path, Unit unit, String outputDirectory) {
@@ -243,16 +245,36 @@ void _generateServiceJni(String path, Unit unit, String outputDirectory) {
 }
 
 class _JavaVisitor extends CodeGenerationVisitor {
+  final Set<Type> neededListTypes;
   final String outputDirectory;
 
-  _JavaVisitor(String path, String this.outputDirectory) : super(path);
+  static Map<String, String> _GETTERS = const {
+    'bool'    : 'getBooleanAt',
+
+    'uint8'   : 'getUnsignedByteAt',
+    'uint16'  : 'getCharAt',
+    'uint32'  : 'getUnsignedIntAt',
+    // TODO(ager): consider how to deal with unsigned 64-bit integers.
+
+    'int8'    : 'getByteAt',
+    'int16'   : 'getShortAt',
+    'int32'   : 'getIntAt',
+    'int64'   : 'getLongAt',
+
+    'float32' : 'getFloatAt',
+    'float64' : 'getDoubleAt',
+  };
+
+  _JavaVisitor(String path, String this.outputDirectory)
+    : neededListTypes = new Set<Type>(),
+      super(path);
 
   static const PRIMITIVE_TYPES = const <String, String> {
     'void'    : 'void',
     'bool'    : 'boolean',
 
     'uint8'   : 'short',
-    'uint16'  : 'int',
+    'uint16'  : 'char',
     'uint32'  : 'long',
     // TODO(ager): consider how to deal with unsigned 64 bit integers.
 
@@ -263,6 +285,23 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'float32' : 'float',
     'float64' : 'double',
+  };
+
+  static const PRIMITIVE_LIST_TYPES = const <String, String> {
+    'bool'    : 'Boolean',
+
+    'uint8'   : 'Short',
+    'uint16'  : 'Char',
+    'uint32'  : 'Long',
+    // TODO(ager): consider how to deal with unsigned 64 bit integers.
+
+    'int8'    : 'Byte',
+    'int16'   : 'Short',
+    'int32'   : 'Integer',
+    'int64'   : 'Long',
+
+    'float32' : 'Float',
+    'float64' : 'Double',
   };
 
   String getType(Type node) {
@@ -285,6 +324,16 @@ class _JavaVisitor extends CodeGenerationVisitor {
     }
   }
 
+  String getListType(Type node) {
+    Node resolved = node.resolved;
+    if (resolved != null) {
+      return '${node.identifier}';
+    } else {
+      String type = PRIMITIVE_LIST_TYPES[node.identifier];
+      return type;
+    }
+  }
+
   void writeType(Type node) => write(getType(node));
   void writeTypeToBuffer(Type node, StringBuffer buffer) {
     buffer.write(getType(node));
@@ -295,12 +344,17 @@ class _JavaVisitor extends CodeGenerationVisitor {
     buffer.write(getReturnType(node));
   }
 
+  void writeListTypeToBuffer(Type node, StringBuffer buffer) {
+    buffer.write(getListType(node));
+  }
+
   visitUnit(Unit node) {
     writeln(HEADER);
     writeln('package fletch;');
     writeln();
     node.structs.forEach(visit);
     node.services.forEach(visit);
+    neededListTypes.forEach(writeListImplementation);
   }
 
   visitService(Service node) {
@@ -390,11 +444,12 @@ class _JavaVisitor extends CodeGenerationVisitor {
     String name = node.name;
     StructLayout layout = node.layout;
 
-    writeln('import fletch.$name;');
-
     StringBuffer buffer = new StringBuffer(HEADER);
     buffer.writeln();
     buffer.writeln(READER_HEADER);
+
+    buffer.writeln('import java.util.List;');
+    buffer.writeln();
 
     buffer.writeln('public class $name extends Reader {');
     buffer.writeln('  public $name() { }');
@@ -423,7 +478,17 @@ class _JavaVisitor extends CodeGenerationVisitor {
       }
 
       if (slotType.isList) {
-        // TODO(ager): implement.
+        neededListTypes.add(slotType);
+        buffer.writeln();
+        buffer.write('  public List<');
+        writeListTypeToBuffer(slotType, buffer);
+        buffer.writeln('> get$camel() {');
+        buffer.writeln('    ListReader reader = new ListReader();');
+        buffer.writeln('    readList(reader, ${slot.offset});');
+        buffer.write('    return new ');
+        buffer.write(camelize(slotType.identifier));
+        buffer.writeln('List(reader);');
+        buffer.writeln('  }');
       } else if (slotType.isVoid) {
         // No getters for void slots.
       } else if (slotType.isPrimitive) {
@@ -450,7 +515,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
         if (!slotType.isPointer) {
           buffer.write('    return new ');
           writeReturnTypeToBuffer(slotType, buffer);
-          buffer.writeln('(segment(), base() + ${slot.offset});');
+          buffer.writeln('(segment, base + ${slot.offset});');
         } else {
           buffer.write('    ');
           writeReturnTypeToBuffer(slotType, buffer);
@@ -459,7 +524,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
           buffer.writeln('();');
           buffer.write('    return (');
           writeReturnTypeToBuffer(slotType, buffer);
-          buffer.writeln(')ReadStruct(reader, ${slot.offset});');
+          buffer.writeln(')readStruct(reader, ${slot.offset});');
         }
         buffer.writeln('  }');
       }
@@ -475,13 +540,79 @@ class _JavaVisitor extends CodeGenerationVisitor {
     String fletchDirectory = join(outputDirectory, 'java', 'fletch');
     String name = '${node.name}Builder';
 
-    writeln('import fletch.$name;');
-
     StringBuffer buffer = new StringBuffer(HEADER);
     buffer.writeln();
     buffer.writeln(READER_HEADER);
 
     buffer.writeln('class $name {');
+    buffer.writeln('}');
+
+    writeToFile(fletchDirectory, '$name', buffer.toString(),
+                extension: 'java');
+  }
+
+  void writeListImplementation(Type type) {
+    String fletchDirectory = join(outputDirectory, 'java', 'fletch');
+    String name = '${camelize(type.identifier)}List';
+
+    StringBuffer buffer = new StringBuffer(HEADER);
+    buffer.writeln();
+    buffer.writeln(READER_HEADER);
+
+    buffer.writeln('import java.util.AbstractList;');
+
+    buffer.writeln();
+    buffer.write('class $name extends AbstractList<');
+    writeListTypeToBuffer(type, buffer);
+    buffer.writeln('> {');
+    if (type.isPrimitive) {
+      int elementSize = primitives.size(type.primitiveType);
+      String offset = 'index * $elementSize';
+
+      buffer.writeln('  private ListReader reader;');
+
+      buffer.writeln();
+      buffer.writeln('  public $name(ListReader reader) { this.reader = reader; }');
+
+      buffer.writeln();
+      buffer.write('  public ');
+      writeListTypeToBuffer(type, buffer);
+      buffer.writeln(' get(int index) {');
+      buffer.write('    ');
+      writeReturnTypeToBuffer(type, buffer);
+      buffer.writeln(' result = reader.${_GETTERS[type.identifier]}($offset);');
+
+      buffer.write('    return new ');
+      writeListTypeToBuffer(type, buffer);
+      buffer.writeln('(result);');
+      buffer.writeln('  }');
+    } else {
+      Struct element = type.resolved;
+      StructLayout elementLayout = element.layout;;
+      int elementSize = elementLayout.size;
+
+      buffer.writeln('  private ListReader reader;');
+
+      buffer.writeln();
+      buffer.writeln('  public $name(ListReader reader) { this.reader = reader; }');
+
+      buffer.writeln();
+      buffer.write('  public ');
+      writeReturnTypeToBuffer(type, buffer);
+      buffer.writeln(' get(int index) {');
+      buffer.write('    ');
+      writeReturnTypeToBuffer(type, buffer);
+      buffer.write(' result = new ');
+      writeReturnTypeToBuffer(type, buffer);
+      buffer.writeln('();');
+      buffer.writeln('    reader.readListElement(result, index, $elementSize);');
+      buffer.writeln('    return result;');
+      buffer.writeln('  }');
+    }
+
+    buffer.writeln();
+    buffer.writeln('  public int size() { return reader.length; }');
+
     buffer.writeln('}');
 
     writeToFile(fletchDirectory, '$name', buffer.toString(),

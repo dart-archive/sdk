@@ -6,20 +6,6 @@
 
 package fletch;
 
-import fletch.AgeStats;
-import fletch.AgeStatsBuilder;
-import fletch.Person;
-import fletch.PersonBuilder;
-import fletch.Large;
-import fletch.LargeBuilder;
-import fletch.Small;
-import fletch.SmallBuilder;
-import fletch.PersonBox;
-import fletch.PersonBoxBuilder;
-import fletch.Node;
-import fletch.NodeBuilder;
-import fletch.Cons;
-import fletch.ConsBuilder;
 
 public class ConformanceService {
   public static native void Setup();

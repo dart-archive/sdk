@@ -14,7 +14,7 @@ ConformanceTest.class: ConformanceTest.java
 SnapshotRunner.class: SnapshotRunner.java
 	javac $<
 
-fletch/ConformanceService.jar: fletch/AgeStatsBuilder.class fletch/AgeStats.class fletch/ConformanceService.class fletch/ConsBuilder.class fletch/Cons.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/LargeBuilder.class fletch/Large.class fletch/NodeBuilder.class fletch/Node.class fletch/PersonBoxBuilder.class fletch/PersonBox.class fletch/PersonBuilder.class fletch/Person.class fletch/Reader.class fletch/MessageReader.class fletch/Segment.class fletch/SmallBuilder.class fletch/Small.class
+fletch/ConformanceService.jar: fletch/AgeStatsBuilder.class fletch/AgeStats.class fletch/ConformanceService.class fletch/ConsBuilder.class fletch/Cons.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/LargeBuilder.class fletch/Large.class fletch/NodeBuilder.class fletch/Node.class fletch/PersonBoxBuilder.class fletch/PersonBox.class fletch/PersonBuilder.class fletch/Person.class fletch/PersonList.class fletch/Reader.class fletch/ListReader.class fletch/MessageReader.class fletch/Segment.class fletch/SmallBuilder.class fletch/Small.class fletch/Uint8List.class
 	jar cvf $@ fletch/*.class
 
 fletch/AgeStatsBuilder.class: fletch/AgeStatsBuilder.java
@@ -62,7 +62,13 @@ fletch/PersonBuilder.class: fletch/PersonBuilder.java
 fletch/Person.class: fletch/Person.java
 	javac $<
 
+fletch/PersonList.class: fletch/PersonList.java
+	javac $<
+
 fletch/Reader.class: fletch/Reader.java
+	javac $<
+
+fletch/ListReader.class: fletch/ListReader.java
 	javac $<
 
 fletch/Segment.class: fletch/Segment.java
@@ -75,6 +81,9 @@ fletch/SmallBuilder.class: fletch/SmallBuilder.java
 	javac $<
 
 fletch/Small.class: fletch/Small.java
+	javac $<
+
+fletch/Uint8List.class: fletch/Uint8List.java
 	javac $<
 
 jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/conformance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a

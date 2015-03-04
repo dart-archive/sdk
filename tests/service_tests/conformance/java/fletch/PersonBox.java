@@ -6,6 +6,8 @@
 
 package fletch;
 
+import java.util.List;
+
 public class PersonBox extends Reader {
   public PersonBox() { }
 
@@ -23,6 +25,6 @@ public class PersonBox extends Reader {
 
   public Person getPerson() {
     Person reader = new Person();
-    return (Person)ReadStruct(reader, 0);
+    return (Person)readStruct(reader, 0);
   }
 }

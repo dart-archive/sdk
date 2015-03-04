@@ -8,6 +8,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import java.util.List;
+
 class ConformanceTest {
   public static void main(String args[]) {
     // Expecting a snapshot of the dart service code on the command line.
@@ -61,6 +63,16 @@ class ConformanceTest {
     AgeStats stats = ConformanceService.createAgeStats(42, 42);
     assert 42 == stats.getAverageAge();
     assert 42 == stats.getSum();
+
+    Person generated = ConformanceService.createPerson(10);
+    assert 42 == generated.getAge();
+    assert 1 == generated.getName().size();
+    assert 11 == generated.getName().get(0);
+    List<Person> children = generated.getChildren();
+    assert 10 == children.size();
+    for (int i = 0; i < children.size(); i++) {
+      assert (12 + i * 2) == children.get(i).getAge();
+    }
   }
 
   private static int depth(Node node) {

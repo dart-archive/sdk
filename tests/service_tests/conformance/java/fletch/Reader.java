@@ -33,11 +33,20 @@ class Reader {
     return segment.getShortAt(base + offset);
   }
 
+  public char getCharAt(int offset) {
+    return segment.getCharAt(base + offset);
+  }
+
   public boolean getBooleanAt(int offset) {
     return segment.getBooleanAt(base + offset);
   }
 
-  public Reader ReadStruct(Reader reader, int offset) {
+  public short getUnsignedByteAt(int offset) {
+    short result = (short)segment.getByteAt(base + offset);
+    return (short)Math.abs(result);
+  }
+
+  public Reader readStruct(Reader reader, int offset) {
     Segment s = segment;
     offset += base;
     while (true) {
@@ -59,6 +68,31 @@ class Reader {
     }
   }
 
+  public ListReader readList(ListReader reader, int offset) {
+    Segment s = segment;
+    offset += base;
+    while (true) {
+      ByteBuffer buffer = s.buffer();
+      int lo = buffer.getInt(offset + 0);
+      int hi = buffer.getInt(offset + 4);
+      int tag = lo & 3;
+      if (tag == 0) {
+        // If the list hasn't been initialized we return an empty
+        // list.
+        reader.length = 0;
+        return reader;
+      } else if (tag == 1) {
+        reader.segment = s;
+        reader.base = lo >> 2;
+        reader.length = hi;
+        return reader;
+      } else {
+        s = s.reader().getSegment(hi);
+        offset = lo >> 2;
+      }
+    }
+  }
+
   public int computeUsed() {
     MessageReader reader = segment.reader();
     int used = 0;
@@ -68,9 +102,6 @@ class Reader {
     return used;
   }
 
-  protected Segment segment() { return segment; }
-  protected int base() { return base; }
-
-  private Segment segment;
-  private int base;
+  protected Segment segment;
+  protected int base;
 }
