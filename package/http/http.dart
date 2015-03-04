@@ -107,6 +107,7 @@ class _HttpParser {
   static const int _CHAR_1               = 49;
   static const int _CHAR_9               = 57;
   static const int _CHAR_COLON           = 58;
+  static const int _CHAR_SEMICOLON       = 59;
   static const int _CHAR_UPPER_H         = 72;
   static const int _CHAR_UPPER_T         = 84;
   static const int _CHAR_UPPER_P         = 80;
@@ -183,7 +184,7 @@ class _HttpParser {
     _expect(_CHAR_CARRIAGE_RETURN);
     _expect(_CHAR_LINE_FEED);
 
-    // We are now donw with all of the headers; the body begins. There are 3
+    // We are now done with all of the headers; the body begins. There are 3
     // formats for the body
     //  - Fixed length (content-length is >= 0)
     //  - Unknown length - chunked encoding
@@ -201,6 +202,64 @@ class _HttpParser {
         body = new Uint8List(contentLength);
         body.setRange(0, bufferRemaining, _buffer, _offset);
         body.setRange(bufferRemaining, contentLength, remaining);
+      }
+    } else if (headers["Transfer-Encoding"] == "chunked") {
+      int contentLength = 0;
+      List chunks = [];
+
+      while (true) {
+        int count = 0;
+        int char = _peek();
+        while (char != _CHAR_CARRIAGE_RETURN && char != _CHAR_SEMICOLON) {
+          _consume();
+          ++count;
+          char = _peek();
+        }
+        Uint8List chars = new Uint8List.view(_buffer, _offset - count, count);
+        int chunkLength = int.parse(new String.fromCharCodes(chars), radix: 16);
+
+        // TODO(zerny): support optional extensions.
+        if (char == _CHAR_SEMICOLON) {
+          while (_peek() != _CHAR_CARRIAGE_RETURN) _consume();
+        }
+
+        _expect(_CHAR_CARRIAGE_RETURN);
+        _expect(_CHAR_LINE_FEED);
+
+        // A zero-size chunk denotes the last chunk.
+        if (chunkLength == 0) break;
+
+        int bufferRemaining = _buffer.length - _offset;
+        int chunkRemaining = chunkLength;
+        while (chunkRemaining > bufferRemaining) {
+          chunks.add(new Uint8List.view(_buffer, _offset, bufferRemaining));
+          chunkRemaining -= bufferRemaining;
+          _buffer = new Uint8List.view(socket.readNext());
+          _offset = 0;
+          bufferRemaining = _buffer.length;
+        }
+        chunks.add(new Uint8List.view(_buffer, _offset, chunkRemaining));
+        _offset += chunkRemaining;
+
+        contentLength += chunkLength;
+
+        _expect(_CHAR_CARRIAGE_RETURN);
+        _expect(_CHAR_LINE_FEED);
+      }
+
+      // TODO(zerny): read optional trailer
+      while (_peek() != _CHAR_CARRIAGE_RETURN) _consume();
+      _expect(_CHAR_CARRIAGE_RETURN);
+      _expect(_CHAR_LINE_FEED);
+
+      body = new Uint8List(contentLength);
+      int offset = 0;
+      int chunkCount = chunks.length;
+      for (int i = 0; i < chunkCount; ++i) {
+        Uint8List chunk = chunks[i];
+        int chunkLength = chunk.length;
+        body.setRange(offset, offset + chunkLength, chunk);
+        offset += chunkLength;
       }
     }
 
