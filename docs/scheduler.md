@@ -1,60 +1,88 @@
 **class Scheduler**
 
-The scheduler has two basic operations for Process:
-
-- `SpawnProcess` - Spawn a new process and enqueue it on a thread.
-- `SendToProcess` - While executing a process, attempt to wake up a target
-  process on the current thread. Returns the process the thread should continue
-  to execute immediately - or Null if next in queue.
-
 *Fields*
 
 * `Array Threads` - Non-growable list of `Thread`s.
 * `Stack IdleThreads` - List of idle `Thread`s.
+* `Atomic<int> Processes` - The number of processes associated to scheduler.
 
 ```python
 SpawnProcess() {
   P <- new Process()
+  Processes++
   EnqueueOnAnyThread(P)
-}
-```
-
-```python
-SendToProcess(Current, Target) {
-  if Target.ChangeState(Sleeping, Running) {
-    Current.ChangeState(Running, Queued)
-    EnqueueOnAnyThread(Current)
-    return Target
-  } else {
-    TargetThread <- Target.OwnerThread
-    if TargetThread != Null and TargetThread.TryDequeueEntry(Target) {
-      Current.ChangeState(Running, Queued)
-      EnqueueOnAnyThread(Current)
-      return Target
-    }
-  }
-  Current.ChangeState(Running, Queued)
-  EnqueueOnAnyThread(Current)
-  return Null
 }
 ```
 
 ```python
 RunThread(T) {
   while True {
-    IdleThreads.Push(T)
-    T.Wait()
+    T.IdleMonitor.Lock();
+    while T.IsEmpty and Processes > 0 {
+      IdleThreads.Push(T)
+      T.IdleMonitor.Wait();
+    }
+    T.IdleMonitor.Unlock();
+    if Processes = 0: break
     while True {
       P <- DequeueFromThread(T)
-      while P != Null: P <= Execute(P)
+      while P != Null: P <= Execute(P, T)
     }
   }
 }
 ```
 
 ```python
-Execute(P)
-  # May call SpawnProcess and SendToProcess.
+Execute(P, T)
+  # May call SpawnProcess.
+  Interrupt <- Interpret(P)
+
+  if Interrupt = Terminate {
+    delete P
+    Processes--
+    if Process = 0: NotifyAllThreads()
+    return Null
+  }
+
+  if Interrupt = Yielded {
+    P.ChangeState(Running, Yielding)
+    if P.IsQueueEmpty {
+      P.ChangeState(Yielding, Sleeping)
+    } else {
+      P.ChangeState(Yielding, Queued)
+      EnqueueOnThread(T, P)
+    }
+    return Null
+  }
+
+  if Interrupt = TargetYielded {
+    Port = Interrupt.Port
+    INVARIANT(Port.IsLocked())
+    Target = Port.Target
+    if Target.ChangeState(Sleeping, Running) {
+      Port.Unlock()
+      P.ChangeState(Running, Queued)
+      EnqueueOnAnyThread(P)
+      return Target
+    } else {
+      TargetThread <- Target.OwnerThread
+      if TargetThread != Null and TargetThread.TryDequeueEntry(Target) {
+        Port.Unlock()
+        P.ChangeState(Running, Queued)
+        EnqueueOnAnyThread(P)
+        return Target
+      }
+    }
+    Port.Unlock()
+    C.ChangeState(Running, Queued)
+    EnqueueOnAnyThread(C)
+    return Null
+  }
+```
+
+```python
+NotifyAllThreads()
+  for T in Threads: T.Wakeup()
 ```
 
 ```python
@@ -236,17 +264,22 @@ The process transition in state as follows:
 - `Atomic<Thread> OwnerThread`
 - `Atomic<Process> Next`
 - `Atomic<Process> Previous`
-- `Atomic<Queued|Running> State`
+- `Atomic<Sleeping|Queued|Running|Yielding> State`
 
 ```python
 ChangeState(From, To) {
-  if From = Running {
-    INVARIANT(State = Running)
+  if From = Running or From = Yielding {
+    INVARIANT(State = From)
     State <- To
     return True
   }
   S <- State
-  while S = From {
+  while True {
+    if From = Yielding {
+      S <- State
+      continue
+    }
+    if S = From: break;
     if State.CompareAndSwap(S, To): return True
     S <- State
   }
