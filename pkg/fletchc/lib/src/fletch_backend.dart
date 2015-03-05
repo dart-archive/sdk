@@ -245,6 +245,7 @@ class FletchBackend extends Backend {
     smiClass = loadBuiltinClass("_Smi", fletchSystemLibrary);
     mintClass = loadBuiltinClass("_Mint", fletchSystemLibrary);
     stringClass = loadBuiltinClass("String", fletchSystemLibrary);
+    loadBuiltinClass("Null", compiler.coreLibrary);
     loadBuiltinClass("bool", compiler.coreLibrary);
     loadBuiltinClass("Object", compiler.coreLibrary);
 

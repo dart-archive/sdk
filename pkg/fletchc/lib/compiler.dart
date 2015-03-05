@@ -196,15 +196,14 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
 // TODO(lukechurch): Delete this class.
 class Backdoor {
   final FletchCompiler _compiler;
-  
+
   Backdoor(this._compiler);
-  
+
   functionElementFromName(String name) =>
         _compiler._compiler.backend.compiledFunctions.keys.where(
             (f) => f.name == name).single;
   indexForFunctionElement(var element) =>
         _compiler._compiler.backend.allocateMethodId(element);
-  
 }
 
 /// Resolves any symbolic links in [uri] if its scheme is "file". Otherwise

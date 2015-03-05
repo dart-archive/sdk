@@ -383,18 +383,12 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       return;
     }
     if (element.isExternal) {
+      // Patch known functions directly.
       if (element == context.compiler.backend.fletchExternalInvokeMain) {
         element = context.compiler.mainFunction;
-      } else if (element == context.compiler.backend.fletchExternalYield) {
-        // Handled elsewhere.
-      } else if (element.library ==
-          context.compiler.backend.fletchNativesLibrary) {
-        // Handled elsewhere.
-      } else {
-        generateUnimplementedError(
-            node, "External function ${element.name} not implemented yet.");
-        return;
       }
+      // TODO(ajohnsen): Define a known set of external functions we allow
+      // calls to?
     }
     int arity = loadArguments(arguments, element);
     registry.registerStaticInvocation(element);
@@ -411,6 +405,22 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector selector,
       _) {
     visitTopLevelFunctionInvoke(node, element, arguments, selector, _);
+  }
+
+  void visitTopLevelFieldInvoke(
+      Send node,
+      FieldElement element,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    // TODO(ajohnsen): Handle initializer.
+    int index = context.getStaticFieldIndex(element, function);
+    builder.loadStatic(index);
+    for (Node argument in arguments) {
+      visitForValue(argument);
+    }
+    invokeMethod(selector);
+    applyVisitState();
   }
 
   void visitDynamicPropertyInvoke(
@@ -463,10 +473,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Send node,
       FieldElement element,
       _) {
-    Expression initializer = element.initializer;
-    if (initializer != null) {
-      internalError(node, "Static field initializer is not implemented");
-    }
+    // TODO(ajohnsen): Handle initializer.
     int index = context.getStaticFieldIndex(element, function);
     builder.loadStatic(index);
     applyVisitState();
@@ -624,7 +631,9 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
     int stackSizeDifference = builder.stackSize - stackSize;
     if (stackSizeDifference != blockLocals) {
-      throw "Unbalanced number of block locals and stack slots used by block.";
+      internalError(
+          node,
+          "Unbalanced number of block locals and stack slots used by block.");
     }
 
     for (int i = 0; i < blockLocals; i++) {

@@ -35,7 +35,6 @@ assert_assignable_type_test: Fail
 assert_with_type_test_or_cast_test: Fail
 assertion_test: Fail
 assign_op_test: Fail
-assign_static_type_test/01: Fail
 assign_static_type_test/02: Fail
 assign_static_type_test/03: Fail
 assign_static_type_test/04: Fail
@@ -299,22 +298,6 @@ compile_time_constant_arguments_test/06: MissingCompileTimeError
 compile_time_constant_arguments_test/none: Fail
 compile_time_constant_b_test: Fail
 compile_time_constant_c_test/02: MissingCompileTimeError
-compile_time_constant_c_test/none: Fail
-compile_time_constant_checked2_test/01: Fail
-compile_time_constant_checked2_test/02: Fail
-compile_time_constant_checked2_test/03: Fail
-compile_time_constant_checked2_test/04: Fail
-compile_time_constant_checked2_test/05: Fail
-compile_time_constant_checked2_test/06: Fail
-compile_time_constant_checked3_test/01: Fail
-compile_time_constant_checked3_test/02: Fail
-compile_time_constant_checked3_test/03: Fail
-compile_time_constant_checked3_test/04: Fail
-compile_time_constant_checked3_test/05: Fail
-compile_time_constant_checked3_test/06: Fail
-compile_time_constant_checked_test/01: Fail
-compile_time_constant_checked_test/02: Fail
-compile_time_constant_checked_test/03: Fail
 compile_time_constant_d_test: Fail
 compile_time_constant_e_test: Fail
 compile_time_constant_f_test: Fail
@@ -322,10 +305,6 @@ compile_time_constant_g_test: Fail
 compile_time_constant_h_test: Fail
 compile_time_constant_i_test: Fail
 compile_time_constant_j_test: Fail
-compile_time_constant_k_test/01: Fail
-compile_time_constant_k_test/02: Fail
-compile_time_constant_k_test/03: Fail
-compile_time_constant_k_test/none: Fail
 compile_time_constant_l_test: Fail
 compile_time_constant_m_test: Fail
 compile_time_constant_n_test: Fail
@@ -334,7 +313,6 @@ compile_time_constant_o_test/02: Fail
 compile_time_constant_o_test/none: Fail
 compile_time_constant_p_test/01: MissingCompileTimeError
 compile_time_constant_p_test/none: Fail
-compile_time_constant_q_test: Fail
 compile_time_constant_test/01: MissingCompileTimeError
 compile_time_constant_test/02: MissingCompileTimeError
 compile_time_constant_test/none: Fail
@@ -351,7 +329,6 @@ const_conditional_test/07: MissingCompileTimeError
 const_conditional_test/08: MissingCompileTimeError
 const_conditional_test/09: MissingCompileTimeError
 const_conditional_test/10: MissingCompileTimeError
-const_conditional_test/none: Fail
 const_constructor2_test/03: Fail
 const_constructor2_test/06: Fail
 const_constructor2_test/09: Fail
@@ -364,10 +341,6 @@ const_constructor2_test/21: Fail
 const_constructor2_test/22: Fail
 const_constructor2_test/23: Fail
 const_constructor2_test/24: Fail
-const_constructor3_test/01: Fail
-const_constructor3_test/02: Fail
-const_constructor3_test/03: Fail
-const_constructor3_test/04: Fail
 const_constructor_mixin2_test/01: MissingCompileTimeError
 const_constructor_mixin3_test/01: MissingCompileTimeError
 const_constructor_mixin_test/01: MissingCompileTimeError
@@ -389,8 +362,6 @@ const_evaluation_test/none: Fail
 const_factory_redirection_test: Fail
 const_factory_with_body_test/01: MissingCompileTimeError
 const_global_test: Fail
-const_init2_test/01: Fail
-const_init2_test/02: Fail
 const_init_test: Fail
 const_instance_field_test/01: MissingCompileTimeError
 const_list_test: Fail
@@ -475,7 +446,6 @@ constant_locals_test/02: MissingCompileTimeError
 constant_locals_test/03: MissingCompileTimeError
 constant_locals_test/04: MissingCompileTimeError
 constant_locals_test/05: MissingCompileTimeError
-constant_locals_test/none: Fail
 constant_propagation_phis_test: Fail
 constant_string_interpolation_test: Fail
 constant_type_literal_test/01: MissingCompileTimeError
@@ -533,9 +503,6 @@ ct_const_test: Fail
 cyclic_class_member_test/01: MissingCompileTimeError
 cyclic_constructor_test/01: MissingCompileTimeError
 cyclic_import_test: Fail
-cyclic_metadata_test/01: Fail
-cyclic_metadata_test/02: Fail
-cyclic_metadata_test/none: Fail
 cyclic_type2_test: Fail
 cyclic_type_test/00: Fail
 cyclic_type_test/01: Fail
@@ -615,7 +582,6 @@ deopt_lazy_finalization_test: Fail
 deopt_no_feedback_test: Fail
 deopt_smi_op_test: Fail
 deoptimized_function_on_stack_test: Fail
-disassemble_test: Fail
 div_by_zero_test: Fail
 div_with_power_of_two2_test: Fail
 div_with_power_of_two_test: Fail
@@ -675,9 +641,6 @@ execute_finally8_test: Fail
 execute_finally9_test: Fail
 exhaustive_for_test: Fail
 expect_test: Fail
-export_cyclic_test: Fail
-export_main_override_test: Fail
-export_test: Fail
 extend_type_parameter2_negative_test: Fail
 extend_type_parameter_negative_test: Fail
 extends_test: Fail
@@ -958,7 +921,6 @@ function_type_parameter_test: Fail
 function_type_test: Fail
 function_type_this_parameter_test: Fail
 gc_test: Fail
-generic2_test: Fail
 generic_closure_test: Fail
 generic_constructor_mixin2_test: Fail
 generic_constructor_mixin3_test: Fail
@@ -981,7 +943,7 @@ generic_native_test: Fail
 generic_parameterized_extends_test: Fail
 generic_syntax_test: Fail
 generic_test: Fail
-generics2_test: Fail
+generic2_test: Fail
 generics_test: Fail
 get_set_syntax_test/00: MissingCompileTimeError
 get_set_syntax_test/01: MissingCompileTimeError
@@ -1035,7 +997,6 @@ gvn_interceptor_test: Fail
 gvn_test: Fail
 hash_code_mangling_test: Fail
 hash_map_null_key_foreach_test: Fail
-hello_dart_test: Fail
 hello_script_test: Fail
 identical_closure2_test: Fail
 identical_closure_test: Fail
@@ -1057,11 +1018,9 @@ implicit_this_test/none: Fail
 implied_interface_test: Fail
 import_collection_no_prefix_test: Fail
 import_combinators_test: Fail
-import_core_no_prefix_test: Fail
 import_core_prefix_test: Fail
 import_core_test: Fail
 import_private_test/01: MissingCompileTimeError
-import_private_test/none: Fail
 import_self_test/01: Fail
 import_self_test/none: Fail
 import_show_test: Fail
@@ -1232,8 +1191,8 @@ least_upper_bound_test/none: Fail
 left_shift_test: Fail
 library1_test: Fail
 library5_test: Fail
+library_ambiguous_test/04: MissingRuntimeError
 library_ambiguous_test/05: MissingCompileTimeError
-library_ambiguous_test/none: Fail
 library_juxtaposition_test: Fail
 library_prefixes_test: Fail
 library_private_in_constructor_test: Fail
@@ -1310,8 +1269,6 @@ malbounded_type_cast_test: Fail
 malbounded_type_literal_test: Fail
 malbounded_type_test2_test: Fail
 malformed2_test/00: Fail
-malformed2_test/01: Fail
-malformed2_test/none: Fail
 malformed_inheritance_test/01: MissingCompileTimeError
 malformed_inheritance_test/02: Fail
 malformed_inheritance_test/03: MissingCompileTimeError
@@ -1329,7 +1286,6 @@ malformed_test/02: MissingCompileTimeError
 malformed_test/03: MissingCompileTimeError
 malformed_test/04: MissingCompileTimeError
 malformed_test/none: Fail
-malformed_type_test: Fail
 many_calls_test: Fail
 many_generic_instanceof_test: Fail
 many_named_arguments_test: Fail
@@ -1393,7 +1349,6 @@ mixin_black_listed_test/05: MissingCompileTimeError
 mixin_black_listed_test/06: MissingCompileTimeError
 mixin_black_listed_test/07: MissingCompileTimeError
 mixin_black_listed_test/08: MissingCompileTimeError
-mixin_black_listed_test/none: Fail
 mixin_bound_test: Fail
 mixin_cyclic_test/01: MissingCompileTimeError
 mixin_cyclic_test/02: MissingCompileTimeError
@@ -1568,7 +1523,6 @@ namer_test: Fail
 naming2_test: Fail
 naming3_test: Fail
 naming_test: Fail
-native_test: Fail
 nested_if_test: Fail
 nested_switch_label_test: Fail
 new_statement_test: Fail
@@ -1641,6 +1595,8 @@ osr_test: Fail
 overridden_no_such_method_test: Fail
 override_field_method1_negative_test: Fail
 override_field_method2_negative_test: Fail
+override_field_method4_negative_test: Fail
+override_field_method5_negative_test: Fail
 override_field_test/01: MissingCompileTimeError
 override_inheritance_abstract_test/25: Fail
 override_inheritance_mixed_test/01: MissingCompileTimeError
@@ -1669,8 +1625,6 @@ parameter_types_specialization_test: Fail
 parse_closures_in_initializers_test: Fail
 parse_types_test: Fail
 parser_quirks_test: Fail
-part2_test: Fail
-part_test: Fail
 partial_min_test: Fail
 phi_merge_test: Fail
 positional_parameters_type_test/none: Fail
@@ -1761,7 +1715,6 @@ regress_19728_test: Fail
 regress_20074_test: Fail
 regress_20394_test/01: MissingCompileTimeError
 regress_20840_test: Fail
-regress_20935_test: Fail
 regress_r24720_test: Fail
 reify_typevar_test: Fail
 resolution_test: Fail
@@ -1772,8 +1725,6 @@ return_type_test: Fail
 rewrite_compound_assign_test: Fail
 rewrite_conditional_test: Fail
 rewrite_for_update_order_test: Fail
-rewrite_if_empty_then_test: Fail
-rewrite_if_return_test: Fail
 rewrite_if_swap_test: Fail
 rewrite_implicit_this_test/01: Fail
 rewrite_logical_test: Fail
@@ -1784,8 +1735,9 @@ round_test: Fail
 runtime_type_test: Fail
 savannah_test: Fail
 scope_variable_test/01: MissingCompileTimeError
-scope_variable_test/none: Fail
 scoped_variables_try_catch_test: Fail
+script1_negative_test: Fail
+script2_negative_test: Fail
 setter0_test: Fail
 setter1_test: Fail
 setter2_test: Fail
@@ -1805,6 +1757,7 @@ skip_expression_test: Fail
 smaller_4_Interface_Types_A11_t01_test: Fail
 smaller_4_Interface_Types_A11_t02_test: Fail
 smi_type_test: Fail
+source_self_negative_test: Fail
 stack_overflow_stacktrace_test: Fail
 stack_overflow_test: Fail
 stack_trace_test: Fail
@@ -1853,9 +1806,11 @@ static_top_level_test/07: MissingCompileTimeError
 strict_equal_test: Fail
 string_charcode_test: Fail
 string_escapes_test: Fail
+string_interpolate2_negative_test: Fail
 string_interpolate2_test: Fail
 string_interpolate_null_test: Fail
 string_interpolate_test: Fail
+string_interpolation3_negative_test: Fail
 string_interpolation7_test: Fail
 string_interpolation8_test: Fail
 string_interpolation9_test/10: MissingCompileTimeError
@@ -2316,6 +2271,8 @@ unicode_bom_middle_test: Fail
 unicode_hash_test: Fail
 unnamed_closure_test: Fail
 unresolved_default_constructor_test/01: Fail
+unresolved_top_level_method_negative_test: Fail
+unresolved_top_level_var_negative_test: Fail
 unsigned_right_shift_test/01: MissingCompileTimeError
 unsigned_right_shift_test/02: MissingCompileTimeError
 unsigned_right_shift_test/none: Fail
@@ -2323,7 +2280,6 @@ unsupported_operators_test/01: MissingCompileTimeError
 unsupported_operators_test/02: MissingCompileTimeError
 unsupported_operators_test/03: MissingCompileTimeError
 unsupported_operators_test/04: MissingCompileTimeError
-unsupported_operators_test/none: Fail
 value_range2_test: Fail
 value_range3_test: Fail
 value_range_test: Fail
