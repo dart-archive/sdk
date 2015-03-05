@@ -75,6 +75,7 @@ Segment* MessageReader::GetRootSegment(char* memory) {
     return new Segment(memory, size);
   } else {
     MessageReader* reader = new MessageReader(segments, memory + 8);
+    free(memory);
     return new Segment(reader);
   }
 }
