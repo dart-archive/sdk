@@ -492,7 +492,6 @@ constructor5_test: Fail
 constructor6_test: Fail
 constructor7_test: Fail
 constructor8_test: Fail
-constructor_body_test: Fail
 constructor_default_test: Fail
 constructor_duplicate_final_test/03: MissingCompileTimeError
 constructor_duplicate_initializers_test/01: MissingCompileTimeError
@@ -517,7 +516,6 @@ constructor_return_test/02: MissingCompileTimeError
 constructor_return_test/03: MissingCompileTimeError
 constructor_return_test/04: MissingCompileTimeError
 constructor_return_test/05: MissingCompileTimeError
-constructor_return_test/none: Fail
 constructor_setter_negative_test: Fail
 constructor_test: Fail
 context2_test: Fail
@@ -1295,13 +1293,10 @@ main_test/01: Fail
 main_test/02: Fail
 main_test/04: Fail
 main_test/05: Fail
-main_test/20: Fail
 main_test/21: Fail
-main_test/22: Fail
 main_test/41: Fail
 main_test/42: Fail
 main_test/43: Fail
-main_test/44: Fail
 main_test/45: Fail
 malbounded_redirecting_factory2_test/01: Fail
 malbounded_redirecting_factory2_test/02: Fail
@@ -1686,7 +1681,6 @@ positive_bit_operations_test: Fail
 prefix101_test: Fail
 prefix10_test: Fail
 prefix11_test: Fail
-prefix12_test: Fail
 prefix13_negative_test: Fail
 prefix14_test: Fail
 prefix15_negative_test: Fail

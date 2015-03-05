@@ -80,6 +80,27 @@ class CompiledClass {
 
   final Map<int, int> methodTable = <int, int>{};
 
+  void createImplicitGetters(FletchBackend backend) {
+    // TODO(ajohnsen): Don't do this once dart2js can enqueue field getters in
+    // CodegenEnqueuer.
+    int fieldIndex = 0;
+    if (element.superclass != null) {
+      element.superclass.forEachInstanceField(
+          (_, __) { fieldIndex++; },
+          includeSuperAndInjectedMembers:  true);
+    }
+    element.forEachInstanceField((enclosing, field) {
+      var selector = new Selector.getter(field.name, field.library);
+      String symbol = backend.context.getSymbolFromSelector(selector);
+      int id = backend.context.getSymbolId(symbol);
+      int fletchSelector = FletchSelector.encodeGetter(id);
+      methodTable.putIfAbsent(
+          fletchSelector,
+          () => backend.makeGetter(fieldIndex));
+      fieldIndex++;
+    });
+  }
+
   CompiledClass(this.id, this.element, this.fields);
 }
 
@@ -106,6 +127,8 @@ class FletchBackend extends Backend {
       <ClassElement, CompiledClass>{};
 
   final Set<ClassElement> builtinClasses = new Set<ClassElement>();
+
+  final Map<int, int> getters = <int, int>{};
 
   int nextMethodId = 0;
 
@@ -422,6 +445,12 @@ class FletchBackend extends Backend {
   bool get canHandleCompilationFailed => true;
 
   int assembleProgram() {
+    // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
+    // This is a workaround, where we basically add getters for all fields.
+    for (CompiledClass compiledClass in compiledClasses.values) {
+      compiledClass.createImplicitGetters(this);
+    }
+
     List<Command> commands = <Command>[
         const NewMap(MapId.methods),
         const NewMap(MapId.classes),
@@ -690,6 +719,22 @@ class FletchBackend extends Backend {
     functions.add(stub);
 
     return stub.methodId;
+  }
+
+  /**
+   * Generate a getter for field [fieldIndex].
+   */
+  int makeGetter(int fieldIndex) {
+    return getters.putIfAbsent(fieldIndex, () {
+      CompiledFunction stub = new CompiledFunction(nextMethodId++, 1);
+      stub.builder
+          ..loadParameter(0)
+          ..loadField(fieldIndex)
+          ..ret()
+          ..methodEnd();
+      functions.add(stub);
+      return stub.methodId;
+    });
   }
 
   void generateUnimplementedError(

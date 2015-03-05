@@ -134,6 +134,68 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     builder.invokeMethod(fletchSelector, 0);
   }
 
+  /**
+   * Load the [arguments] for caling [function].
+   *
+   * Return the number of arguments pushed onto the stack.
+   */
+  int loadArguments(
+      NodeList arguments,
+      FunctionElement function) {
+    assert(!function.isInstanceMember);
+    FunctionSignature signature = function.functionSignature;
+    if (signature.hasOptionalParameters &&
+        signature.optionalParametersAreNamed) {
+      generateUnimplementedError(
+          function,
+          "Unimplemented load of named arguments");
+      return 1;
+    }
+    return loadPositionalArguments(arguments, function);
+  }
+
+  /**
+   * Load the [arguments] for caling [function], with potential optional
+   * positional parameters.
+   *
+   * Return the number of arguments pushed onto the stack.
+   */
+  int loadPositionalArguments(
+      NodeList arguments,
+      FunctionElement function) {
+    FunctionSignature signature = function.functionSignature;
+    assert(!signature.optionalParametersAreNamed);
+    int argumentCount = 0;
+    for (Node argument in arguments) {
+      argumentCount++;
+      visitForValue(argument);
+    }
+    // TODO(ajohnsen): Create a generic way of loading arguments (including
+    // named).
+    if (signature.parameterCount > argumentCount) {
+      int parameterCount = 0;
+      signature.orderedForEachParameter((ParameterElement parameter) {
+        if (parameterCount >= argumentCount) {
+          assert(!parameter.isNamed);
+          if (parameter.isOptional) {
+            Expression initializer = parameter.initializer;
+            if (initializer == null) {
+              builder.loadLiteralNull();
+            } else {
+              visitForValue(initializer);
+            }
+          } else {
+            generateUnimplementedError(
+                arguments,
+                "Arguments doesn't match parameters");
+          }
+        }
+        parameterCount++;
+      });
+    }
+    return signature.parameterCount;
+  }
+
   // Visit the expression [node] with the result pushed on top of the stack.
   void visitForValue(Node node) {
     VisitState oldState = visitState;
@@ -326,33 +388,11 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
         return;
       }
     }
-    int argumentCount = 0;
-    for (Node argument in arguments) {
-      argumentCount++;
-      visitForValue(argument);
-    }
-    FunctionSignature signature = element.functionSignature;
-    // TODO(ajohnsen): Create a generic way of loading arguments (including
-    // named).
-    if (signature.parameterCount > argumentCount) {
-      int parameterCount = 0;
-      signature.orderedForEachParameter((ParameterElement parameter) {
-        if (parameterCount >= argumentCount) {
-          if (parameter.isOptional) {
-            visitForValue(parameter.initializer);
-          } else {
-            generateUnimplementedError(
-                parameter,
-                "Initializers not implemented");
-          }
-        }
-        parameterCount++;
-      });
-    }
+    int arity = loadArguments(arguments, element);
     registry.registerStaticInvocation(element);
     int methodId = context.backend.allocateMethodId(element);
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
-    builder.invokeStatic(constId, signature.parameterCount);
+    builder.invokeStatic(constId, arity);
     applyVisitState();
   }
 
@@ -539,15 +579,12 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   void visitNewExpression(NewExpression node) {
     ConstructorElement constructor = elements[node.send];
-    for (Node argument in node.send.arguments) {
-      visitForValue(argument);
-    }
+    int arity = loadArguments(node.send.argumentsNode, constructor);
     int constructorId = context.backend.compileConstructor(constructor);
     int constId = compiledFunction.allocateConstantFromFunction(constructorId);
     registry.registerStaticInvocation(constructor);
     registry.registerInstantiatedType(elements.getType(node));
-    FunctionSignature signature = constructor.functionSignature;
-    builder.invokeStatic(constId, signature.parameterCount);
+    builder.invokeStatic(constId, arity);
     applyVisitState();
   }
 

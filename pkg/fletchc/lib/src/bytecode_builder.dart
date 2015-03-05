@@ -97,6 +97,10 @@ class BytecodeBuilder {
     internalAdd(new LoadStatic(index));
   }
 
+  void loadField(int index) {
+    internalAdd(new LoadField(index));
+  }
+
   void loadLiteralNull() {
     internalAdd(new LoadLiteralNull());
   }
