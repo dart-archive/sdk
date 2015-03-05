@@ -1097,7 +1097,6 @@ inline_getter_test: Fail
 inline_in_for_initializer_and_bailout_test: Fail
 inline_super_field_test: Fail
 inline_super_test: Fail
-inline_test: Fail
 inline_test_context_test: Fail
 inline_value_context_test: Fail
 inlined_conditional_test: Fail
@@ -1656,12 +1655,6 @@ override_inheritance_mixed_test/01: MissingCompileTimeError
 override_inheritance_mixed_test/02: MissingCompileTimeError
 override_inheritance_mixed_test/03: MissingCompileTimeError
 override_inheritance_mixed_test/04: MissingCompileTimeError
-override_inheritance_no_such_method_test/03: Fail
-override_inheritance_no_such_method_test/04: Fail
-override_inheritance_no_such_method_test/05: Fail
-override_inheritance_no_such_method_test/08: Fail
-override_inheritance_no_such_method_test/11: Fail
-override_inheritance_no_such_method_test/13: Fail
 override_method_with_field_test/01: MissingCompileTimeError
 override_method_with_field_test/02: Fail
 override_method_with_field_test/none: Fail
@@ -1783,7 +1776,6 @@ reify_typevar_test: Fail
 resolution_test: Fail
 resolve_test: Fail
 rethrow_test: Fail
-return_in_loop_test: Fail
 return_this_type_test: Fail
 return_type_test: Fail
 rewrite_compound_assign_test: Fail
@@ -2334,7 +2326,6 @@ unbound_getter_test: Fail
 unicode_bom_middle_test: Fail
 unicode_hash_test: Fail
 unnamed_closure_test: Fail
-unqual_name_test: Fail
 unresolved_default_constructor_test/01: Fail
 unsigned_right_shift_test/01: MissingCompileTimeError
 unsigned_right_shift_test/02: MissingCompileTimeError

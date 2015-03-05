@@ -55,7 +55,8 @@ void StackWalker::UncookFrame(int delta) {
 static int StackDiff(uint8** bcp,
                      uint8* end_bcp,
                      Program* program,
-                     int current_stack_offset) {
+                     int current_stack_offset,
+                     bool include_last) {
   int stack_diff = kVarDiff;
 
   Opcode opcode = static_cast<Opcode>(**bcp);
@@ -86,8 +87,9 @@ static int StackDiff(uint8** bcp,
     case kBranchIfFalseLong: {
       int delta = Utils::ReadInt32(*bcp + 1);
       stack_diff = Bytecode::StackDiff(opcode);
-      if (*bcp + delta <= end_bcp) {
-        *bcp += delta;
+      uint8* target = *bcp + delta;
+      if (target < end_bcp || (include_last && target == end_bcp)) {
+        *bcp = target;
         // Return as we have moved bcp with a custom delta.
         return stack_diff;
       }
@@ -143,7 +145,7 @@ int StackWalker::ComputeStackOffset(Function* function,
   while (bcp != end_bcp) {
     ASSERT(bcp < end_bcp);
     stack_offset += next_diff;
-    next_diff = StackDiff(&bcp, end_bcp, program, stack_offset);
+    next_diff = StackDiff(&bcp, end_bcp, program, stack_offset, include_last);
   }
   ASSERT(bcp == end_bcp);
   if (include_last) stack_offset += next_diff;

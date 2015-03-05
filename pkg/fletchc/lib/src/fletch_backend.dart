@@ -134,6 +134,7 @@ class FletchBackend extends Backend {
   }
 
   CompiledClass registerClassElement(ClassElement element) {
+    assert(element.isDeclaration);
     return compiledClasses.putIfAbsent(element, () {
         int id = classIds.putIfAbsent(element, () => classIds.length);
         int fields = 0;
@@ -159,6 +160,8 @@ class FletchBackend extends Backend {
   bool classNeedsRti(ClassElement cls) => false;
 
   bool methodNeedsRti(FunctionElement function) => false;
+
+  String getName(String key) => compiler.context.names[key];
 
   void enqueueHelpers(
       ResolutionEnqueuer world,
@@ -188,9 +191,6 @@ class FletchBackend extends Backend {
     fletchExternalInvokeMain = findExternal('invokeMain');
     fletchExternalYield = findExternal('yield');
 
-    builtinClasses.add(compiler.objectClass);
-    registerClassElement(compiler.objectClass);
-
     fletchNativeElement = fletchSystemLibrary.findLocal('native');
 
     ClassElement loadBuiltinClass(String name, LibraryElement library) {
@@ -215,9 +215,19 @@ class FletchBackend extends Backend {
     mintClass = loadBuiltinClass("_Mint", fletchSystemLibrary);
     stringClass = loadBuiltinClass("String", fletchSystemLibrary);
     loadBuiltinClass("bool", compiler.coreLibrary);
+    loadBuiltinClass("Object", compiler.coreLibrary);
 
     // TODO(ajohnsen): Remoev? - string interpolation does not enqueue '+'.
     world.registerDynamicInvocation(new Selector.binaryOperator('+'));
+
+    void registerNamedSelector(String name, LibraryElement library, int arity) {
+      var selector = new Selector.call(getName(name), library, arity);
+      world.registerDynamicInvocation(selector);
+      registry.registerDynamicInvocation(selector);
+    }
+
+    registerNamedSelector('NoSuchMethodTrampoline', compiler.coreLibrary, 0);
+    registerNamedSelector('NoSuchMethod', compiler.coreLibrary, 1);
   }
 
   ClassElement get stringImplementation => stringClass;
@@ -286,10 +296,10 @@ class FletchBackend extends Backend {
     functions.add(compiledFunction);
 
     // TODO(ahe): Don't do this.
-    compiler.enqueuer.codegen.generatedCode[function] = null;
+    compiler.enqueuer.codegen.generatedCode[function.declaration] = null;
 
     if (function.isInstanceMember) {
-      ClassElement enclosingClass = function.enclosingClass;
+      ClassElement enclosingClass = function.enclosingClass.declaration;
       CompiledClass compiledClass = registerClassElement(enclosingClass);
       String symbol = context.getSymbolFromFunction(function);
       int id = context.getSymbolId(symbol);
@@ -321,8 +331,8 @@ class FletchBackend extends Backend {
     int arity = functionCompiler.builder.functionArity;
     functionCompiler.builder.invokeNative(arity, descriptor.index);
 
-    Return returnNode = function.node.body.asReturn();
-    if (returnNode != null && !returnNode.hasExpression) {
+    EmptyStatement empty = function.node.body.asEmptyStatement();
+    if (empty != null) {
       // A native method without a body.
       functionCompiler.builder
           ..emitThrow()
@@ -339,6 +349,9 @@ class FletchBackend extends Backend {
       codegenExternalYield(function, functionCompiler);
     } else if (function == fletchExternalInvokeMain) {
       codegenExternalInvokeMain(function, functionCompiler);
+    } else if (function.name == getName('NoSuchMethodTrampoline') &&
+               function.library == compiler.coreLibrary) {
+      codegenExternalNoSuchMethodTrampoline(function, functionCompiler);
     } else {
       compiler.internalError(function, "Unhandled external function.");
     }
@@ -371,6 +384,18 @@ class FletchBackend extends Backend {
     functionCompiler.builder
         ..invokeStatic(methodId, mainArity)
         ..ret()
+        ..methodEnd();
+  }
+
+  void codegenExternalNoSuchMethodTrampoline(
+      FunctionElement function,
+      FunctionCompiler functionCompiler) {
+    int id = context.getSymbolId(getName("NoSuchMethod"));
+    int fletchSelector = FletchSelector.encodeMethod(id, 1);
+    functionCompiler.builder
+        ..enterNoSuchMethod()
+        ..invokeMethod(fletchSelector, 1)
+        ..exitNoSuchMethod()
         ..methodEnd();
   }
 
@@ -486,12 +511,12 @@ class FletchBackend extends Backend {
     commands.add(new ChangeStatics(context.staticIndices.length));
     changes++;
 
+    CompiledClass compiledObjectClass = compiledClasses[compiler.objectClass];
     for (CompiledClass compiledClass in compiledClasses.values) {
+      if (compiledClass == compiledObjectClass) continue;
       ClassElement element = compiledClass.element;
-      if (element == compiler.objectClass) continue;
       commands.add(new PushFromMap(MapId.classes, compiledClass.id));
-      // TODO(ajohnsen): Don't assume object id is 0.
-      commands.add(new PushFromMap(MapId.classes, 0));
+      commands.add(new PushFromMap(MapId.classes, compiledObjectClass.id));
       commands.add(const ChangeSuperClass());
       changes++;
     }
@@ -564,6 +589,8 @@ class FletchBackend extends Backend {
     } else if (element.library == fletchSystemLibrary) {
       // Nothing needed for now.
     } else if (element.library == fletchNativesLibrary) {
+      // Nothing needed for now.
+    } else if (element.library == compiler.coreLibrary) {
       // Nothing needed for now.
     } else if (externals.contains(element)) {
       // Nothing needed for now.

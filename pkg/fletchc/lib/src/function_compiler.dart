@@ -228,23 +228,40 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     BytecodeLabel isFalse = new BytecodeLabel();
     BytecodeLabel done = new BytecodeLabel();
 
+    builder.loadLiteralFalse();
+
     visitForTest(left, isFirstTrue, isFalse);
 
     builder.bind(isFirstTrue);
     visitForTest(right, isTrue, isFalse);
 
     builder.bind(isTrue);
+    builder.pop();
     builder.loadLiteralTrue();
+    builder.bind(isFalse);
+
+    applyVisitState();
+  }
+
+  void visitConditional(Conditional node) {
+    BytecodeLabel isTrue = new BytecodeLabel();
+    BytecodeLabel isFalse = new BytecodeLabel();
+    BytecodeLabel done = new BytecodeLabel();
+
+    builder.loadLiteralNull();
+
+    visitForTest(node.condition, isTrue, isFalse);
+
+    builder.bind(isTrue);
+    builder.pop();
+    visitForValue(node.thenExpression);
     builder.branch(done);
 
     builder.bind(isFalse);
-    builder.loadLiteralFalse();
+    builder.pop();
+    visitForValue(node.elseExpression);
 
     builder.bind(done);
-
-    // The above sequence of branch/loadX makes the stack appear to have grown
-    // by two, while it has actually only grown by one. Fix it.
-    builder.applyFrameSizeFix(-1);
 
     applyVisitState();
   }
@@ -355,6 +372,19 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector selector,
       _) {
     visitForValue(receiver);
+    for (Node argument in arguments) {
+      visitForValue(argument);
+    }
+    invokeMethod(selector);
+    applyVisitState();
+  }
+
+  void visitThisPropertyInvoke(
+      Send node,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    builder.loadParameter(0);
     for (Node argument in arguments) {
       visitForValue(argument);
     }

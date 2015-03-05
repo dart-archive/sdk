@@ -45,10 +45,6 @@ class BytecodeBuilder {
 
   BytecodeBuilder(this.functionArity);
 
-  void applyFrameSizeFix(int diff) {
-    stackSize += diff;
-  }
-
   void loadConst(int id) {
     internalAdd(new LoadConstUnfold(id));
   }
@@ -231,6 +227,14 @@ class BytecodeBuilder {
     if (bytecodes.isEmpty) return false;
     Opcode opcode = bytecodes.last.opcode;
     return opcode == Opcode.Return || opcode == Opcode.Throw;
+  }
+
+  void enterNoSuchMethod() {
+    internalAdd(const EnterNoSuchMethod());
+  }
+
+  void exitNoSuchMethod() {
+    internalAdd(const ExitNoSuchMethod());
   }
 
   void methodEnd() {
