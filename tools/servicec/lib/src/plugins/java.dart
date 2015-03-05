@@ -853,7 +853,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
       String setterType = _SETTER_TYPES[type.identifier];
       buffer.writeln('  public $listType set(int index, $listType value) {');
       buffer.write('    builder.segment().buffer().');
-      buffer.writeln('$setter($offset, value.${setterType}Value());');
+      buffer.writeln('$setter(builder.base + $offset, value.${setterType}Value());');
       buffer.writeln('    return value;');
       buffer.writeln('  }');
     } else {
