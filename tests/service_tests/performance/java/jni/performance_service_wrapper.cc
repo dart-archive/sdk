@@ -6,6 +6,7 @@
 
 #include <jni.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "service_api.h"
 
@@ -29,7 +30,7 @@ JNIEXPORT void JNICALL Java_fletch_PerformanceService_TearDown(JNIEnv*, jclass) 
   ServiceApiTerminate(service_id_);
 }
 
-static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
+static JNIEnv* AttachCurrentThreadAndGetEnv(JavaVM* vm) {
   AttachEnvType result = NULL;
   if (vm->AttachCurrentThread(&result, NULL) != JNI_OK) {
     // TODO(ager): Nicer error recovery?
@@ -38,14 +39,14 @@ static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
   return reinterpret_cast<JNIEnv*>(result);
 }
 
-static void detachCurrentThread(JavaVM* vm) {
+static void DetachCurrentThread(JavaVM* vm) {
   if (vm->DetachCurrentThread() != JNI_OK) {
     // TODO(ager): Nicer error recovery?
     exit(1);
   }
 }
 
-static jobject createByteArray(JNIEnv* env, char* memory, int size) {
+static jobject CreateByteArray(JNIEnv* env, char* memory, int size) {
   jbyteArray result = env->NewByteArray(size);
   jbyte* contents = reinterpret_cast<jbyte*>(memory);
   env->SetByteArrayRegion(result, 0, size, contents);
@@ -53,25 +54,25 @@ static jobject createByteArray(JNIEnv* env, char* memory, int size) {
   return result;
 }
 
-static jobject createByteArrayArray(JNIEnv* env, char* memory, int size) {
+static jobject CreateByteArrayArray(JNIEnv* env, char* memory, int size) {
   jobjectArray array = env->NewObjectArray(size, env->FindClass("[B"), NULL);
   for (int i = 0; i < size; i++) {
     int64_t address = *reinterpret_cast<int64_t*>(memory + 8 + (i * 16));
     int size = *reinterpret_cast<int*>(memory + 16 + (i * 16));
     char* contents = reinterpret_cast<char*>(address);
-    env->SetObjectArrayElement(array, i, createByteArray(env, contents, size));
+    env->SetObjectArrayElement(array, i, CreateByteArray(env, contents, size));
   }
   free(memory);
   return array;
 }
 
-static jobject getRootSegment(JNIEnv* env, char* memory) {
+static jobject GetRootSegment(JNIEnv* env, char* memory) {
   int32_t segments = *reinterpret_cast<int32_t*>(memory);
   if (segments == 0) {
     int32_t size = *reinterpret_cast<int32_t*>(memory + 4);
-    return createByteArray(env, memory, size);
+    return CreateByteArray(env, memory, size);
   }
-  return createByteArrayArray(env, memory, segments);
+  return CreateByteArrayArray(env, memory, segments);
 }
 
 class CallbackInfo {
@@ -82,11 +83,11 @@ class CallbackInfo {
   JavaVM* vm;
 };
 
-static int computeMessage(JNIEnv* env,
+static int ComputeMessage(JNIEnv* env,
                           jobject builder,
-                          char** buffer,
                           jobject callback,
-                          JavaVM* vm) {
+                          JavaVM* vm,
+                          char** buffer) {
   jclass clazz = env->GetObjectClass(builder);
   jmethodID methodId = env->GetMethodID(clazz, "isSegmented", "()Z");
   jboolean isSegmented =  env->CallBooleanMethod(builder, methodId);
@@ -109,8 +110,10 @@ static int computeMessage(JNIEnv* env,
       int segment_length = env->GetArrayLength(segment);
       jboolean is_copy;
       jbyte* data = env->GetByteArrayElements(segment, &is_copy);
-      // TODO(ager): Release this again.
-      *reinterpret_cast<void**>(*buffer + offset) = data;
+      char* segment_copy = reinterpret_cast<char*>(malloc(segment_length));
+      memcpy(segment_copy, data, segment_length);
+      env->ReleaseByteArrayElements(segment, data, JNI_ABORT);
+      *reinterpret_cast<void**>(*buffer + offset) = segment_copy;
       // TODO(ager): Correct sizing.
       *reinterpret_cast<int*>(*buffer + offset + 8) = segment_length;
       offset += 16;
@@ -127,15 +130,27 @@ static int computeMessage(JNIEnv* env,
   jbyteArray segment = (jbyteArray)env->CallObjectMethod(builder, methodId);
   int segment_length = env->GetArrayLength(segment);
   jboolean is_copy;
-  // TODO(ager): Release this again.
   jbyte* data = env->GetByteArrayElements(segment, &is_copy);
-  *buffer = reinterpret_cast<char*>(data);
+  char* segment_copy = reinterpret_cast<char*>(malloc(segment_length));
+  memcpy(segment_copy, data, segment_length);
+  env->ReleaseByteArrayElements(segment, data, JNI_ABORT);
+  *buffer = segment_copy;
   // Mark the request as being non-segmented.
   *reinterpret_cast<int64_t*>(*buffer + 40) = 0;
   // Set the callback information.
   *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
   // TODO(ager): Correct sizing.
   return segment_length;
+}
+
+static void DeleteMessage(char* message) {
+  int32_t segments = *reinterpret_cast<int32_t*>(message + 40);
+  for (int i = 0; i < segments; i++) {
+    int64_t address = *reinterpret_cast<int64_t*>(message + 56 + (i * 16));
+    char* memory = reinterpret_cast<char*>(address);
+    free(memory);
+  }
+  free(message);
 }
 
 static const MethodId _kechoId = reinterpret_cast<MethodId>(1);
@@ -153,15 +168,15 @@ JNIEXPORT jint JNICALL Java_fletch_PerformanceService_echo(JNIEnv* _env, jclass,
 static void Unwrap_int32_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
   CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
-  JNIEnv* env = attachCurrentThreadAndGetEnv(info->vm);
+  JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
   int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  DeleteMessage(buffer);
   jclass clazz = env->GetObjectClass(info->callback);
   jmethodID methodId = env->GetMethodID(clazz, "handle", "(I)V");
   env->CallVoidMethod(info->callback, methodId, result);
   env->DeleteGlobalRef(info->callback);
-  detachCurrentThread(info->vm);
+  DetachCurrentThread(info->vm);
   delete info;
-  free(buffer);
 }
 
 JNIEXPORT void JNICALL Java_fletch_PerformanceService_echoAsync(JNIEnv* _env, jclass, jint n, jobject _callback) {
@@ -181,9 +196,11 @@ static const MethodId _kcountTreeNodesId = reinterpret_cast<MethodId>(2);
 
 JNIEXPORT jint JNICALL Java_fletch_PerformanceService_countTreeNodes(JNIEnv* _env, jclass, jobject node) {
   char* buffer = NULL;
-  int size = computeMessage(_env, node, &buffer, NULL, NULL);
+  int size = ComputeMessage(_env, node, NULL, NULL, &buffer);
   ServiceApiInvoke(service_id_, _kcountTreeNodesId, buffer, size);
-  return *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  DeleteMessage(buffer);
+  return result;
 }
 
 JNIEXPORT void JNICALL Java_fletch_PerformanceService_countTreeNodesAsync(JNIEnv* _env, jclass, jobject node, jobject _callback) {
@@ -191,7 +208,7 @@ JNIEXPORT void JNICALL Java_fletch_PerformanceService_countTreeNodesAsync(JNIEnv
   JavaVM* vm;
   _env->GetJavaVM(&vm);
   char* buffer = NULL;
-  int size = computeMessage(_env, node, &buffer, callback, vm);
+  int size = ComputeMessage(_env, node, callback, vm, &buffer);
   ServiceApiInvokeAsync(service_id_, _kcountTreeNodesId, Unwrap_int32_8, buffer, size);
 }
 
@@ -206,7 +223,7 @@ JNIEXPORT jobject JNICALL Java_fletch_PerformanceService_buildTree(JNIEnv* _env,
   ServiceApiInvoke(service_id_, _kbuildTreeId, _buffer, kSize);
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
   char* memory = reinterpret_cast<char*>(result);
-  jobject rootSegment = getRootSegment(_env, memory);
+  jobject rootSegment = GetRootSegment(_env, memory);
   jclass resultClass = _env->FindClass("fletch/TreeNode");
   jmethodID create = _env->GetStaticMethodID(resultClass, "create", "(Ljava/lang/Object;)Lfletch/TreeNode;");
   jobject resultObject = _env->CallStaticObjectMethod(resultClass, create, rootSegment);
@@ -216,10 +233,11 @@ JNIEXPORT jobject JNICALL Java_fletch_PerformanceService_buildTree(JNIEnv* _env,
 static void Unwrap_TreeNode_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
   CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
-  JNIEnv* env = attachCurrentThreadAndGetEnv(info->vm);
+  JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
   int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  DeleteMessage(buffer);
   char* memory = reinterpret_cast<char*>(result);
-  jobject rootSegment = getRootSegment(env, memory);
+  jobject rootSegment = GetRootSegment(env, memory);
   jclass resultClass = env->FindClass("fletch/TreeNode");
   jmethodID create = env->GetStaticMethodID(resultClass, "create", "(Ljava/lang/Object;)Lfletch/TreeNode;");
   jobject resultObject = env->CallStaticObjectMethod(resultClass, create, rootSegment);
@@ -227,9 +245,8 @@ static void Unwrap_TreeNode_8(void* raw) {
   jmethodID methodId = env->GetMethodID(clazz, "handle", "(Lfletch/TreeNode;)V");
   env->CallVoidMethod(info->callback, methodId, resultObject);
   env->DeleteGlobalRef(info->callback);
-  detachCurrentThread(info->vm);
+  DetachCurrentThread(info->vm);
   delete info;
-  free(buffer);
 }
 
 JNIEXPORT void JNICALL Java_fletch_PerformanceService_buildTreeAsync(JNIEnv* _env, jclass, jint n, jobject _callback) {

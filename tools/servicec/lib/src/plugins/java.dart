@@ -119,7 +119,7 @@ JNIEXPORT void JNICALL Java_fletch_FletchServiceApi_TearDown(JNIEnv*, jclass) {
 """;
 
 const JNI_UTILS = """
-static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
+static JNIEnv* AttachCurrentThreadAndGetEnv(JavaVM* vm) {
   AttachEnvType result = NULL;
   if (vm->AttachCurrentThread(&result, NULL) != JNI_OK) {
     // TODO(ager): Nicer error recovery?
@@ -128,14 +128,14 @@ static JNIEnv* attachCurrentThreadAndGetEnv(JavaVM* vm) {
   return reinterpret_cast<JNIEnv*>(result);
 }
 
-static void detachCurrentThread(JavaVM* vm) {
+static void DetachCurrentThread(JavaVM* vm) {
   if (vm->DetachCurrentThread() != JNI_OK) {
     // TODO(ager): Nicer error recovery?
     exit(1);
   }
 }
 
-static jobject createByteArray(JNIEnv* env, char* memory, int size) {
+static jobject CreateByteArray(JNIEnv* env, char* memory, int size) {
   jbyteArray result = env->NewByteArray(size);
   jbyte* contents = reinterpret_cast<jbyte*>(memory);
   env->SetByteArrayRegion(result, 0, size, contents);
@@ -143,25 +143,25 @@ static jobject createByteArray(JNIEnv* env, char* memory, int size) {
   return result;
 }
 
-static jobject createByteArrayArray(JNIEnv* env, char* memory, int size) {
+static jobject CreateByteArrayArray(JNIEnv* env, char* memory, int size) {
   jobjectArray array = env->NewObjectArray(size, env->FindClass("[B"), NULL);
   for (int i = 0; i < size; i++) {
     int64_t address = *reinterpret_cast<int64_t*>(memory + 8 + (i * 16));
     int size = *reinterpret_cast<int*>(memory + 16 + (i * 16));
     char* contents = reinterpret_cast<char*>(address);
-    env->SetObjectArrayElement(array, i, createByteArray(env, contents, size));
+    env->SetObjectArrayElement(array, i, CreateByteArray(env, contents, size));
   }
   free(memory);
   return array;
 }
 
-static jobject getRootSegment(JNIEnv* env, char* memory) {
+static jobject GetRootSegment(JNIEnv* env, char* memory) {
   int32_t segments = *reinterpret_cast<int32_t*>(memory);
   if (segments == 0) {
     int32_t size = *reinterpret_cast<int32_t*>(memory + 4);
-    return createByteArray(env, memory, size);
+    return CreateByteArray(env, memory, size);
   }
-  return createByteArrayArray(env, memory, segments);
+  return CreateByteArrayArray(env, memory, segments);
 }
 
 class CallbackInfo {
@@ -172,11 +172,11 @@ class CallbackInfo {
   JavaVM* vm;
 };
 
-static int computeMessage(JNIEnv* env,
+static int ComputeMessage(JNIEnv* env,
                           jobject builder,
-                          char** buffer,
                           jobject callback,
-                          JavaVM* vm) {
+                          JavaVM* vm,
+                          char** buffer) {
   jclass clazz = env->GetObjectClass(builder);
   jmethodID methodId = env->GetMethodID(clazz, "isSegmented", "()Z");
   jboolean isSegmented =  env->CallBooleanMethod(builder, methodId);
@@ -199,8 +199,10 @@ static int computeMessage(JNIEnv* env,
       int segment_length = env->GetArrayLength(segment);
       jboolean is_copy;
       jbyte* data = env->GetByteArrayElements(segment, &is_copy);
-      // TODO(ager): Release this again.
-      *reinterpret_cast<void**>(*buffer + offset) = data;
+      char* segment_copy = reinterpret_cast<char*>(malloc(segment_length));
+      memcpy(segment_copy, data, segment_length);
+      env->ReleaseByteArrayElements(segment, data, JNI_ABORT);
+      *reinterpret_cast<void**>(*buffer + offset) = segment_copy;
       // TODO(ager): Correct sizing.
       *reinterpret_cast<int*>(*buffer + offset + 8) = segment_length;
       offset += 16;
@@ -217,15 +219,27 @@ static int computeMessage(JNIEnv* env,
   jbyteArray segment = (jbyteArray)env->CallObjectMethod(builder, methodId);
   int segment_length = env->GetArrayLength(segment);
   jboolean is_copy;
-  // TODO(ager): Release this again.
   jbyte* data = env->GetByteArrayElements(segment, &is_copy);
-  *buffer = reinterpret_cast<char*>(data);
+  char* segment_copy = reinterpret_cast<char*>(malloc(segment_length));
+  memcpy(segment_copy, data, segment_length);
+  env->ReleaseByteArrayElements(segment, data, JNI_ABORT);
+  *buffer = segment_copy;
   // Mark the request as being non-segmented.
   *reinterpret_cast<int64_t*>(*buffer + 40) = 0;
   // Set the callback information.
   *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
   // TODO(ager): Correct sizing.
   return segment_length;
+}
+
+static void DeleteMessage(char* message) {
+  int32_t segments = *reinterpret_cast<int32_t*>(message + 40);
+  for (int i = 0; i < segments; i++) {
+    int64_t address = *reinterpret_cast<int64_t*>(message + 56 + (i * 16));
+    char* memory = reinterpret_cast<char*>(address);
+    free(memory);
+  }
+  free(message);
 }""";
 
 const List<String> JAVA_RESOURCES = const [
@@ -905,6 +919,7 @@ class _JniVisitor extends CcVisitor {
     writeln(HEADER);
     writeln('#include <jni.h>');
     writeln('#include <stdlib.h>');
+    writeln('#include <string.h>');
     writeln();
     writeln('#include "service_api.h"');
     node.services.forEach(visit);
@@ -1074,7 +1089,7 @@ class _JniVisitor extends CcVisitor {
         Type type = method.returnType;
         writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
         writeln('  char* memory = reinterpret_cast<char*>(result);');
-        writeln('  jobject rootSegment = getRootSegment(_env, memory);');
+        writeln('  jobject rootSegment = GetRootSegment(_env, memory);');
         writeln('  jclass resultClass = '
                 '_env->FindClass("fletch/${type.identifier}");');
         writeln('  jmethodID create = _env->GetStaticMethodID('
@@ -1111,19 +1126,20 @@ class _JniVisitor extends CcVisitor {
     String javaVM = async ? 'vm' : 'NULL';
 
     writeln('  char* buffer = NULL;');
-    writeln('  int size = computeMessage('
-            '_env, $argumentName, &buffer, $javaCallback, $javaVM);');
+    writeln('  int size = ComputeMessage('
+            '_env, $argumentName, $javaCallback, $javaVM, &buffer);');
 
     if (async) {
       write('  ServiceApiInvokeAsync(service_id_, $id, $callback, ');
       writeln('buffer, size);');
     } else {
       writeln('  ServiceApiInvoke(service_id_, $id, buffer, size);');
+      writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
+      writeln('  DeleteMessage(buffer);');
       if (method.outputKind == OutputKind.STRUCT) {
         Type type = method.returnType;
-        writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
         writeln('  char* memory = reinterpret_cast<char*>(result);');
-        writeln('  jobject rootSegment = getRootSegment(_env, memory);');
+        writeln('  jobject rootSegment = GetRootSegment(_env, memory);');
         writeln('  jclass resultClass = '
                 '_env->FindClass("fletch/${type.identifier}");');
         writeln('  jmethodID create = _env->GetStaticMethodID('
@@ -1133,7 +1149,7 @@ class _JniVisitor extends CcVisitor {
                 'resultClass, create, rootSegment);');
         writeln('  return resultObject;');
       } else {
-        writeln('  return *reinterpret_cast<int64_t*>(buffer + 48);');
+        writeln('  return result;');
       }
     }
   }
@@ -1207,12 +1223,13 @@ class _JniVisitor extends CcVisitor {
       int offset = 48 + layout.size;
       write('  CallbackInfo* info = *${cast('CallbackInfo**')}');
       writeln('(buffer + 32);');
-      writeln('  JNIEnv* env = attachCurrentThreadAndGetEnv(info->vm);');
+      writeln('  JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);');
       if (!type.isVoid) {
         writeln('  int64_t result = *${cast('int64_t*')}(buffer + 48);');
+        writeln('  DeleteMessage(buffer);');
         if (!type.isPrimitive) {
           writeln('  char* memory = reinterpret_cast<char*>(result);');
-          writeln('  jobject rootSegment = getRootSegment(env, memory);');
+          writeln('  jobject rootSegment = GetRootSegment(env, memory);');
           writeln('  jclass resultClass = '
                   'env->FindClass("fletch/${type.identifier}");');
           writeln('  jmethodID create = env->GetStaticMethodID('
@@ -1221,6 +1238,8 @@ class _JniVisitor extends CcVisitor {
           writeln('  jobject resultObject = env->CallStaticObjectMethod('
                   'resultClass, create, rootSegment);');
         }
+      } else {
+        writeln('  DeleteMessage(buffer);');
       }
       writeln('  jclass clazz = env->GetObjectClass(info->callback);');
       write('  jmethodID methodId = env->GetMethodID');
@@ -1239,9 +1258,8 @@ class _JniVisitor extends CcVisitor {
         }
       }
       writeln('  env->DeleteGlobalRef(info->callback);');
-      writeln('  detachCurrentThread(info->vm);');
+      writeln('  DetachCurrentThread(info->vm);');
       writeln('  delete info;');
-      writeln('  free(buffer);');
       writeln('}');
       return name;
     });

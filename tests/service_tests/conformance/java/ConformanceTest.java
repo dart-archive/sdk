@@ -188,7 +188,6 @@ class ConformanceTest {
         public void handle() { }
     });
 
-
     {
       MessageBuilder builder = new MessageBuilder(512);
       EmptyBuilder empty = new EmptyBuilder();
@@ -223,7 +222,6 @@ class ConformanceTest {
     // TODO(ager): Grumble. We need to figure out how to deal with the
     // unsigned types. This is a List<uint8_t>. WAT?!?
     name.set(0, new Short((short)99));
-
     int age = ConformanceService.getBoxedAge(box);
     assert 87 == age;
   }
