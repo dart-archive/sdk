@@ -164,10 +164,27 @@ static jobject getRootSegment(JNIEnv* env, char* memory) {
   return createByteArrayArray(env, memory, segments);
 }
 
-static int computeMessage(JNIEnv* env, jobject builder, char** buffer) {
+class CallbackInfo {
+ public:
+  CallbackInfo(jobject jcallback, JavaVM* jvm)
+      : callback(jcallback), vm(jvm) { }
+  jobject callback;
+  JavaVM* vm;
+};
+
+static int computeMessage(JNIEnv* env,
+                          jobject builder,
+                          char** buffer,
+                          jobject callback,
+                          JavaVM* vm) {
   jclass clazz = env->GetObjectClass(builder);
   jmethodID methodId = env->GetMethodID(clazz, "isSegmented", "()Z");
   jboolean isSegmented =  env->CallBooleanMethod(builder, methodId);
+
+  CallbackInfo* info = NULL;
+  if (callback != NULL) {
+    info = new CallbackInfo(callback, vm);
+  }
 
   if (isSegmented) {
     methodId = env->GetMethodID(clazz, "getSegments", "()[[B");
@@ -191,6 +208,8 @@ static int computeMessage(JNIEnv* env, jobject builder, char** buffer) {
 
     // Mark the request as being segmented.
     *reinterpret_cast<int32_t*>(*buffer + 40) = segments;
+    // Set the callback information.
+    *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
     return size;
   }
 
@@ -203,6 +222,8 @@ static int computeMessage(JNIEnv* env, jobject builder, char** buffer) {
   *buffer = reinterpret_cast<char*>(data);
   // Mark the request as being non-segmented.
   *reinterpret_cast<int64_t*>(*buffer + 40) = 0;
+  // Set the callback information.
+  *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
   // TODO(ager): Correct sizing.
   return segment_length;
 }""";
@@ -442,7 +463,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
   }
 
   visitService(Service node) {
-    writeln();
     writeln('public class ${node.name} {');
     writeln('  public static native void Setup();');
     writeln('  public static native void TearDown();');
@@ -464,47 +484,15 @@ class _JavaVisitor extends CodeGenerationVisitor {
     writeln('  }');
 
     writeln();
-    if (node.outputKind != OutputKind.PRIMITIVE) {
-      write('  private static native Object ${name}_raw(');
-    } else {
-      write('  public static native ');
-      writeReturnType(node.returnType);
-      write(' $name(');
-    }
+    write('  public static native ');
+    writeReturnType(node.returnType);
+    write(' $name(');
     visitArguments(node.arguments);
     writeln(');');
     write('  public static native void ${name}Async(');
     visitArguments(node.arguments);
     if (!node.arguments.isEmpty) write(', ');
     writeln('${camelName}Callback callback);');
-
-    if (node.outputKind != OutputKind.PRIMITIVE) {
-      write('  public static ');
-      writeReturnType(node.returnType);
-      write(' ${name}(');
-      visitArguments(node.arguments);
-      writeln(') {');
-      write('    Object rawData = ${name}_raw(');
-      bool first = true;
-      for (int i = 0; i < node.arguments.length; i++) {
-        if (first) {
-          first = false;
-        } else {
-          write(', ');
-        }
-        write(node.arguments[i].name);
-      }
-      writeln(');');
-      writeln('    if (rawData instanceof byte[]) {');
-      write('      return new ');
-      writeReturnType(node.returnType);
-      writeln('((byte[])rawData, 8);');
-      writeln('    }');
-      write('    return new ');
-      writeReturnType(node.returnType);
-      writeln('((byte[][])rawData, 8);');
-      writeln('  }');
-    }
   }
 
   visitArguments(List<Formal> formals) {
@@ -546,6 +534,13 @@ class _JavaVisitor extends CodeGenerationVisitor {
     buffer.writeln();
     buffer.writeln('  public $name(byte[][] segments, int offset) {');
     buffer.writeln('    super(segments, offset);');
+    buffer.writeln('  }');
+    buffer.writeln();
+    buffer.writeln('  public static $name create(Object rawData) {');
+    buffer.writeln('    if (rawData instanceof byte[]) {');
+    buffer.writeln('      return new $name((byte[])rawData, 8);');
+    buffer.writeln('    }');
+    buffer.writeln('    return new $name((byte[][])rawData, 8);');
     buffer.writeln('  }');
 
     for (StructSlot slot in layout.slots) {
@@ -971,11 +966,7 @@ class _JniVisitor extends CcVisitor {
     writeln();
     write('JNIEXPORT ');
     writeReturnType(node.returnType);
-    if (node.outputKind != OutputKind.PRIMITIVE) {
-      write(' JNICALL Java_fletch_${serviceName}_${name}_1raw(');
-    } else {
-      write(' JNICALL Java_fletch_${serviceName}_${name}(');
-    }
+    write(' JNICALL Java_fletch_${serviceName}_${name}(');
     write('JNIEnv* _env, jclass');
     if (!node.arguments.isEmpty) write(', ');
     if (node.inputKind != InputKind.PRIMITIVES) {
@@ -991,27 +982,40 @@ class _JniVisitor extends CcVisitor {
     }
     writeln('}');
 
-    // TODO(ager): Support async variant with input and output structs.
-    if (node.outputKind != OutputKind.PRIMITIVE ||
-        node.inputKind != InputKind.PRIMITIVES) return;
-
-    String callback = ensureCallback(node.returnType,
-        node.inputPrimitiveStructLayout);
+    String callback;
+    if (node.inputKind == InputKind.STRUCT) {
+      StructLayout layout = node.arguments.single.type.resolved.layout;
+      callback = ensureCallback(node.returnType, layout);
+    } else {
+      callback =
+          ensureCallback(node.returnType, node.inputPrimitiveStructLayout);
+    }
 
     writeln();
     write('JNIEXPORT void JNICALL ');
     write('Java_fletch_${serviceName}_${name}Async(');
     write('JNIEnv* _env, jclass');
     if (!node.arguments.isEmpty) write(', ');
-    visitArguments(node.arguments);
+    if (node.inputKind != InputKind.PRIMITIVES) {
+      write('jobject ${node.arguments.single.name}');
+    } else {
+      visitArguments(node.arguments);
+    }
     writeln(', jobject _callback) {');
     writeln('  jobject callback = _env->NewGlobalRef(_callback);');
     writeln('  JavaVM* vm;');
     writeln('  _env->GetJavaVM(&vm);');
-    visitMethodBody(id,
-                    node,
-                    extraArguments: [ 'vm' ],
-                    callback: callback);
+    if (node.inputKind != InputKind.PRIMITIVES) {
+      visitStructArgumentMethodBody(id,
+                                    node,
+                                    extraArguments: [ 'vm' ],
+                                    callback: callback);
+    } else {
+      visitMethodBody(id,
+                      node,
+                      extraArguments: [ 'vm' ],
+                      callback: callback);
+    }
     writeln('}');
   }
 
@@ -1060,23 +1064,25 @@ class _JniVisitor extends CcVisitor {
     }
 
     if (async) {
-      String dataArgument = pointerToArgument(-16, 0, 'void*');
-      writeln('  *$dataArgument = ${cast("void*")}(callback);');
-      for (int i = 0; i < extraArguments.length; i++) {
-        String dataArgument = pointerToArgument(layout.size, i, 'void*');
-        String arg = extraArguments[i];
-        writeln('  *$dataArgument = ${cast("void*")}($arg);');
-      }
+      writeln('  CallbackInfo* info = new CallbackInfo(callback, vm);');
+      writeln('  *reinterpret_cast<CallbackInfo**>(_buffer + 32) = info;');
       write('  ServiceApiInvokeAsync(service_id_, $id, $callback, ');
       writeln('_buffer, kSize);');
     } else {
       writeln('  ServiceApiInvoke(service_id_, $id, _buffer, kSize);');
       if (method.outputKind == OutputKind.STRUCT) {
+        Type type = method.returnType;
         writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
         writeln('  char* memory = reinterpret_cast<char*>(result);');
-        // TODO(ajohnsen): Do range-check between size and segment size.
         writeln('  jobject rootSegment = getRootSegment(_env, memory);');
-        writeln('  return rootSegment;');
+        writeln('  jclass resultClass = '
+                '_env->FindClass("fletch/${type.identifier}");');
+        writeln('  jmethodID create = _env->GetStaticMethodID('
+                'resultClass, "create", '
+                '"(Ljava/lang/Object;)Lfletch/${type.identifier};");');
+        writeln('  jobject resultObject = _env->CallStaticObjectMethod('
+                'resultClass, create, rootSegment);');
+        writeln('  return resultObject;');
       } else if (!method.returnType.isVoid) {
         writeln('  return *${pointerToArgument(0, 0, 'int64_t')};');
       }
@@ -1097,18 +1103,38 @@ class _JniVisitor extends CcVisitor {
       return '$prefix(buffer + $offset + $pointers * sizeof(void*))';
     }
 
-    bool async = callback != null;
+    StructLayout layout = method.arguments.single.type.resolved.layout;
     String argumentName = method.arguments.single.name;
+
+    bool async = callback != null;
+    String javaCallback = async ? 'callback' : 'NULL';
+    String javaVM = async ? 'vm' : 'NULL';
+
     writeln('  char* buffer = NULL;');
-    writeln('  int size = computeMessage(_env, $argumentName, &buffer);');
-    writeln('  ServiceApiInvoke(service_id_, $id, buffer, size);');
-    if (method.outputKind == OutputKind.STRUCT) {
-      writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
-      writeln('  char* memory = reinterpret_cast<char*>(result);');
-      writeln('  jobject rootSegment = getRootSegment(_env, memory);');
-      writeln('  return rootSegment;');
+    writeln('  int size = computeMessage('
+            '_env, $argumentName, &buffer, $javaCallback, $javaVM);');
+
+    if (async) {
+      write('  ServiceApiInvokeAsync(service_id_, $id, $callback, ');
+      writeln('buffer, size);');
     } else {
-      writeln('  return *reinterpret_cast<int64_t*>(buffer + 48);');
+      writeln('  ServiceApiInvoke(service_id_, $id, buffer, size);');
+      if (method.outputKind == OutputKind.STRUCT) {
+        Type type = method.returnType;
+        writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
+        writeln('  char* memory = reinterpret_cast<char*>(result);');
+        writeln('  jobject rootSegment = getRootSegment(_env, memory);');
+        writeln('  jclass resultClass = '
+                '_env->FindClass("fletch/${type.identifier}");');
+        writeln('  jmethodID create = _env->GetStaticMethodID('
+                'resultClass, "create", '
+                '"(Ljava/lang/Object;)Lfletch/${type.identifier};");');
+        writeln('  jobject resultObject = _env->CallStaticObjectMethod('
+                'resultClass, create, rootSegment);');
+        writeln('  return resultObject;');
+      } else {
+        writeln('  return *reinterpret_cast<int64_t*>(buffer + 48);');
+      }
     }
   }
 
@@ -1144,6 +1170,29 @@ class _JniVisitor extends CcVisitor {
     }
   }
 
+  static const Map<String, String> PRIMITIVE_JNI_SIG = const {
+    'void' : '',
+    'bool' : 'Z',
+
+    'uint8' : 'Z',
+    'uint16' : 'C',
+    // TODO(ager): uint32 and uint64.
+
+    'int8' : 'B',
+    'int16' : 'S',
+    'int32' : 'I',
+    'int64' : 'J',
+
+    'float32' : 'F',
+    'float64' : 'D',
+  };
+
+  String getJNISignatureType(Type type) {
+    String name = type.identifier;
+    if (type.isPrimitive) return PRIMITIVE_JNI_SIG[name];
+    return 'Lfletch/$name;';
+  }
+
   final Map<String, String> callbacks = {};
   String ensureCallback(Type type,
                         StructLayout layout,
@@ -1155,27 +1204,43 @@ class _JniVisitor extends CcVisitor {
       writeln();
       writeln('static void $name(void* raw) {');
       writeln('  char* buffer = ${cast('char*')}(raw);');
+      int offset = 48 + layout.size;
+      write('  CallbackInfo* info = *${cast('CallbackInfo**')}');
+      writeln('(buffer + 32);');
+      writeln('  JNIEnv* env = attachCurrentThreadAndGetEnv(info->vm);');
       if (!type.isVoid) {
         writeln('  int64_t result = *${cast('int64_t*')}(buffer + 48);');
+        if (!type.isPrimitive) {
+          writeln('  char* memory = reinterpret_cast<char*>(result);');
+          writeln('  jobject rootSegment = getRootSegment(env, memory);');
+          writeln('  jclass resultClass = '
+                  'env->FindClass("fletch/${type.identifier}");');
+          writeln('  jmethodID create = env->GetStaticMethodID('
+                  'resultClass, "create", '
+                  '"(Ljava/lang/Object;)Lfletch/${type.identifier};");');
+          writeln('  jobject resultObject = env->CallStaticObjectMethod('
+                  'resultClass, create, rootSegment);');
+        }
       }
-      int offset = 48 + layout.size;
-      write('  jobject callback = *${cast('jobject*')}');
-      writeln('(buffer + 32);');
-      write('  JavaVM* vm = *${cast('JavaVM**')}');
-      writeln('(buffer + $offset);');
-      writeln('  JNIEnv* env = attachCurrentThreadAndGetEnv(vm);');
-      writeln('  jclass clazz = env->GetObjectClass(callback);');
+      writeln('  jclass clazz = env->GetObjectClass(info->callback);');
       write('  jmethodID methodId = env->GetMethodID');
       write('(clazz, "handle", ');
       if (type.isVoid) {
         writeln('"()V");');
-        writeln('  env->CallVoidMethod(callback, methodId);');
+        writeln('  env->CallVoidMethod(info->callback, methodId);');
       } else {
-        writeln('"(I)V");');
-        writeln('  env->CallVoidMethod(callback, methodId, result);');
+        String signatureType = getJNISignatureType(type);
+        writeln('"($signatureType)V");');
+        write('  env->CallVoidMethod(info->callback, methodId,');
+        if (!type.isPrimitive) {
+          writeln(' resultObject);');
+        } else {
+          writeln(' result);');
+        }
       }
-      writeln('  env->DeleteGlobalRef(callback);');
-      writeln('  detachCurrentThread(vm);');
+      writeln('  env->DeleteGlobalRef(info->callback);');
+      writeln('  detachCurrentThread(info->vm);');
+      writeln('  delete info;');
       writeln('  free(buffer);');
       writeln('}');
       return name;

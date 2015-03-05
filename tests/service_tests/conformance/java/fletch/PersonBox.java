@@ -23,6 +23,13 @@ public class PersonBox extends Reader {
     super(segments, offset);
   }
 
+  public static PersonBox create(Object rawData) {
+    if (rawData instanceof byte[]) {
+      return new PersonBox((byte[])rawData, 8);
+    }
+    return new PersonBox((byte[][])rawData, 8);
+  }
+
   public Person getPerson() {
     Person reader = new Person();
     return (Person)readStruct(reader, 0);

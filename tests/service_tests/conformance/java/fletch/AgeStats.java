@@ -23,6 +23,13 @@ public class AgeStats extends Reader {
     super(segments, offset);
   }
 
+  public static AgeStats create(Object rawData) {
+    if (rawData instanceof byte[]) {
+      return new AgeStats((byte[])rawData, 8);
+    }
+    return new AgeStats((byte[][])rawData, 8);
+  }
+
   public int getAverageAge() { return getIntAt(0); }
 
   public int getSum() { return getIntAt(4); }

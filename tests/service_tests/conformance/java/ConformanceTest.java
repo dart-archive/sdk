@@ -76,8 +76,38 @@ class ConformanceTest {
       builder.initRoot(person, PersonBuilder.kSize);
       buildPerson(person, 7);
       assert 3128 == builder.computeUsed();
+      ConformanceService.getAgeAsync(
+          person,
+          new ConformanceService.GetAgeCallback() {
+            public void handle(int age) {
+              assert 140 == age;
+            }
+          });
+    }
+
+    {
+      MessageBuilder builder = new MessageBuilder(512);
+      PersonBuilder person = new PersonBuilder();
+      builder.initRoot(person, PersonBuilder.kSize);
+      buildPerson(person, 7);
+      assert 3128 == builder.computeUsed();
       int count = ConformanceService.count(person);
       assert 127 == count;
+    }
+
+    {
+      MessageBuilder builder = new MessageBuilder(512);
+      PersonBuilder person = new PersonBuilder();
+      builder.initRoot(person, PersonBuilder.kSize);
+      buildPerson(person, 7);
+      assert 3128 == builder.computeUsed();
+      ConformanceService.countAsync(
+          person,
+          new ConformanceService.CountCallback() {
+              public void handle(int count) {
+                assert 127 == count;
+              }
+            });
     }
 
     {
@@ -92,9 +122,36 @@ class ConformanceTest {
     }
 
     {
+      MessageBuilder builder = new MessageBuilder(512);
+      PersonBuilder person = new PersonBuilder();
+      builder.initRoot(person, PersonBuilder.kSize);
+      buildPerson(person, 7);
+      assert 3128 == builder.computeUsed();
+      ConformanceService.getAgeStatsAsync(
+          person,
+          new ConformanceService.GetAgeStatsCallback() {
+            public void handle(AgeStats stats) {
+              assert 39 == stats.getAverageAge();
+              assert 4940 == stats.getSum();
+            }
+          });
+    }
+
+    {
       AgeStats stats = ConformanceService.createAgeStats(42, 42);
       assert 42 == stats.getAverageAge();
       assert 42 == stats.getSum();
+    }
+
+    {
+      ConformanceService.createAgeStatsAsync(
+          42, 42,
+          new ConformanceService.CreateAgeStatsCallback() {
+            public void handle(AgeStats stats) {
+              assert 42 == stats.getAverageAge();
+              assert 42 == stats.getSum();
+            }
+          });
     }
 
     {
@@ -107,6 +164,23 @@ class ConformanceTest {
       for (int i = 0; i < children.size(); i++) {
         assert (12 + i * 2) == children.get(i).getAge();
       }
+    }
+
+    {
+      ConformanceService.createPersonAsync(
+          10,
+          new ConformanceService.CreatePersonCallback() {
+            public void handle(Person generated) {
+              assert 42 == generated.getAge();
+              assert 1 == generated.getName().size();
+              assert 11 == generated.getName().get(0);
+              List<Person> children = generated.getChildren();
+              assert 10 == children.size();
+              for (int i = 0; i < children.size(); i++) {
+                assert (12 + i * 2) == children.get(i).getAge();
+              }
+            }
+          });
     }
 
     ConformanceService.foo();

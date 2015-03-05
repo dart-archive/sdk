@@ -23,6 +23,13 @@ public class TreeNode extends Reader {
     super(segments, offset);
   }
 
+  public static TreeNode create(Object rawData) {
+    if (rawData instanceof byte[]) {
+      return new TreeNode((byte[])rawData, 8);
+    }
+    return new TreeNode((byte[][])rawData, 8);
+  }
+
   public List<TreeNode> getChildren() {
     ListReader reader = new ListReader();
     readList(reader, 0);

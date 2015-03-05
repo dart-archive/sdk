@@ -23,6 +23,13 @@ public class Node extends Reader {
     super(segments, offset);
   }
 
+  public static Node create(Object rawData) {
+    if (rawData instanceof byte[]) {
+      return new Node((byte[])rawData, 8);
+    }
+    return new Node((byte[][])rawData, 8);
+  }
+
   public boolean isNum() { return 1 == getTag(); }
 
   public int getNum() { return getIntAt(0); }

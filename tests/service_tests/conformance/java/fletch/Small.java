@@ -23,5 +23,12 @@ public class Small extends Reader {
     super(segments, offset);
   }
 
+  public static Small create(Object rawData) {
+    if (rawData instanceof byte[]) {
+      return new Small((byte[])rawData, 8);
+    }
+    return new Small((byte[][])rawData, 8);
+  }
+
   public int getX() { return getIntAt(0); }
 }

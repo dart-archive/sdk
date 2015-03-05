@@ -23,6 +23,13 @@ public class Large extends Reader {
     super(segments, offset);
   }
 
+  public static Large create(Object rawData) {
+    if (rawData instanceof byte[]) {
+      return new Large((byte[])rawData, 8);
+    }
+    return new Large((byte[][])rawData, 8);
+  }
+
   public Small getS() {
     return new Small(segment, base + 0);
   }

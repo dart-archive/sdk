@@ -6,7 +6,6 @@
 
 package fletch;
 
-
 public class ConformanceService {
   public static native void Setup();
   public static native void TearDown();
@@ -29,57 +28,29 @@ public class ConformanceService {
     public abstract void handle(AgeStats result);
   }
 
-  private static native Object getAgeStats_raw(PersonBuilder person);
+  public static native AgeStats getAgeStats(PersonBuilder person);
   public static native void getAgeStatsAsync(PersonBuilder person, GetAgeStatsCallback callback);
-  public static AgeStats getAgeStats(PersonBuilder person) {
-    Object rawData = getAgeStats_raw(person);
-    if (rawData instanceof byte[]) {
-      return new AgeStats((byte[])rawData, 8);
-    }
-    return new AgeStats((byte[][])rawData, 8);
-  }
 
   public static abstract class CreateAgeStatsCallback {
     public abstract void handle(AgeStats result);
   }
 
-  private static native Object createAgeStats_raw(int averageAge, int sum);
+  public static native AgeStats createAgeStats(int averageAge, int sum);
   public static native void createAgeStatsAsync(int averageAge, int sum, CreateAgeStatsCallback callback);
-  public static AgeStats createAgeStats(int averageAge, int sum) {
-    Object rawData = createAgeStats_raw(averageAge, sum);
-    if (rawData instanceof byte[]) {
-      return new AgeStats((byte[])rawData, 8);
-    }
-    return new AgeStats((byte[][])rawData, 8);
-  }
 
   public static abstract class CreatePersonCallback {
     public abstract void handle(Person result);
   }
 
-  private static native Object createPerson_raw(int children);
+  public static native Person createPerson(int children);
   public static native void createPersonAsync(int children, CreatePersonCallback callback);
-  public static Person createPerson(int children) {
-    Object rawData = createPerson_raw(children);
-    if (rawData instanceof byte[]) {
-      return new Person((byte[])rawData, 8);
-    }
-    return new Person((byte[][])rawData, 8);
-  }
 
   public static abstract class CreateNodeCallback {
     public abstract void handle(Node result);
   }
 
-  private static native Object createNode_raw(int depth);
+  public static native Node createNode(int depth);
   public static native void createNodeAsync(int depth, CreateNodeCallback callback);
-  public static Node createNode(int depth) {
-    Object rawData = createNode_raw(depth);
-    if (rawData instanceof byte[]) {
-      return new Node((byte[])rawData, 8);
-    }
-    return new Node((byte[][])rawData, 8);
-  }
 
   public static abstract class CountCallback {
     public abstract void handle(int result);

@@ -23,6 +23,13 @@ public class Cons extends Reader {
     super(segments, offset);
   }
 
+  public static Cons create(Object rawData) {
+    if (rawData instanceof byte[]) {
+      return new Cons((byte[])rawData, 8);
+    }
+    return new Cons((byte[][])rawData, 8);
+  }
+
   public Node getFst() {
     Node reader = new Node();
     return (Node)readStruct(reader, 0);
