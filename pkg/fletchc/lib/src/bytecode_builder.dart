@@ -130,6 +130,10 @@ class BytecodeBuilder {
     internalAdd(new StoreStatic(index));
   }
 
+  void storeField(int index) {
+    internalAdd(new StoreField(index));
+  }
+
   void invokeStatic(int id, int arity) {
     internalAddStackPointerDifference(
         new InvokeStaticUnfold(id),

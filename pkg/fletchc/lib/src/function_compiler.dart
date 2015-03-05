@@ -134,6 +134,14 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     builder.invokeMethod(fletchSelector, 0);
   }
 
+  void invokeSetter(Selector selector) {
+    registry.registerDynamicSetter(selector);
+    String symbol = context.getSymbolFromSelector(selector);
+    int id = context.getSymbolId(symbol);
+    int fletchSelector = FletchSelector.encodeSetter(id);
+    builder.invokeMethod(fletchSelector, 1);
+  }
+
   /**
    * Load the [arguments] for caling [function].
    *
@@ -461,6 +469,18 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     }
     int index = context.getStaticFieldIndex(element, function);
     builder.loadStatic(index);
+    applyVisitState();
+  }
+
+  void visitDynamicPropertySet(
+      Send node,
+      Node receiver,
+      Selector selector,
+      Node rhs,
+      _) {
+    visitForValue(receiver);
+    visitForValue(rhs);
+    invokeSetter(selector);
     applyVisitState();
   }
 

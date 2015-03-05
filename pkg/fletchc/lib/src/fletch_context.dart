@@ -51,6 +51,10 @@ export 'bytecode_builder.dart' show
 import 'fletch_native_descriptor.dart' show
     FletchNativeDescriptor;
 
+import 'fletch_selector.dart' show
+    FletchSelector,
+    SelectorKind;
+
 export 'fletch_native_descriptor.dart' show
     FletchNativeDescriptor;
 
@@ -115,6 +119,19 @@ class FletchContext {
 
   void forEachStatic(f(FieldElement element, int index)) {
     staticIndices.forEach(f);
+  }
+
+  int toFletchSelector(Selector selector) {
+    String symbol = getSymbolFromSelector(selector);
+    int id = getSymbolId(symbol);
+    SelectorKind kind = getFletchSelectorKind(selector);
+    return FletchSelector.encode(id, kind, selector.argumentCount);
+  }
+
+  SelectorKind getFletchSelectorKind(Selector selector) {
+    if (selector.isGetter) return SelectorKind.Getter;
+    if (selector.isSetter) return SelectorKind.Setter;
+    return SelectorKind.Method;
   }
 
   /// If [isConst] is true, a compile-time error is reported.

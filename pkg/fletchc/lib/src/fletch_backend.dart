@@ -80,7 +80,7 @@ class CompiledClass {
 
   final Map<int, int> methodTable = <int, int>{};
 
-  void createImplicitGetters(FletchBackend backend) {
+  void createImplicitAccessors(FletchBackend backend) {
     // TODO(ajohnsen): Don't do this once dart2js can enqueue field getters in
     // CodegenEnqueuer.
     int fieldIndex = 0;
@@ -90,13 +90,20 @@ class CompiledClass {
           includeSuperAndInjectedMembers:  true);
     }
     element.forEachInstanceField((enclosing, field) {
-      var selector = new Selector.getter(field.name, field.library);
-      String symbol = backend.context.getSymbolFromSelector(selector);
-      int id = backend.context.getSymbolId(symbol);
-      int fletchSelector = FletchSelector.encodeGetter(id);
+      var getter = new Selector.getter(field.name, field.library);
+      int getterSelector = backend.context.toFletchSelector(getter);
       methodTable.putIfAbsent(
-          fletchSelector,
+          getterSelector,
           () => backend.makeGetter(fieldIndex));
+
+      if (!field.isFinal) {
+        var setter = new Selector.setter(field.name, field.library);
+        var setterSelector = backend.context.toFletchSelector(setter);
+        methodTable.putIfAbsent(
+            setterSelector,
+            () => backend.makeSetter(fieldIndex));
+      }
+
       fieldIndex++;
     });
   }
@@ -129,6 +136,7 @@ class FletchBackend extends Backend {
   final Set<ClassElement> builtinClasses = new Set<ClassElement>();
 
   final Map<int, int> getters = <int, int>{};
+  final Map<int, int> setters = <int, int>{};
 
   int nextMethodId = 0;
 
@@ -327,8 +335,9 @@ class FletchBackend extends Backend {
       String symbol = context.getSymbolFromFunction(function);
       int id = context.getSymbolId(symbol);
       int arity = function.functionSignature.parameterCount;
-      SelectorKind kind = function.isGetter ?
-          SelectorKind.Getter : SelectorKind.Method;
+      SelectorKind kind = SelectorKind.Method;
+      if (function.isGetter) kind = SelectorKind.Getter;
+      if (function.isSetter) kind = SelectorKind.Setter;
       int fletchSelector = FletchSelector.encode(id, kind, arity);
       compiledClass.methodTable[fletchSelector] = compiledFunction.methodId;
     }
@@ -448,7 +457,7 @@ class FletchBackend extends Backend {
     // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
     // This is a workaround, where we basically add getters for all fields.
     for (CompiledClass compiledClass in compiledClasses.values) {
-      compiledClass.createImplicitGetters(this);
+      compiledClass.createImplicitAccessors(this);
     }
 
     List<Command> commands = <Command>[
@@ -730,6 +739,24 @@ class FletchBackend extends Backend {
       stub.builder
           ..loadParameter(0)
           ..loadField(fieldIndex)
+          ..ret()
+          ..methodEnd();
+      functions.add(stub);
+      return stub.methodId;
+    });
+  }
+
+  /**
+   * Generate a setter for field [fieldIndex].
+   */
+  int makeSetter(int fieldIndex) {
+    return setters.putIfAbsent(fieldIndex, () {
+      CompiledFunction stub = new CompiledFunction(nextMethodId++, 2);
+      stub.builder
+          ..loadParameter(0)
+          ..loadParameter(1)
+          ..storeField(fieldIndex)
+      // Top is at this point the rhs argument, thus the return value.
           ..ret()
           ..methodEnd();
       functions.add(stub);
