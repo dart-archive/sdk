@@ -18,6 +18,13 @@ public class PerformanceService {
   public static native int echo(int n);
   public static native void echoAsync(int n, EchoCallback callback);
 
+  public static abstract class CountTreeNodesCallback {
+    public abstract void handle(int result);
+  }
+
+  public static native int countTreeNodes(TreeNodeBuilder node);
+  public static native void countTreeNodesAsync(TreeNodeBuilder node, CountTreeNodesCallback callback);
+
   public static abstract class BuildTreeCallback {
     public abstract void handle(TreeNode result);
   }

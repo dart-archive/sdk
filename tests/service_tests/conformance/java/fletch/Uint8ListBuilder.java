@@ -19,7 +19,7 @@ class Uint8ListBuilder extends AbstractList<Short> {
   }
 
   public Short set(int index, Short value) {
-    builder.segment().buffer().put(index * 1, value.byteValue());
+    builder.segment().buffer().put(builder.base + index * 1, value.byteValue());
     return value;
   }
 

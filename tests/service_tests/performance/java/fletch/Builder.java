@@ -37,6 +37,21 @@ class Builder {
 
   public BuilderSegment segment() { return segment; }
 
+  public boolean isSegmented() { return segment().hasNext(); }
+
+  public byte[] getSingleSegment() { return segment().buffer().array(); }
+
+  public byte[][] getSegments() {
+    int segments = segment().builder().segments();
+    byte[][] result = new byte[segments][];
+    BuilderSegment current = segment;
+    for (int i = 0; i < segments; i++) {
+      result[i] = current.buffer().array();
+      current = current.next();
+    }
+    return result;
+  }
+
   public Builder newStruct(Builder builder, int offset, int size) {
     offset += base;
     BuilderSegment s = segment;
@@ -73,7 +88,7 @@ class Builder {
       int result = s.allocate(size);
       ByteBuffer memory = s.buffer();
       if (result >= 0) {
-        memory.putInt(offset + 0, (result << 2) | 1);
+        memory.putInt(offset + 0, (result << 2) | 2);
         memory.putInt(offset + 4, length);
         list.segment = s;
         list.base = result;

@@ -18,7 +18,7 @@ public class MessageBuilder {
   public Builder initRoot(Builder builder, int size) {
     int offset = first.allocate(48 + size);
     builder.segment = first;
-    builder.base = offset + 8;
+    builder.base = offset + 48;
     return builder;
   }
 

@@ -87,9 +87,9 @@ static void BuildTree(int n, TreeNodeBuilder node) {
 
 static void RunTreeTests() {
   const int kTreeDepth = 7;
-  MessageBuilder builder(8192);
 
   uint64_t start = GetMicroseconds();
+  MessageBuilder builder(8192);
   TreeNodeBuilder built = builder.initRoot<TreeNodeBuilder>();
   BuildTree(kTreeDepth, built);
   uint64_t end = GetMicroseconds();

@@ -162,6 +162,49 @@ static jobject getRootSegment(JNIEnv* env, char* memory) {
     return createByteArray(env, memory, size);
   }
   return createByteArrayArray(env, memory, segments);
+}
+
+static int computeMessage(JNIEnv* env, jobject builder, char** buffer) {
+  jclass clazz = env->GetObjectClass(builder);
+  jmethodID methodId = env->GetMethodID(clazz, "isSegmented", "()Z");
+  jboolean isSegmented =  env->CallBooleanMethod(builder, methodId);
+
+  if (isSegmented) {
+    methodId = env->GetMethodID(clazz, "getSegments", "()[[B");
+    jobjectArray array = (jobjectArray)env->CallObjectMethod(builder, methodId);
+    int segments = env->GetArrayLength(array);
+
+    int size = 56 + (segments * 16);
+    *buffer = reinterpret_cast<char*>(malloc(size));
+    int offset = 56;
+    for (int i = 0; i < segments; i++) {
+      jbyteArray segment = (jbyteArray)env->GetObjectArrayElement(array, i);
+      int segment_length = env->GetArrayLength(segment);
+      jboolean is_copy;
+      jbyte* data = env->GetByteArrayElements(segment, &is_copy);
+      // TODO(ager): Release this again.
+      *reinterpret_cast<void**>(*buffer + offset) = data;
+      // TODO(ager): Correct sizing.
+      *reinterpret_cast<int*>(*buffer + offset + 8) = segment_length;
+      offset += 16;
+    }
+
+    // Mark the request as being segmented.
+    *reinterpret_cast<int32_t*>(*buffer + 40) = segments;
+    return size;
+  }
+
+  methodId = env->GetMethodID(clazz, "getSingleSegment", "()[B");
+  jbyteArray segment = (jbyteArray)env->CallObjectMethod(builder, methodId);
+  int segment_length = env->GetArrayLength(segment);
+  jboolean is_copy;
+  // TODO(ager): Release this again.
+  jbyte* data = env->GetByteArrayElements(segment, &is_copy);
+  *buffer = reinterpret_cast<char*>(data);
+  // Mark the request as being non-segmented.
+  *reinterpret_cast<int64_t*>(*buffer + 40) = 0;
+  // TODO(ager): Correct sizing.
+  return segment_length;
 }""";
 
 const List<String> JAVA_RESOURCES = const [
@@ -269,6 +312,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
     'float64' : 'getDoubleAt',
   };
 
+  // TODO(ager): Unify the getter/setter names. Avoid extra indirections
+  // for getters.
   static Map<String, String> _SETTERS = const {
     'bool'    : 'put',
 
@@ -406,8 +451,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
   }
 
   visitMethod(Method node) {
-    if (node.inputKind != InputKind.PRIMITIVES) return;
-
     String name = node.name;
     String camelName = name.substring(0, 1).toUpperCase() + name.substring(1);
     writeln();
@@ -925,8 +968,6 @@ class _JniVisitor extends CcVisitor {
     write('static const MethodId $id = ');
     writeln('reinterpret_cast<MethodId>(${methodId++});');
 
-    if (node.inputKind != InputKind.PRIMITIVES) return;  // Not handled yet.
-
     writeln();
     write('JNIEXPORT ');
     writeReturnType(node.returnType);
@@ -937,13 +978,22 @@ class _JniVisitor extends CcVisitor {
     }
     write('JNIEnv* _env, jclass');
     if (!node.arguments.isEmpty) write(', ');
-    visitArguments(node.arguments);
+    if (node.inputKind != InputKind.PRIMITIVES) {
+      write('jobject ${node.arguments.single.name}');
+    } else {
+      visitArguments(node.arguments);
+    }
     writeln(') {');
-    visitMethodBody(id, node);
+    if (node.inputKind != InputKind.PRIMITIVES) {
+      visitStructArgumentMethodBody(id, node);
+    } else {
+      visitMethodBody(id, node);
+    }
     writeln('}');
 
-    // TODO(ager): Support async variant with output structs.
-    if (node.outputKind != OutputKind.PRIMITIVE) return;
+    // TODO(ager): Support async variant with input and output structs.
+    if (node.outputKind != OutputKind.PRIMITIVE ||
+        node.inputKind != InputKind.PRIMITIVES) return;
 
     String callback = ensureCallback(node.returnType,
         node.inputPrimitiveStructLayout);
@@ -970,6 +1020,15 @@ class _JniVisitor extends CcVisitor {
                   {bool cStyle: false,
                    List<String> extraArguments: const [],
                    String callback}) {
+    String cast(String type) => CcVisitor.cast(type, false);
+
+    String pointerToArgument(int offset, int pointers, String type) {
+      offset += REQUEST_HEADER_SIZE;
+      String prefix = cast('$type*');
+      if (pointers == 0) return '$prefix(_buffer + $offset)';
+      return '$prefix(_buffer + $offset + $pointers * sizeof(void*))';
+    }
+
     List<Formal> arguments = method.arguments;
     assert(method.inputKind == InputKind.PRIMITIVES);
     StructLayout layout = method.inputPrimitiveStructLayout;
@@ -981,15 +1040,6 @@ class _JniVisitor extends CcVisitor {
     } else {
       writeln('  static const int kSize = ${size};');
     }
-
-    String cast(String type) => CcVisitor.cast(type, cStyle);
-
-    String pointerToArgument(int offset, int pointers, String type) {
-      offset += REQUEST_HEADER_SIZE;
-      String prefix = cast('$type*');
-      if (pointers == 0) return '$prefix(_buffer + $offset)';
-      return '$prefix(_buffer + $offset + $pointers * sizeof(void*))';
-   }
 
     if (async) {
       writeln('  char* _buffer = ${cast("char*")}(malloc(kSize));');
@@ -1030,6 +1080,35 @@ class _JniVisitor extends CcVisitor {
       } else if (!method.returnType.isVoid) {
         writeln('  return *${pointerToArgument(0, 0, 'int64_t')};');
       }
+    }
+  }
+
+  visitStructArgumentMethodBody(String id,
+                                Method method,
+                                {bool cStyle: false,
+                                 List<String> extraArguments: const [],
+                                 String callback}) {
+    String cast(String type) => CcVisitor.cast(type, false);
+
+    String pointerToArgument(int offset, int pointers, String type) {
+      offset += REQUEST_HEADER_SIZE;
+      String prefix = cast('$type*');
+      if (pointers == 0) return '$prefix(buffer + $offset)';
+      return '$prefix(buffer + $offset + $pointers * sizeof(void*))';
+    }
+
+    bool async = callback != null;
+    String argumentName = method.arguments.single.name;
+    writeln('  char* buffer = NULL;');
+    writeln('  int size = computeMessage(_env, $argumentName, &buffer);');
+    writeln('  ServiceApiInvoke(service_id_, $id, buffer, size);');
+    if (method.outputKind == OutputKind.STRUCT) {
+      writeln('  int64_t result = *${pointerToArgument(0, 0, 'int64_t')};');
+      writeln('  char* memory = reinterpret_cast<char*>(result);');
+      writeln('  jobject rootSegment = getRootSegment(_env, memory);');
+      writeln('  return rootSegment;');
+    } else {
+      writeln('  return *reinterpret_cast<int64_t*>(buffer + 48);');
     }
   }
 

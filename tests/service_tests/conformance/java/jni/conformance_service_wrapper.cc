@@ -74,11 +74,78 @@ static jobject getRootSegment(JNIEnv* env, char* memory) {
   return createByteArrayArray(env, memory, segments);
 }
 
+static int computeMessage(JNIEnv* env, jobject builder, char** buffer) {
+  jclass clazz = env->GetObjectClass(builder);
+  jmethodID methodId = env->GetMethodID(clazz, "isSegmented", "()Z");
+  jboolean isSegmented =  env->CallBooleanMethod(builder, methodId);
+
+  if (isSegmented) {
+    methodId = env->GetMethodID(clazz, "getSegments", "()[[B");
+    jobjectArray array = (jobjectArray)env->CallObjectMethod(builder, methodId);
+    int segments = env->GetArrayLength(array);
+
+    int size = 56 + (segments * 16);
+    *buffer = reinterpret_cast<char*>(malloc(size));
+    int offset = 56;
+    for (int i = 0; i < segments; i++) {
+      jbyteArray segment = (jbyteArray)env->GetObjectArrayElement(array, i);
+      int segment_length = env->GetArrayLength(segment);
+      jboolean is_copy;
+      jbyte* data = env->GetByteArrayElements(segment, &is_copy);
+      // TODO(ager): Release this again.
+      *reinterpret_cast<void**>(*buffer + offset) = data;
+      // TODO(ager): Correct sizing.
+      *reinterpret_cast<int*>(*buffer + offset + 8) = segment_length;
+      offset += 16;
+    }
+
+    // Mark the request as being segmented.
+    *reinterpret_cast<int32_t*>(*buffer + 40) = segments;
+    return size;
+  }
+
+  methodId = env->GetMethodID(clazz, "getSingleSegment", "()[B");
+  jbyteArray segment = (jbyteArray)env->CallObjectMethod(builder, methodId);
+  int segment_length = env->GetArrayLength(segment);
+  jboolean is_copy;
+  // TODO(ager): Release this again.
+  jbyte* data = env->GetByteArrayElements(segment, &is_copy);
+  *buffer = reinterpret_cast<char*>(data);
+  // Mark the request as being non-segmented.
+  *reinterpret_cast<int64_t*>(*buffer + 40) = 0;
+  // TODO(ager): Correct sizing.
+  return segment_length;
+}
+
 static const MethodId _kgetAgeId = reinterpret_cast<MethodId>(1);
+
+JNIEXPORT jint JNICALL Java_fletch_ConformanceService_getAge(JNIEnv* _env, jclass, jobject person) {
+  char* buffer = NULL;
+  int size = computeMessage(_env, person, &buffer);
+  ServiceApiInvoke(service_id_, _kgetAgeId, buffer, size);
+  return *reinterpret_cast<int64_t*>(buffer + 48);
+}
 
 static const MethodId _kgetBoxedAgeId = reinterpret_cast<MethodId>(2);
 
+JNIEXPORT jint JNICALL Java_fletch_ConformanceService_getBoxedAge(JNIEnv* _env, jclass, jobject box) {
+  char* buffer = NULL;
+  int size = computeMessage(_env, box, &buffer);
+  ServiceApiInvoke(service_id_, _kgetBoxedAgeId, buffer, size);
+  return *reinterpret_cast<int64_t*>(buffer + 48);
+}
+
 static const MethodId _kgetAgeStatsId = reinterpret_cast<MethodId>(3);
+
+JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_getAgeStats_1raw(JNIEnv* _env, jclass, jobject person) {
+  char* buffer = NULL;
+  int size = computeMessage(_env, person, &buffer);
+  ServiceApiInvoke(service_id_, _kgetAgeStatsId, buffer, size);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  char* memory = reinterpret_cast<char*>(result);
+  jobject rootSegment = getRootSegment(_env, memory);
+  return rootSegment;
+}
 
 static const MethodId _kcreateAgeStatsId = reinterpret_cast<MethodId>(4);
 
@@ -128,7 +195,21 @@ JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_createNode_1raw(JNIEnv*
 
 static const MethodId _kcountId = reinterpret_cast<MethodId>(7);
 
+JNIEXPORT jint JNICALL Java_fletch_ConformanceService_count(JNIEnv* _env, jclass, jobject person) {
+  char* buffer = NULL;
+  int size = computeMessage(_env, person, &buffer);
+  ServiceApiInvoke(service_id_, _kcountId, buffer, size);
+  return *reinterpret_cast<int64_t*>(buffer + 48);
+}
+
 static const MethodId _kdepthId = reinterpret_cast<MethodId>(8);
+
+JNIEXPORT jint JNICALL Java_fletch_ConformanceService_depth(JNIEnv* _env, jclass, jobject node) {
+  char* buffer = NULL;
+  int size = computeMessage(_env, node, &buffer);
+  ServiceApiInvoke(service_id_, _kdepthId, buffer, size);
+  return *reinterpret_cast<int64_t*>(buffer + 48);
+}
 
 static const MethodId _kfooId = reinterpret_cast<MethodId>(9);
 

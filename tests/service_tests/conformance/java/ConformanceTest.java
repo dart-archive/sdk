@@ -45,6 +45,7 @@ class ConformanceTest {
     // Run conformance tests.
     ConformanceService.Setup();
     runPersonTests();
+    runPersonBoxTests();
     runNodeTests();
     ConformanceService.TearDown();
   }
@@ -59,11 +60,54 @@ class ConformanceTest {
   }
 
   private static void runPersonTests() {
-    MessageBuilder builder = new MessageBuilder(512);
-    PersonBuilder person = new PersonBuilder();
-    builder.initRoot(person, PersonBuilder.kSize);
-    buildPerson(person, 7);
-    assert 3128 == builder.computeUsed();
+    {
+      MessageBuilder builder = new MessageBuilder(512);
+      PersonBuilder person = new PersonBuilder();
+      builder.initRoot(person, PersonBuilder.kSize);
+      buildPerson(person, 7);
+      assert 3128 == builder.computeUsed();
+      int age = ConformanceService.getAge(person);
+      assert 140 == age;
+    }
+
+    {
+      MessageBuilder builder = new MessageBuilder(512);
+      PersonBuilder person = new PersonBuilder();
+      builder.initRoot(person, PersonBuilder.kSize);
+      buildPerson(person, 7);
+      assert 3128 == builder.computeUsed();
+      int count = ConformanceService.count(person);
+      assert 127 == count;
+    }
+
+    {
+      MessageBuilder builder = new MessageBuilder(512);
+      PersonBuilder person = new PersonBuilder();
+      builder.initRoot(person, PersonBuilder.kSize);
+      buildPerson(person, 7);
+      assert 3128 == builder.computeUsed();
+      AgeStats stats = ConformanceService.getAgeStats(person);
+      assert 39 == stats.getAverageAge();
+      assert 4940 == stats.getSum();
+    }
+
+    {
+      AgeStats stats = ConformanceService.createAgeStats(42, 42);
+      assert 42 == stats.getAverageAge();
+      assert 42 == stats.getSum();
+    }
+
+    {
+      Person generated = ConformanceService.createPerson(10);
+      assert 42 == generated.getAge();
+      assert 1 == generated.getName().size();
+      assert 11 == generated.getName().get(0);
+      List<Person> children = generated.getChildren();
+      assert 10 == children.size();
+      for (int i = 0; i < children.size(); i++) {
+        assert (12 + i * 2) == children.get(i).getAge();
+      }
+    }
 
     ConformanceService.foo();
     ConformanceService.fooAsync(new ConformanceService.FooCallback() {
@@ -74,21 +118,24 @@ class ConformanceTest {
     ConformanceService.pingAsync(new ConformanceService.PingCallback() {
         public void handle(int result) { assert 42 == result; }
     });
-
-    AgeStats stats = ConformanceService.createAgeStats(42, 42);
-    assert 42 == stats.getAverageAge();
-    assert 42 == stats.getSum();
-
-    Person generated = ConformanceService.createPerson(10);
-    assert 42 == generated.getAge();
-    assert 1 == generated.getName().size();
-    assert 11 == generated.getName().get(0);
-    List<Person> children = generated.getChildren();
-    assert 10 == children.size();
-    for (int i = 0; i < children.size(); i++) {
-      assert (12 + i * 2) == children.get(i).getAge();
-    }
   }
+
+  private static void runPersonBoxTests() {
+    MessageBuilder builder = new MessageBuilder(512);
+
+    PersonBoxBuilder box = new PersonBoxBuilder();
+    builder.initRoot(box, PersonBoxBuilder.kSize);
+    PersonBuilder person = box.initPerson();
+    person.setAge(87);
+    List<Short> name = person.initName(1);
+    // TODO(ager): Grumble. We need to figure out how to deal with the
+    // unsigned types. This is a List<uint8_t>. WAT?!?
+    name.set(0, new Short((short)99));
+
+    int age = ConformanceService.getBoxedAge(box);
+    assert 87 == age;
+  }
+
 
   private static int depth(Node node) {
     if (node.isNum()) return 1;
@@ -114,6 +161,8 @@ class ConformanceTest {
     NodeBuilder root = new NodeBuilder();
     builder.initRoot(root, NodeBuilder.kSize);
     buildNode(root, 10);
+    int depth = ConformanceService.depth(root);
+    assert 10 == depth;
 
     Node node = ConformanceService.createNode(10);
     assert 24680 == node.computeUsed();

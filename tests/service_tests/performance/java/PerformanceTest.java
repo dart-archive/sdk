@@ -109,13 +109,42 @@ class PerformanceTest {
     return sum;
   }
 
+  private static void buildTree(int n, TreeNodeBuilder node) {
+    if (n > 1) {
+      List<TreeNodeBuilder> children = node.initChildren(2);
+      buildTree(n - 1, children.get(0));
+      buildTree(n - 1, children.get(1));
+    }
+  }
+
   private static void runTreeTests() {
+
     long start = System.currentTimeMillis();
+    TreeNodeBuilder built = null;
     for (int i = 0; i < CALL_COUNT; i++) {
-      TreeNode generated = PerformanceService.buildTree(TREE_DEPTH);
+      MessageBuilder builder = new MessageBuilder(8192);
+      built = new TreeNodeBuilder();
+      builder.initRoot(built, TreeNodeBuilder.kSize);
+      buildTree(TREE_DEPTH, built);
     }
     long end = System.currentTimeMillis();
     double us = (end - start) * 1000.0 / CALL_COUNT;
+    System.out.println("Building (Java) took " + us + " us.");
+
+    start = System.currentTimeMillis();
+    for (int i = 0; i < CALL_COUNT; i++) {
+      PerformanceService.countTreeNodes(built);
+    }
+    end = System.currentTimeMillis();
+    us = (end - start) * 1000.0 / CALL_COUNT;
+    System.out.println("Counting (Dart) took " + us + " us.");
+
+    start = System.currentTimeMillis();
+    for (int i = 0; i < CALL_COUNT; i++) {
+      TreeNode generated = PerformanceService.buildTree(TREE_DEPTH);
+    }
+    end = System.currentTimeMillis();
+    us = (end - start) * 1000.0 / CALL_COUNT;
     System.out.println("Building (Dart) took " + us + " us.");
 
     TreeNode generated = PerformanceService.buildTree(TREE_DEPTH);

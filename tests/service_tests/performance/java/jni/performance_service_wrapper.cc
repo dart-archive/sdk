@@ -74,6 +74,49 @@ static jobject getRootSegment(JNIEnv* env, char* memory) {
   return createByteArrayArray(env, memory, segments);
 }
 
+static int computeMessage(JNIEnv* env, jobject builder, char** buffer) {
+  jclass clazz = env->GetObjectClass(builder);
+  jmethodID methodId = env->GetMethodID(clazz, "isSegmented", "()Z");
+  jboolean isSegmented =  env->CallBooleanMethod(builder, methodId);
+
+  if (isSegmented) {
+    methodId = env->GetMethodID(clazz, "getSegments", "()[[B");
+    jobjectArray array = (jobjectArray)env->CallObjectMethod(builder, methodId);
+    int segments = env->GetArrayLength(array);
+
+    int size = 56 + (segments * 16);
+    *buffer = reinterpret_cast<char*>(malloc(size));
+    int offset = 56;
+    for (int i = 0; i < segments; i++) {
+      jbyteArray segment = (jbyteArray)env->GetObjectArrayElement(array, i);
+      int segment_length = env->GetArrayLength(segment);
+      jboolean is_copy;
+      jbyte* data = env->GetByteArrayElements(segment, &is_copy);
+      // TODO(ager): Release this again.
+      *reinterpret_cast<void**>(*buffer + offset) = data;
+      // TODO(ager): Correct sizing.
+      *reinterpret_cast<int*>(*buffer + offset + 8) = segment_length;
+      offset += 16;
+    }
+
+    // Mark the request as being segmented.
+    *reinterpret_cast<int32_t*>(*buffer + 40) = segments;
+    return size;
+  }
+
+  methodId = env->GetMethodID(clazz, "getSingleSegment", "()[B");
+  jbyteArray segment = (jbyteArray)env->CallObjectMethod(builder, methodId);
+  int segment_length = env->GetArrayLength(segment);
+  jboolean is_copy;
+  // TODO(ager): Release this again.
+  jbyte* data = env->GetByteArrayElements(segment, &is_copy);
+  *buffer = reinterpret_cast<char*>(data);
+  // Mark the request as being non-segmented.
+  *reinterpret_cast<int64_t*>(*buffer + 40) = 0;
+  // TODO(ager): Correct sizing.
+  return segment_length;
+}
+
 static const MethodId _kechoId = reinterpret_cast<MethodId>(1);
 
 JNIEXPORT jint JNICALL Java_fletch_PerformanceService_echo(JNIEnv* _env, jclass, jint n) {
@@ -114,6 +157,13 @@ JNIEXPORT void JNICALL Java_fletch_PerformanceService_echoAsync(JNIEnv* _env, jc
 }
 
 static const MethodId _kcountTreeNodesId = reinterpret_cast<MethodId>(2);
+
+JNIEXPORT jint JNICALL Java_fletch_PerformanceService_countTreeNodes(JNIEnv* _env, jclass, jobject node) {
+  char* buffer = NULL;
+  int size = computeMessage(_env, node, &buffer);
+  ServiceApiInvoke(service_id_, _kcountTreeNodesId, buffer, size);
+  return *reinterpret_cast<int64_t*>(buffer + 48);
+}
 
 static const MethodId _kbuildTreeId = reinterpret_cast<MethodId>(3);
 
