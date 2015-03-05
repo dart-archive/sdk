@@ -10,6 +10,8 @@
 #include <inttypes.h>
 #include "struct.h"
 
+class Empty;
+class EmptyBuilder;
 class AgeStats;
 class AgeStatsBuilder;
 class Person;
@@ -47,8 +49,29 @@ class ConformanceService {
   static void depthAsync(NodeBuilder node, void (*callback)(int32_t));
   static void foo();
   static void fooAsync(void (*callback)());
+  static int32_t bar(EmptyBuilder empty);
+  static void barAsync(EmptyBuilder empty, void (*callback)(int32_t));
   static int32_t ping();
   static void pingAsync(void (*callback)(int32_t));
+};
+
+class Empty : public Reader {
+ public:
+  static const int kSize = 0;
+  Empty(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+};
+
+class EmptyBuilder : public Builder {
+ public:
+  static const int kSize = 0;
+
+  explicit EmptyBuilder(const Builder& builder)
+      : Builder(builder) { }
+  EmptyBuilder(Segment* segment, int offset)
+      : Builder(segment, offset) { }
+
 };
 
 class AgeStats : public Reader {

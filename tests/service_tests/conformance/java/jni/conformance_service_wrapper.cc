@@ -468,7 +468,39 @@ JNIEXPORT void JNICALL Java_fletch_ConformanceService_fooAsync(JNIEnv* _env, jcl
   ServiceApiInvokeAsync(service_id_, _kfooId, Unwrap_void_8, _buffer, kSize);
 }
 
-static const MethodId _kpingId = reinterpret_cast<MethodId>(10);
+static const MethodId _kbarId = reinterpret_cast<MethodId>(10);
+
+JNIEXPORT jint JNICALL Java_fletch_ConformanceService_bar(JNIEnv* _env, jclass, jobject empty) {
+  char* buffer = NULL;
+  int size = computeMessage(_env, empty, &buffer, NULL, NULL);
+  ServiceApiInvoke(service_id_, _kbarId, buffer, size);
+  return *reinterpret_cast<int64_t*>(buffer + 48);
+}
+
+static void Unwrap_int32_0(void* raw) {
+  char* buffer = reinterpret_cast<char*>(raw);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  JNIEnv* env = attachCurrentThreadAndGetEnv(info->vm);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  jclass clazz = env->GetObjectClass(info->callback);
+  jmethodID methodId = env->GetMethodID(clazz, "handle", "(I)V");
+  env->CallVoidMethod(info->callback, methodId, result);
+  env->DeleteGlobalRef(info->callback);
+  detachCurrentThread(info->vm);
+  delete info;
+  free(buffer);
+}
+
+JNIEXPORT void JNICALL Java_fletch_ConformanceService_barAsync(JNIEnv* _env, jclass, jobject empty, jobject _callback) {
+  jobject callback = _env->NewGlobalRef(_callback);
+  JavaVM* vm;
+  _env->GetJavaVM(&vm);
+  char* buffer = NULL;
+  int size = computeMessage(_env, empty, &buffer, callback, vm);
+  ServiceApiInvokeAsync(service_id_, _kbarId, Unwrap_int32_0, buffer, size);
+}
+
+static const MethodId _kpingId = reinterpret_cast<MethodId>(11);
 
 JNIEXPORT jint JNICALL Java_fletch_ConformanceService_ping(JNIEnv* _env, jclass) {
   static const int kSize = 56;

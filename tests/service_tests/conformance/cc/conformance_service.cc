@@ -234,7 +234,26 @@ void ConformanceService::fooAsync(void (*callback)()) {
   ServiceApiInvokeAsync(service_id_, kFooId_, Unwrap_void_8, _buffer, kSize);
 }
 
-static const MethodId kPingId_ = reinterpret_cast<MethodId>(10);
+static const MethodId kBarId_ = reinterpret_cast<MethodId>(10);
+
+int32_t ConformanceService::bar(EmptyBuilder empty) {
+  return empty.InvokeMethod(service_id_, kBarId_);
+}
+
+static void Unwrap_int32_0(void* raw) {
+  typedef void (*cbt)(int32_t);
+  char* buffer = reinterpret_cast<char*>(raw);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  MessageBuilder::DeleteMessage(buffer);
+  callback(result);
+}
+
+void ConformanceService::barAsync(EmptyBuilder empty, void (*callback)(int32_t)) {
+  empty.InvokeMethodAsync(service_id_, kBarId_, Unwrap_int32_0, reinterpret_cast<void*>(callback));
+}
+
+static const MethodId kPingId_ = reinterpret_cast<MethodId>(11);
 
 int32_t ConformanceService::ping() {
   static const int kSize = 56;

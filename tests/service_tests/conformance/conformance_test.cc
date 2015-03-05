@@ -12,6 +12,8 @@
 #include <stdint.h>
 #include <sys/time.h>
 
+#include <cstdio>
+
 static void BuildPerson(PersonBuilder person, int n) {
   person.setAge(n * 20);
   if (n > 1) {
@@ -29,6 +31,10 @@ static int Depth(Node node) {
 }
 
 static void FooCallback() {
+}
+
+static void BarCallback(int i) {
+  EXPECT_EQ(24, i);
 }
 
 static void PingCallback(int result) {
@@ -154,6 +160,19 @@ static void RunPersonTests() {
 
   ConformanceService::foo();
   ConformanceService::fooAsync(FooCallback);
+
+  {
+    MessageBuilder builder(512);
+    EmptyBuilder empty = builder.initRoot<EmptyBuilder>();
+    int i = ConformanceService::bar(empty);
+    EXPECT_EQ(24, i);
+  }
+
+  {
+    MessageBuilder builder(512);
+    EmptyBuilder empty = builder.initRoot<EmptyBuilder>();
+    ConformanceService::barAsync(empty, BarCallback);
+  }
 
   EXPECT_EQ(42, ConformanceService::ping());
   ConformanceService::pingAsync(PingCallback);

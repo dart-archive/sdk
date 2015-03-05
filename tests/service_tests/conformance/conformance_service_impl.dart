@@ -75,6 +75,10 @@ class ConformanceServiceImpl implements ConformanceService {
   void foo() {
   }
 
+  int bar(Empty empty) {
+    return 24;
+  }
+
   int ping() => 42;
 }
 

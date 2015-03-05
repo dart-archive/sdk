@@ -188,6 +188,24 @@ class ConformanceTest {
         public void handle() { }
     });
 
+
+    {
+      MessageBuilder builder = new MessageBuilder(512);
+      EmptyBuilder empty = new EmptyBuilder();
+      builder.initRoot(empty, EmptyBuilder.kSize);
+      int i = ConformanceService.bar(empty);
+      assert 24 == i;
+    }
+
+    {
+      MessageBuilder builder = new MessageBuilder(512);
+      EmptyBuilder empty = new EmptyBuilder();
+      builder.initRoot(empty, EmptyBuilder.kSize);
+      ConformanceService.barAsync(empty, new ConformanceService.BarCallback() {
+        public void handle(int i) { assert 24 == i; }
+      });
+    }
+
     assert 42 == ConformanceService.ping();
     ConformanceService.pingAsync(new ConformanceService.PingCallback() {
         public void handle(int result) { assert 42 == result; }

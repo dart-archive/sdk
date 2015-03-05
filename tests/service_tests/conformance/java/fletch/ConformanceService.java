@@ -73,6 +73,13 @@ public class ConformanceService {
   public static native void foo();
   public static native void fooAsync(FooCallback callback);
 
+  public static abstract class BarCallback {
+    public abstract void handle(int result);
+  }
+
+  public static native int bar(EmptyBuilder empty);
+  public static native void barAsync(EmptyBuilder empty, BarCallback callback);
+
   public static abstract class PingCallback {
     public abstract void handle(int result);
   }

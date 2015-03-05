@@ -24,6 +24,10 @@ int MessageBuilder::ComputeUsed() const {
 }
 
 Builder MessageBuilder::InternalInitRoot(int size) {
+  // Return value and arguments use the same space. Therefore,
+  // the size of any struct needs to be at least 8 bytes in order
+  // to have room for the return address.
+  if (size == 0) size = 8;
   int offset = first_.Allocate(48 + size);
   return Builder(&first_, offset + 48);
 }

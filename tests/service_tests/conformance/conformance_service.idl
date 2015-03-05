@@ -13,9 +13,12 @@ service ConformanceService {
 
   int32 depth(Node* node);
   void foo();
+  int32 bar(Empty* empty);
 
   int32 ping();
 }
+
+struct Empty { }
 
 struct AgeStats {
   int32 averageAge;

@@ -27,6 +27,7 @@ abstract class ConformanceService {
   int count(Person person);
   int depth(Node node);
   void foo();
+  int bar(Empty empty);
   int ping();
 
   static void initialize(ConformanceService impl) {
@@ -105,6 +106,11 @@ abstract class ConformanceService {
         _impl.foo();
         _postResult.icall$1(request);
         break;
+      case _BAR_METHOD_ID:
+        var result = _impl.bar(getRoot(new Empty(), request));
+        request.setInt32(48, result);
+        _postResult.icall$1(request);
+        break;
       case _PING_METHOD_ID:
         var result = _impl.ping();
         request.setInt32(48, result);
@@ -125,7 +131,14 @@ abstract class ConformanceService {
   const int _COUNT_METHOD_ID = 7;
   const int _DEPTH_METHOD_ID = 8;
   const int _FOO_METHOD_ID = 9;
-  const int _PING_METHOD_ID = 10;
+  const int _BAR_METHOD_ID = 10;
+  const int _PING_METHOD_ID = 11;
+}
+
+class Empty extends Reader {
+}
+
+class EmptyBuilder extends Builder {
 }
 
 class AgeStats extends Reader {
