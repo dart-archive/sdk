@@ -4,7 +4,7 @@
 
 #include "src/vm/scheduler.h"
 
-#include <stdio.h>
+#include <limits>
 
 #include "src/shared/flags.h"
 
@@ -220,7 +220,7 @@ bool Scheduler::Run() {
   // If profile is disabled, next_preempt will always be less than next_profile.
   uint64 next_profile = kProfile
       ? Platform::GetMicroseconds() + kProfileIntervalUs
-      : UINT64_MAX;
+      : std::numeric_limits<uint64_t>::max();
   uint64 next_timeout = Utils::Minimum(next_preempt, next_profile);
 
   preempt_monitor_->Lock();
