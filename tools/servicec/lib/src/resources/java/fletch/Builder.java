@@ -37,18 +37,19 @@ class Builder {
 
   public BuilderSegment segment() { return segment; }
 
-  public boolean isSegmented() { return segment().hasNext(); }
-
-  public byte[] getSingleSegment() { return segment().buffer().array(); }
-
-  public byte[][] getSegments() {
+  public Object[] getSegments() {
+    Object[] result = new Object[2];
     int segments = segment().builder().segments();
-    byte[][] result = new byte[segments][];
+    byte[][] segmentArray = new byte[segments][];
+    int[] sizeArray = new int[segments];
     BuilderSegment current = segment;
     for (int i = 0; i < segments; i++) {
-      result[i] = current.buffer().array();
+      segmentArray[i] = current.buffer().array();
+      sizeArray[i] = current.used();
       current = current.next();
     }
+    result[0] = segmentArray;
+    result[1] = sizeArray;
     return result;
   }
 

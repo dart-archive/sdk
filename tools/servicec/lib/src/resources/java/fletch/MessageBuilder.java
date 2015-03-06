@@ -16,6 +16,10 @@ public class MessageBuilder {
   public int segments() { return segments; }
 
   public Builder initRoot(Builder builder, int size) {
+    // Return value and arguments use the same space. Therefore,
+    // the size of any struct needs to be at least 8 bytes in order
+    // to have room for the return address.
+    if (size == 0) size = 8;
     int offset = first.allocate(48 + size);
     builder.segment = first;
     builder.base = offset + 48;

@@ -83,63 +83,63 @@ class CallbackInfo {
   JavaVM* vm;
 };
 
+static char* ExtractByteArrayData(JNIEnv* env,
+                                  jbyteArray segment,
+                                  jint segment_length) {
+  jbyte* data = env->GetByteArrayElements(segment, NULL);
+  char* segment_copy = reinterpret_cast<char*>(malloc(segment_length));
+  memcpy(segment_copy, data, segment_length);
+  env->ReleaseByteArrayElements(segment, data, JNI_ABORT);
+  return segment_copy;
+}
+
 static int ComputeMessage(JNIEnv* env,
                           jobject builder,
                           jobject callback,
                           JavaVM* vm,
                           char** buffer) {
-  jclass clazz = env->GetObjectClass(builder);
-  jmethodID methodId = env->GetMethodID(clazz, "isSegmented", "()Z");
-  jboolean isSegmented =  env->CallBooleanMethod(builder, methodId);
-
   CallbackInfo* info = NULL;
   if (callback != NULL) {
     info = new CallbackInfo(callback, vm);
   }
 
-  if (isSegmented) {
-    methodId = env->GetMethodID(clazz, "getSegments", "()[[B");
-    jobjectArray array = (jobjectArray)env->CallObjectMethod(builder, methodId);
-    int segments = env->GetArrayLength(array);
+  jclass clazz = env->GetObjectClass(builder);
+  jmethodID method_id = env->GetMethodID(clazz, "getSegments", "()[Ljava/lang/Object;");
+  jobjectArray array = (jobjectArray)env->CallObjectMethod(builder, method_id);
+  jobjectArray segments = (jobjectArray)env->GetObjectArrayElement(array, 0);
+  jintArray sizes_array = (jintArray)env->GetObjectArrayElement(array, 1);
+  int* sizes = env->GetIntArrayElements(sizes_array, NULL);
+  int number_of_segments = env->GetArrayLength(segments);
 
-    int size = 56 + (segments * 16);
+  if (number_of_segments > 1) {
+    int size = 56 + (number_of_segments * 16);
     *buffer = reinterpret_cast<char*>(malloc(size));
     int offset = 56;
-    for (int i = 0; i < segments; i++) {
-      jbyteArray segment = (jbyteArray)env->GetObjectArrayElement(array, i);
-      int segment_length = env->GetArrayLength(segment);
-      jboolean is_copy;
-      jbyte* data = env->GetByteArrayElements(segment, &is_copy);
-      char* segment_copy = reinterpret_cast<char*>(malloc(segment_length));
-      memcpy(segment_copy, data, segment_length);
-      env->ReleaseByteArrayElements(segment, data, JNI_ABORT);
+    for (int i = 0; i < number_of_segments; i++) {
+      jbyteArray segment = (jbyteArray)env->GetObjectArrayElement(segments, i);
+      jint segment_length = sizes[i];
+      char* segment_copy = ExtractByteArrayData(env, segment, segment_length);
       *reinterpret_cast<void**>(*buffer + offset) = segment_copy;
-      // TODO(ager): Correct sizing.
       *reinterpret_cast<int*>(*buffer + offset + 8) = segment_length;
       offset += 16;
     }
 
+    env->ReleaseIntArrayElements(sizes_array, sizes, JNI_ABORT);
     // Mark the request as being segmented.
-    *reinterpret_cast<int32_t*>(*buffer + 40) = segments;
+    *reinterpret_cast<int32_t*>(*buffer + 40) = number_of_segments;
     // Set the callback information.
     *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
     return size;
   }
 
-  methodId = env->GetMethodID(clazz, "getSingleSegment", "()[B");
-  jbyteArray segment = (jbyteArray)env->CallObjectMethod(builder, methodId);
-  int segment_length = env->GetArrayLength(segment);
-  jboolean is_copy;
-  jbyte* data = env->GetByteArrayElements(segment, &is_copy);
-  char* segment_copy = reinterpret_cast<char*>(malloc(segment_length));
-  memcpy(segment_copy, data, segment_length);
-  env->ReleaseByteArrayElements(segment, data, JNI_ABORT);
-  *buffer = segment_copy;
+  jbyteArray segment = (jbyteArray)env->GetObjectArrayElement(segments, 0);
+  jint segment_length = sizes[0];
+  *buffer = ExtractByteArrayData(env, segment, segment_length);
+  env->ReleaseIntArrayElements(sizes_array, sizes, JNI_ABORT);
   // Mark the request as being non-segmented.
   *reinterpret_cast<int64_t*>(*buffer + 40) = 0;
   // Set the callback information.
   *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
-  // TODO(ager): Correct sizing.
   return segment_length;
 }
 
