@@ -21,8 +21,8 @@ import 'package:compiler/src/dart2jslib.dart' show
 
 import 'package:compiler/src/tree/tree.dart' show
     DartString,
-    Expression,
-    Return;
+    EmptyStatement,
+    Expression;
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
