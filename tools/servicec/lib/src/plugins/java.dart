@@ -331,24 +331,22 @@ class _JavaVisitor extends CodeGenerationVisitor {
   final String outputDirectory;
 
   static Map<String, String> _GETTERS = const {
-    'bool'    : 'getBooleanAt',
+    'bool'    : 'getBoolean',
 
-    'uint8'   : 'getUnsignedByteAt',
-    'uint16'  : 'getCharAt',
-    'uint32'  : 'getUnsignedIntAt',
+    'uint8'   : 'getUnsigned',
+    'uint16'  : 'getUnsignedChar',
+    'uint32'  : 'getUnsignedInt',
     // TODO(ager): consider how to deal with unsigned 64-bit integers.
 
-    'int8'    : 'getByteAt',
-    'int16'   : 'getShortAt',
-    'int32'   : 'getIntAt',
-    'int64'   : 'getLongAt',
+    'int8'    : 'buffer().get',
+    'int16'   : 'buffer().getShort',
+    'int32'   : 'buffer().getInt',
+    'int64'   : 'buffer().getLong',
 
-    'float32' : 'getFloatAt',
-    'float64' : 'getDoubleAt',
+    'float32' : 'buffer().getFloat',
+    'float64' : 'buffer().getDouble',
   };
 
-  // TODO(ager): Unify the getter/setter names. Avoid extra indirections
-  // for getters.
   static Map<String, String> _SETTERS = const {
     'bool'    : 'put',
 
@@ -558,67 +556,55 @@ class _JavaVisitor extends CodeGenerationVisitor {
     buffer.writeln('  }');
 
     for (StructSlot slot in layout.slots) {
+      buffer.writeln();
       Type slotType = slot.slot.type;
       String camel = camelize(slot.slot.name);
 
       if (slot.isUnionSlot) {
         String tagName = camelize(slot.union.tag.name);
         int tag = slot.unionTag;
-        buffer.writeln();
-        buffer.writeln('  public boolean is$camel() {'
-                       ' return $tag == get$tagName(); }');
+        buffer.writeln(
+            '  public boolean is$camel() { return $tag == get$tagName(); }');
       }
 
       if (slotType.isList) {
         neededListTypes.add(slotType);
-        buffer.writeln();
-        buffer.write('  public List<');
-        writeListTypeToBuffer(slotType, buffer);
-        buffer.writeln('> get$camel() {');
+        String list = '${camelize(slotType.identifier)}List';
+        buffer.writeln('  public List<${getListType(slotType)}> get$camel() {');
         buffer.writeln('    ListReader reader = new ListReader();');
         buffer.writeln('    readList(reader, ${slot.offset});');
-        buffer.write('    return new ');
-        buffer.write(camelize(slotType.identifier));
-        buffer.writeln('List(reader);');
+        buffer.writeln('    return new $list(reader);');
         buffer.writeln('  }');
       } else if (slotType.isVoid) {
         // No getters for void slots.
       } else if (slotType.isPrimitive) {
         // TODO(ager): Dealing with unsigned numbers in Java is annoying.
-        buffer.writeln();
         if (camel == 'Tag') {
+          String getter = 'getUnsigned';
+          String offset = 'base + ${slot.offset}';
           buffer.writeln('  public int getTag() {');
-          buffer.writeln('    short shortTag = getShortAt(${slot.offset});');
+          buffer.writeln('    short shortTag = segment.$getter($offset);');
           buffer.writeln('    int tag = (int)shortTag;');
           buffer.writeln('    return tag < 0 ? -tag : tag;');
           buffer.writeln('  }');
         } else {
-          buffer.write('  public ');
-          writeTypeToBuffer(slotType, buffer);
-          buffer.write(' get$camel() { return get');
-          buffer.write(camelize(getReturnType(slotType)));
-          buffer.writeln('At(${slot.offset}); }');
+          String getter = _GETTERS[slotType.identifier];
+          buffer.write('  public ${getType(slotType)} get$camel() { ');
+          buffer.writeln('return segment.$getter(base + ${slot.offset}); }');
         }
       } else {
-        buffer.writeln();
-        buffer.write('  public ');
-        writeReturnTypeToBuffer(slotType, buffer);
-        buffer.writeln(' get$camel() {');
+        String returnType = getReturnType(slotType);
+        buffer.write('  public $returnType get$camel() {');
         if (!slotType.isPointer) {
-          buffer.write('    return new ');
-          writeReturnTypeToBuffer(slotType, buffer);
-          buffer.writeln('(segment, base + ${slot.offset});');
+          String offset = 'base + ${slot.offset}';
+          buffer.writeln(' return new $returnType(segment, $offset); }');
         } else {
-          buffer.write('    ');
-          writeReturnTypeToBuffer(slotType, buffer);
-          buffer.write(' reader = new ');
-          writeReturnTypeToBuffer(slotType, buffer);
-          buffer.writeln('();');
-          buffer.write('    return (');
-          writeReturnTypeToBuffer(slotType, buffer);
-          buffer.writeln(')readStruct(reader, ${slot.offset});');
+          buffer.writeln();
+          int offset = slot.offset;
+          buffer.writeln('    $returnType reader = new $returnType();');
+          buffer.writeln('    return ($returnType)readStruct(reader, $offset);');
+          buffer.writeln('  }');
         }
-        buffer.writeln('  }');
       }
     }
 
@@ -639,27 +625,21 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     buffer.write('import java.util.List;');
     buffer.writeln();
-
     buffer.writeln('public class $name extends Builder {');
-
     buffer.writeln('  public static int kSize = ${layout.size};');
-
     buffer.writeln('  public $name(BuilderSegment segment, int offset) {');
     buffer.writeln('    super(segment, offset);');
     buffer.writeln('  }');
-
     buffer.writeln();
     buffer.writeln('  public $name() {');
     buffer.writeln('    super();');
     buffer.writeln('  }');
-
 
     for (StructSlot slot in layout.slots) {
       buffer.writeln();
       String slotName = slot.slot.name;
       String camel = camelize(slotName);
       Type slotType = slot.slot.type;
-
 
       String updateTag = '';
       if (slot.isUnionSlot) {
@@ -705,9 +685,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
         String setter = _SETTERS[slotType.identifier];
         String setterType = _SETTER_TYPES[slotType.identifier];
         String offset = 'base + ${slot.offset}';
-        buffer.write('  public void set$camel(');
-        writeTypeToBuffer(slotType, buffer);
-        buffer.writeln(' value) {');
+        buffer.writeln('  public void set$camel(${getType(slotType)} value) {');
         buffer.write(updateTag);
         if (slotType.isBool) {
           buffer.writeln('    segment.buffer().$setter($offset,'
@@ -718,9 +696,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
         }
         buffer.writeln('  }');
       } else {
-        buffer.write('  public ');
-        writeTypeToBuffer(slotType, buffer);
-        buffer.writeln(' init$camel() {');
+        buffer.writeln('  public ${getType(slotType)} init$camel() {');
         buffer.write(updateTag);
         String builderType = getType(slotType);
         if (!slotType.isPointer) {
@@ -749,6 +725,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
   void writeListReaderImplementation(Type type) {
     String fletchDirectory = join(outputDirectory, 'java', 'fletch');
     String name = '${camelize(type.identifier)}List';
+    String listType = getListType(type);
 
     StringBuffer buffer = new StringBuffer(HEADER);
     buffer.writeln();
@@ -757,51 +734,34 @@ class _JavaVisitor extends CodeGenerationVisitor {
     buffer.writeln('import java.util.AbstractList;');
 
     buffer.writeln();
-    buffer.write('class $name extends AbstractList<');
-    writeListTypeToBuffer(type, buffer);
-    buffer.writeln('> {');
+    buffer.writeln('class $name extends AbstractList<$listType> {');
     if (type.isPrimitive) {
       int elementSize = primitives.size(type.primitiveType);
-      String offset = 'index * $elementSize';
+      String offset = 'reader.base + index * $elementSize';
 
       buffer.writeln('  private ListReader reader;');
-
       buffer.writeln();
       buffer.writeln('  public $name(ListReader reader) {'
                      ' this.reader = reader; }');
-
       buffer.writeln();
-      buffer.write('  public ');
-      writeListTypeToBuffer(type, buffer);
-      buffer.writeln(' get(int index) {');
-      buffer.write('    ');
-      writeReturnTypeToBuffer(type, buffer);
-      buffer.writeln(' result = reader.${_GETTERS[type.identifier]}($offset);');
-
-      buffer.write('    return new ');
-      writeListTypeToBuffer(type, buffer);
-      buffer.writeln('(result);');
+      buffer.writeln('  public $listType get(int index) {');
+      buffer.write('    ${getReturnType(type)} result = ');
+      buffer.writeln('reader.segment.${_GETTERS[type.identifier]}($offset);');
+      buffer.writeln('    return new $listType(result);');
       buffer.writeln('  }');
     } else {
       Struct element = type.resolved;
       StructLayout elementLayout = element.layout;;
       int elementSize = elementLayout.size;
+      String returnType = getReturnType(type);
 
       buffer.writeln('  private ListReader reader;');
-
       buffer.writeln();
       buffer.writeln('  public $name(ListReader reader) {'
                      ' this.reader = reader; }');
-
       buffer.writeln();
-      buffer.write('  public ');
-      writeReturnTypeToBuffer(type, buffer);
-      buffer.writeln(' get(int index) {');
-      buffer.write('    ');
-      writeReturnTypeToBuffer(type, buffer);
-      buffer.write(' result = new ');
-      writeReturnTypeToBuffer(type, buffer);
-      buffer.writeln('();');
+      buffer.writeln('  public $returnType get(int index) {');
+      buffer.writeln('    $returnType result = new $returnType();');
       buffer.writeln('    reader.readListElement('
                      'result, index, $elementSize);');
       buffer.writeln('    return result;');
@@ -829,7 +789,9 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     if (type.isPrimitive) {
       int elementSize = primitives.size(type.primitiveType);
-      String offset = 'index * $elementSize';
+      String offset = 'builder.base + index * $elementSize';
+      String listType = getListType(type);
+      String getter = _GETTERS[type.identifier];
 
       buffer.writeln();
       buffer.write('class $name extends AbstractList<');
@@ -843,53 +805,35 @@ class _JavaVisitor extends CodeGenerationVisitor {
                      ' this.builder = builder; }');
 
       buffer.writeln();
-      buffer.write('  public ');
-      writeListTypeToBuffer(type, buffer);
-      buffer.writeln(' get(int index) {');
-      buffer.write('    ');
-      writeReturnTypeToBuffer(type, buffer);
-      buffer.writeln(' result = '
-                     'builder.${_GETTERS[type.identifier]}($offset);');
-
-      buffer.write('    return new ');
-      writeListTypeToBuffer(type, buffer);
-      buffer.writeln('(result);');
+      buffer.writeln('  public $listType get(int index) {');
+      buffer.writeln('    ${getReturnType(type)} result = '
+                     'builder.segment().$getter($offset);');
+      buffer.writeln('    return new $listType(result);');
       buffer.writeln('  }');
 
       buffer.writeln();
-      String listType = getListType(type);
       String setter = _SETTERS[type.identifier];
       String setterType = _SETTER_TYPES[type.identifier];
       buffer.writeln('  public $listType set(int index, $listType value) {');
       buffer.write('    builder.segment().buffer().');
-      buffer.writeln('$setter(builder.base + $offset, value.${setterType}Value());');
+      buffer.writeln('$setter($offset, value.${setterType}Value());');
       buffer.writeln('    return value;');
       buffer.writeln('  }');
     } else {
       Struct element = type.resolved;
       StructLayout elementLayout = element.layout;;
       int elementSize = elementLayout.size;
+      String structType = getType(type);
 
       buffer.writeln();
-      buffer.write('class $name extends AbstractList<');
-      writeTypeToBuffer(type, buffer);
-      buffer.writeln('> {');
-
+      buffer.writeln('class $name extends AbstractList<$structType> {');
       buffer.writeln('  private ListBuilder builder;');
-
       buffer.writeln();
       buffer.writeln('  public $name(ListBuilder builder) {'
                      ' this.builder = builder; }');
-
       buffer.writeln();
-      buffer.write('  public ');
-      writeTypeToBuffer(type, buffer);
-      buffer.writeln(' get(int index) {');
-      buffer.write('    ');
-      writeTypeToBuffer(type, buffer);
-      buffer.write(' result = new ');
-      writeTypeToBuffer(type, buffer);
-      buffer.writeln('();');
+      buffer.writeln('  public $structType get(int index) {');
+      buffer.writeln('    $structType result = new $structType();');
       buffer.writeln('    builder.readListElement('
                      'result, index, $elementSize);');
       buffer.writeln('    return result;');
@@ -1149,7 +1093,7 @@ class _JniVisitor extends CcVisitor {
                 'resultClass, create, rootSegment);');
         writeln('  return resultObject;');
       } else {
-        writeln('  return result;');
+        if (!method.returnType.isVoid) writeln('  return result;');
       }
     }
   }

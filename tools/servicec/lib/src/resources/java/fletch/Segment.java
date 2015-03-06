@@ -22,24 +22,23 @@ class Segment {
   public ByteBuffer buffer() { return buffer; }
   public MessageReader reader() { return reader; }
 
-  public int getIntAt(int offset) {
-    return buffer.getInt(offset);
-  }
-
-  public short getShortAt(int offset) {
-    return buffer.getShort(offset);
-  }
-
-  public char getCharAt(int offset) {
-    return buffer.getChar(offset);
-  }
-
-  public byte getByteAt(int offset) {
-    return buffer.get(offset);
-  }
-
-  public boolean getBooleanAt(int offset) {
+  public boolean getBoolean(int offset) {
     return buffer.get(offset) != 0;
+  }
+
+  public short getUnsigned(int offset) {
+    short result = (short)buffer.get(offset);
+    return (short)Math.abs(result);
+  }
+
+  public int getUnsignedChar(int offset) {
+    int result = (int)buffer.getChar(offset);
+    return (int)Math.abs(result);
+  }
+
+  public long getUnsignedInt(int offset) {
+    long result = (long)buffer.getInt(offset);
+    return (long)Math.abs(result);
   }
 
   private ByteBuffer buffer;

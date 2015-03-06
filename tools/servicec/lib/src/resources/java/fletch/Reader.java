@@ -25,27 +25,6 @@ class Reader {
     base = offset;
   }
 
-  public int getIntAt(int offset) {
-    return segment.getIntAt(base + offset);
-  }
-
-  public short getShortAt(int offset) {
-    return segment.getShortAt(base + offset);
-  }
-
-  public char getCharAt(int offset) {
-    return segment.getCharAt(base + offset);
-  }
-
-  public boolean getBooleanAt(int offset) {
-    return segment.getBooleanAt(base + offset);
-  }
-
-  public short getUnsignedByteAt(int offset) {
-    short result = (short)segment.getByteAt(base + offset);
-    return (short)Math.abs(result);
-  }
-
   public Reader readStruct(Reader reader, int offset) {
     Segment s = segment;
     offset += base;

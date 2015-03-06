@@ -30,7 +30,7 @@ public class AgeStats extends Reader {
     return new AgeStats((byte[][])rawData, 8);
   }
 
-  public int getAverageAge() { return getIntAt(0); }
+  public int getAverageAge() { return segment.buffer().getInt(base + 0); }
 
-  public int getSum() { return getIntAt(4); }
+  public int getSum() { return segment.buffer().getInt(base + 4); }
 }

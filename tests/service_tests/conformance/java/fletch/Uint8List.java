@@ -14,7 +14,7 @@ class Uint8List extends AbstractList<Short> {
   public Uint8List(ListReader reader) { this.reader = reader; }
 
   public Short get(int index) {
-    short result = reader.getUnsignedByteAt(index * 1);
+    short result = reader.segment.getUnsigned(reader.base + index * 1);
     return new Short(result);
   }
 

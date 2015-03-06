@@ -42,5 +42,5 @@ public class Person extends Reader {
     return new PersonList(reader);
   }
 
-  public int getAge() { return getIntAt(16); }
+  public int getAge() { return segment.buffer().getInt(base + 16); }
 }

@@ -31,23 +31,18 @@ public class Node extends Reader {
   }
 
   public boolean isNum() { return 1 == getTag(); }
-
-  public int getNum() { return getIntAt(0); }
+  public int getNum() { return segment.buffer().getInt(base + 0); }
 
   public boolean isCond() { return 2 == getTag(); }
-
-  public boolean getCond() { return getBooleanAt(0); }
+  public boolean getCond() { return segment.getBoolean(base + 0); }
 
   public boolean isCons() { return 3 == getTag(); }
-
-  public Cons getCons() {
-    return new Cons(segment, base + 0);
-  }
+  public Cons getCons() { return new Cons(segment, base + 0); }
 
   public boolean isNil() { return 4 == getTag(); }
 
   public int getTag() {
-    short shortTag = getShortAt(16);
+    short shortTag = segment.getUnsigned(base + 16);
     int tag = (int)shortTag;
     return tag < 0 ? -tag : tag;
   }

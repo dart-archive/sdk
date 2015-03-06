@@ -30,5 +30,5 @@ public class Small extends Reader {
     return new Small((byte[][])rawData, 8);
   }
 
-  public int getX() { return getIntAt(0); }
+  public int getX() { return segment.buffer().getInt(base + 0); }
 }

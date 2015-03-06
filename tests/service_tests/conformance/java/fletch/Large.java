@@ -30,9 +30,7 @@ public class Large extends Reader {
     return new Large((byte[][])rawData, 8);
   }
 
-  public Small getS() {
-    return new Small(segment, base + 0);
-  }
+  public Small getS() { return new Small(segment, base + 0); }
 
-  public int getY() { return getIntAt(4); }
+  public int getY() { return segment.buffer().getInt(base + 4); }
 }

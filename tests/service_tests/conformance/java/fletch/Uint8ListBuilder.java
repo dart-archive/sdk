@@ -14,7 +14,7 @@ class Uint8ListBuilder extends AbstractList<Short> {
   public Uint8ListBuilder(ListBuilder builder) { this.builder = builder; }
 
   public Short get(int index) {
-    short result = builder.getUnsignedByteAt(index * 1);
+    short result = builder.segment().getUnsigned(builder.base + index * 1);
     return new Short(result);
   }
 
