@@ -116,8 +116,8 @@ class CompiledClass {
 }
 
 class FletchBackend extends Backend {
-  static const String noSuchMethod = '_noSuchMethod';
-  static const String noSuchMethodTrampoline = '_noSuchMethodTrampoline';
+  static const String noSuchMethodName = '_noSuchMethod';
+  static const String noSuchMethodTrampolineName = '_noSuchMethodTrampoline';
 
   final FletchContext context;
 
@@ -263,8 +263,8 @@ class FletchBackend extends Backend {
       registry.registerDynamicInvocation(selector);
     }
 
-    registerNamedSelector(noSuchMethodTrampoline, compiler.coreLibrary, 0);
-    registerNamedSelector(noSuchMethod, compiler.coreLibrary, 1);
+    registerNamedSelector(noSuchMethodTrampolineName, compiler.coreLibrary, 0);
+    registerNamedSelector(noSuchMethodName, compiler.coreLibrary, 1);
   }
 
   ClassElement get stringImplementation => stringClass;
@@ -387,7 +387,7 @@ class FletchBackend extends Backend {
       codegenExternalYield(function, functionCompiler);
     } else if (function == fletchExternalInvokeMain) {
       codegenExternalInvokeMain(function, functionCompiler);
-    } else if (function.name == noSuchMethodTrampoline &&
+    } else if (function.name == noSuchMethodTrampolineName &&
                function.library == compiler.coreLibrary) {
       codegenExternalNoSuchMethodTrampoline(function, functionCompiler);
     } else {
@@ -428,7 +428,7 @@ class FletchBackend extends Backend {
   void codegenExternalNoSuchMethodTrampoline(
       FunctionElement function,
       FunctionCompiler functionCompiler) {
-    int id = context.getSymbolId(noSuchMethod);
+    int id = context.getSymbolId(noSuchMethodName);
     int fletchSelector = FletchSelector.encodeMethod(id, 1);
     functionCompiler.builder
         ..enterNoSuchMethod()
