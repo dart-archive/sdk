@@ -30,7 +30,7 @@ public class Str extends Reader {
     return new Str((byte[][])rawData, 8);
   }
 
-  public List<Short> getChars() {
+  public Uint8List getChars() {
     ListReader reader = new ListReader();
     readList(reader, 0);
     return new Uint8List(reader);

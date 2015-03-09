@@ -102,7 +102,7 @@ class PerformanceTest {
 
   private static int countTreeNodes(TreeNode node) {
     int sum = 1;
-    List<TreeNode> children = node.getChildren();
+    TreeNodeList children = node.getChildren();
     for (int i = 0; i < children.size(); i++) {
       sum += countTreeNodes(children.get(i));
     }
@@ -111,7 +111,7 @@ class PerformanceTest {
 
   private static void buildTree(int n, TreeNodeBuilder node) {
     if (n > 1) {
-      List<TreeNodeBuilder> children = node.initChildren(2);
+      TreeNodeListBuilder children = node.initChildren(2);
       buildTree(n - 1, children.get(0));
       buildTree(n - 1, children.get(1));
     }

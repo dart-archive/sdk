@@ -17,7 +17,7 @@ public class PatchSetBuilder extends Builder {
     super();
   }
 
-  public List<PatchBuilder> initPatches(int length) {
+  public PatchListBuilder initPatches(int length) {
     ListBuilder builder = new ListBuilder();
     newList(builder, 0, length, 32);
     return new PatchListBuilder(builder);

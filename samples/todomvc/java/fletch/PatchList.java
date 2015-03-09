@@ -6,9 +6,7 @@
 
 package fletch;
 
-import java.util.AbstractList;
-
-class PatchList extends AbstractList<Patch> {
+public class PatchList {
   private ListReader reader;
 
   public PatchList(ListReader reader) { this.reader = reader; }

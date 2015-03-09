@@ -6,20 +6,17 @@
 
 package fletch;
 
-import java.util.AbstractList;
-
-class Uint8ListBuilder extends AbstractList<Short> {
+public class Uint8ListBuilder {
   private ListBuilder builder;
 
   public Uint8ListBuilder(ListBuilder builder) { this.builder = builder; }
 
-  public Short get(int index) {
-    short result = builder.segment().getUnsigned(builder.base + index * 1);
-    return new Short(result);
+  public int get(int index) {
+    return builder.segment().getUnsigned(builder.base + index * 1);
   }
 
-  public Short set(int index, Short value) {
-    builder.segment().buffer().put(builder.base + index * 1, value.byteValue());
+  public int set(int index, int value) {
+    builder.segment().buffer().put(builder.base + index * 1, (byte)value);
     return value;
   }
 

@@ -17,7 +17,7 @@ public class StrBuilder extends Builder {
     super();
   }
 
-  public List<Short> initChars(int length) {
+  public Uint8ListBuilder initChars(int length) {
     ListBuilder builder = new ListBuilder();
     newList(builder, 0, length, 1);
     return new Uint8ListBuilder(builder);

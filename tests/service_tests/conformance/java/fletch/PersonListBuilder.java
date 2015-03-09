@@ -6,9 +6,7 @@
 
 package fletch;
 
-import java.util.AbstractList;
-
-class PersonListBuilder extends AbstractList<PersonBuilder> {
+public class PersonListBuilder {
   private ListBuilder builder;
 
   public PersonListBuilder(ListBuilder builder) { this.builder = builder; }

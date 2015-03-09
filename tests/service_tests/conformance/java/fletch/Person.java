@@ -30,13 +30,13 @@ public class Person extends Reader {
     return new Person((byte[][])rawData, 8);
   }
 
-  public List<Short> getName() {
+  public Uint8List getName() {
     ListReader reader = new ListReader();
     readList(reader, 0);
     return new Uint8List(reader);
   }
 
-  public List<Person> getChildren() {
+  public PersonList getChildren() {
     ListReader reader = new ListReader();
     readList(reader, 8);
     return new PersonList(reader);

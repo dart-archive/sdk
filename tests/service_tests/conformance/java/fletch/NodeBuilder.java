@@ -18,26 +18,26 @@ public class NodeBuilder extends Builder {
   }
 
   public void setNum(int value) {
-    setTag((char)1);
+    setTag(1);
     segment.buffer().putInt(base + 0, (int)value);
   }
 
   public void setCond(boolean value) {
-    setTag((char)2);
+    setTag(2);
     segment.buffer().put(base + 0, (byte)(value ? 1 : 0));
   }
 
   public ConsBuilder initCons() {
-    setTag((char)3);
+    setTag(3);
     ConsBuilder result = new ConsBuilder();
     result.segment = segment;
     result.base = base + 0;
     return result;
   }
 
-  public void setNil() { setTag((char)4); }
+  public void setNil() { setTag(4); }
 
-  public void setTag(char value) {
+  public void setTag(int value) {
     segment.buffer().putChar(base + 16, (char)value);
   }
 }

@@ -53,7 +53,7 @@ class ConformanceTest {
   private static void buildPerson(PersonBuilder person, int n) {
     person.setAge(n * 20);
     if (n > 1) {
-      List<PersonBuilder> children = person.initChildren(2);
+      PersonListBuilder children = person.initChildren(2);
       buildPerson(children.get(0), n - 1);
       buildPerson(children.get(1), n - 1);
     }
@@ -159,7 +159,7 @@ class ConformanceTest {
       assert 42 == generated.getAge();
       assert 1 == generated.getName().size();
       assert 11 == generated.getName().get(0);
-      List<Person> children = generated.getChildren();
+      PersonList children = generated.getChildren();
       assert 10 == children.size();
       for (int i = 0; i < children.size(); i++) {
         assert (12 + i * 2) == children.get(i).getAge();
@@ -174,7 +174,7 @@ class ConformanceTest {
               assert 42 == generated.getAge();
               assert 1 == generated.getName().size();
               assert 11 == generated.getName().get(0);
-              List<Person> children = generated.getChildren();
+              PersonList children = generated.getChildren();
               assert 10 == children.size();
               for (int i = 0; i < children.size(); i++) {
                 assert (12 + i * 2) == children.get(i).getAge();
@@ -218,10 +218,8 @@ class ConformanceTest {
     builder.initRoot(box, PersonBoxBuilder.kSize);
     PersonBuilder person = box.initPerson();
     person.setAge(87);
-    List<Short> name = person.initName(1);
-    // TODO(ager): Grumble. We need to figure out how to deal with the
-    // unsigned types. This is a List<uint8_t>. WAT?!?
-    name.set(0, new Short((short)99));
+    Uint8ListBuilder name = person.initName(1);
+    name.set(0, 99);
     int age = ConformanceService.getBoxedAge(box);
     assert 87 == age;
   }

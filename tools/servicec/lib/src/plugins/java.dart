@@ -336,7 +336,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
     'uint8'   : 'getUnsigned',
     'uint16'  : 'getUnsignedChar',
     'uint32'  : 'getUnsignedInt',
-    // TODO(ager): consider how to deal with unsigned 64-bit integers.
+    'uint64'  : 'buffer().getLong',
 
     'int8'    : 'buffer().get',
     'int16'   : 'buffer().getShort',
@@ -353,7 +353,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
     'uint8'   : 'put',
     'uint16'  : 'putChar',
     'uint32'  : 'putInt',
-    // TODO(ager): consider how to deal with unsigned 64-bit integers.
+    'uint64'  : 'putLong',
 
     'int8'    : 'put',
     'int16'   : 'putShort',
@@ -365,20 +365,20 @@ class _JavaVisitor extends CodeGenerationVisitor {
   };
 
   static Map<String, String> _SETTER_TYPES = const {
-    'bool'    : 'byte',
+    'bool'     : 'byte',
 
-    'uint8'   : 'byte',
-    'uint16'  : 'char',
-    'uint32'  : 'int',
-    // TODO(ager): consider how to deal with unsigned 64-bit integers.
+    'uint8'    : 'byte',
+    'uint16'   : 'char',
+    'uint32'   : 'int',
+    'uint64_t' : 'long',
 
-    'int8'    : 'byte',
-    'int16'   : 'char',
-    'int32'   : 'int',
-    'int64'   : 'long',
+    'int8'     : 'byte',
+    'int16'    : 'char',
+    'int32'    : 'int',
+    'int64'    : 'long',
 
-    'float32' : 'float',
-    'float64' : 'double',
+    'float32'  : 'float',
+    'float64'  : 'double',
   };
 
   _JavaVisitor(String path, String this.outputDirectory)
@@ -389,13 +389,13 @@ class _JavaVisitor extends CodeGenerationVisitor {
     'void'    : 'void',
     'bool'    : 'boolean',
 
-    'uint8'   : 'short',
-    'uint16'  : 'char',
-    'uint32'  : 'long',
-    // TODO(ager): consider how to deal with unsigned 64 bit integers.
+    'uint8'   : 'int',
+    'uint16'  : 'int',
+    'uint32'  : 'int',
+    'uint64'  : 'long',
 
-    'int8'    : 'byte',
-    'int16'   : 'short',
+    'int8'    : 'int',
+    'int16'   : 'int',
     'int32'   : 'int',
     'int64'   : 'long',
 
@@ -404,20 +404,20 @@ class _JavaVisitor extends CodeGenerationVisitor {
   };
 
   static const PRIMITIVE_LIST_TYPES = const <String, String> {
-    'bool'    : 'Boolean',
+    'bool'    : 'boolean',
 
-    'uint8'   : 'Short',
-    'uint16'  : 'Char',
-    'uint32'  : 'Long',
-    // TODO(ager): consider how to deal with unsigned 64 bit integers.
+    'uint8'   : 'int',
+    'uint16'  : 'int',
+    'uint32'  : 'int',
+    'uint64'  : 'long',
 
-    'int8'    : 'Byte',
-    'int16'   : 'Short',
-    'int32'   : 'Integer',
-    'int64'   : 'Long',
+    'int8'    : 'int',
+    'int16'   : 'int',
+    'int32'   : 'int',
+    'int64'   : 'long',
 
-    'float32' : 'Float',
-    'float64' : 'Double',
+    'float32' : 'float',
+    'float64' : 'double',
   };
 
   String getType(Type node) {
@@ -570,7 +570,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
       if (slotType.isList) {
         neededListTypes.add(slotType);
         String list = '${camelize(slotType.identifier)}List';
-        buffer.writeln('  public List<${getListType(slotType)}> get$camel() {');
+        buffer.writeln('  public $list get$camel() {');
         buffer.writeln('    ListReader reader = new ListReader();');
         buffer.writeln('    readList(reader, ${slot.offset});');
         buffer.writeln('    return new $list(reader);');
@@ -645,7 +645,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
       if (slot.isUnionSlot) {
         String tagName = camelize(slot.union.tag.name);
         int tag = slot.unionTag;
-        updateTag = '    set$tagName((char)$tag);\n';
+        updateTag = '    set$tagName($tag);\n';
       }
 
       if (slotType.isList) {
@@ -661,7 +661,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
         } else {
           listBuilder = '${getListType(slotType)}ListBuilder';
         }
-        buffer.writeln('  public List<$listElement> init$camel(int length) {');
+        buffer.writeln('  public $listBuilder init$camel(int length) {');
         buffer.write(updateTag);
         int size = 0;
         if (slotType.isPrimitive) {
@@ -680,7 +680,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
         String tagName = camelize(slot.union.tag.name);
         int tag = slot.unionTag;
         buffer.writeln('  public void set$camel() {'
-                       ' set$tagName((char)$tag); }');
+                       ' set$tagName($tag); }');
       } else if (slotType.isPrimitive) {
         String setter = _SETTERS[slotType.identifier];
         String setterType = _SETTER_TYPES[slotType.identifier];
@@ -731,10 +731,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
     buffer.writeln();
     buffer.writeln(READER_HEADER);
 
-    buffer.writeln('import java.util.AbstractList;');
-
-    buffer.writeln();
-    buffer.writeln('class $name extends AbstractList<$listType> {');
+    buffer.writeln('public class $name {');
     if (type.isPrimitive) {
       int elementSize = primitives.size(type.primitiveType);
       String offset = 'reader.base + index * $elementSize';
@@ -745,9 +742,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
                      ' this.reader = reader; }');
       buffer.writeln();
       buffer.writeln('  public $listType get(int index) {');
-      buffer.write('    ${getReturnType(type)} result = ');
+      buffer.write('    return ');
       buffer.writeln('reader.segment.${_GETTERS[type.identifier]}($offset);');
-      buffer.writeln('    return new $listType(result);');
       buffer.writeln('  }');
     } else {
       Struct element = type.resolved;
@@ -785,7 +781,12 @@ class _JavaVisitor extends CodeGenerationVisitor {
     buffer.writeln();
     buffer.writeln(READER_HEADER);
 
-    buffer.writeln('import java.util.AbstractList;');
+    buffer.writeln('public class $name {');
+    buffer.writeln('  private ListBuilder builder;');
+    buffer.writeln();
+    buffer.writeln('  public $name(ListBuilder builder) {'
+                   ' this.builder = builder; }');
+    buffer.writeln();
 
     if (type.isPrimitive) {
       int elementSize = primitives.size(type.primitiveType);
@@ -793,22 +794,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
       String listType = getListType(type);
       String getter = _GETTERS[type.identifier];
 
-      buffer.writeln();
-      buffer.write('class $name extends AbstractList<');
-      writeListTypeToBuffer(type, buffer);
-      buffer.writeln('> {');
-
-      buffer.writeln('  private ListBuilder builder;');
-
-      buffer.writeln();
-      buffer.writeln('  public $name(ListBuilder builder) {'
-                     ' this.builder = builder; }');
-
-      buffer.writeln();
       buffer.writeln('  public $listType get(int index) {');
-      buffer.writeln('    ${getReturnType(type)} result = '
-                     'builder.segment().$getter($offset);');
-      buffer.writeln('    return new $listType(result);');
+      buffer.writeln('    return builder.segment().$getter($offset);');
       buffer.writeln('  }');
 
       buffer.writeln();
@@ -816,7 +803,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
       String setterType = _SETTER_TYPES[type.identifier];
       buffer.writeln('  public $listType set(int index, $listType value) {');
       buffer.write('    builder.segment().buffer().');
-      buffer.writeln('$setter($offset, value.${setterType}Value());');
+      buffer.writeln('$setter($offset, (${setterType})value);');
       buffer.writeln('    return value;');
       buffer.writeln('  }');
     } else {
@@ -825,13 +812,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
       int elementSize = elementLayout.size;
       String structType = getType(type);
 
-      buffer.writeln();
-      buffer.writeln('class $name extends AbstractList<$structType> {');
-      buffer.writeln('  private ListBuilder builder;');
-      buffer.writeln();
-      buffer.writeln('  public $name(ListBuilder builder) {'
-                     ' this.builder = builder; }');
-      buffer.writeln();
       buffer.writeln('  public $structType get(int index) {');
       buffer.writeln('    $structType result = new $structType();');
       buffer.writeln('    builder.readListElement('

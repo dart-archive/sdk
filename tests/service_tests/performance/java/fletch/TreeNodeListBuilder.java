@@ -6,9 +6,7 @@
 
 package fletch;
 
-import java.util.AbstractList;
-
-class TreeNodeListBuilder extends AbstractList<TreeNodeBuilder> {
+public class TreeNodeListBuilder {
   private ListBuilder builder;
 
   public TreeNodeListBuilder(ListBuilder builder) { this.builder = builder; }

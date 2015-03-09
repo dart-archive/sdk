@@ -6,9 +6,7 @@
 
 package fletch;
 
-import java.util.AbstractList;
-
-class TreeNodeList extends AbstractList<TreeNode> {
+public class TreeNodeList {
   private ListReader reader;
 
   public TreeNodeList(ListReader reader) { this.reader = reader; }

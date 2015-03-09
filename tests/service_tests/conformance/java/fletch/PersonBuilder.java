@@ -17,13 +17,13 @@ public class PersonBuilder extends Builder {
     super();
   }
 
-  public List<Short> initName(int length) {
+  public Uint8ListBuilder initName(int length) {
     ListBuilder builder = new ListBuilder();
     newList(builder, 0, length, 1);
     return new Uint8ListBuilder(builder);
   }
 
-  public List<PersonBuilder> initChildren(int length) {
+  public PersonListBuilder initChildren(int length) {
     ListBuilder builder = new ListBuilder();
     newList(builder, 8, length, 24);
     return new PersonListBuilder(builder);

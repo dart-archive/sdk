@@ -24,7 +24,7 @@ public class PatchBuilder extends Builder {
     return result;
   }
 
-  public List<Short> initPath(int length) {
+  public Uint8ListBuilder initPath(int length) {
     ListBuilder builder = new ListBuilder();
     newList(builder, 24, length, 1);
     return new Uint8ListBuilder(builder);

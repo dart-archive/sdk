@@ -30,7 +30,7 @@ public class TreeNode extends Reader {
     return new TreeNode((byte[][])rawData, 8);
   }
 
-  public List<TreeNode> getChildren() {
+  public TreeNodeList getChildren() {
     ListReader reader = new ListReader();
     readList(reader, 0);
     return new TreeNodeList(reader);

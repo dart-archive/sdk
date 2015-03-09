@@ -32,7 +32,7 @@ public class Patch extends Reader {
 
   public Node getContent() { return new Node(segment, base + 0); }
 
-  public List<Short> getPath() {
+  public Uint8List getPath() {
     ListReader reader = new ListReader();
     readList(reader, 24);
     return new Uint8List(reader);

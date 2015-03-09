@@ -30,7 +30,7 @@ public class PatchSet extends Reader {
     return new PatchSet((byte[][])rawData, 8);
   }
 
-  public List<Patch> getPatches() {
+  public PatchList getPatches() {
     ListReader reader = new ListReader();
     readList(reader, 0);
     return new PatchList(reader);

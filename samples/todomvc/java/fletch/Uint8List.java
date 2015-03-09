@@ -6,16 +6,13 @@
 
 package fletch;
 
-import java.util.AbstractList;
-
-class Uint8List extends AbstractList<Short> {
+public class Uint8List {
   private ListReader reader;
 
   public Uint8List(ListReader reader) { this.reader = reader; }
 
-  public Short get(int index) {
-    short result = reader.segment.getUnsigned(reader.base + index * 1);
-    return new Short(result);
+  public int get(int index) {
+    return reader.segment.getUnsigned(reader.base + index * 1);
   }
 
   public int size() { return reader.length; }

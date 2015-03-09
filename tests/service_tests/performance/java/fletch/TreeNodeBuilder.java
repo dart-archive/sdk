@@ -17,7 +17,7 @@ public class TreeNodeBuilder extends Builder {
     super();
   }
 
-  public List<TreeNodeBuilder> initChildren(int length) {
+  public TreeNodeListBuilder initChildren(int length) {
     ListBuilder builder = new ListBuilder();
     newList(builder, 0, length, 8);
     return new TreeNodeListBuilder(builder);
