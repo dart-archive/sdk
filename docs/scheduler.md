@@ -265,6 +265,7 @@ The process transition in state as follows:
 - `Atomic<Process> Next`
 - `Atomic<Process> Previous`
 - `Atomic<Sleeping|Queued|Running|Yielding> State`
+- `Atomic<Message> MessageStack`
 
 ```python
 ChangeState(From, To) {
@@ -284,5 +285,67 @@ ChangeState(From, To) {
     S <- State
   }
   return False
+}
+```
+
+**class Port**
+
+*Fields*
+
+- `Atomic<Bool> Locked`
+- `Atomic<Int> RefCount`
+- `Process Process`
+
+```python
+Lock() {
+  while True {
+    L <- Locked
+    if L: continue
+    if Lock.CompareAndSwap(L, True): break
+  }
+}
+```
+
+```python
+Unlock() {
+  Lock <- False
+}
+```
+
+```python
+IsLocked() {
+  return Lock
+}
+```
+
+```python
+IncrementRef() {
+  INVARIANT(RefCount > 0)
+  RefCount++
+}
+```
+
+```python
+DecrementRef() {
+  Lock()
+  INVARIANT(RefCount > 0)
+  RefCount--
+  if RefCount = 0 and Process = Null {
+    delete This
+  } else {
+    Unlock()
+  }
+}
+```
+
+```python
+OwnerProcessTerminating() {
+  Lock()
+  if RefCount = 0 {
+    delete This
+  } else {
+    Process <- Null
+    Unlock()
+  }
 }
 ```
