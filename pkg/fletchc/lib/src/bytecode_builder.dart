@@ -113,6 +113,18 @@ class BytecodeBuilder {
     internalAdd(new LoadLiteralFalse());
   }
 
+  void loadLiteral(int value) {
+    if (value == 0) {
+      internalAdd(const LoadLiteral0());
+    } else if (value == 1) {
+      internalAdd(const LoadLiteral1());
+    } else if (value < 256) {
+      internalAdd(new LoadLiteral(value));
+    } else {
+      internalAdd(new LoadLiteralWide(value));
+    }
+  }
+
   void storeLocal(int offset) {
     assert(offset >= 0);
     internalAdd(new StoreLocal(offset));

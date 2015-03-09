@@ -9,7 +9,8 @@ import 'package:semantic_visitor/semantic_visitor.dart' show
     SemanticVisitor;
 
 import 'package:semantic_visitor/operators.dart' show
-    BinaryOperator;
+    BinaryOperator,
+    IncDecOperator;
 
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
@@ -582,6 +583,44 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void doLocalVariableIncrement(
+      LocalVariableElement element,
+      IncDecOperator operator,
+      bool prefix) {
+    // TODO(ajohnsen): Candidate for bytecode: Inc/Dec local with non-Smi
+    // bailout.
+    // If visitState is for effect, we can ignore the return value, thus always
+    // generate code for the simpler 'prefix' case.
+    if (visitState == VisitState.Effect) prefix = true;
+    int slot = scope[element];
+    builder.loadSlot(slot);
+    // For postfix, keep local, unmodified version, to 'return' after store.
+    if (!prefix) builder.dup();
+    builder.loadLiteral(1);
+    Selector selector = new Selector.binaryOperator(
+        operator == IncDecOperator.INC ? '+' : '-');
+    invokeMethod(selector);
+    builder.storeSlot(slot);
+    if (!prefix) builder.pop();
+    applyVisitState();
+  }
+
+  void visitLocalVariablePrefix(
+      SendSet node,
+      LocalVariableElement element,
+      IncDecOperator operator,
+      _) {
+    doLocalVariableIncrement(element, operator, true);
+  }
+
+  void visitLocalVariablePostfix(
+      SendSet node,
+      LocalVariableElement element,
+      IncDecOperator operator,
+      _) {
+    doLocalVariableIncrement(element, operator, false);
+  }
+
   void visitParameterGet(
       Send node,
       ParameterElement element,
@@ -684,6 +723,31 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     } else {
       builder.bind(ifFalse);
     }
+  }
+
+  void visitFor(For node) {
+    BytecodeLabel start = new BytecodeLabel();
+    BytecodeLabel ifTrue = new BytecodeLabel();
+    BytecodeLabel end = new BytecodeLabel();
+
+    Node initializer = node.initializer;
+    if (initializer != null) visitForValue(initializer);
+
+    builder.bind(start);
+
+    Expression condition = node.condition;
+    if (condition != null) {
+      visitForTest(condition, ifTrue, end);
+      builder.bind(ifTrue);
+    }
+
+    node.body.accept(this);
+    for (Node update in node.update) {
+      visitForEffect(update);
+    }
+    builder.branch(start);
+
+    builder.bind(end);
   }
 
   void visitWhile(While node) {
