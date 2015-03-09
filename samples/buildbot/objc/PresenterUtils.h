@@ -11,3 +11,18 @@
 + (NSString*)decodeStrData:(const StrData&)str;
 
 @end
+
+template<typename T>
+class PresenterListUtils {
+public:
+  typedef id (*DecodeElementFunction)(const T&);
+
+  static NSMutableArray* decodeList(const List<T>& list,
+                                    DecodeElementFunction decodeElement) {
+    NSMutableArray* array = [NSMutableArray arrayWithCapacity:list.length()];
+    for (int i = 0; i < list.length(); ++i) {
+      [array addObject:decodeElement(list[i])];
+    }
+    return array;
+  }
+};

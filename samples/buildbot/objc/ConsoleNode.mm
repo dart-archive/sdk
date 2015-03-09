@@ -4,6 +4,7 @@
 
 #import "ConsoleNode.h"
 
+#import "CommitNode.h"
 #import "PresenterUtils.h"
 
 #include "buildbot_service.h"
@@ -21,6 +22,7 @@
 - (id)initWith:(const ConsoleNodeData&)data {
   _title = [PresenterUtils decodeStrData:data.getTitle()];
   _status = [PresenterUtils decodeStrData:data.getStatus()];
+  _commits = [CommitNode arrayWithData:data.getCommits()];
   return self;
 }
 
@@ -42,6 +44,8 @@
       (*node)->_title = [PresenterUtils decodeStrData:patch.getTitle()];
     } else if (patch.isStatus()) {
       (*node)->_status = [PresenterUtils decodeStrData:patch.getStatus()];
+    } else if (patch.isCommits()) {
+      [CommitNode applyListPatch:patch.getCommits() atList:&(*node)->_commits];
     } else {
       abort();
     }

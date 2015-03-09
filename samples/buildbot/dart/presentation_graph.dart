@@ -6,7 +6,13 @@
 
 // This file provides utility functions for constructing presentation graphs.
 
+import 'commit_node.dart';
 import 'console_node.dart';
 
-ConsoleNode console({String title: "", String status: ""}) =>
-  new ConsoleNode(title, status);
+// TODO(zerny): Should we support default values?
+
+CommitNode commit({int revision, String author, String message}) =>
+  new CommitNode(revision, author, message);
+
+ConsoleNode console({String title, String status, List commits}) =>
+  new ConsoleNode(title, status, commits);

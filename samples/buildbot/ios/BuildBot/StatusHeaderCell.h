@@ -4,9 +4,10 @@
 
 #import <UIKit/UIKit.h>
 
-@interface ViewController : UIViewController
+static NSString* StatusHeaderCellId = @"StatusHeaderPrototypeCell";
 
-@property (weak, nonatomic) IBOutlet UILabel *status;
+@interface StatusHeaderCell : UITableViewCell
+
+@property (weak, nonatomic) IBOutlet UILabel *statusLabel;
 
 @end
-

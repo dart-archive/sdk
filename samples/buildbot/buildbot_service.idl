@@ -12,17 +12,26 @@
 //    node ConsoleNode {
 //      string title;
 //      string status;
+//      List<CommitNode> commits;
+//    }
+//
+//    node CommitNode {
+//      int32 revision;
+//      string author;
+//      string message;
 //    }
 //
 // From this description we generate the files:
 //
-//    dart/console_presenter_base.dart
+//    dart/commit_node.dart
 //    dart/console_node.dart
+//    dart/console_presenter_base.dart
 //    dart/presentation_graph.dart
 //    dart/presentation_utils.dart
 //
-//    objc/ConsolePresenter.{h,mm}
+//    objc/CommitNode.{h,mm}
 //    objc/ConsoleNode.{h,mm}
+//    objc/ConsolePresenter.{h,mm}
 //    objc/PresentationUtils.{h,mm}
 //
 // For communtication also we define the service structures below for
@@ -51,6 +60,13 @@ struct PresenterPatchSet {
 struct ConsoleNodeData {
   StrData title;
   StrData status;
+  List<CommitNodeData> commits;
+}
+
+struct CommitNodeData {
+  int32 revision;
+  StrData author;
+  StrData message;
 }
 
 // Patch structures.
@@ -64,6 +80,23 @@ struct ConsoleNodePatchData {
     ConsoleNodeData replace;
     StrData title;
     StrData status;
+    // TODO(zerny): Why can't I inline a union here?
+    ListCommitNodePatchData* commits;
+  }
+}
+
+struct CommitNodePatchData {
+  union {
+    CommitNodeData replace;
+    int32 revision;
+    StrData author;
+    StrData message;
+  }
+}
+
+struct ListCommitNodePatchData {
+  union {
+    List<CommitNodeData> replace;
   }
 }
 

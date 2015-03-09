@@ -23,8 +23,12 @@ abstract class RemoteData {
   bool _wait = true;
   var _channel = new Channel();
 
-  void updateData() {
-    Thread.fork(() { this._run(); });
+  void updateData([onComplete = null]) {
+    Thread.fork(() {
+      this._run();
+      if (onComplete != null)
+        onComplete();
+    });
   }
 
   void ensureData() {
@@ -51,22 +55,38 @@ class JsonData extends RemoteData {
 class Console {
   String title;
 
-  JsonData _status;
-  JsonData _changes;
+  JsonData _jsonStatus;
+  JsonData _jsonChanges;
+
+  String _status = "unknown status";
+  List<String> _commitKeys = new List();
 
   Console(this.title,
           Resource api,
           Resource status) {
-    _status = new JsonData(status.sub("/current?format=json"));
-    _status.updateData();
-    _changes = new JsonData(api.sub("/json/changes"));
+    _jsonStatus = new JsonData(status.sub("/current?format=json"));
+    _jsonStatus.updateData(updateStatus);
+
+    _jsonChanges = new JsonData(api.sub("/json/changes"));
+    _jsonChanges.updateData(updateCommits);
   }
 
-  String get status {
-    _status.ensureData();
-    if (_status.data is Map && _status.data.containsKey("message")) {
-      return _status.data['message'];
-    }
-    return "unknown status";
+  String get status => _status;
+
+  int get commitCount => _commitKeys.length;
+
+  dynamic commit(int index) =>
+    (index < _commitKeys.length) ? _jsonChanges.data[_commitKeys[index]] : null;
+
+  void updateCommits() {
+    var data = _jsonChanges.data;
+    _commitKeys = data.keys.toList();
+    _commitKeys.sort();
+    // TODO(zerny): queue up another update (but don't pressure the bots).
+  }
+
+  void updateStatus() {
+    _status = _jsonStatus.data['message'];
+    // TODO(zerny): queue up another update (but don't pressure the bots).
   }
 }

@@ -67,12 +67,29 @@ StrDataBuilder ConsoleNodeDataBuilder::initStatus() {
   return StrDataBuilder(segment(), offset() + 8);
 }
 
+List<CommitNodeDataBuilder> ConsoleNodeDataBuilder::initCommits(int length) {
+  Reader result = NewList(16, length, 24);
+  return List<CommitNodeDataBuilder>(result.segment(), result.offset(), length);
+}
+
 StrData ConsoleNodeData::getTitle() const { return StrData(segment(), offset() + 0); }
 
 StrData ConsoleNodeData::getStatus() const { return StrData(segment(), offset() + 8); }
 
+StrDataBuilder CommitNodeDataBuilder::initAuthor() {
+  return StrDataBuilder(segment(), offset() + 0);
+}
+
+StrDataBuilder CommitNodeDataBuilder::initMessage() {
+  return StrDataBuilder(segment(), offset() + 8);
+}
+
+StrData CommitNodeData::getAuthor() const { return StrData(segment(), offset() + 0); }
+
+StrData CommitNodeData::getMessage() const { return StrData(segment(), offset() + 8); }
+
 List<ConsoleNodePatchDataBuilder> ConsolePatchSetBuilder::initPatches(int length) {
-  Reader result = NewList(0, length, 24);
+  Reader result = NewList(0, length, 32);
   return List<ConsoleNodePatchDataBuilder>(result.segment(), result.offset(), length);
 }
 
@@ -91,11 +108,46 @@ StrDataBuilder ConsoleNodePatchDataBuilder::initStatus() {
   return StrDataBuilder(segment(), offset() + 0);
 }
 
+ListCommitNodePatchDataBuilder ConsoleNodePatchDataBuilder::initCommits() {
+  setTag(4);
+  Builder result = NewStruct(0, 16);
+  return ListCommitNodePatchDataBuilder(result);
+}
+
 ConsoleNodeData ConsoleNodePatchData::getReplace() const { return ConsoleNodeData(segment(), offset() + 0); }
 
 StrData ConsoleNodePatchData::getTitle() const { return StrData(segment(), offset() + 0); }
 
 StrData ConsoleNodePatchData::getStatus() const { return StrData(segment(), offset() + 0); }
+
+ListCommitNodePatchData ConsoleNodePatchData::getCommits() const { return ReadStruct<ListCommitNodePatchData>(0); }
+
+CommitNodeDataBuilder CommitNodePatchDataBuilder::initReplace() {
+  setTag(1);
+  return CommitNodeDataBuilder(segment(), offset() + 0);
+}
+
+StrDataBuilder CommitNodePatchDataBuilder::initAuthor() {
+  setTag(3);
+  return StrDataBuilder(segment(), offset() + 0);
+}
+
+StrDataBuilder CommitNodePatchDataBuilder::initMessage() {
+  setTag(4);
+  return StrDataBuilder(segment(), offset() + 0);
+}
+
+CommitNodeData CommitNodePatchData::getReplace() const { return CommitNodeData(segment(), offset() + 0); }
+
+StrData CommitNodePatchData::getAuthor() const { return StrData(segment(), offset() + 0); }
+
+StrData CommitNodePatchData::getMessage() const { return StrData(segment(), offset() + 0); }
+
+List<CommitNodeDataBuilder> ListCommitNodePatchDataBuilder::initReplace(int length) {
+  setTag(1);
+  Reader result = NewList(0, length, 24);
+  return List<CommitNodeDataBuilder>(result.segment(), result.offset(), length);
+}
 
 List<uint8_t> StrDataBuilder::initChars(int length) {
   Reader result = NewList(0, length, 1);

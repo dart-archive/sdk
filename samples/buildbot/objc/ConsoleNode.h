@@ -10,6 +10,9 @@
 
 @property (readonly) NSString* title;
 @property (readonly) NSString* status;
+@property (readonly) NSArray* commits;
+
+- (id)initWith:(const ConsoleNodeData&)data;
 
 + (void)applyPatches:(const ConsolePatchSet&)patchSet
               atRoot:(ConsoleNode* __strong *)root;

@@ -13,5 +13,19 @@ class ConsolePresenter extends ConsolePresenterBase {
 
   ConsoleNode present() =>
     node.console(title: "${_project.name}::${_project.console.title}",
-                 status: "${_project.console.status} v${++_version}");
+                 status: "${_project.console.status}",
+                 commits: presentCommits());
+
+  List<CommitNode> presentCommits() {
+    Console console = _project.console;
+    int length = console.commitCount;
+    List commits = new List(length);
+    for (int i = 0; i < length; ++i) {
+      var data = console.commit(i);
+      commits[i] = node.commit(revision: data["number"],
+                               author: data["who"],
+                               message: data["comments"]);
+    }
+    return commits;
+  }
 }

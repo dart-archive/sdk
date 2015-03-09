@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DA1752D31AA99CE600576109 /* CommitNode.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1752D21AA99CE600576109 /* CommitNode.mm */; };
+		DA1752D61AA9B37000576109 /* CommitsTableViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1752D51AA9B37000576109 /* CommitsTableViewController.mm */; };
+		DA1752D91AA9C73700576109 /* CommitCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1752D81AA9C73700576109 /* CommitCell.mm */; };
+		DA1752DC1AA9DC1400576109 /* StatusHeaderCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1752DB1AA9DC1400576109 /* StatusHeaderCell.mm */; };
 		DA1B2C9C1AA1B91600A94B70 /* ConsolePresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1B2C9B1AA1B91600A94B70 /* ConsolePresenter.mm */; };
 		DA1B2C9F1AA1BAE700A94B70 /* ConsoleNode.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1B2C9E1AA1BAE700A94B70 /* ConsoleNode.mm */; };
 		DA1B2CA21AA44F8300A94B70 /* PresenterUtils.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1B2CA11AA44F8300A94B70 /* PresenterUtils.mm */; };
@@ -16,7 +20,6 @@
 		DA1DEDFF1A9F20810043E9CF /* struct.cc in Sources */ = {isa = PBXBuildFile; fileRef = DA1DEDFC1A9F20810043E9CF /* struct.cc */; };
 		DA4B88861A9F0BF500EFBB5A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = DA4B88851A9F0BF500EFBB5A /* main.m */; };
 		DA4B88891A9F0BF500EFBB5A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA4B88881A9F0BF500EFBB5A /* AppDelegate.mm */; };
-		DA4B888C1A9F0BF500EFBB5A /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA4B888B1A9F0BF500EFBB5A /* ViewController.mm */; };
 		DA4B888F1A9F0BF500EFBB5A /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DA4B888D1A9F0BF500EFBB5A /* Main.storyboard */; };
 		DA4B88911A9F0BF500EFBB5A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DA4B88901A9F0BF500EFBB5A /* Images.xcassets */; };
 		DA4B88A01A9F0BF500EFBB5A /* BuildBotTests.m in Sources */ = {isa = PBXBuildFile; fileRef = DA4B889F1A9F0BF500EFBB5A /* BuildBotTests.m */; };
@@ -33,6 +36,14 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		DA1752D11AA99CE600576109 /* CommitNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitNode.h; sourceTree = "<group>"; };
+		DA1752D21AA99CE600576109 /* CommitNode.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitNode.mm; sourceTree = "<group>"; };
+		DA1752D41AA9B37000576109 /* CommitsTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitsTableViewController.h; sourceTree = "<group>"; };
+		DA1752D51AA9B37000576109 /* CommitsTableViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitsTableViewController.mm; sourceTree = "<group>"; };
+		DA1752D71AA9C73700576109 /* CommitCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitCell.h; sourceTree = "<group>"; };
+		DA1752D81AA9C73700576109 /* CommitCell.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitCell.mm; sourceTree = "<group>"; };
+		DA1752DA1AA9DC1400576109 /* StatusHeaderCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StatusHeaderCell.h; sourceTree = "<group>"; };
+		DA1752DB1AA9DC1400576109 /* StatusHeaderCell.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = StatusHeaderCell.mm; sourceTree = "<group>"; };
 		DA1B2C9A1AA1B91600A94B70 /* ConsolePresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConsolePresenter.h; sourceTree = "<group>"; };
 		DA1B2C9B1AA1B91600A94B70 /* ConsolePresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ConsolePresenter.mm; sourceTree = "<group>"; };
 		DA1B2C9D1AA1BAE700A94B70 /* ConsoleNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConsoleNode.h; sourceTree = "<group>"; };
@@ -50,8 +61,6 @@
 		DA4B88851A9F0BF500EFBB5A /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		DA4B88871A9F0BF500EFBB5A /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		DA4B88881A9F0BF500EFBB5A /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
-		DA4B888A1A9F0BF500EFBB5A /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		DA4B888B1A9F0BF500EFBB5A /* ViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ViewController.mm; sourceTree = "<group>"; };
 		DA4B888E1A9F0BF500EFBB5A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		DA4B88901A9F0BF500EFBB5A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		DA4B88991A9F0BF500EFBB5A /* BuildBotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BuildBotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -83,6 +92,8 @@
 			children = (
 				DA1B2C9A1AA1B91600A94B70 /* ConsolePresenter.h */,
 				DA1B2C9B1AA1B91600A94B70 /* ConsolePresenter.mm */,
+				DA1752D11AA99CE600576109 /* CommitNode.h */,
+				DA1752D21AA99CE600576109 /* CommitNode.mm */,
 				DA1B2C9D1AA1BAE700A94B70 /* ConsoleNode.h */,
 				DA1B2C9E1AA1BAE700A94B70 /* ConsoleNode.mm */,
 				DA1B2CA01AA44F8300A94B70 /* PresenterUtils.h */,
@@ -138,13 +149,17 @@
 		DA4B88821A9F0BF500EFBB5A /* BuildBot */ = {
 			isa = PBXGroup;
 			children = (
-				DA4B88871A9F0BF500EFBB5A /* AppDelegate.h */,
-				DA4B88881A9F0BF500EFBB5A /* AppDelegate.mm */,
-				DA4B888A1A9F0BF500EFBB5A /* ViewController.h */,
-				DA4B888B1A9F0BF500EFBB5A /* ViewController.mm */,
 				DA4B888D1A9F0BF500EFBB5A /* Main.storyboard */,
 				DA4B88901A9F0BF500EFBB5A /* Images.xcassets */,
 				DA4B88831A9F0BF500EFBB5A /* Supporting Files */,
+				DA4B88871A9F0BF500EFBB5A /* AppDelegate.h */,
+				DA4B88881A9F0BF500EFBB5A /* AppDelegate.mm */,
+				DA1752D41AA9B37000576109 /* CommitsTableViewController.h */,
+				DA1752D51AA9B37000576109 /* CommitsTableViewController.mm */,
+				DA1752D71AA9C73700576109 /* CommitCell.h */,
+				DA1752D81AA9C73700576109 /* CommitCell.mm */,
+				DA1752DA1AA9DC1400576109 /* StatusHeaderCell.h */,
+				DA1752DB1AA9DC1400576109 /* StatusHeaderCell.mm */,
 			);
 			path = BuildBot;
 			sourceTree = "<group>";
@@ -275,12 +290,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DA1752D91AA9C73700576109 /* CommitCell.mm in Sources */,
 				DA1DEDFE1A9F20810043E9CF /* buildbot_service.cc in Sources */,
 				DA1B2C9F1AA1BAE700A94B70 /* ConsoleNode.mm in Sources */,
+				DA1752D31AA99CE600576109 /* CommitNode.mm in Sources */,
 				DA1DEDFF1A9F20810043E9CF /* struct.cc in Sources */,
-				DA4B888C1A9F0BF500EFBB5A /* ViewController.mm in Sources */,
 				DA1B2CA21AA44F8300A94B70 /* PresenterUtils.mm in Sources */,
+				DA1752D61AA9B37000576109 /* CommitsTableViewController.mm in Sources */,
 				DA4B88891A9F0BF500EFBB5A /* AppDelegate.mm in Sources */,
+				DA1752DC1AA9DC1400576109 /* StatusHeaderCell.mm in Sources */,
 				DA1B2C9C1AA1B91600A94B70 /* ConsolePresenter.mm in Sources */,
 				DA4B88861A9F0BF500EFBB5A /* main.m in Sources */,
 			);

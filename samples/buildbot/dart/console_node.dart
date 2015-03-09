@@ -4,12 +4,14 @@
 
 // Should become auto-generated.
 
+import 'commit_node.dart';
 import 'presentation_utils.dart';
 
 class ConsoleNode {
   String title;
   String status;
-  ConsoleNode(this.title, this.status);
+  List commits;
+  ConsoleNode(this.title, this.status, this.commits);
 
   List<ConsoleNodePatch> diff(ConsoleNode previous) {
     List<ConsoleNodePatch> patches = new List();
@@ -29,11 +31,20 @@ class ConsoleNode {
     if (this.status != previous.status) {
       patches.add(new ConsoleNodeStatusPatch(this.status));
     }
+    // TODO(zerny): implement generic list-diff.
+    if (this.commits != previous.commits) {
+      patches.add(new ConsoleNodeCommitsPatch(this.commits));
+    }
   }
 
   void serialize(ConsoleNodeDataBuilder builder) {
     serializeString(title, builder.initTitle());
     serializeString(status, builder.initStatus());
+    int length = commits.length;
+    List<CommitNodeDataBuilder> builders = builder.initCommits(length);
+    for (int i = 0; i < length; ++i) {
+      commits[i].serialize(builders[i]);
+    }
   }
 }
 
@@ -65,5 +76,14 @@ class ConsoleNodeStatusPatch extends ConsoleNodePatch {
 
   void serialize(ConsoleNodePatchDataBuilder builder) {
     serializeString(status, builder.initStatus());
+  }
+}
+
+class ConsoleNodeCommitsPatch extends ConsoleNodePatch {
+  ListPatch patch;
+  ConsoleNodeCommitsPatch(commits) : patch = new ListReplacePatch(commits);
+
+  void serialize(ConsoleNodePatchDataBuilder builder) {
+    patch.serialize(builder.initCommits());
   }
 }

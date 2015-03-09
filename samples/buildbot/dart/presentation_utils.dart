@@ -9,3 +9,20 @@ void serializeString(String string, StrDataBuilder builder) {
     chars[i] = string.codeUnitAt(i);
   }
 }
+
+abstract class ListPatch {
+  void serialize(builder);
+}
+
+class ListReplacePatch {
+  List nodes;
+  ListReplacePatch(this.nodes);
+
+  void serialize(builder) {
+    int length = nodes.length;
+    List builders = builder.initReplace(length);
+    for (int i = 0; i < length; ++i) {
+      nodes[i].serialize(builders[i]);
+    }
+  }
+}

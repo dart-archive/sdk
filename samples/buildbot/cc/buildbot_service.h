@@ -14,10 +14,16 @@ class PresenterPatchSet;
 class PresenterPatchSetBuilder;
 class ConsoleNodeData;
 class ConsoleNodeDataBuilder;
+class CommitNodeData;
+class CommitNodeDataBuilder;
 class ConsolePatchSet;
 class ConsolePatchSetBuilder;
 class ConsoleNodePatchData;
 class ConsoleNodePatchDataBuilder;
+class CommitNodePatchData;
+class CommitNodePatchDataBuilder;
+class ListCommitNodePatchData;
+class ListCommitNodePatchDataBuilder;
 class StrData;
 class StrDataBuilder;
 
@@ -55,17 +61,18 @@ class PresenterPatchSetBuilder : public Builder {
 
 class ConsoleNodeData : public Reader {
  public:
-  static const int kSize = 16;
+  static const int kSize = 24;
   ConsoleNodeData(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
   StrData getTitle() const;
   StrData getStatus() const;
+  List<CommitNodeData> getCommits() const { return ReadList<CommitNodeData>(16); }
 };
 
 class ConsoleNodeDataBuilder : public Builder {
  public:
-  static const int kSize = 16;
+  static const int kSize = 24;
 
   explicit ConsoleNodeDataBuilder(const Builder& builder)
       : Builder(builder) { }
@@ -74,6 +81,32 @@ class ConsoleNodeDataBuilder : public Builder {
 
   StrDataBuilder initTitle();
   StrDataBuilder initStatus();
+  List<CommitNodeDataBuilder> initCommits(int length);
+};
+
+class CommitNodeData : public Reader {
+ public:
+  static const int kSize = 24;
+  CommitNodeData(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+  StrData getAuthor() const;
+  StrData getMessage() const;
+  int32_t getRevision() const { return *PointerTo<int32_t>(16); }
+};
+
+class CommitNodeDataBuilder : public Builder {
+ public:
+  static const int kSize = 24;
+
+  explicit CommitNodeDataBuilder(const Builder& builder)
+      : Builder(builder) { }
+  CommitNodeDataBuilder(Segment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  StrDataBuilder initAuthor();
+  StrDataBuilder initMessage();
+  void setRevision(int32_t value) { *PointerTo<int32_t>(16) = value; }
 };
 
 class ConsolePatchSet : public Reader {
@@ -99,7 +132,7 @@ class ConsolePatchSetBuilder : public Builder {
 
 class ConsoleNodePatchData : public Reader {
  public:
-  static const int kSize = 24;
+  static const int kSize = 32;
   ConsoleNodePatchData(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
@@ -109,12 +142,14 @@ class ConsoleNodePatchData : public Reader {
   StrData getTitle() const;
   bool isStatus() const { return 3 == getTag(); }
   StrData getStatus() const;
-  uint16_t getTag() const { return *PointerTo<uint16_t>(16); }
+  bool isCommits() const { return 4 == getTag(); }
+  ListCommitNodePatchData getCommits() const;
+  uint16_t getTag() const { return *PointerTo<uint16_t>(24); }
 };
 
 class ConsoleNodePatchDataBuilder : public Builder {
  public:
-  static const int kSize = 24;
+  static const int kSize = 32;
 
   explicit ConsoleNodePatchDataBuilder(const Builder& builder)
       : Builder(builder) { }
@@ -124,7 +159,65 @@ class ConsoleNodePatchDataBuilder : public Builder {
   ConsoleNodeDataBuilder initReplace();
   StrDataBuilder initTitle();
   StrDataBuilder initStatus();
-  void setTag(uint16_t value) { *PointerTo<uint16_t>(16) = value; }
+  ListCommitNodePatchDataBuilder initCommits();
+  void setTag(uint16_t value) { *PointerTo<uint16_t>(24) = value; }
+};
+
+class CommitNodePatchData : public Reader {
+ public:
+  static const int kSize = 24;
+  CommitNodePatchData(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+  bool isReplace() const { return 1 == getTag(); }
+  CommitNodeData getReplace() const;
+  bool isRevision() const { return 2 == getTag(); }
+  int32_t getRevision() const { return *PointerTo<int32_t>(0); }
+  bool isAuthor() const { return 3 == getTag(); }
+  StrData getAuthor() const;
+  bool isMessage() const { return 4 == getTag(); }
+  StrData getMessage() const;
+  uint16_t getTag() const { return *PointerTo<uint16_t>(20); }
+};
+
+class CommitNodePatchDataBuilder : public Builder {
+ public:
+  static const int kSize = 24;
+
+  explicit CommitNodePatchDataBuilder(const Builder& builder)
+      : Builder(builder) { }
+  CommitNodePatchDataBuilder(Segment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  CommitNodeDataBuilder initReplace();
+  void setRevision(int32_t value) { setTag(2); *PointerTo<int32_t>(0) = value; }
+  StrDataBuilder initAuthor();
+  StrDataBuilder initMessage();
+  void setTag(uint16_t value) { *PointerTo<uint16_t>(20) = value; }
+};
+
+class ListCommitNodePatchData : public Reader {
+ public:
+  static const int kSize = 16;
+  ListCommitNodePatchData(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+  bool isReplace() const { return 1 == getTag(); }
+  List<CommitNodeData> getReplace() const { return ReadList<CommitNodeData>(0); }
+  uint16_t getTag() const { return *PointerTo<uint16_t>(8); }
+};
+
+class ListCommitNodePatchDataBuilder : public Builder {
+ public:
+  static const int kSize = 16;
+
+  explicit ListCommitNodePatchDataBuilder(const Builder& builder)
+      : Builder(builder) { }
+  ListCommitNodePatchDataBuilder(Segment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  List<CommitNodeDataBuilder> initReplace(int length);
+  void setTag(uint16_t value) { *PointerTo<uint16_t>(8) = value; }
 };
 
 class StrData : public Reader {
