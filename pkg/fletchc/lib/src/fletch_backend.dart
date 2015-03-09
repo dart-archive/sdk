@@ -112,6 +112,9 @@ class CompiledClass {
 }
 
 class FletchBackend extends Backend {
+  static const String noSuchMethod = '_noSuchMethod';
+  static const String noSuchMethodTrampoline = '_noSuchMethodTrampoline';
+
   final FletchContext context;
 
   final DartConstantTask constantCompilerTask;
@@ -192,8 +195,6 @@ class FletchBackend extends Backend {
 
   bool methodNeedsRti(FunctionElement function) => false;
 
-  String getName(String key) => compiler.context.names[key];
-
   void enqueueHelpers(
       ResolutionEnqueuer world,
       Registry registry) {
@@ -253,13 +254,13 @@ class FletchBackend extends Backend {
     world.registerDynamicInvocation(new Selector.binaryOperator('+'));
 
     void registerNamedSelector(String name, LibraryElement library, int arity) {
-      var selector = new Selector.call(getName(name), library, arity);
+      var selector = new Selector.call(name, library, arity);
       world.registerDynamicInvocation(selector);
       registry.registerDynamicInvocation(selector);
     }
 
-    registerNamedSelector('NoSuchMethodTrampoline', compiler.coreLibrary, 0);
-    registerNamedSelector('NoSuchMethod', compiler.coreLibrary, 1);
+    registerNamedSelector(noSuchMethodTrampoline, compiler.coreLibrary, 0);
+    registerNamedSelector(noSuchMethod, compiler.coreLibrary, 1);
   }
 
   ClassElement get stringImplementation => stringClass;
@@ -382,7 +383,7 @@ class FletchBackend extends Backend {
       codegenExternalYield(function, functionCompiler);
     } else if (function == fletchExternalInvokeMain) {
       codegenExternalInvokeMain(function, functionCompiler);
-    } else if (function.name == getName('NoSuchMethodTrampoline') &&
+    } else if (function.name == noSuchMethodTrampoline &&
                function.library == compiler.coreLibrary) {
       codegenExternalNoSuchMethodTrampoline(function, functionCompiler);
     } else {
@@ -423,7 +424,7 @@ class FletchBackend extends Backend {
   void codegenExternalNoSuchMethodTrampoline(
       FunctionElement function,
       FunctionCompiler functionCompiler) {
-    int id = context.getSymbolId(getName("NoSuchMethod"));
+    int id = context.getSymbolId(noSuchMethod);
     int fletchSelector = FletchSelector.encodeMethod(id, 1);
     functionCompiler.builder
         ..enterNoSuchMethod()
