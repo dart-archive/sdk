@@ -77,18 +77,24 @@ class CompiledClass {
   final int id;
   final ClassElement element;
   final int fields;
+  final CompiledClass superClass;
 
   final Map<int, int> methodTable = <int, int>{};
+
+  CompiledClass(this.id, this.element, this.fields, this.superClass);
+
+  /**
+   * Returns the number of instance fields of all the super classes of this
+   * class.
+   *
+   * If this class has no super class (if it's Object), 0 is returned.
+   */
+  int get superClassFields => superClass != null ? superClass.fields : 0;
 
   void createImplicitAccessors(FletchBackend backend) {
     // TODO(ajohnsen): Don't do this once dart2js can enqueue field getters in
     // CodegenEnqueuer.
-    int fieldIndex = 0;
-    if (element.superclass != null) {
-      element.superclass.forEachInstanceField(
-          (_, __) { fieldIndex++; },
-          includeSuperAndInjectedMembers:  true);
-    }
+    int fieldIndex = superClassFields;
     element.forEachInstanceField((enclosing, field) {
       var getter = new Selector.getter(field.name, field.library);
       int getterSelector = backend.context.toFletchSelector(getter);
@@ -107,8 +113,6 @@ class CompiledClass {
       fieldIndex++;
     });
   }
-
-  CompiledClass(this.id, this.element, this.fields);
 }
 
 class FletchBackend extends Backend {
@@ -168,15 +172,15 @@ class FletchBackend extends Backend {
   }
 
   CompiledClass registerClassElement(ClassElement element) {
+    if (element == null) return null;
     assert(element.isDeclaration);
     return compiledClasses.putIfAbsent(element, () {
-        int id = classIds.putIfAbsent(element, () => classIds.length);
-        int fields = 0;
-        element.forEachInstanceField((enclosing, field) {
-          fields++;
-        }, includeSuperAndInjectedMembers: true);
-        return new CompiledClass(id, element, fields);
-      });
+      CompiledClass superClass = registerClassElement(element.superclass);
+      int fields = superClass != null ? superClass.fields : 0;
+      element.forEachInstanceField((enclosing, field) { fields++; });
+      int id = classIds.putIfAbsent(element, () => classIds.length);
+      return new CompiledClass(id, element, fields, superClass);
+    });
   }
 
   FletchResolutionCallbacks get resolutionCallbacks {
@@ -551,12 +555,11 @@ class FletchBackend extends Backend {
     commands.add(new ChangeStatics(context.staticIndices.length));
     changes++;
 
-    CompiledClass compiledObjectClass = compiledClasses[compiler.objectClass];
     for (CompiledClass compiledClass in compiledClasses.values) {
-      if (compiledClass == compiledObjectClass) continue;
-      ClassElement element = compiledClass.element;
+      CompiledClass superClass = compiledClass.superClass;
+      if (superClass == null) continue;
       commands.add(new PushFromMap(MapId.classes, compiledClass.id));
-      commands.add(new PushFromMap(MapId.classes, compiledObjectClass.id));
+      commands.add(new PushFromMap(MapId.classes, superClass.id));
       commands.add(const ChangeSuperClass());
       changes++;
     }

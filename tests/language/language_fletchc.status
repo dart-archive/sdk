@@ -453,7 +453,6 @@ constant_type_literal_test/none: Fail
 constructor10_test/00: MissingCompileTimeError
 constructor10_test/01: MissingCompileTimeError
 constructor10_test/02: MissingCompileTimeError
-constructor10_test/none: Fail
 constructor11_test: Fail
 constructor2_test: Fail
 constructor3_test: Fail
@@ -612,8 +611,6 @@ duplicate_implements_test/04: MissingCompileTimeError
 duplicate_interface_test: Fail
 dynamic2_test/00: MissingCompileTimeError
 dynamic2_test/01: MissingCompileTimeError
-dynamic_field_test/01: Fail
-dynamic_field_test/02: Fail
 dynamic_prefix_core_test/01: Fail
 dynamic_prefix_core_test/none: Fail
 dynamic_test: Fail
@@ -1140,7 +1137,6 @@ issue9664_test: Fail
 issue9687_test: Fail
 issue9939_test: Fail
 issue9949_test: Fail
-js_properties_test: Fail
 keyword_type_expression_test/01: MissingCompileTimeError
 keyword_type_expression_test/02: MissingCompileTimeError
 keyword_type_expression_test/03: MissingCompileTimeError
@@ -1644,13 +1640,11 @@ prefix24_test: Fail
 prefix7_negative_test: Fail
 prefix_new_test: Fail
 prefix_test: Fail
-private2_test: Fail
 private3_test: Fail
 private4_test: Fail
 private_member_test: Fail
 private_mixin2_test: Fail
 private_mixin_exception_throw_test: Fail
-private_selector_test: Fail
 private_test: Fail
 propagated_argument_type_check_test: Fail
 property_field_override_test: Fail
@@ -1859,7 +1853,6 @@ super_field_access_test: Fail
 super_field_test: Fail
 super_first_constructor_test: Fail
 super_getter_setter_test: Fail
-super_getter_test: Fail
 super_implicit_closure_test: Fail
 super_inferrer_test: Fail
 super_operator_index2_test: Fail
@@ -2266,7 +2259,6 @@ unary_plus_negative_test: Fail
 unary_test: Fail
 unbalanced_brace_test/01: MissingCompileTimeError
 unbalanced_brace_test/02: MissingCompileTimeError
-unbound_getter_test: Fail
 unicode_bom_middle_test: Fail
 unicode_hash_test: Fail
 unnamed_closure_test: Fail
