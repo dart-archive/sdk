@@ -24,7 +24,8 @@ import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
 
 import 'package:compiler/src/dart2jslib.dart' show
-    DartConstantCompiler;
+    DartConstantCompiler,
+    isPrivateName;
 
 import 'fletch_compiler.dart' show
     FletchCompiler;
@@ -67,10 +68,11 @@ class FletchContext {
 
   Map<String, String> names;
 
-  Map<FieldElement, int> staticIndices = new Map<FieldElement, int>();
+  Map<FieldElement, int> staticIndices = <FieldElement, int>{};
 
-  Map<String, id> symbolIds = new Map<String, id>();
-  Map<Selector, String> selectorToSymbol = new Map<Selector, String>();
+  Map<LibraryElement, String> libraryPrivateTag = <LibraryElement, String>{};
+  Map<String, id> symbolIds = <String, id>{};
+  Map<Selector, String> selectorToSymbol = <Selector, String>{};
 
   FletchContext(this.compiler);
 
@@ -84,6 +86,17 @@ class FletchContext {
     this.names = names;
   }
 
+  String mangleName(String name, LibraryElement library) {
+    if (!isPrivateName(name)) return name;
+    return name + libraryPrivateTag.putIfAbsent(library, () {
+      // Give the core library the unique mangling of the empty string. That
+      // will make the VM able to create selector into core (used for e.g.
+      // _noSuchMethodTrampoline).
+      if (library == compiler.coreLibrary) return "";
+      return "%${libraryPrivateTag.length}";
+    });
+  }
+
   int getStaticFieldIndex(FieldElement element, Element referrer) {
     return staticIndices.putIfAbsent(element, () => staticIndices.length);
   }
@@ -91,7 +104,7 @@ class FletchContext {
   String getSymbolFromSelector(Selector selector) {
     return selectorToSymbol.putIfAbsent(selector, () {
         StringBuffer buffer = new StringBuffer();
-        buffer.write(selector.name);
+        buffer.write(mangleName(selector.name, selector.library));
         for (String namedArgument in selector.namedArguments) {
           buffer.write(":");
           buffer.write(namedArgument);
@@ -102,7 +115,7 @@ class FletchContext {
 
   String getSymbolFromFunction(FunctionElement function) {
     StringBuffer buffer = new StringBuffer();
-    buffer.write(function.name);
+    buffer.write(mangleName(function.name, function.library));
     FunctionSignature functionSignature = function.functionSignature;
     functionSignature.orderedForEachParameter((ParameterElement parameter) {
       if (parameter.isNamed) {

@@ -18,7 +18,9 @@ abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
 abstract_runtime_error_test/03: Fail
 abstract_runtime_error_test/none: Fail
+abstract_syntax_test/00: Fail
 abstract_syntax_test/01: MissingCompileTimeError
+abstract_syntax_test/none: Fail
 ackermann_test: Fail
 adjacent_const_string_literals_test: Fail
 adjacent_string_literals_test: Fail
@@ -461,6 +463,7 @@ constructor5_test: Fail
 constructor6_test: Fail
 constructor7_test: Fail
 constructor8_test: Fail
+constructor_body_test: Fail
 constructor_default_test: Fail
 constructor_duplicate_final_test/03: MissingCompileTimeError
 constructor_duplicate_initializers_test/01: MissingCompileTimeError
@@ -485,6 +488,7 @@ constructor_return_test/02: MissingCompileTimeError
 constructor_return_test/03: MissingCompileTimeError
 constructor_return_test/04: MissingCompileTimeError
 constructor_return_test/05: MissingCompileTimeError
+constructor_return_test/none: Fail
 constructor_setter_negative_test: Fail
 constructor_test: Fail
 context2_test: Fail
@@ -611,6 +615,9 @@ duplicate_implements_test/04: MissingCompileTimeError
 duplicate_interface_test: Fail
 dynamic2_test/00: MissingCompileTimeError
 dynamic2_test/01: MissingCompileTimeError
+dynamic_call_test: Fail
+dynamic_field_test/01: Fail
+dynamic_field_test/02: Fail
 dynamic_prefix_core_test/01: Fail
 dynamic_prefix_core_test/none: Fail
 dynamic_test: Fail
@@ -918,6 +925,7 @@ function_type_parameter_test: Fail
 function_type_test: Fail
 function_type_this_parameter_test: Fail
 gc_test: Fail
+generic2_test: Fail
 generic_closure_test: Fail
 generic_constructor_mixin2_test: Fail
 generic_constructor_mixin3_test: Fail
@@ -940,7 +948,6 @@ generic_native_test: Fail
 generic_parameterized_extends_test: Fail
 generic_syntax_test: Fail
 generic_test: Fail
-generic2_test: Fail
 generics_test: Fail
 get_set_syntax_test/00: MissingCompileTimeError
 get_set_syntax_test/01: MissingCompileTimeError
@@ -965,7 +972,10 @@ getter_no_setter_test/00: Fail
 getter_no_setter_test/02: MissingCompileTimeError
 getter_no_setter_test/none: Fail
 getter_override2_test/00: Fail
+getter_override2_test/01: Fail
 getter_override2_test/02: MissingCompileTimeError
+getter_override2_test/03: Fail
+getter_override2_test/none: Fail
 getter_override_test/00: MissingCompileTimeError
 getter_override_test/01: MissingCompileTimeError
 getter_override_test/02: MissingCompileTimeError
@@ -1137,6 +1147,7 @@ issue9664_test: Fail
 issue9687_test: Fail
 issue9939_test: Fail
 issue9949_test: Fail
+js_properties_test: Fail
 keyword_type_expression_test/01: MissingCompileTimeError
 keyword_type_expression_test/02: MissingCompileTimeError
 keyword_type_expression_test/03: MissingCompileTimeError
@@ -1227,6 +1238,7 @@ literal_unary_plus_test/02: MissingCompileTimeError
 literal_unary_plus_test/03: MissingCompileTimeError
 liveness_test: Fail
 load_indexed_constant_test: Fail
+local_export_test: Fail
 local_function2_test: Fail
 local_function3_test: Fail
 local_function_non_equal_test: Fail
@@ -1306,6 +1318,7 @@ memory_swap_test: Fail
 metadata_test: Fail
 method_binding_test: Fail
 method_invocation_test: Fail
+method_name_test: Fail
 method_override2_test/00: Fail
 method_override2_test/01: Fail
 method_override2_test/02: Fail
@@ -1321,8 +1334,13 @@ method_override6_test: Fail
 method_override7_test/00: MissingCompileTimeError
 method_override7_test/01: MissingCompileTimeError
 method_override7_test/02: MissingCompileTimeError
+method_override7_test/03: Fail
+method_override7_test/none: Fail
 method_override8_test/00: MissingCompileTimeError
 method_override8_test/01: MissingCompileTimeError
+method_override8_test/02: Fail
+method_override8_test/03: Fail
+method_override8_test/none: Fail
 method_override_test: Fail
 methods_as_constants2_test: Fail
 methods_as_constants_test: Fail
@@ -1480,6 +1498,7 @@ mixin_type_parameters_super_test: Fail
 mixin_typedef_constructor_test: Fail
 mixin_with_two_implicit_constructors_test: Fail
 modulo_test: Fail
+multi_assign_test: Fail
 multi_pass2_test: Fail
 multi_pass_test: Fail
 multiple_field_assignment_constructor_test: Fail
@@ -1519,6 +1538,7 @@ namer_test: Fail
 naming2_test: Fail
 naming3_test: Fail
 naming_test: Fail
+native_test: Fail
 nested_if_test: Fail
 nested_switch_label_test: Fail
 new_statement_test: Fail
@@ -1603,6 +1623,7 @@ override_method_with_field_test/01: MissingCompileTimeError
 override_method_with_field_test/02: Fail
 override_method_with_field_test/none: Fail
 param2_test: Fail
+param_test: Fail
 parameter_default_test/01: MissingCompileTimeError
 parameter_default_test/02: MissingCompileTimeError
 parameter_default_test/03: MissingCompileTimeError
@@ -1622,12 +1643,14 @@ parse_closures_in_initializers_test: Fail
 parse_types_test: Fail
 parser_quirks_test: Fail
 partial_min_test: Fail
+patch_test: Fail
 phi_merge_test: Fail
 positional_parameters_type_test/none: Fail
 positive_bit_operations_test: Fail
 prefix101_test: Fail
 prefix10_test: Fail
 prefix11_test: Fail
+prefix12_test: Fail
 prefix13_negative_test: Fail
 prefix14_test: Fail
 prefix15_negative_test: Fail
@@ -1667,6 +1690,7 @@ pure_function_test: Fail
 range_analysis2_test: Fail
 range_analysis3_test: Fail
 range_analysis_test: Fail
+raw_string_test: Fail
 recursive_calls_test: Fail
 recursive_loop_phis_test: Fail
 redirecting_factory_default_values_test/01: MissingCompileTimeError
@@ -1714,14 +1738,22 @@ reify_typevar_test: Fail
 resolution_test: Fail
 resolve_test: Fail
 rethrow_test: Fail
+return_in_loop_test: Fail
 return_this_type_test: Fail
 return_type_test: Fail
+rewrite_assign_test: Fail
 rewrite_compound_assign_test: Fail
 rewrite_conditional_test: Fail
 rewrite_for_update_order_test: Fail
+rewrite_if_empty_then_test: Fail
+rewrite_if_return_test: Fail
 rewrite_if_swap_test: Fail
 rewrite_implicit_this_test/01: Fail
 rewrite_logical_test: Fail
+rewrite_nested_if1_test: Fail
+rewrite_nested_if2_test: Fail
+rewrite_nested_if3_test: Fail
+rewrite_swap_test: Fail
 rewrite_variable_initializer_test: Fail
 rewrite_while_many_exits_test: Fail
 rewrite_while_test: Fail
@@ -1729,9 +1761,11 @@ round_test: Fail
 runtime_type_test: Fail
 savannah_test: Fail
 scope_variable_test/01: MissingCompileTimeError
+scope_variable_test/none: Fail
 scoped_variables_try_catch_test: Fail
 script1_negative_test: Fail
 script2_negative_test: Fail
+second_test: Fail
 setter0_test: Fail
 setter1_test: Fail
 setter2_test: Fail
@@ -1853,6 +1887,7 @@ super_field_access_test: Fail
 super_field_test: Fail
 super_first_constructor_test: Fail
 super_getter_setter_test: Fail
+super_getter_test: Fail
 super_implicit_closure_test: Fail
 super_inferrer_test: Fail
 super_operator_index2_test: Fail
@@ -1975,6 +2010,7 @@ throwing_lazy_variable_test: Fail
 top_level_func_test: Fail
 top_level_getter_arrow_syntax_test: Fail
 top_level_in_initializer_test: Fail
+top_level_method_test: Fail
 top_level_multiple_files_test: Fail
 top_level_non_prefixed_library_test: Fail
 top_level_prefixed_declaration_test: Fail
@@ -2205,6 +2241,7 @@ type_propagation2_test: Fail
 type_propagation3_test: Fail
 type_propagation_assert_assignable_test: Fail
 type_propagation_in_for_update_test: Fail
+type_propagation_phi_test: Fail
 type_propagation_test: Fail
 type_variable_bounds2_test/00: Fail
 type_variable_bounds2_test/01: Fail
@@ -2262,6 +2299,7 @@ unbalanced_brace_test/02: MissingCompileTimeError
 unicode_bom_middle_test: Fail
 unicode_hash_test: Fail
 unnamed_closure_test: Fail
+unqual_name_test: Fail
 unresolved_default_constructor_test/01: Fail
 unresolved_top_level_method_negative_test: Fail
 unresolved_top_level_var_negative_test: Fail

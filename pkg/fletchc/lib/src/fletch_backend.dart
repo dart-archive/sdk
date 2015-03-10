@@ -428,7 +428,8 @@ class FletchBackend extends Backend {
   void codegenExternalNoSuchMethodTrampoline(
       FunctionElement function,
       FunctionCompiler functionCompiler) {
-    int id = context.getSymbolId(noSuchMethodName);
+    int id = context.getSymbolId(
+        context.mangleName(noSuchMethodName, compiler.coreLibrary));
     int fletchSelector = FletchSelector.encodeMethod(id, 1);
     functionCompiler.builder
         ..enterNoSuchMethod()
