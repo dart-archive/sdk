@@ -470,6 +470,17 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void visitThisPropertySet(
+      Send node,
+      Selector selector,
+      Node rhs,
+      _) {
+    builder.loadParameter(0);
+    visitForValue(rhs);
+    invokeSetter(selector);
+    applyVisitState();
+  }
+
   void visitTopLevelFieldGet(
       Send node,
       FieldElement element,

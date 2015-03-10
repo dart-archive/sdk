@@ -31,3 +31,32 @@ const patch = "patch";
   // from the caller stack before it returns.
   external _noSuchMethodTrampoline();
 }
+
+// TODO(ajohnsen): Merge 'fletch.String' into this String.
+@patch class String {
+  @patch factory String.fromCharCode(int charCode) {
+    return fletch.String.fromCharCode(charCode);
+  }
+}
+
+@patch class StringBuffer {
+  String _buffer;
+
+  @patch StringBuffer([this._buffer = ""]);
+
+  @patch void write(Object obj) {
+    _buffer = _buffer + "$obj";
+  }
+
+  @patch void writeCharCode(int charCode) {
+    _buffer = _buffer + new String.fromCharCode(charCode);
+  }
+
+  @patch void clear() {
+    _buffer = "";
+  }
+
+  @patch int get length => _buffer.length;
+
+  @patch String toString() => _buffer;
+}
