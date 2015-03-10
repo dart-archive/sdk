@@ -148,9 +148,9 @@ class Builder : public StackAllocated {
   TerminalTrieNode* const identifier_root_;
   TerminalTrieNode* const number_root_;
   ListBuilder<TreeNode*, 64> nodes_;
-  ListBuilder<TreeNode*, 1024> registry_;
-  ListBuilder<const char*, 1024> identifiers_;
-  ListBuilder<LiteralStringNode*, 1024> string_registry_;
+  ListBuilder<TreeNode*, 256> registry_;
+  ListBuilder<const char*, 256> identifiers_;
+  ListBuilder<LiteralStringNode*, 256> string_registry_;
   List<int> builtins_;
 
   TreeNode* Top() const { return nodes_.last(); }
