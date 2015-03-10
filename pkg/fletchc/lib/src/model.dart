@@ -7,11 +7,6 @@ library fletchc.model;
 import 'dart:mirrors' as mirrors;
 
 /**
- * A marker object representing reusing an existing element.
- */
-final Object REUSE_EXISTING = new Object();
-
-/**
  * Indirection from the class mirror. This allows us to adapt the interface
  * here as needed.
  */
@@ -114,37 +109,64 @@ class ClassBuilder {
   String signatureDeclaration = "";
 
   /**
-   * A map of changes to be applied to the instance members.
-   * The changes are of the form name -> declaration.
-   * The declarations may be either a string representing the new form or
-   * REUSE_EXISTING.
-   * If a name isn't included in the map, the associated entity will be
-   * deleted when the change is applied.
+   * A map of how the instance members of [original] should
+   * look after this builder has been applied.
    */
-  final Map<String, Object> instanceMembers = {};
+  final Map<String, MirrorBuilder> instanceMembers = {};
 
   /**
-   * A map of changes to be applied to the static members.
-   * The changes are of the form name -> declaration.
-   * The declarations may be either a string representing the new form or
-   * REUSE_EXISTING.
-   * If a name isn't included in the map, the associated entity will be
-   * deleted when the change is applied.
+   * A map of how the static members of [original] should
+   * look after this builder has been applied.
    */
-  final Map<String, Object> staticMembers = {};
+  final Map<String, MirrorBuilder> staticMembers = {};
 
   /**
-   * A map of changes to be applied to the fields.
-   * The changes are of the form name -> declaration.
-   * The declarations may be either a string representing the new form or
-   * REUSE_EXISTING.
-   * If a name isn't included in the map, the associated entity will be
-   * deleted when the change is applied.
+   * A map of how the fields of [original] should
+   * look after this builder has been applied.
    */
-  final Map<String, Object> fields = {};
+  final Map<String, MirrorBuilder> fields = {};
 
   ClassBuilder(this.original) {
-    // TODO(lukechurch): Populate the instance members and static maps with
-    // REUSE_EXISTING.
+
+    // Setup with no changes by default.
+
+    original.staticMembers.forEach((symbol, methodMirror) {
+      String name = mirrors.MirrorSystem.getName(symbol);
+      staticMembers.putIfAbsent(
+        name, () => new MirrorBuilder.fromMirror(methodMirror));
+    });
+
+    original.instanceMembers.forEach((symbol, methodMirror) {
+      String name = mirrors.MirrorSystem.getName(symbol);
+      staticMembers.putIfAbsent(
+        name, () => new MirrorBuilder.fromMirror(methodMirror));
+    });
+
+    // TODO(lukechurch): Do the same thing for fields.
   }
 }
+
+/**
+ * Used to assemble change a change to a [ClassBuilder].
+ */
+class MirrorBuilder {
+  final String newSource;
+  final mirrors.DeclarationMirror reuseFrom;
+
+  /**
+   * Represents a replacement of the implementation of a declaration with
+   * a new version from [newSource].
+   */
+  MirrorBuilder.fromSource(this.newSource)
+    : this.reuseFrom = null;
+
+  /**
+   * Represents reusing the implementation from [reuseFrom].
+   */
+  MirrorBuilder.fromMirror(this.reuseFrom)
+    : this.newSource = null;
+
+  bool get hasSource => newSource != null;
+  bool get isReusing => reuseFrom != null;
+}
+
