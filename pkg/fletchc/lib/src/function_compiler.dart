@@ -600,9 +600,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       bool prefix) {
     // TODO(ajohnsen): Candidate for bytecode: Inc/Dec local with non-Smi
     // bailout.
-    // If visitState is for effect, we can ignore the return value, thus always
-    // generate code for the simpler 'prefix' case.
-    if (visitState == VisitState.Effect) prefix = true;
     int slot = scope[element];
     builder.loadSlot(slot);
     // For postfix, keep local, unmodified version, to 'return' after store.
@@ -629,7 +626,10 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       LocalVariableElement element,
       IncDecOperator operator,
       _) {
-    doLocalVariableIncrement(element, operator, false);
+    // If visitState is for effect, we can ignore the return value, thus always
+    // generate code for the simpler 'prefix' case.
+    bool prefix = (visitState == VisitState.Effect);
+    doLocalVariableIncrement(element, operator, prefix);
   }
 
   void visitParameterGet(
