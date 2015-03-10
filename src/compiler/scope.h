@@ -58,6 +58,7 @@ class Scope : public IdMap<ScopeEntry*> {
 
 class ScopeEntry : public ZoneAllocated {
  public:
+  virtual ~ScopeEntry() {}
   virtual bool IsLibrary() const { return false; }
   virtual bool IsMember() const { return false; }
   virtual bool IsFormalParameter() const { return false; }
@@ -72,6 +73,7 @@ class LibraryEntry : public ScopeEntry {
  public:
   LibraryEntry(IdentifierNode* name, LibraryNode* library)
       : name_(name), library_(library) { }
+  virtual ~LibraryEntry() {}
 
   virtual bool IsLibrary() const { return true; }
   virtual LibraryEntry* AsLibrary() { return this; }
@@ -90,6 +92,7 @@ class MemberEntry : public ScopeEntry {
       : name_(name)
       , member_(NULL)
       , setter_(NULL) { }
+  virtual ~MemberEntry() {}
 
   virtual bool IsMember() const { return true; }
   virtual MemberEntry* AsMember() { return this; }
@@ -113,6 +116,7 @@ class MemberEntry : public ScopeEntry {
 class FormalParameterEntry : public ScopeEntry {
  public:
   explicit FormalParameterEntry(int index) : index_(index) { }
+  virtual ~FormalParameterEntry() {}
 
   virtual bool IsFormalParameter() const { return true; }
   virtual FormalParameterEntry* AsFormalParameter() { return this; }
@@ -129,6 +133,7 @@ class DeclarationEntry : public ScopeEntry {
       : node_(node)
       , index_(-1)
       , captured_(kNotCaptured) { }
+  virtual ~DeclarationEntry() {}
 
   virtual bool IsDeclaration() const { return true; }
   virtual DeclarationEntry* AsDeclaration() { return this; }

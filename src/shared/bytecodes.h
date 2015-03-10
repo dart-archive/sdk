@@ -129,6 +129,7 @@ class Bytecode {
 
   class Writer {
    public:
+    virtual ~Writer() {}
     virtual void Write(const char* format, ...) = 0;
   };
 

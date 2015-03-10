@@ -92,6 +92,7 @@ DO_NODES(DECLARE)
 
 class TreeVisitor : public StackAllocated {
  public:
+  virtual ~TreeVisitor() {}
   virtual void Do(TreeNode* node);
 #define DECLARE(name) virtual void Do##name(name##Node* node);
 DO_NODES(DECLARE)
@@ -100,6 +101,7 @@ DO_NODES(DECLARE)
 
 class TreeNode : public ZoneAllocated {
  public:
+  virtual ~TreeNode() {}
   virtual void Accept(TreeVisitor* visitor) = 0;
 
 #define DECLARE(name)                                                        \

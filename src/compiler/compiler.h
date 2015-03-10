@@ -80,6 +80,8 @@ class CompiledClass : public ZoneAllocated {
 
 class CompilerConsumer {
  public:
+  virtual ~CompilerConsumer() {}
+
   virtual void Initialize(int object_class_id) = 0;
 
   virtual void DoMethod(MethodNode* method, Code* code) = 0;

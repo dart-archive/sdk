@@ -26,6 +26,7 @@ class ConstClass;
 
 class ConstObjectVisitor : public StackAllocated {
  public:
+  virtual ~ConstObjectVisitor() {}
   virtual void DoNull(ConstNull* object) {}
   virtual void DoTrue(ConstTrue* object) {}
   virtual void DoFalse(ConstFalse* object) {}
@@ -40,6 +41,7 @@ class ConstObjectVisitor : public StackAllocated {
 class ConstObject : public ZoneAllocated {
  public:
   explicit ConstObject(int id) : id_(id) {}
+  virtual ~ConstObject() {}
 
   int id() const { return id_; }
 

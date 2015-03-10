@@ -15,8 +15,9 @@ class ClassVisitor {
  public:
   ClassVisitor(ClassNode* class_node, Zone* zone)
       : class_node_(class_node)
-      , zone_(zone) {
-  }
+      , zone_(zone) {}
+
+  virtual ~ClassVisitor() {}
 
   void Visit(MethodNode* constructor);
 

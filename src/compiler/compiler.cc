@@ -38,6 +38,7 @@ struct RestoreLabel {
 
 class ParameterMatcher {
  public:
+  virtual ~ParameterMatcher() {}
   virtual int LoadArgument(ExpressionNode* argument) = 0;
   virtual void MatchPositional(IdentifierNode* name,
                                int position,

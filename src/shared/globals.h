@@ -5,8 +5,13 @@
 #ifndef SRC_SHARED_GLOBALS_H_
 #define SRC_SHARED_GLOBALS_H_
 
+#ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
+#endif
+
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
+#endif
 
 #include <stddef.h>
 #include <stdio.h>
