@@ -35,7 +35,9 @@ class LibraryElement : public ZoneAllocated {
 
 class LibraryLoader : public StackAllocated {
  public:
-  explicit LibraryLoader(Builder* builder, const char* library_root);
+  explicit LibraryLoader(Builder* builder,
+                         const char* library_root,
+                         const char* package_root);
 
   LibraryElement* LoadLibrary(const char* library_name, const char* source_uri);
 
@@ -49,6 +51,7 @@ class LibraryLoader : public StackAllocated {
   Builder* builder_;
   IdMap<LibraryElement*> library_map_;
   const char* library_root_;
+  const char* package_root_;
 
   LibraryElement* LookupLibrary(IdentifierNode* library_name);
   LibraryNode* BuildLibrary(const char* source_uri) const;

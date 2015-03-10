@@ -95,7 +95,10 @@ class CompilerConsumer {
 
 class Compiler : public StackAllocated {
  public:
-  Compiler(Zone* zone, Builder* builder, const char* library_root);
+  Compiler(Zone* zone,
+           Builder* builder,
+           const char* library_root,
+           const char* package_root);
 
   LibraryLoader* loader() { return &loader_; }
   Builder* builder() { return loader()->builder(); }

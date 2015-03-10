@@ -21,7 +21,7 @@ LibraryElement* Load(LibraryLoader* loader,
 int Print(const char* library_root, const char* uri) {
   Zone zone;
   Builder builder(&zone);
-  LibraryLoader loader(&builder, library_root);
+  LibraryLoader loader(&builder, library_root, "package/");
 
   LibraryElement* root = Load(&loader, library_root, uri);
   if (root == NULL) return 1;
@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   const char* library_root =
-      fletch::OS::UriResolve(argv[0], "../../../lib/", NULL);
+      fletch::OS::UriResolve(argv[0], "../../lib/", NULL);
   int result = fletch::Print(library_root, argv[1]);
   fletch::Fletch::TearDown();
   return result;

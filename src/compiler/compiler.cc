@@ -534,9 +534,12 @@ int CompiledClass::TableEntry::Compare(const void* a, const void* b) {
       static_cast<const TableEntry*>(b)->selector();
 }
 
-Compiler::Compiler(Zone* zone, Builder* builder, const char* library_root)
+Compiler::Compiler(Zone* zone,
+                   Builder* builder,
+                   const char* library_root,
+                   const char* package_root)
     : zone_(zone)
-    , loader_(builder, library_root)
+    , loader_(builder, library_root, package_root)
     , statics_(zone)
     , field_getters_(zone)
     , field_setters_(zone)

@@ -58,7 +58,7 @@ void Scan(const char* filename) {
     Builder builder(&zone);
     CompilationUnitNode* unit = builder.BuildUnit(location);
     MethodNode* method = unit->declarations()[0]->AsMethod();
-    Compiler compiler(&zone, &builder, "");
+    Compiler compiler(&zone, &builder, "", "");
     Emitter emitter(&zone, method->parameters().length());
     compiler.CompileMethod(method, &emitter);
     if (i == 0) {

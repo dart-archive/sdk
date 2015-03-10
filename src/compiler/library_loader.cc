@@ -26,10 +26,13 @@ void LibraryElement::AddImportOf(LibraryElement* element,
   outer_library_scope()->Add(prefix->id(), entry);
 }
 
-LibraryLoader::LibraryLoader(Builder* builder, const char* library_root)
+LibraryLoader::LibraryLoader(Builder* builder,
+                             const char* library_root,
+                             const char* package_root)
     : builder_(builder),
       library_map_(builder->zone(), 0),
-      library_root_(library_root) {
+      library_root_(library_root),
+      package_root_(package_root) {
 }
 
 LibraryElement* LibraryLoader::LoadLibrary(
@@ -99,7 +102,7 @@ LibraryElement* LibraryLoader::LoadLibrary(
         const char* resolve_uri = source_uri;
         if (strncmp(import_path, "package:", 8) == 0) {
           import_path += 8;
-          resolve_uri = "package/";
+          resolve_uri = package_root_;
         }
         const char* import_uri = OS::UriResolve(resolve_uri,
                                                 import_path,

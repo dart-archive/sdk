@@ -49,7 +49,7 @@ const char* Compile(Zone* zone, const char* source) {
   library->set_scope(&scope);
   MethodNode* method = unit->declarations()[0]->AsMethod();
   method->set_owner(library);
-  Compiler compiler(zone, &builder, "");
+  Compiler compiler(zone, &builder, "", "");
   Emitter emitter(zone, method->parameters().length());
   compiler.CompileMethod(method, &emitter);
 

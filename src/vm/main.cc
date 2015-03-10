@@ -27,6 +27,8 @@ static bool RunBridgeSession(int port) {
 static bool RunSession(const char* argv0,
                        const char* input,
                        const char* out,
+                       const char* library_path,
+                       const char* package_root,
                        bool compile) {
   // Listen for new connections.
   ConnectionListener listener("127.0.0.1", 0);
@@ -40,8 +42,10 @@ static bool RunSession(const char* argv0,
   char port[256];
   snprintf(port, ARRAY_SIZE(port), "--port=%d", listener.Port());
 
-  const char* args[4] = { executable, input, port, NULL };
-  const char* args_out[5] = { executable, input, port, out, NULL };
+  const char* args[6] =
+      { executable, input, port, library_path, package_root, NULL };
+  const char* args_out[7] =
+      { executable, input, port, out, library_path, package_root, NULL };
 
   NativeProcess process(executable, compile ? args_out : args);
   process.Start();
@@ -64,7 +68,7 @@ static int Main(int argc, char** argv) {
   Flags::ExtractFromCommandLine(&argc, argv);
   FletchSetup();
 
-  if (argc > 3) {
+  if (argc > 5) {
     FATAL("Too many arguments.");
   } else if (argc < 2) {
     FATAL("Not enough arguments.");
@@ -75,16 +79,22 @@ static int Main(int argc, char** argv) {
   bool bridge_session = false;
   const char* input = argv[1];
   const char* out = NULL;
+  const char* library_path = NULL;
+  const char* package_root = NULL;
 
   if (strncmp(input, "--port=", 7) == 0) {
     compile = true;
     bridge_session = true;
   } else if (argc > 2) {
-    if (strncmp(argv[2], "--out=", 6) == 0) {
-      compile = true;
-      out = argv[2];
-    } else {
-      FATAL("Too many arguments.");
+    for (int i = 2; i < argc; i++) {
+      if (strncmp(argv[i], "--out=", 6) == 0) {
+        compile = true;
+        out = argv[i];
+      } else if (strncmp(argv[i], "--lib=", 6) == 0) {
+        library_path = argv[i];
+      } else if (strncmp(argv[i], "--packages=", 11) == 0) {
+        package_root = argv[i];
+      }
     }
   }
 
@@ -108,7 +118,8 @@ static int Main(int argc, char** argv) {
     if (bridge_session) {
       success = RunBridgeSession(atoi(input + 7));
     } else {
-      success = RunSession(argv[0], input, out, compile);
+      success =
+          RunSession(argv[0], input, out, library_path, package_root, compile);
     }
   }
 

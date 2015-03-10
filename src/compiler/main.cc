@@ -17,12 +17,16 @@
 
 namespace fletch {
 
-void Compile(const char* lib, const char* uri, int port, const char* out) {
+void Compile(const char* lib,
+             const char* package_root,
+             const char* uri,
+             int port,
+             const char* out) {
   Connection* connection = Connection::Connect("127.0.0.1", port);
 
   Zone zone;
   Builder builder(&zone, connection);
-  Compiler compiler(&zone, &builder, lib);
+  Compiler compiler(&zone, &builder, lib, package_root);
 
   LibraryElement* root = NULL;
   if (!Flags::IsOn("simple-system")) {
@@ -45,7 +49,8 @@ void Compile(const char* lib, const char* uri, int port, const char* out) {
 
 void ReportUsage(const char* executable) {
   fprintf(stderr,
-          "Usage: %s <entry> --port=<port> [--out=<file>]\n",
+          "Usage: %s <entry> --port=<port> [--out=<file>]"
+          " [--lib=<dir>] [--packages=<dir>]\n",
           executable);
   exit(1);
 }
@@ -53,21 +58,31 @@ void ReportUsage(const char* executable) {
 int Main(int argc, char** argv) {
   Flags::ExtractFromCommandLine(&argc, argv);
   Fletch::Setup();
-
-  if (argc < 3 || argc > 4) ReportUsage(argv[0]);
+  if (argc < 3 || argc > 6) ReportUsage(argv[0]);
   const char* entry = argv[1];
 
   if (strncmp(argv[2], "--port=", 7) != 0) ReportUsage(argv[0]);
   int port = atoi(argv[2] + 7);
 
   const char* out = NULL;
-  if (argc == 4) {
-    if (strncmp(argv[3], "--out=", 6) != 0) ReportUsage(argv[0]);
-    out = argv[3] + 6;
+  const char* library_path = "../../lib/";
+  const char* library_uri = argv[0];
+  const char* package_root = "package/";
+  if (argc > 3) {
+    for (int i = 3; i < argc; i++) {
+      if (strncmp(argv[i], "--out=", 6) == 0) {
+        out = argv[i] + 6;
+      } else if (strncmp(argv[i], "--lib=", 6) == 0) {
+        library_path = argv[i] + 6;
+        library_uri = "";
+      } else if (strncmp(argv[i], "--packages=", 11) == 0) {
+        package_root = argv[i] + 11;
+      }
+    }
   }
 
-  const char* lib = OS::UriResolve(argv[0], "../../lib/", NULL);
-  Compile(lib, entry, port, out);
+  const char* lib = OS::UriResolve(library_uri, library_path, NULL);
+  Compile(lib, package_root, entry, port, out);
   Fletch::TearDown();
   return 0;
 }

@@ -63,7 +63,7 @@ static void RunDartFile() {
   // Prepare the port argument.
   char port[256];
   snprintf(port, ARRAY_SIZE(port), "--port=%d", listener.Port());
-  const char* args[4] = { compiler, dart_file, port, NULL };
+  const char* args[6] = { compiler, dart_file, port, NULL };
   NativeProcess process(compiler, args);
   process.Start();
 
