@@ -486,8 +486,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
     String name = node.name;
     String camelName = name.substring(0, 1).toUpperCase() + name.substring(1);
     writeln();
-    writeln('  public static abstract class ${camelName}Callback {');
-    write('    public abstract void handle(');
+    writeln('  public interface ${camelName}Callback {');
+    write('    public void handle(');
     if (!node.returnType.isVoid) {
       writeReturnType(node.returnType);
       write(' result');

@@ -10,22 +10,22 @@ public class PerformanceService {
   public static native void Setup();
   public static native void TearDown();
 
-  public static abstract class EchoCallback {
-    public abstract void handle(int result);
+  public interface EchoCallback {
+    public void handle(int result);
   }
 
   public static native int echo(int n);
   public static native void echoAsync(int n, EchoCallback callback);
 
-  public static abstract class CountTreeNodesCallback {
-    public abstract void handle(int result);
+  public interface CountTreeNodesCallback {
+    public void handle(int result);
   }
 
   public static native int countTreeNodes(TreeNodeBuilder node);
   public static native void countTreeNodesAsync(TreeNodeBuilder node, CountTreeNodesCallback callback);
 
-  public static abstract class BuildTreeCallback {
-    public abstract void handle(TreeNode result);
+  public interface BuildTreeCallback {
+    public void handle(TreeNode result);
   }
 
   public static native TreeNode buildTree(int n);

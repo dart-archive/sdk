@@ -130,6 +130,11 @@ class List {
     return T(segment_, offset_ + (index * T::kSize));
   }
 
+  const T operator[](int index) const {
+    // TODO(kasperl): Bounds check?
+    return T(segment_, offset_ + (index * T::kSize));
+  }
+
  private:
   Segment* segment_;
   int offset_;

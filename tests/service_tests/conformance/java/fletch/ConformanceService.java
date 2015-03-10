@@ -10,78 +10,78 @@ public class ConformanceService {
   public static native void Setup();
   public static native void TearDown();
 
-  public static abstract class GetAgeCallback {
-    public abstract void handle(int result);
+  public interface GetAgeCallback {
+    public void handle(int result);
   }
 
   public static native int getAge(PersonBuilder person);
   public static native void getAgeAsync(PersonBuilder person, GetAgeCallback callback);
 
-  public static abstract class GetBoxedAgeCallback {
-    public abstract void handle(int result);
+  public interface GetBoxedAgeCallback {
+    public void handle(int result);
   }
 
   public static native int getBoxedAge(PersonBoxBuilder box);
   public static native void getBoxedAgeAsync(PersonBoxBuilder box, GetBoxedAgeCallback callback);
 
-  public static abstract class GetAgeStatsCallback {
-    public abstract void handle(AgeStats result);
+  public interface GetAgeStatsCallback {
+    public void handle(AgeStats result);
   }
 
   public static native AgeStats getAgeStats(PersonBuilder person);
   public static native void getAgeStatsAsync(PersonBuilder person, GetAgeStatsCallback callback);
 
-  public static abstract class CreateAgeStatsCallback {
-    public abstract void handle(AgeStats result);
+  public interface CreateAgeStatsCallback {
+    public void handle(AgeStats result);
   }
 
   public static native AgeStats createAgeStats(int averageAge, int sum);
   public static native void createAgeStatsAsync(int averageAge, int sum, CreateAgeStatsCallback callback);
 
-  public static abstract class CreatePersonCallback {
-    public abstract void handle(Person result);
+  public interface CreatePersonCallback {
+    public void handle(Person result);
   }
 
   public static native Person createPerson(int children);
   public static native void createPersonAsync(int children, CreatePersonCallback callback);
 
-  public static abstract class CreateNodeCallback {
-    public abstract void handle(Node result);
+  public interface CreateNodeCallback {
+    public void handle(Node result);
   }
 
   public static native Node createNode(int depth);
   public static native void createNodeAsync(int depth, CreateNodeCallback callback);
 
-  public static abstract class CountCallback {
-    public abstract void handle(int result);
+  public interface CountCallback {
+    public void handle(int result);
   }
 
   public static native int count(PersonBuilder person);
   public static native void countAsync(PersonBuilder person, CountCallback callback);
 
-  public static abstract class DepthCallback {
-    public abstract void handle(int result);
+  public interface DepthCallback {
+    public void handle(int result);
   }
 
   public static native int depth(NodeBuilder node);
   public static native void depthAsync(NodeBuilder node, DepthCallback callback);
 
-  public static abstract class FooCallback {
-    public abstract void handle();
+  public interface FooCallback {
+    public void handle();
   }
 
   public static native void foo();
   public static native void fooAsync(FooCallback callback);
 
-  public static abstract class BarCallback {
-    public abstract void handle(int result);
+  public interface BarCallback {
+    public void handle(int result);
   }
 
   public static native int bar(EmptyBuilder empty);
   public static native void barAsync(EmptyBuilder empty, BarCallback callback);
 
-  public static abstract class PingCallback {
-    public abstract void handle(int result);
+  public interface PingCallback {
+    public void handle(int result);
   }
 
   public static native int ping();
