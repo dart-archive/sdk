@@ -138,7 +138,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
         function = function,
         compiledFunction = new CompiledFunction(
             methodId,
-            computeFunctionArity(function)) {
+            function.functionSignature,
+            hasThisArgument(function)) {
     thisSlot = -1 - compiledFunction.builder.functionArity;
   }
 
@@ -152,22 +153,21 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
         function = function,
         compiledFunction = new CompiledFunction(
             methodId,
-            function.functionSignature.parameterCount) {
+            function.functionSignature,
+            false) {
     thisSlot = -1 - compiledFunction.builder.functionArity;
   }
 
-  static int computeFunctionArity(FunctionElement function) {
-    FunctionSignature signature = function.functionSignature;
-    int arity = signature.parameterCount;
+  static bool hasThisArgument(FunctionElement function) {
     if (function.isInstanceMember ||
         function.isGenerativeConstructor) {
       // 'this' argument.
-      arity++;
+      return true;
     } else if (function.memberContext != function) {
       // 'closure' argument.
-      arity++;
+      return true;
     }
-    return arity;
+    return false;
   }
 
   BytecodeBuilder get builder => compiledFunction.builder;

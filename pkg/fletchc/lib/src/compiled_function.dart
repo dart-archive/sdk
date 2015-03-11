@@ -23,14 +23,37 @@ class CompiledFunction {
 
   final int methodId;
 
+  /**
+   * The signature of the CompiledFunction.
+   *
+   * Som compiled functions does not have a signature (for example, generated
+   * accessors).
+   */
+  final FunctionSignature signature;
+
+  /**
+   * In addition to the function signature, the compiled function may take a
+   * 'this' argument.
+   */
+  final bool hasThisArgument;
+
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
 
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
 
   final Map<int, ConstantValue> classConstantValues = <int, ConstantValue>{};
 
-  CompiledFunction(this.methodId, int arity)
-      : builder = new BytecodeBuilder(arity);
+  CompiledFunction(this.methodId,
+                   FunctionSignature signature,
+                   bool hasThisArgument)
+      : this.signature = signature,
+        this.hasThisArgument = hasThisArgument,
+        builder = new BytecodeBuilder(
+          signature.parameterCount + (hasThisArgument ? 1 : 0));
+
+  CompiledFunction.accessor(this.methodId, bool setter)
+      : hasThisArgument = true,
+        builder = new BytecodeBuilder(setter ? 2 : 1);
 
   int allocateConstant(ConstantValue constant) {
     return constants.putIfAbsent(constant, () => constants.length);

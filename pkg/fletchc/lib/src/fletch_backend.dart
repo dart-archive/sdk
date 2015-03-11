@@ -741,7 +741,9 @@ class FletchBackend extends Backend {
    */
   int makeGetter(int fieldIndex) {
     return getters.putIfAbsent(fieldIndex, () {
-      CompiledFunction stub = new CompiledFunction(nextMethodId++, 1);
+      CompiledFunction stub = new CompiledFunction.accessor(
+          nextMethodId++,
+          false);
       stub.builder
           ..loadParameter(0)
           ..loadField(fieldIndex)
@@ -757,7 +759,9 @@ class FletchBackend extends Backend {
    */
   int makeSetter(int fieldIndex) {
     return setters.putIfAbsent(fieldIndex, () {
-      CompiledFunction stub = new CompiledFunction(nextMethodId++, 2);
+      CompiledFunction stub = new CompiledFunction.accessor(
+          nextMethodId++,
+          true);
       stub.builder
           ..loadParameter(0)
           ..loadParameter(1)
