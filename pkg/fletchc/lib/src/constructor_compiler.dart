@@ -32,6 +32,8 @@ import '../bytecodes.dart' show
 import 'compiled_function.dart' show
     CompiledFunction;
 
+import 'closure_environment.dart';
+
 import 'function_compiler.dart';
 
 // TODO(ajohnsen): Extend SemanticVisitor instead of FunctionCompiler?
@@ -44,9 +46,11 @@ class ConstructorCompiler extends FunctionCompiler {
                       FletchContext context,
                       TreeElements elements,
                       Registry registry,
+                      ClosureEnvironment closureEnvironment,
                       ConstructorElement constructor,
                       this.compiledClass)
-      : super.forFactory(methodId, context, elements, registry, constructor);
+      : super.forFactory(methodId, context, elements, registry,
+                         closureEnvironment, constructor);
 
   BytecodeBuilder get builder => compiledFunction.builder;
 
@@ -82,7 +86,7 @@ class ConstructorCompiler extends FunctionCompiler {
     //  parameter-m
 
     int classConstant = compiledFunction.allocateConstantFromClass(
-        compiledClass.element);
+        compiledClass.id);
     int methodId = context.backend.allocateMethodId(function);
     int constructorId = compiledFunction.allocateConstantFromFunction(methodId);
 

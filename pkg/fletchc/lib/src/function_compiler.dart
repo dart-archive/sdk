@@ -28,6 +28,8 @@ import 'package:compiler/src/dart_types.dart';
 
 import 'fletch_context.dart';
 
+import 'fletch_backend.dart';
+
 import 'fletch_constants.dart' show
     CompiledFunctionConstant,
     FletchClassConstant;
@@ -40,10 +42,68 @@ import 'compiled_function.dart' show
 
 import 'fletch_selector.dart';
 
+import 'closure_environment.dart';
+
 enum VisitState {
   Value,
   Effect,
   Test,
+}
+
+/**
+ * A reference to a local value, including how it should be used
+ * (loaded/stored).
+ */
+abstract class LocalValue {
+  final int slot;
+  final LocalElement element;
+  LocalValue(this.slot, this.element);
+
+  void initialize(BytecodeBuilder builder);
+
+  void load(BytecodeBuilder builder);
+
+  void store(BytecodeBuilder builder);
+}
+
+/**
+ * A reference to a local value that is boxed.
+ */
+class BoxedLocalValue extends LocalValue {
+  BoxedLocalValue(int slot, LocalElement element) : super(slot, element);
+
+  void initialize(BytecodeBuilder builder) {
+    builder.allocateBoxed();
+  }
+
+  void load(BytecodeBuilder builder) {
+    builder.loadBoxedSlot(slot);
+  }
+
+  void store(BytecodeBuilder builder) {
+    builder.storeBoxedSlot(slot);
+  }
+
+  String toString() => "Boxed($element, $slot)";
+}
+
+/**
+ * A reference to a local value that is boxed.
+ */
+class UnboxedLocalValue extends LocalValue {
+  UnboxedLocalValue(int slot, LocalElement element) : super(slot, element);
+
+  void initialize(BytecodeBuilder builder) {}
+
+  void load(BytecodeBuilder builder) {
+    builder.loadSlot(slot);
+  }
+
+  void store(BytecodeBuilder builder) {
+    builder.storeSlot(slot);
+  }
+
+  String toString() => "Local($element, $slot)";
 }
 
 class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
@@ -51,15 +111,20 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   final Registry registry;
 
+  final ClosureEnvironment closureEnvironment;
+
   final FunctionElement function;
 
   final CompiledFunction compiledFunction;
 
-  final Map<Element, int> scope = <Element, int>{};
+  final Map<Element, LocalValue> scope = <Element, LocalValue>{};
 
   VisitState visitState;
   BytecodeLabel trueLabel;
   BytecodeLabel falseLabel;
+
+  // The slot at which 'this' is stored. In closures, this is overridden.
+  int thisSlot;
 
   int blockLocals = 0;
 
@@ -67,29 +132,47 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
                    this.context,
                    TreeElements elements,
                    this.registry,
+                   this.closureEnvironment,
                    FunctionElement function)
       : super(elements),
         function = function,
         compiledFunction = new CompiledFunction(
             methodId,
-            function.functionSignature.parameterCount +
-            (function.isInstanceMember ||
-             function.isGenerativeConstructor ? 1 : 0));
+            computeFunctionArity(function)) {
+    thisSlot = -1 - compiledFunction.builder.functionArity;
+  }
 
   FunctionCompiler.forFactory(int methodId,
                               this.context,
                               TreeElements elements,
                               this.registry,
+                              this.closureEnvironment,
                               FunctionElement function)
       : super(elements),
         function = function,
         compiledFunction = new CompiledFunction(
             methodId,
-            function.functionSignature.parameterCount);
+            function.functionSignature.parameterCount) {
+    thisSlot = -1 - compiledFunction.builder.functionArity;
+  }
+
+  static int computeFunctionArity(FunctionElement function) {
+    FunctionSignature signature = function.functionSignature;
+    int arity = signature.parameterCount;
+    if (function.isInstanceMember ||
+        function.isGenerativeConstructor) {
+      // 'this' argument.
+      arity++;
+    } else if (function.memberContext != function) {
+      // 'closure' argument.
+      arity++;
+    }
+    return arity;
+  }
 
   BytecodeBuilder get builder => compiledFunction.builder;
 
-  get sendVisitor => this;
+  SemanticSendVisitor get sendVisitor => this;
 
   ConstantExpression compileConstant(Node node, {bool isConst}) {
     return context.compileConstant(node, elements, isConst: isConst);
@@ -106,14 +189,42 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
             new DartString.literal(string)));
   }
 
+  ClosureInfo get closureInfo => closureEnvironment.closures[function];
+
+  LocalValue createLocalValueFor(
+      LocalElement element,
+      [int slot]) {
+    if (slot == null) slot = builder.stackSize;
+    if (closureEnvironment.shouldBeBoxed(element)) {
+      return new BoxedLocalValue(slot, element);
+    }
+    return new UnboxedLocalValue(slot, element);
+  }
+
   void compile() {
     FunctionSignature functionSignature = function.functionSignature;
     int parameterCount = functionSignature.parameterCount;
     int i = 0;
     functionSignature.orderedForEachParameter((FormalElement parameter) {
       int slot = i++ - parameterCount - 1;
-      scope[parameter] = slot;
+      scope[parameter] = createLocalValueFor(parameter, slot);
     });
+
+    ClosureInfo info = closureEnvironment.closures[function];
+    if (info != null) {
+      int index = 0;
+      if (info.isThisFree) {
+        thisSlot = builder.stackSize;
+        builder.loadParameter(0);
+        builder.loadField(index++);
+      }
+      for (LocalElement local in info.free) {
+        scope[local] = createLocalValueFor(local);
+        // TODO(ajohnsen): Use a specialized helper for loading the closure.
+        builder.loadParameter(0);
+        builder.loadField(index++);
+      }
+    }
 
     Node node = function.node;
     if (node != null) {
@@ -172,6 +283,10 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       return 1;
     }
     return loadPositionalArguments(arguments, function);
+  }
+
+  void loadThis() {
+    builder.loadSlot(thisSlot);
   }
 
   /**
@@ -371,7 +486,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   void visitThisGet(
       Node node,
       _) {
-    builder.loadParameter(0);
+    loadThis();
     applyVisitState();
   }
 
@@ -449,12 +564,26 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void visitExpressionInvoke(
+      Send node,
+      Expression receiver,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    visitForValue(receiver);
+    for (Node argument in arguments) {
+      visitForValue(argument);
+    }
+    invokeMethod(selector);
+    applyVisitState();
+  }
+
   void visitThisPropertyInvoke(
       Send node,
       NodeList arguments,
       Selector selector,
       _) {
-    builder.loadParameter(0);
+    loadThis();
     for (Node argument in arguments) {
       visitForValue(argument);
     }
@@ -476,7 +605,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Send node,
       Selector selector,
       _) {
-    builder.loadParameter(0);
+    loadThis();
     invokeGetter(selector);
     applyVisitState();
   }
@@ -599,8 +728,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Send node,
       LocalVariableElement element,
       _) {
-    int slot = scope[element];
-    builder.loadSlot(slot);
+    scope[element].load(builder);
     applyVisitState();
   }
 
@@ -610,8 +738,21 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Node rhs,
       _) {
     visitForValue(rhs);
-    int slot = scope[element];
-    builder.storeSlot(slot);
+    scope[element].store(builder);
+    applyVisitState();
+  }
+
+  void visitLocalVariableInvoke(
+      Send node,
+      LocalVariableElement element,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    scope[element].load(builder);
+    for (Node argument in arguments) {
+      visitForValue(argument);
+    }
+    invokeMethod(selector);
     applyVisitState();
   }
 
@@ -621,15 +762,15 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       bool prefix) {
     // TODO(ajohnsen): Candidate for bytecode: Inc/Dec local with non-Smi
     // bailout.
-    int slot = scope[element];
-    builder.loadSlot(slot);
+    LocalValue value = scope[element];
+    value.load(builder);
     // For postfix, keep local, unmodified version, to 'return' after store.
     if (!prefix) builder.dup();
     builder.loadLiteral(1);
     Selector selector = new Selector.binaryOperator(
         operator == IncDecOperator.INC ? '+' : '-');
     invokeMethod(selector);
-    builder.storeSlot(slot);
+    value.store(builder);
     if (!prefix) builder.pop();
     applyVisitState();
   }
@@ -687,6 +828,34 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     registry.registerInstantiatedType(elements.getType(node));
     builder.invokeStatic(constId, arity);
     applyVisitState();
+  }
+
+  void visitFunctionExpression(FunctionExpression node) {
+    FunctionElement function = elements[node];
+    ClosureInfo info = closureEnvironment.closures[function];
+    int fields = info.free.length;
+    if (info.isThisFree) {
+      fields++;
+      loadThis();
+    }
+    CompiledClass compiledClass = context.backend.createStubClass(
+        fields,
+        context.backend.compiledObjectClass);
+    for (LocalVariableElement element in info.free) {
+      // Load the raw value (the 'Box' when by reference).
+      builder.loadSlot(scope[element].slot);
+    }
+    int classConstant = compiledFunction.allocateConstantFromClass(
+        compiledClass.id);
+    builder.allocate(classConstant, fields);
+
+    int methodId = context.backend.allocateMethodId(function);
+    int arity = function.functionSignature.parameterCount;
+    Selector selector = new Selector.call('call', null, arity);
+    int fletchSelector = context.toFletchSelector(selector);
+    compiledClass.methodTable[fletchSelector] = methodId;
+
+    registry.registerStaticInvocation(function);
   }
 
   void visitExpression(Expression node) {
@@ -816,14 +985,11 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       } else {
         visitForValue(initializer);
       }
-      scope[element] = slot;
+      LocalValue value = createLocalValueFor(element, slot);
+      value.initialize(builder);
+      scope[element] = value;
       blockLocals++;
     }
-  }
-
-  void visitFunctionExpression(FunctionExpression node) {
-    generateUnimplementedError(
-        node, "[visitFunctionExpression] isn't implemented.");
   }
 
   void visitParameterInvocation(

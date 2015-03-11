@@ -609,6 +609,9 @@ duplicate_implements_test/04: MissingCompileTimeError
 duplicate_interface_test: Fail
 dynamic2_test/00: MissingCompileTimeError
 dynamic2_test/01: MissingCompileTimeError
+dynamic_field_test/01: Fail
+dynamic_field_test/02: Fail
+dynamic_field_test/none: Fail
 dynamic_prefix_core_test/01: Fail
 dynamic_prefix_core_test/none: Fail
 dynamic_test: Fail
@@ -720,6 +723,8 @@ field_override_test/02: Fail
 field_override_test/none: Fail
 field_parameter_test: Fail
 field_test: Fail
+field_type_check2_test/01: Fail
+field_type_check_test/01: Fail
 final_field_initialization_order_test: Fail
 final_for_in_variable_test/none: Fail
 final_is_not_const_test/01: MissingCompileTimeError
@@ -904,7 +909,6 @@ function_type_alias_test: Fail
 function_type_parameter2_test: Fail
 function_type_parameter_test: Fail
 function_type_test: Fail
-function_type_this_parameter_test: Fail
 gc_test: Fail
 generic2_test: Fail
 generic_closure_test: Fail
@@ -1115,7 +1119,6 @@ issue18628_1_test/01: Fail
 issue20476_test: Fail
 issue3806_test: Fail
 issue4157508_test: Fail
-issue4295001_test: Fail
 issue4515170_test: Fail
 issue7513_test: Fail
 issue7525_test: Fail
@@ -1173,7 +1176,6 @@ least_upper_bound_test/none: Fail
 left_shift_test: Fail
 library1_test: Fail
 library5_test: Fail
-library_ambiguous_test/04: MissingRuntimeError
 library_ambiguous_test/05: MissingCompileTimeError
 library_juxtaposition_test: Fail
 library_prefixes_test: Fail
@@ -1692,6 +1694,7 @@ regress_18535_test: Fail
 regress_20074_test: Fail
 regress_20394_test/01: MissingCompileTimeError
 regress_20840_test: Fail
+regress_20935_test: Fail
 regress_r24720_test: Fail
 reify_typevar_test: Fail
 resolution_test: Fail
@@ -1749,6 +1752,8 @@ state_mangling_test: Fail
 statement_test: Fail
 static_closure_identical_test: Fail
 static_const_field_test: Fail
+static_field2_test: Fail
+static_field2a_test: Fail
 static_field3_test/01: Fail
 static_field3_test/02: Fail
 static_field3_test/03: Fail
@@ -2053,7 +2058,6 @@ type_promotion_functions_test/12: Fail
 type_promotion_functions_test/13: Fail
 type_promotion_functions_test/14: Fail
 type_promotion_functions_test/none: Fail
-type_propagation2_test: Fail
 type_propagation3_test: Fail
 type_propagation_assert_assignable_test: Fail
 type_propagation_in_for_update_test: Fail
@@ -2102,7 +2106,6 @@ type_variable_scope_test/05: Fail
 type_variable_scope_test/none: Fail
 type_variable_typedef_test: Fail
 typed_message_test: Fail
-typed_selector2_test: Fail
 typed_selector_test: Fail
 typedef_is_test: Fail
 typevariable_substitution2_test/02: Fail
@@ -2113,7 +2116,6 @@ unbalanced_brace_test/01: MissingCompileTimeError
 unbalanced_brace_test/02: MissingCompileTimeError
 unicode_bom_middle_test: Fail
 unicode_hash_test: Fail
-unnamed_closure_test: Fail
 unresolved_default_constructor_test/01: Fail
 unresolved_top_level_method_negative_test: Fail
 unresolved_top_level_var_negative_test: Fail

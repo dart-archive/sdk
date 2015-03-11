@@ -42,9 +42,9 @@ class FletchFunctionConstant extends ConstantValue {
 }
 
 class FletchClassConstant extends ConstantValue {
-  final ClassElement element;
+  final int classId;
 
-  FletchClassConstant(this.element);
+  FletchClassConstant(this.classId);
 
   DartType getType(CoreTypes types) => const DynamicType();
 
@@ -57,7 +57,6 @@ class FletchClassConstant extends ConstantValue {
   String unparse() => toStructuredString();
 
   String toStructuredString() {
-    String enclosing = element.library.getLibraryOrScriptName();
-    return 'FletchClassConstant($enclosing:${element.name})';
+    return 'FletchClassConstant($classId)';
   }
 }

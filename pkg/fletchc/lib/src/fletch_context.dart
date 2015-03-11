@@ -15,6 +15,7 @@ import 'package:compiler/src/elements/elements.dart' show
     FieldElement,
     FunctionElement,
     FunctionSignature,
+    LibraryElement,
     ParameterElement;
 
 import 'package:compiler/src/resolution/resolution.dart' show

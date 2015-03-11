@@ -73,6 +73,8 @@ import 'function_compiler.dart';
 
 import 'constructor_compiler.dart';
 
+import 'closure_environment.dart';
+
 import '../commands.dart';
 
 class CompiledClass {
@@ -96,6 +98,9 @@ class CompiledClass {
   bool get hasSuperClass => superClass != null;
 
   void createImplicitAccessors(FletchBackend backend) {
+    // If we don't have an element (stub class), we don't have anything to
+    // generate accessors for.
+    if (element == null) return;
     // TODO(ajohnsen): Don't do this once dart2js can enqueue field getters in
     // CodegenEnqueuer.
     int fieldIndex = superClassFields;
@@ -139,12 +144,15 @@ class FletchBackend extends Backend {
 
   final Set<FunctionElement> externals = new Set<FunctionElement>();
 
-  final Map<ClassElement, int> classIds = <ClassElement, int>{};
-
   final Map<ClassElement, CompiledClass> compiledClasses =
       <ClassElement, CompiledClass>{};
 
+  final List<CompiledClass> classes = <CompiledClass>[];
+
   final Set<ClassElement> builtinClasses = new Set<ClassElement>();
+
+  final Map<FunctionElement, ClosureEnvironment> closureEnvironments =
+      <FunctionElement, ClosureEnvironment>{};
 
   final Map<int, int> getters = <int, int>{};
   final Map<int, int> setters = <int, int>{};
@@ -164,6 +172,8 @@ class FletchBackend extends Backend {
 
   FieldElement fletchNativeElement;
 
+  CompiledClass compiledObjectClass;
+
   ClassElement stringClass;
   ClassElement smiClass;
   ClassElement mintClass;
@@ -182,9 +192,27 @@ class FletchBackend extends Backend {
       CompiledClass superClass = registerClassElement(element.superclass);
       int fields = superClass != null ? superClass.fields : 0;
       element.forEachInstanceField((enclosing, field) { fields++; });
-      int id = classIds.putIfAbsent(element, () => classIds.length);
-      return new CompiledClass(id, element, fields, superClass);
+      int id = classes.length;
+      CompiledClass compiledClass = new CompiledClass(
+          id,
+          element,
+          fields,
+          superClass);
+      classes.add(compiledClass);
+      return compiledClass;
     });
+  }
+
+  CompiledClass createStubClass(int fields, CompiledClass superClass) {
+    int totalFields = fields + superClass.fields;
+    int id = classes.length;
+    CompiledClass compiledClass = new CompiledClass(
+        id,
+        null,
+        totalFields,
+        superClass);
+    classes.add(compiledClass);
+    return compiledClass;
   }
 
   FletchResolutionCallbacks get resolutionCallbacks {
@@ -233,7 +261,7 @@ class FletchBackend extends Backend {
 
     fletchNativeElement = fletchSystemLibrary.findLocal('native');
 
-    ClassElement loadBuiltinClass(String name, LibraryElement library) {
+    CompiledClass loadBuiltinClass(String name, LibraryElement library) {
       var classImpl = library.findLocal(name);
       if (classImpl == null) {
         compiler.internalError(library, "Internal class '$name' not found.");
@@ -243,22 +271,24 @@ class FletchBackend extends Backend {
       // TODO(ahe): Register in ResolutionCallbacks. The 3 lines below should
       // not happen at this point in time.
       classImpl.ensureResolved(compiler);
-      registerClassElement(classImpl);
+      CompiledClass compiledClass = registerClassElement(classImpl);
       world.registerInstantiatedType(classImpl.rawType, registry);
       // TODO(ahe): This is a hack to let both the world and the codegen know
       // about the instantiated type.
       registry.registerInstantiatedType(classImpl.rawType);
-      return classImpl;
+      return compiledClass;
     }
 
-    smiClass = loadBuiltinClass("_Smi", fletchSystemLibrary);
-    mintClass = loadBuiltinClass("_Mint", fletchSystemLibrary);
-    stringClass = loadBuiltinClass("String", fletchSystemLibrary);
+    compiledObjectClass = loadBuiltinClass("Object", compiler.coreLibrary);
+    smiClass = loadBuiltinClass("_Smi", fletchSystemLibrary).element;
+    mintClass = loadBuiltinClass("_Mint", fletchSystemLibrary).element;
+    stringClass = loadBuiltinClass("String", fletchSystemLibrary).element;
     loadBuiltinClass("Null", compiler.coreLibrary);
     loadBuiltinClass("bool", compiler.coreLibrary);
-    loadBuiltinClass("Object", compiler.coreLibrary);
 
-    // TODO(ajohnsen): Remoev? - string interpolation does not enqueue '+'.
+    // TODO(ajohnsen): Remove? String interpolation does not enqueue '+'.
+    // Investigate what else it may enqueue, could be StringBuilder, and then
+    // consider using that instead.
     world.registerDynamicInvocation(new Selector.binaryOperator('+'));
 
     void registerNamedSelector(String name, LibraryElement library, int arity) {
@@ -316,11 +346,16 @@ class FletchBackend extends Backend {
       registry.registerStaticInvocation(fletchSystemEntry);
     }
 
+    ClosureEnvironment closureEnvironment = createClosureEnvironment(
+        function,
+        elements);
+
     FunctionCompiler functionCompiler = new FunctionCompiler(
         allocateMethodId(function),
         context,
         elements,
         registry,
+        closureEnvironment,
         function);
 
     if (isNative(function)) {
@@ -464,10 +499,20 @@ class FletchBackend extends Backend {
 
   bool get canHandleCompilationFailed => true;
 
+  ClosureEnvironment createClosureEnvironment(
+      FunctionElement function,
+      TreeElements elements) {
+    function = function.memberContext;
+    return closureEnvironments.putIfAbsent(function, () {
+      ClosureVisitor environment = new ClosureVisitor(function, elements);
+      return environment.compute();
+    });
+  }
+
   int assembleProgram() {
     // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
     // This is a workaround, where we basically add getters for all fields.
-    for (CompiledClass compiledClass in compiledClasses.values) {
+    for (CompiledClass compiledClass in classes) {
       compiledClass.createImplicitAccessors(this);
     }
 
@@ -505,10 +550,9 @@ class FletchBackend extends Backend {
           } else if (constant is FletchClassConstant) {
             commands.add(const PushNull());
             deferredActions.add(() {
-              int referredClassId = compiledClasses[constant.element].id;
               commands
                   ..add(new PushFromMap(MapId.methods, methodId))
-                  ..add(new PushFromMap(MapId.classes, referredClassId))
+                  ..add(new PushFromMap(MapId.classes, constant.classId))
                   ..add(new ChangeMethodLiteral(index));
             });
           } else {
@@ -530,7 +574,7 @@ class FletchBackend extends Backend {
 
     int changes = 0;
 
-    for (CompiledClass compiledClass in compiledClasses.values) {
+    for (CompiledClass compiledClass in classes) {
       ClassElement element = compiledClass.element;
       if (builtinClasses.contains(element)) {
         int nameId = context.getSymbolId(element.name);
@@ -560,7 +604,7 @@ class FletchBackend extends Backend {
     commands.add(new ChangeStatics(context.staticIndices.length));
     changes++;
 
-    for (CompiledClass compiledClass in compiledClasses.values) {
+    for (CompiledClass compiledClass in classes) {
       CompiledClass superClass = compiledClass.superClass;
       if (superClass == null) continue;
       commands.add(new PushFromMap(MapId.classes, compiledClass.id));
@@ -668,11 +712,16 @@ class FletchBackend extends Backend {
     ClassElement classElement = constructor.enclosingClass;
     CompiledClass compiledClass = registerClassElement(classElement);
 
+    ClosureEnvironment closureEnvironment = createClosureEnvironment(
+        constructor,
+        elements);
+
     ConstructorCompiler constructorCompiler = new ConstructorCompiler(
         nextMethodId++,
         context,
         elements,
         registry,
+        closureEnvironment,
         constructor,
         compiledClass);
 

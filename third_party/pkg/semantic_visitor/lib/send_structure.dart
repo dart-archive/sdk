@@ -114,14 +114,14 @@ class InvokeStructure<R, A> implements SendStructure<R, A> {
           node,
           semantics.element,
           node.argumentsNode,
-          selector,
+          new Selector.callClosureFrom(selector),
           arg);
     case AccessKind.LOCAL_VARIABLE:
       return visitor.visitLocalVariableInvoke(
           node,
           semantics.element,
           node.argumentsNode,
-          selector,
+          new Selector.callClosureFrom(selector),
           arg);
     case AccessKind.PARAMETER:
       return visitor.visitParameterInvoke(

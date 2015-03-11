@@ -69,6 +69,11 @@ class BytecodeBuilder {
     internalAdd(bytecode);
   }
 
+  void loadBoxed(int offset) {
+    assert(offset >= 0);
+    internalAdd(new LoadBoxed(offset));
+  }
+
   void dup() {
     loadLocal(0);
   }
@@ -85,6 +90,11 @@ class BytecodeBuilder {
   void loadSlot(int slot) {
     int offset = stackSize - slot - 1;
     loadLocal(offset);
+  }
+
+  void loadBoxedSlot(int slot) {
+    int offset = stackSize - slot - 1;
+    loadBoxed(offset);
   }
 
   void loadParameter(int parameter) {
@@ -130,12 +140,22 @@ class BytecodeBuilder {
     internalAdd(new StoreLocal(offset));
   }
 
+  void storeBoxed(int offset) {
+    assert(offset >= 0);
+    internalAdd(new StoreBoxed(offset));
+  }
+
   /**
    * See loadSlot for information about 'slots'.
    */
   void storeSlot(int slot) {
     int offset = stackSize - slot - 1;
     storeLocal(offset);
+  }
+
+  void storeBoxedSlot(int slot) {
+    int offset = stackSize - slot - 1;
+    storeBoxed(offset);
   }
 
   void storeStatic(int index) {
@@ -241,6 +261,10 @@ class BytecodeBuilder {
 
   void allocate(int classId, int fields) {
     internalAddStackPointerDifference(new AllocateUnfold(classId), 1 - fields);
+  }
+
+  void allocateBoxed() {
+    internalAdd(const AllocateBoxed());
   }
 
   bool get endsWithTerminator {

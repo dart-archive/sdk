@@ -27,8 +27,7 @@ class CompiledFunction {
 
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
 
-  final Map<Element, ConstantValue> classConstantValues =
-      <Element, ConstantValue>{};
+  final Map<int, ConstantValue> classConstantValues = <int, ConstantValue>{};
 
   CompiledFunction(this.methodId, int arity)
       : builder = new BytecodeBuilder(arity);
@@ -44,10 +43,10 @@ class CompiledFunction {
     return allocateConstant(constant);
   }
 
-  int allocateConstantFromClass(ClassElement element) {
+  int allocateConstantFromClass(int classId) {
     FletchClassConstant constant =
         classConstantValues.putIfAbsent(
-            element, () => new FletchClassConstant(element));
+            classId, () => new FletchClassConstant(classId));
     return allocateConstant(constant);
   }
 
