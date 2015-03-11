@@ -525,6 +525,15 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void visitStringJuxtaposition(StringJuxtaposition node) {
+    visitForValue(node.first);
+    visitForValue(node.second);
+    // TODO(ajohnsen): Cache these in context/backend.
+    Selector concat = new Selector.binaryOperator('+');
+    invokeMethod(concat);
+    applyVisitState();
+  }
+
   void visitStringInterpolation(StringInterpolation node) {
     // TODO(ajohnsen): Cache these in context/backend.
     Selector toString = new Selector.call('toString', null, 0);
@@ -537,6 +546,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       invokeMethod(concat);
       invokeMethod(concat);
     }
+    applyVisitState();
   }
 
   void visitLiteralNull(LiteralNull node) {
