@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.expression_visitor;
+library fletchc.function_compiler;
 
 import 'package:semantic_visitor/semantic_visitor.dart' show
     SemanticSendVisitor,
@@ -75,6 +75,17 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
             function.functionSignature.parameterCount +
             (function.isInstanceMember ||
              function.isGenerativeConstructor ? 1 : 0));
+
+  FunctionCompiler.forFactory(int methodId,
+                              this.context,
+                              TreeElements elements,
+                              this.registry,
+                              FunctionElement function)
+      : super(elements),
+        function = function,
+        compiledFunction = new CompiledFunction(
+            methodId,
+            function.functionSignature.parameterCount);
 
   BytecodeBuilder get builder => compiledFunction.builder;
 
@@ -657,7 +668,10 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   void visitNewExpression(NewExpression node) {
     ConstructorElement constructor = elements[node.send];
     int arity = loadArguments(node.send.argumentsNode, constructor);
-    int constructorId = context.backend.compileConstructor(constructor);
+    int constructorId = context.backend.compileConstructor(
+        constructor,
+        elements,
+        registry);
     int constId = compiledFunction.allocateConstantFromFunction(constructorId);
     registry.registerStaticInvocation(constructor);
     registry.registerInstantiatedType(elements.getType(node));

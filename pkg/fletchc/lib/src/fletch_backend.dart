@@ -71,6 +71,8 @@ import 'fletch_selector.dart';
 
 import 'function_compiler.dart';
 
+import 'constructor_compiler.dart';
+
 import '../commands.dart';
 
 class CompiledClass {
@@ -89,7 +91,9 @@ class CompiledClass {
    *
    * If this class has no super class (if it's Object), 0 is returned.
    */
-  int get superClassFields => superClass != null ? superClass.fields : 0;
+  int get superClassFields => hasSuperClass ? superClass.fields : 0;
+
+  bool get hasSuperClass => superClass != null;
 
   void createImplicitAccessors(FletchBackend backend) {
     // TODO(ajohnsen): Don't do this once dart2js can enqueue field getters in
@@ -645,7 +649,9 @@ class FletchBackend extends Backend {
     return element;
   }
 
-  int compileConstructor(ConstructorElement constructor) {
+  int compileConstructor(ConstructorElement constructor,
+                         TreeElements elements,
+                         Registry registry) {
     // TODO(ajohnsen): Move out to seperate file, and visit super
     // constructors as well.
     if (constructorIds.containsKey(constructor)) {
@@ -662,78 +668,23 @@ class FletchBackend extends Backend {
     ClassElement classElement = constructor.enclosingClass;
     CompiledClass compiledClass = registerClassElement(classElement);
 
-    FunctionSignature signature = constructor.functionSignature;
-    CompiledFunction stub = new CompiledFunction(
+    ConstructorCompiler constructorCompiler = new ConstructorCompiler(
         nextMethodId++,
-        signature.parameterCount);
-    BytecodeBuilder builder = stub.builder;
+        context,
+        elements,
+        registry,
+        constructor,
+        compiledClass);
 
-    Map<FieldElement, int> scope = <FieldElement, int>{};
-
-    // Initialize all fields (including super-classes).
-    int fieldIndex = 0;
-    classElement.forEachInstanceField(
-        (ClassElement enclosingClass, FieldElement field) {
-          scope[field] = fieldIndex++;
-          Expression initializer = field.initializer;
-          if (initializer == null) {
-            builder.loadLiteralNull();
-          } else {
-            generateUnimplementedError(
-                field,
-                "Unhandled field initializer",
-                stub);
-          }
-        },
-        includeSuperAndInjectedMembers: true);
-
-    int parameterCount = signature.parameterCount;
-
-    int parameterIndex = 0;
-    signature.orderedForEachParameter((FormalElement parameter) {
-      builder.loadParameter(parameterIndex++);
-      if (parameter.isInitializingFormal) {
-        builder.storeSlot(scope[parameter.fieldElement]);
-      }
-    });
-
-    int classConstant = stub.allocateConstantFromClass(classElement);
-    int methodId = allocateMethodId(constructor);
-    int constructorId = stub.allocateConstantFromFunction(methodId);
-
-    // TODO(ajohnsen): Let allocate take an offset to the field stack, so we
-    // don't have to copy all the fields?
-    // Copy all the fields to the end of the stack.
-    for (int i = 0; i < fieldIndex; i++) {
-      builder.loadSlot(i);
-    }
-    assert(fieldIndex == compiledClass.fields);
-    builder.allocate(classConstant, fieldIndex);
-    // The stack is now:
-    //   - Fields
-    //   - Arguments
-    //   - New instance
-    builder.dup();
-    for (int i = 0; i < parameterCount; i++) {
-      builder.loadSlot(fieldIndex + i);
-    }
-    // Invoke the constructor body.
-    builder
-        ..invokeStatic(constructorId, 1 + parameterCount)
-        ..pop();
-
-    // Return the instance.
-    builder
-        ..ret()
-        ..methodEnd();
-
+    constructorCompiler.compile();
+    CompiledFunction compiledFunction = constructorCompiler.compiledFunction;
     if (compiler.verbose) {
-      print(stub.verboseToString());
+      print(compiledFunction.verboseToString());
     }
 
-    functions.add(stub);
+    functions.add(compiledFunction);
 
-    return stub.methodId;
+    return compiledFunction.methodId;
   }
 
   /**
