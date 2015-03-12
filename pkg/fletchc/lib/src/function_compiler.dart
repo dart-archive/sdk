@@ -819,14 +819,22 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   void visitNewExpression(NewExpression node) {
     ConstructorElement constructor = elements[node.send];
     int arity = loadArguments(node.send.argumentsNode, constructor);
-    int constructorId = context.backend.compileConstructor(
-        constructor,
-        elements,
-        registry);
-    int constId = compiledFunction.allocateConstantFromFunction(constructorId);
-    registry.registerStaticInvocation(constructor);
-    registry.registerInstantiatedType(elements.getType(node));
-    builder.invokeStatic(constId, arity);
+    if (constructor.isFactoryConstructor) {
+      registry.registerStaticInvocation(constructor);
+      int methodId = context.backend.allocateMethodId(constructor);
+      int constId = compiledFunction.allocateConstantFromFunction(methodId);
+      builder.invokeFactory(constId, arity);
+    } else {
+      int constructorId = context.backend.compileConstructor(
+          constructor,
+          elements,
+          registry);
+      int constId = compiledFunction.allocateConstantFromFunction(
+          constructorId);
+      registry.registerStaticInvocation(constructor);
+      registry.registerInstantiatedType(elements.getType(node));
+      builder.invokeStatic(constId, arity);
+    }
     applyVisitState();
   }
 

@@ -172,6 +172,12 @@ class BytecodeBuilder {
         1 - arity);
   }
 
+  void invokeFactory(int id, int arity) {
+    internalAddStackPointerDifference(
+        new InvokeFactoryUnfold(id),
+        1 - arity);
+  }
+
   void invokeMethod(int selector, int arity) {
     internalAddStackPointerDifference(new InvokeMethod(selector), -arity);
   }

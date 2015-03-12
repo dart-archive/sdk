@@ -9,8 +9,6 @@
 aborting_switch_case_test: Fail
 abstract_exact_selector_test/01: Fail
 abstract_exact_selector_test/none: Fail
-abstract_factory_constructor_test/00: Fail
-abstract_factory_constructor_test/none: Fail
 abstract_getter_test/01: Fail
 abstract_method_test: Fail
 abstract_object_method_test: Fail
@@ -661,9 +659,6 @@ f_bounded_quantification5_test: Fail
 f_bounded_quantification_test/01: Fail
 f_bounded_quantification_test/02: Fail
 f_bounded_quantification_test/none: Fail
-factory1_test/00: Fail
-factory1_test/01: Fail
-factory1_test/none: Fail
 factory2_test: Fail
 factory3_test: Fail
 factory4_test: Fail
@@ -1600,6 +1595,7 @@ parameter_default_test/08: MissingCompileTimeError
 parameter_default_test/none: Fail
 parameter_initializer1_negative_test: Fail
 parameter_initializer2_test: Fail
+parameter_initializer3_negative_test: Fail
 parameter_initializer5_negative_test: Fail
 parameter_initializer_test: Fail
 parameter_name_conflict_test: Fail
