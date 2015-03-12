@@ -664,6 +664,10 @@ class FletchBackend extends Backend {
     }
   }
 
+  bool isBackendLibrary(LibraryElement library) {
+    return library == fletchSystemLibrary;
+  }
+
   /// Return non-null to enable patching. Possible return values are 'new' and
   /// 'old'. Referring to old and new emitter. Since the new emitter is the
   /// future, we assume 'old' will go away. So it seems the best option for

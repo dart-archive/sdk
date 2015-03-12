@@ -26,7 +26,7 @@ external invokeMain([arguments, isolateArgument]);
 
 /// This is the main entry point for a Fletch program, and it takes care of
 /// calling "main" and exiting the VM when "main" is done.
-entry(core.int mainArity) {
+entry(int mainArity) {
   invokeMain();
   yield(true);
 }

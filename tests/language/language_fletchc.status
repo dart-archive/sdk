@@ -1498,7 +1498,6 @@ nested_switch_label_test: Fail
 new_statement_test: Fail
 no_such_constructor2_test: Fail
 no_such_method2_test: Fail
-no_such_method3_test: Fail
 no_such_method_dispatcher_test: Fail
 no_such_method_empty_selector_test: Fail
 no_such_method_subtype_test: Fail
