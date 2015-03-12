@@ -1212,8 +1212,7 @@ void ByteArray::set(int index, uint8 value) {
 
 void ByteArray::Initialize(int length) {
   set_length(length);
-  // Initialize the body of the instance.
-  for (int i = 0; i < length; i++) set(i, 0);
+  memset(reinterpret_cast<void*>(address() + kSize), 0, length - kSize);
 }
 
 // Inlined Class functions.
@@ -1296,9 +1295,7 @@ void String::Initialize(int size, int length) {
   set_length(length);
   set_hash_value(kNoHashValue);
   // Clear the body.
-  for (int offset = kSize; offset < size; offset += kPointerSize) {
-    at_put(offset, Smi::FromWord(0));
-  }
+  memset(reinterpret_cast<void*>(address() + kSize), 0, size - kSize);
 }
 
 word String::hash_value() {
