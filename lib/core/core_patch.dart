@@ -13,6 +13,9 @@ const patch = "patch";
 @patch class Object {
   @patch String toString() => '[object Object]';
 
+  // TODO(ajohnsen): Not very good..
+  @patch int get hashCode => 42;
+
   @patch noSuchMethod(Invocation invocation) {
     // TODO(kasperl): Extract information from the invocation
     // so we can construct the right NoSuchMethodError.

@@ -18,6 +18,7 @@ abstract_runtime_error_test/03: Fail
 abstract_runtime_error_test/none: Fail
 abstract_syntax_test/01: MissingCompileTimeError
 ackermann_test: Fail
+ackermann_test: Timeout
 adjacent_const_string_literals_test: Fail
 adjacent_string_literals_test: Fail
 allocate_large_object_test: Fail
@@ -87,7 +88,6 @@ bad_named_parameters_test/none: Fail
 bad_override_test/03: MissingCompileTimeError
 bad_override_test/04: MissingCompileTimeError
 bad_override_test/05: MissingCompileTimeError
-bailout2_test: Fail
 bailout3_test: Fail
 bailout4_test: Fail
 bailout5_test: Fail
@@ -434,7 +434,6 @@ const_types_test/40: Fail
 const_types_test/41: MissingCompileTimeError
 const_types_test/none: Fail
 const_var_test: Fail
-constant_fold_equals_test: Fail
 constant_locals_test/01: MissingCompileTimeError
 constant_locals_test/02: MissingCompileTimeError
 constant_locals_test/03: MissingCompileTimeError
@@ -581,7 +580,6 @@ div_by_zero_test: Fail
 div_with_power_of_two2_test: Fail
 div_with_power_of_two_test: Fail
 do_while2_test: Fail
-do_while3_test: Fail
 do_while4_test: Fail
 do_while_test: Fail
 double_comparison_test: Fail
@@ -690,7 +688,6 @@ fast_method_extraction_test: Fail
 fauxverride_test/03: MissingCompileTimeError
 fauxverride_test/05: MissingCompileTimeError
 fauxverride_test/none: Fail
-fibo_test: Fail
 field1_negative_test: Fail
 field2_negative_test: Fail
 field3_negative_test: Fail
@@ -755,7 +752,6 @@ for2_test: Fail
 for_in2_test: Fail
 for_in_side_effects_test: Fail
 for_in_test: Fail
-for_inlining_test: Fail
 for_test: Fail
 for_without_condition_test: Fail
 forwarding_factory_constructor_default_values_test: Fail
@@ -1026,7 +1022,6 @@ inferrer_synthesized_super_constructor2_test: Fail
 inferrer_this_access_test: Fail
 infinite_switch_label_test: Fail
 infinity_test: Fail
-inline_add_constants_to_initial_env_test: Fail
 inline_argument_test: Fail
 inline_closure_with_constant_arguments_test: Fail
 inline_effect_context_test: Fail
@@ -1112,7 +1107,6 @@ issue15702_test: Fail
 issue15720_test: Fail
 issue18628_1_test/01: Fail
 issue20476_test: Fail
-issue3806_test: Fail
 issue4157508_test: Fail
 issue4515170_test: Fail
 issue7513_test: Fail
@@ -1220,9 +1214,7 @@ logical_expression4_test: Fail
 logical_expression5_test: Fail
 logical_expression_test: Fail
 loop_exchange2_test: Fail
-loop_exchange3_test: Fail
 loop_exchange4_test: Fail
-loop_exchange_test: Fail
 loop_hoist_test: Fail
 main_test/01: Fail
 main_test/02: Fail
@@ -1523,7 +1515,6 @@ null_access_error_test: Fail
 null_inline_test: Fail
 null_is2_test: Fail
 null_is_test: Fail
-null_method_test: Fail
 null_no_such_method_test: Fail
 null_test/01: MissingCompileTimeError
 null_test/02: MissingCompileTimeError
@@ -1531,7 +1522,6 @@ null_test/03: MissingCompileTimeError
 null_test/none: Fail
 null_to_string2_test: Fail
 null_to_string_test: Fail
-number_constant_folding1_test: Fail
 number_identifier_test/01: MissingCompileTimeError
 number_identifier_test/02: MissingCompileTimeError
 number_identifier_test/03: MissingCompileTimeError
@@ -1594,7 +1584,6 @@ parameter_default_test/07: MissingCompileTimeError
 parameter_default_test/08: MissingCompileTimeError
 parameter_default_test/none: Fail
 parameter_initializer1_negative_test: Fail
-parameter_initializer2_test: Fail
 parameter_initializer3_negative_test: Fail
 parameter_initializer5_negative_test: Fail
 parameter_initializer_test: Fail
@@ -1628,7 +1617,6 @@ private_member_test: Fail
 private_mixin2_test: Fail
 private_mixin_exception_throw_test: Fail
 private_test: Fail
-propagated_argument_type_check_test: Fail
 property_field_override_test: Fail
 proxy2_test/01: Fail
 proxy2_test/02: Fail
@@ -2014,6 +2002,7 @@ type_checks_in_factory_method_test: Fail
 type_conversion_ssa_test: Fail
 type_error_test: Fail
 type_guard_conversion_test: Fail
+type_intersection_test: Fail
 type_parameter_literal_test: Fail
 type_parameter_test/01: Fail
 type_parameter_test/02: Fail
@@ -2111,7 +2100,6 @@ unary_test: Fail
 unbalanced_brace_test/01: MissingCompileTimeError
 unbalanced_brace_test/02: MissingCompileTimeError
 unicode_bom_middle_test: Fail
-unicode_hash_test: Fail
 unresolved_default_constructor_test/01: Fail
 unresolved_top_level_method_negative_test: Fail
 unresolved_top_level_var_negative_test: Fail
@@ -2125,7 +2113,6 @@ unsupported_operators_test/04: MissingCompileTimeError
 value_range2_test: Fail
 value_range3_test: Fail
 value_range_test: Fail
-var_init_test: Fail
 vm/allocation_sinking_vm_test: Fail
 vm/deopt_hoisted_smi_check_vm_test: Fail
 vm/function_equality_vm_test: Fail
@@ -2134,7 +2121,6 @@ vm/issue11087_vm_test: Fail
 vm/load_to_load_forwarding_vm_test: Fail
 vm/math_vm_test: Fail
 vm/no_such_method_error_message_vm_test: Fail
-vm/null_hashcode_optimized_vm_test: Fail
 vm/optimization_test: Fail
 vm/optimized_guarded_field_isolates_test: Fail
 vm/optimized_guarded_field_test: Fail
@@ -2154,7 +2140,6 @@ vm/type_vm_test: Fail
 vm/typed_data_polymorphic_view_test: Fail
 vm/uint32_add_test: Fail
 vm/uint32_right_shift_test: Fail
-vm/uint32_shift_test: Fail
 void_type_test: Fail
 while_test: Fail
 wrong_number_type_arguments_test/00: Fail

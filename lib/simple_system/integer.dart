@@ -4,16 +4,59 @@
 
 part of dart.system;
 
-// TODO(ajohnsen): Implement int.
-class _Smi {
-  @native external core.String toString();
-
-  @native external num operator +(num other);
+// TODO(ajohnsen): Rename to e.g. _IntImpl when old compiler is out.
+// TODO(ajohnsen): Implements int.
+abstract class int {
 }
 
-// TODO(ajohnsen): Implement int.
-class _Mint {
+class _Smi extends int {
+  /* core.int */ get hashCode => this;
+
   @native external core.String toString();
 
+  @native external num operator -();
   @native external num operator +(num other);
+  @native external num operator -(num other);
+  @native external num operator *(num other);
+  @native external num operator /(num other);
+  @native external int operator ~/(num other);
+
+  @native external int operator ~();
+  @native external int operator &(int other);
+  @native external int operator |(int other);
+  @native external int operator ^(int other);
+  @native external int operator >>(int other);
+  @native external int operator <<(int other);
+
+  @native external bool operator ==(other);
+  @native external bool operator <(num other);
+  @native external bool operator <=(num other);
+  @native external bool operator >(num other);
+  @native external bool operator >=(num other);
+}
+
+class _Mint extends int {
+  /* core.int */ get hashCode => this;
+
+  @native external core.String toString();
+
+  @native external num operator -();
+  @native external num operator +(num other);
+  @native external num operator -(num other);
+  @native external num operator *(num other);
+  @native external num operator /(num other);
+  @native external int operator ~/(num other);
+
+  @native external int operator ~();
+  @native external int operator &(int other);
+  @native external int operator |(int other);
+  @native external int operator ^(int other);
+  @native external int operator >>(int other);
+  @native external int operator <<(int other);
+
+  @native external bool operator ==(other);
+  @native external bool operator <(num other);
+  @native external bool operator <=(num other);
+  @native external bool operator >(num other);
+  @native external bool operator >=(num other);
 }

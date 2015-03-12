@@ -5,9 +5,11 @@
 library dart.system;
 
 import 'dart:core' hide
+    int,
     String;
 
 import 'dart:core' as core show
+    int,
     String;
 
 part 'string.dart';
@@ -24,7 +26,7 @@ external invokeMain([arguments, isolateArgument]);
 
 /// This is the main entry point for a Fletch program, and it takes care of
 /// calling "main" and exiting the VM when "main" is done.
-entry(int mainArity) {
+entry(core.int mainArity) {
   invokeMain();
   yield(true);
 }
