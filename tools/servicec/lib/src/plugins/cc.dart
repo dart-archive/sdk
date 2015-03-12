@@ -77,6 +77,8 @@ abstract class CcVisitor extends CodeGenerationVisitor {
 
     'float32' : 'float',
     'float64' : 'double',
+
+    'String'  : 'char*',
   };
 
   static String cast(String type, bool cStyle) => cStyle
@@ -318,6 +320,12 @@ class _HeaderVisitor extends CcVisitor {
         writeln('>(${slot.offset}); }');
       } else if (slotType.isVoid) {
         // No getters for void slots.
+      } else if (slotType.isString) {
+        write('  ');
+        writeType(slotType);
+        writeln(' get$camel() const { return ReadString(${slot.offset}); }');
+        writeln('  List<uint8_t> get${camel}Data() const '
+                '{ return ReadList<uint8_t>(${slot.offset}); }');
       } else if (slotType.isPrimitive) {
         write('  ');
         writeType(slotType);
@@ -370,6 +378,7 @@ class _HeaderVisitor extends CcVisitor {
         writeln('  void set$camel() { set$tagName($tag); }');
       } else if (slotType.isPrimitive) {
         write('  void set$camel(');
+        if (slotType.isString) write('const ');
         writeType(slotType);
         write(' value) { ');
         if (slot.isUnionSlot) {
@@ -377,12 +386,16 @@ class _HeaderVisitor extends CcVisitor {
           int tag = slot.unionTag;
           write('set$tagName($tag); ');
         }
-        write('*PointerTo<');
-        if (slotType.isBool) {
-          writeln('uint8_t>(${slot.offset}) = value ? 1 : 0; }');
+        if (slotType.isString) {
+          writeln('NewString(${slot.offset}, value); }');
         } else {
-          writeType(slotType);
-          writeln('>(${slot.offset}) = value; }');
+          write('*PointerTo<');
+          if (slotType.isBool) {
+            writeln('uint8_t>(${slot.offset}) = value ? 1 : 0; }');
+          } else {
+            writeType(slotType);
+            writeln('>(${slot.offset}) = value; }');
+          }
         }
       } else {
         write('  ');

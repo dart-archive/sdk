@@ -17,10 +17,8 @@ public class PersonBuilder extends Builder {
     super();
   }
 
-  public Uint8ListBuilder initName(int length) {
-    ListBuilder builder = new ListBuilder();
-    newList(builder, 0, length, 1);
-    return new Uint8ListBuilder(builder);
+  public void setName(String value) {
+    newString(0, (String)value);
   }
 
   public PersonListBuilder initChildren(int length) {

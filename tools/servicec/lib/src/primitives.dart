@@ -20,6 +20,8 @@ enum PrimitiveType {
 
   FLOAT32,
   FLOAT64,
+
+  STRING
 }
 
 int size(PrimitiveType type) {
@@ -40,6 +42,8 @@ int size(PrimitiveType type) {
     case PrimitiveType.FLOAT64:
     case PrimitiveType.INT64:
     case PrimitiveType.UINT64: return 8;
+
+    case PrimitiveType.STRING: return 8;
   }
   return -1;
 }
@@ -61,6 +65,8 @@ PrimitiveType lookup(String identifier) {
 
     'float32' : PrimitiveType.FLOAT32,
     'float64' : PrimitiveType.FLOAT64,
+
+    'String'  : PrimitiveType.STRING,
   };
   return types[identifier];
 }

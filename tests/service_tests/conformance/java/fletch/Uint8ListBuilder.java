@@ -12,12 +12,11 @@ public class Uint8ListBuilder {
   public Uint8ListBuilder(ListBuilder builder) { this.builder = builder; }
 
   public int get(int index) {
-    return builder.segment().getUnsigned(builder.base + index * 1);
+    return builder.segment.getUnsigned(builder.base + index * 1);
   }
 
   public int set(int index, int value) {
-    builder.segment().buffer().put(builder.base + index * 1, (byte)value);
-    return value;
+    builder.segment.buffer().put(builder.base + index * 1, (byte)value);    return value;
   }
 
   public int size() { return builder.length; }

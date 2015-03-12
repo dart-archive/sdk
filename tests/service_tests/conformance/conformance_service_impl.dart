@@ -10,6 +10,14 @@ class ConformanceServiceImpl implements ConformanceService {
   }
 
   int getBoxedAge(PersonBox box) {
+    if (box.person.name != "fisk") {
+      throw new Exception("Incorrect person name");
+    }
+    if (box.person.nameData.length != 4 ||
+        box.person.nameData[0] != "f".codeUnitAt(0) ||
+        box.person.nameData[3] != "k".codeUnitAt(0)) {
+      throw new Exception("Incorrect person name data");
+    }
     return box.person.age;
   }
 
@@ -40,8 +48,7 @@ class ConformanceServiceImpl implements ConformanceService {
     for (int i = 0; i < children.length; ++i) {
       children[i].age = 12 + (i * 2);
     }
-    List<int> name = result.initName(1);
-    name[0] = 11;
+    result.name = "person";
   }
 
   void createNode(int depth, NodeBuilder result) {

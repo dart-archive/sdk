@@ -30,7 +30,8 @@ public class Person extends Reader {
     return new Person((byte[][])rawData, 8);
   }
 
-  public Uint8List getName() {
+  public String getName() { return readString(0); }
+  public Uint8List getNameData() {
     ListReader reader = new ListReader();
     readList(reader, 0);
     return new Uint8List(reader);

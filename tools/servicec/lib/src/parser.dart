@@ -105,6 +105,7 @@ abstract class Type {
 
   bool get isVoid => primitiveType == primitives.PrimitiveType.VOID;
   bool get isBool => primitiveType == primitives.PrimitiveType.BOOL;
+  bool get isString => primitiveType == primitives.PrimitiveType.STRING;
 
   // TODO(kasperl): Get rid of this.
   String get identifier;

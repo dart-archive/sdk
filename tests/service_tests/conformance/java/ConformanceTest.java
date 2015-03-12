@@ -157,8 +157,13 @@ class ConformanceTest {
     {
       Person generated = ConformanceService.createPerson(10);
       assert 42 == generated.getAge();
-      assert 1 == generated.getName().size();
-      assert 11 == generated.getName().get(0);
+      String name = generated.getName();
+      assert 6 == name.length();
+      assert name.equals("person");
+      Uint8List nameData = generated.getNameData();
+      assert 6 == nameData.size();
+      assert "p".charAt(0) == nameData.get(0);
+      assert "n".charAt(0) == nameData.get(5);
       PersonList children = generated.getChildren();
       assert 10 == children.size();
       for (int i = 0; i < children.size(); i++) {
@@ -172,8 +177,13 @@ class ConformanceTest {
           new ConformanceService.CreatePersonCallback() {
             public void handle(Person generated) {
               assert 42 == generated.getAge();
-              assert 1 == generated.getName().size();
-              assert 11 == generated.getName().get(0);
+              String name = generated.getName();
+              assert 6 == name.length();
+              assert name.equals("person");
+              Uint8List nameData = generated.getNameData();
+              assert 6 == nameData.size();
+              assert "p".charAt(0) == nameData.get(0);
+              assert "n".charAt(0) == nameData.get(5);
               PersonList children = generated.getChildren();
               assert 10 == children.size();
               for (int i = 0; i < children.size(); i++) {
@@ -218,8 +228,7 @@ class ConformanceTest {
     builder.initRoot(box, PersonBoxBuilder.kSize);
     PersonBuilder person = box.initPerson();
     person.setAge(87);
-    Uint8ListBuilder name = person.initName(1);
-    name.set(0, 99);
+    person.setName("fisk");
     int age = ConformanceService.getBoxedAge(box);
     assert 87 == age;
   }

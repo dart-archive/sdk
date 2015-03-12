@@ -72,6 +72,13 @@ class Reader {
     }
   }
 
+  public String readString(int offset) {
+    ListReader reader = new ListReader();
+    readList(reader, offset);
+    byte[] data = reader.segment.buffer().array();
+    return new String(data, reader.base, reader.length);
+  }
+
   public int computeUsed() {
     MessageReader reader = segment.reader();
     int used = 0;

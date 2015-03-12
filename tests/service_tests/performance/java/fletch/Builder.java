@@ -85,6 +85,16 @@ class Builder {
     }
   }
 
+  public void newString(int offset, String value) {
+    int length = value.length();
+    ListBuilder stringBuilder = new ListBuilder();
+    newList(stringBuilder, offset, length, 1);
+    for (int i = 0; i < length; i++) {
+      stringBuilder.segment.buffer().put(
+          stringBuilder.base + i, (byte)value.charAt(i));
+    }
+  }
+
   protected BuilderSegment segment;
   protected int base;
 }

@@ -331,37 +331,41 @@ class _JavaVisitor extends CodeGenerationVisitor {
   final String outputDirectory;
 
   static Map<String, String> _GETTERS = const {
-    'bool'    : 'getBoolean',
+    'bool'    : 'segment.getBoolean',
 
-    'uint8'   : 'getUnsigned',
-    'uint16'  : 'getUnsignedChar',
-    'uint32'  : 'getUnsignedInt',
-    'uint64'  : 'buffer().getLong',
+    'uint8'   : 'segment.getUnsigned',
+    'uint16'  : 'segment.getUnsignedChar',
+    'uint32'  : 'segment.getUnsignedInt',
+    'uint64'  : 'segment.buffer().getLong',
 
-    'int8'    : 'buffer().get',
-    'int16'   : 'buffer().getShort',
-    'int32'   : 'buffer().getInt',
-    'int64'   : 'buffer().getLong',
+    'int8'    : 'segment.buffer().get',
+    'int16'   : 'segment.buffer().getShort',
+    'int32'   : 'segment.buffer().getInt',
+    'int64'   : 'segment.buffer().getLong',
 
-    'float32' : 'buffer().getFloat',
-    'float64' : 'buffer().getDouble',
+    'float32' : 'segment.buffer().getFloat',
+    'float64' : 'segment.buffer().getDouble',
+
+    'String'  : 'readString',
   };
 
   static Map<String, String> _SETTERS = const {
-    'bool'    : 'put',
+    'bool'    : 'segment.buffer().put',
 
-    'uint8'   : 'put',
-    'uint16'  : 'putChar',
-    'uint32'  : 'putInt',
-    'uint64'  : 'putLong',
+    'uint8'   : 'segment.buffer().put',
+    'uint16'  : 'segment.buffer().putChar',
+    'uint32'  : 'segment.buffer().putInt',
+    'uint64'  : 'segment.buffer().putLong',
 
-    'int8'    : 'put',
-    'int16'   : 'putShort',
-    'int32'   : 'putInt',
-    'int64'   : 'putLong',
+    'int8'    : 'segment.buffer().put',
+    'int16'   : 'segment.buffer().putShort',
+    'int32'   : 'segment.buffer().putInt',
+    'int64'   : 'segment.buffer().putLong',
 
-    'float32' : 'putFloat',
-    'float64' : 'pubDouble',
+    'float32' : 'segment.buffer().putFloat',
+    'float64' : 'segment.buffer().pubDouble',
+
+    'String'  : 'newString',
   };
 
   static Map<String, String> _SETTER_TYPES = const {
@@ -379,6 +383,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'float32'  : 'float',
     'float64'  : 'double',
+
+    'String'   : 'String',
   };
 
   _JavaVisitor(String path, String this.outputDirectory)
@@ -401,6 +407,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'float32' : 'float',
     'float64' : 'double',
+
+    'String'  : 'String',
   };
 
   static const PRIMITIVE_LIST_TYPES = const <String, String> {
@@ -589,8 +597,21 @@ class _JavaVisitor extends CodeGenerationVisitor {
           buffer.writeln('  }');
         } else {
           String getter = _GETTERS[slotType.identifier];
+          String offset = "${(slotType.isString) ? '' : 'base + '}${slot.offset}";
           buffer.write('  public ${getType(slotType)} get$camel() { ');
-          buffer.writeln('return segment.$getter(base + ${slot.offset}); }');
+          buffer.writeln('return $getter($offset); }');
+          if (slotType.isString) {
+            // TODO(ager): This is nasty. Maybe inject this type earler in the
+            // pipeline?
+            Type uint8Type = new SimpleType("uint8", false);
+            uint8Type.primitiveType = primitives.lookup("uint8");
+            neededListTypes.add(uint8Type);
+            buffer.writeln('  public Uint8List get${camel}Data() {');
+            buffer.writeln('    ListReader reader = new ListReader();');
+            buffer.writeln('    readList(reader, $offset);');
+            buffer.writeln('    return new Uint8List(reader);');
+            buffer.writeln('  }');
+          }
         }
       } else {
         String returnType = getReturnType(slotType);
@@ -649,12 +670,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
       }
 
       if (slotType.isList) {
-        String listElement = '';
-        if (slotType.isPrimitive) {
-          listElement = '${getListType(slotType)}';
-        }  else {
-          listElement = '${getListType(slotType)}Builder';
-        }
         String listBuilder = '';
         if (slotType.isPrimitive) {
           listBuilder =  '${camelize(slotType.identifier)}ListBuilder';
@@ -685,14 +700,14 @@ class _JavaVisitor extends CodeGenerationVisitor {
         String setter = _SETTERS[slotType.identifier];
         String setterType = _SETTER_TYPES[slotType.identifier];
         String offset = 'base + ${slot.offset}';
+        if (slotType.isString) offset = '${slot.offset}';
         buffer.writeln('  public void set$camel(${getType(slotType)} value) {');
         buffer.write(updateTag);
         if (slotType.isBool) {
-          buffer.writeln('    segment.buffer().$setter($offset,'
+          buffer.writeln('    $setter($offset,'
                          ' (byte)(value ? 1 : 0));');
         } else {
-          buffer.writeln('    segment.buffer().'
-                         '$setter($offset, (${setterType})value);');
+          buffer.writeln('    $setter($offset, (${setterType})value);');
         }
         buffer.writeln('  }');
       } else {
@@ -743,7 +758,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
       buffer.writeln();
       buffer.writeln('  public $listType get(int index) {');
       buffer.write('    return ');
-      buffer.writeln('reader.segment.${_GETTERS[type.identifier]}($offset);');
+      buffer.writeln('reader.${_GETTERS[type.identifier]}($offset);');
       buffer.writeln('  }');
     } else {
       Struct element = type.resolved;
@@ -795,15 +810,14 @@ class _JavaVisitor extends CodeGenerationVisitor {
       String getter = _GETTERS[type.identifier];
 
       buffer.writeln('  public $listType get(int index) {');
-      buffer.writeln('    return builder.segment().$getter($offset);');
+      buffer.writeln('    return builder.$getter($offset);');
       buffer.writeln('  }');
 
       buffer.writeln();
       String setter = _SETTERS[type.identifier];
       String setterType = _SETTER_TYPES[type.identifier];
       buffer.writeln('  public $listType set(int index, $listType value) {');
-      buffer.write('    builder.segment().buffer().');
-      buffer.writeln('$setter($offset, (${setterType})value);');
+      buffer.write('    builder.$setter($offset, (${setterType})value);');
       buffer.writeln('    return value;');
       buffer.writeln('  }');
     } else {
@@ -1042,7 +1056,6 @@ class _JniVisitor extends CcVisitor {
       return '$prefix(buffer + $offset + $pointers * sizeof(void*))';
     }
 
-    StructLayout layout = method.arguments.single.type.resolved.layout;
     String argumentName = method.arguments.single.name;
 
     bool async = callback != null;
@@ -1144,7 +1157,6 @@ class _JniVisitor extends CcVisitor {
       writeln();
       writeln('static void $name(void* raw) {');
       writeln('  char* buffer = ${cast('char*')}(raw);');
-      int offset = 48 + layout.size;
       write('  CallbackInfo* info = *${cast('CallbackInfo**')}');
       writeln('(buffer + 32);');
       writeln('  JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);');

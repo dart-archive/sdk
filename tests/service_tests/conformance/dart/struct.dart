@@ -127,6 +127,11 @@ class Reader {
       }
     }
   }
+
+  String readString(ListReader reader, int offset) {
+    List<int> charCodes = readList(reader, offset);
+    return new String.fromCharCodes(charCodes);
+  }
 }
 
 class ListReader extends Reader {
@@ -241,6 +246,13 @@ class Builder {
 
       segment = other;
       offset = target;
+    }
+  }
+
+  void NewString(ListBuilder list, int offset, String value) {
+    NewList(list, offset, value.length, 1);
+    for (int i = 0; i < value.length; i++) {
+      list[i] = value.codeUnitAt(i);
     }
   }
 }

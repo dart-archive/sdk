@@ -156,14 +156,15 @@ class AgeStatsBuilder extends Builder {
 }
 
 class Person extends Reader {
-  List<int> get name => readList(new _uint8List(), 0);
+  String get name => readString(new _uint8List(), 0);
+  List<int> get nameData => readList(new _uint8List(), 0);
   List<Person> get children => readList(new _PersonList(), 8);
   int get age => _segment.memory.getInt32(_offset + 16);
 }
 
 class PersonBuilder extends Builder {
-  List<int> initName(int length) {
-    return NewList(new _uint8BuilderList(), 0, length, 1);
+  void set name(String value) {
+    NewString(new _uint8BuilderList(), 0, value);
   }
   List<PersonBuilder> initChildren(int length) {
     return NewList(new _PersonBuilderList(), 8, length, 24);

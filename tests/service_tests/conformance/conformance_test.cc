@@ -49,8 +49,15 @@ static void CreateAgeStatsCallback(AgeStats stats) {
 
 static void CreatePersonCallback(Person generated) {
   EXPECT_EQ(42, generated.getAge());
-  EXPECT_EQ(1, generated.getName().length());
-  EXPECT_EQ(11, generated.getName()[0]);
+  char* name = generated.getName();
+  int name_length = strlen(name);
+  EXPECT_EQ(6, name_length);
+  EXPECT(strcmp(name, "person") == 0);
+  free(name);
+  List<uint8_t> name_data = generated.getNameData();
+  EXPECT_EQ(6, name_data.length());
+  EXPECT_EQ('p', name_data[0]);
+  EXPECT_EQ('n', name_data[5]);
 
   List<Person> children = generated.getChildren();
   EXPECT_EQ(10, children.length());
@@ -145,9 +152,17 @@ static void RunPersonTests() {
 
   {
     Person generated = ConformanceService::createPerson(10);
+    char* name = generated.getName();
+    int name_length = strlen(name);
     EXPECT_EQ(42, generated.getAge());
-    EXPECT_EQ(1, generated.getName().length());
-    EXPECT_EQ(11, generated.getName()[0]);
+    EXPECT_EQ(6, name_length);
+    EXPECT(strcmp(name, "person") == 0);
+    free(name);
+    List<uint8_t> name_data = generated.getNameData();
+    EXPECT_EQ(6, name_data.length());
+    EXPECT_EQ('p', name_data[0]);
+    EXPECT_EQ('n', name_data[5]);
+
     List<Person> children = generated.getChildren();
     EXPECT_EQ(10, children.length());
     for (int i = 0; i < children.length(); i++) {
@@ -184,8 +199,7 @@ static void RunPersonBoxTests() {
   PersonBoxBuilder box = builder.initRoot<PersonBoxBuilder>();
   PersonBuilder person = box.initPerson();
   person.setAge(87);
-  List<uint8_t> name = person.initName(1);
-  name[0] = 99;
+  person.setName("fisk");
 
   int age = ConformanceService::getBoxedAge(box);
   EXPECT_EQ(87, age);

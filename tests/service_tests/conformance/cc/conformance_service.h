@@ -103,7 +103,8 @@ class Person : public Reader {
   Person(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
-  List<uint8_t> getName() const { return ReadList<uint8_t>(0); }
+  char* getName() const { return ReadString(0); }
+  List<uint8_t> getNameData() const { return ReadList<uint8_t>(0); }
   List<Person> getChildren() const { return ReadList<Person>(8); }
   int32_t getAge() const { return *PointerTo<int32_t>(16); }
 };
@@ -117,7 +118,7 @@ class PersonBuilder : public Builder {
   PersonBuilder(Segment* segment, int offset)
       : Builder(segment, offset) { }
 
-  List<uint8_t> initName(int length);
+  void setName(const char* value) { NewString(0, value); }
   List<PersonBuilder> initChildren(int length);
   void setAge(int32_t value) { *PointerTo<int32_t>(16) = value; }
 };

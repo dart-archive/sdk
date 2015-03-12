@@ -272,11 +272,6 @@ void ConformanceService::pingAsync(void (*callback)(int32_t)) {
   ServiceApiInvokeAsync(service_id_, kPingId_, Unwrap_int32_8, _buffer, kSize);
 }
 
-List<uint8_t> PersonBuilder::initName(int length) {
-  Reader result = NewList(0, length, 1);
-  return List<uint8_t>(result.segment(), result.offset(), length);
-}
-
 List<PersonBuilder> PersonBuilder::initChildren(int length) {
   Reader result = NewList(8, length, 24);
   return List<PersonBuilder>(result.segment(), result.offset(), length);

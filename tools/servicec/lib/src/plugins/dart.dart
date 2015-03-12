@@ -292,8 +292,19 @@ class _DartVisitor extends CodeGenerationVisitor {
 
         write('  ');
         writeType(slotType);
-        if (slotType.primitiveType == primitives.PrimitiveType.BOOL) {
+        if (slotType.isBool) {
           writeln(' get $slotName => _segment.memory.$getter($offset) != 0;');
+        } else if (slotType.isString) {
+          // TODO(ager): This is nasty. Maybe inject this type earler
+          // in the pipeline?
+          Type uint8Type = new SimpleType("uint8", false);
+          uint8Type.primitiveType = primitives.lookup("uint8");
+          neededListTypes.add(uint8Type);
+          writeln(' get $slotName => '
+                  'readString(new _uint8List(), ${slot.offset});');
+          writeln('  List<int> get ${slotName}Data => '
+                  'readList(new _uint8List(), ${slot.offset});');
+
         } else {
           writeln(' get $slotName => _segment.memory.$getter($offset);');
         }
@@ -364,6 +375,8 @@ class _DartVisitor extends CodeGenerationVisitor {
         String offset = '_offset + ${slot.offset}';
         if (slotType.isBool) {
           writeln('    _segment.memory.$setter($offset, value ? 1 : 0);');
+        } else if (slotType.isString) {
+          writeln('    NewString(new _uint8BuilderList(), ${slot.offset}, value);');
         } else {
           writeln('    _segment.memory.$setter($offset, value);');
         }
@@ -435,6 +448,8 @@ class _DartVisitor extends CodeGenerationVisitor {
 
     'float32' : 'double',
     'float64' : 'double',
+
+    'String'  : 'String',
   };
 
   void writeType(Type node) {
