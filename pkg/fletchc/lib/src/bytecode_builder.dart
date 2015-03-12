@@ -45,6 +45,13 @@ class BytecodeBuilder {
 
   BytecodeBuilder(this.functionArity);
 
+  /**
+   * Apply a fix to the currently known stack size.
+   */
+  void applyStackSizeFix(int diff) {
+    stackSize += diff;
+  }
+
   void loadConst(int id) {
     internalAdd(new LoadConstUnfold(id));
   }

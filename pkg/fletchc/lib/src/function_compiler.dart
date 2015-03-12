@@ -106,6 +106,13 @@ class UnboxedLocalValue extends LocalValue {
   String toString() => "Local($element, $slot)";
 }
 
+class GotoTarget {
+  final int stackSize;
+  final BytecodeLabel continueLabel;
+  final BytecodeLabel breakLabel;
+  GotoTarget(this.stackSize, this.continueLabel, this.breakLabel);
+}
+
 class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   final FletchContext context;
 
@@ -118,6 +125,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   final CompiledFunction compiledFunction;
 
   final Map<Element, LocalValue> scope = <Element, LocalValue>{};
+
+  final List<GotoTarget> gotoTargets = <GotoTarget>[];
 
   VisitState visitState;
   BytecodeLabel trueLabel;
@@ -871,6 +880,14 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
         node, "Missing visit of expression: ${node.runtimeType}");
   }
 
+  void visitStatement(Node node) {
+    Visitstate oldState = visitState;
+    visitState = VisitState.Effect;
+    generateUnimplementedError(
+        node, "Missing visit of statement: ${node.runtimeType}");
+    visitState = oldState;
+  }
+
   void visitBlock(Block node) {
     int oldBlockLocals = blockLocals;
     blockLocals = 0;
@@ -912,12 +929,40 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     builder.ret();
   }
 
-  void visitStatement(Node node) {
-    Visitstate oldState = visitState;
-    visitState = VisitState.Effect;
-    generateUnimplementedError(
-        node, "Missing visit of statement: ${node.runtimeType}");
-    visitState = oldState;
+  void visitBreakStatement(BreakStatement node) {
+    // TODO(ajohnsen): Unify gotoTargets lookup.
+    // TODO(ajohnsen): Handle break target.
+    for (int i = gotoTargets.length - 1; i >= 0; i--) {
+      GotoTarget target = gotoTargets[i];
+      BytecodeLabel label = target.breakLabel;
+      if (label == null) continue;
+      int diff = builder.stackSize - target.stackSize;
+      for (int j = 0; j < diff; j++) {
+        builder.pop();
+      }
+      builder.branch(label);
+      builder.applyStackSizeFix(diff);
+      return;
+    }
+    generateUnimplementedError(node, "'break' not in loop");
+  }
+
+  void visitContinueStatement(ContinueStatement node) {
+    // TODO(ajohnsen): Unify gotoTargets lookup.
+    // TODO(ajohnsen): Handle continue target.
+    for (int i = gotoTargets.length - 1; i >= 0; i--) {
+      GotoTarget target = gotoTargets[i];
+      BytecodeLabel label = target.continueLabel;
+      if (label == null) continue;
+      int diff = builder.stackSize - target.stackSize;
+      for (int j = 0; j < diff; j++) {
+        builder.pop();
+      }
+      builder.branch(label);
+      builder.applyStackSizeFix(diff);
+      return;
+    }
+    generateUnimplementedError(node, "'continue' not in loop");
   }
 
   void visitIf(If node) {
@@ -953,7 +998,10 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       builder.bind(ifTrue);
     }
 
+    gotoTargets.add(new GotoTarget(builder.stackSize, start, end));
     node.body.accept(this);
+    gotoTargets.removeLast();
+
     for (Node update in node.update) {
       visitForEffect(update);
     }
@@ -969,7 +1017,9 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     builder.bind(start);
     visitForTest(node.condition, ifTrue, end);
     builder.bind(ifTrue);
+    gotoTargets.add(new GotoTarget(builder.stackSize, start, end));
     node.body.accept(this);
+    gotoTargets.removeLast();
     builder.branch(start);
     builder.bind(end);
   }
@@ -977,8 +1027,12 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   void visitDoWhile(DoWhile node) {
     BytecodeLabel start = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
+    BytecodeLabel skipBody = new BytecodeLabel();
     builder.bind(start);
+    gotoTargets.add(new GotoTarget(builder.stackSize, skipBody, end));
     node.body.accept(this);
+    gotoTargets.removeLast();
+    builder.bind(skipBody);
     visitForTest(node.condition, start, end);
     builder.bind(end);
   }

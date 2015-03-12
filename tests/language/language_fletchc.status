@@ -753,7 +753,6 @@ for_in2_test: Fail
 for_in_side_effects_test: Fail
 for_in_test: Fail
 for_test: Fail
-for_without_condition_test: Fail
 forwarding_factory_constructor_default_values_test: Fail
 full_stacktrace1_test: Fail
 full_stacktrace2_test: Fail
@@ -1111,7 +1110,6 @@ issue4157508_test: Fail
 issue4515170_test: Fail
 issue7513_test: Fail
 issue7525_test: Fail
-issue9664_test: Fail
 issue9687_test: Fail
 issue9939_test: Fail
 issue9949_test: Fail
@@ -1215,7 +1213,6 @@ logical_expression5_test: Fail
 logical_expression_test: Fail
 loop_exchange2_test: Fail
 loop_exchange4_test: Fail
-loop_hoist_test: Fail
 main_test/01: Fail
 main_test/02: Fail
 main_test/04: Fail
