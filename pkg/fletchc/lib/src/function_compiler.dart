@@ -106,11 +106,11 @@ class UnboxedLocalValue extends LocalValue {
   String toString() => "Local($element, $slot)";
 }
 
-class GotoTarget {
+class JumpInfo {
   final int stackSize;
   final BytecodeLabel continueLabel;
   final BytecodeLabel breakLabel;
-  GotoTarget(this.stackSize, this.continueLabel, this.breakLabel);
+  JumpInfo(this.stackSize, this.continueLabel, this.breakLabel);
 }
 
 class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
@@ -126,7 +126,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   final Map<Element, LocalValue> scope = <Element, LocalValue>{};
 
-  final List<GotoTarget> gotoTargets = <GotoTarget>[];
+  final Map<Node, JumpInfo> jumpInfo = <Node, JumpInfo>{};
 
   VisitState visitState;
   BytecodeLabel trueLabel;
@@ -929,40 +929,38 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     builder.ret();
   }
 
-  void visitBreakStatement(BreakStatement node) {
-    // TODO(ajohnsen): Unify gotoTargets lookup.
-    // TODO(ajohnsen): Handle break target.
-    for (int i = gotoTargets.length - 1; i >= 0; i--) {
-      GotoTarget target = gotoTargets[i];
-      BytecodeLabel label = target.breakLabel;
-      if (label == null) continue;
-      int diff = builder.stackSize - target.stackSize;
-      for (int j = 0; j < diff; j++) {
-        builder.pop();
-      }
-      builder.branch(label);
-      builder.applyStackSizeFix(diff);
-      return;
+  JumpInfo getJumpInfo(GotoStatement node) {
+    JumpTarget target = elements.getTargetOf(node);
+    if (target == null) {
+      generateUnimplementedError(node, "'$node' not in loop");
+      builder.pop();
+      return null;
     }
-    generateUnimplementedError(node, "'break' not in loop");
+    Node statement = target.statement;
+    JumpInfo info = jumpInfo[statement];
+    if (info == null) {
+      generateUnimplementedError(node, "'$node' has no target");
+      builder.pop();
+    }
+    return info;
+  }
+
+  void unbalancedBranch(GotoStatement node, bool isBreak) {
+    JumpInfo info = getJumpInfo(node);
+    if (info == null) return;
+    BytecodeLabel label = isBreak ? info.breakLabel : info.continueLabel;
+    int diff = builder.stackSize - info.stackSize;
+    builder.popMany(diff);
+    builder.branch(label);
+    builder.applyStackSizeFix(diff);
+  }
+
+  void visitBreakStatement(BreakStatement node) {
+    unbalancedBranch(node, true);
   }
 
   void visitContinueStatement(ContinueStatement node) {
-    // TODO(ajohnsen): Unify gotoTargets lookup.
-    // TODO(ajohnsen): Handle continue target.
-    for (int i = gotoTargets.length - 1; i >= 0; i--) {
-      GotoTarget target = gotoTargets[i];
-      BytecodeLabel label = target.continueLabel;
-      if (label == null) continue;
-      int diff = builder.stackSize - target.stackSize;
-      for (int j = 0; j < diff; j++) {
-        builder.pop();
-      }
-      builder.branch(label);
-      builder.applyStackSizeFix(diff);
-      return;
-    }
-    generateUnimplementedError(node, "'continue' not in loop");
+    unbalancedBranch(node, false);
   }
 
   void visitIf(If node) {
@@ -990,6 +988,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     Node initializer = node.initializer;
     if (initializer != null) visitForValue(initializer);
 
+    jumpInfo[node] = new JumpInfo(builder.stackSize, start, end);
+
     builder.bind(start);
 
     Expression condition = node.condition;
@@ -998,9 +998,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       builder.bind(ifTrue);
     }
 
-    gotoTargets.add(new GotoTarget(builder.stackSize, start, end));
     node.body.accept(this);
-    gotoTargets.removeLast();
 
     for (Node update in node.update) {
       visitForEffect(update);
@@ -1010,16 +1008,19 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     builder.bind(end);
   }
 
+  void visitLabeledStatement(LabeledStatement node) {
+    node.statement.accept(this);
+  }
+
   void visitWhile(While node) {
     BytecodeLabel start = new BytecodeLabel();
     BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
+    jumpInfo[node] = new JumpInfo(builder.stackSize, start, end);
     builder.bind(start);
     visitForTest(node.condition, ifTrue, end);
     builder.bind(ifTrue);
-    gotoTargets.add(new GotoTarget(builder.stackSize, start, end));
     node.body.accept(this);
-    gotoTargets.removeLast();
     builder.branch(start);
     builder.bind(end);
   }
@@ -1028,10 +1029,9 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     BytecodeLabel start = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
     BytecodeLabel skipBody = new BytecodeLabel();
+    jumpInfo[node] = new JumpInfo(builder.stackSize, skipBody, end);
     builder.bind(start);
-    gotoTargets.add(new GotoTarget(builder.stackSize, skipBody, end));
     node.body.accept(this);
-    gotoTargets.removeLast();
     builder.bind(skipBody);
     visitForTest(node.condition, start, end);
     builder.bind(end);

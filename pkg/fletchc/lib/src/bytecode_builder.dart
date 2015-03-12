@@ -193,7 +193,7 @@ class BytecodeBuilder {
     internalAdd(new Pop());
   }
 
-  void popRange(int count) {
+  void popMany(int count) {
     // TODO(ajohnsen): Create bytecode for this.
     for (int i = 0; i < count; i++) {
       internalAdd(new Pop());
