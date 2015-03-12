@@ -56,7 +56,7 @@ enum VisitState {
  */
 abstract class LocalValue {
   final int slot;
-  final LocalElement element;
+  final Element element;
   LocalValue(this.slot, this.element);
 
   void initialize(BytecodeBuilder builder);
@@ -70,7 +70,7 @@ abstract class LocalValue {
  * A reference to a local value that is boxed.
  */
 class BoxedLocalValue extends LocalValue {
-  BoxedLocalValue(int slot, LocalElement element) : super(slot, element);
+  BoxedLocalValue(int slot, Element element) : super(slot, element);
 
   void initialize(BytecodeBuilder builder) {
     builder.allocateBoxed();
@@ -91,7 +91,7 @@ class BoxedLocalValue extends LocalValue {
  * A reference to a local value that is boxed.
  */
 class UnboxedLocalValue extends LocalValue {
-  UnboxedLocalValue(int slot, LocalElement element) : super(slot, element);
+  UnboxedLocalValue(int slot, Element element) : super(slot, element);
 
   void initialize(BytecodeBuilder builder) {}
 

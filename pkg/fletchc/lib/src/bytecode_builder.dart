@@ -193,6 +193,13 @@ class BytecodeBuilder {
     internalAdd(new Pop());
   }
 
+  void popRange(int count) {
+    // TODO(ajohnsen): Create bytecode for this.
+    for (int i = 0; i < count; i++) {
+      internalAdd(new Pop());
+    }
+  }
+
   void ret() {
     if (stackSize <= 0) throw "Bad stackSize for return bytecode: $stackSize";
     internalAdd(new Return(stackSize, functionArity));

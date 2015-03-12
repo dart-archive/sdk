@@ -40,7 +40,9 @@ import 'function_compiler.dart';
 class ConstructorCompiler extends FunctionCompiler {
   final CompiledClass compiledClass;
 
-  final Map<FieldElement, int> fieldScope = <FieldElement, int>{};
+  final Map<FieldElement, LocalValue> fieldScope = <FieldElement, LocalValue>{};
+
+  final List<ConstructorElement> constructors = <ConstructorElement>[];
 
   ConstructorCompiler(int methodId,
                       FletchContext context,
@@ -58,98 +60,142 @@ class ConstructorCompiler extends FunctionCompiler {
     // Push all initial field values (including super-classes).
     pushInitialFieldValues(compiledClass);
     // The stack is now:
-    //  Initial value for field-0
+    //  Value for field-0
     //  ...
-    //  Initial value for field-n
-
+    //  Value for field-n
+    //
     FunctionSignature signature = function.functionSignature;
-
     int parameterCount = signature.parameterCount;
 
-    int parameterIndex = 0;
-    // Load all parameters to the constructor, onto the stack.
-    signature.orderedForEachParameter((FormalElement parameter) {
-      builder.loadParameter(parameterIndex++);
-      if (parameter.isInitializingFormal) {
-        // If it's a initializing formal, also store the value into initial
-        // field value.
-        builder.storeSlot(fieldScope[parameter.fieldElement]);
-      }
-    });
-
-    // The stack is now:
-    //  field-0
-    //  ...
-    //  field-n
-    //  parameter-0
-    //  ...
-    //  parameter-m
-
-    int classConstant = compiledFunction.allocateConstantFromClass(
-        compiledClass.id);
-    int methodId = context.backend.allocateMethodId(function);
-    int constructorId = compiledFunction.allocateConstantFromFunction(methodId);
-
-    int fields = compiledClass.fields;
+    // Visit constructor and evaluate initializers and super calls. The
+    // arguments to the constructor are located before the return address.
+    inlineInitializers(function, -parameterCount - 1);
 
     // TODO(ajohnsen): Let allocate take an offset to the field stack, so we
     // don't have to copy all the fields?
     // Copy all the fields to the end of the stack.
+    int fields = compiledClass.fields;
     for (int i = 0; i < fields; i++) {
       builder.loadSlot(i);
     }
 
     // The stack is now:
-    //  field-0
+    //  Value for field-0
     //  ...
-    //  field-n
-    //  parameter-0
+    //  Value for field-n
+    //  [super arguments]
+    //  Value for field-0
     //  ...
-    //  parameter-m
-    //  field-0
-    //  ...
-    //  field-n
+    //  Value for field-n
 
     // Create the actual instance.
+    int classConstant = compiledFunction.allocateConstantFromClass(
+        compiledClass.id);
     builder.allocate(classConstant, fields);
 
     // The stack is now:
-    //  field-0
+    //  Value for field-0
     //  ...
-    //  field-n
-    //  parameter-0
-    //  ...
-    //  parameter-m
+    //  Value for field-n
+    //  [super arguments]
     //  instance
 
-    // Prepate for constructor body invoke.
-    builder.dup();
-    for (int i = 0; i < parameterCount; i++) {
-      builder.loadSlot(fields + i);
+    // Call constructor bodies in reverse order.
+    for (int i = constructors.length - 1; i >= 0; i--) {
+      callConstructorBody(constructors[i]);
     }
-
-    // The stack is now:
-    //  field-0
-    //  ...
-    //  field-n
-    //  parameter-0
-    //  ...
-    //  parameter-m
-    //  instance
-    //  instance
-    //  parameter-0
-    //  ...
-    //  parameter-m
-
-    // Invoke the constructor body.
-    builder
-        ..invokeStatic(constructorId, 1 + parameterCount)
-        ..pop();
 
     // Return the instance.
     builder
         ..ret()
         ..methodEnd();
+  }
+
+  /**
+   * Visit [constructor] and inline initializers and super calls, recursively.
+   */
+  void inlineInitializers(
+      ConstructorElement constructor,
+      int firstParameterSlot) {
+    if (constructors.indexOf(constructor) >= 0) {
+      internalError(constructor.node,
+                    "Multiple visits to the same constructor");
+    }
+
+    constructors.add(constructor);
+    FunctionSignature signature = constructor.functionSignature;
+    int parameterIndex = 0;
+
+    // Visit parameters and add them to scope. Note the scope is the scope of
+    // locals, in FunctionCompiler.
+    signature.orderedForEachParameter((FormalElement parameter) {
+      int slot = firstParameterSlot + parameterIndex;
+      // TODO(ajohnsen): Validate that we handle boxed parameters correctly.
+      LocalValue value = createLocalValueFor(parameter, slot);
+      scope[parameter] = value;
+      if (parameter.isInitializingFormal) {
+        // If it's a initializing formal, store the value into initial
+        // field value.
+        value.load(builder);
+        fieldScope[parameter.fieldElement].store(builder);
+        builder.pop();
+      }
+      parameterIndex++;
+    });
+
+    // Now the parameters are in the scope, visit the constructor initializers.
+    Node node = constructor.node;
+    if (node == null) return;
+    NodeList initializers = node.initializers;
+    if (initializers == null) return;
+    for (var initializer in initializers) {
+      Element element = elements[initializer];
+      if (element.isGenerativeConstructor) {
+        // TODO(ajohnsen): Handle named arguments.
+        // Load all parameters to the constructor, onto the stack.
+        int initSlot = builder.stackSize;
+        loadArguments(initializer.argumentsNode, element);
+        inlineInitializers(element, initSlot);
+      } else {
+        // An initializer is a SendSet, leaving a value on the stack. Be sure to
+        // pop it by visiting for effect.
+        visitForEffect(initializer);
+      }
+    }
+  }
+
+  // This is called for each initializer list assignment.
+  void visitThisPropertySet(
+      Send node,
+      Selector selector,
+      Node rhs,
+      _) {
+    visitForValue(rhs);
+    Element element = elements[node];
+    fieldScope[element].store(builder);
+    applyVisitState();
+  }
+
+  void callConstructorBody(ConstructorElement constructor) {
+    Node node = constructor.node;
+    if (node == null || node.body.asEmptyStatement() != null) return;
+
+    registry.registerStaticInvocation(constructor);
+
+    int methodId = context.backend.allocateMethodId(constructor);
+    int constructorId = compiledFunction.allocateConstantFromFunction(methodId);
+
+    FunctionSignature signature = constructor.functionSignature;
+
+    // Prepate for constructor body invoke.
+    builder.dup();
+    signature.orderedForEachParameter((FormalElement parameter) {
+      scope[parameter].load(builder);
+    });
+
+    builder
+        ..invokeStatic(constructorId, 1 + signature.parameterCount)
+        ..pop();
   }
 
   void pushInitialFieldValues(CompiledClass compiledClass) {
@@ -158,7 +204,7 @@ class ConstructorCompiler extends FunctionCompiler {
     }
     int fieldIndex = compiledClass.superClassFields;
     compiledClass.element.forEachInstanceField((_, FieldElement field) {
-      fieldScope[field] = fieldIndex++;
+      fieldScope[field] = new UnboxedLocalValue(fieldIndex++, field);
       Expression initializer = field.initializer;
       if (initializer == null) {
         builder.loadLiteralNull();
