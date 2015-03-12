@@ -4,11 +4,11 @@
 
 library fletchc.function_compiler;
 
-import 'package:semantic_visitor/semantic_visitor.dart' show
+import 'package:compiler/src/resolution/semantic_visitor.dart' show
     SemanticSendVisitor,
     SemanticVisitor;
 
-import 'package:semantic_visitor/operators.dart' show
+import 'package:compiler/src/resolution/operators.dart' show
     BinaryOperator,
     IncDecOperator;
 
@@ -415,7 +415,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
-  void visitLazyAnd(
+  void visitLogicalAnd(
       Send node,
       Node left,
       Node right,
