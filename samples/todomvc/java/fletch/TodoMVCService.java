@@ -44,4 +44,11 @@ public class TodoMVCService {
 
   public static native PatchSet sync();
   public static native void syncAsync(SyncCallback callback);
+
+  public interface ResetCallback {
+    public void handle();
+  }
+
+  public static native void reset();
+  public static native void resetAsync(ResetCallback callback);
 }

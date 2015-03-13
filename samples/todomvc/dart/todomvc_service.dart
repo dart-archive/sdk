@@ -23,6 +23,7 @@ abstract class TodoMVCService {
   void completeItem(int id);
   void clearItems();
   void sync(PatchSetBuilder result);
+  void reset();
 
   static void initialize(TodoMVCService impl) {
     if (_impl != null) {
@@ -68,6 +69,10 @@ abstract class TodoMVCService {
         request.setInt64(48, result);
         _postResult.icall$1(request);
         break;
+      case _RESET_METHOD_ID:
+        _impl.reset();
+        _postResult.icall$1(request);
+        break;
       default:
         throw UnsupportedError();
     }
@@ -79,6 +84,7 @@ abstract class TodoMVCService {
   const int _COMPLETE_ITEM_METHOD_ID = 3;
   const int _CLEAR_ITEMS_METHOD_ID = 4;
   const int _SYNC_METHOD_ID = 5;
+  const int _RESET_METHOD_ID = 6;
 }
 
 class Node extends Reader {

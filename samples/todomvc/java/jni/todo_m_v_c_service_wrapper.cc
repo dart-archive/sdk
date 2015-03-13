@@ -303,6 +303,28 @@ JNIEXPORT void JNICALL Java_fletch_TodoMVCService_syncAsync(JNIEnv* _env, jclass
   ServiceApiInvokeAsync(service_id_, _ksyncId, Unwrap_PatchSet_8, _buffer, kSize);
 }
 
+static const MethodId _kresetId = reinterpret_cast<MethodId>(6);
+
+JNIEXPORT void JNICALL Java_fletch_TodoMVCService_reset(JNIEnv* _env, jclass) {
+  static const int kSize = 56;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  ServiceApiInvoke(service_id_, _kresetId, _buffer, kSize);
+}
+
+JNIEXPORT void JNICALL Java_fletch_TodoMVCService_resetAsync(JNIEnv* _env, jclass, jobject _callback) {
+  jobject callback = _env->NewGlobalRef(_callback);
+  JavaVM* vm;
+  _env->GetJavaVM(&vm);
+  static const int kSize = 56 + 1 * sizeof(void*);
+  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  CallbackInfo* info = new CallbackInfo(callback, vm);
+  *reinterpret_cast<CallbackInfo**>(_buffer + 32) = info;
+  ServiceApiInvokeAsync(service_id_, _kresetId, Unwrap_void_8, _buffer, kSize);
+}
+
 #ifdef __cplusplus
 }
 #endif

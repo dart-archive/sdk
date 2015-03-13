@@ -38,4 +38,8 @@ abstract class TodoMVCPresenter extends TodoMVCService {
     update().serialize(result);
   }
 
+  void reset() {
+    _presentation = new Nil();
+  }
+
 }

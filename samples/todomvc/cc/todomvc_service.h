@@ -35,6 +35,8 @@ class TodoMVCService {
   static void clearItemsAsync(void (*callback)());
   static PatchSet sync();
   static void syncAsync(void (*callback)(PatchSet));
+  static void reset();
+  static void resetAsync(void (*callback)());
 };
 
 class Node : public Reader {

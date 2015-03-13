@@ -20,13 +20,13 @@ cd $JAVA_DIR
 NDK_MODULE_PATH=. ndk-build
 
 # Copy Java source and fletch library to the right places.
-mkdir $DIR/TodoMVC/app/src/main/java/fletch
+mkdir -p $DIR/TodoMVC/app/src/main/java/fletch
 cp -R fletch/*.java $DIR/TodoMVC/app/src/main/java/fletch/
-mkdir $DIR/TodoMVC/app/src/main/jniLibs/
+mkdir -p $DIR/TodoMVC/app/src/main/jniLibs/
 cp -R libs/* $DIR/TodoMVC/app/src/main/jniLibs/
 
 # Build snapshot.
 cd $FLETCH_DIR
-mkdir $DIR/TodoMVC/app/src/main/res/raw
+mkdir -p $DIR/TodoMVC/app/src/main/res/raw
 ./out/ReleaseIA32/fletch $DIR/../todomvc.dart --out=$DIR/TodoMVC/app/src/main/res/raw/todomvc_snapshot
 

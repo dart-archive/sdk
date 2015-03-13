@@ -10,6 +10,7 @@ service TodoMVCService {
 
   // Synchronization should be considered internal.
   PatchSet* sync();
+  void reset();
 }
 
 // Primary structures.

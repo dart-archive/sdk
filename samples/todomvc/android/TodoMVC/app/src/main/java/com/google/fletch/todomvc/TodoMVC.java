@@ -11,7 +11,6 @@ import java.io.InputStream;
 
 import fletch.FletchApi;
 import fletch.FletchServiceApi;
-import fletch.PatchSet;
 import fletch.TodoMVCService;
 
 public class TodoMVC extends Application {
@@ -46,10 +45,6 @@ public class TodoMVC extends Application {
 
     // Setup the service.
     TodoMVCService.Setup();
-
-    // Use the service.
-    PatchSet patch = TodoMVCService.sync();
-    System.out.println("First patch set of size: " + patch.getPatches().size());
   }
 
   @Override
