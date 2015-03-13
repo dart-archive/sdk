@@ -441,8 +441,15 @@ static int Main(int argc, char** argv) {
       if (FD_ISSET(STDIN_FILENO, &readfds)) {
         uint8 buffer[1500];
         size_t bytes_count = read(STDIN_FILENO, &buffer, sizeof(buffer));
-        // TODO(ahe): Check return values.
-        write(stdio_socket->FileDescriptor(), &buffer, bytes_count);
+        do {
+          ssize_t bytes_written =
+            write(stdio_socket->FileDescriptor(), &buffer, bytes_count);
+          if (bytes_written == -1) {
+            Die("%s: write to stdio_socket failed: %s",
+                program_name, strerror(errno));
+          }
+          bytes_count -= bytes_written;
+        } while (bytes_count > 0);
       }
       if (FD_ISSET(socket->FileDescriptor(), &readfds)) {
         exit(ReadInt(socket));
