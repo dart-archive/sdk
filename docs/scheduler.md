@@ -265,7 +265,27 @@ The process transition in state as follows:
 - `Atomic<Process> Next`
 - `Atomic<Process> Previous`
 - `Atomic<Sleeping|Queued|Running|Yielding> State`
-- `Atomic<Message> MessageStack`
+- `Atomic<PortQueue> MessageStack`
+- `List<Port> Ports`
+
+```python
+~Process() {
+  for Port in Ports {
+    Port.OwnerProcessTerminating()
+  }
+}
+```
+
+```python
+Enqueue(Port, Message) {
+  Entry <- new PortQueue(Port, Message)
+  while True {
+    Last <- MessageStack
+    Entry.SetNext(Last);
+    if MessageStack.CompareAndSwap(Last, Entry): break
+  }
+}
+```
 
 ```python
 ChangeState(From, To) {
@@ -347,5 +367,20 @@ OwnerProcessTerminating() {
     Process <- Null
     Unlock()
   }
+}
+```
+
+```python
+Send(Message) {
+  Lock()
+  if Process != Null {
+    Process.Enqueue(This, Message)
+    // When returning something not Null, the current Process will be interrupted
+    // with TargetYielded.
+    // Note it's returned Locked.
+    return This
+  }
+  Unlock()  
+  return Null
 }
 ```
