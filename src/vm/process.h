@@ -101,7 +101,15 @@ class Process {
   Object* NewArray(int length);
   Object* NewDouble(double value);
   Object* NewInteger(int64 value);
-  Object* NewString(List<const char> value);
+  // NewString allocates a string of the given length and fills the payload
+  // with zeroes.
+  Object* NewString(int length);
+  // NewStringUninitialized allocates a string of the given length and
+  // leaves the payload uninitialized. The payload contains whatever
+  // was in that heap space before. Only use this if you intend to
+  // immediately overwrite the payload with something else.
+  Object* NewStringUninitialized(int length);
+  Object* NewStringFromAscii(List<const char> value);
   Object* NewBoxed(Object* value);
   Object* NewStack(int length);
 

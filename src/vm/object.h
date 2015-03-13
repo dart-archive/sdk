@@ -567,8 +567,11 @@ class Instance: public HeapObject {
 class String: public BaseArray {
  public:
   // Access to individual chars.
-  inline char get_char(int offset);
-  inline void set_char(int offset, char value);
+  inline uint16_t get_code_unit(int offset);
+  inline void set_code_unit(int offset, uint16_t value);
+
+  // Byte-level access to the payload.
+  inline uint8* byte_address_for(int index);
 
   inline static String* cast(Object* value);
 
@@ -577,13 +580,14 @@ class String: public BaseArray {
   inline void set_hash_value(word value);
 
   // Is the content equal to the given string.
-  bool Equals(List<const char> str);
+  bool Equals(List<const uint16_t> str);
   bool Equals(String* str);
 
   // Sizing.
   int StringSize() { return AllocationSize(length()); }
-  static int AllocationSize(int block_size) {
-    return Utils::RoundUp(kSize + block_size, kPointerSize);
+  static int AllocationSize(int length) {
+    int bytes = length * sizeof(uint16_t);
+    return Utils::RoundUp(kSize + bytes, kPointerSize);
   }
 
   // Hashing
@@ -614,8 +618,8 @@ class String: public BaseArray {
 
  private:
   // Only Heap should initialize objects.
-  inline void Initialize(int size, int length);
-  inline char* address_for(int offset);
+  inline void Initialize(int size, int length, bool clear);
+  inline uint16* address_for(int offset);
   friend class Heap;
   friend class Program;
   friend class Process;
@@ -1279,23 +1283,33 @@ String* String::cast(Object* object) {
   return reinterpret_cast<String*>(object);
 }
 
-char String::get_char(int offset) {
+uint16_t String::get_code_unit(int offset) {
+  offset *= sizeof(uint16_t);
   return *reinterpret_cast<char*>(address() + kSize + offset);
 }
 
-void String::set_char(int offset, char value) {
+void String::set_code_unit(int offset, uint16_t value) {
+  offset *= sizeof(uint16_t);
   *reinterpret_cast<char*>(address() + kSize + offset) = value;
 }
 
-char* String::address_for(int offset) {
-  return reinterpret_cast<char*>(address() + kSize + offset);
+uint8_t* String::byte_address_for(int offset) {
+  offset *= sizeof(uint16_t);
+  return reinterpret_cast<uint8_t*>(address() + kSize + offset);
 }
 
-void String::Initialize(int size, int length) {
+uint16_t* String::address_for(int offset) {
+  offset *= sizeof(uint16_t);
+  return reinterpret_cast<uint16_t*>(address() + kSize + offset);
+}
+
+void String::Initialize(int size, int length, bool clear) {
   set_length(length);
   set_hash_value(kNoHashValue);
   // Clear the body.
-  memset(reinterpret_cast<void*>(address() + kSize), 0, size - kSize);
+  if (clear) {
+    memset(reinterpret_cast<void*>(address() + kSize), 0, size - kSize);
+  }
 }
 
 word String::hash_value() {

@@ -82,7 +82,7 @@ NATIVE(SmiToString) {
   Smi* x = Smi::cast(arguments[0]);
   char buffer[128];  // TODO(kasperl): What's the right buffer size?
   int length = snprintf(buffer, ARRAY_SIZE(buffer), "%ld", x->value());
-  return process->NewString(List<const char>(buffer, length));
+  return process->NewStringFromAscii(List<const char>(buffer, length));
 }
 
 NATIVE(SmiToMint) {
@@ -264,7 +264,7 @@ NATIVE(MintToString) {
   long long int value = x->value();  // NOLINT
   char buffer[128];  // TODO(kasperl): What's the right buffer size?
   int length = snprintf(buffer, ARRAY_SIZE(buffer), "%lld", value);
-  return process->NewString(List<const char>(buffer, length));
+  return process->NewStringFromAscii(List<const char>(buffer, length));
 }
 
 NATIVE(MintNegate) {
@@ -618,7 +618,7 @@ NATIVE(DoubleToString) {
   ASSERT(status);
   char* result = builder.Finalize();
   ASSERT(result == buffer);
-  return process->NewString(List<const char>(result, strlen(result)));
+  return process->NewStringFromAscii(List<const char>(result, strlen(result)));
 }
 
 NATIVE(DoubleToStringAsExponential) {
@@ -641,7 +641,7 @@ NATIVE(DoubleToStringAsExponential) {
   ASSERT(status);
   char* result = builder.Finalize();
   ASSERT(result == buffer);
-  return process->NewString(List<const char>(result, strlen(result)));
+  return process->NewStringFromAscii(List<const char>(result, strlen(result)));
 }
 
 NATIVE(DoubleToStringAsFixed) {
@@ -665,7 +665,7 @@ NATIVE(DoubleToStringAsFixed) {
   ASSERT(status);
   char* result = builder.Finalize();
   ASSERT(result == buffer);
-  return process->NewString(List<const char>(result, strlen(result)));
+  return process->NewStringFromAscii(List<const char>(result, strlen(result)));
 }
 
 NATIVE(DoubleToStringAsPrecision) {
@@ -692,7 +692,7 @@ NATIVE(DoubleToStringAsPrecision) {
   ASSERT(status);
   char* result = builder.Finalize();
   ASSERT(result == buffer);
-  return process->NewString(List<const char>(result, strlen(result)));
+  return process->NewStringFromAscii(List<const char>(result, strlen(result)));
 }
 
 NATIVE(ListNew) {
@@ -868,13 +868,7 @@ NATIVE(StopwatchNow) {
 }
 
 char* AsForeignString(String* s) {
-  int length = s->length();
-  char* result = static_cast<char*>(malloc(length + 1));
-  for (int i = 0; i < length; i++) {
-    result[i] = s->get_char(i);
-  }
-  result[length] = '\0';
-  return result;
+  return s->ToCString();
 }
 
 word AsForeignWord(Object* object) {
@@ -901,7 +895,7 @@ NATIVE(StringCodeUnitAt) {
   word index = Smi::cast(y)->value();
   if (index < 0) return Failure::index_out_of_bounds();
   if (index >= x->length()) return Failure::index_out_of_bounds();
-  return process->ToInteger(x->get_char(index));
+  return process->ToInteger(x->get_code_unit(index));
 }
 
 NATIVE(StringCreate) {
@@ -909,12 +903,7 @@ NATIVE(StringCreate) {
   if (!z->IsSmi()) return Failure::wrong_argument_type();
   word length = Smi::cast(z)->value();
   if (length < 0) return Failure::index_out_of_bounds();
-  List<char> chars = List<char>::New(length);
-  for (int i = 0; i < length; i++) {
-    chars[i] = 0;
-  }
-  Object* result = process->NewString(List<const char>(chars));
-  chars.Delete();
+  Object* result = process->NewString(length);
   return result;
 }
 
@@ -934,7 +923,7 @@ NATIVE(StringSetCodeUnitAt) {
   if (!z->IsSmi()) return Failure::wrong_argument_type();
   word value = Smi::cast(z)->value();
   if (value < 0 || value > 255) return Failure::wrong_argument_type();
-  x->set_char(index, value);
+  x->set_code_unit(index, value);
   return process->program()->null_object();
 }
 
@@ -951,12 +940,12 @@ NATIVE(StringSubstring) {
   int length = x->length();
   if (end > length) return Failure::index_out_of_bounds();
   if (start == 0 && end == length) return x;
-  List<char> chars = List<char>::New(end - start);
-  for (int i = 0; i < end - start; i++) {
-    chars[i] = x->get_char(start + i);
-  }
-  Object* result = process->NewString(List<const char>(chars));
-  chars.Delete();
+  int substring_length = end - start;
+  int data_size = substring_length * sizeof(uint16_t);
+  Object* raw_string = process->NewStringUninitialized(substring_length);
+  if (raw_string->IsFailure()) return raw_string;
+  String* result = String::cast(raw_string);
+  memcpy(result->byte_address_for(0), x->byte_address_for(start), data_size);
   return result;
 }
 

@@ -516,15 +516,13 @@ void String::StringWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::STRING_TYPE, length());
   writer->Forward(this);
   // Body.
-  for (int i = 0; i < length(); i++) {
-    writer->WriteByte(get_char(i));
-  }
+  writer->WriteBytes(length() * sizeof(uint16_t), byte_address_for(0));
 }
 
 void String::StringReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
   set_hash_value(kNoHashValue);
-  for (int i = 0; i < length; i++) set_char(i, reader->ReadByte());
+  reader->ReadBytes(length * sizeof(uint16_t), byte_address_for(0));
 }
 
 void Array::ArrayWriteTo(SnapshotWriter* writer, Class* klass) {

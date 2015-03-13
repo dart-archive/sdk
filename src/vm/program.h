@@ -154,7 +154,7 @@ class Program {
                          int number_of_literals);
   Object* CreateInteger(int64 value);
   Object* CreateLargeInteger(int64 value);
-  Object* CreateString(List<const char> str);
+  Object* CreateStringFromAscii(List<const char> str);
   Object* CreateInstance(Class* klass);
   Object* CreateInitializer(Function* function);
 

@@ -100,7 +100,7 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function) {
   return Initializer::cast(result);
 }
 
-Object* Heap::CreateString(Class* the_class, int length) {
+Object* Heap::CreateStringInternal(Class* the_class, int length, bool clear) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::STRING_TYPE);
   int size = String::AllocationSize(length);
@@ -108,8 +108,16 @@ Object* Heap::CreateString(Class* the_class, int length) {
   if (raw_result->IsFailure()) return raw_result;
   String* result = reinterpret_cast<String*>(raw_result);
   result->set_class(the_class);
-  result->Initialize(size, length);
+  result->Initialize(size, length, clear);
   return String::cast(result);
+}
+
+Object* Heap::CreateString(Class* the_class, int length) {
+  return CreateStringInternal(the_class, length, true);
+}
+
+Object* Heap::CreateStringUninitialized(Class* the_class, int length) {
+  return CreateStringInternal(the_class, length, false);
 }
 
 Object* Heap::CreateStack(Class* the_class, int length) {

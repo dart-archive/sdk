@@ -377,14 +377,14 @@ Object* Program::CreateInteger(int64 value) {
   return Smi::FromWord(value);
 }
 
-Object* Program::CreateString(List<const char> str) {
+Object* Program::CreateStringFromAscii(List<const char> str) {
   Object* raw_result = heap()->CreateString(string_class(), str.length());
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
   ASSERT(result->length() == str.length());
   // Set the content.
   for (int i = 0; i < str.length(); i++) {
-    result->set_char(i, str[i]);
+    result->set_code_unit(i, str[i]);
   }
   return result;
 }
@@ -690,20 +690,22 @@ void Program::Initialize() {
 
   // Create the retry after gc failure object payload.
   raw_retry_after_gc_ =
-      String::cast(CreateString(StringFromCharZ("Retry after GC.")));
+      String::cast(CreateStringFromAscii(StringFromCharZ("Retry after GC.")));
 
   // Create the wrong argument type failure object payload.
   raw_wrong_argument_type_ =
-      String::cast(CreateString(StringFromCharZ("Wrong argument type.")));
+      String::cast(
+          CreateStringFromAscii(StringFromCharZ("Wrong argument type.")));
 
   raw_index_out_of_bounds_ =
-      String::cast(CreateString(StringFromCharZ("Index out of bounds.")));
+      String::cast(
+          CreateStringFromAscii(StringFromCharZ("Index out of bounds.")));
 
   raw_illegal_state_ =
-      String::cast(CreateString(StringFromCharZ("Illegal state.")));
+      String::cast(CreateStringFromAscii(StringFromCharZ("Illegal state.")));
 
   raw_should_preempt_ =
-      String::cast(CreateString(StringFromCharZ("Should preempt.")));
+      String::cast(CreateStringFromAscii(StringFromCharZ("Should preempt.")));
 
   native_failure_result_ = null_object_;
 }

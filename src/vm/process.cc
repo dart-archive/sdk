@@ -219,13 +219,27 @@ Object* Process::NewInteger(int64 value) {
   return result;
 }
 
-Object* Process::NewString(List<const char> value) {
+Object* Process::NewString(int length) {
+  Class* string_class = program()->string_class();
+  Object* raw_result = heap_.CreateString(string_class, length);
+  if (raw_result->IsFailure()) return raw_result;
+  return String::cast(raw_result);
+}
+
+Object* Process::NewStringUninitialized(int length) {
+  Class* string_class = program()->string_class();
+  Object* raw_result = heap_.CreateStringUninitialized(string_class, length);
+  if (raw_result->IsFailure()) return raw_result;
+  return String::cast(raw_result);
+}
+
+Object* Process::NewStringFromAscii(List<const char> value) {
   Class* string_class = program()->string_class();
   Object* raw_result = heap_.CreateString(string_class, value.length());
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
   for (int i = 0; i < value.length(); i++) {
-    result->set_char(i, value[i]);
+    result->set_code_unit(i, value[i]);
   }
   return result;
 }
@@ -256,12 +270,10 @@ Object* Process::Concatenate(String* x, String* y) {
   Object* raw_result = heap_.CreateString(string_class, length);
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
-  for (int i = 0; i < xlen; i++) {
-    result->set_char(i, x->get_char(i));
-  }
-  for (int i = 0; i < ylen; i++) {
-    result->set_char(i + xlen, y->get_char(i));
-  }
+  uint8_t* first_part = result->byte_address_for(0);
+  uint8_t* second_part = first_part + xlen * sizeof(uint16_t);
+  memcpy(first_part, x->byte_address_for(0), xlen * sizeof(uint16_t));
+  memcpy(second_part, y->byte_address_for(0), ylen * sizeof(uint16_t));
   return result;
 }
 

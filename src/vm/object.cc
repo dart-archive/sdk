@@ -179,11 +179,11 @@ int HeapObject::FixedSize() {
   return format.fixed_size();
 }
 
-bool String::Equals(List<const char> str) {
+bool String::Equals(List<const uint16_t> str) {
   int us = str.length();
   if (length() != us) return false;
   for (int i = 0; i < us; i++) {
-    if (get_char(i) != str[i]) return false;
+    if (get_code_unit(i) != str[i]) return false;
   }
   return true;
 }
@@ -193,7 +193,7 @@ bool String::Equals(String* str) {
   int len  = str->length();
   if (length() != len) return false;
   for (int i = 0; i < len; i++) {
-    if (get_char(i) != str->get_char(i)) return false;
+    if (get_code_unit(i) != str->get_code_unit(i)) return false;
   }
   return true;
 }
@@ -279,20 +279,21 @@ void String::StringPrint() {
   RawPrint("String");
   int len  = length();
   printf("\"");
-  for (int i = 0; i < len; i++) printf("%c", get_char(i));
+  for (int i = 0; i < len; i++) printf("%c", get_code_unit(i));
   printf("\"");
 }
 
 void String::StringShortPrint() {
   int len  = length();
-  for (int i = 0; i < len; i++) printf("%c", get_char(i));
+  for (int i = 0; i < len; i++) printf("%c", get_code_unit(i));
 }
 
 char* String::ToCString() {
+  // TODO(ager): utf16 to utf8 conversion?
   int len = length();
   char* result = reinterpret_cast<char*>(malloc(len + 1));
   for (int i = 0; i < len; i++) {
-    char c = get_char(i);
+    char c = get_code_unit(i);
     if (c == '\0') {
       FATAL("Converting string with zero bytes to C string");
     }

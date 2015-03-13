@@ -398,7 +398,11 @@ void Session::PushNewDouble(double value) {
 }
 
 void Session::PushNewString(List<const char> contents) {
-  GC_AND_RETRY_ON_ALLOCATION_FAILURE(result, program()->CreateString(contents));
+  // TODO(ager): Decide on the format the compiler generates. For now assume
+  // ascii strings.
+  GC_AND_RETRY_ON_ALLOCATION_FAILURE(
+      result,
+      program()->CreateStringFromAscii(contents));
   Push(result);
 }
 

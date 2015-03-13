@@ -45,8 +45,15 @@ class Heap {
   // Allocate static variable info.
   Object* CreateInitializer(Class* the_class, Function* function);
 
-  // Create a string object. Caller must set the content.
+  // Create a string object initialized with zeros. Caller should set
+  // the actual contents.
   Object* CreateString(Class* the_class, int length);
+
+  // Create a string object where the payload is uninitialized.
+  // The payload therefore contains whatever was in the heap at this
+  // location before. This should only be used if you are going
+  // to immediately overwrite the payload with the actual data.
+  Object* CreateStringUninitialized(Class* the_class, int length);
 
   // Allocate stack.
   Object* CreateStack(Class* the_class, int length);
@@ -88,6 +95,8 @@ class Heap {
   }
 
  private:
+  Object* CreateStringInternal(Class* the_class, int length, bool clear);
+  
   Space* space_;
   Object* AllocateRawClass(int size);
 };
