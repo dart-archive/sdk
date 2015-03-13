@@ -13,9 +13,9 @@
 #include "src/vm/intrinsics.h"
 #include "src/vm/natives.h"
 #include "src/vm/program.h"
+#include "src/vm/unicode.h"
 
 namespace fletch {
-
 
 // Helper class to remove forward pointer when performing
 // equivalence checks.
@@ -277,29 +277,22 @@ void Smi::SmiPrint() {
 
 void String::StringPrint() {
   RawPrint("String");
-  int len  = length();
   printf("\"");
-  for (int i = 0; i < len; i++) printf("%c", get_code_unit(i));
+  StringShortPrint();
   printf("\"");
 }
 
 void String::StringShortPrint() {
-  int len  = length();
-  for (int i = 0; i < len; i++) printf("%c", get_code_unit(i));
+  char* result = ToCString();
+  printf("%s", result);
+  free(result);
 }
 
 char* String::ToCString() {
-  // TODO(ager): utf16 to utf8 conversion?
-  int len = length();
+  intptr_t len = Utf8::Length(this);
   char* result = reinterpret_cast<char*>(malloc(len + 1));
-  for (int i = 0; i < len; i++) {
-    char c = get_code_unit(i);
-    if (c == '\0') {
-      FATAL("Converting string with zero bytes to C string");
-    }
-    result[i] = c;
-  }
-  result[len] = '\0';
+  Utf8::Encode(this, result, len);
+  result[len] = 0;
   return result;
 }
 

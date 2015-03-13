@@ -62,6 +62,7 @@
         'stack_walker.cc',
         'thread_pool.cc',
         'thread_posix.cc',
+        'unicode.cc',
         'weak_pointer.cc',
       ],
       'link_settings': {
