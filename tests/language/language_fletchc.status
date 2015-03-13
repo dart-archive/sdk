@@ -786,7 +786,6 @@ function_subtype_local2_test: Fail
 function_subtype_local3_test: Fail
 function_subtype_local4_test: Fail
 function_subtype_local5_test: Fail
-function_subtype_local6_test: Fail
 function_subtype_named1_test: Fail
 function_subtype_named2_test: Fail
 function_subtype_not0_test: Fail
@@ -1084,9 +1083,9 @@ issue12336_test: Fail
 issue13474_test: Fail
 issue1363_test: Fail
 issue13673_test: Fail
-issue14014_test: Fail
 issue14014_2_test: Fail
 issue14014_3_test: Fail
+issue14014_test: Fail
 issue14242_test: Fail
 issue15606_test/01: Fail
 issue15702_test: Fail
@@ -1104,6 +1103,7 @@ keyword_type_expression_test/01: MissingCompileTimeError
 keyword_type_expression_test/02: MissingCompileTimeError
 keyword_type_expression_test/03: MissingCompileTimeError
 label5_negative_test: Fail
+label6_negative_test: Fail
 label_test: Fail
 large_class_declaration_test: Fail
 large_implicit_getter_test: Fail
@@ -1190,7 +1190,6 @@ liveness_test: Fail
 load_indexed_constant_test: Fail
 local_function2_test: Fail
 local_function3_test: Fail
-local_function_non_equal_test: Fail
 local_function_test: Fail
 logical_expression2_test: Fail
 logical_expression3_test: Fail
@@ -2063,6 +2062,7 @@ type_variable_scope_test/05: Fail
 type_variable_scope_test/none: Fail
 type_variable_typedef_test: Fail
 typed_message_test: Fail
+typed_selector2_test: Fail
 typed_selector_test: Fail
 typedef_is_test: Fail
 typevariable_substitution2_test/02: Fail
@@ -2118,4 +2118,3 @@ wrong_number_type_arguments_test/00: Fail
 wrong_number_type_arguments_test/01: Fail
 wrong_number_type_arguments_test/02: Fail
 wrong_number_type_arguments_test/none: Fail
-typed_selector2_test: Fail

@@ -179,6 +179,10 @@ class ClosureVisitor
     markUsed(element, CaptureMode.ByValue);
   }
 
+  void visitLocalFunctionGet(Send node, LocalFunctionElement element, _) {
+    markUsed(element, CaptureMode.ByValue);
+  }
+
   void visitParameterGet(Send node, ParameterElement element, _) {
     markUsed(element, CaptureMode.ByValue);
   }
@@ -205,6 +209,16 @@ class ClosureVisitor
   void visitLocalVariableInvoke(
       Send node,
       LocalVariableElement element,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    markUsed(element, CaptureMode.ByValue);
+    arguments.accept(this);
+  }
+
+  void visitLocalFunctionInvoke(
+      Send node,
+      LocalFunctionElement element,
       NodeList arguments,
       Selector selector,
       _) {
