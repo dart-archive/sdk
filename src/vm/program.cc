@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unordered_map>
+#include <vector>
 
 #include "src/shared/bytecodes.h"
 #include "src/shared/globals.h"
@@ -20,6 +21,7 @@
 
 namespace fletch {
 
+typedef std::vector<Class*> ClassVector;
 typedef std::unordered_map<Object*, int> ObjectIndexMap;
 
 static List<const char> StringFromCharZ(const char* str) {
@@ -197,11 +199,16 @@ class ProgramTableRewriter {
   }
 
   void AddClassAndRewrite(uint8_t* bcp, uint8_t* new_bcp) {
-    AddAndRewrite(&classes_, bcp, new_bcp);
+    Class* clazz = Class::cast(Function::ConstantForBytecode(bcp));
+    unsigned index = AddAndRewrite(&class_map_, clazz, new_bcp);
+    if (index >= class_vector_.size()) {
+      class_vector_.push_back(clazz);
+      ASSERT(class_vector_[index] == clazz);
+    }
   }
 
-  Array* CreateClassArray(Program* program) {
-    return MapToArray(&classes_, program);
+  Class* LookupClass(int index) {
+    return class_vector_[index];
   }
 
   Array* CreateConstantArray(Program* program) {
@@ -213,14 +220,20 @@ class ProgramTableRewriter {
   }
 
  private:
-  void AddAndRewrite(ObjectIndexMap* map, uint8_t* bcp, uint8_t* new_bcp) {
+  int AddAndRewrite(ObjectIndexMap* map, uint8_t* bcp, uint8_t* new_bcp) {
     Object* literal = Function::ConstantForBytecode(bcp);
+    return AddAndRewrite(map, literal, new_bcp);
+  }
+
+  int AddAndRewrite(ObjectIndexMap* map, Object* literal, uint8_t* new_bcp) {
     int new_index = AddToMap(map, literal);
     *new_bcp = *new_bcp - 1;
     Utils::WriteInt32(new_bcp + 1, new_index);
+    return new_index;
   }
 
-  ObjectIndexMap classes_;
+  ClassVector class_vector_;
+  ObjectIndexMap class_map_;
   ObjectIndexMap constants_;
   ObjectIndexMap static_methods_;
 };
@@ -266,6 +279,43 @@ void Program::FoldFunction(Function* old_function,
   UNREACHABLE();
 }
 
+// After folding, we have to postprocess all functions in the heap to
+// adjust the bytecodes to take advantage of class ids.
+class FunctionPostprocessVisitor: public HeapObjectVisitor {
+ public:
+  explicit FunctionPostprocessVisitor(ProgramTableRewriter* rewriter)
+      : rewriter_(rewriter) { }
+
+  virtual void Visit(HeapObject* object) {
+    if (object->IsFunction()) Process(Function::cast(object));
+  }
+
+ private:
+  void Process(Function* function) {
+    uint8_t* bcp = function->bytecode_address_for(0);
+    while (true) {
+      Opcode opcode = static_cast<Opcode>(*bcp);
+      switch (opcode) {
+        case kAllocate: {
+          int index = Utils::ReadInt32(bcp + 1);
+          Class* clazz = rewriter_->LookupClass(index);
+          Utils::WriteInt32(bcp + 1, clazz->id());
+          break;
+        }
+        case kMethodEnd:
+          return;
+        default:
+          // Do nothing.
+          break;
+      }
+      bcp += Bytecode::Size(opcode);
+    }
+    UNREACHABLE();
+  }
+
+  ProgramTableRewriter* rewriter_;
+};
+
 class FoldingVisitor: public PointerVisitor {
  public:
   FoldingVisitor(Space* from,
@@ -276,7 +326,8 @@ class FoldingVisitor: public PointerVisitor {
         to_(to),
         rewriter_(rewriter),
         program_(program),
-        classes_(NULL) { }
+        classes_(NULL),
+        class_count_(0) { }
 
   void Visit(Object** p) { FoldPointer(p); }
 
@@ -285,9 +336,13 @@ class FoldingVisitor: public PointerVisitor {
     for (Object** p = start; p < end; p++) FoldPointer(p);
   }
 
-  void Finalize() {
+  Array* Finalize() {
     Object* hierarchy = ConstructClassHierarchy(classes_);
-    AssignClassIds(hierarchy, 0);
+    Array* table = Array::cast(program_->CreateArray(class_count_));
+    AssignClassIds(hierarchy, table, 0);
+    FunctionPostprocessVisitor visitor(rewriter_);
+    program_->heap()->IterateObjects(&visitor);
+    return table;
   }
 
  private:
@@ -330,6 +385,7 @@ class FoldingVisitor: public PointerVisitor {
         clazz->set_link(classes_);
         clazz->set_child_link(NULL);
         classes_ = clazz;
+        class_count_++;
       }
     }
   }
@@ -357,13 +413,14 @@ class FoldingVisitor: public PointerVisitor {
 
   // Assign class ids with a depth-first numbering so that all subclasses
   // of a given class have ids in the half-open interval [id, child-id).
-  static int AssignClassIds(Object* classes, int id) {
+  static int AssignClassIds(Object* classes, Array* table, int id) {
     Object* current = classes;
     while (current != NULL) {
       Class* clazz = Class::cast(current);
       Object* next = clazz->link();
       clazz->set_id(id++);
-      id = AssignClassIds(clazz->child_link(), id);
+      table->set(clazz->id(), clazz);
+      id = AssignClassIds(clazz->child_link(), table, id);
       clazz->set_child_id(id);
       current = next;
     }
@@ -374,7 +431,9 @@ class FoldingVisitor: public PointerVisitor {
   Space* to_;
   ProgramTableRewriter* rewriter_;
   Program* program_;
+
   Object* classes_;
+  int class_count_;
 };
 
 void Program::Fold() {
@@ -388,9 +447,8 @@ void Program::Fold() {
   IterateRoots(&visitor);
   to->CompleteScavenge(&visitor);
   heap_.ReplaceSpace(to);
-  visitor.Finalize();
 
-  classes_ = rewriter.CreateClassArray(this);
+  classes_ = visitor.Finalize();
   constants_ = rewriter.CreateConstantArray(this);
   static_methods_ = rewriter.CreateStaticMethodArray(this);
   is_compact_ = true;

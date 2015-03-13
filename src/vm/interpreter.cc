@@ -538,6 +538,7 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
   OPCODE_BEGIN(Allocate);
     int index = ReadInt32(1);
     Class* klass = program()->class_at(index);
+    ASSERT(klass->id() == index);
     GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
         process()->NewInstance(klass));
     Instance* instance = Instance::cast(result);
