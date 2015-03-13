@@ -603,9 +603,9 @@ class _JavaVisitor extends CodeGenerationVisitor {
           if (slotType.isString) {
             // TODO(ager): This is nasty. Maybe inject this type earler in the
             // pipeline?
-            Type uint8Type = new SimpleType("uint8", false);
-            uint8Type.primitiveType = primitives.lookup("uint8");
-            neededListTypes.add(uint8Type);
+            Type uint8ListType = new ListType(new SimpleType("uint8", false));
+            uint8ListType.primitiveType = primitives.lookup("uint8");
+            neededListTypes.add(uint8ListType);
             buffer.writeln('  public Uint8List get${camel}Data() {');
             buffer.writeln('    ListReader reader = new ListReader();');
             buffer.writeln('    readList(reader, $offset);');

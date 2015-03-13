@@ -282,7 +282,7 @@ class _DartVisitor extends CodeGenerationVisitor {
         write('  List<');
         writeType(slotType);
         write('> get $slotName => ');
-        neededListTypes.add(slotType.elementType);
+        neededListTypes.add(slotType);
         writeln('readList(new _${slotType.identifier}List(), ${slot.offset});');
       } else if (slotType.isVoid) {
         // No getters for void slots.
@@ -297,9 +297,9 @@ class _DartVisitor extends CodeGenerationVisitor {
         } else if (slotType.isString) {
           // TODO(ager): This is nasty. Maybe inject this type earler
           // in the pipeline?
-          Type uint8Type = new SimpleType("uint8", false);
-          uint8Type.primitiveType = primitives.lookup("uint8");
-          neededListTypes.add(uint8Type);
+          Type uint8ListType = new ListType(new SimpleType("uint8", false));
+          uint8ListType.primitiveType = primitives.lookup("uint8");
+          neededListTypes.add(uint8ListType);
           writeln(' get $slotName => '
                   'readString(new _uint8List(), ${slot.offset});');
           writeln('  List<int> get ${slotName}Data => '
