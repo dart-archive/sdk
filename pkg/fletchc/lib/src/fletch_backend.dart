@@ -154,6 +154,9 @@ class FletchBackend extends Backend {
   final Map<FunctionElement, ClosureEnvironment> closureEnvironments =
       <FunctionElement, ClosureEnvironment>{};
 
+  final Map<FunctionElement, CompiledClass> closureClasses =
+      <FunctionElement, CompiledClass>{};
+
   final Map<int, int> getters = <int, int>{};
   final Map<int, int> setters = <int, int>{};
 
@@ -317,6 +320,17 @@ class FletchBackend extends Backend {
     return super.stringImplementation;
   }
 
+  CompiledClass createClosureClass(
+      Function closure,
+      ClosureEnvironment closureEnvironment) {
+    return closureClasses.putIfAbsent(closure, () {
+      ClosureInfo info = closureEnvironment.closures[closure];
+      int fields = info.free.length;
+      if (info.isThisFree) fields++;
+      return createStubClass(fields, compiledObjectClass);
+    });
+  }
+
   void codegen(CodegenWorkItem work) {
     Element element = work.element;
     assert(!compiledFunctions.containsKey(element));
@@ -350,13 +364,24 @@ class FletchBackend extends Backend {
         function,
         elements);
 
+    CompiledClass holderClass;
+
+    if (function.isInstanceMember ||
+        function.isGenerativeConstructor) {
+      ClassElement enclosingClass = function.enclosingClass.declaration;
+      holderClass = registerClassElement(enclosingClass);
+    } else if (function.memberContext != function) {
+      holderClass = createClosureClass(function, closureEnvironment);
+    }
+
     FunctionCompiler functionCompiler = new FunctionCompiler(
         allocateMethodId(function),
         context,
         elements,
         registry,
         closureEnvironment,
-        function);
+        function,
+        holderClass);
 
     if (isNative(function)) {
       codegenNativeFunction(function, functionCompiler);
@@ -374,9 +399,10 @@ class FletchBackend extends Backend {
     // TODO(ahe): Don't do this.
     compiler.enqueuer.codegen.generatedCode[function.declaration] = null;
 
-    if (function.isInstanceMember) {
-      ClassElement enclosingClass = function.enclosingClass.declaration;
-      CompiledClass compiledClass = registerClassElement(enclosingClass);
+    if (holderClass != null && !function.isGenerativeConstructor) {
+      // Inject the function into the method table of the 'holderClass' class. Note
+      // that while constructor bodies has a this argument, we don't inject
+      // them into the method table.
       String symbol = context.getSymbolFromFunction(function);
       int id = context.getSymbolId(symbol);
       int arity = function.functionSignature.parameterCount;
@@ -384,7 +410,7 @@ class FletchBackend extends Backend {
       if (function.isGetter) kind = SelectorKind.Getter;
       if (function.isSetter) kind = SelectorKind.Setter;
       int fletchSelector = FletchSelector.encode(id, kind, arity);
-      compiledClass.methodTable[fletchSelector] = compiledFunction.methodId;
+      holderClass.methodTable[fletchSelector] = compiledFunction.methodId;
     }
 
     if (compiler.verbose) {

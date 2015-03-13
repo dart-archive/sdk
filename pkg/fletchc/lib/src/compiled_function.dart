@@ -32,10 +32,13 @@ class CompiledFunction {
   final FunctionSignature signature;
 
   /**
-   * In addition to the function signature, the compiled function may take a
-   * 'this' argument.
+   * If the functions is an instance member, [memberOf] is set to the compiled
+   * class.
+   *
+   * If [memberOf] is set, the compiled function takes an 'this' argument in
+   * addition to that of [signature].
    */
-  final bool hasThisArgument;
+  final CompiledClass memberOf;
 
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
 
@@ -45,15 +48,16 @@ class CompiledFunction {
 
   CompiledFunction(this.methodId,
                    FunctionSignature signature,
-                   bool hasThisArgument)
+                   CompiledClass memberOf)
       : this.signature = signature,
-        this.hasThisArgument = hasThisArgument,
+        this.memberOf = memberOf,
         builder = new BytecodeBuilder(
-          signature.parameterCount + (hasThisArgument ? 1 : 0));
+          signature.parameterCount + (memberOf != null ? 1 : 0));
 
   CompiledFunction.accessor(this.methodId, bool setter)
-      : hasThisArgument = true,
-        builder = new BytecodeBuilder(setter ? 2 : 1);
+      : builder = new BytecodeBuilder(setter ? 2 : 1);
+
+  bool get hasThisArgument => memberOf != null;
 
   int allocateConstant(ConstantValue constant) {
     return constants.putIfAbsent(constant, () => constants.length);

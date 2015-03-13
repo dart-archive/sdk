@@ -142,13 +142,14 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
                    TreeElements elements,
                    this.registry,
                    this.closureEnvironment,
-                   FunctionElement function)
+                   FunctionElement function,
+                   CompiledClass memberOf)
       : super(elements),
         function = function,
         compiledFunction = new CompiledFunction(
             methodId,
             function.functionSignature,
-            hasThisArgument(function)) {
+            memberOf) {
     thisSlot = -1 - compiledFunction.builder.functionArity;
   }
 
@@ -163,20 +164,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
         compiledFunction = new CompiledFunction(
             methodId,
             function.functionSignature,
-            false) {
+            null) {
     thisSlot = -1 - compiledFunction.builder.functionArity;
-  }
-
-  static bool hasThisArgument(FunctionElement function) {
-    if (function.isInstanceMember ||
-        function.isGenerativeConstructor) {
-      // 'this' argument.
-      return true;
-    } else if (function.memberContext != function) {
-      // 'closure' argument.
-      return true;
-    }
-    return false;
   }
 
   BytecodeBuilder get builder => compiledFunction.builder;
@@ -849,28 +838,18 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   void visitFunctionExpression(FunctionExpression node) {
     FunctionElement function = elements[node];
+    CompiledClass compiledClass = context.backend.createClosureClass(
+        function,
+        closureEnvironment);
     ClosureInfo info = closureEnvironment.closures[function];
-    int fields = info.free.length;
-    if (info.isThisFree) {
-      fields++;
-      loadThis();
-    }
-    CompiledClass compiledClass = context.backend.createStubClass(
-        fields,
-        context.backend.compiledObjectClass);
+    if (info.isThisFree) loadThis();
     for (LocalVariableElement element in info.free) {
       // Load the raw value (the 'Box' when by reference).
       builder.loadSlot(scope[element].slot);
     }
     int classConstant = compiledFunction.allocateConstantFromClass(
         compiledClass.id);
-    builder.allocate(classConstant, fields);
-
-    int methodId = context.backend.allocateMethodId(function);
-    int arity = function.functionSignature.parameterCount;
-    Selector selector = new Selector.call('call', null, arity);
-    int fletchSelector = context.toFletchSelector(selector);
-    compiledClass.methodTable[fletchSelector] = methodId;
+    builder.allocate(classConstant, compiledClass.fields);
 
     registry.registerStaticInvocation(function);
   }

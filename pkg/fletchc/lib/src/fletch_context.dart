@@ -88,6 +88,9 @@ class FletchContext {
   }
 
   String mangleName(String name, LibraryElement library) {
+    // Anonymous functions (closures) have an empty name. To match call-sites,
+    // we mangle them as 'call'.
+    if (name.isEmpty) name = 'call';
     if (!isPrivateName(name)) return name;
     return name + libraryPrivateTag.putIfAbsent(library, () {
       // Give the core library the unique mangling of the empty string. That
