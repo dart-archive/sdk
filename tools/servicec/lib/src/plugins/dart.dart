@@ -282,7 +282,7 @@ class _DartVisitor extends CodeGenerationVisitor {
         write('  List<');
         writeType(slotType);
         write('> get $slotName => ');
-        neededListTypes.add(slotType);
+        neededListTypes.add(slotType.elementType);
         writeln('readList(new _${slotType.identifier}List(), ${slot.offset});');
       } else if (slotType.isVoid) {
         // No getters for void slots.
