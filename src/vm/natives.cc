@@ -922,7 +922,7 @@ NATIVE(StringSetCodeUnitAt) {
   Object* z = arguments[2];
   if (!z->IsSmi()) return Failure::wrong_argument_type();
   word value = Smi::cast(z)->value();
-  if (value < 0 || value > 255) return Failure::wrong_argument_type();
+  if (value < 0 || value > 65535) return Failure::wrong_argument_type();
   x->set_code_unit(index, value);
   return process->program()->null_object();
 }

@@ -1332,12 +1332,12 @@ String* String::cast(Object* object) {
 
 uint16_t String::get_code_unit(int offset) {
   offset *= sizeof(uint16_t);
-  return *reinterpret_cast<char*>(address() + kSize + offset);
+  return *reinterpret_cast<uint16_t*>(address() + kSize + offset);
 }
 
 void String::set_code_unit(int offset, uint16_t value) {
   offset *= sizeof(uint16_t);
-  *reinterpret_cast<char*>(address() + kSize + offset) = value;
+  *reinterpret_cast<uint16_t*>(address() + kSize + offset) = value;
 }
 
 uint8_t* String::byte_address_for(int offset) {

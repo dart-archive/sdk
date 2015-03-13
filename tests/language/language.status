@@ -844,7 +844,6 @@ string_interpolation9_test/19: MissingCompileTimeError
 string_interpolation9_test/4: MissingCompileTimeError
 string_interpolation9_test/9: MissingCompileTimeError
 string_interpolation_newline_test: Fail
-string_test: Fail
 string_unicode1_negative_test: Fail
 string_unicode2_negative_test: Fail
 string_unicode3_negative_test: Fail
