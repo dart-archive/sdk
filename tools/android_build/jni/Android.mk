@@ -42,6 +42,7 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/stack_walker.cc \
 	../../../src/vm/thread_pool.cc \
 	../../../src/vm/thread_posix.cc \
+	../../../src/vm/unicode.cc \
 	../../../src/vm/weak_pointer.cc \
 	../../../third_party/double-conversion/src/bignum-dtoa.cc \
 	../../../third_party/double-conversion/src/bignum.cc \
