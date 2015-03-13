@@ -344,7 +344,7 @@ static int StartFletchDriverServer() {
     close(parent_stderr);
     char *end;
     intmax_t port = strtoimax(buffer, &end, 10);
-    printf("Started persistent driver process on port %i\n", port);
+    printf("Started persistent driver process on port %j\n", port);
     return port;
   }
   return -1;
