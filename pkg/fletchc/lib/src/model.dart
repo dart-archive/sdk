@@ -103,10 +103,11 @@ class ClassBuilder {
   final ClassMirror original;
 
   /**
-   * The definition of the change to signature of the class
+   * The definition of the change to the header of the class
    * An empty string implies no change.
+   * for example: "class Foo extends Bar"
    */
-  String signatureDeclaration = "";
+  String classHeader = "";
 
   /**
    * A map of how the instance members of [original] should
@@ -144,10 +145,15 @@ class ClassBuilder {
 
     // TODO(lukechurch): Do the same thing for fields.
   }
+
+  /**
+   * Construct a new class from [classHeader].
+   */
+  ClassBuilder.fromEmpty(this.classHeader) : original = null;
 }
 
 /**
- * Used to assemble change a change to a [ClassBuilder].
+ * Used to assemble a change to a [ClassBuilder].
  */
 class MirrorBuilder {
   final String newSource;
