@@ -38,6 +38,7 @@ build $
         src/compiler/compiler.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
+        src/tools/driver/driver.gyp $
         src/vm/vm.gyp $
         tests/service_tests/service_tests.gyp $
         samples/todomvc/todomvc.gyp

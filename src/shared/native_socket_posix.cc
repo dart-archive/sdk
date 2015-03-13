@@ -125,4 +125,8 @@ uint8* Socket::Read(int length) {
   return data;
 }
 
+int Socket::FileDescriptor() {
+  return data_->fd;
+}
+
 }  // namespace fletch

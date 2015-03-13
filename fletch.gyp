@@ -57,6 +57,14 @@
       ],
     },
     {
+      'target_name': 'fletch_driver',
+      'type': 'none',
+      'toolsets': ['host'],
+      'dependencies': [
+        'src/tools/driver/driver.gyp:fletch_driver',
+      ],
+    },
+    {
       'target_name': 'run_compiler_tests',
       # Note: this target_name needs to be different from its dependency.
       # This is due to the ninja GYP generator which doesn't generate unique

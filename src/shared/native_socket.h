@@ -26,6 +26,8 @@ class Socket {
   void Write(uint8* data, int length);
   uint8* Read(int length);
 
+  int FileDescriptor();
+
  private:
   bool ShouldRetryAccept(int error);
 
