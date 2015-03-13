@@ -337,6 +337,17 @@ class ClosureVisitor
     right.accept(this);
   }
 
+  void visitIndexSet(
+      SendSet node,
+      Node receiver,
+      Node index,
+      Node value,
+      _) {
+    receiver.accept(this);
+    index.accept(this);
+    value.accept(this);
+  }
+
   void visitEquals(Send node, Node left, Node right, _) {
     left.accept(this);
     right.accept(this);

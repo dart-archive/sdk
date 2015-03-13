@@ -125,6 +125,8 @@ class CompiledClass {
 }
 
 class FletchBackend extends Backend {
+  static const String growableListName = '_GrowableList';
+  static const String fixedListName = '_FixedList';
   static const String noSuchMethodName = '_noSuchMethod';
   static const String noSuchMethodTrampolineName = '_noSuchMethodTrampoline';
 
@@ -180,6 +182,7 @@ class FletchBackend extends Backend {
   ClassElement stringClass;
   ClassElement smiClass;
   ClassElement mintClass;
+  ClassElement growableListClass;
 
   FletchBackend(FletchCompiler compiler)
       : this.context = compiler.context,
@@ -264,13 +267,12 @@ class FletchBackend extends Backend {
 
     fletchNativeElement = fletchSystemLibrary.findLocal('native');
 
-    CompiledClass loadBuiltinClass(String name, LibraryElement library) {
+    CompiledClass loadClass(String name, LibraryElement library) {
       var classImpl = library.findLocal(name);
       if (classImpl == null) {
         compiler.internalError(library, "Internal class '$name' not found.");
         return null;
       }
-      builtinClasses.add(classImpl);
       // TODO(ahe): Register in ResolutionCallbacks. The 3 lines below should
       // not happen at this point in time.
       classImpl.ensureResolved(compiler);
@@ -282,12 +284,28 @@ class FletchBackend extends Backend {
       return compiledClass;
     }
 
+    CompiledClass loadBuiltinClass(String name, LibraryElement library) {
+      CompiledClass compiledClass = loadClass(name, library);
+      builtinClasses.add(compiledClass.element);
+      return compiledClass;
+    }
+
     compiledObjectClass = loadBuiltinClass("Object", compiler.coreLibrary);
     smiClass = loadBuiltinClass("_Smi", fletchSystemLibrary).element;
     mintClass = loadBuiltinClass("_Mint", fletchSystemLibrary).element;
     stringClass = loadBuiltinClass("String", fletchSystemLibrary).element;
     loadBuiltinClass("Null", compiler.coreLibrary);
     loadBuiltinClass("bool", compiler.coreLibrary);
+
+    growableListClass =
+        loadClass(growableListName, fletchSystemLibrary).element;
+    // Register list constructors to world.
+    // TODO(ahe): Register growableListClass through ResolutionCallbacks.
+    for (ConstructorElement constructor in growableListClass.constructors) {
+      world.registerStaticUse(constructor);
+    }
+    // TODO(ahe): Register fixedListClass through ResolutionCallbacks.
+    loadClass(fixedListName, fletchSystemLibrary);
 
     // TODO(ajohnsen): Remove? String interpolation does not enqueue '+'.
     // Investigate what else it may enqueue, could be StringBuilder, and then

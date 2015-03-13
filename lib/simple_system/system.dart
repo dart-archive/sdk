@@ -12,8 +12,9 @@ import 'dart:core' as core show
     int,
     String;
 
-part 'string.dart';
 part 'integer.dart';
+part 'list.dart';
+part 'string.dart';
 
 const native = "native";
 

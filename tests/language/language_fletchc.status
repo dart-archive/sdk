@@ -439,7 +439,6 @@ constant_locals_test/05: MissingCompileTimeError
 constant_propagation_phis_test: Fail
 constant_string_interpolation_test: Fail
 constant_type_literal_test/01: MissingCompileTimeError
-constant_type_literal_test/none: Fail
 constructor10_test/00: MissingCompileTimeError
 constructor10_test/01: MissingCompileTimeError
 constructor10_test/02: MissingCompileTimeError
@@ -961,7 +960,6 @@ getters_setters_type_test/01: Fail
 getters_setters_type_test/none: Fail
 guess_cid_test: Fail
 gvn_field_access_test: Fail
-gvn_interceptor_test: Fail
 gvn_test: Fail
 hash_code_mangling_test: Fail
 hash_map_null_key_foreach_test: Fail
@@ -1082,7 +1080,6 @@ issue11724_test: Fail
 issue11793_test: Fail
 issue12023_test: Fail
 issue12284_test: Fail
-issue12288_test: Fail
 issue12336_test: Fail
 issue13474_test: Fail
 issue1363_test: Fail
@@ -1184,7 +1181,6 @@ list_literal_test: Fail
 list_test: Fail
 list_tracer_call_last_test: Fail
 list_tracer_closure_test: Fail
-list_tracer_in_list_test: Fail
 list_tracer_in_map_test: Fail
 list_tracer_return_from_tearoff_closure_test: Fail
 literal_unary_plus_test/01: MissingCompileTimeError
@@ -1518,7 +1514,6 @@ number_syntax_test: Fail
 numbers_test: Fail
 on_catch_malformed_type_test: Fail
 operator1_negative_test: Fail
-operator2_test: Fail
 operator3_test: Fail
 operator4_test: Fail
 operator5_test: Fail

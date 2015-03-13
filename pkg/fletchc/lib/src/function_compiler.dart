@@ -379,7 +379,13 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       _) {
     visitForValue(left);
     visitForValue(right);
-    Selector selector = new Selector.binaryOperator(operator.name);
+    Selector selector;
+    // TODO(ajohnsen): Remove once SemanticVisitor handle IndexGet seperately.
+    if (operator == BinaryOperator.INDEX) {
+      selector = new Selector.index();
+    } else {
+      selector = new Selector.binaryOperator(operator.name);
+    }
     invokeMethod(selector);
   }
 
@@ -410,6 +416,20 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Node right,
       _) {
     handleBinaryOperator(left, right, operator, _);
+    applyVisitState();
+  }
+
+  void visitIndexSet(
+      SendSet node,
+      Node receiver,
+      Node index,
+      Node value,
+      _) {
+    visitForValue(receiver);
+    visitForValue(index);
+    visitForValue(value);
+    Selector selector = new Selector.indexSet();
+    invokeMethod(selector);
     applyVisitState();
   }
 
@@ -707,6 +727,23 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     }
   }
 
+  void visitLiteralList(LiteralList node) {
+    ClassElement growableClass = context.backend.growableListClass;
+    ConstructorElement constructor = growableClass.lookupDefaultConstructor();
+    if (constructor == null) {
+      internalError(growableClass, "Failed to lookup default list constructor");
+    }
+    // Call with 0 arguments, as we call the default constructor.
+    callConstructor(constructor, 0);
+    Selector add = new Selector.call('add', null, 1);
+    for (Node element in node.elements) {
+      builder.dup();
+      visitForValue(element);
+      invokeMethod(add);
+      builder.pop();
+    }
+  }
+
   void visitLiteralString(LiteralString node) {
     if (visitState == VisitState.Value) {
       builder.loadConst(allocateConstantFromNode(node));
@@ -814,6 +851,17 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void callConstructor(ConstructorElement constructor, int arity) {
+    int constructorId = context.backend.compileConstructor(
+        constructor,
+        elements,
+        registry);
+    int constId = compiledFunction.allocateConstantFromFunction(constructorId);
+    registry.registerStaticInvocation(constructor);
+    registry.registerInstantiatedClass(constructor.enclosingClass);
+    builder.invokeStatic(constId, arity);
+  }
+
   void visitNewExpression(NewExpression node) {
     ConstructorElement constructor = elements[node.send];
     int arity = loadArguments(node.send.argumentsNode, constructor);
@@ -823,15 +871,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       int constId = compiledFunction.allocateConstantFromFunction(methodId);
       builder.invokeFactory(constId, arity);
     } else {
-      int constructorId = context.backend.compileConstructor(
-          constructor,
-          elements,
-          registry);
-      int constId = compiledFunction.allocateConstantFromFunction(
-          constructorId);
-      registry.registerStaticInvocation(constructor);
-      registry.registerInstantiatedType(elements.getType(node));
-      builder.invokeStatic(constId, arity);
+      callConstructor(constructor, arity);
     }
     applyVisitState();
   }
