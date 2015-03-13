@@ -275,22 +275,30 @@ class FoldingVisitor: public PointerVisitor {
       : from_(from),
         to_(to),
         rewriter_(rewriter),
-        program_(program) { }
+        program_(program),
+        classes_(NULL) { }
 
-  void Visit(Object** p) { UnfoldPointer(p); }
+  void Visit(Object** p) { FoldPointer(p); }
 
   void VisitBlock(Object** start, Object** end) {
     // Fold all HeapObject pointers in [start, end)
-    for (Object** p = start; p < end; p++) UnfoldPointer(p);
+    for (Object** p = start; p < end; p++) FoldPointer(p);
+  }
+
+  void Finalize() {
+    Object* hierarchy = ConstructClassHierarchy(classes_);
+    AssignClassIds(hierarchy, 0);
   }
 
  private:
-  void UnfoldPointer(Object** p) {
-    Object* object = *p;
-    if (!object->IsHeapObject()) return;
-    if (!from_->Includes(reinterpret_cast<uword>(object))) return;
+  void FoldPointer(Object** p) {
+    Object* raw_object = *p;
+    if (!raw_object->IsHeapObject()) return;
+    if (!from_->Includes(reinterpret_cast<uword>(raw_object))) return;
+    HeapObject* object = HeapObject::cast(raw_object);
+
     // Check for forwarding address before checking type.
-    HeapObject* f = HeapObject::cast(object)->forwarding_address();
+    HeapObject* f = object->forwarding_address();
     if (f != NULL) {
       *p = f;
     } else if (object->IsFunction()) {
@@ -307,14 +315,66 @@ class FoldingVisitor: public PointerVisitor {
       Function* new_function = Function::cast(*p);
       program_->FoldFunction(old_function, new_function, rewriter_);
     } else {
-      *p = reinterpret_cast<HeapObject*>(object)->CloneInToSpace(to_);
+      // Clone the heap object in to-space, but check if the object
+      // was a class before doing so. As part of the cloning, we install
+      // a forwarding pointer in the object, which makes it impossible
+      // to ask if it was a class.
+      bool is_class = object->IsClass();
+      HeapObject* clone = object->CloneInToSpace(to_);
+      *p = clone;
+
+      // Link all classes together so we can run through them after
+      // the heap traversal.
+      if (is_class) {
+        Class* clazz = reinterpret_cast<Class*>(clone);
+        clazz->set_link(classes_);
+        clazz->set_child_link(NULL);
+        classes_ = clazz;
+      }
     }
+  }
+
+  // Turn the linked list of classes into a hierarchy where each class
+  // has a linked list of its children.
+  static Object* ConstructClassHierarchy(Object* classes) {
+    Object* result = NULL;
+    Object* current = classes;
+    while (current != NULL) {
+      Class* clazz = Class::cast(current);
+      Object* next = clazz->link();
+      if (clazz->has_super_class()) {
+        Class* super_class = clazz->super_class();
+        clazz->set_link(super_class->child_link());
+        super_class->set_child_link(clazz);
+      } else {
+        clazz->set_link(result);
+        result = clazz;
+      }
+      current = next;
+    }
+    return result;
+  }
+
+  // Assign class ids with a depth-first numbering so that all subclasses
+  // of a given class have ids in the half-open interval [id, child-id).
+  static int AssignClassIds(Object* classes, int id) {
+    Object* current = classes;
+    while (current != NULL) {
+      Class* clazz = Class::cast(current);
+      Object* next = clazz->link();
+      clazz->set_id(id++);
+      id = AssignClassIds(clazz->child_link(), id);
+      clazz->set_child_id(id);
+      current = next;
+    }
+    return id;
   }
 
   Space* from_;
   Space* to_;
   ProgramTableRewriter* rewriter_;
   Program* program_;
+  Object* classes_;
 };
 
 void Program::Fold() {
@@ -323,10 +383,13 @@ void Program::Fold() {
   ProgramTableRewriter rewriter;
   Space* to = new Space();
   NoAllocationFailureScope scope(to);
+
   FoldingVisitor visitor(heap_.space(), to, &rewriter, this);
   IterateRoots(&visitor);
   to->CompleteScavenge(&visitor);
   heap_.ReplaceSpace(to);
+  visitor.Finalize();
+
   classes_ = rewriter.CreateClassArray(this);
   constants_ = rewriter.CreateConstantArray(this);
   static_methods_ = rewriter.CreateStaticMethodArray(this);

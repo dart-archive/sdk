@@ -719,6 +719,19 @@ class Class: public Instance {
   inline InstanceFormat instance_format();
   inline void set_instance_format(InstanceFormat value);
 
+  // [id] or [link]: class id or link to next class while folding.
+  inline int id();
+  inline void set_id(int value);
+  inline Object* link();
+  inline void set_link(Object* value);
+
+  // [child_id] or [child_link]: class id of last child or link to
+  // children while folding.
+  inline int child_id();
+  inline void set_child_id(int value);
+  inline Object* child_link();
+  inline void set_child_link(Object* value);
+
   // [methods]: array containing pairs of (Smi*, Function*) sorted by Smi*
   // values.
   inline Array* methods();
@@ -754,7 +767,9 @@ class Class: public Instance {
   // Layout descriptor.
   static const int kSuperClassOffset = HeapObject::kSize;
   static const int kInstanceFormatOffset = kSuperClassOffset + kPointerSize;
-  static const int kMethodsOffset = kInstanceFormatOffset + kPointerSize;
+  static const int kIdOffset = kInstanceFormatOffset + kPointerSize;
+  static const int kChildIdOffset = kIdOffset + kPointerSize;
+  static const int kMethodsOffset = kChildIdOffset + kPointerSize;
   static const int kSize = kMethodsOffset + kPointerSize;
 
  private:
@@ -1227,6 +1242,38 @@ InstanceFormat Class::instance_format() {
 
 void Class::set_instance_format(InstanceFormat value) {
   at_put(kInstanceFormatOffset, value.as_smi());
+}
+
+int Class::id() {
+  return Smi::cast(at(kIdOffset))->value();
+}
+
+void Class::set_id(int value) {
+  at_put(kIdOffset, Smi::FromWord(value));
+}
+
+Object* Class::link() {
+  return at(kIdOffset);
+}
+
+void Class::set_link(Object* value) {
+  at_put(kIdOffset, value);
+}
+
+int Class::child_id() {
+  return Smi::cast(at(kChildIdOffset))->value();
+}
+
+void Class::set_child_id(int value) {
+  at_put(kChildIdOffset, Smi::FromWord(value));
+}
+
+Object* Class::child_link() {
+  return at(kChildIdOffset);
+}
+
+void Class::set_child_link(Object* value) {
+  at_put(kChildIdOffset, value);
 }
 
 void Class::Initialize(InstanceFormat format, int size, Object* null) {
