@@ -1,4 +1,6 @@
 packages
+third_party/libs/linux/arm/libtcmalloc_minimal.a
+third_party/libs/linux/arm64/libtcmalloc_minimal.a
 third_party/libs/linux/x64/libtcmalloc_minimal.a
 third_party/libs/linux/x86/libtcmalloc_minimal.a
 third_party/libs/mac/x64/libtcmalloc_minimal.a
