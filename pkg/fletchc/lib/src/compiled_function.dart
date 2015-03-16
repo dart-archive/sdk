@@ -7,14 +7,28 @@ library fletchc.compiled_function;
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue;
 
+import 'package:compiler/src/constants/expressions.dart' show
+    ConstantExpression;
+
+import 'package:compiler/src/tree/tree.dart' show
+    Expression;
+
 import 'package:compiler/src/elements/elements.dart';
 
 import 'fletch_constants.dart' show
     FletchFunctionConstant,
     FletchClassConstant;
 
+import 'package:compiler/src/universe/universe.dart'
+    show Selector;
+
 import '../bytecodes.dart' show
     Bytecode;
+
+import 'fletch_backend.dart' show
+    CompiledClass;
+
+import 'fletch_context.dart';
 
 import 'bytecode_builder.dart';
 
@@ -40,6 +54,8 @@ class CompiledFunction {
    */
   final CompiledClass memberOf;
 
+  final String name;
+
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
 
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
@@ -47,12 +63,18 @@ class CompiledFunction {
   final Map<int, ConstantValue> classConstantValues = <int, ConstantValue>{};
 
   CompiledFunction(this.methodId,
+                   this.name,
                    FunctionSignature signature,
                    CompiledClass memberOf)
       : this.signature = signature,
         this.memberOf = memberOf,
         builder = new BytecodeBuilder(
           signature.parameterCount + (memberOf != null ? 1 : 0));
+
+  CompiledFunction.parameterStub(
+      this.methodId,
+      int argumentCount)
+      : builder = new BytecodeBuilder(argumentCount);
 
   CompiledFunction.accessor(this.methodId, bool setter)
       : builder = new BytecodeBuilder(setter ? 2 : 1);
@@ -75,6 +97,128 @@ class CompiledFunction {
         classConstantValues.putIfAbsent(
             classId, () => new FletchClassConstant(classId));
     return allocateConstant(constant);
+  }
+
+  bool matchesSelector(Selector selector) {
+    if (!canBeCalledAs(selector)) return false;
+    if (selector.namedArguments.length != signature.optionalParameterCount) {
+      return false;
+    }
+    int index = 0;
+    bool match = true;
+    signature.forEachOptionalParameter((parameter) {
+      if (parameter.name != selector.namedArguments[index++]) match = false;
+    });
+    return match;
+  }
+
+  // TODO(ajohnsen): Remove and use the one one Selector, when it takes a
+  // FunctionSignature directly.
+  // This is raw copy of Selector.signaturesApplies.
+  bool canBeCalledAs(Selector selector) {
+    if (selector.argumentCount > signature.parameterCount) return false;
+    int requiredParameterCount = signature.requiredParameterCount;
+    int optionalParameterCount = signature.optionalParameterCount;
+    if (selector.positionalArgumentCount < requiredParameterCount) return false;
+
+    if (!signature.optionalParametersAreNamed) {
+      // We have already checked that the number of arguments are
+      // not greater than the number of signature. Therefore the
+      // number of positional arguments are not greater than the
+      // number of signature.
+      assert(selector.positionalArgumentCount <= signature.parameterCount);
+      return selector.namedArguments.isEmpty;
+    } else {
+      if (selector.positionalArgumentCount > requiredParameterCount) {
+        return false;
+      }
+      assert(selector.positionalArgumentCount == requiredParameterCount);
+      if (selector.namedArgumentCount > optionalParameterCount) return false;
+      Set<String> nameSet = new Set<String>();
+      signature.optionalParameters.forEach((Element element) {
+        nameSet.add(element.name);
+      });
+      for (String name in selector.namedArguments) {
+        if (!nameSet.contains(name)) return false;
+        // TODO(5213): By removing from the set we are checking
+        // that we are not passing the name twice. We should have this
+        // check in the resolver also.
+        nameSet.remove(name);
+      }
+      return true;
+    }
+  }
+
+  CompiledFunction createParameterMappingFor(
+      Selector selector,
+      FletchContext context) {
+    // TODO(ajohnsen): Cache result!
+    assert(canBeCalledAs(selector));
+    int arity = selector.argumentCount;
+    if (hasThisArgument) arity++;
+
+    CompiledFunction compiledFunction = new CompiledFunction.parameterStub(
+        context.backend.nextMethodId++,
+        arity);
+    BytecodeBuilder builder = compiledFunction.builder;
+
+    void loadInitializerOrNull(parameter) {
+      Expression initializer = parameter.initializer;
+      if (initializer != null) {
+        ConstantExpression expression = context.compileConstant(
+            initializer,
+            context.compiler.globalDependencies.treeElements,
+            isConst: true);
+        int constId = compiledFunction.allocateConstant(expression.value);
+        builder.loadConst(constId);
+      } else {
+        builder.loadLiteralNull();
+      }
+    }
+
+    // Load this.
+    if (hasThisArgument) builder.loadParameter(0);
+
+    int index = hasThisArgument ? 1 : 0;
+    signature.orderedForEachParameter((parameter) {
+      if (!parameter.isOptional) {
+        builder.loadParameter(index);
+      } else if (parameter.isNamed) {
+        int parameterIndex = selector.namedArguments.indexOf(parameter.name);
+        if (parameterIndex >= 0) {
+          if (hasThisArgument) parameterIndex++;
+          int position = selector.positionalArgumentCount + parameterIndex;
+          builder.loadParameter(position);
+        } else {
+          loadInitializerOrNull(parameter);
+        }
+      } else {
+        if (index < arity) {
+          builder.loadParameter(index);
+        } else {
+          loadInitializerOrNull(parameter);
+        }
+      }
+      index++;
+    });
+
+    // TODO(ajohnsen): We have to be extra careful when overriding a method that
+    // takes optional arguments. We really should enumerate all the stubs in the
+    // superclasses and make sure they're overridden.
+    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    builder
+        ..invokeStatic(constId, index)
+        ..ret()
+        ..methodEnd();
+
+    context.backend.functions.add(compiledFunction);
+
+    if (memberOf != null) {
+      int fletchSelector = context.toFletchSelector(selector);
+      memberOf.methodTable[fletchSelector] = compiledFunction.methodId;
+    }
+
+    return compiledFunction;
   }
 
   String verboseToString() {

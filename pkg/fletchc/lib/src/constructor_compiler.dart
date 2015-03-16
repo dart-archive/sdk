@@ -44,14 +44,14 @@ class ConstructorCompiler extends FunctionCompiler {
 
   final List<ConstructorElement> constructors = <ConstructorElement>[];
 
-  ConstructorCompiler(int methodId,
+  ConstructorCompiler(CompiledFunction compiledFunction,
                       FletchContext context,
                       TreeElements elements,
                       Registry registry,
                       ClosureEnvironment closureEnvironment,
                       ConstructorElement constructor,
                       this.compiledClass)
-      : super.forFactory(methodId, context, elements, registry,
+      : super.forFactory(compiledFunction, context, elements, registry,
                          closureEnvironment, constructor);
 
   BytecodeBuilder get builder => compiledFunction.builder;

@@ -34,6 +34,10 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionSignature,
     LibraryElement;
 
+import 'package:compiler/src/dart2jslib.dart' show
+    Compiler,
+    isPrivateName;
+
 import 'package:compiler/src/universe/universe.dart'
     show Selector;
 
@@ -48,6 +52,9 @@ import 'package:compiler/src/dart_backend/dart_backend.dart' show
 
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue;
+
+import 'package:compiler/src/constants/expressions.dart' show
+    ConstantExpression;
 
 import '../bytecodes.dart' show
     InvokeNative;
@@ -340,7 +347,7 @@ class FletchBackend extends Backend {
   }
 
   CompiledClass createClosureClass(
-      Function closure,
+      FunctionElement closure,
       ClosureEnvironment closureEnvironment) {
     return closureClasses.putIfAbsent(closure, () {
       ClosureInfo info = closureEnvironment.closures[closure];
@@ -350,9 +357,21 @@ class FletchBackend extends Backend {
     });
   }
 
+  CompiledFunction createCompiledFunction(
+      FunctionElement function,
+      String name,
+      CompiledClass holderClass) {
+    return compiledFunctions.putIfAbsent(function, () {
+      return new CompiledFunction(
+          allocateMethodId(function),
+          name,
+          function.functionSignature,
+          holderClass);
+    });
+  }
+
   void codegen(CodegenWorkItem work) {
     Element element = work.element;
-    assert(!compiledFunctions.containsKey(element));
     if (compiler.verbose) {
       compiler.reportHint(
           element, MessageKind.GENERIC, {'text': 'Compiling ${element.name}'});
@@ -385,22 +404,30 @@ class FletchBackend extends Backend {
 
     CompiledClass holderClass;
 
+    String name;
+
     if (function.isInstanceMember ||
         function.isGenerativeConstructor) {
       ClassElement enclosingClass = function.enclosingClass.declaration;
       holderClass = registerClassElement(enclosingClass);
+      name = function.name;
     } else if (function.memberContext != function) {
       holderClass = createClosureClass(function, closureEnvironment);
+      name = Compiler.CALL_OPERATOR_NAME;
     }
 
+    CompiledFunction compiledFunction = createCompiledFunction(
+        function,
+        name,
+        holderClass);
+
     FunctionCompiler functionCompiler = new FunctionCompiler(
-        allocateMethodId(function),
+        compiledFunction,
         context,
         elements,
         registry,
         closureEnvironment,
-        function,
-        holderClass);
+        function);
 
     if (isNative(function)) {
       codegenNativeFunction(function, functionCompiler);
@@ -409,8 +436,6 @@ class FletchBackend extends Backend {
     } else {
       functionCompiler.compile();
     }
-
-    CompiledFunction compiledFunction = functionCompiler.compiledFunction;
 
     compiledFunctions[function] = compiledFunction;
     functions.add(compiledFunction);
@@ -554,7 +579,28 @@ class FletchBackend extends Backend {
     });
   }
 
+  void createParameterMatchingStubs() {
+    int length = functions.length;
+    for (int i = 0; i < length; i++) {
+      CompiledFunction function = functions[i];
+      if (!function.hasThisArgument) continue;
+      String name = function.name;
+      Set<Selector> usage = compiler.resolverWorld.invokedNames[name];
+      if (usage == null) continue;
+      for (Selector use in usage) {
+        // TODO(ajohnsen): Somehow filter out private selectors of other
+        // libraries.
+        if (function.canBeCalledAs(use) &&
+            !function.matchesSelector(use)) {
+          function.createParameterMappingFor(use, context);
+        }
+      }
+    }
+  }
+
   int assembleProgram() {
+    createParameterMatchingStubs();
+
     // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
     // This is a workaround, where we basically add getters for all fields.
     for (CompiledClass compiledClass in classes) {
@@ -765,8 +811,14 @@ class FletchBackend extends Backend {
         constructor,
         elements);
 
-    ConstructorCompiler constructorCompiler = new ConstructorCompiler(
+    CompiledFunction compiledFunction = new CompiledFunction(
         nextMethodId++,
+        null,
+        constructor.functionSignature,
+        null);
+
+    ConstructorCompiler constructorCompiler = new ConstructorCompiler(
+        compiledFunction,
         context,
         elements,
         registry,
@@ -775,7 +827,6 @@ class FletchBackend extends Backend {
         compiledClass);
 
     constructorCompiler.compile();
-    CompiledFunction compiledFunction = constructorCompiler.compiledFunction;
     if (compiler.verbose) {
       print(compiledFunction.verboseToString());
     }

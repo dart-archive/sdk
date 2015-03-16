@@ -139,36 +139,25 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   int blockLocals = 0;
 
-  FunctionCompiler(int methodId,
+  FunctionCompiler(CompiledFunction compiledFunction,
                    this.context,
                    TreeElements elements,
                    this.registry,
                    this.closureEnvironment,
-                   FunctionElement function,
-                   CompiledClass memberOf)
+                   this.function)
       : super(elements),
-        function = function,
-        compiledFunction = new CompiledFunction(
-            methodId,
-            function.functionSignature,
-            memberOf) {
-    thisSlot = -1 - compiledFunction.builder.functionArity;
-  }
+        this.compiledFunction = compiledFunction,
+        thisSlot = -1 - compiledFunction.builder.functionArity;
 
-  FunctionCompiler.forFactory(int methodId,
+  FunctionCompiler.forFactory(CompiledFunction compiledFunction,
                               this.context,
                               TreeElements elements,
                               this.registry,
                               this.closureEnvironment,
-                              FunctionElement function)
+                              this.function)
       : super(elements),
-        function = function,
-        compiledFunction = new CompiledFunction(
-            methodId,
-            function.functionSignature,
-            null) {
-    thisSlot = -1 - compiledFunction.builder.functionArity;
-  }
+        this.compiledFunction = compiledFunction,
+        thisSlot = -1 - compiledFunction.builder.functionArity;
 
   BytecodeBuilder get builder => compiledFunction.builder;
 
@@ -285,6 +274,41 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     return loadPositionalArguments(arguments, function);
   }
 
+  void staticFunctionCall(
+      FunctionElement function,
+      NodeList arguments,
+      Selector selector) {
+    registry.registerStaticInvocation(function);
+    assert(!function.isInstanceMember);
+    FunctionSignature signature = function.functionSignature;
+    int methodId;
+    int arity;
+    if (signature.hasOptionalParameters &&
+        signature.optionalParametersAreNamed) {
+      CompiledFunction target = context.backend.createCompiledFunction(
+          function,
+          null,
+          null);
+      if (target.matchesSelector(selector)) {
+        methodId = target.methodId;
+      } else {
+        // TODO(ajohnsen): Inline parameter mapping?
+        CompiledFunction stub = target.createParameterMappingFor(
+            selector, context);
+        methodId = stub.methodId;
+      }
+      for (Node argument in arguments) {
+        visitForValue(argument);
+      }
+      arity = selector.argumentCount;
+    } else {
+      methodId = context.backend.allocateMethodId(function);
+      arity = loadPositionalArguments(arguments, function);
+    }
+    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    builder.invokeStatic(constId, arity);
+  }
+
   void loadThis() {
     builder.loadSlot(thisSlot);
   }
@@ -372,6 +396,16 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       builder.branchIfTrue(trueLabel);
       builder.branch(falseLabel);
     }
+  }
+
+  void visitNamedArgument(NamedArgument node) {
+    Expression expression = node.expression;
+    if (expression != null) {
+      visitForValue(expression);
+    } else {
+      builder.loadLiteralNull();
+    }
+    applyVisitState();
   }
 
   void handleBinaryOperator(
@@ -582,11 +616,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       // TODO(ajohnsen): Define a known set of external functions we allow
       // calls to?
     }
-    int arity = loadArguments(arguments, element);
-    registry.registerStaticInvocation(element);
-    int methodId = context.backend.allocateMethodId(element);
-    int constId = compiledFunction.allocateConstantFromFunction(methodId);
-    builder.invokeStatic(constId, arity);
+    staticFunctionCall(element, arguments, selector);
     applyVisitState();
   }
 
@@ -944,6 +974,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   }
 
   void callConstructor(ConstructorElement constructor, int arity) {
+    // TODO(ajohnsen): Use staticFunctionCall.
     int constructorId = context.backend.compileConstructor(
         constructor,
         elements,
@@ -973,7 +1004,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
    *
    * If [function] captures itself, its field index is returned.
    */
-  int pushCapturedVariables(FunctionExpression function, ClosureInfo info) {
+  int pushCapturedVariables(FunctionElement function) {
+    ClosureInfo info = closureEnvironment.closures[function];
     int index = 0;
     if (info.isThisFree) {
       loadThis();
@@ -998,31 +1030,22 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   void visitFunctionExpression(FunctionExpression node) {
     FunctionElement function = elements[node];
-    ClosureInfo info = closureEnvironment.closures[function];
-    int fields = info.free.length;
-    if (info.isThisFree) fields++;
 
     // If the closure captures itself, thisClosureIndex is the field-index in
     // the closure.
-    int thisClosureIndex = pushCapturedVariables(function, info);
+    int thisClosureIndex = pushCapturedVariables(function);
 
-    CompiledClass compiledClass = context.backend.createStubClass(
-        fields,
-        context.backend.compiledObjectClass);
+    CompiledClass compiledClass = context.backend.createClosureClass(
+        function,
+        closureEnvironment);
     int classConstant = compiledFunction.allocateConstantFromClass(
         compiledClass.id);
-    builder.allocate(classConstant, fields);
+    builder.allocate(classConstant, compiledClass.fields);
 
     if (thisClosureIndex >= 0) {
       builder.dup();
       builder.storeField(thisClosureIndex);
     }
-
-    int methodId = context.backend.allocateMethodId(function);
-    int arity = function.functionSignature.parameterCount;
-    Selector selector = new Selector.call('call', null, arity);
-    int fletchSelector = context.toFletchSelector(selector);
-    compiledClass.methodTable[fletchSelector] = methodId;
 
     registry.registerStaticInvocation(function);
   }
