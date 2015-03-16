@@ -100,12 +100,12 @@ class Method extends Node {
 abstract class Type {
   bool get isPointer;
   bool get isList;
+  bool get isString;
 
   bool get isPrimitive => primitiveType != null;
 
   bool get isVoid => primitiveType == primitives.PrimitiveType.VOID;
   bool get isBool => primitiveType == primitives.PrimitiveType.BOOL;
-  bool get isString => primitiveType == primitives.PrimitiveType.STRING;
 
   // TODO(kasperl): Get rid of this.
   String get identifier;
@@ -113,6 +113,23 @@ abstract class Type {
   // Set by the resolver.
   Node resolved;
   primitives.PrimitiveType primitiveType;
+}
+
+class StringType extends Type {
+  final String identifier = "String";
+
+  int get hashCode {
+    int hash = identifier.hashCode;
+    return hash;
+  }
+
+  bool operator==(Object other) {
+    return other is StringType;
+  }
+
+  bool get isPointer => false;
+  bool get isList => false;
+  bool get isString => true;
 }
 
 class SimpleType extends Type {
@@ -135,6 +152,7 @@ class SimpleType extends Type {
   }
 
   bool get isList => false;
+  bool get isString => false;
 }
 
 class ListType extends Type {
@@ -152,6 +170,7 @@ class ListType extends Type {
 
   bool get isPointer => false;
   bool get isList => true;
+  bool get isString => false;
 
   String get identifier => elementType.identifier;
 }
@@ -159,6 +178,7 @@ class ListType extends Type {
 // --------------------------------------------------------------
 
 class _ServiceParserDefinition extends ServiceGrammarDefinition {
+  final StringType string = new StringType();
   unit() => super.unit()
       .map((each) => new Unit(each.where((e) => e is Service).toList(),
                               each.where((e) => e is Struct).toList()));
@@ -172,6 +192,7 @@ class _ServiceParserDefinition extends ServiceGrammarDefinition {
       .map((each) => new Method(each[1], each[3], each[0]));
   simpleType() => super.simpleType()
       .map((each) => new SimpleType(each[0], each[1]));
+  stringType() => super.stringType().map((each) => string);
   listType() => super.listType()
       .map((each) => new ListType(each[2]));
   union() => super.union()

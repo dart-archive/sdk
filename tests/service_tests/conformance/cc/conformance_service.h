@@ -119,6 +119,7 @@ class PersonBuilder : public Builder {
       : Builder(segment, offset) { }
 
   void setName(const char* value) { NewString(0, value); }
+  List<uint8_t> initNameData(int length);
   List<PersonBuilder> initChildren(int length);
   void setAge(int32_t value) { *PointerTo<int32_t>(16) = value; }
 };

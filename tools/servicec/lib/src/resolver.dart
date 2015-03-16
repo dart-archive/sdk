@@ -106,7 +106,9 @@ class Resolver extends ResolutionVisitor {
     Iterable<Struct> computeDependencies(Iterable<Formal> slots) {
       return slots
           .where((Formal slot) => !slot.type.isPointer)
-          .where((Formal slot) => !slot.type.isPrimitive && !slot.type.isList)
+          .where((Formal slot) => !slot.type.isPrimitive &&
+                                  !slot.type.isList &&
+                                  !slot.type.isString)
           .map((Formal slot) => definitions[slot.type.identifier]);
     }
 
@@ -129,6 +131,7 @@ class Resolver extends ResolutionVisitor {
   }
 
   void resolveType(Type node) {
+    if (node.isString) return;
     primitives.PrimitiveType primitiveType = primitives.lookup(node.identifier);
     if (primitiveType != null) {
       node.primitiveType = primitiveType;

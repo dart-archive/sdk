@@ -286,6 +286,14 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln('readList(new _${slotType.identifier}List(), ${slot.offset});');
       } else if (slotType.isVoid) {
         // No getters for void slots.
+      } else if (slotType.isString) {
+        Type uint8ListType = new ListType(new SimpleType("uint8", false));
+        uint8ListType.primitiveType = primitives.lookup("uint8");
+        neededListTypes.add(uint8ListType);
+        writeln('  String get $slotName => '
+                'readString(new _uint8List(), ${slot.offset});');
+        writeln('  List<int> get ${slotName}Data => '
+                'readList(new _uint8List(), ${slot.offset});');
       } else if (slotType.isPrimitive) {
         String getter = _GETTERS[slotType.identifier];
         String offset = '_offset + ${slot.offset}';
@@ -294,17 +302,6 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeType(slotType);
         if (slotType.isBool) {
           writeln(' get $slotName => _segment.memory.$getter($offset) != 0;');
-        } else if (slotType.isString) {
-          // TODO(ager): This is nasty. Maybe inject this type earler
-          // in the pipeline?
-          Type uint8ListType = new ListType(new SimpleType("uint8", false));
-          uint8ListType.primitiveType = primitives.lookup("uint8");
-          neededListTypes.add(uint8ListType);
-          writeln(' get $slotName => '
-                  'readString(new _uint8List(), ${slot.offset});');
-          writeln('  List<int> get ${slotName}Data => '
-                  'readList(new _uint8List(), ${slot.offset});');
-
         } else {
           writeln(' get $slotName => _segment.memory.$getter($offset);');
         }
@@ -366,6 +363,14 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln('  void set$camel() {');
         write(updateTag);
         writeln('  }');
+      } else if (slotType.isString) {
+        writeln('  void set ${slotName}(String value) {');
+        writeln('    NewString(new _uint8BuilderList(), ${slot.offset}, value);');
+        writeln('  }');
+        writeln('  List<int> init${camel}Data(int length) {');
+        writeln('    return NewList(new _uint8BuilderList(), ${slot.offset},'
+                ' length, 1);');
+        writeln('  }');
       } else if (slotType.isPrimitive) {
         String setter = _SETTERS[slotType.identifier];
         write('  void set ${slotName}(');
@@ -375,8 +380,6 @@ class _DartVisitor extends CodeGenerationVisitor {
         String offset = '_offset + ${slot.offset}';
         if (slotType.isBool) {
           writeln('    _segment.memory.$setter($offset, value ? 1 : 0);');
-        } else if (slotType.isString) {
-          writeln('    NewString(new _uint8BuilderList(), ${slot.offset}, value);');
         } else {
           writeln('    _segment.memory.$setter($offset, value);');
         }
@@ -448,8 +451,6 @@ class _DartVisitor extends CodeGenerationVisitor {
 
     'float32' : 'double',
     'float64' : 'double',
-
-    'String'  : 'String',
   };
 
   void writeType(Type node) {

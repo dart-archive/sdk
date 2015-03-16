@@ -66,7 +66,10 @@ class ServiceGrammarDefinition extends GrammarDefinition {
       & ref(identifier);
 
   type() => ref(listType)
+      | ref(stringType)
       | ref(simpleType);
+
+  stringType() => ref(token, 'String');
 
   simpleType() => ref(identifier)
       & ref(token, '*').optional(null).map((e) => e != null);

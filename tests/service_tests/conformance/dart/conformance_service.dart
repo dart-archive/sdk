@@ -166,6 +166,9 @@ class PersonBuilder extends Builder {
   void set name(String value) {
     NewString(new _uint8BuilderList(), 0, value);
   }
+  List<int> initNameData(int length) {
+    return NewList(new _uint8BuilderList(), 0, length, 1);
+  }
   List<PersonBuilder> initChildren(int length) {
     return NewList(new _PersonBuilderList(), 8, length, 24);
   }

@@ -345,8 +345,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'float32' : 'segment.buffer().getFloat',
     'float64' : 'segment.buffer().getDouble',
-
-    'String'  : 'readString',
   };
 
   static Map<String, String> _SETTERS = const {
@@ -364,8 +362,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'float32' : 'segment.buffer().putFloat',
     'float64' : 'segment.buffer().pubDouble',
-
-    'String'  : 'newString',
   };
 
   static Map<String, String> _SETTER_TYPES = const {
@@ -383,8 +379,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'float32'  : 'float',
     'float64'  : 'double',
-
-    'String'   : 'String',
   };
 
   _JavaVisitor(String path, String this.outputDirectory)
@@ -407,8 +401,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'float32' : 'float',
     'float64' : 'double',
-
-    'String'  : 'String',
   };
 
   static const PRIMITIVE_LIST_TYPES = const <String, String> {
@@ -585,6 +577,19 @@ class _JavaVisitor extends CodeGenerationVisitor {
         buffer.writeln('  }');
       } else if (slotType.isVoid) {
         // No getters for void slots.
+      } else if (slotType.isString) {
+        buffer.write('  public String get$camel() { ');
+        buffer.writeln('return readString(${slot.offset}); }');
+        // TODO(ager): This is nasty. Maybe inject this type earler in the
+        // pipeline?
+        Type uint8ListType = new ListType(new SimpleType("uint8", false));
+        uint8ListType.primitiveType = primitives.lookup("uint8");
+        neededListTypes.add(uint8ListType);
+        buffer.writeln('  public Uint8List get${camel}Data() {');
+        buffer.writeln('    ListReader reader = new ListReader();');
+        buffer.writeln('    readList(reader, ${slot.offset});');
+        buffer.writeln('    return new Uint8List(reader);');
+        buffer.writeln('  }');
       } else if (slotType.isPrimitive) {
         // TODO(ager): Dealing with unsigned numbers in Java is annoying.
         if (camel == 'Tag') {
@@ -597,21 +602,9 @@ class _JavaVisitor extends CodeGenerationVisitor {
           buffer.writeln('  }');
         } else {
           String getter = _GETTERS[slotType.identifier];
-          String offset = "${(slotType.isString) ? '' : 'base + '}${slot.offset}";
+          String offset = "base + ${slot.offset}";
           buffer.write('  public ${getType(slotType)} get$camel() { ');
           buffer.writeln('return $getter($offset); }');
-          if (slotType.isString) {
-            // TODO(ager): This is nasty. Maybe inject this type earler in the
-            // pipeline?
-            Type uint8ListType = new ListType(new SimpleType("uint8", false));
-            uint8ListType.primitiveType = primitives.lookup("uint8");
-            neededListTypes.add(uint8ListType);
-            buffer.writeln('  public Uint8List get${camel}Data() {');
-            buffer.writeln('    ListReader reader = new ListReader();');
-            buffer.writeln('    readList(reader, $offset);');
-            buffer.writeln('    return new Uint8List(reader);');
-            buffer.writeln('  }');
-          }
         }
       } else {
         String returnType = getReturnType(slotType);
@@ -696,11 +689,22 @@ class _JavaVisitor extends CodeGenerationVisitor {
         int tag = slot.unionTag;
         buffer.writeln('  public void set$camel() {'
                        ' set$tagName($tag); }');
+      } else if (slotType.isString) {
+        buffer.writeln('  public void set$camel(String value) {');
+        buffer.write(updateTag);
+        buffer.writeln('    newString(${slot.offset}, value);');
+        buffer.writeln('  }');
+        buffer.writeln();
+        buffer.writeln('  public Uint8ListBuilder init${camel}Data(int length) {');
+        buffer.write(updateTag);
+        buffer.writeln('    ListBuilder builder = new ListBuilder();');
+        buffer.writeln('    newList(builder, ${slot.offset}, length, 1);');
+        buffer.writeln('    return new Uint8ListBuilder(builder);');
+        buffer.writeln('  }');
       } else if (slotType.isPrimitive) {
         String setter = _SETTERS[slotType.identifier];
         String setterType = _SETTER_TYPES[slotType.identifier];
         String offset = 'base + ${slot.offset}';
-        if (slotType.isString) offset = '${slot.offset}';
         buffer.writeln('  public void set$camel(${getType(slotType)} value) {');
         buffer.write(updateTag);
         if (slotType.isBool) {
