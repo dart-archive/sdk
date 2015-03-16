@@ -16,10 +16,13 @@
         '../../src/vm/vm.gyp:fletch_vm',
       ],
       'sources': [
-        'cc/struct.cc',	         # generated
-        'cc/struct.h',	         # generated
-        'cc/todomvc_presenter.cc',	 # should be generated
-        'cc/todomvc_presenter.h',	 # should be generated
+        'cc/struct.cc',  # generated
+        'cc/struct.h',   # generated
+        'cc/unicode.cc', # generated
+        'cc/unicode.h',  # generated
+
+        'cc/todomvc_presenter.cc',   # should be generated
+        'cc/todomvc_presenter.h',    # should be generated
         'cc/todomvc_service.cc',     # generated
         'cc/todomvc_service.h',      # generated
         'todomvc.cc',

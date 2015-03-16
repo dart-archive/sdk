@@ -160,7 +160,7 @@ class ConformanceTest {
       String name = generated.getName();
       assert 6 == name.length();
       assert name.equals("person");
-      Uint8List nameData = generated.getNameData();
+      Uint16List nameData = generated.getNameData();
       assert 6 == nameData.size();
       assert "p".charAt(0) == nameData.get(0);
       assert "n".charAt(0) == nameData.get(5);
@@ -180,7 +180,7 @@ class ConformanceTest {
               String name = generated.getName();
               assert 6 == name.length();
               assert name.equals("person");
-              Uint8List nameData = generated.getNameData();
+              Uint16List nameData = generated.getNameData();
               assert 6 == nameData.size();
               assert "p".charAt(0) == nameData.get(0);
               assert "n".charAt(0) == nameData.get(5);
@@ -219,6 +219,31 @@ class ConformanceTest {
     ConformanceService.pingAsync(new ConformanceService.PingCallback() {
         public void handle(int result) { assert 42 == result; }
     });
+
+    {
+      MessageBuilder builder = new MessageBuilder(512);
+      TableFlipBuilder flip = new TableFlipBuilder();
+      builder.initRoot(flip, TableFlipBuilder.kSize);
+      String expectedFlip = "(╯°□°）╯︵ ┻━┻";
+      flip.setFlip(expectedFlip);
+      TableFlip flipResult = ConformanceService.flipTable(flip);
+      assert flipResult.getFlip().equals(expectedFlip);
+    }
+
+    {
+      MessageBuilder builder = new MessageBuilder(512);
+      TableFlipBuilder flip = new TableFlipBuilder();
+      builder.initRoot(flip, TableFlipBuilder.kSize);
+      final String expectedFlip = "(╯°□°）╯︵ ┻━┻";
+      flip.setFlip(expectedFlip);
+      ConformanceService.flipTableAsync(
+          flip,
+          new ConformanceService.FlipTableCallback() {
+            public void handle(TableFlip flipResult) {
+              assert flipResult.getFlip().equals(expectedFlip);
+            };
+          });
+    }
   }
 
   private static void runPersonBoxTests() {

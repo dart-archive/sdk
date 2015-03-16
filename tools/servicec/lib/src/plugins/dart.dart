@@ -287,13 +287,13 @@ class _DartVisitor extends CodeGenerationVisitor {
       } else if (slotType.isVoid) {
         // No getters for void slots.
       } else if (slotType.isString) {
-        Type uint8ListType = new ListType(new SimpleType("uint8", false));
-        uint8ListType.primitiveType = primitives.lookup("uint8");
-        neededListTypes.add(uint8ListType);
+        Type uint16ListType = new ListType(new SimpleType("uint16", false));
+        uint16ListType.primitiveType = primitives.lookup("uint16");
+        neededListTypes.add(uint16ListType);
         writeln('  String get $slotName => '
-                'readString(new _uint8List(), ${slot.offset});');
+                'readString(new _uint16List(), ${slot.offset});');
         writeln('  List<int> get ${slotName}Data => '
-                'readList(new _uint8List(), ${slot.offset});');
+                'readList(new _uint16List(), ${slot.offset});');
       } else if (slotType.isPrimitive) {
         String getter = _GETTERS[slotType.identifier];
         String offset = '_offset + ${slot.offset}';
@@ -365,11 +365,11 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln('  }');
       } else if (slotType.isString) {
         writeln('  void set ${slotName}(String value) {');
-        writeln('    NewString(new _uint8BuilderList(), ${slot.offset}, value);');
+        writeln('    NewString(new _uint16BuilderList(), ${slot.offset}, value);');
         writeln('  }');
         writeln('  List<int> init${camel}Data(int length) {');
-        writeln('    return NewList(new _uint8BuilderList(), ${slot.offset},'
-                ' length, 1);');
+        writeln('    return NewList(new _uint16BuilderList(), ${slot.offset},'
+                ' length, 2);');
         writeln('  }');
       } else if (slotType.isPrimitive) {
         String setter = _SETTERS[slotType.identifier];

@@ -5,6 +5,7 @@
 package fletch;
 
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 
 class Builder {
   public Builder() { }
@@ -85,13 +86,15 @@ class Builder {
     }
   }
 
+
   public void newString(int offset, String value) {
     int length = value.length();
     ListBuilder stringBuilder = new ListBuilder();
-    newList(stringBuilder, offset, length, 1);
+    newList(stringBuilder, offset, length, 2);
+    CharBuffer cb = stringBuilder.segment.buffer().asCharBuffer();
+    int base = stringBuilder.base / 2;
     for (int i = 0; i < length; i++) {
-      stringBuilder.segment.buffer().put(
-          stringBuilder.base + i, (byte)value.charAt(i));
+      cb.put(base + i, value.charAt(i));
     }
   }
 

@@ -16,6 +16,8 @@ service ConformanceService {
   int32 bar(Empty* empty);
 
   int32 ping();
+
+  TableFlip* flipTable(TableFlip* flip);
 }
 
 struct Empty { }
@@ -56,4 +58,8 @@ struct Node {
 struct Cons {
   Node* fst;
   Node* snd;
+}
+
+struct TableFlip {
+  String flip;
 }

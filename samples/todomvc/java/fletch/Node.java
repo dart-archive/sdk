@@ -40,10 +40,10 @@ public class Node extends Reader {
 
   public boolean isStr() { return 4 == getTag(); }
   public String getStr() { return readString(0); }
-  public Uint8List getStrData() {
+  public Uint16List getStrData() {
     ListReader reader = new ListReader();
     readList(reader, 0);
-    return new Uint8List(reader);
+    return new Uint16List(reader);
   }
 
   public boolean isCons() { return 5 == getTag(); }

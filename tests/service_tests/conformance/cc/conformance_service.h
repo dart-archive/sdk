@@ -26,6 +26,8 @@ class Node;
 class NodeBuilder;
 class Cons;
 class ConsBuilder;
+class TableFlip;
+class TableFlipBuilder;
 
 class ConformanceService {
  public:
@@ -53,6 +55,8 @@ class ConformanceService {
   static void barAsync(EmptyBuilder empty, void (*callback)(int32_t));
   static int32_t ping();
   static void pingAsync(void (*callback)(int32_t));
+  static TableFlip flipTable(TableFlipBuilder flip);
+  static void flipTableAsync(TableFlipBuilder flip, void (*callback)(TableFlip));
 };
 
 class Empty : public Reader {
@@ -104,7 +108,7 @@ class Person : public Reader {
       : Reader(segment, offset) { }
 
   char* getName() const { return ReadString(0); }
-  List<uint8_t> getNameData() const { return ReadList<uint8_t>(0); }
+  List<uint16_t> getNameData() const { return ReadList<uint16_t>(0); }
   List<Person> getChildren() const { return ReadList<Person>(8); }
   int32_t getAge() const { return *PointerTo<int32_t>(16); }
 };
@@ -119,7 +123,7 @@ class PersonBuilder : public Builder {
       : Builder(segment, offset) { }
 
   void setName(const char* value) { NewString(0, value); }
-  List<uint8_t> initNameData(int length);
+  List<uint16_t> initNameData(int length);
   List<PersonBuilder> initChildren(int length);
   void setAge(int32_t value) { *PointerTo<int32_t>(16) = value; }
 };
@@ -242,6 +246,29 @@ class ConsBuilder : public Builder {
 
   NodeBuilder initFst();
   NodeBuilder initSnd();
+};
+
+class TableFlip : public Reader {
+ public:
+  static const int kSize = 8;
+  TableFlip(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+  char* getFlip() const { return ReadString(0); }
+  List<uint16_t> getFlipData() const { return ReadList<uint16_t>(0); }
+};
+
+class TableFlipBuilder : public Builder {
+ public:
+  static const int kSize = 8;
+
+  explicit TableFlipBuilder(const Builder& builder)
+      : Builder(builder) { }
+  TableFlipBuilder(Segment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  void setFlip(const char* value) { NewString(0, value); }
+  List<uint16_t> initFlipData(int length);
 };
 
 #endif  // CONFORMANCE_SERVICE_H

@@ -21,10 +21,10 @@ public class PersonBuilder extends Builder {
     newString(0, value);
   }
 
-  public Uint8ListBuilder initNameData(int length) {
+  public Uint16ListBuilder initNameData(int length) {
     ListBuilder builder = new ListBuilder();
-    newList(builder, 0, length, 1);
-    return new Uint8ListBuilder(builder);
+    newList(builder, 0, length, 2);
+    return new Uint16ListBuilder(builder);
   }
 
   public PersonListBuilder initChildren(int length) {

@@ -87,6 +87,14 @@ class ConformanceServiceImpl implements ConformanceService {
   }
 
   int ping() => 42;
+
+  void flipTable(TableFlip flip, TableFlipBuilder result) {
+    var flipTableCodes =
+        [ 40, 9583, 176, 9633, 176, 65289, 9583, 65077, 32, 9531, 9473, 9531 ];
+    String expectedFlip = new String.fromCharCodes(flipTableCodes);
+    if (flip.flip != expectedFlip) throw new Exception("Unexpected table flip");
+    result.flip = expectedFlip;
+  }
 }
 
 main() {

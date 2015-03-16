@@ -582,13 +582,13 @@ class _JavaVisitor extends CodeGenerationVisitor {
         buffer.writeln('return readString(${slot.offset}); }');
         // TODO(ager): This is nasty. Maybe inject this type earler in the
         // pipeline?
-        Type uint8ListType = new ListType(new SimpleType("uint8", false));
-        uint8ListType.primitiveType = primitives.lookup("uint8");
-        neededListTypes.add(uint8ListType);
-        buffer.writeln('  public Uint8List get${camel}Data() {');
+        Type uint16ListType = new ListType(new SimpleType("uint16", false));
+        uint16ListType.primitiveType = primitives.lookup("uint16");
+        neededListTypes.add(uint16ListType);
+        buffer.writeln('  public Uint16List get${camel}Data() {');
         buffer.writeln('    ListReader reader = new ListReader();');
         buffer.writeln('    readList(reader, ${slot.offset});');
-        buffer.writeln('    return new Uint8List(reader);');
+        buffer.writeln('    return new Uint16List(reader);');
         buffer.writeln('  }');
       } else if (slotType.isPrimitive) {
         // TODO(ager): Dealing with unsigned numbers in Java is annoying.
@@ -695,11 +695,11 @@ class _JavaVisitor extends CodeGenerationVisitor {
         buffer.writeln('    newString(${slot.offset}, value);');
         buffer.writeln('  }');
         buffer.writeln();
-        buffer.writeln('  public Uint8ListBuilder init${camel}Data(int length) {');
+        buffer.writeln('  public Uint16ListBuilder init${camel}Data(int length) {');
         buffer.write(updateTag);
         buffer.writeln('    ListBuilder builder = new ListBuilder();');
-        buffer.writeln('    newList(builder, ${slot.offset}, length, 1);');
-        buffer.writeln('    return new Uint8ListBuilder(builder);');
+        buffer.writeln('    newList(builder, ${slot.offset}, length, 2);');
+        buffer.writeln('    return new Uint16ListBuilder(builder);');
         buffer.writeln('  }');
       } else if (slotType.isPrimitive) {
         String setter = _SETTERS[slotType.identifier];

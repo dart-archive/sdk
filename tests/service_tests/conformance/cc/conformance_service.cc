@@ -272,9 +272,33 @@ void ConformanceService::pingAsync(void (*callback)(int32_t)) {
   ServiceApiInvokeAsync(service_id_, kPingId_, Unwrap_int32_8, _buffer, kSize);
 }
 
-List<uint8_t> PersonBuilder::initNameData(int length) {
-  Reader result = NewList(0, length, 1);
-  return List<uint8_t>(result.segment(), result.offset(), length);
+static const MethodId kFlipTableId_ = reinterpret_cast<MethodId>(12);
+
+TableFlip ConformanceService::flipTable(TableFlipBuilder flip) {
+  int64_t result = flip.InvokeMethod(service_id_, kFlipTableId_);
+  char* memory = reinterpret_cast<char*>(result);
+  Segment* segment = MessageReader::GetRootSegment(memory);
+  return TableFlip(segment, 8);
+}
+
+static void Unwrap_TableFlip_8(void* raw) {
+  typedef void (*cbt)(TableFlip);
+  char* buffer = reinterpret_cast<char*>(raw);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  char* memory = reinterpret_cast<char*>(result);
+  Segment* segment = MessageReader::GetRootSegment(memory);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  MessageBuilder::DeleteMessage(buffer);
+  callback(TableFlip(segment, 8));
+}
+
+void ConformanceService::flipTableAsync(TableFlipBuilder flip, void (*callback)(TableFlip)) {
+  flip.InvokeMethodAsync(service_id_, kFlipTableId_, Unwrap_TableFlip_8, reinterpret_cast<void*>(callback));
+}
+
+List<uint16_t> PersonBuilder::initNameData(int length) {
+  Reader result = NewList(0, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
 }
 
 List<PersonBuilder> PersonBuilder::initChildren(int length) {
@@ -315,3 +339,8 @@ NodeBuilder ConsBuilder::initSnd() {
 Node Cons::getFst() const { return ReadStruct<Node>(0); }
 
 Node Cons::getSnd() const { return ReadStruct<Node>(8); }
+
+List<uint16_t> TableFlipBuilder::initFlipData(int length) {
+  Reader result = NewList(0, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
+}

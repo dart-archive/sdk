@@ -86,4 +86,11 @@ public class ConformanceService {
 
   public static native int ping();
   public static native void pingAsync(PingCallback callback);
+
+  public interface FlipTableCallback {
+    public void handle(TableFlip result);
+  }
+
+  public static native TableFlip flipTable(TableFlipBuilder flip);
+  public static native void flipTableAsync(TableFlipBuilder flip, FlipTableCallback callback);
 }

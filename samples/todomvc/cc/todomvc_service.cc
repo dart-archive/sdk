@@ -166,10 +166,10 @@ void TodoMVCService::resetAsync(void (*callback)()) {
   ServiceApiInvokeAsync(service_id_, kResetId_, Unwrap_void_8, _buffer, kSize);
 }
 
-List<uint8_t> NodeBuilder::initStrData(int length) {
+List<uint16_t> NodeBuilder::initStrData(int length) {
   setTag(4);
-  Reader result = NewList(0, length, 1);
-  return List<uint8_t>(result.segment(), result.offset(), length);
+  Reader result = NewList(0, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
 }
 
 ConsBuilder NodeBuilder::initCons() {
@@ -209,7 +209,7 @@ List<PatchBuilder> PatchSetBuilder::initPatches(int length) {
   return List<PatchBuilder>(result.segment(), result.offset(), length);
 }
 
-List<uint8_t> BoxedStringBuilder::initStrData(int length) {
-  Reader result = NewList(0, length, 1);
-  return List<uint8_t>(result.segment(), result.offset(), length);
+List<uint16_t> BoxedStringBuilder::initStrData(int length) {
+  Reader result = NewList(0, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
 }

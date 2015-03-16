@@ -251,13 +251,7 @@ class Reader {
     }
   }
 
-  char* ReadString(int offset) const {
-    List<uint8_t> data = ReadList<uint8_t>(offset);
-    char* result = reinterpret_cast<char*>(malloc(data.length() + 1));
-    memcpy(result, data.data(), data.length());
-    result[data.length()] = '\0';
-    return result;
-  }
+  char* ReadString(int offset) const;
 
  private:
   Segment* const segment_;
@@ -291,11 +285,7 @@ class Builder {
 
   Builder NewStruct(int offset, int size);
   Reader NewList(int offset, int length, int size);
-  void NewString(int offset, const char* value) {
-    int length = strlen(value);
-    Reader reader = NewList(offset, length, 1);
-    memcpy(reader.segment()->memory() + reader.offset(), value, length);
-  }
+  void NewString(int offset, const char* value);
 
  private:
   BuilderSegment* const segment_;

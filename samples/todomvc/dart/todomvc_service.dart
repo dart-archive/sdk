@@ -100,8 +100,8 @@ class Node extends Reader {
   bool get isBool => 3 == this.tag;
   bool get bool => _segment.memory.getUint8(_offset + 0) != 0;
   bool get isStr => 4 == this.tag;
-  String get str => readString(new _uint8List(), 0);
-  List<int> get strData => readList(new _uint8List(), 0);
+  String get str => readString(new _uint16List(), 0);
+  List<int> get strData => readList(new _uint16List(), 0);
   bool get isCons => 5 == this.tag;
   Cons get cons => new Cons()
       .._segment = _segment
@@ -122,10 +122,10 @@ class NodeBuilder extends Builder {
     _segment.memory.setUint8(_offset + 0, value ? 1 : 0);
   }
   void set str(String value) {
-    NewString(new _uint8BuilderList(), 0, value);
+    NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initStrData(int length) {
-    return NewList(new _uint8BuilderList(), 0, length, 1);
+    return NewList(new _uint16BuilderList(), 0, length, 2);
   }
   ConsBuilder initCons() {
     tag = 5;
@@ -181,17 +181,26 @@ class PatchSetBuilder extends Builder {
 }
 
 class BoxedString extends Reader {
-  String get str => readString(new _uint8List(), 0);
-  List<int> get strData => readList(new _uint8List(), 0);
+  String get str => readString(new _uint16List(), 0);
+  List<int> get strData => readList(new _uint16List(), 0);
 }
 
 class BoxedStringBuilder extends Builder {
   void set str(String value) {
-    NewString(new _uint8BuilderList(), 0, value);
+    NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initStrData(int length) {
-    return NewList(new _uint8BuilderList(), 0, length, 1);
+    return NewList(new _uint16BuilderList(), 0, length, 2);
   }
+}
+
+class _uint16List extends ListReader implements List<uint16> {
+  int operator[](int index) => _segment.memory.getUint16(_offset + index * 2);
+}
+
+class _uint16BuilderList extends ListBuilder implements List<uint16> {
+  int operator[](int index) => _segment.memory.getUint16(_offset + index * 2);
+  void operator[]=(int index, int value) => _segment.memory.setUint16(_offset + index * 2, value);
 }
 
 class _uint8List extends ListReader implements List<uint8> {

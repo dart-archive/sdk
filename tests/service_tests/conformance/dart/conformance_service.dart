@@ -29,6 +29,7 @@ abstract class ConformanceService {
   void foo();
   int bar(Empty empty);
   int ping();
+  void flipTable(TableFlip flip, TableFlipBuilder result);
 
   static void initialize(ConformanceService impl) {
     if (_impl != null) {
@@ -116,6 +117,14 @@ abstract class ConformanceService {
         request.setInt32(48, result);
         _postResult.icall$1(request);
         break;
+      case _FLIP_TABLE_METHOD_ID:
+        MessageBuilder mb = new MessageBuilder(16);
+        TableFlipBuilder builder = mb.initRoot(new TableFlipBuilder(), 8);
+        _impl.flipTable(getRoot(new TableFlip(), request), builder);
+        var result = getResultMessage(builder);
+        request.setInt64(48, result);
+        _postResult.icall$1(request);
+        break;
       default:
         throw UnsupportedError();
     }
@@ -133,6 +142,7 @@ abstract class ConformanceService {
   const int _FOO_METHOD_ID = 9;
   const int _BAR_METHOD_ID = 10;
   const int _PING_METHOD_ID = 11;
+  const int _FLIP_TABLE_METHOD_ID = 12;
 }
 
 class Empty extends Reader {
@@ -156,18 +166,18 @@ class AgeStatsBuilder extends Builder {
 }
 
 class Person extends Reader {
-  String get name => readString(new _uint8List(), 0);
-  List<int> get nameData => readList(new _uint8List(), 0);
+  String get name => readString(new _uint16List(), 0);
+  List<int> get nameData => readList(new _uint16List(), 0);
   List<Person> get children => readList(new _PersonList(), 8);
   int get age => _segment.memory.getInt32(_offset + 16);
 }
 
 class PersonBuilder extends Builder {
   void set name(String value) {
-    NewString(new _uint8BuilderList(), 0, value);
+    NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initNameData(int length) {
-    return NewList(new _uint8BuilderList(), 0, length, 1);
+    return NewList(new _uint16BuilderList(), 0, length, 2);
   }
   List<PersonBuilder> initChildren(int length) {
     return NewList(new _PersonBuilderList(), 8, length, 24);
@@ -265,13 +275,27 @@ class ConsBuilder extends Builder {
   }
 }
 
-class _uint8List extends ListReader implements List<uint8> {
-  int operator[](int index) => _segment.memory.getUint8(_offset + index * 1);
+class TableFlip extends Reader {
+  String get flip => readString(new _uint16List(), 0);
+  List<int> get flipData => readList(new _uint16List(), 0);
 }
 
-class _uint8BuilderList extends ListBuilder implements List<uint8> {
-  int operator[](int index) => _segment.memory.getUint8(_offset + index * 1);
-  void operator[]=(int index, int value) => _segment.memory.setUint8(_offset + index * 1, value);
+class TableFlipBuilder extends Builder {
+  void set flip(String value) {
+    NewString(new _uint16BuilderList(), 0, value);
+  }
+  List<int> initFlipData(int length) {
+    return NewList(new _uint16BuilderList(), 0, length, 2);
+  }
+}
+
+class _uint16List extends ListReader implements List<uint16> {
+  int operator[](int index) => _segment.memory.getUint16(_offset + index * 2);
+}
+
+class _uint16BuilderList extends ListBuilder implements List<uint16> {
+  int operator[](int index) => _segment.memory.getUint16(_offset + index * 2);
+  void operator[]=(int index, int value) => _segment.memory.setUint16(_offset + index * 2, value);
 }
 
 class _PersonList extends ListReader implements List<Person> {

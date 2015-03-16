@@ -31,10 +31,10 @@ public class Person extends Reader {
   }
 
   public String getName() { return readString(0); }
-  public Uint8List getNameData() {
+  public Uint16List getNameData() {
     ListReader reader = new ListReader();
     readList(reader, 0);
-    return new Uint8List(reader);
+    return new Uint16List(reader);
   }
 
   public PersonList getChildren() {

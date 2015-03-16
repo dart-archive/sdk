@@ -54,7 +54,7 @@ class Node : public Reader {
   bool getBool() const { return *PointerTo<uint8_t>(0) != 0; }
   bool isStr() const { return 4 == getTag(); }
   char* getStr() const { return ReadString(0); }
-  List<uint8_t> getStrData() const { return ReadList<uint8_t>(0); }
+  List<uint16_t> getStrData() const { return ReadList<uint16_t>(0); }
   bool isCons() const { return 5 == getTag(); }
   Cons getCons() const;
   uint16_t getTag() const { return *PointerTo<uint16_t>(16); }
@@ -73,7 +73,7 @@ class NodeBuilder : public Builder {
   void setNum(int32_t value) { setTag(2); *PointerTo<int32_t>(0) = value; }
   void setBool(bool value) { setTag(3); *PointerTo<uint8_t>(0) = value ? 1 : 0; }
   void setStr(const char* value) { setTag(4); NewString(0, value); }
-  List<uint8_t> initStrData(int length);
+  List<uint16_t> initStrData(int length);
   ConsBuilder initCons();
   void setTag(uint16_t value) { *PointerTo<uint16_t>(16) = value; }
 };
@@ -152,7 +152,7 @@ class BoxedString : public Reader {
       : Reader(segment, offset) { }
 
   char* getStr() const { return ReadString(0); }
-  List<uint8_t> getStrData() const { return ReadList<uint8_t>(0); }
+  List<uint16_t> getStrData() const { return ReadList<uint16_t>(0); }
 };
 
 class BoxedStringBuilder : public Builder {
@@ -165,7 +165,7 @@ class BoxedStringBuilder : public Builder {
       : Builder(segment, offset) { }
 
   void setStr(const char* value) { NewString(0, value); }
-  List<uint8_t> initStrData(int length);
+  List<uint16_t> initStrData(int length);
 };
 
 #endif  // TODOMVC_SERVICE_H

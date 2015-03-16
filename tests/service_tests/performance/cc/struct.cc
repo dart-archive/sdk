@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+#include "unicode.h"
+
 MessageBuilder::MessageBuilder(int space)
     : first_(this, 0, space),
       last_(&first_),
@@ -239,6 +241,16 @@ Reader Builder::NewList(int offset, int length, int size) {
   }
 }
 
+void Builder::NewString(int offset, const char* value) {
+  size_t value_len = strlen(value);
+  Utf8::Type type;
+  intptr_t len = Utf8::CodeUnitCount(value, value_len, &type);
+  Reader reader = NewList(offset, len, 2);
+  uint16_t* dst =
+      reinterpret_cast<uint16_t*>(reader.segment()->memory() + reader.offset());
+  Utf8::DecodeToUTF16(value, value_len, dst, len);
+}
+
 int Reader::ComputeUsed() const {
   MessageReader* reader = segment_->reader();
   int used = 0;
@@ -246,4 +258,13 @@ int Reader::ComputeUsed() const {
     used += reader->GetSegment(i)->size();
   }
   return used;
+}
+
+char* Reader::ReadString(int offset) const {
+  List<uint16_t> data = ReadList<uint16_t>(offset);
+  intptr_t len = Utf8::Length(data);
+  char* result = reinterpret_cast<char*>(malloc(len + 1));
+  Utf8::Encode(data, result, len);
+  result[len] = 0;
+  return result;
 }

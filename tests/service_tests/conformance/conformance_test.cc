@@ -54,7 +54,7 @@ static void CreatePersonCallback(Person generated) {
   EXPECT_EQ(6, name_length);
   EXPECT(strcmp(name, "person") == 0);
   free(name);
-  List<uint8_t> name_data = generated.getNameData();
+  List<uint16_t> name_data = generated.getNameData();
   EXPECT_EQ(6, name_data.length());
   EXPECT_EQ('p', name_data[0]);
   EXPECT_EQ('n', name_data[5]);
@@ -85,6 +85,11 @@ static void GetAgeStatsCallback(AgeStats stats) {
   EXPECT_EQ(39, stats.getAverageAge());
   EXPECT_EQ(4940, stats.getSum());
   stats.Delete();
+}
+
+static void FlipTableCallback(TableFlip flip_result) {
+  const char* expected_flip = "(╯°□°）╯︵ ┻━┻";
+  EXPECT(strcmp(flip_result.getFlip(), expected_flip) == 0);
 }
 
 static void RunPersonTests() {
@@ -158,7 +163,7 @@ static void RunPersonTests() {
     EXPECT_EQ(6, name_length);
     EXPECT(strcmp(name, "person") == 0);
     free(name);
-    List<uint8_t> name_data = generated.getNameData();
+    List<uint16_t> name_data = generated.getNameData();
     EXPECT_EQ(6, name_data.length());
     EXPECT_EQ('p', name_data[0]);
     EXPECT_EQ('n', name_data[5]);
@@ -191,6 +196,22 @@ static void RunPersonTests() {
 
   EXPECT_EQ(42, ConformanceService::ping());
   ConformanceService::pingAsync(PingCallback);
+
+  {
+    MessageBuilder builder(512);
+    TableFlipBuilder flip = builder.initRoot<TableFlipBuilder>();
+    const char* expected_flip = "(╯°□°）╯︵ ┻━┻";
+    flip.setFlip(expected_flip);
+    TableFlip flip_result = ConformanceService::flipTable(flip);
+    EXPECT(strcmp(flip_result.getFlip(), expected_flip) == 0);
+  }
+
+  {
+    MessageBuilder builder(512);
+    TableFlipBuilder flip = builder.initRoot<TableFlipBuilder>();
+    flip.setFlip("(╯°□°）╯︵ ┻━┻");
+    ConformanceService::flipTableAsync(flip, FlipTableCallback);
+  }
 }
 
 static void RunPersonBoxTests() {

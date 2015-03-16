@@ -549,6 +549,50 @@ JNIEXPORT void JNICALL Java_fletch_ConformanceService_pingAsync(JNIEnv* _env, jc
   ServiceApiInvokeAsync(service_id_, _kpingId, Unwrap_int32_8, _buffer, kSize);
 }
 
+static const MethodId _kflipTableId = reinterpret_cast<MethodId>(12);
+
+JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_flipTable(JNIEnv* _env, jclass, jobject flip) {
+  char* buffer = NULL;
+  int size = ComputeMessage(_env, flip, NULL, NULL, &buffer);
+  ServiceApiInvoke(service_id_, _kflipTableId, buffer, size);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  DeleteMessage(buffer);
+  char* memory = reinterpret_cast<char*>(result);
+  jobject rootSegment = GetRootSegment(_env, memory);
+  jclass resultClass = _env->FindClass("fletch/TableFlip");
+  jmethodID create = _env->GetStaticMethodID(resultClass, "create", "(Ljava/lang/Object;)Lfletch/TableFlip;");
+  jobject resultObject = _env->CallStaticObjectMethod(resultClass, create, rootSegment);
+  return resultObject;
+}
+
+static void Unwrap_TableFlip_8(void* raw) {
+  char* buffer = reinterpret_cast<char*>(raw);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  DeleteMessage(buffer);
+  char* memory = reinterpret_cast<char*>(result);
+  jobject rootSegment = GetRootSegment(env, memory);
+  jclass resultClass = env->FindClass("fletch/TableFlip");
+  jmethodID create = env->GetStaticMethodID(resultClass, "create", "(Ljava/lang/Object;)Lfletch/TableFlip;");
+  jobject resultObject = env->CallStaticObjectMethod(resultClass, create, rootSegment);
+  jclass clazz = env->GetObjectClass(info->callback);
+  jmethodID methodId = env->GetMethodID(clazz, "handle", "(Lfletch/TableFlip;)V");
+  env->CallVoidMethod(info->callback, methodId, resultObject);
+  env->DeleteGlobalRef(info->callback);
+  DetachCurrentThread(info->vm);
+  delete info;
+}
+
+JNIEXPORT void JNICALL Java_fletch_ConformanceService_flipTableAsync(JNIEnv* _env, jclass, jobject flip, jobject _callback) {
+  jobject callback = _env->NewGlobalRef(_callback);
+  JavaVM* vm;
+  _env->GetJavaVM(&vm);
+  char* buffer = NULL;
+  int size = ComputeMessage(_env, flip, callback, vm, &buffer);
+  ServiceApiInvokeAsync(service_id_, _kflipTableId, Unwrap_TableFlip_8, buffer, size);
+}
+
 #ifdef __cplusplus
 }
 #endif

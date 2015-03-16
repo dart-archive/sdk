@@ -21,6 +21,8 @@
         'performance/cc/performance_service.h',
         'performance/cc/struct.cc',
         'performance/cc/struct.h',
+        'performance/cc/unicode.cc',
+        'performance/cc/unicode.h',
       ],
     },
     {
@@ -34,6 +36,8 @@
         'conformance/cc/conformance_service.h',
         'conformance/cc/struct.cc',
         'conformance/cc/struct.h',
+        'conformance/cc/unicode.cc',
+        'conformance/cc/unicode.h',
         'conformance/conformance_test.cc',
         'conformance/conformance_test_shared.cc',
         'conformance/conformance_test_shared.h',

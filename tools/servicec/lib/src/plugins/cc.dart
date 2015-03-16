@@ -24,6 +24,8 @@ const COPYRIGHT = """
 const List<String> RESOURCES = const [
   "struct.h",
   "struct.cc",
+  "unicode.h",
+  "unicode.cc",
 ];
 
 const int RESPONSE_HEADER_SIZE = 8;
@@ -321,8 +323,8 @@ class _HeaderVisitor extends CcVisitor {
       } else if (slotType.isString) {
         writeln('  char* get$camel() const '
                 '{ return ReadString(${slot.offset}); }');
-        writeln('  List<uint8_t> get${camel}Data() const '
-                '{ return ReadList<uint8_t>(${slot.offset}); }');
+        writeln('  List<uint16_t> get${camel}Data() const '
+                '{ return ReadList<uint16_t>(${slot.offset}); }');
       } else if (slotType.isPrimitive) {
         write('  ');
         writeType(slotType);
@@ -384,7 +386,7 @@ class _HeaderVisitor extends CcVisitor {
         write('  void set$camel(const char* value) { ');
         write(updateTag);
         writeln('NewString(${slot.offset}, value); }');
-        writeln('  List<uint8_t> init${camel}Data(int length);');
+        writeln('  List<uint16_t> init${camel}Data(int length);');
       } else if (slotType.isPrimitive) {
         write('  void set$camel(');
         writeType(slotType);
@@ -496,10 +498,10 @@ class _ImplementationVisitor extends CcVisitor {
         writeln('}');
       } else if (slotType.isString) {
         writeln();
-        writeln('List<uint8_t> $name::init${camel}Data(int length) {');
+        writeln('List<uint16_t> $name::init${camel}Data(int length) {');
         write(updateTag);
-        writeln('  Reader result = NewList(${slot.offset}, length, 1);');
-        writeln('  return List<uint8_t>(result.segment(), result.offset(),'
+        writeln('  Reader result = NewList(${slot.offset}, length, 2);');
+        writeln('  return List<uint16_t>(result.segment(), result.offset(),'
                 ' length);');
         writeln('}');
       } else if (!slotType.isPrimitive) {
