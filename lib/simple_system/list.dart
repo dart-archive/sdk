@@ -13,9 +13,9 @@ class _ConstantList<E> {
 
   @native external int get length;
 
-  int get isEmpty => length == 0;
+  bool get isEmpty => length == 0;
 
-  int get isNotEmpty => length != 0;
+  bool get isNotEmpty => length != 0;
 
   @native external E operator[](int index);
 
@@ -30,7 +30,7 @@ class _FixedList<E> extends _ConstantList<E> {
 }
 
 // TODO(ajohnsen): Implement 'List'.
-class _GrowableList<E> {
+class _GrowableList<E> extends IterableBase<E> {
   int _length;
   _FixedList<E> _list;
 
@@ -40,9 +40,11 @@ class _GrowableList<E> {
 
   int get length => _length;
 
-  int get isEmpty => _length == 0;
+  bool get isEmpty => _length == 0;
 
-  int get isNotEmpty => _length != 0;
+  bool get isNotEmpty => _length != 0;
+
+  Iterator<E> get iterator => null;
 
   void add(E value) {
     _FixedList<E> list = _list;
@@ -57,13 +59,13 @@ class _GrowableList<E> {
 
   E operator[](int index) {
     // TODO(ajohnsen): Fix throw of exception.
-    if (index >= _length) throw "new IndexError(index, this)";
+    if (index >= _length) throw new IndexError(index, this);
     return _list[index];
   }
 
   void operator[]=(int index, value) {
     // TODO(ajohnsen): Fix throw of exception.
-    if (index >= length) throw "new IndexError(index, this);";
+    if (index >= length) throw new IndexError(index, this);
     return _list[index] = value;
   }
 

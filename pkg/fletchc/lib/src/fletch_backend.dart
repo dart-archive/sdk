@@ -311,6 +311,7 @@ class FletchBackend extends Backend {
     // Investigate what else it may enqueue, could be StringBuilder, and then
     // consider using that instead.
     world.registerDynamicInvocation(new Selector.binaryOperator('+'));
+    world.registerDynamicInvocation(new Selector.call('add', null, 1));
 
     void registerNamedSelector(String name, LibraryElement library, int arity) {
       var selector = new Selector.call(name, library, arity);

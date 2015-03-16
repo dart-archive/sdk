@@ -37,6 +37,13 @@ const patch = "patch";
 
 // TODO(ajohnsen): Merge 'fletch.String' into this String.
 @patch class String {
+  @patch factory String.fromCharCodes(
+      Iterable<int> charCode,
+      [int start = 0,
+       int end]) {
+    return fletch.String.fromCharCodes(charCode, start, end);
+  }
+
   @patch factory String.fromCharCode(int charCode) {
     return fletch.String.fromCharCode(charCode);
   }
@@ -62,4 +69,18 @@ const patch = "patch";
   @patch int get length => _buffer.length;
 
   @patch String toString() => _buffer;
+}
+
+@patch class Error {
+  @patch static String _stringToSafeString(String string) {
+    throw "_stringToSafeString is unimplemented";
+  }
+
+  @patch static String _objectToString(Object object) {
+    throw "_stringToSafeString is unimplemented";
+  }
+
+  @patch StackTrace get stackTrace {
+    throw "getter stackTrace is unimplemented";
+  }
 }

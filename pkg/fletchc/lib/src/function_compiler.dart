@@ -10,7 +10,8 @@ import 'package:compiler/src/resolution/semantic_visitor.dart' show
 
 import 'package:compiler/src/resolution/operators.dart' show
     BinaryOperator,
-    IncDecOperator;
+    IncDecOperator,
+    UnaryOperator;
 
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
@@ -420,6 +421,26 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void visitUnary(
+      Send node,
+      UnaryOperator operator,
+      Node value,
+      _) {
+    visitForValue(value);
+    Selector selector = new Selector.unaryOperator(operator.name);
+    invokeMethod(selector);
+    applyVisitState();
+  }
+
+  void visitNot(
+      Send node,
+      Node value,
+      _) {
+    visitForValue(value);
+    builder.negate();
+    applyVisitState();
+  }
+
   void visitIndexSet(
       SendSet node,
       Node receiver,
@@ -455,6 +476,31 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     builder.pop();
     builder.loadLiteralTrue();
     builder.bind(isFalse);
+
+    applyVisitState();
+  }
+
+  void visitLogicalOr(
+      Send node,
+      Node left,
+      Node right,
+      _) {
+    BytecodeLabel isFirstFalse = new BytecodeLabel();
+    BytecodeLabel isTrue = new BytecodeLabel();
+    BytecodeLabel isFalse = new BytecodeLabel();
+    BytecodeLabel done = new BytecodeLabel();
+
+    builder.loadLiteralTrue();
+
+    visitForTest(left, isTrue, isFirstFalse);
+
+    builder.bind(isFirstFalse);
+    visitForTest(right, isTrue, isFalse);
+
+    builder.bind(isFalse);
+    builder.pop();
+    builder.loadLiteralFalse();
+    builder.bind(isTrue);
 
     applyVisitState();
   }
@@ -615,6 +661,13 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Node receiver,
       Selector selector,
       _) {
+    if (selector == null) {
+      // TODO(ajohnsen): Remove hack - dart2js has a problem with generating
+      // selectors in initializer bodies.
+      selector = new Selector.getter(
+          node.selector.asIdentifier().source,
+          function.library);
+    }
     visitForValue(receiver);
     invokeGetter(selector);
     applyVisitState();
@@ -648,6 +701,20 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     int index = context.getStaticFieldIndex(element, function);
     builder.loadStatic(index);
     applyVisitState();
+  }
+
+  void visitStaticFieldGet(
+      Send node,
+      FieldElement element,
+      _) {
+    // TODO(ajohnsen): Handle initializer.
+    int index = context.getStaticFieldIndex(element, function);
+    builder.loadStatic(index);
+    applyVisitState();
+  }
+
+  void visitAssert(Send node, Node expression, _) {
+    // TODO(ajohnsen): Emit assert in checked mode.
   }
 
   void visitDynamicPropertySet(
@@ -1145,246 +1212,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   void visitFunctionDeclaration(FunctionDeclaration node) {
     FunctionExpression function = node.function;
     initializeLocal(elements[function], function);
-  }
-
-  void visitParameterInvocation(
-      Send node,
-      ParameterElement element,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitParameterInvocation] isn't implemented.");
-  }
-
-  void visitLocalVariableInvocation(
-      Send node,
-      LocalVariableElement element,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitLocalVariableInvocation] isn't implemented.");
-  }
-
-  void visitLocalFunctionAccess(
-      Send node,
-      LocalFunctionElement element) {
-    generateUnimplementedError(
-        node, "[visitLocalFunctionAccess] isn't implemented.");
-  }
-
-  void visitLocalFunctionAssignment(
-      SendSet node,
-      LocalFunctionElement element,
-      Node rhs,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitLocalFunctionAssignment] isn't implemented.");
-  }
-
-  void visitLocalFunctionInvocation(
-      Send node,
-      LocalFunctionElement element,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitLocalFunctionInvocation] isn't implemented.");
-  }
-
-  void visitDynamicAssignment(
-      SendSet node,
-      Selector selector,
-      Node rhs) {
-    generateUnimplementedError(
-        node, "[visitDynamicAssignment] isn't implemented.");
-  }
-
-  void visitStaticFieldInvocation(
-      Send node,
-      FieldElement element,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitStaticFieldInvocation] isn't implemented.");
-  }
-
-  void visitStaticMethodAccess(
-      Send node,
-      MethodElement element) {
-    generateUnimplementedError(
-        node, "[visitStaticMethodAccess] isn't implemented.");
-  }
-
-  void visitStaticPropertyAccess(
-      Send node,
-      FunctionElement element) {
-    generateUnimplementedError(
-        node, "[visitStaticPropertyAccess] isn't implemented.");
-  }
-
-  void visitStaticPropertyAssignment(
-      SendSet node,
-      FunctionElement element,
-      Node rhs) {
-    generateUnimplementedError(
-        node, "[visitStaticPropertyAssignment] isn't implemented.");
-  }
-
-  void visitStaticPropertyInvocation(
-      Send node,
-      FieldElement element,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitStaticPropertyInvocation] isn't implemented.");
-  }
-
-  void visitTopLevelFieldAccess(
-      Send node,
-      FieldElement element) {
-    generateUnimplementedError(
-        node, "[visitTopLevelFieldAccess] isn't implemented.");
-  }
-
-  void visitTopLevelFieldAssignment(
-      SendSet node,
-      FieldElement element,
-      Node rhs) {
-    generateUnimplementedError(
-        node, "[visitTopLevelFieldAssignment] isn't implemented.");
-  }
-
-  void visitTopLevelFieldInvocation(
-      Send node,
-      FieldElement element,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitTopLevelFieldInvocation] isn't implemented.");
-  }
-
-  void visitTopLevelMethodAccess(
-      Send node,
-      MethodElement element) {
-    generateUnimplementedError(
-        node, "[visitTopLevelMethodAccess] isn't implemented.");
-  }
-
-  void visitTopLevelMethodInvocation(
-      Send node,
-      MethodElement element,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitTopLevelMethodInvocation] isn't implemented.");
-  }
-
-  void visitTopLevelPropertyAccess(
-      Send node,
-      FunctionElement element) {
-    generateUnimplementedError(
-        node, "[visitTopLevelPropertyAccess] isn't implemented.");
-  }
-
-  void visitTopLevelPropertyAssignment(
-      SendSet node,
-      FunctionElement element,
-      Node rhs) {
-    generateUnimplementedError(
-        node, "[visitTopLevelPropertyAssignment] isn't implemented.");
-  }
-
-  void visitTopLevelPropertyInvocation(
-      Send node,
-      FieldElement element,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitTopLevelPropertyInvocation] isn't implemented.");
-  }
-
-  void visitClassTypeLiteralAccess(
-      Send node,
-      ClassElement element) {
-    generateUnimplementedError(
-        node, "[visitClassTypeLiteralAccess] isn't implemented.");
-  }
-
-  void visitClassTypeLiteralInvocation(
-      Send node,
-      ClassElement element,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitClassTypeLiteralInvocation] isn't implemented.");
-  }
-
-  void visitClassTypeLiteralAssignment(
-      SendSet node,
-      ClassElement element,
-      Node rhs) {
-    generateUnimplementedError(
-        node, "[visitClassTypeLiteralAssignment] isn't implemented.");
-  }
-
-  void visitTypedefTypeLiteralAccess(
-      Send node,
-      TypedefElement element) {
-    generateUnimplementedError(
-        node, "[visitTypedefTypeLiteralAccess] isn't implemented.");
-  }
-
-  void visitTypedefTypeLiteralInvocation(
-      Send node,
-      TypedefElement element,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitTypedefTypeLiteralInvocation] isn't implemented.");
-  }
-
-  void visitTypedefTypeLiteralAssignment(
-      SendSet node,
-      TypedefElement element,
-      Node rhs) {
-    generateUnimplementedError(
-        node, "[visitTypedefTypeLiteralAssignment] isn't implemented.");
-  }
-
-  void visitTypeVariableTypeLiteralAccess(
-      Send node,
-      TypeVariableElement element) {
-    generateUnimplementedError(
-        node, "[visitTypeVariableTypeLiteralAccess] isn't implemented.");
-  }
-
-  void visitTypeVariableTypeLiteralInvocation(
-      Send node,
-      TypeVariableElement element,
-      NodeList arguments,
-      Selector selector) {
-    generateUnimplementedError(
-        node, "[visitTypeVariableTypeLiteralInvocation] isn't implemented.");
-  }
-
-  void visitTypeVariableTypeLiteralAssignment(
-      SendSet node,
-      TypeVariableElement element,
-      Node rhs) {
-    generateUnimplementedError(
-        node, "[visitTypeVariableTypeLiteralAssignment] isn't implemented.");
-  }
-
-  void visitDynamicTypeLiteralAccess(
-      Send node) {
-    generateUnimplementedError(
-        node, "[visitDynamicTypeLiteralAccess] isn't implemented.");
-  }
-
-  void visitAssert(
-      Send node,
-      Node expression) {
-    generateUnimplementedError(
-        node, "[visitAssert] isn't implemented.");
   }
 
   void internalError(Spannable spannable, String reason) {

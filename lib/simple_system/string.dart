@@ -6,8 +6,22 @@ part of dart.system;
 
 // TODO(ajohnsen): Rename String to e.g. _StringImpl.
 abstract class String implements core.String {
+  static String fromCharCodes(Iterable<int> charCodes, int start, int end) {
+    if (end == null) end = charCodes.length;
+    int length = end - start;
+    if (start < 0 || length < 0) throw new RangeError.range(start, 0, length);
+    var str = _create(length);
+    int i = -start;
+    charCodes.forEach((value) {
+      if (i >= 0 && i < length) str._setCodeUnitAt(i, value);
+      i++;
+    });
+    if (i < length) throw new RangeError.range(start, 0, length);
+    return str;
+  }
+
   static String fromCharCode(int charCode) {
-    var result = _create(1);
+    String result = _create(1);
     result._setCodeUnitAt(0, charCode);
     return result;
   }

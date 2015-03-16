@@ -10,7 +10,8 @@ import 'package:compiler/src/resolution/semantic_visitor.dart' show
 
 import 'package:compiler/src/resolution/operators.dart' show
     BinaryOperator,
-    IncDecOperator;
+    IncDecOperator,
+    UnaryOperator;
 
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
@@ -216,6 +217,16 @@ class ClosureVisitor
     arguments.accept(this);
   }
 
+  void visitParameterInvoke(
+      Send node,
+      LocalVariableElement element,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    markUsed(element, CaptureMode.ByValue);
+    arguments.accept(this);
+  }
+
   void visitLocalFunctionInvoke(
       Send node,
       LocalFunctionElement element,
@@ -272,6 +283,10 @@ class ClosureVisitor
   }
 
   void visitTopLevelFieldGet(Send node, FieldElement element, _) {
+    // Intentionally empty: there is just nothing to visit in this case.
+  }
+
+  void visitStaticFieldGet(Send node, FieldElement element, _) {
     // Intentionally empty: there is just nothing to visit in this case.
   }
 
@@ -334,10 +349,17 @@ class ClosureVisitor
   }
 
   void visitIs(Send node, Node expression, DartType type, _) {
+    // TODO(ajohnsen): Type is used ByValue.
+    expression.accept(this);
+  }
+
+  void visitIsNot(Send node, Node expression, DartType type, _) {
+    // TODO(ajohnsen): Type is used ByValue.
     expression.accept(this);
   }
 
   void visitAs(Send node, Node expression, DartType type, _) {
+    // TODO(ajohnsen): Type is used ByValue.
     expression.accept(this);
   }
 
@@ -349,6 +371,21 @@ class ClosureVisitor
       _) {
     left.accept(this);
     right.accept(this);
+  }
+
+  void visitUnary(
+      Send node,
+      UnaryOperator operator,
+      Node value,
+      _) {
+    value.accept(this);
+  }
+
+  void visitNot(
+      Send node,
+      Node value,
+      _) {
+    value.accept(this);
   }
 
   void visitIndexSet(
@@ -375,5 +412,15 @@ class ClosureVisitor
   void visitLogicalAnd(Send node, Node left, Node right, _) {
     left.accept(this);
     right.accept(this);
+  }
+
+  void visitLogicalOr(Send node, Node left, Node right, _) {
+    left.accept(this);
+    right.accept(this);
+  }
+
+  void visitAssert(Send node, Node expression, _) {
+    // TODO(ajohnsen): Only visit in checked mode.
+    expression.accept(this);
   }
 }

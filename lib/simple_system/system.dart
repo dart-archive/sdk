@@ -12,6 +12,8 @@ import 'dart:core' as core show
     int,
     String;
 
+import 'dart:collection';
+
 part 'integer.dart';
 part 'list.dart';
 part 'string.dart';
