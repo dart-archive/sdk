@@ -114,6 +114,8 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoLoadLiteralWide();
 
   virtual void DoInvokeMethod();
+  virtual void DoInvokeMethodFast();
+
   virtual void DoInvokeStatic();
   virtual void DoInvokeStaticUnfold();
   virtual void DoInvokeFactory();
@@ -484,6 +486,67 @@ void InterpreterGeneratorX86::DoLoadLiteralWide() {
 
 void InterpreterGeneratorX86::DoInvokeMethod() {
   InvokeMethod(false);
+}
+
+void InterpreterGeneratorX86::DoInvokeMethodFast() {
+  // Get the dispatch table for this invoke.
+  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
+  __ movl(EBX, Address(ECX, Program::ConstantsOffset()));
+  __ movl(EDX, Address(ESI, 1));
+  __ movl(EDX, Address(EBX, EDX, TIMES_4, Array::kSize - HeapObject::kTag));
+
+  // Get the arity from the dispatch table and get the receiver from the stack.
+  __ movl(EBX, Address(EDX, Array::kSize - HeapObject::kTag));
+  __ negl(EBX);
+  __ movl(EBX, Address(EDI, EBX, TIMES_2));
+
+  // Compute the receiver class.
+  Label smi, probe;
+  ASSERT(Smi::kTag == 0);
+  __ testl(EBX, Immediate(Smi::kTagMask));
+  __ j(ZERO, &smi);
+  __ movl(EBX, Address(EBX, HeapObject::kClassOffset - HeapObject::kTag));
+
+  // Fetch the receiver class id and get ready to look at the table entries.
+  __ Bind(&probe);
+  __ movl(EBX, Address(EBX, Class::kIdOffset - HeapObject::kTag));
+
+  // Loop through the table.
+  static const int kDisplacement = Array::kSize - HeapObject::kTag;
+  Label loop, next;
+  __ Bind(&loop);
+  __ cmpl(EBX, Address(EDX, kDisplacement + 2 * kPointerSize));
+  __ j(LESS, &next);
+  __ cmpl(EBX, Address(EDX, kDisplacement + 3 * kPointerSize));
+  __ j(GREATER_EQUAL, &next);
+
+  // Found the right target method.
+  Label intrinsified;
+  __ movl(EBX, Address(EDX, kDisplacement + 4 * kPointerSize));
+  __ movl(EAX, Address(EDX, kDisplacement + 5 * kPointerSize));
+  __ testl(EBX, EBX);
+  __ j(NOT_ZERO, &intrinsified);
+
+  // Compute and push the return address on the stack.
+  __ addl(ESI, Immediate(kInvokeMethodFastLength));
+  Push(ESI);
+
+  // Jump to the first bytecode in the target method.
+  __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
+  CheckStackOverflow(0);
+  Dispatch(0);
+
+  // Go to the next table entry.
+  __ Bind(&next);
+  __ addl(EDX, Immediate(4 * kPointerSize));
+  __ jmp(&loop);
+
+  __ Bind(&intrinsified);
+  __ jmp(EBX);
+
+  __ Bind(&smi);
+  __ movl(EBX, Address(ECX, Program::smi_class_offset()));
+  __ jmp(&probe);
 }
 
 void InterpreterGeneratorX86::DoInvokeTest() {
@@ -1073,12 +1136,29 @@ void InterpreterGeneratorX86::DoEnterNoSuchMethod() {
   // Load the return address from the stack.
   LoadLocal(EAX, 0);
 
+  // Load the caller opcode through the return address.
+  Label decode, fast;
+  __ movzbl(EBX, Address(EAX, -5));
+  __ cmpl(EBX, Immediate(kInvokeMethodFast));
+  __ j(EQUAL, &fast);
+
   // Load the selector indirectly through the return address.
   __ movl(EAX, Address(EAX, -4));
-  __ movl(EBX, EAX);
+  __ jmp(&decode);
+
+  // Load the selector from the dispatch table.
+  __ Bind(&fast);
+  __ movl(EAX, Address(EAX, -4));
+  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
+  __ movl(ECX, Address(ECX, Program::ConstantsOffset()));
+  __ movl(ECX, Address(ECX, EAX, TIMES_4, Array::kSize - HeapObject::kTag));
+  __ movl(EAX, Address(ECX, kPointerSize + Array::kSize - HeapObject::kTag));
+  __ shrl(EAX, Immediate(Smi::kTagSize));
 
   // Decode the arity from the selector.
   ASSERT(Selector::ArityField::shift() == 0);
+  __ Bind(&decode);
+  __ movl(EBX, EAX);
   __ andl(EBX, Immediate(Selector::ArityField::mask()));
   __ negl(EBX);
 

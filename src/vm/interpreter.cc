@@ -315,6 +315,32 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
   OPCODE_END();
 
+  OPCODE_BEGIN(InvokeMethodFast);
+    int index = ReadInt32(1);
+    Array* table = Array::cast(program()->constant_at(index));
+    int arity = Smi::cast(table->get(0))->value();
+    Object* receiver = Local(arity);
+    PushReturnAddress(kInvokeMethodFastLength);
+
+    Class* clazz = receiver->IsSmi()
+        ? program()->smi_class()
+        : HeapObject::cast(receiver)->get_class();
+    int class_id = clazz->id();
+
+    Function* target = NULL;
+    for (int index = 2; true; index += 4) {
+      Smi* lower = Smi::cast(table->get(index));
+      if (class_id < lower->value()) continue;
+      Smi* upper = Smi::cast(table->get(index + 1));
+      if (class_id >= upper->value()) continue;
+      target = Function::cast(table->get(index + 3));
+      break;
+    }
+
+    Goto(target->bytecode_address_for(0));
+    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+  OPCODE_END();
+
   OPCODE_BEGIN(InvokeStatic);
     int index = ReadInt32(1);
     Function* target = program()->static_method_at(index);
@@ -656,9 +682,18 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
 
   OPCODE_BEGIN(EnterNoSuchMethod);
     uint8* return_address = reinterpret_cast<uint8*>(Local(0));
-    int selector = Utils::ReadInt32(return_address - 4);
-    int arity = Selector::ArityField::decode(selector);
+    Opcode opcode = static_cast<Opcode>(*(return_address - 5));
 
+    int selector;
+    if (opcode == kInvokeMethodFast) {
+      int index = Utils::ReadInt32(return_address - 4);
+      Array* table = Array::cast(program()->constant_at(index));
+      selector = Smi::cast(table->get(1))->value();
+    } else {
+      selector = Utils::ReadInt32(return_address - 4);
+    }
+
+    int arity = Selector::ArityField::decode(selector);
     Smi* selector_smi = Smi::FromWord(selector);
     Object* receiver = Local(arity + 1);
 

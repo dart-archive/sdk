@@ -67,6 +67,14 @@ static int StackDiff(uint8** bcp,
       break;
     }
 
+    case kInvokeMethodFast: {
+      int index = Utils::ReadInt32(*bcp + 1);
+      Array* table = Array::cast(program->constant_at(index));
+      int arity = Smi::cast(table->get(0))->value();
+      stack_diff = -arity;
+      break;
+    }
+
     case kInvokeStatic:
     case kInvokeFactory: {
       int method = Utils::ReadInt32(*bcp + 1);

@@ -734,6 +734,7 @@ class Class: public Instance {
 
   // [methods]: array containing pairs of (Smi*, Function*) sorted by Smi*
   // values.
+  inline bool has_methods();
   inline Array* methods();
   inline void set_methods(Array* value);
 
@@ -1281,6 +1282,10 @@ void Class::Initialize(InstanceFormat format, int size, Object* null) {
     at_put(offset, null);
   }
   set_instance_format(format);
+}
+
+bool Class::has_methods() {
+  return at(kMethodsOffset)->IsArray();
 }
 
 Array* Class::methods() {

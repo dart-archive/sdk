@@ -115,6 +115,8 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoLoadLiteralWide();
 
   virtual void DoInvokeMethod();
+  virtual void DoInvokeMethodFast();
+
   virtual void DoInvokeStatic();
   virtual void DoInvokeStaticUnfold();
   virtual void DoInvokeFactory();
@@ -492,6 +494,13 @@ void InterpreterGeneratorARM::DoLoadLiteralWide() {
 
 void InterpreterGeneratorARM::DoInvokeMethod() {
   InvokeMethod(false);
+}
+
+void InterpreterGeneratorARM::DoInvokeMethodFast() {
+  // TODO(kasperl): Implement this once we're happy with the
+  // performance charateristics of it on x86.
+  __ mov(R0, Immediate(-1));
+  __ b(&done_);
 }
 
 void InterpreterGeneratorARM::DoInvokeTest() {
@@ -1042,11 +1051,29 @@ void InterpreterGeneratorARM::DoEnterNoSuchMethod() {
   // Load the return address from the stack.
   LoadLocal(R0, 0);
 
+  // Load the caller opcode through the return address.
+  Label decode, fast;
+  __ ldrb(R1, Address(R0, -5));
+  __ cmp(R1, Immediate(kInvokeMethodFast));
+  __ b(EQ, &fast);
+
   // Load the selector indirectly through the return address.
   __ ldr(R0, Address(R0, -4));
+  __ b(&decode);
+
+  // Load the selector from the dispatch table.
+  __ Bind(&fast);
+  __ ldr(R0, Address(R0, -4));
+  __ ldr(R2, Address(R4, Process::ProgramOffset()));
+  __ ldr(R3, Address(R2, Program::ConstantsOffset()));
+  __ add(R3, R3, Immediate(Array::kSize - HeapObject::kTag));
+  __ ldr(R3, Address(R3, Operand(R0, TIMES_4)));
+  __ ldr(R0, Address(R3, kPointerSize + Array::kSize - HeapObject::kTag));
+  __ lsr(R0, R0, Immediate(Smi::kTagSize));
 
   // Decode the arity from the selector.
   ASSERT(Selector::ArityField::shift() == 0);
+  __ Bind(&decode);
   __ and_(R1, R0, Immediate(Selector::ArityField::mask()));
   __ neg(R1, R1);
 
