@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "src/shared/bytecodes.h"
+#include "src/shared/flags.h"
 #include "src/shared/globals.h"
 #include "src/shared/utils.h"
 #include "src/shared/selectors.h"
@@ -979,6 +980,16 @@ void Program::Initialize() {
 }
 
 bool Program::RunMainInNewProcess() {
+  // For testing purposes, we support unfolding the program
+  // before running it.
+  bool unfold = Flags::IsOn("unfold-program");
+  if (is_compact()) {
+    if (unfold) Unfold();
+  } else if (!unfold) {
+    Fold();
+  }
+  ASSERT(is_compact() == !unfold);
+
   // TODO(ager): GC for testing only.
   CollectGarbage();
 

@@ -8,7 +8,6 @@
 #include <stdlib.h>
 
 #include "src/shared/assert.h"
-#include "src/shared/flags.h"
 
 #include "src/vm/object.h"
 #include "src/vm/program.h"
@@ -287,10 +286,6 @@ Program* SnapshotReader::ReadProgram() {
 
   // Programs read from a snapshot are always compact.
   program->set_is_compact(true);
-
-  // For testing purposes, we support unfolding the program
-  // right after reading it from the snapshot.
-  if (Flags::IsOn("unfold-program")) program->Unfold();
 
   return program;
 }
