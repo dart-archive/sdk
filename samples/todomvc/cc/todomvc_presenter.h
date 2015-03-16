@@ -12,6 +12,8 @@
 const uint8_t TAG_CONS_FST = 0;
 const uint8_t TAG_CONS_SND = 1;
 
+void VoidCallback();
+
 class TodoMVCPresenter {
  public:
   // Async forwarding of commands to the Dart presenter.

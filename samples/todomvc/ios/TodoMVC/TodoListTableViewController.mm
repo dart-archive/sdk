@@ -22,11 +22,14 @@ public:
 
   NSArray* items() { return items_; }
 
-  // TODO: Implement direct support for NSString in the IDL compiler.
   void createItem(NSString* title) {
-    char* cstr = encodeString(title);
-    TodoMVCPresenter::createItem(cstr);
-    free(cstr);
+    int length = title.length;
+    int size = 40 + 8 + BoxedStringBuilder::kSize + length;
+    MessageBuilder builder(size);
+    BoxedStringBuilder box = builder.initRoot<BoxedStringBuilder>();
+    List<uint8_t> chars = box.initStrData(length);
+    encodeString(title, chars);
+    TodoMVCService::createItemAsync(box, VoidCallback);
   }
 
   void toggleItem(int id) {
@@ -91,19 +94,21 @@ private:
     }
   }
 
-  char* encodeString(NSString* string) {
-    char* cstr = (char*)malloc(sizeof(char) * string.length + 1);
-    [string getCString:cstr
-             maxLength:string.length + 1
-              encoding:NSASCIIStringEncoding];
-    return cstr;
+  void encodeString(NSString* string, List<uint8_t> chars) {
+    assert(string.length == chars.length());
+    [string getBytes:chars.data()
+           maxLength:string.length
+          usedLength:NULL
+            encoding:NSASCIIStringEncoding
+             options:NSStringEncodingConversionAllowLossy
+               range:NSMakeRange(0, string.length)
+      remainingRange:NULL];
   }
  
   NSString* decodeString(List<uint8_t> chars) {
-    unsigned length = chars.length();
     return [[NSString alloc]
             initWithBytes:chars.data()
-                   length:length
+                   length:chars.length()
                  encoding:NSASCIIStringEncoding];
   }
 

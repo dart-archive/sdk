@@ -18,6 +18,12 @@ public class BoxedStringBuilder extends Builder {
   }
 
   public void setStr(String value) {
-    newString(0, (String)value);
+    newString(0, value);
+  }
+
+  public Uint8ListBuilder initStrData(int length) {
+    ListBuilder builder = new ListBuilder();
+    newList(builder, 0, length, 1);
+    return new Uint8ListBuilder(builder);
   }
 }

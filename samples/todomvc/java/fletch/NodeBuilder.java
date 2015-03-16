@@ -31,7 +31,14 @@ public class NodeBuilder extends Builder {
 
   public void setStr(String value) {
     setTag(4);
-    newString(0, (String)value);
+    newString(0, value);
+  }
+
+  public Uint8ListBuilder initStrData(int length) {
+    setTag(4);
+    ListBuilder builder = new ListBuilder();
+    newList(builder, 0, length, 1);
+    return new Uint8ListBuilder(builder);
   }
 
   public ConsBuilder initCons() {

@@ -166,6 +166,12 @@ void TodoMVCService::resetAsync(void (*callback)()) {
   ServiceApiInvokeAsync(service_id_, kResetId_, Unwrap_void_8, _buffer, kSize);
 }
 
+List<uint8_t> NodeBuilder::initStrData(int length) {
+  setTag(4);
+  Reader result = NewList(0, length, 1);
+  return List<uint8_t>(result.segment(), result.offset(), length);
+}
+
 ConsBuilder NodeBuilder::initCons() {
   setTag(5);
   return ConsBuilder(segment(), offset() + 0);
@@ -201,4 +207,9 @@ Node Patch::getContent() const { return Node(segment(), offset() + 0); }
 List<PatchBuilder> PatchSetBuilder::initPatches(int length) {
   Reader result = NewList(0, length, 32);
   return List<PatchBuilder>(result.segment(), result.offset(), length);
+}
+
+List<uint8_t> BoxedStringBuilder::initStrData(int length) {
+  Reader result = NewList(0, length, 1);
+  return List<uint8_t>(result.segment(), result.offset(), length);
 }

@@ -73,6 +73,7 @@ class NodeBuilder : public Builder {
   void setNum(int32_t value) { setTag(2); *PointerTo<int32_t>(0) = value; }
   void setBool(bool value) { setTag(3); *PointerTo<uint8_t>(0) = value ? 1 : 0; }
   void setStr(const char* value) { setTag(4); NewString(0, value); }
+  List<uint8_t> initStrData(int length);
   ConsBuilder initCons();
   void setTag(uint16_t value) { *PointerTo<uint16_t>(16) = value; }
 };
@@ -164,6 +165,7 @@ class BoxedStringBuilder : public Builder {
       : Builder(segment, offset) { }
 
   void setStr(const char* value) { NewString(0, value); }
+  List<uint8_t> initStrData(int length);
 };
 
 #endif  // TODOMVC_SERVICE_H

@@ -122,8 +122,10 @@ class NodeBuilder extends Builder {
     _segment.memory.setUint8(_offset + 0, value ? 1 : 0);
   }
   void set str(String value) {
-    tag = 4;
     NewString(new _uint8BuilderList(), 0, value);
+  }
+  List<int> initStrData(int length) {
+    return NewList(new _uint8BuilderList(), 0, length, 1);
   }
   ConsBuilder initCons() {
     tag = 5;
@@ -186,6 +188,9 @@ class BoxedString extends Reader {
 class BoxedStringBuilder extends Builder {
   void set str(String value) {
     NewString(new _uint8BuilderList(), 0, value);
+  }
+  List<int> initStrData(int length) {
+    return NewList(new _uint8BuilderList(), 0, length, 1);
   }
 }
 

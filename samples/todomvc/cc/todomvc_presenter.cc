@@ -4,7 +4,7 @@
 
 #include "todomvc_presenter.h"
 
-static void VoidCallback() {}
+void VoidCallback() {}
 
 void TodoMVCPresenter::createItem(char* title) {
   int length = 0;
