@@ -19,6 +19,7 @@
 		DAC13F031A9B71F800D3159D /* AddTodoItemViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = DAC13F001A9B71F800D3159D /* AddTodoItemViewController.m */; };
 		DAC13F041A9B71F800D3159D /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = DAC13F021A9B71F800D3159D /* AppDelegate.mm */; };
 		DAC13F071A9B721A00D3159D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DAC13F051A9B721A00D3159D /* Main.storyboard */; };
+		DAC5188E1AB70A7E00EAFF43 /* unicode.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAC5188C1AB70A7E00EAFF43 /* unicode.cc */; };
 		DADB66D71A9CA17500BD8B6E /* todomvc.snapshot in Resources */ = {isa = PBXBuildFile; fileRef = DADB66D61A9CA17500BD8B6E /* todomvc.snapshot */; };
 /* End PBXBuildFile section */
 
@@ -56,6 +57,8 @@
 		DAC13F011A9B71F800D3159D /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		DAC13F021A9B71F800D3159D /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
 		DAC13F061A9B721A00D3159D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		DAC5188C1AB70A7E00EAFF43 /* unicode.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unicode.cc; sourceTree = "<group>"; };
+		DAC5188D1AB70A7E00EAFF43 /* unicode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unicode.h; sourceTree = "<group>"; };
 		DADB66D61A9CA17500BD8B6E /* todomvc.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; path = todomvc.snapshot; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -81,6 +84,8 @@
 		DAB200FE1A9B78890087F7F9 /* cc */ = {
 			isa = PBXGroup;
 			children = (
+				DAC5188C1AB70A7E00EAFF43 /* unicode.cc */,
+				DAC5188D1AB70A7E00EAFF43 /* unicode.h */,
 				DAB200FF1A9B78890087F7F9 /* struct.cc */,
 				DAB201001A9B78890087F7F9 /* struct.h */,
 				DAB201011A9B78890087F7F9 /* todomvc_presenter.cc */,
@@ -268,6 +273,7 @@
 			files = (
 				DAC13EFC1A9B71CF00D3159D /* TodoItem.m in Sources */,
 				DAC13EFD1A9B71CF00D3159D /* TodoListTableViewController.mm in Sources */,
+				DAC5188E1AB70A7E00EAFF43 /* unicode.cc in Sources */,
 				DAB201071A9B78890087F7F9 /* todomvc_service.cc in Sources */,
 				DAC13ED11A9B6ED000D3159D /* main.m in Sources */,
 				DAB201061A9B78890087F7F9 /* todomvc_presenter.cc in Sources */,

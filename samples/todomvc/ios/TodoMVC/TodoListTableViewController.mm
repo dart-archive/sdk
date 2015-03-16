@@ -27,7 +27,7 @@ public:
     int size = 40 + 8 + BoxedStringBuilder::kSize + length;
     MessageBuilder builder(size);
     BoxedStringBuilder box = builder.initRoot<BoxedStringBuilder>();
-    List<uint8_t> chars = box.initStrData(length);
+    List<unichar> chars = box.initStrData(length);
     encodeString(title, chars);
     TodoMVCService::createItemAsync(box, VoidCallback);
   }
@@ -94,22 +94,15 @@ private:
     }
   }
 
-  void encodeString(NSString* string, List<uint8_t> chars) {
+  void encodeString(NSString* string, List<unichar> chars) {
     assert(string.length == chars.length());
-    [string getBytes:chars.data()
-           maxLength:string.length
-          usedLength:NULL
-            encoding:NSASCIIStringEncoding
-             options:NSStringEncodingConversionAllowLossy
-               range:NSMakeRange(0, string.length)
-      remainingRange:NULL];
+    [string getCharacters:chars.data()
+                    range:NSMakeRange(0, string.length)];
   }
  
-  NSString* decodeString(List<uint8_t> chars) {
-    return [[NSString alloc]
-            initWithBytes:chars.data()
-                   length:chars.length()
-                 encoding:NSASCIIStringEncoding];
+  NSString* decodeString(List<unichar> chars) {
+    return [[NSString alloc] initWithCharacters:chars.data()
+                                         length:chars.length()];
   }
 
   TodoItem* newItem(const Node& node) {
