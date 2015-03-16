@@ -319,7 +319,7 @@ class ProgramTableRewriter {
 
 void SelectorRow::ComputeDispatchTableIndex(Program* program,
                                             ProgramTableRewriter* rewriter) {
-  if (variants_ > kFewVariantsThreshold) return;
+  if (true || variants_ > kFewVariantsThreshold) return;
 
   // TODO(kasperl): The snapshotting code cannot deal with the intrinsic
   // pointer yet, so we avoid using the dispatch table if any of the target
