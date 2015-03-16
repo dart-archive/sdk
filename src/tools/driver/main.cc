@@ -443,7 +443,8 @@ static int Main(int argc, char** argv) {
         size_t bytes_count = read(STDIN_FILENO, &buffer, sizeof(buffer));
         do {
           ssize_t bytes_written =
-            write(stdio_socket->FileDescriptor(), &buffer, bytes_count);
+            TEMP_FAILURE_RETRY(
+                write(stdio_socket->FileDescriptor(), &buffer, bytes_count));
           if (bytes_written == -1) {
             Die("%s: write to stdio_socket failed: %s",
                 program_name, strerror(errno));
