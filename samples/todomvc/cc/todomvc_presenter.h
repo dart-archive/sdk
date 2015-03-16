@@ -18,6 +18,7 @@ class TodoMVCPresenter {
   void createItem(char* title);
   void deleteItem(int id);
   void completeItem(int id);
+  void uncompleteItem(int id);
   void clearItems();
 
   // Synchronize with the Dart presentation model.

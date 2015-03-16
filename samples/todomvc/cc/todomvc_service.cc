@@ -21,7 +21,7 @@ void TodoMVCService::tearDown() {
 
 static const MethodId kCreateItemId_ = reinterpret_cast<MethodId>(1);
 
-void TodoMVCService::createItem(StrBuilder title) {
+void TodoMVCService::createItem(BoxedStringBuilder title) {
   title.InvokeMethod(service_id_, kCreateItemId_);
 }
 
@@ -33,7 +33,7 @@ static void Unwrap_void_8(void* raw) {
   callback();
 }
 
-void TodoMVCService::createItemAsync(StrBuilder title, void (*callback)()) {
+void TodoMVCService::createItemAsync(BoxedStringBuilder title, void (*callback)()) {
   title.InvokeMethodAsync(service_id_, kCreateItemId_, Unwrap_void_8, reinterpret_cast<void*>(callback));
 }
 
@@ -77,7 +77,27 @@ void TodoMVCService::completeItemAsync(int32_t id, void (*callback)()) {
   ServiceApiInvokeAsync(service_id_, kCompleteItemId_, Unwrap_void_8, _buffer, kSize);
 }
 
-static const MethodId kClearItemsId_ = reinterpret_cast<MethodId>(4);
+static const MethodId kUncompleteItemId_ = reinterpret_cast<MethodId>(4);
+
+void TodoMVCService::uncompleteItem(int32_t id) {
+  static const int kSize = 56;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 48) = id;
+  ServiceApiInvoke(service_id_, kUncompleteItemId_, _buffer, kSize);
+}
+
+void TodoMVCService::uncompleteItemAsync(int32_t id, void (*callback)()) {
+  static const int kSize = 56 + 0 * sizeof(void*);
+  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 48) = id;
+  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
+  ServiceApiInvokeAsync(service_id_, kUncompleteItemId_, Unwrap_void_8, _buffer, kSize);
+}
+
+static const MethodId kClearItemsId_ = reinterpret_cast<MethodId>(5);
 
 void TodoMVCService::clearItems() {
   static const int kSize = 56;
@@ -95,7 +115,7 @@ void TodoMVCService::clearItemsAsync(void (*callback)()) {
   ServiceApiInvokeAsync(service_id_, kClearItemsId_, Unwrap_void_8, _buffer, kSize);
 }
 
-static const MethodId kSyncId_ = reinterpret_cast<MethodId>(5);
+static const MethodId kSyncId_ = reinterpret_cast<MethodId>(6);
 
 PatchSet TodoMVCService::sync() {
   static const int kSize = 56;
@@ -128,7 +148,7 @@ void TodoMVCService::syncAsync(void (*callback)(PatchSet)) {
   ServiceApiInvokeAsync(service_id_, kSyncId_, Unwrap_PatchSet_8, _buffer, kSize);
 }
 
-static const MethodId kResetId_ = reinterpret_cast<MethodId>(6);
+static const MethodId kResetId_ = reinterpret_cast<MethodId>(7);
 
 void TodoMVCService::reset() {
   static const int kSize = 56;
@@ -146,17 +166,10 @@ void TodoMVCService::resetAsync(void (*callback)()) {
   ServiceApiInvokeAsync(service_id_, kResetId_, Unwrap_void_8, _buffer, kSize);
 }
 
-StrBuilder NodeBuilder::initStr() {
-  setTag(4);
-  return StrBuilder(segment(), offset() + 0);
-}
-
 ConsBuilder NodeBuilder::initCons() {
   setTag(5);
   return ConsBuilder(segment(), offset() + 0);
 }
-
-Str Node::getStr() const { return Str(segment(), offset() + 0); }
 
 Cons Node::getCons() const { return Cons(segment(), offset() + 0); }
 
@@ -173,11 +186,6 @@ NodeBuilder ConsBuilder::initSnd() {
 Node Cons::getFst() const { return ReadStruct<Node>(0); }
 
 Node Cons::getSnd() const { return ReadStruct<Node>(8); }
-
-List<uint8_t> StrBuilder::initChars(int length) {
-  Reader result = NewList(0, length, 1);
-  return List<uint8_t>(result.segment(), result.offset(), length);
-}
 
 NodeBuilder PatchBuilder::initContent() {
   return NodeBuilder(segment(), offset() + 0);

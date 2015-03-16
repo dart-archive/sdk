@@ -4,12 +4,12 @@
 
 package com.google.fletch.todomvc;
 
+import fletch.BoxedStringBuilder;
 import fletch.MessageBuilder;
 import fletch.Node;
 import fletch.Patch;
 import fletch.PatchList;
 import fletch.PatchSet;
-import fletch.StrBuilder;
 import fletch.TodoMVCService;
 import fletch.Uint8List;
 import fletch.Uint8ListBuilder;
@@ -25,15 +25,12 @@ abstract class TodoMVCPresenter {
 
   public void createItem(String title) {
     int length = title.length();
-    int messageSize = 48 + StrBuilder.kSize + length;
+    int messageSize = 48 + BoxedStringBuilder.kSize + length;
     MessageBuilder builder = new MessageBuilder(messageSize);
-    StrBuilder str = new StrBuilder();
-    builder.initRoot(str, StrBuilder.kSize);
-    Uint8ListBuilder chars = str.initChars(length);
-    for (int i = 0; i < length; ++i) {
-      chars.set(i, title.charAt(i));
-    }
-    TodoMVCService.createItem(str);
+    BoxedStringBuilder box = new BoxedStringBuilder();
+    builder.initRoot(box, BoxedStringBuilder.kSize);
+    box.setStr(title);
+    TodoMVCService.createItem(box);
   }
 
   public void deleteItem(int id) {
@@ -45,6 +42,13 @@ abstract class TodoMVCPresenter {
 
   public void completeItem(int id) {
     TodoMVCService.completeItemAsync(id, new TodoMVCService.CompleteItemCallback() {
+      @Override
+      public void handle() { }
+    });
+  }
+
+  public void uncompleteItem(int id) {
+    TodoMVCService.uncompleteItemAsync(id, new TodoMVCService.UncompleteItemCallback() {
       @Override
       public void handle() { }
     });

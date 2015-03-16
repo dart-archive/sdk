@@ -14,6 +14,8 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 
+import com.google.fletch.todomvc.TodoItem;
+
 import java.util.ArrayList;
 
 import fletch.Cons;
@@ -72,7 +74,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     protected void updateNode(Node node) {
       switch (context) {
         case IN_TITLE:
-          todos.get(index).title = decodeStr(node.getStr());
+          todos.get(index).title = node.getStr();
           break;
         case IN_DONE:
           todos.get(index).status = node.getBool();
@@ -91,9 +93,9 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     private TodoItem newTodoItem(Node node) {
       Cons cons = node.getCons();
-      Str title = cons.getFst().getStr();
+      String title = cons.getFst().getStr();
       boolean status = cons.getSnd().getBool();
-      return new TodoItem(decodeStr(title), status);
+      return new TodoItem(title, status);
     }
 
     private void addItem(Node node) {
@@ -108,13 +110,13 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
       }
     }
 
-    private String decodeStr(Str str) {
-      Uint8List chars = str.getChars();
-      StringBuilder builder = new StringBuilder(chars.size());
-      for (int i = 0; i < chars.size(); ++i) {
-        builder.append((char) chars.get(i));
+    public void toggleItem(int position) {
+      TodoItem item = todos.get(position);
+      if (item.done()) {
+        uncompleteItem(position);
+      } else {
+        completeItem(position);
       }
-      return builder.toString();
     }
 
     public void refresh() {
@@ -165,7 +167,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
   @Override
   public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-    impl.completeItem(position);
+    impl.toggleItem(position);
     initiateSync();
   }
 

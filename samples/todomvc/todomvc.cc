@@ -36,13 +36,40 @@ static bool is(char* str1, const char* str2) {
 
 class TodoListView : public TodoMVCPresenter {
  public:
-  struct Item {
-    std::string title;
-    bool done;
+  class Item {
+   public:
+    Item(char* title, bool done) : title_(title), done_(done) {}
+
+    ~Item() {
+      delete title_;
+    }
+
+    char* title() const { return title_; }
+    void set_title(char* title) {
+      if (title_) delete title_;
+      title_ = title;
+    }
+
+    bool done() const { return done_; }
+    void set_done(bool done) {
+      done_ = done;
+    }
+
+   private:
+    char* title_;
+    bool done_;
   };
 
+  ~TodoListView() {
+    for (size_t i = 0; i < todos.size(); ++i) {
+      delete todos[i];
+    }
+    todos.clear();
+  }
+
   void help() {
-    printf("Commands: list, new, del, done, quit, help\n");
+    printf(
+        "Commands: list, new, del, done, undone, toggle, clear, quit, help\n");
   }
 
   void list() {
@@ -52,11 +79,11 @@ class TodoListView : public TodoMVCPresenter {
     }
 
     for (unsigned i = 0; i < todos.size(); ++i) {
-      Item* item = &todos[i];
+      Item* item = todos[i];
       printf(" %d. [%s]: %s\n",
              i,
-             item->done ? "done" : "todo",
-             item->title.c_str());
+             item->done() ? "done" : "todo",
+             item->title());
     }
   }
 
@@ -87,6 +114,29 @@ class TodoListView : public TodoMVCPresenter {
       return;
     }
     completeItem(id);
+  }
+
+  void undone() {
+    int id = readId();
+    if (id < 0) {
+      printf("Invalid todo index\n");
+      return;
+    }
+    uncompleteItem(id);
+  }
+
+  void toggle() {
+    int id = readId();
+    if (id < 0) {
+      printf("Invalid todo index\n");
+      return;
+    }
+    Item* item = todos[id];
+    if (item->done()) {
+      uncompleteItem(id);
+    } else {
+      completeItem(id);
+    }
   }
 
   void clear() {
@@ -122,15 +172,19 @@ class TodoListView : public TodoMVCPresenter {
   void updateNode(const Node& node) {
     switch (context) {
       case IN_TITLE:
-        todos[index].title = str(node.getStr());
+        todos[index]->set_title(node.getStr());
         break;
       case IN_DONE:
-        todos[index].done = node.getBool();
+        todos[index]->set_done(node.getBool());
         break;
       case IN_ITEM:
+	delete todos[index];
         todos[index] = newItem(node);
         break;
       case IN_LIST:
+	for (size_t i = index; i < todos.size(); ++i) {
+	  delete todos[i];
+	}
         todos.resize(index);
         addItems(node);
         break;
@@ -150,24 +204,14 @@ class TodoListView : public TodoMVCPresenter {
     todos.push_back(newItem(content));
   }
 
-  Item newItem(const Node& content) {
+  Item* newItem(const Node& content) {
     Cons cons = content.getCons();
-    Str title = cons.getFst().getStr();
+    char* title = cons.getFst().getStr();
     bool done = cons.getSnd().getBool();
-    return Item { str(title), done };
+    return new Item(title, done);
   }
 
-  std::string str(const Str& s) {
-    List<uint8_t> chars = s.getChars();
-    std::string out;
-    out.reserve(chars.length());
-    for (int i = 0; i < chars.length(); ++i) {
-      out.push_back(chars[i]);
-    }
-    return out;
-  }
-
-  std::vector<Item> todos;
+  std::vector<Item*> todos;
 };
 
 static void InteractWithService() {
@@ -192,6 +236,10 @@ static void InteractWithService() {
       view.destroy();
     } else if (strcmp(buffer, "done") == 0) {
       view.done();
+    } else if (strcmp(buffer, "undone") == 0) {
+      view.undone();
+    } else if (strcmp(buffer, "toggle") == 0) {
+      view.toggle();
     } else if (strcmp(buffer, "clear") == 0) {
       view.clear();
     } else if (strcmp(buffer, "help") == 0) {

@@ -21,9 +21,9 @@ import 'todomvc_service.dart';
 
   struct Atom {
     union {
-      Nil;
-      Bool bool;
-      Str str;
+      void nil;
+      bool bool;
+      String str;
     }
   }
 
@@ -33,7 +33,7 @@ import 'todomvc_service.dart';
   }
 
   service TodoListPresenter {
-    void Create(Str);
+    void Create(String);
     void Delete(Int32);
     void Complete(Int32);
     void Clear();
@@ -128,15 +128,7 @@ class Str extends Atom {
   Str(String value) : super(value);
   void serialize(NodeBuilder builder) {
     trace("Str::serialize: $this");
-    encodeStr(value, builder.initStr());
-  }
-
-  static void encodeStr(String s, StrBuilder builder) {
-    int length = s.length;
-    List<int> chars = builder.initChars(length);
-    for (var i = 0; i < length; ++i) {
-      chars[i] = s.codeUnitAt(i);
-    }
+    builder.str = value;
   }
 }
 

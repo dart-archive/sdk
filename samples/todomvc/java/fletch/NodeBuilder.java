@@ -29,12 +29,9 @@ public class NodeBuilder extends Builder {
     segment.buffer().put(base + 0, (byte)(value ? 1 : 0));
   }
 
-  public StrBuilder initStr() {
+  public void setStr(String value) {
     setTag(4);
-    StrBuilder result = new StrBuilder();
-    result.segment = segment;
-    result.base = base + 0;
-    return result;
+    newString(0, (String)value);
   }
 
   public ConsBuilder initCons() {

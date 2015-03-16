@@ -39,7 +39,12 @@ public class Node extends Reader {
   public boolean getBool() { return segment.getBoolean(base + 0); }
 
   public boolean isStr() { return 4 == getTag(); }
-  public Str getStr() { return new Str(segment, base + 0); }
+  public String getStr() { return readString(0); }
+  public Uint8List getStrData() {
+    ListReader reader = new ListReader();
+    readList(reader, 0);
+    return new Uint8List(reader);
+  }
 
   public boolean isCons() { return 5 == getTag(); }
   public Cons getCons() { return new Cons(segment, base + 0); }

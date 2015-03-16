@@ -17,6 +17,10 @@ public class TodoItem {
     this.status = status;
   }
 
+  public boolean done() {
+    return status;
+  }
+
   public void populateView(View view) {
     ((TextView) view.findViewById(R.id.todo_title)).setText(title);
     CheckBox box = (CheckBox) view.findViewById(R.id.todo_status);

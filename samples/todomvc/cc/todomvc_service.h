@@ -14,23 +14,25 @@ class Node;
 class NodeBuilder;
 class Cons;
 class ConsBuilder;
-class Str;
-class StrBuilder;
 class Patch;
 class PatchBuilder;
 class PatchSet;
 class PatchSetBuilder;
+class BoxedString;
+class BoxedStringBuilder;
 
 class TodoMVCService {
  public:
   static void setup();
   static void tearDown();
-  static void createItem(StrBuilder title);
-  static void createItemAsync(StrBuilder title, void (*callback)());
+  static void createItem(BoxedStringBuilder title);
+  static void createItemAsync(BoxedStringBuilder title, void (*callback)());
   static void deleteItem(int32_t id);
   static void deleteItemAsync(int32_t id, void (*callback)());
   static void completeItem(int32_t id);
   static void completeItemAsync(int32_t id, void (*callback)());
+  static void uncompleteItem(int32_t id);
+  static void uncompleteItemAsync(int32_t id, void (*callback)());
   static void clearItems();
   static void clearItemsAsync(void (*callback)());
   static PatchSet sync();
@@ -51,7 +53,8 @@ class Node : public Reader {
   bool isBool() const { return 3 == getTag(); }
   bool getBool() const { return *PointerTo<uint8_t>(0) != 0; }
   bool isStr() const { return 4 == getTag(); }
-  Str getStr() const;
+  char* getStr() const { return ReadString(0); }
+  List<uint8_t> getStrData() const { return ReadList<uint8_t>(0); }
   bool isCons() const { return 5 == getTag(); }
   Cons getCons() const;
   uint16_t getTag() const { return *PointerTo<uint16_t>(16); }
@@ -69,7 +72,7 @@ class NodeBuilder : public Builder {
   void setNil() { setTag(1); }
   void setNum(int32_t value) { setTag(2); *PointerTo<int32_t>(0) = value; }
   void setBool(bool value) { setTag(3); *PointerTo<uint8_t>(0) = value ? 1 : 0; }
-  StrBuilder initStr();
+  void setStr(const char* value) { setTag(4); NewString(0, value); }
   ConsBuilder initCons();
   void setTag(uint16_t value) { *PointerTo<uint16_t>(16) = value; }
 };
@@ -95,27 +98,6 @@ class ConsBuilder : public Builder {
 
   NodeBuilder initFst();
   NodeBuilder initSnd();
-};
-
-class Str : public Reader {
- public:
-  static const int kSize = 8;
-  Str(Segment* segment, int offset)
-      : Reader(segment, offset) { }
-
-  List<uint8_t> getChars() const { return ReadList<uint8_t>(0); }
-};
-
-class StrBuilder : public Builder {
- public:
-  static const int kSize = 8;
-
-  explicit StrBuilder(const Builder& builder)
-      : Builder(builder) { }
-  StrBuilder(Segment* segment, int offset)
-      : Builder(segment, offset) { }
-
-  List<uint8_t> initChars(int length);
 };
 
 class Patch : public Reader {
@@ -160,6 +142,28 @@ class PatchSetBuilder : public Builder {
       : Builder(segment, offset) { }
 
   List<PatchBuilder> initPatches(int length);
+};
+
+class BoxedString : public Reader {
+ public:
+  static const int kSize = 8;
+  BoxedString(Segment* segment, int offset)
+      : Reader(segment, offset) { }
+
+  char* getStr() const { return ReadString(0); }
+  List<uint8_t> getStrData() const { return ReadList<uint8_t>(0); }
+};
+
+class BoxedStringBuilder : public Builder {
+ public:
+  static const int kSize = 8;
+
+  explicit BoxedStringBuilder(const Builder& builder)
+      : Builder(builder) { }
+  BoxedStringBuilder(Segment* segment, int offset)
+      : Builder(segment, offset) { }
+
+  void setStr(const char* value) { NewString(0, value); }
 };
 
 #endif  // TODOMVC_SERVICE_H

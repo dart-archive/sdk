@@ -35,6 +35,12 @@ class Model {
     }
   }
 
+  void uncompleteItem(int id) {
+    if (id < todos.length) {
+      todos[id].done = false;
+    }
+  }
+
   void clearItems() {
     todos.removeWhere((item) => item.done);
   }

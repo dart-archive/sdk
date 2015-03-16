@@ -8,29 +8,30 @@ package fletch;
 
 import java.util.List;
 
-public class Str extends Reader {
-  public Str() { }
+public class BoxedString extends Reader {
+  public BoxedString() { }
 
-  public Str(byte[] memory, int offset) {
+  public BoxedString(byte[] memory, int offset) {
     super(memory, offset);
   }
 
-  public Str(Segment segment, int offset) {
+  public BoxedString(Segment segment, int offset) {
     super(segment, offset);
   }
 
-  public Str(byte[][] segments, int offset) {
+  public BoxedString(byte[][] segments, int offset) {
     super(segments, offset);
   }
 
-  public static Str create(Object rawData) {
+  public static BoxedString create(Object rawData) {
     if (rawData instanceof byte[]) {
-      return new Str((byte[])rawData, 8);
+      return new BoxedString((byte[])rawData, 8);
     }
-    return new Str((byte[][])rawData, 8);
+    return new BoxedString((byte[][])rawData, 8);
   }
 
-  public Uint8List getChars() {
+  public String getStr() { return readString(0); }
+  public Uint8List getStrData() {
     ListReader reader = new ListReader();
     readList(reader, 0);
     return new Uint8List(reader);

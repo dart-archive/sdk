@@ -9,16 +9,11 @@ static void VoidCallback() {}
 void TodoMVCPresenter::createItem(char* title) {
   int length = 0;
   while (title[length] != '\0') ++length;
-  int size = 40 + 8 + StrBuilder::kSize + length;
+  int size = 40 + 8 + BoxedStringBuilder::kSize + length;
   MessageBuilder builder(size);
-  StrBuilder str = builder.initRoot<StrBuilder>();
-  List<uint8_t> chars = str.initChars(length);
-  for (int i = 0; i < length; ++i) {
-    chars[i] = title[i];
-  }
-
-  // Should be an async call once supported for strings/structs.
-  TodoMVCService::createItem(str);
+  BoxedStringBuilder box = builder.initRoot<BoxedStringBuilder>();
+  box.setStr(title);
+  TodoMVCService::createItemAsync(box, VoidCallback);
 }
 
 void TodoMVCPresenter::deleteItem(int id) {
@@ -27,6 +22,10 @@ void TodoMVCPresenter::deleteItem(int id) {
 
 void TodoMVCPresenter::completeItem(int id) {
   TodoMVCService::completeItemAsync(id, VoidCallback);
+}
+
+void TodoMVCPresenter::uncompleteItem(int id) {
+  TodoMVCService::uncompleteItemAsync(id, VoidCallback);
 }
 
 void TodoMVCPresenter::clearItems() {

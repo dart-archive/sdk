@@ -7,19 +7,17 @@
 package fletch;
 
 import java.util.List;
-public class StrBuilder extends Builder {
+public class BoxedStringBuilder extends Builder {
   public static int kSize = 8;
-  public StrBuilder(BuilderSegment segment, int offset) {
+  public BoxedStringBuilder(BuilderSegment segment, int offset) {
     super(segment, offset);
   }
 
-  public StrBuilder() {
+  public BoxedStringBuilder() {
     super();
   }
 
-  public Uint8ListBuilder initChars(int length) {
-    ListBuilder builder = new ListBuilder();
-    newList(builder, 0, length, 1);
-    return new Uint8ListBuilder(builder);
+  public void setStr(String value) {
+    newString(0, (String)value);
   }
 }

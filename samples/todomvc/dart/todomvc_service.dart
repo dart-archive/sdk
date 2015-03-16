@@ -18,9 +18,10 @@ bool _terminated = false;
 TodoMVCService _impl;
 
 abstract class TodoMVCService {
-  void createItem(Str title);
+  void createItem(BoxedString title);
   void deleteItem(int id);
   void completeItem(int id);
+  void uncompleteItem(int id);
   void clearItems();
   void sync(PatchSetBuilder result);
   void reset();
@@ -46,7 +47,7 @@ abstract class TodoMVCService {
         _postResult.icall$1(request);
         break;
       case _CREATE_ITEM_METHOD_ID:
-        _impl.createItem(getRoot(new Str(), request));
+        _impl.createItem(getRoot(new BoxedString(), request));
         _postResult.icall$1(request);
         break;
       case _DELETE_ITEM_METHOD_ID:
@@ -55,6 +56,10 @@ abstract class TodoMVCService {
         break;
       case _COMPLETE_ITEM_METHOD_ID:
         _impl.completeItem(request.getInt32(48));
+        _postResult.icall$1(request);
+        break;
+      case _UNCOMPLETE_ITEM_METHOD_ID:
+        _impl.uncompleteItem(request.getInt32(48));
         _postResult.icall$1(request);
         break;
       case _CLEAR_ITEMS_METHOD_ID:
@@ -82,9 +87,10 @@ abstract class TodoMVCService {
   const int _CREATE_ITEM_METHOD_ID = 1;
   const int _DELETE_ITEM_METHOD_ID = 2;
   const int _COMPLETE_ITEM_METHOD_ID = 3;
-  const int _CLEAR_ITEMS_METHOD_ID = 4;
-  const int _SYNC_METHOD_ID = 5;
-  const int _RESET_METHOD_ID = 6;
+  const int _UNCOMPLETE_ITEM_METHOD_ID = 4;
+  const int _CLEAR_ITEMS_METHOD_ID = 5;
+  const int _SYNC_METHOD_ID = 6;
+  const int _RESET_METHOD_ID = 7;
 }
 
 class Node extends Reader {
@@ -94,9 +100,8 @@ class Node extends Reader {
   bool get isBool => 3 == this.tag;
   bool get bool => _segment.memory.getUint8(_offset + 0) != 0;
   bool get isStr => 4 == this.tag;
-  Str get str => new Str()
-      .._segment = _segment
-      .._offset = _offset + 0;
+  String get str => readString(new _uint8List(), 0);
+  List<int> get strData => readList(new _uint8List(), 0);
   bool get isCons => 5 == this.tag;
   Cons get cons => new Cons()
       .._segment = _segment
@@ -116,11 +121,9 @@ class NodeBuilder extends Builder {
     tag = 3;
     _segment.memory.setUint8(_offset + 0, value ? 1 : 0);
   }
-  StrBuilder initStr() {
+  void set str(String value) {
     tag = 4;
-    return new StrBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
+    NewString(new _uint8BuilderList(), 0, value);
   }
   ConsBuilder initCons() {
     tag = 5;
@@ -144,16 +147,6 @@ class ConsBuilder extends Builder {
   }
   NodeBuilder initSnd() {
     return NewStruct(new NodeBuilder(), 8, 24);
-  }
-}
-
-class Str extends Reader {
-  List<int> get chars => readList(new _uint8List(), 0);
-}
-
-class StrBuilder extends Builder {
-  List<int> initChars(int length) {
-    return NewList(new _uint8BuilderList(), 0, length, 1);
   }
 }
 
@@ -182,6 +175,17 @@ class PatchSet extends Reader {
 class PatchSetBuilder extends Builder {
   List<PatchBuilder> initPatches(int length) {
     return NewList(new _PatchBuilderList(), 0, length, 32);
+  }
+}
+
+class BoxedString extends Reader {
+  String get str => readString(new _uint8List(), 0);
+  List<int> get strData => readList(new _uint8List(), 0);
+}
+
+class BoxedStringBuilder extends Builder {
+  void set str(String value) {
+    NewString(new _uint8BuilderList(), 0, value);
   }
 }
 

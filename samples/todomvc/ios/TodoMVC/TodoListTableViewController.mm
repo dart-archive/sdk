@@ -22,18 +22,20 @@ public:
 
   NSArray* items() { return items_; }
 
-  // Custom iOS createItem to avoid a memcpy of the string.
   // TODO: Implement direct support for NSString in the IDL compiler.
   void createItem(NSString* title) {
-    int length = [title length] + 1;
-    // TODO: Avoid manually calculating the message size.
-    int size = 40 + 8 + StrBuilder::kSize + length;
-    MessageBuilder builder(size);
-    StrBuilder str = builder.initRoot<StrBuilder>();
-    encodeStr(title, &str);
+    char* cstr = encodeString(title);
+    TodoMVCPresenter::createItem(cstr);
+    free(cstr);
+  }
 
-    // Should be an async call once supported for strings/structs.
-    TodoMVCService::createItem(str);
+  void toggleItem(int id) {
+    TodoItem* item = [items_ objectAtIndex:id];
+    if (item.completed) {
+      uncompleteItem(id);
+    } else {
+      completeItem(id);
+    }
   }
 
 protected:
@@ -60,7 +62,7 @@ protected:
     switch (context_) {
       case IN_TITLE:
         item = [items_ objectAtIndex:index_];
-        item.itemName = decodeStr(node.getStr());
+        item.itemName = decodeString(node.getStrData());
         break;
       case IN_STATUS:
         item = [items_ objectAtIndex:index_];
@@ -89,17 +91,15 @@ private:
     }
   }
 
-  void encodeStr(NSString* string, StrBuilder* builder) {
-    // Encoded length is string length plus null termination.
-    int length = [string length] + 1;
-    List<uint8_t> chars = builder->initChars(length);
-    [string getCString:reinterpret_cast<char*>(chars.data())
-             maxLength:length
+  char* encodeString(NSString* string) {
+    char* cstr = (char*)malloc(sizeof(char) * string.length + 1);
+    [string getCString:cstr
+             maxLength:string.length + 1
               encoding:NSASCIIStringEncoding];
+    return cstr;
   }
-
-  NSString* decodeStr(Str str) {
-    List<uint8_t> chars = str.getChars();
+ 
+  NSString* decodeString(List<uint8_t> chars) {
     unsigned length = chars.length();
     return [[NSString alloc]
             initWithBytes:chars.data()
@@ -110,7 +110,7 @@ private:
   TodoItem* newItem(const Node& node) {
     TodoItem *item = [[TodoItem alloc] init];
     Cons cons = node.getCons();
-    item.itemName = decodeStr(cons.getFst().getStr());
+    item.itemName = decodeString(cons.getFst().getStrData());
     item.completed = cons.getSnd().getBool();
     return item;
   }
@@ -217,8 +217,7 @@ private:
 - (void)tableView:(UITableView *)tableView
     didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
   [tableView deselectRowAtIndexPath:indexPath animated:NO];
-  // TODO: this should toggle the status.
-  self.impl->completeItem(indexPath.row);
+  self.impl->toggleItem(indexPath.row);
 }
 
 @end

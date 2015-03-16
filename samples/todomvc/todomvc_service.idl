@@ -3,9 +3,10 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 service TodoMVCService {
-  void createItem(Str* title);
+  void createItem(BoxedString* title);
   void deleteItem(int32 id);
   void completeItem(int32 id);
+  void uncompleteItem(int32 id);
   void clearItems();
 
   // Synchronization should be considered internal.
@@ -20,7 +21,7 @@ struct Node {
     void nil;
     int32 num;
     bool bool;
-    Str str;
+    String str;
     Cons cons;
   }
 }
@@ -32,10 +33,6 @@ struct Cons {
 
 // Utility structures.
 
-struct Str {
-  List<uint8> chars;
-}
-
 struct Patch {
   List<uint8> path;
   Node content;
@@ -43,4 +40,8 @@ struct Patch {
 
 struct PatchSet {
   List<Patch> patches;
+}
+
+struct BoxedString {
+  String str;
 }

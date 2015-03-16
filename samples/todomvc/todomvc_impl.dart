@@ -2,16 +2,6 @@ import 'model.dart';
 import 'dart/todomvc_presenter.dart';
 import 'dart/todomvc_presenter_model.dart';
 
-String decodeStr(Str s) {
-  var buffer = new StringBuffer();
-  var chars = s.chars;
-  int length = chars.length;
-  for (int i = 0; i < length; ++i) {
-    buffer.writeCharCode(chars[i]);
-  }
-  return buffer.toString();
-}
-
 class TodoMVCImpl extends TodoMVCPresenter {
 
   Model _model = new Model();
@@ -22,7 +12,7 @@ class TodoMVCImpl extends TodoMVCPresenter {
   }
 
   void createItem(title) {
-    _model.createItem(decodeStr(title));
+    _model.createItem(title.str);
   }
 
   void deleteItem(int id) {
@@ -31,6 +21,10 @@ class TodoMVCImpl extends TodoMVCPresenter {
 
   void completeItem(int id) {
     _model.completeItem(id);
+  }
+
+  void uncompleteItem(int id) {
+    _model.uncompleteItem(id);
   }
 
   void clearItems() {
