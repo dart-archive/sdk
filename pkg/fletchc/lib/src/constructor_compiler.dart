@@ -128,7 +128,7 @@ class ConstructorCompiler extends FunctionCompiler {
 
     // Visit parameters and add them to scope. Note the scope is the scope of
     // locals, in FunctionCompiler.
-    signature.orderedForEachParameter((FormalElement parameter) {
+    signature.orderedForEachParameter((ParameterElement parameter) {
       int slot = firstParameterSlot + parameterIndex;
       // TODO(ajohnsen): Validate that we handle boxed parameters correctly.
       LocalValue value = createLocalValueFor(parameter, slot);
@@ -136,15 +136,16 @@ class ConstructorCompiler extends FunctionCompiler {
       if (parameter.isInitializingFormal) {
         // If it's a initializing formal, store the value into initial
         // field value.
+        InitializingFormalElement formal = parameter;
         value.load(builder);
-        fieldScope[parameter.fieldElement].store(builder);
+        fieldScope[formal.fieldElement].store(builder);
         builder.pop();
       }
       parameterIndex++;
     });
 
     // Now the parameters are in the scope, visit the constructor initializers.
-    Node node = constructor.node;
+    FunctionExpression node = constructor.node;
     if (node == null) return;
     NodeList initializers = node.initializers;
     if (initializers == null) return;
@@ -177,7 +178,7 @@ class ConstructorCompiler extends FunctionCompiler {
   }
 
   void callConstructorBody(ConstructorElement constructor) {
-    Node node = constructor.node;
+    FunctionExpression node = constructor.node;
     if (node == null || node.body.asEmptyStatement() != null) return;
 
     registry.registerStaticInvocation(constructor);

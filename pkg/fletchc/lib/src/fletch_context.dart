@@ -72,7 +72,7 @@ class FletchContext {
   Map<FieldElement, int> staticIndices = <FieldElement, int>{};
 
   Map<LibraryElement, String> libraryPrivateTag = <LibraryElement, String>{};
-  Map<String, id> symbolIds = <String, id>{};
+  Map<String, int> symbolIds = <String, int>{};
   Map<Selector, String> selectorToSymbol = <Selector, String>{};
 
   FletchContext(this.compiler);

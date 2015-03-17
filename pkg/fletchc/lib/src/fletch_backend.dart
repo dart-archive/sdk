@@ -10,6 +10,7 @@ import 'dart:async' show
 import 'package:compiler/src/dart2jslib.dart' show
     Backend,
     BackendConstantEnvironment,
+    CodegenRegistry,
     CodegenWorkItem,
     CompilerTask,
     ConstantCompilerTask,
@@ -51,7 +52,8 @@ import 'package:compiler/src/dart_backend/dart_backend.dart' show
     DartConstantTask;
 
 import 'package:compiler/src/constants/values.dart' show
-    ConstantValue;
+    ConstantValue,
+    StringConstantValue;
 
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
@@ -149,7 +151,7 @@ class FletchBackend extends Backend {
   final Map<ConstructorElement, int> constructorIds =
       <ConstructorElement, int>{};
 
-  final List<FletchFunction> functions = <FletchFunction>[];
+  final List<CompiledFunction> functions = <CompiledFunction>[];
 
   final Set<FunctionElement> externals = new Set<FunctionElement>();
 
@@ -246,7 +248,7 @@ class FletchBackend extends Backend {
 
   void enqueueHelpers(
       ResolutionEnqueuer world,
-      Registry registry) {
+      CodegenRegistry registry) {
     compiler.patchAnnotationClass = patchAnnotationClass;
 
     FunctionElement findHelper(String name) {
@@ -517,21 +519,10 @@ class FletchBackend extends Backend {
   void codegenExternalInvokeMain(
       FunctionElement function,
       FunctionCompiler functionCompiler) {
+    compiler.internalError(
+        function, "[codegenExternalInvokeMain] not implemented.");
     // TODO(ahe): This code shouldn't normally be called, only if invokeMain is
-    // torn off.
-    FunctionElement main = compiler.mainFunction;
-    int mainArity = main.functionSignature.parameterCount;
-    registry.registerStaticInvocation(main);
-    int methodId = allocateConstantFromFunction(main);
-    if (mainArity == 0) {
-    } else {
-      // TODO(ahe): Push arguments on stack.
-      compiler.internalError(main, "Arguments to main not implemented yet.");
-    }
-    functionCompiler.builder
-        ..invokeStatic(methodId, mainArity)
-        ..ret()
-        ..methodEnd();
+    // torn off. Perhaps we should just say we don't support that.
   }
 
   void codegenExternalNoSuchMethodTrampoline(
@@ -555,7 +546,8 @@ class FletchBackend extends Backend {
         if (metadata.constant == null) continue;
         ConstantValue value = metadata.constant.value;
         if (!value.isString) continue;
-        if (value.toDartString().slowToString() != 'native') continue;
+        StringConstantValue stringValue = value;
+        if (stringValue.toDartString().slowToString() != 'native') continue;
         return true;
       }
     }
@@ -572,7 +564,8 @@ class FletchBackend extends Backend {
   ClosureEnvironment createClosureEnvironment(
       FunctionElement function,
       TreeElements elements) {
-    function = function.memberContext;
+    // TODO(ahe): The cast below may fail for field initializers with closures.
+    function = function.memberContext as FunctionElement;
     return closureEnvironments.putIfAbsent(function, () {
       ClosureVisitor environment = new ClosureVisitor(function, elements);
       return environment.compute();

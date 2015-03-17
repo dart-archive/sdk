@@ -9,14 +9,17 @@ import 'package:compiler/src/resolution/semantic_visitor.dart' show
     SemanticVisitor;
 
 import 'package:compiler/src/resolution/operators.dart' show
+    AssignmentOperator,
     BinaryOperator,
     IncDecOperator,
     UnaryOperator;
 
 import 'package:compiler/src/constants/expressions.dart' show
-    ConstantExpression;
+    ConstantExpression,
+    TypeConstantExpression;
 
 import 'package:compiler/src/dart2jslib.dart' show
+    CodegenRegistry,
     MessageKind,
     Registry;
 
@@ -117,7 +120,7 @@ class JumpInfo {
 class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   final FletchContext context;
 
-  final Registry registry;
+  final CodegenRegistry registry;
 
   final ClosureEnvironment closureEnvironment;
 
@@ -194,7 +197,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     FunctionSignature functionSignature = function.functionSignature;
     int parameterCount = functionSignature.parameterCount;
     int i = 0;
-    functionSignature.orderedForEachParameter((FormalElement parameter) {
+    functionSignature.orderedForEachParameter((ParameterElement parameter) {
       int slot = i++ - parameterCount - 1;
       scope[parameter] = createLocalValueFor(parameter, slot);
     });
@@ -215,7 +218,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       }
     }
 
-    Node node = function.node;
+    FunctionExpression node = function.node;
     if (node != null) {
       node.body.accept(this);
     }
@@ -610,7 +613,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     }
     if (element.isExternal) {
       // Patch known functions directly.
-      if (element == context.compiler.backend.fletchExternalInvokeMain) {
+      if (element == context.backend.fletchExternalInvokeMain) {
         element = context.compiler.mainFunction;
       }
       // TODO(ajohnsen): Define a known set of external functions we allow
@@ -877,7 +880,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   void visitLocalVariableSet(
       SendSet node,
-      LocalVariableElement element,
+      VariableElement element,
       Node rhs,
       _) {
     visitForValue(rhs);
@@ -953,14 +956,14 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   void visitParameterGet(
       Send node,
-      ParameterElement element,
+      VariableElement element,
       _) {
     visitLocalVariableGet(node, element, _);
   }
 
   void visitParameterSet(
       SendSet node,
-      ParameterElement element,
+      VariableElement element,
       Node rhs,
       _) {
     visitLocalVariableSet(node, element, rhs, _);
@@ -1056,7 +1059,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   }
 
   void visitStatement(Node node) {
-    Visitstate oldState = visitState;
+    VisitState oldState = visitState;
     visitState = VisitState.Effect;
     generateUnimplementedError(
         node, "Missing visit of statement: ${node.runtimeType}");
@@ -1242,7 +1245,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   }
 
   void generateUnimplementedError(Spannable spannable, String reason) {
-    context.compiler.backend.generateUnimplementedError(
+    context.backend.generateUnimplementedError(
         spannable,
         reason,
         compiledFunction);
@@ -1250,4 +1253,1204 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   }
 
   String toString() => "FunctionCompiler(${function.name})";
+
+
+  void visitNode(Node node) {
+    internalError(node, "[visitNode] isn't implemented.");
+  }
+
+  void apply(Node node, _) {
+    internalError(node, "[apply] isn't implemented.");
+  }
+
+  void errorFinalParameterSet(
+      SendSet node,
+      ParameterElement parameter,
+      Node rhs,
+      _) {
+    internalError(node, "[errorFinalParameterSet] isn't implemented.");
+  }
+
+  void visitParameterInvoke(
+      Send node,
+      ParameterElement parameter,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    internalError(node, "[visitParameterInvoke] isn't implemented.");
+  }
+
+  void errorLocalFunctionSet(
+      SendSet node,
+      LocalFunctionElement function,
+      Node rhs,
+      _) {
+    internalError(node, "[errorLocalFunctionSet] isn't implemented.");
+  }
+
+  void visitThisInvoke(
+      Send node,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    internalError(node, "[visitThisInvoke] isn't implemented.");
+  }
+
+  void visitSuperFieldGet(
+      Send node,
+      FieldElement field,
+      _) {
+    internalError(node, "[visitSuperFieldGet] isn't implemented.");
+  }
+
+  void visitSuperFieldSet(
+      SendSet node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    internalError(node, "[visitSuperFieldSet] isn't implemented.");
+  }
+
+  void errorFinalSuperFieldSet(
+      SendSet node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    internalError(node, "[errorFinalSuperFieldSet] isn't implemented.");
+  }
+
+  void visitSuperFieldInvoke(
+      Send node,
+      FieldElement field,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    internalError(node, "[visitSuperFieldInvoke] isn't implemented.");
+  }
+
+  void visitSuperMethodGet(
+      Send node,
+      MethodElement method,
+      _) {
+    internalError(node, "[visitSuperMethodGet] isn't implemented.");
+  }
+
+  void visitSuperMethodInvoke(
+      Send node,
+      MethodElement method,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    internalError(node, "[visitSuperMethodInvoke] isn't implemented.");
+  }
+
+  void errorSuperMethodSet(
+      Send node,
+      MethodElement method,
+      Node rhs,
+      _) {
+    internalError(node, "[errorSuperMethodSet] isn't implemented.");
+  }
+
+  void visitSuperGetterGet(
+      Send node,
+      FunctionElement getter,
+      _) {
+    internalError(node, "[visitSuperGetterGet] isn't implemented.");
+  }
+
+  void errorSuperSetterGet(
+      Send node,
+      FunctionElement setter,
+      _) {
+    internalError(node, "[errorSuperSetterGet] isn't implemented.");
+  }
+
+  void visitSuperSetterSet(
+      SendSet node,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    internalError(node, "[visitSuperSetterSet] isn't implemented.");
+  }
+
+  void errorFinalLocalVariableSet(
+      SendSet node,
+      LocalVariableElement variable,
+      Node rhs,
+      _){
+    internalError(node, "[errorFinalLocalVariableSet] isn't implemented.");
+  }
+
+  void errorSuperGetterSet(
+      SendSet node,
+      FunctionElement getter,
+      Node rhs,
+      _){
+    internalError(node, "[errorSuperGetterSet] isn't implemented.");
+  }
+
+  void visitSuperGetterInvoke(
+      Send node,
+      FunctionElement getter,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[visitSuperGetterInvoke] isn't implemented.");
+  }
+
+  void errorSuperSetterInvoke(
+      Send node,
+      FunctionElement setter,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[errorSuperSetterInvoke] isn't implemented.");
+  }
+
+  void visitStaticFieldSet(
+      SendSet node,
+      FieldElement field,
+      Node rhs,
+      _){
+    internalError(node, "[visitStaticFieldSet] isn't implemented.");
+  }
+
+  void errorFinalStaticFieldSet(
+      SendSet node,
+      FieldElement field,
+      Node rhs,
+      _){
+    internalError(node, "[errorFinalStaticFieldSet] isn't implemented.");
+  }
+
+  void visitStaticFieldInvoke(
+      Send node,
+      FieldElement field,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[visitStaticFieldInvoke] isn't implemented.");
+  }
+
+  void visitStaticFunctionGet(
+      Send node,
+      MethodElement function,
+      _){
+    internalError(node, "[visitStaticFunctionGet] isn't implemented.");
+  }
+
+  void errorStaticFunctionSet(
+      Send node,
+      MethodElement function,
+      Node rhs,
+      _){
+    internalError(node, "[errorStaticFunctionSet] isn't implemented.");
+  }
+
+  void visitStaticGetterGet(
+      Send node,
+      FunctionElement getter,
+      _){
+    internalError(node, "[visitStaticGetterGet] isn't implemented.");
+  }
+
+  void errorStaticSetterGet(
+      Send node,
+      FunctionElement setter,
+      _){
+    internalError(node, "[errorStaticSetterGet] isn't implemented.");
+  }
+
+  void visitStaticSetterSet(
+      SendSet node,
+      FunctionElement setter,
+      Node rhs,
+      _){
+    internalError(node, "[visitStaticSetterSet] isn't implemented.");
+  }
+
+  void errorStaticGetterSet(
+      SendSet node,
+      FunctionElement getter,
+      Node rhs,
+      _){
+    internalError(node, "[errorStaticGetterSet] isn't implemented.");
+  }
+
+  void visitStaticGetterInvoke(
+      Send node,
+      FunctionElement getter,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[visitStaticGetterInvoke] isn't implemented.");
+  }
+
+  void errorStaticSetterInvoke(
+      Send node,
+      FunctionElement setter,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[errorStaticSetterInvoke] isn't implemented.");
+  }
+
+  void errorFinalTopLevelFieldSet(
+      SendSet node,
+      FieldElement field,
+      Node rhs,
+      _){
+    internalError(node, "[errorFinalTopLevelFieldSet] isn't implemented.");
+  }
+
+  void visitTopLevelFunctionGet(
+      Send node,
+      MethodElement function,
+      _){
+    internalError(node, "[visitTopLevelFunctionGet] isn't implemented.");
+  }
+
+  void errorTopLevelFunctionSet(
+      Send node,
+      MethodElement function,
+      Node rhs,
+      _){
+    internalError(node, "[errorTopLevelFunctionSet] isn't implemented.");
+  }
+
+  void visitTopLevelGetterGet(
+      Send node,
+      FunctionElement getter,
+      _){
+    internalError(node, "[visitTopLevelGetterGet] isn't implemented.");
+  }
+
+  void errorTopLevelSetterGet(
+      Send node,
+      FunctionElement setter,
+      _){
+    internalError(node, "[errorTopLevelSetterGet] isn't implemented.");
+  }
+
+  void visitTopLevelSetterSet(
+      SendSet node,
+      FunctionElement setter,
+      Node rhs,
+      _){
+    internalError(node, "[visitTopLevelSetterSet] isn't implemented.");
+  }
+
+  void errorTopLevelGetterSet(
+      SendSet node,
+      FunctionElement getter,
+      Node rhs,
+      _){
+    internalError(node, "[errorTopLevelGetterSet] isn't implemented.");
+  }
+
+  void visitTopLevelGetterInvoke(
+      Send node,
+      FunctionElement getter,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[visitTopLevelGetterInvoke] isn't implemented.");
+  }
+
+  void errorTopLevelSetterInvoke(
+      Send node,
+      FunctionElement setter,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[errorTopLevelSetterInvoke] isn't implemented.");
+  }
+
+  void visitClassTypeLiteralGet(
+      Send node,
+      TypeConstantExpression constant,
+      _){
+    internalError(node, "[visitClassTypeLiteralGet] isn't implemented.");
+  }
+
+  void visitClassTypeLiteralInvoke(
+      Send node,
+      TypeConstantExpression constant,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[visitClassTypeLiteralInvoke] isn't implemented.");
+  }
+
+  void errorClassTypeLiteralSet(
+      SendSet node,
+      TypeConstantExpression constant,
+      Node rhs,
+      _){
+    internalError(node, "[errorClassTypeLiteralSet] isn't implemented.");
+  }
+
+  void visitTypedefTypeLiteralGet(
+      Send node,
+      TypeConstantExpression constant,
+      _){
+    internalError(node, "[visitTypedefTypeLiteralGet] isn't implemented.");
+  }
+
+  void visitTypedefTypeLiteralInvoke(
+      Send node,
+      TypeConstantExpression constant,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[visitTypedefTypeLiteralInvoke] isn't implemented.");
+  }
+
+  void errorTypedefTypeLiteralSet(
+      SendSet node,
+      TypeConstantExpression constant,
+      Node rhs,
+      _){
+    internalError(node, "[errorTypedefTypeLiteralSet] isn't implemented.");
+  }
+
+  void visitTypeVariableTypeLiteralGet(
+      Send node,
+      TypeVariableElement element,
+      _){
+    internalError(node, "[visitTypeVariableTypeLiteralGet] isn't implemented.");
+  }
+
+  void visitTypeVariableTypeLiteralInvoke(
+      Send node,
+      TypeVariableElement element,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(
+        node, "[visitTypeVariableTypeLiteralInvoke] isn't implemented.");
+  }
+
+  void errorTypeVariableTypeLiteralSet(
+      SendSet node,
+      TypeVariableElement element,
+      Node rhs,
+      _){
+    internalError(node, "[errorTypeVariableTypeLiteralSet] isn't implemented.");
+  }
+
+  void visitDynamicTypeLiteralGet(
+      Send node,
+      TypeConstantExpression constant,
+      _){
+    internalError(node, "[visitDynamicTypeLiteralGet] isn't implemented.");
+  }
+
+  void visitDynamicTypeLiteralInvoke(
+      Send node,
+      TypeConstantExpression constant,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[visitDynamicTypeLiteralInvoke] isn't implemented.");
+  }
+
+  void errorDynamicTypeLiteralSet(
+      SendSet node,
+      TypeConstantExpression constant,
+      Node rhs,
+      _){
+    internalError(node, "[errorDynamicTypeLiteralSet] isn't implemented.");
+  }
+
+  void errorInvalidAssert(
+      Send node,
+      NodeList arguments,
+      _){
+    internalError(node, "[errorInvalidAssert] isn't implemented.");
+  }
+
+  void visitSuperBinary(
+      Send node,
+      FunctionElement function,
+      BinaryOperator operator,
+      Node argument,
+      _){
+    internalError(node, "[visitSuperBinary] isn't implemented.");
+  }
+
+  void visitSuperNotEquals(
+      Send node,
+      FunctionElement function,
+      Node argument,
+      _){
+    internalError(node, "[visitSuperNotEquals] isn't implemented.");
+  }
+
+  void visitSuperEquals(
+      Send node,
+      FunctionElement function,
+      Node argument,
+      _){
+    internalError(node, "[visitSuperEquals] isn't implemented.");
+  }
+
+  void visitSuperUnary(
+      Send node,
+      UnaryOperator operator,
+      FunctionElement function,
+      _){
+    internalError(node, "[visitSuperUnary] isn't implemented.");
+  }
+
+  void visitSuperIndexSet(
+      Send node,
+      FunctionElement function,
+      Node index,
+      Node rhs,
+      _){
+    internalError(node, "[visitSuperIndexSet] isn't implemented.");
+  }
+
+  void visitIsNot(
+      Send node,
+      Node expression,
+      DartType type,
+      _){
+    internalError(node, "[visitIsNot] isn't implemented.");
+  }
+
+  void visitDynamicPropertyCompound(
+      Send node,
+      Node receiver,
+      AssignmentOperator operator,
+      Node rhs,
+      Selector getterSelector,
+      Selector setterSelector,
+      _){
+    internalError(node, "[visitDynamicPropertyCompound] isn't implemented.");
+  }
+
+  void visitThisPropertyCompound(
+      Send node,
+      AssignmentOperator operator,
+      Node rhs,
+      Selector getterSelector,
+      Selector setterSelector,
+      _){
+    internalError(node, "[visitThisPropertyCompound] isn't implemented.");
+  }
+
+  void visitParameterCompound(
+      Send node,
+      ParameterElement parameter,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitParameterCompound] isn't implemented.");
+  }
+
+  void errorFinalParameterCompound(
+      Send node,
+      ParameterElement parameter,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[errorFinalParameterCompound] isn't implemented.");
+  }
+
+  void visitLocalVariableCompound(
+      Send node,
+      LocalVariableElement variable,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitLocalVariableCompound] isn't implemented.");
+  }
+
+  void errorFinalLocalVariableCompound(
+      Send node,
+      LocalVariableElement variable,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[errorFinalLocalVariableCompound] isn't implemented.");
+  }
+
+  void errorLocalFunctionCompound(
+      Send node,
+      LocalFunctionElement function,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[errorLocalFunctionCompound] isn't implemented.");
+  }
+
+  void visitStaticFieldCompound(
+      Send node,
+      FieldElement field,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitStaticFieldCompound] isn't implemented.");
+  }
+
+  void errorFinalStaticFieldCompound(
+      Send node,
+      FieldElement field,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[errorFinalStaticFieldCompound] isn't implemented.");
+  }
+
+  void visitStaticGetterSetterCompound(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitStaticGetterSetterCompound] isn't implemented.");
+  }
+
+  void visitStaticMethodSetterCompound(
+      Send node,
+      FunctionElement method,
+      FunctionElement setter,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitStaticMethodSetterCompound] isn't implemented.");
+  }
+
+  void visitTopLevelFieldCompound(
+      Send node,
+      FieldElement field,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitTopLevelFieldCompound] isn't implemented.");
+  }
+
+  void errorFinalTopLevelFieldCompound(
+      Send node,
+      FieldElement field,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[errorFinalTopLevelFieldCompound] isn't implemented.");
+  }
+
+  void visitTopLevelGetterSetterCompound(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(
+        node, "[visitTopLevelGetterSetterCompound] isn't implemented.");
+  }
+
+  void visitTopLevelMethodSetterCompound(
+      Send node,
+      FunctionElement method,
+      FunctionElement setter,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(
+        node, "[visitTopLevelMethodSetterCompound] isn't implemented.");
+  }
+
+  void visitSuperFieldCompound(
+      Send node,
+      FieldElement field,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitSuperFieldCompound] isn't implemented.");
+  }
+
+  void errorFinalSuperFieldCompound(
+      Send node,
+      FieldElement field,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[errorFinalSuperFieldCompound] isn't implemented.");
+  }
+
+  void visitSuperGetterSetterCompound(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitSuperGetterSetterCompound] isn't implemented.");
+  }
+
+  void visitSuperMethodSetterCompound(
+      Send node,
+      FunctionElement method,
+      FunctionElement setter,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitSuperMethodSetterCompound] isn't implemented.");
+  }
+
+  void visitSuperFieldSetterCompound(
+      Send node,
+      FieldElement field,
+      FunctionElement setter,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitSuperFieldSetterCompound] isn't implemented.");
+  }
+
+  void visitSuperGetterFieldCompound(
+      Send node,
+      FunctionElement getter,
+      FieldElement field,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitSuperGetterFieldCompound] isn't implemented.");
+  }
+
+  void visitClassTypeLiteralCompound(
+      Send node,
+      TypeConstantExpression constant,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitClassTypeLiteralCompound] isn't implemented.");
+  }
+
+  void visitTypedefTypeLiteralCompound(
+      Send node,
+      TypeConstantExpression constant,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitTypedefTypeLiteralCompound] isn't implemented.");
+  }
+
+  void visitTypeVariableTypeLiteralCompound(
+      Send node,
+      TypeVariableElement element,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(
+        node, "[visitTypeVariableTypeLiteralCompound] isn't implemented.");
+  }
+
+  void visitDynamicTypeLiteralCompound(
+      Send node,
+      TypeConstantExpression constant,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitDynamicTypeLiteralCompound] isn't implemented.");
+  }
+
+  void visitCompoundIndexSet(
+      Send node,
+      Node receiver,
+      Node index,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitCompoundIndexSet] isn't implemented.");
+  }
+
+  void visitSuperCompoundIndexSet(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      Node index,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[visitSuperCompoundIndexSet] isn't implemented.");
+  }
+
+  void visitDynamicPropertyPrefix(
+      Send node,
+      Node receiver,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _){
+    internalError(node, "[visitDynamicPropertyPrefix] isn't implemented.");
+  }
+
+  void visitParameterPrefix(
+      Send node,
+      ParameterElement parameter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitParameterPrefix] isn't implemented.");
+  }
+
+  void errorLocalFunctionPrefix(
+      Send node,
+      LocalFunctionElement function,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[errorLocalFunctionPrefix] isn't implemented.");
+  }
+
+
+  void visitThisPropertyPrefix(
+      Send node,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _){
+    internalError(node, "[visitThisPropertyPrefix] isn't implemented.");
+  }
+
+  void visitStaticFieldPrefix(
+      Send node,
+      FieldElement field,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitStaticFieldPrefix] isn't implemented.");
+  }
+
+  void visitStaticGetterSetterPrefix(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitStaticGetterSetterPrefix] isn't implemented.");
+  }
+
+
+  void visitStaticMethodSetterPrefix(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitStaticMethodSetterPrefix] isn't implemented.");
+  }
+
+  void visitTopLevelFieldPrefix(
+      Send node,
+      FieldElement field,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitTopLevelFieldPrefix] isn't implemented.");
+  }
+
+  void visitTopLevelGetterSetterPrefix(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitTopLevelGetterSetterPrefix] isn't implemented.");
+  }
+
+  void visitTopLevelMethodSetterPrefix(
+      Send node,
+      FunctionElement method,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitTopLevelMethodSetterPrefix] isn't implemented.");
+  }
+
+  void visitSuperFieldPrefix(
+      Send node,
+      FieldElement field,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperFieldPrefix] isn't implemented.");
+  }
+
+  void visitSuperFieldFieldPrefix(
+      Send node,
+      FieldElement readField,
+      FieldElement writtenField,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperFieldFieldPrefix] isn't implemented.");
+  }
+
+  void visitSuperFieldSetterPrefix(
+      Send node,
+      FieldElement field,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperFieldSetterPrefix] isn't implemented.");
+  }
+
+
+  void visitSuperGetterSetterPrefix(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperGetterSetterPrefix] isn't implemented.");
+  }
+
+  void visitSuperGetterFieldPrefix(
+      Send node,
+      FunctionElement getter,
+      FieldElement field,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperGetterFieldPrefix] isn't implemented.");
+  }
+
+  void visitSuperMethodSetterPrefix(
+      Send node,
+      FunctionElement method,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperMethodSetterPrefix] isn't implemented.");
+  }
+
+  void visitClassTypeLiteralPrefix(
+      Send node,
+      TypeConstantExpression constant,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitClassTypeLiteralPrefix] isn't implemented.");
+  }
+
+  void visitTypedefTypeLiteralPrefix(
+      Send node,
+      TypeConstantExpression constant,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitTypedefTypeLiteralPrefix] isn't implemented.");
+  }
+
+  void visitTypeVariableTypeLiteralPrefix(
+      Send node,
+      TypeVariableElement element,
+      IncDecOperator operator,
+      _){
+    internalError(
+        node, "[visitTypeVariableTypeLiteralPrefix] isn't implemented.");
+  }
+
+  void visitDynamicTypeLiteralPrefix(
+      Send node,
+      TypeConstantExpression constant,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitDynamicTypeLiteralPrefix] isn't implemented.");
+  }
+
+  void visitDynamicPropertyPostfix(
+      Send node,
+      Node receiver,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _){
+    internalError(node, "[visitDynamicPropertyPostfix] isn't implemented.");
+  }
+
+  void visitParameterPostfix(
+      Send node,
+      ParameterElement parameter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitParameterPostfix] isn't implemented.");
+  }
+
+  void errorLocalFunctionPostfix(
+      Send node,
+      LocalFunctionElement function,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[errorLocalFunctionPostfix] isn't implemented.");
+  }
+
+
+  void visitThisPropertyPostfix(
+      Send node,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _){
+    internalError(node, "[visitThisPropertyPostfix] isn't implemented.");
+  }
+
+  void visitStaticFieldPostfix(
+      Send node,
+      FieldElement field,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitStaticFieldPostfix] isn't implemented.");
+  }
+
+  void visitStaticGetterSetterPostfix(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitStaticGetterSetterPostfix] isn't implemented.");
+  }
+
+
+  void visitStaticMethodSetterPostfix(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitStaticMethodSetterPostfix] isn't implemented.");
+  }
+
+  void visitTopLevelFieldPostfix(
+      Send node,
+      FieldElement field,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitTopLevelFieldPostfix] isn't implemented.");
+  }
+
+  void visitTopLevelGetterSetterPostfix(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(
+        node, "[visitTopLevelGetterSetterPostfix] isn't implemented.");
+  }
+
+  void visitTopLevelMethodSetterPostfix(
+      Send node,
+      FunctionElement method,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(
+        node, "[visitTopLevelMethodSetterPostfix] isn't implemented.");
+  }
+
+  void visitSuperFieldPostfix(
+      Send node,
+      FieldElement field,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperFieldPostfix] isn't implemented.");
+  }
+
+  void visitSuperFieldFieldPostfix(
+      Send node,
+      FieldElement readField,
+      FieldElement writtenField,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperFieldFieldPostfix] isn't implemented.");
+  }
+
+  void visitSuperFieldSetterPostfix(
+      Send node,
+      FieldElement field,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperFieldSetterPostfix] isn't implemented.");
+  }
+
+
+  void visitSuperGetterSetterPostfix(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperGetterSetterPostfix] isn't implemented.");
+  }
+
+  void visitSuperGetterFieldPostfix(
+      Send node,
+      FunctionElement getter,
+      FieldElement field,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperGetterFieldPostfix] isn't implemented.");
+  }
+
+  void visitSuperMethodSetterPostfix(
+      Send node,
+      FunctionElement method,
+      FunctionElement setter,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitSuperMethodSetterPostfix] isn't implemented.");
+  }
+
+  void visitClassTypeLiteralPostfix(
+      Send node,
+      TypeConstantExpression constant,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitClassTypeLiteralPostfix] isn't implemented.");
+  }
+
+  void visitTypedefTypeLiteralPostfix(
+      Send node,
+      TypeConstantExpression constant,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitTypedefTypeLiteralPostfix] isn't implemented.");
+  }
+
+  void visitTypeVariableTypeLiteralPostfix(
+      Send node,
+      TypeVariableElement element,
+      IncDecOperator operator,
+      _){
+    internalError(
+        node, "[visitTypeVariableTypeLiteralPostfix] isn't implemented.");
+  }
+
+  void visitDynamicTypeLiteralPostfix(
+      Send node,
+      TypeConstantExpression constant,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[visitDynamicTypeLiteralPostfix] isn't implemented.");
+  }
+
+  void visitConstantGet(
+      Send node,
+      ConstantExpression constant,
+      _){
+    internalError(node, "[visitConstantGet] isn't implemented.");
+  }
+
+  void visitConstantInvoke(
+      Send node,
+      ConstantExpression constant,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[visitConstantInvoke] isn't implemented.");
+  }
+
+  void errorUnresolvedGet(
+      Send node,
+      Element element,
+      _){
+    internalError(node, "[errorUnresolvedGet] isn't implemented.");
+  }
+
+  void errorUnresolvedSet(
+      Send node,
+      Element element,
+      Node rhs,
+      _){
+    internalError(node, "[errorUnresolvedSet] isn't implemented.");
+  }
+
+  void errorUnresolvedInvoke(
+      Send node,
+      Element element,
+      NodeList arguments,
+      Selector selector,
+      _){
+    internalError(node, "[errorUnresolvedInvoke] isn't implemented.");
+  }
+
+  void errorUnresolvedCompound(
+      Send node,
+      Element element,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(node, "[errorUnresolvedCompound] isn't implemented.");
+  }
+
+  void errorUnresolvedPrefix(
+      Send node,
+      Element element,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[errorUnresolvedPrefix] isn't implemented.");
+  }
+
+  void errorUnresolvedPostfix(
+      Send node,
+      Element element,
+      IncDecOperator operator,
+      _){
+    internalError(node, "[errorUnresolvedPostfix] isn't implemented.");
+  }
+
+  void errorUnresolvedSuperIndexSet(
+      Send node,
+      Element element,
+      Node index,
+      Node rhs,
+      _){
+    internalError(node, "[errorUnresolvedSuperIndexSet] isn't implemented.");
+  }
+
+  void errorUnresolvedSuperCompoundIndexSet(
+      Send node,
+      Element element,
+      Node index,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    internalError(
+        node, "[errorUnresolvedSuperCompoundIndexSet] isn't implemented.");
+  }
+
+  void errorUnresolvedSuperUnary(
+      Send node,
+      UnaryOperator operator,
+      Element element,
+      _){
+    internalError(node, "[errorUnresolvedSuperUnary] isn't implemented.");
+  }
+
+  void errorUnresolvedSuperBinary(
+      Send node,
+      Element element,
+      BinaryOperator operator,
+      Node argument,
+      _){
+    internalError(node, "[errorUnresolvedSuperBinary] isn't implemented.");
+  }
+
+  void errorUndefinedUnaryExpression(
+      Send node,
+      Operator operator,
+      Node expression,
+      _){
+    internalError(node, "[errorUndefinedUnaryExpression] isn't implemented.");
+  }
+
+  void errorUndefinedBinaryExpression(
+      Send node,
+      Node left,
+      Operator operator,
+      Node right,
+      _){
+    internalError(node, "[errorUndefinedBinaryExpression] isn't implemented.");
+  }
 }

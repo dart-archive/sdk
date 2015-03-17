@@ -162,12 +162,12 @@ class CompiledFunction {
         arity);
     BytecodeBuilder builder = compiledFunction.builder;
 
-    void loadInitializerOrNull(parameter) {
+    void loadInitializerOrNull(ParameterElement parameter) {
       Expression initializer = parameter.initializer;
       if (initializer != null) {
         ConstantExpression expression = context.compileConstant(
             initializer,
-            context.compiler.globalDependencies.treeElements,
+            parameter.memberContext.resolvedAst.elements,
             isConst: true);
         int constId = compiledFunction.allocateConstant(expression.value);
         builder.loadConst(constId);
@@ -180,7 +180,7 @@ class CompiledFunction {
     if (hasThisArgument) builder.loadParameter(0);
 
     int index = hasThisArgument ? 1 : 0;
-    signature.orderedForEachParameter((parameter) {
+    signature.orderedForEachParameter((ParameterElement parameter) {
       if (!parameter.isOptional) {
         builder.loadParameter(index);
       } else if (parameter.isNamed) {
