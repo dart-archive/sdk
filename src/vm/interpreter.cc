@@ -317,8 +317,8 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
 
   OPCODE_BEGIN(InvokeMethodFast);
     int index = ReadInt32(1);
-    Array* table = Array::cast(program()->constant_at(index));
-    int arity = Smi::cast(table->get(0))->value();
+    Array* table = program()->dispatch_table();
+    int arity = Smi::cast(table->get(index))->value();
     Object* receiver = Local(arity);
     PushReturnAddress(kInvokeMethodFastLength);
 
@@ -328,12 +328,12 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     int class_id = clazz->id();
 
     Function* target = NULL;
-    for (int index = 2; true; index += 4) {
-      Smi* lower = Smi::cast(table->get(index));
+    for (int offset = 2; true; offset += 4) {
+      Smi* lower = Smi::cast(table->get(index + offset));
       if (class_id < lower->value()) continue;
-      Smi* upper = Smi::cast(table->get(index + 1));
+      Smi* upper = Smi::cast(table->get(index + offset + 1));
       if (class_id >= upper->value()) continue;
-      target = Function::cast(table->get(index + 3));
+      target = Function::cast(table->get(index + offset + 3));
       break;
     }
 
@@ -687,8 +687,8 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     int selector;
     if (opcode == kInvokeMethodFast) {
       int index = Utils::ReadInt32(return_address - 4);
-      Array* table = Array::cast(program()->constant_at(index));
-      selector = Smi::cast(table->get(1))->value();
+      Array* table = program()->dispatch_table();
+      selector = Smi::cast(table->get(index + 1))->value();
     } else {
       selector = Utils::ReadInt32(return_address - 4);
     }

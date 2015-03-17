@@ -109,6 +109,11 @@ class Program {
     static_fields_ = Array::cast(static_fields);
   }
 
+  Array* dispatch_table() const { return dispatch_table_; }
+  void set_dispatch_table(Object* dispatch_table) {
+    dispatch_table_ = Array::cast(dispatch_table);
+  }
+
   Scheduler* scheduler() const { return scheduler_; }
   void set_scheduler(Scheduler* scheduler) {
     ASSERT(scheduler_ == NULL);
@@ -177,6 +182,10 @@ class Program {
     return OFFSET_OF(Program, static_methods_);
   }
 
+  static int DispatchTableOffset() {
+    return OFFSET_OF(Program, dispatch_table_);
+  }
+
  private:
   // Access to the address of the first and last root.
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
@@ -198,6 +207,7 @@ class Program {
   Array* constants_;
   Array* static_methods_;
   Array* static_fields_;
+  Array* dispatch_table_;
 
   bool is_compact_;
 

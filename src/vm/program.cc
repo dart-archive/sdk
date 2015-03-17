@@ -41,6 +41,7 @@ Program::Program()
       constants_(NULL),
       static_methods_(NULL),
       static_fields_(NULL),
+      dispatch_table_(NULL),
       is_compact_(false) {
 }
 
@@ -116,8 +117,8 @@ Object* Program::UnfoldFunction(Function* function, Space* to) {
         break;
       case kInvokeMethodFast: {
         int index = Utils::ReadInt32(bcp + 1);
-        Array* table = Array::cast(constant_at(index));
-        int selector = Smi::cast(table->get(1))->value();
+        Array* table = dispatch_table();
+        int selector = Smi::cast(table->get(index + 1))->value();
         *bcp = kInvokeMethod;
         Utils::WriteInt32(bcp + 1, selector);
         break;
@@ -213,8 +214,11 @@ class SelectorRow {
 
   int dispatch_table_index() const { return dispatch_table_index_; }
 
-  void ComputeDispatchTableIndex(Program* program,
-                                 ProgramTableRewriter* rewriter);
+  int ComputeSize() {
+    return (variants_ <= kFewVariantsThreshold) ? (variants_ + 1) * 4 + 2 : 0;
+  }
+
+  int FillDispatchTable(Program* program, Array* table, int index);
 
   // The bottom up construction order guarantees that more specific methods
   // always get defined before less specific ones.
@@ -259,12 +263,23 @@ class ProgramTableRewriter {
     return entry;
   }
 
-  void ProcessSelectorRows(Program* program) {
-    SelectorRowMap::const_iterator it = selector_rows_.begin();
+  Array* ProcessSelectorRows(Program* program) {
+    SelectorRowMap::const_iterator it;
     SelectorRowMap::const_iterator end = selector_rows_.end();
-    for (; it != end; ++it) {
-      it->second->ComputeDispatchTableIndex(program, this);
+
+    // Compute the size of the dispatch table.
+    int size = 0;
+    for (it = selector_rows_.begin(); it != end; ++it) {
+      size += it->second->ComputeSize();
     }
+
+    // Fill in the dispatch table entries.
+    Array* table = Array::cast(program->CreateArray(size));
+    int index = 0;
+    for (it = selector_rows_.begin(); it != end; ++it) {
+      index = it->second->FillDispatchTable(program, table, index);
+    }
+    return table;
   }
 
   void AddMethodAndRewrite(uint8_t* bcp, uint8_t* new_bcp) {
@@ -317,41 +332,43 @@ class ProgramTableRewriter {
   SelectorRowMap selector_rows_;
 };
 
-void SelectorRow::ComputeDispatchTableIndex(Program* program,
-                                            ProgramTableRewriter* rewriter) {
-  if (variants_ > kFewVariantsThreshold) return;
+int SelectorRow::FillDispatchTable(Program* program, Array* table, int index) {
+  if (variants_ > kFewVariantsThreshold) return index;
 
   // TODO(kasperl): The snapshotting code cannot deal with the intrinsic
   // pointer yet, so we avoid using the dispatch table if any of the target
   // methods has an associated intrinsic.
   for (int i = 0; i < variants_; i++) {
-    if (methods_[i]->ComputeIntrinsic() != NULL) return;
+    if (methods_[i]->ComputeIntrinsic() != NULL) return index;
   }
 
-  Array* table = Array::cast(program->CreateArray(4 * (variants_ + 1) + 2));
-  table->set(0, Smi::FromWord(Selector::ArityField::decode(selector_)));
-  table->set(1, Smi::FromWord(selector_));
+  // Mark this row as being in the dispatch table.
+  dispatch_table_index_ = index;
+
+  table->set(index++, Smi::FromWord(Selector::ArityField::decode(selector_)));
+  table->set(index++, Smi::FromWord(selector_));
   for (int i = 0; i < variants_; i++) {
     Class* clazz = classes_[i];
     Function* method = methods_[i];
-    table->set(i * 4 + 2, Smi::FromWord(clazz->id()));
-    table->set(i * 4 + 3, Smi::FromWord(clazz->child_id()));
+    table->set(index++, Smi::FromWord(clazz->id()));
+    table->set(index++, Smi::FromWord(clazz->child_id()));
     Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
     ASSERT(intrinsic == NULL);
-    table->set(i * 4 + 4, intrinsic);
-    table->set(i * 4 + 5, method);
+    table->set(index++, intrinsic);
+    table->set(index++, method);
   }
 
   static const Names::Id name = Names::kNoSuchMethodTrampoline;
   Function* target = program->object_class()->LookupMethod(
       Selector::Encode(name, Selector::METHOD, 0));
 
-  table->set(table->length() - 4, Smi::FromWord(0));
-  table->set(table->length() - 3, Smi::FromWord(Smi::kMaxValue));
-  table->set(table->length() - 2, Smi::FromWord(0));
-  table->set(table->length() - 1, target);
+  table->set(index++, Smi::FromWord(0));
+  table->set(index++, Smi::FromWord(Smi::kMaxValue));
+  table->set(index++, Smi::FromWord(0));
+  table->set(index++, target);
 
-  dispatch_table_index_ = rewriter->AddConstant(table);
+  ASSERT(index - dispatch_table_index_ == ComputeSize());
+  return index;
 }
 
 void Program::FoldFunction(Function* old_function,
@@ -468,7 +485,8 @@ class FoldingVisitor: public PointerVisitor {
     AssignClassIds(hierarchy, table, 0);
 
     ConstructDispatchTable(table);
-    rewriter_->ProcessSelectorRows(program_);
+    program_->set_dispatch_table(rewriter_->ProcessSelectorRows(program_));
+
     FunctionPostprocessVisitor visitor(rewriter_);
     program_->heap()->IterateObjects(&visitor);
     return table;
@@ -1016,6 +1034,7 @@ void Program::IterateRoots(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&constants_));
   visitor->Visit(reinterpret_cast<Object**>(&static_methods_));
   visitor->Visit(reinterpret_cast<Object**>(&static_fields_));
+  visitor->Visit(reinterpret_cast<Object**>(&dispatch_table_));
 }
 
 }  // namespace fletch

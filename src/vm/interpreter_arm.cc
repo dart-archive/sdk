@@ -1065,10 +1065,9 @@ void InterpreterGeneratorARM::DoEnterNoSuchMethod() {
   __ Bind(&fast);
   __ ldr(R0, Address(R0, -4));
   __ ldr(R2, Address(R4, Process::ProgramOffset()));
-  __ ldr(R3, Address(R2, Program::ConstantsOffset()));
-  __ add(R3, R3, Immediate(Array::kSize - HeapObject::kTag));
-  __ ldr(R3, Address(R3, Operand(R0, TIMES_4)));
-  __ ldr(R0, Address(R3, kPointerSize + Array::kSize - HeapObject::kTag));
+  __ ldr(R3, Address(R2, Program::DispatchTableOffset()));
+  __ add(R3, R3, Immediate(kPointerSize + Array::kSize - HeapObject::kTag));
+  __ ldr(R0, Address(R3, Operand(R0, TIMES_4)));
   __ lsr(R0, R0, Immediate(Smi::kTagSize));
 
   // Decode the arity from the selector.

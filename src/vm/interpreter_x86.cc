@@ -489,14 +489,15 @@ void InterpreterGeneratorX86::DoInvokeMethod() {
 }
 
 void InterpreterGeneratorX86::DoInvokeMethodFast() {
-  // Get the dispatch table for this invoke.
-  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EBX, Address(ECX, Program::ConstantsOffset()));
+  // Get the dispatch table and form a pointer to the first element
+  // corresponding to this invoke bytecode.
   __ movl(EDX, Address(ESI, 1));
-  __ movl(EDX, Address(EBX, EDX, TIMES_4, Array::kSize - HeapObject::kTag));
+  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
+  __ movl(EBX, Address(ECX, Program::DispatchTableOffset()));
+  __ leal(EDX, Address(EBX, EDX, TIMES_4, Array::kSize - HeapObject::kTag));
 
   // Get the arity from the dispatch table and get the receiver from the stack.
-  __ movl(EBX, Address(EDX, Array::kSize - HeapObject::kTag));
+  __ movl(EBX, Address(EDX));
   __ negl(EBX);
   __ movl(EBX, Address(EDI, EBX, TIMES_2));
 
@@ -512,18 +513,17 @@ void InterpreterGeneratorX86::DoInvokeMethodFast() {
   __ movl(EBX, Address(EBX, Class::kIdOffset - HeapObject::kTag));
 
   // Loop through the table.
-  static const int kDisplacement = Array::kSize - HeapObject::kTag;
   Label loop, next;
   __ Bind(&loop);
-  __ cmpl(EBX, Address(EDX, kDisplacement + 2 * kPointerSize));
+  __ cmpl(EBX, Address(EDX, 2 * kPointerSize));
   __ j(LESS, &next);
-  __ cmpl(EBX, Address(EDX, kDisplacement + 3 * kPointerSize));
+  __ cmpl(EBX, Address(EDX, 3 * kPointerSize));
   __ j(GREATER_EQUAL, &next);
 
   // Found the right target method.
   Label intrinsified;
-  __ movl(EBX, Address(EDX, kDisplacement + 4 * kPointerSize));
-  __ movl(EAX, Address(EDX, kDisplacement + 5 * kPointerSize));
+  __ movl(EBX, Address(EDX, 4 * kPointerSize));
+  __ movl(EAX, Address(EDX, 5 * kPointerSize));
   __ testl(EBX, EBX);
   __ j(NOT_ZERO, &intrinsified);
 
@@ -1150,9 +1150,9 @@ void InterpreterGeneratorX86::DoEnterNoSuchMethod() {
   __ Bind(&fast);
   __ movl(EAX, Address(EAX, -4));
   __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-  __ movl(ECX, Address(ECX, Program::ConstantsOffset()));
-  __ movl(ECX, Address(ECX, EAX, TIMES_4, Array::kSize - HeapObject::kTag));
-  __ movl(EAX, Address(ECX, kPointerSize + Array::kSize - HeapObject::kTag));
+  __ movl(ECX, Address(ECX, Program::DispatchTableOffset()));
+  __ movl(EAX, Address(ECX, EAX, TIMES_4,
+        kPointerSize + Array::kSize - HeapObject::kTag));
   __ shrl(EAX, Immediate(Smi::kTagSize));
 
   // Decode the arity from the selector.
