@@ -218,7 +218,13 @@ class PushNewFunction extends Command {
 
   final List<Bytecode> bytecodes;
 
-  const PushNewFunction(this.arity, this.literals, this.bytecodes)
+  final List<int> catchRanges;
+
+  const PushNewFunction(
+      this.arity,
+      this.literals,
+      this.bytecodes,
+      this.catchRanges)
       : super(CommandCode.PushNewFunction);
 
   List<int> computeBytes(List<Bytecode> bytecodes) {
@@ -231,13 +237,15 @@ class PushNewFunction extends Command {
 
   void addTo(StreamSink<List<int>> sink) {
     List<int> bytes = computeBytes(bytecodes);
+    int size = bytes.length + 4 + catchRanges.length * 4;
     buffer
         ..addUint32(arity)
         ..addUint32(literals)
-        ..addUint32(bytes.length + 4 /* Try-catch blocks. */)
+        ..addUint32(size)
         ..addUint8List(bytes)
-        ..addUint32(0 /* No try-catch blocks. */)
-        ..sendOn(sink, code);
+        ..addUint32(catchRanges.length ~/ 2);
+    catchRanges.forEach(buffer.addUint32);
+    buffer.sendOn(sink, code);
   }
 }
 

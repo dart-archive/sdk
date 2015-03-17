@@ -1215,7 +1215,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     builder.bind(end);
   }
 
-  void initializeLocal(LocalElement element, Expression initializer) {
+  LocalValue initializeLocal(LocalElement element, Expression initializer) {
     int slot = builder.stackSize;
     if (initializer != null) {
       visitForValue(initializer);
@@ -1226,6 +1226,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     value.initialize(builder);
     scope[element] = value;
     blockLocals++;
+    return value;
   }
 
   void visitVariableDefinitions(VariableDefinitions node) {
@@ -1238,6 +1239,63 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   void visitFunctionDeclaration(FunctionDeclaration node) {
     FunctionExpression function = node.function;
     initializeLocal(elements[function], function);
+  }
+
+  void handleCatchBlock(CatchBlock node, int exceptionSlot) {
+    // TODO(ajohnsen): Handle type argument.
+    int locals = 0;
+    Node exception = node.exception;
+    if (exception != null) {
+      LocalVariableElement element = elements[exception];
+      LocalValue value = createLocalValueFor(element);
+      builder.loadSlot(exceptionSlot);
+      value.initialize(builder);
+      scope[element] = value;
+      locals++;
+
+      Node trace = node.trace;
+      if (trace != null) {
+        LocalVariableElement element = elements[trace];
+        LocalValue value = createLocalValueFor(element);
+        builder.loadLiteralNull();
+        value.initialize(builder);
+        scope[element] = value;
+        // TODO(ajohnsen): Set trace.
+        locals++;
+      }
+    }
+
+    node.block.accept(this);
+
+    builder.popMany(locals);
+  }
+
+  void visitTryStatement(TryStatement node) {
+    // TODO(ajohnsen): Handle finally.
+    BytecodeLabel end = new BytecodeLabel();
+
+    // Reserve slot for exception.
+    int exceptionSlot = builder.stackSize;
+    builder.loadLiteralNull();
+
+    int startBytecodeSize = builder.byteSize;
+    node.tryBlock.accept(this);
+    // Go to end if no exceptions was thrown.
+    builder.branch(end);
+    int endBytecodeSize = builder.byteSize;
+
+    // Add catch-frame to the builder.
+    builder.addCatchFrameRange(startBytecodeSize, endBytecodeSize);
+
+    for (Node catchBlock in node.catchBlocks) {
+      handleCatchBlock(catchBlock, exceptionSlot);
+      builder.branch(end);
+    }
+
+    builder.bind(end);
+
+    // Pop exception slot.
+    builder.pop();
   }
 
   void internalError(Spannable spannable, String reason) {
@@ -1253,7 +1311,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   }
 
   String toString() => "FunctionCompiler(${function.name})";
-
 
   void visitNode(Node node) {
     internalError(node, "[visitNode] isn't implemented.");

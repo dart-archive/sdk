@@ -37,6 +37,7 @@ class BytecodeLabel {
 
 class BytecodeBuilder {
   final List<Bytecode> bytecodes = <Bytecode>[];
+  final List<int> catchRanges = <int>[];
 
   final int functionArity;
 
@@ -50,6 +51,12 @@ class BytecodeBuilder {
    */
   void applyStackSizeFix(int diff) {
     stackSize += diff;
+  }
+
+  void addCatchFrameRange(int start, int end) {
+    catchRanges
+        ..add(start)
+        ..add(end);
   }
 
   void loadConst(int id) {

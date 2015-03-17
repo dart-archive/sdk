@@ -649,7 +649,10 @@ class FletchBackend extends Backend {
 
       commands.add(
           new PushNewFunction(
-              arity, constantCount, compiledFunction.builder.bytecodes));
+              arity,
+              constantCount,
+              compiledFunction.builder.bytecodes,
+              compiledFunction.builder.catchRanges));
 
       commands.add(new PopToMap(MapId.methods, methodId));
     }
