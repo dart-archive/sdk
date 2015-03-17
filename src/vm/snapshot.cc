@@ -586,9 +586,9 @@ void Class::ClassReadFrom(SnapshotReader* reader) {
 
 void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  int rounded_bytecode_size = BytecodeAllocationSize(bytecode_size());
-  int variable_size = rounded_bytecode_size + literals_size() * kPointerSize;
-  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, variable_size);
+  int bytecode_size = BytecodeAllocationSize(bytecode_size());
+  ASSERT(literals_size() == 0);
+  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, bytecode_size);
   writer->Forward(this);
   // Body.
   for (int offset = kPointerSize;

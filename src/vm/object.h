@@ -164,14 +164,16 @@ class InstanceFormat {
   inline static const InstanceFormat null_format();
 
   InstanceFormat set_fixed_size(int value) {
+    ASSERT(Utils::IsAligned(value, kPointerSize));
+    int pointers = value / kPointerSize;
     return InstanceFormat(
         Smi::cast(
-            reinterpret_cast<Smi*>(FixedSizeField::update(value, as_uword()))));
+            reinterpret_cast<Smi*>(FixedSizeField::update(pointers, as_uword()))));
   }
 
   // Accessors.
   int fixed_size() {
-    return FixedSizeField::decode(as_uword());
+    return FixedSizeField::decode(as_uword()) * kPointerSize;
   }
 
   Type type() {
@@ -678,8 +680,7 @@ class Function: public HeapObject {
   }
 
   static int AllocationSize(int variable_size) {
-    ASSERT(Utils::IsAligned(variable_size, kPointerSize));
-    return kSize + variable_size;
+    return Utils::RoundUp(kSize + variable_size, kPointerSize);
   }
 
   static Function* FromBytecodePointer(uint8* bcp,
@@ -900,11 +901,12 @@ InstanceFormat::InstanceFormat(Type type,
                                bool has_variable_part,
                                bool only_pointers_in_fixed_part,
                                Marker marker = NO_MARKER) {
+  ASSERT(Utils::IsAligned(fixed_size, kPointerSize));
   uword v = TypeField::encode(type)
       | HasVariablePartField::encode(has_variable_part)
       | OnlyPointersInFixedPartField::encode(only_pointers_in_fixed_part)
       | MarkerField::encode(marker)
-      | FixedSizeField::encode(fixed_size);
+      | FixedSizeField::encode(fixed_size / kPointerSize);
   value_ = Smi::cast(reinterpret_cast<Smi*>(v));
   ASSERT(type == this->type());
   ASSERT(fixed_size == this->fixed_size());

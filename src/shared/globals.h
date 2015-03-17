@@ -46,6 +46,12 @@ const int kWordSize = sizeof(word);
 const int kDoubleSize = sizeof(double);  // NOLINT
 const int kPointerSize = sizeof(void*);  // NOLINT
 
+#ifdef FLETCH64
+const int kPointerSizeLog2 = 3;
+#else
+const int kPointerSizeLog2 = 2;
+#endif
+
 // Bit sizes.
 const int kBitsPerByte = 8;
 const int kBitsPerByteLog2 = 3;

@@ -1450,7 +1450,12 @@ void InterpreterGeneratorARM::Allocate(bool unfolded) {
   __ ldr(R2, Address(R7, Class::kInstanceFormatOffset - HeapObject::kTag));
   __ ldr(R3, Immediate(InstanceFormat::FixedSizeField::mask()));
   __ and_(R2, R2, R3);
-  __ lsr(R2, R2, Immediate(InstanceFormat::FixedSizeField::shift()));
+  // The fixed size is recorded as the number of pointers. Therefore, the
+  // size in bytes is the recorded size multiplied by kPointerSize. Instead
+  // of doing the multiplication we shift right by kPointerSizeLog2 less.
+  ASSERT(InstanceFormat::FixedSizeField::shift() >= kPointerSizeLog2);
+  int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
+  __ lsr(R2, R2, Immediate(size_shift));
 
   // Compute the address of the first and last instance field.
   __ sub(R7, R0, Immediate(kWordSize + HeapObject::kTag));

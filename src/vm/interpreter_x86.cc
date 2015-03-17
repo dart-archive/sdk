@@ -1356,7 +1356,12 @@ void InterpreterGeneratorX86::Allocate(bool unfolded) {
 
   __ movl(ECX, Address(EBX, Class::kInstanceFormatOffset - HeapObject::kTag));
   __ andl(ECX, Immediate(InstanceFormat::FixedSizeField::mask()));
-  __ shrl(ECX, Immediate(InstanceFormat::FixedSizeField::shift()));
+  // The fixed size is recorded as the number of pointers. Therefore, the
+  // size in bytes is the recorded size multiplied by kPointerSize. Instead
+  // of doing the multiplication we shift by kPointerSizeLog2 less.
+  ASSERT(InstanceFormat::FixedSizeField::shift() >= kPointerSizeLog2);
+  int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
+  __ shrl(ECX, Immediate(size_shift));
 
   // Compute the address of the first and last instance field.
   __ leal(EDX, Address(EAX, ECX, TIMES_1, -1 * kWordSize - HeapObject::kTag));
