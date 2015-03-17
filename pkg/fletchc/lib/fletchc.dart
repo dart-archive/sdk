@@ -11,6 +11,10 @@ import 'dart:io';
 import 'compiler.dart' show
     FletchCompiler;
 
+const COMPILER_CRASHED = 253;
+const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
+const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
+
 main(List<String> arguments) async {
   List<String> options = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
@@ -19,13 +23,19 @@ main(List<String> arguments) async {
       options: options,
       script: arguments.single,
       packageRoot: "package/");
+  bool compilerCrashed = false;
   List commands = await compiler.run().catchError((e, trace) {
+    compilerCrashed = true;
     // TODO(ahe): Remove this catchError block when this bug is fixed:
     // https://code.google.com/p/dart/issues/detail?id=22437.
     print(e);
     print(trace);
-    exit(1);
+    return [];
   });
+
+  if (compilerCrashed) {
+    return COMPILER_CRASHED;
+  }
 
   var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 
@@ -58,4 +68,5 @@ main(List<String> arguments) async {
   if (exitCode != 0) {
     print("Non-zero exit code from VM ($exitCode).");
   }
+  return exitCode;
 }

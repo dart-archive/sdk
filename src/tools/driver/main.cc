@@ -353,17 +353,46 @@ static int StartFletchDriverServer() {
 
 static int ReadInt(Socket *socket) {
   uint32* data = reinterpret_cast<uint32*>(socket->Read(4));
+  if (data == NULL) {
+    Die("%s: Read returned NULL", program_name);
+  }
   uint32 result = ntohl(*data);
   free(data);
   return (int)result;
 }
 
 
-static void Forward(Socket* socket, FILE* file) {
+static void Forward(Socket* socket, int fd) {
   uint8 buffer[1500];
-  size_t bytes_count = read(socket->FileDescriptor(), &buffer, sizeof(buffer));
-  // TODO(ahe): Check return values.
-  fwrite(&buffer, bytes_count, 1, file);
+  ssize_t bytes_count =
+      TEMP_FAILURE_RETRY(
+          read(socket->FileDescriptor(), &buffer, sizeof(buffer)));
+  if (bytes_count == -1) {
+    Die("%s: Read failed: %s", program_name, strerror(errno));
+  }
+  do {
+    ssize_t bytes_written = TEMP_FAILURE_RETRY(write(fd, &buffer, bytes_count));
+    if (bytes_written == -1) {
+      Die("%s: write failed: %s", program_name, strerror(errno));
+    }
+    bytes_count -= bytes_written;
+  } while (bytes_count > 0);
+}
+
+
+static void SendInt(Socket *socket, uint32 value) {
+  uint32 data = htonl(value);
+  socket->Write(reinterpret_cast<uint8*>(&data), sizeof(uint32));
+}
+
+
+static void SendArgv(Socket *socket, int argc, char** argv) {
+  SendInt(socket, argc);
+  for (int i = 0; i < argc; i++) {
+    int size = strlen(argv[i]) + 1;
+    SendInt(socket, size);
+    socket->Write(reinterpret_cast<uint8*>(argv[i]), size);
+  }
 }
 
 
@@ -387,6 +416,8 @@ static int Main(int argc, char** argv) {
   }
 
   int io_port = ReadInt(socket);
+
+  SendArgv(socket, argc, argv);
 
   Socket *stdio_socket = new Socket();
   Socket *stderr_socket = new Socket();
@@ -433,10 +464,10 @@ static int Main(int argc, char** argv) {
       // Timeout, shouldn't happen.
     } else {
       if (FD_ISSET(stdio_socket->FileDescriptor(), &readfds)) {
-        Forward(stdio_socket, stdout);
+        Forward(stdio_socket, STDOUT_FILENO);
       }
       if (FD_ISSET(stderr_socket->FileDescriptor(), &readfds)) {
-        Forward(stderr_socket, stderr);
+        Forward(stderr_socket, STDERR_FILENO);
       }
       if (FD_ISSET(STDIN_FILENO, &readfds)) {
         uint8 buffer[1500];
