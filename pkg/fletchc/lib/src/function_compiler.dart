@@ -282,7 +282,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector) {
     registry.registerStaticInvocation(function);
-    assert(!function.isInstanceMember);
+    if (function.isInstanceMember) loadThis();
     FunctionSignature signature = function.functionSignature;
     int methodId;
     int arity;
@@ -294,11 +294,16 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
           null);
       if (target.matchesSelector(selector)) {
         methodId = target.methodId;
-      } else {
+      } else if (target.canBeCalledAs(selector)) {
         // TODO(ajohnsen): Inline parameter mapping?
         CompiledFunction stub = target.createParameterMappingFor(
             selector, context);
         methodId = stub.methodId;
+      } else {
+        generateUnimplementedError(
+            function.node,
+            "call to function does not match signature");
+        return;
       }
       for (Node argument in arguments) {
         visitForValue(argument);
@@ -308,6 +313,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       methodId = context.backend.allocateMethodId(function);
       arity = loadPositionalArguments(arguments, function);
     }
+    if (function.isInstanceMember) arity++;
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
     builder.invokeStatic(constId, arity);
   }
@@ -601,12 +607,11 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
-  void visitTopLevelFunctionInvoke(
+  void handleStaticallyBoundInvoke(
       Send node,
       MethodElement element,
       NodeList arguments,
-      Selector selector,
-      _) {
+      Selector selector) {
     if (element == context.compiler.identicalFunction) {
       inlineIdenticalCall(arguments);
       return;
@@ -623,13 +628,31 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void visitTopLevelFunctionInvoke(
+      Send node,
+      MethodElement element,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    handleStaticallyBoundInvoke(node, element, arguments, selector);
+  }
+
   void visitStaticFunctionInvoke(
       Send node,
       /* MethodElement */ element,
       NodeList arguments,
       Selector selector,
       _) {
-    visitTopLevelFunctionInvoke(node, element, arguments, selector, _);
+    handleStaticallyBoundInvoke(node, element, arguments, selector);
+  }
+
+  void visitSuperMethodInvoke(
+      Send node,
+      MethodElement element,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    handleStaticallyBoundInvoke(node, element, arguments, selector);
   }
 
   void visitTopLevelFieldInvoke(
@@ -762,15 +785,30 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void handleStaticFieldSet(
+      SendSet node,
+      FieldElement element,
+      Node rhs) {
+    visitForValue(rhs);
+    int index = context.getStaticFieldIndex(element, function);
+    builder.storeStatic(index);
+    applyVisitState();
+  }
+
   void visitTopLevelFieldSet(
       SendSet node,
       FieldElement element,
       Node rhs,
       _) {
-    visitForValue(rhs);
-    int index = context.getStaticFieldIndex(element, function);
-    builder.storeStatic(index);
-    applyVisitState();
+    handleStaticFieldSet(node, element, rhs);
+  }
+
+  void visitStaticFieldSet(
+      SendSet node,
+      FieldElement element,
+      Node rhs,
+      _) {
+    handleStaticFieldSet(node, element, rhs);
   }
 
   void visitStringJuxtaposition(StringJuxtaposition node) {
@@ -1298,6 +1336,16 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     builder.pop();
   }
 
+  void errorUnresolvedInvoke(
+      Send node,
+      Element element,
+      Node arguments,
+      Selector selector,
+      _) {
+    generateUnimplementedError(node, "unresolved static call");
+    applyVisitState();
+  }
+
   void internalError(Spannable spannable, String reason) {
     context.compiler.internalError(spannable, reason);
   }
@@ -1392,15 +1440,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     internalError(node, "[visitSuperMethodGet] isn't implemented.");
   }
 
-  void visitSuperMethodInvoke(
-      Send node,
-      MethodElement method,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    internalError(node, "[visitSuperMethodInvoke] isn't implemented.");
-  }
-
   void errorSuperMethodSet(
       Send node,
       MethodElement method,
@@ -1463,14 +1502,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector selector,
       _){
     internalError(node, "[errorSuperSetterInvoke] isn't implemented.");
-  }
-
-  void visitStaticFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs,
-      _){
-    internalError(node, "[visitStaticFieldSet] isn't implemented.");
   }
 
   void errorFinalStaticFieldSet(
@@ -1823,7 +1854,9 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitLocalVariableCompound] isn't implemented.");
+    generateUnimplementedError(
+        node,
+        "[visitLocalVariableCompound] isn't implemented.");
   }
 
   void errorFinalLocalVariableCompound(
@@ -2421,15 +2454,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Node rhs,
       _){
     internalError(node, "[errorUnresolvedSet] isn't implemented.");
-  }
-
-  void errorUnresolvedInvoke(
-      Send node,
-      Element element,
-      NodeList arguments,
-      Selector selector,
-      _){
-    internalError(node, "[errorUnresolvedInvoke] isn't implemented.");
   }
 
   void errorUnresolvedCompound(

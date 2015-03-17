@@ -184,8 +184,6 @@ class FletchBackend extends Backend {
 
   FunctionElement fletchExternalYield;
 
-  FieldElement fletchNativeElement;
-
   CompiledClass compiledObjectClass;
 
   ClassElement stringClass;
@@ -273,8 +271,6 @@ class FletchBackend extends Backend {
     }
     fletchExternalInvokeMain = findExternal('invokeMain');
     fletchExternalYield = findExternal('yield');
-
-    fletchNativeElement = fletchSystemLibrary.findLocal('native');
 
     CompiledClass loadClass(String name, LibraryElement library) {
       var classImpl = library.findLocal(name);
@@ -467,10 +463,10 @@ class FletchBackend extends Backend {
   void codegenNativeFunction(
       FunctionElement function,
       FunctionCompiler functionCompiler) {
-    String name = function.name;
+    String name = '.${function.name}';
 
     ClassElement enclosingClass = function.enclosingClass;
-    if (enclosingClass != null) name = '${enclosingClass.name}.$name';
+    if (enclosingClass != null) name = '${enclosingClass.name}$name';
 
     FletchNativeDescriptor descriptor = context.nativeDescriptors[name];
     if (descriptor == null) {
@@ -769,6 +765,8 @@ class FletchBackend extends Backend {
         patch.computeType(compiler);
       });
       element = patch;
+      // TODO(ahe): Don't use ensureResolved (fix TODO in isNative instead).
+      element.metadata.forEach((m) => m.ensureResolved(compiler));
     } else if (element.library == fletchSystemLibrary) {
       // Nothing needed for now.
     } else if (element.library == fletchNativesLibrary) {

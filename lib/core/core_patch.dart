@@ -84,3 +84,13 @@ const patch = "patch";
     throw "getter stackTrace is unimplemented";
   }
 }
+
+@patch class Stopwatch {
+  @patch @fletch.native external static int _now();
+
+  @patch static int _initTicker() {
+    _frequency = _fletchNative_frequency();
+  }
+
+  @fletch.native external static int _fletchNative_frequency();
+}

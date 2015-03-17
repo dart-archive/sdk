@@ -29,23 +29,27 @@ class FletchNativeDescriptor {
     for (Map native in jsonObjects['natives']) {
       String cls = native['class'];
       String name = native['name'];
+      void add(className, name) {
+        var cls = className == "<none>" ? null : className;
+        natives['$className.$name'] =
+            new FletchNativeDescriptor(native['enum'], cls, name, index);
+        natives['$className._fletchNative$name'] =
+            new FletchNativeDescriptor(native['enum'], cls, name, index);
+      }
       String key;
       if (cls == "<none>") {
         cls = null;
         key = name;
+        add("", name);
         if (name.startsWith("_")) {
           // For private top-level methods, create a public version as well.
           // TODO(ahe): Modify the VM table of natives.
-          String public = name.substring(1);
-          natives[public] =
-              new FletchNativeDescriptor(
-                  native['enum'], cls, public, index);
+          add("", name.substring(1));
         }
       } else {
-        key = '$cls.$name';
+        add(cls, name);
       }
-      natives[key] =
-          new FletchNativeDescriptor(native['enum'], cls, name, index++);
+      index++;
     }
     for (Map name in jsonObjects['names']) {
       names[name['name']] = name['value'];

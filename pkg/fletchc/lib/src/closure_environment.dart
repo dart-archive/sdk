@@ -289,6 +289,15 @@ class ClosureVisitor
     arguments.accept(this);
   }
 
+  void visitSuperMethodInvoke(
+      Send node,
+      MethodElement element,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    arguments.accept(this);
+  }
+
   void visitTopLevelFieldGet(Send node, FieldElement element, _) {
     // Intentionally empty: there is just nothing to visit in this case.
   }
@@ -353,6 +362,16 @@ class ClosureVisitor
       Selector selector,
       _) {
     receiver.accept(this);
+  }
+
+  void visitDynamicPropertySet(
+      Send node,
+      Node receiver,
+      Selector selector,
+      Node rhs,
+      _) {
+    receiver.accept(this);
+    rhs.accept(this);
   }
 
   void visitIs(Send node, Node expression, DartType type, _) {
@@ -431,6 +450,32 @@ class ClosureVisitor
     expression.accept(this);
   }
 
+  void visitStaticFieldSet(
+      SendSet node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void visitLocalVariableCompound(
+      Send node,
+      LocalVariableElement variable,
+      AssignmentOperator operator,
+      Node rhs,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorUnresolvedInvoke(
+      Send node,
+      Element element,
+      Node arguments,
+      Selector selector,
+      _) {
+    // Don't report errors here.
+  }
+
   void internalError(Spannable spannable, String message) {
     throw new SpannableAssertionFailure(spannable, message);
   }
@@ -463,15 +508,6 @@ class ClosureVisitor
     internalError(node, "[errorLocalFunctionSet] isn't implemented yet.");
   }
 
-  void visitDynamicPropertySet(
-      SendSet node,
-      Node receiver,
-      Selector selector,
-      Node rhs,
-      _) {
-    internalError(node, "[visitDynamicPropertySet] isn't implemented yet.");
-  }
-
   void visitThisInvoke(
       Send node,
       NodeList arguments,
@@ -479,7 +515,6 @@ class ClosureVisitor
       _) {
     internalError(node, "[visitThisInvoke] isn't implemented yet.");
   }
-
 
   void visitSuperFieldGet(
       Send node,
@@ -518,15 +553,6 @@ class ClosureVisitor
       MethodElement method,
       _) {
     internalError(node, "[visitSuperMethodGet] isn't implemented yet.");
-  }
-
-  void visitSuperMethodInvoke(
-      Send node,
-      MethodElement method,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    internalError(node, "[visitSuperMethodInvoke] isn't implemented yet.");
   }
 
   void errorSuperMethodSet(
@@ -583,14 +609,6 @@ class ClosureVisitor
       Selector selector,
       _) {
     internalError(node, "[errorSuperSetterInvoke] isn't implemented yet.");
-  }
-
-  void visitStaticFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs,
-      _) {
-    internalError(node, "[visitStaticFieldSet] isn't implemented yet.");
   }
 
   void errorFinalStaticFieldSet(
@@ -932,15 +950,6 @@ class ClosureVisitor
       Node rhs,
       _) {
     internalError(node, "[errorFinalParameterCompound] isn't implemented yet.");
-  }
-
-  void visitLocalVariableCompound(
-      Send node,
-      LocalVariableElement variable,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    internalError(node, "[visitLocalVariableCompound] isn't implemented yet.");
   }
 
   void errorFinalLocalVariableCompound(
@@ -1568,15 +1577,6 @@ class ClosureVisitor
       Node rhs,
       _) {
     internalError(node, "[errorUnresolvedSet] isn't implemented yet.");
-  }
-
-  void errorUnresolvedInvoke(
-      Send node,
-      Element element,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    internalError(node, "[errorUnresolvedInvoke] isn't implemented yet.");
   }
 
   void errorUnresolvedCompound(
