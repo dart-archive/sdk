@@ -47,24 +47,17 @@
 
 namespace fletch {
 
-
 static const char* driver_env_name = "FLETCH_DRIVER_PORT";
-
 
 static char* program_name = NULL;
 
-
 static char fletch_config_file[MAXPATHLEN];
-
 
 static const char fletch_config_name[] = ".fletch";
 
-
 static bool fletch_config_file_exists = false;
 
-
 static const char* dart_vm_name = "/dart/sdk/bin/dart";
-
 
 void Die(const char *format, ...) {
   va_list args;
@@ -75,7 +68,6 @@ void Die(const char *format, ...) {
   exit(255);
 }
 
-
 dev_t GetDevice(const char* name) {
   struct stat info;
   if (stat(name, &info) != 0) {
@@ -83,7 +75,6 @@ dev_t GetDevice(const char* name) {
   }
   return info.st_dev;
 }
-
 
 bool FileExists(const char* name) {
   struct stat info;
@@ -93,7 +84,6 @@ bool FileExists(const char* name) {
   return false;
 }
 
-
 void FletchConfigFile(char *result, const char* directory) {
   char* ptr = stpncpy(result, directory, MAXPATHLEN);
   if (ptr[-1] != '/') {
@@ -102,7 +92,6 @@ void FletchConfigFile(char *result, const char* directory) {
   }
   strncpy(ptr, fletch_config_name, sizeof(fletch_config_name));
 }
-
 
 void ParentDir(char *directory) {
   char copy[MAXPATHLEN + 1];
@@ -160,7 +149,6 @@ static void DetectConfiguration() {
   fletch_config_file_exists = false;
 }
 
-
 static void ReadDriverConfig(char* config_string, size_t length) {
   DetectConfiguration();
   if (fletch_config_file_exists) {
@@ -177,7 +165,6 @@ static void ReadDriverConfig(char* config_string, size_t length) {
     printf("Creating config file: %s\n", fletch_config_file);
   }
 }
-
 
 static int ComputeDriverPort() {
   char buffer[1024];
@@ -231,7 +218,6 @@ static int ComputeDriverPort() {
   return (int)port;
 }
 
-
 static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
   char resolved[buffer_length];
   GetPathOfExecutable(buffer, buffer_length);
@@ -247,7 +233,6 @@ static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
   size_t length = strlen(buffer);
   strncpy(buffer + length, dart_vm_name, buffer_length - length);
 }
-
 
 static int StartFletchDriverServer() {
   const char* argv[6];
@@ -350,7 +335,6 @@ static int StartFletchDriverServer() {
   return -1;
 }
 
-
 static int ReadInt(Socket *socket) {
   uint32* data = reinterpret_cast<uint32*>(socket->Read(4));
   if (data == NULL) {
@@ -360,7 +344,6 @@ static int ReadInt(Socket *socket) {
   free(data);
   return (int)result;
 }
-
 
 static void Forward(Socket* socket, int fd) {
   uint8 buffer[1500];
@@ -379,12 +362,10 @@ static void Forward(Socket* socket, int fd) {
   } while (bytes_count > 0);
 }
 
-
 static void SendInt(Socket *socket, uint32 value) {
   uint32 data = htonl(value);
   socket->Write(reinterpret_cast<uint8*>(&data), sizeof(uint32));
 }
-
 
 static void SendArgv(Socket *socket, int argc, char** argv) {
   SendInt(socket, argc);
@@ -394,7 +375,6 @@ static void SendArgv(Socket *socket, int argc, char** argv) {
     socket->Write(reinterpret_cast<uint8*>(argv[i]), size);
   }
 }
-
 
 static int Main(int argc, char** argv) {
   program_name = argv[0];
@@ -434,7 +414,6 @@ static int Main(int argc, char** argv) {
   tcgetattr(STDIN_FILENO, &term);
   term.c_lflag &= ~(ICANON);
   tcsetattr(STDIN_FILENO, TCSANOW, &term);
-
 
   int nfds = stdio_socket->FileDescriptor();
   if (nfds < stderr_socket->FileDescriptor()) {
@@ -491,7 +470,6 @@ static int Main(int argc, char** argv) {
 
   return 0;
 }
-
 
 }  // namespace fletch
 
