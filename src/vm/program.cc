@@ -199,6 +199,7 @@ void Program::Unfold() {
   classes_ = NULL;
   constants_ = NULL;
   static_methods_ = NULL;
+  dispatch_table_ = NULL;
   is_compact_ = false;
 }
 
@@ -215,7 +216,7 @@ class SelectorRow {
   int dispatch_table_index() const { return dispatch_table_index_; }
 
   int ComputeSize() {
-    return (variants_ <= kFewVariantsThreshold) ? (variants_ + 1) * 4 + 2 : 0;
+    return (variants_ <= kFewVariantsThreshold) ? (variants_ + 2) * 4 : 0;
   }
 
   int FillDispatchTable(Program* program, Array* table, int index);
@@ -335,26 +336,20 @@ class ProgramTableRewriter {
 int SelectorRow::FillDispatchTable(Program* program, Array* table, int index) {
   if (variants_ > kFewVariantsThreshold) return index;
 
-  // TODO(kasperl): The snapshotting code cannot deal with the intrinsic
-  // pointer yet, so we avoid using the dispatch table if any of the target
-  // methods has an associated intrinsic.
-  for (int i = 0; i < variants_; i++) {
-    if (methods_[i]->ComputeIntrinsic() != NULL) return index;
-  }
-
   // Mark this row as being in the dispatch table.
   dispatch_table_index_ = index;
 
   table->set(index++, Smi::FromWord(Selector::ArityField::decode(selector_)));
   table->set(index++, Smi::FromWord(selector_));
+  table->set(index++, NULL);
+  table->set(index++, NULL);
+
   for (int i = 0; i < variants_; i++) {
     Class* clazz = classes_[i];
     Function* method = methods_[i];
     table->set(index++, Smi::FromWord(clazz->id()));
     table->set(index++, Smi::FromWord(clazz->child_id()));
-    Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
-    ASSERT(intrinsic == NULL);
-    table->set(index++, intrinsic);
+    table->set(index++, NULL);
     table->set(index++, method);
   }
 
@@ -364,7 +359,7 @@ int SelectorRow::FillDispatchTable(Program* program, Array* table, int index) {
 
   table->set(index++, Smi::FromWord(0));
   table->set(index++, Smi::FromWord(Smi::kMaxValue));
-  table->set(index++, Smi::FromWord(0));
+  table->set(index++, NULL);
   table->set(index++, target);
 
   ASSERT(index - dispatch_table_index_ == ComputeSize());
@@ -486,6 +481,7 @@ class FoldingVisitor: public PointerVisitor {
 
     ConstructDispatchTable(table);
     program_->set_dispatch_table(rewriter_->ProcessSelectorRows(program_));
+    program_->SetupDispatchTableIntrinsics();
 
     FunctionPostprocessVisitor visitor(rewriter_);
     program_->heap()->IterateObjects(&visitor);
@@ -1035,6 +1031,29 @@ void Program::IterateRoots(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&static_methods_));
   visitor->Visit(reinterpret_cast<Object**>(&static_fields_));
   visitor->Visit(reinterpret_cast<Object**>(&dispatch_table_));
+}
+
+void Program::ClearDispatchTableIntrinsics() {
+  Array* table = dispatch_table();
+  if (table == NULL) return;
+  int length = table->length();
+  for (int i = 0; i < length; i += 4) {
+    table->set(i + 2, NULL);
+  }
+}
+
+void Program::SetupDispatchTableIntrinsics() {
+  Array* table = dispatch_table();
+  if (table == NULL) return;
+  int length = table->length();
+  for (int i = 0; i < length; i += 4) {
+    ASSERT(table->get(i + 2) == NULL);
+    Object* target = table->get(i + 3);
+    if (target == NULL) continue;
+    Function* method = Function::cast(target);
+    Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
+    table->set(i + 2, intrinsic);
+  }
 }
 
 }  // namespace fletch

@@ -168,6 +168,10 @@ class Program {
   // Iterates over all roots in the program.
   void IterateRoots(PointerVisitor* visitor);
 
+  // Dispatch table support.
+  void ClearDispatchTableIntrinsics();
+  void SetupDispatchTableIntrinsics();
+
   // Root objects.
 #define ROOT_ACCESSOR(type, name)                                       \
   type* name() const { return name##_; }                                \

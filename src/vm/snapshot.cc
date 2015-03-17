@@ -287,6 +287,7 @@ Program* SnapshotReader::ReadProgram() {
 
   // Programs read from a snapshot are always compact.
   program->set_is_compact(true);
+  program->SetupDispatchTableIntrinsics();
 
   return program;
 }
@@ -303,6 +304,7 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   // snapshotting.
   if (!program->is_compact()) program->Fold();
   ASSERT(program->is_compact());
+  program->ClearDispatchTableIntrinsics();
 
   // Write the size of the heap.
   //

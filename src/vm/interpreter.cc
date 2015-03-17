@@ -328,7 +328,7 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     int class_id = clazz->id();
 
     Function* target = NULL;
-    for (int offset = 2; true; offset += 4) {
+    for (int offset = 4; true; offset += 4) {
       Smi* lower = Smi::cast(table->get(index + offset));
       if (class_id < lower->value()) continue;
       Smi* upper = Smi::cast(table->get(index + offset + 1));

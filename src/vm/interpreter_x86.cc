@@ -515,15 +515,15 @@ void InterpreterGeneratorX86::DoInvokeMethodFast() {
   // Loop through the table.
   Label loop, next;
   __ Bind(&loop);
-  __ cmpl(EBX, Address(EDX, 2 * kPointerSize));
+  __ cmpl(EBX, Address(EDX, 4 * kPointerSize));
   __ j(LESS, &next);
-  __ cmpl(EBX, Address(EDX, 3 * kPointerSize));
+  __ cmpl(EBX, Address(EDX, 5 * kPointerSize));
   __ j(GREATER_EQUAL, &next);
 
   // Found the right target method.
   Label intrinsified;
-  __ movl(EBX, Address(EDX, 4 * kPointerSize));
-  __ movl(EAX, Address(EDX, 5 * kPointerSize));
+  __ movl(EBX, Address(EDX, 6 * kPointerSize));
+  __ movl(EAX, Address(EDX, 7 * kPointerSize));
   __ testl(EBX, EBX);
   __ j(NOT_ZERO, &intrinsified);
 
