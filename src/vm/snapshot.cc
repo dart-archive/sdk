@@ -16,6 +16,7 @@ namespace fletch {
 
 static const int kSupportedSizeOfDouble = 8;
 static const int kReferenceTableSizeBytes = 4;
+static const int kHeapSizeBytes = 4;
 
 class Header {
  public:
@@ -263,7 +264,10 @@ Program* SnapshotReader::ReadProgram() {
   Program* program = new Program();
 
   // Read the heap size and allocate an area for it.
-  memory_ = ObjectMemory::AllocateChunk(program->heap()->space(), ReadWord());
+  int size_position = position_ + ((kPointerSize == 4) ? 0 : kHeapSizeBytes);
+  position_ += 2 * kHeapSizeBytes;
+  int heap_size = ReadHeapSizeFrom(size_position);
+  memory_ = ObjectMemory::AllocateChunk(program->heap()->space(), heap_size);
   top_ = memory_->base();
 
   // Allocate space for the backward references.
@@ -306,15 +310,12 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   ASSERT(program->is_compact());
   program->ClearDispatchTableIntrinsics();
 
-  // Write the size of the heap.
-  //
-  // TODO(ager): This is currently platform dependent. This makes it
-  // impossible to load a snapshot created on x86 on an x64 machine.
-  // That seems really unfortunate. We could keep track of byte data
-  // and pointers separately and record the size of pointers and the
-  // size of data so that we can deserialize in a platform independent
-  // way.
-  WriteWord(program->heap()->space()->Used());
+  // Reserve space for the size of the heap.
+  int size_position =
+      position_ + ((kPointerSize == 4) ? 0 : kHeapSizeBytes);
+  int alternative_size_position =
+      position_ + ((kPointerSize == 4) ? kHeapSizeBytes : 0);
+  for (int i = 0; i < 2 * kHeapSizeBytes; i++) WriteByte(0);
 
   // Write all the program state (except roots).
   WriteObject(program->entry());
@@ -342,6 +343,10 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
     references >>= 8;
   }
   ASSERT(references == 0);
+
+  // Write the size of the heap.
+  WriteHeapSizeTo(size_position, program->heap()->space()->Used());
+  WriteHeapSizeTo(alternative_size_position, alternative_heap_size_);
 
   return snapshot_.Sublist(0, position_);
 }
@@ -399,6 +404,7 @@ Object* SnapshotReader::ReadObject() {
     default:
       UNIMPLEMENTED();
   }
+
   return object;
 }
 
@@ -423,33 +429,60 @@ void SnapshotWriter::WriteObject(Object* object) {
 
   // Serialize the object.
   switch (type) {
-    case InstanceFormat::STRING_TYPE:
-      String::cast(object)->StringWriteTo(this, klass);
+    case InstanceFormat::STRING_TYPE: {
+      String* str = String::cast(object);
+      alternative_heap_size_ += str->AlternativeSize();
+      str->StringWriteTo(this, klass);
       break;
-    case InstanceFormat::ARRAY_TYPE:
-      Array::cast(object)->ArrayWriteTo(this, klass);
+    }
+    case InstanceFormat::ARRAY_TYPE: {
+      Array* array = Array::cast(object);
+      alternative_heap_size_ += array->AlternativeSize();
+      array->ArrayWriteTo(this, klass);
       break;
-    case InstanceFormat::BYTE_ARRAY_TYPE:
-      ByteArray::cast(object)->ByteArrayWriteTo(this, klass);
+    }
+    case InstanceFormat::BYTE_ARRAY_TYPE: {
+      ByteArray* array = ByteArray::cast(object);
+      alternative_heap_size_ += array->AlternativeSize();
+      array->ByteArrayWriteTo(this, klass);
       break;
-    case InstanceFormat::LARGE_INTEGER_TYPE:
-      LargeInteger::cast(object)->LargeIntegerWriteTo(this, klass);
+    }
+    case InstanceFormat::LARGE_INTEGER_TYPE: {
+      LargeInteger* integer = LargeInteger::cast(object);
+      alternative_heap_size_ += integer->AlternativeSize();
+      integer->LargeIntegerWriteTo(this, klass);
       break;
-    case InstanceFormat::INSTANCE_TYPE:
-      Instance::cast(object)->InstanceWriteTo(this, klass);
+    }
+    case InstanceFormat::INSTANCE_TYPE: {
+      Instance* instance = Instance::cast(object);
+      alternative_heap_size_ += instance->AlternativeSize(klass);
+      instance->InstanceWriteTo(this, klass);
       break;
-    case InstanceFormat::CLASS_TYPE:
-      Class::cast(object)->ClassWriteTo(this, klass);
+    }
+    case InstanceFormat::CLASS_TYPE: {
+      Class* klass = Class::cast(object);
+      alternative_heap_size_ += klass->AlternativeSize();
+      klass->ClassWriteTo(this, klass);
       break;
-    case InstanceFormat::FUNCTION_TYPE:
-      Function::cast(object)->FunctionWriteTo(this, klass);
+    }
+    case InstanceFormat::FUNCTION_TYPE: {
+      Function* function = Function::cast(object);
+      alternative_heap_size_ += function->AlternativeSize();
+      function->FunctionWriteTo(this, klass);
       break;
-    case InstanceFormat::DOUBLE_TYPE:
-      Double::cast(object)->DoubleWriteTo(this, klass);
+    }
+    case InstanceFormat::DOUBLE_TYPE: {
+      Double* d = Double::cast(object);
+      alternative_heap_size_ += d->AlternativeSize();
+      d->DoubleWriteTo(this, klass);
       break;
-    case InstanceFormat::INITIALIZER_TYPE:
-      Initializer::cast(object)->InitializerWriteTo(this, klass);
+    }
+    case InstanceFormat::INITIALIZER_TYPE: {
+      Initializer* initializer = Initializer::cast(object);
+      alternative_heap_size_ += initializer->AlternativeSize();
+      initializer->InitializerWriteTo(this, klass);
       break;
+    }
     default:
       // Unable to handle this type of object.
       UNREACHABLE();
@@ -487,6 +520,21 @@ void SnapshotWriter::WriteWordList(List<int> list) {
   WriteWord(length);
   for (int i = 0; i < length; i++) {
     WriteWord(list[i]);
+  }
+}
+
+int SnapshotReader::ReadHeapSizeFrom(int position) {
+  int size = 0;
+  for (int i = 0; i < kHeapSizeBytes; i++) {
+    size = (size << 8) | snapshot_[position + i];
+  }
+  return size;
+}
+
+void SnapshotWriter::WriteHeapSizeTo(int position, int size) {
+  for (int i = kHeapSizeBytes - 1; i >= 0; i--) {
+    snapshot_[position + i] = size & 0xFF;
+    size >>= 8;
   }
 }
 

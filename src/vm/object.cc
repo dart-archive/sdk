@@ -149,25 +149,21 @@ int HeapObject::Size() {
   InstanceFormat format = raw_class()->instance_format();
   if (!format.has_variable_part()) return format.fixed_size();
   int type = format.type();
-  // Strings.
-  if (type == InstanceFormat::STRING_TYPE) {
-    return String::cast(this)->StringSize();
-  }
-  // Arrays.
-  if (type == InstanceFormat::ARRAY_TYPE) {
-    return Array::cast(this)->ArraySize();
-  }
-  // ByteArrays.
-  if (type == InstanceFormat::BYTE_ARRAY_TYPE) {
-    return ByteArray::cast(this)->ByteArraySize();
-  }
-  // Functions.
-  if (type == InstanceFormat::FUNCTION_TYPE) {
-    return Function::cast(this)->FunctionSize();
-  }
-  // Stacks.
-  if (type == InstanceFormat::STACK_TYPE) {
-    return Stack::cast(this)->StackSize();
+  switch (type) {
+    case InstanceFormat::STRING_TYPE:
+      return String::cast(this)->StringSize();
+    case InstanceFormat::ARRAY_TYPE:
+      return Array::cast(this)->ArraySize();
+    case InstanceFormat::BYTE_ARRAY_TYPE:
+      return ByteArray::cast(this)->ByteArraySize();
+    case InstanceFormat::FUNCTION_TYPE:
+      return Function::cast(this)->FunctionSize();
+    case InstanceFormat::STACK_TYPE:
+      return Stack::cast(this)->StackSize();
+    case InstanceFormat::DOUBLE_TYPE:
+      return Double::cast(this)->DoubleSize();
+    case InstanceFormat::LARGE_INTEGER_TYPE:
+      return LargeInteger::cast(this)->LargeIntegerSize();
   }
   UNREACHABLE();
   return 0;
@@ -501,13 +497,6 @@ void HeapObject::IteratePointers(PointerVisitor* visitor) {
       visitor->VisitBlock(first, first + function->literals_size());
       break;
     }
-
-    case InstanceFormat::LARGE_INTEGER_TYPE:
-    case InstanceFormat::DOUBLE_TYPE:
-      // No pointers in these objects.
-      // TODO(vitalyr): we might want to have
-      // only_non_pointers_in_fixed_part for types like these.
-      break;
 
     default:
       UNREACHABLE();

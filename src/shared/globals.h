@@ -48,8 +48,10 @@ const int kPointerSize = sizeof(void*);  // NOLINT
 
 #ifdef FLETCH64
 const int kPointerSizeLog2 = 3;
+const int kAlternativePointerSize = 4;
 #else
 const int kPointerSizeLog2 = 2;
+const int kAlternativePointerSize = 8;
 #endif
 
 // Bit sizes.

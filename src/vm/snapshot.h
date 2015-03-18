@@ -77,6 +77,7 @@ class SnapshotReader {
 
   List<Object*> ReadList();
   List<int> ReadWordList();
+  int ReadHeapSizeFrom(int position);
 };
 
 class SnapshotWriter {
@@ -84,7 +85,8 @@ class SnapshotWriter {
   SnapshotWriter()
       : snapshot_(List<uint8>::New(1 * MB)),
         position_(0),
-        index_(1) { }
+        index_(1),
+        alternative_heap_size_(0) { }
   virtual ~SnapshotWriter() { }
 
   List<uint8> WriteProgram(Program* program);
@@ -119,11 +121,19 @@ class SnapshotWriter {
  private:
   List<uint8> snapshot_;
   int position_;
-
   int index_;
+
+  // The snapshot contains the heap size needed in order to read in the snapshot
+  // without reallocation both for a 32-bit system and for a 64-bit system.
+  // When writing the snapshot from a 32-bit system, the alternative heap size
+  // is the size needed for the snapshot on a 64-bit system. When writing the
+  // snapshot from a 64-bit system, the alternative heap size is the size needed
+  // for the snapshot on a 32-bit system.
+  int alternative_heap_size_;
 
   void WriteList(List<Object*> list);
   void WriteWordList(List<int> list);
+  void WriteHeapSizeTo(int position, int size);
 
   void EnsureCapacity(int extra) {
     if (position_ + extra >= snapshot_.length()) GrowCapacity(extra);

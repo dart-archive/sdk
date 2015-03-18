@@ -288,6 +288,13 @@ class HeapObject: public Object {
   inline void SetEquivalentForwarding(HeapObject* other);
   inline HeapObject* EquivalentForwardingAddress();
 
+  int ComputeAlternativeSize(int fixed_size, int variable_size) {
+    ASSERT(Utils::IsAligned(fixed_size, kPointerSize));
+    int pointers_size = (fixed_size / kPointerSize) * kAlternativePointerSize;
+    return Utils::RoundUp(pointers_size + variable_size,
+                          kAlternativePointerSize);
+  }
+
   // Raw field accessors.
   inline void at_put(int offset, Object* value);
   inline Object* at(int offset);
@@ -322,10 +329,16 @@ class LargeInteger : public HeapObject {
   void LargeIntegerPrint();
   void LargeIntegerShortPrint();
 
-  static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
+  static int AllocationSize() {
+    return Utils::RoundUp(kSize + sizeof(int64), kPointerSize);
+  }
 
-  static const int kValueOffset = HeapObject::kSize;
-  static const int kSize = kValueOffset + sizeof(int64);
+  int LargeIntegerSize() { return AllocationSize(); }
+
+  int AlternativeSize() {
+    return ComputeAlternativeSize(HeapObject::kSize, sizeof(int64));
+  }
+
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(LargeInteger);
 };
@@ -349,15 +362,20 @@ class Double : public HeapObject {
   void DoubleReadFrom(SnapshotReader* reader);
 
   // Sizing.
-  static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
+  static int AllocationSize() {
+    return Utils::RoundUp(kSize + sizeof(double), kPointerSize);
+  }
+
+  int DoubleSize() { return AllocationSize(); }
+
+  int AlternativeSize() {
+    return ComputeAlternativeSize(HeapObject::kSize, sizeof(double));
+  }
 
   // Comparing.
   inline bool DoubleIsEquivalentTo(Double* other) {
     return value() == other->value();
   }
-
-  static const int kValueOffset = HeapObject::kSize;
-  static const int kSize = kValueOffset + sizeof(double);
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(Double);
@@ -386,7 +404,6 @@ class Boxed : public HeapObject {
 
 class Function;
 
-
 // Heap allocated object containing a static initializer.
 class Initializer : public HeapObject {
  public:
@@ -405,6 +422,10 @@ class Initializer : public HeapObject {
   void InitializerReadFrom(SnapshotReader* reader);
 
   static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
+
+  int AlternativeSize() {
+    return ComputeAlternativeSize(kSize, 0);
+  }
 
   static const int kFunctionOffset = HeapObject::kSize;
   static const int kSize = kFunctionOffset + kPointerSize;
@@ -472,8 +493,13 @@ class Array: public BaseArray {
   int ArraySize() {
     return AllocationSize(length());
   }
+
   static int AllocationSize(int length) {
     return kSize + (length * kPointerSize);
+  }
+
+  int AlternativeSize() {
+    return ComputeAlternativeSize(kSize, length() * kAlternativePointerSize);
   }
 
   // Casting.
@@ -515,6 +541,10 @@ class ByteArray : public BaseArray {
     return kSize + Utils::RoundUp(length, kPointerSize);
   }
 
+  int AlternativeSize() {
+    return ComputeAlternativeSize(kSize, length());
+  }
+
   // Snapshotting.
   void ByteArrayWriteTo(SnapshotWriter* writer, Class* klass);
   void ByteArrayReadFrom(SnapshotReader* reader, int length);
@@ -550,6 +580,8 @@ class Instance: public HeapObject {
   inline static int NumberOfFieldsFromAllocationSize(int size) {
     return (size - kSize) / kPointerSize;
   }
+
+  inline int AlternativeSize(Class* klass);
 
   // Snapshotting.
   void InstanceWriteTo(SnapshotWriter* writer, Class* klass);
@@ -590,6 +622,10 @@ class String: public BaseArray {
   static int AllocationSize(int length) {
     int bytes = length * sizeof(uint16_t);
     return Utils::RoundUp(kSize + bytes, kPointerSize);
+  }
+
+  int AlternativeSize() {
+    return ComputeAlternativeSize(kSize, length() * sizeof(uint16_t));
   }
 
   // Hashing
@@ -672,6 +708,13 @@ class Function: public HeapObject {
     return AllocationSize(variable_size);
   }
 
+  int AlternativeSize() {
+    // Only used when writing snapshots. We only write snapshots
+    // in folded form where there are no literals.
+    ASSERT(literals_size() == 0);
+    return ComputeAlternativeSize(kSize, bytecode_size());
+  }
+
   Function* UnfoldInToSpace(Space* to, int literals_size);
   Function* FoldInToSpace(Space* to);
 
@@ -709,7 +752,7 @@ class Function: public HeapObject {
   DISALLOW_IMPLICIT_CONSTRUCTORS(Function);
 };
 
-class Class: public Instance {
+class Class: public HeapObject {
  public:
   // [super]: field containing the super class.
   inline bool has_super_class();
@@ -746,6 +789,10 @@ class Class: public Instance {
   inline static Class* cast(Object* value);
 
   static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
+
+  int AlternativeSize() {
+    return ComputeAlternativeSize(kSize, 0);
+  }
 
   // Is this class a subclass of the given class?
   bool IsSubclassOf(Class* klass);
@@ -915,7 +962,7 @@ InstanceFormat::InstanceFormat(Type type,
 }
 
 const InstanceFormat InstanceFormat::heap_integer_format() {
-  return InstanceFormat(LARGE_INTEGER_TYPE, LargeInteger::kSize, false, false);
+  return InstanceFormat(LARGE_INTEGER_TYPE, LargeInteger::kSize, true, true);
 }
 
 const InstanceFormat InstanceFormat::byte_array_format() {
@@ -923,7 +970,7 @@ const InstanceFormat InstanceFormat::byte_array_format() {
 }
 
 const InstanceFormat InstanceFormat::double_format() {
-  return InstanceFormat(DOUBLE_TYPE, Double::kSize, false, false);
+  return InstanceFormat(DOUBLE_TYPE, Double::kSize, true, true);
 }
 
 const InstanceFormat InstanceFormat::boxed_format() {
@@ -1389,6 +1436,11 @@ void Instance::SetInstanceField(int index, Object* object) {
   at_put(HeapObject::kSize + (index * kPointerSize), object);
 }
 
+int Instance::AlternativeSize(Class* klass) {
+  int fields = klass->NumberOfInstanceFields();
+  return ComputeAlternativeSize(kSize, fields * kAlternativePointerSize);
+}
+
 // Inlined Function functions.
 
 uword Function::arity() {
@@ -1458,11 +1510,11 @@ Object* Function::ConstantForBytecode(uint8* bcp) {
 // Inlined LargeInteger functions.
 
 int64 LargeInteger::value() {
-  return *reinterpret_cast<int64*>(address() + LargeInteger::kValueOffset);
+  return *reinterpret_cast<int64*>(address() + HeapObject::kSize);
 }
 
 void LargeInteger::set_value(int64 value) {
-  *reinterpret_cast<int64*>(address() + LargeInteger::kValueOffset) = value;
+  *reinterpret_cast<int64*>(address() + HeapObject::kSize) = value;
 }
 
 LargeInteger* LargeInteger::cast(Object* object) {
@@ -1473,11 +1525,11 @@ LargeInteger* LargeInteger::cast(Object* object) {
 // Inlined Double functions.
 
 double Double::value() {
-  return *reinterpret_cast<double*>(address() + Double::kValueOffset);
+  return *reinterpret_cast<double*>(address() + HeapObject::kSize);
 }
 
 void Double::set_value(double value) {
-  *reinterpret_cast<double*>(address() + Double::kValueOffset) = value;
+  *reinterpret_cast<double*>(address() + HeapObject::kSize) = value;
 }
 
 Double* Double::cast(Object* object) {

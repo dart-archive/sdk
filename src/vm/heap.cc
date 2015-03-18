@@ -55,8 +55,7 @@ Object* Heap::CreateByteArray(Class* the_class, int length) {
 Object* Heap::CreateLargeInteger(Class* the_class, int64 value) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::LARGE_INTEGER_TYPE);
-  int size = the_class->instance_format().fixed_size();
-  Object* raw_result = Allocate(size);
+  Object* raw_result = Allocate(LargeInteger::AllocationSize());
   if (raw_result->IsFailure()) return raw_result;
   LargeInteger* result = reinterpret_cast<LargeInteger*>(raw_result);
   result->set_class(the_class);
@@ -67,8 +66,7 @@ Object* Heap::CreateLargeInteger(Class* the_class, int64 value) {
 Object* Heap::CreateDouble(Class* the_class, double value) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::DOUBLE_TYPE);
-  int size = the_class->instance_format().fixed_size();
-  Object* raw_result = Allocate(size);
+  Object* raw_result = Allocate(Double::AllocationSize());
   if (raw_result->IsFailure()) return raw_result;
   Double* result = reinterpret_cast<Double*>(raw_result);
   result->set_class(the_class);
