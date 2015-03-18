@@ -202,9 +202,12 @@ int StackWalker::ComputeStackTrace(Process* process, Session* session) {
     uint8* start_bcp = function->bytecode_address_for(0);
     int bytecode_offset = walker.return_address() - start_bcp;
     // The first byte-code offset is not a return address but the offset for
-    // the throw bytecode. Make it look like a return address by adding
-    // one to the byte-code offset.
-    if (frames == 0) ++bytecode_offset;
+    // the current bytecode. Make it look like a return address by adding
+    // the current bytecode size to the byte-code offset.
+    if (frames == 0) {
+      Opcode current = static_cast<Opcode>(*walker.return_address());
+      bytecode_offset += Bytecode::Size(current);
+    }
     session->PushNewInteger(bytecode_offset);
     session->PushFunction(function);
     ++frames;
