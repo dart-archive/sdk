@@ -778,7 +778,6 @@ void Program::CollectGarbage() {
     NoAllocationFailureScope scope(to);
     ScavengeVisitor visitor(heap_.space(), to);
     IterateRoots(&visitor);
-    if (session_ != NULL) session_->IteratePointers(&visitor);
     {
       VisitProgramRootsVisitor visit_program_roots_visitor(&visitor);
       scheduler()->VisitProcesses(this, &visit_program_roots_visitor);
@@ -1031,6 +1030,7 @@ void Program::IterateRoots(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&static_methods_));
   visitor->Visit(reinterpret_cast<Object**>(&static_fields_));
   visitor->Visit(reinterpret_cast<Object**>(&dispatch_table_));
+  if (session_ != NULL) session_->IteratePointers(visitor);
 }
 
 void Program::ClearDispatchTableIntrinsics() {
