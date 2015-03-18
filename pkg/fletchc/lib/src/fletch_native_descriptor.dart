@@ -29,11 +29,10 @@ class FletchNativeDescriptor {
     for (Map native in jsonObjects['natives']) {
       String cls = native['class'];
       String name = native['name'];
-      void add(className, name) {
-        var cls = className == "<none>" ? null : className;
-        natives['$className.$name'] =
+      void add(cls, name) {
+        natives['$cls.$name'] =
             new FletchNativeDescriptor(native['enum'], cls, name, index);
-        natives['$className._fletchNative$name'] =
+        natives['$cls._fletchNative$name'] =
             new FletchNativeDescriptor(native['enum'], cls, name, index);
       }
       String key;
