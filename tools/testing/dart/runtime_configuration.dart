@@ -56,7 +56,9 @@ class RuntimeConfiguration {
         return new StandaloneDartRuntimeConfiguration();
 
       case 'fletchc':
-        return new FletchcRuntimeConfiguration();
+        return new FletchcRuntimeConfiguration(
+            persist: configuration['persist'],
+            hostChecked: configuration['host_checked']);
 
       case 'drt':
         return new DrtRuntimeConfiguration();
@@ -231,6 +233,11 @@ class StandaloneDartRuntimeConfiguration extends DartVmRuntimeConfiguration {
 }
 
 class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
+  final bool persist;
+  final bool hostChecked;
+
+  FletchcRuntimeConfiguration({this.persist: true, this.hostChecked: true});
+
   List<Command> computeRuntimeCommands(
       TestSuite suite,
       CommandBuilder commandBuilder,
@@ -242,11 +249,23 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
     if (script != null && type != 'application/dart') {
       throw "Dart VM cannot run files of type '$type'.";
     }
-    var binDir = suite.buildDir;
-    var args = ["-p", "package", "pkg/fletchc/lib/fletchc.dart"];
-    args.addAll(arguments);
-    return <Command>[commandBuilder.getVmCommand(
-          suite.dartVmBinaryFileName, args, environmentOverrides)];
+    if (!persist) {
+      List<String> vmArguments =
+          <String>["-p", "package", "pkg/fletchc/lib/fletchc.dart"];
+      if (hostChecked) {
+        vmArguments.insert(0, "-c");
+      }
+      vmArguments.addAll(arguments);
+      return <Command>[commandBuilder.getVmCommand(
+            suite.dartVmBinaryFileName, vmArguments, environmentOverrides)];
+    } else {
+      if (!hostChecked) {
+        throw "fletch_driver only works with --host-checked option.";
+      }
+      return <Command>[
+          commandBuilder.getVmCommand(
+              "${suite.buildDir}/fletch_driver", arguments, {})];
+    }
   }
 }
 

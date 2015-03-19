@@ -276,7 +276,10 @@ Future<int> compile(List<String> arguments, Socket stdio, Socket stderr) async {
   List<String> options = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   FletchCompiler compiler =
-      new FletchCompiler(options: options, script: arguments.single);
+      new FletchCompiler(
+          options: options, script: arguments.single,
+          // TODO(ahe): packageRoot should be an option.
+          packageRoot: "package/");
   bool compilerCrashed = false;
   List commands = await compiler.run().catchError((e, trace) {
     compilerCrashed = true;
