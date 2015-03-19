@@ -769,9 +769,14 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Send node,
       FieldElement element,
       _) {
-    // TODO(ajohnsen): Handle initializer.
-    int index = context.getStaticFieldIndex(element, function);
-    builder.loadStatic(index);
+    if (element.isConst) {
+      int constId = allocateConstantFromNode(node);
+      builder.loadConst(constId);
+    } else {
+      // TODO(ajohnsen): Handle initializer.
+      int index = context.getStaticFieldIndex(element, function);
+      builder.loadStatic(index);
+    }
     applyVisitState();
   }
 
@@ -1061,7 +1066,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     // If visitState is for effect, we can ignore the return value, thus always
     // generate code for the simpler 'prefix' case.
     if (visitState == VisitState.Effect) {
-      handleDynamicPrefix(node, operator, getterSelector, setterSelector);
+      handleDynamicPrefix(null, operator, getterSelector, setterSelector);
       return;
     }
 
@@ -1156,6 +1161,18 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       callConstructor(constructor, arity);
     }
     applyVisitState();
+  }
+
+  void visitTopLevelGetterGet(
+      Send node,
+      FunctionElement getter,
+      _) {
+    if (getter == context.backend.fletchExternalNativeError) {
+      builder.loadSlot(0);
+      return;
+    }
+    generateUnimplementedError(
+        node, "[visitTopLevelGetterGet] isn't implemented.");
   }
 
   /**
@@ -1749,14 +1766,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       _){
     generateUnimplementedError(
         node, "[errorTopLevelFunctionSet] isn't implemented.");
-  }
-
-  void visitTopLevelGetterGet(
-      Send node,
-      FunctionElement getter,
-      _){
-    generateUnimplementedError(
-        node, "[visitTopLevelGetterGet] isn't implemented.");
   }
 
   void errorTopLevelSetterGet(

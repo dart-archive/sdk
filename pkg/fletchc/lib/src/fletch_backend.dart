@@ -184,6 +184,8 @@ class FletchBackend extends Backend {
 
   FunctionElement fletchExternalYield;
 
+  FunctionElement fletchExternalNativeError;
+
   CompiledClass compiledObjectClass;
 
   ClassElement stringClass;
@@ -250,7 +252,9 @@ class FletchBackend extends Backend {
     compiler.patchAnnotationClass = patchAnnotationClass;
 
     FunctionElement findHelper(String name) {
-      FunctionElement helper = fletchSystemLibrary.findLocal(name);
+      Element helper = fletchSystemLibrary.findLocal(name);
+      // TODO(ahe): Make it cleaner.
+      if (helper.isAbstractField) helper = helper.getter;
       if (helper == null) {
         compiler.reportError(
             fletchSystemLibrary, MessageKind.GENERIC,
@@ -271,6 +275,7 @@ class FletchBackend extends Backend {
     }
     fletchExternalInvokeMain = findExternal('invokeMain');
     fletchExternalYield = findExternal('yield');
+    fletchExternalNativeError = findExternal('nativeError');
 
     CompiledClass loadClass(String name, LibraryElement library) {
       var classImpl = library.findLocal(name);
@@ -299,6 +304,7 @@ class FletchBackend extends Backend {
     smiClass = loadBuiltinClass("_Smi", fletchSystemLibrary).element;
     mintClass = loadBuiltinClass("_Mint", fletchSystemLibrary).element;
     stringClass = loadBuiltinClass("String", fletchSystemLibrary).element;
+    loadBuiltinClass("double", fletchSystemLibrary);
     loadBuiltinClass("Null", compiler.coreLibrary);
     loadBuiltinClass("bool", compiler.coreLibrary);
 
@@ -616,9 +622,14 @@ class FletchBackend extends Backend {
             commands.add(new PushBoolean(true));
           } else if (constant.isFalse) {
             commands.add(new PushBoolean(false));
+          } else if (constant.isNull) {
+            commands.add(const PushNull());
           } else if (constant.isString) {
             commands.add(
                 new PushNewString(constant.primitiveValue.slowToString()));
+          } else if (constant.isConstructedObject) {
+            // TODO(ajohnsen): Implement.
+            commands.add(const PushNull());
           } else if (constant is FletchFunctionConstant) {
             commands.add(const PushNull());
             deferredActions.add(() {

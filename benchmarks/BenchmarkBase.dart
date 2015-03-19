@@ -27,7 +27,7 @@ class Expect {
 }
 
 
-const double MILLIS_PER_SECOND = 1000;
+const int MILLIS_PER_SECOND = 1000;
 //const double MICROS_PER_SECOND = 1000000;
 
 

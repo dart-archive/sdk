@@ -5,15 +5,18 @@
 library dart.system;
 
 import 'dart:core' hide
+    double,
     int,
     String;
 
 import 'dart:core' as core show
+    double,
     int,
     String;
 
 import 'dart:collection';
 
+part 'double.dart';
 part 'integer.dart';
 part 'list.dart';
 part 'string.dart';
@@ -36,3 +39,5 @@ entry(int mainArity) {
 
 /// Exits the VM cleanly.
 external yield(bool halt);
+
+external get nativeError;

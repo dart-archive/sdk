@@ -108,10 +108,6 @@ abstract class int implements core.int {
     throw "toInt() isn't implemented";
   }
 
-  toDouble() {
-    throw "toDouble() isn't implemented";
-  }
-
   toStringAsFixed(fractionDigits) {
     throw "toStringAsFixed(fractionDigits) isn't implemented";
   }
@@ -123,6 +119,30 @@ abstract class int implements core.int {
   toStringAsPrecision(precision) {
     throw "toStringAsPrecision(precision) isn't implemented";
   }
+
+  double _addFromDouble(double other) => other + toDouble();
+
+  double _subFromDouble(double other) => other - toDouble();
+
+  double _mulFromDouble(double other) => other * toDouble();
+
+  double _modFromDouble(double other) => other % toDouble();
+
+  double _divFromDouble(double other) => other / toDouble();
+
+  double _truncDivFromDouble(double other) => other ~/ toDouble();
+
+  bool _compareEqFromDouble(double other) => other == toDouble();
+
+  bool _compareLtFromDouble(double other) => other <  toDouble();
+
+  bool _compareLeFromDouble(double other) => other <= toDouble();
+
+  bool _compareGtFromDouble(double other) => other >  toDouble();
+
+  bool _compareGeFromDouble(double other) => other >= toDouble();
+
+  double _remainderFromDouble(double other) => other.remainder(toDouble());
 }
 
 class _Smi extends int {
@@ -130,25 +150,42 @@ class _Smi extends int {
 
   @native external String toString();
 
+  @native external double toDouble();
+
   @native external num operator -();
+
   @native external num operator +(num other);
+
   @native external num operator -(num other);
+
   @native external num operator *(num other);
+
   @native external num operator /(num other);
+
   @native external int operator ~/(num other);
+
   @native external num operator %(num other);
 
   @native external int operator ~();
+
   @native external int operator &(int other);
+
   @native external int operator |(int other);
+
   @native external int operator ^(int other);
+
   @native external int operator >>(int other);
+
   @native external int operator <<(int other);
 
   @native external bool operator ==(other);
+
   @native external bool operator <(num other);
+
   @native external bool operator <=(num other);
+
   @native external bool operator >(num other);
+
   @native external bool operator >=(num other);
 }
 
@@ -157,24 +194,41 @@ class _Mint extends int {
 
   @native external String toString();
 
+  @native external double toDouble();
+
   @native external num operator -();
+
   @native external num operator +(num other);
+
   @native external num operator -(num other);
+
   @native external num operator *(num other);
+
   @native external num operator /(num other);
+
   @native external int operator ~/(num other);
+
   @native external num operator %(num other);
 
   @native external int operator ~();
+
   @native external int operator &(int other);
+
   @native external int operator |(int other);
+
   @native external int operator ^(int other);
+
   @native external int operator >>(int other);
+
   @native external int operator <<(int other);
 
   @native external bool operator ==(other);
+
   @native external bool operator <(num other);
+
   @native external bool operator <=(num other);
+
   @native external bool operator >(num other);
+
   @native external bool operator >=(num other);
 }
