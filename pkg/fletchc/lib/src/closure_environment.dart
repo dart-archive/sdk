@@ -489,7 +489,7 @@ class ClosureVisitor
       ParameterElement parameter,
       Node rhs,
       _) {
-    internalError(node, "[errorFinalParameterSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorFinalLocalVariableSet(
@@ -497,7 +497,7 @@ class ClosureVisitor
       LocalVariableElement variable,
       Node rhs,
       _) {
-    internalError(node, "[errorFinalLocalVariableSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorLocalFunctionSet(
@@ -505,7 +505,7 @@ class ClosureVisitor
       LocalFunctionElement function,
       Node rhs,
       _) {
-    internalError(node, "[errorLocalFunctionSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitThisInvoke(
@@ -513,14 +513,16 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[visitThisInvoke] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperFieldGet(
       Send node,
       FieldElement field,
       _) {
-    internalError(node, "[visitSuperFieldGet] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperFieldSet(
@@ -528,7 +530,8 @@ class ClosureVisitor
       FieldElement field,
       Node rhs,
       _) {
-    internalError(node, "[visitSuperFieldSet] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void errorFinalSuperFieldSet(
@@ -536,7 +539,8 @@ class ClosureVisitor
       FieldElement field,
       Node rhs,
       _) {
-    internalError(node, "[errorFinalSuperFieldSet] isn't implemented yet.");
+    markThisUsed(); // For invoking noSuchMethod.
+    node.visitChildren(this);
   }
 
   void visitSuperFieldInvoke(
@@ -545,14 +549,16 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[visitSuperFieldInvoke] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperMethodGet(
       Send node,
       MethodElement method,
       _) {
-    internalError(node, "[visitSuperMethodGet] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void errorSuperMethodSet(
@@ -560,21 +566,22 @@ class ClosureVisitor
       MethodElement method,
       Node rhs,
       _) {
-    internalError(node, "[errorSuperMethodSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitSuperGetterGet(
       Send node,
       FunctionElement getter,
       _) {
-    internalError(node, "[visitSuperGetterGet] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void errorSuperSetterGet(
       Send node,
       FunctionElement setter,
       _) {
-    internalError(node, "[errorSuperSetterGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitSuperSetterSet(
@@ -582,7 +589,8 @@ class ClosureVisitor
       FunctionElement setter,
       Node rhs,
       _) {
-    internalError(node, "[visitSuperSetterSet] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void errorSuperGetterSet(
@@ -590,7 +598,7 @@ class ClosureVisitor
       FunctionElement getter,
       Node rhs,
       _) {
-    internalError(node, "[errorSuperGetterSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitSuperGetterInvoke(
@@ -599,7 +607,8 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[visitSuperGetterInvoke] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void errorSuperSetterInvoke(
@@ -608,7 +617,7 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[errorSuperSetterInvoke] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorFinalStaticFieldSet(
@@ -616,7 +625,7 @@ class ClosureVisitor
       FieldElement field,
       Node rhs,
       _) {
-    internalError(node, "[errorFinalStaticFieldSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitStaticFieldInvoke(
@@ -625,14 +634,14 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[visitStaticFieldInvoke] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitStaticFunctionGet(
       Send node,
       MethodElement function,
       _) {
-    internalError(node, "[visitStaticFunctionGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorStaticFunctionSet(
@@ -640,21 +649,21 @@ class ClosureVisitor
       MethodElement function,
       Node rhs,
       _) {
-    internalError(node, "[errorStaticFunctionSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitStaticGetterGet(
       Send node,
       FunctionElement getter,
       _) {
-    internalError(node, "[visitStaticGetterGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorStaticSetterGet(
       Send node,
       FunctionElement setter,
       _) {
-    internalError(node, "[errorStaticSetterGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitStaticSetterSet(
@@ -662,7 +671,7 @@ class ClosureVisitor
       FunctionElement setter,
       Node rhs,
       _) {
-    internalError(node, "[visitStaticSetterSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorStaticGetterSet(
@@ -670,7 +679,7 @@ class ClosureVisitor
       FunctionElement getter,
       Node rhs,
       _) {
-    internalError(node, "[errorStaticGetterSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitStaticGetterInvoke(
@@ -679,7 +688,7 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[visitStaticGetterInvoke] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorStaticSetterInvoke(
@@ -688,7 +697,7 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[errorStaticSetterInvoke] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorFinalTopLevelFieldSet(
@@ -696,14 +705,14 @@ class ClosureVisitor
       FieldElement field,
       Node rhs,
       _) {
-    internalError(node, "[errorFinalTopLevelFieldSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelFunctionGet(
       Send node,
       MethodElement function,
       _) {
-    internalError(node, "[visitTopLevelFunctionGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorTopLevelFunctionSet(
@@ -711,21 +720,21 @@ class ClosureVisitor
       MethodElement function,
       Node rhs,
       _) {
-    internalError(node, "[errorTopLevelFunctionSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelGetterGet(
       Send node,
       FunctionElement getter,
       _) {
-    internalError(node, "[visitTopLevelGetterGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorTopLevelSetterGet(
       Send node,
       FunctionElement setter,
       _) {
-    internalError(node, "[errorTopLevelSetterGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelSetterSet(
@@ -733,7 +742,7 @@ class ClosureVisitor
       FunctionElement setter,
       Node rhs,
       _) {
-    internalError(node, "[visitTopLevelSetterSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorTopLevelGetterSet(
@@ -741,7 +750,7 @@ class ClosureVisitor
       FunctionElement getter,
       Node rhs,
       _) {
-    internalError(node, "[errorTopLevelGetterSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelGetterInvoke(
@@ -750,7 +759,7 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[visitTopLevelGetterInvoke] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorTopLevelSetterInvoke(
@@ -759,14 +768,14 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[errorTopLevelSetterInvoke] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitClassTypeLiteralGet(
       Send node,
       TypeConstantExpression constant,
       _) {
-    internalError(node, "[visitClassTypeLiteralGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitClassTypeLiteralInvoke(
@@ -775,7 +784,7 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[visitClassTypeLiteralInvoke] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorClassTypeLiteralSet(
@@ -783,14 +792,14 @@ class ClosureVisitor
       TypeConstantExpression constant,
       Node rhs,
       _) {
-    internalError(node, "[errorClassTypeLiteralSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTypedefTypeLiteralGet(
       Send node,
       TypeConstantExpression constant,
       _) {
-    internalError(node, "[visitTypedefTypeLiteralGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTypedefTypeLiteralInvoke(
@@ -799,8 +808,7 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(
-        node, "[visitTypedefTypeLiteralInvoke] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorTypedefTypeLiteralSet(
@@ -808,15 +816,15 @@ class ClosureVisitor
       TypeConstantExpression constant,
       Node rhs,
       _) {
-    internalError(node, "[errorTypedefTypeLiteralSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTypeVariableTypeLiteralGet(
       Send node,
       TypeVariableElement element,
       _) {
-    internalError(
-        node, "[visitTypeVariableTypeLiteralGet] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitTypeVariableTypeLiteralInvoke(
@@ -825,8 +833,8 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(
-        node, "[visitTypeVariableTypeLiteralInvoke] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void errorTypeVariableTypeLiteralSet(
@@ -834,15 +842,15 @@ class ClosureVisitor
       TypeVariableElement element,
       Node rhs,
       _) {
-    internalError(
-        node, "[errorTypeVariableTypeLiteralSet] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitDynamicTypeLiteralGet(
       Send node,
       TypeConstantExpression constant,
       _) {
-    internalError(node, "[visitDynamicTypeLiteralGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitDynamicTypeLiteralInvoke(
@@ -851,8 +859,7 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(
-        node, "[visitDynamicTypeLiteralInvoke] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorDynamicTypeLiteralSet(
@@ -860,14 +867,14 @@ class ClosureVisitor
       TypeConstantExpression constant,
       Node rhs,
       _) {
-    internalError(node, "[errorDynamicTypeLiteralSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorInvalidAssert(
       Send node,
       NodeList arguments,
       _) {
-    internalError(node, "[errorInvalidAssert] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitSuperBinary(
@@ -876,7 +883,8 @@ class ClosureVisitor
       BinaryOperator operator,
       Node argument,
       _) {
-    internalError(node, "[visitSuperBinary] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperNotEquals(
@@ -884,7 +892,8 @@ class ClosureVisitor
       FunctionElement function,
       Node argument,
       _) {
-    internalError(node, "[visitSuperNotEquals] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperEquals(
@@ -892,7 +901,8 @@ class ClosureVisitor
       FunctionElement function,
       Node argument,
       _) {
-    internalError(node, "[visitSuperEquals] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperUnary(
@@ -900,7 +910,8 @@ class ClosureVisitor
       UnaryOperator operator,
       FunctionElement function,
       _) {
-    internalError(node, "[visitSuperUnary] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperIndexSet(
@@ -909,7 +920,8 @@ class ClosureVisitor
       Node index,
       Node rhs,
       _) {
-    internalError(node, "[visitSuperIndexSet] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitDynamicPropertyCompound(
@@ -920,8 +932,7 @@ class ClosureVisitor
       Selector getterSelector,
       Selector setterSelector,
       _) {
-    internalError(
-        node, "[visitDynamicPropertyCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitThisPropertyCompound(
@@ -931,7 +942,8 @@ class ClosureVisitor
       Selector getterSelector,
       Selector setterSelector,
       _) {
-    internalError(node, "[visitThisPropertyCompound] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitParameterCompound(
@@ -940,7 +952,8 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(node, "[visitParameterCompound] isn't implemented yet.");
+    markUsed(parameter, CaptureMode.ByReference);
+    node.visitChildren(this);
   }
 
   void errorFinalParameterCompound(
@@ -949,7 +962,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(node, "[errorFinalParameterCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorFinalLocalVariableCompound(
@@ -958,8 +971,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[errorFinalLocalVariableCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorLocalFunctionCompound(
@@ -968,7 +980,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(node, "[errorLocalFunctionCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitStaticFieldCompound(
@@ -977,7 +989,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(node, "[visitStaticFieldCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorFinalStaticFieldCompound(
@@ -986,8 +998,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[errorFinalStaticFieldCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitStaticGetterSetterCompound(
@@ -997,8 +1008,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitStaticGetterSetterCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitStaticMethodSetterCompound(
@@ -1008,8 +1018,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitStaticMethodSetterCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelFieldCompound(
@@ -1018,7 +1027,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(node, "[visitTopLevelFieldCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorFinalTopLevelFieldCompound(
@@ -1027,8 +1036,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[errorFinalTopLevelFieldCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelGetterSetterCompound(
@@ -1038,8 +1046,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitTopLevelGetterSetterCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelMethodSetterCompound(
@@ -1049,8 +1056,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitTopLevelMethodSetterCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitSuperFieldCompound(
@@ -1059,7 +1065,8 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(node, "[visitSuperFieldCompound] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void errorFinalSuperFieldCompound(
@@ -1068,8 +1075,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[errorFinalSuperFieldCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitSuperGetterSetterCompound(
@@ -1079,8 +1085,8 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitSuperGetterSetterCompound] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperMethodSetterCompound(
@@ -1090,8 +1096,8 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitSuperMethodSetterCompound] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperFieldSetterCompound(
@@ -1101,8 +1107,8 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitSuperFieldSetterCompound] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperGetterFieldCompound(
@@ -1112,8 +1118,8 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitSuperGetterFieldCompound] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitClassTypeLiteralCompound(
@@ -1122,8 +1128,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitClassTypeLiteralCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTypedefTypeLiteralCompound(
@@ -1132,8 +1137,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitTypedefTypeLiteralCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTypeVariableTypeLiteralCompound(
@@ -1142,8 +1146,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitTypeVariableTypeLiteralCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitDynamicTypeLiteralCompound(
@@ -1152,8 +1155,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[visitDynamicTypeLiteralCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitCompoundIndexSet(
@@ -1163,7 +1165,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(node, "[visitCompoundIndexSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitSuperCompoundIndexSet(
@@ -1174,7 +1176,8 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(node, "[visitSuperCompoundIndexSet] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitDynamicPropertyPrefix(
@@ -1184,7 +1187,7 @@ class ClosureVisitor
       Selector getterSelector,
       Selector setterSelector,
       _) {
-    internalError(node, "[visitDynamicPropertyPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitParameterPrefix(
@@ -1192,7 +1195,8 @@ class ClosureVisitor
       ParameterElement parameter,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitParameterPrefix] isn't implemented yet.");
+    markUsed(parameter, CaptureMode.ByReference);
+    node.visitChildren(this);
   }
 
   void errorLocalFunctionPrefix(
@@ -1200,7 +1204,7 @@ class ClosureVisitor
       LocalFunctionElement function,
       IncDecOperator operator,
       _) {
-    internalError(node, "[errorLocalFunctionPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
 
@@ -1210,7 +1214,8 @@ class ClosureVisitor
       Selector getterSelector,
       Selector setterSelector,
       _) {
-    internalError(node, "[visitThisPropertyPrefix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitStaticFieldPrefix(
@@ -1218,7 +1223,7 @@ class ClosureVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitStaticFieldPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitStaticGetterSetterPrefix(
@@ -1227,8 +1232,7 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitStaticGetterSetterPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
 
@@ -1238,8 +1242,7 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitStaticMethodSetterPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelFieldPrefix(
@@ -1247,7 +1250,7 @@ class ClosureVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitTopLevelFieldPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelGetterSetterPrefix(
@@ -1256,8 +1259,7 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitTopLevelGetterSetterPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelMethodSetterPrefix(
@@ -1266,8 +1268,7 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitTopLevelMethodSetterPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitSuperFieldPrefix(
@@ -1275,7 +1276,8 @@ class ClosureVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitSuperFieldPrefix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperFieldFieldPrefix(
@@ -1284,7 +1286,8 @@ class ClosureVisitor
       FieldElement writtenField,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitSuperFieldFieldPrefix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperFieldSetterPrefix(
@@ -1293,7 +1296,8 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitSuperFieldSetterPrefix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
 
@@ -1303,8 +1307,8 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitSuperGetterSetterPrefix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperGetterFieldPrefix(
@@ -1313,7 +1317,8 @@ class ClosureVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitSuperGetterFieldPrefix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperMethodSetterPrefix(
@@ -1322,8 +1327,8 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitSuperMethodSetterPrefix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitClassTypeLiteralPrefix(
@@ -1331,7 +1336,7 @@ class ClosureVisitor
       TypeConstantExpression constant,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitClassTypeLiteralPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTypedefTypeLiteralPrefix(
@@ -1339,8 +1344,7 @@ class ClosureVisitor
       TypeConstantExpression constant,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitTypedefTypeLiteralPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTypeVariableTypeLiteralPrefix(
@@ -1348,8 +1352,8 @@ class ClosureVisitor
       TypeVariableElement element,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitTypeVariableTypeLiteralPrefix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitDynamicTypeLiteralPrefix(
@@ -1357,8 +1361,7 @@ class ClosureVisitor
       TypeConstantExpression constant,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitDynamicTypeLiteralPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitDynamicPropertyPostfix(
@@ -1368,7 +1371,7 @@ class ClosureVisitor
       Selector getterSelector,
       Selector setterSelector,
       _) {
-    internalError(node, "[visitDynamicPropertyPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitParameterPostfix(
@@ -1376,7 +1379,8 @@ class ClosureVisitor
       ParameterElement parameter,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitParameterPostfix] isn't implemented yet.");
+    markUsed(parameter, CaptureMode.ByReference);
+    node.visitChildren(this);
   }
 
   void errorLocalFunctionPostfix(
@@ -1384,7 +1388,7 @@ class ClosureVisitor
       LocalFunctionElement function,
       IncDecOperator operator,
       _) {
-    internalError(node, "[errorLocalFunctionPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
 
@@ -1394,7 +1398,7 @@ class ClosureVisitor
       Selector getterSelector,
       Selector setterSelector,
       _) {
-    internalError(node, "[visitThisPropertyPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitStaticFieldPostfix(
@@ -1402,7 +1406,7 @@ class ClosureVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitStaticFieldPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitStaticGetterSetterPostfix(
@@ -1411,8 +1415,7 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitStaticGetterSetterPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
 
@@ -1422,8 +1425,7 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitStaticMethodSetterPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelFieldPostfix(
@@ -1431,7 +1433,7 @@ class ClosureVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitTopLevelFieldPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelGetterSetterPostfix(
@@ -1440,8 +1442,7 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitTopLevelGetterSetterPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTopLevelMethodSetterPostfix(
@@ -1450,8 +1451,7 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitTopLevelMethodSetterPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitSuperFieldPostfix(
@@ -1459,7 +1459,8 @@ class ClosureVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitSuperFieldPostfix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperFieldFieldPostfix(
@@ -1468,7 +1469,8 @@ class ClosureVisitor
       FieldElement writtenField,
       IncDecOperator operator,
       _) {
-    internalError(node, "[visitSuperFieldFieldPostfix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperFieldSetterPostfix(
@@ -1477,8 +1479,8 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitSuperFieldSetterPostfix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
 
@@ -1488,8 +1490,8 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitSuperGetterSetterPostfix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperGetterFieldPostfix(
@@ -1498,8 +1500,8 @@ class ClosureVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitSuperGetterFieldPostfix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitSuperMethodSetterPostfix(
@@ -1508,8 +1510,8 @@ class ClosureVisitor
       FunctionElement setter,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitSuperMethodSetterPostfix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitClassTypeLiteralPostfix(
@@ -1517,8 +1519,7 @@ class ClosureVisitor
       TypeConstantExpression constant,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitClassTypeLiteralPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTypedefTypeLiteralPostfix(
@@ -1526,8 +1527,7 @@ class ClosureVisitor
       TypeConstantExpression constant,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitTypedefTypeLiteralPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitTypeVariableTypeLiteralPostfix(
@@ -1535,8 +1535,8 @@ class ClosureVisitor
       TypeVariableElement element,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitTypeVariableTypeLiteralPostfix] isn't implemented yet.");
+    markThisUsed();
+    node.visitChildren(this);
   }
 
   void visitDynamicTypeLiteralPostfix(
@@ -1544,15 +1544,14 @@ class ClosureVisitor
       TypeConstantExpression constant,
       IncDecOperator operator,
       _) {
-    internalError(
-        node, "[visitDynamicTypeLiteralPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitConstantGet(
       Send node,
       ConstantExpression constant,
       _) {
-    internalError(node, "[visitConstantGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void visitConstantInvoke(
@@ -1561,14 +1560,14 @@ class ClosureVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[visitConstantInvoke] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorUnresolvedGet(
       Send node,
       Element element,
       _) {
-    internalError(node, "[errorUnresolvedGet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorUnresolvedSet(
@@ -1576,7 +1575,7 @@ class ClosureVisitor
       Element element,
       Node rhs,
       _) {
-    internalError(node, "[errorUnresolvedSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorUnresolvedCompound(
@@ -1585,7 +1584,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(node, "[errorUnresolvedCompound] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorUnresolvedPrefix(
@@ -1593,7 +1592,7 @@ class ClosureVisitor
       Element element,
       IncDecOperator operator,
       _) {
-    internalError(node, "[errorUnresolvedPrefix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorUnresolvedPostfix(
@@ -1601,7 +1600,7 @@ class ClosureVisitor
       Element element,
       IncDecOperator operator,
       _) {
-    internalError(node, "[errorUnresolvedPostfix] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorUnresolvedSuperIndexSet(
@@ -1610,8 +1609,7 @@ class ClosureVisitor
       Node index,
       Node rhs,
       _) {
-    internalError(
-        node, "[errorUnresolvedSuperIndexSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorUnresolvedSuperCompoundIndexSet(
@@ -1621,8 +1619,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    internalError(
-        node, "[errorUnresolvedSuperCompoundIndexSet] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorUnresolvedSuperUnary(
@@ -1630,7 +1627,7 @@ class ClosureVisitor
       UnaryOperator operator,
       Element element,
       _) {
-    internalError(node, "[errorUnresolvedSuperUnary] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorUnresolvedSuperBinary(
@@ -1639,7 +1636,7 @@ class ClosureVisitor
       BinaryOperator operator,
       Node argument,
       _) {
-    internalError(node, "[errorUnresolvedSuperBinary] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorUndefinedUnaryExpression(
@@ -1647,8 +1644,7 @@ class ClosureVisitor
       Operator operator,
       Node expression,
       _) {
-    internalError(
-        node, "[errorUndefinedUnaryExpression] isn't implemented yet.");
+    node.visitChildren(this);
   }
 
   void errorUndefinedBinaryExpression(
@@ -1657,7 +1653,6 @@ class ClosureVisitor
       Operator operator,
       Node right,
       _) {
-    internalError(
-        node, "[errorUndefinedBinaryExpression] isn't implemented yet.");
+    node.visitChildren(this);
   }
 }

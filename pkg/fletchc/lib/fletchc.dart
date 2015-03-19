@@ -16,6 +16,8 @@ const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
 const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
 
 main(List<String> arguments) async {
+  exitCode = COMPILER_CRASHED;
+
   List<String> options = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   // TODO(ajohnsen): packageRoot should be a command line argument.
@@ -33,9 +35,7 @@ main(List<String> arguments) async {
     return [];
   });
 
-  if (compilerCrashed) {
-    return COMPILER_CRASHED;
-  }
+  if (compilerCrashed) return;
 
   var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 
@@ -68,5 +68,4 @@ main(List<String> arguments) async {
   if (exitCode != 0) {
     print("Non-zero exit code from VM ($exitCode).");
   }
-  return exitCode;
 }

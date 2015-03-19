@@ -1027,7 +1027,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   }
 
   void visitNewExpression(NewExpression node) {
-    ConstructorElement constructor = elements[node.send];
+    // TODO(ahe): Report bug: should already be the declaration.
+    ConstructorElement constructor = elements[node.send].declaration;
     int arity = loadArguments(node.send.argumentsNode, constructor);
     if (constructor.isFactoryConstructor) {
       registry.registerStaticInvocation(constructor);
@@ -1373,7 +1374,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       ParameterElement parameter,
       Node rhs,
       _) {
-    internalError(node, "[errorFinalParameterSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorFinalParameterSet] isn't implemented.");
   }
 
   void visitParameterInvoke(
@@ -1382,7 +1384,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[visitParameterInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitParameterInvoke] isn't implemented.");
   }
 
   void errorLocalFunctionSet(
@@ -1390,7 +1393,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       LocalFunctionElement function,
       Node rhs,
       _) {
-    internalError(node, "[errorLocalFunctionSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorLocalFunctionSet] isn't implemented.");
   }
 
   void visitThisInvoke(
@@ -1398,14 +1402,14 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[visitThisInvoke] isn't implemented.");
+    generateUnimplementedError(node, "[visitThisInvoke] isn't implemented.");
   }
 
   void visitSuperFieldGet(
       Send node,
       FieldElement field,
       _) {
-    internalError(node, "[visitSuperFieldGet] isn't implemented.");
+    generateUnimplementedError(node, "[visitSuperFieldGet] isn't implemented.");
   }
 
   void visitSuperFieldSet(
@@ -1413,7 +1417,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       Node rhs,
       _) {
-    internalError(node, "[visitSuperFieldSet] isn't implemented.");
+    generateUnimplementedError(node, "[visitSuperFieldSet] isn't implemented.");
   }
 
   void errorFinalSuperFieldSet(
@@ -1421,7 +1425,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       Node rhs,
       _) {
-    internalError(node, "[errorFinalSuperFieldSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorFinalSuperFieldSet] isn't implemented.");
   }
 
   void visitSuperFieldInvoke(
@@ -1430,14 +1435,16 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _) {
-    internalError(node, "[visitSuperFieldInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperFieldInvoke] isn't implemented.");
   }
 
   void visitSuperMethodGet(
       Send node,
       MethodElement method,
       _) {
-    internalError(node, "[visitSuperMethodGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperMethodGet] isn't implemented.");
   }
 
   void errorSuperMethodSet(
@@ -1445,21 +1452,24 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       MethodElement method,
       Node rhs,
       _) {
-    internalError(node, "[errorSuperMethodSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorSuperMethodSet] isn't implemented.");
   }
 
   void visitSuperGetterGet(
       Send node,
       FunctionElement getter,
       _) {
-    internalError(node, "[visitSuperGetterGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperGetterGet] isn't implemented.");
   }
 
   void errorSuperSetterGet(
       Send node,
       FunctionElement setter,
       _) {
-    internalError(node, "[errorSuperSetterGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorSuperSetterGet] isn't implemented.");
   }
 
   void visitSuperSetterSet(
@@ -1467,7 +1477,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       Node rhs,
       _) {
-    internalError(node, "[visitSuperSetterSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperSetterSet] isn't implemented.");
   }
 
   void errorFinalLocalVariableSet(
@@ -1475,7 +1486,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       LocalVariableElement variable,
       Node rhs,
       _){
-    internalError(node, "[errorFinalLocalVariableSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorFinalLocalVariableSet] isn't implemented.");
   }
 
   void errorSuperGetterSet(
@@ -1483,7 +1495,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement getter,
       Node rhs,
       _){
-    internalError(node, "[errorSuperGetterSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorSuperGetterSet] isn't implemented.");
   }
 
   void visitSuperGetterInvoke(
@@ -1492,7 +1505,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(node, "[visitSuperGetterInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperGetterInvoke] isn't implemented.");
   }
 
   void errorSuperSetterInvoke(
@@ -1501,7 +1515,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(node, "[errorSuperSetterInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorSuperSetterInvoke] isn't implemented.");
   }
 
   void errorFinalStaticFieldSet(
@@ -1509,7 +1524,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       Node rhs,
       _){
-    internalError(node, "[errorFinalStaticFieldSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorFinalStaticFieldSet] isn't implemented.");
   }
 
   void visitStaticFieldInvoke(
@@ -1518,14 +1534,16 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(node, "[visitStaticFieldInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticFieldInvoke] isn't implemented.");
   }
 
   void visitStaticFunctionGet(
       Send node,
       MethodElement function,
       _){
-    internalError(node, "[visitStaticFunctionGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticFunctionGet] isn't implemented.");
   }
 
   void errorStaticFunctionSet(
@@ -1533,21 +1551,24 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       MethodElement function,
       Node rhs,
       _){
-    internalError(node, "[errorStaticFunctionSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorStaticFunctionSet] isn't implemented.");
   }
 
   void visitStaticGetterGet(
       Send node,
       FunctionElement getter,
       _){
-    internalError(node, "[visitStaticGetterGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticGetterGet] isn't implemented.");
   }
 
   void errorStaticSetterGet(
       Send node,
       FunctionElement setter,
       _){
-    internalError(node, "[errorStaticSetterGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorStaticSetterGet] isn't implemented.");
   }
 
   void visitStaticSetterSet(
@@ -1555,7 +1576,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       Node rhs,
       _){
-    internalError(node, "[visitStaticSetterSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticSetterSet] isn't implemented.");
   }
 
   void errorStaticGetterSet(
@@ -1563,7 +1585,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement getter,
       Node rhs,
       _){
-    internalError(node, "[errorStaticGetterSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorStaticGetterSet] isn't implemented.");
   }
 
   void visitStaticGetterInvoke(
@@ -1572,7 +1595,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(node, "[visitStaticGetterInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticGetterInvoke] isn't implemented.");
   }
 
   void errorStaticSetterInvoke(
@@ -1581,7 +1605,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(node, "[errorStaticSetterInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorStaticSetterInvoke] isn't implemented.");
   }
 
   void errorFinalTopLevelFieldSet(
@@ -1589,14 +1614,16 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       Node rhs,
       _){
-    internalError(node, "[errorFinalTopLevelFieldSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorFinalTopLevelFieldSet] isn't implemented.");
   }
 
   void visitTopLevelFunctionGet(
       Send node,
       MethodElement function,
       _){
-    internalError(node, "[visitTopLevelFunctionGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTopLevelFunctionGet] isn't implemented.");
   }
 
   void errorTopLevelFunctionSet(
@@ -1604,21 +1631,24 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       MethodElement function,
       Node rhs,
       _){
-    internalError(node, "[errorTopLevelFunctionSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorTopLevelFunctionSet] isn't implemented.");
   }
 
   void visitTopLevelGetterGet(
       Send node,
       FunctionElement getter,
       _){
-    internalError(node, "[visitTopLevelGetterGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTopLevelGetterGet] isn't implemented.");
   }
 
   void errorTopLevelSetterGet(
       Send node,
       FunctionElement setter,
       _){
-    internalError(node, "[errorTopLevelSetterGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorTopLevelSetterGet] isn't implemented.");
   }
 
   void visitTopLevelSetterSet(
@@ -1626,7 +1656,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       Node rhs,
       _){
-    internalError(node, "[visitTopLevelSetterSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTopLevelSetterSet] isn't implemented.");
   }
 
   void errorTopLevelGetterSet(
@@ -1634,7 +1665,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement getter,
       Node rhs,
       _){
-    internalError(node, "[errorTopLevelGetterSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorTopLevelGetterSet] isn't implemented.");
   }
 
   void visitTopLevelGetterInvoke(
@@ -1643,7 +1675,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(node, "[visitTopLevelGetterInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTopLevelGetterInvoke] isn't implemented.");
   }
 
   void errorTopLevelSetterInvoke(
@@ -1652,14 +1685,16 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(node, "[errorTopLevelSetterInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorTopLevelSetterInvoke] isn't implemented.");
   }
 
   void visitClassTypeLiteralGet(
       Send node,
       TypeConstantExpression constant,
       _){
-    internalError(node, "[visitClassTypeLiteralGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitClassTypeLiteralGet] isn't implemented.");
   }
 
   void visitClassTypeLiteralInvoke(
@@ -1668,7 +1703,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(node, "[visitClassTypeLiteralInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitClassTypeLiteralInvoke] isn't implemented.");
   }
 
   void errorClassTypeLiteralSet(
@@ -1676,14 +1712,16 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeConstantExpression constant,
       Node rhs,
       _){
-    internalError(node, "[errorClassTypeLiteralSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorClassTypeLiteralSet] isn't implemented.");
   }
 
   void visitTypedefTypeLiteralGet(
       Send node,
       TypeConstantExpression constant,
       _){
-    internalError(node, "[visitTypedefTypeLiteralGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTypedefTypeLiteralGet] isn't implemented.");
   }
 
   void visitTypedefTypeLiteralInvoke(
@@ -1692,7 +1730,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(node, "[visitTypedefTypeLiteralInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTypedefTypeLiteralInvoke] isn't implemented.");
   }
 
   void errorTypedefTypeLiteralSet(
@@ -1700,14 +1739,16 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeConstantExpression constant,
       Node rhs,
       _){
-    internalError(node, "[errorTypedefTypeLiteralSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorTypedefTypeLiteralSet] isn't implemented.");
   }
 
   void visitTypeVariableTypeLiteralGet(
       Send node,
       TypeVariableElement element,
       _){
-    internalError(node, "[visitTypeVariableTypeLiteralGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTypeVariableTypeLiteralGet] isn't implemented.");
   }
 
   void visitTypeVariableTypeLiteralInvoke(
@@ -1716,7 +1757,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(
+    generateUnimplementedError(
         node, "[visitTypeVariableTypeLiteralInvoke] isn't implemented.");
   }
 
@@ -1725,14 +1766,16 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeVariableElement element,
       Node rhs,
       _){
-    internalError(node, "[errorTypeVariableTypeLiteralSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorTypeVariableTypeLiteralSet] isn't implemented.");
   }
 
   void visitDynamicTypeLiteralGet(
       Send node,
       TypeConstantExpression constant,
       _){
-    internalError(node, "[visitDynamicTypeLiteralGet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitDynamicTypeLiteralGet] isn't implemented.");
   }
 
   void visitDynamicTypeLiteralInvoke(
@@ -1741,7 +1784,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(node, "[visitDynamicTypeLiteralInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitDynamicTypeLiteralInvoke] isn't implemented.");
   }
 
   void errorDynamicTypeLiteralSet(
@@ -1749,14 +1793,15 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeConstantExpression constant,
       Node rhs,
       _){
-    internalError(node, "[errorDynamicTypeLiteralSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorDynamicTypeLiteralSet] isn't implemented.");
   }
 
   void errorInvalidAssert(
       Send node,
       NodeList arguments,
       _){
-    internalError(node, "[errorInvalidAssert] isn't implemented.");
+    generateUnimplementedError(node, "[errorInvalidAssert] isn't implemented.");
   }
 
   void visitSuperBinary(
@@ -1765,7 +1810,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       BinaryOperator operator,
       Node argument,
       _){
-    internalError(node, "[visitSuperBinary] isn't implemented.");
+    generateUnimplementedError(node, "[visitSuperBinary] isn't implemented.");
   }
 
   void visitSuperNotEquals(
@@ -1773,7 +1818,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement function,
       Node argument,
       _){
-    internalError(node, "[visitSuperNotEquals] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperNotEquals] isn't implemented.");
   }
 
   void visitSuperEquals(
@@ -1781,7 +1827,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement function,
       Node argument,
       _){
-    internalError(node, "[visitSuperEquals] isn't implemented.");
+    generateUnimplementedError(node, "[visitSuperEquals] isn't implemented.");
   }
 
   void visitSuperUnary(
@@ -1789,7 +1835,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       UnaryOperator operator,
       FunctionElement function,
       _){
-    internalError(node, "[visitSuperUnary] isn't implemented.");
+    generateUnimplementedError(node, "[visitSuperUnary] isn't implemented.");
   }
 
   void visitSuperIndexSet(
@@ -1798,7 +1844,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Node index,
       Node rhs,
       _){
-    internalError(node, "[visitSuperIndexSet] isn't implemented.");
+    generateUnimplementedError(node, "[visitSuperIndexSet] isn't implemented.");
   }
 
   void visitIsNot(
@@ -1806,7 +1852,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Node expression,
       DartType type,
       _){
-    internalError(node, "[visitIsNot] isn't implemented.");
+    generateUnimplementedError(node, "[visitIsNot] isn't implemented.");
   }
 
   void visitDynamicPropertyCompound(
@@ -1817,7 +1863,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector getterSelector,
       Selector setterSelector,
       _){
-    internalError(node, "[visitDynamicPropertyCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitDynamicPropertyCompound] isn't implemented.");
   }
 
   void visitThisPropertyCompound(
@@ -1827,7 +1874,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector getterSelector,
       Selector setterSelector,
       _){
-    internalError(node, "[visitThisPropertyCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitThisPropertyCompound] isn't implemented.");
   }
 
   void visitParameterCompound(
@@ -1836,7 +1884,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitParameterCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitParameterCompound] isn't implemented.");
   }
 
   void errorFinalParameterCompound(
@@ -1845,7 +1894,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[errorFinalParameterCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorFinalParameterCompound] isn't implemented.");
   }
 
   void visitLocalVariableCompound(
@@ -1865,7 +1915,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[errorFinalLocalVariableCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorFinalLocalVariableCompound] isn't implemented.");
   }
 
   void errorLocalFunctionCompound(
@@ -1874,7 +1925,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[errorLocalFunctionCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorLocalFunctionCompound] isn't implemented.");
   }
 
   void visitStaticFieldCompound(
@@ -1883,7 +1935,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitStaticFieldCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticFieldCompound] isn't implemented.");
   }
 
   void errorFinalStaticFieldCompound(
@@ -1892,7 +1945,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[errorFinalStaticFieldCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorFinalStaticFieldCompound] isn't implemented.");
   }
 
   void visitStaticGetterSetterCompound(
@@ -1902,7 +1956,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitStaticGetterSetterCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticGetterSetterCompound] isn't implemented.");
   }
 
   void visitStaticMethodSetterCompound(
@@ -1912,7 +1967,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitStaticMethodSetterCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticMethodSetterCompound] isn't implemented.");
   }
 
   void visitTopLevelFieldCompound(
@@ -1921,7 +1977,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitTopLevelFieldCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTopLevelFieldCompound] isn't implemented.");
   }
 
   void errorFinalTopLevelFieldCompound(
@@ -1930,7 +1987,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[errorFinalTopLevelFieldCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorFinalTopLevelFieldCompound] isn't implemented.");
   }
 
   void visitTopLevelGetterSetterCompound(
@@ -1940,7 +1998,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelGetterSetterCompound] isn't implemented.");
   }
 
@@ -1951,7 +2009,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelMethodSetterCompound] isn't implemented.");
   }
 
@@ -1961,7 +2019,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitSuperFieldCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperFieldCompound] isn't implemented.");
   }
 
   void errorFinalSuperFieldCompound(
@@ -1970,7 +2029,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[errorFinalSuperFieldCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorFinalSuperFieldCompound] isn't implemented.");
   }
 
   void visitSuperGetterSetterCompound(
@@ -1980,7 +2040,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitSuperGetterSetterCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperGetterSetterCompound] isn't implemented.");
   }
 
   void visitSuperMethodSetterCompound(
@@ -1990,7 +2051,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitSuperMethodSetterCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperMethodSetterCompound] isn't implemented.");
   }
 
   void visitSuperFieldSetterCompound(
@@ -2000,7 +2062,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitSuperFieldSetterCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperFieldSetterCompound] isn't implemented.");
   }
 
   void visitSuperGetterFieldCompound(
@@ -2010,7 +2073,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitSuperGetterFieldCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperGetterFieldCompound] isn't implemented.");
   }
 
   void visitClassTypeLiteralCompound(
@@ -2019,7 +2083,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitClassTypeLiteralCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitClassTypeLiteralCompound] isn't implemented.");
   }
 
   void visitTypedefTypeLiteralCompound(
@@ -2028,7 +2093,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitTypedefTypeLiteralCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTypedefTypeLiteralCompound] isn't implemented.");
   }
 
   void visitTypeVariableTypeLiteralCompound(
@@ -2037,7 +2103,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(
+    generateUnimplementedError(
         node, "[visitTypeVariableTypeLiteralCompound] isn't implemented.");
   }
 
@@ -2047,7 +2113,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitDynamicTypeLiteralCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitDynamicTypeLiteralCompound] isn't implemented.");
   }
 
   void visitCompoundIndexSet(
@@ -2057,7 +2124,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitCompoundIndexSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitCompoundIndexSet] isn't implemented.");
   }
 
   void visitSuperCompoundIndexSet(
@@ -2068,7 +2136,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[visitSuperCompoundIndexSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperCompoundIndexSet] isn't implemented.");
   }
 
   void visitDynamicPropertyPrefix(
@@ -2078,7 +2147,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector getterSelector,
       Selector setterSelector,
       _){
-    internalError(node, "[visitDynamicPropertyPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitDynamicPropertyPrefix] isn't implemented.");
   }
 
   void visitParameterPrefix(
@@ -2086,7 +2156,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       ParameterElement parameter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitParameterPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitParameterPrefix] isn't implemented.");
   }
 
   void errorLocalFunctionPrefix(
@@ -2094,7 +2165,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       LocalFunctionElement function,
       IncDecOperator operator,
       _){
-    internalError(node, "[errorLocalFunctionPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorLocalFunctionPrefix] isn't implemented.");
   }
 
 
@@ -2104,7 +2176,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector getterSelector,
       Selector setterSelector,
       _){
-    internalError(node, "[visitThisPropertyPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitThisPropertyPrefix] isn't implemented.");
   }
 
   void visitStaticFieldPrefix(
@@ -2112,7 +2185,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitStaticFieldPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticFieldPrefix] isn't implemented.");
   }
 
   void visitStaticGetterSetterPrefix(
@@ -2121,7 +2195,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitStaticGetterSetterPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticGetterSetterPrefix] isn't implemented.");
   }
 
 
@@ -2131,7 +2206,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitStaticMethodSetterPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticMethodSetterPrefix] isn't implemented.");
   }
 
   void visitTopLevelFieldPrefix(
@@ -2139,7 +2215,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitTopLevelFieldPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTopLevelFieldPrefix] isn't implemented.");
   }
 
   void visitTopLevelGetterSetterPrefix(
@@ -2148,7 +2225,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitTopLevelGetterSetterPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTopLevelGetterSetterPrefix] isn't implemented.");
   }
 
   void visitTopLevelMethodSetterPrefix(
@@ -2157,7 +2235,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitTopLevelMethodSetterPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTopLevelMethodSetterPrefix] isn't implemented.");
   }
 
   void visitSuperFieldPrefix(
@@ -2165,7 +2244,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperFieldPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperFieldPrefix] isn't implemented.");
   }
 
   void visitSuperFieldFieldPrefix(
@@ -2174,7 +2254,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement writtenField,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperFieldFieldPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperFieldFieldPrefix] isn't implemented.");
   }
 
   void visitSuperFieldSetterPrefix(
@@ -2183,7 +2264,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperFieldSetterPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperFieldSetterPrefix] isn't implemented.");
   }
 
 
@@ -2193,7 +2275,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperGetterSetterPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperGetterSetterPrefix] isn't implemented.");
   }
 
   void visitSuperGetterFieldPrefix(
@@ -2202,7 +2285,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperGetterFieldPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperGetterFieldPrefix] isn't implemented.");
   }
 
   void visitSuperMethodSetterPrefix(
@@ -2211,7 +2295,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperMethodSetterPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperMethodSetterPrefix] isn't implemented.");
   }
 
   void visitClassTypeLiteralPrefix(
@@ -2219,7 +2304,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeConstantExpression constant,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitClassTypeLiteralPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitClassTypeLiteralPrefix] isn't implemented.");
   }
 
   void visitTypedefTypeLiteralPrefix(
@@ -2227,7 +2313,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeConstantExpression constant,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitTypedefTypeLiteralPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTypedefTypeLiteralPrefix] isn't implemented.");
   }
 
   void visitTypeVariableTypeLiteralPrefix(
@@ -2235,7 +2322,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeVariableElement element,
       IncDecOperator operator,
       _){
-    internalError(
+    generateUnimplementedError(
         node, "[visitTypeVariableTypeLiteralPrefix] isn't implemented.");
   }
 
@@ -2244,7 +2331,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeConstantExpression constant,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitDynamicTypeLiteralPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitDynamicTypeLiteralPrefix] isn't implemented.");
   }
 
   void visitDynamicPropertyPostfix(
@@ -2254,7 +2342,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector getterSelector,
       Selector setterSelector,
       _){
-    internalError(node, "[visitDynamicPropertyPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitDynamicPropertyPostfix] isn't implemented.");
   }
 
   void visitParameterPostfix(
@@ -2262,7 +2351,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       ParameterElement parameter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitParameterPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitParameterPostfix] isn't implemented.");
   }
 
   void errorLocalFunctionPostfix(
@@ -2270,7 +2360,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       LocalFunctionElement function,
       IncDecOperator operator,
       _){
-    internalError(node, "[errorLocalFunctionPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorLocalFunctionPostfix] isn't implemented.");
   }
 
 
@@ -2280,7 +2371,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector getterSelector,
       Selector setterSelector,
       _){
-    internalError(node, "[visitThisPropertyPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitThisPropertyPostfix] isn't implemented.");
   }
 
   void visitStaticFieldPostfix(
@@ -2288,7 +2380,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitStaticFieldPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticFieldPostfix] isn't implemented.");
   }
 
   void visitStaticGetterSetterPostfix(
@@ -2297,7 +2390,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitStaticGetterSetterPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticGetterSetterPostfix] isn't implemented.");
   }
 
 
@@ -2307,7 +2401,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitStaticMethodSetterPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitStaticMethodSetterPostfix] isn't implemented.");
   }
 
   void visitTopLevelFieldPostfix(
@@ -2315,7 +2410,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitTopLevelFieldPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTopLevelFieldPostfix] isn't implemented.");
   }
 
   void visitTopLevelGetterSetterPostfix(
@@ -2324,7 +2420,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelGetterSetterPostfix] isn't implemented.");
   }
 
@@ -2334,7 +2430,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(
+    generateUnimplementedError(
         node, "[visitTopLevelMethodSetterPostfix] isn't implemented.");
   }
 
@@ -2343,7 +2439,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperFieldPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperFieldPostfix] isn't implemented.");
   }
 
   void visitSuperFieldFieldPostfix(
@@ -2352,7 +2449,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement writtenField,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperFieldFieldPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperFieldFieldPostfix] isn't implemented.");
   }
 
   void visitSuperFieldSetterPostfix(
@@ -2361,7 +2459,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperFieldSetterPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperFieldSetterPostfix] isn't implemented.");
   }
 
 
@@ -2371,7 +2470,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperGetterSetterPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperGetterSetterPostfix] isn't implemented.");
   }
 
   void visitSuperGetterFieldPostfix(
@@ -2380,7 +2480,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FieldElement field,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperGetterFieldPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperGetterFieldPostfix] isn't implemented.");
   }
 
   void visitSuperMethodSetterPostfix(
@@ -2389,7 +2490,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       FunctionElement setter,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitSuperMethodSetterPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitSuperMethodSetterPostfix] isn't implemented.");
   }
 
   void visitClassTypeLiteralPostfix(
@@ -2397,7 +2499,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeConstantExpression constant,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitClassTypeLiteralPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitClassTypeLiteralPostfix] isn't implemented.");
   }
 
   void visitTypedefTypeLiteralPostfix(
@@ -2405,7 +2508,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeConstantExpression constant,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitTypedefTypeLiteralPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitTypedefTypeLiteralPostfix] isn't implemented.");
   }
 
   void visitTypeVariableTypeLiteralPostfix(
@@ -2413,7 +2517,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeVariableElement element,
       IncDecOperator operator,
       _){
-    internalError(
+    generateUnimplementedError(
         node, "[visitTypeVariableTypeLiteralPostfix] isn't implemented.");
   }
 
@@ -2422,14 +2526,15 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       TypeConstantExpression constant,
       IncDecOperator operator,
       _){
-    internalError(node, "[visitDynamicTypeLiteralPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitDynamicTypeLiteralPostfix] isn't implemented.");
   }
 
   void visitConstantGet(
       Send node,
       ConstantExpression constant,
       _){
-    internalError(node, "[visitConstantGet] isn't implemented.");
+    generateUnimplementedError(node, "[visitConstantGet] isn't implemented.");
   }
 
   void visitConstantInvoke(
@@ -2438,14 +2543,15 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _){
-    internalError(node, "[visitConstantInvoke] isn't implemented.");
+    generateUnimplementedError(
+        node, "[visitConstantInvoke] isn't implemented.");
   }
 
   void errorUnresolvedGet(
       Send node,
       Element element,
       _){
-    internalError(node, "[errorUnresolvedGet] isn't implemented.");
+    generateUnimplementedError(node, "[errorUnresolvedGet] isn't implemented.");
   }
 
   void errorUnresolvedSet(
@@ -2453,7 +2559,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Element element,
       Node rhs,
       _){
-    internalError(node, "[errorUnresolvedSet] isn't implemented.");
+    generateUnimplementedError(node, "[errorUnresolvedSet] isn't implemented.");
   }
 
   void errorUnresolvedCompound(
@@ -2462,7 +2568,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(node, "[errorUnresolvedCompound] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorUnresolvedCompound] isn't implemented.");
   }
 
   void errorUnresolvedPrefix(
@@ -2470,7 +2577,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Element element,
       IncDecOperator operator,
       _){
-    internalError(node, "[errorUnresolvedPrefix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorUnresolvedPrefix] isn't implemented.");
   }
 
   void errorUnresolvedPostfix(
@@ -2478,7 +2586,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Element element,
       IncDecOperator operator,
       _){
-    internalError(node, "[errorUnresolvedPostfix] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorUnresolvedPostfix] isn't implemented.");
   }
 
   void errorUnresolvedSuperIndexSet(
@@ -2487,7 +2596,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Node index,
       Node rhs,
       _){
-    internalError(node, "[errorUnresolvedSuperIndexSet] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorUnresolvedSuperIndexSet] isn't implemented.");
   }
 
   void errorUnresolvedSuperCompoundIndexSet(
@@ -2497,7 +2607,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       AssignmentOperator operator,
       Node rhs,
       _){
-    internalError(
+    generateUnimplementedError(
         node, "[errorUnresolvedSuperCompoundIndexSet] isn't implemented.");
   }
 
@@ -2506,7 +2616,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       UnaryOperator operator,
       Element element,
       _){
-    internalError(node, "[errorUnresolvedSuperUnary] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorUnresolvedSuperUnary] isn't implemented.");
   }
 
   void errorUnresolvedSuperBinary(
@@ -2515,7 +2626,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       BinaryOperator operator,
       Node argument,
       _){
-    internalError(node, "[errorUnresolvedSuperBinary] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorUnresolvedSuperBinary] isn't implemented.");
   }
 
   void errorUndefinedUnaryExpression(
@@ -2523,7 +2635,8 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Operator operator,
       Node expression,
       _){
-    internalError(node, "[errorUndefinedUnaryExpression] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorUndefinedUnaryExpression] isn't implemented.");
   }
 
   void errorUndefinedBinaryExpression(
@@ -2532,6 +2645,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Operator operator,
       Node right,
       _){
-    internalError(node, "[errorUndefinedBinaryExpression] isn't implemented.");
+    generateUnimplementedError(
+        node, "[errorUndefinedBinaryExpression] isn't implemented.");
   }
 }
