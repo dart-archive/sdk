@@ -281,6 +281,7 @@ Program* SnapshotReader::ReadProgram() {
   program->set_static_methods(ReadObject());
   program->set_static_fields(ReadObject());
   program->set_dispatch_table(ReadObject());
+  program->set_vtable(ReadObject());
 
   // Read the roots.
   ReaderVisitor visitor(this);
@@ -325,6 +326,7 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   WriteObject(program->static_methods());
   WriteObject(program->static_fields());
   WriteObject(program->dispatch_table());
+  WriteObject(program->vtable());
 
   // Write out all the roots of the program.
   WriterVisitor visitor(this);

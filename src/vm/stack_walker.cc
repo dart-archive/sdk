@@ -61,7 +61,8 @@ static int StackDiff(uint8** bcp,
 
   Opcode opcode = static_cast<Opcode>(**bcp);
   switch (opcode) {
-    case kInvokeMethod: {
+    case kInvokeMethod:
+    case kInvokeMethodVtable: {
       int arity = Utils::ReadInt32(*bcp + 1) & 0xFF;
       stack_diff = -arity;
       break;

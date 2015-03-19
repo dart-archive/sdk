@@ -7,6 +7,8 @@
 // TODO(ager): Implement a self-contained simple hash map.
 #include <stdlib.h>
 #include <string.h>
+
+#include <algorithm>
 #include <unordered_map>
 #include <vector>
 
@@ -26,8 +28,10 @@ namespace fletch {
 class SelectorRow;
 
 typedef std::vector<Class*> ClassVector;
+typedef std::vector<Function*> FunctionVector;
 typedef std::unordered_map<Object*, int> ObjectIndexMap;
 typedef std::unordered_map<int, SelectorRow*> SelectorRowMap;
+typedef std::unordered_map<int, int> SelectorOffsetMap;
 
 static List<const char> StringFromCharZ(const char* str) {
   return List<const char>(str, strlen(str));
@@ -42,6 +46,7 @@ Program::Program()
       static_methods_(NULL),
       static_fields_(NULL),
       dispatch_table_(NULL),
+      vtable_(NULL),
       is_compact_(false) {
 }
 
@@ -96,7 +101,10 @@ class LiteralsRewriter {
   ObjectIndexMap literals_index_map_;
 };
 
-Object* Program::UnfoldFunction(Function* function, Space* to) {
+Object* Program::UnfoldFunction(Function* function,
+                                Space* to,
+                                void* raw_map) {
+  SelectorOffsetMap* map = static_cast<SelectorOffsetMap*>(raw_map);
   LiteralsRewriter rewriter(to, function);
 
   uint8_t* bcp = function->bytecode_address_for(0);
@@ -119,6 +127,13 @@ Object* Program::UnfoldFunction(Function* function, Space* to) {
         int index = Utils::ReadInt32(bcp + 1);
         Array* table = dispatch_table();
         int selector = Smi::cast(table->get(index + 1))->value();
+        *bcp = kInvokeMethod;
+        Utils::WriteInt32(bcp + 1, selector);
+        break;
+      }
+      case kInvokeMethodVtable: {
+        int offset = Selector::IdField::decode(Utils::ReadInt32(bcp + 1));
+        int selector = map->at(offset);
         *bcp = kInvokeMethod;
         Utils::WriteInt32(bcp + 1, selector);
         break;
@@ -151,10 +166,14 @@ Object* Program::UnfoldFunction(Function* function, Space* to) {
 
 class UnfoldingVisitor: public PointerVisitor {
  public:
-  UnfoldingVisitor(Program* program, Space* from, Space* to)
+  UnfoldingVisitor(Program* program,
+                   Space* from,
+                   Space* to,
+                   SelectorOffsetMap* map)
       : program_(program),
         from_(from),
-        to_(to) { }
+        to_(to),
+        map_(map) { }
 
   void Visit(Object** p) { UnfoldPointer(p); }
 
@@ -174,7 +193,7 @@ class UnfoldingVisitor: public PointerVisitor {
       *p = f;
     } else if (object->IsFunction()) {
       // Rewrite functions.
-      *p = program_->UnfoldFunction(Function::cast(object), to_);
+      *p = program_->UnfoldFunction(Function::cast(object), to_, map_);
     } else {
       *p = reinterpret_cast<HeapObject*>(object)->CloneInToSpace(to_);
     }
@@ -183,15 +202,34 @@ class UnfoldingVisitor: public PointerVisitor {
   Program* program_;
   Space* from_;
   Space* to_;
+  SelectorOffsetMap* map_;
 };
 
 void Program::Unfold() {
   ASSERT(is_compact());
+
+  // Run through the vtable and compute a map from selector offsets
+  // to the original selectors. This is used when rewriting the
+  // bytecodes back to the original invoke-method bytecodes.
+  SelectorOffsetMap map;
+  if (vtable_ != NULL) {
+    Array* vtable = vtable_;
+    for (int i = 0, length = vtable->length(); i < length; i++) {
+      Object* element = vtable->get(i);
+      if (element->IsNull()) continue;
+      Array* entry = Array::cast(element);
+      int offset = Smi::cast(entry->get(0))->value();
+      int selector = Smi::cast(entry->get(1))->value();
+      ASSERT(map.count(offset) == 0 || map[offset] == selector);
+      map[offset] = selector;
+    }
+  }
+
   // Unfolding operates as a scavenge copying over objects as it goes.
   Space* to = new Space();
   {
     NoAllocationFailureScope scope(to);
-    UnfoldingVisitor visitor(this, heap_.space(), to);
+    UnfoldingVisitor visitor(this, heap_.space(), to, &map);
     IterateRoots(&visitor);
     to->CompleteScavenge(&visitor);
   }
@@ -200,6 +238,7 @@ void Program::Unfold() {
   constants_ = NULL;
   static_methods_ = NULL;
   dispatch_table_ = NULL;
+  vtable_ = NULL;
   is_compact_ = false;
 }
 
@@ -207,39 +246,111 @@ class ProgramTableRewriter;
 
 class SelectorRow {
  public:
+  enum Kind {
+    LINEAR,
+    TABLE,
+  };
+
   explicit SelectorRow(int selector)
       : selector_(selector),
+        offset_(-1),
         variants_(0),
-        dispatch_table_index_(-1) {
+        begin_(-1),
+        end_(-1) {
   }
 
-  int dispatch_table_index() const { return dispatch_table_index_; }
-
-  int ComputeSize() {
-    return (variants_ <= kFewVariantsThreshold) ? (variants_ + 2) * 4 : 0;
+  int begin() const {
+    return begin_;
   }
 
-  int FillDispatchTable(Program* program, Array* table, int index);
+  Kind kind() const {
+    return (variants_ <= kFewVariantsThreshold) ? LINEAR : TABLE;
+  }
+
+  int offset() const {
+    return offset_;
+  }
+
+  Kind Finalize() {
+    int variants = variants_;
+    ASSERT(variants > 0);
+    if (variants <= kFewVariantsThreshold) return LINEAR;
+
+    ASSERT(begin_ == -1 && end_ == -1);
+    Class* first = classes_[0];
+    begin_ = first->id();
+    end_ = first->child_id();
+
+    for (int i = 1; i < variants; i++) {
+      Class* clazz = classes_[i];
+      int begin = clazz->id();
+      int end = clazz->child_id();
+      if (begin < begin_) begin_ = begin;
+      if (end > end_) end_ = end;
+    }
+
+    // TODO(kasperl): This is a hacky workaround for an issue where
+    // multiple rows end up with the same offsets. We need to fix
+    // this in a less pessimistic way and still get unique offsets.
+    begin_ = 0;
+
+    return TABLE;
+  }
+
+  int ComputeLinearSize() {
+    ASSERT(kind() == LINEAR);
+    return (variants_ + 2) * 4;
+  }
+
+  int ComputeTableSize() {
+    ASSERT(kind() == TABLE);
+    return end_ - begin_;
+  }
+
+  int FillLinear(Program* program, Array* table, int index);
+  int FillTable(Program* program, Array* table, int index);
 
   // The bottom up construction order guarantees that more specific methods
   // always get defined before less specific ones.
   void DefineMethod(Class* clazz, Function* method) {
-    int variant = variants_++;
-    if (variant < kFewVariantsThreshold) {
-      classes_[variant] = clazz;
-      methods_[variant] = method;
+#ifdef DEBUG
+    for (int i = 0; i < variants_; i++) {
+      // No class should have multiple method definitions for a
+      // single given selector.
+      ASSERT(classes_[i] != clazz);
     }
+#endif
+    classes_.push_back(clazz);
+    methods_.push_back(method);
+    variants_++;
+  }
+
+  static bool Compare(SelectorRow* a, SelectorRow* b) {
+    int a_size = a->ComputeTableSize();
+    int b_size = b->ComputeTableSize();
+    // Sort by decreasing sizes (first) and decreasing begin index.
+    // According to the litterature, this leads to fewer holes and
+    // faster row offset computation.
+    return (a_size == b_size)
+        ? a->begin() > b->begin()
+        : a_size > b_size;
   }
 
  private:
   static const int kFewVariantsThreshold = 2;
 
   const int selector_;
-  int variants_;
-  Class* classes_[kFewVariantsThreshold];
-  Function* methods_[kFewVariantsThreshold];
+  int offset_;
 
-  int dispatch_table_index_;
+  // We keep track of all the different implementations of
+  // the selector corresponding to this row.
+  int variants_;
+  ClassVector classes_;
+  FunctionVector methods_;
+
+  // All used entries in this row are in the [begin, end) interval.
+  int begin_;
+  int end_;
 };
 
 class ProgramTableRewriter {
@@ -256,31 +367,83 @@ class ProgramTableRewriter {
     return class_vector_[index];
   }
 
-  SelectorRow* LookupSelectorRow(int selector) {
+  SelectorRow* LookupSelectorRow(int selector, bool create) {
     SelectorRow*& entry = selector_rows_[selector];
-    if (entry == NULL) {
+    if (create && entry == NULL) {
       entry = new SelectorRow(selector);
     }
     return entry;
   }
 
-  Array* ProcessSelectorRows(Program* program) {
+  void ProcessSelectorRows(Program* program) {
     SelectorRowMap::const_iterator it;
     SelectorRowMap::const_iterator end = selector_rows_.end();
 
-    // Compute the size of the dispatch table.
-    int size = 0;
+    // Compute the sizes of the dispatch tables.
+    std::vector<SelectorRow*> table_rows;
+    int linear_size = 0;
+    int table_size = 0;
     for (it = selector_rows_.begin(); it != end; ++it) {
-      size += it->second->ComputeSize();
+      SelectorRow* row = it->second;
+      SelectorRow::Kind kind = row->Finalize();
+      if (kind == SelectorRow::LINEAR) {
+        linear_size += row->ComputeLinearSize();
+      } else {
+        table_size += row->ComputeTableSize();
+        table_rows.push_back(row);
+      }
     }
 
     // Fill in the dispatch table entries.
-    Array* table = Array::cast(program->CreateArray(size));
-    int index = 0;
+    Array* linear = Array::cast(program->CreateArray(linear_size));
+    int linear_index = 0;
     for (it = selector_rows_.begin(); it != end; ++it) {
-      index = it->second->FillDispatchTable(program, table, index);
+      SelectorRow* row = it->second;
+      if (row->kind() == SelectorRow::LINEAR) {
+        linear_index = row->FillLinear(program, linear, linear_index);
+      }
     }
-    return table;
+    program->set_dispatch_table(linear);
+    if (table_rows.size() == 0) return;
+
+    // Sort the table rows according to size.
+    std::sort(table_rows.begin(), table_rows.end(), SelectorRow::Compare);
+
+    // TODO(kasperl): Avoid wasting space at the beginning and end of the
+    // vtable if it isn't necessary to avoid negative offsets or rows with
+    // offsets that fall off the end of the vtable.
+    int class_count = program->classes()->length();
+    table_size += 1 + (class_count * 2);
+
+    Array* table = Array::cast(program->CreateArray(table_size));
+    int table_index = class_count + 1;
+    for (unsigned i = 0; i < table_rows.size(); i++) {
+      table_index = table_rows[i]->FillTable(program, table, table_index);
+    }
+
+    // Simplify how we deal with noSuchMethod in the interpreter
+    // by explicitly replacing all unused entries in the vtable with
+    // an entry that doesn't match any invoke. Also, make sure the
+    // first table entry always refers to this noSuchMethod entry.
+    static const Names::Id name = Names::kNoSuchMethodTrampoline;
+    Function* trampoline = program->object_class()->LookupMethod(
+        Selector::Encode(name, Selector::METHOD, 0));
+
+    Array* nsm = Array::cast(program->CreateArray(4));
+    nsm->set(0, Smi::FromWord(0));
+    nsm->set(1, Smi::FromWord(0));
+    nsm->set(2, trampoline);
+    nsm->set(3, NULL);
+
+    ASSERT(table->get(0)->IsNull());
+    for (int i = 0; i < table_size; i++) {
+      if (table->get(i)->IsNull()) {
+        table->set(i, nsm);
+      }
+    }
+    ASSERT(table->get(0) == nsm);
+
+    program->set_vtable(table);
   }
 
   void AddMethodAndRewrite(uint8_t* bcp, uint8_t* new_bcp) {
@@ -333,11 +496,11 @@ class ProgramTableRewriter {
   SelectorRowMap selector_rows_;
 };
 
-int SelectorRow::FillDispatchTable(Program* program, Array* table, int index) {
-  if (variants_ > kFewVariantsThreshold) return index;
+int SelectorRow::FillLinear(Program* program, Array* table, int index) {
+  ASSERT(kind() == LINEAR);
 
   // Mark this row as being in the dispatch table.
-  dispatch_table_index_ = index;
+  offset_ = index;
 
   table->set(index++, Smi::FromWord(Selector::ArityField::decode(selector_)));
   table->set(index++, Smi::FromWord(selector_));
@@ -362,8 +525,39 @@ int SelectorRow::FillDispatchTable(Program* program, Array* table, int index) {
   table->set(index++, NULL);
   table->set(index++, target);
 
-  ASSERT(index - dispatch_table_index_ == ComputeSize());
+  ASSERT(index - offset_ == ComputeLinearSize());
   return index;
+}
+
+int SelectorRow::FillTable(Program* program, Array* table, int index) {
+  ASSERT(kind() == TABLE);
+  int offset = index - begin_;
+  offset_ = offset;
+  for (int i = 0, length = variants_; i < length; i++) {
+    Class* clazz = classes_[i];
+    Function* method = methods_[i];
+    Array* entry = Array::cast(program->CreateArray(4));
+    entry->set(0, Smi::FromWord(offset));
+    entry->set(1, Smi::FromWord(selector_));
+    entry->set(2, method);
+    entry->set(3, NULL);
+
+    int id = clazz->id();
+    int limit = clazz->child_id();
+    while (id < limit) {
+      if (table->get(offset + id)->IsNull()) {
+        table->set(offset + id, entry);
+        id++;
+      } else {
+        // Because the variants are ordered so we deal with the most specific
+        // implementations first, we can skip the entire subclass hierarchy
+        // when we find that the method we're currently filling into the table
+        // is overridden by an already processed implementation.
+        id = program->class_at(id)->child_id();
+      }
+    }
+  }
+  return index + ComputeTableSize();
 }
 
 void Program::FoldFunction(Function* old_function,
@@ -432,11 +626,18 @@ class FunctionPostprocessVisitor: public HeapObjectVisitor {
         }
         case kInvokeMethod: {
           int selector = Utils::ReadInt32(bcp + 1);
-          SelectorRow* row = rewriter_->LookupSelectorRow(selector);
-          int index = row->dispatch_table_index();
-          if (index >= 0) {
-            Utils::WriteInt32(bcp + 1, index);
+          SelectorRow* row = rewriter_->LookupSelectorRow(selector, false);
+          if (row == NULL) break;
+          SelectorRow::Kind kind = row->kind();
+          int offset = row->offset();
+          if (kind == SelectorRow::LINEAR) {
+            ASSERT(offset >= 0);
+            Utils::WriteInt32(bcp + 1, offset);
             *bcp = kInvokeMethodFast;
+          } else {
+            int updated = Selector::IdField::update(offset, selector);
+            Utils::WriteInt32(bcp + 1, updated);
+            *bcp = kInvokeMethodVtable;
           }
           break;
         }
@@ -474,18 +675,18 @@ class FoldingVisitor: public PointerVisitor {
     for (Object** p = start; p < end; p++) FoldPointer(p);
   }
 
-  Array* Finalize() {
+  void Finalize() {
     Object* hierarchy = ConstructClassHierarchy(classes_);
     Array* table = Array::cast(program_->CreateArray(class_count_));
     AssignClassIds(hierarchy, table, 0);
+    program_->set_classes(table);
 
     ConstructDispatchTable(table);
-    program_->set_dispatch_table(rewriter_->ProcessSelectorRows(program_));
+    rewriter_->ProcessSelectorRows(program_);
     program_->SetupDispatchTableIntrinsics();
 
     FunctionPostprocessVisitor visitor(rewriter_);
     program_->heap()->IterateObjects(&visitor);
-    return table;
   }
 
  private:
@@ -574,11 +775,12 @@ class FoldingVisitor: public PointerVisitor {
     // Run through all classes in post order depth first.
     for (int i = table->length() - 1; i >= 0; i--) {
       Class* clazz = Class::cast(table->get(i));
-      DefineMethods(table, clazz);
+      ASSERT(clazz->id() == i);
+      DefineMethods(clazz);
     }
   }
 
-  void DefineMethods(Array* table, Class* clazz) {
+  void DefineMethods(Class* clazz) {
     if (!clazz->has_methods()) return;
     Array* methods = clazz->methods();
     int last_selector = 0;
@@ -589,7 +791,7 @@ class FoldingVisitor: public PointerVisitor {
       if (i != 0 && selector == last_selector) continue;
       last_selector = selector;
       Function* method = Function::cast(methods->get(i + 1));
-      SelectorRow* row = rewriter_->LookupSelectorRow(selector);
+      SelectorRow* row = rewriter_->LookupSelectorRow(selector, true);
       row->DefineMethod(clazz, method);
     }
   }
@@ -604,8 +806,8 @@ class FoldingVisitor: public PointerVisitor {
 };
 
 void Program::Fold() {
-  ASSERT(!is_compact());
   // Folding operates as a scavenge copying over objects as it goes.
+  ASSERT(!is_compact());
   ProgramTableRewriter rewriter;
   Space* to = new Space();
   NoAllocationFailureScope scope(to);
@@ -615,7 +817,7 @@ void Program::Fold() {
   to->CompleteScavenge(&visitor);
   heap_.ReplaceSpace(to);
 
-  classes_ = visitor.Finalize();
+  visitor.Finalize();
   constants_ = rewriter.CreateConstantArray(this);
   static_methods_ = rewriter.CreateStaticMethodArray(this);
   is_compact_ = true;
@@ -1035,6 +1237,7 @@ void Program::IterateRoots(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&static_methods_));
   visitor->Visit(reinterpret_cast<Object**>(&static_fields_));
   visitor->Visit(reinterpret_cast<Object**>(&dispatch_table_));
+  visitor->Visit(reinterpret_cast<Object**>(&vtable_));
   if (session_ != NULL) session_->IteratePointers(visitor);
 }
 
@@ -1044,6 +1247,16 @@ void Program::ClearDispatchTableIntrinsics() {
   int length = table->length();
   for (int i = 0; i < length; i += 4) {
     table->set(i + 2, NULL);
+  }
+
+  table = vtable();
+  if (table == NULL) return;
+  length = table->length();
+  for (int i = 0; i < length; i++) {
+    Object* element = table->get(i);
+    if (element->IsNull()) continue;
+    Array* entry = Array::cast(element);
+    entry->set(3, NULL);
   }
 }
 
@@ -1058,6 +1271,21 @@ void Program::SetupDispatchTableIntrinsics() {
     Function* method = Function::cast(target);
     Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
     table->set(i + 2, intrinsic);
+  }
+
+  table = vtable();
+  if (table == NULL) return;
+  length = table->length();
+  for (int i = 0; i < length; i++) {
+    Object* element = table->get(i);
+    if (element->IsNull()) continue;
+    Array* entry = Array::cast(element);
+    if (entry->get(3) != NULL) continue;
+    Object* target = entry->get(2);
+    if (target == NULL) continue;
+    Function* method = Function::cast(target);
+    Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
+    entry->set(3, intrinsic);
   }
 }
 

@@ -341,6 +341,27 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
   OPCODE_END();
 
+  OPCODE_BEGIN(InvokeMethodVtable);
+    int selector = ReadInt32(1);
+    int arity = Selector::ArityField::decode(selector);
+    int offset = Selector::IdField::decode(selector);
+    Object* receiver = Local(arity);
+    PushReturnAddress(kInvokeMethodVtableLength);
+
+    Class* clazz = receiver->IsSmi()
+        ? program()->smi_class()
+        : HeapObject::cast(receiver)->get_class();
+
+    int index = clazz->id() + offset;
+    Array* entry = Array::cast(program()->vtable()->get(index));
+    if (Smi::cast(entry->get(0))->value() != offset) {
+      entry = Array::cast(program()->vtable()->get(0));
+    }
+    Function* target = Function::cast(entry->get(2));
+    Goto(target->bytecode_address_for(0));
+    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+  OPCODE_END();
+
   OPCODE_BEGIN(InvokeStatic);
     int index = ReadInt32(1);
     Function* target = program()->static_method_at(index);
@@ -401,33 +422,11 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
 #undef INVOKE_COMPARE
 
   OPCODE_BEGIN(InvokeAdd);
-    Object* receiver = Local(1);
-    Object* argument = Local(0);
-    if (!receiver->IsSmi() || !argument->IsSmi()) DISPATCH_TO(InvokeMethod);
-    word x_value = reinterpret_cast<word>(receiver);
-    word y_value = reinterpret_cast<word>(argument);
-    word result;
-    if (Utils::SignedAddOverflow(x_value, y_value, &result)) {
-      DISPATCH_TO(InvokeMethod);
-    }
-    Drop(1);
-    SetTop(reinterpret_cast<Smi*>(result));
-    Advance(kInvokeAddLength);
+    DISPATCH_TO(InvokeMethod);
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeSub);
-    Object* receiver = Local(1);
-    Object* argument = Local(0);
-    if (!receiver->IsSmi() || !argument->IsSmi()) DISPATCH_TO(InvokeMethod);
-    word x_value = reinterpret_cast<word>(receiver);
-    word y_value = reinterpret_cast<word>(argument);
-    word result;
-    if (Utils::SignedSubOverflow(x_value, y_value, &result)) {
-      DISPATCH_TO(InvokeMethod);
-    }
-    Drop(1);
-    SetTop(reinterpret_cast<Smi*>(result));
-    Advance(kInvokeSubLength);
+    DISPATCH_TO(InvokeMethod);
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeMod);
@@ -689,6 +688,10 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
       int index = Utils::ReadInt32(return_address - 4);
       Array* table = program()->dispatch_table();
       selector = Smi::cast(table->get(index + 1))->value();
+    } else if (opcode == kInvokeMethodVtable) {
+      // TODO(kasperl): The id encoded in the selector is
+      // wrong because it is an offset.
+      selector = Utils::ReadInt32(return_address - 4);
     } else {
       selector = Utils::ReadInt32(return_address - 4);
     }

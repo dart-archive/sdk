@@ -68,7 +68,7 @@ class Program {
   // self-contained methods makes it easier to do changes to the live
   // system.
   void Unfold();
-  Object* UnfoldFunction(Function* function, Space* to);
+  Object* UnfoldFunction(Function* function, Space* to, void* map);
 
   // Fold the program into a compact format where methods, classes and
   // constants are stored in global tables in the program instead of
@@ -112,6 +112,11 @@ class Program {
   Array* dispatch_table() const { return dispatch_table_; }
   void set_dispatch_table(Object* dispatch_table) {
     dispatch_table_ = Array::cast(dispatch_table);
+  }
+
+  Array* vtable() const { return vtable_; }
+  void set_vtable(Object* vtable) {
+    vtable_ = Array::cast(vtable);
   }
 
   Scheduler* scheduler() const { return scheduler_; }
@@ -190,6 +195,10 @@ class Program {
     return OFFSET_OF(Program, dispatch_table_);
   }
 
+  static int VTableOffset() {
+    return OFFSET_OF(Program, vtable_);
+  }
+
  private:
   // Access to the address of the first and last root.
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
@@ -211,7 +220,9 @@ class Program {
   Array* constants_;
   Array* static_methods_;
   Array* static_fields_;
+
   Array* dispatch_table_;
+  Array* vtable_;
 
   bool is_compact_;
 

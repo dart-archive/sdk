@@ -42,6 +42,7 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
                                                                              \
   V(InvokeMethod,          "I",  5, kVarDiff, "invoke %d")                   \
   V(InvokeMethodFast,      "I",  5, kVarDiff, "invoke fast %d")              \
+  V(InvokeMethodVtable,    "I",  5, kVarDiff, "invoke vtable %d")            \
                                                                              \
   V(InvokeStatic,          "I",  5, kVarDiff, "invoke static %d")            \
   V(InvokeStaticUnfold,    "I",  5, kVarDiff, "invoke static @%d")           \

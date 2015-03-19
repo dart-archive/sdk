@@ -116,6 +116,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
 
   virtual void DoInvokeMethod();
   virtual void DoInvokeMethodFast();
+  virtual void DoInvokeMethodVtable();
 
   virtual void DoInvokeStatic();
   virtual void DoInvokeStaticUnfold();
@@ -497,6 +498,13 @@ void InterpreterGeneratorARM::DoInvokeMethod() {
 }
 
 void InterpreterGeneratorARM::DoInvokeMethodFast() {
+  // TODO(kasperl): Implement this once we're happy with the
+  // performance charateristics of it on x86.
+  __ mov(R0, Immediate(-1));
+  __ b(&done_);
+}
+
+void InterpreterGeneratorARM::DoInvokeMethodVtable() {
   // TODO(kasperl): Implement this once we're happy with the
   // performance charateristics of it on x86.
   __ mov(R0, Immediate(-1));

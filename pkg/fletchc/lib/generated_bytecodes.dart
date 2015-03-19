@@ -30,6 +30,7 @@ enum Opcode {
   LoadLiteralWide,
   InvokeMethod,
   InvokeMethodFast,
+  InvokeMethodVtable,
   InvokeStatic,
   InvokeStaticUnfold,
   InvokeFactory,
@@ -685,6 +686,33 @@ class InvokeMethodFast extends Bytecode {
   }
 
   String toString() => 'invoke fast ${uint32Argument0}';
+}
+
+class InvokeMethodVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeMethodVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeMethodVtable;
+
+  String get name => 'InvokeMethodVtable';
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'invoke vtable %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable ${uint32Argument0}';
 }
 
 class InvokeStatic extends Bytecode {

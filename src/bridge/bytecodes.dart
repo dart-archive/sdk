@@ -70,6 +70,7 @@ const List<Bytecode> _bytecodes = const [
   const Bytecode("load literal %i", 5),
   const Bytecode("invoke %m", 5),
   const Bytecode("invoke fast %m", 5),
+  const Bytecode("invoke vtable %m", 5),
   const Bytecode("invoke static %i", 5),
   const Bytecode("invoke static @%i", 5),
   const Bytecode("invoke factory %i", 5),
