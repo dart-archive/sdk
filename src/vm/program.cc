@@ -827,7 +827,7 @@ Process* Program::SpawnProcess() {
   return new Process(this);
 }
 
-Process* Program::SpawnProcessForMain() {
+Process* Program::ProcessSpawnForMain() {
   // For testing purposes, we support unfolding the program
   // before running it.
   bool unfold = Flags::IsOn("unfold-program");
@@ -1229,7 +1229,7 @@ void Program::Initialize() {
   native_failure_result_ = null_object_;
 }
 
-bool Program::RunProcess(Process* process) {
+bool Program::ProcessRun(Process* process) {
   scheduler()->EnqueueProcess(process);
   return scheduler()->Run();
 }

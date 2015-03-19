@@ -25,7 +25,7 @@ class Session {
   void BuildProgram(Compiler* compiler, LibraryElement* root);
 
   // High-level operations.
-  void RunProcess();
+  void ProcessRun();
   void WriteSnapshot(const char* path);
   void CollectGarbage();
 

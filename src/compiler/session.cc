@@ -92,9 +92,9 @@ void Session::BuildProgram(Compiler* compiler, LibraryElement* root) {
   consumer.DoProgram(root);
 }
 
-void Session::RunProcess() {
-  connection_->Send(Connection::kSpawnProcessForMain);
-  connection_->Send(Connection::kRunProcess);
+void Session::ProcessRun() {
+  connection_->Send(Connection::kProcessSpawnForMain);
+  connection_->Send(Connection::kProcessRun);
 }
 
 void Session::WriteSnapshot(const char* path) {

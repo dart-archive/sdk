@@ -81,6 +81,26 @@ class PopIntegerCommand extends Command {
   PopIntegerCommand() : super(Opcode.PopInteger, const []);
 }
 
+class ProcessRunCommand extends Command {
+  ProcessRunCommand() : super(Opcode.ProcessRun, const[]);
+}
+
+class ProcessDebugCommand extends Command {
+  ProcessDebugCommand() : super(Opcode.ProcessDebug, const[]);
+}
+
+class ProcessStepCommand extends Command {
+  ProcessStepCommand() : super(Opcode.ProcessStep, const[]);
+}
+
+class ProcessContinueCommand extends Command {
+  ProcessContinueCommand() : super(Opcode.ProcessContinue, const[]);
+}
+
+class ProcessBacktraceCommand extends Command {
+  ProcessBacktraceCommand() : super(Opcode.ProcessBacktrace, const[]);
+}
+
 class Chunk {
   List _data;
   Chunk next;
@@ -184,7 +204,7 @@ class Session {
 
   StackTrace _stackTrace;
   int _stackTraceMethodId;
-
+  bool _terminateAfterBacktrace = false;
   bool _classConstruction = false;
 
   Session(this._compilerSocket, this._vmSocket) {
@@ -221,7 +241,10 @@ class Session {
     Command command = _compilerData.readCommand();
     while (command != null) {
       // Forward actual program structure to the VM.
-      if (command.opcode != Opcode.PushNewName) command.writeTo(_vmSocket);
+      if (command.opcode != Opcode.PushNewName &&
+          command.opcode != Opcode.ProcessRun) {
+        command.writeTo(_vmSocket);
+      }
       switch (command.opcode) {
         case Opcode.PushNewName:
           _stack.push(command.bufferAsString());
@@ -292,7 +315,7 @@ class Session {
           }
           _classConstruction = false;
           break;
-        case Opcode.RunProcess:
+        case Opcode.ProcessRun:
           if (SIMPLE_SYSTEM) _model.dumpMethods();
           break;
         default:
@@ -308,6 +331,10 @@ class Session {
     while (command != null) {
       switch (command.opcode) {
         case Opcode.UncaughtException:
+          _terminateAfterBacktrace = true;
+          new ProcessBacktraceCommand().writeTo(_vmSocket);
+          break;
+        case Opcode.ProcessBacktrace:
           var frameCount = command.readInt(0);
           _stackTrace = new StackTrace(frameCount);
           for (int i = 0; i < frameCount; ++i) {
@@ -328,8 +355,10 @@ class Session {
           _stackTrace.addFrame(new StackFrame(methodName, bcp));
           if (_stackTrace.complete) {
             _stackTrace.write(_model);
-            var command = new ForceTerminationCommand();
-            command.writeTo(_vmSocket);
+            if (_terminateAfterBacktrace) {
+              var command = new ForceTerminationCommand();
+              command.writeTo(_vmSocket);
+            }
           }
           break;
         default:
@@ -337,5 +366,27 @@ class Session {
       }
       command = _vmData.readCommand();
     }
+  }
+
+  // TODO(ager): introduce a command buffer and process the buffer only when
+  // the previous command has been completely processed.
+  run() {
+    new ProcessRunCommand().writeTo(_vmSocket);
+  }
+
+  debug() {
+    new ProcessDebugCommand().writeTo(_vmSocket);
+  }
+
+  step() {
+    new ProcessStepCommand().writeTo(_vmSocket);
+  }
+
+  cont() {
+    new ProcessContinueCommand().writeTo(_vmSocket);
+  }
+
+  backtrace() {
+    new ProcessBacktraceCommand().writeTo(_vmSocket);
   }
 }

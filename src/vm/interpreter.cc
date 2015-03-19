@@ -900,8 +900,7 @@ uint8* HandleThrow(Process* process, Object* exception, int* stack_delta) {
         // Send stack trace information to attached sessions.
         Session* session = process->program()->session();
         if (session != NULL) {
-          int frames = StackWalker::ComputeStackTrace(process, session);
-          session->UncaughtException(frames);
+          session->UncaughtException();
           return NULL;
         }
       }

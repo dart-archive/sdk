@@ -47,7 +47,7 @@ class Scheduler {
   void ResumeProcess(Process* process);
 
   // Continue a process that is stopped at a break point.
-  void ContinueProcess(Process* process);
+  void ProcessContinue(Process* process);
 
   // Run the [process] on the current thread if possible.
   // The [port] must be locked, and will be unlocked by this method.
@@ -55,7 +55,7 @@ class Scheduler {
   // TODO(ajohnsen): This could be improved by taking a Port and a 'message',
   // and avoid the extra allocation on the process queue (in the case where it's
   // empty).
-  bool RunProcessOnCurrentThread(Process* process, Port* port);
+  bool ProcessRunOnCurrentThread(Process* process, Port* port);
 
   bool Run();
 

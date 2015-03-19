@@ -12,6 +12,7 @@
 #include "src/vm/platform.h"
 #include "src/vm/process.h"
 #include "src/vm/snapshot.h"
+#include "src/vm/stack_walker.h"
 #include "src/vm/thread.h"
 
 #define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp)                    \
@@ -87,21 +88,46 @@ void Session::ProcessMessages() {
         return;
       }
 
-      case Connection::kSpawnProcessForMain: {
+      case Connection::kProcessSpawnForMain: {
         // Setup entry point for main thread.
         program()->set_entry(Function::cast(Pop()));
         program()->set_main_arity(Smi::cast(Pop())->value());
-        process_ = program()->SpawnProcessForMain();
+        process_ = program()->ProcessSpawnForMain();
         break;
       }
 
-      case Connection::kRunProcess: {
-        SignalMainThread(kRunProcess);
+      case Connection::kProcessRun: {
+        SignalMainThread(kProcessRun);
         // If we have a bridge connection we continue
         // processing messages. If we are connected to the
         // compiler directly we terminate the message
         // processing thread.
         if (!Flags::IsOn(kBridgeConnectionFlag)) return;
+        break;
+      }
+
+      case Connection::kProcessDebug: {
+        process_->set_is_stepping(true);
+        break;
+      }
+
+      case Connection::kProcessStep: {
+        Scheduler* scheduler = program()->scheduler();
+        scheduler->ProcessContinue(process_);
+        break;
+      }
+
+      case Connection::kProcessContinue: {
+        Scheduler* scheduler = program()->scheduler();
+        process_->set_is_stepping(false);
+        scheduler->ProcessContinue(process_);
+        break;
+      }
+
+      case Connection::kProcessBacktrace: {
+        int frames = StackWalker::ComputeStackTrace(process_, this);
+        connection_->WriteInt(frames);
+        connection_->Send(Connection::kProcessBacktrace);
         break;
       }
 
@@ -312,7 +338,7 @@ void Session::IteratePointers(PointerVisitor* visitor) {
   }
 }
 
-bool Session::RunProcess() {
+bool Session::ProcessRun() {
   main_thread_monitor_->Lock();
   while (main_thread_resume_kind_ == kUnknown) main_thread_monitor_->Wait();
   main_thread_monitor_->Unlock();
@@ -321,8 +347,8 @@ bool Session::RunProcess() {
       return false;
     case kSnapshotDone:
       return true;
-    case kRunProcess:
-      return program()->RunProcess(process_);
+    case kProcessRun:
+      return program()->ProcessRun(process_);
     case kUnknown:
       UNREACHABLE();
       break;
@@ -661,13 +687,12 @@ void Session::PostponeChange(Change change, int count) {
   changes_.Add(array);
 }
 
-void Session::UncaughtException(int frame_count) {
+void Session::UncaughtException() {
   // TODO(ager): This is not thread safe. UncaughtException is called
   // from the interpreter on a thread from the thread pool and it is
   // writing on the connection.  We need a real event loop for the
   // message handling and we need to enqueue a message for the event
   // loop here.
-  connection_->WriteInt(frame_count);
   connection_->Send(Connection::kUncaughtException);
 }
 

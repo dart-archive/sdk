@@ -3,17 +3,61 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'session.dart';
 
 const String BUILD_DIR = const String.fromEnvironment("build-dir");
 
+const String BANNER = """
+Starting session.
+
+Commands:
+  'r'    run main
+  'd'    mark the process for debugging
+  's'    step on bytecode in the process
+  'c'    continue a stepping execution running to program completion
+  'bt'   backtrace
+  'quit' quit the session
+""";
+
+Session session;
+String previousLine = '';
+
 addCompilerOutput(stream) {
   return (d) {
     stream.write("compiler: ");
     stream.add(d);
   };
+}
+
+printPrompt() => stdout.write('> ');
+
+onInput(String line) {
+  if (line.isEmpty) line = previousLine;
+  previousLine = line;
+  switch (line) {
+    case "quit":
+      exit(0);
+      break;
+    case "r":
+      session.run();
+      break;
+    case "d":
+      session.debug();
+      break;
+    case "s":
+      session.step();
+      break;
+    case "c":
+      session.cont();
+      break;
+    case "bt":
+      session.backtrace();
+      break;
+  }
+  printPrompt();
 }
 
 main(args) {
@@ -60,11 +104,12 @@ main(args) {
               assert(hasValue);
               var vmSocket = connectionIterator.current;
               server.close();
-              print('\nStarting session. Ctrl-D to end session.\n');
-              var session = new Session(compilerSocket, vmSocket);
-              // TODO(ager): dart:io be zhe borken! No way to terminate
-              // stdin nicely?
-              stdin.listen((_) { exit(1); }, onDone: () => session.end());
+              print(BANNER);
+              session = new Session(compilerSocket, vmSocket);
+              printPrompt();
+              stdin.transform(new Utf8Decoder())
+                   .transform(new LineSplitter())
+                   .listen(onInput, onDone: () => session.end());
             });
           });
         });

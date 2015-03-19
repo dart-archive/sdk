@@ -168,13 +168,13 @@ void Scheduler::ResumeProcess(Process* process) {
   EnqueueOnAnyThread(process, 0);
 }
 
-void Scheduler::ContinueProcess(Process* process) {
+void Scheduler::ProcessContinue(Process* process) {
   bool success = process->ChangeState(Process::kBreakPoint, Process::kReady);
   ASSERT(success);
   EnqueueOnAnyThread(process, 0);
 }
 
-bool Scheduler::RunProcessOnCurrentThread(Process* process, Port* port) {
+bool Scheduler::ProcessRunOnCurrentThread(Process* process, Port* port) {
   ASSERT(port->IsLocked());
   if (!process->ChangeState(Process::kSleeping, Process::kRunning)) {
     port->Unlock();

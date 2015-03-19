@@ -117,7 +117,7 @@ void Service::Invoke(int id, void* buffer, int size) {
   request->service = this;
   request->callback = NULL;
   process->EnqueueForeign(port_, buffer, size, false);
-  process->program()->scheduler()->RunProcessOnCurrentThread(process, port_);
+  process->program()->scheduler()->ProcessRunOnCurrentThread(process, port_);
   WaitForResult(request);
 }
 

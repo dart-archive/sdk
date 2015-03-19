@@ -70,7 +70,7 @@ static void RunDartFile() {
   Session session(listener.Accept());
   session.Initialize();
   session.StartMessageProcessingThread();
-  bool success = session.RunProcess();
+  bool success = session.ProcessRun();
 
   EXPECT_EQ(true, success);
 

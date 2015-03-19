@@ -145,7 +145,7 @@ class Process {
   // Debugging support.
   bool is_debugging() const { return is_stepping_; }
   bool is_stepping() const { return is_stepping_; }
-  void set_is_stepping(bool value) { is_stepping_ = true; }
+  void set_is_stepping(bool value) { is_stepping_ = value; }
 
   Process* next() const { return next_; }
   void set_next(Process* process) { next_ = process; }

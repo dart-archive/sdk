@@ -30,7 +30,7 @@ class Session {
   void IteratePointers(PointerVisitor* visitor);
 
   // High-level operations.
-  bool RunProcess();
+  bool ProcessRun();
   bool WriteSnapshot(const char* path);
   void CollectGarbage();
 
@@ -89,7 +89,7 @@ class Session {
   void CommitChanges(int count);
   void DiscardChanges();
 
-  void UncaughtException(int frame_count);
+  void UncaughtException();
 
   void BreakPoint(Process* process);
 
@@ -105,7 +105,7 @@ class Session {
 
   enum MainThreadResumeKind {
     kUnknown,
-    kRunProcess,
+    kProcessRun,
     kError,
     kSnapshotDone
   };
