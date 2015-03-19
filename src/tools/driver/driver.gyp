@@ -7,6 +7,41 @@
     'include_dirs': [
       '../../../',
     ],
+    # TODO(ahe): Move rules to common.gypi.
+    'rules': [
+      {
+        'rule_name': 'lint_cc',
+        'extension': 'cc',
+        'toolsets': ['host'],
+        'inputs': [
+          '../../../third_party/cpplint/cpplint.py',
+        ],
+        'outputs': [
+          '>(INTERMEDIATE_DIR)/<(RULE_INPUT_NAME).lint.log',
+        ],
+        'action': [
+          "bash", "-c",
+          "python >(_inputs) <(RULE_INPUT_PATH) && "
+          "LANG=POSIX date '+Lint checked on %+' > <(_outputs)",
+        ],
+      },
+      {
+        'rule_name': 'lint_h',
+        'extension': 'h',
+        'toolsets': ['host'],
+        'inputs': [
+          '../../../third_party/cpplint/cpplint.py',
+        ],
+        'outputs': [
+          '>(INTERMEDIATE_DIR)/<(RULE_INPUT_NAME).lint.log',
+        ],
+        'action': [
+          "bash", "-c",
+          "python >(_inputs) <(RULE_INPUT_PATH) && "
+          "LANG=POSIX date '+Lint checked on %+' > <(_outputs)",
+        ],
+      },
+    ],
   },
   'targets': [
     {
@@ -19,6 +54,8 @@
       'sources': [
         'main.cc',
 
+        'connection.h',
+        'connection.cc',
         'get_path_of_executable.h',
         'get_path_of_executable_linux.cc',
         'get_path_of_executable_macos.cc',

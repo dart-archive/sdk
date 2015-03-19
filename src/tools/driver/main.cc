@@ -41,9 +41,6 @@
 //
 // Consequently, this process always communicates with a server process that
 // isn't considered a child of itself.
-//
-// TODO(ahe): Send the command line arguments of this process to the persistent
-// process.
 
 namespace fletch {
 
@@ -215,11 +212,12 @@ static int ComputeDriverPort() {
 
   // We have determined that the port number is in the range [-1, USHRT_MAX],
   // and can safely cast it to an int.
-  return (int)port;
+  return static_cast<int>(port);
 }
 
 static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
-  char resolved[buffer_length];
+  // TODO(ahe): Fix lint problem: Do not use variable-length arrays.
+  char resolved[buffer_length];  // NOLINT
   GetPathOfExecutable(buffer, buffer_length);
   if (realpath(buffer, resolved) == NULL) {
     Die("%s: realpath of '%s' failed: %s", program_name, buffer,
@@ -348,11 +346,11 @@ static int ReadInt(Socket *socket) {
     desired_bytes -= bytes_read;
     data += bytes_read;
   }
-  return (int)ntohl(result);
+  return static_cast<int>(ntohl(result));
 }
 
 static void Forward(Socket* socket, int fd) {
-  uint8 buffer[1500];
+  uint8 buffer[4096];
   ssize_t bytes_count =
       TEMP_FAILURE_RETRY(
           read(socket->FileDescriptor(), &buffer, sizeof(buffer)));
@@ -385,25 +383,25 @@ static void SendArgv(Socket *socket, int argc, char** argv) {
 static int Main(int argc, char** argv) {
   program_name = argv[0];
   int port = ComputeDriverPort();
-  Socket *socket = new Socket();
+  Socket *controlSocket = new Socket();
 
   if (port < -1) {
     return 1;
   }
 
-  if (!socket->Connect("127.0.0.1", port)) {
+  if (!controlSocket->Connect("127.0.0.1", port)) {
     port = StartFletchDriverServer();
 
-    delete socket;
-    socket = new Socket();
-    if (!socket->Connect("127.0.0.1", port)) {
+    delete controlSocket;
+    controlSocket = new Socket();
+    if (!controlSocket->Connect("127.0.0.1", port)) {
       Die("%s: Failed to start fletch server.", program_name);
     }
   }
 
-  int io_port = ReadInt(socket);
+  int io_port = ReadInt(controlSocket);
 
-  SendArgv(socket, argc, argv);
+  SendArgv(controlSocket, argc, argv);
 
   Socket *stdio_socket = new Socket();
   Socket *stderr_socket = new Socket();
@@ -425,8 +423,8 @@ static int Main(int argc, char** argv) {
   if (nfds < stderr_socket->FileDescriptor()) {
     nfds = stderr_socket->FileDescriptor();
   }
-  if (nfds < socket->FileDescriptor()) {
-    nfds = socket->FileDescriptor();
+  if (nfds < controlSocket->FileDescriptor()) {
+    nfds = controlSocket->FileDescriptor();
   }
   nfds++;
   while (true) {
@@ -437,7 +435,7 @@ static int Main(int argc, char** argv) {
     FD_ZERO(&writefds);
     FD_ZERO(&errorfds);
     FD_SET(STDIN_FILENO, &readfds);
-    FD_SET(socket->FileDescriptor(), &readfds);
+    FD_SET(controlSocket->FileDescriptor(), &readfds);
     FD_SET(stdio_socket->FileDescriptor(), &readfds);
     FD_SET(stderr_socket->FileDescriptor(), &readfds);
 
@@ -455,7 +453,7 @@ static int Main(int argc, char** argv) {
         Forward(stderr_socket, STDERR_FILENO);
       }
       if (FD_ISSET(STDIN_FILENO, &readfds)) {
-        uint8 buffer[1500];
+        uint8 buffer[4096];
         size_t bytes_count = read(STDIN_FILENO, &buffer, sizeof(buffer));
         do {
           ssize_t bytes_written =
@@ -468,8 +466,8 @@ static int Main(int argc, char** argv) {
           bytes_count -= bytes_written;
         } while (bytes_count > 0);
       }
-      if (FD_ISSET(socket->FileDescriptor(), &readfds)) {
-        exit(ReadInt(socket));
+      if (FD_ISSET(controlSocket->FileDescriptor(), &readfds)) {
+        exit(ReadInt(controlSocket));
       }
     }
   }
