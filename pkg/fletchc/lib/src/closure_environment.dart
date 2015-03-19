@@ -467,6 +467,26 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
+  void visitDynamicPropertyPrefix(
+      Send node,
+      Node receiver,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void visitDynamicPropertyPostfix(
+      Send node,
+      Node receiver,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _) {
+    node.visitChildren(this);
+  }
+
   void errorUnresolvedInvoke(
       Send node,
       Element element,
@@ -1180,16 +1200,6 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void visitDynamicPropertyPrefix(
-      Send node,
-      Node receiver,
-      IncDecOperator operator,
-      Selector getterSelector,
-      Selector setterSelector,
-      _) {
-    node.visitChildren(this);
-  }
-
   void visitParameterPrefix(
       Send node,
       ParameterElement parameter,
@@ -1206,7 +1216,6 @@ class ClosureVisitor
       _) {
     node.visitChildren(this);
   }
-
 
   void visitThisPropertyPrefix(
       Send node,
@@ -1364,16 +1373,6 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void visitDynamicPropertyPostfix(
-      Send node,
-      Node receiver,
-      IncDecOperator operator,
-      Selector getterSelector,
-      Selector setterSelector,
-      _) {
-    node.visitChildren(this);
-  }
-
   void visitParameterPostfix(
       Send node,
       ParameterElement parameter,
@@ -1391,13 +1390,13 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-
   void visitThisPropertyPostfix(
       Send node,
       IncDecOperator operator,
       Selector getterSelector,
       Selector setterSelector,
       _) {
+    markThisUsed();
     node.visitChildren(this);
   }
 

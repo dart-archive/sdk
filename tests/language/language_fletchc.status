@@ -40,7 +40,6 @@ ackermann_test: Fail
 ackermann_test: Timeout
 adjacent_const_string_literals_test: Fail
 adjacent_string_literals_test: Fail
-allocation_sinking_inlining_test: Fail
 argument_definition_test/01: MissingCompileTimeError
 arithmetic2_test: Fail
 arithmetic_canonicalization_test: Crash
@@ -80,6 +79,7 @@ async_test/type-mismatch3: Fail
 async_test/type-mismatch4: Fail
 await_backwards_compatibility_test/await1: MissingCompileTimeError
 await_backwards_compatibility_test/await2: Crash
+await_backwards_compatibility_test/await2: MissingCompileTimeError
 await_backwards_compatibility_test/await3: MissingCompileTimeError
 await_backwards_compatibility_test/await4: MissingCompileTimeError
 await_backwards_compatibility_test/none: Fail
@@ -92,7 +92,6 @@ bad_constructor_test/04: MissingCompileTimeError
 bad_constructor_test/05: MissingRuntimeError
 bad_constructor_test/06: Crash
 bad_initializer1_negative_test: Crash
-bad_named_constructor_negative_test: Crash
 bad_override_test/03: MissingCompileTimeError
 bad_override_test/04: MissingCompileTimeError
 bad_override_test/05: MissingCompileTimeError
@@ -128,7 +127,6 @@ bool_test: Fail
 bound_closure_equality_test: Fail
 bound_closure_primitives_test: Fail
 branch_canonicalization_test: Crash
-branches_test: Fail
 break_test: Crash
 built_in_identifier_illegal_test/01: Crash
 built_in_identifier_illegal_test/04: Crash
@@ -190,7 +188,6 @@ cascade_test/01: Crash
 cascade_test/02: Crash
 cascade_test/03: Crash
 cascade_test/none: Fail
-cast2_test/none: Fail
 cast_test/04: Fail
 cast_test/05: Fail
 cast_test/none: Fail
@@ -232,6 +229,7 @@ class_literal_test/14: Fail
 class_literal_test/15: Fail
 class_literal_test/16: Fail
 class_literal_test/17: Crash
+class_literal_test/17: Fail
 class_literal_test/18: Fail
 class_literal_test/19: Fail
 class_literal_test/20: Fail
@@ -240,6 +238,7 @@ class_literal_test/22: Fail
 class_literal_test/23: Fail
 class_literal_test/24: Fail
 class_literal_test/25: Crash
+class_literal_test/25: Fail
 class_literal_test/none: Fail
 class_syntax2_test: Fail
 class_syntax_test/01: MissingCompileTimeError
@@ -263,7 +262,6 @@ closure_parameter_types_test: Fail
 closure_self_reference_test: Fail
 closure_shared_state_test: Fail
 closure_side_effect_test: Fail
-closure_test: Fail
 closure_type_test/01: Fail
 closure_type_test/none: Fail
 closure_type_variable_test: Fail
@@ -389,6 +387,7 @@ const_syntax_test/08: MissingCompileTimeError
 const_syntax_test/09: MissingCompileTimeError
 const_syntax_test/10: MissingCompileTimeError
 const_syntax_test/none: Fail
+const_test: Crash
 const_test: Fail
 const_types_test/01: Fail
 const_types_test/02: Fail
@@ -568,10 +567,8 @@ deferred_not_loaded_check_test: Crash
 deferred_optimized_test: Crash
 deferred_shadow_load_library_test: Crash
 deopt_inlined_function_test: Fail
-deopt_lazy_finalization_test: Fail
 deopt_no_feedback_test: Crash
 deopt_smi_op_test: Fail
-deoptimized_function_on_stack_test: Fail
 div_by_zero_test: Crash
 div_with_power_of_two2_test: Fail
 div_with_power_of_two_test: Fail
@@ -959,13 +956,11 @@ hello_script_test: Fail
 identical_closure2_test: Crash
 identical_closure_test: Crash
 identical_test: Fail
-if_and_test: Fail
 illegal_declaration_test/01: Crash
 illegal_initializer_test/01: Crash
 illegal_initializer_test/02: Crash
 illegal_initializer_test/03: Crash
 illegal_initializer_test/04: Crash
-illegal_invocation_test/01: Crash
 implicit_closure1_test: Fail
 implicit_closure2_test: Fail
 implicit_closure_test: Fail
@@ -1000,18 +995,14 @@ inferrer_synthesized_constructor_test: Fail
 inferrer_this_access_test: Fail
 infinite_switch_label_test: Fail
 infinity_test: Fail
-inline_argument_test: Fail
-inline_effect_context_test: Fail
-inline_getter_test: Fail
 inline_in_for_initializer_and_bailout_test: Crash
 inline_super_field_test: Crash
 inline_super_test: Fail
-inline_test_context_test: Fail
-inline_value_context_test: Fail
 inlined_conditional_test: Fail
 inlined_throw_test: Fail
 inst_field_initializer1_negative_test: Crash
 inst_field_initializer_test: Fail
+instance_compound_assignment_operator_test: Crash
 instance_compound_assignment_operator_test: Fail
 instance_incr_deopt_test: Crash
 instance_inline_test: Fail
@@ -1043,6 +1034,7 @@ interface_static_method_negative_test: Fail
 interface_test/00: Fail
 internal_library_test/01: MissingCompileTimeError
 internal_library_test/02: Crash
+internal_library_test/02: MissingCompileTimeError
 intrinsified_methods_test: Crash
 invocation_mirror2_test: Crash
 invocation_mirror_invoke_on2_test: Crash
@@ -1058,9 +1050,7 @@ is_malformed_type_test/97: Fail
 is_malformed_type_test/98: Fail
 is_malformed_type_test/99: Fail
 is_nan_test: Fail
-is_not_class1_negative_test: Crash
 is_not_class2_test: Fail
-is_not_class4_negative_test: Crash
 is_object_test: Fail
 is_operator_test: Fail
 isnot_malformed_type_test: Fail
@@ -1098,7 +1088,6 @@ keyword_type_expression_test/02: Crash
 keyword_type_expression_test/03: Crash
 label5_negative_test: Fail
 label6_negative_test: Fail
-label8_negative_test: Crash
 label_test: Crash
 large_class_declaration_test: Fail
 large_implicit_getter_test: Fail
@@ -1120,7 +1109,6 @@ library_prefixes_test: Fail
 library_private_in_constructor_test: Fail
 library_same_name_used_test: Fail
 licm2_test: Fail
-licm3_test: Fail
 licm_test: Fail
 list_double_index_in_loop2_test: Crash
 list_double_index_in_loop_test: Crash
@@ -1129,7 +1117,6 @@ list_literal2_negative_test: Fail
 list_literal2_test: Fail
 list_literal3_test: Crash
 list_literal4_test: Fail
-list_literal_negative_test: Crash
 list_literal_syntax_test/00: Crash
 list_literal_syntax_test/04: Crash
 list_literal_syntax_test/05: Crash
@@ -1154,7 +1141,6 @@ logical_expression3_test: Crash
 logical_expression4_test: Crash
 logical_expression5_test: Crash
 logical_expression_test: Crash
-loop_exchange4_test: Fail
 main_not_a_function_test/01: Crash
 main_test/01: Crash
 main_test/02: Crash
@@ -1210,7 +1196,6 @@ map_literal6_test: Fail
 map_literal7_test: Fail
 map_literal8_test: Fail
 map_literal9_test: Fail
-map_literal_negative_test: Crash
 map_literal_syntax_test: Fail
 map_literal_test: Fail
 map_test: Fail
@@ -1286,12 +1271,15 @@ mixin_illegal_object_test/02: MissingCompileTimeError
 mixin_illegal_static_access_test: Fail
 mixin_illegal_super_use_test/01: MissingCompileTimeError
 mixin_illegal_super_use_test/02: Crash
+mixin_illegal_super_use_test/02: MissingCompileTimeError
 mixin_illegal_super_use_test/03: MissingCompileTimeError
 mixin_illegal_super_use_test/04: MissingCompileTimeError
 mixin_illegal_super_use_test/05: Crash
+mixin_illegal_super_use_test/05: MissingCompileTimeError
 mixin_illegal_super_use_test/06: MissingCompileTimeError
 mixin_illegal_super_use_test/07: MissingCompileTimeError
 mixin_illegal_super_use_test/08: Crash
+mixin_illegal_super_use_test/08: MissingCompileTimeError
 mixin_illegal_super_use_test/09: MissingCompileTimeError
 mixin_illegal_super_use_test/10: MissingCompileTimeError
 mixin_illegal_super_use_test/11: MissingCompileTimeError
@@ -1402,6 +1390,7 @@ named_parameters3_test: Fail
 named_parameters4_test: Crash
 named_parameters_aggregated_test/01: MissingCompileTimeError
 named_parameters_aggregated_test/02: Crash
+named_parameters_aggregated_test/02: MissingCompileTimeError
 named_parameters_aggregated_test/03: MissingCompileTimeError
 named_parameters_aggregated_test/04: Crash
 named_parameters_aggregated_test/05: Fail
@@ -1506,6 +1495,7 @@ parameter_initializer1_negative_test: Fail
 parameter_initializer2_negative_test: Crash
 parameter_initializer3_negative_test: Fail
 parameter_initializer4_negative_test: Crash
+parameter_initializer_test: Crash
 parameter_initializer_test: Fail
 parameter_name_conflict_test: Fail
 parameter_types_specialization_test: Fail
@@ -1541,7 +1531,6 @@ private3_test: Fail
 private4_test: Fail
 private_mixin2_test: Fail
 private_test: Fail
-property_field_override_test: Fail
 pure_function2_test: Crash
 pure_function_test: Fail
 range_analysis2_test: Fail
@@ -1583,7 +1572,6 @@ regress_14105_test: Fail
 regress_14348_test: Crash
 regress_18435_test: Fail
 regress_18535_test: Crash
-regress_19413_test/01: Crash
 regress_20394_test/01: Crash
 regress_20840_test: Fail
 regress_r24720_test: Fail
@@ -1632,10 +1620,6 @@ stacktrace_rethrow_error_test/none: Fail
 stacktrace_rethrow_error_test/withtraceparameter: Fail
 stacktrace_rethrow_nonerror_test: Fail
 stacktrace_test: Fail
-state_mangling2_test: Fail
-state_mangling3_test: Fail
-state_mangling4_test: Fail
-state_mangling_test: Fail
 statement_test: Crash
 static_call_wrong_argument_count_negative_test: Crash
 static_closure_identical_test: Fail
@@ -1672,12 +1656,7 @@ string_interpolate2_negative_test: Fail
 string_interpolate2_test: Fail
 string_interpolate_null_test: Fail
 string_interpolate_test: Fail
-string_interpolation1_negative_test: Crash
-string_interpolation2_negative_test: Crash
 string_interpolation3_negative_test: Fail
-string_interpolation4_negative_test: Crash
-string_interpolation5_negative_test: Crash
-string_interpolation6_negative_test: Crash
 string_interpolation7_test: Fail
 string_interpolation8_test: Fail
 string_interpolation9_test/10: MissingCompileTimeError
@@ -1860,10 +1839,15 @@ try_catch3_test: Fail
 try_catch4_test: Fail
 try_catch5_test: Fail
 try_catch_on_syntax_test/02: Crash
+try_catch_on_syntax_test/02: MissingCompileTimeError
 try_catch_on_syntax_test/03: Crash
+try_catch_on_syntax_test/03: MissingCompileTimeError
 try_catch_on_syntax_test/04: Crash
+try_catch_on_syntax_test/04: MissingCompileTimeError
 try_catch_on_syntax_test/05: Crash
+try_catch_on_syntax_test/05: MissingCompileTimeError
 try_catch_on_syntax_test/06: Crash
+try_catch_on_syntax_test/06: MissingCompileTimeError
 try_catch_on_syntax_test/07: Fail
 try_catch_on_syntax_test/none: Fail
 try_catch_optimized1_test: Crash
@@ -1873,10 +1857,14 @@ try_catch_optimized4_test: Fail
 try_catch_osr_test: Fail
 try_catch_syntax_test/01: MissingCompileTimeError
 try_catch_syntax_test/02: Crash
+try_catch_syntax_test/02: MissingCompileTimeError
 try_catch_syntax_test/03: Crash
+try_catch_syntax_test/03: MissingCompileTimeError
 try_catch_syntax_test/04: Crash
+try_catch_syntax_test/04: MissingCompileTimeError
 try_catch_syntax_test/05: MissingCompileTimeError
 try_catch_syntax_test/06: Crash
+try_catch_syntax_test/06: MissingCompileTimeError
 try_catch_syntax_test/07: MissingCompileTimeError
 try_catch_syntax_test/09: MissingCompileTimeError
 try_catch_syntax_test/10: MissingCompileTimeError
@@ -1978,7 +1966,6 @@ unbalanced_brace_test/01: Crash
 unbalanced_brace_test/02: Crash
 unicode_bom_middle_test: Fail
 unresolved_default_constructor_test/01: Crash
-unresolved_in_factory_negative_test: Crash
 unresolved_top_level_method_negative_test: Fail
 unresolved_top_level_var_negative_test: Fail
 unsigned_right_shift_test/01: Crash

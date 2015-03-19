@@ -417,6 +417,22 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void visitLocalVariableCompound(
+      Send node,
+      LocalVariableElement variable,
+      AssignmentOperator operator,
+      Node rhs,
+      _) {
+    LocalValue value = scope[variable];
+    value.load(builder);
+    visitForValue(rhs);
+    Selector selector = new Selector.binaryOperator(
+        operator.binaryOperator.name);
+    invokeMethod(selector);
+    value.store(builder);
+    applyVisitState();
+  }
+
   void handleBinaryOperator(
       Node left,
       Node right,
@@ -954,7 +970,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
-  void doLocalVariableIncrement(
+  void handleLocalVariableIncrement(
       LocalVariableElement element,
       IncDecOperator operator,
       bool prefix) {
@@ -978,7 +994,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       LocalVariableElement element,
       IncDecOperator operator,
       _) {
-    doLocalVariableIncrement(element, operator, true);
+    handleLocalVariableIncrement(element, operator, true);
   }
 
   void visitLocalVariablePostfix(
@@ -989,7 +1005,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     // If visitState is for effect, we can ignore the return value, thus always
     // generate code for the simpler 'prefix' case.
     bool prefix = (visitState == VisitState.Effect);
-    doLocalVariableIncrement(element, operator, prefix);
+    handleLocalVariableIncrement(element, operator, prefix);
   }
 
   void visitParameterGet(
@@ -1005,6 +1021,107 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Node rhs,
       _) {
     visitLocalVariableSet(node, element, rhs, _);
+  }
+
+  void handleDynamicPrefix(
+      Node receiver,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector) {
+    if (receiver != null) {
+      visitForValue(receiver);
+    } else {
+      loadThis();
+    }
+    builder.dup();
+    invokeGetter(getterSelector);
+    builder.loadLiteral(1);
+    Selector selector = new Selector.binaryOperator(
+        operator == IncDecOperator.INC ? '+' : '-');
+    invokeMethod(selector);
+    invokeSetter(setterSelector);
+    applyVisitState();
+  }
+
+  void visitThisPropertyPrefix(
+      Send node,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _) {
+    handleDynamicPrefix(null, operator, getterSelector, setterSelector);
+  }
+
+  void visitThisPropertyPostfix(
+      Send node,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _) {
+    // If visitState is for effect, we can ignore the return value, thus always
+    // generate code for the simpler 'prefix' case.
+    if (visitState == VisitState.Effect) {
+      handleDynamicPrefix(node, operator, getterSelector, setterSelector);
+      return;
+    }
+
+    loadThis();
+    invokeGetter(getterSelector);
+    // For postfix, keep local, unmodified version, to 'return' after store.
+    builder.dup();
+    builder.loadLiteral(1);
+    Selector selector = new Selector.binaryOperator(
+        operator == IncDecOperator.INC ? '+' : '-');
+    invokeMethod(selector);
+    loadThis();
+    builder.loadLocal(1);
+    invokeSetter(setterSelector);
+    builder.popMany(2);
+    applyVisitState();
+  }
+
+  void visitDynamicPropertyPrefix(
+      Send node,
+      Node receiver,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _) {
+    handleDynamicPrefix(receiver, operator, getterSelector, setterSelector);
+  }
+
+  void visitDynamicPropertyPostfix(
+      Send node,
+      Node receiver,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _) {
+    // If visitState is for effect, we can ignore the return value, thus always
+    // generate code for the simpler 'prefix' case.
+    if (visitState == VisitState.Effect) {
+      handleDynamicPrefix(receiver, operator, getterSelector, setterSelector);
+      return;
+    }
+
+    int receiverSlot = builder.stackSize;
+    visitForValue(receiver);
+    builder.loadSlot(receiverSlot);
+    invokeGetter(getterSelector);
+    // For postfix, keep local, unmodified version, to 'return' after store.
+    builder.dup();
+    builder.loadLiteral(1);
+    Selector selector = new Selector.binaryOperator(
+        operator == IncDecOperator.INC ? '+' : '-');
+    invokeMethod(selector);
+    builder.loadSlot(receiverSlot);
+    builder.loadLocal(1);
+    invokeSetter(setterSelector);
+    builder.popMany(2);
+    builder.storeLocal(1);
+    // Pop receiver.
+    builder.pop();
+    applyVisitState();
   }
 
   void visitThrow(Throw node) {
@@ -1344,7 +1461,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector selector,
       _) {
     generateUnimplementedError(node, "unresolved static call");
-    applyVisitState();
   }
 
   void internalError(Spannable spannable, String reason) {
@@ -1898,17 +2014,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
         node, "[errorFinalParameterCompound] isn't implemented.");
   }
 
-  void visitLocalVariableCompound(
-      Send node,
-      LocalVariableElement variable,
-      AssignmentOperator operator,
-      Node rhs,
-      _){
-    generateUnimplementedError(
-        node,
-        "[visitLocalVariableCompound] isn't implemented.");
-  }
-
   void errorFinalLocalVariableCompound(
       Send node,
       LocalVariableElement variable,
@@ -2140,17 +2245,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
         node, "[visitSuperCompoundIndexSet] isn't implemented.");
   }
 
-  void visitDynamicPropertyPrefix(
-      Send node,
-      Node receiver,
-      IncDecOperator operator,
-      Selector getterSelector,
-      Selector setterSelector,
-      _){
-    generateUnimplementedError(
-        node, "[visitDynamicPropertyPrefix] isn't implemented.");
-  }
-
   void visitParameterPrefix(
       Send node,
       ParameterElement parameter,
@@ -2167,17 +2261,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       _){
     generateUnimplementedError(
         node, "[errorLocalFunctionPrefix] isn't implemented.");
-  }
-
-
-  void visitThisPropertyPrefix(
-      Send node,
-      IncDecOperator operator,
-      Selector getterSelector,
-      Selector setterSelector,
-      _){
-    generateUnimplementedError(
-        node, "[visitThisPropertyPrefix] isn't implemented.");
   }
 
   void visitStaticFieldPrefix(
@@ -2198,7 +2281,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     generateUnimplementedError(
         node, "[visitStaticGetterSetterPrefix] isn't implemented.");
   }
-
 
   void visitStaticMethodSetterPrefix(
       Send node,
@@ -2335,17 +2417,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
         node, "[visitDynamicTypeLiteralPrefix] isn't implemented.");
   }
 
-  void visitDynamicPropertyPostfix(
-      Send node,
-      Node receiver,
-      IncDecOperator operator,
-      Selector getterSelector,
-      Selector setterSelector,
-      _){
-    generateUnimplementedError(
-        node, "[visitDynamicPropertyPostfix] isn't implemented.");
-  }
-
   void visitParameterPostfix(
       Send node,
       ParameterElement parameter,
@@ -2362,17 +2433,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       _){
     generateUnimplementedError(
         node, "[errorLocalFunctionPostfix] isn't implemented.");
-  }
-
-
-  void visitThisPropertyPostfix(
-      Send node,
-      IncDecOperator operator,
-      Selector getterSelector,
-      Selector setterSelector,
-      _){
-    generateUnimplementedError(
-        node, "[visitThisPropertyPostfix] isn't implemented.");
   }
 
   void visitStaticFieldPostfix(
