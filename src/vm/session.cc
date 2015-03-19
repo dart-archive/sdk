@@ -671,6 +671,10 @@ void Session::UncaughtException(int frame_count) {
   connection_->Send(Connection::kUncaughtException);
 }
 
+void Session::BreakPoint(Process* process) {
+  // TODO(ager): Do Stuff.
+}
+
 void Session::ProcessTerminated(Process* process) {
   if (process_ == process) process_ = NULL;
 }

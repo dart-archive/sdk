@@ -61,6 +61,7 @@ class Process {
     kReady,
     kRunning,
     kYielding,
+    kBreakPoint,
   };
 
   enum ProgramGCState {
@@ -140,6 +141,11 @@ class Process {
   void Preempt();
 
   void Profile();
+
+  // Debugging support.
+  bool is_debugging() const { return is_stepping_; }
+  bool is_stepping() const { return is_stepping_; }
+  void set_is_stepping(bool value) { is_stepping_ = true; }
 
   Process* next() const { return next_; }
   void set_next(Process* process) { next_ = process; }
@@ -255,6 +261,8 @@ class Process {
   ProgramGCState program_gc_state_;
 
   int errno_cache_;
+
+  bool is_stepping_;
 
 #ifdef DEBUG
   bool true_then_false_;

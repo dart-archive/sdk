@@ -12,6 +12,7 @@
 #include "src/vm/port.h"
 #include "src/vm/process.h"
 #include "src/vm/process_queue.h"
+#include "src/vm/session.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
@@ -164,6 +165,12 @@ void Scheduler::EnqueueProcess(Process* process, ThreadState* thread_state) {
 
 void Scheduler::ResumeProcess(Process* process) {
   if (!process->ChangeState(Process::kSleeping, Process::kReady)) return;
+  EnqueueOnAnyThread(process, 0);
+}
+
+void Scheduler::ContinueProcess(Process* process) {
+  bool success = process->ChangeState(Process::kBreakPoint, Process::kReady);
+  ASSERT(success);
   EnqueueOnAnyThread(process, 0);
 }
 
@@ -413,7 +420,7 @@ Process* Scheduler::InterpretProcess(Process* process,
 
   ClearCurrentProcessForThread(thread_id, process);
 
-  if (interpreter.isTerminated()) {
+  if (interpreter.IsTerminated()) {
     delete process;
     if (--processes_ == 0) {
       NotifyAllThreads();
@@ -428,7 +435,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     return NULL;
   }
 
-  if (interpreter.isYielded()) {
+  if (interpreter.IsYielded()) {
     process->ChangeState(Process::kRunning, Process::kYielding);
     if (process->IsQueueEmpty()) {
       process->ChangeState(Process::kYielding, Process::kSleeping);
@@ -439,7 +446,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     return NULL;
   }
 
-  if (interpreter.isTargetYielded()) {
+  if (interpreter.IsTargetYielded()) {
     // The returned port currently has the lock. Unlock as soon as we know the
     // process is not kRunning (ChangeState either succeeded or failed).
     Port* port = interpreter.target();
@@ -468,16 +475,25 @@ Process* Scheduler::InterpretProcess(Process* process,
     return NULL;
   }
 
-  if (interpreter.isInterrupted()) {
+  if (interpreter.IsInterrupted()) {
     // No need to notify threads, as 'this' is now available.
     process->ChangeState(Process::kRunning, Process::kReady);
     EnqueueOnThread(thread_state, process);
     return NULL;
   }
 
-  if (interpreter.isUncaughtException()) {
+  if (interpreter.IsUncaughtException()) {
     // Just hang by not enqueueing the process. The session
     // will terminate the program on uncaught exceptions.
+    return NULL;
+  }
+
+  if (interpreter.IsAtBreakPoint()) {
+    process->ChangeState(Process::kRunning, Process::kBreakPoint);
+    Session* session = process->program()->session();
+    if (session != NULL) {
+      session->BreakPoint(process);
+    }
     return NULL;
   }
 

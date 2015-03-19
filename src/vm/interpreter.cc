@@ -140,6 +140,8 @@ class Engine : public State {
 
   void ValidateStack();
 
+  bool ShouldBreak();
+
   Object* ToBool(bool value) const {
     return value ? program()->true_object() : program()->false_object();
   }
@@ -156,6 +158,7 @@ class Engine : public State {
   opcode##Label: {                                        \
     if (Flags::IsOn("validate-stack")) ValidateStack()
 #define OPCODE_END() }                                    \
+  if (ShouldBreak()) return Interpreter::kBreakPoint;     \
   DISPATCH()
 
 Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
@@ -798,6 +801,12 @@ void Engine::ValidateStack() {
   RestoreState();
 }
 
+bool Engine::ShouldBreak() {
+  if (!process()->is_stepping()) return false;
+  SaveState();
+  return true;
+}
+
 extern "C"
 int InterpretFast(Process* process, Port** yield_target) __attribute__((weak));
 int InterpretFast(Process* process, Port** yield_target) { return -1; }
@@ -806,7 +815,8 @@ void Interpreter::Run() {
   ASSERT(interruption_ == kReady);
   process_->RestoreErrno();
   process_->TakeLookupCache();
-  int result = InterpretFast(process_, &target_);
+  int result = -1;
+  if (!process_->is_debugging()) result = InterpretFast(process_, &target_);
   if (result < 0) {
     Engine engine(process_);
     interruption_ = engine.Interpret(&target_);
@@ -817,7 +827,6 @@ void Interpreter::Run() {
   process_->StoreErrno();
   ASSERT(interruption_ != kReady);
 }
-
 
 // -------------------- Native interpreter support --------------------
 

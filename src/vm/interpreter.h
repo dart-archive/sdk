@@ -27,6 +27,7 @@ class Interpreter {
     kYield,
     kTargetYield,
     kUncaughtException,
+    kBreakPoint
   };
 
   explicit Interpreter(Process* process)
@@ -37,13 +38,14 @@ class Interpreter {
   // Run the Process until interruption.
   void Run();
 
-  bool isTerminated() const { return interruption_ == kTerminate; }
-  bool isInterrupted() const { return interruption_ == kInterrupt; }
-  bool isYielded() const { return interruption_ == kYield; }
-  bool isTargetYielded() const { return interruption_ == kTargetYield; }
-  bool isUncaughtException() const {
+  bool IsTerminated() const { return interruption_ == kTerminate; }
+  bool IsInterrupted() const { return interruption_ == kInterrupt; }
+  bool IsYielded() const { return interruption_ == kYield; }
+  bool IsTargetYielded() const { return interruption_ == kTargetYield; }
+  bool IsUncaughtException() const {
     return interruption_ == kUncaughtException;
   }
+  bool IsAtBreakPoint() const { return interruption_ == kBreakPoint; }
 
   Port* target() const { return target_; }
 

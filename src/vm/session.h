@@ -91,6 +91,8 @@ class Session {
 
   void UncaughtException(int frame_count);
 
+  void BreakPoint(Process* process);
+
   void ProcessTerminated(Process* process);
 
  private:

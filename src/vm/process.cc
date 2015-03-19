@@ -112,7 +112,8 @@ Process::Process(Program* program)
       last_message_(NULL),
       current_message_(NULL),
       program_gc_state_(kUnknown),
-      errno_cache_(0) {
+      errno_cache_(0),
+      is_stepping_(false) {
   Array* static_fields = program->static_fields();
   int length = static_fields->length();
   statics_ = Array::cast(NewArray(length));

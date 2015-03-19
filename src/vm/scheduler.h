@@ -46,6 +46,9 @@ class Scheduler {
   // nothing. This function is thread safe.
   void ResumeProcess(Process* process);
 
+  // Continue a process that is stopped at a break point.
+  void ContinueProcess(Process* process);
+
   // Run the [process] on the current thread if possible.
   // The [port] must be locked, and will be unlocked by this method.
   // Returns false if [process] is already scheduled or running.
