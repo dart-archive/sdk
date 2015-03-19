@@ -4,7 +4,10 @@
 
 library fletchc.driver;
 
-import 'dart:io';
+import 'dart:io' hide
+    stderr,
+    stdin,
+    stdout;
 
 import 'dart:io' as io;
 
@@ -59,31 +62,46 @@ class StreamBuffer {
   }
 
   void handleError(error, StackTrace stackTrace) {
-    if (stackTrace != null) {
-      stderr.write("$error\n$stackTrace\n");
-    } else {
-      stderr.write("$error\n");
-    }
+    Zone.ROOT.print(stringifyError(error, stackTrace));
     exit(1);
   }
 
   void handleDone() {
-    builder.takeBytes();
+    if (completer != null) {
+      completeIfPossible();
+    }
+    List trailing = builder.takeBytes();
+    if (trailing.length != 0) {
+      var error =
+          new StateError(
+              "Stream closed with trailing bytes "
+              "(requestedBytes = $requestedBytes): $trailing");
+      if (completer != null) {
+        completer.completeError(error);
+        completer = null;
+        requestedBytes = 0;
+      } else {
+        throw error;
+      }
+    }
   }
 
   void completeIfPossible() {
-    if (this.requestedBytes > builder.length) return;
+    if (requestedBytes > builder.length) return;
     // BytesBuilder always returns a Uint8List.
     Uint8List list = builder.takeBytes();
-    Completer<Uint8List> completer = this.completer;
-    int requestedBytes = this.requestedBytes;
-    this.completer = null;
-    this.requestedBytes = 0;
-    if (requestedBytes != list.length) {
-      builder.add(makeView(list, requestedBytes, list.length - requestedBytes));
+    Completer<Uint8List> currentCompleter = completer;
+    int currentRequestedBytes = requestedBytes;
+    completer = null;
+    requestedBytes = 0;
+    if (currentRequestedBytes != list.length) {
+      builder.add(
+          makeView(
+              list, currentRequestedBytes,
+              list.length - currentRequestedBytes));
     }
-    var result = makeView(list, 0, requestedBytes);
-    completer.complete(result);
+    var result = makeView(list, 0, currentRequestedBytes);
+    currentCompleter.complete(result);
   }
 
   Future<Uint8List> read(int length) {
@@ -129,7 +147,7 @@ Future main(List<String> arguments) async {
   try {
     while (await connectionIterator.moveNext()) {
       await handleClient(
-          handleErrors(connectionIterator.current, "controlSocket"));
+          handleSocketErrors(connectionIterator.current, "controlSocket"));
     }
   } finally {
     // TODO(ahe): Do this in a SIGTERM handler.
@@ -137,29 +155,52 @@ Future main(List<String> arguments) async {
   }
 }
 
-handleErrors(thing, String name) {
-  String info;
+Function makeErrorHandler(String info) {
+  return (error, StackTrace stackTrace) {
+    Zone.ROOT.print("Error on $info: ${stringifyError(error, stackTrace)}");
+  };
+}
 
-  void onError(error, stackTrace) {
-    if (stackTrace != null) {
-      io.stderr.write("Error on $info: $error\n$stackTrace\n");
-    } else {
-      io.stderr.write("Error on $info: $error\n");
+Socket handleSocketErrors(Socket socket, String name) {
+  String remotePort = "?";
+  try {
+    remotePort = "${socket.remotePort}";
+  } catch (_) {
+    // Ignored, socket.remotePort may fail if the socket was closed on the
+    // other side.
+  }
+  String info = "$name ${socket.port} -> $remotePort";
+  // TODO(ahe): Remove the following line when things get more stable.
+  Zone.ROOT.print(info);
+  socket.done.catchError(makeErrorHandler(info));
+  return socket;
+}
+
+StreamSubscription handleSubscriptionErrors(
+    StreamSubscription subscription,
+    String name) {
+  String info = "$name subscription";
+  Zone.ROOT.print(info);
+  return subscription
+      ..onError(makeErrorHandler(info));
+}
+
+String stringifyError(error, StackTrace stackTrace) {
+  String safeToString(object) {
+    try {
+      return '$object';
+    } catch (e) {
+      return Error.safeToString(object);
     }
   }
-
-  if (thing is Socket) {
-    info = "$name ${thing.port} -> ${thing.remotePort}";
-    thing.done.catchError(onError);
-  } else if (thing is StreamSubscription) {
-    info = "$name subscription";
-    thing.onError(onError);
+  StringBuffer buffer = new StringBuffer();
+  buffer.writeln(safeToString(error));
+  if (stackTrace != null) {
+    buffer.writeln(safeToString(stackTrace));
   } else {
-    throw "Unknown thing: ${thing.runtimeType}";
+    buffer.writeln("No stack trace.");
   }
-  io.stderr.write("New $info\n");
-
-  return thing;
+  return '$buffer';
 }
 
 Future handleClient(Socket controlSocket) async {
@@ -170,7 +211,6 @@ Future handleClient(Socket controlSocket) async {
   int port = server.port;
 
   writeNetworkUint32(controlSocket, port);
-  await controlSocket.flush();
 
   StreamBuffer controlBuffer = new StreamBuffer(controlSocket);
 
@@ -180,18 +220,26 @@ Future handleClient(Socket controlSocket) async {
   await connectionIterator.moveNext();
 
   // Socket for stdin and stdout.
-  Socket stdio = handleErrors(connectionIterator.current, "stdio");
+  Socket stdio = handleSocketErrors(connectionIterator.current, "stdio");
   await connectionIterator.moveNext();
 
   // Socket for stderr.
-  Socket stderr = handleErrors(connectionIterator.current, "stderr");
+  Socket stderr = handleSocketErrors(connectionIterator.current, "stderr");
 
   // Now that we have the sockets, close the server.
   server.close();
 
   ZoneSpecification specification =
       new ZoneSpecification(print: (_1, _2, _3, String line) {
-        stdout.writeln(line);
+        stdio.write('$line\n');
+      },
+      handleUncaughtError: (_1, _2, _3, error, StackTrace stackTrace) {
+        String message =
+            "\n\nExiting due to uncaught error.\n"
+            "${stringifyError(error, stackTrace)}";
+        Zone.ROOT.print(message);
+        stderr.write(message);
+        exit(1);
       });
 
   int exitCode = await Zone.current.fork(specification: specification)
@@ -257,13 +305,13 @@ Future<int> compile(List<String> arguments, Socket stdio, Socket stderr) async {
   var vmProcess =
       await Process.start(compiler.fletchVm.toFilePath(), vmOptions);
 
-  handleErrors(stdio.listen(vmProcess.stdin.add), "stdin");
-  handleErrors(vmProcess.stdout.listen(stdio.add), "stdout");
-  handleErrors(vmProcess.stderr.listen(stderr.add), "stderr");
+  handleSubscriptionErrors(stdio.listen(vmProcess.stdin.add), "stdin");
+  handleSubscriptionErrors(vmProcess.stdout.listen(stdio.add), "stdout");
+  handleSubscriptionErrors(vmProcess.stderr.listen(stderr.add), "stderr");
 
   bool hasValue = await connectionIterator.moveNext();
   assert(hasValue);
-  var vmSocket = handleErrors(connectionIterator.current, "vmSocket");
+  var vmSocket = handleSocketErrors(connectionIterator.current, "vmSocket");
   server.close();
 
   vmSocket.listen(null).cancel();

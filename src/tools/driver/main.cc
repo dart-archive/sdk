@@ -336,13 +336,19 @@ static int StartFletchDriverServer() {
 }
 
 static int ReadInt(Socket *socket) {
-  uint32* data = reinterpret_cast<uint32*>(socket->Read(4));
-  if (data == NULL) {
-    Die("%s: Read returned NULL", program_name);
+  uint32 result;
+  uint8* data = reinterpret_cast<uint8*>(&result);
+  ssize_t desired_bytes = 4;
+  while (desired_bytes > 0) {
+    ssize_t bytes_read =
+      TEMP_FAILURE_RETRY(read(socket->FileDescriptor(), data, desired_bytes));
+    if (bytes_read == -1) {
+      Die("%s: Read failed: %s", program_name, strerror(errno));
+    }
+    desired_bytes -= bytes_read;
+    data += bytes_read;
   }
-  uint32 result = ntohl(*data);
-  free(data);
-  return (int)result;
+  return (int)ntohl(result);
 }
 
 static void Forward(Socket* socket, int fd) {
