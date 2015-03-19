@@ -2,6 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#include <pthread.h>
+#include <sys/time.h>
+
+#include <cstdio>
+
 #include "include/service_api.h"
 #include "include/fletch_api.h"
 
@@ -10,10 +15,6 @@
 #include "src/vm/thread_pool.h"
 
 #include "cc/performance_service.h"
-
-#include <cstdio>
-#include <pthread.h>
-#include <sys/time.h>
 
 static pthread_mutex_t mutex;
 static pthread_cond_t cond;

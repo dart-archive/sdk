@@ -7,23 +7,6 @@
     'include_dirs': [
       '../../',
     ],
-    'actions': [
-      {
-        # TODO(ahe): Move to .gypi file that is included by the other .gyp
-        # files.
-        'action_name': 'lint_>(_target_name)',
-        'inputs': [
-          '../../third_party/cpplint/cpplint.py',
-          '>@(_sources)',
-        ],
-        'outputs': [ '>(INTERMEDIATE_DIR)/lint_>(_target_name).log' ],
-        'action': [
-          "bash", "-c",
-          "python >(_inputs) && "
-          "LANG=POSIX date '+Lint checked on %+' > <(_outputs)",
-        ],
-      },
-    ]
   },
   'targets': [
     {

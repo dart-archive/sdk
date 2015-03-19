@@ -13,7 +13,7 @@ static void TearDown();
 
 int main(int argc, char** argv) {
   Setup(argv[1]);
-  
+
   MyApi api = MyApi::create();
   MyObject m0 = api.foo();
   MyObject m1 = api.foo();

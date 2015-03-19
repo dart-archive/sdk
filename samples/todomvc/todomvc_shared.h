@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef _SAMPLES_TODOMVC_SHARED_H
-#define _SAMPLES_TODOMVC_SHARED_H
+#ifndef SAMPLES_TODOMVC_TODOMVC_SHARED_H_
+#define SAMPLES_TODOMVC_TODOMVC_SHARED_H_
 
 void SetupTodoMVC(int argc, char** argv);
 void TearDownTodoMVC();
 
-#endif  // _SAMPLES_TODOMVC_SHARED_H
+#endif  // SAMPLES_TODOMVC_TODOMVC_SHARED_H_

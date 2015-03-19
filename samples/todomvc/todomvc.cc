@@ -2,15 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#include "todomvc_shared.h"
-#include "cc/struct.h"
-#include "cc/todomvc_presenter.h"
-#include "cc/todomvc_service.h"
-
 #include <cstdio>
 #include <cstring>
 #include <vector>
 #include <string>
+
+#include "todomvc_shared.h"  // NOLINT(build/include)
+#include "cc/struct.h"
+#include "cc/todomvc_presenter.h"
+#include "cc/todomvc_service.h"
 
 static int trim(char* str) {
   if (!str) return 0;
@@ -20,7 +20,7 @@ static int trim(char* str) {
   int last = first;
   while (str[last] != '\0') ++last;
 
-  while (last-- > 0 && (str[last] == ' ' || str[last] == '\n'));
+  while (last-- > 0 && (str[last] == ' ' || str[last] == '\n')) {}
   if (last <= 0) return 0;
 
   int size = 1 + last - first;
@@ -89,7 +89,7 @@ class TodoListView : public TodoMVCPresenter {
 
   void create() {
     static int max_str = 256;
-    char buffer[max_str];
+    char buffer[max_str];  // NOLINT(runtime/arrays)
     int length = trim(fgets(buffer, max_str, stdin));
     if (!length) {
       printf("Please specify a todo text\n");
@@ -165,8 +165,11 @@ class TodoListView : public TodoMVCPresenter {
   }
 
   void enterConsSnd() {
-    if (context == IN_ITEM) context = IN_DONE;
-    else index++;
+    if (context == IN_ITEM) {
+      context = IN_DONE;
+    } else {
+      index++;
+    }
   }
 
   void updateNode(const Node& node) {
@@ -178,13 +181,13 @@ class TodoListView : public TodoMVCPresenter {
         todos[index]->set_done(node.getBool());
         break;
       case IN_ITEM:
-	delete todos[index];
+        delete todos[index];
         todos[index] = newItem(node);
         break;
       case IN_LIST:
-	for (size_t i = index; i < todos.size(); ++i) {
-	  delete todos[i];
-	}
+        for (size_t i = index; i < todos.size(); ++i) {
+          delete todos[i];
+        }
         todos.resize(index);
         addItems(node);
         break;

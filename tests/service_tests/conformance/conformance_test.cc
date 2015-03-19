@@ -4,15 +4,14 @@
 
 #define TESTING
 
-#include "src/shared/assert.h"
-#include "conformance_test_shared.h"
-#include "cc/conformance_service.h"
-
-#include <cstdio>
 #include <stdint.h>
 #include <sys/time.h>
 
 #include <cstdio>
+
+#include "src/shared/assert.h"  // NOLINT(build/include)
+#include "conformance_test_shared.h"  // NOLINT(build/include)
+#include "cc/conformance_service.h"  // NOLINT(build/include)
 
 static void BuildPerson(PersonBuilder person, int n) {
   person.setAge(n * 20);

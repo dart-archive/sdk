@@ -487,5 +487,48 @@
           ['exclude', '_posix(_test)?\\.(h|cc|mm?)$' ], ],
       }],
     ],
+
+    'rules': [
+      {
+        'rule_name': 'lint_cc',
+        'extension': 'cc',
+        'toolsets': ['host'],
+        'inputs': [
+          '<(DEPTH)/third_party/cpplint/cpplint.py',
+        ],
+        'outputs': [
+          '>(INTERMEDIATE_DIR)/<(RULE_INPUT_NAME).lintstamp',
+        ],
+        'action': [
+          "bash", "-c",
+          # "echo Entering directory \`$$(pwd)\\';"
+          "([[ '<(RULE_INPUT_PATH)' == *'/third_party/'* ]] || "
+          "[[ '<(RULE_INPUT_PATH)' == *'cc/'* ]] || "
+          "[[ '<(RULE_INPUT_PATH)' == *'generated/'* ]] || "
+          "python >(_inputs) $$(pwd)/<(RULE_INPUT_PATH) ) && "
+          "LANG=POSIX date '+Lint checked on %+' > <(_outputs)",
+        ],
+      },
+      {
+        'rule_name': 'lint_h',
+        'extension': 'h',
+        'toolsets': ['host'],
+        'inputs': [
+          '<(DEPTH)/third_party/cpplint/cpplint.py',
+        ],
+        'outputs': [
+          '>(INTERMEDIATE_DIR)/<(RULE_INPUT_NAME).lintstamp',
+        ],
+        'action': [
+          "bash", "-c",
+          # "echo Entering directory \`$$(pwd)\\';"
+          "([[ '<(RULE_INPUT_PATH)' == *'/third_party/'* ]] || "
+          "[[ '<(RULE_INPUT_PATH)' == *'cc/'* ]] || "
+          "[[ '<(RULE_INPUT_PATH)' == *'generated/'* ]] || "
+          "python >(_inputs) $$(pwd)/<(RULE_INPUT_PATH) ) && "
+          "LANG=POSIX date '+Lint checked on %+' > <(_outputs)",
+        ],
+      },
+    ],
   },
 }
