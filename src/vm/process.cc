@@ -15,6 +15,7 @@
 #include "src/vm/object_memory.h"
 #include "src/vm/port.h"
 #include "src/vm/process_queue.h"
+#include "src/vm/session.h"
 #include "src/vm/stack_walker.h"
 
 namespace fletch {
@@ -137,6 +138,10 @@ Process::~Process() {
     PortQueue* entry = last_message_;
     last_message_ = entry->next();
     delete entry;
+  }
+  Session* session = program()->session();
+  if (session != NULL) {
+    session->ProcessTerminated(this);
   }
   ASSERT(last_message_ == NULL);
 }

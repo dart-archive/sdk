@@ -87,12 +87,16 @@ void Session::ProcessMessages() {
         return;
       }
 
-      case Connection::kRunMain: {
+      case Connection::kSpawnProcessForMain: {
         // Setup entry point for main thread.
         program()->set_entry(Function::cast(Pop()));
         program()->set_main_arity(Smi::cast(Pop())->value());
-        // Signal main thread that the main method is ready.
-        SignalMainThread(kRunMain);
+        process_ = program()->SpawnProcessForMain();
+        break;
+      }
+
+      case Connection::kRunProcess: {
+        SignalMainThread(kRunProcess);
         // If we have a bridge connection we continue
         // processing messages. If we are connected to the
         // compiler directly we terminate the message
@@ -308,7 +312,7 @@ void Session::IteratePointers(PointerVisitor* visitor) {
   }
 }
 
-bool Session::RunMain() {
+bool Session::RunProcess() {
   main_thread_monitor_->Lock();
   while (main_thread_resume_kind_ == kUnknown) main_thread_monitor_->Wait();
   main_thread_monitor_->Unlock();
@@ -317,8 +321,8 @@ bool Session::RunMain() {
       return false;
     case kSnapshotDone:
       return true;
-    case kRunMain:
-      return program()->RunMainInNewProcess();
+    case kRunProcess:
+      return program()->RunProcess(process_);
     case kUnknown:
       UNREACHABLE();
       break;
@@ -665,6 +669,10 @@ void Session::UncaughtException(int frame_count) {
   // loop here.
   connection_->WriteInt(frame_count);
   connection_->Send(Connection::kUncaughtException);
+}
+
+void Session::ProcessTerminated(Process* process) {
+  if (process_ == process) process_ = NULL;
 }
 
 }  // namespace fletch

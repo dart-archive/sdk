@@ -827,6 +827,36 @@ Process* Program::SpawnProcess() {
   return new Process(this);
 }
 
+Process* Program::SpawnProcessForMain() {
+  // For testing purposes, we support unfolding the program
+  // before running it.
+  bool unfold = Flags::IsOn("unfold-program");
+  if (is_compact()) {
+    if (unfold) Unfold();
+  } else if (!unfold) {
+    Fold();
+  }
+  ASSERT(is_compact() == !unfold);
+
+  // TODO(ager): GC for testing only.
+  CollectGarbage();
+
+  ASSERT(scheduler() != NULL);
+
+  Process* process = SpawnProcess();
+  Function* entry = process->entry();
+  int main_arity = process->main_arity();
+  process->SetupExecutionStack();
+  Stack* stack = process->stack();
+  uint8_t* bcp = entry->bytecode_address_for(0);
+  stack->set(0, Smi::FromWord(main_arity));
+  stack->set(1, NULL);
+  stack->set(2, reinterpret_cast<Object*>(bcp));
+  stack->set_top(2);
+
+  return process;
+}
+
 Object* Program::CreateArrayWith(int capacity, Object* initial_value) {
   Object* result = heap()->CreateArray(array_class(), capacity, initial_value);
   return result;
@@ -1199,32 +1229,7 @@ void Program::Initialize() {
   native_failure_result_ = null_object_;
 }
 
-bool Program::RunMainInNewProcess() {
-  // For testing purposes, we support unfolding the program
-  // before running it.
-  bool unfold = Flags::IsOn("unfold-program");
-  if (is_compact()) {
-    if (unfold) Unfold();
-  } else if (!unfold) {
-    Fold();
-  }
-  ASSERT(is_compact() == !unfold);
-
-  // TODO(ager): GC for testing only.
-  CollectGarbage();
-
-  if (scheduler() == NULL) return false;
-
-  Process* process = SpawnProcess();
-  Function* entry = process->entry();
-  int main_arity = process->main_arity();
-  process->SetupExecutionStack();
-  Stack* stack = process->stack();
-  uint8_t* bcp = entry->bytecode_address_for(0);
-  stack->set(0, Smi::FromWord(main_arity));
-  stack->set(1, NULL);
-  stack->set(2, reinterpret_cast<Object*>(bcp));
-  stack->set_top(2);
+bool Program::RunProcess(Process* process) {
   scheduler()->EnqueueProcess(process);
   return scheduler()->Run();
 }

@@ -709,7 +709,9 @@ class FletchBackend extends Backend {
         new PushFromMap(
             MapId.methods, allocatedMethodId(fletchSystemEntry)));
 
-    commands.add(const RunMain());
+    commands.add(const SpawnProcessForMain());
+
+    commands.add(const RunProcess());
 
     this.commands = commands;
 

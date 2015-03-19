@@ -21,7 +21,7 @@ static bool RunBridgeSession(int port) {
   Session session(connection);
   session.Initialize();
   session.StartMessageProcessingThread();
-  return session.RunMain();
+  return session.RunProcess();
 }
 
 static bool RunSession(const char* argv0,
@@ -53,7 +53,7 @@ static bool RunSession(const char* argv0,
   Session session(listener.Accept());
   session.Initialize();
   session.StartMessageProcessingThread();
-  bool success = session.RunMain();
+  bool success = session.RunProcess();
 
   process.Wait();
   free(executable);

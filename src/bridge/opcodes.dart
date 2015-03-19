@@ -11,7 +11,8 @@ enum Opcode {
   SessionEnd,
   ForceTermination,
 
-  RunMain,
+  SpawnProcessForMain,
+  RunProcess,
   WriteSnapshot,
   CollectGarbage,
 

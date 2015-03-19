@@ -47,7 +47,7 @@ const List<Command> commands = const <Command>[
             const Return(1, 1),
         ]),
 
-    const RunMain(),
+    const RunProcess(),
 
     const SessionEnd(),
 ];

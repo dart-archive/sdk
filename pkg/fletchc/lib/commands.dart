@@ -319,9 +319,14 @@ class PushNewInteger extends Command {
   }
 }
 
-class RunMain extends Command {
-  const RunMain()
-      : super(CommandCode.RunMain);
+class SpawnProcessForMain extends Command {
+  const SpawnProcessForMain()
+      : super(CommandCode.SpawnProcessForMain);
+}
+
+class RunProcess extends Command {
+  const RunProcess()
+      : super(CommandCode.RunProcess);
 }
 
 class SessionEnd extends Command {
@@ -339,7 +344,8 @@ enum CommandCode {
   SessionEnd,
   ForceTermination,
 
-  RunMain,
+  SpawnProcessForMain,
+  RunProcess,
   WriteSnapshot,
   CollectGarbage,
 

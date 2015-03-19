@@ -61,7 +61,7 @@ class Program {
 
   void Initialize();
 
-  bool RunMainInNewProcess();
+  bool RunProcess(Process* process);
 
   // Unfold the program into a new heap where all indices are resolved
   // and stored in the literals section of methods. Having
@@ -152,6 +152,7 @@ class Program {
   }
 
   Process* SpawnProcess();
+  Process* SpawnProcessForMain();
 
   Object* CreateArray(int capacity) {
     return CreateArrayWith(capacity, null_object());

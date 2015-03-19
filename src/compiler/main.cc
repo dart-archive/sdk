@@ -40,7 +40,7 @@ void Compile(const char* lib,
   Session session(connection);
   session.BuildProgram(&compiler, root);
   if (out == NULL) {
-    session.RunMain();
+    session.RunProcess();
   } else {
     session.WriteSnapshot(out);
   }

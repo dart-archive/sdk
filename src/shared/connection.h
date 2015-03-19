@@ -56,7 +56,8 @@ class Connection {
     kSessionEnd,
     kForceTermination,
 
-    kRunMain,
+    kSpawnProcessForMain,
+    kRunProcess,
     kWriteSnapshot,
     kCollectGarbage,
 

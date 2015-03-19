@@ -292,7 +292,7 @@ class Session {
           }
           _classConstruction = false;
           break;
-        case Opcode.RunMain:
+        case Opcode.RunProcess:
           if (SIMPLE_SYSTEM) _model.dumpMethods();
           break;
         default:

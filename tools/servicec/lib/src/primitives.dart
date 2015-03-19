@@ -19,9 +19,7 @@ enum PrimitiveType {
   INT64,
 
   FLOAT32,
-  FLOAT64,
-
-  STRING
+  FLOAT64
 }
 
 int size(PrimitiveType type) {

@@ -30,7 +30,7 @@ class Session {
   void IteratePointers(PointerVisitor* visitor);
 
   // High-level operations.
-  bool RunMain();
+  bool RunProcess();
   bool WriteSnapshot(const char* path);
   void CollectGarbage();
 
@@ -91,6 +91,8 @@ class Session {
 
   void UncaughtException(int frame_count);
 
+  void ProcessTerminated(Process* process);
+
  private:
   enum Change {
     kChangeSuperClass,
@@ -101,13 +103,18 @@ class Session {
 
   enum MainThreadResumeKind {
     kUnknown,
-    kRunMain,
+    kRunProcess,
     kError,
     kSnapshotDone
   };
 
   Connection* const connection_;
   Program* program_;
+
+  // TODO(ager): For debugging, the session should have a mapping from
+  // ids to processes. For now we just keep a reference to the main
+  // process (with implicit id 0).
+  Process* process_;
 
   ObjectList stack_;
   ObjectList changes_;
