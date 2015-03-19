@@ -73,7 +73,6 @@ closure_in_initializer_test: Fail
 closure_type_test/01: Fail
 closure_type_test/none: Fail
 closure_type_variable_test: Fail
-closure_with_super_field_test: Fail
 closures_initializer2_test: Fail
 closures_initializer_test: Fail
 compile_time_constant10_test/01: Crash
@@ -938,6 +937,14 @@ vm/store_to_load_forwarding_phis_vm_test: CompileTimeError
 vm/type_cast_vm_test: CompileTimeError
 vm/type_vm_test: Fail
 vm/typed_data_polymorphic_view_test: Fail
+
+# It looks like the compiler generates the wrong code for this
+# test. That causes the interpreter to fetch an illegal value
+# from the stack. Usually, we're lucky and this value is a valid
+# object pointer (most likely a smi), but every now and then we
+# see the VM crashing because the value looks like a heap object
+# pointer but isn't.
+closure_with_super_field_test: Crash, Fail
 
 [ $compiler == fletch && $arch == ia32 ]
 bit_shift_test: Fail
