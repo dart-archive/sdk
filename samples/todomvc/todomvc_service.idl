@@ -9,6 +9,9 @@ service TodoMVCService {
   void uncompleteItem(int32 id);
   void clearItems();
 
+  // Event dispatching.
+  void dispatch(uint16 id);
+
   // Synchronization should be considered internal.
   PatchSet* sync();
   void reset();
@@ -29,6 +32,10 @@ struct Node {
 struct Cons {
   Node* fst;
   Node* snd;
+
+  uint16 deleteEvent;
+  uint16 completeEvent;
+  uint16 uncompleteEvent;
 }
 
 // Utility structures.

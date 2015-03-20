@@ -50,6 +50,6 @@ public class NodeBuilder extends Builder {
   }
 
   public void setTag(int value) {
-    segment.buffer().putChar(base + 16, (char)value);
+    segment.buffer().putChar(base + 22, (char)value);
   }
 }

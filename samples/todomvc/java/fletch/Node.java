@@ -50,7 +50,7 @@ public class Node extends Reader {
   public Cons getCons() { return new Cons(segment, base + 0); }
 
   public int getTag() {
-    short shortTag = segment.getUnsigned(base + 16);
+    short shortTag = segment.getUnsigned(base + 22);
     int tag = (int)shortTag;
     return tag < 0 ? -tag : tag;
   }

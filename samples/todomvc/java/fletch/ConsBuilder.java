@@ -8,7 +8,7 @@ package fletch;
 
 import java.util.List;
 public class ConsBuilder extends Builder {
-  public static int kSize = 16;
+  public static int kSize = 24;
   public ConsBuilder(BuilderSegment segment, int offset) {
     super(segment, offset);
   }
@@ -27,5 +27,17 @@ public class ConsBuilder extends Builder {
     NodeBuilder result = new NodeBuilder();
     newStruct(result, 8, 24);
     return result;
+  }
+
+  public void setDeleteEvent(int value) {
+    segment.buffer().putChar(base + 16, (char)value);
+  }
+
+  public void setCompleteEvent(int value) {
+    segment.buffer().putChar(base + 18, (char)value);
+  }
+
+  public void setUncompleteEvent(int value) {
+    segment.buffer().putChar(base + 20, (char)value);
   }
 }

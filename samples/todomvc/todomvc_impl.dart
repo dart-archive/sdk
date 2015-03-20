@@ -41,6 +41,9 @@ class TodoMVCImpl extends TodoMVCPresenter {
 
   Immutable _reprItem(Item item) =>
       new Cons(new Str(item.title),
-               new Bool(item.done));
-
+               new Bool(item.done),
+               // TODO(zerny): Avoid causing a patch for each sync on handlers.
+               new EventHandler(() { _model.todos.remove(item); }),
+               new EventHandler(item.complete),
+               new EventHandler(item.uncomplete));
 }

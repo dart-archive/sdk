@@ -56,13 +56,120 @@ void trace(obj) { if (TRACE) print("  $obj"); }
 
 const TAG_CONS_FST = 0;
 const TAG_CONS_SND = 1;
+const TAG_CONS_DELETE_EVENT = 2;
+const TAG_CONS_COMPLETE_EVENT = 3;
+const TAG_CONS_UNCOMPLETE_EVENT = 4;
+
+// The event manager maintains a mapping from the active handler ids transferred
+// as part of the presentation graph to the handler callbacks.
+class EventManager {
+  Map<int, EventHandler> _handlers = new Map();
+
+  int _lfsr = 0xABBA;
+
+  int get _next {
+    // 16 bits with taps 16, 14, 13, 11.
+    int lfsr = _lfsr;
+    int bit = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5)) & 1;
+    lfsr = (lfsr >> 1) | (bit << 15);
+    _lfsr = lfsr;
+    return lfsr;
+  }
+
+  int register(EventHandler handler) {
+    if (handler == null) return 0;
+    if (handler.allocated) return handler.id;
+    int id = _next;
+    // TODO(zerny): Do something clever once completing the lfsr sequence.
+    while (_handlers.containsKey(id)) id = _next;
+    trace("registered event-handler id: $id");
+    _handlers[id] = handler;
+    handler.allocate(id);
+    return id;
+  }
+
+  void unregister(EventHandler handler) {
+    if (handler == null) return;
+    // TODO(zerny): replace by assert.
+    int id = handler.id;
+    if (!handler.allocated) {
+      print("ERROR: attempt to unregister unallocated event handler: $id");
+      return;
+    }
+    trace("unregistered event-handler id: $id");
+    assert(_handlers[id] == handler);
+    handler.delete();
+    _handlers.remove(id);
+  }
+
+  void call(int id) {
+    assert(id > 0);
+    EventHandler handler = _handlers[id];
+    if (handler == null) {
+      print("ERROR: attempt to call non-exisiting event handler: $id");
+      return;
+    }
+    handler.call();
+  }
+
+  void clear() {
+    _handlers.clear();
+  }
+}
+
+class EventHandler {
+  final Function _handler;
+  int _id = 0;
+
+  EventHandler(this._handler);
+
+  int get id => _id;
+  bool get allocated => _id > 0;
+  bool get deleted => _id < 0;
+
+  void call() {
+    assert(allocated);
+    _handler();
+  }
+
+  void allocate(int id) {
+    assert(!deleted);
+    _id = id;
+  }
+
+  void delete() {
+    _id = -1;
+  }
+
+  static void diff(EventHandler self, other, Path path, MyPatchSet patches) {
+    if (self == other) return;
+    // TODO(zerny): Do we want to consider another definition of equality here?
+    // Currently only the same physically allocated event-handler object is
+    // considered "the same", but we could refine that to be if the _handler
+    // object is "the same" (which it typically won't be because of closure
+    // allocation). Also, if we do so, we need to make sure that the allocated
+    // event ids are updated to be the same too, otherwise we could end up with
+    // an unallocated event handler being referenced from the binding layer.
+    patches.add(path, self, other);
+  }
+
+  // TODO(zerny): Event handler fields should not be encoded in Node.
+  void serialize(NodeBuilder builder, EventManager events) {
+    builder.num = events.register(this);
+  }
+
+  void unregisterEvents(EventManager events) {
+    events.unregister(this);
+  }
+}
 
 // Immutable model for the presentation (reused as a mutable mirror on the
 // "host" side).  (just sexp to simulate a "rich structure" for now)
 
 abstract class Immutable {
   void diff(Immutable other, Path path, MyPatchSet patches);
-  void serialize(NodeBuilder builder);
+  void serialize(NodeBuilder builder, EventManager events);
+  void unregisterEvents(EventManager events);
 }
 
 abstract class Atom extends Immutable {
@@ -74,35 +181,64 @@ abstract class Atom extends Immutable {
     trace("Atom::diff $this ~=~ $other");
     if (other is Atom && value == other.value)
       return;
-    patches.add(path, this);
+    patches.add(path, this, other);
   }
+
+  void unregisterEvents(EventManager events) { }
 }
 
 class Cons extends Immutable {
   final Immutable fst, snd;
-  Cons(this.fst, this.snd);
+  final EventHandler deleteEvent, completeEvent, uncompleteEvent;
+  Cons(this.fst, this.snd,
+       [ this.deleteEvent,
+         this.completeEvent,
+         this.uncompleteEvent ]);
   String toString() => "($fst . $snd)";
 
   void diff(Immutable other, Path path, MyPatchSet patches) {
-    if (other is Cons) {
-      fst.diff(other.fst, new ConsFst(path), patches);
-      snd.diff(other.snd, new ConsSnd(path), patches);
+    if (other is! Cons) {
+      patches.add(path, this, other);
       return;
     }
-    patches.add(path, this);
+    fst.diff(other.fst, new ConsFst(path), patches);
+    snd.diff(other.snd, new ConsSnd(path), patches);
+    EventHandler.diff(
+        deleteEvent,
+        other.deleteEvent,
+        new ConsDeleteEvent(path), patches);
+    EventHandler.diff(
+        completeEvent,
+        other.completeEvent,
+        new ConsCompleteEvent(path), patches);
+    EventHandler.diff(
+        uncompleteEvent,
+        other.uncompleteEvent,
+        new ConsUncompleteEvent(path), patches);
   }
 
-  void serialize(NodeBuilder builder) {
+  void serialize(NodeBuilder builder, EventManager events) {
     trace("Cons::serialize: $this");
     ConsBuilder cons = builder.initCons();
-    fst.serialize(cons.initFst());
-    snd.serialize(cons.initSnd());
+    cons.deleteEvent = events.register(deleteEvent);
+    cons.completeEvent = events.register(completeEvent);
+    cons.uncompleteEvent = events.register(uncompleteEvent);
+    fst.serialize(cons.initFst(), events);
+    snd.serialize(cons.initSnd(), events);
+  }
+
+  void unregisterEvents(EventManager events) {
+    events.unregister(deleteEvent);
+    events.unregister(completeEvent);
+    events.unregister(uncompleteEvent);
+    fst.unregisterEvents(events);
+    snd.unregisterEvents(events);
   }
 }
 
 class Nil extends Atom {
   Nil() : super(null);
-  void serialize(NodeBuilder builder) {
+  void serialize(NodeBuilder builder, EventManager events) {
     trace("Nil::serialize");
     builder.setNil();
   }
@@ -110,7 +246,7 @@ class Nil extends Atom {
 
 class Bool extends Atom {
   Bool(bool value) : super(value);
-  void serialize(NodeBuilder builder) {
+  void serialize(NodeBuilder builder, EventManager events) {
     trace("Bool::serialize: $this");
     builder.bool = value;
   }
@@ -118,7 +254,7 @@ class Bool extends Atom {
 
 class Num extends Atom {
   Num(num value) : super(value);
-  void serialize(NodeBuilder builder) {
+  void serialize(NodeBuilder builder, EventManager events) {
     trace("Num::serialize: $this");
     builder.num = value;
   }
@@ -126,7 +262,7 @@ class Num extends Atom {
 
 class Str extends Atom {
   Str(String value) : super(value);
-  void serialize(NodeBuilder builder) {
+  void serialize(NodeBuilder builder, EventManager events) {
     trace("Str::serialize: $this");
     builder.str = value;
   }
@@ -169,18 +305,34 @@ class ConsSnd extends Path {
   int get tag => TAG_CONS_SND;
 }
 
+class ConsDeleteEvent extends Path {
+  ConsDeleteEvent(Path parent) : super(parent);
+  int get tag => TAG_CONS_DELETE_EVENT;
+}
+
+class ConsCompleteEvent extends Path {
+  ConsCompleteEvent(Path parent) : super(parent);
+  int get tag => TAG_CONS_COMPLETE_EVENT;
+}
+
+class ConsUncompleteEvent extends Path {
+  ConsUncompleteEvent(Path parent) : super(parent);
+  int get tag => TAG_CONS_UNCOMPLETE_EVENT;
+}
+
 // Patch description
 
 class MyPatchSet {
   List<Patch> patches = new List<Patch>();
-  add(Path path, Immutable content) => patches.add(new Patch(path, content));
+  add(Path path, Immutable content, Immutable oldContent) =>
+      patches.add(new Patch(path, content, oldContent));
 
-  void serialize(PatchSetBuilder builder) {
+  void serialize(PatchSetBuilder builder, EventManager events) {
     var length = patches.length;
     trace("MyPatchSet::serialize: length($length)");
     var out = builder.initPatches(patches.length);
     for (int i = 0; i < length; ++i) {
-      patches[i].serialize(out[i]);
+      patches[i].serialize(out[i], events);
     }
   }
 }
@@ -188,11 +340,13 @@ class MyPatchSet {
 class Patch {
   Path path;
   Immutable content;
-  Patch(this.path, this.content);
+  Immutable oldContent;
+  Patch(this.path, this.content, this.oldContent);
 
-  void serialize(PatchBuilder builder) {
+  void serialize(PatchBuilder builder, EventManager events) {
     trace("Patch::serialize");
+    oldContent.unregisterEvents(events);
     Path.serialize(path, builder);
-    content.serialize(builder.initContent());
+    content.serialize(builder.initContent(), events);
   }
 }

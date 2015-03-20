@@ -39,4 +39,10 @@ public class Cons extends Reader {
     Node reader = new Node();
     return (Node)readStruct(reader, 8);
   }
+
+  public int getDeleteEvent() { return segment.getUnsignedChar(base + 16); }
+
+  public int getCompleteEvent() { return segment.getUnsignedChar(base + 18); }
+
+  public int getUncompleteEvent() { return segment.getUnsignedChar(base + 20); }
 }

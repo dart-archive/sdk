@@ -35,6 +35,8 @@ class TodoMVCService {
   static void uncompleteItemAsync(int32_t id, void (*callback)());
   static void clearItems();
   static void clearItemsAsync(void (*callback)());
+  static void dispatch(uint16_t id);
+  static void dispatchAsync(uint16_t id, void (*callback)());
   static PatchSet sync();
   static void syncAsync(void (*callback)(PatchSet));
   static void reset();
@@ -57,7 +59,7 @@ class Node : public Reader {
   List<uint16_t> getStrData() const { return ReadList<uint16_t>(0); }
   bool isCons() const { return 5 == getTag(); }
   Cons getCons() const;
-  uint16_t getTag() const { return *PointerTo<uint16_t>(16); }
+  uint16_t getTag() const { return *PointerTo<uint16_t>(22); }
 };
 
 class NodeBuilder : public Builder {
@@ -75,22 +77,25 @@ class NodeBuilder : public Builder {
   void setStr(const char* value) { setTag(4); NewString(0, value); }
   List<uint16_t> initStrData(int length);
   ConsBuilder initCons();
-  void setTag(uint16_t value) { *PointerTo<uint16_t>(16) = value; }
+  void setTag(uint16_t value) { *PointerTo<uint16_t>(22) = value; }
 };
 
 class Cons : public Reader {
  public:
-  static const int kSize = 16;
+  static const int kSize = 24;
   Cons(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
   Node getFst() const;
   Node getSnd() const;
+  uint16_t getDeleteEvent() const { return *PointerTo<uint16_t>(16); }
+  uint16_t getCompleteEvent() const { return *PointerTo<uint16_t>(18); }
+  uint16_t getUncompleteEvent() const { return *PointerTo<uint16_t>(20); }
 };
 
 class ConsBuilder : public Builder {
  public:
-  static const int kSize = 16;
+  static const int kSize = 24;
 
   explicit ConsBuilder(const Builder& builder)
       : Builder(builder) { }
@@ -99,6 +104,9 @@ class ConsBuilder : public Builder {
 
   NodeBuilder initFst();
   NodeBuilder initSnd();
+  void setDeleteEvent(uint16_t value) { *PointerTo<uint16_t>(16) = value; }
+  void setCompleteEvent(uint16_t value) { *PointerTo<uint16_t>(18) = value; }
+  void setUncompleteEvent(uint16_t value) { *PointerTo<uint16_t>(20) = value; }
 };
 
 class Patch : public Reader {

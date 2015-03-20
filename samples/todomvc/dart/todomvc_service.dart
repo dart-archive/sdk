@@ -23,6 +23,7 @@ abstract class TodoMVCService {
   void completeItem(int id);
   void uncompleteItem(int id);
   void clearItems();
+  void dispatch(int id);
   void sync(PatchSetBuilder result);
   void reset();
 
@@ -66,6 +67,10 @@ abstract class TodoMVCService {
         _impl.clearItems();
         _postResult.icall$1(request);
         break;
+      case _DISPATCH_METHOD_ID:
+        _impl.dispatch(request.getUint16(48));
+        _postResult.icall$1(request);
+        break;
       case _SYNC_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(16);
         PatchSetBuilder builder = mb.initRoot(new PatchSetBuilder(), 8);
@@ -89,8 +94,9 @@ abstract class TodoMVCService {
   const int _COMPLETE_ITEM_METHOD_ID = 3;
   const int _UNCOMPLETE_ITEM_METHOD_ID = 4;
   const int _CLEAR_ITEMS_METHOD_ID = 5;
-  const int _SYNC_METHOD_ID = 6;
-  const int _RESET_METHOD_ID = 7;
+  const int _DISPATCH_METHOD_ID = 6;
+  const int _SYNC_METHOD_ID = 7;
+  const int _RESET_METHOD_ID = 8;
 }
 
 class Node extends Reader {
@@ -106,7 +112,7 @@ class Node extends Reader {
   Cons get cons => new Cons()
       .._segment = _segment
       .._offset = _offset + 0;
-  int get tag => _segment.memory.getUint16(_offset + 16);
+  int get tag => _segment.memory.getUint16(_offset + 22);
 }
 
 class NodeBuilder extends Builder {
@@ -134,13 +140,16 @@ class NodeBuilder extends Builder {
         .._offset = _offset + 0;
   }
   void set tag(int value) {
-    _segment.memory.setUint16(_offset + 16, value);
+    _segment.memory.setUint16(_offset + 22, value);
   }
 }
 
 class Cons extends Reader {
   Node get fst => readStruct(new Node(), 0);
   Node get snd => readStruct(new Node(), 8);
+  int get deleteEvent => _segment.memory.getUint16(_offset + 16);
+  int get completeEvent => _segment.memory.getUint16(_offset + 18);
+  int get uncompleteEvent => _segment.memory.getUint16(_offset + 20);
 }
 
 class ConsBuilder extends Builder {
@@ -149,6 +158,15 @@ class ConsBuilder extends Builder {
   }
   NodeBuilder initSnd() {
     return NewStruct(new NodeBuilder(), 8, 24);
+  }
+  void set deleteEvent(int value) {
+    _segment.memory.setUint16(_offset + 16, value);
+  }
+  void set completeEvent(int value) {
+    _segment.memory.setUint16(_offset + 18, value);
+  }
+  void set uncompleteEvent(int value) {
+    _segment.memory.setUint16(_offset + 20, value);
   }
 }
 

@@ -8,8 +8,13 @@ library todomvc.model;
 
 class Item {
   String title;
-  bool done = false;
+  bool _done = false;
+
   Item(this.title);
+
+  bool get done => _done;
+  void complete() { _done = true; }
+  void uncomplete() { _done = false; }
 }
 
 class Model {
@@ -31,13 +36,13 @@ class Model {
 
   void completeItem(int id) {
     if (id < todos.length) {
-      todos[id].done = true;
+      todos[id].complete();
     }
   }
 
   void uncompleteItem(int id) {
     if (id < todos.length) {
-      todos[id].done = false;
+      todos[id].uncomplete();
     }
   }
 

@@ -16,20 +16,12 @@ void TodoMVCPresenter::createItem(char* title) {
   TodoMVCService::createItemAsync(box, VoidCallback);
 }
 
-void TodoMVCPresenter::deleteItem(int id) {
-  TodoMVCService::deleteItemAsync(id, VoidCallback);
-}
-
-void TodoMVCPresenter::completeItem(int id) {
-  TodoMVCService::completeItemAsync(id, VoidCallback);
-}
-
-void TodoMVCPresenter::uncompleteItem(int id) {
-  TodoMVCService::uncompleteItemAsync(id, VoidCallback);
-}
-
 void TodoMVCPresenter::clearItems() {
   TodoMVCService::clearItemsAsync(VoidCallback);
+}
+
+void TodoMVCPresenter::dispatch(event id) {
+  TodoMVCService::dispatchAsync(id, VoidCallback);
 }
 
 void TodoMVCPresenter::sync() {
@@ -51,6 +43,9 @@ void TodoMVCPresenter::applyPatch(const Patch& patch) {
     switch (path[i]) {
       case TAG_CONS_FST: enterConsFst(); break;
       case TAG_CONS_SND: enterConsSnd(); break;
+      case TAG_CONS_DELETE_EVENT: enterConsDeleteEvent(); break;
+      case TAG_CONS_COMPLETE_EVENT: enterConsCompleteEvent(); break;
+      case TAG_CONS_UNCOMPLETE_EVENT: enterConsUncompleteEvent(); break;
       default: abort();
     }
   }

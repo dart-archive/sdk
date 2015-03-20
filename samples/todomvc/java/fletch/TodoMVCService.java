@@ -45,6 +45,13 @@ public class TodoMVCService {
   public static native void clearItems();
   public static native void clearItemsAsync(ClearItemsCallback callback);
 
+  public interface DispatchCallback {
+    public void handle();
+  }
+
+  public static native void dispatch(int id);
+  public static native void dispatchAsync(int id, DispatchCallback callback);
+
   public interface SyncCallback {
     public void handle(PatchSet result);
   }

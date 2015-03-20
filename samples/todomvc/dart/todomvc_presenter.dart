@@ -12,6 +12,7 @@ import 'todomvc_presenter_model.dart';
 abstract class TodoMVCPresenter extends TodoMVCService {
 
   var _presentation = new Nil();
+  var _eventManager = new EventManager();
 
   // Construct a "presenter model" from the model.
   Immutable render();
@@ -35,11 +36,15 @@ abstract class TodoMVCPresenter extends TodoMVCService {
 
   // Entry point for synchronizing with the host mirror.
   void sync(PatchSetBuilder result) {
-    update().serialize(result);
+    update().serialize(result, _eventManager);
   }
 
   void reset() {
     _presentation = new Nil();
+    _eventManager.clear();
   }
 
+  void dispatch(int eventHandlerId) {
+    _eventManager.call(eventHandlerId);
+  }
 }

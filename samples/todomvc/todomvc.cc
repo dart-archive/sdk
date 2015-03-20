@@ -38,7 +38,17 @@ class TodoListView : public TodoMVCPresenter {
  public:
   class Item {
    public:
-    Item(char* title, bool done) : title_(title), done_(done) {}
+    Item(char* title,
+         bool done,
+         event delete_event,
+         event complete_event,
+         event uncomplete_event)
+        : title_(title),
+          done_(done),
+          delete_event_(delete_event),
+          complete_event_(complete_event),
+          uncomplete_event_(uncomplete_event)
+    {}
 
     ~Item() {
       delete title_;
@@ -51,13 +61,27 @@ class TodoListView : public TodoMVCPresenter {
     }
 
     bool done() const { return done_; }
-    void set_done(bool done) {
-      done_ = done;
+
+    void deleteEvent() {
+      TodoMVCPresenter::dispatch(delete_event_);
+    }
+
+    void completeEvent() {
+      TodoMVCPresenter::dispatch(complete_event_);
+    }
+
+    void uncompleteEvent() {
+      TodoMVCPresenter::dispatch(uncomplete_event_);
     }
 
    private:
     char* title_;
     bool done_;
+    event delete_event_;
+    event complete_event_;
+    event uncomplete_event_;
+
+    friend class TodoListView;
   };
 
   ~TodoListView() {
@@ -99,43 +123,30 @@ class TodoListView : public TodoMVCPresenter {
   }
 
   void destroy() {
-    int id = readId();
-    if (id < 0) {
-      printf("Invalid todo index\n");
-      return;
+    if (Item* item = readItem()) {
+      item->deleteEvent();
     }
-    deleteItem(id);
   }
 
   void done() {
-    int id = readId();
-    if (id < 0) {
-      printf("Invalid todo index\n");
-      return;
+    if (Item* item = readItem()) {
+      item->completeEvent();
     }
-    completeItem(id);
   }
 
   void undone() {
-    int id = readId();
-    if (id < 0) {
-      printf("Invalid todo index\n");
-      return;
+    if (Item* item = readItem()) {
+      item->uncompleteEvent();
     }
-    uncompleteItem(id);
   }
 
   void toggle() {
-    int id = readId();
-    if (id < 0) {
-      printf("Invalid todo index\n");
-      return;
-    }
-    Item* item = todos[id];
-    if (item->done()) {
-      uncompleteItem(id);
-    } else {
-      completeItem(id);
+    if (Item* item = readItem()) {
+      if (item->done()) {
+        item->uncompleteEvent();
+      } else {
+        item->completeEvent();
+      }
     }
   }
 
@@ -150,8 +161,26 @@ class TodoListView : public TodoMVCPresenter {
     return (match == 1) ? id : -1;
   }
 
+  Item* readItem() {
+    int id = readId();
+    if (id < 0 || static_cast<unsigned>(id) >= todos.size()) {
+      printf("Invalid todo item index %d\n", id);
+      return 0;
+    }
+    return todos[id];
+  }
+
   // State when applying a patch. We assume a right-hanging encoding of a list.
-  enum Context { IN_LIST, IN_ITEM, IN_TITLE, IN_DONE };
+  enum Context {
+    IN_LIST,
+    IN_ITEM,
+    IN_TITLE,
+    IN_DONE,
+    IN_DELETE_EVENT,
+    IN_COMPLETE_EVENT,
+    IN_UNCOMPLETE_EVENT
+  };
+
   Context context;
   int index;
 
@@ -172,13 +201,37 @@ class TodoListView : public TodoMVCPresenter {
     }
   }
 
+  void enterConsDeleteEvent() {
+    if (context != IN_ITEM) abort();
+    context = IN_DELETE_EVENT;
+  }
+
+  void enterConsCompleteEvent() {
+    if (context != IN_ITEM) abort();
+    context = IN_COMPLETE_EVENT;
+  }
+
+  void enterConsUncompleteEvent() {
+    if (context != IN_ITEM) abort();
+    context = IN_UNCOMPLETE_EVENT;
+  }
+
   void updateNode(const Node& node) {
     switch (context) {
       case IN_TITLE:
         todos[index]->set_title(node.getStr());
         break;
       case IN_DONE:
-        todos[index]->set_done(node.getBool());
+        todos[index]->done_ = node.getBool();
+        break;
+      case IN_DELETE_EVENT:
+        todos[index]->delete_event_ = node.getNum();
+        break;
+      case IN_COMPLETE_EVENT:
+        todos[index]->complete_event_ = node.getNum();
+        break;
+      case IN_UNCOMPLETE_EVENT:
+        todos[index]->uncomplete_event_ = node.getNum();
         break;
       case IN_ITEM:
         delete todos[index];
@@ -211,7 +264,12 @@ class TodoListView : public TodoMVCPresenter {
     Cons cons = content.getCons();
     char* title = cons.getFst().getStr();
     bool done = cons.getSnd().getBool();
-    return new Item(title, done);
+    return new Item(
+        title,
+        done,
+        cons.getDeleteEvent(),
+        cons.getCompleteEvent(),
+        cons.getUncompleteEvent());
   }
 
   std::vector<Item*> todos;

@@ -279,7 +279,31 @@ JNIEXPORT void JNICALL Java_fletch_TodoMVCService_clearItemsAsync(JNIEnv* _env, 
   ServiceApiInvokeAsync(service_id_, _kclearItemsId, Unwrap_void_8, _buffer, kSize);
 }
 
-static const MethodId _ksyncId = reinterpret_cast<MethodId>(6);
+static const MethodId _kdispatchId = reinterpret_cast<MethodId>(6);
+
+JNIEXPORT void JNICALL Java_fletch_TodoMVCService_dispatch(JNIEnv* _env, jclass, jchar id) {
+  static const int kSize = 56;
+  char _bits[kSize];
+  char* _buffer = _bits;
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<jchar*>(_buffer + 48) = id;
+  ServiceApiInvoke(service_id_, _kdispatchId, _buffer, kSize);
+}
+
+JNIEXPORT void JNICALL Java_fletch_TodoMVCService_dispatchAsync(JNIEnv* _env, jclass, jchar id, jobject _callback) {
+  jobject callback = _env->NewGlobalRef(_callback);
+  JavaVM* vm;
+  _env->GetJavaVM(&vm);
+  static const int kSize = 56 + 1 * sizeof(void*);
+  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
+  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<jchar*>(_buffer + 48) = id;
+  CallbackInfo* info = new CallbackInfo(callback, vm);
+  *reinterpret_cast<CallbackInfo**>(_buffer + 32) = info;
+  ServiceApiInvokeAsync(service_id_, _kdispatchId, Unwrap_void_8, _buffer, kSize);
+}
+
+static const MethodId _ksyncId = reinterpret_cast<MethodId>(7);
 
 JNIEXPORT jobject JNICALL Java_fletch_TodoMVCService_sync(JNIEnv* _env, jclass) {
   static const int kSize = 56;
@@ -327,7 +351,7 @@ JNIEXPORT void JNICALL Java_fletch_TodoMVCService_syncAsync(JNIEnv* _env, jclass
   ServiceApiInvokeAsync(service_id_, _ksyncId, Unwrap_PatchSet_8, _buffer, kSize);
 }
 
-static const MethodId _kresetId = reinterpret_cast<MethodId>(7);
+static const MethodId _kresetId = reinterpret_cast<MethodId>(8);
 
 JNIEXPORT void JNICALL Java_fletch_TodoMVCService_reset(JNIEnv* _env, jclass) {
   static const int kSize = 56;
