@@ -24,6 +24,9 @@ import 'package:compiler/src/resolution/resolution.dart' show
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
 
+import 'package:compiler/src/constants/values.dart' show
+    ConstantValue;
+
 import 'package:compiler/src/dart2jslib.dart' show
     DartConstantCompiler,
     isPrivateName;
@@ -74,6 +77,8 @@ class FletchContext {
   Map<LibraryElement, String> libraryPrivateTag = <LibraryElement, String>{};
   Map<String, int> symbolIds = <String, int>{};
   Map<Selector, String> selectorToSymbol = <Selector, String>{};
+
+  Map<ConstantValue, int> compiledConstants = <ConstantValue, int>{};
 
   FletchContext(this.compiler);
 
@@ -151,6 +156,22 @@ class FletchContext {
     return SelectorKind.Method;
   }
 
+  void markConstantUsed(ConstantValue constant) {
+    compiledConstants.putIfAbsent(
+        constant,
+        () {
+          if (constant.isConstructedObject) {
+            ConstructedConstantValue value = constant;
+            ClassElement classElement = value.type.element;
+            backend.registerClassElement(classElement);
+          }
+          for (ConstantValue value in constant.getDependencies()) {
+            markConstantUsed(value);
+          }
+          return compiledConstants.length;
+        });
+  }
+
   /// If [isConst] is true, a compile-time error is reported.
   ConstantExpression compileConstant(
       Node node,
@@ -159,7 +180,11 @@ class FletchContext {
     assert(isConst != null);
     DartConstantCompiler constantCompiler =
         backend.constantCompilerTask.constantCompiler;
-    return constantCompiler.compileNodeWithDefinitions(
-        node, elements, isConst: isConst);
+    ConstantExpression expression = constantCompiler.compileNodeWithDefinitions(
+        node,
+        elements,
+        isConst: isConst);
+    markConstantUsed(expression.value);
+    return expression;
   }
 }

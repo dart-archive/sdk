@@ -898,6 +898,11 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   }
 
   void visitLiteralList(LiteralList node) {
+    if (node.isConst) {
+      int constId = allocateConstantFromNode(node);
+      builder.loadConst(constId);
+      return;
+    }
     ClassElement growableClass = context.backend.growableListClass;
     ConstructorElement constructor = growableClass.lookupDefaultConstructor();
     if (constructor == null) {
@@ -1170,6 +1175,12 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   void visitNewExpression(NewExpression node) {
     // TODO(ahe): Report bug: should already be the declaration.
     ConstructorElement constructor = elements[node.send].declaration;
+    if (node.isConst) {
+      registry.registerInstantiatedClass(constructor.enclosingClass);
+      int constId = allocateConstantFromNode(node);
+      builder.loadConst(constId);
+      return;
+    }
     int arity = loadArguments(node.send.argumentsNode, constructor);
     if (constructor.isFactoryConstructor) {
       registry.registerStaticInvocation(constructor);

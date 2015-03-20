@@ -103,6 +103,11 @@ class PushNewString extends Command {
   }
 }
 
+class PushNewInstance extends Command {
+  const PushNewInstance()
+      : super(CommandCode.PushNewInstance);
+}
+
 class PushNewClass extends Command {
   final int fields;
 
@@ -127,6 +132,19 @@ class PushBuiltinClass extends Command {
     buffer
         ..addUint32(name)
         ..addUint32(fields)
+        ..sendOn(sink, code);
+  }
+}
+
+class PushConstantList extends Command {
+  final int entries;
+
+  const PushConstantList(this.entries)
+      : super(CommandCode.PushConstantList);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(entries)
         ..sendOn(sink, code);
   }
 }

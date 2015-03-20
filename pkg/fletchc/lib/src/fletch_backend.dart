@@ -53,6 +53,8 @@ import 'package:compiler/src/dart_backend/dart_backend.dart' show
 
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
+    ConstructedConstantValue,
+    ListConstantValue,
     StringConstantValue;
 
 import 'package:compiler/src/constants/expressions.dart' show
@@ -135,7 +137,7 @@ class CompiledClass {
 
 class FletchBackend extends Backend {
   static const String growableListName = '_GrowableList';
-  static const String fixedListName = '_FixedList';
+  static const String constantListName = '_ConstantList';
   static const String noSuchMethodName = '_noSuchMethod';
   static const String noSuchMethodTrampolineName = '_noSuchMethodTrampoline';
 
@@ -304,6 +306,8 @@ class FletchBackend extends Backend {
     smiClass = loadBuiltinClass("_Smi", fletchSystemLibrary).element;
     mintClass = loadBuiltinClass("_Mint", fletchSystemLibrary).element;
     stringClass = loadBuiltinClass("String", fletchSystemLibrary).element;
+    // TODO(ahe): Register _ConstantList through ResolutionCallbacks.
+    loadBuiltinClass(constantListName, fletchSystemLibrary);
     loadBuiltinClass("double", fletchSystemLibrary);
     loadBuiltinClass("Null", compiler.coreLibrary);
     loadBuiltinClass("bool", compiler.coreLibrary);
@@ -315,8 +319,6 @@ class FletchBackend extends Backend {
     for (ConstructorElement constructor in growableListClass.constructors) {
       world.registerStaticUse(constructor);
     }
-    // TODO(ahe): Register fixedListClass through ResolutionCallbacks.
-    loadClass(fixedListName, fletchSystemLibrary);
 
     // TODO(ajohnsen): Remove? String interpolation does not enqueue '+'.
     // Investigate what else it may enqueue, could be StringBuilder, and then
@@ -605,6 +607,7 @@ class FletchBackend extends Backend {
     List<Command> commands = <Command>[
         const NewMap(MapId.methods),
         const NewMap(MapId.classes),
+        const NewMap(MapId.constants),
     ];
 
     List<Function> deferredActions = <Function>[];
@@ -616,21 +619,7 @@ class FletchBackend extends Backend {
 
       compiledFunction.constants.forEach((constant, int index) {
         if (constant is ConstantValue) {
-          if (constant.isInt) {
-            commands.add(new PushNewInteger(constant.primitiveValue));
-          } else if (constant.isTrue) {
-            commands.add(new PushBoolean(true));
-          } else if (constant.isFalse) {
-            commands.add(new PushBoolean(false));
-          } else if (constant.isNull) {
-            commands.add(const PushNull());
-          } else if (constant.isString) {
-            commands.add(
-                new PushNewString(constant.primitiveValue.slowToString()));
-          } else if (constant.isConstructedObject) {
-            // TODO(ajohnsen): Implement.
-            commands.add(const PushNull());
-          } else if (constant is FletchFunctionConstant) {
+          if (constant is FletchFunctionConstant) {
             commands.add(const PushNull());
             deferredActions.add(() {
               commands
@@ -647,7 +636,17 @@ class FletchBackend extends Backend {
                   ..add(new ChangeMethodLiteral(index));
             });
           } else {
-            throw "Unsupported constant: ${constant.toStructuredString()}";
+            commands.add(const PushNull());
+            deferredActions.add(() {
+              int id = context.compiledConstants[constant];
+              if (id == null) {
+                throw "Unsupported constant: ${constant.toStructuredString()}";
+              }
+              commands
+                  ..add(new PushFromMap(MapId.methods, methodId))
+                  ..add(new PushFromMap(MapId.constants, id))
+                  ..add(new ChangeMethodLiteral(index));
+            });
           }
         } else {
           throw "Unsupported constant: ${constant.runtimeType}";
@@ -697,6 +696,42 @@ class FletchBackend extends Backend {
     });
     commands.add(new ChangeStatics(context.staticIndices.length));
     changes++;
+
+    context.compiledConstants.forEach((constant, id) {
+      if (constant.isInt) {
+        commands.add(new PushNewInteger(constant.primitiveValue));
+      } else if (constant.isTrue) {
+        commands.add(new PushBoolean(true));
+      } else if (constant.isFalse) {
+        commands.add(new PushBoolean(false));
+      } else if (constant.isNull) {
+        commands.add(const PushNull());
+      } else if (constant.isString) {
+        commands.add(
+            new PushNewString(constant.primitiveValue.slowToString()));
+      } else if (constant.isList) {
+        ListConstantValue value = constant;
+        for (ConstantValue entry in value.entries) {
+          int entryId = context.compiledConstants[entry];
+          commands.add(new PushFromMap(MapId.constants, entryId));
+        }
+        commands.add(new PushConstantList(value.length));
+      } else if (constant.isConstructedObject) {
+        ConstructedConstantValue value = constant;
+        ClassElement classElement = value.type.element;
+        CompiledClass compiledClass = compiledClasses[classElement];
+        for (ConstantValue field in value.fields) {
+          int fieldId = context.compiledConstants[field];
+          commands.add(new PushFromMap(MapId.constants, fieldId));
+        }
+        commands
+            ..add(new PushFromMap(MapId.classes, compiledClass.id))
+            ..add(const PushNewInstance());
+      } else {
+        throw "Unsupported constant: ${constant.toStructuredString()}";
+      }
+      commands.add(new PopToMap(MapId.constants, id));
+    });
 
     for (CompiledClass compiledClass in classes) {
       CompiledClass superClass = compiledClass.superClass;
@@ -889,6 +924,7 @@ class FletchBackend extends Backend {
         spannable, MessageKind.GENERIC, {'text': reason});
     var constString = constantSystem.createString(
         new DartString.literal(reason));
+    context.markConstantUsed(constString);
     function
         ..builder.loadConst(function.allocateConstant(constString))
         ..builder.emitThrow();
