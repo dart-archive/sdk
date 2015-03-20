@@ -24,7 +24,10 @@ class DriverConnection {
     kExitCode,  // Set process exit code.
 
     kDriverConnectionError,  // Error in connection.
+    kDriverConnectionClosed,  // Connection closed.
   };
+
+  static const size_t kHeaderSize = 5;
 
   explicit DriverConnection(Socket* socket);
 

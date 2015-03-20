@@ -70,6 +70,7 @@ class StreamBuffer {
   }
 
   void handleData(Uint8List data) {
+    // TODO(ahe): makeView(data, ...) to ensure monomorphism?
     builder.add(data);
     if (completer != null) {
       completeIfPossible();
@@ -165,6 +166,24 @@ class StreamBuffer {
   }
 }
 
+class CommandSender {
+  final Sink<List<int>> sink;
+
+  static const headerSize = 5;
+
+  CommandSender(this.sink);
+
+  void sendExitCode(int exitCode) {
+    int payloadSize = 4;
+    Uint8List list = new Uint8List(headerSize + payloadSize);
+    ByteData view = list.buffer.asByteData();
+    view.setUint32(0, payloadSize, commandEndianness);
+    view.setUint8(4, DriverCommand.ExitCode.index);
+    view.setUint32(headerSize, exitCode, commandEndianness);
+    sink.add(list);
+  }
+}
+
 Uint8List makeView(TypedData list, int offset, int length) {
   return new Uint8List.view(list.buffer, list.offsetInBytes + offset, length);
 }
@@ -247,6 +266,8 @@ String stringifyError(error, StackTrace stackTrace) {
 }
 
 Future handleClient(Socket controlSocket) async {
+  CommandSender commandSender = new CommandSender(controlSocket);
+
   // Start another server socket to set up sockets for stdin, stdout, and
   // stderr.
   ServerSocket server =
@@ -290,7 +311,7 @@ Future handleClient(Socket controlSocket) async {
   stdio.destroy();
   stderr.destroy();
 
-  writeNetworkUint32(controlSocket, exitCode);
+  commandSender.sendExitCode(exitCode);
 
   await controlSocket.flush();
   controlSocket.close();

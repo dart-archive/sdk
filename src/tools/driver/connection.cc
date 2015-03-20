@@ -4,6 +4,8 @@
 
 #include "src/tools/driver/connection.h"
 
+#include <errno.h>
+
 #include <cstdlib>
 
 #include "src/shared/native_socket.h"
@@ -21,11 +23,21 @@ DriverConnection::~DriverConnection() {
 
 DriverConnection::Command DriverConnection::Receive() {
   incoming_.ClearBuffer();
-  uint8* bytes = socket_->Read(5);
-  if (bytes == NULL) return kDriverConnectionError;
-  int buffer_length = Utils::ReadInt32(bytes);
-  Command command = static_cast<Command>(bytes[4]);
-  free(bytes);
+  uint8 header[kHeaderSize];
+  size_t offset = 0;
+  int fd = socket_->FileDescriptor();
+  while (offset < sizeof(header)) {
+    int bytes =
+        TEMP_FAILURE_RETRY(read(fd, header + offset, sizeof(header) - offset));
+    if (bytes == 0) {
+      return kDriverConnectionClosed;
+    } else if (bytes < 0) {
+      return kDriverConnectionError;
+    }
+    offset += bytes;
+  }
+  int buffer_length = Utils::ReadInt32(header);
+  Command command = static_cast<Command>(header[4]);
   if (buffer_length > 0) {
     uint8* buffer = socket_->Read(buffer_length);
     incoming_.SetBuffer(buffer, buffer_length);

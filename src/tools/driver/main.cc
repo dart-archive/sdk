@@ -46,6 +46,8 @@
 
 namespace fletch {
 
+static const int COMPILER_CRASHED = 253;
+
 static const char* driver_env_name = "FLETCH_DRIVER_PORT";
 
 static char* program_name = NULL;
@@ -57,6 +59,8 @@ static const char fletch_config_name[] = ".fletch";
 static bool fletch_config_file_exists = false;
 
 static const char* dart_vm_name = "/dart/sdk/bin/dart";
+
+static int exit_code = COMPILER_CRASHED;
 
 void Die(const char *format, ...) {
   va_list args;
@@ -377,28 +381,47 @@ static void SendArgv(DriverConnection *connection, int argc, char** argv) {
   connection->Send(DriverConnection::kArguments);
 }
 
+static DriverConnection::Command HandleCommand(DriverConnection *connection) {
+  DriverConnection::Command command = connection->Receive();
+  switch (command) {
+    case DriverConnection::kExitCode:
+      exit_code = connection->ReadInt();
+      return command;
+
+    case DriverConnection::kDriverConnectionError:
+    case DriverConnection::kDriverConnectionClosed:
+      return command;
+
+    default:
+      break;
+  }
+
+  Die("%s: Unhandled command code: %i\n", program_name, command);
+  return DriverConnection::kDriverConnectionError;
+}
+
 static int Main(int argc, char** argv) {
   program_name = argv[0];
   int port = ComputeDriverPort();
-  Socket *controlSocket = new Socket();
+  Socket *control_socket = new Socket();
 
   if (port < -1) {
     return 1;
   }
 
-  if (!controlSocket->Connect("127.0.0.1", port)) {
+  if (!control_socket->Connect("127.0.0.1", port)) {
     port = StartFletchDriverServer();
 
-    delete controlSocket;
-    controlSocket = new Socket();
-    if (!controlSocket->Connect("127.0.0.1", port)) {
+    delete control_socket;
+    control_socket = new Socket();
+    if (!control_socket->Connect("127.0.0.1", port)) {
       Die("%s: Failed to start fletch server.", program_name);
     }
   }
 
-  DriverConnection* connection = new DriverConnection(controlSocket);
+  DriverConnection* connection = new DriverConnection(control_socket);
 
-  int io_port = ReadInt(controlSocket);
+  int io_port = ReadInt(control_socket);
 
   SendArgv(connection, argc, argv);
 
@@ -422,8 +445,8 @@ static int Main(int argc, char** argv) {
   if (nfds < stderr_socket->FileDescriptor()) {
     nfds = stderr_socket->FileDescriptor();
   }
-  if (nfds < controlSocket->FileDescriptor()) {
-    nfds = controlSocket->FileDescriptor();
+  if (nfds < control_socket->FileDescriptor()) {
+    nfds = control_socket->FileDescriptor();
   }
   nfds++;
   while (true) {
@@ -434,7 +457,7 @@ static int Main(int argc, char** argv) {
     FD_ZERO(&writefds);
     FD_ZERO(&errorfds);
     FD_SET(STDIN_FILENO, &readfds);
-    FD_SET(controlSocket->FileDescriptor(), &readfds);
+    FD_SET(control_socket->FileDescriptor(), &readfds);
     FD_SET(stdio_socket->FileDescriptor(), &readfds);
     FD_SET(stderr_socket->FileDescriptor(), &readfds);
 
@@ -465,13 +488,19 @@ static int Main(int argc, char** argv) {
           bytes_count -= bytes_written;
         } while (bytes_count > 0);
       }
-      if (FD_ISSET(controlSocket->FileDescriptor(), &readfds)) {
-        exit(ReadInt(controlSocket));
+      if (FD_ISSET(control_socket->FileDescriptor(), &readfds)) {
+        DriverConnection::Command command = HandleCommand(connection);
+        if (command == DriverConnection::kDriverConnectionError) {
+          Die("%s: lost connection to persistent process: %s", strerror(errno));
+        } else if (command == DriverConnection::kDriverConnectionClosed) {
+          // Connection was closed.
+          break;
+        }
       }
     }
   }
 
-  return 0;
+  return exit_code;
 }
 
 }  // namespace fletch
