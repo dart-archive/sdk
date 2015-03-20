@@ -27,6 +27,7 @@ class DriverConnection {
     kDriverConnectionClosed,  // Connection closed.
   };
 
+  // Four bytes package length and one byte Command code.
   static const size_t kHeaderSize = 5;
 
   explicit DriverConnection(Socket* socket);
