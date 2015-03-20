@@ -354,11 +354,12 @@ Future<int> compile(List<String> arguments, Socket stdio, Socket stderr) async {
 
   var connectionIterator = new StreamIterator(server);
 
+  String vmPath = compiler.fletchVm.toFilePath();
+
   if (compiler.verbose) {
-    print("Running '${compiler.fletchVm.toFilePath()} ${vmOptions.join(" ")}'");
+    print("Running '$vmPath ${vmOptions.join(" ")}'");
   }
-  var vmProcess =
-      await Process.start(compiler.fletchVm.toFilePath(), vmOptions);
+  var vmProcess = await Process.start(vmPath, vmOptions);
 
   handleSubscriptionErrors(stdio.listen(vmProcess.stdin.add), "stdin");
   handleSubscriptionErrors(vmProcess.stdout.listen(stdio.add), "vm stdout");
@@ -375,7 +376,7 @@ Future<int> compile(List<String> arguments, Socket stdio, Socket stderr) async {
 
   exitCode = await vmProcess.exitCode;
   if (exitCode != 0) {
-    print("Non-zero exit code from VM ($exitCode).");
+    print("Non-zero exit code from '$vmPath' ($exitCode).");
   }
   if (exitCode < 0) {
     // TODO(ahe): Is there a better value for reporting a VM crash? One

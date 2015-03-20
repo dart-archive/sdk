@@ -11,6 +11,7 @@ import 'package:compiler/src/universe/universe.dart' show
     Selector;
 
 import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
     Element,
     FieldElement,
     FunctionElement,
@@ -25,7 +26,8 @@ import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
 
 import 'package:compiler/src/constants/values.dart' show
-    ConstantValue;
+    ConstantValue,
+    ConstructedConstantValue;
 
 import 'package:compiler/src/dart2jslib.dart' show
     DartConstantCompiler,
