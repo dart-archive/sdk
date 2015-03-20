@@ -14,7 +14,7 @@ class Bytecode {
 
   const Bytecode(this.name, this.size);
 
-  String toString(int index, List<int> bytecodes, ProgramModel model) {
+  String bytecodeToString(int index, List<int> bytecodes, ProgramModel model) {
     StringBuffer buffer = new StringBuffer();
     buffer.write("${index.toString().padLeft(4)}: ");
     var parts = name.split("%");

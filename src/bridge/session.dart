@@ -7,6 +7,7 @@ library session;
 import 'dart:io';
 
 part 'bytecodes.dart';
+part 'command.dart';
 part 'opcodes.dart';
 part 'program_model.dart';
 part 'stack_trace.dart';
@@ -15,91 +16,6 @@ part 'utils.dart';
 // To make it easy to bootstrap a new bytecode compiler, we allow running
 // with a super small library implementation.
 const SIMPLE_SYSTEM = const bool.fromEnvironment("simple-system");
-
-class Command {
-  final Opcode opcode;
-  final List buffer;
-
-  bool isPushNewName() { return opcode == Opcode.PushNewName; }
-
-  void writeLengthTo(Socket socket) {
-    var data = new List(4);
-    var length = buffer.length;
-    writeInt32ToBuffer(data, 0, length);
-    socket.add(data);
-  }
-
-  void writeTo(Socket socket) {
-    writeLengthTo(socket);
-    socket.add([opcode.index]);
-    socket.add(buffer);
-  }
-
-  String bufferAsString() {
-    assert(isPushNewName());
-    return new String.fromCharCodes(buffer);
-  }
-
-  int readInt64(int offset) => readInt64FromBuffer(buffer, offset);
-  int readInt(int offset) => readInt32FromBuffer(buffer, offset);
-
-  void writeInt64(int offset, int value) {
-    writeInt64ToBuffer(buffer, offset, value);
-  }
-
-  void writeInt(int offset, int value) {
-    writeInt32ToBuffer(buffer, offset, value);
-  }
-
-  List<int> readBytes(int offset, int length) =>
-      buffer.sublist(offset, offset + length);
-
-  Command(this.opcode, this.buffer);
-}
-
-class MapLookupCommand extends Command {
-  MapLookupCommand(int mapIndex) : super(Opcode.MapLookup, new List(8)) {
-    writeInt64(0, mapIndex);
-  }
-}
-
-class EndCommand extends Command {
-  EndCommand() : super(Opcode.SessionEnd, const []);
-}
-
-class ForceTerminationCommand extends Command {
-  ForceTerminationCommand() : super(Opcode.ForceTermination, const []);
-}
-
-class DropCommand extends Command {
-  DropCommand(int count) : super(Opcode.Drop, new List(4)) {
-    writeInt(0, count);
-  }
-}
-
-class PopIntegerCommand extends Command {
-  PopIntegerCommand() : super(Opcode.PopInteger, const []);
-}
-
-class ProcessRunCommand extends Command {
-  ProcessRunCommand() : super(Opcode.ProcessRun, const[]);
-}
-
-class ProcessDebugCommand extends Command {
-  ProcessDebugCommand() : super(Opcode.ProcessDebug, const[]);
-}
-
-class ProcessStepCommand extends Command {
-  ProcessStepCommand() : super(Opcode.ProcessStep, const[]);
-}
-
-class ProcessContinueCommand extends Command {
-  ProcessContinueCommand() : super(Opcode.ProcessContinue, const[]);
-}
-
-class ProcessBacktraceCommand extends Command {
-  ProcessBacktraceCommand() : super(Opcode.ProcessBacktrace, const[]);
-}
 
 class Chunk {
   List _data;
@@ -362,7 +278,7 @@ class Session {
           }
           break;
         default:
-          throw "Unknown VM opcode ${Opcode.opcodeToString(command.opcode)}";
+          throw "Unknown VM opcode ${command.opcode}";
       }
       command = _vmData.readCommand();
     }

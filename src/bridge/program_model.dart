@@ -31,7 +31,7 @@ class Method {
     var i = 0;
     while (i < bytecodes.length) {
       var current = _bytecodes[bytecodes[i]];
-      var bytecodeString = current.toString(i, bytecodes, model);
+      var bytecodeString = current.bytecodeToString(i, bytecodes, model);
       i += current.size;
       print("$bytecodeString");
       if (current == _bytecodes.last) break;

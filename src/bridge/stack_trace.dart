@@ -17,7 +17,7 @@ class StackFrame {
     var i = 0;
     while (i < bytecodes.length) {
       var current = _bytecodes[bytecodes[i]];
-      var bytecodeString = current.toString(i, bytecodes, model);
+      var bytecodeString = current.bytecodeToString(i, bytecodes, model);
       i += current.size;
       var marker = (i == bcp)
         ? " <---".padRight(40 - bytecodeString.length, "-") + " bcp"

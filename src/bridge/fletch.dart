@@ -22,45 +22,74 @@ Commands:
   'quit' quit the session
 """;
 
-Session session;
-String previousLine = '';
+class ConnectionHandler {
+  final ServerSocket server;
+  final StreamIterator iterator;
 
-addCompilerOutput(stream) {
-  return (d) {
-    stream.write("compiler: ");
-    stream.add(d);
-  };
-}
+  ConnectionHandler._(this.server, this.iterator);
 
-printPrompt() => stdout.write('> ');
-
-onInput(String line) {
-  if (line.isEmpty) line = previousLine;
-  previousLine = line;
-  switch (line) {
-    case "quit":
-      exit(0);
-      break;
-    case "r":
-      session.run();
-      break;
-    case "d":
-      session.debug();
-      break;
-    case "s":
-      session.step();
-      break;
-    case "c":
-      session.cont();
-      break;
-    case "bt":
-      session.backtrace();
-      break;
+  static ConnectionHandler start() async {
+    var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
+    var iterator = new StreamIterator(server);
+    return new ConnectionHandler._(server, iterator);
   }
-  printPrompt();
+
+  next() async {
+    var hasNext = await iterator.moveNext();
+    assert(hasNext);
+    return iterator.current;
+  }
+
+  close()  => server.close();
+  get port => server.port;
 }
 
-main(args) {
+class InputHandler {
+  final Session session;
+  String previousLine = '';
+
+  InputHandler(this.session);
+
+  printPrompt() => stdout.write('> ');
+
+  handleLine(String line) {
+    if (line.isEmpty) line = previousLine;
+    previousLine = line;
+    switch (line) {
+      case "quit":
+        exit(0);
+        break;
+      case "r":
+        session.run();
+        break;
+      case "d":
+        session.debug();
+        break;
+      case "s":
+        session.step();
+        break;
+      case "c":
+        session.cont();
+        break;
+      case "bt":
+        session.backtrace();
+        break;
+    }
+    printPrompt();
+  }
+
+  run() async {
+    print(BANNER);
+    printPrompt();
+    var inputLineStream = stdin.transform(new Utf8Decoder())
+                               .transform(new LineSplitter());
+    await for(var line in inputLineStream) {
+      handleLine(line);
+    }
+  }
+}
+
+main(args) async {
   if (SIMPLE_SYSTEM) {
     if (args.length != 0) {
       print('usage: fletch.dart');
@@ -84,35 +113,39 @@ main(args) {
   var vm = "$buildDir/fletch";
 
   var testFile = SIMPLE_SYSTEM ? '<dummy.dart>' : args[0];
-  ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0).then((server) {
-    var portArgument = '--port=${server.port}';
-    var bridgeArgument = "-Xbridge-connection";
-    var connectionIterator = new StreamIterator(server);
-    var compilerArgs = [testFile, portArgument, bridgeArgument];
-    if (SIMPLE_SYSTEM) compilerArgs.add("-Xsimple-system");
-    Process.start(compiler, compilerArgs)
-      .then((compilerProcess) {
-        compilerProcess.stdout.listen(addCompilerOutput(stdout));
-        compilerProcess.stderr.listen(addCompilerOutput(stderr));
-        connectionIterator.moveNext().then((bool hasValue) {
-          assert(hasValue);
-          var compilerSocket = connectionIterator.current;
-          Process.start(vm, [portArgument, bridgeArgument]).then((vmProcess) {
-            vmProcess.stdout.listen(stdout.add);
-            vmProcess.stderr.listen(stderr.add);
-            connectionIterator.moveNext().then((bool hasValue) {
-              assert(hasValue);
-              var vmSocket = connectionIterator.current;
-              server.close();
-              print(BANNER);
-              session = new Session(compilerSocket, vmSocket);
-              printPrompt();
-              stdin.transform(new Utf8Decoder())
-                   .transform(new LineSplitter())
-                   .listen(onInput, onDone: () => session.end());
-            });
-          });
-        });
-      });
-  });
+
+  // Create server socket on which to listen for connection from compiler
+  // and VM.
+  ConnectionHandler connectionHandler = await ConnectionHandler.start();
+
+  // Setup connection arguments to instruct compiler and VM to connect to the
+  // bridge.
+  var portArgument = '--port=${connectionHandler.port}';
+  var bridgeArgument = "-Xbridge-connection";
+
+  // Invoke compiler with the file and connection info and wait for the
+  // compiler to connect to the bridge.
+  var compilerArgs = [testFile, portArgument, bridgeArgument];
+  if (SIMPLE_SYSTEM) compilerArgs.add("-Xsimple-system");
+  var compilerProcess = await Process.start(compiler, compilerArgs);
+  compilerProcess.stdout.listen(stdout.add);
+  compilerProcess.stderr.listen(stderr.add);
+  var compilerSocket = await connectionHandler.next();
+
+  // Invoke VM with connection info and wait for it to connect to the bridge.
+  var vmProcess = await Process.start(vm, [portArgument, bridgeArgument]);
+  vmProcess.stdout.listen(stdout.add);
+  vmProcess.stderr.listen(stderr.add);
+  var vmSocket = await connectionHandler.next();
+
+  // Stop accepting connections.
+  connectionHandler.close();
+
+  // Start the bridge session that communicates with both compiler and VM.
+  var session = new Session(compilerSocket, vmSocket);
+
+  // Start the command-line input handling.
+  var inputHandler = new InputHandler(session);
+  await inputHandler.run();
+  session.end();
 }
