@@ -24,6 +24,8 @@
 
 #include "src/tools/driver/get_path_of_executable.h"
 
+#include "src/tools/driver/connection.h"
+
 // Fast front-end for persistent compiler process.
 //
 // To obtain the required performance of command line tools, the fletch
@@ -366,18 +368,13 @@ static void Forward(Socket* socket, int fd) {
   } while (bytes_count > 0);
 }
 
-static void SendInt(Socket *socket, uint32 value) {
-  uint32 data = htonl(value);
-  socket->Write(reinterpret_cast<uint8*>(&data), sizeof(uint32));
-}
-
-static void SendArgv(Socket *socket, int argc, char** argv) {
-  SendInt(socket, argc);
+static void SendArgv(DriverConnection *connection, int argc, char** argv) {
+  connection->WriteInt(argc);
   for (int i = 0; i < argc; i++) {
-    int size = strlen(argv[i]) + 1;
-    SendInt(socket, size);
-    socket->Write(reinterpret_cast<uint8*>(argv[i]), size);
+    connection->WriteInt(strlen(argv[i]));
+    connection->WriteString(argv[i]);
   }
+  connection->Send(DriverConnection::kArguments);
 }
 
 static int Main(int argc, char** argv) {
@@ -399,9 +396,11 @@ static int Main(int argc, char** argv) {
     }
   }
 
+  DriverConnection* connection = new DriverConnection(controlSocket);
+
   int io_port = ReadInt(controlSocket);
 
-  SendArgv(controlSocket, argc, argv);
+  SendArgv(connection, argc, argv);
 
   Socket *stdio_socket = new Socket();
   Socket *stderr_socket = new Socket();

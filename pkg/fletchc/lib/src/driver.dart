@@ -22,6 +22,8 @@ import 'dart:async' show
 
 import 'dart:typed_data' show
     ByteData,
+    Endianness,
+    TypedData,
     Uint8List;
 
 import 'dart:convert' show
@@ -33,6 +35,19 @@ import '../compiler.dart' show
 const COMPILER_CRASHED = 253;
 const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
 const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
+
+const Endianness commandEndianness = Endianness.LITTLE_ENDIAN;
+
+enum DriverCommand {
+  Stdin,  // Data on stdin.
+  Stdout,  // Data on stdout.
+  Stderr,  // Data on stderr.
+  Arguments,  // Command-line arguments.
+  Signal,  // Unix process signal received.
+  ExitCode,  // Set process exit code.
+
+  DriverConnectionError,  // Error in connection.
+}
 
 class StreamBuffer {
   final Stream<List<int>> stream;
@@ -115,14 +130,42 @@ class StreamBuffer {
     return future;
   }
 
-  Future<int> readUint32() {
+  Future<int> readUint32([Endianness endian = Endianness.BIG_ENDIAN]) {
     return read(4).then((Uint8List list) {
-      return new ByteData.view(list.buffer, list.offsetInBytes).getUint32(0);
+      return new ByteData.view(list.buffer, list.offsetInBytes)
+          .getUint32(0, endian);
     });
+  }
+
+  Future<dynamic> readCommand() async {
+    int length = await readUint32(commandEndianness);
+    Uint8List data = await read(length + 1);
+    ByteData view = new ByteData.view(data.buffer, data.offsetInBytes + 1);
+    DriverCommand command = DriverCommand.values[data[0]];
+    switch (command) {
+      case DriverCommand.Arguments:
+        return decodeArgumentsCommand(view);
+      default:
+        throw "Command not implemented yet: $command";
+    }
+  }
+
+  List<String> decodeArgumentsCommand(ByteData view) {
+    int offset = 0;
+    int argc = view.getUint32(offset, commandEndianness);
+    offset += 4;
+    List<String> argv = <String>[];
+    for (int i = 0; i < argc; i++) {
+      int length = view.getUint32(offset, commandEndianness);
+      offset += 4;
+      argv.add(UTF8.decode(makeView(view, offset, length)));
+      offset += length;
+    }
+    return argv;
   }
 }
 
-Uint8List makeView(Uint8List list, int offset, int length) {
+Uint8List makeView(TypedData list, int offset, int length) {
   return new Uint8List.view(list.buffer, list.offsetInBytes + offset, length);
 }
 
@@ -214,7 +257,7 @@ Future handleClient(Socket controlSocket) async {
 
   StreamBuffer controlBuffer = new StreamBuffer(controlSocket);
 
-  List<String> arguments = await readArgv(controlBuffer);
+  List<String> arguments = await controlBuffer.readCommand();
 
   var connectionIterator = new StreamIterator(server);
   await connectionIterator.moveNext();
@@ -260,18 +303,6 @@ void writeNetworkUint32(Socket socket, int i) {
   socket.add(list);
 }
 
-Future<List<String>> readArgv(StreamBuffer buffer) async {
-  int argc = await buffer.readUint32();
-  List<String> argv = <String>[];
-  for (int i = 0; i < argc; i++) {
-    Uint8List bytes = await buffer.read(await buffer.readUint32());
-    // [bytes] is zero-terminated.
-    bytes = makeView(bytes, 0, bytes.length - 1);
-    argv.add(UTF8.decode(bytes));
-  }
-  return argv;
-}
-
 Future<int> compile(List<String> arguments, Socket stdio, Socket stderr) async {
   List<String> options = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
@@ -309,8 +340,8 @@ Future<int> compile(List<String> arguments, Socket stdio, Socket stderr) async {
       await Process.start(compiler.fletchVm.toFilePath(), vmOptions);
 
   handleSubscriptionErrors(stdio.listen(vmProcess.stdin.add), "stdin");
-  handleSubscriptionErrors(vmProcess.stdout.listen(stdio.add), "stdout");
-  handleSubscriptionErrors(vmProcess.stderr.listen(stderr.add), "stderr");
+  handleSubscriptionErrors(vmProcess.stdout.listen(stdio.add), "vm stdout");
+  handleSubscriptionErrors(vmProcess.stderr.listen(stderr.add), "vm stderr");
 
   bool hasValue = await connectionIterator.moveNext();
   assert(hasValue);
