@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "src/shared/bytecodes.h"
@@ -271,6 +272,10 @@ class SelectorRow {
     return offset_;
   }
 
+  void set_offset(int value) {
+    offset_ = value;
+  }
+
   Kind Finalize() {
     int variants = variants_;
     ASSERT(variants > 0);
@@ -289,11 +294,6 @@ class SelectorRow {
       if (end > end_) end_ = end;
     }
 
-    // TODO(kasperl): This is a hacky workaround for an issue where
-    // multiple rows end up with the same offsets. We need to fix
-    // this in a less pessimistic way and still get unique offsets.
-    begin_ = 0;
-
     return TABLE;
   }
 
@@ -308,7 +308,7 @@ class SelectorRow {
   }
 
   int FillLinear(Program* program, Array* table, int index);
-  int FillTable(Program* program, Array* table, int index);
+  void FillTable(Program* program, Array* table);
 
   // The bottom up construction order guarantees that more specific methods
   // always get defined before less specific ones.
@@ -353,6 +353,45 @@ class SelectorRow {
   int end_;
 };
 
+class RowFitter {
+ public:
+  RowFitter() : next_(0), limit_(0) {
+  }
+
+  int limit() const { return limit_; }
+
+  int Fit(SelectorRow* row) {
+    ASSERT(row->kind() == SelectorRow::TABLE);
+
+    // Pad to avoid negative offsets.
+    int start = next_;
+    int offset = start - row->begin();
+    if (offset < 0) {
+      start += -offset;
+      offset = 0;
+    }
+
+    // Pad to guarantee unique offsets.
+    while (used_offsets_.count(offset) > 0) {
+      start++;
+      offset++;
+    }
+    used_offsets_.insert(offset);
+
+    // Keep track of the highest used offset.
+    if (offset > limit_) limit_ = offset;
+
+    // Allocate the necessary space.
+    next_ = start + row->ComputeTableSize();
+    return offset;
+  }
+
+ private:
+  std::unordered_set<int> used_offsets_;
+  int next_;
+  int limit_;
+};
+
 class ProgramTableRewriter {
  public:
   ~ProgramTableRewriter() {
@@ -382,14 +421,12 @@ class ProgramTableRewriter {
     // Compute the sizes of the dispatch tables.
     std::vector<SelectorRow*> table_rows;
     int linear_size = 0;
-    int table_size = 0;
     for (it = selector_rows_.begin(); it != end; ++it) {
       SelectorRow* row = it->second;
       SelectorRow::Kind kind = row->Finalize();
       if (kind == SelectorRow::LINEAR) {
         linear_size += row->ComputeLinearSize();
       } else {
-        table_size += row->ComputeTableSize();
         table_rows.push_back(row);
       }
     }
@@ -409,16 +446,28 @@ class ProgramTableRewriter {
     // Sort the table rows according to size.
     std::sort(table_rows.begin(), table_rows.end(), SelectorRow::Compare);
 
-    // TODO(kasperl): Avoid wasting space at the beginning and end of the
-    // vtable if it isn't necessary to avoid negative offsets or rows with
-    // offsets that fall off the end of the vtable.
-    int class_count = program->classes()->length();
-    table_size += 1 + (class_count * 2);
+    // We add a fake header entry at the start of the vtable to deal
+    // with noSuchMethod.
+    static const int kHeaderSize = 1;
 
-    Array* table = Array::cast(program->CreateArray(table_size));
-    int table_index = class_count + 1;
+    RowFitter fitter;
     for (unsigned i = 0; i < table_rows.size(); i++) {
-      table_index = table_rows[i]->FillTable(program, table, table_index);
+      SelectorRow* row = table_rows[i];
+      int offset = fitter.Fit(row);
+      row->set_offset(offset + kHeaderSize);
+    }
+
+    // The combined table size is header plus enough space to guarantee
+    // that looking up at the highest offset with any given receiver class
+    // isn't going to be out of bounds.
+    int table_size = kHeaderSize +
+        fitter.limit() +
+        program->classes()->length();
+
+    // Allocate the vtable and fill it in.
+    Array* table = Array::cast(program->CreateArray(table_size));
+    for (unsigned i = 0; i < table_rows.size(); i++) {
+      table_rows[i]->FillTable(program, table);
     }
 
     // Simplify how we deal with noSuchMethod in the interpreter
@@ -529,10 +578,9 @@ int SelectorRow::FillLinear(Program* program, Array* table, int index) {
   return index;
 }
 
-int SelectorRow::FillTable(Program* program, Array* table, int index) {
+void SelectorRow::FillTable(Program* program, Array* table) {
   ASSERT(kind() == TABLE);
-  int offset = index - begin_;
-  offset_ = offset;
+  int offset = offset_;
   for (int i = 0, length = variants_; i < length; i++) {
     Class* clazz = classes_[i];
     Function* method = methods_[i];
@@ -557,7 +605,6 @@ int SelectorRow::FillTable(Program* program, Array* table, int index) {
       }
     }
   }
-  return index + ComputeTableSize();
 }
 
 void Program::FoldFunction(Function* old_function,
