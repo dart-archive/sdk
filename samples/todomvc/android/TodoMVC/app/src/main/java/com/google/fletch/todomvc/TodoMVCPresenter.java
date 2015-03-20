@@ -4,6 +4,8 @@
 
 package com.google.fletch.todomvc;
 
+import java.lang.Override;
+
 import fletch.BoxedStringBuilder;
 import fletch.MessageBuilder;
 import fletch.Node;
@@ -18,10 +20,16 @@ abstract class TodoMVCPresenter {
   abstract protected void enterPatch();
   abstract protected void enterConsFst();
   abstract protected void enterConsSnd();
+  abstract protected void enterConsDeleteEvent();
+  abstract protected void enterConsCompleteEvent();
+  abstract protected void enterConsUncompleteEvent();
   abstract protected void updateNode(Node node);
 
   static final int TAG_CONS_FST = 0;
   static final int TAG_CONS_SND = 1;
+  static final int TAG_CONS_DELETE_EVENT = 2;
+  static final int TAG_CONS_COMPLETE_EVENT = 3;
+  static final int TAG_CONS_UNCOMPLETE_EVENT = 4;
 
   public void createItem(String title) {
     int length = title.length();
@@ -33,22 +41,8 @@ abstract class TodoMVCPresenter {
     TodoMVCService.createItem(box);
   }
 
-  public void deleteItem(int id) {
-    TodoMVCService.deleteItemAsync(id, new TodoMVCService.DeleteItemCallback() {
-      @Override
-      public void handle() { }
-    });
-  }
-
-  public void completeItem(int id) {
-    TodoMVCService.completeItemAsync(id, new TodoMVCService.CompleteItemCallback() {
-      @Override
-      public void handle() { }
-    });
-  }
-
-  public void uncompleteItem(int id) {
-    TodoMVCService.uncompleteItemAsync(id, new TodoMVCService.UncompleteItemCallback() {
+  static public void dispatch(int id) {
+    TodoMVCService.dispatchAsync(id, new TodoMVCService.DispatchCallback() {
       @Override
       public void handle() { }
     });
@@ -68,6 +62,9 @@ abstract class TodoMVCPresenter {
       switch (path.get(i)) {
         case TAG_CONS_FST: enterConsFst(); break;
         case TAG_CONS_SND: enterConsSnd(); break;
+        case TAG_CONS_DELETE_EVENT: enterConsDeleteEvent(); break;
+        case TAG_CONS_COMPLETE_EVENT: enterConsCompleteEvent(); break;
+        case TAG_CONS_UNCOMPLETE_EVENT: enterConsUncompleteEvent(); break;
         default: throw new RuntimeException("Invalid patch tag");
       }
     }

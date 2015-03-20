@@ -31,7 +31,15 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
   private ListView todoList;
   private TodoMVCImpl impl;
 
-  private enum Context { IN_LIST, IN_ITEM, IN_TITLE, IN_DONE }
+  private enum Context {
+    IN_LIST,
+    IN_ITEM,
+    IN_TITLE,
+    IN_DONE,
+    IN_DELETE_EVENT,
+    IN_COMPLETE_EVENT,
+    IN_UNCOMPLETE_EVENT
+  }
 
   private class TodoMVCImpl extends TodoMVCPresenter {
     // List view/adapter data.
@@ -62,6 +70,24 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     }
 
     @Override
+    protected void enterConsDeleteEvent() {
+      assert context == Context.IN_ITEM;
+      context = Context.IN_DELETE_EVENT;
+    }
+
+    @Override
+    protected void enterConsCompleteEvent() {
+      assert context == Context.IN_ITEM;
+      context = Context.IN_COMPLETE_EVENT;
+    }
+
+    @Override
+    protected void enterConsUncompleteEvent() {
+      assert context == Context.IN_ITEM;
+      context = Context.IN_UNCOMPLETE_EVENT;
+    }
+
+    @Override
     protected void enterConsSnd() {
       if (context == Context.IN_ITEM) {
         context = Context.IN_DONE;
@@ -79,6 +105,15 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         case IN_DONE:
           todos.get(index).status = node.getBool();
           break;
+        case IN_DELETE_EVENT:
+          todos.get(index).setDeleteEvent(node.getNum());
+          break;
+        case IN_COMPLETE_EVENT:
+          todos.get(index).setCompleteEvent(node.getNum());
+          break;
+        case IN_UNCOMPLETE_EVENT:
+          todos.get(index).setUncompleteEvent(node.getNum());
+          break;
         case IN_ITEM:
           todos.set(index, newTodoItem(node));
           break;
@@ -95,7 +130,12 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
       Cons cons = node.getCons();
       String title = cons.getFst().getStr();
       boolean status = cons.getSnd().getBool();
-      return new TodoItem(title, status);
+      return new TodoItem(
+          title,
+          status,
+          cons.getDeleteEvent(),
+          cons.getCompleteEvent(),
+          cons.getUncompleteEvent());
     }
 
     private void addItem(Node node) {
@@ -113,9 +153,9 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     public void toggleItem(int position) {
       TodoItem item = todos.get(position);
       if (item.done()) {
-        uncompleteItem(position);
+        item.dispatchUncompleteEvent();
       } else {
-        completeItem(position);
+        item.dispatchCompleteEvent();
       }
     }
 
