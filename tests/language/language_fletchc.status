@@ -180,10 +180,8 @@ canonical_const2_test: Crash
 canonical_const3_test: Crash
 canonical_const_test: Crash
 cascade2_test: Crash
-cascade_2_test: Fail
 cascade_in_expression_function_test: Fail
-cascade_in_initializer_list_test: Fail
-cascade_precedence_test: Fail
+cascade_precedence_test: Crash
 cascade_test/01: Crash
 cascade_test/02: Crash
 cascade_test/03: Crash
@@ -1603,7 +1601,6 @@ rewrite_conditional_test: Fail
 rewrite_for_update_order_test: Fail
 rewrite_if_swap_test: Fail
 rewrite_implicit_this_test/01: Fail
-rewrite_variable_initializer_test: Fail
 rewrite_while_many_exits_test: Fail
 round_test: Crash
 runtime_type_test: Fail

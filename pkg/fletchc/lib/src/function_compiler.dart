@@ -693,6 +693,14 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       NodeList arguments,
       Selector selector,
       _) {
+    if (selector == null) {
+      // TODO(ajohnsen): Remove hack - dart2js has a problem with generating
+      // selectors in initializer bodies.
+      selector = new Selector.call(
+          node.selector.asIdentifier().source,
+          function.library,
+          arguments.slowLength());
+    }
     visitForValue(receiver);
     for (Node argument in arguments) {
       visitForValue(argument);
@@ -914,6 +922,17 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     } else if (visitState == VisitState.Test) {
       builder.branch(falseLabel);
     }
+  }
+
+  void visitCascadeReceiver(CascadeReceiver node) {
+    visitForValue(node.expression);
+    builder.dup();
+    assert(visitState == VisitState.Value);
+  }
+
+  void visitCascade(Cascade node) {
+    visitForEffect(node.expression);
+    applyVisitState();
   }
 
   void visitParenthesizedExpression(ParenthesizedExpression node) {
