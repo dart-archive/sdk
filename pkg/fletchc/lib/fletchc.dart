@@ -68,4 +68,8 @@ main(List<String> arguments) async {
   if (exitCode != 0) {
     print("Non-zero exit code from VM ($exitCode).");
   }
+  if (exitCode < 0) {
+    // TODO(ahe): Is there a better value for reporting a VM crash?
+    exitCode = COMPILER_CRASHED;
+  }
 }

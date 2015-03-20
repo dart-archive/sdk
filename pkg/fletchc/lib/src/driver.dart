@@ -356,5 +356,17 @@ Future<int> compile(List<String> arguments, Socket stdio, Socket stderr) async {
   if (exitCode != 0) {
     print("Non-zero exit code from VM ($exitCode).");
   }
+  if (exitCode < 0) {
+    // TODO(ahe): Is there a better value for reporting a VM crash? One
+    // alternative is to use raise in the client if exitCode is < 0, for
+    // example:
+    //
+    //     if (exit_code < 0) {
+    //       signal(-exit_code, SIG_DFL);
+    //       raise(-exit_code);
+    //     }
+    exitCode = COMPILER_CRASHED;
+  }
+
   return exitCode;
 }
