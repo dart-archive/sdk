@@ -5,6 +5,7 @@
 #include "src/vm/stack_walker.h"
 
 #include "src/shared/bytecodes.h"
+#include "src/shared/selectors.h"
 #include "src/shared/utils.h"
 
 #include "src/vm/program.h"
@@ -63,7 +64,8 @@ static int StackDiff(uint8** bcp,
   switch (opcode) {
     case kInvokeMethod:
     case kInvokeMethodVtable: {
-      int arity = Utils::ReadInt32(*bcp + 1) & 0xFF;
+      int selector = Utils::ReadInt32(*bcp + 1);
+      int arity = Selector::ArityField::decode(selector);
       stack_diff = -arity;
       break;
     }
@@ -71,7 +73,8 @@ static int StackDiff(uint8** bcp,
     case kInvokeMethodFast: {
       int index = Utils::ReadInt32(*bcp + 1);
       Array* table = program->dispatch_table();
-      int arity = Smi::cast(table->get(index))->value();
+      int selector = Smi::cast(table->get(index + 1))->value();
+      int arity = Selector::ArityField::decode(selector);
       stack_diff = -arity;
       break;
     }

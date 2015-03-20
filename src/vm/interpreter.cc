@@ -321,7 +321,8 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
   OPCODE_BEGIN(InvokeMethodFast);
     int index = ReadInt32(1);
     Array* table = program()->dispatch_table();
-    int arity = Smi::cast(table->get(index))->value();
+    int selector = Smi::cast(table->get(index + 1))->value();
+    int arity = Selector::ArityField::decode(selector);
     Object* receiver = Local(arity);
     PushReturnAddress(kInvokeMethodFastLength);
 
