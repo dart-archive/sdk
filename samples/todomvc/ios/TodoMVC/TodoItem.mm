@@ -6,4 +6,16 @@
 
 @implementation TodoItem
 
+- (void)dispatchDeleteEvent {
+  TodoMVCPresenter::dispatch(self.deleteEvent);
+}
+
+- (void)dispatchCompleteEvent {
+  TodoMVCPresenter::dispatch(self.completeEvent);
+}
+
+- (void)dispatchUncompleteEvent {
+  TodoMVCPresenter::dispatch(self.uncompleteEvent);
+}
+
 @end

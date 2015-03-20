@@ -35,9 +35,9 @@ public:
   void toggleItem(int id) {
     TodoItem* item = [items_ objectAtIndex:id];
     if (item.completed) {
-      uncompleteItem(id);
+      [item dispatchUncompleteEvent];
     } else {
-      completeItem(id);
+      [item dispatchCompleteEvent];
     }
   }
 
@@ -60,6 +60,21 @@ protected:
     }
   }
 
+  virtual void enterConsDeleteEvent() {
+    assert(context_ == IN_ITEM);
+    context_ = IN_DELETE_EVENT;
+  }
+
+  virtual void enterConsCompleteEvent() {
+    assert(context_ == IN_ITEM);
+    context_ = IN_COMPLETE_EVENT;
+  }
+
+  virtual void enterConsUncompleteEvent() {
+    assert(context_ == IN_ITEM);
+    context_ = IN_UNCOMPLETE_EVENT;
+  }
+
   virtual void updateNode(const Node& node) {
     TodoItem *item;
     switch (context_) {
@@ -70,6 +85,18 @@ protected:
       case IN_STATUS:
         item = [items_ objectAtIndex:index_];
         item.completed = node.getBool();
+        break;
+      case IN_DELETE_EVENT:
+        item = [items_ objectAtIndex:index_];
+        item.deleteEvent = node.getNum();
+        break;
+      case IN_COMPLETE_EVENT:
+        item = [items_ objectAtIndex:index_];
+        item.completeEvent = node.getNum();
+        break;
+      case IN_UNCOMPLETE_EVENT:
+        item = [items_ objectAtIndex:index_];
+        item.uncompleteEvent = node.getNum();
         break;
       case IN_ITEM:
         item = newItem(node);
@@ -110,6 +137,9 @@ private:
     Cons cons = node.getCons();
     item.itemName = decodeString(cons.getFst().getStrData());
     item.completed = cons.getSnd().getBool();
+    item.deleteEvent = cons.getDeleteEvent();
+    item.completeEvent = cons.getCompleteEvent();
+    item.uncompleteEvent = cons.getUncompleteEvent();
     return item;
   }
 
@@ -125,7 +155,15 @@ private:
     addItems(cons.getSnd());
   }
 
-  enum Context { IN_LIST, IN_ITEM, IN_TITLE, IN_STATUS };
+  enum Context {
+    IN_LIST,
+    IN_ITEM,
+    IN_TITLE,
+    IN_STATUS,
+    IN_DELETE_EVENT,
+    IN_COMPLETE_EVENT,
+    IN_UNCOMPLETE_EVENT
+  };
   Context context_;
   int index_;
   NSMutableArray* items_;
