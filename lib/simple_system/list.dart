@@ -69,6 +69,28 @@ class _GrowableList<E> extends IterableBase<E> {
     return _list[index] = value;
   }
 
+  bool remove(Object value) {
+    _FixedList<E> list = _list;
+    int length = _length;
+    for (int i = 0; i < length; ++i) {
+      if (list[i] == value) {
+        _shiftDown(i, length);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  E removeLast() {
+    int index = _length - 1;
+    if (index < 0) throw new IndexError(index, this);
+    _FixedList<E> list = _list;
+    E result = list[index];
+    list[index] = null;
+    _length = index;
+    return result;
+  }
+
   _FixedList<E> _grow(minSize) {
     // TODO(ager): play with heuristics here.
     var newList = new _FixedList<E>(minSize + (minSize >> 2));
@@ -76,5 +98,17 @@ class _GrowableList<E> extends IterableBase<E> {
       newList[i] = _list[i];
     }
     return _list = newList;
+  }
+
+  void _shiftDown(int i, int length) {
+    _FixedList<E> list = _list;
+    --length;
+    while (i < length) {
+      int j = i + 1;
+      list[i] = list[j];
+      i = j;
+    }
+    _length = length;
+    list[length] = null;
   }
 }

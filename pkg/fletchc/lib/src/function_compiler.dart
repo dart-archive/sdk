@@ -238,7 +238,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     int id = context.getSymbolId(symbol);
     int arity = selector.argumentCount;
     int fletchSelector = FletchSelector.encodeMethod(id, arity);
-    builder.invokeMethod(fletchSelector, arity);
+    builder.invokeMethod(fletchSelector, arity, selector.name);
   }
 
   void invokeGetter(Selector selector) {
@@ -438,8 +438,20 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Node right,
       BinaryOperator operator,
       _) {
+    bool isConstNull(Node node) {
+      ConstantExpression expression = compileConstant(node, isConst: false);
+      if (expression == null) return false;
+      return expression.value.isNull;
+    }
+
     visitForValue(left);
     visitForValue(right);
+    if (operator == BinaryOperator.EQ &&
+        (isConstNull(left) || isConstNull(right))) {
+      builder.identicalNonNumeric();
+      return;
+    }
+
     Selector selector;
     // TODO(ajohnsen): Remove once SemanticVisitor handle IndexGet seperately.
     if (operator == BinaryOperator.INDEX) {
@@ -1026,6 +1038,14 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     handleLocalVariableIncrement(element, operator, true);
   }
 
+  void visitParameterPrefix(
+      Send node,
+      ParameterElement parameter,
+      IncDecOperator operator,
+      _) {
+    handleLocalVariableIncrement(parameter, operator, true);
+  }
+
   void visitLocalVariablePostfix(
       SendSet node,
       LocalVariableElement element,
@@ -1035,6 +1055,17 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     // generate code for the simpler 'prefix' case.
     bool prefix = (visitState == VisitState.Effect);
     handleLocalVariableIncrement(element, operator, prefix);
+  }
+
+  void visitParameterPostfix(
+      SendSet node,
+      ParameterElement parameter,
+      IncDecOperator operator,
+      _) {
+    // If visitState is for effect, we can ignore the return value, thus always
+    // generate code for the simpler 'prefix' case.
+    bool prefix = (visitState == VisitState.Effect);
+    handleLocalVariableIncrement(parameter, operator, prefix);
   }
 
   void visitParameterGet(
@@ -2284,15 +2315,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
         node, "[visitSuperCompoundIndexSet] isn't implemented.");
   }
 
-  void visitParameterPrefix(
-      Send node,
-      ParameterElement parameter,
-      IncDecOperator operator,
-      _){
-    generateUnimplementedError(
-        node, "[visitParameterPrefix] isn't implemented.");
-  }
-
   void errorLocalFunctionPrefix(
       Send node,
       LocalFunctionElement function,
@@ -2454,15 +2476,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       _){
     generateUnimplementedError(
         node, "[visitDynamicTypeLiteralPrefix] isn't implemented.");
-  }
-
-  void visitParameterPostfix(
-      Send node,
-      ParameterElement parameter,
-      IncDecOperator operator,
-      _){
-    generateUnimplementedError(
-        node, "[visitParameterPostfix] isn't implemented.");
   }
 
   void errorLocalFunctionPostfix(

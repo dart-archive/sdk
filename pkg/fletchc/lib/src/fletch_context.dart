@@ -30,6 +30,7 @@ import 'package:compiler/src/constants/values.dart' show
     ConstructedConstantValue;
 
 import 'package:compiler/src/dart2jslib.dart' show
+    CodegenRegistry,
     DartConstantCompiler,
     isPrivateName;
 
@@ -166,6 +167,12 @@ class FletchContext {
             ConstructedConstantValue value = constant;
             ClassElement classElement = value.type.element;
             backend.registerClassElement(classElement);
+            // TODO(ahe): This should not be required. Also, instantiate type,
+            // not class.
+            var registry = new CodegenRegistry(
+                compiler,
+                classElement.resolvedAst.elements);
+            registry.registerInstantiatedClass(classElement);
           }
           for (ConstantValue value in constant.getDependencies()) {
             markConstantUsed(value);
@@ -186,6 +193,7 @@ class FletchContext {
         node,
         elements,
         isConst: isConst);
+    if (expression == null) return null;
     markConstantUsed(expression.value);
     return expression;
   }

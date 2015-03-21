@@ -64,7 +64,7 @@ class FletchCompiler {
   FletchCompiler._(this._compiler, this.script, this.verbose);
 
   Backdoor get backdoor => new Backdoor(this);
-  
+
   factory FletchCompiler(
       {CompilerInputProvider provider,
        CompilerOutputProvider outputProvider,
@@ -129,7 +129,7 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>.""");
     }
 
     fletchVm = _computeValidatedUri(
-        fletchVm, name: 'fletchVm', ensureTrailingSlash: true);
+        fletchVm, name: 'fletchVm', ensureTrailingSlash: false);
     if (fletchVm == null) {
       fletchVm = _guessFletchVm();
       if (fletchVm == null) {

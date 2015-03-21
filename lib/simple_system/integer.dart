@@ -152,6 +152,8 @@ class _Smi extends int {
 
   @native external double toDouble();
 
+  @native external int _toMint();
+
   @native external num operator -();
 
   @native external num operator +(num other);
@@ -178,7 +180,10 @@ class _Smi extends int {
 
   @native external int operator <<(int other);
 
-  @native external bool operator ==(other);
+  @native bool operator ==(other) {
+    // TODO(kasperl): Check error.
+    return other.compareEqFromInteger(this);
+  }
 
   @native external bool operator <(num other);
 
@@ -187,6 +192,8 @@ class _Smi extends int {
   @native external bool operator >(num other);
 
   @native external bool operator >=(num other);
+
+  bool compareEqFromInteger(other) => other._toMint() == _toMint();
 }
 
 class _Mint extends int {
@@ -196,6 +203,8 @@ class _Mint extends int {
 
   @native external double toDouble();
 
+  int _toMint() => this;
+
   @native external num operator -();
 
   @native external num operator +(num other);
@@ -222,7 +231,10 @@ class _Mint extends int {
 
   @native external int operator <<(int other);
 
-  @native external bool operator ==(other);
+  @native bool operator ==(other) {
+    // TODO(kasperl): Check error.
+    return other.compareEqFromInteger(this);
+  }
 
   @native external bool operator <(num other);
 
@@ -231,4 +243,6 @@ class _Mint extends int {
   @native external bool operator >(num other);
 
   @native external bool operator >=(num other);
+
+  bool compareEqFromInteger(other) => other._toMint() == this;
 }

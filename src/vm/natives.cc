@@ -37,6 +37,7 @@ static Object* ToBool(Process* process, bool value) {
 NATIVE(PrintString) {
   arguments[0]->ShortPrint();
   printf("\n");
+  fflush(stdout);
   return process->program()->null_object();
 }
 

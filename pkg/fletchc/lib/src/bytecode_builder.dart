@@ -192,8 +192,76 @@ class BytecodeBuilder {
         1 - arity);
   }
 
-  void invokeMethod(int selector, int arity) {
-    internalAddStackPointerDifference(new InvokeMethod(selector), -arity);
+  void invokeMethod(int selector, int arity, [String name]) {
+    switch (name) {
+      case '==':
+        internalAddStackPointerDifference(new InvokeEq(selector), -arity);
+        break;
+
+      case '<':
+        internalAddStackPointerDifference(new InvokeLt(selector), -arity);
+        break;
+
+      case '<=':
+        internalAddStackPointerDifference(new InvokeLe(selector), -arity);
+        break;
+
+      case '>':
+        internalAddStackPointerDifference(new InvokeGt(selector), -arity);
+        break;
+
+      case '>=':
+        internalAddStackPointerDifference(new InvokeGe(selector), -arity);
+        break;
+
+      case '+':
+        internalAddStackPointerDifference(new InvokeAdd(selector), -arity);
+        break;
+
+      case '-':
+        internalAddStackPointerDifference(new InvokeSub(selector), -arity);
+        break;
+
+      case '*':
+        internalAddStackPointerDifference(new InvokeMul(selector), -arity);
+        break;
+
+      case '~/':
+        internalAddStackPointerDifference(new InvokeTruncDiv(selector), -arity);
+        break;
+
+      case '%':
+        internalAddStackPointerDifference(new InvokeMod(selector), -arity);
+        break;
+
+      case '~':
+        internalAddStackPointerDifference(new InvokeBitNot(selector), -arity);
+        break;
+
+      case '&':
+        internalAddStackPointerDifference(new InvokeBitAnd(selector), -arity);
+        break;
+
+      case '|':
+        internalAddStackPointerDifference(new InvokeBitOr(selector), -arity);
+        break;
+
+      case '^':
+        internalAddStackPointerDifference(new InvokeBitXor(selector), -arity);
+        break;
+
+      case '<<':
+        internalAddStackPointerDifference(new InvokeBitShl(selector), -arity);
+        break;
+
+      case '>>':
+        internalAddStackPointerDifference(new InvokeBitShr(selector), -arity);
+        break;
+
+      default:
+        internalAddStackPointerDifference(new InvokeMethod(selector), -arity);
+        break;
+    }
   }
 
   void pop() {
