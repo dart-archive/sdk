@@ -143,7 +143,6 @@ built_in_identifier_illegal_test/20: Crash
 built_in_identifier_prefix_test: Crash
 built_in_identifier_test/01: Crash
 built_in_identifier_test/none: Fail
-call_argument_inference_test: Fail
 call_closurization_test: Fail
 call_constructor_on_unresolvable_class_test/01: Crash
 call_constructor_on_unresolvable_class_test/02: Crash
@@ -204,7 +203,6 @@ class_cycle_test/00: MissingCompileTimeError
 class_cycle_test/01: MissingCompileTimeError
 class_cycle_test/02: MissingCompileTimeError
 class_cycle_test/03: MissingCompileTimeError
-class_cycle_test/none: Fail
 class_keyword_test/01: Crash
 class_keyword_test/02: Crash
 class_literal_test/01: Crash
@@ -246,7 +244,7 @@ closure_break1_test: Fail
 closure_break2_test: Fail
 closure_break_test: Fail
 closure_cycles_test: Crash
-closure_in_constructor_test: Fail
+closure_in_constructor_test: Crash
 closure_in_field_initializer_test: Fail
 closure_in_initializer2_test: Fail
 closure_in_initializer_test: Crash
@@ -258,14 +256,12 @@ closure_side_effect_test: Fail
 closure_type_test/01: Fail
 closure_type_test/none: Fail
 closure_type_variable_test: Fail
-closure_type_variables_test: Fail
 closure_variable_shadow_test: Fail
 closure_with_super_field_test: Fail
 closure_with_super_send_test: Fail
 closures_initializer2_test: Crash
 closures_initializer_test: Fail
 closures_with_complex_params_test: Fail
-code_after_try_is_executed_test/none: Fail
 comparison_test: Crash
 compile_time_constant10_test/01: Crash
 compile_time_constant10_test/02: Crash
@@ -568,7 +564,6 @@ duplicate_implements_test/01: MissingCompileTimeError
 duplicate_implements_test/02: MissingCompileTimeError
 duplicate_implements_test/03: MissingCompileTimeError
 duplicate_implements_test/04: MissingCompileTimeError
-duplicate_interface_test: Fail
 dynamic2_test/00: MissingCompileTimeError
 dynamic2_test/01: MissingCompileTimeError
 dynamic_prefix_core_test/01: Crash
@@ -623,11 +618,9 @@ factory3_test: Crash
 factory4_test: Fail
 factory5_test/00: Fail
 factory5_test/none: Fail
-factory_arrow_test: Fail
 factory_implementation_test/00: Fail
 factory_implementation_test/none: Fail
 factory_redirection2_test/01: MissingCompileTimeError
-factory_redirection2_test/none: Fail
 factory_redirection3_cyclic_test/01: MissingCompileTimeError
 factory_redirection3_cyclic_test/none: Fail
 factory_redirection_test/04: MissingCompileTimeError
@@ -639,7 +632,6 @@ factory_redirection_test/11: Fail
 factory_redirection_test/12: Fail
 factory_redirection_test/13: Fail
 factory_redirection_test/14: Fail
-factory_redirection_test/none: Fail
 factory_type_parameter2_test: Fail
 factory_type_parameter_test: Fail
 fannkuch_test: Crash
@@ -667,9 +659,6 @@ field_override3_test/02: MissingCompileTimeError
 field_override3_test/03: MissingCompileTimeError
 field_override3_test/none: Fail
 field_override4_test/02: MissingCompileTimeError
-field_override_test/01: Fail
-field_override_test/02: Fail
-field_override_test/none: Fail
 field_test: Crash
 final_field_initialization_order_test: Fail
 final_for_in_variable_test/none: Fail
@@ -762,10 +751,6 @@ function_subtype_simple2_test: Fail
 function_subtype_top_level0_test: Fail
 function_subtype_top_level1_test: Fail
 function_subtype_typearg0_test: Fail
-function_subtype_typearg1_test: Fail
-function_subtype_typearg2_test: Fail
-function_subtype_typearg3_test: Fail
-function_subtype_typearg4_test: Fail
 function_syntax_test/00: Crash
 function_syntax_test/01: Crash
 function_syntax_test/02: Crash
@@ -964,7 +949,6 @@ infinite_switch_label_test: Fail
 infinity_test: Fail
 inline_in_for_initializer_and_bailout_test: Crash
 inline_super_field_test: Crash
-inline_super_test: Fail
 inlined_conditional_test: Fail
 inlined_throw_test: Fail
 inst_field_initializer1_negative_test: Crash
@@ -1005,8 +989,6 @@ invocation_mirror_invoke_on2_test: Crash
 invocation_mirror_invoke_on_test: Crash
 invocation_mirror_test: Crash
 is_function_test: Fail
-is_interfaces2_test: Fail
-is_interfaces_test: Fail
 is_malformed_type_test/94: Fail
 is_malformed_type_test/95: Fail
 is_malformed_type_test/96: Fail
@@ -1015,13 +997,12 @@ is_malformed_type_test/98: Fail
 is_malformed_type_test/99: Fail
 is_nan_test: Fail
 is_not_class2_test: Fail
-is_object_test: Fail
-is_operator_test: Fail
 isnot_malformed_type_test: Fail
 issue10204_test: Fail
 issue10321_test: Fail
 issue10561_test: Crash
 issue10581_test: Fail
+issue10721_test: Crash
 issue10747_test: Fail
 issue10783_test: Fail
 issue11724_test: Fail
@@ -1063,7 +1044,6 @@ lazy_static6_test: Fail
 lazy_static_test: Fail
 left_shift_test: Fail
 library5_test: Fail
-library_ambiguous_test/04: MissingRuntimeError
 library_ambiguous_test/05: MissingCompileTimeError
 library_negative_test: Crash
 library_prefixes_test: Fail
@@ -1121,13 +1101,12 @@ malbounded_redirecting_factory_test/04: Fail
 malbounded_redirecting_factory_test/none: Fail
 malbounded_type_cast_test: Fail
 malbounded_type_literal_test: Fail
+malbounded_type_test_test/01: Fail
+malbounded_type_test_test/04: Fail
 malformed2_test/00: Crash
 malformed_inheritance_test/01: MissingCompileTimeError
-malformed_inheritance_test/02: Fail
 malformed_inheritance_test/03: MissingCompileTimeError
-malformed_inheritance_test/04: Fail
 malformed_inheritance_test/05: MissingCompileTimeError
-malformed_inheritance_test/06: Fail
 malformed_inheritance_test/07: MissingCompileTimeError
 malformed_inheritance_test/08: MissingCompileTimeError
 malformed_inheritance_test/09: MissingCompileTimeError
@@ -1196,7 +1175,6 @@ mixin_bound_test: Fail
 mixin_cyclic_test/01: MissingCompileTimeError
 mixin_cyclic_test/02: MissingCompileTimeError
 mixin_extends_field_test: Fail
-mixin_extends_is_test: Fail
 mixin_extends_method_test: Fail
 mixin_field_test: Fail
 mixin_forwarding_constructor1_test: Fail
@@ -1291,7 +1269,6 @@ mixin_invalid_inheritance1_test/03: MissingCompileTimeError
 mixin_invalid_inheritance2_test/01: Crash
 mixin_invalid_inheritance2_test/02: Crash
 mixin_invalid_inheritance2_test/03: Crash
-mixin_is_test: Fail
 mixin_issue10216_2_test: Fail
 mixin_issue10216_test: Fail
 mixin_lib_extends_field_test: Fail
@@ -1306,7 +1283,6 @@ mixin_mixin7_test: Fail
 mixin_mixin_bound2_test: Fail
 mixin_mixin_bound_test: Fail
 mixin_mixin_test: Fail
-mixin_naming_test: Fail
 mixin_override_regression_test: Fail
 mixin_prefix_test: Crash
 mixin_regress_11398_test: Crash
@@ -1320,7 +1296,6 @@ mixin_this_use_test: Fail
 mixin_type_parameter1_test: Fail
 mixin_type_parameter2_test: Fail
 mixin_type_parameter3_test: Fail
-mixin_type_parameter4_test: Fail
 mixin_type_parameters_mixin_extends_test: Fail
 mixin_type_parameters_mixin_test: Fail
 mixin_type_parameters_simple_test: Fail
@@ -1369,7 +1344,6 @@ no_such_constructor_test/01: Crash
 no_such_method2_test: Fail
 no_such_method_dispatcher_test: Fail
 no_such_method_empty_selector_test: Fail
-no_such_method_subtype_test: Fail
 no_such_method_test: Crash
 non_dominating_loop_test: Fail
 non_parameterized_factory2_test: Fail
@@ -1382,7 +1356,6 @@ not_enough_positional_arguments_test/06: MissingRuntimeError
 not_enough_positional_arguments_test/07: Crash
 null2_test: Crash
 null_is2_test: Fail
-null_is_test: Fail
 null_no_such_method_test: Fail
 null_test/01: Crash
 null_test/02: Crash
@@ -1521,11 +1494,11 @@ regress_14348_test: Crash
 regress_18535_test: Crash
 regress_20394_test/01: Crash
 regress_20840_test: Fail
+regress_20935_test: Fail
 regress_r24720_test: Fail
 reify_typevar_test: Crash
 resolution_test: Fail
 rethrow_test: Fail
-return_this_type_test: Fail
 rewrite_compound_assign_test: Fail
 rewrite_conditional_test: Fail
 rewrite_for_update_order_test: Fail
@@ -1533,7 +1506,7 @@ rewrite_if_swap_test: Fail
 rewrite_implicit_this_test/01: Fail
 rewrite_while_many_exits_test: Fail
 round_test: Crash
-runtime_type_test: Fail
+runtime_type_test: Crash
 savannah_test: Fail
 scope_variable_test/01: MissingCompileTimeError
 script1_negative_test: Fail
@@ -1552,9 +1525,6 @@ setter_override_test/02: Fail
 setter_override_test/03: MissingCompileTimeError
 setter_override_test/none: Fail
 side_effect_throw_test: Fail
-skip_expression_test: Fail
-smaller_4_Interface_Types_A11_t01_test: Fail
-smaller_4_Interface_Types_A11_t02_test: Fail
 smi_type_test: Fail
 source_self_negative_test: Fail
 stack_overflow_stacktrace_test: Timeout
@@ -1740,7 +1710,7 @@ syntax_test/58: Crash
 syntax_test/59: MissingCompileTimeError
 syntax_test/60: MissingCompileTimeError
 syntax_test/61: MissingCompileTimeError
-syntax_test/62: MissingCompileTimeError
+syntax_test/62: Crash
 syntax_test/63: Crash
 syntax_test/64: Crash
 syntax_test/65: Crash
@@ -1772,7 +1742,6 @@ toplevel_collision1_test/01: MissingCompileTimeError
 toplevel_collision1_test/02: MissingCompileTimeError
 toplevel_collision2_test/00: MissingCompileTimeError
 toplevel_collision2_test/01: MissingCompileTimeError
-tree_shake_typed_selector_test: Fail
 truncdiv_test: Fail
 truncdiv_uint32_test: Fail
 try_catch3_test: Fail
@@ -1841,15 +1810,6 @@ type_promotion_functions_test/14: Fail
 type_promotion_functions_test/none: Fail
 type_propagation3_test: Fail
 type_propagation_in_for_update_test: Fail
-type_propagation_test: Fail
-type_variable_bounds2_test/00: Fail
-type_variable_bounds2_test/01: Fail
-type_variable_bounds2_test/02: Fail
-type_variable_bounds2_test/03: Fail
-type_variable_bounds2_test/04: Fail
-type_variable_bounds2_test/05: Fail
-type_variable_bounds2_test/06: Fail
-type_variable_bounds2_test/none: Fail
 type_variable_bounds4_test/01: Crash
 type_variable_bounds4_test/none: Crash
 type_variable_closure_test: Fail
@@ -1869,8 +1829,8 @@ type_variable_conflict_test/03: MissingCompileTimeError
 type_variable_conflict_test/04: MissingCompileTimeError
 type_variable_conflict_test/05: MissingCompileTimeError
 type_variable_conflict_test/06: MissingCompileTimeError
-type_variable_field_initializer_closure_test: Fail
-type_variable_field_initializer_test: Fail
+type_variable_field_initializer_closure_test: Crash
+type_variable_field_initializer_test: Crash
 type_variable_function_type_test: Crash
 type_variable_initializer_test: Fail
 type_variable_nested_test: Crash
@@ -1887,7 +1847,6 @@ type_variable_static_context_negative_test: Crash
 type_variable_typedef_test: Fail
 typed_message_test: Crash
 typed_selector2_test: Fail
-typed_selector_test: Fail
 typedef_is_test: Fail
 typevariable_substitution2_test/02: Fail
 unary_plus_negative_test: Fail

@@ -77,7 +77,7 @@ class FletchContext {
 
   Map<FieldElement, int> staticIndices = <FieldElement, int>{};
 
-  Map<LibraryElement, String> libraryPrivateTag = <LibraryElement, String>{};
+  Map<LibraryElement, String> libraryTag = <LibraryElement, String>{};
   Map<String, int> symbolIds = <String, int>{};
   Map<Selector, String> selectorToSymbol = <Selector, String>{};
 
@@ -100,12 +100,16 @@ class FletchContext {
     // we mangle them as 'call'.
     if (name.isEmpty) name = 'call';
     if (!isPrivateName(name)) return name;
-    return name + libraryPrivateTag.putIfAbsent(library, () {
+    return name + getLibraryTag(library);
+  }
+
+  String getLibraryTag(LibraryElement library) {
+    return libraryTag.putIfAbsent(library, () {
       // Give the core library the unique mangling of the empty string. That
       // will make the VM able to create selector into core (used for e.g.
       // _noSuchMethodTrampoline).
       if (library == compiler.coreLibrary) return "";
-      return "%${libraryPrivateTag.length}";
+      return "%${libraryTag.length}";
     });
   }
 
@@ -151,6 +155,17 @@ class FletchContext {
     int id = getSymbolId(symbol);
     SelectorKind kind = getFletchSelectorKind(selector);
     return FletchSelector.encode(id, kind, selector.argumentCount);
+  }
+
+  int toFletchIsSelector(ClassElement classElement) {
+    LibraryElement library = classElement.library;
+    StringBuffer buffer = new StringBuffer();
+    buffer.write("?is?");
+    buffer.write(classElement.name);
+    buffer.write("?");
+    buffer.write(getLibraryTag(library));
+    int id = getSymbolId(buffer.toString());
+    return FletchSelector.encodeMethod(id, 0);
   }
 
   SelectorKind getFletchSelectorKind(Selector selector) {

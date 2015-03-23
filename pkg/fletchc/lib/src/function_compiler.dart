@@ -611,13 +611,35 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     applyVisitState();
   }
 
+  void handleIs(Node expression, DartType type) {
+    if (type == null) {
+      // 'type' is null for malformed types.
+      visitForEffect(expression);
+      builder.loadLiteralFalse();
+    } else {
+      visitForValue(expression);
+      ClassElement classElement = type.element;
+      int fletchSelector = context.toFletchIsSelector(classElement);
+      builder.invokeTest(fletchSelector, 0);
+    }
+  }
+
   void visitIs(
       Send node,
       Node expression,
       DartType type,
       _) {
-    // TODO(ajohnsen): Implement.
-    builder.loadLiteralFalse();
+    handleIs(expression, type);
+    applyVisitState();
+  }
+
+  void visitIsNot(
+      Send node,
+      Node expression,
+      DartType type,
+      _){
+    handleIs(expression, type);
+    builder.negate();
     applyVisitState();
   }
 
@@ -2043,14 +2065,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Node rhs,
       _){
     generateUnimplementedError(node, "[visitSuperIndexSet] isn't implemented.");
-  }
-
-  void visitIsNot(
-      Send node,
-      Node expression,
-      DartType type,
-      _){
-    generateUnimplementedError(node, "[visitIsNot] isn't implemented.");
   }
 
   void visitDynamicPropertyCompound(

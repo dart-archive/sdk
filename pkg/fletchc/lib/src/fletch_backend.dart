@@ -12,13 +12,15 @@ import 'package:compiler/src/dart2jslib.dart' show
     BackendConstantEnvironment,
     CodegenRegistry,
     CodegenWorkItem,
+    Compiler,
     CompilerTask,
     ConstantCompilerTask,
     ConstantSystem,
     Enqueuer,
     MessageKind,
     Registry,
-    ResolutionEnqueuer;
+    ResolutionEnqueuer,
+    isPrivateName;
 
 import 'package:compiler/src/tree/tree.dart' show
     DartString,
@@ -35,9 +37,8 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionSignature,
     LibraryElement;
 
-import 'package:compiler/src/dart2jslib.dart' show
-    Compiler,
-    isPrivateName;
+import 'package:compiler/src/dart_types.dart' show
+    DartType;
 
 import 'package:compiler/src/universe/universe.dart'
     show Selector;
@@ -92,11 +93,11 @@ class CompiledClass {
   final int id;
   final ClassElement element;
   final int fields;
-  final CompiledClass superClass;
+  final CompiledClass superclass;
 
   final Map<int, int> methodTable = <int, int>{};
 
-  CompiledClass(this.id, this.element, this.fields, this.superClass);
+  CompiledClass(this.id, this.element, this.fields, this.superclass);
 
   /**
    * Returns the number of instance fields of all the super classes of this
@@ -104,9 +105,9 @@ class CompiledClass {
    *
    * If this class has no super class (if it's Object), 0 is returned.
    */
-  int get superClassFields => hasSuperClass ? superClass.fields : 0;
+  int get superclassFields => hasSuperClass ? superclass.fields : 0;
 
-  bool get hasSuperClass => superClass != null;
+  bool get hasSuperClass => superclass != null;
 
   void createImplicitAccessors(FletchBackend backend) {
     // If we don't have an element (stub class), we don't have anything to
@@ -114,7 +115,7 @@ class CompiledClass {
     if (element == null) return;
     // TODO(ajohnsen): Don't do this once dart2js can enqueue field getters in
     // CodegenEnqueuer.
-    int fieldIndex = superClassFields;
+    int fieldIndex = superclassFields;
     element.forEachInstanceField((enclosing, field) {
       var getter = new Selector.getter(field.name, field.library);
       int getterSelector = backend.context.toFletchSelector(getter);
@@ -132,6 +133,35 @@ class CompiledClass {
 
       fieldIndex++;
     });
+  }
+
+  void createIsEntries(FletchBackend backend) {
+    if (element == null) return;
+
+    Set superclasses = new Set();
+    for (CompiledClass current = superclass;
+         current != null;
+         current = current.superclass) {
+      superclasses.add(current.element);
+    }
+
+    void createFor(ClassElement classElement) {
+      if (superclasses.contains(classElement)) return;
+      int fletchSelector = backend.context.toFletchIsSelector(classElement);
+      // TODO(ajohnsen): '0' is a placeholder. Generate dummy function?
+      methodTable[fletchSelector] = 0;
+    }
+
+    // Create for the current element.
+    createFor(element);
+
+    // Add all types related to 'implements'.
+    for (DartType interfaceType in element.interfaces) {
+      createFor(interfaceType.element);
+      for (DartType type in interfaceType.element.allSupertypes) {
+        createFor(type.element);
+      }
+    }
   }
 }
 
@@ -206,28 +236,28 @@ class FletchBackend extends Backend {
     if (element == null) return null;
     assert(element.isDeclaration);
     return compiledClasses.putIfAbsent(element, () {
-      CompiledClass superClass = registerClassElement(element.superclass);
-      int fields = superClass != null ? superClass.fields : 0;
+      CompiledClass superclass = registerClassElement(element.superclass);
+      int fields = superclass != null ? superclass.fields : 0;
       element.forEachInstanceField((enclosing, field) { fields++; });
       int id = classes.length;
       CompiledClass compiledClass = new CompiledClass(
           id,
           element,
           fields,
-          superClass);
+          superclass);
       classes.add(compiledClass);
       return compiledClass;
     });
   }
 
-  CompiledClass createStubClass(int fields, CompiledClass superClass) {
-    int totalFields = fields + superClass.fields;
+  CompiledClass createStubClass(int fields, CompiledClass superclass) {
+    int totalFields = fields + superclass.fields;
     int id = classes.length;
     CompiledClass compiledClass = new CompiledClass(
         id,
         null,
         totalFields,
-        superClass);
+        superclass);
     classes.add(compiledClass);
     return compiledClass;
   }
@@ -598,9 +628,10 @@ class FletchBackend extends Backend {
   int assembleProgram() {
     createParameterMatchingStubs();
 
-    // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
-    // This is a workaround, where we basically add getters for all fields.
     for (CompiledClass compiledClass in classes) {
+      compiledClass.createIsEntries(this);
+      // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
+      // This is a workaround, where we basically add getters for all fields.
       compiledClass.createImplicitAccessors(this);
     }
 
@@ -734,10 +765,10 @@ class FletchBackend extends Backend {
     });
 
     for (CompiledClass compiledClass in classes) {
-      CompiledClass superClass = compiledClass.superClass;
-      if (superClass == null) continue;
+      CompiledClass superclass = compiledClass.superclass;
+      if (superclass == null) continue;
       commands.add(new PushFromMap(MapId.classes, compiledClass.id));
-      commands.add(new PushFromMap(MapId.classes, superClass.id));
+      commands.add(new PushFromMap(MapId.classes, superclass.id));
       commands.add(const ChangeSuperClass());
       changes++;
     }

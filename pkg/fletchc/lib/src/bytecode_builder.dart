@@ -264,6 +264,10 @@ class BytecodeBuilder {
     }
   }
 
+  void invokeTest(int selector, int arity) {
+    internalAddStackPointerDifference(new InvokeTest(selector), -arity);
+  }
+
   void pop() {
     internalAdd(new Pop());
   }

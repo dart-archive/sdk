@@ -200,9 +200,9 @@ class ConstructorCompiler extends FunctionCompiler {
 
   void pushInitialFieldValues(CompiledClass compiledClass) {
     if (compiledClass.hasSuperClass) {
-      pushInitialFieldValues(compiledClass.superClass);
+      pushInitialFieldValues(compiledClass.superclass);
     }
-    int fieldIndex = compiledClass.superClassFields;
+    int fieldIndex = compiledClass.superclassFields;
     compiledClass.element.forEachInstanceField((_, FieldElement field) {
       fieldScope[field] = new UnboxedLocalValue(fieldIndex++, field);
       Expression initializer = field.initializer;
