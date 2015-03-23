@@ -182,6 +182,34 @@ class CommandSender {
     view.setUint32(headerSize, exitCode, commandEndianness);
     sink.add(list);
   }
+
+  void sendStdout(String data) {
+    sendStdoutBytes(new Uint8List.fromList(UTF8.encode(data)));
+  }
+
+  void sendStdoutBytes(List<int> data) {
+    sendDataCommand(DriverCommand.Stdout, data);
+  }
+
+  void sendStderr(String data) {
+    sendStderrBytes(new Uint8List.fromList(UTF8.encode(data)));
+  }
+
+  void sendStderrBytes(List<int> data) {
+    sendDataCommand(DriverCommand.Stderr, data);
+  }
+
+  void sendDataCommand(DriverCommand command, List<int> data) {
+    int payloadSize = data.length + 4;
+    Uint8List list = new Uint8List(headerSize + payloadSize);
+    ByteData view = list.buffer.asByteData();
+    view.setUint32(0, payloadSize, commandEndianness);
+    view.setUint8(4, command.index);
+    view.setUint32(headerSize, data.length, commandEndianness);
+    int dataOffset = headerSize + 4;
+    list.setRange(dataOffset, dataOffset + data.length, data);
+    sink.add(list);
+  }
 }
 
 Uint8List makeView(TypedData list, int offset, int length) {
@@ -268,8 +296,7 @@ String stringifyError(error, StackTrace stackTrace) {
 Future handleClient(Socket controlSocket) async {
   CommandSender commandSender = new CommandSender(controlSocket);
 
-  // Start another server socket to set up sockets for stdin, stdout, and
-  // stderr.
+  // Start another server socket to set up sockets for stdin, stdout.
   ServerSocket server =
       await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
   int port = server.port;
@@ -285,31 +312,26 @@ Future handleClient(Socket controlSocket) async {
 
   // Socket for stdin and stdout.
   Socket stdio = handleSocketErrors(connectionIterator.current, "stdio");
-  await connectionIterator.moveNext();
-
-  // Socket for stderr.
-  Socket stderr = handleSocketErrors(connectionIterator.current, "stderr");
 
   // Now that we have the sockets, close the server.
   server.close();
 
   ZoneSpecification specification =
       new ZoneSpecification(print: (_1, _2, _3, String line) {
-        stdio.write('$line\n');
+        commandSender.sendStdout('$line\n');
       },
       handleUncaughtError: (_1, _2, _3, error, StackTrace stackTrace) {
         String message =
             "\n\nExiting due to uncaught error.\n"
             "${stringifyError(error, stackTrace)}";
         Zone.ROOT.print(message);
-        stderr.write(message);
+        commandSender.sendStderr('$message\n');
         exit(1);
       });
 
   int exitCode = await Zone.current.fork(specification: specification)
-      .run(() => compile(arguments.skip(1).toList(), stdio, stderr));
+      .run(() => compile(arguments.skip(1).toList(), commandSender, stdio));
   stdio.destroy();
-  stderr.destroy();
 
   commandSender.sendExitCode(exitCode);
 
@@ -324,7 +346,11 @@ void writeNetworkUint32(Socket socket, int i) {
   socket.add(list);
 }
 
-Future<int> compile(List<String> arguments, Socket stdio, Socket stderr) async {
+// TODO(ahe): Rename this method, it both compiles and executes the code.
+Future<int> compile(
+    List<String> arguments,
+    CommandSender commandSender,
+    Socket stdio) async {
   List<String> options = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   FletchCompiler compiler =
@@ -362,8 +388,10 @@ Future<int> compile(List<String> arguments, Socket stdio, Socket stderr) async {
   var vmProcess = await Process.start(vmPath, vmOptions);
 
   handleSubscriptionErrors(stdio.listen(vmProcess.stdin.add), "stdin");
-  handleSubscriptionErrors(vmProcess.stdout.listen(stdio.add), "vm stdout");
-  handleSubscriptionErrors(vmProcess.stderr.listen(stderr.add), "vm stderr");
+  handleSubscriptionErrors(
+      vmProcess.stdout.listen(commandSender.sendStdoutBytes), "vm stdout");
+  handleSubscriptionErrors(
+      vmProcess.stderr.listen(commandSender.sendStderrBytes), "vm stderr");
 
   bool hasValue = await connectionIterator.moveNext();
   assert(hasValue);

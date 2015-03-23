@@ -355,21 +355,15 @@ static int ReadInt(Socket *socket) {
   return static_cast<int>(ntohl(result));
 }
 
-static void Forward(Socket* socket, int fd) {
-  uint8 buffer[4096];
-  ssize_t bytes_count =
-      TEMP_FAILURE_RETRY(
-          read(socket->FileDescriptor(), &buffer, sizeof(buffer)));
-  if (bytes_count == -1) {
-    Die("%s: Read failed: %s", program_name, strerror(errno));
-  }
-  do {
-    ssize_t bytes_written = TEMP_FAILURE_RETRY(write(fd, &buffer, bytes_count));
-    if (bytes_written == -1) {
+static void WriteFully(int fd, uint8* data, ssize_t length) {
+  ssize_t offset = 0;
+  while (offset < length) {
+    int bytes = TEMP_FAILURE_RETRY(write(fd, data + offset, length - offset));
+    if (bytes < 0) {
       Die("%s: write failed: %s", program_name, strerror(errno));
     }
-    bytes_count -= bytes_written;
-  } while (bytes_count > 0);
+    offset += bytes;
+  }
 }
 
 static void SendArgv(DriverConnection *connection, int argc, char** argv) {
@@ -381,12 +375,35 @@ static void SendArgv(DriverConnection *connection, int argc, char** argv) {
   connection->Send(DriverConnection::kArguments);
 }
 
+static int CommandFileDescriptor(DriverConnection::Command command) {
+  switch (command) {
+    case DriverConnection::kStdin:
+    case DriverConnection::kStdout:
+    case DriverConnection::kStderr:
+      return command;
+
+    default:
+      Die("%s: No file descriptor for command: %i\n", program_name, command);
+      return -1;
+  }
+}
+
 static DriverConnection::Command HandleCommand(DriverConnection *connection) {
   DriverConnection::Command command = connection->Receive();
+
   switch (command) {
     case DriverConnection::kExitCode:
       exit_code = connection->ReadInt();
       return command;
+
+    case DriverConnection::kStdout:
+    case DriverConnection::kStderr: {
+      int size = 0;
+      uint8* bytes = connection->ReadBytes(&size);
+      WriteFully(CommandFileDescriptor(command), bytes, size);
+      free(bytes);
+      return command;
+    }
 
     case DriverConnection::kDriverConnectionError:
     case DriverConnection::kDriverConnectionClosed:
@@ -426,15 +443,15 @@ static int Main(int argc, char** argv) {
   SendArgv(connection, argc, argv);
 
   Socket *stdio_socket = new Socket();
-  Socket *stderr_socket = new Socket();
 
   if (!stdio_socket->Connect("127.0.0.1", io_port)) {
     Die("%s: Failed to connect stdio.", program_name);
   }
 
-  if (!stderr_socket->Connect("127.0.0.1", io_port)) {
-    Die("%s: Failed to connect stderr.", program_name);
-  }
+  // Ensure any previous FILE based IO is flushed, as we now start using file
+  // descriptors bypassing the FILE buffers.
+  fflush(stdout);
+  fflush(stderr);
 
   struct termios term;
   tcgetattr(STDIN_FILENO, &term);
@@ -442,9 +459,6 @@ static int Main(int argc, char** argv) {
   tcsetattr(STDIN_FILENO, TCSANOW, &term);
 
   int nfds = stdio_socket->FileDescriptor();
-  if (nfds < stderr_socket->FileDescriptor()) {
-    nfds = stderr_socket->FileDescriptor();
-  }
   if (nfds < control_socket->FileDescriptor()) {
     nfds = control_socket->FileDescriptor();
   }
@@ -459,7 +473,6 @@ static int Main(int argc, char** argv) {
     FD_SET(STDIN_FILENO, &readfds);
     FD_SET(control_socket->FileDescriptor(), &readfds);
     FD_SET(stdio_socket->FileDescriptor(), &readfds);
-    FD_SET(stderr_socket->FileDescriptor(), &readfds);
 
     int ready_count = select(nfds, &readfds, &writefds, &errorfds, NULL);
     if (ready_count < 0) {
@@ -469,10 +482,12 @@ static int Main(int argc, char** argv) {
       // Timeout, shouldn't happen.
     } else {
       if (FD_ISSET(stdio_socket->FileDescriptor(), &readfds)) {
-        Forward(stdio_socket, STDOUT_FILENO);
-      }
-      if (FD_ISSET(stderr_socket->FileDescriptor(), &readfds)) {
-        Forward(stderr_socket, STDERR_FILENO);
+        char buffer[1];
+        size_t bytes_count =
+            read(stdio_socket->FileDescriptor(), &buffer, sizeof(buffer));
+        if (bytes_count != 0) {
+          Die("%s: Unexpected data on stdio_socket", program_name);
+        }
       }
       if (FD_ISSET(STDIN_FILENO, &readfds)) {
         uint8 buffer[4096];
