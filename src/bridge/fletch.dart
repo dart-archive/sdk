@@ -28,13 +28,13 @@ class ConnectionHandler {
 
   ConnectionHandler._(this.server, this.iterator);
 
-  static ConnectionHandler start() async {
+  static Future<ConnectionHandler> start() async {
     var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
     var iterator = new StreamIterator(server);
     return new ConnectionHandler._(server, iterator);
   }
 
-  next() async {
+  Future next() async {
     var hasNext = await iterator.moveNext();
     assert(hasNext);
     return iterator.current;
@@ -52,11 +52,12 @@ class InputHandler {
 
   printPrompt() => stdout.write('> ');
 
-  handleLine(String line) {
+  Future handleLine(String line) async {
     if (line.isEmpty) line = previousLine;
     previousLine = line;
     switch (line) {
       case "quit":
+        session.end();
         exit(0);
         break;
       case "r":
@@ -72,19 +73,19 @@ class InputHandler {
         session.cont();
         break;
       case "bt":
-        session.backtrace();
+        await session.backtrace();
         break;
     }
     printPrompt();
   }
 
-  run() async {
+  Future run() async {
     print(BANNER);
     printPrompt();
     var inputLineStream = stdin.transform(new Utf8Decoder())
                                .transform(new LineSplitter());
     await for(var line in inputLineStream) {
-      handleLine(line);
+      await handleLine(line);
     }
   }
 }
@@ -142,7 +143,7 @@ main(args) async {
   connectionHandler.close();
 
   // Start the bridge session that communicates with both compiler and VM.
-  var session = new Session(compilerSocket, vmSocket);
+  var session = await Session.start(compilerSocket, vmSocket);
 
   // Start the command-line input handling.
   var inputHandler = new InputHandler(session);

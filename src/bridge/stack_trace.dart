@@ -41,9 +41,8 @@ class StackTrace {
 
   void addFrame(StackFrame frame) { _stackFrames[--_framesToGo] = frame; }
 
-  bool get complete => _framesToGo == 0;
-
   void write(ProgramModel model) {
+    assert(_framesToGo == 0);
     print("Stack trace:");
     for (var frame in _stackFrames) frame.write(model);
   }
