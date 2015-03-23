@@ -193,13 +193,25 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
     return new UnboxedLocalValue(slot, element);
   }
 
+  LocalValue createLocalValueForParameter(
+      ParameterElement parameter,
+      int slot) {
+    if (closureEnvironment.shouldBeBoxed(parameter)) {
+      LocalValue value = new BoxedLocalValue(builder.stackSize, parameter);
+      builder.loadSlot(slot);
+      value.initialize(builder);
+      return value;
+    }
+    return new UnboxedLocalValue(slot, parameter);
+  }
+
   void compile() {
     FunctionSignature functionSignature = function.functionSignature;
     int parameterCount = functionSignature.parameterCount;
     int i = 0;
     functionSignature.orderedForEachParameter((ParameterElement parameter) {
       int slot = i++ - parameterCount - 1;
-      scope[parameter] = createLocalValueFor(parameter, slot);
+      scope[parameter] = createLocalValueForParameter(parameter, slot);
     });
 
     ClosureInfo info = closureEnvironment.closures[function];

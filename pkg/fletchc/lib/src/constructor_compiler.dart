@@ -130,8 +130,7 @@ class ConstructorCompiler extends FunctionCompiler {
     // locals, in FunctionCompiler.
     signature.orderedForEachParameter((ParameterElement parameter) {
       int slot = firstParameterSlot + parameterIndex;
-      // TODO(ajohnsen): Validate that we handle boxed parameters correctly.
-      LocalValue value = createLocalValueFor(parameter, slot);
+      LocalValue value = createLocalValueForParameter(parameter, slot);
       scope[parameter] = value;
       if (parameter.isInitializingFormal) {
         // If it's a initializing formal, store the value into initial

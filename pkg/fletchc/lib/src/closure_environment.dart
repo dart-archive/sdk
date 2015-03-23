@@ -112,7 +112,7 @@ class ClosureVisitor
     assert(function.memberContext == function);
     assert(currentFunction == null);
     currentFunction = function;
-    if (function.node != null) function.node.body.accept(this);
+    if (function.node != null) function.node.accept(this);
     assert(currentFunction == function);
     return closureEnvironment;
   }
@@ -132,8 +132,19 @@ class ClosureVisitor
   void visitFunctionExpression(FunctionExpression node) {
     FunctionElement oldFunction = currentFunction;
     currentFunction = elements[node];
-    ClosureInfo info = new ClosureInfo();
-    closureEnvironment.closures[currentFunction] = info;
+    if (currentFunction != function) {
+      ClosureInfo info = new ClosureInfo();
+      closureEnvironment.closures[currentFunction] = info;
+    }
+    NodeList initializers = node.initializers;
+    if (initializers != null) {
+      for (var initializer in initializers) {
+        Element element = elements[initializer];
+        if (element != null && !element.isGenerativeConstructor) {
+          initializer.accept(this);
+        }
+      }
+    }
     node.body.accept(this);
     currentFunction = oldFunction;
   }
