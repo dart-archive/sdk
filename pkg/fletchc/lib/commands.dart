@@ -368,6 +368,8 @@ enum CommandCode {
   ProcessStep,
   ProcessContinue,
   ProcessBacktrace,
+  ProcessBreakpoint,
+  ProcessTerminate,
   WriteSnapshot,
   CollectGarbage,
 

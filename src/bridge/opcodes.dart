@@ -17,6 +17,8 @@ enum Opcode {
   ProcessStep,
   ProcessContinue,
   ProcessBacktrace,
+  ProcessBreakpoint,
+  ProcessTerminated,
   WriteSnapshot,
   CollectGarbage,
 

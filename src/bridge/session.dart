@@ -178,22 +178,33 @@ class Session {
     return _userResponseVMCommands.current;
   }
 
-  // TODO(ager): Add ack responses to more commands. At this point only
-  // backtrace awaits the full reply.
-  run() {
-    new ProcessRunCommand().writeTo(_vmSocket);
+  Future handleProcessStop() async {
+    Command response = await nextUserResponseCommand();
+    if (response.opcode == Opcode.ProcessTerminated) {
+      print('process terminated');
+    } else {
+      assert(response.opcode == Opcode.ProcessBreakpoint);
+    }
   }
 
+  Future run() async {
+    new ProcessRunCommand().writeTo(_vmSocket);
+    await handleProcessStop();
+  }
+
+  // TODO(ager): Replace with break point support.
   debug() {
     new ProcessDebugCommand().writeTo(_vmSocket);
   }
 
-  step() {
+  Future step() async {
     new ProcessStepCommand().writeTo(_vmSocket);
+    await handleProcessStop();
   }
 
-  cont() {
+  Future cont() async {
     new ProcessContinueCommand().writeTo(_vmSocket);
+    await handleProcessStop();
   }
 
   Future backtrace() async {

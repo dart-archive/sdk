@@ -61,16 +61,17 @@ class InputHandler {
         exit(0);
         break;
       case "r":
-        session.run();
+        await session.run();
         break;
       case "d":
+        // TODO(ager): Replace with break point support.
         session.debug();
         break;
       case "s":
-        session.step();
+        await session.step();
         break;
       case "c":
-        session.cont();
+        await session.cont();
         break;
       case "bt":
         await session.backtrace();

@@ -697,11 +697,14 @@ void Session::UncaughtException() {
 }
 
 void Session::BreakPoint(Process* process) {
-  // TODO(ager): Do Stuff.
+  connection_->Send(Connection::kProcessBreakpoint);
 }
 
 void Session::ProcessTerminated(Process* process) {
-  if (process_ == process) process_ = NULL;
+  if (process_ == process) {
+    connection_->Send(Connection::kProcessTerminated);
+    process_ = NULL;
+  }
 }
 
 }  // namespace fletch

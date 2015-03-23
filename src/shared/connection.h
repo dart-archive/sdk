@@ -62,6 +62,8 @@ class Connection {
     kProcessStep,
     kProcessContinue,
     kProcessBacktrace,
+    kProcessBreakpoint,
+    kProcessTerminated,
     kWriteSnapshot,
     kCollectGarbage,
 
