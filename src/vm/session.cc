@@ -106,20 +106,26 @@ void Session::ProcessMessages() {
         break;
       }
 
-      case Connection::kProcessDebug: {
-        process_->set_is_stepping(true);
+      case Connection::kProcessSetBreakpoint: {
+        if (process_->debug_info() == NULL) {
+          process_->AttachDebugger();
+        }
+        int bytecode_index = connection_->ReadInt();
+        Function* function = Function::cast(Pop());
+        process_->debug_info()->SetBreakpoint(function, bytecode_index);
+        connection_->Send(Connection::kProcessSetBreakpoint);
         break;
       }
 
       case Connection::kProcessStep: {
         Scheduler* scheduler = program()->scheduler();
+        process_->debug_info()->set_is_stepping(true);
         scheduler->ProcessContinue(process_);
         break;
       }
 
       case Connection::kProcessContinue: {
         Scheduler* scheduler = program()->scheduler();
-        process_->set_is_stepping(false);
         scheduler->ProcessContinue(process_);
         break;
       }
@@ -298,7 +304,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kMapLookup: {
-        int64 map_index = connection_->ReadInt64();
+        int map_index = connection_->ReadInt();
         int id = MapLookup(map_index);
         connection_->WriteInt(id);
         connection_->Send(Connection::kObjectId);
@@ -394,7 +400,7 @@ void Session::PopToMap(int index, int64 id) {
   maps_[index]->Add(id, Pop());
 }
 
-int64 Session::MapLookup(int64 map_index) {
+int64 Session::MapLookup(int map_index) {
   int64 id = -1;
   ObjectMap* map = maps_[map_index];
   if (map != NULL) id = map->LookupByObject(Top());
@@ -697,6 +703,7 @@ void Session::UncaughtException() {
 }
 
 void Session::BreakPoint(Process* process) {
+  process->debug_info()->set_is_stepping(false);
   connection_->Send(Connection::kProcessBreakpoint);
 }
 

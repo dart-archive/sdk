@@ -14,12 +14,12 @@ const String BANNER = """
 Starting session.
 
 Commands:
-  'r'    run main
-  'd'    mark the process for debugging
-  's'    step on bytecode in the process
-  'c'    continue a stepping execution running to program completion
-  'bt'   backtrace
-  'quit' quit the session
+  'r'                                   run main
+  'b <method name> <bytecode index>'    set breakpoint
+  's'                                   step on bytecode in the process
+  'c'                                   continue execution
+  'bt'                                  backtrace
+  'quit'                                quit the session
 """;
 
 class ConnectionHandler {
@@ -55,7 +55,10 @@ class InputHandler {
   Future handleLine(String line) async {
     if (line.isEmpty) line = previousLine;
     previousLine = line;
-    switch (line) {
+    List<String> commandComponents =
+        line.split(" ").where((s) => !s.isEmpty).toList();
+    String command = commandComponents[0];
+    switch (command) {
       case "quit":
         session.end();
         exit(0);
@@ -63,9 +66,18 @@ class InputHandler {
       case "r":
         await session.run();
         break;
-      case "d":
-        // TODO(ager): Replace with break point support.
-        session.debug();
+      case "b":
+        var method =
+            (commandComponents.length > 1) ? commandComponents[1] : "main";
+        var bci =
+            (commandComponents.length > 2) ? commandComponents[2] : "0";
+        try {
+          bci = int.parse(bci);
+        } catch(e) {
+          print('### invalid bytecode index: $bci');
+          break;
+        }
+        await session.setBreakpoint(method: method, bytecodeIndex: bci);
         break;
       case "s":
         await session.step();
@@ -75,6 +87,9 @@ class InputHandler {
         break;
       case "bt":
         await session.backtrace();
+        break;
+      default:
+        print('### unknown command: $command');
         break;
     }
     printPrompt();

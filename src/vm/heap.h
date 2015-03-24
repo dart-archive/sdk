@@ -96,7 +96,7 @@ class Heap {
 
  private:
   Object* CreateStringInternal(Class* the_class, int length, bool clear);
-  
+
   Space* space_;
   Object* AllocateRawClass(int size);
 };

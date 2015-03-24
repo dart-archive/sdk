@@ -113,7 +113,7 @@ Process::Process(Program* program)
       current_message_(NULL),
       program_gc_state_(kUnknown),
       errno_cache_(0),
-      is_stepping_(false) {
+      debug_info_(NULL) {
   Array* static_fields = program->static_fields();
   int length = static_fields->length();
   statics_ = Array::cast(NewArray(length));
@@ -421,6 +421,7 @@ static void IteratePortQueueProgramPointers(PortQueue* queue,
 void Process::IterateProgramPointers(PointerVisitor* visitor) {
   ProgramPointerVisitor program_pointer_visitor(visitor);
   heap()->IterateObjects(&program_pointer_visitor);
+  if (debug_info_ != NULL) debug_info_->VisitProgramPointers(visitor);
   IteratePortQueueProgramPointers(last_message_, visitor);
   IteratePortQueueProgramPointers(current_message_, visitor);
 }
@@ -457,6 +458,17 @@ void Process::Profile() {
   Object** stack_limit = stack_limit_;
   if (stack_limit_ == kPreemptMarker) return;
   stack_limit_.compare_exchange_strong(stack_limit, kProfileMarker);
+}
+
+void Process::AttachDebugger() {
+  ASSERT(debug_info_ == NULL);
+  debug_info_ = new DebugInfo();
+}
+
+void Process::DetachDebugger() {
+  ASSERT(debug_info_ != NULL);
+  delete debug_info_;
+  debug_info_ = NULL;
 }
 
 void Process::CookStacks(int number_of_stacks) {

@@ -7,6 +7,7 @@
 
 #include <atomic>
 
+#include "src/vm/debug_info.h"
 #include "src/vm/heap.h"
 #include "src/vm/lookup_cache.h"
 #include "src/vm/program.h"
@@ -143,9 +144,10 @@ class Process {
   void Profile();
 
   // Debugging support.
-  bool is_debugging() const { return is_stepping_; }
-  bool is_stepping() const { return is_stepping_; }
-  void set_is_stepping(bool value) { is_stepping_ = value; }
+  void AttachDebugger();
+  void DetachDebugger();
+  DebugInfo* debug_info() { return debug_info_; }
+  bool is_debugging() const { return debug_info_ != NULL; }
 
   Process* next() const { return next_; }
   void set_next(Process* process) { next_ = process; }
@@ -216,6 +218,9 @@ class Process {
   // Put 'entry' at the end of the port's queue. This function is thread safe.
   void EnqueueEntry(PortQueue* entry);
 
+  // Iterate all pointers reachable from this process object.
+  void IterateRoots(PointerVisitor* visitor);
+
   Heap heap_;
   Program* program_;
   Array* statics_;
@@ -262,7 +267,7 @@ class Process {
 
   int errno_cache_;
 
-  bool is_stepping_;
+  DebugInfo* debug_info_;
 
 #ifdef DEBUG
   bool true_then_false_;

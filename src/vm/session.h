@@ -44,7 +44,7 @@ class Session {
   // Get the id for the top object on the session stack in the object
   // map with the given index. Returns -1 if the object does not exist
   // in the map.
-  int64 MapLookup(int64 map_index);
+  int64 MapLookup(int map_index);
 
   // Stack operations.
   void Dup() { Push(Top()); }

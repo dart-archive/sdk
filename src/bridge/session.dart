@@ -181,7 +181,7 @@ class Session {
   Future handleProcessStop() async {
     Command response = await nextUserResponseCommand();
     if (response.opcode == Opcode.ProcessTerminated) {
-      print('process terminated');
+      print('### process terminated');
     } else {
       assert(response.opcode == Opcode.ProcessBreakpoint);
     }
@@ -192,9 +192,20 @@ class Session {
     await handleProcessStop();
   }
 
-  // TODO(ager): Replace with break point support.
-  debug() {
-    new ProcessDebugCommand().writeTo(_vmSocket);
+  // TODO(ager): Sets a breakpoint in all methods with the given name.
+  // With a proper UI we should know the method id directly.
+  Future setBreakpoint({String method, int bytecodeIndex}) async {
+    List<int> methodIds = new List();
+    // TODO(ager): Optimize.
+    _model.methodMap.forEach((int i, Method m) {
+      if (m.name == method) methodIds.add(i);
+    });
+    for (int id in methodIds) {
+      new PushFromMapCommand(_model.methodMapId, id).writeTo(_vmSocket);
+      new ProcessSetBreakpointCommand(bytecodeIndex).writeTo(_vmSocket);
+      Command command = await nextUserResponseCommand();
+      assert(command.opcode == Opcode.ProcessSetBreakpoint);
+    }
   }
 
   Future step() async {

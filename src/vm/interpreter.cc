@@ -103,6 +103,9 @@ class State {
     return Function::FromBytecodePointer(bcp_);
   }
 
+ protected:
+  uint8* bcp() { return bcp_; }
+
  private:
   Process* const process_;
   Program* const program_;
@@ -149,6 +152,7 @@ class Engine : public State {
 
 // Dispatching helper macros.
 #define DISPATCH()                                        \
+  if (ShouldBreak()) return Interpreter::kBreakPoint;     \
   goto *kDispatchTable[ReadOpcode()]
 #define DISPATCH_TO(opcode)                               \
   goto opcode##Label
@@ -158,7 +162,6 @@ class Engine : public State {
   opcode##Label: {                                        \
     if (Flags::IsOn("validate-stack")) ValidateStack()
 #define OPCODE_END() }                                    \
-  if (ShouldBreak()) return Interpreter::kBreakPoint;     \
   DISPATCH()
 
 Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
@@ -803,9 +806,18 @@ void Engine::ValidateStack() {
 }
 
 bool Engine::ShouldBreak() {
-  if (!process()->is_stepping()) return false;
-  SaveState();
-  return true;
+  DebugInfo* debug_info = process()->debug_info();
+  if (debug_info != NULL) {
+    // TODO(ager): We shouldn't compute the current function here in order
+    // to find the break point. Instead, we should record actual bytecode
+    // pointers in the break point list and update them on program gc.
+    Function* function = ComputeCurrentFunction();
+    int bytecode_index = bcp() - function->bytecode_address_for(0);
+    bool should_break = debug_info->ShouldBreak(function, bytecode_index);
+    if (should_break) SaveState();
+    return should_break;
+  }
+  return false;
 }
 
 extern "C"

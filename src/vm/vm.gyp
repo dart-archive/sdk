@@ -19,6 +19,7 @@
       ],
       'sources': [
         # TODO(ahe): Add header (.h) files.
+        'debug_info.cc',
         'event_handler.cc',
         'event_handler_macos.cc',
         'event_handler_linux.cc',

@@ -364,7 +364,7 @@ enum CommandCode {
 
   ProcessSpawnForMain,
   ProcessRun,
-  ProcessDebug,
+  ProcessSetBreakpoint,
   ProcessStep,
   ProcessContinue,
   ProcessBacktrace,

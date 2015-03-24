@@ -67,8 +67,6 @@ class ProgramModel {
     _mapsMap[id] = classMap;
   }
 
-  ProgramModel() { }
-
   Map lookupMap(int id) => _mapsMap[id];
 
   void dumpMethods() {

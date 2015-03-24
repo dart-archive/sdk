@@ -45,9 +45,17 @@ class Command {
       buffer.sublist(offset, offset + length);
 }
 
+class PushFromMapCommand extends Command {
+  PushFromMapCommand(int mapIndex, int id)
+      : super(Opcode.PushFromMap, new List(12)) {
+    writeInt(0, mapIndex);
+    writeInt64(4, id);
+  }
+}
+
 class MapLookupCommand extends Command {
-  MapLookupCommand(int mapIndex) : super(Opcode.MapLookup, new List(8)) {
-    writeInt64(0, mapIndex);
+  MapLookupCommand(int mapIndex) : super(Opcode.MapLookup, new List(4)) {
+    writeInt(0, mapIndex);
   }
 }
 
@@ -73,8 +81,11 @@ class ProcessRunCommand extends Command {
   ProcessRunCommand() : super(Opcode.ProcessRun, const[]);
 }
 
-class ProcessDebugCommand extends Command {
-  ProcessDebugCommand() : super(Opcode.ProcessDebug, const[]);
+class ProcessSetBreakpointCommand extends Command {
+  ProcessSetBreakpointCommand(int bytecodeIndex)
+      : super(Opcode.ProcessSetBreakpoint, new List(4)) {
+    writeInt(0, bytecodeIndex);
+  }
 }
 
 class ProcessStepCommand extends Command {

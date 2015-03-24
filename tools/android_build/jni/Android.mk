@@ -17,6 +17,7 @@ LOCAL_SRC_FILES := \
 	../../../src/shared/native_socket_linux.cc \
 	../../../src/shared/native_socket_posix.cc \
 	../../../src/shared/utils.cc \
+	../../../src/shared/debug_info.cc \
 	../../../src/vm/event_handler.cc \
 	../../../src/vm/event_handler_linux.cc \
 	../../../src/vm/ffi.cc \
