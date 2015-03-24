@@ -17,6 +17,9 @@ src/shared/shared.xcodeproj/
 src/vm/vm.xcodeproj/
 src/double_conversion.xcodeproj/
 tests/service_tests/service_tests.xcodeproj/
+jniLibs/
+samples/buildbot/java/
+samples/todomvc/java/
 .DS_Store
 .ninja_deps
 .ninja_log
