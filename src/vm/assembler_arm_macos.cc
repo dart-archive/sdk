@@ -9,19 +9,25 @@
 
 namespace fletch {
 
+#if defined(FLETCH_TARGET_ANDROID)
+static const char* kPrefix = "";
+#else
+static const char* kPrefix = "_";
+#endif
+
 void Assembler::Bind(const char* name) {
   putchar('\n');
   printf("\t.align 4\n");
   printf("\t.code 32\n");
-  printf("\t.global _%s\n_%s:\n", name, name);
+  printf("\t.global %s%s\n%s%s:\n", kPrefix, name, kPrefix, name);
 }
 
 void Assembler::DefineLong(const char* name) {
-  printf("\t.long _%s\n", name);
+  printf("\t.long %s%s\n", kPrefix, name);
 }
 
 const char* Assembler::LabelPrefix() {
-  return "_";
+  return kPrefix;
 }
 
 }  // namespace fletch

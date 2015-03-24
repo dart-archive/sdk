@@ -463,6 +463,16 @@
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm' ],
       },
 
+      'DebugXARMAndroid': {
+        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_xarm' ],
+        'defines': [ 'FLETCH_TARGET_ANDROID' ],
+      },
+
+      'ReleaseXARMAndroid': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm'],
+        'defines': [ 'FLETCH_TARGET_ANDROID' ],
+      },
+
       'DebugXARM64': {
         'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_xarm64' ],
       },

@@ -54,4 +54,14 @@ LOCAL_SRC_FILES := \
 	../../../third_party/double-conversion/src/fixed-dtoa.cc \
 	../../../third_party/double-conversion/src/strtod.cc \
 
+ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
+  LOCAL_SRC_FILES += \
+    ../../../out/ReleaseXARMAndroid/obj/src/vm/fletch_vm.gen/generated.S
+endif
+
+ifeq ($(TARGET_ARCH_ABI), x86)
+  LOCAL_SRC_FILES += \
+    ../../../out/ReleaseIA32/obj/src/vm/fletch_vm.gen/generated.S
+endif
+
 include $(BUILD_STATIC_LIBRARY)
