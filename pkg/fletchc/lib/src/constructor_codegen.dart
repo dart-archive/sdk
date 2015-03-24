@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.constructor_compiler;
+library fletchc.constructor_codegen;
 
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
@@ -34,27 +34,37 @@ import 'compiled_function.dart' show
 
 import 'closure_environment.dart';
 
-import 'function_compiler.dart';
+import 'codegen_visitor.dart';
 
-// TODO(ajohnsen): Extend SemanticVisitor instead of FunctionCompiler?
-class ConstructorCompiler extends FunctionCompiler {
+class ConstructorCodegen extends CodegenVisitor {
   final CompiledClass compiledClass;
 
   final Map<FieldElement, LocalValue> fieldScope = <FieldElement, LocalValue>{};
 
   final List<ConstructorElement> constructors = <ConstructorElement>[];
 
-  ConstructorCompiler(CompiledFunction compiledFunction,
-                      FletchContext context,
-                      TreeElements elements,
-                      Registry registry,
-                      ClosureEnvironment closureEnvironment,
-                      ConstructorElement constructor,
-                      this.compiledClass)
-      : super.forFactory(compiledFunction, context, elements, registry,
-                         closureEnvironment, constructor);
+  TreeElements fieldElements;
+
+  ConstructorCodegen(CompiledFunction compiledFunction,
+                     FletchContext context,
+                     TreeElements elements,
+                     Registry registry,
+                     ClosureEnvironment closureEnvironment,
+                     ConstructorElement constructor,
+                     this.compiledClass)
+      : super(compiledFunction, context, elements, registry,
+              closureEnvironment, constructor);
+
+  ConstructorElement get constructor => element;
 
   BytecodeBuilder get builder => compiledFunction.builder;
+
+  TreeElements get elements {
+    // When visiting field initializers, the 'elements' scope is not that of the
+    // constructor, but that of the field.
+    if (fieldElements != null) return fieldElements;
+    return super.elements;
+  }
 
   void compile() {
     // Push all initial field values (including super-classes).
@@ -64,12 +74,12 @@ class ConstructorCompiler extends FunctionCompiler {
     //  ...
     //  Value for field-n
     //
-    FunctionSignature signature = function.functionSignature;
+    FunctionSignature signature = constructor.functionSignature;
     int parameterCount = signature.parameterCount;
 
     // Visit constructor and evaluate initializers and super calls. The
     // arguments to the constructor are located before the return address.
-    inlineInitializers(function, -parameterCount - 1);
+    inlineInitializers(constructor, -parameterCount - 1);
 
     // TODO(ajohnsen): Let allocate take an offset to the field stack, so we
     // don't have to copy all the fields?
@@ -127,7 +137,7 @@ class ConstructorCompiler extends FunctionCompiler {
     int parameterIndex = 0;
 
     // Visit parameters and add them to scope. Note the scope is the scope of
-    // locals, in FunctionCompiler.
+    // locals, in VisitingCodegen.
     signature.orderedForEachParameter((ParameterElement parameter) {
       int slot = firstParameterSlot + parameterIndex;
       LocalValue value = createLocalValueForParameter(parameter, slot);

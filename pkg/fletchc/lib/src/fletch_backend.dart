@@ -31,11 +31,13 @@ import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     ConstructorElement,
     Element,
+    ExecutableElement,
     FieldElement,
     FormalElement,
     FunctionElement,
     FunctionSignature,
-    LibraryElement;
+    LibraryElement,
+    MemberElement;
 
 import 'package:compiler/src/dart_types.dart' show
     DartType;
@@ -81,9 +83,9 @@ import 'fletch_context.dart';
 
 import 'fletch_selector.dart';
 
-import 'function_compiler.dart';
+import 'function_codegen.dart';
 
-import 'constructor_compiler.dart';
+import 'constructor_codegen.dart';
 
 import 'closure_environment.dart';
 
@@ -194,8 +196,8 @@ class FletchBackend extends Backend {
 
   final Set<ClassElement> builtinClasses = new Set<ClassElement>();
 
-  final Map<FunctionElement, ClosureEnvironment> closureEnvironments =
-      <FunctionElement, ClosureEnvironment>{};
+  final Map<MemberElement, ClosureEnvironment> closureEnvironments =
+      <MemberElement, ClosureEnvironment>{};
 
   final Map<FunctionElement, CompiledClass> closureClasses =
       <FunctionElement, CompiledClass>{};
@@ -457,7 +459,7 @@ class FletchBackend extends Backend {
         name,
         holderClass);
 
-    FunctionCompiler functionCompiler = new FunctionCompiler(
+    FunctionCodegen codegen = new FunctionCodegen(
         compiledFunction,
         context,
         elements,
@@ -466,11 +468,11 @@ class FletchBackend extends Backend {
         function);
 
     if (isNative(function)) {
-      codegenNativeFunction(function, functionCompiler);
+      codegenNativeFunction(function, codegen);
     } else if (isExternal(function)) {
-      codegenExternalFunction(function, functionCompiler);
+      codegenExternalFunction(function, codegen);
     } else {
-      functionCompiler.compile();
+      codegen.compile();
     }
 
     compiledFunctions[function] = compiledFunction;
@@ -494,13 +496,13 @@ class FletchBackend extends Backend {
     }
 
     if (compiler.verbose) {
-      print(functionCompiler.compiledFunction.verboseToString());
+      print(compiledFunction.verboseToString());
     }
   }
 
   void codegenNativeFunction(
       FunctionElement function,
-      FunctionCompiler functionCompiler) {
+      FunctionCodegen codegen) {
     String name = '.${function.name}';
 
     ClassElement enclosingClass = function.enclosingClass;
@@ -511,30 +513,30 @@ class FletchBackend extends Backend {
       throw "Unsupported native function: $name";
     }
 
-    int arity = functionCompiler.builder.functionArity;
-    functionCompiler.builder.invokeNative(arity, descriptor.index);
+    int arity = codegen.builder.functionArity;
+    codegen.builder.invokeNative(arity, descriptor.index);
 
     EmptyStatement empty = function.node.body.asEmptyStatement();
     if (empty != null) {
       // A native method without a body.
-      functionCompiler.builder
+      codegen.builder
           ..emitThrow()
           ..methodEnd();
     } else {
-      functionCompiler.compile();
+      codegen.compile();
     }
   }
 
   void codegenExternalFunction(
       FunctionElement function,
-      FunctionCompiler functionCompiler) {
+      FunctionCodegen codegen) {
     if (function == fletchExternalYield) {
-      codegenExternalYield(function, functionCompiler);
+      codegenExternalYield(function, codegen);
     } else if (function == fletchExternalInvokeMain) {
-      codegenExternalInvokeMain(function, functionCompiler);
+      codegenExternalInvokeMain(function, codegen);
     } else if (function.name == noSuchMethodTrampolineName &&
                function.library == compiler.coreLibrary) {
-      codegenExternalNoSuchMethodTrampoline(function, functionCompiler);
+      codegenExternalNoSuchMethodTrampoline(function, codegen);
     } else {
       compiler.internalError(function, "Unhandled external function.");
     }
@@ -542,8 +544,8 @@ class FletchBackend extends Backend {
 
   void codegenExternalYield(
       FunctionElement function,
-      FunctionCompiler functionCompiler) {
-    functionCompiler.builder
+      FunctionCodegen codegen) {
+    codegen.builder
         ..loadLocal(1)
         ..processYield()
         ..ret()
@@ -552,7 +554,7 @@ class FletchBackend extends Backend {
 
   void codegenExternalInvokeMain(
       FunctionElement function,
-      FunctionCompiler functionCompiler) {
+      FunctionCodegen codegen) {
     compiler.internalError(
         function, "[codegenExternalInvokeMain] not implemented.");
     // TODO(ahe): This code shouldn't normally be called, only if invokeMain is
@@ -561,11 +563,11 @@ class FletchBackend extends Backend {
 
   void codegenExternalNoSuchMethodTrampoline(
       FunctionElement function,
-      FunctionCompiler functionCompiler) {
+      FunctionCodegen codegen) {
     int id = context.getSymbolId(
         context.mangleName(noSuchMethodName, compiler.coreLibrary));
     int fletchSelector = FletchSelector.encodeMethod(id, 1);
-    functionCompiler.builder
+    codegen.builder
         ..enterNoSuchMethod()
         ..invokeMethod(fletchSelector, 1)
         ..exitNoSuchMethod()
@@ -596,12 +598,11 @@ class FletchBackend extends Backend {
   bool get canHandleCompilationFailed => true;
 
   ClosureEnvironment createClosureEnvironment(
-      FunctionElement function,
+      ExecutableElement element,
       TreeElements elements) {
-    // TODO(ahe): The cast below may fail for field initializers with closures.
-    function = function.memberContext as FunctionElement;
-    return closureEnvironments.putIfAbsent(function, () {
-      ClosureVisitor environment = new ClosureVisitor(function, elements);
+    MemberElement member = element.memberContext;
+    return closureEnvironments.putIfAbsent(member, () {
+      ClosureVisitor environment = new ClosureVisitor(member, elements);
       return environment.compute();
     });
   }
@@ -890,7 +891,7 @@ class FletchBackend extends Backend {
         constructor.functionSignature,
         null);
 
-    ConstructorCompiler constructorCompiler = new ConstructorCompiler(
+    ConstructorCodegen codegen = new ConstructorCodegen(
         compiledFunction,
         context,
         elements,
@@ -899,7 +900,8 @@ class FletchBackend extends Backend {
         constructor,
         compiledClass);
 
-    constructorCompiler.compile();
+    codegen.compile();
+
     if (compiler.verbose) {
       print(compiledFunction.verboseToString());
     }

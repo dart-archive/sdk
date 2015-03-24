@@ -99,21 +99,21 @@ class ClosureVisitor
    */
   final Set<LocalElement> locallyAssigned = new Set<LocalElement>();
 
-  final FunctionElement function;
+  final MemberElement element;
 
-  FunctionElement currentFunction;
+  ExecutableElement currentElement;
 
-  ClosureVisitor(this.function, TreeElements elements)
+  ClosureVisitor(this.element, TreeElements elements)
       : super(elements);
 
   SemanticSendVisitor get sendVisitor => this;
 
   ClosureEnvironment compute() {
-    assert(function.memberContext == function);
-    assert(currentFunction == null);
-    currentFunction = function;
-    if (function.node != null) function.node.accept(this);
-    assert(currentFunction == function);
+    assert(element.memberContext == element);
+    assert(currentElement == null);
+    currentElement = element;
+    if (element.node != null) element.node.accept(this);
+    assert(currentElement == element);
     return closureEnvironment;
   }
 
@@ -130,11 +130,11 @@ class ClosureVisitor
   }
 
   void visitFunctionExpression(FunctionExpression node) {
-    FunctionElement oldFunction = currentFunction;
-    currentFunction = elements[node];
-    if (currentFunction != function) {
+    ExecutableElement oldElement = currentElement;
+    currentElement = elements[node];
+    if (currentElement != element) {
       ClosureInfo info = new ClosureInfo();
-      closureEnvironment.closures[currentFunction] = info;
+      closureEnvironment.closures[currentElement] = info;
     }
     NodeList initializers = node.initializers;
     if (initializers != null) {
@@ -146,11 +146,11 @@ class ClosureVisitor
       }
     }
     node.body.accept(this);
-    currentFunction = oldFunction;
+    currentElement = oldElement;
   }
 
   void markUsed(LocalElement element, CaptureMode use) {
-    if (currentFunction == element.executableContext) {
+    if (currentElement == element.executableContext) {
       // If a local is assigned in the declaring context, and it is captured
       // at this point, mark it as used by reference (we assign to the value
       // after it's captured).
@@ -171,26 +171,24 @@ class ClosureVisitor
         // there already - if it's in there it can be by reference.
         closureEnvironment.captured.putIfAbsent(element, () => use);
       }
-      FunctionElement current = currentFunction;
+      ExecutableElement current = currentElement;
       // Mark all closures from the current to the one where `element` is
       // defined, as used in that closure. That makes sure we capture it in
       // all intermidiate closures, thus making it available in the current.
       while (current != element.executableContext) {
         ClosureInfo info = closureEnvironment.closures[current];
         info.markUsed(element);
-        LocalFunctionElement local = current;
-        current = local.executableContext;
+        current = current.executableContext;
       }
     }
   }
 
   void markThisUsed() {
-    FunctionElement current = currentFunction;
-    while (current != function) {
+    ExecutableElement current = currentElement;
+    while (current != element) {
       ClosureInfo info = closureEnvironment.closures[current];
       info.isThisFree = true;
-      LocalFunctionElement local = current;
-      current = local.executableContext;
+      current = current.executableContext;
     }
   }
 

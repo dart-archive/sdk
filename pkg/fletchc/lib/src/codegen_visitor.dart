@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.function_compiler;
+library fletchc.codegen_visitor;
 
 import 'package:compiler/src/resolution/semantic_visitor.dart' show
     SemanticSendVisitor,
@@ -117,14 +117,18 @@ class JumpInfo {
   JumpInfo(this.stackSize, this.continueLabel, this.breakLabel);
 }
 
-class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
+abstract class CodegenVisitor
+    extends SemanticVisitor
+    implements SemanticSendVisitor {
   final FletchContext context;
 
   final CodegenRegistry registry;
 
   final ClosureEnvironment closureEnvironment;
 
-  final FunctionElement function;
+  final ExecutableElement element;
+
+  final MemberElement member;
 
   final CompiledFunction compiledFunction;
 
@@ -138,29 +142,21 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   // TODO(ajohnsen): Merge computation into constructor.
   // The slot at which 'this' is stored. In closures, this is overwritten.
-  int thisSlot;
+  LocalValue thisValue;
 
   int blockLocals = 0;
 
-  FunctionCompiler(CompiledFunction compiledFunction,
-                   this.context,
-                   TreeElements elements,
-                   this.registry,
-                   this.closureEnvironment,
-                   this.function)
+  CodegenVisitor(CompiledFunction compiledFunction,
+                 this.context,
+                 TreeElements elements,
+                 this.registry,
+                 this.closureEnvironment,
+                 this.element)
       : super(elements),
         this.compiledFunction = compiledFunction,
-        thisSlot = -1 - compiledFunction.builder.functionArity;
-
-  FunctionCompiler.forFactory(CompiledFunction compiledFunction,
-                              this.context,
-                              TreeElements elements,
-                              this.registry,
-                              this.closureEnvironment,
-                              this.function)
-      : super(elements),
-        this.compiledFunction = compiledFunction,
-        thisSlot = -1 - compiledFunction.builder.functionArity;
+        thisValue = new UnboxedLocalValue(
+            -1 - compiledFunction.builder.functionArity,
+            null);
 
   BytecodeBuilder get builder => compiledFunction.builder;
 
@@ -181,7 +177,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
             new DartString.literal(string)));
   }
 
-  ClosureInfo get closureInfo => closureEnvironment.closures[function];
+  ClosureInfo get closureInfo => closureEnvironment.closures[element];
 
   LocalValue createLocalValueFor(
       LocalElement element,
@@ -203,45 +199,6 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       return value;
     }
     return new UnboxedLocalValue(slot, parameter);
-  }
-
-  void compile() {
-    FunctionSignature functionSignature = function.functionSignature;
-    int parameterCount = functionSignature.parameterCount;
-    int i = 0;
-    functionSignature.orderedForEachParameter((ParameterElement parameter) {
-      int slot = i++ - parameterCount - 1;
-      scope[parameter] = createLocalValueForParameter(parameter, slot);
-    });
-
-    ClosureInfo info = closureEnvironment.closures[function];
-    if (info != null) {
-      int index = 0;
-      if (info.isThisFree) {
-        thisSlot = builder.stackSize;
-        builder.loadParameter(0);
-        builder.loadField(index++);
-      }
-      for (LocalElement local in info.free) {
-        scope[local] = createLocalValueFor(local);
-        // TODO(ajohnsen): Use a specialized helper for loading the closure.
-        builder.loadParameter(0);
-        builder.loadField(index++);
-      }
-    }
-
-    FunctionExpression node = function.node;
-    if (node != null) {
-      node.body.accept(this);
-    }
-
-    // Emit implicit 'return null' if no terminator is present.
-    if (!builder.endsWithTerminator) {
-      builder.loadLiteralNull();
-      builder.ret();
-    }
-
-    builder.methodEnd();
   }
 
   void invokeMethod(Selector selector) {
@@ -331,7 +288,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
   }
 
   void loadThis() {
-    builder.loadSlot(thisSlot);
+    thisValue.load(builder);
   }
 
   /**
@@ -724,7 +681,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       Selector selector,
       _) {
     // TODO(ajohnsen): Handle initializer.
-    int index = context.getStaticFieldIndex(element, function);
+    int index = context.getStaticFieldIndex(element, element);
     builder.loadStatic(index);
     for (Node argument in arguments) {
       visitForValue(argument);
@@ -744,7 +701,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       // selectors in initializer bodies.
       selector = new Selector.call(
           node.selector.asIdentifier().source,
-          function.library,
+          element.library,
           arguments.slowLength());
     }
     visitForValue(receiver);
@@ -792,7 +749,7 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
       // selectors in initializer bodies.
       selector = new Selector.getter(
           node.selector.asIdentifier().source,
-          function.library);
+          element.library);
     }
     visitForValue(receiver);
     invokeGetter(selector);
@@ -821,14 +778,14 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   void visitTopLevelFieldGet(
       Send node,
-      FieldElement element,
+      FieldElement field,
       _) {
-    if (element.isConst) {
+    if (field.isConst) {
       int constId = allocateConstantFromNode(node);
       builder.loadConst(constId);
     } else {
       // TODO(ajohnsen): Handle initializer.
-      int index = context.getStaticFieldIndex(element, function);
+      int index = context.getStaticFieldIndex(field, element);
       builder.loadStatic(index);
     }
     applyVisitState();
@@ -836,10 +793,10 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   void visitStaticFieldGet(
       Send node,
-      FieldElement element,
+      FieldElement field,
       _) {
     // TODO(ajohnsen): Handle initializer.
-    int index = context.getStaticFieldIndex(element, function);
+    int index = context.getStaticFieldIndex(field, element);
     builder.loadStatic(index);
     applyVisitState();
   }
@@ -862,10 +819,10 @@ class FunctionCompiler extends SemanticVisitor implements SemanticSendVisitor {
 
   void handleStaticFieldSet(
       SendSet node,
-      FieldElement element,
+      FieldElement field,
       Node rhs) {
     visitForValue(rhs);
-    int index = context.getStaticFieldIndex(element, function);
+    int index = context.getStaticFieldIndex(field, element);
     builder.storeStatic(index);
     applyVisitState();
   }
