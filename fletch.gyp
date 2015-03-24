@@ -369,6 +369,7 @@
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'samples/todomvc/model.dart',
             'samples/todomvc/todomvc_impl.dart',
+            'samples/todomvc/dart/presentation_graph.dart',
             'samples/todomvc/dart/struct.dart',
             'samples/todomvc/dart/todomvc_service.dart',
             'samples/todomvc/dart/todomvc_presenter.dart',

@@ -14,16 +14,12 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 
-import com.google.fletch.todomvc.TodoItem;
-
 import java.util.ArrayList;
 
 import fletch.Cons;
 import fletch.Node;
 import fletch.PatchSet;
-import fletch.Str;
 import fletch.TodoMVCService;
-import fletch.Uint8List;
 
 public class MainActivity extends ActionBarActivity implements AdapterView.OnItemClickListener {
   private final int REQUEST_NEW_TODO = 0;

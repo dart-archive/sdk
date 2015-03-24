@@ -7,10 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DA0C0CA91A9E107400127155 /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA0C0CA81A9E107400127155 /* libfletch.a */; };
 		DAB201051A9B78890087F7F9 /* struct.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAB200FF1A9B78890087F7F9 /* struct.cc */; };
 		DAB201061A9B78890087F7F9 /* todomvc_presenter.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAB201011A9B78890087F7F9 /* todomvc_presenter.cc */; };
 		DAB201071A9B78890087F7F9 /* todomvc_service.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAB201031A9B78890087F7F9 /* todomvc_service.cc */; };
-		DAB201091A9B78C40087F7F9 /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DAB201081A9B78C40087F7F9 /* libfletch.a */; };
 		DAC13ED11A9B6ED000D3159D /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = DAC13ED01A9B6ED000D3159D /* main.m */; };
 		DAC13EDC1A9B6ED000D3159D /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DAC13EDB1A9B6ED000D3159D /* Images.xcassets */; };
 		DAC13EEB1A9B6ED000D3159D /* TodoMVCTests.m in Sources */ = {isa = PBXBuildFile; fileRef = DAC13EEA1A9B6ED000D3159D /* TodoMVCTests.m */; };
@@ -34,13 +34,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		DA0C0CA81A9E107400127155 /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfletch.a; path = ../../../out/ReleaseXARM/libfletch.a; sourceTree = "<group>"; };
 		DAB200FF1A9B78890087F7F9 /* struct.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = struct.cc; sourceTree = "<group>"; };
 		DAB201001A9B78890087F7F9 /* struct.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = struct.h; sourceTree = "<group>"; };
 		DAB201011A9B78890087F7F9 /* todomvc_presenter.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = todomvc_presenter.cc; sourceTree = "<group>"; };
 		DAB201021A9B78890087F7F9 /* todomvc_presenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = todomvc_presenter.h; sourceTree = "<group>"; };
 		DAB201031A9B78890087F7F9 /* todomvc_service.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = todomvc_service.cc; sourceTree = "<group>"; };
 		DAB201041A9B78890087F7F9 /* todomvc_service.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = todomvc_service.h; sourceTree = "<group>"; };
-		DAB201081A9B78C40087F7F9 /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfletch.a; path = ../../../out/ReleaseXARM64/libfletch.a; sourceTree = "<group>"; };
 		DAC13ECB1A9B6ED000D3159D /* TodoMVC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TodoMVC.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DAC13ECF1A9B6ED000D3159D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DAC13ED01A9B6ED000D3159D /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
@@ -67,7 +67,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DAB201091A9B78C40087F7F9 /* libfletch.a in Frameworks */,
+				DA0C0CA91A9E107400127155 /* libfletch.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,8 +100,8 @@
 		DAC13EC21A9B6ED000D3159D = {
 			isa = PBXGroup;
 			children = (
+				DA0C0CA81A9E107400127155 /* libfletch.a */,
 				DADB66D51A9CA17500BD8B6E /* Resources */,
-				DAB201081A9B78C40087F7F9 /* libfletch.a */,
 				DAB200FE1A9B78890087F7F9 /* cc */,
 				DAC13ECD1A9B6ED000D3159D /* TodoMVC */,
 				DAC13EE71A9B6ED000D3159D /* TodoMVCTests */,
@@ -394,7 +394,7 @@
 		DAC13EEF1A9B6ED000D3159D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
+				ARCHS = armv7;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEAD_CODE_STRIPPING = NO;
 				HEADER_SEARCH_PATHS = (
@@ -406,7 +406,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../../out/ReleaseXARM64",
+					"$(PROJECT_DIR)/../../../out/ReleaseXARM",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -415,7 +415,7 @@
 		DAC13EF01A9B6ED000D3159D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
+				ARCHS = armv7;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEAD_CODE_STRIPPING = NO;
 				HEADER_SEARCH_PATHS = (
@@ -427,7 +427,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../../out/ReleaseXARM64",
+					"$(PROJECT_DIR)/../../../out/ReleaseXARM",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

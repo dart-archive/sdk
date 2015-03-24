@@ -78,7 +78,17 @@ class EventManager {
 
   int register(EventHandler handler) {
     if (handler == null) return 0;
-    if (handler.allocated) return handler.id;
+    if (handler.allocated) {
+      // After event manager reset we must re-register event handlers.
+      int id = handler.id;
+      Handler registered = _handlers[id];
+      if (registered == null) {
+        _handlers[id] = handler;
+      } else if (registered != handler) {
+        print("ERROR: attempt to re-register event handler: $id");
+      }
+      return id;
+    }
     int id = _next;
     // TODO(zerny): Do something clever once completing the lfsr sequence.
     while (_handlers.containsKey(id)) id = _next;
@@ -142,7 +152,7 @@ class EventHandler {
   }
 
   static void diff(EventHandler self, other, Path path, MyPatchSet patches) {
-    if (self == other) return;
+    if (identical(self, other)) return;
     // TODO(zerny): Do we want to consider another definition of equality here?
     // Currently only the same physically allocated event-handler object is
     // considered "the same", but we could refine that to be if the _handler
@@ -174,7 +184,9 @@ abstract class Immutable {
 
 abstract class Atom extends Immutable {
   final value;
-  Atom(this.value);
+  Atom(this.value) {
+    trace("Allocating Atom");
+  }
   String toString() => "value($value)";
 
   void diff(Immutable other, Path path, MyPatchSet patches) {
@@ -190,13 +202,18 @@ abstract class Atom extends Immutable {
 class Cons extends Immutable {
   final Immutable fst, snd;
   final EventHandler deleteEvent, completeEvent, uncompleteEvent;
+
   Cons(this.fst, this.snd,
        [ this.deleteEvent,
          this.completeEvent,
-         this.uncompleteEvent ]);
+         this.uncompleteEvent ]) {
+    trace("Allocating Cons");
+  }
+
   String toString() => "($fst . $snd)";
 
   void diff(Immutable other, Path path, MyPatchSet patches) {
+    if (identical(this, other)) return;
     if (other is! Cons) {
       patches.add(path, this, other);
       return;

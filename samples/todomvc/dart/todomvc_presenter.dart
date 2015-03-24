@@ -30,7 +30,7 @@ abstract class TodoMVCPresenter extends TodoMVCService {
   // Update the presentation and get the current patch set.
   MyPatchSet update() {
     var previous = _presentation;
-    _presentation = render();
+    _presentation = render(previous);
     return diff(previous, _presentation);
   }
 
