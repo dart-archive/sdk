@@ -37,6 +37,14 @@ entry(int mainArity) {
   yield(true);
 }
 
+unresolved(name) {
+  throw new NoSuchMethodError(
+      null,
+      name,
+      null,
+      null);
+}
+
 /// Exits the VM cleanly.
 external yield(bool halt);
 

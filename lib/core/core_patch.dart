@@ -19,7 +19,7 @@ const patch = "patch";
   @patch noSuchMethod(Invocation invocation) {
     // TODO(kasperl): Extract information from the invocation
     // so we can construct the right NoSuchMethodError.
-    throw "NoSuchMethod";
+    fletch.unresolved("<unknown>");
   }
 
   // The noSuchMethod helper is automatically called from the
@@ -102,5 +102,11 @@ const patch = "patch";
 @patch class List {
   @patch factory List([int length]) {
     return fletch.newList(length);
+  }
+}
+
+@patch class NoSuchMethodError {
+  @patch String toString() {
+    return "NoSuchMethodError: '$_memberName'";
   }
 }

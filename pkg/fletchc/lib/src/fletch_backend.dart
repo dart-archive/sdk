@@ -225,6 +225,8 @@ class FletchBackend extends Backend {
 
   FunctionElement fletchExternalNativeError;
 
+  FunctionElement fletchUnresolved;
+
   CompiledClass compiledObjectClass;
 
   ClassElement stringClass;
@@ -315,6 +317,8 @@ class FletchBackend extends Backend {
     fletchExternalInvokeMain = findExternal('invokeMain');
     fletchExternalYield = findExternal('yield');
     fletchExternalNativeError = findExternal('nativeError');
+    fletchUnresolved = findExternal('unresolved');
+    world.registerStaticUse(fletchUnresolved);
 
     CompiledClass loadClass(String name, LibraryElement library) {
       var classImpl = library.findLocal(name);

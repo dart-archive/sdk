@@ -1587,13 +1587,33 @@ abstract class CodegenVisitor
     builder.pop();
   }
 
+  void handleUnresolved(String name) {
+    var constString = context.backend.constantSystem.createString(
+        new DartString.literal(name));
+    context.markConstantUsed(constString);
+    builder.loadConst(compiledFunction.allocateConstant(constString));
+    FunctionElement function = context.backend.fletchUnresolved;
+    registry.registerStaticInvocation(function);
+    int methodId = context.backend.allocateMethodId(function);
+    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    builder.invokeStatic(constId, 1);
+    applyVisitState();
+  }
+
   void errorUnresolvedInvoke(
       Send node,
       Element element,
       Node arguments,
       Selector selector,
       _) {
-    generateUnimplementedError(node, "unresolved static call");
+    handleUnresolved(element.name);
+  }
+
+  void errorUnresolvedGet(
+      Send node,
+      Element element,
+      _) {
+    handleUnresolved(element != null ? element.name : node.toString());
   }
 
   void internalError(Spannable spannable, String reason) {
@@ -2703,13 +2723,6 @@ abstract class CodegenVisitor
       _){
     generateUnimplementedError(
         node, "[visitConstantInvoke] isn't implemented.");
-  }
-
-  void errorUnresolvedGet(
-      Send node,
-      Element element,
-      _){
-    generateUnimplementedError(node, "[errorUnresolvedGet] isn't implemented.");
   }
 
   void errorUnresolvedSet(
