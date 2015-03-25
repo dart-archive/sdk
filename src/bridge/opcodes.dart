@@ -14,6 +14,7 @@ enum Opcode {
   ProcessSpawnForMain,
   ProcessRun,
   ProcessSetBreakpoint,
+  ProcessDeleteBreakpoint,
   ProcessStep,
   ProcessContinue,
   ProcessBacktrace,

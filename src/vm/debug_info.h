@@ -37,7 +37,7 @@ class DebugInfo {
 
   bool ShouldBreak(uint8_t* bcp);
   int SetBreakpoint(Function* function, int bytecode_index);
-  bool RemoveBreakpoint(int id);
+  bool DeleteBreakpoint(int id);
   bool is_stepping() const { return is_stepping_; }
   void set_is_stepping(bool value) { is_stepping_ = value; }
   bool is_at_breakpoint() const { return is_at_breakpoint_; }

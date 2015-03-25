@@ -29,6 +29,14 @@ class SessionStack {
   bool get isEmpty => _stack.isEmpty;
 }
 
+class Breakpoint {
+  final String methodName;
+  final int bytecodeIndex;
+  final int id;
+  Breakpoint(this.methodName, this.bytecodeIndex, this.id);
+  String toString() => "$id: $methodName@$bytecodeIndex";
+}
+
 class Session {
   final CommandReader _compilerCommands;
   final StreamIterator<Command> _userResponseVMCommands;
@@ -36,8 +44,10 @@ class Session {
   final ProgramModel _model = new ProgramModel();
   final SessionStack _stack = new SessionStack();
   final Socket _vmSocket;
+  final Map<int, Breakpoint> breakpoints = new Map();
 
   bool _classConstruction = false;
+  var _stackTrace;
 
   Session._(this._vmSocket,
             this._compilerCommands,
@@ -164,7 +174,7 @@ class Session {
   Future processVMCommand(Command command) async {
     switch (command.opcode) {
       case Opcode.UncaughtException:
-        await backtrace();
+        await backtrace(-1);
         new ForceTerminationCommand().writeTo(_vmSocket);
         break;
       default:
@@ -179,6 +189,7 @@ class Session {
   }
 
   Future handleProcessStop() async {
+    _stackTrace = null;
     Command response = await nextUserResponseCommand();
     if (response.opcode == Opcode.ProcessTerminated) {
       print('### process terminated');
@@ -207,6 +218,35 @@ class Session {
       new ProcessSetBreakpointCommand(bytecodeIndex).writeTo(_vmSocket);
       Command command = await nextUserResponseCommand();
       assert(command.opcode == Opcode.ProcessSetBreakpoint);
+      var breakpointId = command.readInt(0);
+      var breakpoint = new Breakpoint(method, bytecodeIndex, breakpointId);
+      assert(!breakpoints.containsKey(breakpointId));
+      breakpoints[breakpointId] = breakpoint;
+      print("breakpoint set: $breakpoint");
+    }
+  }
+
+  Future deleteBreakpoint(int id) async {
+    Breakpoint breakpoint = breakpoints[id];
+    if (!breakpoints.containsKey(id)) {
+      print("### invalid breakpoint id: $id");
+      return;
+    }
+    new ProcessDeleteBreakpointCommand(id).writeTo(_vmSocket);
+    Command response = await nextUserResponseCommand();
+    assert(response.opcode == Opcode.DeleteBreakpoint);
+    print("deleted breakpoint: ${breakpoints[id]}");
+    breakpoints.remove(id);
+  }
+
+  void listBreakpoints() {
+    if (breakpoints.isEmpty) {
+      print('No breakpoints.');
+      return;
+    }
+    print("Breakpoints:");
+    for (var bp in breakpoints.values) {
+      print(bp);
     }
   }
 
@@ -220,26 +260,33 @@ class Session {
     await handleProcessStop();
   }
 
-  Future backtrace() async {
-    new ProcessBacktraceCommand().writeTo(_vmSocket);
-    var backtraceResponse = await nextUserResponseCommand();
-    var frameCount = backtraceResponse.readInt(0);
-    var stackTrace = new StackTrace(frameCount);
-    for (int i = 0; i < frameCount; ++i) {
-      var command = new MapLookupCommand(_model.methodMapId);
-      command.writeTo(_vmSocket);
-      command = new DropCommand(1);
-      command.writeTo(_vmSocket);
-      command = new PopIntegerCommand();
-      command.writeTo(_vmSocket);
-      var objectIdCommand = await nextUserResponseCommand();
-      var stackTraceMethodId = objectIdCommand.readInt(0);
-      var integerCommand = await nextUserResponseCommand();
-      var bcp = integerCommand.readInt64(0);
-      var methodName = _model.methodMap[stackTraceMethodId];
-      stackTrace.addFrame(new StackFrame(methodName, bcp));
+  Future backtrace(int frame) async {
+    if (_stackTrace == null) {
+      new ProcessBacktraceCommand().writeTo(_vmSocket);
+      var backtraceResponse = await nextUserResponseCommand();
+      var frameCount = backtraceResponse.readInt(0);
+      _stackTrace = new StackTrace(frameCount);
+      for (int i = 0; i < _stackTrace.frames; ++i) {
+        var command = new MapLookupCommand(_model.methodMapId);
+        command.writeTo(_vmSocket);
+        command = new DropCommand(1);
+        command.writeTo(_vmSocket);
+        command = new PopIntegerCommand();
+        command.writeTo(_vmSocket);
+        var objectIdCommand = await nextUserResponseCommand();
+        var stackTraceMethodId = objectIdCommand.readInt(0);
+        var integerCommand = await nextUserResponseCommand();
+        var bcp = integerCommand.readInt64(0);
+        var methodName = _model.methodMap[stackTraceMethodId];
+        _stackTrace.addFrame(new StackFrame(methodName, bcp));
+      }
     }
-    stackTrace.write(_model);
+    if (frame >= _stackTrace.frames) {
+      _stackTrace = null;
+      print('### invalid frame number: $frame');
+      return;
+    }
+    _stackTrace.write(_model, frame);
   }
 
   end() {

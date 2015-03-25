@@ -59,6 +59,7 @@ class Connection {
     kProcessSpawnForMain,
     kProcessRun,
     kProcessSetBreakpoint,
+    kProcessDeleteBreakpoint,
     kProcessStep,
     kProcessContinue,
     kProcessBacktrace,

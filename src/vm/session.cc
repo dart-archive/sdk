@@ -112,8 +112,19 @@ void Session::ProcessMessages() {
         }
         int bytecode_index = connection_->ReadInt();
         Function* function = Function::cast(Pop());
-        process_->debug_info()->SetBreakpoint(function, bytecode_index);
+        DebugInfo* debug_info = process_->debug_info();
+        int id = debug_info->SetBreakpoint(function, bytecode_index);
+        connection_->WriteInt(id);
         connection_->Send(Connection::kProcessSetBreakpoint);
+        break;
+      }
+
+      case Connection::kProcessDeleteBreakpoint: {
+        ASSERT(process_->debug_info() != NULL);
+        int id = connection_->ReadInt();
+        bool deleted = process_->debug_info()->DeleteBreakpoint(id);
+        ASSERT(deleted);
+        connection_->Send(Connection::kProcessDeleteBreakpoint);
         break;
       }
 

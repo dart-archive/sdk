@@ -88,6 +88,13 @@ class ProcessSetBreakpointCommand extends Command {
   }
 }
 
+class ProcessDeleteBreakpointCommand extends Command {
+  ProcessDeleteBreakpointCommand(int id)
+      : super(Opcode.ProcessDeleteBreakpoint, new List(4)) {
+    writeInt(0, id);
+  }
+}
+
 class ProcessStepCommand extends Command {
   ProcessStepCommand() : super(Opcode.ProcessStep, const[]);
 }

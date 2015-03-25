@@ -10,8 +10,8 @@ class StackFrame {
 
   StackFrame(this.method, this.bytecodePointer);
 
-  void write(ProgramModel model) {
-    print("  ${method.name}");
+  void write(ProgramModel model, int frameNumber) {
+    writeName(frameNumber);
     var bytecodes = method.bytecodes;
     var bcp = bytecodePointer;
     var i = 0;
@@ -27,6 +27,8 @@ class StackFrame {
     }
     print("");
   }
+
+  void writeName(int frameNumber) => print("  $frameNumber: ${method.name}");
 }
 
 class StackTrace {
@@ -39,11 +41,19 @@ class StackTrace {
 
   StackTrace._internal(this._framesToGo, this._stackFrames);
 
+  int get frames => _stackFrames.length;
+
   void addFrame(StackFrame frame) { _stackFrames[--_framesToGo] = frame; }
 
-  void write(ProgramModel model) {
+  void write(ProgramModel model, int currentFrame) {
     assert(_framesToGo == 0);
     print("Stack trace:");
-    for (var frame in _stackFrames) frame.write(model);
+    for (var i = 0; i < _stackFrames.length; i++) {
+      if (currentFrame < 0 || currentFrame == i) {
+        _stackFrames[i].write(model, i);
+      } else {
+        _stackFrames[i].writeName(i);
+      }
+    }
   }
 }

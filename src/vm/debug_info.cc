@@ -33,11 +33,13 @@ bool DebugInfo::ShouldBreak(uint8_t* bcp) {
 int DebugInfo::SetBreakpoint(Function* function, int bytecode_index) {
   Breakpoint breakpoint(function, bytecode_index, next_breakpoint_id_++, false);
   uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
+  BreakpointMap::const_iterator it = breakpoints_.find(bcp);
+  if (it != breakpoints_.end()) return it->second.id();
   breakpoints_.insert({bcp, breakpoint});
   return breakpoint.id();
 }
 
-bool DebugInfo::RemoveBreakpoint(int id) {
+bool DebugInfo::DeleteBreakpoint(int id) {
   BreakpointMap::const_iterator it = breakpoints_.begin();
   BreakpointMap::const_iterator end = breakpoints_.end();
   for (; it != end; ++it) {

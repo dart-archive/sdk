@@ -16,9 +16,12 @@ Starting session.
 Commands:
   'r'                                   run main
   'b <method name> <bytecode index>'    set breakpoint
-  's'                                   step on bytecode in the process
+  'd <breakpoint id>'                   delete breakpoint
+  'lb'                                  list breakpoints
+  's'                                   step one bytecode in the process
   'c'                                   continue execution
   'bt'                                  backtrace
+  'bt <n>'                              backtrace only expanding frame n
   'quit'                                quit the session
 """;
 
@@ -79,6 +82,19 @@ class InputHandler {
         }
         await session.setBreakpoint(method: method, bytecodeIndex: bci);
         break;
+      case "d":
+        var id = (commandComponents.length > 1) ? commandComponents[1] : null;
+        try {
+          id = int.parse(id);
+        } catch(e) {
+          print('### invalid breakpoint number: $id');
+          break;
+        }
+        await session.deleteBreakpoint(id);
+        break;
+      case "lb":
+        session.listBreakpoints();
+        break;
       case "s":
         await session.step();
         break;
@@ -86,7 +102,15 @@ class InputHandler {
         await session.cont();
         break;
       case "bt":
-        await session.backtrace();
+        var frame =
+            (commandComponents.length > 1) ? commandComponents[1] : "-1";
+        try {
+          frame = int.parse(frame);
+        } catch(e) {
+          print('### invalid frame number: $frame');
+          break;
+        }
+        await session.backtrace(frame);
         break;
       default:
         print('### unknown command: $command');
