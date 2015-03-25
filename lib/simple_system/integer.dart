@@ -6,6 +6,16 @@ part of dart.system;
 
 // TODO(ajohnsen): Rename to e.g. _IntImpl when old compiler is out.
 abstract class int implements core.int {
+  bool get isNaN => false;
+
+  bool get isNegative => this < 0;
+
+  bool get isInfinite => false;
+
+  bool get isFinite => true;
+
+  int abs() => isNegative ? -this : this;
+
   // From int.
   modPow(exponent, modulus) {
     throw "modPow(exponent, modulus) isn't implemented";
@@ -29,10 +39,6 @@ abstract class int implements core.int {
 
   toSigned(width) {
     throw "toSigned(width) isn't implemented";
-  }
-
-  abs() {
-    throw "abs() isn't implemented";
   }
 
   get sign {
@@ -82,22 +88,6 @@ abstract class int implements core.int {
 
   remainder(other) {
     throw "remainder(other) isn't implemented";
-  }
-
-  get isNaN {
-    throw "get isNaN isn't implemented";
-  }
-
-  get isNegative {
-    throw "get isNegative isn't implemented";
-  }
-
-  get isInfinite {
-    throw "get isInfinite isn't implemented";
-  }
-
-  get isFinite {
-    throw "get isFinite isn't implemented";
   }
 
   clamp(lowerLimit, upperLimit) {

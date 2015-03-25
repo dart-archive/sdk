@@ -30,6 +30,7 @@ const EXTRA_DART2JS_OPTIONS = const <String>[
 
 const FLETCH_PATCHES = const <String, String>{
   "core": "core/core_patch.dart",
+  "collection": "collection/collection_patch.dart",
   "_internal": "internal/internal_patch.dart",
 };
 

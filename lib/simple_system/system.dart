@@ -18,6 +18,7 @@ import 'dart:collection';
 
 part 'double.dart';
 part 'integer.dart';
+part 'linked_hash_map.dart';
 part 'list.dart';
 part 'string.dart';
 

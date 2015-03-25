@@ -291,7 +291,11 @@ abstract class CodegenVisitor
     }
     if (function.isInstanceMember) arity++;
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
-    builder.invokeStatic(constId, arity);
+    if (function.isFactoryConstructor) {
+      builder.invokeFactory(constId, arity);
+    } else {
+      builder.invokeStatic(constId, arity);
+    }
   }
 
   void loadThis() {
@@ -1247,20 +1251,20 @@ abstract class CodegenVisitor
 
   void visitNewExpression(NewExpression node) {
     // TODO(ahe): Report bug: should already be the declaration.
-    ConstructorElement constructor = elements[node.send].declaration;
+    ConstructorElement constructor =
+        elements[node.send].declaration.effectiveTarget.declaration;
     if (node.isConst) {
       int constId = allocateConstantFromNode(
           node,
           elements: element.memberContext.resolvedAst.elements);
       builder.loadConst(constId);
     } else {
-      int arity = loadArguments(node.send.argumentsNode, constructor);
+      NodeList arguments = node.send.argumentsNode;
       if (constructor.isFactoryConstructor) {
-        registry.registerStaticInvocation(constructor);
-        int methodId = context.backend.allocateMethodId(constructor);
-        int constId = compiledFunction.allocateConstantFromFunction(methodId);
-        builder.invokeFactory(constId, arity);
+        Selector selector = elements.getSelector(node.send);
+        staticFunctionCall(constructor, arguments, selector);
       } else {
+        int arity = loadArguments(node.send.argumentsNode, constructor);
         callConstructor(constructor, arity);
       }
     }
