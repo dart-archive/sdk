@@ -980,18 +980,34 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void visitLocalVariableInvoke(
-      Send node,
+  void handleLocalVariableInvoke(
       LocalVariableElement element,
       NodeList arguments,
-      Selector selector,
-      _) {
+      Selector selector) {
     scope[element].load(builder);
     for (Node argument in arguments) {
       visitForValue(argument);
     }
     invokeMethod(selector);
     applyVisitState();
+  }
+
+  void visitLocalVariableInvoke(
+      Send node,
+      LocalVariableElement element,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    handleLocalVariableInvoke(element, arguments, selector);
+  }
+
+  void visitParameterInvoke(
+      Send node,
+      LocalVariableElement element,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    handleLocalVariableInvoke(element, arguments, selector);
   }
 
   void visitLocalFunctionInvoke(
@@ -1567,16 +1583,6 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[errorFinalParameterSet] isn't implemented.");
-  }
-
-  void visitParameterInvoke(
-      Send node,
-      ParameterElement parameter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[visitParameterInvoke] isn't implemented.");
   }
 
   void errorLocalFunctionSet(

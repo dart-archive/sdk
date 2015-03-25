@@ -735,6 +735,8 @@ class FletchBackend extends Backend {
     context.compiledConstants.forEach((constant, id) {
       if (constant.isInt) {
         commands.add(new PushNewInteger(constant.primitiveValue));
+      } else if (constant.isDouble) {
+        commands.add(new PushNewDouble(constant.primitiveValue));
       } else if (constant.isTrue) {
         commands.add(new PushBoolean(true));
       } else if (constant.isFalse) {

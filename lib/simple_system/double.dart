@@ -12,6 +12,8 @@ abstract class double implements core.double {
 
   @native external String toString();
 
+  @native external num operator -();
+
   @native num operator +(other) {
     // TODO(kasperl): Check error.
     return other._addFromDouble(this);

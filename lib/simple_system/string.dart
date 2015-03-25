@@ -28,6 +28,13 @@ abstract class String implements core.String {
 
   String toString() => this;
 
+  @native external int get length;
+
+  // TODO(kasperl): This is a really bad hash code.
+  int get hashCode => length;
+
+  @native external bool operator ==(Object other);
+
   @native external String operator +(String other);
 
   @native external static String _create(int length);
@@ -40,10 +47,6 @@ abstract class String implements core.String {
 
   codeUnitAt(index) {
     throw "codeUnitAt(index) isn't implemented";
-  }
-
-  get length {
-    throw "get length isn't implemented";
   }
 
   endsWith(other) {

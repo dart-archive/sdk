@@ -54,6 +54,12 @@ class CommandBuffer {
     position += 8;
   }
 
+  void addDouble(double value) {
+    growBytes(8);
+    view.setFloat64(position, value, Endianness.LITTLE_ENDIAN);
+    position += 8;
+  }
+
   void addUint8List(List<int> value) {
     growBytes(value.length);
     list.setRange(position, position + value.length, value);
@@ -333,6 +339,19 @@ class PushNewInteger extends Command {
   void addTo(StreamSink<List<int>> sink) {
     buffer
         ..addUint64(value)
+        ..sendOn(sink, code);
+  }
+}
+
+class PushNewDouble extends Command {
+  final double value;
+
+  const PushNewDouble(this.value)
+      : super(CommandCode.PushNewDouble);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addDouble(value)
         ..sendOn(sink, code);
   }
 }
