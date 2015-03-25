@@ -220,7 +220,6 @@ class Session {
       assert(command.opcode == Opcode.ProcessSetBreakpoint);
       var breakpointId = command.readInt(0);
       var breakpoint = new Breakpoint(method, bytecodeIndex, breakpointId);
-      assert(!breakpoints.containsKey(breakpointId));
       breakpoints[breakpointId] = breakpoint;
       print("breakpoint set: $breakpoint");
     }
