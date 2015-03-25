@@ -219,7 +219,9 @@ class ConstructorCodegen extends CodegenVisitor {
       if (initializer == null) {
         builder.loadLiteralNull();
       } else {
+        fieldElements = field.memberContext.resolvedAst.elements;
         visitForValue(initializer);
+        fieldElements = null;
       }
     });
   }

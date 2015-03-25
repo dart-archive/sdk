@@ -85,6 +85,8 @@ import 'fletch_selector.dart';
 
 import 'function_codegen.dart';
 
+import 'lazy_field_initializer_codegen.dart';
+
 import 'constructor_codegen.dart';
 
 import 'closure_environment.dart';
@@ -201,6 +203,9 @@ class FletchBackend extends Backend {
 
   final Map<FunctionElement, CompiledClass> closureClasses =
       <FunctionElement, CompiledClass>{};
+
+  final Map<FieldElement, CompiledFunction> lazyFieldInitializers =
+      <FieldElement, CompiledFunction>{};
 
   final Map<int, int> getters = <int, int>{};
   final Map<int, int> setters = <int, int>{};
@@ -726,8 +731,13 @@ class FletchBackend extends Backend {
     }
 
     context.forEachStatic((element, index) {
-      // TODO(ajohnsen): Push initializers.
-      commands.add(const PushNull());
+      CompiledFunction initializer = lazyFieldInitializers[element];
+      if (initializer != null) {
+        commands.add(new PushFromMap(MapId.methods, initializer.methodId));
+        commands.add(const PushNewInitializer());
+      } else {
+        commands.add(const PushNull());
+      }
     });
     commands.add(new ChangeStatics(context.staticIndices.length));
     changes++;
@@ -865,6 +875,40 @@ class FletchBackend extends Backend {
           element, MessageKind.PATCH_EXTERNAL_WITHOUT_IMPLEMENTATION);
     }
     return element;
+  }
+
+  int compileLazyFieldInitializer(FieldElement field,
+                                  TreeElements elements,
+                                  Registry registry) {
+    int index = context.getStaticFieldIndex(field, null);
+
+    if (field.initializer == null) return index;
+
+    lazyFieldInitializers.putIfAbsent(field, () {
+      CompiledFunction compiledFunction = new CompiledFunction.parameterStub(
+          nextMethodId++,
+          0);
+
+      ClosureEnvironment closureEnvironment = createClosureEnvironment(
+          field,
+          elements);
+
+      LazyFieldInitializerCodegen codegen = new LazyFieldInitializerCodegen(
+          compiledFunction,
+          context,
+          elements,
+          registry,
+          closureEnvironment,
+          field);
+
+      codegen.compile();
+
+      functions.add(compiledFunction);
+
+      return compiledFunction;
+    });
+
+    return index;
   }
 
   int compileConstructor(ConstructorElement constructor,

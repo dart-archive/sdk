@@ -273,6 +273,11 @@ class PushNewFunction extends Command {
   }
 }
 
+class PushNewInitializer extends Command {
+  const PushNewInitializer()
+      : super(CommandCode.PushNewInitializer);
+}
+
 class ChangeStatics extends Command {
   final int count;
 

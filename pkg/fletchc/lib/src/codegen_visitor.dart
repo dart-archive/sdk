@@ -162,12 +162,19 @@ abstract class CodegenVisitor
 
   SemanticSendVisitor get sendVisitor => this;
 
-  ConstantExpression compileConstant(Node node, {bool isConst}) {
+  ConstantExpression compileConstant(
+      Node node,
+      {TreeElements elements,
+       bool isConst}) {
+    if (elements == null) elements = this.elements;
     return context.compileConstant(node, elements, isConst: isConst);
   }
 
-  int allocateConstantFromNode(Node node) {
-    ConstantExpression expression = compileConstant(node, isConst: false);
+  int allocateConstantFromNode(Node node, {TreeElements elements}) {
+    ConstantExpression expression = compileConstant(
+        node,
+        elements: elements,
+        isConst: false);
     return compiledFunction.allocateConstant(expression.value);
   }
 
@@ -319,7 +326,10 @@ abstract class CodegenVisitor
             if (initializer == null) {
               builder.loadLiteralNull();
             } else {
-              visitForValue(initializer);
+              int constId = allocateConstantFromNode(
+                  initializer,
+                  elements: parameter.memberContext.resolvedAst.elements);
+              builder.loadConst(constId);
             }
           } else {
             generateUnimplementedError(
@@ -782,18 +792,35 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void handleStaticFieldGet(FieldElement element) {
+    if (element.isConst) {
+      if (element.initializer == null) {
+        generateUnimplementedError(
+            element.node, "Const field must have an initializer");
+        return;
+      }
+      int constId = allocateConstantFromNode(
+          element.initializer,
+          elements: element.resolvedAst.elements);
+      builder.loadConst(constId);
+    } else {
+      int index = context.backend.compileLazyFieldInitializer(
+          element,
+          elements,
+          registry);
+      if (element.initializer != null) {
+        builder.loadStaticInit(index);
+      } else {
+        builder.loadStatic(index);
+      }
+    }
+  }
+
   void visitTopLevelFieldGet(
       Send node,
       FieldElement field,
       _) {
-    if (field.isConst) {
-      int constId = allocateConstantFromNode(node);
-      builder.loadConst(constId);
-    } else {
-      // TODO(ajohnsen): Handle initializer.
-      int index = context.getStaticFieldIndex(field, element);
-      builder.loadStatic(index);
-    }
+    handleStaticFieldGet(field);
     applyVisitState();
   }
 
@@ -801,9 +828,7 @@ abstract class CodegenVisitor
       Send node,
       FieldElement field,
       _) {
-    // TODO(ajohnsen): Handle initializer.
-    int index = context.getStaticFieldIndex(field, element);
-    builder.loadStatic(index);
+    handleStaticFieldGet(field);
     applyVisitState();
   }
 
@@ -1220,19 +1245,20 @@ abstract class CodegenVisitor
     // TODO(ahe): Report bug: should already be the declaration.
     ConstructorElement constructor = elements[node.send].declaration;
     if (node.isConst) {
-      registry.registerInstantiatedClass(constructor.enclosingClass);
-      int constId = allocateConstantFromNode(node);
+      int constId = allocateConstantFromNode(
+          node,
+          elements: element.memberContext.resolvedAst.elements);
       builder.loadConst(constId);
-      return;
-    }
-    int arity = loadArguments(node.send.argumentsNode, constructor);
-    if (constructor.isFactoryConstructor) {
-      registry.registerStaticInvocation(constructor);
-      int methodId = context.backend.allocateMethodId(constructor);
-      int constId = compiledFunction.allocateConstantFromFunction(methodId);
-      builder.invokeFactory(constId, arity);
     } else {
-      callConstructor(constructor, arity);
+      int arity = loadArguments(node.send.argumentsNode, constructor);
+      if (constructor.isFactoryConstructor) {
+        registry.registerStaticInvocation(constructor);
+        int methodId = context.backend.allocateMethodId(constructor);
+        int constId = compiledFunction.allocateConstantFromFunction(methodId);
+        builder.invokeFactory(constId, arity);
+      } else {
+        callConstructor(constructor, arity);
+      }
     }
     applyVisitState();
   }
@@ -1298,6 +1324,7 @@ abstract class CodegenVisitor
     }
 
     registry.registerStaticInvocation(function);
+    applyVisitState();
   }
 
   void visitExpression(Expression node) {
