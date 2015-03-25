@@ -314,6 +314,11 @@ class BytecodeBuilder {
           bytecodes[index] = new BranchIfTrueLong(offset);
           break;
 
+        case Opcode.BranchIfFalseLong:
+          int offset = position - bytecode.uint32Argument0;
+          bytecodes[index] = new BranchIfFalseLong(offset);
+          break;
+
         case Opcode.BranchLong:
           int offset = position - bytecode.uint32Argument0;
           bytecodes[index] = new BranchLong(offset);
@@ -335,6 +340,18 @@ class BytecodeBuilder {
     } else {
       label.addUsage(bytecodes.length);
       internalAdd(new BranchIfTrueLong(byteSize));
+    }
+  }
+
+  void branchIfFalse(BytecodeLabel label) {
+    if (label.isBound) {
+      internalBranchBack(
+          label,
+          (v) => new BranchBackIfFalse(v),
+          (v) => new BranchBackIfFalseLong(v));
+    } else {
+      label.addUsage(bytecodes.length);
+      internalAdd(new BranchIfFalseLong(byteSize));
     }
   }
 

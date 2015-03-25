@@ -486,7 +486,7 @@ abstract class CodegenVisitor
   }
 
   void visitIndex(
-      SendSet node,
+      Send node,
       Node receiver,
       Node index,
       _) {
@@ -584,6 +584,12 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void callIsSelector(DartType type) {
+    ClassElement classElement = type.element;
+    int fletchSelector = context.toFletchIsSelector(classElement);
+    builder.invokeTest(fletchSelector, 0);
+  }
+
   void handleIs(Node expression, DartType type) {
     if (type == null) {
       // 'type' is null for malformed types.
@@ -591,9 +597,7 @@ abstract class CodegenVisitor
       builder.loadLiteralFalse();
     } else {
       visitForValue(expression);
-      ClassElement classElement = type.element;
-      int fletchSelector = context.toFletchIsSelector(classElement);
-      builder.invokeTest(fletchSelector, 0);
+      callIsSelector(type);
     }
   }
 
@@ -1515,8 +1519,16 @@ abstract class CodegenVisitor
     initializeLocal(elements[function], function);
   }
 
-  void handleCatchBlock(CatchBlock node, int exceptionSlot) {
-    // TODO(ajohnsen): Handle type argument.
+  void handleCatchBlock(CatchBlock node, int exceptionSlot, BytecodeLabel end) {
+    BytecodeLabel wrongType = new BytecodeLabel();
+
+    TypeAnnotation type = node.type;
+    if (type != null) {
+      builder.loadSlot(exceptionSlot);
+      callIsSelector(elements.getType(type));
+      builder.branchIfFalse(wrongType);
+    }
+
     int locals = 0;
     Node exception = node.exception;
     if (exception != null) {
@@ -1542,6 +1554,10 @@ abstract class CodegenVisitor
     node.block.accept(this);
 
     builder.popMany(locals);
+
+    builder.branch(end);
+
+    builder.bind(wrongType);
   }
 
   void visitTryStatement(TryStatement node) {
@@ -1562,8 +1578,7 @@ abstract class CodegenVisitor
     builder.addCatchFrameRange(startBytecodeSize, endBytecodeSize);
 
     for (Node catchBlock in node.catchBlocks) {
-      handleCatchBlock(catchBlock, exceptionSlot);
-      builder.branch(end);
+      handleCatchBlock(catchBlock, exceptionSlot, end);
     }
 
     builder.bind(end);
