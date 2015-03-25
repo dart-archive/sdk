@@ -485,7 +485,10 @@ class FletchBackend extends Backend {
       // Inject the function into the method table of the 'holderClass' class. Note
       // that while constructor bodies has a this argument, we don't inject
       // them into the method table.
-      String symbol = context.getSymbolFromFunction(function);
+      String symbol = context.getSymbolForFunction(
+          name,
+          function.functionSignature,
+          function.library);
       int id = context.getSymbolId(symbol);
       int arity = function.functionSignature.parameterCount;
       SelectorKind kind = SelectorKind.Method;

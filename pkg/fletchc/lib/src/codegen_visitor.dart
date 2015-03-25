@@ -421,13 +421,7 @@ abstract class CodegenVisitor
       return;
     }
 
-    Selector selector;
-    // TODO(ajohnsen): Remove once SemanticVisitor handle IndexGet seperately.
-    if (operator == BinaryOperator.INDEX) {
-      selector = new Selector.index();
-    } else {
-      selector = new Selector.binaryOperator(operator.name);
-    }
+    Selector selector = new Selector.binaryOperator(operator.name);
     invokeMethod(selector);
   }
 
@@ -478,6 +472,18 @@ abstract class CodegenVisitor
       _) {
     visitForValue(value);
     builder.negate();
+    applyVisitState();
+  }
+
+  void visitIndex(
+      SendSet node,
+      Node receiver,
+      Node index,
+      _) {
+    visitForValue(receiver);
+    visitForValue(index);
+    Selector selector = new Selector.index();
+    invokeMethod(selector);
     applyVisitState();
   }
 
@@ -2015,6 +2021,15 @@ abstract class CodegenVisitor
     generateUnimplementedError(node, "[visitSuperUnary] isn't implemented.");
   }
 
+  void visitSuperIndex(
+      Send node,
+      FunctionElement function,
+      Node index,
+      _) {
+    generateUnimplementedError(
+        node, "[visitSuperIndex] isn't implemented.");
+  }
+
   void visitSuperIndexSet(
       Send node,
       FunctionElement function,
@@ -2742,5 +2757,24 @@ abstract class CodegenVisitor
       _){
     generateUnimplementedError(
         node, "[errorUndefinedBinaryExpression] isn't implemented.");
+  }
+
+  void visitIndexPrefix(
+      SendSend node,
+      Node receiver,
+      Node index,
+      IncDecOperator operator,
+      _) {
+    generateUnimplementedError(
+        node, "[visitIndexPrefix] isn't implemented.");
+  }
+
+  void errorUnresolvedSuperIndex(
+      Send node,
+      Element element,
+      Node index,
+      _) {
+    generateUnimplementedError(
+        node, "[errorUnresolvedSuperIndex] isn't implemented.");
   }
 }

@@ -96,9 +96,6 @@ class FletchContext {
   }
 
   String mangleName(String name, LibraryElement library) {
-    // Anonymous functions (closures) have an empty name. To match call-sites,
-    // we mangle them as 'call'.
-    if (name.isEmpty) name = 'call';
     if (!isPrivateName(name)) return name;
     return name + getLibraryTag(library);
   }
@@ -129,11 +126,13 @@ class FletchContext {
       });
   }
 
-  String getSymbolFromFunction(FunctionElement function) {
+  String getSymbolForFunction(
+      String name,
+      FunctionSignature signature,
+      LibraryElement library) {
     StringBuffer buffer = new StringBuffer();
-    buffer.write(mangleName(function.name, function.library));
-    FunctionSignature functionSignature = function.functionSignature;
-    functionSignature.orderedForEachParameter((ParameterElement parameter) {
+    buffer.write(mangleName(name, library));
+    signature.orderedForEachParameter((ParameterElement parameter) {
       if (parameter.isNamed) {
         buffer.write(":");
         buffer.write(parameter.name);

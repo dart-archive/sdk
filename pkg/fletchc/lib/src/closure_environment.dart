@@ -423,6 +423,14 @@ class ClosureVisitor
     value.accept(this);
   }
 
+  void visitIndex(
+      Send node,
+      Node receiver,
+      Node index,
+      _) {
+    node.visitChildren(this);
+  }
+
   void visitIndexSet(
       SendSet node,
       Node receiver,
@@ -432,6 +440,15 @@ class ClosureVisitor
     receiver.accept(this);
     index.accept(this);
     value.accept(this);
+  }
+
+  void visitIndexPrefix(
+      SendSend node,
+      Node receiver,
+      Node index,
+      IncDecOperator operator,
+      _) {
+    node.visitChildren(this);
   }
 
   void visitEquals(Send node, Node left, Node right, _) {
@@ -911,6 +928,15 @@ class ClosureVisitor
       FunctionElement function,
       BinaryOperator operator,
       Node argument,
+      _) {
+    markThisUsed();
+    node.visitChildren(this);
+  }
+
+  void visitSuperIndex(
+      Send node,
+      FunctionElement function,
+      Node index,
       _) {
     markThisUsed();
     node.visitChildren(this);
@@ -1661,6 +1687,15 @@ class ClosureVisitor
       Operator operator,
       Node right,
       _) {
+    node.visitChildren(this);
+  }
+
+  void errorUnresolvedSuperIndex(
+      Send node,
+      Element element,
+      Node index,
+      _) {
+    markThisUsed();
     node.visitChildren(this);
   }
 }
