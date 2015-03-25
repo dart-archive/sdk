@@ -144,6 +144,7 @@ class Engine : public State {
   void ValidateStack();
 
   bool ShouldBreak();
+  bool IsAtBreakPoint();
 
   Object* ToBool(bool value) const {
     return value ? program()->true_object() : program()->false_object();
@@ -153,6 +154,8 @@ class Engine : public State {
 // Dispatching helper macros.
 #define DISPATCH()                                        \
   if (ShouldBreak()) return Interpreter::kBreakPoint;     \
+  goto *kDispatchTable[ReadOpcode()]
+#define DISPATCH_NO_BREAK()                               \
   goto *kDispatchTable[ReadOpcode()]
 #define DISPATCH_TO(opcode)                               \
   goto opcode##Label
@@ -172,7 +175,11 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
 #undef LABEL
 
   // Dispatch to the first bytecode.
-  DISPATCH();
+  if (IsAtBreakPoint()) {
+    DISPATCH_NO_BREAK();
+  } else {
+    DISPATCH();
+  }
 
   OPCODE_BEGIN(LoadLocal0);
     Object* local = Local(0);
@@ -816,6 +823,16 @@ bool Engine::ShouldBreak() {
     bool should_break = debug_info->ShouldBreak(function, bytecode_index);
     if (should_break) SaveState();
     return should_break;
+  }
+  return false;
+}
+
+bool Engine::IsAtBreakPoint() {
+  DebugInfo* debug_info = process()->debug_info();
+  if (process()->debug_info() != NULL) {
+    bool result = debug_info->is_at_breakpoint();
+    debug_info->set_is_at_breakpoint(false);
+    return result;
   }
   return false;
 }

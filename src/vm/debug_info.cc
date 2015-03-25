@@ -18,9 +18,13 @@ void Breakpoint::VisitProgramPointers(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&function_));
 }
 
-DebugInfo::DebugInfo() : is_stepping_(false), next_breakpoint_index_(0) { }
+DebugInfo::DebugInfo()
+    : is_stepping_(false),
+      is_at_breakpoint_(false),
+      next_breakpoint_index_(0) { }
 
 bool DebugInfo::ShouldBreak(Function* function, int bytecode_index) {
+  if (is_stepping_) return true;
   for (int i = 0; i < next_breakpoint_index_; i++) {
     Breakpoint* breakpoint = breakpoints_[i];
     if (breakpoint != NULL &&
@@ -39,7 +43,7 @@ int DebugInfo::SetBreakpoint(Function* function, int bytecode_index) {
   if (breakpoints_.length() <= next_breakpoint_index_) {
     breakpoints_.Reallocate(next_breakpoint_index_ + 4);
   }
-  Breakpoint* breakpoint = new Breakpoint(function, bytecode_index, true);
+  Breakpoint* breakpoint = new Breakpoint(function, bytecode_index, false);
   breakpoints_[next_breakpoint_index_] = breakpoint;
   return next_breakpoint_index_++;
 }

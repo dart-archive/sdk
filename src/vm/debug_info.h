@@ -38,12 +38,15 @@ class DebugInfo {
   bool RemoveBreakpoint(int id);
   bool is_stepping() const { return is_stepping_; }
   void set_is_stepping(bool value) { is_stepping_ = value; }
+  bool is_at_breakpoint() const { return is_at_breakpoint_; }
+  void set_is_at_breakpoint(bool value) { is_at_breakpoint_ = value; }
 
   // GC support for program GCs.
   void VisitProgramPointers(PointerVisitor* visitor);
 
  private:
   bool is_stepping_;
+  bool is_at_breakpoint_;
 
   // TODO(ager): Use better data structure for breakpoints to avoid duplicates
   // and to reduce memory use when adding and removing many breakpoints.
