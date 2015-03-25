@@ -98,3 +98,9 @@ const patch = "patch";
 
   @fletch.native external static int _fletchNative_frequency();
 }
+
+@patch class List {
+  @patch factory List([int length]) {
+    return fletch.newList(length);
+  }
+}

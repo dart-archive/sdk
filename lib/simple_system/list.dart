@@ -4,6 +4,11 @@
 
 part of dart.system;
 
+// TODO(ajohnsen): Temp hack to expose _GrowableList/_FixedList to core.
+List newList(int length) {
+  return (length == null) ? new _GrowableList() : new _FixedList(length);
+}
+
 // TODO(ajohnsen): Implement 'List'.
 class _ConstantList<E> {
   final _list;
