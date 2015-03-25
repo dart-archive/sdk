@@ -815,12 +815,7 @@ void Engine::ValidateStack() {
 bool Engine::ShouldBreak() {
   DebugInfo* debug_info = process()->debug_info();
   if (debug_info != NULL) {
-    // TODO(ager): We shouldn't compute the current function here in order
-    // to find the break point. Instead, we should record actual bytecode
-    // pointers in the break point list and update them on program gc.
-    Function* function = ComputeCurrentFunction();
-    int bytecode_index = bcp() - function->bytecode_address_for(0);
-    bool should_break = debug_info->ShouldBreak(function, bytecode_index);
+    bool should_break = debug_info->ShouldBreak(bcp());
     if (should_break) SaveState();
     return should_break;
   }

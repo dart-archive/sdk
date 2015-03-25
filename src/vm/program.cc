@@ -1007,6 +1007,7 @@ class UncookStacksVisitor : public ProcessVisitor {
 
   virtual void VisitProcess(Process* process) {
     process->UncookAndUnchainStacks();
+    process->UpdateBreakpoints();
     process->set_program_gc_state(Process::kUnknown);
     if (unlink_) process->set_next(NULL);
   }

@@ -5,7 +5,7 @@
 #ifndef SRC_VM_DEBUG_INFO_H_
 #define SRC_VM_DEBUG_INFO_H_
 
-#include "src/vm/list.h"
+#include <unordered_map>
 
 namespace fletch {
 
@@ -14,10 +14,11 @@ class PointerVisitor;
 
 class Breakpoint {
  public:
-  Breakpoint(Function* function, int bytecode_index, bool is_one_shot);
+  Breakpoint(Function* function, int bytecode_index, int id, bool is_one_shot);
 
   Function* function() const { return function_; }
   int bytecode_index() const { return bytecode_index_; }
+  int id() const { return id_; }
   bool is_one_shot() const { return is_one_shot_; }
 
   // GC support for program GCs.
@@ -26,6 +27,7 @@ class Breakpoint {
  private:
   Function* function_;
   int bytecode_index_;
+  int id_;
   bool is_one_shot_;
 };
 
@@ -33,7 +35,7 @@ class DebugInfo {
  public:
   DebugInfo();
 
-  bool ShouldBreak(Function* process, int bytecode_index);
+  bool ShouldBreak(uint8_t* bcp);
   int SetBreakpoint(Function* function, int bytecode_index);
   bool RemoveBreakpoint(int id);
   bool is_stepping() const { return is_stepping_; }
@@ -43,15 +45,15 @@ class DebugInfo {
 
   // GC support for program GCs.
   void VisitProgramPointers(PointerVisitor* visitor);
+  void UpdateBreakpoints();
 
  private:
   bool is_stepping_;
   bool is_at_breakpoint_;
 
-  // TODO(ager): Use better data structure for breakpoints to avoid duplicates
-  // and to reduce memory use when adding and removing many breakpoints.
-  List<Breakpoint*> breakpoints_;
-  int next_breakpoint_index_;
+  typedef std::unordered_map<uint8_t*, Breakpoint> BreakpointMap;
+  BreakpointMap breakpoints_;
+  int next_breakpoint_id_;
 };
 
 }  // namespace fletch

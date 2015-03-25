@@ -182,6 +182,8 @@ class Session {
     Command response = await nextUserResponseCommand();
     if (response.opcode == Opcode.ProcessTerminated) {
       print('### process terminated');
+      end();
+      exit(0);
     } else {
       assert(response.opcode == Opcode.ProcessBreakpoint);
     }

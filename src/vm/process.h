@@ -162,6 +162,10 @@ class Process {
   void CookStacks(int number_of_stacks);
   void UncookAndUnchainStacks();
 
+  // Program GC support. Update breakpoints after having moved function.
+  // Bytecode pointers need to be updated.
+  void UpdateBreakpoints();
+
   void set_program_gc_state(ProgramGCState value) { program_gc_state_ = value; }
   ProgramGCState program_gc_state() const { return program_gc_state_; }
 

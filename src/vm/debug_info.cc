@@ -9,9 +9,11 @@
 
 namespace fletch {
 
-Breakpoint::Breakpoint(Function* function, int bytecode_index, bool is_one_shot)
+Breakpoint::Breakpoint(
+    Function* function, int bytecode_index, int id, bool is_one_shot)
     : function_(function),
       bytecode_index_(bytecode_index),
+      id_(id),
       is_one_shot_(is_one_shot) { }
 
 void Breakpoint::VisitProgramPointers(PointerVisitor* visitor) {
@@ -21,47 +23,52 @@ void Breakpoint::VisitProgramPointers(PointerVisitor* visitor) {
 DebugInfo::DebugInfo()
     : is_stepping_(false),
       is_at_breakpoint_(false),
-      next_breakpoint_index_(0) { }
+      next_breakpoint_id_(0) { }
 
-bool DebugInfo::ShouldBreak(Function* function, int bytecode_index) {
+bool DebugInfo::ShouldBreak(uint8_t* bcp) {
   if (is_stepping_) return true;
-  for (int i = 0; i < next_breakpoint_index_; i++) {
-    Breakpoint* breakpoint = breakpoints_[i];
-    if (breakpoint != NULL &&
-        breakpoint->function() == function &&
-        breakpoint->bytecode_index() == bytecode_index) {
-      if (breakpoint->is_one_shot()) {
-        RemoveBreakpoint(i);
-      }
-      return true;
-    }
-  }
-  return false;
+  return breakpoints_.find(bcp) != breakpoints_.end();
 }
 
 int DebugInfo::SetBreakpoint(Function* function, int bytecode_index) {
-  if (breakpoints_.length() <= next_breakpoint_index_) {
-    breakpoints_.Reallocate(next_breakpoint_index_ + 4);
-  }
-  Breakpoint* breakpoint = new Breakpoint(function, bytecode_index, false);
-  breakpoints_[next_breakpoint_index_] = breakpoint;
-  return next_breakpoint_index_++;
+  Breakpoint breakpoint(function, bytecode_index, next_breakpoint_id_++, false);
+  uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
+  breakpoints_.insert({bcp, breakpoint});
+  return breakpoint.id();
 }
 
 bool DebugInfo::RemoveBreakpoint(int id) {
-  if (id < breakpoints_.length()) {
-    delete breakpoints_[id];
-    breakpoints_[id] = NULL;
+  BreakpointMap::const_iterator it = breakpoints_.begin();
+  BreakpointMap::const_iterator end = breakpoints_.end();
+  for (; it != end; ++it) {
+    if (it->second.id() == id) break;
+  }
+  if (it != end) {
+    breakpoints_.erase(it);
     return true;
   }
   return false;
 }
 
 void DebugInfo::VisitProgramPointers(PointerVisitor* visitor) {
-  for (int i = 0; i < next_breakpoint_index_; i++) {
-    Breakpoint* breakpoint = breakpoints_[i];
-    if (breakpoint != NULL) breakpoint->VisitProgramPointers(visitor);
+  BreakpointMap::iterator it = breakpoints_.begin();
+  BreakpointMap::iterator end = breakpoints_.end();
+  for (; it != end; ++it) {
+    it->second.VisitProgramPointers(visitor);
   }
+}
+
+void DebugInfo::UpdateBreakpoints() {
+  BreakpointMap new_breakpoints;
+  BreakpointMap::const_iterator it = breakpoints_.begin();
+  BreakpointMap::const_iterator end = breakpoints_.end();
+  for (; it != end; ++it) {
+    Function* function = it->second.function();
+    uint8_t* bcp =
+        function->bytecode_address_for(0) + it->second.bytecode_index();
+    new_breakpoints.insert({bcp, it->second});
+  }
+  breakpoints_.swap(new_breakpoints);
 }
 
 }  // namespace fletch

@@ -506,6 +506,12 @@ void Process::UncookAndUnchainStacks() {
   cooked_stack_deltas_.Delete();
 }
 
+void Process::UpdateBreakpoints() {
+  if (debug_info_ != NULL) {
+    debug_info_->UpdateBreakpoints();
+  }
+}
+
 bool Process::Enqueue(Port* port, Object* message) {
   PortQueue* entry;
   if (!message->IsHeapObject()) {
