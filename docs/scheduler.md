@@ -1,3 +1,13 @@
+**Entry**
+
+```python
+Main() {
+  S <- new Scheduler()
+  S.SpawnProcess()
+  S.RunThread()
+}
+```
+
 **class Scheduler**
 
 *Fields*
@@ -33,8 +43,7 @@ RunThread(T) {
 ```
 
 ```python
-Execute(P, T)
-  # May call SpawnProcess.
+Execute(P, T) {
   Interrupt <- Interpret(P)
 
   if Interrupt = Terminate {
@@ -78,11 +87,38 @@ Execute(P, T)
     EnqueueOnAnyThread(C)
     return Null
   }
+}
 ```
 
 ```python
-NotifyAllThreads()
+Interpret(P) {
+  while True {
+    switch P.NextBytecode() {
+      case Spawn:
+        SpawnProcess()
+        break
+
+      case Send
+        Port <- P.Stack(0)
+        Message <- P.Stack(1)
+        Target <- Port.Send(Message)
+        if Target != Null: return new TargetYielded(Target)
+        break
+
+      case Terminate:
+        return new Terminate()
+
+      case Yield:
+        return new Yielded()
+    }
+  }
+}
+```
+
+```python
+NotifyAllThreads() {
   for T in Threads: T.Wakeup()
+}
 ```
 
 ```python
@@ -197,7 +233,7 @@ TryDequeue() {
 ```
 
 ```python
-TryDequeueEntry(P)
+TryDequeueEntry(P) {
   H <- Head
   while True {
     if H = Sentinel or H = Null: return False
@@ -375,12 +411,12 @@ Send(Message) {
   Lock()
   if Process != Null {
     Process.Enqueue(This, Message)
-    // When returning something not Null, the current Process will be interrupted
-    // with TargetYielded.
-    // Note it's returned Locked.
+    # When returning something not Null, the current Process will be interrupted
+    # with TargetYielded.
+    # Note it's returned Locked.
     return This
   }
-  Unlock()  
+  Unlock()
   return Null
 }
 ```
