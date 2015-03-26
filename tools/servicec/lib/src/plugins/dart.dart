@@ -365,9 +365,11 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln('  }');
       } else if (slotType.isString) {
         writeln('  void set ${slotName}(String value) {');
+        writeln(updateTag);
         writeln('    NewString(new _uint16BuilderList(), ${slot.offset}, value);');
         writeln('  }');
         writeln('  List<int> init${camel}Data(int length) {');
+        writeln(updateTag);
         writeln('    return NewList(new _uint16BuilderList(), ${slot.offset},'
                 ' length, 2);');
         writeln('  }');
