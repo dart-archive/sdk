@@ -647,7 +647,7 @@ static int Main(int argc, char** argv) {
           "Use DART_VM environment variable to override location of Dart VM.",
           program_name);
     }
-    printf("Persistent process port: %ji\n", port);
+    printf("Persistent process port: %i\n", port);
     control_socket = new Socket();
     if (!control_socket->Connect("127.0.0.1", port)) {
       Die("%s: Unable to connect to server: %s.",
