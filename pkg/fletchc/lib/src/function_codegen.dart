@@ -50,6 +50,20 @@ class FunctionCodegen extends CodegenVisitor {
   FunctionElement get function => element;
 
   void compile() {
+    ClassElement enclosing = function.enclosingClass;
+    // Generate implicit 'null' check for '==' functions, except for Null.
+    if (enclosing != null &&
+        enclosing.declaration != context.compiler.nullClass &&
+        function.name == '==') {
+      BytecodeLabel notNull = new BytecodeLabel();
+      builder.loadParameter(1);
+      builder.loadLiteralNull();
+      builder.identicalNonNumeric();
+      builder.branchIfFalse(notNull);
+      builder.loadLiteralFalse();
+      builder.ret();
+      builder.bind(notNull);
+    }
     FunctionSignature functionSignature = function.functionSignature;
     int parameterCount = functionSignature.parameterCount;
     int i = 0;

@@ -465,7 +465,6 @@ dynamic_prefix_core_test/none: Fail
 dynamic_test: Fail
 dynamic_type_literal_test: Crash
 empty_block_case_test: Fail
-equality_test: Fail
 error_stacktrace_test: Fail
 evaluation_redirecting_constructor_test: Fail
 example_constructor_test: Fail

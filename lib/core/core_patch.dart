@@ -110,3 +110,8 @@ const patch = "patch";
     return "NoSuchMethodError: '$_memberName'";
   }
 }
+
+@patch class Null {
+  // This function is overridden, so we can bypass the 'this == null' check.
+  bool operator ==(other) => other == null;
+}
