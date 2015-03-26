@@ -264,7 +264,9 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
       }
       return <Command>[
           commandBuilder.getVmCommand(
-              "${suite.buildDir}/fletch_driver", arguments, {})];
+              "${suite.buildDir}/fletch_driver", arguments, {
+                'DART_VM': suite.dartVmBinaryFileName,
+              })];
     }
   }
 }

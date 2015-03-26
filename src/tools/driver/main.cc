@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/errno.h>
+#include <sys/file.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -18,13 +19,11 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "src/shared/assert.h"
 #include "src/shared/globals.h"
-
 #include "src/shared/native_socket.h"
-
-#include "src/tools/driver/get_path_of_executable.h"
-
 #include "src/tools/driver/connection.h"
+#include "src/tools/driver/get_path_of_executable.h"
 
 // Fast front-end for persistent compiler process.
 //
@@ -37,18 +36,19 @@
 // measurements show this C++ program to be 10-20 times faster than a
 // hello-world program in Dart.
 //
-// If the persistent process isn't running, it will be started by this
-// program. This is done with two forks, see, for example:
-// http://stackoverflow.com/questions/881388/what-is-the-reason-for-performing-a-double-fork-when-creating-a-daemon // NOLINT
+// If the persistent process isn't running, it will be started by this program.
 //
 // Consequently, this process always communicates with a server process that
 // isn't considered a child of itself.
+//
+// Details about starting the server: to avoid starting multiple servers, this
+// program attempts obtain an exclusive lock during the initial handshake with
+// the server. If the server doesn't respond, it is started, and the lock isn't
+// released until the server is ready.
 
 namespace fletch {
 
 static const int COMPILER_CRASHED = 253;
-
-static const char* driver_env_name = "FLETCH_DRIVER_PORT";
 
 static char* program_name = NULL;
 
@@ -56,11 +56,15 @@ static char fletch_config_file[MAXPATHLEN];
 
 static const char fletch_config_name[] = ".fletch";
 
-static bool fletch_config_file_exists = false;
+static int fletch_config_fd;
 
 static const char* dart_vm_name = "/dart/sdk/bin/dart";
 
+static const char* dart_vm_env_name = "DART_VM";
+
 static int exit_code = COMPILER_CRASHED;
+
+static void WriteFully(int fd, uint8* data, ssize_t length);
 
 void Die(const char *format, ...) {
   va_list args;
@@ -69,6 +73,60 @@ void Die(const char *format, ...) {
   va_end(args);
   fprintf(stderr, "\n");
   exit(255);
+}
+
+static void StrCpy(
+    void* destination,
+    size_t destination_size,
+    void* source,
+    size_t source_size) {
+  void* source_end = memchr(source, '\0', source_size);
+  if (source_end == NULL) {
+    Die("%s: source isn't zero-terminated.", program_name);
+  }
+  size_t source_length =
+    reinterpret_cast<uint8*>(source_end) - reinterpret_cast<uint8*>(source);
+
+  if (source_length + 1 >= destination_size) {
+    Die("%s: not enough room in destination (%i) for %i + 1 bytes.",
+        program_name, destination_size, source_length);
+  }
+
+  memcpy(destination, source, source_length + 1);
+}
+
+static void StrCat(
+    void* destination,
+    size_t destination_size,
+    void* source,
+    size_t source_size) {
+  void* destination_end = memchr(destination, '\0', destination_size);
+  if (destination_end == NULL) {
+    Die("%s: destination isn't zero-terminated.", program_name);
+  }
+  size_t destination_length =
+    reinterpret_cast<uint8*>(destination_end) -
+    reinterpret_cast<uint8*>(destination);
+
+  void* source_end = memchr(source, '\0', source_size);
+  if (source_end == NULL) {
+    Die("%s: source isn't zero-terminated.", program_name);
+  }
+  size_t source_length =
+    reinterpret_cast<uint8*>(source_end) - reinterpret_cast<uint8*>(source);
+
+  if (destination_length + source_length + 1 >= destination_size) {
+    Die("%s: not enough room in destination (%i) for %i + %i + 1 bytes.",
+        program_name, destination_size, destination_length, source_length);
+  }
+
+  memcpy(destination_end, source, source_length + 1);
+}
+
+static void Close(int fd) {
+  if (TEMP_FAILURE_RETRY(close(fd)) == -1) {
+    Die("%s: close failed: %s", program_name, strerror(errno));
+  }
 }
 
 dev_t GetDevice(const char* name) {
@@ -93,6 +151,7 @@ void FletchConfigFile(char *result, const char* directory) {
     ptr[0] = '/';
     ptr++;
   }
+  // TODO(ahe): Use StrCat or StrCpy instead.
   strncpy(ptr, fletch_config_name, sizeof(fletch_config_name));
 }
 
@@ -101,19 +160,20 @@ void ParentDir(char *directory) {
   // On Linux, dirname's argument may be modified. On Mac OS X, it returns a
   // pointer to internal memory. Probably not thread safe. So we first copy
   // directory to a place we don't mind getting modified.
+  // TODO(ahe): Use StrCat or StrCpy instead.
   strncpy(copy, directory, MAXPATHLEN);
   char* parent = dirname(copy);
   if (parent == NULL) {
     Die("%s: Unable to compute parent directory of '%s': %s",
         program_name, directory, strerror(errno));
   }
+  // TODO(ahe): Use StrCat or StrCpy instead.
   strncpy(directory, parent, MAXPATHLEN);
 }
 
 // Detect the configuration and initialize the following variables:
 //
 // * fletch_config_file
-// * fletch_config_file_exists
 //
 // We search for a file named fletch_config_name in the current directory. If
 // such a file doesn't exist, traverse parent directories until a file is
@@ -129,6 +189,7 @@ static void DetectConfiguration() {
     Die("%s: Unable to read current directory: %s",
         program_name, strerror(errno));
   }
+  // TODO(ahe): Use StrCat or StrCpy instead.
   strncpy(directory, cwd, MAXPATHLEN);
 
   dev_t starting_device = GetDevice(cwd);
@@ -137,8 +198,8 @@ static void DetectConfiguration() {
     FletchConfigFile(path, directory);
 
     if (FileExists(path)) {
+      // TODO(ahe): Use StrCat or StrCpy instead.
       strncpy(fletch_config_file, path, MAXPATHLEN);
-      fletch_config_file_exists = true;
       return;
     }
     if (strlen(directory) == 1) {
@@ -148,42 +209,61 @@ static void DetectConfiguration() {
   } while (starting_device == GetDevice(directory));
 
   FletchConfigFile(path, cwd);
+  // TODO(ahe): Use StrCat or StrCpy instead.
   strncpy(fletch_config_file, path, MAXPATHLEN);
-  fletch_config_file_exists = false;
+}
+
+// Opens and locks the config file named by fletch_config_file and initialize
+// the variable fletch_config_fd.
+static void LockConfigFile() {
+  int fd = TEMP_FAILURE_RETRY(
+      open(fletch_config_file, O_RDONLY | O_CREAT, S_IRUSR | S_IWUSR));
+  if (fd == -1) {
+    Die("%s: Unable open '%s' failed: %s.", program_name, fletch_config_file,
+        strerror(errno));
+  }
+
+  if (TEMP_FAILURE_RETRY(flock(fd, LOCK_EX)) == -1) {
+    Die("%s: flock '%s' failed: %s.", program_name, fletch_config_file,
+        strerror(errno));
+  }
+
+  fletch_config_fd = fd;
+}
+
+// Release the lock on fletch_config_fd.
+static void UnlockConfigFile() {
+  // Closing the file descriptor will release the lock.
+  Close(fletch_config_fd);
 }
 
 static void ReadDriverConfig(char* config_string, size_t length) {
-  DetectConfiguration();
-  if (fletch_config_file_exists) {
-    printf("Using config file: %s\n", fletch_config_file);
+  printf("Using config file: %s\n", fletch_config_file);
 
-    FILE* file = fopen(fletch_config_file, "r");
-    if (file == NULL) {
-      Die("%s: Unable to read '%s': %s", program_name, fletch_config_file,
-          strerror(errno));
+  size_t offset = 0;
+  while (offset < length) {
+    ssize_t bytes = TEMP_FAILURE_RETRY(
+        read(fletch_config_fd, config_string + offset, length - offset));
+    if (bytes < 0) {
+      Die("%s: error reading from child process: %s",
+          program_name, strerror(errno));
+    } else if (bytes == 0) {
+      break;  // End of file.
     }
-    size_t read = fread(config_string, sizeof(char), length - 1, file);
-    config_string[read] = '\0';
-  } else {
-    printf("Creating config file: %s\n", fletch_config_file);
+    offset += bytes;
   }
+  config_string[offset] = '\0';
 }
 
 static int ComputeDriverPort() {
-  char buffer[1024];
-  char* port_string = getenv(driver_env_name);
+  char port_string[1024];
 
-  const char* what = "Value of environment variable";
-  const char* who = driver_env_name;
+  const char* what = "Contents of file";
+  const char* who = fletch_config_file;
 
-  if (port_string == NULL) {
-    buffer[0] = '\0';
-    ReadDriverConfig(buffer, sizeof(buffer));
-    if (buffer[0] == '\0') return -1;
-    port_string = buffer;
-    what = "Contents of file";
-    who = fletch_config_file;
-  }
+  port_string[0] = '\0';
+  ReadDriverConfig(port_string, sizeof(port_string));
+  if (port_string[0] == '\0') return -1;
 
   // Socket ports are in the range 0..65k.
   size_t max_length = 5;
@@ -222,6 +302,12 @@ static int ComputeDriverPort() {
 }
 
 static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
+  char* dart_vm_env = getenv(dart_vm_env_name);
+  if (dart_vm_env != NULL) {
+    StrCpy(buffer, buffer_length, dart_vm_env, strlen(dart_vm_env) + 1);
+    return;
+  }
+
   // TODO(ahe): Fix lint problem: Do not use variable-length arrays.
   char resolved[buffer_length];  // NOLINT
   GetPathOfExecutable(buffer, buffer_length);
@@ -229,16 +315,48 @@ static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
     Die("%s: realpath of '%s' failed: %s", program_name, buffer,
         strerror(errno));
   }
+  // TODO(ahe): Use StrCat or StrCpy instead.
   strncpy(buffer, resolved, buffer_length);
   ParentDir(buffer);
   ParentDir(buffer);
   ParentDir(buffer);
   ParentDir(buffer);
   size_t length = strlen(buffer);
+  // TODO(ahe): Use StrCat or StrCpy instead.
   strncpy(buffer + length, dart_vm_name, buffer_length - length);
 }
 
-static int StartFletchDriverServer() {
+// Flush all open streams (FILE objects). This is needed before forking
+// (otherwise, buffered data will get duplicated in the children leading to
+// duplicated output). It is also needed before using file descriptors, as I/O
+// based on file descriptors bypass any buffering in streams.
+void FlushAllStreams() {
+  if (fflush(NULL) != 0) {
+    Die("%s: fflush failed: %s", program_name, strerror(errno));
+  }
+}
+
+pid_t Fork() {
+  FlushAllStreams();
+
+  pid_t pid = fork();
+  if (pid == -1) {
+    Die("%s: fork failed: %s", program_name, strerror(errno));
+  }
+  return pid;
+}
+
+static int WaitForDaemonHandshake(
+    pid_t pid,
+    int parent_stdout,
+    int parent_stderr);
+
+static void ExecDaemon(
+    int child_stdout,
+    int child_stderr,
+    const char** argv);
+
+static int StartDaemon() {
   const char* argv[6];
 
   char vm_path[MAXPATHLEN + 1];
@@ -250,6 +368,13 @@ static int StartFletchDriverServer() {
   argv[3] = "package:fletchc/src/driver.dart";
   argv[4] = fletch_config_file;
   argv[5] = NULL;
+
+  printf("Starting");
+  for (int i = 0; argv[i] != NULL; i++) {
+    printf(" '%s'", argv[i]);
+  }
+  printf("\n");
+  fflush(stdout);
 
   int file_descriptors[2];
   if (pipe(file_descriptors) != 0) {
@@ -264,50 +389,96 @@ static int StartFletchDriverServer() {
   int parent_stderr = file_descriptors[0];
   int child_stderr = file_descriptors[1];
 
-  pid_t pid = fork();
+  pid_t pid = Fork();
   if (pid == 0) {
     // In child.
-    close(parent_stdout);
-    close(parent_stderr);
-    fclose(stdin);
+    Close(parent_stdout);
+    Close(parent_stderr);
+    Close(fletch_config_fd);
+    ExecDaemon(child_stdout, child_stderr, argv);
+    UNREACHABLE();
+    return -1;
+  } else {
+    Close(child_stdout);
+    Close(child_stderr);
+    return WaitForDaemonHandshake(pid, parent_stdout, parent_stderr);
+  }
+}
 
-    // Create an indepent processs.
-    pid = fork();
-    if (pid < 0) {
-      Die("%s: fork failed: %s", program_name, strerror(errno));
-    }
-    if (pid > 0) {
+static void NewSession() {
+  pid_t sid = setsid();
+  if (sid < 0) {
+    Die("%s: setsid failed: %s", program_name, strerror(errno));
+  }
+}
+
+static void Dup2(int source, int destination) {
+  if (TEMP_FAILURE_RETRY(dup2(source, destination)) == -1) {
+    Die("%s: dup2 failed: %s", program_name, strerror(errno));
+  }
+}
+
+static void ExecDaemon(
+    int child_stdout,
+    int child_stderr,
+    const char** argv) {
+  {  // TODO(ahe): Remove extra indentation and inline this block.
+    Close(STDOUT_FILENO);
+
+    // Calling fork one more time to create an indepent processs. This prevents
+    // zombie processes, and ensures the server can continue running in the
+    // background independently of the parent process.
+    if (Fork() > 0) {
+      // This process exits and leaves the new child as an independent process.
       exit(0);
     }
 
     // Create a new session (to avoid getting killed by Ctrl-C).
-    pid_t sid = setsid();
-    if (sid < 0) {
-      Die("%s: setsid failed: %s", program_name, strerror(errno));
-    }
+    NewSession();
 
     // This is the child process that will exec the persistent server. We don't
     // want this server to be associated with the current terminal, so we must
-    // close stdin (handled above), stdout, and stderr.
-    fflush(stdout);
-    fflush(stderr);
+    // close stdin (handled above), stdout, and stderr. This is accomplished by
+    // redirecting stdout and stderr to the pipes to the parent process.
+    Dup2(child_stdout, STDOUT_FILENO);  // Closes stdout.
+    Dup2(child_stderr, STDERR_FILENO);  // Closes stderr.
+    Close(child_stdout);
+    Close(child_stderr);
 
-    // Now redirect stdout and stderr to the pipes to the parent process.
-    dup2(child_stdout, STDOUT_FILENO);  // Closes stdout.
-    dup2(child_stderr, STDERR_FILENO);  // Closes stderr.
-    close(child_stdout);
-    close(child_stderr);
+    execv(argv[0], const_cast<char**>(argv));
+    Die("%s: exec '%s' failed: %s", program_name, argv[0], strerror(errno));
+  }  // TODO(ahe): Remove extra indentation and inline this block.
+}
 
-    execv(vm_path, const_cast<char**>(argv));
-    Die("%s: exec '%s' failed: %s", program_name, vm_path, strerror(errno));
-  } else {
-    // In parent.
-    if (pid == -1) {
-      Die("%s: fork failed: %s", program_name, strerror(errno));
-    }
-    close(child_stdout);
-    close(child_stderr);
+static ssize_t Read(int fd, char* buffer, size_t buffer_length) {
+  ssize_t bytes_read =
+      TEMP_FAILURE_RETRY(read(fd, buffer, buffer_length));
+  if (bytes_read < 0) {
+    Die("%s: read failed: %s", program_name, strerror(errno));
+  }
+  return bytes_read;
+}
 
+// Forwards data on file descriptor "from" to "to" using the buffer. Errors are
+// fatal. Returns true if "from" was closed.
+static bool ForwardWithBuffer(
+    int from,
+    int to,
+    char* buffer,
+    ssize_t* buffer_length) {
+  ssize_t bytes_read = Read(from, buffer, *buffer_length);
+  *buffer_length = bytes_read;
+  if (bytes_read == 0) return true;
+  FlushAllStreams();
+  WriteFully(to, reinterpret_cast<uint8*>(buffer), bytes_read);
+  return false;
+}
+
+static int WaitForDaemonHandshake(
+    pid_t pid,
+    int parent_stdout,
+    int parent_stderr) {
+  {  // TODO(ahe): Remove extra indentation and inline this block.
     int status;
     waitpid(pid, &status, 0);
     if (!WIFEXITED(status)) {
@@ -319,24 +490,63 @@ static int StartFletchDriverServer() {
           program_name, status);
     }
 
-    // TODO(ahe): Use select to empty parent_stdout and parent_stderr until a
-    // port number has been successfully read.
-    char buffer[10];
-    ssize_t bytes_read =
-      TEMP_FAILURE_RETRY(read(parent_stdout, buffer, sizeof(buffer) - 1));
-    if (bytes_read < 0) {
-      Die("%s: error reading from child process: %s",
-          program_name, strerror(errno));
+    char stdout_buffer[4096];
+    stdout_buffer[0] = '\0';
+    bool stdout_is_closed = false;
+    bool stderr_is_closed = false;
+    intmax_t port = -1;
+    while (!stdout_is_closed || !stderr_is_closed) {
+      char buffer[4096];
+      fd_set readfds;
+      int max_fd = 0;
+      FD_ZERO(&readfds);
+      if (!stdout_is_closed) {
+        FD_SET(parent_stdout, &readfds);
+        if (max_fd < parent_stdout) max_fd = parent_stdout;
+      }
+      if (!stderr_is_closed) {
+        FD_SET(parent_stderr, &readfds);
+        if (max_fd < parent_stderr) max_fd = parent_stderr;
+      }
+      int ready_count =
+          TEMP_FAILURE_RETRY(select(max_fd + 1, &readfds, NULL, NULL, NULL));
+      if (ready_count < 0) {
+        fprintf(stderr, "%s: select error: %s", program_name, strerror(errno));
+        break;
+      } else if (ready_count == 0) {
+        // Timeout, shouldn't happen.
+      } else {
+        if (FD_ISSET(parent_stderr, &readfds)) {
+          ssize_t bytes_read = sizeof(buffer);
+          stderr_is_closed = ForwardWithBuffer(
+              parent_stderr, STDERR_FILENO, buffer, &bytes_read);
+        }
+        if (FD_ISSET(parent_stdout, &readfds)) {
+          ssize_t bytes_read = sizeof(buffer) - 1;
+          stdout_is_closed = ForwardWithBuffer(
+              parent_stdout, STDOUT_FILENO, buffer, &bytes_read);
+          buffer[bytes_read] = '\0';
+          StrCat(stdout_buffer, sizeof(stdout_buffer), buffer, sizeof(buffer));
+          // At this point, stdout_buffer contains all the data we have
+          // received from the server process via its stdout. We're looking for
+          // a handshake which is a port number on the first line. So we look
+          // for a number followed by a newline character.
+          char *end;
+          port = strtoimax(stdout_buffer, &end, 10);
+          if (end[0] == '\n') {
+            // We got the server handshake (the port number). So break to
+            // eventually return from this function.
+            break;
+          } else {
+            port = -1;
+          }
+        }
+      }
     }
-    buffer[bytes_read] = '\0';
-    close(parent_stdout);
-    close(parent_stderr);
-    char *end;
-    intmax_t port = strtoimax(buffer, &end, 10);
-    printf("Started persistent driver process on port %ji\n", port);
+    Close(parent_stdout);
+    Close(parent_stderr);
     return port;
   }
-  return -1;
 }
 
 static int ReadInt(Socket *socket) {
@@ -419,6 +629,8 @@ static DriverConnection::Command HandleCommand(DriverConnection *connection) {
 
 static int Main(int argc, char** argv) {
   program_name = argv[0];
+  DetectConfiguration();
+  LockConfigFile();
   int port = ComputeDriverPort();
   Socket *control_socket = new Socket();
 
@@ -427,14 +639,23 @@ static int Main(int argc, char** argv) {
   }
 
   if (!control_socket->Connect("127.0.0.1", port)) {
-    port = StartFletchDriverServer();
-
     delete control_socket;
+    port = StartDaemon();
+    if (port == -1) {
+      Die(
+          "%s: Failed to start fletch server.\n"
+          "Use DART_VM environment variable to override location of Dart VM.",
+          program_name);
+    }
+    printf("Persistent process port: %ji\n", port);
     control_socket = new Socket();
     if (!control_socket->Connect("127.0.0.1", port)) {
-      Die("%s: Failed to start fletch server.", program_name);
+      Die("%s: Unable to connect to server: %s.",
+          program_name, strerror(errno));
     }
   }
+
+  UnlockConfigFile();
 
   DriverConnection* connection = new DriverConnection(control_socket);
 
@@ -448,21 +669,17 @@ static int Main(int argc, char** argv) {
     Die("%s: Failed to connect stdio.", program_name);
   }
 
-  // Ensure any previous FILE based IO is flushed, as we now start using file
-  // descriptors bypassing the FILE buffers.
-  fflush(stdout);
-  fflush(stderr);
+  FlushAllStreams();
 
   struct termios term;
   tcgetattr(STDIN_FILENO, &term);
   term.c_lflag &= ~(ICANON);
   tcsetattr(STDIN_FILENO, TCSANOW, &term);
 
-  int nfds = stdio_socket->FileDescriptor();
-  if (nfds < control_socket->FileDescriptor()) {
-    nfds = control_socket->FileDescriptor();
+  int max_fd = stdio_socket->FileDescriptor();
+  if (max_fd < control_socket->FileDescriptor()) {
+    max_fd = control_socket->FileDescriptor();
   }
-  nfds++;
   while (true) {
     fd_set readfds;
     fd_set writefds;
@@ -474,7 +691,7 @@ static int Main(int argc, char** argv) {
     FD_SET(control_socket->FileDescriptor(), &readfds);
     FD_SET(stdio_socket->FileDescriptor(), &readfds);
 
-    int ready_count = select(nfds, &readfds, &writefds, &errorfds, NULL);
+    int ready_count = select(max_fd + 1, &readfds, &writefds, &errorfds, NULL);
     if (ready_count < 0) {
       fprintf(stderr, "%s: select error: %s", program_name, strerror(errno));
       break;
