@@ -58,6 +58,7 @@ import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
     ConstructedConstantValue,
     ListConstantValue,
+    MapConstantValue,
     StringConstantValue;
 
 import 'package:compiler/src/constants/expressions.dart' show
@@ -172,6 +173,8 @@ class CompiledClass {
 class FletchBackend extends Backend {
   static const String growableListName = '_GrowableList';
   static const String constantListName = '_ConstantList';
+  static const String constantMapName = '_ConstantMap';
+  static const String linkedHashMapName = 'LinkedHashMapImpl';
   static const String noSuchMethodName = '_noSuchMethod';
   static const String noSuchMethodTrampolineName = '_noSuchMethodTrampoline';
 
@@ -233,6 +236,7 @@ class FletchBackend extends Backend {
   ClassElement smiClass;
   ClassElement mintClass;
   ClassElement growableListClass;
+  ClassElement linkedHashMapClass;
 
   FletchBackend(FletchCompiler compiler)
       : this.context = compiler.context,
@@ -349,17 +353,19 @@ class FletchBackend extends Backend {
     stringClass = loadBuiltinClass("String", fletchSystemLibrary).element;
     // TODO(ahe): Register _ConstantList through ResolutionCallbacks.
     loadBuiltinClass(constantListName, fletchSystemLibrary);
+    loadBuiltinClass(constantMapName, fletchSystemLibrary);
     loadBuiltinClass("double", fletchSystemLibrary);
     loadBuiltinClass("Null", compiler.coreLibrary);
     loadBuiltinClass("bool", compiler.coreLibrary);
 
     growableListClass =
         loadClass(growableListName, fletchSystemLibrary).element;
+    linkedHashMapClass =
+        loadClass(linkedHashMapName, fletchSystemLibrary).element;
     // Register list constructors to world.
     // TODO(ahe): Register growableListClass through ResolutionCallbacks.
-    for (ConstructorElement constructor in growableListClass.constructors) {
-      world.registerStaticUse(constructor);
-    }
+    growableListClass.constructors.forEach(world.registerStaticUse);
+    linkedHashMapClass.constructors.forEach(world.registerStaticUse);
 
     // TODO(ajohnsen): Remove? String interpolation does not enqueue '+'.
     // Investigate what else it may enqueue, could be StringBuilder, and then
@@ -747,6 +753,14 @@ class FletchBackend extends Backend {
     changes++;
 
     context.compiledConstants.forEach((constant, id) {
+      void addList(List<ConstantValue> list) {
+        for (ConstantValue entry in list) {
+          int entryId = context.compiledConstants[entry];
+          commands.add(new PushFromMap(MapId.constants, entryId));
+        }
+        commands.add(new PushConstantList(list.length));
+      }
+
       if (constant.isInt) {
         commands.add(new PushNewInteger(constant.primitiveValue));
       } else if (constant.isDouble) {
@@ -762,11 +776,12 @@ class FletchBackend extends Backend {
             new PushNewString(constant.primitiveValue.slowToString()));
       } else if (constant.isList) {
         ListConstantValue value = constant;
-        for (ConstantValue entry in value.entries) {
-          int entryId = context.compiledConstants[entry];
-          commands.add(new PushFromMap(MapId.constants, entryId));
-        }
-        commands.add(new PushConstantList(value.length));
+        addList(constant.entries);
+      } else if (constant.isMap) {
+        MapConstantValue value = constant;
+        addList(value.keys);
+        addList(value.values);
+        commands.add(new PushConstantMap(value.length * 2));
       } else if (constant.isConstructedObject) {
         ConstructedConstantValue value = constant;
         ClassElement classElement = value.type.element;
@@ -881,9 +896,7 @@ class FletchBackend extends Backend {
     return element;
   }
 
-  int compileLazyFieldInitializer(FieldElement field,
-                                  TreeElements elements,
-                                  Registry registry) {
+  int compileLazyFieldInitializer(FieldElement field, Registry registry) {
     int index = context.getStaticFieldIndex(field, null);
 
     if (field.initializer == null) return index;
@@ -892,6 +905,8 @@ class FletchBackend extends Backend {
       CompiledFunction compiledFunction = new CompiledFunction.parameterStub(
           nextMethodId++,
           0);
+
+      TreeElements elements = field.resolvedAst.elements;
 
       ClosureEnvironment closureEnvironment = createClosureEnvironment(
           field,
@@ -916,8 +931,8 @@ class FletchBackend extends Backend {
   }
 
   int compileConstructor(ConstructorElement constructor,
-                         TreeElements elements,
                          Registry registry) {
+    TreeElements elements = constructor.resolvedAst.elements;
     // TODO(ajohnsen): Move out to seperate file, and visit super
     // constructors as well.
     if (constructorIds.containsKey(constructor)) {

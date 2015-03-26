@@ -155,6 +155,19 @@ class PushConstantList extends Command {
   }
 }
 
+class PushConstantMap extends Command {
+  final int entries;
+
+  const PushConstantMap(this.entries)
+      : super(CommandCode.PushConstantMap);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(entries)
+        ..sendOn(sink, code);
+  }
+}
+
 class Generic extends Command {
   final List<int> payload;
 

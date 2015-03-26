@@ -34,6 +34,8 @@ import 'compiled_function.dart' show
 
 import 'closure_environment.dart';
 
+import 'lazy_field_initializer_codegen.dart';
+
 import 'codegen_visitor.dart';
 
 class ConstructorCodegen extends CodegenVisitor {
@@ -42,8 +44,6 @@ class ConstructorCodegen extends CodegenVisitor {
   final Map<FieldElement, LocalValue> fieldScope = <FieldElement, LocalValue>{};
 
   final List<ConstructorElement> constructors = <ConstructorElement>[];
-
-  TreeElements fieldElements;
 
   ConstructorCodegen(CompiledFunction compiledFunction,
                      FletchContext context,
@@ -58,13 +58,6 @@ class ConstructorCodegen extends CodegenVisitor {
   ConstructorElement get constructor => element;
 
   BytecodeBuilder get builder => compiledFunction.builder;
-
-  TreeElements get elements {
-    // When visiting field initializers, the 'elements' scope is not that of the
-    // constructor, but that of the field.
-    if (fieldElements != null) return fieldElements;
-    return super.elements;
-  }
 
   void compile() {
     // Push all initial field values (including super-classes).
@@ -219,9 +212,22 @@ class ConstructorCodegen extends CodegenVisitor {
       if (initializer == null) {
         builder.loadLiteralNull();
       } else {
-        fieldElements = field.memberContext.resolvedAst.elements;
-        visitForValue(initializer);
-        fieldElements = null;
+        TreeElements elements = field.resolvedAst.elements;
+
+        // Create a LazyFieldInitializerCodegen for compiling the initializer.
+        // Note that we reuse the compiledFunction, to inline it into the
+        // constructor.
+        LazyFieldInitializerCodegen codegen = new LazyFieldInitializerCodegen(
+            compiledFunction,
+            context,
+            elements,
+            registry,
+            context.backend.createClosureEnvironment(field, elements),
+            field);
+
+        // We only want the value of the actual initializer, not the usual
+        // 'body'.
+        codegen.visitForValue(initializer);
       }
     });
   }

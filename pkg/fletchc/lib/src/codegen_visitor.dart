@@ -332,7 +332,7 @@ abstract class CodegenVisitor
             } else {
               int constId = allocateConstantFromNode(
                   initializer,
-                  elements: parameter.memberContext.resolvedAst.elements);
+                  elements: parameter.resolvedAst.elements);
               builder.loadConst(constId);
             }
           } else {
@@ -814,7 +814,6 @@ abstract class CodegenVisitor
     } else {
       int index = context.backend.compileLazyFieldInitializer(
           element,
-          elements,
           registry);
       if (element.initializer != null) {
         builder.loadStaticInit(index);
@@ -943,12 +942,13 @@ abstract class CodegenVisitor
     if (node.isConst) {
       int constId = allocateConstantFromNode(node);
       builder.loadConst(constId);
+      applyVisitState();
       return;
     }
-    ClassElement growableClass = context.backend.growableListClass;
-    ConstructorElement constructor = growableClass.lookupDefaultConstructor();
+    ClassElement literalClass = context.backend.growableListClass;
+    ConstructorElement constructor = literalClass.lookupDefaultConstructor();
     if (constructor == null) {
-      internalError(growableClass, "Failed to lookup default list constructor");
+      internalError(node, "Failed to lookup default list constructor");
     }
     // Call with 0 arguments, as we call the default constructor.
     callConstructor(constructor, 0);
@@ -959,6 +959,39 @@ abstract class CodegenVisitor
       invokeMethod(add);
       builder.pop();
     }
+    applyVisitState();
+  }
+
+  void visitLiteralMap(LiteralMap node) {
+    if (node.isConst) {
+      int constId = allocateConstantFromNode(node);
+      builder.loadConst(constId);
+      applyVisitState();
+      return;
+    }
+    ClassElement literalClass = context.backend.linkedHashMapClass;
+    ConstructorElement constructor = literalClass.lookupDefaultConstructor();
+    if (constructor == null) {
+      internalError(literalClass,
+                    "Failed to lookup default list constructor");
+      return;
+    }
+    // Call with 0 arguments, as we call the default constructor.
+    callConstructor(constructor, 0);
+    Selector selector = new Selector.indexSet();
+    for (Node element in node.entries) {
+      builder.dup();
+      visitForValue(element);
+      invokeMethod(selector);
+      builder.pop();
+    }
+    applyVisitState();
+  }
+
+  void visitLiteralMapEntry(LiteralMapEntry node) {
+    assert(visitState == VisitState.Value);
+    visitForValue(node.key);
+    visitForValue(node.value);
   }
 
   void visitLiteralString(LiteralString node) {
@@ -1241,7 +1274,6 @@ abstract class CodegenVisitor
     // TODO(ajohnsen): Use staticFunctionCall.
     int constructorId = context.backend.compileConstructor(
         constructor,
-        elements,
         registry);
     int constId = compiledFunction.allocateConstantFromFunction(constructorId);
     registry.registerStaticInvocation(constructor);
@@ -1254,9 +1286,7 @@ abstract class CodegenVisitor
     ConstructorElement constructor =
         elements[node.send].declaration.effectiveTarget.declaration;
     if (node.isConst) {
-      int constId = allocateConstantFromNode(
-          node,
-          elements: element.memberContext.resolvedAst.elements);
+      int constId = allocateConstantFromNode(node);
       builder.loadConst(constId);
     } else {
       NodeList arguments = node.send.argumentsNode;

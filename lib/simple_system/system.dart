@@ -20,6 +20,7 @@ part 'double.dart';
 part 'integer.dart';
 part 'linked_hash_map.dart';
 part 'list.dart';
+part 'map.dart';
 part 'string.dart';
 
 const native = "native";

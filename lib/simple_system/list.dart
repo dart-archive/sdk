@@ -22,6 +22,15 @@ class _ConstantList<E> {
 
   bool get isNotEmpty => length != 0;
 
+  int indexOf(E element, [int start = 0]) {
+    if (start >= length) return -1;
+    if (start < 0) start = 0;
+    for (int i = start; i < length; i++) {
+      if (this[i] == element) return i;
+    }
+    return -1;
+  }
+
   @native external E operator[](int index);
 
   @native external static _ConstantList _new(int length);
@@ -115,5 +124,25 @@ class _GrowableList<E> extends IterableBase<E> {
     }
     _length = length;
     list[length] = null;
+  }
+}
+
+class _ListIterator<E> implements Iterator<E> {
+  final List _list;
+
+  int _index = -1;
+  E _current;
+
+  _ListIterator(this._list);
+
+  E get current => _current;
+
+  bool moveNext() {
+    if (++_index < _list.length) {
+      _current = _list[_index];
+      return true;
+    }
+    _current = null;
+    return false;
   }
 }
