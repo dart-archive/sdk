@@ -15,6 +15,19 @@ const patch = "patch";
         isValidKey != null) {
       throw new UnsupportedError("LinkedHashMap arguments are not implemented");
     }
-    return new fletch.LinkedHashMapImpl();
+    return new fletch.LinkedHashMapImpl<K, V>();
+  }
+}
+
+@patch class LinkedHashSet<E> {
+  @patch factory LinkedHashSet({ bool equals(E key1, E key2),
+                                 int hashCode(E key),
+                                 bool isValidKey(potentialKey) }) {
+    if (equals != null ||
+        hashCode != null ||
+        isValidKey != null) {
+      throw new UnsupportedError("LinkedHashMap arguments are not implemented");
+    }
+    return new fletch.LinkedHashSetImpl<E>();
   }
 }
