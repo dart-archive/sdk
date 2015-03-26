@@ -99,6 +99,10 @@ class ProcessStepCommand extends Command {
   ProcessStepCommand() : super(Opcode.ProcessStep, const[]);
 }
 
+class ProcessStepOverCommand extends Command {
+  ProcessStepOverCommand() : super(Opcode.ProcessStepOver, const []);
+}
+
 class ProcessContinueCommand extends Command {
   ProcessContinueCommand() : super(Opcode.ProcessContinue, const[]);
 }

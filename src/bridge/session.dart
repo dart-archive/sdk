@@ -233,7 +233,7 @@ class Session {
     }
     new ProcessDeleteBreakpointCommand(id).writeTo(_vmSocket);
     Command response = await nextUserResponseCommand();
-    assert(response.opcode == Opcode.DeleteBreakpoint);
+    assert(response.opcode == Opcode.ProcessDeleteBreakpoint);
     print("deleted breakpoint: ${breakpoints[id]}");
     breakpoints.remove(id);
   }
@@ -251,6 +251,11 @@ class Session {
 
   Future step() async {
     new ProcessStepCommand().writeTo(_vmSocket);
+    await handleProcessStop();
+  }
+
+  Future stepOver() async {
+    new ProcessStepOverCommand().writeTo(_vmSocket);
     await handleProcessStop();
   }
 

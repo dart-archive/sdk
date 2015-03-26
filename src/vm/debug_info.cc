@@ -9,12 +9,35 @@
 
 namespace fletch {
 
-Breakpoint::Breakpoint(
-    Function* function, int bytecode_index, int id, bool is_one_shot)
+Breakpoint::Breakpoint(Function* function,
+                       int bytecode_index,
+                       int id,
+                       bool is_one_shot)
     : function_(function),
       bytecode_index_(bytecode_index),
       id_(id),
-      is_one_shot_(is_one_shot) { }
+      is_one_shot_(is_one_shot),
+      coroutine_(NULL),
+      stack_height_(0) { }
+
+Breakpoint::Breakpoint(Function* function,
+                       int bytecode_index,
+                       int id,
+                       bool is_one_shot,
+                       Coroutine* coroutine,
+                       int stack_height)
+    : function_(function),
+      bytecode_index_(bytecode_index),
+      id_(id),
+      is_one_shot_(is_one_shot),
+      coroutine_(coroutine),
+      stack_height_(stack_height) { }
+
+void Breakpoint::VisitPointers(PointerVisitor* visitor) {
+  if (coroutine_ != NULL) {
+    visitor->Visit(reinterpret_cast<Object**>(&coroutine_));
+  }
+}
 
 void Breakpoint::VisitProgramPointers(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&function_));
@@ -25,13 +48,45 @@ DebugInfo::DebugInfo()
       is_at_breakpoint_(false),
       next_breakpoint_id_(0) { }
 
-bool DebugInfo::ShouldBreak(uint8_t* bcp) {
+bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
   if (is_stepping_) return true;
-  return breakpoints_.find(bcp) != breakpoints_.end();
+  BreakpointMap::const_iterator it = breakpoints_.find(bcp);
+  if (it != breakpoints_.end()) {
+    const Breakpoint& breakpoint = it->second;
+    Stack* breakpoint_stack = breakpoint.stack();
+    if (breakpoint_stack != NULL) {
+      // Step-over breakpoint that only matches if the stack height
+      // is correct.
+      Object** expected_sp =
+          breakpoint_stack->Pointer(0) + breakpoint.stack_height();
+      ASSERT(expected_sp >= sp);
+      if (expected_sp != sp) return false;
+    }
+    if (breakpoint.is_one_shot()) DeleteBreakpoint(breakpoint.id());
+    return true;
+  }
+  return false;
 }
 
 int DebugInfo::SetBreakpoint(Function* function, int bytecode_index) {
   Breakpoint breakpoint(function, bytecode_index, next_breakpoint_id_++, false);
+  uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
+  BreakpointMap::const_iterator it = breakpoints_.find(bcp);
+  if (it != breakpoints_.end()) return it->second.id();
+  breakpoints_.insert({bcp, breakpoint});
+  return breakpoint.id();
+}
+
+int DebugInfo::SetStepOverBreakpoint(Function* function,
+                                     int bytecode_index,
+                                     Coroutine* coroutine,
+                                     int stack_height) {
+  Breakpoint breakpoint(function,
+                        bytecode_index,
+                        next_breakpoint_id_++,
+                        true,
+                        coroutine,
+                        stack_height);
   uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
   BreakpointMap::const_iterator it = breakpoints_.find(bcp);
   if (it != breakpoints_.end()) return it->second.id();
@@ -50,6 +105,14 @@ bool DebugInfo::DeleteBreakpoint(int id) {
     return true;
   }
   return false;
+}
+
+void DebugInfo::VisitPointers(PointerVisitor* visitor) {
+  BreakpointMap::iterator it = breakpoints_.begin();
+  BreakpointMap::iterator end = breakpoints_.end();
+  for (; it != end; ++it) {
+    it->second.VisitPointers(visitor);
+  }
 }
 
 void DebugInfo::VisitProgramPointers(PointerVisitor* visitor) {

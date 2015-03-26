@@ -135,6 +135,13 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kProcessStepOver: {
+        Scheduler* scheduler = program()->scheduler();
+        process_->PrepareStepOver();
+        scheduler->ProcessContinue(process_);
+        break;
+      }
+
       case Connection::kProcessContinue: {
         Scheduler* scheduler = program()->scheduler();
         scheduler->ProcessContinue(process_);

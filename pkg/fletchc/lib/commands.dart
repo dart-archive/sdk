@@ -404,6 +404,7 @@ enum CommandCode {
   ProcessSetBreakpoint,
   ProcessDeleteBreakpoint,
   ProcessStep,
+  ProcessStepOver,
   ProcessContinue,
   ProcessBacktrace,
   ProcessBreakpoint,

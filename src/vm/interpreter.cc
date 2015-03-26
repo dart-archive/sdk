@@ -105,6 +105,7 @@ class State {
 
  protected:
   uint8* bcp() { return bcp_; }
+  Object** sp() { return sp_; }
 
  private:
   Process* const process_;
@@ -815,7 +816,7 @@ void Engine::ValidateStack() {
 bool Engine::ShouldBreak() {
   DebugInfo* debug_info = process()->debug_info();
   if (debug_info != NULL) {
-    bool should_break = debug_info->ShouldBreak(bcp());
+    bool should_break = debug_info->ShouldBreak(bcp(), sp());
     if (should_break) SaveState();
     return should_break;
   }

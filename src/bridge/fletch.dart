@@ -18,7 +18,8 @@ Commands:
   'b <method name> <bytecode index>'    set breakpoint
   'd <breakpoint id>'                   delete breakpoint
   'lb'                                  list breakpoints
-  's'                                   step one bytecode in the process
+  's'                                   step bytecode
+  'so'                                  step over
   'c'                                   continue execution
   'bt'                                  backtrace
   'bt <n>'                              backtrace only expanding frame n
@@ -97,6 +98,9 @@ class InputHandler {
         break;
       case "s":
         await session.step();
+        break;
+      case "so":
+        await session.stepOver();
         break;
       case "c":
         await session.cont();

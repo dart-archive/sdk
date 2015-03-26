@@ -297,6 +297,7 @@ void Process::CollectGarbage() {
   ScavengeVisitor visitor(heap_.space(), to);
   visitor.Visit(reinterpret_cast<Object**>(&statics_));
   visitor.Visit(reinterpret_cast<Object**>(&coroutine_));
+  if (debug_info_ != NULL) debug_info_->VisitPointers(&visitor);
   to->CompleteScavenge(&visitor);
   WeakPointer::Process(&weak_pointers_);
   set_ports(Port::CleanupPorts(ports()));
@@ -469,6 +470,82 @@ void Process::DetachDebugger() {
   ASSERT(debug_info_ != NULL);
   delete debug_info_;
   debug_info_ = NULL;
+}
+
+void Process::PrepareStepOver() {
+  Object** pushed_bcp_address = stack()->Pointer(stack()->top());
+  uint8_t* current_bcp = reinterpret_cast<uint8_t*>(*pushed_bcp_address);
+  Object** stack_top = pushed_bcp_address - 1;
+  Opcode opcode = static_cast<Opcode>(*current_bcp);
+
+  // TODO(ager): We should share this code with the stack walker that also
+  // needs to know the stack diff for each bytecode.
+  int stack_diff = 0;
+  switch (opcode) {
+    // For invoke bytecodes we set a one-shot breakpoint for the next bytecode
+    // with the expected stack height on return.
+    case Opcode::kInvokeMethod:
+    case Opcode::kInvokeMethodVtable: {
+      int selector = Utils::ReadInt32(current_bcp + 1);
+      int arity = Selector::ArityField::decode(selector);
+      stack_diff = -arity;
+      break;
+    }
+    case Opcode::kInvokeMethodFast: {
+      int index = Utils::ReadInt32(current_bcp + 1);
+      Array* table = program()->dispatch_table();
+      int selector = Smi::cast(table->get(index + 1))->value();
+      int arity = Selector::ArityField::decode(selector);
+      stack_diff = -arity;
+      break;
+    }
+    case Opcode::kInvokeStatic:
+    case Opcode::kInvokeFactory: {
+      int method = Utils::ReadInt32(current_bcp + 1);
+      Function* function = program()->static_method_at(method);
+      stack_diff = 1 - function->arity();
+      break;
+    }
+    case Opcode::kInvokeStaticUnfold:
+    case Opcode::kInvokeFactoryUnfold: {
+      Function* function =
+          Function::cast(Function::ConstantForBytecode(current_bcp));
+      stack_diff = 1 - function->arity();
+      break;
+    }
+    case Opcode::kInvokeEq:
+    case Opcode::kInvokeLt:
+    case Opcode::kInvokeLe:
+    case Opcode::kInvokeGt:
+    case Opcode::kInvokeGe:
+    case Opcode::kInvokeAdd:
+    case Opcode::kInvokeSub:
+    case Opcode::kInvokeMod:
+    case Opcode::kInvokeMul:
+    case Opcode::kInvokeTruncDiv:
+    case Opcode::kInvokeBitNot:
+    case Opcode::kInvokeBitAnd:
+    case Opcode::kInvokeBitOr:
+    case Opcode::kInvokeBitXor:
+    case Opcode::kInvokeBitShr:
+    case Opcode::kInvokeBitShl:
+      stack_diff = Bytecode::StackDiff(opcode);
+      break;
+    default:
+      // For any other bytecode step over is the same as step.
+      debug_info_->set_is_stepping(true);
+      return;
+  }
+
+  Object** expected_sp = stack_top + stack_diff;
+  Function* function = Function::FromBytecodePointer(current_bcp);
+  int stack_height = expected_sp - stack()->Pointer(0);
+  int bytecode_index =
+      current_bcp + Bytecode::Size(opcode) - function->bytecode_address_for(0);
+  debug_info_->SetStepOverBreakpoint(function,
+                                     bytecode_index,
+                                     coroutine_,
+                                     stack_height);
 }
 
 void Process::CookStacks(int number_of_stacks) {
