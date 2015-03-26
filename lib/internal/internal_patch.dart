@@ -9,3 +9,8 @@ const patch = "patch";
 @patch void printToConsole(String line) {
   printString(line);
 }
+
+@patch class Symbol {
+  // TODO(ajohnsen): Decide what to do with 'name'.
+  @patch const Symbol(String name) : _name = name;
+}

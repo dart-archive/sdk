@@ -18,6 +18,8 @@ class _ConstantList<E> {
 
   @native external int get length;
 
+  Iterator<E> get iterator => new _ListIterator<E>(this);
+
   bool get isEmpty => length == 0;
 
   bool get isNotEmpty => length != 0;
@@ -58,7 +60,7 @@ class _GrowableList<E> extends IterableBase<E> {
 
   bool get isNotEmpty => _length != 0;
 
-  Iterator<E> get iterator => null;
+  Iterator<E> get iterator => new _ListIterator<E>(this);
 
   void add(E value) {
     _FixedList<E> list = _list;

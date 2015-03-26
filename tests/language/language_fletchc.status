@@ -229,7 +229,6 @@ closure_type_test/01: Fail
 closure_type_test/none: Fail
 closure_type_variable_test: Fail
 closure_with_super_field_test: Fail
-closure_with_super_send_test: Fail
 closures_initializer2_test: Crash
 closures_initializer_test: Fail
 comparison_test: Fail
@@ -540,7 +539,6 @@ field_override3_test/03: MissingCompileTimeError
 field_override4_test/02: MissingCompileTimeError
 field_test: Crash
 final_field_initialization_order_test: Fail
-final_for_in_variable_test/none: Fail
 final_is_not_const_test/01: MissingCompileTimeError
 final_syntax_test/01: MissingCompileTimeError
 final_syntax_test/02: MissingCompileTimeError
@@ -569,9 +567,7 @@ fixed_type_variable_test/04: Fail
 fixed_type_variable_test/05: Fail
 fixed_type_variable_test/06: Fail
 for2_test: Crash
-for_in2_test: Fail
-for_in_side_effects_test: Fail
-for_in_test: Fail
+for_in2_test: Crash
 forwarding_factory_constructor_default_values_test: Fail
 full_stacktrace1_test: Fail
 full_stacktrace2_test: Fail
@@ -768,7 +764,6 @@ getters_setters_type2_test: Fail
 getters_setters_type3_test: Fail
 getters_setters_type_test/01: Fail
 getters_setters_type_test/none: Fail
-hash_map_null_key_foreach_test: Fail
 hello_script_test: Fail
 identical_closure2_test: Fail
 identical_closure_test: Fail
@@ -841,11 +836,9 @@ is_malformed_type_test/99: Fail
 is_nan_test: Fail
 is_not_class2_test: Fail
 isnot_malformed_type_test: Fail
-issue10204_test: Fail
 issue10561_test: Crash
 issue10581_test: Fail
 issue10747_test: Fail
-issue10783_test: Fail
 issue12023_test: Fail
 issue12284_test: Crash
 issue12336_test: Fail
@@ -862,7 +855,6 @@ issue18628_1_test/01: Fail
 issue20476_test: Fail
 issue4157508_test: Fail
 issue7513_test: Fail
-issue9939_test: Fail
 issue9949_test: Crash
 keyword_type_expression_test/01: MissingCompileTimeError
 keyword_type_expression_test/02: Crash
@@ -949,8 +941,6 @@ map_literal7_test: Fail
 map_literal8_test: Fail
 map_literal9_test: Fail
 map_literal_syntax_test: Fail
-map_test: Fail
-megamorphic_no_such_method_test: Fail
 metadata_test: Crash
 method_binding_test: Fail
 method_invocation_test: Fail
@@ -1265,7 +1255,6 @@ regress_13494_test: Fail
 regress_14105_test: Fail
 regress_18535_test: Crash
 regress_20394_test/01: Crash
-regress_20840_test: Fail
 regress_20935_test: Fail
 regress_r24720_test: Fail
 reify_typevar_test: Crash
@@ -1510,9 +1499,7 @@ try_catch_on_syntax_test/04: MissingCompileTimeError
 try_catch_on_syntax_test/05: MissingCompileTimeError
 try_catch_on_syntax_test/06: MissingCompileTimeError
 try_catch_optimized1_test: Crash
-try_catch_optimized2_test: Fail
 try_catch_optimized3_test: Fail
-try_catch_optimized4_test: Fail
 try_catch_osr_test: Fail
 try_catch_syntax_test/01: MissingCompileTimeError
 try_catch_syntax_test/02: MissingCompileTimeError
@@ -1562,7 +1549,6 @@ type_promotion_functions_test/12: Fail
 type_promotion_functions_test/13: Fail
 type_promotion_functions_test/14: Fail
 type_promotion_functions_test/none: Fail
-type_propagation3_test: Fail
 type_propagation_in_for_update_test: Fail
 type_variable_bounds4_test/01: Crash
 type_variable_bounds4_test/none: Crash

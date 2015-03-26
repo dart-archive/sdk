@@ -1535,6 +1535,43 @@ abstract class CodegenVisitor
     builder.bind(end);
   }
 
+  void visitForIn(ForIn node) {
+    BytecodeLabel start = new BytecodeLabel();
+    BytecodeLabel end = new BytecodeLabel();
+
+    // Evalutate expression and iterator.
+    visitForValue(node.expression);
+    invokeGetter(new Selector.getter('iterator', null));
+
+    jumpInfo[node] = new JumpInfo(builder.stackSize, start, end);
+
+    builder.bind(start);
+
+    builder.dup();
+    invokeMethod(new Selector.call('moveNext', null, 0));
+    builder.branchIfFalse(end);
+
+    // Create local value and load the current element to it.
+    LocalElement local = elements[node];
+    LocalValue value = createLocalValueFor(local);
+    builder.dup();
+    invokeGetter(new Selector.getter('current', null));
+    value.initialize(builder);
+    scope[local] = value;
+
+    node.body.accept(this);
+
+    // Pop the local again.
+    builder.pop();
+
+    builder.branch(start);
+
+    builder.bind(end);
+
+    // Pop iterator.
+    builder.pop();
+  }
+
   void visitLabeledStatement(LabeledStatement node) {
     node.statement.accept(this);
   }
