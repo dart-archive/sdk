@@ -763,6 +763,21 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void visitThisInvoke(
+      Send node,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    // TODO(ajohnsen): This should not be needed.
+    selector = new Selector.callClosureFrom(selector);
+    loadThis();
+    for (Node argument in arguments) {
+      visitForValue(argument);
+    }
+    invokeMethod(selector);
+    applyVisitState();
+  }
+
   void visitDynamicPropertyGet(
       Send node,
       Node receiver,
@@ -1163,15 +1178,9 @@ abstract class CodegenVisitor
   }
 
   void handleDynamicPrefix(
-      Node receiver,
       IncDecOperator operator,
       Selector getterSelector,
       Selector setterSelector) {
-    if (receiver != null) {
-      visitForValue(receiver);
-    } else {
-      loadThis();
-    }
     builder.dup();
     invokeGetter(getterSelector);
     builder.loadLiteral(1);
@@ -1179,6 +1188,26 @@ abstract class CodegenVisitor
         operator == IncDecOperator.INC ? '+' : '-');
     invokeMethod(selector);
     invokeSetter(setterSelector);
+  }
+
+  void visitIndexPrefix(
+      SendSend node,
+      Node receiver,
+      Node index,
+      IncDecOperator operator,
+      _) {
+    visitForValue(receiver);
+    visitForValue(index);
+    // Load already evaluated receiver and index for '[]' call.
+    builder.loadLocal(1);
+    builder.loadLocal(1);
+    invokeMethod(new Selector.index());
+    builder.loadLiteral(1);
+    Selector selector = new Selector.binaryOperator(
+        operator == IncDecOperator.INC ? '+' : '-');
+    invokeMethod(selector);
+    // Use existing evaluated receiver and index for '[]=' call.
+    invokeMethod(new Selector.indexSet());
     applyVisitState();
   }
 
@@ -1188,7 +1217,9 @@ abstract class CodegenVisitor
       Selector getterSelector,
       Selector setterSelector,
       _) {
-    handleDynamicPrefix(null, operator, getterSelector, setterSelector);
+    loadThis();
+    handleDynamicPrefix(operator, getterSelector, setterSelector);
+    applyVisitState();
   }
 
   void visitThisPropertyPostfix(
@@ -1200,7 +1231,9 @@ abstract class CodegenVisitor
     // If visitState is for effect, we can ignore the return value, thus always
     // generate code for the simpler 'prefix' case.
     if (visitState == VisitState.Effect) {
-      handleDynamicPrefix(null, operator, getterSelector, setterSelector);
+      loadThis();
+      handleDynamicPrefix(operator, getterSelector, setterSelector);
+      applyVisitState();
       return;
     }
 
@@ -1226,7 +1259,9 @@ abstract class CodegenVisitor
       Selector getterSelector,
       Selector setterSelector,
       _) {
-    handleDynamicPrefix(receiver, operator, getterSelector, setterSelector);
+    visitForValue(receiver);
+    handleDynamicPrefix(operator, getterSelector, setterSelector);
+    applyVisitState();
   }
 
   void visitDynamicPropertyPostfix(
@@ -1239,7 +1274,9 @@ abstract class CodegenVisitor
     // If visitState is for effect, we can ignore the return value, thus always
     // generate code for the simpler 'prefix' case.
     if (visitState == VisitState.Effect) {
-      handleDynamicPrefix(receiver, operator, getterSelector, setterSelector);
+      visitForValue(receiver);
+      handleDynamicPrefix(operator, getterSelector, setterSelector);
+      applyVisitState();
       return;
     }
 
@@ -1688,14 +1725,6 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[errorLocalFunctionSet] isn't implemented.");
-  }
-
-  void visitThisInvoke(
-      Send node,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(node, "[visitThisInvoke] isn't implemented.");
   }
 
   void visitSuperFieldGet(
@@ -2852,16 +2881,6 @@ abstract class CodegenVisitor
       _){
     generateUnimplementedError(
         node, "[errorUndefinedBinaryExpression] isn't implemented.");
-  }
-
-  void visitIndexPrefix(
-      SendSend node,
-      Node receiver,
-      Node index,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitIndexPrefix] isn't implemented.");
   }
 
   void errorUnresolvedSuperIndex(

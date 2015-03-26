@@ -154,7 +154,6 @@ call_nonexistent_static_test/09: Fail
 call_nonexistent_static_test/10: Fail
 call_nonexistent_static_test/none: Fail
 call_operator_test: Fail
-call_this_test: Fail
 call_through_getter_test: Fail
 call_type_literal_test/01: Fail
 call_with_no_such_method_test: Crash
@@ -1182,7 +1181,6 @@ operator2_negative_test: Crash
 operator_equals_test: Fail
 operator_index_evaluation_order_test: Fail
 operator_test: Fail
-optimize_redundant_array_load_test: Fail
 optimized_constant_array_string_access_test: Fail
 optimized_isempty_test: Fail
 optimized_setter_test: Crash
