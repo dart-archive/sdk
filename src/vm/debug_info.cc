@@ -69,7 +69,7 @@ bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
 }
 
 int DebugInfo::SetBreakpoint(Function* function, int bytecode_index) {
-  Breakpoint breakpoint(function, bytecode_index, next_breakpoint_id_++, false);
+  Breakpoint breakpoint(function, bytecode_index, next_breakpoint_id(), false);
   uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
   BreakpointMap::const_iterator it = breakpoints_.find(bcp);
   if (it != breakpoints_.end()) return it->second.id();
@@ -83,7 +83,7 @@ int DebugInfo::SetStepOverBreakpoint(Function* function,
                                      int stack_height) {
   Breakpoint breakpoint(function,
                         bytecode_index,
-                        next_breakpoint_id_++,
+                        next_breakpoint_id(),
                         true,
                         coroutine,
                         stack_height);

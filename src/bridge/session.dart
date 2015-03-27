@@ -39,8 +39,7 @@ class Breakpoint {
 
 class Session {
   final CommandReader _compilerCommands;
-  final StreamIterator<Command> _userResponseVMCommands;
-  final Stream<Command> _otherVMCommands;
+  final StreamIterator<Command> _vmCommands;
   final ProgramModel _model = new ProgramModel();
   final SessionStack _stack = new SessionStack();
   final Socket _vmSocket;
@@ -51,22 +50,13 @@ class Session {
 
   Session._(this._vmSocket,
             this._compilerCommands,
-            this._userResponseVMCommands,
-            this._otherVMCommands) {
-    _otherVMCommands.listen(processVMCommand);
-  }
+            this._vmCommands) { }
 
   static Future<Session> start(Socket compilerSocket, Socket vmSocket) async {
-    var vmCommandReader = new CommandReader(vmSocket);
-    var vmCommands = vmCommandReader.broadcastStream();
-    var userResponseVMCommands = vmCommands
-        .where((command) => command.opcode != Opcode.UncaughtException);
-    var otherVMCommands = vmCommands
-        .where((command) => command.opcode == Opcode.UncaughtException);
+    var vmCommandIterator = new CommandReader(vmSocket).iterator;
     Session session = new Session._(vmSocket,
                                     new CommandReader(compilerSocket),
-                                    new StreamIterator(userResponseVMCommands),
-                                    otherVMCommands);
+                                    vmCommandIterator);
     await session.processCompilerData();
     return session;
   }
@@ -171,32 +161,28 @@ class Session {
     }
   }
 
-  Future processVMCommand(Command command) async {
-    switch (command.opcode) {
-      case Opcode.UncaughtException:
-        await backtrace(-1);
-        new ForceTerminationCommand().writeTo(_vmSocket);
-        break;
-      default:
-        throw "Unknown non-user response VM opcode ${command.opcode}";
-    }
-  }
-
-  Future nextUserResponseCommand() async {
-    var hasNext = await _userResponseVMCommands.moveNext();
+  Future nextVmCommand() async {
+    var hasNext = await _vmCommands.moveNext();
     assert(hasNext);
-    return _userResponseVMCommands.current;
+    return _vmCommands.current;
   }
 
   Future handleProcessStop() async {
     _stackTrace = null;
-    Command response = await nextUserResponseCommand();
-    if (response.opcode == Opcode.ProcessTerminated) {
-      print('### process terminated');
-      end();
-      exit(0);
-    } else {
-      assert(response.opcode == Opcode.ProcessBreakpoint);
+    Command response = await nextVmCommand();
+    switch(response.opcode) {
+      case Opcode.UncaughtException:
+        await backtrace(-1);
+        new ForceTerminationCommand().writeTo(_vmSocket);
+        break;
+      case Opcode.ProcessTerminated:
+        print('### process terminated');
+        end();
+        exit(0);
+        break;
+      default:
+        assert(response.opcode == Opcode.ProcessBreakpoint);
+        break;
     }
   }
 
@@ -216,7 +202,7 @@ class Session {
     for (int id in methodIds) {
       new PushFromMapCommand(_model.methodMapId, id).writeTo(_vmSocket);
       new ProcessSetBreakpointCommand(bytecodeIndex).writeTo(_vmSocket);
-      Command command = await nextUserResponseCommand();
+      Command command = await nextVmCommand();
       assert(command.opcode == Opcode.ProcessSetBreakpoint);
       var breakpointId = command.readInt(0);
       var breakpoint = new Breakpoint(method, bytecodeIndex, breakpointId);
@@ -226,13 +212,12 @@ class Session {
   }
 
   Future deleteBreakpoint(int id) async {
-    Breakpoint breakpoint = breakpoints[id];
     if (!breakpoints.containsKey(id)) {
       print("### invalid breakpoint id: $id");
       return;
     }
     new ProcessDeleteBreakpointCommand(id).writeTo(_vmSocket);
-    Command response = await nextUserResponseCommand();
+    Command response = await nextVmCommand();
     assert(response.opcode == Opcode.ProcessDeleteBreakpoint);
     print("deleted breakpoint: ${breakpoints[id]}");
     breakpoints.remove(id);
@@ -267,19 +252,16 @@ class Session {
   Future backtrace(int frame) async {
     if (_stackTrace == null) {
       new ProcessBacktraceCommand().writeTo(_vmSocket);
-      var backtraceResponse = await nextUserResponseCommand();
+      var backtraceResponse = await nextVmCommand();
       var frameCount = backtraceResponse.readInt(0);
       _stackTrace = new StackTrace(frameCount);
       for (int i = 0; i < _stackTrace.frames; ++i) {
-        var command = new MapLookupCommand(_model.methodMapId);
-        command.writeTo(_vmSocket);
-        command = new DropCommand(1);
-        command.writeTo(_vmSocket);
-        command = new PopIntegerCommand();
-        command.writeTo(_vmSocket);
-        var objectIdCommand = await nextUserResponseCommand();
+        new MapLookupCommand(_model.methodMapId).writeTo(_vmSocket);
+        new DropCommand(1).writeTo(_vmSocket);
+        new PopIntegerCommand().writeTo(_vmSocket);
+        var objectIdCommand = await nextVmCommand();
         var stackTraceMethodId = objectIdCommand.readInt(0);
-        var integerCommand = await nextUserResponseCommand();
+        var integerCommand = await nextVmCommand();
         var bcp = integerCommand.readInt64(0);
         var methodName = _model.methodMap[stackTraceMethodId];
         _stackTrace.addFrame(new StackFrame(methodName, bcp));

@@ -70,6 +70,8 @@ class DebugInfo {
   void UpdateBreakpoints();
 
  private:
+  int next_breakpoint_id() { return next_breakpoint_id_++; }
+
   bool is_stepping_;
   bool is_at_breakpoint_;
 
