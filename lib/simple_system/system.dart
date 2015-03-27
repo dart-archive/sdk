@@ -15,6 +15,7 @@ import 'dart:core' as core show
     String;
 
 import 'dart:collection';
+import 'dart:math';
 
 part 'double.dart';
 part 'integer.dart';
