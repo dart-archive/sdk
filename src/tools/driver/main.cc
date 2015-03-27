@@ -86,13 +86,15 @@ static void StrCpy(
   }
   size_t source_length =
     reinterpret_cast<uint8*>(source_end) - reinterpret_cast<uint8*>(source);
+  // Increment source_length to include '\0'.
+  source_length++;
 
-  if (source_length + 1 >= destination_size) {
-    Die("%s: not enough room in destination (%i) for %i + 1 bytes.",
+  if (source_length > destination_size) {
+    Die("%s: not enough room in destination (%i) for %i bytes.",
         program_name, destination_size, source_length);
   }
 
-  memcpy(destination, source, source_length + 1);
+  memcpy(destination, source, source_length);
 }
 
 static void StrCat(
@@ -108,19 +110,9 @@ static void StrCat(
     reinterpret_cast<uint8*>(destination_end) -
     reinterpret_cast<uint8*>(destination);
 
-  void* source_end = memchr(source, '\0', source_size);
-  if (source_end == NULL) {
-    Die("%s: source isn't zero-terminated.", program_name);
-  }
-  size_t source_length =
-    reinterpret_cast<uint8*>(source_end) - reinterpret_cast<uint8*>(source);
-
-  if (destination_length + source_length + 1 >= destination_size) {
-    Die("%s: not enough room in destination (%i) for %i + %i + 1 bytes.",
-        program_name, destination_size, destination_length, source_length);
-  }
-
-  memcpy(destination_end, source, source_length + 1);
+  StrCpy(
+      destination_end, destination_size - destination_length,
+      source, source_size);
 }
 
 static void Close(int fd) {
@@ -146,6 +138,7 @@ bool FileExists(const char* name) {
 }
 
 void FletchConfigFile(char *result, const char* directory) {
+  // TODO(ahe): Use StrCat or StrCpy instead.
   char* ptr = stpncpy(result, directory, MAXPATHLEN);
   if (ptr[-1] != '/') {
     ptr[0] = '/';
@@ -356,7 +349,7 @@ static void ExecDaemon(
     int child_stderr,
     const char** argv);
 
-static int StartDaemon() {
+static int StartDriverDaemon() {
   const char* argv[6];
 
   char vm_path[MAXPATHLEN + 1];
@@ -405,7 +398,7 @@ static int StartDaemon() {
   }
 }
 
-static void NewSession() {
+static void NewProcessSession() {
   pid_t sid = setsid();
   if (sid < 0) {
     Die("%s: setsid failed: %s", program_name, strerror(errno));
@@ -434,7 +427,7 @@ static void ExecDaemon(
     }
 
     // Create a new session (to avoid getting killed by Ctrl-C).
-    NewSession();
+    NewProcessSession();
 
     // This is the child process that will exec the persistent server. We don't
     // want this server to be associated with the current terminal, so we must
@@ -469,7 +462,11 @@ static bool ForwardWithBuffer(
   ssize_t bytes_read = Read(from, buffer, *buffer_length);
   *buffer_length = bytes_read;
   if (bytes_read == 0) return true;
+
+  // Flushing all streams in case one of them has buffered data for "to" file
+  // descriptor.
   FlushAllStreams();
+
   WriteFully(to, reinterpret_cast<uint8*>(buffer), bytes_read);
   return false;
 }
@@ -640,7 +637,7 @@ static int Main(int argc, char** argv) {
 
   if (!control_socket->Connect("127.0.0.1", port)) {
     delete control_socket;
-    port = StartDaemon();
+    port = StartDriverDaemon();
     if (port == -1) {
       Die(
           "%s: Failed to start fletch server.\n"
