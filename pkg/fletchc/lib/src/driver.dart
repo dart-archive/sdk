@@ -15,6 +15,7 @@ import 'dart:async' show
     Completer,
     Future,
     Stream,
+    StreamController,
     StreamIterator,
     StreamSubscription,
     Zone,
@@ -38,6 +39,8 @@ const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
 
 const Endianness commandEndianness = Endianness.LITTLE_ENDIAN;
 
+const headerSize = 5;
+
 enum DriverCommand {
   Stdin,  // Data on stdin.
   Stdout,  // Data on stdout.
@@ -49,18 +52,25 @@ enum DriverCommand {
   DriverConnectionError,  // Error in connection.
 }
 
-class StreamBuffer {
+class Command {
+  final DriverCommand code;
+  final data;
+
+  Command(this.code, this.data);
+
+  String toString() => 'Command($code, $data)';
+}
+
+class ControlStream {
   final Stream<List<int>> stream;
 
   final StreamSubscription<List<int>> subscription;
 
   final BytesBuilder builder = new BytesBuilder(copy: false);
 
-  int requestedBytes = 0;
+  final StreamController<Command> controller = new StreamController<Command>();
 
-  Completer<Uint8List> completer;
-
-  StreamBuffer(Stream<List<int>> stream)
+  ControlStream(Stream<List<int>> stream)
       : this.stream = stream,
         this.subscription = stream.listen(null) {
     subscription
@@ -69,85 +79,48 @@ class StreamBuffer {
         ..onDone(handleDone);
   }
 
+  Stream<Command> get commandStream => controller.stream;
+
   void handleData(Uint8List data) {
     // TODO(ahe): makeView(data, ...) to ensure monomorphism?
     builder.add(data);
-    if (completer != null) {
-      completeIfPossible();
+    if (builder.length < headerSize) return;
+    Uint8List list = builder.takeBytes();
+    ByteData view = new ByteData.view(list.buffer, list.offsetInBytes);
+    int length = view.getUint32(0, commandEndianness);
+    if (list.length - headerSize < length) {
+      builder.add(list);
+      return;
+    }
+    int commandCode = view.getUint8(4);
+
+    DriverCommand command = DriverCommand.values[commandCode];
+    view = new ByteData.view(list.buffer, list.offsetInBytes + headerSize);
+    switch (command) {
+      case DriverCommand.Arguments:
+        controller.add(new Command(command, decodeArgumentsCommand(view)));
+        break;
+
+      case DriverCommand.Stdin:
+        int length = view.getUint32(0, commandEndianness);
+        controller.add(new Command(command, makeView(view, 4, length)));
+        break;
+
+      default:
+        controller.addError("Command not implemented yet: $command");
+        break;
     }
   }
 
   void handleError(error, StackTrace stackTrace) {
-    Zone.ROOT.print(stringifyError(error, stackTrace));
-    exit(1);
+    controller.addError(error, stackTrace);
   }
 
   void handleDone() {
-    if (completer != null) {
-      completeIfPossible();
-    }
     List trailing = builder.takeBytes();
     if (trailing.length != 0) {
-      var error =
-          new StateError(
-              "Stream closed with trailing bytes "
-              "(requestedBytes = $requestedBytes): $trailing");
-      if (completer != null) {
-        completer.completeError(error);
-        completer = null;
-        requestedBytes = 0;
-      } else {
-        throw error;
-      }
-    }
-  }
-
-  void completeIfPossible() {
-    if (requestedBytes > builder.length) return;
-    // BytesBuilder always returns a Uint8List.
-    Uint8List list = builder.takeBytes();
-    Completer<Uint8List> currentCompleter = completer;
-    int currentRequestedBytes = requestedBytes;
-    completer = null;
-    requestedBytes = 0;
-    if (currentRequestedBytes != list.length) {
-      builder.add(
-          makeView(
-              list, currentRequestedBytes,
-              list.length - currentRequestedBytes));
-    }
-    var result = makeView(list, 0, currentRequestedBytes);
-    currentCompleter.complete(result);
-  }
-
-  Future<Uint8List> read(int length) {
-    if (completer != null) {
-      throw "Previous read not complete";
-    }
-    completer = new Completer<Uint8List>();
-    Future<Uint8List> future = completer.future;
-    requestedBytes = length;
-    completeIfPossible();
-    return future;
-  }
-
-  Future<int> readUint32([Endianness endian = Endianness.BIG_ENDIAN]) {
-    return read(4).then((Uint8List list) {
-      return new ByteData.view(list.buffer, list.offsetInBytes)
-          .getUint32(0, endian);
-    });
-  }
-
-  Future<dynamic> readCommand() async {
-    int length = await readUint32(commandEndianness);
-    Uint8List data = await read(length + 1);
-    ByteData view = new ByteData.view(data.buffer, data.offsetInBytes + 1);
-    DriverCommand command = DriverCommand.values[data[0]];
-    switch (command) {
-      case DriverCommand.Arguments:
-        return decodeArgumentsCommand(view);
-      default:
-        throw "Command not implemented yet: $command";
+      controller.addError(
+          new StateError("Stream closed with trailing bytes : $trailing"));
     }
   }
 
@@ -168,8 +141,6 @@ class StreamBuffer {
 
 class CommandSender {
   final Sink<List<int>> sink;
-
-  static const headerSize = 5;
 
   CommandSender(this.sink);
 
@@ -296,25 +267,22 @@ String stringifyError(error, StackTrace stackTrace) {
 Future handleClient(Socket controlSocket) async {
   CommandSender commandSender = new CommandSender(controlSocket);
 
-  // Start another server socket to set up sockets for stdin, stdout.
-  ServerSocket server =
-      await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
-  int port = server.port;
+  StreamIterator<Command> commandIterator = new StreamIterator<Command>(
+      new ControlStream(controlSocket).commandStream);
 
-  writeNetworkUint32(controlSocket, port);
+  await commandIterator.moveNext();
+  Command command = commandIterator.current;
+  if (command.code != DriverCommand.Arguments) {
+    print("Expected arguments from clients but got: $command");
+    controlSocket.close();
+    return;
+  }
 
-  StreamBuffer controlBuffer = new StreamBuffer(controlSocket);
-
-  List<String> arguments = await controlBuffer.readCommand();
-
-  var connectionIterator = new StreamIterator(server);
-  await connectionIterator.moveNext();
-
-  // Socket for stdin and stdout.
-  Socket stdio = handleSocketErrors(connectionIterator.current, "stdio");
-
-  // Now that we have the sockets, close the server.
-  server.close();
+  // This is argv from a C/C++ program. The first entry is the program name
+  // which isn't normally included in Dart arguments (as passed to main).
+  List<String> arguments = command.data;
+  String programName = arguments.first;
+  arguments = arguments.skip(1).toList();
 
   ZoneSpecification specification =
       new ZoneSpecification(print: (_1, _2, _3, String line) {
@@ -330,27 +298,20 @@ Future handleClient(Socket controlSocket) async {
       });
 
   int exitCode = await Zone.current.fork(specification: specification)
-      .run(() => compile(arguments.skip(1).toList(), commandSender, stdio));
-  stdio.destroy();
+      .run(() => compileAndRun(arguments, commandSender, commandIterator));
 
   commandSender.sendExitCode(exitCode);
+
+  commandIterator.cancel();
 
   await controlSocket.flush();
   controlSocket.close();
 }
 
-void writeNetworkUint32(Socket socket, int i) {
-  Uint8List list = new Uint8List(4);
-  ByteData view = new ByteData.view(list.buffer);
-  view.setUint32(0, i);
-  socket.add(list);
-}
-
-// TODO(ahe): Rename this method, it both compiles and executes the code.
-Future<int> compile(
+Future<int> compileAndRun(
     List<String> arguments,
     CommandSender commandSender,
-    Socket stdio) async {
+    StreamIterator<Command> commandIterator) async {
   List<String> options = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   FletchCompiler compiler =
@@ -387,10 +348,11 @@ Future<int> compile(
   }
   var vmProcess = await Process.start(vmPath, vmOptions);
 
-  handleSubscriptionErrors(stdio.listen(vmProcess.stdin.add), "stdin");
-  handleSubscriptionErrors(
+  readCommands(commandIterator, vmProcess.stdin);
+
+  StreamSubscription vmStdoutSubscription = handleSubscriptionErrors(
       vmProcess.stdout.listen(commandSender.sendStdoutBytes), "vm stdout");
-  handleSubscriptionErrors(
+  StreamSubscription vmStderrSubscription = handleSubscriptionErrors(
       vmProcess.stderr.listen(commandSender.sendStderrBytes), "vm stderr");
 
   bool hasValue = await connectionIterator.moveNext();
@@ -403,6 +365,11 @@ Future<int> compile(
   vmSocket.close();
 
   exitCode = await vmProcess.exitCode;
+
+  await vmProcess.stdin.close();
+  await vmStdoutSubscription.cancel();
+  await vmStderrSubscription.cancel();
+
   if (exitCode != 0) {
     print("Non-zero exit code from '$vmPath' ($exitCode).");
   }
@@ -419,4 +386,21 @@ Future<int> compile(
   }
 
   return exitCode;
+}
+
+Future<Null> readCommands(
+    StreamIterator<Command> commandIterator,
+    IOSink stdin) async {
+  while (await commandIterator.moveNext()) {
+    Command command = commandIterator.current;
+    if (command.code == DriverCommand.Stdin) {
+      if (command.data.length == 0) {
+        await stdin.close();
+      } else {
+        stdin.add(command.data);
+      }
+    } else {
+      Zone.ROOT.print("Unexpected command from client: $command");
+    }
+  }
 }

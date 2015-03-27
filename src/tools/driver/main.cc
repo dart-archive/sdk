@@ -546,22 +546,6 @@ static int WaitForDaemonHandshake(
   }
 }
 
-static int ReadInt(Socket *socket) {
-  uint32 result;
-  uint8* data = reinterpret_cast<uint8*>(&result);
-  ssize_t desired_bytes = 4;
-  while (desired_bytes > 0) {
-    ssize_t bytes_read =
-      TEMP_FAILURE_RETRY(read(socket->FileDescriptor(), data, desired_bytes));
-    if (bytes_read == -1) {
-      Die("%s: Read failed: %s", program_name, strerror(errno));
-    }
-    desired_bytes -= bytes_read;
-    data += bytes_read;
-  }
-  return static_cast<int>(ntohl(result));
-}
-
 static void WriteFully(int fd, uint8* data, ssize_t length) {
   ssize_t offset = 0;
   while (offset < length) {
@@ -595,7 +579,7 @@ static int CommandFileDescriptor(DriverConnection::Command command) {
   }
 }
 
-static DriverConnection::Command HandleCommand(DriverConnection *connection) {
+static DriverConnection::Command HandleCommand(DriverConnection* connection) {
   DriverConnection::Command command = connection->Receive();
 
   switch (command) {
@@ -656,15 +640,7 @@ static int Main(int argc, char** argv) {
 
   DriverConnection* connection = new DriverConnection(control_socket);
 
-  int io_port = ReadInt(control_socket);
-
   SendArgv(connection, argc, argv);
-
-  Socket *stdio_socket = new Socket();
-
-  if (!stdio_socket->Connect("127.0.0.1", io_port)) {
-    Die("%s: Failed to connect stdio.", program_name);
-  }
 
   FlushAllStreams();
 
@@ -673,54 +649,47 @@ static int Main(int argc, char** argv) {
   term.c_lflag &= ~(ICANON);
   tcsetattr(STDIN_FILENO, TCSANOW, &term);
 
-  int max_fd = stdio_socket->FileDescriptor();
+  int max_fd = STDIN_FILENO;
   if (max_fd < control_socket->FileDescriptor()) {
     max_fd = control_socket->FileDescriptor();
   }
+  bool stdin_closed = false;
   while (true) {
     fd_set readfds;
-    fd_set writefds;
-    fd_set errorfds;
     FD_ZERO(&readfds);
-    FD_ZERO(&writefds);
-    FD_ZERO(&errorfds);
-    FD_SET(STDIN_FILENO, &readfds);
+    if (!stdin_closed) {
+      FD_SET(STDIN_FILENO, &readfds);
+    }
     FD_SET(control_socket->FileDescriptor(), &readfds);
-    FD_SET(stdio_socket->FileDescriptor(), &readfds);
 
-    int ready_count = select(max_fd + 1, &readfds, &writefds, &errorfds, NULL);
+    int ready_count = select(max_fd + 1, &readfds, NULL, NULL, NULL);
     if (ready_count < 0) {
       fprintf(stderr, "%s: select error: %s", program_name, strerror(errno));
       break;
     } else if (ready_count == 0) {
       // Timeout, shouldn't happen.
     } else {
-      if (FD_ISSET(stdio_socket->FileDescriptor(), &readfds)) {
-        char buffer[1];
-        size_t bytes_count =
-            read(stdio_socket->FileDescriptor(), &buffer, sizeof(buffer));
-        if (bytes_count != 0) {
-          Die("%s: Unexpected data on stdio_socket", program_name);
-        }
-      }
       if (FD_ISSET(STDIN_FILENO, &readfds)) {
         uint8 buffer[4096];
-        size_t bytes_count = read(STDIN_FILENO, &buffer, sizeof(buffer));
-        do {
-          ssize_t bytes_written =
-            TEMP_FAILURE_RETRY(
-                write(stdio_socket->FileDescriptor(), &buffer, bytes_count));
-          if (bytes_written == -1) {
-            Die("%s: write to stdio_socket failed: %s",
-                program_name, strerror(errno));
+        ssize_t bytes_count =
+            TEMP_FAILURE_RETRY(read(STDIN_FILENO, &buffer, sizeof(buffer)));
+        if (bytes_count >= 0) {
+          connection->WriteBytes(buffer, bytes_count);
+          connection->Send(DriverConnection::kStdin);
+          if (bytes_count == 0) {
+            close(STDIN_FILENO);
+            stdin_closed = true;
           }
-          bytes_count -= bytes_written;
-        } while (bytes_count > 0);
+        } else if (bytes_count < 0) {
+          Die("%s: Error reading from stdin: %s",
+              program_name, strerror(errno));
+        }
       }
       if (FD_ISSET(control_socket->FileDescriptor(), &readfds)) {
         DriverConnection::Command command = HandleCommand(connection);
         if (command == DriverConnection::kDriverConnectionError) {
-          Die("%s: lost connection to persistent process: %s", strerror(errno));
+          Die("%s: lost connection to persistent process: %s",
+              program_name, strerror(errno));
         } else if (command == DriverConnection::kDriverConnectionClosed) {
           // Connection was closed.
           break;
