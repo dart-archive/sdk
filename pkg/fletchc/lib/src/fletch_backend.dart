@@ -121,7 +121,7 @@ class CompiledClass {
     // TODO(ajohnsen): Don't do this once dart2js can enqueue field getters in
     // CodegenEnqueuer.
     int fieldIndex = superclassFields;
-    element.forEachInstanceField((enclosing, field) {
+    element.implementation.forEachInstanceField((enclosing, field) {
       var getter = new Selector.getter(field.name, field.library);
       int getterSelector = backend.context.toFletchSelector(getter);
       methodTable.putIfAbsent(
@@ -251,7 +251,8 @@ class FletchBackend extends Backend {
     return compiledClasses.putIfAbsent(element, () {
       CompiledClass superclass = registerClassElement(element.superclass);
       int fields = superclass != null ? superclass.fields : 0;
-      element.forEachInstanceField((enclosing, field) { fields++; });
+      element.implementation.forEachInstanceField(
+          (enclosing, field) { fields++; });
       int id = classes.length;
       CompiledClass compiledClass = new CompiledClass(
           id,
@@ -948,6 +949,8 @@ class FletchBackend extends Backend {
 
     ClassElement classElement = constructor.enclosingClass;
     CompiledClass compiledClass = registerClassElement(classElement);
+
+    constructor = constructor.implementation;
 
     ClosureEnvironment closureEnvironment = createClosureEnvironment(
         constructor,

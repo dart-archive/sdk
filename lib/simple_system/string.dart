@@ -30,6 +30,10 @@ abstract class String implements core.String {
 
   @native external int get length;
 
+  bool get isEmpty => length == 0;
+
+  bool get isNotEmpty => length != 0;
+
   // TODO(kasperl): This is a really bad hash code.
   int get hashCode => length;
 
@@ -63,14 +67,6 @@ abstract class String implements core.String {
 
   lastIndexOf(pattern, [start]) {
     throw "lastIndexOf(pattern, [start]) isn't implemented";
-  }
-
-  get isEmpty {
-    throw "get isEmpty isn't implemented";
-  }
-
-  get isNotEmpty {
-    throw "get isNotEmpty isn't implemented";
   }
 
   substring(startIndex, [endIndex]) {

@@ -27,7 +27,6 @@ stack_overflow_test: Skip # TODO(ahe): Timeout.
 
 aborting_switch_case_test: Fail
 abstract_getter_test/01: Fail
-abstract_method_test: Fail
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
 abstract_syntax_test/01: MissingCompileTimeError
@@ -1115,7 +1114,6 @@ named_parameters_type_test/01: MissingRuntimeError
 named_parameters_type_test/02: MissingRuntimeError
 named_parameters_type_test/03: MissingRuntimeError
 named_parameters_with_conversions_test: Fail
-named_parameters_with_dollars_test: Fail
 namer2_test: Fail
 naming_test: Crash
 nested_switch_label_test: Fail
@@ -1161,7 +1159,6 @@ operator_equals_test: Fail
 operator_index_evaluation_order_test: Fail
 operator_test: Fail
 optimized_constant_array_string_access_test: Fail
-optimized_isempty_test: Fail
 optimized_setter_test: Crash
 optimized_string_charat_test: Fail
 optimized_string_charcodeat_test: Fail
@@ -1335,8 +1332,6 @@ string_interpolation9_test/9: MissingCompileTimeError
 string_interpolation_newline_test: Fail
 string_interpolation_test/01: Fail
 string_interpolation_test/none: Fail
-string_intrinsics_test: Fail
-string_join_test: Fail
 string_supertype_checked_test: Fail
 string_test: Fail
 string_unicode1_negative_test: Crash

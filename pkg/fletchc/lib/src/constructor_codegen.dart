@@ -183,7 +183,7 @@ class ConstructorCodegen extends CodegenVisitor {
     FunctionExpression node = constructor.node;
     if (node == null || node.body.asEmptyStatement() != null) return;
 
-    registry.registerStaticInvocation(constructor);
+    registry.registerStaticInvocation(constructor.declaration);
 
     int methodId = context.backend.allocateMethodId(constructor);
     int constructorId = compiledFunction.allocateConstantFromFunction(methodId);
@@ -206,7 +206,8 @@ class ConstructorCodegen extends CodegenVisitor {
       pushInitialFieldValues(compiledClass.superclass);
     }
     int fieldIndex = compiledClass.superclassFields;
-    compiledClass.element.forEachInstanceField((_, FieldElement field) {
+    ClassElement classElement = compiledClass.element.implementation;
+    classElement.forEachInstanceField((_, FieldElement field) {
       fieldScope[field] = new UnboxedLocalValue(fieldIndex++, field);
       Expression initializer = field.initializer;
       if (initializer == null) {
