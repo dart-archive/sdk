@@ -301,6 +301,10 @@ class BytecodeBuilder {
   }
 
   void bind(BytecodeLabel label) {
+    internalBind(label, false);
+  }
+
+  void internalBind(BytecodeLabel label, bool isSubroutineReturn) {
     assert(label.position == -1);
     // TODO(ajohnsen): If the previous bytecode is a branch to this label,
     // consider popping it - if no other binds has happened at this bytecode
@@ -322,6 +326,21 @@ class BytecodeBuilder {
         case Opcode.BranchLong:
           int offset = position - bytecode.uint32Argument0;
           bytecodes[index] = new BranchLong(offset);
+          break;
+
+        case Opcode.SubroutineCall:
+          if (isSubroutineReturn) {
+            int offset = position - bytecode.uint32Argument1;
+            offset -= bytecode.size;
+            bytecodes[index] = new SubroutineCall(
+                bytecode.uint32Argument0,
+                offset);
+          } else {
+            int offset = position - bytecode.uint32Argument0;
+            bytecodes[index] = new SubroutineCall(
+                offset,
+                bytecode.uint32Argument1);
+          }
           break;
 
         default:
@@ -385,6 +404,21 @@ class BytecodeBuilder {
 
   void allocateBoxed() {
     internalAdd(const AllocateBoxed());
+  }
+
+  void subroutineCall(BytecodeLabel label, BytecodeLabel returnLabel) {
+    assert(!label.isBound);
+    assert(!returnLabel.isBound);
+    label.addUsage(bytecodes.length);
+    returnLabel.addUsage(bytecodes.length);
+    internalAddStackPointerDifference(
+        new SubroutineCall(byteSize, byteSize),
+        0);
+  }
+
+  void subroutineReturn(BytecodeLabel returnLabel) {
+    internalBind(returnLabel, true);
+    internalAdd(const SubroutineReturn());
   }
 
   bool get endsWithTerminator {

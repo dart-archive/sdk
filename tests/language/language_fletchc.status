@@ -437,6 +437,7 @@ deferred_no_such_method_test: Crash
 deferred_not_loaded_check_test: Crash
 deferred_optimized_test: Crash
 deferred_shadow_load_library_test: Crash
+deopt_inlined_function_lazy_test: Fail
 deopt_smi_op_test: Fail
 div_by_zero_test: Fail
 div_with_power_of_two2_test: Fail
@@ -466,12 +467,9 @@ error_stacktrace_test: Fail
 evaluation_redirecting_constructor_test: Fail
 example_constructor_test: Fail
 exception_test: Fail
-execute_finally10_test: Fail
-execute_finally11_test: Fail
 execute_finally1_test: Fail
 execute_finally2_test: Fail
 execute_finally3_test: Crash
-execute_finally4_test: Fail
 execute_finally5_test: Fail
 execute_finally6_test: Fail
 execute_finally7_test: Fail
@@ -546,7 +544,6 @@ final_syntax_test/04: MissingCompileTimeError
 final_syntax_test/08: Crash
 final_syntax_test/09: MissingCompileTimeError
 final_used_in_try_test: Fail
-finally_test: Fail
 first_class_types_constants_test: Crash
 first_class_types_libraries_test: Crash
 first_class_types_literals_test/01: Crash
@@ -600,6 +597,7 @@ function_subtype_closure1_test: Fail
 function_subtype_factory0_test: Fail
 function_subtype_factory1_test: Fail
 function_subtype_inline0_test: Fail
+function_subtype_inline2_test: Fail
 function_subtype_local0_test: Fail
 function_subtype_local1_test: Fail
 function_subtype_local2_test: Fail
@@ -1345,6 +1343,7 @@ string_unicode1_negative_test: Crash
 string_unicode2_negative_test: Crash
 string_unicode3_negative_test: Crash
 string_unicode4_negative_test: Crash
+substring_test/01: Fail
 super_all_named_constructor_test: Fail
 super_assign_test: Fail
 super_bound_closure_test: Crash
@@ -1460,14 +1459,8 @@ this_test/05: MissingCompileTimeError
 this_test/06: MissingCompileTimeError
 this_test/07: MissingCompileTimeError
 this_test/08: MissingCompileTimeError
-throw1_test: Fail
-throw2_test: Fail
 throw3_test: Fail
-throw4_test: Fail
-throw5_test: Fail
-throw6_test: Fail
 throw8_test: Fail
-throw_test: Fail
 throwing_lazy_variable_test: Fail
 top_level_func_test: Fail
 top_level_getter_arrow_syntax_test: Fail
@@ -1480,7 +1473,6 @@ toplevel_collision1_test/02: MissingCompileTimeError
 toplevel_collision2_test/00: MissingCompileTimeError
 toplevel_collision2_test/01: MissingCompileTimeError
 truncdiv_test: Fail
-try_catch3_test: Fail
 try_catch4_test: Fail
 try_catch5_test: Fail
 try_catch_on_syntax_test/02: MissingCompileTimeError
@@ -1490,7 +1482,6 @@ try_catch_on_syntax_test/05: MissingCompileTimeError
 try_catch_on_syntax_test/06: MissingCompileTimeError
 try_catch_optimized1_test: Crash
 try_catch_optimized3_test: Fail
-try_catch_osr_test: Fail
 try_catch_syntax_test/01: MissingCompileTimeError
 try_catch_syntax_test/02: MissingCompileTimeError
 try_catch_syntax_test/03: MissingCompileTimeError
@@ -1508,7 +1499,6 @@ try_catch_syntax_test/15: Crash
 try_catch_syntax_test/16: MissingCompileTimeError
 try_catch_syntax_test/17: MissingCompileTimeError
 try_catch_test/01: MissingCompileTimeError
-try_catch_test/none: Fail
 type_check_const_function_typedef2_test/00: Crash
 type_check_const_function_typedef2_test/none: Crash
 type_check_const_function_typedef_test: Crash
@@ -1560,6 +1550,7 @@ type_variable_conflict_test/06: MissingCompileTimeError
 type_variable_field_initializer_closure_test: Fail
 type_variable_field_initializer_test: Fail
 type_variable_function_type_test: Crash
+type_variable_identifier_expression_test: Fail
 type_variable_initializer_test: Fail
 type_variable_nested_test: Fail
 type_variable_scope2_test: Crash

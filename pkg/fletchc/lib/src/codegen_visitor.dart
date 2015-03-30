@@ -1669,8 +1669,12 @@ abstract class CodegenVisitor
   }
 
   void visitTryStatement(TryStatement node) {
-    // TODO(ajohnsen): Handle finally.
     BytecodeLabel end = new BytecodeLabel();
+    BytecodeLabel finallyLabel = new BytecodeLabel();
+    BytecodeLabel finallyReturnLabel = new BytecodeLabel();
+
+    Block finallyBlock = node.finallyBlock;
+    bool hasFinally = finallyBlock != null;
 
     // Reserve slot for exception.
     int exceptionSlot = builder.stackSize;
@@ -1689,7 +1693,32 @@ abstract class CodegenVisitor
       handleCatchBlock(catchBlock, exceptionSlot, end);
     }
 
+    if (hasFinally) {
+      if (!node.catchBlocks.isEmpty) {
+        builder.addCatchFrameRange(endBytecodeSize, builder.byteSize);
+      }
+      // TODO(ajohnsen): Only if catch blocks.
+      // Catch exception from catch blocks.
+      builder.subroutineCall(finallyLabel, finallyReturnLabel);
+    }
+
+    // The exception was not cought. Rethrow.
+    builder.emitThrow();
+
     builder.bind(end);
+
+    if (hasFinally) {
+      BytecodeLabel done = new BytecodeLabel();
+      builder.subroutineCall(finallyLabel, finallyReturnLabel);
+      builder.branch(done);
+
+      builder.bind(finallyLabel);
+      builder.applyStackSizeFix(1);
+      finallyBlock.accept(this);
+      builder.subroutineReturn(finallyReturnLabel);
+
+      builder.bind(done);
+    }
 
     // Pop exception slot.
     builder.pop();
