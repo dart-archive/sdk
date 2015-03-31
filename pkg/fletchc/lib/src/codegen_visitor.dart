@@ -429,6 +429,7 @@ abstract class CodegenVisitor
 
     visitForValue(left);
     visitForValue(right);
+    // For '==', if either side is a null literal, use identicalNonNumeric.
     if (operator == BinaryOperator.EQ &&
         (isConstNull(left) || isConstNull(right))) {
       builder.identicalNonNumeric();
@@ -1786,14 +1787,14 @@ abstract class CodegenVisitor
       Node arguments,
       Selector selector,
       _) {
-    handleUnresolved(element.name);
+    handleUnresolved(node.selector.toString());
   }
 
   void errorUnresolvedGet(
       Send node,
       Element element,
       _) {
-    handleUnresolved(element != null ? element.name : node.toString());
+    handleUnresolved(node.selector.toString());
   }
 
   void internalError(Spannable spannable, String reason) {
