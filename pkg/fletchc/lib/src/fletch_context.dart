@@ -126,19 +126,27 @@ class FletchContext {
       });
   }
 
-  String getSymbolForFunction(
-      String name,
-      FunctionSignature signature,
-      LibraryElement library) {
-    StringBuffer buffer = new StringBuffer();
-    buffer.write(mangleName(name, library));
+  void writeNamedArguments(StringBuffer buffer, FunctionSignature signature) {
     signature.orderedForEachParameter((ParameterElement parameter) {
       if (parameter.isNamed) {
         buffer.write(":");
         buffer.write(parameter.name);
       }
     });
+  }
+
+  String getSymbolForFunction(
+      String name,
+      FunctionSignature signature,
+      LibraryElement library) {
+    StringBuffer buffer = new StringBuffer();
+    buffer.write(mangleName(name, library));
+    writeNamedArguments(buffer, signature);
     return buffer.toString();
+  }
+
+  String getCallSymbol(FunctionSignature signature) {
+    return getSymbolForFunction('call', signature, null);
   }
 
   int getSymbolId(String symbol) {

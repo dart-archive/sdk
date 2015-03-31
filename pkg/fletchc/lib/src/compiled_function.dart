@@ -62,22 +62,25 @@ class CompiledFunction {
 
   final Map<int, ConstantValue> classConstantValues = <int, ConstantValue>{};
 
+  final bool isGetter;
+
   CompiledFunction(this.methodId,
                    this.name,
                    FunctionSignature signature,
-                   CompiledClass memberOf)
+                   CompiledClass memberOf,
+                   {this.isGetter: false})
       : this.signature = signature,
         this.memberOf = memberOf,
         builder = new BytecodeBuilder(
           signature.parameterCount + (memberOf != null ? 1 : 0));
 
-  CompiledFunction.parameterStub(
-      this.methodId,
-      int argumentCount)
-      : builder = new BytecodeBuilder(argumentCount);
+  CompiledFunction.parameterStub(this.methodId, int argumentCount)
+      : builder = new BytecodeBuilder(argumentCount),
+        isGetter = false;
 
   CompiledFunction.accessor(this.methodId, bool setter)
-      : builder = new BytecodeBuilder(setter ? 2 : 1);
+      : builder = new BytecodeBuilder(setter ? 2 : 1),
+        isGetter = !setter;
 
   bool get hasThisArgument => memberOf != null;
 

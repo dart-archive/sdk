@@ -210,6 +210,9 @@ class FletchBackend extends Backend {
   final Map<FieldElement, CompiledFunction> lazyFieldInitializers =
       <FieldElement, CompiledFunction>{};
 
+  final Map<CompiledFunction, CompiledClass> tearoffClasses =
+      <CompiledFunction, CompiledClass>{};
+
   final Map<int, int> getters = <int, int>{};
   final Map<int, int> setters = <int, int>{};
 
@@ -411,6 +414,66 @@ class FletchBackend extends Backend {
     });
   }
 
+  /**
+   * Create a tearoff class for function [function].
+   *
+   * The class will have one method named 'call', accepting the same arguments
+   * as [function]. The method will load the arguments received and statically
+   * call [function] (essential a tail-call).
+   *
+   * If [function] is an instance member, the class will have one field, the
+   * instance.
+   */
+  CompiledClass createTearoffClass(CompiledFunction function) {
+    return tearoffClasses.putIfAbsent(function, () {
+      FunctionSignature signature = function.signature;
+      bool hasThis = function.hasThisArgument;
+      int fields = hasThis ? 1 : 0;
+      CompiledClass compiledClass = createStubClass(
+          fields,
+          compiledObjectClass);
+      CompiledFunction compiledFunction = new CompiledFunction(
+          nextMethodId++,
+          'call',
+          signature,
+          compiledClass);
+
+      BytecodeBuilder builder = compiledFunction.builder;
+      int argumentCount = signature.parameterCount;
+      if (hasThis) {
+        argumentCount++;
+        // If the tearoff has a 'this' value, load it. It's the only field
+        // in the tearoff class.
+        builder
+            ..loadParameter(0)
+            ..loadField(0);
+      }
+      for (int i = 0; i < signature.parameterCount; i++) {
+        // The closure-class is at parameter index 0, so argument i is at
+        // i + 1.
+        builder.loadParameter(i + 1);
+      }
+      int constId = compiledFunction.allocateConstantFromFunction(
+          function.methodId);
+      // TODO(ajohnsen): Create a tail-call bytecode, so we don't have to
+      // load all the arguments.
+      builder
+          ..invokeStatic(constId, argumentCount)
+          ..ret()
+          ..methodEnd();
+
+      functions.add(compiledFunction);
+
+      String symbol = context.getCallSymbol(signature);
+      int id = context.getSymbolId(symbol);
+      int fletchSelector = FletchSelector.encodeMethod(
+          id,
+          signature.parameterCount);
+      compiledClass.methodTable[fletchSelector] = compiledFunction.methodId;
+      return compiledClass;
+    });
+  }
+
   CompiledFunction createCompiledFunction(
       FunctionElement function,
       String name,
@@ -422,7 +485,8 @@ class FletchBackend extends Backend {
           // Parameter initializers are expressed in the potential
           // implementation.
           function.implementation.functionSignature,
-          holderClass);
+          holderClass,
+          isGetter: function.isGetter);
     });
   }
 
@@ -500,8 +564,8 @@ class FletchBackend extends Backend {
     compiler.enqueuer.codegen.generatedCode[function.declaration] = null;
 
     if (holderClass != null && !function.isGenerativeConstructor) {
-      // Inject the function into the method table of the 'holderClass' class. Note
-      // that while constructor bodies has a this argument, we don't inject
+      // Inject the function into the method table of the 'holderClass' class.
+      // Note that while constructor bodies has a this argument, we don't inject
       // them into the method table.
       String symbol = context.getSymbolForFunction(
           name,
@@ -640,7 +704,7 @@ class FletchBackend extends Backend {
     int length = functions.length;
     for (int i = 0; i < length; i++) {
       CompiledFunction function = functions[i];
-      if (!function.hasThisArgument) continue;
+      if (!function.hasThisArgument || function.isGetter) continue;
       String name = function.name;
       Set<Selector> usage = compiler.resolverWorld.invokedNames[name];
       if (usage == null) continue;
@@ -655,7 +719,48 @@ class FletchBackend extends Backend {
     }
   }
 
+  void createTearoffStubs() {
+    int length = functions.length;
+    for (int i = 0; i < length; i++) {
+      CompiledFunction function = functions[i];
+      if (!function.hasThisArgument || function.isGetter) continue;
+      String name = function.name;
+      Set<Selector> usage = compiler.resolverWorld.invokedGetters[name];
+      if (usage == null) continue;
+      for (Selector use in usage) {
+        if (function.canBeCalledAs(use)) {
+          createTearoffGetterForFunction(function);
+          break;
+        }
+      }
+    }
+  }
+
+  void createTearoffGetterForFunction(CompiledFunction function) {
+    CompiledClass tearoffClass = createTearoffClass(function);
+    CompiledFunction getter = new CompiledFunction.accessor(
+        nextMethodId++,
+        false);
+    int constId = getter.allocateConstantFromClass(tearoffClass.id);
+    getter.builder
+        ..loadParameter(0)
+        ..allocate(constId, tearoffClass.fields)
+        ..ret()
+        ..methodEnd();
+    functions.add(getter);
+    // If the name is private, we need the library.
+    // Invariant: We only generate public stubs, e.g. 'call'.
+    LibraryElement library;
+    if (function.memberOf.element != null) {
+      library = function.memberOf.element.library;
+    }
+    int fletchSelector = context.toFletchSelector(
+        new Selector.getter(function.name, library));
+    function.memberOf.methodTable[fletchSelector] = getter.methodId;
+  }
+
   int assembleProgram() {
+    createTearoffStubs();
     createParameterMatchingStubs();
 
     for (CompiledClass compiledClass in classes) {

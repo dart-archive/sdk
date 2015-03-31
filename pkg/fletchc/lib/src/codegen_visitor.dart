@@ -661,6 +661,33 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void handleStaticFunctionGet(MethodElement function) {
+    registry.registerStaticInvocation(function);
+    CompiledFunction compiledFunctionTarget =
+        context.backend.createCompiledFunction(function, null, null);
+    CompiledClass compiledClass = context.backend.createTearoffClass(
+        compiledFunctionTarget);
+    int classConstant = compiledFunction.allocateConstantFromClass(
+        compiledClass.id);
+    builder.allocate(classConstant, compiledClass.fields);
+  }
+
+  void visitTopLevelFunctionGet(
+      Send node,
+      MethodElement function,
+      _) {
+    handleStaticFunctionGet(function);
+    applyVisitState();
+  }
+
+  void visitStaticFunctionGet(
+      Send node,
+      MethodElement function,
+      _) {
+    handleStaticFunctionGet(function);
+    applyVisitState();
+  }
+
   void handleStaticallyBoundInvoke(
       Send node,
       MethodElement element,
@@ -1081,7 +1108,6 @@ abstract class CodegenVisitor
       visitForValue(argument);
     }
     invokeMethod(selector);
-    applyVisitState();
   }
 
   void visitLocalVariableInvoke(
@@ -1091,15 +1117,17 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     handleLocalVariableInvoke(element, arguments, selector);
+    applyVisitState();
   }
 
   void visitParameterInvoke(
       Send node,
-      LocalVariableElement element,
+      ParameterElement parameter,
       NodeList arguments,
       Selector selector,
       _) {
-    handleLocalVariableInvoke(element, arguments, selector);
+    handleLocalVariableInvoke(parameter, arguments, selector);
+    applyVisitState();
   }
 
   void visitLocalFunctionInvoke(
@@ -1108,11 +1136,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    scope[element].load(builder);
-    for (Node argument in arguments) {
-      visitForValue(argument);
-    }
-    invokeMethod(selector);
+    handleLocalVariableInvoke(element, arguments, selector);
     applyVisitState();
   }
 
@@ -1132,7 +1156,6 @@ abstract class CodegenVisitor
     invokeMethod(selector);
     value.store(builder);
     if (!prefix) builder.pop();
-    applyVisitState();
   }
 
   void visitLocalVariablePrefix(
@@ -1141,6 +1164,7 @@ abstract class CodegenVisitor
       IncDecOperator operator,
       _) {
     handleLocalVariableIncrement(element, operator, true);
+    applyVisitState();
   }
 
   void visitParameterPrefix(
@@ -1149,6 +1173,7 @@ abstract class CodegenVisitor
       IncDecOperator operator,
       _) {
     handleLocalVariableIncrement(parameter, operator, true);
+    applyVisitState();
   }
 
   void visitLocalVariablePostfix(
@@ -1160,6 +1185,7 @@ abstract class CodegenVisitor
     // generate code for the simpler 'prefix' case.
     bool prefix = (visitState == VisitState.Effect);
     handleLocalVariableIncrement(element, operator, prefix);
+    applyVisitState();
   }
 
   void visitParameterPostfix(
@@ -1171,6 +1197,7 @@ abstract class CodegenVisitor
     // generate code for the simpler 'prefix' case.
     bool prefix = (visitState == VisitState.Effect);
     handleLocalVariableIncrement(parameter, operator, prefix);
+    applyVisitState();
   }
 
   void visitParameterGet(
@@ -2048,14 +2075,6 @@ abstract class CodegenVisitor
         node, "[visitStaticFieldInvoke] isn't implemented.");
   }
 
-  void visitStaticFunctionGet(
-      Send node,
-      MethodElement function,
-      _){
-    generateUnimplementedError(
-        node, "[visitStaticFunctionGet] isn't implemented.");
-  }
-
   void errorStaticFunctionSet(
       Send node,
       MethodElement function,
@@ -2126,14 +2145,6 @@ abstract class CodegenVisitor
       _){
     generateUnimplementedError(
         node, "[errorFinalTopLevelFieldSet] isn't implemented.");
-  }
-
-  void visitTopLevelFunctionGet(
-      Send node,
-      MethodElement function,
-      _){
-    generateUnimplementedError(
-        node, "[visitTopLevelFunctionGet] isn't implemented.");
   }
 
   void errorTopLevelFunctionSet(
