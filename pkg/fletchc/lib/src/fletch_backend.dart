@@ -513,7 +513,15 @@ class FletchBackend extends Backend {
       if (function.isGetter) kind = SelectorKind.Getter;
       if (function.isSetter) kind = SelectorKind.Setter;
       int fletchSelector = FletchSelector.encode(id, kind, arity);
-      holderClass.methodTable[fletchSelector] = compiledFunction.methodId;
+      int methodId = compiledFunction.methodId;
+      holderClass.methodTable[fletchSelector] = methodId;
+      // Inject method into all mixin usages.
+      Iterable<ClassElement> mixinUsage =
+          compiler.world.mixinUsesOf(function.enclosingClass);
+      for (ClassElement usage in mixinUsage) {
+        CompiledClass compiledUsage = registerClassElement(usage);
+        compiledUsage.methodTable[fletchSelector] = methodId;
+      }
     }
 
     if (compiler.verbose) {

@@ -771,7 +771,6 @@ import_self_test/none: Fail
 import_show_test: Fail
 incr_op_test: Crash
 inference_list_or_null_test: Crash
-inference_mixin_field_test: Fail
 inferrer_closure_test: Fail
 inferrer_constructor3_test: Fail
 inferrer_constructor4_test: Fail
@@ -948,14 +947,11 @@ mixin_black_listed_test/05: MissingCompileTimeError
 mixin_black_listed_test/06: MissingCompileTimeError
 mixin_black_listed_test/07: MissingCompileTimeError
 mixin_black_listed_test/08: Crash
-mixin_bound_test: Fail
 mixin_cyclic_test/01: MissingCompileTimeError
 mixin_cyclic_test/02: MissingCompileTimeError
-mixin_extends_method_test: Fail
 mixin_forwarding_constructor1_test: Fail
 mixin_forwarding_constructor2_test: Fail
 mixin_generic_test: Fail
-mixin_getter_regression_test: Fail
 mixin_illegal_constructor_test/01: MissingCompileTimeError
 mixin_illegal_constructor_test/02: MissingCompileTimeError
 mixin_illegal_constructor_test/03: MissingCompileTimeError
@@ -991,7 +987,6 @@ mixin_illegal_super_use_test/08: MissingCompileTimeError
 mixin_illegal_super_use_test/09: MissingCompileTimeError
 mixin_illegal_super_use_test/10: MissingCompileTimeError
 mixin_illegal_super_use_test/11: MissingCompileTimeError
-mixin_illegal_super_use_test/none: Fail
 mixin_illegal_superclass_test/01: MissingCompileTimeError
 mixin_illegal_superclass_test/02: MissingCompileTimeError
 mixin_illegal_superclass_test/03: MissingCompileTimeError
@@ -1036,7 +1031,6 @@ mixin_illegal_syntax_test/11: Crash
 mixin_illegal_syntax_test/12: Crash
 mixin_illegal_syntax_test/13: MissingRuntimeError
 mixin_illegal_syntax_test/14: Crash
-mixin_implements_test: Fail
 mixin_invalid_inheritance1_test/01: MissingCompileTimeError
 mixin_invalid_inheritance1_test/02: MissingCompileTimeError
 mixin_invalid_inheritance1_test/03: MissingCompileTimeError
@@ -1045,8 +1039,6 @@ mixin_invalid_inheritance2_test/02: Crash
 mixin_invalid_inheritance2_test/03: Crash
 mixin_issue10216_2_test: Fail
 mixin_issue10216_test: Fail
-mixin_lib_extends_method_test: Fail
-mixin_method_test: Fail
 mixin_mixin2_test: Fail
 mixin_mixin3_test: Fail
 mixin_mixin4_test: Fail
@@ -1056,16 +1048,13 @@ mixin_mixin7_test: Fail
 mixin_mixin_bound2_test: Fail
 mixin_mixin_bound_test: Fail
 mixin_mixin_test: Fail
-mixin_override_regression_test: Fail
 mixin_prefix_test: Fail
 mixin_regress_11398_test: Crash
 mixin_regress_13688_test: Crash
 mixin_super_constructor2_test: Fail
 mixin_super_constructor_default_test: Fail
 mixin_super_constructor_multiple_test: Fail
-mixin_super_constructor_positionals_test: Fail
 mixin_super_constructor_test: Fail
-mixin_this_use_test: Fail
 mixin_type_parameter1_test: Fail
 mixin_type_parameter2_test: Fail
 mixin_type_parameter3_test: Fail
