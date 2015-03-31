@@ -19,11 +19,14 @@ mixin_super_constructor_named_test: Crash
 
 
 [ $runtime == fletchc ]
-ackermann_test: Skip # TODO(ahe): Timeout.
-execute_finally12_test: Skip # TODO(ahe): Timeout.
-execute_finally8_test: Skip # TODO(ahe): Timeout.
-stack_overflow_stacktrace_test: Skip # TODO(ahe): Timeout.
-stack_overflow_test: Skip # TODO(ahe): Timeout.
+ackermann_test: Skip # TODO(ajohnsen): Timeout.
+execute_finally12_test: Skip # TODO(ajohnsen): Timeout.
+execute_finally8_test: Skip # TODO(ajohnsen): Timeout.
+large_implicit_getter_test: Skip # TODO(ajohnsen): Timeout.
+memory_swap_test: Skip # TODO(ajohnsen): Timeout.
+stack_overflow_stacktrace_test: Skip # TODO(ajohnsen): Timeout.
+stack_overflow_test: Skip # TODO(ajohnsen): Timeout.
+vm/regress_16873_test: Skip # TODO(ajohnsen): Timeout.
 
 abstract_getter_test/01: Fail
 abstract_runtime_error_test/01: Fail
@@ -218,7 +221,6 @@ closure_in_initializer2_test: Fail
 closure_in_initializer_test: Crash
 closure_internals_test: Fail
 closure_parameter_types_test: Fail
-closure_self_reference_test: Fail
 closure_shared_state_test: Fail
 closure_side_effect_test: Fail
 closure_type_test/01: Fail
@@ -458,10 +460,6 @@ error_stacktrace_test: Fail
 evaluation_redirecting_constructor_test: Fail
 example_constructor_test: Fail
 exception_test: Fail
-execute_finally1_test: Fail
-execute_finally2_test: Fail
-execute_finally3_test: Fail
-execute_finally5_test: Fail
 execute_finally6_test: Fail
 execute_finally7_test: Fail
 execute_finally8_test: Fail
@@ -833,7 +831,6 @@ issue15702_test: Fail
 issue15720_test: Crash
 issue1578_negative_test: Crash
 issue18628_1_test/01: Fail
-issue20476_test: Fail
 issue4157508_test: Fail
 issue7513_test: Fail
 issue9949_test: Crash
@@ -1436,8 +1433,6 @@ toplevel_collision1_test/02: MissingCompileTimeError
 toplevel_collision2_test/00: MissingCompileTimeError
 toplevel_collision2_test/01: MissingCompileTimeError
 truncdiv_test: Fail
-try_catch4_test: Fail
-try_catch5_test: Fail
 try_catch_on_syntax_test/02: MissingCompileTimeError
 try_catch_on_syntax_test/03: MissingCompileTimeError
 try_catch_on_syntax_test/04: MissingCompileTimeError

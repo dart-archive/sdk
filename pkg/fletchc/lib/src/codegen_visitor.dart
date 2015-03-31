@@ -117,6 +117,13 @@ class JumpInfo {
   JumpInfo(this.stackSize, this.continueLabel, this.breakLabel);
 }
 
+class FinallyBlock {
+  final int stackSize;
+  final BytecodeLabel finallyLabel;
+  final BytecodeLabel finallyReturnLabel;
+  FinallyBlock(this.stackSize, this.finallyLabel, this.finallyReturnLabel);
+}
+
 abstract class CodegenVisitor
     extends SemanticVisitor
     implements SemanticSendVisitor {
@@ -135,6 +142,9 @@ abstract class CodegenVisitor
   final Map<Element, LocalValue> scope = <Element, LocalValue>{};
 
   final Map<Node, JumpInfo> jumpInfo = <Node, JumpInfo>{};
+
+  // Stack of finally blocks (inner-most at top), in the lexical scope.
+  final List<FinallyBlock> finallyBlockStack = <FinallyBlock>[];
 
   VisitState visitState;
   BytecodeLabel trueLabel;
@@ -1428,7 +1438,7 @@ abstract class CodegenVisitor
     int stackSizeDifference = builder.stackSize - stackSize;
     if (stackSizeDifference != blockLocals) {
       internalError(
-          node,
+          statements,
           "Unbalanced number of block locals and stack slots used by block.");
     }
 
@@ -1458,6 +1468,7 @@ abstract class CodegenVisitor
     } else {
       visitForValue(expression);
     }
+    callFinallyBlocks(0, true);
     builder.ret();
   }
 
@@ -1477,9 +1488,41 @@ abstract class CodegenVisitor
     return info;
   }
 
+  void callFinallyBlocks(int targetStackSize, bool preserveTop) {
+    int popCount = 0;
+    for (var block in finallyBlockStack.reversed) {
+      // Break once all exited finally blocks are processed. Finally blocks
+      // are ordered by stack size which coincides with scoping. Blocks with
+      // stack sizes at least equal to target size are being exited.
+      if (block.stackSize < targetStackSize) break;
+      if (preserveTop) {
+        // We reuse the exception slot as a tempoary buffer for the top element,
+        // which is located -1 relative to the block's stack size.
+        builder.storeSlot(block.stackSize - 1);
+      }
+      // TODO(ajohnsen): Don't pop, but let subroutineCall take a 'pop count'
+      // argument, just like popAndBranch.
+      while (builder.stackSize > block.stackSize) {
+        builder.pop();
+        popCount++;
+      }
+      builder.subroutineCall(block.finallyLabel, block.finallyReturnLabel);
+      if (preserveTop) {
+        builder.loadSlot(block.stackSize - 1);
+        popCount--;
+      }
+    }
+    // Reallign stack (should be removed, according to above TODO).
+    for (int i = 0; i < popCount; i++) {
+      // Note we dup, to make sure the top element is the return value.
+      builder.dup();
+    }
+  }
+
   void unbalancedBranch(GotoStatement node, bool isBreak) {
     JumpInfo info = getJumpInfo(node);
     if (info == null) return;
+    callFinallyBlocks(info.stackSize, false);
     BytecodeLabel label = isBreak ? info.breakLabel : info.continueLabel;
     int diff = builder.stackSize - info.stackSize;
     builder.popAndBranch(diff, label);
@@ -1751,7 +1794,16 @@ abstract class CodegenVisitor
     builder.loadLiteralNull();
 
     int startBytecodeSize = builder.byteSize;
+
+    if (hasFinally) {
+      finallyBlockStack.add(new FinallyBlock(
+          builder.stackSize,
+          finallyLabel,
+          finallyReturnLabel));
+    }
+
     node.tryBlock.accept(this);
+
     // Go to end if no exceptions was thrown.
     builder.branch(end);
     int endBytecodeSize = builder.byteSize;
@@ -1764,10 +1816,10 @@ abstract class CodegenVisitor
     }
 
     if (hasFinally) {
+      finallyBlockStack.removeLast();
       if (!node.catchBlocks.isEmpty) {
         builder.addCatchFrameRange(endBytecodeSize, builder.byteSize);
       }
-      // TODO(ajohnsen): Only if catch blocks.
       // Catch exception from catch blocks.
       builder.subroutineCall(finallyLabel, finallyReturnLabel);
     }
