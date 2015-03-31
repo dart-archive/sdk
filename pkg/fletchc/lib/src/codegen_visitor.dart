@@ -1554,18 +1554,44 @@ abstract class CodegenVisitor
     invokeMethod(new Selector.call('moveNext', null, 0));
     builder.branchIfFalse(end);
 
-    // Create local value and load the current element to it.
-    LocalElement local = elements[node];
-    LocalValue value = createLocalValueFor(local);
-    builder.dup();
-    invokeGetter(new Selector.getter('current', null));
-    value.initialize(builder);
-    scope[local] = value;
+    bool isVariableDeclaration = node.declaredIdentifier.asSend() == null;
+    if (isVariableDeclaration) {
+      LocalElement local = elements[node];
+      // Create local value and load the current element to it.
+      LocalValue value = createLocalValueFor(local);
+      builder.dup();
+      invokeGetter(new Selector.getter('current', null));
+      value.initialize(builder);
+      scope[local] = value;
+    } else {
+      Element target = elements[node];
+      if (target == null || target.isInstanceMember) {
+        loadThis();
+        builder.loadLocal(1);
+        invokeGetter(new Selector.getter('current', null));
+        Selector selector = elements.getSelector(node.declaredIdentifier);
+        invokeSetter(selector);
+      } else {
+        builder.dup();
+        invokeGetter(new Selector.getter('current', null));
+        if (target.isLocal) {
+          scope[target].store(builder);
+        } else if (target.isField) {
+          int index = context.getStaticFieldIndex(target, element);
+          builder.storeStatic(index);
+        } else {
+          internalError(node, "Unhandled store in for-in");
+        }
+      }
+      builder.pop();
+    }
 
     node.body.accept(this);
 
-    // Pop the local again.
-    builder.pop();
+    if (isVariableDeclaration) {
+      // Pop the local again.
+      builder.pop();
+    }
 
     builder.branch(start);
 
