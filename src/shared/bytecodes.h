@@ -88,6 +88,9 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   V(BranchBackIfTrueLong,  "I",  5,       -1, "branch if true -%d")          \
   V(BranchBackIfFalseLong, "I",  5,       -1, "branch if false -%d")         \
                                                                              \
+  V(PopAndBranchLong,      "BI", 6,        0, "pop %d and branch long +%d")  \
+  V(PopAndBranchBackLong,  "BI", 6,        0, "pop %d and branch long -%d")  \
+                                                                             \
   V(Allocate,              "I",  5, kVarDiff, "allocate %d")                 \
   V(AllocateUnfold,        "I",  5, kVarDiff, "allocate @%d")                \
   V(AllocateBoxed,         "",   1,        0, "allocate boxed")              \

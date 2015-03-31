@@ -160,6 +160,9 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoBranchBackIfTrueLong();
   virtual void DoBranchBackIfFalseLong();
 
+  virtual void DoPopAndBranchLong();
+  virtual void DoPopAndBranchBackLong();
+
   virtual void DoAllocate();
   virtual void DoAllocateUnfold();
   virtual void DoAllocateBoxed();
@@ -993,6 +996,28 @@ void InterpreterGeneratorX86::DoBranchBackIfFalseLong() {
 
   __ Bind(&branch);
   __ movl(EAX, Address(ESI, 1));
+  __ subl(ESI, EAX);
+  Dispatch(0);
+}
+
+void InterpreterGeneratorX86::DoPopAndBranchLong() {
+  __ movzbl(EAX, Address(ESI, 1));
+  __ negl(EAX);
+  __ leal(EDI, Address(EDI, EAX, TIMES_4));
+
+  __ movl(EAX, Address(ESI, 2));
+  __ addl(ESI, EAX);
+  Dispatch(0);
+}
+
+void InterpreterGeneratorX86::DoPopAndBranchBackLong() {
+  CheckStackOverflow(0);
+
+  __ movzbl(EAX, Address(ESI, 1));
+  __ negl(EAX);
+  __ leal(EDI, Address(EDI, EAX, TIMES_4));
+
+  __ movl(EAX, Address(ESI, 2));
   __ subl(ESI, EAX);
   Dispatch(0);
 }

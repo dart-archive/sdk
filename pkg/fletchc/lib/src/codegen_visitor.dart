@@ -1415,12 +1415,12 @@ abstract class CodegenVisitor
     visitState = oldState;
   }
 
-  void visitBlock(Block node) {
+  void handleStatements(NodeList statements) {
     int oldBlockLocals = blockLocals;
     blockLocals = 0;
     int stackSize = builder.stackSize;
 
-    for (Node statement in node.statements) {
+    for (Node statement in statements) {
       statement.accept(this);
     }
 
@@ -1437,6 +1437,10 @@ abstract class CodegenVisitor
     }
 
     blockLocals = oldBlockLocals;
+  }
+
+  void visitBlock(Block node) {
+    handleStatements(node.statements);
   }
 
   void visitEmptyStatement(EmptyStatement node) {
@@ -1477,9 +1481,7 @@ abstract class CodegenVisitor
     if (info == null) return;
     BytecodeLabel label = isBreak ? info.breakLabel : info.continueLabel;
     int diff = builder.stackSize - info.stackSize;
-    builder.popMany(diff);
-    builder.branch(label);
-    builder.applyStackSizeFix(diff);
+    builder.popAndBranch(diff, label);
   }
 
   void visitBreakStatement(BreakStatement node) {
@@ -1625,6 +1627,47 @@ abstract class CodegenVisitor
   void visitFunctionDeclaration(FunctionDeclaration node) {
     FunctionExpression function = node.function;
     initializeLocal(elements[function], function);
+  }
+
+  void visitSwitchStatement(SwitchStatement node) {
+    BytecodeLabel end = new BytecodeLabel();
+
+    visitForValue(node.expression);
+
+    jumpInfo[node] = new JumpInfo(builder.stackSize, null, end);
+
+    // Install cross-case jump targets.
+    for (SwitchCase switchCase in node.cases) {
+      BytecodeLabel continueLabel = new BytecodeLabel();
+      jumpInfo[switchCase] = new JumpInfo(
+          builder.stackSize,
+          continueLabel,
+          null);
+    }
+
+    for (SwitchCase switchCase in node.cases) {
+      BytecodeLabel ifTrue = jumpInfo[switchCase].continueLabel;
+      BytecodeLabel next = new BytecodeLabel();
+      if (!switchCase.isDefaultCase) {
+        for (Node labelOrCaseMatch in switchCase.labelsAndCases) {
+          CaseMatch caseMatch = labelOrCaseMatch.asCaseMatch();
+          if (caseMatch == null) continue;
+          builder.dup();
+          int constId = allocateConstantFromNode(caseMatch.expression);
+          builder.loadConst(constId);
+          invokeMethod(new Selector.binaryOperator('=='));
+          builder.branchIfTrue(ifTrue);
+        }
+        builder.branch(next);
+      }
+      builder.bind(ifTrue);
+      handleStatements(switchCase.statements);
+      builder.branch(end);
+      builder.bind(next);
+    }
+
+    builder.bind(end);
+    builder.pop();
   }
 
   void handleCatchBlock(CatchBlock node, int exceptionSlot, BytecodeLabel end) {

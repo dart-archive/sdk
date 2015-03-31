@@ -105,6 +105,8 @@ const List<Bytecode> _bytecodes = const [
   const Bytecode("branch -%i", 5),
   const Bytecode("branch if true -%i", 5),
   const Bytecode("branch if false -%i", 5),
+  const Bytecode("pop %b and branch +%i", 6),
+  const Bytecode("pop %b and branch -%i", 6),
   const Bytecode("allocate %i", 5),
   const Bytecode("allocate @%i", 5),
   const Bytecode("allocate boxed", 1),

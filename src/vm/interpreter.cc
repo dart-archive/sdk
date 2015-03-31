@@ -575,6 +575,21 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     Branch(kBranchBackIfFalseLongLength, delta);
   OPCODE_END();
 
+  OPCODE_BEGIN(PopAndBranchLong);
+    int pop_count = ReadByte(1);
+    int delta = ReadInt32(2);
+    Drop(pop_count);
+    Advance(delta);
+  OPCODE_END();
+
+  OPCODE_BEGIN(PopAndBranchBackLong);
+    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    int pop_count = ReadByte(1);
+    int delta = -ReadInt32(2);
+    Drop(pop_count);
+    Advance(delta);
+  OPCODE_END();
+
   OPCODE_BEGIN(Allocate);
     int index = ReadInt32(1);
     Class* klass = program()->class_at(index);

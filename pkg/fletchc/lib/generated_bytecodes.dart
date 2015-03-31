@@ -65,6 +65,8 @@ enum Opcode {
   BranchBackLong,
   BranchBackIfTrueLong,
   BranchBackIfFalseLong,
+  PopAndBranchLong,
+  PopAndBranchBackLong,
   Allocate,
   AllocateUnfold,
   AllocateBoxed,
@@ -1635,6 +1637,64 @@ class BranchBackIfFalseLong extends Bytecode {
   }
 
   String toString() => 'branch if false -${uint32Argument0}';
+}
+
+class PopAndBranchLong extends Bytecode {
+  final int uint8Argument0;
+  final int uint32Argument1;
+  const PopAndBranchLong(this.uint8Argument0, this.uint32Argument1)
+      : super();
+
+  Opcode get opcode => Opcode.PopAndBranchLong;
+
+  String get name => 'PopAndBranchLong';
+
+  String get format => 'BI';
+
+  int get size => 6;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'pop %d and branch +%d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint8(uint8Argument0)
+        ..addUint32(uint32Argument1)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'pop $uint8Argument0 and branch +${uint32Argument1}';
+}
+
+class PopAndBranchBackLong extends Bytecode {
+  final int uint8Argument0;
+  final int uint32Argument1;
+  const PopAndBranchBackLong(this.uint8Argument0, this.uint32Argument1)
+      : super();
+
+  Opcode get opcode => Opcode.PopAndBranchBackLong;
+
+  String get name => 'PopAndBranchBackLong';
+
+  String get format => 'BI';
+
+  int get size => 6;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'pop %d and branch -%d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint8(uint8Argument0)
+        ..addUint32(uint32Argument1)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'pop $uint8Argument0 and branch -${uint32Argument1}';
 }
 
 class Allocate extends Bytecode {

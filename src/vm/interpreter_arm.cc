@@ -161,6 +161,9 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoBranchBackIfTrueLong();
   virtual void DoBranchBackIfFalseLong();
 
+  virtual void DoPopAndBranchLong();
+  virtual void DoPopAndBranchBackLong();
+
   virtual void DoAllocate();
   virtual void DoAllocateUnfold();
   virtual void DoAllocateBoxed();
@@ -991,6 +994,26 @@ void InterpreterGeneratorARM::DoBranchBackIfFalseLong() {
 
   __ Bind(&branch);
   __ ldr(R0, Address(R5, 1));
+  __ sub(R5, R5, R0);
+  Dispatch(0);
+}
+
+void InterpreterGeneratorARM::DoPopAndBranchLong() {
+  __ ldrb(R0, Address(R5, 1));
+  __ sub(R6, R6, Operand(R0, TIMES_4));
+
+  __ ldr(R0, Address(R5, 2));
+  __ add(R5, R5, R0);
+  Dispatch(0);
+}
+
+void InterpreterGeneratorARM::DoPopAndBranchBackLong() {
+  CheckStackOverflow(0);
+
+  __ ldrb(R0, Address(R5, 1));
+  __ sub(R6, R6, Operand(R0, TIMES_4));
+
+  __ ldr(R0, Address(R5, 2));
   __ sub(R5, R5, R0);
   Dispatch(0);
 }

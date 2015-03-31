@@ -328,6 +328,13 @@ class BytecodeBuilder {
           bytecodes[index] = new BranchLong(offset);
           break;
 
+        case Opcode.PopAndBranchLong:
+          int offset = position - bytecode.uint32Argument1;
+          bytecodes[index] = new PopAndBranchLong(
+              bytecode.uint8Argument0,
+              offset);
+          break;
+
         case Opcode.SubroutineCall:
           if (isSubroutineReturn) {
             int offset = position - bytecode.uint32Argument1;
@@ -383,6 +390,18 @@ class BytecodeBuilder {
     } else {
       label.addUsage(bytecodes.length);
       internalAdd(new BranchLong(byteSize));
+    }
+  }
+
+  void popAndBranch(int diff, BytecodeLabel label) {
+    if (label.isBound) {
+      internalBranchBack(
+          label,
+          (v) => new PopAndBranchBackLong(diff, v),
+          (v) => new PopAndBranchBackLong(diff, v));
+    } else {
+      label.addUsage(bytecodes.length);
+      internalAdd(new PopAndBranchLong(diff, byteSize));
     }
   }
 
