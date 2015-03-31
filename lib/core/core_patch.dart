@@ -115,3 +115,21 @@ const patch = "patch";
   // This function is overridden, so we can bypass the 'this == null' check.
   bool operator ==(other) => other == null;
 }
+
+@patch class int {
+  @patch static int parse(
+      String source,
+      {int radix: 0,
+       int onError(String source)}) {
+    return _parse(source, radix);
+  }
+
+  @fletch.native static _parse(String source, int radix) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        throw new ArgumentError(source);
+      case fletch.indexOutOfBounds:
+        throw new FormatException("Invalud number", source);
+    }
+  }
+}

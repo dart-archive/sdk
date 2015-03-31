@@ -419,7 +419,9 @@ class FletchBackend extends Backend {
       return new CompiledFunction(
           allocateMethodId(function),
           name,
-          function.functionSignature,
+          // Parameter initializers are expressed in the potential
+          // implementation.
+          function.implementation.functionSignature,
           holderClass);
     });
   }

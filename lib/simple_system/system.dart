@@ -27,6 +27,10 @@ part 'string.dart';
 
 const native = "native";
 
+const wrongArgumentType = "Wrong argument type.";
+const indexOutOfBounds = "Index out of bounds.";
+const illegalState = "Illegal state.";
+
 /// This is a magic method recognized by the compiler, and references to it
 /// will be substituted for the actual main method.
 /// [arguments] is supposed to be a List<String> with command line arguments.

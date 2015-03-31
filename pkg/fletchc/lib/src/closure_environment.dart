@@ -773,7 +773,6 @@ class ClosureVisitor
       Send node,
       FunctionElement getter,
       _) {
-    node.visitChildren(this);
   }
 
   void errorTopLevelSetterGet(

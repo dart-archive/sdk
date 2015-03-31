@@ -225,7 +225,7 @@ closure_type_test/01: Fail
 closure_type_test/none: Fail
 closure_type_variable_test: Fail
 closure_with_super_field_test: Fail
-closures_initializer2_test: Crash
+closures_initializer2_test: Fail
 closures_initializer_test: Fail
 comparison_test: Fail
 compile_time_constant10_test/01: Crash
@@ -381,7 +381,7 @@ cyclic_typedef_test/08: MissingCompileTimeError
 cyclic_typedef_test/09: MissingCompileTimeError
 cyclic_typedef_test/10: MissingCompileTimeError
 cyclic_typedef_test/11: MissingCompileTimeError
-deferred_closurize_load_library_test: Crash
+deferred_closurize_load_library_test: Fail
 deferred_constraints_constants_test/constructor1: Crash
 deferred_constraints_constants_test/constructor2: Crash
 deferred_constraints_constants_test/default_argument1: Crash
@@ -824,7 +824,6 @@ isnot_malformed_type_test: Fail
 issue10561_test: Crash
 issue10581_test: Fail
 issue10747_test: Fail
-issue12023_test: Crash
 issue12284_test: Crash
 issue13474_test: Fail
 issue13673_test: Fail
@@ -1203,7 +1202,6 @@ pure_function2_test: Crash
 range_analysis2_test: Fail
 range_analysis3_test: Crash
 range_analysis_test: Crash
-recursive_calls_test: Crash
 redirecting_factory_default_values_test/01: MissingCompileTimeError
 redirecting_factory_default_values_test/02: MissingCompileTimeError
 redirecting_factory_incompatible_signature_test: Fail
