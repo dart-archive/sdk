@@ -5,11 +5,12 @@
 import 'model.dart';
 import 'dart/buildbot_service.dart';
 import 'console_presenter.dart';
+import 'trace.dart';
 
 class BuildBotImpl extends BuildBotService {
   Project _project;
-  ConsolePresenter _presenter;
-  ConsoleNode _presenter_graph = null;
+  ConsolePresenter _consolePresenter;
+  ConsoleNode _consoleGraph = null;
 
   BuildBotImpl() {
     _project = new Project("Dart")
@@ -18,11 +19,21 @@ class BuildBotImpl extends BuildBotService {
           new Resource("build.chromium.org", "/p/client.dart"),
           new Resource("dart-status.appspot.com", ""));
 
-    _presenter = new ConsolePresenter(_project);
+    _consolePresenter = new ConsolePresenter(_project);
   }
 
-  void refresh(PresenterPatchSetBuilder builder) {
-    _presenter_graph = _presenter.refresh(_presenter_graph,
-                                          builder.initConsolePatchSet());
+  void refresh(BuildBotPatchDataBuilder builder) {
+    assert(trace("BuildBotImpl::refresh (${_project.console.commitCount})"));
+    // TODO(zerny): How do we want to connect the presentation roots?
+    ConsoleNode graph = _consolePresenter.present();
+    ConsolePatch patch = graph.diff(_consoleGraph);
+    if (patch != null) {
+      _consoleGraph = graph;
+      patch.serialize(builder.initConsolePatch());
+      assert(trace("Sending non-empty patch"));
+      return;
+    }
+    assert(trace("Sending empty patch"));
+    builder.setNoPatch();
   }
 }

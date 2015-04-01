@@ -6,40 +6,40 @@
 
 import 'commit_node.dart';
 import 'presentation_utils.dart';
+import '../trace.dart';
 
 class ConsoleNode {
-  String title;
-  String status;
-  List commits;
+  final String title;
+  final String status;
+  final List commits;
   ConsoleNode(this.title, this.status, this.commits);
 
-  List<ConsoleNodePatch> diff(ConsoleNode previous) {
-    List<ConsoleNodePatch> patches = new List();
-    diffAt(previous, patches);
-    return patches;
-  }
-
-  void diffAt(ConsoleNode previous,
-              List<ConsoleNodePatch> patches) {
-    if (previous == null || previous is! ConsoleNode) {
-      patches.add(new ConsoleNodeReplacePatch(this));
-      return;
+  ConsolePatch diff(ConsoleNode previous) {
+    assert(trace("ConsoleNode::diff"));
+    if (previous is! ConsoleNode) {
+      return new ConsoleReplacePatch(this, previous);
     }
-    if (this.title != previous.title) {
-      patches.add(new ConsoleNodeTitlePatch(this.title));
+    ConsoleUpdatePatch patch;
+    if (title != previous.title) {
+      patch = new ConsoleUpdatePatch();
+      patch.title = title;
     }
-    if (this.status != previous.status) {
-      patches.add(new ConsoleNodeStatusPatch(this.status));
+    if (status != previous.status) {
+      if (patch == null) patch = new ConsoleUpdatePatch();
+      patch.status = status;
     }
-    // TODO(zerny): implement generic list-diff.
-    if (this.commits != previous.commits) {
-      patches.add(new ConsoleNodeCommitsPatch(this.commits));
+    CommitListPatch commitsPatch = diffList(commits, previous.commits);
+    if (commitsPatch != null) {
+      if (patch == null) patch = new ConsoleUpdatePatch();
+      patch.commits = commitsPatch;
     }
+    return patch;
   }
 
   void serialize(ConsoleNodeDataBuilder builder) {
-    serializeString(title, builder.initTitle());
-    serializeString(status, builder.initStatus());
+    assert(trace("ConsoleNode::serialize"));
+    builder.title = title;
+    builder.status = status;
     int length = commits.length;
     List<CommitNodeDataBuilder> builders = builder.initCommits(length);
     for (int i = 0; i < length; ++i) {
@@ -48,42 +48,39 @@ class ConsoleNode {
   }
 }
 
-abstract class ConsoleNodePatch {
-  void serialize(ConsoleNodePatchDataBuilder builder);
+abstract class ConsolePatch {
+  void serialize(ConsolePatchDataBuilder builder);
 }
 
-class ConsoleNodeReplacePatch extends ConsoleNodePatch {
-  ConsoleNode node;
-  ConsoleNodeReplacePatch(this.node);
+class ConsoleReplacePatch extends ConsolePatch {
+  final ConsoleNode replacement;
+  final ConsoleNode previous;
+  ConsoleReplacePatch(this.replacement, this.previous);
 
-  void serialize(ConsoleNodePatchDataBuilder builder) {
-    node.serialize(builder.initReplace());
+  void serialize(ConsolePatchDataBuilder builder) {
+    assert(trace("ConsoleReplacePatch::serialize"));
+    replacement.serialize(builder.initReplace());
   }
 }
 
-class ConsoleNodeTitlePatch extends ConsoleNodePatch {
-  String title;
-  ConsoleNodeTitlePatch(this.title);
+class ConsoleUpdatePatch extends ConsolePatch {
+  String _title;
+  String _status;
+  ListPatch _commits;
+  int _count = 0;
 
-  void serialize(ConsoleNodePatchDataBuilder builder) {
-    serializeString(title, builder.initTitle());
-  }
-}
+  set title(title) { ++_count; _title = title; }
+  set status(status) { ++_count; _status = status; }
+  set commits(commits) { ++_count; _commits = commits; }
 
-class ConsoleNodeStatusPatch extends ConsoleNodePatch {
-  String status;
-  ConsoleNodeStatusPatch(this.status);
-
-  void serialize(ConsoleNodePatchDataBuilder builder) {
-    serializeString(status, builder.initStatus());
-  }
-}
-
-class ConsoleNodeCommitsPatch extends ConsoleNodePatch {
-  ListPatch patch;
-  ConsoleNodeCommitsPatch(commits) : patch = new ListReplacePatch(commits);
-
-  void serialize(ConsoleNodePatchDataBuilder builder) {
-    patch.serialize(builder.initCommits());
+  void serialize(ConsolePatchDataBuilder builder) {
+    assert(trace("ConsoleUpdatePatch::serialize"));
+    assert(_count > 0);
+    List<ConsoleUpdatePatchDataBuilder> builders = builder.initUpdates(_count);
+    int index = 0;
+    if (_title != null) builders[index++].title = _title;
+    if (_status != null) builders[index++].status = _status;
+    if (_commits != null) _commits.serialize(builders[index++].initCommits());
+    assert(index == _count);
   }
 }

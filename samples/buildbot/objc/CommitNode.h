@@ -14,9 +14,14 @@
 
 - (id)initWith:(const CommitNodeData&)data;
 
-+ (NSArray*)arrayWithData:(const List<CommitNodeData>&)data;
+- (void)patchWith:(const CommitPatchData&)patch;
 
-+ (void)applyListPatch:(const ListCommitNodePatchData&)patch
-                atList:(NSArray* __strong *)list;
++ (void)applyPatch:(const CommitPatchData&)patch
+            atNode:(CommitNode* __strong *)node;
+
++ (void)applyListPatch:(const CommitListPatchData&)patch
+                atList:(NSArray*)list;
+
++ (NSArray*)arrayWithData:(const List<CommitNodeData>&)data;
 
 @end

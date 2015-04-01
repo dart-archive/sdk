@@ -18,7 +18,7 @@ bool _terminated = false;
 BuildBotService _impl;
 
 abstract class BuildBotService {
-  void refresh(PresenterPatchSetBuilder result);
+  void refresh(BuildBotPatchDataBuilder result);
 
   static void initialize(BuildBotService impl) {
     if (_impl != null) {
@@ -41,8 +41,8 @@ abstract class BuildBotService {
         _postResult.icall$1(request);
         break;
       case _REFRESH_METHOD_ID:
-        MessageBuilder mb = new MessageBuilder(24);
-        PresenterPatchSetBuilder builder = mb.initRoot(new PresenterPatchSetBuilder(), 16);
+        MessageBuilder mb = new MessageBuilder(40);
+        BuildBotPatchDataBuilder builder = mb.initRoot(new BuildBotPatchDataBuilder(), 32);
         _impl.refresh(builder);
         var result = getResultMessage(builder);
         request.setInt64(48, result);
@@ -57,46 +57,30 @@ abstract class BuildBotService {
   const int _REFRESH_METHOD_ID = 1;
 }
 
-class PresenterPatchSet extends Reader {
-  bool get isConsolePatchSet => 1 == this.tag;
-  ConsolePatchSet get consolePatchSet => new ConsolePatchSet()
-      .._segment = _segment
-      .._offset = _offset + 0;
-  int get tag => _segment.memory.getUint16(_offset + 8);
-}
-
-class PresenterPatchSetBuilder extends Builder {
-  ConsolePatchSetBuilder initConsolePatchSet() {
-    tag = 1;
-    return new ConsolePatchSetBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
-  }
-  void set tag(int value) {
-    _segment.memory.setUint16(_offset + 8, value);
-  }
-}
-
 class ConsoleNodeData extends Reader {
-  StrData get title => new StrData()
-      .._segment = _segment
-      .._offset = _offset + 0;
-  StrData get status => new StrData()
-      .._segment = _segment
-      .._offset = _offset + 8;
+  String get title => readString(new _uint16List(), 0);
+  List<int> get titleData => readList(new _uint16List(), 0);
+  String get status => readString(new _uint16List(), 8);
+  List<int> get statusData => readList(new _uint16List(), 8);
   List<CommitNodeData> get commits => readList(new _CommitNodeDataList(), 16);
 }
 
 class ConsoleNodeDataBuilder extends Builder {
-  StrDataBuilder initTitle() {
-    return new StrDataBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
+  void set title(String value) {
+
+    NewString(new _uint16BuilderList(), 0, value);
   }
-  StrDataBuilder initStatus() {
-    return new StrDataBuilder()
-        .._segment = _segment
-        .._offset = _offset + 8;
+  List<int> initTitleData(int length) {
+
+    return NewList(new _uint16BuilderList(), 0, length, 2);
+  }
+  void set status(String value) {
+
+    NewString(new _uint16BuilderList(), 8, value);
+  }
+  List<int> initStatusData(int length) {
+
+    return NewList(new _uint16BuilderList(), 8, length, 2);
   }
   List<CommitNodeDataBuilder> initCommits(int length) {
     return NewList(new _CommitNodeDataBuilderList(), 16, length, 24);
@@ -104,157 +88,248 @@ class ConsoleNodeDataBuilder extends Builder {
 }
 
 class CommitNodeData extends Reader {
-  StrData get author => new StrData()
-      .._segment = _segment
-      .._offset = _offset + 0;
-  StrData get message => new StrData()
-      .._segment = _segment
-      .._offset = _offset + 8;
+  String get author => readString(new _uint16List(), 0);
+  List<int> get authorData => readList(new _uint16List(), 0);
+  String get message => readString(new _uint16List(), 8);
+  List<int> get messageData => readList(new _uint16List(), 8);
   int get revision => _segment.memory.getInt32(_offset + 16);
 }
 
 class CommitNodeDataBuilder extends Builder {
-  StrDataBuilder initAuthor() {
-    return new StrDataBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
+  void set author(String value) {
+
+    NewString(new _uint16BuilderList(), 0, value);
   }
-  StrDataBuilder initMessage() {
-    return new StrDataBuilder()
-        .._segment = _segment
-        .._offset = _offset + 8;
+  List<int> initAuthorData(int length) {
+
+    return NewList(new _uint16BuilderList(), 0, length, 2);
+  }
+  void set message(String value) {
+
+    NewString(new _uint16BuilderList(), 8, value);
+  }
+  List<int> initMessageData(int length) {
+
+    return NewList(new _uint16BuilderList(), 8, length, 2);
   }
   void set revision(int value) {
     _segment.memory.setInt32(_offset + 16, value);
   }
 }
 
-class ConsolePatchSet extends Reader {
-  List<ConsoleNodePatchData> get patches => readList(new _ConsoleNodePatchDataList(), 0);
+class BuildBotPatchData extends Reader {
+  bool get isNoPatch => 1 == this.tag;
+  bool get isConsolePatch => 2 == this.tag;
+  ConsolePatchData get consolePatch => new ConsolePatchData()
+      .._segment = _segment
+      .._offset = _offset + 0;
+  int get tag => _segment.memory.getUint16(_offset + 26);
 }
 
-class ConsolePatchSetBuilder extends Builder {
-  List<ConsoleNodePatchDataBuilder> initPatches(int length) {
-    return NewList(new _ConsoleNodePatchDataBuilderList(), 0, length, 32);
+class BuildBotPatchDataBuilder extends Builder {
+  void setNoPatch() {
+    tag = 1;
+  }
+  ConsolePatchDataBuilder initConsolePatch() {
+    tag = 2;
+    return new ConsolePatchDataBuilder()
+        .._segment = _segment
+        .._offset = _offset + 0;
+  }
+  void set tag(int value) {
+    _segment.memory.setUint16(_offset + 26, value);
   }
 }
 
-class ConsoleNodePatchData extends Reader {
+class ConsolePatchData extends Reader {
   bool get isReplace => 1 == this.tag;
   ConsoleNodeData get replace => new ConsoleNodeData()
       .._segment = _segment
       .._offset = _offset + 0;
-  bool get isTitle => 2 == this.tag;
-  StrData get title => new StrData()
-      .._segment = _segment
-      .._offset = _offset + 0;
-  bool get isStatus => 3 == this.tag;
-  StrData get status => new StrData()
-      .._segment = _segment
-      .._offset = _offset + 0;
-  bool get isCommits => 4 == this.tag;
-  ListCommitNodePatchData get commits => readStruct(new ListCommitNodePatchData(), 0);
+  bool get isUpdates => 2 == this.tag;
+  List<ConsoleUpdatePatchData> get updates => readList(new _ConsoleUpdatePatchDataList(), 0);
   int get tag => _segment.memory.getUint16(_offset + 24);
 }
 
-class ConsoleNodePatchDataBuilder extends Builder {
+class ConsolePatchDataBuilder extends Builder {
   ConsoleNodeDataBuilder initReplace() {
     tag = 1;
     return new ConsoleNodeDataBuilder()
         .._segment = _segment
         .._offset = _offset + 0;
   }
-  StrDataBuilder initTitle() {
+  List<ConsoleUpdatePatchDataBuilder> initUpdates(int length) {
     tag = 2;
-    return new StrDataBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
-  }
-  StrDataBuilder initStatus() {
-    tag = 3;
-    return new StrDataBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
-  }
-  ListCommitNodePatchDataBuilder initCommits() {
-    tag = 4;
-    return NewStruct(new ListCommitNodePatchDataBuilder(), 0, 16);
+    return NewList(new _ConsoleUpdatePatchDataBuilderList(), 0, length, 16);
   }
   void set tag(int value) {
     _segment.memory.setUint16(_offset + 24, value);
   }
 }
 
-class CommitNodePatchData extends Reader {
-  bool get isReplace => 1 == this.tag;
-  CommitNodeData get replace => new CommitNodeData()
+class ConsoleUpdatePatchData extends Reader {
+  bool get isTitle => 1 == this.tag;
+  String get title => readString(new _uint16List(), 0);
+  List<int> get titleData => readList(new _uint16List(), 0);
+  bool get isStatus => 2 == this.tag;
+  String get status => readString(new _uint16List(), 0);
+  List<int> get statusData => readList(new _uint16List(), 0);
+  bool get isCommits => 3 == this.tag;
+  CommitListPatchData get commits => new CommitListPatchData()
       .._segment = _segment
       .._offset = _offset + 0;
-  bool get isRevision => 2 == this.tag;
-  int get revision => _segment.memory.getInt32(_offset + 0);
-  bool get isAuthor => 3 == this.tag;
-  StrData get author => new StrData()
-      .._segment = _segment
-      .._offset = _offset + 0;
-  bool get isMessage => 4 == this.tag;
-  StrData get message => new StrData()
-      .._segment = _segment
-      .._offset = _offset + 0;
-  int get tag => _segment.memory.getUint16(_offset + 20);
-}
-
-class CommitNodePatchDataBuilder extends Builder {
-  CommitNodeDataBuilder initReplace() {
-    tag = 1;
-    return new CommitNodeDataBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
-  }
-  void set revision(int value) {
-    tag = 2;
-    _segment.memory.setInt32(_offset + 0, value);
-  }
-  StrDataBuilder initAuthor() {
-    tag = 3;
-    return new StrDataBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
-  }
-  StrDataBuilder initMessage() {
-    tag = 4;
-    return new StrDataBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
-  }
-  void set tag(int value) {
-    _segment.memory.setUint16(_offset + 20, value);
-  }
-}
-
-class ListCommitNodePatchData extends Reader {
-  bool get isReplace => 1 == this.tag;
-  List<CommitNodeData> get replace => readList(new _CommitNodeDataList(), 0);
   int get tag => _segment.memory.getUint16(_offset + 8);
 }
 
-class ListCommitNodePatchDataBuilder extends Builder {
-  List<CommitNodeDataBuilder> initReplace(int length) {
+class ConsoleUpdatePatchDataBuilder extends Builder {
+  void set title(String value) {
     tag = 1;
-    return NewList(new _CommitNodeDataBuilderList(), 0, length, 24);
+
+    NewString(new _uint16BuilderList(), 0, value);
+  }
+  List<int> initTitleData(int length) {
+    tag = 1;
+
+    return NewList(new _uint16BuilderList(), 0, length, 2);
+  }
+  void set status(String value) {
+    tag = 2;
+
+    NewString(new _uint16BuilderList(), 0, value);
+  }
+  List<int> initStatusData(int length) {
+    tag = 2;
+
+    return NewList(new _uint16BuilderList(), 0, length, 2);
+  }
+  CommitListPatchDataBuilder initCommits() {
+    tag = 3;
+    return new CommitListPatchDataBuilder()
+        .._segment = _segment
+        .._offset = _offset + 0;
   }
   void set tag(int value) {
     _segment.memory.setUint16(_offset + 8, value);
   }
 }
 
-class StrData extends Reader {
-  List<int> get chars => readList(new _uint8List(), 0);
+class CommitPatchData extends Reader {
+  bool get isReplace => 1 == this.tag;
+  CommitNodeData get replace => new CommitNodeData()
+      .._segment = _segment
+      .._offset = _offset + 0;
+  bool get isUpdates => 2 == this.tag;
+  List<CommitUpdatePatchData> get updates => readList(new _CommitUpdatePatchDataList(), 0);
+  int get tag => _segment.memory.getUint16(_offset + 20);
 }
 
-class StrDataBuilder extends Builder {
-  List<int> initChars(int length) {
-    return NewList(new _uint8BuilderList(), 0, length, 1);
+class CommitPatchDataBuilder extends Builder {
+  CommitNodeDataBuilder initReplace() {
+    tag = 1;
+    return new CommitNodeDataBuilder()
+        .._segment = _segment
+        .._offset = _offset + 0;
   }
+  List<CommitUpdatePatchDataBuilder> initUpdates(int length) {
+    tag = 2;
+    return NewList(new _CommitUpdatePatchDataBuilderList(), 0, length, 16);
+  }
+  void set tag(int value) {
+    _segment.memory.setUint16(_offset + 20, value);
+  }
+}
+
+class CommitUpdatePatchData extends Reader {
+  bool get isRevision => 1 == this.tag;
+  int get revision => _segment.memory.getInt32(_offset + 0);
+  bool get isAuthor => 2 == this.tag;
+  String get author => readString(new _uint16List(), 0);
+  List<int> get authorData => readList(new _uint16List(), 0);
+  bool get isMessage => 3 == this.tag;
+  String get message => readString(new _uint16List(), 0);
+  List<int> get messageData => readList(new _uint16List(), 0);
+  int get tag => _segment.memory.getUint16(_offset + 8);
+}
+
+class CommitUpdatePatchDataBuilder extends Builder {
+  void set revision(int value) {
+    tag = 1;
+    _segment.memory.setInt32(_offset + 0, value);
+  }
+  void set author(String value) {
+    tag = 2;
+
+    NewString(new _uint16BuilderList(), 0, value);
+  }
+  List<int> initAuthorData(int length) {
+    tag = 2;
+
+    return NewList(new _uint16BuilderList(), 0, length, 2);
+  }
+  void set message(String value) {
+    tag = 3;
+
+    NewString(new _uint16BuilderList(), 0, value);
+  }
+  List<int> initMessageData(int length) {
+    tag = 3;
+
+    return NewList(new _uint16BuilderList(), 0, length, 2);
+  }
+  void set tag(int value) {
+    _segment.memory.setUint16(_offset + 8, value);
+  }
+}
+
+class CommitListPatchData extends Reader {
+  List<CommitListUpdatePatchData> get updates => readList(new _CommitListUpdatePatchDataList(), 0);
+}
+
+class CommitListPatchDataBuilder extends Builder {
+  List<CommitListUpdatePatchDataBuilder> initUpdates(int length) {
+    return NewList(new _CommitListUpdatePatchDataBuilderList(), 0, length, 16);
+  }
+}
+
+class CommitListUpdatePatchData extends Reader {
+  bool get isInsert => 1 == this.tag;
+  List<CommitNodeData> get insert => readList(new _CommitNodeDataList(), 0);
+  bool get isPatch => 2 == this.tag;
+  List<CommitPatchData> get patch => readList(new _CommitPatchDataList(), 0);
+  bool get isRemove => 3 == this.tag;
+  int get remove => _segment.memory.getUint32(_offset + 0);
+  int get index => _segment.memory.getUint32(_offset + 8);
+  int get tag => _segment.memory.getUint16(_offset + 12);
+}
+
+class CommitListUpdatePatchDataBuilder extends Builder {
+  List<CommitNodeDataBuilder> initInsert(int length) {
+    tag = 1;
+    return NewList(new _CommitNodeDataBuilderList(), 0, length, 24);
+  }
+  List<CommitPatchDataBuilder> initPatch(int length) {
+    tag = 2;
+    return NewList(new _CommitPatchDataBuilderList(), 0, length, 24);
+  }
+  void set remove(int value) {
+    tag = 3;
+    _segment.memory.setUint32(_offset + 0, value);
+  }
+  void set index(int value) {
+    _segment.memory.setUint32(_offset + 8, value);
+  }
+  void set tag(int value) {
+    _segment.memory.setUint16(_offset + 12, value);
+  }
+}
+
+class _uint16List extends ListReader implements List<uint16> {
+  int operator[](int index) => _segment.memory.getUint16(_offset + index * 2);
+}
+
+class _uint16BuilderList extends ListBuilder implements List<uint16> {
+  int operator[](int index) => _segment.memory.getUint16(_offset + index * 2);
+  void operator[]=(int index, int value) => _segment.memory.setUint16(_offset + index * 2, value);
 }
 
 class _CommitNodeDataList extends ListReader implements List<CommitNodeData> {
@@ -265,19 +340,34 @@ class _CommitNodeDataBuilderList extends ListBuilder implements List<CommitNodeD
   CommitNodeDataBuilder operator[](int index) => readListElement(new CommitNodeDataBuilder(), index, 24);
 }
 
-class _ConsoleNodePatchDataList extends ListReader implements List<ConsoleNodePatchData> {
-  ConsoleNodePatchData operator[](int index) => readListElement(new ConsoleNodePatchData(), index, 32);
+class _ConsoleUpdatePatchDataList extends ListReader implements List<ConsoleUpdatePatchData> {
+  ConsoleUpdatePatchData operator[](int index) => readListElement(new ConsoleUpdatePatchData(), index, 16);
 }
 
-class _ConsoleNodePatchDataBuilderList extends ListBuilder implements List<ConsoleNodePatchDataBuilder> {
-  ConsoleNodePatchDataBuilder operator[](int index) => readListElement(new ConsoleNodePatchDataBuilder(), index, 32);
+class _ConsoleUpdatePatchDataBuilderList extends ListBuilder implements List<ConsoleUpdatePatchDataBuilder> {
+  ConsoleUpdatePatchDataBuilder operator[](int index) => readListElement(new ConsoleUpdatePatchDataBuilder(), index, 16);
 }
 
-class _uint8List extends ListReader implements List<uint8> {
-  int operator[](int index) => _segment.memory.getUint8(_offset + index * 1);
+class _CommitUpdatePatchDataList extends ListReader implements List<CommitUpdatePatchData> {
+  CommitUpdatePatchData operator[](int index) => readListElement(new CommitUpdatePatchData(), index, 16);
 }
 
-class _uint8BuilderList extends ListBuilder implements List<uint8> {
-  int operator[](int index) => _segment.memory.getUint8(_offset + index * 1);
-  void operator[]=(int index, int value) => _segment.memory.setUint8(_offset + index * 1, value);
+class _CommitUpdatePatchDataBuilderList extends ListBuilder implements List<CommitUpdatePatchDataBuilder> {
+  CommitUpdatePatchDataBuilder operator[](int index) => readListElement(new CommitUpdatePatchDataBuilder(), index, 16);
+}
+
+class _CommitListUpdatePatchDataList extends ListReader implements List<CommitListUpdatePatchData> {
+  CommitListUpdatePatchData operator[](int index) => readListElement(new CommitListUpdatePatchData(), index, 16);
+}
+
+class _CommitListUpdatePatchDataBuilderList extends ListBuilder implements List<CommitListUpdatePatchDataBuilder> {
+  CommitListUpdatePatchDataBuilder operator[](int index) => readListElement(new CommitListUpdatePatchDataBuilder(), index, 16);
+}
+
+class _CommitPatchDataList extends ListReader implements List<CommitPatchData> {
+  CommitPatchData operator[](int index) => readListElement(new CommitPatchData(), index, 24);
+}
+
+class _CommitPatchDataBuilderList extends ListBuilder implements List<CommitPatchDataBuilder> {
+  CommitPatchDataBuilder operator[](int index) => readListElement(new CommitPatchDataBuilder(), index, 24);
 }

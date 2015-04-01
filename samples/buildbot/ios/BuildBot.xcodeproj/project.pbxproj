@@ -23,6 +23,7 @@
 		DA4B888F1A9F0BF500EFBB5A /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DA4B888D1A9F0BF500EFBB5A /* Main.storyboard */; };
 		DA4B88911A9F0BF500EFBB5A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DA4B88901A9F0BF500EFBB5A /* Images.xcassets */; };
 		DA4B88A01A9F0BF500EFBB5A /* BuildBotTests.m in Sources */ = {isa = PBXBuildFile; fileRef = DA4B889F1A9F0BF500EFBB5A /* BuildBotTests.m */; };
+		DABB4D171AC54D7800B7267E /* unicode.cc in Sources */ = {isa = PBXBuildFile; fileRef = DABB4D151AC54D7800B7267E /* unicode.cc */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,6 +67,8 @@
 		DA4B88991A9F0BF500EFBB5A /* BuildBotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BuildBotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA4B889E1A9F0BF500EFBB5A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DA4B889F1A9F0BF500EFBB5A /* BuildBotTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BuildBotTests.m; sourceTree = "<group>"; };
+		DABB4D151AC54D7800B7267E /* unicode.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unicode.cc; sourceTree = "<group>"; };
+		DABB4D161AC54D7800B7267E /* unicode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unicode.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -115,6 +118,8 @@
 		DA1DEDF91A9F20810043E9CF /* cc */ = {
 			isa = PBXGroup;
 			children = (
+				DABB4D151AC54D7800B7267E /* unicode.cc */,
+				DABB4D161AC54D7800B7267E /* unicode.h */,
 				DA1DEDFA1A9F20810043E9CF /* buildbot_service.cc */,
 				DA1DEDFB1A9F20810043E9CF /* buildbot_service.h */,
 				DA1DEDFC1A9F20810043E9CF /* struct.cc */,
@@ -295,6 +300,7 @@
 				DA1B2C9F1AA1BAE700A94B70 /* ConsoleNode.mm in Sources */,
 				DA1752D31AA99CE600576109 /* CommitNode.mm in Sources */,
 				DA1DEDFF1A9F20810043E9CF /* struct.cc in Sources */,
+				DABB4D171AC54D7800B7267E /* unicode.cc in Sources */,
 				DA1B2CA21AA44F8300A94B70 /* PresenterUtils.mm in Sources */,
 				DA1752D61AA9B37000576109 /* CommitsTableViewController.mm in Sources */,
 				DA4B88891A9F0BF500EFBB5A /* AppDelegate.mm in Sources */,

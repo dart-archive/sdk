@@ -3,19 +3,15 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 
-// Imaginary presenter description:
+// Imaginary presentation description:
 //
-//    presenter ConsolePresenter {
-//      ConsoleNode present()
-//    }
-//
-//    node ConsoleNode {
+//    node Console {
 //      string title;
 //      string status;
 //      List<CommitNode> commits;
 //    }
 //
-//    node CommitNode {
+//    node Commit {
 //      int32 revision;
 //      string author;
 //      string message;
@@ -46,62 +42,72 @@
 
 // Internal service layer
 service BuildBotService {
-  PresenterPatchSet* refresh();
+  BuildBotPatchData* refresh();
 }
 
-struct PresenterPatchSet {
-  union {
-    ConsolePatchSet consolePatchSet;
-  }
-}
-
-// Exchange structures.
+// Node structures.
 
 struct ConsoleNodeData {
-  StrData title;
-  StrData status;
+  String title;
+  String status;
   List<CommitNodeData> commits;
 }
 
 struct CommitNodeData {
   int32 revision;
-  StrData author;
-  StrData message;
+  String author;
+  String message;
 }
 
 // Patch structures.
 
-struct ConsolePatchSet {
-  List<ConsoleNodePatchData> patches;
+// TODO(zerny): Do we want to hook up several root presenters in this way?
+struct BuildBotPatchData {
+  union {
+    void noPatch;
+    ConsolePatchData consolePatch;
+  }
 }
 
-struct ConsoleNodePatchData {
+struct ConsolePatchData {
   union {
     ConsoleNodeData replace;
-    StrData title;
-    StrData status;
-    // TODO(zerny): Why can't I inline a union here?
-    ListCommitNodePatchData* commits;
+    List<ConsoleUpdatePatchData> updates;
   }
 }
 
-struct CommitNodePatchData {
+struct ConsoleUpdatePatchData {
+  union {
+    String title;
+    String status;
+    CommitListPatchData commits;
+  }
+}
+
+struct CommitPatchData {
   union {
     CommitNodeData replace;
-    int32 revision;
-    StrData author;
-    StrData message;
+    List<CommitUpdatePatchData> updates;
   }
 }
 
-struct ListCommitNodePatchData {
+struct CommitUpdatePatchData {
   union {
-    List<CommitNodeData> replace;
+    int32 revision;
+    String author;
+    String message;
   }
 }
 
-// Utility structures.
+struct CommitListPatchData {
+  List<CommitListUpdatePatchData> updates;
+}
 
-struct StrData {
-  List<uint8> chars;
+struct CommitListUpdatePatchData {
+  uint32 index;
+  union {
+    List<CommitNodeData> insert;
+    List<CommitPatchData> patch;
+    uint32 remove;
+  }
 }

@@ -5,18 +5,23 @@
 import 'model.dart';
 import 'dart/console_presenter_base.dart';
 import 'dart/presentation_graph.dart' as node;
+import 'trace.dart';
 
 class ConsolePresenter extends ConsolePresenterBase {
   int _version = 0;
   Project _project;
   ConsolePresenter(this._project);
 
-  ConsoleNode present() =>
-    node.console(title: "${_project.name}::${_project.console.title}",
-                 status: "${_project.console.status}",
-                 commits: presentCommits());
+  ConsoleNode present() {
+    assert(trace("ConsolePresenter::present"));
+    return node.console(
+        title: "${_project.name}::${_project.console.title}",
+        status: "${_project.console.status}",
+        commits: presentCommits());
+  }
 
   List<CommitNode> presentCommits() {
+    assert(trace("ConsolePresenter::presentCommits"));
     Console console = _project.console;
     int length = console.commitCount;
     List commits = new List(length);

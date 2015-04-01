@@ -8,7 +8,8 @@
 
 @interface PresenterUtils : NSObject
 
-+ (NSString*)decodeStrData:(const StrData&)str;
++ (NSString*)decodeString:(const List<unichar>&)chars;
++ (void)encodeString:(NSString*)string into:(List<unichar>)chars;
 
 @end
 

@@ -20,35 +20,40 @@
 }
 
 - (id)initWith:(const ConsoleNodeData&)data {
-  _title = [PresenterUtils decodeStrData:data.getTitle()];
-  _status = [PresenterUtils decodeStrData:data.getStatus()];
+  _title = [PresenterUtils decodeString:data.getTitleData()];
+  _status = [PresenterUtils decodeString:data.getStatusData()];
   _commits = [CommitNode arrayWithData:data.getCommits()];
   return self;
 }
 
-+ (void)applyPatches:(const ConsolePatchSet&)patchSet
-              atRoot:(ConsoleNode* __strong *)root {
-  List<ConsoleNodePatchData> patches = patchSet.getPatches();
-  for (int i = 0; i < patches.length(); ++i) {
-    [ConsoleNode applyPatch:patches[i] atNode:root];
-  }
-}
-
-+ (void)applyPatch:(const ConsoleNodePatchData&)patch
-            atNode:(ConsoleNode* __strong *)node {
+- (void)patchWith:(const ConsolePatchData &)patch {
   if (patch.isReplace()) {
-    *node = [[ConsoleNode alloc] initWith: patch.getReplace()];
-  } else {
-    assert(*node);
-    if (patch.isTitle()) {
-      (*node)->_title = [PresenterUtils decodeStrData:patch.getTitle()];
-    } else if (patch.isStatus()) {
-      (*node)->_status = [PresenterUtils decodeStrData:patch.getStatus()];
-    } else if (patch.isCommits()) {
-      [CommitNode applyListPatch:patch.getCommits() atList:&(*node)->_commits];
+    (void)[self initWith:patch.getReplace()];
+    return;
+  }
+  assert(patch.isUpdates());
+  List<ConsoleUpdatePatchData> updates = patch.getUpdates();
+  for (int i = 0; i < updates.length(); ++i) {
+    ConsoleUpdatePatchData update = updates[i];
+    if (update.isTitle()) {
+      _title = [PresenterUtils decodeString:update.getTitleData()];
+    } else if (update.isStatus()) {
+      _status = [PresenterUtils decodeString:update.getStatusData()];
+    } else if (update.isCommits()) {
+      [CommitNode applyListPatch:update.getCommits() atList:_commits];
     } else {
       abort();
     }
+  }
+}
+
++ (void)applyPatch:(const ConsolePatchData&)patch
+            atNode:(ConsoleNode* __strong *)node {
+  if (*node) {
+    [*node patchWith:patch];
+  } else {
+    assert(patch.isReplace());
+    *node = [[ConsoleNode alloc] initWith: patch.getReplace()];
   }
 }
 

@@ -10,9 +10,13 @@
 @implementation ConsolePresenter
 
 - (void)refresh {
-  PresenterPatchSet patchSet = BuildBotService::refresh();
-  [ConsoleNode applyPatches:patchSet.getConsolePatchSet() atRoot:&_root];
-  patchSet.Delete();
+  BuildBotPatchData patch = BuildBotService::refresh();
+  if (patch.isConsolePatch()) {
+    [ConsoleNode applyPatch:patch.getConsolePatch() atNode:&_root];
+  } else {
+    assert(patch.isNoPatch());
+  }
+  patch.Delete();
 }
 
 @end

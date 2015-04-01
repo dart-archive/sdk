@@ -6,12 +6,16 @@
 
 @implementation PresenterUtils
 
-+ (NSString*)decodeStrData:(const StrData&)str {
-  List<uint8_t> chars = str.getChars();
-  unsigned length = chars.length();
-  return [[NSString alloc]
-           initWithBytes:chars.data()
-                  length:length encoding:NSASCIIStringEncoding];
++ (NSString*)decodeString:(const List<unichar>&)chars {
+  List<unichar>& tmp = const_cast<List<unichar>&>(chars);
+  return [[NSString alloc] initWithCharacters:tmp.data()
+                                       length:tmp.length()];
+}
+
++ (void)encodeString:(NSString*)string into:(List<unichar>)chars {
+  assert(string.length == chars.length());
+  [string getCharacters:chars.data()
+                  range:NSMakeRange(0, string.length)];
 }
 
 @end

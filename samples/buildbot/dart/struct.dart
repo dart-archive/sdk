@@ -250,7 +250,7 @@ class Builder {
   }
 
   void NewString(ListBuilder list, int offset, String value) {
-    NewList(list, offset, value.length, 1);
+    NewList(list, offset, value.length, 2);
     for (int i = 0; i < value.length; i++) {
       list[i] = value.codeUnitAt(i);
     }

@@ -21,7 +21,7 @@ void BuildBotService::tearDown() {
 
 static const MethodId kRefreshId_ = reinterpret_cast<MethodId>(1);
 
-PresenterPatchSet BuildBotService::refresh() {
+BuildBotPatchData BuildBotService::refresh() {
   static const int kSize = 56;
   char _bits[kSize];
   char* _buffer = _bits;
@@ -30,41 +30,36 @@ PresenterPatchSet BuildBotService::refresh() {
   int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
-  return PresenterPatchSet(segment, 8);
+  return BuildBotPatchData(segment, 8);
 }
 
-static void Unwrap_PresenterPatchSet_8(void* raw) {
-  typedef void (*cbt)(PresenterPatchSet);
+static void Unwrap_BuildBotPatchData_8(void* raw) {
+  typedef void (*cbt)(BuildBotPatchData);
   char* buffer = reinterpret_cast<char*>(raw);
   int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
   cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback(PresenterPatchSet(segment, 8));
+  callback(BuildBotPatchData(segment, 8));
 }
 
-void BuildBotService::refreshAsync(void (*callback)(PresenterPatchSet)) {
+void BuildBotService::refreshAsync(void (*callback)(BuildBotPatchData)) {
   static const int kSize = 56 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
   *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
-  ServiceApiInvokeAsync(service_id_, kRefreshId_, Unwrap_PresenterPatchSet_8, _buffer, kSize);
+  ServiceApiInvokeAsync(service_id_, kRefreshId_, Unwrap_BuildBotPatchData_8, _buffer, kSize);
 }
 
-ConsolePatchSetBuilder PresenterPatchSetBuilder::initConsolePatchSet() {
-  setTag(1);
-  return ConsolePatchSetBuilder(segment(), offset() + 0);
+List<uint16_t> ConsoleNodeDataBuilder::initTitleData(int length) {
+  Reader result = NewList(0, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
 }
 
-ConsolePatchSet PresenterPatchSet::getConsolePatchSet() const { return ConsolePatchSet(segment(), offset() + 0); }
-
-StrDataBuilder ConsoleNodeDataBuilder::initTitle() {
-  return StrDataBuilder(segment(), offset() + 0);
-}
-
-StrDataBuilder ConsoleNodeDataBuilder::initStatus() {
-  return StrDataBuilder(segment(), offset() + 8);
+List<uint16_t> ConsoleNodeDataBuilder::initStatusData(int length) {
+  Reader result = NewList(8, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
 }
 
 List<CommitNodeDataBuilder> ConsoleNodeDataBuilder::initCommits(int length) {
@@ -72,84 +67,93 @@ List<CommitNodeDataBuilder> ConsoleNodeDataBuilder::initCommits(int length) {
   return List<CommitNodeDataBuilder>(result.segment(), result.offset(), length);
 }
 
-StrData ConsoleNodeData::getTitle() const { return StrData(segment(), offset() + 0); }
-
-StrData ConsoleNodeData::getStatus() const { return StrData(segment(), offset() + 8); }
-
-StrDataBuilder CommitNodeDataBuilder::initAuthor() {
-  return StrDataBuilder(segment(), offset() + 0);
+List<uint16_t> CommitNodeDataBuilder::initAuthorData(int length) {
+  Reader result = NewList(0, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
 }
 
-StrDataBuilder CommitNodeDataBuilder::initMessage() {
-  return StrDataBuilder(segment(), offset() + 8);
+List<uint16_t> CommitNodeDataBuilder::initMessageData(int length) {
+  Reader result = NewList(8, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
 }
 
-StrData CommitNodeData::getAuthor() const { return StrData(segment(), offset() + 0); }
-
-StrData CommitNodeData::getMessage() const { return StrData(segment(), offset() + 8); }
-
-List<ConsoleNodePatchDataBuilder> ConsolePatchSetBuilder::initPatches(int length) {
-  Reader result = NewList(0, length, 32);
-  return List<ConsoleNodePatchDataBuilder>(result.segment(), result.offset(), length);
+ConsolePatchDataBuilder BuildBotPatchDataBuilder::initConsolePatch() {
+  setTag(2);
+  return ConsolePatchDataBuilder(segment(), offset() + 0);
 }
 
-ConsoleNodeDataBuilder ConsoleNodePatchDataBuilder::initReplace() {
+ConsolePatchData BuildBotPatchData::getConsolePatch() const { return ConsolePatchData(segment(), offset() + 0); }
+
+ConsoleNodeDataBuilder ConsolePatchDataBuilder::initReplace() {
   setTag(1);
   return ConsoleNodeDataBuilder(segment(), offset() + 0);
 }
 
-StrDataBuilder ConsoleNodePatchDataBuilder::initTitle() {
+List<ConsoleUpdatePatchDataBuilder> ConsolePatchDataBuilder::initUpdates(int length) {
   setTag(2);
-  return StrDataBuilder(segment(), offset() + 0);
+  Reader result = NewList(0, length, 16);
+  return List<ConsoleUpdatePatchDataBuilder>(result.segment(), result.offset(), length);
 }
 
-StrDataBuilder ConsoleNodePatchDataBuilder::initStatus() {
+ConsoleNodeData ConsolePatchData::getReplace() const { return ConsoleNodeData(segment(), offset() + 0); }
+
+List<uint16_t> ConsoleUpdatePatchDataBuilder::initTitleData(int length) {
+  setTag(1);
+  Reader result = NewList(0, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
+}
+
+List<uint16_t> ConsoleUpdatePatchDataBuilder::initStatusData(int length) {
+  setTag(2);
+  Reader result = NewList(0, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
+}
+
+CommitListPatchDataBuilder ConsoleUpdatePatchDataBuilder::initCommits() {
   setTag(3);
-  return StrDataBuilder(segment(), offset() + 0);
+  return CommitListPatchDataBuilder(segment(), offset() + 0);
 }
 
-ListCommitNodePatchDataBuilder ConsoleNodePatchDataBuilder::initCommits() {
-  setTag(4);
-  Builder result = NewStruct(0, 16);
-  return ListCommitNodePatchDataBuilder(result);
-}
+CommitListPatchData ConsoleUpdatePatchData::getCommits() const { return CommitListPatchData(segment(), offset() + 0); }
 
-ConsoleNodeData ConsoleNodePatchData::getReplace() const { return ConsoleNodeData(segment(), offset() + 0); }
-
-StrData ConsoleNodePatchData::getTitle() const { return StrData(segment(), offset() + 0); }
-
-StrData ConsoleNodePatchData::getStatus() const { return StrData(segment(), offset() + 0); }
-
-ListCommitNodePatchData ConsoleNodePatchData::getCommits() const { return ReadStruct<ListCommitNodePatchData>(0); }
-
-CommitNodeDataBuilder CommitNodePatchDataBuilder::initReplace() {
+CommitNodeDataBuilder CommitPatchDataBuilder::initReplace() {
   setTag(1);
   return CommitNodeDataBuilder(segment(), offset() + 0);
 }
 
-StrDataBuilder CommitNodePatchDataBuilder::initAuthor() {
+List<CommitUpdatePatchDataBuilder> CommitPatchDataBuilder::initUpdates(int length) {
+  setTag(2);
+  Reader result = NewList(0, length, 16);
+  return List<CommitUpdatePatchDataBuilder>(result.segment(), result.offset(), length);
+}
+
+CommitNodeData CommitPatchData::getReplace() const { return CommitNodeData(segment(), offset() + 0); }
+
+List<uint16_t> CommitUpdatePatchDataBuilder::initAuthorData(int length) {
+  setTag(2);
+  Reader result = NewList(0, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
+}
+
+List<uint16_t> CommitUpdatePatchDataBuilder::initMessageData(int length) {
   setTag(3);
-  return StrDataBuilder(segment(), offset() + 0);
+  Reader result = NewList(0, length, 2);
+  return List<uint16_t>(result.segment(), result.offset(), length);
 }
 
-StrDataBuilder CommitNodePatchDataBuilder::initMessage() {
-  setTag(4);
-  return StrDataBuilder(segment(), offset() + 0);
+List<CommitListUpdatePatchDataBuilder> CommitListPatchDataBuilder::initUpdates(int length) {
+  Reader result = NewList(0, length, 16);
+  return List<CommitListUpdatePatchDataBuilder>(result.segment(), result.offset(), length);
 }
 
-CommitNodeData CommitNodePatchData::getReplace() const { return CommitNodeData(segment(), offset() + 0); }
-
-StrData CommitNodePatchData::getAuthor() const { return StrData(segment(), offset() + 0); }
-
-StrData CommitNodePatchData::getMessage() const { return StrData(segment(), offset() + 0); }
-
-List<CommitNodeDataBuilder> ListCommitNodePatchDataBuilder::initReplace(int length) {
+List<CommitNodeDataBuilder> CommitListUpdatePatchDataBuilder::initInsert(int length) {
   setTag(1);
   Reader result = NewList(0, length, 24);
   return List<CommitNodeDataBuilder>(result.segment(), result.offset(), length);
 }
 
-List<uint8_t> StrDataBuilder::initChars(int length) {
-  Reader result = NewList(0, length, 1);
-  return List<uint8_t>(result.segment(), result.offset(), length);
+List<CommitPatchDataBuilder> CommitListUpdatePatchDataBuilder::initPatch(int length) {
+  setTag(2);
+  Reader result = NewList(0, length, 24);
+  return List<CommitPatchDataBuilder>(result.segment(), result.offset(), length);
 }

@@ -5,20 +5,76 @@
 // Should become auto-generated.
 
 import 'presentation_utils.dart';
+import '../trace.dart';
 
 class CommitNode {
-  int revision;
-  String author;
-  String message;
+  final int revision;
+  final String author;
+  final String message;
+
   CommitNode(this.revision, this.author, this.message);
 
-  // TODO(zerny): implement diff
+  CommitPatch diff(CommitNode previous) {
+    assert(trace("CommitNode::diff"));
+    if (previous is! CommitNode) {
+      return new CommitReplacePatch(this, previous);
+    }
+    CommitUpdatePatch patch;
+    if (revision != previous.revision) {
+      patch = new CommitUpdatePatch();
+      patch.revision = revision;
+    }
+    if (author != previous.author) {
+      if (patch == null) patch = new CommitUpdatePatch();
+      patch.author = author;
+    }
+    if (message != previous.message) {
+      if (patch == null) patch = new CommitUpdatePatch();
+      patch.message = message;
+    }
+    return patch;
+  }
 
   void serialize(CommitNodeDataBuilder builder) {
+    assert(trace("CommitNode::serialize"));
     builder.revision = revision;
-    serializeString(author, builder.initAuthor());
-    serializeString(message, builder.initMessage());
+    builder.author = author;
+    builder.message = message;
   }
 }
 
-// TODO(zerny): implement CommitNode patches.
+abstract class CommitPatch {
+  void serialize(CommitPatchDataBuilder builder);
+}
+
+class CommitReplacePatch extends CommitPatch {
+  final CommitNode replacement;
+  final CommitNode previous;
+  CommitReplacePatch(this.replacement, this.previous);
+  void serialize(CommitPatchDataBuilder builder) {
+    assert(trace("CommitReplacePatch::serialize"));
+    replacement.serialize(builder.initReplace());
+  }
+}
+
+class CommitUpdatePatch extends CommitPatch {
+  int _revision;
+  String _author;
+  String _message;
+  int _count = 0;
+
+  set revision(revision) { ++_count; _revision = revision; }
+  set author(author) { ++_count; _author = author; }
+  set message(message) { ++_count; _message = message; }
+
+  void serialize(CommitUpdatePatchDataBuilder builder) {
+    assert(trace("CommitUpdatePatch::serialize"));
+    assert(_count > 0);
+    List<CommitUpdatePatchDataBuilder> builders = builder.initUpdates(_count);
+    int index = 0;
+    if (_revision != null) builders[index++].revision = _revision;
+    if (_author != null) builders[index++].author = _author;
+    if (_message != null) builders[index++].message = _message;
+    assert(index == _count);
+  }
+}

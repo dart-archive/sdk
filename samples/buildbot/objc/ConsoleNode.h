@@ -14,7 +14,9 @@
 
 - (id)initWith:(const ConsoleNodeData&)data;
 
-+ (void)applyPatches:(const ConsolePatchSet&)patchSet
-              atRoot:(ConsoleNode* __strong *)root;
+- (void)patchWith:(const ConsolePatchData&)patch;
+
++ (void)applyPatch:(const ConsolePatchData&)patch
+            atNode:(ConsoleNode* __strong *)node;
 
 @end
