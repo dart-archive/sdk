@@ -1356,24 +1356,122 @@ abstract class CodegenVisitor
     builder.invokeStatic(constId, arity);
   }
 
-  void visitNewExpression(NewExpression node) {
-    // TODO(ahe): Report bug: should already be the declaration.
-    ConstructorElement constructor =
-        elements[node.send].declaration.effectiveTarget.declaration;
-    if (node.isConst) {
-      int constId = allocateConstantFromNode(node);
-      builder.loadConst(constId);
-    } else {
-      NodeList arguments = node.send.argumentsNode;
-      if (constructor.isFactoryConstructor) {
-        Selector selector = elements.getSelector(node.send);
-        staticFunctionCall(constructor, arguments, selector);
-      } else {
-        int arity = loadArguments(node.send.argumentsNode, constructor);
-        callConstructor(constructor, arity);
-      }
-    }
+  void visitConstConstructorInvoke(
+      NewExpression node,
+      ConstructedConstantExpression constant,
+      _) {
+    int constId = allocateConstantFromNode(node);
+    builder.loadConst(constId);
     applyVisitState();
+  }
+
+  void visitGenerativeConstructorInvoke(
+      NewExpression node,
+      ConstructorElement constructor,
+      InterfaceType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    int arity = loadArguments(arguments, constructor);
+    callConstructor(constructor, arity);
+    applyVisitState();
+  }
+
+  void visitFactoryConstructorInvoke(
+      NewExpression node,
+      ConstructorElement constructor,
+      InterfaceType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    Selector selector = elements.getSelector(node.send);
+    staticFunctionCall(constructor, arguments, selector);
+    applyVisitState();
+  }
+
+  void visitRedirectingGenerativeConstructorInvoke(
+      NewExpression node,
+      ConstructorElement constructor,
+      InterfaceType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    // TODO(ajohnsen): The arguments may need to be shuffled.
+    visitGenerativeConstructorInvoke(
+        node,
+        constructor.effectiveTarget,
+        type,
+        arguments,
+        Selector,
+        null);
+ }
+
+  void visitRedirectingFactoryConstructorInvoke(
+      NewExpression node,
+      ConstructorElement constructor,
+      InterfaceType type,
+      ConstructorElement effectiveTarget,
+      InterfaceType effectiveTargetType,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    if (effectiveTarget.isGenerativeConstructor) {
+      visitGenerativeConstructorInvoke(
+          node,
+          effectiveTarget,
+          effectiveTargetType,
+          arguments,
+          Selector,
+          null);
+    } else {
+      visitFactoryConstructorInvoke(
+          node,
+          effectiveTarget,
+          effectiveTargetType,
+          arguments,
+          Selector,
+          null);
+    }
+  }
+
+  void errorUnresolvedConstructorInvoke(
+      NewExpression node,
+      Element constructor,
+      DartType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    handleUnresolved(node.send.toString());
+  }
+
+  void errorUnresolvedClassConstructorInvoke(
+      NewExpression node,
+      Element element,
+      MalformedType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    handleUnresolved(node.send.toString());
+  }
+
+  void errorAbstractClassConstructorInvoke(
+      NewExpression node,
+      ConstructorElement element,
+      InterfaceType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    generateUnimplementedError(node, "Cannot allocate abstract class");
+  }
+
+  void errorUnresolvedRedirectingFactoryConstructorInvoke(
+      NewExpression node,
+      ConstructorElement constructor,
+      InterfaceType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    handleUnresolved(node.send.toString());
   }
 
   void visitTopLevelGetterGet(
