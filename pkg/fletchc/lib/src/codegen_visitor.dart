@@ -442,6 +442,38 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void handleStaticFieldCompound(
+      FieldElement field,
+      AssignmentOperator operator,
+      Node rhs) {
+    handleStaticFieldGet(field);
+    visitForValue(rhs);
+    Selector selector = new Selector.binaryOperator(
+        operator.binaryOperator.name);
+    invokeMethod(selector);
+    handleStaticFieldSet(field);
+  }
+
+  void visitTopLevelFieldCompound(
+      Send node,
+      FieldElement field,
+      AssignmentOperator operator,
+      Node rhs,
+      _) {
+    handleStaticFieldCompound(field, operator, rhs);
+    applyVisitState();
+  }
+
+  void visitStaticFieldCompound(
+      Send node,
+      FieldElement field,
+      AssignmentOperator operator,
+      Node rhs,
+      _) {
+    handleStaticFieldCompound(field, operator, rhs);
+    applyVisitState();
+  }
+
   void handleBinaryOperator(
       Node left,
       Node right,
@@ -794,19 +826,34 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void visitTopLevelFieldInvoke(
-      Send node,
-      FieldElement element,
+  void handleStaticFieldInvoke(
+      FieldElement field,
       NodeList arguments,
-      Selector selector,
-      _) {
-    // TODO(ajohnsen): Handle initializer.
-    int index = context.getStaticFieldIndex(element, element);
-    builder.loadStatic(index);
+      Selector selector) {
+    handleStaticFieldGet(field);
     for (Node argument in arguments) {
       visitForValue(argument);
     }
     invokeMethod(selector);
+  }
+
+  void visitTopLevelFieldInvoke(
+      Send node,
+      FieldElement field,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    handleStaticFieldInvoke(field, arguments, selector);
+    applyVisitState();
+  }
+
+  void visitStaticFieldInvoke(
+      Send node,
+      FieldElement field,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    handleStaticFieldInvoke(field, arguments, selector);
     applyVisitState();
   }
 
@@ -966,30 +1013,29 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void handleStaticFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs) {
-    visitForValue(rhs);
+  void handleStaticFieldSet(FieldElement field) {
     int index = context.getStaticFieldIndex(field, element);
     builder.storeStatic(index);
-    applyVisitState();
   }
 
   void visitTopLevelFieldSet(
       SendSet node,
-      FieldElement element,
+      FieldElement field,
       Node rhs,
       _) {
-    handleStaticFieldSet(node, element, rhs);
+    visitForValue(rhs);
+    handleStaticFieldSet(field);
+    applyVisitState();
   }
 
   void visitStaticFieldSet(
       SendSet node,
-      FieldElement element,
+      FieldElement field,
       Node rhs,
       _) {
-    handleStaticFieldSet(node, element, rhs);
+    visitForValue(rhs);
+    handleStaticFieldSet(field);
+    applyVisitState();
   }
 
   void visitStringJuxtaposition(StringJuxtaposition node) {
@@ -1865,8 +1911,7 @@ abstract class CodegenVisitor
         if (target.isLocal) {
           scope[target].store(builder);
         } else if (target.isField) {
-          int index = context.getStaticFieldIndex(target, element);
-          builder.storeStatic(index);
+          handleStaticFieldSet(target);
         } else {
           internalError(node, "Unhandled store in for-in");
         }
@@ -2268,16 +2313,6 @@ abstract class CodegenVisitor
         node, "[errorFinalStaticFieldSet] isn't implemented.");
   }
 
-  void visitStaticFieldInvoke(
-      Send node,
-      FieldElement field,
-      NodeList arguments,
-      Selector selector,
-      _){
-    generateUnimplementedError(
-        node, "[visitStaticFieldInvoke] isn't implemented.");
-  }
-
   void errorStaticFunctionSet(
       Send node,
       MethodElement function,
@@ -2602,16 +2637,6 @@ abstract class CodegenVisitor
         node, "[errorLocalFunctionCompound] isn't implemented.");
   }
 
-  void visitStaticFieldCompound(
-      Send node,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _){
-    generateUnimplementedError(
-        node, "[visitStaticFieldCompound] isn't implemented.");
-  }
-
   void errorFinalStaticFieldCompound(
       Send node,
       FieldElement field,
@@ -2642,16 +2667,6 @@ abstract class CodegenVisitor
       _){
     generateUnimplementedError(
         node, "[visitStaticMethodSetterCompound] isn't implemented.");
-  }
-
-  void visitTopLevelFieldCompound(
-      Send node,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _){
-    generateUnimplementedError(
-        node, "[visitTopLevelFieldCompound] isn't implemented.");
   }
 
   void errorFinalTopLevelFieldCompound(

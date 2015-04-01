@@ -305,13 +305,10 @@ constructor10_test/00: MissingCompileTimeError
 constructor10_test/01: MissingCompileTimeError
 constructor10_test/02: MissingCompileTimeError
 constructor11_test: Fail
-constructor2_test: Fail
 constructor3_negative_test: Crash
-constructor3_test: Fail
 constructor4_test: Fail
 constructor5_test: Fail
 constructor6_test: Crash
-constructor7_test: Fail
 constructor_default_test: Fail
 constructor_duplicate_final_test/01: MissingRuntimeError
 constructor_duplicate_final_test/02: MissingRuntimeError
@@ -422,11 +419,8 @@ dynamic_type_literal_test: Crash
 empty_block_case_test: Fail
 error_stacktrace_test: Fail
 evaluation_redirecting_constructor_test: Fail
-example_constructor_test: Fail
 exception_test: Fail
 execute_finally8_test: Fail
-execute_finally9_test: Fail
-exhaustive_for_test: Fail
 export_ambiguous_main_negative_test: Crash
 extend_type_parameter_negative_test: Fail
 external_test/01: MissingCompileTimeError
@@ -754,7 +748,6 @@ is_malformed_type_test/99: Fail
 is_not_class2_test: Fail
 isnot_malformed_type_test: Fail
 issue10561_test: Crash
-issue10581_test: Fail
 issue10747_test: Fail
 issue12284_test: Crash
 issue13474_test: Fail
@@ -785,7 +778,6 @@ library_ambiguous_test/04: MissingRuntimeError
 library_ambiguous_test/05: MissingCompileTimeError
 library_negative_test: Crash
 library_private_in_constructor_test: Fail
-licm_test: Fail
 list_is_test: Fail
 list_literal2_negative_test: Fail
 list_literal4_test: Fail
@@ -1042,7 +1034,6 @@ on_catch_malformed_type_test: Fail
 operator1_negative_test: Fail
 operator_equals_test: Fail
 operator_index_evaluation_order_test: Fail
-operator_test: Fail
 optimized_string_charat_test: Fail
 optimized_string_charcodeat_test: Fail
 overridden_no_such_method_test: Crash
@@ -1116,9 +1107,7 @@ regress_r24720_test: Fail
 reify_typevar_test: Crash
 resolution_test: Fail
 rethrow_test: Fail
-rewrite_conditional_test: Fail
 rewrite_for_update_order_test: Fail
-rewrite_if_swap_test: Fail
 rewrite_while_many_exits_test: Fail
 runtime_type_test: Crash
 savannah_test: Fail
@@ -1142,7 +1131,6 @@ stacktrace_rethrow_nonerror_test: Fail
 stacktrace_test: Fail
 static_call_wrong_argument_count_negative_test: Crash
 static_closure_identical_test: Fail
-static_field_test/none: Fail
 static_final_field2_test/02: MissingCompileTimeError
 static_implicit_closure_test: Fail
 static_parameter_test/01: MissingCompileTimeError
