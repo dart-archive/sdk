@@ -16,6 +16,59 @@ abstract class int implements core.int {
 
   int abs() => isNegative ? -this : this;
 
+  int round() => this;
+
+  int floor() => this;
+
+  int ceil() => this;
+
+  int truncate() => this;
+
+  double roundToDouble() => this.toDouble();
+
+  double floorToDouble() => this.toDouble();
+
+  double ceilToDouble() => this.toDouble();
+
+  double truncateToDouble() => this.toDouble();
+
+  int toInt() => this;
+
+  String toStringAsFixed(int fractionDigits) {
+    return toDouble().toStringAsFixed(fractionDigits);
+  }
+
+  String toStringAsExponential([int fractionDigits]) {
+    return toDouble().toStringAsExponential(fractionDigits);
+  }
+
+  String toStringAsPrecision(int precision) {
+    return toDouble().toStringAsPrecision(fractionDigits);
+  }
+
+  int get sign {
+    if (this > 0) return 1;
+    if (this < 0) return -1;
+    return 0;
+  }
+
+  int compareTo(num other) {
+    if (this == other) {
+      if (this == 0 && other is double) return other.isNegative ? 1 : 0;
+      return 0;
+    } else if (this < other) {
+      return -1;
+    } else if (other.isNaN) {
+      return -1;
+    } else {
+      return 1;
+    }
+  }
+
+  num remainder(num other) {
+    return this - (this ~/ other) * other;
+  }
+
   // From int.
   modPow(exponent, modulus) {
     throw "modPow(exponent, modulus) isn't implemented";
@@ -41,73 +94,13 @@ abstract class int implements core.int {
     throw "toSigned(width) isn't implemented";
   }
 
-  get sign {
-    throw "get sign isn't implemented";
-  }
-
-  round() {
-    throw "round() isn't implemented";
-  }
-
-  floor() {
-    throw "floor() isn't implemented";
-  }
-
-  ceil() {
-    throw "ceil() isn't implemented";
-  }
-
-  truncate() {
-    throw "truncate() isn't implemented";
-  }
-
-  roundToDouble() {
-    throw "roundToDouble() isn't implemented";
-  }
-
-  floorToDouble() {
-    throw "floorToDouble() isn't implemented";
-  }
-
-  ceilToDouble() {
-    throw "ceilToDouble() isn't implemented";
-  }
-
-  truncateToDouble() {
-    throw "truncateToDouble() isn't implemented";
-  }
-
   toRadixString(radix) {
     throw "toRadixString(radix) isn't implemented";
   }
 
   // From num.
-  compareTo(other) {
-    throw "compareTo(other) isn't implemented";
-  }
-
-  remainder(other) {
-    throw "remainder(other) isn't implemented";
-  }
-
   clamp(lowerLimit, upperLimit) {
     throw "clamp(lowerLimit, upperLimit) isn't implemented";
-  }
-
-  toInt() {
-    throw "toInt() isn't implemented";
-  }
-
-  toStringAsFixed(fractionDigits) {
-    throw "toStringAsFixed(fractionDigits) isn't implemented";
-  }
-
-  toStringAsExponential([fractionDigits]) {
-    throw "toStringAsExponential([fractionDigits]) isn't implemented";
-  }
-
-  toStringAsPrecision(precision) {
-    throw "toStringAsPrecision(precision) isn't implemented";
   }
 
   double _addFromDouble(double other) => other + toDouble();
@@ -146,44 +139,132 @@ class _Smi extends int {
 
   @native external num operator -();
 
-  @native external num operator +(num other);
+  @native num operator +(other) {
+    // TODO(kasperl): Check error.
+    return other._addFromInteger(this);
+  }
 
-  @native external num operator -(num other);
+  @native num operator -(other) {
+    // TODO(kasperl): Check error.
+    return other._subFromInteger(this);
+  }
 
-  @native external num operator *(num other);
+  @native num operator *(other) {
+    // TODO(kasperl): Check error.
+    return other._mulFromInteger(this);
+  }
 
-  @native external num operator /(num other);
+  @native num operator %(other) {
+    switch (nativeError) {
+      case wrongArgumentType:
+        return other._modFromInteger(this);
+      case indexOutOfBounds:
+        throw new IntegerDivisionByZeroException();
+    }
+  }
 
-  @native external int operator ~/(num other);
+  @native num operator /(other) {
+    // TODO(kasperl): Check error.
+    return other._divFromInteger(this);
+  }
 
-  @native external num operator %(num other);
+  @native int operator ~/(other) {
+    switch (nativeError) {
+      case wrongArgumentType:
+        return other._truncDivFromInteger(this);
+      case indexOutOfBounds:
+        throw new IntegerDivisionByZeroException();
+    }
+  }
 
   @native external int operator ~();
 
-  @native external int operator &(int other);
-
-  @native external int operator |(int other);
-
-  @native external int operator ^(int other);
-
-  @native external int operator >>(int other);
-
-  @native external int operator <<(int other);
-
-  @native bool operator ==(other) {
+  @native int operator &(other) {
     // TODO(kasperl): Check error.
-    return other.compareEqFromInteger(this);
+    return other._bitAndFromInteger(this);
   }
 
-  @native external bool operator <(num other);
+  @native int operator |(other) {
+    // TODO(kasperl): Check error.
+    return other._bitOrFromInteger(this);
+  }
 
-  @native external bool operator <=(num other);
+  @native int operator ^(other) {
+    // TODO(kasperl): Check error.
+    return other._bitXorFromInteger(this);
+  }
 
-  @native external bool operator >(num other);
+  @native int operator >>(other) {
+    // TODO(kasperl): Check error.
+    return other._bitShrFromInteger(this);
+  }
 
-  @native external bool operator >=(num other);
+  @native int operator <<(other) {
+    // TODO(kasperl): Check error.
+    return other._bitShlFromInteger(this);
+  }
 
-  bool compareEqFromInteger(other) => other._toMint() == _toMint();
+  @native bool operator ==(other) {
+    if (other is! num) return false;
+    // TODO(kasperl): Check error.
+    return other._compareEqFromInteger(this);
+  }
+
+  @native bool operator <(other) {
+    // TODO(kasperl): Check error.
+    return other._compareLtFromInteger(this);
+  }
+
+  @native bool operator <=(other) {
+    // TODO(kasperl): Check error.
+    return other._compareLeFromInteger(this);
+  }
+
+  @native bool operator >(other) {
+    // TODO(kasperl): Check error.
+    return other._compareGtFromInteger(this);
+  }
+
+  @native bool operator >=(other) {
+    // TODO(kasperl): Check error.
+    return other._compareGeFromInteger(this);
+  }
+
+  // In the following double-dispatch helpers, [other] might
+  // be a small integer in case of overflows. Calling toMint()
+  // on [other] isn't strictly necessary but it makes the
+  // overflow case a litte bit faster.
+  int _addFromInteger(other) => other._toMint() + _toMint();
+
+  int _subFromInteger(other) => other._toMint() - _toMint();
+
+  int _mulFromInteger(other) => other._toMint() * _toMint();
+
+  int _modFromInteger(other) => other._toMint() % _toMint();
+
+  num _divFromInteger(other) => other._toMint() / _toMint();
+
+  int _truncDivFromInteger(other) => other._toMint() ~/ _toMint();
+
+  int _bitAndFromInteger(other) => other._toMint() &  _toMint();
+
+  int _bitOrFromInteger(other)  => other._toMint() |  _toMint();
+
+  int _bitXorFromInteger(other) => other._toMint() ^  _toMint();
+
+  int _bitShrFromInteger(other) => other._toMint() >> _toMint();
+
+  int _bitShlFromInteger(other) => other._toMint() << _toMint();
+
+  bool _compareEqFromInteger(other) => other._toMint() == _toMint();
+
+  bool _compareLtFromInteger(other) => other._toMint() <  _toMint();
+
+  bool _compareLeFromInteger(other) => other._toMint() <= _toMint();
+
+  bool _compareGtFromInteger(other) => other._toMint() >  _toMint();
+
+  bool _compareGeFromInteger(other) => other._toMint() >= _toMint();
 }
 
 class _Mint extends int {
@@ -197,42 +278,130 @@ class _Mint extends int {
 
   @native external num operator -();
 
-  @native external num operator +(num other);
+  @native num operator +(other) {
+    // TODO(kasperl): Check error.
+    return other._addFromInteger(this);
+  }
 
-  @native external num operator -(num other);
+  @native num operator -(other) {
+    // TODO(kasperl): Check error.
+    return other._subFromInteger(this);
+  }
 
-  @native external num operator *(num other);
+  @native num operator *(other) {
+    // TODO(kasperl): Check error.
+    return other._mulFromInteger(this);
+  }
 
-  @native external num operator /(num other);
+  @native num operator %(other) {
+    switch (nativeError) {
+      case wrongArgumentType:
+        return other._modFromInteger(this);
+      case indexOutOfBounds:
+        throw new IntegerDivisionByZeroException();
+    }
+  }
 
-  @native external int operator ~/(num other);
+  @native num operator /(other) {
+    // TODO(kasperl): Check error.
+    return other._divFromInteger(this);
+  }
 
-  @native external num operator %(num other);
+  @native int operator ~/(other) {
+    switch (nativeError) {
+      case wrongArgumentType:
+        return other._truncDivFromInteger(this);
+      case indexOutOfBounds:
+        throw new IntegerDivisionByZeroException();
+    }
+  }
 
   @native external int operator ~();
 
-  @native external int operator &(int other);
-
-  @native external int operator |(int other);
-
-  @native external int operator ^(int other);
-
-  @native external int operator >>(int other);
-
-  @native external int operator <<(int other);
-
-  @native bool operator ==(other) {
+  @native int operator &(other) {
     // TODO(kasperl): Check error.
-    return other.compareEqFromInteger(this);
+    return other._bitAndFromInteger(this);
   }
 
-  @native external bool operator <(num other);
+  @native int operator |(other) {
+    // TODO(kasperl): Check error.
+    return other._bitOrFromInteger(this);
+  }
 
-  @native external bool operator <=(num other);
+  @native int operator ^(other) {
+    // TODO(kasperl): Check error.
+    return other._bitXorFromInteger(this);
+  }
 
-  @native external bool operator >(num other);
+  @native int operator >>(other) {
+    // TODO(kasperl): Check error.
+    return other._bitShrFromInteger(this);
+  }
 
-  @native external bool operator >=(num other);
+  @native int operator <<(other) {
+    if (nativeError == wrongArgumentType && other is _Mint) {
+      // TODO(ajohnsen): Add bigint support.
+      throw new UnimplementedError("Overflow to big integer");
+    }
+    // TODO(kasperl): Check error.
+    return other._bitShlFromInteger(this);
+  }
 
-  bool compareEqFromInteger(other) => other._toMint() == this;
+  @native bool operator ==(other) {
+    if (other is! num) return false;
+    // TODO(kasperl): Check error.
+    return other._compareEqFromInteger(this);
+  }
+
+  @native bool operator <(other) {
+    // TODO(kasperl): Check error.
+    return other._compareLtFromInteger(this);
+  }
+
+  @native bool operator <=(other) {
+    // TODO(kasperl): Check error.
+    return other._compareLeFromInteger(this);
+  }
+
+  @native bool operator >(other) {
+    // TODO(kasperl): Check error.
+    return other._compareGtFromInteger(this);
+  }
+
+  @native bool operator >=(other) {
+    // TODO(kasperl): Check error.
+    return other._compareGeFromInteger(this);
+  }
+
+  int _addFromInteger(other) => other._toMint() + this;
+
+  int _subFromInteger(other) => other._toMint() - this;
+
+  int _mulFromInteger(other) => other._toMint() * this;
+
+  int _modFromInteger(other) => other._toMint() % this;
+
+  num _divFromInteger(other) => other._toMint() / this;
+
+  int _truncDivFromInteger(other) => other._toMint() ~/ this;
+
+  int _bitAndFromInteger(other) => other._toMint() &  this;
+
+  int _bitOrFromInteger(other)  => other._toMint() |  this;
+
+  int _bitXorFromInteger(other) => other._toMint() ^  this;
+
+  int _bitShrFromInteger(other) => other._toMint() >> this;
+
+  int _bitShlFromInteger(other) => other._toMint() << this;
+
+  bool _compareEqFromInteger(other) => other._toMint() == this;
+
+  bool _compareLtFromInteger(other) => other._toMint() <  this;
+
+  bool _compareLeFromInteger(other) => other._toMint() <= this;
+
+  bool _compareGtFromInteger(other) => other._toMint() >  this;
+
+  bool _compareGeFromInteger(other) => other._toMint() >= this;
 }

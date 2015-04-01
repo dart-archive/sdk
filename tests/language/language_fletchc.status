@@ -32,9 +32,6 @@ abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
 abstract_syntax_test/01: MissingCompileTimeError
 argument_definition_test/01: MissingCompileTimeError
-arithmetic2_test: Fail
-arithmetic_canonicalization_test: Fail
-arithmetic_smi_overflow_test: Fail
 arithmetic_test: Crash
 assertion_test: Fail
 assign_op_test: Fail
@@ -108,7 +105,6 @@ black_listed_test/14: Crash
 body_less_constructor_wrong_arg_negative_test: Fail
 bound_closure_equality_test: Fail
 bound_closure_primitives_test: Fail
-branch_canonicalization_test: Fail
 break_test: Crash
 built_in_identifier_illegal_test/01: Crash
 built_in_identifier_illegal_test/04: Crash
@@ -216,7 +212,6 @@ closure_type_variable_test: Fail
 closure_with_super_field_test: Fail
 closures_initializer2_test: Fail
 closures_initializer_test: Fail
-comparison_test: Fail
 compile_time_constant10_test/01: Crash
 compile_time_constant10_test/02: Crash
 compile_time_constant10_test/none: Crash
@@ -416,16 +411,8 @@ deferred_no_such_method_test: Crash
 deferred_not_loaded_check_test: Crash
 deferred_optimized_test: Crash
 deferred_shadow_load_library_test: Crash
-deopt_inlined_function_lazy_test: Fail
-deopt_smi_op_test: Fail
-div_by_zero_test: Fail
-div_with_power_of_two2_test: Fail
-double_to_string_as_exponential2_test: Fail
 double_to_string_as_exponential3_test: Fail
 double_to_string_as_exponential_test: Fail
-double_to_string_as_fixed2_test: Fail
-double_to_string_as_fixed_test: Fail
-double_to_string_as_precision2_test: Fail
 double_to_string_as_precision3_test: Fail
 double_to_string_as_precision_test: Fail
 duplicate_constructor_test/01: MissingCompileTimeError
@@ -497,7 +484,6 @@ field_decl_missing_var_type_test/01: MissingCompileTimeError
 field_increment_bailout_test: Crash
 field_initialization_order_test: Fail
 field_method_test: Fail
-field_optimization3_test: Fail
 field_override3_test/00: MissingCompileTimeError
 field_override3_test/01: MissingCompileTimeError
 field_override3_test/02: MissingCompileTimeError
@@ -759,7 +745,6 @@ instanceof3_test: Fail
 instanceof4_test/01: Fail
 instanceof4_test/none: Fail
 int_test: Fail
-integer_division_by_zero_test: Fail
 interceptor2_test: Fail
 interceptor3_test: Fail
 interceptor4_test: Fail
@@ -786,7 +771,6 @@ is_malformed_type_test/96: Fail
 is_malformed_type_test/97: Fail
 is_malformed_type_test/98: Fail
 is_malformed_type_test/99: Fail
-is_nan_test: Fail
 is_not_class2_test: Fail
 isnot_malformed_type_test: Fail
 issue10561_test: Crash
@@ -799,12 +783,10 @@ issue14014_2_test: Crash
 issue14014_3_test: Crash
 issue14014_test: Crash
 issue14242_test: Fail
-issue15702_test: Fail
 issue15720_test: Crash
 issue1578_negative_test: Crash
 issue18628_1_test/01: Fail
 issue4157508_test: Fail
-issue7513_test: Fail
 issue9949_test: Crash
 keyword_type_expression_test/01: MissingCompileTimeError
 keyword_type_expression_test/02: Crash
@@ -898,7 +880,6 @@ method_override8_test/01: MissingCompileTimeError
 method_override_test: Fail
 methods_as_constants2_test: Crash
 methods_as_constants_test: Crash
-mint_arithmetic_test: Fail
 mint_compares_test: Fail
 missing_const_constructor_test/02: Crash
 missing_const_constructor_test/03: MissingCompileTimeError
@@ -1028,7 +1009,6 @@ mixin_type_parameters_simple_test: Fail
 mixin_type_parameters_super_extends_test: Fail
 mixin_type_parameters_super_test: Fail
 mixin_with_two_implicit_constructors_test: Fail
-modulo_test: Fail
 named_argument_test: Fail
 named_constructor_test/02: Crash
 named_constructor_test/04: Crash
@@ -1082,9 +1062,7 @@ number_identifier_test/06: MissingCompileTimeError
 number_identifier_test/07: MissingCompileTimeError
 number_identifier_test/10: MissingCompileTimeError
 number_identifier_test/11: MissingCompileTimeError
-number_identity2_test: Crash
-number_identity_test: Fail
-numbers_test: Fail
+number_identity2_test: Fail
 on_catch_malformed_type_test: Fail
 operator1_negative_test: Fail
 operator_equals_test: Fail
@@ -1172,7 +1150,6 @@ rewrite_conditional_test: Fail
 rewrite_for_update_order_test: Fail
 rewrite_if_swap_test: Fail
 rewrite_while_many_exits_test: Fail
-round_test: Fail
 runtime_type_test: Crash
 savannah_test: Fail
 scope_variable_test/01: MissingCompileTimeError
@@ -1254,7 +1231,6 @@ string_interpolation9_test/9: MissingCompileTimeError
 string_interpolation_newline_test: Fail
 string_interpolation_test/01: Fail
 string_interpolation_test/none: Fail
-string_supertype_checked_test: Fail
 string_test: Fail
 string_unicode1_negative_test: Crash
 string_unicode2_negative_test: Crash
@@ -1383,7 +1359,6 @@ toplevel_collision1_test/01: MissingCompileTimeError
 toplevel_collision1_test/02: MissingCompileTimeError
 toplevel_collision2_test/00: MissingCompileTimeError
 toplevel_collision2_test/01: MissingCompileTimeError
-truncdiv_test: Fail
 try_catch_on_syntax_test/02: MissingCompileTimeError
 try_catch_on_syntax_test/03: MissingCompileTimeError
 try_catch_on_syntax_test/04: MissingCompileTimeError
@@ -1476,14 +1451,11 @@ vm/load_to_load_forwarding_vm_test: Crash
 vm/math_vm_test: Crash
 vm/no_such_method_error_message_vm_test: Fail
 vm/optimized_guarded_field_isolates_test: Crash
-vm/optimized_identical_test: Fail
 vm/optimized_shl_test: Fail
 vm/reflect_core_vm_test: Crash
 vm/regress_16873_test: Fail
 vm/reusable_boxes_test: Crash
-vm/store_elimination_vm_test: Fail
 vm/store_to_load_forwarding_phis_vm_test: Crash
-vm/string_polymorphic_test: Fail
 vm/type_cast_vm_test: Crash
 vm/type_vm_test: Crash
 vm/typed_data_polymorphic_view_test: Crash

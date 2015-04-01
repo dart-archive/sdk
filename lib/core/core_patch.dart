@@ -33,10 +33,6 @@ const patch = "patch";
   // takes care off removing an arbitrary number of arguments
   // from the caller stack before it returns.
   external _noSuchMethodTrampoline();
-
-  // TODO(ajohnsen): Make private.
-  bool compareEqFromInteger(int other) => false;
-  bool compareEqFromDouble(double other) => false;
 }
 
 // TODO(ajohnsen): Merge 'fletch.String' into this String.
