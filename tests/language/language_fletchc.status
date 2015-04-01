@@ -1501,7 +1501,6 @@ vm/load_to_load_forwarding_vm_test: Crash
 vm/math_vm_test: Crash
 vm/no_such_method_error_message_vm_test: Fail
 vm/optimized_guarded_field_isolates_test: Crash
-vm/optimized_guarded_field_test: Crash
 vm/optimized_identical_test: Fail
 vm/optimized_shl_test: Fail
 vm/reflect_core_vm_test: Crash
