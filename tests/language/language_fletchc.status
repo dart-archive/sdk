@@ -1196,15 +1196,12 @@ string_unicode2_negative_test: Crash
 string_unicode3_negative_test: Crash
 string_unicode4_negative_test: Crash
 super_all_named_constructor_test: Fail
-super_assign_test: Fail
 super_bound_closure_test: Crash
 super_call3_test/01: MissingCompileTimeError
 super_call3_test/02: MissingCompileTimeError
 super_call4_test: Crash
 super_closure_test: Fail
 super_field_2_test: Fail
-super_field_access_test: Fail
-super_field_test: Fail
 super_getter_setter_test: Crash
 super_implicit_closure_test: Fail
 super_operator_index2_test: Fail

@@ -668,13 +668,12 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void inlineIdenticalCall(NodeList arguments) {
+  void handleIdenticalCall(NodeList arguments) {
     assert(arguments.slowLength() == 2);
     for (Node argument in arguments) {
       visitForValue(argument);
     }
     builder.identical();
-    applyVisitState();
   }
 
   void handleStaticFunctionGet(MethodElement function) {
@@ -710,7 +709,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       Selector selector) {
     if (element == context.compiler.identicalFunction) {
-      inlineIdenticalCall(arguments);
+      handleIdenticalCall(arguments);
       return;
     }
     if (element.isExternal) {
@@ -722,7 +721,6 @@ abstract class CodegenVisitor
       // calls to?
     }
     staticFunctionCall(element, arguments, selector);
-    applyVisitState();
   }
 
   void visitTopLevelFunctionInvoke(
@@ -732,6 +730,7 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     handleStaticallyBoundInvoke(node, element, arguments, selector);
+    applyVisitState();
   }
 
   void visitStaticFunctionInvoke(
@@ -741,6 +740,7 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     handleStaticallyBoundInvoke(node, element, arguments, selector);
+    applyVisitState();
   }
 
   void visitSuperMethodInvoke(
@@ -750,6 +750,48 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     handleStaticallyBoundInvoke(node, element, arguments, selector);
+    applyVisitState();
+  }
+
+  int computeFieldIndex(FieldElement field) {
+    ClassElement classElement = field.enclosingClass;
+    // We know the enclosing class is compiled, so we can use the CompiledClass
+    // as an optimization for getting the number of super fields, thus we only
+    // have to iterate the fields of the enclosing class.
+    CompiledClass compiledClass = context.backend.registerClassElement(
+        classElement);
+    int i = 0;
+    int fieldIndex;
+    classElement.implementation.forEachInstanceField((_, FieldElement member) {
+      if (member == field) {
+        assert(fieldIndex == null);
+        fieldIndex = i;
+      }
+      i++;
+    });
+    assert(fieldIndex != null);
+    fieldIndex += compiledClass.superclassFields;
+    return fieldIndex;
+  }
+
+  void visitSuperFieldGet(
+      Send node,
+      FieldElement field,
+      _) {
+    loadThis();
+    builder.loadField(computeFieldIndex(field));
+    applyVisitState();
+  }
+
+  void visitSuperFieldSet(
+      SendSet node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    loadThis();
+    visitForValue(rhs);
+    builder.storeField(computeFieldIndex(field));
+    applyVisitState();
   }
 
   void visitTopLevelFieldInvoke(
@@ -2116,21 +2158,6 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[errorLocalFunctionSet] isn't implemented.");
-  }
-
-  void visitSuperFieldGet(
-      Send node,
-      FieldElement field,
-      _) {
-    generateUnimplementedError(node, "[visitSuperFieldGet] isn't implemented.");
-  }
-
-  void visitSuperFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs,
-      _) {
-    generateUnimplementedError(node, "[visitSuperFieldSet] isn't implemented.");
   }
 
   void errorFinalSuperFieldSet(
