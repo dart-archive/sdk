@@ -14,5 +14,9 @@ import 'console_node.dart';
 CommitNode commit({int revision, String author, String message}) =>
   new CommitNode(revision, author, message);
 
-ConsoleNode console({String title, String status, List commits}) =>
-  new ConsoleNode(title, status, commits);
+ConsoleNode console({
+    String title,
+    String status,
+    int commitsOffset,
+    List commits}) =>
+  new ConsoleNode(title, status, commitsOffset, commits);

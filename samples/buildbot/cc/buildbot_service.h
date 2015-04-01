@@ -35,11 +35,17 @@ class BuildBotService {
   static void tearDown();
   static BuildBotPatchData refresh();
   static void refreshAsync(void (*callback)(BuildBotPatchData));
+  static void setConsoleCount(int32_t count);
+  static void setConsoleCountAsync(int32_t count, void (*callback)());
+  static void setConsoleMinimumIndex(int32_t index);
+  static void setConsoleMinimumIndexAsync(int32_t index, void (*callback)());
+  static void setConsoleMaximumIndex(int32_t index);
+  static void setConsoleMaximumIndexAsync(int32_t index, void (*callback)());
 };
 
 class ConsoleNodeData : public Reader {
  public:
-  static const int kSize = 24;
+  static const int kSize = 32;
   ConsoleNodeData(Segment* segment, int offset)
       : Reader(segment, offset) { }
 
@@ -48,11 +54,12 @@ class ConsoleNodeData : public Reader {
   char* getStatus() const { return ReadString(8); }
   List<uint16_t> getStatusData() const { return ReadList<uint16_t>(8); }
   List<CommitNodeData> getCommits() const { return ReadList<CommitNodeData>(16); }
+  int32_t getCommitsOffset() const { return *PointerTo<int32_t>(24); }
 };
 
 class ConsoleNodeDataBuilder : public Builder {
  public:
-  static const int kSize = 24;
+  static const int kSize = 32;
 
   explicit ConsoleNodeDataBuilder(const Builder& builder)
       : Builder(builder) { }
@@ -64,6 +71,7 @@ class ConsoleNodeDataBuilder : public Builder {
   void setStatus(const char* value) { NewString(8, value); }
   List<uint16_t> initStatusData(int length);
   List<CommitNodeDataBuilder> initCommits(int length);
+  void setCommitsOffset(int32_t value) { *PointerTo<int32_t>(24) = value; }
 };
 
 class CommitNodeData : public Reader {
@@ -104,7 +112,7 @@ class BuildBotPatchData : public Reader {
   bool isNoPatch() const { return 1 == getTag(); }
   bool isConsolePatch() const { return 2 == getTag(); }
   ConsolePatchData getConsolePatch() const;
-  uint16_t getTag() const { return *PointerTo<uint16_t>(26); }
+  uint16_t getTag() const { return *PointerTo<uint16_t>(30); }
 };
 
 class BuildBotPatchDataBuilder : public Builder {
@@ -118,7 +126,7 @@ class BuildBotPatchDataBuilder : public Builder {
 
   void setNoPatch() { setTag(1); }
   ConsolePatchDataBuilder initConsolePatch();
-  void setTag(uint16_t value) { *PointerTo<uint16_t>(26) = value; }
+  void setTag(uint16_t value) { *PointerTo<uint16_t>(30) = value; }
 };
 
 class ConsolePatchData : public Reader {
@@ -131,7 +139,7 @@ class ConsolePatchData : public Reader {
   ConsoleNodeData getReplace() const;
   bool isUpdates() const { return 2 == getTag(); }
   List<ConsoleUpdatePatchData> getUpdates() const { return ReadList<ConsoleUpdatePatchData>(0); }
-  uint16_t getTag() const { return *PointerTo<uint16_t>(24); }
+  uint16_t getTag() const { return *PointerTo<uint16_t>(28); }
 };
 
 class ConsolePatchDataBuilder : public Builder {
@@ -145,7 +153,7 @@ class ConsolePatchDataBuilder : public Builder {
 
   ConsoleNodeDataBuilder initReplace();
   List<ConsoleUpdatePatchDataBuilder> initUpdates(int length);
-  void setTag(uint16_t value) { *PointerTo<uint16_t>(24) = value; }
+  void setTag(uint16_t value) { *PointerTo<uint16_t>(28) = value; }
 };
 
 class ConsoleUpdatePatchData : public Reader {
@@ -160,7 +168,9 @@ class ConsoleUpdatePatchData : public Reader {
   bool isStatus() const { return 2 == getTag(); }
   char* getStatus() const { return ReadString(0); }
   List<uint16_t> getStatusData() const { return ReadList<uint16_t>(0); }
-  bool isCommits() const { return 3 == getTag(); }
+  bool isCommitsOffset() const { return 3 == getTag(); }
+  int32_t getCommitsOffset() const { return *PointerTo<int32_t>(0); }
+  bool isCommits() const { return 4 == getTag(); }
   CommitListPatchData getCommits() const;
   uint16_t getTag() const { return *PointerTo<uint16_t>(8); }
 };
@@ -178,6 +188,7 @@ class ConsoleUpdatePatchDataBuilder : public Builder {
   List<uint16_t> initTitleData(int length);
   void setStatus(const char* value) { setTag(2); NewString(0, value); }
   List<uint16_t> initStatusData(int length);
+  void setCommitsOffset(int32_t value) { setTag(3); *PointerTo<int32_t>(0) = value; }
   CommitListPatchDataBuilder initCommits();
   void setTag(uint16_t value) { *PointerTo<uint16_t>(8) = value; }
 };

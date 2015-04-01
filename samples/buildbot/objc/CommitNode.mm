@@ -64,26 +64,32 @@ static id createCommitNode(const CommitNodeData& data) {
 + (void)applyListPatch:(const CommitListPatchData&)patchData
                 atList:(NSMutableArray*)list {
   List<CommitListUpdatePatchData> updates = patchData.getUpdates();
+  NSLog(@"List patching: patches(%d)", updates.length());
   for (int i = 0; i < updates.length(); ++i) {
     CommitListUpdatePatchData update = updates[i];
     int index = update.getIndex();
     if (update.isInsert()) {
       NSArray* newCommits = [CommitNode arrayWithData:update.getInsert()];
       int count = newCommits.count;
-      NSIndexSet* indexes =
-          [NSIndexSet indexSetWithIndexesInRange: NSMakeRange(index, count)];
+      NSRange range = NSMakeRange(index, count);
+      NSIndexSet* indexes = [NSIndexSet indexSetWithIndexesInRange: range];
       [list insertObjects:newCommits atIndexes:indexes];
+      NSLog(@"  insert: index(%d) count(%d)", index, count);
     } else if (update.isPatch()) {
       List<CommitPatchData> patches = update.getPatch();
       for (int patchIndex = 0; patchIndex < patches.length(); ++patchIndex) {
         int elementIndex = index + patchIndex;
         [list[elementIndex] patchWith:patches[patchIndex]];
       }
+      NSLog(@"  update: index(%d) count(%d)", index, patches.length());
     } else if (update.isRemove()) {
       int count = update.getRemove();
       NSIndexSet* indexes =
       [NSIndexSet indexSetWithIndexesInRange: NSMakeRange(index, count)];
       [list removeObjectsAtIndexes:indexes];
+      NSLog(@"  remove: index(%d) count(%d)", index, count);
+    } else {
+      abort();
     }
   }
 }

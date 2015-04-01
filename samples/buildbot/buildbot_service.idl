@@ -43,6 +43,9 @@
 // Internal service layer
 service BuildBotService {
   BuildBotPatchData* refresh();
+  void setConsoleCount(int32 count);
+  void setConsoleMinimumIndex(int32 index);
+  void setConsoleMaximumIndex(int32 index);
 }
 
 // Node structures.
@@ -50,6 +53,7 @@ service BuildBotService {
 struct ConsoleNodeData {
   String title;
   String status;
+  int32 commitsOffset;
   List<CommitNodeData> commits;
 }
 
@@ -80,6 +84,7 @@ struct ConsoleUpdatePatchData {
   union {
     String title;
     String status;
+    int32 commitsOffset;
     CommitListPatchData commits;
   }
 }

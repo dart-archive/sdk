@@ -22,6 +22,7 @@
 - (id)initWith:(const ConsoleNodeData&)data {
   _title = [PresenterUtils decodeString:data.getTitleData()];
   _status = [PresenterUtils decodeString:data.getStatusData()];
+  _commitsOffset = data.getCommitsOffset();
   _commits = [CommitNode arrayWithData:data.getCommits()];
   return self;
 }
@@ -39,8 +40,12 @@
       _title = [PresenterUtils decodeString:update.getTitleData()];
     } else if (update.isStatus()) {
       _status = [PresenterUtils decodeString:update.getStatusData()];
+    } else if (update.isCommitsOffset()) {
+      _commitsOffset = update.getCommitsOffset();
     } else if (update.isCommits()) {
       [CommitNode applyListPatch:update.getCommits() atList:_commits];
+      NSLog(@"Commits: offset(%d) count(%d)",
+            self.commitsOffset, self.commits.count);
     } else {
       abort();
     }

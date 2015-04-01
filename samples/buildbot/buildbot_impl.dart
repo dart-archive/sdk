@@ -23,7 +23,7 @@ class BuildBotImpl extends BuildBotService {
   }
 
   void refresh(BuildBotPatchDataBuilder builder) {
-    assert(trace("BuildBotImpl::refresh (${_project.console.commitCount})"));
+    assert(trace("BuildBotImpl::refresh"));
     // TODO(zerny): How do we want to connect the presentation roots?
     ConsoleNode graph = _consolePresenter.present();
     ConsolePatch patch = graph.diff(_consoleGraph);
@@ -35,5 +35,15 @@ class BuildBotImpl extends BuildBotService {
     }
     assert(trace("Sending empty patch"));
     builder.setNoPatch();
+  }
+
+  void setConsoleCount(int count) {
+    _consolePresenter.visibleItemCount = count;
+  }
+  void setConsoleMinimumIndex(int index) {
+    _consolePresenter.firstVisibleItem = index;
+  }
+  void setConsoleMaximumIndex(int index) {
+    _consolePresenter.lastVisibleItem = index;
   }
 }

@@ -8,7 +8,15 @@ ListPatch diffList(List current, List previous) {
   int currentLength = current.length;
   int previousLength = previous.length;
   assert(trace("diffList (cur ${currentLength}, prev ${previousLength})"));
-  if (currentLength == 0 && previousLength == 0) return null;
+  if (currentLength == 0 && previousLength == 0) {
+    return null;
+  }
+  if (previousLength == 0) {
+    return new ListPatch([new ListInsertPatch(0, current)]);
+  }
+  if (currentLength == 0) {
+    return new ListPatch([new ListRemovePatch(0, previousLength)]);
+  }
 
   // TODO(zerny): be more clever about diffing a list.
   int minLength =
@@ -35,12 +43,12 @@ ListPatch diffList(List current, List previous) {
 
   if (currentLength > previousLength) {
     int start = previousLength;
-    int count = currentLength - previousLength;
-    patches.add(new ListInsertPatch(start, current.sublist(start, count)));
+    List add = (start == 0) ? current : current.sublist(start, currentLength);
+    patches.add(new ListInsertPatch(start, add));
   } else if (currentLength < previousLength) {
     int start = currentLength;
     int count = previousLength - currentLength;
-    patches.add(new ListRemovePatch(start, count));
+    patches.add(new ListRemovePatch(currentLength, count));
   }
 
   return (patches.length > 0) ? new ListPatch(patches) : null;

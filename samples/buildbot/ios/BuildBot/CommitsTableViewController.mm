@@ -17,6 +17,7 @@
 @property ConsolePresenter* presenter;
 @property int frames;
 @property CFTimeInterval frameTimestamp;
+@property BOOL resumedFromScroll;
 
 @end
 
@@ -24,24 +25,29 @@
 
 - (void)viewDidLoad {
   [super viewDidLoad];
-  // Attach the console presenter with a 1-second refresh rate.
-  self.presenter = [[ConsolePresenter alloc] init];
   self.frames = 0;
   self.frameTimestamp = 0;
+  self.resumedFromScroll = NO;
+  self.presenter = [[ConsolePresenter alloc] init];
+  // Attach the console presenter with a 1-second refresh rate.
   CADisplayLink* consoleLink =
     [CADisplayLink
      displayLinkWithTarget:self
                   selector:@selector(refreshConsole:)];
-  [consoleLink setFrameInterval:1];
+  [consoleLink setFrameInterval:60];
   [consoleLink addToRunLoop:[NSRunLoop currentRunLoop]
                     forMode:NSDefaultRunLoopMode];
 }
 
 - (void)refreshConsole:(CADisplayLink*)sender {
   [self.presenter refresh];
+  if (self.frameTimestamp == 0 || self.resumedFromScroll == YES) {
+    self.resumedFromScroll = NO;
+    self.frameTimestamp = sender.timestamp;
+  }
   // Log 60 fps misses.
-  if (self.frameTimestamp == 0) self.frameTimestamp = sender.timestamp;
   if (++self.frames == 60 / sender.frameInterval) {
+    [self.presenter printStats];
     double intervalTime = sender.timestamp - self.frameTimestamp;
     if (intervalTime > 1.1) {
       NSLog(@"Missed 60 fps with interval time %f", intervalTime);
@@ -67,8 +73,7 @@
 
 - (NSInteger)tableView:(UITableView *)tableView
     numberOfRowsInSection:(NSInteger)section {
-  if ([self.presenter root] == nil) return 0;
-  return [[[self.presenter root] commits] count];
+  return [self.presenter commitCount];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView
@@ -76,20 +81,19 @@
   CommitCell* cell = (CommitCell*)[tableView
       dequeueReusableCellWithIdentifier:CommitCellId
                            forIndexPath:indexPath];
-  CommitNode* commit =
-    [self.presenter.root.commits objectAtIndex:indexPath.row];
+  CommitNode* commit = [self.presenter commitAtIndex:indexPath.row];
   cell.revisionLabel.text = [NSString stringWithFormat:@"%d", commit.revision];
   cell.authorLabel.text = commit.author;
   cell.messageLabel.text = commit.message;
   return cell;
 }
 
--(CGFloat)tableView:(UITableView *)tableView
+- (CGFloat)tableView:(UITableView *)tableView
     heightForHeaderInSection:(NSInteger)section {
   return 50.0;
 }
 
--(UIView*)tableView:(UITableView *)tableView
+- (UIView*)tableView:(UITableView *)tableView
     viewForHeaderInSection:(NSInteger)section {
   StatusHeaderCell* cell =
     [tableView dequeueReusableCellWithIdentifier:StatusHeaderCellId];
@@ -98,4 +102,8 @@
   return cell;
 }
 
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView
+                  willDecelerate:(BOOL)decelerate {
+  self.resumedFromScroll = YES;
+}
 @end

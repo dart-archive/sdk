@@ -73,10 +73,13 @@ class Console {
 
   String get status => _status;
 
-  int get commitCount => _commitKeys.length;
+  int get commitCount => _commitKeys.length > 0 ? 10000 : 0;
 
-  dynamic commit(int index) =>
-    (index < _commitKeys.length) ? _jsonChanges.data[_commitKeys[index]] : null;
+  dynamic commit(int index) {
+    int length = _commitKeys.length;
+    if (length == 0) return null;
+    return _jsonChanges.data[_commitKeys[index % length]];
+  }
 
   void updateCommits() {
     var data = _jsonChanges.data;

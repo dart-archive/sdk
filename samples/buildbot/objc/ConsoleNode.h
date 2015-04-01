@@ -10,6 +10,7 @@
 
 @property (readonly) NSString* title;
 @property (readonly) NSString* status;
+@property (readonly) int commitsOffset;
 @property (readonly) NSArray* commits;
 
 - (id)initWith:(const ConsoleNodeData&)data;

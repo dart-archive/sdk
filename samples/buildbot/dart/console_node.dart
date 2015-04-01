@@ -11,8 +11,9 @@ import '../trace.dart';
 class ConsoleNode {
   final String title;
   final String status;
+  final int commitsOffset;
   final List commits;
-  ConsoleNode(this.title, this.status, this.commits);
+  ConsoleNode(this.title, this.status, this.commitsOffset, this.commits);
 
   ConsolePatch diff(ConsoleNode previous) {
     assert(trace("ConsoleNode::diff"));
@@ -27,6 +28,10 @@ class ConsoleNode {
     if (status != previous.status) {
       if (patch == null) patch = new ConsoleUpdatePatch();
       patch.status = status;
+    }
+    if (commitsOffset != previous.commitsOffset) {
+      if (patch == null) patch = new ConsoleUpdatePatch();
+      patch.commitsOffset = commitsOffset;
     }
     CommitListPatch commitsPatch = diffList(commits, previous.commits);
     if (commitsPatch != null) {
@@ -66,11 +71,13 @@ class ConsoleReplacePatch extends ConsolePatch {
 class ConsoleUpdatePatch extends ConsolePatch {
   String _title;
   String _status;
+  int _commitsOffset;
   ListPatch _commits;
   int _count = 0;
 
   set title(title) { ++_count; _title = title; }
   set status(status) { ++_count; _status = status; }
+  set commitsOffset(commitsOffset) { ++_count; _commitsOffset = commitsOffset; }
   set commits(commits) { ++_count; _commits = commits; }
 
   void serialize(ConsolePatchDataBuilder builder) {
@@ -80,6 +87,9 @@ class ConsoleUpdatePatch extends ConsolePatch {
     int index = 0;
     if (_title != null) builders[index++].title = _title;
     if (_status != null) builders[index++].status = _status;
+    if (_commitsOffset != null) {
+      builders[index++].commitsOffset = _commitsOffset;
+    }
     if (_commits != null) _commits.serialize(builders[index++].initCommits());
     assert(index == _count);
   }

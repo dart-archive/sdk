@@ -4,12 +4,17 @@
 
 #import <Foundation/Foundation.h>
 
+@class CommitNode;
 @class ConsoleNode;
 
 @interface ConsolePresenter : NSObject
 
 @property (readonly) ConsoleNode* root;
 
+- (id)init;
 - (void)refresh;
+- (int)commitCount;
+- (CommitNode*)commitAtIndex:(int)index;
+- (void)printStats;
 
 @end
