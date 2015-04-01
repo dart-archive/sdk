@@ -142,7 +142,6 @@ call_through_getter_test: Fail
 call_type_literal_test/01: Fail
 call_with_no_such_method_test: Crash
 canonical_const3_test: Crash
-cascade_precedence_test: Fail
 cascade_test/01: Crash
 cascade_test/02: Crash
 cascade_test/03: Crash
@@ -195,7 +194,6 @@ class_literal_test/25: Crash
 class_literal_test/none: Crash
 class_syntax2_test: Fail
 class_syntax_test/01: MissingCompileTimeError
-class_test: Fail
 closure7_test: Fail
 closure8_test: Fail
 closure_cycles_test: Crash
@@ -428,8 +426,6 @@ error_stacktrace_test: Fail
 evaluation_redirecting_constructor_test: Fail
 example_constructor_test: Fail
 exception_test: Fail
-execute_finally6_test: Fail
-execute_finally7_test: Fail
 execute_finally8_test: Fail
 execute_finally9_test: Fail
 exhaustive_for_test: Fail
@@ -1341,7 +1337,6 @@ try_catch_on_syntax_test/04: MissingCompileTimeError
 try_catch_on_syntax_test/05: MissingCompileTimeError
 try_catch_on_syntax_test/06: MissingCompileTimeError
 try_catch_optimized1_test: Crash
-try_catch_optimized3_test: Fail
 try_catch_syntax_test/01: MissingCompileTimeError
 try_catch_syntax_test/02: MissingCompileTimeError
 try_catch_syntax_test/03: MissingCompileTimeError
@@ -1427,7 +1422,6 @@ vm/load_to_load_forwarding_vm_test: Crash
 vm/math_vm_test: Crash
 vm/no_such_method_error_message_vm_test: Fail
 vm/optimized_guarded_field_isolates_test: Crash
-vm/optimized_shl_test: Fail
 vm/reflect_core_vm_test: Crash
 vm/regress_16873_test: Fail
 vm/reusable_boxes_test: Crash

@@ -410,19 +410,35 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void handleLocalVariableCompound(
+      LocalVariableElement variable,
+      AssignmentOperator operator,
+      Node rhs) {
+    LocalValue value = scope[variable];
+    value.load(builder);
+    visitForValue(rhs);
+    String operatorName = operator.binaryOperator.name;
+    invokeMethod(new Selector.binaryOperator(operatorName));
+    value.store(builder);
+  }
+
   void visitLocalVariableCompound(
       Send node,
       LocalVariableElement variable,
       AssignmentOperator operator,
       Node rhs,
       _) {
-    LocalValue value = scope[variable];
-    value.load(builder);
-    visitForValue(rhs);
-    Selector selector = new Selector.binaryOperator(
-        operator.binaryOperator.name);
-    invokeMethod(selector);
-    value.store(builder);
+    handleLocalVariableCompound(variable, operator, rhs);
+    applyVisitState();
+  }
+
+  void visitParameterCompound(
+      Send node,
+      ParameterElement parameter,
+      AssignmentOperator operator,
+      Node rhs,
+      _){
+    handleLocalVariableCompound(parameter, operator, rhs);
     applyVisitState();
   }
 
@@ -1213,6 +1229,54 @@ abstract class CodegenVisitor
       Node rhs,
       _) {
     visitLocalVariableSet(node, element, rhs, _);
+  }
+
+  void handleDynamicPropertyCompound(
+      AssignmentOperator operator,
+      Node rhs,
+      Selector getterSelector,
+      Selector setterSelector) {
+    // Dup receiver for setter.
+    builder.dup();
+    invokeGetter(getterSelector);
+    visitForValue(rhs);
+    String operatorName = operator.binaryOperator.name;
+    invokeMethod(new Selector.binaryOperator(operatorName));
+    invokeSetter(setterSelector);
+  }
+
+  void visitDynamicPropertyCompound(
+      Send node,
+      Node receiver,
+      AssignmentOperator operator,
+      Node rhs,
+      Selector getterSelector,
+      Selector setterSelector,
+      _) {
+    visitForValue(receiver);
+    handleDynamicPropertyCompound(
+        operator,
+        rhs,
+        getterSelector,
+        setterSelector);
+    applyVisitState();
+  }
+
+
+  void visitThisPropertyCompound(
+      Send node,
+      AssignmentOperator operator,
+      Node rhs,
+      Selector getterSelector,
+      Selector setterSelector,
+      _) {
+    loadThis();
+    handleDynamicPropertyCompound(
+        operator,
+        rhs,
+        getterSelector,
+        setterSelector);
+    applyVisitState();
   }
 
   void handleDynamicPrefix(
@@ -2479,39 +2543,6 @@ abstract class CodegenVisitor
       Node rhs,
       _){
     generateUnimplementedError(node, "[visitSuperIndexSet] isn't implemented.");
-  }
-
-  void visitDynamicPropertyCompound(
-      Send node,
-      Node receiver,
-      AssignmentOperator operator,
-      Node rhs,
-      Selector getterSelector,
-      Selector setterSelector,
-      _){
-    generateUnimplementedError(
-        node, "[visitDynamicPropertyCompound] isn't implemented.");
-  }
-
-  void visitThisPropertyCompound(
-      Send node,
-      AssignmentOperator operator,
-      Node rhs,
-      Selector getterSelector,
-      Selector setterSelector,
-      _){
-    generateUnimplementedError(
-        node, "[visitThisPropertyCompound] isn't implemented.");
-  }
-
-  void visitParameterCompound(
-      Send node,
-      ParameterElement parameter,
-      AssignmentOperator operator,
-      Node rhs,
-      _){
-    generateUnimplementedError(
-        node, "[visitParameterCompound] isn't implemented.");
   }
 
   void errorFinalParameterCompound(
