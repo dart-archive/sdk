@@ -16,6 +16,7 @@ import 'package:compiler/src/resolution/operators.dart' show
 
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression,
+    ConstructedConstantExpression,
     TypeConstantExpression;
 
 import 'package:compiler/src/dart2jslib.dart' show
@@ -1554,7 +1555,7 @@ abstract class CodegenVisitor
         constructor.effectiveTarget,
         type,
         arguments,
-        Selector,
+        selector,
         null);
  }
 
