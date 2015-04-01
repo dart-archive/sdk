@@ -5,18 +5,24 @@
 part of dart.system;
 
 // TODO(ajohnsen): Rename String to e.g. _StringImpl.
-abstract class String implements core.String {
+class String implements core.String {
   static String fromCharCodes(Iterable<int> charCodes, int start, int end) {
     if (end == null) end = charCodes.length;
     int length = end - start;
     if (start < 0 || length < 0) throw new RangeError.range(start, 0, length);
     var str = _create(length);
-    int i = -start;
-    charCodes.forEach((value) {
-      if (i >= 0 && i < length) str._setCodeUnitAt(i, value);
-      i++;
-    });
-    if (i < length) throw new RangeError.range(start, 0, length);
+    if (charCodes is List) {
+      for (int i = 0; i < length; i++) {
+        str._setCodeUnitAt(i, charCodes[start + i]);
+      }
+    } else {
+      int i = -start;
+      charCodes.forEach((value) {
+        if (i >= 0 && i < length) str._setCodeUnitAt(i, value);
+        i++;
+      });
+      if (i < length) throw new RangeError.range(start, 0, length);
+    }
     return str;
   }
 
@@ -41,16 +47,42 @@ abstract class String implements core.String {
 
   @native external String operator +(String other);
 
-  @native external static String _create(int length);
-
-  @native external void _setCodeUnitAt(int offset, int char);
-
-  operator[] (index) {
-    throw "operator[](index) isn't implemented";
+  String substring(int startIndex, [int endIndex]) {
+    if (startIndex == null) startIndex == 0;
+    if (endIndex == null) endIndex = length;
+    return _substring(startIndex, endIndex);
   }
 
-  codeUnitAt(index) {
-    throw "codeUnitAt(index) isn't implemented";
+  int compareTo(String other) {
+    int thisLength = this.length;
+    int otherLength = other.length;
+    int length = (thisLength < otherLength) ? thisLength : otherLength;
+    for (int i = 0; i < length; i++) {
+      int thisCodeUnit = this.codeUnitAt(i);
+      int otherCodeUnit = other.codeUnitAt(i);
+      if (thisCodeUnit < otherCodeUnit) return -1;
+      if (thisCodeUnit > otherCodeUnit) return 1;
+    }
+    if (thisLength < otherLength) return -1;
+    if (thisLength > otherLength) return 1;
+    return 0;
+  }
+
+  String operator[](int index) {
+    return _substring(index, index + 1);
+  }
+
+  @native int codeUnitAt(int index) {
+    switch (nativeError) {
+      case wrongArgumentType:
+        throw new ArgumentError();
+      case indexOutOfBounds:
+        throw new IndexError(index, this);
+    }
+  }
+
+  allMatches(string, [start]) {
+    throw "allMatches(string, [start]) isn't implemented";
   }
 
   endsWith(other) {
@@ -69,8 +101,8 @@ abstract class String implements core.String {
     throw "lastIndexOf(pattern, [start]) isn't implemented";
   }
 
-  substring(startIndex, [endIndex]) {
-    throw "substring(startIndex, [endIndex]) isn't implemented";
+  matchAsPrefix(string, [start]) {
+    throw "matchAsPrefix(string, [start]) isn't implemented";
   }
 
   trim() {
@@ -144,4 +176,24 @@ abstract class String implements core.String {
   toUpperCase() {
     throw "toUpperCase() isn't implemented";
   }
+
+  @native String _substring(int start, int end) {
+    switch (nativeError) {
+      case wrongArgumentType:
+        throw new ArgumentError();
+      case indexOutOfBounds:
+        throw new IndexError(start, this);
+    }
+  }
+
+  @native void _setCodeUnitAt(int index, int char) {
+    switch (nativeError) {
+      case wrongArgumentType:
+        throw new ArgumentError();
+      case indexOutOfBounds:
+        throw new IndexError(index, this);
+    }
+  }
+
+  @native external static String _create(int length);
 }

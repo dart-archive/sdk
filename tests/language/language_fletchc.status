@@ -337,8 +337,6 @@ constructor_return_test/04: MissingCompileTimeError
 constructor_return_test/05: MissingCompileTimeError
 crash_12118_test: Fail
 crash_6725_test/01: Crash
-critical_edge2_test: Fail
-critical_edge_test: Fail
 cyclic_class_member_test/01: MissingCompileTimeError
 cyclic_constructor_test/01: Crash
 cyclic_type2_test: Fail
@@ -489,7 +487,6 @@ final_syntax_test/03: MissingCompileTimeError
 final_syntax_test/04: MissingCompileTimeError
 final_syntax_test/08: Crash
 final_syntax_test/09: MissingCompileTimeError
-final_used_in_try_test: Fail
 first_class_types_constants_test: Crash
 first_class_types_libraries_test: Crash
 first_class_types_literals_test/01: Crash
@@ -723,7 +720,6 @@ inferrer_this_access_test: Fail
 inline_super_field_test: Crash
 inlined_conditional_test: Fail
 instance_compound_assignment_operator_test: Fail
-instance_inline_test: Fail
 instanceof2_test: Fail
 instanceof3_test: Fail
 instanceof4_test/01: Fail
@@ -804,7 +800,6 @@ list_tracer_closure_test: Fail
 literal_unary_plus_test/01: MissingCompileTimeError
 literal_unary_plus_test/02: MissingCompileTimeError
 literal_unary_plus_test/03: MissingCompileTimeError
-load_indexed_constant_test: Fail
 local_function2_test: Fail
 local_function3_test: Fail
 local_function_test: Fail
@@ -975,7 +970,6 @@ mixin_mixin7_test: Fail
 mixin_mixin_bound2_test: Fail
 mixin_mixin_bound_test: Fail
 mixin_mixin_test: Fail
-mixin_prefix_test: Fail
 mixin_regress_13688_test: Crash
 mixin_super_constructor2_test: Fail
 mixin_super_constructor_default_test: Fail
@@ -1049,7 +1043,6 @@ operator1_negative_test: Fail
 operator_equals_test: Fail
 operator_index_evaluation_order_test: Fail
 operator_test: Fail
-optimized_constant_array_string_access_test: Fail
 optimized_string_charat_test: Fail
 optimized_string_charcodeat_test: Fail
 overridden_no_such_method_test: Crash
@@ -1147,13 +1140,11 @@ stacktrace_rethrow_error_test/none: Fail
 stacktrace_rethrow_error_test/withtraceparameter: Fail
 stacktrace_rethrow_nonerror_test: Fail
 stacktrace_test: Fail
-statement_test: Fail
 static_call_wrong_argument_count_negative_test: Crash
 static_closure_identical_test: Fail
 static_field_test/none: Fail
 static_final_field2_test/02: MissingCompileTimeError
 static_implicit_closure_test: Fail
-static_inline_test: Fail
 static_parameter_test/01: MissingCompileTimeError
 static_parameter_test/02: MissingCompileTimeError
 static_parameter_test/03: MissingCompileTimeError
@@ -1175,7 +1166,6 @@ static_top_level_test/04: MissingCompileTimeError
 static_top_level_test/05: MissingCompileTimeError
 static_top_level_test/06: MissingCompileTimeError
 static_top_level_test/07: MissingCompileTimeError
-string_charcode_test: Fail
 string_escape4_negative_test: Crash
 string_escapes_test: Fail
 string_interpolate2_negative_test: Fail
@@ -1201,14 +1191,10 @@ string_interpolation9_test/7: MissingCompileTimeError
 string_interpolation9_test/8: MissingCompileTimeError
 string_interpolation9_test/9: MissingCompileTimeError
 string_interpolation_newline_test: Fail
-string_interpolation_test/01: Fail
-string_interpolation_test/none: Fail
-string_test: Fail
 string_unicode1_negative_test: Crash
 string_unicode2_negative_test: Crash
 string_unicode3_negative_test: Crash
 string_unicode4_negative_test: Crash
-substring_test/01: Fail
 super_all_named_constructor_test: Fail
 super_assign_test: Fail
 super_bound_closure_test: Crash
@@ -1360,7 +1346,6 @@ type_check_const_function_typedef_test: Crash
 type_check_test: Fail
 type_checks_in_factory_method_test: Fail
 type_error_test: Crash
-type_guard_conversion_test: Fail
 type_parameter_literal_test: Fail
 type_parameter_test/01: Fail
 type_parameter_test/02: Fail
