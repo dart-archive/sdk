@@ -50,6 +50,18 @@ const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
       category: "Shared",
       documented: false,
       platforms: FLETCH_PLATFORM),
+
+  "ffi": const LibraryInfo(
+      "ffi/ffi.dart",
+      category: "Shared",
+      documented: false,
+      platforms: FLETCH_PLATFORM),
+
+  "service": const LibraryInfo(
+      "service/service_fletchc.dart",
+      category: "Shared",
+      documented: false,
+      platforms: FLETCH_PLATFORM),
 };
 
 class FletchCompiler extends FletchCompilerHack {
