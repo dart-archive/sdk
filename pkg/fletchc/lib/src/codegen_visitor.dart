@@ -622,7 +622,7 @@ abstract class CodegenVisitor
   }
 
   void handleIs(Node expression, DartType type) {
-    if (type == null) {
+    if (type == null || type.element.isErroneous) {
       // 'type' is null for malformed types.
       visitForEffect(expression);
       builder.loadLiteralFalse();
@@ -1527,7 +1527,7 @@ abstract class CodegenVisitor
           effectiveTarget,
           effectiveTargetType,
           arguments,
-          Selector,
+          selector,
           null);
     } else {
       visitFactoryConstructorInvoke(
@@ -1535,7 +1535,7 @@ abstract class CodegenVisitor
           effectiveTarget,
           effectiveTargetType,
           arguments,
-          Selector,
+          selector,
           null);
     }
   }

@@ -12,5 +12,5 @@ import 'dart:_fletch_system' as fletch;
 // TODO(ajohnsen): Rename file.
 
 @fletch.native void register(String service, Port servicePort) {
-  throw new UnsupportedError();
+  throw new UnsupportedError("Was not able to register service '$service'");
 }
