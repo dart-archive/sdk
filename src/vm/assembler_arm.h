@@ -243,6 +243,7 @@ class Assembler {
 
   INSTRUCTION_3(sub, "sub %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(sub, "sub %r, %r, %r", Register, Register, Register);
+  INSTRUCTION_3(sub, "sub %r, %r, %o", Register, Register, const Operand&);
   INSTRUCTION_3(subs, "subs %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_2(tst, "tst %r, %i", Register, const Immediate&);
