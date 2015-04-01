@@ -15,7 +15,7 @@ abstract class TodoMVCPresenter extends TodoMVCService {
   var _eventManager = new EventManager();
 
   // Construct a "presenter model" from the model.
-  Immutable render();
+  Immutable render(Immutable previous);
 
   // Compare two "presenter models" to calculate a patch set for the host.
   MyPatchSet diff(Immutable previous, Immutable current) {

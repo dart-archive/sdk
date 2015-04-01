@@ -29,7 +29,7 @@ abstract class TodoMVCService {
 
   static void initialize(TodoMVCService impl) {
     if (_impl != null) {
-      throw new UnsupportedError();
+      throw new UnsupportedError("Cannot re-initialize");
     }
     _impl = impl;
     _terminated = false;
@@ -84,19 +84,19 @@ abstract class TodoMVCService {
         _postResult.icall$1(request);
         break;
       default:
-        throw UnsupportedError();
+        throw new UnsupportedError("Unknown method");
     }
   }
 
-  const int _TERMINATE_METHOD_ID = 0;
-  const int _CREATE_ITEM_METHOD_ID = 1;
-  const int _DELETE_ITEM_METHOD_ID = 2;
-  const int _COMPLETE_ITEM_METHOD_ID = 3;
-  const int _UNCOMPLETE_ITEM_METHOD_ID = 4;
-  const int _CLEAR_ITEMS_METHOD_ID = 5;
-  const int _DISPATCH_METHOD_ID = 6;
-  const int _SYNC_METHOD_ID = 7;
-  const int _RESET_METHOD_ID = 8;
+  static const int _TERMINATE_METHOD_ID = 0;
+  static const int _CREATE_ITEM_METHOD_ID = 1;
+  static const int _DELETE_ITEM_METHOD_ID = 2;
+  static const int _COMPLETE_ITEM_METHOD_ID = 3;
+  static const int _UNCOMPLETE_ITEM_METHOD_ID = 4;
+  static const int _CLEAR_ITEMS_METHOD_ID = 5;
+  static const int _DISPATCH_METHOD_ID = 6;
+  static const int _SYNC_METHOD_ID = 7;
+  static const int _RESET_METHOD_ID = 8;
 }
 
 class Node extends Reader {
@@ -128,9 +128,13 @@ class NodeBuilder extends Builder {
     _segment.memory.setUint8(_offset + 0, value ? 1 : 0);
   }
   void set str(String value) {
+    tag = 4;
+
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initStrData(int length) {
+    tag = 4;
+
     return NewList(new _uint16BuilderList(), 0, length, 2);
   }
   ConsBuilder initCons() {
@@ -205,9 +209,11 @@ class BoxedString extends Reader {
 
 class BoxedStringBuilder extends Builder {
   void set str(String value) {
+
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initStrData(int length) {
+
     return NewList(new _uint16BuilderList(), 0, length, 2);
   }
 }

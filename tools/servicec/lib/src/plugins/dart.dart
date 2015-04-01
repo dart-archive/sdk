@@ -188,7 +188,7 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln();
     writeln('  static void initialize($serviceName impl) {');
     writeln('    if (_impl != null) {');
-    writeln('      throw new UnsupportedError();');
+    writeln('      throw new UnsupportedError("Cannot re-initialize");');
     writeln('    }');
     writeln('    _impl = impl;');
     writeln('    _terminated = false;');
@@ -248,15 +248,15 @@ class _DartVisitor extends CodeGenerationVisitor {
       writeln('        break;');
     }
     writeln('      default:');
-    writeln('        throw UnsupportedError();');
+    writeln('        throw new UnsupportedError("Unknown method");');
     writeln('    }');
     writeln('  }');
 
     writeln();
     int nextId = 0;
-    writeln('  const int _TERMINATE_METHOD_ID = ${nextId++};');
+    writeln('  static const int _TERMINATE_METHOD_ID = ${nextId++};');
     for (String id in methodIds) {
-      writeln('  const int $id = ${nextId++};');
+      writeln('  static const int $id = ${nextId++};');
     }
 
     writeln('}');
