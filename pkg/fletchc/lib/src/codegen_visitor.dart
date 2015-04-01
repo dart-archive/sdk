@@ -1586,6 +1586,10 @@ abstract class CodegenVisitor
     visitForEffect(node.expression);
   }
 
+  // Called before 'return', as an option to replace the already evaluated
+  // return value.
+  void optionalReplaceResultValue() { }
+
   void visitReturn(Return node) {
     Expression expression = node.expression;
     if (expression == null) {
@@ -1594,6 +1598,7 @@ abstract class CodegenVisitor
       visitForValue(expression);
     }
     callFinallyBlocks(0, true);
+    optionalReplaceResultValue();
     builder.ret();
   }
 
@@ -1682,11 +1687,13 @@ abstract class CodegenVisitor
     BytecodeLabel start = new BytecodeLabel();
     BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
+    BytecodeLabel afterBody  = new BytecodeLabel();
 
+    int initStackSize = builder.stackSize;
     Node initializer = node.initializer;
-    if (initializer != null) visitForValue(initializer);
+    if (initializer != null) visitForEffect(initializer);
 
-    jumpInfo[node] = new JumpInfo(builder.stackSize, start, end);
+    jumpInfo[node] = new JumpInfo(builder.stackSize, afterBody, end);
 
     builder.bind(start);
 
@@ -1698,12 +1705,19 @@ abstract class CodegenVisitor
 
     node.body.accept(this);
 
+    builder.bind(afterBody);
+
     for (Node update in node.update) {
       visitForEffect(update);
     }
     builder.branch(start);
 
     builder.bind(end);
+
+    while (initStackSize < builder.stackSize) {
+      builder.pop();
+      blockLocals--;
+    }
   }
 
   void visitForIn(ForIn node) {

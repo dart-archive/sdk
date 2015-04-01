@@ -499,6 +499,7 @@ class FletchBackend extends Backend {
 
     if (element.isFunction ||
         element.isGetter ||
+        element.isSetter ||
         element.isGenerativeConstructor) {
       compiler.withCurrentElement(element.implementation, () {
         codegenFunction(
@@ -583,8 +584,20 @@ class FletchBackend extends Backend {
       Iterable<ClassElement> mixinUsage =
           compiler.world.mixinUsesOf(function.enclosingClass);
       for (ClassElement usage in mixinUsage) {
+        // TODO(ajohnsen): Consider having multiple 'memberOf' in
+        // CompiledFunction, to avoid duplicates.
+        // Create a copy with a unique 'memberOf', so we can detect missing
+        // stubs for the mixin classes as well.
         CompiledClass compiledUsage = registerClassElement(usage);
-        compiledUsage.methodTable[fletchSelector] = methodId;
+        CompiledFunction copy = new CompiledFunction(
+            nextMethodId++,
+            function.name,
+            function.implementation.functionSignature,
+            compiledUsage,
+            isGetter: function.isGetter);
+        compiledUsage.methodTable[fletchSelector] = copy.methodId;
+        copy.copyFrom(compiledFunction);
+        functions.add(copy);
       }
     }
 

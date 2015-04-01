@@ -99,6 +99,29 @@ const patch = "patch";
   @patch factory List([int length]) {
     return fletch.newList(length);
   }
+
+  @patch factory List.from(Iterable elements, {bool growable: true}) {
+    // TODO(ajohnsen): elements.length can be slow if not a List. Consider
+    // fast-path non-list & growable, and create internal helper for non-list &
+    // non-growable.
+    int length = elements.length;
+    var list;
+    if (growable) {
+      list = fletch.newList(null);
+      list.length = length;
+    } else {
+      list = fletch.newList(length);
+    }
+    if (elements is List) {
+      for (int i = 0; i < length; i++) {
+        list[i] = elements[i];
+      }
+    } else {
+      int i = 0;
+      elements.forEach((e) { list[i++] = e; });
+    }
+    return list;
+  }
 }
 
 @patch class NoSuchMethodError {

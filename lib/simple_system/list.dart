@@ -35,7 +35,7 @@ class _Lists {
   }
 }
 
-class _ConstantList<E> extends IterableBase<E> implements List<E> {
+class _ConstantList<E> extends ListBase<E> implements List<E> {
   final _list;
 
   _ConstantList(int length)
@@ -44,62 +44,6 @@ class _ConstantList<E> extends IterableBase<E> implements List<E> {
   // Not external, to match non-external setter.
   @native int get length {
     throw nativeError;
-  }
-
-  Iterator<E> get iterator => new _ListIterator<E>(this);
-
-  bool get isEmpty => length == 0;
-
-  bool get isNotEmpty => length != 0;
-
-  E get first {
-    if (length == 0) throw new StateError("No element");
-    return this[0];
-  }
-
-  E get last {
-    if (length == 0) throw new StateError("No element");
-    return this[length - 1];
-  }
-
-  E get single {
-    if (length == 0) throw new StateError("No element");
-    if (length != 1) throw new StateError("Too many elements");
-    return this[0];
-  }
-
-  E elementAt(int index) {
-    if (index is! int) throw new ArgumentError('$index');
-    return this[index];
-  }
-
-  int indexOf(E element, [int start = 0]) {
-    if (start >= length) return -1;
-    if (start < 0) start = 0;
-    for (int i = start; i < length; i++) {
-      if (this[i] == element) return i;
-    }
-    return -1;
-  }
-
-  int lastIndexOf(E element, [int start]) {
-    if (start == null) start = length - 1;
-    if (start < 0) return -1;
-    if (start >= length) start = length - 1;
-    for (int i = start; i >= 0; i--) {
-      if (this[i] == element) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  List<E> sublist(int start, [int end]) {
-    var result = new List();
-    for (int i = start; i < end; i++) {
-      result.add(this[i]);
-    }
-    return result;
   }
 
   @native external E operator[](int index);
@@ -221,7 +165,7 @@ class _FixedList<E> extends _ConstantList<E> {
   @native external E operator[]=(int index, value);
 }
 
-class _GrowableList<E> extends IterableBase<E> implements List<E> {
+class _GrowableList<E> extends ListBase<E> implements List<E> {
   int _length;
   _FixedList<E> _list;
 
@@ -230,33 +174,6 @@ class _GrowableList<E> extends IterableBase<E> implements List<E> {
         _list = new _FixedList<E>(4);
 
   int get length => _length;
-
-  bool get isEmpty => _length == 0;
-
-  bool get isNotEmpty => _length != 0;
-
-  Iterator<E> get iterator => new _ListIterator<E>(this);
-
-  E get first {
-    if (length == 0) throw new StateError("No element");
-    return this[0];
-  }
-
-  E get last {
-    if (length == 0) throw new StateError("No element");
-    return this[length - 1];
-  }
-
-  E get single {
-    if (length == 0) throw new StateError("No element");
-    if (length != 1) throw new StateError("Too many elements");
-    return this[0];
-  }
-
-  E elementAt(int index) {
-    if (index is! int) throw new ArgumentError('$index');
-    return this[index];
-  }
 
   void add(E value) {
     _FixedList<E> list = _list;
@@ -270,13 +187,11 @@ class _GrowableList<E> extends IterableBase<E> implements List<E> {
   }
 
   E operator[](int index) {
-    // TODO(ajohnsen): Fix throw of exception.
     if (index >= _length) throw new IndexError(index, this);
     return _list[index];
   }
 
   void operator[]=(int index, value) {
-    // TODO(ajohnsen): Fix throw of exception.
     if (index >= length) throw new IndexError(index, this);
     return _list[index] = value;
   }
@@ -294,59 +209,11 @@ class _GrowableList<E> extends IterableBase<E> implements List<E> {
     });
   }
 
-  Iterable<E> get reversed {
-    throw new UnimplementedError("_GrowableList.reversed");
-  }
-
-  void sort([int compare(E a, E b)]) {
-    if (compare == null) {
-      compare = Comparable.compare;
-    }
-    _Sort.sort(this, compare);
-  }
-
-  void shuffle([Random random]) {
-    throw new UnimplementedError("_GrowableList.shuffle");
-  }
-
-  int indexOf(E element, [int start = 0]) {
-    if (start >= length) return -1;
-    if (start < 0) start = 0;
-    for (int i = start; i < length; i++) {
-      if (this[i] == element) return i;
-    }
-    return -1;
-  }
-
-  int lastIndexOf(E element, [int start]) {
-    if (start == null) start = length - 1;
-    if (start < 0) return -1;
-    if (start >= length) start = length - 1;
-    for (int i = start; i >= 0; i--) {
-      if (this[i] == element) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
   void clear() {
     if (_length != 0) {
       _length = 0;
       _list = new _FixedList(4);
     }
-  }
-
-  void insert(int index, E element) {
-    throw new UnimplementedError("_GrowableList.insert");
-  }
-
-  void insertAll(int index, Iterable<E> iterable) {
-    throw new UnimplementedError("_GrowableList.insertAll");
-  }
-
-  void setAll(int index, Iterable<E> iterable) {
-    throw new UnimplementedError("_GrowableList.setAll");
   }
 
   bool remove(Object value) {
@@ -391,45 +258,6 @@ class _GrowableList<E> extends IterableBase<E> implements List<E> {
     }
   }
 
-  List<E> sublist(int start, [int end]) {
-    var result = new List();
-    for (int i = start; i < end; i++) {
-      result.add(this[i]);
-    }
-    return result;
-  }
-
-  Iterable<E> getRange(int start, int end) {
-    throw new UnimplementedError("_GrowableList.getRange");
-  }
-
-  void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
-    _Lists.setRange(this, start, end, iterable, skipCount);
-  }
-
-  void removeRange(int start, int end) {
-    RangeError.checkValidRange(start, end, length);
-    for (int i = 0; i < length - end; i++) {
-      this[start + i] = this[end + i];
-    }
-    length -= (end - start);
-  }
-
-  void fillRange(int start, int end, [E fillValue]) {
-    RangeError.checkValidRange(start, end, length);
-    for (int i = start; i < end; i++) {
-      this[i] = fillValue;
-    }
-  }
-
-  void replaceRange(int start, int end, Iterable<E> replacement) {
-    throw new UnimplementedError("_GrowableList.replaceRange");
-  }
-
-  Map<int, E> asMap() {
-    throw new UnimplementedError("_GrowableList.asMap");
-  }
-
   _FixedList<E> _grow(minSize) {
     // TODO(ager): play with heuristics here.
     var newList = new _FixedList<E>(minSize + (minSize >> 2));
@@ -449,25 +277,5 @@ class _GrowableList<E> extends IterableBase<E> implements List<E> {
     }
     _length = length;
     list[length] = null;
-  }
-}
-
-class _ListIterator<E> implements Iterator<E> {
-  final List _list;
-
-  int _index = -1;
-  E _current;
-
-  _ListIterator(this._list);
-
-  E get current => _current;
-
-  bool moveNext() {
-    if (++_index < _list.length) {
-      _current = _list[_index];
-      return true;
-    }
-    _current = null;
-    return false;
   }
 }

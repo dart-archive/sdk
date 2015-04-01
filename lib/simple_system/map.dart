@@ -60,7 +60,7 @@ class _MapIterable<E> extends IterableBase<E> implements Iterable<E> {
 
   _MapIterable(this._list);
 
-  Iterator<E> get iterator => new _ListIterator(_list);
+  Iterator<E> get iterator => new ListIterator(_list);
 
   int get length => _list.length;
 

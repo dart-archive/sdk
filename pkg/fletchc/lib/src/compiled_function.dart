@@ -102,6 +102,16 @@ class CompiledFunction {
     return allocateConstant(constant);
   }
 
+  // TODO(ajohnsen): Remove this function when usage is avoided in
+  // FletchBackend.
+  void copyFrom(CompiledFunction function) {
+    builder.bytecodes.addAll(function.builder.bytecodes);
+    builder.catchRanges.addAll(function.builder.catchRanges);
+    constants.addAll(function.constants);
+    functionConstantValues.addAll(function.functionConstantValues);
+    classConstantValues.addAll(function.classConstantValues);
+  }
+
   bool matchesSelector(Selector selector) {
     if (!canBeCalledAs(selector)) return false;
     if (selector.namedArguments.length != signature.optionalParameterCount) {
@@ -227,6 +237,7 @@ class CompiledFunction {
   String verboseToString() {
     StringBuffer sb = new StringBuffer();
 
+    sb.writeln("Method $methodId, Arity=${builder.functionArity}");
     sb.writeln("Constants:");
     constants.forEach((constant, int index) {
       if (constant is ConstantValue) {

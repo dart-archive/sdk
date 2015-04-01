@@ -38,6 +38,8 @@ import 'codegen_visitor.dart';
 
 class FunctionCodegen extends CodegenVisitor {
 
+  int setterResultSlot;
+
   FunctionCodegen(CompiledFunction compiledFunction,
                   FletchContext context,
                   TreeElements elements,
@@ -64,8 +66,18 @@ class FunctionCodegen extends CodegenVisitor {
       builder.ret();
       builder.bind(notNull);
     }
+
     FunctionSignature functionSignature = function.functionSignature;
     int parameterCount = functionSignature.parameterCount;
+
+    // If the function is a setter, push the argument to later be returned.
+    // TODO(ajohnsen): If the argument is semantically final, we don't have to
+    // do this.
+    if (function.isSetter) {
+      setterResultSlot = - parameterCount - 1;
+      builder.loadSlot(setterResultSlot);
+    }
+
     int i = 0;
     functionSignature.orderedForEachParameter((ParameterElement parameter) {
       int slot = i++ - parameterCount - 1;
@@ -95,10 +107,21 @@ class FunctionCodegen extends CodegenVisitor {
 
     // Emit implicit 'return null' if no terminator is present.
     if (!builder.endsWithTerminator) {
-      builder.loadLiteralNull();
+      if (function.isSetter) {
+        builder.loadSlot(setterResultSlot);
+      } else {
+        builder.loadLiteralNull();
+      }
       builder.ret();
     }
 
     builder.methodEnd();
+  }
+
+  void optionalReplaceResultValue() {
+    if (function.isSetter) {
+      builder.pop();
+      builder.loadSlot(setterResultSlot);
+    }
   }
 }

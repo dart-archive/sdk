@@ -14,6 +14,7 @@ import 'dart:core' as core show
     int,
     String;
 
+import 'dart:_internal';
 import 'dart:collection';
 import 'dart:math';
 
