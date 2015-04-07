@@ -75,7 +75,8 @@ import 'package:compiler/src/library_loader.dart' show
 
 import 'fletch_constants.dart' show
     FletchClassConstant,
-    FletchFunctionConstant;
+    FletchFunctionConstant,
+    FletchClassInstanceConstant;
 
 import 'compiled_function.dart' show
     CompiledFunction;
@@ -917,6 +918,10 @@ class FletchBackend extends Backend {
         }
         commands
             ..add(new PushFromMap(MapId.classes, compiledClass.id))
+            ..add(const PushNewInstance());
+      } else if (constant is FletchClassInstanceConstant) {
+        commands
+            ..add(new PushFromMap(MapId.classes, constant.classId))
             ..add(const PushNewInstance());
       } else {
         throw "Unsupported constant: ${constant.toStructuredString()}";

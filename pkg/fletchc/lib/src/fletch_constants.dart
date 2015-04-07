@@ -60,3 +60,23 @@ class FletchClassConstant extends ConstantValue {
     return 'FletchClassConstant($classId)';
   }
 }
+
+class FletchClassInstanceConstant extends ConstantValue {
+  final int classId;
+
+  FletchClassInstanceConstant(this.classId);
+
+  DartType getType(CoreTypes types) => const DynamicType();
+
+  List<ConstantValue> getDependencies() => const <ConstantValue>[];
+
+  accept(visitor, arg) {
+    throw new UnsupportedError("FletchClassInstanceConstant.accept");
+  }
+
+  String unparse() => toStructuredString();
+
+  String toStructuredString() {
+    return 'FletchClassInstanceConstant($classId)';
+  }
+}

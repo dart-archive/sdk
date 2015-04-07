@@ -37,7 +37,8 @@ import 'fletch_backend.dart';
 
 import 'fletch_constants.dart' show
     CompiledFunctionConstant,
-    FletchClassConstant;
+    FletchClassConstant,
+    FletchClassInstanceConstant;
 
 import '../bytecodes.dart' show
     Bytecode;
@@ -187,6 +188,12 @@ abstract class CodegenVisitor
         elements: elements,
         isConst: false);
     return compiledFunction.allocateConstant(expression.value);
+  }
+
+  int allocateConstantClassInstance(int classId) {
+    var constant = new FletchClassInstanceConstant(classId);
+    context.markConstantUsed(constant);
+    return compiledFunction.allocateConstant(constant);
   }
 
   int allocateStringConstant(String string) {
@@ -735,9 +742,14 @@ abstract class CodegenVisitor
         context.backend.createCompiledFunction(function, null, null);
     CompiledClass compiledClass = context.backend.createTearoffClass(
         compiledFunctionTarget);
-    int classConstant = compiledFunction.allocateConstantFromClass(
-        compiledClass.id);
-    builder.allocate(classConstant, compiledClass.fields);
+    if (compiledClass.fields == 0) {
+      int constId = allocateConstantClassInstance(compiledClass.id);
+      builder.loadConst(constId);
+    } else {
+      int classConstant = compiledFunction.allocateConstantFromClass(
+          compiledClass.id);
+      builder.allocate(classConstant, compiledClass.fields);
+    }
   }
 
   void visitTopLevelFunctionGet(
@@ -1105,6 +1117,20 @@ abstract class CodegenVisitor
       }
     } else if (visitState == VisitState.Test) {
       builder.branch(isTrue ? trueLabel : falseLabel);
+    }
+  }
+
+  void visitLiteralInt(LiteralInt node) {
+    if (visitState == VisitState.Value) {
+      int value = node.value;
+      if (value >= 0x3FFFFFFF) {
+        int constId = allocateConstantFromNode(node);
+        builder.loadConst(constId);
+      } else {
+        builder.loadLiteral(value);
+      }
+    } else if (visitState == VisitState.Test) {
+      builder.branch(falseLabel);
     }
   }
 
