@@ -478,8 +478,7 @@ abstract class CodegenVisitor
   void handleBinaryOperator(
       Node left,
       Node right,
-      BinaryOperator operator,
-      _) {
+      BinaryOperator operator) {
     bool isConstNull(Node node) {
       ConstantExpression expression = compileConstant(node, isConst: false);
       if (expression == null) return false;
@@ -505,7 +504,7 @@ abstract class CodegenVisitor
       Node right,
       _) {
     // TODO(ajohnsen): Inject null check (in callee).
-    handleBinaryOperator(left, right, BinaryOperator.EQ, _);
+    handleBinaryOperator(left, right, BinaryOperator.EQ);
     applyVisitState();
   }
 
@@ -514,9 +513,14 @@ abstract class CodegenVisitor
       Node left,
       Node right,
       _) {
-    handleBinaryOperator(left, right, BinaryOperator.EQ, _);
-    builder.negate();
-    applyVisitState();
+    handleBinaryOperator(left, right, BinaryOperator.EQ);
+    if (visitState == VisitState.Test) {
+      builder.branchIfTrue(falseLabel);
+      builder.branch(trueLabel);
+    } else {
+      builder.negate();
+      applyVisitState();
+    }
   }
 
   void visitBinary(
@@ -525,7 +529,7 @@ abstract class CodegenVisitor
       BinaryOperator operator,
       Node right,
       _) {
-    handleBinaryOperator(left, right, operator, _);
+    handleBinaryOperator(left, right, operator);
     applyVisitState();
   }
 
@@ -580,6 +584,14 @@ abstract class CodegenVisitor
       Node left,
       Node right,
       _) {
+    if (visitState == VisitState.Test) {
+      BytecodeLabel isFirstTrue = new BytecodeLabel();
+      visitForTest(left, isFirstTrue, falseLabel);
+      builder.bind(isFirstTrue);
+      visitForTest(right, trueLabel, falseLabel);
+      return;
+    }
+
     BytecodeLabel isFirstTrue = new BytecodeLabel();
     BytecodeLabel isTrue = new BytecodeLabel();
     BytecodeLabel isFalse = new BytecodeLabel();
@@ -605,6 +617,14 @@ abstract class CodegenVisitor
       Node left,
       Node right,
       _) {
+    if (visitState == VisitState.Test) {
+      BytecodeLabel isFirstFalse = new BytecodeLabel();
+      visitForTest(left, trueLabel, isFirstFalse);
+      builder.bind(isFirstFalse);
+      visitForTest(right, trueLabel, falseLabel);
+      return;
+    }
+
     BytecodeLabel isFirstFalse = new BytecodeLabel();
     BytecodeLabel isTrue = new BytecodeLabel();
     BytecodeLabel isFalse = new BytecodeLabel();
