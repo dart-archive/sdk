@@ -15,6 +15,7 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
@@ -53,6 +54,8 @@ static const int COMPILER_CRASHED = 253;
 static char* program_name = NULL;
 
 static char fletch_config_file[MAXPATHLEN];
+
+static char fletch_socket_file[MAXPATHLEN];
 
 static const char fletch_config_name[] = ".fletch";
 
@@ -230,13 +233,14 @@ static void UnlockConfigFile() {
   Close(fletch_config_fd);
 }
 
-static void ReadDriverConfig(char* config_string, size_t length) {
+static void ReadDriverConfig() {
   printf("Using config file: %s\n", fletch_config_file);
 
   size_t offset = 0;
+  size_t length = sizeof(fletch_socket_file) - 1;
   while (offset < length) {
     ssize_t bytes = TEMP_FAILURE_RETRY(
-        read(fletch_config_fd, config_string + offset, length - offset));
+        read(fletch_config_fd, fletch_socket_file + offset, length - offset));
     if (bytes < 0) {
       Die("%s: error reading from child process: %s",
           program_name, strerror(errno));
@@ -245,53 +249,7 @@ static void ReadDriverConfig(char* config_string, size_t length) {
     }
     offset += bytes;
   }
-  config_string[offset] = '\0';
-}
-
-static int ComputeDriverPort() {
-  char port_string[1024];
-
-  const char* what = "Contents of file";
-  const char* who = fletch_config_file;
-
-  port_string[0] = '\0';
-  ReadDriverConfig(port_string, sizeof(port_string));
-  if (port_string[0] == '\0') return -1;
-
-  // Socket ports are in the range 0..65k.
-  size_t max_length = 5;
-
-  size_t port_string_length = strnlen(port_string, max_length + 1);
-  if (port_string_length > max_length) {
-    fprintf(stderr, "%s: %s '%s' is too large.\n", program_name, what, who);
-    return -2;
-  }
-  char* end = NULL;
-  intmax_t port = strtoimax(port_string, &end, 10);
-  if (port_string + port_string_length != end) {
-    fprintf(stderr,
-            "%s: %s '%s' isn't a number: '%s'.\n",
-            program_name, what, who, port_string);
-    return -2;
-  }
-
-  if (port < -1) {
-    fprintf(stderr,
-            "%s: %s '%s' is less than -1: '%ji'.\n",
-            program_name, what, who, port);
-    return -2;
-  }
-
-  if (port > USHRT_MAX) {
-    fprintf(stderr,
-            "%s: %s '%s' is larger than %i: '%ji'.\n",
-            program_name, what, who, USHRT_MAX, port);
-    return -2;
-  }
-
-  // We have determined that the port number is in the range [-1, USHRT_MAX],
-  // and can safely cast it to an int.
-  return static_cast<int>(port);
+  fletch_socket_file[offset] = '\0';
 }
 
 static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
@@ -339,7 +297,7 @@ pid_t Fork() {
   return pid;
 }
 
-static int WaitForDaemonHandshake(
+static void WaitForDaemonHandshake(
     pid_t pid,
     int parent_stdout,
     int parent_stderr);
@@ -349,7 +307,7 @@ static void ExecDaemon(
     int child_stderr,
     const char** argv);
 
-static int StartDriverDaemon() {
+static void StartDriverDaemon() {
   const char* argv[6];
 
   char vm_path[MAXPATHLEN + 1];
@@ -390,11 +348,10 @@ static int StartDriverDaemon() {
     Close(fletch_config_fd);
     ExecDaemon(child_stdout, child_stderr, argv);
     UNREACHABLE();
-    return -1;
   } else {
     Close(child_stdout);
     Close(child_stderr);
-    return WaitForDaemonHandshake(pid, parent_stdout, parent_stderr);
+    WaitForDaemonHandshake(pid, parent_stdout, parent_stderr);
   }
 }
 
@@ -471,7 +428,7 @@ static bool ForwardWithBuffer(
   return false;
 }
 
-static int WaitForDaemonHandshake(
+static void WaitForDaemonHandshake(
     pid_t pid,
     int parent_stdout,
     int parent_stderr) {
@@ -491,7 +448,6 @@ static int WaitForDaemonHandshake(
     stdout_buffer[0] = '\0';
     bool stdout_is_closed = false;
     bool stderr_is_closed = false;
-    intmax_t port = -1;
     while (!stdout_is_closed || !stderr_is_closed) {
       char buffer[4096];
       fd_set readfds;
@@ -526,23 +482,23 @@ static int WaitForDaemonHandshake(
           StrCat(stdout_buffer, sizeof(stdout_buffer), buffer, sizeof(buffer));
           // At this point, stdout_buffer contains all the data we have
           // received from the server process via its stdout. We're looking for
-          // a handshake which is a port number on the first line. So we look
-          // for a number followed by a newline character.
-          char *end;
-          port = strtoimax(stdout_buffer, &end, 10);
-          if (end[0] == '\n') {
-            // We got the server handshake (the port number). So break to
+          // a handshake which is a file name on the first line. So we look for
+          // a newline character.
+          char *match = strchr(stdout_buffer, '\n');
+          if (match != NULL) {
+            match[0] = '\0';
+            StrCpy(
+                fletch_socket_file, sizeof(fletch_socket_file),
+                stdout_buffer, sizeof(stdout_buffer));
+            // We got the server handshake (the socket file). So we break to
             // eventually return from this function.
             break;
-          } else {
-            port = -1;
           }
         }
       }
     }
     Close(parent_stdout);
     Close(parent_stderr);
-    return port;
   }
 }
 
@@ -608,30 +564,45 @@ static DriverConnection::Command HandleCommand(DriverConnection* connection) {
   return DriverConnection::kDriverConnectionError;
 }
 
+Socket* Connect() {
+  struct sockaddr_un address;
+
+  address.sun_family = AF_UNIX;
+  StrCpy(
+      address.sun_path, sizeof(address.sun_path),
+      fletch_socket_file, sizeof(fletch_socket_file));
+
+  int fd = socket(PF_UNIX, SOCK_STREAM, 0);
+  if (fd < 0) {
+    Die("%s: socket failed: %s", program_name, strerror(errno));
+  }
+  Socket* socket = new Socket(fd);
+
+  int connect_result = TEMP_FAILURE_RETRY(connect(
+    fd, reinterpret_cast<struct sockaddr*>(&address), sizeof(address)));
+  if (connect_result != 0) {
+    delete socket;
+    return NULL;
+  } else {
+    return socket;
+  }
+}
+
 static int Main(int argc, char** argv) {
   program_name = argv[0];
   DetectConfiguration();
   LockConfigFile();
-  int port = ComputeDriverPort();
-  Socket *control_socket = new Socket();
+  ReadDriverConfig();
 
-  if (port < -1) {
-    return 1;
-  }
+  Socket *control_socket = Connect();
 
-  if (!control_socket->Connect("127.0.0.1", port)) {
-    delete control_socket;
-    port = StartDriverDaemon();
-    if (port == -1) {
+  if (control_socket == NULL) {
+    StartDriverDaemon();
+    control_socket = Connect();
+    if (control_socket == NULL) {
       Die(
-          "%s: Failed to start fletch server.\n"
+          "%s: Failed to start fletch server (%s).\n"
           "Use DART_VM environment variable to override location of Dart VM.",
-          program_name);
-    }
-    printf("Persistent process port: %i\n", port);
-    control_socket = new Socket();
-    if (!control_socket->Connect("127.0.0.1", port)) {
-      Die("%s: Unable to connect to server: %s.",
           program_name, strerror(errno));
     }
   }

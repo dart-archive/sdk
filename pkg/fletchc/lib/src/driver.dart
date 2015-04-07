@@ -189,19 +189,27 @@ Uint8List makeView(TypedData list, int offset, int length) {
 
 Future main(List<String> arguments) async {
   File configFile = new File.fromUri(Uri.base.resolve(arguments.first));
+  Directory tmpdir = Directory.systemTemp.createTempSync("fletch_driver");
+
+  File socketFile = new File("${tmpdir.path}/socket");
+  try {
+    socketFile.deleteSync();
+  } on FileSystemException catch (e) {
+    // Ignored. There's no way to check if a socket file exists.
+  }
 
   ServerSocket server =
-      await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
-  int port = server.port;
+      await ServerSocket.bind(new UnixDomainAddress(socketFile.path), 0);
 
-  // Write the port number to a config file. This lets multiple command line
+  // Write the socket file to a config file. This lets multiple command line
   // programs share this persistent driver process, which in turn eliminates
   // start up overhead.
-  configFile.writeAsStringSync("$port");
+  configFile.writeAsStringSync(socketFile.path, flush: true);
 
-  // Print the port number so the launching process knows where to connect, and
-  // that the socket port is ready.
-  print(port);
+
+  // Print the temporary directory so the launching process knows where to
+  // connect, and that the socket is ready.
+  print(socketFile.path);
 
   var connectionIterator = new StreamIterator(server);
 

@@ -22,8 +22,14 @@ struct Socket::SocketData {
 
 Socket::Socket() : data_(new SocketData()) {
   data_->fd = socket(AF_INET, SOCK_STREAM, 0);
-  fcntl(data_->fd, FD_CLOEXEC);
   ASSERT(data_->fd >= 0);
+  fcntl(data_->fd, FD_CLOEXEC);
+}
+
+Socket::Socket(int fd) : data_(new SocketData()) {
+  data_->fd = fd;
+  ASSERT(data_->fd >= 0);
+  fcntl(data_->fd, FD_CLOEXEC);
 }
 
 Socket::~Socket() {
