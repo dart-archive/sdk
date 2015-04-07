@@ -487,7 +487,7 @@ class FletchBackend extends Backend {
           // implementation.
           function.implementation.functionSignature,
           holderClass,
-          isGetter: function.isGetter);
+          isAccessor: function.isAccessor);
     });
   }
 
@@ -595,7 +595,7 @@ class FletchBackend extends Backend {
             function.name,
             function.implementation.functionSignature,
             compiledUsage,
-            isGetter: function.isGetter);
+            isAccessor: function.isAccessor);
         compiledUsage.methodTable[fletchSelector] = copy.methodId;
         copy.copyFrom(compiledFunction);
         functions.add(copy);
@@ -718,7 +718,7 @@ class FletchBackend extends Backend {
     int length = functions.length;
     for (int i = 0; i < length; i++) {
       CompiledFunction function = functions[i];
-      if (!function.hasThisArgument || function.isGetter) continue;
+      if (!function.hasThisArgument || function.isAccessor) continue;
       String name = function.name;
       Set<Selector> usage = compiler.resolverWorld.invokedNames[name];
       if (usage == null) continue;
@@ -737,15 +737,10 @@ class FletchBackend extends Backend {
     int length = functions.length;
     for (int i = 0; i < length; i++) {
       CompiledFunction function = functions[i];
-      if (!function.hasThisArgument || function.isGetter) continue;
+      if (!function.hasThisArgument || function.isAccessor) continue;
       String name = function.name;
-      Set<Selector> usage = compiler.resolverWorld.invokedGetters[name];
-      if (usage == null) continue;
-      for (Selector use in usage) {
-        if (function.canBeCalledAs(use)) {
-          createTearoffGetterForFunction(function);
-          break;
-        }
+      if (compiler.resolverWorld.invokedGetters.containsKey(name)) {
+        createTearoffGetterForFunction(function);
       }
     }
   }
