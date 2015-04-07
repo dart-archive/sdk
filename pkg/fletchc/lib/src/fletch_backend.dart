@@ -222,6 +222,7 @@ class FletchBackend extends Backend {
 
   LibraryElement fletchSystemLibrary;
   LibraryElement fletchNativesLibrary;
+  LibraryElement fletchFFILibrary;
 
   FunctionElement fletchSystemEntry;
 
@@ -984,9 +985,10 @@ class FletchBackend extends Backend {
 
     if (Uri.parse('dart:_fletch_system') == library.canonicalUri) {
       fletchSystemLibrary = library;
-    }
-    if (Uri.parse('dart:fletch_natives') == library.canonicalUri) {
+    } else if (Uri.parse('dart:fletch_natives') == library.canonicalUri) {
       fletchNativesLibrary = library;
+    } else if (Uri.parse('dart:ffi') == library.canonicalUri) {
+      fletchFFILibrary = library;
     }
   }
 
@@ -1015,6 +1017,8 @@ class FletchBackend extends Backend {
     } else if (element.library == fletchNativesLibrary) {
       // Nothing needed for now.
     } else if (element.library == compiler.coreLibrary) {
+      // Nothing needed for now.
+    } else if (element.library == fletchFFILibrary) {
       // Nothing needed for now.
     } else if (externals.contains(element)) {
       // Nothing needed for now.

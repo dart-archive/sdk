@@ -209,8 +209,8 @@ class Foreign {
 
   // Natives needed for FFI support.
   @fletch.native static int _lookup(String name, String library) {
-    var error = nativeError;
-    throw (error != _indexOutOfBounds) ? error : new ArgumentError();
+    var error = fletch.nativeError;
+    throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
   }
 
   @fletch.native external static int _call$0(int address);
