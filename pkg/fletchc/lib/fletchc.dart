@@ -11,11 +11,32 @@ import 'dart:io';
 import 'compiler.dart' show
     FletchCompiler;
 
+import 'commands.dart';
+
 const COMPILER_CRASHED = 253;
 const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
 const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
 
 main(List<String> arguments) async {
+  String script;
+  String snapshotPath;
+
+  for (int i = 0; i < arguments.length; i++) {
+    String argument = arguments[i];
+    switch (argument) {
+      case '-o':
+      case '--out':
+        snapshotPath = arguments[++i];
+        break;
+
+      default:
+        script = argument;
+        break;
+    }
+  }
+
+  if (script == null) throw "No script supplied";
+
   exitCode = COMPILER_CRASHED;
 
   List<String> options = const bool.fromEnvironment("fletchc-verbose")
@@ -23,7 +44,7 @@ main(List<String> arguments) async {
   // TODO(ajohnsen): packageRoot should be a command line argument.
   FletchCompiler compiler = new FletchCompiler(
       options: options,
-      script: arguments.single,
+      script: script,
       packageRoot: "package/");
   bool compilerCrashed = false;
   List commands = await compiler.run().catchError((e, trace) {
@@ -36,6 +57,13 @@ main(List<String> arguments) async {
   });
 
   if (compilerCrashed) return;
+
+  if (snapshotPath == null) {
+    commands.add(const ProcessSpawnForMain());
+    commands.add(const ProcessRun());
+  } else {
+    commands.add(new WriteSnapshot(snapshotPath));
+  }
 
   var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 

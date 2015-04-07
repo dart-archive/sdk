@@ -389,6 +389,21 @@ class SessionEnd extends Command {
       : super(CommandCode.SessionEnd);
 }
 
+class WriteSnapshot extends Command {
+  final String value;
+
+  const WriteSnapshot(this.value)
+      : super(CommandCode.WriteSnapshot);
+
+  void addTo(StreamSink<List<int>> sink) {
+    List<int> payload = UTF8.encode(value).toList()..add(0);
+    buffer
+        ..addUint32(payload.length)
+        ..addUint8List(payload)
+        ..sendOn(sink, code);
+  }
+}
+
 enum CommandCode {
   // Session opcodes.
   // TODO(ahe): Understand what "Session opcodes" mean and turn it into a
