@@ -372,32 +372,30 @@ static void ExecDaemon(
     int child_stdout,
     int child_stderr,
     const char** argv) {
-  {  // TODO(ahe): Remove extra indentation and inline this block.
-    Close(STDOUT_FILENO);
+  Close(STDOUT_FILENO);
 
-    // Calling fork one more time to create an indepent processs. This prevents
-    // zombie processes, and ensures the server can continue running in the
-    // background independently of the parent process.
-    if (Fork() > 0) {
-      // This process exits and leaves the new child as an independent process.
-      exit(0);
-    }
+  // Calling fork one more time to create an indepent processs. This prevents
+  // zombie processes, and ensures the server can continue running in the
+  // background independently of the parent process.
+  if (Fork() > 0) {
+    // This process exits and leaves the new child as an independent process.
+    exit(0);
+  }
 
-    // Create a new session (to avoid getting killed by Ctrl-C).
-    NewProcessSession();
+  // Create a new session (to avoid getting killed by Ctrl-C).
+  NewProcessSession();
 
-    // This is the child process that will exec the persistent server. We don't
-    // want this server to be associated with the current terminal, so we must
-    // close stdin (handled above), stdout, and stderr. This is accomplished by
-    // redirecting stdout and stderr to the pipes to the parent process.
-    Dup2(child_stdout, STDOUT_FILENO);  // Closes stdout.
-    Dup2(child_stderr, STDERR_FILENO);  // Closes stderr.
-    Close(child_stdout);
-    Close(child_stderr);
+  // This is the child process that will exec the persistent server. We don't
+  // want this server to be associated with the current terminal, so we must
+  // close stdin (handled above), stdout, and stderr. This is accomplished by
+  // redirecting stdout and stderr to the pipes to the parent process.
+  Dup2(child_stdout, STDOUT_FILENO);  // Closes stdout.
+  Dup2(child_stderr, STDERR_FILENO);  // Closes stderr.
+  Close(child_stdout);
+  Close(child_stderr);
 
-    execv(argv[0], const_cast<char**>(argv));
-    Die("%s: exec '%s' failed: %s", program_name, argv[0], strerror(errno));
-  }  // TODO(ahe): Remove extra indentation and inline this block.
+  execv(argv[0], const_cast<char**>(argv));
+  Die("%s: exec '%s' failed: %s", program_name, argv[0], strerror(errno));
 }
 
 static ssize_t Read(int fd, char* buffer, size_t buffer_length) {
@@ -432,74 +430,72 @@ static void WaitForDaemonHandshake(
     pid_t pid,
     int parent_stdout,
     int parent_stderr) {
-  {  // TODO(ahe): Remove extra indentation and inline this block.
-    int status;
-    waitpid(pid, &status, 0);
-    if (!WIFEXITED(status)) {
-      Die("%s: child process failed.", program_name);
-    }
-    status = WEXITSTATUS(status);
-    if (status != 0) {
-      Die("%s: child process exited with non-zero exit code %i.",
-          program_name, status);
-    }
-
-    char stdout_buffer[4096];
-    stdout_buffer[0] = '\0';
-    bool stdout_is_closed = false;
-    bool stderr_is_closed = false;
-    while (!stdout_is_closed || !stderr_is_closed) {
-      char buffer[4096];
-      fd_set readfds;
-      int max_fd = 0;
-      FD_ZERO(&readfds);
-      if (!stdout_is_closed) {
-        FD_SET(parent_stdout, &readfds);
-        if (max_fd < parent_stdout) max_fd = parent_stdout;
-      }
-      if (!stderr_is_closed) {
-        FD_SET(parent_stderr, &readfds);
-        if (max_fd < parent_stderr) max_fd = parent_stderr;
-      }
-      int ready_count =
-          TEMP_FAILURE_RETRY(select(max_fd + 1, &readfds, NULL, NULL, NULL));
-      if (ready_count < 0) {
-        fprintf(stderr, "%s: select error: %s", program_name, strerror(errno));
-        break;
-      } else if (ready_count == 0) {
-        // Timeout, shouldn't happen.
-      } else {
-        if (FD_ISSET(parent_stderr, &readfds)) {
-          ssize_t bytes_read = sizeof(buffer);
-          stderr_is_closed = ForwardWithBuffer(
-              parent_stderr, STDERR_FILENO, buffer, &bytes_read);
-        }
-        if (FD_ISSET(parent_stdout, &readfds)) {
-          ssize_t bytes_read = sizeof(buffer) - 1;
-          stdout_is_closed = ForwardWithBuffer(
-              parent_stdout, STDOUT_FILENO, buffer, &bytes_read);
-          buffer[bytes_read] = '\0';
-          StrCat(stdout_buffer, sizeof(stdout_buffer), buffer, sizeof(buffer));
-          // At this point, stdout_buffer contains all the data we have
-          // received from the server process via its stdout. We're looking for
-          // a handshake which is a file name on the first line. So we look for
-          // a newline character.
-          char *match = strchr(stdout_buffer, '\n');
-          if (match != NULL) {
-            match[0] = '\0';
-            StrCpy(
-                fletch_socket_file, sizeof(fletch_socket_file),
-                stdout_buffer, sizeof(stdout_buffer));
-            // We got the server handshake (the socket file). So we break to
-            // eventually return from this function.
-            break;
-          }
-        }
-      }
-    }
-    Close(parent_stdout);
-    Close(parent_stderr);
+  int status;
+  waitpid(pid, &status, 0);
+  if (!WIFEXITED(status)) {
+    Die("%s: child process failed.", program_name);
   }
+  status = WEXITSTATUS(status);
+  if (status != 0) {
+    Die("%s: child process exited with non-zero exit code %i.",
+        program_name, status);
+  }
+
+  char stdout_buffer[4096];
+  stdout_buffer[0] = '\0';
+  bool stdout_is_closed = false;
+  bool stderr_is_closed = false;
+  while (!stdout_is_closed || !stderr_is_closed) {
+    char buffer[4096];
+    fd_set readfds;
+    int max_fd = 0;
+    FD_ZERO(&readfds);
+    if (!stdout_is_closed) {
+      FD_SET(parent_stdout, &readfds);
+      if (max_fd < parent_stdout) max_fd = parent_stdout;
+    }
+    if (!stderr_is_closed) {
+      FD_SET(parent_stderr, &readfds);
+      if (max_fd < parent_stderr) max_fd = parent_stderr;
+    }
+    int ready_count =
+        TEMP_FAILURE_RETRY(select(max_fd + 1, &readfds, NULL, NULL, NULL));
+    if (ready_count < 0) {
+      fprintf(stderr, "%s: select error: %s", program_name, strerror(errno));
+      break;
+    } else if (ready_count == 0) {
+      // Timeout, shouldn't happen.
+    } else {
+      if (FD_ISSET(parent_stderr, &readfds)) {
+        ssize_t bytes_read = sizeof(buffer);
+        stderr_is_closed = ForwardWithBuffer(
+            parent_stderr, STDERR_FILENO, buffer, &bytes_read);
+      }
+      if (FD_ISSET(parent_stdout, &readfds)) {
+        ssize_t bytes_read = sizeof(buffer) - 1;
+        stdout_is_closed = ForwardWithBuffer(
+            parent_stdout, STDOUT_FILENO, buffer, &bytes_read);
+        buffer[bytes_read] = '\0';
+        StrCat(stdout_buffer, sizeof(stdout_buffer), buffer, sizeof(buffer));
+        // At this point, stdout_buffer contains all the data we have
+        // received from the server process via its stdout. We're looking for
+        // a handshake which is a file name on the first line. So we look for
+        // a newline character.
+        char *match = strchr(stdout_buffer, '\n');
+        if (match != NULL) {
+          match[0] = '\0';
+          StrCpy(
+              fletch_socket_file, sizeof(fletch_socket_file),
+              stdout_buffer, sizeof(stdout_buffer));
+          // We got the server handshake (the socket file). So we break to
+          // eventually return from this function.
+          break;
+        }
+      }
+    }
+  }
+  Close(parent_stdout);
+  Close(parent_stderr);
 }
 
 static void WriteFully(int fd, uint8* data, ssize_t length) {
