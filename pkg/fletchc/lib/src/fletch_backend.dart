@@ -1056,53 +1056,51 @@ class FletchBackend extends Backend {
 
   int compileConstructor(ConstructorElement constructor,
                          Registry registry) {
-    TreeElements elements = constructor.resolvedAst.elements;
-    // TODO(ajohnsen): Move out to seperate file, and visit super
-    // constructors as well.
-    if (constructorIds.containsKey(constructor)) {
-      return constructorIds[constructor];
-    }
+    assert(constructor.isDeclaration);
+    return constructorIds.putIfAbsent(constructor, () {
+      ClassElement classElement = constructor.enclosingClass;
+      CompiledClass compiledClass = registerClassElement(classElement);
 
-    if (compiler.verbose) {
-      compiler.reportHint(
+      constructor = constructor.implementation;
+
+      if (compiler.verbose) {
+        compiler.reportHint(
+            constructor,
+            MessageKind.GENERIC,
+            {'text': 'Compiling constructor ${constructor.name}'});
+      }
+
+      TreeElements elements = constructor.resolvedAst.elements;
+
+      ClosureEnvironment closureEnvironment = createClosureEnvironment(
           constructor,
-          MessageKind.GENERIC,
-          {'text': 'Compiling constructor ${constructor.name}'});
-    }
+          elements);
 
-    ClassElement classElement = constructor.enclosingClass;
-    CompiledClass compiledClass = registerClassElement(classElement);
+      CompiledFunction compiledFunction = new CompiledFunction(
+          nextMethodId++,
+          null,
+          constructor.functionSignature,
+          null);
 
-    constructor = constructor.implementation;
+      ConstructorCodegen codegen = new ConstructorCodegen(
+          compiledFunction,
+          context,
+          elements,
+          registry,
+          closureEnvironment,
+          constructor,
+          compiledClass);
 
-    ClosureEnvironment closureEnvironment = createClosureEnvironment(
-        constructor,
-        elements);
+      codegen.compile();
 
-    CompiledFunction compiledFunction = new CompiledFunction(
-        nextMethodId++,
-        null,
-        constructor.functionSignature,
-        null);
+      if (compiler.verbose) {
+        print(compiledFunction.verboseToString());
+      }
 
-    ConstructorCodegen codegen = new ConstructorCodegen(
-        compiledFunction,
-        context,
-        elements,
-        registry,
-        closureEnvironment,
-        constructor,
-        compiledClass);
+      functions.add(compiledFunction);
 
-    codegen.compile();
-
-    if (compiler.verbose) {
-      print(compiledFunction.verboseToString());
-    }
-
-    functions.add(compiledFunction);
-
-    return compiledFunction.methodId;
+      return compiledFunction.methodId;
+    });
   }
 
   /**
