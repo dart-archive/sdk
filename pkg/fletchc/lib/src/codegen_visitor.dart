@@ -1291,6 +1291,11 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  static Selector getIncDecSelector(IncDecOperator operator) {
+    String name = operator == IncDecOperator.INC ? '+' : '-';
+    return new Selector.binaryOperator(name);
+  }
+
   void handleLocalVariableIncrement(
       LocalVariableElement element,
       IncDecOperator operator,
@@ -1302,9 +1307,7 @@ abstract class CodegenVisitor
     // For postfix, keep local, unmodified version, to 'return' after store.
     if (!prefix) builder.dup();
     builder.loadLiteral(1);
-    Selector selector = new Selector.binaryOperator(
-        operator == IncDecOperator.INC ? '+' : '-');
-    invokeMethod(selector);
+    invokeMethod(getIncDecSelector(operator));
     value.store(builder);
     if (!prefix) builder.pop();
   }
@@ -1348,6 +1351,67 @@ abstract class CodegenVisitor
     // generate code for the simpler 'prefix' case.
     bool prefix = (visitState == VisitState.Effect);
     handleLocalVariableIncrement(parameter, operator, prefix);
+    applyVisitState();
+  }
+
+  void handleStaticFieldPrefix(FieldElement field, IncDecOperator operator) {
+    handleStaticFieldGet(field);
+    builder.loadLiteral(1);
+    invokeMethod(getIncDecSelector(operator));
+    handleStaticFieldSet(field);
+  }
+
+  void handleStaticFieldPostfix(FieldElement field, IncDecOperator operator) {
+    handleStaticFieldGet(field);
+    // For postfix, keep local, unmodified version, to 'return' after store.
+    builder.dup();
+    builder.loadLiteral(1);
+    invokeMethod(getIncDecSelector(operator));
+    handleStaticFieldSet(field);
+    builder.pop();
+  }
+
+  void visitStaticFieldPostfix(
+      Send node,
+      FieldElement field,
+      IncDecOperator operator,
+      _) {
+    if (visitState == VisitState.Effect) {
+      handleStaticFieldPrefix(field, operator);
+    } else {
+      handleStaticFieldPostfix(field, operator);
+    }
+    applyVisitState();
+  }
+
+  void visitStaticFieldPrefix(
+      Send node,
+      FieldElement field,
+      IncDecOperator operator,
+      _) {
+    handleStaticFieldPrefix(field, operator);
+    applyVisitState();
+  }
+
+  void visitTopLevelFieldPostfix(
+      Send node,
+      FieldElement field,
+      IncDecOperator operator,
+      _) {
+    if (visitState == VisitState.Effect) {
+      handleStaticFieldPrefix(field, operator);
+    } else {
+      handleStaticFieldPostfix(field, operator);
+    }
+    applyVisitState();
+  }
+
+  void visitTopLevelFieldPrefix(
+      Send node,
+      FieldElement field,
+      IncDecOperator operator,
+      _) {
+    handleStaticFieldPrefix(field, operator);
     applyVisitState();
   }
 
@@ -1421,9 +1485,7 @@ abstract class CodegenVisitor
     builder.dup();
     invokeGetter(getterSelector);
     builder.loadLiteral(1);
-    Selector selector = new Selector.binaryOperator(
-        operator == IncDecOperator.INC ? '+' : '-');
-    invokeMethod(selector);
+    invokeMethod(getIncDecSelector(operator));
     invokeSetter(setterSelector);
   }
 
@@ -1440,9 +1502,7 @@ abstract class CodegenVisitor
     builder.loadLocal(1);
     invokeMethod(new Selector.index());
     builder.loadLiteral(1);
-    Selector selector = new Selector.binaryOperator(
-        operator == IncDecOperator.INC ? '+' : '-');
-    invokeMethod(selector);
+    invokeMethod(getIncDecSelector(operator));
     // Use existing evaluated receiver and index for '[]=' call.
     invokeMethod(new Selector.indexSet());
     applyVisitState();
@@ -1479,9 +1539,7 @@ abstract class CodegenVisitor
     // For postfix, keep local, unmodified version, to 'return' after store.
     builder.dup();
     builder.loadLiteral(1);
-    Selector selector = new Selector.binaryOperator(
-        operator == IncDecOperator.INC ? '+' : '-');
-    invokeMethod(selector);
+    invokeMethod(getIncDecSelector(operator));
     loadThis();
     builder.loadLocal(1);
     invokeSetter(setterSelector);
@@ -1524,9 +1582,7 @@ abstract class CodegenVisitor
     // For postfix, keep local, unmodified version, to 'return' after store.
     builder.dup();
     builder.loadLiteral(1);
-    Selector selector = new Selector.binaryOperator(
-        operator == IncDecOperator.INC ? '+' : '-');
-    invokeMethod(selector);
+    invokeMethod(getIncDecSelector(operator));
     builder.loadSlot(receiverSlot);
     builder.loadLocal(1);
     invokeSetter(setterSelector);
@@ -2884,15 +2940,6 @@ abstract class CodegenVisitor
         node, "[errorLocalFunctionPrefix] isn't implemented.");
   }
 
-  void visitStaticFieldPrefix(
-      Send node,
-      FieldElement field,
-      IncDecOperator operator,
-      _){
-    generateUnimplementedError(
-        node, "[visitStaticFieldPrefix] isn't implemented.");
-  }
-
   void visitStaticGetterSetterPrefix(
       Send node,
       FunctionElement getter,
@@ -2911,15 +2958,6 @@ abstract class CodegenVisitor
       _){
     generateUnimplementedError(
         node, "[visitStaticMethodSetterPrefix] isn't implemented.");
-  }
-
-  void visitTopLevelFieldPrefix(
-      Send node,
-      FieldElement field,
-      IncDecOperator operator,
-      _){
-    generateUnimplementedError(
-        node, "[visitTopLevelFieldPrefix] isn't implemented.");
   }
 
   void visitTopLevelGetterSetterPrefix(
@@ -3047,15 +3085,6 @@ abstract class CodegenVisitor
         node, "[errorLocalFunctionPostfix] isn't implemented.");
   }
 
-  void visitStaticFieldPostfix(
-      Send node,
-      FieldElement field,
-      IncDecOperator operator,
-      _){
-    generateUnimplementedError(
-        node, "[visitStaticFieldPostfix] isn't implemented.");
-  }
-
   void visitStaticGetterSetterPostfix(
       Send node,
       FunctionElement getter,
@@ -3075,15 +3104,6 @@ abstract class CodegenVisitor
       _){
     generateUnimplementedError(
         node, "[visitStaticMethodSetterPostfix] isn't implemented.");
-  }
-
-  void visitTopLevelFieldPostfix(
-      Send node,
-      FieldElement field,
-      IncDecOperator operator,
-      _){
-    generateUnimplementedError(
-        node, "[visitTopLevelFieldPostfix] isn't implemented.");
   }
 
   void visitTopLevelGetterSetterPostfix(

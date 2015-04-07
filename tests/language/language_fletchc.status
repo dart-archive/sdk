@@ -81,14 +81,11 @@ bad_override_test/03: MissingCompileTimeError
 bad_override_test/04: MissingCompileTimeError
 bad_override_test/05: MissingCompileTimeError
 bad_raw_string_negative_test: Crash
-bailout4_test: Fail
-bailout_test: Fail
 bit_operations_test/01: Fail
 bit_operations_test/02: Fail
 bit_operations_test/03: Fail
 bit_operations_test/04: Fail
 bit_operations_test/none: Fail
-bit_shift_test: Fail
 black_listed_test/01: MissingCompileTimeError
 black_listed_test/02: Crash
 black_listed_test/03: MissingCompileTimeError
@@ -414,7 +411,6 @@ dynamic_test: Fail
 dynamic_type_literal_test: Crash
 empty_block_case_test: Fail
 error_stacktrace_test: Fail
-evaluation_redirecting_constructor_test: Fail
 exception_test: Fail
 execute_finally8_test: Fail
 export_ambiguous_main_negative_test: Crash
@@ -682,7 +678,6 @@ getters_setters_type2_test: Fail
 getters_setters_type3_test: Fail
 getters_setters_type_test/01: Fail
 getters_setters_type_test/none: Fail
-hello_script_test: Fail
 identical_closure2_test: Fail
 identical_closure_test: Fail
 illegal_declaration_test/01: Crash
@@ -704,7 +699,6 @@ inferrer_constructor4_test: Fail
 inferrer_constructor5_test/01: Fail
 inferrer_synthesized_constructor_test: Fail
 inferrer_this_access_test: Fail
-inline_super_field_test: Crash
 inlined_conditional_test: Fail
 instance_compound_assignment_operator_test: Fail
 instanceof2_test: Fail
@@ -992,14 +986,12 @@ named_parameters_type_test/02: MissingRuntimeError
 named_parameters_type_test/03: MissingRuntimeError
 named_parameters_with_conversions_test: Fail
 namer2_test: Fail
-naming_test: Fail
 no_main_test/01: Crash
 no_such_constructor2_test: Fail
 no_such_constructor_test/01: Crash
 no_such_method2_test: Fail
 no_such_method_dispatcher_test: Fail
 no_such_method_test: Crash
-non_dominating_loop_test: Fail
 not_enough_positional_arguments_test/00: MissingRuntimeError
 not_enough_positional_arguments_test/01: Crash
 not_enough_positional_arguments_test/02: MissingRuntimeError
@@ -1054,7 +1046,6 @@ parameter_initializer_test: Fail
 parse_closures_in_initializers_test: Fail
 positional_parameters_type_test/01: MissingRuntimeError
 positional_parameters_type_test/02: MissingRuntimeError
-positive_bit_operations_test: Fail
 prefix12_negative_test: Crash
 prefix13_negative_test: Fail
 prefix15_negative_test: Fail
@@ -1097,10 +1088,7 @@ regress_r24720_test: Fail
 reify_typevar_test: Crash
 resolution_test: Fail
 rethrow_test: Fail
-rewrite_for_update_order_test: Fail
-rewrite_while_many_exits_test: Fail
 runtime_type_test: Crash
-savannah_test: Fail
 scope_variable_test/01: MissingCompileTimeError
 script1_negative_test: Fail
 script2_negative_test: Fail
@@ -1135,7 +1123,6 @@ static_parameter_test/09: MissingCompileTimeError
 static_parameter_test/10: MissingCompileTimeError
 static_parameter_test/11: MissingCompileTimeError
 static_parameter_test/12: MissingCompileTimeError
-static_postfix_operator_test: Fail
 static_top_level_test/00: MissingCompileTimeError
 static_top_level_test/01: MissingCompileTimeError
 static_top_level_test/02: MissingCompileTimeError
@@ -1193,7 +1180,6 @@ super_operator_index_test/none: Fail
 super_operator_test: Fail
 super_setter_interceptor_test: Fail
 super_setter_test: Fail
-super_test: Fail
 switch1_negative_test: Fail
 switch3_negative_test: Fail
 switch4_negative_test: Fail
@@ -1280,13 +1266,11 @@ this_test/06: MissingCompileTimeError
 this_test/07: MissingCompileTimeError
 this_test/08: MissingCompileTimeError
 throw3_test: Fail
-throw8_test: Fail
 throwing_lazy_variable_test: Fail
 top_level_func_test: Fail
 top_level_getter_arrow_syntax_test: Fail
 top_level_in_initializer_test: Fail
 top_level_prefixed_declaration_test: Fail
-top_level_var_test: Fail
 toplevel_collision1_test/00: MissingCompileTimeError
 toplevel_collision1_test/01: MissingCompileTimeError
 toplevel_collision1_test/02: MissingCompileTimeError
