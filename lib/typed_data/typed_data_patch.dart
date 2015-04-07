@@ -14,8 +14,7 @@ const patch = "patch";
   }
 }
 
-// TODO(ajohnsen): Mixin List<int> members.
-class _Uint8List extends _TypedData implements Uint8List {
+class _Uint8List extends _TypedData with ListMixin<int> implements Uint8List {
 
   _Uint8List(int length) : super._create(length);
 
@@ -57,6 +56,10 @@ class _Uint8List extends _TypedData implements Uint8List {
 
   int get length => lengthInBytes;
   int get elementSizeInBytes => 1;
+
+  void set length(int value) {
+    throw new UnsupportedError("A Uint8List cannot change length");
+  }
 }
 
 abstract class _TypedData {
