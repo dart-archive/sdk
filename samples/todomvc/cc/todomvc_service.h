@@ -52,8 +52,8 @@ class Node : public Reader {
   bool isNil() const { return 1 == getTag(); }
   bool isNum() const { return 2 == getTag(); }
   int32_t getNum() const { return *PointerTo<int32_t>(0); }
-  bool isBool() const { return 3 == getTag(); }
-  bool getBool() const { return *PointerTo<uint8_t>(0) != 0; }
+  bool isTruth() const { return 3 == getTag(); }
+  bool getTruth() const { return *PointerTo<uint8_t>(0) != 0; }
   bool isStr() const { return 4 == getTag(); }
   char* getStr() const { return ReadString(0); }
   List<uint16_t> getStrData() const { return ReadList<uint16_t>(0); }
@@ -73,7 +73,7 @@ class NodeBuilder : public Builder {
 
   void setNil() { setTag(1); }
   void setNum(int32_t value) { setTag(2); *PointerTo<int32_t>(0) = value; }
-  void setBool(bool value) { setTag(3); *PointerTo<uint8_t>(0) = value ? 1 : 0; }
+  void setTruth(bool value) { setTag(3); *PointerTo<uint8_t>(0) = value ? 1 : 0; }
   void setStr(const char* value) { setTag(4); NewString(0, value); }
   List<uint16_t> initStrData(int length);
   ConsBuilder initCons();

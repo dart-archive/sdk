@@ -6,7 +6,7 @@
 
 import 'todomvc_presenter_model.dart';
 
-Bool bool(bool value, [previous]) =>
+Bool truth(bool value, [previous]) =>
     (previous is Bool && previous.value == value) ? previous : new Bool(value);
 
 Str str(String value, [previous]) =>

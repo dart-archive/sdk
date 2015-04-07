@@ -84,7 +84,7 @@ protected:
         break;
       case IN_STATUS:
         item = [items_ objectAtIndex:index_];
-        item.completed = node.getBool();
+        item.completed = node.getTruth();
         break;
       case IN_DELETE_EVENT:
         item = [items_ objectAtIndex:index_];
@@ -136,7 +136,7 @@ private:
     TodoItem *item = [[TodoItem alloc] init];
     Cons cons = node.getCons();
     item.itemName = decodeString(cons.getFst().getStrData());
-    item.completed = cons.getSnd().getBool();
+    item.completed = cons.getSnd().getTruth();
     item.deleteEvent = cons.getDeleteEvent();
     item.completeEvent = cons.getCompleteEvent();
     item.uncompleteEvent = cons.getUncompleteEvent();

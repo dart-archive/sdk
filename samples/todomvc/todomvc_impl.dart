@@ -90,7 +90,7 @@ class TodoMVCImpl extends TodoMVCPresenter {
         ? _renderItem(item, previous)
         : node.cons(
               node.str(item.title, cached.fst),
-              node.bool(item.done, cached.snd),
+              node.truth(item.done, cached.snd),
               // Reuse the handlers since we know that item is the same as the
               // item used for the creating the cached handlers.
               cached.deleteEvent,
@@ -104,7 +104,7 @@ class TodoMVCImpl extends TodoMVCPresenter {
   Immutable _renderItem(Item item, Immutable previous) =>
     node.cons(
         node.str(item.title, node.getConsFst(previous)),
-        node.bool(item.done, node.getConsSnd(previous)),
+        node.truth(item.done, node.getConsSnd(previous)),
         new EventHandler(() { _model.todos.remove(item); }),
         new EventHandler(item.complete),
         new EventHandler(item.uncomplete));

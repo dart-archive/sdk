@@ -24,7 +24,7 @@ public class NodeBuilder extends Builder {
     segment.buffer().putInt(base + 0, (int)value);
   }
 
-  public void setBool(boolean value) {
+  public void setTruth(boolean value) {
     setTag(3);
     segment.buffer().put(base + 0, (byte)(value ? 1 : 0));
   }

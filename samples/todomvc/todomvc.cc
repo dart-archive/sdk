@@ -222,7 +222,7 @@ class TodoListView : public TodoMVCPresenter {
         todos[index]->set_title(node.getStr());
         break;
       case IN_DONE:
-        todos[index]->done_ = node.getBool();
+        todos[index]->done_ = node.getTruth();
         break;
       case IN_DELETE_EVENT:
         todos[index]->delete_event_ = node.getNum();
@@ -263,7 +263,7 @@ class TodoListView : public TodoMVCPresenter {
   Item* newItem(const Node& content) {
     Cons cons = content.getCons();
     char* title = cons.getFst().getStr();
-    bool done = cons.getSnd().getBool();
+    bool done = cons.getSnd().getTruth();
     return new Item(
         title,
         done,

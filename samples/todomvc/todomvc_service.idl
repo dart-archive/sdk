@@ -23,7 +23,7 @@ struct Node {
   union {
     void nil;
     int32 num;
-    bool bool;
+    bool truth;
     String str;
     Cons cons;
   }

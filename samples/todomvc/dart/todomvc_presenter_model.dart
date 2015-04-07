@@ -22,7 +22,8 @@ import 'todomvc_service.dart';
   struct Atom {
     union {
       void nil;
-      bool bool;
+      int32 num;
+      bool truth;
       String str;
     }
   }
@@ -81,7 +82,7 @@ class EventManager {
     if (handler.allocated) {
       // After event manager reset we must re-register event handlers.
       int id = handler.id;
-      Handler registered = _handlers[id];
+      EventHandler registered = _handlers[id];
       if (registered == null) {
         _handlers[id] = handler;
       } else if (registered != handler) {
@@ -127,7 +128,16 @@ class EventManager {
   }
 }
 
-class EventHandler {
+// Immutable model for the presentation (reused as a mutable mirror on the
+// "host" side).  (just sexp to simulate a "rich structure" for now)
+
+abstract class Immutable {
+  void diff(Immutable other, Path path, MyPatchSet patches);
+  void serialize(NodeBuilder builder, EventManager events);
+  void unregisterEvents(EventManager events);
+}
+
+class EventHandler extends Immutable {
   final Function _handler;
   int _id = 0;
 
@@ -151,7 +161,10 @@ class EventHandler {
     _id = -1;
   }
 
-  static void diff(EventHandler self, other, Path path, MyPatchSet patches) {
+  static void staticDiff(EventHandler self,
+                         EventHandler other,
+                         Path path,
+                         MyPatchSet patches) {
     if (identical(self, other)) return;
     // TODO(zerny): Do we want to consider another definition of equality here?
     // Currently only the same physically allocated event-handler object is
@@ -163,6 +176,10 @@ class EventHandler {
     patches.add(path, self, other);
   }
 
+  void diff(Immutable other, Path path, MyPatchSet patches) {
+    EventHandler.staticDiff(this, other, path, patches);
+  }
+
   // TODO(zerny): Event handler fields should not be encoded in Node.
   void serialize(NodeBuilder builder, EventManager events) {
     builder.num = events.register(this);
@@ -171,15 +188,6 @@ class EventHandler {
   void unregisterEvents(EventManager events) {
     events.unregister(this);
   }
-}
-
-// Immutable model for the presentation (reused as a mutable mirror on the
-// "host" side).  (just sexp to simulate a "rich structure" for now)
-
-abstract class Immutable {
-  void diff(Immutable other, Path path, MyPatchSet patches);
-  void serialize(NodeBuilder builder, EventManager events);
-  void unregisterEvents(EventManager events);
 }
 
 abstract class Atom extends Immutable {
@@ -218,19 +226,20 @@ class Cons extends Immutable {
       patches.add(path, this, other);
       return;
     }
-    fst.diff(other.fst, new ConsFst(path), patches);
-    snd.diff(other.snd, new ConsSnd(path), patches);
-    EventHandler.diff(
+    Cons otherCons = other;
+    fst.diff(otherCons.fst, new ConsFst(path), patches);
+    snd.diff(otherCons.snd, new ConsSnd(path), patches);
+    EventHandler.staticDiff(
         deleteEvent,
-        other.deleteEvent,
+        otherCons.deleteEvent,
         new ConsDeleteEvent(path), patches);
-    EventHandler.diff(
+    EventHandler.staticDiff(
         completeEvent,
-        other.completeEvent,
+        otherCons.completeEvent,
         new ConsCompleteEvent(path), patches);
-    EventHandler.diff(
+    EventHandler.staticDiff(
         uncompleteEvent,
-        other.uncompleteEvent,
+        otherCons.uncompleteEvent,
         new ConsUncompleteEvent(path), patches);
   }
 
@@ -265,7 +274,7 @@ class Bool extends Atom {
   Bool(bool value) : super(value);
   void serialize(NodeBuilder builder, EventManager events) {
     trace("Bool::serialize: $this");
-    builder.bool = value;
+    builder.truth = value;
   }
 }
 

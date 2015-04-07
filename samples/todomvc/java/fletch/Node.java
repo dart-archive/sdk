@@ -35,8 +35,8 @@ public class Node extends Reader {
   public boolean isNum() { return 2 == getTag(); }
   public int getNum() { return segment.buffer().getInt(base + 0); }
 
-  public boolean isBool() { return 3 == getTag(); }
-  public boolean getBool() { return segment.getBoolean(base + 0); }
+  public boolean isTruth() { return 3 == getTag(); }
+  public boolean getTruth() { return segment.getBoolean(base + 0); }
 
   public boolean isStr() { return 4 == getTag(); }
   public String getStr() { return readString(0); }

@@ -103,8 +103,8 @@ class Node extends Reader {
   bool get isNil => 1 == this.tag;
   bool get isNum => 2 == this.tag;
   int get num => segment.memory.getInt32(offset + 0);
-  bool get isBool => 3 == this.tag;
-  bool get bool => segment.memory.getUint8(offset + 0) != 0;
+  bool get isTruth => 3 == this.tag;
+  bool get truth => segment.memory.getUint8(offset + 0) != 0;
   bool get isStr => 4 == this.tag;
   String get str => readString(new _uint16List(), 0);
   List<int> get strData => readList(new _uint16List(), 0);
@@ -123,7 +123,7 @@ class NodeBuilder extends Builder {
     tag = 2;
     segment.memory.setInt32(offset + 0, value);
   }
-  void set bool(bool value) {
+  void set truth(bool value) {
     tag = 3;
     segment.memory.setUint8(offset + 0, value ? 1 : 0);
   }

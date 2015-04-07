@@ -99,7 +99,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
           todos.get(index).title = node.getStr();
           break;
         case IN_DONE:
-          todos.get(index).status = node.getBool();
+          todos.get(index).status = node.getTruth();
           break;
         case IN_DELETE_EVENT:
           todos.get(index).setDeleteEvent(node.getNum());
@@ -125,7 +125,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     private TodoItem newTodoItem(Node node) {
       Cons cons = node.getCons();
       String title = cons.getFst().getStr();
-      boolean status = cons.getSnd().getBool();
+      boolean status = cons.getSnd().getTruth();
       return new TodoItem(
           title,
           status,
