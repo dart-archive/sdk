@@ -368,6 +368,7 @@ class FletchBackend extends Backend {
     loadBuiltinClass("bool", compiler.coreLibrary);
     loadBuiltinClass("Coroutine", compiler.coreLibrary);
     loadBuiltinClass("Port", compiler.coreLibrary);
+    loadBuiltinClass("Foreign", fletchFFILibrary);
 
     growableListClass =
         loadClass(growableListName, fletchSystemLibrary).element;
