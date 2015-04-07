@@ -154,11 +154,17 @@ class ConstructorCodegen extends CodegenVisitor {
     for (var initializer in initializers) {
       Element element = elements[initializer];
       if (element.isGenerativeConstructor) {
+        ConstructorElement superConstructor = element;
+
+        // If the constructor is synthesized, use the defining constructor.
+        ConstructorElement defining = superConstructor.definingConstructor;
+        if (defining != null) superConstructor = defining;
+
         // TODO(ajohnsen): Handle named arguments.
         // Load all parameters to the constructor, onto the stack.
         int initSlot = builder.stackSize;
-        loadArguments(initializer.argumentsNode, element);
-        inlineInitializers(element, initSlot);
+        loadArguments(initializer.argumentsNode, superConstructor);
+        inlineInitializers(superConstructor, initSlot);
       } else {
         // An initializer is a SendSet, leaving a value on the stack. Be sure to
         // pop it by visiting for effect.
