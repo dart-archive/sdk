@@ -110,21 +110,25 @@ class _DartVisitor extends CodeGenerationVisitor {
       String name = listType.identifier;
       if (listType.isPrimitive) {
         int elementSize = primitives.size(listType.primitiveType);
-        String getter = '_segment.memory.${_GETTERS[name]}';
-        String setter = '_segment.memory.${_SETTERS[name]}';
-        String offset = '_offset + index * $elementSize';
+        String getter = 'segment.memory.${_GETTERS[name]}';
+        String setter = 'segment.memory.${_SETTERS[name]}';
+        String offset = 'offset + index * $elementSize';
 
         writeln();
-        writeln('class _${name}List extends ListReader '
-                'implements List<$name> {');
+        write('class _${name}List extends ListReader '
+              'implements List<');
+        writeType(listType);
+        writeln('> {');
         write('  ');
         writeType(listType);
         writeln(' operator[](int index) => $getter($offset);');
         writeln('}');
 
         writeln();
-        writeln('class _${name}BuilderList extends ListBuilder '
-                'implements List<$name> {');
+        write('class _${name}BuilderList extends ListBuilder '
+              'implements List<');
+        writeType(listType);
+        writeln('> {');
         write('  ');
         writeType(listType);
         writeln(' operator[](int index) => $getter($offset);');
@@ -296,14 +300,14 @@ class _DartVisitor extends CodeGenerationVisitor {
                 'readList(new _uint16List(), ${slot.offset});');
       } else if (slotType.isPrimitive) {
         String getter = _GETTERS[slotType.identifier];
-        String offset = '_offset + ${slot.offset}';
+        String offset = 'offset + ${slot.offset}';
 
         write('  ');
         writeType(slotType);
         if (slotType.isBool) {
-          writeln(' get $slotName => _segment.memory.$getter($offset) != 0;');
+          writeln(' get $slotName => segment.memory.$getter($offset) != 0;');
         } else {
-          writeln(' get $slotName => _segment.memory.$getter($offset);');
+          writeln(' get $slotName => segment.memory.$getter($offset);');
         }
       } else {
         write('  ');
@@ -313,8 +317,8 @@ class _DartVisitor extends CodeGenerationVisitor {
           write('new ');
           writeType(slotType);
           writeln('()');
-          writeln('      .._segment = _segment');
-          writeln('      .._offset = _offset + ${slot.offset};');
+          writeln('      ..segment = segment');
+          writeln('      ..offset = offset + ${slot.offset};');
         } else {
           write('readStruct(new ');
           writeType(slotType);
@@ -379,11 +383,11 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeType(slotType);
         writeln(' value) {');
         write(updateTag);
-        String offset = '_offset + ${slot.offset}';
+        String offset = 'offset + ${slot.offset}';
         if (slotType.isBool) {
-          writeln('    _segment.memory.$setter($offset, value ? 1 : 0);');
+          writeln('    segment.memory.$setter($offset, value ? 1 : 0);');
         } else {
-          writeln('    _segment.memory.$setter($offset, value);');
+          writeln('    segment.memory.$setter($offset, value);');
         }
         writeln('  }');
       } else {
@@ -395,8 +399,8 @@ class _DartVisitor extends CodeGenerationVisitor {
           write('    return new ');
           writeReturnType(slotType);
           writeln('()');
-          writeln('        .._segment = _segment');
-          writeln('        .._offset = _offset + ${slot.offset};');
+          writeln('        ..segment = segment');
+          writeln('        ..offset = offset + ${slot.offset};');
         } else {
           Struct element = slotType.resolved;
           StructLayout elementLayout = element.layout;

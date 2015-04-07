@@ -102,17 +102,17 @@ abstract class TodoMVCService {
 class Node extends Reader {
   bool get isNil => 1 == this.tag;
   bool get isNum => 2 == this.tag;
-  int get num => _segment.memory.getInt32(_offset + 0);
+  int get num => segment.memory.getInt32(offset + 0);
   bool get isBool => 3 == this.tag;
-  bool get bool => _segment.memory.getUint8(_offset + 0) != 0;
+  bool get bool => segment.memory.getUint8(offset + 0) != 0;
   bool get isStr => 4 == this.tag;
   String get str => readString(new _uint16List(), 0);
   List<int> get strData => readList(new _uint16List(), 0);
   bool get isCons => 5 == this.tag;
   Cons get cons => new Cons()
-      .._segment = _segment
-      .._offset = _offset + 0;
-  int get tag => _segment.memory.getUint16(_offset + 22);
+      ..segment = segment
+      ..offset = offset + 0;
+  int get tag => segment.memory.getUint16(offset + 22);
 }
 
 class NodeBuilder extends Builder {
@@ -121,11 +121,11 @@ class NodeBuilder extends Builder {
   }
   void set num(int value) {
     tag = 2;
-    _segment.memory.setInt32(_offset + 0, value);
+    segment.memory.setInt32(offset + 0, value);
   }
   void set bool(bool value) {
     tag = 3;
-    _segment.memory.setUint8(_offset + 0, value ? 1 : 0);
+    segment.memory.setUint8(offset + 0, value ? 1 : 0);
   }
   void set str(String value) {
     tag = 4;
@@ -140,20 +140,20 @@ class NodeBuilder extends Builder {
   ConsBuilder initCons() {
     tag = 5;
     return new ConsBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
+        ..segment = segment
+        ..offset = offset + 0;
   }
   void set tag(int value) {
-    _segment.memory.setUint16(_offset + 22, value);
+    segment.memory.setUint16(offset + 22, value);
   }
 }
 
 class Cons extends Reader {
   Node get fst => readStruct(new Node(), 0);
   Node get snd => readStruct(new Node(), 8);
-  int get deleteEvent => _segment.memory.getUint16(_offset + 16);
-  int get completeEvent => _segment.memory.getUint16(_offset + 18);
-  int get uncompleteEvent => _segment.memory.getUint16(_offset + 20);
+  int get deleteEvent => segment.memory.getUint16(offset + 16);
+  int get completeEvent => segment.memory.getUint16(offset + 18);
+  int get uncompleteEvent => segment.memory.getUint16(offset + 20);
 }
 
 class ConsBuilder extends Builder {
@@ -164,28 +164,28 @@ class ConsBuilder extends Builder {
     return NewStruct(new NodeBuilder(), 8, 24);
   }
   void set deleteEvent(int value) {
-    _segment.memory.setUint16(_offset + 16, value);
+    segment.memory.setUint16(offset + 16, value);
   }
   void set completeEvent(int value) {
-    _segment.memory.setUint16(_offset + 18, value);
+    segment.memory.setUint16(offset + 18, value);
   }
   void set uncompleteEvent(int value) {
-    _segment.memory.setUint16(_offset + 20, value);
+    segment.memory.setUint16(offset + 20, value);
   }
 }
 
 class Patch extends Reader {
   Node get content => new Node()
-      .._segment = _segment
-      .._offset = _offset + 0;
+      ..segment = segment
+      ..offset = offset + 0;
   List<int> get path => readList(new _uint8List(), 24);
 }
 
 class PatchBuilder extends Builder {
   NodeBuilder initContent() {
     return new NodeBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
+        ..segment = segment
+        ..offset = offset + 0;
   }
   List<int> initPath(int length) {
     return NewList(new _uint8BuilderList(), 24, length, 1);
@@ -218,22 +218,22 @@ class BoxedStringBuilder extends Builder {
   }
 }
 
-class _uint16List extends ListReader implements List<uint16> {
-  int operator[](int index) => _segment.memory.getUint16(_offset + index * 2);
+class _uint16List extends ListReader implements List<int> {
+  int operator[](int index) => segment.memory.getUint16(offset + index * 2);
 }
 
-class _uint16BuilderList extends ListBuilder implements List<uint16> {
-  int operator[](int index) => _segment.memory.getUint16(_offset + index * 2);
-  void operator[]=(int index, int value) => _segment.memory.setUint16(_offset + index * 2, value);
+class _uint16BuilderList extends ListBuilder implements List<int> {
+  int operator[](int index) => segment.memory.getUint16(offset + index * 2);
+  void operator[]=(int index, int value) => segment.memory.setUint16(offset + index * 2, value);
 }
 
-class _uint8List extends ListReader implements List<uint8> {
-  int operator[](int index) => _segment.memory.getUint8(_offset + index * 1);
+class _uint8List extends ListReader implements List<int> {
+  int operator[](int index) => segment.memory.getUint8(offset + index * 1);
 }
 
-class _uint8BuilderList extends ListBuilder implements List<uint8> {
-  int operator[](int index) => _segment.memory.getUint8(_offset + index * 1);
-  void operator[]=(int index, int value) => _segment.memory.setUint8(_offset + index * 1, value);
+class _uint8BuilderList extends ListBuilder implements List<int> {
+  int operator[](int index) => segment.memory.getUint8(offset + index * 1);
+  void operator[]=(int index, int value) => segment.memory.setUint8(offset + index * 1, value);
 }
 
 class _PatchList extends ListReader implements List<Patch> {

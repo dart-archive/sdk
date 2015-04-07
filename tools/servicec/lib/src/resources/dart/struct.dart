@@ -82,6 +82,16 @@ class Reader {
   Segment _segment;
   int _offset;
 
+  Segment get segment => _segment;
+  void set segment(Segment value) {
+    _segment = value;
+  }
+
+  int get offset => _offset;
+  void set offset(int value) {
+    _offset = value;
+  }
+
   readStruct(Reader reader, int offset) {
     Segment segment = _segment;
     offset += _offset;
@@ -248,6 +258,16 @@ class MessageBuilder {
 class Builder {
   BuilderSegment _segment;
   int _offset;
+
+  Segment get segment => _segment;
+  void set segment(Segment value) {
+    _segment = value;
+  }
+
+  int get offset => _offset;
+  void set offset(int value) {
+    _offset = value;
+  }
 
   Builder NewStruct(Builder builder, int offset, int size) {
     offset += _offset;

@@ -82,6 +82,16 @@ class Reader {
   Segment _segment;
   int _offset;
 
+  Segment get segment => _segment;
+  void set segment(Segment value) {
+    _segment = value;
+  }
+
+  int get offset => _offset;
+  void set offset(int value) {
+    _offset = value;
+  }
+
   readStruct(Reader reader, int offset) {
     Segment segment = _segment;
     offset += _offset;
@@ -144,6 +154,7 @@ class ListReader extends Reader {
     return reader;
   }
 
+  // TODO(zerny): Move this to a mixin base.
   Iterator get iterator { throw new UnsupportedError("ListBuilder::iterator"); }
   Iterable map(Function f) { throw new UnsupportedError("ListBuilder::map"); }
   Iterable where(Function test) { throw new UnsupportedError("ListBuilder::where"); }
@@ -176,7 +187,7 @@ class ListReader extends Reader {
   void addAll(Iterable iterable) { throw new UnsupportedError("ListBuilder::addAll"); }
   Iterable get reversed { throw new UnsupportedError("ListBuilder::reversed"); }
   void sort([int compare(a, b)]) { throw new UnsupportedError("ListBuilder::sort"); }
-  void shuffle([Random random]) { throw new UnsupportedError("ListBuilder::shuffle"); }
+  void shuffle([random]) { throw new UnsupportedError("ListBuilder::shuffle"); }
   int indexOf(element, [int start = 0]) { throw new UnsupportedError("ListBuilder::indexOf"); }
   int lastIndexOf(element, [int start]) { throw new UnsupportedError("ListBuilder::lastIndexOf"); }
   void clear() { throw new UnsupportedError("ListBuilder::clear"); }
@@ -247,6 +258,16 @@ class MessageBuilder {
 class Builder {
   BuilderSegment _segment;
   int _offset;
+
+  Segment get segment => _segment;
+  void set segment(Segment value) {
+    _segment = value;
+  }
+
+  int get offset => _offset;
+  void set offset(int value) {
+    _offset = value;
+  }
 
   Builder NewStruct(Builder builder, int offset, int size) {
     offset += _offset;
@@ -319,6 +340,7 @@ class ListBuilder extends Builder {
     return builder;
   }
 
+  // TODO(zerny): Move this to a mixin base.
   Iterator get iterator { throw new UnsupportedError("ListBuilder::iterator"); }
   Iterable map(Function f) { throw new UnsupportedError("ListBuilder::map"); }
   Iterable where(Function test) { throw new UnsupportedError("ListBuilder::where"); }
@@ -351,7 +373,7 @@ class ListBuilder extends Builder {
   void addAll(Iterable iterable) { throw new UnsupportedError("ListBuilder::addAll"); }
   Iterable get reversed { throw new UnsupportedError("ListBuilder::reversed"); }
   void sort([int compare(a, b)]) { throw new UnsupportedError("ListBuilder::sort"); }
-  void shuffle([Random random]) { throw new UnsupportedError("ListBuilder::shuffle"); }
+  void shuffle([random]) { throw new UnsupportedError("ListBuilder::shuffle"); }
   int indexOf(element, [int start = 0]) { throw new UnsupportedError("ListBuilder::indexOf"); }
   int lastIndexOf(element, [int start]) { throw new UnsupportedError("ListBuilder::lastIndexOf"); }
   void clear() { throw new UnsupportedError("ListBuilder::clear"); }
