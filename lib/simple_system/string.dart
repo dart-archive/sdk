@@ -12,8 +12,9 @@ class String implements core.String {
     if (start < 0 || length < 0) throw new RangeError.range(start, 0, length);
     var str = _create(length);
     if (charCodes is List) {
+      List list = charCodes;
       for (int i = 0; i < length; i++) {
-        str._setCodeUnitAt(i, charCodes[start + i]);
+        str._setCodeUnitAt(i, list[start + i]);
       }
     } else {
       int i = -start;

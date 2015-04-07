@@ -187,7 +187,7 @@ class double implements core.double {
 
   double _divFromInteger(int other) => other.toDouble() / this;
 
-  double _truncDivFromInteger(int other) => other.toDouble() ~/ this;
+  int _truncDivFromInteger(int other) => other.toDouble() ~/ this;
 
   bool _compareEqFromInteger(int other) => other.toDouble() == this;
 

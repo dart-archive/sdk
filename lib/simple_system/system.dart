@@ -41,9 +41,13 @@ external invokeMain([arguments, isolateArgument]);
 
 /// This is the main entry point for a Fletch program, and it takes care of
 /// calling "main" and exiting the VM when "main" is done.
-entry(int mainArity) {
-  invokeMain();
-  yield(true);
+void entry(int mainArity) {
+  Thread.exit(invokeMain());
+}
+
+runToEnd(entry) {
+  entry();
+  Thread.exit();
 }
 
 unresolved(name) {
@@ -54,7 +58,15 @@ unresolved(name) {
       null);
 }
 
+@native halt(int code) {
+  yield(true);
+}
+
 /// Exits the VM cleanly.
 external yield(bool halt);
 
 external get nativeError;
+
+// The compiler generates a special bytecode for calls to this
+// magical external method.
+external coroutineChange(coroutine, argument);

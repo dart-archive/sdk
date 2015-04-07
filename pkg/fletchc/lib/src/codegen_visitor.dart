@@ -773,7 +773,7 @@ abstract class CodegenVisitor
       MethodElement element,
       NodeList arguments,
       Selector selector) {
-    if (element == context.compiler.identicalFunction) {
+    if (element.declaration == context.compiler.identicalFunction) {
       handleIdenticalCall(arguments);
       return;
     }
@@ -781,6 +781,12 @@ abstract class CodegenVisitor
       // Patch known functions directly.
       if (element == context.backend.fletchExternalInvokeMain) {
         element = context.compiler.mainFunction;
+      } else if (element == context.backend.fletchExternalCoroutineChange) {
+        for (Node argument in arguments) {
+          visitForValue(argument);
+        }
+        builder.coroutineChange();
+        return;
       }
       // TODO(ajohnsen): Define a known set of external functions we allow
       // calls to?

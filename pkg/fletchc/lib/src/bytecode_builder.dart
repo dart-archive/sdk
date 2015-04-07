@@ -459,7 +459,11 @@ class BytecodeBuilder {
   }
 
   void processYield() {
-    internalAdd(new ProcessYield());
+    internalAdd(const ProcessYield());
+  }
+
+  void coroutineChange() {
+    internalAdd(const CoroutineChange());
   }
 
   void internalAdd(Bytecode bytecode) {
@@ -479,6 +483,10 @@ class BytecodeBuilder {
 
   void invokeNative(int arity, int index) {
     internalAdd(new InvokeNative(arity, index));
+  }
+
+  void invokeNativeYield(int arity, int index) {
+    internalAdd(new InvokeNativeYield(arity, index));
   }
 
   void emitThrow() {

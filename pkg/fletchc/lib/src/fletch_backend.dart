@@ -233,6 +233,8 @@ class FletchBackend extends Backend {
 
   FunctionElement fletchExternalNativeError;
 
+  FunctionElement fletchExternalCoroutineChange;
+
   FunctionElement fletchUnresolved;
 
   CompiledClass compiledObjectClass;
@@ -326,6 +328,7 @@ class FletchBackend extends Backend {
     }
     fletchExternalInvokeMain = findExternal('invokeMain');
     fletchExternalYield = findExternal('yield');
+    fletchExternalCoroutineChange = findExternal('coroutineChange');
     fletchExternalNativeError = findExternal('nativeError');
     fletchUnresolved = findExternal('unresolved');
     world.registerStaticUse(fletchUnresolved);
@@ -363,6 +366,8 @@ class FletchBackend extends Backend {
     loadBuiltinClass("double", fletchSystemLibrary);
     loadBuiltinClass("Null", compiler.coreLibrary);
     loadBuiltinClass("bool", compiler.coreLibrary);
+    loadBuiltinClass("Coroutine", compiler.coreLibrary);
+    loadBuiltinClass("Port", compiler.coreLibrary);
 
     growableListClass =
         loadClass(growableListName, fletchSystemLibrary).element;
@@ -387,6 +392,7 @@ class FletchBackend extends Backend {
 
     registerNamedSelector(noSuchMethodTrampolineName, compiler.coreLibrary, 0);
     registerNamedSelector(noSuchMethodName, compiler.coreLibrary, 1);
+    registerNamedSelector('_coroutineStart', compiler.coreLibrary, 1);
   }
 
   ClassElement get stringImplementation => stringClass;
@@ -622,7 +628,11 @@ class FletchBackend extends Backend {
     }
 
     int arity = codegen.builder.functionArity;
-    codegen.builder.invokeNative(arity, descriptor.index);
+    if (function.name == "send") {
+      codegen.builder.invokeNativeYield(arity, descriptor.index);
+    } else {
+      codegen.builder.invokeNative(arity, descriptor.index);
+    }
 
     EmptyStatement empty = function.node.body.asEmptyStatement();
     if (empty != null) {
@@ -971,6 +981,17 @@ class FletchBackend extends Backend {
   }
 
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
+    // TODO(ajohnsen): Find a better way to do this.
+    // Inject non-patch members in a patch library, into the declaration
+    // library.
+    if (library.isPatch && library.declaration == compiler.coreLibrary) {
+      library.entryCompilationUnit.forEachLocalMember((element) {
+        if (!element.isPatch && !isPrivateName(element.name)) {
+          library.declaration.addToScope(element, compiler);
+        }
+      });
+    }
+
     if (library.isPlatformLibrary && !library.isPatched) {
       // Apply patch, if any.
       Uri patchUri = compiler.resolvePatchUri(library.canonicalUri.path);
