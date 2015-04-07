@@ -282,7 +282,8 @@ Future handleClient(Socket controlSocket) async {
   Command command = commandIterator.current;
   if (command.code != DriverCommand.Arguments) {
     print("Expected arguments from clients but got: $command");
-    controlSocket.close();
+    // The client is misbehaving, shut it down now.
+    controlSocket.destroy();
     return;
   }
 

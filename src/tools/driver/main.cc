@@ -23,6 +23,7 @@
 #include "src/shared/assert.h"
 #include "src/shared/globals.h"
 #include "src/shared/native_socket.h"
+#include "src/shared/utils.h"
 #include "src/tools/driver/connection.h"
 #include "src/tools/driver/get_path_of_executable.h"
 
@@ -452,11 +453,11 @@ static void WaitForDaemonHandshake(
     FD_ZERO(&readfds);
     if (!stdout_is_closed) {
       FD_SET(parent_stdout, &readfds);
-      if (max_fd < parent_stdout) max_fd = parent_stdout;
+      max_fd = Utils::Maximum(max_fd, parent_stdout);
     }
     if (!stderr_is_closed) {
       FD_SET(parent_stderr, &readfds);
-      if (max_fd < parent_stderr) max_fd = parent_stderr;
+      max_fd = Utils::Maximum(max_fd, parent_stderr);
     }
     int ready_count =
         TEMP_FAILURE_RETRY(select(max_fd + 1, &readfds, NULL, NULL, NULL));
@@ -616,10 +617,7 @@ static int Main(int argc, char** argv) {
   term.c_lflag &= ~(ICANON);
   tcsetattr(STDIN_FILENO, TCSANOW, &term);
 
-  int max_fd = STDIN_FILENO;
-  if (max_fd < control_socket->FileDescriptor()) {
-    max_fd = control_socket->FileDescriptor();
-  }
+  int max_fd = Utils::Maximum(STDIN_FILENO, control_socket->FileDescriptor());
   bool stdin_closed = false;
   while (true) {
     fd_set readfds;
