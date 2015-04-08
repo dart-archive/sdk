@@ -194,12 +194,20 @@ abstract class TestSuite {
 
     if (dartExecutable == '') {
       String suffix = executableBinarySuffix;
-      dartExecutable = useSdk
-          ? '$buildDir/dart-sdk/bin/dart$suffix'
-          : '$buildDir/dart$suffix';
+      String os;
+      if (Platform.isMacOS) {
+        os = 'mac';
+      } else if (Platform.isLinux) {
+        os = 'linux';
+      } else if (Platform.isWindows) {
+        os = 'win';
+      } else {
+        throw "Unknown OS: ${Platform.operatingSystem}";
+      }
+      dartExecutable = 'third_party/bin/$os/dart$suffix';
     }
 
-//    TestUtils.ensureExists(dartExecutable, configuration);
+    TestUtils.ensureExists(dartExecutable, configuration);
     return dartExecutable;
   }
 

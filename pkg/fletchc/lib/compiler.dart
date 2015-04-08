@@ -264,7 +264,7 @@ Uri get _executable {
   if (Platform.isLinux) {
     return new Uri.file(new Link('/proc/self/exe').targetSync());
   }
-  return new Uri.file(Platform.executable);
+  return Uri.base.resolveUri(new Uri.file(Platform.executable));
 }
 
 Uri _guessFletchVm() {
