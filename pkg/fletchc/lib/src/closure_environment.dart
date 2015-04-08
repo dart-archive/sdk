@@ -443,7 +443,7 @@ class ClosureVisitor
   }
 
   void visitIndexPrefix(
-      SendSend node,
+      SendSet node,
       Node receiver,
       Node index,
       IncDecOperator operator,

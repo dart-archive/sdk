@@ -675,21 +675,30 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void callIsSelector(DartType type) {
-    ClassElement classElement = type.element;
-    int fletchSelector = context.toFletchIsSelector(classElement);
+  void callIsSelector(
+      DartType type,
+      // TODO(ahe): Remove [diagnosticLocation] when malformed types are
+      // handled.
+      Spannable diagnosticLocation) {
+    if (type == null || type.isMalformed || !type.isInterfaceType) {
+      builder.pop();
+      generateUnimplementedError(
+          diagnosticLocation, "Unhandled type test involving $type.");
+      return;
+    }
+    Element element = type.element;
+    int fletchSelector = context.toFletchIsSelector(element);
     builder.invokeTest(fletchSelector, 0);
   }
 
-  void handleIs(Node expression, DartType type) {
-    if (type == null || type.element.isErroneous) {
-      // 'type' is null for malformed types.
-      visitForEffect(expression);
-      builder.loadLiteralFalse();
-    } else {
-      visitForValue(expression);
-      callIsSelector(type);
-    }
+  void handleIs(
+      Node expression,
+      DartType type,
+      // TODO(ahe): Remove [diagnosticLocation] when callIsSelector doesn't
+      // require it.
+      Spannable diagnosticLocation) {
+    visitForValue(expression);
+    callIsSelector(type, diagnosticLocation);
   }
 
   void visitIs(
@@ -697,7 +706,7 @@ abstract class CodegenVisitor
       Node expression,
       DartType type,
       _) {
-    handleIs(expression, type);
+    handleIs(expression, type, node.arguments.first);
     applyVisitState();
   }
 
@@ -706,7 +715,7 @@ abstract class CodegenVisitor
       Node expression,
       DartType type,
       _){
-    handleIs(expression, type);
+    handleIs(expression, type, node.arguments.first);
     builder.negate();
     applyVisitState();
   }
@@ -1257,7 +1266,7 @@ abstract class CodegenVisitor
   }
 
   void handleLocalVariableInvoke(
-      LocalVariableElement element,
+      LocalElement element,
       NodeList arguments,
       Selector selector) {
     scope[element].load(builder);
@@ -1496,7 +1505,7 @@ abstract class CodegenVisitor
   }
 
   void visitIndexPrefix(
-      SendSend node,
+      SendSet node,
       Node receiver,
       Node index,
       IncDecOperator operator,
@@ -1646,7 +1655,8 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     Selector selector = elements.getSelector(node.send);
-    staticFunctionCall(constructor, arguments, selector);
+    // TODO(ahe): Remove ".declaration" when issue 23135 is fixed.
+    staticFunctionCall(constructor.declaration, arguments, selector);
     applyVisitState();
   }
 
@@ -2145,7 +2155,7 @@ abstract class CodegenVisitor
     TypeAnnotation type = node.type;
     if (type != null) {
       builder.loadSlot(exceptionSlot);
-      callIsSelector(elements.getType(type));
+      callIsSelector(elements.getType(type), type);
       builder.branchIfFalse(wrongType);
     }
 

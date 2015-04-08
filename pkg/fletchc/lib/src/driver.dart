@@ -33,6 +33,8 @@ import 'dart:convert' show
 import '../compiler.dart' show
     FletchCompiler;
 
+import '../commands.dart' as commands_lib;
+
 const COMPILER_CRASHED = 253;
 const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
 const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
@@ -371,6 +373,8 @@ Future<int> compileAndRun(
 
   vmSocket.listen(null).cancel();
   commands.forEach((command) => command.addTo(vmSocket));
+  const commands_lib.ProcessSpawnForMain().addTo(vmSocket);
+  const commands_lib.ProcessRun().addTo(vmSocket);
   vmSocket.close();
 
   exitCode = await vmProcess.exitCode;

@@ -9,14 +9,16 @@
 constructor_named_arguments_test/none: Fail
 getter_no_setter_test/02: MissingCompileTimeError
 mixin_super_constructor_named_test: Fail
-
+constructor5_test: Fail
 
 [ $runtime == fletchc && $host_checked ]
 constructor_named_arguments_test/01: Crash
 constructor_named_arguments_test/none: Crash
 getter_no_setter_test/02: Crash
 mixin_super_constructor_named_test: Crash
-
+constructor5_test: Crash
+mixin_prefix_test: Crash
+regress_14348_test: Crash
 
 [ $runtime == fletchc ]
 ackermann_test: Skip # TODO(ajohnsen): Timeout.
@@ -290,7 +292,6 @@ constructor10_test/02: MissingCompileTimeError
 constructor11_test: Fail
 constructor3_negative_test: Crash
 constructor4_test: Fail
-constructor5_test: Fail
 constructor6_test: Crash
 constructor_default_test: Fail
 constructor_duplicate_final_test/01: MissingRuntimeError
