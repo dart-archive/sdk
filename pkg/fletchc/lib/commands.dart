@@ -81,6 +81,15 @@ class Command {
 
   const Command(this.code);
 
+  factory Command.fromBuffer(CommandCode code, List<int> buffer) {
+    switch (code) {
+      case CommandCode.ProcessTerminate:
+        return const ProcessTerminate();
+      default:
+        throw 'Unhandled command in Command.fromBuffer: $code';
+    }
+  }
+
   /// Shared command buffer. Not safe to use in asynchronous operations.
   CommandBuffer get buffer => _buffer;
 
@@ -384,9 +393,19 @@ class ProcessRun extends Command {
       : super(CommandCode.ProcessRun);
 }
 
+class ProcessTerminate extends Command {
+  const ProcessTerminate()
+      : super(CommandCode.ProcessTerminate);
+}
+
 class SessionEnd extends Command {
   const SessionEnd()
       : super(CommandCode.SessionEnd);
+}
+
+class ForceTermination extends Command {
+  const ForceTermination()
+      : super(CommandCode.ForceTermination);
 }
 
 class WriteSnapshot extends Command {

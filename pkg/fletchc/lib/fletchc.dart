@@ -5,13 +5,13 @@
 library fletchc;
 
 import 'dart:async';
-
 import 'dart:io';
 
 import 'compiler.dart' show
     FletchCompiler;
 
 import 'commands.dart';
+import 'session.dart';
 
 const COMPILER_CRASHED = 253;
 const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
@@ -20,6 +20,7 @@ const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
 main(List<String> arguments) async {
   String script;
   String snapshotPath;
+  bool debugging = false;
 
   for (int i = 0; i < arguments.length; i++) {
     String argument = arguments[i];
@@ -27,6 +28,11 @@ main(List<String> arguments) async {
       case '-o':
       case '--out':
         snapshotPath = arguments[++i];
+        break;
+
+      case '-d':
+      case '--debug':
+        debugging = true;
         break;
 
       default:
@@ -58,13 +64,6 @@ main(List<String> arguments) async {
 
   if (compilerCrashed) return;
 
-  if (snapshotPath == null) {
-    commands.add(const ProcessSpawnForMain());
-    commands.add(const ProcessRun());
-  } else {
-    commands.add(new WriteSnapshot(snapshotPath));
-  }
-
   var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 
   List<String> vmOptions = <String>[
@@ -89,9 +88,17 @@ main(List<String> arguments) async {
   var vmSocket = connectionIterator.current;
   server.close();
 
-  vmSocket.listen(null);
   commands.forEach((command) => command.addTo(vmSocket));
-  vmSocket.close();
+
+  var session = new Session(vmSocket);
+
+  if (snapshotPath != null) {
+    session.writeSnapshot(snapshotPath);
+  } else if (debugging) {
+    await session.debug();
+  } else {
+    session.run();
+  }
 
   exitCode = await vmProcess.exitCode;
   if (exitCode != 0) {
