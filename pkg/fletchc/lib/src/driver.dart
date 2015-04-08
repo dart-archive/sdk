@@ -43,6 +43,8 @@ const Endianness commandEndianness = Endianness.LITTLE_ENDIAN;
 
 const headerSize = 5;
 
+const fletchDriverSuffix = "_driver";
+
 enum DriverCommand {
   Stdin,  // Data on stdin.
   Stdout,  // Data on stdout.
@@ -293,6 +295,11 @@ Future handleClient(Socket controlSocket) async {
   // which isn't normally included in Dart arguments (as passed to main).
   List<String> arguments = command.data;
   String programName = arguments.first;
+  String fletchVm = null;
+  if (programName.endsWith(fletchDriverSuffix)) {
+    fletchVm = programName.substring(
+        0, programName.length - fletchDriverSuffix.length);
+  }
   arguments = arguments.skip(1).toList();
 
   ZoneSpecification specification =
@@ -309,7 +316,8 @@ Future handleClient(Socket controlSocket) async {
       });
 
   int exitCode = await Zone.current.fork(specification: specification)
-      .run(() => compileAndRun(arguments, commandSender, commandIterator));
+      .run(() => compileAndRun(
+          fletchVm, arguments, commandSender, commandIterator));
 
   commandSender.sendExitCode(exitCode);
 
@@ -320,6 +328,7 @@ Future handleClient(Socket controlSocket) async {
 }
 
 Future<int> compileAndRun(
+    String fletchVm,
     List<String> arguments,
     CommandSender commandSender,
     StreamIterator<Command> commandIterator) async {
@@ -327,7 +336,7 @@ Future<int> compileAndRun(
       ? <String>['--verbose'] : <String>[];
   FletchCompiler compiler =
       new FletchCompiler(
-          options: options, script: arguments.single,
+          options: options, script: arguments.single, fletchVm: fletchVm,
           // TODO(ahe): packageRoot should be an option.
           packageRoot: "package/");
   bool compilerCrashed = false;
