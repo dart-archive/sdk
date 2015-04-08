@@ -15,9 +15,14 @@
 namespace fletch {
 
 void GetPathOfExecutable(char* path, size_t path_length) {
-  if (readlink("/proc/self/exe", path, path_length) < 0) {
+  ssize_t length = readlink("/proc/self/exe", path, path_length - 1);
+  if (length == -1) {
     FATAL1("readlink failed: %s", strerror(errno));
   }
+  if (static_cast<size_t>(length) == path_length - 1) {
+    FATAL("readlink returned too much data");
+  }
+  path[length] = '\0';
 }
 
 }  // namespace fletch
