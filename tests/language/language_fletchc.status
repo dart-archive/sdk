@@ -1375,6 +1375,7 @@ value_range3_test: Fail
 value_range_test: Fail
 vm/allocation_sinking_vm_test: Crash
 vm/load_to_load_forwarding_vm_test: Crash
+vm/math_vm_test: Crash
 vm/no_such_method_error_message_vm_test: Fail
 vm/optimized_guarded_field_isolates_test: Crash
 vm/reflect_core_vm_test: Crash
