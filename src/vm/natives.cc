@@ -696,6 +696,44 @@ NATIVE(DoubleToStringAsPrecision) {
   return process->NewStringFromAscii(List<const char>(result, strlen(result)));
 }
 
+#define DOUBLE_MATH_NATIVE(name, method)                        \
+  NATIVE(name) {                                                \
+    Object* x = arguments[0];                                   \
+    if (!x->IsDouble()) return Failure::wrong_argument_type();  \
+    double d = Double::cast(x)->value();                        \
+    return process->NewDouble(method(d));                       \
+  }
+
+DOUBLE_MATH_NATIVE(DoubleSin, sin)
+DOUBLE_MATH_NATIVE(DoubleCos, cos)
+DOUBLE_MATH_NATIVE(DoubleTan, tan)
+DOUBLE_MATH_NATIVE(DoubleAcos, acos)
+DOUBLE_MATH_NATIVE(DoubleAsin, asin)
+DOUBLE_MATH_NATIVE(DoubleAtan, atan)
+DOUBLE_MATH_NATIVE(DoubleSqrt, sqrt)
+DOUBLE_MATH_NATIVE(DoubleExp, exp)
+DOUBLE_MATH_NATIVE(DoubleLog, log)
+
+NATIVE(DoubleAtan2) {
+  Object* x = arguments[0];
+  if (!x->IsDouble()) return Failure::wrong_argument_type();
+  Object* y = arguments[1];
+  if (!y->IsDouble()) return Failure::wrong_argument_type();
+  double x_value = Double::cast(x)->value();
+  double y_value = Double::cast(y)->value();
+  return process->NewDouble(atan2(x_value, y_value));
+}
+
+NATIVE(DoublePow) {
+  Object* x = arguments[0];
+  if (!x->IsDouble()) return Failure::wrong_argument_type();
+  Object* y = arguments[1];
+  if (!y->IsDouble()) return Failure::wrong_argument_type();
+  double x_value = Double::cast(x)->value();
+  double y_value = Double::cast(y)->value();
+  return process->NewDouble(pow(x_value, y_value));
+}
+
 NATIVE(ListNew) {
   int length = Smi::cast(arguments[0])->value();
   return process->NewArray(length);

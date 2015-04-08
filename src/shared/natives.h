@@ -99,6 +99,18 @@ namespace fletch {
   N(DoubleToStringAsFixed,       "double", "_toStringAsFixed")           \
   N(DoubleToStringAsPrecision,   "double", "_toStringAsPrecision")       \
                                                                          \
+  N(DoubleSin,                   "double", "sin")                        \
+  N(DoubleCos,                   "double", "cos")                        \
+  N(DoubleTan,                   "double", "tan")                        \
+  N(DoubleAcos,                  "double", "acos")                       \
+  N(DoubleAsin,                  "double", "asin")                       \
+  N(DoubleAtan,                  "double", "atan")                       \
+  N(DoubleSqrt,                  "double", "sqrt")                       \
+  N(DoubleExp,                   "double", "exp")                        \
+  N(DoubleLog,                   "double", "log")                        \
+  N(DoubleAtan2,                 "double", "atan2")                      \
+  N(DoublePow,                   "double", "pow")                        \
+                                                                         \
   N(ListNew,                     "_ConstantList", "_new")                \
   N(ListLength,                  "_ConstantList", "length")              \
   N(ListIndexGet,                "_ConstantList", "[]")                  \

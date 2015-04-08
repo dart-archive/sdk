@@ -153,6 +153,12 @@ const patch = "patch";
   }
 }
 
+@patch class double {
+  @patch static double parse(String source, [double onError(String source)]) {
+    throw new UnimplementedError("double.parse");
+  }
+}
+
 class Thread {
 
   // We keep track of the top of the coroutine stack and

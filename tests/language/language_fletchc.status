@@ -32,7 +32,7 @@ abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
 abstract_syntax_test/01: MissingCompileTimeError
 argument_definition_test/01: MissingCompileTimeError
-arithmetic_test: Crash
+arithmetic_test: Fail
 assertion_test: Fail
 assign_op_test: Fail
 assign_top_method_test/01: Fail
@@ -119,14 +119,6 @@ built_in_identifier_illegal_test/20: Crash
 built_in_identifier_prefix_test: Crash
 built_in_identifier_test/01: Crash
 built_in_identifier_test/none: Fail
-call_constructor_on_unresolvable_class_test/01: Crash
-call_constructor_on_unresolvable_class_test/02: Crash
-call_constructor_on_unresolvable_class_test/03: Crash
-call_constructor_on_unresolvable_class_test/04: Crash
-call_constructor_on_unresolvable_class_test/05: Crash
-call_constructor_on_unresolvable_class_test/06: Crash
-call_constructor_on_unresolvable_class_test/07: Crash
-call_constructor_on_unresolvable_class_test/none: Crash
 call_nonexistent_constructor_test/01: Fail
 call_nonexistent_static_test/01: Fail
 call_nonexistent_static_test/04: Fail
@@ -196,8 +188,6 @@ closure_in_initializer_test: Crash
 closure_parameter_types_test: Fail
 closure_shared_state_test: Fail
 closure_side_effect_test: Fail
-closure_type_test/01: Crash
-closure_type_test/none: Crash
 closure_type_variable_test: Fail
 closure_with_super_field_test: Fail
 closures_initializer2_test: Fail
@@ -393,10 +383,6 @@ deferred_no_such_method_test: Crash
 deferred_not_loaded_check_test: Crash
 deferred_optimized_test: Crash
 deferred_shadow_load_library_test: Crash
-double_to_string_as_exponential3_test: Fail
-double_to_string_as_exponential_test: Fail
-double_to_string_as_precision3_test: Fail
-double_to_string_as_precision_test: Fail
 duplicate_constructor_test/01: MissingCompileTimeError
 duplicate_export_negative_test: Fail
 duplicate_implements_test/01: MissingCompileTimeError
@@ -719,7 +705,6 @@ interface_injection1_negative_test: Crash
 interface_injection2_negative_test: Crash
 internal_library_test/01: MissingCompileTimeError
 internal_library_test/02: MissingCompileTimeError
-intrinsified_methods_test: Crash
 invocation_mirror2_test: Crash
 invocation_mirror_invoke_on2_test: Crash
 invocation_mirror_invoke_on_test: Crash
@@ -1278,7 +1263,7 @@ try_catch_on_syntax_test/03: MissingCompileTimeError
 try_catch_on_syntax_test/04: MissingCompileTimeError
 try_catch_on_syntax_test/05: MissingCompileTimeError
 try_catch_on_syntax_test/06: MissingCompileTimeError
-try_catch_optimized1_test: Crash
+try_catch_optimized1_test: Fail
 try_catch_syntax_test/01: MissingCompileTimeError
 try_catch_syntax_test/02: MissingCompileTimeError
 try_catch_syntax_test/03: MissingCompileTimeError
@@ -1360,7 +1345,6 @@ value_range3_test: Fail
 value_range_test: Fail
 vm/allocation_sinking_vm_test: Crash
 vm/load_to_load_forwarding_vm_test: Crash
-vm/math_vm_test: Crash
 vm/no_such_method_error_message_vm_test: Fail
 vm/optimized_guarded_field_isolates_test: Crash
 vm/reflect_core_vm_test: Crash

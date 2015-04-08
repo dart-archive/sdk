@@ -29,10 +29,11 @@ const EXTRA_DART2JS_OPTIONS = const <String>[
 ];
 
 const FLETCH_PATCHES = const <String, String>{
-  "core": "core/core_patch.dart",
-  "collection": "collection/collection_patch.dart",
-  "typed_data": "typed_data/typed_data_patch.dart",
   "_internal": "internal/internal_patch.dart",
+  "collection": "collection/collection_patch.dart",
+  "core": "core/core_patch.dart",
+  "math": "math/math_patch.dart",
+  "typed_data": "typed_data/typed_data_patch.dart",
 };
 
 const FLETCH_PLATFORM = 3;

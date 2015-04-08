@@ -119,11 +119,14 @@ class double implements core.double {
   @native external bool get isNegative;
 
   bool get isFinite {
-    return this != double.INFINITY && this != -double.INFINITY && !isNaN;
+    return this != core.double.INFINITY &&
+      this != -core.double.INFINITY &&
+      !isNaN;
   }
 
   bool get isInfinite {
-    return (this == double.INFINITY || this == -double.INFINITY) && !isNaN;
+    return (this == core.double.INFINITY ||
+            this == -core.double.INFINITY) && !isNaN;
   }
 
   double get sign {
@@ -150,8 +153,8 @@ class double implements core.double {
       if (digits < 0 || digits > 20) throw new RangeError.range(digits, 0, 20);
     }
     if (isNaN) return "NaN";
-    if (this == double.INFINITY) return "Infinity";
-    if (this == -double.INFINITY) return "-Infinity";
+    if (this == core.double.INFINITY) return "Infinity";
+    if (this == -core.double.INFINITY) return "-Infinity";
 
     return _toStringAsExponential(digits);
   }
@@ -168,8 +171,8 @@ class double implements core.double {
     if (digits is! int) throw new ArgumentError();
     if (digits < 1 || digits > 21) throw new RangeError.range(digits, 1, 21);
     if (isNaN) return "NaN";
-    if (this == double.INFINITY) return "Infinity";
-    if (this == -double.INFINITY) return "-Infinity";
+    if (this == core.double.INFINITY) return "Infinity";
+    if (this == -core.double.INFINITY) return "-Infinity";
     return _toStringAsPrecision(digits);
   }
 
@@ -198,4 +201,26 @@ class double implements core.double {
   bool _compareGtFromInteger(int other) => other.toDouble() >  this;
 
   bool _compareGeFromInteger(int other) => other.toDouble() >= this;
+
+  @native external static double sin(double x);
+
+  @native external static double cos(double x);
+
+  @native external static double tan(double x);
+
+  @native external static double acos(double x);
+
+  @native external static double asin(double x);
+
+  @native external static double atan(double x);
+
+  @native external static double sqrt(double x);
+
+  @native external static double exp(double x);
+
+  @native external static double log(double x);
+
+  @native external static double atan2(double a, double b);
+
+  @native external static double pow(double x, double exponent);
 }
