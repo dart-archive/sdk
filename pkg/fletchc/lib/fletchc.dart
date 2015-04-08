@@ -70,6 +70,8 @@ main(List<String> arguments) async {
       '-Xvalidate-stack',
   ];
 
+  if (debugging) vmOptions.add('-Xbridge-connection');
+
   var connectionIterator = new StreamIterator(server);
 
   String vmPath = compiler.fletchVm.toFilePath();
