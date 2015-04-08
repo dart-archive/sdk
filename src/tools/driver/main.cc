@@ -62,7 +62,7 @@ static const char fletch_config_name[] = ".fletch";
 
 static int fletch_config_fd;
 
-static const char* dart_vm_name = "/dart/sdk/bin/dart";
+extern const char* dart_vm_name;
 
 static const char* dart_vm_env_name = "DART_VM";
 
@@ -269,7 +269,6 @@ static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
   }
   // TODO(ahe): Use StrCat or StrCpy instead.
   strncpy(buffer, resolved, buffer_length);
-  ParentDir(buffer);
   ParentDir(buffer);
   ParentDir(buffer);
   ParentDir(buffer);

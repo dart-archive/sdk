@@ -23,3 +23,6 @@ samples/todomvc/java/
 .DS_Store
 .ninja_deps
 .ninja_log
+/third_party/bin/mac/dart
+/third_party/bin/linux/dart
+.fletch

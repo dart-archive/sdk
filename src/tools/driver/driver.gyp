@@ -18,6 +18,8 @@
       ],
       'sources': [
         'main.cc',
+        'main_linux.cc',
+        'main_macos.cc',
 
         'connection.h',
         'connection.cc',

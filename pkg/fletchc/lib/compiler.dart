@@ -109,7 +109,7 @@ class FletchCompiler {
       if (libraryRoot == null) {
         throw new StateError("""
 Unable to guess the location of the Dart SDK (libraryRoot).
-Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>.""");
+Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
       }
     } else if (!_looksLikeLibraryRoot(libraryRoot)) {
       throw new ArgumentError(
@@ -243,7 +243,11 @@ Uri _computeValidatedUri(
 }
 
 Uri _guessLibraryRoot() {
-  Uri guess = _executable.resolve('../');
+  Uri guess = _executable.resolve('../../../../dart/sdk/');
+  if (_looksLikeLibraryRoot(guess)) {
+    return _resolveSymbolicLinks(guess);
+  }
+  guess = _executable.resolve('../');
   if (_looksLikeLibraryRoot(guess)) {
     return _resolveSymbolicLinks(guess);
   }
