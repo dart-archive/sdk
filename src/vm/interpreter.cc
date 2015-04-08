@@ -28,8 +28,6 @@
 
 namespace fletch {
 
-static const char* kBridgeConnectionFlag = "bridge-connection";
-
 const NativeFunction kNativeTable[] = {
 #define N(e, c, n) &Native_##e,
   NATIVES_DO(N)
@@ -937,13 +935,11 @@ uint8* HandleThrow(Process* process, Object* exception, int* stack_delta) {
       printf("Uncaught exception:\n");
       exception->Print();
 
-      if (Flags::IsOn(kBridgeConnectionFlag)) {
-        // Send stack trace information to attached sessions.
-        Session* session = process->program()->session();
-        if (session != NULL) {
-          session->UncaughtException();
-          return NULL;
-        }
+      // Send stack trace information to attached session.
+      Session* session = process->program()->session();
+      if (session != NULL) {
+        session->UncaughtException();
+        return NULL;
       }
       exit(1);
     }

@@ -85,6 +85,8 @@ class Command {
     switch (code) {
       case CommandCode.ProcessTerminate:
         return const ProcessTerminate();
+      case CommandCode.UncaughtException:
+        return const UncaughtException();
       default:
         throw 'Unhandled command in Command.fromBuffer: $code';
     }
@@ -355,6 +357,11 @@ class CommitChanges extends Command {
         ..addUint32(count)
         ..sendOn(sink, code);
   }
+}
+
+class UncaughtException extends Command {
+  const UncaughtException()
+      : super(CommandCode.UncaughtException);
 }
 
 class PushNewInteger extends Command {

@@ -47,7 +47,7 @@ class Session {
 
   Future handleProcessStop() async {
     Command response = await nextVmCommand();
-    switch(response.code) {
+    switch (response.code) {
       case CommandCode.UncaughtException:
         await backtrace(-1);
         const ForceTermination().addTo(vmSocket);
@@ -69,7 +69,7 @@ class Session {
   }
 
   // TODO(ager): Implement.
-  Future backtrace() async {
+  Future backtrace(int frame) async {
   }
 
   void quit() {

@@ -10,7 +10,6 @@ import 'dart:io';
 import 'compiler.dart' show
     FletchCompiler;
 
-import 'commands.dart';
 import 'session.dart';
 
 const COMPILER_CRASHED = 253;
