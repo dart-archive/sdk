@@ -490,6 +490,7 @@ class ClosureVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
+    markUsed(variable, CaptureMode.ByReference);
     node.visitChildren(this);
   }
 

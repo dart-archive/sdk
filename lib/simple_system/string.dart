@@ -6,30 +6,54 @@ part of dart.system;
 
 // TODO(ajohnsen): Rename String to e.g. _StringImpl.
 class String implements core.String {
+  static const int _MAX_CODE_UNIT = 0xFFFF;
+  static const int _LEAD_SURROGATE_OFFSET = (0xD800 - (0x10000 >> 10));
+  static const int _MAX_CHAR_CODE = 0x10FFFF;
+
   static String fromCharCodes(Iterable<int> charCodes, int start, int end) {
     if (end == null) end = charCodes.length;
     int length = end - start;
     if (start < 0 || length < 0) throw new RangeError.range(start, 0, length);
-    var str = _create(length);
+    var str = _create(_stringLength(charCodes, start, length));
+    int offset = 0;
     if (charCodes is List) {
       List list = charCodes;
       for (int i = 0; i < length; i++) {
-        str._setCodeUnitAt(i, list[start + i]);
+        offset += _encodeCharCode(str, list[start + i], offset);
       }
     } else {
       int i = -start;
       charCodes.forEach((value) {
-        if (i >= 0 && i < length) str._setCodeUnitAt(i, value);
+        if (i >= 0 && i < length) {
+          offset += _encodeCharCode(str, value, offset);
+        }
         i++;
       });
-      if (i < length) throw new RangeError.range(start, 0, length);
     }
     return str;
   }
 
+  static int _stringLength(Iterable<int> charCodes, int start, int length) {
+    int stringLength = 0;
+    if (charCodes is List) {
+      List list = charCodes;
+      for (int i = 0; i < length; i++) {
+        stringLength += _charCodeLength(list[start + i]);
+      }
+    } else {
+      int i = -start;
+      charCodes.forEach((value) {
+        if (i >= 0 && i < length) stringLength += _charCodeLength(value);
+        i++;
+      });
+      if (i < length) throw new RangeError.range(start, 0, length);
+    }
+    return stringLength;
+  }
+
   static String fromCharCode(int charCode) {
-    String result = _create(1);
-    result._setCodeUnitAt(0, charCode);
+    String result = _create(_charCodeLength(charCode));
+    _encodeCharCode(result, charCode, 0);
     return result;
   }
 
@@ -176,6 +200,24 @@ class String implements core.String {
 
   toUpperCase() {
     throw "toUpperCase() isn't implemented";
+  }
+
+  static int _charCodeLength(int charCode) {
+    return (charCode <= _MAX_CODE_UNIT) ? 1 : 2;
+  }
+
+  static int _encodeCharCode(String char, int charCode, int offset) {
+    if (charCode < 0 || charCode > _MAX_CHAR_CODE) {
+      throw new ArgumentError(charCode);
+    }
+    int length = _charCodeLength(charCode);
+    if (length == 2) {
+      char._setCodeUnitAt(offset, _LEAD_SURROGATE_OFFSET + (charCode >> 10));
+      char._setCodeUnitAt(offset + 1, (0xDC00 + (charCode & 0x3FF)));
+    } else {
+      char._setCodeUnitAt(offset, charCode);
+    }
+    return length;
   }
 
   @native String _substring(int start, int end) {
