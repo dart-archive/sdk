@@ -183,8 +183,6 @@ class FletchBackend extends Backend {
 
   final DartConstantTask constantCompilerTask;
 
-  final Map<FunctionElement, int> methodIds = <FunctionElement, int>{};
-
   final Map<FunctionElement, CompiledFunction> compiledFunctions =
       <FunctionElement, CompiledFunction>{};
 
@@ -216,8 +214,6 @@ class FletchBackend extends Backend {
 
   final Map<int, int> getters = <int, int>{};
   final Map<int, int> setters = <int, int>{};
-
-  int nextMethodId = 0;
 
   List<Command> commands;
 
@@ -442,10 +438,11 @@ class FletchBackend extends Backend {
           fields,
           compiledObjectClass);
       CompiledFunction compiledFunction = new CompiledFunction(
-          nextMethodId++,
+          functions.length,
           'call',
           signature,
           compiledClass);
+      functions.add(compiledFunction);
 
       BytecodeBuilder builder = compiledFunction.builder;
       int argumentCount = signature.parameterCount;
@@ -471,8 +468,6 @@ class FletchBackend extends Backend {
           ..ret()
           ..methodEnd();
 
-      functions.add(compiledFunction);
-
       String symbol = context.getCallSymbol(signature);
       int id = context.getSymbolId(symbol);
       int fletchSelector = FletchSelector.encodeMethod(
@@ -483,20 +478,40 @@ class FletchBackend extends Backend {
     });
   }
 
-  CompiledFunction createCompiledFunction(
+  CompiledFunction createCompiledFunction(FunctionElement function) {
+    assert(function.memberContext == function);
+
+    CompiledClass holderClass;
+    if (function.isInstanceMember || function.isGenerativeConstructor) {
+      ClassElement enclosingClass = function.enclosingClass.declaration;
+      holderClass = registerClassElement(enclosingClass);
+    }
+    return internalCreateCompiledFunction(
+        function,
+        function.name,
+        holderClass);
+  }
+
+  CompiledFunction internalCreateCompiledFunction(
       FunctionElement function,
       String name,
       CompiledClass holderClass) {
-    return compiledFunctions.putIfAbsent(function, () {
-      return new CompiledFunction(
-          allocateMethodId(function),
+    return compiledFunctions.putIfAbsent(function.declaration, () {
+      CompiledFunction compiledFunction = new CompiledFunction(
+          functions.length,
           name,
           // Parameter initializers are expressed in the potential
           // implementation.
           function.implementation.functionSignature,
           holderClass,
           isAccessor: function.isAccessor);
+      functions.add(compiledFunction);
+      return compiledFunction;
     });
+  }
+
+  int functionMethodId(FunctionElement function) {
+    return createCompiledFunction(function).methodId;
   }
 
   void codegen(CodegenWorkItem work) {
@@ -532,26 +547,16 @@ class FletchBackend extends Backend {
         function,
         elements);
 
-    CompiledClass holderClass;
+    CompiledFunction compiledFunction;
 
-    String name;
-
-    if (function.isInstanceMember ||
-        function.isGenerativeConstructor) {
-      ClassElement enclosingClass = function.enclosingClass.declaration;
-      holderClass = registerClassElement(enclosingClass);
-      name = function.name;
-    } else if (function.memberContext != function) {
-      holderClass = createClosureClass(function, closureEnvironment);
-      name = Compiler.CALL_OPERATOR_NAME;
+    if (function.memberContext != function) {
+      compiledFunction = internalCreateCompiledFunction(
+          function,
+          Compiler.CALL_OPERATOR_NAME,
+          createClosureClass(function, closureEnvironment));
     } else {
-      name = function.name;
+      compiledFunction = createCompiledFunction(function);
     }
-
-    CompiledFunction compiledFunction = createCompiledFunction(
-        function,
-        name,
-        holderClass);
 
     FunctionCodegen codegen = new FunctionCodegen(
         compiledFunction,
@@ -569,18 +574,16 @@ class FletchBackend extends Backend {
       codegen.compile();
     }
 
-    compiledFunctions[function] = compiledFunction;
-    functions.add(compiledFunction);
-
     // TODO(ahe): Don't do this.
     compiler.enqueuer.codegen.generatedCode[function.declaration] = null;
 
-    if (holderClass != null && !function.isGenerativeConstructor) {
+    if (compiledFunction.memberOf != null &&
+        !function.isGenerativeConstructor) {
       // Inject the function into the method table of the 'holderClass' class.
       // Note that while constructor bodies has a this argument, we don't inject
       // them into the method table.
       String symbol = context.getSymbolForFunction(
-          name,
+          compiledFunction.name,
           function.functionSignature,
           function.library);
       int id = context.getSymbolId(symbol);
@@ -590,7 +593,7 @@ class FletchBackend extends Backend {
       if (function.isSetter) kind = SelectorKind.Setter;
       int fletchSelector = FletchSelector.encode(id, kind, arity);
       int methodId = compiledFunction.methodId;
-      holderClass.methodTable[fletchSelector] = methodId;
+      compiledFunction.memberOf.methodTable[fletchSelector] = methodId;
       // Inject method into all mixin usages.
       Iterable<ClassElement> mixinUsage =
           compiler.world.mixinUsesOf(function.enclosingClass);
@@ -601,14 +604,14 @@ class FletchBackend extends Backend {
         // stubs for the mixin classes as well.
         CompiledClass compiledUsage = registerClassElement(usage);
         CompiledFunction copy = new CompiledFunction(
-            nextMethodId++,
+            functions.length,
             function.name,
             function.implementation.functionSignature,
             compiledUsage,
             isAccessor: function.isAccessor);
+        functions.add(copy);
         compiledUsage.methodTable[fletchSelector] = copy.methodId;
         copy.copyFrom(compiledFunction);
-        functions.add(copy);
       }
     }
 
@@ -762,15 +765,15 @@ class FletchBackend extends Backend {
   void createTearoffGetterForFunction(CompiledFunction function) {
     CompiledClass tearoffClass = createTearoffClass(function);
     CompiledFunction getter = new CompiledFunction.accessor(
-        nextMethodId++,
+        functions.length,
         false);
+    functions.add(getter);
     int constId = getter.allocateConstantFromClass(tearoffClass.id);
     getter.builder
         ..loadParameter(0)
         ..allocate(constId, tearoffClass.fields)
         ..ret()
         ..methodEnd();
-    functions.add(getter);
     // If the name is private, we need the library.
     // Invariant: We only generate public stubs, e.g. 'call'.
     LibraryElement library;
@@ -805,6 +808,9 @@ class FletchBackend extends Backend {
       int arity = compiledFunction.builder.functionArity;
       int constantCount = compiledFunction.constants.length;
       int methodId = compiledFunction.methodId;
+
+      assert(functions[methodId] == compiledFunction);
+      assert(compiledFunction.builder.bytecodes.isNotEmpty);
 
       compiledFunction.constants.forEach((constant, int index) {
         if (constant is ConstantValue) {
@@ -960,27 +966,13 @@ class FletchBackend extends Backend {
 
     commands.add(const PushNewInteger(0));
 
-    commands.add(
-        new PushFromMap(
-            MapId.methods, allocatedMethodId(fletchSystemEntry)));
+    commands.add(new PushFromMap(
+        MapId.methods,
+        compiledFunctions[fletchSystemEntry].methodId));
 
     this.commands = commands;
 
     return 0;
-  }
-
-  int allocateMethodId(FunctionElement element) {
-    element = element.declaration;
-    return methodIds.putIfAbsent(element, () => nextMethodId++);
-  }
-
-  int allocatedMethodId(FunctionElement element) {
-    element = element.declaration;
-    int id = methodIds[element];
-    if (id != null) return id;
-    id = constructorIds[element];
-    if (id != null) return id;
-    throw "Use of non-compiled function: $element";
   }
 
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
@@ -1056,8 +1048,9 @@ class FletchBackend extends Backend {
 
     lazyFieldInitializers.putIfAbsent(field, () {
       CompiledFunction compiledFunction = new CompiledFunction.parameterStub(
-          nextMethodId++,
+          functions.length,
           0);
+      functions.add(compiledFunction);
 
       TreeElements elements = field.resolvedAst.elements;
 
@@ -1074,8 +1067,6 @@ class FletchBackend extends Backend {
           field);
 
       codegen.compile();
-
-      functions.add(compiledFunction);
 
       return compiledFunction;
     });
@@ -1106,10 +1097,11 @@ class FletchBackend extends Backend {
           elements);
 
       CompiledFunction compiledFunction = new CompiledFunction(
-          nextMethodId++,
+          functions.length,
           constructor.name,
           constructor.functionSignature,
           null);
+      functions.add(compiledFunction);
 
       ConstructorCodegen codegen = new ConstructorCodegen(
           compiledFunction,
@@ -1126,8 +1118,6 @@ class FletchBackend extends Backend {
         print(compiledFunction.verboseToString());
       }
 
-      functions.add(compiledFunction);
-
       return compiledFunction.methodId;
     });
   }
@@ -1138,14 +1128,14 @@ class FletchBackend extends Backend {
   int makeGetter(int fieldIndex) {
     return getters.putIfAbsent(fieldIndex, () {
       CompiledFunction stub = new CompiledFunction.accessor(
-          nextMethodId++,
+          functions.length,
           false);
+      functions.add(stub);
       stub.builder
           ..loadParameter(0)
           ..loadField(fieldIndex)
           ..ret()
           ..methodEnd();
-      functions.add(stub);
       return stub.methodId;
     });
   }
@@ -1156,8 +1146,9 @@ class FletchBackend extends Backend {
   int makeSetter(int fieldIndex) {
     return setters.putIfAbsent(fieldIndex, () {
       CompiledFunction stub = new CompiledFunction.accessor(
-          nextMethodId++,
+          functions.length,
           true);
+      functions.add(stub);
       stub.builder
           ..loadParameter(0)
           ..loadParameter(1)
@@ -1165,7 +1156,6 @@ class FletchBackend extends Backend {
       // Top is at this point the rhs argument, thus the return value.
           ..ret()
           ..methodEnd();
-      functions.add(stub);
       return stub.methodId;
     });
   }

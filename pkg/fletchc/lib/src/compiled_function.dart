@@ -171,8 +171,10 @@ class CompiledFunction {
     if (hasThisArgument) arity++;
 
     CompiledFunction compiledFunction = new CompiledFunction.parameterStub(
-        context.backend.nextMethodId++,
+        context.backend.functions.length,
         arity);
+    context.backend.functions.add(compiledFunction);
+
     BytecodeBuilder builder = compiledFunction.builder;
 
     void loadInitializerOrNull(ParameterElement parameter) {
@@ -223,8 +225,6 @@ class CompiledFunction {
         ..invokeStatic(constId, index)
         ..ret()
         ..methodEnd();
-
-    context.backend.functions.add(compiledFunction);
 
     if (memberOf != null) {
       int fletchSelector = context.toFletchSelector(selector);

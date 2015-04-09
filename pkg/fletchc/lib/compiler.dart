@@ -195,8 +195,9 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
   Uri get fletchVm => _compiler.fletchVm;
 
   CompiledFunction lookupCompiledFunction(int id) {
-    // TODO(ager/ajohnsen): Optimize.
-    return _compiler.backend.functions.firstWhere((f) => f.methodId == id);
+    CompiledFunction function = _compiler.backend.functions[id];
+    assert(function.methodId == id);
+    return function;
   }
 
   String lookupFunctionName(int id) {

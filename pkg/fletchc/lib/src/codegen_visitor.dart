@@ -283,9 +283,7 @@ abstract class CodegenVisitor
     if (signature.hasOptionalParameters &&
         signature.optionalParametersAreNamed) {
       CompiledFunction target = context.backend.createCompiledFunction(
-          function,
-          function.name,
-          null);
+          function);
       if (target.matchesSelector(selector)) {
         methodId = target.methodId;
       } else if (target.canBeCalledAs(selector)) {
@@ -304,7 +302,7 @@ abstract class CodegenVisitor
       }
       arity = selector.argumentCount;
     } else {
-      methodId = context.backend.allocateMethodId(function);
+      methodId = context.backend.functionMethodId(function);
       arity = loadPositionalArguments(arguments, function);
     }
     if (function.isInstanceMember) arity++;
@@ -748,7 +746,7 @@ abstract class CodegenVisitor
   void handleStaticFunctionGet(MethodElement function) {
     registry.registerStaticInvocation(function);
     CompiledFunction compiledFunctionTarget =
-        context.backend.createCompiledFunction(function, function.name, null);
+        context.backend.createCompiledFunction(function);
     CompiledClass compiledClass = context.backend.createTearoffClass(
         compiledFunctionTarget);
     if (compiledClass.fields == 0) {
@@ -2272,7 +2270,7 @@ abstract class CodegenVisitor
     builder.loadConst(compiledFunction.allocateConstant(constString));
     FunctionElement function = context.backend.fletchUnresolved;
     registry.registerStaticInvocation(function);
-    int methodId = context.backend.allocateMethodId(function);
+    int methodId = context.backend.functionMethodId(function);
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
     builder.invokeStatic(constId, 1);
     applyVisitState();

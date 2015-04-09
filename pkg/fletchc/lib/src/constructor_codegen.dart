@@ -191,7 +191,7 @@ class ConstructorCodegen extends CodegenVisitor {
 
     registry.registerStaticInvocation(constructor.declaration);
 
-    int methodId = context.backend.allocateMethodId(constructor);
+    int methodId = context.backend.functionMethodId(constructor);
     int constructorId = compiledFunction.allocateConstantFromFunction(methodId);
 
     FunctionSignature signature = constructor.functionSignature;
