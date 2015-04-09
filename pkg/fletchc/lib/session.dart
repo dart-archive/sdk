@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'bytecodes.dart';
 import 'commands.dart';
 import 'compiler.dart' show FletchCompiler;
 

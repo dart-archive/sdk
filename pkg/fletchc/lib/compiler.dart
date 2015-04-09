@@ -31,6 +31,9 @@ import 'package:compiler/src/source_file_provider.dart' show
 import 'package:compiler/src/filenames.dart' show
     appendSlash;
 
+import 'src/compiled_function.dart' show
+    CompiledFunction;
+
 import 'src/fletch_native_descriptor.dart' show
     FletchNativeDescriptor;
 
@@ -191,12 +194,22 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
 
   Uri get fletchVm => _compiler.fletchVm;
 
+  CompiledFunction lookupCompiledFunction(int id) {
+    // TODO(ager/ajohnsen): Optimize.
+    return _compiler.backend.functions.firstWhere((f) => f.methodId == id);
+  }
+
   String lookupFunctionName(int id) {
-    return _compiler.backend.functions[id].name;
+    return lookupCompiledFunction(id).name;
+  }
+
+  String lookupFunctionNameBySelector(int selector) {
+    // TODO(ager/ajohnsen): Generate mapping from symbol id to string.
+    return "symbol ${selector >> 10}";
   }
 
   List<Bytecode> lookupFunctionBytecodes(int id) {
-    return _compiler.backend.functions[id].builder.bytecodes;
+    return lookupCompiledFunction(id).builder.bytecodes;
   }
 
   Iterable<int> lookupFunctionIdsByName(String name) {
