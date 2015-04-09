@@ -198,6 +198,12 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
   List<Bytecode> lookupFunctionBytecodes(int id) {
     return _compiler.backend.functions[id].builder.bytecodes;
   }
+
+  Iterable<int> lookupFunctionIdsByName(String name) {
+    return _compiler.backend.functions
+        .where((f) => f.name == name)
+        .map((f) => f.methodId);
+  }
 }
 
 // In this library to allow access to privates.

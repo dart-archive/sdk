@@ -90,8 +90,6 @@ class Connection {
     kPushConstantList,
     kPushConstantMap,
 
-    kPushNewName,
-
     kChangeSuperClass,
     kChangeMethodTable,
     kChangeMethodLiteral,

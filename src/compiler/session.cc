@@ -16,8 +16,6 @@
 
 namespace fletch {
 
-static const char* kBridgeConnectionFlag = "bridge-connection";
-
 class SessionConsumer : public CompilerConsumer, public StackAllocated {
  public:
   SessionConsumer(Compiler* compiler, Session* session, Zone* zone)
@@ -167,13 +165,6 @@ void Session::PushNewArray(int length) {
   connection_->Send(Connection::kPushNewArray);
 }
 
-void Session::PushNewName(const char* name) {
-  if (Flags::IsOn(kBridgeConnectionFlag)) {
-    connection_->WriteString(name);
-    connection_->Send(Connection::kPushNewName);
-  }
-}
-
 void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
   connection_->WriteInt(arity);
   connection_->WriteInt(literals);
@@ -292,9 +283,7 @@ void SessionConstantHandler::DoClass(ConstClass* object) {
 }
 
 void SessionConsumer::DoProgram(LibraryElement* root) {
-  session()->PushNewName("classMap");
   session()->NewMap(kClassId);
-  session()->PushNewName("methodMap");
   session()->NewMap(kMethodId);
   session()->NewMap(kConstantId);
   compiler_->CompileLibrary(root, this);
@@ -355,13 +344,8 @@ void SessionConsumer::DoMethod(MethodNode* method, Code* code) {
   for (int i = 0; i < ids.length(); i++) {
     session()->PushNull();
   }
-
-  const char* name = method->name()->IsIdentifier()
-      ? method->name()->AsIdentifier()->value() : "";
-  session()->PushNewName(name);
   session()->PushNewFunction(code->arity(), ids.length(), code->bytes());
   session()->PopToMap(kMethodId, method->id());
-
   methods_.Add(method);
   code_.Add(code);
 }
@@ -377,7 +361,6 @@ void SessionConsumer::DoConstants(List<ConstObject*> constants) {
 void SessionConsumer::DoClass(CompiledClass* clazz) {
   ASSERT(HasObjectClassId());
   int name = clazz->node()->name()->id();
-  session()->PushNewName(clazz->node()->name()->value());
   if (Names::IsBuiltinClassName(name)) {
     session()->PushBuiltinClass(static_cast<Names::Id>(name),
                                 clazz->node()->FieldCount());

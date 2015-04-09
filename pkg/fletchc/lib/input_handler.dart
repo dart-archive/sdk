@@ -9,6 +9,14 @@ Starting session.
 
 Commands:
   'r'/'run'                             run main
+  'b <method name> <bytecode index>'    set breakpoint
+  'd <breakpoint id>'                   delete breakpoint
+  'lb'                                  list breakpoints
+  's'                                   step bytecode
+  'so'                                  step over
+  'c'                                   continue execution
+  'bt'                                  backtrace
+  'bt <n>'                              backtrace only expanding frame n
   'q'/'quit'                            quit the session
 """;
 
@@ -27,6 +35,46 @@ class InputHandler {
         line.split(' ').where((s) => !s.isEmpty).toList();
     String command = commandComponents[0];
     switch (command) {
+      case "b":
+        var method =
+            (commandComponents.length > 1) ? commandComponents[1] : "main";
+        var bci =
+            (commandComponents.length > 2) ? commandComponents[2] : "0";
+        try {
+          bci = int.parse(bci);
+        } catch(e) {
+          print('### invalid bytecode index: $bci');
+          break;
+        }
+        await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
+        break;
+      case 'bt':
+        var frame =
+            (commandComponents.length > 1) ? commandComponents[1] : "-1";
+        try {
+          frame = int.parse(frame);
+        } catch(e) {
+          print('### invalid frame number: $frame');
+          break;
+        }
+        await session.backtrace(frame);
+        break;
+      case "c":
+        await session.cont();
+        break;
+      case "d":
+        var id = (commandComponents.length > 1) ? commandComponents[1] : null;
+        try {
+          id = int.parse(id);
+        } catch(e) {
+          print('### invalid breakpoint number: $id');
+          break;
+        }
+        await session.deleteBreakpoint(id);
+        break;
+      case 'lb':
+        session.listBreakpoints();
+        break;
       case 'q':
       case 'quit':
         session.quit();
@@ -35,6 +83,12 @@ class InputHandler {
       case 'r':
       case 'run':
         await session.debugRun();
+        break;
+      case "s":
+        await session.step();
+        break;
+      case "so":
+        await session.stepOver();
         break;
       default:
         print('### unknown command: $command');

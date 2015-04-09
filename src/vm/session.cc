@@ -124,6 +124,7 @@ void Session::ProcessMessages() {
         int id = connection_->ReadInt();
         bool deleted = process_->debug_info()->DeleteBreakpoint(id);
         ASSERT(deleted);
+        connection_->WriteInt(id);
         connection_->Send(Connection::kProcessDeleteBreakpoint);
         break;
       }

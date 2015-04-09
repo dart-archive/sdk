@@ -66,8 +66,6 @@ class Session {
   void PushConstantList(int length);
   void PushConstantMap(int length);
 
-  void PushNewName(const char* name);
-
   // These methods supports building up a list of changes and
   // committing (or discarding) them in one atomic operation.
   void ChangeSuperClass();

@@ -100,15 +100,23 @@ class Command {
 
   factory Command.fromBuffer(CommandCode code, List<int> buffer) {
     switch (code) {
-      case CommandCode.ObjectId:
-        int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
-        return new ObjectId(id);
       case CommandCode.Integer:
         int value = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new Integer(value);
+      case CommandCode.ObjectId:
+        int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new ObjectId(id);
       case CommandCode.ProcessBacktrace:
         int frames = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ProcessBacktrace(frames);
+      case CommandCode.ProcessBreakpoint:
+        return new ProcessBreakpoint();
+      case CommandCode.ProcessDeleteBreakpoint:
+        int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new ProcessDeleteBreakpoint(id);
+      case CommandCode.ProcessSetBreakpoint:
+        int value = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new ProcessSetBreakpoint(value);
       case CommandCode.ProcessTerminate:
         return const ProcessTerminate();
       case CommandCode.UncaughtException:
@@ -465,6 +473,32 @@ class ProcessRun extends Command {
       : super(CommandCode.ProcessRun);
 }
 
+class ProcessSetBreakpoint extends Command {
+  final int value;
+
+  const ProcessSetBreakpoint(this.value)
+      : super(CommandCode.ProcessSetBreakpoint);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(value)
+        ..sendOn(sink, code);
+  }
+}
+
+class ProcessDeleteBreakpoint extends Command {
+  final int id;
+
+  const ProcessDeleteBreakpoint(this.id)
+      : super(CommandCode.ProcessDeleteBreakpoint);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(id)
+        ..sendOn(sink, code);
+  }
+}
+
 class ProcessBacktrace extends Command {
   final int frames;
 
@@ -476,6 +510,26 @@ class ProcessBacktrace extends Command {
         ..addUint32(frames)
         ..sendOn(sink, code);
   }
+}
+
+class ProcessBreakpoint extends Command {
+  const ProcessBreakpoint()
+      : super(CommandCode.ProcessBreakpoint);
+}
+
+class ProcessStep extends Command {
+  const ProcessStep()
+      : super(CommandCode.ProcessStep);
+}
+
+class ProcessStepOver extends Command {
+  const ProcessStepOver()
+      : super(CommandCode.ProcessStepOver);
+}
+
+class ProcessContinue extends Command {
+  const ProcessContinue()
+      : super(CommandCode.ProcessContinue);
 }
 
 class ProcessTerminate extends Command {
@@ -569,8 +623,6 @@ enum CommandCode {
   PushBuiltinClass,
   PushConstantList,
   PushConstantMap,
-
-  PushNewName,
 
   ChangeSuperClass,
   ChangeMethodTable,
