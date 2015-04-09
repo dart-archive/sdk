@@ -251,7 +251,7 @@ class Session {
 
   Future backtrace(int frame) async {
     if (_stackTrace == null) {
-      new ProcessBacktraceCommand().writeTo(_vmSocket);
+      new ProcessBacktraceCommand(0).writeTo(_vmSocket);
       var backtraceResponse = await nextVmCommand();
       var frameCount = backtraceResponse.readInt(0);
       _stackTrace = new StackTrace(frameCount);
@@ -263,8 +263,8 @@ class Session {
         var stackTraceMethodId = objectIdCommand.readInt(0);
         var integerCommand = await nextVmCommand();
         var bcp = integerCommand.readInt64(0);
-        var methodName = _model.methodMap[stackTraceMethodId];
-        _stackTrace.addFrame(new StackFrame(methodName, bcp));
+        var method = _model.methodMap[stackTraceMethodId];
+        _stackTrace.addFrame(new StackFrame(method, bcp));
       }
     }
     if (frame >= _stackTrace.frames) {

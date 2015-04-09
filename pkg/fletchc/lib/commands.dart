@@ -72,6 +72,23 @@ class CommandBuffer {
     sink.add(list.sublist(0, position));
     position = headerSize;
   }
+
+  static int readInt32FromBuffer(List<int> buffer, int offset) {
+    return _readIntFromBuffer(buffer, offset, 4);
+  }
+
+  static int readInt64FromBuffer(List<int> buffer, int offset) {
+    return _readIntFromBuffer(buffer, offset, 8);
+  }
+
+  static int _readIntFromBuffer(List<int> buffer, int offset, int sizeInBytes) {
+    assert(buffer.length >= offset + sizeInBytes);
+    int result = 0;
+    for (int i = 0; i < sizeInBytes; ++i) {
+      result |= buffer[i + offset] << (i * 8);
+    }
+    return result;
+  }
 }
 
 class Command {
@@ -83,6 +100,15 @@ class Command {
 
   factory Command.fromBuffer(CommandCode code, List<int> buffer) {
     switch (code) {
+      case CommandCode.ObjectId:
+        int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new ObjectId(id);
+      case CommandCode.Integer:
+        int value = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        return new Integer(value);
+      case CommandCode.ProcessBacktrace:
+        int frames = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new ProcessBacktrace(frames);
       case CommandCode.ProcessTerminate:
         return const ProcessTerminate();
       case CommandCode.UncaughtException:
@@ -230,6 +256,19 @@ class PushFromMap extends MapAccess {
       : super(map, index, CommandCode.PushFromMap);
 }
 
+class Drop extends Command {
+  final int value;
+
+  const Drop(this.value)
+      : super(CommandCode.Drop);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(value)
+        ..sendOn(sink, code);
+  }
+}
+
 class PushNull extends Command {
   const PushNull()
       : super(CommandCode.PushNull);
@@ -364,6 +403,32 @@ class UncaughtException extends Command {
       : super(CommandCode.UncaughtException);
 }
 
+class MapLookup extends Command {
+  final MapId mapId;
+
+  const MapLookup(this.mapId)
+      : super(CommandCode.MapLookup);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(mapId.index)
+        ..sendOn(sink, code);
+  }
+}
+
+class ObjectId extends Command {
+  final int id;
+
+  const ObjectId(this.id)
+      : super(CommandCode.ObjectId);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint64(id)
+        ..sendOn(sink, code);
+  }
+}
+
 class PushNewInteger extends Command {
   final int value;
 
@@ -400,6 +465,19 @@ class ProcessRun extends Command {
       : super(CommandCode.ProcessRun);
 }
 
+class ProcessBacktrace extends Command {
+  final int frames;
+
+  const ProcessBacktrace(this.frames)
+      : super(CommandCode.ProcessBacktrace);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(frames)
+        ..sendOn(sink, code);
+  }
+}
+
 class ProcessTerminate extends Command {
   const ProcessTerminate()
       : super(CommandCode.ProcessTerminate);
@@ -426,6 +504,24 @@ class WriteSnapshot extends Command {
     buffer
         ..addUint32(payload.length)
         ..addUint8List(payload)
+        ..sendOn(sink, code);
+  }
+}
+
+class PopInteger extends Command {
+  const PopInteger()
+      : super(CommandCode.PopInteger);
+}
+
+class Integer extends Command {
+  final int value;
+
+  const Integer(this.value)
+    : super(CommandCode.Integer);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint64(value)
         ..sendOn(sink, code);
   }
 }

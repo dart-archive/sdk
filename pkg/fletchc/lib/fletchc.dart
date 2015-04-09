@@ -70,7 +70,9 @@ main(List<String> arguments) async {
       '-Xvalidate-stack',
   ];
 
-  if (debugging) vmOptions.add('-Xbridge-connection');
+  // TODO(ager): Make this part of the command protocol for the VM instead
+  // of a flag.
+  if (debugging) vmOptions.add('-Xdebugging');
 
   var connectionIterator = new StreamIterator(server);
 
@@ -91,7 +93,7 @@ main(List<String> arguments) async {
 
   commands.forEach((command) => command.addTo(vmSocket));
 
-  var session = new Session(vmSocket);
+  var session = new Session(vmSocket, compiler);
 
   if (snapshotPath != null) {
     session.writeSnapshot(snapshotPath);

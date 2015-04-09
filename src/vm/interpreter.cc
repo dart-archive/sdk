@@ -28,7 +28,7 @@
 
 namespace fletch {
 
-static const char* kBridgeConnectionFlag = "bridge-connection";
+static const char* kDebuggingFlag = "debugging";
 
 const NativeFunction kNativeTable[] = {
 #define N(e, c, n) &Native_##e,
@@ -938,7 +938,7 @@ uint8* HandleThrow(Process* process, Object* exception, int* stack_delta) {
       exception->Print();
 
       // Send stack trace information to attached session.
-      if (Flags::IsOn(kBridgeConnectionFlag)) {
+      if (Flags::IsOn(kDebuggingFlag)) {
       Session* session = process->program()->session();
         if (session != NULL) {
           session->UncaughtException();

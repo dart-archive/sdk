@@ -9,16 +9,20 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'commands.dart';
+import 'compiler.dart' show FletchCompiler;
 
 part 'command_reader.dart';
 part 'input_handler.dart';
+part 'stack_trace.dart';
 
 class Session {
   final Socket vmSocket;
+  final FletchCompiler compiler;
 
   StreamIterator<Command> vmCommands;
+  StackTrace currentStackTrace;
 
-  Session(this.vmSocket);
+  Session(this.vmSocket, this.compiler);
 
   void writeSnapshot(String snapshotPath) {
     new WriteSnapshot(snapshotPath).addTo(vmSocket);
@@ -46,6 +50,7 @@ class Session {
   }
 
   Future handleProcessStop() async {
+    currentStackTrace = null;
     Command response = await nextVmCommand();
     switch (response.code) {
       case CommandCode.UncaughtException:
@@ -68,8 +73,29 @@ class Session {
     await handleProcessStop();
   }
 
-  // TODO(ager): Implement.
   Future backtrace(int frame) async {
+    if (currentStackTrace == null) {
+      new ProcessBacktrace(0).addTo(vmSocket);
+      ProcessBacktrace backtraceResponse = await nextVmCommand();
+      var frames = backtraceResponse.frames;
+      currentStackTrace = new StackTrace(frames);
+      for (int i = 0; i < currentStackTrace.frames; ++i) {
+        new MapLookup(MapId.methods).addTo(vmSocket);
+        new Drop(1).addTo(vmSocket);
+        new PopInteger().addTo(vmSocket);
+        var objectIdCommand = await nextVmCommand();
+        var functionId = objectIdCommand.id;
+        var integerCommand = await nextVmCommand();
+        var bcp = integerCommand.value;
+        currentStackTrace.addFrame(new StackFrame(functionId, bcp));
+      }
+    }
+    if (frame >= currentStackTrace.frames) {
+      currentStackTrace = null;
+      print('### invalid frame number: $frame');
+      return;
+    }
+    currentStackTrace.write(compiler, frame);
   }
 
   void quit() {

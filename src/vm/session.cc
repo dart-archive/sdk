@@ -27,7 +27,7 @@ namespace fletch {
 
 // TODO(kasperl): Clean this up.
 static const char* kLogFlag = "log-decoder";
-static const char* kBridgeConnectionFlag = "bridge-connection";
+static const char* kDebuggingFlag = "debugging";
 
 Session::Session(Connection* connection)
     : connection_(connection),
@@ -102,7 +102,7 @@ void Session::ProcessMessages() {
         // processing messages. If we are connected to the
         // compiler directly we terminate the message
         // processing thread.
-        if (!Flags::IsOn(kBridgeConnectionFlag)) return;
+        if (!Flags::IsOn(kDebuggingFlag)) return;
         break;
       }
 
@@ -149,6 +149,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessBacktrace: {
+        connection_->ReadInt();
         int frames = StackWalker::ComputeStackTrace(process_, this);
         connection_->WriteInt(frames);
         connection_->Send(Connection::kProcessBacktrace);

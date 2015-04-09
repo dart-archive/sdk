@@ -108,5 +108,8 @@ class ProcessContinueCommand extends Command {
 }
 
 class ProcessBacktraceCommand extends Command {
-  ProcessBacktraceCommand() : super(Opcode.ProcessBacktrace, const[]);
+  ProcessBacktraceCommand(int frames)
+      : super(Opcode.ProcessBacktrace, new List(4)) {
+    writeInt(0, frames);
+  }
 }

@@ -190,6 +190,14 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
   }
 
   Uri get fletchVm => _compiler.fletchVm;
+
+  String lookupFunctionName(int id) {
+    return _compiler.backend.functions[id].name;
+  }
+
+  List<Bytecode> lookupFunctionBytecodes(int id) {
+    return _compiler.backend.functions[id].builder.bytecodes;
+  }
 }
 
 // In this library to allow access to privates.

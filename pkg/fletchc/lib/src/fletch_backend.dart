@@ -544,6 +544,8 @@ class FletchBackend extends Backend {
     } else if (function.memberContext != function) {
       holderClass = createClosureClass(function, closureEnvironment);
       name = Compiler.CALL_OPERATOR_NAME;
+    } else {
+      name = function.name;
     }
 
     CompiledFunction compiledFunction = createCompiledFunction(
@@ -1105,7 +1107,7 @@ class FletchBackend extends Backend {
 
       CompiledFunction compiledFunction = new CompiledFunction(
           nextMethodId++,
-          null,
+          constructor.name,
           constructor.functionSignature,
           null);
 

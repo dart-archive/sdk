@@ -284,7 +284,7 @@ abstract class CodegenVisitor
         signature.optionalParametersAreNamed) {
       CompiledFunction target = context.backend.createCompiledFunction(
           function,
-          null,
+          function.name,
           null);
       if (target.matchesSelector(selector)) {
         methodId = target.methodId;
@@ -748,7 +748,7 @@ abstract class CodegenVisitor
   void handleStaticFunctionGet(MethodElement function) {
     registry.registerStaticInvocation(function);
     CompiledFunction compiledFunctionTarget =
-        context.backend.createCompiledFunction(function, null, null);
+        context.backend.createCompiledFunction(function, function.name, null);
     CompiledClass compiledClass = context.backend.createTearoffClass(
         compiledFunctionTarget);
     if (compiledClass.fields == 0) {

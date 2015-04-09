@@ -167,6 +167,7 @@ main(args) async {
   // bridge.
   var portArgument = '--port=${connectionHandler.port}';
   var bridgeArgument = "-Xbridge-connection";
+  var debugArgument = "-Xdebugging";
 
   // Invoke compiler with the file and connection info and wait for the
   // compiler to connect to the bridge.
@@ -178,7 +179,7 @@ main(args) async {
   var compilerSocket = await connectionHandler.next();
 
   // Invoke VM with connection info and wait for it to connect to the bridge.
-  var vmProcess = await Process.start(vm, [portArgument, bridgeArgument]);
+  var vmProcess = await Process.start(vm, [portArgument, debugArgument]);
   vmProcess.stdout.listen(stdout.add);
   vmProcess.stderr.listen(stderr.add);
   var vmSocket = await connectionHandler.next();
