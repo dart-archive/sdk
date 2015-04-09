@@ -947,6 +947,16 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     loadThis();
+
+    // If the property is statically known to be a field, instead invoke the
+    // getter and then invoke 'call(...)' on the value.
+    // TODO(ajohnsen): This is a fix that only works when the field is
+    // statically known - that is not always the case. Implement VM support?
+    Element target = elements[node];
+    if (target != null && target.isField) {
+      invokeGetter(new Selector.getter(target.name, element.library));
+      selector = new Selector.callClosureFrom(selector);
+    }
     for (Node argument in arguments) {
       visitForValue(argument);
     }

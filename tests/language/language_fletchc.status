@@ -188,7 +188,6 @@ closure_cycles_test: Crash
 closure_in_constructor_test: Fail
 closure_in_initializer2_test: Fail
 closure_in_initializer_test: Crash
-closure_parameter_types_test: Fail
 closure_shared_state_test: Fail
 closure_side_effect_test: Fail
 closure_type_variable_test: Fail
@@ -448,7 +447,6 @@ field6a_negative_test: Fail
 field_decl_missing_var_type_test/01: MissingCompileTimeError
 field_increment_bailout_test: Crash
 field_initialization_order_test: Fail
-field_method_test: Fail
 field_override3_test/00: MissingCompileTimeError
 field_override3_test/01: MissingCompileTimeError
 field_override3_test/02: MissingCompileTimeError
