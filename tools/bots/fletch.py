@@ -136,6 +136,8 @@ def RunTests(name, mode, arch,
       args.extend(['-rfletchc', '-cnone', '--host-checked'])
       # TODO(ahe): Run all test suites.
       args.append('language')
+      # TODO(ahe): Remove shard arguments.
+      args.extend(['--shards=20', '--shard=1'])
 
     Run(args)
 
