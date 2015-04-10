@@ -1319,6 +1319,11 @@ abstract class CodegenVisitor
     return new Selector.binaryOperator(name);
   }
 
+  static Selector getAssignmentSelector(AssignmentOperator operator) {
+    String name = operator.binaryOperator.name;
+    return new Selector.binaryOperator(name);
+  }
+
   void handleLocalVariableIncrement(
       LocalVariableElement element,
       IncDecOperator operator,
@@ -1462,8 +1467,7 @@ abstract class CodegenVisitor
     builder.dup();
     invokeGetter(getterSelector);
     visitForValue(rhs);
-    String operatorName = operator.binaryOperator.name;
-    invokeMethod(new Selector.binaryOperator(operatorName));
+    invokeMethod(getAssignmentSelector(operator));
     invokeSetter(setterSelector);
   }
 
@@ -1526,6 +1530,26 @@ abstract class CodegenVisitor
     invokeMethod(new Selector.index());
     builder.loadLiteral(1);
     invokeMethod(getIncDecSelector(operator));
+    // Use existing evaluated receiver and index for '[]=' call.
+    invokeMethod(new Selector.indexSet());
+    applyVisitState();
+  }
+
+  void visitCompoundIndexSet(
+      Send node,
+      Node receiver,
+      Node index,
+      AssignmentOperator operator,
+      Node rhs,
+      _) {
+    visitForValue(receiver);
+    visitForValue(index);
+    // Load already evaluated receiver and index for '[]' call.
+    builder.loadLocal(1);
+    builder.loadLocal(1);
+    invokeMethod(new Selector.index());
+    visitForValue(rhs);
+    invokeMethod(getAssignmentSelector(operator));
     // Use existing evaluated receiver and index for '[]=' call.
     invokeMethod(new Selector.indexSet());
     applyVisitState();
@@ -2930,17 +2954,6 @@ abstract class CodegenVisitor
       _){
     generateUnimplementedError(
         node, "[visitDynamicTypeLiteralCompound] isn't implemented.");
-  }
-
-  void visitCompoundIndexSet(
-      Send node,
-      Node receiver,
-      Node index,
-      AssignmentOperator operator,
-      Node rhs,
-      _){
-    generateUnimplementedError(
-        node, "[visitCompoundIndexSet] isn't implemented.");
   }
 
   void visitSuperCompoundIndexSet(

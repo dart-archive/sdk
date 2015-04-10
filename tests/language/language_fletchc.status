@@ -36,7 +36,6 @@ abstract_syntax_test/01: MissingCompileTimeError
 argument_definition_test/01: MissingCompileTimeError
 arithmetic_test: Fail
 assertion_test: Fail
-assign_op_test: Fail
 assign_top_method_test/01: Fail
 assignable_expression_test/01: Crash
 assignable_expression_test/02: Crash
@@ -661,7 +660,6 @@ getter_parameters_test/04: MissingCompileTimeError
 getter_parameters_test/none: Fail
 getter_setter_in_lib_test: Fail
 getter_setter_order_test: Crash
-getters_setters_test: Fail
 getters_setters_type2_test: Fail
 getters_setters_type3_test: Fail
 getters_setters_type_test/01: Fail
@@ -688,7 +686,6 @@ inferrer_constructor5_test/01: Fail
 inferrer_synthesized_constructor_test: Fail
 inferrer_this_access_test: Fail
 inlined_conditional_test: Fail
-instance_compound_assignment_operator_test: Fail
 instanceof2_test: Fail
 instanceof3_test: Fail
 instanceof4_test/01: Fail
@@ -997,7 +994,6 @@ number_identity2_test: Fail
 on_catch_malformed_type_test: Fail
 operator1_negative_test: Fail
 operator_equals_test: Fail
-operator_index_evaluation_order_test: Fail
 optimized_string_charat_test: Fail
 optimized_string_charcodeat_test: Fail
 overridden_no_such_method_test: Crash
