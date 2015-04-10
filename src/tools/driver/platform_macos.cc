@@ -6,7 +6,7 @@
 
 #include "src/shared/assert.h"
 
-#include "src/tools/driver/get_path_of_executable.h"
+#include "src/tools/driver/platform.h"
 
 namespace fletch {
 

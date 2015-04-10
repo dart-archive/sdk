@@ -4,6 +4,10 @@ for details. All rights reserved. Use of this source code is governed by a
 BSD-style license that can be found in the LICENSE.md file.
 -->
 
+fletch_driver requires Unix domain sockets which aren't part of Dart yet, so we
+maintain a custom build of the Dart VM. As of Apr 9, 2015 Unix domain sockets
+are planned for some release of Dart *after* 1.10.
+
 How to build the dart binary:
 
 In a normal Dart checkout, run:

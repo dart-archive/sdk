@@ -18,14 +18,12 @@
       ],
       'sources': [
         'main.cc',
-        'main_linux.cc',
-        'main_macos.cc',
 
-        'connection.h',
         'connection.cc',
-        'get_path_of_executable.h',
-        'get_path_of_executable_linux.cc',
-        'get_path_of_executable_macos.cc',
+        'connection.h',
+        'platform.h',
+        'platform_linux.cc',
+        'platform_macos.cc',
       ],
     },
   ],

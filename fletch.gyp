@@ -62,6 +62,7 @@
       'toolsets': ['host'],
       'dependencies': [
         'src/tools/driver/driver.gyp:fletch_driver',
+        'copy_dart',
       ],
     },
     {
@@ -433,6 +434,19 @@
             },
           ],
         }],
+      ],
+    },
+    {
+      'target_name': 'copy_dart',
+      'type': 'none',
+      'toolsets': ['host'],
+      'copies': [
+        {
+          'destination': '<(PRODUCT_DIR)',
+          'files': [
+            'third_party/bin/<(OS)/dart',
+          ],
+        },
       ],
     },
   ],

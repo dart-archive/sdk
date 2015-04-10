@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef SRC_TOOLS_DRIVER_GET_PATH_OF_EXECUTABLE_H_
-#define SRC_TOOLS_DRIVER_GET_PATH_OF_EXECUTABLE_H_
+#ifndef SRC_TOOLS_DRIVER_PLATFORM_H_
+#define SRC_TOOLS_DRIVER_PLATFORM_H_
 
 namespace fletch {
 
@@ -15,4 +15,4 @@ void GetPathOfExecutable(char* path, size_t path_length);
 
 }  // namespace fletch
 
-#endif  // SRC_TOOLS_DRIVER_GET_PATH_OF_EXECUTABLE_H_
+#endif  // SRC_TOOLS_DRIVER_PLATFORM_H_

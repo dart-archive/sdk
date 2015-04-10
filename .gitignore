@@ -1,28 +1,35 @@
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+# The following match filenames in any directory.
 packages
-third_party/libs/linux/arm/libtcmalloc_minimal.a
-third_party/libs/linux/arm64/libtcmalloc_minimal.a
-third_party/libs/linux/x64/libtcmalloc_minimal.a
-third_party/libs/linux/x86/libtcmalloc_minimal.a
-third_party/libs/mac/x64/libtcmalloc_minimal.a
-third_party/libs/mac/x86/libtcmalloc_minimal.a
-tools/testing/bin/linux/dart
-tools/testing/bin/mac/dart
 *.pyc
 .flaky.log
-out/
-xcodebuild/
-fletch.xcodeproj/
-src/compiler/compiler.xcodeproj/
-src/shared/shared.xcodeproj/
-src/vm/vm.xcodeproj/
-src/double_conversion.xcodeproj/
-tests/service_tests/service_tests.xcodeproj/
-jniLibs/
-samples/buildbot/java/
-samples/todomvc/java/
 .DS_Store
 .ninja_deps
 .ninja_log
+.fletch
+
+# The following match exact path names starting from the location of this file.
+/third_party/libs/linux/arm/libtcmalloc_minimal.a
+/third_party/libs/linux/arm64/libtcmalloc_minimal.a
+/third_party/libs/linux/x64/libtcmalloc_minimal.a
+/third_party/libs/linux/x86/libtcmalloc_minimal.a
+/third_party/libs/mac/x64/libtcmalloc_minimal.a
+/third_party/libs/mac/x86/libtcmalloc_minimal.a
+/tools/testing/bin/linux/dart
+/tools/testing/bin/mac/dart
+/out/
+/xcodebuild/
+/fletch.xcodeproj/
+/src/compiler/compiler.xcodeproj/
+/src/shared/shared.xcodeproj/
+/src/vm/vm.xcodeproj/
+/src/double_conversion.xcodeproj/
+/tests/service_tests/service_tests.xcodeproj/
+/jniLibs/
+/samples/buildbot/java/
+/samples/todomvc/java/
 /third_party/bin/mac/dart
 /third_party/bin/linux/dart
-.fletch

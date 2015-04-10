@@ -25,7 +25,7 @@
 #include "src/shared/native_socket.h"
 #include "src/shared/utils.h"
 #include "src/tools/driver/connection.h"
-#include "src/tools/driver/get_path_of_executable.h"
+#include "src/tools/driver/platform.h"
 
 // Fast front-end for persistent compiler process.
 //
@@ -62,9 +62,9 @@ static const char fletch_config_name[] = ".fletch";
 
 static int fletch_config_fd;
 
-extern const char* dart_vm_name;
+static const char dart_vm_env_name[] = "DART_VM";
 
-static const char* dart_vm_env_name = "DART_VM";
+static const char dart_vm_name[] = "dart";
 
 static int exit_code = COMPILER_CRASHED;
 
@@ -82,14 +82,14 @@ void Die(const char *format, ...) {
 static void StrCpy(
     void* destination,
     size_t destination_size,
-    void* source,
+    const void* source,
     size_t source_size) {
-  void* source_end = memchr(source, '\0', source_size);
+  const void* source_end = memchr(source, '\0', source_size);
   if (source_end == NULL) {
     Die("%s: source isn't zero-terminated.", program_name);
   }
-  size_t source_length =
-    reinterpret_cast<uint8*>(source_end) - reinterpret_cast<uint8*>(source);
+  size_t source_length = reinterpret_cast<const uint8*>(source_end) -
+      reinterpret_cast<const uint8*>(source);
   // Increment source_length to include '\0'.
   source_length++;
 
@@ -104,7 +104,7 @@ static void StrCpy(
 static void StrCat(
     void* destination,
     size_t destination_size,
-    void* source,
+    const void* source,
     size_t source_size) {
   void* destination_end = memchr(destination, '\0', destination_size);
   if (destination_end == NULL) {
@@ -267,14 +267,22 @@ static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
     Die("%s: realpath of '%s' failed: %s", program_name, buffer,
         strerror(errno));
   }
-  // TODO(ahe): Use StrCat or StrCpy instead.
-  strncpy(buffer, resolved, buffer_length);
+  StrCpy(buffer, buffer_length, resolved, sizeof(resolved));
+
+  // 'buffer' is now the absolute path of this executable (with symlinks
+  // resolved). When running from fletch-repo, this executable will be in
+  // "fletch-repo/fletch/out/$CONFIGURATION/fletch_driver".
   ParentDir(buffer);
-  ParentDir(buffer);
-  ParentDir(buffer);
+  // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION".
+
   size_t length = strlen(buffer);
-  // TODO(ahe): Use StrCat or StrCpy instead.
-  strncpy(buffer + length, dart_vm_name, buffer_length - length);
+  if (length > 0 && buffer[length - 1] != '/') {
+    // Append trailing slash.
+    StrCat(buffer, buffer_length, "/", 2);
+  }
+
+  StrCat(buffer, buffer_length, dart_vm_name, sizeof(dart_vm_name));
+  // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION/dart".
 }
 
 // Flush all open streams (FILE objects). This is needed before forking
