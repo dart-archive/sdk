@@ -13,6 +13,7 @@ enum SelectorKind {
 class FletchSelector {
   static const MAX_ARITY = (1 << 8) - 1;
   static const MAX_UNIQUE_SELECTORS = (1 << 22) - 1;
+  static const ID_SHIFT = 10;
 
   // Encode a fletch selector. The result is a 32bit integer with the following
   // layout (lower to higher):
@@ -24,7 +25,7 @@ class FletchSelector {
     if (id > MAX_UNIQUE_SELECTORS) {
       throw "Only ${MAX_UNIQUE_SELECTORS + 1} unique identifiers is supported";
     }
-    return arity | (kind.index << 8) | (id << 10);
+    return arity | (kind.index << 8) | (id << ID_SHIFT);
   }
 
   static int encodeMethod(int id, int arity) {
@@ -34,4 +35,6 @@ class FletchSelector {
   static int encodeGetter(int id) => encode(id, SelectorKind.Getter, 0);
 
   static int encodeSetter(int id) => encode(id, SelectorKind.Setter, 1);
+
+  static int decodeId(int selector) => selector >> ID_SHIFT;
 }

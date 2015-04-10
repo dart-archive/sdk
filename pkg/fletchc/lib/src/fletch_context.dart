@@ -78,6 +78,7 @@ class FletchContext {
   Map<FieldElement, int> staticIndices = <FieldElement, int>{};
 
   Map<LibraryElement, String> libraryTag = <LibraryElement, String>{};
+  List<String> symbols = <String>[];
   Map<String, int> symbolIds = <String, int>{};
   Map<Selector, String> selectorToSymbol = <Selector, String>{};
 
@@ -150,7 +151,12 @@ class FletchContext {
   }
 
   int getSymbolId(String symbol) {
-    return symbolIds.putIfAbsent(symbol, () => symbolIds.length);
+    return symbolIds.putIfAbsent(symbol, () {
+      int id = symbols.length;
+      assert(id == symbolIds.length);
+      symbols.add(symbol);
+      return id;
+    });
   }
 
   void forEachStatic(f(FieldElement element, int index)) {

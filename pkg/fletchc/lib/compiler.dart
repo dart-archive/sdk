@@ -44,6 +44,8 @@ import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
 import 'src/fletch_compiler.dart' as implementation;
 
+import 'src/fletch_selector.dart';
+
 const String _SDK_DIR = const String.fromEnvironment("dart-sdk");
 
 const String _FLETCH_VM = const String.fromEnvironment("fletch-vm");
@@ -205,8 +207,8 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
   }
 
   String lookupFunctionNameBySelector(int selector) {
-    // TODO(ager/ajohnsen): Generate mapping from symbol id to string.
-    return "symbol ${selector >> 10}";
+    int id = FletchSelector.decodeId(selector);
+    return _compiler.context.symbols[id];
   }
 
   List<Bytecode> lookupFunctionBytecodes(int id) {
