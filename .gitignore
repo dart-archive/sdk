@@ -30,6 +30,7 @@ packages
 /tests/service_tests/service_tests.xcodeproj/
 /jniLibs/
 /samples/buildbot/java/
+/samples/github/generated/
 /samples/todomvc/java/
 /third_party/bin/mac/dart
 /third_party/bin/linux/dart
