@@ -21,14 +21,8 @@ mixin_prefix_test: Crash
 regress_14348_test: Crash
 
 [ $runtime == fletchc ]
-ackermann_test: Skip # TODO(ajohnsen): Timeout.
-execute_finally12_test: Skip # TODO(ajohnsen): Timeout.
-execute_finally8_test: Skip # TODO(ajohnsen): Timeout.
-large_implicit_getter_test: Skip # TODO(ajohnsen): Timeout.
-memory_swap_test: Skip # TODO(ajohnsen): Timeout.
-stack_overflow_stacktrace_test: Skip # TODO(ajohnsen): Timeout.
-stack_overflow_test: Skip # TODO(ajohnsen): Timeout.
-vm/regress_16873_test: Skip # TODO(ajohnsen): Timeout.
+large_implicit_getter_test: Skip # TODO(ahe): Should be: Slow, Pass
+vm/regress_16873_test: Skip # TODO(ahe): Should be: Slow, Pass
 
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
@@ -398,7 +392,6 @@ dynamic_type_literal_test: Crash
 empty_block_case_test: Fail
 error_stacktrace_test: Fail
 exception_test: Fail
-execute_finally8_test: Fail
 export_ambiguous_main_negative_test: Crash
 extend_type_parameter_negative_test: Fail
 external_test/01: MissingCompileTimeError
@@ -1080,6 +1073,8 @@ setter_override_test/03: MissingCompileTimeError
 setter_override_test/none: Fail
 smi_type_test: Fail
 source_self_negative_test: Fail
+stack_overflow_stacktrace_test: Crash
+stack_overflow_test: Crash
 stack_trace_test: Fail
 stacktrace_rethrow_error_test/none: Fail
 stacktrace_rethrow_error_test/withtraceparameter: Fail
@@ -1359,7 +1354,6 @@ vm/load_to_load_forwarding_vm_test: Crash
 vm/no_such_method_error_message_vm_test: Fail
 vm/optimized_guarded_field_isolates_test: Crash
 vm/reflect_core_vm_test: Crash
-vm/regress_16873_test: Fail
 vm/reusable_boxes_test: Crash
 vm/store_to_load_forwarding_phis_vm_test: Crash
 vm/type_cast_vm_test: Crash

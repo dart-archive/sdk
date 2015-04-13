@@ -110,6 +110,11 @@ class ControlStream {
         controller.add(new Command(command, makeView(view, 4, length)));
         break;
 
+      case DriverCommand.Signal:
+        int signal = view.getUint32(0, commandEndianness);
+        controller.add(new Command(command, signal));
+        break;
+
       default:
         controller.addError("Command not implemented yet: $command");
         break;
@@ -366,9 +371,9 @@ Future<int> compileAndRun(
   if (compiler.verbose) {
     print("Running '$vmPath ${vmOptions.join(" ")}'");
   }
-  var vmProcess = await Process.start(vmPath, vmOptions);
+  Process vmProcess = await Process.start(vmPath, vmOptions);
 
-  readCommands(commandIterator, vmProcess.stdin);
+  readCommands(commandIterator, vmProcess);
 
   StreamSubscription vmStdoutSubscription = handleSubscriptionErrors(
       vmProcess.stdout.listen(commandSender.sendStdoutBytes), "vm stdout");
@@ -395,34 +400,46 @@ Future<int> compileAndRun(
   if (exitCode != 0) {
     print("Non-zero exit code from '$vmPath' ($exitCode).");
   }
-  if (exitCode < 0) {
-    // TODO(ahe): Is there a better value for reporting a VM crash? One
-    // alternative is to use raise in the client if exitCode is < 0, for
-    // example:
-    //
-    //     if (exit_code < 0) {
-    //       signal(-exit_code, SIG_DFL);
-    //       raise(-exit_code);
-    //     }
-    exitCode = COMPILER_CRASHED;
-  }
 
   return exitCode;
 }
 
 Future<Null> readCommands(
     StreamIterator<Command> commandIterator,
-    IOSink stdin) async {
+    Process vmProcess) async {
   while (await commandIterator.moveNext()) {
     Command command = commandIterator.current;
-    if (command.code == DriverCommand.Stdin) {
-      if (command.data.length == 0) {
-        await stdin.close();
-      } else {
-        stdin.add(command.data);
-      }
-    } else {
-      Zone.ROOT.print("Unexpected command from client: $command");
+    switch (command.code) {
+      case DriverCommand.Stdin:
+        if (command.data.length == 0) {
+          await vmProcess.stdin.close();
+        } else {
+          vmProcess.stdin.add(command.data);
+        }
+        break;
+
+      case DriverCommand.Signal:
+        int signalNumber = command.data;
+        ProcessSignal signal = ProcessSignal.SIGTERM;
+        switch (signalNumber) {
+          case 2:
+            signal = ProcessSignal.SIGINT;
+            break;
+
+          case 15:
+            signal = ProcessSignal.SIGTERM;
+            break;
+
+          default:
+            Zone.ROOT.print("Warning: unknown signal number: $signalNumber");
+            signal = ProcessSignal.SIGTERM;
+            break;
+        }
+        vmProcess.kill(signal);
+        break;
+
+      default:
+        Zone.ROOT.print("Unexpected command from client: $command");
     }
   }
 }

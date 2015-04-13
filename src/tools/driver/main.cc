@@ -638,6 +638,12 @@ Socket* Connect() {
   }
 }
 
+static void HandleSignal(int signal_pipe, DriverConnection* connection) {
+  int signal = ReadSignal(signal_pipe);
+  connection->WriteInt(signal);
+  connection->Send(DriverConnection::kSignal);
+}
+
 static int Main(int argc, char** argv) {
   program_name = argv[0];
   DetectConfiguration();
@@ -659,6 +665,8 @@ static int Main(int argc, char** argv) {
 
   UnlockConfigFile();
 
+  int signal_pipe = SignalFileDescriptor();
+
   DriverConnection* connection = new DriverConnection(control_socket);
 
   SendArgv(connection, argc, argv);
@@ -671,6 +679,7 @@ static int Main(int argc, char** argv) {
   tcsetattr(STDIN_FILENO, TCSANOW, &term);
 
   int max_fd = Utils::Maximum(STDIN_FILENO, control_socket->FileDescriptor());
+  max_fd = Utils::Maximum(max_fd, signal_pipe);
   bool stdin_closed = false;
   while (true) {
     fd_set readfds;
@@ -679,14 +688,19 @@ static int Main(int argc, char** argv) {
       FD_SET(STDIN_FILENO, &readfds);
     }
     FD_SET(control_socket->FileDescriptor(), &readfds);
+    FD_SET(signal_pipe, &readfds);
 
-    int ready_count = select(max_fd + 1, &readfds, NULL, NULL, NULL);
+    int ready_count =
+        TEMP_FAILURE_RETRY(select(max_fd + 1, &readfds, NULL, NULL, NULL));
     if (ready_count < 0) {
       fprintf(stderr, "%s: select error: %s", program_name, strerror(errno));
       break;
     } else if (ready_count == 0) {
       // Timeout, shouldn't happen.
     } else {
+      if (FD_ISSET(signal_pipe, &readfds)) {
+        HandleSignal(signal_pipe, connection);
+      }
       if (FD_ISSET(STDIN_FILENO, &readfds)) {
         uint8 buffer[4096];
         ssize_t bytes_count =
@@ -716,6 +730,7 @@ static int Main(int argc, char** argv) {
     }
   }
 
+  Exit(exit_code);
   return exit_code;
 }
 

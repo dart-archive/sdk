@@ -138,6 +138,10 @@ def RunTests(name, mode, arch,
       args.append('language')
       # TODO(ahe): Remove shard arguments.
       args.extend(['--shards=20', '--shard=1'])
+      # TODO(ahe): Remove -j option. It's needed temporarily, as driver.dart
+      # doesn't spawn new isolates. So if one tests times out, tasks-1 other
+      # tests might also be seen as timing out.
+      args.append('-j1')
 
     Run(args)
 
