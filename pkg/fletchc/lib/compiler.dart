@@ -220,6 +220,12 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
         .where((f) => f.name == name)
         .map((f) => f.methodId);
   }
+
+  String sourceString(int id, int bytecodeIndex) {
+    CompiledFunction function = lookupCompiledFunction(id);
+    _compiler.backend.ensureDebugInfo(function);
+    return function.debugInfo.sourceString(bytecodeIndex);
+  }
 }
 
 // In this library to allow access to privates.

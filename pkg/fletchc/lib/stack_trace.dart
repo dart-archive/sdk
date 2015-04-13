@@ -24,15 +24,16 @@ class StackFrame {
     var bytecodes = compiler.lookupFunctionBytecodes(functionId);
     var offset = 0;
     for (var i = 0; i  < bytecodes.length; i++) {
+      var source = compiler.sourceString(functionId, offset);
       var current = bytecodes[i];
       var byteNumberString = '$offset'.padLeft(4);
       var invokeInfo = invokeString(compiler, current);
       var bytecodeString = '$byteNumberString $current$invokeInfo';
+      var sourceString = '// $source';
+      var printString = bytecodeString.padRight(30) + sourceString;
       offset += current.size;
-      var marker = (offset == bytecodePointer)
-        ? ' <---'.padRight(40 - bytecodeString.length, '-') + ' bcp'
-        : '';
-      print("    $bytecodeString$marker");
+      var marker = (offset == bytecodePointer) ? '>' : ' ';
+      print("  $marker$printString");
     }
     print('');
   }

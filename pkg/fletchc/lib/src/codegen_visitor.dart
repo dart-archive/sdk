@@ -226,8 +226,28 @@ abstract class CodegenVisitor
     return new UnboxedLocalValue(slot, parameter);
   }
 
-  void invokeMethod(Selector selector) {
+  void registerDynamicInvocation(Selector selector) {
     registry.registerDynamicInvocation(selector);
+  }
+
+  void registerDynamicGetter(Selector selector) {
+    registry.registerDynamicGetter(selector);
+  }
+
+  void registerDynamicSetter(Selector selector) {
+    registry.registerDynamicSetter(selector);
+  }
+
+  void registerStaticInvocation(FunctionElement function) {
+    registry.registerStaticInvocation(function);
+  }
+
+  void registerInstantiatedClass(ClassElement klass) {
+    registry.registerInstantiatedClass(klass);
+  }
+
+  void invokeMethod(Node node, Selector selector) {
+    registerDynamicInvocation(selector);
     String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
     int arity = selector.argumentCount;
@@ -236,7 +256,7 @@ abstract class CodegenVisitor
   }
 
   void invokeGetter(Selector selector) {
-    registry.registerDynamicGetter(selector);
+    registerDynamicGetter(selector);
     String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
     int fletchSelector = FletchSelector.encodeGetter(id);
@@ -244,11 +264,23 @@ abstract class CodegenVisitor
   }
 
   void invokeSetter(Selector selector) {
-    registry.registerDynamicSetter(selector);
+    registerDynamicSetter(selector);
     String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
     int fletchSelector = FletchSelector.encodeSetter(id);
     builder.invokeMethod(fletchSelector, 1);
+  }
+
+  void invokeFactory(Node node, int constId, int arity) {
+    builder.invokeFactory(constId, arity);
+  }
+
+  void invokeStatic(Node node, int constId, int arity) {
+    builder.invokeStatic(constId, arity);
+  }
+
+  void generateReturn(Node node) {
+    builder.ret();
   }
 
   /**
@@ -272,10 +304,11 @@ abstract class CodegenVisitor
   }
 
   void staticFunctionCall(
+      Node node,
       FunctionElement function,
       NodeList arguments,
       Selector selector) {
-    registry.registerStaticInvocation(function);
+    registerStaticInvocation(function);
     if (function.isInstanceMember) loadThis();
     FunctionSignature signature = function.functionSignature;
     int methodId;
@@ -308,9 +341,9 @@ abstract class CodegenVisitor
     if (function.isInstanceMember) arity++;
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
     if (function.isFactoryConstructor) {
-      builder.invokeFactory(constId, arity);
+      invokeFactory(node, constId, arity);
     } else {
-      builder.invokeStatic(constId, arity);
+      invokeStatic(node, constId, arity);
     }
   }
 
@@ -417,6 +450,7 @@ abstract class CodegenVisitor
   }
 
   void handleLocalVariableCompound(
+      Node node,
       LocalVariableElement variable,
       AssignmentOperator operator,
       Node rhs) {
@@ -424,7 +458,7 @@ abstract class CodegenVisitor
     value.load(builder);
     visitForValue(rhs);
     String operatorName = operator.binaryOperator.name;
-    invokeMethod(new Selector.binaryOperator(operatorName));
+    invokeMethod(node, new Selector.binaryOperator(operatorName));
     value.store(builder);
   }
 
@@ -434,7 +468,7 @@ abstract class CodegenVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    handleLocalVariableCompound(variable, operator, rhs);
+    handleLocalVariableCompound(node, variable, operator, rhs);
     applyVisitState();
   }
 
@@ -444,7 +478,7 @@ abstract class CodegenVisitor
       AssignmentOperator operator,
       Node rhs,
       _){
-    handleLocalVariableCompound(parameter, operator, rhs);
+    handleLocalVariableCompound(node, parameter, operator, rhs);
     applyVisitState();
   }
 
@@ -456,7 +490,7 @@ abstract class CodegenVisitor
     visitForValue(rhs);
     Selector selector = new Selector.binaryOperator(
         operator.binaryOperator.name);
-    invokeMethod(selector);
+    invokeMethod(node, selector);
     handleStaticFieldSet(field);
   }
 
@@ -466,7 +500,7 @@ abstract class CodegenVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    handleStaticFieldCompound(field, operator, rhs);
+    handleStaticFieldCompound(node, field, operator, rhs);
     applyVisitState();
   }
 
@@ -476,11 +510,12 @@ abstract class CodegenVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    handleStaticFieldCompound(field, operator, rhs);
+    handleStaticFieldCompound(node, field, operator, rhs);
     applyVisitState();
   }
 
   void handleBinaryOperator(
+      Node node,
       Node left,
       Node right,
       BinaryOperator operator) {
@@ -500,7 +535,7 @@ abstract class CodegenVisitor
     }
 
     Selector selector = new Selector.binaryOperator(operator.name);
-    invokeMethod(selector);
+    invokeMethod(node, selector);
   }
 
   void visitEquals(
@@ -509,7 +544,7 @@ abstract class CodegenVisitor
       Node right,
       _) {
     // TODO(ajohnsen): Inject null check (in callee).
-    handleBinaryOperator(left, right, BinaryOperator.EQ);
+    handleBinaryOperator(node, left, right, BinaryOperator.EQ);
     applyVisitState();
   }
 
@@ -518,7 +553,7 @@ abstract class CodegenVisitor
       Node left,
       Node right,
       _) {
-    handleBinaryOperator(left, right, BinaryOperator.EQ);
+    handleBinaryOperator(node, left, right, BinaryOperator.EQ);
     if (visitState == VisitState.Test) {
       builder.branchIfTrue(falseLabel);
       builder.branch(trueLabel);
@@ -534,7 +569,7 @@ abstract class CodegenVisitor
       BinaryOperator operator,
       Node right,
       _) {
-    handleBinaryOperator(left, right, operator);
+    handleBinaryOperator(node, left, right, operator);
     applyVisitState();
   }
 
@@ -545,7 +580,7 @@ abstract class CodegenVisitor
       _) {
     visitForValue(value);
     Selector selector = new Selector.unaryOperator(operator.name);
-    invokeMethod(selector);
+    invokeMethod(node, selector);
     applyVisitState();
   }
 
@@ -566,7 +601,7 @@ abstract class CodegenVisitor
     visitForValue(receiver);
     visitForValue(index);
     Selector selector = new Selector.index();
-    invokeMethod(selector);
+    invokeMethod(node, selector);
     applyVisitState();
   }
 
@@ -580,7 +615,7 @@ abstract class CodegenVisitor
     visitForValue(index);
     visitForValue(value);
     Selector selector = new Selector.indexSet();
-    invokeMethod(selector);
+    invokeMethod(node, selector);
     applyVisitState();
   }
 
@@ -744,7 +779,7 @@ abstract class CodegenVisitor
   }
 
   void handleStaticFunctionGet(MethodElement function) {
-    registry.registerStaticInvocation(function);
+    registerStaticInvocation(function);
     CompiledFunction compiledFunctionTarget =
         context.backend.createCompiledFunction(function);
     CompiledClass compiledClass = context.backend.createTearoffClass(
@@ -798,7 +833,7 @@ abstract class CodegenVisitor
       // TODO(ajohnsen): Define a known set of external functions we allow
       // calls to?
     }
-    staticFunctionCall(element, arguments, selector);
+    staticFunctionCall(node, element, arguments, selector);
   }
 
   void visitTopLevelFunctionInvoke(
@@ -873,6 +908,7 @@ abstract class CodegenVisitor
   }
 
   void handleStaticFieldInvoke(
+      Node node,
       FieldElement field,
       NodeList arguments,
       Selector selector) {
@@ -880,7 +916,7 @@ abstract class CodegenVisitor
     for (Node argument in arguments) {
       visitForValue(argument);
     }
-    invokeMethod(selector);
+    invokeMethod(node, selector);
   }
 
   void visitTopLevelFieldInvoke(
@@ -889,7 +925,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    handleStaticFieldInvoke(field, arguments, selector);
+    handleStaticFieldInvoke(node, field, arguments, selector);
     applyVisitState();
   }
 
@@ -899,7 +935,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    handleStaticFieldInvoke(field, arguments, selector);
+    handleStaticFieldInvoke(node, field, arguments, selector);
     applyVisitState();
   }
 
@@ -921,7 +957,7 @@ abstract class CodegenVisitor
     for (Node argument in arguments) {
       visitForValue(argument);
     }
-    invokeMethod(selector);
+    invokeMethod(node, selector);
     applyVisitState();
   }
 
@@ -935,7 +971,7 @@ abstract class CodegenVisitor
     for (Node argument in arguments) {
       visitForValue(argument);
     }
-    invokeMethod(selector);
+    invokeMethod(node, selector);
     applyVisitState();
   }
 
@@ -958,7 +994,7 @@ abstract class CodegenVisitor
     for (Node argument in arguments) {
       visitForValue(argument);
     }
-    invokeMethod(selector);
+    invokeMethod(node, selector);
     applyVisitState();
   }
 
@@ -973,7 +1009,7 @@ abstract class CodegenVisitor
     for (Node argument in arguments) {
       visitForValue(argument);
     }
-    invokeMethod(selector);
+    invokeMethod(node, selector);
     applyVisitState();
   }
 
@@ -1101,7 +1137,7 @@ abstract class CodegenVisitor
     visitForValue(node.second);
     // TODO(ajohnsen): Cache these in context/backend.
     Selector concat = new Selector.binaryOperator('+');
-    invokeMethod(concat);
+    invokeMethod(node, concat);
     applyVisitState();
   }
 
@@ -1112,10 +1148,10 @@ abstract class CodegenVisitor
     visitForValue(node.string);
     for (StringInterpolationPart part in node.parts) {
       visitForValue(part.expression);
-      invokeMethod(toString);
+      invokeMethod(node, toString);
       visitForValue(part.string);
-      invokeMethod(concat);
-      invokeMethod(concat);
+      invokeMethod(node, concat);
+      invokeMethod(node, concat);
     }
     applyVisitState();
   }
@@ -1178,12 +1214,12 @@ abstract class CodegenVisitor
       internalError(node, "Failed to lookup default list constructor");
     }
     // Call with 0 arguments, as we call the default constructor.
-    callConstructor(constructor, 0);
+    callConstructor(node, constructor, 0);
     Selector add = new Selector.call('add', null, 1);
     for (Node element in node.elements) {
       builder.dup();
       visitForValue(element);
-      invokeMethod(add);
+      invokeMethod(node, add);
       builder.pop();
     }
     applyVisitState();
@@ -1204,12 +1240,12 @@ abstract class CodegenVisitor
       return;
     }
     // Call with 0 arguments, as we call the default constructor.
-    callConstructor(constructor, 0);
+    callConstructor(node, constructor, 0);
     Selector selector = new Selector.indexSet();
     for (Node element in node.entries) {
       builder.dup();
       visitForValue(element);
-      invokeMethod(selector);
+      invokeMethod(node, selector);
       builder.pop();
     }
     applyVisitState();
@@ -1224,7 +1260,7 @@ abstract class CodegenVisitor
   void visitLiteralString(LiteralString node) {
     if (visitState == VisitState.Value) {
       builder.loadConst(allocateConstantFromNode(node));
-      registry.registerInstantiatedClass(
+      registerInstantiatedClass(
           context.compiler.backend.stringImplementation);
     } else if (visitState == VisitState.Test) {
       builder.branch(falseLabel);
@@ -1274,6 +1310,7 @@ abstract class CodegenVisitor
   }
 
   void handleLocalVariableInvoke(
+      Node node,
       LocalElement element,
       NodeList arguments,
       Selector selector) {
@@ -1281,7 +1318,7 @@ abstract class CodegenVisitor
     for (Node argument in arguments) {
       visitForValue(argument);
     }
-    invokeMethod(selector);
+    invokeMethod(node, selector);
   }
 
   void visitLocalVariableInvoke(
@@ -1290,7 +1327,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    handleLocalVariableInvoke(element, arguments, selector);
+    handleLocalVariableInvoke(node, element, arguments, selector);
     applyVisitState();
   }
 
@@ -1300,7 +1337,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    handleLocalVariableInvoke(parameter, arguments, selector);
+    handleLocalVariableInvoke(node, parameter, arguments, selector);
     applyVisitState();
   }
 
@@ -1310,7 +1347,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    handleLocalVariableInvoke(element, arguments, selector);
+    handleLocalVariableInvoke(node, element, arguments, selector);
     applyVisitState();
   }
 
@@ -1325,6 +1362,7 @@ abstract class CodegenVisitor
   }
 
   void handleLocalVariableIncrement(
+      Node node,
       LocalVariableElement element,
       IncDecOperator operator,
       bool prefix) {
@@ -1335,7 +1373,7 @@ abstract class CodegenVisitor
     // For postfix, keep local, unmodified version, to 'return' after store.
     if (!prefix) builder.dup();
     builder.loadLiteral(1);
-    invokeMethod(getIncDecSelector(operator));
+    invokeMethod(node, getIncDecSelector(operator));
     value.store(builder);
     if (!prefix) builder.pop();
   }
@@ -1345,7 +1383,7 @@ abstract class CodegenVisitor
       LocalVariableElement element,
       IncDecOperator operator,
       _) {
-    handleLocalVariableIncrement(element, operator, true);
+    handleLocalVariableIncrement(node, element, operator, true);
     applyVisitState();
   }
 
@@ -1354,7 +1392,7 @@ abstract class CodegenVisitor
       ParameterElement parameter,
       IncDecOperator operator,
       _) {
-    handleLocalVariableIncrement(parameter, operator, true);
+    handleLocalVariableIncrement(node, parameter, operator, true);
     applyVisitState();
   }
 
@@ -1366,7 +1404,7 @@ abstract class CodegenVisitor
     // If visitState is for effect, we can ignore the return value, thus always
     // generate code for the simpler 'prefix' case.
     bool prefix = (visitState == VisitState.Effect);
-    handleLocalVariableIncrement(element, operator, prefix);
+    handleLocalVariableIncrement(node, element, operator, prefix);
     applyVisitState();
   }
 
@@ -1378,23 +1416,29 @@ abstract class CodegenVisitor
     // If visitState is for effect, we can ignore the return value, thus always
     // generate code for the simpler 'prefix' case.
     bool prefix = (visitState == VisitState.Effect);
-    handleLocalVariableIncrement(parameter, operator, prefix);
+    handleLocalVariableIncrement(node, parameter, operator, prefix);
     applyVisitState();
   }
 
-  void handleStaticFieldPrefix(FieldElement field, IncDecOperator operator) {
+  void handleStaticFieldPrefix(
+        Node node,
+        FieldElement field,
+        IncDecOperator operator) {
     handleStaticFieldGet(field);
     builder.loadLiteral(1);
-    invokeMethod(getIncDecSelector(operator));
+    invokeMethod(node, getIncDecSelector(operator));
     handleStaticFieldSet(field);
   }
 
-  void handleStaticFieldPostfix(FieldElement field, IncDecOperator operator) {
+  void handleStaticFieldPostfix(
+        Node node,
+        FieldElement field,
+        IncDecOperator operator) {
     handleStaticFieldGet(field);
     // For postfix, keep local, unmodified version, to 'return' after store.
     builder.dup();
     builder.loadLiteral(1);
-    invokeMethod(getIncDecSelector(operator));
+    invokeMethod(node, getIncDecSelector(operator));
     handleStaticFieldSet(field);
     builder.pop();
   }
@@ -1405,9 +1449,9 @@ abstract class CodegenVisitor
       IncDecOperator operator,
       _) {
     if (visitState == VisitState.Effect) {
-      handleStaticFieldPrefix(field, operator);
+      handleStaticFieldPrefix(node, field, operator);
     } else {
-      handleStaticFieldPostfix(field, operator);
+      handleStaticFieldPostfix(node, field, operator);
     }
     applyVisitState();
   }
@@ -1417,7 +1461,7 @@ abstract class CodegenVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    handleStaticFieldPrefix(field, operator);
+    handleStaticFieldPrefix(node, field, operator);
     applyVisitState();
   }
 
@@ -1427,9 +1471,9 @@ abstract class CodegenVisitor
       IncDecOperator operator,
       _) {
     if (visitState == VisitState.Effect) {
-      handleStaticFieldPrefix(field, operator);
+      handleStaticFieldPrefix(node, field, operator);
     } else {
-      handleStaticFieldPostfix(field, operator);
+      handleStaticFieldPostfix(node, field, operator);
     }
     applyVisitState();
   }
@@ -1439,7 +1483,7 @@ abstract class CodegenVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    handleStaticFieldPrefix(field, operator);
+    handleStaticFieldPrefix(node, field, operator);
     applyVisitState();
   }
 
@@ -1459,6 +1503,7 @@ abstract class CodegenVisitor
   }
 
   void handleDynamicPropertyCompound(
+      Node node,
       AssignmentOperator operator,
       Node rhs,
       Selector getterSelector,
@@ -1467,7 +1512,7 @@ abstract class CodegenVisitor
     builder.dup();
     invokeGetter(getterSelector);
     visitForValue(rhs);
-    invokeMethod(getAssignmentSelector(operator));
+    invokeMethod(node, getAssignmentSelector(operator));
     invokeSetter(setterSelector);
   }
 
@@ -1481,6 +1526,7 @@ abstract class CodegenVisitor
       _) {
     visitForValue(receiver);
     handleDynamicPropertyCompound(
+        node,
         operator,
         rhs,
         getterSelector,
@@ -1498,6 +1544,7 @@ abstract class CodegenVisitor
       _) {
     loadThis();
     handleDynamicPropertyCompound(
+        node,
         operator,
         rhs,
         getterSelector,
@@ -1506,13 +1553,14 @@ abstract class CodegenVisitor
   }
 
   void handleDynamicPrefix(
+      Node node,
       IncDecOperator operator,
       Selector getterSelector,
       Selector setterSelector) {
     builder.dup();
     invokeGetter(getterSelector);
     builder.loadLiteral(1);
-    invokeMethod(getIncDecSelector(operator));
+    invokeMethod(node, getIncDecSelector(operator));
     invokeSetter(setterSelector);
   }
 
@@ -1527,11 +1575,11 @@ abstract class CodegenVisitor
     // Load already evaluated receiver and index for '[]' call.
     builder.loadLocal(1);
     builder.loadLocal(1);
-    invokeMethod(new Selector.index());
+    invokeMethod(node, new Selector.index());
     builder.loadLiteral(1);
-    invokeMethod(getIncDecSelector(operator));
+    invokeMethod(node, getIncDecSelector(operator));
     // Use existing evaluated receiver and index for '[]=' call.
-    invokeMethod(new Selector.indexSet());
+    invokeMethod(node, new Selector.indexSet());
     applyVisitState();
   }
 
@@ -1547,11 +1595,11 @@ abstract class CodegenVisitor
     // Load already evaluated receiver and index for '[]' call.
     builder.loadLocal(1);
     builder.loadLocal(1);
-    invokeMethod(new Selector.index());
+    invokeMethod(node, new Selector.index());
     visitForValue(rhs);
-    invokeMethod(getAssignmentSelector(operator));
+    invokeMethod(node, getAssignmentSelector(operator));
     // Use existing evaluated receiver and index for '[]=' call.
-    invokeMethod(new Selector.indexSet());
+    invokeMethod(node, new Selector.indexSet());
     applyVisitState();
   }
 
@@ -1562,7 +1610,7 @@ abstract class CodegenVisitor
       Selector setterSelector,
       _) {
     loadThis();
-    handleDynamicPrefix(operator, getterSelector, setterSelector);
+    handleDynamicPrefix(node, operator, getterSelector, setterSelector);
     applyVisitState();
   }
 
@@ -1576,7 +1624,7 @@ abstract class CodegenVisitor
     // generate code for the simpler 'prefix' case.
     if (visitState == VisitState.Effect) {
       loadThis();
-      handleDynamicPrefix(operator, getterSelector, setterSelector);
+      handleDynamicPrefix(node, operator, getterSelector, setterSelector);
       applyVisitState();
       return;
     }
@@ -1586,7 +1634,7 @@ abstract class CodegenVisitor
     // For postfix, keep local, unmodified version, to 'return' after store.
     builder.dup();
     builder.loadLiteral(1);
-    invokeMethod(getIncDecSelector(operator));
+    invokeMethod(node, getIncDecSelector(operator));
     loadThis();
     builder.loadLocal(1);
     invokeSetter(setterSelector);
@@ -1629,7 +1677,7 @@ abstract class CodegenVisitor
     // For postfix, keep local, unmodified version, to 'return' after store.
     builder.dup();
     builder.loadLiteral(1);
-    invokeMethod(getIncDecSelector(operator));
+    invokeMethod(node, getIncDecSelector(operator));
     builder.loadSlot(receiverSlot);
     builder.loadLocal(1);
     invokeSetter(setterSelector);
@@ -1647,15 +1695,15 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void callConstructor(ConstructorElement constructor, int arity) {
+  void callConstructor(Node node, ConstructorElement constructor, int arity) {
     // TODO(ajohnsen): Use staticFunctionCall.
     int constructorId = context.backend.compileConstructor(
         constructor,
         registry);
     int constId = compiledFunction.allocateConstantFromFunction(constructorId);
-    registry.registerStaticInvocation(constructor);
-    registry.registerInstantiatedClass(constructor.enclosingClass);
-    builder.invokeStatic(constId, arity);
+    registerStaticInvocation(constructor);
+    registerInstantiatedClass(constructor.enclosingClass);
+    invokeStatic(node, constId, arity);
   }
 
   void visitConstConstructorInvoke(
@@ -1675,7 +1723,7 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     int arity = loadArguments(arguments, constructor);
-    callConstructor(constructor, arity);
+    callConstructor(node, constructor, arity);
     applyVisitState();
   }
 
@@ -1688,7 +1736,7 @@ abstract class CodegenVisitor
       _) {
     Selector selector = elements.getSelector(node.send);
     // TODO(ahe): Remove ".declaration" when issue 23135 is fixed.
-    staticFunctionCall(constructor.declaration, arguments, selector);
+    staticFunctionCall(node, constructor.declaration, arguments, selector);
     applyVisitState();
   }
 
@@ -1837,7 +1885,7 @@ abstract class CodegenVisitor
       builder.storeField(thisClosureIndex);
     }
 
-    registry.registerStaticInvocation(function);
+    registerStaticInvocation(function);
     applyVisitState();
   }
 
@@ -1902,7 +1950,7 @@ abstract class CodegenVisitor
     }
     callFinallyBlocks(0, true);
     optionalReplaceResultValue();
-    builder.ret();
+    generateReturn(node);
   }
 
   JumpInfo getJumpInfo(GotoStatement node) {
@@ -2036,7 +2084,7 @@ abstract class CodegenVisitor
     builder.bind(start);
 
     builder.dup();
-    invokeMethod(new Selector.call('moveNext', null, 0));
+    invokeMethod(node, new Selector.call('moveNext', null, 0));
     builder.branchIfFalse(end);
 
     bool isVariableDeclaration = node.declaredIdentifier.asSend() == null;
@@ -2166,7 +2214,7 @@ abstract class CodegenVisitor
           builder.dup();
           int constId = allocateConstantFromNode(caseMatch.expression);
           builder.loadConst(constId);
-          invokeMethod(new Selector.binaryOperator('=='));
+          invokeMethod(labelOrCaseMatch, new Selector.binaryOperator('=='));
           builder.branchIfTrue(ifTrue);
         }
         builder.branch(next);
@@ -2293,7 +2341,7 @@ abstract class CodegenVisitor
     context.markConstantUsed(constString);
     builder.loadConst(compiledFunction.allocateConstant(constString));
     FunctionElement function = context.backend.fletchUnresolved;
-    registry.registerStaticInvocation(function);
+    registerStaticInvocation(function);
     int methodId = context.backend.functionMethodId(function);
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
     builder.invokeStatic(constId, 1);

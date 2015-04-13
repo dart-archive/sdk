@@ -76,7 +76,10 @@ import 'fletch_constants.dart' show
     FletchClassInstanceConstant;
 
 import 'compiled_function.dart' show
-    CompiledFunction;
+    CompiledFunction,
+    DebugInfo;
+
+import 'debug_info_function_codegen.dart';
 
 import 'fletch_context.dart';
 
@@ -211,6 +214,8 @@ class FletchBackend extends Backend {
 
   final Map<int, int> getters = <int, int>{};
   final Map<int, int> setters = <int, int>{};
+
+  Map<CompiledFunction, FunctionElement> functionElements;
 
   List<Command> commands;
 
@@ -509,6 +514,35 @@ class FletchBackend extends Backend {
 
   int functionMethodId(FunctionElement function) {
     return createCompiledFunction(function).methodId;
+  }
+
+  FunctionElement elementFromCompiledFunction(CompiledFunction function) {
+    if (functionElements == null) {
+      functionElements = <CompiledFunction, FunctionElement>{};
+      compiledFunctions.forEach((k, v) => functionElements[v] = k);
+    }
+    return functionElements[function];
+  }
+
+  void ensureDebugInfo(CompiledFunction function) {
+    if (function.debugInfo != null) return;
+    function.debugInfo = new DebugInfo();
+    FunctionElement element = elementFromCompiledFunction(function);
+    if (element == null) return;
+    if (isNative(element)) return;
+    if (isExternal(element)) return;
+    TreeElements elements = element.resolvedAst.elements;
+    ClosureEnvironment closureEnvironment = createClosureEnvironment(
+        element,
+        elements);
+    DebugInfoFunctionCodegen codegen = new DebugInfoFunctionCodegen(
+        function,
+        context,
+        elements,
+        null,
+        closureEnvironment,
+        element);
+    codegen.compile();
   }
 
   void codegen(CodegenWorkItem work) {

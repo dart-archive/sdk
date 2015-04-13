@@ -11,7 +11,8 @@ import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
 
 import 'package:compiler/src/tree/tree.dart' show
-    Expression;
+    Expression,
+    Node;
 
 import 'package:compiler/src/elements/elements.dart';
 
@@ -32,9 +33,37 @@ import 'fletch_context.dart';
 
 import 'bytecode_builder.dart';
 
+class SourceLocation {
+  final int bytecodeIndex;
+  final Node node;
+  SourceLocation(this.bytecodeIndex, this.node);
+}
+
+class DebugInfo {
+  List<SourceLocation> locations = new List();
+
+  void add(int bytecodeIndex, Node node) {
+    locations.add(new SourceLocation(bytecodeIndex, node));
+  }
+
+  Node nodeFor(int bytecodeIndex) {
+    try {
+      var location = locations.lastWhere(
+          (location) => location.bytecodeIndex <= bytecodeIndex);
+      return location.node;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  String sourceString(int bytecodeIndex) {
+    Node node = nodeFor(bytecodeIndex);
+    return '$node';
+  }
+}
+
 class CompiledFunction {
   final BytecodeBuilder builder;
-
   final int methodId;
 
   /**
@@ -63,6 +92,8 @@ class CompiledFunction {
   final Map<int, ConstantValue> classConstantValues = <int, ConstantValue>{};
 
   final bool isAccessor;
+
+  DebugInfo debugInfo;
 
   CompiledFunction(this.methodId,
                    this.name,
