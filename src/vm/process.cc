@@ -625,6 +625,14 @@ bool Process::EnqueueForeign(Port* port,
   return true;
 }
 
+bool Process::IsValidForEnqueue(Object* message) {
+  Space* space = program_->heap()->space();
+  return !message->IsHeapObject()
+      || message->IsPort()
+      || message->IsLargeInteger()
+      || space->Includes(HeapObject::cast(message)->address());
+}
+
 static PortQueue* Reverse(PortQueue* queue) {
   PortQueue* previous = NULL;
   while (queue != NULL) {

@@ -142,6 +142,44 @@ NATIVE(PortSend) {
   return process->program()->null_object();
 }
 
+NATIVE(PortSendList) {
+  Instance* instance = Instance::cast(arguments[0]);
+  ASSERT(instance->IsPort());
+  Object* field = instance->GetInstanceField(0);
+  uword address = AsForeignWord(field);
+  if (address == 0) return Failure::illegal_state();
+
+  Instance* growable = Instance::cast(arguments[1]);
+  Smi* length = Smi::cast(growable->GetInstanceField(0));
+  Instance* fixed = Instance::cast(growable->GetInstanceField(1));
+  Array* array = Array::cast(fixed->GetInstanceField(0));
+  for (int i = 0; i < length->value(); i++) {
+    if (!process->IsValidForEnqueue(array->get(i))) {
+      return Failure::wrong_argument_type();
+    }
+  }
+
+  // Get hold of the port and the associated process.
+  Port* port = reinterpret_cast<Port*>(address);
+  port->Lock();
+  Process* port_process = port->process();
+  if (port_process == NULL) {
+    port->Unlock();
+    return process->program()->null_object();
+  }
+
+  port_process->Enqueue(port, arguments[2]);  // Sentinel.
+  port_process->Enqueue(port, length);
+  for (int i = 0; i < length->value(); i++) {
+    bool enqueued = port_process->Enqueue(port, array->get(i));
+    ASSERT(enqueued);
+  }
+
+  // Return the locked port. This will allow the scheduler to schedule the
+  // owner of the port, while it's still alive.
+  return reinterpret_cast<Object*>(port);
+}
+
 NATIVE(PortIncrementRef) {
   word address = AsForeignWord(arguments[0]);
   Port* port = reinterpret_cast<Port*>(address);

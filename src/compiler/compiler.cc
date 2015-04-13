@@ -1100,7 +1100,7 @@ void Compiler::CompileMethod(MethodNode* method,
         ? holder->name()
         : builder()->Canonicalize("<none>");
     Native native = builder()->LookupNative(method_name, holder_name);
-    if (native == Native::kPortSend) {
+    if (native == Native::kPortSend || native == Native::kPortSendList) {
       emitter->InvokeNativeYield(arity, native);
     } else {
       emitter->InvokeNative(arity, native);

@@ -64,9 +64,6 @@ import 'package:compiler/src/constants/values.dart' show
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
 
-import '../bytecodes.dart' show
-    InvokeNative;
-
 import 'package:compiler/src/resolution/resolution.dart' show
     TreeElements;
 
@@ -634,7 +631,7 @@ class FletchBackend extends Backend {
     }
 
     int arity = codegen.builder.functionArity;
-    if (function.name == "send") {
+    if (name == "Port.send" || name == "Port._sendList") {
       codegen.builder.invokeNativeYield(arity, descriptor.index);
     } else {
       codegen.builder.invokeNative(arity, descriptor.index);

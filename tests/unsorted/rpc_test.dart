@@ -48,6 +48,8 @@ main() {
   Expect.equals(55, (client.baz)(55));
   Expect.equals(99, (client.baz)(99));
 
+  Expect.throws(() => (client.baz)(client), (e) => e is ArgumentError);
+
   Expect.throws(() => (client.biz)(1), (e) => e == 1);
   Expect.throws(() => (client.biz)(2), (e) => e == 2);
 
@@ -102,27 +104,25 @@ class RpcServer {
 
   void _processMessages() {
     while (true) {
-      int opcode = _channel.receive();
+      List command = _channel.receive();
+      int opcode = command[0];
       if (opcode == -1) return;
-      Port replyTo = _channel.receive();
+      Port replyTo = command[1];
       int arity = _api[opcode].arity;
-      var args = [];
-      for (int i = 0; i < arity; i++) args.add(_channel.receive());
-      if (args.length != arity) throw "Bad arity";
+      int args = command.length - 2;
+      if (args != arity) throw "Bad arity";
       try {
         Function function = _functions[opcode];
         var result;
         switch (arity) {
           case 0: result = function(); break;
-          case 1: result = function(args[0]); break;
-          case 2: result = function(args[0], args[1]); break;
+          case 1: result = function(command[2]); break;
+          case 2: result = function(command[2], command[3]); break;
           default: throw "Too many arguments.";
         }
-        replyTo.send(0);
-        replyTo.send(result);
+        replyTo.sendMultiple([0, result]);
       } catch (e) {
-        replyTo.send(1);
-        replyTo.send(e);
+        replyTo.sendMultiple([1, e]);
       }
     }
   }
@@ -161,31 +161,29 @@ class RpcClient {
   Function operator[](String name) => _api[name];
 
   Function _newStub0(int opcode) => () {
-    return _forward(opcode, []);
+    return _forward([opcode, null]);
   };
 
   Function _newStub1(int opcode) => (a0) {
-    return _forward(opcode, [a0]);
+    return _forward([opcode, null, a0]);
   };
 
   Function _newStub2(int opcode) => (a0, a1) {
-    return _forward(opcode, [a0, a1]);
+    return _forward([opcode, null, a0, a1]);
   };
 
   void done() {
-    _port.send(-1);
+    _port.sendMultiple([-1]);
   }
 
-  _forward(int opcode, arguments) {
+  _forward(List command) {
     Channel replyTo = new Channel();
-    _port.send(opcode);
-    _port.send(new Port(replyTo));
-    for (int i = 0; i < arguments.length; i++) {
-      _port.send(arguments[i]);
-    }
-    var status = replyTo.receive();
-    var result = replyTo.receive();
-    if (status == 1) throw result;
+    command[1] = new Port(replyTo);
+    _port.sendMultiple(command);
+    List reply = replyTo.receive();
+    var tag = reply[0];
+    var result = reply[1];
+    if (tag == 1) throw result;
     return result;
   }
 }

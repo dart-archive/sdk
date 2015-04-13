@@ -184,6 +184,7 @@ namespace fletch {
   N(PortCreate,                  "Port", "_create")                      \
   N(PortClose,                   "Port", "_close")                       \
   N(PortSend,                    "Port", "send")                         \
+  N(PortSendList,                "Port", "_sendList")                    \
   N(PortIncrementRef,            "Port", "_incrementRef")                \
                                                                          \
   N(SystemGetEventHandler,       "System", "_getEventHandler")           \
