@@ -483,6 +483,7 @@ abstract class CodegenVisitor
   }
 
   void handleStaticFieldCompound(
+      Node node,
       FieldElement field,
       AssignmentOperator operator,
       Node rhs) {
@@ -1650,7 +1651,7 @@ abstract class CodegenVisitor
       Selector setterSelector,
       _) {
     visitForValue(receiver);
-    handleDynamicPrefix(operator, getterSelector, setterSelector);
+    handleDynamicPrefix(node, operator, getterSelector, setterSelector);
     applyVisitState();
   }
 
@@ -1665,7 +1666,7 @@ abstract class CodegenVisitor
     // generate code for the simpler 'prefix' case.
     if (visitState == VisitState.Effect) {
       visitForValue(receiver);
-      handleDynamicPrefix(operator, getterSelector, setterSelector);
+      handleDynamicPrefix(node, operator, getterSelector, setterSelector);
       applyVisitState();
       return;
     }
