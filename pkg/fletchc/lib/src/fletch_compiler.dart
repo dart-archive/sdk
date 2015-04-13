@@ -71,6 +71,9 @@ class FletchCompiler extends FletchCompilerHack {
 
   final Uri fletchVm;
 
+  /// Location of fletch patch files.
+  final Uri patchRoot;
+
   FletchContext internalContext;
 
   FletchCompiler(
@@ -79,6 +82,7 @@ class FletchCompiler extends FletchCompilerHack {
       api.DiagnosticHandler handler,
       Uri libraryRoot,
       Uri packageRoot,
+      this.patchRoot,
       List<String> options,
       Map<String, dynamic> environment,
       this.fletchVm)
@@ -131,7 +135,7 @@ class FletchCompiler extends FletchCompilerHack {
     assert(info.dart2jsPath == null);
     assert(info.dart2jsPatchPath == null);
     String path = relativize(
-        libraryRoot, Uri.base.resolve("lib/${info.path}"), false);
+        libraryRoot, patchRoot.resolve("lib/${info.path}"), false);
     return new LibraryInfo(
         '../$path',
         category: info.category,
@@ -144,7 +148,7 @@ class FletchCompiler extends FletchCompilerHack {
   Uri resolvePatchUri(String dartLibraryPath) {
     String patchPath = lookupPatchPath(dartLibraryPath);
     if (patchPath == null) return null;
-    return Uri.base.resolve(patchPath);
+    return patchRoot.resolve(patchPath);
   }
 
   bool inUserCode(element, {bool assumeInUserCode: false}) => true;

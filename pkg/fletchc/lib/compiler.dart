@@ -50,6 +50,8 @@ const String _SDK_DIR = const String.fromEnvironment("dart-sdk");
 
 const String _FLETCH_VM = const String.fromEnvironment("fletch-vm");
 
+const String _PATCH_ROOT = const String.fromEnvironment("fletch-patch-root");
+
 const List<String> _fletchVmSuggestions = const <String> [
     'out/DebugX64Clang/fletch',
     'out/DebugX64/fletch',
@@ -76,6 +78,8 @@ class FletchCompiler {
        DiagnosticHandler handler,
        @StringOrUri libraryRoot,
        @StringOrUri packageRoot,
+       /// Location of fletch patch files.
+       @StringOrUri patchRoot,
        @StringOrUri script,
        @StringOrUri fletchVm,
        List<String> options,
@@ -104,11 +108,11 @@ class FletchCompiler {
       outputProvider = new OutputProvider();
     }
 
-    libraryRoot = _computeValidatedUri(
-        libraryRoot, name: 'libraryRoot', ensureTrailingSlash: true);
     if (libraryRoot == null  && _SDK_DIR != null) {
       libraryRoot = Uri.base.resolve(appendSlash(_SDK_DIR));
     }
+    libraryRoot = _computeValidatedUri(
+        libraryRoot, name: 'libraryRoot', ensureTrailingSlash: true);
     if (libraryRoot == null) {
       libraryRoot = _guessLibraryRoot();
       if (libraryRoot == null) {
@@ -133,6 +137,9 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
       }
     }
 
+    if (fletchVm == null  && _FLETCH_VM != null) {
+      fletchVm = Uri.base.resolve(_FLETCH_VM);
+    }
     fletchVm = _computeValidatedUri(
         fletchVm, name: 'fletchVm', ensureTrailingSlash: false);
     if (fletchVm == null) {
@@ -140,10 +147,27 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
       if (fletchVm == null) {
         throw new StateError("""
 Unable to guess the location of the fletch VM (fletchVm).
-Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
+Try adding command-line option '-Dfletch-vm=<path to fletch VM>.""");
       }
     } else if (!_looksLikeFletchVm(fletchVm)) {
-      throw new ArgumentError("[fletchVm]: Fletch VM at '$fletchVm'.");
+      throw new ArgumentError("[fletchVm]: No fletch VM at '$fletchVm'.");
+    }
+
+    if (patchRoot == null  && _PATCH_ROOT != null) {
+      patchRoot = Uri.base.resolve(appendSlash(_PATCH_ROOT));
+    }
+    patchRoot = _computeValidatedUri(
+        patchRoot, name: 'patchRoot', ensureTrailingSlash: true);
+    if (patchRoot == null) {
+      patchRoot = _guessPatchRoot(libraryRoot);
+      if (patchRoot == null) {
+        throw new StateError("""
+Unable to guess the location of the fletch patch files (patchRoot).
+Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
+      }
+    } else if (!_looksLikePatchRoot(patchRoot)) {
+      throw new ArgumentError(
+          "[patchRoot]: Fletch patches not found in '$patchRoot'.");
     }
 
     if (environment == null) {
@@ -156,6 +180,7 @@ Try adding command-line option '-Dfletch-vm=<path to Dart sdk>.""");
         handler,
         libraryRoot,
         packageRoot,
+        patchRoot,
         options,
         environment,
         fletchVm);
@@ -254,9 +279,12 @@ Uri _resolveSymbolicLinks(Uri uri) {
   return new Uri.file(realLocation);
 }
 
-bool _looksLikeLibraryRoot(Uri uri) {
-  String expectedFile = 'lib/_internal/libraries.dart';
+bool _containsFile(Uri uri, String expectedFile) {
   return new File.fromUri(uri.resolve(expectedFile)).existsSync();
+}
+
+bool _looksLikeLibraryRoot(Uri uri) {
+  return _containsFile(uri, 'lib/_internal/libraries.dart');
 }
 
 Uri _computeValidatedUri(
@@ -324,4 +352,14 @@ bool _looksLikeFletchVm(Uri uri) {
   if (!new File.fromUri(uri).existsSync()) return false;
   String expectedFile = 'natives.json';
   return new File.fromUri(uri.resolve(expectedFile)).existsSync();
+}
+
+Uri _guessPatchRoot(Uri libraryRoot) {
+  Uri guess = libraryRoot.resolve('../../fletch/');
+  if (_looksLikePatchRoot(guess)) return guess;
+  return null;
+}
+
+bool _looksLikePatchRoot(Uri uri) {
+  return _containsFile(uri, 'lib/core/core_patch.dart');
 }

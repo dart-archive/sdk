@@ -253,6 +253,34 @@ static void ReadDriverConfig() {
   fletch_socket_file[offset] = '\0';
 }
 
+static void ComputeFletchRoot(char* buffer, size_t buffer_length) {
+  // TODO(ahe): Fix lint problem: Do not use variable-length arrays.
+  char resolved[buffer_length];  // NOLINT
+  GetPathOfExecutable(buffer, buffer_length);
+  if (realpath(buffer, resolved) == NULL) {
+    Die("%s: realpath of '%s' failed: %s", program_name, buffer,
+        strerror(errno));
+  }
+  StrCpy(buffer, buffer_length, resolved, sizeof(resolved));
+
+  // 'buffer' is now the absolute path of this executable (with symlinks
+  // resolved). When running from fletch-repo, this executable will be in
+  // "fletch-repo/fletch/out/$CONFIGURATION/fletch_driver".
+  ParentDir(buffer);
+  // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION".
+  ParentDir(buffer);
+  // 'buffer' is now, for example, "fletch-repo/fletch/out".
+  ParentDir(buffer);
+  // 'buffer' is now, for example, "fletch-repo/fletch".
+
+  size_t length = strlen(buffer);
+  if (length > 0 && buffer[length - 1] != '/') {
+    // Append trailing slash.
+    StrCat(buffer, buffer_length, "/", 2);
+  }
+}
+
+// Stores the location of the Dart VM in 'buffer'.
 static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
   char* dart_vm_env = getenv(dart_vm_env_name);
   if (dart_vm_env != NULL) {
@@ -283,6 +311,16 @@ static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
 
   StrCat(buffer, buffer_length, dart_vm_name, sizeof(dart_vm_name));
   // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION/dart".
+}
+
+// Stores the package root in 'buffer'. The value of 'fletch_root' must be the
+// absolute path of '.../fletch-repo/fletch/' (including trailing slash).
+static void ComputePackageRoot(
+    char* buffer, size_t buffer_length,
+    const char* fletch_root, size_t fletch_root_length) {
+  StrCpy(buffer, buffer_length, fletch_root, fletch_root_length);
+  StrCat(buffer, buffer_length, "package/", sizeof("package/"));
+  // 'buffer' is now, for example, "fletch-repo/fletch/package/".
 }
 
 // Flush all open streams (FILE objects). This is needed before forking
@@ -316,17 +354,25 @@ static void ExecDaemon(
     const char** argv);
 
 static void StartDriverDaemon() {
-  const char* argv[6];
+  const char* argv[7];
+
+  char fletch_root[MAXPATHLEN + 1];
+  ComputeFletchRoot(fletch_root, sizeof(fletch_root));
 
   char vm_path[MAXPATHLEN + 1];
   ComputeDartVmPath(vm_path, sizeof(vm_path));
 
+  char package_root[MAXPATHLEN + 1];
+  ComputePackageRoot(
+      package_root, sizeof(package_root), fletch_root, sizeof(fletch_root));
+
   argv[0] = vm_path;
   argv[1] = "-c";
-  argv[2] = "-ppackage/";
-  argv[3] = "package:fletchc/src/driver.dart";
-  argv[4] = fletch_config_file;
-  argv[5] = NULL;
+  argv[2] = "-p";
+  argv[3] = package_root;
+  argv[4] = "package:fletchc/src/driver.dart";
+  argv[5] = fletch_config_file;
+  argv[6] = NULL;
 
   printf("Starting");
   for (int i = 0; argv[i] != NULL; i++) {
