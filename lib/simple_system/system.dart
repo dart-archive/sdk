@@ -67,6 +67,5 @@ external yield(bool halt);
 
 external get nativeError;
 
-// The compiler generates a special bytecode for calls to this
-// magical external method.
+// Change execution to [coroutine], passing along [argument].
 external coroutineChange(coroutine, argument);

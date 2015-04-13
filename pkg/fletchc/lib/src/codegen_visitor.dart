@@ -24,6 +24,9 @@ import 'package:compiler/src/dart2jslib.dart' show
     MessageKind,
     Registry;
 
+import 'package:compiler/src/util/util.dart' show
+    Link;
+
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
@@ -129,6 +132,9 @@ class FinallyBlock {
 abstract class CodegenVisitor
     extends SemanticVisitor
     implements SemanticSendVisitor {
+  // A literal int can have up to 31 bits of information (32 minus sign).
+  static const int LITERAL_INT_MAX = 0x3FFFFFFF;
+
   final FletchContext context;
 
   final CodegenRegistry registry;
@@ -145,8 +151,8 @@ abstract class CodegenVisitor
 
   final Map<Node, JumpInfo> jumpInfo = <Node, JumpInfo>{};
 
-  // Stack of finally blocks (inner-most at top), in the lexical scope.
-  final List<FinallyBlock> finallyBlockStack = <FinallyBlock>[];
+  // Stack of finally blocks (inner-most first), in the lexical scope.
+  Link<FinallyBlock> finallyBlockStack = const Link<FinallyBlock>();
 
   VisitState visitState;
   BytecodeLabel trueLabel;
@@ -785,14 +791,9 @@ abstract class CodegenVisitor
         context.backend.createCompiledFunction(function);
     CompiledClass compiledClass = context.backend.createTearoffClass(
         compiledFunctionTarget);
-    if (compiledClass.fields == 0) {
-      int constId = allocateConstantClassInstance(compiledClass.id);
-      builder.loadConst(constId);
-    } else {
-      int classConstant = compiledFunction.allocateConstantFromClass(
-          compiledClass.id);
-      builder.allocate(classConstant, compiledClass.fields);
-    }
+    assert(compiledClass.fields == 0);
+    int constId = allocateConstantClassInstance(compiledClass.id);
+    builder.loadConst(constId);
   }
 
   void visitTopLevelFunctionGet(
@@ -1183,7 +1184,8 @@ abstract class CodegenVisitor
   void visitLiteralInt(LiteralInt node) {
     if (visitState == VisitState.Value) {
       int value = node.value;
-      if (value >= 0x3FFFFFFF) {
+      assert(value >= 0);
+      if (value > LITERAL_INT_MAX) {
         int constId = allocateConstantFromNode(node);
         builder.loadConst(constId);
       } else {
@@ -1940,6 +1942,7 @@ abstract class CodegenVisitor
 
   // Called before 'return', as an option to replace the already evaluated
   // return value.
+  // One example is setters.
   void optionalReplaceResultValue() { }
 
   void visitReturn(Return node) {
@@ -1972,14 +1975,14 @@ abstract class CodegenVisitor
 
   void callFinallyBlocks(int targetStackSize, bool preserveTop) {
     int popCount = 0;
-    for (var block in finallyBlockStack.reversed) {
+    for (var block in finallyBlockStack) {
       // Break once all exited finally blocks are processed. Finally blocks
       // are ordered by stack size which coincides with scoping. Blocks with
       // stack sizes at least equal to target size are being exited.
       if (block.stackSize < targetStackSize) break;
       if (preserveTop) {
-        // We reuse the exception slot as a tempoary buffer for the top element,
-        // which is located -1 relative to the block's stack size.
+        // We reuse the exception slot as a temporary buffer for the top
+        // element, which is located -1 relative to the block's stack size.
         builder.storeSlot(block.stackSize - 1);
       }
       // TODO(ajohnsen): Don't pop, but let subroutineCall take a 'pop count'
@@ -2286,10 +2289,11 @@ abstract class CodegenVisitor
     int startBytecodeSize = builder.byteSize;
 
     if (hasFinally) {
-      finallyBlockStack.add(new FinallyBlock(
-          builder.stackSize,
-          finallyLabel,
-          finallyReturnLabel));
+      finallyBlockStack = finallyBlockStack.prepend(
+          new FinallyBlock(
+              builder.stackSize,
+              finallyLabel,
+              finallyReturnLabel));
     }
 
     node.tryBlock.accept(this);
@@ -2306,7 +2310,7 @@ abstract class CodegenVisitor
     }
 
     if (hasFinally) {
-      finallyBlockStack.removeLast();
+      finallyBlockStack = finallyBlockStack.tail;
       if (!node.catchBlocks.isEmpty) {
         builder.addCatchFrameRange(endBytecodeSize, builder.byteSize);
       }

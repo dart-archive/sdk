@@ -632,7 +632,7 @@ class FletchBackend extends Backend {
         // TODO(ajohnsen): Consider having multiple 'memberOf' in
         // CompiledFunction, to avoid duplicates.
         // Create a copy with a unique 'memberOf', so we can detect missing
-        // stubs for the mixin classes as well.
+        // stubs for the mixin applications as well.
         CompiledClass compiledUsage = registerClassElement(usage);
         CompiledFunction copy = new CompiledFunction(
             functions.length,

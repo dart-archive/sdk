@@ -148,7 +148,7 @@ const patch = "patch";
       case fletch.wrongArgumentType:
         throw new ArgumentError(source);
       case fletch.indexOutOfBounds:
-        throw new FormatException("Invalud number", source);
+        throw new FormatException("Can't parse to an integer", source);
     }
   }
 }

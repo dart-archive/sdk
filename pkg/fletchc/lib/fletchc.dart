@@ -35,6 +35,7 @@ main(List<String> arguments) async {
         break;
 
       default:
+        if (script != null) throw "Unknown option: $argument";
         script = argument;
         break;
     }
