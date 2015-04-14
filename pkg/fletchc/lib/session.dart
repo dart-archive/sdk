@@ -11,6 +11,7 @@ import 'dart:io';
 import 'bytecodes.dart';
 import 'commands.dart';
 import 'compiler.dart' show FletchCompiler;
+import 'src/debug_info.dart';
 
 part 'command_reader.dart';
 part 'input_handler.dart';
@@ -31,6 +32,8 @@ class Session {
 
   StreamIterator<Command> vmCommands;
   StackTrace currentStackTrace;
+  int currentFrame;
+  SourceLocation currentLocation;
 
   Session(this.vmSocket, this.compiler);
 
@@ -61,10 +64,11 @@ class Session {
 
   Future handleProcessStop() async {
     currentStackTrace = null;
+    currentFrame = 0;
     Command response = await nextVmCommand();
     switch (response.code) {
       case CommandCode.UncaughtException:
-        await backtrace(-1);
+        await backtrace();
         const ForceTermination().addTo(vmSocket);
         break;
       case CommandCode.ProcessTerminate:
@@ -74,6 +78,7 @@ class Session {
         break;
       default:
         assert(response.code == CommandCode.ProcessBreakpoint);
+        await getStackTrace();
         break;
     }
   }
@@ -122,11 +127,25 @@ class Session {
   }
 
   Future step() async {
+    SourceLocation previous = currentLocation;
+    do {
+      await stepBytecode();
+    } while (currentLocation == null || currentLocation == previous);
+  }
+
+  Future stepOver() async {
+    SourceLocation previous = currentLocation;
+    do {
+      await stepOverBytecode();
+    } while (currentLocation == null || currentLocation == previous);
+  }
+
+  Future stepBytecode() async {
     const ProcessStep().addTo(vmSocket);
     await handleProcessStop();
   }
 
-  Future stepOver() async {
+  Future stepOverBytecode() async {
     const ProcessStepOver().addTo(vmSocket);
     await handleProcessStop();
   }
@@ -136,7 +155,32 @@ class Session {
     await handleProcessStop();
   }
 
-  Future backtrace(int frame) async {
+  void list() {
+    if (currentStackTrace == null) {
+      print("### no stack trace");
+      return;
+    }
+    currentStackTrace.list(compiler, currentFrame);
+  }
+
+  void disasm() {
+    if (currentStackTrace == null) {
+      print("### no stack trace");
+      return;
+    }
+    currentStackTrace.disasm(compiler, currentFrame);
+  }
+
+  void selectFrame(int frame) {
+    if (currentStackTrace == null ||
+        frame >= currentStackTrace.stackFrames.length) {
+      print('### invalid frame number $frame');
+      return;
+    }
+    currentFrame = frame;
+  }
+
+  Future getStackTrace() async {
     if (currentStackTrace == null) {
       const ProcessBacktrace(0).addTo(vmSocket);
       ProcessBacktrace backtraceResponse = await nextVmCommand();
@@ -150,15 +194,15 @@ class Session {
         var functionId = objectIdCommand.id;
         var integerCommand = await nextVmCommand();
         var bcp = integerCommand.value;
-        currentStackTrace.addFrame(new StackFrame(functionId, bcp));
+        currentStackTrace.addFrame(compiler, new StackFrame(functionId, bcp));
       }
+      currentLocation = currentStackTrace.sourceLocation(compiler);
     }
-    if (frame >= currentStackTrace.frames) {
-      currentStackTrace = null;
-      print('### invalid frame number: $frame');
-      return;
-    }
-    currentStackTrace.write(compiler, frame);
+  }
+
+  Future backtrace() async {
+    await getStackTrace();
+    currentStackTrace.write(compiler, currentFrame);
   }
 
   void quit() {

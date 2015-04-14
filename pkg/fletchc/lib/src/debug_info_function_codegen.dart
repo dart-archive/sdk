@@ -4,14 +4,23 @@
 
 library fletchc.debug_info_function_codegen;
 
+import 'package:compiler/src/elements/elements.dart';
+import 'package:compiler/src/resolution/resolution.dart';
+import 'package:compiler/src/tree/tree.dart';
+import 'package:compiler/src/universe/universe.dart';
+
 import 'bytecode_builder.dart';
+import 'closure_environment.dart';
 
 import 'compiled_function.dart' show
     CompiledFunction;
 
+import 'fletch_context.dart';
 import 'function_codegen.dart';
 
 class DebugInfoFunctionCodegen extends FunctionCodegen {
+  final FletchCompiler compiler;
+
   // Regenerate the bytecode in a fresh buffer separately from the compiled
   // function. If we did not create a separate buffer, the bytecode would
   // be appended to the compiled function builder and we would get a compiled
@@ -23,14 +32,15 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
                            TreeElements elements,
                            Registry registry,
                            ClosureEnvironment closureEnvironment,
-                           FunctionElement function)
+                           FunctionElement function,
+                           this.compiler)
       : super(compiledFunction, context, elements, registry,
               closureEnvironment, function) {
     builder = new BytecodeBuilder(super.builder.functionArity);
   }
 
   void recordDebugInfo(Node node) {
-    compiledFunction.debugInfo.add(builder.byteSize, node);
+    compiledFunction.debugInfo.add(compiler, builder.byteSize, node);
   }
 
   void registerDynamicInvocation(Selector selector) { }

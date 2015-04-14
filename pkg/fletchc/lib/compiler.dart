@@ -34,10 +34,13 @@ import 'package:compiler/src/filenames.dart' show
 import 'src/compiled_function.dart' show
     CompiledFunction;
 
+import 'src/debug_info.dart';
+
 import 'src/fletch_native_descriptor.dart' show
     FletchNativeDescriptor;
 
 import 'src/fletch_backend.dart' show
+    CompiledClass,
     FletchBackend;
 
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
@@ -221,14 +224,18 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
 
   Uri get fletchVm => _compiler.fletchVm;
 
-  CompiledFunction lookupCompiledFunction(int id) {
-    CompiledFunction function = _compiler.backend.functions[id];
-    assert(function.methodId == id);
+  CompiledFunction lookupCompiledFunction(int methodId) {
+    CompiledFunction function = _compiler.backend.functions[methodId];
+    assert(function.methodId == methodId);
     return function;
   }
 
-  String lookupFunctionName(int id) {
-    return lookupCompiledFunction(id).name;
+  String lookupFunctionName(int methodId) {
+    CompiledFunction function = lookupCompiledFunction(methodId);
+    String functionName = function.name;
+    CompiledClass memberOf = function.memberOf;
+    if (memberOf == null) return functionName;
+    return '${memberOf.element.name}.$functionName';
   }
 
   String lookupFunctionNameBySelector(int selector) {
@@ -236,8 +243,8 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return _compiler.context.symbols[id];
   }
 
-  List<Bytecode> lookupFunctionBytecodes(int id) {
-    return lookupCompiledFunction(id).builder.bytecodes;
+  List<Bytecode> lookupFunctionBytecodes(int methodId) {
+    return lookupCompiledFunction(methodId).builder.bytecodes;
   }
 
   Iterable<int> lookupFunctionIdsByName(String name) {
@@ -246,10 +253,30 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
         .map((f) => f.methodId);
   }
 
-  String sourceString(int id, int bytecodeIndex) {
-    CompiledFunction function = lookupCompiledFunction(id);
+  String astString(int methodId, int bytecodeIndex) {
+    CompiledFunction function = lookupCompiledFunction(methodId);
     _compiler.backend.ensureDebugInfo(function);
-    return function.debugInfo.sourceString(bytecodeIndex);
+    return function.debugInfo.astStringFor(bytecodeIndex);
+  }
+
+  String fileAndLineString(int methodId, int bytecodeIndex) {
+    CompiledFunction function = lookupCompiledFunction(methodId);
+    _compiler.backend.ensureDebugInfo(function);
+    return function.debugInfo.fileAndLineStringFor(bytecodeIndex);
+  }
+
+  String sourceListString(int methodId,
+                          int bytecodeIndex,
+                          {int contextLines : 5}) {
+    CompiledFunction function = lookupCompiledFunction(methodId);
+    _compiler.backend.ensureDebugInfo(function);
+    return function.debugInfo.sourceListStringFor(bytecodeIndex, contextLines);
+  }
+
+  SourceLocation sourceLocation(int methodId, int bytecodeIndex) {
+    CompiledFunction function = lookupCompiledFunction(methodId);
+    _compiler.backend.ensureDebugInfo(function);
+    return function.debugInfo.sourceLocationFor(bytecodeIndex);
   }
 }
 

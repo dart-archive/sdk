@@ -79,20 +79,14 @@ import 'compiled_function.dart' show
     CompiledFunction,
     DebugInfo;
 
+import 'debug_info.dart';
 import 'debug_info_function_codegen.dart';
-
 import 'fletch_context.dart';
-
 import 'fletch_selector.dart';
-
 import 'function_codegen.dart';
-
 import 'lazy_field_initializer_codegen.dart';
-
 import 'constructor_codegen.dart';
-
 import 'closure_environment.dart';
-
 import '../commands.dart';
 
 class CompiledClass {
@@ -529,20 +523,23 @@ class FletchBackend extends Backend {
     function.debugInfo = new DebugInfo();
     FunctionElement element = elementFromCompiledFunction(function);
     if (element == null) return;
-    if (isNative(element)) return;
-    if (isExternal(element)) return;
-    TreeElements elements = element.resolvedAst.elements;
-    ClosureEnvironment closureEnvironment = createClosureEnvironment(
-        element,
-        elements);
-    DebugInfoFunctionCodegen codegen = new DebugInfoFunctionCodegen(
-        function,
-        context,
-        elements,
-        null,
-        closureEnvironment,
-        element);
-    codegen.compile();
+      compiler.withCurrentElement(element.implementation, () {
+      if (isNative(element)) return;
+      if (isExternal(element)) return;
+      TreeElements elements = element.resolvedAst.elements;
+      ClosureEnvironment closureEnvironment = createClosureEnvironment(
+          element,
+          elements);
+      DebugInfoFunctionCodegen codegen = new DebugInfoFunctionCodegen(
+          function,
+          context,
+          elements,
+          null,
+          closureEnvironment,
+          element,
+          compiler);
+      codegen.compile();
+    });
   }
 
   void codegen(CodegenWorkItem work) {

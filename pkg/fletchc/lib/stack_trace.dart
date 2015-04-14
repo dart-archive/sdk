@@ -19,12 +19,15 @@ class StackFrame {
     return '';
   }
 
-  void write(FletchCompiler compiler, int frameNumber) {
-    writeName(compiler, frameNumber);
+  void list(FletchCompiler compiler) {
+    print(compiler.sourceListString(functionId, bytecodePointer - 1));
+  }
+
+  void disasm(FletchCompiler compiler) {
     var bytecodes = compiler.lookupFunctionBytecodes(functionId);
     var offset = 0;
     for (var i = 0; i  < bytecodes.length; i++) {
-      var source = compiler.sourceString(functionId, offset);
+      var source = compiler.astString(functionId, offset);
       var current = bytecodes[i];
       var byteNumberString = '$offset'.padLeft(4);
       var invokeInfo = invokeString(compiler, current);
@@ -38,15 +41,22 @@ class StackFrame {
     print('');
   }
 
-  void writeName(FletchCompiler compiler, int frameNumber) {
+  String shortString(FletchCompiler compiler, int frameNumber, maxNameLength) {
     String name = compiler.lookupFunctionName(functionId);
-    print("  $frameNumber: $name");
+    String fileAndLine =
+        compiler.fileAndLineString(functionId, bytecodePointer - 1);
+    return "  $frameNumber: ${name.padRight(maxNameLength)} \t$fileAndLine";
+  }
+
+  SourceLocation sourceLocation(FletchCompiler compiler) {
+    return compiler.sourceLocation(functionId, bytecodePointer - 1);
   }
 }
 
 class StackTrace {
   final List<StackFrame> stackFrames;
   int framesToGo;
+  int maxNameLength = 0;
 
   factory StackTrace(int numberOfFrames) {
     return new StackTrace._(numberOfFrames, new List(numberOfFrames));
@@ -56,17 +66,31 @@ class StackTrace {
 
   int get frames => stackFrames.length;
 
-  void addFrame(StackFrame frame) { stackFrames[--framesToGo] = frame; }
+  void addFrame(compiler, StackFrame frame) {
+    stackFrames[--framesToGo] = frame;
+    var nameLength = compiler.lookupFunctionName(frame.functionId).length;
+    if (nameLength > maxNameLength) maxNameLength = nameLength;
+  }
 
   void write(FletchCompiler compiler, int currentFrame) {
     assert(framesToGo == 0);
     print("Stack trace:");
     for (var i = 0; i < stackFrames.length; i++) {
-      if (currentFrame < 0 || currentFrame == i) {
-        stackFrames[i].write(compiler, i);
-      } else {
-        stackFrames[i].writeName(compiler, i);
-      }
+      var marker = currentFrame == i ? '> ' : '  ';
+      var line = stackFrames[i].shortString(compiler, i, maxNameLength);
+      print('$marker$line');
     }
+  }
+
+  void list(FletchCompiler compiler, int frame) {
+    stackFrames[frame].list(compiler);
+  }
+
+  void disasm(FletchCompiler compiler, int frame) {
+    stackFrames[frame].disasm(compiler);
+  }
+
+  SourceLocation sourceLocation(FletchCompiler compiler) {
+    return stackFrames[0].sourceLocation(compiler);
   }
 }

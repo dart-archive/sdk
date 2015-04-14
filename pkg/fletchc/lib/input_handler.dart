@@ -12,11 +12,15 @@ Commands:
   'b <method name> <bytecode index>'    set breakpoint
   'd <breakpoint id>'                   delete breakpoint
   'lb'                                  list breakpoints
-  's'                                   step bytecode
+  's'                                   step
   'so'                                  step over
+  'sb'                                  step bytecode
+  'sob'                                 step over bytecode
   'c'                                   continue execution
   'bt'                                  backtrace
-  'bt <n>'                              backtrace only expanding frame n
+  'f <n>'                               select frame
+  'l'                                   list source for frame
+  'disasm'                              disassemble code for frame
   'q'/'quit'                            quit the session
 """;
 
@@ -35,11 +39,11 @@ class InputHandler {
         line.split(' ').where((s) => !s.isEmpty).toList();
     String command = commandComponents[0];
     switch (command) {
-      case "b":
+      case 'b':
         var method =
-            (commandComponents.length > 1) ? commandComponents[1] : "main";
+            (commandComponents.length > 1) ? commandComponents[1] : 'main';
         var bci =
-            (commandComponents.length > 2) ? commandComponents[2] : "0";
+            (commandComponents.length > 2) ? commandComponents[2] : '0';
         try {
           bci = int.parse(bci);
         } catch(e) {
@@ -49,6 +53,9 @@ class InputHandler {
         await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
         break;
       case 'bt':
+        await session.backtrace();
+        break;
+      case 'f':
         var frame =
             (commandComponents.length > 1) ? commandComponents[1] : "-1";
         try {
@@ -57,12 +64,18 @@ class InputHandler {
           print('### invalid frame number: $frame');
           break;
         }
-        await session.backtrace(frame);
+        session.selectFrame(frame);
         break;
-      case "c":
+      case 'l':
+        session.list();
+        break;
+      case 'disasm':
+        session.disasm();
+        break;
+      case 'c':
         await session.cont();
         break;
-      case "d":
+      case 'd':
         var id = (commandComponents.length > 1) ? commandComponents[1] : null;
         try {
           id = int.parse(id);
@@ -84,11 +97,17 @@ class InputHandler {
       case 'run':
         await session.debugRun();
         break;
-      case "s":
+      case 's':
         await session.step();
         break;
-      case "so":
+      case 'sb':
+        await session.stepBytecode();
+        break;
+      case 'so':
         await session.stepOver();
+        break;
+      case 'sob':
+        await session.stepOverBytecode();
         break;
       default:
         print('### unknown command: $command');
