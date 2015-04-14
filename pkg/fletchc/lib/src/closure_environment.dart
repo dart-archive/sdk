@@ -942,6 +942,17 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
+  void visitSuperIndexPostfix(
+      SendSet node,
+      FunctionElement getter,
+      FunctionElement setter,
+      Node index,
+      IncDecOperator operator,
+      _) {
+    markThisUsed();
+    node.visitChildren(this);
+  }
+
   void visitSuperNotEquals(
       Send node,
       FunctionElement function,
@@ -1642,6 +1653,15 @@ class ClosureVisitor
       Element element,
       Node index,
       Node rhs,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorUnresolvedSuperIndexPostfix(
+      Send node,
+      Element element,
+      Node index,
+      IncDecOperator operator,
       _) {
     node.visitChildren(this);
   }

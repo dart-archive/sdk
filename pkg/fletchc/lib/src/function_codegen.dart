@@ -51,6 +51,11 @@ class FunctionCodegen extends CodegenVisitor {
 
   FunctionElement get function => element;
 
+  // If the function is a setter, push the argument to later be returned.
+  // TODO(ajohnsen): If the argument is semantically final, we don't have to
+  // do this.
+  bool get hasAssignmentSemantics => function.isSetter || function.name == '[]=';
+
   void compile() {
     ClassElement enclosing = function.enclosingClass;
     // Generate implicit 'null' check for '==' functions, except for Null.
@@ -70,12 +75,11 @@ class FunctionCodegen extends CodegenVisitor {
     FunctionSignature functionSignature = function.functionSignature;
     int parameterCount = functionSignature.parameterCount;
 
-    // If the function is a setter, push the argument to later be returned.
-    // TODO(ajohnsen): If the argument is semantically final, we don't have to
-    // do this.
-    if (function.isSetter) {
-      setterResultSlot = - parameterCount - 1;
-      builder.loadSlot(setterResultSlot);
+    if (hasAssignmentSemantics) {
+      setterResultSlot = builder.stackSize;
+      // The result is always the last argument (-1 for return address, -1 for
+      // last parameter).
+      builder.loadSlot(-2);
     }
 
     int i = 0;
@@ -107,7 +111,7 @@ class FunctionCodegen extends CodegenVisitor {
 
     // Emit implicit 'return null' if no terminator is present.
     if (!builder.endsWithTerminator) {
-      if (function.isSetter) {
+      if (hasAssignmentSemantics) {
         builder.loadSlot(setterResultSlot);
       } else {
         builder.loadLiteralNull();
@@ -119,7 +123,7 @@ class FunctionCodegen extends CodegenVisitor {
   }
 
   void optionalReplaceResultValue() {
-    if (function.isSetter) {
+    if (hasAssignmentSemantics) {
       builder.pop();
       builder.loadSlot(setterResultSlot);
     }

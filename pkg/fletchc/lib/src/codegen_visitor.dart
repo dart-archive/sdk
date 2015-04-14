@@ -873,6 +873,126 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void handleSuperOperatorCall(Node node, FunctionElement function) {
+    registerStaticInvocation(function);
+    int arity = function.functionSignature.parameterCount + 1;
+    int methodId = context.backend.functionMethodId(function);
+    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    invokeStatic(node, constId, arity);
+  }
+
+  void visitSuperIndex(
+      Send node,
+      FunctionElement function,
+      Node index,
+      _) {
+    loadThis();
+    visitForValue(index);
+    handleSuperOperatorCall(node, function);
+    applyVisitState();
+  }
+
+  void visitSuperIndexSet(
+      Send node,
+      FunctionElement function,
+      Node index,
+      Node rhs,
+      _) {
+    loadThis();
+    visitForValue(index);
+    visitForValue(rhs);
+    handleSuperOperatorCall(node, function);
+    applyVisitState();
+  }
+
+  void visitSuperCompoundIndexSet(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      Node index,
+      AssignmentOperator operator,
+      Node rhs,
+      _) {
+    visitForValue(index);
+    loadThis();
+    builder.loadLocal(1);
+    handleSuperOperatorCall(node, getter);
+    loadThis();
+    // Load index
+    builder.loadLocal(2);
+    // Load value from index call and call operator.
+    builder.loadLocal(2);
+    visitForValue(rhs);
+    invokeMethod(node, getAssignmentSelector(operator));
+    handleSuperOperatorCall(node, setter);
+    // Override 'index' with result value, and pop everything else.
+    builder.storeLocal(2);
+    builder.pop();
+    builder.pop();
+    applyVisitState();
+  }
+
+  void visitSuperIndexPostfix(
+      SendSet node,
+      FunctionElement getter,
+      FunctionElement setter,
+      Node index,
+      IncDecOperator operator,
+      _) {
+    // TODO(ajohnsen): Fast-case when for effect.
+    visitForValue(index);
+    loadThis();
+    builder.loadLocal(1);
+    handleSuperOperatorCall(node, getter);
+    loadThis();
+    // Load index
+    builder.loadLocal(2);
+    // Load value from index call and inc/dec.
+    builder.loadLocal(2);
+    builder.loadLiteral(1);
+    invokeMethod(node, getIncDecSelector(operator));
+    // We can now call []= with 'this', 'index' and 'value'.
+    handleSuperOperatorCall(node, setter);
+    builder.pop();
+    // Pop result, override 'index' with initial indexed value, and pop again.
+    builder.storeLocal(1);
+    builder.pop();
+    applyVisitState();
+  }
+
+  void visitSuperBinary(
+      Send node,
+      FunctionElement function,
+      BinaryOperator operator,
+      Node argument,
+      _) {
+    loadThis();
+    visitForValue(argument);
+    handleSuperOperatorCall(node, function);
+    applyVisitState();
+  }
+
+  void visitSuperEquals(
+      Send node,
+      FunctionElement function,
+      Node argument,
+      _) {
+    loadThis();
+    visitForValue(argument);
+    handleSuperOperatorCall(node, function);
+    applyVisitState();
+  }
+
+  void visitSuperUnary(
+      Send node,
+      UnaryOperator operator,
+      FunctionElement function,
+      _) {
+    loadThis();
+    handleSuperOperatorCall(node, function);
+    applyVisitState();
+  }
+
   int computeFieldIndex(FieldElement field) {
     ClassElement classElement = field.enclosingClass;
     // We know the enclosing class is compiled, so we can use the CompiledClass
@@ -1801,6 +1921,7 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     handleUnresolved(node.send.toString());
+    applyVisitState();
   }
 
   void errorUnresolvedClassConstructorInvoke(
@@ -1811,6 +1932,7 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     handleUnresolved(node.send.toString());
+    applyVisitState();
   }
 
   void errorAbstractClassConstructorInvoke(
@@ -1831,6 +1953,7 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     handleUnresolved(node.send.toString());
+    applyVisitState();
   }
 
   void visitTopLevelGetterGet(
@@ -2355,7 +2478,6 @@ abstract class CodegenVisitor
     int methodId = context.backend.functionMethodId(function);
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
     builder.invokeStatic(constId, 1);
-    applyVisitState();
   }
 
   void errorUnresolvedInvoke(
@@ -2365,6 +2487,7 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     handleUnresolved(node.selector.toString());
+    applyVisitState();
   }
 
   void errorUnresolvedGet(
@@ -2372,7 +2495,77 @@ abstract class CodegenVisitor
       Element element,
       _) {
     handleUnresolved(node.selector.toString());
+    applyVisitState();
   }
+
+  void errorUnresolvedSuperCompoundIndexSet(
+      Send node,
+      Element element,
+      Node index,
+      AssignmentOperator operator,
+      Node rhs,
+      _) {
+    handleUnresolved("[]=");
+    applyVisitState();
+  }
+
+  void errorUnresolvedSuperIndexSet(
+      Send node,
+      Element element,
+      Node index,
+      Node rhs,
+      _) {
+    handleUnresolved("[]=");
+    applyVisitState();
+  }
+
+  void errorUnresolvedSuperIndexPostfix(
+      Send node,
+      Element element,
+      Node index,
+      IncDecOperator operator,
+      _) {
+    handleUnresolved(node.selector.toString());
+    applyVisitState();
+  }
+
+  void errorUnresolvedSuperIndex(
+      Send node,
+      Element element,
+      Node index,
+      _) {
+    handleUnresolved(node.selector.toString());
+    applyVisitState();
+  }
+
+  void errorUnresolvedSuperUnary(
+      Send node,
+      UnaryOperator operator,
+      Element element,
+      _) {
+    handleUnresolved(node.selector.toString());
+    applyVisitState();
+  }
+
+  void errorUnresolvedSuperBinary(
+      Send node,
+      Element element,
+      BinaryOperator operator,
+      Node argument,
+      _) {
+    handleUnresolved(node.selector.toString());
+    applyVisitState();
+  }
+
+  void errorUndefinedUnaryExpression(
+      Send node,
+      Operator operator,
+      Node expression,
+      _) {
+    handleUnresolved(node.selector.toString());
+    applyVisitState();
+  }
+
 
   void internalError(Spannable spannable, String reason) {
     context.compiler.internalError(spannable, reason);
@@ -2764,58 +2957,6 @@ abstract class CodegenVisitor
     generateUnimplementedError(node, "[errorInvalidAssert] isn't implemented.");
   }
 
-  void visitSuperBinary(
-      Send node,
-      FunctionElement function,
-      BinaryOperator operator,
-      Node argument,
-      _){
-    generateUnimplementedError(node, "[visitSuperBinary] isn't implemented.");
-  }
-
-  void visitSuperNotEquals(
-      Send node,
-      FunctionElement function,
-      Node argument,
-      _){
-    generateUnimplementedError(
-        node, "[visitSuperNotEquals] isn't implemented.");
-  }
-
-  void visitSuperEquals(
-      Send node,
-      FunctionElement function,
-      Node argument,
-      _){
-    generateUnimplementedError(node, "[visitSuperEquals] isn't implemented.");
-  }
-
-  void visitSuperUnary(
-      Send node,
-      UnaryOperator operator,
-      FunctionElement function,
-      _){
-    generateUnimplementedError(node, "[visitSuperUnary] isn't implemented.");
-  }
-
-  void visitSuperIndex(
-      Send node,
-      FunctionElement function,
-      Node index,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperIndex] isn't implemented.");
-  }
-
-  void visitSuperIndexSet(
-      Send node,
-      FunctionElement function,
-      Node index,
-      Node rhs,
-      _){
-    generateUnimplementedError(node, "[visitSuperIndexSet] isn't implemented.");
-  }
-
   void errorFinalParameterCompound(
       Send node,
       ParameterElement parameter,
@@ -3012,18 +3153,6 @@ abstract class CodegenVisitor
       _){
     generateUnimplementedError(
         node, "[visitDynamicTypeLiteralCompound] isn't implemented.");
-  }
-
-  void visitSuperCompoundIndexSet(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      Node index,
-      AssignmentOperator operator,
-      Node rhs,
-      _){
-    generateUnimplementedError(
-        node, "[visitSuperCompoundIndexSet] isn't implemented.");
   }
 
   void errorLocalFunctionPrefix(
@@ -3370,55 +3499,6 @@ abstract class CodegenVisitor
         node, "[errorUnresolvedPostfix] isn't implemented.");
   }
 
-  void errorUnresolvedSuperIndexSet(
-      Send node,
-      Element element,
-      Node index,
-      Node rhs,
-      _){
-    generateUnimplementedError(
-        node, "[errorUnresolvedSuperIndexSet] isn't implemented.");
-  }
-
-  void errorUnresolvedSuperCompoundIndexSet(
-      Send node,
-      Element element,
-      Node index,
-      AssignmentOperator operator,
-      Node rhs,
-      _){
-    generateUnimplementedError(
-        node, "[errorUnresolvedSuperCompoundIndexSet] isn't implemented.");
-  }
-
-  void errorUnresolvedSuperUnary(
-      Send node,
-      UnaryOperator operator,
-      Element element,
-      _){
-    generateUnimplementedError(
-        node, "[errorUnresolvedSuperUnary] isn't implemented.");
-  }
-
-  void errorUnresolvedSuperBinary(
-      Send node,
-      Element element,
-      BinaryOperator operator,
-      Node argument,
-      _){
-    generateUnimplementedError(
-        node, "[errorUnresolvedSuperBinary] isn't implemented.");
-  }
-
-  void errorUndefinedUnaryExpression(
-      Send node,
-      Operator operator,
-      Node expression,
-      _){
-    generateUnimplementedError(
-        node, "[errorUndefinedUnaryExpression] isn't implemented.");
-  }
-
   void errorUndefinedBinaryExpression(
       Send node,
       Node left,
@@ -3427,14 +3507,5 @@ abstract class CodegenVisitor
       _){
     generateUnimplementedError(
         node, "[errorUndefinedBinaryExpression] isn't implemented.");
-  }
-
-  void errorUnresolvedSuperIndex(
-      Send node,
-      Element element,
-      Node index,
-      _) {
-    generateUnimplementedError(
-        node, "[errorUnresolvedSuperIndex] isn't implemented.");
   }
 }

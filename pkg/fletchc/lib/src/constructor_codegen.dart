@@ -125,6 +125,23 @@ class ConstructorCodegen extends CodegenVisitor {
                     "Multiple visits to the same constructor");
     }
 
+    if (constructor.isSynthesized) {
+      // If the constructor is implicit, invoke the defining constructor.
+      if (constructor.functionSignature.parameterCount == 0) {
+        ConstructorElement defining = constructor.definingConstructor;
+        int initSlot = builder.stackSize;
+        loadArguments(new NodeList.empty(), defining);
+        inlineInitializers(defining, initSlot);
+        return;
+      }
+
+      // Otherwise the constructor is synthesized in the context of mixin
+      // applications, use the defining constructor.
+      do {
+        constructor = constructor.definingConstructor;
+      } while (constructor.isSynthesized);
+    }
+
     constructors.add(constructor);
     FunctionSignature signature = constructor.functionSignature;
     int parameterIndex = 0;
@@ -154,17 +171,11 @@ class ConstructorCodegen extends CodegenVisitor {
     for (var initializer in initializers) {
       Element element = elements[initializer];
       if (element.isGenerativeConstructor) {
-        ConstructorElement superConstructor = element;
-
-        // If the constructor is synthesized, use the defining constructor.
-        ConstructorElement defining = superConstructor.definingConstructor;
-        if (defining != null) superConstructor = defining;
-
         // TODO(ajohnsen): Handle named arguments.
         // Load all parameters to the constructor, onto the stack.
         int initSlot = builder.stackSize;
-        loadArguments(initializer.argumentsNode, superConstructor);
-        inlineInitializers(superConstructor, initSlot);
+        loadArguments(initializer.argumentsNode, element);
+        inlineInitializers(element, initSlot);
       } else {
         // An initializer is a SendSet, leaving a value on the stack. Be sure to
         // pop it by visiting for effect.
