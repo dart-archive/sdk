@@ -33,7 +33,7 @@ abstract class ConformanceService {
 
   static void initialize(ConformanceService impl) {
     if (_impl != null) {
-      throw new UnsupportedError();
+      throw new UnsupportedError("Cannot re-initialize");
     }
     _impl = impl;
     _terminated = false;
@@ -126,23 +126,23 @@ abstract class ConformanceService {
         _postResult.icall$1(request);
         break;
       default:
-        throw UnsupportedError();
+        throw new UnsupportedError("Unknown method");
     }
   }
 
-  const int _TERMINATE_METHOD_ID = 0;
-  const int _GET_AGE_METHOD_ID = 1;
-  const int _GET_BOXED_AGE_METHOD_ID = 2;
-  const int _GET_AGE_STATS_METHOD_ID = 3;
-  const int _CREATE_AGE_STATS_METHOD_ID = 4;
-  const int _CREATE_PERSON_METHOD_ID = 5;
-  const int _CREATE_NODE_METHOD_ID = 6;
-  const int _COUNT_METHOD_ID = 7;
-  const int _DEPTH_METHOD_ID = 8;
-  const int _FOO_METHOD_ID = 9;
-  const int _BAR_METHOD_ID = 10;
-  const int _PING_METHOD_ID = 11;
-  const int _FLIP_TABLE_METHOD_ID = 12;
+  static const int _TERMINATE_METHOD_ID = 0;
+  static const int _GET_AGE_METHOD_ID = 1;
+  static const int _GET_BOXED_AGE_METHOD_ID = 2;
+  static const int _GET_AGE_STATS_METHOD_ID = 3;
+  static const int _CREATE_AGE_STATS_METHOD_ID = 4;
+  static const int _CREATE_PERSON_METHOD_ID = 5;
+  static const int _CREATE_NODE_METHOD_ID = 6;
+  static const int _COUNT_METHOD_ID = 7;
+  static const int _DEPTH_METHOD_ID = 8;
+  static const int _FOO_METHOD_ID = 9;
+  static const int _BAR_METHOD_ID = 10;
+  static const int _PING_METHOD_ID = 11;
+  static const int _FLIP_TABLE_METHOD_ID = 12;
 }
 
 class Empty extends Reader {
@@ -152,16 +152,16 @@ class EmptyBuilder extends Builder {
 }
 
 class AgeStats extends Reader {
-  int get averageAge => _segment.memory.getInt32(_offset + 0);
-  int get sum => _segment.memory.getInt32(_offset + 4);
+  int get averageAge => segment.memory.getInt32(offset + 0);
+  int get sum => segment.memory.getInt32(offset + 4);
 }
 
 class AgeStatsBuilder extends Builder {
   void set averageAge(int value) {
-    _segment.memory.setInt32(_offset + 0, value);
+    segment.memory.setInt32(offset + 0, value);
   }
   void set sum(int value) {
-    _segment.memory.setInt32(_offset + 4, value);
+    segment.memory.setInt32(offset + 4, value);
   }
 }
 
@@ -169,49 +169,51 @@ class Person extends Reader {
   String get name => readString(new _uint16List(), 0);
   List<int> get nameData => readList(new _uint16List(), 0);
   List<Person> get children => readList(new _PersonList(), 8);
-  int get age => _segment.memory.getInt32(_offset + 16);
+  int get age => segment.memory.getInt32(offset + 16);
 }
 
 class PersonBuilder extends Builder {
   void set name(String value) {
+
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initNameData(int length) {
+
     return NewList(new _uint16BuilderList(), 0, length, 2);
   }
   List<PersonBuilder> initChildren(int length) {
     return NewList(new _PersonBuilderList(), 8, length, 24);
   }
   void set age(int value) {
-    _segment.memory.setInt32(_offset + 16, value);
+    segment.memory.setInt32(offset + 16, value);
   }
 }
 
 class Large extends Reader {
   Small get s => new Small()
-      .._segment = _segment
-      .._offset = _offset + 0;
-  int get y => _segment.memory.getInt32(_offset + 4);
+      ..segment = segment
+      ..offset = offset + 0;
+  int get y => segment.memory.getInt32(offset + 4);
 }
 
 class LargeBuilder extends Builder {
   SmallBuilder initS() {
     return new SmallBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
+        ..segment = segment
+        ..offset = offset + 0;
   }
   void set y(int value) {
-    _segment.memory.setInt32(_offset + 4, value);
+    segment.memory.setInt32(offset + 4, value);
   }
 }
 
 class Small extends Reader {
-  int get x => _segment.memory.getInt32(_offset + 0);
+  int get x => segment.memory.getInt32(offset + 0);
 }
 
 class SmallBuilder extends Builder {
   void set x(int value) {
-    _segment.memory.setInt32(_offset + 0, value);
+    segment.memory.setInt32(offset + 0, value);
   }
 }
 
@@ -227,37 +229,37 @@ class PersonBoxBuilder extends Builder {
 
 class Node extends Reader {
   bool get isNum => 1 == this.tag;
-  int get num => _segment.memory.getInt32(_offset + 0);
+  int get num => segment.memory.getInt32(offset + 0);
   bool get isCond => 2 == this.tag;
-  bool get cond => _segment.memory.getUint8(_offset + 0) != 0;
+  bool get cond => segment.memory.getUint8(offset + 0) != 0;
   bool get isCons => 3 == this.tag;
   Cons get cons => new Cons()
-      .._segment = _segment
-      .._offset = _offset + 0;
+      ..segment = segment
+      ..offset = offset + 0;
   bool get isNil => 4 == this.tag;
-  int get tag => _segment.memory.getUint16(_offset + 16);
+  int get tag => segment.memory.getUint16(offset + 16);
 }
 
 class NodeBuilder extends Builder {
   void set num(int value) {
     tag = 1;
-    _segment.memory.setInt32(_offset + 0, value);
+    segment.memory.setInt32(offset + 0, value);
   }
   void set cond(bool value) {
     tag = 2;
-    _segment.memory.setUint8(_offset + 0, value ? 1 : 0);
+    segment.memory.setUint8(offset + 0, value ? 1 : 0);
   }
   ConsBuilder initCons() {
     tag = 3;
     return new ConsBuilder()
-        .._segment = _segment
-        .._offset = _offset + 0;
+        ..segment = segment
+        ..offset = offset + 0;
   }
   void setNil() {
     tag = 4;
   }
   void set tag(int value) {
-    _segment.memory.setUint16(_offset + 16, value);
+    segment.memory.setUint16(offset + 16, value);
   }
 }
 
@@ -282,20 +284,22 @@ class TableFlip extends Reader {
 
 class TableFlipBuilder extends Builder {
   void set flip(String value) {
+
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initFlipData(int length) {
+
     return NewList(new _uint16BuilderList(), 0, length, 2);
   }
 }
 
-class _uint16List extends ListReader implements List<uint16> {
-  int operator[](int index) => _segment.memory.getUint16(_offset + index * 2);
+class _uint16List extends ListReader implements List<int> {
+  int operator[](int index) => segment.memory.getUint16(offset + index * 2);
 }
 
-class _uint16BuilderList extends ListBuilder implements List<uint16> {
-  int operator[](int index) => _segment.memory.getUint16(_offset + index * 2);
-  void operator[]=(int index, int value) => _segment.memory.setUint16(_offset + index * 2, value);
+class _uint16BuilderList extends ListBuilder implements List<int> {
+  int operator[](int index) => segment.memory.getUint16(offset + index * 2);
+  void operator[]=(int index, int value) => segment.memory.setUint16(offset + index * 2, value);
 }
 
 class _PersonList extends ListReader implements List<Person> {

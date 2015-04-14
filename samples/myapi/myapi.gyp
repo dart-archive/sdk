@@ -22,6 +22,8 @@
         'generated/cc/myapi_service.h',
         'generated/cc/struct.cc',
         'generated/cc/struct.h',
+        'generated/cc/unicode.cc',
+        'generated/cc/unicode.h',
       ],
     },
   ],

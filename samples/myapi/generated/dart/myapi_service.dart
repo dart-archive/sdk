@@ -24,7 +24,7 @@ abstract class MyApiService {
 
   static void initialize(MyApiService impl) {
     if (_impl != null) {
-      throw new UnsupportedError();
+      throw new UnsupportedError("Cannot re-initialize");
     }
     _impl = impl;
     _terminated = false;
@@ -44,30 +44,30 @@ abstract class MyApiService {
         break;
       case _CREATE_METHOD_ID:
         var result = _impl.create();
-        request.setInt32(32, result);
+        request.setInt32(48, result);
         _postResult.icall$1(request);
         break;
       case _DESTROY_METHOD_ID:
-        _impl.destroy(request.getInt32(32));
+        _impl.destroy(request.getInt32(48));
         _postResult.icall$1(request);
         break;
       case _FOO_METHOD_ID:
-        var result = _impl.foo(request.getInt32(32));
-        request.setInt32(32, result);
+        var result = _impl.foo(request.getInt32(48));
+        request.setInt32(48, result);
         _postResult.icall$1(request);
         break;
       case _MY_OBJECT_FUNK_METHOD_ID:
-        _impl.MyObject_funk(request.getInt32(32), request.getInt32(36), request.getInt32(40));
+        _impl.MyObject_funk(request.getInt32(48), request.getInt32(52), request.getInt32(56));
         _postResult.icall$1(request);
         break;
       default:
-        throw UnsupportedError();
+        throw new UnsupportedError("Unknown method");
     }
   }
 
-  const int _TERMINATE_METHOD_ID = 0;
-  const int _CREATE_METHOD_ID = 1;
-  const int _DESTROY_METHOD_ID = 2;
-  const int _FOO_METHOD_ID = 3;
-  const int _MY_OBJECT_FUNK_METHOD_ID = 4;
+  static const int _TERMINATE_METHOD_ID = 0;
+  static const int _CREATE_METHOD_ID = 1;
+  static const int _DESTROY_METHOD_ID = 2;
+  static const int _FOO_METHOD_ID = 3;
+  static const int _MY_OBJECT_FUNK_METHOD_ID = 4;
 }

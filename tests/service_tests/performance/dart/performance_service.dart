@@ -24,7 +24,7 @@ abstract class PerformanceService {
 
   static void initialize(PerformanceService impl) {
     if (_impl != null) {
-      throw new UnsupportedError();
+      throw new UnsupportedError("Cannot re-initialize");
     }
     _impl = impl;
     _terminated = false;
@@ -61,14 +61,14 @@ abstract class PerformanceService {
         _postResult.icall$1(request);
         break;
       default:
-        throw UnsupportedError();
+        throw new UnsupportedError("Unknown method");
     }
   }
 
-  const int _TERMINATE_METHOD_ID = 0;
-  const int _ECHO_METHOD_ID = 1;
-  const int _COUNT_TREE_NODES_METHOD_ID = 2;
-  const int _BUILD_TREE_METHOD_ID = 3;
+  static const int _TERMINATE_METHOD_ID = 0;
+  static const int _ECHO_METHOD_ID = 1;
+  static const int _COUNT_TREE_NODES_METHOD_ID = 2;
+  static const int _BUILD_TREE_METHOD_ID = 3;
 }
 
 class TreeNode extends Reader {

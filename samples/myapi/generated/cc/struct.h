@@ -9,6 +9,7 @@
 
 #include <inttypes.h>
 #include <stdlib.h>
+#include <string.h>
 
 class Builder;
 class MessageBuilder;
@@ -26,6 +27,13 @@ class Segment {
 
   char* memory() const { return memory_; }
   int size() const { return size_; }
+
+ protected:
+  // Detach the memory from the segment because ownership
+  // has been transferred. Typically, because the message
+  // has been transmitted to Dart in a call and will be
+  // deleted on return.
+  void Detach() { memory_ = NULL; }
 
  private:
   MessageReader* reader_;
@@ -55,6 +63,13 @@ class BuilderSegment : public Segment {
   int Allocate(int bytes);
 
   void* At(int offset) const { return memory() + offset; }
+
+  // Detach all builder segments in the current chain because
+  // something else is taking ownership of the memory for the
+  // segments. This happens when built messages are transferred
+  // to Dart in a call. The memory will be freed on method
+  // return in that case.
+  void Detach();
 
   int id() const { return id_; }
   int used() const { return used_; }
@@ -91,6 +106,8 @@ class MessageBuilder {
 
   BuilderSegment* FindSegmentForBytes(int bytes);
 
+  static void DeleteMessage(char* message);
+
  private:
   BuilderSegment first_;
   BuilderSegment* last_;
@@ -114,6 +131,11 @@ class List {
     return T(segment_, offset_ + (index * T::kSize));
   }
 
+  const T operator[](int index) const {
+    // TODO(kasperl): Bounds check?
+    return T(segment_, offset_ + (index * T::kSize));
+  }
+
  private:
   Segment* segment_;
   int offset_;
@@ -127,6 +149,7 @@ class PrimitiveList {
       : data_(reinterpret_cast<T*>(segment->At(offset))),
         length_(length) { }
 
+  T* data() { return data_; }
   int length() const { return length_; }
 
   T& operator[](int index) {
@@ -228,6 +251,8 @@ class Reader {
     }
   }
 
+  char* ReadString(int offset) const;
+
  private:
   Segment* const segment_;
   const int offset_;
@@ -244,6 +269,10 @@ class Builder {
   int offset() const { return offset_; }
 
   int64_t InvokeMethod(ServiceId service, MethodId method);
+  void InvokeMethodAsync(ServiceId service,
+                         MethodId method,
+                         ServiceApiCallback api_callback,
+                         void* callback);
 
  protected:
   Builder(Segment* segment, int offset)
@@ -256,6 +285,7 @@ class Builder {
 
   Builder NewStruct(int offset, int size);
   Reader NewList(int offset, int length, int size);
+  void NewString(int offset, const char* value);
 
  private:
   BuilderSegment* const segment_;

@@ -236,9 +236,7 @@ class _HeaderVisitor extends CcVisitor {
 
     writeln();
     writeln('#include <inttypes.h>');
-    if (node.structs.isNotEmpty) {
-      writeln('#include "struct.h"');
-    }
+    writeln('#include "struct.h"');
 
     if (node.structs.isNotEmpty) writeln();
     for (Struct struct in node.structs) {

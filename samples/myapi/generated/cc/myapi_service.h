@@ -8,6 +8,7 @@
 #define MYAPI_SERVICE_H
 
 #include <inttypes.h>
+#include "struct.h"
 
 class MyApiService {
  public:

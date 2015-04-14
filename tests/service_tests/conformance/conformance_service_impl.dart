@@ -32,7 +32,7 @@ class ConformanceServiceImpl implements ConformanceService {
 
   void getAgeStats(Person person, AgeStatsBuilder result) {
     int sum = _sumAges(person);
-    int count = count(person);
+    int count = this.count(person);
     result.averageAge = (sum / count).round();
     result.sum = sum;
   }
