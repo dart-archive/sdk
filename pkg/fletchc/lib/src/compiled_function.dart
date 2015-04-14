@@ -150,9 +150,9 @@ class CompiledFunction {
     }
     int index = 0;
     bool match = true;
-    signature.forEachOptionalParameter((parameter) {
+    for (var parameter in signature.orderedOptionalParameters) {
       if (parameter.name != selector.namedArguments[index++]) match = false;
-    });
+    }
     return match;
   }
 

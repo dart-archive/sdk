@@ -932,7 +932,6 @@ mixin_type_parameters_simple_test: Fail
 mixin_type_parameters_super_extends_test: Fail
 mixin_type_parameters_super_test: Fail
 mixin_with_two_implicit_constructors_test: Fail
-named_argument_test: Fail
 named_constructor_test/02: Crash
 named_constructor_test/04: Crash
 named_constructor_test/05: Crash
