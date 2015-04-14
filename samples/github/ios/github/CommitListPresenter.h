@@ -13,4 +13,7 @@
 - (void)refresh;
 - (void)reset;
 
+- (int)commitCount;
+- (CommitNode*)commitAtIndex:(int)index;
+
 @end

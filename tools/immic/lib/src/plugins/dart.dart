@@ -68,6 +68,29 @@ class _DartVisitor extends CodeGenerationVisitor {
       write('this.${slotName}');
     });
     writeln(');');
+    // Serialization
+    writeln('  void serializeNode(NodeDataBuilder builder) {');
+    writeln('    serialize(builder.init${node.name}());');
+    writeln('  }');
+    writeln('  void serialize(${nodeName}DataBuilder builder) {');
+    forEachSlot(node, null, (Type slotType, String slotName) {
+        String slotNameCamel = camelize(slotName);
+        if (slotType.isList) {
+          String localSlotLength = "${slotName}Length";
+          String localSlotBuilder = "${slotName}Builder";
+          writeln('    var $localSlotLength = $slotName.length;');
+          writeln('    List $localSlotBuilder =');
+          writeln('        builder.init$slotNameCamel($localSlotLength);');
+          writeln('    for (var i = 0; i < $localSlotLength; ++i) {');
+          writeln('      $slotName[i].serialize($localSlotBuilder[i]);');
+          writeln('    }');
+        } else if (slotType.resolved != null) {
+          writeln('    $slotName.serialize(builder.init$slotNameCamel);');
+        } else {
+          writeln('    builder.$slotName = $slotName;');
+        }
+    });
+    writeln('  }');
     writeln('}');
     writeln();
   }
@@ -90,11 +113,16 @@ class ${implName} extends ${serviceName} {
   var _previous;
   ${implName}(this._presenter);
   void reset() {
-    print("reset was called!");
     _previous = null;
   }
   void refresh(PatchSetDataBuilder builder) {
-    builder.initPatches(0);
+    var current = _presenter.present(_previous);
+    // TODO(zerny): Support variable number of dynamically-typed patches.
+    List<PatchDataBuilder> patchBuilder = builder.initPatches(1);
+    patchBuilder[0].initPath(0);
+    ContentDataBuilder contentBuilder = patchBuilder[0].initContent();
+    NodeDataBuilder nodeBuilder = contentBuilder.initNode();
+    current.serializeNode(nodeBuilder);
   }
   void run() {
     ${serviceName}.initialize(this);
@@ -108,8 +136,11 @@ class ${implName} extends ${serviceName} {
   }
 
   void _writeNodeBase(List<Struct> nodes) {
-    writeln('abstract class Node { }');
-    writeln();
+  write("""
+abstract class Node {
+  void serializeNode(NodeDataBuilder builder);
+}
+""");
   }
 
   void _writeHeader() {

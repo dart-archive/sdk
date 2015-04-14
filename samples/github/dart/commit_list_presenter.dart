@@ -8,7 +8,7 @@ class CommitListPresenter {
   int revision = 0;
   CommitListNode present(Node previous) {
     return new CommitListNode(
-        commits: [new Commit(
+        commits: [new CommitNode(
             revision: ++revision,
             author: 'zerny@google.com',
             message: 'Fletchy fletch fletch')]);

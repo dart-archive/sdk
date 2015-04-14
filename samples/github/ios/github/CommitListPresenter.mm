@@ -21,13 +21,29 @@
   PatchSetData data = GithubPresenterService::refresh();
   List<PatchData> patches = data.getPatches();
   for (int i = 0; i < patches.length(); ++i) {
-    NSLog(@"Got a patch...");
+    PatchData patch = patches[i];
+    List<uint8_t> path = patch.getPath();
+    if (path.length() == 0) {
+      assert(patch.getContent().getNode().isCommitList());
+      self.root = [[CommitListNode alloc] initWith:patch.getContent().getNode().getCommitList()];
+    } else {
+      // TODO(zerny): support a non-root patch.
+      abort();
+    }
   }
-  if (patches.length() == 0) NSLog(@"Empty patch set");
 }
 
 - (void)reset {
   GithubPresenterService::reset();
+}
+
+- (int)commitCount {
+  return self.root == nil ? 0 : self.root.commits.count;
+}
+
+- (CommitNode*)commitAtIndex:(int)index {
+  assert(self.root != nil);
+  return [self.root.commits objectAtIndex:index];
 }
 
 @end

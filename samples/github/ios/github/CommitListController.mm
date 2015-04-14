@@ -29,8 +29,7 @@
 - (NSInteger)tableView:(UITableView *)tableView
  numberOfRowsInSection:(NSInteger)section {
   assert(section == 0);
-  if (!self.presenter.root) return 0;
-  return self.presenter.root.commits.count;
+  return self.presenter.commitCount;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView
@@ -39,7 +38,7 @@
     (CommitCell*)[tableView
         dequeueReusableCellWithIdentifier:CommitCellId
                              forIndexPath:indexPath];
-  CommitNode* commit = [self.presenter.root.commits objectAtIndex:indexPath.row];
+  CommitNode* commit = [self.presenter commitAtIndex:indexPath.row];
   cell.revisionLabel.text = [NSString stringWithFormat:@"%d", commit.revision];
   cell.authorLabel.text = commit.author;
   cell.messageLabel.text = commit.message;

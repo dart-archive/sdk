@@ -41,6 +41,12 @@ const Map<String, String> _TYPES = const {
   'String' : 'NSString*',
 };
 
+String getTypeName(Type type) {
+  if (type.resolved != null) {
+    return "${type.identifier}Node";
+  }
+  return _types[type.identifier];
+}
 
 void generate(String path, Unit unit, String outputDirectory) {
   String directory = join(outputDirectory, "objc");
@@ -74,6 +80,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
   visitStruct(Struct node) {
     StructLayout layout = node.layout;
     String nodeName = "${node.name}Node";
+    String nodeNameData = "${nodeName}Data";
     writeln('@interface $nodeName : Node');
     writeln();
     forEachSlot(node, null, (Type slotType, String slotName) {
@@ -82,7 +89,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
       writeln(' $slotName;');
     });
     writeln();
-    writeln('- (id)initWith:(const ContentData&)data;');
+    writeln('- (id)initWith:(const $nodeNameData&)data;');
     writeln();
     writeln('@end');
     writeln();
@@ -120,6 +127,8 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
   visitUnit(Unit unit) {
     _writeHeader();
+    _writeStringUtils();
+    _writeListUtils();
     _writeNodeBase();
     unit.structs.forEach(visit);
   }
@@ -128,7 +137,12 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     StructLayout layout = node.layout;
     String name = node.name;
     String nodeName = "${node.name}Node";
+    String nodeNameData = "${nodeName}Data";
     write("""
+static id create$nodeName(const $nodeNameData& data) {
+  return [[$nodeName alloc] initWith:data];
+}
+
 @implementation $nodeName
 
 - (id)init {
@@ -139,22 +153,20 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
   return nil;
 }
 
-- (id)initWith:(const ContentData&)data {
-  assert(data.isNode());
-  assert(data.getNode().is${name}());
-  ${nodeName}Data node = data.getNode().get${name}();
+- (id)initWith:(const $nodeNameData&)data {
 """);
     forEachSlot(node, null, (Type slotType, String slotName) {
       String camelName = camelize(slotName);
       write('  _$slotName = ');
       if (slotType.isList) {
-        // TODO(zerny): Allocate a populated array.
-        writeln('[NSArray array];');
+        String slotTypeName = getTypeName(slotType);
+        String slotTypeData = "${slotTypeName}Data";
+        writeln('ListUtils<$slotTypeData>::decodeList(');
+        writeln('      data.get${camelName}(), create$slotTypeName);');
       } else if (slotType.isString) {
-        // TODO(zerny): Construct a NSString.
-        writeln('@"";');
+        writeln('decodeString(data.get${camelName}Data());');
       } else {
-        writeln('node.get${camelName}();');
+        writeln('data.get${camelName}();');
       }
     });
     write("""
@@ -170,6 +182,43 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     write("""
 @implementation Node
 @end
+
+""");
+  }
+
+  void _writeListUtils() {
+    write("""
+template<typename T>
+class ListUtils {
+public:
+  typedef id (*DecodeElementFunction)(const T&);
+
+  static NSMutableArray* decodeList(const List<T>& list,
+                                    DecodeElementFunction decodeElement) {
+    NSMutableArray* array = [NSMutableArray arrayWithCapacity:list.length()];
+    for (int i = 0; i < list.length(); ++i) {
+      [array addObject:decodeElement(list[i])];
+    }
+    return array;
+  }
+};
+
+""");
+  }
+
+  void _writeStringUtils() {
+    write("""
+static NSString* decodeString(const List<unichar>& chars) {
+  List<unichar>& tmp = const_cast<List<unichar>&>(chars);
+  return [[NSString alloc] initWithCharacters:tmp.data()
+                                       length:tmp.length()];
+}
+
+static void encodeString(NSString* string, List<unichar> chars) {
+  assert(string.length == chars.length());
+  [string getCharacters:chars.data()
+                  range:NSMakeRange(0, string.length)];
+}
 
 """);
   }
