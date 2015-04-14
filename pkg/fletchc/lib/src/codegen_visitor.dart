@@ -825,6 +825,11 @@ abstract class CodegenVisitor
       // Patch known functions directly.
       if (element == context.backend.fletchExternalInvokeMain) {
         element = context.compiler.mainFunction;
+        if (element.isErroneous) {
+          // TODO(ajohnsen): Better error.
+          handleUnresolved("main");
+          return;
+        }
       } else if (element == context.backend.fletchExternalCoroutineChange) {
         for (Node argument in arguments) {
           visitForValue(argument);

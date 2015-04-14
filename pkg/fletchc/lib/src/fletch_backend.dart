@@ -570,9 +570,7 @@ class FletchBackend extends Backend {
       FunctionElement function,
       TreeElements elements,
       Registry registry) {
-    if (function == compiler.mainFunction) {
-      registry.registerStaticInvocation(fletchSystemEntry);
-    }
+    registry.registerStaticInvocation(fletchSystemEntry);
 
     ClosureEnvironment closureEnvironment = createClosureEnvironment(
         function,
