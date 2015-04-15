@@ -120,6 +120,8 @@ class ConstructorCodegen extends CodegenVisitor {
   void inlineInitializers(
       ConstructorElement constructor,
       int firstParameterSlot) {
+    if (checkCompileError(constructor.enclosingClass)) return;
+
     if (constructors.indexOf(constructor) >= 0) {
       internalError(constructor.node,
                     "Multiple visits to the same constructor");

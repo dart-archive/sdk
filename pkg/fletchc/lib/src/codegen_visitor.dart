@@ -826,8 +826,7 @@ abstract class CodegenVisitor
       if (element == context.backend.fletchExternalInvokeMain) {
         element = context.compiler.mainFunction;
         if (element.isErroneous) {
-          // TODO(ajohnsen): Better error.
-          handleUnresolved("main");
+          handleCompileError();
           return;
         }
       } else if (element == context.backend.fletchExternalCoroutineChange) {
@@ -1920,7 +1919,9 @@ abstract class CodegenVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    handleUnresolved(node.send.toString());
+    if (!checkCompileError(constructor.enclosingClass)) {
+      handleUnresolved(node.send.toString());
+    }
     applyVisitState();
   }
 
@@ -2478,6 +2479,22 @@ abstract class CodegenVisitor
     int methodId = context.backend.functionMethodId(function);
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
     builder.invokeStatic(constId, 1);
+  }
+
+  bool checkCompileError(Element element) {
+    if (context.compiler.elementsWithCompileTimeErrors.contains(element)) {
+      handleCompileError();
+      return true;
+    }
+    return false;
+  }
+
+  void handleCompileError() {
+    FunctionElement function = context.backend.fletchCompileError;
+    registerStaticInvocation(function);
+    int methodId = context.backend.functionMethodId(function);
+    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    builder.invokeStatic(constId, 0);
   }
 
   void errorUnresolvedInvoke(

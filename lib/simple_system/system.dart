@@ -58,6 +58,11 @@ unresolved(name) {
       null);
 }
 
+compileError() {
+  print("Compile error");
+  halt(254);
+}
+
 @native halt(int code) {
   yield(true);
 }

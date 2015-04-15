@@ -57,6 +57,8 @@ class FunctionCodegen extends CodegenVisitor {
   bool get hasAssignmentSemantics => function.isSetter || function.name == '[]=';
 
   void compile() {
+    checkCompileError(function);
+
     ClassElement enclosing = function.enclosingClass;
     // Generate implicit 'null' check for '==' functions, except for Null.
     if (enclosing != null &&
