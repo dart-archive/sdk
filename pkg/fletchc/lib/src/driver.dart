@@ -208,14 +208,15 @@ Future main(List<String> arguments) async {
     // Ignored. There's no way to check if a socket file exists.
   }
 
-  ServerSocket server =
-      await ServerSocket.bind(new UnixDomainAddress(socketFile.path), 0);
+  ServerSocket server = await ServerSocket.bind(
+      new
+      UnixDomainAddress // NO_LINT
+      (socketFile.path), 0);
 
   // Write the socket file to a config file. This lets multiple command line
   // programs share this persistent driver process, which in turn eliminates
   // start up overhead.
   configFile.writeAsStringSync(socketFile.path, flush: true);
-
 
   // Print the temporary directory so the launching process knows where to
   // connect, and that the socket is ready.
