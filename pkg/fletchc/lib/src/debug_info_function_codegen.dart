@@ -9,6 +9,9 @@ import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
 import 'package:compiler/src/universe/universe.dart';
 
+import 'package:compiler/src/dart2jslib.dart' show
+    Registry;
+
 import 'bytecode_builder.dart';
 import 'closure_environment.dart';
 

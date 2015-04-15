@@ -19,6 +19,7 @@ import 'package:compiler/src/resolution/operators.dart' show
 
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression,
+    ConstructedConstantExpression,
     TypeConstantExpression;
 
 import 'package:compiler/src/dart2jslib.dart' show
@@ -178,7 +179,7 @@ class ClosureVisitor
       while (current != element.executableContext) {
         ClosureInfo info = closureEnvironment.closures[current];
         info.markUsed(element);
-        current = current.executableContext;
+        current = (current as Local).executableContext;
       }
     }
   }
@@ -188,7 +189,7 @@ class ClosureVisitor
     while (current != element) {
       ClosureInfo info = closureEnvironment.closures[current];
       info.isThisFree = true;
-      current = current.executableContext;
+      current = (current as Local).executableContext;
     }
   }
 
@@ -1716,6 +1717,226 @@ class ClosureVisitor
       Node index,
       _) {
     markThisUsed();
+    node.visitChildren(this);
+  }
+
+  void visitIndexPostfix(
+      Send node,
+      Node receiver,
+      Node index,
+      IncDecOperator operator,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void visitSuperIndexPrefix(
+      Send node,
+      FunctionElement indexFunction,
+      FunctionElement indexSetFunction,
+      Node index,
+      IncDecOperator operator,
+      _) {
+    markThisUsed();
+    node.visitChildren(this);
+  }
+
+  void errorUnresolvedSuperIndexPrefix(
+      Send node,
+      Element function,
+      Node index,
+      IncDecOperator operator,
+      _) {
+    markThisUsed();
+    node.visitChildren(this);
+  }
+
+  void errorClassTypeLiteralCompound(
+      Send node,
+      ConstantExpression constant,
+      AssignmentOperator operator,
+      Node rhs,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorTypedefTypeLiteralCompound(
+      Send node,
+      ConstantExpression constant,
+      AssignmentOperator operator,
+      Node rhs,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorTypeVariableTypeLiteralCompound(
+      Send node,
+      TypeVariableElement element,
+      AssignmentOperator operator,
+      Node rhs,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorDynamicTypeLiteralCompound(
+      Send node,
+      ConstantExpression constant,
+      AssignmentOperator operator,
+      Node rhs,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorClassTypeLiteralPrefix(
+      Send node,
+      ConstantExpression constant,
+      IncDecOperator operator,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorTypedefTypeLiteralPrefix(
+      Send node,
+      ConstantExpression constant,
+      IncDecOperator operator,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorTypeVariableTypeLiteralPrefix(
+      Send node,
+      TypeVariableElement element,
+      IncDecOperator operator,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorDynamicTypeLiteralPrefix(
+      Send node,
+      ConstantExpression constant,
+      IncDecOperator operator,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorClassTypeLiteralPostfix(
+      Send node,
+      ConstantExpression constant,
+      IncDecOperator operator,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorTypedefTypeLiteralPostfix(
+      Send node,
+      ConstantExpression constant,
+      IncDecOperator operator,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorTypeVariableTypeLiteralPostfix(
+      Send node,
+      TypeVariableElement element,
+      IncDecOperator operator,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorDynamicTypeLiteralPostfix(
+      Send node,
+      ConstantExpression constant,
+      IncDecOperator operator,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void visitConstConstructorInvoke(
+      NewExpression node,
+      ConstructedConstantExpression constant,
+      _) {
+    markThisUsed();
+    node.visitChildren(this);
+  }
+
+  void visitGenerativeConstructorInvoke(
+      NewExpression node,
+      ConstructorElement constructor,
+      InterfaceType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void visitRedirectingGenerativeConstructorInvoke(
+      NewExpression node,
+      ConstructorElement constructor,
+      InterfaceType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void visitFactoryConstructorInvoke(
+      NewExpression node,
+      ConstructorElement constructor,
+      InterfaceType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void visitRedirectingFactoryConstructorInvoke(
+      NewExpression node,
+      ConstructorElement constructor,
+      InterfaceType type,
+      ConstructorElement effectiveTarget,
+      InterfaceType effectiveTargetType,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorUnresolvedConstructorInvoke(
+      NewExpression node,
+      Element constructor,
+      DartType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorUnresolvedClassConstructorInvoke(
+      NewExpression node,
+      Element element,
+      MalformedType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorAbstractClassConstructorInvoke(
+      NewExpression node,
+      ConstructorElement element,
+      InterfaceType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    node.visitChildren(this);
+  }
+
+  void errorUnresolvedRedirectingFactoryConstructorInvoke(
+      NewExpression node,
+      ConstructorElement constructor,
+      InterfaceType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
     node.visitChildren(this);
   }
 }

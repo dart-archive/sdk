@@ -17,7 +17,11 @@ import 'package:compiler/src/io/source_file.dart';
 import 'package:compiler/src/tree/tree.dart' show
     Node;
 
+import 'package:compiler/src/source_file_provider.dart' show
+    SourceFileProvider;
+
 import 'compiled_function.dart';
+
 import 'fletch_compiler.dart' show
     FletchCompiler;
 
@@ -45,9 +49,17 @@ class DebugInfo {
 
   void add(FletchCompiler compiler, int bytecodeIndex, Node node) {
     SourceSpan span = compiler.spanFromSpannable(node);
-    SourceFile file = span != null
-        ? compiler.provider.sourceFiles[span.uri]
-        : null;
+    SourceFile file = null;
+    // TODO(ahe): What to do if compiler.provider isn't a SourceFileProvider?
+    // Perhaps we can create a new type of diagnostic, see
+    // package:compiler/compiler.dart. The class Diagnostic is an "extensible"
+    // enum class. This way, the debugger doesn't hold on to files.
+    // Alternatively, source files should be obtained by iterating through the
+    // compilation units.
+    if (span != null && compiler.provider is SourceFileProvider) {
+      SourceFileProvider provider = compiler.provider;
+      file = provider.sourceFiles[span.uri];
+    }
     locations.add(new SourceLocation(bytecodeIndex, node, span, file));
   }
 

@@ -28,6 +28,7 @@ import 'package:compiler/src/tree/tree.dart' show
     Expression;
 
 import 'package:compiler/src/elements/elements.dart' show
+    AbstractFieldElement,
     ClassElement,
     ConstructorElement,
     Element,
@@ -36,11 +37,13 @@ import 'package:compiler/src/elements/elements.dart' show
     FormalElement,
     FunctionElement,
     FunctionSignature,
+    FunctionTypedElement,
     LibraryElement,
     MemberElement;
 
 import 'package:compiler/src/dart_types.dart' show
-    DartType;
+    DartType,
+    InterfaceType;
 
 import 'package:compiler/src/universe/universe.dart'
     show Selector;
@@ -156,7 +159,7 @@ class CompiledClass {
     createFor(element);
 
     // Add all types related to 'implements'.
-    for (DartType interfaceType in element.interfaces) {
+    for (InterfaceType interfaceType in element.interfaces) {
       createFor(interfaceType.element);
       for (DartType type in interfaceType.element.allSupertypes) {
         createFor(type.element);
@@ -300,7 +303,10 @@ class FletchBackend extends Backend {
     FunctionElement findHelper(String name) {
       Element helper = fletchSystemLibrary.findLocal(name);
       // TODO(ahe): Make it cleaner.
-      if (helper.isAbstractField) helper = helper.getter;
+      if (helper.isAbstractField) {
+        AbstractFieldElement abstractField = helper;
+        helper = abstractField.getter;
+      }
       if (helper == null) {
         compiler.reportError(
             fletchSystemLibrary, MessageKind.GENERIC,
@@ -496,12 +502,13 @@ class FletchBackend extends Backend {
       String name,
       CompiledClass holderClass) {
     return compiledFunctions.putIfAbsent(function.declaration, () {
+      FunctionTypedElement implementation = function.implementation;
       CompiledFunction compiledFunction = new CompiledFunction(
           functions.length,
           name,
           // Parameter initializers are expressed in the potential
           // implementation.
-          function.implementation.functionSignature,
+          implementation.functionSignature,
           holderClass,
           isAccessor: function.isAccessor);
       functions.add(compiledFunction);
@@ -632,10 +639,11 @@ class FletchBackend extends Backend {
         // Create a copy with a unique 'memberOf', so we can detect missing
         // stubs for the mixin applications as well.
         CompiledClass compiledUsage = registerClassElement(usage);
+        FunctionTypedElement implementation = function.implementation;
         CompiledFunction copy = new CompiledFunction(
             functions.length,
             function.name,
-            function.implementation.functionSignature,
+            implementation.functionSignature,
             compiledUsage,
             isAccessor: function.isAccessor);
         functions.add(copy);
@@ -1013,7 +1021,8 @@ class FletchBackend extends Backend {
     if (library.isPatch && library.declaration == compiler.coreLibrary) {
       library.entryCompilationUnit.forEachLocalMember((element) {
         if (!element.isPatch && !isPrivateName(element.name)) {
-          library.declaration.addToScope(element, compiler);
+          LibraryElement declaration = library.declaration;
+          declaration.addToScope(element, compiler);
         }
       });
     }

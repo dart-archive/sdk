@@ -47,6 +47,9 @@ import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
 import 'src/fletch_compiler.dart' as implementation;
 
+import 'bytecodes.dart' show
+    Bytecode;
+
 import 'src/fletch_selector.dart';
 
 const String _SDK_DIR = const String.fromEnvironment("dart-sdk");
@@ -229,7 +232,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   Uri get fletchVm => _compiler.fletchVm;
 
   CompiledFunction lookupCompiledFunction(int methodId) {
-    CompiledFunction function = _compiler.backend.functions[methodId];
+    CompiledFunction function = _compiler.context.backend.functions[methodId];
     assert(function.methodId == methodId);
     return function;
   }
@@ -279,7 +282,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
 
   SourceLocation sourceLocation(int methodId, int bytecodeIndex) {
     CompiledFunction function = lookupCompiledFunction(methodId);
-    _compiler.backend.ensureDebugInfo(function);
+    _compiler.context.backend.ensureDebugInfo(function);
     return function.debugInfo.sourceLocationFor(bytecodeIndex);
   }
 

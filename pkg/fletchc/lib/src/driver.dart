@@ -5,6 +5,7 @@
 library fletchc.driver;
 
 import 'dart:io' hide
+    exitCode,
     stderr,
     stdin,
     stdout;
@@ -293,7 +294,7 @@ Future handleClient(Socket controlSocket) async {
     print("Expected arguments from clients but got: $command");
     // The client is misbehaving, shut it down now.
     controlSocket.destroy();
-    return;
+    return null;
   }
 
   // This is argv from a C/C++ program. The first entry is the program name
@@ -417,7 +418,7 @@ Future<int> compileAndRun(
 
   vmSocket.close();
 
-  exitCode = await vmProcess.exitCode;
+  int exitCode = await vmProcess.exitCode;
 
   await vmProcess.stdin.close();
   await vmStdoutSubscription.cancel();
