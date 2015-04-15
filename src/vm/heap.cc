@@ -186,4 +186,10 @@ void Heap::ReplaceSpace(Space* space) {
   AdjustAllocationBudget();
 }
 
+Space* Heap::TakeSpace() {
+  Space* result = space_;
+  space_ = NULL;
+  return result;
+}
+
 }  // namespace fletch

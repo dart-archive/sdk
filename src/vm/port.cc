@@ -134,12 +134,35 @@ NATIVE(PortSend) {
       port->Unlock();
       return Failure::wrong_argument_type();
     }
-    // Return the locked port. This will allow the scheduler to schedule the
-    // owner of the port, while it's still alive.
+    // Return the locked port. This will allow the scheduler to
+    // schedule the owner of the port, while it's still alive.
     return reinterpret_cast<Object*>(port);
   }
   port->Unlock();
   return process->program()->null_object();
+}
+
+NATIVE(PortSendExit) {
+  Instance* instance = Instance::cast(arguments[0]);
+  ASSERT(instance->IsPort());
+  Object* field = instance->GetInstanceField(0);
+  uword address = AsForeignWord(field);
+  if (address == 0) return Failure::illegal_state();
+
+  Port* port = reinterpret_cast<Port*>(address);
+  port->Lock();
+
+  Process* port_process = port->process();
+  if (port_process != NULL && port_process != process) {
+    // Enqueue the exit message and return the locked port. This
+    // will allow the scheduler to schedule the owner of the port,
+    // while it's still alive.
+    port_process->EnqueueExit(process, port, arguments[1]);
+    return reinterpret_cast<Object*>(port);
+  }
+
+  port->Unlock();
+  return Failure::illegal_state();
 }
 
 NATIVE(PortSendList) {
@@ -175,8 +198,8 @@ NATIVE(PortSendList) {
     ASSERT(enqueued);
   }
 
-  // Return the locked port. This will allow the scheduler to schedule the
-  // owner of the port, while it's still alive.
+  // Return the locked port. This will allow the scheduler to
+  // schedule the owner of the port, while it's still alive.
   return reinterpret_cast<Object*>(port);
 }
 

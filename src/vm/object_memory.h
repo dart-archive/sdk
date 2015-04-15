@@ -48,7 +48,7 @@ class Chunk {
 #endif
 
  private:
-  Space* const owner_;
+  Space* owner_;
   const uword base_;
   const uword limit_;
 
@@ -60,6 +60,7 @@ class Chunk {
   ~Chunk();
 
   void set_next(Chunk* value) { next_ = value; }
+  void set_owner(Space* value) { owner_ = value; }
 
   friend class ObjectMemory;
   friend class PageTable;
@@ -109,6 +110,8 @@ class Space {
     top_ = top;
     limit_ = chunk->limit_;
   }
+
+  void PrependSpace(Space* space);
 
  private:
   friend class NoAllocationFailureScope;
@@ -216,6 +219,8 @@ class ObjectMemory {
   static PageDirectory* page_directories_[1 << 13];
 #endif
   static Mutex* mutex_;    // Mutex used for synchronized chunk allocation.
+
+  friend class Space;
 };
 
 inline bool Space::Includes(uword address) const {

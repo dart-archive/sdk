@@ -268,6 +268,30 @@ bool Scheduler::Run() {
   return true;
 }
 
+void Scheduler::DeleteProcess(Process* process, ThreadState* thread_state) {
+  delete process;
+  if (--processes_ == 0) {
+    NotifyAllThreads();
+  } else if (Flags::IsOn("gc-on-delete")) {
+    sleeping_threads_++;
+    thread_state->cache()->Clear();
+    process->program()->CollectGarbage();
+    sleeping_threads_--;
+  }
+}
+
+void Scheduler::RescheduleProcess(Process* process,
+                                  ThreadState* state,
+                                  bool terminate) {
+  ASSERT(process->state() == Process::kRunning);
+  if (terminate) {
+    DeleteProcess(process, state);
+  } else {
+    process->ChangeState(Process::kRunning, Process::kReady);
+    EnqueueOnAnyThread(process, state->thread_id() + 1);
+  }
+}
+
 void Scheduler::PreemptThreadProcess(int thread_id) {
   Process* process = current_processes_[thread_id];
   if (process != NULL) {
@@ -407,8 +431,6 @@ void Scheduler::ClearCurrentProcessForThread(int thread_id, Process* process) {
 
 Process* Scheduler::InterpretProcess(Process* process,
                                      ThreadState* thread_state) {
-  Program* program = process->program();
-
   int thread_id = thread_state->thread_id();
   SetCurrentProcessForThread(thread_id, process);
 
@@ -419,21 +441,6 @@ Process* Scheduler::InterpretProcess(Process* process,
   process->set_thread_state(NULL);
 
   ClearCurrentProcessForThread(thread_id, process);
-
-  if (interpreter.IsTerminated()) {
-    delete process;
-    if (--processes_ == 0) {
-      NotifyAllThreads();
-    } else {
-      if (Flags::IsOn("gc-on-delete")) {
-        sleeping_threads_++;
-        thread_state->cache()->Clear();
-        program->CollectGarbage();
-        sleeping_threads_--;
-      }
-    }
-    return NULL;
-  }
 
   if (interpreter.IsYielded()) {
     process->ChangeState(Process::kRunning, Process::kYielding);
@@ -447,6 +454,10 @@ Process* Scheduler::InterpretProcess(Process* process,
   }
 
   if (interpreter.IsTargetYielded()) {
+    // If we've stolen the space from the process' heap, it is destined
+    // to terminate and there's nothing anybody can do about it.
+    bool terminate = process->heap()->space() == NULL;
+
     // The returned port currently has the lock. Unlock as soon as we know the
     // process is not kRunning (ChangeState either succeeded or failed).
     Port* port = interpreter.target();
@@ -456,22 +467,24 @@ Process* Scheduler::InterpretProcess(Process* process,
     ASSERT(target != NULL);
     if (target->ChangeState(Process::kSleeping, Process::kRunning)) {
       port->Unlock();
-      process->ChangeState(Process::kRunning, Process::kReady);
-      EnqueueOnAnyThread(process, thread_state->thread_id() + 1);
+      RescheduleProcess(process, thread_state, terminate);
       return target;
     } else {
       ProcessQueue* target_queue = target->process_queue();
       if (target_queue != NULL && target_queue->TryDequeueEntry(target)) {
         port->Unlock();
         ASSERT(target->state() == Process::kRunning);
-        process->ChangeState(Process::kRunning, Process::kReady);
-        EnqueueOnAnyThread(process, thread_state->thread_id() + 1);
+        RescheduleProcess(process, thread_state, terminate);
         return target;
       }
     }
     port->Unlock();
-    process->ChangeState(Process::kRunning, Process::kReady);
-    EnqueueOnThread(thread_state, process);
+    RescheduleProcess(process, thread_state, terminate);
+    return NULL;
+  }
+
+  if (interpreter.IsTerminated()) {
+    DeleteProcess(process, thread_state);
     return NULL;
   }
 

@@ -8,7 +8,9 @@ class Process {
   /**
    * Spawn a top-level function.
    */
-  static spawn(Function fn, [argument]) => _spawn(_entry, fn, argument);
+  static void spawn(Function fn, [argument]) {
+    _spawn(_entry, fn, argument);
+  }
 
   // Low-level entry for spawned processes.
   static void _entry(fn, argument) {
@@ -19,8 +21,22 @@ class Process {
     }
   }
 
+  /**
+   * Exit the current process. If a non-null [to] port is provided,
+   * the process will send the provided [value] to the [to] port as
+   * its final action.
+   */
+  static void exit({value, Port to}) {
+    try {
+      if (to != null) to._sendExit(value);
+    } finally {
+      fletch.yield(true);
+    }
+  }
+
   // Low-level helper function for spawning.
-  static _spawn(Function entry, Function fn, argument) native catch (error) {
+  static void _spawn(Function entry, Function fn, argument)
+      native catch (error) {
     throw new ArgumentError();
   }
 

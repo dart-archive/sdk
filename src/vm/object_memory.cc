@@ -114,6 +114,20 @@ void Space::AdjustAllocationBudget() {
   allocation_budget_ = Utils::Maximum(512 * KB, Used());
 }
 
+void Space::PrependSpace(Space* space) {
+  Chunk* first = space->first();
+  Chunk* chunk = first;
+  while (chunk != NULL) {
+    ObjectMemory::SetSpaceForPages(chunk->base(), chunk->limit(), this);
+    chunk->set_owner(this);
+    chunk = chunk->next();
+  }
+
+  space->last()->set_next(this->first());
+  first_ = first;
+  used_ += space->Used();
+}
+
 void Space::Append(Chunk* chunk) {
   ASSERT(chunk->owner() == this);
   if (is_empty()) {

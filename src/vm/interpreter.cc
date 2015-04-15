@@ -864,6 +864,7 @@ void Interpreter::Run() {
   } else {
     interruption_ = static_cast<InterruptKind>(result);
   }
+
   process_->ReleaseLookupCache();
   process_->StoreErrno();
   ASSERT(interruption_ != kReady);

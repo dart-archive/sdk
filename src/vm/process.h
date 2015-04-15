@@ -185,6 +185,7 @@ class Process {
   // message queue. Returns false if the object is of wrong type.
   bool Enqueue(Port* port, Object* message);
   bool EnqueueForeign(Port* port, void* foreign, int size, bool finalized);
+  void EnqueueExit(Process* sender, Port* port, Object* message);
 
   // Determine if it's possible to enqueue the given 'object' in the
   // message queue of some process. If it's valid for this process, it's valid

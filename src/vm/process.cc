@@ -23,6 +23,28 @@ namespace fletch {
 static Object** kPreemptMarker = reinterpret_cast<Object**>(1);
 static Object** kProfileMarker = reinterpret_cast<Object**>(2);
 
+class ExitReference {
+ public:
+  ExitReference(Space* space, Object* message)
+      : space_(space), message_(message) { }
+
+  ~ExitReference() {
+    delete space_;
+  }
+
+  Object* message() const { return message_; }
+
+  Space* TakeSpace() {
+    Space* result = space_;
+    space_ = NULL;
+    return result;
+  }
+
+ private:
+  Space* space_;
+  Object* const message_;
+};
+
 class PortQueue {
  public:
   enum Kind {
@@ -31,7 +53,8 @@ class PortQueue {
     LARGE_INTEGER,
     OBJECT,
     FOREIGN,
-    FOREIGN_FINALIZED
+    FOREIGN_FINALIZED,
+    EXIT
   };
 
   PortQueue(Port* port, int64 value, int size, Kind kind)
@@ -49,6 +72,9 @@ class PortQueue {
     port_->DecrementRef();
     if (kind() == PORT) {
       reinterpret_cast<Port*>(value_)->DecrementRef();
+    } else if (kind() == EXIT) {
+      ExitReference* ref = reinterpret_cast<ExitReference*>(address());
+      delete ref;
     }
   }
 
@@ -625,6 +651,14 @@ bool Process::EnqueueForeign(Port* port,
   return true;
 }
 
+void Process::EnqueueExit(Process* sender, Port* port, Object* message) {
+  // TODO(kasperl): Optimize this to avoid merging heaps if copying is cheaper.
+  Space* space = sender->heap()->TakeSpace();
+  uword address = reinterpret_cast<uword>(new ExitReference(space, message));
+  PortQueue* entry = new PortQueue(port, address, 0, PortQueue::EXIT);
+  EnqueueEntry(entry);
+}
+
 bool Process::IsValidForEnqueue(Object* message) {
   Space* space = program_->heap()->space();
   return !message->IsHeapObject()
@@ -804,6 +838,13 @@ NATIVE(ProcessQueueGetMessage) {
         process->RegisterFinalizer(foreign, Process::FinalizeForeign);
       }
       result = foreign;
+      break;
+    }
+
+    case PortQueue::EXIT: {
+      ExitReference* ref = reinterpret_cast<ExitReference*>(queue->address());
+      process->heap()->space()->PrependSpace(ref->TakeSpace());
+      result = ref->message();
       break;
     }
 

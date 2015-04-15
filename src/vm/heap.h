@@ -85,6 +85,7 @@ class Heap {
   Space* space() { return space_; }
 
   void ReplaceSpace(Space* space);
+  Space* TakeSpace();
 
   // Adjust the allocation budget based on the current heap size.
   void AdjustAllocationBudget() { space()->AdjustAllocationBudget(); }

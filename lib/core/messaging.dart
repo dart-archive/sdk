@@ -49,6 +49,10 @@ class Port {
     }
   }
 
+  void _sendExit(value) native catch (error) {
+    throw new StateError("Port is closed.");
+  }
+
   // Close the port. Messages already sent to a port will still
   // be delivered to the corresponding channel.
   void close() {

@@ -382,7 +382,22 @@ class Process {
   /**
    * Spawn a top-level function.
    */
-  static spawn(Function fn, [argument]) => _spawn(_entry, fn, argument);
+  static void spawn(Function fn, [argument]) {
+    _spawn(_entry, fn, argument);
+  }
+
+  /**
+   * Exit the current process. If a non-null [to] port is provided,
+   * the process will send the provided [value] to the [to] port as
+   * its final action.
+   */
+  static void exit({value, Port to}) {
+    try {
+      if (to != null) to._sendExit(value);
+    } finally {
+      fletch.yield(true);
+    }
+  }
 
   // Low-level entry for spawned processes.
   static void _entry(fn, argument) {
@@ -394,7 +409,7 @@ class Process {
   }
 
   // Low-level helper function for spawning.
-  @fletch.native static _spawn(Function entry, Function fn, argument) {
+  @fletch.native static void _spawn(Function entry, Function fn, argument) {
     throw new ArgumentError();
   }
 
@@ -455,6 +470,10 @@ class Port {
       default:
         throw fletch.nativeError;
     }
+  }
+
+  @fletch.native void _sendExit(value) {
+    throw new StateError("Port is closed.");
   }
 
   // Close the port. Messages already sent to a port will still
