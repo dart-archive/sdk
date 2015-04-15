@@ -269,13 +269,14 @@ bool Scheduler::Run() {
 }
 
 void Scheduler::DeleteProcess(Process* process, ThreadState* thread_state) {
+  Program* program = process->program();
   delete process;
   if (--processes_ == 0) {
     NotifyAllThreads();
   } else if (Flags::IsOn("gc-on-delete")) {
     sleeping_threads_++;
     thread_state->cache()->Clear();
-    process->program()->CollectGarbage();
+    program->CollectGarbage();
     sleeping_threads_--;
   }
 }
