@@ -96,6 +96,22 @@ def Steps(config):
       with bot.BuildStep('Build %s' % configuration['build_conf']):
         Run(['ninja', '-v', '-C', configuration['build_dir']])
 
+    with bot.BuildStep('warnings'):
+      # TODO(ahe): Make this check part of the build.
+      output = subprocess.check_output([
+        "./out/ReleaseIA32Clang/dart",
+        "-ppackage/",
+        "package/compiler/src/dart2js.dart",
+        "-ppackage/", # For dart2js.
+        "--library-root=../dart/sdk/",
+        "--analyze-only",
+        "--categories=Server",
+        "package:fletchc/src/driver.dart"])
+      if output: # output from dart2js should be empty.
+        print output
+        print '@@@STEP_FAILURE@@@'
+        sys.stdout.flush()
+
     for configuration in configurations:
       if mac and configuration['arch'] == 'x64' and configuration['asan']:
         # Asan/x64 takes a long time on mac.
