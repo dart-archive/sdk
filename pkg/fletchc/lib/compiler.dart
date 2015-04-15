@@ -282,6 +282,14 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     _compiler.backend.ensureDebugInfo(function);
     return function.debugInfo.sourceLocationFor(bytecodeIndex);
   }
+
+  DebugInfo debugInfoForPosition(String file, int position) {
+    return _compiler.debugInfoForPosition(file, position);
+  }
+
+  int positionInFile(String file, int line, int column) {
+    return _compiler.positionInFile(file, line, column);
+  }
 }
 
 // In this library to allow access to privates.

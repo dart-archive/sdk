@@ -10,6 +10,7 @@ Starting session.
 Commands:
   'r'/'run'                             run main
   'b <method name> <bytecode index>'    set breakpoint
+  'bf <file> <line> <column>'           set breakpoint
   'd <breakpoint id>'                   delete breakpoint
   'lb'                                  list breakpoints
   's'                                   step
@@ -51,6 +52,27 @@ class InputHandler {
           break;
         }
         await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
+        break;
+      case 'bf':
+        var file =
+            (commandComponents.length > 1) ? commandComponents[1] : '';
+        var line =
+            (commandComponents.length > 2) ? commandComponents[2] : '1';
+        var column =
+            (commandComponents.length > 3) ? commandComponents[3] : '1';
+        try {
+          line = int.parse(line);
+        } catch(e) {
+          print('### invalid line number: $line');
+          break;
+        }
+        try {
+          column = int.parse(column);
+        } catch(e) {
+          print('### invalid column number: $column');
+          break;
+        }
+        await session.setFileBreakpoint(file, line, column);
         break;
       case 'bt':
         await session.backtrace();

@@ -12,12 +12,12 @@ import 'package:compiler/src/colors.dart' as colors;
 import 'package:compiler/src/dart2jslib.dart' show
     SourceSpan;
 
-
 import 'package:compiler/src/io/source_file.dart';
 
 import 'package:compiler/src/tree/tree.dart' show
     Node;
 
+import 'compiled_function.dart';
 import 'fletch_compiler.dart' show
     FletchCompiler;
 
@@ -27,10 +27,21 @@ class SourceLocation {
   final SourceSpan span;
   final SourceFile file;
   SourceLocation(this.bytecodeIndex, this.node, this.span, this.file);
+
+  bool contains(SourceLocation other) {
+    return span.begin <= other.span.begin && other.span.end <= span.end;
+  }
+
+  bool containsPosition(int position) {
+    return span.begin <= position && position <= span.end;
+  }
 }
 
 class DebugInfo {
-  List<SourceLocation> locations = new List();
+  final CompiledFunction function;
+  final List<SourceLocation> locations = new List();
+
+  DebugInfo(this.function);
 
   void add(FletchCompiler compiler, int bytecodeIndex, Node node) {
     SourceSpan span = compiler.spanFromSpannable(node);
@@ -48,6 +59,31 @@ class DebugInfo {
     } catch (e) {
       return null;
     }
+  }
+
+  SourceLocation locationForPosition(int position) {
+    SourceLocation current;
+    bool foundContaining = false;
+
+    for (SourceLocation location in locations) {
+      if (location.span == null) continue;
+      if (location.containsPosition(position)) {
+        if (foundContaining) {
+          if (current.contains(location)) current = location;
+        } else {
+          foundContaining = true;
+          current = location;
+        }
+      } else if (!foundContaining) {
+        current = current != null ? current : location;
+        if (location.span.begin > position &&
+            current.span.begin > location.span.begin) {
+          current = location;
+        }
+      }
+    }
+
+    return current;
   }
 
   // TODO(ager): Should this be upstreamed to dart2js?
@@ -87,11 +123,13 @@ class DebugInfo {
 
     StringBuffer buffer = new StringBuffer();
 
+    buffer.writeln(fileAndLineStringFor(bytecodeIndex));
+
     // Add contextLines lines before the breakpoint line.
     for (; startLine < currentLine; startLine++) {
       var l = file.slowSubstring(file.lineStarts[startLine],
                                  file.lineStarts[startLine + 1]);
-      buffer.write('$startLine'.padRight(5) + l);
+      buffer.write('${startLine + 1}'.padRight(5) + l);
     }
 
     // Add the breakpoint line highlighting the actual breakpoint location.
@@ -101,7 +139,7 @@ class DebugInfo {
     var prefix = l.substring(0, column);
     var focus = l.substring(column, toColumn);
     var postfix = l.substring(toColumn);
-    buffer.write('$currentLine'.padRight(5) + prefix);
+    buffer.write('${currentLine + 1}'.padRight(5) + prefix);
     buffer.write(colors.red(focus));
     buffer.write(postfix);
 
@@ -110,7 +148,7 @@ class DebugInfo {
       var lineEnd = file.lineStarts[startLine + 1];
       if (lineEnd >= file.length) --lineEnd;
       var l = file.slowSubstring(file.lineStarts[startLine], lineEnd);
-      buffer.write('$startLine'.padRight(5) + l);
+      buffer.write('${startLine + 1}'.padRight(5) + l);
     }
 
     return buffer.toString();

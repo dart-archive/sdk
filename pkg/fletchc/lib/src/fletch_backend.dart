@@ -523,7 +523,7 @@ class FletchBackend extends Backend {
 
   void ensureDebugInfo(CompiledFunction function) {
     if (function.debugInfo != null) return;
-    function.debugInfo = new DebugInfo();
+    function.debugInfo = new DebugInfo(function);
     FunctionElement element = elementFromCompiledFunction(function);
     if (element == null) return;
       compiler.withCurrentElement(element.implementation, () {

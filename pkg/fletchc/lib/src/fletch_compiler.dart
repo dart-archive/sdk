@@ -12,12 +12,18 @@ import 'package:compiler/compiler.dart' as api;
 
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
+import 'package:compiler/src/io/source_file.dart';
+
 import 'package:compiler/src/elements/modelx.dart' show
+    CompilationUnitElementX,
     LibraryElementX;
 
 import 'package:compiler/src/util/uri_extras.dart' show
     relativize;
 
+import 'compiled_function.dart';
+import 'debug_info.dart';
+import 'find_position_visitor.dart';
 import 'fletch_context.dart';
 
 part 'fletch_compiler_hack.dart';
@@ -74,6 +80,7 @@ class FletchCompiler extends FletchCompilerHack {
   /// Location of fletch patch files.
   final Uri patchRoot;
 
+  Map<Uri, CompilationUnitElementX> compilationUnits;
   FletchContext internalContext;
 
   FletchCompiler(
@@ -149,6 +156,38 @@ class FletchCompiler extends FletchCompilerHack {
     String patchPath = lookupPatchPath(dartLibraryPath);
     if (patchPath == null) return null;
     return patchRoot.resolve(patchPath);
+  }
+
+  CompilationUnitElementX compilationUnitForUri(Uri uri) {
+    if (compilationUnits == null) {
+      compilationUnits = <Uri, CompilationUnitElementX>{};
+      libraryLoader.libraries.forEach((LibraryElementX library) {
+        for (CompilationUnitElementX unit in library.compilationUnits) {
+          compilationUnits[unit.script.resourceUri] = unit;
+        }
+      });
+    }
+    return compilationUnits[uri];
+  }
+
+  DebugInfo debugInfoForPosition(String file, int position) {
+    Uri uri = Uri.base.resolve(file);
+    CompilationUnitElementX unit = compilationUnitForUri(uri);
+    if (unit == null) return null;
+    FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
+    unit.accept(visitor);
+    CompiledFunction function = backend.compiledFunctions[visitor.element];
+    if (function == null) return null;
+    backend.ensureDebugInfo(function);
+    return function.debugInfo;
+  }
+
+  int positionInFile(String file, int line, int column) {
+    Uri uri = Uri.base.resolve(file);
+    SourceFile sourceFile = provider.sourceFiles[uri];
+    if (sourceFile == null) return null;
+    if (line >= sourceFile.lineStarts.length) return null;
+    return sourceFile.lineStarts[line] + column;
   }
 
   bool inUserCode(element, {bool assumeInUserCode: false}) => true;

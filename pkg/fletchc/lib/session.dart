@@ -22,7 +22,7 @@ class Breakpoint {
   final int bytecodeIndex;
   final int id;
   Breakpoint(this.methodName, this.bytecodeIndex, this.id);
-  String toString() => "$id: $methodName@$bytecodeIndex";
+  String toString() => "$id: $methodName @$bytecodeIndex";
 }
 
 class Session {
@@ -86,21 +86,55 @@ class Session {
   Future debugRun() async {
     const ProcessRun().addTo(vmSocket);
     await handleProcessStop();
+    await backtrace();
   }
 
-  // TODO(ager): Implement support for setting breakpoints based on source
-  // position.
+  Future setBreakpointHelper(String name,
+                             int methodId,
+                             int bytecodeIndex) async {
+    new PushFromMap(MapId.methods, methodId).addTo(vmSocket);
+    new ProcessSetBreakpoint(bytecodeIndex).addTo(vmSocket);
+    ProcessSetBreakpoint response = await nextVmCommand();
+    int breakpointId = response.value;
+    var breakpoint = new Breakpoint(name, bytecodeIndex, breakpointId);
+    breakpoints[breakpointId] = breakpoint;
+    print("breakpoint set: $breakpoint");
+  }
+
   Future setBreakpoint({String methodName, int bytecodeIndex}) async {
     Iterable<int> functionIds = compiler.lookupFunctionIdsByName(methodName);
     for (int id in functionIds) {
-      new PushFromMap(MapId.methods, id).addTo(vmSocket);
-      new ProcessSetBreakpoint(bytecodeIndex).addTo(vmSocket);
-      ProcessSetBreakpoint response = await nextVmCommand();
-      int breakpointId = response.value;
-      var breakpoint = new Breakpoint(methodName, bytecodeIndex, breakpointId);
-      breakpoints[breakpointId] = breakpoint;
-      print("breakpoint set: $breakpoint");
+      await setBreakpointHelper(methodName, id, bytecodeIndex);
     }
+  }
+
+  Future setFileBreakpoint(String file, int line, int column) async {
+    if (line < 1) {
+      print("### Invalid line number: $line");
+      return;
+    }
+    if (column < 1) {
+      print("### Invalid column number: $column");
+      return;
+    }
+    int position = compiler.positionInFile(file, line - 1, column - 1);
+    if (position == null) {
+      print("### Failed setting breakpoint for $file:$line:$column");
+      return;
+    }
+    DebugInfo debugInfo = compiler.debugInfoForPosition(file, position);
+    if (debugInfo == null) {
+      print("### Failed setting breakpoint for $file:$line:$column");
+      return;
+    }
+    SourceLocation location = debugInfo.locationForPosition(position);
+    if (location == null) {
+      print("### Failed setting breakpoint for $file:$line:$column");
+      return;
+    }
+    int methodId = debugInfo.function.methodId;
+    int bytecodeIndex = location.bytecodeIndex;
+    await setBreakpointHelper('$file:$line:$column', methodId, bytecodeIndex);
   }
 
   Future deleteBreakpoint(int id) async {
@@ -131,6 +165,7 @@ class Session {
     do {
       await stepBytecode();
     } while (currentLocation == null || currentLocation == previous);
+    await backtrace();
   }
 
   Future stepOver() async {
@@ -138,6 +173,7 @@ class Session {
     do {
       await stepOverBytecode();
     } while (currentLocation == null || currentLocation == previous);
+    await backtrace();
   }
 
   Future stepBytecode() async {
