@@ -337,11 +337,31 @@ Future<int> compileAndRun(
     List<String> arguments,
     CommandSender commandSender,
     StreamIterator<Command> commandIterator) async {
+  String script;
+  String snapshotPath;
+
+  for (int i = 0; i < arguments.length; i++) {
+    String argument = arguments[i];
+    switch (argument) {
+      case '-o':
+      case '--out':
+        snapshotPath = arguments[++i];
+        break;
+
+      default:
+        if (script != null) throw "Unknown option: $argument";
+        script = argument;
+        break;
+    }
+  }
+
+  if (script == null) throw "No script supplied";
+
   List<String> options = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   FletchCompiler compiler =
       new FletchCompiler(
-          options: options, script: arguments.single, fletchVm: fletchVm,
+          options: options, script: script, fletchVm: fletchVm,
           // TODO(ahe): packageRoot should be an option.
           packageRoot: "package/");
   bool compilerCrashed = false;
@@ -387,8 +407,14 @@ Future<int> compileAndRun(
 
   vmSocket.listen(null).cancel();
   commands.forEach((command) => command.addTo(vmSocket));
-  const commands_lib.ProcessSpawnForMain().addTo(vmSocket);
-  const commands_lib.ProcessRun().addTo(vmSocket);
+
+  if (snapshotPath == null) {
+    const commands_lib.ProcessSpawnForMain().addTo(vmSocket);
+    const commands_lib.ProcessRun().addTo(vmSocket);
+  } else {
+    new commands_lib.WriteSnapshot(snapshotPath).addTo(vmSocket);
+  }
+
   vmSocket.close();
 
   exitCode = await vmProcess.exitCode;

@@ -66,42 +66,6 @@
       ],
     },
     {
-      'target_name': 'run_compiler_tests',
-      # Note: this target_name needs to be different from its dependency.
-      # This is due to the ninja GYP generator which doesn't generate unique
-      # names.
-      'type': 'none',
-      'dependencies': [
-        'src/compiler/compiler.gyp:compiler_run_tests',
-        'src/compiler/compiler.gyp:fletchc',
-        'copy_asan',
-      ],
-      'actions': [
-        {
-          'action_name': 'run_compiler_tests',
-          'command': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'compiler_run_tests'
-            '<(EXECUTABLE_SUFFIX)',
-          ],
-          'inputs': [
-            '<@(_command)',
-            '<(mac_asan_dylib)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'fletchc'
-            '<(EXECUTABLE_SUFFIX)',
-          ],
-          'outputs': [
-            '<(PRODUCT_DIR)/test_outcomes/compiler_run_tests.pass',
-          ],
-          'action': [
-            "bash", "-c",
-            "<(_command) && LANG=POSIX date '+Test passed on %+' > <(_outputs)",
-          ],
-        },
-      ],
-    },
-    {
       'target_name': 'run_shared_tests',
       # Note: this target_name needs to be different from its dependency.
       # This is due to the ninja GYP generator which doesn't generate unique
@@ -109,7 +73,6 @@
       'type': 'none',
       'dependencies': [
         'src/shared/shared.gyp:shared_run_tests',
-        'src/compiler/compiler.gyp:fletchc',
         'copy_asan',
       ],
       'actions': [
@@ -123,9 +86,6 @@
           'inputs': [
             '<@(_command)',
             '<(mac_asan_dylib)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'fletchc'
-            '<(EXECUTABLE_SUFFIX)',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/test_outcomes/shared_run_tests.pass',
@@ -145,7 +105,6 @@
       'type': 'none',
       'dependencies': [
         'src/vm/vm.gyp:vm_run_tests',
-        'src/compiler/compiler.gyp:fletchc',
         'copy_asan',
       ],
       'actions': [
@@ -159,9 +118,6 @@
           'inputs': [
             '<@(_command)',
             '<(mac_asan_dylib)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'fletchc'
-            '<(EXECUTABLE_SUFFIX)',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/test_outcomes/vm_run_tests.pass',
@@ -181,22 +137,24 @@
       'type': 'none',
       'dependencies': [
         'src/vm/vm.gyp:fletch',
+        'copy_dart#host',
         'tests/service_tests/service_tests.gyp:service_performance_test',
-        'src/compiler/compiler.gyp:fletchc',
         'copy_asan',
       ],
       'actions': [
         {
           'action_name': 'generate_service_performance_snapshot',
           'command': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
+            '-p',
+            '<(PRODUCT_DIR)/../../package/',
+            '<(PRODUCT_DIR)/../../pkg/fletchc/lib/fletchc.dart',
             'tests/service_tests/performance/performance_service_impl.dart',
           ],
           'inputs': [
-            '<@(_command)',
             '<(mac_asan_dylib)',
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'fletchc'
+            'dart'
             '<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'tests/service_tests/performance/dart/performance_service.dart',
@@ -207,7 +165,8 @@
           ],
           'action': [
             '<@(_command)',
-            '--out=<(SHARED_INTERMEDIATE_DIR)/service_performance.snapshot',
+            '--out',
+            '<(SHARED_INTERMEDIATE_DIR)/service_performance.snapshot',
           ],
         },
         {
@@ -237,22 +196,24 @@
       'type': 'none',
       'dependencies': [
         'src/vm/vm.gyp:fletch',
+        'copy_dart#host',
         'tests/service_tests/service_tests.gyp:service_conformance_test',
-        'src/compiler/compiler.gyp:fletchc',
         'copy_asan',
       ],
       'actions': [
         {
           'action_name': 'generate_service_conformance_snapshot',
           'command': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
+            '-p',
+            '<(PRODUCT_DIR)/../../package/',
+            '<(PRODUCT_DIR)/../../pkg/fletchc/lib/fletchc.dart',
             'tests/service_tests/conformance/conformance_service_impl.dart',
           ],
           'inputs': [
-            '<@(_command)',
             '<(mac_asan_dylib)',
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'fletchc'
+            'dart'
             '<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'tests/service_tests/conformance/dart/conformance_service.dart',
@@ -263,7 +224,8 @@
           ],
           'action': [
             '<@(_command)',
-            '--out=<(SHARED_INTERMEDIATE_DIR)/service_conformance.snapshot',
+            '--out',
+            '<(SHARED_INTERMEDIATE_DIR)/service_conformance.snapshot',
           ],
         },
         {
@@ -293,22 +255,24 @@
       'type': 'none',
       'dependencies': [
         'src/vm/vm.gyp:fletch',
+        'copy_dart#host',
         'samples/myapi/myapi.gyp:myapi_test',
-        'src/compiler/compiler.gyp:fletchc',
         'copy_asan',
       ],
       'actions': [
         {
           'action_name': 'generate_myapi_snapshot',
           'command': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
+            '-p',
+            '<(PRODUCT_DIR)/../../package/',
+            '<(PRODUCT_DIR)/../../pkg/fletchc/lib/fletchc.dart',
             'samples/myapi/generated/myapi_service_impl.dart',
           ],
           'inputs': [
-            '<@(_command)',
             '<(mac_asan_dylib)',
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'fletchc'
+            'dart'
             '<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'samples/myapi/myapi_impl.dart',
@@ -320,7 +284,8 @@
           ],
           'action': [
             '<@(_command)',
-            '--out=<(SHARED_INTERMEDIATE_DIR)/myapi.snapshot',
+            '--out',
+            '<(SHARED_INTERMEDIATE_DIR)/myapi.snapshot',
           ],
         },
         {
@@ -350,22 +315,24 @@
       'type': 'none',
       'dependencies': [
         'src/vm/vm.gyp:fletch',
+        'copy_dart#host',
         'samples/todomvc/todomvc.gyp:todomvc_sample',
-        'src/compiler/compiler.gyp:fletchc',
         'copy_asan',
       ],
       'actions': [
         {
           'action_name': 'generate_todomvc_snapshot',
           'command': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
+            '-p',
+            '<(PRODUCT_DIR)/../../package/',
+            '<(PRODUCT_DIR)/../../pkg/fletchc/lib/fletchc.dart',
             'samples/todomvc/todomvc.dart',
           ],
           'inputs': [
-            '<@(_command)',
             '<(mac_asan_dylib)',
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'fletchc'
+            'dart'
             '<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'samples/todomvc/model.dart',
@@ -380,7 +347,7 @@
             '<(SHARED_INTERMEDIATE_DIR)/todomvc.snapshot',
           ],
           'action': [
-            '<@(_command)', '--out=<(SHARED_INTERMEDIATE_DIR)/todomvc.snapshot',
+            '<@(_command)', '--out', '<(SHARED_INTERMEDIATE_DIR)/todomvc.snapshot',
           ],
         },
         {

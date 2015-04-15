@@ -205,7 +205,6 @@
       ],
       'sources': [
         # TODO(ahe): Add header (.h) files.
-        'foreign_ports_test.cc',
         'object_map_test.cc',
         'object_memory_test.cc',
         'object_test.cc',
