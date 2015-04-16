@@ -203,11 +203,14 @@ NATIVE(PortSendList) {
   return reinterpret_cast<Object*>(port);
 }
 
-NATIVE(PortIncrementRef) {
-  word address = AsForeignWord(arguments[0]);
+NATIVE(SystemIncrementPortRef) {
+  Instance* instance = Instance::cast(arguments[0]);
+  ASSERT(instance->IsPort());
+  Object* field = instance->GetInstanceField(0);
+  uword address = AsForeignWord(field);
   Port* port = reinterpret_cast<Port*>(address);
   port->IncrementRef();
-  return process->program()->null_object();
+  return process->ToInteger(address);
 }
 
 }  // namespace fletch

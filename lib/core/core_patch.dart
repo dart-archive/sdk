@@ -486,7 +486,7 @@ class Port {
   }
 
   @fletch.native external static int _create(Channel channel, Port port);
-  @fletch.native external static void _close(int port, Port port);
+  @fletch.native external static void _close(int port, Port portObject);
   @fletch.native external static void _incrementRef(int port);
 }
 

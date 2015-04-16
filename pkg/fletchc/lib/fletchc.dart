@@ -68,7 +68,6 @@ main(List<String> arguments) async {
 
   List<String> vmOptions = <String>[
       '--port=${server.port}',
-      '-Xvalidate-stack',
   ];
 
   // TODO(ager): Make this part of the command protocol for the VM instead

@@ -65,6 +65,18 @@ const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
       documented: false,
       platforms: FLETCH_PLATFORM),
 
+  "io": const LibraryInfo(
+      "io/io.dart",
+      category: "Shared",
+      documented: false,
+      platforms: FLETCH_PLATFORM),
+
+  "system": const LibraryInfo(
+      "io/system.dart",
+      category: "Internal",
+      documented: false,
+      platforms: FLETCH_PLATFORM),
+
   "service": const LibraryInfo(
       "service/service_fletchc.dart",
       category: "Shared",
@@ -118,6 +130,10 @@ class FletchCompiler extends FletchCompilerHack {
 
   LibraryInfo lookupLibraryInfo(String name) {
     return fletchLibraries.putIfAbsent(name, () {
+      // Let FLETCH_LIBRARIES shadow LIBRARIES.
+      if (FLETCH_LIBRARIES.containsKey(name)) {
+        return computeFletchLibraryInfo(name);
+      }
       LibraryInfo info = LIBRARIES[name];
       if (info == null) {
         return computeFletchLibraryInfo(name);

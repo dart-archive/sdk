@@ -192,6 +192,8 @@ class Foreign {
     return foreign;
   }
 
+  static int get errno => _errno();
+
   // Helper for checking bounds and computing derived
   // address for memory address functionality.
   int _computeAddress(int offset, int n) {

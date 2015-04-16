@@ -18,7 +18,7 @@ class _Uint8List extends _TypedData with ListMixin<int> implements Uint8List {
 
   _Uint8List(int length) : super._create(length);
 
-  _Uint8List.view(ByteBuffer buffer, [int offsetInBytes = 0, int length])
+  _Uint8List._view(ByteBuffer buffer, int offsetInBytes, int length)
       : super._wrap(buffer, offsetInBytes, length);
 
   int operator[](int index) => _foreign.getUint8(offsetInBytes + index);
@@ -72,14 +72,84 @@ abstract class _TypedData {
       offsetInBytes = 0,
       lengthInBytes = sizeInBytes;
 
-  _TypedData._wrap(ByteBuffer other, int offsetInBytes, int lengthInBytes)
-    : _foreign = other._foreign,
+  _TypedData._wrap(_ByteBuffer other, int offsetInBytes, int lengthInBytes)
+    : _foreign = other.getForeign(),
       this.offsetInBytes = offsetInBytes,
       this.lengthInBytes = (lengthInBytes == null)
           ? other.lengthInBytes - offsetInBytes
           : lengthInBytes;
 
-  ByteBuffer get buffer => new ByteBuffer._from(_foreign);
+  ByteBuffer get buffer => new _ByteBuffer._from(_foreign);
 
   int get elementSizeInBytes;
+}
+
+class _ByteBuffer implements ByteBuffer {
+  final Foreign _foreign;
+
+  _ByteBuffer._from(this._foreign);
+
+  Foreign getForeign() => _foreign;
+
+  int get lengthInBytes => _foreign.length;
+
+  Uint8List asUint8List([int offsetInBytes = 0, int length]) {
+    return new _Uint8List._view(this, offsetInBytes, length);
+  }
+
+  asInt8List([offsetInBytes, length]) {
+    throw "asInt8List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asUint8ClampedList([offsetInBytes, length]) {
+    throw "asUint8ClampedList([offsetInBytes, length]) isn't implemented";
+  }
+
+  asUint16List([offsetInBytes, length]) {
+    throw "asUint16List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asInt16List([offsetInBytes, length]) {
+    throw "asInt16List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asUint32List([offsetInBytes, length]) {
+    throw "asUint32List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asInt32List([offsetInBytes, length]) {
+    throw "asInt32List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asUint64List([offsetInBytes, length]) {
+    throw "asUint64List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asInt64List([offsetInBytes, length]) {
+    throw "asInt64List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asInt32x4List([offsetInBytes, length]) {
+    throw "asInt32x4List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asFloat32List([offsetInBytes, length]) {
+    throw "asFloat32List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asFloat64List([offsetInBytes, length]) {
+    throw "asFloat64List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asFloat32x4List([offsetInBytes, length]) {
+    throw "asFloat32x4List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asFloat64x2List([offsetInBytes, length]) {
+    throw "asFloat64x2List([offsetInBytes, length]) isn't implemented";
+  }
+
+  asByteData([offsetInBytes, length]) {
+    throw "asByteData([offsetInBytes, length]) isn't implemented";
+  }
 }

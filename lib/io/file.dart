@@ -18,7 +18,9 @@ class File {
    * A [FileException] is thrown if it was unable to open the specified file.
    */
   factory File.open(String path, {int mode: READ}) {
-    if (mode < 0 || mode > 2) throw ArgumentError("Invalid open mode: $mode");
+    if (mode < 0 || mode > 2) {
+      throw new ArgumentError("Invalid open mode: $mode");
+    }
     int fd = sys.open(path, mode == WRITE, mode == APPEND);
     if (fd == -1) throw new FileException("Failed to open file '$path'");
     return new File._(path, fd);
@@ -96,7 +98,9 @@ class File {
   /**
    * Flush all data written to this file.
    */
-  void flush();
+  void flush() {
+    // TODO(ajohnsen): Implement.
+  }
 
   /**
    * Close the file.
@@ -126,7 +130,9 @@ class File {
    * Delete the file at [path] from disk.
    */
   static void delete(String path) {
-    if (sys.unlink(path) == -1) _error("Failed to remove file");
+    if (sys.unlink(path) == -1) {
+      throw new FileException("Failed to remove file");
+    }
   }
 
   /**

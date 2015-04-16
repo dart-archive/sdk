@@ -127,7 +127,7 @@ abstract class PosixSystem implements System {
       Foreign addr = info.ai_addr;
       List<int> bytes = new List<int>(length);
       addr.copyBytesToList(bytes, offset, offset + length, 0);
-      address = new InternetAddress._internal(bytes);
+      address = new _InternetAddress(bytes);
       break;
     }
     _freeaddrinfo.icall$1(start);
@@ -181,7 +181,7 @@ abstract class PosixSystem implements System {
     return result;
   }
 
-  int bind(int fd, InternetAddress address, int port) {
+  int bind(int fd, _InternetAddress address, int port) {
     Foreign sockaddr = _createSocketAddress(address, port);
     int status = _retry(() => _bind.icall$3(fd, sockaddr, sockaddr.length));
     sockaddr.free();
@@ -224,7 +224,7 @@ abstract class PosixSystem implements System {
     return port;
   }
 
-  int connect(int fd, InternetAddress address, int port) {
+  int connect(int fd, _InternetAddress address, int port) {
     Foreign sockaddr = _createSocketAddress(address, port);
     int status = _retry(() => _connect.icall$3(fd, sockaddr, sockaddr.length));
     sockaddr.free();
@@ -241,7 +241,7 @@ abstract class PosixSystem implements System {
     }
     return _retry(() => _fcntl.icall$3(fd, F_SETFL, flags));
   }
-  
+
   int setReuseaddr(int fd) {
     return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 1);
   }
@@ -255,25 +255,25 @@ abstract class PosixSystem implements System {
     return available;
   }
 
-  int read(int fd, ByteBuffer buffer, int offset, int length) {
+  int read(int fd, var buffer, int offset, int length) {
     _rangeCheck(buffer, offset, length);
-    var address = buffer._foreign.value + offset;
+    var address = buffer.getForeign().value + offset;
     return _retry(() => _read.icall$3(fd, address, length));
   }
 
-  int write(int fd, ByteBuffer buffer, int offset, int length) {
+  int write(int fd, var buffer, int offset, int length) {
     _rangeCheck(buffer, offset, length);
-    var address = buffer._foreign.value + offset;
+    var address = buffer.getForeign().value + offset;
     return _retry(() => _write.icall$3(fd, address, length));
   }
 
-  void memcpy(ByteBuffer dest,
+  void memcpy(var dest,
               int destOffset,
-              ByteBuffer src,
-              srcOffset,
+              var src,
+              int srcOffset,
               int length) {
-    var destAddress = dest._foreign.value + destOffset;
-    var srcAddress = src._foreign.value + srcOffset;
+    var destAddress = dest.getForeign().value + destOffset;
+    var srcAddress = src.getForeign().value + srcOffset;
     _memcpy.icall$3(destAddress, srcAddress, length);
   }
 
@@ -295,7 +295,7 @@ abstract class PosixSystem implements System {
   }
 
   Errno errno() {
-    return Errno.from(Foreign._errno());
+    return Errno.from(Foreign.errno);
   }
 
   static void _rangeCheck(ByteBuffer buffer, int offset, int length) {
@@ -304,7 +304,7 @@ abstract class PosixSystem implements System {
     }
   }
 
-  Foreign _createSocketAddress(InternetAddress address, int port) {
+  Foreign _createSocketAddress(_InternetAddress address, int port) {
     var bytes = address._bytes;
     Foreign sockaddr;
     int length;
@@ -330,7 +330,7 @@ abstract class PosixSystem implements System {
   int _retry(Function f) {
     int value;
     while ((value = f()) == -1) {
-      if (Foreign._errno() != Errno.EINTR) break;
+      if (Foreign.errno != Errno.EINTR) break;
     }
     return value;
   }

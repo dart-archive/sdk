@@ -1957,16 +1957,31 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void visitTopLevelGetterGet(
-      Send node,
-      FunctionElement getter,
-      _) {
+  void handleStaticGetterGet(Send node, FunctionElement getter) {
     if (getter == context.backend.fletchExternalNativeError) {
       builder.loadSlot(0);
       return;
     }
-    generateUnimplementedError(
-        node, "[visitTopLevelGetterGet] isn't implemented.");
+    registerStaticInvocation(getter);
+    int methodId = context.backend.functionMethodId(getter);
+    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    invokeStatic(node, constId, 0);
+  }
+
+  void visitStaticGetterGet(
+      Send node,
+      FunctionElement getter,
+      _) {
+    handleStaticGetterGet(node, getter);
+    applyVisitState();
+  }
+
+  void visitTopLevelGetterGet(
+      Send node,
+      FunctionElement getter,
+      _) {
+    handleStaticGetterGet(node, getter);
+    applyVisitState();
   }
 
   /**
@@ -2739,14 +2754,6 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[errorStaticFunctionSet] isn't implemented.");
-  }
-
-  void visitStaticGetterGet(
-      Send node,
-      FunctionElement getter,
-      _) {
-    generateUnimplementedError(
-        node, "[visitStaticGetterGet] isn't implemented.");
   }
 
   void errorStaticSetterGet(

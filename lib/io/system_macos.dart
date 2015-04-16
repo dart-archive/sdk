@@ -43,18 +43,26 @@ class KEvent extends Struct {
   }
 
   get ident => getWord(0);
-  void set ident(int value) => setWord(0, value);
+  void set ident(int value) {
+    setWord(0, value);
+  }
 
   get filter => getInt16(wordSize);
-  void set filter(int value) => setInt16(wordSize, value);
+  void set filter(int value) {
+    setInt16(wordSize, value);
+  }
 
   get flags => getUint16(wordSize + 2);
-  void set flags(int value) => setUint16(wordSize + 2, value);
+  void set flags(int value) {
+    setUint16(wordSize + 2, value);
+  }
 
   get fflags => getInt32(wordSize + 4);
   get data => getWord(wordSize + 8);
   get udata => getWord(wordSize + 8 + wordSize);
-  void set udata(int value) => setWord(wordSize + 8 + wordSize, value);
+  void set udata(int value) {
+    setWord(wordSize + 8 + wordSize, value);
+  }
 }
 
 class MacOSSystem extends PosixSystem {
@@ -109,9 +117,7 @@ class MacOSSystem extends PosixSystem {
     _kEvent.clear();
     _kEvent.ident = fd;
     _kEvent.flags = EV_ADD | EV_ONESHOT;
-    int rawPort = port._port;
-    Port._incrementRef(rawPort);
-    _kEvent.udata = rawPort;
+    _kEvent.udata = System._incrementPortRef(port);
     return _setEvents((mask & READ_EVENT) != 0, (mask & WRITE_EVENT) != 0);
   }
 }

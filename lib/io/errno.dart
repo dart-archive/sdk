@@ -4,13 +4,20 @@
 
 part of dart.io;
 
+// TODO(ajohnsen): Errno's are platform dependent. Make them so.
 class Errno {
-  static const EOK = const Errno(0, "EOK");
-  static const EINTR = const Errno(4, "EINTR");
-  static const EEXIST = const Errno(17, "EEXIST");
-  static const EINVAL = const Errno(22, "EINVAL");
-  static const EPIPE = const Errno(32, "EPIPE");
-  static const EAGAIN = const Errno(115, "EAGAIN");
+  static const EOK_VALUE = 0;
+  static const EOK = const Errno(EINTR_VALUE, "EOK");
+  static const EINTR_VALUE = 4;
+  static const EINTR = const Errno(EINVAL_VALUE, "EINTR");
+  static const EEXIST_VALUE = 17;
+  static const EEXIST = const Errno(EEXIST_VALUE, "EEXIST");
+  static const EINVAL_VALUE = 22;
+  static const EINVAL = const Errno(EINTR_VALUE, "EINVAL");
+  static const EPIPE_VALUE = 32;
+  static const EPIPE = const Errno(EPIPE_VALUE, "EPIPE");
+  static const EAGAIN_VALUE = 115;
+  static const EAGAIN = const Errno(EAGAIN_VALUE, "EAGAIN");
 
   final int value;
   final String name;
@@ -21,12 +28,12 @@ class Errno {
 
   static Errno from(int value) {
     switch (value) {
-      case EOK.value: return EOK;
-      case EINTR.value: return EINTR;
-      case EEXIST.value: return EEXIST;
-      case EINVAL.value: return EINVAL;
-      case EPIPE.value: return EPIPE;
-      case EAGAIN.value: return EAGAIN;
+      case EOK_VALUE: return EOK;
+      case EINTR_VALUE: return EINTR;
+      case EEXIST_VALUE: return EEXIST;
+      case EINVAL_VALUE: return EINVAL;
+      case EPIPE_VALUE: return EPIPE;
+      case EAGAIN_VALUE: return EAGAIN;
 
       default:
         throw "Unknown errno: $value";

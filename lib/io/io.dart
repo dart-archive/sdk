@@ -8,7 +8,7 @@ import 'dart:ffi';
 import 'dart:typed_data';
 
 // The system library exposes a static 'sys' object for all system calls.
-import 'system.dart';
+import 'dart:system';
 
 part 'errno.dart';
 part 'file.dart';
@@ -41,7 +41,4 @@ int setBlocking(int fd, bool blocking) => sys.setBlocking(fd, blocking);
 void sleep(int milliseconds) => sys.sleep(milliseconds);
 Errno errno() => sys.errno();
 
-class InternetAddress {
-  final List<int> _bytes;
-  InternetAddress._internal(this._bytes);
-}
+abstract class InternetAddress { }

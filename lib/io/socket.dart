@@ -84,7 +84,7 @@ class Socket extends _SocketBase {
    * Returns `null` if the socket was closed for reading.
    */
   ByteBuffer read(int bytes) {
-    ByteBuffer buffer = new ByteBuffer._create(bytes);
+    ByteBuffer buffer = new Uint8List(bytes).buffer;
     int offset = 0;
     while (offset < bytes) {
       int events = _waitFor(READ_EVENT);
@@ -114,7 +114,7 @@ class Socket extends _SocketBase {
     ByteBuffer buffer;
     if ((events & READ_EVENT) != 0) {
       int available = this.available;
-      buffer = new ByteBuffer._create(available);
+      buffer = new Uint8List(available).buffer;
       read = sys.read(_fd, buffer, 0, available);
     }
     if (read == 0 && (events & CLOSE_EVENT) != 0) return null;

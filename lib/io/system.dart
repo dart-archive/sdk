@@ -6,6 +6,9 @@ library system;
 
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:typed_data';
+
+import 'dart:_fletch_system' as fletch;
 
 part 'system_linux.dart';
 part 'system_macos.dart';
@@ -67,14 +70,20 @@ abstract class System {
   int write(int fd, ByteBuffer buffer, int offset, int length);
   int shutdown(int fd, int how);
   int close(int fd);
+  int lseek(int fd, int offset, int whence);
   void sleep(int milliseconds);
+  void memcpy(var dest, int destOffset, var src, int srcOffset, int length);
   Errno errno();
+
+  int addToEventHandler(int fd);
+  int setPortForNextEvent(int fd, Port port, int mask);
 
   int setBlocking(int fd, bool blocking);
   int setReuseaddr(int fd);
 
   static int eventHandler = _getEventHandler();
-  static int _getEventHandler() native;
+  @fletch.native external static int _getEventHandler();
+  @fletch.native external static int _incrementPortRef(Port port);
 }
 
 final int hostWordSize = Foreign.bitsPerMachineWord ~/ 8;
@@ -132,4 +141,9 @@ class Struct32 extends Struct {
 class Struct64 extends Struct {
   Struct64(int fields) : super.withWordSize(fields, 8);
   Struct64.finalize(int fields) : super.withWordSizeFinalize(fields, 8);
+}
+
+class _InternetAddress extends InternetAddress {
+  final List<int> _bytes;
+  _InternetAddress(this._bytes);
 }

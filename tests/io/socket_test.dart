@@ -18,8 +18,8 @@ void main() {
 }
 
 void testLookup() {
-  InternetAddress address = io.lookup("127.0.0.1");
-  Expect.isNotNull(address);
+  io.InternetAddress address = io.lookup("127.0.0.1");
+  Expect.isTrue(address is io.InternetAddress);
 }
 
 void testBindListen() {
@@ -76,7 +76,7 @@ void testReadWrite() {
   server.close();
 }
 
-void spawnAcceptCallback(Socket client) {
+void spawnAcceptCallback(io.Socket client) {
   validateBuffer(client.read(CHUNK_SIZE), CHUNK_SIZE);
   client.write(createBuffer(CHUNK_SIZE));
   Expect.equals(0, client.available);
@@ -99,7 +99,7 @@ void testSpawnAccept() {
 
 const LARGE_CHUNK_SIZE = 1024 * 1024;
 
-void largeChunkClient(Socket client) {
+void largeChunkClient(io.Socket client) {
   validateBuffer(client.read(LARGE_CHUNK_SIZE), LARGE_CHUNK_SIZE);
   client.write(createBuffer(LARGE_CHUNK_SIZE));
   Expect.equals(0, client.available);
@@ -121,7 +121,7 @@ void testLargeChunk() {
   server.close();
 }
 
-bool isSocketException(e) => e is SocketException;
+bool isSocketException(e) => e is io.SocketException;
 
 void testShutdown() {
   var server = new io.ServerSocket("127.0.0.1", 0);

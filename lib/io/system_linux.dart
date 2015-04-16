@@ -42,10 +42,14 @@ class EpollEvent extends Foreign {
   EpollEvent() : super.allocatedFinalize(eventSize + 8);
 
   int get events => getInt32(0);
-  void set events(int value) => setInt32(0, value);
+  void set events(int value) {
+    setInt32(0, value);
+  }
 
   int get data => getInt64(eventSize);
-  void set data(int value) => setInt64(eventSize, value);
+  void set data(int value) {
+    setInt64(eventSize, value);
+  }
 }
 
 class LinuxSystem extends PosixSystem {
@@ -81,9 +85,7 @@ class LinuxSystem extends PosixSystem {
     if ((mask & READ_EVENT) != 0) events |= EPOLLIN;
     if ((mask & WRITE_EVENT) != 0) events |= EPOLLOUT;
     _epollEvent.events = events;
-    int rawPort = port._port;
-    Port._incrementRef(rawPort);
-    _epollEvent.data = rawPort;
+    _epollEvent.data = System._incrementPortRef(port);
     int eh = System.eventHandler;
     return _retry(() => _epollCtl.icall$4(eh, EPOLL_CTL_MOD, fd, _epollEvent));
   }
