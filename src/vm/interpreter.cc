@@ -28,8 +28,6 @@
 
 namespace fletch {
 
-static const char* kDebuggingFlag = "debugging";
-
 const NativeFunction kNativeTable[] = {
 #define N(e, c, n) &Native_##e,
   NATIVES_DO(N)
@@ -938,13 +936,11 @@ uint8* HandleThrow(Process* process, Object* exception, int* stack_delta) {
       printf("Uncaught exception:\n");
       exception->Print();
 
-      // Send stack trace information to attached session.
-      if (Flags::IsOn(kDebuggingFlag)) {
+      // Send stack trace information to attached session if debugging.
       Session* session = process->program()->session();
-        if (session != NULL) {
-          session->UncaughtException();
-          return NULL;
-        }
+      if (session != NULL && session->is_debugging()) {
+        session->UncaughtException();
+        return NULL;
       }
       exit(1);
     }

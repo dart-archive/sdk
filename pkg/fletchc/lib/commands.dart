@@ -547,6 +547,11 @@ class ForceTermination extends Command {
       : super(CommandCode.ForceTermination);
 }
 
+class Debugging extends Command {
+  const Debugging()
+      : super(CommandCode.Debugging);
+}
+
 class WriteSnapshot extends Command {
   final String value;
 
@@ -589,6 +594,7 @@ enum CommandCode {
   CompilerError,
   SessionEnd,
   ForceTermination,
+  Debugging,
 
   ProcessSpawnForMain,
   ProcessRun,

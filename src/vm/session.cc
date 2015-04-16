@@ -27,11 +27,12 @@ namespace fletch {
 
 // TODO(kasperl): Clean this up.
 static const char* kLogFlag = "log-decoder";
-static const char* kDebuggingFlag = "debugging";
 
 Session::Session(Connection* connection)
     : connection_(connection),
       program_(NULL),
+      process_(NULL),
+      debugging_(false),
       stack_(0),
       changes_(0),
       main_thread_monitor_(Platform::CreateMonitor()),
@@ -98,11 +99,10 @@ void Session::ProcessMessages() {
 
       case Connection::kProcessRun: {
         SignalMainThread(kProcessRun);
-        // If we have a bridge connection we continue
-        // processing messages. If we are connected to the
-        // compiler directly we terminate the message
+        // If we are debugging we continue processing messages. If we are
+        // connected to the compiler directly we terminate the message
         // processing thread.
-        if (!Flags::IsOn(kDebuggingFlag)) return;
+        if (!is_debugging()) return;
         break;
       }
 
@@ -163,6 +163,11 @@ void Session::ProcessMessages() {
 
       case Connection::kForceTermination: {
         exit(1);
+      }
+
+      case Connection::kDebugging: {
+        debugging_ = true;
+        break;
       }
 
       case Connection::kWriteSnapshot: {

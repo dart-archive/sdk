@@ -52,6 +52,7 @@ class Session {
 
   Future debug() async {
     vmCommands = new CommandReader(vmSocket).iterator;
+    const Debugging().addTo(vmSocket);
     const ProcessSpawnForMain().addTo(vmSocket);
     await new InputHandler(this).run();
   }

@@ -23,6 +23,8 @@ class Session {
 
   Program* program() const { return program_; }
 
+  bool is_debugging() const { return debugging_; }
+
   void Initialize();
   void StartMessageProcessingThread();
   void ProcessMessages();
@@ -117,6 +119,8 @@ class Session {
   // ids to processes. For now we just keep a reference to the main
   // process (with implicit id 0).
   Process* process_;
+
+  bool debugging_;
 
   ObjectList stack_;
   ObjectList changes_;

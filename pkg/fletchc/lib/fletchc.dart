@@ -70,10 +70,6 @@ main(List<String> arguments) async {
       '--port=${server.port}',
   ];
 
-  // TODO(ager): Make this part of the command protocol for the VM instead
-  // of a flag.
-  if (debugging) vmOptions.add('-Xdebugging');
-
   var connectionIterator = new StreamIterator(server);
 
   String vmPath = compiler.fletchVm.toFilePath();
