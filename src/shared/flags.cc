@@ -15,7 +15,7 @@ namespace fletch {
   type Flags::name = value;
 #else
 #define MATERIALIZE_DEBUG_FLAG(type, prefix, name, value, doc) \
-  /* Do nothing */
+  /* Do nothing. */
 #endif
 
 #define MATERIALIZE_RELEASE_FLAG(type, prefix, name, value, doc) \
@@ -53,7 +53,7 @@ static void PrintFlagString(const char* name, const char* value,
   PrintFlag##prefix(XSTR(name), Flags::name, value, doc);
 #else
 #define PRINT_DEBUG_FLAG(type, prefix, name, value, doc) \
-  /* Do nothing */
+  /* Do nothing. */
 #endif
 
 #define PRINT_RELEASE_FLAG(type, prefix, name, value, doc) \
@@ -68,16 +68,12 @@ static void PrintFlags() {
   exit(-1);
 }
 
-
 static bool FlagMatches(const char* a, const char* b) {
-  size_t n =  strlen(b);
-  for (; n > 0; a++, b++, --n) {
+  for (; *b != '\0'; a++, b++) {
     if ((*a != *b) && ((*a != '-') || (*b != '_'))) return false;
-    else if (*a == '\0') return true;
   }
-  return true;
+  return (*a == '\0') || (*a == '=');
 }
-
 
 static bool ProcessFlagBoolean(const char* name_ptr, const char* value_ptr,
                                const char* name, bool* field) {
@@ -133,7 +129,7 @@ static bool ProcessFlagString(const char* name_ptr, const char* value_ptr,
     return;
 #else
 #define PROCESS_DEBUG_FLAG(type, prefix, name, value, doc) \
-  /* do nothing */
+  /* Do nothing */
 #endif
 
 #define PROCESS_RELEASE_FLAG(type, prefix, name, value, doc) \
