@@ -2,7 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.driver;
+library fletchc.driver_main;
+
+import 'dart:collection' show
+    Queue;
 
 import 'dart:io' hide
     exitCode,
@@ -10,17 +13,15 @@ import 'dart:io' hide
     stdin,
     stdout;
 
-import 'dart:io' as io;
-
 import 'dart:async' show
     Completer,
     Future,
     Stream,
     StreamController,
     StreamIterator,
-    StreamSubscription,
-    Zone,
-    ZoneSpecification;
+    StreamSubscription;
+
+import 'dart:async' show Zone;
 
 import 'dart:typed_data' show
     ByteData,
@@ -31,40 +32,24 @@ import 'dart:typed_data' show
 import 'dart:convert' show
     UTF8;
 
-import '../../compiler.dart' show
-    FletchCompiler;
+import 'dart:isolate' show
+    Isolate,
+    ReceivePort,
+    SendPort;
 
-import '../../commands.dart' as commands_lib;
+import 'driver_commands.dart' show
+    Command,
+    CommandSender,
+    DriverCommand,
+    handleSocketErrors,
+    stringifyError;
 
-const COMPILER_CRASHED = 253;
-const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
-const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
+import 'driver_isolate.dart' show
+    isolateMain;
 
 const Endianness commandEndianness = Endianness.LITTLE_ENDIAN;
 
 const headerSize = 5;
-
-const fletchDriverSuffix = "_driver";
-
-enum DriverCommand {
-  Stdin,  // Data on stdin.
-  Stdout,  // Data on stdout.
-  Stderr,  // Data on stderr.
-  Arguments,  // Command-line arguments.
-  Signal,  // Unix process signal received.
-  ExitCode,  // Set process exit code.
-
-  DriverConnectionError,  // Error in connection.
-}
-
-class Command {
-  final DriverCommand code;
-  final data;
-
-  Command(this.code, this.data);
-
-  String toString() => 'Command($code, $data)';
-}
 
 class ControlStream {
   final Stream<List<int>> stream;
@@ -149,10 +134,10 @@ class ControlStream {
   }
 }
 
-class CommandSender {
+class ByteCommandSender extends CommandSender {
   final Sink<List<int>> sink;
 
-  CommandSender(this.sink);
+  ByteCommandSender(this.sink);
 
   void sendExitCode(int exitCode) {
     int payloadSize = 4;
@@ -162,22 +147,6 @@ class CommandSender {
     view.setUint8(4, DriverCommand.ExitCode.index);
     view.setUint32(headerSize, exitCode, commandEndianness);
     sink.add(list);
-  }
-
-  void sendStdout(String data) {
-    sendStdoutBytes(new Uint8List.fromList(UTF8.encode(data)));
-  }
-
-  void sendStdoutBytes(List<int> data) {
-    sendDataCommand(DriverCommand.Stdout, data);
-  }
-
-  void sendStderr(String data) {
-    sendStderrBytes(new Uint8List.fromList(UTF8.encode(data)));
-  }
-
-  void sendStderrBytes(List<int> data) {
-    sendDataCommand(DriverCommand.Stderr, data);
   }
 
   void sendDataCommand(DriverCommand command, List<int> data) {
@@ -190,6 +159,15 @@ class CommandSender {
     int dataOffset = headerSize + 4;
     list.setRange(dataOffset, dataOffset + data.length, data);
     sink.add(list);
+  }
+
+  void sendClose() {
+    throw new UnsupportedError("[sendClose] isn't supported in bytes.");
+  }
+
+  void sendEventLoopStarted() {
+    throw new UnsupportedError(
+        "[sendEventLoopStarted] isn't supported in bytes.");
   }
 }
 
@@ -224,9 +202,11 @@ Future main(List<String> arguments) async {
 
   var connectionIterator = new StreamIterator(server);
 
+  IsolatePool pool = new IsolatePool(isolateMain);
   try {
     while (await connectionIterator.moveNext()) {
-      await handleClient(
+      handleClient(
+          pool,
           handleSocketErrors(connectionIterator.current, "controlSocket"));
     }
   } finally {
@@ -235,239 +215,197 @@ Future main(List<String> arguments) async {
   }
 }
 
-Function makeErrorHandler(String info) {
-  return (error, StackTrace stackTrace) {
-    Zone.ROOT.print("Error on $info: ${stringifyError(error, stackTrace)}");
-  };
+Future handleClient(IsolatePool pool, Socket controlSocket) async {
+  // This method needs to do the following:
+  // * Spawn a new isolate (or reuse an existing) to perform the task.
+  //
+  // * Forward commands from C++ to isolate.
+  //
+  // * Intercept signal command and potentially kill isolate (isolate needs to
+  //   tell if it is interuptible or needs to be killed, latter if compiler is
+  //   running).
+  //
+  // * Forward commands from isolate to C++.
+  //
+  // * Store completed isolates in a pool.
+  ClientController client = new ClientController(controlSocket);
+  CompilerController compiler = new CompilerController(await pool.getIsolate());
+
+  Future clientFuture = client.run(compiler);
+  await compiler.run(client);
+  await clientFuture;
 }
 
-Socket handleSocketErrors(Socket socket, String name) {
-  String remotePort = "?";
-  try {
-    remotePort = "${socket.remotePort}";
-  } catch (_) {
-    // Ignored, socket.remotePort may fail if the socket was closed on the
-    // other side.
-  }
-  String info = "$name ${socket.port} -> $remotePort";
-  // TODO(ahe): Remove the following line when things get more stable.
-  Zone.ROOT.print(info);
-  socket.done.catchError(makeErrorHandler(info));
-  return socket;
-}
+/// Handles communication with the C++ client.
+class ClientController {
+  final Socket socket;
 
-StreamSubscription handleSubscriptionErrors(
-    StreamSubscription subscription,
-    String name) {
-  String info = "$name subscription";
-  Zone.ROOT.print(info);
-  return subscription
-      ..onError(makeErrorHandler(info));
-}
+  CompilerController compiler;
+  CommandSender commandSender;
+  StreamSubscription<Command> subscription;
+  Completer<Null> completer;
 
-String stringifyError(error, StackTrace stackTrace) {
-  String safeToString(object) {
-    try {
-      return '$object';
-    } catch (e) {
-      return Error.safeToString(object);
-    }
-  }
-  StringBuffer buffer = new StringBuffer();
-  buffer.writeln(safeToString(error));
-  if (stackTrace != null) {
-    buffer.writeln(safeToString(stackTrace));
-  } else {
-    buffer.writeln("No stack trace.");
-  }
-  return '$buffer';
-}
+  ClientController(this.socket);
 
-Future handleClient(Socket controlSocket) async {
-  CommandSender commandSender = new CommandSender(controlSocket);
-
-  StreamIterator<Command> commandIterator = new StreamIterator<Command>(
-      new ControlStream(controlSocket).commandStream);
-
-  await commandIterator.moveNext();
-  Command command = commandIterator.current;
-  if (command.code != DriverCommand.Arguments) {
-    print("Expected arguments from clients but got: $command");
-    // The client is misbehaving, shut it down now.
-    controlSocket.destroy();
-    return null;
+  Future<Null> run(CompilerController compiler) {
+    this.compiler = compiler;
+    commandSender = new ByteCommandSender(socket);
+    subscription = new ControlStream(socket).commandStream.listen(null);
+    subscription
+        ..onData(handleCommand)
+        ..onError(handleCommandError)
+        ..onDone(handleCommandsDone);
+    completer = new Completer<Null>();
+    return completer.future;
   }
 
-  // This is argv from a C/C++ program. The first entry is the program name
-  // which isn't normally included in Dart arguments (as passed to main).
-  List<String> arguments = command.data;
-  String programName = arguments.first;
-  String fletchVm = null;
-  if (programName.endsWith(fletchDriverSuffix)) {
-    fletchVm = programName.substring(
-        0, programName.length - fletchDriverSuffix.length);
+  void handleCommand(Command command) {
+    compiler.controller.add(command);
   }
-  arguments = arguments.skip(1).toList();
 
-  ZoneSpecification specification =
-      new ZoneSpecification(print: (_1, _2, _3, String line) {
-        commandSender.sendStdout('$line\n');
-      },
-      handleUncaughtError: (_1, _2, _3, error, StackTrace stackTrace) {
-        String message =
-            "\n\nExiting due to uncaught error.\n"
-            "${stringifyError(error, stackTrace)}";
-        Zone.ROOT.print(message);
-        commandSender.sendStderr('$message\n');
-        exit(1);
-      });
+  void handleCommandError(error, StackTrace trace) {
+    print(stringifyError(error, trace));
+    completer.completeError(error, trace);
+  }
 
-  int exitCode = await Zone.current.fork(specification: specification)
-      .run(() => compileAndRun(
-          fletchVm, arguments, commandSender, commandIterator));
+  void handleCommandsDone() {
+    completer.complete();
+  }
 
-  commandSender.sendExitCode(exitCode);
+  void sendCommand(DriverCommand code, data) {
+    switch (code) {
+      case DriverCommand.Stdout:
+        commandSender.sendStdoutBytes(data);
+        break;
 
-  commandIterator.cancel();
+      case DriverCommand.Stderr:
+        commandSender.sendStderrBytes(data);
+        break;
 
-  await controlSocket.flush();
-  controlSocket.close();
-}
-
-Future<int> compileAndRun(
-    String fletchVm,
-    List<String> arguments,
-    CommandSender commandSender,
-    StreamIterator<Command> commandIterator) async {
-  String script;
-  String snapshotPath;
-
-  for (int i = 0; i < arguments.length; i++) {
-    String argument = arguments[i];
-    switch (argument) {
-      case '-o':
-      case '--out':
-        snapshotPath = arguments[++i];
+      case DriverCommand.ExitCode:
+        commandSender.sendExitCode(data);
         break;
 
       default:
-        if (script != null) throw "Unknown option: $argument";
-        script = argument;
-        break;
+        throw "Unexpected command: $code";
     }
   }
 
-  if (script == null) throw "No script supplied";
-
-  List<String> options = const bool.fromEnvironment("fletchc-verbose")
-      ? <String>['--verbose'] : <String>[];
-  FletchCompiler compiler =
-      new FletchCompiler(
-          options: options, script: script, fletchVm: fletchVm,
-          // TODO(ahe): packageRoot should be an option.
-          packageRoot: "package/");
-  bool compilerCrashed = false;
-  List commands = await compiler.run().catchError((e, trace) {
-    compilerCrashed = true;
-    // TODO(ahe): Remove this catchError block when this bug is fixed:
-    // https://code.google.com/p/dart/issues/detail?id=22437.
-    print(e);
-    print(trace);
-    return [];
-  });
-  if (compilerCrashed) {
-    return COMPILER_CRASHED;
+  void endSession() {
+    subscription.cancel();
+    var future = socket.flush();
+    if (future == null) {
+      future = new Future.value();
+    }
+    future.then((_) {
+      socket.close();
+    });
   }
-
-  var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
-
-  List<String> vmOptions = <String>[
-      '--port=${server.port}',
-      '-Xvalidate-stack',
-  ];
-
-  var connectionIterator = new StreamIterator(server);
-
-  String vmPath = compiler.fletchVm.toFilePath();
-
-  if (compiler.verbose) {
-    print("Running '$vmPath ${vmOptions.join(" ")}'");
-  }
-  Process vmProcess = await Process.start(vmPath, vmOptions);
-
-  readCommands(commandIterator, vmProcess);
-
-  StreamSubscription vmStdoutSubscription = handleSubscriptionErrors(
-      vmProcess.stdout.listen(commandSender.sendStdoutBytes), "vm stdout");
-  StreamSubscription vmStderrSubscription = handleSubscriptionErrors(
-      vmProcess.stderr.listen(commandSender.sendStderrBytes), "vm stderr");
-
-  bool hasValue = await connectionIterator.moveNext();
-  assert(hasValue);
-  var vmSocket = handleSocketErrors(connectionIterator.current, "vmSocket");
-  server.close();
-
-  vmSocket.listen(null).cancel();
-  commands.forEach((command) => command.addTo(vmSocket));
-
-  if (snapshotPath == null) {
-    const commands_lib.ProcessSpawnForMain().addTo(vmSocket);
-    const commands_lib.ProcessRun().addTo(vmSocket);
-  } else {
-    new commands_lib.WriteSnapshot(snapshotPath).addTo(vmSocket);
-  }
-
-  vmSocket.close();
-
-  int exitCode = await vmProcess.exitCode;
-
-  await vmProcess.stdin.close();
-  await vmStdoutSubscription.cancel();
-  await vmStderrSubscription.cancel();
-
-  if (exitCode != 0) {
-    print("Non-zero exit code from '$vmPath' ($exitCode).");
-  }
-
-  return exitCode;
 }
 
-Future<Null> readCommands(
-    StreamIterator<Command> commandIterator,
-    Process vmProcess) async {
-  while (await commandIterator.moveNext()) {
-    Command command = commandIterator.current;
-    switch (command.code) {
-      case DriverCommand.Stdin:
-        if (command.data.length == 0) {
-          await vmProcess.stdin.close();
-        } else {
-          vmProcess.stdin.add(command.data);
-        }
-        break;
+/// Handles communication with the compiler running in its own isolate.
+class CompilerController {
+  final ManagedIsolate isolate;
 
-      case DriverCommand.Signal:
-        int signalNumber = command.data;
-        ProcessSignal signal = ProcessSignal.SIGTERM;
-        switch (signalNumber) {
-          case 2:
-            signal = ProcessSignal.SIGINT;
-            break;
+  final StreamController<Command> controller = new StreamController<Command>();
 
-          case 15:
-            signal = ProcessSignal.SIGTERM;
-            break;
+  bool eventLoopStarted = false;
 
-          default:
-            Zone.ROOT.print("Warning: unknown signal number: $signalNumber");
-            signal = ProcessSignal.SIGTERM;
-            break;
-        }
-        vmProcess.kill(signal);
-        break;
+  CompilerController(this.isolate);
 
-      default:
-        Zone.ROOT.print("Unexpected command from client: $command");
+  Future<Null> run(ClientController client) async {
+    ReceivePort port = isolate.beginSession();
+    StreamIterator iterator = new StreamIterator(port);
+    if (!await iterator.moveNext()) {
+      throw "bummer";
     }
+    SendPort sendPort = iterator.current;
+
+    StreamSubscription subscription = controller.stream.listen(null);
+    subscription.onData((Command command) {
+      if (command.code == DriverCommand.Signal && !eventLoopStarted) {
+        isolate.kill();
+        port.close();
+      } else {
+        sendPort.send([command.code.index, command.data]);
+      }
+    });
+
+    while (await iterator.moveNext()) {
+      DriverCommand code = DriverCommand.values[iterator.current[0]];
+      var data = iterator.current[1];
+      switch (code) {
+        case DriverCommand.ClosePort:
+          port.close();
+          break;
+
+        case DriverCommand.EventLoopStarted:
+          eventLoopStarted = true;
+          break;
+
+        default:
+          client.sendCommand(code, data);
+          break;
+      }
+    }
+
+    isolate.endSession();
+    client.endSession();
+  }
+}
+
+class ManagedIsolate {
+  final IsolatePool pool;
+  final Isolate isolate;
+  final SendPort port;
+  bool wasKilled = false;
+
+  ManagedIsolate(this.pool, this.isolate, this.port);
+
+  ReceivePort beginSession() {
+    ReceivePort receivePort = new ReceivePort();
+    port.send(receivePort.sendPort);
+    return receivePort;
+  }
+
+  void endSession() {
+    if (!wasKilled) {
+      pool.idleIsolates.addLast(this);
+    }
+  }
+
+  void kill() {
+    wasKilled = true;
+    isolate.kill(Isolate.IMMEDIATE);
+  }
+}
+
+class IsolatePool {
+  // Queue of idle isolates. When an isolate becomes idle, it is added at the
+  // end.
+  final Queue<ManagedIsolate> idleIsolates = new Queue<ManagedIsolate>();
+  final Function isolateEntryPoint;
+
+  IsolatePool(this.isolateEntryPoint);
+
+  Future<ManagedIsolate> getIsolate() async {
+    if (idleIsolates.isEmpty) {
+      return await spawnIsolate();
+    } else {
+      return idleIsolates.removeFirst();
+    }
+  }
+
+  Future<ManagedIsolate> spawnIsolate() async {
+    ReceivePort receivePort = new ReceivePort();
+    Isolate isolate =
+        await Isolate.spawn(isolateEntryPoint, receivePort.sendPort);
+    isolate.setErrorsFatal(true);
+    StreamIterator iterator = new StreamIterator(receivePort);
+    bool hasElement = await iterator.moveNext();
+    if (!hasElement) throw new StateError("No port received from isolate.");
+    SendPort port = iterator.current;
+    await iterator.cancel();
+    return new ManagedIsolate(this, isolate, port);
   }
 }

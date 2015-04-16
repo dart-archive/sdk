@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.driver;
+library fletchc.driver_isolate;
 
 import 'dart:io' hide
     exitCode,
@@ -10,250 +10,73 @@ import 'dart:io' hide
     stdin,
     stdout;
 
-import 'dart:io' as io;
-
 import 'dart:async' show
-    Completer,
     Future,
-    Stream,
-    StreamController,
     StreamIterator,
     StreamSubscription,
+    StreamTransformer,
     Zone,
     ZoneSpecification;
 
-import 'dart:typed_data' show
-    ByteData,
-    Endianness,
-    TypedData,
-    Uint8List;
-
-import 'dart:convert' show
-    UTF8;
+import 'dart:isolate' show
+    ReceivePort,
+    SendPort;
 
 import '../../compiler.dart' show
     FletchCompiler;
 
 import '../../commands.dart' as commands_lib;
 
+import 'driver_commands.dart' show
+    Command,
+    CommandSender,
+    DriverCommand,
+    handleSocketErrors,
+    makeErrorHandler,
+    stringifyError;
+
 const COMPILER_CRASHED = 253;
 const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
 const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
 
-const Endianness commandEndianness = Endianness.LITTLE_ENDIAN;
-
-const headerSize = 5;
-
 const fletchDriverSuffix = "_driver";
 
-enum DriverCommand {
-  Stdin,  // Data on stdin.
-  Stdout,  // Data on stdout.
-  Stderr,  // Data on stderr.
-  Arguments,  // Command-line arguments.
-  Signal,  // Unix process signal received.
-  ExitCode,  // Set process exit code.
+class PortCommandSender extends CommandSender {
+  final SendPort port;
 
-  DriverConnectionError,  // Error in connection.
-}
-
-class Command {
-  final DriverCommand code;
-  final data;
-
-  Command(this.code, this.data);
-
-  String toString() => 'Command($code, $data)';
-}
-
-class ControlStream {
-  final Stream<List<int>> stream;
-
-  final StreamSubscription<List<int>> subscription;
-
-  final BytesBuilder builder = new BytesBuilder(copy: false);
-
-  final StreamController<Command> controller = new StreamController<Command>();
-
-  ControlStream(Stream<List<int>> stream)
-      : this.stream = stream,
-        this.subscription = stream.listen(null) {
-    subscription
-        ..onData(handleData)
-        ..onError(handleError)
-        ..onDone(handleDone);
-  }
-
-  Stream<Command> get commandStream => controller.stream;
-
-  void handleData(Uint8List data) {
-    // TODO(ahe): makeView(data, ...) to ensure monomorphism?
-    builder.add(data);
-    if (builder.length < headerSize) return;
-    Uint8List list = builder.takeBytes();
-    ByteData view = new ByteData.view(list.buffer, list.offsetInBytes);
-    int length = view.getUint32(0, commandEndianness);
-    if (list.length - headerSize < length) {
-      builder.add(list);
-      return;
-    }
-    int commandCode = view.getUint8(4);
-
-    DriverCommand command = DriverCommand.values[commandCode];
-    view = new ByteData.view(list.buffer, list.offsetInBytes + headerSize);
-    switch (command) {
-      case DriverCommand.Arguments:
-        controller.add(new Command(command, decodeArgumentsCommand(view)));
-        break;
-
-      case DriverCommand.Stdin:
-        int length = view.getUint32(0, commandEndianness);
-        controller.add(new Command(command, makeView(view, 4, length)));
-        break;
-
-      case DriverCommand.Signal:
-        int signal = view.getUint32(0, commandEndianness);
-        controller.add(new Command(command, signal));
-        break;
-
-      default:
-        controller.addError("Command not implemented yet: $command");
-        break;
-    }
-  }
-
-  void handleError(error, StackTrace stackTrace) {
-    controller.addError(error, stackTrace);
-  }
-
-  void handleDone() {
-    List trailing = builder.takeBytes();
-    if (trailing.length != 0) {
-      controller.addError(
-          new StateError("Stream closed with trailing bytes : $trailing"));
-    }
-  }
-
-  List<String> decodeArgumentsCommand(ByteData view) {
-    int offset = 0;
-    int argc = view.getUint32(offset, commandEndianness);
-    offset += 4;
-    List<String> argv = <String>[];
-    for (int i = 0; i < argc; i++) {
-      int length = view.getUint32(offset, commandEndianness);
-      offset += 4;
-      argv.add(UTF8.decode(makeView(view, offset, length)));
-      offset += length;
-    }
-    return argv;
-  }
-}
-
-class CommandSender {
-  final Sink<List<int>> sink;
-
-  CommandSender(this.sink);
+  PortCommandSender(this.port);
 
   void sendExitCode(int exitCode) {
-    int payloadSize = 4;
-    Uint8List list = new Uint8List(headerSize + payloadSize);
-    ByteData view = list.buffer.asByteData();
-    view.setUint32(0, payloadSize, commandEndianness);
-    view.setUint8(4, DriverCommand.ExitCode.index);
-    view.setUint32(headerSize, exitCode, commandEndianness);
-    sink.add(list);
-  }
-
-  void sendStdout(String data) {
-    sendStdoutBytes(new Uint8List.fromList(UTF8.encode(data)));
-  }
-
-  void sendStdoutBytes(List<int> data) {
-    sendDataCommand(DriverCommand.Stdout, data);
-  }
-
-  void sendStderr(String data) {
-    sendStderrBytes(new Uint8List.fromList(UTF8.encode(data)));
-  }
-
-  void sendStderrBytes(List<int> data) {
-    sendDataCommand(DriverCommand.Stderr, data);
+    port.send([DriverCommand.ExitCode.index, exitCode]);
   }
 
   void sendDataCommand(DriverCommand command, List<int> data) {
-    int payloadSize = data.length + 4;
-    Uint8List list = new Uint8List(headerSize + payloadSize);
-    ByteData view = list.buffer.asByteData();
-    view.setUint32(0, payloadSize, commandEndianness);
-    view.setUint8(4, command.index);
-    view.setUint32(headerSize, data.length, commandEndianness);
-    int dataOffset = headerSize + 4;
-    list.setRange(dataOffset, dataOffset + data.length, data);
-    sink.add(list);
+    port.send([command.index, data]);
+  }
+
+  void sendClose() {
+    port.send([DriverCommand.ClosePort.index, null]);
+  }
+
+  void sendEventLoopStarted() {
+    port.send([DriverCommand.EventLoopStarted.index, null]);
   }
 }
 
-Uint8List makeView(TypedData list, int offset, int length) {
-  return new Uint8List.view(list.buffer, list.offsetInBytes + offset, length);
-}
-
-Future main(List<String> arguments) async {
-  File configFile = new File.fromUri(Uri.base.resolve(arguments.first));
-  Directory tmpdir = Directory.systemTemp.createTempSync("fletch_driver");
-
-  File socketFile = new File("${tmpdir.path}/socket");
-  try {
-    socketFile.deleteSync();
-  } on FileSystemException catch (e) {
-    // Ignored. There's no way to check if a socket file exists.
-  }
-
-  ServerSocket server = await ServerSocket.bind(
-      new
-      UnixDomainAddress // NO_LINT
-      (socketFile.path), 0);
-
-  // Write the socket file to a config file. This lets multiple command line
-  // programs share this persistent driver process, which in turn eliminates
-  // start up overhead.
-  configFile.writeAsStringSync(socketFile.path, flush: true);
-
-  // Print the temporary directory so the launching process knows where to
-  // connect, and that the socket is ready.
-  print(socketFile.path);
-
-  var connectionIterator = new StreamIterator(server);
-
-  try {
-    while (await connectionIterator.moveNext()) {
-      await handleClient(
-          handleSocketErrors(connectionIterator.current, "controlSocket"));
-    }
-  } finally {
-    // TODO(ahe): Do this in a SIGTERM handler.
-    configFile.delete();
+/* void */ isolateMain(SendPort port) async {
+  ReceivePort receivePort = new ReceivePort();
+  port.send(receivePort.sendPort);
+  port = null;
+  StreamIterator iterator = new StreamIterator(receivePort);
+  while (await iterator.moveNext()) {
+    beginSession(iterator.current);
   }
 }
 
-Function makeErrorHandler(String info) {
-  return (error, StackTrace stackTrace) {
-    Zone.ROOT.print("Error on $info: ${stringifyError(error, stackTrace)}");
-  };
-}
-
-Socket handleSocketErrors(Socket socket, String name) {
-  String remotePort = "?";
-  try {
-    remotePort = "${socket.remotePort}";
-  } catch (_) {
-    // Ignored, socket.remotePort may fail if the socket was closed on the
-    // other side.
-  }
-  String info = "$name ${socket.port} -> $remotePort";
-  // TODO(ahe): Remove the following line when things get more stable.
-  Zone.ROOT.print(info);
-  socket.done.catchError(makeErrorHandler(info));
-  return socket;
+Future<Null> beginSession(SendPort port) async {
+  ReceivePort receivePort = new ReceivePort();
+  port.send(receivePort.sendPort);
+  handleClient(port, receivePort);
 }
 
 StreamSubscription handleSubscriptionErrors(
@@ -265,36 +88,25 @@ StreamSubscription handleSubscriptionErrors(
       ..onError(makeErrorHandler(info));
 }
 
-String stringifyError(error, StackTrace stackTrace) {
-  String safeToString(object) {
-    try {
-      return '$object';
-    } catch (e) {
-      return Error.safeToString(object);
-    }
-  }
-  StringBuffer buffer = new StringBuffer();
-  buffer.writeln(safeToString(error));
-  if (stackTrace != null) {
-    buffer.writeln(safeToString(stackTrace));
-  } else {
-    buffer.writeln("No stack trace.");
-  }
-  return '$buffer';
-}
+Future handleClient(SendPort sendPort, ReceivePort receivePort) async {
+  CommandSender commandSender = new PortCommandSender(sendPort);
 
-Future handleClient(Socket controlSocket) async {
-  CommandSender commandSender = new CommandSender(controlSocket);
+  StreamTransformer commandDecoder =
+      new StreamTransformer.fromHandlers(handleData: (message, sink) {
+        int code = message[0];
+        var data = message[1];
+        sink.add(new Command(DriverCommand.values[code], data));
+      });
 
   StreamIterator<Command> commandIterator = new StreamIterator<Command>(
-      new ControlStream(controlSocket).commandStream);
+      receivePort.transform(commandDecoder));
 
   await commandIterator.moveNext();
   Command command = commandIterator.current;
   if (command.code != DriverCommand.Arguments) {
     print("Expected arguments from clients but got: $command");
     // The client is misbehaving, shut it down now.
-    controlSocket.destroy();
+    commandSender.sendClose();
     return null;
   }
 
@@ -330,8 +142,9 @@ Future handleClient(Socket controlSocket) async {
 
   commandIterator.cancel();
 
-  await controlSocket.flush();
-  controlSocket.close();
+  commandSender.sendClose();
+
+  receivePort.close();
 }
 
 Future<int> compileAndRun(
@@ -396,6 +209,11 @@ Future<int> compileAndRun(
   Process vmProcess = await Process.start(vmPath, vmOptions);
 
   readCommands(commandIterator, vmProcess);
+
+  // Notify controlling isolate (driver_main) that the event loop
+  // [readCommands] has been started, and commands like DriverCommand.Signal
+  // will be honored.
+  commandSender.sendEventLoopStarted();
 
   StreamSubscription vmStdoutSubscription = handleSubscriptionErrors(
       vmProcess.stdout.listen(commandSender.sendStdoutBytes), "vm stdout");
