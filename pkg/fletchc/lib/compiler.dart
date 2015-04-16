@@ -290,6 +290,10 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return _compiler.debugInfoForPosition(file, position);
   }
 
+  int positionInFileFromPattern(String file, int line, String pattern) {
+    return _compiler.positionInFileFromPattern(file, line, pattern);
+  }
+
   int positionInFile(String file, int line, int column) {
     return _compiler.positionInFile(file, line, column);
   }

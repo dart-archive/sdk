@@ -198,6 +198,22 @@ class FletchCompiler extends FletchCompilerHack {
     return function.debugInfo;
   }
 
+  int positionInFileFromPattern(String file, int line, String pattern) {
+    Uri uri = Uri.base.resolve(file);
+    SourceFile sourceFile = provider.sourceFiles[uri];
+    if (sourceFile == null) return null;
+    List<int> lineStarts = sourceFile.lineStarts;
+    if (line >= lineStarts.length) return null;
+    int begin = lineStarts[line];
+    int end = line + 2 < lineStarts.length
+        ? lineStarts[line + 1]
+        : sourceFile.length;
+    String lineText = sourceFile.slowSubstring(begin, end);
+    int column = lineText.indexOf(pattern);
+    if (column == -1) return null;
+    return begin + column;
+  }
+
   int positionInFile(String file, int line, int column) {
     Uri uri = Uri.base.resolve(file);
     SourceFile sourceFile = provider.sourceFiles[uri];

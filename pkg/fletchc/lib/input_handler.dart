@@ -69,7 +69,7 @@ class InputHandler {
         try {
           column = int.parse(column);
         } catch(e) {
-          print('### invalid column number: $column');
+          await session.setFileBreakpointFromPattern(file, line, column);
           break;
         }
         await session.setFileBreakpoint(file, line, column);

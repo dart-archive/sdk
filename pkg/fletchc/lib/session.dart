@@ -109,6 +109,39 @@ class Session {
     }
   }
 
+  Future setFileBreakpointFromPosition(String name,
+                                       String file,
+                                       int position) async {
+    if (position == null) {
+      print("### Failed setting breakpoint for $name");
+      return;
+    }
+    DebugInfo debugInfo = compiler.debugInfoForPosition(file, position);
+    if (debugInfo == null) {
+      print("### Failed setting breakpoint for $name");
+      return;
+    }
+    SourceLocation location = debugInfo.locationForPosition(position);
+    if (location == null) {
+      print("### Failed setting breakpoint for $name");
+      return;
+    }
+    int methodId = debugInfo.function.methodId;
+    int bytecodeIndex = location.bytecodeIndex;
+    await setBreakpointHelper(name, methodId, bytecodeIndex);
+  }
+
+  Future setFileBreakpointFromPattern(String file,
+                                      int line,
+                                      String pattern) async {
+    if (line < 1) {
+      print("### Invalid line number: $line");
+      return;
+    }
+    int position = compiler.positionInFileFromPattern(file, line - 1, pattern);
+    await setFileBreakpointFromPosition('$file:$line:$pattern', file, position);
+  }
+
   Future setFileBreakpoint(String file, int line, int column) async {
     if (line < 1) {
       print("### Invalid line number: $line");
@@ -119,23 +152,7 @@ class Session {
       return;
     }
     int position = compiler.positionInFile(file, line - 1, column - 1);
-    if (position == null) {
-      print("### Failed setting breakpoint for $file:$line:$column");
-      return;
-    }
-    DebugInfo debugInfo = compiler.debugInfoForPosition(file, position);
-    if (debugInfo == null) {
-      print("### Failed setting breakpoint for $file:$line:$column");
-      return;
-    }
-    SourceLocation location = debugInfo.locationForPosition(position);
-    if (location == null) {
-      print("### Failed setting breakpoint for $file:$line:$column");
-      return;
-    }
-    int methodId = debugInfo.function.methodId;
-    int bytecodeIndex = location.bytecodeIndex;
-    await setBreakpointHelper('$file:$line:$column', methodId, bytecodeIndex);
+    await setFileBreakpointFromPosition('$file:$line:$column', file, position);
   }
 
   Future deleteBreakpoint(int id) async {
