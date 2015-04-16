@@ -222,7 +222,10 @@ class FletchContext {
         elements,
         isConst: isConst);
     if (expression == null) return null;
-    markConstantUsed(expression.value);
+    ConstantValue value = expression.value;
+    // Don't mark function constants as used.
+    if (value.isFunction) return null;
+    markConstantUsed(value);
     return expression;
   }
 }

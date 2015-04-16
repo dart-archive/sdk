@@ -79,4 +79,10 @@ class FletchClassInstanceConstant extends ConstantValue {
   String toStructuredString() {
     return 'FletchClassInstanceConstant($classId)';
   }
+
+  bool operator==(other) {
+    return other is FletchClassInstanceConstant && other.classId == classId;
+  }
+
+  int get hashCode => classId;
 }
