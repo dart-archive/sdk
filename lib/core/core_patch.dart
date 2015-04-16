@@ -35,6 +35,14 @@ const patch = "patch";
   external _noSuchMethodTrampoline();
 }
 
+@patch class bool {
+  @patch factory bool.fromEnvironment(
+      String name,
+      {bool defaultValue: false}) => defaultValue;
+
+  int get hashCode => this ? 5 : 7;
+}
+
 // TODO(ajohnsen): Merge 'fletch.String' into this String.
 @patch class String {
   @patch factory String.fromCharCodes(
@@ -47,6 +55,10 @@ const patch = "patch";
   @patch factory String.fromCharCode(int charCode) {
     return fletch.String.fromCharCode(charCode);
   }
+
+  @patch factory String.fromEnvironment(
+      String name,
+      {String defaultValue}) => defaultValue;
 }
 
 @patch class StringBuffer {
@@ -151,6 +163,10 @@ const patch = "patch";
         throw new FormatException("Can't parse to an integer", source);
     }
   }
+
+  @patch factory int.fromEnvironment(
+      String name,
+      {int defaultValue}) => defaultValue;
 }
 
 @patch class double {

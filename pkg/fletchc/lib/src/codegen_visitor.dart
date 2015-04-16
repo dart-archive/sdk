@@ -1874,8 +1874,12 @@ abstract class CodegenVisitor
       NewExpression node,
       ConstructedConstantExpression constant,
       _) {
-    int constId = allocateConstantFromNode(node);
-    builder.loadConst(constId);
+    if (constant == null) {
+      handleCompileError();
+    } else {
+      int constId = allocateConstantFromNode(node);
+      builder.loadConst(constId);
+    }
     applyVisitState();
   }
 
