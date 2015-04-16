@@ -46,7 +46,15 @@ class _ConstantList<E> extends ListBase<E> implements List<E> {
     throw nativeError;
   }
 
-  @native external E operator[](int index);
+  @native E operator[](int index) {
+    switch (nativeError) {
+      case wrongArgumentType:
+        throw new ArgumentError(index);
+
+      case indexOutOfBounds:
+        throw new IndexError(index, this);
+    }
+  }
 
   @native external static _ConstantList _new(int length);
 
@@ -162,7 +170,15 @@ class _FixedList<E> extends _ConstantList<E> {
     }
   }
 
-  @native external E operator[]=(int index, value);
+  @native E operator[]=(int index, value) {
+    switch (nativeError) {
+      case wrongArgumentType:
+        throw new ArgumentError(index);
+
+      case indexOutOfBounds:
+        throw new IndexError(index, this);
+    }
+  }
 }
 
 class _GrowableList<E> extends ListBase<E> implements List<E> {
@@ -187,6 +203,7 @@ class _GrowableList<E> extends ListBase<E> implements List<E> {
   }
 
   E operator[](int index) {
+    if (index is! int) throw new ArgumentError(index);
     if (index >= _length) throw new IndexError(index, this);
     return _list[index];
   }
