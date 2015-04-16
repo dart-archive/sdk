@@ -107,7 +107,7 @@ def Steps(config):
         "--analyze-only",
         "--show-package-warnings",
         "--categories=Server",
-        "package:fletchc/src/driver.dart"])
+        "package:fletchc/src/driver/driver_main.dart"])
       output = re.sub(r"[^\n]*\n[^\n]*\n[^\n]* // NO_LINT\n *\^+\n", "", output)
       if output: # output from dart2js should be empty.
         print output

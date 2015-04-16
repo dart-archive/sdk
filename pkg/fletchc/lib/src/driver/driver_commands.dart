@@ -31,10 +31,10 @@ import 'dart:typed_data' show
 import 'dart:convert' show
     UTF8;
 
-import '../compiler.dart' show
+import '../../compiler.dart' show
     FletchCompiler;
 
-import '../commands.dart' as commands_lib;
+import '../../commands.dart' as commands_lib;
 
 const COMPILER_CRASHED = 253;
 const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;

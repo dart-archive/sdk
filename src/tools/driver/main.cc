@@ -370,7 +370,7 @@ static void StartDriverDaemon() {
   argv[1] = "-c";
   argv[2] = "-p";
   argv[3] = package_root;
-  argv[4] = "package:fletchc/src/driver.dart";
+  argv[4] = "package:fletchc/src/driver/driver_main.dart";
   argv[5] = fletch_config_file;
   argv[6] = NULL;
 
