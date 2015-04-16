@@ -153,9 +153,8 @@
           ],
           'inputs': [
             '<(mac_asan_dylib)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'dart'
-            '<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'tests/service_tests/performance/dart/performance_service.dart',
             'tests/service_tests/performance/dart/struct.dart',
@@ -212,9 +211,8 @@
           ],
           'inputs': [
             '<(mac_asan_dylib)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'dart'
-            '<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'tests/service_tests/conformance/dart/conformance_service.dart',
             'tests/service_tests/conformance/dart/struct.dart',
@@ -271,9 +269,8 @@
           ],
           'inputs': [
             '<(mac_asan_dylib)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'dart'
-            '<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'samples/myapi/myapi_impl.dart',
             'samples/myapi/generated/dart/myapi_service.dart',
@@ -331,9 +328,8 @@
           ],
           'inputs': [
             '<(mac_asan_dylib)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'dart'
-            '<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'samples/todomvc/model.dart',
             'samples/todomvc/todomvc_impl.dart',
