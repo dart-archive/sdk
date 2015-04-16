@@ -123,7 +123,7 @@ compile_time_constant_l_test: Fail
 compile_time_constant_p_test/01: MissingCompileTimeError
 compile_time_constant_test/01: MissingCompileTimeError
 compile_time_constant_test/02: MissingCompileTimeError
-compound_assignment_operator_test: Crash
+compound_assignment_operator_test: Fail
 const_conditional_test/01: MissingCompileTimeError
 const_conditional_test/02: MissingCompileTimeError
 const_conditional_test/03: MissingCompileTimeError
@@ -159,7 +159,6 @@ const_syntax_test/07: MissingCompileTimeError
 const_syntax_test/08: MissingCompileTimeError
 const_syntax_test/09: MissingCompileTimeError
 const_syntax_test/10: MissingCompileTimeError
-const_test: Crash
 const_types_test/09: Crash
 const_types_test/10: Crash
 const_types_test/11: Crash
@@ -458,7 +457,6 @@ get_set_syntax_test/02: MissingCompileTimeError
 get_set_syntax_test/03: MissingCompileTimeError
 getter_closure_execution_order_test: Fail
 getter_setter_in_lib_test: Fail
-getter_setter_order_test: Crash
 getters_setters_type2_test: Fail
 getters_setters_type3_test: Fail
 getters_setters_type_test/01: Fail
@@ -474,7 +472,7 @@ implicit_scope_test: Crash
 import_private_test/01: MissingCompileTimeError
 import_self_test/01: Crash
 import_self_test/none: Fail
-incr_op_test: Crash
+incr_op_test: Fail
 inference_list_or_null_test: Crash
 inferrer_closure_test: Fail
 inferrer_constructor3_test: Fail
@@ -835,6 +833,6 @@ vm/optimized_guarded_field_isolates_test: Crash
 vm/reflect_core_vm_test: Crash
 vm/reusable_boxes_test: Crash
 vm/store_to_load_forwarding_phis_vm_test: Crash
-vm/type_cast_vm_test: Crash
-vm/type_vm_test: Crash
+vm/type_cast_vm_test: Fail
+vm/type_vm_test: Fail
 vm/typed_data_polymorphic_view_test: Crash

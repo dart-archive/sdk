@@ -1691,12 +1691,11 @@ abstract class CodegenVisitor
     invokeSetter(setterSelector);
   }
 
-  void visitIndexPrefix(
+  void handleIndexPrefix(
       SendSet node,
       Node receiver,
       Node index,
-      IncDecOperator operator,
-      _) {
+      IncDecOperator operator) {
     visitForValue(receiver);
     visitForValue(index);
     // Load already evaluated receiver and index for '[]' call.
@@ -1707,6 +1706,44 @@ abstract class CodegenVisitor
     invokeMethod(node, getIncDecSelector(operator));
     // Use existing evaluated receiver and index for '[]=' call.
     invokeMethod(node, new Selector.indexSet());
+  }
+
+  void visitIndexPrefix(
+      SendSet node,
+      Node receiver,
+      Node index,
+      IncDecOperator operator,
+      _) {
+    handleIndexPrefix(node, receiver, index, operator);
+    applyVisitState();
+  }
+
+  void visitIndexPostfix(
+      Send node,
+      Node receiver,
+      Node index,
+      IncDecOperator operator,
+      _) {
+    if (visitState == VisitState.Effect) {
+      handleIndexPrefix(node, receiver, index, operator);
+      applyVisitState();
+      return;
+    }
+
+    // Reserve slot for result.
+    builder.loadLiteralNull();
+    visitForValue(receiver);
+    visitForValue(index);
+    // Load already evaluated receiver and index for '[]' call.
+    builder.loadLocal(1);
+    builder.loadLocal(1);
+    invokeMethod(node, new Selector.index());
+    builder.storeLocal(3);
+    builder.loadLiteral(1);
+    invokeMethod(node, getIncDecSelector(operator));
+    // Use existing evaluated receiver and index for '[]=' call.
+    invokeMethod(node, new Selector.indexSet());
+    builder.pop();
     applyVisitState();
   }
 
@@ -3531,16 +3568,6 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[errorUndefinedBinaryExpression] isn't implemented.");
-  }
-
-  void visitIndexPostfix(
-      Send node,
-      Node receiver,
-      Node index,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitIndexPostfix] isn't implemented.");
   }
 
   void visitSuperIndexPrefix(
