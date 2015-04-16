@@ -2,13 +2,20 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'package:isolate/isolate.dart';
 import 'package:expect/expect.dart';
 
-isolateFunction() {
+void main() {
+  Expect.equals(5, Isolate.spawn(simple).join());
+
+  Expect.equals(3, Isolate.spawn(increment, 2).join());
+  Expect.equals(5, Isolate.spawn(increment, 4).join());
+}
+
+simple() {
   return 5;
 }
 
-void main() {
-  Isolate isolate = Isolate.spawn(isolateFunction);
-  Expect.equals(5, isolate.wait());
+increment(n) {
+  return n + 1;
 }

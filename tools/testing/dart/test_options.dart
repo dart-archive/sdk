@@ -11,8 +11,15 @@ import "utils.dart";
 import "compiler_configuration.dart" show CompilerConfiguration;
 import "runtime_configuration.dart" show RuntimeConfiguration;
 
-const List<String> defaultTestSelectors =
-    const ['language', 'corelib', 'unsorted', 'coroutine', 'ffi', 'samples'];
+const List<String> defaultTestSelectors = const [
+    'language',
+    'corelib',
+    'unsorted',
+    'isolate',
+    'coroutine',
+    'ffi',
+    'samples'
+];
 
 /**
  * Specification of a single test option.
