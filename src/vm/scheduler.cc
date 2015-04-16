@@ -538,14 +538,17 @@ void Scheduler::ThreadExit(ThreadState* thread_state) {
   pause_monitor_->Unlock();
 }
 
+static void NotifyThread(ThreadState* thread_state) {
+  Monitor* monitor = thread_state->idle_monitor();
+  monitor->Lock();
+  monitor->Notify();
+  monitor->Unlock();
+}
+
 void Scheduler::NotifyAllThreads() {
   for (int i = 0; i < thread_count_; i++) {
     ThreadState* thread_state = threads_[i];
-    if (thread_state != NULL) {
-      thread_state->idle_monitor()->Lock();
-      thread_state->idle_monitor()->Notify();
-      thread_state->idle_monitor()->Unlock();
-    }
+    if (thread_state != NULL) NotifyThread(thread_state);
   }
 }
 
@@ -653,14 +656,12 @@ bool Scheduler::TryEnqueueOnIdleThread(Process* process) {
     ThreadState* thread_state = PopIdleThread();
     if (thread_state == NULL) return false;
     bool was_empty = false;
-    if (!thread_state->queue()->TryEnqueue(process, &was_empty)) {
-      // Turns out someone else tried to spin it up. Take another one.
-      continue;
-    }
-    thread_state->idle_monitor()->Lock();
-    thread_state->idle_monitor()->Notify();
-    thread_state->idle_monitor()->Unlock();
-    return true;
+    bool enqueued = thread_state->queue()->TryEnqueue(process, &was_empty);
+    // Always notify the idle thread, so it can be re-inserted into the idle
+    // thread pool.
+    NotifyThread(thread_state);
+    // We enqueued, we are done. Otherwise, try another.
+    if (enqueued) return true;
   }
   UNREACHABLE();
   return false;
@@ -679,9 +680,7 @@ bool Scheduler::EnqueueOnAnyThread(Process* process, int start_id) {
     if (thread_state != NULL &&
         thread_state->queue()->TryEnqueue(process, &was_empty)) {
       if (was_empty && current_processes_[i] == NULL) {
-        thread_state->idle_monitor()->Lock();
-        thread_state->idle_monitor()->Notify();
-        thread_state->idle_monitor()->Unlock();
+        NotifyThread(thread_state);
       }
       return false;
     }
