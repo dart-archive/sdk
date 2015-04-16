@@ -17,7 +17,7 @@ namespace fletch {
 //   -Xname=<boolean>|<int>|<address>|<string>
 //
 // debug means the flag is ONLY available in the debug build.
-// release means the flag is available in both the debug and release build. 
+// release means the flag is available in both the debug and release build.
 
 #define BOOLEAN(macro, name, value, doc) \
   macro(bool, Boolean, name, value, doc)
@@ -27,13 +27,13 @@ namespace fletch {
   macro(const char*, String, name, value, doc)
 
 #define APPLY_TO_FLAGS(debug, release)             \
-  BOOLEAN(debug, expose_gc, false,                 \
+  BOOLEAN(release, expose_gc, false,               \
       "Expose invoking GC to native call.")        \
   BOOLEAN(debug, validate_stack, false,            \
       "Validate stack at each interperter step")   \
-  BOOLEAN(debug, unfold_program, false,            \
+  BOOLEAN(release, unfold_program, false,          \
       "Unfold the program before running")         \
-  BOOLEAN(debug, gc_on_delete, false,              \
+  BOOLEAN(release, gc_on_delete, false,            \
       "GC the heap at when terminating isolate")   \
   BOOLEAN(debug, log_decoder, false,               \
       "Log decoding")                              \
