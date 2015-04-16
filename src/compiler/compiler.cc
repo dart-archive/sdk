@@ -560,7 +560,7 @@ Compiler::Compiler(Zone* zone,
 
 void Compiler::CompileLibrary(LibraryElement* element,
                               CompilerConsumer* consumer) {
-  bool use_simple_system = Flags::IsOn("simple-system");
+  bool use_simple_system = Flags::simple_system;
   consumer_ = consumer;
 
   // Load main through 'dart:system's _entry method.
@@ -1035,7 +1035,7 @@ void Compiler::EnqueueInvokeSelector(IdentifierNode* node,
 
 void Compiler::CompileMethod(MethodNode* method,
                              Emitter* emitter) {
-  if (Flags::IsOn("trace-compiler")) {
+  if (Flags::trace_compiler) {
     const char* name = GetLastIdentifier(method->name())->value();
     TreeNode* owner = method->owner();
     if (owner != NULL && owner->IsClass()) {

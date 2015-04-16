@@ -50,7 +50,7 @@ int Scan(const char* filename, Builder* builder) {
   int64 end = OS::CurrentTime();
   io_time += end - start;
 
-  if (Flags::IsOn("verbose")) {
+  if (Flags::verbose) {
     printf("Scanning %s (%d bytes)\n", filename, size);
   }
   start = OS::CurrentTime();
@@ -62,7 +62,7 @@ int Scan(const char* filename, Builder* builder) {
 
   end = OS::CurrentTime();
   scan_time += end - start;
-  if (Flags::IsOn("verbose")) {
+  if (Flags::verbose) {
     printf("  - scanned in %" PRId64 " us.\n", end - start);
     printf("  - generated %d tokens (%zd bytes).\n",
         tokens.length(), tokens.length() * sizeof(TokenInfo));
@@ -75,7 +75,7 @@ int Scan(const char* filename, Builder* builder) {
 
   end = OS::CurrentTime();
   parse_time += end - start;
-  if (Flags::IsOn("verbose")) {
+  if (Flags::verbose) {
     printf("  - parsed in %" PRId64 " us.\n", end - start);
   }
 

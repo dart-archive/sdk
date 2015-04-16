@@ -211,15 +211,10 @@ bool Scheduler::ProcessRunOnCurrentThread(Process* process, Port* port) {
   return true;
 }
 
-static uint64 ComputeProfileInterval() {
-  int interval = 1000;  // us
-  Flags::IsInt("profile-interval", &interval);
-  return interval;
-}
 
 bool Scheduler::Run() {
-  static const bool kProfile = Flags::IsOn("profile");
-  static const uint64 kProfileIntervalUs = ComputeProfileInterval();
+  static const bool kProfile = Flags::profile;
+  static const uint64 kProfileIntervalUs = Flags::profile_interval;
   // Start initial thread.
   while (!thread_pool_.TryStartThread(RunThread, this, 1)) { }
   int thread_index = 0;
@@ -273,7 +268,7 @@ void Scheduler::DeleteProcess(Process* process, ThreadState* thread_state) {
   delete process;
   if (--processes_ == 0) {
     NotifyAllThreads();
-  } else if (Flags::IsOn("gc-on-delete")) {
+  } else if (Flags::gc_on_delete) {
     sleeping_threads_++;
     thread_state->cache()->Clear();
     program->CollectGarbage();

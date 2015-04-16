@@ -42,7 +42,7 @@ LibraryElement* LibraryLoader::LoadLibrary(
   LibraryElement* element = LookupLibrary(identifier);
   if (element != NULL) return element;
 
-  if (Flags::IsOn("trace_library")) {
+  if (Flags::trace_library) {
     printf("Loading library '%s' from '%s'\n", library_name, source_uri);
   }
 
@@ -58,11 +58,11 @@ LibraryElement* LibraryLoader::LoadLibrary(
   element = new(zone()) LibraryElement(id, library, outer_library_scope);
   library_map_.Add(id, element);
 
-  if (Flags::IsOn("trace_library")) {
+  if (Flags::trace_library) {
     printf("Loaded '%s' as %i\n", library_name, id);
   }
 
-  if (!Flags::IsOn("simple-system")) {
+  if (!Flags::simple_system) {
     // Add implicit import of dart:core.
     if (strcmp(library_name, "dart:core") != 0) {
       const char* core_source_uri =
@@ -143,7 +143,7 @@ LibraryNode* LibraryLoader::BuildLibrary(const char* source_uri) const {
       const char* part_uri =
           OS::UriResolve(source_uri, part->uri()->value(), zone());
       Location part_location = builder()->source()->LoadFile(part_uri);
-      if (Flags::IsOn("trace_library")) {
+      if (Flags::trace_library) {
         printf(" - Part '%s' from '%s'\n", part->uri()->value(), part_uri);
       }
       if (part_location.IsInvalid()) return NULL;
@@ -213,7 +213,7 @@ void LibraryLoader::PopulateScope(LibraryNode* library,
     TreeNode* declaration = declarations[i];
     if (declaration->IsClass()) {
       ClassNode* clazz = declaration->AsClass();
-      if (Flags::IsOn("trace_library")) {
+      if (Flags::trace_library) {
         printf(" + Adding Class '%s' to scope\n", clazz->name()->value());
       }
       AddMemberToScope(scope, clazz->name(), clazz);
@@ -234,7 +234,7 @@ void LibraryLoader::PopulateScope(LibraryNode* library,
         builder()->ReportError(
             name->location(), "A top-level method can not be abstract");
       }
-      if (Flags::IsOn("trace_library")) {
+      if (Flags::trace_library) {
         printf(" + Adding Method '%s' to scope\n", name->value());
       }
       method->set_owner(library);
@@ -254,7 +254,7 @@ void LibraryLoader::PopulateScope(LibraryNode* library,
           builder()->ReportError(
               name->location(), "Top-level field can not be static");
         }
-        if (Flags::IsOn("trace_library")) {
+        if (Flags::trace_library) {
           printf(" + Adding Field '%s' to scope\n", name->value());
         }
         AddMemberToScope(scope, name, var);
@@ -293,7 +293,7 @@ void LibraryLoader::PopulateScope(ClassNode* clazz, Scope* scope) {
         AddSetterToScope(scope, method);
         continue;
       }
-      if (Flags::IsOn("trace_library")) {
+      if (Flags::trace_library) {
         printf("   - Adding Method '%s' to scope\n", name->value());
       }
       AddMemberToScope(scope, name, method);
@@ -303,7 +303,7 @@ void LibraryLoader::PopulateScope(ClassNode* clazz, Scope* scope) {
       List<VariableDeclarationNode*> vars = stmt->declarations();
       for (int j = 0; j < vars.length(); j++) {
         VariableDeclarationNode* var = vars[j];
-        if (Flags::IsOn("trace_library")) {
+        if (Flags::trace_library) {
           printf("   - Adding Field '%s' to scope\n", var->name()->value());
         }
         AddMemberToScope(scope, var->name(), var);

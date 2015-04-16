@@ -29,7 +29,7 @@ void Compile(const char* lib,
   Compiler compiler(&zone, &builder, lib, package_root);
 
   LibraryElement* root = NULL;
-  if (!Flags::IsOn("simple-system")) {
+  if (!Flags::simple_system) {
     root = compiler.loader()->LoadLibrary(uri, uri);
     if (root == NULL) {
       Location location;

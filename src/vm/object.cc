@@ -613,7 +613,7 @@ class PrintVisitor: public PointerVisitor {
 };
 
 void HeapObject::RawPrint(const char* title) {
-  if (!Flags::IsOn("verbose")) {
+  if (!Flags::verbose) {
     printf("a %s: ", title);
   } else {
     printf("0x%lx: [%s] (%d): ", address(), title, static_cast<int>(Size()));

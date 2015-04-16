@@ -10,6 +10,19 @@
 
 namespace fletch {
 
+#ifdef DEBUG
+#define MATERIALIZE_DEBUG_FLAG(type, prefix, name, value, doc) \
+  type Flags::name = value;
+#else
+#define MATERIALIZE_DEBUG_FLAG(type, prefix, name, value, doc) \
+  /* Do nothing */
+#endif
+
+#define MATERIALIZE_RELEASE_FLAG(type, prefix, name, value, doc) \
+  type Flags::name = value;
+
+APPLY_TO_FLAGS(MATERIALIZE_DEBUG_FLAG, MATERIALIZE_RELEASE_FLAG)
+
 char* Flags::executable_ = NULL;
 
 // Tells whether the given string is a valid flag argument.
@@ -17,197 +30,126 @@ static bool IsValidFlag(const char* argument) {
   return (strncmp(argument, "-X", 2) == 0) && (strlen(argument) > 2);
 }
 
+
+static void PrintFlagBoolean(const char* name, bool value,
+                             bool init, const char* doc) {
+  printf(" - bool %s = %s\n", name, value ? "true" : "false");
+}
+
+static void PrintFlagInteger(const char* name, int value,
+                             int init, const char* doc) {
+  printf(" - int %s = %d\n", name, value);
+}
+
+static void PrintFlagString(const char* name, const char* value,
+                            const char* init, const char* doc) {
+  printf(" - char* %s = \"%s\"\n", name, value);
+}
+
+#define XSTR(n) #n
+
 #ifdef DEBUG
-
-class Flag {
- public:
-  // Initialize the flag by parsing argument.
-  void Parse(char* argument);
-
-  // Print the flag with its value.
-  void Print() const;
-
-  bool IsOn() {
-    if (kind_ == kNoValueKind) return true;
-    if (kind_ == kBoolKind) return value_.b;
-    return false;
-  }
-
-  bool IsBool(bool* value) {
-    if (kind_ != kBoolKind) return false;
-    *value = value_.b;
-    return true;
-  }
-
-  bool IsInt(int* value) {
-    if (kind_ != kIntValue) return false;
-    *value = value_.i;
-    return true;
-  }
-
-  bool IsAddress(uword* value) {
-    if (kind_ != kAddressKind) return false;
-    *value = value_.a;
-    return true;
-  }
-
-  bool IsString(char** value) {
-    if (kind_ != kStringKind) return false;
-    *value = value_.s;
-    return true;
-  }
-
-  const char* name() const { return name_; }
-
- private:
-  enum Kind {
-    kNoValueKind,
-    kBoolKind,
-    kIntValue,
-    kAddressKind,
-    kStringKind
-  };
-
-  // Data fields.
-  char* name_;
-  Kind kind_;
-  union {
-    int i;
-    char* s;
-    bool b;
-    uword a;
-  } value_;
-};
-
-void Flag::Print() const {
-  printf(" - %s", name());
-  switch (kind_) {
-    case kIntValue:
-      printf("=%d (int)\n", value_.i);
-      break;
-    case kBoolKind:
-      printf("=%s (bool)\n", value_.b ? "true" : "false");
-      break;
-    case kStringKind:
-      printf("=%s (string)\n", value_.s);
-      break;
-    case kAddressKind:
-      printf("=0x%lx (address)\n", value_.a);
-      break;
-    case kNoValueKind:
-      printf(" (no value)\n");
-      break;
-  }
-}
-
-void Flag::Parse(char* argument) {
-  static const int kPrefixLength = strlen("-X");
-
-  ASSERT(IsValidFlag(argument));
-  argument = argument + kPrefixLength;
-
-  // Parse the name of the flag.
-  const char* p = argument;
-  while (*argument != '\0' && *argument != '=') argument++;
-  name_ = static_cast<char*>(malloc(1+ argument - p));
-  strncpy(name_, p, argument - p);
-  name_[argument - p] = '\0';
-
-  // Check for flags without a value.
-  if (*argument++ != '=' || *argument == '\0') {
-    kind_ = kNoValueKind;
-    return;
-  }
-
-  // Check for int value.
-  char* end;
-  int i_value = strtol(argument, &end, 10);  // NOLINT
-  if (*end == '\0') {
-    kind_ = kIntValue;
-    value_.i = i_value;
-    return;
-  }
-
-  // Check for address value.
-  uword a_value = strtoll(argument, &end, 16);  // NOLINT
-  if (*end == '\0') {
-    kind_ = kAddressKind;
-    value_.a = a_value;
-    return;
-  }
-
-  // Check for bool values.
-  if (strcmp(argument, "false") == 0) {
-    kind_ = kBoolKind;
-    value_.b = false;
-    return;
-  }
-
-  if (strcmp(argument, "true") == 0) {
-    kind_ = kBoolKind;
-    value_.b = true;
-    return;
-  }
-
-  // Default to string value.
-  kind_ = kStringKind;
-  value_.s = argument;
-}
-
-// Maintain a list of parsed flags in debug mode.
-static Flag* flags_ = NULL;
-static int number_of_flags_ = 0;
-
-static Flag* LookupFlag(const char* name) {
-  for (int i = 0; i < number_of_flags_; i++) {
-    if (strcmp(flags_[i].name(), name) == 0) return &flags_[i];
-  }
-  return NULL;
-}
-
-bool Flags::SlowIsOn(const char* name) {
-  Flag* flag = LookupFlag(name);
-  if (flag != NULL) return flag->IsOn();
-  return false;
-}
-
-bool Flags::SlowIsBool(const char* name, bool* value) {
-  Flag* flag = LookupFlag(name);
-  if (flag != NULL) return flag->IsBool(value);
-  return false;
-}
-
-bool Flags::SlowIsInt(const char* name, int* value) {
-  Flag* flag = LookupFlag(name);
-  if (flag != NULL) return flag->IsInt(value);
-  return false;
-}
-
-bool Flags::SlowIsAddress(const char* name, uword* value) {
-  Flag* flag = LookupFlag(name);
-  if (flag != NULL) return flag->IsAddress(value);
-  return false;
-}
-
-bool Flags::SlowIsString(const char* name, char** value) {
-  Flag* flag = LookupFlag(name);
-  if (flag != NULL) return flag->IsString(value);
-  return false;
-}
-
+#define PRINT_DEBUG_FLAG(type, prefix, name, value, doc) \
+  PrintFlag##prefix(XSTR(name), Flags::name, value, doc);
+#else
+#define PRINT_DEBUG_FLAG(type, prefix, name, value, doc) \
+  /* Do nothing */
 #endif
 
-static void ShrinkArguments(int* argc, char** argv) {
-  int eliminated = 0;
-  int j = 1;
-  for (int i = 1; i < *argc; i++) {
-    if (argv[i] != NULL) {
-      argv[j++] = argv[i];
-    } else {
-      eliminated++;
+#define PRINT_RELEASE_FLAG(type, prefix, name, value, doc) \
+  PrintFlag##prefix(XSTR(name), Flags::name, value, doc);
+
+static void PrintFlags() {
+  printf("List of command line flags:\n");
+
+  APPLY_TO_FLAGS(PRINT_DEBUG_FLAG, PRINT_RELEASE_FLAG);
+
+  // Terminate the process with error code.
+  exit(-1);
+}
+
+
+static bool FlagMatches(const char* a, const char* b) {
+  size_t n =  strlen(b);
+  for (; n > 0; a++, b++, --n) {
+    if ((*a != *b) && ((*a != '-') || (*b != '_'))) return false;
+    else if (*a == '\0') return true;
+  }
+  return true;
+}
+
+
+static bool ProcessFlagBoolean(const char* name_ptr, const char* value_ptr,
+                               const char* name, bool* field) {
+  // -Xname
+  if (value_ptr == NULL) {
+    if (FlagMatches(name_ptr, name)) {
+      *field = true;
+      return true;
+    }
+    return false;
+  }
+  // -Xname=<boolean>
+  if (FlagMatches(name_ptr, name)) {
+    if (strcmp(value_ptr, "false") == 0) {
+      *field = false;
+      return true;
+    }
+    if (strcmp(value_ptr, "true") == 0) {
+      *field = true;
+      return true;
     }
   }
-  *argc = *argc - eliminated;
+  return false;
+}
+
+static bool ProcessFlagInteger(const char* name_ptr, const char* value_ptr,
+                               const char* name, int* field) {
+  // -Xname=<int>
+  if (FlagMatches(name_ptr, name)) {
+    char* end;
+    int value = strtol(value_ptr, &end, 10);  // NOLINT
+    if (*end == '\0') {
+      *field = value;
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool ProcessFlagString(const char* name_ptr, const char* value_ptr,
+                              const char* name, const char** field) {
+  // -Xname=<string>
+  if (FlagMatches(name_ptr, name)) {
+    *field = value_ptr;
+    return true;
+  }
+  return false;
+}
+
+#ifdef DEBUG
+#define PROCESS_DEBUG_FLAG(type, prefix, name, value, doc) \
+  if (ProcessFlag##prefix(name_ptr, value_ptr, XSTR(name), &Flags::name)) \
+    return;
+#else
+#define PROCESS_DEBUG_FLAG(type, prefix, name, value, doc) \
+  /* do nothing */
+#endif
+
+#define PROCESS_RELEASE_FLAG(type, prefix, name, value, doc) \
+  if (ProcessFlag##prefix(name_ptr, value_ptr, XSTR(name), &Flags::name)) \
+    return;
+
+static void ProcessArgument(const char* argument) {
+  ASSERT(IsValidFlag(argument));
+  const char* name_ptr = argument + 2;             // skip "-X"
+  const char* equals_ptr = strchr(name_ptr, '=');  // Locate '='
+  const char* value_ptr = equals_ptr != NULL ? equals_ptr + 1 : NULL;
+
+  APPLY_TO_FLAGS(PROCESS_DEBUG_FLAG, PROCESS_RELEASE_FLAG);
+  printf("Failed to recognize flag argument: %s\n", argument);
+  // Terminate the process with error code.
+  exit(-1);
 }
 
 void Flags::ExtractFromCommandLine(int* argc, char** argv) {
@@ -215,42 +157,26 @@ void Flags::ExtractFromCommandLine(int* argc, char** argv) {
   executable_ = argv[0];
   // Compute number of provided flag arguments.
   int number_of_flags = 0;
-  for (int i = 1; i < *argc; i++) {
-    if (IsValidFlag(argv[i])) number_of_flags++;
+  for (int index = 1; index < *argc; index++) {
+    if (IsValidFlag(argv[index])) number_of_flags++;
   }
-#ifdef DEBUG
-  number_of_flags_ = number_of_flags;
-#endif
   if (number_of_flags == 0) return;
 
-#ifdef DEBUG
-  // Allocate the flag structure.
-  flags_ = static_cast<Flag*>(calloc(number_of_flags_, sizeof(Flag)));
-  int number = 0;
-#endif
-
-  // Fill in the individual flags.
-  for (int i = 1; i < *argc; i++) {
-    if (IsValidFlag(argv[i])) {
-#ifdef DEBUG
-      flags_[number++].Parse(argv[i]);
-#endif
-      argv[i] = NULL;
+  // Process the the individual flags and shrink argc and argv.
+  int count = 1;
+  for (int index = 1; index < *argc; index++) {
+    if (IsValidFlag(argv[index])) {
+      ProcessArgument(argv[index]);
+    } else {
+      argv[count++] = argv[index];
     }
   }
+  *argc = count;
 
-  // Get rid of all the NULL'ed out arguments.
-  ShrinkArguments(argc, argv);
-
-#ifdef DEBUG
-  // Print list of flags if requested.
-  if (IsOn("print-flags")) {
-    printf("Command line flags:\n");
-    for (int i = 0; i < number_of_flags_; i++) {
-      flags_[i].Print();
-    }
+  if (Flags::print_flags) {
+    PrintFlags();
+    // Process is terminated and will not return.
   }
-#endif
 }
 
 }  // namespace fletch

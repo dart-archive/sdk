@@ -162,7 +162,7 @@ class Engine : public State {
 // Opcode definition macros.
 #define OPCODE_BEGIN(opcode)                              \
   opcode##Label: {                                        \
-    if (Flags::IsOn("validate-stack")) ValidateStack()
+    if (Flags::validate_stack) ValidateStack()
 #define OPCODE_END() }                                    \
   DISPATCH()
 

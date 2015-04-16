@@ -48,7 +48,7 @@ NATIVE(Halt) {
 }
 
 NATIVE(ExposeGC) {
-  return ToBool(process, Flags::IsOn("expose-gc"));
+  return ToBool(process, Flags::expose_gc);
 }
 
 NATIVE(GC) {

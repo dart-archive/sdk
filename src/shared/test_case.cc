@@ -35,8 +35,8 @@ void TestCase::RunAll() {
   TestCase* test_case = first_;
   while (test_case != NULL) {
     bool run = true;
-    char* filter;
-    if (Flags::IsString("filter", &filter)) {
+    const char* filter = Flags::filter;
+    if (filter != NULL) {
       run = (strcmp(filter, test_case->name()) == 0);
       if (run) printf("Running %s\n", test_case->name());
     }

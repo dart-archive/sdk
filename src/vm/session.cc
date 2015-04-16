@@ -25,9 +25,6 @@
 
 namespace fletch {
 
-// TODO(kasperl): Clean this up.
-static const char* kLogFlag = "log-decoder";
-
 Session::Session(Connection* connection)
     : connection_(connection),
       program_(NULL),
@@ -537,7 +534,7 @@ void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
   RewriteLiteralIndicesToOffsets(function);
   Push(function);
 
-  if (Flags::IsOn(kLogFlag)) {
+  if (Flags::log_decoder) {
     printf("Method:\n");
     uint8* bytes = function->bytecode_address_for(0);
     Opcode opcode;

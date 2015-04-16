@@ -7,16 +7,11 @@
 #include "src/shared/flags.h"
 #include "src/shared/test_case.h"
 
-static const int argc = 8;
+static const int argc = 3;
 static const char* argv[argc] = {
     "fletch",
-    "-Xon",
-    "-Xtrue=true",
-    "-Xfalse=false",
-    "-Xint=123456",
-    "-Xaddress=0x120120",
+    "-Xverbose",
     "nothing",
-    "-Xstring=\"value\""
 };
 
 namespace fletch {
@@ -36,30 +31,7 @@ TEST_CASE(Arguments) {
   EXPECT_EQ(2, count);
   EXPECT_STREQ("fletch", values[0]);
   EXPECT_STREQ("nothing", values[1]);
-
-#ifdef DEBUG
-  EXPECT(Flags::IsOn("on"));
-  EXPECT(Flags::IsOn("true"));
-
-  bool b;
-  EXPECT(Flags::IsBool("true", &b));
-  EXPECT_EQ(true, b);
-
-  EXPECT(Flags::IsBool("false", &b));
-  EXPECT_EQ(false, b);
-
-  int i;
-  EXPECT(Flags::IsInt("int", &i));
-  EXPECT_EQ(123456, i);
-
-  uword a;
-  EXPECT(Flags::IsAddress("address", &a));
-  EXPECT_EQ(a, static_cast<uword>(0x120120));
-
-  char* s;
-  EXPECT(Flags::IsString("string", &s));
-  EXPECT(strcmp(s, "\"value\"") == 0);
-#endif
+  EXPECT(Flags::verbose);
 }
 
 }  // namespace fletch

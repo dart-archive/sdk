@@ -877,7 +877,7 @@ Process* Program::SpawnProcess() {
 Process* Program::ProcessSpawnForMain() {
   // For testing purposes, we support unfolding the program
   // before running it.
-  bool unfold = Flags::IsOn("unfold-program");
+  bool unfold = Flags::unfold_program;
   if (is_compact()) {
     if (unfold) Unfold();
   } else if (!unfold) {
