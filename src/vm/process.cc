@@ -860,7 +860,7 @@ NATIVE(ProcessQueueGetChannel) {
   PortQueue* queue = process->CurrentMessage();
   // The channel for a port can die independently of the port. In that case
   // messages sent to the port can never be received. In that case we drop the
-  // when processing the message queue.
+  // message when processing the message queue.
   while (queue != NULL) {
     Instance* channel = queue->port()->channel();
     if (channel != NULL) return channel;

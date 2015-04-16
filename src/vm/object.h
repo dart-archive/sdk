@@ -113,12 +113,13 @@ class Smi: public Object {
 };
 
 // The instance format describes how an instance of a class looks.
-// The bit format of the word is as follow.
-//   [MSB...7] Contains the non variable size of the instance.
-//   [6]       Tells whether all pointers are in the non variable part.
-//   [5]       Tells whether the object has a variable part.
-//   [4-1]     The type of the instance.
-//   [LSB]     Smi tag.
+// The bit format of the word is as follows:
+//   [MSB...10] Contains the non variable size of the instance.
+//   [9-7]      The marker of the instance.
+//   [6]        Tells whether all pointers are in the non variable part.
+//   [5]        Tells whether the object has a variable part.
+//   [4-1]      The type of the instance.
+//   [LSB]      Smi tag.
 class InstanceFormat {
  public:
   enum Type {
@@ -1327,7 +1328,7 @@ void Class::set_child_link(Object* value) {
 }
 
 void Class::Initialize(InstanceFormat format, int size, Object* null) {
-  for (int offset = kPointerSize; offset < size; offset += kPointerSize) {
+  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
     at_put(offset, null);
   }
   set_instance_format(format);

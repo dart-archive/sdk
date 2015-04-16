@@ -26,7 +26,7 @@ class Header {
   static Header FromIndex(word value) { return Header((value << 2) | 1); }
   static Header FromTypeAndElements(InstanceFormat::Type type,
                                     int elements = 0) {
-    // Format: <elements:24><type:4><11>
+    // Format: <elements:26><type:4><11>
     Header result =
         Header((elements << 6) | (static_cast<word>(type) << 2) | 3);
     ASSERT(elements == result.elements());
@@ -615,7 +615,7 @@ void Instance::InstanceWriteTo(SnapshotWriter* writer, Class* klass) {
 
 void Instance::InstanceReadFrom(SnapshotReader* reader, int fields) {
   int size = AllocationSize(fields);
-  for (int offset = kPointerSize; offset < size; offset += kPointerSize) {
+  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
 }
@@ -626,14 +626,14 @@ void Class::ClassWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->Forward(this);
   // Body.
   int size = AllocationSize();
-  for (int offset = kPointerSize; offset < size; offset += kPointerSize) {
+  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
     writer->WriteObject(at(offset));
   }
 }
 
 void Class::ClassReadFrom(SnapshotReader* reader) {
   int size = AllocationSize();
-  for (int offset = kPointerSize; offset < size; offset += kPointerSize) {
+  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
 }
@@ -645,7 +645,7 @@ void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, rounded_bytecode_size);
   writer->Forward(this);
   // Body.
-  for (int offset = kPointerSize;
+  for (int offset = HeapObject::kSize;
        offset < Function::kSize;
        offset += kPointerSize) {
     writer->WriteObject(at(offset));
@@ -658,7 +658,7 @@ void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
 }
 
 void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
-  for (int offset = kPointerSize;
+  for (int offset = HeapObject::kSize;
        offset < Function::kSize;
        offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
@@ -700,7 +700,7 @@ void Initializer::InitializerWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::INITIALIZER_TYPE);
   writer->Forward(this);
   // Body.
-  for (int offset = kPointerSize;
+  for (int offset = HeapObject::kSize;
        offset < Initializer::kSize;
        offset += kPointerSize) {
     writer->WriteObject(at(offset));
@@ -708,7 +708,7 @@ void Initializer::InitializerWriteTo(SnapshotWriter* writer, Class* klass) {
 }
 
 void Initializer::InitializerReadFrom(SnapshotReader* reader) {
-  for (int offset = kPointerSize;
+  for (int offset = HeapObject::kSize;
        offset < Initializer::kSize;
        offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
