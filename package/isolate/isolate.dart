@@ -7,7 +7,7 @@ library isolate;
 class Isolate {
 
   final Channel _channel;
-  bool _isDone;
+  bool _isDone = false;
   var _result;
 
   Isolate._internal(this._channel);
