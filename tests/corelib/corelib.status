@@ -383,19 +383,13 @@ integer_to_radix_string_test: Fail
 integer_to_string_test/01: Fail
 integer_to_string_test/none: Fail
 is_operator_basic_types_test: Crash
-iterable_element_at_test: Fail
-iterable_first_where_test: Fail
 iterable_fold_test: Crash
 iterable_generate_test: Fail
 iterable_join_test: Fail
-iterable_last_where_test: Fail
 iterable_reduce_test: Crash
 iterable_return_type_test/01: Crash
 iterable_return_type_test/02: Crash
 iterable_return_type_test/none: Fail
-iterable_single_where_test: Fail
-iterable_skip_while_test: Fail
-iterable_take_while_test: Fail
 iterable_to_list_test: Fail
 iterable_to_set_test: Fail
 json_map_test: Crash
@@ -424,7 +418,6 @@ null_test: Crash
 num_clamp_test: Fail
 num_parse_test/01: Fail
 num_parse_test/none: Fail
-range_error_test: Fail
 reg_exp1_test: Crash
 reg_exp4_test: Crash
 reg_exp5_test: Crash

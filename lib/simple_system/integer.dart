@@ -74,16 +74,26 @@ abstract class int implements core.int {
     throw "modPow(exponent, modulus) isn't implemented";
   }
 
-  get isEven {
-    throw "get isEven isn't implemented";
-  }
+  bool get isEven => (this & 1) == 0;
 
-  get isOdd {
-    throw "get isOdd isn't implemented";
-  }
+  bool get isOdd => (this & 1) == 1;
 
-  get bitLength {
-    throw "get bitLength isn't implemented";
+  int get bitLength {
+    int value = this.abs();
+    int length = 0;
+    // Shift by 8.
+    while (true) {
+      int rem = value >> 8;
+      if (rem == 0) break;
+      value = rem;
+      length += 8;
+    }
+    // Shift remaining by 1.
+    while (value != 0) {
+      value >>= 1;
+      length++;
+    }
+    return length;
   }
 
   toUnsigned(width) {
