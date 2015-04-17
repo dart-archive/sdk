@@ -14,16 +14,14 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJ=github
 
 FLETCH_DIR="$DIR/../../.."
-
-# TODO: Use an in tree location.
-DART=dart
-
-SERVICEC="$DART $FLETCH_DIR/tools/servicec/bin/servicec.dart"
-IMMIC="$DART $FLETCH_DIR/tools/immic/bin/immic.dart"
-FLETCHC="$DART -p $FLETCH_DIR/package $FLETCH_DIR/pkg/fletchc/lib/fletchc.dart"
-OLDFLETCHC="$FLETCH_DIR/out/ReleaseIA32/fletch"
-
 OUT_DIR="$DIR/../generated"
+
+DART="$FLETCH_DIR/out/ReleaseIA32/dart"
+
+IMMIC="$DART $FLETCH_DIR/tools/immic/bin/immic.dart"
+SERVICEC="$DART $FLETCH_DIR/tools/servicec/bin/servicec.dart"
+FLETCHC="$DART -p $FLETCH_DIR/package $FLETCH_DIR/pkg/fletchc/lib/fletchc.dart"
+
 $IMMIC --out "$OUT_DIR" "$DIR/../github.immi"
 $SERVICEC --out "$OUT_DIR" "$OUT_DIR/idl/${PROJ}_presenter_service.idl"
 

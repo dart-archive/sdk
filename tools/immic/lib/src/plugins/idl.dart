@@ -126,7 +126,6 @@ struct ContentData {
   union {
     PrimitiveData primitive;
     NodeData node;
-    List<ContentData> list;
   }
 }
 
@@ -135,15 +134,15 @@ struct ListPatchData {
   union {
     uint32 remove;
     List<ContentData> insert;
-    List<PatchData> update;
+    List<PatchSetData> update;
   }
 }
 
 struct PatchData {
   List<uint8> path;
   union {
-    ContentData content;
-    ListPatchData list;
+    ContentData* content;
+    ListPatchData* listPatch;
   }
 }
 

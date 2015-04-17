@@ -4,8 +4,8 @@
 
 #import "CommitListController.h"
 
-#import "CommitListPresenter.h"
 #import "CommitCell.h"
+#import "CommitListPresenter.h"
 
 @interface CommitListController ()
 
@@ -18,7 +18,21 @@
 - (void)viewDidLoad {
   [super viewDidLoad];
   self.presenter = [[CommitListPresenter alloc] init];
-  [self.presenter refresh];
+
+  // Setup regular refresh.
+  CADisplayLink* consoleLink =
+      [CADisplayLink displayLinkWithTarget:self
+                                  selector:@selector(refresh:)];
+  [consoleLink setFrameInterval:60];
+  [consoleLink addToRunLoop:[NSRunLoop currentRunLoop]
+                    forMode:NSDefaultRunLoopMode];
+
+}
+
+- (void)refresh:(CADisplayLink*)sender {
+  if ([self.presenter refresh]) {
+    [self.tableView reloadData];
+  }
 }
 
 - (void)didReceiveMemoryWarning {

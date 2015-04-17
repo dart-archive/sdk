@@ -10,7 +10,7 @@
 
 @property CommitListNode* root;
 
-- (void)refresh;
+- (bool)refresh;
 - (void)reset;
 
 - (int)commitCount;

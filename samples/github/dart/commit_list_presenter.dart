@@ -9,8 +9,11 @@ class CommitListPresenter {
   CommitListNode present(Node previous) {
     return new CommitListNode(
         commits: [new CommitNode(
-            revision: ++revision,
+            revision: revision,
             author: 'zerny@google.com',
-            message: 'Fletchy fletch fletch')]);
+            message: [
+                'Fletchy',
+                'Fletchy fletch',
+                'Fletchy fletch fletch'][revision++ % 3])]);
   }
 }

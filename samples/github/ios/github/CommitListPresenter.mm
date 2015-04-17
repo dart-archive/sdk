@@ -17,23 +17,16 @@
   return self;
 }
 
-- (void)refresh {
+- (bool)refresh {
   PatchSetData data = GithubPresenterService::refresh();
-  List<PatchData> patches = data.getPatches();
-  for (int i = 0; i < patches.length(); ++i) {
-    PatchData patch = patches[i];
-    List<uint8_t> path = patch.getPath();
-    if (path.length() == 0) {
-      assert(patch.getContent().getNode().isCommitList());
-      self.root = [[CommitListNode alloc] initWith:patch.getContent().getNode().getCommitList()];
-    } else {
-      // TODO(zerny): support a non-root patch.
-      abort();
-    }
-  }
+  bool result = [Node applyPatchSet:data atNode:&_root];
+  assert(self.root.isCommitList);
+  data.Delete();
+  return result;
 }
 
 - (void)reset {
+  self.root = nil;
   GithubPresenterService::reset();
 }
 

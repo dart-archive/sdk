@@ -45,7 +45,7 @@ String getTypeName(Type type) {
   if (type.resolved != null) {
     return "${type.identifier}Node";
   }
-  return _types[type.identifier];
+  return _TYPES[type.identifier];
 }
 
 void generate(String path, Unit unit, String outputDirectory) {
@@ -71,7 +71,10 @@ void _generateImplementationFile(String path, Unit unit, String directory) {
 class _HeaderVisitor extends CodeGenerationVisitor {
   _HeaderVisitor(String path) : super(path);
 
+  List nodes;
+
   visitUnit(Unit unit) {
+    nodes = unit.structs;
     _writeHeader();
     _writeNodeBase();
     unit.structs.forEach(visit);
@@ -89,14 +92,21 @@ class _HeaderVisitor extends CodeGenerationVisitor {
       writeln(' $slotName;');
     });
     writeln();
-    writeln('- (id)initWith:(const $nodeNameData&)data;');
-    writeln();
     writeln('@end');
     writeln();
   }
 
   void _writeNodeBase() {
+    nodes.forEach((node) { writeln('@class ${node.name}Node;'); });
+    writeln();
     writeln('@interface Node : NSObject');
+    writeln();
+    writeln('+ (bool)applyPatchSet:(const PatchSetData&)data');
+    writeln('               atNode:(Node* __strong *)node;');
+    writeln();
+    nodes.forEach((node) { writeln('- (bool)is${node.name};'); });
+    nodes.forEach((node) { writeln('- (${node.name}Node*)as${node.name};'); });
+    writeln();
     writeln('@end');
     writeln();
   }
@@ -104,10 +114,8 @@ class _HeaderVisitor extends CodeGenerationVisitor {
   void _writeNSType(Type type) {
     if (type.isList) {
       write('NSArray*');
-    } else if (type.resolved != null) {
-      write('${node.identifier}Node');
     } else {
-      write(_TYPES[type.identifier]);
+      write(getTypeName(type));
     }
   }
 
@@ -125,36 +133,65 @@ class _HeaderVisitor extends CodeGenerationVisitor {
 class _ImplementationVisitor extends CodeGenerationVisitor {
   _ImplementationVisitor(String path) : super(path);
 
+  List<Struct> nodes;
+
   visitUnit(Unit unit) {
+    nodes = unit.structs;
+
     _writeHeader();
+    _writeNodeBaseExtendedInterface();
+    nodes.forEach(_writeNodeExtendedInterface);
+
     _writeStringUtils();
     _writeListUtils();
-    _writeNodeBase();
-    unit.structs.forEach(visit);
+
+    _writeNodeBaseImplementation();
+    nodes.forEach(_writeNodeImplementation);
   }
 
-  visitStruct(Struct node) {
-    StructLayout layout = node.layout;
+  _writeNodeExtendedInterface(Struct node) {
     String name = node.name;
     String nodeName = "${node.name}Node";
     String nodeNameData = "${nodeName}Data";
-    write("""
-static id create$nodeName(const $nodeNameData& data) {
-  return [[$nodeName alloc] initWith:data];
-}
+    writeln('@interface $nodeName ()');
+    writeln('- (id)initWith:(const $nodeNameData&)data;');
+    writeln('@end');
+    writeln();
+  }
 
-@implementation $nodeName
-
-- (id)init {
-  @throw [NSException
-          exceptionWithName:NSInternalInconsistencyException
-          reason:@"-init is private"
-          userInfo:nil];
-  return nil;
-}
-
-- (id)initWith:(const $nodeNameData&)data {
-""");
+  _writeNodeImplementation(Struct node) {
+    String name = node.name;
+    String nodeName = "${node.name}Node";
+    String nodeNameData = "${nodeName}Data";
+    writeln('@implementation $nodeName');
+    bool hasNodeSlots = false;
+    bool hasListSlots = false;
+    forEachSlot(node, null, (Type slotType, _) {
+      if (slotType.isList) {
+        hasListSlots = true;
+      } else if (slotType.resolved) {
+        hasNodeSlots = true;
+      }
+    });
+    // Create hidden instance variables for lists holding mutable arrays.
+    if (hasListSlots) {
+      forEachSlot(node, null, (Type slotType, String slotName) {
+        if (slotType.isList) writeln('NSMutableArray* _$slotName;');
+      });
+      forEachSlot(node, null, (Type slotType, String slotName) {
+        if (slotType.isList) {
+          writeln('- (NSArray*)$slotName { return _$slotName; }');
+        }
+      });
+    }
+    if (hasNodeSlots) {
+      writeln('- (Node*)getSlot:(int)index {');
+      writeln('  abort();');
+      writeln('}');
+    }
+    writeln('- (bool)is$name { return true; }');
+    writeln('- ($nodeName*)as$name { return self; }');
+    writeln('- (id)initWith:(const $nodeNameData&)data {');
     forEachSlot(node, null, (Type slotType, String slotName) {
       String camelName = camelize(slotName);
       write('  _$slotName = ');
@@ -169,8 +206,158 @@ static id create$nodeName(const $nodeNameData& data) {
         writeln('data.get${camelName}();');
       }
     });
+    writeln('  return self;');
+    writeln('}');
+
+    writeln('- (void)applyPatch:(const PatchData&)patch atSlot:(int)index {');
+    int slotIndex = 0;
+    writeln('  switch(index) {');
+    forEachSlot(node, null, (Type slotType, String slotName) {
+      writeln('  case $slotIndex:');
+      if (slotType.isList) {
+        writeln('    assert(patch.isListPatch());');
+        writeln('    [Node applyListPatch:patch.getListPatch()');
+        writeln('                 toArray:_$slotName];');
+      } else if (slotType.resolved != null) {
+        String typeName = "${slotType.identifier}Node";
+        writeln('    assert(patch.isContent());');
+        writeln('    assert(patch.getContent().isNode());');
+        writeln('    assert(patch.getContent().getNode().is${typeName}());');
+        writeln('    _$slotName = [[$typeName alloc]');
+        writeln('        initWith:patch.getContent().getNode().get${typeName}()];');
+      } else {
+        String typeName = camelize("${slotType.identifier}Data");
+        writeln('    assert(patch.isContent());');
+        writeln('    assert(patch.getContent().isPrimitive());');
+        writeln('    assert(patch.getContent().getPrimitive().is${typeName}());');
+        if (slotType.isString) {
+          writeln('    _$slotName =');
+          writeln('        decodeString(patch.getContent().getPrimitive().get${typeName}Data());');
+        } else {
+          writeln('    _$slotName =');
+          writeln('        patch.getContent().getPrimitive().get${typeName}();');
+        }
+      }
+      writeln('    break;');
+      ++slotIndex;
+    });
+    writeln('  default: abort();');
+    writeln('  }');
+    writeln('}');
+
+    writeln('@end');
+    writeln();
+  }
+
+  void _writeNodeBaseExtendedInterface() {
+    writeln('@interface Node ()');
+    writeln('+ (Node*)node:(const NodeData&)data;');
+    writeln('+ (void)applyListPatch:(const ListPatchData&)patch');
+    writeln('               toArray:(NSMutableArray*)array;');
+    writeln('- (Node*)getSlot:(int)index;');
+    writeln('- (void)applyPatch:(const PatchData&)patch');
+    writeln('            atSlot:(int)slot;');
+    writeln('@end');
+    writeln();
+  }
+
+  void _writeNodeBaseImplementation() {
+    writeln('@implementation Node');
+    writeln('- (Node*)getSlot:(int)index { abort(); }');
+    nodes.forEach((node) {
+      writeln('- (bool)is${node.name} { return false; }');
+    });
+    nodes.forEach((node) {
+      writeln('- (${node.name}Node*)as${node.name} { abort(); }');
+    });
+    writeln('+ (Node*)node:(const NodeData&)data {');
+    write(' ');
+    nodes.forEach((node) {
+      writeln(' if (data.is${node.name}()) {');
+      writeln('    return [[${node.name}Node alloc] initWith:data.get${node.name}()];');
+      write('  } else');
+    });
+    writeln(' {');
+    writeln('    abort();');
+    writeln('  }');
+    writeln('}');
+
     write("""
-  return self;
+- (id)init {
+  @throw [NSException
+          exceptionWithName:NSInternalInconsistencyException
+          reason:@"-init is private"
+          userInfo:nil];
+  return nil;
+}
+
+- (void)applyPatch:(const PatchData&)patch
+            atSlot:(int)slot {
+  @throw [NSException
+          exceptionWithName:NSInternalInconsistencyException
+          reason:@"-applyPatch must be implemented by subclass"
+          userInfo:nil];
+}
+
++ (bool)applyPatchSet:(const PatchSetData&)data
+               atNode:(Node* __strong *)node {
+  List<PatchData> patches = data.getPatches();
+  if (patches.length() == 0) return false;
+  if (patches.length() == 1 && patches[0].getPath().length() == 0) {
+    assert(patches[0].isContent());
+    assert(patches[0].getContent().isNode());
+    *node = [Node node:patches[0].getContent().getNode()];
+  } else {
+    [Node applyPatches:patches atNode:*node];
+  }
+  return true;
+}
+
++ (void)applyPatches:(const List<PatchData>&)patches
+              atNode:(Node*)node {
+  for (int i = 0; i < patches.length(); ++i) {
+    PatchData patch = patches[i];
+    List<uint8_t> path = patch.getPath();
+    assert(path.length() > 0);
+    Node* current = node;
+    int lastIndex = path.length() - 1;
+    int lastSlot = path[lastIndex];
+    for (int j = 0; j < lastIndex; ++j) {
+      current = [current getSlot:path[j]];
+    }
+    [current applyPatch:patch atSlot:lastSlot];
+  }
+}
+
++ (void)applyListPatch:(const ListPatchData&)listPatch
+               toArray:(NSMutableArray*)array {
+  int index = listPatch.getIndex();
+  if (listPatch.isRemove()) {
+    NSRange range = NSMakeRange(index, listPatch.getRemove());
+    NSIndexSet* indexes = [NSIndexSet indexSetWithIndexesInRange:range];
+    [array removeObjectsAtIndexes:indexes];
+  } else if (listPatch.isInsert()) {
+    NSArray* addition = ListUtils<ContentData>::decodeList(
+        listPatch.getInsert(), createContent);
+    NSRange range = NSMakeRange(index, addition.count);
+    NSIndexSet* indexes = [NSIndexSet indexSetWithIndexesInRange:range];
+    [array insertObjects:addition atIndexes:indexes];
+  } else {
+    assert(listPatch.isUpdate());
+    const List<PatchSetData>& updates = listPatch.getUpdate();
+    for (int i = 0; i < updates.length(); ++i) {
+      const List<PatchData>& patches = updates[i].getPatches();
+      if (patches.length() == 1 && patches[0].getPath().length() == 0) {
+        assert(patches[0].isContent());
+        const ContentData& content = patches[0].getContent();
+        // TODO(zerny): Support lists of primitive types.
+        assert(content.isNode());
+        array[index + i] = [Node node:content.getNode()];
+      } else {
+        [Node applyPatches:patches atNode:array[index + i]];
+      }
+    }
+  }
 }
 
 @end
@@ -178,16 +365,23 @@ static id create$nodeName(const $nodeNameData& data) {
 """);
   }
 
-  void _writeNodeBase() {
-    write("""
-@implementation Node
-@end
-
-""");
-  }
-
   void _writeListUtils() {
+    nodes.forEach((Struct node) {
+      String name = node.name;
+      String nodeName = "${node.name}Node";
+      String nodeNameData = "${nodeName}Data";
+      writeln('static id create$nodeName(const $nodeNameData& data) {');
+      writeln('  return [[$nodeName alloc] initWith:data];');
+      writeln('}');
+      writeln();
+    });
+    // TODO(zerny): Support lists of primitive types.
     write("""
+static id createContent(const ContentData& data) {
+  assert(data.isNode());
+  return [Node node:data.getNode()];
+}
+
 template<typename T>
 class ListUtils {
 public:
