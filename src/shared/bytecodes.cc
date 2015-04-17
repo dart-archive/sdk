@@ -58,6 +58,7 @@ int Bytecode::sizes_[kNumBytecodes] = {
 };
 
 int Bytecode::Size(Opcode opcode) {
+  ASSERT(opcode < kNumBytecodes);
   return sizes_[opcode];
 }
 

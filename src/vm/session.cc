@@ -514,6 +514,7 @@ static void RewriteLiteralIndicesToOffsets(Function* function) {
         // session.
         UNREACHABLE();
       default:
+        ASSERT(opcode < Bytecode::kNumBytecodes);
         break;
     }
 

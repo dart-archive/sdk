@@ -558,6 +558,7 @@ void Process::PrepareStepOver() {
       stack_diff = Bytecode::StackDiff(opcode);
       break;
     default:
+      ASSERT(opcode < Bytecode::kNumBytecodes);
       // For any other bytecode step over is the same as step.
       debug_info_->set_is_stepping(true);
       return;

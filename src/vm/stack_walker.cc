@@ -139,6 +139,7 @@ static int StackDiff(uint8** bcp,
     }
 
     default:
+      ASSERT(opcode < Bytecode::kNumBytecodes);
       stack_diff = Bytecode::StackDiff(opcode);
       break;
   }

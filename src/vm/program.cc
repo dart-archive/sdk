@@ -155,6 +155,7 @@ Object* Program::UnfoldFunction(Function* function,
         // We should only unfold folded functions.
         UNREACHABLE();
       default:
+        ASSERT(opcode < Bytecode::kNumBytecodes);
         break;
     }
 
@@ -639,6 +640,7 @@ void Program::FoldFunction(Function* old_function,
         // We should only fold unfolded functions.
         UNREACHABLE();
       default:
+        ASSERT(opcode < Bytecode::kNumBytecodes);
         break;
     }
 
@@ -691,6 +693,7 @@ class FunctionPostprocessVisitor: public HeapObjectVisitor {
         case kMethodEnd:
           return;
         default:
+          ASSERT(opcode < Bytecode::kNumBytecodes);
           // Do nothing.
           break;
       }
