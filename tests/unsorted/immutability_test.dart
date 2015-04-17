@@ -4,11 +4,13 @@
 
 import 'package:expect/expect.dart';
 
+// This class is missing: final fields and const constructor.
 class Fisk {
   int age;
   Fisk(this.age);
 }
 
+// This class is missing: const constructor.
 class Hest {
   final int age;
   Hest(this.age);
@@ -19,29 +21,55 @@ class Hund {
   const Hund(this.age);
 }
 
+// This class has one (const) constructor which can be used for immutable
+// objects. The other constructor is non-const and cannot be used ATM.
+class Node {
+  final Node left;
+  final Node right;
+  const Node(this.left, this.right);
+  Node.nonConst(this.left, this.right);
+}
+
 main() {
-  /// Check for mutable objects
-  Expect.isFalse(isImmutable(new Fisk(1)));
-  Expect.isFalse(isImmutable(new Hest(1)));
+  var leaf = new Node(null, null);
+  var nonConstConstructorObj = new Node.nonConst(leaf, leaf);
 
   /// Check for immutable objects
-  Expect.isTrue(isImmutable(null));
-  Expect.isTrue(isImmutable(''));
-  Expect.isTrue(isImmutable('hello world'));
-  Expect.isTrue(isImmutable(1));
-  Expect.isTrue(isImmutable(1.1));
-  Expect.isTrue(isImmutable(true));
-  Expect.isTrue(isImmutable(false));
+  testImmutable(null);
+  testImmutable('');
+  testImmutable('hello world');
+  testImmutable(1);
+  testImmutable(1.1);
+  testImmutable(true);
+  testImmutable(false);
+  testImmutable(new Hund(1));
+  testImmutable(leaf);
+  testImmutable(new Node(leaf, leaf));
+  testImmutable(new Node(new Node(leaf, leaf), leaf));
 
-  // TODO: Not working yet.
-  Expect.isFalse(isImmutable(new Hund(1)));
+  /// Check for mutable objects
+  testMutable(new Fisk(1));
+  testMutable(new Hest(1));
+  testMutable(nonConstConstructorObj);
+  testMutable(new Node(leaf, nonConstConstructorObj));
+  testMutable(new Node(nonConstConstructorObj, leaf));
+  testMutable(new Node(new Node(leaf, nonConstConstructorObj), leaf));
+
+
+  // TODO(kustermann): Runtime types are not working ATM.
   Expect.isFalse(isImmutable(bool));
   Expect.isFalse(isImmutable(String));
   Expect.isFalse(isImmutable(Hest));
-  Expect.isFalse(isImmutable(main));
 
-  // TODO: This causes an "class = class  - @0 = Overflow to big integer"
-  // error for some reason.
-  // Expect.isTrue(isImmutable(1 << 420));
+  // TODO(kustermann): Functions are not working ATM.
+  Expect.isFalse(isImmutable(main));
+}
+
+testImmutable(obj) {
+  Expect.isTrue(isImmutable(obj));
+}
+
+testMutable(obj) {
+  Expect.isFalse(isImmutable(obj));
 }
 

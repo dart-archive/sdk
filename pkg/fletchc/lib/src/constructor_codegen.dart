@@ -94,7 +94,8 @@ class ConstructorCodegen extends CodegenVisitor {
     // Create the actual instance.
     int classConstant = compiledFunction.allocateConstantFromClass(
         compiledClass.id);
-    builder.allocate(classConstant, fields);
+    // TODO(ajohnsen): Set immutable for all-final classes.
+    builder.allocate(classConstant, fields, immutable: element.isConst);
 
     // The stack is now:
     //  Value for field-0

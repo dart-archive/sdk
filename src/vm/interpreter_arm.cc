@@ -166,6 +166,8 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
 
   virtual void DoAllocate();
   virtual void DoAllocateUnfold();
+  virtual void DoAllocateImmutable();
+  virtual void DoAllocateImmutableUnfold();
   virtual void DoAllocateBoxed();
 
   virtual void DoNegate();
@@ -209,7 +211,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Pop(Register reg);
   void Drop(int n);
 
-  void Allocate(bool unfolded);
+  void Allocate(bool unfolded, bool immutable);
   void InvokeCompare(Condition condition);
   void InvokeMethod(bool test);
   void InvokeNative(bool yield);
@@ -1019,11 +1021,19 @@ void InterpreterGeneratorARM::DoPopAndBranchBackLong() {
 }
 
 void InterpreterGeneratorARM::DoAllocate() {
-  Allocate(false);
+  Allocate(false, false);
 }
 
 void InterpreterGeneratorARM::DoAllocateUnfold() {
-  Allocate(true);
+  Allocate(true, false);
+}
+
+void InterpreterGeneratorX86::DoAllocateImmutable() {
+  Allocate(false, true);
+}
+
+void InterpreterGeneratorX86::DoAllocateImmutableUnfold() {
+  Allocate(true, true);
 }
 
 void InterpreterGeneratorARM::DoAllocateBoxed() {
@@ -1590,7 +1600,7 @@ void InterpreterGeneratorARM::InvokeStatic(bool unfolded) {
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::Allocate(bool unfolded) {
+void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
   // Load the class into register r7.
   if (unfolded) {
     __ ldr(R0, Address(R5, 1));
@@ -1602,6 +1612,9 @@ void InterpreterGeneratorARM::Allocate(bool unfolded) {
     __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
     __ ldr(R7, Address(R1, Operand(R0, TIMES_4)));
   }
+
+  // TODO(kustermann): Implement immutability testing & allocation.
+  __ mov(R2, Immediate(0));
 
   // TODO(kasperl): Consider inlining this in the interpreter.
   __ mov(R0, R4);

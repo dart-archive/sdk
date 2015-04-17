@@ -165,6 +165,8 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
 
   virtual void DoAllocate();
   virtual void DoAllocateUnfold();
+  virtual void DoAllocateImmutable();
+  virtual void DoAllocateImmutableUnfold();
   virtual void DoAllocateBoxed();
 
   virtual void DoNegate();
@@ -208,7 +210,7 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   void Pop(Register reg);
   void Drop(int n);
 
-  void Allocate(bool unfolded);
+  void Allocate(bool unfolded, bool immutable);
   void InvokeMethod(bool test);
   void InvokeStatic(bool unfolded);
   void InvokeCompare(Condition condition);
@@ -1023,11 +1025,19 @@ void InterpreterGeneratorX86::DoPopAndBranchBackLong() {
 }
 
 void InterpreterGeneratorX86::DoAllocate() {
-  Allocate(false);
+  Allocate(false, false);
 }
 
 void InterpreterGeneratorX86::DoAllocateUnfold() {
-  Allocate(true);
+  Allocate(true, false);
+}
+
+void InterpreterGeneratorX86::DoAllocateImmutable() {
+  Allocate(false, true);
+}
+
+void InterpreterGeneratorX86::DoAllocateImmutableUnfold() {
+  Allocate(true, true);
 }
 
 void InterpreterGeneratorX86::DoAllocateBoxed() {
@@ -1442,7 +1452,7 @@ void InterpreterGeneratorX86::StoreLocal(Register reg, int index) {
   __ movl(Address(EDI, -index * kWordSize), reg);
 }
 
-void InterpreterGeneratorX86::Allocate(bool unfolded) {
+void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
   // Load the class into register ebx.
   if (unfolded) {
     __ movl(EAX, Address(ESI, 1));
@@ -1454,9 +1464,56 @@ void InterpreterGeneratorX86::Allocate(bool unfolded) {
     __ movl(EBX, Address(EBX, EAX, TIMES_4, Array::kSize - HeapObject::kTag));
   }
 
+  // Either directly jump to allocation code or determine first if arguments
+  // on the stack have immutable flag set.
+  Label allocate;
+  Label allocate_immutable;
+  if (immutable) {
+    __ movl(ECX, Address(EBX, Class::kInstanceFormatOffset - HeapObject::kTag));
+    __ andl(ECX, Immediate(InstanceFormat::FixedSizeField::mask()));
+    int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
+    __ shrl(ECX, Immediate(size_shift));
+
+    // ECX = SizeOfEntireObject - HeapObject::kSize
+    __ subl(ECX, Immediate(HeapObject::kSize));
+
+    // EDX = StackPointer(EDI) - NumberOfFields*kPointerSize
+    __ movl(EDX, EDI);
+    __ subl(EDX, ECX);
+
+    Label loop;
+    // Increment pointer to point to next field.
+    __ Bind(&loop);
+    __ addl(EDX, Immediate(kPointerSize));
+
+    // Test whether EDX > EDI. If so we're done and it's immutable.
+    __ cmpl(EDX, EDI);
+    __ j(ABOVE, &allocate_immutable);
+
+    // If Smi, continue the loop.
+    __ movl(ECX, Address(EDX));
+    __ testl(ECX, Immediate(Smi::kTagMask));
+    __ j(ZERO, &loop);
+
+    // Else load immutable bit from object and test.
+    __ movl(ECX, Address(ECX, HeapObject::kFlagsOffset - HeapObject::kTag));
+    __ cmpl(ECX, Immediate(HeapObject::FlagsImmutabilityField::encode(true)));
+
+    __ j(EQUAL, &loop);
+  }
+
+  __ movl(ECX, Immediate(0));
+  __ jmp(&allocate);
+
+  __ Bind(&allocate_immutable);
+  __ movl(ECX, Immediate(1));
+
+
   // TODO(kasperl): Consider inlining this in the interpreter.
+  __ Bind(&allocate);
   __ movl(Address(ESP, 0 * kWordSize), EBP);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
+  __ movl(Address(ESP, 2 * kWordSize), ECX);
   __ call("HandleAllocate");
   __ cmpl(EAX, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
   __ j(EQUAL, &gc_);

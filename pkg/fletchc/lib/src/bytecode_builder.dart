@@ -417,8 +417,10 @@ class BytecodeBuilder {
     }
   }
 
-  void allocate(int classId, int fields) {
-    internalAddStackPointerDifference(new AllocateUnfold(classId), 1 - fields);
+  void allocate(int classId, int fields, {bool immutable: false}) {
+    var instruction = immutable ?
+        new AllocateImmutableUnfold(classId) : new AllocateUnfold(classId);
+    internalAddStackPointerDifference(instruction, 1 - fields);
   }
 
   void allocateBoxed() {

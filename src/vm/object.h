@@ -1224,12 +1224,12 @@ void HeapObject::set_class(Class* value) {
 
 bool HeapObject::get_immutable() {
   return FlagsImmutabilityField::decode(
-      Smi::cast(at(kFlagsOffset))->value());
+      reinterpret_cast<word>(Smi::cast(at(kFlagsOffset))));
 }
 
 void HeapObject::set_immutable(bool immutable) {
-  at_put(kFlagsOffset, Smi::FromWord(
-      FlagsImmutabilityField::encode(immutable)));
+  at_put(kFlagsOffset, Smi::cast(
+      reinterpret_cast<Smi*>(FlagsImmutabilityField::encode(immutable))));
 }
 
 void HeapObject::Initialize(int size, Object* null) {

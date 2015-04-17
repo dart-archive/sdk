@@ -122,6 +122,7 @@ Object* Program::UnfoldFunction(Function* function,
         rewriter.AddLiteralAndRewrite(static_methods(), bcp);
         break;
       case kAllocate:
+      case kAllocateImmutable:
         rewriter.AddLiteralAndRewrite(classes(), bcp);
         break;
       case kInvokeMethodFast: {
@@ -152,6 +153,7 @@ Object* Program::UnfoldFunction(Function* function,
       case kInvokeStaticUnfold:
       case kInvokeFactoryUnfold:
       case kAllocateUnfold:
+      case kAllocateImmutableUnfold:
         // We should only unfold folded functions.
         UNREACHABLE();
       default:
@@ -628,6 +630,7 @@ void Program::FoldFunction(Function* old_function,
         rewriter->AddMethodAndRewrite(bcp, new_bcp);
         break;
       case kAllocateUnfold:
+      case kAllocateImmutableUnfold:
         rewriter->AddClassAndRewrite(bcp, new_bcp);
         break;
       case kMethodEnd: {
@@ -637,6 +640,7 @@ void Program::FoldFunction(Function* old_function,
       case kInvokeStatic:
       case kInvokeFactory:
       case kAllocate:
+      case kAllocateImmutable:
         // We should only fold unfolded functions.
         UNREACHABLE();
       default:
@@ -667,7 +671,8 @@ class FunctionPostprocessVisitor: public HeapObjectVisitor {
     while (true) {
       Opcode opcode = static_cast<Opcode>(*bcp);
       switch (opcode) {
-        case kAllocate: {
+        case kAllocate:
+        case kAllocateImmutable: {
           int index = Utils::ReadInt32(bcp + 1);
           Class* clazz = rewriter_->LookupClass(index);
           Utils::WriteInt32(bcp + 1, clazz->id());

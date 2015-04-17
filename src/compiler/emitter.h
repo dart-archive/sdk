@@ -105,6 +105,7 @@ class Emitter : public StackAllocated {
   void Dup();
 
   void Allocate(int id, int fields);
+  void AllocateImmutable(int id, int fields);
   void AllocateBoxed();
 
   void Negate();

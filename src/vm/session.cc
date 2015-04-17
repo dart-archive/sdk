@@ -496,7 +496,8 @@ static void RewriteLiteralIndicesToOffsets(Function* function) {
       case kLoadConstUnfold:
       case kInvokeStaticUnfold:
       case kInvokeFactoryUnfold:
-      case kAllocateUnfold: {
+      case kAllocateUnfold:
+      case kAllocateImmutableUnfold: {
         int literal_index = Utils::ReadInt32(bcp + 1);
         Object** literal_address =
             function->literal_address_for(literal_index);
@@ -510,6 +511,7 @@ static void RewriteLiteralIndicesToOffsets(Function* function) {
       case kInvokeStatic:
       case kInvokeFactory:
       case kAllocate:
+      case kAllocateImmutable:
         // We should only be creating unfolded functions via a
         // session.
         UNREACHABLE();

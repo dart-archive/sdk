@@ -115,7 +115,7 @@ class Process {
   Object* NewBoxed(Object* value);
   Object* NewStack(int length);
 
-  Object* NewInstance(Class* klass);
+  Object* NewInstance(Class* klass, bool immutable = false);
 
   // Returns either a Smi or a LargeInteger.
   Object* ToInteger(int64 value);

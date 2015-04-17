@@ -118,7 +118,8 @@ static int StackDiff(uint8** bcp,
       break;
     }
 
-    case kAllocate: {
+    case kAllocate:
+    case kAllocateImmutable: {
       int class_id = Utils::ReadInt32(*bcp + 1);
       Class* klass = program->class_at(class_id);
       int fields = klass->NumberOfInstanceFields();
@@ -126,7 +127,8 @@ static int StackDiff(uint8** bcp,
       break;
     }
 
-    case kAllocateUnfold: {
+    case kAllocateUnfold:
+    case kAllocateImmutableUnfold: {
       Class* klass = Class::cast(Function::ConstantForBytecode(*bcp));
       int fields = klass->NumberOfInstanceFields();
       stack_diff = 1 - fields;

@@ -3292,7 +3292,11 @@ int Compiler::CompileConstructor(CompiledClass* clazz,
   for (int i = 0; i < total_field_count; i++) {
     emitter.LoadLocal(i);
   }
-  emitter.Allocate(class_node->id(), total_field_count);
+  if (constructor->modifiers().is_const()) {
+    emitter.AllocateImmutable(class_node->id(), total_field_count);
+  } else {
+    emitter.Allocate(class_node->id(), total_field_count);
+  }
   int params_offset = emitter.frame_size() - 1;
   // Invoke constructor 'bodies' in reverse order.
   for (int i = constructors.length() - 1; i >= 0; i--) {

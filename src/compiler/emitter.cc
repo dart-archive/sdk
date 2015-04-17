@@ -342,6 +342,12 @@ void Emitter::Allocate(int id, int fields) {
   StackSizeChange(1 - fields);
 }
 
+void Emitter::AllocateImmutable(int id, int fields) {
+  EmitOpcode(kAllocateImmutableUnfold);
+  EmitLiteral(id, kClassId);
+  StackSizeChange(1 - fields);
+}
+
 void Emitter::AllocateBoxed() {
   EmitOpcode(kAllocateBoxed);
 }

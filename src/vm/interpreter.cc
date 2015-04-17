@@ -616,6 +616,48 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     Advance(kAllocateLength);
   OPCODE_END();
 
+  OPCODE_BEGIN(AllocateImmutable);
+    int index = ReadInt32(1);
+    Class* klass = program()->class_at(index);
+    ASSERT(klass->id() == index);
+    int fields = klass->NumberOfInstanceFields();
+    bool immutable = true;
+    for (int i = 0; i < fields; i++) {
+      if (!Local(i)->IsImmutable()) {
+        immutable = false;
+        break;
+      }
+    }
+    GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
+        process()->NewInstance(klass, immutable));
+    Instance* instance = Instance::cast(result);
+    for (int i = fields - 1; i >= 0; --i) {
+      instance->SetInstanceField(i, Pop());
+    }
+    Push(instance);
+    Advance(kAllocateImmutableLength);
+  OPCODE_END();
+
+  OPCODE_BEGIN(AllocateImmutableUnfold);
+    Class* klass = Class::cast(ReadConstant());
+    int fields = klass->NumberOfInstanceFields();
+    bool immutable = true;
+    for (int i = 0; i < fields; i++) {
+      if (!Local(i)->IsImmutable()) {
+        immutable = false;
+        break;
+      }
+    }
+    GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
+        process()->NewInstance(klass, immutable));
+    Instance* instance = Instance::cast(result);
+    for (int i = fields - 1; i >= 0; --i) {
+      instance->SetInstanceField(i, Pop());
+    }
+    Push(instance);
+    Advance(kAllocateImmutableUnfoldLength);
+  OPCODE_END();
+
   OPCODE_BEGIN(AllocateBoxed);
     Object* value = Local(0);
     GC_AND_RETRY_ON_ALLOCATION_FAILURE(raw_boxed,
@@ -768,7 +810,7 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
   OPCODE_BEGIN(MethodEnd);
     FATAL("Cannot interpret 'method-end' bytecodes.");
   OPCODE_END();
-}
+} // NOLINT
 
 void Engine::Branch(int true_offset, int false_offset) {
   int offset = (Pop() == program()->true_object())
@@ -882,8 +924,8 @@ Object* HandleObjectFromFailure(Process* process, Failure* failure) {
   return process->program()->ObjectFromFailure(failure);
 }
 
-Object* HandleAllocate(Process* process, Class* clazz) {
-  return process->NewInstance(clazz);
+Object* HandleAllocate(Process* process, Class* clazz, int immutable) {
+  return process->NewInstance(clazz, immutable == 1);
 }
 
 Object* HandleAllocateBoxed(Process* process, Object* value) {

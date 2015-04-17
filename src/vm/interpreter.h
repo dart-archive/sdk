@@ -67,7 +67,8 @@ extern "C" bool HandleStackOverflow(Process* process, int size);
 
 extern "C" void HandleGC(Process* process);
 
-extern "C" Object* HandleAllocate(Process* process, Class* clazz);
+extern "C" Object* HandleAllocate(Process* process, Class* clazz,
+                                  int immutable);
 
 extern "C" Object* HandleAllocateBoxed(Process* process, Object* value);
 

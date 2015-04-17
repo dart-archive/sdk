@@ -69,6 +69,8 @@ enum Opcode {
   PopAndBranchBackLong,
   Allocate,
   AllocateUnfold,
+  AllocateImmutable,
+  AllocateImmutableUnfold,
   AllocateBoxed,
   Negate,
   StackOverflowCheck,
@@ -1749,6 +1751,60 @@ class AllocateUnfold extends Bytecode {
   }
 
   String toString() => 'allocate @${uint32Argument0}';
+}
+
+class AllocateImmutable extends Bytecode {
+  final int uint32Argument0;
+  const AllocateImmutable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.AllocateImmutable;
+
+  String get name => 'AllocateImmutable';
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'allocateim %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'allocateim @${uint32Argument0}';
+}
+
+class AllocateImmutableUnfold extends Bytecode {
+  final int uint32Argument0;
+  const AllocateImmutableUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.AllocateImmutableUnfold;
+
+  String get name => 'AllocateImmutableUnfold';
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'allocateim @%d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'allocateim @${uint32Argument0}';
 }
 
 class AllocateBoxed extends Bytecode {
