@@ -814,9 +814,10 @@ abstract class CodegenVisitor
 
   void handleStaticallyBoundInvoke(
       Send node,
-      MethodElement element,
+      Element element,
       NodeList arguments,
       Selector selector) {
+    if (checkCompileError(element)) return;
     if (element.declaration == context.compiler.identicalFunction) {
       handleIdenticalCall(arguments);
       return;
