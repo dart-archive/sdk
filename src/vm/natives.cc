@@ -993,4 +993,9 @@ NATIVE(SystemGetEventHandler) {
   return process->ToInteger(fd);
 }
 
+NATIVE(IsImmutable) {
+  Object* o = arguments[0];
+  return ToBool(process, o->IsImmutable());
+}
+
 }  // namespace fletch

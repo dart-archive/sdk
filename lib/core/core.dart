@@ -30,6 +30,7 @@ part 'string.dart';
 part 'thread.dart';
 part 'time.dart';
 part 'uri.dart';
+part 'immutable.dart';
 
 // Matches dart:core on Jan 21, 2015.
 external bool identical(Object a, Object b);

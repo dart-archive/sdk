@@ -191,6 +191,8 @@ namespace fletch {
   N(SystemIncrementPortRef,      "System", "_incrementPortRef")          \
                                                                          \
   N(ServiceRegister,             "<none>", "register")                   \
+                                                                         \
+  N(IsImmutable,                 "<none>", "_isImmutable")               \
 
 enum Native {
 #define N(e, c, n) k##e,
