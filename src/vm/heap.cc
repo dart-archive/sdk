@@ -18,29 +18,33 @@ Object* Heap::Allocate(int size) {
   return HeapObject::FromAddress(result);
 }
 
-Object* Heap::CreateHeapObject(Class* the_class, Object* init_value) {
+Object* Heap::CreateHeapObject(Class* the_class, Object* init_value,
+                               bool immutable) {
   int size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   HeapObject* result = HeapObject::cast(raw_result);
   result->set_class(the_class);
+  result->set_immutable(immutable);
   ASSERT(size == the_class->instance_format().fixed_size());
   result->Initialize(size, init_value);
   return result;
 }
 
-Object* Heap::CreateArray(Class* the_class, int length, Object* init_value) {
+Object* Heap::CreateArray(Class* the_class, int length, Object* init_value,
+                          bool immutable) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::ARRAY_TYPE);
   int size = Array::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Array* result = reinterpret_cast<Array*>(raw_result);
   result->set_class(the_class);
+  result->set_immutable(immutable);
   result->Initialize(length, size, init_value);
   return Array::cast(result);
 }
 
-Object* Heap::CreateByteArray(Class* the_class, int length) {
+Object* Heap::CreateByteArray(Class* the_class, int length, bool immutable) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::BYTE_ARRAY_TYPE);
   int size = ByteArray::AllocationSize(length);
@@ -48,33 +52,37 @@ Object* Heap::CreateByteArray(Class* the_class, int length) {
   if (raw_result->IsFailure()) return raw_result;
   ByteArray* result = reinterpret_cast<ByteArray*>(raw_result);
   result->set_class(the_class);
+  result->set_immutable(immutable);
   result->Initialize(length);
   return ByteArray::cast(result);
 }
 
-Object* Heap::CreateLargeInteger(Class* the_class, int64 value) {
+Object* Heap::CreateLargeInteger(Class* the_class, int64 value,
+                                 bool immutable) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::LARGE_INTEGER_TYPE);
   Object* raw_result = Allocate(LargeInteger::AllocationSize());
   if (raw_result->IsFailure()) return raw_result;
   LargeInteger* result = reinterpret_cast<LargeInteger*>(raw_result);
   result->set_class(the_class);
+  result->set_immutable(immutable);
   result->set_value(value);
   return LargeInteger::cast(result);
 }
 
-Object* Heap::CreateDouble(Class* the_class, double value) {
+Object* Heap::CreateDouble(Class* the_class, double value, bool immutable) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::DOUBLE_TYPE);
   Object* raw_result = Allocate(Double::AllocationSize());
   if (raw_result->IsFailure()) return raw_result;
   Double* result = reinterpret_cast<Double*>(raw_result);
   result->set_class(the_class);
+  result->set_immutable(immutable);
   result->set_value(value);
   return Double::cast(result);
 }
 
-Object* Heap::CreateBoxed(Class* the_class, Object* value) {
+Object* Heap::CreateBoxed(Class* the_class, Object* value, bool immutable) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::BOXED_TYPE);
   int size = the_class->instance_format().fixed_size();
@@ -82,11 +90,13 @@ Object* Heap::CreateBoxed(Class* the_class, Object* value) {
   if (raw_result->IsFailure()) return raw_result;
   Boxed* result = reinterpret_cast<Boxed*>(raw_result);
   result->set_class(the_class);
+  result->set_immutable(immutable);
   result->set_value(value);
   return Boxed::cast(result);
 }
 
-Object* Heap::CreateInitializer(Class* the_class, Function* function) {
+Object* Heap::CreateInitializer(Class* the_class, Function* function,
+                                bool immutable) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::INITIALIZER_TYPE);
   int size = the_class->instance_format().fixed_size();
@@ -94,11 +104,13 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function) {
   if (raw_result->IsFailure()) return raw_result;
   Initializer* result = reinterpret_cast<Initializer*>(raw_result);
   result->set_class(the_class);
+  result->set_immutable(immutable);
   result->set_function(function);
   return Initializer::cast(result);
 }
 
-Object* Heap::CreateStringInternal(Class* the_class, int length, bool clear) {
+Object* Heap::CreateStringInternal(Class* the_class, int length, bool clear,
+                                   bool immutable) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::STRING_TYPE);
   int size = String::AllocationSize(length);
@@ -106,25 +118,28 @@ Object* Heap::CreateStringInternal(Class* the_class, int length, bool clear) {
   if (raw_result->IsFailure()) return raw_result;
   String* result = reinterpret_cast<String*>(raw_result);
   result->set_class(the_class);
+  result->set_immutable(immutable);
   result->Initialize(size, length, clear);
   return String::cast(result);
 }
 
-Object* Heap::CreateString(Class* the_class, int length) {
-  return CreateStringInternal(the_class, length, true);
+Object* Heap::CreateString(Class* the_class, int length, bool immutable) {
+  return CreateStringInternal(the_class, length, true, immutable);
 }
 
-Object* Heap::CreateStringUninitialized(Class* the_class, int length) {
-  return CreateStringInternal(the_class, length, false);
+Object* Heap::CreateStringUninitialized(Class* the_class, int length,
+                                        bool immutable) {
+  return CreateStringInternal(the_class, length, false, immutable);
 }
 
-Object* Heap::CreateStack(Class* the_class, int length) {
+Object* Heap::CreateStack(Class* the_class, int length, bool immutable) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::STACK_TYPE);
   int size = Stack::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Stack* result = reinterpret_cast<Stack*>(raw_result);
   result->set_class(the_class);
+  result->set_immutable(immutable);
   result->Initialize(length);
   return Stack::cast(result);
 }
@@ -133,7 +148,7 @@ Object* Heap::AllocateRawClass(int size) {
   return Allocate(size);
 }
 
-Object* Heap::CreateMetaClass() {
+Object* Heap::CreateMetaClass(bool immutable) {
   InstanceFormat format = InstanceFormat::class_format();
   int size = Class::AllocationSize();
   // Allocate the raw class objects.
@@ -141,6 +156,7 @@ Object* Heap::CreateMetaClass() {
   if (meta_class->IsFailure()) return meta_class;
   // Bind the class loop.
   meta_class->set_class(meta_class);
+  meta_class->set_immutable(immutable);
   // Initialize the classes.
   meta_class->Initialize(format, size, NULL);
   return meta_class;
@@ -148,7 +164,8 @@ Object* Heap::CreateMetaClass() {
 
 Object* Heap::CreateClass(InstanceFormat format,
                           Class* meta_class,
-                          HeapObject* null) {
+                          HeapObject* null,
+                          bool immutable) {
   ASSERT(meta_class->instance_format().type() ==
          InstanceFormat::CLASS_TYPE);
 
@@ -157,6 +174,7 @@ Object* Heap::CreateClass(InstanceFormat format,
   if (raw_result->IsFailure()) return raw_result;
   Class* result = reinterpret_cast<Class*>(raw_result);
   result->set_class(meta_class);
+  result->set_immutable(immutable);
   result->Initialize(format, size, null);
   return Class::cast(result);  // Perform a cast to validate type.
 }
@@ -164,7 +182,8 @@ Object* Heap::CreateClass(InstanceFormat format,
 Object* Heap::CreateFunction(Class* the_class,
                              int arity,
                              List<uint8> bytecodes,
-                             int number_of_literals) {
+                             int number_of_literals,
+                             bool immutable) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::FUNCTION_TYPE);
   int literals_size = number_of_literals * kPointerSize;
@@ -174,6 +193,7 @@ Object* Heap::CreateFunction(Class* the_class,
   if (raw_result->IsFailure()) return raw_result;
   Function* result = reinterpret_cast<Function*>(raw_result);
   result->set_class(the_class);
+  result->set_immutable(immutable);
   result->set_arity(arity);
   result->set_literals_size(number_of_literals);
   result->Initialize(bytecodes);

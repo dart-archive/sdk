@@ -97,7 +97,7 @@ class SnapshotWriter {
   void WriteWord(word value);
   void WriteInt64(int64 value);
   void WriteDouble(double value);
-  void WriteHeader(InstanceFormat::Type type, int elements);
+  void WriteHeader(InstanceFormat::Type type, bool immutable, int elements = 0);
 
   void WriteObject(Object* object);
 

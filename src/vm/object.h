@@ -53,6 +53,9 @@ class Object {
   inline bool IsTrue();
   inline bool IsFalse();
 
+  // - based on the flags field in class HeapObject.
+  inline bool IsImmutable();
+
   // Print object on stdout.
   void Print();
   void ShortPrint();
@@ -255,6 +258,10 @@ class HeapObject: public Object {
   inline Class* get_class();
   inline void set_class(Class* value);
 
+  // [immutable]: field indicating immutability of an object.
+  inline bool get_immutable();
+  inline void set_immutable(bool immutable);
+
   // Scavenge support.
   HeapObject* forwarding_address();
   void set_forwarding_address(HeapObject* value);
@@ -282,7 +289,11 @@ class HeapObject: public Object {
 
   // Sizing.
   static const int kClassOffset = 0;
-  static const int kSize = kClassOffset + kPointerSize;
+  static const int kFlagsOffset = kClassOffset + kPointerSize;
+  static const int kSize = kFlagsOffset + kPointerSize;
+
+  // Leave LSB for Smi tag.
+  class FlagsImmutabilityField: public BoolField<1> {};
 
  protected:
   inline void Initialize(int size, Object* init_value);
@@ -1143,6 +1154,13 @@ bool Object::IsFalse() {
   return h->format().marker() == InstanceFormat::FALSE_MARKER;
 }
 
+bool Object::IsImmutable() {
+  if (IsHeapObject()) {
+    return HeapObject::cast(this)->get_immutable();
+  }
+  return IsSmi();
+}
+
 // Inlined Smi functions.
 
 Smi* Smi::cast(Object* object) {
@@ -1202,6 +1220,16 @@ Class* HeapObject::raw_class() {
 
 void HeapObject::set_class(Class* value) {
   at_put(kClassOffset, value);
+}
+
+bool HeapObject::get_immutable() {
+  return FlagsImmutabilityField::decode(
+      Smi::cast(at(kFlagsOffset))->value());
+}
+
+void HeapObject::set_immutable(bool immutable) {
+  at_put(kFlagsOffset, Smi::FromWord(
+      FlagsImmutabilityField::encode(immutable)));
 }
 
 void HeapObject::Initialize(int size, Object* null) {

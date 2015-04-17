@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "src/shared/assert.h"
+#include "src/shared/utils.h"
 
 #include "src/vm/object.h"
 #include "src/vm/program.h"
@@ -22,16 +23,33 @@ class Header {
  public:
   explicit Header(word value) : value_(value) {}
 
-  static Header FromSmi(Smi* value) { return Header(value->value() << 1); }
-  static Header FromIndex(word value) { return Header((value << 2) | 1); }
+  static Header FromSmi(Smi* value) {
+    Header h((value->value() << kSmiShift) | kSmiTag);
+    ASSERT(h.is_smi());
+    ASSERT(h.as_smi() == value);
+    return h;
+  }
+
+  static Header FromIndex(word value) {
+    Header h((value << kIndexFieldShift) | kIndexTag);
+    ASSERT(h.is_index());
+    ASSERT(h.as_index() == value);
+    return h;
+  }
+
   static Header FromTypeAndElements(InstanceFormat::Type type,
+                                    bool immutable,
                                     int elements = 0) {
-    // Format: <elements:26><type:4><11>
-    Header result =
-        Header((elements << 6) | (static_cast<word>(type) << 2) | 3);
-    ASSERT(elements == result.elements());
-    ASSERT(type == result.as_type());
-    return result;
+    Header h = Header(
+        TypeField::encode(type) |
+        ImmutableField::encode(immutable) |
+        ElementsField::encode(elements) |
+        kTypeAndElementsTag);
+    ASSERT(h.is_type());
+    ASSERT(type == h.as_type());
+    ASSERT(immutable == h.immutable());
+    ASSERT(elements == h.elements());
+    return h;
   }
 
   // Compute the object size based on type and elements.
@@ -61,30 +79,52 @@ class Header {
     }
   }
 
-  bool is_smi() { return (value_ & 1) == 0; }
+  bool is_smi() { return (value_ & kSmiMask) == kSmiTag; }
   Smi* as_smi() {
     ASSERT(is_smi());
-    return Smi::FromWord(value_ >> 1);
+    return Smi::FromWord(value_ >> kSmiShift);
   }
 
-  bool is_index() { return (value_ & 3) == 1; }
+  bool is_index() { return (value_ & kTagMask) == kIndexTag; }
   word as_index() {
     ASSERT(is_index());
-    return value_ >> 2;
+    return value_ >> kIndexFieldShift;
   }
 
-  bool is_type() { return (value_ & 3) == 3; }
+  bool is_type() { return (value_ & kTagMask) == kTypeAndElementsTag; }
   InstanceFormat::Type as_type() {
     ASSERT(is_type());
-    return static_cast<InstanceFormat::Type>((value_ >> 2) & 15);
+    return TypeField::decode(value_);
   }
+
   int elements() {
     ASSERT(is_type());
-    return value_ >> 6;
+    return ElementsField::decode(value_);
+  }
+
+  bool immutable() {
+    ASSERT(is_type());
+    return ImmutableField::decode(value_);
   }
 
   word as_word() { return value_; }
 
+  // Lowest one/two bits are used for tagging between:
+  // Smi, Indexed and Type+Elements.
+  static const int kSmiMask = 1;
+  static const int kTagMask = 3;
+
+  static const int kSmiTag = 0;
+  static const int kIndexTag = 1;
+  static const int kTypeAndElementsTag = 3;
+
+  static const int kIndexFieldShift = 2;
+  static const int kSmiShift = 1;
+
+  // Fields in case of Type + Elements encoding.
+  class TypeField : public BitField<InstanceFormat::Type, 2, 4> {};
+  class ImmutableField : public BoolField<6> {};
+  class ElementsField: public BitField<word, 7, 25> {};
  private:
   word value_;
 };
@@ -247,8 +287,9 @@ void SnapshotWriter::WriteDouble(double value) {
   WriteBytes(kSupportedSizeOfDouble, p_data);
 }
 
-void SnapshotWriter::WriteHeader(InstanceFormat::Type type, int elements = 0) {
-  WriteWord(Header::FromTypeAndElements(type, elements).as_word());
+void SnapshotWriter::WriteHeader(InstanceFormat::Type type, bool immutable,
+                                 int elements) {
+  WriteWord(Header::FromTypeAndElements(type, immutable, elements).as_word());
 }
 
 Program* SnapshotReader::ReadProgram() {
@@ -373,6 +414,7 @@ Object* SnapshotReader::ReadObject() {
 
   AddReference(object);
   object->set_class(reinterpret_cast<Class*>(ReadObject()));
+  object->set_immutable(header.immutable());
   switch (type) {
     case InstanceFormat::STRING_TYPE:
       reinterpret_cast<String*>(object)->StringReadFrom(this, elements);
@@ -562,7 +604,7 @@ void SnapshotWriter::GrowCapacity(int extra) {
 
 void String::StringWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::STRING_TYPE, length());
+  writer->WriteHeader(InstanceFormat::STRING_TYPE, get_immutable(), length());
   writer->Forward(this);
   // Body.
   writer->WriteBytes(length() * sizeof(uint16_t), byte_address_for(0));
@@ -576,7 +618,7 @@ void String::StringReadFrom(SnapshotReader* reader, int length) {
 
 void Array::ArrayWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::ARRAY_TYPE, length());
+  writer->WriteHeader(InstanceFormat::ARRAY_TYPE, get_immutable(), length());
   writer->Forward(this);
   // Body.
   for (int i = 0; i < length(); i++) {
@@ -591,7 +633,8 @@ void Array::ArrayReadFrom(SnapshotReader* reader, int length) {
 
 void ByteArray::ByteArrayWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::BYTE_ARRAY_TYPE, length());
+  writer->WriteHeader(InstanceFormat::BYTE_ARRAY_TYPE, get_immutable(),
+                      length());
   writer->Forward(this);
   // Body.
   writer->WriteBytes(length(), byte_address_for(0));
@@ -605,7 +648,7 @@ void ByteArray::ByteArrayReadFrom(SnapshotReader* reader, int length) {
 void Instance::InstanceWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
   int nof = klass->NumberOfInstanceFields();
-  writer->WriteHeader(klass->instance_format().type(), nof);
+  writer->WriteHeader(klass->instance_format().type(), get_immutable(), nof);
   writer->Forward(this);
   // Body
   for (int i = 0; i < nof; i++) {
@@ -622,7 +665,7 @@ void Instance::InstanceReadFrom(SnapshotReader* reader, int fields) {
 
 void Class::ClassWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::CLASS_TYPE);
+  writer->WriteHeader(InstanceFormat::CLASS_TYPE, get_immutable());
   writer->Forward(this);
   // Body.
   int size = AllocationSize();
@@ -642,7 +685,8 @@ void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
   int rounded_bytecode_size = BytecodeAllocationSize(bytecode_size());
   ASSERT(literals_size() == 0);
-  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, rounded_bytecode_size);
+  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, get_immutable(),
+                      rounded_bytecode_size);
   writer->Forward(this);
   // Body.
   for (int offset = HeapObject::kSize;
@@ -673,7 +717,7 @@ void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
 
 void LargeInteger::LargeIntegerWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::LARGE_INTEGER_TYPE);
+  writer->WriteHeader(InstanceFormat::LARGE_INTEGER_TYPE, get_immutable());
   writer->Forward(this);
   // Body.
   writer->WriteInt64(value());
@@ -685,7 +729,7 @@ void LargeInteger::LargeIntegerReadFrom(SnapshotReader* reader) {
 
 void Double::DoubleWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::DOUBLE_TYPE);
+  writer->WriteHeader(InstanceFormat::DOUBLE_TYPE, get_immutable());
   writer->Forward(this);
   // Body.
   writer->WriteDouble(value());
@@ -697,7 +741,7 @@ void Double::DoubleReadFrom(SnapshotReader* reader) {
 
 void Initializer::InitializerWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::INITIALIZER_TYPE);
+  writer->WriteHeader(InstanceFormat::INITIALIZER_TYPE, get_immutable());
   writer->Forward(this);
   // Body.
   for (int offset = HeapObject::kSize;

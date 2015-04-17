@@ -1225,6 +1225,7 @@ void Program::Initialize() {
                                         null_object_));
     null_class->set_super_class(object_class_);
     null_object_->set_class(null_class);
+    null_object_->set_immutable(true);
     null_object_->Initialize(null_format.fixed_size(),
                              null_object_);
   }

@@ -25,50 +25,57 @@ class Heap {
   Object* Allocate(int size);
 
   // Allocate heap object.
-  Object* CreateHeapObject(Class* the_class, Object* init_value);
+  Object* CreateHeapObject(Class* the_class, Object* init_value,
+                           bool immutable = false);
 
   // Allocate array.
-  Object* CreateArray(Class* the_class, int length, Object* init_value);
+  Object* CreateArray(Class* the_class, int length, Object* init_value,
+                      bool immutable = false);
 
   // Allocate byte array.
-  Object* CreateByteArray(Class* the_class, int length);
+  Object* CreateByteArray(Class* the_class, int length, bool immutable = false);
 
   // Allocate heap integer.
-  Object* CreateLargeInteger(Class* the_class, int64 value);
+  Object* CreateLargeInteger(Class* the_class, int64 value,
+                             bool immutable = false);
 
   // Allocate double.
-  Object* CreateDouble(Class* the_class, double value);
+  Object* CreateDouble(Class* the_class, double value, bool immutable = false);
 
   // Allocate boxed.
-  Object* CreateBoxed(Class* the_class, Object* value);
+  Object* CreateBoxed(Class* the_class, Object* value, bool immutable = false);
 
   // Allocate static variable info.
-  Object* CreateInitializer(Class* the_class, Function* function);
+  Object* CreateInitializer(Class* the_class, Function* function,
+                            bool immutable = false);
 
   // Create a string object initialized with zeros. Caller should set
   // the actual contents.
-  Object* CreateString(Class* the_class, int length);
+  Object* CreateString(Class* the_class, int length, bool immutable = false);
 
   // Create a string object where the payload is uninitialized.
   // The payload therefore contains whatever was in the heap at this
   // location before. This should only be used if you are going
   // to immediately overwrite the payload with the actual data.
-  Object* CreateStringUninitialized(Class* the_class, int length);
+  Object* CreateStringUninitialized(Class* the_class, int length,
+                                    bool immutable = false);
 
   // Allocate stack.
-  Object* CreateStack(Class* the_class, int length);
+  Object* CreateStack(Class* the_class, int length, bool immutable = false);
 
   // Allocate class.
-  Object* CreateMetaClass();
+  Object* CreateMetaClass(bool immutable = false);
   Object* CreateClass(InstanceFormat format,
                       Class* meta_class,
-                      HeapObject* null);
+                      HeapObject* null,
+                      bool immutable = false);
 
   // Allocate function.
   Object* CreateFunction(Class* the_class,
                          int arity,
                          List<uint8> bytecodes,
-                         int number_of_literals);
+                         int number_of_literals,
+                         bool immutable = false);
 
   // Iterate over all objects in the heap.
   void IterateObjects(HeapObjectVisitor* visitor) {
@@ -96,7 +103,8 @@ class Heap {
   }
 
  private:
-  Object* CreateStringInternal(Class* the_class, int length, bool clear);
+  Object* CreateStringInternal(Class* the_class, int length, bool clear,
+                               bool immutable = false);
 
   Space* space_;
   Object* AllocateRawClass(int size);
