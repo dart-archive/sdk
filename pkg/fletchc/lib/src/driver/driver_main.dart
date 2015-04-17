@@ -162,12 +162,13 @@ class ByteCommandSender extends CommandSender {
   }
 
   void sendClose() {
-    throw new UnsupportedError("[sendClose] isn't supported in bytes.");
+    throw new UnsupportedError(
+        "Client (C++) doesn't support DriverCommand.Close.");
   }
 
   void sendEventLoopStarted() {
     throw new UnsupportedError(
-        "[sendEventLoopStarted] isn't supported in bytes.");
+        "Client (C++) doesn't support DriverCommand.EventLoopStarted.");
   }
 }
 
@@ -219,7 +220,7 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
   // This method needs to do the following:
   // * Spawn a new isolate (or reuse an existing) to perform the task.
   //
-  // * Forward commands from C++ to isolate.
+  // * Forward commands from C++ client to isolate.
   //
   // * Intercept signal command and potentially kill isolate (isolate needs to
   //   tell if it is interuptible or needs to be killed, latter if compiler is
@@ -228,12 +229,24 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
   // * Forward commands from isolate to C++.
   //
   // * Store completed isolates in a pool.
-  ClientController client = new ClientController(controlSocket);
-  CompilerController compiler = new CompilerController(await pool.getIsolate());
 
-  Future clientFuture = client.run(compiler);
-  await compiler.run(client);
+  // Spawn or reuse isolate.
+  ManagedIsolate isolate = await pool.getIsolate();
+
+  // Forward commands between C++ client [client], and compiler isolate
+  // [compiler]. This is done with two asynchronous tasks that communicate with
+  // each other. Also handles the signal command as mentioned above.
+  ClientController client = new ClientController(controlSocket);
+  CompilerController compiler = new CompilerController(isolate);
+  Future clientFuture = client.start(compiler);
+  Future compilerFuture = compiler.start(client);
+  await compilerFuture;
+
+  // At this point, the isolate has already been returned to the pool by
+  // [compiler].
+
   await clientFuture;
+
 }
 
 /// Handles communication with the C++ client.
@@ -247,7 +260,9 @@ class ClientController {
 
   ClientController(this.socket);
 
-  Future<Null> run(CompilerController compiler) {
+  /// Start processing commands from the client. The returned future completes
+  /// when [endSession] is called.
+  Future<Null> start(CompilerController compiler) {
     this.compiler = compiler;
     commandSender = new ByteCommandSender(socket);
     subscription = new ControlStream(socket).commandStream.listen(null);
@@ -293,11 +308,7 @@ class ClientController {
 
   void endSession() {
     subscription.cancel();
-    var future = socket.flush();
-    if (future == null) {
-      future = new Future.value();
-    }
-    future.then((_) {
+    socket.flush().then((_) {
       socket.close();
     });
   }
@@ -307,33 +318,40 @@ class ClientController {
 class CompilerController {
   final ManagedIsolate isolate;
 
+  /// [ClientController] uses this [controller] to notify this object about
+  /// commands that should be forwarded to the compiler isolate.
   final StreamController<Command> controller = new StreamController<Command>();
 
   bool eventLoopStarted = false;
 
   CompilerController(this.isolate);
 
-  Future<Null> run(ClientController client) async {
+  /// Start processing commands from the compiler isolate (and forward commands
+  /// from the C++ client). The returned future normally completes when the
+  /// compiler isolate sends DriverCommand.ClosePort, or if the isolate is
+  /// killed due to DriverCommand.Signal arriving through controller.stream.
+  Future<Null> start(ClientController client) async {
     ReceivePort port = isolate.beginSession();
     StreamIterator iterator = new StreamIterator(port);
-    if (!await iterator.moveNext()) {
-      throw "bummer";
-    }
+    bool hasPort = await iterator.moveNext();
+    assert(hasPort);
     SendPort sendPort = iterator.current;
 
-    StreamSubscription subscription = controller.stream.listen(null);
-    subscription.onData((Command command) {
+    handleCommand(Command command) {
       if (command.code == DriverCommand.Signal && !eventLoopStarted) {
         isolate.kill();
         port.close();
       } else {
         sendPort.send([command.code.index, command.data]);
       }
-    });
+    }
+    StreamSubscription subscription = controller.stream.listen(handleCommand);
 
     while (await iterator.moveNext()) {
-      DriverCommand code = DriverCommand.values[iterator.current[0]];
-      var data = iterator.current[1];
+      /// [message] is a pair of int (index into DriverCommand.values), and
+      /// command payload data.
+      List message = iterator.current;
+      DriverCommand code = DriverCommand.values[message[0]];
       switch (code) {
         case DriverCommand.ClosePort:
           port.close();
@@ -344,11 +362,12 @@ class CompilerController {
           break;
 
         default:
-          client.sendCommand(code, data);
+          client.sendCommand(code, message[1]);
           break;
       }
     }
 
+    // Return the isolate to the pool *before* shutting down the client.
     isolate.endSession();
     client.endSession();
   }
