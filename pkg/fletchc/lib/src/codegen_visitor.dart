@@ -162,7 +162,7 @@ abstract class CodegenVisitor
   // The slot at which 'this' is stored. In closures, this is overwritten.
   LocalValue thisValue;
 
-  int blockLocals = 0;
+  List<Element> blockLocals = <Element>[];
 
   CodegenVisitor(CompiledFunction compiledFunction,
                  this.context,
@@ -230,6 +230,14 @@ abstract class CodegenVisitor
       return value;
     }
     return new UnboxedLocalValue(slot, parameter);
+  }
+
+  void pushVariableDeclaration(Element local, LocalValue value) {
+    scope[local] = value;
+  }
+
+  void popVariableDeclaration(Element local) {
+    scope.remove(local);
   }
 
   void registerDynamicInvocation(Selector selector) {
@@ -734,7 +742,7 @@ abstract class CodegenVisitor
   void handleIs(
       Node expression,
       DartType type,
-      // TODO(ahe): Remove [diagnosticLocation] when callIsSelector doesn't
+      // TODO(ahe): Remove [diagnosticLocation] when callIsSelector does not
       // require it.
       Spannable diagnosticLocation) {
     visitForValue(expression);
@@ -2092,8 +2100,8 @@ abstract class CodegenVisitor
   }
 
   void handleStatements(NodeList statements) {
-    int oldBlockLocals = blockLocals;
-    blockLocals = 0;
+    List<Element> oldBlockLocals = blockLocals;
+    blockLocals = <Element>[];
     int stackSize = builder.stackSize;
 
     for (Node statement in statements) {
@@ -2101,15 +2109,16 @@ abstract class CodegenVisitor
     }
 
     int stackSizeDifference = builder.stackSize - stackSize;
-    if (stackSizeDifference != blockLocals) {
+    if (stackSizeDifference != blockLocals.length) {
       internalError(
           statements,
           "Unbalanced number of block locals and stack slots used by block.");
     }
 
-    for (int i = 0; i < blockLocals; i++) {
+    for (int i = blockLocals.length - 1; i >= 0 ; --i) {
       // TODO(ajohnsen): Pop range bytecode?
       builder.pop();
+      popVariableDeclaration(blockLocals[i]);
     }
 
     blockLocals = oldBlockLocals;
@@ -2225,6 +2234,9 @@ abstract class CodegenVisitor
   }
 
   void visitFor(For node) {
+    List<Element> oldBlockLocals = blockLocals;
+    blockLocals = <Element>[];
+
     BytecodeLabel start = new BytecodeLabel();
     BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
@@ -2255,10 +2267,12 @@ abstract class CodegenVisitor
 
     builder.bind(end);
 
-    while (initStackSize < builder.stackSize) {
+    for (int i = blockLocals.length - 1; i >= 0 ; --i) {
       builder.pop();
-      blockLocals--;
+      popVariableDeclaration(blockLocals[i]);
     }
+
+    blockLocals = oldBlockLocals;
   }
 
   void visitForIn(ForIn node) {
@@ -2278,17 +2292,15 @@ abstract class CodegenVisitor
     builder.branchIfFalse(end);
 
     bool isVariableDeclaration = node.declaredIdentifier.asSend() == null;
+    Element element = elements[node];
     if (isVariableDeclaration) {
-      LocalElement local = elements[node];
       // Create local value and load the current element to it.
-      LocalValue value = createLocalValueFor(local);
+      LocalValue value = createLocalValueFor(element);
       builder.dup();
-      invokeGetter(new Selector.getter('current', null));
       value.initialize(builder);
-      scope[local] = value;
+      pushVariableDeclaration(element, value);
     } else {
-      Element target = elements[node];
-      if (target == null || target.isInstanceMember) {
+      if (element == null || element.isInstanceMember) {
         loadThis();
         builder.loadLocal(1);
         invokeGetter(new Selector.getter('current', null));
@@ -2297,10 +2309,10 @@ abstract class CodegenVisitor
       } else {
         builder.dup();
         invokeGetter(new Selector.getter('current', null));
-        if (target.isLocal) {
-          scope[target].store(builder);
-        } else if (target.isField) {
-          handleStaticFieldSet(target);
+        if (element.isLocal) {
+          scope[element].store(builder);
+        } else if (element.isField) {
+          handleStaticFieldSet(element);
         } else {
           internalError(node, "Unhandled store in for-in");
         }
@@ -2313,6 +2325,7 @@ abstract class CodegenVisitor
     if (isVariableDeclaration) {
       // Pop the local again.
       builder.pop();
+      popVariableDeclaration(element);
     }
 
     builder.branch(start);
@@ -2361,8 +2374,8 @@ abstract class CodegenVisitor
     }
     LocalValue value = createLocalValueFor(element, slot);
     value.initialize(builder);
-    scope[element] = value;
-    blockLocals++;
+    pushVariableDeclaration(element, value);
+    blockLocals.add(element);
     return value;
   }
 
@@ -2429,15 +2442,15 @@ abstract class CodegenVisitor
       builder.branchIfFalse(wrongType);
     }
 
-    int locals = 0;
+    List<Element> locals = <Element>[];
     Node exception = node.exception;
     if (exception != null) {
       LocalVariableElement element = elements[exception];
       LocalValue value = createLocalValueFor(element);
       builder.loadSlot(exceptionSlot);
       value.initialize(builder);
-      scope[element] = value;
-      locals++;
+      pushVariableDeclaration(element, value);
+      locals.add(element);
 
       Node trace = node.trace;
       if (trace != null) {
@@ -2445,15 +2458,18 @@ abstract class CodegenVisitor
         LocalValue value = createLocalValueFor(element);
         builder.loadLiteralNull();
         value.initialize(builder);
-        scope[element] = value;
+        pushVariableDeclaration(element, value);
         // TODO(ajohnsen): Set trace.
-        locals++;
+        locals.add(element);
       }
     }
 
     node.block.accept(this);
 
-    builder.popMany(locals);
+    builder.popMany(locals.length);
+    for (Element e in locals) {
+      popVariableDeclaration(e);
+    }
 
     builder.branch(end);
 
