@@ -1655,7 +1655,7 @@ class PopAndBranchLong extends Bytecode {
 
   int get stackPointerDifference => 0;
 
-  String get formatString => 'pop %d and branch +%d';
+  String get formatString => 'pop %d and branch long +%d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1665,7 +1665,7 @@ class PopAndBranchLong extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'pop $uint8Argument0 and branch +${uint32Argument1}';
+  String toString() => 'pop ${uint8Argument0} and branch long +${uint32Argument1}';
 }
 
 class PopAndBranchBackLong extends Bytecode {
@@ -1684,7 +1684,7 @@ class PopAndBranchBackLong extends Bytecode {
 
   int get stackPointerDifference => 0;
 
-  String get formatString => 'pop %d and branch -%d';
+  String get formatString => 'pop %d and branch long -%d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1694,7 +1694,7 @@ class PopAndBranchBackLong extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'pop $uint8Argument0 and branch -${uint32Argument1}';
+  String toString() => 'pop ${uint8Argument0} and branch long -${uint32Argument1}';
 }
 
 class Allocate extends Bytecode {
