@@ -8,8 +8,13 @@ import 'package:expect/expect.dart';
 void main() {
   Expect.equals(5, Isolate.spawn(simple).join());
 
-  Expect.equals(3, Isolate.spawn(increment, 2).join());
-  Expect.equals(5, Isolate.spawn(increment, 4).join());
+  Expect.equals(3, Isolate.spawn(bind(increment, 2)).join());
+  Expect.equals(5, Isolate.spawn(bind(increment, 4)).join());
+
+  var diff4 = bind(difference, 4);
+  Expect.equals(4 - 1, bind(diff4, 1)());
+  Expect.equals(4 - 2, Isolate.spawn(bind(diff4, 2)).join());
+  Expect.equals(4 - 3, Isolate.spawn(bind(diff4, 3)).join());
 }
 
 simple() {
@@ -18,4 +23,8 @@ simple() {
 
 increment(n) {
   return n + 1;
+}
+
+difference(x, y) {
+  return x - y;
 }

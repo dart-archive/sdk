@@ -81,7 +81,15 @@ abstract class Function {
   static apply(Function function,
                List positionalArguments,
               [Map<Symbol, dynamic> namedArguments]) {
-    throw new UnimplementedError("Function.apply");
+    int arity = positionalArguments.length;
+    if (arity > 2 || namedArguments != null) {
+      throw new UnimplementedError("Function.apply");
+    }
+    switch (arity) {
+      case 0: return function();
+      case 1: return function(positionalArguments[0]);
+      case 2: return function(positionalArguments[0], positionalArguments[1]);
+    }
   }
 }
 
