@@ -72,7 +72,8 @@ class StackTrace {
 
   void addFrame(compiler, StackFrame frame) {
     stackFrames[--framesToGo] = frame;
-    var nameLength = compiler.lookupFunctionName(frame.functionId).length;
+    String name = compiler.lookupFunctionName(frame.functionId);
+    var nameLength = name == null ? 0 : name.length;
     if (nameLength > maxNameLength) maxNameLength = nameLength;
   }
 

@@ -33,8 +33,9 @@ class Session {
 
   StreamIterator<Command> vmCommands;
   StackTrace currentStackTrace;
-  int currentFrame;
+  int currentFrame = 0;
   SourceLocation currentLocation;
+  bool running = false;
 
   Session(this.vmSocket, this.compiler);
 
@@ -85,7 +86,17 @@ class Session {
     }
   }
 
+  bool checkRunning() {
+    if (!running) print("### process not running");
+    return running;
+  }
+
   Future debugRun() async {
+    if (running) {
+      print("### already running");
+      return;
+    }
+    running = true;
     const ProcessRun().addTo(vmSocket);
     await handleProcessStop();
     await backtrace();
@@ -180,6 +191,7 @@ class Session {
   }
 
   Future step() async {
+    if (!checkRunning()) return;
     SourceLocation previous = currentLocation;
     do {
       await stepBytecode();
@@ -188,6 +200,7 @@ class Session {
   }
 
   Future stepOver() async {
+    if (!checkRunning()) return;
     SourceLocation previous = currentLocation;
     do {
       await stepOverBytecode();
@@ -196,16 +209,19 @@ class Session {
   }
 
   Future stepBytecode() async {
+    if (!checkRunning()) return;
     const ProcessStep().addTo(vmSocket);
     await handleProcessStop();
   }
 
   Future stepOverBytecode() async {
+    if (!checkRunning()) return;
     const ProcessStepOver().addTo(vmSocket);
     await handleProcessStop();
   }
 
   Future cont() async {
+    if (!checkRunning()) return;
     const ProcessContinue().addTo(vmSocket);
     await handleProcessStop();
     await backtrace();
@@ -261,19 +277,12 @@ class Session {
     currentStackTrace.write(compiler, currentFrame);
   }
 
-  Future printVariable(String name) async {
-    await getStackTrace();
-    ScopeInfo location =
-        currentStackTrace.scopeInfo(compiler, currentFrame);
-    LocalValue local = location.lookup(name);
-    if (local == null) {
-      print('### No such variable: $name');
-      return;
-    }
+  Future printLocal(LocalValue local) async {
+    String name = local.element.name;
     new ProcessLocal(currentFrame, local.slot).addTo(vmSocket);
     Command response = await nextVmCommand();
     if (response is Integer) {
-      print(response.value);
+      print('$name: ${response.value}');
       return;
     }
     assert(response is Instance);
@@ -284,7 +293,28 @@ class Session {
     const Drop(1).addTo(vmSocket);
     var classId = (await nextVmCommand()).id;
     String className = compiler.lookupClassName(classId);
-    print('instance of $className');
+    print('$name: instance of $className');
+  }
+
+  Future printAllVariables() async {
+    await getStackTrace();
+    ScopeInfo info = currentStackTrace.scopeInfo(compiler, currentFrame);
+    for (ScopeInfo current = info;
+         current != ScopeInfo.sentinel;
+         current = current.previous) {
+      await printLocal(current.local);
+    }
+  }
+
+  Future printVariable(String name) async {
+    await getStackTrace();
+    ScopeInfo info = currentStackTrace.scopeInfo(compiler, currentFrame);
+    LocalValue local = info.lookup(name);
+    if (local == null) {
+      print('### No such variable: $name');
+      return;
+    }
+    await printLocal(local);
   }
 
   void quit() {

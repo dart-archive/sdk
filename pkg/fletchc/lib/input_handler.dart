@@ -22,6 +22,7 @@ Commands:
   'f <n>'                               select frame
   'l'                                   list source for frame
   'p <name>'                            print the value of local variable
+  'p'                                   print the values of all locals
   'disasm'                              disassemble code for frame
   'q'/'quit'                            quit the session
 """;
@@ -113,7 +114,7 @@ class InputHandler {
         break;
       case 'p':
         if (commandComponents.length <= 1) {
-          print('### no variable name provided');
+          await session.printAllVariables();
           break;
         }
         await session.printVariable(commandComponents[1]);

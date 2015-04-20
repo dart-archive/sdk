@@ -239,9 +239,13 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
 
   String lookupFunctionName(int methodId) {
     CompiledFunction function = lookupCompiledFunction(methodId);
+    if (function == null) return '';
     String functionName = function.name;
+    if (functionName == null) return '';
     CompiledClass memberOf = function.memberOf;
     if (memberOf == null) return functionName;
+    if (memberOf.element == null) return functionName;
+    if (functionName.isEmpty) return memberOf.element.name;
     return '${memberOf.element.name}.$functionName';
   }
 

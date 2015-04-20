@@ -65,8 +65,7 @@ class SourceLocation {
 class DebugInfo {
   final CompiledFunction function;
   final List<SourceLocation> locations = <SourceLocation>[];
-  final List<ScopeInfo> scopeInfos =
-      <ScopeInfo>[ScopeInfo.sentinel];
+  final List<ScopeInfo> scopeInfos = <ScopeInfo>[ScopeInfo.sentinel];
 
   DebugInfo(this.function);
 
@@ -102,7 +101,7 @@ class DebugInfo {
   ScopeInfo scopeInfoFor(int bytecodeIndex) {
     return scopeInfos.lastWhere(
         (location) => location.bytecodeIndex <= bytecodeIndex,
-        orElse: () => null);
+        orElse: () => ScopeInfo.sentinel);
   }
 
   SourceLocation locationFor(int bytecodeIndex) {
