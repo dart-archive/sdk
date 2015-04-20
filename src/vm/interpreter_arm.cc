@@ -1028,11 +1028,11 @@ void InterpreterGeneratorARM::DoAllocateUnfold() {
   Allocate(true, false);
 }
 
-void InterpreterGeneratorX86::DoAllocateImmutable() {
+void InterpreterGeneratorARM::DoAllocateImmutable() {
   Allocate(false, true);
 }
 
-void InterpreterGeneratorX86::DoAllocateImmutableUnfold() {
+void InterpreterGeneratorARM::DoAllocateImmutableUnfold() {
   Allocate(true, true);
 }
 
