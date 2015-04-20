@@ -2297,6 +2297,7 @@ abstract class CodegenVisitor
       // Create local value and load the current element to it.
       LocalValue value = createLocalValueFor(element);
       builder.dup();
+      invokeGetter(new Selector.getter('current', null));
       value.initialize(builder);
       pushVariableDeclaration(value);
     } else {
