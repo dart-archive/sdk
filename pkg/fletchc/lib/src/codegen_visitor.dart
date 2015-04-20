@@ -822,7 +822,7 @@ abstract class CodegenVisitor
 
   void handleStaticallyBoundInvoke(
       Send node,
-      Element element,
+      MethodElement element,
       NodeList arguments,
       Selector selector) {
     if (checkCompileError(element)) return;
@@ -863,7 +863,7 @@ abstract class CodegenVisitor
 
   void visitStaticFunctionInvoke(
       Send node,
-      /* MethodElement */ element,
+      MethodElement element,
       NodeList arguments,
       Selector selector,
       _) {
