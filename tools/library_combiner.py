@@ -16,7 +16,7 @@ def invoke_ar(args):
     script += 'addlib %s\\n' % lib
   script += 'save\\n'
   script += 'end\\n'
-  os.system('echo -e "%s" | ar -M' % script)
+  os.system('env echo -e "%s" | ar -M' % script)
 
 def invoke_libtool(args):
   library_name = args[len(args) - 1]
