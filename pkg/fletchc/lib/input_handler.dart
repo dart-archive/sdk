@@ -21,6 +21,7 @@ Commands:
   'bt'                                  backtrace
   'f <n>'                               select frame
   'l'                                   list source for frame
+  'p <name>'                            print the value of local variable
   'disasm'                              disassemble code for frame
   'q'/'quit'                            quit the session
 """;
@@ -109,6 +110,13 @@ class InputHandler {
         break;
       case 'lb':
         session.listBreakpoints();
+        break;
+      case 'p':
+        if (commandComponents.length <= 1) {
+          print('### no variable name provided');
+          break;
+        }
+        await session.printVariable(commandComponents[1]);
         break;
       case 'q':
       case 'quit':

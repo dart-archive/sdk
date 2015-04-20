@@ -53,6 +53,11 @@ void StackWalker::UncookFrame(int delta) {
   stack_->set(stack_->top() + stack_offset_, bcp);
 }
 
+Object* StackWalker::GetLocal(int slot) {
+  int stack_index = stack_->top() + stack_offset_ + 1 + slot;
+  return stack_->get(stack_index);
+}
+
 static int StackDiff(uint8** bcp,
                      uint8* end_bcp,
                      Program* program,
@@ -220,6 +225,13 @@ int StackWalker::ComputeStackTrace(Process* process, Session* session) {
     ++frames;
   }
   return frames;
+}
+
+Object* StackWalker::ComputeLocal(Process* process, int frame, int slot) {
+  StackWalker walker(process, process->stack());
+  walker.MoveNext();
+  for (int i = 0; i < frame; i++) walker.MoveNext();
+  return walker.GetLocal(slot);
 }
 
 }  // namespace fletch

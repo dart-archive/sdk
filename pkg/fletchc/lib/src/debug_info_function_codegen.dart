@@ -14,6 +14,7 @@ import 'package:compiler/src/dart2jslib.dart' show
 
 import 'bytecode_builder.dart';
 import 'closure_environment.dart';
+import 'codegen_visitor.dart';
 
 import 'compiled_function.dart' show
     CompiledFunction;
@@ -43,7 +44,17 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
   }
 
   void recordDebugInfo(Node node) {
-    compiledFunction.debugInfo.add(compiler, builder.byteSize, node);
+    compiledFunction.debugInfo.addLocation(compiler, builder.byteSize, node);
+  }
+
+  void pushVariableDeclaration(LocalValue value) {
+    super.pushVariableDeclaration(value);
+    compiledFunction.debugInfo.pushScope(builder.byteSize, value);
+  }
+
+  void popVariableDeclaration(Element element) {
+    super.popVariableDeclaration(element);
+    compiledFunction.debugInfo.popScope(builder.byteSize);
   }
 
   void registerDynamicInvocation(Selector selector) { }

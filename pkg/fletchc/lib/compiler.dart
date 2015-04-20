@@ -245,6 +245,17 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return '${memberOf.element.name}.$functionName';
   }
 
+  CompiledClass lookupCompiledClass(int classId) {
+    CompiledClass klass = _compiler.context.backend.classes[classId];
+    assert(klass.id == classId);
+    return klass;
+  }
+
+  String lookupClassName(int classId) {
+    CompiledClass klass = lookupCompiledClass(classId);
+    return klass.element.name;
+  }
+
   String lookupFunctionNameBySelector(int selector) {
     int id = FletchSelector.decodeId(selector);
     return _compiler.context.symbols[id];
@@ -284,6 +295,12 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     CompiledFunction function = lookupCompiledFunction(methodId);
     _compiler.context.backend.ensureDebugInfo(function);
     return function.debugInfo.sourceLocationFor(bytecodeIndex);
+  }
+
+  ScopeInfo scopeInfo(int methodId, int bytecodeIndex) {
+    CompiledFunction function = lookupCompiledFunction(methodId);
+    _compiler.context.backend.ensureDebugInfo(function);
+    return function.debugInfo.scopeInfoFor(bytecodeIndex);
   }
 
   DebugInfo debugInfoForPosition(String file, int position) {

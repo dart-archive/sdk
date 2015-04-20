@@ -154,6 +154,26 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kProcessLocal: {
+        int frame = connection_->ReadInt();
+        int slot = connection_->ReadInt();
+        Object* local = StackWalker::ComputeLocal(process_, frame, slot);
+        if (local->IsSmi() || local->IsLargeInteger()) {
+          int64_t value = local->IsSmi()
+              ? Smi::cast(local)->value()
+              : LargeInteger::cast(local)->value();
+          connection_->WriteInt64(value);
+          connection_->Send(Connection::kInteger);
+        } else {
+          // TODO(ager): Instead of directly pushing the class we should
+          // add the object to an object map supplied by the debugger and
+          // pass back the reference for the debugger to use.
+          Push(HeapObject::cast(local)->get_class());
+          connection_->Send(Connection::kInstance);
+        }
+        break;
+      }
+
       case Connection::kSessionEnd: {
         return;
       }

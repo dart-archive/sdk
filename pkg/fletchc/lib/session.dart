@@ -11,6 +11,7 @@ import 'dart:io';
 import 'bytecodes.dart';
 import 'commands.dart';
 import 'compiler.dart' show FletchCompiler;
+import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';
 
 part 'command_reader.dart';
@@ -207,6 +208,7 @@ class Session {
   Future cont() async {
     const ProcessContinue().addTo(vmSocket);
     await handleProcessStop();
+    await backtrace();
   }
 
   void list() {
@@ -257,6 +259,32 @@ class Session {
   Future backtrace() async {
     await getStackTrace();
     currentStackTrace.write(compiler, currentFrame);
+  }
+
+  Future printVariable(String name) async {
+    await getStackTrace();
+    ScopeInfo location =
+        currentStackTrace.scopeInfo(compiler, currentFrame);
+    LocalValue local = location.lookup(name);
+    if (local == null) {
+      print('### No such variable: $name');
+      return;
+    }
+    new ProcessLocal(currentFrame, local.slot).addTo(vmSocket);
+    Command response = await nextVmCommand();
+    if (response is Integer) {
+      print(response.value);
+      return;
+    }
+    assert(response is Instance);
+    // The local is an instance of a class. The class is on the session stack,
+    // lookup the class id in the class map and drop the class from the session
+    // stack.
+    new MapLookup(MapId.classes).addTo(vmSocket);
+    const Drop(1).addTo(vmSocket);
+    var classId = (await nextVmCommand()).id;
+    String className = compiler.lookupClassName(classId);
+    print('instance of $className');
   }
 
   void quit() {

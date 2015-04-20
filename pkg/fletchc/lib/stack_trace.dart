@@ -51,6 +51,10 @@ class StackFrame {
   SourceLocation sourceLocation(FletchCompiler compiler) {
     return compiler.sourceLocation(functionId, bytecodePointer - 1);
   }
+
+  ScopeInfo scopeInfo(FletchCompiler compiler) {
+    return compiler.scopeInfo(functionId, bytecodePointer);
+  }
 }
 
 class StackTrace {
@@ -92,5 +96,9 @@ class StackTrace {
 
   SourceLocation sourceLocation(FletchCompiler compiler) {
     return stackFrames[0].sourceLocation(compiler);
+  }
+
+  ScopeInfo scopeInfo(FletchCompiler compiler, int frame) {
+    return stackFrames[frame].scopeInfo(compiler);
   }
 }

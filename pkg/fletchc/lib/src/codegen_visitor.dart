@@ -232,8 +232,8 @@ abstract class CodegenVisitor
     return new UnboxedLocalValue(slot, parameter);
   }
 
-  void pushVariableDeclaration(Element local, LocalValue value) {
-    scope[local] = value;
+  void pushVariableDeclaration(LocalValue value) {
+    scope[value.element] = value;
   }
 
   void popVariableDeclaration(Element local) {
@@ -2298,7 +2298,7 @@ abstract class CodegenVisitor
       LocalValue value = createLocalValueFor(element);
       builder.dup();
       value.initialize(builder);
-      pushVariableDeclaration(element, value);
+      pushVariableDeclaration(value);
     } else {
       if (element == null || element.isInstanceMember) {
         loadThis();
@@ -2374,7 +2374,7 @@ abstract class CodegenVisitor
     }
     LocalValue value = createLocalValueFor(element, slot);
     value.initialize(builder);
-    pushVariableDeclaration(element, value);
+    pushVariableDeclaration(value);
     blockLocals.add(element);
     return value;
   }
@@ -2449,7 +2449,7 @@ abstract class CodegenVisitor
       LocalValue value = createLocalValueFor(element);
       builder.loadSlot(exceptionSlot);
       value.initialize(builder);
-      pushVariableDeclaration(element, value);
+      pushVariableDeclaration(value);
       locals.add(element);
 
       Node trace = node.trace;
@@ -2458,7 +2458,7 @@ abstract class CodegenVisitor
         LocalValue value = createLocalValueFor(element);
         builder.loadLiteralNull();
         value.initialize(builder);
-        pushVariableDeclaration(element, value);
+        pushVariableDeclaration(value);
         // TODO(ajohnsen): Set trace.
         locals.add(element);
       }

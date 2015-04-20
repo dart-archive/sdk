@@ -100,6 +100,8 @@ class Command {
 
   factory Command.fromBuffer(CommandCode code, List<int> buffer) {
     switch (code) {
+      case CommandCode.Instance:
+        return const Instance();
       case CommandCode.Integer:
         int value = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new Integer(value);
@@ -517,6 +519,21 @@ class ProcessBreakpoint extends Command {
       : super(CommandCode.ProcessBreakpoint);
 }
 
+class ProcessLocal extends Command {
+  final int frame;
+  final int slot;
+
+  const ProcessLocal(this.frame, this.slot)
+      : super(CommandCode.ProcessLocal);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(frame)
+        ..addUint32(slot)
+        ..sendOn(sink, code);
+  }
+}
+
 class ProcessStep extends Command {
   const ProcessStep()
       : super(CommandCode.ProcessStep);
@@ -572,6 +589,11 @@ class PopInteger extends Command {
       : super(CommandCode.PopInteger);
 }
 
+class Instance extends Command {
+  const Instance()
+      : super(CommandCode.Instance);
+}
+
 class Integer extends Command {
   final int value;
 
@@ -605,6 +627,7 @@ enum CommandCode {
   ProcessContinue,
   ProcessBacktrace,
   ProcessBreakpoint,
+  ProcessLocal,
   ProcessTerminate,
   WriteSnapshot,
   CollectGarbage,
@@ -643,7 +666,8 @@ enum CommandCode {
   ObjectId,
 
   PopInteger,
-  Integer
+  Integer,
+  Instance
 }
 
 enum MapId {

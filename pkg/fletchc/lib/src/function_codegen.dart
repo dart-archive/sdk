@@ -88,7 +88,7 @@ class FunctionCodegen extends CodegenVisitor {
     functionSignature.orderedForEachParameter((ParameterElement parameter) {
       int slot = i++ - parameterCount - 1;
       LocalValue value = createLocalValueForParameter(parameter, slot);
-      pushVariableDeclaration(parameter, value);
+      pushVariableDeclaration(value);
     });
 
     ClosureInfo info = closureEnvironment.closures[function];
@@ -100,7 +100,7 @@ class FunctionCodegen extends CodegenVisitor {
         builder.loadField(index++);
       }
       for (LocalElement local in info.free) {
-        pushVariableDeclaration(local, createLocalValueFor(local));
+        pushVariableDeclaration(createLocalValueFor(local));
         // TODO(ajohnsen): Use a specialized helper for loading the closure.
         builder.loadParameter(0);
         builder.loadField(index++);

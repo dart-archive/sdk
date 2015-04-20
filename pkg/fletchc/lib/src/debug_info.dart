@@ -20,10 +20,31 @@ import 'package:compiler/src/tree/tree.dart' show
 import 'package:compiler/src/source_file_provider.dart' show
     SourceFileProvider;
 
+import 'codegen_visitor.dart';
 import 'compiled_function.dart';
 
 import 'fletch_compiler.dart' show
     FletchCompiler;
+
+class ScopeInfo {
+  static const ScopeInfo sentinel = const ScopeInfo(0, null, null);
+
+  final int bytecodeIndex;
+  final LocalValue local;
+  final ScopeInfo previous;
+  const ScopeInfo(this.bytecodeIndex, this.local, this.previous);
+
+  LocalValue lookup(String name) {
+    for (ScopeInfo current = this;
+         current != sentinel;
+         current = current.previous) {
+      if (current.local.element.name == name) {
+        return current.local;
+      }
+    }
+    return null;
+  }
+}
 
 class SourceLocation {
   final int bytecodeIndex;
@@ -43,11 +64,13 @@ class SourceLocation {
 
 class DebugInfo {
   final CompiledFunction function;
-  final List<SourceLocation> locations = new List();
+  final List<SourceLocation> locations = <SourceLocation>[];
+  final List<ScopeInfo> scopeInfos =
+      <ScopeInfo>[ScopeInfo.sentinel];
 
   DebugInfo(this.function);
 
-  void add(FletchCompiler compiler, int bytecodeIndex, Node node) {
+  void addLocation(FletchCompiler compiler, int bytecodeIndex, Node node) {
     SourceSpan span = compiler.spanFromSpannable(node);
     SourceFile file = null;
     // TODO(ahe): What to do if compiler.provider isn't a SourceFileProvider?
@@ -63,14 +86,29 @@ class DebugInfo {
     locations.add(new SourceLocation(bytecodeIndex, node, span, file));
   }
 
+  void pushScope(int bytecodeIndex, LocalValue local) {
+    scopeInfos.add(new ScopeInfo(bytecodeIndex,
+                                 local,
+                                 scopeInfos.last));
+  }
+
+  void popScope(int bytecodeIndex) {
+    ScopeInfo previous = scopeInfos.last.previous;
+    scopeInfos.add(new ScopeInfo(bytecodeIndex,
+                                 previous.local,
+                                 previous.previous));
+  }
+
+  ScopeInfo scopeInfoFor(int bytecodeIndex) {
+    return scopeInfos.lastWhere(
+        (location) => location.bytecodeIndex <= bytecodeIndex,
+        orElse: () => null);
+  }
+
   SourceLocation locationFor(int bytecodeIndex) {
-    try {
-      var location = locations.lastWhere(
-          (location) => location.bytecodeIndex <= bytecodeIndex);
-      return location;
-    } catch (e) {
-      return null;
-    }
+    return locations.lastWhere(
+        (location) => location.bytecodeIndex <= bytecodeIndex,
+        orElse: () => null);
   }
 
   SourceLocation locationForPosition(int position) {

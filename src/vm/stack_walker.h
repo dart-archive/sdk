@@ -41,6 +41,10 @@ class StackWalker {
   // Uncook frame given the delta returned by CookFrame.
   void UncookFrame(int delta);
 
+  // Get the local in the given slot. A slot is relative to the value
+  // immediately after the return address in the current frame.
+  Object* GetLocal(int slot);
+
   Function* function() const { return function_; }
   uint8* return_address() const { return return_address_; }
   int frame_size() const { return frame_size_; }
@@ -57,6 +61,9 @@ class StackWalker {
 
   // Compute a stack trace and send it to the session.
   static int ComputeStackTrace(Process* process, Session* session);
+
+  // Compute the value of the local in stack frame |frame| in slot |slot|.
+  static Object* ComputeLocal(Process* process, int frame, int slot);
 
  private:
   NoAllocationFailureScope no_allocation_failure_scope_;
