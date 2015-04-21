@@ -542,10 +542,9 @@ class FletchBackend extends Backend {
     if (function.debugInfo != null) return;
     function.debugInfo = new DebugInfo(function);
     FunctionElement element = elementFromCompiledFunction(function);
-    if (element == null) return;
-      compiler.withCurrentElement(element.implementation, () {
-      if (isNative(element)) return;
-      if (isExternal(element)) return;
+    if (element == null || isNative(element)) return;
+    element = element.implementation;
+    compiler.withCurrentElement(element, () {
       TreeElements elements = element.resolvedAst.elements;
       ClosureEnvironment closureEnvironment = createClosureEnvironment(
           element,
