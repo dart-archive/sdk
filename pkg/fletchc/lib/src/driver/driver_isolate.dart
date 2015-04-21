@@ -134,9 +134,19 @@ Future handleClient(SendPort sendPort, ReceivePort receivePort) async {
         exit(1);
       });
 
-  int exitCode = await Zone.current.fork(specification: specification)
-      .run(() => compileAndRun(
-          fletchVm, arguments, commandSender, commandIterator));
+  int exitCode = await Zone.current.fork(specification: specification).run(
+      () async {
+        try {
+          return await compileAndRun(
+              fletchVm,
+              arguments,
+              commandSender,
+              commandIterator);
+        } catch (e) {
+          print(e);
+          return 255;
+        }
+      });
 
   commandSender.sendExitCode(exitCode);
 

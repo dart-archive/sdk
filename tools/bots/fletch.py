@@ -119,7 +119,6 @@ def Steps(config):
         # Asan/x64 takes a long time on mac.
         pass
       else:
-        # Run fletch (old compiler).
         RunTests(
           configuration['build_conf'],
           configuration['mode'],
@@ -128,42 +127,24 @@ def Steps(config):
           mac=mac,
           clang=configuration['clang'],
           asan=configuration['asan'])
-        # Run fletchc driver (new compiler).
-        RunTests(
-          'driver_%s' % configuration['build_conf'],
-          configuration['mode'],
-          configuration['arch'],
-          config,
-          mac=mac,
-          clang=configuration['clang'],
-          asan=configuration['asan'],
-          fletch_driver=True)
 
 
-def RunTests(name, mode, arch, config,
-             mac=False, clang=True, asan=False, fletch_driver=False):
+def RunTests(name, mode, arch, config, mac=False, clang=True, asan=False):
   with bot.BuildStep('Test %s' % name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
-            '--time', '--report', '-pbuildbot', '--step_name=test_%s' % name]
+            '--time', '--report', '-pbuildbot', '--step_name=test_%s' % name,
+            '-rfletchc', '-cnone', '--host-checked']
     if asan:
       args.append('--asan')
 
     if clang:
       args.append('--clang')
 
-    if fletch_driver:
-      args.extend(['-rfletchc', '-cnone', '--host-checked'])
-      # TODO(ahe): Run all test suites.
-      args.append('language')
-      args.append('io')
-      args.append('ffi')
-      args.append('unsorted')
-
-    if fletch_driver: KillFletch(config)
+    KillFletch(config)
 
     Run(args)
 
-    if fletch_driver: KillFletch(config)
+    KillFletch(config)
 
 
 if __name__ == '__main__':

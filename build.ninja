@@ -35,7 +35,6 @@ build $
     gyp $
         common.gypi $
         fletch.gyp $
-        src/compiler/compiler.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $

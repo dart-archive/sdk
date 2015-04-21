@@ -8,7 +8,6 @@
   },
 
   # SCons translation:
-  # compiler/libfletch.a is now src/compiler/compiler.gyp:fletch_compiler.
   # lib/libfletch.a is now src/vm/vm.gyp:fletch_vm.
   # shared/libshared.a is now src/shared/shared.gyp:fletch_shared.
   # TODO(ahe): Remove the above lines when SCons is gone.
@@ -18,34 +17,6 @@
       'type': 'none',
       'dependencies': [
         'src/vm/vm.gyp:fletch',
-      ],
-    },
-    {
-      'target_name': 'fletchc',
-      'type': 'none',
-      'dependencies': [
-        'src/compiler/compiler.gyp:fletchc',
-      ],
-    },
-    {
-      'target_name': 'fletchc_scan',
-      'type': 'none',
-      'dependencies': [
-        'src/compiler/compiler.gyp:fletchc_scan',
-      ],
-    },
-    {
-      'target_name': 'bench',
-      'type': 'none',
-      'dependencies': [
-        'src/compiler/compiler.gyp:bench',
-      ],
-    },
-    {
-      'target_name': 'fletchc_print',
-      'type': 'none',
-      'dependencies': [
-        'src/compiler/compiler.gyp:fletchc_print',
       ],
     },
     {

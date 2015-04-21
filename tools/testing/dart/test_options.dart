@@ -17,6 +17,7 @@ const List<String> defaultTestSelectors = const [
     'unsorted',
     'isolate',
     'coroutine',
+    'io',
     'ffi',
     'samples'
 ];
@@ -77,7 +78,7 @@ class TestOptionsParser {
           (only valid with the following runtimes: none)''',
               ['-c', '--compiler'],
               ['none', 'fletch'],
-              'fletch'),
+              'none'),
           // TODO(antonm): fix the option drt.
           new _TestOptionSpecification(
               'runtime',
@@ -109,7 +110,7 @@ class TestOptionsParser {
                'chromeOnAndroid', 'safarimobilesim',
                'ContentShellOnAndroid', 'DartiumOnAndroid', 'none',
                'fletchc'],
-              'vm'),
+              'fletchc'),
           new _TestOptionSpecification(
               'arch',
               'The architecture to run tests for',
@@ -135,7 +136,7 @@ class TestOptionsParser {
               'Run compiler in checked mode',
               ['--host-checked'],
               [],
-              false,
+              true,
               type: 'bool'),
           new _TestOptionSpecification(
               'minified',

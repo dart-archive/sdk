@@ -52,7 +52,6 @@ endif
 gyp_files = \
   common.gypi \
   fletch.gyp \
-  src/compiler/compiler.gyp \
   src/double_conversion.gyp \
   src/shared/shared.gyp \
   src/vm/vm.gyp \
