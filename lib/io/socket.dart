@@ -28,6 +28,7 @@ class _SocketBase {
    */
   void close() {
     if (_fd != -1) {
+      _port.send(-1);
       _port.close();
       sys.close(_fd);
       _fd = -1;

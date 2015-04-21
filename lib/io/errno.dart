@@ -7,13 +7,15 @@ part of dart.io;
 // TODO(ajohnsen): Errno's are platform dependent. Make them so.
 class Errno {
   static const EOK_VALUE = 0;
-  static const EOK = const Errno(EINTR_VALUE, "EOK");
+  static const EOK = const Errno(EOK_VALUE, "EOK");
+  static const ENOENT_VALUE = 2;
+  static const ENOENT = const Errno(ENOENT_VALUE, "ENOENT");
   static const EINTR_VALUE = 4;
-  static const EINTR = const Errno(EINVAL_VALUE, "EINTR");
+  static const EINTR = const Errno(EINTR_VALUE, "EINTR");
   static const EEXIST_VALUE = 17;
   static const EEXIST = const Errno(EEXIST_VALUE, "EEXIST");
   static const EINVAL_VALUE = 22;
-  static const EINVAL = const Errno(EINTR_VALUE, "EINVAL");
+  static const EINVAL = const Errno(EINVAL_VALUE, "EINVAL");
   static const EPIPE_VALUE = 32;
   static const EPIPE = const Errno(EPIPE_VALUE, "EPIPE");
   static const EAGAIN_VALUE = 115;
@@ -29,6 +31,7 @@ class Errno {
   static Errno from(int value) {
     switch (value) {
       case EOK_VALUE: return EOK;
+      case ENOENT_VALUE: return ENOENT;
       case EINTR_VALUE: return EINTR;
       case EEXIST_VALUE: return EEXIST;
       case EINVAL_VALUE: return EINVAL;
