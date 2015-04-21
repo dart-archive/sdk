@@ -187,6 +187,30 @@ Future main(List<String> arguments) async {
     // Ignored. There's no way to check if a socket file exists.
   }
 
+  void gracefulShutdown(ProcessSignal signal) {
+    print("Received signal $signal");
+
+    try {
+      socketFile.deleteSync();
+      tmpdir.deleteSync(recursive: true);
+    } catch (e) {
+      print(e);
+    }
+
+    try {
+      configFile.deleteSync();
+    } catch (e) {
+      print(e);
+    }
+
+    int exitCode = signal == ProcessSignal.SIGTERM ? 15 : 2;
+    exit(-exitCode);
+  }
+
+  // When receiving SIGTERM or SIGINT, remove socket and config file.
+  ProcessSignal.SIGTERM.watch().listen(gracefulShutdown);
+  ProcessSignal.SIGINT.watch().listen(gracefulShutdown);
+
   ServerSocket server = await ServerSocket.bind(
       new
       UnixDomainAddress // NO_LINT
