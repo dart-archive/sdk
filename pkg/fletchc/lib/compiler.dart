@@ -257,7 +257,15 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
 
   String lookupClassName(int classId) {
     CompiledClass klass = lookupCompiledClass(classId);
-    return klass.element.name;
+    if (klass.element != null) return klass.element.name;
+    // TODO(ager): Provide better information for closures.
+    if (_compiler.context.backend.closureClasses.values.contains(klass)) {
+      return 'closure';
+    }
+    CompiledFunction function =
+        _compiler.context.backend.compiledFunctionFromTearoffClass(klass);
+    if (function != null) return 'tearoff of ${function.name}';
+    return 'unknown';
   }
 
   String lookupFunctionNameBySelector(int selector) {

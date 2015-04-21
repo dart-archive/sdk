@@ -213,6 +213,7 @@ class FletchBackend extends Backend {
   final Map<int, int> setters = <int, int>{};
 
   Map<CompiledFunction, FunctionElement> functionElements;
+  Map<CompiledClass, CompiledFunction> tearoffFunctions;
 
   List<Command> commands;
 
@@ -527,6 +528,14 @@ class FletchBackend extends Backend {
       compiledFunctions.forEach((k, v) => functionElements[v] = k);
     }
     return functionElements[function];
+  }
+
+  CompiledFunction compiledFunctionFromTearoffClass(CompiledClass klass) {
+    if (tearoffFunctions == null) {
+      tearoffFunctions = <CompiledClass, CompiledFunction>{};
+      tearoffClasses.forEach((k, v) => tearoffFunctions[v] = k);
+    }
+    return tearoffFunctions[klass];
   }
 
   void ensureDebugInfo(CompiledFunction function) {
