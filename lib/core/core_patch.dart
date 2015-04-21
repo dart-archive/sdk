@@ -585,3 +585,7 @@ class _ChannelEntry {
   _ChannelEntry next;
   _ChannelEntry(this.message, this.sender);
 }
+
+bool isImmutable(Object object) => _isImmutable(object);
+
+@fletch.native external bool _isImmutable(String string);
