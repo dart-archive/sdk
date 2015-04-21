@@ -35,6 +35,24 @@ const patch = "patch";
   external _noSuchMethodTrampoline();
 }
 
+@patch class Function {
+  @patch static apply(Function function,
+                      List positionalArguments,
+                      [Map<Symbol, dynamic> namedArguments]) {
+    int arity = positionalArguments.length;
+    if (arity > 2 || namedArguments != null) {
+      throw new UnimplementedError("Function.apply");
+    }
+    switch (arity) {
+      case 0: return function();
+      case 1: return function(positionalArguments[0]);
+      case 2: return function(positionalArguments[0], positionalArguments[1]);
+      default:
+        throw new UnimplementedError("Function.apply");
+    }
+  }
+}
+
 @patch class bool {
   @patch factory bool.fromEnvironment(
       String name,
