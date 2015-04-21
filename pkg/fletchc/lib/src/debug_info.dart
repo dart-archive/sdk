@@ -80,7 +80,8 @@ class DebugInfo {
     // compilation units.
     if (span != null && compiler.provider is SourceFileProvider) {
       SourceFileProvider provider = compiler.provider;
-      file = provider.sourceFiles[span.uri];
+      Uri resourceUri = compiler.translateUri(span, span.uri);
+      file = provider.sourceFiles[resourceUri];
     }
     locations.add(new SourceLocation(bytecodeIndex, node, span, file));
   }
