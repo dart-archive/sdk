@@ -53,7 +53,7 @@ class StackFrame {
   }
 
   ScopeInfo scopeInfo(FletchCompiler compiler) {
-    return compiler.scopeInfo(functionId, bytecodePointer);
+    return compiler.scopeInfo(functionId, bytecodePointer - 1);
   }
 }
 
