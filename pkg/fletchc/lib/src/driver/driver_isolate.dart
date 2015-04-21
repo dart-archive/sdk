@@ -196,7 +196,6 @@ Future<int> compileAndRun(
 
   List<String> vmOptions = <String>[
       '--port=${server.port}',
-      '-Xvalidate-stack',
   ];
 
   var connectionIterator = new StreamIterator(server);
