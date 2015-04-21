@@ -472,9 +472,7 @@ instanceof4_test/none: Fail
 int_test: Fail
 interceptor2_test: Fail
 interceptor3_test: Fail
-interceptor4_test: Fail
 interceptor5_test: Fail
-interceptor7_test: Fail
 interceptor9_test: Crash
 interface2_negative_test: Fail
 interface_cycle_test/01: MissingCompileTimeError
@@ -529,12 +527,6 @@ logical_expression3_test: Crash
 logical_expression4_test: Crash
 logical_expression5_test: Crash
 logical_expression_test: Crash
-main_test/01: Fail
-main_test/02: Fail
-main_test/04: Fail
-main_test/05: Fail
-main_test/21: Fail
-main_test/42: Fail
 malbounded_type_cast_test: Fail
 malbounded_type_literal_test: Fail
 malbounded_type_test_test/01: Fail

@@ -6,7 +6,7 @@ import 'dart:ffi';
 import 'dart:io' as io;
 import "package:expect/expect.dart";
 
-abstract class Timeval {
+abstract class Timeval implements Foreign {
   factory Timeval() {
     switch (Foreign.bitsPerMachineWord) {
       case 32: return new Timeval32();

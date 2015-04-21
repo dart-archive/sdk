@@ -42,12 +42,11 @@ external invokeMain([arguments, isolateArgument]);
 /// This is the main entry point for a Fletch program, and it takes care of
 /// calling "main" and exiting the VM when "main" is done.
 void entry(int mainArity) {
-  Thread.exit(invokeMain());
+  Thread.exit(invokeMain([]));
 }
 
 runToEnd(entry) {
-  entry();
-  Thread.exit();
+  Thread.exit(entry());
 }
 
 unresolved(name) {

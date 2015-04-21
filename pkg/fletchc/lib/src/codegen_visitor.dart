@@ -820,6 +820,29 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void handleMainCall(Send node, NodeList arguments) {
+    FunctionElement function = context.compiler.mainFunction;
+    if (function.isErroneous) {
+      handleCompileError();
+      return;
+    }
+    registerStaticInvocation(function);
+    // Load up to 'parameterCount' arguments, padding with nulls.
+    int parameterCount = function.functionSignature.parameterCount;
+    int argumentCount = 0;
+    for (Node argument in arguments) {
+      if (argumentCount == parameterCount) break;
+      visitForValue(argument);
+      argumentCount++;
+    }
+    for (int i = argumentCount; i < parameterCount; i++) {
+      builder.loadLiteralNull();
+    }
+    int methodId = context.backend.functionMethodId(function);
+    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    invokeStatic(node, constId, parameterCount);
+  }
+
   void handleStaticallyBoundInvoke(
       Send node,
       MethodElement element,
@@ -833,11 +856,8 @@ abstract class CodegenVisitor
     if (element.isExternal) {
       // Patch known functions directly.
       if (element == context.backend.fletchExternalInvokeMain) {
-        element = context.compiler.mainFunction;
-        if (element.isErroneous) {
-          handleCompileError();
-          return;
-        }
+        handleMainCall(node, arguments);
+        return;
       } else if (element == context.backend.fletchExternalCoroutineChange) {
         for (Node argument in arguments) {
           visitForValue(argument);
