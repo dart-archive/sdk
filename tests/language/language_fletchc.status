@@ -7,14 +7,12 @@
 
 [ $runtime == fletchc && $host_unchecked ]
 constructor_named_arguments_test/none: Fail
-getter_no_setter_test/02: MissingCompileTimeError
 mixin_super_constructor_named_test: Fail
 constructor5_test: Fail
 
 [ $runtime == fletchc && $host_checked ]
 constructor_named_arguments_test/01: Crash
 constructor_named_arguments_test/none: Crash
-getter_no_setter_test/02: Crash
 mixin_super_constructor_named_test: Crash
 constructor5_test: Crash
 mixin_prefix_test: Crash
@@ -24,6 +22,9 @@ regress_14348_test: Crash
 large_implicit_getter_test: Skip # TODO(ahe): Should be: Slow, Pass
 vm/regress_16873_test: Skip # TODO(ahe): Should be: Slow, Pass
 deferred_closurize_load_library_test: Skip # TODO(ajohnsen): Should be: Fail
+
+[ $runtime == fletchc && $arch == ia32 ]
+bit_shift_test: Fail
 
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
