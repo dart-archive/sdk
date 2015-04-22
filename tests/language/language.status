@@ -68,7 +68,7 @@ call_operator_test: Fail
 call_property_test: Fail
 call_through_getter_test: Fail
 call_type_literal_test/01: Fail
-call_with_no_such_method_test: Crash
+call_with_no_such_method_test: Fail
 canonical_const3_test: Crash
 cast_test/01: MissingRuntimeError
 cast_test/10: MissingRuntimeError
@@ -535,7 +535,7 @@ malbounded_type_test_test/04: Fail
 malformed2_test/00: Fail
 malformed_test/none: Fail
 many_generic_instanceof_test: Fail
-many_named_arguments_test: Crash
+many_named_arguments_test: Fail
 many_overridden_no_such_method_test: CompileTimeError
 map_literal4_test: Fail
 map_literal7_test: Fail
