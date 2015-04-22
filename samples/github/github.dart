@@ -10,7 +10,9 @@ import 'generated/dart/github.dart';
 main() {
   var mock = new GithubMock()..spawn();
   var server = new Server(mock.host, mock.port);
-  var root = new CommitListPresenter();
+  var user = server.getUser('dart-lang');
+  var repo = user.getRepository('fletch');
+  var root = new CommitListPresenter(repo);
   var impl = new GithubImpl(root);
   impl.run();
 }

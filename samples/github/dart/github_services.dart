@@ -47,8 +47,43 @@ class User extends Service {
 
 class Repository extends Service {
   final String name;
+  final Pagination _commitPages;
 
   Repository(String name, User parent)
       : super('repos/${parent.name}/$name', parent.server),
-        this.name = name;
+        this.name = name,
+        _commitPages = new Pagination(
+            'repos/${parent.name}/$name/commits', parent.server);
+
+  Commit getCommitAt(int index) => _commitPages.itemAt(index);
+}
+
+class Commit {
+  var _data;
+  Commit(this.data);
+  operator[](String key) => _data[key];
+}
+
+class Pagination {
+  static const count = 30;
+
+  final Server server;
+  final String api;
+  List<List> _pages = [];
+
+  Pagination(this.api, this.server);
+
+  dynamic itemAt(int index) {
+    int page = (index ~/ count);
+    int entry = index % count;
+    if (_pages.length <= page) {
+      _pages.length = page + 1;
+    }
+    List entries = _pages[page];
+    if (entries == null) {
+      entries = server.get('$api?page=${page + 1}');
+      _pages[page] = entries;
+    }
+    return (entry < entries.length) ? entries[entry] : null;
+  }
 }

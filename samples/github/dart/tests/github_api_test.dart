@@ -16,6 +16,7 @@ void main() {
   testError(server);
   testUser(server);
   testRepository(server);
+  testCommits(server);
   mock.close();
 }
 
@@ -33,4 +34,13 @@ void testRepository(Server server) {
 void testError(Server server) {
   var user = server.getUser('dart-lang-no-such-user');
   Expect.throws(() { user['login']; });
+}
+
+void testCommits(Server server) {
+  var user = server.getUser('dart-lang');
+  var repo = user.getRepository('fletch');
+  var commit = repo.getCommitAt(0);
+  Expect.stringEquals('Ian Zerny', commit['commit']['author']['name']);
+  commit = repo.getCommitAt(60);
+  Expect.stringEquals("Anders Johnsen", commit['commit']['author']['name']);
 }
