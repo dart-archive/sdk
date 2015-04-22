@@ -18,13 +18,13 @@ constructor5_test: Crash
 mixin_prefix_test: Crash
 regress_14348_test: Crash
 
+[ $runtime == fletchc && $arch == ia32 ]
+bit_shift_test: Fail
+
 [ $runtime == fletchc ]
 large_implicit_getter_test: Skip # TODO(ahe): Should be: Slow, Pass
 vm/regress_16873_test: Skip # TODO(ahe): Should be: Slow, Pass
 deferred_closurize_load_library_test: Skip # TODO(ajohnsen): Should be: Fail
-
-[ $runtime == fletchc && $arch == ia32 ]
-bit_shift_test: Fail
 
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
