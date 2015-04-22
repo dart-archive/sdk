@@ -11,7 +11,7 @@ import '../github_services.dart';
 import '../github_mock.dart';
 
 void main() {
-  var mock = new GithubMock()..startLocalServer();
+  var mock = new GithubMock()..spawn();
   var server = new Server(mock.host, mock.port);
   testError(server);
   testUser(server);

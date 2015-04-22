@@ -12,7 +12,7 @@ int _min(int m, int n) => (m < n) ? m : n;
 dynamic getJson(String host, int port, String resource) {
   var socket = new Socket.connect(host, port);
   HttpConnection connection = new HttpConnection(socket);
-  HttpRequest request = new HttpRequest(resource);
+  HttpRequest request = new HttpRequest('$host/$resource');
   request.headers["Host"] = host;
   request.headers["User-Agent"] = 'fletch';
   HttpResponse response = connection.send(request);

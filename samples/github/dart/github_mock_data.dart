@@ -1,4 +1,85 @@
-HTTP/1.1 200 OK
+// Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
+// This file contains a mapping of resources to responses for the mock github
+// server.
+
+// TODO(zerny): Find a better way of running the mock server than 'on-device'.
+// For the time being, this is the easiest setup for development because it
+// eliminates the need to communicate with any external entities. The downside
+// is an increased application size due to a larger snapshot and an increased
+// battery consumption because the device is running both client and server.
+
+String githubMockData404 = r"""HTTP/1.1 404 Not Found
+Server: GitHubMock.com
+Content-Length: 3
+Status: 404 Not Found
+
+{}
+""";
+
+Map<String, String> githubMockData = {
+    "users/dart-lang": r"""HTTP/1.1 200 OK
+Server: GitHubMock.com
+Date: Mon, 20 Apr 2015 07:15:01 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 1338
+Status: 200 OK
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 59
+X-RateLimit-Reset: 1429517701
+Cache-Control: public, max-age=60, s-maxage=60
+Last-Modified: Mon, 20 Apr 2015 07:05:19 GMT
+ETag: "5af2fef807e0d5372a3d5c17ce28ab30"
+Vary: Accept
+X-GitHub-Media-Type: github.v3
+X-XSS-Protection: 1; mode=block
+X-Frame-Options: deny
+Content-Security-Policy: default-src 'none'
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: ETag, Link, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval
+Access-Control-Allow-Origin: *
+X-GitHub-Request-Id: 57398502:1416:E988BA8:5534A775
+Strict-Transport-Security: max-age=31536000; includeSubdomains; preload
+X-Content-Type-Options: nosniff
+Vary: Accept-Encoding
+X-Served-By: 474556b853193c38f1b14328ce2d1b7d
+
+{
+  "login": "dart-lang",
+  "id": 1609975,
+  "avatar_url": "https://avatars.githubusercontent.com/u/1609975?v=3",
+  "gravatar_id": "",
+  "url": "https://api.github.com/users/dart-lang",
+  "html_url": "https://github.com/dart-lang",
+  "followers_url": "https://api.github.com/users/dart-lang/followers",
+  "following_url": "https://api.github.com/users/dart-lang/following{/other_user}",
+  "gists_url": "https://api.github.com/users/dart-lang/gists{/gist_id}",
+  "starred_url": "https://api.github.com/users/dart-lang/starred{/owner}{/repo}",
+  "subscriptions_url": "https://api.github.com/users/dart-lang/subscriptions",
+  "organizations_url": "https://api.github.com/users/dart-lang/orgs",
+  "repos_url": "https://api.github.com/users/dart-lang/repos",
+  "events_url": "https://api.github.com/users/dart-lang/events{/privacy}",
+  "received_events_url": "https://api.github.com/users/dart-lang/received_events",
+  "type": "Organization",
+  "site_admin": false,
+  "name": "Dart",
+  "company": null,
+  "blog": "https://www.dartlang.org",
+  "location": "",
+  "email": "",
+  "hireable": null,
+  "bio": "Productive language, libraries, and tools for client and server development",
+  "public_repos": 132,
+  "public_gists": 0,
+  "followers": 0,
+  "following": 0,
+  "created_at": "2012-04-03T23:36:55Z",
+  "updated_at": "2015-04-20T07:05:19Z"
+}
+""",
+    "repos/dart-lang/fletch": r"""HTTP/1.1 200 OK
 Server: GitHubMock.com
 Date: Tue, 21 Apr 2015 08:44:30 GMT
 Content-Type: application/json; charset=utf-8
@@ -132,3 +213,5 @@ X-Served-By: 2811da37fbdda4367181b328b22b2499
   "network_count": 3,
   "subscribers_count": 55
 }
+"""
+};

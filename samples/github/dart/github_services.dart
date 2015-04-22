@@ -5,13 +5,14 @@
 import 'json.dart';
 
 class Server {
-  static const GITHUB_API = 'https://api.github.com';
+  static const githubApiUrl = 'https://api.github.com';
   final String host;
   final int port;
 
   Server(this.host, this.port);
 
-  dynamic get(String resource) => getJson(host, port, '$host/$resource');
+  dynamic get(String resource) => getJson(host, port, resource);
+
   User getUser(String name) => new User(name, this);
 }
 
