@@ -798,3 +798,14 @@ vm/store_to_load_forwarding_phis_vm_test: Crash
 vm/type_cast_vm_test: Fail
 vm/type_vm_test: Fail
 vm/typed_data_polymorphic_view_test: Crash
+
+[ $runtime == fletchc && $asan ]
+# Address sanitizer turns caught crashes into failures.
+large_class_declaration_test: Fail
+implicit_scope_test: Fail
+
+[ $runtime == fletchc && $mode == release && $asan]
+# These are only caught by asan in release mode because they
+# hit assertions in debug mode before they get to the crash.
+inferrer_synthesized_constructor_test: Fail
+issue12284_test: Fail

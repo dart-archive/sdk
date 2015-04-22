@@ -320,6 +320,14 @@
       'fletch_asan': {
         'abstract': 1,
 
+        'cflags': [
+          '-fsanitize=address',
+        ],
+
+        'ldflags': [
+          '-fsanitize=address',
+        ],
+
         'xcode_settings': { # And ninja.
           'OTHER_CPLUSPLUSFLAGS': [
             '-g3',
@@ -344,6 +352,13 @@
           # Recognized by cxx_wrapper.py and cc_wrapper.py and causes them to
           # invoke clang.
           'FLETCH_CLANG',
+        ],
+
+        'ldflags': [
+          # The define above is not passed to the cxx_wrapper.py and
+          # cc_wrapper.py scripts when linking. We therefore have to force
+          # the use of clang with a dummy link flag.
+          '-L/FLETCH_CLANG',
         ],
 
         'xcode_settings': { # And ninja.
