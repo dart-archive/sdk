@@ -28,6 +28,10 @@ import 'package:compiler/src/source_file_provider.dart' show
     FormattingDiagnosticHandler,
     SourceFileProvider;
 
+import 'package:compiler/src/elements/elements.dart' show
+    ConstructorElement,
+    ClassElement;
+
 import 'package:compiler/src/filenames.dart' show
     appendSlash;
 
@@ -240,6 +244,11 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   String lookupFunctionName(int methodId) {
     CompiledFunction function = lookupCompiledFunction(methodId);
     if (function == null) return '';
+    if (function.isConstructor) {
+      ConstructorElement constructor = function.element;
+      ClassElement enclosing = constructor.enclosingClass;
+      return '${enclosing.name} initializer';
+    }
     String functionName = function.name;
     if (functionName == null) return '';
     CompiledClass memberOf = function.memberOf;

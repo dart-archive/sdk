@@ -74,6 +74,10 @@ class ConstructorCodegen extends CodegenVisitor {
     // arguments to the constructor are located before the return address.
     inlineInitializers(constructor, -parameterCount - 1);
 
+    handleAllocationAndBodyCall();
+  }
+
+  void handleAllocationAndBodyCall() {
     // TODO(ajohnsen): Let allocate take an offset to the field stack, so we
     // don't have to copy all the fields?
     // Copy all the fields to the end of the stack.
@@ -187,6 +191,11 @@ class ConstructorCodegen extends CodegenVisitor {
     }
   }
 
+  void handleThisPropertySet(Send node) {
+    Element element = elements[node];
+    fieldScope[element].store(builder);
+  }
+
   // This is called for each initializer list assignment.
   void visitThisPropertySet(
       Send node,
@@ -194,8 +203,7 @@ class ConstructorCodegen extends CodegenVisitor {
       Node rhs,
       _) {
     visitForValue(rhs);
-    Element element = elements[node];
-    fieldScope[element].store(builder);
+    handleThisPropertySet(node);
     applyVisitState();
   }
 
@@ -203,7 +211,7 @@ class ConstructorCodegen extends CodegenVisitor {
     FunctionExpression node = constructor.node;
     if (node == null || node.body.asEmptyStatement() != null) return;
 
-    registry.registerStaticInvocation(constructor.declaration);
+    registerStaticInvocation(constructor.declaration);
 
     int methodId = context.backend.functionMethodId(constructor);
     int constructorId = compiledFunction.allocateConstantFromFunction(methodId);

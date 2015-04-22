@@ -151,7 +151,7 @@ class DebugInfo {
 
   String astStringFor(int bytecodeIndex) {
     SourceLocation location = locationFor(bytecodeIndex);
-    if (location == null) return null;
+    if (location == null || location.node == null) return null;
     return '${location.node}';
   }
 

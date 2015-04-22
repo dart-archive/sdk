@@ -45,7 +45,8 @@ class StackFrame {
     String name = compiler.lookupFunctionName(functionId);
     String astString =
         compiler.astString(functionId, bytecodePointer - 1);
-    return '  $frameNumber: ${name.padRight(maxNameLength)}\t@$astString';
+    astString = (astString != null) ? '@$astString' : '';
+    return '  $frameNumber: ${name.padRight(maxNameLength)}\t$astString';
   }
 
   SourceLocation sourceLocation(FletchCompiler compiler) {

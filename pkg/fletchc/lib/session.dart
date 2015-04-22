@@ -195,7 +195,9 @@ class Session {
     SourceLocation previous = currentLocation;
     do {
       await stepBytecode();
-    } while (currentLocation == null || currentLocation == previous);
+    } while (currentLocation == null ||
+             currentLocation == previous ||
+             currentLocation.node == null);
     await backtrace();
   }
 
@@ -204,7 +206,9 @@ class Session {
     SourceLocation previous = currentLocation;
     do {
       await stepOverBytecode();
-    } while (currentLocation == null || currentLocation == previous);
+    } while (currentLocation == null ||
+             currentLocation == previous ||
+             currentLocation.node == null);
     await backtrace();
   }
 

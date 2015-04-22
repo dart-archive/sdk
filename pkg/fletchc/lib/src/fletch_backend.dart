@@ -82,7 +82,9 @@ import 'compiled_function.dart' show
     CompiledFunction,
     DebugInfo;
 
+import 'codegen_visitor.dart';
 import 'debug_info.dart';
+import 'debug_info_constructor_codegen.dart';
 import 'debug_info_function_codegen.dart';
 import 'fletch_context.dart';
 import 'fletch_selector.dart';
@@ -212,7 +214,6 @@ class FletchBackend extends Backend {
   final Map<int, int> getters = <int, int>{};
   final Map<int, int> setters = <int, int>{};
 
-  Map<CompiledFunction, FunctionElement> functionElements;
   Map<CompiledClass, CompiledFunction> tearoffFunctions;
 
   List<Command> commands;
@@ -447,6 +448,7 @@ class FletchBackend extends Backend {
       CompiledFunction compiledFunction = new CompiledFunction(
           functions.length,
           'call',
+          null,
           signature,
           compiledClass);
       functions.add(compiledFunction);
@@ -508,6 +510,7 @@ class FletchBackend extends Backend {
       CompiledFunction compiledFunction = new CompiledFunction(
           functions.length,
           name,
+          function,
           // Parameter initializers are expressed in the potential
           // implementation.
           implementation.functionSignature,
@@ -522,14 +525,6 @@ class FletchBackend extends Backend {
     return createCompiledFunction(function).methodId;
   }
 
-  FunctionElement elementFromCompiledFunction(CompiledFunction function) {
-    if (functionElements == null) {
-      functionElements = <CompiledFunction, FunctionElement>{};
-      compiledFunctions.forEach((k, v) => functionElements[v] = k);
-    }
-    return functionElements[function];
-  }
-
   CompiledFunction compiledFunctionFromTearoffClass(CompiledClass klass) {
     if (tearoffFunctions == null) {
       tearoffFunctions = <CompiledClass, CompiledFunction>{};
@@ -541,15 +536,28 @@ class FletchBackend extends Backend {
   void ensureDebugInfo(CompiledFunction function) {
     if (function.debugInfo != null) return;
     function.debugInfo = new DebugInfo(function);
-    FunctionElement element = elementFromCompiledFunction(function);
+    Element element = function.element;
     if (element == null || isNative(element)) return;
     element = element.implementation;
-    compiler.withCurrentElement(element, () {
-      TreeElements elements = element.resolvedAst.elements;
-      ClosureEnvironment closureEnvironment = createClosureEnvironment(
+    TreeElements elements = element.resolvedAst.elements;
+    ClosureEnvironment closureEnvironment = createClosureEnvironment(
+        element,
+        elements);
+    CodegenVisitor codegen;
+    if (function.isConstructor) {
+      ClassElement enclosingClass = element.enclosingClass;
+      CompiledClass compiledClass = compiledClasses[enclosingClass];
+      codegen = new DebugInfoConstructorCodegen(
+          function,
+          context,
+          elements,
+          null,
+          closureEnvironment,
           element,
-          elements);
-      DebugInfoFunctionCodegen codegen = new DebugInfoFunctionCodegen(
+          compiledClass,
+          compiler);
+    } else {
+      codegen = new DebugInfoFunctionCodegen(
           function,
           context,
           elements,
@@ -557,8 +565,8 @@ class FletchBackend extends Backend {
           closureEnvironment,
           element,
           compiler);
-      codegen.compile();
-    });
+    }
+    compiler.withCurrentElement(element, () { codegen.compile(); });
   }
 
   void codegen(CodegenWorkItem work) {
@@ -652,6 +660,7 @@ class FletchBackend extends Backend {
         CompiledFunction copy = new CompiledFunction(
             functions.length,
             function.name,
+            implementation,
             implementation.functionSignature,
             compiledUsage,
             isAccessor: function.isAccessor);
@@ -1152,6 +1161,7 @@ class FletchBackend extends Backend {
       CompiledFunction compiledFunction = new CompiledFunction(
           functions.length,
           constructor.name,
+          constructor,
           constructor.functionSignature,
           null);
       functions.add(compiledFunction);

@@ -180,6 +180,8 @@ abstract class CodegenVisitor
 
   SemanticSendVisitor get sendVisitor => this;
 
+  void compile();
+
   ConstantExpression compileConstant(
       Node node,
       {TreeElements elements,

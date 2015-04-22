@@ -55,6 +55,8 @@ class CompiledFunction {
 
   final String name;
 
+  final Element element;
+
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
 
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
@@ -67,6 +69,7 @@ class CompiledFunction {
 
   CompiledFunction(this.methodId,
                    this.name,
+                   this.element,
                    FunctionSignature signature,
                    CompiledClass memberOf,
                    {this.isAccessor: false})
@@ -84,6 +87,8 @@ class CompiledFunction {
         isAccessor = true;
 
   bool get hasThisArgument => memberOf != null;
+
+  bool get isConstructor => element != null && element.isGenerativeConstructor;
 
   int allocateConstant(ConstantValue constant) {
     return constants.putIfAbsent(constant, () => constants.length);
