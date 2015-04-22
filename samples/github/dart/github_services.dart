@@ -55,13 +55,7 @@ class Repository extends Service {
         _commitPages = new Pagination(
             'repos/${parent.name}/$name/commits', parent.server);
 
-  Commit getCommitAt(int index) => _commitPages.itemAt(index);
-}
-
-class Commit {
-  var _data;
-  Commit(this.data);
-  operator[](String key) => _data[key];
+  dynamic getCommitAt(int index) => _commitPages.itemAt(index);
 }
 
 class Pagination {
