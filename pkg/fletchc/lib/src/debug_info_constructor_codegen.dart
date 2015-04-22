@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.debug_info_function_codegen;
+library fletchc.debug_info_constructor_codegen;
 
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/resolution/resolution.dart';

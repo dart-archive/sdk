@@ -28,6 +28,7 @@ import 'package:compiler/src/tree/tree.dart' show
     Expression;
 
 import 'package:compiler/src/elements/elements.dart' show
+    AstElement,
     AbstractFieldElement,
     ClassElement,
     ConstructorElement,
@@ -536,7 +537,7 @@ class FletchBackend extends Backend {
   void ensureDebugInfo(CompiledFunction function) {
     if (function.debugInfo != null) return;
     function.debugInfo = new DebugInfo(function);
-    Element element = function.element;
+    AstElement element = function.element;
     if (element == null || isNative(element)) return;
     element = element.implementation;
     TreeElements elements = element.resolvedAst.elements;
