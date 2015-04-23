@@ -20,6 +20,7 @@ main(List<String> arguments) async {
   String script;
   String snapshotPath;
   bool debugging = false;
+  bool testDebugger = false;
 
   for (int i = 0; i < arguments.length; i++) {
     String argument = arguments[i];
@@ -32,6 +33,10 @@ main(List<String> arguments) async {
       case '-d':
       case '--debug':
         debugging = true;
+        break;
+
+      case '--test-debugger':
+        testDebugger = true;
         break;
 
       default:
@@ -94,7 +99,11 @@ main(List<String> arguments) async {
   if (snapshotPath != null) {
     session.writeSnapshot(snapshotPath);
   } else if (debugging) {
-    await session.debug();
+    if (testDebugger) {
+      await session.testDebugStepToCompletion();
+    } else {
+      await session.debug();
+    }
   } else {
     session.run();
   }

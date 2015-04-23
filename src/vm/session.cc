@@ -65,6 +65,14 @@ void Session::StartMessageProcessingThread() {
   Thread::Run(MessageProcessingThread, this);
 }
 
+int64_t Session::PopInteger() {
+  Object* top = Pop();
+  if (top->IsLargeInteger()) {
+    return LargeInteger::cast(top)->value();
+  }
+  return Smi::cast(top)->value();
+}
+
 void Session::SignalMainThread(MainThreadResumeKind kind) {
   main_thread_monitor_->Lock();
   main_thread_resume_kind_ = kind;
@@ -147,9 +155,17 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessBacktrace: {
-        connection_->ReadInt();
+        int map_index = connection_->ReadInt();
         int frames = StackWalker::ComputeStackTrace(process_, this);
         connection_->WriteInt(frames);
+        for (int i = 0; i < frames; i++) {
+          // Lookup method in method map and send id.
+          connection_->WriteInt(MapLookup(map_index));
+          // Drop method from session stack.
+          Drop(1);
+          // Pop bytecode index from session stack and send it.
+          connection_->WriteInt64(PopInteger());
+        }
         connection_->Send(Connection::kProcessBacktrace);
         break;
       }
@@ -354,13 +370,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPopInteger: {
-        Object* top = Pop();
-        int64 value = 0;
-        if (top->IsLargeInteger()) {
-          value = LargeInteger::cast(top)->value();
-        } else {
-          value = Smi::cast(top)->value();
-        }
+        int64_t value = PopInteger();
         connection_->WriteInt64(value);
         connection_->Send(Connection::kInteger);
         break;

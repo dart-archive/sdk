@@ -134,6 +134,7 @@ class Session {
   void Push(Object* object) { stack_.Add(object); }
   Object* Pop() { return stack_.RemoveLast(); }
   Object* Top() const { return stack_.Last(); }
+  int64_t PopInteger();
 
   void PostponeChange(Change change, int count);
 

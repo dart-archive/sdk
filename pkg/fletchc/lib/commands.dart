@@ -110,7 +110,16 @@ class Command {
         return new ObjectId(id);
       case CommandCode.ProcessBacktrace:
         int frames = CommandBuffer.readInt32FromBuffer(buffer, 0);
-        return new ProcessBacktrace(frames);
+        ProcessBacktrace backtrace = new ProcessBacktrace(frames);
+        for (int i = 0; i < frames; i++) {
+          int offset = i * 12;
+          int methodId = CommandBuffer.readInt32FromBuffer(buffer, offset + 4);
+          int bytecodeIndex =
+              CommandBuffer.readInt64FromBuffer(buffer, offset + 8);
+          backtrace.methodIds[i] = methodId;
+          backtrace.bytecodeIndices[i] = bytecodeIndex;
+        }
+        return backtrace;
       case CommandCode.ProcessBreakpoint:
         return new ProcessBreakpoint();
       case CommandCode.ProcessDeleteBreakpoint:
@@ -503,15 +512,28 @@ class ProcessDeleteBreakpoint extends Command {
 
 class ProcessBacktrace extends Command {
   final int frames;
+  final List<int> methodIds;
+  final List<int> bytecodeIndices;
 
-  const ProcessBacktrace(this.frames)
+  ProcessBacktrace(int frameCount)
+      : frames = frameCount,
+        methodIds = new List<int>(frameCount),
+        bytecodeIndices = new List<int>(frameCount),
+        super(CommandCode.ProcessBacktrace);
+}
+
+class ProcessBacktraceRequest extends Command {
+  final MapId methodMap;
+
+  const ProcessBacktraceRequest(this.methodMap)
       : super(CommandCode.ProcessBacktrace);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
-        ..addUint32(frames)
+        ..addUint32(methodMap.index)
         ..sendOn(sink, code);
   }
+
 }
 
 class ProcessBreakpoint extends Command {

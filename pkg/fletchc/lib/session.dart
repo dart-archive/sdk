@@ -59,6 +59,17 @@ class Session {
     await new InputHandler(this).run();
   }
 
+  Future testDebugStepToCompletion() async {
+    vmCommands = new CommandReader(vmSocket).iterator;
+    const Debugging().addTo(vmSocket);
+    const ProcessSpawnForMain().addTo(vmSocket);
+    await setBreakpoint(methodName: 'main', bytecodeIndex: 0);
+    await debugRun();
+    while (true) {
+      await step();
+    }
+  }
+
   Future nextVmCommand() async {
     var hasNext = await vmCommands.moveNext();
     assert(hasNext);
@@ -258,19 +269,15 @@ class Session {
 
   Future getStackTrace() async {
     if (currentStackTrace == null) {
-      const ProcessBacktrace(0).addTo(vmSocket);
+      const ProcessBacktraceRequest(MapId.methods).addTo(vmSocket);
       ProcessBacktrace backtraceResponse = await nextVmCommand();
       var frames = backtraceResponse.frames;
       currentStackTrace = new StackTrace(frames);
-      for (int i = 0; i < currentStackTrace.frames; ++i) {
-        new MapLookup(MapId.methods).addTo(vmSocket);
-        const Drop(1).addTo(vmSocket);
-        const PopInteger().addTo(vmSocket);
-        var objectIdCommand = await nextVmCommand();
-        var functionId = objectIdCommand.id;
-        var integerCommand = await nextVmCommand();
-        var bcp = integerCommand.value;
-        currentStackTrace.addFrame(compiler, new StackFrame(functionId, bcp));
+      for (int i = 0; i < frames; ++i) {
+        currentStackTrace.addFrame(
+            compiler,
+            new StackFrame(backtraceResponse.methodIds[i],
+                           backtraceResponse.bytecodeIndices[i]));
       }
       currentLocation = currentStackTrace.sourceLocation(compiler);
     }
