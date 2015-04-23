@@ -581,11 +581,6 @@ class SessionEnd extends Command {
       : super(CommandCode.SessionEnd);
 }
 
-class ForceTermination extends Command {
-  const ForceTermination()
-      : super(CommandCode.ForceTermination);
-}
-
 class Debugging extends Command {
   const Debugging()
       : super(CommandCode.Debugging);
@@ -637,7 +632,6 @@ enum CommandCode {
   ConnectionError,
   CompilerError,
   SessionEnd,
-  ForceTermination,
   Debugging,
 
   ProcessSpawnForMain,

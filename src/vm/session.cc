@@ -194,10 +194,6 @@ void Session::ProcessMessages() {
         return;
       }
 
-      case Connection::kForceTermination: {
-        exit(1);
-      }
-
       case Connection::kDebugging: {
         debugging_ = true;
         break;

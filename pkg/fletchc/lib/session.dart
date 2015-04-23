@@ -83,7 +83,7 @@ class Session {
     switch (response.code) {
       case CommandCode.UncaughtException:
         await backtrace();
-        const ForceTermination().addTo(vmSocket);
+        running = false;
         break;
       case CommandCode.ProcessTerminate:
         print('### process terminated');
