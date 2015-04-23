@@ -2,12 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:fletch_natives';
-
- main() { 
+main() {
   while (true) {
     var a = foo();
-    printString(a);
+    print(a);
   }
   bar();
 }

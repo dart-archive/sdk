@@ -30,16 +30,16 @@ main(List<String> arguments) {
       () => new FletchCompiler(script: 0),
       (e) => e is ArgumentError && '$e'.contains("script"));
 
-  new FletchCompiler(script: "lib/simple_system/system.dart").run();
+  new FletchCompiler(script: "lib/system/system.dart").run();
 
-  new FletchCompiler(script: Uri.parse("lib/simple_system/system.dart")).run();
+  new FletchCompiler(script: Uri.parse("lib/system/system.dart")).run();
 
   new FletchCompiler(
-      script: Uri.base.resolve("lib/simple_system/system.dart")).run();
+      script: Uri.base.resolve("lib/system/system.dart")).run();
 
-  new FletchCompiler().run("lib/simple_system/system.dart");
+  new FletchCompiler().run("lib/system/system.dart");
 
-  new FletchCompiler().run(Uri.parse("lib/simple_system/system.dart"));
+  new FletchCompiler().run(Uri.parse("lib/system/system.dart"));
 
-  new FletchCompiler().run(Uri.base.resolve("lib/simple_system/system.dart"));
+  new FletchCompiler().run(Uri.base.resolve("lib/system/system.dart"));
 }

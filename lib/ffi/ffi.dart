@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -6,6 +6,8 @@
 // library that allows Dart code to call arbitrary native platform
 // code defined outside the VM.
 library dart.ffi;
+
+import 'dart:_fletch_system' as fletch;
 
 class Foreign {
   static const int UNKNOWN = 0;
@@ -190,6 +192,8 @@ class Foreign {
     return foreign;
   }
 
+  static int get errno => _errno();
+
   // Helper for checking bounds and computing derived
   // address for memory address functionality.
   int _computeAddress(int offset, int n) {
@@ -206,73 +210,74 @@ class Foreign {
   }
 
   // Natives needed for FFI support.
-  static int _lookup(String name, String library) native catch (error) {
-    throw (error != _indexOutOfBounds) ? error : new ArgumentError();
+  @fletch.native static int _lookup(String name, String library) {
+    var error = fletch.nativeError;
+    throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
   }
 
-  static int _call$0(int address) native;
-  static int _call$1(int address, a0) native;
-  static int _call$2(int address, a0, a1) native;
-  static int _call$3(int address, a0, a1, a2) native;
-  static int _call$4(int address, a0, a1, a2, a3) native;
-  static int _call$5(int address, a0, a1, a2, a3, a4) native;
-  static int _call$6(int address, a0, a1, a2, a3, a4, a5) native;
+  @fletch.native external static int _call$0(int address);
+  @fletch.native external static int _call$1(int address, a0);
+  @fletch.native external static int _call$2(int address, a0, a1);
+  @fletch.native external static int _call$3(int address, a0, a1, a2);
+  @fletch.native external static int _call$4(int address, a0, a1, a2, a3);
+  @fletch.native external static int _call$5(int address, a0, a1, a2, a3, a4);
+  @fletch.native external static int _call$6(int address, a0, a1, a2, a3, a4, a5);
 
-  static int _Lcall$wLw(int address, a0, a1, a2) native;
+  @fletch.native external static int _Lcall$wLw(int address, a0, a1, a2);
 
-  static int _allocate(int length) native;
-  static void _free(int address) native;
-  void _markForFinalization() native;
+  @fletch.native external static int _allocate(int length);
+  @fletch.native external static void _free(int address);
+  @fletch.native external void _markForFinalization();
 
-  static int _getInt8(int address) native;
-  static int _getInt16(int address) native;
-  static int _getInt32(int address) native;
-  static int _getInt64(int address) native;
+  @fletch.native external static int _getInt8(int address);
+  @fletch.native external static int _getInt16(int address);
+  @fletch.native external static int _getInt32(int address);
+  @fletch.native external static int _getInt64(int address);
 
-  static int _setInt8(int address, int value) native catch (error) {
+  @fletch.native static int _setInt8(int address, int value) {
     throw new ArgumentError();
   }
-  static int _setInt16(int address, int value) native catch (error) {
+  @fletch.native static int _setInt16(int address, int value) {
     throw new ArgumentError();
   }
-  static int _setInt32(int address, int value) native catch (error) {
+  @fletch.native static int _setInt32(int address, int value) {
     throw new ArgumentError();
   }
-  static int _setInt64(int address, int value) native catch (error) {
-    throw new ArgumentError();
-  }
-
-  static int _getUint8(int address) native;
-  static int _getUint16(int address) native;
-  static int _getUint32(int address) native;
-  static int _getUint64(int address) native;
-
-  static int _setUint8(int address, int value) native catch (error) {
-    throw new ArgumentError();
-  }
-  static int _setUint16(int address, int value) native catch (error) {
-    throw new ArgumentError();
-  }
-  static int _setUint32(int address, int value) native catch (error) {
-    throw new ArgumentError();
-  }
-  static int _setUint64(int address, int value) native catch (error) {
+  @fletch.native static int _setInt64(int address, int value) {
     throw new ArgumentError();
   }
 
-  static double _getFloat32(int address) native;
-  static double _getFloat64(int address) native;
+  @fletch.native external static int _getUint8(int address);
+  @fletch.native external static int _getUint16(int address);
+  @fletch.native external static int _getUint32(int address);
+  @fletch.native external static int _getUint64(int address);
 
-  static double _setFloat32(int address, double value) native catch (error) {
+  @fletch.native static int _setUint8(int address, int value) {
     throw new ArgumentError();
   }
-  static double _setFloat64(int address, double value) native catch (error) {
+  @fletch.native static int _setUint16(int address, int value) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _setUint32(int address, int value) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _setUint64(int address, int value) {
     throw new ArgumentError();
   }
 
-  static int _bitsPerMachineWord() native;
-  static int _errno() native;
-  static int _platform() native;
-  static int _architecture() native;
-  static int _convertPort(Port port) native;
+  @fletch.native external static double _getFloat32(int address);
+  @fletch.native external static double _getFloat64(int address);
+
+  @fletch.native static double _setFloat32(int address, double value) {
+    throw new ArgumentError();
+  }
+  @fletch.native static double _setFloat64(int address, double value) {
+    throw new ArgumentError();
+  }
+
+  @fletch.native external static int _bitsPerMachineWord();
+  @fletch.native external static int _errno();
+  @fletch.native external static int _platform();
+  @fletch.native external static int _architecture();
+  @fletch.native external static int _convertPort(Port port);
 }

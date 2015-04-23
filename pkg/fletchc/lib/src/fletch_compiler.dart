@@ -46,21 +46,13 @@ const FLETCH_PLATFORM = 3;
 
 const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
   "_fletch_system": const LibraryInfo(
-      "simple_system/system.dart",
+      "system/system.dart",
       category: "Internal",
       documented: false,
       platforms: FLETCH_PLATFORM),
 
-  // TODO(ahe): This library should be hidden from users: change category to
-  // "Internal", and prefix name with "_".
-  "fletch_natives": const LibraryInfo(
-      "simple_system/fletch_natives.dart",
-      category: "Shared",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-
   "ffi": const LibraryInfo(
-      "ffi/ffi_fletchc.dart",
+      "ffi/ffi.dart",
       category: "Shared",
       documented: false,
       platforms: FLETCH_PLATFORM),
@@ -78,7 +70,7 @@ const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
       platforms: FLETCH_PLATFORM),
 
   "service": const LibraryInfo(
-      "service/service_fletchc.dart",
+      "service/service.dart",
       category: "Shared",
       documented: false,
       platforms: FLETCH_PLATFORM),
@@ -114,16 +106,6 @@ class FletchCompiler extends FletchCompilerHack {
       internalContext = new FletchContext(this);
     }
     return internalContext;
-  }
-
-  void onLibraryCreated(LibraryElementX library) {
-    if (library.isPlatformLibrary &&
-        Uri.parse('dart:fletch_natives') == library.canonicalUri) {
-      // TODO(ahe): Remove this, no need to use native syntax, we can use:
-      //   @native external nativeMethod();
-      library.canUseNative = true;
-    }
-    super.onLibraryCreated(library);
   }
 
   String fletchPatchLibraryFor(String name) => FLETCH_PATCHES[name];

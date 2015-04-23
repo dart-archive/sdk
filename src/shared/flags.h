@@ -48,7 +48,6 @@ namespace fletch {
   CSTRING(release, filter, NULL,                   \
       "Filter string for unit testing")            \
   /* Temporary compiler flags */                   \
-  BOOLEAN(release, simple_system, false, "")       \
   BOOLEAN(release, trace_compiler, false, "")      \
   BOOLEAN(release, trace_library, false, "")       \
 

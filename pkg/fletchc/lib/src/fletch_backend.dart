@@ -227,7 +227,6 @@ class FletchBackend extends Backend {
   List<Command> commands;
 
   LibraryElement fletchSystemLibrary;
-  LibraryElement fletchNativesLibrary;
   LibraryElement fletchFFILibrary;
   LibraryElement fletchIOSystemLibrary;
 
@@ -1068,8 +1067,6 @@ class FletchBackend extends Backend {
 
     if (Uri.parse('dart:_fletch_system') == library.canonicalUri) {
       fletchSystemLibrary = library;
-    } else if (Uri.parse('dart:fletch_natives') == library.canonicalUri) {
-      fletchNativesLibrary = library;
     } else if (Uri.parse('dart:ffi') == library.canonicalUri) {
       fletchFFILibrary = library;
     } else if (Uri.parse('dart:system') == library.canonicalUri) {
@@ -1098,8 +1095,6 @@ class FletchBackend extends Backend {
       // TODO(ahe): Don't use ensureResolved (fix TODO in isNative instead).
       element.metadata.forEach((m) => m.ensureResolved(compiler));
     } else if (element.library == fletchSystemLibrary) {
-      // Nothing needed for now.
-    } else if (element.library == fletchNativesLibrary) {
       // Nothing needed for now.
     } else if (element.library == compiler.coreLibrary) {
       // Nothing needed for now.
