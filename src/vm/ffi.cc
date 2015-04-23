@@ -97,8 +97,11 @@ NATIVE(ForeignLookup) {
 
 NATIVE(ForeignAllocate) {
   word size = AsForeignWord(arguments[0]);
-  void* result = calloc(1, size);
-  return process->ToInteger(reinterpret_cast<intptr_t>(result));
+  Object* result = process->NewLargeInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  void* value = calloc(1, size);
+  LargeInteger::cast(result)->set_value(reinterpret_cast<intptr_t>(value));
+  return result;
 }
 
 NATIVE(ForeignFree) {
@@ -137,8 +140,10 @@ NATIVE(ForeignConvertPort) {
   uword address = AsForeignWord(field);
   if (address == 0) return Smi::zero();
   Port* port = reinterpret_cast<Port*>(address);
+  Object* result = process->ToInteger(reinterpret_cast<intptr_t>(port));
+  if (result == Failure::retry_after_gc()) return result;
   port->IncrementRef();
-  return process->ToInteger(reinterpret_cast<intptr_t>(port));
+  return result;
 }
 
 typedef int (*F0)();
@@ -152,16 +157,22 @@ typedef int (*F6)(word, word, word, word, word, word);
 NATIVE(ForeignCall0) {
   word address = AsForeignWord(arguments[0]);
   F0 function = reinterpret_cast<F0>(address);
-  int result = function();
-  return process->ToInteger(result);
+  Object* result = process->NewLargeInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  int value = function();
+  LargeInteger::cast(result)->set_value(value);
+  return result;
 }
 
 NATIVE(ForeignCall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   F1 function = reinterpret_cast<F1>(address);
-  int result = function(a0);
-  return process->ToInteger(result);
+  Object* result = process->NewLargeInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  int value = function(a0);
+  LargeInteger::cast(result)->set_value(value);
+  return result;
 }
 
 NATIVE(ForeignCall2) {
@@ -169,8 +180,11 @@ NATIVE(ForeignCall2) {
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   F2 function = reinterpret_cast<F2>(address);
-  int result = function(a0, a1);
-  return process->ToInteger(result);
+  Object* result = process->NewLargeInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  int value = function(a0, a1);
+  LargeInteger::cast(result)->set_value(value);
+  return result;
 }
 
 NATIVE(ForeignCall3) {
@@ -179,8 +193,11 @@ NATIVE(ForeignCall3) {
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   F3 function = reinterpret_cast<F3>(address);
-  int result = function(a0, a1, a2);
-  return process->ToInteger(result);
+  Object* result = process->NewLargeInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  int value = function(a0, a1, a2);
+  LargeInteger::cast(result)->set_value(value);
+  return result;
 }
 
 NATIVE(ForeignCall4) {
@@ -190,8 +207,11 @@ NATIVE(ForeignCall4) {
   word a2 = AsForeignWord(arguments[3]);
   word a3 = AsForeignWord(arguments[4]);
   F4 function = reinterpret_cast<F4>(address);
-  int result = function(a0, a1, a2, a3);
-  return process->ToInteger(result);
+  Object* result = process->NewLargeInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  int value = function(a0, a1, a2, a3);
+  LargeInteger::cast(result)->set_value(value);
+  return result;
 }
 
 NATIVE(ForeignCall5) {
@@ -202,8 +222,11 @@ NATIVE(ForeignCall5) {
   word a3 = AsForeignWord(arguments[4]);
   word a4 = AsForeignWord(arguments[5]);
   F5 function = reinterpret_cast<F5>(address);
-  int result = function(a0, a1, a2, a3, a4);
-  return process->ToInteger(result);
+  Object* result = process->NewLargeInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  int value = function(a0, a1, a2, a3, a4);
+  LargeInteger::cast(result)->set_value(value);
+  return result;
 }
 
 NATIVE(ForeignCall6) {
@@ -215,8 +238,11 @@ NATIVE(ForeignCall6) {
   word a4 = AsForeignWord(arguments[5]);
   word a5 = AsForeignWord(arguments[6]);
   F6 function = reinterpret_cast<F6>(address);
-  int result = function(a0, a1, a2, a3, a4, a5);
-  return process->ToInteger(result);
+  Object* result = process->NewLargeInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  int value = function(a0, a1, a2, a3, a4, a5);
+  LargeInteger::cast(result)->set_value(value);
+  return result;
 }
 
 typedef int64 (*LwLw)(word, int64, word);
@@ -234,8 +260,11 @@ NATIVE(ForeignLCallwLw) {
   int64 a1 = AsInt64Value(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   LwLw function = reinterpret_cast<LwLw>(address);
-  int64 result = function(a0, a1, a2);
-  return process->ToInteger(result);
+  Object* result = process->NewLargeInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  int64 value = function(a0, a1, a2);
+  LargeInteger::cast(result)->set_value(value);
+  return result;
 }
 
 #define DEFINE_FOREIGN_ACCESSORS_INTEGER(suffix, type)                   \

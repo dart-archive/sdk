@@ -104,9 +104,11 @@ class Process {
   Object* NewArray(int length);
   Object* NewDouble(double value);
   Object* NewInteger(int64 value);
+
   // NewString allocates a string of the given length and fills the payload
   // with zeroes.
   Object* NewString(int length);
+
   // NewStringUninitialized allocates a string of the given length and
   // leaves the payload uninitialized. The payload contains whatever
   // was in that heap space before. Only use this if you intend to
@@ -115,6 +117,9 @@ class Process {
   Object* NewStringFromAscii(List<const char> value);
   Object* NewBoxed(Object* value);
   Object* NewStack(int length);
+
+  // Allocate a heap allocated integer with the given value.
+  Object* NewLargeInteger(int64 value);
 
   Object* NewInstance(Class* klass, bool immutable = false);
 

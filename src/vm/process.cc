@@ -284,6 +284,12 @@ Object* Process::NewBoxed(Object* value) {
   return result;
 }
 
+Object* Process::NewLargeInteger(int64 value) {
+  Class* large_integer_class = program()->large_integer_class();
+  Object* result = heap_.CreateLargeInteger(large_integer_class, value);
+  return result;
+}
+
 Object* Process::NewInstance(Class* klass, bool immutable) {
   Object* null = program()->null_object();
   Object* result = heap_.CreateHeapObject(klass, null, immutable);
