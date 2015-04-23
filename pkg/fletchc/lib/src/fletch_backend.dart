@@ -169,6 +169,13 @@ class CompiledClass {
       }
     }
   }
+
+  void createIsFunctionEntry(FletchBackend backend) {
+    int fletchSelector = backend.context.toFletchIsSelector(
+        backend.compiler.functionClass);
+    // TODO(ajohnsen): '0' is a placeholder. Generate dummy function?
+    methodTable[fletchSelector] = 0;
+  }
 }
 
 class FletchBackend extends Backend {
@@ -266,12 +273,15 @@ class FletchBackend extends Backend {
           element,
           fields,
           superclass);
+      if (element.lookupLocalMember(Compiler.CALL_OPERATOR_NAME) != null) {
+        compiledClass.createIsFunctionEntry(this);
+      }
       classes.add(compiledClass);
       return compiledClass;
     });
   }
 
-  CompiledClass createStubClass(int fields, CompiledClass superclass) {
+  CompiledClass createCallableStubClass(int fields, CompiledClass superclass) {
     int totalFields = fields + superclass.fields;
     int id = classes.length;
     CompiledClass compiledClass = new CompiledClass(
@@ -280,6 +290,7 @@ class FletchBackend extends Backend {
         totalFields,
         superclass);
     classes.add(compiledClass);
+    compiledClass.createIsFunctionEntry(this);
     return compiledClass;
   }
 
@@ -424,7 +435,7 @@ class FletchBackend extends Backend {
       ClosureInfo info = closureEnvironment.closures[closure];
       int fields = info.free.length;
       if (info.isThisFree) fields++;
-      return createStubClass(fields, compiledObjectClass);
+      return createCallableStubClass(fields, compiledObjectClass);
     });
   }
 
@@ -443,7 +454,7 @@ class FletchBackend extends Backend {
       FunctionSignature signature = function.signature;
       bool hasThis = function.hasThisArgument;
       int fields = hasThis ? 1 : 0;
-      CompiledClass compiledClass = createStubClass(
+      CompiledClass compiledClass = createCallableStubClass(
           fields,
           compiledObjectClass);
       CompiledFunction compiledFunction = new CompiledFunction(

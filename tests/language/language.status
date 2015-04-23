@@ -64,7 +64,6 @@ call_nonexistent_static_test/01: Fail
 call_nonexistent_static_test/04: Fail
 call_nonexistent_static_test/06: Fail
 call_nonexistent_static_test/09: Fail
-call_operator_test: Fail
 call_property_test: Fail
 call_through_getter_test: Fail
 call_type_literal_test/01: Fail
@@ -403,7 +402,6 @@ function_syntax_test/55: MissingCompileTimeError
 function_syntax_test/66: MissingCompileTimeError
 function_syntax_test/70: MissingCompileTimeError
 function_syntax_test/72: MissingCompileTimeError
-function_syntax_test/none: Fail
 function_test: Crash
 function_type2_test: Crash
 function_type_alias2_test: Fail
@@ -465,7 +463,6 @@ inferrer_constructor3_test: Fail
 inferrer_constructor4_test: Fail
 inferrer_constructor5_test/01: Fail
 inferrer_synthesized_constructor_test: Crash
-inlined_conditional_test: Fail
 instanceof2_test: Fail
 instanceof3_test: Fail
 instanceof4_test/01: Fail
@@ -484,7 +481,6 @@ invocation_mirror2_test: CompileTimeError
 invocation_mirror_invoke_on2_test: CompileTimeError
 invocation_mirror_invoke_on_test: CompileTimeError
 invocation_mirror_test: Crash
-is_function_test: Fail
 is_malformed_type_test/94: Fail
 is_malformed_type_test/95: Crash
 is_malformed_type_test/96: Fail
