@@ -46,6 +46,9 @@ main() {
   testImmutable(leaf);
   testImmutable(new Node(leaf, leaf));
   testImmutable(new Node(new Node(leaf, leaf), leaf));
+  testImmutable(() {});
+  int x;
+  testImmutable(() { x; });
 
   /// Check for mutable objects
   testMutable(new Fisk(1));
@@ -54,6 +57,8 @@ main() {
   testMutable(new Node(leaf, nonConstConstructorObj));
   testMutable(new Node(nonConstConstructorObj, leaf));
   testMutable(new Node(new Node(leaf, nonConstConstructorObj), leaf));
+  int y;
+  testMutable(() { y = 4; });
 
 
   // TODO(kustermann): Runtime types are not working ATM.

@@ -264,6 +264,11 @@ bool Scheduler::Run() {
 }
 
 void Scheduler::DeleteProcess(Process* process, ThreadState* thread_state) {
+  Process* blocked = process->blocked();
+  if (blocked != NULL && blocked->DecrementBlocked()) {
+    blocked->ChangeState(Process::kBlocked, Process::kReady);
+    EnqueueOnAnyThread(blocked);
+  }
   Program* program = process->program();
   delete process;
   if (--processes_ == 0) {
@@ -278,13 +283,18 @@ void Scheduler::DeleteProcess(Process* process, ThreadState* thread_state) {
 
 void Scheduler::RescheduleProcess(Process* process,
                                   ThreadState* state,
-                                  bool terminate) {
-  ASSERT(process->state() == Process::kRunning);
-  if (terminate) {
-    DeleteProcess(process, state);
+                                  bool terminate,
+                                  bool blocked) {
+  if (blocked) {
+    ASSERT(!terminate);
   } else {
-    process->ChangeState(Process::kRunning, Process::kReady);
-    EnqueueOnAnyThread(process, state->thread_id() + 1);
+    ASSERT(process->state() == Process::kRunning);
+    if (terminate) {
+      DeleteProcess(process, state);
+    } else {
+      process->ChangeState(Process::kRunning, Process::kReady);
+      EnqueueOnAnyThread(process, state->thread_id() + 1);
+    }
   }
 }
 
@@ -453,6 +463,8 @@ Process* Scheduler::InterpretProcess(Process* process,
     // If we've stolen the space from the process' heap, it is destined
     // to terminate and there's nothing anybody can do about it.
     bool terminate = process->heap()->space() == NULL;
+    bool blocked = process->IsBlocked();
+    if (blocked) process->ChangeState(Process::kRunning, Process::kBlocked);
 
     // The returned port currently has the lock. Unlock as soon as we know the
     // process is not kRunning (ChangeState either succeeded or failed).
@@ -463,19 +475,19 @@ Process* Scheduler::InterpretProcess(Process* process,
     ASSERT(target != NULL);
     if (target->ChangeState(Process::kSleeping, Process::kRunning)) {
       port->Unlock();
-      RescheduleProcess(process, thread_state, terminate);
+      RescheduleProcess(process, thread_state, terminate, blocked);
       return target;
     } else {
       ProcessQueue* target_queue = target->process_queue();
       if (target_queue != NULL && target_queue->TryDequeueEntry(target)) {
         port->Unlock();
         ASSERT(target->state() == Process::kRunning);
-        RescheduleProcess(process, thread_state, terminate);
+        RescheduleProcess(process, thread_state, terminate, blocked);
         return target;
       }
     }
     port->Unlock();
-    RescheduleProcess(process, thread_state, terminate);
+    RescheduleProcess(process, thread_state, terminate, blocked);
     return NULL;
   }
 

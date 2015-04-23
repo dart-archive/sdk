@@ -2097,7 +2097,9 @@ abstract class CodegenVisitor
         closureEnvironment);
     int classConstant = compiledFunction.allocateConstantFromClass(
         compiledClass.id);
-    builder.allocate(classConstant, compiledClass.fields);
+    bool immutable = !closureEnvironment.closures[function].free.any(
+        closureEnvironment.shouldBeBoxed);
+    builder.allocate(classConstant, compiledClass.fields, immutable: immutable);
 
     if (thisClosureIndex >= 0) {
       builder.dup();

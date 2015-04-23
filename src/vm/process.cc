@@ -139,7 +139,9 @@ Process::Process(Program* program)
       current_message_(NULL),
       program_gc_state_(kUnknown),
       errno_cache_(0),
-      debug_info_(NULL) {
+      debug_info_(NULL),
+      block_count_(0),
+      blocked_(NULL) {
   Array* static_fields = program->static_fields();
   int length = static_fields->length();
   statics_ = Array::cast(NewArray(length));
@@ -278,8 +280,7 @@ Object* Process::NewStringFromAscii(List<const char> value) {
 
 Object* Process::NewBoxed(Object* value) {
   Class* boxed_class = program()->boxed_class();
-  Object* result = heap_.CreateBoxed(boxed_class, value,
-                                     value->IsImmutable());
+  Object* result = heap_.CreateBoxed(boxed_class, value, false);
   return result;
 }
 

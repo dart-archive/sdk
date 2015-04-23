@@ -63,6 +63,7 @@ class Process {
     kRunning,
     kYielding,
     kBreakPoint,
+    kBlocked,
   };
 
   enum ProgramGCState {
@@ -223,6 +224,19 @@ class Process {
   void StoreErrno();
   void RestoreErrno();
 
+  void IncrementBlocked() {
+    ++block_count_;
+  }
+
+  bool DecrementBlocked() {
+    return (--block_count_) == 0;
+  }
+
+  bool IsBlocked() const { return block_count_ > 0; }
+
+  void set_blocked(Process* value) { blocked_ = value; }
+  Process* blocked() const { return blocked_; }
+
  private:
   void UpdateStackLimit();
 
@@ -280,6 +294,9 @@ class Process {
 
   DebugInfo* debug_info_;
 
+  std::atomic<int> block_count_;
+  Process* blocked_;
+
 #ifdef DEBUG
   bool true_then_false_;
 #endif
@@ -300,7 +317,7 @@ inline LookupCache::Entry* Process::LookupEntry(Object* receiver,
 }
 
 inline bool Process::ChangeState(State from, State to) {
-  if (from == kRunning || from == kYielding) {
+  if (from == kRunning || from == kYielding || from == kBlocked) {
     ASSERT(thread_state_ == NULL);
     ASSERT(state_ == from);
     state_ = to;

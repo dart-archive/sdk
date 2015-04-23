@@ -861,6 +861,98 @@ NATIVE(ProcessSpawn) {
   return process->program()->null_object();
 }
 
+static bool SpawnBlockingProcess(Process* process,
+                                 Function* entry,
+                                 Class* fn_class,
+                                 Instance* port,
+                                 Object* argument) {
+  // TODO(ajohnsen): Allow Port as argument?
+  if (!argument->IsImmutable()) return false;
+
+  // Spawn a new process and create a copy of the closure in the
+  // new process' heap.
+  Program* program = process->program();
+  Process* child = program->SpawnProcess();
+  Instance* closure = Instance::cast(child->NewInstance(fn_class));
+
+  // Clone the argument.
+  port = ClonePort(child, Instance::cast(port));
+
+  // Set up the stack as a call of the entry with one argument: closure.
+  child->SetupExecutionStack();
+  Stack* stack = child->stack();
+  uint8_t* bcp = entry->bytecode_address_for(0);
+
+  // The entry closure takes three arguments, 'this', the closure, and
+  // a single argument. Since the method is a static tear-off, 'this'
+  // is not used and simply be 'NULL'.
+  stack->set(0, NULL);
+  stack->set(1, closure);
+  stack->set(2, port);
+  stack->set(3, argument);
+
+  // Push 'NULL' return address. This will tell the stack-walker this is the
+  // last function.
+  stack->set(4, NULL);
+
+  // Finally push the bcp.
+  stack->set(5, reinterpret_cast<Object*>(bcp));
+  stack->set_top(5);
+
+  child->set_blocked(process);
+  process->IncrementBlocked();
+  program->scheduler()->EnqueueProcess(child, process->thread_state());
+  return true;
+}
+
+NATIVE(ProcessDivide) {
+  Function* entry = FunctionForClosure(Instance::cast(arguments[0]), 3);
+  ASSERT(entry != NULL);
+
+  Instance* fn = Instance::cast(arguments[1]);
+  Class* fn_class = fn->get_class();
+  if (FunctionForClosure(fn, 2) == NULL) {
+    return Failure::wrong_argument_type();
+  }
+
+  // Extract ports.
+  Instance* fixed = Instance::cast(arguments[2]);
+  Array* ports = Array::cast(fixed->GetInstanceField(0));
+  word ports_length = ports->length();
+
+  // Extract arguments.
+  Instance* growable = Instance::cast(arguments[3]);
+  word length = Smi::cast(growable->GetInstanceField(0))->value();
+  fixed = Instance::cast(growable->GetInstanceField(1));
+  Array* fn_arguments = Array::cast(fixed->GetInstanceField(0));
+
+  if (length != ports_length) return Failure::index_out_of_bounds();
+  if (length == 0) return process->program()->null_object();
+
+  // TODO(ajohnsen): We currently need a port to signal we are yielding to
+  // the scheduler.
+  Instance* instance = Instance::cast(ports->get(0));
+  Object* field = instance->GetInstanceField(0);
+  uword address = AsForeignWord(field);
+  Port* result_port = reinterpret_cast<Port*>(address);
+  result_port->Lock();
+
+  for (int i = 0; i < length; i++) {
+    Instance* instance = Instance::cast(ports->get(i));
+    ASSERT(instance->IsPort());
+    if (!SpawnBlockingProcess(process,
+                              entry,
+                              fn_class,
+                              instance,
+                              fn_arguments->get(i))) {
+      result_port->Unlock();
+      return Failure::wrong_argument_type();
+    }
+  }
+
+  return reinterpret_cast<Object*>(result_port);
+}
+
 NATIVE(CoroutineCurrent) {
   return process->coroutine();
 }

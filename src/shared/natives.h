@@ -118,6 +118,7 @@ namespace fletch {
   N(ListIndexSet,                "_FixedList", "[]=")                    \
                                                                          \
   N(ProcessSpawn,                "Process", "_spawn")                    \
+  N(ProcessDivide,               "Process", "_divide")                   \
   N(ProcessQueueGetMessage,      "Process", "_queueGetMessage")          \
   N(ProcessQueueGetChannel,      "Process", "_queueGetChannel")          \
                                                                          \

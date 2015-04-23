@@ -421,6 +421,36 @@ class Process {
   }
 
   /**
+   * Divide the elements in [arguments] into a matching number of processes with
+   * [fn] as entry. The port passed to [fn] can be used to communicate the
+   * result of invoking [fn] back to the current process.
+   * The current process blocks until all processes have terminated.
+   *
+   * The elements in [arguments] can be any immutable (see [isImmutable])
+   * object.
+   *
+   * The function [fn] must be a top-level or static function.
+   */
+  static List divide(void fn(Port port, argument), List arguments) {
+    // TODO(ajohnsen): Type check arguments.
+    int length = arguments.length;
+    List channels = new List(length);
+    List ports = new List(length);
+    for (int i = 0; i < length; i++) {
+      var channel = new Channel();
+      channels[i] = channel;
+      ports[i] = new Port(channel);
+      if (!isImmutable(arguments[i])) {
+      }
+    }
+    _divide(_entryDivide, fn, ports, arguments);
+    for (int i = 0; i < length; i++) {
+      channels[i] = channels[i].receive();
+    }
+    return channels;
+  }
+
+  /**
    * Exit the current process. If a non-null [to] port is provided,
    * the process will send the provided [value] to the [to] port as
    * its final action.
@@ -445,6 +475,31 @@ class Process {
   // Low-level helper function for spawning.
   @fletch.native static void _spawn(Function entry, Function fn, argument) {
     throw new ArgumentError();
+  }
+
+  // Low-level entry for dividing processes.
+  static void _entryDivide(fn, port, argument) {
+    try {
+      fn(port, argument);
+    } finally {
+      // TODO(ajohnsen): Exception?
+      Process.exit(to: port);
+    }
+  }
+
+  // Low-level helper function for dividing.
+  @fletch.native static _divide(
+      Function entry,
+      Function fn,
+      List<Port> ports,
+      List arguments) {
+    for (int i = 0; i < arguments.length; i++) {
+      if (!isImmutable(arguments[i])) {
+        throw new ArgumentError.value(
+            arguments[i], "@$i", "Cannot pass mutable data");
+      }
+    }
+    throw new ArgumentError.value(fn, "fn", "Entry function must be static");
   }
 
   static void _handleMessages() {

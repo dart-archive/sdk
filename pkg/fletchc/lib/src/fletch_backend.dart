@@ -703,7 +703,8 @@ class FletchBackend extends Backend {
     int arity = codegen.builder.functionArity;
     if (name == "Port.send" ||
         name == "Port._sendList" ||
-        name == "Port._sendExit") {
+        name == "Port._sendExit" ||
+        name == "Process._divide") {
       codegen.builder.invokeNativeYield(arity, descriptor.index);
     } else {
       codegen.builder.invokeNative(arity, descriptor.index);
