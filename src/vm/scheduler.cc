@@ -265,12 +265,14 @@ bool Scheduler::Run() {
 
 void Scheduler::DeleteProcess(Process* process, ThreadState* thread_state) {
   Process* blocked = process->blocked();
+  Program* program = process->program();
+  delete process;
+  // Don't unblock until 'process' is deleted, to make sure all references to
+  // 'blocked's heap are gone.
   if (blocked != NULL && blocked->DecrementBlocked()) {
     blocked->ChangeState(Process::kBlocked, Process::kReady);
     EnqueueOnAnyThread(blocked);
   }
-  Program* program = process->program();
-  delete process;
   if (--processes_ == 0) {
     NotifyAllThreads();
   } else if (Flags::gc_on_delete) {
