@@ -5,9 +5,13 @@
 part of dart.io;
 
 class _SocketBase {
+  // List of waiting sockets. Used by the GC to keep track of Channels that
+  // are kept alive by the event handler.
+  static final Set _waitingSockets = new Set();
+
   int _fd = -1;
-  var _channel;
-  var _port;
+  Channel _channel;
+  Port _port;
 
   void _addSocketToEventHandler() {
     if (sys.addToEventHandler(_fd) == -1) {
@@ -18,8 +22,11 @@ class _SocketBase {
   }
 
   int _waitFor(int mask) {
+    _waitingSockets.add(this);
     sys.setPortForNextEvent(_fd, _port, mask);
-    return _channel.receive();
+    var result = _channel.receive();
+    _waitingSockets.remove(this);
+    return result;
   }
 
   /**
