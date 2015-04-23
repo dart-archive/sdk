@@ -9,9 +9,7 @@ class Mutable {
 }
 
 // A simple entry that expects the argument to be a function taking 0 arguments.
-void entry(Port port, fn) {
-  Process.exit(value: fn(), to: port);
-}
+entry(fn) => fn();
 
 bool isArgumentError(o) => o is ArgumentError;
 

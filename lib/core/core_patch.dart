@@ -421,17 +421,16 @@ class Process {
   }
 
   /**
-   * Divide the elements in [arguments] into a matching number of processes with
-   * [fn] as entry. The port passed to [fn] can be used to communicate the
-   * result of invoking [fn] back to the current process.
-   * The current process blocks until all processes have terminated.
+   * Divide the elements in [arguments] into a matching number of processes
+   * with [fn] as entry. The current process blocks until all processes have
+   * terminated.
    *
    * The elements in [arguments] can be any immutable (see [isImmutable])
    * object.
    *
    * The function [fn] must be a top-level or static function.
    */
-  static List divide(void fn(Port port, argument), List arguments) {
+  static List divide(fn(argument), List arguments) {
     // TODO(ajohnsen): Type check arguments.
     int length = arguments.length;
     List channels = new List(length);
@@ -440,8 +439,6 @@ class Process {
       var channel = new Channel();
       channels[i] = channel;
       ports[i] = new Port(channel);
-      if (!isImmutable(arguments[i])) {
-      }
     }
     _divide(_entryDivide, fn, ports, arguments);
     for (int i = 0; i < length; i++) {
@@ -480,9 +477,9 @@ class Process {
   // Low-level entry for dividing processes.
   static void _entryDivide(fn, port, argument) {
     try {
-      fn(port, argument);
+      Process.exit(value: fn(argument), to: port);
     } finally {
-      // TODO(ajohnsen): Exception?
+      // TODO(ajohnsen): Handle exceptions?
       Process.exit(to: port);
     }
   }

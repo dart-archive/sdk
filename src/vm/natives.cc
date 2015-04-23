@@ -911,7 +911,7 @@ NATIVE(ProcessDivide) {
 
   Instance* fn = Instance::cast(arguments[1]);
   Class* fn_class = fn->get_class();
-  if (FunctionForClosure(fn, 2) == NULL) {
+  if (FunctionForClosure(fn, 1) == NULL) {
     return Failure::wrong_argument_type();
   }
 
