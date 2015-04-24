@@ -7,7 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		DA0C0CA91A9E107400127155 /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA0C0CA81A9E107400127155 /* libfletch.a */; };
+		DA4370B71AE9113000EEE52F /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA4370B61AE9113000EEE52F /* libfletch.a */; };
+		DA4370B91AE914A800EEE52F /* unix_ia32_hack.c in Sources */ = {isa = PBXBuildFile; fileRef = DA4370B81AE914A800EEE52F /* unix_ia32_hack.c */; };
 		DAB201051A9B78890087F7F9 /* struct.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAB200FF1A9B78890087F7F9 /* struct.cc */; };
 		DAB201061A9B78890087F7F9 /* todomvc_presenter.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAB201011A9B78890087F7F9 /* todomvc_presenter.cc */; };
 		DAB201071A9B78890087F7F9 /* todomvc_service.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAB201031A9B78890087F7F9 /* todomvc_service.cc */; };
@@ -34,7 +35,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		DA0C0CA81A9E107400127155 /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfletch.a; path = ../../../out/ReleaseXARM/libfletch.a; sourceTree = "<group>"; };
+		DA4370B61AE9113000EEE52F /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfletch.a; path = TodoMVC/libfletch.a; sourceTree = "<group>"; };
+		DA4370B81AE914A800EEE52F /* unix_ia32_hack.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = unix_ia32_hack.c; path = ../unix_ia32_hack.c; sourceTree = "<group>"; };
 		DAB200FF1A9B78890087F7F9 /* struct.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = struct.cc; sourceTree = "<group>"; };
 		DAB201001A9B78890087F7F9 /* struct.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = struct.h; sourceTree = "<group>"; };
 		DAB201011A9B78890087F7F9 /* todomvc_presenter.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = todomvc_presenter.cc; sourceTree = "<group>"; };
@@ -67,7 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DA0C0CA91A9E107400127155 /* libfletch.a in Frameworks */,
+				DA4370B71AE9113000EEE52F /* libfletch.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,7 +102,8 @@
 		DAC13EC21A9B6ED000D3159D = {
 			isa = PBXGroup;
 			children = (
-				DA0C0CA81A9E107400127155 /* libfletch.a */,
+				DA4370B81AE914A800EEE52F /* unix_ia32_hack.c */,
+				DA4370B61AE9113000EEE52F /* libfletch.a */,
 				DADB66D51A9CA17500BD8B6E /* Resources */,
 				DAB200FE1A9B78890087F7F9 /* cc */,
 				DAC13ECD1A9B6ED000D3159D /* TodoMVC */,
@@ -215,7 +218,7 @@
 		DAC13EC31A9B6ED000D3159D /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 0620;
 				ORGANIZATIONNAME = "Google Inc";
 				TargetAttributes = {
 					DAC13ECA1A9B6ED000D3159D = {
@@ -276,6 +279,7 @@
 				DAC5188E1AB70A7E00EAFF43 /* unicode.cc in Sources */,
 				DAB201071A9B78890087F7F9 /* todomvc_service.cc in Sources */,
 				DAC13ED11A9B6ED000D3159D /* main.m in Sources */,
+				DA4370B91AE914A800EEE52F /* unix_ia32_hack.c in Sources */,
 				DAB201061A9B78890087F7F9 /* todomvc_presenter.cc in Sources */,
 				DAC13F041A9B71F800D3159D /* AppDelegate.mm in Sources */,
 				DAB201051A9B78890087F7F9 /* struct.cc in Sources */,
@@ -317,6 +321,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = armv7;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
@@ -359,6 +364,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = armv7;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
@@ -394,7 +400,6 @@
 		DAC13EEF1A9B6ED000D3159D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = armv7;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEAD_CODE_STRIPPING = NO;
 				HEADER_SEARCH_PATHS = (
@@ -406,7 +411,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../../out/ReleaseXARM",
+					"$(PROJECT_DIR)/TodoMVC",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -415,7 +420,6 @@
 		DAC13EF01A9B6ED000D3159D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = armv7;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEAD_CODE_STRIPPING = NO;
 				HEADER_SEARCH_PATHS = (
@@ -427,7 +431,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../../out/ReleaseXARM",
+					"$(PROJECT_DIR)/TodoMVC",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
