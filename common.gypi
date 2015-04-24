@@ -231,12 +231,12 @@
                 # TODO(ager): Do not hard code the xcode sdk.
                 'OTHER_CPLUSPLUSFLAGS' : [
                   '-isysroot',
-                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk',
+                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.2.sdk',
                 ],
 
                 'OTHER_CFLAGS' : [
                   '-isysroot',
-                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk',
+                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.2.sdk',
                 ],
               },
             },
@@ -293,12 +293,12 @@
                 # TODO(ager): Do not hard code the xcode sdk.
                 'OTHER_CPLUSPLUSFLAGS' : [
                   '-isysroot',
-                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk',
+                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.2.sdk',
                 ],
 
                 'OTHER_CFLAGS' : [
                   '-isysroot',
-                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk',
+                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.2.sdk',
                 ],
               },
             },
