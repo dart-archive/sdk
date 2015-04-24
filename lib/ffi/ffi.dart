@@ -130,35 +130,48 @@ class Foreign {
 
   // Support for calling foreign functions that return
   // machine words as immediate integer value.
-  int icall$0() => _call$0(_value);
-  int icall$1(a0) => _call$1(_value, _convert(a0));
-  int icall$2(a0, a1) => _call$2(_value, _convert(a0), _convert(a1));
+  int icall$0() => _icall$0(_value);
+  int icall$1(a0) => _icall$1(_value, _convert(a0));
+  int icall$2(a0, a1) => _icall$2(_value, _convert(a0), _convert(a1));
   int icall$3(a0, a1, a2) {
-    return _call$3(_value, _convert(a0), _convert(a1), _convert(a2));
+    return _icall$3(_value, _convert(a0), _convert(a1), _convert(a2));
   }
   int icall$4(a0, a1, a2, a3) {
-    return _call$4(_value,
-                   _convert(a0),
-                   _convert(a1),
-                   _convert(a2),
-                   _convert(a3));
+    return _icall$4(_value, _convert(a0), _convert(a1), _convert(a2),
+                    _convert(a3));
   }
   int icall$5(a0, a1, a2, a3, a4) {
-    return _call$5(_value,
-                   _convert(a0),
-                   _convert(a1),
-                   _convert(a2),
-                   _convert(a3),
-                   _convert(a4));
+    return _icall$5(_value, _convert(a0), _convert(a1), _convert(a2),
+                    _convert(a3), _convert(a4));
   }
   int icall$6(a0, a1, a2, a3, a4, a5) {
-    return _call$6(_value,
-                   _convert(a0),
-                   _convert(a1),
-                   _convert(a2),
-                   _convert(a3),
-                   _convert(a4),
-                   _convert(a5));
+    return _icall$6(_value, _convert(a0), _convert(a1), _convert(a2),
+                    _convert(a3), _convert(a4), _convert(a5));
+  }
+
+  // Support for calling foreign functions with no return value.
+  void vcall$0() {
+    _vcall$0(_value);
+  }
+  void vcall$1(a0) {
+    _vcall$1(_value, _convert(a0));
+  }
+  void vcall$2(a0, a1) {
+    _vcall$2(_value, _convert(a0), _convert(a1));
+  }
+  void vcall$3(a0, a1, a2) {
+    _vcall$3(_value, _convert(a0), _convert(a1), _convert(a2));
+  }
+  void vcall$4(a0, a1, a2, a3) {
+    _vcall$4(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3));
+  }
+  void vcall$5(a0, a1, a2, a3, a4) {
+    _vcall$5(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
+             _convert(a4));
+  }
+  void vcall$6(a0, a1, a2, a3, a4, a5) {
+    _vcall$6(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
+             _convert(a4), _convert(a5));
   }
 
   // Support for calling foreign functions that
@@ -178,17 +191,17 @@ class Foreign {
   // machine words -- typically pointers -- encapulated in
   // the given foreign object arguments.
   Foreign pcall$0(Foreign foreign) {
-    foreign._value = _call$0(_value);
+    foreign._value = _icall$0(_value);
     return foreign;
   }
 
   Foreign pcall$1(Foreign foreign, a0) {
-    foreign._value = _call$1(_value, _convert(a0));
+    foreign._value = _icall$1(_value, _convert(a0));
     return foreign;
   }
 
   Foreign pcall$2(Foreign foreign, a0, a1) {
-    foreign._value = _call$2(_value, _convert(a0), _convert(a1));
+    foreign._value = _icall$2(_value, _convert(a0), _convert(a1));
     return foreign;
   }
 
@@ -215,13 +228,23 @@ class Foreign {
     throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
   }
 
-  @fletch.native external static int _call$0(int address);
-  @fletch.native external static int _call$1(int address, a0);
-  @fletch.native external static int _call$2(int address, a0, a1);
-  @fletch.native external static int _call$3(int address, a0, a1, a2);
-  @fletch.native external static int _call$4(int address, a0, a1, a2, a3);
-  @fletch.native external static int _call$5(int address, a0, a1, a2, a3, a4);
-  @fletch.native external static int _call$6(int address, a0, a1, a2, a3, a4, a5);
+  @fletch.native external static int _icall$0(int address);
+  @fletch.native external static int _icall$1(int address, a0);
+  @fletch.native external static int _icall$2(int address, a0, a1);
+  @fletch.native external static int _icall$3(int address, a0, a1, a2);
+  @fletch.native external static int _icall$4(int address, a0, a1, a2, a3);
+  @fletch.native external static int _icall$5(int address, a0, a1, a2, a3, a4);
+  @fletch.native external static int _icall$6(
+      int address, a0, a1, a2, a3, a4, a5);
+
+  @fletch.native external static int _vcall$0(int address);
+  @fletch.native external static int _vcall$1(int address, a0);
+  @fletch.native external static int _vcall$2(int address, a0, a1);
+  @fletch.native external static int _vcall$3(int address, a0, a1, a2);
+  @fletch.native external static int _vcall$4(int address, a0, a1, a2, a3);
+  @fletch.native external static int _vcall$5(int address, a0, a1, a2, a3, a4);
+  @fletch.native external static int _vcall$6(
+      int address, a0, a1, a2, a3, a4, a5);
 
   @fletch.native external static int _Lcall$wLw(int address, a0, a1, a2);
 

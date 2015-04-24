@@ -40,17 +40,17 @@ abstract class PerformanceService {
     switch (request.getInt32(0)) {
       case _TERMINATE_METHOD_ID:
         _terminated = true;
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _ECHO_METHOD_ID:
         var result = _impl.echo(request.getInt32(48));
         request.setInt32(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _COUNT_TREE_NODES_METHOD_ID:
         var result = _impl.countTreeNodes(getRoot(new TreeNode(), request));
         request.setInt32(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _BUILD_TREE_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(16);
@@ -58,7 +58,7 @@ abstract class PerformanceService {
         _impl.buildTree(request.getInt32(48), builder);
         var result = getResultMessage(builder);
         request.setInt64(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       default:
         throw new UnsupportedError("Unknown method");

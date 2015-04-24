@@ -60,7 +60,7 @@ struct ServiceRequest {
 };
 
 __attribute__((visibility("default")))
-int PostResultToService(char* buffer) {
+void PostResultToService(char* buffer) {
   ServiceRequest* request = reinterpret_cast<ServiceRequest*>(buffer);
   if (request->callback == NULL) {
     request->service->NotifyResult(request);
@@ -70,7 +70,6 @@ int PostResultToService(char* buffer) {
     ASSERT(callback != NULL);
     callback(buffer);
   }
-  return 0;
 }
 
 Service::Service(char* name, Port* port)

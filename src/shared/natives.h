@@ -138,13 +138,21 @@ namespace fletch {
   N(ForeignArchitecture,         "Foreign", "_architecture")             \
   N(ForeignConvertPort,          "Foreign", "_convertPort")              \
                                                                          \
-  N(ForeignCall0,                "Foreign", "_call$0")                   \
-  N(ForeignCall1,                "Foreign", "_call$1")                   \
-  N(ForeignCall2,                "Foreign", "_call$2")                   \
-  N(ForeignCall3,                "Foreign", "_call$3")                   \
-  N(ForeignCall4,                "Foreign", "_call$4")                   \
-  N(ForeignCall5,                "Foreign", "_call$5")                   \
-  N(ForeignCall6,                "Foreign", "_call$6")                   \
+  N(ForeignICall0,               "Foreign", "_icall$0")                  \
+  N(ForeignICall1,               "Foreign", "_icall$1")                  \
+  N(ForeignICall2,               "Foreign", "_icall$2")                  \
+  N(ForeignICall3,               "Foreign", "_icall$3")                  \
+  N(ForeignICall4,               "Foreign", "_icall$4")                  \
+  N(ForeignICall5,               "Foreign", "_icall$5")                  \
+  N(ForeignICall6,               "Foreign", "_icall$6")                  \
+                                                                         \
+  N(ForeignVCall0,               "Foreign", "_vcall$0")                  \
+  N(ForeignVCall1,               "Foreign", "_vcall$1")                  \
+  N(ForeignVCall2,               "Foreign", "_vcall$2")                  \
+  N(ForeignVCall3,               "Foreign", "_vcall$3")                  \
+  N(ForeignVCall4,               "Foreign", "_vcall$4")                  \
+  N(ForeignVCall5,               "Foreign", "_vcall$5")                  \
+  N(ForeignVCall6,               "Foreign", "_vcall$6")                  \
                                                                          \
   N(ForeignLCallwLw,             "Foreign", "_Lcall$wLw")                \
                                                                          \

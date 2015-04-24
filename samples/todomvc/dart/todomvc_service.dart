@@ -45,31 +45,31 @@ abstract class TodoMVCService {
     switch (request.getInt32(0)) {
       case _TERMINATE_METHOD_ID:
         _terminated = true;
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _CREATE_ITEM_METHOD_ID:
         _impl.createItem(getRoot(new BoxedString(), request));
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _DELETE_ITEM_METHOD_ID:
         _impl.deleteItem(request.getInt32(48));
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _COMPLETE_ITEM_METHOD_ID:
         _impl.completeItem(request.getInt32(48));
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _UNCOMPLETE_ITEM_METHOD_ID:
         _impl.uncompleteItem(request.getInt32(48));
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _CLEAR_ITEMS_METHOD_ID:
         _impl.clearItems();
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _DISPATCH_METHOD_ID:
         _impl.dispatch(request.getUint16(48));
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _SYNC_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(16);
@@ -77,11 +77,11 @@ abstract class TodoMVCService {
         _impl.sync(builder);
         var result = getResultMessage(builder);
         request.setInt64(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _RESET_METHOD_ID:
         _impl.reset();
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       default:
         throw new UnsupportedError("Unknown method");

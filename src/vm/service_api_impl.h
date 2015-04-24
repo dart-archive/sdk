@@ -17,7 +17,7 @@ struct ServiceRequest;
 // probably post a callback into dart? Fix the service param;
 // for now it is a pointer to a pointer so we can post something
 // into dart that dart can free.
-extern "C" int PostResultToService(char* buffer);
+extern "C" void PostResultToService(char* buffer);
 
 class Service {
  public:
@@ -37,7 +37,7 @@ class Service {
   char* name() const { return name_; }
 
  private:
-  friend int PostResultToService(char* buffer);
+  friend void PostResultToService(char* buffer);
 
   void NotifyResult(ServiceRequest* request);
   void WaitForResult(ServiceRequest* request);

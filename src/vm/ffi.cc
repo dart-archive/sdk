@@ -154,7 +154,7 @@ typedef int (*F4)(word, word, word, word);
 typedef int (*F5)(word, word, word, word, word);
 typedef int (*F6)(word, word, word, word, word, word);
 
-NATIVE(ForeignCall0) {
+NATIVE(ForeignICall0) {
   word address = AsForeignWord(arguments[0]);
   F0 function = reinterpret_cast<F0>(address);
   Object* result = process->NewLargeInteger(0);
@@ -164,7 +164,7 @@ NATIVE(ForeignCall0) {
   return result;
 }
 
-NATIVE(ForeignCall1) {
+NATIVE(ForeignICall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   F1 function = reinterpret_cast<F1>(address);
@@ -175,7 +175,7 @@ NATIVE(ForeignCall1) {
   return result;
 }
 
-NATIVE(ForeignCall2) {
+NATIVE(ForeignICall2) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -187,7 +187,7 @@ NATIVE(ForeignCall2) {
   return result;
 }
 
-NATIVE(ForeignCall3) {
+NATIVE(ForeignICall3) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -200,7 +200,7 @@ NATIVE(ForeignCall3) {
   return result;
 }
 
-NATIVE(ForeignCall4) {
+NATIVE(ForeignICall4) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -214,7 +214,7 @@ NATIVE(ForeignCall4) {
   return result;
 }
 
-NATIVE(ForeignCall5) {
+NATIVE(ForeignICall5) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -229,7 +229,7 @@ NATIVE(ForeignCall5) {
   return result;
 }
 
-NATIVE(ForeignCall6) {
+NATIVE(ForeignICall6) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -243,6 +243,84 @@ NATIVE(ForeignCall6) {
   int value = function(a0, a1, a2, a3, a4, a5);
   LargeInteger::cast(result)->set_value(value);
   return result;
+}
+
+typedef void (*VF0)();
+typedef void (*VF1)(word);
+typedef void (*VF2)(word, word);
+typedef void (*VF3)(word, word, word);
+typedef void (*VF4)(word, word, word, word);
+typedef void (*VF5)(word, word, word, word, word);
+typedef void (*VF6)(word, word, word, word, word, word);
+
+NATIVE(ForeignVCall0) {
+  word address = AsForeignWord(arguments[0]);
+  VF0 function = reinterpret_cast<VF0>(address);
+  function();
+  return Smi::FromWord(0);
+}
+
+NATIVE(ForeignVCall1) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  VF1 function = reinterpret_cast<VF1>(address);
+  function(a0);
+  return Smi::FromWord(0);
+}
+
+NATIVE(ForeignVCall2) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  VF2 function = reinterpret_cast<VF2>(address);
+  function(a0, a1);
+  return Smi::FromWord(0);
+}
+
+NATIVE(ForeignVCall3) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  word a2 = AsForeignWord(arguments[3]);
+  VF3 function = reinterpret_cast<VF3>(address);
+  function(a0, a1, a2);
+  return Smi::FromWord(0);
+}
+
+NATIVE(ForeignVCall4) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  word a2 = AsForeignWord(arguments[3]);
+  word a3 = AsForeignWord(arguments[4]);
+  VF4 function = reinterpret_cast<VF4>(address);
+  function(a0, a1, a2, a3);
+  return Smi::FromWord(0);
+}
+
+NATIVE(ForeignVCall5) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  word a2 = AsForeignWord(arguments[3]);
+  word a3 = AsForeignWord(arguments[4]);
+  word a4 = AsForeignWord(arguments[5]);
+  VF5 function = reinterpret_cast<VF5>(address);
+  function(a0, a1, a2, a3, a4);
+  return Smi::FromWord(0);
+}
+
+NATIVE(ForeignVCall6) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  word a2 = AsForeignWord(arguments[3]);
+  word a3 = AsForeignWord(arguments[4]);
+  word a4 = AsForeignWord(arguments[5]);
+  word a5 = AsForeignWord(arguments[6]);
+  VF6 function = reinterpret_cast<VF6>(address);
+  function(a0, a1, a2, a3, a4, a5);
+  return Smi::FromWord(0);
 }
 
 typedef int64 (*LwLw)(word, int64, word);

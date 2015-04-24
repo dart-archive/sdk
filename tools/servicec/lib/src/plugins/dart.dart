@@ -215,7 +215,7 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('    switch (request.getInt32(0)) {');
     writeln('      case _TERMINATE_METHOD_ID:');
     writeln('        _terminated = true;');
-    writeln('        _postResult.icall\$1(request);');
+    writeln('        _postResult.vcall\$1(request);');
     writeln('        break;');
 
     String setInt32() => 'request.setInt32(48, result)';
@@ -248,7 +248,7 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln('        var result = getResultMessage(builder);');
         writeln('        ${setInt64()};');
       }
-      writeln('        _postResult.icall\$1(request);');
+      writeln('        _postResult.vcall\$1(request);');
       writeln('        break;');
     }
     writeln('      default:');

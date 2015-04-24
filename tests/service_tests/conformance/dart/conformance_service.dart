@@ -49,17 +49,17 @@ abstract class ConformanceService {
     switch (request.getInt32(0)) {
       case _TERMINATE_METHOD_ID:
         _terminated = true;
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _GET_AGE_METHOD_ID:
         var result = _impl.getAge(getRoot(new Person(), request));
         request.setInt32(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _GET_BOXED_AGE_METHOD_ID:
         var result = _impl.getBoxedAge(getRoot(new PersonBox(), request));
         request.setInt32(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _GET_AGE_STATS_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(16);
@@ -67,7 +67,7 @@ abstract class ConformanceService {
         _impl.getAgeStats(getRoot(new Person(), request), builder);
         var result = getResultMessage(builder);
         request.setInt64(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _CREATE_AGE_STATS_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(16);
@@ -75,7 +75,7 @@ abstract class ConformanceService {
         _impl.createAgeStats(request.getInt32(48), request.getInt32(52), builder);
         var result = getResultMessage(builder);
         request.setInt64(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _CREATE_PERSON_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(32);
@@ -83,7 +83,7 @@ abstract class ConformanceService {
         _impl.createPerson(request.getInt32(48), builder);
         var result = getResultMessage(builder);
         request.setInt64(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _CREATE_NODE_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(32);
@@ -91,31 +91,31 @@ abstract class ConformanceService {
         _impl.createNode(request.getInt32(48), builder);
         var result = getResultMessage(builder);
         request.setInt64(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _COUNT_METHOD_ID:
         var result = _impl.count(getRoot(new Person(), request));
         request.setInt32(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _DEPTH_METHOD_ID:
         var result = _impl.depth(getRoot(new Node(), request));
         request.setInt32(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _FOO_METHOD_ID:
         _impl.foo();
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _BAR_METHOD_ID:
         var result = _impl.bar(getRoot(new Empty(), request));
         request.setInt32(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _PING_METHOD_ID:
         var result = _impl.ping();
         request.setInt32(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _FLIP_TABLE_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(16);
@@ -123,7 +123,7 @@ abstract class ConformanceService {
         _impl.flipTable(getRoot(new TableFlip(), request), builder);
         var result = getResultMessage(builder);
         request.setInt64(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       default:
         throw new UnsupportedError("Unknown method");

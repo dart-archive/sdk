@@ -41,7 +41,7 @@ abstract class BuildBotService {
     switch (request.getInt32(0)) {
       case _TERMINATE_METHOD_ID:
         _terminated = true;
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _REFRESH_METHOD_ID:
         MessageBuilder mb = new MessageBuilder(40);
@@ -49,19 +49,19 @@ abstract class BuildBotService {
         _impl.refresh(builder);
         var result = getResultMessage(builder);
         request.setInt64(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _SET_CONSOLE_COUNT_METHOD_ID:
         _impl.setConsoleCount(request.getInt32(48));
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _SET_CONSOLE_MINIMUM_INDEX_METHOD_ID:
         _impl.setConsoleMinimumIndex(request.getInt32(48));
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _SET_CONSOLE_MAXIMUM_INDEX_METHOD_ID:
         _impl.setConsoleMaximumIndex(request.getInt32(48));
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       default:
         throw new UnsupportedError("Unknown method");
