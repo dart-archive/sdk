@@ -341,15 +341,16 @@ abstract class CodegenVisitor
             selector, context);
         methodId = stub.methodId;
       } else {
-        generateUnimplementedError(
-            function.node,
-            "call to function does not match signature");
+        handleUnresolved(function.name);
         return;
       }
       for (Node argument in arguments) {
         visitForValue(argument);
       }
       arity = selector.argumentCount;
+    } else if (selector != null && selector.namedArguments.isNotEmpty) {
+      handleUnresolved(function.name);
+      return;
     } else {
       methodId = context.backend.functionMethodId(function);
       arity = loadPositionalArguments(arguments, function);
@@ -373,43 +374,33 @@ abstract class CodegenVisitor
    *
    * Return the number of arguments pushed onto the stack.
    */
-  int loadPositionalArguments(
-      NodeList arguments,
-      FunctionElement function) {
+  int loadPositionalArguments(NodeList arguments, FunctionElement function) {
     FunctionSignature signature = function.functionSignature;
     assert(!signature.optionalParametersAreNamed);
     int argumentCount = 0;
-    for (Node argument in arguments) {
-      argumentCount++;
-      visitForValue(argument);
-    }
-    // TODO(ajohnsen): Create a generic way of loading arguments (including
-    // named).
-    if (signature.parameterCount > argumentCount) {
-      int parameterCount = 0;
-      signature.orderedForEachParameter((ParameterElement parameter) {
-        if (parameterCount >= argumentCount) {
-          assert(!parameter.isNamed);
-          if (parameter.isOptional) {
-            Expression initializer = parameter.initializer;
-            if (initializer == null) {
-              builder.loadLiteralNull();
-            } else {
-              int constId = allocateConstantFromNode(
-                  initializer,
-                  elements: parameter.resolvedAst.elements);
-              builder.loadConst(constId);
-            }
+    Iterator<Node> it = arguments.iterator;
+    signature.orderedForEachParameter((ParameterElement parameter) {
+      if (it.moveNext()) {
+        visitForValue(it.current);
+      } else {
+        if (parameter.isOptional) {
+          Expression initializer = parameter.initializer;
+          if (initializer == null) {
+            builder.loadLiteralNull();
           } else {
-            generateUnimplementedError(
-                arguments,
-                "Arguments doesn't match parameters");
+            int constId = allocateConstantFromNode(
+                initializer,
+                elements: parameter.resolvedAst.elements);
+            builder.loadConst(constId);
           }
+        } else {
+          handleUnresolved(function.name);
         }
-        parameterCount++;
-      });
-    }
-    return signature.parameterCount;
+      }
+      argumentCount++;
+    });
+    if (it.moveNext()) handleUnresolved(function.name);
+    return argumentCount;
   }
 
   // Visit the expression [node] with the result pushed on top of the stack.
