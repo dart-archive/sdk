@@ -29,9 +29,7 @@ void GetPathOfExecutable(char* path, size_t path_length) {
 
 int SignalFileDescriptor() {
   sigset_t signal_mask;
-  sigemptyset(&signal_mask);
-  sigaddset(&signal_mask, SIGINT);
-  sigaddset(&signal_mask, SIGTERM);
+  sigfillset(&signal_mask);
 
   if (sigprocmask(SIG_BLOCK, &signal_mask, NULL) == -1) {
     FATAL1("sigprocmask failed: %s", strerror(errno));

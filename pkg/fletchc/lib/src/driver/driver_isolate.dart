@@ -275,22 +275,7 @@ Future<Null> readCommands(
 
       case DriverCommand.Signal:
         int signalNumber = command.data;
-        ProcessSignal signal = ProcessSignal.SIGTERM;
-        switch (signalNumber) {
-          case 2:
-            signal = ProcessSignal.SIGINT;
-            break;
-
-          case 15:
-            signal = ProcessSignal.SIGTERM;
-            break;
-
-          default:
-            Zone.ROOT.print("Warning: unknown signal number: $signalNumber");
-            signal = ProcessSignal.SIGTERM;
-            break;
-        }
-        vmProcess.kill(signal);
+        Process.runSync("kill", ["-$signalNumber", "${vmProcess.pid}"]);
         break;
 
       default:
