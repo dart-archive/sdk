@@ -130,6 +130,18 @@ const patch = "patch";
     return fletch.newList(length);
   }
 
+  @patch factory List.filled(int length, E fill) {
+    // All error handling on the length parameter is done at the implementation
+    // of new _List.
+    var result = fletch.newList(length);
+    if (fill != null) {
+      for (int i = 0; i < length; i++) {
+        result[i] = fill;
+      }
+    }
+    return result;
+  }
+
   @patch factory List.from(Iterable elements, {bool growable: true}) {
     // TODO(ajohnsen): elements.length can be slow if not a List. Consider
     // fast-path non-list & growable, and create internal helper for non-list &

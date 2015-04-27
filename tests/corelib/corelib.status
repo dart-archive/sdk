@@ -96,8 +96,7 @@ json_map_test: Crash
 linked_hash_map_from_iterable_test: Fail
 linked_hash_map_from_iterables_test: Fail
 list_as_map_test: Fail
-list_filled_type_argument_test: Crash
-list_fixed_test: Crash
+list_filled_type_argument_test: Fail
 list_get_range_test: Fail
 list_removeat_test: Fail
 list_reversed_test: Fail
@@ -200,7 +199,7 @@ shuffle_test: Crash
 sort_test: Fail
 splay_tree_from_iterable_test: Fail
 splay_tree_from_iterables_test: Fail
-splay_tree_test: Crash
+splay_tree_test: Fail
 stopwatch2_test: Fail
 string_buffer_test: Fail
 string_case_test/01: Fail
