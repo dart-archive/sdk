@@ -795,7 +795,7 @@ class LibraryUpdater extends JsFeatures {
     // newlySeenSelectors.
     for (Element e in enqueuer.codegen.generatedCode.keys) {
       if (e.isFunction && !e.isConstructor &&
-          e.functionSignature.hasOptionalParameters) {
+          (e as dynamic).functionSignature.hasOptionalParameters) {
         for (Selector selector in enqueuer.codegen.newlySeenSelectors) {
           // TODO(ahe): Group selectors by name at this point for improved
           // performance.
@@ -887,7 +887,7 @@ class LibraryUpdater extends JsFeatures {
     }
 
     Set<ConstantValue> newConstants = new Set<ConstantValue>.identity()..addAll(
-        compiler.backend.constants.compiledConstants);
+        (compiler.backend.constants as dynamic).compiledConstants);
     newConstants.removeAll(_compiledConstants);
 
     if (!newConstants.isEmpty) {
@@ -998,7 +998,7 @@ if (this.pendingStubs) {
   String prettyPrintJs(jsAst.Node node) {
     jsAst.JavaScriptPrintingOptions options =
         new jsAst.JavaScriptPrintingOptions();
-    jsAst.JavaScriptPrintingContext context =
+    jsAst.Dart2JSJavaScriptPrintingContext context =
         new jsAst.Dart2JSJavaScriptPrintingContext(compiler, null);
     jsAst.Printer printer = new jsAst.Printer(options, context);
     printer.blockOutWithoutBraces(node);
@@ -1192,7 +1192,7 @@ class RemovedClassUpdate extends RemovalUpdate with JsFeatures {
 
     element.forEachLocalMember((ElementX member) {
       if (!member.isInstanceMember) {
-        accessToStatics.add(emitter.staticFunctionAccess(member));
+        accessToStatics.add(emitter.staticFunctionAccess(member as dynamic));
       }
     });
   }

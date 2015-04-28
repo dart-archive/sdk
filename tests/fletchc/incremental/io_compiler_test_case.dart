@@ -3,36 +3,42 @@
 // BSD-style license that can be found in the LICENSE file.
 
 // Helpers for writing compiler tests running in browser.
-library trydart.web_compiler_test_case;
+library fletchc.test.io_compiler_test_case;
+
+import 'dart:io' show
+    File;
 
 import 'dart:async' show
     EventSink,
     Future;
 
-import 'dart:html' show
-    HttpRequest;
-
-import '../poi/compiler_test_case.dart' show
+import 'compiler_test_case.dart' show
     customUri,
     CompilerTestCase;
 
-import 'package:dart2js_incremental/dart2js_incremental.dart' show
+import 'package:fletchc/incremental/dart2js_incremental.dart' show
     IncrementalCompiler, OutputProvider;
 
 import 'package:compiler/compiler.dart' show
     Diagnostic;
 
-const String WEB_SCHEME = 'org.trydart.web';
+const String SDK_SCHEME = 'org.trydart.sdk';
+
+const String PACKAGE_SCHEME = 'org.trydart.packages';
+
+// TODO(ahe): Integrate with pkg/fletchc/lib/compiler.dart.
+const String _SDK_DIR =
+    const String.fromEnvironment("dart-sdk", defaultValue: "sdk/");
 
 /// A CompilerTestCase which runs in a browser.
-class WebCompilerTestCase extends CompilerTestCase {
+class IoCompilerTestCase extends CompilerTestCase {
   final IncrementalCompiler incrementalCompiler;
 
-  WebCompilerTestCase.init(/* Map or String */ source, Uri uri)
+  IoCompilerTestCase.init(/* Map or String */ source, Uri uri)
       : this.incrementalCompiler = makeCompiler(source, uri),
         super.init(null, uri, null);
 
-  WebCompilerTestCase(/* Map or String */ source, [String path])
+  IoCompilerTestCase(/* Map or String */ source, [String path])
       : this.init(source, customUri(path == null ? 'main.dart' : path));
 
   Future run() {
@@ -46,8 +52,8 @@ class WebCompilerTestCase extends CompilerTestCase {
   static IncrementalCompiler makeCompiler(
       /* Map or String */ source,
       Uri mainUri) {
-    Uri libraryRoot = new Uri(scheme: WEB_SCHEME, path: '/sdk/');
-    Uri packageRoot = new Uri(scheme: WEB_SCHEME, path: '/packages/');
+    Uri libraryRoot = new Uri(scheme: SDK_SCHEME, path: '/');
+    Uri packageRoot = new Uri(scheme: PACKAGE_SCHEME, path: '/');
 
     Map<Uri, String> sources = <Uri, String>{};
     if (source is String) {
@@ -60,8 +66,8 @@ class WebCompilerTestCase extends CompilerTestCase {
       throw new ArgumentError("[source] should be a String or a Map");
     }
 
-    WebInputProvider inputProvider =
-        new WebInputProvider(sources, libraryRoot, packageRoot);
+    IoInputProvider inputProvider =
+        new IoInputProvider(sources, libraryRoot, packageRoot);
 
     void diagnosticHandler(
         Uri uri, int begin, int end, String message, Diagnostic kind) {
@@ -81,10 +87,10 @@ class WebCompilerTestCase extends CompilerTestCase {
   }
 }
 
-/// An input provider which provides input via [HttpRequest].
-/// Includes one in-memory compilation unit [source] which is returned when
-/// [mainUri] is requested.
-class WebInputProvider {
+/// An input provider which provides input via [HttpRequest].  Includes
+/// in-memory compilation units [sources] which are returned when a matching
+/// key requested.
+class IoInputProvider {
   final Map<Uri, String> sources;
 
   final Uri libraryRoot;
@@ -93,22 +99,25 @@ class WebInputProvider {
 
   final Map<Uri, Future> cachedSources = new Map<Uri, Future>();
 
-  static final Map<String, Future> cachedRequests = new Map<String, Future>();
+  static final Map<Uri, Future> cachedFiles = new Map<Uri, Future>();
 
-  WebInputProvider(this.sources, this.libraryRoot, this.packageRoot);
+  IoInputProvider(this.sources, this.libraryRoot, this.packageRoot);
 
   Future call(Uri uri) {
     return cachedSources.putIfAbsent(uri, () {
       if (sources.containsKey(uri)) return new Future.value(sources[uri]);
-      if (uri.scheme == WEB_SCHEME) {
-        return cachedHttpRequest('/root_dart${uri.path}');
+      if (uri.scheme == SDK_SCHEME) {
+        return readCachedFile(new Uri.file('${_SDK_DIR}${uri.path}'));
+      } else if (uri.scheme == PACKAGE_SCHEME) {
+        throw "packages not supported";
       } else {
-        return cachedHttpRequest('$uri');
+        return readCachedFile(uri);
       }
     });
   }
 
-  static Future cachedHttpRequest(String uri) {
-    return cachedRequests.putIfAbsent(uri, () => HttpRequest.getString(uri));
+  static Future readCachedFile(Uri uri) {
+    return cachedFiles.putIfAbsent(
+        uri, () => new File.fromUri(uri).readAsString());
   }
 }

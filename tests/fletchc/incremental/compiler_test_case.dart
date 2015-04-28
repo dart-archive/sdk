@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 // Helper class for writing compiler tests.
-library trydart.compiler_test_case;
+library fletchc.test.compiler_test_case;
 
 import 'dart:async' show
     Future;
@@ -11,10 +11,10 @@ import 'dart:async' show
 export 'dart:async' show
     Future;
 
-import 'package:async_helper/async_helper.dart' show
+import 'async_helper.dart' show
     asyncTest;
 
-import '../../compiler/dart2js/compiler_helper.dart' show
+import 'package:compiler_tests/dart2js/compiler_helper.dart' show
     MockCompiler,
     compilerFor;
 
@@ -32,17 +32,6 @@ const String CONSTANT_CLASS = 'class Constant { const Constant(); }';
 const String SCHEME = 'org.trydart.compiler-test-case';
 
 Uri customUri(String path) => Uri.parse('$SCHEME:/$path');
-
-Future runTests(List<CompilerTestCase> tests) {
-  asyncTest(() => Future.forEach(tests, runTest));
-}
-
-Future runTest(CompilerTestCase test) {
-  print('\n{{{\n$test\n\n=== Test Output:\n');
-  return test.run().then((_) {
-  print('}}}');
-  });
-}
 
 abstract class CompilerTestCase {
   final String source;
@@ -74,13 +63,6 @@ abstract class CompilerTestCase {
   }
 
   Future run();
-
-  /// Returns a future for the mainApp after running the compiler.
-  Future<LibraryElement> compile() {
-    return loadMainApp().then((LibraryElement library) {
-      return compiler.runCompiler(scriptUri).then((_) => library);
-    });
-  }
 
   String toString() => source;
 }

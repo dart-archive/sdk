@@ -2,12 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library trydart.test.program_result;
+library fletchc.test.program_result;
 
 import 'dart:convert' show
     JSON;
 
-import '../poi/source_update.dart';
+import 'source_update.dart';
 
 class ProgramResult {
   final /* Map<String, String> or String */ code;
@@ -18,10 +18,6 @@ class ProgramResult {
 
   const ProgramResult(
       this.code, this.messages, {this.compileUpdatesShouldThrow: false});
-
-  List<String> messagesWith(String extra) {
-    return new List<String>.from(messages)..add(extra);
-  }
 
   String toString() {
     return """

@@ -2,35 +2,25 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library trydart.incremental_compilation_update_test;
-
-import 'dart:html' hide
-    Element;
+library fletchc.test.feature_test;
 
 import 'dart:async' show
     Future;
 
-import 'package:async_helper/async_helper.dart' show
+import 'async_helper.dart' show
     asyncTest;
 
 import 'package:expect/expect.dart' show
     Expect;
 
-import 'package:try/src/interaction_manager.dart' show
-    splitLines;
-
-import 'package:try/poi/scope_information_visitor.dart' show
+import 'package:fletchc/incremental/scope_information_visitor.dart' show
     ScopeInformationVisitor;
 
-import 'sandbox.dart' show
-    appendIFrame,
-    listener;
+import 'io_compiler_test_case.dart' show
+    IoCompilerTestCase,
+    IoInputProvider;
 
-import 'web_compiler_test_case.dart' show
-    WebCompilerTestCase,
-    WebInputProvider;
-
-import '../poi/compiler_test_case.dart' show
+import 'compiler_test_case.dart' show
     CompilerTestCase;
 
 import 'package:compiler/src/elements/elements.dart' show
@@ -40,7 +30,7 @@ import 'package:compiler/src/elements/elements.dart' show
 import 'package:compiler/src/dart2jslib.dart' show
     Compiler;
 
-import 'package:dart2js_incremental/dart2js_incremental.dart' show
+import 'package:fletchc/incremental/dart2js_incremental.dart' show
     IncrementalCompilationFailed;
 
 import 'program_result.dart';
@@ -1817,143 +1807,96 @@ method() {
 ];
 
 void main() {
-  listener.start();
-
-  document.head.append(lineNumberStyle());
-
-  summary = new SpanElement();
-  document.body.append(new HeadingElement.h1()
-      ..appendText("Incremental compiler tests")
-      ..append(summary));
-
-  String query = window.location.search;
-  int skip = 0;
-  if (query != null && query.length > 1) {
-    query = query.substring(1);
-    String skipParameter = Uri.splitQueryString(window.location.search)['skip'];
-    if (skipParameter != null) {
-      skip = int.parse(skipParameter);
-    }
-    String verboseParameter =
-        Uri.splitQueryString(window.location.search)['verbose'];
-    verboseStatus = verboseParameter != null;
-  }
+  int skip = const int.fromEnvironment("skip", defaultValue: 0);
   testCount += skip;
 
   return asyncTest(() => Future.forEach(tests.skip(skip), compileAndRun)
       .then(updateSummary));
 }
 
-SpanElement summary;
-
 int testCount = 1;
 
-bool verboseStatus = false;
+bool verboseStatus = const bool.fromEnvironment("verbose", defaultValue: false);
 
 void updateSummary(_) {
-  summary.text = " (${testCount - 1}/${tests.length})";
+  print(" (${testCount - 1}/${tests.length})");
 }
 
-Future compileAndRun(EncodedResult encodedResult) {
+Future compileAndRun(EncodedResult encodedResult) async {
   updateSummary(null);
   List<ProgramResult> programs = encodedResult.decode();
-  var status = new DivElement();
-  document.body.append(status);
 
-  IFrameElement iframe =
-      appendIFrame(
-          '/root_dart/tests/try/web/incremental_compilation_update.html',
-          document.body)
-          ..style.width = '100%'
-          ..style.height = '600px';
+  // The first program is compiled "fully". There rest are compiled below
+  // as incremental updates to this first program.
+  ProgramResult program = programs.first;
 
-  return listener.expect('iframe-ready').then((_) {
-    ProgramResult program = programs.first;
+  print("Full program #${testCount++}:");
+  print(numberedLines(program.code));
 
-    status.append(
-        new HeadingElement.h2()
-            ..appendText("Full program #${testCount++}:"));
-    status.append(numberedLines(program.code));
+  IoCompilerTestCase test = new IoCompilerTestCase(program.code);
+  String jsCode = await test.run();
+  print(jsCode);
 
-    status.style.color = 'orange';
-    WebCompilerTestCase test = new WebCompilerTestCase(program.code);
-    return test.run().then((String jsCode) {
-      status.style.color = 'red';
-      var objectUrl =
-          Url.createObjectUrl(new Blob([jsCode], 'application/javascript'));
+  // TODO(ahe): Run the compiled program.
 
-      iframe.contentWindow.postMessage(['add-script', objectUrl], '*');
-      Future future =
-          listener.expect(program.messagesWith('iframe-dart-main-done'));
-      return future.then((_) {
-        int version = 2;
-        return Future.forEach(programs.skip(1), (ProgramResult program) {
+  // TODO(ahe): Ensure the output is:
+  program.messages;
 
-          status.append(new HeadingElement.h2()..appendText("Update:"));
-          status.append(numberedLines(program.code));
+  int version = 2;
+  await Future.forEach(programs.skip(1), (ProgramResult program) async {
 
-          WebInputProvider inputProvider =
-              test.incrementalCompiler.inputProvider;
-          Uri base = test.scriptUri;
-          Map<String, String> code = program.code is String
-              ? { 'main.dart': program.code }
-              : program.code;
-          Map<Uri, Uri> uriMap = <Uri, Uri>{};
-          for (String name in code.keys) {
-            Uri uri = base.resolve('$name?v${version++}');
-            inputProvider.cachedSources[uri] = new Future.value(code[name]);
-            uriMap[base.resolve(name)] = uri;
-          }
-          Future future = test.incrementalCompiler.compileUpdates(
-              uriMap, logVerbose: logger, logTime: logger);
-          bool compileUpdatesThrew = false;
-          future = future.catchError((error, trace) {
-            String statusMessage;
-            Future result;
-            compileUpdatesThrew = true;
-            if (program.compileUpdatesShouldThrow &&
-                error is IncrementalCompilationFailed) {
-              statusMessage = "Expected error in compileUpdates.";
-              result = null;
-            } else {
-              statusMessage = "Unexpected error in compileUpdates.";
-              result = new Future.error(error, trace);
-            }
-            status.append(new HeadingElement.h3()..appendText(statusMessage));
-            return result;
-          });
-          return future.then((String update) {
-            if (program.compileUpdatesShouldThrow) {
-              Expect.isTrue(
-                  compileUpdatesThrew,
-                  "Expected an exception in compileUpdates");
-              Expect.isNull( update, "Expected update == null");
-              return null;
-            }
-            print({'update': update});
-            iframe.contentWindow.postMessage(['apply-update', update], '*');
+    print("Update:");
+    print(numberedLines(program.code));
 
-            return listener.expect(
-                program.messagesWith('iframe-dart-updated-main-done'))
-                .then((_) {
-                  // TODO(ahe): Enable SerializeScopeTestCase for multiple
-                  // parts.
-                  if (program.code is! String) return null;
-                  return new SerializeScopeTestCase(
-                      program.code, test.incrementalCompiler.mainApp,
-                      test.incrementalCompiler.compiler).run();
-                });
-          });
-        });
-      });
+    IoInputProvider inputProvider =
+        test.incrementalCompiler.inputProvider;
+    Uri base = test.scriptUri;
+    Map<String, String> code = program.code is String
+        ? { 'main.dart': program.code }
+        : program.code;
+    Map<Uri, Uri> uriMap = <Uri, Uri>{};
+    for (String name in code.keys) {
+      Uri uri = base.resolve('$name?v${version++}');
+      inputProvider.cachedSources[uri] = new Future.value(code[name]);
+      uriMap[base.resolve(name)] = uri;
+    }
+    Future future = test.incrementalCompiler.compileUpdates(
+        uriMap, logVerbose: logger, logTime: logger);
+    bool compileUpdatesThrew = false;
+    future = future.catchError((error, trace) {
+      String statusMessage;
+      Future result;
+      compileUpdatesThrew = true;
+      if (program.compileUpdatesShouldThrow &&
+          error is IncrementalCompilationFailed) {
+        statusMessage = "Expected error in compileUpdates.";
+        result = null;
+      } else {
+        statusMessage = "Unexpected error in compileUpdates.";
+        result = new Future.error(error, trace);
+      }
+      print(statusMessage);
+      return result;
     });
-  }).then((_) {
-    status.style.color = 'limegreen';
+    String update = await future;
+    if (program.compileUpdatesShouldThrow) {
+      Expect.isTrue(
+          compileUpdatesThrew,
+          "Expected an exception in compileUpdates");
+      Expect.isNull( update, "Expected update == null");
+      return null;
+    }
+    print({'update': update});
+    // TODO(ahe): Send ['apply-update', update] to VM.
 
-    // Remove the iframe and status to work around a bug in test.dart
-    // (https://code.google.com/p/dart/issues/detail?id=21691).
-    if (!verboseStatus) status.remove();
-    iframe.remove();
+    // TODO(ahe): Expect program.messages from VM.
+
+    // TODO(ahe): Enable SerializeScopeTestCase for multiple
+    // parts.
+    if (program.code is! String) return null;
+    return new SerializeScopeTestCase(
+        program.code, test.incrementalCompiler.mainApp,
+        test.incrementalCompiler.compiler).run();
   });
 }
 
@@ -1999,64 +1942,24 @@ class SerializeScopeTestCase extends CompilerTestCase {
 
 void logger(x) {
   print(x);
-  bool isCheckedMode = false;
-  assert(isCheckedMode = true);
-  int timeout = isCheckedMode ? TIMEOUT * 2 : TIMEOUT;
-  if (listener.elapsed > timeout) {
-    throw 'Test timed out.';
-  }
 }
 
-DivElement numberedLines(code) {
+String numberedLines(code) {
   if (code is! Map) {
     code = {'main.dart': code};
   }
-  DivElement result = new DivElement();
+  StringBuffer result = new StringBuffer();
   code.forEach((String fileName, String code) {
-    result.append(new HeadingElement.h4()..appendText(fileName));
-    DivElement lines = new DivElement();
-    result.append(lines);
-    lines.classes.add("output");
-
+    result.writeln("==> $fileName <==");
+    int lineNumber = 1;
     for (String text in splitLines(code)) {
-      PreElement line = new PreElement()
-          ..appendText(text.trimRight())
-          ..classes.add("line");
-      lines.append(line);
+      result.write("$lineNumber: $text");
+      lineNumber++;
     }
   });
-  return result;
+  return '$result';
 }
 
-StyleElement lineNumberStyle() {
-  StyleElement style = new StyleElement()..appendText('''
-h2, h3, h4 {
-  color: black;
-}
-
-.output {
-  padding: 0px;
-  counter-reset: line-number;
-  padding-bottom: 1em;
-}
-
-.line {
-  white-space: pre-wrap;
-  padding-left: 3.5em;
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
-.line::before {
-  counter-increment: line-number;
-  content: counter(line-number) " ";
-  position: absolute;
-  left: 0px;
-  width: 3em;
-  text-align: right;
-  background-color: lightgoldenrodyellow;
-}
-''');
-  style.type = 'text/css';
-  return style;
+List<String> splitLines(String text) {
+  return text.split(new RegExp('^', multiLine: true));
 }
