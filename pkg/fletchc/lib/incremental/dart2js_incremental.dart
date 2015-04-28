@@ -150,13 +150,15 @@ class IncrementalCompiler {
 
     jsAst.FunctionDeclaration mainRunner = jsAst.js.statement(r"""
 function dartMainRunner(main, args) {
-  #helper.patch(#updates + "\n//# sourceURL=initial_patch.js\n");
+  #helper.patch(#updates + '\n//# sourceURL=initial_patch.js\n');
   return main(args);
 }""", {'updates': updates, 'helper': backend.namer.accessIncrementalHelper});
 
-    jsAst.Printer printer = new jsAst.Printer(_compiler, null);
+    jsAst.Printer printer = new jsAst.Printer(
+        new jsAst.JavaScriptPrintingOptions(),
+        new jsAst.SimpleJavaScriptPrintingContext());
     printer.blockOutWithoutBraces(mainRunner);
-    return printer.outBuffer.getText();
+    return printer.context.getText();
   }
 }
 

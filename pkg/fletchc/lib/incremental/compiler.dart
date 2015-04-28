@@ -11,7 +11,7 @@ import 'dart:async' show
     StreamController,
     StreamSubscription;
 
-import 'package:dart2js_incremental/dart2js_incremental.dart' show
+import 'dart2js_incremental.dart' show
     IncrementalCompilationFailed,
     IncrementalCompiler;
 
@@ -19,6 +19,10 @@ import 'package:compiler/src/source_file_provider.dart' show
     FormattingDiagnosticHandler;
 
 import 'watcher.dart';
+
+// TODO(ahe): This file should be removed or merged into ../compiler.dart.
+const String _SDK_DIR =
+    const String.fromEnvironment("dart-sdk", defaultValue: "sdk/");
 
 main(List<String> arguments) {
   int updateCount = 0;
@@ -72,7 +76,7 @@ compileToStream(
     StreamController<CompilerEvent> controller) async {
   var watcher = new Watcher();
 
-  Uri libraryRoot = Uri.base.resolve('sdk/');
+  Uri libraryRoot = Uri.base.resolve(_SDK_DIR);
   Uri packageRoot = Uri.base.resolve('packages/');
 
   FormattingDiagnosticHandler diagnosticHandler =

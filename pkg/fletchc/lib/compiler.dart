@@ -20,7 +20,7 @@ import 'package:compiler/compiler.dart' show
     CompilerOutputProvider,
     DiagnosticHandler;
 
-import 'package:dart2js_incremental/compiler.dart' show
+import 'incremental/compiler.dart' show
     OutputProvider;
 
 import 'package:compiler/src/source_file_provider.dart' show
