@@ -56,6 +56,35 @@ class StackFrame {
   ScopeInfo scopeInfo(FletchCompiler compiler) {
     return compiler.scopeInfo(functionId, bytecodePointer - 1);
   }
+
+  bool isSameSourceLocation(FletchCompiler compiler,
+                            int offset,
+                            SourceLocation current) {
+    SourceLocation location = compiler.sourceLocation(functionId, offset);
+    // Treat locations for which we have no source information as the same
+    // as the previous location.
+    if (location == null || location.node == null) return true;
+    return location == current;
+  }
+
+  int stepBytecodePointer(FletchCompiler compiler, SourceLocation current) {
+    var bytecodes = compiler.lookupFunctionBytecodes(functionId);
+    // Zip forward to the current bytecode. The bytecode pointer in the stack
+    // frame is the return address which is one bytecode after the current one.
+    var offset = 0;
+    var i = 0;
+    for (; i < bytecodes.length; i++) {
+      var currentSize = bytecodes[i].size;
+      if (offset + currentSize == bytecodePointer) break;
+      offset += currentSize;
+    }
+    // Move forward while we know step should not stop.
+    while (!bytecodes[i].isBranching &&
+           isSameSourceLocation(compiler, offset, current)) {
+      offset += bytecodes[i++].size;
+    }
+    return offset <= bytecodePointer ? -1 : offset;
+  }
 }
 
 class StackTrace {
@@ -103,4 +132,12 @@ class StackTrace {
   ScopeInfo scopeInfo(FletchCompiler compiler, int frame) {
     return stackFrames[frame].scopeInfo(compiler);
   }
+
+  int stepBytecodePointer(FletchCompiler compiler, SourceLocation location) {
+    return stackFrames[0].stepBytecodePointer(compiler, location);
+  }
+
+  int get bytecodePointer => stackFrames[0].bytecodePointer;
+
+  int get methodId => stackFrames[0].functionId;
 }

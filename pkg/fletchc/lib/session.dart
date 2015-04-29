@@ -201,11 +201,22 @@ class Session {
     }
   }
 
+  Future stepTo(int methodId, int bcp) async {
+    if (!checkRunning()) return;
+    new ProcessStepTo(MapId.methods, methodId, bcp).addTo(vmSocket);
+    await handleProcessStop();
+  }
+
   Future step() async {
     if (!checkRunning()) return;
     SourceLocation previous = currentLocation;
     do {
-      await stepBytecode();
+      var bcp = currentStackTrace.stepBytecodePointer(compiler, previous);
+      if (bcp != -1) {
+        await stepTo(currentStackTrace.methodId, bcp);
+      } else {
+        await stepBytecode();
+      }
     } while (currentLocation == null ||
              currentLocation == previous ||
              currentLocation.node == null);

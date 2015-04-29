@@ -13,13 +13,12 @@ namespace fletch {
 
 class Breakpoint {
  public:
-  Breakpoint(Function* function, int bytecode_index, int id, bool is_one_shot);
   Breakpoint(Function* function,
              int bytecode_index,
              int id,
              bool is_one_shot,
-             Coroutine* coroutine,
-             int stack_height);
+             Coroutine* coroutine = NULL,
+             int stack_height = 0);
 
   Function* function() const { return function_; }
   int bytecode_index() const { return bytecode_index_; }
@@ -51,11 +50,11 @@ class DebugInfo {
   DebugInfo();
 
   bool ShouldBreak(uint8_t* bcp, Object** sp);
-  int SetBreakpoint(Function* function, int bytecode_index);
-  int SetStepOverBreakpoint(Function* function,
-                            int bytecode_index,
-                            Coroutine* coroutine,
-                            int stack_height);
+  int SetBreakpoint(Function* function,
+                    int bytecode_index,
+                    bool one_shot = false,
+                    Coroutine* coroutine = NULL,
+                    int stack_height = 0);
   bool DeleteBreakpoint(int id);
   bool is_stepping() const { return is_stepping_; }
   void set_is_stepping(bool value) { is_stepping_ = value; }

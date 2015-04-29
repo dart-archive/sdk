@@ -95,6 +95,8 @@ class LoadLocal0 extends Bytecode {
 
   String get name => 'LoadLocal0';
 
+  bool get isBranching => false;
+
   String get format => '';
 
   int get size => 1;
@@ -119,6 +121,8 @@ class LoadLocal1 extends Bytecode {
   Opcode get opcode => Opcode.LoadLocal1;
 
   String get name => 'LoadLocal1';
+
+  bool get isBranching => false;
 
   String get format => '';
 
@@ -145,6 +149,8 @@ class LoadLocal2 extends Bytecode {
 
   String get name => 'LoadLocal2';
 
+  bool get isBranching => false;
+
   String get format => '';
 
   int get size => 1;
@@ -170,6 +176,8 @@ class LoadLocal extends Bytecode {
   Opcode get opcode => Opcode.LoadLocal;
 
   String get name => 'LoadLocal';
+
+  bool get isBranching => false;
 
   String get format => 'B';
 
@@ -198,6 +206,8 @@ class LoadBoxed extends Bytecode {
 
   String get name => 'LoadBoxed';
 
+  bool get isBranching => false;
+
   String get format => 'B';
 
   int get size => 2;
@@ -224,6 +234,8 @@ class LoadStatic extends Bytecode {
   Opcode get opcode => Opcode.LoadStatic;
 
   String get name => 'LoadStatic';
+
+  bool get isBranching => false;
 
   String get format => 'I';
 
@@ -252,6 +264,8 @@ class LoadStaticInit extends Bytecode {
 
   String get name => 'LoadStaticInit';
 
+  bool get isBranching => false;
+
   String get format => 'I';
 
   int get size => 5;
@@ -278,6 +292,8 @@ class LoadField extends Bytecode {
   Opcode get opcode => Opcode.LoadField;
 
   String get name => 'LoadField';
+
+  bool get isBranching => false;
 
   String get format => 'B';
 
@@ -306,6 +322,8 @@ class LoadConst extends Bytecode {
 
   String get name => 'LoadConst';
 
+  bool get isBranching => false;
+
   String get format => 'I';
 
   int get size => 5;
@@ -332,6 +350,8 @@ class LoadConstUnfold extends Bytecode {
   Opcode get opcode => Opcode.LoadConstUnfold;
 
   String get name => 'LoadConstUnfold';
+
+  bool get isBranching => false;
 
   String get format => 'I';
 
@@ -360,6 +380,8 @@ class StoreLocal extends Bytecode {
 
   String get name => 'StoreLocal';
 
+  bool get isBranching => false;
+
   String get format => 'B';
 
   int get size => 2;
@@ -386,6 +408,8 @@ class StoreBoxed extends Bytecode {
   Opcode get opcode => Opcode.StoreBoxed;
 
   String get name => 'StoreBoxed';
+
+  bool get isBranching => false;
 
   String get format => 'B';
 
@@ -414,6 +438,8 @@ class StoreStatic extends Bytecode {
 
   String get name => 'StoreStatic';
 
+  bool get isBranching => false;
+
   String get format => 'I';
 
   int get size => 5;
@@ -441,6 +467,8 @@ class StoreField extends Bytecode {
 
   String get name => 'StoreField';
 
+  bool get isBranching => false;
+
   String get format => 'B';
 
   int get size => 2;
@@ -467,6 +495,8 @@ class LoadLiteralNull extends Bytecode {
 
   String get name => 'LoadLiteralNull';
 
+  bool get isBranching => false;
+
   String get format => '';
 
   int get size => 1;
@@ -491,6 +521,8 @@ class LoadLiteralTrue extends Bytecode {
   Opcode get opcode => Opcode.LoadLiteralTrue;
 
   String get name => 'LoadLiteralTrue';
+
+  bool get isBranching => false;
 
   String get format => '';
 
@@ -517,6 +549,8 @@ class LoadLiteralFalse extends Bytecode {
 
   String get name => 'LoadLiteralFalse';
 
+  bool get isBranching => false;
+
   String get format => '';
 
   int get size => 1;
@@ -541,6 +575,8 @@ class LoadLiteral0 extends Bytecode {
   Opcode get opcode => Opcode.LoadLiteral0;
 
   String get name => 'LoadLiteral0';
+
+  bool get isBranching => false;
 
   String get format => '';
 
@@ -567,6 +603,8 @@ class LoadLiteral1 extends Bytecode {
 
   String get name => 'LoadLiteral1';
 
+  bool get isBranching => false;
+
   String get format => '';
 
   int get size => 1;
@@ -592,6 +630,8 @@ class LoadLiteral extends Bytecode {
   Opcode get opcode => Opcode.LoadLiteral;
 
   String get name => 'LoadLiteral';
+
+  bool get isBranching => false;
 
   String get format => 'B';
 
@@ -620,6 +660,8 @@ class LoadLiteralWide extends Bytecode {
 
   String get name => 'LoadLiteralWide';
 
+  bool get isBranching => false;
+
   String get format => 'I';
 
   int get size => 5;
@@ -646,6 +688,8 @@ class InvokeMethod extends Bytecode {
   Opcode get opcode => Opcode.InvokeMethod;
 
   String get name => 'InvokeMethod';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -674,6 +718,8 @@ class InvokeMethodFast extends Bytecode {
 
   String get name => 'InvokeMethodFast';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -700,6 +746,8 @@ class InvokeMethodVtable extends Bytecode {
   Opcode get opcode => Opcode.InvokeMethodVtable;
 
   String get name => 'InvokeMethodVtable';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -728,6 +776,8 @@ class InvokeStatic extends Bytecode {
 
   String get name => 'InvokeStatic';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -754,6 +804,8 @@ class InvokeStaticUnfold extends Bytecode {
   Opcode get opcode => Opcode.InvokeStaticUnfold;
 
   String get name => 'InvokeStaticUnfold';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -782,6 +834,8 @@ class InvokeFactory extends Bytecode {
 
   String get name => 'InvokeFactory';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -808,6 +862,8 @@ class InvokeFactoryUnfold extends Bytecode {
   Opcode get opcode => Opcode.InvokeFactoryUnfold;
 
   String get name => 'InvokeFactoryUnfold';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -836,6 +892,8 @@ class InvokeNative extends Bytecode {
   Opcode get opcode => Opcode.InvokeNative;
 
   String get name => 'InvokeNative';
+
+  bool get isBranching => true;
 
   String get format => 'BB';
 
@@ -866,6 +924,8 @@ class InvokeNativeYield extends Bytecode {
 
   String get name => 'InvokeNativeYield';
 
+  bool get isBranching => true;
+
   String get format => 'BB';
 
   int get size => 3;
@@ -894,6 +954,8 @@ class InvokeTest extends Bytecode {
 
   String get name => 'InvokeTest';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -920,6 +982,8 @@ class InvokeEq extends Bytecode {
   Opcode get opcode => Opcode.InvokeEq;
 
   String get name => 'InvokeEq';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -948,6 +1012,8 @@ class InvokeLt extends Bytecode {
 
   String get name => 'InvokeLt';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -974,6 +1040,8 @@ class InvokeLe extends Bytecode {
   Opcode get opcode => Opcode.InvokeLe;
 
   String get name => 'InvokeLe';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -1002,6 +1070,8 @@ class InvokeGt extends Bytecode {
 
   String get name => 'InvokeGt';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1028,6 +1098,8 @@ class InvokeGe extends Bytecode {
   Opcode get opcode => Opcode.InvokeGe;
 
   String get name => 'InvokeGe';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -1056,6 +1128,8 @@ class InvokeAdd extends Bytecode {
 
   String get name => 'InvokeAdd';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1082,6 +1156,8 @@ class InvokeSub extends Bytecode {
   Opcode get opcode => Opcode.InvokeSub;
 
   String get name => 'InvokeSub';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -1110,6 +1186,8 @@ class InvokeMod extends Bytecode {
 
   String get name => 'InvokeMod';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1136,6 +1214,8 @@ class InvokeMul extends Bytecode {
   Opcode get opcode => Opcode.InvokeMul;
 
   String get name => 'InvokeMul';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -1164,6 +1244,8 @@ class InvokeTruncDiv extends Bytecode {
 
   String get name => 'InvokeTruncDiv';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1190,6 +1272,8 @@ class InvokeBitNot extends Bytecode {
   Opcode get opcode => Opcode.InvokeBitNot;
 
   String get name => 'InvokeBitNot';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -1218,6 +1302,8 @@ class InvokeBitAnd extends Bytecode {
 
   String get name => 'InvokeBitAnd';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1244,6 +1330,8 @@ class InvokeBitOr extends Bytecode {
   Opcode get opcode => Opcode.InvokeBitOr;
 
   String get name => 'InvokeBitOr';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -1272,6 +1360,8 @@ class InvokeBitXor extends Bytecode {
 
   String get name => 'InvokeBitXor';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1298,6 +1388,8 @@ class InvokeBitShr extends Bytecode {
   Opcode get opcode => Opcode.InvokeBitShr;
 
   String get name => 'InvokeBitShr';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -1326,6 +1418,8 @@ class InvokeBitShl extends Bytecode {
 
   String get name => 'InvokeBitShl';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1351,6 +1445,8 @@ class Pop extends Bytecode {
   Opcode get opcode => Opcode.Pop;
 
   String get name => 'Pop';
+
+  bool get isBranching => false;
 
   String get format => '';
 
@@ -1378,6 +1474,8 @@ class Return extends Bytecode {
   Opcode get opcode => Opcode.Return;
 
   String get name => 'Return';
+
+  bool get isBranching => true;
 
   String get format => 'BB';
 
@@ -1407,6 +1505,8 @@ class BranchLong extends Bytecode {
 
   String get name => 'BranchLong';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1433,6 +1533,8 @@ class BranchIfTrueLong extends Bytecode {
   Opcode get opcode => Opcode.BranchIfTrueLong;
 
   String get name => 'BranchIfTrueLong';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -1461,6 +1563,8 @@ class BranchIfFalseLong extends Bytecode {
 
   String get name => 'BranchIfFalseLong';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1487,6 +1591,8 @@ class BranchBack extends Bytecode {
   Opcode get opcode => Opcode.BranchBack;
 
   String get name => 'BranchBack';
+
+  bool get isBranching => true;
 
   String get format => 'B';
 
@@ -1515,6 +1621,8 @@ class BranchBackIfTrue extends Bytecode {
 
   String get name => 'BranchBackIfTrue';
 
+  bool get isBranching => true;
+
   String get format => 'B';
 
   int get size => 2;
@@ -1541,6 +1649,8 @@ class BranchBackIfFalse extends Bytecode {
   Opcode get opcode => Opcode.BranchBackIfFalse;
 
   String get name => 'BranchBackIfFalse';
+
+  bool get isBranching => true;
 
   String get format => 'B';
 
@@ -1569,6 +1679,8 @@ class BranchBackLong extends Bytecode {
 
   String get name => 'BranchBackLong';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1595,6 +1707,8 @@ class BranchBackIfTrueLong extends Bytecode {
   Opcode get opcode => Opcode.BranchBackIfTrueLong;
 
   String get name => 'BranchBackIfTrueLong';
+
+  bool get isBranching => true;
 
   String get format => 'I';
 
@@ -1623,6 +1737,8 @@ class BranchBackIfFalseLong extends Bytecode {
 
   String get name => 'BranchBackIfFalseLong';
 
+  bool get isBranching => true;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1650,6 +1766,8 @@ class PopAndBranchLong extends Bytecode {
   Opcode get opcode => Opcode.PopAndBranchLong;
 
   String get name => 'PopAndBranchLong';
+
+  bool get isBranching => true;
 
   String get format => 'BI';
 
@@ -1680,6 +1798,8 @@ class PopAndBranchBackLong extends Bytecode {
 
   String get name => 'PopAndBranchBackLong';
 
+  bool get isBranching => true;
+
   String get format => 'BI';
 
   int get size => 6;
@@ -1708,6 +1828,8 @@ class Allocate extends Bytecode {
 
   String get name => 'Allocate';
 
+  bool get isBranching => false;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1734,6 +1856,8 @@ class AllocateUnfold extends Bytecode {
   Opcode get opcode => Opcode.AllocateUnfold;
 
   String get name => 'AllocateUnfold';
+
+  bool get isBranching => false;
 
   String get format => 'I';
 
@@ -1762,6 +1886,8 @@ class AllocateImmutable extends Bytecode {
 
   String get name => 'AllocateImmutable';
 
+  bool get isBranching => false;
+
   String get format => 'I';
 
   int get size => 5;
@@ -1777,7 +1903,7 @@ class AllocateImmutable extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'allocateim @${uint32Argument0}';
+  String toString() => 'allocateim ${uint32Argument0}';
 }
 
 class AllocateImmutableUnfold extends Bytecode {
@@ -1788,6 +1914,8 @@ class AllocateImmutableUnfold extends Bytecode {
   Opcode get opcode => Opcode.AllocateImmutableUnfold;
 
   String get name => 'AllocateImmutableUnfold';
+
+  bool get isBranching => false;
 
   String get format => 'I';
 
@@ -1815,6 +1943,8 @@ class AllocateBoxed extends Bytecode {
 
   String get name => 'AllocateBoxed';
 
+  bool get isBranching => false;
+
   String get format => '';
 
   int get size => 1;
@@ -1839,6 +1969,8 @@ class Negate extends Bytecode {
   Opcode get opcode => Opcode.Negate;
 
   String get name => 'Negate';
+
+  bool get isBranching => false;
 
   String get format => '';
 
@@ -1865,6 +1997,8 @@ class StackOverflowCheck extends Bytecode {
 
   String get name => 'StackOverflowCheck';
 
+  bool get isBranching => true;
+
   String get format => '';
 
   int get size => 5;
@@ -1889,6 +2023,8 @@ class Throw extends Bytecode {
   Opcode get opcode => Opcode.Throw;
 
   String get name => 'Throw';
+
+  bool get isBranching => true;
 
   String get format => '';
 
@@ -1917,6 +2053,8 @@ class SubroutineCall extends Bytecode {
 
   String get name => 'SubroutineCall';
 
+  bool get isBranching => true;
+
   String get format => 'II';
 
   int get size => 9;
@@ -1944,6 +2082,8 @@ class SubroutineReturn extends Bytecode {
 
   String get name => 'SubroutineReturn';
 
+  bool get isBranching => true;
+
   String get format => '';
 
   int get size => 1;
@@ -1968,6 +2108,8 @@ class ProcessYield extends Bytecode {
   Opcode get opcode => Opcode.ProcessYield;
 
   String get name => 'ProcessYield';
+
+  bool get isBranching => true;
 
   String get format => '';
 
@@ -1994,6 +2136,8 @@ class CoroutineChange extends Bytecode {
 
   String get name => 'CoroutineChange';
 
+  bool get isBranching => true;
+
   String get format => '';
 
   int get size => 1;
@@ -2018,6 +2162,8 @@ class Identical extends Bytecode {
   Opcode get opcode => Opcode.Identical;
 
   String get name => 'Identical';
+
+  bool get isBranching => true;
 
   String get format => '';
 
@@ -2044,6 +2190,8 @@ class IdenticalNonNumeric extends Bytecode {
 
   String get name => 'IdenticalNonNumeric';
 
+  bool get isBranching => true;
+
   String get format => '';
 
   int get size => 1;
@@ -2069,6 +2217,8 @@ class EnterNoSuchMethod extends Bytecode {
 
   String get name => 'EnterNoSuchMethod';
 
+  bool get isBranching => true;
+
   String get format => '';
 
   int get size => 1;
@@ -2093,6 +2243,8 @@ class ExitNoSuchMethod extends Bytecode {
   Opcode get opcode => Opcode.ExitNoSuchMethod;
 
   String get name => 'ExitNoSuchMethod';
+
+  bool get isBranching => true;
 
   String get format => '';
 
@@ -2120,6 +2272,8 @@ class FrameSize extends Bytecode {
 
   String get name => 'FrameSize';
 
+  bool get isBranching => false;
+
   String get format => 'B';
 
   int get size => 2;
@@ -2146,6 +2300,8 @@ class MethodEnd extends Bytecode {
   Opcode get opcode => Opcode.MethodEnd;
 
   String get name => 'MethodEnd';
+
+  bool get isBranching => false;
 
   String get format => 'I';
 

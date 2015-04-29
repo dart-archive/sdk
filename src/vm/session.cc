@@ -148,6 +148,17 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kProcessStepTo: {
+        int map_id = connection_->ReadInt();
+        int64 id = connection_->ReadInt64();
+        int bcp = connection_->ReadInt();
+        Function* function = Function::cast(maps_[map_id]->LookupById(id));
+        DebugInfo* debug_info = process_->debug_info();
+        debug_info->SetBreakpoint(function, bcp, true);
+        program()->scheduler()->ProcessContinue(process_);
+        break;
+      }
+
       case Connection::kProcessContinue: {
         Scheduler* scheduler = program()->scheduler();
         scheduler->ProcessContinue(process_);

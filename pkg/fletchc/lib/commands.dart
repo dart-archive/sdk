@@ -566,6 +566,23 @@ class ProcessStepOver extends Command {
       : super(CommandCode.ProcessStepOver);
 }
 
+class ProcessStepTo extends Command {
+  final MapId id;
+  final int methodId;
+  final int bcp;
+
+  const ProcessStepTo(this.id, this.methodId, this.bcp)
+      : super(CommandCode.ProcessStepTo);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(id.index)
+        ..addUint64(methodId)
+        ..addUint32(bcp)
+        ..sendOn(sink, code);
+  }
+}
+
 class ProcessContinue extends Command {
   const ProcessContinue()
       : super(CommandCode.ProcessContinue);
@@ -640,6 +657,7 @@ enum CommandCode {
   ProcessDeleteBreakpoint,
   ProcessStep,
   ProcessStepOver,
+  ProcessStepTo,
   ProcessContinue,
   ProcessBacktrace,
   ProcessBreakpoint,

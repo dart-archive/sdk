@@ -12,17 +12,6 @@ namespace fletch {
 Breakpoint::Breakpoint(Function* function,
                        int bytecode_index,
                        int id,
-                       bool is_one_shot)
-    : function_(function),
-      bytecode_index_(bytecode_index),
-      id_(id),
-      is_one_shot_(is_one_shot),
-      coroutine_(NULL),
-      stack_height_(0) { }
-
-Breakpoint::Breakpoint(Function* function,
-                       int bytecode_index,
-                       int id,
                        bool is_one_shot,
                        Coroutine* coroutine,
                        int stack_height)
@@ -68,23 +57,15 @@ bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
   return false;
 }
 
-int DebugInfo::SetBreakpoint(Function* function, int bytecode_index) {
-  Breakpoint breakpoint(function, bytecode_index, next_breakpoint_id(), false);
-  uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
-  BreakpointMap::const_iterator it = breakpoints_.find(bcp);
-  if (it != breakpoints_.end()) return it->second.id();
-  breakpoints_.insert({bcp, breakpoint});
-  return breakpoint.id();
-}
-
-int DebugInfo::SetStepOverBreakpoint(Function* function,
-                                     int bytecode_index,
-                                     Coroutine* coroutine,
-                                     int stack_height) {
+int DebugInfo::SetBreakpoint(Function* function,
+                             int bytecode_index,
+                             bool one_shot,
+                             Coroutine* coroutine,
+                             int stack_height) {
   Breakpoint breakpoint(function,
                         bytecode_index,
                         next_breakpoint_id(),
-                        true,
+                        one_shot,
                         coroutine,
                         stack_height);
   uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;

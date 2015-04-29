@@ -30,7 +30,7 @@ class InterpreterGenerator {
   virtual void GeneratePrologue() = 0;
   virtual void GenerateEpilogue() = 0;
 
-#define V(name, format, size, stack_diff, print) \
+#define V(name, branching, format, size, stack_diff, print)      \
   virtual void Do##name() = 0;
 BYTECODES_DO(V)
 #undef V
@@ -51,8 +51,8 @@ void InterpreterGenerator::Generate() {
   GeneratePrologue();
   GenerateEpilogue();
 
-#define V(name, format, size, stack_diff, print) \
-  assembler()->Bind("BC_" #name);                \
+#define V(name, branching, format, size, stack_diff, print)      \
+  assembler()->Bind("BC_" #name);                                \
   Do##name();
 BYTECODES_DO(V)
 #undef V
@@ -66,7 +66,7 @@ INTRINSICS_DO(V)
   // TODO(kasperl): Let this go through the assembler.
   assembler()->Align(16);
   printf("\nInterpretFast_DispatchTable:\n");
-#define V(name, format, size, stack_diff, print) \
+#define V(name, branching, format, size, stack_diff, print)      \
   assembler()->DefineLong("BC_" #name);
 BYTECODES_DO(V)
 #undef V

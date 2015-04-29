@@ -577,10 +577,8 @@ void Process::PrepareStepOver() {
   int stack_height = expected_sp - stack()->Pointer(0);
   int bytecode_index =
       current_bcp + Bytecode::Size(opcode) - function->bytecode_address_for(0);
-  debug_info_->SetStepOverBreakpoint(function,
-                                     bytecode_index,
-                                     coroutine_,
-                                     stack_height);
+  debug_info_->SetBreakpoint(
+    function, bytecode_index, true, coroutine_, stack_height);
 }
 
 void Process::CookStacks(int number_of_stacks) {

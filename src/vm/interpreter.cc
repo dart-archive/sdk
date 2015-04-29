@@ -167,7 +167,7 @@ class Engine : public State {
   DISPATCH()
 
 Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
-#define LABEL(name, format, length, stack_diff, print) &&name##Label,
+#define LABEL(name, branching, format, length, stack_diff, print) &&name##Label,
   static void* kDispatchTable[] = {
     BYTECODES_DO(LABEL)
   };

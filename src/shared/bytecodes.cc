@@ -52,7 +52,7 @@ int Bytecode::Print(uint8* bcp, Writer* writer) {
 }
 
 int Bytecode::sizes_[kNumBytecodes] = {
-#define BYTECODE_SIZE(name, format, size, stack_diff, print) size,
+#define BYTECODE_SIZE(name, branching, format, size, stack_diff, print) size,
   BYTECODES_DO(BYTECODE_SIZE)
 #undef BYTECODE_SIZE
 };
@@ -66,7 +66,7 @@ int Bytecode::Size(Opcode opcode) {
 
 const char* Bytecode::PrintFormat(Opcode opcode) {
   const char* print_formats[kNumBytecodes] = {
-#define BYTECODE_PRINT_FORMAT(name, format, size, stack_diff, print) \
+#define BYTECODE_PRINT_FORMAT(name, branching, format, size, stack_diff, print)\
     print,
   BYTECODES_DO(BYTECODE_PRINT_FORMAT)
 #undef BYTECODE_PRINT_FORMAT
@@ -76,7 +76,7 @@ const char* Bytecode::PrintFormat(Opcode opcode) {
 
 const char* Bytecode::BytecodeFormat(Opcode opcode) {
   const char* bytecode_formats[kNumBytecodes] = {
-#define BYTECODE_FORMAT(name, format, size, stack_diff, print) \
+#define BYTECODE_FORMAT(name, branching, format, size, stack_diff, print) \
     format,
   BYTECODES_DO(BYTECODE_FORMAT)
 #undef BYTECODE_FORMAT
@@ -85,7 +85,8 @@ const char* Bytecode::BytecodeFormat(Opcode opcode) {
 }
 
 int Bytecode::stack_diffs_[kNumBytecodes] = {
-#define BYTECODE_STACK_DIFF(name, format, size, stack_diff, print) stack_diff,
+#define BYTECODE_STACK_DIFF(name, branching, format, size, stack_diff, print) \
+    stack_diff,
   BYTECODES_DO(BYTECODE_STACK_DIFF)
 #undef BYTECODE_STACK_DIFF
 };
