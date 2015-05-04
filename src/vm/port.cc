@@ -209,8 +209,10 @@ NATIVE(SystemIncrementPortRef) {
   Object* field = instance->GetInstanceField(0);
   uword address = AsForeignWord(field);
   Port* port = reinterpret_cast<Port*>(address);
+  Object* result = process->ToInteger(address);
+  if (result == Failure::retry_after_gc()) return result;
   port->IncrementRef();
-  return process->ToInteger(address);
+  return result;
 }
 
 }  // namespace fletch

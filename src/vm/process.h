@@ -118,9 +118,6 @@ class Process {
   Object* NewBoxed(Object* value);
   Object* NewStack(int length);
 
-  // Allocate a heap allocated integer with the given value.
-  Object* NewLargeInteger(int64 value);
-
   Object* NewInstance(Class* klass, bool immutable = false);
 
   // Returns either a Smi or a LargeInteger.
