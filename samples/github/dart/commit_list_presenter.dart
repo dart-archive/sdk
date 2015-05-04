@@ -8,14 +8,28 @@ import '../generated/dart/github.dart';
 class CommitListPresenter {
   Repository _repository;
 
-  // TODO(zerny): Make these adjustable from the UI.
   int _offset = 0;
-  int _visibleCount = 20;
+  int _visibleCount = 0;
 
-  CommitListPresenter(this._repository);
+  // TODO(zerny): Cache the tear-off to preserve identity. Eliminate this once
+  // issue #25 is resovled.
+  Function _setDisplayRangeTearOff;
+
+  CommitListPresenter(this._repository) {
+    _setDisplayRangeTearOff = _setDisplayRange;
+  }
 
   CommitListNode present(Node previous) {
-    return new CommitListNode(commits: _presentCommits());
+    return new CommitListNode(
+        startOffset: _offset,
+        commits: _presentCommits(),
+        display: _setDisplayRangeTearOff);
+  }
+
+  void _setDisplayRange(int start, int end) {
+    assert(start < end);
+    _offset = start;
+    _visibleCount = end - start;
   }
 
   List<CommitNode> _presentCommits() {
@@ -24,8 +38,6 @@ class CommitListPresenter {
       int index = _offset + i;
       Map<String, dynamic> json = _repository.getCommitAt(index);
       commits[i] = new CommitNode(
-          // TODO(zerny): Can we construct a meaningful revision here?
-          revision: 0,
           author: json['commit']['author']['name'],
           message: json['commit']['message']);
     }

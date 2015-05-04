@@ -12,6 +12,7 @@ import 'package:http/http.dart';
 class GithubMock {
   final String host;
   final int delay;
+  bool verbose = false;
   ServerSocket _server;
   static const String _requestSuffix = ' HTTP/1.1';
 
@@ -33,6 +34,7 @@ class GithubMock {
   }
 
   void run() {
+    if (verbose) print('Running server on $host:$port');
     while (_server != null) {
       try {
         _accept(_server.accept());
@@ -40,6 +42,7 @@ class GithubMock {
         // outstanding accept throws when the server closes.
       }
     }
+    if (verbose) print('Terminated server');
   }
 
   void _accept(Socket socket) {
@@ -81,6 +84,10 @@ class GithubMock {
 
   ByteBuffer _readResponseFile(String resource) {
     var result = githubMockData[resource];
+    if (verbose) {
+      int code = result == null ? 404 : 200;
+      print('Response $code on request for $resource');
+    }
     return (result != null) ?
         stringToByteBuffer(result) :
         stringToByteBuffer(githubMockData404);

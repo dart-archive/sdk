@@ -18,6 +18,8 @@
 }
 
 - (bool)refresh {
+  // TODO(zerny): Implement dynamic display-size.
+  if (self.root != nil) [self.root dispatchDisplayStart:0 end:10];
   PatchSetData data = GithubPresenterService::refresh();
   bool result = [Node applyPatchSet:data atNode:&_root];
   assert(self.root.isCommitList);

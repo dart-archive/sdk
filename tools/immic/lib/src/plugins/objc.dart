@@ -92,8 +92,27 @@ class _HeaderVisitor extends CodeGenerationVisitor {
       writeln(' $slotName;');
     });
     writeln();
+    for (var method in node.methods) {
+      write('- (void)dispatch${camelize(method.name)}');
+      List arguments = method.arguments;
+      if (!arguments.isEmpty) {
+        var arg = arguments[0];
+        _writeFormalWithKeyword(camelize(arg.name), arg);
+        for (int i = 1; i < arguments.length; ++i) {
+          arg = arguments[i];
+          write(' ');
+          _writeFormalWithKeyword(arg.name, arg);
+        }
+      }
+      writeln(';');
+    }
+    if (!node.methods.isEmpty) writeln();
     writeln('@end');
     writeln();
+  }
+
+  void _writeFormalWithKeyword(String keyword, Formal formal) {
+    write('$keyword:(${getTypeName(formal.type)})${formal.name}');
   }
 
   void _writeNodeBase() {
@@ -144,6 +163,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
     _writeStringUtils();
     _writeListUtils();
+    _writeEventUtils();
 
     _writeNodeBaseImplementation();
     nodes.forEach(_writeNodeImplementation);
@@ -173,6 +193,9 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         hasNodeSlots = true;
       }
     });
+    for (var method in node.methods) {
+      writeln('EventID _${method.name}EventID;');
+    }
     // Create hidden instance variables for lists holding mutable arrays.
     if (hasListSlots) {
       forEachSlot(node, null, (Type slotType, String slotName) {
@@ -206,6 +229,9 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         writeln('data.get${camelName}();');
       }
     });
+    for (var method in node.methods) {
+      writeln('  _${method.name}EventID = data.get${camelize(method.name)}();');
+    }
     writeln('  return self;');
     writeln('}');
 
@@ -241,9 +267,47 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       writeln('    break;');
       ++slotIndex;
     });
+    for (var method in node.methods) {
+      writeln('  case $slotIndex:');
+      writeln('    assert(patch.isContent());');
+      writeln('    assert(patch.getContent().isPrimitive());');
+      writeln('    assert(patch.getContent().getPrimitive().isUint16Data());');
+      writeln('    _${method.name}EventID =');
+      writeln('         patch.getContent().getPrimitive().getUint16Data();');
+      writeln('    break;');
+      ++slotIndex;
+    }
     writeln('  default: abort();');
     writeln('  }');
     writeln('}');
+
+    // Event dispatching
+    String unitName = camelize(basenameWithoutExtension(path));
+    for (var method in node.methods) {
+      write('- (void)dispatch${camelize(method.name)}');
+      List arguments = method.arguments;
+      if (!arguments.isEmpty) {
+        var arg = arguments[0];
+        _writeFormalWithKeyword(camelize(arg.name), arg);
+        for (int i = 1; i < arguments.length; ++i) {
+          arg = arguments[i];
+          write(' ');
+          _writeFormalWithKeyword(arg.name, arg);
+        }
+      }
+      writeln(' {');
+      write('  ${unitName}PresenterService::dispatch');
+      for (var formal in method.arguments) {
+        write(camelize(formal.type.identifier));
+      }
+      write('Async(_${method.name}EventID');
+      for (var formal in method.arguments) {
+        write(', ');
+        write(formal.name);
+      }
+      write(', noopVoidEventCallback);');
+      writeln('}');
+    }
 
     writeln('@end');
     writeln();
@@ -417,6 +481,12 @@ static void encodeString(NSString* string, List<unichar> chars) {
 """);
   }
 
+  void _writeEventUtils() {
+    writeln('typedef uint16_t EventID;');
+    writeln('static void noopVoidEventCallback() {}');
+    writeln();
+  }
+
   void _writeHeader() {
     String fileName = basenameWithoutExtension(path);
     writeln(COPYRIGHT);
@@ -424,5 +494,9 @@ static void encodeString(NSString* string, List<unichar> chars) {
     writeln();
     writeln('#import "${fileName}.h"');
     writeln();
+  }
+
+  void _writeFormalWithKeyword(String keyword, Formal formal) {
+    write('$keyword:(${getTypeName(formal.type)})${formal.name}');
   }
 }

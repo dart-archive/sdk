@@ -33,7 +33,10 @@ void generate(String path, Unit unit, String outputDirectory) {
 class _IDLVisitor extends CodeGenerationVisitor {
   _IDLVisitor(String path) : super(path);
 
+  HashMap<String, List<Type>> _methodSignatures = {};
+
   visitUnit(Unit node) {
+    _collectMethodSignatures(node);
     _writeCopyright();
     _writeService();
     node.structs.forEach(visit);
@@ -51,6 +54,7 @@ class _IDLVisitor extends CodeGenerationVisitor {
       writeType(slotType);
       writeln(' $slotName;');
     }
+    node.methods.forEach(visit);
     writeln('}');
     writeln();
   }
@@ -60,7 +64,7 @@ class _IDLVisitor extends CodeGenerationVisitor {
   }
 
   visitMethod(Method node) {
-    // Ignored for now.
+    writeln('  uint16 ${node.name};');
   }
 
   void writeType(Type node) {
@@ -72,6 +76,19 @@ class _IDLVisitor extends CodeGenerationVisitor {
       write(node.identifier);
     }
     if (node.isList) write('>');
+  }
+
+  void _collectMethodSignatures(Unit unit) {
+    for (var node in unit.structs) {
+      for (var method in node.methods) {
+        assert(method.returnType.isVoid);
+        String signature =
+            method.arguments.map((formal) => formal.type.identifier);
+        _methodSignatures.putIfAbsent('$signature', () {
+          return method.arguments.map((formal) => formal.type);
+        });
+      }
+    }
   }
 
   void _writeCopyright() {
@@ -86,6 +103,18 @@ class _IDLVisitor extends CodeGenerationVisitor {
     // TODO(zerny): Don't assume a root entry point for the scene.
     writeln('  void reset();');
     writeln('  PatchSetData* refresh();');
+    for (List<Type> formals in _methodSignatures.values) {
+      write('  void dispatch');
+      for (var formal in formals) {
+        write(camelize(formal.identifier));
+      }
+      write('(uint16 id');
+      int i = 0;
+      for (var formal in formals) {
+        write(', ${formal.identifier} arg${++i}');
+      }
+      writeln(');');
+    }
     writeln('}');
     writeln();
   }
@@ -96,7 +125,7 @@ class _IDLVisitor extends CodeGenerationVisitor {
     nodes.forEach((Struct node) {
       String nodeType = "${node.name}NodeData";
       String nodeField = camelize(node.name);
-      writeln('  $nodeType $nodeField;');
+      writeln('  $nodeType* $nodeField;');
     });
     writeln('  }');
     writeln('}');
@@ -124,8 +153,8 @@ struct PrimitiveData {
 
 struct ContentData {
   union {
-    PrimitiveData primitive;
-    NodeData node;
+    PrimitiveData* primitive;
+    NodeData* node;
   }
 }
 
@@ -149,6 +178,7 @@ struct PatchData {
 struct PatchSetData {
   List<PatchData> patches;
 }
+
 """);
   }
 }

@@ -14,7 +14,8 @@
 		DA313FB01AD665A6000089F9 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DA313FAF1AD665A6000089F9 /* Images.xcassets */; };
 		DA313FB31AD665A6000089F9 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = DA313FB11AD665A6000089F9 /* LaunchScreen.xib */; };
 		DA313FBF1AD665A7000089F9 /* githubTests.m in Sources */ = {isa = PBXBuildFile; fileRef = DA313FBE1AD665A7000089F9 /* githubTests.m */; };
-		DAEE2EAB1AD67CF900945914 /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DAEE2EAA1AD67CF900945914 /* libfletch.a */; };
+		DA4370BB1AE9321600EEE52F /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA4370BA1AE9321600EEE52F /* libfletch.a */; };
+		DA4370BD1AE9328D00EEE52F /* unix_ia32_hack.c in Sources */ = {isa = PBXBuildFile; fileRef = DA4370BC1AE9328D00EEE52F /* unix_ia32_hack.c */; };
 		DAEE2EB61AD6890B00945914 /* github_presenter_service.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2EAF1AD6890B00945914 /* github_presenter_service.cc */; };
 		DAEE2EB71AD6890B00945914 /* struct.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2EB11AD6890B00945914 /* struct.cc */; };
 		DAEE2EB81AD6890B00945914 /* unicode.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2EB31AD6890B00945914 /* unicode.cc */; };
@@ -49,7 +50,8 @@
 		DA313FB81AD665A7000089F9 /* githubTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = githubTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA313FBD1AD665A7000089F9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DA313FBE1AD665A7000089F9 /* githubTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = githubTests.m; sourceTree = "<group>"; };
-		DAEE2EAA1AD67CF900945914 /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfletch.a; path = ../../../out/ReleaseXARM/libfletch.a; sourceTree = "<group>"; };
+		DA4370BA1AE9321600EEE52F /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libfletch.a; sourceTree = "<group>"; };
+		DA4370BC1AE9328D00EEE52F /* unix_ia32_hack.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = unix_ia32_hack.c; sourceTree = "<group>"; };
 		DAEE2EAF1AD6890B00945914 /* github_presenter_service.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = github_presenter_service.cc; sourceTree = "<group>"; };
 		DAEE2EB01AD6890B00945914 /* github_presenter_service.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = github_presenter_service.h; sourceTree = "<group>"; };
 		DAEE2EB11AD6890B00945914 /* struct.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = struct.cc; sourceTree = "<group>"; };
@@ -70,7 +72,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DAEE2EAB1AD67CF900945914 /* libfletch.a in Frameworks */,
+				DA4370BB1AE9321600EEE52F /* libfletch.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -87,10 +89,11 @@
 		DA313F961AD665A6000089F9 = {
 			isa = PBXGroup;
 			children = (
+				DA4370BC1AE9328D00EEE52F /* unix_ia32_hack.c */,
+				DA4370BA1AE9321600EEE52F /* libfletch.a */,
 				DAEE2F321AD6AA1800945914 /* Resources */,
 				DAEE2F2E1AD695F600945914 /* objc */,
 				DAEE2EAC1AD6890B00945914 /* cc */,
-				DAEE2EAA1AD67CF900945914 /* libfletch.a */,
 				DA313FA11AD665A6000089F9 /* github */,
 				DA313FBB1AD665A7000089F9 /* githubTests */,
 				DA313FA01AD665A6000089F9 /* Products */,
@@ -304,6 +307,7 @@
 			files = (
 				DA313FAB1AD665A6000089F9 /* CommitListController.mm in Sources */,
 				DAEE2EB61AD6890B00945914 /* github_presenter_service.cc in Sources */,
+				DA4370BD1AE9328D00EEE52F /* unix_ia32_hack.c in Sources */,
 				DAEE2F311AD695F600945914 /* github.mm in Sources */,
 				DA313FA81AD665A6000089F9 /* AppDelegate.mm in Sources */,
 				DAEE2F391AD6B0FB00945914 /* CommitListPresenter.h in Sources */,
@@ -446,7 +450,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/zerny/src/fletch/fletch/out/ReleaseXARM,
+					"$(PROJECT_DIR)",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "";
@@ -469,7 +473,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/zerny/src/fletch/fletch/out/ReleaseXARM,
+					"$(PROJECT_DIR)",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "";

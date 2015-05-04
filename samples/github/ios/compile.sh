@@ -25,5 +25,9 @@ FLETCHC="$DART -p $FLETCH_DIR/package $FLETCH_DIR/pkg/fletchc/lib/fletchc.dart"
 $IMMIC --out "$OUT_DIR" "$DIR/../github.immi"
 $SERVICEC --out "$OUT_DIR" "$OUT_DIR/idl/${PROJ}_presenter_service.idl"
 
+lipo -create -output "$DIR/libfletch.a" \
+     "$FLETCH_DIR/out/ReleaseIA32/libfletch.a" \
+     "$FLETCH_DIR/out/ReleaseXARM/libfletch.a"
+
 cd $FLETCH_DIR;
 exec $FLETCHC "$DIR/../$PROJ.dart" --out "$DIR/../generated/$PROJ.snapshot"

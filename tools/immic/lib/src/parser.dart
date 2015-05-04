@@ -46,7 +46,8 @@ class Struct extends Node {
   final String name;
   final List<Formal> slots;
   final List<Union> unions;
-  Struct(this.name, this.slots, this.unions);
+  final List<Method> methods;
+  Struct(this.name, this.slots, this.unions, this.methods);
 
   // Set by the resolver.
   StructLayout layout;
@@ -175,7 +176,8 @@ class _ImmiParserDefinition extends ImmiGrammarDefinition {
   struct() => super.struct()
       .map((each) => new Struct(each[1],
           each[3].where((e) => e is Formal).toList(),
-          each[3].where((e) => e is Union).toList()));
+          each[3].where((e) => e is Union).toList(),
+          each[3].where((e) => e is Method).toList()));
   method() => super.method()
       .map((each) => new Method(each[1], each[3], each[0]));
   simpleType() => super.simpleType()
