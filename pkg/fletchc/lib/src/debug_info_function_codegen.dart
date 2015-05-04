@@ -68,6 +68,16 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
     super.invokeMethod(node, selector);
   }
 
+  void invokeGetter(Node node, Selector selector) {
+    recordDebugInfo(node);
+    super.invokeGetter(node, selector);
+  }
+
+  void invokeSetter(Node node, Selector selector) {
+    recordDebugInfo(node);
+    super.invokeSetter(node, selector);
+  }
+
   void invokeFactory(Node node, int constId, int arity) {
     recordDebugInfo(node);
     super.invokeFactory(node, constId, arity);

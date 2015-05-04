@@ -271,7 +271,7 @@ abstract class CodegenVisitor
     builder.invokeMethod(fletchSelector, arity, selector.name);
   }
 
-  void invokeGetter(Selector selector) {
+  void invokeGetter(Node node, Selector selector) {
     registerDynamicGetter(selector);
     String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
@@ -279,7 +279,7 @@ abstract class CodegenVisitor
     builder.invokeMethod(fletchSelector, 0);
   }
 
-  void invokeSetter(Selector selector) {
+  void invokeSetter(Node node, Selector selector) {
     registerDynamicSetter(selector);
     String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
@@ -1136,7 +1136,7 @@ abstract class CodegenVisitor
     // statically known - that is not always the case. Implement VM support?
     Element target = elements[node];
     if (target != null && target.isField) {
-      invokeGetter(new Selector.getter(target.name, element.library));
+      invokeGetter(node, new Selector.getter(target.name, element.library));
       selector = new Selector.callClosureFrom(selector);
     }
     for (Node argument in arguments) {
@@ -1174,7 +1174,7 @@ abstract class CodegenVisitor
           element.library);
     }
     visitForValue(receiver);
-    invokeGetter(selector);
+    invokeGetter(node, selector);
     applyVisitState();
   }
 
@@ -1183,7 +1183,7 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     loadThis();
-    invokeGetter(selector);
+    invokeGetter(node, selector);
     applyVisitState();
   }
 
@@ -1194,7 +1194,7 @@ abstract class CodegenVisitor
       _) {
     builder.loadParameter(0);
     visitForValue(rhs);
-    invokeSetter(selector);
+    invokeSetter(node, selector);
     applyVisitState();
   }
 
@@ -1249,7 +1249,7 @@ abstract class CodegenVisitor
       _) {
     visitForValue(receiver);
     visitForValue(rhs);
-    invokeSetter(selector);
+    invokeSetter(node, selector);
     applyVisitState();
   }
 
@@ -1659,10 +1659,10 @@ abstract class CodegenVisitor
       Selector setterSelector) {
     // Dup receiver for setter.
     builder.dup();
-    invokeGetter(getterSelector);
+    invokeGetter(node, getterSelector);
     visitForValue(rhs);
     invokeMethod(node, getAssignmentSelector(operator));
-    invokeSetter(setterSelector);
+    invokeSetter(node, setterSelector);
   }
 
   void visitDynamicPropertyCompound(
@@ -1707,10 +1707,10 @@ abstract class CodegenVisitor
       Selector getterSelector,
       Selector setterSelector) {
     builder.dup();
-    invokeGetter(getterSelector);
+    invokeGetter(node, getterSelector);
     builder.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
-    invokeSetter(setterSelector);
+    invokeSetter(node, setterSelector);
   }
 
   void handleIndexPrefix(
@@ -1816,14 +1816,14 @@ abstract class CodegenVisitor
     }
 
     loadThis();
-    invokeGetter(getterSelector);
+    invokeGetter(node, getterSelector);
     // For postfix, keep local, unmodified version, to 'return' after store.
     builder.dup();
     builder.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     loadThis();
     builder.loadLocal(1);
-    invokeSetter(setterSelector);
+    invokeSetter(node, setterSelector);
     builder.popMany(2);
     applyVisitState();
   }
@@ -1859,14 +1859,14 @@ abstract class CodegenVisitor
     int receiverSlot = builder.stackSize;
     visitForValue(receiver);
     builder.loadSlot(receiverSlot);
-    invokeGetter(getterSelector);
+    invokeGetter(node, getterSelector);
     // For postfix, keep local, unmodified version, to 'return' after store.
     builder.dup();
     builder.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     builder.loadSlot(receiverSlot);
     builder.loadLocal(1);
-    invokeSetter(setterSelector);
+    invokeSetter(node, setterSelector);
     builder.popMany(2);
     builder.storeLocal(1);
     // Pop receiver.
@@ -2296,7 +2296,7 @@ abstract class CodegenVisitor
 
     // Evalutate expression and iterator.
     visitForValue(node.expression);
-    invokeGetter(new Selector.getter('iterator', null));
+    invokeGetter(node.expression, new Selector.getter('iterator', null));
 
     jumpInfo[node] = new JumpInfo(builder.stackSize, start, end);
 
@@ -2312,19 +2312,19 @@ abstract class CodegenVisitor
       // Create local value and load the current element to it.
       LocalValue value = createLocalValueFor(element);
       builder.dup();
-      invokeGetter(new Selector.getter('current', null));
+      invokeGetter(node, new Selector.getter('current', null));
       value.initialize(builder);
       pushVariableDeclaration(value);
     } else {
       if (element == null || element.isInstanceMember) {
         loadThis();
         builder.loadLocal(1);
-        invokeGetter(new Selector.getter('current', null));
+        invokeGetter(node, new Selector.getter('current', null));
         Selector selector = elements.getSelector(node.declaredIdentifier);
-        invokeSetter(selector);
+        invokeSetter(node, selector);
       } else {
         builder.dup();
-        invokeGetter(new Selector.getter('current', null));
+        invokeGetter(node, new Selector.getter('current', null));
         if (element.isLocal) {
           scope[element].store(builder);
         } else if (element.isField) {
