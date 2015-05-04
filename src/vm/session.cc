@@ -403,6 +403,10 @@ void Session::IteratePointers(PointerVisitor* visitor) {
   }
 }
 
+void Session::VisitProcesses(ProcessVisitor* visitor) {
+  if (process_ != NULL) visitor->VisitProcess(process_);
+}
+
 bool Session::ProcessRun() {
   main_thread_monitor_->Lock();
   while (main_thread_resume_kind_ == kUnknown) main_thread_monitor_->Wait();
@@ -708,10 +712,16 @@ void Session::CommitChangeStatics(Array* change) {
 }
 
 void Session::CommitChanges(int count) {
+  // Make sure the program is unfolded when applying changes.
+  //
+  // TODO(ager): Should we make folding and unfolding part of the wire
+  // protocol? For now we unfold and fold every time we apply changes.
   Scheduler* scheduler = program()->scheduler();
   if (!scheduler->StopProgram(program())) {
     FATAL("Failed to stop program, for committing changes\n");
   }
+
+  if (program()->is_compact()) program()->Unfold();
 
   ASSERT(count == changes_.length());
   for (int i = 0; i < count; i++) {
@@ -736,6 +746,8 @@ void Session::CommitChanges(int count) {
     }
   }
   changes_.Clear();
+
+  program()->Fold();
 
   scheduler->ResumeProgram(program());
 }

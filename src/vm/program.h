@@ -66,13 +66,15 @@ class Program {
   // Unfold the program into a new heap where all indices are resolved
   // and stored in the literals section of methods. Having
   // self-contained methods makes it easier to do changes to the live
-  // system.
+  // system. The caller of Unfold should stop all processes running for this
+  // program before calling.
   void Unfold();
   Object* UnfoldFunction(Function* function, Space* to, void* map);
 
   // Fold the program into a compact format where methods, classes and
   // constants are stored in global tables in the program instead of
-  // duplicated out in the literals sections of methods.
+  // duplicated out in the literals sections of methods. The caller of
+  // Fold should stop all processes running for this program before calling.
   void Fold();
   void FoldFunction(Function* old_function,
                     Function* new_function,
@@ -205,6 +207,11 @@ class Program {
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
   Object** last_root_address() { return &native_failure_result_; }
 
+  void PrepareProgramGC(Process** additional_processes);
+  void PerformProgramGC(Space* to,
+                        PointerVisitor* visitor,
+                        Process* additional_processes);
+  void FinishProgramGC(Process* additional_processes);
   Heap heap_;
 
   Scheduler* scheduler_;

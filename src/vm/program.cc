@@ -72,6 +72,67 @@ static Array* MapToArray(ObjectIndexMap* map, Program* program) {
   return result;
 }
 
+class MarkProcessesFoundVisitor : public ProcessVisitor {
+ public:
+  virtual void VisitProcess(Process* process) {
+    process->set_program_gc_state(Process::kFound);
+  }
+};
+
+class CollectGarbageAndCookStacksVisitor : public ProcessVisitor {
+ public:
+  explicit CollectGarbageAndCookStacksVisitor(Process** list) : list_(list) { }
+
+  virtual void VisitProcess(Process* process) {
+    ASSERT(process->program_gc_state() == Process::kFound);
+    process->set_program_gc_state(Process::kProcessed);
+    int number_of_stacks = process->CollectGarbageAndChainStacks(list_);
+    process->CookStacks(number_of_stacks);
+    process->CollectProcessesInQueues(list_);
+  }
+ private:
+  Process** list_;
+};
+
+class IterateProgramRootsVisitor : public ProcessVisitor {
+ public:
+  explicit IterateProgramRootsVisitor(PointerVisitor* visitor)
+      : visitor_(visitor) { }
+
+  virtual void VisitProcess(Process* process) {
+    process->IterateProgramPointers(visitor_);
+  }
+
+ private:
+  PointerVisitor* visitor_;
+};
+
+class UncookStacksVisitor : public ProcessVisitor {
+ public:
+  UncookStacksVisitor() : unlink_(false) { }
+
+  void set_unlink(bool value) { unlink_ = value; }
+
+  virtual void VisitProcess(Process* process) {
+    process->UncookAndUnchainStacks();
+    process->UpdateBreakpoints();
+    process->set_program_gc_state(Process::kUnknown);
+    if (unlink_) process->set_next(NULL);
+  }
+
+ private:
+  bool unlink_;
+};
+
+static void VisitProcesses(Process* processes, ProcessVisitor* visitor) {
+  for (Process* current = processes;
+       current != NULL;
+       current = current->next()) {
+    ASSERT(current->program_gc_state() == Process::kProcessed);
+    visitor->VisitProcess(current);
+  }
+}
+
 class LiteralsRewriter {
  public:
   LiteralsRewriter(Space* space, Function* function)
@@ -210,6 +271,9 @@ class UnfoldingVisitor: public PointerVisitor {
 };
 
 void Program::Unfold() {
+  // TODO(ager): Can we add an assert that there are no processes running
+  // for this program. Either because we haven't enqueued any or because
+  // the program is stopped?
   ASSERT(is_compact());
 
   // Run through the vtable and compute a map from selector offsets
@@ -229,21 +293,23 @@ void Program::Unfold() {
     }
   }
 
-  // Unfolding operates as a scavenge copying over objects as it goes.
+
+  // List of processes that are only referenced by ports floating
+  // around in the system.
+  Process* additional_processes = NULL;
+  PrepareProgramGC(&additional_processes);
   Space* to = new Space();
-  {
-    NoAllocationFailureScope scope(to);
-    UnfoldingVisitor visitor(this, heap_.space(), to, &map);
-    IterateRoots(&visitor);
-    to->CompleteScavenge(&visitor);
-  }
-  heap_.ReplaceSpace(to);
+  UnfoldingVisitor visitor(this, heap_.space(), to, &map);
+  PerformProgramGC(to, &visitor, additional_processes);
+
   classes_ = NULL;
   constants_ = NULL;
   static_methods_ = NULL;
   dispatch_table_ = NULL;
   vtable_ = NULL;
   is_compact_ = false;
+
+  FinishProgramGC(additional_processes);
 }
 
 class ProgramTableRewriter;
@@ -861,21 +927,27 @@ class FoldingVisitor: public PointerVisitor {
 };
 
 void Program::Fold() {
-  // Folding operates as a scavenge copying over objects as it goes.
+  // TODO(ager): Can we add an assert that there are no processes running
+  // for this program. Either because we haven't enqueued any or because
+  // the program is stopped?
   ASSERT(!is_compact());
+
+  // List of processes that are only referenced by ports floating
+  // around in the system.
+  Process* additional_processes = NULL;
+  PrepareProgramGC(&additional_processes);
+
   ProgramTableRewriter rewriter;
   Space* to = new Space();
-  NoAllocationFailureScope scope(to);
-
   FoldingVisitor visitor(heap_.space(), to, &rewriter, this);
-  IterateRoots(&visitor);
-  to->CompleteScavenge(&visitor);
-  heap_.ReplaceSpace(to);
+  PerformProgramGC(to, &visitor, additional_processes);
 
   visitor.Finalize();
   constants_ = rewriter.CreateConstantArray(this);
   static_methods_ = rewriter.CreateStaticMethodArray(this);
   is_compact_ = true;
+
+  FinishProgramGC(additional_processes);
 }
 
 Process* Program::SpawnProcess() {
@@ -975,65 +1047,59 @@ Object* Program::CreateInitializer(Function* function) {
   return heap()->CreateInitializer(initializer_class_, function);
 }
 
-class MarkProcessesFoundVisitor : public ProcessVisitor {
- public:
-  virtual void VisitProcess(Process* process) {
-    process->set_program_gc_state(Process::kFound);
-  }
-};
-
-class CollectGarbageAndCookStacksVisitor : public ProcessVisitor {
- public:
-  explicit CollectGarbageAndCookStacksVisitor(Process** list) : list_(list) { }
-
-  virtual void VisitProcess(Process* process) {
-    ASSERT(process->program_gc_state() == Process::kFound);
-    process->set_program_gc_state(Process::kProcessed);
-    int number_of_stacks = process->CollectGarbageAndChainStacks(list_);
-    process->CookStacks(number_of_stacks);
-    process->CollectProcessesInQueues(list_);
-  }
- private:
-  Process** list_;
-};
-
-class VisitProgramRootsVisitor : public ProcessVisitor {
- public:
-  explicit VisitProgramRootsVisitor(PointerVisitor* visitor)
-      : visitor_(visitor) { }
-
-  virtual void VisitProcess(Process* process) {
-    process->IterateProgramPointers(visitor_);
+void Program::PrepareProgramGC(Process** additional_processes) {
+  {
+    MarkProcessesFoundVisitor visitor;
+    scheduler()->VisitProcesses(this, &visitor);
+    if (session_ != NULL) session_->VisitProcesses(&visitor);
   }
 
- private:
-  PointerVisitor* visitor_;
-};
-
-class UncookStacksVisitor : public ProcessVisitor {
- public:
-  UncookStacksVisitor() : unlink_(false) { }
-
-  void set_unlink(bool value) { unlink_ = value; }
-
-  virtual void VisitProcess(Process* process) {
-    process->UncookAndUnchainStacks();
-    process->UpdateBreakpoints();
-    process->set_program_gc_state(Process::kUnknown);
-    if (unlink_) process->set_next(NULL);
+  {
+    CollectGarbageAndCookStacksVisitor visitor(additional_processes);
+    scheduler()->VisitProcesses(this, &visitor);
+    if (session_ != NULL) session_->VisitProcesses(&visitor);
+    while (*additional_processes != NULL &&
+           (*additional_processes)->program_gc_state() == Process::kFound) {
+      // At each iteration, start from the beginning of the additional_processes
+      // list and go until we find a process that we have already processed
+      // or we hit the end. During the iteration we can discover more processes
+      // that are added to the front of the list and picked up in the next
+      // iteration.
+      Process* current = *additional_processes;
+      while (current != NULL &&
+             current->program_gc_state() == Process::kFound) {
+        visitor.VisitProcess(current);
+        current = current->next();
+      }
+    }
   }
+}
 
- private:
-  bool unlink_;
-};
-
-static void VisitProcesses(Process* processes, ProcessVisitor* visitor) {
-  for (Process* current = processes;
-       current != NULL;
-       current = current->next()) {
-    ASSERT(current->program_gc_state() == Process::kProcessed);
-    visitor->VisitProcess(current);
+void Program::PerformProgramGC(Space* to,
+                               PointerVisitor* visitor,
+                               Process* additional_processes) {
+  {
+    NoAllocationFailureScope scope(to);
+    IterateRoots(visitor);
+    {
+      IterateProgramRootsVisitor iterate_program_roots_visitor(visitor);
+      scheduler()->VisitProcesses(this, &iterate_program_roots_visitor);
+      if (session_ != NULL) {
+        session_->VisitProcesses(&iterate_program_roots_visitor);
+      }
+      VisitProcesses(additional_processes, &iterate_program_roots_visitor);
+    }
+    to->CompleteScavenge(visitor);
   }
+  heap_.ReplaceSpace(to);
+}
+
+void Program::FinishProgramGC(Process* additional_processes) {
+  UncookStacksVisitor uncook_visitor;
+  scheduler()->VisitProcesses(this, &uncook_visitor);
+  if (session_ != NULL) session_->VisitProcesses(&uncook_visitor);
+  uncook_visitor.set_unlink(true);
+  VisitProcesses(additional_processes, &uncook_visitor);
 }
 
 void Program::CollectGarbage() {
@@ -1044,51 +1110,18 @@ void Program::CollectGarbage() {
   if (scheduler() == NULL) return;
   if (!scheduler()->StopProgram(this)) return;
 
-  {
-    MarkProcessesFoundVisitor visitor;
-    scheduler()->VisitProcesses(this, &visitor);
-  }
-
   // List of processes that are only referenced by ports floating
   // around in the system.
   Process* additional_processes = NULL;
 
-  {
-    CollectGarbageAndCookStacksVisitor visitor(&additional_processes);
-    scheduler()->VisitProcesses(this, &visitor);
-    while (additional_processes != NULL &&
-           additional_processes->program_gc_state() == Process::kFound) {
-      Process* current = additional_processes;
-      while (current != NULL &&
-             current->program_gc_state() == Process::kFound) {
-        visitor.VisitProcess(current);
-        current = current->next();
-      }
-    }
-  }
+  PrepareProgramGC(&additional_processes);
 
   Space* to = new Space();
-  {
-    // While garbage collecting, do not fail allocations. Instead grow
-    // the to-space as needed.
-    NoAllocationFailureScope scope(to);
-    ScavengeVisitor visitor(heap_.space(), to);
-    IterateRoots(&visitor);
-    {
-      VisitProgramRootsVisitor visit_program_roots_visitor(&visitor);
-      scheduler()->VisitProcesses(this, &visit_program_roots_visitor);
-      VisitProcesses(additional_processes, &visit_program_roots_visitor);
-    }
-    to->CompleteScavenge(&visitor);
-  }
-  heap_.ReplaceSpace(to);
+  ScavengeVisitor visitor(heap_.space(), to);
+  PerformProgramGC(to, &visitor, additional_processes);
 
-  {
-    UncookStacksVisitor uncook_visitor;
-    scheduler()->VisitProcesses(this, &uncook_visitor);
-    uncook_visitor.set_unlink(true);
-    VisitProcesses(additional_processes, &uncook_visitor);
-  }
+  FinishProgramGC(additional_processes);
+
   scheduler()->ResumeProgram(this);
 }
 
