@@ -42,13 +42,21 @@ main() {
   testImmutable(1.1);
   testImmutable(true);
   testImmutable(false);
+
   testImmutable(new Hund(1));
   testImmutable(leaf);
   testImmutable(new Node(leaf, leaf));
   testImmutable(new Node(new Node(leaf, leaf), leaf));
+
+  const constLeaf = const Node(null, null);
+  testImmutable(const Hund(1));
+  testImmutable(const Node(constLeaf, constLeaf));
+  testImmutable(const Node(const Node(constLeaf, constLeaf), constLeaf));
+
   testImmutable(() {});
   int x;
   testImmutable(() { x; });
+  testImmutable(main);
 
   /// Check for mutable objects
   testMutable(new Fisk(1));
@@ -60,14 +68,10 @@ main() {
   int y;
   testMutable(() { y = 4; });
 
-
   // TODO(kustermann): Runtime types are not working ATM.
   // Expect.isFalse(isImmutable(bool));
   // Expect.isFalse(isImmutable(String));
   // Expect.isFalse(isImmutable(Hest));
-
-  // TODO(kustermann): Functions are not working ATM.
-  Expect.isFalse(isImmutable(main));
 }
 
 testImmutable(obj) {

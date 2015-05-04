@@ -22,8 +22,7 @@ void testInvalidArguments() {
 
 int fib(int x) {
   if (x <= 1) return x;
-  var res = Process.divide(entry, [() => fib(x - 1), () => fib(x - 2)]);
-  return res[0] + res[1];
+  return parallel.map(fib)([x - 1, x - 2]).reduce((a, b) => a + b);
 }
 
 void testFib() {
@@ -33,4 +32,26 @@ void testFib() {
 main() {
   testInvalidArguments();
   testFib();
+}
+
+const Parallel parallel = const Parallel();
+
+class Parallel implements Function {
+  const Parallel();
+  Iterable call(Iterable values) => values;
+  Parallel map(fn(value)) => new _ParallelMap(this, fn);
+}
+
+class _ParallelMap extends Parallel {
+  final Parallel _link;
+  final Function _fn;
+  const _ParallelMap(this._link, this._fn);
+
+  Iterable call(Iterable values) {
+    final Function fn = _fn;
+    List fns = _link(values).map((final e) => () => fn(e)).toList();
+    return Process.divide(_entry, fns);
+  }
+
+  static _entry(fn) => fn();
 }

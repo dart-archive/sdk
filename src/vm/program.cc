@@ -967,7 +967,8 @@ Object* Program::CreateStringFromAscii(List<const char> str) {
 }
 
 Object* Program::CreateInstance(Class* klass) {
-  return heap()->CreateHeapObject(klass, null_object());
+  bool immutable = true;
+  return heap()->CreateHeapObject(klass, null_object(), immutable);
 }
 
 Object* Program::CreateInitializer(Function* function) {
