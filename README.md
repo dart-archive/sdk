@@ -16,10 +16,10 @@ products on top of it.
 
 To try out Fletch, you need to first
 [build it](https://github.com/dart-lang/fletch/wiki/Building).
-Once you have a working `fletch` executable, running Dart code on top of it is
-as easy as typing:
+Once you have working `fletch` and `fletch_driver` executables, running Dart
+code on top of it is as easy as typing:
 
-    $ fletch hello.dart
+    $ fletch_driver hello.dart
 
 
 ## Contributing
