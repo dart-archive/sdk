@@ -11,13 +11,7 @@ namespace fletch {
 TEST_CASE(ObjectMap) {
   ObjectMap map(256);
   for (int i = 0; i < 1024; i++) {
-    EXPECT(map.Add(i, Smi::FromWord(i)));
-  }
-  EXPECT_EQ(1024, map.size());
-
-  for (int i = 0; i < 1024; i++) {
-    EXPECT(!map.Add(i, Smi::FromWord(i)));
-    EXPECT(!map.Add(i, Smi::FromWord(i + 1)));
+    map.Add(i, Smi::FromWord(i));
   }
   EXPECT_EQ(1024, map.size());
 
@@ -37,7 +31,11 @@ TEST_CASE(ObjectMap) {
   EXPECT(!map.RemoveByObject(Smi::FromWord(100)));
   EXPECT_EQ(1023, map.size());
   EXPECT_EQ(-1, map.LookupByObject(Smi::FromWord(100)));
-  EXPECT(map.Add(100, Smi::FromWord(100)));
+  map.Add(100, Smi::FromWord(100));
+  EXPECT_EQ(100, map.LookupByObject(Smi::FromWord(100)));
+  map.Add(100, Smi::FromWord(101));
+  EXPECT_EQ(100, map.LookupByObject(Smi::FromWord(101)));
+  EXPECT_EQ(Smi::FromWord(101), map.LookupById(100));
   EXPECT_EQ(1024, map.size());
 
   for (int i = 0; i < 1024; i++) {

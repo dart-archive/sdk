@@ -17,12 +17,23 @@ ObjectMap::~ObjectMap() {
   DeleteTable(table_by_object_);
 }
 
-bool ObjectMap::Add(int64 id, Object* object) {
+void ObjectMap::Add(int64 id, Object* object) {
   int index = BucketIndexFromId(id);
   Bucket* original = table_by_id_[index];
   Bucket* current = original;
   while (current != NULL) {
-    if (current->id == id) return false;
+    if (current->id == id) {
+      if (HasTableByObject() && current->object != object) {
+        Bucket* existing = DetachByObject(current->object);
+        ASSERT(existing != NULL);
+        int index = BucketIndexFromObject(object);
+        existing->next = table_by_object_[index];
+        existing->object = object;
+        table_by_object_[index] = existing;
+      }
+      current->object = object;
+      return;
+    }
     current = current->next;
   }
 
@@ -36,7 +47,6 @@ bool ObjectMap::Add(int64 id, Object* object) {
   bucket->object = object;
   table_by_id_[index] = bucket;
   if (HasTableByObject()) AddToTableByObject(id, object);
-  return true;
 }
 
 bool ObjectMap::RemoveById(int64 id) {

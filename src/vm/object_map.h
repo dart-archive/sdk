@@ -17,7 +17,7 @@ class ObjectMap {
 
   int size() const { return size_; }
 
-  bool Add(int64 id, Object* object);
+  void Add(int64 id, Object* object);
 
   bool RemoveById(int64 id);
   bool RemoveByObject(Object* object);
