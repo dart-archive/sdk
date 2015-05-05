@@ -1613,10 +1613,54 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     __ ldr(R7, Address(R1, Operand(R0, TIMES_4)));
   }
 
-  // TODO(kustermann): Implement immutability testing & allocation.
+  // Either directly jump to allocation code or determine first if arguments
+  // on the stack have immutable flag set.
+  Label allocate;
+  Label allocate_immutable;
+  if (immutable) {
+    __ ldr(R2, Address(R7, Class::kInstanceFormatOffset - HeapObject::kTag));
+    __ ldr(R3, Immediate(InstanceFormat::FixedSizeField::mask()));
+    __ and_(R2, R2, R3);
+    int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
+    __ asr(R2, R2, Immediate(size_shift));
+
+    // R2 = SizeOfEntireObject - HeapObject::kSize
+    __ sub(R2, R2, Immediate(HeapObject::kSize));
+
+    // R3 = StackPointer(R6) - NumberOfFields*kPointerSize
+    __ sub(R3, R6, R2);
+
+    Label loop;
+    // Increment pointer to point to next field.
+    __ Bind(&loop);
+    __ add(R3, R3, Immediate(kPointerSize));
+
+    // Test whether R3 > R6. If so we're done and it's immutable.
+    __ cmp(R3, R6);
+    __ b(HI, &allocate_immutable);
+
+    // If Smi, continue the loop.
+    __ ldr(R2, Address(R3, 0));
+    __ tst(R2, Immediate(Smi::kTagMask));
+    __ b(EQ, &loop);
+
+    // Else load immutable bit from object and test.
+    uword im_mask = HeapObject::FlagsImmutabilityField::encode(true);
+    __ ldr(R2, Address(R2, HeapObject::kFlagsOffset - HeapObject::kTag));
+    __ and_(R2, R2, Immediate(im_mask));
+    __ cmp(R2, Immediate(im_mask));
+
+    __ b(EQ, &loop);
+  }
+
   __ mov(R2, Immediate(0));
+  __ b(&allocate);
+
+  __ Bind(&allocate_immutable);
+  __ mov(R2, Immediate(1));
 
   // TODO(kasperl): Consider inlining this in the interpreter.
+  __ Bind(&allocate);
   __ mov(R0, R4);
   __ mov(R1, R7);
   __ bl("HandleAllocate");

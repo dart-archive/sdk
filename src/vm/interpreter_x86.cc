@@ -1496,8 +1496,10 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
     __ j(ZERO, &loop);
 
     // Else load immutable bit from object and test.
+    uword im_mask = HeapObject::FlagsImmutabilityField::encode(true);
     __ movl(ECX, Address(ECX, HeapObject::kFlagsOffset - HeapObject::kTag));
-    __ cmpl(ECX, Immediate(HeapObject::FlagsImmutabilityField::encode(true)));
+    __ andl(ECX, Immediate(im_mask));
+    __ cmpl(ECX, Immediate(im_mask));
 
     __ j(EQUAL, &loop);
   }
