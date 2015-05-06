@@ -98,6 +98,13 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
                    spDiff, String formatString)) {
   // Code below was copied from src/shared/bytecodes.h.
   var kVarDiff = "VAR_DIFF";
+
+  void INVOKES(V, name, desc) {
+    V("Invoke${name}",       true, "I", 5, kVarDiff, "invoke ${desc}%d");
+    V("Invoke${name}Fast",   true, "I", 5, kVarDiff, "invoke fast ${desc}%d");
+    V("Invoke${name}Vtable", true, "I", 5, kVarDiff, "invoke vtable ${desc}%d");
+  }
+
   /* Name             Branching Format Size   SP-diff  format-string   */
   V("LoadLocal0",           false,    "",   1,        1, "load local 0");
   V("LoadLocal1",           false,    "",   1,        1, "load local 1");
@@ -126,9 +133,7 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   // TODO(ahe): The argument to LoadLiteralWide is probably signed.
   V("LoadLiteralWide",      false,    "I",  5,        1, "load literal %d");
 
-  V("InvokeMethod",          true,    "I",  5, kVarDiff, "invoke %d");
-  V("InvokeMethodFast",      true,    "I",  5, kVarDiff, "invoke fast %d");
-  V("InvokeMethodVtable",    true,    "I",  5, kVarDiff, "invoke vtable %d");
+  INVOKES(V, "Method", "");
 
   V("InvokeStatic",          true,    "I",  5, kVarDiff, "invoke static %d");
   V("InvokeStaticUnfold",    true,    "I",  5, kVarDiff, "invoke static @%d");

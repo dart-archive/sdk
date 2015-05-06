@@ -12,6 +12,12 @@ namespace fletch {
 const int kVarDiff = 0x7FFFFFFF;
 const int kLoadLiteralWideLimit = 0x3fffffff;
 
+#define INVOKES(V, name, desc)                                                 \
+  V(Invoke##name,          true, "I", 5, kVarDiff, "invoke " desc "%d")        \
+  V(Invoke##name##Fast,    true, "I", 5, kVarDiff, "invoke fast " desc "%d")   \
+  V(Invoke##name##Vtable,  true, "I", 5, kVarDiff, "invoke vtable " desc "%d") \
+
+
 #define BYTECODES_DO(V)                                                        \
   /* Name             Branching Format Size   SP-diff  format-string   */      \
   V(LoadLocal0,           false,    "",   1,        1, "load local 0")         \
@@ -40,9 +46,7 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   V(LoadLiteral,          false,    "B",  2,        1, "load literal %d")      \
   V(LoadLiteralWide,      false,    "I",  5,        1, "load literal %d")      \
                                                                                \
-  V(InvokeMethod,          true,    "I",  5, kVarDiff, "invoke %d")            \
-  V(InvokeMethodFast,      true,    "I",  5, kVarDiff, "invoke fast %d")       \
-  V(InvokeMethodVtable,    true,    "I",  5, kVarDiff, "invoke vtable %d")     \
+  INVOKES(V, Method, "")                                                       \
                                                                                \
   V(InvokeStatic,          true,    "I",  5, kVarDiff, "invoke static %d")     \
   V(InvokeStaticUnfold,    true,    "I",  5, kVarDiff, "invoke static @%d")    \
