@@ -9,7 +9,15 @@ class Server {
   final String host;
   final int port;
 
+  List<Channel> outstanding = [];
+
   Server(this.host, this.port);
+
+  void close() {
+    var local = outstanding;
+    outstanding = [];
+    for (Channel channel in local) channel.receive();
+  }
 
   dynamic get(String resource) => getJson(host, port, resource);
 
@@ -56,6 +64,9 @@ class Repository extends Service {
             'repos/${parent.name}/$name/commits', parent.server);
 
   dynamic getCommitAt(int index) => _commitPages.itemAt(index);
+
+  void prefetchCommitsInRange(int start, int end) =>
+      _commitPages.prefetchItemsInRange(start, end);
 }
 
 class Pagination {
@@ -63,21 +74,73 @@ class Pagination {
 
   final Server server;
   final String api;
-  List<List> _pages = [];
+  List _pages = [];
 
   Pagination(this.api, this.server);
 
+  void prefetch(int page) {
+    _fetch(page, true);
+  }
+
+  List fetch(int page) {
+    return _fetch(page, false);
+  }
+
+  void prefetchItemsInRange(int start, int end) {
+    int firstPage = start ~/ count;
+    int lastPage = (end ~/ count) + 1;
+    // Scheduling prefetching of surrounding pages in descending order.
+    // (Currently the fletch scheduler will process these in reverse order).
+    if (firstPage > 0) prefetch(firstPage - 1);
+    prefetch(lastPage + 1);
+    for (int i = lastPage; i >= firstPage; --i) {
+      prefetch(i);
+    }
+  }
+
   dynamic itemAt(int index) {
-    int page = (index ~/ count);
+    int page = index ~/ count;
     int entry = index % count;
+    List entries = fetch(page);
+    return (entries != null && entry < entries.length) ? entries[entry] : null;
+  }
+
+  _fetch(int page, bool prefetch) {
+    var entries = null;
     if (_pages.length <= page) {
       _pages.length = page + 1;
+    } else {
+      entries = _pages[page];
     }
-    List entries = _pages[page];
+    if (entries is Channel) {
+      if (prefetch) return;
+      return entries.receive();
+    }
     if (entries == null) {
-      entries = server.get('$api?page=${page + 1}');
-      _pages[page] = entries;
+      Channel channel = new Channel();
+      _pages[page] = channel;
+      if (prefetch) {
+        server.outstanding.add(channel);
+        Thread.fork(() {
+          _doFetch(channel, page);
+          server.outstanding.remove(channel);
+        });
+      } else {
+        return _doFetch(channel, page);
+      }
     }
-    return (entry < entries.length) ? entries[entry] : null;
+    return entries;
+  }
+
+  List _doFetch(Channel channel, int page) {
+    List entries = null;
+    try {
+      entries = server.get('$api?page=${page + 1}');
+    } catch (_) {
+      // Throws once when we hit past the last page.
+    }
+    _pages[page] = entries;
+    channel.send(entries);
+    return entries;
   }
 }

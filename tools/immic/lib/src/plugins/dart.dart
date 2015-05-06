@@ -349,7 +349,9 @@ abstract class ListPatch extends Patch {
   ListPatch(this.index, path) : super(path);
   void serialize(PatchDataBuilder builder, ResourceManager manager) {
     super.serialize(builder, manager);
-    serializeListPatch(builder.initListPatch(), manager);
+    ListPatchDataBuilder listPatch = builder.initListPatch();
+    listPatch.index = index;
+    serializeListPatch(listPatch, manager);
   }
   void serializeListPatch(ListPatchDataBuilder builder, ResourceManager manager);
 }
@@ -441,7 +443,7 @@ bool diffList(List current, List previous, List path, List patches) {
 
   if (currentLength > previousLength) {
     patches.add(new ListInsertPatch(
-        previousLength, currentLength, current, path));
+        previousLength, currentLength - previousLength, current, path));
   } else if (currentLength < previousLength) {
     patches.add(new ListRemovePatch(
         currentLength, previousLength - currentLength, previous, path));

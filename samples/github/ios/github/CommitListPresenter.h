@@ -3,12 +3,13 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 #import "github.h"
 
 @interface CommitListPresenter : NSObject
 
-@property CommitListNode* root;
+- (id)init:(UITableView*)tableView;
 
 - (bool)refresh;
 - (void)reset;

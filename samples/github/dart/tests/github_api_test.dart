@@ -14,6 +14,7 @@ void main() {
   testUser(server);
   testRepository(server);
   testCommits(server);
+  server.close();
   mock.close();
 }
 

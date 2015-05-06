@@ -18,24 +18,56 @@ void main() {
   var user = server.getUser('dart-lang');
   var repo = user.getRepository('fletch');
   testPresent(repo);
+  server.close();
   mock.close();
 }
 
 void testPresent(Repository repo) {
   var presenter = new CommitListPresenter(repo);
+  CommitListNode previous = null;
+  CommitListNode current = null;
 
   // Initial rendering (don't assume much about this).
-  CommitListNode initialNode = presenter.present(null);
-  testDiff(null, initialNode);
+  current = presenter.present(previous);
+  testDiff(previous, current);
 
   // Provide screen-size and re-render.
-  // TODO(zerny): Remove unneeded parenthesis once issue #20 is resolved.
-  (initialNode.display)(0, 5);
-  CommitListNode subsequentNode = presenter.present(initialNode);
-  Expect.equals(0, subsequentNode.startOffset);
-  Expect.equals(5, subsequentNode.commits.length);
-  Expect.stringEquals("Ian Zerny", subsequentNode.commits[0].author);
-  testDiff(initialNode, subsequentNode);
+  (current.display)(0, 5);
+  previous = current;
+  current = presenter.present(previous);
+  Expect.equals(0, current.startOffset);
+  Expect.equals(5, current.commits.length);
+  Expect.stringEquals("Ian Zerny", current.commits[0].author);
+  testDiff(previous, current);
+
+  (current.display)(0, 6);
+  previous = current;
+  current = presenter.present(previous);
+  Expect.equals(0, current.startOffset);
+  Expect.isTrue(current.commits.length >= 6);
+  Expect.stringEquals("Ian Zerny", current.commits[0].author);
+  testDiff(previous, current);
+
+  (current.display)(1, 6);
+  previous = current;
+  current = presenter.present(previous);
+  Expect.equals(1, current.startOffset);
+  Expect.equals(1, current.bufferOffset);
+  Expect.isTrue(current.commits.length >= 5);
+  Expect.stringEquals("Anders Johnsen", current.commits[1].author);
+  testDiff(previous, current);
+
+  (current.display)(100, 105);
+  previous = current;
+  current = presenter.present(previous);
+  Expect.equals(100, current.startOffset);
+  Expect.equals(0, current.bufferOffset);
+
+  (current.display)(99, 104);
+  previous = current;
+  current = presenter.present(previous);
+  Expect.equals(99, current.startOffset);
+  Expect.equals(4, current.bufferOffset);
 }
 
 testDiff(Node previous, Node current) {

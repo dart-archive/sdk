@@ -7,8 +7,26 @@ node Commit {
   String message;
 }
 
+// The commit-list node represents a sliding-window view of a list of commit
+// nodes.  The window is represented as a cyclic buffer so that sliding by N,
+// where N is less than the buffer length, can be implemented as shifting the
+// buffer offset by N and populating N items.
 node CommitList {
-  uint32 startOffset;
+  // Cyclic buffer for the sliding window of commits.
   List<Commit> commits;
+
+  // Offset of the window from the commit list.
+  uint32 startOffset;
+
+  // Offset of the first sliding-window item in the buffer.
+  uint16 bufferOffset;
+
+  // Number of items in the list. A negative value denots an unknown size.
+  int32 count;
+
+  // Number of items known to be in the list.
+  uint32 minimumCount;
+
+  // Event to update the sliding-window display range.
   void display(uint32 start, uint32 end);
 }

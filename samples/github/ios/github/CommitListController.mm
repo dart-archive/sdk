@@ -17,28 +17,24 @@
 
 - (void)viewDidLoad {
   [super viewDidLoad];
-  self.presenter = [[CommitListPresenter alloc] init];
+  self.presenter = [[CommitListPresenter alloc] init:self.tableView];
 
   // Setup regular refresh.
   CADisplayLink* consoleLink =
-      [CADisplayLink displayLinkWithTarget:self
-                                  selector:@selector(refresh:)];
+      [CADisplayLink displayLinkWithTarget:self.presenter
+                                  selector:@selector(refresh)];
   [consoleLink setFrameInterval:60];
   [consoleLink addToRunLoop:[NSRunLoop currentRunLoop]
                     forMode:NSDefaultRunLoopMode];
 
 }
 
-- (void)refresh:(CADisplayLink*)sender {
-  if ([self.presenter refresh]) {
-    [self.tableView reloadData];
-  }
-}
-
 - (void)didReceiveMemoryWarning {
   [super didReceiveMemoryWarning];
   // Dispose of any resources that can be recreated.
 }
+
+#pragma mark - Table view data source
 
 - (NSInteger)tableView:(UITableView *)tableView
  numberOfRowsInSection:(NSInteger)section {

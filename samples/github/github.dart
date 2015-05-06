@@ -15,4 +15,6 @@ main() {
   var root = new CommitListPresenter(repo);
   var impl = new GithubImpl(root);
   impl.run();
+  server.close();
+  mock.close();
 }
