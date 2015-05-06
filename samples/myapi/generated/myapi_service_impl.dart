@@ -35,7 +35,7 @@ class MyApiServiceImpl extends ApiService implements MyApiService {
   }
 
   void MyObject_funk(int api, int id, int o) {
-    MyObject object = objects[api][id];
+    impl.MyObject object = objects[api][id];
     object.funk(objects[api][o]);
   }
 }

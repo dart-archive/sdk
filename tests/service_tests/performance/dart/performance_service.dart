@@ -77,7 +77,8 @@ class TreeNode extends Reader {
 
 class TreeNodeBuilder extends Builder {
   List<TreeNodeBuilder> initChildren(int length) {
-    return NewList(new _TreeNodeBuilderList(), 0, length, 8);
+    _TreeNodeBuilderList result = NewList(new _TreeNodeBuilderList(), 0, length, 8);
+    return result;
   }
 }
 

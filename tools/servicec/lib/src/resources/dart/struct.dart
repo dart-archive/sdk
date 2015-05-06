@@ -259,8 +259,8 @@ class Builder {
   BuilderSegment _segment;
   int _offset;
 
-  Segment get segment => _segment;
-  void set segment(Segment value) {
+  BuilderSegment get segment => _segment;
+  void set segment(BuilderSegment value) {
     _segment = value;
   }
 
@@ -330,7 +330,7 @@ class Builder {
   }
 }
 
-class ListBuilder extends Builder {
+abstract class ListBuilder extends Builder {
   int _length;
   int get length => _length;
 

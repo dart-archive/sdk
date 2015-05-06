@@ -9,7 +9,7 @@ class PerformanceServiceImpl implements PerformanceService {
 
   int countTreeNodes(TreeNode node) {
     int sum = 1;
-    List<Node> children = node.children;
+    List<TreeNode> children = node.children;
     for (int i = 0; i < children.length; i++) {
       sum += countTreeNodes(children[i]);
     }

@@ -174,15 +174,15 @@ class Person extends Reader {
 
 class PersonBuilder extends Builder {
   void set name(String value) {
-
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initNameData(int length) {
-
-    return NewList(new _uint16BuilderList(), 0, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 0, length, 2);
+    return result;
   }
   List<PersonBuilder> initChildren(int length) {
-    return NewList(new _PersonBuilderList(), 8, length, 24);
+    _PersonBuilderList result = NewList(new _PersonBuilderList(), 8, length, 24);
+    return result;
   }
   void set age(int value) {
     segment.memory.setInt32(offset + 16, value);
@@ -284,12 +284,11 @@ class TableFlip extends Reader {
 
 class TableFlipBuilder extends Builder {
   void set flip(String value) {
-
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initFlipData(int length) {
-
-    return NewList(new _uint16BuilderList(), 0, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 0, length, 2);
+    return result;
   }
 }
 
@@ -299,7 +298,7 @@ class _uint16List extends ListReader implements List<int> {
 
 class _uint16BuilderList extends ListBuilder implements List<int> {
   int operator[](int index) => segment.memory.getUint16(offset + index * 2);
-  void operator[]=(int index, int value) => segment.memory.setUint16(offset + index * 2, value);
+  void operator[]=(int index, int value) { segment.memory.setUint16(offset + index * 2, value); }
 }
 
 class _PersonList extends ListReader implements List<Person> {

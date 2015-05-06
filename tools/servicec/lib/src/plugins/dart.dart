@@ -134,7 +134,7 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln(' operator[](int index) => $getter($offset);');
         write('  void operator[]=(int index, ');
         writeType(listType);
-        writeln(' value) => $setter($offset, value);');
+        writeln(' value) { $setter($offset, value); }');
         writeln('}');
       } else {
         Struct element = listType.resolved;
@@ -355,27 +355,26 @@ class _DartVisitor extends CodeGenerationVisitor {
           StructLayout elementLayout = element.layout;
           size = elementLayout.size;
         }
-        write('    return NewList(new _');
-        if (slotType.isPrimitive) {
-          write('${slotType.identifier}Builder');
-        } else {
-          writeReturnType(slotType);
-        }
-        writeln('List(), ${slot.offset}, length, $size);');
+        String type = '_${slotType.identifier}BuilderList';
+        writeln('    $type result = NewList(new $type(), ${slot.offset},'
+                ' length, $size);');
+        writeln('    return result;');
         writeln('  }');
       } else if (slotType.isVoid) {
         writeln('  void set$camel() {');
         write(updateTag);
         writeln('  }');
       } else if (slotType.isString) {
+        String type = '_uint16BuilderList';
         writeln('  void set ${slotName}(String value) {');
-        writeln(updateTag);
-        writeln('    NewString(new _uint16BuilderList(), ${slot.offset}, value);');
+        write(updateTag);
+        writeln('    NewString(new $type(), ${slot.offset}, value);');
         writeln('  }');
         writeln('  List<int> init${camel}Data(int length) {');
-        writeln(updateTag);
-        writeln('    return NewList(new _uint16BuilderList(), ${slot.offset},'
+        write(updateTag);
+        writeln('    $type result = NewList(new $type(), ${slot.offset},'
                 ' length, 2);');
+        writeln('    return result;');
         writeln('  }');
       } else if (slotType.isPrimitive) {
         String setter = _SETTERS[slotType.identifier];

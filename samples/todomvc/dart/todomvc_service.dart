@@ -129,13 +129,12 @@ class NodeBuilder extends Builder {
   }
   void set str(String value) {
     tag = 4;
-
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initStrData(int length) {
     tag = 4;
-
-    return NewList(new _uint16BuilderList(), 0, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 0, length, 2);
+    return result;
   }
   ConsBuilder initCons() {
     tag = 5;
@@ -188,7 +187,8 @@ class PatchBuilder extends Builder {
         ..offset = offset + 0;
   }
   List<int> initPath(int length) {
-    return NewList(new _uint8BuilderList(), 24, length, 1);
+    _uint8BuilderList result = NewList(new _uint8BuilderList(), 24, length, 1);
+    return result;
   }
 }
 
@@ -198,7 +198,8 @@ class PatchSet extends Reader {
 
 class PatchSetBuilder extends Builder {
   List<PatchBuilder> initPatches(int length) {
-    return NewList(new _PatchBuilderList(), 0, length, 32);
+    _PatchBuilderList result = NewList(new _PatchBuilderList(), 0, length, 32);
+    return result;
   }
 }
 
@@ -209,12 +210,11 @@ class BoxedString extends Reader {
 
 class BoxedStringBuilder extends Builder {
   void set str(String value) {
-
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initStrData(int length) {
-
-    return NewList(new _uint16BuilderList(), 0, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 0, length, 2);
+    return result;
   }
 }
 
@@ -224,7 +224,7 @@ class _uint16List extends ListReader implements List<int> {
 
 class _uint16BuilderList extends ListBuilder implements List<int> {
   int operator[](int index) => segment.memory.getUint16(offset + index * 2);
-  void operator[]=(int index, int value) => segment.memory.setUint16(offset + index * 2, value);
+  void operator[]=(int index, int value) { segment.memory.setUint16(offset + index * 2, value); }
 }
 
 class _uint8List extends ListReader implements List<int> {
@@ -233,7 +233,7 @@ class _uint8List extends ListReader implements List<int> {
 
 class _uint8BuilderList extends ListBuilder implements List<int> {
   int operator[](int index) => segment.memory.getUint8(offset + index * 1);
-  void operator[]=(int index, int value) => segment.memory.setUint8(offset + index * 1, value);
+  void operator[]=(int index, int value) { segment.memory.setUint8(offset + index * 1, value); }
 }
 
 class _PatchList extends ListReader implements List<Patch> {
