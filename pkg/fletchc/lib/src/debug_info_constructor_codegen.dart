@@ -22,6 +22,7 @@ import 'compiled_function.dart' show
 import 'fletch_backend.dart';
 import 'fletch_context.dart';
 import 'constructor_codegen.dart';
+import 'lazy_field_initializer_codegen.dart';
 import 'debug_info_lazy_field_initializer_codegen.dart';
 
 class DebugInfoConstructorCodegen extends ConstructorCodegen {

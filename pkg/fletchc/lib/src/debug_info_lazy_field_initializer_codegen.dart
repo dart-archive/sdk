@@ -11,6 +11,7 @@ import 'package:compiler/src/dart2jslib.dart' show
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
+import 'package:compiler/src/universe/universe.dart';
 
 import 'fletch_context.dart';
 
@@ -54,19 +55,6 @@ class DebugInfoLazyFieldInitializerCodegen
   void registerDynamicSetter(Selector selector) { }
   void registerStaticInvocation(FunctionElement function) { }
   void registerInstantiatedClass(ClassElement klass) { }
-
-  void handleThisPropertySet(Send node) {
-    recordDebugInfo(node);
-    super.handleThisPropertySet(node);
-  }
-
-  void handleAllocationAndBodyCall() {
-    // Clear out debug information after the initializer list. This avoids
-    // seeing the code that sets up for the body call as part of the last
-    // initializer evaluation.
-    recordDebugInfo(null);
-    super.handleAllocationAndBodyCall();
-  }
 
   void invokeMethod(Node node, Selector selector) {
     recordDebugInfo(node);
