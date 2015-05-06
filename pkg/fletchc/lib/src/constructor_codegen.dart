@@ -77,6 +77,19 @@ class ConstructorCodegen extends CodegenVisitor {
     handleAllocationAndBodyCall();
   }
 
+  LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
+      CompiledFunction function,
+      FieldElement field) {
+    TreeElements elements = field.resolvedAst.elements;
+    return new LazyFieldInitializerCodegen(
+        function,
+        context,
+        elements,
+        registry,
+        context.backend.createClosureEnvironment(field, elements),
+        field);
+  }
+
   void handleAllocationAndBodyCall() {
     // TODO(ajohnsen): Let allocate take an offset to the field stack, so we
     // don't have to copy all the fields?
@@ -244,18 +257,11 @@ class ConstructorCodegen extends CodegenVisitor {
       if (initializer == null) {
         builder.loadLiteralNull();
       } else {
-        TreeElements elements = field.resolvedAst.elements;
-
         // Create a LazyFieldInitializerCodegen for compiling the initializer.
         // Note that we reuse the compiledFunction, to inline it into the
         // constructor.
-        LazyFieldInitializerCodegen codegen = new LazyFieldInitializerCodegen(
-            compiledFunction,
-            context,
-            elements,
-            registry,
-            context.backend.createClosureEnvironment(field, elements),
-            field);
+        LazyFieldInitializerCodegen codegen =
+            lazyFieldInitializerCodegenFor(compiledFunction, field);
 
         // We only want the value of the actual initializer, not the usual
         // 'body'.

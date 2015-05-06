@@ -2,63 +2,38 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.debug_info_constructor_codegen;
+library fletchc.lazy_field_initializer_codegen;
+
+import 'package:compiler/src/dart2jslib.dart' show
+    MessageKind,
+    Registry;
 
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
-import 'package:compiler/src/universe/universe.dart';
 
-import 'package:compiler/src/dart2jslib.dart' show
-    Registry;
-
-import 'bytecode_builder.dart';
-import 'closure_environment.dart';
-import 'codegen_visitor.dart';
+import 'fletch_context.dart';
 
 import 'compiled_function.dart' show
     CompiledFunction;
 
-import 'fletch_backend.dart';
-import 'fletch_context.dart';
-import 'constructor_codegen.dart';
-import 'debug_info_lazy_field_initializer_codegen.dart';
+import 'closure_environment.dart';
+import 'codegen_visitor.dart';
+import 'lazy_field_initializer_codegen.dart';
 
-class DebugInfoConstructorCodegen extends ConstructorCodegen {
+class DebugInfoLazyFieldInitializerCodegen
+    extends LazyFieldInitializerCodegen {
   final FletchCompiler compiler;
 
-  // Regenerate the bytecode in a fresh buffer separately from the compiled
-  // function. If we did not create a separate buffer, the bytecode would
-  // be appended to the compiled function builder and we would get a compiled
-  // function with incorrect bytecode.
-  BytecodeBuilder builder;
-
-  DebugInfoConstructorCodegen(CompiledFunction compiledFunction,
-                              FletchContext context,
-                              TreeElements elements,
-                              Registry registry,
-                              ClosureEnvironment closureEnvironment,
-                              ConstructorElement constructor,
-                              CompiledClass compiledClass,
-                              this.compiler)
+  DebugInfoLazyFieldInitializerCodegen(CompiledFunction compiledFunction,
+                                       FletchContext context,
+                                       TreeElements elements,
+                                       Registry registry,
+                                       ClosureEnvironment closureEnvironment,
+                                       FieldElement field,
+                                       this.compiler)
       : super(compiledFunction, context, elements, registry,
-              closureEnvironment, constructor, compiledClass) {
-    builder = new BytecodeBuilder(super.builder.functionArity);
-  }
-
-  LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
-      CompiledFunction function,
-      FieldElement field) {
-    TreeElements elements = field.resolvedAst.elements;
-    return new DebugInfoLazyFieldInitializerCodegen(
-        function,
-        context,
-        elements,
-        null,
-        context.backend.createClosureEnvironment(field, elements),
-        field,
-        compiler);
-  }
+              closureEnvironment, field);
 
   void recordDebugInfo(Node node) {
     compiledFunction.debugInfo.addLocation(compiler, builder.byteSize, node);

@@ -4,9 +4,6 @@
 
 library fletchc.lazy_field_initializer_codegen;
 
-import 'package:compiler/src/constants/expressions.dart' show
-    ConstantExpression;
-
 import 'package:compiler/src/dart2jslib.dart' show
     MessageKind,
     Registry;
@@ -14,20 +11,8 @@ import 'package:compiler/src/dart2jslib.dart' show
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
-import 'package:compiler/src/universe/universe.dart';
-import 'package:compiler/src/util/util.dart' show Spannable;
-import 'package:compiler/src/dart_types.dart';
 
 import 'fletch_context.dart';
-
-import 'fletch_backend.dart';
-
-import 'fletch_constants.dart' show
-    CompiledFunctionConstant,
-    FletchClassConstant;
-
-import '../bytecodes.dart' show
-    Bytecode;
 
 import 'compiled_function.dart' show
     CompiledFunction;
