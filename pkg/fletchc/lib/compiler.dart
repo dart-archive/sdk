@@ -287,20 +287,20 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   }
 
   Iterable<int> lookupFunctionIdsByName(String name) {
-    return _compiler.backend.functions
+    return _compiler.context.backend.functions
         .where((f) => f.name == name)
         .map((f) => f.methodId);
   }
 
   String astString(int methodId, int bytecodeIndex) {
     CompiledFunction function = lookupCompiledFunction(methodId);
-    _compiler.backend.ensureDebugInfo(function);
+    _compiler.context.backend.ensureDebugInfo(function);
     return function.debugInfo.astStringFor(bytecodeIndex);
   }
 
   String fileAndLineString(int methodId, int bytecodeIndex) {
     CompiledFunction function = lookupCompiledFunction(methodId);
-    _compiler.backend.ensureDebugInfo(function);
+    _compiler.context.backend.ensureDebugInfo(function);
     return function.debugInfo.fileAndLineStringFor(bytecodeIndex);
   }
 
@@ -308,7 +308,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
                           int bytecodeIndex,
                           {int contextLines : 5}) {
     CompiledFunction function = lookupCompiledFunction(methodId);
-    _compiler.backend.ensureDebugInfo(function);
+    _compiler.context.backend.ensureDebugInfo(function);
     return function.debugInfo.sourceListStringFor(bytecodeIndex, contextLines);
   }
 
@@ -345,7 +345,7 @@ class Backdoor {
   Backdoor(this._compiler);
 
   functionElementFromName(String name) =>
-        _compiler._compiler.backend.compiledFunctions.keys.where(
+        _compiler._compiler.context.backend.compiledFunctions.keys.where(
             (f) => f.name == name).single;
   indexForFunctionElement(var element) =>
         _compiler._compiler.backend.allocateMethodId(element);
