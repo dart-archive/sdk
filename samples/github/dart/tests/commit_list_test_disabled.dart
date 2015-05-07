@@ -4,13 +4,16 @@
 
 import 'package:expect/expect.dart';
 
+import 'package:immi/immi.dart';
+import 'package:service/struct.dart';
+
 import '../github_services.dart';
 import '../github_mock.dart';
 import '../commit_list_presenter.dart';
+import '../commit_presenter.dart';
 
 import '../../generated/dart/github.dart';
 import '../../generated/dart/github_presenter_service.dart';
-import '../../generated/dart/struct.dart';
 
 void main() {
   var mock = new GithubMock()..spawn();
@@ -23,7 +26,7 @@ void main() {
 }
 
 void testPresent(Repository repo) {
-  var presenter = new CommitListPresenter(repo);
+  var presenter = new CommitListPresenter(repo, new CommitPresenter(repo));
   CommitListNode previous = null;
   CommitListNode current = null;
 

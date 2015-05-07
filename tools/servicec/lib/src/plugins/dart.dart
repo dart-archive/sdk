@@ -21,9 +21,7 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
-const List<String> RESOURCES = const [
-  "struct.dart",
-];
+const List<String> RESOURCES = const [];
 
 void generate(String path, Unit unit, String outputDirectory) {
   _DartVisitor visitor = new _DartVisitor(path);
@@ -94,7 +92,7 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('import "dart:ffi";');
     writeln('import "dart:service" as service;');
     if (node.structs.isNotEmpty) {
-      writeln('import "struct.dart";');
+      writeln('import "package:service/struct.dart";');
     }
     writeln();
 

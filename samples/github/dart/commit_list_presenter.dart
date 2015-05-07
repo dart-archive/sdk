@@ -5,6 +5,9 @@
 import 'github_services.dart';
 import '../generated/dart/github.dart';
 
+import 'package:immi/immi.dart';
+import 'package:immi_samples/sequenced_presenter.dart';
+
 class _Display {
   int startOffset = 0;
   int bufferOffset = 0;
@@ -30,6 +33,7 @@ class _Display {
 
 class CommitListPresenter {
   Repository _repository;
+  SequencedPresenter _itemPresenter;
   _Display _display = new _Display();
   int _start = 0;
   int _end = 0;
@@ -40,7 +44,7 @@ class CommitListPresenter {
   // issue #25 is resovled.
   Function _setDisplayRangeTearOff;
 
-  CommitListPresenter(this._repository) {
+  CommitListPresenter(this._repository, this._itemPresenter) {
     _setDisplayRangeTearOff = _setDisplayRange;
   }
 
@@ -72,11 +76,9 @@ class CommitListPresenter {
     for (; i < length; ++i) {
       int index = startOffset + i;
       int bufferIndex = (bufferOffset + i) % length;
-      Map<String, dynamic> json = _repository.getCommitAt(index);
-      if (json == null) break;
-      commits[bufferIndex] = new CommitNode(
-          author: json['commit']['author']['name'],
-          message: json['commit']['message']);
+      Node item = _itemPresenter.presentAt(index);
+      if (item == null) break;
+      commits[bufferIndex] = item;
     }
     if (startOffset + i > _minimumCount) {
       _minimumCount = startOffset + i;
