@@ -2,9 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'model.dart';
+import 'package:service/struct.dart';
+
+import 'dart/commit_node.dart';
 import 'dart/console_presenter_base.dart';
+import 'dart/console_node.dart';
 import 'dart/presentation_graph.dart' as node;
+import 'model.dart';
 import 'trace.dart';
 
 class ConsolePresenter extends ConsolePresenterBase {

@@ -40,25 +40,25 @@ abstract class MyApiService {
     switch (request.getInt32(0)) {
       case _TERMINATE_METHOD_ID:
         _terminated = true;
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _CREATE_METHOD_ID:
         var result = _impl.create();
         request.setInt32(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _DESTROY_METHOD_ID:
         _impl.destroy(request.getInt32(48));
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _FOO_METHOD_ID:
         var result = _impl.foo(request.getInt32(48));
         request.setInt32(48, result);
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       case _MY_OBJECT_FUNK_METHOD_ID:
         _impl.MyObject_funk(request.getInt32(48), request.getInt32(52), request.getInt32(56));
-        _postResult.icall$1(request);
+        _postResult.vcall$1(request);
         break;
       default:
         throw new UnsupportedError("Unknown method");

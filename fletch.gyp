@@ -128,7 +128,6 @@
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'tests/service_tests/performance/dart/performance_service.dart',
-            'tests/service_tests/performance/dart/struct.dart',
           ],
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/service_performance.snapshot',
@@ -186,7 +185,6 @@
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'tests/service_tests/conformance/dart/conformance_service.dart',
-            'tests/service_tests/conformance/dart/struct.dart',
           ],
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/service_conformance.snapshot',
@@ -245,7 +243,6 @@
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'samples/myapi/myapi_impl.dart',
             'samples/myapi/generated/dart/myapi_service.dart',
-            'samples/myapi/generated/dart/struct.dart',
           ],
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/myapi.snapshot',
@@ -305,7 +302,6 @@
             'samples/todomvc/model.dart',
             'samples/todomvc/todomvc_impl.dart',
             'samples/todomvc/dart/presentation_graph.dart',
-            'samples/todomvc/dart/struct.dart',
             'samples/todomvc/dart/todomvc_service.dart',
             'samples/todomvc/dart/todomvc_presenter.dart',
             'samples/todomvc/dart/todomvc_presenter_model.dart',

@@ -8,7 +8,7 @@ library todomvc_service;
 
 import "dart:ffi";
 import "dart:service" as service;
-import "struct.dart";
+import "package:service/struct.dart";
 
 final Channel _channel = new Channel();
 final Port _port = new Port(_channel);

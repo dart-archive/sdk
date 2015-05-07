@@ -34,7 +34,6 @@
 // communtication which results in the files:
 //
 //   dart/buildbot_service.dart
-//   dart/struct.dart
 //
 //   cc/buildbot_service.{h,cc}
 //   cc/struct.{h,cc}

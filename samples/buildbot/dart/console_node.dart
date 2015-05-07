@@ -4,6 +4,9 @@
 
 // Should become auto-generated.
 
+import 'package:service/struct.dart';
+
+import 'buildbot_service.dart';
 import 'commit_node.dart';
 import 'presentation_utils.dart';
 import '../trace.dart';
@@ -33,7 +36,7 @@ class ConsoleNode {
       if (patch == null) patch = new ConsoleUpdatePatch();
       patch.commitsOffset = commitsOffset;
     }
-    CommitListPatch commitsPatch = diffList(commits, previous.commits);
+    ListPatch commitsPatch = diffList(commits, previous.commits);
     if (commitsPatch != null) {
       if (patch == null) patch = new ConsoleUpdatePatch();
       patch.commits = commitsPatch;

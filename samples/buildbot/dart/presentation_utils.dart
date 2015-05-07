@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'package:service/struct.dart';
 import '../trace.dart';
 
 ListPatch diffList(List current, List previous) {
@@ -93,7 +94,7 @@ class ListInsertPatch extends ListUpdatePatch {
     assert(trace("ListInsertPatch::serialize"));
     builder.index = index;
     int length = nodes.length;
-    List<Builders> builders = builder.initInsert(length);
+    List<Builder> builders = builder.initInsert(length);
     for (var i = 0; i < length; ++i) {
       nodes[i].serialize(builders[i]);
     }
@@ -109,7 +110,7 @@ class ListPatchPatch extends ListUpdatePatch {
     assert(trace("ListPatchPatch::serialize"));
     builder.index = index;
     int length = patches.length;
-    List<Builders> builders = builder.initPatch(length);
+    List<Builder> builders = builder.initPatch(length);
     for (var i = 0; i < length; ++i) {
       patches[i].serialize(builders[i]);
     }

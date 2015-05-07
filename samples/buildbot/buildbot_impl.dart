@@ -2,9 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'model.dart';
-import 'dart/buildbot_service.dart';
 import 'console_presenter.dart';
+import 'dart/buildbot_service.dart';
+import 'dart/console_node.dart';
+import 'model.dart';
 import 'trace.dart';
 
 class BuildBotImpl extends BuildBotService {

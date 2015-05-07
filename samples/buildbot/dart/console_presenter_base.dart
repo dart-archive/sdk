@@ -4,8 +4,9 @@
 
 // Should become auto-generated.
 
+import 'buildbot_service.dart';
 import 'console_node.dart';
-import 'struct.dart';
+import 'package:service/struct.dart';
 
 abstract class ConsolePresenterBase {
   // Construct a "presentation graph" from the model.

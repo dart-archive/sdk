@@ -4,6 +4,7 @@
 
 // Should become auto-generated.
 
+import 'buildbot_service.dart';
 import 'presentation_utils.dart';
 import '../trace.dart';
 
@@ -67,7 +68,7 @@ class CommitUpdatePatch extends CommitPatch {
   set author(author) { ++_count; _author = author; }
   set message(message) { ++_count; _message = message; }
 
-  void serialize(CommitUpdatePatchDataBuilder builder) {
+  void serialize(CommitPatchDataBuilder builder) {
     assert(trace("CommitUpdatePatch::serialize"));
     assert(_count > 0);
     List<CommitUpdatePatchDataBuilder> builders = builder.initUpdates(_count);

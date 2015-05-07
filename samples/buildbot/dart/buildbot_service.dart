@@ -8,7 +8,7 @@ library buildbot_service;
 
 import "dart:ffi";
 import "dart:service" as service;
-import "struct.dart";
+import "package:service/struct.dart";
 
 final Channel _channel = new Channel();
 final Port _port = new Port(_channel);
@@ -86,23 +86,22 @@ class ConsoleNodeData extends Reader {
 
 class ConsoleNodeDataBuilder extends Builder {
   void set title(String value) {
-
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initTitleData(int length) {
-
-    return NewList(new _uint16BuilderList(), 0, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 0, length, 2);
+    return result;
   }
   void set status(String value) {
-
     NewString(new _uint16BuilderList(), 8, value);
   }
   List<int> initStatusData(int length) {
-
-    return NewList(new _uint16BuilderList(), 8, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 8, length, 2);
+    return result;
   }
   List<CommitNodeDataBuilder> initCommits(int length) {
-    return NewList(new _CommitNodeDataBuilderList(), 16, length, 24);
+    _CommitNodeDataBuilderList result = NewList(new _CommitNodeDataBuilderList(), 16, length, 24);
+    return result;
   }
   void set commitsOffset(int value) {
     segment.memory.setInt32(offset + 24, value);
@@ -119,20 +118,18 @@ class CommitNodeData extends Reader {
 
 class CommitNodeDataBuilder extends Builder {
   void set author(String value) {
-
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initAuthorData(int length) {
-
-    return NewList(new _uint16BuilderList(), 0, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 0, length, 2);
+    return result;
   }
   void set message(String value) {
-
     NewString(new _uint16BuilderList(), 8, value);
   }
   List<int> initMessageData(int length) {
-
-    return NewList(new _uint16BuilderList(), 8, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 8, length, 2);
+    return result;
   }
   void set revision(int value) {
     segment.memory.setInt32(offset + 16, value);
@@ -182,7 +179,8 @@ class ConsolePatchDataBuilder extends Builder {
   }
   List<ConsoleUpdatePatchDataBuilder> initUpdates(int length) {
     tag = 2;
-    return NewList(new _ConsoleUpdatePatchDataBuilderList(), 0, length, 16);
+    _ConsoleUpdatePatchDataBuilderList result = NewList(new _ConsoleUpdatePatchDataBuilderList(), 0, length, 16);
+    return result;
   }
   void set tag(int value) {
     segment.memory.setUint16(offset + 28, value);
@@ -208,23 +206,21 @@ class ConsoleUpdatePatchData extends Reader {
 class ConsoleUpdatePatchDataBuilder extends Builder {
   void set title(String value) {
     tag = 1;
-
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initTitleData(int length) {
     tag = 1;
-
-    return NewList(new _uint16BuilderList(), 0, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 0, length, 2);
+    return result;
   }
   void set status(String value) {
     tag = 2;
-
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initStatusData(int length) {
     tag = 2;
-
-    return NewList(new _uint16BuilderList(), 0, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 0, length, 2);
+    return result;
   }
   void set commitsOffset(int value) {
     tag = 3;
@@ -260,7 +256,8 @@ class CommitPatchDataBuilder extends Builder {
   }
   List<CommitUpdatePatchDataBuilder> initUpdates(int length) {
     tag = 2;
-    return NewList(new _CommitUpdatePatchDataBuilderList(), 0, length, 16);
+    _CommitUpdatePatchDataBuilderList result = NewList(new _CommitUpdatePatchDataBuilderList(), 0, length, 16);
+    return result;
   }
   void set tag(int value) {
     segment.memory.setUint16(offset + 20, value);
@@ -286,23 +283,21 @@ class CommitUpdatePatchDataBuilder extends Builder {
   }
   void set author(String value) {
     tag = 2;
-
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initAuthorData(int length) {
     tag = 2;
-
-    return NewList(new _uint16BuilderList(), 0, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 0, length, 2);
+    return result;
   }
   void set message(String value) {
     tag = 3;
-
     NewString(new _uint16BuilderList(), 0, value);
   }
   List<int> initMessageData(int length) {
     tag = 3;
-
-    return NewList(new _uint16BuilderList(), 0, length, 2);
+    _uint16BuilderList result = NewList(new _uint16BuilderList(), 0, length, 2);
+    return result;
   }
   void set tag(int value) {
     segment.memory.setUint16(offset + 8, value);
@@ -315,7 +310,8 @@ class CommitListPatchData extends Reader {
 
 class CommitListPatchDataBuilder extends Builder {
   List<CommitListUpdatePatchDataBuilder> initUpdates(int length) {
-    return NewList(new _CommitListUpdatePatchDataBuilderList(), 0, length, 16);
+    _CommitListUpdatePatchDataBuilderList result = NewList(new _CommitListUpdatePatchDataBuilderList(), 0, length, 16);
+    return result;
   }
 }
 
@@ -333,11 +329,13 @@ class CommitListUpdatePatchData extends Reader {
 class CommitListUpdatePatchDataBuilder extends Builder {
   List<CommitNodeDataBuilder> initInsert(int length) {
     tag = 1;
-    return NewList(new _CommitNodeDataBuilderList(), 0, length, 24);
+    _CommitNodeDataBuilderList result = NewList(new _CommitNodeDataBuilderList(), 0, length, 24);
+    return result;
   }
   List<CommitPatchDataBuilder> initPatch(int length) {
     tag = 2;
-    return NewList(new _CommitPatchDataBuilderList(), 0, length, 24);
+    _CommitPatchDataBuilderList result = NewList(new _CommitPatchDataBuilderList(), 0, length, 24);
+    return result;
   }
   void set remove(int value) {
     tag = 3;
@@ -357,7 +355,7 @@ class _uint16List extends ListReader implements List<int> {
 
 class _uint16BuilderList extends ListBuilder implements List<int> {
   int operator[](int index) => segment.memory.getUint16(offset + index * 2);
-  void operator[]=(int index, int value) => segment.memory.setUint16(offset + index * 2, value);
+  void operator[]=(int index, int value) { segment.memory.setUint16(offset + index * 2, value); }
 }
 
 class _CommitNodeDataList extends ListReader implements List<CommitNodeData> {
