@@ -26,6 +26,12 @@ class DebugInfoLazyFieldInitializerCodegen
     extends LazyFieldInitializerCodegen {
   final FletchCompiler compiler;
 
+  // Regenerate the bytecode in a fresh buffer separately from the compiled
+  // function. If we did not create a separate buffer, the bytecode would
+  // be appended to the compiled function builder and we would get a compiled
+  // function with incorrect bytecode.
+  final BytecodeBuilder debugBuilder;
+
   DebugInfoLazyFieldInitializerCodegen(CompiledFunction compiledFunction,
                                        FletchContext context,
                                        TreeElements elements,
@@ -33,8 +39,11 @@ class DebugInfoLazyFieldInitializerCodegen
                                        ClosureEnvironment closureEnvironment,
                                        FieldElement field,
                                        this.compiler)
-      : super(compiledFunction, context, elements, registry,
+      : debugBuilder = new BytecodeBuilder(compiledFunction.arity),
+        super(compiledFunction, context, elements, registry,
               closureEnvironment, field);
+
+  BytecodeBuilder get builder => debugBuilder;
 
   void recordDebugInfo(Node node) {
     compiledFunction.debugInfo.addLocation(compiler, builder.byteSize, node);

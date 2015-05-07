@@ -555,7 +555,7 @@ class FletchBackend extends Backend {
         element,
         elements);
     CodegenVisitor codegen;
-    if (function.isConstructor) {
+    if (function.isInitializer) {
       ClassElement enclosingClass = element.enclosingClass;
       CompiledClass compiledClass = compiledClasses[enclosingClass];
       codegen = new DebugInfoConstructorCodegen(
@@ -1171,7 +1171,8 @@ class FletchBackend extends Backend {
           constructor.name,
           constructor,
           constructor.functionSignature,
-          null);
+          null,
+          isInitializer: true);
       functions.add(compiledFunction);
 
       ConstructorCodegen codegen = new ConstructorCodegen(
@@ -1224,7 +1225,7 @@ class FletchBackend extends Backend {
           ..loadParameter(0)
           ..loadParameter(1)
           ..storeField(fieldIndex)
-      // Top is at this point the rhs argument, thus the return value.
+          // Top is at this point the rhs argument, thus the return value.
           ..ret()
           ..methodEnd();
       return stub.methodId;

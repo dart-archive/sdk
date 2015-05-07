@@ -29,7 +29,7 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
   // function. If we did not create a separate buffer, the bytecode would
   // be appended to the compiled function builder and we would get a compiled
   // function with incorrect bytecode.
-  BytecodeBuilder builder;
+  final BytecodeBuilder debugBuilder;
 
   DebugInfoFunctionCodegen(CompiledFunction compiledFunction,
                            FletchContext context,
@@ -38,10 +38,11 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
                            ClosureEnvironment closureEnvironment,
                            FunctionElement function,
                            this.compiler)
-      : super(compiledFunction, context, elements, registry,
-              closureEnvironment, function) {
-    builder = new BytecodeBuilder(super.builder.functionArity);
-  }
+      : debugBuilder = new BytecodeBuilder(compiledFunction.arity),
+        super(compiledFunction, context, elements, registry,
+              closureEnvironment, function);
+
+  BytecodeBuilder get builder => debugBuilder;
 
   void recordDebugInfo(Node node) {
     compiledFunction.debugInfo.addLocation(compiler, builder.byteSize, node);

@@ -247,7 +247,8 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     if (function.isConstructor) {
       ConstructorElement constructor = function.element;
       ClassElement enclosing = constructor.enclosingClass;
-      return '${enclosing.name} initializer';
+      String postfix = function.isInitializer ? ' initializer' : '';
+      return '${enclosing.name}$postfix';
     }
     String functionName = function.name;
     if (functionName == null) return '';

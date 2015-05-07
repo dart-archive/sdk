@@ -234,7 +234,7 @@ class ConstructorCodegen extends CodegenVisitor {
 
     FunctionSignature signature = constructor.functionSignature;
 
-    // Prepate for constructor body invoke.
+    // Prepare for constructor body invoke.
     builder.dup();
     signature.orderedForEachParameter((FormalElement parameter) {
       scope[parameter].load(builder);

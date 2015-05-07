@@ -32,7 +32,7 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
   // function. If we did not create a separate buffer, the bytecode would
   // be appended to the compiled function builder and we would get a compiled
   // function with incorrect bytecode.
-  BytecodeBuilder builder;
+  final BytecodeBuilder debugBuilder;
 
   DebugInfoConstructorCodegen(CompiledFunction compiledFunction,
                               FletchContext context,
@@ -42,10 +42,11 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
                               ConstructorElement constructor,
                               CompiledClass compiledClass,
                               this.compiler)
-      : super(compiledFunction, context, elements, registry,
-              closureEnvironment, constructor, compiledClass) {
-    builder = new BytecodeBuilder(super.builder.functionArity);
-  }
+      : debugBuilder = new BytecodeBuilder(compiledFunction.arity),
+        super(compiledFunction, context, elements, registry,
+              closureEnvironment, constructor, compiledClass);
+
+  BytecodeBuilder get builder => debugBuilder;
 
   LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
       CompiledFunction function,

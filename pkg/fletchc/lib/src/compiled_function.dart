@@ -52,18 +52,13 @@ class CompiledFunction {
    * addition to that of [signature].
    */
   final CompiledClass memberOf;
-
   final String name;
-
   final Element element;
-
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
-
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
-
   final Map<int, ConstantValue> classConstantValues = <int, ConstantValue>{};
-
   final bool isAccessor;
+  final bool isInitializer;
 
   DebugInfo debugInfo;
 
@@ -72,7 +67,8 @@ class CompiledFunction {
                    this.element,
                    FunctionSignature signature,
                    CompiledClass memberOf,
-                   {this.isAccessor: false})
+                   {this.isAccessor: false,
+                    this.isInitializer: false})
       : this.signature = signature,
         this.memberOf = memberOf,
         builder = new BytecodeBuilder(
@@ -89,6 +85,8 @@ class CompiledFunction {
   bool get hasThisArgument => memberOf != null;
 
   bool get isConstructor => element != null && element.isGenerativeConstructor;
+
+  int get arity => signature.parameterCount + (hasThisArgument ? 1 : 0);
 
   int allocateConstant(ConstantValue constant) {
     return constants.putIfAbsent(constant, () => constants.length);
