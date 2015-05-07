@@ -7,12 +7,6 @@
 3_test: Fail
 5_test: Fail
 
-[ $compiler == fletch ]
-messaging_port_lifetime_test: Fail # TODO(ajohnsen): Needs new compiler.
-messaging_process_death_test: Fail # TODO(ajohnsen): Needs new compiler.
-messaging_program_gc_test: Fail # TODO(ajohnsen): Needs new compiler.
-spawn_process_yield_test: Fail # TODO(ajohnsen): Needs new compiler.
-
 [ $asan && $mode == debug ]
 4_test: Pass, Slow
 messaging_latency_test: Pass, Slow

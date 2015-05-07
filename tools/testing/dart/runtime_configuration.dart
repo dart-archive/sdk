@@ -27,41 +27,16 @@ class RuntimeConfiguration {
   factory RuntimeConfiguration(Map configuration) {
     String runtime = configuration['runtime'];
     switch (runtime) {
-      case 'ContentShellOnAndroid':
-      case 'DartiumOnAndroid':
-      case 'chrome':
-      case 'chromeOnAndroid':
-      case 'dartium':
-      case 'ff':
-      case 'firefox':
-      case 'ie11':
-      case 'ie10':
-      case 'ie9':
-      case 'opera':
-      case 'safari':
-      case 'safarimobilesim':
-        // TODO(ahe): Replace this with one or more browser runtimes.
-        return new DummyRuntimeConfiguration();
-
-      case 'jsshell':
-        return new JsshellRuntimeConfiguration();
-
-      case 'd8':
-        return new D8RuntimeConfiguration();
-
       case 'none':
         return new NoneRuntimeConfiguration();
-
-      case 'vm':
-        return new StandaloneDartRuntimeConfiguration();
 
       case 'fletchc':
         return new FletchcRuntimeConfiguration(
             persist: configuration['persist'],
             hostChecked: configuration['host_checked']);
 
-      case 'drt':
-        return new DrtRuntimeConfiguration();
+      case 'fletchvm':
+        return new FletchVMRuntimeConfiguration();
 
       default:
         throw "Unknown runtime '$runtime'";
@@ -105,65 +80,6 @@ class NoneRuntimeConfiguration extends RuntimeConfiguration {
   }
 }
 
-class CommandLineJavaScriptRuntime extends RuntimeConfiguration {
-  final String moniker;
-
-  CommandLineJavaScriptRuntime(this.moniker)
-      : super._subclass();
-
-  void checkArtifact(CommandArtifact artifact) {
-    String type = artifact.mimeType;
-    if (type != 'application/javascript') {
-      throw "Runtime '$moniker' cannot run files of type '$type'.";
-    }
-  }
-}
-
-/// Chrome/V8-based development shell (d8).
-class D8RuntimeConfiguration extends CommandLineJavaScriptRuntime {
-  D8RuntimeConfiguration()
-      : super('d8');
-
-  List<Command> computeRuntimeCommands(
-      TestSuite suite,
-      CommandBuilder commandBuilder,
-      CommandArtifact artifact,
-      List<String> arguments,
-      Map<String, String> environmentOverrides) {
-    // TODO(ahe): Avoid duplication of this method between d8 and jsshell.
-    checkArtifact(artifact);
-    return <Command>[
-        commandBuilder.getJSCommandlineCommand(
-            moniker, suite.d8FileName, arguments, environmentOverrides)];
-  }
-
-  List<String> dart2jsPreambles(Uri preambleDir) {
-    return [preambleDir.resolve('d8.js').toFilePath()];
-  }
-}
-
-/// Firefox/SpiderMonkey-based development shell (jsshell).
-class JsshellRuntimeConfiguration extends CommandLineJavaScriptRuntime {
-  JsshellRuntimeConfiguration()
-      : super('jsshell');
-
-  List<Command> computeRuntimeCommands(
-      TestSuite suite,
-      CommandBuilder commandBuilder,
-      CommandArtifact artifact,
-      List<String> arguments,
-      Map<String, String> environmentOverrides) {
-    checkArtifact(artifact);
-    return <Command>[
-        commandBuilder.getJSCommandlineCommand(
-            moniker, suite.jsShellFileName, arguments, environmentOverrides)];
-  }
-
-  List<String> dart2jsPreambles(Uri preambleDir) {
-    return ['-f', preambleDir.resolve('jsshell.js').toFilePath(), '-f'];
-  }
-}
-
 /// Common runtime configuration for runtimes based on the Dart VM.
 class DartVmRuntimeConfiguration extends RuntimeConfiguration {
   DartVmRuntimeConfiguration()
@@ -190,53 +106,57 @@ class DartVmRuntimeConfiguration extends RuntimeConfiguration {
   }
 }
 
-/// Runtime configuration for Content Shell.  We previously used a similar
-/// program named Dump Render Tree, hence the name.
-class DrtRuntimeConfiguration extends DartVmRuntimeConfiguration {
-  int computeTimeoutMultiplier({
-      bool isDebug: false,
-      bool isChecked: false,
-      String arch}) {
-    return 4 // Allow additional time for browser testing to run.
-        // TODO(ahe): We might need to distinquish between DRT for running
-        // JavaScript and Dart code.  I'm not convinced the inherited timeout
-        // multiplier is relevant for JavaScript.
-        * super.computeTimeoutMultiplier(
-            isDebug: isDebug, isChecked: isChecked);
-  }
-}
-
-/// The standalone Dart VM binary, "dart" or "dart.exe".
-class StandaloneDartRuntimeConfiguration extends DartVmRuntimeConfiguration {
-  List<Command> computeRuntimeCommands(
-      TestSuite suite,
-      CommandBuilder commandBuilder,
-      CommandArtifact artifact,
-      List<String> arguments,
-      Map<String, String> environmentOverrides) {
-    String script = artifact.filename;
-    String type = artifact.mimeType;
-    if (script != null && type != 'application/dart') {
-      throw "Dart VM cannot run files of type '$type'.";
-    }
-    var binDir = suite.buildDir;
-    return <Command>[
-        commandBuilder.getProcessCommand(
-            "fletch",
-            "$binDir/fletch",
-            arguments),
-        commandBuilder.getProcessCommand(
-            "fletch",
-            "$binDir/fletch",
-            ["-Xunfold-program"]..addAll(arguments))];
-  }
-}
-
 class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
   final bool persist;
   final bool hostChecked;
 
-  FletchcRuntimeConfiguration({this.persist: true, this.hostChecked: true});
+  FletchcRuntimeConfiguration({this.persist: true, this.hostChecked: true}) {
+    if (persist && !hostChecked) {
+      throw "fletch_driver only works with --host-checked option.";
+    }
+  }
+
+  List<Command> computeRuntimeCommands(
+      TestSuite suite,
+      CommandBuilder commandBuilder,
+      CommandArtifact artifact,
+      List<String> basicArguments,
+      Map<String, String> environmentOverrides) {
+    String script = artifact.filename;
+    String type = artifact.mimeType;
+    if (script != null && type != 'application/dart') {
+      throw "Dart VM cannot run files of type '$type'.";
+    }
+    String executable;
+    List<String> arguments;
+    Map<String, String> environment;
+    if (!persist) {
+      List<String> vmArguments =
+          <String>["-p", "package", "package:fletchc/fletchc.dart"];
+      if (hostChecked) {
+        vmArguments.insert(0, "-c");
+      }
+      vmArguments.addAll(basicArguments);
+
+      executable = suite.dartVmBinaryFileName;
+      arguments = vmArguments;
+      environment = environmentOverrides;
+    } else {
+      executable = '${suite.buildDir}/fletch_driver';
+      arguments = basicArguments;
+      environment = {
+        'DART_VM': suite.dartVmBinaryFileName,
+      };
+    }
+    // NOTE: We assume that `fletch_driver` behaves the same as invoking
+    // the DartVM in terms of exit codes.
+    return <Command>[
+        commandBuilder.getVmCommand(executable, arguments, environment)];
+  }
+}
+
+class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
+  FletchVMRuntimeConfiguration();
 
   List<Command> computeRuntimeCommands(
       TestSuite suite,
@@ -246,28 +166,18 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
       Map<String, String> environmentOverrides) {
     String script = artifact.filename;
     String type = artifact.mimeType;
-    if (script != null && type != 'application/dart') {
-      throw "Dart VM cannot run files of type '$type'.";
+    if (script != null && type != 'application/fletch-snapshot') {
+      throw "Fletch VM cannot run files of type '$type'.";
     }
-    if (!persist) {
-      List<String> vmArguments =
-          <String>["-p", "package", "pkg/fletchc/lib/fletchc.dart"];
-      if (hostChecked) {
-        vmArguments.insert(0, "-c");
-      }
-      vmArguments.addAll(arguments);
-      return <Command>[commandBuilder.getVmCommand(
-            suite.dartVmBinaryFileName, vmArguments, environmentOverrides)];
-    } else {
-      if (!hostChecked) {
-        throw "fletch_driver only works with --host-checked option.";
-      }
-      return <Command>[
-          commandBuilder.getVmCommand(
-              "${suite.buildDir}/fletch_driver", arguments, {
-                'DART_VM': suite.dartVmBinaryFileName,
-              })];
-    }
+    var argumentsUnfold = ["-Xunfold-program"]..addAll(arguments);
+
+    // NOTE: We assume that `fletch` behaves the same as invoking
+    // the DartVM in terms of exit codes.
+    return <Command>[
+        commandBuilder.getVmCommand(
+            "${suite.buildDir}/fletch", arguments, environmentOverrides),
+        commandBuilder.getVmCommand(
+            "${suite.buildDir}/fletch", argumentsUnfold, environmentOverrides)];
   }
 }
 

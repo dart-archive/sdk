@@ -5,12 +5,12 @@
 # This directory contains tests that are intended to show the
 # current state of the language.
 
-[ $runtime == fletchc && $host_unchecked ]
+[ ($compiler == fletchc || $runtime == fletchc) && $host_unchecked ]
 constructor_named_arguments_test/none: Fail
 mixin_super_constructor_named_test: Fail
 constructor5_test: Fail
 
-[ $runtime == fletchc && $host_checked ]
+[ ($compiler == fletchc || $runtime == fletchc) && $host_checked ]
 constructor_named_arguments_test/01: Crash
 constructor_named_arguments_test/none: Crash
 mixin_super_constructor_named_test: Crash
@@ -18,10 +18,10 @@ constructor5_test: Crash
 mixin_prefix_test: Crash
 regress_14348_test: Crash
 
-[ $runtime == fletchc && $arch == ia32 ]
+[ ($compiler == fletchc || $runtime == fletchc) && $arch == ia32 ]
 bit_shift_test: Fail
 
-[ $runtime == fletchc ]
+[ $compiler == fletchc || $runtime == fletchc ]
 large_implicit_getter_test: Skip # TODO(ahe): Should be: Slow, Pass
 vm/regress_16873_test: Skip # TODO(ahe): Should be: Slow, Pass
 deferred_closurize_load_library_test: Skip # TODO(ajohnsen): Should be: Fail

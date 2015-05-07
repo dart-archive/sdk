@@ -145,13 +145,14 @@ void Scheduler::VisitProcesses(Program* program, ProcessVisitor* visitor) {
   ASSERT(program->scheduler() == this);
   pause_monitor_->Lock();
 
-  ASSERT(stopped_processes_map_.find(program) != stopped_processes_map_.end());
-  ProcessList& list = stopped_processes_map_[program];
+  if (stopped_processes_map_.find(program) != stopped_processes_map_.end()) {
+    ProcessList& list = stopped_processes_map_[program];
 
-  Process* process = list.head;
-  while (process != NULL) {
-    visitor->VisitProcess(process);
-    process = process->next();
+    Process* process = list.head;
+    while (process != NULL) {
+      visitor->VisitProcess(process);
+      process = process->next();
+    }
   }
 
   pause_monitor_->Unlock();

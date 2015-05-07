@@ -77,7 +77,7 @@ class TestOptionsParser {
    dart2analyzer: Perform static analysis on Dart code by running the analyzer on Dart.
           (only valid with the following runtimes: none)''',
               ['-c', '--compiler'],
-              ['none', 'fletch'],
+              ['none', 'fletchc'],
               'none'),
           // TODO(antonm): fix the option drt.
           new _TestOptionSpecification(
@@ -105,11 +105,7 @@ class TestOptionsParser {
     none: No runtime, compile only (for example, used for dartanalyzer static
           analysis tests).''',
               ['-r', '--runtime'],
-              ['vm', 'd8', 'jsshell', 'drt', 'dartium', 'ff', 'firefox',
-               'chrome', 'safari', 'ie9', 'ie10', 'ie11', 'opera',
-               'chromeOnAndroid', 'safarimobilesim',
-               'ContentShellOnAndroid', 'DartiumOnAndroid', 'none',
-               'fletchc'],
+              ['none', 'fletchc', 'fletchvm'],
               'fletchc'),
           new _TestOptionSpecification(
               'arch',
@@ -652,25 +648,11 @@ Note: currently only implemented for dart2js.''',
     bool isValid = true;
     List<String> validRuntimes;
     switch (config['compiler']) {
-      case 'dart2js':
-        // Note: by adding 'none' as a configuration, if the user
-        // runs test.py -c dart2js -r drt,none the dart2js_none and
-        // dart2js_drt will be duplicating work. If later we don't need 'none'
-        // with dart2js, we should remove it from here.
-        validRuntimes = const ['d8', 'jsshell', 'drt', 'none', 'dartium',
-                               'ff', 'chrome', 'safari', 'ie9', 'ie10', 'ie11',
-                               'opera', 'chromeOnAndroid', 'safarimobilesim'];
-        break;
-      case 'dartanalyzer':
-      case 'dart2analyzer':
-        validRuntimes = const ['none'];
+      case 'fletchc':
+        validRuntimes = const ['none', 'fletchvm'];
         break;
       case 'none':
         validRuntimes = const ['fletchc'];
-        break;
-      case 'fletch':
-        validRuntimes = const ['vm', 'drt', 'dartium',
-                               'ContentShellOnAndroid', 'DartiumOnAndroid'];
         break;
     }
     if (!validRuntimes.contains(config['runtime'])) {

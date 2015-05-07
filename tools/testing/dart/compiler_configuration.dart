@@ -62,8 +62,8 @@ abstract class CompilerConfiguration {
     bool isCsp = configuration['csp'];
 
     switch (compiler) {
-      case 'fletch':
-        return new Dart2dartCompilerConfiguration(
+      case 'fletchc':
+        return new FletchCCompilerConfiguration(
             isDebug: isDebug, isChecked: isChecked,
             isHostChecked: isHostChecked, useSdk: useSdk);
       case 'none':
@@ -168,19 +168,6 @@ class Dart2xCompilerConfiguration extends CompilerConfiguration {
 
   String computeCompilerPath(String buildDir) {
     return '$buildDir/fletch';
-    var prefix = 'sdk/bin';
-    String suffix = executableScriptSuffix;
-    if (isHostChecked) {
-      // The script dart2js_developer is not included in the
-      // shipped SDK, that is the script is not installed in
-      // "$buildDir/dart-sdk/bin/"
-      return '$prefix/dart2js_developer$suffix';
-    } else {
-      if (useSdk) {
-        prefix = '$buildDir/dart-sdk/bin';
-      }
-      return '$prefix/dart2js$suffix';
-    }
   }
 
   CompilationCommand computeCompilationCommand(
@@ -208,36 +195,63 @@ class Dart2xCompilerConfiguration extends CompilerConfiguration {
   }
 }
 
-/// Configuration for dart2dart compiler.
-class Dart2dartCompilerConfiguration extends Dart2xCompilerConfiguration {
-  Dart2dartCompilerConfiguration({
+class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
+  final bool persist;
+  final bool hostChecked;
+
+  FletchCCompilerConfiguration({
       bool isDebug,
       bool isChecked,
       bool isHostChecked,
-      bool useSdk})
+      bool useSdk,
+      this.hostChecked: true,
+      this.persist: true})
       : super(
-          'dart2dart',
+          'fletchc',
           isDebug: isDebug, isChecked: isChecked,
-          isHostChecked: isHostChecked, useSdk: useSdk);
+          isHostChecked: isHostChecked, useSdk: useSdk) {
+    if (persist && !hostChecked) {
+      throw "fletch_driver only works with --host-checked option.";
+    }
+  }
 
   CommandArtifact computeCompilationArtifact(
       String buildDir,
       String tempDir,
       CommandBuilder commandBuilder,
-      List arguments,
+      List basicArguments,
       Map<String, String> environmentOverrides) {
-    String outputFileName = '$tempDir/fletch.snapshot';
-//    arguments = new List.from(arguments)..add('--output-type=dart');
+    String snapshotFileName = '$tempDir/fletch.snapshot';
+    basicArguments.insertAll(0, ['-o', snapshotFileName]);
+
+    String executable;
+    List<String> arguments;
+    Map<String, String> environment;
+    if (!persist) {
+      List<String> vmArguments = [];
+      if (hostChecked) {
+        vmArguments.add("-c");
+      }
+      vmArguments.addAll(["-p", "package", "package:fletchc/fletchc.dart"]);
+      vmArguments.addAll(basicArguments);
+
+      executable = '$buildDir/dart';
+      arguments = vmArguments;
+      environment = environmentOverrides;
+    } else {
+      executable = '$buildDir/fletch_driver';
+      arguments = basicArguments;
+      environment = {
+        'DART_VM' : '$buildDir/dart',
+      }..addAll(environmentOverrides);
+    }
+
+    // NOTE: We assume that `fletch_driver` behaves the same as invoking
+    // the DartVM in terms of exit codes.
+    var commands = <Command>[
+        commandBuilder.getVmCommand(executable, arguments, environment)];
     return new CommandArtifact(
-        <Command>[
-            this.computeCompilationCommand(
-                outputFileName,
-                buildDir,
-                CommandBuilder.instance,
-                arguments,
-                environmentOverrides)],
-        outputFileName,
-        'application/dart');
+        commands, snapshotFileName, 'application/fletch-snapshot');
   }
 
   List<String> computeRuntimeArguments(
@@ -248,10 +262,8 @@ class Dart2dartCompilerConfiguration extends Dart2xCompilerConfiguration {
       List<String> sharedOptions,
       List<String> originalArguments,
       CommandArtifact artifact) {
-    // TODO(antonm): support checked.
     return <String>[]
         ..addAll(vmOptions)
         ..add(artifact.filename);
   }
 }
-

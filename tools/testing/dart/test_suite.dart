@@ -989,11 +989,15 @@ class StandardTestSuite extends TestSuite {
             environmentOverrides);
     commands.addAll(compilationArtifact.commands);
 
-    if (expectCompileError(info) && compilerConfiguration.hasCompiler) {
-      // Do not attempt to run the compiled result. A compilation
-      // error should be reported by the compilation command.
-      return commands;
-    }
+    // NOTE: Since fletchc does not report compile time errors at compile time,
+    // but rather generates code to call 'lib/system/system.dart:compileError()`
+    // We need to enqueue running the snapshot.
+    //
+    // if (expectCompileError(info) && compilerConfiguration.hasCompiler) {
+    //  // Do not attempt to run the compiled result. A compilation
+    //   // error should be reported by the compilation command.
+    //   return commands;
+    // }
 
     RuntimeConfiguration runtimeConfiguration =
         new RuntimeConfiguration(configuration);
