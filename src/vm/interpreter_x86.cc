@@ -126,24 +126,29 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoInvokeNativeYield();
   virtual void DoInvokeTest();
 
-  virtual void DoInvokeEq();
-  virtual void DoInvokeLt();
-  virtual void DoInvokeLe();
-  virtual void DoInvokeGt();
-  virtual void DoInvokeGe();
+#define INVOKE_BUILTIN(kind) \
+  virtual void DoInvoke##kind() { Invoke##kind("BC_InvokeMethod"); }
 
-  virtual void DoInvokeAdd();
-  virtual void DoInvokeSub();
-  virtual void DoInvokeMod();
-  virtual void DoInvokeMul();
-  virtual void DoInvokeTruncDiv();
+  INVOKE_BUILTIN(Eq);
+  INVOKE_BUILTIN(Lt);
+  INVOKE_BUILTIN(Le);
+  INVOKE_BUILTIN(Gt);
+  INVOKE_BUILTIN(Ge);
 
-  virtual void DoInvokeBitNot();
-  virtual void DoInvokeBitAnd();
-  virtual void DoInvokeBitOr();
-  virtual void DoInvokeBitXor();
-  virtual void DoInvokeBitShr();
-  virtual void DoInvokeBitShl();
+  INVOKE_BUILTIN(Add);
+  INVOKE_BUILTIN(Sub);
+  INVOKE_BUILTIN(Mod);
+  INVOKE_BUILTIN(Mul);
+  INVOKE_BUILTIN(TruncDiv);
+
+  INVOKE_BUILTIN(BitNot);
+  INVOKE_BUILTIN(BitAnd);
+  INVOKE_BUILTIN(BitOr);
+  INVOKE_BUILTIN(BitXor);
+  INVOKE_BUILTIN(BitShr);
+  INVOKE_BUILTIN(BitShl);
+
+#undef INVOKE_BUILTIN
 
   virtual void DoPop();
   virtual void DoReturn();
@@ -213,8 +218,28 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   void Allocate(bool unfolded, bool immutable);
   void InvokeMethod(bool test);
   void InvokeStatic(bool unfolded);
-  void InvokeCompare(Condition condition);
-  void InvokeDivision(bool quotient);
+
+  void InvokeEq(const char* fallback);
+  void InvokeLt(const char* fallback);
+  void InvokeLe(const char* fallback);
+  void InvokeGt(const char* fallback);
+  void InvokeGe(const char* fallback);
+  void InvokeCompare(const char* fallback, Condition condition);
+
+  void InvokeAdd(const char* fallback);
+  void InvokeSub(const char* fallback);
+  void InvokeMod(const char* fallback);
+  void InvokeMul(const char* fallback);
+  void InvokeTruncDiv(const char* fallback);
+  void InvokeDivision(const char* fallback, bool quotient);
+
+  void InvokeBitNot(const char* fallback);
+  void InvokeBitAnd(const char* fallback);
+  void InvokeBitOr(const char* fallback);
+  void InvokeBitXor(const char* fallback);
+  void InvokeBitShr(const char* fallback);
+  void InvokeBitShl(const char* fallback);
+
   void InvokeNative(bool yield);
 
   void CheckStackOverflow(int size);
@@ -664,93 +689,93 @@ void InterpreterGeneratorX86::DoInvokeNativeYield() {
   InvokeNative(true);
 }
 
-void InterpreterGeneratorX86::DoInvokeEq() {
-  InvokeCompare(EQUAL);
+void InterpreterGeneratorX86::InvokeEq(const char* fallback) {
+  InvokeCompare(fallback, EQUAL);
 }
 
-void InterpreterGeneratorX86::DoInvokeLt() {
-  InvokeCompare(LESS);
+void InterpreterGeneratorX86::InvokeLt(const char* fallback) {
+  InvokeCompare(fallback, LESS);
 }
 
-void InterpreterGeneratorX86::DoInvokeLe() {
-  InvokeCompare(LESS_EQUAL);
+void InterpreterGeneratorX86::InvokeLe(const char* fallback) {
+  InvokeCompare(fallback, LESS_EQUAL);
 }
 
-void InterpreterGeneratorX86::DoInvokeGt() {
-  InvokeCompare(GREATER);
+void InterpreterGeneratorX86::InvokeGt(const char* fallback) {
+  InvokeCompare(fallback, GREATER);
 }
 
-void InterpreterGeneratorX86::DoInvokeGe() {
-  InvokeCompare(GREATER_EQUAL);
+void InterpreterGeneratorX86::InvokeGe(const char* fallback) {
+  InvokeCompare(fallback, GREATER_EQUAL);
 }
 
-void InterpreterGeneratorX86::DoInvokeAdd() {
+void InterpreterGeneratorX86::InvokeAdd(const char* fallback) {
   LoadLocal(EAX, 1);
   __ testl(EAX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
   LoadLocal(EBX, 0);
   __ testl(EBX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
 
   __ addl(EAX, EBX);
-  __ j(OVERFLOW_, "BC_InvokeMethod");
+  __ j(OVERFLOW_, fallback);
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(kInvokeAddLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeSub() {
+void InterpreterGeneratorX86::InvokeSub(const char* fallback) {
   LoadLocal(EAX, 1);
   __ testl(EAX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
   LoadLocal(EBX, 0);
   __ testl(EBX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
 
   __ subl(EAX, EBX);
-  __ j(OVERFLOW_, "BC_InvokeMethod");
+  __ j(OVERFLOW_, fallback);
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(kInvokeSubLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeMod() {
-  InvokeDivision(false);
+void InterpreterGeneratorX86::InvokeMod(const char* fallback) {
+  InvokeDivision(fallback, false);
 }
 
-void InterpreterGeneratorX86::DoInvokeMul() {
+void InterpreterGeneratorX86::InvokeMul(const char* fallback) {
   LoadLocal(EAX, 1);
   __ testl(EAX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
   LoadLocal(EBX, 0);
   __ testl(EBX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
 
   // Untag and multiply.
   __ sarl(EAX, Immediate(1));
   __ sarl(EBX, Immediate(1));
   __ imul(EBX);
-  __ j(OVERFLOW_, "BC_InvokeMethod");
+  __ j(OVERFLOW_, fallback);
 
   // Re-tag. We need to check for overflow to handle the case
   // where the top two bits are 01 after the multiplication.
   ASSERT(Smi::kTagSize == 1 && Smi::kTag == 0);
   __ addl(EAX, EAX);
-  __ j(OVERFLOW_, "BC_InvokeMethod");
+  __ j(OVERFLOW_, fallback);
 
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(kInvokeMulLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeTruncDiv() {
-  InvokeDivision(true);
+void InterpreterGeneratorX86::InvokeTruncDiv(const char* fallback) {
+  InvokeDivision(fallback, true);
 }
 
-void InterpreterGeneratorX86::DoInvokeBitNot() {
+void InterpreterGeneratorX86::InvokeBitNot(const char* fallback) {
   LoadLocal(EAX, 0);
   __ testl(EAX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
 
   __ notl(EAX);
   __ andl(EAX, Immediate(~Smi::kTagMask));
@@ -758,13 +783,13 @@ void InterpreterGeneratorX86::DoInvokeBitNot() {
   Dispatch(kInvokeBitNotLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeBitAnd() {
+void InterpreterGeneratorX86::InvokeBitAnd(const char* fallback) {
   LoadLocal(EAX, 1);
   __ testl(EAX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
   LoadLocal(EBX, 0);
   __ testl(EBX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
 
   __ andl(EAX, EBX);
   StoreLocal(EAX, 1);
@@ -772,13 +797,13 @@ void InterpreterGeneratorX86::DoInvokeBitAnd() {
   Dispatch(kInvokeBitAndLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeBitOr() {
+void InterpreterGeneratorX86::InvokeBitOr(const char* fallback) {
   LoadLocal(EAX, 1);
   __ testl(EAX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
   LoadLocal(EBX, 0);
   __ testl(EBX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
 
   __ orl(EAX, EBX);
   StoreLocal(EAX, 1);
@@ -786,13 +811,13 @@ void InterpreterGeneratorX86::DoInvokeBitOr() {
   Dispatch(kInvokeBitAndLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeBitXor() {
+void InterpreterGeneratorX86::InvokeBitXor(const char* fallback) {
   LoadLocal(EAX, 1);
   __ testl(EAX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
   LoadLocal(EBX, 0);
   __ testl(EBX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
 
   __ xorl(EAX, EBX);
   StoreLocal(EAX, 1);
@@ -800,13 +825,13 @@ void InterpreterGeneratorX86::DoInvokeBitXor() {
   Dispatch(kInvokeBitAndLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeBitShr() {
+void InterpreterGeneratorX86::InvokeBitShr(const char* fallback) {
   LoadLocal(EAX, 1);
   __ testl(EAX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
   LoadLocal(ECX, 0);
   __ testl(ECX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
 
   // Untag the smis and do the shift.
   __ sarl(EAX, Immediate(1));
@@ -825,20 +850,20 @@ void InterpreterGeneratorX86::DoInvokeBitShr() {
   Dispatch(kInvokeBitAndLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeBitShl() {
+void InterpreterGeneratorX86::InvokeBitShl(const char* fallback) {
   LoadLocal(EAX, 1);
   __ testl(EAX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
   LoadLocal(ECX, 0);
   __ testl(ECX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
 
   // Untag the shift count, but not the value. If the shift
   // count is greater than 31 (or negative), the shift is going
   // to misbehave so we have to guard against that.
   __ sarl(ECX, Immediate(1));
   __ cmpl(ECX, Immediate(32));
-  __ j(ABOVE_EQUAL, "BC_InvokeMethod");
+  __ j(ABOVE_EQUAL, fallback);
 
   // Only allow to shift out "sign bits". If we shift
   // out any other bit, it's an overflow.
@@ -847,7 +872,7 @@ void InterpreterGeneratorX86::DoInvokeBitShl() {
   __ movl(EDX, EAX);
   __ sarl_cl(EDX);
   __ cmpl(EBX, EDX);
-  __ j(NOT_EQUAL, "BC_InvokeMethod");
+  __ j(NOT_EQUAL, fallback);
 
   StoreLocal(EAX, 1);
   Drop(1);
@@ -1670,13 +1695,14 @@ void InterpreterGeneratorX86::InvokeStatic(bool unfolded) {
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::InvokeCompare(Condition condition) {
+void InterpreterGeneratorX86::InvokeCompare(const char* fallback,
+                                            Condition condition) {
   LoadLocal(EAX, 0);
   __ testl(EAX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
   LoadLocal(EBX, 1);
   __ testl(EBX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
 
   Label true_case;
   __ cmpl(EBX, EAX);
@@ -1696,17 +1722,18 @@ void InterpreterGeneratorX86::InvokeCompare(Condition condition) {
   Dispatch(5);
 }
 
-void InterpreterGeneratorX86::InvokeDivision(bool quotient) {
+void InterpreterGeneratorX86::InvokeDivision(const char* fallback,
+                                             bool quotient) {
   LoadLocal(EAX, 1);
   __ testl(EAX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
   LoadLocal(EBX, 0);
   __ testl(EBX, Immediate(Smi::kTagSize));
-  __ j(NOT_ZERO, "BC_InvokeMethod");
+  __ j(NOT_ZERO, fallback);
 
   // Check for division by zero.
   __ testl(EBX, EBX);
-  __ j(ZERO, "BC_InvokeMethod");
+  __ j(ZERO, fallback);
 
   // Untag and sign extend eax into edx:eax.
   __ sarl(EAX, Immediate(1));
@@ -1723,7 +1750,7 @@ void InterpreterGeneratorX86::InvokeDivision(bool quotient) {
   ASSERT(Smi::kTagSize == 1 && Smi::kTag == 0);
   Register reg = quotient ? EAX : EDX;
   __ addl(reg, reg);
-  __ j(OVERFLOW_, "BC_InvokeMethod");
+  __ j(OVERFLOW_, fallback);
 
   StoreLocal(reg, 1);
   Drop(1);

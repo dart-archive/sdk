@@ -127,24 +127,29 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoInvokeNativeYield();
   virtual void DoInvokeTest();
 
-  virtual void DoInvokeEq();
-  virtual void DoInvokeLt();
-  virtual void DoInvokeLe();
-  virtual void DoInvokeGt();
-  virtual void DoInvokeGe();
+#define INVOKE_BUILTIN(kind) \
+  virtual void DoInvoke##kind() { Invoke##kind("BC_InvokeMethod"); }
 
-  virtual void DoInvokeAdd();
-  virtual void DoInvokeSub();
-  virtual void DoInvokeMod();
-  virtual void DoInvokeMul();
-  virtual void DoInvokeTruncDiv();
+  INVOKE_BUILTIN(Eq);
+  INVOKE_BUILTIN(Lt);
+  INVOKE_BUILTIN(Le);
+  INVOKE_BUILTIN(Gt);
+  INVOKE_BUILTIN(Ge);
 
-  virtual void DoInvokeBitNot();
-  virtual void DoInvokeBitAnd();
-  virtual void DoInvokeBitOr();
-  virtual void DoInvokeBitXor();
-  virtual void DoInvokeBitShr();
-  virtual void DoInvokeBitShl();
+  INVOKE_BUILTIN(Add);
+  INVOKE_BUILTIN(Sub);
+  INVOKE_BUILTIN(Mod);
+  INVOKE_BUILTIN(Mul);
+  INVOKE_BUILTIN(TruncDiv);
+
+  INVOKE_BUILTIN(BitNot);
+  INVOKE_BUILTIN(BitAnd);
+  INVOKE_BUILTIN(BitOr);
+  INVOKE_BUILTIN(BitXor);
+  INVOKE_BUILTIN(BitShr);
+  INVOKE_BUILTIN(BitShl);
+
+#undef INVOKE_BUILTIN
 
   virtual void DoPop();
   virtual void DoReturn();
@@ -212,7 +217,27 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Drop(int n);
 
   void Allocate(bool unfolded, bool immutable);
-  void InvokeCompare(Condition condition);
+
+  void InvokeEq(const char* fallback);
+  void InvokeLt(const char* fallback);
+  void InvokeLe(const char* fallback);
+  void InvokeGt(const char* fallback);
+  void InvokeGe(const char* fallback);
+  void InvokeCompare(const char* fallback, Condition condition);
+
+  void InvokeAdd(const char* fallback);
+  void InvokeSub(const char* fallback);
+  void InvokeMod(const char* fallback);
+  void InvokeMul(const char* fallback);
+  void InvokeTruncDiv(const char* fallback);
+
+  void InvokeBitNot(const char* fallback);
+  void InvokeBitAnd(const char* fallback);
+  void InvokeBitOr(const char* fallback);
+  void InvokeBitXor(const char* fallback);
+  void InvokeBitShr(const char* fallback);
+  void InvokeBitShl(const char* fallback);
+
   void InvokeMethod(bool test);
   void InvokeNative(bool yield);
   void InvokeStatic(bool unfolded);
@@ -677,69 +702,69 @@ void InterpreterGeneratorARM::DoInvokeNativeYield() {
   InvokeNative(true);
 }
 
-void InterpreterGeneratorARM::DoInvokeEq() {
-  InvokeCompare(EQ);
+void InterpreterGeneratorARM::InvokeEq(const char* fallback) {
+  InvokeCompare(fallback, EQ);
 }
 
-void InterpreterGeneratorARM::DoInvokeLt() {
-  InvokeCompare(LT);
+void InterpreterGeneratorARM::InvokeLt(const char* fallback) {
+  InvokeCompare(fallback, LT);
 }
 
-void InterpreterGeneratorARM::DoInvokeLe() {
-  InvokeCompare(LE);
+void InterpreterGeneratorARM::InvokeLe(const char* fallback) {
+  InvokeCompare(fallback, LE);
 }
 
-void InterpreterGeneratorARM::DoInvokeGt() {
-  InvokeCompare(GT);
+void InterpreterGeneratorARM::InvokeGt(const char* fallback) {
+  InvokeCompare(fallback, GT);
 }
 
-void InterpreterGeneratorARM::DoInvokeGe() {
-  InvokeCompare(GE);
+void InterpreterGeneratorARM::InvokeGe(const char* fallback) {
+  InvokeCompare(fallback, GE);
 }
 
-void InterpreterGeneratorARM::DoInvokeAdd() {
+void InterpreterGeneratorARM::InvokeAdd(const char* fallback) {
   LoadLocal(R0, 1);
   __ tst(R0, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
   LoadLocal(R1, 0);
   __ tst(R1, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   __ adds(R0, R0, R1);
-  __ b(VS, "BC_InvokeMethod");
+  __ b(VS, fallback);
   StoreLocal(R0, 1);
   Drop(1);
   Dispatch(kInvokeAddLength);
 }
 
-void InterpreterGeneratorARM::DoInvokeSub() {
+void InterpreterGeneratorARM::InvokeSub(const char* fallback) {
   LoadLocal(R0, 1);
   __ tst(R0, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
   LoadLocal(R1, 0);
   __ tst(R1, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   __ subs(R0, R0, R1);
-  __ b(VS, "BC_InvokeMethod");
+  __ b(VS, fallback);
   StoreLocal(R0, 1);
   Drop(1);
   Dispatch(kInvokeAddLength);
 }
 
-void InterpreterGeneratorARM::DoInvokeMod() {
+void InterpreterGeneratorARM::InvokeMod(const char* fallback) {
   // TODO(ager): Implement. Probably need to go to floating-point
   // arithmetic for this on arm.
-  __ b("BC_InvokeMethod");
+  __ b(fallback);
 }
 
-void InterpreterGeneratorARM::DoInvokeMul() {
+void InterpreterGeneratorARM::InvokeMul(const char* fallback) {
   LoadLocal(R0, 1);
   __ tst(R0, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
   LoadLocal(R1, 0);
   __ tst(R1, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   // Untag one of the arguments, multiply, and check for overflow.
   // The overflow check is complicated on arm. We use smull to
@@ -749,22 +774,22 @@ void InterpreterGeneratorARM::DoInvokeMul() {
   __ asr(R0, R0, Immediate(1));
   __ smull(R0, IP, R1, R0);
   __ cmp(IP, Operand(R0, ASR, 31));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   StoreLocal(R0, 1);
   Drop(1);
   Dispatch(kInvokeMulLength);
 }
 
-void InterpreterGeneratorARM::DoInvokeTruncDiv() {
+void InterpreterGeneratorARM::InvokeTruncDiv(const char* fallback) {
   // TODO(ager): Do this using floating point instruction and registers.
-  __ b("BC_InvokeMethod");
+  __ b(fallback);
 }
 
-void InterpreterGeneratorARM::DoInvokeBitNot() {
+void InterpreterGeneratorARM::InvokeBitNot(const char* fallback) {
   LoadLocal(R0, 0);
   __ tst(R0, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   // Move negated.
   __ mvn(R1, R0);
@@ -775,13 +800,13 @@ void InterpreterGeneratorARM::DoInvokeBitNot() {
   Dispatch(kInvokeBitNotLength);
 }
 
-void InterpreterGeneratorARM::DoInvokeBitAnd() {
+void InterpreterGeneratorARM::InvokeBitAnd(const char* fallback) {
   LoadLocal(R0, 1);
   __ tst(R0, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
   LoadLocal(R1, 0);
   __ tst(R1, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   __ and_(R0, R0, R1);
   StoreLocal(R0, 1);
@@ -789,13 +814,13 @@ void InterpreterGeneratorARM::DoInvokeBitAnd() {
   Dispatch(kInvokeBitAndLength);
 }
 
-void InterpreterGeneratorARM::DoInvokeBitOr() {
+void InterpreterGeneratorARM::InvokeBitOr(const char* fallback) {
   LoadLocal(R0, 1);
   __ tst(R0, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
   LoadLocal(R1, 0);
   __ tst(R1, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   __ orr(R0, R0, R1);
   StoreLocal(R0, 1);
@@ -803,13 +828,13 @@ void InterpreterGeneratorARM::DoInvokeBitOr() {
   Dispatch(kInvokeBitAndLength);
 }
 
-void InterpreterGeneratorARM::DoInvokeBitXor() {
+void InterpreterGeneratorARM::InvokeBitXor(const char* fallback) {
   LoadLocal(R0, 1);
   __ tst(R0, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
   LoadLocal(R1, 0);
   __ tst(R1, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   __ eor(R0, R0, R1);
   StoreLocal(R0, 1);
@@ -817,13 +842,13 @@ void InterpreterGeneratorARM::DoInvokeBitXor() {
   Dispatch(kInvokeBitXorLength);
 }
 
-void InterpreterGeneratorARM::DoInvokeBitShr() {
+void InterpreterGeneratorARM::InvokeBitShr(const char* fallback) {
   LoadLocal(R0, 1);
   __ tst(R0, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
   LoadLocal(R1, 0);
   __ tst(R1, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   // Untag and shift.
   __ asr(R0, R0, Immediate(1));
@@ -837,27 +862,27 @@ void InterpreterGeneratorARM::DoInvokeBitShr() {
   Dispatch(kInvokeBitAndLength);
 }
 
-void InterpreterGeneratorARM::DoInvokeBitShl() {
+void InterpreterGeneratorARM::InvokeBitShl(const char* fallback) {
   LoadLocal(R0, 1);
   __ tst(R0, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
   LoadLocal(R1, 0);
   __ tst(R1, Immediate(Smi::kTagSize));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   // Untag the shift count, but not the value. If the shift
   // count is greater than 31 (or negative), the shift is going
   // to misbehave so we have to guard against that.
   __ asr(R1, R1, Immediate(1));
   __ cmp(R1, Immediate(31));
-  __ b(HI, "BC_InvokeMethod");
+  __ b(HI, fallback);
 
   // Only allow to shift out "sign bits". If we shift
   // out any other bit, it's an overflow.
   __ lsl(R2, R0, R1);
   __ asr(R3, R2, R1);
   __ cmp(R3, R0);
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   StoreLocal(R2, 1);
   Drop(1);
@@ -1696,13 +1721,14 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
   Dispatch(kAllocateLength);
 }
 
-void InterpreterGeneratorARM::InvokeCompare(Condition cond) {
+void InterpreterGeneratorARM::InvokeCompare(const char* fallback,
+                                            Condition cond) {
   LoadLocal(R0, 0);
   __ tst(R0, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
   LoadLocal(R1, 1);
   __ tst(R1, Immediate(Smi::kTagMask));
-  __ b(NE, "BC_InvokeMethod");
+  __ b(NE, fallback);
 
   Label true_case;
   __ cmp(R1, R0);

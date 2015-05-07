@@ -414,69 +414,31 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     }
   OPCODE_END();
 
-#define INVOKE_COMPARE(kind, operation)                                      \
-  OPCODE_BEGIN(Invoke##kind);                                                \
-    Object* receiver = Local(1);                                             \
-    Object* argument = Local(0);                                             \
-    if (!receiver->IsSmi() || !argument->IsSmi()) DISPATCH_TO(InvokeMethod); \
-    Drop(1);                                                                 \
-    word x_value = reinterpret_cast<word>(receiver);                         \
-    word y_value = reinterpret_cast<word>(argument);                         \
-    SetTop(ToBool(x_value operation y_value));                               \
-    Advance(kInvoke##kind##Length);                                          \
-  OPCODE_END();                                                              \
+#define INVOKE_BUILTIN(kind)   \
+  OPCODE_BEGIN(Invoke##kind);  \
+    DISPATCH_TO(InvokeMethod); \
+  OPCODE_END();                \
 
-  INVOKE_COMPARE(Eq, ==);
-  INVOKE_COMPARE(Lt, <);
-  INVOKE_COMPARE(Le, <=);
-  INVOKE_COMPARE(Gt, >);
-  INVOKE_COMPARE(Ge, >=);
+  INVOKE_BUILTIN(Eq);
+  INVOKE_BUILTIN(Lt);
+  INVOKE_BUILTIN(Le);
+  INVOKE_BUILTIN(Gt);
+  INVOKE_BUILTIN(Ge);
 
-#undef INVOKE_COMPARE
+  INVOKE_BUILTIN(Add);
+  INVOKE_BUILTIN(Sub);
+  INVOKE_BUILTIN(Mod);
+  INVOKE_BUILTIN(Mul);
+  INVOKE_BUILTIN(TruncDiv);
 
-  OPCODE_BEGIN(InvokeAdd);
-    DISPATCH_TO(InvokeMethod);
-  OPCODE_END();
+  INVOKE_BUILTIN(BitNot);
+  INVOKE_BUILTIN(BitAnd);
+  INVOKE_BUILTIN(BitOr);
+  INVOKE_BUILTIN(BitXor);
+  INVOKE_BUILTIN(BitShr);
+  INVOKE_BUILTIN(BitShl);
 
-  OPCODE_BEGIN(InvokeSub);
-    DISPATCH_TO(InvokeMethod);
-  OPCODE_END();
-
-  OPCODE_BEGIN(InvokeMod);
-    DISPATCH_TO(InvokeMethod);
-  OPCODE_END();
-
-  OPCODE_BEGIN(InvokeMul);
-    DISPATCH_TO(InvokeMethod);
-  OPCODE_END();
-
-  OPCODE_BEGIN(InvokeTruncDiv);
-    DISPATCH_TO(InvokeMethod);
-  OPCODE_END();
-
-  OPCODE_BEGIN(InvokeBitNot);
-    DISPATCH_TO(InvokeMethod);
-  OPCODE_END();
-
-  OPCODE_BEGIN(InvokeBitAnd);
-    DISPATCH_TO(InvokeMethod);
-  OPCODE_END();
-
-  OPCODE_BEGIN(InvokeBitOr);
-    DISPATCH_TO(InvokeMethod);
-  OPCODE_END();
-
-  OPCODE_BEGIN(InvokeBitXor);
-    DISPATCH_TO(InvokeMethod);
-  OPCODE_END();
-
-  OPCODE_BEGIN(InvokeBitShr);
-    DISPATCH_TO(InvokeMethod);
-  OPCODE_END();
-
-  OPCODE_BEGIN(InvokeBitShl);
-    DISPATCH_TO(InvokeMethod);
-  OPCODE_END();
+#undef INVOKE_BUILTIN
 
   OPCODE_BEGIN(InvokeNativeYield);
     int arity = ReadByte(1);
