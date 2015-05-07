@@ -218,7 +218,7 @@ class Session {
         await stepBytecode();
       }
     } while (currentLocation == null ||
-             currentLocation == previous ||
+             currentLocation.isSameSourceLevelLocationAs(previous) ||
              currentLocation.node == null);
     await backtrace();
   }

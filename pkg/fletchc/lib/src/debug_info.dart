@@ -60,6 +60,12 @@ class SourceLocation {
   bool containsPosition(int position) {
     return span.begin <= position && position <= span.end;
   }
+
+  bool isSameSourceLevelLocationAs(SourceLocation other) {
+    if (file != other.file) return false;
+    if (span == null || other.span == null) return span == other.span;
+    return span.begin == other.span.begin && span.end == other.span.end;
+  }
 }
 
 class DebugInfo {

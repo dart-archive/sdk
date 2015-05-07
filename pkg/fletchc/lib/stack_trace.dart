@@ -64,7 +64,7 @@ class StackFrame {
     // Treat locations for which we have no source information as the same
     // as the previous location.
     if (location == null || location.node == null) return true;
-    return location == current;
+    return location.isSameSourceLevelLocationAs(current);
   }
 
   int stepBytecodePointer(FletchCompiler compiler, SourceLocation current) {
