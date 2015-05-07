@@ -114,11 +114,19 @@ def Steps(config):
         print '@@@STEP_FAILURE@@@'
         sys.stdout.flush()
 
-    for configuration in configurations:
-      if mac and configuration['arch'] == 'x64' and configuration['asan']:
-        # Asan/x64 takes a long time on mac.
-        pass
-      else:
+    for full_run in [True, False]:
+      for configuration in configurations:
+        if mac and configuration['arch'] == 'x64' and configuration['asan']:
+          # Asan/x64 takes a long time on mac.
+          continue
+
+        if full_run and configuration['build_conf'] != 'DebugIA32':
+          # We only do full runs on DebugIA32 for now.
+          # full_run = compile to snapshot &
+          #            run shapshot &
+          #            run shapshot with `-Xunfold-program`
+          continue
+
         RunTests(
           configuration['build_conf'],
           configuration['mode'],
@@ -126,14 +134,28 @@ def Steps(config):
           config,
           mac=mac,
           clang=configuration['clang'],
-          asan=configuration['asan'])
+          asan=configuration['asan'],
+          full_run=full_run)
 
 
-def RunTests(name, mode, arch, config, mac=False, clang=True, asan=False):
-  with bot.BuildStep('Test %s' % name, swallow_error=True):
+def RunTests(name, mode, arch, config, mac=False, clang=True, asan=False,
+             full_run=False):
+  step_name = '%s%s' % (name, '-full' if full_run else '')
+  with bot.BuildStep('Test %s' % step_name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
-            '--time', '--report', '-pbuildbot', '--step_name=test_%s' % name,
-            '-rfletchc', '-cnone', '--host-checked']
+            '--time', '--report', '-pbuildbot',
+            '--step_name=test_%s' % step_name,
+            '--host-checked']
+    if full_run:
+      # We let package:fletchc/fletchc.dart compile tests to snapshots.
+      # Afterwards we run the snapshot with
+      #  - normal fletch VM
+      #  - fletch VM with -Xunfold-program enabled
+      args.extend(['-cfletchc', '-rfletchvm'])
+    else:
+      # We just let package:fletchc/fletchc.dart compile & run tests.
+      args.extend(['-cnone', '-rfletchc'])
+
     if asan:
       args.append('--asan')
 
