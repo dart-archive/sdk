@@ -84,7 +84,7 @@ class CompiledFunction {
 
   bool get hasThisArgument => memberOf != null;
 
-  bool get isConstructor => element != null && element.isGenerativeConstructor;
+  bool get isConstructor => element != null && element.isConstructor;
 
   int get arity => signature.parameterCount + (hasThisArgument ? 1 : 0);
 
