@@ -260,6 +260,7 @@ class Assembler {
   INSTRUCTION_2(movzbl, "movzbl %a, %rl", Register, const Address&);
 
   INSTRUCTION_2(cmpl, "cmpl %i, %rl", Register, const Immediate&);
+  INSTRUCTION_2(cmpl, "cmpl %i, %a", const Address&, const Immediate&);
   INSTRUCTION_2(cmpl, "cmpl %rl, %rl", Register, Register);
   INSTRUCTION_2(cmpl, "cmpl %a, %rl", Register, const Address&);
 

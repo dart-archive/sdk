@@ -115,18 +115,11 @@ class State {
 // TODO(kasperl): Should we call this interpreter?
 class Engine : public State {
  public:
-  explicit Engine(Process* process)
-      : State(process),
-        no_such_method_selector_(
-            Selector::Encode(Names::kNoSuchMethodTrampoline,
-                             Selector::METHOD,
-                             0)) { }
+  explicit Engine(Process* process) : State(process) { }
 
   Interpreter::InterruptKind Interpret(Port** yield_target);
 
  private:
-  const int no_such_method_selector_;
-
   void Branch(int true_offset, int false_offset);
 
   void PushReturnAddress(int offset);
@@ -477,11 +470,41 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeTestFast);
-    UNIMPLEMENTED();
+    int index = ReadInt32(1);
+    Array* table = program()->dispatch_table();
+    Object* receiver = Local(0);
+
+    Class* clazz = receiver->IsSmi()
+        ? program()->smi_class()
+        : HeapObject::cast(receiver)->get_class();
+    int class_id = clazz->id();
+
+    for (int offset = 4; true; offset += 4) {
+      Smi* lower = Smi::cast(table->get(index + offset));
+      if (class_id < lower->value()) continue;
+      Smi* upper = Smi::cast(table->get(index + offset + 1));
+      if (class_id >= upper->value()) continue;
+      SetTop(ToBool(upper != Smi::FromWord(Smi::kMaxValue)));
+      break;
+    }
+
+    Advance(kInvokeTestFastLength);
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeTestVtable);
-    UNIMPLEMENTED();
+    int selector = ReadInt32(1);
+    int offset = Selector::IdField::decode(selector);
+    Object* receiver = Local(0);
+
+    Class* clazz = receiver->IsSmi()
+        ? program()->smi_class()
+        : HeapObject::cast(receiver)->get_class();
+
+    int index = clazz->id() + offset;
+    Array* entry = Array::cast(program()->vtable()->get(index));
+    SetTop(ToBool(Smi::cast(entry->get(0))->value() == offset));
+
+    Advance(kInvokeTestVtableLength);
   OPCODE_END();
 
   OPCODE_BEGIN(Pop);

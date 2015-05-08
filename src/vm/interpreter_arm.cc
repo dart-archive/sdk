@@ -1426,11 +1426,6 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
 }
 
 void InterpreterGeneratorARM::InvokeMethodFast(bool test) {
-  if (test) {
-    __ bkpt();
-    return;
-  }
-
   // Get the dispatch table and form a pointer to the first element
   // corresponding to this invoke bytecode.
   __ ldr(R7, Address(R5, 1));
@@ -1439,10 +1434,14 @@ void InterpreterGeneratorARM::InvokeMethodFast(bool test) {
   __ add(R3, R2, Immediate(Array::kSize - HeapObject::kTag));
   __ add(R7, R3, Operand(R7, TIMES_4));
 
-  // Get the arity from the dispatch table and get the receiver from the stack.
-  __ ldr(R2, Address(R7, 0));
-  __ neg(R2, R2);
-  __ ldr(R2, Address(R6, Operand(R2, TIMES_2)));
+  // Get the receiver from the stack.
+  if (test) {
+    LoadLocal(R2, 0);
+  } else {
+    __ ldr(R2, Address(R7, 0));
+    __ neg(R2, R2);
+    __ ldr(R2, Address(R6, Operand(R2, TIMES_2)));
+  }
 
   // Compute the receiver class.
   Label smi, probe;
@@ -1465,29 +1464,39 @@ void InterpreterGeneratorARM::InvokeMethodFast(bool test) {
   __ cmp(R2, R9);
   __ b(GE, &next);
 
-  // Found the right target method.
   Label intrinsified;
-  __ ldr(R2, Address(R7, 6 * kPointerSize));
-  __ ldr(R0, Address(R7, 7 * kPointerSize));
-  __ tst(R2, R2);
-  __ b(NE, &intrinsified);
+  if (test) {
+    const int32 kMax = reinterpret_cast<int32>(Smi::FromWord(Smi::kMaxValue));
+    __ cmp(R9, Immediate(kMax));
+    __ str(EQ, R11, Address(R6, 0));  // Store false.
+    __ str(NE, R10, Address(R6, 0));  // Store true.
+    Dispatch(kInvokeTestLength);
+  } else {
+    // Found the right target method.
+    __ ldr(R2, Address(R7, 6 * kPointerSize));
+    __ ldr(R0, Address(R7, 7 * kPointerSize));
+    __ tst(R2, R2);
+    __ b(NE, &intrinsified);
 
-  // Compute and push the return address on the stack.
-  __ add(R5, R5, Immediate(kInvokeMethodFastLength));
-  Push(R5);
+    // Compute and push the return address on the stack.
+    __ add(R5, R5, Immediate(kInvokeMethodFastLength));
+    Push(R5);
 
-  // Jump to the first bytecode in the target method.
-  __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
-  CheckStackOverflow(0);
-  Dispatch(0);
+    // Jump to the first bytecode in the target method.
+    __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+    CheckStackOverflow(0);
+    Dispatch(0);
+  }
 
   // Go to the next table entry.
   __ Bind(&next);
   __ add(R7, R7, Immediate(4 * kPointerSize));
   __ b(&loop);
 
-  __ Bind(&intrinsified);
-  __ mov(PC, R2);
+  if (!test) {
+    __ Bind(&intrinsified);
+    __ mov(PC, R2);
+  }
 
   __ Bind(&smi);
   __ ldr(R2, Address(R1, Program::smi_class_offset()));
@@ -1495,11 +1504,6 @@ void InterpreterGeneratorARM::InvokeMethodFast(bool test) {
 }
 
 void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
-  if (test) {
-    __ bkpt();
-    return;
-  }
-
   // Get the selector from the bytecodes.
   __ ldr(R7, Address(R5, 1));
 
@@ -1507,9 +1511,11 @@ void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
   __ ldr(R1, Address(R4, Process::ProgramOffset()));
   __ ldr(R1, Address(R1, Program::VTableOffset()));
 
-  // Compute the arity from the selector.
-  ASSERT(Selector::ArityField::shift() == 0);
-  __ and_(R2, R7, Immediate(Selector::ArityField::mask()));
+  if (!test) {
+    // Compute the arity from the selector.
+    ASSERT(Selector::ArityField::shift() == 0);
+    __ and_(R2, R7, Immediate(Selector::ArityField::mask()));
+  }
 
   // Compute the selector offset (smi tagged) from the selector.
   __ ldr(R9, Immediate(Selector::IdField::mask()));
@@ -1517,8 +1523,12 @@ void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
   __ lsr(R7, R7, Immediate(Selector::IdField::shift() - Smi::kTagSize));
 
   // Get the receiver from the stack.
-  __ neg(R2, R2);
-  __ ldr(R2, Address(R6, Operand(R2, TIMES_4)));
+  if (test) {
+    LoadLocal(R2, 0);
+  } else {
+    __ neg(R2, R2);
+    __ ldr(R2, Address(R6, Operand(R2, TIMES_4)));
+  }
 
   // Compute the receiver class.
   Label smi, dispatch;
@@ -1546,40 +1556,52 @@ void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
   __ b(NE, &invalid);
 
   // Load the target and the intrinsic from the entry.
-  Label validated;
-  __ Bind(&validated);
-  __ ldr(R0, Address(R1, 8 + Array::kSize - HeapObject::kTag));
-  __ ldr(R2, Address(R1, 12 + Array::kSize - HeapObject::kTag));
+  Label validated, intrinsified;
+  if (test) {
+    // Valid entry: The answer is true.
+    StoreLocal(R10, 0);
+    Dispatch(kInvokeTestLength);
+  } else {
+    __ Bind(&validated);
+    __ ldr(R0, Address(R1, 8 + Array::kSize - HeapObject::kTag));
+    __ ldr(R2, Address(R1, 12 + Array::kSize - HeapObject::kTag));
 
-  // Check if we have an associated intrinsic.
-  Label intrinsified;
-  __ tst(R2, R2);
-  __ b(NE, &intrinsified);
+    // Check if we have an associated intrinsic.
+    __ tst(R2, R2);
+    __ b(NE, &intrinsified);
 
-  // Compute and push the return address on the stack.
-  __ add(R5, R5, Immediate(kInvokeMethodVtableLength));
-  Push(R5);
+    // Compute and push the return address on the stack.
+    __ add(R5, R5, Immediate(kInvokeMethodVtableLength));
+    Push(R5);
 
-  // Jump to the first bytecode in the target method.
-  __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
-  CheckStackOverflow(0);
-  Dispatch(0);
+    // Jump to the first bytecode in the target method.
+    __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+    CheckStackOverflow(0);
+    Dispatch(0);
+  }
 
   __ Bind(&smi);
   __ ldr(R2, Address(R4, Process::ProgramOffset()));
   __ ldr(R2, Address(R2, Program::smi_class_offset()));
   __ b(&dispatch);
 
-  __ Bind(&intrinsified);
-  __ mov(PC, R2);
+  if (test) {
+    // Invalid entry: The answer is false.
+    __ Bind(&invalid);
+    StoreLocal(R11, 0);
+    Dispatch(kInvokeTestLength);
+  } else {
+    __ Bind(&intrinsified);
+    __ mov(PC, R2);
 
-  // Invalid entry: Use the noSuchMethod entry from entry zero of
-  // the virtual table.
-  __ Bind(&invalid);
-  __ ldr(R1, Address(R4, Process::ProgramOffset()));
-  __ ldr(R1, Address(R1, Program::VTableOffset()));
-  __ ldr(R1, Address(R1, Array::kSize - HeapObject::kTag));
-  __ b(&validated);
+    // Invalid entry: Use the noSuchMethod entry from entry zero of
+    // the virtual table.
+    __ Bind(&invalid);
+    __ ldr(R1, Address(R4, Process::ProgramOffset()));
+    __ ldr(R1, Address(R1, Program::VTableOffset()));
+    __ ldr(R1, Address(R1, Array::kSize - HeapObject::kTag));
+    __ b(&validated);
+  }
 }
 
 void InterpreterGeneratorARM::InvokeNative(bool yield) {

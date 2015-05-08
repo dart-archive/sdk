@@ -1570,11 +1570,6 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
 }
 
 void InterpreterGeneratorX86::InvokeMethodFast(bool test) {
-  if (test) {
-    __ int3();
-    return;
-  }
-
   // Get the dispatch table and form a pointer to the first element
   // corresponding to this invoke bytecode.
   __ movl(EDX, Address(ESI, 1));
@@ -1582,10 +1577,14 @@ void InterpreterGeneratorX86::InvokeMethodFast(bool test) {
   __ movl(EBX, Address(ECX, Program::DispatchTableOffset()));
   __ leal(EDX, Address(EBX, EDX, TIMES_4, Array::kSize - HeapObject::kTag));
 
-  // Get the arity from the dispatch table and get the receiver from the stack.
-  __ movl(EBX, Address(EDX));
-  __ negl(EBX);
-  __ movl(EBX, Address(EDI, EBX, TIMES_2));
+  // Get the receiver from the stack.
+  if (test) {
+    LoadLocal(EBX, 0);
+  } else {
+    __ movl(EBX, Address(EDX));  // Get arity.
+    __ negl(EBX);
+    __ movl(EBX, Address(EDI, EBX, TIMES_2));
+  }
 
   // Compute the receiver class.
   Label smi, probe;
@@ -1606,29 +1605,49 @@ void InterpreterGeneratorX86::InvokeMethodFast(bool test) {
   __ cmpl(EBX, Address(EDX, 5 * kPointerSize));
   __ j(GREATER_EQUAL, &next);
 
-  // Found the right target method.
   Label intrinsified;
-  __ movl(EBX, Address(EDX, 6 * kPointerSize));
-  __ movl(EAX, Address(EDX, 7 * kPointerSize));
-  __ testl(EBX, EBX);
-  __ j(NOT_ZERO, &intrinsified);
+  if (test) {
+    Label false_case, done;
+    __ cmpl(Address(EDX, 5 * kPointerSize),
+            Immediate(reinterpret_cast<int32>(Smi::FromWord(Smi::kMaxValue))));
+    __ j(EQUAL, &false_case);
+    __ movl(EAX, Address(EBP, Process::ProgramOffset()));
+    __ movl(EAX, Address(EAX, Program::true_object_offset()));
+    __ jmp(&done);
 
-  // Compute and push the return address on the stack.
-  __ addl(ESI, Immediate(kInvokeMethodFastLength));
-  Push(ESI);
+    __ Bind(&false_case);
+    __ movl(EAX, Address(EBP, Process::ProgramOffset()));
+    __ movl(EAX, Address(EAX, Program::false_object_offset()));
 
-  // Jump to the first bytecode in the target method.
-  __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
-  CheckStackOverflow(0);
-  Dispatch(0);
+    __ Bind(&done);
+    StoreLocal(EAX, 0);
+    Dispatch(kInvokeTestLength);
+  } else {
+    // Found the right target method.
+    __ movl(EBX, Address(EDX, 6 * kPointerSize));
+    __ movl(EAX, Address(EDX, 7 * kPointerSize));
+    __ testl(EBX, EBX);
+    __ j(NOT_ZERO, &intrinsified);
+
+    // Compute and push the return address on the stack.
+    __ addl(ESI, Immediate(kInvokeMethodFastLength));
+    Push(ESI);
+
+    // Jump to the first bytecode in the target method.
+    __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
+    CheckStackOverflow(0);
+    Dispatch(0);
+  }
 
   // Go to the next table entry.
   __ Bind(&next);
   __ addl(EDX, Immediate(4 * kPointerSize));
   __ jmp(&loop);
 
-  __ Bind(&intrinsified);
-  __ jmp(EBX);
+  if (!test) {
+    __ Bind(&intrinsified);
+    __ jmp(EBX);
+  }
 
   __ Bind(&smi);
   __ movl(EBX, Address(ECX, Program::smi_class_offset()));
@@ -1636,11 +1655,6 @@ void InterpreterGeneratorX86::InvokeMethodFast(bool test) {
 }
 
 void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {
-  if (test) {
-    __ int3();
-    return;
-  }
-
   // Get the selector from the bytecodes.
   __ movl(EDX, Address(ESI, 1));
 
@@ -1648,18 +1662,24 @@ void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {
   __ movl(ECX, Address(EBP, Process::ProgramOffset()));
   __ movl(ECX, Address(ECX, Program::VTableOffset()));
 
-  // Compute the arity from the selector.
-  ASSERT(Selector::ArityField::shift() == 0);
-  __ movl(EBX, EDX);
-  __ andl(EBX, Immediate(Selector::ArityField::mask()));
+  if (!test) {
+    // Compute the arity from the selector.
+    ASSERT(Selector::ArityField::shift() == 0);
+    __ movl(EBX, EDX);
+    __ andl(EBX, Immediate(Selector::ArityField::mask()));
+  }
 
   // Compute the selector offset (smi tagged) from the selector.
   __ andl(EDX, Immediate(Selector::IdField::mask()));
   __ shrl(EDX, Immediate(Selector::IdField::shift() - Smi::kTagSize));
 
   // Get the receiver from the stack.
-  __ negl(EBX);
-  __ movl(EBX, Address(EDI, EBX, TIMES_4));
+  if (test) {
+    LoadLocal(EBX, 0);
+  } else {
+    __ negl(EBX);
+    __ movl(EBX, Address(EDI, EBX, TIMES_4));
+  }
 
   // Compute the receiver class.
   Label smi, dispatch;
@@ -1684,41 +1704,57 @@ void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {
   __ cmpl(EDX, Address(ECX, Array::kSize - HeapObject::kTag));
   __ j(NOT_EQUAL, &invalid);
 
-  // Load the target and the intrinsic from the entry.
-  Label validated;
-  __ Bind(&validated);
-  __ movl(EAX, Address(ECX, 8 + Array::kSize - HeapObject::kTag));
-  __ movl(EBX, Address(ECX, 12 + Array::kSize - HeapObject::kTag));
+  Label validated, intrinsified;
+  if (test) {
+    // Valid entry: The answer is true.
+    __ movl(EAX, Address(EBP, Process::ProgramOffset()));
+    __ movl(EAX, Address(EAX, Program::true_object_offset()));
+    StoreLocal(EAX, 0);
+    Dispatch(kInvokeTestLength);
+  } else {
+    // Load the target and the intrinsic from the entry.
+    __ Bind(&validated);
+    __ movl(EAX, Address(ECX, 8 + Array::kSize - HeapObject::kTag));
+    __ movl(EBX, Address(ECX, 12 + Array::kSize - HeapObject::kTag));
 
-  // Check if we have an associated intrinsic.
-  Label intrinsified;
-  __ testl(EBX, EBX);
-  __ j(NOT_ZERO, &intrinsified);
+    // Check if we have an associated intrinsic.
+    __ testl(EBX, EBX);
+    __ j(NOT_ZERO, &intrinsified);
 
-  // Compute and push the return address on the stack.
-  __ addl(ESI, Immediate(kInvokeMethodVtableLength));
-  Push(ESI);
+    // Compute and push the return address on the stack.
+    __ addl(ESI, Immediate(kInvokeMethodVtableLength));
+    Push(ESI);
 
-  // Jump to the first bytecode in the target method.
-  __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
-  CheckStackOverflow(0);
-  Dispatch(0);
+    // Jump to the first bytecode in the target method.
+    __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
+    CheckStackOverflow(0);
+    Dispatch(0);
+  }
 
   __ Bind(&smi);
   __ movl(EBX, Address(EBP, Process::ProgramOffset()));
   __ movl(EBX, Address(EBX, Program::smi_class_offset()));
   __ jmp(&dispatch);
 
-  __ Bind(&intrinsified);
-  __ jmp(EBX);
+  if (test) {
+    // Invalid entry: The answer is false.
+    __ Bind(&invalid);
+    __ movl(EAX, Address(EBP, Process::ProgramOffset()));
+    __ movl(EAX, Address(EAX, Program::false_object_offset()));
+    StoreLocal(EAX, 0);
+    Dispatch(kInvokeTestLength);
+  } else {
+    __ Bind(&intrinsified);
+    __ jmp(EBX);
 
-  // Invalid entry: Use the noSuchMethod entry from entry zero of
-  // the virtual table.
-  __ Bind(&invalid);
-  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-  __ movl(ECX, Address(ECX, Program::VTableOffset()));
-  __ movl(ECX, Address(ECX, Array::kSize - HeapObject::kTag));
-  __ jmp(&validated);
+    // Invalid entry: Use the noSuchMethod entry from entry zero of
+    // the virtual table.
+    __ Bind(&invalid);
+    __ movl(ECX, Address(EBP, Process::ProgramOffset()));
+    __ movl(ECX, Address(ECX, Program::VTableOffset()));
+    __ movl(ECX, Address(ECX, Array::kSize - HeapObject::kTag));
+    __ jmp(&validated);
+  }
 }
 
 void InterpreterGeneratorX86::InvokeStatic(bool unfolded) {

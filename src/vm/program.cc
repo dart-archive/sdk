@@ -206,6 +206,7 @@ Object* Program::UnfoldFunction(Function* function,
       case kInvokeBitShrFast:
       case kInvokeBitShlFast:
 
+      case kInvokeTestFast:
       case kInvokeMethodFast: {
         int index = Utils::ReadInt32(bcp + 1);
         Array* table = dispatch_table();
@@ -234,6 +235,7 @@ Object* Program::UnfoldFunction(Function* function,
       case kInvokeBitShrVtable:
       case kInvokeBitShlVtable:
 
+      case kInvokeTestVtable:
       case kInvokeMethodVtable: {
         int offset = Selector::IdField::decode(Utils::ReadInt32(bcp + 1));
         int selector = map->at(offset);
@@ -805,6 +807,7 @@ class FunctionPostprocessVisitor: public HeapObjectVisitor {
         case kInvokeBitShr:
         case kInvokeBitShl:
 
+        case kInvokeTest:
         case kInvokeMethod: {
           int selector = Utils::ReadInt32(bcp + 1);
           SelectorRow* row = rewriter_->LookupSelectorRow(selector, false);
