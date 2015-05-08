@@ -1170,8 +1170,14 @@ void InterpreterGeneratorX86::DoEnterNoSuchMethod() {
   // Load the caller opcode through the return address.
   Label decode, fast;
   __ movzbl(EBX, Address(EAX, -5));
-  __ cmpl(EBX, Immediate(kInvokeMethodFast));
-  __ j(EQUAL, &fast);
+  __ movl(Address(ESP, 0 * kWordSize), EBX);
+  __ call("HandleIsInvokeFast");
+  __ movl(EBX, EAX);
+  LoadLocal(EAX, 0);  // Restore value of EAX.
+
+  // Check if it was a fast call.
+  __ testl(EBX, EBX);
+  __ j(NOT_ZERO, &fast);
 
   // Load the selector indirectly through the return address.
   __ movl(EAX, Address(EAX, -4));

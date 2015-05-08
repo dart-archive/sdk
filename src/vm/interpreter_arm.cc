@@ -1135,9 +1135,14 @@ void InterpreterGeneratorARM::DoEnterNoSuchMethod() {
 
   // Load the caller opcode through the return address.
   Label decode, fast;
-  __ ldrb(R1, Address(R0, -5));
-  __ cmp(R1, Immediate(kInvokeMethodFast));
-  __ b(EQ, &fast);
+  __ ldrb(R0, Address(R0, -5));
+  __ bl("HandleIsInvokeFast");
+  __ mov(R1, R0);
+  LoadLocal(R0, 0);  // Restore value of R0.
+
+  // Check if it was a fast call.
+  __ cmp(R1, Immediate(0));
+  __ b(NE, &fast);
 
   // Load the selector indirectly through the return address.
   __ ldr(R0, Address(R0, -4));
@@ -1421,7 +1426,10 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
 }
 
 void InterpreterGeneratorARM::InvokeMethodFast(bool test) {
-  ASSERT(!test);
+  if (test) {
+    __ bkpt();
+    return;
+  }
 
   // Get the dispatch table and form a pointer to the first element
   // corresponding to this invoke bytecode.
@@ -1487,7 +1495,10 @@ void InterpreterGeneratorARM::InvokeMethodFast(bool test) {
 }
 
 void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
-  ASSERT(!test);
+  if (test) {
+    __ bkpt();
+    return;
+  }
 
   // Get the selector from the bytecodes.
   __ ldr(R7, Address(R5, 1));

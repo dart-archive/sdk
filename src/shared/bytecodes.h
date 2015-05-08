@@ -160,6 +160,11 @@ class Bytecode {
   // Get the bytecode format of the opcode.
   static const char* BytecodeFormat(Opcode opcode);
 
+  // Check for invoke variants.
+  static bool IsInvoke(Opcode opcode);
+  static bool IsInvokeFast(Opcode opcode);
+  static bool IsInvokeVtable(Opcode opcode);
+
  private:
   static int sizes_[];
   static int stack_diffs_[];

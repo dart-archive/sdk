@@ -95,4 +95,99 @@ int Bytecode::StackDiff(Opcode opcode) {
   return stack_diffs_[opcode];
 }
 
+enum InvokeKind {
+  NONE,
+  NORMAL,
+  FAST,
+  VTABLE
+};
+
+static InvokeKind ComputeInvokeKind(Opcode opcode) {
+  switch (opcode) {
+    case kInvokeMethod:
+    case kInvokeTest:
+
+    case kInvokeEq:
+    case kInvokeLt:
+    case kInvokeLe:
+    case kInvokeGt:
+    case kInvokeGe:
+
+    case kInvokeAdd:
+    case kInvokeSub:
+    case kInvokeMod:
+    case kInvokeMul:
+    case kInvokeTruncDiv:
+
+    case kInvokeBitNot:
+    case kInvokeBitAnd:
+    case kInvokeBitOr:
+    case kInvokeBitXor:
+    case kInvokeBitShr:
+    case kInvokeBitShl:
+      return NORMAL;
+
+    case kInvokeMethodFast:
+    case kInvokeTestFast:
+
+    case kInvokeEqFast:
+    case kInvokeLtFast:
+    case kInvokeLeFast:
+    case kInvokeGtFast:
+    case kInvokeGeFast:
+
+    case kInvokeAddFast:
+    case kInvokeSubFast:
+    case kInvokeModFast:
+    case kInvokeMulFast:
+    case kInvokeTruncDivFast:
+
+    case kInvokeBitNotFast:
+    case kInvokeBitAndFast:
+    case kInvokeBitOrFast:
+    case kInvokeBitXorFast:
+    case kInvokeBitShrFast:
+    case kInvokeBitShlFast:
+      return FAST;
+
+    case kInvokeMethodVtable:
+    case kInvokeTestVtable:
+
+    case kInvokeEqVtable:
+    case kInvokeLtVtable:
+    case kInvokeLeVtable:
+    case kInvokeGtVtable:
+    case kInvokeGeVtable:
+
+    case kInvokeAddVtable:
+    case kInvokeSubVtable:
+    case kInvokeModVtable:
+    case kInvokeMulVtable:
+    case kInvokeTruncDivVtable:
+
+    case kInvokeBitNotVtable:
+    case kInvokeBitAndVtable:
+    case kInvokeBitOrVtable:
+    case kInvokeBitXorVtable:
+    case kInvokeBitShrVtable:
+    case kInvokeBitShlVtable:
+      return VTABLE;
+
+    default:
+      return NONE;
+  }
+}
+
+bool Bytecode::IsInvoke(Opcode opcode) {
+  return ComputeInvokeKind(opcode) == NORMAL;
+}
+
+bool Bytecode::IsInvokeFast(Opcode opcode) {
+  return ComputeInvokeKind(opcode) == FAST;
+}
+
+bool Bytecode::IsInvokeVtable(Opcode opcode) {
+  return ComputeInvokeKind(opcode) == VTABLE;
+}
+
 }  // namespace fletch

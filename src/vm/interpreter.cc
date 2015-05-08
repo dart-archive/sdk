@@ -730,15 +730,16 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     Opcode opcode = static_cast<Opcode>(*(return_address - 5));
 
     int selector;
-    if (opcode == kInvokeMethodFast) {
+    if (Bytecode::IsInvokeFast(opcode)) {
       int index = Utils::ReadInt32(return_address - 4);
       Array* table = program()->dispatch_table();
       selector = Smi::cast(table->get(index + 1))->value();
-    } else if (opcode == kInvokeMethodVtable) {
+    } else if (Bytecode::IsInvokeVtable(opcode)) {
       // TODO(kasperl): The id encoded in the selector is
       // wrong because it is an offset.
       selector = Utils::ReadInt32(return_address - 4);
     } else {
+      ASSERT(Bytecode::IsInvoke(opcode));
       selector = Utils::ReadInt32(return_address - 4);
     }
 
@@ -890,6 +891,10 @@ void Interpreter::Run() {
 
 bool HandleStackOverflow(Process* process, int size) {
   return process->HandleStackOverflow(size);
+}
+
+bool HandleIsInvokeFast(int opcode) {
+  return Bytecode::IsInvokeFast(static_cast<Opcode>(opcode));
 }
 
 void HandleGC(Process* process) {
