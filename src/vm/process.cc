@@ -253,6 +253,10 @@ Object* Process::NewInteger(int64 value) {
   return result;
 }
 
+void Process::TryDeallocInteger(LargeInteger* object) {
+  heap_.TryDeallocInteger(object);
+}
+
 Object* Process::NewString(int length) {
   Class* string_class = program()->string_class();
   Object* raw_result = heap_.CreateString(string_class, length);

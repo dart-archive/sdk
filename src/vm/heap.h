@@ -24,6 +24,10 @@ class Heap {
   // Allocate raw object.
   Object* Allocate(int size);
 
+  // Attempt to deallocate the heap object with the given size. Rewinds the
+  // allocation top if the object was the last allocated object.
+  void TryDealloc(Object* object, int size);
+
   // Allocate heap object.
   Object* CreateHeapObject(Class* the_class, Object* init_value,
                            bool immutable = false);
@@ -38,6 +42,7 @@ class Heap {
   // Allocate heap integer.
   Object* CreateLargeInteger(Class* the_class, int64 value,
                              bool immutable = false);
+  void TryDeallocInteger(LargeInteger* object);
 
   // Allocate double.
   Object* CreateDouble(Class* the_class, double value, bool immutable = false);

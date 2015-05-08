@@ -99,8 +99,13 @@ NATIVE(ForeignAllocate) {
   word size = AsForeignWord(arguments[0]);
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
-  void* value = calloc(1, size);
-  LargeInteger::cast(result)->set_value(reinterpret_cast<intptr_t>(value));
+  void* calloc_value = calloc(1, size);
+  uint64 value = reinterpret_cast<uint64>(calloc_value);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
+  LargeInteger::cast(result)->set_value(value);
   return result;
 }
 
@@ -160,6 +165,10 @@ NATIVE(ForeignICall0) {
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
   int value = function();
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
@@ -171,6 +180,10 @@ NATIVE(ForeignICall1) {
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
   int value = function(a0);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
@@ -183,6 +196,10 @@ NATIVE(ForeignICall2) {
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
   int value = function(a0, a1);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
@@ -196,6 +213,10 @@ NATIVE(ForeignICall3) {
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
   int value = function(a0, a1, a2);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
@@ -210,6 +231,10 @@ NATIVE(ForeignICall4) {
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
   int value = function(a0, a1, a2, a3);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
@@ -225,6 +250,10 @@ NATIVE(ForeignICall5) {
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
   int value = function(a0, a1, a2, a3, a4);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
@@ -241,6 +270,10 @@ NATIVE(ForeignICall6) {
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
   int value = function(a0, a1, a2, a3, a4, a5);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
@@ -341,6 +374,10 @@ NATIVE(ForeignLCallwLw) {
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
   int64 value = function(a0, a1, a2);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
   LargeInteger::cast(result)->set_value(value);
   return result;
 }

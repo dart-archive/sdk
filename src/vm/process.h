@@ -105,6 +105,11 @@ class Process {
   Object* NewDouble(double value);
   Object* NewInteger(int64 value);
 
+  // Attempt to deallocate the large integer object. If the large integer
+  // was the last allocated object the allocation top is moved back so
+  // the memory can be reused.
+  void TryDeallocInteger(LargeInteger* object);
+
   // NewString allocates a string of the given length and fills the payload
   // with zeroes.
   Object* NewString(int length);

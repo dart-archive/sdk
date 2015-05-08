@@ -77,6 +77,10 @@ class Space {
   // Allocate raw object.
   uword Allocate(int size);
 
+  // Rewind allocation top by size bytes if location is equal to current
+  // allocation top.
+  void TryDealloc(uword location, int size);
+
   // Flush will make the current chunk consistent for iteration.
   void Flush();
 

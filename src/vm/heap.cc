@@ -18,6 +18,11 @@ Object* Heap::Allocate(int size) {
   return HeapObject::FromAddress(result);
 }
 
+void Heap::TryDealloc(Object* object, int size) {
+  uword location = reinterpret_cast<uword>(object) + size - HeapObject::kTag;
+  space_->TryDealloc(location, size);
+}
+
 Object* Heap::CreateHeapObject(Class* the_class, Object* init_value,
                                bool immutable) {
   int size = the_class->instance_format().fixed_size();
@@ -68,6 +73,10 @@ Object* Heap::CreateLargeInteger(Class* the_class, int64 value,
   result->set_immutable(immutable);
   result->set_value(value);
   return LargeInteger::cast(result);
+}
+
+void Heap::TryDeallocInteger(LargeInteger* object) {
+  TryDealloc(object, LargeInteger::AllocationSize());
 }
 
 Object* Heap::CreateDouble(Class* the_class, double value, bool immutable) {

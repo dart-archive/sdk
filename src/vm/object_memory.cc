@@ -110,6 +110,10 @@ uword Space::Allocate(int size) {
   return AllocateInNewChunk(size);
 }
 
+void Space::TryDealloc(uword location, int size) {
+  if (top_ == location) top_ -= size;
+}
+
 void Space::AdjustAllocationBudget() {
   allocation_budget_ = Utils::Maximum(512 * KB, Used());
 }
