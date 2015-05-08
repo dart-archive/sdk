@@ -12,10 +12,10 @@ namespace fletch {
 const int kVarDiff = 0x7FFFFFFF;
 const int kLoadLiteralWideLimit = 0x3fffffff;
 
-#define INVOKES(V, name, desc)                                                 \
-  V(Invoke##name,          true, "I", 5, kVarDiff, "invoke " desc "%d")        \
-  V(Invoke##name##Fast,    true, "I", 5, kVarDiff, "invoke fast " desc "%d")   \
-  V(Invoke##name##Vtable,  true, "I", 5, kVarDiff, "invoke vtable " desc "%d") \
+#define INVOKES(V, name, diff, desc)                                           \
+  V(Invoke##name,          true, "I", 5, diff, "invoke " desc "%d")            \
+  V(Invoke##name##Fast,    true, "I", 5, diff, "invoke fast " desc "%d")       \
+  V(Invoke##name##Vtable,  true, "I", 5, diff, "invoke vtable " desc "%d")     \
 
 
 #define BYTECODES_DO(V)                                                        \
@@ -46,7 +46,7 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   V(LoadLiteral,          false,    "B",  2,        1, "load literal %d")      \
   V(LoadLiteralWide,      false,    "I",  5,        1, "load literal %d")      \
                                                                                \
-  INVOKES(V, Method, "")                                                       \
+  INVOKES(V, Method, kVarDiff, "")                                             \
                                                                                \
   V(InvokeStatic,          true,    "I",  5, kVarDiff, "invoke static %d")     \
   V(InvokeStaticUnfold,    true,    "I",  5, kVarDiff, "invoke static @%d")    \
@@ -56,26 +56,26 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   V(InvokeNative,          true,    "BB", 3,        1, "invoke native %d %d")  \
   V(InvokeNativeYield,     true,    "BB", 3,   1, "invoke native yield %d %d") \
                                                                                \
-  V(InvokeTest,            true,    "I",  5,        0, "invoke test %d")       \
+  INVOKES(V, Test, 0, "test ")                                                 \
                                                                                \
-  V(InvokeEq,              true,    "I",  5,       -1, "invoke eq")            \
-  V(InvokeLt,              true,    "I",  5,       -1, "invoke lt")            \
-  V(InvokeLe,              true,    "I",  5,       -1, "invoke le")            \
-  V(InvokeGt,              true,    "I",  5,       -1, "invoke gt")            \
-  V(InvokeGe,              true,    "I",  5,       -1, "invoke ge")            \
+  INVOKES(V, Eq, -1, "eq ")                                                    \
+  INVOKES(V, Lt, -1, "lt ")                                                    \
+  INVOKES(V, Le, -1, "le ")                                                    \
+  INVOKES(V, Gt, -1, "gt ")                                                    \
+  INVOKES(V, Ge, -1, "ge ")                                                    \
                                                                                \
-  V(InvokeAdd,             true,    "I",  5,       -1, "invoke add")           \
-  V(InvokeSub,             true,    "I",  5,       -1, "invoke sub")           \
-  V(InvokeMod,             true,    "I",  5,       -1, "invoke mod")           \
-  V(InvokeMul,             true,    "I",  5,       -1, "invoke mul")           \
-  V(InvokeTruncDiv,        true,    "I",  5,       -1, "invoke trunc div")     \
+  INVOKES(V, Add, -1, "add ")                                                  \
+  INVOKES(V, Sub, -1, "sub ")                                                  \
+  INVOKES(V, Mod, -1, "mod ")                                                  \
+  INVOKES(V, Mul, -1, "mul ")                                                  \
+  INVOKES(V, TruncDiv, -1, "trunc div ")                                       \
                                                                                \
-  V(InvokeBitNot,          true,    "I",  5,        0, "invoke bit not")       \
-  V(InvokeBitAnd,          true,    "I",  5,       -1, "invoke bit and")       \
-  V(InvokeBitOr,           true,    "I",  5,       -1, "invoke bit or")        \
-  V(InvokeBitXor,          true,    "I",  5,       -1, "invoke bit xor")       \
-  V(InvokeBitShr,          true,    "I",  5,       -1, "invoke bit shr")       \
-  V(InvokeBitShl,          true,    "I",  5,       -1, "invoke bit shl")       \
+  INVOKES(V, BitNot,  0, "bit not ")                                           \
+  INVOKES(V, BitAnd, -1, "bit and ")                                           \
+  INVOKES(V, BitOr,  -1, "bit or ")                                            \
+  INVOKES(V, BitXor, -1, "bit xor ")                                           \
+  INVOKES(V, BitShr, -1, "bit shr ")                                           \
+  INVOKES(V, BitShl, -1, "bit shl ")                                           \
                                                                                \
   V(Pop,                  false,    "",   1,       -1, "pop")                  \
   V(Return,                true,    "BB", 3,       -1, "return %d %d")         \

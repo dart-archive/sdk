@@ -186,21 +186,62 @@ Object* Program::UnfoldFunction(Function* function,
       case kAllocateImmutable:
         rewriter.AddLiteralAndRewrite(classes(), bcp);
         break;
+
+      case kInvokeEqFast:
+      case kInvokeLtFast:
+      case kInvokeLeFast:
+      case kInvokeGtFast:
+      case kInvokeGeFast:
+
+      case kInvokeAddFast:
+      case kInvokeSubFast:
+      case kInvokeModFast:
+      case kInvokeMulFast:
+      case kInvokeTruncDivFast:
+
+      case kInvokeBitNotFast:
+      case kInvokeBitAndFast:
+      case kInvokeBitOrFast:
+      case kInvokeBitXorFast:
+      case kInvokeBitShrFast:
+      case kInvokeBitShlFast:
+
       case kInvokeMethodFast: {
         int index = Utils::ReadInt32(bcp + 1);
         Array* table = dispatch_table();
         int selector = Smi::cast(table->get(index + 1))->value();
-        *bcp = kInvokeMethod;
+        *bcp = opcode + (kInvokeMethod - kInvokeMethodFast);
         Utils::WriteInt32(bcp + 1, selector);
         break;
       }
+
+      case kInvokeEqVtable:
+      case kInvokeLtVtable:
+      case kInvokeLeVtable:
+      case kInvokeGtVtable:
+      case kInvokeGeVtable:
+
+      case kInvokeAddVtable:
+      case kInvokeSubVtable:
+      case kInvokeModVtable:
+      case kInvokeMulVtable:
+      case kInvokeTruncDivVtable:
+
+      case kInvokeBitNotVtable:
+      case kInvokeBitAndVtable:
+      case kInvokeBitOrVtable:
+      case kInvokeBitXorVtable:
+      case kInvokeBitShrVtable:
+      case kInvokeBitShlVtable:
+
       case kInvokeMethodVtable: {
         int offset = Selector::IdField::decode(Utils::ReadInt32(bcp + 1));
         int selector = map->at(offset);
-        *bcp = kInvokeMethod;
+        *bcp = opcode + (kInvokeMethod - kInvokeMethodVtable);
         Utils::WriteInt32(bcp + 1, selector);
         break;
       }
+
       case kMethodEnd: {
         ASSERT(function->literals_size() == 0);
         int number_of_literals = rewriter.NumberOfLiterals();
@@ -744,6 +785,26 @@ class FunctionPostprocessVisitor: public HeapObjectVisitor {
           Utils::WriteInt32(bcp + 1, clazz->id());
           break;
         }
+
+        case kInvokeEq:
+        case kInvokeLt:
+        case kInvokeLe:
+        case kInvokeGt:
+        case kInvokeGe:
+
+        case kInvokeAdd:
+        case kInvokeSub:
+        case kInvokeMod:
+        case kInvokeMul:
+        case kInvokeTruncDiv:
+
+        case kInvokeBitNot:
+        case kInvokeBitAnd:
+        case kInvokeBitOr:
+        case kInvokeBitXor:
+        case kInvokeBitShr:
+        case kInvokeBitShl:
+
         case kInvokeMethod: {
           int selector = Utils::ReadInt32(bcp + 1);
           SelectorRow* row = rewriter_->LookupSelectorRow(selector, false);
@@ -753,11 +814,11 @@ class FunctionPostprocessVisitor: public HeapObjectVisitor {
           if (kind == SelectorRow::LINEAR) {
             ASSERT(offset >= 0);
             Utils::WriteInt32(bcp + 1, offset);
-            *bcp = kInvokeMethodFast;
+            *bcp = opcode + (kInvokeMethodFast - kInvokeMethod);
           } else {
             int updated = Selector::IdField::update(offset, selector);
             Utils::WriteInt32(bcp + 1, updated);
-            *bcp = kInvokeMethodVtable;
+            *bcp = opcode + (kInvokeMethodVtable - kInvokeMethod);
           }
           break;
         }

@@ -38,22 +38,56 @@ enum Opcode {
   InvokeNative,
   InvokeNativeYield,
   InvokeTest,
+  InvokeTestFast,
+  InvokeTestVtable,
   InvokeEq,
+  InvokeEqFast,
+  InvokeEqVtable,
   InvokeLt,
+  InvokeLtFast,
+  InvokeLtVtable,
   InvokeLe,
+  InvokeLeFast,
+  InvokeLeVtable,
   InvokeGt,
+  InvokeGtFast,
+  InvokeGtVtable,
   InvokeGe,
+  InvokeGeFast,
+  InvokeGeVtable,
   InvokeAdd,
+  InvokeAddFast,
+  InvokeAddVtable,
   InvokeSub,
+  InvokeSubFast,
+  InvokeSubVtable,
   InvokeMod,
+  InvokeModFast,
+  InvokeModVtable,
   InvokeMul,
+  InvokeMulFast,
+  InvokeMulVtable,
   InvokeTruncDiv,
+  InvokeTruncDivFast,
+  InvokeTruncDivVtable,
   InvokeBitNot,
+  InvokeBitNotFast,
+  InvokeBitNotVtable,
   InvokeBitAnd,
+  InvokeBitAndFast,
+  InvokeBitAndVtable,
   InvokeBitOr,
+  InvokeBitOrFast,
+  InvokeBitOrVtable,
   InvokeBitXor,
+  InvokeBitXorFast,
+  InvokeBitXorVtable,
   InvokeBitShr,
+  InvokeBitShrFast,
+  InvokeBitShrVtable,
   InvokeBitShl,
+  InvokeBitShlFast,
+  InvokeBitShlVtable,
   Pop,
   Return,
   BranchLong,
@@ -974,6 +1008,64 @@ class InvokeTest extends Bytecode {
   String toString() => 'invoke test ${uint32Argument0}';
 }
 
+class InvokeTestFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeTestFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeTestFast;
+
+  String get name => 'InvokeTestFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'invoke fast test %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast test ${uint32Argument0}';
+}
+
+class InvokeTestVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeTestVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeTestVtable;
+
+  String get name => 'InvokeTestVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'invoke vtable test %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable test ${uint32Argument0}';
+}
+
 class InvokeEq extends Bytecode {
   final int uint32Argument0;
   const InvokeEq(this.uint32Argument0)
@@ -991,7 +1083,7 @@ class InvokeEq extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke eq';
+  String get formatString => 'invoke eq %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1000,7 +1092,65 @@ class InvokeEq extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke eq${uint32Argument0}';
+  String toString() => 'invoke eq ${uint32Argument0}';
+}
+
+class InvokeEqFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeEqFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeEqFast;
+
+  String get name => 'InvokeEqFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast eq %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast eq ${uint32Argument0}';
+}
+
+class InvokeEqVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeEqVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeEqVtable;
+
+  String get name => 'InvokeEqVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable eq %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable eq ${uint32Argument0}';
 }
 
 class InvokeLt extends Bytecode {
@@ -1020,7 +1170,7 @@ class InvokeLt extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke lt';
+  String get formatString => 'invoke lt %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1029,7 +1179,65 @@ class InvokeLt extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke lt${uint32Argument0}';
+  String toString() => 'invoke lt ${uint32Argument0}';
+}
+
+class InvokeLtFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeLtFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeLtFast;
+
+  String get name => 'InvokeLtFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast lt %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast lt ${uint32Argument0}';
+}
+
+class InvokeLtVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeLtVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeLtVtable;
+
+  String get name => 'InvokeLtVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable lt %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable lt ${uint32Argument0}';
 }
 
 class InvokeLe extends Bytecode {
@@ -1049,7 +1257,7 @@ class InvokeLe extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke le';
+  String get formatString => 'invoke le %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1058,7 +1266,65 @@ class InvokeLe extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke le${uint32Argument0}';
+  String toString() => 'invoke le ${uint32Argument0}';
+}
+
+class InvokeLeFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeLeFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeLeFast;
+
+  String get name => 'InvokeLeFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast le %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast le ${uint32Argument0}';
+}
+
+class InvokeLeVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeLeVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeLeVtable;
+
+  String get name => 'InvokeLeVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable le %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable le ${uint32Argument0}';
 }
 
 class InvokeGt extends Bytecode {
@@ -1078,7 +1344,7 @@ class InvokeGt extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke gt';
+  String get formatString => 'invoke gt %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1087,7 +1353,65 @@ class InvokeGt extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke gt${uint32Argument0}';
+  String toString() => 'invoke gt ${uint32Argument0}';
+}
+
+class InvokeGtFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeGtFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeGtFast;
+
+  String get name => 'InvokeGtFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast gt %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast gt ${uint32Argument0}';
+}
+
+class InvokeGtVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeGtVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeGtVtable;
+
+  String get name => 'InvokeGtVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable gt %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable gt ${uint32Argument0}';
 }
 
 class InvokeGe extends Bytecode {
@@ -1107,7 +1431,7 @@ class InvokeGe extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke ge';
+  String get formatString => 'invoke ge %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1116,7 +1440,65 @@ class InvokeGe extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke ge${uint32Argument0}';
+  String toString() => 'invoke ge ${uint32Argument0}';
+}
+
+class InvokeGeFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeGeFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeGeFast;
+
+  String get name => 'InvokeGeFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast ge %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast ge ${uint32Argument0}';
+}
+
+class InvokeGeVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeGeVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeGeVtable;
+
+  String get name => 'InvokeGeVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable ge %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable ge ${uint32Argument0}';
 }
 
 class InvokeAdd extends Bytecode {
@@ -1136,7 +1518,7 @@ class InvokeAdd extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke add';
+  String get formatString => 'invoke add %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1145,7 +1527,65 @@ class InvokeAdd extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke add${uint32Argument0}';
+  String toString() => 'invoke add ${uint32Argument0}';
+}
+
+class InvokeAddFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeAddFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeAddFast;
+
+  String get name => 'InvokeAddFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast add %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast add ${uint32Argument0}';
+}
+
+class InvokeAddVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeAddVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeAddVtable;
+
+  String get name => 'InvokeAddVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable add %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable add ${uint32Argument0}';
 }
 
 class InvokeSub extends Bytecode {
@@ -1165,7 +1605,7 @@ class InvokeSub extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke sub';
+  String get formatString => 'invoke sub %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1174,7 +1614,65 @@ class InvokeSub extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke sub${uint32Argument0}';
+  String toString() => 'invoke sub ${uint32Argument0}';
+}
+
+class InvokeSubFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeSubFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeSubFast;
+
+  String get name => 'InvokeSubFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast sub %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast sub ${uint32Argument0}';
+}
+
+class InvokeSubVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeSubVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeSubVtable;
+
+  String get name => 'InvokeSubVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable sub %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable sub ${uint32Argument0}';
 }
 
 class InvokeMod extends Bytecode {
@@ -1194,7 +1692,7 @@ class InvokeMod extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke mod';
+  String get formatString => 'invoke mod %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1203,7 +1701,65 @@ class InvokeMod extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke mod${uint32Argument0}';
+  String toString() => 'invoke mod ${uint32Argument0}';
+}
+
+class InvokeModFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeModFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeModFast;
+
+  String get name => 'InvokeModFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast mod %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast mod ${uint32Argument0}';
+}
+
+class InvokeModVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeModVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeModVtable;
+
+  String get name => 'InvokeModVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable mod %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable mod ${uint32Argument0}';
 }
 
 class InvokeMul extends Bytecode {
@@ -1223,7 +1779,7 @@ class InvokeMul extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke mul';
+  String get formatString => 'invoke mul %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1232,7 +1788,65 @@ class InvokeMul extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke mul${uint32Argument0}';
+  String toString() => 'invoke mul ${uint32Argument0}';
+}
+
+class InvokeMulFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeMulFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeMulFast;
+
+  String get name => 'InvokeMulFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast mul %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast mul ${uint32Argument0}';
+}
+
+class InvokeMulVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeMulVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeMulVtable;
+
+  String get name => 'InvokeMulVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable mul %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable mul ${uint32Argument0}';
 }
 
 class InvokeTruncDiv extends Bytecode {
@@ -1252,7 +1866,7 @@ class InvokeTruncDiv extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke trunc div';
+  String get formatString => 'invoke trunc div %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1261,7 +1875,65 @@ class InvokeTruncDiv extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke trunc div${uint32Argument0}';
+  String toString() => 'invoke trunc div ${uint32Argument0}';
+}
+
+class InvokeTruncDivFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeTruncDivFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeTruncDivFast;
+
+  String get name => 'InvokeTruncDivFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast trunc div %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast trunc div ${uint32Argument0}';
+}
+
+class InvokeTruncDivVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeTruncDivVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeTruncDivVtable;
+
+  String get name => 'InvokeTruncDivVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable trunc div %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable trunc div ${uint32Argument0}';
 }
 
 class InvokeBitNot extends Bytecode {
@@ -1281,7 +1953,7 @@ class InvokeBitNot extends Bytecode {
 
   int get stackPointerDifference => 0;
 
-  String get formatString => 'invoke bit not';
+  String get formatString => 'invoke bit not %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1290,7 +1962,65 @@ class InvokeBitNot extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke bit not${uint32Argument0}';
+  String toString() => 'invoke bit not ${uint32Argument0}';
+}
+
+class InvokeBitNotFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitNotFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitNotFast;
+
+  String get name => 'InvokeBitNotFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'invoke fast bit not %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast bit not ${uint32Argument0}';
+}
+
+class InvokeBitNotVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitNotVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitNotVtable;
+
+  String get name => 'InvokeBitNotVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'invoke vtable bit not %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable bit not ${uint32Argument0}';
 }
 
 class InvokeBitAnd extends Bytecode {
@@ -1310,7 +2040,7 @@ class InvokeBitAnd extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke bit and';
+  String get formatString => 'invoke bit and %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1319,7 +2049,65 @@ class InvokeBitAnd extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke bit and${uint32Argument0}';
+  String toString() => 'invoke bit and ${uint32Argument0}';
+}
+
+class InvokeBitAndFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitAndFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitAndFast;
+
+  String get name => 'InvokeBitAndFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast bit and %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast bit and ${uint32Argument0}';
+}
+
+class InvokeBitAndVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitAndVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitAndVtable;
+
+  String get name => 'InvokeBitAndVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable bit and %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable bit and ${uint32Argument0}';
 }
 
 class InvokeBitOr extends Bytecode {
@@ -1339,7 +2127,7 @@ class InvokeBitOr extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke bit or';
+  String get formatString => 'invoke bit or %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1348,7 +2136,65 @@ class InvokeBitOr extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke bit or${uint32Argument0}';
+  String toString() => 'invoke bit or ${uint32Argument0}';
+}
+
+class InvokeBitOrFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitOrFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitOrFast;
+
+  String get name => 'InvokeBitOrFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast bit or %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast bit or ${uint32Argument0}';
+}
+
+class InvokeBitOrVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitOrVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitOrVtable;
+
+  String get name => 'InvokeBitOrVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable bit or %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable bit or ${uint32Argument0}';
 }
 
 class InvokeBitXor extends Bytecode {
@@ -1368,7 +2214,7 @@ class InvokeBitXor extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke bit xor';
+  String get formatString => 'invoke bit xor %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1377,7 +2223,65 @@ class InvokeBitXor extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke bit xor${uint32Argument0}';
+  String toString() => 'invoke bit xor ${uint32Argument0}';
+}
+
+class InvokeBitXorFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitXorFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitXorFast;
+
+  String get name => 'InvokeBitXorFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast bit xor %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast bit xor ${uint32Argument0}';
+}
+
+class InvokeBitXorVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitXorVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitXorVtable;
+
+  String get name => 'InvokeBitXorVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable bit xor %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable bit xor ${uint32Argument0}';
 }
 
 class InvokeBitShr extends Bytecode {
@@ -1397,7 +2301,7 @@ class InvokeBitShr extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke bit shr';
+  String get formatString => 'invoke bit shr %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1406,7 +2310,65 @@ class InvokeBitShr extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke bit shr${uint32Argument0}';
+  String toString() => 'invoke bit shr ${uint32Argument0}';
+}
+
+class InvokeBitShrFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitShrFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitShrFast;
+
+  String get name => 'InvokeBitShrFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast bit shr %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast bit shr ${uint32Argument0}';
+}
+
+class InvokeBitShrVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitShrVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitShrVtable;
+
+  String get name => 'InvokeBitShrVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable bit shr %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable bit shr ${uint32Argument0}';
 }
 
 class InvokeBitShl extends Bytecode {
@@ -1426,7 +2388,7 @@ class InvokeBitShl extends Bytecode {
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'invoke bit shl';
+  String get formatString => 'invoke bit shl %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -1435,7 +2397,65 @@ class InvokeBitShl extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke bit shl${uint32Argument0}';
+  String toString() => 'invoke bit shl ${uint32Argument0}';
+}
+
+class InvokeBitShlFast extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitShlFast(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitShlFast;
+
+  String get name => 'InvokeBitShlFast';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke fast bit shl %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke fast bit shl ${uint32Argument0}';
+}
+
+class InvokeBitShlVtable extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitShlVtable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitShlVtable;
+
+  String get name => 'InvokeBitShlVtable';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke vtable bit shl %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke vtable bit shl ${uint32Argument0}';
 }
 
 class Pop extends Bytecode {

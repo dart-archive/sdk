@@ -414,10 +414,16 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     }
   OPCODE_END();
 
-#define INVOKE_BUILTIN(kind)   \
-  OPCODE_BEGIN(Invoke##kind);  \
-    DISPATCH_TO(InvokeMethod); \
-  OPCODE_END();                \
+#define INVOKE_BUILTIN(kind)           \
+  OPCODE_BEGIN(Invoke##kind);          \
+    DISPATCH_TO(InvokeMethod);         \
+  OPCODE_END();                        \
+  OPCODE_BEGIN(Invoke##kind##Fast);    \
+    DISPATCH_TO(InvokeMethodFast);     \
+  OPCODE_END();                        \
+  OPCODE_BEGIN(Invoke##kind##Vtable);  \
+    DISPATCH_TO(InvokeMethodVtable);   \
+  OPCODE_END();
 
   INVOKE_BUILTIN(Eq);
   INVOKE_BUILTIN(Lt);
@@ -468,6 +474,14 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
     Object* receiver = Local(0);
     SetTop(ToBool(process()->LookupEntry(receiver, selector)->tag != 0));
     Advance(kInvokeTestLength);
+  OPCODE_END();
+
+  OPCODE_BEGIN(InvokeTestFast);
+    UNIMPLEMENTED();
+  OPCODE_END();
+
+  OPCODE_BEGIN(InvokeTestVtable);
+    UNIMPLEMENTED();
   OPCODE_END();
 
   OPCODE_BEGIN(Pop);
