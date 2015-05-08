@@ -295,6 +295,14 @@ abstract class CodegenVisitor
     builder.invokeStatic(constId, arity);
   }
 
+  void generateIdentical(Node node) {
+    builder.identical();
+  }
+
+  void generateIdenticalNonNumeric(Node node) {
+    builder.identicalNonNumeric();
+  }
+
   void generateReturn(Node node) {
     builder.ret();
   }
@@ -538,7 +546,7 @@ abstract class CodegenVisitor
     // For '==', if either side is a null literal, use identicalNonNumeric.
     if (operator == BinaryOperator.EQ &&
         (isConstNull(left) || isConstNull(right))) {
-      builder.identicalNonNumeric();
+      generateIdenticalNonNumeric(node);
       return;
     }
 
@@ -778,12 +786,12 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void handleIdenticalCall(NodeList arguments) {
+  void handleIdenticalCall(Node node, NodeList arguments) {
     assert(arguments.slowLength() == 2);
     for (Node argument in arguments) {
       visitForValue(argument);
     }
-    builder.identical();
+    generateIdentical(node);
   }
 
   void handleStaticFunctionGet(MethodElement function) {
@@ -843,7 +851,7 @@ abstract class CodegenVisitor
       Selector selector) {
     if (checkCompileError(element)) return;
     if (element.declaration == context.compiler.identicalFunction) {
-      handleIdenticalCall(arguments);
+      handleIdenticalCall(node, arguments);
       return;
     }
     if (element.isExternal) {

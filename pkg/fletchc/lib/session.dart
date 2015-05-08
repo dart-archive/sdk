@@ -64,9 +64,10 @@ class Session {
     const Debugging().addTo(vmSocket);
     const ProcessSpawnForMain().addTo(vmSocket);
     await setBreakpoint(methodName: 'main', bytecodeIndex: 0);
-    await debugRun();
+    await doDebugRun();
     while (true) {
-      await step();
+      print(currentStackTrace.shortStringForFrame(0));
+      await doStep();
     }
   }
 
@@ -102,7 +103,7 @@ class Session {
     return running;
   }
 
-  Future debugRun() async {
+  Future doDebugRun() async {
     if (running) {
       print("### already running");
       return;
@@ -110,6 +111,10 @@ class Session {
     running = true;
     const ProcessRun().addTo(vmSocket);
     await handleProcessStop();
+  }
+
+  Future debugRun() async {
+    await doDebugRun();
     await backtrace();
   }
 
@@ -207,11 +212,11 @@ class Session {
     await handleProcessStop();
   }
 
-  Future step() async {
+  Future doStep() async {
     if (!checkRunning()) return;
     SourceLocation previous = currentLocation;
     do {
-      var bcp = currentStackTrace.stepBytecodePointer(compiler, previous);
+      var bcp = currentStackTrace.stepBytecodePointer(previous);
       if (bcp != -1) {
         await stepTo(currentStackTrace.methodId, bcp);
       } else {
@@ -220,6 +225,10 @@ class Session {
     } while (currentLocation == null ||
              currentLocation.isSameSourceLevelLocationAs(previous) ||
              currentLocation.node == null);
+  }
+
+  Future step() async {
+    await doStep();
     await backtrace();
   }
 
@@ -258,7 +267,7 @@ class Session {
       print("### no stack trace");
       return;
     }
-    currentStackTrace.list(compiler, currentFrame);
+    currentStackTrace.list(currentFrame);
   }
 
   void disasm() {
@@ -266,7 +275,7 @@ class Session {
       print("### no stack trace");
       return;
     }
-    currentStackTrace.disasm(compiler, currentFrame);
+    currentStackTrace.disasm(currentFrame);
   }
 
   void selectFrame(int frame) {
@@ -288,15 +297,16 @@ class Session {
         currentStackTrace.addFrame(
             compiler,
             new StackFrame(backtraceResponse.methodIds[i],
-                           backtraceResponse.bytecodeIndices[i]));
+                           backtraceResponse.bytecodeIndices[i],
+                           compiler));
       }
-      currentLocation = currentStackTrace.sourceLocation(compiler);
+      currentLocation = currentStackTrace.sourceLocation();
     }
   }
 
   Future backtrace() async {
     await getStackTrace();
-    currentStackTrace.write(compiler, currentFrame);
+    currentStackTrace.write(currentFrame);
   }
 
   Future printLocal(LocalValue local) async {
@@ -320,7 +330,7 @@ class Session {
 
   Future printAllVariables() async {
     await getStackTrace();
-    ScopeInfo info = currentStackTrace.scopeInfo(compiler, currentFrame);
+    ScopeInfo info = currentStackTrace.scopeInfo(currentFrame);
     for (ScopeInfo current = info;
          current != ScopeInfo.sentinel;
          current = current.previous) {
@@ -330,7 +340,7 @@ class Session {
 
   Future printVariable(String name) async {
     await getStackTrace();
-    ScopeInfo info = currentStackTrace.scopeInfo(compiler, currentFrame);
+    ScopeInfo info = currentStackTrace.scopeInfo(currentFrame);
     LocalValue local = info.lookup(name);
     if (local == null) {
       print('### No such variable: $name');

@@ -95,6 +95,16 @@ class DebugInfoLazyFieldInitializerCodegen
     super.generateReturn(node);
   }
 
+  void generateIdentical(Node node) {
+    recordDebugInfo(node);
+    super.generateIdentical(node);
+  }
+
+  void generateIdenticalNonNumeric(Node node) {
+    recordDebugInfo(node);
+    super.generateIdenticalNonNumeric(node);
+  }
+
   void visitForValue(Node node) {
     recordDebugInfo(node);
     super.visitForValue(node);

@@ -7,10 +7,11 @@ part of fletch.session;
 class StackFrame {
   final int functionId;
   final int bytecodePointer;
+  final FletchCompiler compiler;
 
-  StackFrame(this.functionId, this.bytecodePointer);
+  StackFrame(this.functionId, this.bytecodePointer, this.compiler);
 
-  String invokeString(FletchCompiler compiler, Bytecode bytecode) {
+  String invokeString(Bytecode bytecode) {
     if (bytecode is InvokeMethod) {
       String name =
           compiler.lookupFunctionNameBySelector(bytecode.uint32Argument0);
@@ -19,18 +20,18 @@ class StackFrame {
     return '';
   }
 
-  void list(FletchCompiler compiler) {
+  void list() {
     print(compiler.sourceListString(functionId, bytecodePointer - 1));
   }
 
-  void disasm(FletchCompiler compiler) {
+  void disasm() {
     var bytecodes = compiler.lookupFunctionBytecodes(functionId);
     var offset = 0;
     for (var i = 0; i  < bytecodes.length; i++) {
       var source = compiler.astString(functionId, offset);
       var current = bytecodes[i];
       var byteNumberString = '$offset'.padLeft(4);
-      var invokeInfo = invokeString(compiler, current);
+      var invokeInfo = invokeString(current);
       var bytecodeString = '$byteNumberString $current$invokeInfo';
       var sourceString = '// $source';
       var printString = bytecodeString.padRight(30) + sourceString;
@@ -41,25 +42,24 @@ class StackFrame {
     print('');
   }
 
-  String shortString(FletchCompiler compiler, int frameNumber, maxNameLength) {
+  String shortString(int maxNameLength) {
     String name = compiler.lookupFunctionName(functionId);
     String astString =
         compiler.astString(functionId, bytecodePointer - 1);
     astString = (astString != null) ? '@$astString' : '';
-    String frameNumberString = '$frameNumber'.padLeft(3);
-    return '$frameNumberString: ${name.padRight(maxNameLength)}\t$astString';
+
+    return '${name.padRight(maxNameLength)}\t$astString';
   }
 
-  SourceLocation sourceLocation(FletchCompiler compiler) {
+  SourceLocation sourceLocation() {
     return compiler.sourceLocation(functionId, bytecodePointer - 1);
   }
 
-  ScopeInfo scopeInfo(FletchCompiler compiler) {
+  ScopeInfo scopeInfo() {
     return compiler.scopeInfo(functionId, bytecodePointer - 1);
   }
 
-  bool isSameSourceLocation(FletchCompiler compiler,
-                            int offset,
+  bool isSameSourceLocation(int offset,
                             SourceLocation current) {
     SourceLocation location = compiler.sourceLocation(functionId, offset);
     // Treat locations for which we have no source information as the same
@@ -68,7 +68,7 @@ class StackFrame {
     return location.isSameSourceLevelLocationAs(current);
   }
 
-  int stepBytecodePointer(FletchCompiler compiler, SourceLocation current) {
+  int stepBytecodePointer(SourceLocation current) {
     var bytecodes = compiler.lookupFunctionBytecodes(functionId);
     // Zip forward to the current bytecode. The bytecode pointer in the stack
     // frame is the return address which is one bytecode after the current one.
@@ -81,7 +81,7 @@ class StackFrame {
     }
     // Move forward while we know step should not stop.
     while (!bytecodes[i].isBranching &&
-           isSameSourceLocation(compiler, offset, current)) {
+           isSameSourceLocation(offset, current)) {
       offset += bytecodes[i++].size;
     }
     return offset <= bytecodePointer ? -1 : offset;
@@ -101,41 +101,46 @@ class StackTrace {
 
   int get frames => stackFrames.length;
 
-  void addFrame(compiler, StackFrame frame) {
+  void addFrame(FletchCompiler compiler, StackFrame frame) {
     stackFrames[--framesToGo] = frame;
     String name = compiler.lookupFunctionName(frame.functionId);
     var nameLength = name == null ? 0 : name.length;
     if (nameLength > maxNameLength) maxNameLength = nameLength;
   }
 
-  void write(FletchCompiler compiler, int currentFrame) {
+  String shortStringForFrame(int frame) {
+    return stackFrames[frame].shortString(maxNameLength);
+  }
+
+  void write(int currentFrame) {
     assert(framesToGo == 0);
     print("Stack trace:");
     for (var i = 0; i < stackFrames.length; i++) {
       var marker = currentFrame == i ? '> ' : '  ';
-      var line = stackFrames[i].shortString(compiler, i, maxNameLength);
-      print('$marker$line');
+      var line = shortStringForFrame(i);
+      String frameNumberString = '$i: '.padLeft(3);
+      print('$marker$frameNumberString$line');
     }
   }
 
-  void list(FletchCompiler compiler, int frame) {
-    stackFrames[frame].list(compiler);
+  void list(int frame) {
+    stackFrames[frame].list();
   }
 
-  void disasm(FletchCompiler compiler, int frame) {
-    stackFrames[frame].disasm(compiler);
+  void disasm(int frame) {
+    stackFrames[frame].disasm();
   }
 
-  SourceLocation sourceLocation(FletchCompiler compiler) {
-    return stackFrames[0].sourceLocation(compiler);
+  SourceLocation sourceLocation() {
+    return stackFrames[0].sourceLocation();
   }
 
-  ScopeInfo scopeInfo(FletchCompiler compiler, int frame) {
-    return stackFrames[frame].scopeInfo(compiler);
+  ScopeInfo scopeInfo(int frame) {
+    return stackFrames[frame].scopeInfo();
   }
 
-  int stepBytecodePointer(FletchCompiler compiler, SourceLocation location) {
-    return stackFrames[0].stepBytecodePointer(compiler, location);
+  int stepBytecodePointer(SourceLocation location) {
+    return stackFrames[0].stepBytecodePointer(location);
   }
 
   int get bytecodePointer => stackFrames[0].bytecodePointer;

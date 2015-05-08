@@ -174,14 +174,11 @@ class DebugInfo {
     int column = file.getColumn(currentLine, span.begin);
     int startLine = currentLine - contextLines;
     if (startLine < 0) startLine = 0;
-    int endLine = currentLine + contextLines;
-    if (endLine >= file.lineStarts.length) endLine = file.lineStarts.length - 1;
-
     StringBuffer buffer = new StringBuffer();
 
     buffer.writeln(fileAndLineStringFor(bytecodeIndex));
 
-    // Add contextLines lines before the breakpoint line.
+    // Add contextLines before the breakpoint line.
     for (; startLine < currentLine; startLine++) {
       var l = file.slowSubstring(file.lineStarts[startLine],
                                  file.lineStarts[startLine + 1]);
@@ -199,10 +196,15 @@ class DebugInfo {
     buffer.write(colors.red(focus));
     buffer.write(postfix);
 
-    // Add contextLines lines before the breakpoint line.
-    for (startLine = currentLine + 1; startLine < endLine; startLine++) {
+    // Add contextLines after the breakpoint line.
+    int endLine = currentLine + contextLines;
+    if (endLine > file.lineStarts.length - 3) {
+      endLine = file.lineStarts.length - 3;
+    }
+    for (startLine = currentLine + 1; startLine <= endLine; startLine++) {
       var lineEnd = file.lineStarts[startLine + 1];
-      if (lineEnd >= file.length) --lineEnd;
+      // For last line remove the newline.
+      if (startLine == endLine) --lineEnd;
       var l = file.slowSubstring(file.lineStarts[startLine], lineEnd);
       buffer.write('${startLine + 1}'.padRight(5) + l);
     }
