@@ -409,6 +409,12 @@ class SelectorRow {
     return TABLE;
   }
 
+  int SetLinearOffset(int offset) {
+    ASSERT(kind() == LINEAR);
+    offset_ = offset;
+    return offset + ComputeLinearSize();
+  }
+
   int ComputeLinearSize() {
     ASSERT(kind() == LINEAR);
     return (variants_ + 2) * 4;
@@ -419,7 +425,7 @@ class SelectorRow {
     return end_ - begin_;
   }
 
-  int FillLinear(Program* program, Array* table, int index);
+  int FillLinear(Program* program, Array* table);
   void FillTable(Program* program, Array* table);
 
   // The bottom up construction order guarantees that more specific methods
@@ -506,6 +512,8 @@ class RowFitter {
 
 class ProgramTableRewriter {
  public:
+  ProgramTableRewriter() : linear_size_(0) { }
+
   ~ProgramTableRewriter() {
     SelectorRowMap::const_iterator it = selector_rows_.begin();
     SelectorRowMap::const_iterator end = selector_rows_.end();
@@ -518,10 +526,13 @@ class ProgramTableRewriter {
     return class_vector_[index];
   }
 
-  SelectorRow* LookupSelectorRow(int selector, bool create) {
+  SelectorRow* LookupSelectorRow(int selector, bool nsm) {
     SelectorRow*& entry = selector_rows_[selector];
-    if (create && entry == NULL) {
+    if (entry == NULL) {
       entry = new SelectorRow(selector);
+      if (nsm) {
+        linear_size_ = entry->SetLinearOffset(linear_size_);
+      }
     }
     return entry;
   }
@@ -537,25 +548,15 @@ class ProgramTableRewriter {
       SelectorRow* row = it->second;
       SelectorRow::Kind kind = row->Finalize();
       if (kind == SelectorRow::LINEAR) {
-        linear_size += row->ComputeLinearSize();
+        linear_size = row->SetLinearOffset(linear_size);
       } else {
         table_rows.push_back(row);
       }
     }
-
-    // Fill in the dispatch table entries.
-    Array* linear = Array::cast(program->CreateArray(linear_size));
-    int linear_index = 0;
-    for (it = selector_rows_.begin(); it != end; ++it) {
-      SelectorRow* row = it->second;
-      if (row->kind() == SelectorRow::LINEAR) {
-        linear_index = row->FillLinear(program, linear, linear_index);
-      }
-    }
-    program->set_dispatch_table(linear);
-    if (table_rows.size() == 0) return;
+    linear_size_ = linear_size;
 
     // Sort the table rows according to size.
+    if (table_rows.size() == 0) return;
     std::sort(table_rows.begin(), table_rows.end(), SelectorRow::Compare);
 
     // We add a fake header entry at the start of the vtable to deal
@@ -607,6 +608,21 @@ class ProgramTableRewriter {
     program->set_vtable(table);
   }
 
+  void FinalizeSelectorRows(Program* program) {
+    SelectorRowMap::const_iterator it;
+    SelectorRowMap::const_iterator end = selector_rows_.end();
+
+    // Fill in the linear dispatch table entries.
+    Array* linear = Array::cast(program->CreateArray(linear_size_));
+    for (it = selector_rows_.begin(); it != end; ++it) {
+      SelectorRow* row = it->second;
+      if (row->kind() == SelectorRow::LINEAR) {
+        row->FillLinear(program, linear);
+      }
+    }
+    program->set_dispatch_table(linear);
+  }
+
   void AddMethodAndRewrite(uint8_t* bcp, uint8_t* new_bcp) {
     AddAndRewrite(&static_methods_, bcp, new_bcp);
   }
@@ -655,13 +671,12 @@ class ProgramTableRewriter {
   ObjectIndexMap static_methods_;
 
   SelectorRowMap selector_rows_;
+  int linear_size_;
 };
 
-int SelectorRow::FillLinear(Program* program, Array* table, int index) {
+int SelectorRow::FillLinear(Program* program, Array* table) {
   ASSERT(kind() == LINEAR);
-
-  // Mark this row as being in the dispatch table.
-  offset_ = index;
+  int index = offset_;
 
   table->set(index++, Smi::FromWord(Selector::ArityField::decode(selector_)));
   table->set(index++, Smi::FromWord(selector_));
@@ -810,8 +825,7 @@ class FunctionPostprocessVisitor: public HeapObjectVisitor {
         case kInvokeTest:
         case kInvokeMethod: {
           int selector = Utils::ReadInt32(bcp + 1);
-          SelectorRow* row = rewriter_->LookupSelectorRow(selector, false);
-          if (row == NULL) break;
+          SelectorRow* row = rewriter_->LookupSelectorRow(selector, true);
           SelectorRow::Kind kind = row->kind();
           int offset = row->offset();
           if (kind == SelectorRow::LINEAR) {
@@ -868,10 +882,12 @@ class FoldingVisitor: public PointerVisitor {
 
     ConstructDispatchTable(table);
     rewriter_->ProcessSelectorRows(program_);
-    program_->SetupDispatchTableIntrinsics();
 
     FunctionPostprocessVisitor visitor(rewriter_);
     program_->heap()->IterateObjects(&visitor);
+
+    rewriter_->FinalizeSelectorRows(program_);
+    program_->SetupDispatchTableIntrinsics();
   }
 
  private:
@@ -976,7 +992,7 @@ class FoldingVisitor: public PointerVisitor {
       if (i != 0 && selector == last_selector) continue;
       last_selector = selector;
       Function* method = Function::cast(methods->get(i + 1));
-      SelectorRow* row = rewriter_->LookupSelectorRow(selector, true);
+      SelectorRow* row = rewriter_->LookupSelectorRow(selector, false);
       row->DefineMethod(clazz, method);
     }
   }

@@ -477,6 +477,7 @@ void Process::CollectProcessesInQueues(Process** list) {
 
 void Process::TakeLookupCache() {
   ASSERT(primary_lookup_cache_ == NULL);
+  if (program()->is_compact()) return;
   ThreadState* state = thread_state_;
   ASSERT(state != NULL);
   primary_lookup_cache_ = state->cache()->primary();
@@ -747,6 +748,7 @@ void Process::EnqueueEntry(PortQueue* entry) {
 LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
                                              Class* clazz,
                                              int selector) {
+  ASSERT(!program()->is_compact());
   ThreadState* state = thread_state_;
   ASSERT(state != NULL);
   LookupCache* cache = state->cache();
