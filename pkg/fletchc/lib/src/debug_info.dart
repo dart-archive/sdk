@@ -12,6 +12,8 @@ import 'package:compiler/src/colors.dart' as colors;
 import 'package:compiler/src/dart2jslib.dart' show
     SourceSpan;
 
+import 'package:compiler/src/elements/elements.dart';
+
 import 'package:compiler/src/io/source_file.dart';
 
 import 'package:compiler/src/tree/tree.dart' show
