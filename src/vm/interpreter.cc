@@ -762,7 +762,7 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
       // wrong because it is an offset.
       selector = Utils::ReadInt32(return_address - 4);
     } else {
-      ASSERT(Bytecode::IsInvoke(opcode));
+      ASSERT(Bytecode::IsInvokeNormal(opcode));
       selector = Utils::ReadInt32(return_address - 4);
     }
 

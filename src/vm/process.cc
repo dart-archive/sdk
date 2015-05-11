@@ -510,6 +510,12 @@ void Process::PrepareStepOver() {
   Object** stack_top = pushed_bcp_address - 1;
   Opcode opcode = static_cast<Opcode>(*current_bcp);
 
+  if (!Bytecode::IsInvoke(opcode)) {
+    // For non-invoke bytecodes step over is the same as step.
+    debug_info_->set_is_stepping(true);
+    return;
+  }
+
   // TODO(ager): We should share this code with the stack walker that also
   // needs to know the stack diff for each bytecode.
   int stack_diff = 0;
@@ -545,29 +551,9 @@ void Process::PrepareStepOver() {
       stack_diff = 1 - function->arity();
       break;
     }
-    case Opcode::kInvokeEq:
-    case Opcode::kInvokeLt:
-    case Opcode::kInvokeLe:
-    case Opcode::kInvokeGt:
-    case Opcode::kInvokeGe:
-    case Opcode::kInvokeAdd:
-    case Opcode::kInvokeSub:
-    case Opcode::kInvokeMod:
-    case Opcode::kInvokeMul:
-    case Opcode::kInvokeTruncDiv:
-    case Opcode::kInvokeBitNot:
-    case Opcode::kInvokeBitAnd:
-    case Opcode::kInvokeBitOr:
-    case Opcode::kInvokeBitXor:
-    case Opcode::kInvokeBitShr:
-    case Opcode::kInvokeBitShl:
+    default:
       stack_diff = Bytecode::StackDiff(opcode);
       break;
-    default:
-      ASSERT(opcode < Bytecode::kNumBytecodes);
-      // For any other bytecode step over is the same as step.
-      debug_info_->set_is_stepping(true);
-      return;
   }
 
   Object** expected_sp = stack_top + stack_diff;

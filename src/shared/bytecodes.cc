@@ -179,6 +179,10 @@ static InvokeKind ComputeInvokeKind(Opcode opcode) {
 }
 
 bool Bytecode::IsInvoke(Opcode opcode) {
+  return ComputeInvokeKind(opcode) != NONE;
+}
+
+bool Bytecode::IsInvokeNormal(Opcode opcode) {
   return ComputeInvokeKind(opcode) == NORMAL;
 }
 
