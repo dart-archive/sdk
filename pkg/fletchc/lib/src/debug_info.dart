@@ -44,7 +44,7 @@ class ScopeInfo {
       if (element == null && name == 'this') {
         return current.local;
       }
-      if (element.name == name) {
+      if (element != null && element.name == name) {
         return current.local;
       }
     }
