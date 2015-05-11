@@ -40,6 +40,7 @@ class ThreadState {
   ProcessQueue* queue() { return queue_; }
 
   LookupCache* cache() const { return cache_; }
+  LookupCache* EnsureCache();
 
   Monitor* idle_monitor() const { return idle_monitor_; }
 
@@ -50,7 +51,7 @@ class ThreadState {
   int thread_id_;
   ThreadIdentifier thread_;
   ProcessQueue* const queue_;
-  LookupCache* const cache_;
+  LookupCache* cache_;
   Monitor* idle_monitor_;
   std::atomic<ThreadState*> next_idle_thread_;
 };

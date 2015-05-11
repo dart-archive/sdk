@@ -105,13 +105,18 @@ class PortQueue {
 ThreadState::ThreadState()
     : thread_id_(-1),
       queue_(new ProcessQueue()),
-      cache_(new LookupCache()),
+      cache_(NULL),
       idle_monitor_(Platform::CreateMonitor()),
       next_idle_thread_(NULL) {
 }
 
 void ThreadState::AttachToCurrentThread() {
   thread_ = ThreadIdentifier();
+}
+
+LookupCache* ThreadState::EnsureCache() {
+  if (cache_ == NULL) cache_ = new LookupCache();
+  return cache_;
 }
 
 ThreadState::~ThreadState() {
@@ -480,7 +485,8 @@ void Process::TakeLookupCache() {
   if (program()->is_compact()) return;
   ThreadState* state = thread_state_;
   ASSERT(state != NULL);
-  primary_lookup_cache_ = state->cache()->primary();
+  LookupCache* cache = state->EnsureCache();
+  primary_lookup_cache_ = cache->primary();
 }
 
 void Process::Preempt() {

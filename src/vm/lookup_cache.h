@@ -15,8 +15,8 @@ class Function;
 
 class LookupCache {
  public:
-  static const int kPrimarySize = 16384;
-  static const int kSecondarySize = 8111;
+  static const int kPrimarySize = 4096;
+  static const int kSecondarySize = 2111;
 
   struct Entry {
     Class* clazz;

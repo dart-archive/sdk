@@ -278,7 +278,8 @@ void Scheduler::DeleteProcess(Process* process, ThreadState* thread_state) {
     NotifyAllThreads();
   } else if (Flags::gc_on_delete) {
     sleeping_threads_++;
-    thread_state->cache()->Clear();
+    LookupCache* cache = thread_state->cache();
+    if (cache != NULL) cache->Clear();
     program->CollectGarbage();
     sleeping_threads_--;
   }
@@ -394,7 +395,8 @@ void Scheduler::RunInThread() {
       preempt_monitor_->Unlock();
       break;
     } else if (pause_) {
-      thread_state->cache()->Clear();
+      LookupCache* cache = thread_state->cache();
+      if (cache != NULL) cache->Clear();
       // Take lock to be sure StopProgram is waiting.
       pause_monitor_->Lock();
       sleeping_threads_++;
@@ -591,7 +593,8 @@ void Scheduler::ReturnThreadState(ThreadState* thread_state) {
 void Scheduler::FlushCacheInThreadStates() {
   ThreadState* temp = temporary_thread_states_;
   while (temp != NULL) {
-    temp->cache()->Clear();
+    LookupCache* cache = temp->cache();
+    if (cache != NULL) cache->Clear();
     temp = temp->next_idle_thread();
   }
 }
