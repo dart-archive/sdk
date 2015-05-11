@@ -1,0 +1,19 @@
+breakpoint set: 0: main @0
+main 	@1
+main 	@2
+main 	@3
+main 	@add(1,2,3)
+add  	@a
+add  	@b
+add  	@a+b
+add  	@c
+add  	@a+b+c
+add  	@=>a+b+c;
+main 	@add(1,2,3)
+entry	@Thread.exit(invokeMain([] ))
+exit 	@_scheduler
+exit 	@null
+exit 	@_scheduler==null
+exit 	@0
+exit 	@fletch.halt(0)
+### process terminated

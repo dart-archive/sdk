@@ -14,6 +14,7 @@ import "runtime_configuration.dart" show RuntimeConfiguration;
 const List<String> defaultTestSelectors = const [
     'language',
     'corelib',
+    'debugger',
     'unsorted',
     'isolate',
     'coroutine',
@@ -105,8 +106,8 @@ class TestOptionsParser {
     none: No runtime, compile only (for example, used for dartanalyzer static
           analysis tests).''',
               ['-r', '--runtime'],
-              ['none', 'fletchc', 'fletchvm'],
-              'fletchc'),
+              ['none', 'fletchc', 'fletchd', 'fletchvm'],
+              'fletchc,fletchd'),
           new _TestOptionSpecification(
               'arch',
               'The architecture to run tests for',
@@ -652,7 +653,7 @@ Note: currently only implemented for dart2js.''',
         validRuntimes = const ['none', 'fletchvm'];
         break;
       case 'none':
-        validRuntimes = const ['fletchc'];
+        validRuntimes = const ['fletchc', 'fletchd'];
         break;
     }
     if (!validRuntimes.contains(config['runtime'])) {

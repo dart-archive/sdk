@@ -5,6 +5,7 @@
 library runtime_configuration;
 
 import 'dart:io' show
+    File,
     Platform;
 
 import 'compiler_configuration.dart' show
@@ -34,6 +35,9 @@ class RuntimeConfiguration {
         return new FletchcRuntimeConfiguration(
             persist: configuration['persist'],
             hostChecked: configuration['host_checked']);
+
+      case 'fletchd':
+        return new FletchdRuntimeConfiguration();
 
       case 'fletchvm':
         return new FletchVMRuntimeConfiguration();
@@ -152,6 +156,42 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
     // the DartVM in terms of exit codes.
     return <Command>[
         commandBuilder.getVmCommand(executable, arguments, environment)];
+  }
+}
+
+class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
+  List<Command> computeRuntimeCommands(
+      TestSuite suite,
+      CommandBuilder commandBuilder,
+      CommandArtifact artifact,
+      List<String> basicArguments,
+      Map<String, String> environmentOverrides) {
+    String script = artifact.filename;
+    String type = artifact.mimeType;
+    if (script != null && type != 'application/dart') {
+      throw "Dart VM cannot run files of type '$type'.";
+    }
+    String executable;
+    List<String> arguments;
+    Map<String, String> environment;
+    // TODO(ager): We should be able to run debugger tests through the
+    // persistent fletch_driver as well.
+    List<String> vmArguments =
+        <String>["-p", "package", "package:fletchc/fletchc.dart",
+                 "-d", "--test-debugger"];
+    vmArguments.addAll(basicArguments);
+
+    String testFile = basicArguments[0];
+    String expectationFile =
+        testFile.replaceAll("_test.dart", "_expected.txt");
+    List<int> expectedOutput = new File(expectationFile).readAsBytesSync();
+
+    executable = suite.dartVmBinaryFileName;
+    arguments = vmArguments;
+    environment = environmentOverrides;
+    return <Command>[
+        commandBuilder.getOutputDiffingVmCommand(
+            executable, arguments, environment, expectedOutput)];
   }
 }
 

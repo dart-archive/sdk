@@ -351,8 +351,33 @@ class AnalysisCommand extends ProcessCommand {
 class VmCommand extends ProcessCommand {
   VmCommand._(String executable,
               List<String> arguments,
-              Map<String,String> environmentOverrides)
+              Map<String, String> environmentOverrides)
       : super._("vm", executable, arguments, environmentOverrides);
+}
+
+class OutputDiffingVmCommand extends VmCommand {
+  final List<int> expectedOutput;
+
+  OutputDiffingVmCommand._(String executable,
+                           List<String> arguments,
+                           Map<String, String> environmentOverrides,
+                           this.expectedOutput)
+      : super._(executable, arguments, environmentOverrides);
+
+  void _buildHashCode(HashCodeBuilder builder) {
+    super._buildHashCode(builder);
+    builder.add(expectedOutput);
+  }
+
+  void _equal(Command other) {
+    if (other.expectedOutput.length != expectedOutput.length) return false;
+    for (int i = 0; i < expectedOutput.length; i++) {
+      if (other.expectedOutput[i] != expectedOutput[i]) return false;
+    }
+    return
+        other is OutputDiffingVmCommand &&
+        super._equal(other);
+  }
 }
 
 class JSCommandlineCommand extends ProcessCommand {
@@ -630,6 +655,14 @@ class CommandBuilder {
                          Map<String, String> environmentOverrides) {
     var command = new VmCommand._(executable, arguments, environmentOverrides);
     return _getUniqueCommand(command);
+  }
+
+  VmCommand getOutputDiffingVmCommand(String executable, List<String> arguments,
+                                      Map<String, String> environmentOverrides,
+                                      List<int> expectedOutput) {
+      var command = new OutputDiffingVmCommand._(
+          executable, arguments, environmentOverrides, expectedOutput);
+      return _getUniqueCommand(command);
   }
 
   Command getJSCommandlineCommand(String displayName, executable, arguments,
@@ -1563,6 +1596,24 @@ class VmCommandOutputImpl extends CommandOutputImpl
   }
 }
 
+class OutputDiffingVmCommandOutputImpl extends VmCommandOutputImpl {
+  OutputDiffingVmCommandOutputImpl(Command command, int exitCode, bool timedOut,
+                                   List<int> stdout, List<int> stderr,
+                                   Duration time, int pid)
+      : super(command, exitCode, timedOut, stdout, stderr, time, pid);
+
+  Expectation result(TestCase testCase) {
+    Expectation outcome = super.result(testCase);
+    if (outcome != Expectation.PASS) return outcome;
+    List<int> expected = command.expectedOutput;
+    if (expected.length != stdout.length) return Expectation.FAIL;
+    for (int i = 0; i < expected.length; i++) {
+      if (expected[i] != stdout[i]) return Expectation.FAIL;
+    }
+    return Expectation.PASS;
+  }
+}
+
 class CompilationCommandOutputImpl extends CommandOutputImpl {
   static const DART2JS_EXITCODE_CRASH = 253;
 
@@ -1688,6 +1739,9 @@ CommandOutput createCommandOutput(Command command,
     return new AnalysisCommandOutputImpl(
         command, exitCode, timedOut, stdout, stderr,
         time, compilationSkipped);
+  } else if (command is OutputDiffingVmCommand) {
+    return new OutputDiffingVmCommandOutputImpl(
+        command, exitCode, timedOut, stdout, stderr, time, pid);
   } else if (command is VmCommand) {
     return new VmCommandOutputImpl(
         command, exitCode, timedOut, stdout, stderr, time, pid);

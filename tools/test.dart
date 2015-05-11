@@ -60,6 +60,10 @@ final TEST_SUITE_DIRECTORIES = [
     new Path('samples'),
 ];
 
+final DEBUGGER_TEST_SUITE_DIRECTORIES = [
+    new Path('tests/debugger')
+];
+
 void testConfigurations(List<Map> configurations) {
   var startTime = new DateTime.now();
   // Extract global options from first configuration.
@@ -178,6 +182,14 @@ void testConfigurations(List<Map> configurations) {
       print(conf);
       var suite_path = new Path(conf['suite_dir']);
       testSuites.add(new PKGTestSuite(conf, suite_path));
+    } else if (conf['runtime'] == 'fletchd') {
+      for (final testSuiteDir in DEBUGGER_TEST_SUITE_DIRECTORIES) {
+        final name = testSuiteDir.filename;
+        if (selectors.containsKey(name)) {
+          testSuites.add(
+            new StandardTestSuite.forDirectory(conf, testSuiteDir));
+        }
+      }
     } else {
       for (final testSuiteDir in TEST_SUITE_DIRECTORIES) {
         final name = testSuiteDir.filename;
