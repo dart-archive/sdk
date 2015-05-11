@@ -38,11 +38,19 @@ class ScopeInfo {
     for (ScopeInfo current = this;
          current != sentinel;
          current = current.previous) {
-      if (current.local.element.name == name) {
+      Element element = current.local.element;
+      if (element == null && name == 'this') {
+        return current.local;
+      }
+      if (element.name == name) {
         return current.local;
       }
     }
     return null;
+  }
+
+  String get name {
+    return (local.element == null) ? 'this' : local.element.name;
   }
 }
 

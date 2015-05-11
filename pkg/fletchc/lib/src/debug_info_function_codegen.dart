@@ -40,7 +40,9 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
                            this.compiler)
       : debugBuilder = new BytecodeBuilder(compiledFunction.arity),
         super(compiledFunction, context, elements, registry,
-              closureEnvironment, function);
+              closureEnvironment, function) {
+    if (compiledFunction.hasThisArgument) pushVariableDeclaration(thisValue);
+  }
 
   BytecodeBuilder get builder => debugBuilder;
 

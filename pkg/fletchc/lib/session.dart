@@ -309,8 +309,7 @@ class Session {
     currentStackTrace.write(currentFrame);
   }
 
-  Future printLocal(LocalValue local) async {
-    String name = local.element.name;
+  Future printLocal(String name, LocalValue local) async {
     new ProcessLocal(currentFrame, local.slot).addTo(vmSocket);
     Command response = await nextVmCommand();
     if (response is Integer) {
@@ -334,7 +333,7 @@ class Session {
     for (ScopeInfo current = info;
          current != ScopeInfo.sentinel;
          current = current.previous) {
-      await printLocal(current.local);
+      await printLocal(current.name, current.local);
     }
   }
 
@@ -346,7 +345,7 @@ class Session {
       print('### No such variable: $name');
       return;
     }
-    await printLocal(local);
+    await printLocal(name, local);
   }
 
   void quit() {
