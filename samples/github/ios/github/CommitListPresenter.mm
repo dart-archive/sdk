@@ -7,6 +7,8 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
+#include "immi_service.h"
+
 @interface CommitListPresenter ()
 
 @property CommitListNode* root;
@@ -60,7 +62,7 @@
 
 - (bool)refresh {
   bool first = self.root == nil;
-  PatchSetData data = GithubPresenterService::refresh();
+  PatchSetData data = ImmiService::refresh();
   bool result = [Node applyPatchSet:data atNode:&_root];
   assert(self.root.isCommitList);
   data.Delete();
@@ -80,7 +82,7 @@
 
 - (void)reset {
   self.root = nil;
-  GithubPresenterService::reset();
+  ImmiService::reset();
 }
 
 // The minumum number of items we know to exist in the list.

@@ -21,12 +21,30 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
-void generate(String path, Unit unit, String outputDirectory) {
-  _DartVisitor visitor = new _DartVisitor(path);
-  visitor.visit(unit);
-  String contents = visitor.buffer.toString();
+void generate(String path,
+              Map<String, Unit> units,
+              String outputDirectory) {
   String directory = join(outputDirectory, 'dart');
-  writeToFile(directory, path, contents, extension: 'dart');
+  units.forEach((path, unit) => _generateNodeFile(path, unit, directory));
+  _generateServiceFile(path, units, directory);
+}
+
+void _generateNodeFile(String unitPath, Unit unit, String directory) {
+  _DartVisitor visitor = new _DartVisitor(unitPath);
+  visitor.visit(unit);
+  String content = visitor.buffer.toString();
+  writeToFile(directory, unitPath, content, extension: 'dart');
+}
+
+void _generateServiceFile(String path,
+                          Map<String, Unit> units,
+                          String directory) {
+  _DartVisitor visitor = new _DartVisitor(path);
+  units.values.forEach(visitor._collectMethodSignatures);
+  visitor._writeServiceImpl();
+  String content = visitor.buffer.toString();
+  String file = visitor.serviceImplFile;
+  writeToFile(directory, file, content, extension: 'dart');
 }
 
 class _DartVisitor extends CodeGenerationVisitor {
@@ -35,12 +53,16 @@ class _DartVisitor extends CodeGenerationVisitor {
   HashMap<String, List<Type>> _methodSignatures = {};
 
   visitUnit(Unit node) {
-    _collectMethodSignatures(node);
     _writeHeader();
     _writeLibrary();
     _writeImports();
-    _writeServiceImpl();
+    node.imports.forEach(visit);
     node.structs.forEach(visit);
+  }
+
+  visitImport(Import import) {
+    String file = basenameWithoutExtension(import.file);
+    writeln("import '${immiGenPkg}/dart/${file}.dart';");
   }
 
   visitStruct(Struct node) {
@@ -91,14 +113,19 @@ class _DartVisitor extends CodeGenerationVisitor {
       if (slotType.isList) {
         String localSlotLength = "${slotName}Length";
         String localSlotBuilder = "${slotName}Builder";
+        String serialize =
+            slotType.elementType.isNode ? 'serializeNode' : 'serialize';
         writeln('    var $localSlotLength = $slotName.length;');
         writeln('    List $localSlotBuilder =');
         writeln('        builder.init$slotNameCamel($localSlotLength);');
         writeln('    for (var i = 0; i < $localSlotLength; ++i) {');
-        writeln('      $slotName[i].serialize($localSlotBuilder[i], manager);');
+        writeln('      $slotName[i].$serialize($localSlotBuilder[i], manager);');
         writeln('    }');
+      } else if (slotType.isNode) {
+        writeln('    $slotName.serializeNode(builder.init$slotNameCamel(), manager);');
       } else if (slotType.resolved != null) {
-        writeln('    $slotName.serialize(builder.init$slotNameCamel, manager);');
+        writeln('var local$slotName = $slotName;');
+        writeln('    $slotName.serialize(builder.init$slotNameCamel(), manager);');
       } else {
         writeln('    builder.$slotName = $slotName;');
       }
@@ -186,16 +213,19 @@ class _DartVisitor extends CodeGenerationVisitor {
   }
 
   void _writeServiceImpl() {
-    String baseName = camelize(basenameWithoutExtension(path));
-    String serviceName = "${baseName}PresenterService";
-    String implName = "${baseName}Impl";
+    _writeHeader();
     write("""
-class ${implName} extends ${serviceName} {
+library ${serviceImplLib};
+
+import 'package:immi/immi.dart';
+import '${immiGenPkg}/dart/${serviceFile}.dart';
+
+class ${serviceImplName} extends ${serviceName} {
   var _presenter;
   var _previous;
   var _patches = [];
   ResourceManager _manager = new ResourceManager();
-  ${implName}(this._presenter);
+  ${serviceImplName}(this._presenter);
   void reset() {
     _previous = null;
     _manager.clear();
@@ -258,15 +288,13 @@ class ${implName} extends ${serviceName} {
   }
 
   void _writeLibrary() {
-    String libraryName = basenameWithoutExtension(path);
     writeln('library $libraryName;');
     writeln();
   }
 
   void _writeImports() {
-    String servicePath = "${basenameWithoutExtension(path)}_presenter_service";
     writeln('import "package:immi/immi.dart";');
-    writeln('import "${servicePath}.dart";');
+    writeln('import "package:immi_gen/dart/$serviceFile.dart";');
     writeln();
   }
 
@@ -288,6 +316,7 @@ class ${implName} extends ${serviceName} {
     'float64' : 'double',
 
     'String'  : 'String',
+    'node'    : 'Node',
   };
 
   void writeType(Type node) {

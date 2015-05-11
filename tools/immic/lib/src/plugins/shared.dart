@@ -5,6 +5,7 @@
 library immic.plugins.shared;
 
 import 'package:strings/strings.dart' as strings;
+import 'package:path/path.dart' show basename, basenameWithoutExtension;
 
 import '../parser.dart';
 export '../parser.dart';
@@ -13,6 +14,16 @@ abstract class CodeGenerationVisitor extends Visitor {
   final String path;
   final StringBuffer buffer = new StringBuffer();
   CodeGenerationVisitor(this.path);
+
+  String get libraryFile => basenameWithoutExtension(path);
+  String get libraryName => 'immi.$libraryFile';
+  String get baseName => camelize(libraryName);
+  String serviceName = 'ImmiService';
+  String serviceFile = 'immi_service';
+  String serviceImplName = 'ImmiServiceImpl';
+  String serviceImplFile = 'immi_service_impl';
+  String serviceImplLib = 'immi_service_impl';
+  String immiGenPkg = 'package:immi_gen';
 
   void write(String s) => buffer.write(s);
   void writeln([String s = '']) => buffer.writeln(s);
@@ -41,6 +52,9 @@ abstract class CodeGenerationVisitor extends Visitor {
 
   visitUnion(Union node) {
     // TODO(kasper): Stop ignoring this.
+  }
+
+  visitImport(Import node) {
   }
 
   visitNodes(List<Node> nodes, String separatedBy(bool first)) {

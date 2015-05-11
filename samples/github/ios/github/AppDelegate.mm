@@ -7,7 +7,7 @@
 #include "include/fletch_api.h"
 #include "include/service_api.h"
 
-#include "github_presenter_service.h"
+#include "immi_service.h"
 
 @interface AppDelegate ()
 
@@ -45,7 +45,7 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     [AppDelegate loadAndRunDartSnapshot];
   });
   // Setup the service.
-  GithubPresenterService::setup();
+  ImmiService::setup();
   return YES;
 }
 
@@ -82,7 +82,7 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
   // appropriate. See also applicationDidEnterBackground:.
 
   // Tear down the service API structures and Fletch.
-  GithubPresenterService::tearDown();
+  ImmiService::tearDown();
   ServiceApiTearDown();
   FletchTearDown();
 }

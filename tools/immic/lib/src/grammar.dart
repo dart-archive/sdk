@@ -22,13 +22,24 @@ class ImmiGrammarDefinition extends GrammarDefinition {
 
   UNION() => ref(token, 'union');
 
+  IMPORT() => ref(token, 'import');
 
   // -----------------------------------------------------------------
   // Grammar productions.
   // -----------------------------------------------------------------
   start() => ref(unit).end();
 
-  unit() => ref(struct).star();
+  unit() => ref(import).star() & ref(struct).star();
+
+  import() => ref(IMPORT)
+      & ((ref(token, '"')
+           & ref(token, '"').neg().star()
+           & ref(token, '"'))
+         |
+         (ref(token, "'")
+           & ref(token, "'").neg().star()
+           & ref(token, "'")))
+      & ref(token, ';');
 
   struct() => ref(STRUCT)
       & ref(identifier)
@@ -59,17 +70,22 @@ class ImmiGrammarDefinition extends GrammarDefinition {
 
   type() => ref(listType)
       | ref(stringType)
+      | ref(nodeType)
       | ref(simpleType);
 
   stringType() => ref(token, 'String');
+  nodeType() => ref(token, 'Node');
 
   simpleType() => ref(identifier)
       & ref(token, '*').optional(null).map((e) => e != null);
 
   listType() => ref(LIST)
       & ref(token, '<')
-      & ref(simpleType)  // TODO(kasperl): Make this a general type instead.
+      & ref(listMemberType)
       & ref(token, '>');
+
+  listMemberType() => ref(nodeType)
+      | ref(simpleType);
 
   identifier() => ref(IDENTIFIER).trim(ref(HIDDEN));
 

@@ -21,30 +21,40 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
-void generate(String path, Unit unit, String outputDirectory) {
+void generate(String path,
+              Map<String, Unit> units,
+              String outputDirectory) {
   _IDLVisitor visitor = new _IDLVisitor(path);
-  visitor.visit(unit);
-  String contents = visitor.buffer.toString();
+  visitor.visitUnits(units);
+  String content = visitor.buffer.toString();
   String directory = join(outputDirectory, 'idl');
-  String outPath = "${basenameWithoutExtension(path)}_presenter_service";
-  writeToFile(directory, outPath, contents, extension: 'idl');
+  String outPath = visitor.serviceFile;
+  writeToFile(directory, outPath, content, extension: 'idl');
 }
 
 class _IDLVisitor extends CodeGenerationVisitor {
+  List<Struct> nodes = <Struct>[];
   _IDLVisitor(String path) : super(path);
 
   HashMap<String, List<Type>> _methodSignatures = {};
 
-  visitUnit(Unit node) {
-    _collectMethodSignatures(node);
+  void visitUnits(Map<String, Unit> units) {
     _writeCopyright();
+    units.values.forEach(_collectMethodSignatures);
     _writeService();
-    node.structs.forEach(visit);
-    _writeNodeDataStruct(node.structs);
+    // Genereate node specific IDL entries.
+    units.values.forEach(visit);
+    // Genereate shared definitions.
+    _writeNodeDataStruct(nodes);
     _writePatchDataStructs();
   }
 
+  visitUnit(Unit node) {
+    node.structs.forEach(visit);
+  }
+
   visitStruct(Struct node) {
+    nodes.add(node);
     StructLayout layout = node.layout;
     writeln('struct ${node.name}NodeData {');
     for (StructSlot slot in layout.slots) {
@@ -72,6 +82,8 @@ class _IDLVisitor extends CodeGenerationVisitor {
     Node resolved = node.resolved;
     if (resolved != null) {
       write("${node.identifier}NodeData");
+    } else if (node.isNode || node.isList && node.elementType.isNode) {
+      write("NodeData");
     } else {
       write(node.identifier);
     }
@@ -98,8 +110,7 @@ class _IDLVisitor extends CodeGenerationVisitor {
   }
 
   void _writeService() {
-    String serviceName = camelize(basenameWithoutExtension(path));
-    writeln('service ${serviceName}PresenterService {');
+    writeln('service ${serviceName} {');
     // TODO(zerny): Don't assume a root entry point for the scene.
     writeln('  void reset();');
     writeln('  PatchSetData* refresh();');
@@ -125,7 +136,7 @@ class _IDLVisitor extends CodeGenerationVisitor {
     nodes.forEach((Struct node) {
       String nodeType = "${node.name}NodeData";
       String nodeField = camelize(node.name);
-      writeln('  $nodeType* $nodeField;');
+      writeln('    $nodeType* $nodeField;');
     });
     writeln('  }');
     writeln('}');

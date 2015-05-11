@@ -12,7 +12,7 @@ void writeToFile(String outputDirectory,
                  String path,
                  String contents,
                  {String extension}) {
-  // Create 'cc' output directory if it doesn't already exist.
+  // Create output directory if it doesn't already exist.
   new Directory(outputDirectory).createSync(recursive: true);
   // Write contents of the file.
   String fileName = path;

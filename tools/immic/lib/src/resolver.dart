@@ -10,11 +10,11 @@ import 'parser.dart';
 import 'primitives.dart' as primitives;
 import 'struct_layout.dart';
 
-void resolve(Unit unit) {
+void resolve(Map<String, Unit> units) {
   Definer definer = new Definer();
-  definer.visit(unit);
+  units.values.forEach(definer.visit);
   Resolver resolver = new Resolver(definer.definitions);
-  resolver.visit(unit);
+  units.values.forEach(resolver.visit);
   resolver.resolveAllStructs();
 }
 
@@ -103,6 +103,7 @@ class Resolver extends ResolutionVisitor {
           .where((Formal slot) => !slot.type.isPointer)
           .where((Formal slot) => !slot.type.isPrimitive &&
                                   !slot.type.isList &&
+                                  !slot.type.isNode &&
                                   !slot.type.isString)
           .map((Formal slot) => definitions[slot.type.identifier]);
     }
@@ -126,7 +127,8 @@ class Resolver extends ResolutionVisitor {
   }
 
   void resolveType(Type node) {
-    if (node.isString) return;
+    if (node.isString || node.isNode) return;
+    if (node.isList && node.elementType.isNode) return;
     primitives.PrimitiveType primitiveType = primitives.lookup(node.identifier);
     if (primitiveType != null) {
       node.primitiveType = primitiveType;
@@ -159,7 +161,11 @@ class ResolutionVisitor extends Visitor {
   visit(Node node) => node.accept(this);
 
   visitUnit(Unit node) {
+    node.imports.forEach(visit);
     node.structs.forEach(visit);
+  }
+
+  visitImport(Import import) {
   }
 
   visitStruct(Struct node) {

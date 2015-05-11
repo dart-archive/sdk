@@ -15,7 +15,8 @@ Unit parseUnit(String input) {
 }
 
 abstract class Visitor {
-  visitUnit(Unit node);
+  visitUnit(Unit unit);
+  visitImport(Import import);
   visitStruct(Struct struct);
   visitUnion(Union union);
   visitMethod(Method method);
@@ -37,9 +38,35 @@ abstract class Node {
 }
 
 class Unit extends Node {
+  final List<Import> imports;
   final List<Struct> structs;
-  Unit(this.structs);
+  Unit(this.imports, this.structs);
   accept(Visitor visitor) => visitor.visitUnit(this);
+}
+
+class Import extends Node {
+  static const String packagePrefix = 'package:';
+  String file;
+  String prefix;
+  String extension;
+  Import(List<String> import) {
+    int i = 0;
+    int k = 0;
+    for (int j = 0; j < import.length; ++j) {
+      if (import[j] == ':') {
+        assert(prefix == null);
+        prefix = import.sublist(i, j).join();
+        i = j + 1;
+      } else if (import[j] == '.') {
+        k = j + 1;
+      }
+    }
+    assert(k > 0);
+    file = import.sublist(i).join();
+    extension = import.sublist(k).join();
+  }
+
+  accept(Visitor visitor) => visitor.visitImport(this);
 }
 
 class Struct extends Node {
@@ -90,9 +117,10 @@ class Method extends Node {
 }
 
 abstract class Type {
-  bool get isPointer;
-  bool get isList;
-  bool get isString;
+  bool get isPointer => false;
+  bool get isList => false;
+  bool get isString => false;
+  bool get isNode => false;
 
   bool get isPrimitive => primitiveType != null;
 
@@ -119,9 +147,22 @@ class StringType extends Type {
     return other is StringType;
   }
 
-  bool get isPointer => false;
-  bool get isList => false;
   bool get isString => true;
+}
+
+class NodeType extends Type {
+  final String identifier = "node";
+
+  int get hashCode {
+    int hash = identifier.hashCode;
+    return hash;
+  }
+
+  bool operator==(Object other) {
+    return other is StringType;
+  }
+
+  bool get isNode => true;
 }
 
 class SimpleType extends Type {
@@ -142,9 +183,6 @@ class SimpleType extends Type {
         && identifier == other.identifier
         && isPointer == other.isPointer;
   }
-
-  bool get isList => false;
-  bool get isString => false;
 }
 
 class ListType extends Type {
@@ -160,9 +198,7 @@ class ListType extends Type {
     return other is ListType && elementType == other.elementType;
   }
 
-  bool get isPointer => false;
   bool get isList => true;
-  bool get isString => false;
 
   String get identifier => elementType.identifier;
 }
@@ -171,8 +207,13 @@ class ListType extends Type {
 
 class _ImmiParserDefinition extends ImmiGrammarDefinition {
   final StringType string = new StringType();
+  final NodeType node = new NodeType();
   unit() => super.unit()
-      .map((each) => new Unit(each.where((e) => e is Struct).toList()));
+          .map((each) => new Unit(
+              each[0].toList(),
+              each[1].where((e) => e is Struct).toList()));
+  import() => super.import()
+      .map((each) => new Import(each[1][1]));
   struct() => super.struct()
       .map((each) => new Struct(each[1],
           each[3].where((e) => e is Formal).toList(),
@@ -183,6 +224,7 @@ class _ImmiParserDefinition extends ImmiGrammarDefinition {
   simpleType() => super.simpleType()
       .map((each) => new SimpleType(each[0], each[1]));
   stringType() => super.stringType().map((each) => string);
+  nodeType() => super.nodeType().map((each) => node);
   listType() => super.listType()
       .map((each) => new ListType(each[2]));
   union() => super.union()

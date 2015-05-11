@@ -6,16 +6,16 @@ import 'dart/commit_list_presenter.dart';
 import 'dart/commit_presenter.dart';
 import 'dart/github_mock.dart';
 import 'dart/github_services.dart';
-import 'generated/dart/github.dart';
+
+import 'package:immi_gen/dart/immi_service_impl.dart';
 
 main() {
   var mock = new GithubMock()..spawn();
   var server = new Server(mock.host, mock.port);
   var user = server.getUser('dart-lang');
   var repo = user.getRepository('fletch');
-  var commitPresenter = new CommitPresenter(repo);
-  var commitListPresenter = new CommitListPresenter(repo, commitPresenter);
-  var impl = new GithubImpl(commitListPresenter);
+  var commitListPresenter = new CommitListPresenter(repo);
+  var impl = new ImmiServiceImpl(commitListPresenter);
   impl.run();
   server.close();
   mock.close();

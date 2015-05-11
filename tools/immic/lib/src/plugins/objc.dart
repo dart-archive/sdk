@@ -39,31 +39,41 @@ const Map<String, String> _TYPES = const {
   'float64' : 'double',
 
   'String' : 'NSString*',
+  'node'   : 'Node',
 };
 
+String getTypePointer(Type type) {
+  if (type.isNode) return 'Node*';
+  if (type.resolved != null) {
+    return "${type.identifier}Node*";
+  }
+  return _TYPES[type.identifier];
+}
+
 String getTypeName(Type type) {
+  if (type.isNode) return 'Node';
   if (type.resolved != null) {
     return "${type.identifier}Node";
   }
   return _TYPES[type.identifier];
 }
 
-void generate(String path, Unit unit, String outputDirectory) {
+void generate(String path, Map units, String outputDirectory) {
   String directory = join(outputDirectory, "objc");
-  _generateHeaderFile(path, unit, directory);
-  _generateImplementationFile(path, unit, directory);
+  _generateHeaderFile(path, units, directory);
+  _generateImplementationFile(path, units, directory);
 }
 
-void _generateHeaderFile(String path, Unit unit, String directory) {
+void _generateHeaderFile(String path, Map units, String directory) {
   _HeaderVisitor visitor = new _HeaderVisitor(path);
-  visitor.visit(unit);
+  visitor.visitUnits(units);
   String contents = visitor.buffer.toString();
   writeToFile(directory, path, contents, extension: 'h');
 }
 
-void _generateImplementationFile(String path, Unit unit, String directory) {
+void _generateImplementationFile(String path, Map units, String directory) {
   _ImplementationVisitor visitor = new _ImplementationVisitor(path);
-  visitor.visit(unit);
+  visitor.visitUnits(units);
   String contents = visitor.buffer.toString();
   writeToFile(directory, path, contents, extension: 'mm');
 }
@@ -71,12 +81,16 @@ void _generateImplementationFile(String path, Unit unit, String directory) {
 class _HeaderVisitor extends CodeGenerationVisitor {
   _HeaderVisitor(String path) : super(path);
 
-  List nodes;
+  List nodes = [];
 
-  visitUnit(Unit unit) {
-    nodes = unit.structs;
+  visitUnits(Map units) {
+    units.values.forEach((unit) { nodes.addAll(unit.structs); });
     _writeHeader();
     _writeNodeBase();
+    units.values.forEach(visit);
+  }
+
+  visitUnit(Unit unit) {
     unit.structs.forEach(visit);
   }
 
@@ -134,7 +148,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     if (type.isList) {
       write('NSArray*');
     } else {
-      write(getTypeName(type));
+      write(getTypePointer(type));
     }
   }
 
@@ -144,7 +158,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     writeln('// Generated file. Do not edit.');
     writeln();
     writeln('#import <Foundation/Foundation.h>');
-    writeln('#include "${fileName}_presenter_service.h"');
+    writeln('#include "${serviceFile}.h"');
     writeln();
   }
 }
@@ -152,21 +166,31 @@ class _HeaderVisitor extends CodeGenerationVisitor {
 class _ImplementationVisitor extends CodeGenerationVisitor {
   _ImplementationVisitor(String path) : super(path);
 
-  List<Struct> nodes;
+  List<Struct> nodes = [];
 
-  visitUnit(Unit unit) {
-    nodes = unit.structs;
-
+  visitUnits(Map units) {
+    units.values.forEach((unit) { nodes.addAll(unit.structs); });
     _writeHeader();
     _writeNodeBaseExtendedInterface();
-    nodes.forEach(_writeNodeExtendedInterface);
+
+    _writeEventUtils();
+
+    units.values.forEach((unit) {
+      unit.structs.forEach(_writeNodeExtendedInterface);
+    });
 
     _writeStringUtils();
     _writeListUtils();
-    _writeEventUtils();
 
     _writeNodeBaseImplementation();
-    nodes.forEach(_writeNodeImplementation);
+
+    units.values.forEach((unit) {
+      unit.structs.forEach(_writeNodeImplementation);
+    });
+  }
+
+  visitUnit(Unit unit) {
+    // Everything is done in visitUnits.
   }
 
   _writeNodeExtendedInterface(Struct node) {
@@ -189,19 +213,25 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     forEachSlot(node, null, (Type slotType, _) {
       if (slotType.isList) {
         hasListSlots = true;
-      } else if (slotType.resolved) {
+      } else if (slotType.resolved != null) {
         hasNodeSlots = true;
       }
     });
-    for (var method in node.methods) {
-      writeln('EventID _${method.name}EventID;');
+    // Add internal instance variables.
+    if (hasListSlots || node.methods.isNotEmpty) {
+      writeln('{');
+      for (var method in node.methods) {
+        writeln('  EventID _${method.name}EventID;');
+      }
+      // Create hidden instance variables for lists holding mutable arrays.
+      if (hasListSlots) {
+        forEachSlot(node, null, (Type slotType, String slotName) {
+          if (slotType.isList) writeln('  NSMutableArray* _$slotName;');
+        });
+      writeln('}');
     }
-    // Create hidden instance variables for lists holding mutable arrays.
-    if (hasListSlots) {
-      forEachSlot(node, null, (Type slotType, String slotName) {
-        if (slotType.isList) writeln('NSMutableArray* _$slotName;');
-      });
-      forEachSlot(node, null, (Type slotType, String slotName) {
+
+    forEachSlot(node, null, (Type slotType, String slotName) {
         if (slotType.isList) {
           writeln('- (NSArray*)$slotName { return _$slotName; }');
         }
@@ -209,9 +239,19 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     }
     if (hasNodeSlots) {
       writeln('- (Node*)getSlot:(int)index {');
-      writeln('  abort();');
+      writeln('  switch(index) {');
+      int slotIndex = 0;
+      forEachSlot(node, null, (Type slotType, String slotName) {
+        if (!slotType.isList && slotType.resolved != null) {
+          writeln('    case $slotIndex: return _$slotName;');
+        }
+        slotIndex++;
+      });
+      writeln('    default: abort();');
+      writeln('  }');
       writeln('}');
     }
+
     writeln('- (bool)is$name { return true; }');
     writeln('- ($nodeName*)as$name { return self; }');
     writeln('- (id)initWith:(const $nodeNameData&)data {');
@@ -225,6 +265,11 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         writeln('      data.get${camelName}(), create$slotTypeName);');
       } else if (slotType.isString) {
         writeln('decodeString(data.get${camelName}Data());');
+      } else if (slotType.isNode) {
+        writeln('[Node node:data.get${camelName}()];');
+      } else if (slotType.resolved != null) {
+        String slotTypeName = getTypeName(slotType);
+        writeln('[[$slotTypeName alloc] initWith:data.get${camelName}()];');
       } else {
         writeln('data.get${camelName}();');
       }
@@ -245,11 +290,12 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         writeln('    [Node applyListPatch:patch.getListPatch()');
         writeln('                 toArray:_$slotName];');
       } else if (slotType.resolved != null) {
-        String typeName = "${slotType.identifier}Node";
+        String typeName = "${slotType.identifier}";
+        String typeNodeName = "${slotType.identifier}Node";
         writeln('    assert(patch.isContent());');
         writeln('    assert(patch.getContent().isNode());');
         writeln('    assert(patch.getContent().getNode().is${typeName}());');
-        writeln('    _$slotName = [[$typeName alloc]');
+        writeln('    _$slotName = [[$typeNodeName alloc]');
         writeln('        initWith:patch.getContent().getNode().get${typeName}()];');
       } else {
         String typeName = camelize("${slotType.identifier}Data");
@@ -296,7 +342,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         }
       }
       writeln(' {');
-      write('  ${unitName}PresenterService::dispatch');
+      write('  ${serviceName}::dispatch');
       for (var formal in method.arguments) {
         write(camelize(formal.type.identifier));
       }
@@ -441,9 +487,13 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     });
     // TODO(zerny): Support lists of primitive types.
     write("""
+static id createNode(const NodeData& data) {
+  return [Node node:data];
+}
+
 static id createContent(const ContentData& data) {
   assert(data.isNode());
-  return [Node node:data.getNode()];
+  return createNode(data.getNode());
 }
 
 template<typename T>

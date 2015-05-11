@@ -9,11 +9,22 @@ import 'package:args/args.dart';
 
 main(List<String> arguments) {
   ArgParser parser = new ArgParser();
+  parser.addOption('package');
   parser.addOption('out', defaultsTo: ".");
   ArgResults results = parser.parse(arguments);
+  String packageDirectory = results['package'];
   String outputDirectory = results['out'];
   if (!(new Directory(outputDirectory)).existsSync()) {
     print("Output directory '$outputDirectory' does not exist.");
+    exit(1);
+  }
+  if (packageDirectory == null) {
+    print("Unspecified package directory");
+    print(parser.usage);
+    exit(1);
+  }
+  if (!(new Directory(packageDirectory)).existsSync()) {
+    print("Package directory '$packageDirectory' does not exist.");
     exit(1);
   }
   if (results.rest.isEmpty) {
@@ -21,6 +32,6 @@ main(List<String> arguments) {
     exit(1);
   }
   for (String path in results.rest) {
-    immic.compile(path, outputDirectory);
+    immic.compile(path, outputDirectory, packageDirectory);
   }
 }

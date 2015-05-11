@@ -1,0 +1,19 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+import 'package:immi_samples/sliding_window.immi';
+import 'commit_presenter.immi';
+
+// TODO(zerny): Remove this once CommitListPresenter is eliminated.
+// This node type just renames the fields on SlidingWindow to avoid breaking
+// ObjC code.
+
+node CommitList {
+  List<Commit> commits;
+  uint32 startOffset;
+  uint16 bufferOffset;
+  int32 count;
+  uint32 minimumCount;
+  void display(uint32 start, uint32 end);
+}

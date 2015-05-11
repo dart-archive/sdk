@@ -16,10 +16,10 @@
 		DA313FBF1AD665A7000089F9 /* githubTests.m in Sources */ = {isa = PBXBuildFile; fileRef = DA313FBE1AD665A7000089F9 /* githubTests.m */; };
 		DA4370BB1AE9321600EEE52F /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA4370BA1AE9321600EEE52F /* libfletch.a */; };
 		DA4370BD1AE9328D00EEE52F /* unix_ia32_hack.c in Sources */ = {isa = PBXBuildFile; fileRef = DA4370BC1AE9328D00EEE52F /* unix_ia32_hack.c */; };
-		DAEE2EB61AD6890B00945914 /* github_presenter_service.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2EAF1AD6890B00945914 /* github_presenter_service.cc */; };
-		DAEE2EB71AD6890B00945914 /* struct.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2EB11AD6890B00945914 /* struct.cc */; };
-		DAEE2EB81AD6890B00945914 /* unicode.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2EB31AD6890B00945914 /* unicode.cc */; };
-		DAEE2F311AD695F600945914 /* github.mm in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2F301AD695F600945914 /* github.mm */; };
+		DA79124A1AFCEEB300E5F773 /* immi_service.cc in Sources */ = {isa = PBXBuildFile; fileRef = DA7912441AFCEEB300E5F773 /* immi_service.cc */; };
+		DA79124B1AFCEEB300E5F773 /* struct.cc in Sources */ = {isa = PBXBuildFile; fileRef = DA7912461AFCEEB300E5F773 /* struct.cc */; };
+		DA79124C1AFCEEB300E5F773 /* unicode.cc in Sources */ = {isa = PBXBuildFile; fileRef = DA7912481AFCEEB300E5F773 /* unicode.cc */; };
+		DA7912501AFCEEE900E5F773 /* github.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA79124F1AFCEEE900E5F773 /* github.mm */; };
 		DAEE2F341AD6AA2600945914 /* github.snapshot in Resources */ = {isa = PBXBuildFile; fileRef = DAEE2F331AD6AA2600945914 /* github.snapshot */; };
 		DAEE2F371AD6AEDA00945914 /* CommitCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2F361AD6AEDA00945914 /* CommitCell.mm */; };
 		DAEE2F391AD6B0FB00945914 /* CommitListPresenter.h in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2F381AD6B0FB00945914 /* CommitListPresenter.h */; };
@@ -52,14 +52,14 @@
 		DA313FBE1AD665A7000089F9 /* githubTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = githubTests.m; sourceTree = "<group>"; };
 		DA4370BA1AE9321600EEE52F /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libfletch.a; sourceTree = "<group>"; };
 		DA4370BC1AE9328D00EEE52F /* unix_ia32_hack.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = unix_ia32_hack.c; sourceTree = "<group>"; };
-		DAEE2EAF1AD6890B00945914 /* github_presenter_service.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = github_presenter_service.cc; sourceTree = "<group>"; };
-		DAEE2EB01AD6890B00945914 /* github_presenter_service.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = github_presenter_service.h; sourceTree = "<group>"; };
-		DAEE2EB11AD6890B00945914 /* struct.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = struct.cc; sourceTree = "<group>"; };
-		DAEE2EB21AD6890B00945914 /* struct.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = struct.h; sourceTree = "<group>"; };
-		DAEE2EB31AD6890B00945914 /* unicode.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unicode.cc; sourceTree = "<group>"; };
-		DAEE2EB41AD6890B00945914 /* unicode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unicode.h; sourceTree = "<group>"; };
-		DAEE2F2F1AD695F600945914 /* github.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = github.h; sourceTree = "<group>"; };
-		DAEE2F301AD695F600945914 /* github.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = github.mm; sourceTree = "<group>"; };
+		DA7912441AFCEEB300E5F773 /* immi_service.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = immi_service.cc; sourceTree = "<group>"; };
+		DA7912451AFCEEB300E5F773 /* immi_service.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = immi_service.h; sourceTree = "<group>"; };
+		DA7912461AFCEEB300E5F773 /* struct.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = struct.cc; sourceTree = "<group>"; };
+		DA7912471AFCEEB300E5F773 /* struct.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = struct.h; sourceTree = "<group>"; };
+		DA7912481AFCEEB300E5F773 /* unicode.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unicode.cc; sourceTree = "<group>"; };
+		DA7912491AFCEEB300E5F773 /* unicode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unicode.h; sourceTree = "<group>"; };
+		DA79124E1AFCEEE900E5F773 /* github.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = github.h; sourceTree = "<group>"; };
+		DA79124F1AFCEEE900E5F773 /* github.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = github.mm; sourceTree = "<group>"; };
 		DAEE2F331AD6AA2600945914 /* github.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; name = github.snapshot; path = ../../../generated/github.snapshot; sourceTree = "<group>"; };
 		DAEE2F351AD6AEDA00945914 /* CommitCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitCell.h; sourceTree = "<group>"; };
 		DAEE2F361AD6AEDA00945914 /* CommitCell.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitCell.mm; sourceTree = "<group>"; };
@@ -89,11 +89,11 @@
 		DA313F961AD665A6000089F9 = {
 			isa = PBXGroup;
 			children = (
+				DA79124D1AFCEEE900E5F773 /* objc */,
+				DA7912431AFCEEB300E5F773 /* cc */,
 				DA4370BC1AE9328D00EEE52F /* unix_ia32_hack.c */,
 				DA4370BA1AE9321600EEE52F /* libfletch.a */,
 				DAEE2F321AD6AA1800945914 /* Resources */,
-				DAEE2F2E1AD695F600945914 /* objc */,
-				DAEE2EAC1AD6890B00945914 /* cc */,
 				DA313FA11AD665A6000089F9 /* github */,
 				DA313FBB1AD665A7000089F9 /* githubTests */,
 				DA313FA01AD665A6000089F9 /* Products */,
@@ -154,28 +154,28 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		DAEE2EAC1AD6890B00945914 /* cc */ = {
+		DA7912431AFCEEB300E5F773 /* cc */ = {
 			isa = PBXGroup;
 			children = (
-				DAEE2EAF1AD6890B00945914 /* github_presenter_service.cc */,
-				DAEE2EB01AD6890B00945914 /* github_presenter_service.h */,
-				DAEE2EB11AD6890B00945914 /* struct.cc */,
-				DAEE2EB21AD6890B00945914 /* struct.h */,
-				DAEE2EB31AD6890B00945914 /* unicode.cc */,
-				DAEE2EB41AD6890B00945914 /* unicode.h */,
+				DA7912441AFCEEB300E5F773 /* immi_service.cc */,
+				DA7912451AFCEEB300E5F773 /* immi_service.h */,
+				DA7912461AFCEEB300E5F773 /* struct.cc */,
+				DA7912471AFCEEB300E5F773 /* struct.h */,
+				DA7912481AFCEEB300E5F773 /* unicode.cc */,
+				DA7912491AFCEEB300E5F773 /* unicode.h */,
 			);
 			name = cc;
-			path = ../generated/cc;
+			path = ../../../package/immi_gen/cc;
 			sourceTree = "<group>";
 		};
-		DAEE2F2E1AD695F600945914 /* objc */ = {
+		DA79124D1AFCEEE900E5F773 /* objc */ = {
 			isa = PBXGroup;
 			children = (
-				DAEE2F2F1AD695F600945914 /* github.h */,
-				DAEE2F301AD695F600945914 /* github.mm */,
+				DA79124E1AFCEEE900E5F773 /* github.h */,
+				DA79124F1AFCEEE900E5F773 /* github.mm */,
 			);
 			name = objc;
-			path = ../generated/objc;
+			path = ../../../package/immi_gen/objc;
 			sourceTree = "<group>";
 		};
 		DAEE2F321AD6AA1800945914 /* Resources */ = {
@@ -306,16 +306,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				DA313FAB1AD665A6000089F9 /* CommitListController.mm in Sources */,
-				DAEE2EB61AD6890B00945914 /* github_presenter_service.cc in Sources */,
+				DA79124C1AFCEEB300E5F773 /* unicode.cc in Sources */,
+				DA7912501AFCEEE900E5F773 /* github.mm in Sources */,
+				DA79124B1AFCEEB300E5F773 /* struct.cc in Sources */,
 				DA4370BD1AE9328D00EEE52F /* unix_ia32_hack.c in Sources */,
-				DAEE2F311AD695F600945914 /* github.mm in Sources */,
 				DA313FA81AD665A6000089F9 /* AppDelegate.mm in Sources */,
 				DAEE2F391AD6B0FB00945914 /* CommitListPresenter.h in Sources */,
 				DAEE2F3B1AD6B13400945914 /* CommitListPresenter.mm in Sources */,
-				DAEE2EB71AD6890B00945914 /* struct.cc in Sources */,
-				DAEE2EB81AD6890B00945914 /* unicode.cc in Sources */,
 				DAEE2F371AD6AEDA00945914 /* CommitCell.mm in Sources */,
 				DA313FA51AD665A6000089F9 /* main.m in Sources */,
+				DA79124A1AFCEEB300E5F773 /* immi_service.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

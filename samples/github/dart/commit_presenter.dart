@@ -3,10 +3,13 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'github_services.dart';
-import '../generated/dart/github.dart';
 
 import 'package:immi/immi.dart';
 import 'package:immi_samples/sequenced_presenter.dart';
+
+// Export generated code for nodes in commit_presenter.immi
+import 'package:immi_gen/dart/commit_presenter.dart';
+export 'package:immi_gen/dart/commit_presenter.dart';
 
 class CommitPresenter extends SequencedPresenter<CommitNode> {
   Repository _repository;
