@@ -80,8 +80,6 @@ class FletchCompiler {
 
   FletchCompiler._(this._compiler, this.script, this.verbose);
 
-  Backdoor get backdoor => new Backdoor(this);
-
   factory FletchCompiler(
       {CompilerInputProvider provider,
        CompilerOutputProvider outputProvider,
@@ -109,7 +107,7 @@ class FletchCompiler {
       if (provider is SourceFileProvider) {
         sourceFileProvider = provider;
       }
-      handler = new FormattingDiagnosticHandler(provider)
+      handler = new FormattingDiagnosticHandler(sourceFileProvider)
           ..throwOnError = false
           ..verbose = isVerbose;
     }
@@ -339,20 +337,6 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   int positionInFile(String file, int line, int column) {
     return _compiler.positionInFile(file, line, column);
   }
-}
-
-// In this library to allow access to privates.
-// TODO(lukechurch): Delete this class.
-class Backdoor {
-  final FletchCompiler _compiler;
-
-  Backdoor(this._compiler);
-
-  functionElementFromName(String name) =>
-        _compiler._compiler.context.backend.compiledFunctions.keys.where(
-            (f) => f.name == name).single;
-  indexForFunctionElement(var element) =>
-        _compiler._compiler.backend.allocateMethodId(element);
 }
 
 /// Resolves any symbolic links in [uri] if its scheme is "file". Otherwise
