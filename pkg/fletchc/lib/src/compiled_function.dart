@@ -32,6 +32,14 @@ import 'fletch_context.dart';
 import 'bytecode_builder.dart';
 import 'debug_info.dart';
 
+enum CompiledFunctionKind {
+  NORMAL,
+  LAZY_FIELD_INITIALIZER,
+  INITIALIZER_LIST,
+  PARAMETER_STUB,
+  ACCESSOR
+}
+
 class CompiledFunction {
   final BytecodeBuilder builder;
   final int methodId;
@@ -57,8 +65,8 @@ class CompiledFunction {
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
   final Map<int, ConstantValue> classConstantValues = <int, ConstantValue>{};
-  final bool isAccessor;
-  final bool isInitializer;
+  final int arity;
+  final CompiledFunctionKind kind;
 
   DebugInfo debugInfo;
 
@@ -67,26 +75,46 @@ class CompiledFunction {
                    this.element,
                    FunctionSignature signature,
                    CompiledClass memberOf,
-                   {this.isAccessor: false,
-                    this.isInitializer: false})
+                   {this.kind: CompiledFunctionKind.NORMAL})
       : this.signature = signature,
         this.memberOf = memberOf,
+        arity = signature.parameterCount + (memberOf != null ? 1 : 0),
         builder = new BytecodeBuilder(
           signature.parameterCount + (memberOf != null ? 1 : 0));
 
+  CompiledFunction.lazyInit(this.methodId,
+                            this.name,
+                            this.element,
+                            int argumentCount)
+      : arity = argumentCount,
+        builder = new BytecodeBuilder(argumentCount),
+        kind = CompiledFunctionKind.LAZY_FIELD_INITIALIZER;
+
   CompiledFunction.parameterStub(this.methodId, int argumentCount)
-      : builder = new BytecodeBuilder(argumentCount),
-        isAccessor = false;
+      : arity = argumentCount,
+        builder = new BytecodeBuilder(argumentCount),
+        kind = CompiledFunctionKind.PARAMETER_STUB;
 
   CompiledFunction.accessor(this.methodId, bool setter)
-      : builder = new BytecodeBuilder(setter ? 2 : 1),
-        isAccessor = true;
+      : arity = setter ? 2 : 1,
+        builder = new BytecodeBuilder(setter ? 2 : 1),
+        kind = CompiledFunctionKind.ACCESSOR;
 
   bool get hasThisArgument => memberOf != null;
 
-  bool get isConstructor => element != null && element.isConstructor;
+  bool get isLazyFieldInitializer {
+    return kind == CompiledFunctionKind.LAZY_FIELD_INITIALIZER;
+  }
 
-  int get arity => signature.parameterCount + (hasThisArgument ? 1 : 0);
+  bool get isInitializerList {
+    return kind == CompiledFunctionKind.INITIALIZER_LIST;
+  }
+
+  bool get isAccessor {
+    return kind == CompiledFunctionKind.ACCESSOR;
+  }
+
+  bool get isConstructor => element != null && element.isConstructor;
 
   int allocateConstant(ConstantValue constant) {
     return constants.putIfAbsent(constant, () => constants.length);

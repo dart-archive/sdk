@@ -1,0 +1,26 @@
+breakpoint set: 0: main @0
+main 	@42
+main 	@a1
+a1 lazy initializer	@1
+a1 lazy initializer	@new A(1)
+A initializer      	@x
+A initializer      	@this.x=x
+a1 lazy initializer	@new A(1)
+main 	@a1.x
+main 	@x
+main 	@a1.x+x
+main 	@a2
+a2 lazy initializer	@1
+a2 lazy initializer	@new A(1)
+A initializer      	@x
+A initializer      	@this.x=x
+a2 lazy initializer	@new A(1)
+main 	@a2.x
+main 	@a1.x+x+a2.x
+entry	@Thread.exit(invokeMain([] ))
+exit 	@_scheduler
+exit 	@null
+exit 	@_scheduler==null
+exit 	@0
+exit 	@fletch.halt(0)
+### process terminated

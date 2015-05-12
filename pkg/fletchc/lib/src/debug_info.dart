@@ -72,6 +72,7 @@ class SourceLocation {
   }
 
   bool isSameSourceLevelLocationAs(SourceLocation other) {
+    if (other == null) return false;
     if (file != other.file) return false;
     if (span == null || other.span == null) return span == other.span;
     return span.begin == other.span.begin && span.end == other.span.end;

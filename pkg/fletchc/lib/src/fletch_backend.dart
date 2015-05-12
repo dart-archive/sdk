@@ -80,6 +80,7 @@ import 'fletch_constants.dart' show
     FletchClassInstanceConstant;
 
 import 'compiled_function.dart' show
+    CompiledFunctionKind,
     CompiledFunction,
     DebugInfo;
 
@@ -87,6 +88,7 @@ import 'codegen_visitor.dart';
 import 'debug_info.dart';
 import 'debug_info_constructor_codegen.dart';
 import 'debug_info_function_codegen.dart';
+import 'debug_info_lazy_field_initializer_codegen.dart';
 import 'fletch_context.dart';
 import 'fletch_selector.dart';
 import 'function_codegen.dart';
@@ -526,7 +528,9 @@ class FletchBackend extends Backend {
           // implementation.
           implementation.functionSignature,
           holderClass,
-          isAccessor: function.isAccessor);
+          kind: function.isAccessor
+              ? CompiledFunctionKind.ACCESSOR
+              : CompiledFunctionKind.NORMAL);
       functions.add(compiledFunction);
       return compiledFunction;
     });
@@ -555,7 +559,16 @@ class FletchBackend extends Backend {
         element,
         elements);
     CodegenVisitor codegen;
-    if (function.isInitializer) {
+    if (function.isLazyFieldInitializer) {
+      codegen = new DebugInfoLazyFieldInitializerCodegen(
+          function,
+          context,
+          elements,
+          null,
+          closureEnvironment,
+          element,
+          compiler);
+    } else if (function.isInitializerList) {
       ClassElement enclosingClass = element.enclosingClass;
       CompiledClass compiledClass = compiledClasses[enclosingClass];
       codegen = new DebugInfoConstructorCodegen(
@@ -674,7 +687,9 @@ class FletchBackend extends Backend {
             implementation,
             implementation.functionSignature,
             compiledUsage,
-            isAccessor: function.isAccessor);
+            kind: function.isAccessor
+                ? CompiledFunctionKind.ACCESSOR
+                : CompiledFunctionKind.NORMAL);
         functions.add(copy);
         compiledUsage.methodTable[fletchSelector] = copy.methodId;
         copy.copyFrom(compiledFunction);
@@ -1117,8 +1132,10 @@ class FletchBackend extends Backend {
     if (field.initializer == null) return index;
 
     lazyFieldInitializers.putIfAbsent(field, () {
-      CompiledFunction compiledFunction = new CompiledFunction.parameterStub(
+      CompiledFunction compiledFunction = new CompiledFunction.lazyInit(
           functions.length,
+          "${field.name} lazy initializer",
+          field,
           0);
       functions.add(compiledFunction);
 
@@ -1172,7 +1189,7 @@ class FletchBackend extends Backend {
           constructor,
           constructor.functionSignature,
           null,
-          isInitializer: true);
+          kind: CompiledFunctionKind.INITIALIZER_LIST);
       functions.add(compiledFunction);
 
       ConstructorCodegen codegen = new ConstructorCodegen(
