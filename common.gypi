@@ -33,7 +33,10 @@
           '<(DEPTH)/third_party/clang/mac/lib/clang/3.6.0/'
           'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
         'third_party_libs_path%': '<(DEPTH)/third_party/libs/mac',
-	'ios_sdk_path%': '<!(xcrun --sdk iphoneos --show-sdk-path)',
+        # TODO(zerny): Redirect stderr to work around gyp regarding a non-empty
+        # stderr as a failed command. This should be replaced by a custom script
+        # that retains stderr in case the command actually fails.
+        'ios_sdk_path%': '<!(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)',
       }],
       [ 'OS=="win"', {
         'clang_asan_rt_path%': '.',
@@ -213,6 +216,25 @@
                     'FLETCH_ARM',
                    ],
                  }],
+                ['OS=="mac"', {
+                  'xcode_settings': { # And ninja.
+                    'ARCHS': [ 'armv7' ],
+    
+                    'LIBRARY_SEARCH_PATHS': [
+                      '<(third_party_libs_path)/arm',
+                    ],
+    
+                    'OTHER_CPLUSPLUSFLAGS' : [
+                      '-isysroot',
+                      '<(ios_sdk_path)',
+                    ],
+    
+                    'OTHER_CFLAGS' : [
+                      '-isysroot',
+                      '<(ios_sdk_path)',
+                    ],
+                  },
+                 }]
               ],
 
               'ldflags': [
@@ -221,24 +243,6 @@
                 '-L/FLETCH_ARM',
                 '-static-libstdc++',
               ],
-
-              'xcode_settings': { # And ninja.
-                'ARCHS': [ 'armv7' ],
-
-                'LIBRARY_SEARCH_PATHS': [
-                  '<(third_party_libs_path)/arm',
-                ],
-
-                'OTHER_CPLUSPLUSFLAGS' : [
-                  '-isysroot',
-		  '<(ios_sdk_path)',
-                ],
-
-                'OTHER_CFLAGS' : [
-                  '-isysroot',
-		  '<(ios_sdk_path)',
-                ],
-              },
             },
           ],
 
@@ -274,6 +278,25 @@
                     'FLETCH_ARM64',
                    ],
                  }],
+                ['OS=="mac"', {
+                  'xcode_settings': { # And ninja.
+                    'ARCHS': [ 'arm64' ],
+    
+                    'LIBRARY_SEARCH_PATHS': [
+                      '<(third_party_libs_path)/arm64',
+                    ],
+    
+                    'OTHER_CPLUSPLUSFLAGS' : [
+                      '-isysroot',
+                      '<(ios_sdk_path)',
+                    ],
+    
+                    'OTHER_CFLAGS' : [
+                      '-isysroot',
+                      '<(ios_sdk_path)',
+                    ],
+                  },
+                 }],
               ],
 
               'ldflags': [
@@ -282,24 +305,6 @@
                 '-L/FLETCH_ARM64',
                 '-static-libstdc++',
               ],
-
-              'xcode_settings': { # And ninja.
-                'ARCHS': [ 'arm64' ],
-
-                'LIBRARY_SEARCH_PATHS': [
-                  '<(third_party_libs_path)/arm64',
-                ],
-
-                'OTHER_CPLUSPLUSFLAGS' : [
-                  '-isysroot',
-		  '<(ios_sdk_path)',
-                ],
-
-                'OTHER_CFLAGS' : [
-                  '-isysroot',
-		  '<(ios_sdk_path)',
-                ],
-              },
             },
           ],
 
