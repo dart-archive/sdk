@@ -566,6 +566,11 @@ class ProcessStepOver extends Command {
       : super(CommandCode.ProcessStepOver);
 }
 
+class ProcessStepOut extends Command {
+  const ProcessStepOut()
+      : super(CommandCode.ProcessStepOut);
+}
+
 class ProcessStepTo extends Command {
   final MapId id;
   final int methodId;
@@ -657,6 +662,7 @@ enum CommandCode {
   ProcessDeleteBreakpoint,
   ProcessStep,
   ProcessStepOver,
+  ProcessStepOut,
   ProcessStepTo,
   ProcessContinue,
   ProcessBacktrace,

@@ -62,6 +62,7 @@ class Connection {
     kProcessDeleteBreakpoint,
     kProcessStep,
     kProcessStepOver,
+    kProcessStepOut,
     kProcessStepTo,
     kProcessContinue,
     kProcessBacktrace,

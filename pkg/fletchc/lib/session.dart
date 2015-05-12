@@ -213,7 +213,6 @@ class Session {
   }
 
   Future doStep() async {
-    if (!checkRunning()) return;
     SourceLocation previous = currentLocation;
     do {
       var bcp = currentStackTrace.stepBytecodePointer(previous);
@@ -228,6 +227,7 @@ class Session {
   }
 
   Future step() async {
+    if (!checkRunning()) return;
     await doStep();
     await backtrace();
   }
@@ -240,6 +240,13 @@ class Session {
     } while (currentLocation == null ||
              currentLocation == previous ||
              currentLocation.node == null);
+    await backtrace();
+  }
+
+  Future stepOut() async {
+    if (!checkRunning()) return;
+    const ProcessStepOut().addTo(vmSocket);
+    await handleProcessStop();
     await backtrace();
   }
 

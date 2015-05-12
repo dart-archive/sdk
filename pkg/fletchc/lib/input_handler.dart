@@ -15,6 +15,7 @@ Commands:
   'lb'                                  list breakpoints
   's'                                   step
   'so'                                  step over
+  'finish'                              finish current method (step out)
   'sb'                                  step bytecode
   'sob'                                 step over bytecode
   'c'                                   continue execution
@@ -108,6 +109,9 @@ class InputHandler {
           break;
         }
         await session.deleteBreakpoint(id);
+        break;
+      case 'finish':
+        await session.stepOut();
         break;
       case 'lb':
         session.listBreakpoints();

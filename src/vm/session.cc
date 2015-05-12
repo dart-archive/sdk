@@ -148,6 +148,13 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kProcessStepOut: {
+        Scheduler* scheduler = program()->scheduler();
+        process_->PrepareStepOut();
+        scheduler->ProcessContinue(process_);
+        break;
+      }
+
       case Connection::kProcessStepTo: {
         int map_id = connection_->ReadInt();
         int64 id = connection_->ReadInt64();

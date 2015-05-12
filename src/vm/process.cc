@@ -572,6 +572,22 @@ void Process::PrepareStepOver() {
     function, bytecode_index, true, coroutine_, stack_height);
 }
 
+void Process::PrepareStepOut() {
+  StackWalker stack_walker(this, stack());
+  bool has_top_frame = stack_walker.MoveNext();
+  ASSERT(has_top_frame);
+  bool has_frame_below = stack_walker.MoveNext();
+  ASSERT(has_frame_below);
+  Function* caller = stack_walker.function();
+  int bytecode_index =
+      stack_walker.return_address() - caller->bytecode_address_for(0);
+  Object** stack_top = stack()->Pointer(stack()->top());
+  Object** expected_sp = stack_top + stack_walker.stack_offset() + 1;
+  int stack_height = expected_sp - stack()->Pointer(0);
+  debug_info_->SetBreakpoint(
+      caller, bytecode_index, true, coroutine_, stack_height);
+}
+
 void Process::CookStacks(int number_of_stacks) {
   cooked_stack_deltas_ = List<List<int>>::New(number_of_stacks);
   Object* raw_current = stack();
