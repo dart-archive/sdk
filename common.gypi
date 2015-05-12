@@ -33,6 +33,7 @@
           '<(DEPTH)/third_party/clang/mac/lib/clang/3.6.0/'
           'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
         'third_party_libs_path%': '<(DEPTH)/third_party/libs/mac',
+	'ios_sdk_path%': '<!(xcrun --sdk iphoneos --show-sdk-path)',
       }],
       [ 'OS=="win"', {
         'clang_asan_rt_path%': '.',
@@ -228,15 +229,14 @@
                   '<(third_party_libs_path)/arm',
                 ],
 
-                # TODO(ager): Do not hard code the xcode sdk.
                 'OTHER_CPLUSPLUSFLAGS' : [
                   '-isysroot',
-                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk',
+		  '<(ios_sdk_path)',
                 ],
 
                 'OTHER_CFLAGS' : [
                   '-isysroot',
-                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk',
+		  '<(ios_sdk_path)',
                 ],
               },
             },
@@ -290,15 +290,14 @@
                   '<(third_party_libs_path)/arm64',
                 ],
 
-                # TODO(ager): Do not hard code the xcode sdk.
                 'OTHER_CPLUSPLUSFLAGS' : [
                   '-isysroot',
-                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk',
+		  '<(ios_sdk_path)',
                 ],
 
                 'OTHER_CFLAGS' : [
                   '-isysroot',
-                  '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk',
+		  '<(ios_sdk_path)',
                 ],
               },
             },
