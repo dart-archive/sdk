@@ -100,6 +100,13 @@ class CompiledFunction {
         builder = new BytecodeBuilder(setter ? 2 : 1),
         kind = CompiledFunctionKind.ACCESSOR;
 
+  void reuse() {
+    builder.reuse();
+    constants.clear();
+    functionConstantValues.clear();
+    classConstantValues.clear();
+  }
+
   bool get hasThisArgument => memberOf != null;
 
   bool get isLazyFieldInitializer {

@@ -16,8 +16,15 @@ import 'compiler_test_case.dart' show
     customUri,
     CompilerTestCase;
 
-import 'package:fletchc/incremental/dart2js_incremental.dart' show
-    IncrementalCompiler, OutputProvider;
+import 'package:fletchc/incremental/fletchc_incremental.dart' show
+    IncrementalCompiler,
+    OutputProvider;
+
+import 'package:fletchc/commands.dart' show
+    Command;
+
+import 'package:fletchc/src/fletch_backend.dart' show
+    FletchBackend;
 
 import 'package:compiler/compiler.dart' show
     Diagnostic;
@@ -36,16 +43,16 @@ class IoCompilerTestCase extends CompilerTestCase {
 
   IoCompilerTestCase.init(/* Map or String */ source, Uri uri)
       : this.incrementalCompiler = makeCompiler(source, uri),
-        super.init(null, uri, null);
+        super(uri);
 
   IoCompilerTestCase(/* Map or String */ source, [String path])
       : this.init(source, customUri(path == null ? 'main.dart' : path));
 
-  Future run() {
+  Future<List<Command>> run() {
     return incrementalCompiler.compile(scriptUri).then((success) {
       if (!success) throw 'Compilation failed';
-      OutputProvider outputProvider = incrementalCompiler.outputProvider;
-      return outputProvider['.js'];
+      FletchBackend backend = incrementalCompiler.compiler.backend;
+      return backend.commands;
     });
   }
 
@@ -79,7 +86,8 @@ class IoCompilerTestCase extends CompilerTestCase {
     }
 
     return new IncrementalCompiler(
-        libraryRoot: libraryRoot,
+        // options: ['--verbose'],
+        // libraryRoot: libraryRoot,
         packageRoot: packageRoot,
         inputProvider: inputProvider,
         diagnosticHandler: diagnosticHandler,

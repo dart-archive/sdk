@@ -46,6 +46,13 @@ class BytecodeBuilder {
 
   BytecodeBuilder(this.functionArity);
 
+  void reuse() {
+    bytecodes.clear();
+    catchRanges.clear();
+    byteSize = 0;
+    stackSize = 0;
+  }
+
   /**
    * Apply a fix to the currently known stack size.
    */

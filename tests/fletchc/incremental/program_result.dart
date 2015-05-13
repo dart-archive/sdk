@@ -33,8 +33,12 @@ class ProgramExpectation {
 
   final bool compileUpdatesShouldThrow;
 
+  final bool skip;
+
   const ProgramExpectation(
-      this.messages, {this.compileUpdatesShouldThrow: false});
+      this.messages,
+      {this.compileUpdatesShouldThrow: false,
+       this.skip: false});
 
   ProgramResult toResult(String code) {
     return new ProgramResult(
@@ -55,6 +59,10 @@ class EncodedResult {
         throw new StateError("Trivial diff, no reason to use decode.");
       }
       List<String> sources = expandUpdates(updates);
+      List expectations = this.expectations;
+      if (expectations.first.skip) {
+        expectations = expectations.sublist(1);
+      }
       if (sources.length != expectations.length) {
         throw new StateError(
             "Number of sources and expectations differ"

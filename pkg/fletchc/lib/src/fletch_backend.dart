@@ -1262,4 +1262,12 @@ class FletchBackend extends Backend {
         ..builder.loadConst(function.allocateConstant(constString))
         ..builder.emitThrow();
   }
+
+  void forgetElement(Element element) {
+    CompiledFunction compiledFunction = compiledFunctions[element];
+    if (compiledFunction == null) return;
+    print("Reusing ${compiledFunction.verboseToString()}");
+    compiledFunction.reuse();
+    print("Reused: ${compiledFunction.verboseToString()}");
+  }
 }

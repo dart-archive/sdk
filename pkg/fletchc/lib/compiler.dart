@@ -80,6 +80,8 @@ class FletchCompiler {
 
   FletchCompiler._(this._compiler, this.script, this.verbose);
 
+  Backdoor get backdoor => new Backdoor(this);
+
   factory FletchCompiler(
       {CompilerInputProvider provider,
        CompilerOutputProvider outputProvider,
@@ -203,7 +205,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return new FletchCompiler._(compiler, script, isVerbose);
   }
 
-  Future run([@StringOrUri script]) {
+  Future run([@StringOrUri script]) async {
     script = _computeValidatedUri(script, name: 'script');
     if (script == null) {
       script = this.script;
@@ -211,24 +213,26 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     if (script == null) {
       throw new StateError("No [script] provided.");
     }
+    await _inititalizeContext();
+    FletchBackend backend = _compiler.backend;
+    return _compiler.run(script).then((_) => backend.commands);
+  }
 
+  Future _inititalizeContext() async {
     Uri nativesJson = _compiler.fletchVm.resolve("natives.json");
-    return _compiler.callUserProvider(nativesJson).then((data) {
-      if (data is! String) {
-        if (data.last == 0) {
-          data = data.sublist(0, data.length - 1);
-        }
-        data = UTF8.decode(data);
+    var data = await _compiler.callUserProvider(nativesJson);
+    if (data is! String) {
+      if (data.last == 0) {
+        data = data.sublist(0, data.length - 1);
       }
-      Map<String, FletchNativeDescriptor> natives =
-          <String, FletchNativeDescriptor>{};
-      Map<String, String> names = <String, String>{};
-      FletchNativeDescriptor.decode(data, natives, names);
-      _compiler.context.nativeDescriptors = natives;
-      _compiler.context.setNames(names);
-      FletchBackend backend = _compiler.backend;
-      return _compiler.run(script).then((_) => backend.commands);
-    });
+      data = UTF8.decode(data);
+    }
+    Map<String, FletchNativeDescriptor> natives =
+        <String, FletchNativeDescriptor>{};
+    Map<String, String> names = <String, String>{};
+    FletchNativeDescriptor.decode(data, natives, names);
+    _compiler.context.nativeDescriptors = natives;
+    _compiler.context.setNames(names);
   }
 
   Uri get fletchVm => _compiler.fletchVm;
@@ -339,6 +343,21 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   }
 }
 
+// Backdoor around Dart privacy. For now, certain components (in particular
+// incremental compilation) need access to implementation details that shouldn't
+// be part of the API of this file.
+// TODO(ahe): Delete this class.
+class Backdoor {
+  final FletchCompiler _compiler;
+
+  Backdoor(this._compiler);
+
+  Future<implementation.FletchCompiler> get compilerImplementation async {
+    await _compiler._inititalizeContext();
+    return _compiler._compiler;
+  }
+}
+
 /// Resolves any symbolic links in [uri] if its scheme is "file". Otherwise
 /// return the given [uri].
 Uri _resolveSymbolicLinks(Uri uri) {
@@ -352,6 +371,7 @@ Uri _resolveSymbolicLinks(Uri uri) {
 }
 
 bool _containsFile(Uri uri, String expectedFile) {
+  if (uri.scheme != 'file') return true;
   return new File.fromUri(uri.resolve(expectedFile)).existsSync();
 }
 

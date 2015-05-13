@@ -11,7 +11,7 @@ import 'dart:async' show
     StreamController,
     StreamSubscription;
 
-import 'dart2js_incremental.dart' show
+import 'fletchc_incremental.dart' show
     IncrementalCompilationFailed,
     IncrementalCompiler;
 

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library dart2js_incremental.library_updater;
+library fletchc_incremental.library_updater;
 
 import 'dart:async' show
     Future;
@@ -53,32 +53,11 @@ import 'package:compiler/src/tree/tree.dart' show
     StringNode,
     unparse;
 
-import 'package:compiler/src/js/js.dart' show
-    js;
+import '../src/fletch_backend.dart' show
+    FletchBackend;
 
-import 'package:compiler/src/js/js.dart' as jsAst;
-
-import 'package:compiler/src/js_emitter/js_emitter.dart' show
-    ClassBuilder,
-    ClassEmitter,
-    CodeEmitterTask,
-    ContainerBuilder,
-    MemberInfo,
-    computeMixinClass;
-
-import 'package:compiler/src/js_emitter/model.dart' show
-    Class,
-    Method;
-
-import 'package:compiler/src/js_emitter/program_builder.dart' show
-    ProgramBuilder;
-
-import 'package:_internal/compiler/js_lib/shared/embedded_names.dart'
-    as embeddedNames;
-
-import 'package:compiler/src/js_backend/js_backend.dart' show
-    JavaScriptBackend,
-    Namer;
+import '../commands.dart' show
+    Command;
 
 import 'package:compiler/src/util/util.dart' show
     Link,
@@ -105,7 +84,7 @@ import 'diff.dart' show
     Difference,
     computeDifference;
 
-import 'dart2js_incremental.dart' show
+import 'fletchc_incremental.dart' show
     IncrementalCompilationFailed,
     IncrementalCompiler;
 
@@ -154,15 +133,15 @@ class IncrementalCompilerContext extends _IncrementalCompilerContext {
   }
 
   void _captureState(Compiler compiler) {
-    JavaScriptBackend backend = compiler.backend;
-    _emittedClasses = new Set.from(backend.emitter.neededClasses);
+    FletchBackend backend = compiler.backend;
+    // TODO(ahe): Compute this.
+    _emittedClasses = new Set();
 
     _directlyInstantiatedClasses =
         new Set.from(compiler.codegenWorld.directlyInstantiatedClasses);
 
-    List<ConstantValue> constants =
-        backend.emitter.outputConstantLists[
-            compiler.deferredLoadTask.mainOutputUnit];
+    // TODO(ahe): Compute this.
+    List<ConstantValue> constants = [];
     if (constants == null) constants = <ConstantValue>[];
     _compiledConstants = new Set<ConstantValue>.identity()..addAll(constants);
   }
@@ -170,7 +149,7 @@ class IncrementalCompilerContext extends _IncrementalCompilerContext {
   bool _uriHasUpdate(Uri uri) => _uriWithUpdates.contains(uri);
 }
 
-class LibraryUpdater extends JsFeatures {
+class LibraryUpdater extends FletchFeatures {
   final Compiler compiler;
 
   final api.CompilerInputProvider inputProvider;
@@ -750,6 +729,8 @@ class LibraryUpdater extends JsFeatures {
     for (Update update in updates) {
       Element element = update.apply();
       if (update.isRemoval) {
+        throw new IncrementalCompilationFailed(
+            "Unable to remove ${update.before}");
         if (removals != null) {
           removals.add(update);
         }
@@ -760,7 +741,7 @@ class LibraryUpdater extends JsFeatures {
     return elementsToInvalidate;
   }
 
-  String computeUpdateJs() {
+  List<Command> computeUpdateFletch() {
     List<Update> removals = <Update>[];
     List<Element> updatedElements = applyUpdates(removals);
     if (compiler.progress != null) {
@@ -805,204 +786,41 @@ class LibraryUpdater extends JsFeatures {
             // this, make a copy.
             enqueuer.codegen.newlyEnqueuedElements.add(e);
           }
-          if (selector.name == namer.closureInvocationSelectorName) {
-            selector = new Selector.call(
-                e.name, e.library,
-                selector.argumentCount, selector.namedArguments);
-            if (selector.appliesUnnamed(e, compiler.world)) {
-              // TODO(ahe): Also make a copy here.
-              enqueuer.codegen.newlyEnqueuedElements.add(e);
-            }
-          }
         }
       }
     }
 
-    List<jsAst.Statement> updates = <jsAst.Statement>[];
+    // TODO(ahe): Don't reassemble the entire program.
+    compiler.backend.assembleProgram();
+    return compiler.backend.commands;
 
-    Set<ClassElementX> newClasses = new Set.from(
-        compiler.codegenWorld.directlyInstantiatedClasses);
-    newClasses.removeAll(_directlyInstantiatedClasses);
+    List<Command> updates = <Command>[];
 
-    if (!newClasses.isEmpty) {
-      // Ask the emitter to compute "needs" (only) if new classes were
-      // instantiated.
-      _ensureAllNeededEntitiesComputed();
-      newClasses = new Set.from(emitter.neededClasses);
-      newClasses.removeAll(_emittedClasses);
-    } else {
-      // Make sure that the set of emitted classes is preserved for subsequent
-      // updates.
-      // TODO(ahe): This is a bit convoluted, find a better approach.
-      emitter.neededClasses
-          ..clear()
-          ..addAll(_emittedClasses);
-    }
-
-    List<jsAst.Statement> inherits = <jsAst.Statement>[];
-
-    for (ClassElementX cls in newClasses) {
-      jsAst.Node classAccess = emitter.constructorAccess(cls);
-      String name = namer.className(cls);
-
-      updates.add(
-          js.statement(
-              r'# = #', [classAccess, invokeDefineClass(cls)]));
-
-      ClassElement superclass = cls.superclass;
-      if (superclass != null) {
-        jsAst.Node superAccess = emitter.constructorAccess(superclass);
-        inherits.add(
-            js.statement(
-                r'this.inheritFrom(#, #)', [classAccess, superAccess]));
-      }
-    }
-
-    // Call inheritFrom after all classes have been created. This way we don't
-    // need to sort the classes by having superclasses defined before their
-    // subclasses.
-    updates.addAll(inherits);
-
-    for (ClassElementX cls in changedClasses) {
-      ClassElement superclass = cls.superclass;
-      jsAst.Node superAccess =
-          superclass == null ? js('null')
-              : emitter.constructorAccess(superclass);
-      jsAst.Node classAccess = emitter.constructorAccess(cls);
-      updates.add(
-          js.statement(
-              r'# = this.schemaChange(#, #, #)',
-              [classAccess, invokeDefineClass(cls), classAccess, superAccess]));
-    }
+    // TODO(ahe): Compute this.
+    Set<ClassElementX> newClasses = new Set();
 
     for (RemovalUpdate update in removals) {
-      update.writeUpdateJsOn(updates);
+      update.writeUpdateFletchOn(updates);
     }
     for (Element element in enqueuer.codegen.newlyEnqueuedElements) {
       if (element.isField) {
-        updates.addAll(computeFieldUpdateJs(element));
+        updates.addAll(computeFieldUpdateFletch(element));
       } else {
-        updates.add(computeMethodUpdateJs(element));
+        updates.add(computeMethodUpdateFletch(element));
       }
     }
 
     Set<ConstantValue> newConstants = new Set<ConstantValue>.identity()..addAll(
         (compiler.backend.constants as dynamic).compiledConstants);
     newConstants.removeAll(_compiledConstants);
-
-    if (!newConstants.isEmpty) {
-      _ensureAllNeededEntitiesComputed();
-      List<ConstantValue> constants =
-          emitter.outputConstantLists[compiler.deferredLoadTask.mainOutputUnit];
-      if (constants != null) {
-        for (ConstantValue constant in constants) {
-          if (!_compiledConstants.contains(constant)) {
-            jsAst.Statement constantInitializer =
-                emitter.oldEmitter.buildConstantInitializer(constant)
-                .toStatement();
-            updates.add(constantInitializer);
-          }
-        }
-      }
-    }
-
-    updates.add(js.statement(r'''
-if (this.pendingStubs) {
-  this.pendingStubs.map(function(e) { return e(); });
-  this.pendingStubs = void 0;
-}
-'''));
-
-    if (updates.length == 1) {
-      return prettyPrintJs(updates.single);
-    } else {
-      return prettyPrintJs(js.statement('{#}', [updates]));
-    }
   }
 
-  jsAst.Expression invokeDefineClass(ClassElementX cls) {
-    String name = namer.className(cls);
-    var descriptor = js('Object.create(null)');
-    return js(
-        r'''
-(new Function(
-    "$collectedClasses", "$desc",
-    this.defineClass(#name, #computeFields) +"\n;return " + #name))(
-        {#name: [,#descriptor]})''',
-        {'name': js.string(name),
-         'computeFields': js.stringArray(computeFields(cls)),
-         'descriptor': descriptor});
+  List<Command> computeFieldUpdateFletch(FieldElementX element) {
+    throw "Not implemented yet.";
   }
 
-  jsAst.Node computeMethodUpdateJs(Element element) {
-    Method member = new ProgramBuilder(compiler, namer, emitter)
-        .buildMethodHackForIncrementalCompilation(element);
-    if (member == null) {
-      compiler.internalError(element, '${element.runtimeType}');
-    }
-    ClassBuilder builder = new ClassBuilder(element, namer);
-    containerBuilder.addMemberMethod(member, builder);
-    jsAst.Node partialDescriptor =
-        builder.toObjectInitializer(emitClassDescriptor: false);
-
-    String name = member.name;
-    jsAst.Node function = member.code;
-    bool isStatic = !element.isInstanceMember;
-
-    /// Either a global object (non-instance members) or a prototype (instance
-    /// members).
-    jsAst.Node holder;
-
-    if (element.isInstanceMember) {
-      holder = emitter.prototypeAccess(element.enclosingClass);
-    } else {
-      holder = js('#', namer.globalObjectFor(element));
-    }
-
-    jsAst.Expression globalFunctionsAccess =
-        emitter.generateEmbeddedGlobalAccess(embeddedNames.GLOBAL_FUNCTIONS);
-
-    return js.statement(
-        r'this.addMethod(#, #, #, #, #)',
-        [partialDescriptor, js.string(name), holder,
-         new jsAst.LiteralBool(isStatic), globalFunctionsAccess]);
-  }
-
-  List<jsAst.Statement> computeFieldUpdateJs(FieldElementX element) {
-    if (element.isInstanceMember) {
-      // Any initializers are inlined in factory methods, and the field is
-      // declared by adding its class to [_classesWithSchemaChanges].
-      return const <jsAst.Statement>[];
-    }
-    // A static (or top-level) field.
-    if (backend.constants.lazyStatics.contains(element)) {
-      jsAst.Expression init =
-          emitter.oldEmitter.buildLazilyInitializedStaticField(
-              element, isolateProperties: namer.currentIsolate);
-      if (init == null) {
-        throw new StateError("Initializer optimized away for $element");
-      }
-      return <jsAst.Statement>[init.toStatement()];
-    } else {
-      // TODO(ahe): When a field is referenced it is enqueued. If the field has
-      // no initializer, it will not have any associated code, so it will
-      // appear as if it was newly enqueued.
-      if (element.initializer == null) {
-        return const <jsAst.Statement>[];
-      } else {
-        throw new StateError("Don't know how to compile $element");
-      }
-    }
-  }
-
-  String prettyPrintJs(jsAst.Node node) {
-    jsAst.JavaScriptPrintingOptions options =
-        new jsAst.JavaScriptPrintingOptions();
-    jsAst.Dart2JSJavaScriptPrintingContext context =
-        new jsAst.Dart2JSJavaScriptPrintingContext(compiler, null);
-    jsAst.Printer printer = new jsAst.Printer(options, context);
-    printer.blockOutWithoutBraces(node);
-    return context.outBuffer.getText();
+  Command computeMethodUpdateFletch(Element element) {
+    // throw "Not implemented yet.";
   }
 
   String callNameFor(FunctionElement element) {
@@ -1089,7 +907,7 @@ abstract class RemovalUpdate extends Update {
 
   bool get isRemoval => true;
 
-  void writeUpdateJsOn(List<jsAst.Statement> updates);
+  void writeUpdateFletchOn(List<Command> updates);
 
   void removeFromEnclosing() {
     // TODO(ahe): Need to recompute duplicated elements logic again. Simplest
@@ -1115,16 +933,8 @@ abstract class RemovalUpdate extends Update {
 }
 
 class RemovedFunctionUpdate extends RemovalUpdate
-    with JsFeatures, ReuseFunction {
+    with FletchFeatures, ReuseFunction {
   final PartialFunctionElement element;
-
-  /// Name of property to remove using JavaScript "delete". Null for
-  /// non-instance methods.
-  String name;
-
-  /// For instance methods, access to class object. Otherwise, access to the
-  /// method itself.
-  jsAst.Node elementAccess;
 
   bool wasStateCaptured = false;
 
@@ -1138,13 +948,6 @@ class RemovedFunctionUpdate extends RemovalUpdate
   void captureState() {
     if (wasStateCaptured) throw "captureState was called twice.";
     wasStateCaptured = true;
-
-    if (element.isInstanceMember) {
-      elementAccess = emitter.constructorAccess(element.enclosingClass);
-      name = namer.instanceMethodName(element);
-    } else {
-      elementAccess = emitter.staticFunctionAccess(element);
-    }
   }
 
   PartialFunctionElement apply() {
@@ -1154,29 +957,15 @@ class RemovedFunctionUpdate extends RemovalUpdate
     return null;
   }
 
-  void writeUpdateJsOn(List<jsAst.Statement> updates) {
-    if (elementAccess == null) {
-      compiler.internalError(
-          element, 'No elementAccess for ${element.runtimeType}');
-    }
-    if (element.isInstanceMember) {
-      if (name == null) {
-        compiler.internalError(element, 'No name for ${element.runtimeType}');
-      }
-      updates.add(
-          js.statement('delete #.prototype.#', [elementAccess, name]));
-    } else {
-      updates.add(js.statement('delete #', [elementAccess]));
-    }
+  void writeUpdateFletchOn(List<Command> updates) {
+    throw "Not implemented yet.";
   }
 }
 
-class RemovedClassUpdate extends RemovalUpdate with JsFeatures {
+class RemovedClassUpdate extends RemovalUpdate with FletchFeatures {
   final PartialClassElement element;
 
   bool wasStateCaptured = false;
-
-  final List<jsAst.Node> accessToStatics = <jsAst.Node>[];
 
   RemovedClassUpdate(Compiler compiler, this.element)
       : super(compiler);
@@ -1188,13 +977,6 @@ class RemovedClassUpdate extends RemovalUpdate with JsFeatures {
   void captureState() {
     if (wasStateCaptured) throw "captureState was called twice.";
     wasStateCaptured = true;
-    accessToStatics.add(emitter.constructorAccess(element));
-
-    element.forEachLocalMember((ElementX member) {
-      if (!member.isInstanceMember) {
-        accessToStatics.add(emitter.staticFunctionAccess(member as dynamic));
-      }
-    });
   }
 
   PartialClassElement apply() {
@@ -1215,28 +997,20 @@ class RemovedClassUpdate extends RemovalUpdate with JsFeatures {
     return null;
   }
 
-  void writeUpdateJsOn(List<jsAst.Statement> updates) {
-    if (accessToStatics.isEmpty) {
-      throw
-          new StateError("captureState must be called before writeUpdateJsOn.");
+  void writeUpdateFletchOn(List<Command> updates) {
+    if (!wasStateCaptured) {
+      throw new StateError(
+          "captureState must be called before writeUpdateFletchOn.");
     }
 
-    for (jsAst.Node access in accessToStatics) {
-      updates.add(js.statement('delete #', [access]));
-    }
+    throw "Not implemented yet.";
   }
 }
 
-class RemovedFieldUpdate extends RemovalUpdate with JsFeatures {
+class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
   final FieldElementX element;
 
   bool wasStateCaptured = false;
-
-  jsAst.Node prototypeAccess;
-
-  String getterName;
-
-  String setterName;
 
   RemovedFieldUpdate(Compiler compiler, this.element)
       : super(compiler);
@@ -1248,10 +1022,6 @@ class RemovedFieldUpdate extends RemovalUpdate with JsFeatures {
   void captureState() {
     if (wasStateCaptured) throw "captureState was called twice.";
     wasStateCaptured = true;
-
-    prototypeAccess = emitter.prototypeAccess(element.enclosingClass);
-    getterName = namer.getterForElement(element);
-    setterName = namer.setterForElement(element);
   }
 
   FieldElementX apply() {
@@ -1264,20 +1034,16 @@ class RemovedFieldUpdate extends RemovalUpdate with JsFeatures {
     return element;
   }
 
-  void writeUpdateJsOn(List<jsAst.Statement> updates) {
+  void writeUpdateFletchOn(List<Command> updates) {
     if (!wasStateCaptured) {
       throw new StateError(
-          "captureState must be called before writeUpdateJsOn.");
+          "captureState must be called before writeUpdateFletchOn.");
     }
-
-    updates.add(
-        js.statement('delete #.#', [prototypeAccess, getterName]));
-    updates.add(
-        js.statement('delete #.#', [prototypeAccess, setterName]));
+    throw "Not implemented yet.";
   }
 }
 
-class AddedFunctionUpdate extends Update with JsFeatures {
+class AddedFunctionUpdate extends Update with FletchFeatures {
   final PartialFunctionElement element;
 
   final /* ScopeContainerElement */ container;
@@ -1305,7 +1071,7 @@ class AddedFunctionUpdate extends Update with JsFeatures {
   }
 }
 
-class AddedClassUpdate extends Update with JsFeatures {
+class AddedClassUpdate extends Update with FletchFeatures {
   final PartialClassElement element;
 
   final LibraryElementX library;
@@ -1326,7 +1092,7 @@ class AddedClassUpdate extends Update with JsFeatures {
   }
 }
 
-class AddedFieldUpdate extends Update with JsFeatures {
+class AddedFieldUpdate extends Update with FletchFeatures {
   final FieldElementX element;
 
   final ScopeContainerElement container;
@@ -1351,7 +1117,7 @@ class AddedFieldUpdate extends Update with JsFeatures {
 }
 
 
-class ClassUpdate extends Update with JsFeatures {
+class ClassUpdate extends Update with FletchFeatures {
   final PartialClassElement before;
 
   final PartialClassElement after;
@@ -1461,21 +1227,15 @@ DeclarationSite declarationSite(Element element) {
   return element is ElementX ? element.declarationSite : null;
 }
 
-abstract class JsFeatures {
+abstract class FletchFeatures {
   Compiler get compiler;
 
-  JavaScriptBackend get backend => compiler.backend;
-
-  Namer get namer => backend.namer;
-
-  CodeEmitterTask get emitter => backend.emitter;
-
-  ContainerBuilder get containerBuilder => emitter.oldEmitter.containerBuilder;
+  FletchBackend get backend => compiler.backend;
 
   EnqueueTask get enqueuer => compiler.enqueuer;
 }
 
-class EmitterHelper extends JsFeatures {
+class EmitterHelper extends FletchFeatures {
   final Compiler compiler;
 
   EmitterHelper(this.compiler);

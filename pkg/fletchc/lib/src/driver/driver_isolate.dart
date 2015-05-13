@@ -23,7 +23,8 @@ import 'dart:isolate' show
     SendPort;
 
 import '../../compiler.dart' show
-    FletchCompiler;
+    FletchCompiler,
+    StringOrUri;
 
 import '../../commands.dart' as commands_lib;
 
@@ -161,7 +162,9 @@ Future<int> compileAndRun(
     String fletchVm,
     List<String> arguments,
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator) async {
+    StreamIterator<Command> commandIterator,
+    // TODO(ahe): packageRoot should be an option.
+    {@StringOrUri packageRoot: "package/"}) async {
   String script;
   String snapshotPath;
 
@@ -187,8 +190,7 @@ Future<int> compileAndRun(
   FletchCompiler compiler =
       new FletchCompiler(
           options: options, script: script, fletchVm: fletchVm,
-          // TODO(ahe): packageRoot should be an option.
-          packageRoot: "package/");
+          packageRoot: packageRoot);
   bool compilerCrashed = false;
   List commands = await compiler.run().catchError((e, trace) {
     compilerCrashed = true;

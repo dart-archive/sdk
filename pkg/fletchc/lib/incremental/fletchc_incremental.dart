@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library dart2js_incremental;
+library fletchc_incremental;
 
 import 'dart:async' show
     EventSink,
@@ -23,9 +23,6 @@ import 'package:compiler/compiler.dart' show
 import 'package:compiler/src/dart2jslib.dart' show
     NullSink;
 
-import 'package:compiler/src/js_backend/js_backend.dart' show
-    JavaScriptBackend;
-
 import 'package:compiler/src/elements/elements.dart' show
     LibraryElement;
 
@@ -35,6 +32,15 @@ import 'library_updater.dart' show
     Logger;
 
 import 'package:compiler/src/js/js.dart' as jsAst;
+
+import '../compiler.dart' show
+   FletchCompiler;
+
+import '../src/fletch_backend.dart' show
+    FletchBackend;
+
+import '../commands.dart' show
+    Command;
 
 part 'caching_compiler.dart';
 
@@ -53,7 +59,7 @@ class IncrementalCompiler {
   final List<String> options;
   final CompilerOutputProvider outputProvider;
   final Map<String, dynamic> environment;
-  final List<String> _updates = <String>[];
+  final List<Command> _updates = <Command>[];
   final IncrementalCompilerContext _context = new IncrementalCompilerContext();
 
   Compiler _compiler;
@@ -66,9 +72,9 @@ class IncrementalCompiler {
       this.options,
       this.outputProvider,
       this.environment}) {
-    if (libraryRoot == null) {
-      throw new ArgumentError('libraryRoot is null.');
-    }
+    // if (libraryRoot == null) {
+    //   throw new ArgumentError('libraryRoot is null.');
+    // }
     if (inputProvider == null) {
       throw new ArgumentError('inputProvider is null.');
     }
@@ -109,7 +115,7 @@ class IncrementalCompiler {
         reuseLibrary: reuseLibrary);
   }
 
-  Future<String> compileUpdates(
+  Future<List<Command>> compileUpdates(
       Map<Uri, Uri> updatedFiles,
       {Logger logTime,
        Logger logVerbose}) {
@@ -136,9 +142,11 @@ class IncrementalCompiler {
       if (compiler.compilationFailed) {
         return null;
       } else {
-        String update = updater.computeUpdateJs();
-        _updates.add(update);
-        return update;
+        return updater.computeUpdateFletch();
+        // TODO(ahe): Do this:
+        // List<Command> update = updater.computeUpdateFletch();
+        // _updates.add(update);
+        // return update;
       }
     });
   }

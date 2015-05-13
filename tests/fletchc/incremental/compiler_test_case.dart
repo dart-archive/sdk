@@ -14,10 +14,6 @@ export 'dart:async' show
 import 'async_helper.dart' show
     asyncTest;
 
-import 'package:compiler_tests/dart2js/compiler_helper.dart' show
-    MockCompiler,
-    compilerFor;
-
 export 'package:expect/expect.dart' show
     Expect;
 
@@ -27,42 +23,29 @@ import 'package:compiler/src/elements/elements.dart' show
 export 'package:compiler/src/elements/elements.dart' show
     LibraryElement;
 
-const String CONSTANT_CLASS = 'class Constant { const Constant(); }';
+import 'package:fletchc/compiler.dart' show
+    StringOrUri;
+
+export 'package:fletchc/compiler.dart' show
+    StringOrUri;
 
 const String SCHEME = 'org.trydart.compiler-test-case';
 
 Uri customUri(String path) => Uri.parse('$SCHEME:/$path');
 
 abstract class CompilerTestCase {
-  final String source;
-
   final Uri scriptUri;
 
-  final MockCompiler compiler;
+  CompilerTestCase([@StringOrUri scriptUri])
+      : this.scriptUri = makeScriptUri(scriptUri);
 
-  CompilerTestCase.init(this.source, this.scriptUri, this.compiler);
-
-  CompilerTestCase.intermediate(String source, Uri scriptUri)
-      : this.init(source, scriptUri, compilerFor(source, scriptUri));
-
-  CompilerTestCase(String source, [String path])
-      : this.intermediate(source, customUri(path == null ? 'main.dart' : path));
-
-  Future<LibraryElement> loadMainApp() {
-    return compiler.libraryLoader.loadLibrary(scriptUri)
-        .then((LibraryElement library) {
-          if (compiler.mainApp == null) {
-            compiler.mainApp = library;
-          } else if (compiler.mainApp != library) {
-            throw
-                "Inconsistent use of compiler"
-                " (${compiler.mainApp} != $library).";
-          }
-          return library;
-        });
+  static Uri makeScriptUri(@StringOrUri scriptUri) {
+    if (scriptUri == null) return customUri('main.dart');
+    if (scriptUri is Uri) return scriptUri;
+    return customUri(scriptUri as String);
   }
 
   Future run();
 
-  String toString() => source;
+  String toString() => 'CompilerTestCase($scriptUri)';
 }

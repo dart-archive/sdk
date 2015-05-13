@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-part of dart2js_incremental;
+part of fletchc_incremental;
 
 /// Do not call this method directly. It will be made private.
 // TODO(ahe): Make this method private.
@@ -16,11 +16,11 @@ Future<Compiler> reuseCompiler(
      Uri packageRoot,
      bool packagesAreImmutable: false,
      Map<String, dynamic> environment,
-     Future<bool> reuseLibrary(LibraryElement library)}) {
+     Future<bool> reuseLibrary(LibraryElement library)}) async {
   UserTag oldTag = new UserTag('_reuseCompiler').makeCurrent();
-  if (libraryRoot == null) {
-    throw 'Missing libraryRoot';
-  }
+  // if (libraryRoot == null) {
+  //   throw 'Missing libraryRoot';
+  // }
   if (inputProvider == null) {
     throw 'Missing inputProvider';
   }
@@ -35,7 +35,7 @@ Future<Compiler> reuseCompiler(
   }
   Compiler compiler = cachedCompiler;
   if (compiler == null ||
-      compiler.libraryRoot != libraryRoot ||
+      (libraryRoot != null && compiler.libraryRoot != libraryRoot) ||
       !compiler.hasIncrementalSupport ||
       compiler.hasCrashed ||
       compiler.enqueuer.resolution.hasEnqueuedReflectiveElements ||
@@ -53,33 +53,15 @@ Future<Compiler> reuseCompiler(
       }
     }
     oldTag.makeCurrent();
-    compiler = new Compiler(
-        inputProvider,
-        outputProvider,
-        diagnosticHandler,
-        libraryRoot,
-        packageRoot,
-        options,
-        environment);
-    JavaScriptBackend backend = compiler.backend;
-
-    // Much like a scout, an incremental compiler is always prepared. For
-    // mixins, classes, and lazy statics, at least.
-    backend.emitter.oldEmitter
-        ..needsClassSupport = true
-        ..needsMixinSupport = true
-        ..needsLazyInitializer = true
-        ..needsStructuredMemberInfo = true;
-
-    Uri core = Uri.parse("dart:core");
-    return compiler.libraryLoader.loadLibrary(core).then((_) {
-      // Likewise, always be prepared for runtimeType support.
-      // TODO(johnniwinther): Add global switch to force RTI.
-      compiler.enabledRuntimeType = true;
-      backend.registerRuntimeType(
-          compiler.enqueuer.resolution, compiler.globalDependencies);
-      return compiler;
-    });
+    compiler = await new FletchCompiler(
+        provider: inputProvider,
+        outputProvider: outputProvider,
+        handler: diagnosticHandler,
+        libraryRoot: libraryRoot,
+        packageRoot: packageRoot,
+        options: options,
+        environment: environment).backdoor.compilerImplementation;
+    return compiler;
   } else {
     for (final task in compiler.tasks) {
       if (task.watch != null) {
@@ -97,59 +79,11 @@ Future<Compiler> reuseCompiler(
         ..enqueuer.codegen.hasEnqueuedReflectiveElements = false
         ..enqueuer.codegen.hasEnqueuedReflectiveStaticFields = false
         ..compilationFailed = false;
-    JavaScriptBackend backend = compiler.backend;
-
-    // TODO(ahe): Seems this cache only serves to tell
-    // [OldEmitter.invalidateCaches] if it was invoked on a full compile (in
-    // which case nothing should be invalidated), or if it is an incremental
-    // compilation (in which case, holders/owners of newly compiled methods
-    // must be invalidated).
-    backend.emitter.oldEmitter.cachedElements.add(null);
+    FletchBackend backend = compiler.backend;
 
     compiler.enqueuer.codegen
         ..newlyEnqueuedElements.clear()
         ..newlySeenSelectors.clear();
-
-    backend.emitter.oldEmitter.nsmEmitter
-        ..trivialNsmHandlers.clear();
-
-    backend.emitter.typeTestRegistry
-        ..checkedClasses = null
-        ..checkedFunctionTypes = null
-        ..rtiNeededClasses.clear()
-        ..cachedClassesUsingTypeVariableTests = null;
-
-    backend.emitter.oldEmitter.interceptorEmitter
-        ..interceptorInvocationNames.clear();
-
-    backend.emitter.nativeEmitter
-        ..hasNativeClasses = false
-        ..nativeMethods.clear();
-
-    backend.emitter.readTypeVariables.clear();
-
-    backend.emitter.oldEmitter
-        ..outputBuffers.clear()
-        ..isolateProperties = null
-        ..classesCollector = null
-        ..mangledFieldNames.clear()
-        ..mangledGlobalFieldNames.clear()
-        ..recordedMangledNames.clear()
-        ..clearCspPrecompiledNodes()
-        ..elementDescriptors.clear();
-
-    backend.emitter
-        ..nativeClassesAndSubclasses.clear()
-        ..outputContainsConstantList = false
-        ..neededClasses.clear()
-        ..outputClassLists.clear()
-        ..outputConstantLists.clear()
-        ..outputStaticLists.clear()
-        ..outputStaticNonFinalFieldLists.clear()
-        ..outputLibraryLists.clear();
-
-    backend
-        ..preMirrorsMethodCount = 0;
 
     if (reuseLibrary == null) {
       reuseLibrary = (LibraryElement library) {
