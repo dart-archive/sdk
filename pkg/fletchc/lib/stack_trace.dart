@@ -8,8 +8,15 @@ class StackFrame {
   final int functionId;
   final int bytecodePointer;
   final FletchCompiler compiler;
+  final bool isInternal;
+  final Session session;
 
-  StackFrame(this.functionId, this.bytecodePointer, this.compiler);
+  StackFrame(int functionId, this.bytecodePointer, FletchCompiler compiler,
+             this.session)
+      : this.functionId = functionId,
+        this.compiler = compiler,
+        isInternal =
+            compiler.lookupCompiledFunction(functionId).isParameterStub;
 
   String invokeString(Bytecode bytecode) {
     if (bytecode is InvokeMethod) {
@@ -19,6 +26,8 @@ class StackFrame {
     }
     return '';
   }
+
+  bool get isVisible => session.showInternalFrames || !isInternal;
 
   void list() {
     print(compiler.sourceListString(functionId, bytecodePointer - 1));
@@ -90,14 +99,14 @@ class StackFrame {
 
 class StackTrace {
   final List<StackFrame> stackFrames;
+
+  List<int> visibleFrameMapping;
   int framesToGo;
   int maxNameLength = 0;
 
-  factory StackTrace(int numberOfFrames) {
-    return new StackTrace._(numberOfFrames, new List(numberOfFrames));
-  }
-
-  StackTrace._(this.framesToGo, this.stackFrames);
+  StackTrace(int framesToGo)
+      : this.framesToGo = framesToGo,
+        stackFrames = new List(framesToGo);
 
   int get frames => stackFrames.length;
 
@@ -115,20 +124,43 @@ class StackTrace {
   void write(int currentFrame) {
     assert(framesToGo == 0);
     print("Stack trace:");
+    var frameNumber = 0;
     for (var i = 0; i < stackFrames.length; i++) {
-      var marker = currentFrame == i ? '> ' : '  ';
+      if (!stackFrames[i].isVisible) continue;
+      var marker = currentFrame == frameNumber ? '> ' : '  ';
       var line = shortStringForFrame(i);
-      String frameNumberString = '$i: '.padLeft(3);
+      String frameNumberString = '${frameNumber++}: '.padLeft(3);
       print('$marker$frameNumberString$line');
     }
   }
 
+  // Map user visible frame numbers to actual frame numbers.
+  int actualFrameNumber(int visibleFrameNumber) {
+    if (visibleFrameMapping == null) {
+      visibleFrameMapping = [];
+      for (int i = 0; i < stackFrames.length; i++) {
+        if (stackFrames[i].isVisible) visibleFrameMapping.add(i);
+      }
+    }
+    return (visibleFrameNumber < visibleFrameMapping.length)
+        ? visibleFrameMapping[visibleFrameNumber]
+        : -1;
+  }
+
+  StackFrame visibleFrame(int frame) {
+    return stackFrames[actualFrameNumber(frame)];
+  }
+
+  void visibilityChanged() {
+    visibleFrameMapping = null;
+  }
+
   void list(int frame) {
-    stackFrames[frame].list();
+    visibleFrame(frame).list();
   }
 
   void disasm(int frame) {
-    stackFrames[frame].disasm();
+    visibleFrame(frame).disasm();
   }
 
   SourceLocation sourceLocation() {
@@ -136,7 +168,7 @@ class StackTrace {
   }
 
   ScopeInfo scopeInfo(int frame) {
-    return stackFrames[frame].scopeInfo();
+    return visibleFrame(frame).scopeInfo();
   }
 
   int stepBytecodePointer(SourceLocation location) {

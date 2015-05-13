@@ -25,6 +25,8 @@ Commands:
   'p <name>'                            print the value of local variable
   'p'                                   print the values of all locals
   'disasm'                              disassemble code for frame
+  't <flag>'                            toggle one of the flags:
+                                          - 'internal' : show internal frames
   'q'/'quit'                            quit the session
 """;
 
@@ -143,6 +145,20 @@ class InputHandler {
         break;
       case 'sob':
         await session.stepOverBytecode();
+        break;
+      case 't':
+        String toggle;
+        if (commandComponents.length > 1) {
+          toggle = commandComponents[1];
+        }
+        switch (toggle) {
+          case 'internal':
+            await session.toggleInternal();
+            break;
+          default:
+            print('### invalid flag $toggle');
+            break;
+        }
         break;
       default:
         print('### unknown command: $command');

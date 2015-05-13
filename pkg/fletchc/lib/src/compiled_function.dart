@@ -114,6 +114,10 @@ class CompiledFunction {
     return kind == CompiledFunctionKind.ACCESSOR;
   }
 
+  bool get isParameterStub {
+    return kind == CompiledFunctionKind.PARAMETER_STUB;
+  }
+
   bool get isConstructor => element != null && element.isConstructor;
 
   int allocateConstant(ConstantValue constant) {

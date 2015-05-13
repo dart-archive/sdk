@@ -36,6 +36,7 @@ class Session {
   int currentFrame = 0;
   SourceLocation currentLocation;
   bool running = false;
+  bool showInternalFrames = false;
 
   Session(this.vmSocket, this.compiler);
 
@@ -245,8 +246,10 @@ class Session {
 
   Future stepOut() async {
     if (!checkRunning()) return;
-    const ProcessStepOut().addTo(vmSocket);
-    await handleProcessStop();
+    do {
+      const ProcessStepOut().addTo(vmSocket);
+      await handleProcessStop();
+    } while (!currentStackTrace.stackFrames[0].isVisible);
     await backtrace();
   }
 
@@ -287,7 +290,7 @@ class Session {
 
   void selectFrame(int frame) {
     if (currentStackTrace == null ||
-        frame >= currentStackTrace.stackFrames.length) {
+        currentStackTrace.actualFrameNumber(frame) == -1) {
       print('### invalid frame number $frame');
       return;
     }
@@ -305,7 +308,8 @@ class Session {
             compiler,
             new StackFrame(backtraceResponse.methodIds[i],
                            backtraceResponse.bytecodeIndices[i],
-                           compiler));
+                           compiler,
+                           this));
       }
       currentLocation = currentStackTrace.sourceLocation();
     }
@@ -317,7 +321,8 @@ class Session {
   }
 
   Future printLocal(String name, LocalValue local) async {
-    new ProcessLocal(currentFrame, local.slot).addTo(vmSocket);
+    var actualFrameNumber = currentStackTrace.actualFrameNumber(currentFrame);
+    new ProcessLocal(actualFrameNumber, local.slot).addTo(vmSocket);
     Command response = await nextVmCommand();
     if (response is Integer) {
       print('$name: ${response.value}');
@@ -353,6 +358,14 @@ class Session {
       return;
     }
     await printLocal(name, local);
+  }
+
+  Future toggleInternal() async {
+    showInternalFrames = !showInternalFrames;
+    if (currentStackTrace != null) {
+      currentStackTrace.visibilityChanged();
+      await backtrace();
+    }
   }
 
   void quit() {
