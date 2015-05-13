@@ -583,7 +583,7 @@ void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
   // have an explicit command to start changes. That should perform the
   // unfolding and we can replace this with an assert that the program
   // is unfolded here.
-  if (program->is_compact()) program->Unfold();
+  if (program()->is_compact()) program()->Unfold();
 
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
       result,
