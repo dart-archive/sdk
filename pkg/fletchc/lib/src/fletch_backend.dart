@@ -1007,7 +1007,7 @@ class FletchBackend extends Backend {
 
   void pushNewFunction(
       CompiledFunction compiledFunction,
-      List<Commands> commands,
+      List<Command> commands,
       List<Function> deferredActions) {
     int arity = compiledFunction.builder.functionArity;
     int constantCount = compiledFunction.constants.length;
