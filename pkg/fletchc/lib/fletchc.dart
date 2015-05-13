@@ -57,17 +57,7 @@ main(List<String> arguments) async {
       options: options,
       script: script,
       packageRoot: "package/");
-  bool compilerCrashed = false;
-  List commands = await compiler.run().catchError((e, trace) {
-    compilerCrashed = true;
-    // TODO(ahe): Remove this catchError block when this bug is fixed:
-    // https://code.google.com/p/dart/issues/detail?id=22437.
-    print(e);
-    print(trace);
-    return [];
-  });
-
-  if (compilerCrashed) return;
+  List commands = await compiler.run();
 
   var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 

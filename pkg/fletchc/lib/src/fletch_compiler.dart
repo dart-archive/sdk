@@ -87,6 +87,10 @@ class FletchCompiler extends FletchCompilerHack {
   Map<Uri, CompilationUnitElementX> compilationUnits;
   FletchContext internalContext;
 
+  /// A reference to [../compiler.dart:FletchCompiler] used for testing.
+  // TODO(ahe): Clean this up and remove this.
+  var helper;
+
   FletchCompiler(
       api.CompilerInputProvider provider,
       api.CompilerOutputProvider outputProvider,

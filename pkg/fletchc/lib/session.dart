@@ -6,7 +6,9 @@ library fletch.session;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' hide exit;
+
+import 'dart:io' as io;
 
 import 'bytecodes.dart';
 import 'commands.dart';
@@ -370,5 +372,9 @@ class Session {
 
   void quit() {
     vmSocket.close();
+  }
+
+  void exit(int exitCode) {
+    io.exit(exitCode);
   }
 }

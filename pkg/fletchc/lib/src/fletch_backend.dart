@@ -888,61 +888,7 @@ class FletchBackend extends Backend {
 
     List<Function> deferredActions = <Function>[];
 
-    void pushNewFunction(CompiledFunction compiledFunction) {
-      int arity = compiledFunction.builder.functionArity;
-      int constantCount = compiledFunction.constants.length;
-      int methodId = compiledFunction.methodId;
-
-      assert(functions[methodId] == compiledFunction);
-      assert(compiledFunction.builder.bytecodes.isNotEmpty);
-
-      compiledFunction.constants.forEach((constant, int index) {
-        if (constant is ConstantValue) {
-          if (constant is FletchFunctionConstant) {
-            commands.add(const PushNull());
-            deferredActions.add(() {
-              commands
-                  ..add(new PushFromMap(MapId.methods, methodId))
-                  ..add(new PushFromMap(MapId.methods, constant.methodId))
-                  ..add(new ChangeMethodLiteral(index));
-            });
-          } else if (constant is FletchClassConstant) {
-            commands.add(const PushNull());
-            deferredActions.add(() {
-              commands
-                  ..add(new PushFromMap(MapId.methods, methodId))
-                  ..add(new PushFromMap(MapId.classes, constant.classId))
-                  ..add(new ChangeMethodLiteral(index));
-            });
-          } else {
-            commands.add(const PushNull());
-            deferredActions.add(() {
-              int id = context.compiledConstants[constant];
-              if (id == null) {
-                throw "Unsupported constant: ${constant.toStructuredString()}";
-              }
-              commands
-                  ..add(new PushFromMap(MapId.methods, methodId))
-                  ..add(new PushFromMap(MapId.constants, id))
-                  ..add(new ChangeMethodLiteral(index));
-            });
-          }
-        } else {
-          throw "Unsupported constant: ${constant.runtimeType}";
-        }
-      });
-
-      commands.add(
-          new PushNewFunction(
-              arity,
-              constantCount,
-              compiledFunction.builder.bytecodes,
-              compiledFunction.builder.catchRanges));
-
-      commands.add(new PopToMap(MapId.methods, methodId));
-    }
-
-    functions.forEach(pushNewFunction);
+    functions.forEach((f) => pushNewFunction(f, commands, deferredActions));
 
     int changes = 0;
 
@@ -1057,6 +1003,63 @@ class FletchBackend extends Backend {
     this.commands = commands;
 
     return 0;
+  }
+
+  void pushNewFunction(
+      CompiledFunction compiledFunction,
+      List<Commands> commands,
+      List<Function> deferredActions) {
+    int arity = compiledFunction.builder.functionArity;
+    int constantCount = compiledFunction.constants.length;
+    int methodId = compiledFunction.methodId;
+
+    assert(functions[methodId] == compiledFunction);
+    assert(compiledFunction.builder.bytecodes.isNotEmpty);
+
+    compiledFunction.constants.forEach((constant, int index) {
+      if (constant is ConstantValue) {
+        if (constant is FletchFunctionConstant) {
+          commands.add(const PushNull());
+          deferredActions.add(() {
+            commands
+                ..add(new PushFromMap(MapId.methods, methodId))
+                ..add(new PushFromMap(MapId.methods, constant.methodId))
+                ..add(new ChangeMethodLiteral(index));
+          });
+        } else if (constant is FletchClassConstant) {
+          commands.add(const PushNull());
+          deferredActions.add(() {
+            commands
+                ..add(new PushFromMap(MapId.methods, methodId))
+                ..add(new PushFromMap(MapId.classes, constant.classId))
+                ..add(new ChangeMethodLiteral(index));
+          });
+        } else {
+          commands.add(const PushNull());
+          deferredActions.add(() {
+            int id = context.compiledConstants[constant];
+            if (id == null) {
+              throw "Unsupported constant: ${constant.toStructuredString()}";
+            }
+            commands
+                ..add(new PushFromMap(MapId.methods, methodId))
+                ..add(new PushFromMap(MapId.constants, id))
+                ..add(new ChangeMethodLiteral(index));
+          });
+        }
+      } else {
+        throw "Unsupported constant: ${constant.runtimeType}";
+      }
+    });
+
+    commands.add(
+        new PushNewFunction(
+            arity,
+            constantCount,
+            compiledFunction.builder.bytecodes,
+            compiledFunction.builder.catchRanges));
+
+    commands.add(new PopToMap(MapId.methods, methodId));
   }
 
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
@@ -1266,8 +1269,6 @@ class FletchBackend extends Backend {
   void forgetElement(Element element) {
     CompiledFunction compiledFunction = compiledFunctions[element];
     if (compiledFunction == null) return;
-    print("Reusing ${compiledFunction.verboseToString()}");
     compiledFunction.reuse();
-    print("Reused: ${compiledFunction.verboseToString()}");
   }
 }

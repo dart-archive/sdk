@@ -202,7 +202,9 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     compiler.log("Using library root: $libraryRoot");
     compiler.log("Using package root: $packageRoot");
 
-    return new FletchCompiler._(compiler, script, isVerbose);
+    var helper = new FletchCompiler._(compiler, script, isVerbose);
+    compiler.helper = helper;
+    return helper;
   }
 
   Future run([@StringOrUri script]) async {

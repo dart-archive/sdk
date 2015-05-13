@@ -39,11 +39,26 @@ const illegalState = "Illegal state.";
 /// [Isolate.spawnUri].
 external invokeMain([arguments, isolateArgument]);
 
+/// Trivial wrapper around invokeMain to make it easy to patch changes to main
+/// (since invokeMain is handled specially by the compiler).
+// TODO(ahe): Remove this.
+callMain(arguments) => invokeMain(arguments);
+
 /// This is the main entry point for a Fletch program, and it takes care of
 /// calling "main" and exiting the VM when "main" is done.
 void entry(int mainArity) {
-  Thread.exit(invokeMain([]));
+  var result;
+  do {
+    result = callMain([]);
+  } while (!isMainDone);
+  Thread.exit(result);
 }
+
+/// No-op method used for testing of incremental compiler. The compiler will
+/// set a break point here, to get notified that main is done.
+bool get isMainDone => mainIsDone;
+
+const bool mainIsDone = true;
 
 runToEnd(entry) {
   Thread.exit(entry());

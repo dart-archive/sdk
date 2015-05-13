@@ -57,7 +57,10 @@ import '../src/fletch_backend.dart' show
     FletchBackend;
 
 import '../commands.dart' show
-    Command;
+    Command,
+    MapId;
+
+import '../commands.dart' as commands_lib;
 
 import 'package:compiler/src/util/util.dart' show
     Link,
@@ -87,6 +90,9 @@ import 'diff.dart' show
 import 'fletchc_incremental.dart' show
     IncrementalCompilationFailed,
     IncrementalCompiler;
+
+import '../src/compiled_function.dart' show
+    CompiledFunction;
 
 typedef void Logger(message);
 
@@ -159,6 +165,8 @@ class LibraryUpdater extends FletchFeatures {
   final Logger logVerbose;
 
   final List<Update> updates = <Update>[];
+
+  final List<Function> deferredActions = <Function>[];
 
   final List<FailedUpdate> _failedUpdates = <FailedUpdate>[];
 
@@ -742,6 +750,8 @@ class LibraryUpdater extends FletchFeatures {
   }
 
   List<Command> computeUpdateFletch() {
+    int constantCount = backend.context.compiledConstants.length;
+
     List<Update> removals = <Update>[];
     List<Element> updatedElements = applyUpdates(removals);
     if (compiler.progress != null) {
@@ -759,7 +769,7 @@ class LibraryUpdater extends FletchFeatures {
     compiler.phase = Compiler.PHASE_DONE_RESOLVING;
 
     // TODO(ahe): Clean this up. Don't call this method in analyze-only mode.
-    if (compiler.analyzeOnly) return "/* analyze only */";
+    if (compiler.analyzeOnly) return <Command>[];
 
     Set<ClassElementX> changedClasses =
         new Set<ClassElementX>.from(_classesWithSchemaChanges);
@@ -790,10 +800,6 @@ class LibraryUpdater extends FletchFeatures {
       }
     }
 
-    // TODO(ahe): Don't reassemble the entire program.
-    compiler.backend.assembleProgram();
-    return compiler.backend.commands;
-
     List<Command> updates = <Command>[];
 
     // TODO(ahe): Compute this.
@@ -804,23 +810,49 @@ class LibraryUpdater extends FletchFeatures {
     }
     for (Element element in enqueuer.codegen.newlyEnqueuedElements) {
       if (element.isField) {
-        updates.addAll(computeFieldUpdateFletch(element));
+        computeFieldUpdateFletch(element, updates);
       } else {
-        updates.add(computeMethodUpdateFletch(element));
+        computeMethodUpdateFletch(element, updates);
       }
     }
 
-    Set<ConstantValue> newConstants = new Set<ConstantValue>.identity()..addAll(
-        (compiler.backend.constants as dynamic).compiledConstants);
-    newConstants.removeAll(_compiledConstants);
+    backend.context.compiledConstants.forEach((constant, id) {
+      if (id >= constantCount) {
+        updates.add(
+            new commands_lib.PushNewString(
+                constant.primitiveValue.slowToString()));
+        updates.add(new commands_lib.PopToMap(MapId.constants, id));
+      }
+    });
+
+    for (Function action in deferredActions) {
+      action();
+    }
+
+    updates.add(new commands_lib.CommitChanges(deferredActions.length));
+
+    return updates;
   }
 
-  List<Command> computeFieldUpdateFletch(FieldElementX element) {
-    throw "Not implemented yet.";
+  void computeFieldUpdateFletch(FieldElementX element, List<Command> commands) {
+    throw new IncrementalCompilationFailed("Not implemented yet.");
   }
 
-  Command computeMethodUpdateFletch(Element element) {
-    // throw "Not implemented yet.";
+  void computeMethodUpdateFletch(Element element, List<Command> commands) {
+    CompiledFunction function = lookupCompiledFunction(element);
+    backend.pushNewFunction(function, commands, deferredActions);
+    if (element == backend.context.compiler.mainFunction) {
+      deferredActions.add(() {
+        CompiledFunction callMain =
+            lookupCompiledFunction(
+                backend.fletchSystemLibrary.findLocal('callMain'));
+        commands.add(
+            new commands_lib.PushFromMap(MapId.methods, callMain.methodId));
+        commands.add(
+            new commands_lib.PushFromMap(MapId.methods, function.methodId));
+        commands.add(new commands_lib.ChangeMethodLiteral(0));
+      });
+    }
   }
 
   String callNameFor(FunctionElement element) {
@@ -828,10 +860,6 @@ class LibraryUpdater extends FletchFeatures {
     String callPrefix = namer.callPrefix;
     int parameterCount = element.functionSignature.parameterCount;
     return '$callPrefix\$$parameterCount';
-  }
-
-  List<String> computeFields(ClassElement cls) {
-    return new EmitterHelper(compiler).computeFields(cls);
   }
 
   void _ensureAllNeededEntitiesComputed() {
@@ -958,7 +986,7 @@ class RemovedFunctionUpdate extends RemovalUpdate
   }
 
   void writeUpdateFletchOn(List<Command> updates) {
-    throw "Not implemented yet.";
+    throw new IncrementalCompilationFailed("Not implemented yet.");
   }
 }
 
@@ -1003,7 +1031,7 @@ class RemovedClassUpdate extends RemovalUpdate with FletchFeatures {
           "captureState must be called before writeUpdateFletchOn.");
     }
 
-    throw "Not implemented yet.";
+    throw new IncrementalCompilationFailed("Not implemented yet.");
   }
 }
 
@@ -1039,7 +1067,7 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
       throw new StateError(
           "captureState must be called before writeUpdateFletchOn.");
     }
-    throw "Not implemented yet.";
+    throw new IncrementalCompilationFailed("Not implemented yet.");
   }
 }
 
@@ -1233,22 +1261,9 @@ abstract class FletchFeatures {
   FletchBackend get backend => compiler.backend;
 
   EnqueueTask get enqueuer => compiler.enqueuer;
-}
 
-class EmitterHelper extends FletchFeatures {
-  final Compiler compiler;
-
-  EmitterHelper(this.compiler);
-
-  ClassEmitter get classEmitter => backend.emitter.oldEmitter.classEmitter;
-
-  List<String> computeFields(ClassElement classElement) {
-    Class cls = new ProgramBuilder(compiler, namer, emitter)
-        .buildFieldsHackForIncrementalCompilation(classElement);
-    // TODO(ahe): Rewrite for new emitter.
-    ClassBuilder builder = new ClassBuilder(classElement, namer);
-    classEmitter.emitFields(cls, builder);
-    return builder.fields;
+  CompiledFunction lookupCompiledFunction(FunctionElement function) {
+    return backend.compiledFunctions[function];
   }
 }
 

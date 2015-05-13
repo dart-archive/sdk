@@ -17,7 +17,9 @@ import 'dart:async' show
     StreamIterator;
 
 import 'dart:convert' show
-    UTF8;
+    LineSplitter,
+    UTF8,
+    Utf8Decoder;
 
 import 'async_helper.dart' show
     asyncTest;
@@ -37,6 +39,8 @@ import 'compiler_test_case.dart' show
 
 import 'package:compiler/src/elements/elements.dart' show
     Element,
+    FieldElement,
+    FunctionElement,
     LibraryElement;
 
 import 'package:compiler/src/dart2jslib.dart' show
@@ -46,9 +50,14 @@ import 'package:fletchc/incremental/fletchc_incremental.dart' show
     IncrementalCompilationFailed;
 
 import 'package:fletchc/commands.dart' show
-    Command;
+    Command,
+    MapId;
 
 import 'package:fletchc/commands.dart' as commands_lib;
+
+import 'package:fletchc/session.dart' show
+    CommandReader,
+    Session;
 
 import 'program_result.dart';
 
@@ -1878,7 +1887,10 @@ void main() {
   testCount += skip;
   skippedCount += skip;
 
-  return asyncTest(() => Future.forEach(tests.skip(skip), compileAndRun)
+  var testsToRun = tests.skip(skip);
+  // TODO(ahe): Remove the following line, as it means only run the first test.
+  testsToRun = testsToRun.take(1);
+  return asyncTest(() => Future.forEach(testsToRun, compileAndRun)
       .then(updateSummary));
 }
 
@@ -1918,13 +1930,13 @@ compileAndRun(EncodedResult encodedResult) async {
   IoCompilerTestCase test = new IoCompilerTestCase(program.code);
   List<Command> commands = await test.run();
 
-  String stdout = await runFletchVM(test, commands);
+  TestSession session = await runFletchVM(test, commands);
 
-  String expected = program.messages.join('\n');
-  if (!expected.isEmpty) {
-    expected = "$expected\n";
+  for (String expected in program.messages) {
+    Expect.isTrue(await session.iterator.moveNext());
+    Expect.stringEquals(expected, session.iterator.current);
+    print("Got expected output: ${session.iterator.current}");
   }
-  Expect.stringEquals(expected, stdout);
 
   int version = 2;
   for (ProgramResult program in programs.skip(1)) {
@@ -1971,24 +1983,44 @@ compileAndRun(EncodedResult encodedResult) async {
       return null;
     }
 
-    String stdout = await runFletchVM(test, update);
-    String expected = program.messages.join('\n');
-    if (!expected.isEmpty) {
-      expected = "$expected\n";
+    for (Command command in update) {
+      print(command);
+      command.addTo(session.vmSocket);
     }
-    Expect.stringEquals(expected, stdout);
 
-    // TODO(ahe): Send ['apply-update', update] to VM.
+    await session.cont();
 
-    // TODO(ahe): Expect program.messages from VM.
+    for (String expected in program.messages) {
+      Expect.isTrue(await session.iterator.moveNext());
+      Expect.stringEquals(expected, session.iterator.current);
+    }
 
     // TODO(ahe): Enable SerializeScopeTestCase for multiple
     // parts.
-    if (program.code is! String) return null;
-    return new SerializeScopeTestCase(
-        program.code, test.incrementalCompiler.mainApp,
-        test.incrementalCompiler.compiler).run();
+    if (program.code is String) {
+      await new SerializeScopeTestCase(
+          program.code, test.incrementalCompiler.mainApp,
+          test.incrementalCompiler.compiler).run();
+    }
   }
+
+  for (Command command in [
+           new commands_lib.PushFromMap(MapId.methods, session.methodId),
+           const commands_lib.PushBoolean(true),
+           const commands_lib.ChangeMethodLiteral(0),
+           const commands_lib.CommitChanges(1),
+           const commands_lib.ProcessContinue(),
+           const commands_lib.SessionEnd()]) {
+    print(command);
+    command.addTo(session.vmSocket);
+  }
+
+  session.exitIsExpected = true;
+  await session.handleProcessStop();
+  session.quit();
+  print("Waiting for VM to exit");
+  Expect.equals(0, await session.process.exitCode);
+  print("VM exited");
 }
 
 class SerializeScopeTestCase extends CompilerTestCase {
@@ -2077,9 +2109,9 @@ List<String> splitLines(String text) {
   return text.split(new RegExp('^', multiLine: true));
 }
 
-Future<String> runFletchVM(
+Future<TestSession> runFletchVM(
     IoCompilerTestCase test,
-    List<Commands> commands) async {
+    List<Command> commands) async {
   var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 
   List<String> vmOptions = <String>[
@@ -2091,34 +2123,78 @@ Future<String> runFletchVM(
 
   print("Running '$vmPath ${vmOptions.join(" ")}'");
   Process vmProcess = await Process.start(vmPath, vmOptions);
-  Future<List> stdoutFuture = UTF8.decoder.bind(vmProcess.stdout).toList();
-  Future<List> stderrFuture = UTF8.decoder.bind(vmProcess.stderr).toList();
+
+  UTF8.decoder.bind(vmProcess.stderr).toList().then(
+      (List<String> stderrChunks) {
+        print(stderrChunks.join());
+        Expect.stringEquals("", stderrChunks.join());
+      });
 
   bool hasValue = await connectionIterator.moveNext();
   assert(hasValue);
   var vmSocket = connectionIterator.current;
   server.close();
 
-  vmSocket.listen(null).cancel();
-  commands.forEach((command) => command.addTo(vmSocket));
+  for (Command command in commands) {
+    command.addTo(vmSocket);
+  }
 
+  var compiler = test.incrementalCompiler.compiler;
+
+  FunctionElement isMainDone =
+      compiler.backend.fletchSystemLibrary.findLocal("isMainDone").getter;
+  int methodId = compiler.backend.compiledFunctions[isMainDone].methodId;
+
+  for (Command command in [
+           new commands_lib.PushFromMap(MapId.methods, methodId),
+           const commands_lib.PushBoolean(false),
+           const commands_lib.ChangeMethodLiteral(0),
+           const commands_lib.CommitChanges(1)]) {
+    print(command);
+    command.addTo(vmSocket);
+  }
+
+  const commands_lib.Debugging().addTo(vmSocket);
   const commands_lib.ProcessSpawnForMain().addTo(vmSocket);
-  const commands_lib.ProcessRun().addTo(vmSocket);
 
-  vmSocket.close();
+  new commands_lib.PushFromMap(MapId.methods, methodId).addTo(vmSocket);
+  const commands_lib.ProcessSetBreakpoint(0).addTo(vmSocket);
 
-  String stdout = (await stdoutFuture).join();
-  String stderr = (await stderrFuture).join();
+  TestSession session = new TestSession(
+      vmSocket, compiler.helper,
+      vmProcess,
+      new StreamIterator(vmProcess.stdout
+                         .transform(new Utf8Decoder())
+                         .transform(new LineSplitter())),
+      methodId);
+  session.vmCommands = new CommandReader(vmSocket).iterator;
+  await session.nextVmCommand();
+  await session.debugRun();
 
-  print("==> stdout <==");
-  print(stdout);
-  print("==> stderr <==");
-  print(stderr);
-  print("==> ... <==");
+  return session;
+}
 
-  int exitCode = await vmProcess.exitCode;
-  print("Fletch VM exit code: $exitCode.");
-  Expect.isTrue(stderr.isEmpty);
+class TestSession extends Session {
+  final Process process;
+  final StreamIterator iterator;
+  final int methodId;
 
-  return stdout;
+  bool exitIsExpected = false;
+
+  TestSession(
+      Socket vmSocket,
+      compiler,
+      this.process,
+      this.iterator,
+      this.methodId)
+      : super(vmSocket, compiler);
+
+  void exit(int exitCode) {
+    if (!exitIsExpected) {
+      throw "Unexpected exit from VM ($exitCode).";
+    } else {
+      Expect.equals(0, exitCode);
+      print("VM process exited with exit code = $exitCode.");
+    }
+  }
 }

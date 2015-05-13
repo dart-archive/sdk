@@ -163,6 +163,8 @@ class PushNewString extends Command {
         ..addUint8List(payload)
         ..sendOn(sink, code);
   }
+
+  String toString() => "PushNewString('$value')";
 }
 
 class PushNewInstance extends Command {
@@ -248,6 +250,8 @@ class NewMap extends Command {
         ..addUint32(map.index)
         ..sendOn(sink, code);
   }
+
+  String toString() => "NewMap($map)";
 }
 
 abstract class MapAccess extends Command {
@@ -268,11 +272,15 @@ abstract class MapAccess extends Command {
 class PopToMap extends MapAccess {
   const PopToMap(MapId map, int index)
       : super(map, index, CommandCode.PopToMap);
+
+  String toString() => "PopToMap($map, $index)";
 }
 
 class PushFromMap extends MapAccess {
   const PushFromMap(MapId map, int index)
       : super(map, index, CommandCode.PushFromMap);
+
+  String toString() => "PushFromMap($map, $index)";
 }
 
 class Drop extends Command {
@@ -291,6 +299,8 @@ class Drop extends Command {
 class PushNull extends Command {
   const PushNull()
       : super(CommandCode.PushNull);
+
+  String toString() => "PushNull()";
 }
 
 class PushBoolean extends Command {
@@ -304,6 +314,8 @@ class PushBoolean extends Command {
         ..addUint8(value ? 1 : 0)
         ..sendOn(sink, code);
   }
+
+  String toString() => 'PushBoolean($value)';
 }
 
 class BytecodeSink implements Sink<List<int>> {
@@ -353,6 +365,10 @@ class PushNewFunction extends Command {
     catchRanges.forEach(buffer.addUint32);
     buffer.sendOn(sink, code);
   }
+
+  String toString() {
+    return "PushNewFunction($arity, $literals, $bytecodes, $catchRanges)";
+  }
 }
 
 class PushNewInitializer extends Command {
@@ -384,6 +400,8 @@ class ChangeMethodLiteral extends Command {
         ..addUint32(index)
         ..sendOn(sink, code);
   }
+
+  String toString() => "ChangeMethodLiteral($index)";
 }
 
 class ChangeMethodTable extends Command {
@@ -415,6 +433,8 @@ class CommitChanges extends Command {
         ..addUint32(count)
         ..sendOn(sink, code);
   }
+
+  String toString() => 'CommitChanges($count)';
 }
 
 class UncaughtException extends Command {
