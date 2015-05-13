@@ -111,8 +111,26 @@ def Steps(config):
       output = re.sub(r"[^\n]*\n[^\n]*\n[^\n]* // NO_LINT\n *\^+\n", "", output)
       if output: # output from dart2js should be empty.
         print output
-        print '@@@STEP_FAILURE@@@'
-        sys.stdout.flush()
+        raise OSError()
+
+    with bot.BuildStep('incremental', swallow_error=True):
+      dart_vm = './third_party/bin/linux/dart'
+      if mac:
+        dart_vm = './third_party/bin/mac/dart'
+      output = None
+      try:
+        output = subprocess.check_output([
+          dart_vm, '-Dfletch-vm=out/DebugX64Clang/fletch',
+          '-Ddart-sdk=../dart/sdk/', '-c', '-ppackage/',
+          'tests/fletchc/incremental/feature_test.dart'])
+      except subprocess.CalledProcessError as error:
+        print error
+        raise OSError()
+      last_line = output.split('\n')[-2]
+      if last_line != 'unittest-suite-success':
+        print output
+        print 'Last line of output not: "unittest-suite-success".'
+        raise OSError()
 
     for full_run in [True, False]:
       for configuration in configurations:
