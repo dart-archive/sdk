@@ -1,6 +1,13 @@
 breakpoint set: 0: main @0
-main 	
-entry	@Thread.exit(invokeMain([] ))
+main    	
+callMain	@=>invokeMain(arguments);
+entry	@callMain([] )
+entry	@isMainDone
+isMainDone	@mainIsDone
+isMainDone	@=>mainIsDone;
+entry	@isMainDone
+entry	@result
+entry	@Thread.exit(result)
 exit 	@_scheduler
 exit 	@null
 exit 	@_scheduler==null

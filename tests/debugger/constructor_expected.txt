@@ -1,6 +1,6 @@
 breakpoint set: 0: main @0
-main 	@42
-main 	@new B(42)
+main    	@42
+main    	@new B(42)
 B initializer	@a
 B initializer	@a
 B initializer	@add(a,a)
@@ -53,8 +53,15 @@ B.initB      	@d
 B.initB      	@a+b+c+d
 B.initB      	@sum=a+b+c+d
 B            	@initB(_a,_x,_y,_z)
-main 	@new B(42)
-entry	@Thread.exit(invokeMain([] ))
+main    	@new B(42)
+callMain	@=>invokeMain(arguments);
+entry	@callMain([] )
+entry	@isMainDone
+isMainDone	@mainIsDone
+isMainDone	@=>mainIsDone;
+entry	@isMainDone
+entry	@result
+entry	@Thread.exit(result)
 exit 	@_scheduler
 exit 	@null
 exit 	@_scheduler==null
