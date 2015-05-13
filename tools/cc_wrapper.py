@@ -7,6 +7,7 @@
 import os
 import sys
 import utils
+import subprocess
 
 
 def invoke_clang(args):
@@ -15,10 +16,14 @@ def invoke_clang(args):
   os_name = utils.GuessOS()
   if os_name == "macos":
     os_name = "mac"
+    args.extend([
+      '-isysroot',
+      subprocess.check_output(['xcrun', '--show-sdk-path']).strip()])
   clang_bin = os.path.join(
     fletch_root, "third_party", "clang", os_name, "bin", "clang")
   print clang_bin
   args.insert(0, clang_bin)
+  print "'%s'" % "' '".join(args)
   os.execv(clang_bin, args)
 
 
