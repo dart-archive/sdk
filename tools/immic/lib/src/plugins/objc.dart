@@ -228,15 +228,15 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         forEachSlot(node, null, (Type slotType, String slotName) {
           if (slotType.isList) writeln('  NSMutableArray* _$slotName;');
         });
+      }
       writeln('}');
     }
 
     forEachSlot(node, null, (Type slotType, String slotName) {
-        if (slotType.isList) {
-          writeln('- (NSArray*)$slotName { return _$slotName; }');
-        }
-      });
-    }
+      if (slotType.isList) {
+        writeln('- (NSArray*)$slotName { return _$slotName; }');
+      }
+    });
     if (hasNodeSlots) {
       writeln('- (Node*)getSlot:(int)index {');
       writeln('  switch(index) {');
