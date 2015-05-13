@@ -575,6 +575,16 @@ static void RewriteLiteralIndicesToOffsets(Function* function) {
 }
 
 void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
+  // Before pushing a new function we make sure that the program is unfolded.
+  // The functions we push are all unfolded and we therefore need to unfold
+  // the program to get a consistent heap.
+  //
+  // TODO(ager): Instead of unfolding here and in CommitChanges we should
+  // have an explicit command to start changes. That should perform the
+  // unfolding and we can replace this with an assert that the program
+  // is unfolded here.
+  if (program->is_compact()) program->Unfold();
+
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
       result,
       program()->CreateFunction(arity, bytecodes, literals));
