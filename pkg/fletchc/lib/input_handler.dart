@@ -128,7 +128,7 @@ class InputHandler {
       case 'q':
       case 'quit':
         session.quit();
-        exit(0);
+        io.exit(0);
         break;
       case 'r':
       case 'run':
