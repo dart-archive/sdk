@@ -8,11 +8,12 @@ class StackFrame {
   final int functionId;
   final int bytecodePointer;
   final FletchCompiler compiler;
-  final bool isInternal;
   final Session session;
+  final bool isBelowMain;
+  final bool isInternal;
 
   StackFrame(int functionId, this.bytecodePointer, FletchCompiler compiler,
-             this.session)
+             this.session, this.isBelowMain)
       : this.functionId = functionId,
         this.compiler = compiler,
         isInternal =
@@ -27,7 +28,9 @@ class StackFrame {
     return '';
   }
 
-  bool get isVisible => session.showInternalFrames || !isInternal;
+  bool get isVisible {
+    return session.showInternalFrames || !(isInternal || isBelowMain);
+  }
 
   void list() {
     print(compiler.sourceListString(functionId, bytecodePointer - 1));

@@ -17,17 +17,4 @@ A initializer      	@this.x=x
 a2 lazy initializer	@new A(1)
 main    	@a2.x
 main    	@a1.x+x+a2.x
-callMain	@=>invokeMain(arguments);
-entry	@callMain([] )
-entry	@isMainDone
-isMainDone	@mainIsDone
-isMainDone	@=>mainIsDone;
-entry	@isMainDone
-entry	@result
-entry	@Thread.exit(result)
-exit 	@_scheduler
-exit 	@null
-exit 	@_scheduler==null
-exit 	@0
-exit 	@fletch.halt(0)
 ### process terminated

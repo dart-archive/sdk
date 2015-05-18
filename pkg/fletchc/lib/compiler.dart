@@ -30,7 +30,8 @@ import 'package:compiler/src/source_file_provider.dart' show
 
 import 'package:compiler/src/elements/elements.dart' show
     ConstructorElement,
-    ClassElement;
+    ClassElement,
+    FunctionElement;
 
 import 'package:compiler/src/filenames.dart' show
     appendSlash;
@@ -298,6 +299,13 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return _compiler.context.backend.functions
         .where((f) => f.name == name)
         .map((f) => f.methodId);
+  }
+
+  int mainMethodId() {
+    FunctionElement mainFunctionElement = _compiler.mainFunction;
+    CompiledFunction mainMethod =
+        _compiler.context.backend.compiledFunctions[mainFunctionElement];
+    return mainMethod.methodId;
   }
 
   String astString(int methodId, int bytecodeIndex) {

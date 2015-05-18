@@ -42,6 +42,10 @@ class Session {
 
   Session(this.vmSocket, this.compiler);
 
+  bool get currentLocationIsVisible {
+    return currentStackTrace.stackFrames[0].isVisible;
+  }
+
   void writeSnapshot(String snapshotPath) {
     new WriteSnapshot(snapshotPath).addTo(vmSocket);
     vmSocket.drain();
@@ -224,7 +228,8 @@ class Session {
       } else {
         await stepBytecode();
       }
-    } while (currentLocation == null ||
+    } while (!currentLocationIsVisible ||
+             currentLocation == null ||
              currentLocation.isSameSourceLevelLocationAs(previous) ||
              currentLocation.node == null);
   }
@@ -240,7 +245,8 @@ class Session {
     SourceLocation previous = currentLocation;
     do {
       await stepOverBytecode();
-    } while (currentLocation == null ||
+    } while (!currentLocationIsVisible ||
+             currentLocation == null ||
              currentLocation == previous ||
              currentLocation.node == null);
     await backtrace();
@@ -251,7 +257,7 @@ class Session {
     do {
       const ProcessStepOut().addTo(vmSocket);
       await handleProcessStop();
-    } while (!currentStackTrace.stackFrames[0].isVisible);
+    } while (!currentLocationIsVisible);
     await backtrace();
   }
 
@@ -305,13 +311,20 @@ class Session {
       ProcessBacktrace backtraceResponse = await nextVmCommand();
       var frames = backtraceResponse.frames;
       currentStackTrace = new StackTrace(frames);
+      // The bottom frames below main are internal implementation details
+      // and should not be surfaced to debugger users by default.
+      int mainMethodId = compiler.mainMethodId();
+      bool belowMain = true;
       for (int i = 0; i < frames; ++i) {
+        int methodId = backtraceResponse.methodIds[i];
+        if (methodId == mainMethodId) belowMain = false;
         currentStackTrace.addFrame(
             compiler,
-            new StackFrame(backtraceResponse.methodIds[i],
+            new StackFrame(methodId,
                            backtraceResponse.bytecodeIndices[i],
                            compiler,
-                           this));
+                           this,
+                           belowMain));
       }
       currentLocation = currentStackTrace.sourceLocation();
     }

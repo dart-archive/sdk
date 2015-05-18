@@ -10,17 +10,4 @@ add     	@c
 add     	@a+b+c
 add     	@=>a+b+c;
 main    	@add(1,2,3)
-callMain	@=>invokeMain(arguments);
-entry	@callMain([] )
-entry	@isMainDone
-isMainDone	@mainIsDone
-isMainDone	@=>mainIsDone;
-entry	@isMainDone
-entry	@result
-entry	@Thread.exit(result)
-exit 	@_scheduler
-exit 	@null
-exit 	@_scheduler==null
-exit 	@0
-exit 	@fletch.halt(0)
 ### process terminated
