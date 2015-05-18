@@ -106,6 +106,10 @@ static InvokeKind ComputeInvokeKind(Opcode opcode) {
   switch (opcode) {
     case kInvokeMethod:
     case kInvokeTest:
+    case kInvokeStatic:
+    case kInvokeStaticUnfold:
+    case kInvokeFactory:
+    case kInvokeFactoryUnfold:
 
     case kInvokeEq:
     case kInvokeLt:
