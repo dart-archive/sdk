@@ -5,9 +5,14 @@
 # Add $(PROJECT_DIR)/../generated to Build Settings / User Header Search Path
 # Add out/ReleaseXARM/libfletch.a to Build Phases / Link Binary with Libraries
 # Set 'no' in Build Settings / Dead Code Stripping
-# Add directory reference for /generated
+# Add directory group to objc and to cc in <FLETCH_ROOT>/package/immi_gen
+# Add Resources directory reference to ./generated
 # Add a "Run Script" with content ./compile.sh in Build Phases
 # and place it between Target Dependencies and Compile Sources (drag it there).
+# Install cocoapods: sudo gem install cocoapods
+# Install pod dependencies: pod install (run in the samples/github/ios dir).
+# Open the project/workspace: open github.xcworkspace
+# Hit the 'run' button and it should work.
 
 set -uxe
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
