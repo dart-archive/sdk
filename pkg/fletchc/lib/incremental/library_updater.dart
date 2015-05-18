@@ -800,7 +800,7 @@ class LibraryUpdater extends FletchFeatures {
       }
     }
 
-    List<Command> updates = <Command>[];
+    List<Command> updates = <Command>[const commands_lib.PrepareForChanges()];
 
     // TODO(ahe): Compute this.
     Set<ClassElementX> newClasses = new Set();

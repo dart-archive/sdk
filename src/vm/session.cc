@@ -365,6 +365,11 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kPrepareForChanges: {
+        PrepareForChanges();
+        break;
+      }
+
       case Connection::kCommitChanges: {
         CommitChanges(connection_->ReadInt());
         break;
@@ -575,15 +580,7 @@ static void RewriteLiteralIndicesToOffsets(Function* function) {
 }
 
 void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
-  // Before pushing a new function we make sure that the program is unfolded.
-  // The functions we push are all unfolded and we therefore need to unfold
-  // the program to get a consistent heap.
-  //
-  // TODO(ager): Instead of unfolding here and in CommitChanges we should
-  // have an explicit command to start changes. That should perform the
-  // unfolding and we can replace this with an assert that the program
-  // is unfolded here.
-  if (program()->is_compact()) program()->Unfold();
+  ASSERT(!program()->is_compact());
 
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
       result,
@@ -686,6 +683,17 @@ void Session::PushConstantMap(int length) {
   Push(map);
 }
 
+void Session::PrepareForChanges() {
+  if (program()->is_compact()) {
+    Scheduler* scheduler = program()->scheduler();
+    if (!scheduler->StopProgram(program())) {
+     FATAL("Failed to stop program for unfolding\n");
+    }
+    program()->Unfold();
+    scheduler->ResumeProgram(program());
+  }
+}
+
 void Session::ChangeSuperClass() {
   PostponeChange(kChangeSuperClass, 2);
 }
@@ -729,16 +737,12 @@ void Session::CommitChangeStatics(Array* change) {
 }
 
 void Session::CommitChanges(int count) {
-  // Make sure the program is unfolded when applying changes.
-  //
-  // TODO(ager): Should we make folding and unfolding part of the wire
-  // protocol? For now we unfold and fold every time we apply changes.
   Scheduler* scheduler = program()->scheduler();
   if (!scheduler->StopProgram(program())) {
     FATAL("Failed to stop program, for committing changes\n");
   }
 
-  if (program()->is_compact()) program()->Unfold();
+  ASSERT(!program()->is_compact());
 
   ASSERT(count == changes_.length());
   for (int i = 0; i < count; i++) {
@@ -764,6 +768,8 @@ void Session::CommitChanges(int count) {
   }
   changes_.Clear();
 
+  // Fold the program after applying changes to continue running in the
+  // optimized compact form.
   program()->Fold();
 
   scheduler->ResumeProgram(program());

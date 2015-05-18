@@ -2005,6 +2005,7 @@ compileAndRun(EncodedResult encodedResult) async {
   }
 
   for (Command command in [
+           const commands_lib.PrepareForChanges(),
            new commands_lib.PushFromMap(MapId.methods, session.methodId),
            const commands_lib.PushBoolean(true),
            const commands_lib.ChangeMethodLiteral(0),
@@ -2146,6 +2147,7 @@ Future<TestSession> runFletchVM(
   int methodId = compiler.backend.compiledFunctions[isMainDone].methodId;
 
   for (Command command in [
+           const commands_lib.PrepareForChanges(),
            new commands_lib.PushFromMap(MapId.methods, methodId),
            const commands_lib.PushBoolean(false),
            const commands_lib.ChangeMethodLiteral(0),

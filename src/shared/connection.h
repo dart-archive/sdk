@@ -97,6 +97,7 @@ class Connection {
     kChangeMethodTable,
     kChangeMethodLiteral,
     kChangeStatics,
+    kPrepareForChanges,
     kCommitChanges,
     kDiscardChanges,
 

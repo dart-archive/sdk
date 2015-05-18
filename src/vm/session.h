@@ -89,6 +89,7 @@ class Session {
   void ChangeMethodLiteral(int index);
   void ChangeStatics(int count);
 
+  void PrepareForChanges();
   void CommitChanges(int count);
   void DiscardChanges();
 

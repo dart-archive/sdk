@@ -422,6 +422,11 @@ class ChangeSuperClass extends Command {
       : super(CommandCode.ChangeSuperClass);
 }
 
+class PrepareForChanges extends Command {
+  const PrepareForChanges()
+      : super(CommandCode.PrepareForChanges);
+}
+
 class CommitChanges extends Command {
   final int count;
 
@@ -717,6 +722,7 @@ enum CommandCode {
   ChangeMethodTable,
   ChangeMethodLiteral,
   ChangeStatics,
+  PrepareForChanges,
   CommitChanges,
   DiscardChange,
 
