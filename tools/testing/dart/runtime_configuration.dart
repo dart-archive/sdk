@@ -20,6 +20,8 @@ import 'test_runner.dart' show
     Command,
     CommandBuilder;
 
+import "utils.dart";
+
 // TODO(ahe): I expect this class will become abstract very soon.
 class RuntimeConfiguration {
   // TODO(ahe): Remove this constructor and move the switch to
@@ -174,14 +176,23 @@ class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
     String executable;
     List<String> arguments;
     Map<String, String> environment;
+
+    String testFile = basicArguments[0];
+
+    Map options = suite.readOptionsFromFile(new Path(testFile));
+    String debuggerCommands = options["fletchDebuggerCommands"];
+    String testDebuggerArgument = "--test-debugger";
+    if (!debuggerCommands.isEmpty) {
+      testDebuggerArgument = "$testDebuggerArgument=$debuggerCommands";
+    }
+
     // TODO(ager): We should be able to run debugger tests through the
     // persistent fletch_driver as well.
     List<String> vmArguments =
         <String>["-p", "package", "package:fletchc/fletchc.dart",
-                 "-d", "--test-debugger"];
+                 "-d", testDebuggerArgument];
     vmArguments.addAll(basicArguments);
 
-    String testFile = basicArguments[0];
     String expectationFile =
         testFile.replaceAll("_test.dart", "_expected.txt");
     List<int> expectedOutput = new File(expectationFile).readAsBytesSync();

@@ -1,0 +1,10 @@
+Starting session. Type 'help' for a list of commands.
+
+> breakpoint set: 0: main @0
+> Stack trace:
+> 0: main    	@foo()
+> Stack trace:
+> 0: main    	@foo()
+> Stack trace:
+> 0: main    	@1
+> 

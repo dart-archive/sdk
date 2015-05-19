@@ -5,9 +5,12 @@
 part of fletch.session;
 
 const String BANNER = """
-Starting session.
+Starting session. Type 'help' for a list of commands.
+""";
 
+const String HELP = """
 Commands:
+  'help'                                show list of commands
   'r'/'run'                             run main
   'b <method name> <bytecode index>'    set breakpoint
   'bf <file> <line> <column>'           set breakpoint
@@ -32,9 +35,11 @@ Commands:
 
 class InputHandler {
   final Session session;
+
+  Stream stream;
   String previousLine = '';
 
-  InputHandler(this.session);
+  InputHandler(this.session, [this.stream]);
 
   printPrompt() => stdout.write('> ');
 
@@ -45,6 +50,9 @@ class InputHandler {
         line.split(' ').where((s) => !s.isEmpty).toList();
     String command = commandComponents[0];
     switch (command) {
+      case 'help':
+        print(HELP);
+        break;
       case 'b':
         var method =
             (commandComponents.length > 1) ? commandComponents[1] : 'main';
@@ -170,8 +178,11 @@ class InputHandler {
   Future run() async {
     print(BANNER);
     printPrompt();
-    var inputLineStream = stdin.transform(new Utf8Decoder())
-                               .transform(new LineSplitter());
+    var inputLineStream = stream;
+    if (inputLineStream == null) {
+      inputLineStream = stdin.transform(new Utf8Decoder())
+                             .transform(new LineSplitter());
+    }
     await for(var line in inputLineStream) {
       await handleLine(line);
     }

@@ -370,13 +370,12 @@ class OutputDiffingVmCommand extends VmCommand {
   }
 
   void _equal(Command other) {
+    if (other is! OutputDiffingVmCommand) return false;
     if (other.expectedOutput.length != expectedOutput.length) return false;
     for (int i = 0; i < expectedOutput.length; i++) {
       if (other.expectedOutput[i] != expectedOutput[i]) return false;
     }
-    return
-        other is OutputDiffingVmCommand &&
-        super._equal(other);
+    return super._equal(other);
   }
 }
 

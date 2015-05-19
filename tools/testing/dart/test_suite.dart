@@ -1525,6 +1525,8 @@ class StandardTestSuite extends TestSuite {
     }
     RegExp testOptionsRegExp = new RegExp(r"// VMOptions=(.*)");
     RegExp fletchOptionsRegExp = new RegExp(r"// FletchOptions=(.*)");
+    RegExp fletchDebuggerCommandsRegExp
+        = new RegExp(r"// FletchDebuggerCommands=(.*)");
     RegExp sharedOptionsRegExp = new RegExp(r"// SharedOptions=(.*)");
     RegExp dartOptionsRegExp = new RegExp(r"// DartOptions=(.*)");
     RegExp otherScriptsRegExp = new RegExp(r"// OtherScripts=(.*)");
@@ -1542,6 +1544,7 @@ class StandardTestSuite extends TestSuite {
     // Find the options in the file.
     List<List> result = new List<List>();
     List<List> fletchOptions = new List<List>();
+    String fletchDebuggerCommands = "";
     List<String> dartOptions;
     List<String> sharedOptions;
     String packageRoot;
@@ -1557,6 +1560,16 @@ class StandardTestSuite extends TestSuite {
       fletchOptions.add(match[1].split(' ').where((e) => e != '').toList());
     }
     if (fletchOptions.isEmpty) fletchOptions.add([]);
+
+    matches = fletchDebuggerCommandsRegExp.allMatches(contents);
+    for (var match in matches) {
+      if (!fletchDebuggerCommands.isEmpty) {
+        throw new Exception(
+            'More than one "// FletchDebuggerCommands=" '
+            'line in test $filePath');
+      }
+      fletchDebuggerCommands = match[1];
+    }
 
     matches = dartOptionsRegExp.allMatches(contents);
     for (var match in matches) {
@@ -1611,6 +1624,7 @@ class StandardTestSuite extends TestSuite {
 
     return { "vmOptions": result,
              "fletchOptions": fletchOptions,
+             "fletchDebuggerCommands": fletchDebuggerCommands,
              "sharedOptions": sharedOptions == null ? [] : sharedOptions,
              "dartOptions": dartOptions,
              "packageRoot": packageRoot,

@@ -21,6 +21,7 @@ main(List<String> arguments) async {
   String snapshotPath;
   bool debugging = false;
   bool testDebugger = false;
+  String testDebuggerCommands = "";
 
   for (int i = 0; i < arguments.length; i++) {
     String argument = arguments[i];
@@ -40,6 +41,11 @@ main(List<String> arguments) async {
         break;
 
       default:
+        if (argument.startsWith('--test-debugger=')) {
+          testDebugger = true;
+          testDebuggerCommands = argument.substring(16);
+          break;
+        }
         if (script != null) throw "Unknown option: $argument";
         script = argument;
         break;
@@ -90,7 +96,7 @@ main(List<String> arguments) async {
     session.writeSnapshot(snapshotPath);
   } else if (debugging) {
     if (testDebugger) {
-      await session.testDebugStepToCompletion();
+      await session.testDebugger(testDebuggerCommands);
     } else {
       await session.debug();
     }

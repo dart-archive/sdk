@@ -66,15 +66,27 @@ class Session {
     await new InputHandler(this).run();
   }
 
-  Future testDebugStepToCompletion() async {
-    vmCommands = new CommandReader(vmSocket).iterator;
-    const Debugging().addTo(vmSocket);
-    const ProcessSpawnForMain().addTo(vmSocket);
+  Future stepToCompletion() async {
     await setBreakpoint(methodName: 'main', bytecodeIndex: 0);
     await doDebugRun();
     while (true) {
       print(currentStackTrace.shortStringForFrame(0));
       await doStep();
+    }
+  }
+
+  Stream<String> debugCommandsFromString(String commandString) {
+    return new Stream<String>.fromIterable(commandString.split(','));
+  }
+
+  Future testDebugger(String commands) async {
+    vmCommands = new CommandReader(vmSocket).iterator;
+    const Debugging().addTo(vmSocket);
+    const ProcessSpawnForMain().addTo(vmSocket);
+    if (commands.isEmpty) {
+      await stepToCompletion();
+    } else {
+      await new InputHandler(this, debugCommandsFromString(commands)).run();
     }
   }
 
