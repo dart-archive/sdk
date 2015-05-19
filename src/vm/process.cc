@@ -332,9 +332,7 @@ void Process::CollectGarbage() {
   // the to-space as needed.
   NoAllocationFailureScope scope(to);
   ScavengeVisitor visitor(heap_.space(), to);
-  visitor.Visit(reinterpret_cast<Object**>(&statics_));
-  visitor.Visit(reinterpret_cast<Object**>(&coroutine_));
-  if (debug_info_ != NULL) debug_info_->VisitPointers(&visitor);
+  IterateRoots(&visitor);
   to->CompleteScavenge(&visitor);
   WeakPointer::Process(&weak_pointers_);
   set_ports(Port::CleanupPorts(ports()));
@@ -432,6 +430,12 @@ int Process::CollectGarbageAndChainStacks(Process** list) {
   // Update stack_limit.
   UpdateStackLimit();
   return visitor.number_of_stacks();
+}
+
+void Process::IterateRoots(PointerVisitor* visitor) {
+  visitor->Visit(reinterpret_cast<Object**>(&statics_));
+  visitor->Visit(reinterpret_cast<Object**>(&coroutine_));
+  if (debug_info_ != NULL) debug_info_->VisitPointers(visitor);
 }
 
 class ProgramPointerVisitor : public HeapObjectVisitor {

@@ -294,6 +294,8 @@ class Drop extends Command {
         ..addUint32(value)
         ..sendOn(sink, code);
   }
+
+  String toString() => "Drop($value)";
 }
 
 class PushNull extends Command {
@@ -422,6 +424,23 @@ class ChangeSuperClass extends Command {
       : super(CommandCode.ChangeSuperClass);
 }
 
+class ChangeSchemas extends Command {
+  final int count;
+  final int delta;
+
+  const ChangeSchemas(this.count, this.delta)
+      : super(CommandCode.ChangeSchemas);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(count)
+        ..addUint32(delta)
+        ..sendOn(sink, code);
+  }
+
+  String toString() => 'ChangeSchemas($count, $delta)';
+}
+
 class PrepareForChanges extends Command {
   const PrepareForChanges()
       : super(CommandCode.PrepareForChanges);
@@ -471,6 +490,21 @@ class ObjectId extends Command {
         ..addUint64(id)
         ..sendOn(sink, code);
   }
+}
+
+class PushNewArray extends Command {
+  final int length;
+
+  const PushNewArray(this.length)
+      : super(CommandCode.PushNewArray);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(length)
+        ..sendOn(sink, code);
+  }
+
+  String toString() => 'PushNewArray($length)';
 }
 
 class PushNewInteger extends Command {
@@ -722,6 +756,8 @@ enum CommandCode {
   ChangeMethodTable,
   ChangeMethodLiteral,
   ChangeStatics,
+  ChangeSchemas,
+
   PrepareForChanges,
   CommitChanges,
   DiscardChange,

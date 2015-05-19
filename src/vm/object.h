@@ -14,6 +14,7 @@
 
 namespace fletch {
 
+class Heap;
 class Program;
 class SnapshotReader;
 class SnapshotWriter;
@@ -60,9 +61,6 @@ class Object {
   void Print();
   void ShortPrint();
 
-  // Structural comparing.
-  bool IsEquivalentTo(Object* other);
-
   // Tag information
   static const int kAlignmentBits = 2;
   static const int kAlignment = 1 << kAlignmentBits;
@@ -71,9 +69,6 @@ class Object {
  private:
   friend class Array;
   friend class Instance;
-
-  // Internal equivalent helper.
-  bool ObjectIsEquivalentTo(Object* other);
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(Object);
 };
@@ -242,10 +237,6 @@ class HeapObject: public Object {
   // Retrieve the object format from the class.
   inline InstanceFormat format();
 
-  // Illegal pointer. Use to mark that further access will cause
-  // trouble.
-  static HeapObject* const kIllegal;
-
   // Tag information.
   static const int kTag = 1;
   static const int kTagSize = 2;
@@ -284,9 +275,6 @@ class HeapObject: public Object {
   void HeapObjectPrint();
   void HeapObjectShortPrint();
 
-  // Comparing.
-  bool HeapObjectIsEquivalentTo(HeapObject* other);
-
   // Sizing.
   static const int kClassOffset = 0;
   static const int kFlagsOffset = kClassOffset + kPointerSize;
@@ -297,8 +285,6 @@ class HeapObject: public Object {
 
  protected:
   inline void Initialize(int size, Object* init_value);
-  inline void SetEquivalentForwarding(HeapObject* other);
-  inline HeapObject* EquivalentForwardingAddress();
 
   int ComputeAlternativeSize(int fixed_size, int variable_size) {
     ASSERT(Utils::IsAligned(fixed_size, kPointerSize));
@@ -317,7 +303,6 @@ class HeapObject: public Object {
   friend class Heap;
   friend class Program;
   friend class SnapshotWriter;
-  friend class UnmarkEquivalenceVisitor;
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(HeapObject);
@@ -382,11 +367,6 @@ class Double : public HeapObject {
 
   int AlternativeSize() {
     return ComputeAlternativeSize(HeapObject::kSize, sizeof(double));
-  }
-
-  // Comparing.
-  inline bool DoubleIsEquivalentTo(Double* other) {
-    return value() == other->value();
   }
 
  private:
@@ -525,9 +505,6 @@ class Array: public BaseArray {
   void ArrayWriteTo(SnapshotWriter* writer, Class* klass);
   void ArrayReadFrom(SnapshotReader* reader, int length);
 
-  // Comparing.
-  bool ArrayIsEquivalentTo(Array* other);
-
  private:
   // Only Heap should initialize objects.
   inline void Initialize(int length, int size, Object* null);
@@ -595,6 +572,9 @@ class Instance: public HeapObject {
 
   inline int AlternativeSize(Class* klass);
 
+  // Schema change support.
+  Instance* CloneTransformed(Heap* heap);
+
   // Snapshotting.
   void InstanceWriteTo(SnapshotWriter* writer, Class* klass);
   void InstanceReadFrom(SnapshotReader* reader, int nof);
@@ -602,9 +582,6 @@ class Instance: public HeapObject {
   // Printing.
   void InstancePrint();
   void InstanceShortPrint();
-
-  // Comparing.
-  bool InstanceIsEquivalentTo(Instance* other);
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(Instance);
@@ -654,9 +631,6 @@ class String: public BaseArray {
   // Conversion to C string. The result is allocated with malloc and
   // should be freed by the caller.
   char* ToCString();
-
-  // Comparing.
-  bool StringIsEquivalentTo(String* other);
 
   // Snapshotting.
   void StringWriteTo(SnapshotWriter* writer, Class* klass);
@@ -798,6 +772,13 @@ class Class: public HeapObject {
   // description. Can only be used on instance classes.
   inline int NumberOfInstanceFields();
 
+  // Schema change support.
+  inline bool IsTransformed();
+  void Transform(Class* target, Array* transformation);
+
+  inline Class* TransformationTarget();
+  inline Array* Transformation();
+
   inline static Class* cast(Object* value);
 
   static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
@@ -826,12 +807,18 @@ class Class: public HeapObject {
   Function* LookupMethod(int selector);
 
   // Layout descriptor.
-  static const int kSuperClassOffset = HeapObject::kSize;
-  static const int kInstanceFormatOffset = kSuperClassOffset + kPointerSize;
-  static const int kIdOffset = kInstanceFormatOffset + kPointerSize;
-  static const int kChildIdOffset = kIdOffset + kPointerSize;
-  static const int kMethodsOffset = kChildIdOffset + kPointerSize;
-  static const int kSize = kMethodsOffset + kPointerSize;
+  static const int kSuperClassOffset =
+      HeapObject::kSize;
+  static const int kInstanceFormatOffset =
+      kSuperClassOffset + kPointerSize;
+  static const int kIdOrTransformationTargetOffset =
+      kInstanceFormatOffset + kPointerSize;
+  static const int kChildIdOrTransformationOffset =
+      kIdOrTransformationTargetOffset + kPointerSize;
+  static const int kMethodsOffset =
+      kChildIdOrTransformationOffset + kPointerSize;
+  static const int kSize =
+      kMethodsOffset + kPointerSize;
 
  private:
   friend class Heap;
@@ -929,21 +916,6 @@ class PointerVisitor {
 
   // Handy shorthand for visiting a class field in an object.
   virtual void VisitClass(Object** p) { VisitBlock(p, p + 1); }
-};
-
-// Abstract base class for visiting, and optionally modifying, the
-// pointers contained in Objects. Used in GC and serialization/deserialization.
-class ObjectContentVisitor {
- public:
-  virtual ~ObjectContentVisitor() { }
-
-  // Called before visiting the content of an object.
-  virtual void Begin(HeapObject* object) { }
-  // Called after visiting the content of an object.
-  virtual void End(HeapObject* object) { }
-
-  virtual void VisitPointerBlock(Object** start, Object** end) = 0;
-  virtual void VisitUint8Block(uint8** start, uint8** end) = 0;
 };
 
 // Abstract base class for visiting all objects in a space.
@@ -1315,6 +1287,19 @@ void ByteArray::Initialize(int length) {
 
 // Inlined Class functions.
 
+bool Class::has_super_class() {
+  return at(kSuperClassOffset)->IsClass();
+}
+
+Class* Class::super_class() {
+  return Class::cast(at(kSuperClassOffset));
+}
+
+void Class::set_super_class(Class* value) {
+  ASSERT(this != value);  // Don't create cycles.
+  at_put(kSuperClassOffset, value);
+}
+
 InstanceFormat Class::instance_format() {
   return InstanceFormat(Smi::cast(at(kInstanceFormatOffset)));
 }
@@ -1324,35 +1309,35 @@ void Class::set_instance_format(InstanceFormat value) {
 }
 
 int Class::id() {
-  return Smi::cast(at(kIdOffset))->value();
+  return Smi::cast(at(kIdOrTransformationTargetOffset))->value();
 }
 
 void Class::set_id(int value) {
-  at_put(kIdOffset, Smi::FromWord(value));
+  at_put(kIdOrTransformationTargetOffset, Smi::FromWord(value));
 }
 
 Object* Class::link() {
-  return at(kIdOffset);
+  return at(kIdOrTransformationTargetOffset);
 }
 
 void Class::set_link(Object* value) {
-  at_put(kIdOffset, value);
+  at_put(kIdOrTransformationTargetOffset, value);
 }
 
 int Class::child_id() {
-  return Smi::cast(at(kChildIdOffset))->value();
+  return Smi::cast(at(kChildIdOrTransformationOffset))->value();
 }
 
 void Class::set_child_id(int value) {
-  at_put(kChildIdOffset, Smi::FromWord(value));
+  at_put(kChildIdOrTransformationOffset, Smi::FromWord(value));
 }
 
 Object* Class::child_link() {
-  return at(kChildIdOffset);
+  return at(kChildIdOrTransformationOffset);
 }
 
 void Class::set_child_link(Object* value) {
-  at_put(kChildIdOffset, value);
+  at_put(kChildIdOrTransformationOffset, value);
 }
 
 void Class::Initialize(InstanceFormat format, int size, Object* null) {
@@ -1374,17 +1359,18 @@ void Class::set_methods(Array* value) {
   at_put(kMethodsOffset, value);
 }
 
-bool Class::has_super_class() {
-  return at(kSuperClassOffset)->IsClass();
+bool Class::IsTransformed() {
+  return at(kIdOrTransformationTargetOffset)->IsClass();
 }
 
-Class* Class::super_class() {
-  return Class::cast(at(kSuperClassOffset));
+Class* Class::TransformationTarget() {
+  ASSERT(IsTransformed());
+  return Class::cast(at(kIdOrTransformationTargetOffset));
 }
 
-void Class::set_super_class(Class* value) {
-  ASSERT(this != value);  // Don't create cycles.
-  at_put(kSuperClassOffset, value);
+Array* Class::Transformation() {
+  ASSERT(IsTransformed());
+  return Array::cast(at(kChildIdOrTransformationOffset));
 }
 
 int Class::NumberOfInstanceFields() {

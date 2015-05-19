@@ -365,6 +365,13 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kChangeSchemas: {
+        int count = connection_->ReadInt();
+        int delta = connection_->ReadInt();
+        ChangeSchemas(count, delta);
+        break;
+      }
+
       case Connection::kPrepareForChanges: {
         PrepareForChanges();
         break;
@@ -736,6 +743,31 @@ void Session::CommitChangeStatics(Array* change) {
   program()->set_static_fields(Array::cast(change->get(1)));
 }
 
+void Session::ChangeSchemas(int count, int delta) {
+  // Stack: <count> classes + transformation array
+  Push(Smi::FromWord(delta));
+  PostponeChange(kChangeSchemas, count + 2);
+}
+
+void Session::CommitChangeSchemas(Array* change) {
+  // TODO(kasperl): Rework this so we can allow allocation failures
+  // as part of allocating the new classes.
+  Space* space = program()->heap()->space();
+  NoAllocationFailureScope scope(space);
+
+  int length = change->length();
+  Array* transformation = Array::cast(change->get(length - 2));
+  int delta = Smi::cast(change->get(length - 1))->value();
+  for (int i = 1; i < length - 2; i++) {
+    Class* original = Class::cast(change->get(i));
+    int fields = original->NumberOfInstanceFields() + delta;
+    Class* target = Class::cast(program()->CreateClass(fields));
+    target->set_super_class(original->super_class());
+    target->set_methods(original->methods());
+    original->Transform(target, transformation);
+  }
+}
+
 void Session::CommitChanges(int count) {
   Scheduler* scheduler = program()->scheduler();
   if (!scheduler->StopProgram(program())) {
@@ -745,14 +777,17 @@ void Session::CommitChanges(int count) {
   ASSERT(!program()->is_compact());
 
   ASSERT(count == changes_.length());
+  bool schemas_changed = false;
   for (int i = 0; i < count; i++) {
     Array* array = Array::cast(changes_[i]);
     Change change = static_cast<Change>(Smi::cast(array->get(0))->value());
     switch (change) {
       case kChangeSuperClass:
+        ASSERT(!schemas_changed);
         CommitChangeSuperClass(array);
         break;
       case kChangeMethodTable:
+        ASSERT(!schemas_changed);
         CommitChangeMethodTable(array);
         break;
       case kChangeMethodLiteral:
@@ -761,12 +796,18 @@ void Session::CommitChanges(int count) {
       case kChangeStatics:
         CommitChangeStatics(array);
         break;
+      case kChangeSchemas:
+        CommitChangeSchemas(array);
+        schemas_changed = true;
+        break;
       default:
         UNREACHABLE();
         break;
     }
   }
   changes_.Clear();
+
+  if (schemas_changed) TransformInstances();
 
   // Fold the program after applying changes to continue running in the
   // optimized compact form.
@@ -809,6 +850,79 @@ void Session::ProcessTerminated(Process* process) {
     connection_->Send(Connection::kProcessTerminated);
     process_ = NULL;
   }
+}
+
+class TransformInstancesPointerVisitor : public PointerVisitor {
+ public:
+  explicit TransformInstancesPointerVisitor(Heap* heap) : heap_(heap) { }
+
+  virtual void VisitClass(Object** p) {
+    // The class pointer in the header of an object should not
+    // be updated even if it points to a transformed class. If we
+    // updated the pointer, the new class would have the wrong
+    // instance format for the non-transformed, old instance.
+  }
+
+  virtual void VisitBlock(Object** start, Object** end) {
+    for (Object** p = start; p < end; p++) {
+      Object* object = *p;
+      if (!object->IsHeapObject()) continue;
+      HeapObject* heap_object = HeapObject::cast(object);
+      HeapObject* forward = heap_object->forwarding_address();
+      if (forward != NULL) {
+        *p = forward;
+      } else if (heap_object->IsInstance()) {
+        Instance* instance = Instance::cast(heap_object);
+        if (instance->get_class()->IsTransformed()) {
+          Instance* clone = instance->CloneTransformed(heap_);
+          instance->set_forwarding_address(clone);
+          *p = clone;
+        }
+      } else if (heap_object->IsClass()) {
+        Class* clazz = Class::cast(heap_object);
+        if (clazz->IsTransformed()) {
+          *p = clazz->TransformationTarget();
+        }
+      }
+    }
+  }
+
+ private:
+  Heap* const heap_;
+};
+
+class TransformInstancesProcessVisitor : public ProcessVisitor {
+ public:
+  virtual void VisitProcess(Process* process) {
+    TransformInstancesPointerVisitor pointer_visitor(process->heap());
+    Space* space = process->heap()->space();
+    NoAllocationFailureScope scope(space);
+    process->IterateRoots(&pointer_visitor);
+    space->CompleteTransformations(&pointer_visitor);
+  }
+};
+
+void Session::TransformInstances() {
+  // Make sure we don't have any mappings that rely on the addresses
+  // of objects *not* changing as we transform instances.
+  for (int i = 0; i < maps_.length(); ++i) {
+    ObjectMap* map = maps_[i];
+    ASSERT(!map->HasTableByObject());
+  }
+
+  // Deal with program space before the process spaces. This allows
+  // the [TransformInstancesProcessVisitor] to use the already installed
+  // forwarding pointers in program space.
+  Space* space = program()->heap()->space();
+  NoAllocationFailureScope scope(space);
+  TransformInstancesPointerVisitor pointer_visitor(program()->heap());
+  program()->IterateRoots(&pointer_visitor);
+  space->CompleteTransformations(&pointer_visitor);
+
+  TransformInstancesProcessVisitor process_visitor;
+  Scheduler* scheduler = program()->scheduler();
+  VisitProcesses(&process_visitor);
+  scheduler->VisitProcesses(program(), &process_visitor);
 }
 
 }  // namespace fletch

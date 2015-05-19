@@ -88,6 +88,7 @@ class Session {
   void ChangeMethodTable(int length);
   void ChangeMethodLiteral(int index);
   void ChangeStatics(int count);
+  void ChangeSchemas(int count, int delta);
 
   void PrepareForChanges();
   void CommitChanges(int count);
@@ -104,7 +105,8 @@ class Session {
     kChangeSuperClass,
     kChangeMethodTable,
     kChangeMethodLiteral,
-    kChangeStatics
+    kChangeStatics,
+    kChangeSchemas
   };
 
   enum MainThreadResumeKind {
@@ -144,6 +146,9 @@ class Session {
   void CommitChangeMethodTable(Array* change);
   void CommitChangeMethodLiteral(Array* change);
   void CommitChangeStatics(Array* change);
+  void CommitChangeSchemas(Array* change);
+
+  void TransformInstances();
 };
 
 }  // namespace fletch

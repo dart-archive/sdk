@@ -1594,8 +1594,9 @@ void InterpreterGeneratorX86::InvokeMethodFast(bool test) {
   __ movl(EBX, Address(EBX, HeapObject::kClassOffset - HeapObject::kTag));
 
   // Fetch the receiver class id and get ready to look at the table entries.
+  int id_offset = Class::kIdOrTransformationTargetOffset - HeapObject::kTag;
   __ Bind(&probe);
-  __ movl(EBX, Address(EBX, Class::kIdOffset - HeapObject::kTag));
+  __ movl(EBX, Address(EBX, id_offset));
 
   // Loop through the table.
   Label loop, next;
@@ -1689,8 +1690,9 @@ void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {
   __ movl(EBX, Address(EBX, HeapObject::kClassOffset - HeapObject::kTag));
 
   // Compute entry index: class id + selector offset.
+  int id_offset = Class::kIdOrTransformationTargetOffset - HeapObject::kTag;
   __ Bind(&dispatch);
-  __ movl(EBX, Address(EBX, Class::kIdOffset - HeapObject::kTag));
+  __ movl(EBX, Address(EBX, id_offset));
   __ addl(EBX, EDX);
 
   // Fetch the entry from the table. Because the index is smi tagged

@@ -25,6 +25,7 @@ class ObjectMap {
   Object* LookupById(int64 id, Object* none = NULL);
   int64 LookupByObject(Object* object, int64 none = -1);
 
+  bool HasTableByObject() const { return !table_by_object_.is_empty(); }
   void ClearTableByObject();
 
   void IteratePointers(PointerVisitor* visitor);
@@ -51,7 +52,6 @@ class ObjectMap {
   bool Expand();
 
   void PopulateTableByObject();
-  bool HasTableByObject() const { return !table_by_object_.is_empty(); }
 
   static List<Bucket*> NewTable(int length);
   static void DeleteTable(List<Bucket*> table);

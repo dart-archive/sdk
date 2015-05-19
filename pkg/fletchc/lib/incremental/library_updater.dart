@@ -54,6 +54,7 @@ import 'package:compiler/src/tree/tree.dart' show
     unparse;
 
 import '../src/fletch_backend.dart' show
+    CompiledClass,
     FletchBackend;
 
 import '../commands.dart' show
@@ -737,8 +738,6 @@ class LibraryUpdater extends FletchFeatures {
     for (Update update in updates) {
       Element element = update.apply();
       if (update.isRemoval) {
-        throw new IncrementalCompilationFailed(
-            "Unable to remove ${update.before}");
         if (removals != null) {
           removals.add(update);
         }
@@ -805,8 +804,10 @@ class LibraryUpdater extends FletchFeatures {
     // TODO(ahe): Compute this.
     Set<ClassElementX> newClasses = new Set();
 
+    int changes = 0;
     for (RemovalUpdate update in removals) {
       update.writeUpdateFletchOn(updates);
+      changes++;
     }
     for (Element element in enqueuer.codegen.newlyEnqueuedElements) {
       if (element.isField) {
@@ -827,9 +828,10 @@ class LibraryUpdater extends FletchFeatures {
 
     for (Function action in deferredActions) {
       action();
+      changes++;
     }
 
-    updates.add(new commands_lib.CommitChanges(deferredActions.length));
+    updates.add(new commands_lib.CommitChanges(changes));
 
     return updates;
   }
@@ -1039,6 +1041,7 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
   final FieldElementX element;
 
   bool wasStateCaptured = false;
+  CompiledClass enclosingCompiledClass;
 
   RemovedFieldUpdate(Compiler compiler, this.element)
       : super(compiler);
@@ -1050,6 +1053,10 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
   void captureState() {
     if (wasStateCaptured) throw "captureState was called twice.";
     wasStateCaptured = true;
+    enclosingCompiledClass = backend.compiledClasses[element.enclosingClass];
+    if (enclosingCompiledClass == null) {
+      throw new IncrementalCompilationFailed("Not implemented yet.");
+    }
   }
 
   FieldElementX apply() {
@@ -1067,7 +1074,42 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
       throw new StateError(
           "captureState must be called before writeUpdateFletchOn.");
     }
-    throw new IncrementalCompilationFailed("Not implemented yet.");
+
+    // TODO(kasperl): This is a very hacky hard-coded version of removing a
+    // the last field from class with two fields.
+    //
+    // First, we push all the classes want to remove the field from. In a more
+    // realistic setting, we may have also wanted to push all subclasses (also
+    // affected by the change).
+    //
+    // Then we push a transformation mapping that tells the runtime system how
+    // to build the values for the first part of all instances of the classes.
+    // Pre-existing fields that fall after the mapped part will be copied with
+    // no changes. In this particular case, we build a mapping like this:
+    //
+    //     new instance @ 0 <- old instance @ 0
+    //
+
+    const VALUE_FROM_ELSEWHERE = 0;
+    const VALUE_FROM_OLD_INSTANCE = 1;
+
+    // Push all affected classes.
+    updates.add(
+        new commands_lib.PushFromMap(MapId.classes, enclosingCompiledClass.id));
+    int numberOfClasses = 1;
+
+    // Push the tranformation mapping.
+    updates.add(
+        const commands_lib.PushNewInteger(VALUE_FROM_OLD_INSTANCE));
+    updates.add(
+        const commands_lib.PushNewInteger(0));  // Value from old instance @ 0.
+    updates.add(
+        const commands_lib.PushNewArray(2));
+    int fieldCountDelta = -1;
+
+    // Finally, ask the runtime to change the schemas!
+    updates.add(
+        new commands_lib.ChangeSchemas(numberOfClasses, fieldCountDelta));
   }
 }
 

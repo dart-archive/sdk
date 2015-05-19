@@ -173,6 +173,30 @@ void Space::CompleteScavenge(PointerVisitor* visitor) {
   }
 }
 
+void Space::CompleteTransformations(PointerVisitor* visitor) {
+  ASSERT(!is_empty());
+  Flush();
+  for (Chunk* c = first(); c != NULL; c = c->next()) {
+    uword current = c->base();
+    // TODO(kasperl): I don't like the repeated checks to see if p is
+    // the last chunk. Can't we just make sure to write the sentinel
+    // whenever we've copied over an object, so this check becomes
+    // simpler like in IterateObjects?
+    while ((c == last()) ? (current < top()) : !HasSentinelAt(current)) {
+      HeapObject* o = HeapObject::FromAddress(current);
+      if (o->forwarding_address() != NULL) {
+        current += Instance::kSize;
+        while (*reinterpret_cast<uword*>(current) == HeapObject::kTag) {
+          current += kPointerSize;
+        }
+      } else {
+        o->IteratePointers(visitor);
+        current += o->Size();
+      }
+    }
+  }
+}
+
 void PageDirectory::Clear() {
   memset(&tables_, 0, kPointerSize * ARRAY_SIZE(tables_));
 }

@@ -141,6 +141,9 @@ class Process {
   // number of stacks found in the heap.
   int CollectGarbageAndChainStacks(Process** list);
 
+  // Iterate all pointers reachable from this process object.
+  void IterateRoots(PointerVisitor* visitor);
+
   // Iterate all pointers in the process heap and stack. Used for
   // program garbage collection.
   void IterateProgramPointers(PointerVisitor* visitor);
@@ -252,9 +255,6 @@ class Process {
 
   // Put 'entry' at the end of the port's queue. This function is thread safe.
   void EnqueueEntry(PortQueue* entry);
-
-  // Iterate all pointers reachable from this process object.
-  void IterateRoots(PointerVisitor* visitor);
 
   Heap heap_;
   Program* program_;

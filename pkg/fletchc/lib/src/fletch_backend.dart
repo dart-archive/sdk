@@ -178,6 +178,8 @@ class CompiledClass {
     // TODO(ajohnsen): '0' is a placeholder. Generate dummy function?
     methodTable[fletchSelector] = 0;
   }
+
+  String toString() => "CompiledClass(${element.name}, $id)";
 }
 
 class FletchBackend extends Backend {

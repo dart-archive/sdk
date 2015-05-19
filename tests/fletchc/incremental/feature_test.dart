@@ -82,6 +82,39 @@ const List<EncodedResult> tests = const <EncodedResult>[
                 const <String>['Hello, Brave New World!']),
         ]),
 
+    // Test that we can remove a field from an instance of a class.
+    const EncodedResult(
+        r"""
+==> main.dart.patch <==
+class A {
+  var x;
+<<<<<<<
+  var y;
+=======
+>>>>>>>
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new A();
+    instance.x = 42;
+  } else {
+    print('instance.x is ${instance.x}');
+  }
+}
+""",
+        const <ProgramExpectation>[
+            const ProgramExpectation(
+                const <String>[
+                    'instance is null']),
+            const ProgramExpectation(
+                const <String>[
+                    'instance.x is 42']),
+        ]),
+
     // Test that the test framework handles more than one update.
     const EncodedResult(
         const [
@@ -1888,8 +1921,9 @@ void main() {
   skippedCount += skip;
 
   var testsToRun = tests.skip(skip);
-  // TODO(ahe): Remove the following line, as it means only run the first test.
-  testsToRun = testsToRun.take(1);
+  // TODO(ahe): Remove the following line, as it means only run the
+  // first two tests.
+  testsToRun = testsToRun.take(2);
   return asyncTest(() => Future.forEach(testsToRun, compileAndRun)
       .then(updateSummary));
 }
@@ -1993,6 +2027,7 @@ compileAndRun(EncodedResult encodedResult) async {
     for (String expected in program.messages) {
       Expect.isTrue(await session.iterator.moveNext());
       Expect.stringEquals(expected, session.iterator.current);
+      print("Got expected output: ${session.iterator.current}");
     }
 
     // TODO(ahe): Enable SerializeScopeTestCase for multiple

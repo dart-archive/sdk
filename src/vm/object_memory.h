@@ -97,6 +97,9 @@ class Space {
   // Scavenge loop.
   void CompleteScavenge(PointerVisitor* visitor);
 
+  // Schema change support.
+  void CompleteTransformations(PointerVisitor* visitor);
+
   // Returns true if the address is inside this space.
   inline bool Includes(uword address) const;
 

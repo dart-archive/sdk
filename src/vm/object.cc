@@ -17,135 +17,28 @@
 
 namespace fletch {
 
-// Helper class to remove forward pointer when performing
-// equivalence checks.
+static void CopyBlock(Object** dst, Object** src, int byte_size) {
+  ASSERT(byte_size > 0);
+  ASSERT(Utils::IsAligned(byte_size, kPointerSize));
 
-class UnmarkEquivalenceVisitor: public PointerVisitor {
- public:
-  void VisitBlock(Object** start, Object** end) {
-    for (Object** p = start; p < end; p++) {
-      Object* object = *p;
-      if (object->IsHeapObject()) {
-        Unmark(HeapObject::cast(object));
-      }
-    }
+  // Use block copying memcpy if the segment we're copying is
+  // enough to justify the extra call/setup overhead.
+  static const int kBlockCopyLimit = 16 * kPointerSize;
+
+  if (byte_size >= kBlockCopyLimit) {
+    memcpy(dst, src, byte_size);
+  } else {
+    int remaining = byte_size / kPointerSize;
+    do {
+      remaining--;
+      *dst++ = *src++;
+    } while (remaining > 0);
   }
-
-  void Unmark(HeapObject* object) {
-    // An object is only marked if it has a
-    // forwarding address and the referred object
-    // has a forwarding address.
-    HeapObject* f = object->forwarding_address();
-    if (f == NULL) return;  // Not marked.
-    HeapObject* g = f->forwarding_address();
-    if (g == NULL) return;  // Not marked.
-    ASSERT(g->IsClass());
-    f->set_class(Class::cast(g));
-    object->set_class(Class::cast(g));
-    object->IteratePointers(this);
-  }
-
-  void VisitClass(Object** p) {
-    // Ignore class pointer.
-  }
-};
-
-bool Object::IsEquivalentTo(Object* other) {
-  // First perform the recursive check.
-  bool result = ObjectIsEquivalentTo(other);
-  if (IsHeapObject()) {
-    // Then remove all inserted forwarding pointers.
-    UnmarkEquivalenceVisitor visitor;
-    visitor.Unmark(HeapObject::cast(this));
-  }
-  return result;
-}
-
-bool Object::ObjectIsEquivalentTo(Object* other) {
-  if (this == other) return true;
-  if (IsSmi() || other->IsSmi()) return false;
-  bool result =
-      HeapObject::cast(this)->HeapObjectIsEquivalentTo(HeapObject::cast(other));
-  return result;
-}
-
-HeapObject* const HeapObject::kIllegal =
-    reinterpret_cast<HeapObject*>(0xdeadbead);
-
-
-HeapObject* HeapObject::EquivalentForwardingAddress() {
-  // Check for forwarding pointers in this and other.
-  HeapObject* f = forwarding_address();
-  if (f == NULL) return NULL;
-  if (f->forwarding_address() == NULL) return NULL;
-  return f;
-}
-
-bool HeapObject::HeapObjectIsEquivalentTo(HeapObject* other) {
-  ASSERT(this != other);  // Dealt with in ObjectIsEquivalentTo.
-  if (forwarding_address() != NULL || other->forwarding_address() != NULL) {
-    HeapObject* f = EquivalentForwardingAddress();
-    if (f != NULL) return f == other;
-    return this == other->EquivalentForwardingAddress();
-  }
-  ASSERT(forwarding_address() == NULL);
-  ASSERT(other->forwarding_address() == NULL);
-
-  // Check they have same class.
-  if (raw_class() != other->raw_class()) return false;
-
-  // Dispatch to string, array, or double. Otherwise return false;
-  switch (raw_class()->instance_format().type()) {
-    case InstanceFormat::STRING_TYPE:
-      return String::cast(this)->StringIsEquivalentTo(String::cast(other));
-    case InstanceFormat::ARRAY_TYPE:
-      return Array::cast(this)->ArrayIsEquivalentTo(Array::cast(other));
-    case InstanceFormat::DOUBLE_TYPE:
-      return Double::cast(this)->DoubleIsEquivalentTo(Double::cast(other));
-    case InstanceFormat::INSTANCE_TYPE:
-      return Instance::cast(this)->
-          InstanceIsEquivalentTo(Instance::cast(other));
-    default:
-      // Other object types only check object identity.
-      return false;
-  }
-}
-
-void HeapObject::SetEquivalentForwarding(HeapObject* other) {
-  ASSERT(this != other);
-  ASSERT(raw_class() == other->raw_class());
-  set_forwarding_address(other);
-  other->set_forwarding_address(other->get_class());
-}
-
-bool Array::ArrayIsEquivalentTo(Array* other) {
-  SetEquivalentForwarding(other);
-  if (length() != other->length()) return false;
-  for (int i = 0; i < length(); i++) {
-    if (!get(i)->ObjectIsEquivalentTo(other->get(i))) return false;
-  }
-  return true;
-}
-
-bool String::StringIsEquivalentTo(String* other) {
-  SetEquivalentForwarding(other);
-  return Equals(other);
-}
-
-bool Instance::InstanceIsEquivalentTo(Instance* other) {
-  // Remember to read the format before setting the forward pointer.
-  InstanceFormat format = raw_class()->instance_format();
-  SetEquivalentForwarding(other);
-  for (int offset = HeapObject::kSize;
-       offset < format.fixed_size();
-       offset += kPointerSize) {
-    if (!at(offset)->ObjectIsEquivalentTo(other->at(offset))) return false;
-  }
-  return true;
 }
 
 int HeapObject::Size() {
-  // Fast check for non variable length types.
+  // Fast check for non-variable length types.
+  ASSERT(forwarding_address() == NULL);
   InstanceFormat format = raw_class()->instance_format();
   if (!format.has_variable_part()) return format.fixed_size();
   int type = format.type();
@@ -171,6 +64,7 @@ int HeapObject::Size() {
 
 int HeapObject::FixedSize() {
   // Fast check for non variable length types.
+  ASSERT(forwarding_address() == NULL);
   InstanceFormat format = raw_class()->instance_format();
   return format.fixed_size();
 }
@@ -292,6 +186,60 @@ char* String::ToCString() {
   return result;
 }
 
+Instance* Instance::CloneTransformed(Heap* heap) {
+  ASSERT(forwarding_address() == NULL);
+  Class* old_class = get_class();
+  Class* new_class = old_class->TransformationTarget();
+  Array* transformation = old_class->Transformation();
+
+  Object* clone = heap->CreateHeapObject(
+      new_class, Smi::FromWord(0), get_immutable());
+  ASSERT(!clone->IsFailure());  // Needs to be in no-allocation-failure scope.
+  Instance* target = Instance::cast(clone);
+
+  int old_fields = old_class->NumberOfInstanceFields();
+  int new_fields = new_class->NumberOfInstanceFields();
+
+  int new_prefix = transformation->length() / 2;
+  int old_prefix = new_prefix - (new_fields - old_fields);
+  int suffix = new_fields - new_prefix;
+
+  Object** new_fields_pointer = reinterpret_cast<Object**>(
+      target->address() + Instance::kSize);
+  Object** old_fields_pointer = reinterpret_cast<Object**>(
+      address() + Instance::kSize);
+
+  // Transform the prefix.
+  for (int i = 0; i < new_prefix; i++) {
+    int tag = Smi::cast(transformation->get(i * 2 + 0))->value();
+    Object* value = transformation->get(i * 2 + 1);
+    if (tag == 0) {
+      new_fields_pointer[i] = value;
+    } else {
+      ASSERT(tag == 1);
+      int index = Smi::cast(value)->value();
+      ASSERT(index >= 0 && index < old_fields);
+      new_fields_pointer[i] = old_fields_pointer[index];
+    }
+  }
+
+  // Copy the suffix over if it is non-empty.
+  if (suffix > 0) {
+    CopyBlock(new_fields_pointer + new_prefix,
+              old_fields_pointer + old_prefix,
+              suffix * sizeof(Object*));
+  }
+
+  // Zap old fields. This makes it possible to compute the size of a
+  // transformed instance where it is hard to reach the class because
+  // of the installed forwarding pointer.
+  for (int i = 0; i < old_fields; i++) {
+    *(old_fields_pointer + i) = reinterpret_cast<Object*>(HeapObject::kTag);
+  }
+
+  return target;
+}
+
 void Instance::InstancePrint() {
   RawPrint("Instance");
   printf("\n");
@@ -410,6 +358,13 @@ void Initializer::InitializerShortPrint() {
   printf("\n");
 }
 
+void Class::Transform(Class* target, Array* transformation) {
+  ASSERT(!IsTransformed());
+  at_put(kIdOrTransformationTargetOffset, target);
+  at_put(kChildIdOrTransformationOffset, transformation);
+  ASSERT(IsTransformed());
+}
+
 Function* Class::LookupMethod(int selector) {
   ASSERT(Smi::IsValid(selector));
   Smi* selector_smi = Smi::FromWord(selector);
@@ -466,6 +421,7 @@ void Class::ClassShortPrint() {
 }
 
 void HeapObject::IteratePointers(PointerVisitor* visitor) {
+  ASSERT(forwarding_address() == NULL);
   visitor->VisitClass(reinterpret_cast<Object**>(address()));
   InstanceFormat format = raw_class()->instance_format();
   // Fast case for fixed size object with all pointers.
@@ -523,24 +479,6 @@ HeapObject* HeapObject::forwarding_address() {
 void HeapObject::set_forwarding_address(HeapObject* value) {
   ASSERT(forwarding_address() == NULL);
   at_put(kClassOffset, Smi::cast(reinterpret_cast<Smi*>(value->address())));
-}
-
-static void CopyBlock(Object** dst, Object** src, int byte_size) {
-  ASSERT(Utils::IsAligned(byte_size, kPointerSize));
-
-  // Use block copying memcpy if the segment we're copying is
-  // enough to justify the extra call/setup overhead.
-  static const int kBlockCopyLimit = 16 * kPointerSize;
-
-  if (byte_size >= kBlockCopyLimit) {
-    memcpy(dst, src, byte_size);
-  } else {
-    int remaining = byte_size / kPointerSize;
-    do {
-      remaining--;
-      *dst++ = *src++;
-    } while (remaining > 0);
-  }
 }
 
 HeapObject* HeapObject::CloneInToSpace(Space* to) {
