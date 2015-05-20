@@ -1,0 +1,34 @@
+breakpoint set: 0: main @0
+main    	@new A()
+main    	@new B()
+main    	@a
+main    	@a is A
+main    	@a
+main    	@a.a
+main    	@a
+main    	@a is B
+main    	@b
+main    	@b is A
+main    	@b
+main    	@b.a
+main    	@b
+main    	@b is B
+main    	@b
+main    	@b.b
+main    	@a
+main    	@b
+main    	@new C(a,b)
+C initializer	@b
+C initializer	@b is B
+C initializer	@isB=b is B
+C            	@a
+C            	@a is B
+C            	@a.b
+main    	@new C(a,b)
+isB lazy initializer	@globalA
+globalA lazy initializer	@new B()
+isB lazy initializer	@globalA is B
+main    	@new C(a,b)
+main    	@globalA
+main    	@globalA.a
+### process terminated

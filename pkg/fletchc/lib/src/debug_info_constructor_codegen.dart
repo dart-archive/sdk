@@ -95,6 +95,14 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
     super.handleAllocationAndBodyCall();
   }
 
+  void callIsSelector(
+      Node node,
+      DartType type,
+      Spannable diagnosticLocation) {
+    recordDebugInfo(node);
+    super.callIsSelector(node, type, diagnosticLocation);
+  }
+
   void invokeMethod(Node node, Selector selector) {
     recordDebugInfo(node);
     super.invokeMethod(node, selector);

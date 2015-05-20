@@ -725,6 +725,7 @@ abstract class CodegenVisitor
   }
 
   void callIsSelector(
+      Node node,
       DartType type,
       // TODO(ahe): Remove [diagnosticLocation] when malformed types are
       // handled.
@@ -741,13 +742,14 @@ abstract class CodegenVisitor
   }
 
   void handleIs(
+      Node node,
       Node expression,
       DartType type,
       // TODO(ahe): Remove [diagnosticLocation] when callIsSelector does not
       // require it.
       Spannable diagnosticLocation) {
     visitForValue(expression);
-    callIsSelector(type, diagnosticLocation);
+    callIsSelector(node, type, diagnosticLocation);
   }
 
   void visitIs(
@@ -755,7 +757,7 @@ abstract class CodegenVisitor
       Node expression,
       DartType type,
       _) {
-    handleIs(expression, type, node.arguments.first);
+    handleIs(node, expression, type, node.arguments.first);
     applyVisitState();
   }
 
@@ -764,7 +766,7 @@ abstract class CodegenVisitor
       Node expression,
       DartType type,
       _) {
-    handleIs(expression, type, node.arguments.first);
+    handleIs(node, expression, type, node.arguments.first);
     builder.negate();
     applyVisitState();
   }

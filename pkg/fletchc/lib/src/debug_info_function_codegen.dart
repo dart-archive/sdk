@@ -66,6 +66,14 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
   void registerStaticInvocation(FunctionElement function) { }
   void registerInstantiatedClass(ClassElement klass) { }
 
+  void callIsSelector(
+      Node node,
+      DartType type,
+      Spannable diagnosticLocation) {
+    recordDebugInfo(node);
+    super.callIsSelector(node, type, diagnosticLocation);
+  }
+
   void invokeMethod(Node node, Selector selector) {
     recordDebugInfo(node);
     super.invokeMethod(node, selector);
