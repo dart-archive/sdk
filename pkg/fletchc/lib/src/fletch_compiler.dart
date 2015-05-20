@@ -178,15 +178,16 @@ class FletchCompiler extends FletchCompilerHack {
     if (unit == null) return null;
     FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
     unit.accept(visitor);
-    CompiledFunction function = backend.compiledFunctions[visitor.element];
+    CompiledFunction function =
+        _NO_WARN(backend).compiledFunctions[visitor.element];
     if (function == null) return null;
-    backend.ensureDebugInfo(function);
+    _NO_WARN(backend).ensureDebugInfo(function);
     return function.debugInfo;
   }
 
   int positionInFileFromPattern(String file, int line, String pattern) {
     Uri uri = Uri.base.resolve(file);
-    SourceFile sourceFile = provider.sourceFiles[uri];
+    SourceFile sourceFile = _NO_WARN(provider).sourceFiles[uri];
     if (sourceFile == null) return null;
     List<int> lineStarts = sourceFile.lineStarts;
     if (line >= lineStarts.length) return null;
@@ -202,7 +203,7 @@ class FletchCompiler extends FletchCompilerHack {
 
   int positionInFile(String file, int line, int column) {
     Uri uri = Uri.base.resolve(file);
-    SourceFile sourceFile = provider.sourceFiles[uri];
+    SourceFile sourceFile = _NO_WARN(provider).sourceFiles[uri];
     if (sourceFile == null) return null;
     if (line >= sourceFile.lineStarts.length) return null;
     return sourceFile.lineStarts[line] + column;
@@ -210,3 +211,6 @@ class FletchCompiler extends FletchCompilerHack {
 
   bool inUserCode(element, {bool assumeInUserCode: false}) => true;
 }
+
+// TODO(ahe): Remove this method.
+_NO_WARN(object) => object;

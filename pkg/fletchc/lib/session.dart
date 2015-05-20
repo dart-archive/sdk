@@ -125,7 +125,7 @@ class Session {
   Future doDebugRun() async {
     if (running) {
       print("### already running");
-      return;
+      return null;
     }
     running = true;
     const ProcessRun().addTo(vmSocket);
@@ -161,17 +161,17 @@ class Session {
                                        int position) async {
     if (position == null) {
       print("### Failed setting breakpoint for $name");
-      return;
+      return null;
     }
     DebugInfo debugInfo = compiler.debugInfoForPosition(file, position);
     if (debugInfo == null) {
       print("### Failed setting breakpoint for $name");
-      return;
+      return null;
     }
     SourceLocation location = debugInfo.locationForPosition(position);
     if (location == null) {
       print("### Failed setting breakpoint for $name");
-      return;
+      return null;
     }
     int methodId = debugInfo.function.methodId;
     int bytecodeIndex = location.bytecodeIndex;
@@ -183,7 +183,7 @@ class Session {
                                       String pattern) async {
     if (line < 1) {
       print("### Invalid line number: $line");
-      return;
+      return null;
     }
     int position = compiler.positionInFileFromPattern(file, line - 1, pattern);
     await setFileBreakpointFromPosition('$file:$line:$pattern', file, position);
@@ -192,11 +192,11 @@ class Session {
   Future setFileBreakpoint(String file, int line, int column) async {
     if (line < 1) {
       print("### Invalid line number: $line");
-      return;
+      return null;
     }
     if (column < 1) {
       print("### Invalid column number: $column");
-      return;
+      return null;
     }
     int position = compiler.positionInFile(file, line - 1, column - 1);
     await setFileBreakpointFromPosition('$file:$line:$column', file, position);
@@ -205,7 +205,7 @@ class Session {
   Future deleteBreakpoint(int id) async {
     if (!breakpoints.containsKey(id)) {
       print("### invalid breakpoint id: $id");
-      return;
+      return null;
     }
     new ProcessDeleteBreakpoint(id).addTo(vmSocket);
     ProcessDeleteBreakpoint response = await nextVmCommand();
@@ -226,7 +226,7 @@ class Session {
   }
 
   Future stepTo(int methodId, int bcp) async {
-    if (!checkRunning()) return;
+    if (!checkRunning()) return null;
     new ProcessStepTo(MapId.methods, methodId, bcp).addTo(vmSocket);
     await handleProcessStop();
   }
@@ -247,13 +247,13 @@ class Session {
   }
 
   Future step() async {
-    if (!checkRunning()) return;
+    if (!checkRunning()) return null;
     await doStep();
     await backtrace();
   }
 
   Future stepOver() async {
-    if (!checkRunning()) return;
+    if (!checkRunning()) return null;
     SourceLocation previous = currentLocation;
     do {
       await stepOverBytecode();
@@ -265,7 +265,7 @@ class Session {
   }
 
   Future stepOut() async {
-    if (!checkRunning()) return;
+    if (!checkRunning()) return null;
     do {
       const ProcessStepOut().addTo(vmSocket);
       await handleProcessStop();
@@ -274,19 +274,19 @@ class Session {
   }
 
   Future stepBytecode() async {
-    if (!checkRunning()) return;
+    if (!checkRunning()) return null;
     const ProcessStep().addTo(vmSocket);
     await handleProcessStop();
   }
 
   Future stepOverBytecode() async {
-    if (!checkRunning()) return;
+    if (!checkRunning()) return null;
     const ProcessStepOver().addTo(vmSocket);
     await handleProcessStop();
   }
 
   Future cont() async {
-    if (!checkRunning()) return;
+    if (!checkRunning()) return null;
     const ProcessContinue().addTo(vmSocket);
     await handleProcessStop();
     await backtrace();
@@ -353,7 +353,7 @@ class Session {
     Command response = await nextVmCommand();
     if (response is Integer) {
       print('$name: ${response.value}');
-      return;
+      return null;
     }
     assert(response is Instance);
     // The local is an instance of a class. The class is on the session stack,
@@ -382,7 +382,7 @@ class Session {
     LocalValue local = info.lookup(name);
     if (local == null) {
       print('### No such variable: $name');
-      return;
+      return null;
     }
     await printLocal(name, local);
   }
