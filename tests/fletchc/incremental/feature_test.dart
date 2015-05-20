@@ -82,7 +82,8 @@ const List<EncodedResult> tests = const <EncodedResult>[
                 const <String>['Hello, Brave New World!']),
         ]),
 
-    // Test that we can remove a field from an instance of a class.
+    // Test that we can remove a field from an instance of a class
+    // from the end of the field list.
     const EncodedResult(
         r"""
 ==> main.dart.patch <==
@@ -113,6 +114,41 @@ main() {
             const ProgramExpectation(
                 const <String>[
                     'instance.x is 42']),
+        ]),
+
+    // Test that we can remove a field from an instance of a class
+    // from the middle of the field list.
+    const EncodedResult(
+        r"""
+==> main.dart.patch <==
+class A {
+  var x;
+<<<<<<<
+  var y;
+=======
+>>>>>>>
+  var z;
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new A();
+    instance.x = 87;
+  } else {
+    print('instance.x is ${instance.x}');
+  }
+}
+""",
+        const <ProgramExpectation>[
+            const ProgramExpectation(
+                const <String>[
+                    'instance is null']),
+            const ProgramExpectation(
+                const <String>[
+                    'instance.x is 87']),
         ]),
 
     // Test that the test framework handles more than one update.
@@ -1922,8 +1958,8 @@ void main() {
 
   var testsToRun = tests.skip(skip);
   // TODO(ahe): Remove the following line, as it means only run the
-  // first two tests.
-  testsToRun = testsToRun.take(2);
+  // first few tests.
+  testsToRun = testsToRun.take(3);
   return asyncTest(() => Future.forEach(testsToRun, compileAndRun)
       .then(updateSummary));
 }

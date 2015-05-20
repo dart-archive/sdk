@@ -1041,7 +1041,9 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
   final FieldElementX element;
 
   bool wasStateCaptured = false;
-  CompiledClass enclosingCompiledClass;
+
+  CompiledClass beforeCompiledClass;
+  Map<FieldElement, int> beforeFields;
 
   RemovedFieldUpdate(Compiler compiler, this.element)
       : super(compiler);
@@ -1053,8 +1055,16 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
   void captureState() {
     if (wasStateCaptured) throw "captureState was called twice.";
     wasStateCaptured = true;
-    enclosingCompiledClass = backend.compiledClasses[element.enclosingClass];
-    if (enclosingCompiledClass == null) {
+
+    ClassElement classElement = element.enclosingClass;
+    beforeCompiledClass = backend.compiledClasses[classElement];
+
+    beforeFields = <FieldElement, int>{};
+    int index = 0;
+    classElement.implementation.forEachInstanceField((_, field) {
+      beforeFields[field] = index++;
+    });
+    if (beforeCompiledClass == null) {
       throw new IncrementalCompilationFailed("Not implemented yet.");
     }
   }
@@ -1093,19 +1103,35 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
     const VALUE_FROM_ELSEWHERE = 0;
     const VALUE_FROM_OLD_INSTANCE = 1;
 
+    List<FieldElementX> afterFields = [];
+    beforeCompiledClass.element.implementation.forEachInstanceField((_, field) {
+      afterFields.add(field);
+    });
+
     // Push all affected classes.
     updates.add(
-        new commands_lib.PushFromMap(MapId.classes, enclosingCompiledClass.id));
+        new commands_lib.PushFromMap(MapId.classes, beforeCompiledClass.id));
     int numberOfClasses = 1;
 
     // Push the tranformation mapping.
-    updates.add(
-        const commands_lib.PushNewInteger(VALUE_FROM_OLD_INSTANCE));
-    updates.add(
-        const commands_lib.PushNewInteger(0));  // Value from old instance @ 0.
-    updates.add(
-        const commands_lib.PushNewArray(2));
-    int fieldCountDelta = -1;
+    for (int i = 0; i < afterFields.length; i++) {
+      FieldElementX field = afterFields[i];
+      int beforeIndex = beforeFields[field];
+      if (beforeIndex != null) {
+        updates.add(
+            const commands_lib.PushNewInteger(VALUE_FROM_OLD_INSTANCE));
+        updates.add(
+            new commands_lib.PushNewInteger(beforeIndex));
+      } else {
+        updates.add(
+            const commands_lib.PushNewInteger(VALUE_FROM_ELSEWHERE));
+        updates.add(
+            const commands_lib.PushNull());
+      }
+    }
+    updates.add(new commands_lib.PushNewArray(afterFields.length * 2));
+
+    int fieldCountDelta = afterFields.length - beforeFields.length;
 
     // Finally, ask the runtime to change the schemas!
     updates.add(
