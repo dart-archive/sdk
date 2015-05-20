@@ -273,9 +273,9 @@ class Thread {
     thread._result = value;
 
     // Suspend the current thread. It will never wake up again.
-    _current = _suspendThread(thread, true);
+    Thread next = _suspendThread(thread, true);
     thread._coroutine = null;
-    fletch.coroutineChange(Thread._scheduler, _current);
+    fletch.coroutineChange(Thread._scheduler, next);
   }
 
   join() {
@@ -327,22 +327,25 @@ class Thread {
   static Thread _unlink(Thread thread) {
     Thread next = thread._next;
     if (identical(thread, next)) {
-      thread._next = null;
-      thread._previous = null;
       return null;
     }
 
     Thread previous = thread._previous;
     previous._next = next;
     next._previous = previous;
-    thread._next = null;
-    thread._previous = null;
     return next;
   }
 
   static Thread _suspendThread(Thread thread, bool exiting) {
     Thread current = _current = _unlink(thread);
-    if (!exiting) _idleThreads = _link(thread, _idleThreads);
+
+    if (exiting) {
+      thread._next = null;
+      thread._previous = null;
+    } else {
+      _idleThreads = _link(thread, _idleThreads);
+    }
+
     if (current != null) return current;
 
     // If we don't have any idle threads, halt.
