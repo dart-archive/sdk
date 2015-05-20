@@ -29,8 +29,16 @@ const Map<String, String> URIS_TO_ANALYZE = const <String, String>{
 };
 
 class FletchWarningsRuntimeConfiguration extends RuntimeConfiguration {
-  FletchWarningsRuntimeConfiguration()
-      : super.subclass();
+  final String system;
+
+  FletchWarningsRuntimeConfiguration(Map configuration)
+      : system = configuration['system'],
+        super.subclass();
+
+  String get dartBinary {
+    String os = (system == 'macos') ? 'mac' : 'linux';
+    return 'third_party/bin/$os/dart';
+  }
 
   List<Command> computeRuntimeCommands(
       TestSuite suite,
@@ -41,7 +49,7 @@ class FletchWarningsRuntimeConfiguration extends RuntimeConfiguration {
     return <Command>[
         commandBuilder.getAnalysisCommand(
             'dart2js-analyze-only',
-            'third_party/bin/mac/dart',
+            dartBinary,
             <String>[
                 '-ppackage/',
                 'package/compiler/src/dart2js.dart',

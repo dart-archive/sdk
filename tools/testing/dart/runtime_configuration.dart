@@ -48,7 +48,7 @@ class RuntimeConfiguration {
         return new FletchVMRuntimeConfiguration();
 
       case 'fletch_warnings':
-        return new FletchWarningsRuntimeConfiguration();
+        return new FletchWarningsRuntimeConfiguration(configuration);
 
       default:
         throw "Unknown runtime '$runtime'";
