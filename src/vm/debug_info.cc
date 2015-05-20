@@ -51,8 +51,8 @@ bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
       ASSERT(expected_sp >= sp);
       if (expected_sp != sp) return false;
     }
-    if (breakpoint.is_one_shot()) DeleteBreakpoint(breakpoint.id());
     set_current_breakpoint(breakpoint.id());
+    if (breakpoint.is_one_shot()) DeleteBreakpoint(breakpoint.id());
     return true;
   }
   if (is_stepping_) {
