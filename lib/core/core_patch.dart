@@ -224,7 +224,7 @@ class Thread {
   Thread _next;
 
   static Thread _current = new Thread._initial();
-  static int _threadCount = 1;
+  static Thread _idleThreads;
 
   // This static is initialized as part of creating the
   // initial thread. This way we can avoid checking for
@@ -248,8 +248,7 @@ class Thread {
   static Thread fork(entry) {
     _current;  // Force initialization of threading system.
     Thread thread = new Thread._forked(entry);
-    _threadCount++;
-    _resumeThread(thread);
+    _markReady(thread);
     return thread;
   }
 
@@ -270,14 +269,13 @@ class Thread {
       joiners.clear();
     }
 
-    _threadCount--;
     thread._isDone = true;
     thread._result = value;
 
     // Suspend the current thread. It will never wake up again.
-    Thread next = _suspendThread(thread);
+    _current = _suspendThread(thread, true);
     thread._coroutine = null;
-    fletch.coroutineChange(Thread._scheduler, next);
+    fletch.coroutineChange(Thread._scheduler, _current);
   }
 
   join() {
@@ -296,51 +294,68 @@ class Thread {
     // Suspend the current thread and change to the scheduler.
     // When we get back, the [this] thread has exited and we
     // can go ahead and return the result.
-    Thread next = _suspendThread(thread);
+    Thread next = _suspendThread(thread, false);
     thread._coroutine = Coroutine._coroutineCurrent();
     fletch.coroutineChange(Thread._scheduler, next);
     return _result;
   }
 
   static void _resumeThread(Thread thread) {
-    Thread current = _current;
-    if (current == null) {
-      thread._next = thread;
-      thread._previous = thread;
-      _current = thread;
-    } else {
-      Thread next = current._next;
-      current._next = thread;
-      next._previous = thread;
-      thread._previous = current;
-      thread._next = next;
-    }
+    _idleThreads = _unlink(thread);
+    _markReady(thread);
   }
 
-  static Thread _suspendThread(Thread thread) {
+  static void _markReady(Thread thread) {
+    _current = _link(thread, _current);
+  }
+
+  static Thread _link(Thread thread, Thread list) {
+    if (list == null) {
+      thread._next = thread;
+      thread._previous = thread;
+      return thread;
+    }
+
+    Thread next = list._next;
+    list._next = thread;
+    next._previous = thread;
+    thread._previous = list;
+    thread._next = next;
+    return list;
+  }
+
+  static Thread _unlink(Thread thread) {
+    Thread next = thread._next;
+    if (identical(thread, next)) {
+      thread._next = null;
+      thread._previous = null;
+      return null;
+    }
+
     Thread previous = thread._previous;
-    if (identical(previous, thread)) {
-      // If no more threads are alive, the process is done.
-      if (_threadCount == 0) fletch.halt(0);
-      _current = null;
-      thread._previous = null;
-      thread._next = null;
-      while (true) {
-        Process._handleMessages();
-        // A call to _handleMessages can handle more messages than signaled, so
-        // we can get a following false-positive wakeup. If no new _current is
-        // set, simply yield again.
-        thread = _current;
-        if (thread != null) return thread;
-        fletch.yield(false);
-      }
-    } else {
-      Thread next = thread._next;
-      previous._next = next;
-      next._previous = previous;
-      thread._next = null;
-      thread._previous = null;
-      return next;
+    previous._next = next;
+    next._previous = previous;
+    thread._next = null;
+    thread._previous = null;
+    return next;
+  }
+
+  static Thread _suspendThread(Thread thread, bool exiting) {
+    Thread current = _current = _unlink(thread);
+    if (!exiting) _idleThreads = _link(thread, _idleThreads);
+    if (current != null) return current;
+
+    // If we don't have any idle threads, halt.
+    if (exiting && _idleThreads == null) fletch.halt(0);
+
+    while (true) {
+      Process._handleMessages();
+      // A call to _handleMessages can handle more messages than signaled, so
+      // we can get a following false-positive wakeup. If no new _current is
+      // set, simply yield again.
+      current = _current;
+      if (current != null) return current;
+      fletch.yield(false);
     }
   }
 
@@ -602,7 +617,7 @@ class Channel {
   void deliver(message) {
     Thread sender = Thread._current;
     _enqueue(new _ChannelEntry(message, sender));
-    Thread next = Thread._suspendThread(sender);
+    Thread next = Thread._suspendThread(sender, false);
     // TODO(kasperl): Should we yield to receiver if possible?
     Thread._yieldTo(sender, next);
   }
@@ -622,7 +637,7 @@ class Channel {
     if (_head == null) {
       Thread receiver = Thread._current;
       _receiver = receiver;
-      Thread next = Thread._suspendThread(receiver);
+      Thread next = Thread._suspendThread(receiver, false);
       Thread._yieldTo(receiver, next);
     }
 
