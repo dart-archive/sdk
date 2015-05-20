@@ -1539,7 +1539,7 @@ void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
   __ ldr(R2, Address(R2, HeapObject::kClassOffset - HeapObject::kTag));
 
   // Compute entry index: class id + selector offset.
-  int id_offset = Class::kIdTransformationTargetOffset - HeapObject::kTag;
+  int id_offset = Class::kIdOrTransformationTargetOffset - HeapObject::kTag;
   __ Bind(&dispatch);
   __ ldr(R2, Address(R2, id_offset));
   __ add(R2, R2, R7);

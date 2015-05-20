@@ -87,6 +87,8 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     units.values.forEach((unit) { nodes.addAll(unit.structs); });
     _writeHeader();
     _writeNodeBase();
+    _writeRootPresenter();
+    _writeImmiRoot();
     units.values.forEach(visit);
   }
 
@@ -144,6 +146,30 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     writeln();
   }
 
+  void _writeRootPresenter() {
+    writeln('@class ImmiRoot;');
+    writeln('@protocol RootPresenter <NSObject>');
+    writeln('@property (readonly) ImmiRoot* immi_root;');
+    writeln('- (void)immi_initWithRoot:(ImmiRoot*)root;');
+    writeln('@end');
+    writeln();
+    writeln('@interface UINavigationController (ImmiNavigationRootPresenter) <RootPresenter>');
+    writeln('@end');
+  }
+
+  void _writeImmiRoot() {
+    writeln('@interface ImmiService : NSObject');
+    writeln('- (void)registerStoryboard:(UIStoryboard*)storyboard;');
+    writeln('- (id <RootPresenter>)getPresenterByName:(NSString*)name;');
+    writeln('@end');
+    writeln('@interface ImmiRoot : NSObject');
+    writeln('@property (readonly) Node* rootNode;');
+    writeln('- (bool)refresh;');
+    writeln('- (void)reset;');
+    writeln('@end');
+    writeln();
+  }
+
   void _writeNSType(Type type) {
     if (type.isList) {
       write('NSArray*');
@@ -158,6 +184,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     writeln('// Generated file. Do not edit.');
     writeln();
     writeln('#import <Foundation/Foundation.h>');
+    writeln('#import <UIKit/UIKit.h>');
     writeln('#include "${serviceFile}.h"');
     writeln();
   }
@@ -172,6 +199,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     units.values.forEach((unit) { nodes.addAll(unit.structs); });
     _writeHeader();
     _writeNodeBaseExtendedInterface();
+    _writeImmiRootExtendedInterface();
 
     _writeEventUtils();
 
@@ -183,6 +211,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     _writeListUtils();
 
     _writeNodeBaseImplementation();
+    _writeImmiRootImplementation();
 
     units.values.forEach((unit) {
       unit.structs.forEach(_writeNodeImplementation);
@@ -191,6 +220,94 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
   visitUnit(Unit unit) {
     // Everything is done in visitUnits.
+  }
+
+  _writeImmiRootExtendedInterface() {
+    write("""
+@interface ImmiService ()
+@property NSMutableArray* storyboards;
+@end
+
+@interface ImmiRoot ()
+@end
+
+""");
+  }
+
+  _writeImmiRootImplementation() {
+    write("""
+@implementation UINavigationController (ImmiNavigationRootPresenter)
+
+- (UIViewController <RootPresenter> *)presenter {
+  return (UIViewController <RootPresenter> *)self.topViewController;
+}
+
+- (ImmiRoot*)immi_root {
+  return self.presenter.immi_root;
+}
+
+- (void)immi_initWithRoot:(ImmiRoot*)root {
+  [self.presenter immi_initWithRoot:root];
+}
+
+@end
+
+@implementation ImmiService
+
+- (id)init {
+  _storyboards = [NSMutableArray array];
+  return self;
+}
+
+- (void)registerStoryboard:(UIStoryboard*)storyboard {
+  [self.storyboards addObject:storyboard];
+}
+
+- (id <RootPresenter>)getPresenterByName:(NSString*)name {
+  id <RootPresenter> presenter = nil;
+  for (int i = 0; i < self.storyboards.count; ++i) {
+    @try {
+      presenter =
+          [self.storyboards[i] instantiateViewControllerWithIdentifier:name];
+      break;
+    }
+    @catch (NSException* e) {
+      if (e.name != NSInvalidArgumentException) {
+        @throw e;
+      }
+    }
+  }
+  if (presenter != nil) {
+    [presenter immi_initWithRoot:[[ImmiRoot alloc] init]];
+    return presenter;
+  }
+  abort();
+}
+
+@end
+
+@implementation ImmiRoot
+
+- (id)init {
+  _rootNode = nil;
+  return self;
+}
+
+- (bool)refresh {
+  PatchSetData data = ${serviceName}::refresh();
+  bool result = [Node applyPatchSet:data atNode:&_rootNode];
+  data.Delete();
+  return result;
+}
+
+- (void)reset {
+  _rootNode = nil;
+  ${serviceName}::reset();
+}
+
+@end
+
+""");
   }
 
   _writeNodeExtendedInterface(Struct node) {
@@ -543,6 +660,7 @@ static void encodeString(NSString* string, List<unichar> chars) {
     writeln('// Generated file. Do not edit.');
     writeln();
     writeln('#import "${fileName}.h"');
+    //writeln('#import <Foundation/NSException.h>');
     writeln();
   }
 
