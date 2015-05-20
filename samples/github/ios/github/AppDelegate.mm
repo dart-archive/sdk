@@ -45,7 +45,7 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     [AppDelegate loadAndRunDartSnapshot];
   });
   // Setup the service.
-  ImmiServiceLayer::setup();
+  ImmiService::setup();
   return YES;
 }
 
@@ -82,7 +82,7 @@ didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
   // appropriate. See also applicationDidEnterBackground:.
 
   // Tear down the service API structures and Fletch.
-  ImmiServiceLayer::tearDown();
+  ImmiService::tearDown();
   ServiceApiTearDown();
   FletchTearDown();
 }

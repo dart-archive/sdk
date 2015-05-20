@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #import "MainController.h"
-#import "github.h"
 
 @interface MainController ()
 
@@ -17,16 +16,10 @@
 - (void)viewDidLoad {
   [super viewDidLoad];
 
-  ImmiService* immi = [[ImmiService alloc] init];
-
   UIStoryboard *storyboard =
       [UIStoryboard storyboardWithName:@"Main" bundle:nil];
-
-  [immi registerStoryboard:storyboard];
-
   self.commitListController =
-      (UINavigationController*)[immi getPresenterByName:@"CommitListPresenter"];
-
+      [storyboard instantiateViewControllerWithIdentifier:@"CommitListID"];
   self.menuController =
       [storyboard instantiateViewControllerWithIdentifier:@"MenuID"];
 

@@ -11,8 +11,7 @@
 
 @interface CommitListPresenter ()
 
-@property ImmiRoot* immi_root;
-
+@property CommitListNode* root;
 @property UITableView* tableView;
 
 // Internal properties for updating the sliding-window display range.
@@ -37,6 +36,7 @@
 @implementation CommitListPresenter
 
 - (id)init:(UITableView*)tableView {
+  self.root = nil;
   self.tableView = tableView;
   self.bufferSlack = 1;
   self.bufferAdvance = 4;
@@ -45,12 +45,6 @@
   self.bufferCount = 30;
   return self;
 }
-
-- (void)immi_initWithRoot:(ImmiRoot*)root {
-  self.immi_root = root;
-}
-
-- (CommitListNode*)root { return self.immi_root.rootNode; }
 
 // To track what items are visible on screen we rely on the fact that only
 // visible items are accessed by cellForRowAtIndexPath on the
@@ -67,10 +61,11 @@
 }
 
 - (bool)refresh {
-  if (self.immi_root == nil) return false;
   bool first = self.root == nil;
-  bool result = [self.immi_root refresh];
+  PatchSetData data = ImmiService::refresh();
+  bool result = [Node applyPatchSet:data atNode:&_root];
   assert(self.root.isCommitList);
+  data.Delete();
   // TODO(zerny): Find another way to setup the initial display.
   if (first) {
     assert(result);
@@ -83,6 +78,11 @@
                                   waitUntilDone:NO];
   }
   return result;
+}
+
+- (void)reset {
+  self.root = nil;
+  ImmiService::reset();
 }
 
 // The minumum number of items we know to exist in the list.

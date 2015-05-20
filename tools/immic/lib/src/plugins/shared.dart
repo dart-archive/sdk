@@ -18,7 +18,7 @@ abstract class CodeGenerationVisitor extends Visitor {
   String get libraryFile => basenameWithoutExtension(path);
   String get libraryName => 'immi.$libraryFile';
   String get baseName => camelize(libraryName);
-  String serviceName = 'ImmiServiceLayer';
+  String serviceName = 'ImmiService';
   String serviceFile = 'immi_service';
   String serviceImplName = 'ImmiServiceImpl';
   String serviceImplFile = 'immi_service_impl';

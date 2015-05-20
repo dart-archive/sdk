@@ -3,9 +3,8 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #import <UIKit/UIKit.h>
-#import "github.h"
 
-@interface CommitListController : UITableViewController <RootPresenter>
+@interface CommitListController : UITableViewController
 
 @end
 

@@ -15,20 +15,23 @@
 
 @implementation CommitListController
 
-- (ImmiRoot*)immi_root {
-  return self.presenter.immi_root;
-}
-
-- (void)immi_initWithRoot:(ImmiRoot *)root {
+- (void)viewDidLoad {
+  [super viewDidLoad];
   self.presenter = [[CommitListPresenter alloc] init:self.tableView];
-  [self.presenter immi_initWithRoot:root];
 
+  // Setup regular refresh.
   CADisplayLink* consoleLink =
-  [CADisplayLink displayLinkWithTarget:self.presenter
-                              selector:@selector(refresh)];
+      [CADisplayLink displayLinkWithTarget:self.presenter
+                                  selector:@selector(refresh)];
   [consoleLink setFrameInterval:60];
   [consoleLink addToRunLoop:[NSRunLoop currentRunLoop]
                     forMode:NSDefaultRunLoopMode];
+
+}
+
+- (void)didReceiveMemoryWarning {
+  [super didReceiveMemoryWarning];
+  // Dispose of any resources that can be recreated.
 }
 
 #pragma mark - Table view data source
