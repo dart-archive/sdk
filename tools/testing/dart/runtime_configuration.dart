@@ -22,6 +22,9 @@ import 'test_runner.dart' show
 
 import "utils.dart";
 
+import 'fletch_warnings_suite.dart' show
+    FletchWarningsRuntimeConfiguration;
+
 // TODO(ahe): I expect this class will become abstract very soon.
 class RuntimeConfiguration {
   // TODO(ahe): Remove this constructor and move the switch to
@@ -44,12 +47,15 @@ class RuntimeConfiguration {
       case 'fletchvm':
         return new FletchVMRuntimeConfiguration();
 
+      case 'fletch_warnings':
+        return new FletchWarningsRuntimeConfiguration();
+
       default:
         throw "Unknown runtime '$runtime'";
     }
   }
 
-  RuntimeConfiguration._subclass();
+  RuntimeConfiguration.subclass();
 
   int computeTimeoutMultiplier({
       bool isDebug: false,
@@ -74,7 +80,7 @@ class RuntimeConfiguration {
 /// The 'none' runtime configuration.
 class NoneRuntimeConfiguration extends RuntimeConfiguration {
   NoneRuntimeConfiguration()
-      : super._subclass();
+      : super.subclass();
 
   List<Command> computeRuntimeCommands(
       TestSuite suite,
@@ -89,7 +95,7 @@ class NoneRuntimeConfiguration extends RuntimeConfiguration {
 /// Common runtime configuration for runtimes based on the Dart VM.
 class DartVmRuntimeConfiguration extends RuntimeConfiguration {
   DartVmRuntimeConfiguration()
-      : super._subclass();
+      : super.subclass();
 
   int computeTimeoutMultiplier({
       bool isDebug: false,

@@ -96,23 +96,6 @@ def Steps(config):
       with bot.BuildStep('Build %s' % configuration['build_conf']):
         Run(['ninja', '-v', '-C', configuration['build_dir']])
 
-    with bot.BuildStep('warnings'):
-      # TODO(ahe): Make this check part of the build.
-      output = subprocess.check_output([
-        "./out/ReleaseIA32Clang/dart",
-        "-ppackage/",
-        "package/compiler/src/dart2js.dart",
-        "-ppackage/", # For dart2js.
-        "--library-root=../dart/sdk/",
-        "--analyze-only",
-        "--show-package-warnings",
-        "--categories=Server",
-        "package:fletchc/src/driver/driver_main.dart"])
-      output = re.sub(r"[^\n]*\n[^\n]*\n[^\n]* // NO_LINT\n *\^+\n", "", output)
-      if output: # output from dart2js should be empty.
-        print output
-        raise OSError()
-
     with bot.BuildStep('incremental', swallow_error=True):
       dart_vm = './third_party/bin/linux/dart'
       if mac:

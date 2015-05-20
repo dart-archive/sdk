@@ -20,7 +20,8 @@ const List<String> defaultTestSelectors = const [
     'coroutine',
     'io',
     'ffi',
-    'samples'
+    'samples',
+    'warnings',
 ];
 
 /**
@@ -106,8 +107,8 @@ class TestOptionsParser {
     none: No runtime, compile only (for example, used for dartanalyzer static
           analysis tests).''',
               ['-r', '--runtime'],
-              ['none', 'fletchc', 'fletchd', 'fletchvm'],
-              'fletchc,fletchd'),
+              ['none', 'fletchc', 'fletchd', 'fletchvm', 'fletch_warnings'],
+              'fletch_warnings,fletchd,fletchc'),
           new _TestOptionSpecification(
               'arch',
               'The architecture to run tests for',
@@ -162,7 +163,7 @@ class TestOptionsParser {
               ['-p', '--progress'],
               ['compact', 'color', 'line', 'verbose',
                'silent', 'status', 'buildbot', 'diff'],
-              'compact'),
+              'color'),
           new _TestOptionSpecification(
               'failure-summary',
               'Print failure summary at the end',
@@ -181,7 +182,7 @@ class TestOptionsParser {
               'Print a summary report of the number of tests, by expectation',
               ['--report'],
               [],
-              false,
+              true,
               type: 'bool'),
           new _TestOptionSpecification(
               'tasks',
@@ -230,7 +231,7 @@ class TestOptionsParser {
               'Print timing information after running tests',
               ['--time'],
               [],
-              false,
+              true,
               type: 'bool'),
           new _TestOptionSpecification(
               'dart',
@@ -308,7 +309,7 @@ Note: currently only implemented for dart2js.''',
               'Do not run tests in batch mode',
               ['-n', '--nobatch'],
               [],
-              false,
+              true, // Batch-mode breaks fletch_warnings.
               type: 'bool'),
           new _TestOptionSpecification(
               'dart2js_batch',
@@ -653,7 +654,7 @@ Note: currently only implemented for dart2js.''',
         validRuntimes = const ['none', 'fletchvm'];
         break;
       case 'none':
-        validRuntimes = const ['fletchc', 'fletchd'];
+        validRuntimes = const ['fletchc', 'fletchd', 'fletch_warnings'];
         break;
     }
     if (!validRuntimes.contains(config['runtime'])) {

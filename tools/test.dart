@@ -39,6 +39,9 @@ import "testing/dart/test_runner.dart";
 import "testing/dart/test_suite.dart";
 import "testing/dart/utils.dart";
 
+import 'testing/dart/fletch_warnings_suite.dart' show
+    FletchWarningsSuite;
+
 //import "../runtime/tests/vm/test_config.dart";
 //import "../tests/co19/test_config.dart";
 
@@ -189,6 +192,10 @@ void testConfigurations(List<Map> configurations) {
           testSuites.add(
             new StandardTestSuite.forDirectory(conf, testSuiteDir));
         }
+      }
+    } else if (conf['runtime'] == 'fletch_warnings') {
+      if (selectors.containsKey('warnings')) {
+        testSuites.add(new FletchWarningsSuite(conf, 'warnings'));
       }
     } else {
       for (final testSuiteDir in TEST_SUITE_DIRECTORIES) {

@@ -26,6 +26,9 @@ import "test_suite.dart";
 import "utils.dart";
 import 'record_and_replay.dart';
 
+import 'fletch_warnings_suite.dart' show
+    FletchWarningsOutputCommand;
+
 const int CRASHING_BROWSER_EXITCODE = -10;
 const int SLOW_TIMEOUT_MULTIPLIER = 4;
 
@@ -1435,7 +1438,6 @@ class BrowserControllerTestOutcome extends CommandOutputImpl
   }
 }
 
-
 class AnalysisCommandOutputImpl extends CommandOutputImpl {
   // An error line has 8 fields that look like:
   // ERROR|COMPILER|MISSING_SOURCE|file:/tmp/t.dart|15|1|24|Missing source.
@@ -1735,7 +1737,7 @@ CommandOutput createCommandOutput(Command command,
         command, exitCode, timedOut, stdout, stderr,
         time, compilationSkipped);
   } else if (command is AnalysisCommand) {
-    return new AnalysisCommandOutputImpl(
+    return new FletchWarningsOutputCommand(
         command, exitCode, timedOut, stdout, stderr,
         time, compilationSkipped);
   } else if (command is OutputDiffingVmCommand) {
