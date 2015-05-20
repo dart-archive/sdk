@@ -153,9 +153,6 @@ def RunTests(name, mode, arch, config, mac=False, clang=True, asan=False,
       #  - normal fletch VM
       #  - fletch VM with -Xunfold-program enabled
       args.extend(['-cfletchc', '-rfletchvm'])
-    else:
-      # We just let package:fletchc/fletchc.dart compile & run tests.
-      args.extend(['-cnone', '-rfletchc,fletchd'])
 
     if asan:
       args.append('--asan')
