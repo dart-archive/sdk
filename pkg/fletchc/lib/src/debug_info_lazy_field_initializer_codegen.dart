@@ -13,6 +13,12 @@ import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
 import 'package:compiler/src/universe/universe.dart';
 
+import 'package:compiler/src/dart_types.dart' show
+    DartType;
+
+import 'package:compiler/src/util/util.dart' show
+    Spannable;
+
 import 'fletch_context.dart';
 
 import 'compiled_function.dart' show

@@ -12,6 +12,12 @@ import 'package:compiler/src/universe/universe.dart';
 import 'package:compiler/src/dart2jslib.dart' show
     Registry;
 
+import 'package:compiler/src/dart_types.dart' show
+    DartType;
+
+import 'package:compiler/src/util/util.dart' show
+    Spannable;
+
 import 'bytecode_builder.dart';
 import 'closure_environment.dart';
 import 'codegen_visitor.dart';

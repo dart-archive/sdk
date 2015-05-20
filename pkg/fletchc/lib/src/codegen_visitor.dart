@@ -2464,7 +2464,7 @@ abstract class CodegenVisitor
     TypeAnnotation type = node.type;
     if (type != null) {
       builder.loadSlot(exceptionSlot);
-      callIsSelector(elements.getType(type), type);
+      callIsSelector(type, elements.getType(type), type);
       builder.branchIfFalse(wrongType);
     }
 
