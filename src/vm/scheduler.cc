@@ -516,7 +516,6 @@ Process* Scheduler::InterpretProcess(Process* process,
 
   if (interpreter.IsAtBreakPoint()) {
     process->ChangeState(Process::kRunning, Process::kBreakPoint);
-    process->debug_info()->set_is_at_breakpoint(true);
     Session* session = process->program()->session();
     if (session != NULL) {
       session->BreakPoint(process);

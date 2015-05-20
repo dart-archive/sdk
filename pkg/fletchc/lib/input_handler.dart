@@ -46,6 +46,7 @@ class InputHandler {
   Future handleLine(String line) async {
     if (line.isEmpty) line = previousLine;
     previousLine = line;
+    if (stream != stdin) print(line);
     List<String> commandComponents =
         line.split(' ').where((s) => !s.isEmpty).toList();
     String command = commandComponents[0];
@@ -180,6 +181,7 @@ class InputHandler {
     printPrompt();
     var inputLineStream = stream;
     if (inputLineStream == null) {
+      stream = stdin;
       inputLineStream = stdin.transform(new Utf8Decoder())
                              .transform(new LineSplitter());
     }

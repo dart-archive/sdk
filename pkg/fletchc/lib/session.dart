@@ -96,7 +96,7 @@ class Session {
     return vmCommands.current;
   }
 
-  Future handleProcessStop() async {
+  Future<int> handleProcessStop() async {
     currentStackTrace = null;
     currentFrame = 0;
     Command response = await nextVmCommand();
@@ -112,9 +112,11 @@ class Session {
         break;
       default:
         assert(response.code == CommandCode.ProcessBreakpoint);
+        ProcessBreakpoint command = response;
         await getStackTrace();
-        break;
+        return command.breakpointId;
     }
+    return -1;
   }
 
   bool checkRunning() {
@@ -202,14 +204,18 @@ class Session {
     await setFileBreakpointFromPosition('$file:$line:$column', file, position);
   }
 
+  Future doDeleteBreakpoint(int id) async {
+    new ProcessDeleteBreakpoint(id).addTo(vmSocket);
+    ProcessDeleteBreakpoint response = await nextVmCommand();
+    assert(response.id == id);
+  }
+
   Future deleteBreakpoint(int id) async {
     if (!breakpoints.containsKey(id)) {
       print("### invalid breakpoint id: $id");
       return null;
     }
-    new ProcessDeleteBreakpoint(id).addTo(vmSocket);
-    ProcessDeleteBreakpoint response = await nextVmCommand();
-    assert(response.id == id);
+    await doDeleteBreakpoint(id);
     print("deleted breakpoint: ${breakpoints[id]}");
     breakpoints.remove(id);
   }
@@ -266,10 +272,32 @@ class Session {
 
   Future stepOut() async {
     if (!checkRunning()) return null;
+    // If last frame, just continue.
+    if (currentStackTrace.stackFrames.length <= 1) {
+      await cont();
+      return null;
+    }
+    // Get source location for call. We only want to break when the location
+    // has changed from the call to something else.
+    SourceLocation return_location =
+        currentStackTrace.stackFrames[1].sourceLocation();
     do {
+      if (currentStackTrace.stackFrames.length <= 1) {
+        await cont();
+        return null;
+      }
       const ProcessStepOut().addTo(vmSocket);
-      await handleProcessStop();
+      ProcessSetBreakpoint response = await nextVmCommand();
+      assert(response.value != -1);
+      int id = await handleProcessStop();
+      if (id != response.value) {
+        print("### 'finish' cancelled because another breakpoint was hit");
+        await doDeleteBreakpoint(response.value);
+        await backtrace();
+        return null;
+      }
     } while (!currentLocationIsVisible);
+    if (currentLocation == return_location) await doStep();
     await backtrace();
   }
 
@@ -282,7 +310,12 @@ class Session {
   Future stepOverBytecode() async {
     if (!checkRunning()) return null;
     const ProcessStepOver().addTo(vmSocket);
-    await handleProcessStop();
+    ProcessSetBreakpoint response = await nextVmCommand();
+    int id = await handleProcessStop();
+    if (id != response.value) {
+      print("### 'step over' cancelled because another breakpoint was hit");
+      if (response.value != -1) await doDeleteBreakpoint(response.value);
+    }
   }
 
   Future cont() async {

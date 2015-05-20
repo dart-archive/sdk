@@ -143,14 +143,18 @@ void Session::ProcessMessages() {
 
       case Connection::kProcessStepOver: {
         Scheduler* scheduler = program()->scheduler();
-        process_->PrepareStepOver();
+        int breakpoint_id = process_->PrepareStepOver();
+        connection_->WriteInt(breakpoint_id);
+        connection_->Send(Connection::kProcessSetBreakpoint);
         scheduler->ProcessContinue(process_);
         break;
       }
 
       case Connection::kProcessStepOut: {
         Scheduler* scheduler = program()->scheduler();
-        process_->PrepareStepOut();
+        int breakpoint_id = process_->PrepareStepOut();
+        connection_->WriteInt(breakpoint_id);
+        connection_->Send(Connection::kProcessSetBreakpoint);
         scheduler->ProcessContinue(process_);
         break;
       }
@@ -841,7 +845,9 @@ void Session::UncaughtException() {
 }
 
 void Session::BreakPoint(Process* process) {
-  process->debug_info()->set_is_stepping(false);
+  DebugInfo* debug_info = process->debug_info();
+  debug_info->set_is_stepping(false);
+  connection_->WriteInt(debug_info->current_breakpoint_id());
   connection_->Send(Connection::kProcessBreakpoint);
 }
 

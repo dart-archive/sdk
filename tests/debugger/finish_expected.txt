@@ -1,0 +1,85 @@
+Starting session. Type 'help' for a list of commands.
+
+> b
+breakpoint set: 0: main @0
+> r
+Stack trace:
+> 0: main    	@foo()
+> s
+Stack trace:
+> 0: foo     	@32
+  1: main    	@foo()
+> finish
+Stack trace:
+> 0: main    	@32
+> s
+Stack trace:
+> 0: main    	@32
+> s
+Stack trace:
+> 0: main    	@32+32
+> s
+Stack trace:
+> 0: main    	@foo()
+> s
+Stack trace:
+> 0: foo     	@32
+  1: main    	@foo()
+> finish
+Stack trace:
+> 0: main    	@32+32+foo()
+> s
+Stack trace:
+> 0: main    	@new A()
+> s
+Stack trace:
+> 0: main    	@a
+> s
+Stack trace:
+> 0: main    	@a.x
+> s
+Stack trace:
+> 0: A.x     	@_x
+  1: main    	@a.x
+> finish
+Stack trace:
+> 0: main    	@a
+> s
+Stack trace:
+> 0: main    	@a.y()
+> s
+Stack trace:
+> 0: A.y     	@32
+  1: main    	@a.y()
+> s
+Stack trace:
+> 0: A.y     	@32
+  1: main    	@a.y()
+> s
+Stack trace:
+> 0: A.y     	@32+32
+  1: main    	@a.y()
+> s
+Stack trace:
+> 0: A.y     	@_x
+  1: main    	@a.y()
+> finish
+Stack trace:
+> 0: main    	@a
+> b y
+breakpoint set: 6: y @0
+> s
+Stack trace:
+> 0: main    	@a.z()
+> s
+Stack trace:
+> 0: A.z     	@y()
+  1: main    	@a.z()
+> finish
+### 'finish' cancelled because another breakpoint was hit
+Stack trace:
+> 0: A.y     	@32
+  1: A.z     	@y()
+  2: main    	@a.z()
+> c
+### process terminated

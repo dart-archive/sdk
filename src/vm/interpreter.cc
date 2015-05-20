@@ -882,7 +882,7 @@ bool Engine::IsAtBreakPoint() {
   DebugInfo* debug_info = process()->debug_info();
   if (process()->debug_info() != NULL) {
     bool result = debug_info->is_at_breakpoint();
-    debug_info->set_is_at_breakpoint(false);
+    debug_info->clear_current_breakpoint();
     return result;
   }
   return false;

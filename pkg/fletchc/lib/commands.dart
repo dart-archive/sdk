@@ -121,7 +121,8 @@ class Command {
         }
         return backtrace;
       case CommandCode.ProcessBreakpoint:
-        return new ProcessBreakpoint();
+        int breakpointId = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new ProcessBreakpoint(breakpointId);
       case CommandCode.ProcessDeleteBreakpoint:
         int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ProcessDeleteBreakpoint(id);
@@ -596,7 +597,9 @@ class ProcessBacktraceRequest extends Command {
 }
 
 class ProcessBreakpoint extends Command {
-  const ProcessBreakpoint()
+  final int breakpointId;
+
+  const ProcessBreakpoint(this.breakpointId)
       : super(CommandCode.ProcessBreakpoint);
 }
 

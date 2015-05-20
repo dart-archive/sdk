@@ -158,8 +158,8 @@ class Process {
   // Debugging support.
   void AttachDebugger();
   void DetachDebugger();
-  void PrepareStepOver();
-  void PrepareStepOut();
+  int PrepareStepOver();
+  int PrepareStepOut();
 
   DebugInfo* debug_info() { return debug_info_; }
   bool is_debugging() const { return debug_info_ != NULL; }

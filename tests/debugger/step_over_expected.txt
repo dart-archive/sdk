@@ -1,10 +1,42 @@
 Starting session. Type 'help' for a list of commands.
 
-> breakpoint set: 0: main @0
-> Stack trace:
+> b
+breakpoint set: 0: main @0
+> r
+Stack trace:
 > 0: main    	@foo()
-> Stack trace:
+> so
+Stack trace:
 > 0: main    	@foo()
-> Stack trace:
+> so
+Stack trace:
+> 0: main    	@new A()
+> so
+Stack trace:
+> 0: main    	@a
+> s
+Stack trace:
+> 0: main    	@a.x
+> so
+Stack trace:
+> 0: main    	@a
+> s
+Stack trace:
+> 0: main    	@a.y()
+> so
+Stack trace:
+> 0: main    	@a
+> b y
+breakpoint set: 6: y @0
+> s
+Stack trace:
+> 0: main    	@a.y()
+> so
+### 'step over' cancelled because another breakpoint was hit
+Stack trace:
+> 0: A.y     	@_y
+  1: main    	@a.y()
+> finish
+Stack trace:
 > 0: main    	@1
-> 
+> q

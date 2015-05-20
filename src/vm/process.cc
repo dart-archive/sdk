@@ -515,7 +515,7 @@ void Process::DetachDebugger() {
   debug_info_ = NULL;
 }
 
-void Process::PrepareStepOver() {
+int Process::PrepareStepOver() {
   Object** pushed_bcp_address = stack()->Pointer(stack()->top());
   uint8_t* current_bcp = reinterpret_cast<uint8_t*>(*pushed_bcp_address);
   Object** stack_top = pushed_bcp_address - 1;
@@ -524,7 +524,7 @@ void Process::PrepareStepOver() {
   if (!Bytecode::IsInvoke(opcode)) {
     // For non-invoke bytecodes step over is the same as step.
     debug_info_->set_is_stepping(true);
-    return;
+    return DebugInfo::kNoBreakpointId;
   }
 
   // TODO(ager): We should share this code with the stack walker that also
@@ -572,23 +572,25 @@ void Process::PrepareStepOver() {
   int stack_height = expected_sp - stack()->Pointer(0);
   int bytecode_index =
       current_bcp + Bytecode::Size(opcode) - function->bytecode_address_for(0);
-  debug_info_->SetBreakpoint(
+  return debug_info_->SetBreakpoint(
     function, bytecode_index, true, coroutine_, stack_height);
 }
 
-void Process::PrepareStepOut() {
+int Process::PrepareStepOut() {
   StackWalker stack_walker(this, stack());
   bool has_top_frame = stack_walker.MoveNext();
   ASSERT(has_top_frame);
+  int top_frame_size = -stack_walker.stack_offset();
+  Function* callee = stack_walker.function();
   bool has_frame_below = stack_walker.MoveNext();
   ASSERT(has_frame_below);
   Function* caller = stack_walker.function();
   int bytecode_index =
       stack_walker.return_address() - caller->bytecode_address_for(0);
   Object** stack_top = stack()->Pointer(stack()->top());
-  Object** expected_sp = stack_top + stack_walker.stack_offset() + 1;
+  Object** expected_sp = stack_top - top_frame_size - callee->arity();
   int stack_height = expected_sp - stack()->Pointer(0);
-  debug_info_->SetBreakpoint(
+  return debug_info_->SetBreakpoint(
       caller, bytecode_index, true, coroutine_, stack_height);
 }
 

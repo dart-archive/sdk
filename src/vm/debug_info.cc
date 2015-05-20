@@ -35,10 +35,10 @@ void Breakpoint::VisitProgramPointers(PointerVisitor* visitor) {
 DebugInfo::DebugInfo()
     : is_stepping_(false),
       is_at_breakpoint_(false),
+      current_breakpoint_id_(kNoBreakpointId),
       next_breakpoint_id_(0) { }
 
 bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
-  if (is_stepping_) return true;
   BreakpointMap::const_iterator it = breakpoints_.find(bcp);
   if (it != breakpoints_.end()) {
     const Breakpoint& breakpoint = it->second;
@@ -52,6 +52,11 @@ bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
       if (expected_sp != sp) return false;
     }
     if (breakpoint.is_one_shot()) DeleteBreakpoint(breakpoint.id());
+    set_current_breakpoint(breakpoint.id());
+    return true;
+  }
+  if (is_stepping_) {
+    set_current_breakpoint(kNoBreakpointId);
     return true;
   }
   return false;

@@ -47,6 +47,8 @@ class Breakpoint {
 
 class DebugInfo {
  public:
+  static const int kNoBreakpointId = -1;
+
   DebugInfo();
 
   bool ShouldBreak(uint8_t* bcp, Object** sp);
@@ -59,7 +61,17 @@ class DebugInfo {
   bool is_stepping() const { return is_stepping_; }
   void set_is_stepping(bool value) { is_stepping_ = value; }
   bool is_at_breakpoint() const { return is_at_breakpoint_; }
-  void set_is_at_breakpoint(bool value) { is_at_breakpoint_ = value; }
+  int current_breakpoint_id() const { return current_breakpoint_id_; }
+
+  void set_current_breakpoint(int id) {
+    is_at_breakpoint_ = true;
+    current_breakpoint_id_ = id;
+  }
+
+  void clear_current_breakpoint() {
+    is_at_breakpoint_ = false;
+    current_breakpoint_id_ = kNoBreakpointId;
+  }
 
   // GC support for process GCs.
   void VisitPointers(PointerVisitor* visitor);
@@ -73,6 +85,7 @@ class DebugInfo {
 
   bool is_stepping_;
   bool is_at_breakpoint_;
+  int current_breakpoint_id_;
 
   typedef std::unordered_map<uint8_t*, Breakpoint> BreakpointMap;
   BreakpointMap breakpoints_;
