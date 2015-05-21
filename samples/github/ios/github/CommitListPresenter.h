@@ -7,12 +7,11 @@
 
 #import "github.h"
 
-@interface CommitListPresenter : NSObject
+@interface CommitListPresenter : NSObject <RootPresenter>
 
 - (id)init:(UITableView*)tableView;
 
 - (bool)refresh;
-- (void)reset;
 
 - (int)commitCount;
 - (CommitNode*)commitAtIndex:(int)index;

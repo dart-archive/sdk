@@ -87,6 +87,10 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     units.values.forEach((unit) { nodes.addAll(unit.structs); });
     _writeHeader();
     _writeNodeBase();
+    _writeRootPresenter();
+    _writeImmiService();
+    _writeImmiRoot();
+    _writeNavigationRootPresenterCategory();
     units.values.forEach(visit);
   }
 
@@ -144,6 +148,39 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     writeln();
   }
 
+  void _writeRootPresenter() {
+    writeln('@class ImmiRoot;');
+    writeln('@protocol RootPresenter <NSObject>');
+    writeln('@property (readonly) ImmiRoot* immi_root;');
+    writeln('- (void)immi_setupRoot:(ImmiRoot*)root;');
+    writeln('@end');
+    writeln();
+  }
+
+  void _writeImmiService() {
+    writeln('@interface ImmiService : NSObject');
+    writeln('- (void)registerStoryboard:(UIStoryboard*)storyboard;');
+    writeln('- (id <RootPresenter>)getPresenterByName:(NSString*)name;');
+    writeln('@end');
+    writeln();
+  }
+
+  void _writeImmiRoot() {
+    writeln('@interface ImmiRoot : NSObject');
+    writeln('@property (readonly) Node* rootNode;');
+    writeln('- (bool)refresh;');
+    writeln('- (void)reset;');
+    writeln('@end');
+    writeln();
+  }
+
+  void _writeNavigationRootPresenterCategory() {
+    write('@interface UINavigationController');
+    writeln(' (ImmiNavigationRootPresenter) <RootPresenter>');
+    writeln('@end');
+    writeln();
+  }
+
   void _writeNSType(Type type) {
     if (type.isList) {
       write('NSArray*');
@@ -158,6 +195,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     writeln('// Generated file. Do not edit.');
     writeln();
     writeln('#import <Foundation/Foundation.h>');
+    writeln('#import <UIKit/UIKit.h>');
     writeln('#include "${serviceFile}.h"');
     writeln();
   }
@@ -172,6 +210,8 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     units.values.forEach((unit) { nodes.addAll(unit.structs); });
     _writeHeader();
     _writeNodeBaseExtendedInterface();
+    _writeImmiServiceExtendedInterface();
+    _writeImmiRootExtendedInterface();
 
     _writeEventUtils();
 
@@ -183,6 +223,9 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     _writeListUtils();
 
     _writeNodeBaseImplementation();
+    _writeImmiServiceImplementation();
+    _writeImmiRootImplementation();
+    _writeNavigationRootPresenterCategory();
 
     units.values.forEach((unit) {
       unit.structs.forEach(_writeNodeImplementation);
@@ -191,6 +234,101 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
   visitUnit(Unit unit) {
     // Everything is done in visitUnits.
+  }
+
+  _writeImmiServiceExtendedInterface() {
+    writeln('@interface ImmiService ()');
+    writeln('@property NSMutableArray* storyboards;');
+    writeln('@end');
+    writeln('');
+  }
+
+  _writeImmiServiceImplementation() {
+    writeln('@implementation ImmiService');
+    writeln('');
+    writeln('- (id)init {');
+    writeln('  _storyboards = [NSMutableArray array];');
+    writeln('  return self;');
+    writeln('}');
+    writeln('');
+    writeln('- (void)registerStoryboard:(UIStoryboard*)storyboard {');
+    writeln('  [self.storyboards addObject:storyboard];');
+    writeln('}');
+    writeln('');
+    writeln('- (id <RootPresenter>)getPresenterByName:(NSString*)name {');
+    writeln('  id <RootPresenter> presenter = nil;');
+    writeln('  for (int i = 0; i < self.storyboards.count; ++i) {');
+    writeln('    @try {');
+    writeln('      presenter = [self.storyboards[i]');
+    writeln('          instantiateViewControllerWithIdentifier:name];');
+    writeln('      break;');
+    writeln('    }');
+    writeln('    @catch (NSException* e) {');
+    writeln('      if (e.name != NSInvalidArgumentException) {');
+    writeln('        @throw e;');
+    writeln('      }');
+    writeln('    }');
+    writeln('  }');
+    writeln('  if (presenter != nil) {');
+    writeln('    [presenter immi_setupRoot:[[ImmiRoot alloc] init]];');
+    writeln('    return presenter;');
+    writeln('  }');
+    writeln('  abort();');
+    writeln('}');
+    writeln('');
+    writeln('@end');
+    writeln('');
+  }
+
+  _writeImmiRootExtendedInterface() {
+    writeln('@interface ImmiRoot ()');
+    writeln('@end');
+    writeln('');
+  }
+
+  _writeImmiRootImplementation() {
+    writeln('@implementation ImmiRoot');
+    writeln('');
+    writeln('- (id)init {');
+    writeln('  _rootNode = nil;');
+    writeln('  return self;');
+    writeln('}');
+    writeln('');
+    writeln('- (bool)refresh {');
+    writeln('  PatchSetData data = ${serviceName}::refresh();');
+    writeln('  bool result = [Node applyPatchSet:data atNode:&_rootNode];');
+    writeln('  data.Delete();');
+    writeln('  return result;');
+    writeln('}');
+    writeln('');
+    writeln('- (void)reset {');
+    writeln('  _rootNode = nil;');
+    writeln('  ${serviceName}::reset();');
+    writeln('}');
+    writeln('');
+    writeln('@end');
+    writeln('');
+  }
+
+  _writeNavigationRootPresenterCategory() {
+    writeln(
+        '@implementation UINavigationController (ImmiNavigationRootPresenter)');
+    writeln('');
+    writeln('- (UIViewController <RootPresenter> *)presenter {');
+    writeln(
+        '  return (UIViewController<RootPresenter>*)self.topViewController;');
+    writeln('}');
+    writeln('');
+    writeln('- (ImmiRoot*)immi_root {');
+    writeln('  return self.presenter.immi_root;');
+    writeln('}');
+    writeln('');
+    writeln('- (void)immi_setupRoot:(ImmiRoot*)root {');
+    writeln('  [self.presenter immi_setupRoot:root];');
+    writeln('}');
+    writeln('');
+    writeln('@end');
+    writeln('');
   }
 
   _writeNodeExtendedInterface(Struct node) {

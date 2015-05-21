@@ -117,7 +117,7 @@
         <!--Navigation Controller-->
         <scene sceneID="sWZ-D6-3Gq">
             <objects>
-                <navigationController storyboardIdentifier="CommitListID" automaticallyAdjustsScrollViewInsets="NO" id="x0b-S2-YAz" sceneMemberID="viewController">
+                <navigationController storyboardIdentifier="CommitListPresenter" automaticallyAdjustsScrollViewInsets="NO" id="x0b-S2-YAz" sceneMemberID="viewController">
                     <toolbarItems/>
                     <navigationBar key="navigationBar" contentMode="scaleToFill" id="ge8-Eq-SAf">
                         <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>
