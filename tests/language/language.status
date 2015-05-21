@@ -108,8 +108,6 @@ closure_cycles_test: CompileTimeError
 closure_in_constructor_test: Fail
 closure_in_initializer2_test: Fail
 closure_in_initializer_test: Crash
-closure_shared_state_test: Fail
-closure_side_effect_test: Fail
 closure_type_variable_test: Fail
 closures_initializer2_test: Fail
 closures_initializer_test: Fail
@@ -398,10 +396,8 @@ function_type_alias5_test/02: MissingCompileTimeError
 function_type_alias6_test/none: Fail
 function_type_alias7_test/00: MissingCompileTimeError
 function_type_alias7_test/02: MissingCompileTimeError
-function_type_alias8_test: Fail
 function_type_alias_test: Fail
 function_type_call_getter_test: Fail
-function_type_parameter2_test: Fail
 function_type_parameter_test: Fail
 generic2_test: Fail
 generic_closure_test: Crash
@@ -440,7 +436,6 @@ import_self_test/none: Fail
 incr_op_test: Fail
 inference_list_or_null_test: Crash
 inferrer_closure_test: Fail
-inferrer_constructor3_test: Fail
 inferrer_constructor4_test: Fail
 inferrer_constructor5_test/01: Fail
 inferrer_synthesized_constructor_test: Crash
@@ -486,11 +481,7 @@ issue9949_test: Crash
 keyword_type_expression_test/01: MissingCompileTimeError
 label_test: Fail
 large_class_declaration_test: Crash
-lazy_static2_test: Fail
 lazy_static3_test: Crash
-lazy_static5_test: Fail
-lazy_static6_test: Fail
-lazy_static_test: Fail
 left_shift_test: Fail
 library_negative_test: Crash
 library_private_in_constructor_test: Fail
@@ -608,11 +599,9 @@ reg_ex2_test: Crash
 reg_exp2_test: Crash
 reg_exp3_test: Crash
 reg_exp_test: Crash
-regress_11010_test: Fail
 regress_13462_0_test: CompileTimeError
 regress_13462_1_test: CompileTimeError
 regress_13494_test: Fail
-regress_14105_test: Fail
 regress_14348_test: CompileTimeError
 regress_18535_test: CompileTimeError
 regress_20935_test: Fail
@@ -640,7 +629,6 @@ stacktrace_rethrow_nonerror_test: Fail
 stacktrace_test: Fail
 static_call_wrong_argument_count_negative_test: Crash
 static_final_field2_test/02: MissingCompileTimeError
-static_implicit_closure_test: Fail
 static_top_level_test/00: MissingCompileTimeError
 static_top_level_test/01: MissingCompileTimeError
 static_top_level_test/02: MissingCompileTimeError
@@ -655,7 +643,6 @@ super_all_named_constructor_test: Fail
 super_bound_closure_test: Crash
 super_call4_test: Fail
 super_closure_test: Fail
-super_field_2_test: Fail
 super_getter_setter_test: Fail
 super_implicit_closure_test: Fail
 super_operator_index5_test: Fail

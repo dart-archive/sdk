@@ -1070,6 +1070,8 @@ abstract class CodegenVisitor
       FieldElement field,
       NodeList arguments,
       Selector selector) {
+    // TODO(ajohnsen): Should not be needed.
+    selector = new Selector.callClosureFrom(selector);
     handleStaticFieldGet(field);
     for (Node argument in arguments) {
       visitForValue(argument);
