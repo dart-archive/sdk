@@ -799,6 +799,15 @@ class LibraryUpdater extends FletchFeatures {
       }
     }
 
+    Map<ClassElement, Map<FieldElementX, int>> beforeFields = {};
+    for (ClassElementX element in _classesWithSchemaChanges) {
+      Map<FieldElementX, int> map = beforeFields[element] = {};
+      int index = 0;
+      element.implementation.forEachInstanceField((_, field) {
+        map[field] = index++;
+      });
+    }
+
     List<Command> updates = <Command>[const commands_lib.PrepareForChanges()];
 
     // TODO(ahe): Compute this.
@@ -807,7 +816,6 @@ class LibraryUpdater extends FletchFeatures {
     int changes = 0;
     for (RemovalUpdate update in removals) {
       update.writeUpdateFletchOn(updates);
-      changes++;
     }
     for (Element element in enqueuer.codegen.newlyEnqueuedElements) {
       if (element.isField) {
@@ -828,6 +836,11 @@ class LibraryUpdater extends FletchFeatures {
 
     for (Function action in deferredActions) {
       action();
+      changes++;
+    }
+
+    for (ClassElementX element in _classesWithSchemaChanges) {
+      computeSchemaChange(element, beforeFields[element], updates);
       changes++;
     }
 
@@ -855,6 +868,51 @@ class LibraryUpdater extends FletchFeatures {
         commands.add(new commands_lib.ChangeMethodLiteral(0));
       });
     }
+  }
+
+  void computeSchemaChange(ClassElementX element,
+                           Map<FieldElementX, int> beforeFields,
+                           List<Command> commands) {
+    CompiledClass compiledClass = backend.compiledClasses[element];
+
+    // Collect the list of fields as they should exist after the transformation.
+    List<FieldElementX> afterFields = [];
+    element.implementation.forEachInstanceField((_, field) {
+      afterFields.add(field);
+    });
+
+    // First, we push all the classes we want to remove the field from.
+    commands.add(new commands_lib.PushFromMap(MapId.classes, compiledClass.id));
+    // TODO(kasperl): Push all subclasses too.
+    int numberOfClasses = 1;
+
+    // Then we push a transformation mapping that tells the runtime system how
+    // to build the values for the first part of all instances of the classes.
+    // Pre-existing fields that fall after the mapped part will be copied with
+    // no changes.
+    const VALUE_FROM_ELSEWHERE = 0;
+    const VALUE_FROM_OLD_INSTANCE = 1;
+    for (int i = 0; i < afterFields.length; i++) {
+      FieldElementX field = afterFields[i];
+      int beforeIndex = beforeFields[field];
+      if (beforeIndex != null) {
+        commands.add(
+            const commands_lib.PushNewInteger(VALUE_FROM_OLD_INSTANCE));
+        commands.add(
+            new commands_lib.PushNewInteger(beforeIndex));
+      } else {
+        commands.add(
+            const commands_lib.PushNewInteger(VALUE_FROM_ELSEWHERE));
+        commands.add(
+            const commands_lib.PushNull());
+      }
+    }
+    commands.add(new commands_lib.PushNewArray(afterFields.length * 2));
+
+    // Finally, ask the runtime to change the schemas!
+    int fieldCountDelta = afterFields.length - beforeFields.length;
+    commands.add(
+        new commands_lib.ChangeSchemas(numberOfClasses, fieldCountDelta));
   }
 
   String callNameFor(FunctionElement element) {
@@ -1055,18 +1113,6 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
   void captureState() {
     if (wasStateCaptured) throw "captureState was called twice.";
     wasStateCaptured = true;
-
-    ClassElement classElement = element.enclosingClass;
-    beforeCompiledClass = backend.compiledClasses[classElement];
-
-    beforeFields = <FieldElement, int>{};
-    int index = 0;
-    classElement.implementation.forEachInstanceField((_, field) {
-      beforeFields[field] = index++;
-    });
-    if (beforeCompiledClass == null) {
-      throw new IncrementalCompilationFailed("Not implemented yet.");
-    }
   }
 
   FieldElementX apply() {
@@ -1084,58 +1130,6 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
       throw new StateError(
           "captureState must be called before writeUpdateFletchOn.");
     }
-
-    // TODO(kasperl): This is a very hacky hard-coded version of removing a
-    // the last field from class with two fields.
-    //
-    // First, we push all the classes want to remove the field from. In a more
-    // realistic setting, we may have also wanted to push all subclasses (also
-    // affected by the change).
-    //
-    // Then we push a transformation mapping that tells the runtime system how
-    // to build the values for the first part of all instances of the classes.
-    // Pre-existing fields that fall after the mapped part will be copied with
-    // no changes. In this particular case, we build a mapping like this:
-    //
-    //     new instance @ 0 <- old instance @ 0
-    //
-
-    const VALUE_FROM_ELSEWHERE = 0;
-    const VALUE_FROM_OLD_INSTANCE = 1;
-
-    List<FieldElementX> afterFields = [];
-    beforeCompiledClass.element.implementation.forEachInstanceField((_, field) {
-      afterFields.add(field);
-    });
-
-    // Push all affected classes.
-    updates.add(
-        new commands_lib.PushFromMap(MapId.classes, beforeCompiledClass.id));
-    int numberOfClasses = 1;
-
-    // Push the tranformation mapping.
-    for (int i = 0; i < afterFields.length; i++) {
-      FieldElementX field = afterFields[i];
-      int beforeIndex = beforeFields[field];
-      if (beforeIndex != null) {
-        updates.add(
-            const commands_lib.PushNewInteger(VALUE_FROM_OLD_INSTANCE));
-        updates.add(
-            new commands_lib.PushNewInteger(beforeIndex));
-      } else {
-        updates.add(
-            const commands_lib.PushNewInteger(VALUE_FROM_ELSEWHERE));
-        updates.add(
-            const commands_lib.PushNull());
-      }
-    }
-    updates.add(new commands_lib.PushNewArray(afterFields.length * 2));
-
-    int fieldCountDelta = afterFields.length - beforeFields.length;
-
-    // Finally, ask the runtime to change the schemas!
-    updates.add(
-        new commands_lib.ChangeSchemas(numberOfClasses, fieldCountDelta));
   }
 }
 

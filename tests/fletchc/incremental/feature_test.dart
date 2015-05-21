@@ -90,9 +90,12 @@ const List<EncodedResult> tests = const <EncodedResult>[
 class A {
   var x;
 <<<<<<<
-  var y;
+  var y0;
 =======
+=======
+  var y1;
 >>>>>>>
+  var z;
 }
 
 var instance;
@@ -102,8 +105,13 @@ main() {
     print('instance is null');
     instance = new A();
     instance.x = 42;
+    instance.z = 99;
   } else {
-    print('instance.x is ${instance.x}');
+    print('instance.x = ${instance.x}');
+    if (instance.x == 87) {
+      print('instance.z = ${instance.z}');
+    }
+    instance.x = 87;
   }
 }
 """,
@@ -113,7 +121,10 @@ main() {
                     'instance is null']),
             const ProgramExpectation(
                 const <String>[
-                    'instance.x is 42']),
+                    'instance.x = 42']),
+            const ProgramExpectation(
+                const <String>[
+                    'instance.x = 87', 'instance.z = 99']),
         ]),
 
     // Test that we can remove a field from an instance of a class
@@ -126,6 +137,8 @@ class A {
 <<<<<<<
   var y;
 =======
+=======
+  var y;
 >>>>>>>
   var z;
 }
@@ -136,9 +149,10 @@ main() {
   if (instance == null) {
     print('instance is null');
     instance = new A();
-    instance.x = 87;
+    instance.x = 421;
   } else {
     print('instance.x is ${instance.x}');
+    instance.x = 871;
   }
 }
 """,
@@ -148,7 +162,10 @@ main() {
                     'instance is null']),
             const ProgramExpectation(
                 const <String>[
-                    'instance.x is 87']),
+                    'instance.x is 421']),
+            const ProgramExpectation(
+                const <String>[
+                    'instance.x is 871']),
         ]),
 
     // Test that the test framework handles more than one update.
