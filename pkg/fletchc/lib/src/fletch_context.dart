@@ -181,6 +181,21 @@ class FletchContext {
     return FletchSelector.encodeMethod(id, 0);
   }
 
+  int toFletchTearoffIsSelector(
+      String functionName,
+      ClassElement classElement) {
+    LibraryElement library = classElement.library;
+    StringBuffer buffer = new StringBuffer();
+    buffer.write("?is?");
+    buffer.write(functionName);
+    buffer.write("?");
+    buffer.write(classElement.name);
+    buffer.write("?");
+    buffer.write(getLibraryTag(library));
+    int id = getSymbolId(buffer.toString());
+    return FletchSelector.encodeMethod(id, 0);
+  }
+
   SelectorKind getFletchSelectorKind(Selector selector) {
     if (selector.isGetter) return SelectorKind.Getter;
     if (selector.isSetter) return SelectorKind.Setter;

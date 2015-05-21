@@ -498,6 +498,45 @@ class FletchBackend extends Backend {
           id,
           signature.parameterCount);
       compiledClass.methodTable[fletchSelector] = compiledFunction.methodId;
+
+      if (hasThis && function.memberOf.element != null) {
+        // Create == function that tests for equality.
+        int isSelector = context.toFletchTearoffIsSelector(
+            function.name,
+            function.memberOf.element);
+        compiledClass.methodTable[isSelector] = 0;
+
+        CompiledFunction equal = new CompiledFunction.normal(
+            functions.length,
+            2);
+        functions.add(equal);
+
+        BytecodeBuilder builder = equal.builder;
+        BytecodeLabel isFalse = new BytecodeLabel();
+        builder
+          // First test for class. This ensures it's the exact function that
+          // we expect.
+          ..loadParameter(1)
+          ..invokeTest(isSelector, 0)
+          ..branchIfFalse(isFalse)
+          // Then test that the receiver is identical.
+          ..loadParameter(0)
+          ..loadField(0)
+          ..loadParameter(1)
+          ..loadField(0)
+          ..identicalNonNumeric()
+          ..branchIfFalse(isFalse)
+          ..loadLiteralTrue()
+          ..ret()
+          ..bind(isFalse)
+          ..loadLiteralFalse()
+          ..ret()
+          ..methodEnd();
+
+        int id = context.getSymbolId("==");
+        int fletchSelector = FletchSelector.encodeMethod(id, 1);
+        compiledClass.methodTable[fletchSelector] = equal.methodId;
+      }
       return compiledClass;
     });
   }

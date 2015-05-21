@@ -82,6 +82,11 @@ class CompiledFunction {
         builder = new BytecodeBuilder(
           signature.parameterCount + (memberOf != null ? 1 : 0));
 
+  CompiledFunction.normal(this.methodId, int argumentCount)
+      : arity = argumentCount,
+        builder = new BytecodeBuilder(argumentCount),
+        kind = CompiledFunctionKind.NORMAL;
+
   CompiledFunction.lazyInit(this.methodId,
                             this.name,
                             this.element,
