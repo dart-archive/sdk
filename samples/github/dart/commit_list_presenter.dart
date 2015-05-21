@@ -21,6 +21,21 @@ class CommitListPresenter {
     _presenter = new SlidingWindow(commitPresenter);
   }
 
+  // TODO(zerny): We should represent methods on nodes in a class structure and
+  // support identity-preserving composition.
+  Function _displayCache = null;
+  Function _wrappedDisplayCache = null;
+  Function _wrapDisplayForPrefetching(Function display) {
+    if (display != _displayCache) {
+      _displayCache = display;
+      _wrappedDisplayCache = (int start, int end) {
+        _repository.prefetchCommitsInRange(start, end);
+        (display)(start, end);
+      };
+    }
+    return _wrappedDisplayCache;
+  }
+
   CommitListNode present(Node previous) {
     // TODO(zerny): Eliminate this wrapping of the sliding-window presenter.
     SlidingWindowNode window = _presenter.present();
@@ -30,9 +45,6 @@ class CommitListPresenter {
         bufferOffset: window.windowOffset,
         minimumCount: window.minimumCount,
         count: window.maximumCount,
-        display: (int start, int end) {
-          _repository.prefetchCommitsInRange(start, end);
-          (window.display)(start, end);
-        });
+        display: _wrapDisplayForPrefetching(window.display));
   }
 }

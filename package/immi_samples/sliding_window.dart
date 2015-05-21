@@ -44,13 +44,7 @@ class SlidingWindow<T extends Node> {
   int _minimumCount = 0;
   int _maximumCount = -1;
 
-  // TODO(zerny): Cache the tear-off to preserve identity. Eliminate this once
-  // issue #25 is resovled.
-  Function _setDisplayRangeTearOff;
-
-  SlidingWindow(this._presenter) {
-    _setDisplayRangeTearOff = _setDisplayRange;;
-  }
+  SlidingWindow(this._presenter);
 
   SlidingWindowNode present() {
     _display.update(_start, _end);
@@ -61,7 +55,7 @@ class SlidingWindow<T extends Node> {
         windowOffset: _display.windowOffset,
         minimumCount: _minimumCount,
         maximumCount: _maximumCount,
-        display: _setDisplayRangeTearOff);
+        display: _setDisplayRange);
   }
 
   void _setDisplayRange(int start, int end) {
