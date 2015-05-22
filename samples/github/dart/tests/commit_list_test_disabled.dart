@@ -5,6 +5,7 @@
 import 'package:expect/expect.dart';
 
 import 'package:immi/immi.dart';
+import 'package:immi_samples/sliding_window.dart';
 import 'package:service/struct.dart';
 
 import '../github_services.dart';
@@ -26,8 +27,8 @@ void main() {
 
 void testPresent(Repository repo) {
   var presenter = new CommitListPresenter(repo);
-  CommitListNode previous = null;
-  CommitListNode current = null;
+  SlidingWindowNode previous = null;
+  SlidingWindowNode current = null;
 
   // Initial rendering (don't assume much about this).
   current = presenter.present(previous);
@@ -38,38 +39,38 @@ void testPresent(Repository repo) {
   previous = current;
   current = presenter.present(previous);
   Expect.equals(0, current.startOffset);
-  Expect.equals(5, current.commits.length);
-  Expect.stringEquals("Ian Zerny", current.commits[0].author);
+  Expect.equals(5, current.window.length);
+  Expect.stringEquals("Ian Zerny", current.window[0].author);
   testDiff(previous, current);
 
   (current.display)(0, 6);
   previous = current;
   current = presenter.present(previous);
   Expect.equals(0, current.startOffset);
-  Expect.isTrue(current.commits.length >= 6);
-  Expect.stringEquals("Ian Zerny", current.commits[0].author);
+  Expect.isTrue(current.window.length >= 6);
+  Expect.stringEquals("Ian Zerny", current.window[0].author);
   testDiff(previous, current);
 
   (current.display)(1, 6);
   previous = current;
   current = presenter.present(previous);
   Expect.equals(1, current.startOffset);
-  Expect.equals(1, current.bufferOffset);
-  Expect.isTrue(current.commits.length >= 5);
-  Expect.stringEquals("Anders Johnsen", current.commits[1].author);
+  Expect.equals(1, current.windowOffset);
+  Expect.isTrue(current.window.length >= 5);
+  Expect.stringEquals("Anders Johnsen", current.window[1].author);
   testDiff(previous, current);
 
   (current.display)(100, 105);
   previous = current;
   current = presenter.present(previous);
   Expect.equals(100, current.startOffset);
-  Expect.equals(0, current.bufferOffset);
+  Expect.equals(0, current.windowOffset);
 
   (current.display)(99, 104);
   previous = current;
   current = presenter.present(previous);
   Expect.equals(99, current.startOffset);
-  Expect.equals(4, current.bufferOffset);
+  Expect.equals(4, current.windowOffset);
 }
 
 testDiff(Node previous, Node current) {

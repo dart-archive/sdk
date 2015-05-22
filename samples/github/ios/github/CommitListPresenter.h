@@ -2,18 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-
 #import "github.h"
 
-@interface CommitListPresenter : NSObject <RootPresenter>
-
-- (id)init:(UITableView*)tableView;
-
-- (bool)refresh;
-
-- (int)commitCount;
-- (CommitNode*)commitAtIndex:(int)index;
+@interface CommitListPresenter : UITableViewController <RootPresenter>
 
 @end

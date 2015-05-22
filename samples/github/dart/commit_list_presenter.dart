@@ -36,15 +36,15 @@ class CommitListPresenter {
     return _wrappedDisplayCache;
   }
 
-  CommitListNode present(Node previous) {
+  SlidingWindowNode present(Node previous) {
     // TODO(zerny): Eliminate this wrapping of the sliding-window presenter.
     SlidingWindowNode window = _presenter.present();
-    return new CommitListNode(
-        commits: window.window,
+    return new SlidingWindowNode(
+        window: window.window,
         startOffset: window.startOffset,
-        bufferOffset: window.windowOffset,
+        windowOffset: window.windowOffset,
         minimumCount: window.minimumCount,
-        count: window.maximumCount,
+        maximumCount: window.maximumCount,
         display: _wrapDisplayForPrefetching(window.display));
   }
 }

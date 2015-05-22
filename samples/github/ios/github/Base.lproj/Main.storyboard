@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="7702" systemVersion="14D136" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="Paw-B4-2Sa">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="7702" systemVersion="14D131" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="Paw-B4-2Sa">
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="7701"/>
         <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
@@ -8,13 +8,13 @@
         <!--Fletch @ GitHub-->
         <scene sceneID="iyQ-Xy-YYT">
             <objects>
-                <tableViewController id="pko-Lj-HxW" customClass="CommitListController" sceneMemberID="viewController">
+                <tableViewController storyboardIdentifier="CommitListPresenter" id="pko-Lj-HxW" customClass="CommitListPresenter" sceneMemberID="viewController">
                     <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="22" sectionFooterHeight="22" id="okL-uw-sVU">
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                         <prototypes>
-                            <tableViewCell contentMode="scaleToFill" selectionStyle="default" indentationWidth="10" reuseIdentifier="CommitPrototypeCell" id="fkm-7J-bZZ" customClass="CommitCell">
+                            <tableViewCell contentMode="scaleToFill" selectionStyle="default" indentationWidth="10" reuseIdentifier="CommitPrototypeCell" id="fkm-7J-bZZ" customClass="CommitCellPresenter">
                                 <autoresizingMask key="autoresizingMask"/>
                                 <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="fkm-7J-bZZ" id="7Ri-Ru-XjY">
                                     <autoresizingMask key="autoresizingMask"/>
@@ -117,7 +117,7 @@
         <!--Navigation Controller-->
         <scene sceneID="sWZ-D6-3Gq">
             <objects>
-                <navigationController storyboardIdentifier="CommitListPresenter" automaticallyAdjustsScrollViewInsets="NO" id="x0b-S2-YAz" sceneMemberID="viewController">
+                <navigationController storyboardIdentifier="CommitListPresenterz" automaticallyAdjustsScrollViewInsets="NO" id="x0b-S2-YAz" sceneMemberID="viewController">
                     <toolbarItems/>
                     <navigationBar key="navigationBar" contentMode="scaleToFill" id="ge8-Eq-SAf">
                         <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>

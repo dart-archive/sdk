@@ -8,10 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		07AEBC8F98495D7D40B118B6 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E3EF036F3882AE10C212AC /* libPods.a */; };
+		2DB4917D1B0C797900912DA3 /* SlidingWindowPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4917C1B0C797900912DA3 /* SlidingWindowPresenter.mm */; };
+		2DB491831B0C83D200912DA3 /* CommitCellPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */; };
+		2DB4918A1B0C9B2000912DA3 /* CommitListPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */; };
 		DA1D77031B037490009E936C /* MainController.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1D77021B037490009E936C /* MainController.mm */; };
 		DA313FA51AD665A6000089F9 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = DA313FA41AD665A6000089F9 /* main.m */; };
 		DA313FA81AD665A6000089F9 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA313FA71AD665A6000089F9 /* AppDelegate.mm */; };
-		DA313FAB1AD665A6000089F9 /* CommitListController.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA313FAA1AD665A6000089F9 /* CommitListController.mm */; };
 		DA313FAE1AD665A6000089F9 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DA313FAC1AD665A6000089F9 /* Main.storyboard */; };
 		DA313FB01AD665A6000089F9 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DA313FAF1AD665A6000089F9 /* Images.xcassets */; };
 		DA313FB31AD665A6000089F9 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = DA313FB11AD665A6000089F9 /* LaunchScreen.xib */; };
@@ -23,9 +25,6 @@
 		DA79124C1AFCEEB300E5F773 /* unicode.cc in Sources */ = {isa = PBXBuildFile; fileRef = DA7912481AFCEEB300E5F773 /* unicode.cc */; };
 		DA7912501AFCEEE900E5F773 /* github.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA79124F1AFCEEE900E5F773 /* github.mm */; };
 		DAEE2F341AD6AA2600945914 /* github.snapshot in Resources */ = {isa = PBXBuildFile; fileRef = DAEE2F331AD6AA2600945914 /* github.snapshot */; };
-		DAEE2F371AD6AEDA00945914 /* CommitCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2F361AD6AEDA00945914 /* CommitCell.mm */; };
-		DAEE2F391AD6B0FB00945914 /* CommitListPresenter.h in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2F381AD6B0FB00945914 /* CommitListPresenter.h */; };
-		DAEE2F3B1AD6B13400945914 /* CommitListPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DAEE2F3A1AD6B13400945914 /* CommitListPresenter.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,6 +38,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		2DB4917B1B0C797900912DA3 /* SlidingWindowPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SlidingWindowPresenter.h; sourceTree = "<group>"; };
+		2DB4917C1B0C797900912DA3 /* SlidingWindowPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SlidingWindowPresenter.mm; sourceTree = "<group>"; };
+		2DB4917E1B0C806500912DA3 /* CellPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CellPresenter.h; sourceTree = "<group>"; };
+		2DB491811B0C83D200912DA3 /* CommitCellPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitCellPresenter.h; sourceTree = "<group>"; };
+		2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitCellPresenter.mm; sourceTree = "<group>"; };
+		2DB491881B0C9B2000912DA3 /* CommitListPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitListPresenter.h; sourceTree = "<group>"; };
+		2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitListPresenter.mm; sourceTree = "<group>"; };
 		37E3EF036F3882AE10C212AC /* libPods.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPods.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		4E37F34647C00D8D3201F7A7 /* Pods.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.debug.xcconfig; path = "Pods/Target Support Files/Pods/Pods.debug.xcconfig"; sourceTree = "<group>"; };
 		CF6A9C448DE9E3E165408184 /* Pods.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.release.xcconfig; path = "Pods/Target Support Files/Pods/Pods.release.xcconfig"; sourceTree = "<group>"; };
@@ -49,8 +55,6 @@
 		DA313FA41AD665A6000089F9 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		DA313FA61AD665A6000089F9 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		DA313FA71AD665A6000089F9 /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
-		DA313FA91AD665A6000089F9 /* CommitListController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CommitListController.h; sourceTree = "<group>"; };
-		DA313FAA1AD665A6000089F9 /* CommitListController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitListController.mm; sourceTree = "<group>"; };
 		DA313FAD1AD665A6000089F9 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		DA313FAF1AD665A6000089F9 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		DA313FB21AD665A6000089F9 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
@@ -67,11 +71,7 @@
 		DA7912491AFCEEB300E5F773 /* unicode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unicode.h; sourceTree = "<group>"; };
 		DA79124E1AFCEEE900E5F773 /* github.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = github.h; sourceTree = "<group>"; };
 		DA79124F1AFCEEE900E5F773 /* github.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = github.mm; sourceTree = "<group>"; };
-		DAEE2F331AD6AA2600945914 /* github.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; name = github.snapshot; path = ../../../generated/github.snapshot; sourceTree = "<group>"; };
-		DAEE2F351AD6AEDA00945914 /* CommitCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitCell.h; sourceTree = "<group>"; };
-		DAEE2F361AD6AEDA00945914 /* CommitCell.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitCell.mm; sourceTree = "<group>"; };
-		DAEE2F381AD6B0FB00945914 /* CommitListPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitListPresenter.h; sourceTree = "<group>"; };
-		DAEE2F3A1AD6B13400945914 /* CommitListPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitListPresenter.mm; sourceTree = "<group>"; };
+		DAEE2F331AD6AA2600945914 /* github.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; name = github.snapshot; path = ../generated/github.snapshot; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -143,16 +143,17 @@
 				DA313FA71AD665A6000089F9 /* AppDelegate.mm */,
 				DA1D77011B037490009E936C /* MainController.h */,
 				DA1D77021B037490009E936C /* MainController.mm */,
-				DAEE2F351AD6AEDA00945914 /* CommitCell.h */,
-				DAEE2F361AD6AEDA00945914 /* CommitCell.mm */,
-				DA313FA91AD665A6000089F9 /* CommitListController.h */,
-				DA313FAA1AD665A6000089F9 /* CommitListController.mm */,
-				DAEE2F381AD6B0FB00945914 /* CommitListPresenter.h */,
-				DAEE2F3A1AD6B13400945914 /* CommitListPresenter.mm */,
 				DA313FAC1AD665A6000089F9 /* Main.storyboard */,
 				DA313FAF1AD665A6000089F9 /* Images.xcassets */,
 				DA313FB11AD665A6000089F9 /* LaunchScreen.xib */,
 				DA313FA21AD665A6000089F9 /* Supporting Files */,
+				2DB4917B1B0C797900912DA3 /* SlidingWindowPresenter.h */,
+				2DB4917C1B0C797900912DA3 /* SlidingWindowPresenter.mm */,
+				2DB4917E1B0C806500912DA3 /* CellPresenter.h */,
+				2DB491811B0C83D200912DA3 /* CommitCellPresenter.h */,
+				2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */,
+				2DB491881B0C9B2000912DA3 /* CommitListPresenter.h */,
+				2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */,
 			);
 			path = github;
 			sourceTree = "<group>";
@@ -366,16 +367,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DA313FAB1AD665A6000089F9 /* CommitListController.mm in Sources */,
+				2DB4918A1B0C9B2000912DA3 /* CommitListPresenter.mm in Sources */,
 				DA79124C1AFCEEB300E5F773 /* unicode.cc in Sources */,
 				DA7912501AFCEEE900E5F773 /* github.mm in Sources */,
 				DA79124B1AFCEEB300E5F773 /* struct.cc in Sources */,
 				DA1D77031B037490009E936C /* MainController.mm in Sources */,
 				DA4370BD1AE9328D00EEE52F /* unix_ia32_hack.c in Sources */,
+				2DB4917D1B0C797900912DA3 /* SlidingWindowPresenter.mm in Sources */,
 				DA313FA81AD665A6000089F9 /* AppDelegate.mm in Sources */,
-				DAEE2F391AD6B0FB00945914 /* CommitListPresenter.h in Sources */,
-				DAEE2F3B1AD6B13400945914 /* CommitListPresenter.mm in Sources */,
-				DAEE2F371AD6AEDA00945914 /* CommitCell.mm in Sources */,
+				2DB491831B0C83D200912DA3 /* CommitCellPresenter.mm in Sources */,
 				DA313FA51AD665A6000089F9 /* main.m in Sources */,
 				DA79124A1AFCEEB300E5F773 /* immi_service.cc in Sources */,
 			);
