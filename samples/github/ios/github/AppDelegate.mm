@@ -17,18 +17,27 @@
 
 static dispatch_queue_t queue;
 
+static bool attachDebugger = false;
+static int debugPortNumber = 8123;
+
 + (void)loadAndRunDartSnapshot {
-  // Get the path for the snapshot in the main application bundle.
-  NSBundle* mainBundle = [NSBundle mainBundle];
-  NSString* snapshot =
-  [mainBundle pathForResource: @"github" ofType: @"snapshot"];
-  // Read the snapshot and pass it to fletch.
-  NSData* data = [[NSData alloc] initWithContentsOfFile:snapshot];
-  unsigned char* bytes =
-  reinterpret_cast<unsigned char*>(const_cast<void*>(data.bytes));
-  NSLog(@"Fletch execution started\n");
-  FletchRunSnapshot(bytes, data.length);
-  NSLog(@"Fletch execution terminated\n");
+  if (attachDebbugger) {
+    NSLog(@"Waiting for debugger connection.");
+    FletchWaitForDebuggerConnection(debugPortNumber);
+    NSLog(@"Debugger connected.");
+  } else {
+    // Get the path for the snapshot in the main application bundle.
+    NSBundle* mainBundle = [NSBundle mainBundle];
+    NSString* snapshot =
+    [mainBundle pathForResource: @"github" ofType: @"snapshot"];
+    // Read the snapshot and pass it to fletch.
+    NSData* data = [[NSData alloc] initWithContentsOfFile:snapshot];
+    unsigned char* bytes =
+    reinterpret_cast<unsigned char*>(const_cast<void*>(data.bytes));
+    NSLog(@"Fletch execution started\n");
+    FletchRunSnapshot(bytes, data.length);
+    NSLog(@"Fletch execution terminated\n");
+  }
 }
 
 - (BOOL)application:(UIApplication *)application

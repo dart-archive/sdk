@@ -23,6 +23,7 @@ PKG_DIR="$FLETCH_DIR/package"
 IMMI_GEN_DIR="$PKG_DIR/immi_gen"
 IMMI_SAMPLES_DIR="$PKG_DIR/immi_samples"
 IMMI_SAMPLES_OUT_DIR="$IMMI_SAMPLES_DIR/generated"
+mkdir -p $DIR/../generated
 OUT_DIR="$(cd "$DIR/../generated" && pwd)"
 
 DART="$FLETCH_DIR/out/ReleaseIA32/dart"

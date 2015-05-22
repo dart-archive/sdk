@@ -10,6 +10,8 @@ import 'dart:io';
 import 'compiler.dart' show
     FletchCompiler;
 
+import 'fletch_vm.dart';
+
 import 'session.dart';
 
 const COMPILER_CRASHED = 253;
@@ -22,6 +24,8 @@ main(List<String> arguments) async {
   bool debugging = false;
   bool testDebugger = false;
   String testDebuggerCommands = "";
+  bool connectToExistingVm = false;
+  int existingVmPort = 0;
 
   for (int i = 0; i < arguments.length; i++) {
     String argument = arguments[i];
@@ -46,6 +50,13 @@ main(List<String> arguments) async {
           testDebuggerCommands = argument.substring(16);
           break;
         }
+
+        if (argument.startsWith('--port=')) {
+          connectToExistingVm = true;
+          existingVmPort = int.parse(argument.substring(7));
+          break;
+        }
+
         if (script != null) throw "Unknown option: $argument";
         script = argument;
         break;
@@ -65,32 +76,17 @@ main(List<String> arguments) async {
       packageRoot: "package/");
   List commands = await compiler.run();
 
-  var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
-
-  List<String> vmOptions = <String>[
-      '--port=${server.port}',
-  ];
-
-  var connectionIterator = new StreamIterator(server);
-
-  String vmPath = compiler.fletchVm.toFilePath();
-
-  if (compiler.verbose) {
-    print("Running '$vmPath ${vmOptions.join(" ")}'");
+  FletchVm vm;
+  if (connectToExistingVm) {
+    var socket = await Socket.connect("127.0.0.1", existingVmPort);
+    vm = new FletchVm.existing(socket);
+  } else {
+    vm = await FletchVm.start(compiler);
   }
-  var vmProcess = await Process.start(vmPath, vmOptions);
 
-  vmProcess.stdout.listen(stdout.add);
-  vmProcess.stderr.listen(stderr.add);
+  commands.forEach((command) => command.addTo(vm.socket));
 
-  bool hasValue = await connectionIterator.moveNext();
-  assert(hasValue);
-  var vmSocket = connectionIterator.current;
-  server.close();
-
-  commands.forEach((command) => command.addTo(vmSocket));
-
-  var session = new Session(vmSocket, compiler);
+  var session = new Session(vm.socket, compiler);
 
   if (snapshotPath != null) {
     session.writeSnapshot(snapshotPath);
@@ -104,12 +100,15 @@ main(List<String> arguments) async {
     session.run();
   }
 
-  exitCode = await vmProcess.exitCode;
-  if (exitCode != 0) {
-    print("Non-zero exit code from '$vmPath' ($exitCode).");
-  }
-  if (exitCode < 0) {
-    // TODO(ahe): Is there a better value for reporting a VM crash?
-    exitCode = COMPILER_CRASHED;
+  if (!connectToExistingVm) {
+    exitCode = await vm.process.exitCode;
+    if (exitCode != 0) {
+      print("Non-zero exit code from "
+            "'${compiler.fletchVm.toFilePath()}' ($exitCode).");
+    }
+    if (exitCode < 0) {
+      // TODO(ahe): Is there a better value for reporting a Vm crash?
+      exitCode = COMPILER_CRASHED;
+    }
   }
 }

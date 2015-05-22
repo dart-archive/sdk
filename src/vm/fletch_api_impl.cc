@@ -4,13 +4,15 @@
 
 #include "src/vm/fletch_api_impl.h"
 
-#include "src/shared/fletch.h"
 #include "src/shared/assert.h"
+#include "src/shared/connection.h"
+#include "src/shared/fletch.h"
 
 #include "src/vm/ffi.h"
 #include "src/vm/list.h"
 #include "src/vm/program.h"
 #include "src/vm/scheduler.h"
+#include "src/vm/session.h"
 #include "src/vm/snapshot.h"
 
 namespace fletch {
@@ -40,6 +42,16 @@ static void RunShapshotFromFile(const char* path) {
   bytes.Delete();
 }
 
+static void WaitForDebuggerConnection(int port) {
+  ConnectionListener listener("127.0.0.1", port);
+  Connection* connection = listener.Accept();
+  Session session(connection);
+  session.Initialize();
+  session.StartMessageProcessingThread();
+  bool success = session.ProcessRun();
+  if (!success) FATAL("Failed to run via debugger connection");
+}
+
 }  // namespace fletch
 
 void FletchSetup() {
@@ -48,6 +60,10 @@ void FletchSetup() {
 
 void FletchTearDown() {
   fletch::Fletch::TearDown();
+}
+
+void FletchWaitForDebuggerConnection(int port) {
+  fletch::WaitForDebuggerConnection(port);
 }
 
 void FletchRunSnapshot(unsigned char* snapshot, int length) {

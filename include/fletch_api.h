@@ -18,6 +18,10 @@ FLETCH_EXPORT void FletchSetup();
 // fletch API in order to free up resources.
 FLETCH_EXPORT void FletchTearDown();
 
+// Wait for a debugger connection. The debugger will build the program
+// to run in the VM and start it.
+FLETCH_EXPORT void FletchWaitForDebuggerConnection(int port);
+
 // Load the program from the snapshot, start a process from that
 // program, and run main in that process.
 FLETCH_EXPORT void FletchRunSnapshot(unsigned char* snapshot, int length);
