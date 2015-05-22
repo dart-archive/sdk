@@ -307,6 +307,17 @@ abstract class CodegenVisitor
     builder.ret();
   }
 
+  void generateSwitchCaseMatch(CaseMatch caseMatch, BytecodeLabel ifTrue) {
+    builder.dup();
+    int constId = allocateConstantFromNode(caseMatch.expression);
+    builder.loadConst(constId);
+    // For debugging, ignore the equality checks in connection
+    // with case matches by not associating the calls with
+    // any node.
+    invokeMethod(null, new Selector.binaryOperator('=='));
+    builder.branchIfTrue(ifTrue);
+  }
+
   /**
    * Load the [arguments] for caling [function].
    *
@@ -2442,11 +2453,7 @@ abstract class CodegenVisitor
         for (Node labelOrCaseMatch in switchCase.labelsAndCases) {
           CaseMatch caseMatch = labelOrCaseMatch.asCaseMatch();
           if (caseMatch == null) continue;
-          builder.dup();
-          int constId = allocateConstantFromNode(caseMatch.expression);
-          builder.loadConst(constId);
-          invokeMethod(labelOrCaseMatch, new Selector.binaryOperator('=='));
-          builder.branchIfTrue(ifTrue);
+          generateSwitchCaseMatch(caseMatch, ifTrue);
         }
         builder.branch(next);
       }

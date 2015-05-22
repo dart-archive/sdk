@@ -110,6 +110,13 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
     super.generateReturn(node);
   }
 
+  void generateSwitchCaseMatch(CaseMatch caseMatch, BytecodeLabel ifTrue) {
+    // We do not want to break on the evaluation of the individual
+    // case equality tests.
+    recordDebugInfo(null);
+    super.generateSwitchCaseMatch(caseMatch, ifTrue);
+  }
+
   void generateIdentical(Node node) {
     recordDebugInfo(node);
     super.generateIdentical(node);
