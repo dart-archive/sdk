@@ -21,7 +21,7 @@ static bool attachDebugger = false;
 static int debugPortNumber = 8123;
 
 + (void)loadAndRunDartSnapshot {
-  if (attachDebbugger) {
+  if (attachDebugger) {
     NSLog(@"Waiting for debugger connection.");
     FletchWaitForDebuggerConnection(debugPortNumber);
     NSLog(@"Debugger connected.");
