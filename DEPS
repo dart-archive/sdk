@@ -7,10 +7,12 @@ vars = {
   # Use this googlecode_url variable only if there is an internal mirror for it.
   # If you do not know, use the full path while defining your new deps entry.
   "googlecode_url": "http://%s.googlecode.com/svn",
+  "github_url": "https://github.com/%s.git",
 
   "clang_rev": "@43229",
-  "dart_rev": "@44800",
   "gyp_rev": "@1752",
+
+  "dart_hash": "@dee663e58274e9fc055c89f09ec61560499b5eda",
 }
 
 deps = {
@@ -22,9 +24,7 @@ deps = {
       ((Var("googlecode_url") % "dart") + "/third_party/clang" +
        Var("clang_rev")),
 
-  "dart":
-      ((Var("googlecode_url") % "dart") + "/branches/bleeding_edge/dart" +
-       Var("dart_rev")),
+  "dart": ((Var("github_url") % "dart-lang/sdk") + "/" + Var("dart_hash")),
 }
 
 # To include Mac deps on other OSes, add this to your .gclient file:

@@ -65,7 +65,8 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
         null,
         context.backend.createClosureEnvironment(field, elements),
         field,
-        compiler);
+        compiler,
+        builder);
   }
 
   void recordDebugInfo(Node node) {
@@ -88,9 +89,9 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
   void registerStaticInvocation(FunctionElement function) { }
   void registerInstantiatedClass(ClassElement klass) { }
 
-  void handleThisPropertySet(Send node) {
+  void doFieldInitializerSet(Send node, FieldElement field) {
     recordDebugInfo(node);
-    super.handleThisPropertySet(node);
+    super.doFieldInitializerSet(node, field);
   }
 
   void handleAllocationAndBodyCall() {

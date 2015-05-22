@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// FletchDebuggerCommands=b,r,s,finish,s,s,s,s,finish,s,s,s,s,finish,s,s,s,s,s,finish,b y,s,s,finish,c
+// FletchDebuggerCommands=b,r,s,finish,s,s,s,s,finish,s,s,s,s,s,finish,s,s,s,s,s,finish,b y,s,s,finish,c
 
 class A {
   int _x = 32;

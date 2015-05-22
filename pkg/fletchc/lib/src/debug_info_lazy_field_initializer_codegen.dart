@@ -38,14 +38,20 @@ class DebugInfoLazyFieldInitializerCodegen
   // function with incorrect bytecode.
   final BytecodeBuilder debugBuilder;
 
+  // TODO(ajohnsen): Consider creating a DebugCompiledFunction instead of only
+  // intercepting the BytecodeBuilder, or simply replace the BytecodeBuilder
+  // in the CompiledFunction.
   DebugInfoLazyFieldInitializerCodegen(CompiledFunction compiledFunction,
                                        FletchContext context,
                                        TreeElements elements,
                                        Registry registry,
                                        ClosureEnvironment closureEnvironment,
                                        FieldElement field,
-                                       this.compiler)
-      : debugBuilder = new BytecodeBuilder(compiledFunction.arity),
+                                       this.compiler,
+                                       [BytecodeBuilder debugBuilder])
+      : debugBuilder = (debugBuilder == null)
+                     ? new BytecodeBuilder(compiledFunction.arity)
+                     : debugBuilder,
         super(compiledFunction, context, elements, registry,
               closureEnvironment, field);
 

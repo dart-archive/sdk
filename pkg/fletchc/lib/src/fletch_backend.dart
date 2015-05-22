@@ -15,7 +15,6 @@ import 'package:compiler/src/dart2jslib.dart' show
     Compiler,
     CompilerTask,
     ConstantCompilerTask,
-    ConstantSystem,
     Enqueuer,
     MessageKind,
     Registry,
@@ -42,6 +41,9 @@ import 'package:compiler/src/elements/elements.dart' show
     LibraryElement,
     MemberElement;
 
+import 'package:compiler/src/elements/modelx.dart' show
+    LibraryElementX;
+
 import 'package:compiler/src/dart_types.dart' show
     DartType,
     InterfaceType;
@@ -57,6 +59,12 @@ import 'package:compiler/src/elements/modelx.dart' show
 
 import 'package:compiler/src/dart_backend/dart_backend.dart' show
     DartConstantTask;
+
+import 'package:compiler/src/constants/constant_system.dart' show
+    ConstantSystem;
+
+import 'package:compiler/src/compile_time_constants.dart' show
+    BackendConstantEnvironment;
 
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
@@ -256,6 +264,9 @@ class FletchBackend extends Backend {
   ClassElement mintClass;
   ClassElement growableListClass;
   ClassElement linkedHashMapClass;
+  ClassElement coroutineClass;
+
+  final Set<FunctionElement> alwaysEnqueue = new Set<FunctionElement>();
 
   FletchBackend(FletchCompiler compiler)
       : this.context = compiler.context,
@@ -392,7 +403,8 @@ class FletchBackend extends Backend {
     loadBuiltinClass("double", fletchSystemLibrary);
     loadBuiltinClass("Null", compiler.coreLibrary);
     loadBuiltinClass("bool", compiler.coreLibrary);
-    loadBuiltinClass("Coroutine", compiler.coreLibrary);
+    coroutineClass =
+        loadBuiltinClass("Coroutine", compiler.coreLibrary).element;
     loadBuiltinClass("Port", compiler.coreLibrary);
     loadBuiltinClass("Foreign", fletchFFILibrary);
 
@@ -411,15 +423,22 @@ class FletchBackend extends Backend {
     world.registerDynamicInvocation(new Selector.binaryOperator('+'));
     world.registerDynamicInvocation(new Selector.call('add', null, 1));
 
-    void registerNamedSelector(String name, LibraryElement library, int arity) {
-      var selector = new Selector.call(name, library, arity);
-      world.registerDynamicInvocation(selector);
-      registry.registerDynamicInvocation(selector);
-    }
+    alwaysEnqueue.add(coroutineClass.lookupLocalMember('_coroutineStart'));
+    alwaysEnqueue.add(compiler.objectClass.implementation.lookupLocalMember(
+        noSuchMethodTrampolineName));
+    alwaysEnqueue.add(compiler.objectClass.implementation.lookupLocalMember(
+        noSuchMethodName));
 
-    registerNamedSelector(noSuchMethodTrampolineName, compiler.coreLibrary, 0);
-    registerNamedSelector(noSuchMethodName, compiler.coreLibrary, 1);
-    registerNamedSelector('_coroutineStart', compiler.coreLibrary, 1);
+    for (FunctionElement element in alwaysEnqueue) {
+      world.registerStaticUse(element);
+    }
+  }
+
+  void onElementResolved(Element element, TreeElements elements) {
+    if (alwaysEnqueue.contains(element)) {
+      var registry = new CodegenRegistry(compiler, elements);
+      registry.registerStaticInvocation(element);
+    }
   }
 
   ClassElement get stringImplementation => stringClass;
@@ -1009,7 +1028,7 @@ class FletchBackend extends Backend {
         ConstructedConstantValue value = constant;
         ClassElement classElement = value.type.element;
         CompiledClass compiledClass = compiledClasses[classElement];
-        for (ConstantValue field in value.fields) {
+        for (ConstantValue field in value.fields.values) {
           int fieldId = context.compiledConstants[field];
           commands.add(new PushFromMap(MapId.constants, fieldId));
         }
@@ -1117,7 +1136,7 @@ class FletchBackend extends Backend {
     if (library.isPatch && library.declaration == compiler.coreLibrary) {
       library.entryCompilationUnit.forEachLocalMember((element) {
         if (!element.isPatch && !isPrivateName(element.name)) {
-          LibraryElement declaration = library.declaration;
+          LibraryElementX declaration = library.declaration;
           declaration.addToScope(element, compiler);
         }
       });

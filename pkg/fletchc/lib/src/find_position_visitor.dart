@@ -7,13 +7,15 @@ import 'package:compiler/src/scanner/scannerlib.dart';
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/elements/modelx.dart';
 
-class FindPositionVisitor extends ElementVisitor {
+class FindPositionVisitor extends BaseElementVisitor {
   final int position;
   Element element;
 
   FindPositionVisitor(this.position, this.element);
 
-  visitElement(ElementX e) {
+  visit(Element e, [arg]) => e.accept(this, arg);
+
+  visitElement(ElementX e, _) {
     DeclarationSite site = e.declarationSite;
     if (site is PartialElement) {
       if (site.beginToken.charOffset <= position &&
@@ -23,21 +25,21 @@ class FindPositionVisitor extends ElementVisitor {
     }
   }
 
-  visitClassElement(ClassElement e) {
+  visitClassElement(ClassElement e, _) {
     if (e is PartialClassElement) {
       if (e.beginToken.charOffset <= position &&
           position < e.endToken.next.charOffset) {
         element = e;
-        visitScopeContainerElement(e);
+        visitScopeContainerElement(e, null);
       }
     }
   }
 
-  visitScopeContainerElement(ScopeContainerElement e) {
-    e.forEachLocalMember((Element element) => element.accept(this));
+  visitScopeContainerElement(ScopeContainerElement e, _) {
+    e.forEachLocalMember((Element element) => visit(element));
   }
 
-  visitCompilationUnitElement(CompilationUnitElement e) {
-    e.forEachLocalMember((Element element) => element.accept(this));
+  visitCompilationUnitElement(CompilationUnitElement e, _) {
+    e.forEachLocalMember((Element element) => visit(element));
   }
 }

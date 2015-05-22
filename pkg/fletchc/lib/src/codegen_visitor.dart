@@ -4,9 +4,7 @@
 
 library fletchc.codegen_visitor;
 
-import 'package:compiler/src/resolution/semantic_visitor.dart' show
-    SemanticSendVisitor,
-    SemanticVisitor;
+import 'package:compiler/src/resolution/semantic_visitor.dart';
 
 import 'package:compiler/src/resolution/operators.dart' show
     AssignmentOperator,
@@ -131,7 +129,26 @@ class FinallyBlock {
 
 abstract class CodegenVisitor
     extends SemanticVisitor
-    implements SemanticSendVisitor {
+    with GetBulkMixin,
+         SetBulkMixin,
+         ErrorBulkMixin,
+         InvokeBulkMixin,
+         IndexSetBulkMixin,
+         CompoundBulkMixin,
+         UnaryBulkMixin,
+         BaseBulkMixin,
+         BinaryBulkMixin,
+         PrefixBulkMixin,
+         PostfixBulkMixin,
+         NewBulkMixin,
+         VariableBulkMixin,
+         ParameterBulkMixin,
+         FunctionBulkMixin,
+         ConstructorBulkMixin,
+         InitializerBulkMixin,
+         BaseImplementationOfStaticsMixin,
+         BaseImplementationOfLocalsMixin
+    implements SemanticSendVisitor, SemanticDeclarationVisitor {
   // A literal int can have up to 31 bits of information (32 minus sign).
   static const int LITERAL_INT_MAX = 0x3FFFFFFF;
 
@@ -179,6 +196,7 @@ abstract class CodegenVisitor
   BytecodeBuilder get builder => compiledFunction.builder;
 
   SemanticSendVisitor get sendVisitor => this;
+  SemanticDeclarationVisitor get declVisitor => this;
 
   void compile();
 
@@ -342,7 +360,7 @@ abstract class CodegenVisitor
       Node node,
       FunctionElement function,
       NodeList arguments,
-      Selector selector) {
+      CallStructure callStructure) {
     registerStaticInvocation(function);
     if (function.isInstanceMember) loadThis();
     FunctionSignature signature = function.functionSignature;
@@ -352,12 +370,13 @@ abstract class CodegenVisitor
         signature.optionalParametersAreNamed) {
       CompiledFunction target = context.backend.createCompiledFunction(
           function);
-      if (target.matchesSelector(selector)) {
+      // TODO(ajohnsen): Don't use selectors.
+      if (target.matchesSelector(callStructure.callSelector)) {
         methodId = target.methodId;
-      } else if (target.canBeCalledAs(selector)) {
+      } else if (target.canBeCalledAs(callStructure.callSelector)) {
         // TODO(ajohnsen): Inline parameter mapping?
         CompiledFunction stub = target.createParameterMappingFor(
-            selector, context);
+            callStructure.callSelector, context);
         methodId = stub.methodId;
       } else {
         handleUnresolved(function.name);
@@ -366,8 +385,9 @@ abstract class CodegenVisitor
       for (Node argument in arguments) {
         visitForValue(argument);
       }
-      arity = selector.argumentCount;
-    } else if (selector != null && selector.namedArguments.isNotEmpty) {
+      arity = callStructure.argumentCount;
+    } else if (callStructure != null &&
+               callStructure.namedArguments.isNotEmpty) {
       handleUnresolved(function.name);
       return;
     } else {
@@ -513,12 +533,12 @@ abstract class CodegenVisitor
       FieldElement field,
       AssignmentOperator operator,
       Node rhs) {
-    handleStaticFieldGet(field);
+    doStaticFieldGet(field);
     visitForValue(rhs);
     Selector selector = new Selector.binaryOperator(
         operator.binaryOperator.name);
     invokeMethod(node, selector);
-    handleStaticFieldSet(field);
+    doStaticFieldSet(field);
   }
 
   void visitTopLevelFieldCompound(
@@ -807,7 +827,10 @@ abstract class CodegenVisitor
     generateIdentical(node);
   }
 
-  void handleStaticFunctionGet(MethodElement function) {
+  void handleStaticFunctionGet(
+      Send node,
+      MethodElement function,
+      _) {
     registerStaticInvocation(function);
     CompiledFunction compiledFunctionTarget =
         context.backend.createCompiledFunction(function);
@@ -816,22 +839,6 @@ abstract class CodegenVisitor
     assert(compiledClass.fields == 0);
     int constId = allocateConstantClassInstance(compiledClass.id);
     builder.loadConst(constId);
-  }
-
-  void visitTopLevelFunctionGet(
-      Send node,
-      MethodElement function,
-      _) {
-    handleStaticFunctionGet(function);
-    applyVisitState();
-  }
-
-  void visitStaticFunctionGet(
-      Send node,
-      MethodElement function,
-      _) {
-    handleStaticFunctionGet(function);
-    applyVisitState();
   }
 
   void handleMainCall(Send node, NodeList arguments) {
@@ -861,7 +868,7 @@ abstract class CodegenVisitor
       Send node,
       MethodElement element,
       NodeList arguments,
-      Selector selector) {
+      CallStructure callStructure) {
     if (checkCompileError(element)) return;
     if (element.declaration == context.compiler.identicalFunction) {
       handleIdenticalCall(node, arguments);
@@ -882,26 +889,16 @@ abstract class CodegenVisitor
       // TODO(ajohnsen): Define a known set of external functions we allow
       // calls to?
     }
-    staticFunctionCall(node, element, arguments, selector);
+    staticFunctionCall(node, element, arguments, callStructure);
   }
 
-  void visitTopLevelFunctionInvoke(
+  void handleStaticFunctionInvoke(
       Send node,
       MethodElement element,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
-    handleStaticallyBoundInvoke(node, element, arguments, selector);
-    applyVisitState();
-  }
-
-  void visitStaticFunctionInvoke(
-      Send node,
-      MethodElement element,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    handleStaticallyBoundInvoke(node, element, arguments, selector);
+    handleStaticallyBoundInvoke(node, element, arguments, callStructure);
     applyVisitState();
   }
 
@@ -909,9 +906,9 @@ abstract class CodegenVisitor
       Send node,
       MethodElement element,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
-    handleStaticallyBoundInvoke(node, element, arguments, selector);
+    handleStaticallyBoundInvoke(node, element, arguments, callStructure);
     applyVisitState();
   }
 
@@ -1080,33 +1077,13 @@ abstract class CodegenVisitor
       Node node,
       FieldElement field,
       NodeList arguments,
-      Selector selector) {
-    // TODO(ajohnsen): Should not be needed.
-    selector = new Selector.callClosureFrom(selector);
-    handleStaticFieldGet(field);
+      CallStructure callStructure,
+      _) {
+    doStaticFieldGet(field);
     for (Node argument in arguments) {
       visitForValue(argument);
     }
-    invokeMethod(node, selector);
-  }
-
-  void visitTopLevelFieldInvoke(
-      Send node,
-      FieldElement field,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    handleStaticFieldInvoke(node, field, arguments, selector);
-    applyVisitState();
-  }
-
-  void visitStaticFieldInvoke(
-      Send node,
-      FieldElement field,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    handleStaticFieldInvoke(node, field, arguments, selector);
+    invokeMethod(node, callStructure.callSelector);
     applyVisitState();
   }
 
@@ -1172,15 +1149,13 @@ abstract class CodegenVisitor
   void visitThisInvoke(
       Send node,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
-    // TODO(ajohnsen): This should not be needed.
-    selector = new Selector.callClosureFrom(selector);
     loadThis();
     for (Node argument in arguments) {
       visitForValue(argument);
     }
-    invokeMethod(node, selector);
+    invokeMethod(node, callStructure.callSelector);
     applyVisitState();
   }
 
@@ -1221,7 +1196,7 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void handleStaticFieldGet(FieldElement element) {
+  void doStaticFieldGet(FieldElement element) {
     if (element.isConst) {
       if (element.initializer == null) {
         generateUnimplementedError(
@@ -1244,19 +1219,11 @@ abstract class CodegenVisitor
     }
   }
 
-  void visitTopLevelFieldGet(
+  void handleStaticFieldGet(
       Send node,
       FieldElement field,
       _) {
-    handleStaticFieldGet(field);
-    applyVisitState();
-  }
-
-  void visitStaticFieldGet(
-      Send node,
-      FieldElement field,
-      _) {
-    handleStaticFieldGet(field);
+    doStaticFieldGet(field);
     applyVisitState();
   }
 
@@ -1276,28 +1243,18 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void handleStaticFieldSet(FieldElement field) {
+  void doStaticFieldSet(FieldElement field) {
     int index = context.getStaticFieldIndex(field, element);
     builder.storeStatic(index);
   }
 
-  void visitTopLevelFieldSet(
+  void handleStaticFieldSet(
       SendSet node,
       FieldElement field,
       Node rhs,
       _) {
     visitForValue(rhs);
-    handleStaticFieldSet(field);
-    applyVisitState();
-  }
-
-  void visitStaticFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs,
-      _) {
-    visitForValue(rhs);
-    handleStaticFieldSet(field);
+    doStaticFieldSet(field);
     applyVisitState();
   }
 
@@ -1455,25 +1412,17 @@ abstract class CodegenVisitor
     node.expression.accept(this);
   }
 
-  void visitLocalVariableGet(
+  void handleLocalGet(
       Send node,
-      LocalVariableElement element,
+      LocalElement element,
       _) {
     scope[element].load(builder);
     applyVisitState();
   }
 
-  void visitLocalFunctionGet(
-      Send node,
-      LocalFunctionElement element,
-      _) {
-    scope[element].load(builder);
-    applyVisitState();
-  }
-
-  void visitLocalVariableSet(
+  void handleLocalSet(
       SendSet node,
-      VariableElement element,
+      LocalElement element,
       Node rhs,
       _) {
     visitForValue(rhs);
@@ -1481,45 +1430,17 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void handleLocalVariableInvoke(
+  void handleLocalInvoke(
       Node node,
       LocalElement element,
       NodeList arguments,
-      Selector selector) {
+      CallStructure callStructure,
+      _) {
     scope[element].load(builder);
     for (Node argument in arguments) {
       visitForValue(argument);
     }
-    invokeMethod(node, selector);
-  }
-
-  void visitLocalVariableInvoke(
-      Send node,
-      LocalVariableElement element,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    handleLocalVariableInvoke(node, element, arguments, selector);
-    applyVisitState();
-  }
-
-  void visitParameterInvoke(
-      Send node,
-      ParameterElement parameter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    handleLocalVariableInvoke(node, parameter, arguments, selector);
-    applyVisitState();
-  }
-
-  void visitLocalFunctionInvoke(
-      Send node,
-      LocalFunctionElement element,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    handleLocalVariableInvoke(node, element, arguments, selector);
+    invokeMethod(node, callStructure.callSelector);
     applyVisitState();
   }
 
@@ -1596,22 +1517,22 @@ abstract class CodegenVisitor
         Node node,
         FieldElement field,
         IncDecOperator operator) {
-    handleStaticFieldGet(field);
+    doStaticFieldGet(field);
     builder.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
-    handleStaticFieldSet(field);
+    doStaticFieldSet(field);
   }
 
   void handleStaticFieldPostfix(
         Node node,
         FieldElement field,
         IncDecOperator operator) {
-    handleStaticFieldGet(field);
+    doStaticFieldGet(field);
     // For postfix, keep local, unmodified version, to 'return' after store.
     builder.dup();
     builder.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
-    handleStaticFieldSet(field);
+    doStaticFieldSet(field);
     builder.pop();
   }
 
@@ -1657,21 +1578,6 @@ abstract class CodegenVisitor
       _) {
     handleStaticFieldPrefix(node, field, operator);
     applyVisitState();
-  }
-
-  void visitParameterGet(
-      Send node,
-      VariableElement element,
-      _) {
-    visitLocalVariableGet(node, element, _);
-  }
-
-  void visitParameterSet(
-      SendSet node,
-      VariableElement element,
-      Node rhs,
-      _) {
-    visitLocalVariableSet(node, element, rhs, _);
   }
 
   void handleDynamicPropertyCompound(
@@ -1919,12 +1825,19 @@ abstract class CodegenVisitor
       NewExpression node,
       ConstructedConstantExpression constant,
       _) {
-    if (constant == null) {
-      handleCompileError();
-    } else {
-      int constId = allocateConstantFromNode(node);
-      builder.loadConst(constId);
-    }
+    int constId = allocateConstantFromNode(node);
+    builder.loadConst(constId);
+    applyVisitState();
+  }
+
+  void errorNonConstantConstructorInvoke(
+      NewExpression node,
+      Element element,
+      DartType type,
+      NodeList arguments,
+      CallStructure callStructure,
+      _) {
+    handleCompileError();
     applyVisitState();
   }
 
@@ -1933,7 +1846,7 @@ abstract class CodegenVisitor
       ConstructorElement constructor,
       InterfaceType type,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     int arity = loadArguments(arguments, constructor);
     callConstructor(node, constructor, arity);
@@ -1945,11 +1858,11 @@ abstract class CodegenVisitor
       ConstructorElement constructor,
       InterfaceType type,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
-    Selector selector = elements.getSelector(node.send);
+    // FIXME: Selector selector = elements.getSelector(node.send);
     // TODO(ahe): Remove ".declaration" when issue 23135 is fixed.
-    staticFunctionCall(node, constructor.declaration, arguments, selector);
+    staticFunctionCall(node, constructor.declaration, arguments, callStructure);
     applyVisitState();
   }
 
@@ -1958,7 +1871,7 @@ abstract class CodegenVisitor
       ConstructorElement constructor,
       InterfaceType type,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     // TODO(ajohnsen): The arguments may need to be shuffled.
     visitGenerativeConstructorInvoke(
@@ -1966,7 +1879,7 @@ abstract class CodegenVisitor
         constructor.effectiveTarget,
         type,
         arguments,
-        selector,
+        callStructure,
         null);
  }
 
@@ -1977,7 +1890,7 @@ abstract class CodegenVisitor
       ConstructorElement effectiveTarget,
       InterfaceType effectiveTargetType,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     if (effectiveTarget.isGenerativeConstructor) {
       visitGenerativeConstructorInvoke(
@@ -1985,7 +1898,7 @@ abstract class CodegenVisitor
           effectiveTarget,
           effectiveTargetType,
           arguments,
-          selector,
+          callStructure,
           null);
     } else {
       visitFactoryConstructorInvoke(
@@ -1993,12 +1906,12 @@ abstract class CodegenVisitor
           effectiveTarget,
           effectiveTargetType,
           arguments,
-          selector,
+          callStructure,
           null);
     }
   }
 
-  void errorUnresolvedConstructorInvoke(
+  void visitUnresolvedConstructorInvoke(
       NewExpression node,
       Element constructor,
       DartType type,
@@ -2011,10 +1924,10 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void errorUnresolvedClassConstructorInvoke(
+  void visitUnresolvedClassConstructorInvoke(
       NewExpression node,
       Element element,
-      MalformedType type,
+      DartType type,
       NodeList arguments,
       Selector selector,
       _) {
@@ -2022,12 +1935,12 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void errorAbstractClassConstructorInvoke(
+  void visitAbstractClassConstructorInvoke(
       NewExpression node,
       ConstructorElement element,
       InterfaceType type,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     generateUnimplementedError(node, "Cannot allocate abstract class");
   }
@@ -2043,7 +1956,7 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void handleStaticGetterGet(Send node, FunctionElement getter) {
+  void handleStaticGetterGet(Send node, FunctionElement getter, _) {
     if (getter == context.backend.fletchExternalNativeError) {
       builder.loadSlot(0);
       return;
@@ -2052,21 +1965,6 @@ abstract class CodegenVisitor
     int methodId = context.backend.functionMethodId(getter);
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
     invokeStatic(node, constId, 0);
-  }
-
-  void visitStaticGetterGet(
-      Send node,
-      FunctionElement getter,
-      _) {
-    handleStaticGetterGet(node, getter);
-    applyVisitState();
-  }
-
-  void visitTopLevelGetterGet(
-      Send node,
-      FunctionElement getter,
-      _) {
-    handleStaticGetterGet(node, getter);
     applyVisitState();
   }
 
@@ -2313,6 +2211,10 @@ abstract class CodegenVisitor
     blockLocals = oldBlockLocals;
   }
 
+  void visitSyncForIn(SyncForIn node) {
+    visitForIn(node);
+  }
+
   void visitForIn(ForIn node) {
     BytecodeLabel start = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
@@ -2351,7 +2253,7 @@ abstract class CodegenVisitor
         if (element.isLocal) {
           scope[element].store(builder);
         } else if (element.isField) {
-          handleStaticFieldSet(element);
+          doStaticFieldSet(element);
         } else {
           internalError(node, "Unhandled store in for-in");
         }
@@ -2605,7 +2507,7 @@ abstract class CodegenVisitor
     builder.invokeStatic(constId, 0);
   }
 
-  void errorUnresolvedInvoke(
+  void visitUnresolvedInvoke(
       Send node,
       Element element,
       Node arguments,
@@ -2615,7 +2517,7 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void errorUnresolvedGet(
+  void visitUnresolvedGet(
       Send node,
       Element element,
       _) {
@@ -2623,74 +2525,15 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void errorUnresolvedSuperCompoundIndexSet(
+  void handleStaticFunctionIncompatibleInvoke(
       Send node,
-      Element element,
-      Node index,
-      AssignmentOperator operator,
-      Node rhs,
+      MethodElement function,
+      NodeList arguments,
+      CallStructure callStructure,
       _) {
-    handleUnresolved("[]=");
+    handleUnresolved(function.name);
     applyVisitState();
   }
-
-  void errorUnresolvedSuperIndexSet(
-      Send node,
-      Element element,
-      Node index,
-      Node rhs,
-      _) {
-    handleUnresolved("[]=");
-    applyVisitState();
-  }
-
-  void errorUnresolvedSuperIndexPostfix(
-      Send node,
-      Element element,
-      Node index,
-      IncDecOperator operator,
-      _) {
-    handleUnresolved(node.selector.toString());
-    applyVisitState();
-  }
-
-  void errorUnresolvedSuperIndex(
-      Send node,
-      Element element,
-      Node index,
-      _) {
-    handleUnresolved(node.selector.toString());
-    applyVisitState();
-  }
-
-  void errorUnresolvedSuperUnary(
-      Send node,
-      UnaryOperator operator,
-      Element element,
-      _) {
-    handleUnresolved(node.selector.toString());
-    applyVisitState();
-  }
-
-  void errorUnresolvedSuperBinary(
-      Send node,
-      Element element,
-      BinaryOperator operator,
-      Node argument,
-      _) {
-    handleUnresolved(node.selector.toString());
-    applyVisitState();
-  }
-
-  void errorUndefinedUnaryExpression(
-      Send node,
-      Operator operator,
-      Node expression,
-      _) {
-    handleUnresolved(node.selector.toString());
-    applyVisitState();
-  }
-
 
   void internalError(Spannable spannable, String reason) {
     context.compiler.internalError(spannable, reason);
@@ -2706,6 +2549,83 @@ abstract class CodegenVisitor
 
   String toString() => "FunctionCompiler(${element.name})";
 
+  void handleFinalStaticFieldSet(
+      SendSet node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    generateUnimplementedError(
+        node, "[handleFinalStaticFieldSet] isn't implemented.");
+  }
+
+  void handleImmutableLocalSet(
+      SendSet node,
+      LocalElement element,
+      Node rhs,
+      _) {
+    generateUnimplementedError(
+        node, "[handleImmutableLocalSet] isn't implemented.");
+  }
+
+  void handleStaticSetterGet(
+      SendSet node,
+      FunctionElement setter,
+      _) {
+    generateUnimplementedError(
+        node, "[handleStaticSetterGet] isn't implemented.");
+  }
+
+  void handleStaticSetterSet(
+      SendSet node,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    generateUnimplementedError(
+        node, "[handleStaticSetterSet] isn't implemented.");
+  }
+
+  void handleStaticSetterInvoke(
+      Send node,
+      FunctionElement setter,
+      NodeList arguments,
+      CallStructure callStructure,
+      _) {
+    generateUnimplementedError(
+        node, "[handleStaticSetterInvoke] isn't implemented.");
+  }
+
+  void handleStaticGetterSet(
+      Send node,
+      FunctionElement getter,
+      Node rhs,
+      _) {
+    generateUnimplementedError(
+        node, "[handleStaticGetterSet] isn't implemented.");
+  }
+
+  void handleStaticGetterInvoke(
+      Send node,
+      FunctionElement getter,
+      NodeList arguments,
+      CallStructure callStructure,
+      _) {
+    generateUnimplementedError(
+        node, "[handleStaticGetterInvoke] isn't implemented.");
+  }
+
+  void handleStaticFunctionSet(
+      SendSet node,
+      MethodElement function,
+      Node rhs,
+      _) {
+    generateUnimplementedError(
+        node, "[handleStaticFunctionSet] isn't implemented.");
+  }
+
+  void bulkHandleNode(Node node, String msg, _) {
+    generateUnimplementedError(node, msg.replaceAll('#', node.toString()));
+  }
+
   void visitNode(Node node) {
     internalError(node, "[visitNode] isn't implemented.");
   }
@@ -2714,1057 +2634,11 @@ abstract class CodegenVisitor
     internalError(node, "[apply] isn't implemented.");
   }
 
-  void errorFinalParameterSet(
-      SendSet node,
-      ParameterElement parameter,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorFinalParameterSet] isn't implemented.");
+  void applyInitializers(NodeList initializers, _) {
+    internalError(node, "[applyInitializers] isn't implemented.");
   }
 
-  void errorLocalFunctionSet(
-      SendSet node,
-      LocalFunctionElement function,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorLocalFunctionSet] isn't implemented.");
-  }
-
-  void errorFinalSuperFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorFinalSuperFieldSet] isn't implemented.");
-  }
-
-  void visitSuperFieldInvoke(
-      Send node,
-      FieldElement field,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperFieldInvoke] isn't implemented.");
-  }
-
-  void visitSuperMethodGet(
-      Send node,
-      MethodElement method,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperMethodGet] isn't implemented.");
-  }
-
-  void errorSuperMethodSet(
-      Send node,
-      MethodElement method,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorSuperMethodSet] isn't implemented.");
-  }
-
-  void visitSuperGetterGet(
-      Send node,
-      FunctionElement getter,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperGetterGet] isn't implemented.");
-  }
-
-  void errorSuperSetterGet(
-      Send node,
-      FunctionElement setter,
-      _) {
-    generateUnimplementedError(
-        node, "[errorSuperSetterGet] isn't implemented.");
-  }
-
-  void visitSuperSetterSet(
-      SendSet node,
-      FunctionElement setter,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperSetterSet] isn't implemented.");
-  }
-
-  void errorFinalLocalVariableSet(
-      SendSet node,
-      LocalVariableElement variable,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorFinalLocalVariableSet] isn't implemented.");
-  }
-
-  void errorSuperGetterSet(
-      SendSet node,
-      FunctionElement getter,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorSuperGetterSet] isn't implemented.");
-  }
-
-  void visitSuperGetterInvoke(
-      Send node,
-      FunctionElement getter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperGetterInvoke] isn't implemented.");
-  }
-
-  void errorSuperSetterInvoke(
-      Send node,
-      FunctionElement setter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[errorSuperSetterInvoke] isn't implemented.");
-  }
-
-  void errorFinalStaticFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorFinalStaticFieldSet] isn't implemented.");
-  }
-
-  void errorStaticFunctionSet(
-      Send node,
-      MethodElement function,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorStaticFunctionSet] isn't implemented.");
-  }
-
-  void errorStaticSetterGet(
-      Send node,
-      FunctionElement setter,
-      _) {
-    generateUnimplementedError(
-        node, "[errorStaticSetterGet] isn't implemented.");
-  }
-
-  void visitStaticSetterSet(
-      SendSet node,
-      FunctionElement setter,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitStaticSetterSet] isn't implemented.");
-  }
-
-  void errorStaticGetterSet(
-      SendSet node,
-      FunctionElement getter,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorStaticGetterSet] isn't implemented.");
-  }
-
-  void visitStaticGetterInvoke(
-      Send node,
-      FunctionElement getter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[visitStaticGetterInvoke] isn't implemented.");
-  }
-
-  void errorStaticSetterInvoke(
-      Send node,
-      FunctionElement setter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[errorStaticSetterInvoke] isn't implemented.");
-  }
-
-  void errorFinalTopLevelFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorFinalTopLevelFieldSet] isn't implemented.");
-  }
-
-  void errorTopLevelFunctionSet(
-      Send node,
-      MethodElement function,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTopLevelFunctionSet] isn't implemented.");
-  }
-
-  void errorTopLevelSetterGet(
-      Send node,
-      FunctionElement setter,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTopLevelSetterGet] isn't implemented.");
-  }
-
-  void visitTopLevelSetterSet(
-      SendSet node,
-      FunctionElement setter,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTopLevelSetterSet] isn't implemented.");
-  }
-
-  void errorTopLevelGetterSet(
-      SendSet node,
-      FunctionElement getter,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTopLevelGetterSet] isn't implemented.");
-  }
-
-  void visitTopLevelGetterInvoke(
-      Send node,
-      FunctionElement getter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTopLevelGetterInvoke] isn't implemented.");
-  }
-
-  void errorTopLevelSetterInvoke(
-      Send node,
-      FunctionElement setter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTopLevelSetterInvoke] isn't implemented.");
-  }
-
-  void visitClassTypeLiteralGet(
-      Send node,
-      TypeConstantExpression constant,
-      _) {
-    generateUnimplementedError(
-        node, "[visitClassTypeLiteralGet] isn't implemented.");
-  }
-
-  void visitClassTypeLiteralInvoke(
-      Send node,
-      TypeConstantExpression constant,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[visitClassTypeLiteralInvoke] isn't implemented.");
-  }
-
-  void errorClassTypeLiteralSet(
-      SendSet node,
-      TypeConstantExpression constant,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorClassTypeLiteralSet] isn't implemented.");
-  }
-
-  void visitTypedefTypeLiteralGet(
-      Send node,
-      TypeConstantExpression constant,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTypedefTypeLiteralGet] isn't implemented.");
-  }
-
-  void visitTypedefTypeLiteralInvoke(
-      Send node,
-      TypeConstantExpression constant,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTypedefTypeLiteralInvoke] isn't implemented.");
-  }
-
-  void errorTypedefTypeLiteralSet(
-      SendSet node,
-      TypeConstantExpression constant,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTypedefTypeLiteralSet] isn't implemented.");
-  }
-
-  void visitTypeVariableTypeLiteralGet(
-      Send node,
-      TypeVariableElement element,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTypeVariableTypeLiteralGet] isn't implemented.");
-  }
-
-  void visitTypeVariableTypeLiteralInvoke(
-      Send node,
-      TypeVariableElement element,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTypeVariableTypeLiteralInvoke] isn't implemented.");
-  }
-
-  void errorTypeVariableTypeLiteralSet(
-      SendSet node,
-      TypeVariableElement element,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTypeVariableTypeLiteralSet] isn't implemented.");
-  }
-
-  void visitDynamicTypeLiteralGet(
-      Send node,
-      TypeConstantExpression constant,
-      _) {
-    generateUnimplementedError(
-        node, "[visitDynamicTypeLiteralGet] isn't implemented.");
-  }
-
-  void visitDynamicTypeLiteralInvoke(
-      Send node,
-      TypeConstantExpression constant,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[visitDynamicTypeLiteralInvoke] isn't implemented.");
-  }
-
-  void errorDynamicTypeLiteralSet(
-      SendSet node,
-      TypeConstantExpression constant,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorDynamicTypeLiteralSet] isn't implemented.");
-  }
-
-  void errorInvalidAssert(
-      Send node,
-      NodeList arguments,
-      _) {
-    generateUnimplementedError(node, "[errorInvalidAssert] isn't implemented.");
-  }
-
-  void errorFinalParameterCompound(
-      Send node,
-      ParameterElement parameter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorFinalParameterCompound] isn't implemented.");
-  }
-
-  void errorFinalLocalVariableCompound(
-      Send node,
-      LocalVariableElement variable,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorFinalLocalVariableCompound] isn't implemented.");
-  }
-
-  void errorLocalFunctionCompound(
-      Send node,
-      LocalFunctionElement function,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorLocalFunctionCompound] isn't implemented.");
-  }
-
-  void errorFinalStaticFieldCompound(
-      Send node,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorFinalStaticFieldCompound] isn't implemented.");
-  }
-
-  void visitStaticGetterSetterCompound(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitStaticGetterSetterCompound] isn't implemented.");
-  }
-
-  void visitStaticMethodSetterCompound(
-      Send node,
-      FunctionElement method,
-      FunctionElement setter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitStaticMethodSetterCompound] isn't implemented.");
-  }
-
-  void errorFinalTopLevelFieldCompound(
-      Send node,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorFinalTopLevelFieldCompound] isn't implemented.");
-  }
-
-  void visitTopLevelGetterSetterCompound(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTopLevelGetterSetterCompound] isn't implemented.");
-  }
-
-  void visitTopLevelMethodSetterCompound(
-      Send node,
-      FunctionElement method,
-      FunctionElement setter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTopLevelMethodSetterCompound] isn't implemented.");
-  }
-
-  void visitSuperFieldCompound(
-      Send node,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperFieldCompound] isn't implemented.");
-  }
-
-  void errorFinalSuperFieldCompound(
-      Send node,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorFinalSuperFieldCompound] isn't implemented.");
-  }
-
-  void visitSuperGetterSetterCompound(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperGetterSetterCompound] isn't implemented.");
-  }
-
-  void visitSuperMethodSetterCompound(
-      Send node,
-      FunctionElement method,
-      FunctionElement setter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperMethodSetterCompound] isn't implemented.");
-  }
-
-  void visitSuperFieldSetterCompound(
-      Send node,
-      FieldElement field,
-      FunctionElement setter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperFieldSetterCompound] isn't implemented.");
-  }
-
-  void visitSuperGetterFieldCompound(
-      Send node,
-      FunctionElement getter,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperGetterFieldCompound] isn't implemented.");
-  }
-
-  void visitClassTypeLiteralCompound(
-      Send node,
-      TypeConstantExpression constant,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitClassTypeLiteralCompound] isn't implemented.");
-  }
-
-  void visitTypedefTypeLiteralCompound(
-      Send node,
-      TypeConstantExpression constant,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTypedefTypeLiteralCompound] isn't implemented.");
-  }
-
-  void visitTypeVariableTypeLiteralCompound(
-      Send node,
-      TypeVariableElement element,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTypeVariableTypeLiteralCompound] isn't implemented.");
-  }
-
-  void visitDynamicTypeLiteralCompound(
-      Send node,
-      TypeConstantExpression constant,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[visitDynamicTypeLiteralCompound] isn't implemented.");
-  }
-
-  void errorLocalFunctionPrefix(
-      Send node,
-      LocalFunctionElement function,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorLocalFunctionPrefix] isn't implemented.");
-  }
-
-  void visitStaticGetterSetterPrefix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitStaticGetterSetterPrefix] isn't implemented.");
-  }
-
-  void visitStaticMethodSetterPrefix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitStaticMethodSetterPrefix] isn't implemented.");
-  }
-
-  void visitTopLevelGetterSetterPrefix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTopLevelGetterSetterPrefix] isn't implemented.");
-  }
-
-  void visitTopLevelMethodSetterPrefix(
-      Send node,
-      FunctionElement method,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTopLevelMethodSetterPrefix] isn't implemented.");
-  }
-
-  void visitSuperFieldPrefix(
-      Send node,
-      FieldElement field,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperFieldPrefix] isn't implemented.");
-  }
-
-  void visitSuperFieldFieldPrefix(
-      Send node,
-      FieldElement readField,
-      FieldElement writtenField,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperFieldFieldPrefix] isn't implemented.");
-  }
-
-  void visitSuperFieldSetterPrefix(
-      Send node,
-      FieldElement field,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperFieldSetterPrefix] isn't implemented.");
-  }
-
-
-  void visitSuperGetterSetterPrefix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperGetterSetterPrefix] isn't implemented.");
-  }
-
-  void visitSuperGetterFieldPrefix(
-      Send node,
-      FunctionElement getter,
-      FieldElement field,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperGetterFieldPrefix] isn't implemented.");
-  }
-
-  void visitSuperMethodSetterPrefix(
-      Send node,
-      FunctionElement method,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperMethodSetterPrefix] isn't implemented.");
-  }
-
-  void visitClassTypeLiteralPrefix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitClassTypeLiteralPrefix] isn't implemented.");
-  }
-
-  void visitTypedefTypeLiteralPrefix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTypedefTypeLiteralPrefix] isn't implemented.");
-  }
-
-  void visitTypeVariableTypeLiteralPrefix(
-      Send node,
-      TypeVariableElement element,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTypeVariableTypeLiteralPrefix] isn't implemented.");
-  }
-
-  void visitDynamicTypeLiteralPrefix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitDynamicTypeLiteralPrefix] isn't implemented.");
-  }
-
-  void errorLocalFunctionPostfix(
-      Send node,
-      LocalFunctionElement function,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorLocalFunctionPostfix] isn't implemented.");
-  }
-
-  void visitStaticGetterSetterPostfix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitStaticGetterSetterPostfix] isn't implemented.");
-  }
-
-
-  void visitStaticMethodSetterPostfix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitStaticMethodSetterPostfix] isn't implemented.");
-  }
-
-  void visitTopLevelGetterSetterPostfix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTopLevelGetterSetterPostfix] isn't implemented.");
-  }
-
-  void visitTopLevelMethodSetterPostfix(
-      Send node,
-      FunctionElement method,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTopLevelMethodSetterPostfix] isn't implemented.");
-  }
-
-  void visitSuperFieldPostfix(
-      Send node,
-      FieldElement field,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperFieldPostfix] isn't implemented.");
-  }
-
-  void visitSuperFieldFieldPostfix(
-      Send node,
-      FieldElement readField,
-      FieldElement writtenField,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperFieldFieldPostfix] isn't implemented.");
-  }
-
-  void visitSuperFieldSetterPostfix(
-      Send node,
-      FieldElement field,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperFieldSetterPostfix] isn't implemented.");
-  }
-
-
-  void visitSuperGetterSetterPostfix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperGetterSetterPostfix] isn't implemented.");
-  }
-
-  void visitSuperGetterFieldPostfix(
-      Send node,
-      FunctionElement getter,
-      FieldElement field,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperGetterFieldPostfix] isn't implemented.");
-  }
-
-  void visitSuperMethodSetterPostfix(
-      Send node,
-      FunctionElement method,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperMethodSetterPostfix] isn't implemented.");
-  }
-
-  void visitClassTypeLiteralPostfix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitClassTypeLiteralPostfix] isn't implemented.");
-  }
-
-  void visitTypedefTypeLiteralPostfix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTypedefTypeLiteralPostfix] isn't implemented.");
-  }
-
-  void visitTypeVariableTypeLiteralPostfix(
-      Send node,
-      TypeVariableElement element,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitTypeVariableTypeLiteralPostfix] isn't implemented.");
-  }
-
-  void visitDynamicTypeLiteralPostfix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitDynamicTypeLiteralPostfix] isn't implemented.");
-  }
-
-  void visitConstantGet(
-      Send node,
-      ConstantExpression constant,
-      _) {
-    generateUnimplementedError(node, "[visitConstantGet] isn't implemented.");
-  }
-
-  void visitConstantInvoke(
-      Send node,
-      ConstantExpression constant,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    generateUnimplementedError(
-        node, "[visitConstantInvoke] isn't implemented.");
-  }
-
-  void errorUnresolvedSet(
-      Send node,
-      Element element,
-      Node rhs,
-      _) {
-    generateUnimplementedError(node, "[errorUnresolvedSet] isn't implemented.");
-  }
-
-  void errorUnresolvedCompound(
-      Send node,
-      Element element,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorUnresolvedCompound] isn't implemented.");
-  }
-
-  void errorUnresolvedPrefix(
-      Send node,
-      Element element,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorUnresolvedPrefix] isn't implemented.");
-  }
-
-  void errorUnresolvedPostfix(
-      Send node,
-      Element element,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorUnresolvedPostfix] isn't implemented.");
-  }
-
-  void errorUndefinedBinaryExpression(
-      Send node,
-      Node left,
-      Operator operator,
-      Node right,
-      _) {
-    generateUnimplementedError(
-        node, "[errorUndefinedBinaryExpression] isn't implemented.");
-  }
-
-  void visitSuperIndexPrefix(
-      Send node,
-      FunctionElement indexFunction,
-      FunctionElement indexSetFunction,
-      Node index,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperIndexPrefix] isn't implemented.");
-  }
-
-  void errorUnresolvedSuperIndexPrefix(
-      Send node,
-      Element function,
-      Node index,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorUnresolvedSuperIndexPrefix] isn't implemented.");
-  }
-
-  void visitSuperNotEquals(
-      Send node,
-      FunctionElement function,
-      Node argument,
-      _) {
-    generateUnimplementedError(
-        node, "[visitSuperNotEquals] isn't implemented.");
-  }
-
-  void errorClassTypeLiteralCompound(
-      Send node,
-      ConstantExpression constant,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorClassTypeLiteralCompound] isn't implemented.");
-  }
-
-  void errorTypedefTypeLiteralCompound(
-      Send node,
-      ConstantExpression constant,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTypedefTypeLiteralCompound] isn't implemented.");
-  }
-
-  void errorTypeVariableTypeLiteralCompound(
-      Send node,
-      TypeVariableElement element,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTypeVariableTypeLiteralCompound] isn't implemented.");
-  }
-
-  void errorDynamicTypeLiteralCompound(
-      Send node,
-      ConstantExpression constant,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[errorDynamicTypeLiteralCompound] isn't implemented.");
-  }
-
-  void errorClassTypeLiteralPrefix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorClassTypeLiteralPrefix] isn't implemented.");
-  }
-
-  void errorTypedefTypeLiteralPrefix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTypedefTypeLiteralPrefix] isn't implemented.");
-  }
-
-  void errorTypeVariableTypeLiteralPrefix(
-      Send node,
-      TypeVariableElement element,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTypeVariableTypeLiteralPrefix] isn't implemented.");
-  }
-
-  void errorDynamicTypeLiteralPrefix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorDynamicTypeLiteralPrefix] isn't implemented.");
-  }
-
-  void errorClassTypeLiteralPostfix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorClassTypeLiteralPostfix] isn't implemented.");
-  }
-
-  void errorTypedefTypeLiteralPostfix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTypedefTypeLiteralPostfix] isn't implemented.");
-  }
-
-  void errorTypeVariableTypeLiteralPostfix(
-      Send node,
-      TypeVariableElement element,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorTypeVariableTypeLiteralPostfix] isn't implemented.");
-  }
-
-  void errorDynamicTypeLiteralPostfix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    generateUnimplementedError(
-        node, "[errorDynamicTypeLiteralPostfix] isn't implemented.");
+  void applyParameters(NodeList parameters, _) {
+    internalError(node, "[applyParameters] isn't implemented.");
   }
 }

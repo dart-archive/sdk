@@ -177,7 +177,7 @@ class FletchCompiler extends FletchCompilerHack {
     CompilationUnitElementX unit = compilationUnitForUri(uri);
     if (unit == null) return null;
     FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
-    unit.accept(visitor);
+    unit.accept(visitor, null);
     CompiledFunction function =
         _NO_WARN(backend).compiledFunctions[visitor.element];
     if (function == null) return null;

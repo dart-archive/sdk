@@ -419,7 +419,7 @@ class ManagedIsolate {
 
   void kill() {
     wasKilled = true;
-    isolate.kill(Isolate.IMMEDIATE);
+    isolate.kill(priority: Isolate.IMMEDIATE);
   }
 }
 

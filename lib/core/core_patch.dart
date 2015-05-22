@@ -88,6 +88,18 @@ const patch = "patch";
     _buffer = _buffer + "$obj";
   }
 
+  @patch void writeAll(Iterable objects, [String separator = ""]) {
+    bool first = true;
+    for (var obj in objects) {
+      if (first) {
+        first = false;
+      } else {
+        write(separator);
+      }
+      write(obj);
+    }
+  }
+
   @patch void writeCharCode(int charCode) {
     _buffer = _buffer + new String.fromCharCode(charCode);
   }

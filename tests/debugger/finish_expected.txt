@@ -33,6 +33,10 @@ Stack trace:
 > 0: main    	@new A()
 > s
 Stack trace:
+> 0: A initializer	@32
+  1: main         	@new A()
+> s
+Stack trace:
 > 0: main    	@a
 > s
 Stack trace:

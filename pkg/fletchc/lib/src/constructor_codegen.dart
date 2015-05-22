@@ -45,6 +45,8 @@ class ConstructorCodegen extends CodegenVisitor {
 
   final List<ConstructorElement> constructors = <ConstructorElement>[];
 
+  TreeElements initializerElements;
+
   ConstructorCodegen(CompiledFunction compiledFunction,
                      FletchContext context,
                      TreeElements elements,
@@ -58,6 +60,11 @@ class ConstructorCodegen extends CodegenVisitor {
   ConstructorElement get constructor => element;
 
   BytecodeBuilder get builder => compiledFunction.builder;
+
+  TreeElements get elements {
+    if (initializerElements != null) return initializerElements;
+    return super.elements;
+  }
 
   void compile() {
     // Push all initial field values (including super-classes).
@@ -191,36 +198,57 @@ class ConstructorCodegen extends CodegenVisitor {
     if (node == null) return;
     NodeList initializers = node.initializers;
     if (initializers == null) return;
-    for (var initializer in initializers) {
-      Element element = elements[initializer];
-      if (element.isGenerativeConstructor) {
-        // TODO(ajohnsen): Handle named arguments.
-        // Load all parameters to the constructor, onto the stack.
-        int initSlot = builder.stackSize;
-        loadArguments(initializer.argumentsNode, element);
-        inlineInitializers(element, initSlot);
-      } else {
-        // An initializer is a SendSet, leaving a value on the stack. Be sure to
-        // pop it by visiting for effect.
-        visitForEffect(initializer);
-      }
-    }
+    initializerElements = constructor.resolvedAst.elements;
+    visitInitializers(initializers, null);
   }
 
-  void handleThisPropertySet(Send node) {
-    Element element = elements[node];
-    fieldScope[element].store(builder);
+  void doFieldInitializerSet(Send node, FieldElement field) {
+    fieldScope[field].store(builder);
+    applyVisitState();
   }
 
   // This is called for each initializer list assignment.
-  void visitThisPropertySet(
-      Send node,
-      Selector selector,
-      Node rhs,
+  void visitFieldInitializer(
+      SendSet node,
+      FieldElement field,
+      Node initializer,
       _) {
-    visitForValue(rhs);
-    handleThisPropertySet(node);
-    applyVisitState();
+    // We only want the value of the actual initializer, not the usual
+    // 'body'.
+    visitForValue(initializer);
+    doFieldInitializerSet(node, field);
+  }
+
+  void visitSuperConstructorInvoke(
+      Send node,
+      ConstructorElement superConstructor,
+      InterfaceType type,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    // TODO(ajohnsen): Handle named arguments.
+    // Load all parameters to the constructor, onto the stack.
+    int initSlot = builder.stackSize;
+    loadArguments(arguments, superConstructor);
+    var previous = initializerElements;
+    inlineInitializers(superConstructor, initSlot);
+    initializerElements = previous;
+  }
+
+  void visitThisConstructorInvoke(
+      Send node,
+      ConstructorElement thisConstructor,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    // TODO(ajohnsen): Is this correct behavior?
+    // TODO(ajohnsen): Handle named arguments.
+    // Load all parameters to the constructor, onto the stack.
+    int initSlot = builder.stackSize;
+    loadArguments(arguments, thisConstructor);
+    var previous = initializerElements;
+    inlineInitializers(thisConstructor, initSlot);
+    initializerElements = previous;
   }
 
   void callConstructorBody(ConstructorElement constructor) {

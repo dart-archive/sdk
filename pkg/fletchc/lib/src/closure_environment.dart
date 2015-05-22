@@ -7,9 +7,7 @@ library fletchc.closure_environment;
 import 'package:compiler/src/util/util.dart' show
     SpannableAssertionFailure;
 
-import 'package:compiler/src/resolution/semantic_visitor.dart' show
-    SemanticSendVisitor,
-    SemanticVisitor;
+import 'package:compiler/src/resolution/semantic_visitor.dart';
 
 import 'package:compiler/src/resolution/operators.dart' show
     AssignmentOperator,
@@ -90,7 +88,11 @@ class ClosureEnvironment {
 }
 
 class ClosureVisitor
-    extends SemanticVisitor
+    extends Visitor
+    with TraversalSendMixin,
+         SemanticSendResolvedMixin,
+         SendResolverMixin,
+         BaseImplementationOfLocalsMixin
     implements SemanticSendVisitor {
   final ClosureEnvironment closureEnvironment = new ClosureEnvironment();
 
@@ -102,10 +104,11 @@ class ClosureVisitor
 
   final MemberElement element;
 
+  final TreeElements elements;
+
   ExecutableElement currentElement;
 
-  ClosureVisitor(this.element, TreeElements elements)
-      : super(elements);
+  ClosureVisitor(this.element, this.elements);
 
   SemanticSendVisitor get sendVisitor => this;
 
@@ -193,65 +196,32 @@ class ClosureVisitor
     }
   }
 
-  void visitLocalVariableGet(Send node, LocalVariableElement element, _) {
+  void handleLocalGet(Send node, LocalElement element, _) {
     markUsed(element, CaptureMode.ByValue);
   }
 
-  void visitLocalFunctionGet(Send node, LocalFunctionElement element, _) {
-    markUsed(element, CaptureMode.ByValue);
-  }
-
-  void visitParameterGet(Send node, ParameterElement element, _) {
-    markUsed(element, CaptureMode.ByValue);
-  }
-
-  void visitParameterSet(SendSet node, ParameterElement element, Node rhs, _) {
-    rhs.accept(this);
-    markUsed(element, CaptureMode.ByReference);
-  }
-
-  void visitThisPropertySet(Send node, Selector selector, Node rhs, _) {
-    rhs.accept(this);
-    markThisUsed();
-  }
-
-  void visitLocalVariableSet(
+  void handleLocalSet(
       SendSet node,
-      LocalVariableElement element,
+      LocalElement element,
       Node rhs,
       _) {
     markUsed(element, CaptureMode.ByReference);
     rhs.accept(this);
   }
 
-  void visitLocalVariableInvoke(
+  void handleLocalInvoke(
       Send node,
-      LocalVariableElement element,
+      LocalElement element,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     markUsed(element, CaptureMode.ByValue);
     arguments.accept(this);
   }
 
-  void visitParameterInvoke(
-      Send node,
-      ParameterElement element,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    markUsed(element, CaptureMode.ByValue);
-    arguments.accept(this);
-  }
-
-  void visitLocalFunctionInvoke(
-      Send node,
-      LocalFunctionElement element,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    markUsed(element, CaptureMode.ByValue);
-    arguments.accept(this);
+  void visitThisPropertySet(Send node, Selector selector, Node rhs, _) {
+    rhs.accept(this);
+    markThisUsed();
   }
 
   void visitLocalVariablePrefix(
@@ -290,100 +260,6 @@ class ClosureVisitor
     markThisUsed();
   }
 
-  void visitTopLevelFunctionInvoke(
-      Send node,
-      MethodElement element,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    arguments.accept(this);
-  }
-
-  void visitSuperMethodInvoke(
-      Send node,
-      MethodElement element,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    arguments.accept(this);
-  }
-
-  void visitTopLevelFieldGet(Send node, FieldElement element, _) {
-    // Intentionally empty: there is just nothing to visit in this case.
-  }
-
-  void visitStaticFieldGet(Send node, FieldElement element, _) {
-    // Intentionally empty: there is just nothing to visit in this case.
-  }
-
-  void visitTopLevelFieldInvoke(
-      Send node,
-      FieldElement element,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    arguments.accept(this);
-  }
-
-  void visitTopLevelFieldSet(
-      SendSet node,
-      FieldElement element,
-      Node rhs,
-      _) {
-    rhs.accept(this);
-  }
-
-  void visitStaticFunctionInvoke(
-      Send node,
-      /* MethodElement */ element,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    arguments.accept(this);
-  }
-
-  void visitNewExpression(NewExpression node) {
-    node.send.argumentsNode.accept(this);
-  }
-
-  void visitExpressionInvoke(
-      Send node,
-      Expression receiver,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    receiver.accept(this);
-    arguments.accept(this);
-  }
-
-  void visitDynamicPropertyInvoke(
-      Send node,
-      Node receiver,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    receiver.accept(this);
-    arguments.accept(this);
-  }
-
-  void visitDynamicPropertyGet(
-      Send node,
-      Node receiver,
-      Selector selector,
-      _) {
-    receiver.accept(this);
-  }
-
-  void visitDynamicPropertySet(
-      Send node,
-      Node receiver,
-      Selector selector,
-      Node rhs,
-      _) {
-    receiver.accept(this);
-    rhs.accept(this);
-  }
-
   void visitIs(Send node, Node expression, DartType type, _) {
     // TODO(ajohnsen): Type is used ByValue.
     expression.accept(this);
@@ -399,90 +275,9 @@ class ClosureVisitor
     expression.accept(this);
   }
 
-  void visitBinary(
-      Send node,
-      Node left,
-      BinaryOperator operator,
-      Node right,
-      _) {
-    left.accept(this);
-    right.accept(this);
-  }
-
-  void visitUnary(
-      Send node,
-      UnaryOperator operator,
-      Node value,
-      _) {
-    value.accept(this);
-  }
-
-  void visitNot(
-      Send node,
-      Node value,
-      _) {
-    value.accept(this);
-  }
-
-  void visitIndex(
-      Send node,
-      Node receiver,
-      Node index,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitIndexSet(
-      SendSet node,
-      Node receiver,
-      Node index,
-      Node value,
-      _) {
-    receiver.accept(this);
-    index.accept(this);
-    value.accept(this);
-  }
-
-  void visitIndexPrefix(
-      SendSet node,
-      Node receiver,
-      Node index,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitEquals(Send node, Node left, Node right, _) {
-    left.accept(this);
-    right.accept(this);
-  }
-
-  void visitNotEquals(Send node, Node left, Node right, _) {
-    left.accept(this);
-    right.accept(this);
-  }
-
-  void visitLogicalAnd(Send node, Node left, Node right, _) {
-    left.accept(this);
-    right.accept(this);
-  }
-
-  void visitLogicalOr(Send node, Node left, Node right, _) {
-    left.accept(this);
-    right.accept(this);
-  }
-
   void visitAssert(Send node, Node expression, _) {
     // TODO(ajohnsen): Only visit in checked mode.
     expression.accept(this);
-  }
-
-  void visitStaticFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
   }
 
   void visitLocalVariableCompound(
@@ -495,71 +290,18 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void visitDynamicPropertyPrefix(
-      Send node,
-      Node receiver,
-      IncDecOperator operator,
-      Selector getterSelector,
-      Selector setterSelector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitDynamicPropertyPostfix(
-      Send node,
-      Node receiver,
-      IncDecOperator operator,
-      Selector getterSelector,
-      Selector setterSelector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedInvoke(
-      Send node,
-      Element element,
-      Node arguments,
-      Selector selector,
-      _) {
-    // Don't report errors here.
-  }
-
   void internalError(Spannable spannable, String message) {
     throw new SpannableAssertionFailure(spannable, message);
   }
 
-  void apply(Node node, _) {
-    internalError(node, "[apply] isn't implemented yet.");
-  }
-
-  void errorFinalParameterSet(
-      SendSet node,
-      ParameterElement parameter,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorFinalLocalVariableSet(
-      SendSet node,
-      LocalVariableElement variable,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorLocalFunctionSet(
-      SendSet node,
-      LocalFunctionElement function,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
+  void apply(Node node, [_]) {
+    node.accept(this);
   }
 
   void visitThisInvoke(
       Send node,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     markThisUsed();
     node.visitChildren(this);
@@ -595,7 +337,7 @@ class ClosureVisitor
       Send node,
       FieldElement field,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     markThisUsed();
     node.visitChildren(this);
@@ -609,26 +351,11 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void errorSuperMethodSet(
-      Send node,
-      MethodElement method,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
   void visitSuperGetterGet(
       Send node,
       FunctionElement getter,
       _) {
     markThisUsed();
-    node.visitChildren(this);
-  }
-
-  void errorSuperSetterGet(
-      Send node,
-      FunctionElement setter,
-      _) {
     node.visitChildren(this);
   }
 
@@ -641,228 +368,13 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void errorSuperGetterSet(
-      SendSet node,
-      FunctionElement getter,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
   void visitSuperGetterInvoke(
       Send node,
       FunctionElement getter,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     markThisUsed();
-    node.visitChildren(this);
-  }
-
-  void errorSuperSetterInvoke(
-      Send node,
-      FunctionElement setter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorFinalStaticFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitStaticFieldInvoke(
-      Send node,
-      FieldElement field,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitStaticFunctionGet(
-      Send node,
-      MethodElement function,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorStaticFunctionSet(
-      Send node,
-      MethodElement function,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitStaticGetterGet(
-      Send node,
-      FunctionElement getter,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorStaticSetterGet(
-      Send node,
-      FunctionElement setter,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitStaticSetterSet(
-      SendSet node,
-      FunctionElement setter,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorStaticGetterSet(
-      SendSet node,
-      FunctionElement getter,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitStaticGetterInvoke(
-      Send node,
-      FunctionElement getter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorStaticSetterInvoke(
-      Send node,
-      FunctionElement setter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorFinalTopLevelFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelFunctionGet(
-      Send node,
-      MethodElement function,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorTopLevelFunctionSet(
-      Send node,
-      MethodElement function,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelGetterGet(
-      Send node,
-      FunctionElement getter,
-      _) {
-  }
-
-  void errorTopLevelSetterGet(
-      Send node,
-      FunctionElement setter,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelSetterSet(
-      SendSet node,
-      FunctionElement setter,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorTopLevelGetterSet(
-      SendSet node,
-      FunctionElement getter,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelGetterInvoke(
-      Send node,
-      FunctionElement getter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorTopLevelSetterInvoke(
-      Send node,
-      FunctionElement setter,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitClassTypeLiteralGet(
-      Send node,
-      TypeConstantExpression constant,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitClassTypeLiteralInvoke(
-      Send node,
-      TypeConstantExpression constant,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorClassTypeLiteralSet(
-      SendSet node,
-      TypeConstantExpression constant,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTypedefTypeLiteralGet(
-      Send node,
-      TypeConstantExpression constant,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTypedefTypeLiteralInvoke(
-      Send node,
-      TypeConstantExpression constant,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorTypedefTypeLiteralSet(
-      SendSet node,
-      TypeConstantExpression constant,
-      Node rhs,
-      _) {
     node.visitChildren(this);
   }
 
@@ -878,7 +390,7 @@ class ClosureVisitor
       Send node,
       TypeVariableElement element,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     markThisUsed();
     node.visitChildren(this);
@@ -890,37 +402,6 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
-  }
-
-  void visitDynamicTypeLiteralGet(
-      Send node,
-      TypeConstantExpression constant,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitDynamicTypeLiteralInvoke(
-      Send node,
-      TypeConstantExpression constant,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorDynamicTypeLiteralSet(
-      SendSet node,
-      TypeConstantExpression constant,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorInvalidAssert(
-      Send node,
-      NodeList arguments,
-      _) {
     node.visitChildren(this);
   }
 
@@ -991,17 +472,6 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void visitDynamicPropertyCompound(
-      Send node,
-      Node receiver,
-      AssignmentOperator operator,
-      Node rhs,
-      Selector getterSelector,
-      Selector setterSelector,
-      _) {
-    node.visitChildren(this);
-  }
-
   void visitThisPropertyCompound(
       Send node,
       AssignmentOperator operator,
@@ -1023,109 +493,6 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void errorFinalParameterCompound(
-      Send node,
-      ParameterElement parameter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorFinalLocalVariableCompound(
-      Send node,
-      LocalVariableElement variable,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorLocalFunctionCompound(
-      Send node,
-      LocalFunctionElement function,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitStaticFieldCompound(
-      Send node,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorFinalStaticFieldCompound(
-      Send node,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitStaticGetterSetterCompound(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitStaticMethodSetterCompound(
-      Send node,
-      FunctionElement method,
-      FunctionElement setter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelFieldCompound(
-      Send node,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorFinalTopLevelFieldCompound(
-      Send node,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelGetterSetterCompound(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelMethodSetterCompound(
-      Send node,
-      FunctionElement method,
-      FunctionElement setter,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
   void visitSuperFieldCompound(
       Send node,
       FieldElement field,
@@ -1133,15 +500,6 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
-  }
-
-  void errorFinalSuperFieldCompound(
-      Send node,
-      FieldElement field,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
     node.visitChildren(this);
   }
 
@@ -1189,52 +547,6 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void visitClassTypeLiteralCompound(
-      Send node,
-      TypeConstantExpression constant,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTypedefTypeLiteralCompound(
-      Send node,
-      TypeConstantExpression constant,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTypeVariableTypeLiteralCompound(
-      Send node,
-      TypeVariableElement element,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitDynamicTypeLiteralCompound(
-      Send node,
-      TypeConstantExpression constant,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitCompoundIndexSet(
-      Send node,
-      Node receiver,
-      Node index,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
   void visitSuperCompoundIndexSet(
       Send node,
       FunctionElement getter,
@@ -1256,14 +568,6 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void errorLocalFunctionPrefix(
-      Send node,
-      LocalFunctionElement function,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
   void visitThisPropertyPrefix(
       Send node,
       IncDecOperator operator,
@@ -1271,59 +575,6 @@ class ClosureVisitor
       Selector setterSelector,
       _) {
     markThisUsed();
-    node.visitChildren(this);
-  }
-
-  void visitStaticFieldPrefix(
-      Send node,
-      FieldElement field,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitStaticGetterSetterPrefix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-
-  void visitStaticMethodSetterPrefix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelFieldPrefix(
-      Send node,
-      FieldElement field,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelGetterSetterPrefix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelMethodSetterPrefix(
-      Send node,
-      FunctionElement method,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
     node.visitChildren(this);
   }
 
@@ -1387,36 +638,12 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void visitClassTypeLiteralPrefix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTypedefTypeLiteralPrefix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
   void visitTypeVariableTypeLiteralPrefix(
       Send node,
       TypeVariableElement element,
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
-  }
-
-  void visitDynamicTypeLiteralPrefix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
     node.visitChildren(this);
   }
 
@@ -1429,14 +656,6 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void errorLocalFunctionPostfix(
-      Send node,
-      LocalFunctionElement function,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
   void visitThisPropertyPostfix(
       Send node,
       IncDecOperator operator,
@@ -1444,59 +663,6 @@ class ClosureVisitor
       Selector setterSelector,
       _) {
     markThisUsed();
-    node.visitChildren(this);
-  }
-
-  void visitStaticFieldPostfix(
-      Send node,
-      FieldElement field,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitStaticGetterSetterPostfix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-
-  void visitStaticMethodSetterPostfix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelFieldPostfix(
-      Send node,
-      FieldElement field,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelGetterSetterPostfix(
-      Send node,
-      FunctionElement getter,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTopLevelMethodSetterPostfix(
-      Send node,
-      FunctionElement method,
-      FunctionElement setter,
-      IncDecOperator operator,
-      _) {
     node.visitChildren(this);
   }
 
@@ -1560,172 +726,12 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void visitClassTypeLiteralPostfix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitTypedefTypeLiteralPostfix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
   void visitTypeVariableTypeLiteralPostfix(
       Send node,
       TypeVariableElement element,
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
-  }
-
-  void visitDynamicTypeLiteralPostfix(
-      Send node,
-      TypeConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitConstantGet(
-      Send node,
-      ConstantExpression constant,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitConstantInvoke(
-      Send node,
-      ConstantExpression constant,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedGet(
-      Send node,
-      Element element,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedSet(
-      Send node,
-      Element element,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedCompound(
-      Send node,
-      Element element,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedPrefix(
-      Send node,
-      Element element,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedPostfix(
-      Send node,
-      Element element,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedSuperIndexSet(
-      Send node,
-      Element element,
-      Node index,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedSuperIndexPostfix(
-      Send node,
-      Element element,
-      Node index,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedSuperCompoundIndexSet(
-      Send node,
-      Element element,
-      Node index,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedSuperUnary(
-      Send node,
-      UnaryOperator operator,
-      Element element,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedSuperBinary(
-      Send node,
-      Element element,
-      BinaryOperator operator,
-      Node argument,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUndefinedUnaryExpression(
-      Send node,
-      Operator operator,
-      Node expression,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUndefinedBinaryExpression(
-      Send node,
-      Node left,
-      Operator operator,
-      Node right,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedSuperIndex(
-      Send node,
-      Element element,
-      Node index,
-      _) {
-    markThisUsed();
-    node.visitChildren(this);
-  }
-
-  void visitIndexPostfix(
-      Send node,
-      Node receiver,
-      Node index,
-      IncDecOperator operator,
-      _) {
     node.visitChildren(this);
   }
 
@@ -1750,193 +756,11 @@ class ClosureVisitor
     node.visitChildren(this);
   }
 
-  void errorClassTypeLiteralCompound(
-      Send node,
-      ConstantExpression constant,
-      AssignmentOperator operator,
+  void handleImmutableLocalSet(
+      SendSet node,
+      LocalElement element,
       Node rhs,
       _) {
-    node.visitChildren(this);
-  }
-
-  void errorTypedefTypeLiteralCompound(
-      Send node,
-      ConstantExpression constant,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorTypeVariableTypeLiteralCompound(
-      Send node,
-      TypeVariableElement element,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorDynamicTypeLiteralCompound(
-      Send node,
-      ConstantExpression constant,
-      AssignmentOperator operator,
-      Node rhs,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorClassTypeLiteralPrefix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorTypedefTypeLiteralPrefix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorTypeVariableTypeLiteralPrefix(
-      Send node,
-      TypeVariableElement element,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorDynamicTypeLiteralPrefix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorClassTypeLiteralPostfix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorTypedefTypeLiteralPostfix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorTypeVariableTypeLiteralPostfix(
-      Send node,
-      TypeVariableElement element,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorDynamicTypeLiteralPostfix(
-      Send node,
-      ConstantExpression constant,
-      IncDecOperator operator,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitConstConstructorInvoke(
-      NewExpression node,
-      ConstructedConstantExpression constant,
-      _) {
-    markThisUsed();
-    node.visitChildren(this);
-  }
-
-  void visitGenerativeConstructorInvoke(
-      NewExpression node,
-      ConstructorElement constructor,
-      InterfaceType type,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitRedirectingGenerativeConstructorInvoke(
-      NewExpression node,
-      ConstructorElement constructor,
-      InterfaceType type,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitFactoryConstructorInvoke(
-      NewExpression node,
-      ConstructorElement constructor,
-      InterfaceType type,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void visitRedirectingFactoryConstructorInvoke(
-      NewExpression node,
-      ConstructorElement constructor,
-      InterfaceType type,
-      ConstructorElement effectiveTarget,
-      InterfaceType effectiveTargetType,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedConstructorInvoke(
-      NewExpression node,
-      Element constructor,
-      DartType type,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedClassConstructorInvoke(
-      NewExpression node,
-      Element element,
-      MalformedType type,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorAbstractClassConstructorInvoke(
-      NewExpression node,
-      ConstructorElement element,
-      InterfaceType type,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
-  }
-
-  void errorUnresolvedRedirectingFactoryConstructorInvoke(
-      NewExpression node,
-      ConstructorElement constructor,
-      InterfaceType type,
-      NodeList arguments,
-      Selector selector,
-      _) {
-    node.visitChildren(this);
+    apply(rhs);
   }
 }
