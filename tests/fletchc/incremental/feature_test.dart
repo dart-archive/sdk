@@ -82,20 +82,19 @@ const List<EncodedResult> tests = const <EncodedResult>[
                 const <String>['Hello, Brave New World!']),
         ]),
 
-    // Test that we can remove a field from an instance of a class
-    // from the end of the field list.
+    // Test that we can manipulate a field from an instance
+    // of a class from the end of the field list.
     const EncodedResult(
         r"""
 ==> main.dart.patch <==
 class A {
   var x;
 <<<<<<<
-  var y0;
+  var y;
 =======
 =======
-  var y1;
+  int y;  // TODO(ahe): We don't add the field unless the tokens change.
 >>>>>>>
-  var z;
 }
 
 var instance;
@@ -104,14 +103,9 @@ main() {
   if (instance == null) {
     print('instance is null');
     instance = new A();
-    instance.x = 42;
-    instance.z = 99;
+    instance.x = 0;
   } else {
-    print('instance.x = ${instance.x}');
-    if (instance.x == 87) {
-      print('instance.z = ${instance.z}');
-    }
-    instance.x = 87;
+    print('x = ${instance.x}');
   }
 }
 """,
@@ -121,14 +115,14 @@ main() {
                     'instance is null']),
             const ProgramExpectation(
                 const <String>[
-                    'instance.x = 42']),
+                    'x = 0']),
             const ProgramExpectation(
                 const <String>[
-                    'instance.x = 87', 'instance.z = 99']),
+                    'x = 0']),
         ]),
 
-    // Test that we can remove a field from an instance of a class
-    // from the middle of the field list.
+    // Test that we can manipulate a field from an instance
+    // of a class from the middle of the field list.
     const EncodedResult(
         r"""
 ==> main.dart.patch <==
@@ -138,7 +132,7 @@ class A {
   var y;
 =======
 =======
-  var y;
+  int y;  // TODO(ahe): We don't add the field unless the tokens change.
 >>>>>>>
   var z;
 }
@@ -149,10 +143,16 @@ main() {
   if (instance == null) {
     print('instance is null');
     instance = new A();
-    instance.x = 421;
+    instance.x = 0;
+    instance.y = 1;
+    instance.z = 2;
   } else {
-    print('instance.x is ${instance.x}');
-    instance.x = 871;
+    print('x = ${instance.x}');
+    if (instance.x == 3) {
+      print('y = ${instance.y}');
+      print('z = ${instance.z}');
+    }
+    instance.x = 3;
   }
 }
 """,
@@ -162,10 +162,112 @@ main() {
                     'instance is null']),
             const ProgramExpectation(
                 const <String>[
-                    'instance.x is 421']),
+                    'x = 0']),
             const ProgramExpectation(
                 const <String>[
-                    'instance.x is 871']),
+                    // TODO(kasperl): y and z should not change places.
+                    'x = 3', 'y = 2', 'z = null']),
+        ]),
+
+    // Test that schema changes affect subclasses correctly.
+    const EncodedResult(
+        r"""
+==> main.dart.patch <==
+class A {
+  var x;
+<<<<<<<
+  var y;
+=======
+=======
+  int y;  // // TODO(ahe): We don't add the field unless the tokens change.
+>>>>>>>
+}
+
+class B extends A {
+  var z;
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new B();
+    instance.x = 0;
+    instance.y = 1;
+    instance.z = 2;
+  } else {
+    print('x = ${instance.x}');
+    if (instance.x == 3) {
+      print('y = ${instance.y}');
+      print('z = ${instance.z}');
+    }
+    instance.x = 3;
+  }
+}
+""",
+        const <ProgramExpectation>[
+            const ProgramExpectation(
+                const <String>[
+                    'instance is null']),
+            const ProgramExpectation(
+                const <String>[
+                    'x = 0']),
+            const ProgramExpectation(
+                const <String>[
+                    'x = 3', 'y = null', 'z = 2']),
+        ]),
+
+    // Test that schema changes affect subclasses of subclasses correctly.
+    const EncodedResult(
+        r"""
+==> main.dart.patch <==
+class A {
+  var x;
+<<<<<<<
+  var y;
+=======
+=======
+ int y;  // // TODO(ahe): We don't add the field unless the tokens change.
+>>>>>>>
+}
+
+class B extends A {
+}
+
+class C extends B {
+  var z;
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new C();
+    instance.x = 0;
+    instance.y = 1;
+    instance.z = 2;
+  } else {
+    print('x = ${instance.x}');
+    if (instance.x == 3) {
+      print('y = ${instance.y}');
+      print('z = ${instance.z}');
+    }
+    instance.x = 3;
+  }
+}
+""",
+        const <ProgramExpectation>[
+            const ProgramExpectation(
+                const <String>[
+                    'instance is null']),
+            const ProgramExpectation(
+                const <String>[
+                    'x = 0']),
+            const ProgramExpectation(
+                const <String>[
+                    'x = 3', 'y = null', 'z = 2']),
         ]),
 
     // Test that the test framework handles more than one update.
@@ -1976,7 +2078,7 @@ void main() {
   var testsToRun = tests.skip(skip);
   // TODO(ahe): Remove the following line, as it means only run the
   // first few tests.
-  testsToRun = testsToRun.take(3);
+  testsToRun = testsToRun.take(5);
   return asyncTest(() => Future.forEach(testsToRun, compileAndRun)
       .then(updateSummary));
 }

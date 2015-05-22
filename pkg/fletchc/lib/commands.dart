@@ -445,6 +445,8 @@ class ChangeSchemas extends Command {
 class PrepareForChanges extends Command {
   const PrepareForChanges()
       : super(CommandCode.PrepareForChanges);
+
+  String toString() => "PrepareForChanges()";
 }
 
 class CommitChanges extends Command {
@@ -519,6 +521,8 @@ class PushNewInteger extends Command {
         ..addUint64(value)
         ..sendOn(sink, code);
   }
+
+  String toString() => "PushNewInteger($value)";
 }
 
 class PushNewDouble extends Command {

@@ -10,6 +10,9 @@ import 'dart:async' show
 import 'dart:convert' show
     UTF8;
 
+import 'dart:collection' show
+    Queue;
+
 import 'package:compiler/compiler.dart' as api;
 
 import 'package:compiler/src/dart2jslib.dart' show
@@ -513,6 +516,7 @@ class LibraryUpdater extends FletchFeatures {
   }
 
   void addField(FieldElementX element, ScopeContainerElement container) {
+    logVerbose("Add field $element to $container.");
     invalidateScopesAffectedBy(element, container);
     if (element.isInstanceMember) {
       _classesWithSchemaChanges.add(container);
@@ -751,6 +755,17 @@ class LibraryUpdater extends FletchFeatures {
   List<Command> computeUpdateFletch() {
     int constantCount = backend.context.compiledConstants.length;
 
+    // Collect the fields of the classes that are subject to schema
+    // changes before applying updates.
+    Map<ClassElement, Map<FieldElementX, int>> beforeFields = {};
+    for (ClassElementX element in _classesWithSchemaChanges) {
+      Map<FieldElementX, int> map = beforeFields[element] = {};
+      int index = 0;
+      element.implementation.forEachInstanceField((_, field) {
+        map[field] = index++;
+      });
+    }
+
     List<Update> removals = <Update>[];
     List<Element> updatedElements = applyUpdates(removals);
     if (compiler.progress != null) {
@@ -797,15 +812,6 @@ class LibraryUpdater extends FletchFeatures {
           }
         }
       }
-    }
-
-    Map<ClassElement, Map<FieldElementX, int>> beforeFields = {};
-    for (ClassElementX element in _classesWithSchemaChanges) {
-      Map<FieldElementX, int> map = beforeFields[element] = {};
-      int index = 0;
-      element.implementation.forEachInstanceField((_, field) {
-        map[field] = index++;
-      });
     }
 
     List<Command> updates = <Command>[const commands_lib.PrepareForChanges()];
@@ -881,10 +887,23 @@ class LibraryUpdater extends FletchFeatures {
       afterFields.add(field);
     });
 
-    // First, we push all the classes we want to remove the field from.
-    commands.add(new commands_lib.PushFromMap(MapId.classes, compiledClass.id));
-    // TODO(kasperl): Push all subclasses too.
-    int numberOfClasses = 1;
+    // First, we push all the classes we want to change the schema of. This
+    // includes all subclasses.
+    int numberOfClasses = 0;
+    Queue<ClassElementX> workQueue = new Queue<ClassElementX>()..add(element);
+    while (workQueue.isNotEmpty) {
+      ClassElementX current = workQueue.removeFirst();
+      int id = backend.compiledClasses[current].id;
+      commands.add(new commands_lib.PushFromMap(MapId.classes, id));
+      numberOfClasses++;
+      // Add all subclasses that aren't schema change target themselves to
+      // the work queue.
+      for (ClassElementX subclass in backend.directSubclasses[current]) {
+        if (!_classesWithSchemaChanges.contains(subclass)) {
+          workQueue.add(subclass);
+        }
+      }
+    }
 
     // Then we push a transformation mapping that tells the runtime system how
     // to build the values for the first part of all instances of the classes.

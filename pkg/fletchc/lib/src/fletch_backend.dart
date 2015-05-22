@@ -206,6 +206,8 @@ class FletchBackend extends Backend {
 
   final Map<ClassElement, CompiledClass> compiledClasses =
       <ClassElement, CompiledClass>{};
+  final Map<ClassElement, Set<ClassElement>> directSubclasses =
+      <ClassElement, Set<ClassElement>>{};
 
   final List<CompiledClass> classes = <CompiledClass>[];
 
@@ -266,7 +268,12 @@ class FletchBackend extends Backend {
     if (element == null) return null;
     assert(element.isDeclaration);
     return compiledClasses.putIfAbsent(element, () {
+      directSubclasses[element] = new Set<ClassElement>();
       CompiledClass superclass = registerClassElement(element.superclass);
+      if (superclass != null) {
+        Set<ClassElement> subclasses = directSubclasses[element.superclass];
+        subclasses.add(element);
+      }
       int fields = superclass != null ? superclass.fields : 0;
       element.implementation.forEachInstanceField(
           (enclosing, field) { fields++; });
