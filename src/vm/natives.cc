@@ -864,7 +864,7 @@ NATIVE(ProcessSpawn) {
 static bool SpawnBlockingProcess(Process* process,
                                  Function* entry,
                                  Class* fn_class,
-                                 Instance* port,
+                                 Instance* channel,
                                  Object* argument) {
   // TODO(ajohnsen): Allow Port as argument?
   if (!argument->IsImmutable()) return false;
@@ -875,8 +875,14 @@ static bool SpawnBlockingProcess(Process* process,
   Process* child = program->SpawnProcess();
   Instance* closure = Instance::cast(child->NewInstance(fn_class));
 
-  // Clone the argument.
-  port = ClonePort(child, Instance::cast(port));
+  // Create a Port object in the new process.
+  Class* port_class = process->program()->port_class();
+  ASSERT(port_class->NumberOfInstanceFields() == 1);
+  Instance* port_instance = Instance::cast(child->NewInstance(port_class));
+  Port* port = new Port(process, channel);
+  child->RegisterFinalizer(port_instance, Port::WeakCallback);
+  port_instance->SetInstanceField(
+      0, child->ToInteger(reinterpret_cast<uword>(port)));
 
   // Set up the stack as a call of the entry with one argument: closure.
   child->SetupExecutionStack();
@@ -888,7 +894,7 @@ static bool SpawnBlockingProcess(Process* process,
   // is not used and simply be 'NULL'.
   stack->set(0, NULL);
   stack->set(1, closure);
-  stack->set(2, port);
+  stack->set(2, port_instance);
   stack->set(3, argument);
 
   // Push 'NULL' return address. This will tell the stack-walker this is the
@@ -915,10 +921,10 @@ NATIVE(ProcessDivide) {
     return Failure::wrong_argument_type();
   }
 
-  // Extract ports.
+  // Extract channels.
   Instance* fixed = Instance::cast(arguments[2]);
-  Array* ports = Array::cast(fixed->GetInstanceField(0));
-  word ports_length = ports->length();
+  Array* channels = Array::cast(fixed->GetInstanceField(0));
+  word channels_length = channels->length();
 
   // Extract arguments.
   Instance* growable = Instance::cast(arguments[3]);
@@ -926,31 +932,24 @@ NATIVE(ProcessDivide) {
   fixed = Instance::cast(growable->GetInstanceField(1));
   Array* fn_arguments = Array::cast(fixed->GetInstanceField(0));
 
-  if (length != ports_length) return Failure::index_out_of_bounds();
+  if (length != channels_length) return Failure::index_out_of_bounds();
   if (length == 0) return process->program()->null_object();
 
-  // TODO(ajohnsen): We currently need a port to signal we are yielding to
-  // the scheduler.
-  Instance* instance = Instance::cast(ports->get(0));
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  Port* result_port = reinterpret_cast<Port*>(address);
-  result_port->Lock();
+  process->IncrementBlocked();
 
   for (int i = 0; i < length; i++) {
-    Instance* instance = Instance::cast(ports->get(i));
-    ASSERT(instance->IsPort());
+    Instance* channel = Instance::cast(channels->get(i));
     if (!SpawnBlockingProcess(process,
                               entry,
                               fn_class,
-                              instance,
+                              channel,
                               fn_arguments->get(i))) {
-      result_port->Unlock();
+      process->DecrementBlocked();
       return Failure::wrong_argument_type();
     }
   }
 
-  return reinterpret_cast<Object*>(result_port);
+  return TargetYieldResult(NULL, false, true).AsObject();
 }
 
 NATIVE(CoroutineCurrent) {

@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 
+#include "src/vm/interpreter.h"
 #include "src/vm/natives.h"
 #include "src/vm/object.h"
 #include "src/vm/process.h"
@@ -154,11 +155,17 @@ NATIVE(PortSendExit) {
 
   Process* port_process = port->process();
   if (port_process != NULL && port_process != process) {
-    // Enqueue the exit message and return the locked port. This
-    // will allow the scheduler to schedule the owner of the port,
-    // while it's still alive.
-    port_process->EnqueueExit(process, port, arguments[1]);
-    return reinterpret_cast<Object*>(port);
+    Object* message = arguments[1];
+
+    // If the result is a simple object, we can just enqueue it as such.
+    if (!port_process->Enqueue(port, message)) {
+      // Enqueue the exit message and return the locked port. This
+      // will allow the scheduler to schedule the owner of the port,
+      // while it's still alive.
+      port_process->EnqueueExit(process, port, message);
+    }
+
+    return TargetYieldResult(port, true, false).AsObject();
   }
 
   port->Unlock();

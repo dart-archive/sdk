@@ -117,7 +117,7 @@ class Engine : public State {
  public:
   explicit Engine(Process* process) : State(process) { }
 
-  Interpreter::InterruptKind Interpret(Port** yield_target);
+  Interpreter::InterruptKind Interpret(TargetYieldResult* target_yield_result);
 
  private:
   void Branch(int true_offset, int false_offset);
@@ -159,7 +159,8 @@ class Engine : public State {
 #define OPCODE_END() }                                    \
   DISPATCH()
 
-Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
+Interpreter::InterruptKind Engine::Interpret(
+    TargetYieldResult* target_yield_result) {
 #define LABEL(name, branching, format, length, stack_diff, print) &&name##Label,
   static void* kDispatchTable[] = {
     BYTECODES_DO(LABEL)
@@ -455,8 +456,9 @@ Interpreter::InterruptKind Engine::Interpret(Port** yield_target) {
       Push(null);
       if (result != null) {
         SaveState();
-        *yield_target = reinterpret_cast<Port*>(result);
-        ASSERT((*yield_target)->IsLocked());
+        *target_yield_result = TargetYieldResult(result);
+        ASSERT((*target_yield_result).IsBlocked() ||
+               (*target_yield_result).port()->IsLocked());
         return Interpreter::kTargetYield;
       }
     }
@@ -889,18 +891,21 @@ bool Engine::IsAtBreakPoint() {
 }
 
 extern "C"
-int InterpretFast(Process* process, Port** yield_target) __attribute__((weak));
-int InterpretFast(Process* process, Port** yield_target) { return -1; }
+int InterpretFast(Process* process,
+                  TargetYieldResult* target_yield_result) __attribute__((weak));
+int InterpretFast(Process* process,
+                  TargetYieldResult* target_yield_result) { return -1; }
 
 void Interpreter::Run() {
   ASSERT(interruption_ == kReady);
   process_->RestoreErrno();
   process_->TakeLookupCache();
   int result = -1;
-  if (!process_->is_debugging()) result = InterpretFast(process_, &target_);
+  if (!process_->is_debugging()) result = InterpretFast(
+      process_, &target_yield_result_);
   if (result < 0) {
     Engine engine(process_);
-    interruption_ = engine.Interpret(&target_);
+    interruption_ = engine.Interpret(&target_yield_result_);
   } else {
     interruption_ = static_cast<InterruptKind>(result);
   }

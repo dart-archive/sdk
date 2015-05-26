@@ -18,6 +18,35 @@ class Function;
 class Port;
 class Process;
 
+class TargetYieldResult {
+ public:
+  explicit TargetYieldResult(const Object* object)
+      : value_(reinterpret_cast<uword>(object)) { }
+
+  TargetYieldResult(Port* port, bool terminate, bool blocked)
+      : value_(reinterpret_cast<uword>(port) |
+               Terminate::encode(terminate) |
+               Blocked::encode(blocked)) { }
+
+  bool ShouldTerminate() const { return Terminate::decode(value_); }
+
+  bool IsBlocked() const { return Blocked::decode(value_); }
+
+  Port* port() const {
+    return reinterpret_cast<Port*>(value_ &
+                                   ~Terminate::mask() &
+                                   ~Blocked::mask());
+  }
+
+  Object* AsObject() const { return reinterpret_cast<Object*>(value_); }
+
+ private:
+  class Terminate : public BoolField<0> {};
+  class Blocked : public BoolField<1> {};
+
+  uword value_;
+};
+
 class Interpreter {
  public:
   enum InterruptKind {
@@ -33,7 +62,7 @@ class Interpreter {
   explicit Interpreter(Process* process)
       : process_(process),
         interruption_(kReady),
-        target_(NULL) { }
+        target_yield_result_(NULL, false, false) { }
 
   // Run the Process until interruption.
   void Run();
@@ -47,12 +76,12 @@ class Interpreter {
   }
   bool IsAtBreakPoint() const { return interruption_ == kBreakPoint; }
 
-  Port* target() const { return target_; }
+  TargetYieldResult target_yield_result() const { return target_yield_result_; }
 
  private:
   Process* const process_;
   InterruptKind interruption_;
-  Port* target_;
+  TargetYieldResult target_yield_result_;
 };
 
 

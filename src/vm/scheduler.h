@@ -83,10 +83,7 @@ class Scheduler {
   std::atomic<Process*>* current_processes_;
 
   void DeleteProcess(Process* process, ThreadState* thread_state);
-  void RescheduleProcess(Process* process,
-                         ThreadState* state,
-                         bool terminate,
-                         bool blocked);
+  void RescheduleProcess(Process* process, ThreadState* state, bool terminate);
 
   void PreemptThreadProcess(int thread_id);
   void ProfileThreadProcess(int thread_id);

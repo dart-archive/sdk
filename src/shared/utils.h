@@ -197,6 +197,11 @@ class BoolField {
     return (value & (1U << position)) != 0;
   }
 
+  // Returns a uword mask of the bit field.
+  static uword mask() {
+    return 1U << position;
+  }
+
   // Returns a uword with the bool field value encoded based on the
   // original value. Only the single bit corresponding to this bool
   // field will be changed.

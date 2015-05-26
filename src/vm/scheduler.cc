@@ -272,7 +272,7 @@ void Scheduler::DeleteProcess(Process* process, ThreadState* thread_state) {
   // 'blocked's heap are gone.
   if (blocked != NULL && blocked->DecrementBlocked()) {
     blocked->ChangeState(Process::kBlocked, Process::kReady);
-    EnqueueOnAnyThread(blocked);
+    EnqueueOnAnyThread(blocked, thread_state->thread_id() + 1);
   }
   if (--processes_ == 0) {
     NotifyAllThreads();
@@ -287,18 +287,13 @@ void Scheduler::DeleteProcess(Process* process, ThreadState* thread_state) {
 
 void Scheduler::RescheduleProcess(Process* process,
                                   ThreadState* state,
-                                  bool terminate,
-                                  bool blocked) {
-  if (blocked) {
-    ASSERT(!terminate);
+                                  bool terminate) {
+  ASSERT(process->state() == Process::kRunning);
+  if (terminate) {
+    DeleteProcess(process, state);
   } else {
-    ASSERT(process->state() == Process::kRunning);
-    if (terminate) {
-      DeleteProcess(process, state);
-    } else {
-      process->ChangeState(Process::kRunning, Process::kReady);
-      EnqueueOnAnyThread(process, state->thread_id() + 1);
-    }
+    process->ChangeState(Process::kRunning, Process::kReady);
+    EnqueueOnAnyThread(process, state->thread_id() + 1);
   }
 }
 
@@ -465,34 +460,47 @@ Process* Scheduler::InterpretProcess(Process* process,
   }
 
   if (interpreter.IsTargetYielded()) {
-    // If we've stolen the space from the process' heap, it is destined
-    // to terminate and there's nothing anybody can do about it.
-    bool terminate = process->heap()->space() == NULL;
-    bool blocked = process->IsBlocked();
-    if (blocked) process->ChangeState(Process::kRunning, Process::kBlocked);
+    TargetYieldResult result = interpreter.target_yield_result();
+
+    // If the process became blocked, change state to blocked and decrement to
+    // guarding increment, and resume if completed.
+    if (result.IsBlocked()) {
+      process->ChangeState(Process::kRunning, Process::kBlocked);
+      if (process->DecrementBlocked()) {
+        // If the blocked process is resumed now, continue with it.
+        process->ChangeState(Process::kBlocked, Process::kRunning);
+        return process;
+      }
+      return NULL;
+    }
 
     // The returned port currently has the lock. Unlock as soon as we know the
     // process is not kRunning (ChangeState either succeeded or failed).
-    Port* port = interpreter.target();
+    Port* port = result.port();
     ASSERT(port != NULL);
     ASSERT(port->IsLocked());
     Process* target = port->process();
     ASSERT(target != NULL);
+
+    // TODO(ajohnsen): If the process is terminating and it's resuming another
+    // process, consider returning that process.
+    bool terminate = result.ShouldTerminate();
+
     if (target->ChangeState(Process::kSleeping, Process::kRunning)) {
       port->Unlock();
-      RescheduleProcess(process, thread_state, terminate, blocked);
+      RescheduleProcess(process, thread_state, terminate);
       return target;
     } else {
       ProcessQueue* target_queue = target->process_queue();
       if (target_queue != NULL && target_queue->TryDequeueEntry(target)) {
         port->Unlock();
         ASSERT(target->state() == Process::kRunning);
-        RescheduleProcess(process, thread_state, terminate, blocked);
+        RescheduleProcess(process, thread_state, terminate);
         return target;
       }
     }
     port->Unlock();
-    RescheduleProcess(process, thread_state, terminate, blocked);
+    RescheduleProcess(process, thread_state, terminate);
     return NULL;
   }
 
@@ -601,17 +609,7 @@ void Scheduler::FlushCacheInThreadStates() {
 void Scheduler::DequeueFromThread(ThreadState* thread_state,
                                   Process** process) {
   ASSERT(*process == NULL);
-  // While the current thread's queue is busy, try from the other.
-  while (!thread_state->queue()->TryDequeue(process)) {
-    // If we were able to dequeue a process, we are done.
-    if (TryDequeueFromAnyThread(process, thread_state->thread_id()) &&
-        *process != NULL) return;
-  }
-  // If no process was found (current thread's queue is empty), take a last loop
-  // over all threads.
-  if (*process == NULL) {
-    TryDequeueFromAnyThread(process, thread_state->thread_id());
-  }
+  while (!TryDequeueFromAnyThread(process, thread_state->thread_id())) { }
 }
 
 static bool TryDequeue(ProcessQueue* queue,

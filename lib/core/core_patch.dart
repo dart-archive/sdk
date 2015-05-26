@@ -476,13 +476,10 @@ class Process {
     // TODO(ajohnsen): Type check arguments.
     int length = arguments.length;
     List channels = new List(length);
-    List ports = new List(length);
     for (int i = 0; i < length; i++) {
-      var channel = new Channel();
-      channels[i] = channel;
-      ports[i] = new Port(channel);
+      channels[i] = new Channel();
     }
-    _divide(_entryDivide, fn, ports, arguments);
+    _divide(_entryDivide, fn, channels, arguments);
     for (int i = 0; i < length; i++) {
       channels[i] = channels[i].receive();
     }
