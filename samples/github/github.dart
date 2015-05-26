@@ -4,6 +4,7 @@
 
 import 'dart/commit_list_presenter.dart';
 import 'dart/commit_presenter.dart';
+import 'dart/menu_presenter.dart';
 import 'dart/github_mock.dart';
 import 'dart/github_services.dart';
 
@@ -14,8 +15,9 @@ main() {
   var server = new Server(mock.host, mock.port);
   var user = server.getUser('dart-lang');
   var repo = user.getRepository('fletch');
-  var commitListPresenter = new CommitListPresenter(repo);
-  var impl = new ImmiServiceImpl(commitListPresenter);
+  var impl = new ImmiServiceImpl()
+    ..add('MenuPresenter', new MenuPresenter())
+    ..add('CommitListPresenter', new CommitListPresenter(repo));
   impl.run();
   server.close();
   mock.close();

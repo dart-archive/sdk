@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="7702" systemVersion="14D131" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="Paw-B4-2Sa">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="7702" systemVersion="14D136" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="Paw-B4-2Sa">
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="7701"/>
         <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
@@ -8,7 +8,7 @@
         <!--Fletch @ GitHub-->
         <scene sceneID="iyQ-Xy-YYT">
             <objects>
-                <tableViewController storyboardIdentifier="CommitListPresenter" id="pko-Lj-HxW" customClass="CommitListPresenter" sceneMemberID="viewController">
+                <tableViewController id="pko-Lj-HxW" customClass="CommitListPresenter" sceneMemberID="viewController">
                     <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="22" sectionFooterHeight="22" id="okL-uw-sVU">
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -64,45 +64,20 @@
         <!--MENU-->
         <scene sceneID="Lvv-qK-jgA">
             <objects>
-                <tableViewController title="MENU" id="LI6-AG-X57" sceneMemberID="viewController">
-                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="static" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="22" sectionFooterHeight="22" id="wKS-Fj-QCA">
+                <tableViewController title="MENU" id="LI6-AG-X57" customClass="MenuController" sceneMemberID="viewController">
+                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="22" sectionFooterHeight="22" id="wKS-Fj-QCA">
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
-                        <sections>
-                            <tableViewSection id="Ml2-xW-mln">
-                                <cells>
-                                    <tableViewCell contentMode="scaleToFill" selectionStyle="default" indentationWidth="10" id="Nc0-8S-Djn">
-                                        <autoresizingMask key="autoresizingMask"/>
-                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="Nc0-8S-Djn" id="c5d-UQ-Y1m">
-                                            <autoresizingMask key="autoresizingMask"/>
-                                            <subviews>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Foo" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ofD-nm-xCp">
-                                                    <rect key="frame" x="73" y="11" width="30" height="21"/>
-                                                    <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                                    <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
-                                                    <nil key="highlightedColor"/>
-                                                </label>
-                                            </subviews>
-                                        </tableViewCellContentView>
-                                    </tableViewCell>
-                                    <tableViewCell contentMode="scaleToFill" selectionStyle="default" indentationWidth="10" id="gHl-bR-9Vy">
-                                        <autoresizingMask key="autoresizingMask"/>
-                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="gHl-bR-9Vy" id="xbV-WJ-tSG">
-                                            <autoresizingMask key="autoresizingMask"/>
-                                            <subviews>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Bar" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="KjS-82-agf">
-                                                    <rect key="frame" x="73" y="11" width="27" height="21"/>
-                                                    <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                                    <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
-                                                    <nil key="highlightedColor"/>
-                                                </label>
-                                            </subviews>
-                                        </tableViewCellContentView>
-                                    </tableViewCell>
-                                </cells>
-                            </tableViewSection>
-                        </sections>
+                        <prototypes>
+                            <tableViewCell contentMode="scaleToFill" selectionStyle="default" indentationWidth="10" reuseIdentifier="MenuItemPrototypeCell" id="Nc0-8S-Djn">
+                                <autoresizingMask key="autoresizingMask"/>
+                                <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="Nc0-8S-Djn" id="c5d-UQ-Y1m">
+                                    <autoresizingMask key="autoresizingMask"/>
+                                </tableViewCellContentView>
+                            </tableViewCell>
+                        </prototypes>
+                        <sections/>
                         <connections>
                             <outlet property="dataSource" destination="LI6-AG-X57" id="Pci-hD-c7b"/>
                             <outlet property="delegate" destination="LI6-AG-X57" id="2Ky-Cj-Ctq"/>
@@ -117,7 +92,7 @@
         <!--Navigation Controller-->
         <scene sceneID="sWZ-D6-3Gq">
             <objects>
-                <navigationController storyboardIdentifier="CommitListPresenterz" automaticallyAdjustsScrollViewInsets="NO" id="x0b-S2-YAz" sceneMemberID="viewController">
+                <navigationController storyboardIdentifier="CommitListPresenter" automaticallyAdjustsScrollViewInsets="NO" id="x0b-S2-YAz" sceneMemberID="viewController">
                     <toolbarItems/>
                     <navigationBar key="navigationBar" contentMode="scaleToFill" id="ge8-Eq-SAf">
                         <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>
@@ -153,7 +128,7 @@
         <!--Navigation Controller-->
         <scene sceneID="Ayy-gc-fx8">
             <objects>
-                <navigationController storyboardIdentifier="MenuID" automaticallyAdjustsScrollViewInsets="NO" id="Wj1-ag-DzS" sceneMemberID="viewController">
+                <navigationController storyboardIdentifier="MenuPresenter" automaticallyAdjustsScrollViewInsets="NO" id="Wj1-ag-DzS" sceneMemberID="viewController">
                     <toolbarItems/>
                     <navigationBar key="navigationBar" contentMode="scaleToFill" id="H3l-DG-XDW">
                         <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>
@@ -161,7 +136,7 @@
                     </navigationBar>
                     <nil name="viewControllers"/>
                     <connections>
-                        <segue destination="LI6-AG-X57" kind="relationship" relationship="rootViewController" id="rFs-e2-emh"/>
+                        <segue destination="LI6-AG-X57" kind="relationship" relationship="rootViewController" id="Tb8-D3-Esd"/>
                     </connections>
                 </navigationController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="cve-HP-D55" userLabel="First Responder" sceneMemberID="firstResponder"/>

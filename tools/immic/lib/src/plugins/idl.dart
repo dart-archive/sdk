@@ -111,9 +111,9 @@ class _IDLVisitor extends CodeGenerationVisitor {
 
   void _writeService() {
     writeln('service ${serviceName} {');
-    // TODO(zerny): Don't assume a root entry point for the scene.
-    writeln('  void reset();');
-    writeln('  PatchSetData* refresh();');
+    writeln('  uint16 getPresenter(PresenterData* data);');
+    writeln('  void reset(uint16 pid);');
+    writeln('  PatchSetData* refresh(uint16 pid);');
     for (List<Type> formals in _methodSignatures.values) {
       write('  void dispatch');
       for (var formal in formals) {
@@ -145,6 +145,10 @@ class _IDLVisitor extends CodeGenerationVisitor {
 
   void _writePatchDataStructs() {
     write("""
+struct PresenterData {
+  String name;
+}
+
 struct PrimitiveData {
   union {
     bool boolData;

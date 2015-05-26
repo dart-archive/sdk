@@ -2,8 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// TODO(zerny): Inline the contents of commit_list_presenter.immi once its
-// presenter has been eliminated.
-import 'dart/commit_list_presenter.immi';
+#import <UIKit/UIKit.h>
+#import "github.h"
 
-import 'dart/menu_presenter.immi';
+@interface MenuController : UITableViewController <RootPresenter>
+
+@end

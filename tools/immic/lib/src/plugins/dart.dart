@@ -221,21 +221,51 @@ import 'package:immi/immi.dart';
 import '${immiGenPkg}/dart/${serviceFile}.dart';
 
 class ${serviceImplName} extends ${serviceName} {
-  var _presenter;
-  var _previous;
+  var _nextPresenterId = 1;
+  var _presenters = [null];
+  var _presenterGraphs = [null];
+  var _presenterNameToId = {};
   var _patches = [];
+
+  // TODO(zerny): Implement per-graph resource management.
   ResourceManager _manager = new ResourceManager();
-  ${serviceImplName}(this._presenter);
-  void reset() {
-    _previous = null;
+
+  ${serviceImplName}();
+  void add(String name, presenter) {
+    assert(!_presenterNameToId.containsKey(name));
+    _presenterNameToId[name] = _addPresenter(presenter);
+  }
+
+  int _addPresenter(presenter) {
+    assert(_presenters.length == _nextPresenterId);
+    assert(_presenterGraphs.length == _nextPresenterId);
+    _presenters.add(presenter);
+    _presenterGraphs.add(null);
+    return _nextPresenterId++;
+  }
+
+  int getPresenter(PresenterData data) {
+    String name = data.name;
+    int pid = _presenterNameToId[name];
+    return pid == null ? 0 : pid;
+  }
+
+  void reset(int pid) {
+    int length = _presenterGraphs.length;
+    for (int i = 0; i < length; ++i) {
+      _presenterGraphs[i] = null;
+    }
     _manager.clear();
   }
-  void refresh(PatchSetDataBuilder builder) {
-    var current = _presenter.present(_previous);
+
+  void refresh(int pid, PatchSetDataBuilder builder) {
+    assert(0 < pid && pid < _nextPresenterId);
+    var previous = _presenterGraphs[pid];
+    var current = _presenters[pid].present(previous);
     var patches = _patches;
-    if (current.diff(_previous, [], patches)) {
+    if (current.diff(previous, [], patches)) {
       int length = _patches.length;
-      _previous = current;
+      _presenterGraphs[pid] = current;
       List<PatchDataBuilder> patchBuilder = builder.initPatches(length);
       for (int i = 0; i < length; ++i) {
         patches[i].serialize(patchBuilder[i], _manager);
@@ -245,12 +275,14 @@ class ${serviceImplName} extends ${serviceName} {
       builder.initPatches(0);
     }
   }
+
   void run() {
     ${serviceName}.initialize(this);
     while (${serviceName}.hasNextEvent()) {
       ${serviceName}.handleNextEvent();
     }
   }
+
 """);
     for (List<Type> formals in _methodSignatures.values) {
       write('  void dispatch');
@@ -274,6 +306,7 @@ class ${serviceImplName} extends ${serviceName} {
       writeln(');');
 
       writeln('  }');
+      writeln();
     }
     write("""
 }

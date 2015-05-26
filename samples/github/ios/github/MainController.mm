@@ -19,7 +19,7 @@
 
   ImmiService* immi = [[ImmiService alloc] init];
 
-  UIStoryboard *storyboard =
+  UIStoryboard* storyboard =
       [UIStoryboard storyboardWithName:@"Main" bundle:nil];
 
   [immi registerStoryboard:storyboard];
@@ -28,15 +28,18 @@
       (UINavigationController*)[immi getPresenterByName:@"CommitListPresenter"];
 
   self.menuController =
-      [storyboard instantiateViewControllerWithIdentifier:@"MenuID"];
+      (UINavigationController*)[immi getPresenterByName:@"MenuPresenter"];
 
   self.centerViewController = self.commitListController;
   self.leftDrawerViewController = self.menuController;
 
   self.shouldStretchDrawer = NO;
+
   self.openDrawerGestureModeMask = MMOpenDrawerGestureModePanningCenterView;
-  self.closeDrawerGestureModeMask = MMCloseDrawerGestureModePanningDrawerView
-                                  | MMCloseDrawerGestureModeTapCenterView;
+
+  self.closeDrawerGestureModeMask = MMCloseDrawerGestureModePanningDrawerView |
+                                    MMCloseDrawerGestureModePanningCenterView |
+                                    MMCloseDrawerGestureModeTapCenterView;
 }
 
 @end

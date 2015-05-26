@@ -2,8 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// TODO(zerny): Inline the contents of commit_list_presenter.immi once its
-// presenter has been eliminated.
-import 'dart/commit_list_presenter.immi';
+node Menu {
+  List<MenuItem> items;
+}
 
-import 'dart/menu_presenter.immi';
+node MenuItem {
+  String title;
+  void select();
+}

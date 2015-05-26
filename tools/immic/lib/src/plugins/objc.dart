@@ -159,6 +159,8 @@ class _HeaderVisitor extends CodeGenerationVisitor {
 
   void _writeImmiService() {
     writeln('@interface ImmiService : NSObject');
+    writeln('- (void)registerPresenter:(id <RootPresenter>)presenter');
+    writeln('                  forName:(NSString*)name;');
     writeln('- (void)registerStoryboard:(UIStoryboard*)storyboard;');
     writeln('- (id <RootPresenter>)getPresenterByName:(NSString*)name;');
     writeln('@end');
@@ -239,24 +241,43 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
   _writeImmiServiceExtendedInterface() {
     writeln('@interface ImmiService ()');
     writeln('@property NSMutableArray* storyboards;');
+    writeln('@property NSMutableDictionary* presenters;');
     writeln('@end');
-    writeln('');
+    writeln();
   }
 
   _writeImmiServiceImplementation() {
     writeln('@implementation ImmiService');
-    writeln('');
+    writeln();
     writeln('- (id)init {');
     writeln('  _storyboards = [NSMutableArray array];');
+    writeln('  _presenters = [NSMutableDictionary dictionary];');
     writeln('  return self;');
     writeln('}');
-    writeln('');
+    writeln();
+    writeln('- (void)registerPresenter:(id <RootPresenter>)presenter');
+    writeln('                  forName:(NSString*)name {');
+    writeln('  assert(self.presenters[name] == nil);');
+    writeln('  int length = name.length;');
+    writeln('  int size = 48 + PresenterDataBuilder::kSize + length;');
+    writeln('  MessageBuilder message(size);');
+    writeln('  PresenterDataBuilder builder =');
+    writeln('      message.initRoot<PresenterDataBuilder>();');
+    writeln('  List<unichar> chars = builder.initNameData(length);');
+    writeln('  [name getCharacters:chars.data()');
+    writeln('                range:NSMakeRange(0, length)];');
+    writeln('  uint16_t pid = ImmiServiceLayer::getPresenter(builder);');
+    writeln('  [presenter immi_setupRoot:[[ImmiRoot alloc] init:pid]];');
+    writeln('  self.presenters[name] = presenter;');
+    writeln('}');
+    writeln();
     writeln('- (void)registerStoryboard:(UIStoryboard*)storyboard {');
     writeln('  [self.storyboards addObject:storyboard];');
     writeln('}');
-    writeln('');
+    writeln();
     writeln('- (id <RootPresenter>)getPresenterByName:(NSString*)name {');
-    writeln('  id <RootPresenter> presenter = nil;');
+    writeln('  id <RootPresenter> presenter = self.presenters[name];');
+    writeln('  if (presenter != nil) return presenter;');
     writeln('  for (int i = 0; i < self.storyboards.count; ++i) {');
     writeln('    @try {');
     writeln('      presenter = [self.storyboards[i]');
@@ -269,66 +290,68 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('      }');
     writeln('    }');
     writeln('  }');
-    writeln('  if (presenter != nil) {');
-    writeln('    [presenter immi_setupRoot:[[ImmiRoot alloc] init]];');
-    writeln('    return presenter;');
-    writeln('  }');
-    writeln('  abort();');
+    writeln('  if (presenter == nil) abort();');
+    writeln('  [self registerPresenter:presenter forName:name];');
+    writeln('  return presenter;');
     writeln('}');
-    writeln('');
+    writeln();
     writeln('@end');
-    writeln('');
+    writeln();
   }
 
   _writeImmiRootExtendedInterface() {
     writeln('@interface ImmiRoot ()');
+    writeln('@property (readonly) uint16_t pid;');
+    writeln('- (id)init:(uint16_t)pid;');
     writeln('@end');
-    writeln('');
+    writeln();
   }
 
   _writeImmiRootImplementation() {
     writeln('@implementation ImmiRoot');
-    writeln('');
-    writeln('- (id)init {');
+    writeln();
+    writeln('- (id)init:(uint16_t)pid {');
+    writeln('  assert(pid > 0);');
+    writeln('  _pid = pid;');
     writeln('  _rootNode = nil;');
     writeln('  return self;');
     writeln('}');
-    writeln('');
+    writeln();
     writeln('- (bool)refresh {');
-    writeln('  PatchSetData data = ${serviceName}::refresh();');
+    writeln('  PatchSetData data = ${serviceName}::refresh(self.pid);');
     writeln('  bool result = [Node applyPatchSet:data atNode:&_rootNode];');
     writeln('  data.Delete();');
     writeln('  return result;');
     writeln('}');
-    writeln('');
+    writeln();
     writeln('- (void)reset {');
     writeln('  _rootNode = nil;');
-    writeln('  ${serviceName}::reset();');
+    writeln('  ${serviceName}::reset(self.pid);');
     writeln('}');
-    writeln('');
+    writeln();
     writeln('@end');
-    writeln('');
+    writeln();
   }
 
   _writeNavigationRootPresenterCategory() {
     writeln(
         '@implementation UINavigationController (ImmiNavigationRootPresenter)');
-    writeln('');
+    writeln();
     writeln('- (UIViewController <RootPresenter> *)presenter {');
     writeln(
         '  return (UIViewController<RootPresenter>*)self.topViewController;');
     writeln('}');
-    writeln('');
+    writeln();
     writeln('- (ImmiRoot*)immi_root {');
     writeln('  return self.presenter.immi_root;');
     writeln('}');
-    writeln('');
+    writeln();
     writeln('- (void)immi_setupRoot:(ImmiRoot*)root {');
     writeln('  [self.presenter immi_setupRoot:root];');
     writeln('}');
-    writeln('');
+    writeln();
     writeln('@end');
-    writeln('');
+    writeln();
   }
 
   _writeNodeExtendedInterface(Struct node) {
