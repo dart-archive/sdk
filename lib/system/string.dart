@@ -178,8 +178,45 @@ class String implements core.String {
     throw "replaceRange(start, end, replacement) isn't implemented";
   }
 
-  split(pattern) {
-    throw "split(pattern) isn't implemented";
+  List<String> split(Pattern pattern) {
+    if (pattern is! String) {
+      throw new UnimplementedError("String.split only accepts String patterns");
+    }
+    String stringPattern = pattern;
+    List<String> result = new List<String>();
+    int length = this.length;
+
+    // If the pattern is empty, split all characters.
+    if (stringPattern.isEmpty) {
+      for (int i = 0; i < length; i++) result.add(this[i]);
+      return result;
+    }
+
+    // If the string is empty, return it in a list.
+    if (length == 0) return [this];
+
+    int patternLength = stringPattern.length;
+    int startIndex = 0;
+    int i = 0;
+    int limit = length - patternLength + 1;
+    while (i < limit) {
+      bool match = true;
+      for (int j = 0; j < patternLength; j++) {
+        if (codeUnitAt(i + j) != stringPattern.codeUnitAt(j)) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        result.add(substring(startIndex, i));
+        startIndex = i + patternLength;
+        i += patternLength;
+      } else {
+        i++;
+      }
+    }
+    result.add(substring(startIndex, length));
+    return result;
   }
 
   splitMapJoin(pattern, {onMatch, onNonMatch}) {
