@@ -287,7 +287,7 @@ class ClosureVisitor
       Node rhs,
       _) {
     markUsed(variable, CaptureMode.ByReference);
-    node.visitChildren(this);
+    super.visitLocalVariableCompound(node, variable, operator, rhs, null);
   }
 
   void internalError(Spannable spannable, String message) {
@@ -304,7 +304,7 @@ class ClosureVisitor
       CallStructure callStructure,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitThisInvoke(node, arguments, callStructure, null);
   }
 
   void visitSuperFieldGet(
@@ -312,7 +312,7 @@ class ClosureVisitor
       FieldElement field,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperFieldGet(node, field, null);
   }
 
   void visitSuperFieldSet(
@@ -321,7 +321,7 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperFieldSet(node, field, rhs, null);
   }
 
   void errorFinalSuperFieldSet(
@@ -330,7 +330,7 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed(); // For invoking noSuchMethod.
-    node.visitChildren(this);
+    super.errorFinalSuperFieldSet(node, field, rhs, null);
   }
 
   void visitSuperFieldInvoke(
@@ -340,7 +340,7 @@ class ClosureVisitor
       CallStructure callStructure,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperFieldInvoke(node, field, arguments, callStructure, null);
   }
 
   void visitSuperMethodGet(
@@ -348,7 +348,7 @@ class ClosureVisitor
       MethodElement method,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperMethodGet(node, method, null);
   }
 
   void visitSuperGetterGet(
@@ -356,7 +356,7 @@ class ClosureVisitor
       FunctionElement getter,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperGetterGet(node, getter, null);
   }
 
   void visitSuperSetterSet(
@@ -365,7 +365,7 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperSetterSet(node, setter, rhs, null);
   }
 
   void visitSuperGetterInvoke(
@@ -375,7 +375,7 @@ class ClosureVisitor
       CallStructure callStructure,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperGetterInvoke(node, getter, arguments, callStructure, null);
   }
 
   void visitTypeVariableTypeLiteralGet(
@@ -383,7 +383,7 @@ class ClosureVisitor
       TypeVariableElement element,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitTypeVariableTypeLiteralGet(node, element, null);
   }
 
   void visitTypeVariableTypeLiteralInvoke(
@@ -393,7 +393,8 @@ class ClosureVisitor
       CallStructure callStructure,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitTypeVariableTypeLiteralInvoke(
+        node, element, arguments, callStructure, null);
   }
 
   void errorTypeVariableTypeLiteralSet(
@@ -402,7 +403,7 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.errorTypeVariableTypeLiteralSet(node, element, rhs, null);
   }
 
   void visitSuperBinary(
@@ -412,7 +413,7 @@ class ClosureVisitor
       Node argument,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperBinary(node, function, operator, argument, null);
   }
 
   void visitSuperIndex(
@@ -421,7 +422,7 @@ class ClosureVisitor
       Node index,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperIndex(node, function, index, null);
   }
 
   void visitSuperIndexPostfix(
@@ -432,7 +433,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperIndexPostfix(node, getter, setter, index, operator, null);
   }
 
   void visitSuperNotEquals(
@@ -441,7 +442,7 @@ class ClosureVisitor
       Node argument,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperNotEquals(node, function, argument, null);
   }
 
   void visitSuperEquals(
@@ -450,7 +451,7 @@ class ClosureVisitor
       Node argument,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperEquals(node, function, argument, null);
   }
 
   void visitSuperUnary(
@@ -459,7 +460,7 @@ class ClosureVisitor
       FunctionElement function,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperUnary(node, operator, function, null);
   }
 
   void visitSuperIndexSet(
@@ -469,7 +470,7 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperIndexSet(node, function, index, rhs, null);
   }
 
   void visitThisPropertyCompound(
@@ -480,7 +481,8 @@ class ClosureVisitor
       Selector setterSelector,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitThisPropertyCompound(
+        node, operator, rhs, getterSelector, setterSelector, null);
   }
 
   void visitParameterCompound(
@@ -490,7 +492,7 @@ class ClosureVisitor
       Node rhs,
       _) {
     markUsed(parameter, CaptureMode.ByReference);
-    node.visitChildren(this);
+    super.visitParameterCompound(node, parameter, operator, rhs, null);
   }
 
   void visitSuperFieldCompound(
@@ -500,7 +502,7 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperFieldCompound(node, field, operator, rhs, null);
   }
 
   void visitSuperGetterSetterCompound(
@@ -511,7 +513,8 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperGetterSetterCompound(
+        node, getter, setter, operator, rhs, null);
   }
 
   void visitSuperMethodSetterCompound(
@@ -522,7 +525,8 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperMethodSetterCompound(
+        node, method, setter, operator, rhs, null);
   }
 
   void visitSuperFieldSetterCompound(
@@ -533,7 +537,8 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperFieldSetterCompound(
+        node, field, setter, operator, rhs, null);
   }
 
   void visitSuperGetterFieldCompound(
@@ -544,7 +549,8 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperGetterFieldCompound(
+        node, getter, field, operator, rhs, null);
   }
 
   void visitSuperCompoundIndexSet(
@@ -556,7 +562,8 @@ class ClosureVisitor
       Node rhs,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperCompoundIndexSet(
+        node, getter, setter, index, operator, rhs, null);
   }
 
   void visitParameterPrefix(
@@ -565,7 +572,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markUsed(parameter, CaptureMode.ByReference);
-    node.visitChildren(this);
+    super.visitParameterPrefix(node, parameter, operator, null);
   }
 
   void visitThisPropertyPrefix(
@@ -575,7 +582,8 @@ class ClosureVisitor
       Selector setterSelector,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitThisPropertyPrefix(
+        node, operator, getterSelector, setterSelector, null);
   }
 
   void visitSuperFieldPrefix(
@@ -584,7 +592,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperFieldPrefix(node, field, operator, null);
   }
 
   void visitSuperFieldFieldPrefix(
@@ -594,7 +602,8 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperFieldFieldPrefix(
+        node, readField, writtenField, operator, null);
   }
 
   void visitSuperFieldSetterPrefix(
@@ -604,9 +613,8 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperFieldSetterPrefix(node, field, setter, operator, null);
   }
-
 
   void visitSuperGetterSetterPrefix(
       Send node,
@@ -615,7 +623,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperGetterSetterPrefix(node, getter, setter, operator, null);
   }
 
   void visitSuperGetterFieldPrefix(
@@ -625,7 +633,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperGetterFieldPrefix(node, getter, field, operator, null);
   }
 
   void visitSuperMethodSetterPrefix(
@@ -635,7 +643,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperMethodSetterPrefix(node, method, setter, operator, null);
   }
 
   void visitTypeVariableTypeLiteralPrefix(
@@ -644,7 +652,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitTypeVariableTypeLiteralPrefix(node, element, operator, null);
   }
 
   void visitParameterPostfix(
@@ -653,7 +661,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markUsed(parameter, CaptureMode.ByReference);
-    node.visitChildren(this);
+    super.visitParameterPostfix(node, parameter, operator, null);
   }
 
   void visitThisPropertyPostfix(
@@ -663,7 +671,8 @@ class ClosureVisitor
       Selector setterSelector,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitThisPropertyPostfix(
+        node, operator, getterSelector, setterSelector, null);
   }
 
   void visitSuperFieldPostfix(
@@ -672,7 +681,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperFieldPostfix(node, field, operator, null);
   }
 
   void visitSuperFieldFieldPostfix(
@@ -682,7 +691,8 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperFieldFieldPostfix(
+        node, readField, writtenField, operator, null);
   }
 
   void visitSuperFieldSetterPostfix(
@@ -692,9 +702,8 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperFieldSetterPostfix(node, field, setter, operator, null);
   }
-
 
   void visitSuperGetterSetterPostfix(
       Send node,
@@ -703,7 +712,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperGetterSetterPostfix(node, getter, setter, operator, null);
   }
 
   void visitSuperGetterFieldPostfix(
@@ -713,7 +722,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperGetterFieldPostfix(node, getter, field, operator, null);
   }
 
   void visitSuperMethodSetterPostfix(
@@ -723,7 +732,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperMethodSetterPostfix(node, method, setter, operator, null);
   }
 
   void visitTypeVariableTypeLiteralPostfix(
@@ -732,7 +741,7 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitTypeVariableTypeLiteralPostfix(node, element, operator, null);
   }
 
   void visitSuperIndexPrefix(
@@ -743,7 +752,8 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.visitSuperIndexPrefix(
+        node, indexFunction, indexSetFunction, index, operator, null);
   }
 
   void errorUnresolvedSuperIndexPrefix(
@@ -753,7 +763,8 @@ class ClosureVisitor
       IncDecOperator operator,
       _) {
     markThisUsed();
-    node.visitChildren(this);
+    super.errorUnresolvedSuperIndexPrefix(
+        node, function, index, operator, null);
   }
 
   void handleImmutableLocalSet(
