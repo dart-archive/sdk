@@ -270,6 +270,57 @@ main() {
                     'x = 3', 'y = null', 'z = 2']),
         ]),
 
+    // Test that schema changes work in the presence of fields in
+    // the superclass.
+    const EncodedResult(
+        r"""
+==> main.dart.patch <==
+class A {
+  var x;
+}
+
+class B extends A {
+<<<<<<<
+  var y;
+=======
+=======
+  int y;  // // TODO(ahe): We don't add the field unless the tokens change.
+>>>>>>>
+  var z;
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new B();
+    instance.x = 0;
+    instance.y = 1;
+    instance.z = 2;
+  } else {
+    print('x = ${instance.x}');
+    if (instance.x == 3) {
+      print('y = ${instance.y}');
+      print('z = ${instance.z}');
+    }
+    instance.x = 3;
+  }
+}
+""",
+        const <ProgramExpectation>[
+            const ProgramExpectation(
+                const <String>[
+                    'instance is null']),
+            const ProgramExpectation(
+                const <String>[
+                    'x = 0']),
+            const ProgramExpectation(
+                const <String>[
+                    // TODO(kasperl): y and z should not change places.
+                    'x = 3', 'y = 2', 'z = null']),
+        ]),
+
     // Test that the test framework handles more than one update.
     const EncodedResult(
         const [
@@ -2078,7 +2129,7 @@ void main() {
   var testsToRun = tests.skip(skip);
   // TODO(ahe): Remove the following line, as it means only run the
   // first few tests.
-  testsToRun = testsToRun.take(5);
+  testsToRun = testsToRun.take(6);
   return asyncTest(() => Future.forEach(testsToRun, compileAndRun)
       .then(updateSummary));
 }

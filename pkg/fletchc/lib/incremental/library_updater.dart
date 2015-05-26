@@ -25,6 +25,7 @@ import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     CompilationUnitElement,
     Element,
+    FieldElement,
     FunctionElement,
     LibraryElement,
     STATE_NOT_STARTED,
@@ -752,6 +753,19 @@ class LibraryUpdater extends FletchFeatures {
     return elementsToInvalidate;
   }
 
+  static void forEachField(ClassElement c, void action(FieldElement field)) {
+    List classes = [];
+    while (c != null) {
+      classes.add(c);
+      c = c.superclass;
+    }
+    for (int i = classes.length - 1; i >= 0; i--) {
+      classes[i].implementation.forEachInstanceField((_, FieldElement field) {
+        action(field);
+      });
+    }
+  }
+
   List<Command> computeUpdateFletch() {
     int constantCount = backend.context.compiledConstants.length;
 
@@ -761,7 +775,7 @@ class LibraryUpdater extends FletchFeatures {
     for (ClassElementX element in _classesWithSchemaChanges) {
       Map<FieldElementX, int> map = beforeFields[element] = {};
       int index = 0;
-      element.implementation.forEachInstanceField((_, field) {
+      forEachField(element, (FieldElement field) {
         map[field] = index++;
       });
     }
@@ -883,7 +897,7 @@ class LibraryUpdater extends FletchFeatures {
 
     // Collect the list of fields as they should exist after the transformation.
     List<FieldElementX> afterFields = [];
-    element.implementation.forEachInstanceField((_, field) {
+    forEachField(element, (field) {
       afterFields.add(field);
     });
 
