@@ -2261,7 +2261,7 @@ class SerializeScopeTestCase extends CompilerTestCase {
     visitor.indented.write('[\n');
     visitor.indentationLevel++;
     visitor.indented;
-    library.accept(visitor);
+    visitor.visitLibraryElement(library);
     library.forEachLocalMember((Element member) {
       if (member.isClass) {
         visitor.buffer.write(',\n');
