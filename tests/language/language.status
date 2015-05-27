@@ -163,10 +163,8 @@ const_types_test/29: MissingCompileTimeError
 const_types_test/30: MissingCompileTimeError
 const_types_test/41: MissingCompileTimeError
 constructor3_negative_test: Crash
-constructor4_test: Fail
 constructor5_test: Fail
 constructor6_test: Crash
-constructor_default_test: Fail
 constructor_named_arguments_test/none: Fail
 constructor_redirect2_test/02: Crash
 constructor_redirect2_test/04: Crash
@@ -437,9 +435,6 @@ import_self_test/none: Fail
 incr_op_test: Fail
 inference_list_or_null_test: Crash
 inferrer_closure_test: Fail
-inferrer_constructor4_test: Fail
-inferrer_constructor5_test/01: Fail
-inferrer_synthesized_constructor_test: Crash
 instanceof2_test: Fail
 instanceof3_test: Fail
 instanceof4_test/01: Fail
@@ -484,7 +479,6 @@ label_test: Fail
 large_class_declaration_test: Crash
 lazy_static3_test: Crash
 left_shift_test: Fail
-library_private_in_constructor_test: Fail
 list_is_test: Fail
 list_literal4_test: Fail
 list_test: Fail

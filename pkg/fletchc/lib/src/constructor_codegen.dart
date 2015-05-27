@@ -195,11 +195,31 @@ class ConstructorCodegen extends CodegenVisitor {
 
     // Now the parameters are in the scope, visit the constructor initializers.
     FunctionExpression node = constructor.node;
-    if (node == null) return;
-    NodeList initializers = node.initializers;
-    if (initializers == null) return;
-    initializerElements = constructor.resolvedAst.elements;
-    visitInitializers(initializers, null);
+    if (node != null) {
+      NodeList initializers = node.initializers;
+      if (initializers != null) {
+        initializerElements = constructor.resolvedAst.elements;
+        visitInitializers(initializers, null);
+      }
+    }
+
+    // Test if a super constructor was visited. If not, implicit inline the
+    // super constructor.
+    if (constructors.last == constructor) {
+      ClassElement classElement = constructor.enclosingClass;
+      classElement = classElement.superclass;
+      if (classElement != null) {
+        ConstructorElement superConstructor =
+            classElement.lookupDefaultConstructor();
+        if (superConstructor != null) {
+          int initSlot = builder.stackSize;
+          // Always load arguments, as the super-constructor may have optional
+          // parameters.
+          loadArguments(new NodeList.empty(), superConstructor);
+          inlineInitializers(superConstructor, initSlot);
+        }
+      }
+    }
   }
 
   void doFieldInitializerSet(Send node, FieldElement field) {
