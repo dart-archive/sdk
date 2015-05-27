@@ -160,7 +160,7 @@ class ConstructorCodegen extends CodegenVisitor {
       if (constructor.functionSignature.parameterCount == 0) {
         ConstructorElement defining = constructor.definingConstructor;
         int initSlot = builder.stackSize;
-        loadArguments(new NodeList.empty(), defining);
+        loadArguments(defining, new NodeList.empty(), CallStructure.NO_ARGS);
         inlineInitializers(defining, initSlot);
         return;
       }
@@ -215,7 +215,8 @@ class ConstructorCodegen extends CodegenVisitor {
           int initSlot = builder.stackSize;
           // Always load arguments, as the super-constructor may have optional
           // parameters.
-          loadArguments(new NodeList.empty(), superConstructor);
+          loadArguments(
+              superConstructor, new NodeList.empty(), CallStructure.NO_ARGS);
           inlineInitializers(superConstructor, initSlot);
         }
       }
@@ -248,8 +249,9 @@ class ConstructorCodegen extends CodegenVisitor {
       _) {
     // TODO(ajohnsen): Handle named arguments.
     // Load all parameters to the constructor, onto the stack.
-    int initSlot = builder.stackSize;
-    loadArguments(arguments, superConstructor);
+    loadArguments(superConstructor, arguments, selector.callStructure);
+    int initSlot = builder.stackSize -
+        superConstructor.functionSignature.parameterCount;
     var previous = initializerElements;
     inlineInitializers(superConstructor, initSlot);
     initializerElements = previous;
@@ -264,11 +266,73 @@ class ConstructorCodegen extends CodegenVisitor {
     // TODO(ajohnsen): Is this correct behavior?
     // TODO(ajohnsen): Handle named arguments.
     // Load all parameters to the constructor, onto the stack.
-    int initSlot = builder.stackSize;
-    loadArguments(arguments, thisConstructor);
+    loadArguments(thisConstructor, arguments, selector.callStructure);
+    int initSlot = builder.stackSize -
+        thisConstructor.functionSignature.parameterCount;
     var previous = initializerElements;
     inlineInitializers(thisConstructor, initSlot);
     initializerElements = previous;
+  }
+
+  /**
+   * Load the [arguments] for caling [constructor].
+   *
+   * Return the number of arguments pushed onto the stack.
+   */
+  int loadArguments(
+      ConstructorElement constructor,
+      NodeList arguments,
+      CallStructure callStructure) {
+    FunctionSignature signature = constructor.functionSignature;
+    if (!signature.hasOptionalParameters ||
+        !signature.optionalParametersAreNamed ||
+        callStructure.namedArgumentCount == 0) {
+      return loadPositionalArguments(arguments, signature, constructor.name);
+    }
+
+    int argumentCount = callStructure.argumentCount;
+    int namedArgumentCount = callStructure.namedArgumentCount;
+
+    Iterator<Node> it = arguments.iterator;
+    int unnamedArguments = argumentCount - namedArgumentCount;
+    for (int i = 0; i < unnamedArguments; i++) {
+      it.moveNext();
+      visitForValue(it.current);
+    }
+
+    bool directMatch = namedArgumentCount == signature.optionalParameterCount;
+    Map<String, int> namedArguments = <String, int>{};
+    for (int i = 0; i < namedArgumentCount; i++) {
+      String name = callStructure.namedArguments[i];
+      namedArguments[name] = builder.stackSize;
+      it.moveNext();
+      visitForValue(it.current);
+      if (signature.orderedOptionalParameters[i].name != name) {
+        directMatch = false;
+      }
+    }
+    if (directMatch) return argumentCount;
+
+    // There was no direct match. Push all unnamed arguments and all named
+    // arguments that have already been evaluated, in signature order.
+    for (int i = 0; i < unnamedArguments; i++) {
+      builder.loadLocal(argumentCount);
+    }
+
+    int count = 0;
+    for (ParameterElement parameter in signature.orderedOptionalParameters) {
+      int slot = namedArguments[parameter.name];
+      if (slot != null) {
+        builder.loadSlot(slot);
+      } else {
+        doParameterInitializer(parameter);
+      }
+      count++;
+    }
+
+    // Some parameters may have defaulted to default value, making the
+    // parameter count larger than the argument count.
+    return argumentCount + signature.parameterCount;
   }
 
   void callConstructorBody(ConstructorElement constructor) {

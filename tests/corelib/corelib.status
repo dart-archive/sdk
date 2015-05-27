@@ -88,7 +88,7 @@ iterable_return_type_test/02: Crash
 iterable_return_type_test/none: Fail
 iterable_to_list_test: Fail
 iterable_to_set_test: Fail
-json_map_test: Crash
+json_map_test: CompileTimeError
 linked_hash_map_from_iterable_test: Fail
 linked_hash_map_from_iterables_test: Fail
 list_as_map_test: Fail

@@ -336,26 +336,6 @@ abstract class CodegenVisitor
     builder.branchIfTrue(ifTrue);
   }
 
-  /**
-   * Load the [arguments] for caling [function].
-   *
-   * Return the number of arguments pushed onto the stack.
-   */
-  int loadArguments(
-      NodeList arguments,
-      FunctionElement function) {
-    assert(!function.isInstanceMember);
-    FunctionSignature signature = function.functionSignature;
-    if (signature.hasOptionalParameters &&
-        signature.optionalParametersAreNamed) {
-      generateUnimplementedError(
-          function,
-          "Unimplemented load of named arguments");
-      return 1;
-    }
-    return loadPositionalArguments(arguments, signature, function.name);
-  }
-
   CompiledFunction requireCompiledFunction(FunctionElement element) {
     registerStaticInvocation(element);
     return context.backend.createCompiledFunction(element);
@@ -411,8 +391,8 @@ abstract class CodegenVisitor
   }
 
   /**
-   * Load the [arguments] for caling [function], with potential optional
-   * positional parameters.
+   * Load the [arguments] for caling [function], with potential positional
+   * arguments.
    *
    * Return the number of arguments pushed onto the stack.
    */
@@ -420,7 +400,6 @@ abstract class CodegenVisitor
       NodeList arguments,
       FunctionSignature signature,
       String name) {
-    assert(!signature.optionalParametersAreNamed);
     int argumentCount = 0;
     Iterator<Node> it = arguments.iterator;
     signature.orderedForEachParameter((ParameterElement parameter) {
@@ -428,15 +407,7 @@ abstract class CodegenVisitor
         visitForValue(it.current);
       } else {
         if (parameter.isOptional) {
-          Expression initializer = parameter.initializer;
-          if (initializer == null) {
-            builder.loadLiteralNull();
-          } else {
-            int constId = allocateConstantFromNode(
-                initializer,
-                elements: parameter.resolvedAst.elements);
-            builder.loadConst(constId);
-          }
+          doParameterInitializer(parameter);
         } else {
           handleUnresolved(name);
         }
@@ -445,6 +416,18 @@ abstract class CodegenVisitor
     });
     if (it.moveNext()) handleUnresolved(name);
     return argumentCount;
+  }
+
+  void doParameterInitializer(ParameterElement parameter) {
+    Expression initializer = parameter.initializer;
+    if (initializer == null) {
+      builder.loadLiteralNull();
+    } else {
+      int constId = allocateConstantFromNode(
+          initializer,
+          elements: parameter.resolvedAst.elements);
+      builder.loadConst(constId);
+    }
   }
 
   // Visit the expression [node] with the result pushed on top of the stack.
@@ -1348,7 +1331,7 @@ abstract class CodegenVisitor
     }
     // Call with empty arguments, as we call the default constructor.
     callConstructor(
-        node, constructor, new NodeList.empty(), new CallStructure(0));
+        node, constructor, new NodeList.empty(), CallStructure.NO_ARGS);
     Selector add = new Selector.call('add', null, 1);
     for (Node element in node.elements) {
       builder.dup();
@@ -1375,7 +1358,7 @@ abstract class CodegenVisitor
     }
     // Call with empty arguments, as we call the default constructor.
     callConstructor(
-        node, constructor, new NodeList.empty(), new CallStructure(0));
+        node, constructor, new NodeList.empty(), CallStructure.NO_ARGS);
     Selector selector = new Selector.indexSet();
     for (Node element in node.entries) {
       builder.dup();

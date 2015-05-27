@@ -9,16 +9,7 @@
 # overwrite hashCode getter as well.
 bound_closure_equality_test: Fail
 
-[ ($compiler == fletchc || $runtime == fletchc) && $host_unchecked ]
-constructor_named_arguments_test/none: Fail
-mixin_super_constructor_named_test: Fail
-constructor5_test: Fail
-
 [ ($compiler == fletchc || $runtime == fletchc) && $host_checked ]
-constructor_named_arguments_test/none: Crash
-mixin_super_constructor_named_test: Crash
-constructor5_test: Crash
-mixin_prefix_test: Crash
 regress_14348_test: Crash
 
 [ ($compiler == fletchc || $runtime == fletchc) && $arch == ia32 ]
@@ -166,12 +157,9 @@ const_types_test/29: MissingCompileTimeError
 const_types_test/30: MissingCompileTimeError
 const_types_test/41: MissingCompileTimeError
 constructor3_negative_test: Crash
-constructor5_test: Fail
 constructor6_test: Crash
-constructor_named_arguments_test/none: Fail
 constructor_redirect2_test/02: Crash
 constructor_redirect2_test/04: Crash
-crash_12118_test: Fail
 crash_6725_test/01: Crash
 cyclic_type2_test: Fail
 cyclic_type_test/00: Fail
@@ -296,7 +284,6 @@ fixed_type_variable_test/04: Fail
 fixed_type_variable_test/05: Fail
 fixed_type_variable_test/06: Fail
 for2_test: Fail
-forwarding_factory_constructor_default_values_test: Fail
 full_stacktrace1_test: Fail
 full_stacktrace2_test: Fail
 full_stacktrace3_test: Fail
