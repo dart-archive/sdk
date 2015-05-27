@@ -10,11 +10,14 @@ const patch = "patch";
   return false;
 }
 
+@patch int identityHashCode(Object object) => _identityHashCode(object);
+
+@fletch.native external _identityHashCode(Object object);
+
 @patch class Object {
   @patch String toString() => '[object Object]';
 
-  // TODO(ajohnsen): Not very good..
-  @patch int get hashCode => 42;
+  @patch int get hashCode => _identityHashCode(this);
 
   @patch noSuchMethod(Invocation invocation) {
     // TODO(kasperl): Extract information from the invocation
@@ -57,8 +60,6 @@ const patch = "patch";
   @patch factory bool.fromEnvironment(
       String name,
       {bool defaultValue: false}) => defaultValue;
-
-  int get hashCode => this ? 5 : 7;
 }
 
 // TODO(ajohnsen): Merge 'fletch.String' into this String.

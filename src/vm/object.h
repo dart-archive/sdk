@@ -253,6 +253,8 @@ class HeapObject: public Object {
   inline bool get_immutable();
   inline void set_immutable(bool immutable);
 
+  inline Smi* IdentityHashCode();
+  
   // Scavenge support.
   HeapObject* forwarding_address();
   void set_forwarding_address(HeapObject* value);
@@ -282,6 +284,7 @@ class HeapObject: public Object {
 
   // Leave LSB for Smi tag.
   class FlagsImmutabilityField: public BoolField<1> {};
+  class FlagsHashCodeField: public BitField<int, 2, 32 - 2> { };
 
  protected:
   inline void Initialize(int size, Object* init_value);
@@ -292,6 +295,8 @@ class HeapObject: public Object {
     return Utils::RoundUp(pointers_size + variable_size,
                           kAlternativePointerSize);
   }
+
+  inline int ComputeHashCode();
 
   // Raw field accessors.
   inline void at_put(int offset, Object* value);
@@ -1133,6 +1138,33 @@ bool Object::IsImmutable() {
   return IsSmi();
 }
 
+int HeapObject::ComputeHashCode() {
+  // Take the most significant FlagsHashCodeField size bits of the
+  // this pointer and use that as the hash code for this object.  This
+  // discards the lowest FlagsHashCodeField shift bits from the
+  // pointer. Those bits are usually zero because of alignment so
+  // discarding them is a good thing.
+  //
+  // TODO(ager): Using the this pointer value does not produce great
+  // hash codes since many objects can be allocated at the same address
+  // in new space.
+  int hashCode = FlagsHashCodeField::decode(reinterpret_cast<word>(this));
+  if (hashCode == 0) hashCode = 42;
+  return hashCode;
+}
+
+Smi* HeapObject::IdentityHashCode() {
+  word flags = reinterpret_cast<word>(at(HeapObject::kFlagsOffset));
+  int value = FlagsHashCodeField::decode(flags);
+  if (value != 0) return Smi::FromWord(value);
+  // Immutable objects should get hash code on construction.
+  ASSERT(!IsImmutable());
+  int hashCode = ComputeHashCode();
+  flags = FlagsHashCodeField::update(hashCode, flags);
+  at_put(kFlagsOffset, reinterpret_cast<Smi*>(flags));
+  return Smi::FromWord(FlagsHashCodeField::decode(flags));
+}
+
 // Inlined Smi functions.
 
 Smi* Smi::cast(Object* object) {
@@ -1200,8 +1232,20 @@ bool HeapObject::get_immutable() {
 }
 
 void HeapObject::set_immutable(bool immutable) {
-  at_put(kFlagsOffset, Smi::cast(
-      reinterpret_cast<Smi*>(FlagsImmutabilityField::encode(immutable))));
+  // If the heap object is immutable, initialize the identity hash
+  // code eagerly. Immutable data structures can be accessed
+  // concurrently and we avoid races by eagerly initializing the
+  // identity hash code field. The hash code is FlagsHashCodeField
+  // size bits of the this pointer on creation.
+  //
+  // The hash code computed here is not necessarily the one that will
+  // be returned as the identity hash code. As an example strings have
+  // their own hash code handling and will ignore the hash code in
+  // this field.
+  int hashCode = immutable ? ComputeHashCode() : 0;
+  word value = FlagsImmutabilityField::encode(immutable)
+      | FlagsHashCodeField::encode(hashCode);
+  at_put(kFlagsOffset, reinterpret_cast<Smi*>(value));
 }
 
 void HeapObject::Initialize(int size, Object* null) {

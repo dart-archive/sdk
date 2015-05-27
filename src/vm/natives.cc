@@ -1000,6 +1000,23 @@ NATIVE(StopwatchNow) {
   return process->ToInteger(now - first);
 }
 
+NATIVE(IdentityHashCode) {
+  Object* object = arguments[0];
+  if (object->IsSmi() || object->IsLargeInteger()) return object;
+  if (object->IsTrue()) return Smi::FromWord(5);
+  if (object->IsFalse()) return Smi::FromWord(7);
+  if (object->IsDouble()) {
+    double value = Double::cast(object)->value();
+    if (isnan(value) || isinf(value)) return Smi::FromWord(42);
+    return Smi::FromWord(static_cast<int>(value) & Smi::kMaxValue);
+  }
+  if (object->IsString()) {
+    // TODO(ager): This is a bad hash code.
+    return Smi::FromWord(String::cast(object)->length());
+  }
+  return HeapObject::cast(arguments[0])->IdentityHashCode();
+}
+
 char* AsForeignString(String* s) {
   return s->ToCString();
 }

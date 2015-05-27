@@ -6,7 +6,7 @@ part of dart.system;
 
 // TODO(ajohnsen): Rename to _DoubleImpl.
 class double implements core.double {
-  int get hashCode => truncate();
+  int get hashCode => identityHashCode(this);
 
   @native external num operator -();
 

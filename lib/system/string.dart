@@ -65,8 +65,7 @@ class String implements core.String {
 
   bool get isNotEmpty => length != 0;
 
-  // TODO(kasperl): This is a really bad hash code.
-  int get hashCode => length;
+  int get hashCode => identityHashCode(this);
 
   @native external bool operator ==(Object other);
 

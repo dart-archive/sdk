@@ -5,6 +5,10 @@
 # This directory contains tests that are intended to show the
 # current state of the language.
 
+# TODO(ajohnsen): Closures overwrite equality operator and should
+# overwrite hashCode getter as well.
+bound_closure_equality_test: Fail
+
 [ ($compiler == fletchc || $runtime == fletchc) && $host_unchecked ]
 constructor_named_arguments_test/none: Fail
 mixin_super_constructor_named_test: Fail
@@ -467,9 +471,7 @@ issue14014_2_test: Crash
 issue14014_3_test: Crash
 issue14014_test: Crash
 issue14242_test: Fail
-issue15720_test: Crash
 issue18628_1_test/01: Fail
-issue4157508_test: Crash
 issue9949_test: Crash
 keyword_type_expression_test/01: MissingCompileTimeError
 label_test: Fail

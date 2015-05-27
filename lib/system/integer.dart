@@ -139,7 +139,7 @@ abstract class int implements core.int {
 }
 
 class _Smi extends int {
-  int get hashCode => this;
+  int get hashCode => identityHashCode(this);
 
   @native external String toString();
 
@@ -278,7 +278,7 @@ class _Smi extends int {
 }
 
 class _Mint extends int {
-  int get hashCode => this;
+  int get hashCode => identityHashCode(this);
 
   @native external String toString();
 

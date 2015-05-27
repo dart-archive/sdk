@@ -202,6 +202,7 @@ namespace fletch {
   N(ServiceRegister,             "<none>", "register")                   \
                                                                          \
   N(IsImmutable,                 "<none>", "_isImmutable")               \
+  N(IdentityHashCode,            "<none>", "_identityHashCode")          \
 
 enum Native {
 #define N(e, c, n) k##e,

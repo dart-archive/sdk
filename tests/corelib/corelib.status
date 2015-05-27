@@ -63,8 +63,7 @@ hash_map2_internal_test: Fail
 hash_map2_test: Fail
 hash_set_test/01: Crash
 hash_set_test/none: Crash
-hashcode_boxed_test: Crash
-hashcode_test: Crash
+hashcode_test: Fail
 indexed_list_access_test: Fail
 int_ceil_to_double_test: Fail
 int_floor_to_double_test: Fail
