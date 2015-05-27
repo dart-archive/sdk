@@ -195,7 +195,7 @@ class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
     // TODO(ager): We should be able to run debugger tests through the
     // persistent fletch_driver as well.
     List<String> vmArguments =
-        <String>["-p", "package", "package:fletchc/fletchc.dart",
+        <String>["-c", "-p", "package", "package:fletchc/fletchc.dart",
                  "-d", testDebuggerArgument];
     vmArguments.addAll(basicArguments);
 

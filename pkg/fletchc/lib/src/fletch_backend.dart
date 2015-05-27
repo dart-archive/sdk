@@ -103,6 +103,7 @@ import 'function_codegen.dart';
 import 'lazy_field_initializer_codegen.dart';
 import 'constructor_codegen.dart';
 import 'closure_environment.dart';
+import '../bytecodes.dart';
 import '../commands.dart';
 
 class CompiledClass {
@@ -619,7 +620,8 @@ class FletchBackend extends Backend {
     if (function.debugInfo != null) return;
     function.debugInfo = new DebugInfo(function);
     AstElement element = function.element;
-    if (element == null || isNative(element)) return;
+    if (element == null) return;
+    List<Bytecode> expectedBytecodes = function.builder.bytecodes;
     element = element.implementation;
     TreeElements elements = element.resolvedAst.elements;
     ClosureEnvironment closureEnvironment = createClosureEnvironment(
@@ -657,7 +659,21 @@ class FletchBackend extends Backend {
           element,
           compiler);
     }
-    compiler.withCurrentElement(element, () { codegen.compile(); });
+    if (isNative(element)) {
+      compiler.withCurrentElement(element, () {
+        codegenNativeFunction(element, codegen);
+      });
+    } else if (isExternal(element)) {
+      compiler.withCurrentElement(element, () {
+        codegenExternalFunction(element, codegen);
+      });
+    } else {
+      compiler.withCurrentElement(element, () { codegen.compile(); });
+    }
+    // The debug codegen should generate the same bytecodes as the original
+    // codegen. If that is not the case debug information will be useless.
+    assert(Bytecode.identicalBytecodes(expectedBytecodes,
+                                       codegen.builder.bytecodes));
   }
 
   void codegen(CodegenWorkItem work) {

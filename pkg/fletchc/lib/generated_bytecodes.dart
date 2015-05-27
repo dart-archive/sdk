@@ -229,6 +229,19 @@ class LoadLocal extends Bytecode {
   }
 
   String toString() => 'load local ${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadLocal rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class LoadBoxed extends Bytecode {
@@ -258,6 +271,19 @@ class LoadBoxed extends Bytecode {
   }
 
   String toString() => 'load boxed ${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadBoxed rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class LoadStatic extends Bytecode {
@@ -287,6 +313,19 @@ class LoadStatic extends Bytecode {
   }
 
   String toString() => 'load static ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadStatic rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class LoadStaticInit extends Bytecode {
@@ -316,6 +355,19 @@ class LoadStaticInit extends Bytecode {
   }
 
   String toString() => 'load static init ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadStaticInit rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class LoadField extends Bytecode {
@@ -345,6 +397,19 @@ class LoadField extends Bytecode {
   }
 
   String toString() => 'load field ${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadField rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class LoadConst extends Bytecode {
@@ -374,6 +439,19 @@ class LoadConst extends Bytecode {
   }
 
   String toString() => 'load const ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadConst rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class LoadConstUnfold extends Bytecode {
@@ -403,6 +481,19 @@ class LoadConstUnfold extends Bytecode {
   }
 
   String toString() => 'load const @${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadConstUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class StoreLocal extends Bytecode {
@@ -432,6 +523,19 @@ class StoreLocal extends Bytecode {
   }
 
   String toString() => 'store local ${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    StoreLocal rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class StoreBoxed extends Bytecode {
@@ -461,6 +565,19 @@ class StoreBoxed extends Bytecode {
   }
 
   String toString() => 'store boxed ${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    StoreBoxed rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class StoreStatic extends Bytecode {
@@ -490,6 +607,19 @@ class StoreStatic extends Bytecode {
   }
 
   String toString() => 'store static ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    StoreStatic rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class StoreField extends Bytecode {
@@ -519,6 +649,19 @@ class StoreField extends Bytecode {
   }
 
   String toString() => 'store field ${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    StoreField rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class LoadLiteralNull extends Bytecode {
@@ -683,6 +826,19 @@ class LoadLiteral extends Bytecode {
   }
 
   String toString() => 'load literal ${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadLiteral rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class LoadLiteralWide extends Bytecode {
@@ -712,6 +868,19 @@ class LoadLiteralWide extends Bytecode {
   }
 
   String toString() => 'load literal ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadLiteralWide rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeMethod extends Bytecode {
@@ -741,6 +910,19 @@ class InvokeMethod extends Bytecode {
   }
 
   String toString() => 'invoke ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeMethod rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeMethodFast extends Bytecode {
@@ -770,6 +952,19 @@ class InvokeMethodFast extends Bytecode {
   }
 
   String toString() => 'invoke fast ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeMethodFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeMethodVtable extends Bytecode {
@@ -799,6 +994,19 @@ class InvokeMethodVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeMethodVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeStatic extends Bytecode {
@@ -828,6 +1036,19 @@ class InvokeStatic extends Bytecode {
   }
 
   String toString() => 'invoke static ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeStatic rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeStaticUnfold extends Bytecode {
@@ -857,6 +1078,19 @@ class InvokeStaticUnfold extends Bytecode {
   }
 
   String toString() => 'invoke static @${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeStaticUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeFactory extends Bytecode {
@@ -886,6 +1120,19 @@ class InvokeFactory extends Bytecode {
   }
 
   String toString() => 'invoke factory ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeFactory rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeFactoryUnfold extends Bytecode {
@@ -915,6 +1162,19 @@ class InvokeFactoryUnfold extends Bytecode {
   }
 
   String toString() => 'invoke factory @${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeFactoryUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeNative extends Bytecode {
@@ -946,6 +1206,21 @@ class InvokeNative extends Bytecode {
   }
 
   String toString() => 'invoke native ${uint8Argument0} ${uint8Argument1}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeNative rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    if (uint8Argument1 != rhs.uint8Argument1) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    value += uint8Argument1;
+    return value;
+  }
 }
 
 class InvokeNativeYield extends Bytecode {
@@ -977,6 +1252,21 @@ class InvokeNativeYield extends Bytecode {
   }
 
   String toString() => 'invoke native yield ${uint8Argument0} ${uint8Argument1}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeNativeYield rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    if (uint8Argument1 != rhs.uint8Argument1) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    value += uint8Argument1;
+    return value;
+  }
 }
 
 class InvokeTest extends Bytecode {
@@ -1006,6 +1296,19 @@ class InvokeTest extends Bytecode {
   }
 
   String toString() => 'invoke test ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeTest rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeTestFast extends Bytecode {
@@ -1035,6 +1338,19 @@ class InvokeTestFast extends Bytecode {
   }
 
   String toString() => 'invoke fast test ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeTestFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeTestVtable extends Bytecode {
@@ -1064,6 +1380,19 @@ class InvokeTestVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable test ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeTestVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeEq extends Bytecode {
@@ -1093,6 +1422,19 @@ class InvokeEq extends Bytecode {
   }
 
   String toString() => 'invoke eq ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeEq rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeEqFast extends Bytecode {
@@ -1122,6 +1464,19 @@ class InvokeEqFast extends Bytecode {
   }
 
   String toString() => 'invoke fast eq ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeEqFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeEqVtable extends Bytecode {
@@ -1151,6 +1506,19 @@ class InvokeEqVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable eq ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeEqVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeLt extends Bytecode {
@@ -1180,6 +1548,19 @@ class InvokeLt extends Bytecode {
   }
 
   String toString() => 'invoke lt ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeLt rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeLtFast extends Bytecode {
@@ -1209,6 +1590,19 @@ class InvokeLtFast extends Bytecode {
   }
 
   String toString() => 'invoke fast lt ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeLtFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeLtVtable extends Bytecode {
@@ -1238,6 +1632,19 @@ class InvokeLtVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable lt ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeLtVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeLe extends Bytecode {
@@ -1267,6 +1674,19 @@ class InvokeLe extends Bytecode {
   }
 
   String toString() => 'invoke le ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeLe rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeLeFast extends Bytecode {
@@ -1296,6 +1716,19 @@ class InvokeLeFast extends Bytecode {
   }
 
   String toString() => 'invoke fast le ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeLeFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeLeVtable extends Bytecode {
@@ -1325,6 +1758,19 @@ class InvokeLeVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable le ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeLeVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeGt extends Bytecode {
@@ -1354,6 +1800,19 @@ class InvokeGt extends Bytecode {
   }
 
   String toString() => 'invoke gt ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeGt rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeGtFast extends Bytecode {
@@ -1383,6 +1842,19 @@ class InvokeGtFast extends Bytecode {
   }
 
   String toString() => 'invoke fast gt ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeGtFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeGtVtable extends Bytecode {
@@ -1412,6 +1884,19 @@ class InvokeGtVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable gt ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeGtVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeGe extends Bytecode {
@@ -1441,6 +1926,19 @@ class InvokeGe extends Bytecode {
   }
 
   String toString() => 'invoke ge ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeGe rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeGeFast extends Bytecode {
@@ -1470,6 +1968,19 @@ class InvokeGeFast extends Bytecode {
   }
 
   String toString() => 'invoke fast ge ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeGeFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeGeVtable extends Bytecode {
@@ -1499,6 +2010,19 @@ class InvokeGeVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable ge ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeGeVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeAdd extends Bytecode {
@@ -1528,6 +2052,19 @@ class InvokeAdd extends Bytecode {
   }
 
   String toString() => 'invoke add ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeAdd rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeAddFast extends Bytecode {
@@ -1557,6 +2094,19 @@ class InvokeAddFast extends Bytecode {
   }
 
   String toString() => 'invoke fast add ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeAddFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeAddVtable extends Bytecode {
@@ -1586,6 +2136,19 @@ class InvokeAddVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable add ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeAddVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeSub extends Bytecode {
@@ -1615,6 +2178,19 @@ class InvokeSub extends Bytecode {
   }
 
   String toString() => 'invoke sub ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeSub rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeSubFast extends Bytecode {
@@ -1644,6 +2220,19 @@ class InvokeSubFast extends Bytecode {
   }
 
   String toString() => 'invoke fast sub ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeSubFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeSubVtable extends Bytecode {
@@ -1673,6 +2262,19 @@ class InvokeSubVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable sub ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeSubVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeMod extends Bytecode {
@@ -1702,6 +2304,19 @@ class InvokeMod extends Bytecode {
   }
 
   String toString() => 'invoke mod ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeMod rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeModFast extends Bytecode {
@@ -1731,6 +2346,19 @@ class InvokeModFast extends Bytecode {
   }
 
   String toString() => 'invoke fast mod ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeModFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeModVtable extends Bytecode {
@@ -1760,6 +2388,19 @@ class InvokeModVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable mod ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeModVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeMul extends Bytecode {
@@ -1789,6 +2430,19 @@ class InvokeMul extends Bytecode {
   }
 
   String toString() => 'invoke mul ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeMul rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeMulFast extends Bytecode {
@@ -1818,6 +2472,19 @@ class InvokeMulFast extends Bytecode {
   }
 
   String toString() => 'invoke fast mul ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeMulFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeMulVtable extends Bytecode {
@@ -1847,6 +2514,19 @@ class InvokeMulVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable mul ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeMulVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeTruncDiv extends Bytecode {
@@ -1876,6 +2556,19 @@ class InvokeTruncDiv extends Bytecode {
   }
 
   String toString() => 'invoke trunc div ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeTruncDiv rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeTruncDivFast extends Bytecode {
@@ -1905,6 +2598,19 @@ class InvokeTruncDivFast extends Bytecode {
   }
 
   String toString() => 'invoke fast trunc div ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeTruncDivFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeTruncDivVtable extends Bytecode {
@@ -1934,6 +2640,19 @@ class InvokeTruncDivVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable trunc div ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeTruncDivVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitNot extends Bytecode {
@@ -1963,6 +2682,19 @@ class InvokeBitNot extends Bytecode {
   }
 
   String toString() => 'invoke bit not ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitNot rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitNotFast extends Bytecode {
@@ -1992,6 +2724,19 @@ class InvokeBitNotFast extends Bytecode {
   }
 
   String toString() => 'invoke fast bit not ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitNotFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitNotVtable extends Bytecode {
@@ -2021,6 +2766,19 @@ class InvokeBitNotVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable bit not ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitNotVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitAnd extends Bytecode {
@@ -2050,6 +2808,19 @@ class InvokeBitAnd extends Bytecode {
   }
 
   String toString() => 'invoke bit and ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitAnd rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitAndFast extends Bytecode {
@@ -2079,6 +2850,19 @@ class InvokeBitAndFast extends Bytecode {
   }
 
   String toString() => 'invoke fast bit and ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitAndFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitAndVtable extends Bytecode {
@@ -2108,6 +2892,19 @@ class InvokeBitAndVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable bit and ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitAndVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitOr extends Bytecode {
@@ -2137,6 +2934,19 @@ class InvokeBitOr extends Bytecode {
   }
 
   String toString() => 'invoke bit or ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitOr rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitOrFast extends Bytecode {
@@ -2166,6 +2976,19 @@ class InvokeBitOrFast extends Bytecode {
   }
 
   String toString() => 'invoke fast bit or ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitOrFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitOrVtable extends Bytecode {
@@ -2195,6 +3018,19 @@ class InvokeBitOrVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable bit or ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitOrVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitXor extends Bytecode {
@@ -2224,6 +3060,19 @@ class InvokeBitXor extends Bytecode {
   }
 
   String toString() => 'invoke bit xor ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitXor rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitXorFast extends Bytecode {
@@ -2253,6 +3102,19 @@ class InvokeBitXorFast extends Bytecode {
   }
 
   String toString() => 'invoke fast bit xor ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitXorFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitXorVtable extends Bytecode {
@@ -2282,6 +3144,19 @@ class InvokeBitXorVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable bit xor ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitXorVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitShr extends Bytecode {
@@ -2311,6 +3186,19 @@ class InvokeBitShr extends Bytecode {
   }
 
   String toString() => 'invoke bit shr ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitShr rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitShrFast extends Bytecode {
@@ -2340,6 +3228,19 @@ class InvokeBitShrFast extends Bytecode {
   }
 
   String toString() => 'invoke fast bit shr ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitShrFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitShrVtable extends Bytecode {
@@ -2369,6 +3270,19 @@ class InvokeBitShrVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable bit shr ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitShrVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitShl extends Bytecode {
@@ -2398,6 +3312,19 @@ class InvokeBitShl extends Bytecode {
   }
 
   String toString() => 'invoke bit shl ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitShl rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitShlFast extends Bytecode {
@@ -2427,6 +3354,19 @@ class InvokeBitShlFast extends Bytecode {
   }
 
   String toString() => 'invoke fast bit shl ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitShlFast rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class InvokeBitShlVtable extends Bytecode {
@@ -2456,6 +3396,19 @@ class InvokeBitShlVtable extends Bytecode {
   }
 
   String toString() => 'invoke vtable bit shl ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitShlVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class Pop extends Bytecode {
@@ -2514,6 +3467,21 @@ class Return extends Bytecode {
   }
 
   String toString() => 'return ${uint8Argument0} ${uint8Argument1}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    Return rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    if (uint8Argument1 != rhs.uint8Argument1) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    value += uint8Argument1;
+    return value;
+  }
 }
 
 class BranchLong extends Bytecode {
@@ -2543,6 +3511,19 @@ class BranchLong extends Bytecode {
   }
 
   String toString() => 'branch +${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    BranchLong rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class BranchIfTrueLong extends Bytecode {
@@ -2572,6 +3553,19 @@ class BranchIfTrueLong extends Bytecode {
   }
 
   String toString() => 'branch if true +${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    BranchIfTrueLong rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class BranchIfFalseLong extends Bytecode {
@@ -2601,6 +3595,19 @@ class BranchIfFalseLong extends Bytecode {
   }
 
   String toString() => 'branch if false +${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    BranchIfFalseLong rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class BranchBack extends Bytecode {
@@ -2630,6 +3637,19 @@ class BranchBack extends Bytecode {
   }
 
   String toString() => 'branch -${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    BranchBack rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class BranchBackIfTrue extends Bytecode {
@@ -2659,6 +3679,19 @@ class BranchBackIfTrue extends Bytecode {
   }
 
   String toString() => 'branch if true -${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    BranchBackIfTrue rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class BranchBackIfFalse extends Bytecode {
@@ -2688,6 +3721,19 @@ class BranchBackIfFalse extends Bytecode {
   }
 
   String toString() => 'branch if false -${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    BranchBackIfFalse rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class BranchBackLong extends Bytecode {
@@ -2717,6 +3763,19 @@ class BranchBackLong extends Bytecode {
   }
 
   String toString() => 'branch -${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    BranchBackLong rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class BranchBackIfTrueLong extends Bytecode {
@@ -2746,6 +3805,19 @@ class BranchBackIfTrueLong extends Bytecode {
   }
 
   String toString() => 'branch if true -${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    BranchBackIfTrueLong rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class BranchBackIfFalseLong extends Bytecode {
@@ -2775,6 +3847,19 @@ class BranchBackIfFalseLong extends Bytecode {
   }
 
   String toString() => 'branch if false -${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    BranchBackIfFalseLong rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class PopAndBranchLong extends Bytecode {
@@ -2806,6 +3891,21 @@ class PopAndBranchLong extends Bytecode {
   }
 
   String toString() => 'pop ${uint8Argument0} and branch long +${uint32Argument1}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    PopAndBranchLong rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    if (uint32Argument1 != rhs.uint32Argument1) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    value += uint32Argument1;
+    return value;
+  }
 }
 
 class PopAndBranchBackLong extends Bytecode {
@@ -2837,6 +3937,21 @@ class PopAndBranchBackLong extends Bytecode {
   }
 
   String toString() => 'pop ${uint8Argument0} and branch long -${uint32Argument1}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    PopAndBranchBackLong rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    if (uint32Argument1 != rhs.uint32Argument1) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    value += uint32Argument1;
+    return value;
+  }
 }
 
 class Allocate extends Bytecode {
@@ -2866,6 +3981,19 @@ class Allocate extends Bytecode {
   }
 
   String toString() => 'allocate ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    Allocate rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class AllocateUnfold extends Bytecode {
@@ -2895,6 +4023,19 @@ class AllocateUnfold extends Bytecode {
   }
 
   String toString() => 'allocate @${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    AllocateUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class AllocateImmutable extends Bytecode {
@@ -2924,6 +4065,19 @@ class AllocateImmutable extends Bytecode {
   }
 
   String toString() => 'allocateim ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    AllocateImmutable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class AllocateImmutableUnfold extends Bytecode {
@@ -2953,6 +4107,19 @@ class AllocateImmutableUnfold extends Bytecode {
   }
 
   String toString() => 'allocateim @${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    AllocateImmutableUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class AllocateBoxed extends Bytecode {
@@ -3092,6 +4259,21 @@ class SubroutineCall extends Bytecode {
   }
 
   String toString() => 'subroutine call +${uint32Argument0} -${uint32Argument1}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    SubroutineCall rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    if (uint32Argument1 != rhs.uint32Argument1) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    value += uint32Argument1;
+    return value;
+  }
 }
 
 class SubroutineReturn extends Bytecode {
@@ -3310,6 +4492,19 @@ class FrameSize extends Bytecode {
   }
 
   String toString() => 'frame size ${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    FrameSize rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class MethodEnd extends Bytecode {
@@ -3339,4 +4534,17 @@ class MethodEnd extends Bytecode {
   }
 
   String toString() => 'method end ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    MethodEnd rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }

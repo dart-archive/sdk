@@ -48,10 +48,10 @@ class DebugInfoLazyFieldInitializerCodegen
                                        ClosureEnvironment closureEnvironment,
                                        FieldElement field,
                                        this.compiler,
-                                       [BytecodeBuilder debugBuilder])
-      : debugBuilder = (debugBuilder == null)
-                     ? new BytecodeBuilder(compiledFunction.arity)
-                     : debugBuilder,
+                                       [BytecodeBuilder builder])
+      : debugBuilder = (builder == null)
+            ? new BytecodeBuilder(compiledFunction.arity)
+            : builder,
         super(compiledFunction, context, elements, registry,
               closureEnvironment, field);
 

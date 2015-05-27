@@ -16,6 +16,15 @@ const int VAR_DIFF = 0x3FFFFFFF;
 abstract class Bytecode {
   static final BytecodeBuffer _buffer = new BytecodeBuffer();
 
+  static bool identicalBytecodes(List<Bytecode> expected,
+                                 List<Bytecode> actual) {
+    if (expected.length != actual.length) return false;
+    for (int i = 0; i < expected.length; i++) {
+      if (expected[i] != actual[i]) return false;
+    }
+    return true;
+  }
+
   const Bytecode();
 
   Opcode get opcode;
@@ -32,6 +41,10 @@ abstract class Bytecode {
   String get formatString;
 
   void addTo(Sink<List<int>> sink);
+
+  bool operator==(Bytecode other) => other.opcode == opcode;
+
+  int get hashCode => opcode.index;
 
   /// Shared buffer. Not safe to use in asynchronous operations.
   BytecodeBuffer get buffer => _buffer;

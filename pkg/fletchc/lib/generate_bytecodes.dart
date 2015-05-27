@@ -59,6 +59,33 @@ part of fletch.bytecodes;
     toStringExpression = '$buffer';
   }
 
+  String equals = '';
+  if (!fields.isEmpty) {
+    StringBuffer equalsBuffer =
+        new StringBuffer('\n\n  operator==(Bytecode other) {\n');
+    equalsBuffer.writeln('    if (!(super==(other))) return false;');
+    equalsBuffer.writeln('    $name rhs = other;');
+    for (String field in fields) {
+      equalsBuffer.writeln('    if ($field != rhs.$field) return false;');
+    }
+    equalsBuffer.writeln('    return true;');
+    equalsBuffer.write('  }');
+    equals = '$equalsBuffer';
+  }
+
+  String hashCode = '';
+  if (!fields.isEmpty) {
+    StringBuffer hashCodeBuffer =
+        new StringBuffer('\n\n  int get hashCode {\n');
+    hashCodeBuffer.writeln('    int value = super.hashCode;');
+    for (String field in fields) {
+      hashCodeBuffer.writeln('    value += $field;');
+    }
+    hashCodeBuffer.writeln('    return value;');
+    hashCodeBuffer.write('  }');
+    hashCode = '$hashCodeBuffer';
+  }
+
 print("""
 
 class $name extends Bytecode {
@@ -89,7 +116,7 @@ ${
 }        ..sendOn(sink);
   }
 
-  String toString() => '$toStringExpression';
+  String toString() => '$toStringExpression';$equals$hashCode
 }""");
   });
 }
