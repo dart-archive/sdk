@@ -1194,7 +1194,7 @@ abstract class CodegenVisitor
       Selector selector,
       Node rhs,
       _) {
-    builder.loadParameter(0);
+    loadThis();
     visitForValue(rhs);
     invokeSetter(node, selector);
     applyVisitState();

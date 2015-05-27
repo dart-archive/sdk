@@ -220,8 +220,8 @@ class ClosureVisitor
   }
 
   void visitThisPropertySet(Send node, Selector selector, Node rhs, _) {
-    rhs.accept(this);
     markThisUsed();
+    super.visitThisPropertySet(node, selector, rhs, null);
   }
 
   void visitLocalVariablePrefix(
