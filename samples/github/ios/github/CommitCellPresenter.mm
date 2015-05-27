@@ -6,12 +6,15 @@
 
 @implementation CommitCellPresenter
 
-- (CommitCellPresenter*)tableView:tableView indexPath:indexPath present:node {
-  CommitCellPresenter* cell = (CommitCellPresenter*)[tableView
-      dequeueReusableCellWithIdentifier:@"CommitPrototypeCell"
-                           forIndexPath:indexPath];
-  cell.authorLabel.text = ((CommitNode*) node).author;
-  cell.messageLabel.text = ((CommitNode*) node).message;
+- (UITableViewCell*)tableView:(UITableView*)tableView
+                    indexPath:(NSIndexPath*)indexPath
+                      present:(Node*)node {
+  CommitNode* commitNode = (CommitNode*)node;
+  CommitCellPresenter* cell = (CommitCellPresenter*)
+      [tableView dequeueReusableCellWithIdentifier:@"CommitPrototypeCell"
+                                      forIndexPath:indexPath];
+  cell.authorLabel.text = commitNode.author;
+  cell.messageLabel.text = commitNode.message;
   return cell;
 }
 

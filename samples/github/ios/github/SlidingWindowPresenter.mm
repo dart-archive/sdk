@@ -6,7 +6,7 @@
 
 @interface SlidingWindowPresenter ()
 
-@property id <CellPresenter> cellPresenter;
+@property id<CellPresenter> cellPresenter;
 @property UITableView* tableView;
 
 // Internal properties for updating the sliding-window display range.
@@ -32,8 +32,8 @@
 
 @implementation SlidingWindowPresenter
 
-- (id)initWithCellPresenter:(id <CellPresenter>)presenter
-                  tableView:(UITableView*)tableView  {
+- (id)initWithCellPresenter:(id<CellPresenter>)presenter
+                  tableView:(UITableView*)tableView {
   self.cellPresenter = presenter;
   self.tableView = tableView;
   self.bufferSlack = 1;
@@ -49,17 +49,16 @@
 }
 
 - (SlidingWindowNode*)root {
-    return (SlidingWindowNode*)self.immiRoot.rootNode;
+  return (SlidingWindowNode*)self.immiRoot.rootNode;
 };
 
-- (NSInteger)tableView:(UITableView *)tableView
+- (NSInteger)tableView:(UITableView*)tableView
     numberOfRowsInSection:(NSInteger)section {
   return self.root == nil ? 0 : self.root.minimumCount;
 }
 
-- (UITableViewCell *)tableView:(UITableView *)tableView
-         cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-
+- (UITableViewCell*)tableView:(UITableView*)tableView
+        cellForRowAtIndexPath:(NSIndexPath*)indexPath {
   Node* node = [self itemAtIndex:indexPath.row];
   return [self.cellPresenter tableView:tableView
                              indexPath:indexPath
@@ -70,12 +69,12 @@
 // visible items are accessed by cellForRowAtIndexPath. When accessing an index
 // that is in the proximity of either the start or the end of the sliding
 // window, we shift the window.
--(id)itemAtIndex:(int)index {
+- (id)itemAtIndex:(int)index {
   assert(self.root != nil);
   if (index < self.windowStart + self.bufferSlack) {
-      [self shiftDown:index];
+    [self shiftDown:index];
   } else if (index + self.bufferSlack >= self.windowEnd) {
-      [self shiftUp:index];
+    [self shiftUp:index];
   }
   return [self.root.window objectAtIndex:[self windowIndex:index]];
 }
@@ -91,9 +90,9 @@
   if (end > self.maximumCount) end = self.maximumCount;
   if (end == self.windowEnd) return;
   if (end > self.bufferCount) {
-      [self refreshDisplayStart:end - self.bufferCount end:end];
+    [self refreshDisplayStart:end - self.bufferCount end:end];
   } else {
-      [self refreshDisplayStart:0 end:self.bufferCount];
+    [self refreshDisplayStart:0 end:self.bufferCount];
   }
 }
 
@@ -103,7 +102,7 @@
   [self refresh];
 }
 
--(bool)refresh {
+- (bool)refresh {
   bool first = self.root == nil;
   bool result = [self.immiRoot refresh];
   // TODO(zerny): Find another way to setup the initial display.
@@ -120,7 +119,7 @@
   return result;
 }
 
-- (int) windowIndex :(int)index {
+- (int)windowIndex:(int)index {
   assert(self.root != nil);
   assert(index >= self.windowStart);
   assert(index < self.windowEnd);
@@ -133,7 +132,7 @@
   return self.root.maximumCount < 0 ? INT_MAX : self.root.maximumCount;
 }
 
--(int)windowCount {
+- (int)windowCount {
   return self.root.window.count;
 }
 

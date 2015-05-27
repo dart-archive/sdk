@@ -9,6 +9,8 @@
 
 @protocol CellPresenter
 
-- (UITableViewCell*)tableView:tableView indexPath:indexPath present:node;
+- (UITableViewCell*)tableView:(UITableView*)tableView
+                    indexPath:(NSIndexPath*)indexPath
+                      present:(Node*)node;
 
 @end

@@ -7,12 +7,11 @@
 
 #import "CellPresenter.h"
 
-@interface SlidingWindowPresenter : NSObject <UITableViewDataSource, RootPresenter>
+@interface SlidingWindowPresenter
+    : NSObject <UITableViewDataSource, RootPresenter>
 
 // TODO(zarah): Move access of tableView to controller.
-- (id)initWithCellPresenter:(id <CellPresenter>)cellPresenter
+- (id)initWithCellPresenter:(id<CellPresenter>)cellPresenter
                   tableView:(UITableView*)tableView;
 - (bool)refresh;
 @end
-
-

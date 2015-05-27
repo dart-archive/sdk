@@ -6,8 +6,8 @@
 
 @interface CommitCellPresenter : UITableViewCell <CellPresenter>
 
-@property (weak, nonatomic) IBOutlet UILabel *revisionLabel;
-@property (weak, nonatomic) IBOutlet UILabel *authorLabel;
-@property (weak, nonatomic) IBOutlet UILabel *messageLabel;
+@property (weak, nonatomic) IBOutlet UILabel* revisionLabel;
+@property (weak, nonatomic) IBOutlet UILabel* authorLabel;
+@property (weak, nonatomic) IBOutlet UILabel* messageLabel;
 
 @end

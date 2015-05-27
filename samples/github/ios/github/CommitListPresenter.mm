@@ -9,7 +9,7 @@
 @interface CommitListPresenter ()
 
 @property SlidingWindowPresenter* presenter;
-@property id <CellPresenter> cellPresenter;
+@property id<CellPresenter> cellPresenter;
 
 @end
 
@@ -17,17 +17,17 @@
 
 - (void)immi_setupRoot:(ImmiRoot*)root {
   self.cellPresenter = [[CommitCellPresenter alloc] init];
-  self.presenter = [[SlidingWindowPresenter alloc]
-                    initWithCellPresenter:self.cellPresenter
-                    tableView:self.tableView];
+  self.presenter =
+      [[SlidingWindowPresenter alloc] initWithCellPresenter:self.cellPresenter
+                                                  tableView:self.tableView];
 
   [self.presenter immi_setupRoot:root];
-  
+
   self.tableView.dataSource = self.presenter;
-  
+
   CADisplayLink* consoleLink =
-  [CADisplayLink displayLinkWithTarget:self.presenter
-                              selector:@selector(refresh)];
+      [CADisplayLink displayLinkWithTarget:self.presenter
+                                  selector:@selector(refresh)];
   [consoleLink setFrameInterval:60];
   [consoleLink addToRunLoop:[NSRunLoop currentRunLoop]
                     forMode:NSDefaultRunLoopMode];
