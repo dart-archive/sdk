@@ -860,6 +860,23 @@ class LibraryUpdater extends FletchFeatures {
     }
 
     for (ClassElementX element in _classesWithSchemaChanges) {
+      CompiledClass compiledClass = backend.compiledClasses[element];
+      int id = compiledClass.id;
+      updates.add(new commands_lib.PushFromMap(MapId.classes, id));
+
+      compiledClass.createImplicitAccessors(backend);
+      Map<int, int> methodTable = compiledClass.computeMethodTable(backend);
+
+      methodTable.forEach((int selector, int methodId) {
+        updates.add(new commands_lib.PushNewInteger(selector));
+        updates.add(new commands_lib.PushFromMap(MapId.methods, methodId));
+      });
+
+      updates.add(new commands_lib.ChangeMethodTable(methodTable.length));
+      changes++;
+    }
+
+    for (ClassElementX element in _classesWithSchemaChanges) {
       computeSchemaChange(element, beforeFields[element], updates);
       changes++;
     }

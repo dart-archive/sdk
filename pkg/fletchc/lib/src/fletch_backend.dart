@@ -109,12 +109,13 @@ import '../commands.dart';
 class CompiledClass {
   final int id;
   final ClassElement element;
-  final int fields;
   final CompiledClass superclass;
+  final int extraFields;
 
+  final Map<int, int> implicitAccessorTable = <int, int>{};
   final Map<int, int> methodTable = <int, int>{};
 
-  CompiledClass(this.id, this.element, this.fields, this.superclass);
+  CompiledClass(this.id, this.element, this.superclass, {this.extraFields: 0});
 
   /**
    * Returns the number of instance fields of all the super classes of this
@@ -126,7 +127,31 @@ class CompiledClass {
 
   bool get hasSuperClass => superclass != null;
 
+  int get fields {
+    int count = superclassFields + extraFields;
+    if (element != null) {
+      element.implementation.forEachInstanceField((_, __) { count++; });
+    }
+    return count;
+  }
+
+  Map<int, int> computeMethodTable(FletchBackend backend) {
+    Map<int, int> result = <int, int>{};
+    List<int> selectors = implicitAccessorTable.keys.toList()
+        ..addAll(methodTable.keys)
+        ..sort();
+    for (int selector in selectors) {
+      if (methodTable.containsKey(selector)) {
+        result[selector] = methodTable[selector];
+      } else {
+        result[selector] = implicitAccessorTable[selector];
+      }
+    }
+    return result;
+  }
+
   void createImplicitAccessors(FletchBackend backend) {
+    implicitAccessorTable.clear();
     // If we don't have an element (stub class), we don't have anything to
     // generate accessors for.
     if (element == null) return;
@@ -136,16 +161,12 @@ class CompiledClass {
     element.implementation.forEachInstanceField((enclosing, field) {
       var getter = new Selector.getter(field.name, field.library);
       int getterSelector = backend.context.toFletchSelector(getter);
-      methodTable.putIfAbsent(
-          getterSelector,
-          () => backend.makeGetter(fieldIndex));
+      implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
 
       if (!field.isFinal) {
         var setter = new Selector.setter(field.name, field.library);
         var setterSelector = backend.context.toFletchSelector(setter);
-        methodTable.putIfAbsent(
-            setterSelector,
-            () => backend.makeSetter(fieldIndex));
+        implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
       }
 
       fieldIndex++;
@@ -286,15 +307,8 @@ class FletchBackend extends Backend {
         Set<ClassElement> subclasses = directSubclasses[element.superclass];
         subclasses.add(element);
       }
-      int fields = superclass != null ? superclass.fields : 0;
-      element.implementation.forEachInstanceField(
-          (enclosing, field) { fields++; });
       int id = classes.length;
-      CompiledClass compiledClass = new CompiledClass(
-          id,
-          element,
-          fields,
-          superclass);
+      CompiledClass compiledClass = new CompiledClass(id, element, superclass);
       if (element.lookupLocalMember(Compiler.CALL_OPERATOR_NAME) != null) {
         compiledClass.createIsFunctionEntry(this);
       }
@@ -303,14 +317,10 @@ class FletchBackend extends Backend {
     });
   }
 
-  CompiledClass createCallableStubClass(int fields, CompiledClass superclass) {
-    int totalFields = fields + superclass.fields;
+  CompiledClass createCallableStubClass(int extraFields, CompiledClass superclass) {
     int id = classes.length;
     CompiledClass compiledClass = new CompiledClass(
-        id,
-        null,
-        totalFields,
-        superclass);
+        id, null, superclass, extraFields: extraFields);
     classes.add(compiledClass);
     compiledClass.createIsFunctionEntry(this);
     return compiledClass;
@@ -483,9 +493,8 @@ class FletchBackend extends Backend {
     return tearoffClasses.putIfAbsent(function, () {
       FunctionSignature signature = function.signature;
       bool hasThis = function.hasThisArgument;
-      int fields = hasThis ? 1 : 0;
       CompiledClass compiledClass = createCallableStubClass(
-          fields,
+          hasThis ? 1 : 0,
           compiledObjectClass);
       CompiledFunction compiledFunction = new CompiledFunction(
           functions.length,
@@ -987,13 +996,12 @@ class FletchBackend extends Backend {
       commands.add(const Dup());
       commands.add(new PopToMap(MapId.classes, compiledClass.id));
 
-      Map<int, int> methodTable = compiledClass.methodTable;
-      for (int selector in methodTable.keys.toList()..sort()) {
-        int methodId = methodTable[selector];
+      Map<int, int> methodTable = compiledClass.computeMethodTable(this);
+      methodTable.forEach((int selector, int methodId) {
         commands.add(new PushNewInteger(selector));
         commands.add(new PushFromMap(MapId.methods, methodId));
-      }
-      commands.add(new ChangeMethodTable(compiledClass.methodTable.length));
+      });
+      commands.add(new ChangeMethodTable(methodTable.length));
 
       changes++;
     }

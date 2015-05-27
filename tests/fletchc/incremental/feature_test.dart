@@ -165,8 +165,7 @@ main() {
                     'x = 0']),
             const ProgramExpectation(
                 const <String>[
-                    // TODO(kasperl): y and z should not change places.
-                    'x = 3', 'y = 2', 'z = null']),
+                    'x = 3', 'y = null', 'z = 2']),
         ]),
 
     // Test that schema changes affect subclasses correctly.
@@ -317,8 +316,7 @@ main() {
                     'x = 0']),
             const ProgramExpectation(
                 const <String>[
-                    // TODO(kasperl): y and z should not change places.
-                    'x = 3', 'y = 2', 'z = null']),
+                    'x = 3', 'y = null', 'z = 2']),
         ]),
 
     // Test that the test framework handles more than one update.
