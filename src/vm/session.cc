@@ -293,8 +293,9 @@ void Session::ProcessMessages() {
       case Connection::kPushNewString: {
         int length;
         uint8* bytes = connection_->ReadBytes(&length);
-        List<uint8> contents(bytes, length);
-        PushNewString(List<const char>(contents));
+        ASSERT((length & 1) == 0);
+        List<uint16> contents(reinterpret_cast<uint16*>(bytes), length >> 1);
+        PushNewString(contents);
         contents.Delete();
         break;
       }
@@ -519,12 +520,8 @@ void Session::PushNewDouble(double value) {
   Push(result);
 }
 
-void Session::PushNewString(List<const char> contents) {
-  // TODO(ager): Decide on the format the compiler generates. For now assume
-  // ascii strings.
-  GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateStringFromAscii(contents));
+void Session::PushNewString(List<uint16> contents) {
+  GC_AND_RETRY_ON_ALLOCATION_FAILURE(result, program()->CreateString(contents));
   Push(result);
 }
 

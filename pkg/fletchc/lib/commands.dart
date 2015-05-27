@@ -13,6 +13,7 @@ import 'dart:convert' show
 import 'dart:typed_data' show
     ByteData,
     Endianness,
+    Uint16List,
     Uint8List;
 
 import 'bytecodes.dart' show
@@ -158,7 +159,8 @@ class PushNewString extends Command {
       : super(CommandCode.PushNewString);
 
   void addTo(StreamSink<List<int>> sink) {
-    List<int> payload = UTF8.encode(value);
+    List<int> payload = new Uint16List.fromList(value.codeUnits)
+        .buffer.asUint8List();
     buffer
         ..addUint32(payload.length)
         ..addUint8List(payload)

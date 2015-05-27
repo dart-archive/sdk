@@ -57,7 +57,7 @@ class Session {
   void PushBoolean(bool value);
   void PushNewInteger(int64 value);
   void PushNewDouble(double value);
-  void PushNewString(List<const char> contents);
+  void PushNewString(List<uint16> contents);
 
   // Stack: class, field<n-1>, ..., field<0>, ...
   //     -> new instance, ...

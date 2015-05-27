@@ -74,7 +74,6 @@ cast_test/14: MissingRuntimeError
 cha_deopt1_test: Fail
 cha_deopt2_test: Fail
 cha_deopt3_test: Fail
-char_escape_test: Fail
 class_cycle2_test/02: MissingCompileTimeError
 class_literal_test/01: Crash
 class_literal_test/02: Crash
@@ -555,8 +554,6 @@ null_test/03: Crash
 null_test/none: Crash
 number_identity2_test: Fail
 on_catch_malformed_type_test: Fail
-optimized_string_charat_test: Fail
-optimized_string_charcodeat_test: Fail
 overridden_no_such_method_test: CompileTimeError
 override_inheritance_mixed_test/08: CompileTimeError
 override_inheritance_mixed_test/09: CompileTimeError
@@ -622,7 +619,6 @@ static_top_level_test/04: MissingCompileTimeError
 static_top_level_test/05: MissingCompileTimeError
 static_top_level_test/06: MissingCompileTimeError
 static_top_level_test/07: MissingCompileTimeError
-string_escapes_test: Fail
 string_interpolation_newline_test: Fail
 super_bound_closure_test: Crash
 super_call4_test: Fail
@@ -718,7 +714,6 @@ type_variable_scope_test/none: Fail
 type_variable_typedef_test: Fail
 typed_message_test: Crash
 typedef_is_test: Fail
-unicode_bom_middle_test: Fail
 vm/allocation_sinking_vm_test: Crash
 vm/load_to_load_forwarding_vm_test: Crash
 vm/no_such_method_error_message_vm_test: Fail

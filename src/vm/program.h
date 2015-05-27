@@ -168,6 +168,7 @@ class Program {
   Object* CreateInteger(int64 value);
   Object* CreateLargeInteger(int64 value);
   Object* CreateStringFromAscii(List<const char> str);
+  Object* CreateString(List<uint16> str);
   Object* CreateInstance(Class* klass);
   Object* CreateInitializer(Function* function);
 

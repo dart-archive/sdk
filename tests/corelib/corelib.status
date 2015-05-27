@@ -197,7 +197,6 @@ sort_test: Fail
 splay_tree_from_iterable_test: Fail
 splay_tree_from_iterables_test: Fail
 splay_tree_test: Fail
-string_buffer_test: Fail
 string_case_test/01: Fail
 string_case_test/02: Fail
 string_case_test/03: Fail
@@ -232,7 +231,6 @@ symbol_reserved_word_test/09: Fail
 symbol_reserved_word_test/10: MissingCompileTimeError
 symbol_reserved_word_test/12: Fail
 symbol_test/none: Fail
-throw_half_surrogate_pair_test/none: Fail
 unicode2_test: Fail
 unicode_test: Fail
 uri_base_test: Crash

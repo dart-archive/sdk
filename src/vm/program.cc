@@ -1107,7 +1107,21 @@ Object* Program::CreateInteger(int64 value) {
 }
 
 Object* Program::CreateStringFromAscii(List<const char> str) {
-  Object* raw_result = heap()->CreateString(string_class(), str.length(), true);
+  Object* raw_result = heap()->CreateStringUninitialized(
+      string_class(), str.length(), true);
+  if (raw_result->IsFailure()) return raw_result;
+  String* result = String::cast(raw_result);
+  ASSERT(result->length() == str.length());
+  // Set the content.
+  for (int i = 0; i < str.length(); i++) {
+    result->set_code_unit(i, str[i]);
+  }
+  return result;
+}
+
+Object* Program::CreateString(List<uint16> str) {
+  Object* raw_result = heap()->CreateStringUninitialized(
+      string_class(), str.length(), true);
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
   ASSERT(result->length() == str.length());
