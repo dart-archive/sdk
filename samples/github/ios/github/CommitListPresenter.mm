@@ -33,8 +33,4 @@
                     forMode:NSDefaultRunLoopMode];
 }
 
-- (ImmiRoot*)immi_root {
-  return self.presenter.immi_root;
-}
-
 @end

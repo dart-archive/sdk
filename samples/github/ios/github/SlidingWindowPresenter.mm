@@ -26,7 +26,7 @@
 // Must be >= bufferSlack.
 @property int bufferAdvance;
 
-@property ImmiRoot* immi_root;
+@property ImmiRoot* immiRoot;
 
 @end
 
@@ -45,11 +45,11 @@
 }
 
 - (void)immi_setupRoot:(ImmiRoot*)root {
-  self.immi_root = root;
+  self.immiRoot = root;
 }
 
 - (SlidingWindowNode*)root {
-    return (SlidingWindowNode*)self.immi_root.rootNode;
+    return (SlidingWindowNode*)self.immiRoot.rootNode;
 };
 
 - (NSInteger)tableView:(UITableView *)tableView
@@ -105,7 +105,7 @@
 
 -(bool)refresh {
   bool first = self.root == nil;
-  bool result = [self.immi_root refresh];
+  bool result = [self.immiRoot refresh];
   // TODO(zerny): Find another way to setup the initial display.
   if (first) {
     assert(result);

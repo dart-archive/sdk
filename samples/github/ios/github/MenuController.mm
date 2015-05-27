@@ -6,19 +6,19 @@
 
 @interface MenuController ()
 
-@property ImmiRoot* immi_root;
+@property ImmiRoot* immiRoot;
 
 @end
 
 @implementation MenuController
 
 - (void)immi_setupRoot:(ImmiRoot*)root {
-  self.immi_root = root;
+  self.immiRoot = root;
   [root refresh];
 }
 
 - (MenuNode*)root {
-  return (MenuNode*)self.immi_root.rootNode;
+  return (MenuNode*)self.immiRoot.rootNode;
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView*)tableView {

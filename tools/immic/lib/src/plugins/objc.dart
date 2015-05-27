@@ -151,7 +151,6 @@ class _HeaderVisitor extends CodeGenerationVisitor {
   void _writeRootPresenter() {
     writeln('@class ImmiRoot;');
     writeln('@protocol RootPresenter <NSObject>');
-    writeln('@property (readonly) ImmiRoot* immi_root;');
     writeln('- (void)immi_setupRoot:(ImmiRoot*)root;');
     writeln('@end');
     writeln();
@@ -340,10 +339,6 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('- (UIViewController <RootPresenter> *)presenter {');
     writeln(
         '  return (UIViewController<RootPresenter>*)self.topViewController;');
-    writeln('}');
-    writeln();
-    writeln('- (ImmiRoot*)immi_root {');
-    writeln('  return self.presenter.immi_root;');
     writeln('}');
     writeln();
     writeln('- (void)immi_setupRoot:(ImmiRoot*)root {');
