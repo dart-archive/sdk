@@ -56,7 +56,9 @@ class _ConstantList<E> extends ListBase<E> implements List<E> {
     }
   }
 
-  @native external static _ConstantList _new(int length);
+  @native static _ConstantList _new(int length) {
+    throw new ArgumentError(length);
+  }
 
   void operator[]=(int index, E value) {
     throw new UnsupportedError("Cannot modify an unmodifiable list");

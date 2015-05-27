@@ -735,7 +735,10 @@ NATIVE(DoublePow) {
 }
 
 NATIVE(ListNew) {
+  Object* x = arguments[0];
+  if (!x->IsSmi()) return Failure::wrong_argument_type();
   int length = Smi::cast(arguments[0])->value();
+  if (length < 0) return Failure::index_out_of_bounds();
   return process->NewArray(length);
 }
 
