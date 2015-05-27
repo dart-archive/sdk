@@ -320,7 +320,6 @@ function_subtype_cast2_test: Fail
 function_subtype_cast3_test: Fail
 function_subtype_factory0_test: Crash
 function_subtype_inline0_test: Fail
-function_subtype_inline2_test: Fail
 function_subtype_local0_test: Fail
 function_subtype_local1_test: Fail
 function_subtype_local2_test: Fail
@@ -548,8 +547,6 @@ no_such_constructor_test/01: Crash
 no_such_method2_test: Fail
 no_such_method_dispatcher_test: Fail
 no_such_method_test: CompileTimeError
-not_enough_positional_arguments_test/00: MissingRuntimeError
-not_enough_positional_arguments_test/03: Crash
 null2_test: Crash
 null_is2_test: Fail
 null_test/01: Crash

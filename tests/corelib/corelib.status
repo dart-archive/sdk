@@ -36,9 +36,6 @@ double_parse_test/01: Fail
 double_parse_test/none: Fail
 double_round_test: Fail
 double_truncate_test: Fail
-duration_big_num_test: Fail
-duration_double_multiplication_test: Fail
-duration_test: Fail
 error_stack_trace1_test: Fail
 error_stack_trace2_test: Crash
 error_stack_trace_test: Fail
@@ -200,7 +197,6 @@ sort_test: Fail
 splay_tree_from_iterable_test: Fail
 splay_tree_from_iterables_test: Fail
 splay_tree_test: Fail
-stopwatch2_test: Fail
 string_buffer_test: Fail
 string_case_test/01: Fail
 string_case_test/02: Fail

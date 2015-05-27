@@ -206,8 +206,8 @@ class FletchBackend extends Backend {
   final Map<FunctionElement, CompiledFunction> compiledFunctions =
       <FunctionElement, CompiledFunction>{};
 
-  final Map<ConstructorElement, int> constructorIds =
-      <ConstructorElement, int>{};
+  final Map<ConstructorElement, CompiledFunction> constructors =
+      <ConstructorElement, CompiledFunction>{};
 
   final List<CompiledFunction> functions = <CompiledFunction>[];
 
@@ -1247,10 +1247,10 @@ class FletchBackend extends Backend {
     return index;
   }
 
-  int compileConstructor(ConstructorElement constructor,
-                         Registry registry) {
+  CompiledFunction compileConstructor(ConstructorElement constructor,
+                                      Registry registry) {
     assert(constructor.isDeclaration);
-    return constructorIds.putIfAbsent(constructor, () {
+    return constructors.putIfAbsent(constructor, () {
       ClassElement classElement = constructor.enclosingClass;
       CompiledClass compiledClass = registerClassElement(classElement);
 
@@ -1293,7 +1293,7 @@ class FletchBackend extends Backend {
         print(compiledFunction.verboseToString());
       }
 
-      return compiledFunction.methodId;
+      return compiledFunction;
     });
   }
 

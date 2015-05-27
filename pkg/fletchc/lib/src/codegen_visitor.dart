@@ -353,29 +353,32 @@ abstract class CodegenVisitor
           "Unimplemented load of named arguments");
       return 1;
     }
-    return loadPositionalArguments(arguments, function);
+    return loadPositionalArguments(arguments, signature, function.name);
   }
 
-  void staticFunctionCall(
+  CompiledFunction requireCompiledFunction(FunctionElement element) {
+    registerStaticInvocation(element);
+    return context.backend.createCompiledFunction(element);
+  }
+
+  void doStaticFunctionInvoke(
       Node node,
-      FunctionElement function,
+      CompiledFunction function,
       NodeList arguments,
-      CallStructure callStructure) {
-    registerStaticInvocation(function);
-    if (function.isInstanceMember) loadThis();
-    FunctionSignature signature = function.functionSignature;
+      CallStructure callStructure,
+      {bool factoryInvoke: false}) {
+    if (function.hasThisArgument) loadThis();
+    FunctionSignature signature = function.signature;
     int methodId;
     int arity;
     if (signature.hasOptionalParameters &&
         signature.optionalParametersAreNamed) {
-      CompiledFunction target = context.backend.createCompiledFunction(
-          function);
       // TODO(ajohnsen): Don't use selectors.
-      if (target.matchesSelector(callStructure.callSelector)) {
-        methodId = target.methodId;
-      } else if (target.canBeCalledAs(callStructure.callSelector)) {
+      if (function.matchesSelector(callStructure.callSelector)) {
+        methodId = function.methodId;
+      } else if (function.canBeCalledAs(callStructure.callSelector)) {
         // TODO(ajohnsen): Inline parameter mapping?
-        CompiledFunction stub = target.createParameterMappingFor(
+        CompiledFunction stub = function.createParameterMappingFor(
             callStructure.callSelector, context);
         methodId = stub.methodId;
       } else {
@@ -391,12 +394,12 @@ abstract class CodegenVisitor
       handleUnresolved(function.name);
       return;
     } else {
-      methodId = context.backend.functionMethodId(function);
-      arity = loadPositionalArguments(arguments, function);
+      methodId = function.methodId;
+      arity = loadPositionalArguments(arguments, signature, function.name);
     }
-    if (function.isInstanceMember) arity++;
+    if (function.hasThisArgument) arity++;
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
-    if (function.isFactoryConstructor) {
+    if (factoryInvoke) {
       invokeFactory(node, constId, arity);
     } else {
       invokeStatic(node, constId, arity);
@@ -413,8 +416,10 @@ abstract class CodegenVisitor
    *
    * Return the number of arguments pushed onto the stack.
    */
-  int loadPositionalArguments(NodeList arguments, FunctionElement function) {
-    FunctionSignature signature = function.functionSignature;
+  int loadPositionalArguments(
+      NodeList arguments,
+      FunctionSignature signature,
+      String name) {
     assert(!signature.optionalParametersAreNamed);
     int argumentCount = 0;
     Iterator<Node> it = arguments.iterator;
@@ -433,12 +438,12 @@ abstract class CodegenVisitor
             builder.loadConst(constId);
           }
         } else {
-          handleUnresolved(function.name);
+          handleUnresolved(name);
         }
       }
       argumentCount++;
     });
-    if (it.moveNext()) handleUnresolved(function.name);
+    if (it.moveNext()) handleUnresolved(name);
     return argumentCount;
   }
 
@@ -831,9 +836,7 @@ abstract class CodegenVisitor
       Send node,
       MethodElement function,
       _) {
-    registerStaticInvocation(function);
-    CompiledFunction compiledFunctionTarget =
-        context.backend.createCompiledFunction(function);
+    CompiledFunction compiledFunctionTarget = requireCompiledFunction(function);
     CompiledClass compiledClass = context.backend.createTearoffClass(
         compiledFunctionTarget);
     assert(compiledClass.fields == 0);
@@ -889,7 +892,8 @@ abstract class CodegenVisitor
       // TODO(ajohnsen): Define a known set of external functions we allow
       // calls to?
     }
-    staticFunctionCall(node, element, arguments, callStructure);
+    CompiledFunction target = requireCompiledFunction(element);
+    doStaticFunctionInvoke(node, target, arguments, callStructure);
   }
 
   void handleStaticFunctionInvoke(
@@ -1342,8 +1346,9 @@ abstract class CodegenVisitor
     if (constructor == null) {
       internalError(node, "Failed to lookup default list constructor");
     }
-    // Call with 0 arguments, as we call the default constructor.
-    callConstructor(node, constructor, 0);
+    // Call with empty arguments, as we call the default constructor.
+    callConstructor(
+        node, constructor, new NodeList.empty(), new CallStructure(0));
     Selector add = new Selector.call('add', null, 1);
     for (Node element in node.elements) {
       builder.dup();
@@ -1368,8 +1373,9 @@ abstract class CodegenVisitor
                     "Failed to lookup default list constructor");
       return;
     }
-    // Call with 0 arguments, as we call the default constructor.
-    callConstructor(node, constructor, 0);
+    // Call with empty arguments, as we call the default constructor.
+    callConstructor(
+        node, constructor, new NodeList.empty(), new CallStructure(0));
     Selector selector = new Selector.indexSet();
     for (Node element in node.entries) {
       builder.dup();
@@ -1810,15 +1816,17 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void callConstructor(Node node, ConstructorElement constructor, int arity) {
-    // TODO(ajohnsen): Use staticFunctionCall.
-    int constructorId = context.backend.compileConstructor(
-        constructor,
-        registry);
-    int constId = compiledFunction.allocateConstantFromFunction(constructorId);
+  void callConstructor(Node node,
+                       ConstructorElement constructor,
+                       NodeList arguments,
+                       CallStructure callStructure) {
     registerStaticInvocation(constructor);
     registerInstantiatedClass(constructor.enclosingClass);
-    invokeStatic(node, constId, arity);
+    CompiledFunction compiledFunction = context.backend.compileConstructor(
+        constructor,
+        registry);
+    doStaticFunctionInvoke(
+        node, compiledFunction, arguments, callStructure);
   }
 
   void visitConstConstructorInvoke(
@@ -1848,8 +1856,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
-    int arity = loadArguments(arguments, constructor);
-    callConstructor(node, constructor, arity);
+    callConstructor(node, constructor, arguments, callStructure);
     applyVisitState();
   }
 
@@ -1860,9 +1867,11 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
-    // FIXME: Selector selector = elements.getSelector(node.send);
     // TODO(ahe): Remove ".declaration" when issue 23135 is fixed.
-    staticFunctionCall(node, constructor.declaration, arguments, callStructure);
+    CompiledFunction compiledFunction =
+        requireCompiledFunction(constructor.declaration);
+    doStaticFunctionInvoke(
+        node, compiledFunction, arguments, callStructure, factoryInvoke: true);
     applyVisitState();
   }
 
