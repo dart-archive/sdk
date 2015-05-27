@@ -1014,8 +1014,9 @@ NATIVE(StringLength) {
 
 NATIVE(StringAdd) {
   String* x = String::cast(arguments[0]);
-  String* y = String::cast(arguments[1]);
-  return process->Concatenate(x, y);
+  Object* y = arguments[1];
+  if (!y->IsString()) return Failure::wrong_argument_type();
+  return process->Concatenate(x, String::cast(y));
 }
 
 NATIVE(StringCodeUnitAt) {

@@ -463,7 +463,6 @@ is_not_class2_test: Crash
 isnot_malformed_type_test: Fail
 issue10561_test: Crash
 issue10747_test: Fail
-issue12284_test: Crash
 issue13474_test: Fail
 issue13673_test: Fail
 issue14014_2_test: Crash
@@ -628,7 +627,6 @@ static_top_level_test/06: MissingCompileTimeError
 static_top_level_test/07: MissingCompileTimeError
 string_escapes_test: Fail
 string_interpolation_newline_test: Fail
-super_all_named_constructor_test: Fail
 super_bound_closure_test: Crash
 super_call4_test: Fail
 super_closure_test: Fail
@@ -739,9 +737,3 @@ vm/typed_data_polymorphic_view_test: Crash
 # Address sanitizer turns caught crashes into failures.
 large_class_declaration_test: Fail
 implicit_scope_test: Fail
-
-[ $runtime == fletchc && $mode == release && $asan]
-# These are only caught by asan in release mode because they
-# hit assertions in debug mode before they get to the crash.
-inferrer_synthesized_constructor_test: Fail
-issue12284_test: Fail

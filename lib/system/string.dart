@@ -70,7 +70,9 @@ class String implements core.String {
 
   @native external bool operator ==(Object other);
 
-  @native external String operator +(String other);
+  @native String operator +(String other) {
+    throw new ArgumentError(other);
+  }
 
   String substring(int startIndex, [int endIndex]) {
     if (startIndex == null) startIndex == 0;
