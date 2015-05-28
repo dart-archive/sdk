@@ -472,6 +472,8 @@ abstract class TestSuite {
     return overrides;
   }
 
+  void cleanup() {
+  }
 }
 
 

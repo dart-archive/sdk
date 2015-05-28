@@ -29,6 +29,9 @@ import 'record_and_replay.dart';
 import 'fletch_warnings_suite.dart' show
     FletchWarningsOutputCommand;
 
+import 'fletch_test_suite.dart' show
+    FletchTestCommand;
+
 const int CRASHING_BROWSER_EXITCODE = -10;
 const int SLOW_TIMEOUT_MULTIPLIER = 4;
 
@@ -2578,6 +2581,8 @@ class CommandExecutorImpl implements CommandExecutor {
           .runCommand(command.flavor, command, timeout, command.arguments);
     } else if (command is ScriptCommand) {
       return command.run();
+    } else if (command is FletchTestCommand) {
+      return command.run();
     } else {
       return new RunningProcess(command, timeout).run();
     }
@@ -2844,6 +2849,11 @@ class ProcessQueue {
                 this._listTests = false,
                 String recordingOutputFile,
                 String recordedInputFile]) {
+    void testSuitesCleanup() {
+      for (TestSuite suite in testSuites) {
+        suite.cleanup();
+      }
+    }
     void setupForListing(TestCaseEnqueuer testCaseEnqueuer) {
       _graph.events.where((event) => event is dgraph.GraphSealedEvent)
         .listen((dgraph.GraphSealedEvent event) {
@@ -2857,6 +2867,7 @@ class ProcessQueue {
                   "Expectations: ${testCase.expectedOutcomes.join(', ')}   "
                   "Configuration: '${testCase.configurationString}'");
           }
+          testSuitesCleanup();
         });
     }
 
@@ -2965,6 +2976,7 @@ class ProcessQueue {
             commandQueue.done.then((_) {
               cancelDebugTimer();
               eventAllTestsDone();
+              testSuitesCleanup();
             });
           });
 

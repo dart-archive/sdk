@@ -13,6 +13,8 @@ import 'dart:io' hide
     stdin,
     stdout;
 
+import 'dart:io' as io;
+
 import 'dart:async' show
     Completer,
     Future,
@@ -441,14 +443,36 @@ class IsolatePool {
 
   Future<ManagedIsolate> spawnIsolate() async {
     ReceivePort receivePort = new ReceivePort();
-    Isolate isolate =
-        await Isolate.spawn(isolateEntryPoint, receivePort.sendPort);
-    isolate.setErrorsFatal(true);
+    Isolate isolate = await Isolate.spawn(
+        isolateEntryPoint, receivePort.sendPort, paused: true);
+    ReceivePort errorPort = new ReceivePort();
+    ManagedIsolate managedIsolate;
+    isolate.addErrorListener(errorPort.sendPort);
+    errorPort.listen((errorList) {
+      String error = errorList[0];
+      String stackTrace = errorList[1];
+      io.stderr.writeln(error);
+      if (stackTrace != null) {
+        io.stderr.writeln(stackTrace);
+      }
+      exit(1);
+    });
+    ReceivePort exitPort = new ReceivePort();
+    isolate.addOnExitListener(exitPort.sendPort);
+    exitPort.listen((_) {
+      isolate.removeErrorListener(errorPort.sendPort);
+      isolate.removeOnExitListener(exitPort.sendPort);
+      errorPort.close();
+      exitPort.close();
+      idleIsolates.remove(managedIsolate);
+    });
+    isolate.resume(isolate.pauseCapability);
     StreamIterator iterator = new StreamIterator(receivePort);
     bool hasElement = await iterator.moveNext();
     if (!hasElement) throw new StateError("No port received from isolate.");
     SendPort port = iterator.current;
     await iterator.cancel();
-    return new ManagedIsolate(this, isolate, port);
+    managedIsolate = new ManagedIsolate(this, isolate, port);
+    return managedIsolate;
   }
 }

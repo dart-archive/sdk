@@ -1,0 +1,26 @@
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+self/testAlwaysFails: Fail # This is a test of this suite, failure is expected.
+self/testNeverCompletes: Skip # This is a test of this suite, should always be skipped.
+
+incremental/encoded/0012: Fail
+incremental/encoded/0013: Fail
+incremental/encoded/0019: Fail
+incremental/encoded/0021: Fail
+incremental/encoded/0022: Fail
+incremental/encoded/0024: Fail
+incremental/encoded/0025: Fail
+incremental/encoded/0029: Fail
+incremental/encoded/0032: Fail
+incremental/encoded/0033: Fail
+incremental/encoded/0034: Fail
+incremental/encoded/0037: Fail
+incremental/encoded/0038: Fail
+incremental/encoded/0039: Fail
+incremental/encoded/0040: Fail
+incremental/encoded/0041: Fail
+incremental/encoded/0046: Fail
+incremental/encoded/0047: Fail
+incremental/encoded/0053: Fail

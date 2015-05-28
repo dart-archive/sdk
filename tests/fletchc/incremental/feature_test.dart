@@ -14,6 +14,7 @@ import 'dart:io' as io;
 
 import 'dart:async' show
     Future,
+    Stream,
     StreamIterator;
 
 import 'dart:convert' show
@@ -60,6 +61,8 @@ import 'package:fletchc/session.dart' show
     Session;
 
 import 'program_result.dart';
+
+typedef Future NoArgFuture();
 
 const int TIMEOUT = 100;
 
@@ -2158,97 +2161,110 @@ compileAndRun(EncodedResult encodedResult) async {
 
   TestSession session = await runFletchVM(test, commands);
 
-  for (String expected in program.messages) {
-    Expect.isTrue(await session.iterator.moveNext());
-    Expect.stringEquals(expected, session.iterator.current);
-    print("Got expected output: ${session.iterator.current}");
-  }
-
-  int version = 2;
-  for (ProgramResult program in programs.skip(1)) {
-    print("Update:");
-    print(numberedLines(program.code));
-
-    IoInputProvider inputProvider =
-        test.incrementalCompiler.inputProvider;
-    Uri base = test.scriptUri;
-    Map<String, String> code = program.code is String
-        ? { 'main.dart': program.code }
-        : program.code;
-    Map<Uri, Uri> uriMap = <Uri, Uri>{};
-    for (String name in code.keys) {
-      Uri uri = base.resolve('$name?v${version++}');
-      inputProvider.cachedSources[uri] = new Future.value(code[name]);
-      uriMap[base.resolve(name)] = uri;
-    }
-    Future future = test.incrementalCompiler.compileUpdates(
-        uriMap, logVerbose: logger, logTime: logger);
-    bool compileUpdatesThrew = false;
-    future = future.catchError((error, trace) {
-      String statusMessage;
-      Future result;
-      compileUpdatesThrew = true;
-      if (program.compileUpdatesShouldThrow &&
-          error is IncrementalCompilationFailed) {
-        statusMessage = "Expected error in compileUpdates.";
-        result = null;
-      } else {
-        statusMessage = "Unexpected error in compileUpdates.";
-        result = new Future.error(error, trace);
-      }
-      print(statusMessage);
-      return result;
-    });
-    List<Command> update = await future;
-    if (program.compileUpdatesShouldThrow) {
-      updateFailedCount++;
-      Expect.isTrue(
-          compileUpdatesThrew,
-          "Expected an exception in compileUpdates");
-      Expect.isNull( update, "Expected update == null");
-      return null;
-    }
-
-    for (Command command in update) {
-      print(command);
-      command.addTo(session.vmSocket);
-    }
-
-    await session.cont();
-
+  // TODO(ahe): Replace new Future with try/finally when Dart VM bug 23537 is
+  // fixed.
+  await new Future(() async {
     for (String expected in program.messages) {
       Expect.isTrue(await session.iterator.moveNext());
       Expect.stringEquals(expected, session.iterator.current);
       print("Got expected output: ${session.iterator.current}");
     }
 
-    // TODO(ahe): Enable SerializeScopeTestCase for multiple
-    // parts.
-    if (program.code is String) {
-      await new SerializeScopeTestCase(
-          program.code, test.incrementalCompiler.mainApp,
-          test.incrementalCompiler.compiler).run();
+    int version = 2;
+    for (ProgramResult program in programs.skip(1)) {
+      print("Update:");
+      print(numberedLines(program.code));
+
+      IoInputProvider inputProvider =
+          test.incrementalCompiler.inputProvider;
+      Uri base = test.scriptUri;
+      Map<String, String> code = program.code is String
+          ? { 'main.dart': program.code }
+          : program.code;
+      Map<Uri, Uri> uriMap = <Uri, Uri>{};
+      for (String name in code.keys) {
+        Uri uri = base.resolve('$name?v${version++}');
+        inputProvider.cachedSources[uri] = new Future.value(code[name]);
+        uriMap[base.resolve(name)] = uri;
+      }
+      Future future = test.incrementalCompiler.compileUpdates(
+          uriMap, logVerbose: logger, logTime: logger);
+      bool compileUpdatesThrew = false;
+      future = future.catchError((error, trace) {
+        String statusMessage;
+        Future result;
+        compileUpdatesThrew = true;
+        if (program.compileUpdatesShouldThrow &&
+            error is IncrementalCompilationFailed) {
+          statusMessage = "Expected error in compileUpdates.";
+          result = null;
+        } else {
+          statusMessage = "Unexpected error in compileUpdates.";
+          result = new Future.error(error, trace);
+        }
+        print(statusMessage);
+        return result;
+      });
+      List<Command> update = await future;
+      if (program.compileUpdatesShouldThrow) {
+        updateFailedCount++;
+        Expect.isTrue(
+            compileUpdatesThrew,
+            "Expected an exception in compileUpdates");
+        Expect.isNull( update, "Expected update == null");
+        return null;
+      }
+
+      for (Command command in update) {
+        print(command);
+        command.addTo(session.vmSocket);
+      }
+
+      await session.cont();
+
+      for (String expected in program.messages) {
+        Expect.isTrue(await session.iterator.moveNext());
+        String actual = session.iterator.current;
+        Expect.stringEquals(expected, actual);
+        print("Got expected output: $actual");
+      }
+
+      // TODO(ahe): Enable SerializeScopeTestCase for multiple
+      // parts.
+      if (program.code is String) {
+        await new SerializeScopeTestCase(
+            program.code, test.incrementalCompiler.mainApp,
+            test.incrementalCompiler.compiler).run();
+      }
     }
-  }
+  }).whenComplete(() async {
+    session.iterator.cancel();
+    if (session.running) {
+      for (Command command in [
+               const commands_lib.PrepareForChanges(),
+               new commands_lib.PushFromMap(MapId.methods, session.methodId),
+               const commands_lib.PushBoolean(true),
+               const commands_lib.ChangeMethodLiteral(0),
+               const commands_lib.CommitChanges(1),
+               const commands_lib.ProcessContinue(),
+               const commands_lib.SessionEnd()]) {
+        print(command);
+        command.addTo(session.vmSocket);
+      }
 
-  for (Command command in [
-           const commands_lib.PrepareForChanges(),
-           new commands_lib.PushFromMap(MapId.methods, session.methodId),
-           const commands_lib.PushBoolean(true),
-           const commands_lib.ChangeMethodLiteral(0),
-           const commands_lib.CommitChanges(1),
-           const commands_lib.ProcessContinue(),
-           const commands_lib.SessionEnd()]) {
-    print(command);
-    command.addTo(session.vmSocket);
-  }
+      session.exitIsExpected = true;
+      await session.handleProcessStop();
+    }
+    session.quit();
+    print("Waiting for VM to exit");
+    Expect.equals(0, await session.process.exitCode);
+    print("VM exited");
+  });
 
-  session.exitIsExpected = true;
-  await session.handleProcessStop();
-  session.quit();
-  print("Waiting for VM to exit");
-  Expect.equals(0, await session.process.exitCode);
-  print("VM exited");
+  String stderr = (await session.stderr.toList()).join("\n");
+  if (stderr != "") {
+    throw "Unexpected stderr from fletch VM:\n$stderr";
+  }
 }
 
 class SerializeScopeTestCase extends CompilerTestCase {
@@ -2346,66 +2362,100 @@ Future<TestSession> runFletchVM(
       '--port=${server.port}',
   ];
 
-  var connectionIterator = new StreamIterator(server);
   String vmPath = test.incrementalCompiler.compiler.fletchVm.toFilePath();
 
   print("Running '$vmPath ${vmOptions.join(" ")}'");
   Process vmProcess = await Process.start(vmPath, vmOptions);
+  var stdoutStream = vmProcess.stdout
+      .transform(new Utf8Decoder())
+      .transform(new LineSplitter());
+  var stderrStream = vmProcess.stderr
+      .transform(new Utf8Decoder())
+      .transform(new LineSplitter());
 
-  UTF8.decoder.bind(vmProcess.stderr).toList().then(
-      (List<String> stderrChunks) {
-        print(stderrChunks.join());
-        Expect.stringEquals("", stderrChunks.join());
-      });
+  TestSession session;
+  try {
+    var vmSocket = await server.first;
+    server.close();
 
-  bool hasValue = await connectionIterator.moveNext();
-  assert(hasValue);
-  var vmSocket = connectionIterator.current;
-  server.close();
+    for (Command command in commands) {
+      command.addTo(vmSocket);
+    }
 
-  for (Command command in commands) {
-    command.addTo(vmSocket);
+    var compiler = test.incrementalCompiler.compiler;
+
+    FunctionElement isMainDone =
+        compiler.backend.fletchSystemLibrary.findLocal("isMainDone").getter;
+    int methodId = compiler.backend.compiledFunctions[isMainDone].methodId;
+
+    for (Command command in [
+        // Change isMainDone to always return false.
+        const commands_lib.PrepareForChanges(),
+        new commands_lib.PushFromMap(MapId.methods, methodId),
+        const commands_lib.PushBoolean(false),
+        const commands_lib.ChangeMethodLiteral(0),
+        const commands_lib.CommitChanges(1),
+
+        // Turn on debugging.
+        const commands_lib.Debugging(),
+        const commands_lib.ProcessSpawnForMain(),
+
+        // Set a breakpoint in isMainDone at the first bytecode.
+        new commands_lib.PushFromMap(MapId.methods, methodId),
+        const commands_lib.ProcessSetBreakpoint(0)
+    ]) {
+      print(command);
+      command.addTo(vmSocket);
+    }
+
+    session = new TestSession(
+        vmSocket, compiler.helper,
+        vmProcess,
+        new StreamIterator(stdoutStream),
+        stderrStream,
+        methodId);
+    session.vmCommands = new CommandReader(vmSocket).iterator;
+    await session.nextVmCommand();
+    await session.debugRun();
+
+    return session;
+  } catch (error, stackTrace) {
+    print("An error occurred, shutting down.");
+    print(error);
+    if (stackTrace != null) {
+      print(stackTrace);
+    }
+    var stderrFuture = new Future(() async {
+      await for (String line in stderrStream) {
+        print('fletch_vm_stderr: $line');
+      }
+    });
+    var stdoutFuture = new Future(() async {
+      if (session != null) {
+        while (await session.iterator.moveNext()) {
+          print('fletch_vm_stdout: ${session.iterator.current}');
+        }
+      } else {
+        await for (String line in stdoutStream) {
+          print('fletch_vm_stdout: $line');
+        }
+      }
+    });
+    if (session != null) {
+      session.quit();
+    }
+    var exitFuture = session.process.exitCode.then((int exitCode) {
+      print("VM exited with exit code: $exitCode.");
+    });
+    return Future.wait([stderrFuture, stdoutFuture, exitFuture]).then(
+        (_) => new Future.error(error, stackTrace));
   }
-
-  var compiler = test.incrementalCompiler.compiler;
-
-  FunctionElement isMainDone =
-      compiler.backend.fletchSystemLibrary.findLocal("isMainDone").getter;
-  int methodId = compiler.backend.compiledFunctions[isMainDone].methodId;
-
-  for (Command command in [
-           const commands_lib.PrepareForChanges(),
-           new commands_lib.PushFromMap(MapId.methods, methodId),
-           const commands_lib.PushBoolean(false),
-           const commands_lib.ChangeMethodLiteral(0),
-           const commands_lib.CommitChanges(1)]) {
-    print(command);
-    command.addTo(vmSocket);
-  }
-
-  const commands_lib.Debugging().addTo(vmSocket);
-  const commands_lib.ProcessSpawnForMain().addTo(vmSocket);
-
-  new commands_lib.PushFromMap(MapId.methods, methodId).addTo(vmSocket);
-  const commands_lib.ProcessSetBreakpoint(0).addTo(vmSocket);
-
-  TestSession session = new TestSession(
-      vmSocket, compiler.helper,
-      vmProcess,
-      new StreamIterator(vmProcess.stdout
-                         .transform(new Utf8Decoder())
-                         .transform(new LineSplitter())),
-      methodId);
-  session.vmCommands = new CommandReader(vmSocket).iterator;
-  await session.nextVmCommand();
-  await session.debugRun();
-
-  return session;
 }
 
 class TestSession extends Session {
   final Process process;
   final StreamIterator iterator;
+  final Stream<String> stderr;
   final int methodId;
 
   bool exitIsExpected = false;
@@ -2415,6 +2465,7 @@ class TestSession extends Session {
       compiler,
       this.process,
       this.iterator,
+      this.stderr,
       this.methodId)
       : super(vmSocket, compiler);
 
@@ -2426,4 +2477,18 @@ class TestSession extends Session {
       print("VM process exited with exit code = $exitCode.");
     }
   }
+}
+
+/// Invoked by ../../fletch_tests/fletch_test_suite.dart.
+Future<Map<String, NoArgFuture>> listTests() {
+  Map<String, NoArgFuture> result = <String, NoArgFuture>{};
+  int testNumber = 10001;
+  for (EncodedResult test in tests) {
+    // TODO(ahe): Don't invent names, turn [tests] into a map that includes
+    // names.
+    String testName = 'incremental/encoded/${"$testNumber".substring(1)}';
+    result[testName] = () => compileAndRun(test);
+    testNumber++;
+  }
+  return new Future<Map<String, NoArgFuture>>.value(result);
 }

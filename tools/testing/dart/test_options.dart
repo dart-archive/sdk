@@ -22,6 +22,7 @@ const List<String> defaultTestSelectors = const [
     'ffi',
     'samples',
     'warnings',
+    'fletch_tests',
 ];
 
 /**
@@ -107,7 +108,8 @@ class TestOptionsParser {
     none: No runtime, compile only (for example, used for dartanalyzer static
           analysis tests).''',
               ['-r', '--runtime'],
-              ['none', 'fletchc', 'fletchd', 'fletchvm', 'fletch_warnings'],
+              ['none', 'fletchc', 'fletchd', 'fletchvm', 'fletch_warnings',
+               'fletch_tests'],
               'fletch_warnings,fletchd,fletchc'),
           new _TestOptionSpecification(
               'arch',
@@ -654,7 +656,8 @@ Note: currently only implemented for dart2js.''',
         validRuntimes = const ['none', 'fletchvm'];
         break;
       case 'none':
-        validRuntimes = const ['fletchc', 'fletchd', 'fletch_warnings'];
+        validRuntimes =
+            const ['fletchc', 'fletchd', 'fletch_warnings', 'fletch_tests'];
         break;
     }
     if (!validRuntimes.contains(config['runtime'])) {

@@ -25,6 +25,9 @@ import "utils.dart";
 import 'fletch_warnings_suite.dart' show
     FletchWarningsRuntimeConfiguration;
 
+import 'fletch_test_suite.dart' show
+    FletchTestRuntimeConfiguration;
+
 // TODO(ahe): I expect this class will become abstract very soon.
 class RuntimeConfiguration {
   // TODO(ahe): Remove this constructor and move the switch to
@@ -49,6 +52,9 @@ class RuntimeConfiguration {
 
       case 'fletch_warnings':
         return new FletchWarningsRuntimeConfiguration(configuration);
+
+      case 'fletch_tests':
+        return new FletchTestRuntimeConfiguration(configuration);
 
       default:
         throw "Unknown runtime '$runtime'";
