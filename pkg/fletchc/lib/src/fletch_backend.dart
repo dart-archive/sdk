@@ -832,6 +832,8 @@ class FletchBackend extends Backend {
       FunctionCodegen codegen) {
     if (function == fletchExternalYield) {
       codegenExternalYield(function, codegen);
+    } else if (function == context.compiler.identicalFunction.implementation) {
+      codegenIdentical(function, codegen);
     } else if (function == fletchExternalInvokeMain) {
       codegenExternalInvokeMain(function, codegen);
     } else if (function.name == noSuchMethodTrampolineName &&
@@ -840,6 +842,17 @@ class FletchBackend extends Backend {
     } else {
       compiler.internalError(function, "Unhandled external function.");
     }
+  }
+
+  void codegenIdentical(
+      FunctionElement function,
+      FunctionCodegen codegen) {
+    codegen.builder
+        ..loadLocal(2)
+        ..loadLocal(2)
+        ..identical()
+        ..ret()
+        ..methodEnd();
   }
 
   void codegenExternalYield(

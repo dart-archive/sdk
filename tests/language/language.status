@@ -411,8 +411,6 @@ getters_setters_type2_test: Fail
 getters_setters_type3_test: Fail
 getters_setters_type_test/01: Fail
 getters_setters_type_test/none: Fail
-identical_closure2_test: Fail
-identical_closure_test: Fail
 implicit_closure_test: Fail
 implicit_scope_test: Crash
 import_private_test/01: MissingCompileTimeError

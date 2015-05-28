@@ -6,9 +6,7 @@ import 'dart:_fletch_system' as fletch;
 
 const patch = "patch";
 
-@patch bool identical(Object a, Object b) {
-  return false;
-}
+@patch external bool identical(Object a, Object b);
 
 @patch int identityHashCode(Object object) => _identityHashCode(object);
 
