@@ -319,6 +319,84 @@ main() {
                     'x = 3', 'y = null', 'z = 2']),
         ]),
 
+    const EncodedResult(
+        r"""
+==> main.dart.patch <==
+// Test adding a field to a class works.
+
+class A {
+<<<<<<<
+=======
+  var x;
+>>>>>>>
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new A();
+  }
+  try {
+    instance.x = 'v2';
+  } catch(e) {
+    print('setter threw');
+  }
+  try {
+    print(instance.x);
+  } catch (e) {
+    print('getter threw');
+  }
+}
+""",
+        const <ProgramExpectation>[
+            const ProgramExpectation(
+                const <String>[
+                    'instance is null', 'setter threw', 'getter threw']),
+            const ProgramExpectation(
+                const <String>[
+                    'v2']),
+        ]),
+
+    const EncodedResult(
+        r"""
+==> main.dart.patch <==
+// Test removing a field from a class works.
+
+class A {
+<<<<<<<
+  var x;
+=======
+>>>>>>>
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new A();
+  }
+  try {
+    instance.x = 'v1';
+  } catch(e) {
+    print('setter threw');
+  }
+  try {
+    print(instance.x);
+  } catch (e) {
+    print('getter threw');
+  }
+}
+""",
+        const <ProgramExpectation>[
+            const ProgramExpectation(
+                const <String>['instance is null', 'v1']),
+            const ProgramExpectation(
+                const <String>['setter threw', 'getter threw']),
+        ]),
+
     // Test that the test framework handles more than one update.
     const EncodedResult(
         const [
@@ -538,7 +616,7 @@ main() {
                 const <String>['instance is null', 'v1']),
             const ProgramExpectation(
                 const <String>['threw'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -587,7 +665,7 @@ main() {
                 const <String>['instance is null', 'v1']),
             const ProgramExpectation(
                 const <String>['v2'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -631,7 +709,7 @@ main() {
                 const <String>['instance is null', 'v1']),
             const ProgramExpectation(
                 const <String>['threw'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -684,7 +762,7 @@ main() {
                 const <String>['instance is null', 'v1']),
             const ProgramExpectation(
                 const <String>['threw'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -988,7 +1066,7 @@ main() {
                 const <String>['v1']),
             const ProgramExpectation(
                 const <String>['v2'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -1023,7 +1101,7 @@ main() {
                 const <String>['v1']),
             const ProgramExpectation(
                 const <String>['v2'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -1065,7 +1143,7 @@ main() {
                 const <String>['instance is null', 'v1']),
             const ProgramExpectation(
                 const <String>['v2'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -1136,7 +1214,7 @@ main() {
                 const <String>['v1']),
             const ProgramExpectation(
                 const <String>['v2'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -1171,7 +1249,7 @@ main() {
                 const <String>['v1']),
             const ProgramExpectation(
                 const <String>['v2'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -1225,96 +1303,6 @@ main() {
                     'v2']),
         ]),
 
-    const EncodedResult(
-        const [
-            r"""
-// Test adding a field to a class works.
-
-class A {
-""",
-            const [
-                "",
-                r"""
-  var x;
-""",
-            ],
-            r"""
-}
-
-var instance;
-
-main() {
-  if (instance == null) {
-    print('instance is null');
-    instance = new A();
-  }
-  try {
-    instance.x = 'v2';
-  } catch(e) {
-    print('setter threw');
-  }
-  try {
-    print(instance.x);
-  } catch (e) {
-    print('getter threw');
-  }
-}
-""",
-        ],
-        const <ProgramExpectation>[
-            const ProgramExpectation(
-                const <String>[
-                    'instance is null', 'setter threw', 'getter threw']),
-            const ProgramExpectation(
-                const <String>[
-                    'instance is null', // TODO(ahe): Remove this.
-                    'v2']),
-        ]),
-
-    const EncodedResult(
-        const [
-            r"""
-// Test removing a field from a class works.
-
-class A {
-""",
-            const [
-                r"""
-  var x;
-""",
-                "",
-            ],
-            r"""
-}
-
-var instance;
-
-main() {
-  if (instance == null) {
-    print('instance is null');
-    instance = new A();
-  }
-  try {
-    instance.x = 'v1';
-  } catch(e) {
-    print('setter threw');
-  }
-  try {
-    print(instance.x);
-  } catch (e) {
-    print('getter threw');
-  }
-}
-""",
-        ],
-        const <ProgramExpectation>[
-            const ProgramExpectation(
-                const <String>['instance is null', 'v1']),
-            const ProgramExpectation(
-                const <String>['setter threw', 'getter threw'],
-                // TODO(ahe): Shouldn't throw.
-                compileUpdatesShouldThrow: true),
-        ]),
 
     const EncodedResult(
         const [
@@ -1708,7 +1696,7 @@ main() {
                     '[instance] is null', 'v1', '[instance.y] threw']),
             const ProgramExpectation(
                 const <String>['v1', 'v2'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -1757,7 +1745,7 @@ main() {
                 const <String>['[instance] is null', 'v1', 'v2']),
             const ProgramExpectation(
                 const <String>['v1', '[instance.y] threw'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -1808,7 +1796,7 @@ main() {
                 const <String>['[instance] is null', 'v1', '[instance.x] threw']),
             const ProgramExpectation(
                 const <String>['[C.x] threw', 'v2'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -1859,7 +1847,7 @@ main() {
                 const <String>['[instance] is null', '[C.x] threw', 'v1']),
             const ProgramExpectation(
                 const <String>['v2', '[instance.x] threw'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -1999,7 +1987,7 @@ main() {
             'Hello, World!',
             const ProgramExpectation(
                 const <String>['Hello, World!'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -2020,7 +2008,7 @@ main() {
             'Hello, World!',
             const ProgramExpectation(
                 const <String>['Hello, World!'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -2041,7 +2029,7 @@ main() {
             'Hello, World!',
             const ProgramExpectation(
                 const <String>['Hello, World!'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -2068,7 +2056,7 @@ part of test.main
             'Hello, World!',
             const ProgramExpectation(
                 const <String>['Hello, World!'],
-                // TODO(ahe): Shouldn't throw.
+                // TODO(ahe): Should not throw.
                 compileUpdatesShouldThrow: true),
         ]),
 
@@ -2127,7 +2115,7 @@ void main() {
   var testsToRun = tests.skip(skip);
   // TODO(ahe): Remove the following line, as it means only run the
   // first few tests.
-  testsToRun = testsToRun.take(6);
+  testsToRun = testsToRun.take(8);
   return asyncTest(() => Future.forEach(testsToRun, compileAndRun)
       .then(updateSummary));
 }
