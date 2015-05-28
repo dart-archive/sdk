@@ -100,7 +100,6 @@ map_from_iterable_test: Fail
 map_from_iterables_test: Fail
 map_keys2_test: Fail
 map_test: Crash
-map_to_string_test: Fail
 map_values2_test: Fail
 map_values3_test: Fail
 map_values4_test: Fail

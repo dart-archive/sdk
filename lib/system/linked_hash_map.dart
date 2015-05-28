@@ -143,6 +143,8 @@ class LinkedHashMapImpl<K, V> implements LinkedHashMap<K, V> {
   bool get isEmpty => _elements == 0;
 
   bool get isNotEmpty => !isEmpty;
+
+  String toString() => Maps.mapToString(this);
 }
 
 class _LinkedHashMapNode<K, V> {

@@ -96,7 +96,6 @@ class_literal_test/23: Crash
 class_literal_test/24: Crash
 class_literal_test/25: Crash
 class_literal_test/none: Crash
-class_syntax2_test: Fail
 closure_cycles_test: CompileTimeError
 closure_in_constructor_test: Fail
 closure_in_initializer2_test: Fail
@@ -479,7 +478,6 @@ many_overridden_no_such_method_test: CompileTimeError
 map_literal4_test: Fail
 map_literal7_test: Fail
 map_literal8_test: Fail
-map_literal_syntax_test: Fail
 metadata_test: Fail
 method_binding_test: Fail
 method_invocation_test: Fail
@@ -597,7 +595,6 @@ static_top_level_test/04: MissingCompileTimeError
 static_top_level_test/05: MissingCompileTimeError
 static_top_level_test/06: MissingCompileTimeError
 static_top_level_test/07: MissingCompileTimeError
-string_interpolation_newline_test: Fail
 super_bound_closure_test: Fail
 super_call4_test: Fail
 super_closure_test: Fail

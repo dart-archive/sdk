@@ -53,6 +53,8 @@ class _ConstantMap<K, V> implements Map<K, V> {
   bool get isEmpty => _keys.isEmpty;
 
   bool get isNotEmpty => _keys.isEmpty;
+
+  String toString() => Maps.mapToString(this);
 }
 
 class _MapIterable<E> extends IterableBase<E> implements Iterable<E> {
