@@ -12,7 +12,7 @@ namespace fletch {
   N(Object,                 "Object")                   \
   N(Bool,                   "bool")                     \
   N(Null,                   "Null")                     \
-  N(Double,                 "double")                   \
+  N(Double,                 "_DoubleImpl")              \
   N(Int,                    "int")                      \
   N(Smi,                    "_Smi")                     \
   N(Mint,                   "_Mint")                    \
@@ -22,7 +22,7 @@ namespace fletch {
   N(Coroutine,              "Coroutine")                \
   N(Port,                   "Port")                     \
   N(Foreign,                "Foreign")                  \
-  N(String,                 "String")                   \
+  N(String,                 "_StringImpl")              \
                                                         \
   N(Equals,                 "==")                       \
   N(LessThan,               "<")                        \

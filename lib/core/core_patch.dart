@@ -2,7 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+library dart.core_patch;
+
 import 'dart:_fletch_system' as fletch;
+
+part 'double.dart';
+part 'int.dart';
+part 'string.dart';
 
 const patch = "patch";
 
@@ -60,18 +66,13 @@ const patch = "patch";
       {bool defaultValue: false}) => defaultValue;
 }
 
-// TODO(ajohnsen): Merge 'fletch.String' into this String.
 @patch class String {
   @patch factory String.fromCharCodes(
       Iterable<int> charCode,
-      [int start = 0,
-       int end]) {
-    return fletch.String.fromCharCodes(charCode, start, end);
-  }
+      [int start,
+       int end]) = _StringImpl.fromCharCodes;
 
-  @patch factory String.fromCharCode(int charCode) {
-    return fletch.String.fromCharCode(charCode);
-  }
+  @patch factory String.fromCharCode(int charCode) = _StringImpl.fromCharCode;
 
   @patch factory String.fromEnvironment(
       String name,

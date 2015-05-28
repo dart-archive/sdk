@@ -66,50 +66,50 @@ namespace fletch {
   N(MintGreater,                 "_Mint",  ">")                          \
   N(MintGreaterEqual,            "_Mint",  ">=")                         \
                                                                          \
-  N(DoubleNegate,                "double", "unary-")                     \
+  N(DoubleNegate,                "_DoubleImpl", "unary-")                \
                                                                          \
-  N(DoubleAdd,                   "double", "+")                          \
-  N(DoubleSub,                   "double", "-")                          \
-  N(DoubleMul,                   "double", "*")                          \
-  N(DoubleMod,                   "double", "%")                          \
-  N(DoubleDiv,                   "double", "/")                          \
-  N(DoubleTruncDiv,              "double", "~/")                         \
+  N(DoubleAdd,                   "_DoubleImpl", "+")                     \
+  N(DoubleSub,                   "_DoubleImpl", "-")                     \
+  N(DoubleMul,                   "_DoubleImpl", "*")                     \
+  N(DoubleMod,                   "_DoubleImpl", "%")                     \
+  N(DoubleDiv,                   "_DoubleImpl", "/")                     \
+  N(DoubleTruncDiv,              "_DoubleImpl", "~/")                    \
                                                                          \
-  N(DoubleEqual,                 "double", "==")                         \
-  N(DoubleLess,                  "double", "<")                          \
-  N(DoubleLessEqual,             "double", "<=")                         \
-  N(DoubleGreater,               "double", ">")                          \
-  N(DoubleGreaterEqual,          "double", ">=")                         \
+  N(DoubleEqual,                 "_DoubleImpl", "==")                    \
+  N(DoubleLess,                  "_DoubleImpl", "<")                     \
+  N(DoubleLessEqual,             "_DoubleImpl", "<=")                    \
+  N(DoubleGreater,               "_DoubleImpl", ">")                     \
+  N(DoubleGreaterEqual,          "_DoubleImpl", ">=")                    \
                                                                          \
-  N(DoubleIsNaN,                 "double", "isNaN")                      \
-  N(DoubleIsNegative,            "double", "isNegative")                 \
+  N(DoubleIsNaN,                 "_DoubleImpl", "isNaN")                 \
+  N(DoubleIsNegative,            "_DoubleImpl", "isNegative")            \
                                                                          \
-  N(DoubleCeil,                  "double", "ceil")                       \
-  N(DoubleCeilToDouble,          "double", "ceilToDouble")               \
-  N(DoubleRound,                 "double", "round")                      \
-  N(DoubleRoundToDouble,         "double", "roundToDouble")              \
-  N(DoubleFloor,                 "double", "floor")                      \
-  N(DoubleFloorToDouble,         "double", "floorToDouble")              \
-  N(DoubleTruncate,              "double", "truncate")                   \
-  N(DoubleTruncateToDouble,      "double", "truncateToDouble")           \
-  N(DoubleRemainder,             "double", "remainder")                  \
-  N(DoubleToInt,                 "double", "toInt")                      \
-  N(DoubleToString,              "double", "toString")                   \
-  N(DoubleToStringAsExponential, "double", "_toStringAsExponential")     \
-  N(DoubleToStringAsFixed,       "double", "_toStringAsFixed")           \
-  N(DoubleToStringAsPrecision,   "double", "_toStringAsPrecision")       \
+  N(DoubleCeil,                  "_DoubleImpl", "ceil")                  \
+  N(DoubleCeilToDouble,          "_DoubleImpl", "ceilToDouble")          \
+  N(DoubleRound,                 "_DoubleImpl", "round")                 \
+  N(DoubleRoundToDouble,         "_DoubleImpl", "roundToDouble")         \
+  N(DoubleFloor,                 "_DoubleImpl", "floor")                 \
+  N(DoubleFloorToDouble,         "_DoubleImpl", "floorToDouble")         \
+  N(DoubleTruncate,              "_DoubleImpl", "truncate")              \
+  N(DoubleTruncateToDouble,      "_DoubleImpl", "truncateToDouble")      \
+  N(DoubleRemainder,             "_DoubleImpl", "remainder")             \
+  N(DoubleToInt,                 "_DoubleImpl", "toInt")                 \
+  N(DoubleToString,              "_DoubleImpl", "toString")              \
+  N(DoubleToStringAsExponential, "_DoubleImpl", "_toStringAsExponential")\
+  N(DoubleToStringAsFixed,       "_DoubleImpl", "_toStringAsFixed")      \
+  N(DoubleToStringAsPrecision,   "_DoubleImpl", "_toStringAsPrecision")  \
                                                                          \
-  N(DoubleSin,                   "double", "sin")                        \
-  N(DoubleCos,                   "double", "cos")                        \
-  N(DoubleTan,                   "double", "tan")                        \
-  N(DoubleAcos,                  "double", "acos")                       \
-  N(DoubleAsin,                  "double", "asin")                       \
-  N(DoubleAtan,                  "double", "atan")                       \
-  N(DoubleSqrt,                  "double", "sqrt")                       \
-  N(DoubleExp,                   "double", "exp")                        \
-  N(DoubleLog,                   "double", "log")                        \
-  N(DoubleAtan2,                 "double", "atan2")                      \
-  N(DoublePow,                   "double", "pow")                        \
+  N(DoubleSin,                   "<none>", "_sin")                       \
+  N(DoubleCos,                   "<none>", "_cos")                       \
+  N(DoubleTan,                   "<none>", "_tan")                       \
+  N(DoubleAcos,                  "<none>", "_acos")                      \
+  N(DoubleAsin,                  "<none>", "_asin")                      \
+  N(DoubleAtan,                  "<none>", "_atan")                      \
+  N(DoubleSqrt,                  "<none>", "_sqrt")                      \
+  N(DoubleExp,                   "<none>", "_exp")                       \
+  N(DoubleLog,                   "<none>", "_log")                       \
+  N(DoubleAtan2,                 "<none>", "_atan2")                     \
+  N(DoublePow,                   "<none>", "_pow")                       \
                                                                          \
   N(DateTimeGetCurrentMs,        "DateTime", "_getCurrentMs")            \
   N(DateTimeTimeZone,            "DateTime", "_timeZone")                \
@@ -187,13 +187,13 @@ namespace fletch {
   N(ForeignSetFloat32,            "Foreign", "_setFloat32")              \
   N(ForeignSetFloat64,            "Foreign", "_setFloat64")              \
                                                                          \
-  N(StringAdd,                   "String", "+")                          \
-  N(StringCodeUnitAt,            "String", "codeUnitAt")                 \
-  N(StringCreate,                "String", "_create")                    \
-  N(StringEqual,                 "String", "==")                         \
-  N(StringLength,                "String", "length")                     \
-  N(StringSetCodeUnitAt,         "String", "_setCodeUnitAt")             \
-  N(StringSubstring,             "String", "_substring")                 \
+  N(StringAdd,                   "_StringImpl", "+")                     \
+  N(StringCodeUnitAt,            "_StringImpl", "codeUnitAt")            \
+  N(StringCreate,                "_StringImpl", "_create")               \
+  N(StringEqual,                 "_StringImpl", "==")                    \
+  N(StringLength,                "_StringImpl", "length")                \
+  N(StringSetCodeUnitAt,         "_StringImpl", "_setCodeUnitAt")        \
+  N(StringSubstring,             "_StringImpl", "_substring")            \
                                                                          \
   N(PortCreate,                  "Port", "_create")                      \
   N(PortClose,                   "Port", "_close")                       \

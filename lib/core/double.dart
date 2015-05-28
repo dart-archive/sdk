@@ -2,13 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dart.system;
+part of dart.core_patch;
 
-// TODO(ajohnsen): Rename to _DoubleImpl.
-class double implements core.double {
+class _DoubleImpl implements double {
   int get hashCode => identityHashCode(this);
 
-  @native external num operator -();
+  @fletch.native external num operator -();
 
   int compareTo(num other) {
     if (this < other) return -1;
@@ -25,62 +24,62 @@ class double implements core.double {
     return -1;
   }
 
-  @native num operator +(other) {
+  @fletch.native num operator +(other) {
     // TODO(kasperl): Check error.
     return other._addFromDouble(this);
   }
 
-  @native num operator -(other) {
+  @fletch.native num operator -(other) {
     // TODO(kasperl): Check error.
     return other._subFromDouble(this);
   }
 
-  @native num operator *(other) {
+  @fletch.native num operator *(other) {
     // TODO(kasperl): Check error.
     return other._mulFromDouble(this);
   }
 
-  @native num operator %(other) {
+  @fletch.native num operator %(other) {
     // TODO(kasperl): Check error.
     return other._modFromDouble(this);
   }
 
-  @native num operator /(other) {
+  @fletch.native num operator /(other) {
     // TODO(kasperl): Check error.
     return other._divFromDouble(this);
   }
 
-  @native num operator ~/(other) {
-    switch (nativeError) {
-      case wrongArgumentType:
+  @fletch.native num operator ~/(other) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
         return other._truncDivFromDouble(this);
-      case indexOutOfBounds:
+      case fletch.indexOutOfBounds:
         throw new UnsupportedError("double.~/ $this");
     }
   }
 
-  @native bool operator ==(other) {
+  @fletch.native bool operator ==(other) {
     if (other is! num) return false;
     // TODO(kasperl): Check error.
     return other._compareEqFromDouble(this);
   }
 
-  @native bool operator <(other) {
+  @fletch.native bool operator <(other) {
     // TODO(kasperl): Check error.
     return other._compareLtFromDouble(this);
   }
 
-  @native bool operator <=(other) {
+  @fletch.native bool operator <=(other) {
     // TODO(kasperl): Check error.
     return other._compareLeFromDouble(this);
   }
 
-  @native bool operator >(other) {
+  @fletch.native bool operator >(other) {
     // TODO(kasperl): Check error.
     return other._compareGtFromDouble(this);
   }
 
-  @native bool operator >=(other) {
+  @fletch.native bool operator >=(other) {
     // TODO(kasperl): Check error.
     return other._compareGeFromDouble(this);
   }
@@ -90,43 +89,43 @@ class double implements core.double {
     return (this < 0.0) ? -this : this;
   }
 
-  @native double remainder(other) {
+  @fletch.native double remainder(other) {
     return other._remainderFromDouble(this);
   }
 
-  @native int round() {
+  @fletch.native int round() {
     throw new UnsupportedError("double.round $this");
   }
 
-  @native int floor() {
+  @fletch.native int floor() {
     throw new UnsupportedError("double.floor $this");
   }
 
-  @native int ceil() {
+  @fletch.native int ceil() {
     throw new UnsupportedError("double.ceil $this");
   }
 
-  @native int truncate() {
+  @fletch.native int truncate() {
     throw new UnsupportedError("double.truncate $this");
   }
 
-  @native external double roundToDouble();
-  @native external double floorToDouble();
-  @native external double ceilToDouble();
-  @native external double truncateToDouble();
+  @fletch.native external double roundToDouble();
+  @fletch.native external double floorToDouble();
+  @fletch.native external double ceilToDouble();
+  @fletch.native external double truncateToDouble();
 
-  @native external bool get isNaN;
-  @native external bool get isNegative;
+  @fletch.native external bool get isNaN;
+  @fletch.native external bool get isNegative;
 
   bool get isFinite {
-    return this != core.double.INFINITY &&
-      this != -core.double.INFINITY &&
+    return this != double.INFINITY &&
+      this != -double.INFINITY &&
       !isNaN;
   }
 
   bool get isInfinite {
-    return (this == core.double.INFINITY ||
-            this == -core.double.INFINITY) && !isNaN;
+    return (this == double.INFINITY ||
+            this == -double.INFINITY) && !isNaN;
   }
 
   double get sign {
@@ -143,7 +142,7 @@ class double implements core.double {
 
   int toInt() => truncate();
 
-  @native external String toString();
+  @fletch.native external String toString();
 
   String toStringAsExponential([int digits]) {
     if (digits == null) {
@@ -153,8 +152,8 @@ class double implements core.double {
       if (digits < 0 || digits > 20) throw new RangeError.range(digits, 0, 20);
     }
     if (isNaN) return "NaN";
-    if (this == core.double.INFINITY) return "Infinity";
-    if (this == -core.double.INFINITY) return "-Infinity";
+    if (this == double.INFINITY) return "Infinity";
+    if (this == -double.INFINITY) return "-Infinity";
 
     return _toStringAsExponential(digits);
   }
@@ -171,14 +170,14 @@ class double implements core.double {
     if (digits is! int) throw new ArgumentError();
     if (digits < 1 || digits > 21) throw new RangeError.range(digits, 1, 21);
     if (isNaN) return "NaN";
-    if (this == core.double.INFINITY) return "Infinity";
-    if (this == -core.double.INFINITY) return "-Infinity";
+    if (this == double.INFINITY) return "Infinity";
+    if (this == -double.INFINITY) return "-Infinity";
     return _toStringAsPrecision(digits);
   }
 
-  @native external String _toStringAsExponential(int digits);
-  @native external String _toStringAsFixed(int digits);
-  @native external String _toStringAsPrecision(int digits);
+  @fletch.native external String _toStringAsExponential(int digits);
+  @fletch.native external String _toStringAsFixed(int digits);
+  @fletch.native external String _toStringAsPrecision(int digits);
 
   double _addFromInteger(int other) => other.toDouble() + this;
 
@@ -201,26 +200,4 @@ class double implements core.double {
   bool _compareGtFromInteger(int other) => other.toDouble() >  this;
 
   bool _compareGeFromInteger(int other) => other.toDouble() >= this;
-
-  @native external static double sin(double x);
-
-  @native external static double cos(double x);
-
-  @native external static double tan(double x);
-
-  @native external static double acos(double x);
-
-  @native external static double asin(double x);
-
-  @native external static double atan(double x);
-
-  @native external static double sqrt(double x);
-
-  @native external static double exp(double x);
-
-  @native external static double log(double x);
-
-  @native external static double atan2(double a, double b);
-
-  @native external static double pow(double x, double exponent);
 }

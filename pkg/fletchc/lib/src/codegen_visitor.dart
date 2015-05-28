@@ -1357,11 +1357,8 @@ abstract class CodegenVisitor
                     "Failed to lookup default list constructor");
       return;
     }
-    assert(constructor.isFactoryConstructor);
-    // TODO(ajohnsen): Create _CompactLinkedHashMap directly?
-    CompiledFunction compiledFunction = requireCompiledFunction(constructor);
-    doStaticFunctionInvoke(
-        node, compiledFunction, new NodeList.empty(), CallStructure.NO_ARGS);
+    callConstructor(
+        node, constructor, new NodeList.empty(), CallStructure.NO_ARGS);
     Selector selector = new Selector.indexSet();
     for (Node element in node.entries) {
       builder.dup();

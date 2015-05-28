@@ -4,25 +4,12 @@
 
 library dart.system;
 
-import 'dart:core' hide
-    double,
-    int,
-    String;
-
-import 'dart:core' as core show
-    double,
-    int,
-    String;
-
 import 'dart:_internal';
 import 'dart:collection';
 import 'dart:math';
 
-part 'double.dart';
-part 'integer.dart';
 part 'list.dart';
 part 'map.dart';
-part 'string.dart';
 
 const native = "native";
 

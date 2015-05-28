@@ -216,7 +216,7 @@ class FletchBackend extends Backend {
   static const String growableListName = '_GrowableList';
   static const String constantListName = '_ConstantList';
   static const String constantMapName = '_ConstantMap';
-  static const String linkedHashMapName = 'LinkedHashMap';
+  static const String linkedHashMapName = '_CompactLinkedHashMap';
   static const String noSuchMethodName = '_noSuchMethod';
   static const String noSuchMethodTrampolineName = '_noSuchMethodTrampoline';
 
@@ -266,6 +266,7 @@ class FletchBackend extends Backend {
   LibraryElement fletchFFILibrary;
   LibraryElement fletchIOSystemLibrary;
   LibraryElement collectionLibrary;
+  LibraryElement mathLibrary;
 
   FunctionElement fletchSystemEntry;
 
@@ -384,6 +385,7 @@ class FletchBackend extends Backend {
 
     CompiledClass loadClass(String name, LibraryElement library) {
       var classImpl = library.findLocal(name);
+      if (classImpl == null) classImpl = library.implementation.find(name);
       if (classImpl == null) {
         compiler.internalError(library, "Internal class '$name' not found.");
         return null;
@@ -406,13 +408,13 @@ class FletchBackend extends Backend {
     }
 
     compiledObjectClass = loadBuiltinClass("Object", compiler.coreLibrary);
-    smiClass = loadBuiltinClass("_Smi", fletchSystemLibrary).element;
-    mintClass = loadBuiltinClass("_Mint", fletchSystemLibrary).element;
-    stringClass = loadBuiltinClass("String", fletchSystemLibrary).element;
+    smiClass = loadBuiltinClass("_Smi", compiler.coreLibrary).element;
+    mintClass = loadBuiltinClass("_Mint", compiler.coreLibrary).element;
+    stringClass = loadBuiltinClass("_StringImpl", compiler.coreLibrary).element;
     // TODO(ahe): Register _ConstantList through ResolutionCallbacks.
     loadBuiltinClass(constantListName, fletchSystemLibrary);
     loadBuiltinClass(constantMapName, fletchSystemLibrary);
-    loadBuiltinClass("double", fletchSystemLibrary);
+    loadBuiltinClass("_DoubleImpl", compiler.coreLibrary);
     loadBuiltinClass("Null", compiler.coreLibrary);
     loadBuiltinClass("bool", compiler.coreLibrary);
     coroutineClass =
@@ -422,6 +424,8 @@ class FletchBackend extends Backend {
 
     growableListClass =
         loadClass(growableListName, fletchSystemLibrary).element;
+    // The linked hash map depends on LinkedHashMap.
+    loadClass("LinkedHashMap", collectionLibrary).element;
     linkedHashMapClass =
         loadClass(linkedHashMapName, collectionLibrary).element;
     // Register list constructors to world.
@@ -1188,6 +1192,8 @@ class FletchBackend extends Backend {
       fletchIOSystemLibrary = library;
     } else if (Uri.parse('dart:collection') == library.canonicalUri) {
       collectionLibrary = library;
+    } else if (Uri.parse('dart:math') == library.canonicalUri) {
+      mathLibrary = library;
     }
 
     if (library.isPlatformLibrary && !library.isPatched) {
@@ -1222,6 +1228,8 @@ class FletchBackend extends Backend {
     } else if (element.library == fletchSystemLibrary) {
       // Nothing needed for now.
     } else if (element.library == compiler.coreLibrary) {
+      // Nothing needed for now.
+    } else if (element.library == mathLibrary) {
       // Nothing needed for now.
     } else if (element.library == fletchFFILibrary) {
       // Nothing needed for now.

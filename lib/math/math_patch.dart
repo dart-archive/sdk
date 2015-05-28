@@ -29,29 +29,49 @@ class _Random implements Random {
   }
 }
 
-@patch double sin(num x) => fletch.double.sin(x.toDouble());
+@patch double sin(num x) => _sin(x.toDouble());
 
-@patch double cos(num x) => fletch.double.cos(x.toDouble());
+@patch double cos(num x) => _cos(x.toDouble());
 
-@patch double tan(num x) => fletch.double.tan(x.toDouble());
+@patch double tan(num x) => _tan(x.toDouble());
 
-@patch double acos(num x) => fletch.double.acos(x.toDouble());
+@patch double acos(num x) => _acos(x.toDouble());
 
-@patch double asin(num x) => fletch.double.asin(x.toDouble());
+@patch double asin(num x) => _asin(x.toDouble());
 
-@patch double atan(num x) => fletch.double.atan(x.toDouble());
+@patch double atan(num x) => _atan(x.toDouble());
 
-@patch double sqrt(num x) => fletch.double.sqrt(x.toDouble());
+@patch double sqrt(num x) => _sqrt(x.toDouble());
 
-@patch double exp(num x) => fletch.double.exp(x.toDouble());
+@patch double exp(num x) => _exp(x.toDouble());
 
-@patch double log(num x) => fletch.double.log(x.toDouble());
+@patch double log(num x) => _log(x.toDouble());
 
-@patch double atan2(num a, num b) {
-  return fletch.double.atan2(a.toDouble(), b.toDouble());
-}
+@patch double atan2(num a, num b) => _atan2(a.toDouble(), b.toDouble());
 
 @patch double pow(num x, num exponent) {
   // TODO(ajohnsen): Implement integer pow logic.
-  return fletch.double.pow(x.toDouble(), exponent.toDouble());
+  return _pow(x.toDouble(), exponent.toDouble());
 }
+
+@fletch.native external double _sin(double x);
+
+@fletch.native external double _cos(double x);
+
+@fletch.native external double _tan(double x);
+
+@fletch.native external double _acos(double x);
+
+@fletch.native external double _asin(double x);
+
+@fletch.native external double _atan(double x);
+
+@fletch.native external double _sqrt(double x);
+
+@fletch.native external double _exp(double x);
+
+@fletch.native external double _log(double x);
+
+@fletch.native external double _atan2(double a, double b);
+
+@fletch.native external double _pow(double x, double exponent);

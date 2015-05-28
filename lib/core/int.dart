@@ -2,10 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dart.system;
+part of dart.core_patch;
 
-// TODO(ajohnsen): Rename to e.g. _IntImpl when old compiler is out.
-abstract class int implements core.int {
+abstract class _IntBase implements int {
   bool get isNaN => false;
 
   bool get isNegative => this < 0;
@@ -123,7 +122,7 @@ abstract class int implements core.int {
 
   double _divFromDouble(double other) => other / toDouble();
 
-  double _truncDivFromDouble(double other) => other ~/ toDouble();
+  int _truncDivFromDouble(double other) => other ~/ toDouble();
 
   bool _compareEqFromDouble(double other) => other == toDouble();
 
@@ -138,104 +137,104 @@ abstract class int implements core.int {
   double _remainderFromDouble(double other) => other.remainder(toDouble());
 }
 
-class _Smi extends int {
+class _Smi extends _IntBase {
   int get hashCode => identityHashCode(this);
 
-  @native external String toString();
+  @fletch.native external String toString();
 
-  @native external double toDouble();
+  @fletch.native external double toDouble();
 
-  @native external int _toMint();
+  @fletch.native external int _toMint();
 
-  @native external num operator -();
+  @fletch.native external num operator -();
 
-  @native num operator +(other) {
+  @fletch.native num operator +(other) {
     // TODO(kasperl): Check error.
     return other._addFromInteger(this);
   }
 
-  @native num operator -(other) {
+  @fletch.native num operator -(other) {
     // TODO(kasperl): Check error.
     return other._subFromInteger(this);
   }
 
-  @native num operator *(other) {
+  @fletch.native num operator *(other) {
     // TODO(kasperl): Check error.
     return other._mulFromInteger(this);
   }
 
-  @native num operator %(other) {
-    switch (nativeError) {
-      case wrongArgumentType:
+  @fletch.native num operator %(other) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
         return other._modFromInteger(this);
-      case indexOutOfBounds:
+      case fletch.indexOutOfBounds:
         throw new IntegerDivisionByZeroException();
     }
   }
 
-  @native num operator /(other) {
+  @fletch.native num operator /(other) {
     // TODO(kasperl): Check error.
     return other._divFromInteger(this);
   }
 
-  @native int operator ~/(other) {
-    switch (nativeError) {
-      case wrongArgumentType:
+  @fletch.native int operator ~/(other) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
         return other._truncDivFromInteger(this);
-      case indexOutOfBounds:
+      case fletch.indexOutOfBounds:
         throw new IntegerDivisionByZeroException();
     }
   }
 
-  @native external int operator ~();
+  @fletch.native external int operator ~();
 
-  @native int operator &(other) {
+  @fletch.native int operator &(other) {
     // TODO(kasperl): Check error.
     return other._bitAndFromInteger(this);
   }
 
-  @native int operator |(other) {
+  @fletch.native int operator |(other) {
     // TODO(kasperl): Check error.
     return other._bitOrFromInteger(this);
   }
 
-  @native int operator ^(other) {
+  @fletch.native int operator ^(other) {
     // TODO(kasperl): Check error.
     return other._bitXorFromInteger(this);
   }
 
-  @native int operator >>(other) {
+  @fletch.native int operator >>(other) {
     // TODO(kasperl): Check error.
     return other._bitShrFromInteger(this);
   }
 
-  @native int operator <<(other) {
+  @fletch.native int operator <<(other) {
     // TODO(kasperl): Check error.
     return other._bitShlFromInteger(this);
   }
 
-  @native bool operator ==(other) {
+  @fletch.native bool operator ==(other) {
     if (other is! num) return false;
     // TODO(kasperl): Check error.
     return other._compareEqFromInteger(this);
   }
 
-  @native bool operator <(other) {
+  @fletch.native bool operator <(other) {
     // TODO(kasperl): Check error.
     return other._compareLtFromInteger(this);
   }
 
-  @native bool operator <=(other) {
+  @fletch.native bool operator <=(other) {
     // TODO(kasperl): Check error.
     return other._compareLeFromInteger(this);
   }
 
-  @native bool operator >(other) {
+  @fletch.native bool operator >(other) {
     // TODO(kasperl): Check error.
     return other._compareGtFromInteger(this);
   }
 
-  @native bool operator >=(other) {
+  @fletch.native bool operator >=(other) {
     // TODO(kasperl): Check error.
     return other._compareGeFromInteger(this);
   }
@@ -277,79 +276,79 @@ class _Smi extends int {
   bool _compareGeFromInteger(other) => other._toMint() >= _toMint();
 }
 
-class _Mint extends int {
+class _Mint extends _IntBase {
   int get hashCode => identityHashCode(this);
 
-  @native external String toString();
+  @fletch.native external String toString();
 
-  @native external double toDouble();
+  @fletch.native external double toDouble();
 
   int _toMint() => this;
 
-  @native external num operator -();
+  @fletch.native external num operator -();
 
-  @native num operator +(other) {
+  @fletch.native num operator +(other) {
     // TODO(kasperl): Check error.
     return other._addFromInteger(this);
   }
 
-  @native num operator -(other) {
+  @fletch.native num operator -(other) {
     // TODO(kasperl): Check error.
     return other._subFromInteger(this);
   }
 
-  @native num operator *(other) {
+  @fletch.native num operator *(other) {
     // TODO(kasperl): Check error.
     return other._mulFromInteger(this);
   }
 
-  @native num operator %(other) {
-    switch (nativeError) {
-      case wrongArgumentType:
+  @fletch.native num operator %(other) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
         return other._modFromInteger(this);
-      case indexOutOfBounds:
+      case fletch.indexOutOfBounds:
         throw new IntegerDivisionByZeroException();
     }
   }
 
-  @native num operator /(other) {
+  @fletch.native num operator /(other) {
     // TODO(kasperl): Check error.
     return other._divFromInteger(this);
   }
 
-  @native int operator ~/(other) {
-    switch (nativeError) {
-      case wrongArgumentType:
+  @fletch.native int operator ~/(other) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
         return other._truncDivFromInteger(this);
-      case indexOutOfBounds:
+      case fletch.indexOutOfBounds:
         throw new IntegerDivisionByZeroException();
     }
   }
 
-  @native external int operator ~();
+  @fletch.native external int operator ~();
 
-  @native int operator &(other) {
+  @fletch.native int operator &(other) {
     // TODO(kasperl): Check error.
     return other._bitAndFromInteger(this);
   }
 
-  @native int operator |(other) {
+  @fletch.native int operator |(other) {
     // TODO(kasperl): Check error.
     return other._bitOrFromInteger(this);
   }
 
-  @native int operator ^(other) {
+  @fletch.native int operator ^(other) {
     // TODO(kasperl): Check error.
     return other._bitXorFromInteger(this);
   }
 
-  @native int operator >>(other) {
+  @fletch.native int operator >>(other) {
     // TODO(kasperl): Check error.
     return other._bitShrFromInteger(this);
   }
 
-  @native int operator <<(other) {
-    if (nativeError == wrongArgumentType && other is _Mint) {
+  @fletch.native int operator <<(other) {
+    if (fletch.nativeError == fletch.wrongArgumentType && other is _Mint) {
       // TODO(ajohnsen): Add bigint support.
       throw new UnimplementedError("Overflow to big integer");
     }
@@ -357,28 +356,28 @@ class _Mint extends int {
     return other._bitShlFromInteger(this);
   }
 
-  @native bool operator ==(other) {
+  @fletch.native bool operator ==(other) {
     if (other is! num) return false;
     // TODO(kasperl): Check error.
     return other._compareEqFromInteger(this);
   }
 
-  @native bool operator <(other) {
+  @fletch.native bool operator <(other) {
     // TODO(kasperl): Check error.
     return other._compareLtFromInteger(this);
   }
 
-  @native bool operator <=(other) {
+  @fletch.native bool operator <=(other) {
     // TODO(kasperl): Check error.
     return other._compareLeFromInteger(this);
   }
 
-  @native bool operator >(other) {
+  @fletch.native bool operator >(other) {
     // TODO(kasperl): Check error.
     return other._compareGtFromInteger(this);
   }
 
-  @native bool operator >=(other) {
+  @fletch.native bool operator >=(other) {
     // TODO(kasperl): Check error.
     return other._compareGeFromInteger(this);
   }
@@ -415,3 +414,4 @@ class _Mint extends int {
 
   bool _compareGeFromInteger(other) => other._toMint() >= this;
 }
+

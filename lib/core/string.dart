@@ -2,15 +2,17 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dart.system;
+part of dart.core_patch;
 
-// TODO(ajohnsen): Rename String to e.g. _StringImpl.
-class String implements core.String {
+class _StringImpl implements String {
   static const int _MAX_CODE_UNIT = 0xFFFF;
   static const int _LEAD_SURROGATE_OFFSET = (0xD800 - (0x10000 >> 10));
   static const int _MAX_CHAR_CODE = 0x10FFFF;
 
-  static String fromCharCodes(Iterable<int> charCodes, int start, int end) {
+  factory _StringImpl.fromCharCodes(
+      Iterable<int> charCodes,
+      [int start = 0,
+       int end]) {
     if (end == null) end = charCodes.length;
     int length = end - start;
     if (start < 0 || length < 0) throw new RangeError.range(start, 0, length);
@@ -33,6 +35,12 @@ class String implements core.String {
     return str;
   }
 
+  factory _StringImpl.fromCharCode(int charCode) {
+    _StringImpl result = _create(_charCodeLength(charCode));
+    _encodeCharCode(result, charCode, 0);
+    return result;
+  }
+
   static int _stringLength(Iterable<int> charCodes, int start, int length) {
     int stringLength = 0;
     if (charCodes is List) {
@@ -51,15 +59,9 @@ class String implements core.String {
     return stringLength;
   }
 
-  static String fromCharCode(int charCode) {
-    String result = _create(_charCodeLength(charCode));
-    _encodeCharCode(result, charCode, 0);
-    return result;
-  }
-
   String toString() => this;
 
-  @native external int get length;
+  @fletch.native external int get length;
 
   bool get isEmpty => length == 0;
 
@@ -67,9 +69,9 @@ class String implements core.String {
 
   int get hashCode => identityHashCode(this);
 
-  @native external bool operator ==(Object other);
+  @fletch.native external bool operator ==(Object other);
 
-  @native String operator +(String other) {
+  @fletch.native String operator +(String other) {
     throw new ArgumentError(other);
   }
 
@@ -98,11 +100,11 @@ class String implements core.String {
     return _substring(index, index + 1);
   }
 
-  @native int codeUnitAt(int index) {
-    switch (nativeError) {
-      case wrongArgumentType:
+  @fletch.native int codeUnitAt(int index) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
         throw new ArgumentError();
-      case indexOutOfBounds:
+      case fletch.indexOutOfBounds:
         throw new IndexError(index, this);
     }
   }
@@ -244,7 +246,7 @@ class String implements core.String {
     return (charCode <= _MAX_CODE_UNIT) ? 1 : 2;
   }
 
-  static int _encodeCharCode(String char, int charCode, int offset) {
+  static int _encodeCharCode(_StringImpl char, int charCode, int offset) {
     if (charCode < 0 || charCode > _MAX_CHAR_CODE) {
       throw new ArgumentError(charCode);
     }
@@ -258,23 +260,23 @@ class String implements core.String {
     return length;
   }
 
-  @native String _substring(int start, int end) {
-    switch (nativeError) {
-      case wrongArgumentType:
+  @fletch.native String _substring(int start, int end) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
         throw new ArgumentError();
-      case indexOutOfBounds:
+      case fletch.indexOutOfBounds:
         throw new IndexError(start, this);
     }
   }
 
-  @native void _setCodeUnitAt(int index, int char) {
-    switch (nativeError) {
-      case wrongArgumentType:
+  @fletch.native void _setCodeUnitAt(int index, int char) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
         throw new ArgumentError();
-      case indexOutOfBounds:
+      case fletch.indexOutOfBounds:
         throw new IndexError(index, this);
     }
   }
 
-  @native external static String _create(int length);
+  @fletch.native external static _StringImpl _create(int length);
 }
