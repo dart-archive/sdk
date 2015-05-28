@@ -22,14 +22,20 @@ struct Socket::SocketData {
 
 Socket::Socket() : data_(new SocketData()) {
   data_->fd = socket(AF_INET, SOCK_STREAM, 0);
-  ASSERT(data_->fd >= 0);
-  fcntl(data_->fd, FD_CLOEXEC);
+  if (data_->fd < 0) FATAL("Failed socket creation.");
+  int status = fcntl(data_->fd, FD_CLOEXEC);
+  if (status == -1) FATAL("Failed making socket close on exec.");
+  int optval = 1;
+  status = setsockopt(data_->fd, SOL_SOCKET, SO_REUSEADDR,
+                      &optval, sizeof(optval));
+  if (status == -1) FATAL("Failed setting socket options.");
 }
 
 Socket::Socket(int fd) : data_(new SocketData()) {
   data_->fd = fd;
   ASSERT(data_->fd >= 0);
-  fcntl(data_->fd, FD_CLOEXEC);
+  int status = fcntl(data_->fd, FD_CLOEXEC);
+  if (status == -1) FATAL("Failed making socket close on exec.");
 }
 
 Socket::~Socket() {
@@ -68,7 +74,7 @@ bool Socket::Connect(const char* host, int port) {
 void Socket::Bind(const char* host, int port) {
   struct sockaddr addr = LookupAddress(host, port);
   int status = bind(data_->fd, &addr, sizeof(struct sockaddr_in));
-  ASSERT(status == 0);
+  if (status == -1) FATAL("Failed Socket::Bind.");
 }
 
 int Socket::Listen() {
@@ -79,7 +85,7 @@ int Socket::Listen() {
   status = getsockname(data_->fd,
                        reinterpret_cast<struct sockaddr*>(&addr),
                        &len);
-  ASSERT(status == 0);
+  if (status == -1) FATAL("Failed Socket::Listen.");
   return ntohs(addr.sin_port);
 }
 
