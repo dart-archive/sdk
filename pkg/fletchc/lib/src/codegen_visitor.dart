@@ -2063,7 +2063,7 @@ abstract class CodegenVisitor
           "Unbalanced number of block locals and stack slots used by block.");
     }
 
-    for (int i = blockLocals.length - 1; i >= 0 ; --i) {
+    for (int i = blockLocals.length - 1; i >= 0; --i) {
       // TODO(ajohnsen): Pop range bytecode?
       builder.pop();
       popVariableDeclaration(blockLocals[i]);
@@ -2208,6 +2208,19 @@ abstract class CodegenVisitor
 
     builder.bind(afterBody);
 
+    for (int i = blockLocals.length - 1; i >= 0; --i) {
+      LocalElement local = blockLocals[i];
+      // If the locals are captured by reference, load the current value and
+      // store it in a new boxed.
+      if (closureEnvironment.shouldBeBoxed(local)) {
+        LocalValue value = scope[local];
+        value.load(builder);
+        value.initialize(builder);
+        builder.storeSlot(value.slot);
+        builder.pop();
+      }
+    }
+
     for (Node update in node.update) {
       visitForEffect(update);
     }
@@ -2215,7 +2228,7 @@ abstract class CodegenVisitor
 
     builder.bind(end);
 
-    for (int i = blockLocals.length - 1; i >= 0 ; --i) {
+    for (int i = blockLocals.length - 1; i >= 0; --i) {
       builder.pop();
       popVariableDeclaration(blockLocals[i]);
     }
