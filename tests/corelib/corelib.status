@@ -19,15 +19,11 @@ collection_length_test: Crash
 collection_removes_test: Fail
 collection_to_string_test: Fail
 compare_to2_test: Fail
-core_runtime_types_test: Crash
+core_runtime_types_test: Fail
 date_time2_test: Crash
 date_time3_test: Crash
 date_time4_test: Crash
-date_time5_test: Crash
-date_time6_test: Crash
 date_time7_test: Crash
-date_time8_test: Crash
-date_time9_test: Crash
 date_time_parse_test: Crash
 date_time_test: Crash
 double_ceil_test: Fail
@@ -78,7 +74,7 @@ int_truncate_to_double_test: Fail
 integer_to_radix_string_test: Fail
 integer_to_string_test/01: Fail
 integer_to_string_test/none: Fail
-is_operator_basic_types_test: Crash
+is_operator_basic_types_test: Fail
 iterable_fold_test: Crash
 iterable_generate_test: Fail
 iterable_join_test: Fail
@@ -205,7 +201,7 @@ string_from_environment2_test: RuntimeError
 string_from_environment_test: RuntimeError
 string_from_list_test: Fail
 string_fromcharcodes_test: Crash
-string_operations_with_null_test: Crash
+string_operations_with_null_test: Fail
 string_pattern_test: Fail
 string_replace_all_test: Fail
 string_replace_dollar_test: Crash

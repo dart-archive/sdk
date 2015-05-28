@@ -144,7 +144,9 @@ NATIVE(SmiMod) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word y_value = Smi::cast(y)->value();
   if (y_value == 0) return Failure::index_out_of_bounds();
-  return Smi::FromWord(x->value() % y_value);
+  word result = x->value() % y_value;
+  if (result < 0) result += (y_value > 0) ? y_value : -y_value;
+  return Smi::FromWord(result);
 }
 
 NATIVE(SmiDiv) {
@@ -309,7 +311,9 @@ NATIVE(MintMod) {
       (y_value == -1 && x->value() == (-1LL << 63))) {
     return Failure::index_out_of_bounds();
   }
-  return process->ToInteger(x->value() % y_value);
+  int64 result = x->value() % y_value;
+  if (result < 0) result += (y_value > 0) ? y_value : -y_value;
+  return process->ToInteger(result);
 }
 
 NATIVE(MintDiv) {
@@ -1098,6 +1102,36 @@ NATIVE(StringSubstring) {
   String* result = String::cast(raw_string);
   memcpy(result->byte_address_for(0), x->byte_address_for(start), data_size);
   return result;
+}
+
+NATIVE(DateTimeGetCurrentMs) {
+  uint64 us = Platform::GetMicroseconds();
+  return process->ToInteger(us / 1000);
+}
+
+static int64 kMaxTimeZoneOffsetSeconds = 2100000000;
+
+NATIVE(DateTimeTimeZone) {
+  word seconds = AsForeignWord(arguments[0]);
+  if (seconds < 0 || seconds > kMaxTimeZoneOffsetSeconds) {
+    return Failure::index_out_of_bounds();
+  }
+  const char* name = Platform::GetTimeZoneName(seconds);
+  return process->NewStringFromAscii(List<const char>(name, strlen(name)));
+}
+
+NATIVE(DateTimeTimeZoneOffset) {
+  word seconds = AsForeignWord(arguments[0]);
+  if (seconds < 0 || seconds > kMaxTimeZoneOffsetSeconds) {
+    return Failure::index_out_of_bounds();
+  }
+  int offset = Platform::GetTimeZoneOffset(seconds);
+  return process->ToInteger(offset);
+}
+
+NATIVE(DateTimeLocalTimeZoneOffset) {
+  int offset = Platform::GetLocalTimeZoneOffset();
+  return process->ToInteger(offset);
 }
 
 NATIVE(SystemGetEventHandler) {

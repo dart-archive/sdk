@@ -247,7 +247,6 @@ class ConstructorCodegen extends CodegenVisitor {
       NodeList arguments,
       Selector selector,
       _) {
-    // TODO(ajohnsen): Handle named arguments.
     // Load all parameters to the constructor, onto the stack.
     loadArguments(superConstructor, arguments, selector.callStructure);
     int initSlot = builder.stackSize -
@@ -264,7 +263,7 @@ class ConstructorCodegen extends CodegenVisitor {
       Selector selector,
       _) {
     // TODO(ajohnsen): Is this correct behavior?
-    // TODO(ajohnsen): Handle named arguments.
+    thisConstructor = thisConstructor.implementation;
     // Load all parameters to the constructor, onto the stack.
     loadArguments(thisConstructor, arguments, selector.callStructure);
     int initSlot = builder.stackSize -

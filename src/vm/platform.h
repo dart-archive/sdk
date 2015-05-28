@@ -63,6 +63,12 @@ class Platform {
   // Store file at 'ur'.
   static bool StoreFile(const char* uri, List<uint8> bytes);
 
+  static const char* GetTimeZoneName(int64_t seconds_since_epoch);
+
+  static int GetTimeZoneOffset(int64_t seconds_since_epoch);
+
+  static int GetLocalTimeZoneOffset();
+
   static OperatingSystem OS() {
 #if defined(__linux__)
     return kLinux;

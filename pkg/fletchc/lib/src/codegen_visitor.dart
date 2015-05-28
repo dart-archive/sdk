@@ -885,7 +885,8 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
-    handleStaticallyBoundInvoke(node, element, arguments, callStructure);
+    handleStaticallyBoundInvoke(
+        node, element.declaration, arguments, callStructure);
     applyVisitState();
   }
 

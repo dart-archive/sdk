@@ -629,7 +629,8 @@ void InterpreterGeneratorX86::InvokeSub(const char* fallback) {
 }
 
 void InterpreterGeneratorX86::InvokeMod(const char* fallback) {
-  InvokeDivision(fallback, false);
+  // TODO(ajohnsen): idiv may yield a negative remainder.
+  __ jmp(fallback);
 }
 
 void InterpreterGeneratorX86::InvokeMul(const char* fallback) {

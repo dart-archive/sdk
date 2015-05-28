@@ -97,6 +97,36 @@ bool Platform::StoreFile(const char* uri, List<uint8> bytes) {
   return true;
 }
 
+static bool LocalTime(int64_t seconds_since_epoch, tm* tm_result) {
+  time_t seconds = static_cast<time_t>(seconds_since_epoch);
+  if (seconds != seconds_since_epoch) return false;
+  struct tm* error_code = localtime_r(&seconds, tm_result);
+  return error_code != NULL;
+}
+
+const char* Platform::GetTimeZoneName(int64_t seconds_since_epoch) {
+  tm decomposed;
+  bool succeeded = LocalTime(seconds_since_epoch, &decomposed);
+  // If unsuccessful, return an empty string like V8 does.
+  return (succeeded && (decomposed.tm_zone != NULL)) ? decomposed.tm_zone : "";
+}
+
+int Platform::GetTimeZoneOffset(int64_t seconds_since_epoch) {
+  tm decomposed;
+  bool succeeded = LocalTime(seconds_since_epoch, &decomposed);
+  // Even if the offset was 24 hours it would still easily fit into 32 bits.
+  // If unsuccessful, return zero like V8 does.
+  return succeeded ? static_cast<int>(decomposed.tm_gmtoff) : 0;
+}
+
+int Platform::GetLocalTimeZoneOffset() {
+  // TODO(ajohnsen): avoid excessive calls to tzset?
+  tzset();
+  // Even if the offset was 24 hours it would still easily fit into 32 bits.
+  // Note that Unix and Dart disagree on the sign.
+  return static_cast<int>(-timezone);
+}
+
 // Constants used for mmap.
 static const int kMmapFd = -1;
 static const int kMmapFdOffset = 0;

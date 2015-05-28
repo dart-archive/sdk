@@ -111,6 +111,11 @@ namespace fletch {
   N(DoubleAtan2,                 "double", "atan2")                      \
   N(DoublePow,                   "double", "pow")                        \
                                                                          \
+  N(DateTimeGetCurrentMs,        "DateTime", "_getCurrentMs")            \
+  N(DateTimeTimeZone,            "DateTime", "_timeZone")                \
+  N(DateTimeTimeZoneOffset,      "DateTime", "_timeZoneOffset")          \
+  N(DateTimeLocalTimeZoneOffset, "DateTime", "_localTimeZoneOffset")     \
+                                                                         \
   N(ListNew,                     "_ConstantList", "_new")                \
   N(ListLength,                  "_ConstantList", "length")              \
   N(ListIndexGet,                "_ConstantList", "[]")                  \

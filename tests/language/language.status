@@ -133,9 +133,7 @@ const_evaluation_test/01: CompileTimeError
 const_factory_with_body_test/01: MissingCompileTimeError
 const_instance_field_test/01: MissingCompileTimeError
 const_locals_test: Fail
-const_map2_test/00: Crash
-const_map2_test/none: Crash
-const_map_test: Crash
+const_map_test: Fail
 const_native_factory_test/01: MissingCompileTimeError
 const_nested_test: Fail
 const_string_test: Fail
@@ -422,17 +420,14 @@ import_private_test/01: MissingCompileTimeError
 import_self_test/01: Fail
 import_self_test/none: Fail
 incr_op_test: Fail
-inference_list_or_null_test: Crash
 inferrer_closure_test: Fail
 instanceof2_test: Fail
 instanceof3_test: Fail
 instanceof4_test/01: Fail
 instanceof4_test/none: Fail
-int_test: Fail
 interceptor2_test: Fail
 interceptor3_test: Fail
 interceptor5_test: Fail
-interceptor9_test: Crash
 interface2_negative_test: Fail
 interface_cycle_test/01: MissingCompileTimeError
 interface_cycle_test/02: MissingCompileTimeError
@@ -471,11 +466,7 @@ list_test: Fail
 list_tracer_call_last_test: Fail
 local_function3_test: Fail
 local_function_test: Fail
-logical_expression2_test: Crash
-logical_expression3_test: Crash
-logical_expression4_test: Crash
-logical_expression5_test: Crash
-logical_expression_test: Crash
+logical_expression_test: CompileTimeError
 malbounded_type_cast_test: Fail
 malbounded_type_literal_test: Fail
 malbounded_type_test_test/01: Fail
@@ -554,8 +545,6 @@ prefix16_test: Fail
 prefix18_negative_test: Fail
 prefix21_test: Fail
 prefix7_negative_test: Fail
-pure_function2_test: Crash
-range_analysis3_test: Crash
 redirecting_factory_default_values_test/01: MissingCompileTimeError
 redirecting_factory_default_values_test/02: MissingCompileTimeError
 redirecting_factory_long_test: Fail
@@ -609,7 +598,7 @@ static_top_level_test/05: MissingCompileTimeError
 static_top_level_test/06: MissingCompileTimeError
 static_top_level_test/07: MissingCompileTimeError
 string_interpolation_newline_test: Fail
-super_bound_closure_test: Crash
+super_bound_closure_test: Fail
 super_call4_test: Fail
 super_closure_test: Fail
 super_getter_setter_test: Fail
@@ -651,7 +640,7 @@ type_check_const_function_typedef2_test/none: Crash
 type_check_const_function_typedef_test: Crash
 type_check_test: Fail
 type_checks_in_factory_method_test: Fail
-type_error_test: Crash
+type_error_test: Fail
 type_parameter_literal_test: Fail
 type_parameter_test/01: Fail
 type_parameter_test/02: Fail
@@ -690,7 +679,7 @@ type_variable_conflict_test/05: MissingCompileTimeError
 type_variable_conflict_test/06: MissingCompileTimeError
 type_variable_field_initializer_closure_test: Fail
 type_variable_field_initializer_test: Fail
-type_variable_function_type_test: Crash
+type_variable_function_type_test: Fail
 type_variable_identifier_expression_test: Fail
 type_variable_nested_test: Fail
 type_variable_scope_test/00: Fail
