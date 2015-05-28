@@ -20,8 +20,6 @@ import 'dart:math';
 
 part 'double.dart';
 part 'integer.dart';
-part 'linked_hash_map.dart';
-part 'linked_hash_set.dart';
 part 'list.dart';
 part 'map.dart';
 part 'string.dart';

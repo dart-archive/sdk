@@ -44,9 +44,9 @@ class _ConstantMap<K, V> implements Map<K, V> {
     }
   }
 
-  Iterable<K> get keys => new _MapIterable(_keys);
+  Iterable<K> get keys => new _ConstantMapIterable(_keys);
 
-  Iterable<V> get values => new _MapIterable(_values);
+  Iterable<V> get values => new _ConstantMapIterable(_values);
 
   int get length => _keys.length;
 
@@ -57,10 +57,10 @@ class _ConstantMap<K, V> implements Map<K, V> {
   String toString() => Maps.mapToString(this);
 }
 
-class _MapIterable<E> extends IterableBase<E> implements Iterable<E> {
+class _ConstantMapIterable<E> extends IterableBase<E> implements Iterable<E> {
   final _list;
 
-  _MapIterable(this._list);
+  _ConstantMapIterable(this._list);
 
   Iterator<E> get iterator => new ListIterator(_list);
 

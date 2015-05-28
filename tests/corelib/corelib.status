@@ -16,6 +16,10 @@ big_integer_parsed_div_rem_vm_test: Fail
 big_integer_parsed_mul_div_vm_test: Fail
 bit_twiddling_bigint_test: Fail
 bit_twiddling_test: Fail
+double_ceil_test: Fail
+double_floor_test: Fail
+double_round_test: Fail
+double_truncate_test: Fail
 
 # Object.runtimeType
 collection_length_test: Crash
@@ -32,12 +36,8 @@ date_time4_test: Crash
 date_time7_test: Crash
 date_time_parse_test: Crash
 date_time_test: Crash
-double_ceil_test: Fail
-double_floor_test: Fail
 double_parse_test/01: Fail
 double_parse_test/none: Fail
-double_round_test: Fail
-double_truncate_test: Fail
 error_stack_trace1_test: Fail
 error_stack_trace2_test: Crash
 error_stack_trace_test: Fail
@@ -61,10 +61,8 @@ from_environment_const_type_test/15: RuntimeError
 from_environment_const_type_test/16: RuntimeError
 from_environment_const_type_test/none: RuntimeError
 growable_list_test: Fail
-hash_map2_internal_test: Fail
-hash_map2_test: Fail
-hash_set_test/01: Crash
-hash_set_test/none: Crash
+hash_set_test/01: Fail
+hash_set_test/none: Fail
 hashcode_test: Fail
 indexed_list_access_test: Fail
 int_ceil_to_double_test: Fail
@@ -105,7 +103,7 @@ list_test/none: Crash
 map_from_iterable_test: Fail
 map_from_iterables_test: Fail
 map_keys2_test: Fail
-map_test: Crash
+map_test: Fail
 map_values2_test: Fail
 map_values3_test: Fail
 map_values4_test: Fail
@@ -187,7 +185,7 @@ regexp/unicode-handling_test: Crash
 regexp/unicodeCaseInsensitive_test: Crash
 regexp/zero-length-alternatives_test: Crash
 safe_to_string_test: Fail
-set_test: Crash
+set_test: Fail
 shuffle_test: Crash
 sort_test: Fail
 splay_tree_from_iterable_test: Fail

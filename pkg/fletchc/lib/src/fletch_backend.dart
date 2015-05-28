@@ -216,7 +216,7 @@ class FletchBackend extends Backend {
   static const String growableListName = '_GrowableList';
   static const String constantListName = '_ConstantList';
   static const String constantMapName = '_ConstantMap';
-  static const String linkedHashMapName = 'LinkedHashMapImpl';
+  static const String linkedHashMapName = 'LinkedHashMap';
   static const String noSuchMethodName = '_noSuchMethod';
   static const String noSuchMethodTrampolineName = '_noSuchMethodTrampoline';
 
@@ -265,6 +265,7 @@ class FletchBackend extends Backend {
   LibraryElement fletchSystemLibrary;
   LibraryElement fletchFFILibrary;
   LibraryElement fletchIOSystemLibrary;
+  LibraryElement collectionLibrary;
 
   FunctionElement fletchSystemEntry;
 
@@ -422,7 +423,7 @@ class FletchBackend extends Backend {
     growableListClass =
         loadClass(growableListName, fletchSystemLibrary).element;
     linkedHashMapClass =
-        loadClass(linkedHashMapName, fletchSystemLibrary).element;
+        loadClass(linkedHashMapName, collectionLibrary).element;
     // Register list constructors to world.
     // TODO(ahe): Register growableListClass through ResolutionCallbacks.
     growableListClass.constructors.forEach(world.registerStaticUse);
@@ -1179,20 +1180,22 @@ class FletchBackend extends Backend {
       });
     }
 
-    if (library.isPlatformLibrary && !library.isPatched) {
-      // Apply patch, if any.
-      Uri patchUri = compiler.resolvePatchUri(library.canonicalUri.path);
-      if (patchUri != null) {
-        return compiler.patchParser.patchLibrary(loader, patchUri, library);
-      }
-    }
-
     if (Uri.parse('dart:_fletch_system') == library.canonicalUri) {
       fletchSystemLibrary = library;
     } else if (Uri.parse('dart:ffi') == library.canonicalUri) {
       fletchFFILibrary = library;
     } else if (Uri.parse('dart:system') == library.canonicalUri) {
       fletchIOSystemLibrary = library;
+    } else if (Uri.parse('dart:collection') == library.canonicalUri) {
+      collectionLibrary = library;
+    }
+
+    if (library.isPlatformLibrary && !library.isPatched) {
+      // Apply patch, if any.
+      Uri patchUri = compiler.resolvePatchUri(library.canonicalUri.path);
+      if (patchUri != null) {
+        return compiler.patchParser.patchLibrary(loader, patchUri, library);
+      }
     }
   }
 

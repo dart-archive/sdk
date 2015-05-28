@@ -1357,9 +1357,11 @@ abstract class CodegenVisitor
                     "Failed to lookup default list constructor");
       return;
     }
-    // Call with empty arguments, as we call the default constructor.
-    callConstructor(
-        node, constructor, new NodeList.empty(), CallStructure.NO_ARGS);
+    assert(constructor.isFactoryConstructor);
+    // TODO(ajohnsen): Create _CompactLinkedHashMap directly?
+    CompiledFunction compiledFunction = requireCompiledFunction(constructor);
+    doStaticFunctionInvoke(
+        node, compiledFunction, new NodeList.empty(), CallStructure.NO_ARGS);
     Selector selector = new Selector.indexSet();
     for (Node element in node.entries) {
       builder.dup();
@@ -1851,6 +1853,23 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
+    // If the constructor has an implementation, the implementation is the
+    // factory we want to invoke. Redirect to
+    // visitRedirectingFactoryConstructorInvoke, so we handle both cases of
+    // either a factory or a redirecting factory.
+    if (constructor.implementation != constructor) {
+      ConstructorElement implementation = constructor.implementation;
+      visitRedirectingFactoryConstructorInvoke(
+          node,
+          constructor,
+          type,
+          implementation.effectiveTarget,
+          null,
+          arguments,
+          callStructure,
+          null);
+      return;
+    }
     // TODO(ahe): Remove ".declaration" when issue 23135 is fixed.
     CompiledFunction compiledFunction =
         requireCompiledFunction(constructor.declaration);
