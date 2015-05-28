@@ -16,10 +16,6 @@ regress_14348_test: Crash
 bit_shift_test: Fail
 
 [ $compiler == fletchc || $runtime == fletchc ]
-large_implicit_getter_test: Skip # TODO(ahe): Should be: Slow, Pass
-vm/regress_16873_test: Skip # TODO(ahe): Should be: Slow, Pass
-deferred_closurize_load_library_test: Skip # TODO(ajohnsen): Should be: Fail
-
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
 argument_definition_test/01: MissingCompileTimeError
@@ -175,7 +171,7 @@ cyclic_typedef_test/08: MissingCompileTimeError
 cyclic_typedef_test/09: MissingCompileTimeError
 cyclic_typedef_test/10: MissingCompileTimeError
 cyclic_typedef_test/11: MissingCompileTimeError
-deferred_closurize_load_library_test: Fail
+deferred_closurize_load_library_test: Crash
 deferred_constraints_constants_test/constructor1: MissingCompileTimeError
 deferred_constraints_constants_test/constructor2: MissingCompileTimeError
 deferred_constraints_constants_test/default_argument1: MissingCompileTimeError
