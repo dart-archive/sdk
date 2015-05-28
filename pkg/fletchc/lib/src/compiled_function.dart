@@ -65,6 +65,8 @@ class CompiledFunction {
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
   final Map<int, ConstantValue> classConstantValues = <int, ConstantValue>{};
+  final Map<Selector, CompiledFunction> parameterMappings =
+      <Selector, CompiledFunction>{};
   final int arity;
   final CompiledFunctionKind kind;
 
@@ -213,73 +215,75 @@ class CompiledFunction {
   CompiledFunction createParameterMappingFor(
       Selector selector,
       FletchContext context) {
-    // TODO(ajohnsen): Cache result!
-    assert(canBeCalledAs(selector));
-    int arity = selector.argumentCount;
-    if (hasThisArgument) arity++;
+    return parameterMappings.putIfAbsent(selector, () {
+      assert(canBeCalledAs(selector));
+      int arity = selector.argumentCount;
+      if (hasThisArgument) arity++;
 
-    CompiledFunction compiledFunction = new CompiledFunction.parameterStub(
-        context.backend.functions.length,
-        arity);
-    context.backend.functions.add(compiledFunction);
+      CompiledFunction compiledFunction = new CompiledFunction.parameterStub(
+          context.backend.functions.length,
+          arity);
+      context.backend.functions.add(compiledFunction);
 
-    BytecodeBuilder builder = compiledFunction.builder;
+      BytecodeBuilder builder = compiledFunction.builder;
 
-    void loadInitializerOrNull(ParameterElement parameter) {
-      Expression initializer = parameter.initializer;
-      if (initializer != null) {
-        ConstantExpression expression = context.compileConstant(
-            initializer,
-            parameter.memberContext.resolvedAst.elements,
-            isConst: true);
-        int constId = compiledFunction.allocateConstant(expression.value);
-        builder.loadConst(constId);
-      } else {
-        builder.loadLiteralNull();
-      }
-    }
-
-    // Load this.
-    if (hasThisArgument) builder.loadParameter(0);
-
-    int index = hasThisArgument ? 1 : 0;
-    signature.orderedForEachParameter((ParameterElement parameter) {
-      if (!parameter.isOptional) {
-        builder.loadParameter(index);
-      } else if (parameter.isNamed) {
-        int parameterIndex = selector.namedArguments.indexOf(parameter.name);
-        if (parameterIndex >= 0) {
-          if (hasThisArgument) parameterIndex++;
-          int position = selector.positionalArgumentCount + parameterIndex;
-          builder.loadParameter(position);
+      void loadInitializerOrNull(ParameterElement parameter) {
+        Expression initializer = parameter.initializer;
+        if (initializer != null) {
+          ConstantExpression expression = context.compileConstant(
+              initializer,
+              parameter.memberContext.resolvedAst.elements,
+              isConst: true);
+          int constId = compiledFunction.allocateConstant(expression.value);
+          builder.loadConst(constId);
         } else {
-          loadInitializerOrNull(parameter);
+          builder.loadLiteralNull();
         }
-      } else {
-        if (index < arity) {
+      }
+
+      // Load this.
+      if (hasThisArgument) builder.loadParameter(0);
+
+      int index = hasThisArgument ? 1 : 0;
+      signature.orderedForEachParameter((ParameterElement parameter) {
+        if (!parameter.isOptional) {
           builder.loadParameter(index);
+        } else if (parameter.isNamed) {
+          int parameterIndex = selector.namedArguments.indexOf(parameter.name);
+          if (parameterIndex >= 0) {
+            if (hasThisArgument) parameterIndex++;
+            int position = selector.positionalArgumentCount + parameterIndex;
+            builder.loadParameter(position);
+          } else {
+            loadInitializerOrNull(parameter);
+          }
         } else {
-          loadInitializerOrNull(parameter);
+          if (index < arity) {
+            builder.loadParameter(index);
+          } else {
+            loadInitializerOrNull(parameter);
+          }
         }
+        index++;
+      });
+
+      // TODO(ajohnsen): We have to be extra careful when overriding a
+      // method that takes optional arguments. We really should
+      // enumerate all the stubs in the superclasses and make sure
+      // they're overridden.
+      int constId = compiledFunction.allocateConstantFromFunction(methodId);
+      builder
+          ..invokeStatic(constId, index)
+          ..ret()
+          ..methodEnd();
+
+      if (memberOf != null) {
+        int fletchSelector = context.toFletchSelector(selector);
+        memberOf.methodTable[fletchSelector] = compiledFunction.methodId;
       }
-      index++;
+
+      return compiledFunction;
     });
-
-    // TODO(ajohnsen): We have to be extra careful when overriding a method that
-    // takes optional arguments. We really should enumerate all the stubs in the
-    // superclasses and make sure they're overridden.
-    int constId = compiledFunction.allocateConstantFromFunction(methodId);
-    builder
-        ..invokeStatic(constId, index)
-        ..ret()
-        ..methodEnd();
-
-    if (memberOf != null) {
-      int fletchSelector = context.toFletchSelector(selector);
-      memberOf.methodTable[fletchSelector] = compiledFunction.methodId;
-    }
-
-    return compiledFunction;
   }
 
   String verboseToString() {
