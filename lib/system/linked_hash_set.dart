@@ -4,7 +4,9 @@
 
 part of dart.system;
 
-class LinkedHashSetImpl<E> extends IterableBase<E> implements LinkedHashSet<E> {
+class LinkedHashSetImpl<E>
+    extends IterableBase<E> with SetMixin<E>
+    implements LinkedHashSet<E> {
   static const int _INITIAL_SIZE = 8;
 
   _Node _sentinel = new _Node(null);
@@ -32,10 +34,6 @@ class LinkedHashSetImpl<E> extends IterableBase<E> implements LinkedHashSet<E> {
   Set<E> toSet() => new LinkedHashSetImpl.from(this);
 
   int get length => _elements;
-
-  bool get isEmpty => _elements == 0;
-
-  bool get isNotEmpty => _elements != 0;
 
   bool add(E value) {
     var bucketCount = _buckets.length;
@@ -108,40 +106,6 @@ class LinkedHashSetImpl<E> extends IterableBase<E> implements LinkedHashSet<E> {
   }
 
   bool contains(Object object) => lookup(object) != null;
-
-  void removeAll(Iterable<Object> elements) {
-    elements.forEach((E each) {
-      remove(each);
-    });
-  }
-
-  void retainAll(Iterable<Object> elements) {
-    throw new UnimplementedError("LinkedHashSet.retainAll");
-  }
-
-  void removeWhere(bool test(E element)) {
-    throw new UnimplementedError("LinkedHashSet.removeWhere");
-  }
-
-  void retainWhere(bool test(E element)) {
-    throw new UnimplementedError("LinkedHashSet.retainWhere");
-  }
-
-  bool containsAll(Iterable<Object> other) {
-    throw new UnimplementedError("LinkedHashSet.containsAll");
-  }
-
-  Set<E> intersection(Set<Object> other) {
-    throw new UnimplementedError("LinkedHashSet.intersection");
-  }
-
-  Set<E> union(Set<E> other) {
-    throw new UnimplementedError("LinkedHashSet.union");
-  }
-
-  Set<E> difference(Set<E> other) {
-    throw new UnimplementedError("LinkedHashSet.difference");
-  }
 
   void clear() {
     _sentinel.nextLink = _sentinel;

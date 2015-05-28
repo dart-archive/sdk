@@ -266,14 +266,22 @@ class _GrowableList<E> extends ListBase<E> implements List<E> {
   }
 
   void removeWhere(bool test(E element)) {
-    for (int i = 0; i < _length; i++) {
-      if (test(this[i])) removeAt(i);
+    for (int i = 0; i < _length;) {
+      if (test(this[i])) {
+        removeAt(i);
+      } else {
+        i++;
+      }
     }
   }
 
   void retainWhere(bool test(E element)) {
-    for (int i = 0; i < _length; i++) {
-      if (!test(this[i])) removeAt(i);
+    for (int i = 0; i < _length;) {
+      if (!test(this[i])) {
+        removeAt(i);
+      } else {
+        i++;
+      }
     }
   }
 

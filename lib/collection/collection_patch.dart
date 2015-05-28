@@ -237,7 +237,9 @@ class _ValueIterator<K, V>
   V get current => (_current != null) ? _current.value : null;
 }
 
-class _HashSet<E> extends IterableBase<E> implements HashSet<E> {
+class _HashSet<E>
+    extends IterableBase<E> with SetMixin<E>
+    implements HashSet<E> {
   static const int _INITIAL_SIZE = 8;
 
   List _buckets;
@@ -249,13 +251,9 @@ class _HashSet<E> extends IterableBase<E> implements HashSet<E> {
 
   Iterator<E> get iterator => new _HashSetIterator(this);
 
-  Set<E> toSet() => new _HashSet.from(this);
+  Set<E> toSet() => new _HashSet<E>._(length)..addAll(this);
 
   int get length => _elements;
-
-  bool get isEmpty => _elements == 0;
-
-  bool get isNotEmpty => _elements != 0;
 
   bool add(E value) {
     var bucketCount = _buckets.length;
@@ -325,34 +323,6 @@ class _HashSet<E> extends IterableBase<E> implements HashSet<E> {
     elements.forEach((E each) {
       remove(each);
     });
-  }
-
-  void retainAll(Iterable<Object> elements) {
-    throw new UnimplementedError("HashSet.retainAll");
-  }
-
-  void removeWhere(bool test(E element)) {
-    throw new UnimplementedError("HashSet.removeWhere");
-  }
-
-  void retainWhere(bool test(E element)) {
-    throw new UnimplementedError("HashSet.retainWhere");
-  }
-
-  bool containsAll(Iterable<Object> other) {
-    throw new UnimplementedError("HashSet.containsAll");
-  }
-
-  Set<E> intersection(Set<Object> other) {
-    throw new UnimplementedError("HashSet.intersection");
-  }
-
-  Set<E> union(Set<E> other) {
-    throw new UnimplementedError("HashSet.union");
-  }
-
-  Set<E> difference(Set<E> other) {
-    throw new UnimplementedError("HashSet.difference");
   }
 
   void clear() {
