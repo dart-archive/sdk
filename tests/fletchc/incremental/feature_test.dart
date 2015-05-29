@@ -64,15 +64,9 @@ import 'program_result.dart';
 
 typedef Future NoArgFuture();
 
-const int TIMEOUT = 100;
-
-// TODO(ahe): Remove this when fletchc is more fully-featured.
-const ProgramExpectation SKIP =
-    const ProgramExpectation(const <String>['skip'], skip: true);
-
-const List<EncodedResult> tests = const <EncodedResult>[
+const Map<String, EncodedResult> tests = const <String, EncodedResult>{
     // Basic hello-world test.
-    const EncodedResult(
+    "hello_world": const EncodedResult(
         const [
             "main() { print('Hello, ",
             const ["", "Brave New "],
@@ -87,7 +81,7 @@ const List<EncodedResult> tests = const <EncodedResult>[
 
     // Test that we can manipulate a field from an instance
     // of a class from the end of the field list.
-    const EncodedResult(
+    "instance_field_end": const EncodedResult(
         r"""
 ==> main.dart.patch <==
 class A {
@@ -126,7 +120,7 @@ main() {
 
     // Test that we can manipulate a field from an instance
     // of a class from the middle of the field list.
-    const EncodedResult(
+    "instance_field_middle": const EncodedResult(
         r"""
 ==> main.dart.patch <==
 class A {
@@ -172,7 +166,7 @@ main() {
         ]),
 
     // Test that schema changes affect subclasses correctly.
-    const EncodedResult(
+    "subclass_schema_1": const EncodedResult(
         r"""
 ==> main.dart.patch <==
 class A {
@@ -221,7 +215,7 @@ main() {
         ]),
 
     // Test that schema changes affect subclasses of subclasses correctly.
-    const EncodedResult(
+    "subclass_schema_2": const EncodedResult(
         r"""
 ==> main.dart.patch <==
 class A {
@@ -274,7 +268,7 @@ main() {
 
     // Test that schema changes work in the presence of fields in
     // the superclass.
-    const EncodedResult(
+    "super_schema": const EncodedResult(
         r"""
 ==> main.dart.patch <==
 class A {
@@ -322,7 +316,7 @@ main() {
                     'x = 3', 'y = null', 'z = 2']),
         ]),
 
-    const EncodedResult(
+    "add_instance_field": const EncodedResult(
         r"""
 ==> main.dart.patch <==
 // Test adding a field to a class works.
@@ -362,7 +356,7 @@ main() {
                     'v2']),
         ]),
 
-    const EncodedResult(
+    "remove_instance_field": const EncodedResult(
         r"""
 ==> main.dart.patch <==
 // Test removing a field from a class works.
@@ -401,7 +395,7 @@ main() {
         ]),
 
     // Test that the test framework handles more than one update.
-    const EncodedResult(
+    "two_updates": const EncodedResult(
         const [
             "main() { print('",
             const [
@@ -421,7 +415,7 @@ main() {
         ]),
 
     // Test that that isolate support works.
-    const EncodedResult(
+    "main_args": const EncodedResult(
         const [
             "main(arguments) { print(",
             const [
@@ -437,7 +431,7 @@ main() {
                 const <String>['[]']),
         ]),
 
-    const EncodedResult(
+    "stored_closure": const EncodedResult(
         const [
             r"""
 // Test that a stored closure changes behavior when updated.
@@ -467,14 +461,13 @@ main() {
 }
 """],
         const <ProgramExpectation>[
-            SKIP,
             const ProgramExpectation(
                 const <String>['[closure] is null.', 'a b', 'a c']),
             const ProgramExpectation(
                 const <String>['b a', 'c a']),
         ]),
 
-    const EncodedResult(
+    "modify_static_method": const EncodedResult(
         const [
             """
 // Test modifying a static method works.
@@ -505,7 +498,7 @@ main() {
                 const <String>['v2']),
         ]),
 
-    const EncodedResult(
+    "modify_instance_method": const EncodedResult(
         const [
             """
 // Test modifying an instance method works.
@@ -544,7 +537,7 @@ main() {
                     'v2']),
         ]),
 
-    const EncodedResult(
+    "stored_instance_tearoff": const EncodedResult(
         const [
             """
 // Test that a stored instance tearoff changes behavior when updated.
@@ -575,14 +568,13 @@ main() {
 
         ],
         const <ProgramExpectation>[
-            SKIP,
             const ProgramExpectation(
                 const <String>['closure is null', 'v1']),
             const ProgramExpectation(
                 const <String>['v2']),
         ]),
 
-    const EncodedResult(
+    "remove_instance_method": const EncodedResult(
         const [
             """
 // Test that deleting an instance method works.
@@ -623,7 +615,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "remove_instance_method_super_access": const EncodedResult(
         const [
             """
 // Test that deleting an instance method works, even when accessed through
@@ -672,7 +664,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "remove_top_level_method": const EncodedResult(
         const [
             """
 // Test that deleting a top-level method works.
@@ -716,7 +708,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "remove_static_method": const EncodedResult(
         const [
             """
 // Test that deleting a static method works.
@@ -769,7 +761,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "newly_instantiated_class": const EncodedResult(
         const [
             """
 // Test that a newly instantiated class is handled.
@@ -817,7 +809,7 @@ main() {
                   ]),
         ]),
 
-    const EncodedResult(
+    "source_maps_no_throw": const EncodedResult(
         const [
             """
 // Test that source maps don't throw exceptions.
@@ -844,7 +836,7 @@ main() {
                 const <String>['a', 'b', 'c']),
         ]),
 
-    const EncodedResult(
+    "newly_instantiated_class_X": const EncodedResult(
         // TODO(ahe): How is this different from the other test with same
         // comment.
         const [
@@ -893,7 +885,7 @@ main() {
             //     const <String>['Called B.m']),
         ]),
 
-    const EncodedResult(
+    "newly_instantiated_class_with_fields": const EncodedResult(
         const [
             r"""
 // Test that fields of a newly instantiated class are handled.
@@ -931,7 +923,7 @@ main() {
                 const <String>['v2']),
         ]),
 
-    const EncodedResult(
+    "add_top_level_method": const EncodedResult(
         const [
             r"""
 // Test that top-level functions can be added.
@@ -962,7 +954,7 @@ main() {
                 const <String>['v2']),
         ]),
 
-    const EncodedResult(
+    "add_static_method": const EncodedResult(
         const [
             r"""
 // Test that static methods can be added.
@@ -997,7 +989,7 @@ main() {
                 const <String>['v2']),
         ]),
 
-    const EncodedResult(
+    "add_instance_method": const EncodedResult(
         const [
             r"""
 // Test that instance methods can be added.
@@ -1040,7 +1032,7 @@ main() {
                     'v2']),
         ]),
 
-    const EncodedResult(
+    "signature_change_top_level_method": const EncodedResult(
         const [
             r"""
 // Test that top-level functions can have signature changed.
@@ -1073,7 +1065,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "signature_change_static_method": const EncodedResult(
         const [
             r"""
 // Test that static methods can have signature changed.
@@ -1108,7 +1100,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "signature_change_instance_method": const EncodedResult(
         const [
             r"""
 // Test that instance methods can have signature changed.
@@ -1150,7 +1142,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "add_class": const EncodedResult(
         const [
             r"""
 // Test that adding a class is supported.
@@ -1188,7 +1180,7 @@ main() {
                 const <String>['v2']),
         ]),
 
-    const EncodedResult(
+    "remove_class": const EncodedResult(
         const [
             r"""
 // Test that removing a class is supported, using constructor.
@@ -1221,7 +1213,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "remove_class_with_static_method": const EncodedResult(
         const [
             r"""
 // Test that removing a class is supported, using a static method.
@@ -1256,7 +1248,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "change_supertype": const EncodedResult(
         const [
             r"""
 // Test that changing the supertype of a class works.
@@ -1306,8 +1298,7 @@ main() {
                     'v2']),
         ]),
 
-
-    const EncodedResult(
+    "call_named_arguments_1": const EncodedResult(
         const [
             r"""
 // Test that named arguments can be called.
@@ -1347,10 +1338,10 @@ main() {
                     'v2']),
         ]),
 
-    const EncodedResult(
+    "call_named_arguments_2": const EncodedResult(
         const [
             r"""
-// Test than named arguments can be called.
+// Test that named arguments can be called.
 
 class C {
   foo({a, named: 'v2', x}) {
@@ -1387,7 +1378,7 @@ main() {
                     'v2']),
         ]),
 
-    const EncodedResult(
+    "call_instance_tear_off_named": const EncodedResult(
         const [
             r"""
 // Test that an instance tear-off with named parameters can be called.
@@ -1419,14 +1410,13 @@ main() {
 """,
         ],
         const <ProgramExpectation>[
-            SKIP,
             const ProgramExpectation(
                 const <String>['closure is null', 'v1']),
             const ProgramExpectation(
                 const <String>['v2']),
         ]),
 
-    const EncodedResult(
+    "lazy_static": const EncodedResult(
         const [
             r"""
 // Test that a lazy static is supported.
@@ -1466,14 +1456,13 @@ main() {
 """,
         ],
         const <ProgramExpectation>[
-            SKIP,
             const ProgramExpectation(
                 const <String>['v1']),
             const ProgramExpectation(
                 const <String>['v2', 'lazy']),
         ]),
 
-    const EncodedResult(
+    "super_classes_of_directly_instantiated": const EncodedResult(
         const [
             r"""
 // Test that superclasses of directly instantiated classes are also emitted.
@@ -1505,7 +1494,7 @@ main() {
                 const <String>['v2']),
         ]),
 
-    const EncodedResult(
+    "interceptor_classes": const EncodedResult(
         const [
             r"""
 // Test that interceptor classes are handled correctly.
@@ -1531,7 +1520,7 @@ main() {
                 const <String>['v2']),
         ]),
 
-    const EncodedResult(
+    "newly_instantiated_superclasses_two_updates": const EncodedResult(
         const [
             r"""
 // Test that newly instantiated superclasses are handled correctly when there
@@ -1576,7 +1565,7 @@ main() {
                 const <String>['Called bar']),
         ]),
 
-    const EncodedResult(
+    "newly_instantiated_subclases_two_updates": const EncodedResult(
         const [
             r"""
 // Test that newly instantiated subclasses are handled correctly when there is
@@ -1621,7 +1610,7 @@ main() {
                 const <String>['Called bar']),
         ]),
 
-    const EncodedResult(
+    "constants": const EncodedResult(
         const [
             r"""
 // Test that constants are handled correctly.
@@ -1652,7 +1641,7 @@ main() {
                 const <String>['v2']),
         ]),
 
-    const EncodedResult(
+    "add_compound_instance_field": const EncodedResult(
         const [
             r"""
 // Test that an instance field can be added to a compound declaration.
@@ -1703,7 +1692,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "remove_compound_instance_field": const EncodedResult(
         const [
             r"""
 // Test that an instance field can be removed from a compound declaration.
@@ -1752,7 +1741,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "static_field_to_instance_field": const EncodedResult(
         const [
             r"""
 // Test that a static field can be made an instance field.
@@ -1803,7 +1792,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "instance_field_to_static_field": const EncodedResult(
         const [
             r"""
 // Test that instance field can be made static.
@@ -1845,7 +1834,6 @@ main() {
 """,
         ],
         const <ProgramExpectation>[
-            SKIP,
             const ProgramExpectation(
                 const <String>['[instance] is null', '[C.x] threw', 'v1']),
             const ProgramExpectation(
@@ -1854,7 +1842,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "compound_constants": const EncodedResult(
         const [
             r"""
 // Test compound constants.
@@ -1896,7 +1884,7 @@ main() {
                 const <String>['B(A(v2))', 'A(B(v2))']),
         ]),
 
-    const EncodedResult(
+    "constants_of_new_classes": const EncodedResult(
         const [
             r"""
 // Test constants of new classes.
@@ -1947,7 +1935,7 @@ main() {
                 const <String>['A(v2)', 'B(v2)', 'B(A(v2))', 'A(B(v2))']),
         ]),
 
-    const EncodedResult(
+    "change_in_part": const EncodedResult(
         r"""
 ==> main.dart <==
 // Test that a change in a part is handled.
@@ -1972,7 +1960,7 @@ main() {
             'Hello, Brave New World!',
         ]),
 
-    const EncodedResult(
+    "change_library_name": const EncodedResult(
         r"""
 ==> main.dart.patch <==
 // Test that a change in library name is handled.
@@ -1994,7 +1982,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "add_import": const EncodedResult(
         r"""
 ==> main.dart.patch <==
 // Test that adding an import is handled.
@@ -2015,7 +2003,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "add_export": const EncodedResult(
         r"""
 ==> main.dart.patch <==
 // Test that adding an export is handled.
@@ -2036,7 +2024,7 @@ main() {
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "add_part": const EncodedResult(
         r"""
 ==> main.dart.patch <==
 // Test that adding a part is handled.
@@ -2063,7 +2051,7 @@ part of test.main
                 compileUpdatesShouldThrow: true),
         ]),
 
-    const EncodedResult(
+    "multiple_libraries": const EncodedResult(
         r"""
 ==> main.dart <==
 // Test that changes in multiple libraries is handled.
@@ -2108,14 +2096,14 @@ method() {
             const <String>['lib1.v2', 'lib2.v2'],
             const <String>['lib1.v3', 'lib2.v3'],
         ]),
-];
+};
 
 void main() {
   int skip = const int.fromEnvironment("skip", defaultValue: 0);
   testCount += skip;
   skippedCount += skip;
 
-  var testsToRun = tests.skip(skip);
+  var testsToRun = tests.values.skip(skip);
   // TODO(ahe): Remove the following line, as it means only run the
   // first few tests.
   testsToRun = testsToRun.take(8);
@@ -2141,12 +2129,6 @@ compileAndRun(EncodedResult encodedResult) async {
   testCount++;
 
   updateSummary();
-  if (encodedResult.expectations.first == SKIP) {
-    skippedCount++;
-    print("\n\nTest skipped.\n\n");
-    return;
-  }
-
   List<ProgramResult> programs = encodedResult.decode();
 
   // The first program is compiled "fully". There rest are compiled below
@@ -2493,13 +2475,9 @@ Future<Map<String, NoArgFuture>> listTests() {
     main();
   }
   Map<String, NoArgFuture> result = <String, NoArgFuture>{};
-  int testNumber = 10001;
-  for (EncodedResult test in tests) {
-    // TODO(ahe): Don't invent names, turn [tests] into a map that includes
-    // names.
-    String testName = 'incremental/encoded/${"$testNumber".substring(1)}';
+  tests.forEach((String name, EncodedResult test) {
+    String testName = 'incremental/encoded/$name';
     result[testName] = () => compileAndRun(test);
-    testNumber++;
-  }
+  });
   return new Future<Map<String, NoArgFuture>>.value(result);
 }
