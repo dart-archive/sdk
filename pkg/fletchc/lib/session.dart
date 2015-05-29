@@ -427,6 +427,7 @@ class Session {
   }
 
   void quit() {
+    const SessionEnd().addTo(vmSocket);
     vmSocket.close();
   }
 

@@ -2246,8 +2246,7 @@ compileAndRun(EncodedResult encodedResult) async {
                const commands_lib.PushBoolean(true),
                const commands_lib.ChangeMethodLiteral(0),
                const commands_lib.CommitChanges(1),
-               const commands_lib.ProcessContinue(),
-               const commands_lib.SessionEnd()]) {
+               const commands_lib.ProcessContinue()]) {
         print(command);
         command.addTo(session.vmSocket);
       }
@@ -2470,11 +2469,12 @@ class TestSession extends Session {
       : super(vmSocket, compiler);
 
   void exit(int exitCode) {
+    // TODO(ahe/ager): Rename exit to something less conflicting with io.exit.
     if (!exitIsExpected) {
-      throw "Unexpected exit from VM ($exitCode).";
+      throw "Unexpected exit from TestSession ($exitCode).";
     } else {
       Expect.equals(0, exitCode);
-      print("VM process exited with exit code = $exitCode.");
+      print("TestSession ended with exit code = $exitCode.");
     }
   }
 }
