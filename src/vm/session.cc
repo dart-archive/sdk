@@ -193,6 +193,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessLocal: {
+        int classMap = connection_->ReadInt();
         int frame = connection_->ReadInt();
         int slot = connection_->ReadInt();
         Object* local = StackWalker::ComputeLocal(process_, frame, slot);
@@ -202,11 +203,26 @@ void Session::ProcessMessages() {
               : LargeInteger::cast(local)->value();
           connection_->WriteInt64(value);
           connection_->Send(Connection::kInteger);
+        } else if (local->IsTrue() || local->IsFalse()) {
+          connection_->WriteBoolean(local->IsTrue());
+          connection_->Send(Connection::kBoolean);
+        } else if (local->IsNull()) {
+          connection_->Send(Connection::kNull);
+        } else if (local->IsDouble()) {
+          connection_->WriteDouble(Double::cast(local)->value());
+          connection_->Send(Connection::kDouble);
+        } else if (local->IsString()) {
+          // TODO(ager): We should send the character data as 16-bit values
+          // instead of 32-bit values.
+          String* str = String::cast(local);
+          for (int i = 0; i < str->length(); i++) {
+            connection_->WriteInt(str->get_code_unit(i));
+          }
+          connection_->Send(Connection::kString);
         } else {
-          // TODO(ager): Instead of directly pushing the class we should
-          // add the object to an object map supplied by the debugger and
-          // pass back the reference for the debugger to use.
           Push(HeapObject::cast(local)->get_class());
+          int64 id = MapLookup(classMap);
+          connection_->WriteInt64(id);
           connection_->Send(Connection::kInstance);
         }
         break;
@@ -397,13 +413,6 @@ void Session::ProcessMessages() {
         int id = MapLookup(map_index);
         connection_->WriteInt(id);
         connection_->Send(Connection::kObjectId);
-        break;
-      }
-
-      case Connection::kPopInteger: {
-        int64_t value = PopInteger();
-        connection_->WriteInt64(value);
-        connection_->Send(Connection::kInteger);
         break;
       }
 

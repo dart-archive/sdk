@@ -71,8 +71,8 @@ class CommandReader {
     return result;
   }
 
-  List readBytes(int size) {
-    var result = new List(size);
+  Uint8List readBytes(int size) {
+    var result = new Uint8List(size);
     for (int i = 0; i < size; ++i) {
       int byte = readByte();
       if (byte == null) return null;

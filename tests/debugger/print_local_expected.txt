@@ -1,0 +1,19 @@
+Starting session. Type 'help' for a list of commands.
+
+> b breakHere
+breakpoint set: 0: breakHere @0
+> r
+Stack trace:
+> 0: breakHere	
+  1: main     	@breakHere()
+> f 1
+> p
+f: false
+t: true
+d: 42.42
+n: null
+a: instance of A
+i2: 8589934592
+i: 42
+str: 'spaß'
+> q

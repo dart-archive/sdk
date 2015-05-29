@@ -13,6 +13,7 @@ import 'dart:convert' show
 import 'dart:typed_data' show
     ByteData,
     Endianness,
+    Float64List,
     Uint16List,
     Uint8List;
 
@@ -90,6 +91,10 @@ class CommandBuffer {
     }
     return result;
   }
+
+  static double readDoubleFromBuffer(Uint8List buffer, int offset) {
+    return new Float64List.view(buffer.buffer, offset, 1).first;
+  }
 }
 
 class Command {
@@ -99,13 +104,27 @@ class Command {
 
   const Command(this.code);
 
-  factory Command.fromBuffer(CommandCode code, List<int> buffer) {
+  factory Command.fromBuffer(CommandCode code, Uint8List buffer) {
     switch (code) {
       case CommandCode.Instance:
-        return const Instance();
+        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        return new Instance(classId);
       case CommandCode.Integer:
         int value = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new Integer(value);
+      case CommandCode.Double:
+        return new Double(CommandBuffer.readDoubleFromBuffer(buffer, 0));
+      case CommandCode.Boolean:
+        return new Boolean(buffer[0] != 0);
+      case CommandCode.Null:
+        return const NullValue();
+      case CommandCode.String:
+        int length = buffer.length ~/ 4;
+        List<int> codeUnits = new List<int>(length);
+        for (int i = 0; i < length; i++) {
+          codeUnits[i] = CommandBuffer.readInt32FromBuffer(buffer, i * 4);
+        }
+        return new StringValue(new String.fromCharCodes(codeUnits));
       case CommandCode.ObjectId:
         int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ObjectId(id);
@@ -610,14 +629,16 @@ class ProcessBreakpoint extends Command {
 }
 
 class ProcessLocal extends Command {
+  final MapId classMap;
   final int frame;
   final int slot;
 
-  const ProcessLocal(this.frame, this.slot)
+  const ProcessLocal(this.classMap, this.frame, this.slot)
       : super(CommandCode.ProcessLocal);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
+        ..addUint32(classMap.index)
         ..addUint32(frame)
         ..addUint32(slot)
         ..sendOn(sink, code);
@@ -691,27 +712,65 @@ class WriteSnapshot extends Command {
   }
 }
 
-class PopInteger extends Command {
-  const PopInteger()
-      : super(CommandCode.PopInteger);
+class DartValue extends Command {
+  const DartValue(CommandCode code)
+      : super(code);
 }
 
-class Instance extends Command {
-  const Instance()
+class Instance extends DartValue {
+  final int classId;
+
+  const Instance(this.classId)
       : super(CommandCode.Instance);
 }
 
-class Integer extends Command {
+class Integer extends DartValue {
   final int value;
 
   const Integer(this.value)
-    : super(CommandCode.Integer);
+      : super(CommandCode.Integer);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
         ..addUint64(value)
         ..sendOn(sink, code);
   }
+
+  String toString() => '$value';
+}
+
+class Double extends DartValue {
+  final double value;
+
+  const Double(this.value)
+      : super(CommandCode.Double);
+
+  String toString() => '$value';
+}
+
+class Boolean extends DartValue {
+  final bool value;
+
+  const Boolean(this.value)
+      : super(CommandCode.Boolean);
+
+  String toString() => '$value';
+}
+
+class NullValue extends DartValue {
+  const NullValue()
+      : super(CommandCode.Null);
+
+  String toString() => 'null';
+}
+
+class StringValue extends DartValue {
+  final String value;
+
+  const StringValue(this.value)
+      : super(CommandCode.String);
+
+  String toString() => '\'$value\'';
 }
 
 enum CommandCode {
@@ -776,8 +835,11 @@ enum CommandCode {
   MapLookup,
   ObjectId,
 
-  PopInteger,
   Integer,
+  Boolean,
+  Null,
+  Double,
+  String,
   Instance
 }
 

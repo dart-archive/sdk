@@ -108,8 +108,11 @@ class Connection {
     kMapLookup,
     kObjectId,
 
-    kPopInteger,
     kInteger,
+    kBoolean,
+    kNull,
+    kDouble,
+    kString,
     kInstance
   };
 

@@ -254,7 +254,7 @@ class HeapObject: public Object {
   inline void set_immutable(bool immutable);
 
   inline Smi* IdentityHashCode();
-  
+
   // Scavenge support.
   HeapObject* forwarding_address();
   void set_forwarding_address(HeapObject* value);

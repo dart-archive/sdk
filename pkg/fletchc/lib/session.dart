@@ -7,8 +7,8 @@ library fletch.session;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' hide exit;
-
 import 'dart:io' as io;
+import 'dart:typed_data' show Uint8List;
 
 import 'bytecodes.dart';
 import 'commands.dart';
@@ -382,21 +382,19 @@ class Session {
 
   Future printLocal(String name, LocalValue local) async {
     var actualFrameNumber = currentStackTrace.actualFrameNumber(currentFrame);
-    new ProcessLocal(actualFrameNumber, local.slot).addTo(vmSocket);
+    new ProcessLocal(MapId.classes,
+                     actualFrameNumber,
+                     local.slot).addTo(vmSocket);
     Command response = await nextVmCommand();
-    if (response is Integer) {
-      print('$name: ${response.value}');
-      return null;
+    assert(response is DartValue);
+    if (response is Instance) {
+      Instance i = response;
+      String className = compiler.lookupClassName(i.classId);
+      print('$name: instance of $className');
+    } else {
+      DartValue value = response;
+      print('$name: $value');
     }
-    assert(response is Instance);
-    // The local is an instance of a class. The class is on the session stack,
-    // lookup the class id in the class map and drop the class from the session
-    // stack.
-    new MapLookup(MapId.classes).addTo(vmSocket);
-    const Drop(1).addTo(vmSocket);
-    var classId = (await nextVmCommand()).id;
-    String className = compiler.lookupClassName(classId);
-    print('$name: instance of $className');
   }
 
   Future printAllVariables() async {
