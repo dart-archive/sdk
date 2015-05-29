@@ -261,13 +261,9 @@ class _StringImpl implements String {
     throw "get runes isn't implemented";
   }
 
-  toLowerCase() {
-    throw "toLowerCase() isn't implemented";
-  }
+  @fletch.native external String toLowerCase();
 
-  toUpperCase() {
-    throw "toUpperCase() isn't implemented";
-  }
+  @fletch.native external String toUpperCase();
 
   static int _charCodeLength(int charCode) {
     return (charCode <= _MAX_CODE_UNIT) ? 1 : 2;

@@ -189,9 +189,6 @@ splay_tree_from_iterable_test: Fail
 splay_tree_from_iterables_test: Fail
 splay_tree_test: Fail
 string_case_test/01: Fail
-string_case_test/02: Fail
-string_case_test/03: Fail
-string_case_test/none: Fail
 string_codeunits_test: Fail
 string_from_environment2_test: RuntimeError
 string_from_environment_test: RuntimeError
@@ -233,7 +230,6 @@ uri_normalize_test: Fail
 uri_parse_test: Fail
 uri_path_test: Fail
 uri_query_test: Fail
-uri_scheme_test: Fail
 uri_test: Fail
 
 [ $compiler == fletchc || $runtime == fletchc && $asan]
