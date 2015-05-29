@@ -110,7 +110,7 @@ class TestOptionsParser {
               ['-r', '--runtime'],
               ['none', 'fletchc', 'fletchd', 'fletchvm', 'fletch_warnings',
                'fletch_tests'],
-              'fletch_warnings,fletchd,fletchc'),
+              'fletch_warnings,fletchd,fletch_tests,fletchc'),
           new _TestOptionSpecification(
               'arch',
               'The architecture to run tests for',
