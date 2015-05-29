@@ -132,7 +132,7 @@ class _StringImpl implements String {
     if (index == null) index = 0;
     int otherLength = other.length;
     if (index + otherLength > length) return false;
-    for (int i = index; i < otherLength; i++) {
+    for (int i = 0; i < otherLength; i++) {
       if (codeUnitAt(index + i) != other.codeUnitAt(i)) return false;
     }
     return true;
@@ -148,16 +148,36 @@ class _StringImpl implements String {
     return true;
   }
 
+  int indexOf(Pattern pattern, [int start]) {
+    if (pattern is! String) {
+      throw new UnimplementedError(
+          "String.indexOf only accepts String patterns");
+    }
+    int length = this.length;
+    if (start == null) start = 0;
+    // TODO(ajohnsen): Inline the other loop.
+    for (int i = start; i < length; i++) {
+      if (startsWith(pattern, i)) return i;
+    }
+    return -1;
+  }
+
+  int lastIndexOf(Pattern pattern, [int start]) {
+    if (pattern is! String) {
+      throw new UnimplementedError(
+          "String.lastIndexOf only accepts String patterns");
+    }
+    int length = this.length;
+    if (start == null) start = length;
+    // TODO(ajohnsen): Inline the other looping.
+    for (int i = start; i >= 0; i--) {
+      if (startsWith(pattern, i)) return i;
+    }
+    return -1;
+  }
+
   allMatches(string, [start]) {
     throw "allMatches(string, [start]) isn't implemented";
-  }
-
-  indexOf(pattern, [start]) {
-    throw "indexOf(pattern, [start]) isn't implemented";
-  }
-
-  lastIndexOf(pattern, [start]) {
-    throw "lastIndexOf(pattern, [start]) isn't implemented";
   }
 
   matchAsPrefix(string, [start]) {
@@ -204,8 +224,10 @@ class _StringImpl implements String {
     throw "replaceAllMapped(from, replace) isn't implemented";
   }
 
-  replaceRange(start, end, replacement) {
-    throw "replaceRange(start, end, replacement) isn't implemented";
+  String replaceRange(int start, int end, String replacement) {
+    if (end == null) end = length;
+    // TODO(ajohnsen): Optimize.
+    return substring(0, start) + replacement + substring(end);
   }
 
   List<String> split(Pattern pattern) {

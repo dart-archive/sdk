@@ -69,9 +69,11 @@ NATIVE(IntParse) {
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   Smi* radix = Smi::cast(y);
   char* chars = str->ToCString();
-  int64 result = strtoll(chars, NULL, radix->value());
+  char* end = chars;
+  int64 result = strtoll(chars, &end, radix->value());
+  bool error = (end != chars + str->length()) || (errno == ERANGE);
   free(chars);
-  if (errno == ERANGE) return Failure::index_out_of_bounds();
+  if (error) return Failure::index_out_of_bounds();
   return process->ToInteger(result);
 }
 

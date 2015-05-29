@@ -192,17 +192,35 @@ const patch = "patch";
 @patch class int {
   @patch static int parse(
       String source,
-      {int radix: 0,
+      {int radix,
        int onError(String source)}) {
-    return _parse(source, radix);
+    if (source.isEmpty) {
+      throw new FormatException("Can't parse string as integer", source);
+    }
+    if (radix == null) {
+      if (source.startsWith('0x') ||
+          source.startsWith('-0x') ||
+          source.startsWith('+0x')) {
+        radix = 16;
+      } else {
+        radix = 10;
+      }
+    } else {
+      if (radix < 2 || radix > 36) throw new ArgumentError(radix);
+    }
+    return _parse(source, radix, onError);
   }
 
-  @fletch.native static _parse(String source, int radix) {
+  @fletch.native static _parse(
+      String source,
+      int radix,
+      int onError(String source)) {
     switch (fletch.nativeError) {
       case fletch.wrongArgumentType:
         throw new ArgumentError(source);
       case fletch.indexOutOfBounds:
-        throw new FormatException("Can't parse to an integer", source);
+        if (onError != null) return onError(source);
+        throw new FormatException("Can't parse string as integer", source);
     }
   }
 

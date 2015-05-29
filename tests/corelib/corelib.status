@@ -223,11 +223,7 @@ unicode2_test: Fail
 unicode_test: Fail
 uri_base_test: Crash
 uri_file_test: Crash
-uri_http_test: Fail
-uri_ipv4_test: Fail
-uri_ipv6_test: Fail
 uri_normalize_test: Fail
-uri_parse_test: Fail
 uri_path_test: Fail
 uri_query_test: Fail
 uri_test: Fail
