@@ -20,6 +20,7 @@ double_ceil_test: Fail
 double_floor_test: Fail
 double_round_test: Fail
 double_truncate_test: Fail
+integer_to_radix_string_test: Fail
 
 # Object.runtimeType
 collection_length_test: Crash
@@ -74,7 +75,6 @@ int_parse_radix_test/02: Fail
 int_parse_radix_test/none: Fail
 int_round_to_double_test: Fail
 int_truncate_to_double_test: Fail
-integer_to_radix_string_test: Fail
 integer_to_string_test/01: Fail
 is_operator_basic_types_test: Fail
 iterable_fold_test: Crash
@@ -223,7 +223,6 @@ unicode2_test: Fail
 unicode_test: Fail
 uri_base_test: Crash
 uri_file_test: Crash
-uri_normalize_test: Fail
 uri_path_test: Fail
 uri_query_test: Fail
 uri_test: Fail

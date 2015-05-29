@@ -33,6 +33,59 @@ abstract class _IntBase implements int {
 
   int toInt() => this;
 
+  static const _digits = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+  String toRadixString(int radix) {
+    if (this == -0x8000000000000000) {
+      throw UnimplementedError("Integer too large: $radix");
+    }
+    if (radix < 2 || radix > 36) {
+      throw new ArgumentError(radix);
+    }
+    if (radix & (radix - 1) == 0) {
+      return _toPow2String(radix);
+    }
+    if (radix == 10) return this.toString();
+    final bool isNegative = this < 0;
+    int value = isNegative ? -this : this;
+    List temp = new List();
+    do {
+      int digit = value % radix;
+      value ~/= radix;
+      temp.add(_digits.codeUnitAt(digit));
+    } while (value > 0);
+    if (isNegative) temp.add(0x2d);  // '-'.
+
+    _StringImpl string = _StringImpl._create(temp.length);
+    for (int i = 0, j = temp.length; j > 0; i++) {
+      string._setCodeUnitAt(i, temp[--j]);
+    }
+    return string;
+  }
+
+  String _toPow2String(int radix) {
+    int value = this;
+    if (value == 0) return "0";
+    assert(radix & (radix - 1) == 0);
+    var negative = value < 0;
+    var bitsPerDigit = radix.bitLength - 1;
+    var length = 0;
+    if (negative) {
+      value = -value;
+      length = 1;
+    }
+    // Integer division, rounding up, to find number of _digits.
+    length += (value.bitLength + bitsPerDigit - 1) ~/ bitsPerDigit;
+    _StringImpl string = _StringImpl._create(length);
+    string._setCodeUnitAt(0, 0x2d);  // '-'. Is overwritten if not negative.
+    var mask = radix - 1;
+    do {
+      string._setCodeUnitAt(--length, _digits.codeUnitAt(value & mask));
+      value >>= bitsPerDigit;
+    } while (value > 0);
+    return string;
+  }
+
   String toStringAsFixed(int fractionDigits) {
     return toDouble().toStringAsFixed(fractionDigits);
   }
@@ -101,10 +154,6 @@ abstract class _IntBase implements int {
 
   toSigned(width) {
     throw "toSigned(width) isn't implemented";
-  }
-
-  toRadixString(radix) {
-    throw "toRadixString(radix) isn't implemented";
   }
 
   // From num.
