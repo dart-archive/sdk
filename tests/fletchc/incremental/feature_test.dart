@@ -2254,6 +2254,7 @@ compileAndRun(EncodedResult encodedResult) async {
       session.exitIsExpected = true;
       await session.handleProcessStop();
     }
+    const commands_lib.SessionEnd().addTo(session.vmSocket);
     session.quit();
     print("Waiting for VM to exit");
     Expect.equals(0, await session.process.exitCode);
