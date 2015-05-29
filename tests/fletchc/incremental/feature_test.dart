@@ -2243,11 +2243,17 @@ compileAndRun(EncodedResult encodedResult) async {
       print("VM exited with exit code: $exitCode.");
     });
 
+    session.vmSocket.done.catchError((error, StackTrace stackTrace) {
+      print("Ignoring socket error: $error");
+      if (stackTrace != null) {
+        print(stackTrace);
+      }
+    });
     session.process.kill();
 
-    session.quit();
-
     await Future.wait([stderrFuture, stdoutFuture, exitFuture]);
+
+    session.quit();
   });
 
   Expect.equals(-15, vmExitCode, "Unexpected exit code from fletch VM");
