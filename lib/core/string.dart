@@ -109,16 +109,47 @@ class _StringImpl implements String {
     }
   }
 
+  String operator *(int times) {
+    if (times <= 0) return "";
+    if (times == 1) return this;
+    int length = this.length;
+    _StringImpl str = _create(length * times);
+    for (int i = 0; i < times; i++) {
+      int offset = i * length;
+      for (int j = 0; j < length; j++) {
+        str._setCodeUnitAt(offset + j, codeUnitAt(j));
+      }
+    }
+    return str;
+  }
+
+  startsWith(Pattern pattern, [int index]) {
+    if (pattern is! String) {
+      throw new UnimplementedError(
+          "String.startsWith only accepts String patterns");
+    }
+    String other = pattern;
+    if (index == null) index = 0;
+    int otherLength = other.length;
+    if (index + otherLength > length) return false;
+    for (int i = index; i < otherLength; i++) {
+      if (codeUnitAt(index + i) != other.codeUnitAt(i)) return false;
+    }
+    return true;
+  }
+
+  bool endsWith(String other) {
+    int otherLength = other.length;
+    int offset = length - otherLength;
+    if (offset < 0) return false;
+    for (int i = 0; i < otherLength; i++) {
+      if (codeUnitAt(offset + i) != other.codeUnitAt(i)) return false;
+    }
+    return true;
+  }
+
   allMatches(string, [start]) {
     throw "allMatches(string, [start]) isn't implemented";
-  }
-
-  endsWith(other) {
-    throw "endsWith(other) isn't implemented";
-  }
-
-  startsWith(pattern, [index]) {
-    throw "startsWith(pattern, [index]) isn't implemented";
   }
 
   indexOf(pattern, [start]) {
@@ -143,10 +174,6 @@ class _StringImpl implements String {
 
   trimRight() {
     throw "trimRight() isn't implemented";
-  }
-
-  operator* (times) {
-    throw "operator*(times) isn't implemented";
   }
 
   padLeft(width, [padding]) {

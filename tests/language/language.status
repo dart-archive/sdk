@@ -409,8 +409,6 @@ getters_setters_type_test/none: Fail
 implicit_closure_test: Fail
 implicit_scope_test: Crash
 import_private_test/01: MissingCompileTimeError
-import_self_test/01: Fail
-import_self_test/none: Fail
 incr_op_test: Fail
 inferrer_closure_test: Fail
 instanceof2_test: Fail
@@ -529,7 +527,6 @@ overridden_no_such_method_test: CompileTimeError
 override_inheritance_mixed_test/08: CompileTimeError
 override_inheritance_mixed_test/09: CompileTimeError
 parameter_initializer_test: Fail
-parse_closures_in_initializers_test: Fail
 positional_parameters_type_test/01: MissingRuntimeError
 positional_parameters_type_test/02: MissingRuntimeError
 prefix16_test: Fail
