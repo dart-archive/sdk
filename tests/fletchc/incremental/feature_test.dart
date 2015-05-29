@@ -2254,8 +2254,6 @@ compileAndRun(EncodedResult encodedResult) async {
       session.exitIsExpected = true;
       await session.handleProcessStop();
     }
-    const commands_lib.SessionEnd().addTo(session.vmSocket);
-    session.quit();
     print("Waiting for VM to exit");
     Expect.equals(0, await session.process.exitCode);
     print("VM exited");
@@ -2468,6 +2466,13 @@ class TestSession extends Session {
       this.stderr,
       this.methodId)
       : super(vmSocket, compiler);
+
+  void quit() {
+    // If we are terminating, tell the VM that the session is over before
+    // closing the socket.
+    if (exitIsExpected) const commands_lib.SessionEnd().addTo(vmSocket);
+    super.quit();
+  }
 
   void exit(int exitCode) {
     // TODO(ahe/ager): Rename exit to something less conflicting with io.exit.
