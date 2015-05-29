@@ -2243,9 +2243,9 @@ compileAndRun(EncodedResult encodedResult) async {
       print("VM exited with exit code: $exitCode.");
     });
 
-    session.quit();
-
     session.process.kill();
+
+    session.quit();
 
     await Future.wait([stderrFuture, stdoutFuture, exitFuture]);
   });
