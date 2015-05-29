@@ -58,7 +58,7 @@ class ScopeInformationVisitor extends ElementVisitor/* <void> */ {
     serialize(e, omitEnclosing: false);
   }
 
-  void visitLibraryElement(LibraryElement e) {
+  void visitLibraryElement(LibraryElement e, _) {
     bool isFirst = true;
     forEach(Element member) {
       if (!isFirst) {
@@ -103,7 +103,7 @@ class ScopeInformationVisitor extends ElementVisitor/* <void> */ {
         });
   }
 
-  void visitClassElement(ClassElement e) {
+  void visitClassElement(ClassElement e, _) {
     currentClass = e;
     serializeClassSide(e, isStatic: true);
   }
@@ -183,11 +183,11 @@ class ScopeInformationVisitor extends ElementVisitor/* <void> */ {
     });
   }
 
-  void visitCompilationUnitElement(CompilationUnitElement e) {
-    e.enclosingElement.accept(this);
+  void visitCompilationUnitElement(CompilationUnitElement e, _) {
+    e.enclosingElement.accept(this, _);
   }
 
-  void visitAbstractFieldElement(AbstractFieldElement e) {
+  void visitAbstractFieldElement(AbstractFieldElement e, _) {
     throw new UnsupportedError('AbstractFieldElement cannot be serialized.');
   }
 
@@ -273,7 +273,7 @@ class ScopeInformationVisitor extends ElementVisitor/* <void> */ {
       if (serializeEnclosing != null) {
         serializeEnclosing();
       } else {
-        element.enclosingElement.accept(this);
+        element.enclosingElement.accept(this, null);
       }
     }
     indentationLevel--;

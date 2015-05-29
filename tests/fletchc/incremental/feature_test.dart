@@ -2320,12 +2320,12 @@ class SerializeScopeTestCase extends CompilerTestCase {
     visitor.indented.write('[\n');
     visitor.indentationLevel++;
     visitor.indented;
-    visitor.visitLibraryElement(library);
+    library.accept(visitor, null);
     library.forEachLocalMember((Element member) {
       if (member.isClass) {
         visitor.buffer.write(',\n');
         visitor.indented;
-        member.accept(visitor);
+        member.accept(visitor, null);
       }
     });
     visitor.buffer.write('\n');
@@ -2488,6 +2488,10 @@ class TestSession extends Session {
 
 /// Invoked by ../../fletch_tests/fletch_test_suite.dart.
 Future<Map<String, NoArgFuture>> listTests() {
+  if (false) {
+    // Tell dart2js --analyze-only that [main] is used.
+    main();
+  }
   Map<String, NoArgFuture> result = <String, NoArgFuture>{};
   int testNumber = 10001;
   for (EncodedResult test in tests) {

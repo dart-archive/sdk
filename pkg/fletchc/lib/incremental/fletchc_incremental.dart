@@ -36,6 +36,9 @@ import 'package:compiler/src/js/js.dart' as jsAst;
 import '../compiler.dart' show
    FletchCompiler;
 
+import '../src/fletch_compiler.dart' as implementation show
+   FletchCompiler;
+
 import '../src/fletch_backend.dart' show
     FletchBackend;
 
@@ -62,7 +65,7 @@ class IncrementalCompiler {
   final List<Command> _updates = <Command>[];
   final IncrementalCompilerContext _context = new IncrementalCompilerContext();
 
-  Compiler _compiler;
+  implementation.FletchCompiler _compiler;
 
   IncrementalCompiler({
       this.libraryRoot,
@@ -89,7 +92,7 @@ class IncrementalCompiler {
 
   LibraryElement get mainApp => _compiler.mainApp;
 
-  Compiler get compiler => _compiler;
+  implementation.FletchCompiler get compiler => _compiler;
 
   Future<bool> compile(Uri script) {
     return _reuseCompiler(null).then((Compiler compiler) {

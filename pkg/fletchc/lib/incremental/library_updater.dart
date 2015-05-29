@@ -353,7 +353,7 @@ class LibraryUpdater extends FletchFeatures {
     Uri entryUri = library.entryCompilationUnit.script.resourceUri;
     Script entryScript =
         scripts.singleWhere((Script script) => script.resourceUri == entryUri);
-    LibraryElement newLibrary =
+    LibraryElementX newLibrary =
         new LibraryElementX(entryScript, library.canonicalUri);
     if (_entryUnitTokens.containsKey(library)) {
       compiler.dietParser.dietParse(

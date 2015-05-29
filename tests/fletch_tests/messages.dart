@@ -28,7 +28,9 @@ abstract class Message {
     Map<String, dynamic> data = JSON.decode(json);
     String type = data['type'];
     switch (type) {
-      case 'InternalErrorMessage': return new ErrorMessage.fromJsonData(data);
+      case 'InternalErrorMessage':
+        return new InternalErrorMessage.fromJsonData(data);
+
       case 'Info': return new Info.fromJsonData(data);
       case 'ListTests': return const ListTests();
       case 'ListTestsReply': return new ListTestsReply.fromJsonData(data);
@@ -74,7 +76,7 @@ abstract class ErrorMessage extends Message {
 
 /// Notify that an internal error occurred in this framework (there's a bug in
 /// the framework).
-abstract class InternalErrorMessage extends Message {
+class InternalErrorMessage extends ErrorMessage {
   InternalErrorMessage(String error, String stackTrace)
       : super(error, stackTrace);
 
