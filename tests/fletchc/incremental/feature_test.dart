@@ -2161,6 +2161,10 @@ compileAndRun(EncodedResult encodedResult) async {
 
   TestSession session = await runFletchVM(test, commands);
 
+  bool hasStderrOutput = false;
+  bool hasExtraStdoutOutput = false;
+  int vmExitCode;
+
   // TODO(ahe): Replace new Future with try/finally when Dart VM bug 23537 is
   // fixed.
   await new Future(() async {
@@ -2238,31 +2242,35 @@ compileAndRun(EncodedResult encodedResult) async {
       }
     }
   }).whenComplete(() async {
-    session.iterator.cancel();
-    if (session.running) {
-      for (Command command in [
-               const commands_lib.PrepareForChanges(),
-               new commands_lib.PushFromMap(MapId.methods, session.methodId),
-               const commands_lib.PushBoolean(true),
-               const commands_lib.ChangeMethodLiteral(0),
-               const commands_lib.CommitChanges(1),
-               const commands_lib.ProcessContinue()]) {
-        print(command);
-        command.addTo(session.vmSocket);
-      }
 
-      session.exitIsExpected = true;
-      await session.handleProcessStop();
-    }
-    print("Waiting for VM to exit");
-    Expect.equals(0, await session.process.exitCode);
-    print("VM exited");
+    var stderrFuture = new Future(() async {
+      await for (String line in session.stderr) {
+        hasStderrOutput = true;
+        print('fletch_vm_stderr: $line');
+      }
+    });
+    var stdoutFuture = new Future(() async {
+      while (await session.iterator.moveNext()) {
+        hasExtraStdoutOutput = true;
+        print('fletch_vm_stdout: ${session.iterator.current}');
+      }
+    });
+
+    var exitFuture = session.process.exitCode.then((int exitCode) {
+      vmExitCode = exitCode;
+      print("VM exited with exit code: $exitCode.");
+    });
+
+    session.quit();
+
+    session.process.kill();
+
+    await Future.wait([stderrFuture, stdoutFuture, exitFuture]);
   });
 
-  String stderr = (await session.stderr.toList()).join("\n");
-  if (stderr != "") {
-    throw "Unexpected stderr from fletch VM:\n$stderr";
-  }
+  Expect.equals(-15, vmExitCode, "Unexpected exit code from fletch VM");
+  Expect.isFalse(hasExtraStdoutOutput, "Unexpected fletch_vm_stdout");
+  Expect.isFalse(hasStderrOutput, "Unexpected fletch_vm_stderr");
 }
 
 class SerializeScopeTestCase extends CompilerTestCase {
@@ -2466,13 +2474,6 @@ class TestSession extends Session {
       this.stderr,
       this.methodId)
       : super(vmSocket, compiler);
-
-  void quit() {
-    // If we are terminating, tell the VM that the session is over before
-    // closing the socket.
-    if (exitIsExpected) const commands_lib.SessionEnd().addTo(vmSocket);
-    super.quit();
-  }
 
   void exit(int exitCode) {
     // TODO(ahe/ager): Rename exit to something less conflicting with io.exit.
