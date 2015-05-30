@@ -150,7 +150,6 @@ const_types_test/29: MissingCompileTimeError
 const_types_test/30: MissingCompileTimeError
 const_types_test/41: MissingCompileTimeError
 constructor6_test: Crash
-crash_6725_test/01: Crash
 cyclic_type2_test: Fail
 cyclic_type_test/00: Fail
 cyclic_type_test/01: Fail

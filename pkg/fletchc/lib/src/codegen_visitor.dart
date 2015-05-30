@@ -2282,6 +2282,9 @@ abstract class CodegenVisitor
           scope[element].store(builder);
         } else if (element.isField) {
           doStaticFieldSet(element);
+        } else if (element.isErroneous) {
+          handleUnresolved(element.name);
+          builder.pop();
         } else {
           internalError(node, "Unhandled store in for-in");
         }
