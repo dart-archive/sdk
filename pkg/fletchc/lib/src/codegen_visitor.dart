@@ -1184,22 +1184,16 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void doStaticFieldGet(FieldElement element) {
-    if (element.isConst) {
-      if (element.initializer == null) {
-        generateUnimplementedError(
-            element.node, "Const field must have an initializer");
-        return;
-      }
+  void doStaticFieldGet(FieldElement field) {
+    if (checkCompileError(field)) return;
+    if (field.isConst) {
       int constId = allocateConstantFromNode(
-          element.initializer,
-          elements: element.resolvedAst.elements);
+          field.initializer,
+          elements: field.resolvedAst.elements);
       builder.loadConst(constId);
     } else {
-      int index = context.backend.compileLazyFieldInitializer(
-          element,
-          registry);
-      if (element.initializer != null) {
+      int index = context.backend.compileLazyFieldInitializer(field, registry);
+      if (field.initializer != null) {
         builder.loadStaticInit(index);
       } else {
         builder.loadStatic(index);
