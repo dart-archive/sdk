@@ -1839,7 +1839,13 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
-    callConstructor(node, constructor, arguments, callStructure);
+    if (!checkCompileError(constructor)) {
+      if (callStructure.signatureApplies(constructor)) {
+        callConstructor(node, constructor, arguments, callStructure);
+      } else {
+        handleUnresolved(constructor.name);
+      }
+    }
     applyVisitState();
   }
 
