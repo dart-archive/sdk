@@ -29,10 +29,10 @@ incremental/encoded/stored_instance_tearoff: Fail
 incremental/encoded/super_classes_of_directly_instantiated: Fail
 
 [ $mode == debug && $arch == x64 && $asan ]
-incremental/encoded/add_instance_field: Fail # Issue 41.
-incremental/encoded/instance_field_end: Fail # Issue 41.
-incremental/encoded/instance_field_middle: Fail # Issue 41.
-incremental/encoded/remove_instance_field: Fail # Issue 41.
-incremental/encoded/subclass_schema_1: Fail # Issue 41.
-incremental/encoded/subclass_schema_2: Fail # Issue 41.
-incremental/encoded/super_schema: Fail # Issue 41.
+incremental/encoded/add_instance_field: Fail, Pass # Issue 41.
+incremental/encoded/instance_field_end: Fail, Pass # Issue 41.
+incremental/encoded/instance_field_middle: Fail, Pass # Issue 41.
+incremental/encoded/remove_instance_field: Fail, Pass # Issue 41.
+incremental/encoded/subclass_schema_1: Fail, Pass # Issue 41.
+incremental/encoded/subclass_schema_2: Fail, Pass # Issue 41.
+incremental/encoded/super_schema: Fail, Pass # Issue 41.
