@@ -192,14 +192,12 @@ string_case_test/01: Fail
 string_codeunits_test: Fail
 string_from_environment2_test: RuntimeError
 string_from_environment_test: RuntimeError
-string_from_list_test: Fail
 string_fromcharcodes_test: Crash
 string_operations_with_null_test: Fail
 string_pattern_test: Fail
 string_replace_all_test: Fail
 string_replace_dollar_test: Crash
 string_replace_test: Crash
-string_runes_test: Fail
 string_source_test: CompileTimeError
 string_split_test: Crash
 string_test: Crash

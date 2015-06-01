@@ -111,7 +111,6 @@ const_evaluation_test/01: CompileTimeError
 const_factory_with_body_test/01: MissingCompileTimeError
 const_instance_field_test/01: MissingCompileTimeError
 const_locals_test: Fail
-const_map_test: Fail
 const_native_factory_test/01: MissingCompileTimeError
 const_nested_test: Fail
 const_string_test: Fail

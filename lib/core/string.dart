@@ -284,9 +284,7 @@ class _StringImpl implements String {
     return result;
   }
 
-  get runes {
-    throw "get runes isn't implemented";
-  }
+  Runes get runes => new Runes(this);
 
   @fletch.native external String toLowerCase();
 
