@@ -222,7 +222,6 @@ factory_type_parameter_test: Fail
 fast_method_extraction_test: Fail
 field_decl_missing_var_type_test/01: MissingCompileTimeError
 field_increment_bailout_test: CompileTimeError
-field_inference_test: CompileTimeError
 field_initialization_order_test: Fail
 final_field_initialization_order_test: Fail
 final_syntax_test/08: Crash
@@ -425,7 +424,6 @@ list_test: Fail
 list_tracer_call_last_test: Fail
 local_function3_test: Fail
 local_function_test: Fail
-logical_expression_test: CompileTimeError
 malbounded_type_cast_test: Fail
 malbounded_type_literal_test: Fail
 malbounded_type_test_test/01: Fail
@@ -520,7 +518,6 @@ regress_18535_test: CompileTimeError
 regress_20935_test: Fail
 regress_r24720_test: Fail
 reify_typevar_test: Crash
-rethrow_test: Fail
 runtime_type_test: Crash
 scope_variable_test/01: MissingCompileTimeError
 script1_negative_test: Fail
@@ -566,7 +563,6 @@ this_test/01: MissingCompileTimeError
 this_test/03: MissingCompileTimeError
 this_test/05: MissingCompileTimeError
 this_test/07: MissingCompileTimeError
-throw3_test: Fail
 throwing_lazy_variable_test: Fail
 top_level_func_test: Fail
 top_level_in_initializer_test: Fail

@@ -120,11 +120,11 @@ class JumpInfo {
   JumpInfo(this.stackSize, this.continueLabel, this.breakLabel);
 }
 
-class FinallyBlock {
+class TryBlock {
   final int stackSize;
   final BytecodeLabel finallyLabel;
   final BytecodeLabel finallyReturnLabel;
-  FinallyBlock(this.stackSize, this.finallyLabel, this.finallyReturnLabel);
+  TryBlock(this.stackSize, this.finallyLabel, this.finallyReturnLabel);
 }
 
 abstract class CodegenVisitor
@@ -168,8 +168,8 @@ abstract class CodegenVisitor
 
   final Map<Node, JumpInfo> jumpInfo = <Node, JumpInfo>{};
 
-  // Stack of finally blocks (inner-most first), in the lexical scope.
-  Link<FinallyBlock> finallyBlockStack = const Link<FinallyBlock>();
+  // Stack of try blocks (inner-most first), in the lexical scope.
+  Link<TryBlock> tryBlockStack = const Link<TryBlock>();
 
   VisitState visitState;
   BytecodeLabel trueLabel;
@@ -1793,6 +1793,18 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void visitRethrow(Rethrow node) {
+    if (tryBlockStack.isEmpty) {
+      handleCompileError();
+    } else {
+      TryBlock block = tryBlockStack.head;
+      builder.loadSlot(block.stackSize - 1);
+      // TODO(ahe): It seems suboptimal that each throw is followed by a pop.
+      builder.emitThrow();
+    }
+    builder.pop();
+  }
+
   void callConstructor(Node node,
                        ConstructorElement constructor,
                        NodeList arguments,
@@ -2115,11 +2127,12 @@ abstract class CodegenVisitor
 
   void callFinallyBlocks(int targetStackSize, bool preserveTop) {
     int popCount = 0;
-    for (var block in finallyBlockStack) {
+    for (var block in tryBlockStack) {
       // Break once all exited finally blocks are processed. Finally blocks
       // are ordered by stack size which coincides with scoping. Blocks with
       // stack sizes at least equal to target size are being exited.
       if (block.stackSize < targetStackSize) break;
+      if (block.finallyLabel == null) continue;
       if (preserveTop) {
         // We reuse the exception slot as a temporary buffer for the top
         // element, which is located -1 relative to the block's stack size.
@@ -2452,13 +2465,11 @@ abstract class CodegenVisitor
 
     int startBytecodeSize = builder.byteSize;
 
-    if (hasFinally) {
-      finallyBlockStack = finallyBlockStack.prepend(
-          new FinallyBlock(
-              builder.stackSize,
-              finallyLabel,
-              finallyReturnLabel));
-    }
+    tryBlockStack = tryBlockStack.prepend(
+        new TryBlock(
+            builder.stackSize,
+            hasFinally ? finallyLabel : null,
+            hasFinally ? finallyReturnLabel: null));
 
     node.tryBlock.accept(this);
 
@@ -2473,8 +2484,9 @@ abstract class CodegenVisitor
       handleCatchBlock(catchBlock, exceptionSlot, end);
     }
 
+    tryBlockStack = tryBlockStack.tail;
+
     if (hasFinally) {
-      finallyBlockStack = finallyBlockStack.tail;
       if (!node.catchBlocks.isEmpty) {
         builder.addCatchFrameRange(endBytecodeSize, builder.byteSize);
       }
