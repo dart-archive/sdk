@@ -2550,7 +2550,9 @@ abstract class CodegenVisitor
       Node arguments,
       Selector selector,
       _) {
-    handleUnresolved(node.selector.toString());
+    if (!checkCompileError(element)) {
+      handleUnresolved(node.selector.toString());
+    }
     applyVisitState();
   }
 
@@ -2562,13 +2564,24 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void visitUnresolvedSet(
+      Send node,
+      Element element,
+      Node rhs,
+      _) {
+    handleUnresolved(node.selector.toString());
+    applyVisitState();
+  }
+
   void handleStaticFunctionIncompatibleInvoke(
       Send node,
       MethodElement function,
       NodeList arguments,
       CallStructure callStructure,
       _) {
-    handleUnresolved(function.name);
+    if (!checkCompileError(function)) {
+      handleUnresolved(function.name);
+    }
     applyVisitState();
   }
 
