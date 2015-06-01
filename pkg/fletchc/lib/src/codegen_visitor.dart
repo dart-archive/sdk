@@ -833,6 +833,7 @@ abstract class CodegenVisitor
       handleCompileError();
       return;
     }
+    if (context.compiler.libraryLoader.libraries.any(checkCompileError)) return;
     registerStaticInvocation(function);
     // Load up to 'parameterCount' arguments, padding with nulls.
     int parameterCount = function.functionSignature.parameterCount;
