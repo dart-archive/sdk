@@ -17,8 +17,7 @@ import 'dart:convert' show
 import 'dart:async' show
     Completer,
     Future,
-    StreamIterator,
-    Timer;
+    StreamIterator;
 
 import 'test_suite.dart' show
     TestSuite,
@@ -43,7 +42,6 @@ import '../../../tests/fletch_tests/messages.dart' show
     Message,
     RunTest,
     TestFailed,
-    TimedOut,
     messageTransformer;
 
 class FletchTestRuntimeConfiguration extends RuntimeConfiguration {
@@ -140,9 +138,6 @@ class FletchTestOutputCommand implements CommandOutput {
       case 'TestFailed':
         return Expectation.FAIL;
 
-      case 'TimedOut':
-        return Expectation.TIMEOUT;
-
       default:
         return Expectation.CRASH;
     }
@@ -202,9 +197,9 @@ class FletchTestCommand implements Command {
 
   int get maxNumRetries => 0;
 
-  Future<FletchTestOutputCommand> run(int timeout) {
+  Future<FletchTestOutputCommand> run() {
     Stopwatch sw = new Stopwatch()..start();
-    return _completer.run(this, timeout).then((Message message) {
+    return _completer.run(this).then((Message message) {
       FletchTestOutputCommand output =
           new FletchTestOutputCommand(this, message, sw.elapsed);
       _completer.done(this);
@@ -275,18 +270,9 @@ class TestCompleter {
     }
   }
 
-  Future run(FletchTestCommand command, int timeout) {
-    if (command._name == "self/testNeverCompletes") {
-      // Ensure timeout test times out quickly.
-      timeout = 1;
-    }
+  Future run(FletchTestCommand command) {
     vmProcess.stdin.writeln(
         JSON.encode(new RunTest(command._name).toJson()));
-    Timer timer = new Timer(new Duration(seconds: timeout), () {
-      vmProcess.stdin.writeln(
-          JSON.encode(new TimedOut(command._name).toJson()));
-    });
-
     Completer completer = new Completer();
     completers[command._name] = completer;
     if (exitCode != null) {
@@ -297,10 +283,7 @@ class TestCompleter {
               "Helper program exited prematurely with exit code $exitCode.",
               stderr));
     }
-    return completer.future.then((value) {
-      timer.cancel();
-      return value;
-    });
+    return completer.future;
   }
 
   void processMessage(Message message) {
@@ -311,19 +294,12 @@ class TestCompleter {
         break;
       case 'TestPassed':
       case 'TestFailed':
-      case 'TimedOut':
         Completer completer = completers.remove(message.name);
         completer.complete(message);
         break;
       case 'ListTestsReply':
         testNamesCompleter.complete(message.tests);
         break;
-      case 'InternalErrorMessage':
-        print(message.error);
-        print(message.stackTrace);
-        throw "Internal error in helper process: ${message.error}";
-      default:
-        throw "Unhandled message from helper process: $message";
     }
   }
 

@@ -43,7 +43,6 @@ Future testMessages() async {
   testMessage(const ListTests());
   testMessage(const ListTestsReply(const <String>[]));
   testMessage(const RunTest("arg1"));
-  testMessage(const TimedOut("arg1"));
   testMessage(const TestFailed("arg1", "arg2", "arg3", "arg4"));
   testMessage(const TestPassed("arg1", "arg2"));
   testMessage(const Info("message"));

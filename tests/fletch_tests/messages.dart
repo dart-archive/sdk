@@ -35,7 +35,6 @@ abstract class Message {
       case 'ListTests': return const ListTests();
       case 'ListTestsReply': return new ListTestsReply.fromJsonData(data);
       case 'RunTest': return new RunTest.fromJsonData(data);
-      case 'TimedOut': return new TimedOut.fromJsonData(data);
       case 'TestFailed': return new TestFailed.fromJsonData(data);
       case 'TestPassed': return new TestPassed.fromJsonData(data);
     }
@@ -114,14 +113,16 @@ class ListTestsReply extends Message {
   String toString() => "$type($tests)";
 }
 
-/// Abstract message with a name.
-abstract class NamedMessage extends Message {
+/// Request that test [name] is run.
+class RunTest extends Message {
   final String name;
 
-  const NamedMessage(this.name);
+  const RunTest(this.name);
 
-  NamedMessage.fromJsonData(Map<String, dynamic> data)
+  RunTest.fromJsonData(Map<String, dynamic> data)
       : this(data['name']);
+
+  String get type => 'RunTest';
 
   Map<String, dynamic> toJson() {
     Map<String, dynamic> result = super.toJson();
@@ -130,28 +131,6 @@ abstract class NamedMessage extends Message {
   }
 
   String toString() => "$type($name)";
-}
-
-/// Request that test [name] is run.
-class RunTest extends NamedMessage {
-  const RunTest(String name)
-      : super(name);
-
-  RunTest.fromJsonData(Map<String, dynamic> data)
-      : super.fromJsonData(data);
-
-  String get type => 'RunTest';
-}
-
-/// Notify that test [name] timed out.
-class TimedOut extends NamedMessage {
-  const TimedOut(String name)
-      : super(name);
-
-  TimedOut.fromJsonData(Map<String, dynamic> data)
-      : super.fromJsonData(data);
-
-  String get type => 'TimedOut';
 }
 
 /// Test [name] failed. A possible reply to [RunTest].
