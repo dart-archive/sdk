@@ -31,6 +31,7 @@ Object* Heap::CreateHeapObject(Class* the_class, Object* init_value,
   HeapObject* result = HeapObject::cast(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
+  if (immutable) result->InitializeIdentityHashCode(random());
   ASSERT(size == the_class->instance_format().fixed_size());
   result->Initialize(size, init_value);
   return result;
@@ -45,6 +46,7 @@ Object* Heap::CreateArray(Class* the_class, int length, Object* init_value,
   Array* result = reinterpret_cast<Array*>(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
+  if (immutable) result->InitializeIdentityHashCode(random());
   result->Initialize(length, size, init_value);
   return Array::cast(result);
 }
@@ -58,6 +60,7 @@ Object* Heap::CreateByteArray(Class* the_class, int length, bool immutable) {
   ByteArray* result = reinterpret_cast<ByteArray*>(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
+  if (immutable) result->InitializeIdentityHashCode(random());
   result->Initialize(length);
   return ByteArray::cast(result);
 }
@@ -71,6 +74,7 @@ Object* Heap::CreateLargeInteger(Class* the_class, int64 value,
   LargeInteger* result = reinterpret_cast<LargeInteger*>(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
+  if (immutable) result->InitializeIdentityHashCode(random());
   result->set_value(value);
   return LargeInteger::cast(result);
 }
@@ -87,6 +91,7 @@ Object* Heap::CreateDouble(Class* the_class, double value, bool immutable) {
   Double* result = reinterpret_cast<Double*>(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
+  if (immutable) result->InitializeIdentityHashCode(random());
   result->set_value(value);
   return Double::cast(result);
 }
@@ -100,6 +105,7 @@ Object* Heap::CreateBoxed(Class* the_class, Object* value, bool immutable) {
   Boxed* result = reinterpret_cast<Boxed*>(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
+  if (immutable) result->InitializeIdentityHashCode(random());
   result->set_value(value);
   return Boxed::cast(result);
 }
@@ -114,6 +120,7 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function,
   Initializer* result = reinterpret_cast<Initializer*>(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
+  if (immutable) result->InitializeIdentityHashCode(random());
   result->set_function(function);
   return Initializer::cast(result);
 }
@@ -128,6 +135,7 @@ Object* Heap::CreateStringInternal(Class* the_class, int length, bool clear,
   String* result = reinterpret_cast<String*>(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
+  if (immutable) result->InitializeIdentityHashCode(random());
   result->Initialize(size, length, clear);
   return String::cast(result);
 }
@@ -149,6 +157,7 @@ Object* Heap::CreateStack(Class* the_class, int length, bool immutable) {
   Stack* result = reinterpret_cast<Stack*>(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
+  if (immutable) result->InitializeIdentityHashCode(random());
   result->Initialize(length);
   return Stack::cast(result);
 }
@@ -166,6 +175,7 @@ Object* Heap::CreateMetaClass(bool immutable) {
   // Bind the class loop.
   meta_class->set_class(meta_class);
   meta_class->set_immutable(immutable);
+  if (immutable) meta_class->InitializeIdentityHashCode(random());
   // Initialize the classes.
   meta_class->Initialize(format, size, NULL);
   return meta_class;
@@ -184,6 +194,7 @@ Object* Heap::CreateClass(InstanceFormat format,
   Class* result = reinterpret_cast<Class*>(raw_result);
   result->set_class(meta_class);
   result->set_immutable(immutable);
+  if (immutable) result->InitializeIdentityHashCode(random());
   result->Initialize(format, size, null);
   return Class::cast(result);  // Perform a cast to validate type.
 }
@@ -203,6 +214,7 @@ Object* Heap::CreateFunction(Class* the_class,
   Function* result = reinterpret_cast<Function*>(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
+  if (immutable) result->InitializeIdentityHashCode(random());
   result->set_arity(arity);
   result->set_literals_size(number_of_literals);
   result->Initialize(bytecodes);

@@ -9,6 +9,7 @@
 
 #include "src/shared/assert.h"
 #include "src/shared/globals.h"
+#include "src/shared/random.h"
 #include "src/vm/list.h"
 #include "src/shared/utils.h"
 
@@ -251,9 +252,10 @@ class HeapObject: public Object {
 
   // [immutable]: field indicating immutability of an object.
   inline bool get_immutable();
+  // NOTE: This method will also initialize the identity hash code to 0.
   inline void set_immutable(bool immutable);
 
-  inline Smi* IdentityHashCode();
+  inline Smi* LazyIdentityHashCode(RandomLCG* random);
 
   // Scavenge support.
   HeapObject* forwarding_address();
@@ -284,7 +286,7 @@ class HeapObject: public Object {
 
   // Leave LSB for Smi tag.
   class FlagsImmutabilityField: public BoolField<1> {};
-  class FlagsHashCodeField: public BitField<int, 2, 32 - 2> { };
+  class FlagsHashCodeField: public BitField<word, 2, 32 - 2> { };
 
  protected:
   inline void Initialize(int size, Object* init_value);
@@ -296,7 +298,9 @@ class HeapObject: public Object {
                           kAlternativePointerSize);
   }
 
-  inline int ComputeHashCode();
+  inline void InitializeIdentityHashCode(RandomLCG* random);
+  inline void SetIdentityHashCode(Smi* smi);
+  inline Smi* IdentityHashCode();
 
   // Raw field accessors.
   inline void at_put(int offset, Object* value);
@@ -1138,30 +1142,40 @@ bool Object::IsImmutable() {
   return IsSmi();
 }
 
-int HeapObject::ComputeHashCode() {
-  // Take the most significant FlagsHashCodeField size bits of the
-  // this pointer and use that as the hash code for this object.  This
-  // discards the lowest FlagsHashCodeField shift bits from the
-  // pointer. Those bits are usually zero because of alignment so
-  // discarding them is a good thing.
-  //
-  // TODO(ager): Using the this pointer value does not produce great
-  // hash codes since many objects can be allocated at the same address
-  // in new space.
-  int hashCode = FlagsHashCodeField::decode(reinterpret_cast<word>(this));
-  if (hashCode == 0) hashCode = 42;
-  return hashCode;
+void HeapObject::InitializeIdentityHashCode(RandomLCG* random) {
+  // Taking the most significant FlagsHashCodeField size bits of a
+  // random number might be 0. So we keep getting random numbers until
+  // we've received a non-0 value.
+  while (true) {
+    word hash_code = FlagsHashCodeField::decode(random->NextUInt32());
+    if (hash_code != 0) {
+      SetIdentityHashCode(Smi::FromWord(hash_code));
+      return;
+    }
+  }
+}
+
+Smi* HeapObject::LazyIdentityHashCode(RandomLCG* random) {
+  Smi* hash_code = IdentityHashCode();
+  if (hash_code->value() == 0) {
+    InitializeIdentityHashCode(random);
+    hash_code = IdentityHashCode();
+  }
+  return hash_code;
+}
+
+void HeapObject::SetIdentityHashCode(Smi* smi) {
+  word hash_code = smi->value();
+  word flags = reinterpret_cast<word>(at(HeapObject::kFlagsOffset));
+  flags = FlagsHashCodeField::update(hash_code, flags);
+  at_put(kFlagsOffset, reinterpret_cast<Smi*>(flags));
+
+  // Make sure that encoding the hashcode doesn't truncate any bits.
+  ASSERT(FlagsHashCodeField::decode(flags) == hash_code);
 }
 
 Smi* HeapObject::IdentityHashCode() {
   word flags = reinterpret_cast<word>(at(HeapObject::kFlagsOffset));
-  int value = FlagsHashCodeField::decode(flags);
-  if (value != 0) return Smi::FromWord(value);
-  // Immutable objects should get hash code on construction.
-  ASSERT(!IsImmutable());
-  int hashCode = ComputeHashCode();
-  flags = FlagsHashCodeField::update(hashCode, flags);
-  at_put(kFlagsOffset, reinterpret_cast<Smi*>(flags));
   return Smi::FromWord(FlagsHashCodeField::decode(flags));
 }
 
@@ -1186,7 +1200,6 @@ bool Smi::IsValid(int64 value) {
 }
 
 // Inlined HeapObject functions.
-
 HeapObject* HeapObject::cast(Object* object) {
   ASSERT(object->IsHeapObject());
   return reinterpret_cast<HeapObject*>(object);
@@ -1232,20 +1245,8 @@ bool HeapObject::get_immutable() {
 }
 
 void HeapObject::set_immutable(bool immutable) {
-  // If the heap object is immutable, initialize the identity hash
-  // code eagerly. Immutable data structures can be accessed
-  // concurrently and we avoid races by eagerly initializing the
-  // identity hash code field. The hash code is FlagsHashCodeField
-  // size bits of the this pointer on creation.
-  //
-  // The hash code computed here is not necessarily the one that will
-  // be returned as the identity hash code. As an example strings have
-  // their own hash code handling and will ignore the hash code in
-  // this field.
-  int hashCode = immutable ? ComputeHashCode() : 0;
-  word value = FlagsImmutabilityField::encode(immutable)
-      | FlagsHashCodeField::encode(hashCode);
-  at_put(kFlagsOffset, reinterpret_cast<Smi*>(value));
+  word flags = FlagsImmutabilityField::encode(immutable);
+  at_put(kFlagsOffset, reinterpret_cast<Smi*>(flags));
 }
 
 void HeapObject::Initialize(int size, Object* null) {

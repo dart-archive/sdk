@@ -6,6 +6,7 @@
 #define SRC_VM_PROGRAM_H_
 
 #include "src/shared/globals.h"
+#include "src/shared/random.h"
 #include "src/vm/event_handler.h"
 #include "src/vm/heap.h"
 #include "src/vm/scheduler.h"
@@ -203,6 +204,8 @@ class Program {
     return OFFSET_OF(Program, vtable_);
   }
 
+  RandomLCG* random() { return &random_; }
+
  private:
   // Access to the address of the first and last root.
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
@@ -213,6 +216,9 @@ class Program {
                         PointerVisitor* visitor,
                         Process* additional_processes);
   void FinishProgramGC(Process* additional_processes);
+
+  RandomLCG random_;
+
   Heap heap_;
 
   Scheduler* scheduler_;

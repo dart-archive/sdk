@@ -1021,7 +1021,8 @@ NATIVE(IdentityHashCode) {
     // TODO(ager): This is a bad hash code.
     return Smi::FromWord(String::cast(object)->length());
   }
-  return HeapObject::cast(arguments[0])->IdentityHashCode();
+  return HeapObject::cast(
+      arguments[0])->LazyIdentityHashCode(process->random());
 }
 
 char* AsForeignString(String* s) {

@@ -6,6 +6,7 @@
 #define SRC_VM_HEAP_H_
 
 #include "src/shared/globals.h"
+#include "src/shared/random.h"
 #include "src/vm/object.h"
 #include "src/vm/object_memory.h"
 
@@ -14,7 +15,7 @@ namespace fletch {
 // Heap represents the container for all HeapObjects.
 class Heap {
  public:
-  explicit Heap(int maximum_initial_size = 0) {
+  Heap(RandomLCG* random, int maximum_initial_size = 0) : random_(random) {
     space_ = new Space(maximum_initial_size);
     AdjustAllocationBudget();
   }
@@ -107,10 +108,14 @@ class Heap {
     return space()->needs_garbage_collection();
   }
 
+  RandomLCG* random() { return random_; }
+
  private:
   Object* CreateStringInternal(Class* the_class, int length, bool clear,
                                bool immutable = false);
 
+  // Used for initializing identity hash codes for immutable objects.
+  RandomLCG* random_;
   Space* space_;
   Object* AllocateRawClass(int size);
 };

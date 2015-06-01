@@ -126,7 +126,8 @@ ThreadState::~ThreadState() {
 }
 
 Process::Process(Program* program)
-    : heap_(4 * KB),
+    : random_(program->random()->NextUInt32() + 1),
+      heap_(&random_, 4 * KB),
       program_(program),
       statics_(NULL),
       coroutine_(NULL),

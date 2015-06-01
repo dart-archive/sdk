@@ -39,7 +39,9 @@ static List<const char> StringFromCharZ(const char* str) {
 }
 
 Program::Program()
-    : scheduler_(NULL),
+    : random_(0),
+      heap_(&random_),
+      scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
       classes_(NULL),
@@ -1361,6 +1363,7 @@ void Program::Initialize() {
     null_class->set_super_class(object_class_);
     null_object_->set_class(null_class);
     null_object_->set_immutable(true);
+    null_object_->InitializeIdentityHashCode(random());
     null_object_->Initialize(null_format.fixed_size(),
                              null_object_);
   }

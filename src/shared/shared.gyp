@@ -41,6 +41,7 @@
         'assert_test.cc',
         'flags_test.cc',
         'globals_test.cc',
+        'random_test.cc',
         'utils_test.cc',
 
         'fletch.cc',

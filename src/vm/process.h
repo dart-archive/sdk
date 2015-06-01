@@ -13,6 +13,7 @@
 #include "src/vm/program.h"
 #include "src/vm/thread.h"
 #include "src/vm/weak_pointer.h"
+#include "src/shared/random.h"
 
 namespace fletch {
 
@@ -250,11 +251,15 @@ class Process {
   void set_blocked(Process* value) { blocked_ = value; }
   Process* blocked() const { return blocked_; }
 
+  RandomLCG* random() { return &random_; }
+
  private:
   void UpdateStackLimit();
 
   // Put 'entry' at the end of the port's queue. This function is thread safe.
   void EnqueueEntry(PortQueue* entry);
+
+  RandomLCG random_;
 
   Heap heap_;
   Program* program_;

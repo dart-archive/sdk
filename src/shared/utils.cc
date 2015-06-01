@@ -8,7 +8,7 @@ namespace fletch {
 
 uint32 Utils::StringHash(const uint16_t* data, int length) {
   // This implementation is based on the public domain MurmurHash
-  // version 2.0. It assumes that we the underlying CPU can read from
+  // version 2.0. It assumes that the underlying CPU can read from
   // unaligned addresses. The constants M and R have been determined
   // to work well experimentally.
   const uint32 M = 0x5bd1e995;
