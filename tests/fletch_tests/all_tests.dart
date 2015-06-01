@@ -30,6 +30,8 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'self/testSleepForThreeSeconds': self.testSleepForThreeSeconds,
   'self/testAlwaysFails': self.testAlwaysFails,
   'self/testNeverCompletes': self.testNeverCompletes,
+  'self/testMessages': self.testMessages,
+  'self/testPrint': self.testPrint,
 
   'incremental/*': incremental.listTests,
 };

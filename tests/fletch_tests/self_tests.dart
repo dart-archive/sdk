@@ -9,6 +9,16 @@ import 'dart:async' show
     Completer,
     Future;
 
+import 'dart:convert' show
+    JSON;
+
+import 'package:expect/expect.dart' show
+    Expect;
+
+import 'messages.dart';
+
+import 'fletch_test_suite.dart' as suite show print;
+
 /// Test sleeps for 3 seconds.
 Future testSleepForThreeSeconds() async {
   await new Future.delayed(const Duration(seconds: 3));
@@ -21,3 +31,24 @@ Future testAlwaysFails() async {
 
 /// Never completes (should be skipped).
 Future testNeverCompletes() => new Completer().future;
+
+/// Test that messages can be instantiated and printed.
+Future testMessages() async {
+  void testMessage(Message message) {
+    String json = JSON.encode(message);
+    Expect.stringEquals('$message', '${new Message.fromJson(json)}');
+  }
+
+  testMessage(const InternalErrorMessage("arg1", "arg2"));
+  testMessage(const ListTests());
+  testMessage(const ListTestsReply(const <String>[]));
+  testMessage(const RunTest("arg1"));
+  testMessage(const TestFailed("arg1", "arg2", "arg3", "arg4"));
+  testMessage(const TestPassed("arg1", "arg2"));
+  testMessage(const Info("message"));
+}
+
+/// Test print method.
+Future testPrint() async {
+  suite.print("Debug print from fletch_tests works.");
+}

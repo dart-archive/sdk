@@ -22,9 +22,6 @@ import 'dart:convert' show
     UTF8,
     Utf8Decoder;
 
-import 'async_helper.dart' show
-    asyncTest;
-
 import 'package:expect/expect.dart' show
     Expect;
 
@@ -2098,17 +2095,24 @@ method() {
         ]),
 };
 
-void main() {
-  int skip = const int.fromEnvironment("skip", defaultValue: 0);
-  testCount += skip;
-  skippedCount += skip;
+Future<Null> main(List<String> arguments) async {
+  var testsToRun;
+  if (arguments.isEmpty) {
+    int skip = const int.fromEnvironment("skip", defaultValue: 0);
+    testCount += skip;
+    skippedCount += skip;
 
-  var testsToRun = tests.values.skip(skip);
-  // TODO(ahe): Remove the following line, as it means only run the
-  // first few tests.
-  testsToRun = testsToRun.take(8);
-  return asyncTest(() => Future.forEach(testsToRun, compileAndRun)
-      .then(updateSummary));
+    testsToRun = tests.values.skip(skip);
+    // TODO(ahe): Remove the following line, as it means only run the
+    // first few tests.
+    testsToRun = testsToRun.take(8);
+  } else {
+    testsToRun = arguments.map((String name) => tests[name]);
+  }
+  for (EncodedResult test in testsToRun) {
+    await compileAndRun(test);
+  }
+  updateSummary();
 }
 
 int testCount = 1;
@@ -2119,7 +2123,7 @@ int updateFailedCount = 0;
 
 bool verboseStatus = const bool.fromEnvironment("verbose", defaultValue: false);
 
-void updateSummary([_]) {
+void updateSummary() {
   print(
       "\n\nTest ${testCount - 1} of ${tests.length} "
       "($skippedCount skipped, $updateFailedCount failed).");
@@ -2476,14 +2480,10 @@ class TestSession extends Session {
 
 /// Invoked by ../../fletch_tests/fletch_test_suite.dart.
 Future<Map<String, NoArgFuture>> listTests() {
-  if (false) {
-    // Tell dart2js --analyze-only that [main] is used.
-    main();
-  }
   Map<String, NoArgFuture> result = <String, NoArgFuture>{};
-  tests.forEach((String name, EncodedResult test) {
+  tests.forEach((String name, _) {
     String testName = 'incremental/encoded/$name';
-    result[testName] = () => compileAndRun(test);
+    result[testName] = () => main(<String>[name]);
   });
   return new Future<Map<String, NoArgFuture>>.value(result);
 }

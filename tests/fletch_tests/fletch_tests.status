@@ -3,7 +3,7 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 self/testAlwaysFails: Fail, OK # This is a test of this suite, failure is expected.
-self/testNeverCompletes: Skip # This is a test of this suite, should always be skipped.
+self/testNeverCompletes: Skip # TODO(ahe): Implement timing out.
 
 incremental/encoded/add_class: Fail
 incremental/encoded/add_instance_method: Fail

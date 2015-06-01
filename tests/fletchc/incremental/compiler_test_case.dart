@@ -11,9 +11,6 @@ import 'dart:async' show
 export 'dart:async' show
     Future;
 
-import 'async_helper.dart' show
-    asyncTest;
-
 export 'package:expect/expect.dart' show
     Expect;
 

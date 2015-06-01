@@ -59,7 +59,7 @@ abstract class ErrorMessage extends Message {
 
   final String stackTrace;
 
-  ErrorMessage(this.error, this.stackTrace);
+  const ErrorMessage(this.error, this.stackTrace);
 
   ErrorMessage.fromJsonData(Map<String, dynamic> data)
       : this(data['error'], data['stackTrace']);
@@ -77,7 +77,7 @@ abstract class ErrorMessage extends Message {
 /// Notify that an internal error occurred in this framework (there's a bug in
 /// the framework).
 class InternalErrorMessage extends ErrorMessage {
-  InternalErrorMessage(String error, String stackTrace)
+  const InternalErrorMessage(String error, String stackTrace)
       : super(error, stackTrace);
 
   InternalErrorMessage.fromJsonData(Map<String, dynamic> data)
@@ -138,7 +138,7 @@ class TestFailed extends ErrorMessage {
   final String name;
   final String stdout;
 
-  TestFailed(this.name, this.stdout, String error, String stackTrace)
+  const TestFailed(this.name, this.stdout, String error, String stackTrace)
       : super(error, stackTrace);
 
   TestFailed.fromJsonData(Map<String, dynamic> data)

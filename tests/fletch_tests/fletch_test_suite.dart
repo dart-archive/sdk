@@ -41,10 +41,6 @@ import 'all_tests.dart' show
 Map<String, NoArgFuture> expandedTests;
 
 main() async {
-  if (false) {
-    // Tell dart2js --analyze-only that [print] is used.
-    print(null);
-  }
   IsolatePool pool = new IsolatePool(isolateMain);
   Set isolates = new Set();
   try {
