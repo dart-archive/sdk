@@ -317,7 +317,6 @@ instanceof3_test: Fail
 instanceof4_test/01: Fail
 instanceof4_test/none: Fail
 interceptor2_test: Fail
-interceptor3_test: Fail
 interceptor5_test: Fail
 interface2_negative_test: Fail
 interface_cycle_test/01: MissingCompileTimeError

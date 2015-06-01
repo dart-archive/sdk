@@ -28,6 +28,12 @@ collection_length_test: Crash
 # Isolate/Ports
 bool_from_environment_default_value_test: Crash
 
+# Regexp
+string_replace_dollar_test: Crash
+string_replace_test: Crash
+string_split_test: Crash
+string_test: Crash
+
 # Unsorted
 bool_from_environment_test: RuntimeError
 compare_to2_test: Fail
@@ -196,15 +202,7 @@ string_fromcharcodes_test: Crash
 string_operations_with_null_test: Fail
 string_pattern_test: Fail
 string_replace_all_test: Fail
-string_replace_dollar_test: Crash
-string_replace_test: Crash
 string_source_test: CompileTimeError
-string_split_test: Crash
-string_test: Crash
-string_trim2_test: Fail
-string_trim_test: Fail
-string_trimlr_test/01: Fail
-string_trimlr_test/none: Fail
 symbol_operator_test/03: Fail
 symbol_operator_test/none: Fail
 symbol_reserved_word_test/02: CompileTimeError

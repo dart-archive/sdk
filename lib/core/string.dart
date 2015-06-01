@@ -184,16 +184,32 @@ class _StringImpl implements String {
     throw "matchAsPrefix(string, [start]) isn't implemented";
   }
 
-  trim() {
-    throw "trim() isn't implemented";
+  static bool _isWhitespace(int char) {
+    if (char >= 0x0009 && char <= 0x000D) return true;
+    if (char >= 0x2000 && char <= 0x200A) return true;
+    return const [0x0020, 0x0085, 0x00A0, 0x1680, 0x180E, 0x2028, 0x2029,
+                  0x202F, 0x205F, 0x3000, 0xFEFF].indexOf(char) >= 0;
   }
 
-  trimLeft() {
-    throw "trimLeft() isn't implemented";
+  String trim() {
+    // TODO(ajohnsen): Inline and only do one substring.
+    return trimLeft().trimRight();
   }
 
-  trimRight() {
-    throw "trimRight() isn't implemented";
+  String trimLeft() {
+    int length = this.length;
+    int i = 0;
+    while (i < length && _isWhitespace(codeUnitAt(i))) i++;
+    if (i == 0) return this;
+    return substring(i);
+  }
+
+  String trimRight() {
+    int end = this.length - 1;
+    int i = end;
+    while (i >= 0 && _isWhitespace(codeUnitAt(i))) i--;
+    if (i == end) return this;
+    return substring(0, i + 1);
   }
 
   padLeft(width, [padding]) {
@@ -204,8 +220,8 @@ class _StringImpl implements String {
     throw "padRight(width, [padding]) isn't implemented";
   }
 
-  contains(other, [startIndex]) {
-    throw "contains(other, [startIndex]) isn't implemented";
+  bool contains(Pattern other, [int startIndex]) {
+    return indexOf(other, startIndex) >= 0;
   }
 
   replaceFirst(from, to, [startIndex]) {
