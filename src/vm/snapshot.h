@@ -75,8 +75,6 @@ class SnapshotReader {
     return result;
   }
 
-  List<Object*> ReadList();
-  List<int> ReadWordList();
   int ReadHeapSizeFrom(int position);
 };
 
@@ -131,8 +129,6 @@ class SnapshotWriter {
   // for the snapshot on a 32-bit system.
   int alternative_heap_size_;
 
-  void WriteList(List<Object*> list);
-  void WriteWordList(List<int> list);
   void WriteHeapSizeTo(int position, int size);
 
   void EnsureCapacity(int extra) {

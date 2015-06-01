@@ -533,40 +533,6 @@ void SnapshotWriter::WriteObject(Object* object) {
   }
 }
 
-List<Object*> SnapshotReader::ReadList() {
-  int length = ReadWord();
-  Object** data = static_cast<Object**>(malloc(kPointerSize * length));
-  for (int i = 0; i < length; i++) {
-    data[i] = ReadObject();
-  }
-  return List<Object*>(data, length);
-}
-
-void SnapshotWriter::WriteList(List<Object*> list) {
-  int length = list.length();
-  WriteWord(length);
-  for (int i = 0; i < length; i++) {
-    WriteObject(list[i]);
-  }
-}
-
-List<int> SnapshotReader::ReadWordList() {
-  int length = ReadWord();
-  int* data = static_cast<int*>(malloc(sizeof(int) * length));
-  for (int i = 0; i < length; i++) {
-    data[i] = ReadWord();
-  }
-  return List<int>(data, length);
-}
-
-void SnapshotWriter::WriteWordList(List<int> list) {
-  int length = list.length();
-  WriteWord(length);
-  for (int i = 0; i < length; i++) {
-    WriteWord(list[i]);
-  }
-}
-
 int SnapshotReader::ReadHeapSizeFrom(int position) {
   int size = 0;
   for (int i = 0; i < kHeapSizeBytes; i++) {
