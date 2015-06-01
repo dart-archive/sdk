@@ -28,7 +28,7 @@ incremental/encoded/stored_closure: Fail
 incremental/encoded/stored_instance_tearoff: Fail
 incremental/encoded/super_classes_of_directly_instantiated: Fail
 
-[ $arch == x64 && $asan && $debug ]
+[ $mode == debug && $arch == x64 && $asan ]
 incremental/encoded/add_instance_field: Fail # Issue 41.
 incremental/encoded/instance_field_end: Fail # Issue 41.
 incremental/encoded/instance_field_middle: Fail # Issue 41.
