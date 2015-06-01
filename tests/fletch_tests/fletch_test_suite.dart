@@ -43,13 +43,17 @@ Map<String, NoArgFuture> expandedTests;
 main() async {
   IsolatePool pool = new IsolatePool(isolateMain);
   Set isolates = new Set();
+  Map<String, RunningTest> runningTests = <String, RunningTest>{};
   try {
     var messages = utf8Lines(stdin).transform(messageTransformer);
     await for (Message message in messages) {
+      if (message is TimedOut) {
+        handleTimeout(message, runningTests);
+        continue;
+      }
       var isolate = await pool.getIsolate();
       isolates.add(isolate);
-      var port = isolate.beginSession();
-      runInIsolate(port, isolate, message);
+      runInIsolate(isolate.beginSession(), isolate, message, runningTests);
     }
   } catch (error, stackTrace) {
     new InternalErrorMessage('$error', '$stackTrace').print();
@@ -59,14 +63,47 @@ main() async {
   }
 }
 
-runInIsolate(port, isolate, Message message) async {
+class RunningTest {
+  final cancelable;
+  final isolate;
+  RunningTest(this.cancelable, this.isolate);
+
+  void kill() {
+    cancelable.cancel();
+    isolate.kill();
+  }
+}
+
+void handleTimeout(TimedOut message, Map<String, RunningTest> runningTests) {
+  runningTests.remove(message.name).kill();
+  message.print();
+}
+
+runInIsolate(
+    port,
+    isolate,
+    Message message,
+    Map<String, RunningTest> runningTests) async {
   StreamIterator iterator = new StreamIterator(port);
   bool hasNext = await iterator.moveNext();
   assert(hasNext);
   SendPort sendPort = iterator.current;
   sendPort.send(message);
-  hasNext = await iterator.moveNext();
-  assert(hasNext);
+
+  if (message is RunTest) {
+    String name = message.name;
+    runningTests[name] = new RunningTest(iterator, isolate);
+    if (!await iterator.moveNext()) {
+      // Timed out.
+      assert(runningTests[name] == null);
+      return;
+    }
+    runningTests.remove(message.name);
+  } else {
+    hasNext = await iterator.moveNext();
+    assert(hasNext);
+  }
+
   iterator.current.print();
   iterator.cancel();
   isolate.endSession();
