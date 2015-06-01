@@ -98,9 +98,7 @@ Execute(P, T) {
 
 ```python
 Interpret(P, T) {
-  while True {
-    if --T.BytecodeBudget <= 0: return new Interrupted()
-    
+  while --T.BytecodeBudget > 0 {
     switch P.NextBytecode() {
       case Spawn:
         SpawnProcess()
@@ -120,6 +118,7 @@ Interpret(P, T) {
         return new Yielded()
     }
   }
+  return new Interrupted()
 }
 ```
 
