@@ -44,7 +44,13 @@ RunThread(T) {
 
 ```python
 Execute(P, T) {
-  Interrupt <- Interpret(P)
+  Interrupt <- Interpret(P, T)
+
+  if Interrupt = Interrupted {
+    T.BytecodeBudget = 1000;
+    EnqueueOnThread(T, P)
+    return Null
+  }
 
   if Interrupt = Terminate {
     delete P
@@ -91,8 +97,8 @@ Execute(P, T) {
 ```
 
 ```python
-Interpret(P) {
-  while True {
+Interpret(P, T) {
+  while --T.BytecodeBudget > 0 {
     switch P.NextBytecode() {
       case Spawn:
         SpawnProcess()
@@ -112,6 +118,7 @@ Interpret(P) {
         return new Yielded()
     }
   }
+  return new Interrupted()
 }
 ```
 
@@ -185,6 +192,7 @@ _Fields_
 - `Atomic<Process> Tail` - Tail/end of queue
 - `Process Sentinel` - Non-Null & unique Process value.
 - `Monitor IdleMonitor`
+- `int BytecodeBudget = 1000` - Number of bytecodes before preemption.
 
 _Members_
 
