@@ -25,10 +25,11 @@ integer_to_radix_string_test: Fail
 # Object.runtimeType
 collection_length_test: Crash
 
-# Unsorted
+# Isolate/Ports
 bool_from_environment_default_value_test: Crash
+
+# Unsorted
 bool_from_environment_test: RuntimeError
-collection_to_string_test: Fail
 compare_to2_test: Fail
 core_runtime_types_test: Fail
 date_time2_test: Crash
@@ -76,7 +77,6 @@ int_parse_radix_test/none: Fail
 int_round_to_double_test: Fail
 int_truncate_to_double_test: Fail
 integer_to_string_test/01: Fail
-is_operator_basic_types_test: Fail
 iterable_fold_test: Crash
 iterable_generate_test: Fail
 iterable_reduce_test: Crash
@@ -203,7 +203,6 @@ string_runes_test: Fail
 string_source_test: CompileTimeError
 string_split_test: Crash
 string_test: Crash
-string_to_lower_case_test: Fail
 string_trim2_test: Fail
 string_trim_test: Fail
 string_trimlr_test/01: Fail
@@ -219,7 +218,6 @@ symbol_reserved_word_test/09: Fail
 symbol_reserved_word_test/10: MissingCompileTimeError
 symbol_reserved_word_test/12: Fail
 symbol_test/none: Fail
-unicode2_test: Fail
 unicode_test: Fail
 uri_base_test: Crash
 uri_file_test: Crash
