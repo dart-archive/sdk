@@ -110,8 +110,14 @@ class CompiledClass {
   final int id;
   final ClassElement element;
   final CompiledClass superclass;
+
+  // The extra fields are synthetic fields not represented in any Dart source
+  // code. They are used for the synthetic closure classes that are introduced
+  // behind the scenes.
   final int extraFields;
 
+  // TODO(kasperl): Hide these tables and go through a proper API to define
+  // and lookup methods.
   final Map<int, int> implicitAccessorTable = <int, int>{};
   final Map<int, int> methodTable = <int, int>{};
 
@@ -130,11 +136,16 @@ class CompiledClass {
   int get fields {
     int count = superclassFields + extraFields;
     if (element != null) {
+      // TODO(kasperl): Once we change compiled class to be immutable, we
+      // should cache the field count.
       element.implementation.forEachInstanceField((_, __) { count++; });
     }
     return count;
   }
 
+  // The method table for a class is a mapping from Fletch's integer
+  // selectors to method ids. It contains all methods defined for a
+  // class including the implicit accessors.
   Map<int, int> computeMethodTable(FletchBackend backend) {
     Map<int, int> result = <int, int>{};
     List<int> selectors = implicitAccessorTable.keys.toList()
@@ -319,10 +330,10 @@ class FletchBackend extends Backend {
     });
   }
 
-  CompiledClass createCallableStubClass(int extraFields, CompiledClass superclass) {
+  CompiledClass createCallableStubClass(int fields, CompiledClass superclass) {
     int id = classes.length;
     CompiledClass compiledClass = new CompiledClass(
-        id, null, superclass, extraFields: extraFields);
+        id, null, superclass, extraFields: fields);
     classes.add(compiledClass);
     compiledClass.createIsFunctionEntry(this);
     return compiledClass;
