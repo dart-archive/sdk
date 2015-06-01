@@ -14,7 +14,6 @@ incremental/encoded/change_supertype: Fail
 incremental/encoded/compound_constants: Fail
 incremental/encoded/constants: Fail
 incremental/encoded/constants_of_new_classes: Fail
-incremental/encoded/instance_field_to_static_field: Fail
 incremental/encoded/interceptor_classes: Fail
 incremental/encoded/lazy_static: Fail
 incremental/encoded/modify_instance_method: Fail
@@ -28,3 +27,12 @@ incremental/encoded/newly_instantiated_superclasses_two_updates: Fail
 incremental/encoded/stored_closure: Fail
 incremental/encoded/stored_instance_tearoff: Fail
 incremental/encoded/super_classes_of_directly_instantiated: Fail
+
+[ $arch == x64 && $asan && $debug ]
+incremental/encoded/add_instance_field: Fail # Issue 41.
+incremental/encoded/instance_field_end: Fail # Issue 41.
+incremental/encoded/instance_field_middle: Fail # Issue 41.
+incremental/encoded/remove_instance_field: Fail # Issue 41.
+incremental/encoded/subclass_schema_1: Fail # Issue 41.
+incremental/encoded/subclass_schema_2: Fail # Issue 41.
+incremental/encoded/super_schema: Fail # Issue 41.
