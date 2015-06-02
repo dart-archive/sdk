@@ -221,7 +221,7 @@ uri_path_test: Fail
 uri_query_test: Fail
 uri_test: Fail
 
-[ $compiler == fletchc || $runtime == fletchc && $asan]
+[ ($runtime == fletchc || $runtime == fletchvm) && $asan]
 hash_map2_test: Slow, Pass
 hash_map2_internal_test: Slow, Pass
 hash_set_test/01: Slow, Pass

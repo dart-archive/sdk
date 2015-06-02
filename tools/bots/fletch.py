@@ -102,8 +102,10 @@ def Steps(config):
           # Asan/x64 takes a long time on mac.
           continue
 
-        if full_run and configuration['build_conf'] != 'DebugIA32':
-          # We only do full runs on DebugIA32 for now.
+        full_run_configurations = ['DebugIA32', 'DebugIA32ClangAsan']
+        if full_run and (
+           configuration['build_conf'] not in full_run_configurations):
+          # We only do full runs on DebugIA32 and DebugIA32ClangAsan for now.
           # full_run = compile to snapshot &
           #            run shapshot &
           #            run shapshot with `-Xunfold-program`
@@ -114,13 +116,12 @@ def Steps(config):
           configuration['mode'],
           configuration['arch'],
           config,
-          mac=mac,
           clang=configuration['clang'],
           asan=configuration['asan'],
           full_run=full_run)
 
 
-def RunTests(name, mode, arch, config, mac=False, clang=True, asan=False,
+def RunTests(name, mode, arch, config, clang=True, asan=False,
              full_run=False):
   step_name = '%s%s' % (name, '-full' if full_run else '')
   with bot.BuildStep('Test %s' % step_name, swallow_error=True):
