@@ -1275,6 +1275,11 @@ abstract class CodegenVisitor
     }
   }
 
+  void visitLiteralSymbol(LiteralSymbol node) {
+    int constId = allocateConstantFromNode(node);
+    builder.loadConst(constId);
+  }
+
   void visitLiteralBool(LiteralBool node) {
     var expression = compileConstant(node, isConst: false);
     bool isTrue = expression != null && expression.value.isTrue;

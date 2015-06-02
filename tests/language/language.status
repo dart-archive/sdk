@@ -474,8 +474,6 @@ super_operator_index8_test: Fail
 super_setter_interceptor_test: Fail
 super_setter_test: Fail
 switch_fallthru_test: Fail
-symbol_literal_test/01: Fail
-symbol_literal_test/none: Fail
 this_test/01: MissingCompileTimeError
 this_test/03: MissingCompileTimeError
 this_test/05: MissingCompileTimeError

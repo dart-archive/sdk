@@ -3,6 +3,8 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 [ $compiler == fletchc || $runtime == fletchc ]
+nan_infinity_test/01: Fail, OK # The VM has odd negate semantics.
+
 # Function.apply
 apply2_test: Fail
 apply3_test: Fail
@@ -22,8 +24,16 @@ double_round_test: Fail
 double_truncate_test: Fail
 integer_to_radix_string_test: Fail
 
-# Object.runtimeType
+# Object.runtimeType / type check
 collection_length_test: Crash
+map_from_iterable_test: Fail
+map_from_iterables_test: Fail
+map_keys2_test: Fail
+map_test: Fail
+map_values2_test: Fail
+map_values3_test: Fail
+map_values4_test: Fail
+null_test: Crash
 
 # Isolate/Ports
 bool_from_environment_default_value_test: Crash
@@ -68,8 +78,6 @@ from_environment_const_type_test/15: RuntimeError
 from_environment_const_type_test/16: RuntimeError
 from_environment_const_type_test/none: RuntimeError
 growable_list_test: Fail
-hash_set_test/01: Fail
-hash_set_test/none: Fail
 hashcode_test: Fail
 indexed_list_access_test: Fail
 int_ceil_to_double_test: Fail
@@ -103,14 +111,6 @@ list_set_all_test: Fail
 list_sort_test: Fail
 list_test/01: Crash
 list_test/none: Crash
-map_from_iterable_test: Fail
-map_from_iterables_test: Fail
-map_keys2_test: Fail
-map_test: Fail
-map_values2_test: Fail
-map_values3_test: Fail
-map_values4_test: Fail
-null_test: Crash
 num_clamp_test: Fail
 num_parse_test/01: Fail
 num_parse_test/none: Fail
@@ -224,5 +224,5 @@ uri_test: Fail
 [ $compiler == fletchc || $runtime == fletchc && $asan]
 hash_map2_test: Slow, Pass
 hash_map2_internal_test: Slow, Pass
-hash_set_test/01: Slow, Fail
-hash_set_test/none: Slow, Fail
+hash_set_test/01: Slow, Pass
+hash_set_test/none: Slow, Pass

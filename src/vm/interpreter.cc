@@ -947,20 +947,18 @@ void HandleCoroutineChange(Process* process, Coroutine* coroutine) {
 
 Object* HandleIdentical(Process* process, Object* left, Object* right) {
   bool identical;
-  if (left->IsDouble() && right->IsDouble()) {
-    double left_value = Double::cast(left)->value();
-    double right_value = Double::cast(right)->value();
-    if (isnan(left_value) && isnan(right_value)) {
-      identical = true;
-    } else {
-      identical = (left_value == right_value);
-    }
+  if (left == right) {
+    identical = true;
+  } else if (left->IsDouble() && right->IsDouble()) {
+    uint64 left_value = bit_cast<uint64>(Double::cast(left)->value());
+    uint64 right_value = bit_cast<uint64>(Double::cast(right)->value());
+    identical = (left_value == right_value);
   } else if (left->IsLargeInteger() && right->IsLargeInteger()) {
     int64 left_value = LargeInteger::cast(left)->value();
     int64 right_value = LargeInteger::cast(right)->value();
     identical = (left_value == right_value);
   } else {
-    identical = (left == right);
+    identical = false;
   }
   Program* program = process->program();
   return identical ? program->true_object() : program->false_object();
