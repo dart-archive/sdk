@@ -53,7 +53,7 @@ main() async {
       }
       var isolate = await pool.getIsolate();
       isolates.add(isolate);
-      await runInIsolate(
+      runInIsolate(
           isolate.beginSession(), isolate, message, runningTests);
     }
   } catch (error, stackTrace) {
@@ -92,11 +92,11 @@ void handleTimeout(TimedOut message, Map<String, RunningTest> runningTests) {
   }
 }
 
-Future<Null> runInIsolate(
+void runInIsolate(
     port,
     isolate,
     Message message,
-    Map<String, RunningTest> runningTests) async {
+    Map<String, RunningTest> runningTests) {
   StreamIterator iterator = new StreamIterator(port);
   String name = message is NamedMessage ? message.name : null;
 
