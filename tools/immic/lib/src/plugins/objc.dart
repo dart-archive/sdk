@@ -134,12 +134,14 @@ class _HeaderVisitor extends CodeGenerationVisitor {
   }
 
   void _writeNodeBase() {
+    writeln('@class ImmiRoot;');
     nodes.forEach((node) { writeln('@class ${node.name}Node;'); });
     writeln();
     writeln('@interface Node : NSObject');
     writeln();
     writeln('+ (bool)applyPatchSet:(const PatchSetData&)data');
-    writeln('               atNode:(Node* __strong *)node;');
+    writeln('               atNode:(Node* __strong *)node');
+    writeln('              inGraph:(ImmiRoot*)root;');
     writeln();
     nodes.forEach((node) { writeln('- (bool)is${node.name};'); });
     nodes.forEach((node) { writeln('- (${node.name}Node*)as${node.name};'); });
@@ -149,7 +151,6 @@ class _HeaderVisitor extends CodeGenerationVisitor {
   }
 
   void _writeRootPresenter() {
-    writeln('@class ImmiRoot;');
     writeln('@protocol RootPresenter <NSObject>');
     writeln('- (void)immi_setupRoot:(ImmiRoot*)root;');
     writeln('@end');
@@ -167,10 +168,12 @@ class _HeaderVisitor extends CodeGenerationVisitor {
   }
 
   void _writeImmiRoot() {
+    writeln('typedef void (^ImmiDispatchBlock)(void);');
     writeln('@interface ImmiRoot : NSObject');
     writeln('@property (readonly) Node* rootNode;');
     writeln('- (bool)refresh;');
     writeln('- (void)reset;');
+    writeln('- (void)dispatch:(ImmiDispatchBlock)block;');
     writeln('@end');
     writeln();
   }
@@ -318,7 +321,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln();
     writeln('- (bool)refresh {');
     writeln('  PatchSetData data = ${serviceName}::refresh(self.pid);');
-    writeln('  bool result = [Node applyPatchSet:data atNode:&_rootNode];');
+    writeln('  bool result = [Node applyPatchSet:data atNode:&_rootNode inGraph:self];');
     writeln('  data.Delete();');
     writeln('  return result;');
     writeln('}');
@@ -326,6 +329,10 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('- (void)reset {');
     writeln('  _rootNode = nil;');
     writeln('  ${serviceName}::reset(self.pid);');
+    writeln('}');
+    writeln();
+    writeln('- (void)dispatch:(ImmiDispatchBlock)block {');
+    writeln('  block();');
     writeln('}');
     writeln();
     writeln('@end');
@@ -354,7 +361,10 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     String nodeName = "${node.name}Node";
     String nodeNameData = "${nodeName}Data";
     writeln('@interface $nodeName ()');
-    writeln('- (id)initWith:(const $nodeNameData&)data;');
+    if (node.methods.isNotEmpty) {
+      writeln('@property (weak) ImmiRoot* root;');
+    }
+    writeln('- (id)initWith:(const $nodeNameData&)data inGraph:(ImmiRoot*)root;');
     writeln('@end');
     writeln();
   }
@@ -410,7 +420,10 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
     writeln('- (bool)is$name { return true; }');
     writeln('- ($nodeName*)as$name { return self; }');
-    writeln('- (id)initWith:(const $nodeNameData&)data {');
+    writeln('- (id)initWith:(const $nodeNameData&)data inGraph:(ImmiRoot*)root {');
+    if (node.methods.isNotEmpty) {
+      writeln('  _root = root;');
+    }
     forEachSlot(node, null, (Type slotType, String slotName) {
       String camelName = camelize(slotName);
       write('  _$slotName = ');
@@ -418,14 +431,14 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         String slotTypeName = getTypeName(slotType);
         String slotTypeData = "${slotTypeName}Data";
         writeln('ListUtils<$slotTypeData>::decodeList(');
-        writeln('      data.get${camelName}(), create$slotTypeName);');
+        writeln('      data.get${camelName}(), create$slotTypeName, root);');
       } else if (slotType.isString) {
         writeln('decodeString(data.get${camelName}Data());');
       } else if (slotType.isNode) {
-        writeln('[Node node:data.get${camelName}()];');
+        writeln('[Node node:data.get${camelName}() inGraph:root];');
       } else if (slotType.resolved != null) {
         String slotTypeName = getTypeName(slotType);
-        writeln('[[$slotTypeName alloc] initWith:data.get${camelName}()];');
+        writeln('[[$slotTypeName alloc] initWith:data.get${camelName}() inGraph:(ImmiRoot*)root];');
       } else {
         writeln('data.get${camelName}();');
       }
@@ -436,7 +449,9 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('  return self;');
     writeln('}');
 
-    writeln('- (void)applyPatch:(const PatchData&)patch atSlot:(int)index {');
+    writeln('- (void)applyPatch:(const PatchData&)patch');
+    writeln('            atSlot:(int)index');
+    writeln('           inGraph:(ImmiRoot*)root {');
     int slotIndex = 0;
     writeln('  switch(index) {');
     forEachSlot(node, null, (Type slotType, String slotName) {
@@ -444,7 +459,8 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       if (slotType.isList) {
         writeln('    assert(patch.isListPatch());');
         writeln('    [Node applyListPatch:patch.getListPatch()');
-        writeln('                 toArray:_$slotName];');
+        writeln('                 toArray:_$slotName');
+        writeln('                 inGraph:root];');
       } else if (slotType.resolved != null) {
         String typeName = "${slotType.identifier}";
         String typeNodeName = "${slotType.identifier}Node";
@@ -452,7 +468,8 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         writeln('    assert(patch.getContent().isNode());');
         writeln('    assert(patch.getContent().getNode().is${typeName}());');
         writeln('    _$slotName = [[$typeNodeName alloc]');
-        writeln('        initWith:patch.getContent().getNode().get${typeName}()];');
+        writeln('        initWith:patch.getContent().getNode().get${typeName}()');
+        writeln('         inGraph:root];');
       } else {
         String typeName = camelize("${slotType.identifier}Data");
         writeln('    assert(patch.isContent());');
@@ -498,7 +515,8 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         }
       }
       writeln(' {');
-      write('  ${serviceName}::dispatch');
+      writeln('  [self.root dispatch:^{');
+      write('    ${serviceName}::dispatch');
       for (var formal in method.arguments) {
         write(camelize(formal.type.identifier));
       }
@@ -507,7 +525,8 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         write(', ');
         write(formal.name);
       }
-      write(', noopVoidEventCallback);');
+      writeln(', noopVoidEventCallback);');
+      writeln('  }];');
       writeln('}');
     }
 
@@ -517,12 +536,14 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
   void _writeNodeBaseExtendedInterface() {
     writeln('@interface Node ()');
-    writeln('+ (Node*)node:(const NodeData&)data;');
+    writeln('+ (Node*)node:(const NodeData&)data inGraph:(ImmiRoot*)root;');
     writeln('+ (void)applyListPatch:(const ListPatchData&)patch');
-    writeln('               toArray:(NSMutableArray*)array;');
+    writeln('               toArray:(NSMutableArray*)array');
+    writeln('               inGraph:(ImmiRoot*)root;');
     writeln('- (Node*)getSlot:(int)index;');
     writeln('- (void)applyPatch:(const PatchData&)patch');
-    writeln('            atSlot:(int)slot;');
+    writeln('            atSlot:(int)slot');
+    writeln('           inGraph:(ImmiRoot*)root;');
     writeln('@end');
     writeln();
   }
@@ -536,11 +557,13 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     nodes.forEach((node) {
       writeln('- (${node.name}Node*)as${node.name} { abort(); }');
     });
-    writeln('+ (Node*)node:(const NodeData&)data {');
+    writeln('+ (Node*)node:(const NodeData&)data inGraph:(ImmiRoot*)root {');
     write(' ');
     nodes.forEach((node) {
       writeln(' if (data.is${node.name}()) {');
-      writeln('    return [[${node.name}Node alloc] initWith:data.get${node.name}()];');
+      writeln('    return [[${node.name}Node alloc]');
+      writeln('            initWith:data.get${node.name}()');
+      writeln('            inGraph:root];');
       write('  } else');
     });
     writeln(' {');
@@ -558,7 +581,8 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 }
 
 - (void)applyPatch:(const PatchData&)patch
-            atSlot:(int)slot {
+            atSlot:(int)slot
+           inGraph:(ImmiRoot*)root {
   @throw [NSException
           exceptionWithName:NSInternalInconsistencyException
           reason:@"-applyPatch must be implemented by subclass"
@@ -566,21 +590,23 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 }
 
 + (bool)applyPatchSet:(const PatchSetData&)data
-               atNode:(Node* __strong *)node {
+               atNode:(Node* __strong *)node
+              inGraph:(ImmiRoot*)root {
   List<PatchData> patches = data.getPatches();
   if (patches.length() == 0) return false;
   if (patches.length() == 1 && patches[0].getPath().length() == 0) {
     assert(patches[0].isContent());
     assert(patches[0].getContent().isNode());
-    *node = [Node node:patches[0].getContent().getNode()];
+    *node = [Node node:patches[0].getContent().getNode() inGraph:root];
   } else {
-    [Node applyPatches:patches atNode:*node];
+    [Node applyPatches:patches atNode:*node inGraph:root];
   }
   return true;
 }
 
 + (void)applyPatches:(const List<PatchData>&)patches
-              atNode:(Node*)node {
+              atNode:(Node*)node
+             inGraph:(ImmiRoot*)root {
   for (int i = 0; i < patches.length(); ++i) {
     PatchData patch = patches[i];
     List<uint8_t> path = patch.getPath();
@@ -591,12 +617,13 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     for (int j = 0; j < lastIndex; ++j) {
       current = [current getSlot:path[j]];
     }
-    [current applyPatch:patch atSlot:lastSlot];
+    [current applyPatch:patch atSlot:lastSlot inGraph:root];
   }
 }
 
 + (void)applyListPatch:(const ListPatchData&)listPatch
-               toArray:(NSMutableArray*)array {
+               toArray:(NSMutableArray*)array
+               inGraph:(ImmiRoot*)root {
   int index = listPatch.getIndex();
   if (listPatch.isRemove()) {
     NSRange range = NSMakeRange(index, listPatch.getRemove());
@@ -604,7 +631,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     [array removeObjectsAtIndexes:indexes];
   } else if (listPatch.isInsert()) {
     NSArray* addition = ListUtils<ContentData>::decodeList(
-        listPatch.getInsert(), createContent);
+        listPatch.getInsert(), createContent, root);
     NSRange range = NSMakeRange(index, addition.count);
     NSIndexSet* indexes = [NSIndexSet indexSetWithIndexesInRange:range];
     [array insertObjects:addition atIndexes:indexes];
@@ -618,9 +645,9 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         const ContentData& content = patches[0].getContent();
         // TODO(zerny): Support lists of primitive types.
         assert(content.isNode());
-        array[index + i] = [Node node:content.getNode()];
+        array[index + i] = [Node node:content.getNode() inGraph:root];
       } else {
-        [Node applyPatches:patches atNode:array[index + i]];
+        [Node applyPatches:patches atNode:array[index + i] inGraph:root];
       }
     }
   }
@@ -636,32 +663,33 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       String name = node.name;
       String nodeName = "${node.name}Node";
       String nodeNameData = "${nodeName}Data";
-      writeln('static id create$nodeName(const $nodeNameData& data) {');
-      writeln('  return [[$nodeName alloc] initWith:data];');
+      writeln('id create$nodeName(const $nodeNameData& data, ImmiRoot* root) {');
+      writeln('  return [[$nodeName alloc] initWith:data inGraph:root];');
       writeln('}');
       writeln();
     });
     // TODO(zerny): Support lists of primitive types.
     write("""
-static id createNode(const NodeData& data) {
-  return [Node node:data];
+id createNode(const NodeData& data, ImmiRoot* root) {
+  return [Node node:data inGraph:root];
 }
 
-static id createContent(const ContentData& data) {
+id createContent(const ContentData& data, ImmiRoot* root) {
   assert(data.isNode());
-  return createNode(data.getNode());
+  return createNode(data.getNode(), root);
 }
 
 template<typename T>
 class ListUtils {
 public:
-  typedef id (*DecodeElementFunction)(const T&);
+  typedef id (*DecodeElementFunction)(const T&, ImmiRoot*);
 
   static NSMutableArray* decodeList(const List<T>& list,
-                                    DecodeElementFunction decodeElement) {
+                                    DecodeElementFunction decodeElement,
+                                    ImmiRoot* root) {
     NSMutableArray* array = [NSMutableArray arrayWithCapacity:list.length()];
     for (int i = 0; i < list.length(); ++i) {
-      [array addObject:decodeElement(list[i])];
+      [array addObject:decodeElement(list[i], root)];
     }
     return array;
   }
@@ -672,13 +700,13 @@ public:
 
   void _writeStringUtils() {
     write("""
-static NSString* decodeString(const List<unichar>& chars) {
+NSString* decodeString(const List<unichar>& chars) {
   List<unichar>& tmp = const_cast<List<unichar>&>(chars);
   return [[NSString alloc] initWithCharacters:tmp.data()
                                        length:tmp.length()];
 }
 
-static void encodeString(NSString* string, List<unichar> chars) {
+void encodeString(NSString* string, List<unichar> chars) {
   assert(string.length == chars.length());
   [string getCharacters:chars.data()
                   range:NSMakeRange(0, string.length)];
@@ -689,7 +717,7 @@ static void encodeString(NSString* string, List<unichar> chars) {
 
   void _writeEventUtils() {
     writeln('typedef uint16_t EventID;');
-    writeln('static void noopVoidEventCallback() {}');
+    writeln('void noopVoidEventCallback() {}');
     writeln();
   }
 
