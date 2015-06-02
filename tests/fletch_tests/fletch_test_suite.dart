@@ -43,13 +43,18 @@ Map<String, NoArgFuture> expandedTests;
 main() async {
   IsolatePool pool = new IsolatePool(isolateMain);
   Set isolates = new Set();
+  Map<String, RunningTest> runningTests = <String, RunningTest>{};
   try {
     var messages = utf8Lines(stdin).transform(messageTransformer);
     await for (Message message in messages) {
+      if (message is TimedOut) {
+        handleTimeout(message, runningTests);
+        continue;
+      }
       var isolate = await pool.getIsolate();
       isolates.add(isolate);
-      var port = isolate.beginSession();
-      runInIsolate(port, isolate, message);
+      await runInIsolate(
+          isolate.beginSession(), isolate, message, runningTests);
     }
   } catch (error, stackTrace) {
     new InternalErrorMessage('$error', '$stackTrace').print();
@@ -59,17 +64,73 @@ main() async {
   }
 }
 
-runInIsolate(port, isolate, Message message) async {
+class RunningTest {
+  final cancelable;
+  final isolate;
+  RunningTest(this.cancelable, this.isolate);
+
+  void kill() {
+    cancelable.cancel();
+    isolate.kill();
+  }
+}
+
+void handleTimeout(TimedOut message, Map<String, RunningTest> runningTests) {
+  RunningTest test = runningTests.remove(message.name);
+  if (test != null) {
+    test.kill();
+    message.print();
+  } else {
+    // This can happen for two reasons:
+    // 1. There's a bug, and test.dart will hang.
+    // 2. The test terminated just about the same time that test.dart decided
+    // it had timed out.
+    // Case 2 is unlikely, as tests aren't normally supposed to run for too
+    // long. Hopefully, case 1 is unlikely, but this message is helpful if
+    // test.dart hangs.
+    print("\nWarning: Unable to kill ${message.name}");
+  }
+}
+
+Future<Null> runInIsolate(
+    port,
+    isolate,
+    Message message,
+    Map<String, RunningTest> runningTests) async {
   StreamIterator iterator = new StreamIterator(port);
-  bool hasNext = await iterator.moveNext();
-  assert(hasNext);
-  SendPort sendPort = iterator.current;
-  sendPort.send(message);
-  hasNext = await iterator.moveNext();
-  assert(hasNext);
-  iterator.current.print();
-  iterator.cancel();
-  isolate.endSession();
+  String name = message is NamedMessage ? message.name : null;
+
+  if (name != null) {
+    runningTests[name] = new RunningTest(iterator, isolate);
+  }
+
+  // The rest of this function is executed without "await" as we want tests to
+  // run in parallel on multiple isolates.
+  new Future<Null>(() async {
+    bool hasNext = await iterator.moveNext();
+    if (!hasNext && name != null) {
+      // Timed out.
+      assert(runningTests[name] == null);
+      return null;
+    }
+    assert(hasNext);
+    SendPort sendPort = iterator.current;
+    sendPort.send(message);
+
+    hasNext = await iterator.moveNext();
+    if (!hasNext && name != null) {
+      // Timed out.
+      assert(runningTests[name] == null);
+      return null;
+    }
+    assert(hasNext);
+    runningTests.remove(name);
+    iterator.current.print();
+    iterator.cancel();
+    isolate.endSession();
+  }).catchError((error, stackTrace) {
+    new InternalErrorMessage('$error', '$stackTrace').print();
+  });
 }
 
 /* void */ isolateMain(SendPort port) async {

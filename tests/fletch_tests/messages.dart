@@ -35,6 +35,7 @@ abstract class Message {
       case 'ListTests': return const ListTests();
       case 'ListTestsReply': return new ListTestsReply.fromJsonData(data);
       case 'RunTest': return new RunTest.fromJsonData(data);
+      case 'TimedOut': return new TimedOut.fromJsonData(data);
       case 'TestFailed': return new TestFailed.fromJsonData(data);
       case 'TestPassed': return new TestPassed.fromJsonData(data);
     }
@@ -113,16 +114,14 @@ class ListTestsReply extends Message {
   String toString() => "$type($tests)";
 }
 
-/// Request that test [name] is run.
-class RunTest extends Message {
+/// Abstract message with a name.
+abstract class NamedMessage extends Message {
   final String name;
 
-  const RunTest(this.name);
+  const NamedMessage(this.name);
 
-  RunTest.fromJsonData(Map<String, dynamic> data)
+  NamedMessage.fromJsonData(Map<String, dynamic> data)
       : this(data['name']);
-
-  String get type => 'RunTest';
 
   Map<String, dynamic> toJson() {
     Map<String, dynamic> result = super.toJson();
@@ -133,8 +132,36 @@ class RunTest extends Message {
   String toString() => "$type($name)";
 }
 
+/// Request that test [name] is run.
+class RunTest extends NamedMessage {
+  const RunTest(String name)
+      : super(name);
+
+  RunTest.fromJsonData(Map<String, dynamic> data)
+      : super.fromJsonData(data);
+
+  String get type => 'RunTest';
+}
+
+/// Notify that test [name] timed out.
+///
+/// This message is bi-directional, it is used by test.dart to tell
+/// fletch_test_suite.dart that a test has timed out, as well as by
+/// fletch_test_suite.dart to tell test.dart that the test did in fact time out
+/// (due to interprocess communication, and lack of synchronization, it is
+/// possible for a test to complete normally before it is terminated).
+class TimedOut extends NamedMessage {
+  const TimedOut(String name)
+      : super(name);
+
+  TimedOut.fromJsonData(Map<String, dynamic> data)
+      : super.fromJsonData(data);
+
+  String get type => 'TimedOut';
+}
+
 /// Test [name] failed. A possible reply to [RunTest].
-class TestFailed extends ErrorMessage {
+class TestFailed extends ErrorMessage implements NamedMessage {
   final String name;
   final String stdout;
 
@@ -157,11 +184,11 @@ class TestFailed extends ErrorMessage {
 }
 
 /// Test [name] passed. A possible reply to [RunTest].
-class TestPassed extends Message {
-  final String name;
+class TestPassed extends NamedMessage {
   final String stdout;
 
-  const TestPassed(this.name, this.stdout);
+  const TestPassed(String name, this.stdout)
+      : super(name);
 
   TestPassed.fromJsonData(Map<String, dynamic> data)
       : this(data['name'], data['stdout']);
@@ -170,7 +197,6 @@ class TestPassed extends Message {
 
   Map<String, dynamic> toJson() {
     Map<String, dynamic> result = super.toJson();
-    result['name'] = name;
     result['stdout'] = stdout;
     return result;
   }

@@ -421,7 +421,10 @@ class ManagedIsolate {
 
   void kill() {
     wasKilled = true;
-    isolate.kill(priority: Isolate.IMMEDIATE);
+    isolate.kill();
+    // TODO(ahe): Should be:
+    // isolate.kill(priority: Isolate.IMMEDIATE);
+    // This is due to this (unannounced) breaking change: 1074223002.
   }
 }
 

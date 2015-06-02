@@ -2582,7 +2582,7 @@ class CommandExecutorImpl implements CommandExecutor {
     } else if (command is ScriptCommand) {
       return command.run();
     } else if (command is FletchTestCommand) {
-      return command.run();
+      return command.run(timeout);
     } else {
       return new RunningProcess(command, timeout).run();
     }
