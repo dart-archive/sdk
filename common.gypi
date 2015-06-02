@@ -76,6 +76,10 @@
             '<@(common_gcc_warning_flags)',
             '-Wtrigraphs', # Disable Xcode default.
           ],
+
+          'OTHER_LDFLAGS': [
+            '-framework CoreFoundation',
+          ],
         },
 
         'cflags': [

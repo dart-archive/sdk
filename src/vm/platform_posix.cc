@@ -119,14 +119,6 @@ int Platform::GetTimeZoneOffset(int64_t seconds_since_epoch) {
   return succeeded ? static_cast<int>(decomposed.tm_gmtoff) : 0;
 }
 
-int Platform::GetLocalTimeZoneOffset() {
-  // TODO(ajohnsen): avoid excessive calls to tzset?
-  tzset();
-  // Even if the offset was 24 hours it would still easily fit into 32 bits.
-  // Note that Unix and Dart disagree on the sign.
-  return static_cast<int>(-timezone);
-}
-
 // Constants used for mmap.
 static const int kMmapFd = -1;
 static const int kMmapFdOffset = 0;

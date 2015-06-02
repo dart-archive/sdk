@@ -35,6 +35,8 @@
         'object_list.cc',
         'object_map.cc',
         'object_memory.cc',
+        'platform_linux.cc',
+        'platform_macos.cc',
         'platform_posix.cc',
         'port.cc',
         'process.cc',
