@@ -13,7 +13,7 @@
       'target_name': 'myapi_test',
       'type': 'executable',
       'dependencies': [
-        '../../src/vm/vm.gyp:fletch_vm',
+        '../../src/vm/vm.gyp:fletch_vm_library',
       ],
       'sources': [
         'myapi_client.cc',

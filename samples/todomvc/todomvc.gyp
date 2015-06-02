@@ -13,7 +13,7 @@
       'target_name': 'todomvc_sample',
       'type': 'executable',
       'dependencies': [
-        '../../src/vm/vm.gyp:fletch_vm',
+        '../../src/vm/vm.gyp:fletch_vm_library',
       ],
       'sources': [
         'cc/struct.cc',  # generated

@@ -10,7 +10,7 @@
   },
   'targets': [
     {
-      'target_name': 'fletch_vm_base',
+      'target_name': 'fletch_vm_library_base',
       'type': 'static_library',
       'toolsets': ['target', 'host'],
       'dependencies': [
@@ -62,11 +62,11 @@
       },
     },
     {
-      'target_name': 'fletch_vm',
+      'target_name': 'fletch_vm_library',
       'type': 'static_library',
       'dependencies': [
-        'fletch_vm_generator#host',
-        'fletch_vm_base',
+        'fletch_vm_library_generator#host',
+        'fletch_vm_library_base',
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
       ],
@@ -94,7 +94,7 @@
           'action_name': 'generate_generated_S',
           'inputs': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'fletch_vm_generator'
+            'fletch_vm_library_generator'
             '<(EXECUTABLE_SUFFIX)',
           ],
           'outputs': [
@@ -112,8 +112,8 @@
       'target_name': 'libfletch',
       'type': 'none',
       'dependencies': [
-        'fletch_vm',
-        'fletch_vm_base',
+        'fletch_vm_library',
+        'fletch_vm_library_base',
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
       ],
@@ -129,8 +129,8 @@
             [ 'OS=="linux"', {
               'inputs': [
                 '../../tools/library_combiner.py',
-                '<(PRODUCT_DIR)/obj/src/vm/libfletch_vm.a',
-                '<(PRODUCT_DIR)/obj/src/vm/libfletch_vm_base.a',
+                '<(PRODUCT_DIR)/obj/src/vm/libfletch_vm_library.a',
+                '<(PRODUCT_DIR)/obj/src/vm/libfletch_vm_library_base.a',
                 '<(PRODUCT_DIR)/obj/src/shared/libfletch_shared.a',
                 '<(PRODUCT_DIR)/obj/src/libdouble_conversion.a',
               ],
@@ -138,8 +138,8 @@
             [ 'OS=="mac"', {
               'inputs': [
                 '../../tools/library_combiner.py',
-                '<(PRODUCT_DIR)/libfletch_vm.a',
-                '<(PRODUCT_DIR)/libfletch_vm_base.a',
+                '<(PRODUCT_DIR)/libfletch_vm_library.a',
+                '<(PRODUCT_DIR)/libfletch_vm_library_base.a',
                 '<(PRODUCT_DIR)/libfletch_shared.a',
                 '<(PRODUCT_DIR)/libdouble_conversion.a',
               ],
@@ -155,11 +155,11 @@
       ]
     },
     {
-      'target_name': 'fletch_vm_generator',
+      'target_name': 'fletch_vm_library_generator',
       'type': 'executable',
       'toolsets': ['host'],
       'dependencies': [
-        'fletch_vm_base',
+        'fletch_vm_library_base',
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
       ],

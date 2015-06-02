@@ -13,7 +13,7 @@
       'target_name': 'service_performance_test',
       'type': 'executable',
       'dependencies': [
-        '../../src/vm/vm.gyp:fletch_vm',
+        '../../src/vm/vm.gyp:fletch_vm_library',
       ],
       'sources': [
         'performance/performance_test.cc',
@@ -29,7 +29,7 @@
       'target_name': 'service_conformance_test',
       'type': 'executable',
       'dependencies': [
-        '../../src/vm/vm.gyp:fletch_vm',
+        '../../src/vm/vm.gyp:fletch_vm_library',
       ],
       'sources': [
         'conformance/cc/conformance_service.cc',

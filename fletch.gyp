@@ -7,10 +7,6 @@
     'mac_asan_dylib': '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
   },
 
-  # SCons translation:
-  # lib/libfletch.a is now src/vm/vm.gyp:fletch_vm.
-  # shared/libshared.a is now src/shared/shared.gyp:fletch_shared.
-  # TODO(ahe): Remove the above lines when SCons is gone.
   'targets': [
     {
       'target_name': 'fletch',
