@@ -184,7 +184,7 @@
       ],
     },
     {
-      'target_name': 'fletch',
+      'target_name': 'fletch-vm',
       'type': 'executable',
       'dependencies': [
         'libfletch',

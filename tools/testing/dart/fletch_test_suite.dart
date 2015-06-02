@@ -87,7 +87,7 @@ class FletchTestSuite extends TestSuite {
     String buildDir = TestUtils.buildDir(configuration);
     var processFuture = io.Process.start(
         runtimeConfiguration.dartBinary,
-        ['-Dfletch-vm=$buildDir/fletch',
+        ['-Dfletch-vm=$buildDir/fletch-vm',
          '-Ddart-sdk=../dart/sdk/',
          '-c',
          '-ppackage/',

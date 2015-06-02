@@ -167,7 +167,7 @@ class Dart2xCompilerConfiguration extends CompilerConfiguration {
           isHostChecked: isHostChecked, useSdk: useSdk);
 
   String computeCompilerPath(String buildDir) {
-    return '$buildDir/fletch';
+    return '$buildDir/fletch-vm';
   }
 
   CompilationCommand computeCompilationCommand(

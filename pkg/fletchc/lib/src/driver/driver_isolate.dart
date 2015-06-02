@@ -119,6 +119,7 @@ Future handleClient(SendPort sendPort, ReceivePort receivePort) async {
   if (programName.endsWith(fletchDriverSuffix)) {
     fletchVm = programName.substring(
         0, programName.length - fletchDriverSuffix.length);
+    fletchVm = "$fletchVm-vm";
   }
   arguments = arguments.skip(1).toList();
 

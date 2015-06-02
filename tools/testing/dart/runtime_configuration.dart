@@ -234,13 +234,13 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
     }
     var argumentsUnfold = ["-Xunfold-program"]..addAll(arguments);
 
-    // NOTE: We assume that `fletch` behaves the same as invoking
+    // NOTE: We assume that `fletch-vm` behaves the same as invoking
     // the DartVM in terms of exit codes.
     return <Command>[
         commandBuilder.getVmCommand(
-            "${suite.buildDir}/fletch", arguments, environmentOverrides),
+            "${suite.buildDir}/fletch-vm", arguments, environmentOverrides),
         commandBuilder.getVmCommand(
-            "${suite.buildDir}/fletch", argumentsUnfold, environmentOverrides)];
+            "${suite.buildDir}/fletch-vm", argumentsUnfold, environmentOverrides)];
   }
 }
 

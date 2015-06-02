@@ -64,10 +64,10 @@ const String _FLETCH_VM = const String.fromEnvironment("fletch-vm");
 const String _PATCH_ROOT = const String.fromEnvironment("fletch-patch-root");
 
 const List<String> _fletchVmSuggestions = const <String> [
-    'out/DebugX64Clang/fletch',
-    'out/DebugX64/fletch',
-    'out/ReleaseX64Clang/fletch',
-    'out/ReleaseX64/fletch',
+    'out/DebugX64Clang/fletch-vm',
+    'out/DebugX64/fletch-vm',
+    'out/ReleaseX64Clang/fletch-vm',
+    'out/ReleaseX64/fletch-vm',
 ];
 
 const String StringOrUri = "String or Uri";
@@ -152,7 +152,7 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
       fletchVm = Uri.base.resolve(_FLETCH_VM);
     }
     if (fletchVm == null) {
-      var path = _executable.resolve('fletch');
+      var path = _executable.resolve('fletch-vm');
       if (new File.fromUri(path).existsSync()) fletchVm = path;
     }
     fletchVm = _computeValidatedUri(

@@ -9,10 +9,10 @@
 
   'targets': [
     {
-      'target_name': 'fletch',
+      'target_name': 'fletch-vm',
       'type': 'none',
       'dependencies': [
-        'src/vm/vm.gyp:fletch',
+        'src/vm/vm.gyp:fletch-vm',
       ],
     },
     {
@@ -103,7 +103,7 @@
       # names.
       'type': 'none',
       'dependencies': [
-        'src/vm/vm.gyp:fletch',
+        'src/vm/vm.gyp:fletch-vm',
         'copy_dart#host',
         'tests/service_tests/service_tests.gyp:service_performance_test',
         'copy_asan',
@@ -121,7 +121,7 @@
           'inputs': [
             '<(mac_asan_dylib)',
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch-vm<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'tests/service_tests/performance/dart/performance_service.dart',
           ],
@@ -160,7 +160,7 @@
       # names.
       'type': 'none',
       'dependencies': [
-        'src/vm/vm.gyp:fletch',
+        'src/vm/vm.gyp:fletch-vm',
         'copy_dart#host',
         'tests/service_tests/service_tests.gyp:service_conformance_test',
         'copy_asan',
@@ -178,7 +178,7 @@
           'inputs': [
             '<(mac_asan_dylib)',
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch-vm<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'tests/service_tests/conformance/dart/conformance_service.dart',
           ],
@@ -217,7 +217,7 @@
       # names.
       'type': 'none',
       'dependencies': [
-        'src/vm/vm.gyp:fletch',
+        'src/vm/vm.gyp:fletch-vm',
         'copy_dart#host',
         'samples/myapi/myapi.gyp:myapi_test',
         'copy_asan',
@@ -235,7 +235,7 @@
           'inputs': [
             '<(mac_asan_dylib)',
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch-vm<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'samples/myapi/myapi_impl.dart',
             'samples/myapi/generated/dart/myapi_service.dart',
@@ -275,7 +275,7 @@
       # names.
       'type': 'none',
       'dependencies': [
-        'src/vm/vm.gyp:fletch',
+        'src/vm/vm.gyp:fletch-vm',
         'copy_dart#host',
         'samples/todomvc/todomvc.gyp:todomvc_sample',
         'copy_asan',
@@ -293,7 +293,7 @@
           'inputs': [
             '<(mac_asan_dylib)',
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch<(EXECUTABLE_SUFFIX)',
+            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch-vm<(EXECUTABLE_SUFFIX)',
             # TODO(ahe): Also depend on .dart files in the core libraries.
             'samples/todomvc/model.dart',
             'samples/todomvc/todomvc_impl.dart',
