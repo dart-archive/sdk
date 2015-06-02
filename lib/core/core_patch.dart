@@ -80,12 +80,21 @@ const patch = "patch";
 }
 
 @patch class StringBuffer {
-  String _buffer;
+  final List<String> _strings = [];
+  int _length = 0;
 
-  @patch StringBuffer([this._buffer = ""]);
+  @patch StringBuffer([String contents = ""]) {
+    write(contents);
+  }
 
   @patch void write(Object obj) {
-    _buffer = _buffer + "$obj";
+    String str = obj.toString();
+    if (str is! String) throw new ArgumentError(obj);
+    int length = str.length;
+    if (length > 0) {
+      _strings.add(str);
+      _length += length;
+    }
   }
 
   @patch void writeAll(Iterable objects, [String separator = ""]) {
@@ -101,16 +110,33 @@ const patch = "patch";
   }
 
   @patch void writeCharCode(int charCode) {
-    _buffer = _buffer + new String.fromCharCode(charCode);
+    String char = new String.fromCharCode(charCode);
+    _strings.add(char);
+    _length += char.length;
   }
 
   @patch void clear() {
-    _buffer = "";
+    _strings.clear();
+    _length = 0;
   }
 
-  @patch int get length => _buffer.length;
+  @patch int get length => _length;
 
-  @patch String toString() => _buffer;
+  @patch String toString() {
+    _StringImpl result = _StringImpl._create(length);
+    int offset = 0;
+    int count = _strings.length;
+    for (int i = 0; i < count; i++) {
+      String str = _strings[i];
+      int length = str.length;
+      // TODO(ajohnsen): Create a native '_setStringContent' to speed it up.
+      for (int j = 0; j < length; j++) {
+        result._setCodeUnitAt(offset + j, str.codeUnitAt(j));
+      }
+      offset += length;
+    }
+    return result;
+  }
 }
 
 @patch class Error {
