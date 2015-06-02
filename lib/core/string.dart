@@ -125,8 +125,8 @@ class _StringImpl implements String {
 
   startsWith(Pattern pattern, [int index]) {
     if (pattern is! String) {
-      throw new UnimplementedError(
-          "String.startsWith only accepts String patterns");
+      throw new ArgumentError(
+          "String.startsWith only accepts String patterns for now");
     }
     String other = pattern;
     if (index == null) index = 0;
@@ -150,8 +150,8 @@ class _StringImpl implements String {
 
   int indexOf(Pattern pattern, [int start]) {
     if (pattern is! String) {
-      throw new UnimplementedError(
-          "String.indexOf only accepts String patterns");
+      throw new ArgumentError(
+          "String.indexOf only accepts String patterns for now");
     }
     int length = this.length;
     if (start == null) start = 0;
@@ -164,8 +164,8 @@ class _StringImpl implements String {
 
   int lastIndexOf(Pattern pattern, [int start]) {
     if (pattern is! String) {
-      throw new UnimplementedError(
-          "String.lastIndexOf only accepts String patterns");
+      throw new ArgumentError(
+          "String.lastIndexOf only accepts String patterns for now");
     }
     int length = this.length;
     if (start == null) start = length;
@@ -248,7 +248,8 @@ class _StringImpl implements String {
 
   List<String> split(Pattern pattern) {
     if (pattern is! String) {
-      throw new UnimplementedError("String.split only accepts String patterns");
+      throw new ArgumentError(
+          "String.split only accepts String patterns for now");
     }
     String stringPattern = pattern;
     List<String> result = new List<String>();

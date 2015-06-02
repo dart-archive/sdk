@@ -18,6 +18,7 @@ big_integer_parsed_div_rem_vm_test: Fail
 big_integer_parsed_mul_div_vm_test: Fail
 bit_twiddling_bigint_test: Fail
 bit_twiddling_test: Fail
+compare_to2_test: Fail
 double_ceil_test: Fail
 double_floor_test: Fail
 double_round_test: Fail
@@ -35,9 +36,15 @@ map_values3_test: Fail
 map_values4_test: Fail
 
 # Isolate/Ports
-bool_from_environment_test: RuntimeError
+bool_from_environment_default_value_test: CompileTimeError
 
 # Regexp
+date_time2_test: CompileTimeError
+date_time3_test: CompileTimeError
+date_time4_test: CompileTimeError
+date_time7_test: CompileTimeError
+date_time_parse_test: CompileTimeError
+date_time_test: CompileTimeError
 regexp/UC16_test: CompileTimeError
 regexp/alternative-length-miscalculation_test: CompileTimeError
 regexp/alternatives_test: CompileTimeError
@@ -102,21 +109,18 @@ regexp/unicodeCaseInsensitive_test: CompileTimeError
 regexp/zero-length-alternatives_test: CompileTimeError
 string_split_test: CompileTimeError
 
-# Unsorted
-bool_from_environment_default_value_test: CompileTimeError
-compare_to2_test: Fail
-core_runtime_types_test: Fail
-date_time2_test: CompileTimeError
-date_time3_test: CompileTimeError
-date_time4_test: CompileTimeError
-date_time7_test: CompileTimeError
-date_time_parse_test: CompileTimeError
-date_time_test: CompileTimeError
-double_parse_test/01: Fail
-double_parse_test/none: Fail
+# Stacktrace
 error_stack_trace1_test: Fail
 error_stack_trace2_test: Crash
 error_stack_trace_test: Fail
+
+# Function in class field
+growable_list_test: Fail
+
+# Unsorted
+bool_from_environment_test: RuntimeError
+double_parse_test/01: Fail
+double_parse_test/none: Fail
 expando_test: CompileTimeError
 from_environment_const_type_test/01: RuntimeError
 from_environment_const_type_test/02: RuntimeError
@@ -135,8 +139,6 @@ from_environment_const_type_test/14: RuntimeError
 from_environment_const_type_test/15: RuntimeError
 from_environment_const_type_test/16: RuntimeError
 from_environment_const_type_test/none: RuntimeError
-growable_list_test: Fail
-hashcode_test: Fail
 indexed_list_access_test: Fail
 int_ceil_to_double_test: Fail
 int_floor_to_double_test: Fail
@@ -196,7 +198,6 @@ string_codeunits_test: Fail
 string_from_environment2_test: RuntimeError
 string_from_environment_test: RuntimeError
 string_fromcharcodes_test: CompileTimeError
-string_operations_with_null_test: Fail
 string_pattern_test: Fail
 string_replace_all_test: Fail
 string_replace_dollar_test: Fail

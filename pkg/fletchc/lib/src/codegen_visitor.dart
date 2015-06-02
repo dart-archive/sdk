@@ -915,12 +915,32 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void handleSuperOperatorCall(Node node, FunctionElement function) {
+  void handleSuperCall(Node node, FunctionElement function) {
     registerStaticInvocation(function);
     int arity = function.functionSignature.parameterCount + 1;
     int methodId = context.backend.functionMethodId(function);
     int constId = compiledFunction.allocateConstantFromFunction(methodId);
     invokeStatic(node, constId, arity);
+  }
+
+  void visitSuperGetterGet(
+      Send node,
+      FunctionElement getter,
+      _) {
+    loadThis();
+    handleSuperCall(node, getter);
+    applyVisitState();
+  }
+
+  void visitSuperSetterSet(
+      SendSet node,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    loadThis();
+    visitForValue(rhs);
+    handleSuperCall(node, setter);
+    applyVisitState();
   }
 
   void visitSuperIndex(
@@ -930,7 +950,7 @@ abstract class CodegenVisitor
       _) {
     loadThis();
     visitForValue(index);
-    handleSuperOperatorCall(node, function);
+    handleSuperCall(node, function);
     applyVisitState();
   }
 
@@ -943,7 +963,7 @@ abstract class CodegenVisitor
     loadThis();
     visitForValue(index);
     visitForValue(rhs);
-    handleSuperOperatorCall(node, function);
+    handleSuperCall(node, function);
     applyVisitState();
   }
 
@@ -958,7 +978,7 @@ abstract class CodegenVisitor
     visitForValue(index);
     loadThis();
     builder.loadLocal(1);
-    handleSuperOperatorCall(node, getter);
+    handleSuperCall(node, getter);
     loadThis();
     // Load index
     builder.loadLocal(2);
@@ -966,7 +986,7 @@ abstract class CodegenVisitor
     builder.loadLocal(2);
     visitForValue(rhs);
     invokeMethod(node, getAssignmentSelector(operator));
-    handleSuperOperatorCall(node, setter);
+    handleSuperCall(node, setter);
     // Override 'index' with result value, and pop everything else.
     builder.storeLocal(2);
     builder.pop();
@@ -985,7 +1005,7 @@ abstract class CodegenVisitor
     visitForValue(index);
     loadThis();
     builder.loadLocal(1);
-    handleSuperOperatorCall(node, getter);
+    handleSuperCall(node, getter);
     loadThis();
     // Load index
     builder.loadLocal(2);
@@ -994,7 +1014,7 @@ abstract class CodegenVisitor
     builder.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     // We can now call []= with 'this', 'index' and 'value'.
-    handleSuperOperatorCall(node, setter);
+    handleSuperCall(node, setter);
     builder.pop();
     // Pop result, override 'index' with initial indexed value, and pop again.
     builder.storeLocal(1);
@@ -1010,7 +1030,7 @@ abstract class CodegenVisitor
       _) {
     loadThis();
     visitForValue(argument);
-    handleSuperOperatorCall(node, function);
+    handleSuperCall(node, function);
     applyVisitState();
   }
 
@@ -1021,7 +1041,7 @@ abstract class CodegenVisitor
       _) {
     loadThis();
     visitForValue(argument);
-    handleSuperOperatorCall(node, function);
+    handleSuperCall(node, function);
     applyVisitState();
   }
 
@@ -1031,7 +1051,7 @@ abstract class CodegenVisitor
       FunctionElement function,
       _) {
     loadThis();
-    handleSuperOperatorCall(node, function);
+    handleSuperCall(node, function);
     applyVisitState();
   }
 
@@ -2009,6 +2029,19 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void handleStaticSetterSet(
+      Send node,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    visitForValue(rhs);
+    registerStaticInvocation(setter);
+    int methodId = context.backend.functionMethodId(setter);
+    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    invokeStatic(node, constId, 1);
+    applyVisitState();
+  }
+
   /**
    * Load the captured variables of [function], expressed in [info].
    *
@@ -2643,15 +2676,6 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[handleStaticSetterGet] isn't implemented.");
-  }
-
-  void handleStaticSetterSet(
-      SendSet node,
-      FunctionElement setter,
-      Node rhs,
-      _) {
-    generateUnimplementedError(
-        node, "[handleStaticSetterSet] isn't implemented.");
   }
 
   void handleStaticSetterInvoke(

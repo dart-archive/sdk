@@ -223,9 +223,31 @@ class _GrowableList<E> extends ListBase<E> implements List<E> {
   }
 
   void addAll(Iterable<E> iterable) {
-    iterable.forEach((E each) {
-      add(each);
-    });
+    int length = this.length;
+    Iterator it = iterable.iterator;
+    if (!it.moveNext()) return;
+    do {
+      int capacity = _list.length;
+      while (length < capacity) {
+        int newLength = length + 1;
+        _length = newLength;
+        _list[length] = it.current;
+        if (!it.moveNext()) return;
+        if (this.length != newLength) {
+          throw new ConcurrentModificationError(this);
+        }
+        length = newLength;
+      }
+      _grow(capacity * 2);
+    } while (true);
+  }
+
+  void forEach(f(E element)) {
+    int initialLength = length;
+    for (int i = 0; i < length; i++) {
+      f(this[i]);
+      if (length != initialLength) throw new ConcurrentModificationError(this);
+    }
   }
 
   void clear() {

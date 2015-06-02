@@ -37,7 +37,7 @@ abstract class _IntBase implements int {
 
   String toRadixString(int radix) {
     if (this == -0x8000000000000000) {
-      throw UnimplementedError("Integer too large: $radix");
+      throw new UnimplementedError("Integer too large: $radix");
     }
     if (radix < 2 || radix > 36) {
       throw new ArgumentError(radix);
