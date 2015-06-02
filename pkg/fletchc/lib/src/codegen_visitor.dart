@@ -774,7 +774,7 @@ abstract class CodegenVisitor
     builder.invokeTest(fletchSelector, 0);
   }
 
-  void handleIs(
+  void doIs(
       Node node,
       Node expression,
       DartType type,
@@ -790,7 +790,7 @@ abstract class CodegenVisitor
       Node expression,
       DartType type,
       _) {
-    handleIs(node, expression, type, node.arguments.first);
+    doIs(node, expression, type, node.arguments.first);
     applyVisitState();
   }
 
@@ -799,7 +799,7 @@ abstract class CodegenVisitor
       Node expression,
       DartType type,
       _) {
-    handleIs(node, expression, type, node.arguments.first);
+    doIs(node, expression, type, node.arguments.first);
     builder.negate();
     applyVisitState();
   }
@@ -2004,6 +2004,7 @@ abstract class CodegenVisitor
       CallStructure callStructure,
       _) {
     generateUnimplementedError(node, "Cannot allocate abstract class");
+    applyVisitState();
   }
 
   void errorUnresolvedRedirectingFactoryConstructorInvoke(
@@ -2099,14 +2100,12 @@ abstract class CodegenVisitor
   void visitExpression(Expression node) {
     generateUnimplementedError(
         node, "Missing visit of expression: ${node.runtimeType}");
+    applyVisitState();
   }
 
   void visitStatement(Node node) {
-    VisitState oldState = visitState;
-    visitState = VisitState.Effect;
     generateUnimplementedError(
         node, "Missing visit of statement: ${node.runtimeType}");
-    visitState = oldState;
   }
 
   void handleStatements(NodeList statements) {
@@ -2647,7 +2646,6 @@ abstract class CodegenVisitor
         spannable,
         reason,
         compiledFunction);
-    applyVisitState();
   }
 
   String toString() => "FunctionCompiler(${element.name})";
@@ -2659,6 +2657,7 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[handleFinalStaticFieldSet] isn't implemented.");
+    applyVisitState();
   }
 
   void handleImmutableLocalSet(
@@ -2668,6 +2667,7 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[handleImmutableLocalSet] isn't implemented.");
+    applyVisitState();
   }
 
   void handleStaticSetterGet(
@@ -2676,6 +2676,7 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[handleStaticSetterGet] isn't implemented.");
+    applyVisitState();
   }
 
   void handleStaticSetterInvoke(
@@ -2686,6 +2687,7 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[handleStaticSetterInvoke] isn't implemented.");
+    applyVisitState();
   }
 
   void handleStaticGetterSet(
@@ -2695,6 +2697,7 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[handleStaticGetterSet] isn't implemented.");
+    applyVisitState();
   }
 
   void handleStaticGetterInvoke(
@@ -2705,6 +2708,7 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[handleStaticGetterInvoke] isn't implemented.");
+    applyVisitState();
   }
 
   void handleStaticFunctionSet(
@@ -2714,10 +2718,12 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[handleStaticFunctionSet] isn't implemented.");
+    applyVisitState();
   }
 
   void bulkHandleNode(Node node, String msg, _) {
     generateUnimplementedError(node, msg.replaceAll('#', node.toString()));
+    applyVisitState();
   }
 
   void visitNode(Node node) {
