@@ -1009,20 +1009,16 @@ NATIVE(StopwatchNow) {
 
 NATIVE(IdentityHashCode) {
   Object* object = arguments[0];
-  if (object->IsSmi() || object->IsLargeInteger()) return object;
-  if (object->IsTrue()) return Smi::FromWord(5);
-  if (object->IsFalse()) return Smi::FromWord(7);
-  if (object->IsDouble()) {
-    double value = Double::cast(object)->value();
-    if (isnan(value) || isinf(value)) return Smi::FromWord(42);
-    return Smi::FromWord(static_cast<int>(value) & Smi::kMaxValue);
-  }
   if (object->IsString()) {
-    // TODO(ager): This is a bad hash code.
-    return Smi::FromWord(String::cast(object)->length());
+    return Smi::FromWord(String::cast(object)->Hash());
+  } else if (object->IsSmi() || object->IsLargeInteger()) {
+    return object;
+  } else if (object->IsDouble()) {
+    double value = Double::cast(object)->value();
+    return process->ToInteger(static_cast<int64>(value));
+  } else {
+    return HeapObject::cast(object)->LazyIdentityHashCode(process->random());
   }
-  return HeapObject::cast(
-      arguments[0])->LazyIdentityHashCode(process->random());
 }
 
 char* AsForeignString(String* s) {

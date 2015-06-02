@@ -626,8 +626,8 @@ class String: public BaseArray {
     return ComputeAlternativeSize(kSize, length() * sizeof(uint16_t));
   }
 
-  // Hashing
-  uint32 Hash() {
+  // Hashing.
+  word Hash() {
     word value = hash_value();
     if (value != kNoHashValue) return value;
     return SlowHash();
@@ -659,13 +659,17 @@ class String: public BaseArray {
 
   static const word kNoHashValue = 0;
 
+  // For strings in program space, this function may be called by multiple
+  // threads at the same time. They will all compute the same result, so
+  // they will all write the same value into the [hash_value] field.
   word SlowHash() {
-    word value = Utils::StringHash(address_for(0), length());
+    word value = Utils::StringHash(address_for(0), length()) & Smi::kMaxValue;
     if (value == kNoHashValue) {
       static const int kNoHashValueReplacement = 1;
       ASSERT(kNoHashValueReplacement != kNoHashValue);
       value = kNoHashValueReplacement;
     }
+    ASSERT(Smi::IsValid(value));
     set_hash_value(value);
     return value;
   }
