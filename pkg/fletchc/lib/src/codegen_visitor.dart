@@ -749,12 +749,26 @@ abstract class CodegenVisitor
       // TODO(ahe): Remove [diagnosticLocation] when malformed types are
       // handled.
       Spannable diagnosticLocation) {
-    if (type == null || type.isMalformed || !type.isInterfaceType) {
+    if (type == null || type.isMalformed) {
       builder.pop();
       generateUnimplementedError(
-          diagnosticLocation, "Unhandled type test involving $type.");
+          diagnosticLocation, "Unhandled type test for malformed $type.");
       return;
     }
+
+    if (type.isDynamic) {
+      builder.pop();
+      builder.loadLiteralTrue();
+      return;
+    }
+
+    if (!type.isInterfaceType) {
+      builder.pop();
+      generateUnimplementedError(
+          diagnosticLocation, "Unhandled type test for $type.");
+      return;
+    }
+
     Element element = type.element;
     int fletchSelector = context.toFletchIsSelector(element);
     builder.invokeTest(fletchSelector, 0);
