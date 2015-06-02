@@ -15,6 +15,11 @@ regress_14348_test: Crash
 [ ($compiler == fletchc || $runtime == fletchc) && $arch == ia32 ]
 bit_shift_test: Fail
 
+[ ($runtime == fletchc || $runtime == fletchvm) && $asan ]
+# Address sanitizer turns caught crashes into failures.
+large_class_declaration_test: Fail
+implicit_scope_test: Fail
+
 [ $compiler == fletchc || $runtime == fletchc ]
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
@@ -162,7 +167,7 @@ deferred_constraints_type_annotation_test/type_annotation_generic4: Fail
 deferred_constraints_type_annotation_test/type_annotation_non_deferred: Fail
 deferred_constraints_type_annotation_test/type_annotation_null: Fail
 deferred_constraints_type_annotation_test/type_annotation_top_level: Fail
-deferred_in_isolate_test: Crash
+deferred_in_isolate_test: CompileTimeError
 deferred_inheritance_constraints_test/redirecting_constructor: MissingRuntimeError
 deferred_inlined_test: Fail
 deferred_load_inval_code_test: Fail
@@ -180,14 +185,10 @@ dynamic_type_literal_test: Crash
 empty_block_case_test: Fail
 error_stacktrace_test: Fail
 exception_test: Fail
-external_test/10: Crash
-external_test/11: Crash
-external_test/12: Crash
-external_test/23: Crash
 external_test/25: MissingCompileTimeError
-f_bounded_equality_test: Crash
-f_bounded_quantification4_test: Crash
-f_bounded_quantification5_test: Crash
+f_bounded_equality_test: CompileTimeError
+f_bounded_quantification4_test: CompileTimeError
+f_bounded_quantification5_test: CompileTimeError
 factory2_negative_test: Fail
 factory3_test: Crash
 factory_negative_test: Fail
@@ -208,11 +209,11 @@ final_field_initialization_order_test: Fail
 final_syntax_test/08: Crash
 final_syntax_test/09: MissingCompileTimeError
 first_class_types_constants_test: Crash
-first_class_types_libraries_test: Crash
-first_class_types_literals_test/01: Crash
-first_class_types_literals_test/02: Crash
-first_class_types_literals_test/none: Crash
-first_class_types_test: Crash
+first_class_types_libraries_test: CompileTimeError
+first_class_types_literals_test/01: Fail
+first_class_types_literals_test/02: Fail
+first_class_types_literals_test/none: Fail
+first_class_types_test: CompileTimeError
 fixed_type_variable2_test/01: Fail
 fixed_type_variable2_test/02: Fail
 fixed_type_variable2_test/03: Fail
@@ -286,8 +287,8 @@ function_type_alias_test: Fail
 function_type_call_getter_test: Fail
 function_type_parameter_test: Fail
 generic2_test: Fail
-generic_closure_test: Crash
-generic_creation_test: Crash
+generic_closure_test: Fail
+generic_creation_test: CompileTimeError
 generic_deep_test: Fail
 generic_field_mixin2_test: Fail
 generic_field_mixin3_test: Fail
@@ -333,7 +334,7 @@ is_malformed_type_test/98: Fail
 is_malformed_type_test/99: Crash
 is_not_class2_test: Crash
 isnot_malformed_type_test: Fail
-issue10561_test: Crash
+issue10561_test: CompileTimeError
 issue10747_test: Fail
 issue13474_test: Fail
 issue13673_test: Fail
@@ -342,7 +343,6 @@ issue14014_3_test: Crash
 issue14014_test: Crash
 issue14242_test: Fail
 issue18628_1_test/01: Fail
-issue9949_test: Crash
 label_test: Fail
 large_class_declaration_test: Crash
 lazy_static3_test: Crash
@@ -387,7 +387,7 @@ mixin_mixin7_test: Fail
 mixin_mixin_bound2_test: Fail
 mixin_mixin_bound_test: Fail
 mixin_mixin_test: Fail
-mixin_regress_13688_test: Crash
+mixin_regress_13688_test: CompileTimeError
 mixin_type_parameter1_test: Fail
 mixin_type_parameter2_test: Fail
 mixin_type_parameter3_test: Fail
@@ -405,12 +405,9 @@ namer2_test: Fail
 no_such_method2_test: Fail
 no_such_method_dispatcher_test: Fail
 no_such_method_test: CompileTimeError
-null2_test: Crash
+null2_test: CompileTimeError
 null_is2_test: Fail
-null_test/01: Crash
-null_test/02: Crash
-null_test/03: Crash
-null_test/none: Crash
+null_test/none: Fail
 number_identity2_test: Fail
 on_catch_malformed_type_test: Fail
 overridden_no_such_method_test: CompileTimeError
@@ -432,10 +429,10 @@ ref_before_declaration_test/04: Crash
 ref_before_declaration_test/05: Crash
 ref_before_declaration_test/06: Crash
 ref_before_declaration_test/none: Crash
-reg_ex2_test: Crash
-reg_exp2_test: Crash
-reg_exp3_test: Crash
-reg_exp_test: Crash
+reg_ex2_test: CompileTimeError
+reg_exp2_test: CompileTimeError
+reg_exp3_test: CompileTimeError
+reg_exp_test: CompileTimeError
 regress_13462_0_test: CompileTimeError
 regress_13462_1_test: CompileTimeError
 regress_13494_test: Fail
@@ -443,8 +440,8 @@ regress_14348_test: CompileTimeError
 regress_18535_test: CompileTimeError
 regress_20935_test: Fail
 regress_r24720_test: Fail
-reify_typevar_test: Crash
-runtime_type_test: Crash
+reify_typevar_test: Fail
+runtime_type_test: CompileTimeError
 scope_variable_test/01: MissingCompileTimeError
 script2_negative_test: Fail
 setter0_test: Fail
@@ -511,8 +508,6 @@ type_promotion_functions_test/12: Crash
 type_promotion_functions_test/13: Crash
 type_promotion_functions_test/14: Crash
 type_promotion_functions_test/none: Crash
-type_variable_bounds4_test/01: Crash
-type_variable_bounds4_test/none: Crash
 type_variable_closure_test: Fail
 type_variable_conflict2_test/01: Fail
 type_variable_conflict2_test/05: Fail
@@ -540,17 +535,12 @@ type_variable_typedef_test: Fail
 typed_message_test: Crash
 typedef_is_test: Fail
 vm/allocation_sinking_vm_test: Crash
-vm/load_to_load_forwarding_vm_test: Crash
+vm/load_to_load_forwarding_vm_test: CompileTimeError
 vm/no_such_method_error_message_vm_test: Fail
-vm/optimized_guarded_field_isolates_test: Crash
+vm/optimized_guarded_field_isolates_test: CompileTimeError
 vm/reflect_core_vm_test: CompileTimeError
-vm/reusable_boxes_test: Crash
+vm/reusable_boxes_test: CompileTimeError
 vm/store_to_load_forwarding_phis_vm_test: Crash
 vm/type_cast_vm_test: Fail
 vm/type_vm_test: Fail
-vm/typed_data_polymorphic_view_test: Crash
-
-[ ($runtime == fletchc || $runtime == fletchvm) && $asan ]
-# Address sanitizer turns caught crashes into failures.
-large_class_declaration_test: Fail
-implicit_scope_test: Fail
+vm/typed_data_polymorphic_view_test: Fail

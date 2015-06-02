@@ -856,7 +856,14 @@ class FletchBackend extends Backend {
                function.library == compiler.coreLibrary) {
       codegenExternalNoSuchMethodTrampoline(function, codegen);
     } else {
-      compiler.internalError(function, "Unhandled external function.");
+      compiler.reportError(
+          function.node,
+          MessageKind.GENERIC,
+          {'text': 'External function is not supported'});
+      codegen
+          ..handleCompileError()
+          ..builder.ret()
+          ..builder.methodEnd();
     }
   }
 
