@@ -110,37 +110,38 @@ Function* Function::FromBytecodePointer(uint8* bcp, int* frame_ranges_offset) {
 void* Function::ComputeIntrinsic() {
   int length = bytecode_size();
   uint8* bytecodes = bytecode_address_for(0);
+  void* result = NULL;
   if (length >= 4 &&
       bytecodes[0] == kLoadLocal1 &&
       bytecodes[1] == kLoadField &&
       bytecodes[3] == kReturn) {
-    return reinterpret_cast<void*>(&Intrinsic_GetField);
+    result = reinterpret_cast<void*>(&Intrinsic_GetField);
   } else if (length >= 4 &&
              bytecodes[0] == kLoadLocal2 &&
              bytecodes[1] == kLoadLocal2 &&
              bytecodes[2] == kIdenticalNonNumeric &&
              bytecodes[3] == kReturn) {
-    return reinterpret_cast<void*>(&Intrinsic_ObjectEquals);
+    result = reinterpret_cast<void*>(&Intrinsic_ObjectEquals);
   } else if (length >= 5 &&
              bytecodes[0] == kLoadLocal2 &&
              bytecodes[1] == kLoadLocal2 &&
              bytecodes[2] == kStoreField &&
              bytecodes[4] == kReturn) {
-    return reinterpret_cast<void*>(&Intrinsic_SetField);
+    result = reinterpret_cast<void*>(&Intrinsic_SetField);
   } else if (length >= 3 &&
              bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListIndexGet) {
-    return reinterpret_cast<void*>(&Intrinsic_ListIndexGet);
+    result = reinterpret_cast<void*>(&Intrinsic_ListIndexGet);
   } else if (length >= 3 &&
              bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListIndexSet) {
-    return reinterpret_cast<void*>(&Intrinsic_ListIndexSet);
+    result = reinterpret_cast<void*>(&Intrinsic_ListIndexSet);
   } else if (length >= 3 &&
              bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListLength) {
-    return reinterpret_cast<void*>(&Intrinsic_ListLength);
+    result = reinterpret_cast<void*>(&Intrinsic_ListLength);
   }
-  return NULL;
+  return (reinterpret_cast<Object*>(result)->IsSmi()) ? result : NULL;
 }
 
 void Object::Print() {
