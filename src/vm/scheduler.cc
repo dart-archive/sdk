@@ -18,6 +18,7 @@
 namespace fletch {
 
 ThreadState* const kEmptyThreadState = reinterpret_cast<ThreadState*>(1);
+ThreadState* const kLockedThreadState = reinterpret_cast<ThreadState*>(2);
 
 Scheduler::Scheduler()
     : max_threads_(Platform::GetNumberOfHardwareThreads()),
@@ -343,29 +344,46 @@ void Scheduler::EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
 }
 
 void Scheduler::PushIdleThread(ThreadState* thread_state) {
-  // Add thread_state to idle_threads_, if it is not already in it.
-  if (thread_state->next_idle_thread() != NULL) return;
   ThreadState* idle_threads = idle_threads_;
   while (true) {
-    thread_state->set_next_idle_thread(idle_threads);
-    if (idle_threads_.compare_exchange_weak(idle_threads, thread_state)) {
+    if (idle_threads == kLockedThreadState) {
+      idle_threads = idle_threads_;
+    } else if (idle_threads_.compare_exchange_weak(idle_threads,
+                                                   kLockedThreadState)) {
       break;
     }
   }
+
+  ASSERT(idle_threads != NULL);
+
+  // Add thread_state to idle_threads_, if it is not already in it.
+  if (thread_state->next_idle_thread() == NULL) {
+    thread_state->set_next_idle_thread(idle_threads);
+    idle_threads = thread_state;
+  }
+
+  idle_threads_ = idle_threads;
 }
 
 ThreadState* Scheduler::PopIdleThread() {
   ThreadState* idle_threads = idle_threads_;
-  while (idle_threads != kEmptyThreadState) {
-    ThreadState* next = idle_threads->next_idle_thread();
-    if (next == NULL) {
+  while (true) {
+    if (idle_threads == kEmptyThreadState) {
+      return NULL;
+    } else if (idle_threads == kLockedThreadState) {
       idle_threads = idle_threads_;
-    } else if (idle_threads_.compare_exchange_weak(idle_threads, next)) {
-      idle_threads->set_next_idle_thread(NULL);
-      return idle_threads;
+    } else if (idle_threads_.compare_exchange_weak(idle_threads,
+                                                   kLockedThreadState)) {
+      break;
     }
   }
-  return NULL;
+
+  ThreadState* next = idle_threads->next_idle_thread();
+  idle_threads->set_next_idle_thread(NULL);
+
+  idle_threads_ = next;
+
+  return idle_threads;
 }
 
 void Scheduler::RunInThread() {
