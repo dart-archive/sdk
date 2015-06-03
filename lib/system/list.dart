@@ -9,36 +9,10 @@ List newList(int length) {
   return (length == null) ? new _GrowableList() : new _FixedList(length);
 }
 
-class _Lists {
-  static void setRange(List list,
-                       int start,
-                       int end,
-                       Iterable iterable,
-                       int skipCount) {
-    int length = list.length;
-    if (start < 0 || start > length) {
-      throw new RangeError.range(start, 0, length);
-    }
-    if (end < start || end > length) {
-      throw new RangeError.range(end, start, length);
-    }
-    if ((end - start) == 0) return;
-    Iterator it = iterable.iterator;
-    while (skipCount > 0) {
-      if (!it.moveNext()) return;
-      skipCount--;
-    }
-    for (int i = start; i < end; i++) {
-      if (!it.moveNext()) return;
-      list[i] = it.current;
-    }
-  }
-}
-
-class _ConstantList<E> extends ListBase<E> implements List<E> {
+abstract class _FixedListBase<E> implements List<E> {
   final _list;
 
-  _ConstantList(int length)
+  _FixedListBase(int length)
       : this._list = _new(length);
 
   // Not external, to match non-external setter.
@@ -59,118 +33,22 @@ class _ConstantList<E> extends ListBase<E> implements List<E> {
   @native static _ConstantList _new(int length) {
     throw new ArgumentError(length);
   }
-
-  void operator[]=(int index, E value) {
-    throw new UnsupportedError("Cannot modify an unmodifiable list");
-  }
-
-  void set length(int newLength) {
-    throw new UnsupportedError("Cannot change length of fixed-length list");
-  }
-
-  void add(E value) {
-    throw new UnsupportedError("Cannot add to fixed-length list");
-  }
-
-  void addAll(Iterable<E> iterable) {
-    throw new UnsupportedError("Cannot add to fixed-length list");
-  }
-
-  Iterable<E> get reversed {
-    throw new UnimplementedError("_ConstantList.reversed");
-  }
-
-  void sort([int compare(E a, E b)]) {
-    throw new UnsupportedError("Cannot modify an unmodifiable list");
-  }
-
-  void shuffle([Random random]) {
-    throw new UnsupportedError("Cannot modify an unmodifiable list");
-  }
-
-  void clear() {
-    throw new UnsupportedError("Cannot remove from fixed-length list");
-  }
-
-  void insert(int index, E element) {
-    throw new UnsupportedError("Cannot add to fixed-length list");
-  }
-
-  void insertAll(int index, Iterable<E> iterable) {
-    throw new UnsupportedError("Cannot add to fixed-length list");
-  }
-
-  void setAll(int index, Iterable<E> iterable) {
-    throw new UnsupportedError("Cannot add to fixed-length list");
-  }
-
-  bool remove(Object value) {
-    throw new UnsupportedError("Cannot remove from fixed-length list");
-  }
-
-  E removeAt(int index) {
-    throw new UnsupportedError("Cannot remove from fixed-length list");
-  }
-
-  E removeLast() {
-    throw new UnsupportedError("Cannot remove from fixed-length list");
-  }
-
-  void removeWhere(bool test(E element)) {
-    throw new UnsupportedError("Cannot remove from fixed-length list");
-  }
-
-  void retainWhere(bool test(E element)) {
-    throw new UnsupportedError("Cannot remove from fixed-length list");
-  }
-
-  Iterable<E> getRange(int start, int end) {
-    throw new UnimplementedError("_ConstantList.getRange");
-  }
-
-  void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
-    throw new UnsupportedError("Cannot modify an unmodifiable list");
-  }
-
-  void removeRange(int start, int end) {
-    throw new UnsupportedError("Cannot remove from fixed-length list");
-  }
-
-  void fillRange(int start, int end, [E fillValue]) {
-    throw new UnsupportedError("Cannot modify an unmodifiable list");
-  }
-
-  void replaceRange(int start, int end, Iterable<E> replacement) {
-    throw new UnsupportedError("Cannot remove from fixed-length list");
-  }
-
-  Map<int, E> asMap() {
-    throw new UnimplementedError("_ConstantList.asMap");
-  }
 }
 
-class _FixedList<E> extends _ConstantList<E> {
+class _ConstantList<E>
+    extends _FixedListBase<E>
+    with ListMixin<E>,
+         UnmodifiableListMixin<E> {
+  _ConstantList([int length])
+      : super(length);
+}
+
+class _FixedList<E>
+    extends _FixedListBase<E>
+    with ListMixin<E>,
+         FixedLengthListMixin<E> {
   _FixedList([int length])
       : super(length);
-
-  void sort([int compare(E a, E b)]) {
-    throw new UnimplementedError("_FixedList.sort");
-  }
-
-  void shuffle([Random random]) {
-    throw new UnimplementedError("_FixedList.shuffle");
-  }
-
-  void setRange(int start, int end, Iterable<E> iterable, [int skipCount = 0]) {
-    _Lists.setRange(this, start, end, iterable, skipCount);
-  }
-
-  void fillRange(int start, int end, [E fillValue]) {
-    RangeError.checkValidRange(start, end, length);
-    for (int i = start; i < end; i++) {
-      this[i] = fillValue;
-    }
-  }
 
   @native E operator[]=(int index, value) {
     switch (nativeError) {
@@ -270,9 +148,7 @@ class _GrowableList<E> extends ListBase<E> implements List<E> {
   }
 
   E removeAt(int index) {
-    int length = _length;
-    if (index >= length) throw new IndexError(index, this);
-    E result = _list[index];
+    E result = this[index];
     _shiftDown(index, length);
     return result;
   }

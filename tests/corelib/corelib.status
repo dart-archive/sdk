@@ -27,6 +27,14 @@ integer_to_radix_string_test: Fail
 
 # Object.runtimeType / type check
 collection_length_test: CompileTimeError
+iterable_fold_test: CompileTimeError
+iterable_generate_test: Fail
+iterable_reduce_test: CompileTimeError
+iterable_to_list_test: Fail
+iterable_to_set_test: Fail
+linked_hash_map_from_iterable_test: Fail
+linked_hash_map_from_iterables_test: Fail
+list_filled_type_argument_test: Fail
 map_from_iterable_test: Fail
 map_from_iterables_test: Fail
 map_keys2_test: Fail
@@ -117,6 +125,10 @@ error_stack_trace_test: Fail
 # Function in class field
 growable_list_test: Fail
 
+# dart:typed_data
+list_test/01: Fail
+list_test/none: Fail
+
 # Unsorted
 bool_from_environment_test: RuntimeError
 double_parse_test/01: Fail
@@ -151,26 +163,10 @@ int_parse_radix_test/none: Fail
 int_round_to_double_test: Fail
 int_truncate_to_double_test: Fail
 integer_to_string_test/01: Fail
-iterable_fold_test: CompileTimeError
-iterable_generate_test: Fail
-iterable_reduce_test: CompileTimeError
 iterable_return_type_test/01: Fail
 iterable_return_type_test/02: Fail
 iterable_return_type_test/none: Fail
-iterable_to_list_test: Fail
-iterable_to_set_test: Fail
 json_map_test: CompileTimeError
-linked_hash_map_from_iterable_test: Fail
-linked_hash_map_from_iterables_test: Fail
-list_as_map_test: Fail
-list_filled_type_argument_test: Fail
-list_get_range_test: Fail
-list_removeat_test: Fail
-list_reversed_test: Fail
-list_set_all_test: Fail
-list_sort_test: Fail
-list_test/01: Fail
-list_test/none: Fail
 null_test: Fail
 num_clamp_test: Fail
 num_parse_test/01: Fail
@@ -189,7 +185,6 @@ reg_exp_string_match_test: CompileTimeError
 safe_to_string_test: Fail
 set_test: Fail
 shuffle_test: Fail
-sort_test: Fail
 splay_tree_from_iterable_test: Fail
 splay_tree_from_iterables_test: Fail
 splay_tree_test: Fail

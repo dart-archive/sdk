@@ -116,9 +116,9 @@ namespace fletch {
   N(DateTimeTimeZoneOffset,      "DateTime", "_timeZoneOffset")          \
   N(DateTimeLocalTimeZoneOffset, "DateTime", "_localTimeZoneOffset")     \
                                                                          \
-  N(ListNew,                     "_ConstantList", "_new")                \
-  N(ListLength,                  "_ConstantList", "length")              \
-  N(ListIndexGet,                "_ConstantList", "[]")                  \
+  N(ListNew,                     "_FixedListBase", "_new")               \
+  N(ListLength,                  "_FixedListBase", "length")             \
+  N(ListIndexGet,                "_FixedListBase", "[]")                 \
                                                                          \
   N(ListIndexSet,                "_FixedList", "[]=")                    \
                                                                          \
