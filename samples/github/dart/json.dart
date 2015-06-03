@@ -7,13 +7,14 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart';
 
+import 'github_services.dart';
+
 int _min(int m, int n) => (m < n) ? m : n;
 
-dynamic getJson(String host, int port, String resource) {
-  var socket = new Socket.connect(host, port);
-  HttpConnection connection = new HttpConnection(socket);
-  HttpRequest request = new HttpRequest('$host/$resource');
-  request.headers["Host"] = host;
+dynamic getJson(Connection service, String resource) {
+  HttpConnection connection = new HttpConnection(service.connect());
+  HttpRequest request = new HttpRequest('${service.host}/$resource');
+  request.headers["Host"] = service.host;
   request.headers["User-Agent"] = 'fletch';
   HttpResponse response = connection.send(request);
   if (response.statusCode != 200) {

@@ -2,31 +2,70 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'github_mock_data.dart';
-
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:http/http.dart';
 
-class GithubMock {
+abstract class _Connection {
   final String host;
+  final int port;
+  final bool open;
+  void close();
+  Socket accept();
+}
+
+class _ConnectionImpl implements _Connection {
+  final String host;
+  ServerSocket _socket;
+  get port => _socket.port;
+  _ConnectionImpl(this.host, port) {
+    _socket = new ServerSocket(host, port);
+  }
+  bool get open => _socket != null;
+  void close() {
+    if (!open) return;
+    _socket.close();
+    _socket = null;
+  }
+  Socket accept() => _socket.accept();
+}
+
+class _ConnectionInvertedImpl implements _Connection {
+  final String host = '127.0.0.1';
+  final int port;
+  bool open = true;
+  _ConnectionInvertedImpl(this.port) {
+    // Signal availability to the "client".
+    accept().close();
+  }
+  void close() {
+    open = false;
+  }
+  Socket accept() {
+    return new Socket.connect(host, port);
+  }
+}
+
+class GithubMock {
   final int delay;
   bool verbose = false;
-  ServerSocket _server;
+  _Connection _connection;
   static const String _requestSuffix = ' HTTP/1.1';
 
-  int get port => _server.port;
+  String get host => _connection.host;
+  int get port => _connection.port;
 
-  GithubMock([String host = '127.0.0.1', int port = 0, int delay = 0])
-      : this.host = host,
-        this.delay = delay,
-        _server = new ServerSocket(host, port);
+  GithubMock([host = '127.0.0.1', int port = 0, int this.delay = 0]) {
+    _connection = new _ConnectionImpl(host, port);
+  }
+
+  GithubMock.invertedForTesting(int port, [int this.delay = 0]) {
+    _connection = new _ConnectionInvertedImpl(port);
+  }
 
   void close() {
-    if (_server == null) return;
-    _server.close();
-    _server = null;
+    _connection.close();
   }
 
   void spawn() {
@@ -35,10 +74,10 @@ class GithubMock {
 
   void run() {
     if (verbose) print('Running server on $host:$port');
-    while (_server != null) {
+    while (_connection.open) {
       try {
-        _accept(_server.accept());
-      } catch (_) {
+        _accept(_connection.accept());
+      } on SocketException catch (_) {
         // outstanding accept throws when the server closes.
       }
     }
@@ -82,14 +121,19 @@ class GithubMock {
     socket.close();
   }
 
+  String _dataDir = 'samples/github/dart/github_mock_data';
+
   ByteBuffer _readResponseFile(String resource) {
-    var result = githubMockData[resource];
+    int code = 200;
+    String path = '$_dataDir/$resource.data';
+    if (!File.existsAsFile(path)) {
+      code = 404;
+      path = '$_dataDir/404.data';
+    }
     if (verbose) {
-      int code = result == null ? 404 : 200;
       print('Response $code on request for $resource');
     }
-    return (result != null) ?
-        stringToByteBuffer(result) :
-        stringToByteBuffer(githubMockData404);
+    File file = new File.open(path);
+    return file.read(file.length);
   }
 }

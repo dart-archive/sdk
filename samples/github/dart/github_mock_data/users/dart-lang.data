@@ -1,0 +1,58 @@
+HTTP/1.1 200 OK
+Server: GitHubMock.com
+Date: Mon, 20 Apr 2015 07:15:01 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 1338
+Status: 200 OK
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 59
+X-RateLimit-Reset: 1429517701
+Cache-Control: public, max-age=60, s-maxage=60
+Last-Modified: Mon, 20 Apr 2015 07:05:19 GMT
+ETag: "5af2fef807e0d5372a3d5c17ce28ab30"
+Vary: Accept
+X-GitHub-Media-Type: github.v3
+X-XSS-Protection: 1; mode=block
+X-Frame-Options: deny
+Content-Security-Policy: default-src 'none'
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: ETag, Link, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval
+Access-Control-Allow-Origin: *
+X-GitHub-Request-Id: 57398502:1416:E988BA8:5534A775
+Strict-Transport-Security: max-age=31536000; includeSubdomains; preload
+X-Content-Type-Options: nosniff
+Vary: Accept-Encoding
+X-Served-By: 474556b853193c38f1b14328ce2d1b7d
+
+{
+  "login": "dart-lang",
+  "id": 1609975,
+  "avatar_url": "https://avatars.githubusercontent.com/u/1609975?v=3",
+  "gravatar_id": "",
+  "url": "https://api.github.com/users/dart-lang",
+  "html_url": "https://github.com/dart-lang",
+  "followers_url": "https://api.github.com/users/dart-lang/followers",
+  "following_url": "https://api.github.com/users/dart-lang/following{/other_user}",
+  "gists_url": "https://api.github.com/users/dart-lang/gists{/gist_id}",
+  "starred_url": "https://api.github.com/users/dart-lang/starred{/owner}{/repo}",
+  "subscriptions_url": "https://api.github.com/users/dart-lang/subscriptions",
+  "organizations_url": "https://api.github.com/users/dart-lang/orgs",
+  "repos_url": "https://api.github.com/users/dart-lang/repos",
+  "events_url": "https://api.github.com/users/dart-lang/events{/privacy}",
+  "received_events_url": "https://api.github.com/users/dart-lang/received_events",
+  "type": "Organization",
+  "site_admin": false,
+  "name": "Dart",
+  "company": null,
+  "blog": "https://www.dartlang.org",
+  "location": "",
+  "email": "",
+  "hireable": null,
+  "bio": "Productive language, libraries, and tools for client and server development",
+  "public_repos": 132,
+  "public_gists": 0,
+  "followers": 0,
+  "following": 0,
+  "created_at": "2012-04-03T23:36:55Z",
+  "updated_at": "2015-04-20T07:05:19Z"
+}

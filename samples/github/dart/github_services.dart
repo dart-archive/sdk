@@ -2,24 +2,62 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:io';
 import 'json.dart';
+
+abstract class Connection {
+  final String host;
+  final int port;
+  Socket connect();
+  void close();
+}
+
+class _ConnectionImpl implements Connection {
+  final String host;
+  final int port;
+  _ConnectionImpl(this.host, this.port);
+  Socket connect() => new Socket.connect(host, port);
+  void close() {}
+}
+
+class _ConnectionInvertedImpl implements Connection {
+  final String host = '127.0.0.1';
+  final int port;
+  ServerSocket _socket;
+  _ConnectionInvertedImpl(this.port) {
+    _socket = new ServerSocket(host, port);
+    print('Waiting for Github mock server on $host:$port');
+    connect();
+  }
+  Socket connect() => _socket.accept();
+  void close() { _socket.close(); }
+}
 
 class Server {
   static const githubApiUrl = 'https://api.github.com';
-  final String host;
-  final int port;
+  String get host => _connection.host;
+  int  get port => _connection.port;
+
+  Connection _connection;
 
   List<Channel> outstanding = [];
 
-  Server(this.host, this.port);
+  Server(String host, int port) {
+    _connection = new _ConnectionImpl(host, port);
+  }
+
+  Server.invertedForTesting(int port) {
+    _connection = new _ConnectionInvertedImpl(port);
+  }
 
   void close() {
     var local = outstanding;
     outstanding = [];
     for (Channel channel in local) channel.receive();
+    _connection.close();
   }
 
-  dynamic get(String resource) => getJson(host, port, resource);
+  dynamic get(String resource) => getJson(_connection, resource);
 
   User getUser(String name) => new User(name, this);
 }
