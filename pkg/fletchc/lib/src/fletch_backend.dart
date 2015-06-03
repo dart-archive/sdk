@@ -563,9 +563,8 @@ class FletchBackend extends Backend {
             2);
         functions.add(equal);
 
-        BytecodeBuilder builder = equal.builder;
         BytecodeLabel isFalse = new BytecodeLabel();
-        builder
+        equal.builder
           // First test for class. This ensures it's the exact function that
           // we expect.
           ..loadParameter(1)
@@ -586,8 +585,30 @@ class FletchBackend extends Backend {
           ..methodEnd();
 
         int id = context.getSymbolId("==");
-        int fletchSelector = FletchSelector.encodeMethod(id, 1);
-        compiledClass.methodTable[fletchSelector] = equal.methodId;
+        int equalsSelector = FletchSelector.encodeMethod(id, 1);
+        compiledClass.methodTable[equalsSelector] = equal.methodId;
+
+        // Create hashCode getter. We simply xor the object hashCode and the
+        // method id of the tearoff'ed function.
+        CompiledFunction hashCode = new CompiledFunction.accessor(
+            functions.length,
+            false);
+        functions.add(hashCode);
+
+        int hashCodeSelector = FletchSelector.encodeGetter(
+            context.getSymbolId("hashCode"));
+        int xorSelector = FletchSelector.encodeMethod(
+            context.getSymbolId("^"), 1);
+        hashCode.builder
+          ..loadParameter(0)
+          ..loadField(0)
+          ..invokeMethod(hashCodeSelector, 0)
+          ..loadLiteral(function.methodId)
+          ..invokeMethod(xorSelector, 1)
+          ..ret()
+          ..methodEnd();
+
+        compiledClass.methodTable[hashCodeSelector] = hashCode.methodId;
       }
       return compiledClass;
     });
