@@ -26,6 +26,7 @@
 // Must be >= bufferSlack.
 @property int bufferAdvance;
 
+@property (strong, nonatomic) NSMutableSet* selectedIndexPaths;
 @property ImmiRoot* immiRoot;
 
 @end
@@ -41,6 +42,9 @@
   // TODO(zerny): The buffer size should be dynamically computed. Here we make
   // it large enough for the display of an iPad Air.
   self.bufferCount = 30;
+  self.selectedIndexPaths = [NSMutableSet set];
+  self.tableView.rowHeight = UITableViewAutomaticDimension;
+  self.tableView.estimatedRowHeight = 50.0;
   return self;
 }
 
@@ -60,9 +64,11 @@
 - (UITableViewCell*)tableView:(UITableView*)tableView
         cellForRowAtIndexPath:(NSIndexPath*)indexPath {
   Node* node = [self itemAtIndex:indexPath.row];
-  return [self.cellPresenter tableView:tableView
-                             indexPath:indexPath
-                               present:node];
+  return [self.cellPresenter
+      tableView:tableView
+      indexPath:indexPath
+      withSelection: [self.selectedIndexPaths containsObject:indexPath]
+      present:node];
 }
 
 // To track what items are visible on screen we rely on the fact that only
@@ -142,6 +148,22 @@
 
 - (int)windowStart {
   return self.root.startOffset;
+}
+
+- (void)tableView:(UITableView*)tableView
+    didSelectRowAtIndexPath:(NSIndexPath*)indexPath {
+
+  [tableView deselectRowAtIndexPath:indexPath animated:NO];
+
+  if ([self.selectedIndexPaths containsObject:indexPath]) {
+    [self.selectedIndexPaths removeObject:indexPath];
+    [tableView reloadRowsAtIndexPaths:@[indexPath]
+                     withRowAnimation:UITableViewRowAnimationNone];
+  } else {
+    [self.selectedIndexPaths addObject:indexPath];
+    [tableView reloadRowsAtIndexPaths:@[indexPath]
+                     withRowAnimation:UITableViewRowAnimationNone];
+  }
 }
 
 @end

@@ -24,6 +24,7 @@
   [self.presenter immi_setupRoot:root];
 
   self.tableView.dataSource = self.presenter;
+  self.tableView.delegate = self.presenter;
 
   CADisplayLink* consoleLink =
       [CADisplayLink displayLinkWithTarget:self.presenter
