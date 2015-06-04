@@ -227,7 +227,9 @@ const patch = "patch";
       String source,
       {int radix,
        int onError(String source)}) {
+    source = source.trim();
     if (source.isEmpty) {
+      if (onError != null) return onError(source);
       throw new FormatException("Can't parse string as integer", source);
     }
     if (radix == null) {
@@ -237,6 +239,13 @@ const patch = "patch";
         radix = 16;
       } else {
         radix = 10;
+      }
+    } else if (radix == 16) {
+      if (source.startsWith('0x') ||
+          source.startsWith('-0x') ||
+          source.startsWith('+0x')) {
+        if (onError != null) return onError(source);
+        throw new FormatException("Can't parse string as integer", source);
       }
     } else {
       if (radix < 2 || radix > 36) throw new ArgumentError(radix);

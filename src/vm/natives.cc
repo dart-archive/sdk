@@ -709,7 +709,7 @@ NATIVE(DoubleParse) {
 
   // We trim in Dart to handle all the whitespaces.
   static const int kConversionFlags =
-    double_conversion::StringToDoubleConverter::NO_FLAGS;
+      double_conversion::StringToDoubleConverter::NO_FLAGS;
 
   double_conversion::StringToDoubleConverter converter(
       kConversionFlags,
@@ -718,13 +718,14 @@ NATIVE(DoubleParse) {
       kDoubleInfinitySymbol,
       kDoubleNaNSymbol);
 
-  String* str = String::cast(x);
-  uint16* buffer = reinterpret_cast<uint16_t*>(str->byte_address_for(0));
+  String* source = String::cast(x);
+  int length = source->length();
+  uint16* buffer = reinterpret_cast<uint16_t*>(source->byte_address_for(0));
   int consumed = 0;
-  double result = converter.StringToDouble(buffer, str->length(), &consumed);
+  double result = converter.StringToDouble(buffer, length, &consumed);
 
-  // The string is trimmed, so we must accept the full String.
-  if (consumed != str->length()) return Failure::index_out_of_bounds();
+  // The string is trimmed, so we must accept the full string.
+  if (consumed != length) return Failure::index_out_of_bounds();
   return process->NewDouble(result);
 }
 

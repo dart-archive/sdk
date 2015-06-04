@@ -166,9 +166,7 @@ int_floor_to_double_test: Fail
 int_from_environment2_test: RuntimeError
 int_from_environment_default_value_test: CompileTimeError
 int_from_environment_test: RuntimeError
-int_parse_radix_test/01: Fail
 int_parse_radix_test/02: Fail
-int_parse_radix_test/none: Fail
 int_round_to_double_test: Fail
 int_truncate_to_double_test: Fail
 integer_to_string_test/01: Fail
