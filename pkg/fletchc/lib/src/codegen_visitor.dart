@@ -2136,7 +2136,10 @@ abstract class CodegenVisitor
   }
 
   void visitBlock(Block node) {
+    var breakLabel = new BytecodeLabel();
+    jumpInfo[node] = new JumpInfo(builder.stackSize, null, breakLabel);
     doStatements(node.statements);
+    builder.bind(breakLabel);
   }
 
   void visitEmptyStatement(EmptyStatement node) {

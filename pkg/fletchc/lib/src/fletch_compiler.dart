@@ -37,6 +37,7 @@ const EXTRA_DART2JS_OPTIONS = const <String>[
 const FLETCH_PATCHES = const <String, String>{
   "_internal": "internal/internal_patch.dart",
   "collection": "collection/collection_patch.dart",
+  "convert": "convert/convert_patch.dart",
   "core": "core/core_patch.dart",
   "math": "math/math_patch.dart",
   "typed_data": "typed_data/typed_data_patch.dart",

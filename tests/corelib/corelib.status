@@ -177,7 +177,6 @@ integer_to_string_test/01: Fail
 iterable_return_type_test/01: Fail
 iterable_return_type_test/02: Fail
 iterable_return_type_test/none: Fail
-json_map_test: CompileTimeError
 null_test: Fail
 num_clamp_test: Fail
 num_parse_test/01: Fail
@@ -196,7 +195,6 @@ string_pattern_test: Fail
 string_replace_all_test: Fail
 string_replace_dollar_test: Fail
 string_replace_test: Fail
-string_source_test: CompileTimeError
 string_test: Fail
 symbol_operator_test/03: Fail
 symbol_operator_test/none: Fail
@@ -212,8 +210,6 @@ symbol_test/none: Fail
 unicode_test: Fail
 uri_base_test: CompileTimeError
 uri_file_test: Fail
-uri_path_test: Fail
-uri_query_test: Fail
 uri_test: Fail
 
 [ ($runtime == fletchc || $runtime == fletchvm) && $asan]
