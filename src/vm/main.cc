@@ -10,54 +10,30 @@
 
 #include "src/shared/connection.h"
 #include "src/shared/flags.h"
-#include "src/shared/native_process.h"
 
 #include "src/vm/session.h"
 
 namespace fletch {
 
-static bool RunBridgeSession(int port) {
-  Connection* connection = Connection::Connect("127.0.0.1", port);
+static bool RunSession(Connection* connection) {
   Session session(connection);
   session.Initialize();
   session.StartMessageProcessingThread();
   return session.ProcessRun();
 }
 
-static bool RunSession(const char* argv0,
-                       const char* input,
-                       const char* out,
-                       const char* library_path,
-                       const char* package_root,
-                       bool compile) {
+static Connection* ConnectToExistingCompiler(int port) {
+  return Connection::Connect("127.0.0.1", port);
+}
+
+static Connection* WaitForCompilerConnection() {
+  const char* host = "127.0.0.1";
   // Listen for new connections.
-  ConnectionListener listener("127.0.0.1", 0);
+  ConnectionListener listener(host, 0);
 
-  // Prepare the executable argument.
-  int executable_length = strlen(argv0) + 2;
-  char* executable = static_cast<char*>(malloc(executable_length));
-  snprintf(executable, executable_length, "%sc", argv0);
+  printf("Waiting for compiler on %s:%i\n", host, listener.Port());
 
-  // Prepare the --port=1234 argument.
-  char port[256];
-  snprintf(port, ARRAY_SIZE(port), "--port=%d", listener.Port());
-
-  const char* args[6] =
-      { executable, input, port, library_path, package_root, NULL };
-  const char* args_out[7] =
-      { executable, input, port, out, library_path, package_root, NULL };
-
-  NativeProcess process(executable, compile ? args_out : args);
-  process.Start();
-
-  Session session(listener.Accept());
-  session.Initialize();
-  session.StartMessageProcessingThread();
-  bool success = session.ProcessRun();
-
-  process.Wait();
-  free(executable);
-  return success;
+  return listener.Accept();
 }
 
 static bool IsSnapshot(List<uint8> snapshot) {
@@ -70,21 +46,27 @@ static int Main(int argc, char** argv) {
 
   if (argc > 5) {
     FATAL("Too many arguments.");
-  } else if (argc < 2) {
+  } else if (argc < 1) {
     FATAL("Not enough arguments.");
   }
 
   // Handle the arguments.
   bool compile = false;
-  bool bridge_session = false;
-  const char* input = argv[1];
+  bool attach_to_existing_compiler = false;
+  const char* input = NULL;
   const char* out = NULL;
   const char* library_path = NULL;
   const char* package_root = NULL;
 
-  if (strncmp(input, "--port=", 7) == 0) {
+  if (argc > 1) {
+    input = argv[1];
+  } else {
     compile = true;
-    bridge_session = true;
+  }
+
+  if (input != NULL && strncmp(input, "--port=", 7) == 0) {
+    compile = true;
+    attach_to_existing_compiler = true;
   } else if (argc > 2) {
     for (int i = 2; i < argc; i++) {
       if (strncmp(argv[i], "--out=", 6) == 0) {
@@ -115,12 +97,10 @@ static int Main(int argc, char** argv) {
   // interactive programming session that talks to a separate
   // compiler process.
   if (interactive) {
-    if (bridge_session) {
-      success = RunBridgeSession(atoi(input + 7));
-    } else {
-      success =
-          RunSession(argv[0], input, out, library_path, package_root, compile);
-    }
+    Connection* connection = attach_to_existing_compiler
+      ? ConnectToExistingCompiler(atoi(input + 7))
+      : WaitForCompilerConnection();
+    success = RunSession(connection);
   }
 
   FletchTearDown();

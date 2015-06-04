@@ -13,7 +13,8 @@ import 'dart:async' show
 import 'dart:io' show
     InternetAddress,
     Process,
-    ServerSocket;
+    ServerSocket,
+    Socket;
 
 import '../../compiler.dart' show
     FletchCompiler,
@@ -51,6 +52,7 @@ Future<int> compileAndRun(
     {@StringOrUri packageRoot: "package/"}) async {
   String script;
   String snapshotPath;
+  String attachArgument;
 
   for (int i = 0; i < arguments.length; i++) {
     String argument = arguments[i];
@@ -58,6 +60,11 @@ Future<int> compileAndRun(
       case '-o':
       case '--out':
         snapshotPath = arguments[++i];
+        break;
+
+      case '-a':
+      case '--attach':
+        attachArgument = arguments[++i];
         break;
 
       default:
@@ -88,37 +95,46 @@ Future<int> compileAndRun(
     return COMPILER_CRASHED;
   }
 
-  var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
+  Process vmProcess;
+  Socket vmSocket;
+  StreamSubscription vmStdoutSubscription;
+  StreamSubscription vmStderrSubscription;
+  String vmPath;
+  if (attachArgument == null) {
 
-  List<String> vmOptions = <String>[
-      '--port=${server.port}',
-  ];
+    var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 
-  var connectionIterator = new StreamIterator(server);
+    List<String> vmOptions = <String>[
+        '--port=${server.port}',
+      ];
 
-  String vmPath = compiler.fletchVm.toFilePath();
+    vmPath = compiler.fletchVm.toFilePath();
 
-  if (compiler.verbose) {
-    print("Running '$vmPath ${vmOptions.join(" ")}'");
+    if (compiler.verbose) {
+      print("Running '$vmPath ${vmOptions.join(" ")}'");
+    }
+    vmProcess = await Process.start(vmPath, vmOptions);
+
+    readCommands(commandIterator, vmProcess);
+
+    // Notify controlling isolate (driver_main) that the event loop
+    // [readCommands] has been started, and commands like DriverCommand.Signal
+    // will be honored.
+    commandSender.sendEventLoopStarted();
+
+    vmStdoutSubscription = handleSubscriptionErrors(
+        vmProcess.stdout.listen(commandSender.sendStdoutBytes), "vm stdout");
+    vmStderrSubscription = handleSubscriptionErrors(
+        vmProcess.stderr.listen(commandSender.sendStderrBytes), "vm stderr");
+
+    vmSocket = handleSocketErrors(await server.first, "vmSocket");
+  } else {
+    var address = attachArgument.split(":");
+    String host = address[0];
+    int port = int.parse(address[1]);
+    print("Connecting to $host:$port");
+    vmSocket = handleSocketErrors(await Socket.connect(host, port), "vmSocket");
   }
-  Process vmProcess = await Process.start(vmPath, vmOptions);
-
-  readCommands(commandIterator, vmProcess);
-
-  // Notify controlling isolate (driver_main) that the event loop
-  // [readCommands] has been started, and commands like DriverCommand.Signal
-  // will be honored.
-  commandSender.sendEventLoopStarted();
-
-  StreamSubscription vmStdoutSubscription = handleSubscriptionErrors(
-      vmProcess.stdout.listen(commandSender.sendStdoutBytes), "vm stdout");
-  StreamSubscription vmStderrSubscription = handleSubscriptionErrors(
-      vmProcess.stderr.listen(commandSender.sendStderrBytes), "vm stderr");
-
-  bool hasValue = await connectionIterator.moveNext();
-  assert(hasValue);
-  var vmSocket = handleSocketErrors(connectionIterator.current, "vmSocket");
-  server.close();
 
   vmSocket.listen(null).cancel();
   commands.forEach((command) => command.addTo(vmSocket));
@@ -132,17 +148,21 @@ Future<int> compileAndRun(
 
   vmSocket.close();
 
-  int exitCode = await vmProcess.exitCode;
+  if (vmProcess != null) {
+    int exitCode = await vmProcess.exitCode;
 
-  await vmProcess.stdin.close();
-  await vmStdoutSubscription.cancel();
-  await vmStderrSubscription.cancel();
+    await vmProcess.stdin.close();
+    await vmStdoutSubscription.cancel();
+    await vmStderrSubscription.cancel();
 
-  if (exitCode != 0) {
-    print("Non-zero exit code from '$vmPath' ($exitCode).");
+    if (exitCode != 0) {
+      print("Non-zero exit code from '$vmPath' ($exitCode).");
+    }
+
+    return exitCode;
+  } else {
+    return 0;
   }
-
-  return exitCode;
 }
 
 Future<Null> readCommands(
