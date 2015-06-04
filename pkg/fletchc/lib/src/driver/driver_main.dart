@@ -244,13 +244,13 @@ Future main(List<String> arguments) async {
 
 Future handleClient(IsolatePool pool, Socket controlSocket) async {
   // This method needs to do the following:
-  // * Spawn a new isolate (or reuse an existing) to perform the task.
+  // * Spawn a new worker isolate (or reuse an existing) to perform the task.
   //
   // * Forward commands from C++ client to isolate.
   //
   // * Intercept signal command and potentially kill isolate (isolate needs to
-  //   tell if it is interuptible or needs to be killed, latter if compiler is
-  //   running).
+  //   tell if it is interuptible or needs to be killed, latter, for example,
+  //   if compiler is running).
   //
   // * Forward commands from isolate to C++.
   //
@@ -259,17 +259,17 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
   // Spawn or reuse isolate.
   ManagedIsolate isolate = await pool.getIsolate();
 
-  // Forward commands between C++ client [client], and compiler isolate
-  // [compiler]. This is done with two asynchronous tasks that communicate with
+  // Forward commands between C++ client [client], and worker isolate
+  // [worker]. This is done with two asynchronous tasks that communicate with
   // each other. Also handles the signal command as mentioned above.
   ClientController client = new ClientController(controlSocket);
-  CompilerController compiler = new CompilerController(isolate);
-  Future clientFuture = client.start(compiler);
-  Future compilerFuture = compiler.start(client);
-  await compilerFuture;
+  IsolateController worker = new IsolateController(isolate);
+  Future clientFuture = client.start(worker);
+  Future workerFuture = worker.start(client);
+  await workerFuture;
 
   // At this point, the isolate has already been returned to the pool by
-  // [compiler].
+  // [worker].
 
   await clientFuture;
 
@@ -279,7 +279,7 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
 class ClientController {
   final Socket socket;
 
-  CompilerController compiler;
+  IsolateController worker;
   CommandSender commandSender;
   StreamSubscription<Command> subscription;
   Completer<Null> completer;
@@ -288,8 +288,8 @@ class ClientController {
 
   /// Start processing commands from the client. The returned future completes
   /// when [endSession] is called.
-  Future<Null> start(CompilerController compiler) {
-    this.compiler = compiler;
+  Future<Null> start(IsolateController worker) {
+    this.worker = worker;
     commandSender = new ByteCommandSender(socket);
     subscription = new ControlStream(socket).commandStream.listen(null);
     subscription
@@ -301,7 +301,7 @@ class ClientController {
   }
 
   void handleCommand(Command command) {
-    compiler.controller.add(command);
+    worker.controller.add(command);
   }
 
   void handleCommandError(error, StackTrace trace) {
@@ -340,21 +340,21 @@ class ClientController {
   }
 }
 
-/// Handles communication with the compiler running in its own isolate.
-class CompilerController {
+/// Handles communication with a worker isolate.
+class IsolateController {
   final ManagedIsolate isolate;
 
   /// [ClientController] uses this [controller] to notify this object about
-  /// commands that should be forwarded to the compiler isolate.
+  /// commands that should be forwarded to the worker isolate.
   final StreamController<Command> controller = new StreamController<Command>();
 
   bool eventLoopStarted = false;
 
-  CompilerController(this.isolate);
+  IsolateController(this.isolate);
 
-  /// Start processing commands from the compiler isolate (and forward commands
+  /// Start processing commands from the worker isolate (and forward commands
   /// from the C++ client). The returned future normally completes when the
-  /// compiler isolate sends DriverCommand.ClosePort, or if the isolate is
+  /// worker isolate sends DriverCommand.ClosePort, or if the isolate is
   /// killed due to DriverCommand.Signal arriving through controller.stream.
   Future<Null> start(ClientController client) async {
     ReceivePort port = isolate.beginSession();
