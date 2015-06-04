@@ -145,7 +145,14 @@ const patch = "patch";
   }
 
   @patch static String _objectToString(Object object) {
-    throw "_stringToSafeString is unimplemented";
+    if (identical(object, null) ||
+        identical(object, true) ||
+        identical(object, false) ||
+        object is num ||
+        object is String) {
+      return object.toString();
+    }
+    return '[object Object]';
   }
 
   @patch StackTrace get stackTrace {

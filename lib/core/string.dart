@@ -292,14 +292,7 @@ class _StringImpl implements String {
     throw "splitMapJoin(pattern, {onMatch, onNonMatch}) isn't implemented";
   }
 
-  List<int> get codeUnits {
-    int length = this.length;
-    List<int> result = new List<int>(length);
-    for (int i = 0; i < length; i++) {
-      result[i] = codeUnitAt(i);
-    }
-    return result;
-  }
+  List<int> get codeUnits => new CodeUnits(this);
 
   Runes get runes => new Runes(this);
 
