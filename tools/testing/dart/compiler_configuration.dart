@@ -211,7 +211,7 @@ class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
           isDebug: isDebug, isChecked: isChecked,
           isHostChecked: isHostChecked, useSdk: useSdk) {
     if (persist && !hostChecked) {
-      throw "fletch_driver only works with --host-checked option.";
+      throw "fletch only works with --host-checked option.";
     }
   }
 
@@ -239,14 +239,15 @@ class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
       arguments = vmArguments;
       environment = environmentOverrides;
     } else {
-      executable = '$buildDir/fletch_driver';
-      arguments = basicArguments;
+      executable = '$buildDir/fletch';
+      arguments = <String>['compile-and-run'];
+      arguments.addAll(basicArguments);
       environment = {
         'DART_VM' : '$buildDir/dart',
       }..addAll(environmentOverrides);
     }
 
-    // NOTE: We assume that `fletch_driver` behaves the same as invoking
+    // NOTE: We assume that `fletch` behaves the same as invoking
     // the DartVM in terms of exit codes.
     var commands = <Command>[
         commandBuilder.getVmCommand(executable, arguments, environment)];

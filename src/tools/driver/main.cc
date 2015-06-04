@@ -235,8 +235,6 @@ static void UnlockConfigFile() {
 }
 
 static void ReadDriverConfig() {
-  printf("Using config file: %s\n", fletch_config_file);
-
   size_t offset = 0;
   size_t length = sizeof(fletch_socket_file) - 1;
   while (offset < length) {

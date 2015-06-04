@@ -130,7 +130,7 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
 
   FletchcRuntimeConfiguration({this.persist: true, this.hostChecked: true}) {
     if (persist && !hostChecked) {
-      throw "fletch_driver only works with --host-checked option.";
+      throw "fletch only works with --host-checked option.";
     }
   }
 
@@ -160,13 +160,14 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
       arguments = vmArguments;
       environment = environmentOverrides;
     } else {
-      executable = '${suite.buildDir}/fletch_driver';
-      arguments = basicArguments;
+      executable = '${suite.buildDir}/fletch';
+      arguments = <String>['compile-and-run'];
+      arguments.addAll(basicArguments);
       environment = {
         'DART_VM': suite.dartVmBinaryFileName,
       };
     }
-    // NOTE: We assume that `fletch_driver` behaves the same as invoking
+    // NOTE: We assume that `fletch` behaves the same as invoking
     // the DartVM in terms of exit codes.
     return <Command>[
         commandBuilder.getVmCommand(executable, arguments, environment)];
@@ -199,7 +200,7 @@ class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
     }
 
     // TODO(ager): We should be able to run debugger tests through the
-    // persistent fletch_driver as well.
+    // persistent fletch as well.
     List<String> vmArguments =
         <String>["-c", "-p", "package", "package:fletchc/fletchc.dart",
                  "-d", testDebuggerArgument];
@@ -240,7 +241,8 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
         commandBuilder.getVmCommand(
             "${suite.buildDir}/fletch-vm", arguments, environmentOverrides),
         commandBuilder.getVmCommand(
-            "${suite.buildDir}/fletch-vm", argumentsUnfold, environmentOverrides)];
+            "${suite.buildDir}/fletch-vm", argumentsUnfold,
+            environmentOverrides)];
   }
 }
 

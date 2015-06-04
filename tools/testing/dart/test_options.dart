@@ -688,7 +688,7 @@ Note: currently only implemented for dart2js.''',
         config['persist'] && !config['host_checked']) {
       isValid = false;
       // TODO(ahe): Find a way to make this optional.
-      print("fletch_driver requires --host-checked option.");
+      print("fletch requires --host-checked option.");
     }
 
     return isValid;

@@ -10,7 +10,7 @@
   },
   'targets': [
     {
-      'target_name': 'fletch_driver',
+      'target_name': 'fletch',
       'type': 'executable',
       'toolsets': ['host'],
       'dependencies': [

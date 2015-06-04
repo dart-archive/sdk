@@ -24,11 +24,11 @@
       ],
     },
     {
-      'target_name': 'fletch_driver',
+      'target_name': 'fletch',
       'type': 'none',
       'toolsets': ['host'],
       'dependencies': [
-        'src/tools/driver/driver.gyp:fletch_driver',
+        'src/tools/driver/driver.gyp:fletch',
         'copy_dart',
       ],
     },
