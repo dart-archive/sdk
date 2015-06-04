@@ -75,6 +75,7 @@ int64_t Session::PopInteger() {
 
 void Session::SignalMainThread(MainThreadResumeKind kind) {
   main_thread_monitor_->Lock();
+  while (main_thread_resume_kind_ != kUnknown) main_thread_monitor_->Wait();
   main_thread_resume_kind_ = kind;
   main_thread_monitor_->Notify();
   main_thread_monitor_->Unlock();
@@ -90,6 +91,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kCompilerError: {
+        debugging_ = false;
         SignalMainThread(kError);
         return;
       }
@@ -229,6 +231,8 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kSessionEnd: {
+        debugging_ = false;
+        SignalMainThread(kDebuggerDetached);
         return;
       }
 
@@ -441,21 +445,38 @@ void Session::VisitProcesses(ProcessVisitor* visitor) {
 }
 
 bool Session::ProcessRun() {
-  main_thread_monitor_->Lock();
-  while (main_thread_resume_kind_ == kUnknown) main_thread_monitor_->Wait();
-  main_thread_monitor_->Unlock();
-  switch (main_thread_resume_kind_) {
-    case kError:
-      return false;
-    case kSnapshotDone:
-      return true;
-    case kProcessRun:
-      return program()->ProcessRun(process_);
-    case kUnknown:
-      UNREACHABLE();
-      break;
+  bool has_result = false;
+  bool result = false;
+  while (true) {
+    MainThreadResumeKind resume_kind;
+    main_thread_monitor_->Lock();
+    while (main_thread_resume_kind_ == kUnknown) main_thread_monitor_->Wait();
+    resume_kind = main_thread_resume_kind_;
+    main_thread_resume_kind_ = kUnknown;
+    main_thread_monitor_->Notify();
+    main_thread_monitor_->Unlock();
+    switch (resume_kind) {
+      case kError:
+        ASSERT(!debugging_);
+        return false;
+      case kSnapshotDone:
+        ASSERT(!debugging_);
+        return true;
+      case kProcessRun:
+        result = program()->ProcessRun(process_);
+        has_result = true;
+        if (!debugging_) return result;
+        break;
+      case kDebuggerDetached:
+        ASSERT(!debugging_);
+        if (has_result) return result;
+        break;
+      case kUnknown:
+        UNREACHABLE();
+        break;
+    }
   }
-  return false;
+  return result;
 }
 
 bool Session::WriteSnapshot(const char* path) {

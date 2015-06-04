@@ -113,7 +113,8 @@ class Session {
     kUnknown,
     kProcessRun,
     kError,
-    kSnapshotDone
+    kSnapshotDone,
+    kDebuggerDetached
   };
 
   Connection* const connection_;

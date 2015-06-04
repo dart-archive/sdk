@@ -2235,6 +2235,7 @@ compileAndRun(EncodedResult encodedResult) async {
         print('fletch_vm_stderr: $line');
       }
     });
+
     var stdoutFuture = new Future(() async {
       while (await session.iterator.moveNext()) {
         hasExtraStdoutOutput = true;
@@ -2247,20 +2248,50 @@ compileAndRun(EncodedResult encodedResult) async {
       print("VM exited with exit code: $exitCode.");
     });
 
-    session.vmSocket.done.catchError((error, StackTrace stackTrace) {
-      print("Ignoring socket error: $error");
-      if (stackTrace != null) {
-        print(stackTrace);
+    if (session.running) {
+      // The session is still alive. Rewrite the program so that
+      // the process will terminate.
+      for (Command command in [
+               const commands_lib.PrepareForChanges(),
+               new commands_lib.PushFromMap(MapId.methods, session.methodId),
+               const commands_lib.PushBoolean(true),
+               const commands_lib.ChangeMethodLiteral(0),
+               const commands_lib.CommitChanges(1),
+               const commands_lib.ProcessContinue()]) {
+        print(command);
+        command.addTo(session.vmSocket);
       }
-    });
-    session.process.kill();
-
-    await Future.wait([stderrFuture, stdoutFuture, exitFuture]);
-
-    session.quit();
+      // Wait for process termination.
+      Command response = await session.nextVmCommand();
+      Expect.isTrue(response is commands_lib.ProcessTerminate,
+                    "Unexpected command $response, expected ProcessTerminate");
+      // Terminate the Fletch VM session so the Fletch VM will terminate.
+      const commands_lib.SessionEnd().addTo(session.vmSocket);
+      // Close the session socket to let the Dart VM running the tests
+      // terminate.
+      session.quit();
+      await Future.wait([stderrFuture, stdoutFuture, exitFuture]);
+    } else {
+      // We either failed before we got to start a process or there
+      // was an uncaught exception in the program. If there was an
+      // uncaught exception the VM is intentionally hanging to give
+      // the debugger a chance to inspect the state at the point of
+      // the throw. Therefore, we explicitly have to kill the VM
+      // process and close the session socket so the runner will
+      // terminate.
+      session.vmSocket.done.catchError((error, StackTrace stackTrace) {
+        print("Ignoring socket error: $error");
+        if (stackTrace != null) {
+          print(stackTrace);
+        }
+      });
+      session.process.kill();
+      await Future.wait([stderrFuture, stdoutFuture, exitFuture]);
+      session.quit();
+    }
   });
 
-  Expect.equals(-15, vmExitCode, "Unexpected exit code from fletch VM");
+  Expect.equals(0, vmExitCode, "Unexpected exit code from fletch VM");
   Expect.isFalse(hasExtraStdoutOutput, "Unexpected fletch_vm_stdout");
   Expect.isFalse(hasStderrOutput, "Unexpected fletch_vm_stderr");
 }
@@ -2456,8 +2487,6 @@ class TestSession extends Session {
   final Stream<String> stderr;
   final int methodId;
 
-  bool exitIsExpected = false;
-
   TestSession(
       Socket vmSocket,
       compiler,
@@ -2469,12 +2498,7 @@ class TestSession extends Session {
 
   void exit(int exitCode) {
     // TODO(ahe/ager): Rename exit to something less conflicting with io.exit.
-    if (!exitIsExpected) {
-      throw "Unexpected exit from TestSession ($exitCode).";
-    } else {
-      Expect.equals(0, exitCode);
-      print("TestSession ended with exit code = $exitCode.");
-    }
+    throw "Unexpected exit from TestSession ($exitCode).";
   }
 }
 
