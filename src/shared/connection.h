@@ -54,6 +54,7 @@ class Connection {
     kConnectionError,
     kCompilerError,
     kSessionEnd,
+    kSessionReset,
     kDebugging,
 
     kProcessSpawnForMain,

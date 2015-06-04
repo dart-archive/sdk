@@ -47,12 +47,19 @@ Session::~Session() {
 
 void Session::Initialize() {
   program_ = new Program();
-
   Scheduler* scheduler = new Scheduler();
   scheduler->ScheduleProgram(program_);
-
   program()->Initialize();
   program()->AddSession(this);
+}
+
+void Session::Reinitialize() {
+  delete program_->scheduler();
+  delete program_;
+  Initialize();
+  for (int i = 0; i < maps_.length(); ++i) delete maps_[i];
+  maps_.Delete();
+  maps_ = List<ObjectMap*>();
 }
 
 static void* MessageProcessingThread(void* data) {
@@ -232,8 +239,13 @@ void Session::ProcessMessages() {
 
       case Connection::kSessionEnd: {
         debugging_ = false;
-        SignalMainThread(kDebuggerDetached);
+        SignalMainThread(kSessionEnd);
         return;
+      }
+
+      case Connection::kSessionReset: {
+        Reinitialize();
+        break;
       }
 
       case Connection::kDebugging: {
@@ -467,7 +479,7 @@ bool Session::ProcessRun() {
         has_result = true;
         if (!debugging_) return result;
         break;
-      case kDebuggerDetached:
+      case kSessionEnd:
         ASSERT(!debugging_);
         if (has_result) return result;
         break;

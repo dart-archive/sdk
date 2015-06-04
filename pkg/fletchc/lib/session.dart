@@ -105,7 +105,7 @@ class Session {
         await backtrace();
         running = false;
         break;
-      case CommandCode.ProcessTerminate:
+      case CommandCode.ProcessTerminated:
         print('### process terminated');
         quit();
         exit(0);

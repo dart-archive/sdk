@@ -2160,6 +2160,12 @@ compileAndRun(EncodedResult encodedResult) async {
       print("Got expected output: ${session.iterator.current}");
     }
 
+    for (String expected in program.messages) {
+      Expect.isTrue(await session.iterator.moveNext());
+      Expect.stringEquals(expected, session.iterator.current);
+      print("Got expected output: ${session.iterator.current}");
+    }
+
     int version = 2;
     for (ProgramResult program in programs.skip(1)) {
       print("Update:");
@@ -2263,8 +2269,8 @@ compileAndRun(EncodedResult encodedResult) async {
       }
       // Wait for process termination.
       Command response = await session.nextVmCommand();
-      Expect.isTrue(response is commands_lib.ProcessTerminate,
-                    "Unexpected command $response, expected ProcessTerminate");
+      Expect.isTrue(response is commands_lib.ProcessTerminated,
+                    "Unexpected command $response, expected ProcessTerminated");
       // Terminate the Fletch VM session so the Fletch VM will terminate.
       const commands_lib.SessionEnd().addTo(session.vmSocket);
       // Close the session socket to let the Dart VM running the tests
@@ -2407,15 +2413,44 @@ Future<TestSession> runFletchVM(
     var vmSocket = await server.first;
     server.close();
 
-    for (Command command in commands) {
-      command.addTo(vmSocket);
-    }
-
     var compiler = test.incrementalCompiler.compiler;
 
     FunctionElement isMainDone =
         compiler.backend.fletchSystemLibrary.findLocal("isMainDone").getter;
     int methodId = compiler.backend.compiledFunctions[isMainDone].methodId;
+
+    session = new TestSession(
+        vmSocket, compiler.helper,
+        vmProcess,
+        new StreamIterator(stdoutStream),
+        stderrStream,
+        methodId);
+    session.vmCommands = new CommandReader(vmSocket).iterator;
+
+    for (Command command in commands) {
+      command.addTo(vmSocket);
+    }
+
+    // TODO(ager): Get rid of this again. We first run the program to
+    // completion, then we reset the session and rebuild the program and carry
+    // out the actual incremental compilation test.
+    for (Command command in [
+      const commands_lib.Debugging(),
+      const commands_lib.ProcessSpawnForMain()]) {
+      print(command);
+      command.addTo(vmSocket);
+    }
+
+    session.running = true;
+    const commands_lib.ProcessRun().addTo(vmSocket);
+    await session.nextVmCommand();
+    session.running = false;
+
+    const commands_lib.SessionReset().addTo(vmSocket);
+
+    for (Command command in commands) {
+      command.addTo(vmSocket);
+    }
 
     for (Command command in [
         // Change isMainDone to always return false.
@@ -2431,19 +2466,11 @@ Future<TestSession> runFletchVM(
 
         // Set a breakpoint in isMainDone at the first bytecode.
         new commands_lib.PushFromMap(MapId.methods, methodId),
-        const commands_lib.ProcessSetBreakpoint(0)
-    ]) {
+        const commands_lib.ProcessSetBreakpoint(0)]) {
       print(command);
       command.addTo(vmSocket);
     }
 
-    session = new TestSession(
-        vmSocket, compiler.helper,
-        vmProcess,
-        new StreamIterator(stdoutStream),
-        stderrStream,
-        methodId);
-    session.vmCommands = new CommandReader(vmSocket).iterator;
     await session.nextVmCommand();
     await session.debugRun();
 

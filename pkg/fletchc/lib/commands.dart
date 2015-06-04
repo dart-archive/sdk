@@ -149,8 +149,8 @@ class Command {
       case CommandCode.ProcessSetBreakpoint:
         int value = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ProcessSetBreakpoint(value);
-      case CommandCode.ProcessTerminate:
-        return const ProcessTerminate();
+      case CommandCode.ProcessTerminated:
+        return const ProcessTerminated();
       case CommandCode.UncaughtException:
         return const UncaughtException();
       default:
@@ -680,21 +680,36 @@ class ProcessStepTo extends Command {
 class ProcessContinue extends Command {
   const ProcessContinue()
       : super(CommandCode.ProcessContinue);
+
+  String toString() => "ProcessContinue";
 }
 
-class ProcessTerminate extends Command {
-  const ProcessTerminate()
-      : super(CommandCode.ProcessTerminate);
+class ProcessTerminated extends Command {
+  const ProcessTerminated()
+      : super(CommandCode.ProcessTerminated);
+
+  String toString() => "ProcessTerminated()";
 }
 
 class SessionEnd extends Command {
   const SessionEnd()
       : super(CommandCode.SessionEnd);
+
+  String toString() => "SessionEnd()";
+}
+
+class SessionReset extends Command {
+  const SessionReset()
+      : super(CommandCode.SessionReset);
+
+  String toString() => "SessionReset()";
 }
 
 class Debugging extends Command {
   const Debugging()
       : super(CommandCode.Debugging);
+
+  String toString() => "Debugging";
 }
 
 class WriteSnapshot extends Command {
@@ -781,6 +796,7 @@ enum CommandCode {
   ConnectionError,
   CompilerError,
   SessionEnd,
+  SessionReset,
   Debugging,
 
   ProcessSpawnForMain,
@@ -795,7 +811,7 @@ enum CommandCode {
   ProcessBacktrace,
   ProcessBreakpoint,
   ProcessLocal,
-  ProcessTerminate,
+  ProcessTerminated,
   WriteSnapshot,
   CollectGarbage,
 

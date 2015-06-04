@@ -26,6 +26,7 @@ class Session {
   bool is_debugging() const { return debugging_; }
 
   void Initialize();
+  void Reinitialize();
   void StartMessageProcessingThread();
   void ProcessMessages();
 
@@ -114,7 +115,7 @@ class Session {
     kProcessRun,
     kError,
     kSnapshotDone,
-    kDebuggerDetached
+    kSessionEnd
   };
 
   Connection* const connection_;
