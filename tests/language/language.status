@@ -13,7 +13,7 @@ bit_shift_test: Fail
 
 [ ($runtime == fletchc || $runtime == fletchvm) && $asan ]
 # Address sanitizer turns caught crashes into failures.
-large_class_declaration_test: Fail
+large_class_declaration_test: Fail, Timeout
 implicit_scope_test: Fail
 
 [ $compiler == fletchc || $runtime == fletchc ]
@@ -334,7 +334,7 @@ issue14014_test: Crash
 issue14242_test: Fail
 issue18628_1_test/01: Fail
 label_test: Fail
-large_class_declaration_test: Crash
+large_class_declaration_test: Crash, Timeout
 lazy_static3_test: Crash
 left_shift_test: Fail
 list_is_test: Fail
