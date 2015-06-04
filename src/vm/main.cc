@@ -54,30 +54,15 @@ static int Main(int argc, char** argv) {
   bool compile = false;
   bool attach_to_existing_compiler = false;
   const char* input = NULL;
-  const char* out = NULL;
-  const char* library_path = NULL;
-  const char* package_root = NULL;
 
   if (argc > 1) {
     input = argv[1];
+    if (strncmp(input, "--port=", 7) == 0) {
+      compile = true;
+      attach_to_existing_compiler = true;
+    }
   } else {
     compile = true;
-  }
-
-  if (input != NULL && strncmp(input, "--port=", 7) == 0) {
-    compile = true;
-    attach_to_existing_compiler = true;
-  } else if (argc > 2) {
-    for (int i = 2; i < argc; i++) {
-      if (strncmp(argv[i], "--out=", 6) == 0) {
-        compile = true;
-        out = argv[i];
-      } else if (strncmp(argv[i], "--lib=", 6) == 0) {
-        library_path = argv[i];
-      } else if (strncmp(argv[i], "--packages=", 11) == 0) {
-        package_root = argv[i];
-      }
-    }
   }
 
   bool success = true;
