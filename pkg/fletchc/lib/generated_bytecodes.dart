@@ -4177,7 +4177,8 @@ class Negate extends Bytecode {
 }
 
 class StackOverflowCheck extends Bytecode {
-  const StackOverflowCheck()
+  final int uint32Argument0;
+  const StackOverflowCheck(this.uint32Argument0)
       : super();
 
   Opcode get opcode => Opcode.StackOverflowCheck;
@@ -4186,21 +4187,35 @@ class StackOverflowCheck extends Bytecode {
 
   bool get isBranching => true;
 
-  String get format => '';
+  String get format => 'I';
 
   int get size => 5;
 
   int get stackPointerDifference => 0;
 
-  String get formatString => 'stack overflow check';
+  String get formatString => 'stack overflow check %d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
         ..sendOn(sink);
   }
 
-  String toString() => 'stack overflow check';
+  String toString() => 'stack overflow check ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    StackOverflowCheck rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
 }
 
 class Throw extends Bytecode {

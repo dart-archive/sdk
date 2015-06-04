@@ -6,6 +6,8 @@ library fletchc.bytecode_builder;
 
 import '../bytecodes.dart';
 
+const int IMPLICIT_STACK_OVERFLOW_LIMIT = 32;
+
 class BytecodeLabel {
   int position = -1;
   final List<int> usage = <int>[];
@@ -43,6 +45,7 @@ class BytecodeBuilder {
 
   int byteSize = 0;
   int stackSize = 0;
+  int maxStackSize = 0;
 
   BytecodeBuilder(this.functionArity);
 
@@ -51,6 +54,7 @@ class BytecodeBuilder {
     catchRanges.clear();
     byteSize = 0;
     stackSize = 0;
+    maxStackSize = 0;
   }
 
   /**
@@ -58,6 +62,7 @@ class BytecodeBuilder {
    */
   void applyStackSizeFix(int diff) {
     stackSize += diff;
+    if (stackSize > maxStackSize) maxStackSize = stackSize;
   }
 
   void addCatchFrameRange(int start, int end) {
@@ -464,6 +469,12 @@ class BytecodeBuilder {
   }
 
   void methodEnd() {
+    if (maxStackSize > IMPLICIT_STACK_OVERFLOW_LIMIT) {
+      var bytecode = new StackOverflowCheck(
+          maxStackSize - IMPLICIT_STACK_OVERFLOW_LIMIT);
+      bytecodes.insert(0, bytecode);
+      byteSize += bytecode.size;
+    }
     internalAdd(new MethodEnd(byteSize));
   }
 
@@ -486,8 +497,8 @@ class BytecodeBuilder {
       int stackPointerDifference) {
     assert(stackPointerDifference != VAR_DIFF);
     bytecodes.add(bytecode);
-    stackSize += stackPointerDifference;
     byteSize += bytecode.size;
+    applyStackSizeFix(stackPointerDifference);
   }
 
   void invokeNative(int arity, int index) {

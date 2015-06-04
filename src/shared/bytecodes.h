@@ -103,7 +103,7 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
                                                                                \
   V(Negate,               false,    "",   1,        0, "negate")               \
                                                                                \
-  V(StackOverflowCheck,    true,    "",   5,        0, "stack overflow check") \
+  V(StackOverflowCheck,    true,   "I",   5,      0, "stack overflow check %d")\
                                                                                \
   V(Throw,                 true,    "",   1,        0, "throw")                \
   V(SubroutineCall,        true,  "II", 9, kVarDiff, "subroutine call +%d -%d")\
