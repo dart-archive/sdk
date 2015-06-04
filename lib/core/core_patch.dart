@@ -244,7 +244,7 @@ const patch = "patch";
     return _parse(source, radix, onError);
   }
 
-  @fletch.native static _parse(
+  @fletch.native static int _parse(
       String source,
       int radix,
       int onError(String source)) {
@@ -264,7 +264,19 @@ const patch = "patch";
 
 @patch class double {
   @patch static double parse(String source, [double onError(String source)]) {
-    throw new UnimplementedError("double.parse");
+    return _parse(source.trim(), onError);
+  }
+
+  @fletch.native static double _parse(
+      String source,
+      double onError(String source)) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        throw new ArgumentError(source);
+      case fletch.indexOutOfBounds:
+        if (onError != null) return onError(source);
+        throw new FormatException("Can't parse string as double", source);
+    }
   }
 }
 

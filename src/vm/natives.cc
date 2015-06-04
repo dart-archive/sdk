@@ -703,6 +703,31 @@ NATIVE(DoubleToStringAsPrecision) {
   return process->NewStringFromAscii(List<const char>(result, strlen(result)));
 }
 
+NATIVE(DoubleParse) {
+  Object* x = arguments[0];
+  if (!x->IsString()) return Failure::wrong_argument_type();
+
+  // We trim in Dart to handle all the whitespaces.
+  static const int kConversionFlags =
+    double_conversion::StringToDoubleConverter::NO_FLAGS;
+
+  double_conversion::StringToDoubleConverter converter(
+      kConversionFlags,
+      0.0,
+      0.0,
+      kDoubleInfinitySymbol,
+      kDoubleNaNSymbol);
+
+  String* str = String::cast(x);
+  uint16* buffer = reinterpret_cast<uint16_t*>(str->byte_address_for(0));
+  int consumed = 0;
+  double result = converter.StringToDouble(buffer, str->length(), &consumed);
+
+  // The string is trimmed, so we must accept the full String.
+  if (consumed != str->length()) return Failure::index_out_of_bounds();
+  return process->NewDouble(result);
+}
+
 #define DOUBLE_MATH_NATIVE(name, method)                        \
   NATIVE(name) {                                                \
     Object* x = arguments[0];                                   \

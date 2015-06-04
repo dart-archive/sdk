@@ -142,8 +142,6 @@ list_test/none: Fail
 
 # Unsorted
 bool_from_environment_test: RuntimeError
-double_parse_test/01: Fail
-double_parse_test/none: Fail
 expando_test: CompileTimeError
 from_environment_const_type_test/01: RuntimeError
 from_environment_const_type_test/02: RuntimeError

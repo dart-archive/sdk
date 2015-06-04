@@ -99,6 +99,8 @@ namespace fletch {
   N(DoubleToStringAsFixed,       "_DoubleImpl", "_toStringAsFixed")      \
   N(DoubleToStringAsPrecision,   "_DoubleImpl", "_toStringAsPrecision")  \
                                                                          \
+  N(DoubleParse,                 "double", "_parse")                     \
+                                                                         \
   N(DoubleSin,                   "<none>", "_sin")                       \
   N(DoubleCos,                   "<none>", "_cos")                       \
   N(DoubleTan,                   "<none>", "_tan")                       \
