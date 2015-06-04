@@ -362,7 +362,7 @@ abstract class CodegenVisitor
             callStructure.callSelector, context);
         methodId = stub.methodId;
       } else {
-        handleUnresolved(function.name);
+        doUnresolved(function.name);
         return;
       }
       for (Node argument in arguments) {
@@ -371,7 +371,7 @@ abstract class CodegenVisitor
       arity = callStructure.argumentCount;
     } else if (callStructure != null &&
                callStructure.namedArguments.isNotEmpty) {
-      handleUnresolved(function.name);
+      doUnresolved(function.name);
       return;
     } else {
       methodId = function.methodId;
@@ -409,12 +409,12 @@ abstract class CodegenVisitor
         if (parameter.isOptional) {
           doParameterInitializer(parameter);
         } else {
-          handleUnresolved(name);
+          doUnresolved(name);
         }
       }
       argumentCount++;
     });
-    if (it.moveNext()) handleUnresolved(name);
+    if (it.moveNext()) doUnresolved(name);
     return argumentCount;
   }
 
@@ -483,7 +483,7 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void handleLocalVariableCompound(
+  void doLocalVariableCompound(
       Node node,
       LocalVariableElement variable,
       AssignmentOperator operator,
@@ -502,7 +502,7 @@ abstract class CodegenVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    handleLocalVariableCompound(node, variable, operator, rhs);
+    doLocalVariableCompound(node, variable, operator, rhs);
     applyVisitState();
   }
 
@@ -512,11 +512,11 @@ abstract class CodegenVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    handleLocalVariableCompound(node, parameter, operator, rhs);
+    doLocalVariableCompound(node, parameter, operator, rhs);
     applyVisitState();
   }
 
-  void handleStaticFieldCompound(
+  void doStaticFieldCompound(
       Node node,
       FieldElement field,
       AssignmentOperator operator,
@@ -535,7 +535,7 @@ abstract class CodegenVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    handleStaticFieldCompound(node, field, operator, rhs);
+    doStaticFieldCompound(node, field, operator, rhs);
     applyVisitState();
   }
 
@@ -545,11 +545,11 @@ abstract class CodegenVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    handleStaticFieldCompound(node, field, operator, rhs);
+    doStaticFieldCompound(node, field, operator, rhs);
     applyVisitState();
   }
 
-  void handleBinaryOperator(
+  void doBinaryOperator(
       Node node,
       Node left,
       Node right,
@@ -579,7 +579,7 @@ abstract class CodegenVisitor
       Node right,
       _) {
     // TODO(ajohnsen): Inject null check (in callee).
-    handleBinaryOperator(node, left, right, BinaryOperator.EQ);
+    doBinaryOperator(node, left, right, BinaryOperator.EQ);
     applyVisitState();
   }
 
@@ -588,7 +588,7 @@ abstract class CodegenVisitor
       Node left,
       Node right,
       _) {
-    handleBinaryOperator(node, left, right, BinaryOperator.EQ);
+    doBinaryOperator(node, left, right, BinaryOperator.EQ);
     if (visitState == VisitState.Test) {
       builder.branchIfTrue(falseLabel);
       builder.branch(trueLabel);
@@ -604,7 +604,7 @@ abstract class CodegenVisitor
       BinaryOperator operator,
       Node right,
       _) {
-    handleBinaryOperator(node, left, right, operator);
+    doBinaryOperator(node, left, right, operator);
     applyVisitState();
   }
 
@@ -821,7 +821,7 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void handleIdenticalCall(Node node, NodeList arguments) {
+  void doIdenticalCall(Node node, NodeList arguments) {
     assert(arguments.slowLength() == 2);
     for (Node argument in arguments) {
       visitForValue(argument);
@@ -839,12 +839,13 @@ abstract class CodegenVisitor
     assert(compiledClass.fields == 0);
     int constId = allocateConstantClassInstance(compiledClass.id);
     builder.loadConst(constId);
+    applyVisitState();
   }
 
-  void handleMainCall(Send node, NodeList arguments) {
+  void doMainCall(Send node, NodeList arguments) {
     FunctionElement function = context.compiler.mainFunction;
     if (function.isErroneous) {
-      handleCompileError();
+      doCompileError();
       return;
     }
     if (context.compiler.libraryLoader.libraries.any(checkCompileError)) return;
@@ -865,20 +866,20 @@ abstract class CodegenVisitor
     invokeStatic(node, constId, parameterCount);
   }
 
-  void handleStaticallyBoundInvoke(
+  void doStaticallyBoundInvoke(
       Send node,
       MethodElement element,
       NodeList arguments,
       CallStructure callStructure) {
     if (checkCompileError(element)) return;
     if (element.declaration == context.compiler.identicalFunction) {
-      handleIdenticalCall(node, arguments);
+      doIdenticalCall(node, arguments);
       return;
     }
     if (element.isExternal) {
       // Patch known functions directly.
       if (element == context.backend.fletchExternalInvokeMain) {
-        handleMainCall(node, arguments);
+        doMainCall(node, arguments);
         return;
       } else if (element == context.backend.fletchExternalCoroutineChange) {
         for (Node argument in arguments) {
@@ -900,7 +901,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
-    handleStaticallyBoundInvoke(
+    doStaticallyBoundInvoke(
         node, element.declaration, arguments, callStructure);
     applyVisitState();
   }
@@ -911,11 +912,11 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
-    handleStaticallyBoundInvoke(node, element, arguments, callStructure);
+    doStaticallyBoundInvoke(node, element, arguments, callStructure);
     applyVisitState();
   }
 
-  void handleSuperCall(Node node, FunctionElement function) {
+  void doSuperCall(Node node, FunctionElement function) {
     registerStaticInvocation(function);
     int arity = function.functionSignature.parameterCount + 1;
     int methodId = context.backend.functionMethodId(function);
@@ -928,7 +929,7 @@ abstract class CodegenVisitor
       FunctionElement getter,
       _) {
     loadThis();
-    handleSuperCall(node, getter);
+    doSuperCall(node, getter);
     applyVisitState();
   }
 
@@ -939,7 +940,7 @@ abstract class CodegenVisitor
       _) {
     loadThis();
     visitForValue(rhs);
-    handleSuperCall(node, setter);
+    doSuperCall(node, setter);
     applyVisitState();
   }
 
@@ -950,7 +951,7 @@ abstract class CodegenVisitor
       _) {
     loadThis();
     visitForValue(index);
-    handleSuperCall(node, function);
+    doSuperCall(node, function);
     applyVisitState();
   }
 
@@ -963,7 +964,7 @@ abstract class CodegenVisitor
     loadThis();
     visitForValue(index);
     visitForValue(rhs);
-    handleSuperCall(node, function);
+    doSuperCall(node, function);
     applyVisitState();
   }
 
@@ -978,7 +979,7 @@ abstract class CodegenVisitor
     visitForValue(index);
     loadThis();
     builder.loadLocal(1);
-    handleSuperCall(node, getter);
+    doSuperCall(node, getter);
     loadThis();
     // Load index
     builder.loadLocal(2);
@@ -986,7 +987,7 @@ abstract class CodegenVisitor
     builder.loadLocal(2);
     visitForValue(rhs);
     invokeMethod(node, getAssignmentSelector(operator));
-    handleSuperCall(node, setter);
+    doSuperCall(node, setter);
     // Override 'index' with result value, and pop everything else.
     builder.storeLocal(2);
     builder.pop();
@@ -1005,7 +1006,7 @@ abstract class CodegenVisitor
     visitForValue(index);
     loadThis();
     builder.loadLocal(1);
-    handleSuperCall(node, getter);
+    doSuperCall(node, getter);
     loadThis();
     // Load index
     builder.loadLocal(2);
@@ -1014,7 +1015,7 @@ abstract class CodegenVisitor
     builder.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     // We can now call []= with 'this', 'index' and 'value'.
-    handleSuperCall(node, setter);
+    doSuperCall(node, setter);
     builder.pop();
     // Pop result, override 'index' with initial indexed value, and pop again.
     builder.storeLocal(1);
@@ -1030,7 +1031,7 @@ abstract class CodegenVisitor
       _) {
     loadThis();
     visitForValue(argument);
-    handleSuperCall(node, function);
+    doSuperCall(node, function);
     applyVisitState();
   }
 
@@ -1041,7 +1042,7 @@ abstract class CodegenVisitor
       _) {
     loadThis();
     visitForValue(argument);
-    handleSuperCall(node, function);
+    doSuperCall(node, function);
     applyVisitState();
   }
 
@@ -1051,7 +1052,7 @@ abstract class CodegenVisitor
       FunctionElement function,
       _) {
     loadThis();
-    handleSuperCall(node, function);
+    doSuperCall(node, function);
     applyVisitState();
   }
 
@@ -1477,7 +1478,7 @@ abstract class CodegenVisitor
     return new Selector.binaryOperator(name);
   }
 
-  void handleLocalVariableIncrement(
+  void doLocalVariableIncrement(
       Node node,
       LocalVariableElement element,
       IncDecOperator operator,
@@ -1499,7 +1500,7 @@ abstract class CodegenVisitor
       LocalVariableElement element,
       IncDecOperator operator,
       _) {
-    handleLocalVariableIncrement(node, element, operator, true);
+    doLocalVariableIncrement(node, element, operator, true);
     applyVisitState();
   }
 
@@ -1508,7 +1509,7 @@ abstract class CodegenVisitor
       LocalParameterElement parameter,
       IncDecOperator operator,
       _) {
-    handleLocalVariableIncrement(node, parameter, operator, true);
+    doLocalVariableIncrement(node, parameter, operator, true);
     applyVisitState();
   }
 
@@ -1520,7 +1521,7 @@ abstract class CodegenVisitor
     // If visitState is for effect, we can ignore the return value, thus always
     // generate code for the simpler 'prefix' case.
     bool prefix = (visitState == VisitState.Effect);
-    handleLocalVariableIncrement(node, element, operator, prefix);
+    doLocalVariableIncrement(node, element, operator, prefix);
     applyVisitState();
   }
 
@@ -1532,11 +1533,11 @@ abstract class CodegenVisitor
     // If visitState is for effect, we can ignore the return value, thus always
     // generate code for the simpler 'prefix' case.
     bool prefix = (visitState == VisitState.Effect);
-    handleLocalVariableIncrement(node, parameter, operator, prefix);
+    doLocalVariableIncrement(node, parameter, operator, prefix);
     applyVisitState();
   }
 
-  void handleStaticFieldPrefix(
+  void doStaticFieldPrefix(
         Node node,
         FieldElement field,
         IncDecOperator operator) {
@@ -1546,7 +1547,7 @@ abstract class CodegenVisitor
     doStaticFieldSet(field);
   }
 
-  void handleStaticFieldPostfix(
+  void doStaticFieldPostfix(
         Node node,
         FieldElement field,
         IncDecOperator operator) {
@@ -1565,9 +1566,9 @@ abstract class CodegenVisitor
       IncDecOperator operator,
       _) {
     if (visitState == VisitState.Effect) {
-      handleStaticFieldPrefix(node, field, operator);
+      doStaticFieldPrefix(node, field, operator);
     } else {
-      handleStaticFieldPostfix(node, field, operator);
+      doStaticFieldPostfix(node, field, operator);
     }
     applyVisitState();
   }
@@ -1577,7 +1578,7 @@ abstract class CodegenVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    handleStaticFieldPrefix(node, field, operator);
+    doStaticFieldPrefix(node, field, operator);
     applyVisitState();
   }
 
@@ -1587,9 +1588,9 @@ abstract class CodegenVisitor
       IncDecOperator operator,
       _) {
     if (visitState == VisitState.Effect) {
-      handleStaticFieldPrefix(node, field, operator);
+      doStaticFieldPrefix(node, field, operator);
     } else {
-      handleStaticFieldPostfix(node, field, operator);
+      doStaticFieldPostfix(node, field, operator);
     }
     applyVisitState();
   }
@@ -1599,11 +1600,11 @@ abstract class CodegenVisitor
       FieldElement field,
       IncDecOperator operator,
       _) {
-    handleStaticFieldPrefix(node, field, operator);
+    doStaticFieldPrefix(node, field, operator);
     applyVisitState();
   }
 
-  void handleDynamicPropertyCompound(
+  void doDynamicPropertyCompound(
       Node node,
       AssignmentOperator operator,
       Node rhs,
@@ -1626,7 +1627,7 @@ abstract class CodegenVisitor
       Selector setterSelector,
       _) {
     visitForValue(receiver);
-    handleDynamicPropertyCompound(
+    doDynamicPropertyCompound(
         node,
         operator,
         rhs,
@@ -1644,7 +1645,7 @@ abstract class CodegenVisitor
       Selector setterSelector,
       _) {
     loadThis();
-    handleDynamicPropertyCompound(
+    doDynamicPropertyCompound(
         node,
         operator,
         rhs,
@@ -1653,7 +1654,7 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void handleDynamicPrefix(
+  void doDynamicPrefix(
       Node node,
       IncDecOperator operator,
       Selector getterSelector,
@@ -1665,7 +1666,7 @@ abstract class CodegenVisitor
     invokeSetter(node, setterSelector);
   }
 
-  void handleIndexPrefix(
+  void doIndexPrefix(
       SendSet node,
       Node receiver,
       Node index,
@@ -1688,7 +1689,7 @@ abstract class CodegenVisitor
       Node index,
       IncDecOperator operator,
       _) {
-    handleIndexPrefix(node, receiver, index, operator);
+    doIndexPrefix(node, receiver, index, operator);
     applyVisitState();
   }
 
@@ -1699,7 +1700,7 @@ abstract class CodegenVisitor
       IncDecOperator operator,
       _) {
     if (visitState == VisitState.Effect) {
-      handleIndexPrefix(node, receiver, index, operator);
+      doIndexPrefix(node, receiver, index, operator);
       applyVisitState();
       return;
     }
@@ -1748,7 +1749,7 @@ abstract class CodegenVisitor
       Selector setterSelector,
       _) {
     loadThis();
-    handleDynamicPrefix(node, operator, getterSelector, setterSelector);
+    doDynamicPrefix(node, operator, getterSelector, setterSelector);
     applyVisitState();
   }
 
@@ -1762,7 +1763,7 @@ abstract class CodegenVisitor
     // generate code for the simpler 'prefix' case.
     if (visitState == VisitState.Effect) {
       loadThis();
-      handleDynamicPrefix(node, operator, getterSelector, setterSelector);
+      doDynamicPrefix(node, operator, getterSelector, setterSelector);
       applyVisitState();
       return;
     }
@@ -1788,7 +1789,7 @@ abstract class CodegenVisitor
       Selector setterSelector,
       _) {
     visitForValue(receiver);
-    handleDynamicPrefix(node, operator, getterSelector, setterSelector);
+    doDynamicPrefix(node, operator, getterSelector, setterSelector);
     applyVisitState();
   }
 
@@ -1803,7 +1804,7 @@ abstract class CodegenVisitor
     // generate code for the simpler 'prefix' case.
     if (visitState == VisitState.Effect) {
       visitForValue(receiver);
-      handleDynamicPrefix(node, operator, getterSelector, setterSelector);
+      doDynamicPrefix(node, operator, getterSelector, setterSelector);
       applyVisitState();
       return;
     }
@@ -1835,7 +1836,7 @@ abstract class CodegenVisitor
 
   void visitRethrow(Rethrow node) {
     if (tryBlockStack.isEmpty) {
-      handleCompileError();
+      doCompileError();
     } else {
       TryBlock block = tryBlockStack.head;
       builder.loadSlot(block.stackSize - 1);
@@ -1874,7 +1875,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
-    handleCompileError();
+    doCompileError();
     applyVisitState();
   }
 
@@ -1889,7 +1890,7 @@ abstract class CodegenVisitor
       if (callStructure.signatureApplies(constructor)) {
         callConstructor(node, constructor, arguments, callStructure);
       } else {
-        handleUnresolved(constructor.name);
+        doUnresolved(constructor.name);
       }
     }
     applyVisitState();
@@ -1980,7 +1981,7 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     if (!checkCompileError(constructor.enclosingClass)) {
-      handleUnresolved(node.send.toString());
+      doUnresolved(node.send.toString());
     }
     applyVisitState();
   }
@@ -1992,7 +1993,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    handleUnresolved(node.send.toString());
+    doUnresolved(node.send.toString());
     applyVisitState();
   }
 
@@ -2014,7 +2015,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       Selector selector,
       _) {
-    handleUnresolved(node.send.toString());
+    doUnresolved(node.send.toString());
     applyVisitState();
   }
 
@@ -2106,9 +2107,10 @@ abstract class CodegenVisitor
   void visitStatement(Node node) {
     generateUnimplementedError(
         node, "Missing visit of statement: ${node.runtimeType}");
+    builder.pop();
   }
 
-  void handleStatements(NodeList statements) {
+  void doStatements(NodeList statements) {
     List<Element> oldBlockLocals = blockLocals;
     blockLocals = <Element>[];
     int stackSize = builder.stackSize;
@@ -2134,7 +2136,7 @@ abstract class CodegenVisitor
   }
 
   void visitBlock(Block node) {
-    handleStatements(node.statements);
+    doStatements(node.statements);
   }
 
   void visitEmptyStatement(EmptyStatement node) {
@@ -2342,7 +2344,7 @@ abstract class CodegenVisitor
         } else if (element.isField) {
           doStaticFieldSet(element);
         } else if (element.isErroneous) {
-          handleUnresolved(element.name);
+          doUnresolved(element.name);
           builder.pop();
         } else {
           internalError(node, "Unhandled store in for-in");
@@ -2450,7 +2452,7 @@ abstract class CodegenVisitor
         builder.branch(next);
       }
       builder.bind(ifTrue);
-      handleStatements(switchCase.statements);
+      doStatements(switchCase.statements);
       builder.branch(end);
       builder.bind(next);
     }
@@ -2459,7 +2461,7 @@ abstract class CodegenVisitor
     builder.pop();
   }
 
-  void handleCatchBlock(CatchBlock node, int exceptionSlot, BytecodeLabel end) {
+  void doCatchBlock(CatchBlock node, int exceptionSlot, BytecodeLabel end) {
     BytecodeLabel wrongType = new BytecodeLabel();
 
     TypeAnnotation type = node.type;
@@ -2533,7 +2535,7 @@ abstract class CodegenVisitor
     builder.addCatchFrameRange(startBytecodeSize, endBytecodeSize);
 
     for (Node catchBlock in node.catchBlocks) {
-      handleCatchBlock(catchBlock, exceptionSlot, end);
+      doCatchBlock(catchBlock, exceptionSlot, end);
     }
 
     tryBlockStack = tryBlockStack.tail;
@@ -2568,7 +2570,7 @@ abstract class CodegenVisitor
     builder.pop();
   }
 
-  void handleUnresolved(String name) {
+  void doUnresolved(String name) {
     var constString = context.backend.constantSystem.createString(
         new DartString.literal(name));
     context.markConstantUsed(constString);
@@ -2582,13 +2584,13 @@ abstract class CodegenVisitor
 
   bool checkCompileError(Element element) {
     if (context.compiler.elementsWithCompileTimeErrors.contains(element)) {
-      handleCompileError();
+      doCompileError();
       return true;
     }
     return false;
   }
 
-  void handleCompileError() {
+  void doCompileError() {
     FunctionElement function = context.backend.fletchCompileError;
     registerStaticInvocation(function);
     int methodId = context.backend.functionMethodId(function);
@@ -2603,7 +2605,7 @@ abstract class CodegenVisitor
       Selector selector,
       _) {
     if (!checkCompileError(element)) {
-      handleUnresolved(node.selector.toString());
+      doUnresolved(node.selector.toString());
     }
     applyVisitState();
   }
@@ -2612,7 +2614,7 @@ abstract class CodegenVisitor
       Send node,
       Element element,
       _) {
-    handleUnresolved(node.selector.toString());
+    doUnresolved(node.selector.toString());
     applyVisitState();
   }
 
@@ -2621,7 +2623,7 @@ abstract class CodegenVisitor
       Element element,
       Node rhs,
       _) {
-    handleUnresolved(node.selector.toString());
+    doUnresolved(node.selector.toString());
     applyVisitState();
   }
 
@@ -2632,7 +2634,7 @@ abstract class CodegenVisitor
       CallStructure callStructure,
       _) {
     if (!checkCompileError(function)) {
-      handleUnresolved(function.name);
+      doUnresolved(function.name);
     }
     applyVisitState();
   }

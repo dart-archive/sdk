@@ -882,7 +882,7 @@ class FletchBackend extends Backend {
           MessageKind.GENERIC,
           {'text': 'External function is not supported'});
       codegen
-          ..handleCompileError()
+          ..doCompileError()
           ..builder.ret()
           ..builder.methodEnd();
     }

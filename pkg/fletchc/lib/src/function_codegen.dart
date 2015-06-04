@@ -42,7 +42,12 @@ class FunctionCodegen extends CodegenVisitor {
   bool get hasAssignmentSemantics => function.isSetter || function.name == '[]=';
 
   void compile() {
-    checkCompileError(function);
+    if (checkCompileError(function)) {
+      // TODO(ajohnsen): We can simply emit a MethodEnd here, but for now we
+      // compile the method to stress our CodegenVisitor with erroneous
+      // elements.
+      builder.pop();
+    }
 
     ClassElement enclosing = function.enclosingClass;
     // Generate implicit 'null' check for '==' functions, except for Null.
