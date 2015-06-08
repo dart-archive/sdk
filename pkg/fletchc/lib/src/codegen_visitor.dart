@@ -933,6 +933,20 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void visitSuperMethodGet(
+      Send node,
+      MethodElement method,
+      _) {
+    loadThis();
+    CompiledFunction compiledFunctionTarget = requireCompiledFunction(method);
+    CompiledClass compiledClass = context.backend.createTearoffClass(
+        compiledFunctionTarget);
+    assert(compiledClass.fields == 1);
+    int constId = compiledFunction.allocateConstantFromClass(compiledClass.id);
+    builder.allocate(constId, compiledClass.fields);
+    applyVisitState();
+  }
+
   void visitSuperSetterSet(
       SendSet node,
       FunctionElement setter,

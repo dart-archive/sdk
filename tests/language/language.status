@@ -439,10 +439,8 @@ stacktrace_rethrow_error_test/none: Fail
 stacktrace_rethrow_error_test/withtraceparameter: Fail
 stacktrace_rethrow_nonerror_test: Fail
 stacktrace_test: Fail
-super_bound_closure_test: Fail
 super_call4_test: Fail
 super_getter_setter_test: Fail
-super_implicit_closure_test: Fail
 super_operator_index5_test: Fail
 super_operator_index6_test: Fail
 super_operator_index7_test: Fail
