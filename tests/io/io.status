@@ -3,4 +3,4 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 [ $mode == debug ]
-socket_test: Pass, Slow
+socket_test: Pass, Slow, Timeout
