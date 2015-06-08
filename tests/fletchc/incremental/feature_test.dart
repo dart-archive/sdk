@@ -59,6 +59,8 @@ import 'package:fletchc/session.dart' show
 
 import 'program_result.dart';
 
+const bool testSessionReset = const bool.fromEnvironment("testSessionReset");
+
 typedef Future NoArgFuture();
 
 const Map<String, EncodedResult> tests = const <String, EncodedResult>{
@@ -2160,10 +2162,12 @@ compileAndRun(EncodedResult encodedResult) async {
       print("Got expected output: ${session.iterator.current}");
     }
 
-    for (String expected in program.messages) {
-      Expect.isTrue(await session.iterator.moveNext());
-      Expect.stringEquals(expected, session.iterator.current);
-      print("Got expected output: ${session.iterator.current}");
+    if (testSessionReset) {
+      for (String expected in program.messages) {
+        Expect.isTrue(await session.iterator.moveNext());
+        Expect.stringEquals(expected, session.iterator.current);
+        print("Got expected output: ${session.iterator.current}");
+      }
     }
 
     int version = 2;
@@ -2427,26 +2431,28 @@ Future<TestSession> runFletchVM(
         methodId);
     session.vmCommands = new CommandReader(vmSocket).iterator;
 
-    for (Command command in commands) {
-      command.addTo(vmSocket);
+    if (testSessionReset) {
+      for (Command command in commands) {
+        command.addTo(vmSocket);
+      }
+
+      // TODO(ager): Get rid of this again. We first run the program to
+      // completion, then we reset the session and rebuild the program and carry
+      // out the actual incremental compilation test.
+      for (Command command in [
+               const commands_lib.Debugging(),
+               const commands_lib.ProcessSpawnForMain()]) {
+        print(command);
+        command.addTo(vmSocket);
+      }
+
+      session.running = true;
+      const commands_lib.ProcessRun().addTo(vmSocket);
+      await session.nextVmCommand();
+      session.running = false;
+
+      const commands_lib.SessionReset().addTo(vmSocket);
     }
-
-    // TODO(ager): Get rid of this again. We first run the program to
-    // completion, then we reset the session and rebuild the program and carry
-    // out the actual incremental compilation test.
-    for (Command command in [
-      const commands_lib.Debugging(),
-      const commands_lib.ProcessSpawnForMain()]) {
-      print(command);
-      command.addTo(vmSocket);
-    }
-
-    session.running = true;
-    const commands_lib.ProcessRun().addTo(vmSocket);
-    await session.nextVmCommand();
-    session.running = false;
-
-    const commands_lib.SessionReset().addTo(vmSocket);
 
     for (Command command in commands) {
       command.addTo(vmSocket);
