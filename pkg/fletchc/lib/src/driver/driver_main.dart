@@ -264,8 +264,8 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
   // each other. Also handles the signal command as mentioned above.
   ClientController client = new ClientController(controlSocket);
   IsolateController worker = new IsolateController(isolate);
-  Future clientFuture = client.start(worker);
-  Future workerFuture = worker.start(client);
+  Future clientFuture = client.start();
+  Future workerFuture = worker.attachClient(client);
   await workerFuture;
 
   // At this point, the isolate has already been returned to the pool by
@@ -279,17 +279,22 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
 class ClientController {
   final Socket socket;
 
-  IsolateController worker;
+  /// Used to implement [commands].
+  final StreamController<Command> controller = new StreamController<Command>();
+
   CommandSender commandSender;
   StreamSubscription<Command> subscription;
   Completer<Null> completer;
 
   ClientController(this.socket);
 
+  /// A stream of commands from the client that should be forwarded to a worker
+  /// isolate.
+  Stream<Command> get commands => controller.stream;
+
   /// Start processing commands from the client. The returned future completes
   /// when [endSession] is called.
-  Future<Null> start(IsolateController worker) {
-    this.worker = worker;
+  Future<Null> start() {
     commandSender = new ByteCommandSender(socket);
     subscription = new ControlStream(socket).commandStream.listen(null);
     subscription
@@ -301,7 +306,7 @@ class ClientController {
   }
 
   void handleCommand(Command command) {
-    worker.controller.add(command);
+    controller.add(command);
   }
 
   void handleCommandError(error, StackTrace trace) {
@@ -344,19 +349,15 @@ class ClientController {
 class IsolateController {
   final ManagedIsolate isolate;
 
-  /// [ClientController] uses this [controller] to notify this object about
-  /// commands that should be forwarded to the worker isolate.
-  final StreamController<Command> controller = new StreamController<Command>();
-
   bool eventLoopStarted = false;
 
   IsolateController(this.isolate);
 
   /// Start processing commands from the worker isolate (and forward commands
   /// from the C++ client). The returned future normally completes when the
-  /// worker isolate sends DriverCommand.ClosePort, or if the isolate is
-  /// killed due to DriverCommand.Signal arriving through controller.stream.
-  Future<Null> start(ClientController client) async {
+  /// worker isolate sends DriverCommand.ClosePort, or if the isolate is killed
+  /// due to DriverCommand.Signal arriving through client.commands.
+  Future<Null> attachClient(ClientController client) async {
     ReceivePort port = isolate.beginSession();
     StreamIterator iterator = new StreamIterator(port);
     bool hasPort = await iterator.moveNext();
@@ -371,7 +372,7 @@ class IsolateController {
         sendPort.send([command.code.index, command.data]);
       }
     }
-    StreamSubscription subscription = controller.stream.listen(handleCommand);
+    client.commands.listen(handleCommand);
 
     while (await iterator.moveNext()) {
       /// [message] is a pair of int (index into DriverCommand.values), and
