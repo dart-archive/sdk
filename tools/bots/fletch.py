@@ -51,8 +51,8 @@ def KillFletch(config):
   if config.system != 'windows':
     # Kill any lingering dart processes (from fletch_driver).
     subprocess.call("killall dart", shell=True)
-    subprocess.call("killall fletch_driver", shell=True)
     subprocess.call("killall fletch", shell=True)
+    subprocess.call("killall fletch-vm", shell=True)
 
 
 def Steps(config):
@@ -144,9 +144,10 @@ def RunTests(name, mode, arch, config, clang=True, asan=False,
 
     KillFletch(config)
 
-    Run(args)
-
-    KillFletch(config)
+    try:
+      Run(args)
+    finally:
+      KillFletch(config)
 
 
 if __name__ == '__main__':
