@@ -2166,7 +2166,8 @@ abstract class CodegenVisitor
     generateReturn(node);
   }
 
-  JumpInfo getJumpInfo(GotoStatement node) {
+  // Find the JumpInfo matching the target of [node].
+  JumpInfo getJumpTargetInfo(GotoStatement node) {
     JumpTarget target = elements.getTargetOf(node);
     if (target == null) {
       generateUnimplementedError(node, "'$node' not in loop");
@@ -2215,7 +2216,7 @@ abstract class CodegenVisitor
   }
 
   void unbalancedBranch(GotoStatement node, bool isBreak) {
-    JumpInfo info = getJumpInfo(node);
+    JumpInfo info = getJumpTargetInfo(node);
     if (info == null) return;
     callFinallyBlocks(info.stackSize, false);
     BytecodeLabel label = isBreak ? info.breakLabel : info.continueLabel;
@@ -2224,7 +2225,10 @@ abstract class CodegenVisitor
   }
 
   void visitBreakStatement(BreakStatement node) {
+    var breakLabel = new BytecodeLabel();
+    jumpInfo[node] = new JumpInfo(builder.stackSize, null, breakLabel);
     unbalancedBranch(node, true);
+    builder.bind(breakLabel);
   }
 
   void visitContinueStatement(ContinueStatement node) {
@@ -2236,14 +2240,17 @@ abstract class CodegenVisitor
     BytecodeLabel ifFalse = new BytecodeLabel();
     visitForTest(node.condition, ifTrue, ifFalse);
     builder.bind(ifTrue);
-    doScopedStatement(node.thenPart);
     if (node.hasElsePart) {
       BytecodeLabel end = new BytecodeLabel();
+      jumpInfo[node] = new JumpInfo(builder.stackSize, null, end);
+      doScopedStatement(node.thenPart);
       builder.branch(end);
       builder.bind(ifFalse);
       doScopedStatement(node.elsePart);
       builder.bind(end);
     } else {
+      jumpInfo[node] = new JumpInfo(builder.stackSize, null, ifFalse);
+      doScopedStatement(node.thenPart);
       builder.bind(ifFalse);
     }
   }
@@ -2529,6 +2536,8 @@ abstract class CodegenVisitor
     // Reserve slot for exception.
     int exceptionSlot = builder.stackSize;
     builder.loadLiteralNull();
+
+    jumpInfo[node] = new JumpInfo(builder.stackSize, null, end);
 
     int startBytecodeSize = builder.byteSize;
 

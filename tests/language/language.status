@@ -331,7 +331,6 @@ issue14014_3_test: Crash
 issue14014_test: Crash
 issue14242_test: Fail
 issue18628_1_test/01: Fail
-label_test: Fail
 large_class_declaration_test: Crash, Timeout
 lazy_static3_test: Crash
 left_shift_test: Fail
