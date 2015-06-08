@@ -48,19 +48,19 @@ abstract class BuildBotService {
         BuildBotPatchDataBuilder builder = mb.initRoot(new BuildBotPatchDataBuilder(), 32);
         _impl.refresh(builder);
         var result = getResultMessage(builder);
-        request.setInt64(48, result);
+        request.setInt64(56, result);
         _postResult.vcall$1(request);
         break;
       case _SET_CONSOLE_COUNT_METHOD_ID:
-        _impl.setConsoleCount(request.getInt32(48));
+        _impl.setConsoleCount(request.getInt32(56));
         _postResult.vcall$1(request);
         break;
       case _SET_CONSOLE_MINIMUM_INDEX_METHOD_ID:
-        _impl.setConsoleMinimumIndex(request.getInt32(48));
+        _impl.setConsoleMinimumIndex(request.getInt32(56));
         _postResult.vcall$1(request);
         break;
       case _SET_CONSOLE_MAXIMUM_INDEX_METHOD_ID:
-        _impl.setConsoleMaximumIndex(request.getInt32(48));
+        _impl.setConsoleMaximumIndex(request.getInt32(56));
         _postResult.vcall$1(request);
         break;
       default:

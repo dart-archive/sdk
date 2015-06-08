@@ -5,6 +5,7 @@
 # The following match filenames in any directory.
 packages
 *.pyc
+*.class
 .flaky.log
 .DS_Store
 .ninja_deps

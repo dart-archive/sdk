@@ -9,6 +9,32 @@
 
 #include "unicode.h"
 
+static const int HEADER_SIZE = 56;
+
+char* pointerToArgument(char* buffer, int offset) {
+  return buffer + HEADER_SIZE + offset;
+}
+
+int64_t* pointerToInt64Argument(char* buffer, int offset) {
+  return reinterpret_cast<int64_t*>(pointerToArgument(buffer, offset));
+}
+
+int64_t* pointerToResult(char* buffer) {
+  return pointerToInt64Argument(buffer, 0);
+}
+
+int64_t* pointerToSegments(char* buffer) {
+  return pointerToInt64Argument(buffer, -8);
+}
+
+void** pointerToCallbackFunction(char* buffer) {
+  return reinterpret_cast<void**>(pointerToArgument(buffer, -16));
+}
+
+void** pointerToCallbackData(char* buffer) {
+  return reinterpret_cast<void**>(pointerToArgument(buffer, -24));
+}
+
 MessageBuilder::MessageBuilder(int space)
     : first_(this, 0, space),
       last_(&first_),
@@ -30,8 +56,8 @@ Builder MessageBuilder::InternalInitRoot(int size) {
   // the size of any struct needs to be at least 8 bytes in order
   // to have room for the return address.
   if (size == 0) size = 8;
-  int offset = first_.Allocate(48 + size);
-  return Builder(&first_, offset + 48);
+  int offset = first_.Allocate(HEADER_SIZE + size);
+  return Builder(&first_, offset + HEADER_SIZE);
 }
 
 BuilderSegment* MessageBuilder::FindSegmentForBytes(int bytes) {
@@ -44,9 +70,9 @@ BuilderSegment* MessageBuilder::FindSegmentForBytes(int bytes) {
 }
 
 void MessageBuilder::DeleteMessage(char* buffer) {
-  int32_t segments = *reinterpret_cast<int32_t*>(buffer + 40);
+  int64_t segments = *pointerToSegments(buffer);
   for (int i = 0; i < segments; i++) {
-    int64_t address = *reinterpret_cast<int64_t*>(buffer + 56 + (i * 16));
+    int64_t address = *pointerToInt64Argument(buffer, 8 + (i * 16));
     char* memory = reinterpret_cast<char*>(address);
     free(memory);
   }
@@ -148,9 +174,9 @@ static int ComputeStructBuffer(BuilderSegment* segment,
     // message are extracted and freed on return from the service
     // call.
     int segments = segment->builder()->segments();
-    int size = 56 + (segments * 16);
+    int size = HEADER_SIZE + 8 + (segments * 16);
     *buffer = reinterpret_cast<char*>(malloc(size));
-    int offset = 56;
+    int offset = HEADER_SIZE + 8;
     do {
       *reinterpret_cast<void**>(*buffer + offset) = segment->At(0);
       *reinterpret_cast<int*>(*buffer + offset + 8) = segment->used();
@@ -159,14 +185,14 @@ static int ComputeStructBuffer(BuilderSegment* segment,
     } while (segment != NULL);
 
     // Mark the request as being segmented.
-    *reinterpret_cast<int32_t*>(*buffer + 40) = segments;
+    *pointerToSegments(*buffer) = segments;
     return size;
   }
 
   *buffer = reinterpret_cast<char*>(segment->At(0));
   int size = segment->used();
   // Mark the request as being non-segmented.
-  *reinterpret_cast<int64_t*>(*buffer + 40) = 0;
+  *pointerToSegments(*buffer) = 0;
   return size;
 }
 
@@ -176,22 +202,24 @@ int64_t Builder::InvokeMethod(ServiceId service, MethodId method) {
   int size = ComputeStructBuffer(segment, &buffer);
   segment->Detach();
   ServiceApiInvoke(service, method, buffer, size);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *pointerToResult(buffer);
   MessageBuilder::DeleteMessage(buffer);
   return result;
 }
 
 void Builder::InvokeMethodAsync(ServiceId service,
                                 MethodId method,
-                                ServiceApiCallback callback,
-                                void* data) {
+                                ServiceApiCallback api_callback,
+                                void* callback_function,
+                                void* callback_data) {
   BuilderSegment* segment = this->segment();
   char* buffer;
   int size = ComputeStructBuffer(segment, &buffer);
   segment->Detach();
-  // Set the callback data (the user supplied callback).
-  *reinterpret_cast<void**>(buffer + 32) = data;
-  ServiceApiInvokeAsync(service, method, callback, buffer, size);
+  // Set the callback function (the user supplied callback).
+  *pointerToCallbackFunction(buffer) = callback_function;
+  *pointerToCallbackData(buffer) = callback_data;
+  ServiceApiInvokeAsync(service, method, api_callback, buffer, size);
 }
 
 Builder Builder::NewStruct(int offset, int size) {

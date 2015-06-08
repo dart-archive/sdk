@@ -17,7 +17,7 @@ const uint8_t TAG_CONS_DELETE_EVENT = 2;
 const uint8_t TAG_CONS_COMPLETE_EVENT = 3;
 const uint8_t TAG_CONS_UNCOMPLETE_EVENT = 4;
 
-void VoidCallback();
+void VoidCallback(void*);
 
 class TodoMVCPresenter {
  public:

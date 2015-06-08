@@ -272,7 +272,8 @@ class Builder {
   void InvokeMethodAsync(ServiceId service,
                          MethodId method,
                          ServiceApiCallback api_callback,
-                         void* callback);
+                         void* callback_function,
+                         void* callback_data);
 
  protected:
   Builder(Segment* segment, int offset)

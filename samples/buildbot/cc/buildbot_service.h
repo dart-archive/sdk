@@ -34,13 +34,13 @@ class BuildBotService {
   static void setup();
   static void tearDown();
   static BuildBotPatchData refresh();
-  static void refreshAsync(void (*callback)(BuildBotPatchData));
+  static void refreshAsync(void (*callback)(BuildBotPatchData, void*), void* callback_data);
   static void setConsoleCount(int32_t count);
-  static void setConsoleCountAsync(int32_t count, void (*callback)());
+  static void setConsoleCountAsync(int32_t count, void (*callback)(void*), void* callback_data);
   static void setConsoleMinimumIndex(int32_t index);
-  static void setConsoleMinimumIndexAsync(int32_t index, void (*callback)());
+  static void setConsoleMinimumIndexAsync(int32_t index, void (*callback)(void*), void* callback_data);
   static void setConsoleMaximumIndex(int32_t index);
-  static void setConsoleMaximumIndexAsync(int32_t index, void (*callback)());
+  static void setConsoleMaximumIndexAsync(int32_t index, void (*callback)(void*), void* callback_data);
 };
 
 class ConsoleNodeData : public Reader {

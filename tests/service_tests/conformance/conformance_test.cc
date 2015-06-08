@@ -29,24 +29,28 @@ static int Depth(Node node) {
   return 1 + ((left > right) ? left : right);
 }
 
-static void FooCallback() {
+static void* FooCallbackData = reinterpret_cast<void*>(101);
+static void FooCallback(void* data) {
+  EXPECT_EQ(FooCallbackData, data);
 }
 
-static void BarCallback(int i) {
+static void* BarCallbackData = reinterpret_cast<void*>(102);
+static void BarCallback(int i, void* data) {
+  EXPECT_EQ(BarCallbackData, data);
   EXPECT_EQ(24, i);
 }
 
-static void PingCallback(int result) {
+static void PingCallback(int result, void* data) {
   EXPECT_EQ(42, result);
 }
 
-static void CreateAgeStatsCallback(AgeStats stats) {
+static void CreateAgeStatsCallback(AgeStats stats, void* data) {
   EXPECT_EQ(42, stats.getAverageAge());
   EXPECT_EQ(42, stats.getSum());
   stats.Delete();
 }
 
-static void CreatePersonCallback(Person generated) {
+static void CreatePersonCallback(Person generated, void* data) {
   EXPECT_EQ(42, generated.getAge());
   char* name = generated.getName();
   int name_length = strlen(name);
@@ -66,27 +70,27 @@ static void CreatePersonCallback(Person generated) {
   generated.Delete();
 }
 
-static void CreateNodeCallback(Node node) {
+static void CreateNodeCallback(Node node, void* data) {
   EXPECT_EQ(24680, node.ComputeUsed());
   EXPECT_EQ(10, Depth(node));
   node.Delete();
 }
 
-static void GetAgeCallback(int age) {
+static void GetAgeCallback(int age, void* data) {
   EXPECT_EQ(140, age);
 }
 
-static void CountCallback(int count) {
+static void CountCallback(int count, void* data) {
   EXPECT_EQ(127, count);
 }
 
-static void GetAgeStatsCallback(AgeStats stats) {
+static void GetAgeStatsCallback(AgeStats stats, void* data) {
   EXPECT_EQ(39, stats.getAverageAge());
   EXPECT_EQ(4940, stats.getSum());
   stats.Delete();
 }
 
-static void FlipTableCallback(TableFlip flip_result) {
+static void FlipTableCallback(TableFlip flip_result, void* data) {
   const char* expected_flip = "(╯°□°）╯︵ ┻━┻";
   EXPECT(strcmp(flip_result.getFlip(), expected_flip) == 0);
 }
@@ -96,7 +100,7 @@ static void RunPersonTests() {
     MessageBuilder builder(512);
     PersonBuilder person = builder.initRoot<PersonBuilder>();
     BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
+    EXPECT_EQ(3136, builder.ComputeUsed());
     int age = ConformanceService::getAge(person);
     EXPECT_EQ(140, age);
   }
@@ -105,15 +109,15 @@ static void RunPersonTests() {
     MessageBuilder builder(512);
     PersonBuilder person = builder.initRoot<PersonBuilder>();
     BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
-    ConformanceService::getAgeAsync(person, GetAgeCallback);
+    EXPECT_EQ(3136, builder.ComputeUsed());
+    ConformanceService::getAgeAsync(person, GetAgeCallback, NULL);
   }
 
   {
     MessageBuilder builder(512);
     PersonBuilder person = builder.initRoot<PersonBuilder>();
     BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
+    EXPECT_EQ(3136, builder.ComputeUsed());
     int count = ConformanceService::count(person);
     EXPECT_EQ(127, count);
   }
@@ -122,15 +126,15 @@ static void RunPersonTests() {
     MessageBuilder builder(512);
     PersonBuilder person = builder.initRoot<PersonBuilder>();
     BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
-    ConformanceService::countAsync(person, CountCallback);
+    EXPECT_EQ(3136, builder.ComputeUsed());
+    ConformanceService::countAsync(person, CountCallback, NULL);
   }
 
   {
     MessageBuilder builder(512);
     PersonBuilder person = builder.initRoot<PersonBuilder>();
     BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
+    EXPECT_EQ(3136, builder.ComputeUsed());
     AgeStats stats = ConformanceService::getAgeStats(person);
     EXPECT_EQ(39, stats.getAverageAge());
     EXPECT_EQ(4940, stats.getSum());
@@ -141,8 +145,8 @@ static void RunPersonTests() {
     MessageBuilder builder(512);
     PersonBuilder person = builder.initRoot<PersonBuilder>();
     BuildPerson(person, 7);
-    EXPECT_EQ(3128, builder.ComputeUsed());
-    ConformanceService::getAgeStatsAsync(person, GetAgeStatsCallback);
+    EXPECT_EQ(3136, builder.ComputeUsed());
+    ConformanceService::getAgeStatsAsync(person, GetAgeStatsCallback, NULL);
   }
 
   {
@@ -152,7 +156,7 @@ static void RunPersonTests() {
     stats.Delete();
   }
 
-  ConformanceService::createAgeStatsAsync(42, 42, CreateAgeStatsCallback);
+  ConformanceService::createAgeStatsAsync(42, 42, CreateAgeStatsCallback, NULL);
 
   {
     Person generated = ConformanceService::createPerson(10);
@@ -175,10 +179,10 @@ static void RunPersonTests() {
     generated.Delete();
   }
 
-  ConformanceService::createPersonAsync(10, CreatePersonCallback);
+  ConformanceService::createPersonAsync(10, CreatePersonCallback, NULL);
 
   ConformanceService::foo();
-  ConformanceService::fooAsync(FooCallback);
+  ConformanceService::fooAsync(FooCallback, FooCallbackData);
 
   {
     MessageBuilder builder(512);
@@ -190,11 +194,11 @@ static void RunPersonTests() {
   {
     MessageBuilder builder(512);
     EmptyBuilder empty = builder.initRoot<EmptyBuilder>();
-    ConformanceService::barAsync(empty, BarCallback);
+    ConformanceService::barAsync(empty, BarCallback, BarCallbackData);
   }
 
   EXPECT_EQ(42, ConformanceService::ping());
-  ConformanceService::pingAsync(PingCallback);
+  ConformanceService::pingAsync(PingCallback, NULL);
 
   {
     MessageBuilder builder(512);
@@ -209,7 +213,7 @@ static void RunPersonTests() {
     MessageBuilder builder(512);
     TableFlipBuilder flip = builder.initRoot<TableFlipBuilder>();
     flip.setFlip("(╯°□°）╯︵ ┻━┻");
-    ConformanceService::flipTableAsync(flip, FlipTableCallback);
+    ConformanceService::flipTableAsync(flip, FlipTableCallback, NULL);
   }
 }
 
@@ -249,7 +253,7 @@ static void RunNodeTests() {
   EXPECT_EQ(10, Depth(node));
   node.Delete();
 
-  ConformanceService::createNodeAsync(10, CreateNodeCallback);
+  ConformanceService::createNodeAsync(10, CreateNodeCallback, NULL);
 }
 
 static void InteractWithService() {

@@ -34,9 +34,9 @@ static uint64_t GetMicroseconds() {
   return result;
 }
 
-static void EchoCallback(int result) {
+static void EchoCallback(int result, void* data) {
   if (result < kCallCount) {
-    PerformanceService::echoAsync(result + 1, EchoCallback);
+    PerformanceService::echoAsync(result + 1, EchoCallback, NULL);
   } else {
     echo_monitor->Lock();
     echo_async_done = true;
@@ -58,7 +58,7 @@ static void RunEchoTests() {
   printf("    - %.2f calls/s\n", (1000000.0 / sync_us) * kCallCount);
 
   start = GetMicroseconds();
-  PerformanceService::echoAsync(0, EchoCallback);
+  PerformanceService::echoAsync(0, EchoCallback, NULL);
   echo_monitor->Lock();
   while (!echo_async_done) echo_monitor->Wait();
   echo_monitor->Unlock();

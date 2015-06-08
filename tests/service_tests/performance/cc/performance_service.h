@@ -18,11 +18,11 @@ class PerformanceService {
   static void setup();
   static void tearDown();
   static int32_t echo(int32_t n);
-  static void echoAsync(int32_t n, void (*callback)(int32_t));
+  static void echoAsync(int32_t n, void (*callback)(int32_t, void*), void* callback_data);
   static int32_t countTreeNodes(TreeNodeBuilder node);
-  static void countTreeNodesAsync(TreeNodeBuilder node, void (*callback)(int32_t));
+  static void countTreeNodesAsync(TreeNodeBuilder node, void (*callback)(int32_t, void*), void* callback_data);
   static TreeNode buildTree(int32_t n);
-  static void buildTreeAsync(int32_t n, void (*callback)(TreeNode));
+  static void buildTreeAsync(int32_t n, void (*callback)(TreeNode, void*), void* callback_data);
 };
 
 class TreeNode : public Reader {

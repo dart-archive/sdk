@@ -20,9 +20,9 @@ public class MessageBuilder {
     // the size of any struct needs to be at least 8 bytes in order
     // to have room for the return address.
     if (size == 0) size = 8;
-    int offset = first.allocate(48 + size);
+    int offset = first.allocate(56 + size);
     builder.segment = first;
-    builder.base = offset + 48;
+    builder.base = offset + 56;
     return builder;
   }
 

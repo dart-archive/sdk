@@ -24,12 +24,12 @@ public:
 
   void createItem(NSString* title) {
     int length = title.length;
-    int size = 40 + 8 + BoxedStringBuilder::kSize + length;
+    int size = 56 + BoxedStringBuilder::kSize + length;
     MessageBuilder builder(size);
     BoxedStringBuilder box = builder.initRoot<BoxedStringBuilder>();
     List<unichar> chars = box.initStrData(length);
     encodeString(title, chars);
-    TodoMVCService::createItemAsync(box, VoidCallback);
+    TodoMVCService::createItemAsync(box, VoidCallback, NULL);
   }
 
   void toggleItem(int id) {

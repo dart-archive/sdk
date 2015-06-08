@@ -62,7 +62,7 @@ void _generateImplementationFile(String path, Unit unit, String directory) {
 abstract class CcVisitor extends CodeGenerationVisitor {
   CcVisitor(String path) : super(path);
 
-  static const int REQUEST_HEADER_SIZE = 48;
+  static const int REQUEST_HEADER_SIZE = 56;
   static const PRIMITIVE_TYPES = const <String, String> {
     'void'    : 'void',
     'bool'    : 'bool',
@@ -127,7 +127,7 @@ abstract class CcVisitor extends CodeGenerationVisitor {
       if (async) {
         write('  ');
         writeln('$argumentName.InvokeMethodAsync(service_id_, $id,'
-                ' $callback, reinterpret_cast<void*>(callback));');
+                ' $callback, reinterpret_cast<void*>(callback), callback_data);');
       } else {
         writeln('  int64_t result = $argumentName.'
                 'InvokeMethod(service_id_, $id);');
@@ -141,7 +141,7 @@ abstract class CcVisitor extends CodeGenerationVisitor {
       write('  ');
       if (!method.returnType.isVoid && !async) write('return ');
       String suffix = async ? 'Async' : '';
-      String cb = async ? ', $callback, reinterpret_cast<void*>(callback)' : '';
+      String cb = async ? ', $callback, reinterpret_cast<void*>(callback), callback_data' : '';
       writeln('$argumentName.InvokeMethod$suffix(service_id_, $id$cb);');
     }
   }
@@ -170,7 +170,7 @@ abstract class CcVisitor extends CodeGenerationVisitor {
       String prefix = cast('$type*');
       if (pointers == 0) return '$prefix(_buffer + $offset)';
       return '$prefix(_buffer + $offset + $pointers * sizeof(void*))';
-   }
+    }
 
     if (async) {
       writeln('  char* _buffer = ${cast("char*")}(malloc(kSize));');
@@ -191,8 +191,10 @@ abstract class CcVisitor extends CodeGenerationVisitor {
     }
 
     if (async) {
-      String dataArgument = pointerToArgument(-16, 0, 'void*');
-      writeln('  *$dataArgument = ${cast("void*")}(callback);');
+      String callbackFunction = pointerToArgument(-16, 0, 'void*');
+      String callbackData = pointerToArgument(-24, 0, 'void*');
+      writeln('  *$callbackFunction = ${cast("void*")}(callback);');
+      writeln('  *$callbackData = callback_data;');
       for (int i = 0; i < extraArguments.length; i++) {
         String dataArgument = pointerToArgument(layout.size, i, 'void*');
         String arg = extraArguments[i];
@@ -276,8 +278,9 @@ class _HeaderVisitor extends CcVisitor {
     write('void (*callback)(');
     if (!node.returnType.isVoid) {
       writeReturnType(node.returnType);
+      write(', ');
     }
-    writeln('));');
+    writeln('void*), void* callback_data);');
   }
 
   visitStruct(Struct node) {
@@ -589,8 +592,9 @@ class _ImplementationVisitor extends CcVisitor {
     write('void (*callback)(');
     if (!node.returnType.isVoid) {
       writeReturnType(node.returnType);
+      write(', ');
     }
-    writeln(')) {');
+    writeln('void*), void* callback_data) {');
 
     if (node.inputKind == InputKind.STRUCT) {
       visitStructArgumentMethodBody(id, node, callback: callback);
@@ -608,15 +612,21 @@ class _ImplementationVisitor extends CcVisitor {
     String key = '${type.identifier}_${layout.size}';
     return callbacks.putIfAbsent(key, () {
       String cast(String type) => CcVisitor.cast(type, cStyle);
+      String pointerToArgument(int offset, int pointers, String type) {
+        offset += CcVisitor.REQUEST_HEADER_SIZE;
+        String prefix = cast('$type*');
+        if (pointers == 0) return '$prefix(buffer + $offset)';
+        return '$prefix(buffer + $offset + $pointers * sizeof(void*))';
+      }
       String name = 'Unwrap_$key';
       writeln();
       writeln('static void $name(void* raw) {');
       if (type.isVoid) {
-        writeln('  typedef void (*cbt)();');
+        writeln('  typedef void (*cbt)(void*);');
       } else {
         write('  typedef void (*cbt)(');
         writeReturnType(type);
-        writeln(');');
+        writeln(', void*);');
       }
       writeln('  char* buffer = ${cast('char*')}(raw);');
       int offset = CcVisitor.REQUEST_HEADER_SIZE;
@@ -628,17 +638,20 @@ class _ImplementationVisitor extends CcVisitor {
                   'MessageReader::GetRootSegment(memory);');
         }
       }
-      writeln('  cbt callback = *${cast('cbt*')}(buffer + 32);');
+      String callbackFunction = pointerToArgument(-16, 0, 'cbt');
+      String callbackData = pointerToArgument(-24, 0, 'void*');
+      writeln('  cbt callback = *$callbackFunction;');
+      writeln('  void* callback_data = *$callbackData;');
       writeln('  MessageBuilder::DeleteMessage(buffer);');
       if (type.isVoid) {
-        writeln('  callback();');
+        writeln('  callback(callback_data);');
       } else {
         if (type.isPrimitive) {
-          writeln('  callback(result);');
+          writeln('  callback(result, callback_data);');
         } else {
           write('  callback(');
           writeReturnType(type);
-          writeln('(segment, 8));');
+          writeln('(segment, 8), callback_data);');
         }
       }
       writeln('}');

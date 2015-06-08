@@ -21,6 +21,8 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
+const int HEADER_SIZE = 56;
+
 const List<String> RESOURCES = const [];
 
 void generate(String path, Unit unit, String outputDirectory) {
@@ -169,7 +171,7 @@ class _DartVisitor extends CodeGenerationVisitor {
         if (i != 0) write(', ');
         Formal argument = method.arguments[i];
         String getter = _GETTERS[argument.type.identifier];
-        int offset = inputLayout[argument].offset + 48;
+        int offset = inputLayout[argument].offset + HEADER_SIZE;
         write('request.$getter($offset)');
       }
     }
@@ -216,8 +218,8 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('        _postResult.vcall\$1(request);');
     writeln('        break;');
 
-    String setInt32() => 'request.setInt32(48, result)';
-    String setInt64() => 'request.setInt64(48, result)';
+    String setInt32() => 'request.setInt32($HEADER_SIZE, result)';
+    String setInt64() => 'request.setInt64($HEADER_SIZE, result)';
 
     for (int i = 0; i < methods.length; ++i) {
       Method method = methods[i];

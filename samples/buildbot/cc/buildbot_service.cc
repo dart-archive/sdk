@@ -22,101 +22,107 @@ void BuildBotService::tearDown() {
 static const MethodId kRefreshId_ = reinterpret_cast<MethodId>(1);
 
 BuildBotPatchData BuildBotService::refresh() {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
   ServiceApiInvoke(service_id_, kRefreshId_, _buffer, kSize);
-  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
   return BuildBotPatchData(segment, 8);
 }
 
 static void Unwrap_BuildBotPatchData_8(void* raw) {
-  typedef void (*cbt)(BuildBotPatchData);
+  typedef void (*cbt)(BuildBotPatchData, void*);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  void* callback_data = *reinterpret_cast<void**>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback(BuildBotPatchData(segment, 8));
+  callback(BuildBotPatchData(segment, 8), callback_data);
 }
 
-void BuildBotService::refreshAsync(void (*callback)(BuildBotPatchData)) {
-  static const int kSize = 56 + 0 * sizeof(void*);
+void BuildBotService::refreshAsync(void (*callback)(BuildBotPatchData, void*), void* callback_data) {
+  static const int kSize = 64 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
   ServiceApiInvokeAsync(service_id_, kRefreshId_, Unwrap_BuildBotPatchData_8, _buffer, kSize);
 }
 
 static const MethodId kSetConsoleCountId_ = reinterpret_cast<MethodId>(2);
 
 void BuildBotService::setConsoleCount(int32_t count) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = count;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = count;
   ServiceApiInvoke(service_id_, kSetConsoleCountId_, _buffer, kSize);
 }
 
 static void Unwrap_void_8(void* raw) {
-  typedef void (*cbt)();
+  typedef void (*cbt)(void*);
   char* buffer = reinterpret_cast<char*>(raw);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  void* callback_data = *reinterpret_cast<void**>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback();
+  callback(callback_data);
 }
 
-void BuildBotService::setConsoleCountAsync(int32_t count, void (*callback)()) {
-  static const int kSize = 56 + 0 * sizeof(void*);
+void BuildBotService::setConsoleCountAsync(int32_t count, void (*callback)(void*), void* callback_data) {
+  static const int kSize = 64 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = count;
-  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = count;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
   ServiceApiInvokeAsync(service_id_, kSetConsoleCountId_, Unwrap_void_8, _buffer, kSize);
 }
 
 static const MethodId kSetConsoleMinimumIndexId_ = reinterpret_cast<MethodId>(3);
 
 void BuildBotService::setConsoleMinimumIndex(int32_t index) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = index;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = index;
   ServiceApiInvoke(service_id_, kSetConsoleMinimumIndexId_, _buffer, kSize);
 }
 
-void BuildBotService::setConsoleMinimumIndexAsync(int32_t index, void (*callback)()) {
-  static const int kSize = 56 + 0 * sizeof(void*);
+void BuildBotService::setConsoleMinimumIndexAsync(int32_t index, void (*callback)(void*), void* callback_data) {
+  static const int kSize = 64 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = index;
-  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = index;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
   ServiceApiInvokeAsync(service_id_, kSetConsoleMinimumIndexId_, Unwrap_void_8, _buffer, kSize);
 }
 
 static const MethodId kSetConsoleMaximumIndexId_ = reinterpret_cast<MethodId>(4);
 
 void BuildBotService::setConsoleMaximumIndex(int32_t index) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = index;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = index;
   ServiceApiInvoke(service_id_, kSetConsoleMaximumIndexId_, _buffer, kSize);
 }
 
-void BuildBotService::setConsoleMaximumIndexAsync(int32_t index, void (*callback)()) {
-  static const int kSize = 56 + 0 * sizeof(void*);
+void BuildBotService::setConsoleMaximumIndexAsync(int32_t index, void (*callback)(void*), void* callback_data) {
+  static const int kSize = 64 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = index;
-  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = index;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
   ServiceApiInvokeAsync(service_id_, kSetConsoleMaximumIndexId_, Unwrap_void_8, _buffer, kSize);
 }
 

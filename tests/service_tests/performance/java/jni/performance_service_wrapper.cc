@@ -112,9 +112,9 @@ static int ComputeMessage(JNIEnv* env,
   int number_of_segments = env->GetArrayLength(segments);
 
   if (number_of_segments > 1) {
-    int size = 56 + (number_of_segments * 16);
+    int size = 56 + 8 + (number_of_segments * 16);
     *buffer = reinterpret_cast<char*>(malloc(size));
-    int offset = 56;
+    int offset = 56 + 8;
     for (int i = 0; i < number_of_segments; i++) {
       jbyteArray segment = (jbyteArray)env->GetObjectArrayElement(segments, i);
       jint segment_length = sizes[i];
@@ -126,9 +126,9 @@ static int ComputeMessage(JNIEnv* env,
 
     env->ReleaseIntArrayElements(sizes_array, sizes, JNI_ABORT);
     // Mark the request as being segmented.
-    *reinterpret_cast<int32_t*>(*buffer + 40) = number_of_segments;
+    *reinterpret_cast<int64_t*>(*buffer + 48) = number_of_segments;
     // Set the callback information.
-    *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
+    *reinterpret_cast<CallbackInfo**>(*buffer + 40) = info;
     return size;
   }
 
@@ -137,16 +137,16 @@ static int ComputeMessage(JNIEnv* env,
   *buffer = ExtractByteArrayData(env, segment, segment_length);
   env->ReleaseIntArrayElements(sizes_array, sizes, JNI_ABORT);
   // Mark the request as being non-segmented.
-  *reinterpret_cast<int64_t*>(*buffer + 40) = 0;
+  *reinterpret_cast<int64_t*>(*buffer + 48) = 0;
   // Set the callback information.
-  *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
+  *reinterpret_cast<CallbackInfo**>(*buffer + 40) = info;
   return segment_length;
 }
 
 static void DeleteMessage(char* message) {
-  int32_t segments = *reinterpret_cast<int32_t*>(message + 40);
+  int32_t segments = *reinterpret_cast<int32_t*>(message + 48);
   for (int i = 0; i < segments; i++) {
-    int64_t address = *reinterpret_cast<int64_t*>(message + 56 + (i * 16));
+    int64_t address = *reinterpret_cast<int64_t*>(message + 64 + (i * 16));
     char* memory = reinterpret_cast<char*>(address);
     free(memory);
   }
@@ -156,20 +156,20 @@ static void DeleteMessage(char* message) {
 static const MethodId _kechoId = reinterpret_cast<MethodId>(1);
 
 JNIEXPORT jint JNICALL Java_fletch_PerformanceService_echo(JNIEnv* _env, jclass, jint n) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<jint*>(_buffer + 48) = n;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<jint*>(_buffer + 56) = n;
   ServiceApiInvoke(service_id_, _kechoId, _buffer, kSize);
-  return *reinterpret_cast<int64_t*>(_buffer + 48);
+  return *reinterpret_cast<int64_t*>(_buffer + 56);
 }
 
 static void Unwrap_int32_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   jclass clazz = env->GetObjectClass(info->callback);
   jmethodID methodId = env->GetMethodID(clazz, "handle", "(I)V");
@@ -183,12 +183,12 @@ JNIEXPORT void JNICALL Java_fletch_PerformanceService_echoAsync(JNIEnv* _env, jc
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
-  static const int kSize = 56 + 1 * sizeof(void*);
+  static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<jint*>(_buffer + 48) = n;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<jint*>(_buffer + 56) = n;
   CallbackInfo* info = new CallbackInfo(callback, vm);
-  *reinterpret_cast<CallbackInfo**>(_buffer + 32) = info;
+  *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kechoId, Unwrap_int32_8, _buffer, kSize);
 }
 
@@ -198,7 +198,7 @@ JNIEXPORT jint JNICALL Java_fletch_PerformanceService_countTreeNodes(JNIEnv* _en
   char* buffer = NULL;
   int size = ComputeMessage(_env, node, NULL, NULL, &buffer);
   ServiceApiInvoke(service_id_, _kcountTreeNodesId, buffer, size);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   return result;
 }
@@ -215,13 +215,13 @@ JNIEXPORT void JNICALL Java_fletch_PerformanceService_countTreeNodesAsync(JNIEnv
 static const MethodId _kbuildTreeId = reinterpret_cast<MethodId>(3);
 
 JNIEXPORT jobject JNICALL Java_fletch_PerformanceService_buildTree(JNIEnv* _env, jclass, jint n) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<jint*>(_buffer + 48) = n;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<jint*>(_buffer + 56) = n;
   ServiceApiInvoke(service_id_, _kbuildTreeId, _buffer, kSize);
-  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(_env, memory);
   jclass resultClass = _env->FindClass("fletch/TreeNode");
@@ -232,9 +232,9 @@ JNIEXPORT jobject JNICALL Java_fletch_PerformanceService_buildTree(JNIEnv* _env,
 
 static void Unwrap_TreeNode_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(env, memory);
@@ -253,12 +253,12 @@ JNIEXPORT void JNICALL Java_fletch_PerformanceService_buildTreeAsync(JNIEnv* _en
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
-  static const int kSize = 56 + 1 * sizeof(void*);
+  static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<jint*>(_buffer + 48) = n;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<jint*>(_buffer + 56) = n;
   CallbackInfo* info = new CallbackInfo(callback, vm);
-  *reinterpret_cast<CallbackInfo**>(_buffer + 32) = info;
+  *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kbuildTreeId, Unwrap_TreeNode_8, _buffer, kSize);
 }
 

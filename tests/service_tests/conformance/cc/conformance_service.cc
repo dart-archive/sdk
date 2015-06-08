@@ -26,16 +26,17 @@ int32_t ConformanceService::getAge(PersonBuilder person) {
 }
 
 static void Unwrap_int32_24(void* raw) {
-  typedef void (*cbt)(int32_t);
+  typedef void (*cbt)(int32_t, void*);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  void* callback_data = *reinterpret_cast<void**>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback(result);
+  callback(result, callback_data);
 }
 
-void ConformanceService::getAgeAsync(PersonBuilder person, void (*callback)(int32_t)) {
-  person.InvokeMethodAsync(service_id_, kGetAgeId_, Unwrap_int32_24, reinterpret_cast<void*>(callback));
+void ConformanceService::getAgeAsync(PersonBuilder person, void (*callback)(int32_t, void*), void* callback_data) {
+  person.InvokeMethodAsync(service_id_, kGetAgeId_, Unwrap_int32_24, reinterpret_cast<void*>(callback), callback_data);
 }
 
 static const MethodId kGetBoxedAgeId_ = reinterpret_cast<MethodId>(2);
@@ -45,16 +46,17 @@ int32_t ConformanceService::getBoxedAge(PersonBoxBuilder box) {
 }
 
 static void Unwrap_int32_8(void* raw) {
-  typedef void (*cbt)(int32_t);
+  typedef void (*cbt)(int32_t, void*);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  void* callback_data = *reinterpret_cast<void**>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback(result);
+  callback(result, callback_data);
 }
 
-void ConformanceService::getBoxedAgeAsync(PersonBoxBuilder box, void (*callback)(int32_t)) {
-  box.InvokeMethodAsync(service_id_, kGetBoxedAgeId_, Unwrap_int32_8, reinterpret_cast<void*>(callback));
+void ConformanceService::getBoxedAgeAsync(PersonBoxBuilder box, void (*callback)(int32_t, void*), void* callback_data) {
+  box.InvokeMethodAsync(service_id_, kGetBoxedAgeId_, Unwrap_int32_8, reinterpret_cast<void*>(callback), callback_data);
 }
 
 static const MethodId kGetAgeStatsId_ = reinterpret_cast<MethodId>(3);
@@ -67,124 +69,131 @@ AgeStats ConformanceService::getAgeStats(PersonBuilder person) {
 }
 
 static void Unwrap_AgeStats_24(void* raw) {
-  typedef void (*cbt)(AgeStats);
+  typedef void (*cbt)(AgeStats, void*);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  void* callback_data = *reinterpret_cast<void**>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback(AgeStats(segment, 8));
+  callback(AgeStats(segment, 8), callback_data);
 }
 
-void ConformanceService::getAgeStatsAsync(PersonBuilder person, void (*callback)(AgeStats)) {
-  person.InvokeMethodAsync(service_id_, kGetAgeStatsId_, Unwrap_AgeStats_24, reinterpret_cast<void*>(callback));
+void ConformanceService::getAgeStatsAsync(PersonBuilder person, void (*callback)(AgeStats, void*), void* callback_data) {
+  person.InvokeMethodAsync(service_id_, kGetAgeStatsId_, Unwrap_AgeStats_24, reinterpret_cast<void*>(callback), callback_data);
 }
 
 static const MethodId kCreateAgeStatsId_ = reinterpret_cast<MethodId>(4);
 
 AgeStats ConformanceService::createAgeStats(int32_t averageAge, int32_t sum) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = averageAge;
-  *reinterpret_cast<int32_t*>(_buffer + 52) = sum;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = averageAge;
+  *reinterpret_cast<int32_t*>(_buffer + 60) = sum;
   ServiceApiInvoke(service_id_, kCreateAgeStatsId_, _buffer, kSize);
-  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
   return AgeStats(segment, 8);
 }
 
 static void Unwrap_AgeStats_8(void* raw) {
-  typedef void (*cbt)(AgeStats);
+  typedef void (*cbt)(AgeStats, void*);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  void* callback_data = *reinterpret_cast<void**>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback(AgeStats(segment, 8));
+  callback(AgeStats(segment, 8), callback_data);
 }
 
-void ConformanceService::createAgeStatsAsync(int32_t averageAge, int32_t sum, void (*callback)(AgeStats)) {
-  static const int kSize = 56 + 0 * sizeof(void*);
+void ConformanceService::createAgeStatsAsync(int32_t averageAge, int32_t sum, void (*callback)(AgeStats, void*), void* callback_data) {
+  static const int kSize = 64 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = averageAge;
-  *reinterpret_cast<int32_t*>(_buffer + 52) = sum;
-  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = averageAge;
+  *reinterpret_cast<int32_t*>(_buffer + 60) = sum;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
   ServiceApiInvokeAsync(service_id_, kCreateAgeStatsId_, Unwrap_AgeStats_8, _buffer, kSize);
 }
 
 static const MethodId kCreatePersonId_ = reinterpret_cast<MethodId>(5);
 
 Person ConformanceService::createPerson(int32_t children) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = children;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = children;
   ServiceApiInvoke(service_id_, kCreatePersonId_, _buffer, kSize);
-  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
   return Person(segment, 8);
 }
 
 static void Unwrap_Person_8(void* raw) {
-  typedef void (*cbt)(Person);
+  typedef void (*cbt)(Person, void*);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  void* callback_data = *reinterpret_cast<void**>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback(Person(segment, 8));
+  callback(Person(segment, 8), callback_data);
 }
 
-void ConformanceService::createPersonAsync(int32_t children, void (*callback)(Person)) {
-  static const int kSize = 56 + 0 * sizeof(void*);
+void ConformanceService::createPersonAsync(int32_t children, void (*callback)(Person, void*), void* callback_data) {
+  static const int kSize = 64 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = children;
-  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = children;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
   ServiceApiInvokeAsync(service_id_, kCreatePersonId_, Unwrap_Person_8, _buffer, kSize);
 }
 
 static const MethodId kCreateNodeId_ = reinterpret_cast<MethodId>(6);
 
 Node ConformanceService::createNode(int32_t depth) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = depth;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = depth;
   ServiceApiInvoke(service_id_, kCreateNodeId_, _buffer, kSize);
-  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
   return Node(segment, 8);
 }
 
 static void Unwrap_Node_8(void* raw) {
-  typedef void (*cbt)(Node);
+  typedef void (*cbt)(Node, void*);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  void* callback_data = *reinterpret_cast<void**>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback(Node(segment, 8));
+  callback(Node(segment, 8), callback_data);
 }
 
-void ConformanceService::createNodeAsync(int32_t depth, void (*callback)(Node)) {
-  static const int kSize = 56 + 0 * sizeof(void*);
+void ConformanceService::createNodeAsync(int32_t depth, void (*callback)(Node, void*), void* callback_data) {
+  static const int kSize = 64 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 48) = depth;
-  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<int32_t*>(_buffer + 56) = depth;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
   ServiceApiInvokeAsync(service_id_, kCreateNodeId_, Unwrap_Node_8, _buffer, kSize);
 }
 
@@ -194,8 +203,8 @@ int32_t ConformanceService::count(PersonBuilder person) {
   return person.InvokeMethod(service_id_, kCountId_);
 }
 
-void ConformanceService::countAsync(PersonBuilder person, void (*callback)(int32_t)) {
-  person.InvokeMethodAsync(service_id_, kCountId_, Unwrap_int32_24, reinterpret_cast<void*>(callback));
+void ConformanceService::countAsync(PersonBuilder person, void (*callback)(int32_t, void*), void* callback_data) {
+  person.InvokeMethodAsync(service_id_, kCountId_, Unwrap_int32_24, reinterpret_cast<void*>(callback), callback_data);
 }
 
 static const MethodId kDepthId_ = reinterpret_cast<MethodId>(8);
@@ -204,33 +213,35 @@ int32_t ConformanceService::depth(NodeBuilder node) {
   return node.InvokeMethod(service_id_, kDepthId_);
 }
 
-void ConformanceService::depthAsync(NodeBuilder node, void (*callback)(int32_t)) {
-  node.InvokeMethodAsync(service_id_, kDepthId_, Unwrap_int32_24, reinterpret_cast<void*>(callback));
+void ConformanceService::depthAsync(NodeBuilder node, void (*callback)(int32_t, void*), void* callback_data) {
+  node.InvokeMethodAsync(service_id_, kDepthId_, Unwrap_int32_24, reinterpret_cast<void*>(callback), callback_data);
 }
 
 static const MethodId kFooId_ = reinterpret_cast<MethodId>(9);
 
 void ConformanceService::foo() {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
   ServiceApiInvoke(service_id_, kFooId_, _buffer, kSize);
 }
 
 static void Unwrap_void_8(void* raw) {
-  typedef void (*cbt)();
+  typedef void (*cbt)(void*);
   char* buffer = reinterpret_cast<char*>(raw);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  void* callback_data = *reinterpret_cast<void**>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback();
+  callback(callback_data);
 }
 
-void ConformanceService::fooAsync(void (*callback)()) {
-  static const int kSize = 56 + 0 * sizeof(void*);
+void ConformanceService::fooAsync(void (*callback)(void*), void* callback_data) {
+  static const int kSize = 64 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
   ServiceApiInvokeAsync(service_id_, kFooId_, Unwrap_void_8, _buffer, kSize);
 }
 
@@ -241,34 +252,36 @@ int32_t ConformanceService::bar(EmptyBuilder empty) {
 }
 
 static void Unwrap_int32_0(void* raw) {
-  typedef void (*cbt)(int32_t);
+  typedef void (*cbt)(int32_t, void*);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  void* callback_data = *reinterpret_cast<void**>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback(result);
+  callback(result, callback_data);
 }
 
-void ConformanceService::barAsync(EmptyBuilder empty, void (*callback)(int32_t)) {
-  empty.InvokeMethodAsync(service_id_, kBarId_, Unwrap_int32_0, reinterpret_cast<void*>(callback));
+void ConformanceService::barAsync(EmptyBuilder empty, void (*callback)(int32_t, void*), void* callback_data) {
+  empty.InvokeMethodAsync(service_id_, kBarId_, Unwrap_int32_0, reinterpret_cast<void*>(callback), callback_data);
 }
 
 static const MethodId kPingId_ = reinterpret_cast<MethodId>(11);
 
 int32_t ConformanceService::ping() {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
   ServiceApiInvoke(service_id_, kPingId_, _buffer, kSize);
-  return *reinterpret_cast<int64_t*>(_buffer + 48);
+  return *reinterpret_cast<int64_t*>(_buffer + 56);
 }
 
-void ConformanceService::pingAsync(void (*callback)(int32_t)) {
-  static const int kSize = 56 + 0 * sizeof(void*);
+void ConformanceService::pingAsync(void (*callback)(int32_t, void*), void* callback_data) {
+  static const int kSize = 64 + 0 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<void**>(_buffer + 32) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
+  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
   ServiceApiInvokeAsync(service_id_, kPingId_, Unwrap_int32_8, _buffer, kSize);
 }
 
@@ -282,18 +295,19 @@ TableFlip ConformanceService::flipTable(TableFlipBuilder flip) {
 }
 
 static void Unwrap_TableFlip_8(void* raw) {
-  typedef void (*cbt)(TableFlip);
+  typedef void (*cbt)(TableFlip, void*);
   char* buffer = reinterpret_cast<char*>(raw);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   Segment* segment = MessageReader::GetRootSegment(memory);
-  cbt callback = *reinterpret_cast<cbt*>(buffer + 32);
+  cbt callback = *reinterpret_cast<cbt*>(buffer + 40);
+  void* callback_data = *reinterpret_cast<void**>(buffer + 32);
   MessageBuilder::DeleteMessage(buffer);
-  callback(TableFlip(segment, 8));
+  callback(TableFlip(segment, 8), callback_data);
 }
 
-void ConformanceService::flipTableAsync(TableFlipBuilder flip, void (*callback)(TableFlip)) {
-  flip.InvokeMethodAsync(service_id_, kFlipTableId_, Unwrap_TableFlip_8, reinterpret_cast<void*>(callback));
+void ConformanceService::flipTableAsync(TableFlipBuilder flip, void (*callback)(TableFlip, void*), void* callback_data) {
+  flip.InvokeMethodAsync(service_id_, kFlipTableId_, Unwrap_TableFlip_8, reinterpret_cast<void*>(callback), callback_data);
 }
 
 List<uint16_t> PersonBuilder::initNameData(int length) {

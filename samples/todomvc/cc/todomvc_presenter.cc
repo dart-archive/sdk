@@ -4,24 +4,24 @@
 
 #include "todomvc_presenter.h"
 
-void VoidCallback() {}
+void VoidCallback(void*) {}
 
 void TodoMVCPresenter::createItem(char* title) {
   int length = 0;
   while (title[length] != '\0') ++length;
-  int size = 40 + 8 + BoxedStringBuilder::kSize + length;
+  int size = 56 + BoxedStringBuilder::kSize + length;
   MessageBuilder builder(size);
   BoxedStringBuilder box = builder.initRoot<BoxedStringBuilder>();
   box.setStr(title);
-  TodoMVCService::createItemAsync(box, VoidCallback);
+  TodoMVCService::createItemAsync(box, VoidCallback, NULL);
 }
 
 void TodoMVCPresenter::clearItems() {
-  TodoMVCService::clearItemsAsync(VoidCallback);
+  TodoMVCService::clearItemsAsync(VoidCallback, NULL);
 }
 
 void TodoMVCPresenter::dispatch(event id) {
-  TodoMVCService::dispatchAsync(id, VoidCallback);
+  TodoMVCService::dispatchAsync(id, VoidCallback, NULL);
 }
 
 void TodoMVCPresenter::sync() {

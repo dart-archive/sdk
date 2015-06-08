@@ -525,7 +525,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         write(', ');
         write(formal.name);
       }
-      writeln(', noopVoidEventCallback);');
+      writeln(', noopVoidEventCallback, NULL);');
       writeln('  }];');
       writeln('}');
     }
@@ -717,7 +717,7 @@ void encodeString(NSString* string, List<unichar> chars) {
 
   void _writeEventUtils() {
     writeln('typedef uint16_t EventID;');
-    writeln('void noopVoidEventCallback() {}');
+    writeln('void noopVoidEventCallback(void*) {}');
     writeln();
   }
 

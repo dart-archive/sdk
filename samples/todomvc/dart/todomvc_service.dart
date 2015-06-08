@@ -52,15 +52,15 @@ abstract class TodoMVCService {
         _postResult.vcall$1(request);
         break;
       case _DELETE_ITEM_METHOD_ID:
-        _impl.deleteItem(request.getInt32(48));
+        _impl.deleteItem(request.getInt32(56));
         _postResult.vcall$1(request);
         break;
       case _COMPLETE_ITEM_METHOD_ID:
-        _impl.completeItem(request.getInt32(48));
+        _impl.completeItem(request.getInt32(56));
         _postResult.vcall$1(request);
         break;
       case _UNCOMPLETE_ITEM_METHOD_ID:
-        _impl.uncompleteItem(request.getInt32(48));
+        _impl.uncompleteItem(request.getInt32(56));
         _postResult.vcall$1(request);
         break;
       case _CLEAR_ITEMS_METHOD_ID:
@@ -68,7 +68,7 @@ abstract class TodoMVCService {
         _postResult.vcall$1(request);
         break;
       case _DISPATCH_METHOD_ID:
-        _impl.dispatch(request.getUint16(48));
+        _impl.dispatch(request.getUint16(56));
         _postResult.vcall$1(request);
         break;
       case _SYNC_METHOD_ID:
@@ -76,7 +76,7 @@ abstract class TodoMVCService {
         PatchSetBuilder builder = mb.initRoot(new PatchSetBuilder(), 8);
         _impl.sync(builder);
         var result = getResultMessage(builder);
-        request.setInt64(48, result);
+        request.setInt64(56, result);
         _postResult.vcall$1(request);
         break;
       case _RESET_METHOD_ID:

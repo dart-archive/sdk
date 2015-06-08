@@ -118,7 +118,7 @@ JNIEXPORT void JNICALL Java_fletch_FletchServiceApi_TearDown(JNIEnv*, jclass) {
 #endif
 """;
 
-const JNI_UTILS = """
+String JNI_UTILS = """
 static JNIEnv* AttachCurrentThreadAndGetEnv(JavaVM* vm) {
   AttachEnvType result = NULL;
   if (vm->AttachCurrentThread(&result, NULL) != JNI_OK) {
@@ -201,9 +201,9 @@ static int ComputeMessage(JNIEnv* env,
   int number_of_segments = env->GetArrayLength(segments);
 
   if (number_of_segments > 1) {
-    int size = 56 + (number_of_segments * 16);
+    int size = $REQUEST_HEADER_SIZE + 8 + (number_of_segments * 16);
     *buffer = reinterpret_cast<char*>(malloc(size));
-    int offset = 56;
+    int offset = $REQUEST_HEADER_SIZE + 8;
     for (int i = 0; i < number_of_segments; i++) {
       jbyteArray segment = (jbyteArray)env->GetObjectArrayElement(segments, i);
       jint segment_length = sizes[i];
@@ -215,9 +215,9 @@ static int ComputeMessage(JNIEnv* env,
 
     env->ReleaseIntArrayElements(sizes_array, sizes, JNI_ABORT);
     // Mark the request as being segmented.
-    *reinterpret_cast<int32_t*>(*buffer + 40) = number_of_segments;
+    *${pointerToArgument('*buffer', -8, 'int64_t')} = number_of_segments;
     // Set the callback information.
-    *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
+    *${pointerToArgument('*buffer', -16, 'CallbackInfo*')} = info;
     return size;
   }
 
@@ -226,21 +226,28 @@ static int ComputeMessage(JNIEnv* env,
   *buffer = ExtractByteArrayData(env, segment, segment_length);
   env->ReleaseIntArrayElements(sizes_array, sizes, JNI_ABORT);
   // Mark the request as being non-segmented.
-  *reinterpret_cast<int64_t*>(*buffer + 40) = 0;
+  *${pointerToArgument('*buffer', -8, 'int64_t')} = 0;
   // Set the callback information.
-  *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
+  *${pointerToArgument('*buffer', -16, 'CallbackInfo*')} = info;
   return segment_length;
 }
 
 static void DeleteMessage(char* message) {
-  int32_t segments = *reinterpret_cast<int32_t*>(message + 40);
+  int32_t segments = *${pointerToArgument('message', -8, 'int32_t')};
   for (int i = 0; i < segments; i++) {
-    int64_t address = *reinterpret_cast<int64_t*>(message + 56 + (i * 16));
+    int64_t address = *reinterpret_cast<int64_t*>(message + ${REQUEST_HEADER_SIZE + 8} + (i * 16));
     char* memory = reinterpret_cast<char*>(address);
     free(memory);
   }
   free(message);
 }""";
+
+const int REQUEST_HEADER_SIZE = 56;
+
+String pointerToArgument(String buffer, int offset, String type) {
+  offset += REQUEST_HEADER_SIZE;
+  return 'reinterpret_cast<$type*>($buffer + $offset)';
+}
 
 const List<String> JAVA_RESOURCES = const [
   "Builder.java",
@@ -849,7 +856,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
 }
 
 class _JniVisitor extends CcVisitor {
-  static const int REQUEST_HEADER_SIZE = 48;
+  static const int REQUEST_HEADER_SIZE = 48 + 8;
   static const int RESPONSE_HEADER_SIZE = 8;
 
   int methodId = 1;
@@ -962,6 +969,7 @@ class _JniVisitor extends CcVisitor {
     writeln('  jobject callback = _env->NewGlobalRef(_callback);');
     writeln('  JavaVM* vm;');
     writeln('  _env->GetJavaVM(&vm);');
+    // TODO(zerny): Issue #45. Store VM pointer in 'callback data' header field.
     if (node.inputKind != InputKind.PRIMITIVES) {
       visitStructArgumentMethodBody(id,
                                     node,
@@ -1022,7 +1030,7 @@ class _JniVisitor extends CcVisitor {
 
     if (async) {
       writeln('  CallbackInfo* info = new CallbackInfo(callback, vm);');
-      writeln('  *reinterpret_cast<CallbackInfo**>(_buffer + 32) = info;');
+      writeln('  *${pointerToArgument(-16, 0, "CallbackInfo*")} = info;');
       write('  ServiceApiInvokeAsync(service_id_, $id, $callback, ');
       writeln('_buffer, kSize);');
     } else {
@@ -1157,15 +1165,21 @@ class _JniVisitor extends CcVisitor {
     String key = '${type.identifier}_${layout.size}';
     return callbacks.putIfAbsent(key, () {
       String cast(String type) => CcVisitor.cast(type, cStyle);
+      String pointerToArgument(int offset, String type) {
+        offset += REQUEST_HEADER_SIZE;
+        String prefix = cast('$type*');
+        return '$prefix(buffer + $offset)';
+      }
       String name = 'Unwrap_$key';
       writeln();
       writeln('static void $name(void* raw) {');
       writeln('  char* buffer = ${cast('char*')}(raw);');
-      write('  CallbackInfo* info = *${cast('CallbackInfo**')}');
-      writeln('(buffer + 32);');
+      write('  CallbackInfo* info =');
+      writeln(' *${pointerToArgument(-16, "CallbackInfo*")};');
       writeln('  JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);');
       if (!type.isVoid) {
-        writeln('  int64_t result = *${cast('int64_t*')}(buffer + 48);');
+        write('  int64_t result =');
+        writeln(' *${pointerToArgument(0, 'int64_t')};');
         writeln('  DeleteMessage(buffer);');
         if (!type.isPrimitive) {
           writeln('  char* memory = reinterpret_cast<char*>(result);');

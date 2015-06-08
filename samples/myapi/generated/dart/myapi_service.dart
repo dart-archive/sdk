@@ -44,20 +44,20 @@ abstract class MyApiService {
         break;
       case _CREATE_METHOD_ID:
         var result = _impl.create();
-        request.setInt32(48, result);
+        request.setInt32(56, result);
         _postResult.vcall$1(request);
         break;
       case _DESTROY_METHOD_ID:
-        _impl.destroy(request.getInt32(48));
+        _impl.destroy(request.getInt32(56));
         _postResult.vcall$1(request);
         break;
       case _FOO_METHOD_ID:
-        var result = _impl.foo(request.getInt32(48));
-        request.setInt32(48, result);
+        var result = _impl.foo(request.getInt32(56));
+        request.setInt32(56, result);
         _postResult.vcall$1(request);
         break;
       case _MY_OBJECT_FUNK_METHOD_ID:
-        _impl.MyObject_funk(request.getInt32(48), request.getInt32(52), request.getInt32(56));
+        _impl.MyObject_funk(request.getInt32(56), request.getInt32(60), request.getInt32(64));
         _postResult.vcall$1(request);
         break;
       default:

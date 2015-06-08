@@ -2,11 +2,25 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-INCLUDES=-I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux
-CPPFLAGS=-fPIC -I../../../../include ${INCLUDES}
-FLETCH_BUILD_DIR=../../../../out/ReleaseX64
+UNAME := $(shell uname)
 
-all: ConformanceTest.class SnapshotRunner.class fletch/ConformanceService.jar jni/libfletch.so conformance.snapshot
+ifeq ($(UNAME), Linux)
+PLATFORM_INCLUDES=-I${JAVA_HOME}/include/linux
+PLATFORM_LIB_SUFFIX=so
+endif
+
+ifeq ($(UNAME), Darwin)
+PLATFORM_INCLUDES=-I${JAVA_HOME}/include/darwin
+PLATFORM_LIB_SUFFIX=jnilib
+endif
+
+CPPFLAGS=-fPIC -I../../../../include -I${JAVA_HOME}/include ${PLATFORM_INCLUDES}
+THIS_DIR=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+FLETCH_BUILD=ReleaseX64
+FLETCH_DIR=$(abspath ../../../..)
+FLETCH_BUILD_DIR=$(abspath ${FLETCH_DIR}/out/${FLETCH_BUILD})
+
+all: ConformanceTest.class SnapshotRunner.class fletch/ConformanceService.jar jni/libfletch.${PLATFORM_LIB_SUFFIX} conformance.snapshot
 
 ConformanceTest.class: ConformanceTest.java
 	javac $<
@@ -104,11 +118,17 @@ fletch/Uint8ListBuilder.class: fletch/Uint8ListBuilder.java
 jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/conformance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
 	g++ -shared -o $@ $^
 
+jni/libfletch.jnilib: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/conformance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
+	g++ -framework CoreFoundation -shared -o $@ $^
+
 conformance.snapshot: ../conformance_service_impl.dart
-	${FLETCH_BUILD_DIR}/fletch $< --out=$@
+	# TODO: support the --out option in fletch/fletch-driver.
+	# ${FLETCH_BUILD_DIR}/fletch_driver $< --out=$@
+	# change to the fletch root so that fletch uses the right package directory.
+	cd ${FLETCH_DIR}; ${FLETCH_BUILD_DIR}/dart --checked -p package pkg/fletchc/lib/fletchc.dart ${THIS_DIR}$< --out ${THIS_DIR}$@
 
 test: all
-	LD_LIBRARY_PATH=jni java -ea -cp fletch/ConformanceService.jar:. ConformanceTest conformance.snapshot
+	java -Djava.library.path=jni -ea -cp fletch/ConformanceService.jar:. ConformanceTest conformance.snapshot
 
 clean:
-	rm -f fletch/*.class fletch/ConformanceService.jar jni/*.o jni/*.so *.class conformance.snapshot
+	rm -f fletch/*.class fletch/ConformanceService.jar jni/*.o jni/*.so jni/*.jnilib *.class conformance.snapshot

@@ -6,14 +6,16 @@ library service.struct;
 
 import "dart:ffi";
 
+const int HEADER_SIZE = 56;
+
 Reader getRoot(Reader reader, Foreign request) {
-  int segments = request.getInt32(40);
+  int segments = request.getInt32(HEADER_SIZE - 8);
   if (segments == 0) {
     MessageReader messageReader = new MessageReader();
     Segment segment = new Segment(messageReader, request);
     messageReader.segments.add(segment);
     reader._segment = segment;
-    reader._offset = 48;
+    reader._offset = HEADER_SIZE;
     return reader;
   } else {
     return getSegmentedRoot(reader, request, segments);
@@ -22,7 +24,7 @@ Reader getRoot(Reader reader, Foreign request) {
 
 Reader getSegmentedRoot(Reader reader, Foreign request, int segments) {
   MessageReader messageReader = new MessageReader();
-  int offset = 56;
+  int offset = HEADER_SIZE + 8;
   for (int i = 0; i < segments; i++) {
     int address = (Foreign.bitsPerMachineWord == 32)
         ? request.getUint32(offset)
@@ -34,7 +36,7 @@ Reader getSegmentedRoot(Reader reader, Foreign request, int segments) {
     offset += 16;
   }
   reader._segment = messageReader.segments.first;
-  reader._offset = 48;
+  reader._offset = HEADER_SIZE;
   return reader;
 }
 

@@ -112,9 +112,9 @@ static int ComputeMessage(JNIEnv* env,
   int number_of_segments = env->GetArrayLength(segments);
 
   if (number_of_segments > 1) {
-    int size = 56 + (number_of_segments * 16);
+    int size = 56 + 8 + (number_of_segments * 16);
     *buffer = reinterpret_cast<char*>(malloc(size));
-    int offset = 56;
+    int offset = 56 + 8;
     for (int i = 0; i < number_of_segments; i++) {
       jbyteArray segment = (jbyteArray)env->GetObjectArrayElement(segments, i);
       jint segment_length = sizes[i];
@@ -126,9 +126,9 @@ static int ComputeMessage(JNIEnv* env,
 
     env->ReleaseIntArrayElements(sizes_array, sizes, JNI_ABORT);
     // Mark the request as being segmented.
-    *reinterpret_cast<int32_t*>(*buffer + 40) = number_of_segments;
+    *reinterpret_cast<int64_t*>(*buffer + 48) = number_of_segments;
     // Set the callback information.
-    *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
+    *reinterpret_cast<CallbackInfo**>(*buffer + 40) = info;
     return size;
   }
 
@@ -137,16 +137,16 @@ static int ComputeMessage(JNIEnv* env,
   *buffer = ExtractByteArrayData(env, segment, segment_length);
   env->ReleaseIntArrayElements(sizes_array, sizes, JNI_ABORT);
   // Mark the request as being non-segmented.
-  *reinterpret_cast<int64_t*>(*buffer + 40) = 0;
+  *reinterpret_cast<int64_t*>(*buffer + 48) = 0;
   // Set the callback information.
-  *reinterpret_cast<CallbackInfo**>(*buffer + 32) = info;
+  *reinterpret_cast<CallbackInfo**>(*buffer + 40) = info;
   return segment_length;
 }
 
 static void DeleteMessage(char* message) {
-  int32_t segments = *reinterpret_cast<int32_t*>(message + 40);
+  int32_t segments = *reinterpret_cast<int32_t*>(message + 48);
   for (int i = 0; i < segments; i++) {
-    int64_t address = *reinterpret_cast<int64_t*>(message + 56 + (i * 16));
+    int64_t address = *reinterpret_cast<int64_t*>(message + 64 + (i * 16));
     char* memory = reinterpret_cast<char*>(address);
     free(memory);
   }
@@ -159,16 +159,16 @@ JNIEXPORT jint JNICALL Java_fletch_ConformanceService_getAge(JNIEnv* _env, jclas
   char* buffer = NULL;
   int size = ComputeMessage(_env, person, NULL, NULL, &buffer);
   ServiceApiInvoke(service_id_, _kgetAgeId, buffer, size);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   return result;
 }
 
 static void Unwrap_int32_24(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   jclass clazz = env->GetObjectClass(info->callback);
   jmethodID methodId = env->GetMethodID(clazz, "handle", "(I)V");
@@ -193,16 +193,16 @@ JNIEXPORT jint JNICALL Java_fletch_ConformanceService_getBoxedAge(JNIEnv* _env, 
   char* buffer = NULL;
   int size = ComputeMessage(_env, box, NULL, NULL, &buffer);
   ServiceApiInvoke(service_id_, _kgetBoxedAgeId, buffer, size);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   return result;
 }
 
 static void Unwrap_int32_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   jclass clazz = env->GetObjectClass(info->callback);
   jmethodID methodId = env->GetMethodID(clazz, "handle", "(I)V");
@@ -227,7 +227,7 @@ JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_getAgeStats(JNIEnv* _en
   char* buffer = NULL;
   int size = ComputeMessage(_env, person, NULL, NULL, &buffer);
   ServiceApiInvoke(service_id_, _kgetAgeStatsId, buffer, size);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(_env, memory);
@@ -239,9 +239,9 @@ JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_getAgeStats(JNIEnv* _en
 
 static void Unwrap_AgeStats_24(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(env, memory);
@@ -268,14 +268,14 @@ JNIEXPORT void JNICALL Java_fletch_ConformanceService_getAgeStatsAsync(JNIEnv* _
 static const MethodId _kcreateAgeStatsId = reinterpret_cast<MethodId>(4);
 
 JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_createAgeStats(JNIEnv* _env, jclass, jint averageAge, jint sum) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<jint*>(_buffer + 48) = averageAge;
-  *reinterpret_cast<jint*>(_buffer + 52) = sum;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<jint*>(_buffer + 56) = averageAge;
+  *reinterpret_cast<jint*>(_buffer + 60) = sum;
   ServiceApiInvoke(service_id_, _kcreateAgeStatsId, _buffer, kSize);
-  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(_env, memory);
   jclass resultClass = _env->FindClass("fletch/AgeStats");
@@ -286,9 +286,9 @@ JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_createAgeStats(JNIEnv* 
 
 static void Unwrap_AgeStats_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(env, memory);
@@ -307,26 +307,26 @@ JNIEXPORT void JNICALL Java_fletch_ConformanceService_createAgeStatsAsync(JNIEnv
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
-  static const int kSize = 56 + 1 * sizeof(void*);
+  static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<jint*>(_buffer + 48) = averageAge;
-  *reinterpret_cast<jint*>(_buffer + 52) = sum;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<jint*>(_buffer + 56) = averageAge;
+  *reinterpret_cast<jint*>(_buffer + 60) = sum;
   CallbackInfo* info = new CallbackInfo(callback, vm);
-  *reinterpret_cast<CallbackInfo**>(_buffer + 32) = info;
+  *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kcreateAgeStatsId, Unwrap_AgeStats_8, _buffer, kSize);
 }
 
 static const MethodId _kcreatePersonId = reinterpret_cast<MethodId>(5);
 
 JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_createPerson(JNIEnv* _env, jclass, jint children) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<jint*>(_buffer + 48) = children;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<jint*>(_buffer + 56) = children;
   ServiceApiInvoke(service_id_, _kcreatePersonId, _buffer, kSize);
-  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(_env, memory);
   jclass resultClass = _env->FindClass("fletch/Person");
@@ -337,9 +337,9 @@ JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_createPerson(JNIEnv* _e
 
 static void Unwrap_Person_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(env, memory);
@@ -358,25 +358,25 @@ JNIEXPORT void JNICALL Java_fletch_ConformanceService_createPersonAsync(JNIEnv* 
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
-  static const int kSize = 56 + 1 * sizeof(void*);
+  static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<jint*>(_buffer + 48) = children;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<jint*>(_buffer + 56) = children;
   CallbackInfo* info = new CallbackInfo(callback, vm);
-  *reinterpret_cast<CallbackInfo**>(_buffer + 32) = info;
+  *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kcreatePersonId, Unwrap_Person_8, _buffer, kSize);
 }
 
 static const MethodId _kcreateNodeId = reinterpret_cast<MethodId>(6);
 
 JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_createNode(JNIEnv* _env, jclass, jint depth) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<jint*>(_buffer + 48) = depth;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<jint*>(_buffer + 56) = depth;
   ServiceApiInvoke(service_id_, _kcreateNodeId, _buffer, kSize);
-  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(_buffer + 56);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(_env, memory);
   jclass resultClass = _env->FindClass("fletch/Node");
@@ -387,9 +387,9 @@ JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_createNode(JNIEnv* _env
 
 static void Unwrap_Node_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(env, memory);
@@ -408,12 +408,12 @@ JNIEXPORT void JNICALL Java_fletch_ConformanceService_createNodeAsync(JNIEnv* _e
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
-  static const int kSize = 56 + 1 * sizeof(void*);
+  static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
-  *reinterpret_cast<jint*>(_buffer + 48) = depth;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
+  *reinterpret_cast<jint*>(_buffer + 56) = depth;
   CallbackInfo* info = new CallbackInfo(callback, vm);
-  *reinterpret_cast<CallbackInfo**>(_buffer + 32) = info;
+  *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kcreateNodeId, Unwrap_Node_8, _buffer, kSize);
 }
 
@@ -423,7 +423,7 @@ JNIEXPORT jint JNICALL Java_fletch_ConformanceService_count(JNIEnv* _env, jclass
   char* buffer = NULL;
   int size = ComputeMessage(_env, person, NULL, NULL, &buffer);
   ServiceApiInvoke(service_id_, _kcountId, buffer, size);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   return result;
 }
@@ -443,7 +443,7 @@ JNIEXPORT jint JNICALL Java_fletch_ConformanceService_depth(JNIEnv* _env, jclass
   char* buffer = NULL;
   int size = ComputeMessage(_env, node, NULL, NULL, &buffer);
   ServiceApiInvoke(service_id_, _kdepthId, buffer, size);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   return result;
 }
@@ -460,16 +460,16 @@ JNIEXPORT void JNICALL Java_fletch_ConformanceService_depthAsync(JNIEnv* _env, j
 static const MethodId _kfooId = reinterpret_cast<MethodId>(9);
 
 JNIEXPORT void JNICALL Java_fletch_ConformanceService_foo(JNIEnv* _env, jclass) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
   ServiceApiInvoke(service_id_, _kfooId, _buffer, kSize);
 }
 
 static void Unwrap_void_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
   DeleteMessage(buffer);
   jclass clazz = env->GetObjectClass(info->callback);
@@ -484,11 +484,11 @@ JNIEXPORT void JNICALL Java_fletch_ConformanceService_fooAsync(JNIEnv* _env, jcl
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
-  static const int kSize = 56 + 1 * sizeof(void*);
+  static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
   CallbackInfo* info = new CallbackInfo(callback, vm);
-  *reinterpret_cast<CallbackInfo**>(_buffer + 32) = info;
+  *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kfooId, Unwrap_void_8, _buffer, kSize);
 }
 
@@ -498,16 +498,16 @@ JNIEXPORT jint JNICALL Java_fletch_ConformanceService_bar(JNIEnv* _env, jclass, 
   char* buffer = NULL;
   int size = ComputeMessage(_env, empty, NULL, NULL, &buffer);
   ServiceApiInvoke(service_id_, _kbarId, buffer, size);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   return result;
 }
 
 static void Unwrap_int32_0(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   jclass clazz = env->GetObjectClass(info->callback);
   jmethodID methodId = env->GetMethodID(clazz, "handle", "(I)V");
@@ -529,23 +529,23 @@ JNIEXPORT void JNICALL Java_fletch_ConformanceService_barAsync(JNIEnv* _env, jcl
 static const MethodId _kpingId = reinterpret_cast<MethodId>(11);
 
 JNIEXPORT jint JNICALL Java_fletch_ConformanceService_ping(JNIEnv* _env, jclass) {
-  static const int kSize = 56;
+  static const int kSize = 64;
   char _bits[kSize];
   char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
   ServiceApiInvoke(service_id_, _kpingId, _buffer, kSize);
-  return *reinterpret_cast<int64_t*>(_buffer + 48);
+  return *reinterpret_cast<int64_t*>(_buffer + 56);
 }
 
 JNIEXPORT void JNICALL Java_fletch_ConformanceService_pingAsync(JNIEnv* _env, jclass, jobject _callback) {
   jobject callback = _env->NewGlobalRef(_callback);
   JavaVM* vm;
   _env->GetJavaVM(&vm);
-  static const int kSize = 56 + 1 * sizeof(void*);
+  static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 40) = 0;
+  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
   CallbackInfo* info = new CallbackInfo(callback, vm);
-  *reinterpret_cast<CallbackInfo**>(_buffer + 32) = info;
+  *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kpingId, Unwrap_int32_8, _buffer, kSize);
 }
 
@@ -555,7 +555,7 @@ JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_flipTable(JNIEnv* _env,
   char* buffer = NULL;
   int size = ComputeMessage(_env, flip, NULL, NULL, &buffer);
   ServiceApiInvoke(service_id_, _kflipTableId, buffer, size);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(_env, memory);
@@ -567,9 +567,9 @@ JNIEXPORT jobject JNICALL Java_fletch_ConformanceService_flipTable(JNIEnv* _env,
 
 static void Unwrap_TableFlip_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
-  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 32);
+  CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
-  int64_t result = *reinterpret_cast<int64_t*>(buffer + 48);
+  int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(env, memory);

@@ -26,21 +26,21 @@ class TodoMVCService {
   static void setup();
   static void tearDown();
   static void createItem(BoxedStringBuilder title);
-  static void createItemAsync(BoxedStringBuilder title, void (*callback)());
+  static void createItemAsync(BoxedStringBuilder title, void (*callback)(void*), void* callback_data);
   static void deleteItem(int32_t id);
-  static void deleteItemAsync(int32_t id, void (*callback)());
+  static void deleteItemAsync(int32_t id, void (*callback)(void*), void* callback_data);
   static void completeItem(int32_t id);
-  static void completeItemAsync(int32_t id, void (*callback)());
+  static void completeItemAsync(int32_t id, void (*callback)(void*), void* callback_data);
   static void uncompleteItem(int32_t id);
-  static void uncompleteItemAsync(int32_t id, void (*callback)());
+  static void uncompleteItemAsync(int32_t id, void (*callback)(void*), void* callback_data);
   static void clearItems();
-  static void clearItemsAsync(void (*callback)());
+  static void clearItemsAsync(void (*callback)(void*), void* callback_data);
   static void dispatch(uint16_t id);
-  static void dispatchAsync(uint16_t id, void (*callback)());
+  static void dispatchAsync(uint16_t id, void (*callback)(void*), void* callback_data);
   static PatchSet sync();
-  static void syncAsync(void (*callback)(PatchSet));
+  static void syncAsync(void (*callback)(PatchSet, void*), void* callback_data);
   static void reset();
-  static void resetAsync(void (*callback)());
+  static void resetAsync(void (*callback)(void*), void* callback_data);
 };
 
 class Node : public Reader {

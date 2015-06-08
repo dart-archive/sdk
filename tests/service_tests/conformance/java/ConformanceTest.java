@@ -65,7 +65,7 @@ class ConformanceTest {
       PersonBuilder person = new PersonBuilder();
       builder.initRoot(person, PersonBuilder.kSize);
       buildPerson(person, 7);
-      assert 3128 == builder.computeUsed();
+      assert 3144 == builder.computeUsed();
       int age = ConformanceService.getAge(person);
       assert 140 == age;
     }
@@ -75,7 +75,7 @@ class ConformanceTest {
       PersonBuilder person = new PersonBuilder();
       builder.initRoot(person, PersonBuilder.kSize);
       buildPerson(person, 7);
-      assert 3128 == builder.computeUsed();
+      assert 3144 == builder.computeUsed();
       ConformanceService.getAgeAsync(
           person,
           new ConformanceService.GetAgeCallback() {
@@ -90,7 +90,7 @@ class ConformanceTest {
       PersonBuilder person = new PersonBuilder();
       builder.initRoot(person, PersonBuilder.kSize);
       buildPerson(person, 7);
-      assert 3128 == builder.computeUsed();
+      assert 3144 == builder.computeUsed();
       int count = ConformanceService.count(person);
       assert 127 == count;
     }
@@ -100,7 +100,7 @@ class ConformanceTest {
       PersonBuilder person = new PersonBuilder();
       builder.initRoot(person, PersonBuilder.kSize);
       buildPerson(person, 7);
-      assert 3128 == builder.computeUsed();
+      assert 3144 == builder.computeUsed();
       ConformanceService.countAsync(
           person,
           new ConformanceService.CountCallback() {
@@ -115,7 +115,7 @@ class ConformanceTest {
       PersonBuilder person = new PersonBuilder();
       builder.initRoot(person, PersonBuilder.kSize);
       buildPerson(person, 7);
-      assert 3128 == builder.computeUsed();
+      assert 3144 == builder.computeUsed();
       AgeStats stats = ConformanceService.getAgeStats(person);
       assert 39 == stats.getAverageAge();
       assert 4940 == stats.getSum();
@@ -126,7 +126,7 @@ class ConformanceTest {
       PersonBuilder person = new PersonBuilder();
       builder.initRoot(person, PersonBuilder.kSize);
       buildPerson(person, 7);
-      assert 3128 == builder.computeUsed();
+      assert 3144 == builder.computeUsed();
       ConformanceService.getAgeStatsAsync(
           person,
           new ConformanceService.GetAgeStatsCallback() {
@@ -195,7 +195,10 @@ class ConformanceTest {
 
     ConformanceService.foo();
     ConformanceService.fooAsync(new ConformanceService.FooCallback() {
-        public void handle() { }
+        final int data = 101;
+        public void handle() {
+          assert 101 == data;
+        }
     });
 
     {
@@ -211,7 +214,11 @@ class ConformanceTest {
       EmptyBuilder empty = new EmptyBuilder();
       builder.initRoot(empty, EmptyBuilder.kSize);
       ConformanceService.barAsync(empty, new ConformanceService.BarCallback() {
-        public void handle(int i) { assert 24 == i; }
+        final int data = 102;
+        public void handle(int i) {
+          assert 102 == data;
+          assert 24 == i;
+        }
       });
     }
 
