@@ -2503,8 +2503,16 @@ Future<TestSession> runFletchVM(
     var exitFuture = session.process.exitCode.then((int exitCode) {
       print("VM exited with exit code: $exitCode.");
     });
-    return Future.wait([stderrFuture, stdoutFuture, exitFuture]).then(
-        (_) => new Future.error(error, stackTrace));
+    var futures =
+        [stderrFuture, stdoutFuture, session.vmSocket.done, exitFuture];
+    return Future.wait(futures).catchError((error, StackTrace stackTrace) {
+      // An error already occurred, so we have to ignore any further
+      // errors.
+      print("Ignoring error: $error");
+      if (stackTrace != null) {
+        print(stackTrace);
+      }
+    }).then((_) => new Future.error(error, stackTrace));
   }
 }
 
