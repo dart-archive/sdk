@@ -135,6 +135,7 @@ class CompiledFunction {
   bool get isConstructor => element != null && element.isConstructor;
 
   int allocateConstant(ConstantValue constant) {
+    if (constant == null) throw "bad constant";
     return constants.putIfAbsent(constant, () => constants.length);
   }
 
@@ -234,7 +235,8 @@ class CompiledFunction {
               initializer,
               parameter.memberContext.resolvedAst.elements,
               isConst: true);
-          int constId = compiledFunction.allocateConstant(expression.value);
+          int constId = compiledFunction.allocateConstant(
+              context.getConstantValue(expression));
           builder.loadConst(constId);
         } else {
           builder.loadLiteralNull();

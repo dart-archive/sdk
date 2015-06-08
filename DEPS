@@ -12,7 +12,7 @@ vars = {
   "clang_rev": "@43229",
   "gyp_rev": "@1752",
 
-  "dart_hash": "@dee663e58274e9fc055c89f09ec61560499b5eda",
+  "dart_hash": "@c03bbb79f9cbc3486d054dc832d8ed67679ba491",
 }
 
 deps = {

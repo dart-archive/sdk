@@ -189,8 +189,6 @@ factory_negative_test: Fail
 factory_redirection2_test/01: MissingCompileTimeError
 factory_redirection3_cyclic_test/01: MissingCompileTimeError
 factory_redirection_test/04: MissingCompileTimeError
-factory_redirection_test/05: Crash
-factory_redirection_test/06: Crash
 factory_redirection_test/07: MissingCompileTimeError
 factory_redirection_test/09: Fail
 factory_type_parameter2_test: Fail

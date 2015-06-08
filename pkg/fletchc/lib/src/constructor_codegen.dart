@@ -193,34 +193,8 @@ class ConstructorCodegen extends CodegenVisitor {
       parameterIndex++;
     });
 
-    // Now the parameters are in the scope, visit the constructor initializers.
-    FunctionExpression node = constructor.node;
-    if (node != null) {
-      NodeList initializers = node.initializers;
-      if (initializers != null) {
-        initializerElements = constructor.resolvedAst.elements;
-        visitInitializers(initializers, null);
-      }
-    }
-
-    // Test if a super constructor was visited. If not, implicit inline the
-    // super constructor.
-    if (constructors.last == constructor) {
-      ClassElement classElement = constructor.enclosingClass;
-      classElement = classElement.superclass;
-      if (classElement != null) {
-        ConstructorElement superConstructor =
-            classElement.lookupDefaultConstructor();
-        if (superConstructor != null) {
-          int initSlot = builder.stackSize;
-          // Always load arguments, as the super-constructor may have optional
-          // parameters.
-          loadArguments(
-              superConstructor, new NodeList.empty(), CallStructure.NO_ARGS);
-          inlineInitializers(superConstructor, initSlot);
-        }
-      }
-    }
+    initializerElements = constructor.resolvedAst.elements;
+    visitInitializers(constructor.node, null);
   }
 
   void doFieldInitializerSet(Send node, FieldElement field) {
@@ -245,10 +219,10 @@ class ConstructorCodegen extends CodegenVisitor {
       ConstructorElement superConstructor,
       InterfaceType type,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     // Load all parameters to the constructor, onto the stack.
-    loadArguments(superConstructor, arguments, selector.callStructure);
+    loadArguments(superConstructor, arguments, callStructure);
     int initSlot = builder.stackSize -
         superConstructor.functionSignature.parameterCount;
     var previous = initializerElements;
@@ -260,17 +234,30 @@ class ConstructorCodegen extends CodegenVisitor {
       Send node,
       ConstructorElement thisConstructor,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     // TODO(ajohnsen): Is this correct behavior?
     thisConstructor = thisConstructor.implementation;
     // Load all parameters to the constructor, onto the stack.
-    loadArguments(thisConstructor, arguments, selector.callStructure);
+    loadArguments(thisConstructor, arguments, callStructure);
     int initSlot = builder.stackSize -
         thisConstructor.functionSignature.parameterCount;
     var previous = initializerElements;
     inlineInitializers(thisConstructor, initSlot);
     initializerElements = previous;
+  }
+
+  void visitImplicitSuperConstructorInvoke(
+      FunctionExpression node,
+      ConstructorElement superConstructor,
+      InterfaceType type,
+      _) {
+    int initSlot = builder.stackSize;
+    // Always load arguments, as the super-constructor may have optional
+    // parameters.
+    loadArguments(
+        superConstructor, new NodeList.empty(), CallStructure.NO_ARGS);
+    inlineInitializers(superConstructor, initSlot);
   }
 
   /**

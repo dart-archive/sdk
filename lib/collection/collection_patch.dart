@@ -437,7 +437,7 @@ class _HashMapEntry {
 }
 
 abstract class _HashMapIterable<E> extends Iterable<E>
-                                   implements EfficientLengthIterable<E> {
+                                   implements EfficientLength {
   final HashMap _map;
   _HashMapIterable(this._map);
   int get length => _map.length;

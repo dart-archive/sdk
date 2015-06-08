@@ -232,17 +232,19 @@ class FletchContext {
       TreeElements elements,
       {bool isConst}) {
     assert(isConst != null);
-    DartConstantCompiler constantCompiler =
-        backend.constantCompilerTask.constantCompiler;
-    ConstantExpression expression = constantCompiler.compileNodeWithDefinitions(
-        node,
-        elements,
-        isConst: isConst);
+    // TODO(johnniwinther): Should be handled in resolution.
+    ConstantExpression expression =
+        compiler.resolver.constantCompiler.compileNode(
+            node, elements, enforceConst: isConst);
     if (expression == null) return null;
-    ConstantValue value = expression.value;
     // Don't mark function constants as used.
+    ConstantValue value = getConstantValue(expression);
     if (value.isFunction) return null;
     markConstantUsed(value);
     return expression;
+  }
+
+  ConstantValue getConstantValue(ConstantExpression expression) {
+    return compiler.constants.getConstantValue(expression);
   }
 }

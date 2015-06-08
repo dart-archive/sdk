@@ -19,6 +19,7 @@ import 'package:compiler/src/dart2jslib.dart' show
     MessageKind,
     Registry,
     ResolutionEnqueuer,
+    WorldImpact,
     isPrivateName;
 
 import 'package:compiler/src/tree/tree.dart' show
@@ -722,7 +723,7 @@ class FletchBackend extends Backend {
                                        codegen.builder.bytecodes));
   }
 
-  void codegen(CodegenWorkItem work) {
+  WorldImpact codegen(CodegenWorkItem work) {
     Element element = work.element;
     if (compiler.verbose) {
       compiler.reportHint(
@@ -741,6 +742,8 @@ class FletchBackend extends Backend {
       compiler.internalError(
           element, "Uninimplemented element kind: ${element.kind}");
     }
+
+    return const WorldImpact();
   }
 
   void codegenFunction(
@@ -937,7 +940,7 @@ class FletchBackend extends Backend {
         // TODO(ahe): This code should ensure that @native resolves to precisely
         // the native variable in fletch:system.
         if (metadata.constant == null) continue;
-        ConstantValue value = metadata.constant.value;
+        ConstantValue value = context.getConstantValue(metadata.constant);
         if (!value.isString) continue;
         StringConstantValue stringValue = value;
         if (stringValue.toDartString().slowToString() != 'native') continue;
@@ -1208,6 +1211,14 @@ class FletchBackend extends Backend {
             compiledFunction.builder.catchRanges));
 
     commands.add(new PopToMap(MapId.methods, methodId));
+  }
+
+  bool registerDeferredLoading(Spannable node, Registry registry) {
+    compiler.reportWarning(
+        node,
+        MessageKind.GENERIC,
+        {'text': "Deferred loading is not supported."});
+    return false;
   }
 
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {

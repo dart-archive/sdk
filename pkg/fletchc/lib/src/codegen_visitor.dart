@@ -13,6 +13,9 @@ import 'package:compiler/src/resolution/operators.dart' show
     UnaryOperator;
 
 import 'package:compiler/src/constants/expressions.dart' show
+    BoolFromEnvironmentConstantExpression,
+    IntFromEnvironmentConstantExpression,
+    StringFromEnvironmentConstantExpression,
     ConstantExpression,
     ConstructedConstantExpression,
     TypeConstantExpression;
@@ -213,7 +216,8 @@ abstract class CodegenVisitor
         node,
         elements: elements,
         isConst: false);
-    return compiledFunction.allocateConstant(expression.value);
+    return compiledFunction.allocateConstant(
+        context.getConstantValue(expression));
   }
 
   int allocateConstantClassInstance(int classId) {
@@ -557,7 +561,7 @@ abstract class CodegenVisitor
     bool isConstNull(Node node) {
       ConstantExpression expression = compileConstant(node, isConst: false);
       if (expression == null) return false;
-      return expression.value.isNull;
+      return context.getConstantValue(expression).isNull;
     }
 
     visitForValue(left);
@@ -1331,7 +1335,8 @@ abstract class CodegenVisitor
 
   void visitLiteralBool(LiteralBool node) {
     var expression = compileConstant(node, isConst: false);
-    bool isTrue = expression != null && expression.value.isTrue;
+    bool isTrue = expression != null &&
+        context.getConstantValue(expression).isTrue;
 
     if (visitState == VisitState.Value) {
       if (isTrue) {
@@ -1873,12 +1878,42 @@ abstract class CodegenVisitor
         node, compiledFunction, arguments, callStructure);
   }
 
+  void doConstConstructorInvoke(ConstantExpression constant) {
+    var value = context.getConstantValue(constant);
+    context.markConstantUsed(value);
+    int constId = compiledFunction.allocateConstant(value);
+    builder.loadConst(constId);
+  }
+
   void visitConstConstructorInvoke(
       NewExpression node,
       ConstructedConstantExpression constant,
       _) {
-    int constId = allocateConstantFromNode(node);
-    builder.loadConst(constId);
+    doConstConstructorInvoke(constant);
+    applyVisitState();
+  }
+
+  void visitBoolFromEnvironmentConstructorInvoke(
+      NewExpression node,
+      BoolFromEnvironmentConstantExpression constant,
+      _) {
+    doConstConstructorInvoke(constant);
+    applyVisitState();
+  }
+
+  void visitIntFromEnvironmentConstructorInvoke(
+      NewExpression node,
+      IntFromEnvironmentConstantExpression constant,
+      _) {
+    doConstConstructorInvoke(constant);
+    applyVisitState();
+  }
+
+  void visitStringFromEnvironmentConstructorInvoke(
+      NewExpression node,
+      StringFromEnvironmentConstantExpression constant,
+      _) {
+    doConstConstructorInvoke(constant);
     applyVisitState();
   }
 
@@ -1901,11 +1936,7 @@ abstract class CodegenVisitor
       CallStructure callStructure,
       _) {
     if (!checkCompileError(constructor)) {
-      if (callStructure.signatureApplies(constructor)) {
-        callConstructor(node, constructor, arguments, callStructure);
-      } else {
-        doUnresolved(constructor.name);
-      }
+      callConstructor(node, constructor, arguments, callStructure);
     }
     applyVisitState();
   }
@@ -1939,6 +1970,19 @@ abstract class CodegenVisitor
         requireCompiledFunction(constructor.declaration);
     doStaticFunctionInvoke(
         node, compiledFunction, arguments, callStructure, factoryInvoke: true);
+    applyVisitState();
+  }
+
+  void visitConstructorIncompatibleInvoke(
+      NewExpression node,
+      ConstructorElement constructor,
+      InterfaceType type,
+      NodeList arguments,
+      CallStructure callStructure,
+      _) {
+    if (!checkCompileError(constructor)) {
+      doUnresolved(constructor.name);
+    }
     applyVisitState();
   }
 
@@ -2022,12 +2066,12 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void errorUnresolvedRedirectingFactoryConstructorInvoke(
+  void visitUnresolvedRedirectingFactoryConstructorInvoke(
       NewExpression node,
       ConstructorElement constructor,
       InterfaceType type,
       NodeList arguments,
-      Selector selector,
+      CallStructure callStructure,
       _) {
     doUnresolved(node.send.toString());
     applyVisitState();
@@ -2772,7 +2816,7 @@ abstract class CodegenVisitor
     internalError(node, "[apply] isn't implemented.");
   }
 
-  void applyInitializers(NodeList initializers, _) {
+  void applyInitializers(FunctionExpression initializers, _) {
     internalError(node, "[applyInitializers] isn't implemented.");
   }
 
