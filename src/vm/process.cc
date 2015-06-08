@@ -290,13 +290,13 @@ Object* Process::NewStringFromAscii(List<const char> value) {
 
 Object* Process::NewBoxed(Object* value) {
   Class* boxed_class = program()->boxed_class();
-  Object* result = heap_.CreateBoxed(boxed_class, value, false);
+  Object* result = heap_.CreateBoxed(boxed_class, value);
   return result;
 }
 
 Object* Process::NewInstance(Class* klass, bool immutable) {
   Object* null = program()->null_object();
-  Object* result = heap_.CreateHeapObject(klass, null, immutable);
+  Object* result = heap_.CreateComplexHeapObject(klass, null, immutable);
   return result;
 }
 

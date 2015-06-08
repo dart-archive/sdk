@@ -1074,7 +1074,7 @@ Object* Program::CreateArrayWith(int capacity, Object* initial_value) {
 Object* Program::CreateClass(int fields) {
   InstanceFormat format = InstanceFormat::instance_format(fields);
   Object* raw_class = heap()->CreateClass(
-      format, meta_class(), null_object(), true);
+      format, meta_class(), null_object());
   if (raw_class->IsFailure()) return raw_class;
   Class* klass = Class::cast(raw_class);
   ASSERT(klass->NumberOfInstanceFields() == fields);
@@ -1082,7 +1082,7 @@ Object* Program::CreateClass(int fields) {
 }
 
 Object* Program::CreateDouble(double value) {
-  return heap()->CreateDouble(double_class(), value, true);
+  return heap()->CreateDouble(double_class(), value);
 }
 
 Object* Program::CreateFunction(int arity,
@@ -1091,12 +1091,11 @@ Object* Program::CreateFunction(int arity,
   return heap()->CreateFunction(function_class(),
                                 arity,
                                 bytes,
-                                number_of_literals,
-                                true);
+                                number_of_literals);
 }
 
 Object* Program::CreateLargeInteger(int64 value) {
-  return heap()->CreateLargeInteger(large_integer_class(), value, true);
+  return heap()->CreateLargeInteger(large_integer_class(), value);
 }
 
 Object* Program::CreateInteger(int64 value) {
@@ -1136,7 +1135,7 @@ Object* Program::CreateString(List<uint16> str) {
 
 Object* Program::CreateInstance(Class* klass) {
   bool immutable = true;
-  return heap()->CreateHeapObject(klass, null_object(), immutable);
+  return heap()->CreateComplexHeapObject(klass, null_object(), immutable);
 }
 
 Object* Program::CreateInitializer(Function* function) {
@@ -1230,14 +1229,15 @@ void Program::Initialize() {
   // null_object for initial values.
   InstanceFormat null_format =
       InstanceFormat::instance_format(0, InstanceFormat::NULL_MARKER);
-  null_object_ = HeapObject::cast(heap()->Allocate(null_format.fixed_size()));
+  null_object_ = reinterpret_cast<ComplexHeapObject*>(
+      heap()->Allocate(null_format.fixed_size()));
 
-  meta_class_ = Class::cast(heap()->CreateMetaClass(true));
+  meta_class_ = Class::cast(heap()->CreateMetaClass());
 
   {
     InstanceFormat format = InstanceFormat::array_format();
     array_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   empty_array_ = Array::cast(CreateArray(0));
@@ -1245,99 +1245,99 @@ void Program::Initialize() {
   {
     InstanceFormat format = InstanceFormat::instance_format(0);
     object_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::num_format();
     num_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
     num_class_->set_super_class(object_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::num_format();
     int_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
     int_class_->set_super_class(num_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::smi_format();
     smi_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
     smi_class_->set_super_class(int_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::heap_integer_format();
     large_integer_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
     large_integer_class_->set_super_class(int_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::double_format();
     double_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
     double_class_->set_super_class(num_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::boxed_format();
     boxed_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::stack_format();
     stack_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format =
         InstanceFormat::instance_format(2, InstanceFormat::COROUTINE_MARKER);
     coroutine_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format =
         InstanceFormat::instance_format(1, InstanceFormat::PORT_MARKER);
     port_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format =
         InstanceFormat::instance_format(2, InstanceFormat::FOREIGN_MARKER);
     foreign_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::initializer_format();
     initializer_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(1);
     constant_list_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(2);
     constant_map_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::string_format();
     string_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
     string_class_->set_super_class(object_class_);
   }
 
@@ -1346,20 +1346,20 @@ void Program::Initialize() {
   {
     InstanceFormat format = InstanceFormat::function_format();
     function_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::byte_array_format();
     byte_array_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   Class* null_class;
   { // Create null class and singleton.
     null_class =
         Class::cast(heap()->CreateClass(null_format, meta_class_,
-                                        null_object_, true));
+                                        null_object_));
     null_class->set_super_class(object_class_);
     null_object_->set_class(null_class);
     null_object_->set_immutable(true);
@@ -1371,7 +1371,7 @@ void Program::Initialize() {
   { // Create the bool class.
     InstanceFormat format = InstanceFormat::instance_format(0);
     bool_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
     bool_class_->set_super_class(object_class_);
   }
 
@@ -1379,22 +1379,22 @@ void Program::Initialize() {
     InstanceFormat format =
         InstanceFormat::instance_format(0, InstanceFormat::FALSE_MARKER);
     Class* false_class = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
     false_class->set_super_class(bool_class_);
     false_class->set_methods(empty_array_);
-    false_object_ = HeapObject::cast(
-        heap()->CreateHeapObject(false_class, null_object(), true));
+    false_object_ = ComplexHeapObject::cast(
+        heap()->CreateComplexHeapObject(false_class, null_object(), true));
   }
 
   { // Create True class and the true object.
     InstanceFormat format =
         InstanceFormat::instance_format(0, InstanceFormat::TRUE_MARKER);
     Class* true_class = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_, true));
+        heap()->CreateClass(format, meta_class_, null_object_));
     true_class->set_super_class(bool_class_);
     true_class->set_methods(empty_array_);
-    true_object_ = HeapObject::cast(
-        heap()->CreateHeapObject(true_class, null_object(), true));
+    true_object_ = ComplexHeapObject::cast(
+        heap()->CreateComplexHeapObject(true_class, null_object(), true));
   }
 
   // Create the retry after gc failure object payload.

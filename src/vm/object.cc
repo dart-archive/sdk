@@ -193,7 +193,7 @@ Instance* Instance::CloneTransformed(Heap* heap) {
   Class* new_class = old_class->TransformationTarget();
   Array* transformation = old_class->Transformation();
 
-  Object* clone = heap->CreateHeapObject(
+  Object* clone = heap->CreateComplexHeapObject(
       new_class, Smi::FromWord(0), get_immutable());
   ASSERT(!clone->IsFailure());  // Needs to be in no-allocation-failure scope.
   Instance* target = Instance::cast(clone);

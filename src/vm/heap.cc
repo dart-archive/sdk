@@ -23,12 +23,13 @@ void Heap::TryDealloc(Object* object, int size) {
   space_->TryDealloc(location, size);
 }
 
-Object* Heap::CreateHeapObject(Class* the_class, Object* init_value,
-                               bool immutable) {
+Object* Heap::CreateComplexHeapObject(Class* the_class,
+                                      Object* init_value,
+                                      bool immutable) {
   int size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
-  HeapObject* result = HeapObject::cast(raw_result);
+  ComplexHeapObject* result = reinterpret_cast<ComplexHeapObject*>(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
   if (immutable) result->InitializeIdentityHashCode(random());
@@ -65,16 +66,13 @@ Object* Heap::CreateByteArray(Class* the_class, int length, bool immutable) {
   return ByteArray::cast(result);
 }
 
-Object* Heap::CreateLargeInteger(Class* the_class, int64 value,
-                                 bool immutable) {
+Object* Heap::CreateLargeInteger(Class* the_class, int64 value) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::LARGE_INTEGER_TYPE);
   Object* raw_result = Allocate(LargeInteger::AllocationSize());
   if (raw_result->IsFailure()) return raw_result;
   LargeInteger* result = reinterpret_cast<LargeInteger*>(raw_result);
   result->set_class(the_class);
-  result->set_immutable(immutable);
-  if (immutable) result->InitializeIdentityHashCode(random());
   result->set_value(value);
   return LargeInteger::cast(result);
 }
@@ -83,20 +81,18 @@ void Heap::TryDeallocInteger(LargeInteger* object) {
   TryDealloc(object, LargeInteger::AllocationSize());
 }
 
-Object* Heap::CreateDouble(Class* the_class, double value, bool immutable) {
+Object* Heap::CreateDouble(Class* the_class, double value) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::DOUBLE_TYPE);
   Object* raw_result = Allocate(Double::AllocationSize());
   if (raw_result->IsFailure()) return raw_result;
   Double* result = reinterpret_cast<Double*>(raw_result);
   result->set_class(the_class);
-  result->set_immutable(immutable);
-  if (immutable) result->InitializeIdentityHashCode(random());
   result->set_value(value);
   return Double::cast(result);
 }
 
-Object* Heap::CreateBoxed(Class* the_class, Object* value, bool immutable) {
+Object* Heap::CreateBoxed(Class* the_class, Object* value) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::BOXED_TYPE);
   int size = the_class->instance_format().fixed_size();
@@ -104,14 +100,11 @@ Object* Heap::CreateBoxed(Class* the_class, Object* value, bool immutable) {
   if (raw_result->IsFailure()) return raw_result;
   Boxed* result = reinterpret_cast<Boxed*>(raw_result);
   result->set_class(the_class);
-  result->set_immutable(immutable);
-  if (immutable) result->InitializeIdentityHashCode(random());
   result->set_value(value);
   return Boxed::cast(result);
 }
 
-Object* Heap::CreateInitializer(Class* the_class, Function* function,
-                                bool immutable) {
+Object* Heap::CreateInitializer(Class* the_class, Function* function) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::INITIALIZER_TYPE);
   int size = the_class->instance_format().fixed_size();
@@ -119,8 +112,6 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function,
   if (raw_result->IsFailure()) return raw_result;
   Initializer* result = reinterpret_cast<Initializer*>(raw_result);
   result->set_class(the_class);
-  result->set_immutable(immutable);
-  if (immutable) result->InitializeIdentityHashCode(random());
   result->set_function(function);
   return Initializer::cast(result);
 }
@@ -166,7 +157,7 @@ Object* Heap::AllocateRawClass(int size) {
   return Allocate(size);
 }
 
-Object* Heap::CreateMetaClass(bool immutable) {
+Object* Heap::CreateMetaClass() {
   InstanceFormat format = InstanceFormat::class_format();
   int size = Class::AllocationSize();
   // Allocate the raw class objects.
@@ -174,8 +165,6 @@ Object* Heap::CreateMetaClass(bool immutable) {
   if (meta_class->IsFailure()) return meta_class;
   // Bind the class loop.
   meta_class->set_class(meta_class);
-  meta_class->set_immutable(immutable);
-  if (immutable) meta_class->InitializeIdentityHashCode(random());
   // Initialize the classes.
   meta_class->Initialize(format, size, NULL);
   return meta_class;
@@ -183,8 +172,7 @@ Object* Heap::CreateMetaClass(bool immutable) {
 
 Object* Heap::CreateClass(InstanceFormat format,
                           Class* meta_class,
-                          HeapObject* null,
-                          bool immutable) {
+                          HeapObject* null) {
   ASSERT(meta_class->instance_format().type() ==
          InstanceFormat::CLASS_TYPE);
 
@@ -193,8 +181,6 @@ Object* Heap::CreateClass(InstanceFormat format,
   if (raw_result->IsFailure()) return raw_result;
   Class* result = reinterpret_cast<Class*>(raw_result);
   result->set_class(meta_class);
-  result->set_immutable(immutable);
-  if (immutable) result->InitializeIdentityHashCode(random());
   result->Initialize(format, size, null);
   return Class::cast(result);  // Perform a cast to validate type.
 }
@@ -202,8 +188,7 @@ Object* Heap::CreateClass(InstanceFormat format,
 Object* Heap::CreateFunction(Class* the_class,
                              int arity,
                              List<uint8> bytecodes,
-                             int number_of_literals,
-                             bool immutable) {
+                             int number_of_literals) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::FUNCTION_TYPE);
   int literals_size = number_of_literals * kPointerSize;
@@ -213,8 +198,6 @@ Object* Heap::CreateFunction(Class* the_class,
   if (raw_result->IsFailure()) return raw_result;
   Function* result = reinterpret_cast<Function*>(raw_result);
   result->set_class(the_class);
-  result->set_immutable(immutable);
-  if (immutable) result->InitializeIdentityHashCode(random());
   result->set_arity(arity);
   result->set_literals_size(number_of_literals);
   result->Initialize(bytecodes);

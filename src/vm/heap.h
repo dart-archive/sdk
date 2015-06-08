@@ -30,8 +30,8 @@ class Heap {
   void TryDealloc(Object* object, int size);
 
   // Allocate heap object.
-  Object* CreateHeapObject(Class* the_class, Object* init_value,
-                           bool immutable = false);
+  Object* CreateComplexHeapObject(Class* the_class, Object* init_value,
+                                  bool immutable = false);
 
   // Allocate array.
   Object* CreateArray(Class* the_class, int length, Object* init_value,
@@ -41,19 +41,17 @@ class Heap {
   Object* CreateByteArray(Class* the_class, int length, bool immutable = false);
 
   // Allocate heap integer.
-  Object* CreateLargeInteger(Class* the_class, int64 value,
-                             bool immutable = false);
+  Object* CreateLargeInteger(Class* the_class, int64 value);
   void TryDeallocInteger(LargeInteger* object);
 
   // Allocate double.
-  Object* CreateDouble(Class* the_class, double value, bool immutable = false);
+  Object* CreateDouble(Class* the_class, double value);
 
   // Allocate boxed.
-  Object* CreateBoxed(Class* the_class, Object* value, bool immutable = false);
+  Object* CreateBoxed(Class* the_class, Object* value);
 
   // Allocate static variable info.
-  Object* CreateInitializer(Class* the_class, Function* function,
-                            bool immutable = false);
+  Object* CreateInitializer(Class* the_class, Function* function);
 
   // Create a string object initialized with zeros. Caller should set
   // the actual contents.
@@ -70,18 +68,16 @@ class Heap {
   Object* CreateStack(Class* the_class, int length, bool immutable = false);
 
   // Allocate class.
-  Object* CreateMetaClass(bool immutable = false);
+  Object* CreateMetaClass();
   Object* CreateClass(InstanceFormat format,
                       Class* meta_class,
-                      HeapObject* null,
-                      bool immutable = false);
+                      HeapObject* null);
 
   // Allocate function.
   Object* CreateFunction(Class* the_class,
                          int arity,
                          List<uint8> bytecodes,
-                         int number_of_literals,
-                         bool immutable = false);
+                         int number_of_literals);
 
   // Iterate over all objects in the heap.
   void IterateObjects(HeapObjectVisitor* visitor) {

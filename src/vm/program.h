@@ -22,9 +22,9 @@ class Session;
 
 // Defines all the roots in the program heap.
 #define ROOTS_DO(V)                              \
-  V(HeapObject, null_object)                     \
-  V(HeapObject, false_object)                    \
-  V(HeapObject, true_object)                     \
+  V(ComplexHeapObject, null_object)              \
+  V(ComplexHeapObject, false_object)             \
+  V(ComplexHeapObject, true_object)              \
   /* Global literals up to this line */          \
   V(Array, empty_array)                          \
   V(String, empty_string)                        \

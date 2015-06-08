@@ -223,16 +223,16 @@
                 ['OS=="mac"', {
                   'xcode_settings': { # And ninja.
                     'ARCHS': [ 'armv7' ],
-    
+
                     'LIBRARY_SEARCH_PATHS': [
                       '<(third_party_libs_path)/arm',
                     ],
-    
+
                     'OTHER_CPLUSPLUSFLAGS' : [
                       '-isysroot',
                       '<(ios_sdk_path)',
                     ],
-    
+
                     'OTHER_CFLAGS' : [
                       '-isysroot',
                       '<(ios_sdk_path)',

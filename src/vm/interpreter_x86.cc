@@ -1388,6 +1388,7 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
   // Either directly jump to allocation code or determine first if arguments
   // on the stack have immutable flag set.
   Label allocate;
+  Label allocate_mutable;
   Label allocate_immutable;
   if (immutable) {
     __ movl(ECX, Address(EBX, Class::kInstanceFormatOffset - HeapObject::kTag));
@@ -1395,8 +1396,8 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
     int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
     __ shrl(ECX, Immediate(size_shift));
 
-    // ECX = SizeOfEntireObject - HeapObject::kSize
-    __ subl(ECX, Immediate(HeapObject::kSize));
+    // ECX = SizeOfEntireObject - ComplexHeapObject::kSize
+    __ subl(ECX, Immediate(ComplexHeapObject::kSize));
 
     // EDX = StackPointer(EDI) - NumberOfFields*kPointerSize
     __ movl(EDX, EDI);
@@ -1416,15 +1417,53 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
     __ testl(ECX, Immediate(Smi::kTagMask));
     __ j(ZERO, &loop);
 
-    // Else load immutable bit from object and test.
-    uword im_mask = HeapObject::FlagsImmutabilityField::encode(true);
-    __ movl(ECX, Address(ECX, HeapObject::kFlagsOffset - HeapObject::kTag));
-    __ andl(ECX, Immediate(im_mask));
-    __ cmpl(ECX, Immediate(im_mask));
+    // Load class of object we want to test immutability of.
+    __ movl(EAX, Address(ECX, HeapObject::kClassOffset - HeapObject::kTag));
 
-    __ j(EQUAL, &loop);
+    // Load instance format & handle the three cases:
+    //  - boxed => not immutable
+    //  - simple HeapObject => immutable
+    //  - ComplexHeapObject => check runtime-tracked bit
+
+    // NOTE: Our goal is to test whether a value is a [Boxed] or a
+    // [ComplexHeapObject]. We cannot just compare the [InstanceFormat], since
+    // it contains varying information (e.g. size of the instance).
+    // But we can take the non-varying parts of the [InstanceFormat], namely the
+    // [TypeField] and the [ComplexHeapObjectField].
+    //
+    // We assume all [ComplexHeapObjects] have a [InstanceFormat.INSTANCE] type.
+    //
+    // Given this, we can take "a prototypical"
+    //   - `boxed_format()`
+    //   - `instance_format()`
+    // to generate masks which can be used for boxed/complex-instance tests.
+    uword mask = InstanceFormat::TypeField::mask() |
+                 InstanceFormat::ComplexHeapObjectField::mask();
+    uword complex_heap_object_mask =
+        InstanceFormat::instance_format(0).as_uword() & mask;
+    uword boxed_mask = InstanceFormat::boxed_format().as_uword() & mask;
+
+    __ movl(EAX, Address(EAX, Class::kInstanceFormatOffset - HeapObject::kTag));
+    __ andl(EAX, Immediate(mask));
+
+    // If this is a Boxed, we bail out.
+    __ cmpl(EAX, Immediate(boxed_mask));
+    __ j(EQUAL, &allocate_mutable);
+
+    // If this is not ComplexHeapObject, we consider it immutable.
+    __ cmpl(EAX, Immediate(complex_heap_object_mask));
+    __ j(NOT_EQUAL, &loop);
+
+    // Else, we must have a ComplexHeapObject and check the runtime-tracked
+    // immutable bit.
+    uword im_mask = ComplexHeapObject::FlagsImmutabilityField::encode(true);
+    __ movl(ECX,
+            Address(ECX, ComplexHeapObject::kFlagsOffset - HeapObject::kTag));
+    __ testl(ECX, Immediate(im_mask));
+    __ j(NOT_ZERO, &loop);
   }
 
+  __ Bind(&allocate_mutable);
   __ movl(ECX, Immediate(0));
   __ jmp(&allocate);
 

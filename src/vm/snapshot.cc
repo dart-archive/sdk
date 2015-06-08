@@ -38,16 +38,13 @@ class Header {
   }
 
   static Header FromTypeAndElements(InstanceFormat::Type type,
-                                    bool immutable,
                                     int elements = 0) {
     Header h = Header(
         TypeField::encode(type) |
-        ImmutableField::encode(immutable) |
         ElementsField::encode(elements) |
         kTypeAndElementsTag);
     ASSERT(h.is_type());
     ASSERT(type == h.as_type());
-    ASSERT(immutable == h.immutable());
     ASSERT(elements == h.elements());
     return h;
   }
@@ -102,11 +99,6 @@ class Header {
     return ElementsField::decode(value_);
   }
 
-  bool immutable() {
-    ASSERT(is_type());
-    return ImmutableField::decode(value_);
-  }
-
   word as_word() { return value_; }
 
   // Lowest one/two bits are used for tagging between:
@@ -123,8 +115,7 @@ class Header {
 
   // Fields in case of Type + Elements encoding.
   class TypeField : public BitField<InstanceFormat::Type, 2, 4> {};
-  class ImmutableField : public BoolField<6> {};
-  class ElementsField: public BitField<word, 7, 25> {};
+  class ElementsField: public BitField<word, 6, 26> {};
  private:
   word value_;
 };
@@ -287,9 +278,8 @@ void SnapshotWriter::WriteDouble(double value) {
   WriteBytes(kSupportedSizeOfDouble, p_data);
 }
 
-void SnapshotWriter::WriteHeader(InstanceFormat::Type type, bool immutable,
-                                 int elements) {
-  WriteWord(Header::FromTypeAndElements(type, immutable, elements).as_word());
+void SnapshotWriter::WriteHeader(InstanceFormat::Type type, int elements) {
+  WriteWord(Header::FromTypeAndElements(type, elements).as_word());
 }
 
 Program* SnapshotReader::ReadProgram() {
@@ -414,7 +404,6 @@ Object* SnapshotReader::ReadObject() {
 
   AddReference(object);
   object->set_class(reinterpret_cast<Class*>(ReadObject()));
-  object->set_immutable(header.immutable());
   switch (type) {
     case InstanceFormat::STRING_TYPE:
       reinterpret_cast<String*>(object)->StringReadFrom(this, elements);
@@ -570,89 +559,92 @@ void SnapshotWriter::GrowCapacity(int extra) {
 
 void String::StringWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::STRING_TYPE, get_immutable(), length());
+  writer->WriteHeader(InstanceFormat::STRING_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteWord(IdentityHashCode()->value());
+  writer->WriteWord(FlagsWord());
   writer->WriteBytes(length() * sizeof(uint16_t), byte_address_for(0));
 }
 
 void String::StringReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
   set_hash_value(kNoHashValue);
-  SetIdentityHashCode(Smi::FromWord(reader->ReadWord()));
+  SetFlagsWord(reader->ReadWord());
   reader->ReadBytes(length * sizeof(uint16_t), byte_address_for(0));
 }
 
 void Array::ArrayWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::ARRAY_TYPE, get_immutable(), length());
+  writer->WriteHeader(InstanceFormat::ARRAY_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteWord(IdentityHashCode()->value());
+  writer->WriteWord(FlagsWord());
   for (int i = 0; i < length(); i++) {
     writer->WriteObject(get(i));
   }
 }
 
 void Array::ArrayReadFrom(SnapshotReader* reader, int length) {
-  SetIdentityHashCode(Smi::FromWord(reader->ReadWord()));
   set_length(length);
+  SetFlagsWord(reader->ReadWord());
   for (int i = 0; i < length; i++) set(i, reader->ReadObject());
 }
 
 void ByteArray::ByteArrayWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::BYTE_ARRAY_TYPE, get_immutable(),
-                      length());
+  writer->WriteHeader(InstanceFormat::BYTE_ARRAY_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteWord(IdentityHashCode()->value());
+  writer->WriteWord(FlagsWord());
   writer->WriteBytes(length(), byte_address_for(0));
 }
 
 void ByteArray::ByteArrayReadFrom(SnapshotReader* reader, int length) {
-  SetIdentityHashCode(Smi::FromWord(reader->ReadWord()));
   set_length(length);
+  SetFlagsWord(reader->ReadWord());
   reader->ReadBytes(length, byte_address_for(0));
 }
 
 void Instance::InstanceWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
   int nof = klass->NumberOfInstanceFields();
-  writer->WriteHeader(klass->instance_format().type(), get_immutable(), nof);
+  writer->WriteHeader(klass->instance_format().type(), nof);
   writer->Forward(this);
   // Body
-  writer->WriteWord(IdentityHashCode()->value());
+  writer->WriteWord(FlagsWord());
   for (int i = 0; i < nof; i++) {
     writer->WriteObject(GetInstanceField(i));
   }
 }
 
 void Instance::InstanceReadFrom(SnapshotReader* reader, int fields) {
-  SetIdentityHashCode(Smi::FromWord(reader->ReadWord()));
   int size = AllocationSize(fields);
-  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+  SetFlagsWord(reader->ReadWord());
+  for (int offset = ComplexHeapObject::kSize;
+       offset < size;
+       offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
 }
 
 void Class::ClassWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::CLASS_TYPE, get_immutable());
+  writer->WriteHeader(InstanceFormat::CLASS_TYPE);
   writer->Forward(this);
   // Body.
-  writer->WriteWord(IdentityHashCode()->value());
   int size = AllocationSize();
-  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+  for (int offset = HeapObject::kSize;
+       offset < size;
+       offset += kPointerSize) {
     writer->WriteObject(at(offset));
   }
 }
 
 void Class::ClassReadFrom(SnapshotReader* reader) {
-  SetIdentityHashCode(Smi::FromWord(reader->ReadWord()));
   int size = AllocationSize();
-  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+  for (int offset = HeapObject::kSize;
+       offset < size;
+       offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
 }
@@ -661,11 +653,9 @@ void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
   int rounded_bytecode_size = BytecodeAllocationSize(bytecode_size());
   ASSERT(literals_size() == 0);
-  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, get_immutable(),
-                      rounded_bytecode_size);
+  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, rounded_bytecode_size);
   writer->Forward(this);
   // Body.
-  writer->WriteWord(IdentityHashCode()->value());
   for (int offset = HeapObject::kSize;
        offset < Function::kSize;
        offset += kPointerSize) {
@@ -679,7 +669,6 @@ void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
 }
 
 void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
-  SetIdentityHashCode(Smi::FromWord(reader->ReadWord()));
   for (int offset = HeapObject::kSize;
        offset < Function::kSize;
        offset += kPointerSize) {
@@ -695,38 +684,33 @@ void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
 
 void LargeInteger::LargeIntegerWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::LARGE_INTEGER_TYPE, get_immutable());
+  writer->WriteHeader(InstanceFormat::LARGE_INTEGER_TYPE);
   writer->Forward(this);
   // Body.
-  writer->WriteWord(IdentityHashCode()->value());
   writer->WriteInt64(value());
 }
 
 void LargeInteger::LargeIntegerReadFrom(SnapshotReader* reader) {
-  SetIdentityHashCode(Smi::FromWord(reader->ReadWord()));
   set_value(reader->ReadInt64());
 }
 
 void Double::DoubleWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::DOUBLE_TYPE, get_immutable());
+  writer->WriteHeader(InstanceFormat::DOUBLE_TYPE);
   writer->Forward(this);
   // Body.
-  writer->WriteWord(IdentityHashCode()->value());
   writer->WriteDouble(value());
 }
 
 void Double::DoubleReadFrom(SnapshotReader* reader) {
-  SetIdentityHashCode(Smi::FromWord(reader->ReadWord()));
   set_value(reader->ReadDouble());
 }
 
 void Initializer::InitializerWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::INITIALIZER_TYPE, get_immutable());
+  writer->WriteHeader(InstanceFormat::INITIALIZER_TYPE);
   writer->Forward(this);
   // Body.
-  writer->WriteWord(IdentityHashCode()->value());
   for (int offset = HeapObject::kSize;
        offset < Initializer::kSize;
        offset += kPointerSize) {
@@ -735,7 +719,6 @@ void Initializer::InitializerWriteTo(SnapshotWriter* writer, Class* klass) {
 }
 
 void Initializer::InitializerReadFrom(SnapshotReader* reader) {
-  SetIdentityHashCode(Smi::FromWord(reader->ReadWord()));
   for (int offset = HeapObject::kSize;
        offset < Initializer::kSize;
        offset += kPointerSize) {
