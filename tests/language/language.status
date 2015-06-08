@@ -14,7 +14,6 @@ bit_shift_test: Fail
 [ ($runtime == fletchc || $runtime == fletchvm) && $asan ]
 # Address sanitizer turns caught crashes into failures.
 large_class_declaration_test: Fail, Timeout
-implicit_scope_test: Fail
 
 [ $compiler == fletchc || $runtime == fletchc ]
 abstract_runtime_error_test/01: Fail
@@ -300,7 +299,6 @@ generic_parameterized_extends_test: Fail
 generic_test: Fail
 getter_closure_execution_order_test: Fail
 implicit_closure_test: Fail
-implicit_scope_test: Crash
 incr_op_test: Fail
 inferrer_closure_test: Fail
 instanceof2_test: Fail
@@ -410,14 +408,13 @@ prefix21_test: Fail
 redirecting_factory_default_values_test/01: MissingCompileTimeError
 redirecting_factory_default_values_test/02: MissingCompileTimeError
 redirecting_factory_long_test: Fail
-ref_before_declaration_test/00: Crash
-ref_before_declaration_test/01: Crash
-ref_before_declaration_test/02: Crash
-ref_before_declaration_test/03: Crash
-ref_before_declaration_test/04: Crash
-ref_before_declaration_test/05: Crash
-ref_before_declaration_test/06: Crash
-ref_before_declaration_test/none: Crash
+ref_before_declaration_test/00: MissingCompileTimeError
+ref_before_declaration_test/01: MissingCompileTimeError
+ref_before_declaration_test/02: MissingCompileTimeError
+ref_before_declaration_test/03: MissingCompileTimeError
+ref_before_declaration_test/04: MissingCompileTimeError
+ref_before_declaration_test/05: MissingCompileTimeError
+ref_before_declaration_test/06: MissingCompileTimeError
 reg_ex2_test: CompileTimeError
 reg_exp2_test: CompileTimeError
 reg_exp3_test: CompileTimeError

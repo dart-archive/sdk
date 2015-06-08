@@ -2236,12 +2236,12 @@ abstract class CodegenVisitor
     BytecodeLabel ifFalse = new BytecodeLabel();
     visitForTest(node.condition, ifTrue, ifFalse);
     builder.bind(ifTrue);
-    node.thenPart.accept(this);
+    doScopedStatement(node.thenPart);
     if (node.hasElsePart) {
       BytecodeLabel end = new BytecodeLabel();
       builder.branch(end);
       builder.bind(ifFalse);
-      node.elsePart.accept(this);
+      doScopedStatement(node.elsePart);
       builder.bind(end);
     } else {
       builder.bind(ifFalse);
@@ -2271,7 +2271,7 @@ abstract class CodegenVisitor
       builder.bind(ifTrue);
     }
 
-    node.body.accept(this);
+    doScopedStatement(node.body);
 
     builder.bind(afterBody);
 
@@ -2356,7 +2356,7 @@ abstract class CodegenVisitor
       builder.pop();
     }
 
-    node.body.accept(this);
+    doScopedStatement(node.body);
 
     if (isVariableDeclaration) {
       // Pop the local again.
@@ -2376,6 +2376,16 @@ abstract class CodegenVisitor
     node.statement.accept(this);
   }
 
+  // Visit the statement in a scope, where locals are popped when left.
+  void doScopedStatement(Node statement) {
+    Block block = statement.asBlock();
+    if (block != null) {
+      doStatements(block.statements);
+    } else {
+      doStatements(new NodeList.singleton(statement));
+    }
+  }
+
   void visitWhile(While node) {
     BytecodeLabel start = new BytecodeLabel();
     BytecodeLabel ifTrue = new BytecodeLabel();
@@ -2384,7 +2394,7 @@ abstract class CodegenVisitor
     builder.bind(start);
     visitForTest(node.condition, ifTrue, end);
     builder.bind(ifTrue);
-    node.body.accept(this);
+    doScopedStatement(node.body);
     builder.branch(start);
     builder.bind(end);
   }
@@ -2395,7 +2405,7 @@ abstract class CodegenVisitor
     BytecodeLabel skipBody = new BytecodeLabel();
     jumpInfo[node] = new JumpInfo(builder.stackSize, skipBody, end);
     builder.bind(start);
-    node.body.accept(this);
+    doScopedStatement(node.body);
     builder.bind(skipBody);
     visitForTest(node.condition, start, end);
     builder.bind(end);
