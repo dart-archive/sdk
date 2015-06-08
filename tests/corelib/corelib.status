@@ -213,3 +213,15 @@ hash_map2_test: Slow, Pass
 hash_map2_internal_test: Slow, Pass
 hash_set_test/01: Slow, Pass
 hash_set_test/none: Slow, Pass
+
+[ ($runtime == fletchc || $runtime == fletchvm) && $arch == x64 && $mode == debug]
+uri_test: Slow
+int_parse_radix_test/01: Slow
+int_parse_radix_test/02: Slow
+int_parse_radix_test/none: Slow
+
+[ ($runtime == fletchc || $runtime == fletchvm) && $arch == x64 && $mode == debug && ($clang || $asan)]
+int_parse_radix_test/01: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
+int_parse_radix_test/02: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
+int_parse_radix_test/none: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
+
