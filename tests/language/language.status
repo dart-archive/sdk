@@ -264,8 +264,6 @@ function_subtype_simple2_test: Fail
 function_subtype_top_level0_test: Fail
 function_subtype_top_level1_test: Fail
 function_subtype_typearg0_test: Fail
-function_test: Crash
-function_type2_test: Crash
 function_type_alias2_test: Fail
 function_type_alias3_test: Fail
 function_type_alias4_test: Fail
@@ -324,9 +322,7 @@ issue10561_test: CompileTimeError
 issue10747_test: Fail
 issue13474_test: Fail
 issue13673_test: Fail
-issue14014_2_test: Crash
-issue14014_3_test: Crash
-issue14014_test: Crash
+issue14014_3_test: Fail
 issue14242_test: Fail
 issue18628_1_test/01: Fail
 large_class_declaration_test: Crash, Timeout

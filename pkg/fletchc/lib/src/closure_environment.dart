@@ -88,12 +88,17 @@ class ClosureEnvironment {
 }
 
 class ClosureVisitor
-    extends Visitor
+    extends SemanticVisitor
     with TraversalSendMixin,
          SemanticSendResolvedMixin,
          SendResolverMixin,
-         BaseImplementationOfLocalsMixin
-    implements SemanticSendVisitor {
+         BaseImplementationOfLocalsMixin,
+         VariableBulkMixin,
+         ParameterBulkMixin,
+         FunctionBulkMixin,
+         ConstructorBulkMixin,
+         InitializerBulkMixin
+    implements SemanticSendVisitor, SemanticDeclarationVisitor {
   final ClosureEnvironment closureEnvironment = new ClosureEnvironment();
 
   /**
@@ -104,13 +109,13 @@ class ClosureVisitor
 
   final MemberElement element;
 
-  final TreeElements elements;
-
   ExecutableElement currentElement;
 
-  ClosureVisitor(this.element, this.elements);
+  ClosureVisitor(this.element, TreeElements elements)
+      : super(elements);
 
   SemanticSendVisitor get sendVisitor => this;
+  SemanticDeclarationVisitor get declVisitor => this;
 
   ClosureEnvironment compute() {
     assert(element.memberContext == element);
@@ -140,17 +145,38 @@ class ClosureVisitor
       ClosureInfo info = new ClosureInfo();
       closureEnvironment.closures[currentElement] = info;
     }
-    NodeList initializers = node.initializers;
-    if (initializers != null) {
-      for (var initializer in initializers) {
-        Element element = elements[initializer];
-        if (element != null && !element.isGenerativeConstructor) {
-          initializer.accept(this);
-        }
-      }
+    if (currentElement.isConstructor) {
+      visitInitializers(node, null);
     }
     node.body.accept(this);
     currentElement = oldElement;
+  }
+
+  void visitFieldInitializer(
+      SendSet node,
+      FieldElement field,
+      Node initializer,
+      _) {
+    initializer.accept(this);
+  }
+
+  void visitSuperConstructorInvoke(
+      Send node,
+      ConstructorElement superConstructor,
+      InterfaceType type,
+      NodeList arguments,
+      CallStructure callStructure,
+      _) {
+    arguments.accept(this);
+  }
+
+  void visitThisConstructorInvoke(
+      Send node,
+      ConstructorElement thisConstructor,
+      NodeList arguments,
+      CallStructure callStructure,
+      _) {
+    arguments.accept(this);
   }
 
   void markUsed(LocalElement element, CaptureMode use) {
@@ -773,5 +799,14 @@ class ClosureVisitor
       Node rhs,
       _) {
     apply(rhs);
+  }
+
+  void bulkHandleNode(Node node, String message, _) {
+  }
+
+  void applyInitializers(FunctionExpression initializers, _) {
+  }
+
+  void applyParameters(NodeList parameters, _) {
   }
 }
