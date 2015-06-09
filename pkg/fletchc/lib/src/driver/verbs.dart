@@ -15,6 +15,9 @@ import 'driver_commands.dart' show
     Command,
     CommandSender;
 
+import 'debug_verb.dart' show
+    debugVerb;
+
 import 'help_verb.dart' show
     helpVerb;
 
@@ -46,6 +49,7 @@ class Verb {
 /// for the prompts before and after running fletch.  Another two lines may be
 /// used to print an error message.
 const Map<String, Verb> commonVerbs = const <String, Verb>{
+  "debug": debugVerb,
   "help": helpVerb,
 };
 
