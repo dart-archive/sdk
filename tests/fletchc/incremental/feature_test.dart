@@ -2421,7 +2421,7 @@ Future<TestSession> runFletchVM(
 
     FunctionElement isMainDone =
         compiler.backend.fletchSystemLibrary.findLocal("isMainDone").getter;
-    int methodId = compiler.backend.compiledFunctions[isMainDone].methodId;
+    int methodId = compiler.backend.functionBuilders[isMainDone].methodId;
 
     session = new TestSession(
         vmSocket, compiler.helper,
