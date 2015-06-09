@@ -2503,12 +2503,13 @@ Future<TestSession> runFletchVM(
         }
       }
     });
+    var exitFuture = new Future.value();
     if (session != null) {
       session.quit();
+      exitFuture = session.process.exitCode.then((int exitCode) {
+        print("VM exited with exit code: $exitCode.");
+      });
     }
-    var exitFuture = session.process.exitCode.then((int exitCode) {
-      print("VM exited with exit code: $exitCode.");
-    });
     var futures =
         [stderrFuture, stdoutFuture, session.vmSocket.done, exitFuture];
     return Future.wait(futures).catchError((error, StackTrace stackTrace) {
