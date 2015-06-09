@@ -28,6 +28,7 @@
 
 @property (strong, nonatomic) NSMutableSet* selectedIndexPaths;
 @property ImmiRoot* immiRoot;
+@property bool shifted;
 
 @end
 
@@ -41,15 +42,20 @@
   self.bufferAdvance = 4;
   // TODO(zerny): The buffer size should be dynamically computed. Here we make
   // it large enough for the display of an iPad Air.
-  self.bufferCount = 30;
+  self.bufferCount = 50;
   self.selectedIndexPaths = [NSMutableSet set];
   self.tableView.rowHeight = UITableViewAutomaticDimension;
   self.tableView.estimatedRowHeight = 50.0;
+  self.shifted = true;
   return self;
 }
 
 - (void)immi_setupRoot:(ImmiRoot*)root {
   self.immiRoot = root;
+  [root refresh:^{
+    [self.root dispatchDisplayStart:0 end:self.bufferCount];
+    [self refresh];
+  }];
 }
 
 - (SlidingWindowNode*)root {
@@ -82,7 +88,9 @@
   } else if (index + self.bufferSlack >= self.windowEnd) {
     [self shiftUp:index];
   }
-  return [self.root.window objectAtIndex:[self windowIndex:index]];
+  int adjusted = [self windowIndex:index];
+  // Return nil if the adjusted index is outside the sliding window.
+  return (adjusted < 0) ? nil : [self.root.window objectAtIndex:adjusted];
 }
 
 - (void)shiftDown:(int)index {
@@ -102,33 +110,29 @@
   }
 }
 
-// TODO(zerny): Support an async adjustment so we don't block the main thread.
 - (void)refreshDisplayStart:(int)start end:(int)end {
   [self.root dispatchDisplayStart:start end:end];
-  [self refresh];
+  self.shifted = true;
 }
 
-- (bool)refresh {
-  bool first = self.root == nil;
-  bool result = [self.immiRoot refresh];
-  // TODO(zerny): Find another way to setup the initial display.
-  if (first) {
-    assert(result);
-    [self.root dispatchDisplayStart:0 end:self.bufferCount];
-    return [self refresh];
-  }
-  if (result) {
-    [self.tableView performSelectorOnMainThread:@selector(reloadData)
-                                     withObject:nil
-                                  waitUntilDone:NO];
-  }
-  return result;
+// TODO(zerny): Reload data using an change listener.
+- (void)refresh {
+  if (!self.shifted) return;
+  self.shifted = false;
+  [self.immiRoot refresh:^{
+    [self reload];
+  }];
+}
+
+- (void)reload {
+  [self.tableView performSelectorOnMainThread:@selector(reloadData)
+                                   withObject:nil
+                                waitUntilDone:NO];
 }
 
 - (int)windowIndex:(int)index {
   assert(self.root != nil);
-  assert(index >= self.windowStart);
-  assert(index < self.windowEnd);
+  if (index < self.windowStart || self.windowEnd <= index) return -1;
   int i = self.root.windowOffset + index - self.windowStart;
   return i % self.windowCount;
 }

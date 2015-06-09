@@ -171,7 +171,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     writeln('typedef void (^ImmiDispatchBlock)(void);');
     writeln('@interface ImmiRoot : NSObject');
     writeln('@property (readonly) Node* rootNode;');
-    writeln('- (bool)refresh;');
+    writeln('- (void)refresh:(ImmiDispatchBlock)block;');
     writeln('- (void)reset;');
     writeln('- (void)dispatch:(ImmiDispatchBlock)block;');
     writeln('@end');
@@ -310,6 +310,14 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
   }
 
   _writeImmiRootImplementation() {
+    writeln('typedef void (^ImmiRefreshBlock)(const PatchSetData&);');
+    writeln('typedef void (*ImmiRefreshCallback)(PatchSetData, void*);');
+    writeln('void ImmiRefresh(PatchSetData patchData, void* callbackData) {');
+    writeln('  ImmiRefreshBlock block =');
+    writeln('      (__bridge_transfer ImmiRefreshBlock)callbackData;');
+    writeln('  block(patchData);');
+    writeln('  patchData.Delete();');
+    writeln('}');
     writeln('@implementation ImmiRoot');
     writeln();
     writeln('- (id)init:(uint16_t)pid {');
@@ -319,11 +327,16 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('  return self;');
     writeln('}');
     writeln();
-    writeln('- (bool)refresh {');
-    writeln('  PatchSetData data = ${serviceName}::refresh(self.pid);');
-    writeln('  bool result = [Node applyPatchSet:data atNode:&_rootNode inGraph:self];');
-    writeln('  data.Delete();');
-    writeln('  return result;');
+    writeln('- (void)refresh:(ImmiDispatchBlock)block {');
+    writeln('  ImmiRefreshBlock doApply = ^(const PatchSetData& patchData) {');
+    writeln('      if ([Node applyPatchSet:patchData');
+    writeln('                       atNode:&_rootNode');
+    writeln('                      inGraph:self]) {');
+    writeln('        block();');
+    writeln('      }');
+    writeln('  };');
+    writeln('  ${serviceName}::refreshAsync(');
+    writeln('      self.pid, ImmiRefresh, (__bridge_retained void*)doApply);');
     writeln('}');
     writeln();
     writeln('- (void)reset {');

@@ -29,7 +29,7 @@
   CADisplayLink* consoleLink =
       [CADisplayLink displayLinkWithTarget:self.presenter
                                   selector:@selector(refresh)];
-  [consoleLink setFrameInterval:60];
+  [consoleLink setFrameInterval:1];
   [consoleLink addToRunLoop:[NSRunLoop currentRunLoop]
                     forMode:NSDefaultRunLoopMode];
 }

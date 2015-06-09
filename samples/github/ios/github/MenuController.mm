@@ -14,7 +14,7 @@
 
 - (void)immi_setupRoot:(ImmiRoot*)root {
   self.immiRoot = root;
-  [root refresh];
+  [root refresh:^{ [self.tableView reloadData]; }];
 }
 
 - (MenuNode*)root {
