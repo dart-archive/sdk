@@ -18,7 +18,7 @@ import 'package:compiler/src/dart_types.dart' show
 import 'package:compiler/src/util/util.dart' show
     Spannable;
 
-import 'bytecode_builder.dart';
+import 'bytecode_assembler.dart';
 import 'closure_environment.dart';
 import 'codegen_visitor.dart';
 
@@ -39,9 +39,9 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
 
   // Regenerate the bytecode in a fresh buffer separately from the compiled
   // function. If we did not create a separate buffer, the bytecode would
-  // be appended to the compiled function builder and we would get a compiled
+  // be appended to the compiled function assembler and we would get a compiled
   // function with incorrect bytecode.
-  final BytecodeBuilder debugBuilder;
+  final BytecodeAssembler debugAssembler;
 
   DebugInfoConstructorCodegen(FletchFunctionBuilder functionBuilder,
                               FletchContext context,
@@ -51,11 +51,11 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
                               ConstructorElement constructor,
                               FletchClassBuilder classBuilder,
                               this.compiler)
-      : debugBuilder = new BytecodeBuilder(functionBuilder.arity),
+      : debugAssembler = new BytecodeAssembler(functionBuilder.arity),
         super(functionBuilder, context, elements, registry,
               closureEnvironment, constructor, classBuilder);
 
-  BytecodeBuilder get builder => debugBuilder;
+  BytecodeAssembler get assembler => debugAssembler;
 
   LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
       FletchFunctionBuilder function,
@@ -69,21 +69,21 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
         context.backend.createClosureEnvironment(field, elements),
         field,
         compiler,
-        builder);
+        assembler);
   }
 
   void recordDebugInfo(Node node) {
-    functionBuilder.debugInfo.addLocation(compiler, builder.byteSize, node);
+    functionBuilder.debugInfo.addLocation(compiler, assembler.byteSize, node);
   }
 
   void pushVariableDeclaration(LocalValue value) {
     super.pushVariableDeclaration(value);
-    functionBuilder.debugInfo.pushScope(builder.byteSize, value);
+    functionBuilder.debugInfo.pushScope(assembler.byteSize, value);
   }
 
   void popVariableDeclaration(Element element) {
     super.popVariableDeclaration(element);
-    functionBuilder.debugInfo.popScope(builder.byteSize);
+    functionBuilder.debugInfo.popScope(assembler.byteSize);
   }
 
   void registerDynamicInvocation(Selector selector) { }

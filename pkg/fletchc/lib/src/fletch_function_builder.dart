@@ -29,7 +29,7 @@ import 'fletch_class_builder.dart' show
     FletchClassBuilder;
 
 import 'fletch_context.dart';
-import 'bytecode_builder.dart';
+import 'bytecode_assembler.dart';
 import 'debug_info.dart';
 
 enum FletchFunctionBuilderKind {
@@ -41,7 +41,7 @@ enum FletchFunctionBuilderKind {
 }
 
 class FletchFunctionBuilder {
-  final BytecodeBuilder builder;
+  final BytecodeAssembler assembler;
   final int methodId;
 
   /**
@@ -81,12 +81,12 @@ class FletchFunctionBuilder {
       : this.signature = signature,
         this.memberOf = memberOf,
         arity = signature.parameterCount + (memberOf != null ? 1 : 0),
-        builder = new BytecodeBuilder(
+        assembler = new BytecodeAssembler(
           signature.parameterCount + (memberOf != null ? 1 : 0));
 
   FletchFunctionBuilder.normal(this.methodId, int argumentCount)
       : arity = argumentCount,
-        builder = new BytecodeBuilder(argumentCount),
+        assembler = new BytecodeAssembler(argumentCount),
         kind = FletchFunctionBuilderKind.NORMAL;
 
   FletchFunctionBuilder.lazyInit(this.methodId,
@@ -94,21 +94,21 @@ class FletchFunctionBuilder {
                             this.element,
                             int argumentCount)
       : arity = argumentCount,
-        builder = new BytecodeBuilder(argumentCount),
+        assembler = new BytecodeAssembler(argumentCount),
         kind = FletchFunctionBuilderKind.LAZY_FIELD_INITIALIZER;
 
   FletchFunctionBuilder.parameterStub(this.methodId, int argumentCount)
       : arity = argumentCount,
-        builder = new BytecodeBuilder(argumentCount),
+        assembler = new BytecodeAssembler(argumentCount),
         kind = FletchFunctionBuilderKind.PARAMETER_STUB;
 
   FletchFunctionBuilder.accessor(this.methodId, bool setter)
       : arity = setter ? 2 : 1,
-        builder = new BytecodeBuilder(setter ? 2 : 1),
+        assembler = new BytecodeAssembler(setter ? 2 : 1),
         kind = FletchFunctionBuilderKind.ACCESSOR;
 
   void reuse() {
-    builder.reuse();
+    assembler.reuse();
     constants.clear();
     functionConstantValues.clear();
     classConstantValues.clear();
@@ -156,8 +156,8 @@ class FletchFunctionBuilder {
   // TODO(ajohnsen): Remove this function when usage is avoided in
   // FletchBackend.
   void copyFrom(FletchFunctionBuilder function) {
-    builder.bytecodes.addAll(function.builder.bytecodes);
-    builder.catchRanges.addAll(function.builder.catchRanges);
+    assembler.bytecodes.addAll(function.assembler.bytecodes);
+    assembler.catchRanges.addAll(function.assembler.catchRanges);
     constants.addAll(function.constants);
     functionConstantValues.addAll(function.functionConstantValues);
     classConstantValues.addAll(function.classConstantValues);
@@ -227,7 +227,7 @@ class FletchFunctionBuilder {
               arity);
       context.backend.functions.add(functionBuilder);
 
-      BytecodeBuilder builder = functionBuilder.builder;
+      BytecodeAssembler assembler = functionBuilder.assembler;
 
       void loadInitializerOrNull(ParameterElement parameter) {
         Expression initializer = parameter.initializer;
@@ -238,31 +238,31 @@ class FletchFunctionBuilder {
               isConst: true);
           int constId = functionBuilder.allocateConstant(
               context.getConstantValue(expression));
-          builder.loadConst(constId);
+          assembler.loadConst(constId);
         } else {
-          builder.loadLiteralNull();
+          assembler.loadLiteralNull();
         }
       }
 
       // Load this.
-      if (hasThisArgument) builder.loadParameter(0);
+      if (hasThisArgument) assembler.loadParameter(0);
 
       int index = hasThisArgument ? 1 : 0;
       signature.orderedForEachParameter((ParameterElement parameter) {
         if (!parameter.isOptional) {
-          builder.loadParameter(index);
+          assembler.loadParameter(index);
         } else if (parameter.isNamed) {
           int parameterIndex = selector.namedArguments.indexOf(parameter.name);
           if (parameterIndex >= 0) {
             if (hasThisArgument) parameterIndex++;
             int position = selector.positionalArgumentCount + parameterIndex;
-            builder.loadParameter(position);
+            assembler.loadParameter(position);
           } else {
             loadInitializerOrNull(parameter);
           }
         } else {
           if (index < arity) {
-            builder.loadParameter(index);
+            assembler.loadParameter(index);
           } else {
             loadInitializerOrNull(parameter);
           }
@@ -275,7 +275,7 @@ class FletchFunctionBuilder {
       // enumerate all the stubs in the superclasses and make sure
       // they're overridden.
       int constId = functionBuilder.allocateConstantFromFunction(methodId);
-      builder
+      assembler
           ..invokeStatic(constId, index)
           ..ret()
           ..methodEnd();
@@ -292,7 +292,7 @@ class FletchFunctionBuilder {
   String verboseToString() {
     StringBuffer sb = new StringBuffer();
 
-    sb.writeln("Method $methodId, Arity=${builder.functionArity}");
+    sb.writeln("Method $methodId, Arity=${assembler.functionArity}");
     sb.writeln("Constants:");
     constants.forEach((constant, int index) {
       if (constant is ConstantValue) {
@@ -303,7 +303,7 @@ class FletchFunctionBuilder {
 
     sb.writeln("Bytecodes:");
     int offset = 0;
-    for (Bytecode bytecode in builder.bytecodes) {
+    for (Bytecode bytecode in assembler.bytecodes) {
       sb.writeln("  $offset: $bytecode");
       offset += bytecode.size;
     }

@@ -54,8 +54,8 @@ import 'fletch_resolution_callbacks.dart' show
 export 'fletch_resolution_callbacks.dart' show
     FletchResolutionCallbacks;
 
-export 'bytecode_builder.dart' show
-    BytecodeBuilder,
+export 'bytecode_assembler.dart' show
+    BytecodeAssembler,
     BytecodeLabel;
 
 import 'fletch_native_descriptor.dart' show

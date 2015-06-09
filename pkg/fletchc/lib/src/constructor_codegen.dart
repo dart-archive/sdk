@@ -62,7 +62,7 @@ class ConstructorCodegen extends CodegenVisitor {
 
   ConstructorElement get constructor => element;
 
-  BytecodeBuilder get builder => functionBuilder.builder;
+  BytecodeAssembler get assembler => functionBuilder.assembler;
 
   TreeElements get elements {
     if (initializerElements != null) return initializerElements;
@@ -106,7 +106,7 @@ class ConstructorCodegen extends CodegenVisitor {
     // Copy all the fields to the end of the stack.
     int fields = classBuilder.fields;
     for (int i = 0; i < fields; i++) {
-      builder.loadSlot(i);
+      assembler.loadSlot(i);
     }
 
     // The stack is now:
@@ -122,7 +122,7 @@ class ConstructorCodegen extends CodegenVisitor {
     int classConstant = functionBuilder.allocateConstantFromClass(
         classBuilder.id);
     // TODO(ajohnsen): Set immutable for all-final classes.
-    builder.allocate(classConstant, fields, immutable: element.isConst);
+    assembler.allocate(classConstant, fields, immutable: element.isConst);
 
     // The stack is now:
     //  Value for field-0
@@ -137,7 +137,7 @@ class ConstructorCodegen extends CodegenVisitor {
     }
 
     // Return the instance.
-    builder
+    assembler
         ..ret()
         ..methodEnd();
   }
@@ -162,7 +162,7 @@ class ConstructorCodegen extends CodegenVisitor {
       // If the constructor is implicit, invoke the defining constructor.
       if (constructor.functionSignature.parameterCount == 0) {
         ConstructorElement defining = constructor.definingConstructor;
-        int initSlot = builder.stackSize;
+        int initSlot = assembler.stackSize;
         loadArguments(defining, new NodeList.empty(), CallStructure.NO_ARGS);
         inlineInitializers(defining, initSlot);
         return;
@@ -189,9 +189,9 @@ class ConstructorCodegen extends CodegenVisitor {
         // If it's a initializing formal, store the value into initial
         // field value.
         InitializingFormalElement formal = parameter;
-        value.load(builder);
-        fieldScope[formal.fieldElement].store(builder);
-        builder.pop();
+        value.load(assembler);
+        fieldScope[formal.fieldElement].store(assembler);
+        assembler.pop();
       }
       parameterIndex++;
     });
@@ -201,7 +201,7 @@ class ConstructorCodegen extends CodegenVisitor {
   }
 
   void doFieldInitializerSet(Send node, FieldElement field) {
-    fieldScope[field].store(builder);
+    fieldScope[field].store(assembler);
     applyVisitState();
   }
 
@@ -226,7 +226,7 @@ class ConstructorCodegen extends CodegenVisitor {
       _) {
     // Load all parameters to the constructor, onto the stack.
     loadArguments(superConstructor, arguments, callStructure);
-    int initSlot = builder.stackSize -
+    int initSlot = assembler.stackSize -
         superConstructor.functionSignature.parameterCount;
     var previous = initializerElements;
     inlineInitializers(superConstructor, initSlot);
@@ -243,7 +243,7 @@ class ConstructorCodegen extends CodegenVisitor {
     thisConstructor = thisConstructor.implementation;
     // Load all parameters to the constructor, onto the stack.
     loadArguments(thisConstructor, arguments, callStructure);
-    int initSlot = builder.stackSize -
+    int initSlot = assembler.stackSize -
         thisConstructor.functionSignature.parameterCount;
     var previous = initializerElements;
     inlineInitializers(thisConstructor, initSlot);
@@ -255,7 +255,7 @@ class ConstructorCodegen extends CodegenVisitor {
       ConstructorElement superConstructor,
       InterfaceType type,
       _) {
-    int initSlot = builder.stackSize;
+    int initSlot = assembler.stackSize;
     // Always load arguments, as the super-constructor may have optional
     // parameters.
     loadArguments(
@@ -293,7 +293,7 @@ class ConstructorCodegen extends CodegenVisitor {
     Map<String, int> namedArguments = <String, int>{};
     for (int i = 0; i < namedArgumentCount; i++) {
       String name = callStructure.namedArguments[i];
-      namedArguments[name] = builder.stackSize;
+      namedArguments[name] = assembler.stackSize;
       it.moveNext();
       visitForValue(it.current);
       if (signature.orderedOptionalParameters[i].name != name) {
@@ -305,14 +305,14 @@ class ConstructorCodegen extends CodegenVisitor {
     // There was no direct match. Push all unnamed arguments and all named
     // arguments that have already been evaluated, in signature order.
     for (int i = 0; i < unnamedArguments; i++) {
-      builder.loadLocal(argumentCount);
+      assembler.loadLocal(argumentCount);
     }
 
     int count = 0;
     for (ParameterElement parameter in signature.orderedOptionalParameters) {
       int slot = namedArguments[parameter.name];
       if (slot != null) {
-        builder.loadSlot(slot);
+        assembler.loadSlot(slot);
       } else {
         doParameterInitializer(parameter);
       }
@@ -336,12 +336,12 @@ class ConstructorCodegen extends CodegenVisitor {
     FunctionSignature signature = constructor.functionSignature;
 
     // Prepare for constructor body invoke.
-    builder.dup();
+    assembler.dup();
     signature.orderedForEachParameter((FormalElement parameter) {
-      scope[parameter].load(builder);
+      scope[parameter].load(assembler);
     });
 
-    builder
+    assembler
         ..invokeStatic(constructorId, 1 + signature.parameterCount)
         ..pop();
   }
@@ -356,7 +356,7 @@ class ConstructorCodegen extends CodegenVisitor {
       fieldScope[field] = new UnboxedLocalValue(fieldIndex++, field);
       Expression initializer = field.initializer;
       if (initializer == null) {
-        builder.loadLiteralNull();
+        assembler.loadLiteralNull();
       } else {
         // Create a LazyFieldInitializerCodegen for compiling the initializer.
         // Note that we reuse the functionBuilder, to inline it into the

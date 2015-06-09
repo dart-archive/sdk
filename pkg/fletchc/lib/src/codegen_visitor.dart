@@ -72,11 +72,11 @@ abstract class LocalValue {
   final Element element;
   LocalValue(this.slot, this.element);
 
-  void initialize(BytecodeBuilder builder);
+  void initialize(BytecodeAssembler assembler);
 
-  void load(BytecodeBuilder builder);
+  void load(BytecodeAssembler assembler);
 
-  void store(BytecodeBuilder builder);
+  void store(BytecodeAssembler assembler);
 }
 
 /**
@@ -85,16 +85,16 @@ abstract class LocalValue {
 class BoxedLocalValue extends LocalValue {
   BoxedLocalValue(int slot, Element element) : super(slot, element);
 
-  void initialize(BytecodeBuilder builder) {
-    builder.allocateBoxed();
+  void initialize(BytecodeAssembler assembler) {
+    assembler.allocateBoxed();
   }
 
-  void load(BytecodeBuilder builder) {
-    builder.loadBoxedSlot(slot);
+  void load(BytecodeAssembler assembler) {
+    assembler.loadBoxedSlot(slot);
   }
 
-  void store(BytecodeBuilder builder) {
-    builder.storeBoxedSlot(slot);
+  void store(BytecodeAssembler assembler) {
+    assembler.storeBoxedSlot(slot);
   }
 
   String toString() => "Boxed($element, $slot)";
@@ -106,14 +106,14 @@ class BoxedLocalValue extends LocalValue {
 class UnboxedLocalValue extends LocalValue {
   UnboxedLocalValue(int slot, Element element) : super(slot, element);
 
-  void initialize(BytecodeBuilder builder) {}
+  void initialize(BytecodeAssembler assembler) {}
 
-  void load(BytecodeBuilder builder) {
-    builder.loadSlot(slot);
+  void load(BytecodeAssembler assembler) {
+    assembler.loadSlot(slot);
   }
 
-  void store(BytecodeBuilder builder) {
-    builder.storeSlot(slot);
+  void store(BytecodeAssembler assembler) {
+    assembler.storeSlot(slot);
   }
 
   String toString() => "Local($element, $slot)";
@@ -196,10 +196,10 @@ abstract class CodegenVisitor
       : super(elements),
         this.functionBuilder = functionBuilder,
         thisValue = new UnboxedLocalValue(
-            -1 - functionBuilder.builder.functionArity,
+            -1 - functionBuilder.assembler.functionArity,
             null);
 
-  BytecodeBuilder get builder => functionBuilder.builder;
+  BytecodeAssembler get assembler => functionBuilder.assembler;
 
   SemanticSendVisitor get sendVisitor => this;
   SemanticDeclarationVisitor get declVisitor => this;
@@ -240,7 +240,7 @@ abstract class CodegenVisitor
   LocalValue createLocalValueFor(
       LocalElement element,
       [int slot]) {
-    if (slot == null) slot = builder.stackSize;
+    if (slot == null) slot = assembler.stackSize;
     if (closureEnvironment.shouldBeBoxed(element)) {
       return new BoxedLocalValue(slot, element);
     }
@@ -251,9 +251,9 @@ abstract class CodegenVisitor
       ParameterElement parameter,
       int slot) {
     if (closureEnvironment.shouldBeBoxed(parameter)) {
-      LocalValue value = new BoxedLocalValue(builder.stackSize, parameter);
-      builder.loadSlot(slot);
-      value.initialize(builder);
+      LocalValue value = new BoxedLocalValue(assembler.stackSize, parameter);
+      assembler.loadSlot(slot);
+      value.initialize(assembler);
       return value;
     }
     return new UnboxedLocalValue(slot, parameter);
@@ -293,7 +293,7 @@ abstract class CodegenVisitor
     int id = context.getSymbolId(symbol);
     int arity = selector.argumentCount;
     int fletchSelector = FletchSelector.encodeMethod(id, arity);
-    builder.invokeMethod(fletchSelector, arity, selector.name);
+    assembler.invokeMethod(fletchSelector, arity, selector.name);
   }
 
   void invokeGetter(Node node, Selector selector) {
@@ -301,7 +301,7 @@ abstract class CodegenVisitor
     String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
     int fletchSelector = FletchSelector.encodeGetter(id);
-    builder.invokeMethod(fletchSelector, 0);
+    assembler.invokeMethod(fletchSelector, 0);
   }
 
   void invokeSetter(Node node, Selector selector) {
@@ -309,38 +309,38 @@ abstract class CodegenVisitor
     String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
     int fletchSelector = FletchSelector.encodeSetter(id);
-    builder.invokeMethod(fletchSelector, 1);
+    assembler.invokeMethod(fletchSelector, 1);
   }
 
   void invokeFactory(Node node, int constId, int arity) {
-    builder.invokeFactory(constId, arity);
+    assembler.invokeFactory(constId, arity);
   }
 
   void invokeStatic(Node node, int constId, int arity) {
-    builder.invokeStatic(constId, arity);
+    assembler.invokeStatic(constId, arity);
   }
 
   void generateIdentical(Node node) {
-    builder.identical();
+    assembler.identical();
   }
 
   void generateIdenticalNonNumeric(Node node) {
-    builder.identicalNonNumeric();
+    assembler.identicalNonNumeric();
   }
 
   void generateReturn(Node node) {
-    builder.ret();
+    assembler.ret();
   }
 
   void generateSwitchCaseMatch(CaseMatch caseMatch, BytecodeLabel ifTrue) {
-    builder.dup();
+    assembler.dup();
     int constId = allocateConstantFromNode(caseMatch.expression);
-    builder.loadConst(constId);
+    assembler.loadConst(constId);
     // For debugging, ignore the equality checks in connection
     // with case matches by not associating the calls with
     // any node.
     invokeMethod(null, new Selector.binaryOperator('=='));
-    builder.branchIfTrue(ifTrue);
+    assembler.branchIfTrue(ifTrue);
   }
 
   FletchFunctionBuilder requireFletchFunctionBuilder(FunctionElement element) {
@@ -394,7 +394,7 @@ abstract class CodegenVisitor
   }
 
   void loadThis() {
-    thisValue.load(builder);
+    thisValue.load(assembler);
   }
 
   /**
@@ -428,12 +428,12 @@ abstract class CodegenVisitor
   void doParameterInitializer(ParameterElement parameter) {
     Expression initializer = parameter.initializer;
     if (initializer == null) {
-      builder.loadLiteralNull();
+      assembler.loadLiteralNull();
     } else {
       int constId = allocateConstantFromNode(
           initializer,
           elements: parameter.resolvedAst.elements);
-      builder.loadConst(constId);
+      assembler.loadConst(constId);
     }
   }
 
@@ -473,10 +473,10 @@ abstract class CodegenVisitor
 
   void applyVisitState() {
     if (visitState == VisitState.Effect) {
-      builder.pop();
+      assembler.pop();
     } else if (visitState == VisitState.Test) {
-      builder.branchIfTrue(trueLabel);
-      builder.branch(falseLabel);
+      assembler.branchIfTrue(trueLabel);
+      assembler.branch(falseLabel);
     }
   }
 
@@ -485,7 +485,7 @@ abstract class CodegenVisitor
     if (expression != null) {
       visitForValue(expression);
     } else {
-      builder.loadLiteralNull();
+      assembler.loadLiteralNull();
     }
     applyVisitState();
   }
@@ -496,11 +496,11 @@ abstract class CodegenVisitor
       AssignmentOperator operator,
       Node rhs) {
     LocalValue value = scope[variable];
-    value.load(builder);
+    value.load(assembler);
     visitForValue(rhs);
     String operatorName = operator.binaryOperator.name;
     invokeMethod(node, new Selector.binaryOperator(operatorName));
-    value.store(builder);
+    value.store(assembler);
   }
 
   void visitLocalVariableCompound(
@@ -597,10 +597,10 @@ abstract class CodegenVisitor
       _) {
     doBinaryOperator(node, left, right, BinaryOperator.EQ);
     if (visitState == VisitState.Test) {
-      builder.branchIfTrue(falseLabel);
-      builder.branch(trueLabel);
+      assembler.branchIfTrue(falseLabel);
+      assembler.branch(trueLabel);
     } else {
-      builder.negate();
+      assembler.negate();
       applyVisitState();
     }
   }
@@ -631,7 +631,7 @@ abstract class CodegenVisitor
       Node value,
       _) {
     visitForValue(value);
-    builder.negate();
+    assembler.negate();
     applyVisitState();
   }
 
@@ -669,7 +669,7 @@ abstract class CodegenVisitor
     if (visitState == VisitState.Test) {
       BytecodeLabel isFirstTrue = new BytecodeLabel();
       visitForTest(left, isFirstTrue, falseLabel);
-      builder.bind(isFirstTrue);
+      assembler.bind(isFirstTrue);
       visitForTest(right, trueLabel, falseLabel);
       return;
     }
@@ -679,17 +679,17 @@ abstract class CodegenVisitor
     BytecodeLabel isFalse = new BytecodeLabel();
     BytecodeLabel done = new BytecodeLabel();
 
-    builder.loadLiteralFalse();
+    assembler.loadLiteralFalse();
 
     visitForTest(left, isFirstTrue, isFalse);
 
-    builder.bind(isFirstTrue);
+    assembler.bind(isFirstTrue);
     visitForTest(right, isTrue, isFalse);
 
-    builder.bind(isTrue);
-    builder.pop();
-    builder.loadLiteralTrue();
-    builder.bind(isFalse);
+    assembler.bind(isTrue);
+    assembler.pop();
+    assembler.loadLiteralTrue();
+    assembler.bind(isFalse);
 
     applyVisitState();
   }
@@ -702,7 +702,7 @@ abstract class CodegenVisitor
     if (visitState == VisitState.Test) {
       BytecodeLabel isFirstFalse = new BytecodeLabel();
       visitForTest(left, trueLabel, isFirstFalse);
-      builder.bind(isFirstFalse);
+      assembler.bind(isFirstFalse);
       visitForTest(right, trueLabel, falseLabel);
       return;
     }
@@ -712,17 +712,17 @@ abstract class CodegenVisitor
     BytecodeLabel isFalse = new BytecodeLabel();
     BytecodeLabel done = new BytecodeLabel();
 
-    builder.loadLiteralTrue();
+    assembler.loadLiteralTrue();
 
     visitForTest(left, isTrue, isFirstFalse);
 
-    builder.bind(isFirstFalse);
+    assembler.bind(isFirstFalse);
     visitForTest(right, isTrue, isFalse);
 
-    builder.bind(isFalse);
-    builder.pop();
-    builder.loadLiteralFalse();
-    builder.bind(isTrue);
+    assembler.bind(isFalse);
+    assembler.pop();
+    assembler.loadLiteralFalse();
+    assembler.bind(isTrue);
 
     applyVisitState();
   }
@@ -732,20 +732,20 @@ abstract class CodegenVisitor
     BytecodeLabel isFalse = new BytecodeLabel();
     BytecodeLabel done = new BytecodeLabel();
 
-    builder.loadLiteralNull();
+    assembler.loadLiteralNull();
 
     visitForTest(node.condition, isTrue, isFalse);
 
-    builder.bind(isTrue);
-    builder.pop();
+    assembler.bind(isTrue);
+    assembler.pop();
     visitForValue(node.thenExpression);
-    builder.branch(done);
+    assembler.branch(done);
 
-    builder.bind(isFalse);
-    builder.pop();
+    assembler.bind(isFalse);
+    assembler.pop();
     visitForValue(node.elseExpression);
 
-    builder.bind(done);
+    assembler.bind(done);
 
     applyVisitState();
   }
@@ -757,20 +757,20 @@ abstract class CodegenVisitor
       // handled.
       Spannable diagnosticLocation) {
     if (type == null || type.isMalformed) {
-      builder.pop();
+      assembler.pop();
       generateUnimplementedError(
           diagnosticLocation, "Unhandled type test for malformed $type.");
       return;
     }
 
     if (type.isDynamic) {
-      builder.pop();
-      builder.loadLiteralTrue();
+      assembler.pop();
+      assembler.loadLiteralTrue();
       return;
     }
 
     if (!type.isInterfaceType) {
-      builder.pop();
+      assembler.pop();
       generateUnimplementedError(
           diagnosticLocation, "Unhandled type test for $type.");
       return;
@@ -778,7 +778,7 @@ abstract class CodegenVisitor
 
     Element element = type.element;
     int fletchSelector = context.toFletchIsSelector(element);
-    builder.invokeTest(fletchSelector, 0);
+    assembler.invokeTest(fletchSelector, 0);
   }
 
   void doIs(
@@ -807,7 +807,7 @@ abstract class CodegenVisitor
       DartType type,
       _) {
     doIs(node, expression, type, node.arguments.first);
-    builder.negate();
+    assembler.negate();
     applyVisitState();
   }
 
@@ -846,7 +846,7 @@ abstract class CodegenVisitor
         functionBuilderTarget);
     assert(classBuilder.fields == 0);
     int constId = allocateConstantClassInstance(classBuilder.id);
-    builder.loadConst(constId);
+    assembler.loadConst(constId);
     applyVisitState();
   }
 
@@ -867,7 +867,7 @@ abstract class CodegenVisitor
       argumentCount++;
     }
     for (int i = argumentCount; i < parameterCount; i++) {
-      builder.loadLiteralNull();
+      assembler.loadLiteralNull();
     }
     int methodId = context.backend.functionMethodId(function);
     int constId = functionBuilder.allocateConstantFromFunction(methodId);
@@ -893,7 +893,7 @@ abstract class CodegenVisitor
         for (Node argument in arguments) {
           visitForValue(argument);
         }
-        builder.coroutineChange();
+        assembler.coroutineChange();
         return;
       }
       // TODO(ajohnsen): Define a known set of external functions we allow
@@ -952,7 +952,7 @@ abstract class CodegenVisitor
         functionBuilderTarget);
     assert(classBuilder.fields == 1);
     int constId = functionBuilder.allocateConstantFromClass(classBuilder.id);
-    builder.allocate(constId, classBuilder.fields);
+    assembler.allocate(constId, classBuilder.fields);
     applyVisitState();
   }
 
@@ -1001,20 +1001,20 @@ abstract class CodegenVisitor
       _) {
     visitForValue(index);
     loadThis();
-    builder.loadLocal(1);
+    assembler.loadLocal(1);
     doSuperCall(node, getter);
     loadThis();
     // Load index
-    builder.loadLocal(2);
+    assembler.loadLocal(2);
     // Load value from index call and call operator.
-    builder.loadLocal(2);
+    assembler.loadLocal(2);
     visitForValue(rhs);
     invokeMethod(node, getAssignmentSelector(operator));
     doSuperCall(node, setter);
     // Override 'index' with result value, and pop everything else.
-    builder.storeLocal(2);
-    builder.pop();
-    builder.pop();
+    assembler.storeLocal(2);
+    assembler.pop();
+    assembler.pop();
     applyVisitState();
   }
 
@@ -1028,21 +1028,21 @@ abstract class CodegenVisitor
     // TODO(ajohnsen): Fast-case when for effect.
     visitForValue(index);
     loadThis();
-    builder.loadLocal(1);
+    assembler.loadLocal(1);
     doSuperCall(node, getter);
     loadThis();
     // Load index
-    builder.loadLocal(2);
+    assembler.loadLocal(2);
     // Load value from index call and inc/dec.
-    builder.loadLocal(2);
-    builder.loadLiteral(1);
+    assembler.loadLocal(2);
+    assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     // We can now call []= with 'this', 'index' and 'value'.
     doSuperCall(node, setter);
-    builder.pop();
+    assembler.pop();
     // Pop result, override 'index' with initial indexed value, and pop again.
-    builder.storeLocal(1);
-    builder.pop();
+    assembler.storeLocal(1);
+    assembler.pop();
     applyVisitState();
   }
 
@@ -1105,7 +1105,7 @@ abstract class CodegenVisitor
       FieldElement field,
       _) {
     loadThis();
-    builder.loadField(computeFieldIndex(field));
+    assembler.loadField(computeFieldIndex(field));
     applyVisitState();
   }
 
@@ -1116,7 +1116,7 @@ abstract class CodegenVisitor
       _) {
     loadThis();
     visitForValue(rhs);
-    builder.storeField(computeFieldIndex(field));
+    assembler.storeField(computeFieldIndex(field));
     applyVisitState();
   }
 
@@ -1249,13 +1249,13 @@ abstract class CodegenVisitor
       int constId = allocateConstantFromNode(
           field.initializer,
           elements: field.resolvedAst.elements);
-      builder.loadConst(constId);
+      assembler.loadConst(constId);
     } else {
       int index = context.backend.compileLazyFieldInitializer(field, registry);
       if (field.initializer != null) {
-        builder.loadStaticInit(index);
+        assembler.loadStaticInit(index);
       } else {
-        builder.loadStatic(index);
+        assembler.loadStatic(index);
       }
     }
   }
@@ -1286,7 +1286,7 @@ abstract class CodegenVisitor
 
   void doStaticFieldSet(FieldElement field) {
     int index = context.getStaticFieldIndex(field, element);
-    builder.storeStatic(index);
+    assembler.storeStatic(index);
   }
 
   void handleStaticFieldSet(
@@ -1330,15 +1330,15 @@ abstract class CodegenVisitor
 
   void visitLiteralNull(LiteralNull node) {
     if (visitState == VisitState.Value) {
-      builder.loadLiteralNull();
+      assembler.loadLiteralNull();
     } else if (visitState == VisitState.Test) {
-      builder.branch(falseLabel);
+      assembler.branch(falseLabel);
     }
   }
 
   void visitLiteralSymbol(LiteralSymbol node) {
     int constId = allocateConstantFromNode(node);
-    builder.loadConst(constId);
+    assembler.loadConst(constId);
   }
 
   void visitLiteralBool(LiteralBool node) {
@@ -1348,12 +1348,12 @@ abstract class CodegenVisitor
 
     if (visitState == VisitState.Value) {
       if (isTrue) {
-        builder.loadLiteralTrue();
+        assembler.loadLiteralTrue();
       } else {
-        builder.loadLiteralFalse();
+        assembler.loadLiteralFalse();
       }
     } else if (visitState == VisitState.Test) {
-      builder.branch(isTrue ? trueLabel : falseLabel);
+      assembler.branch(isTrue ? trueLabel : falseLabel);
     }
   }
 
@@ -1363,27 +1363,27 @@ abstract class CodegenVisitor
       assert(value >= 0);
       if (value > LITERAL_INT_MAX) {
         int constId = allocateConstantFromNode(node);
-        builder.loadConst(constId);
+        assembler.loadConst(constId);
       } else {
-        builder.loadLiteral(value);
+        assembler.loadLiteral(value);
       }
     } else if (visitState == VisitState.Test) {
-      builder.branch(falseLabel);
+      assembler.branch(falseLabel);
     }
   }
 
   void visitLiteral(Literal node) {
     if (visitState == VisitState.Value) {
-      builder.loadConst(allocateConstantFromNode(node));
+      assembler.loadConst(allocateConstantFromNode(node));
     } else if (visitState == VisitState.Test) {
-      builder.branch(falseLabel);
+      assembler.branch(falseLabel);
     }
   }
 
   void visitLiteralList(LiteralList node) {
     if (node.isConst) {
       int constId = allocateConstantFromNode(node);
-      builder.loadConst(constId);
+      assembler.loadConst(constId);
       applyVisitState();
       return;
     }
@@ -1397,10 +1397,10 @@ abstract class CodegenVisitor
         node, constructor, new NodeList.empty(), CallStructure.NO_ARGS);
     Selector add = new Selector.call('add', null, 1);
     for (Node element in node.elements) {
-      builder.dup();
+      assembler.dup();
       visitForValue(element);
       invokeMethod(node, add);
-      builder.pop();
+      assembler.pop();
     }
     applyVisitState();
   }
@@ -1408,7 +1408,7 @@ abstract class CodegenVisitor
   void visitLiteralMap(LiteralMap node) {
     if (node.isConst) {
       int constId = allocateConstantFromNode(node);
-      builder.loadConst(constId);
+      assembler.loadConst(constId);
       applyVisitState();
       return;
     }
@@ -1423,10 +1423,10 @@ abstract class CodegenVisitor
         node, constructor, new NodeList.empty(), CallStructure.NO_ARGS);
     Selector selector = new Selector.indexSet();
     for (Node element in node.entries) {
-      builder.dup();
+      assembler.dup();
       visitForValue(element);
       invokeMethod(node, selector);
-      builder.pop();
+      assembler.pop();
     }
     applyVisitState();
   }
@@ -1439,17 +1439,17 @@ abstract class CodegenVisitor
 
   void visitLiteralString(LiteralString node) {
     if (visitState == VisitState.Value) {
-      builder.loadConst(allocateConstantFromNode(node));
+      assembler.loadConst(allocateConstantFromNode(node));
       registerInstantiatedClass(
           context.compiler.backend.stringImplementation);
     } else if (visitState == VisitState.Test) {
-      builder.branch(falseLabel);
+      assembler.branch(falseLabel);
     }
   }
 
   void visitCascadeReceiver(CascadeReceiver node) {
     visitForValue(node.expression);
-    builder.dup();
+    assembler.dup();
     assert(visitState == VisitState.Value);
   }
 
@@ -1467,7 +1467,7 @@ abstract class CodegenVisitor
       Send node,
       LocalElement element,
       _) {
-    scope[element].load(builder);
+    scope[element].load(assembler);
     applyVisitState();
   }
 
@@ -1477,7 +1477,7 @@ abstract class CodegenVisitor
       Node rhs,
       _) {
     visitForValue(rhs);
-    scope[element].store(builder);
+    scope[element].store(assembler);
     applyVisitState();
   }
 
@@ -1487,7 +1487,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
-    scope[element].load(builder);
+    scope[element].load(assembler);
     for (Node argument in arguments) {
       visitForValue(argument);
     }
@@ -1513,13 +1513,13 @@ abstract class CodegenVisitor
     // TODO(ajohnsen): Candidate for bytecode: Inc/Dec local with non-Smi
     // bailout.
     LocalValue value = scope[element];
-    value.load(builder);
+    value.load(assembler);
     // For postfix, keep local, unmodified version, to 'return' after store.
-    if (!prefix) builder.dup();
-    builder.loadLiteral(1);
+    if (!prefix) assembler.dup();
+    assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
-    value.store(builder);
-    if (!prefix) builder.pop();
+    value.store(assembler);
+    if (!prefix) assembler.pop();
   }
 
   void visitLocalVariablePrefix(
@@ -1569,7 +1569,7 @@ abstract class CodegenVisitor
         FieldElement field,
         IncDecOperator operator) {
     doStaticFieldGet(field);
-    builder.loadLiteral(1);
+    assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     doStaticFieldSet(field);
   }
@@ -1580,11 +1580,11 @@ abstract class CodegenVisitor
         IncDecOperator operator) {
     doStaticFieldGet(field);
     // For postfix, keep local, unmodified version, to 'return' after store.
-    builder.dup();
-    builder.loadLiteral(1);
+    assembler.dup();
+    assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     doStaticFieldSet(field);
-    builder.pop();
+    assembler.pop();
   }
 
   void visitStaticFieldPostfix(
@@ -1638,7 +1638,7 @@ abstract class CodegenVisitor
       Selector getterSelector,
       Selector setterSelector) {
     // Dup receiver for setter.
-    builder.dup();
+    assembler.dup();
     invokeGetter(node, getterSelector);
     visitForValue(rhs);
     invokeMethod(node, getAssignmentSelector(operator));
@@ -1686,9 +1686,9 @@ abstract class CodegenVisitor
       IncDecOperator operator,
       Selector getterSelector,
       Selector setterSelector) {
-    builder.dup();
+    assembler.dup();
     invokeGetter(node, getterSelector);
-    builder.loadLiteral(1);
+    assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     invokeSetter(node, setterSelector);
   }
@@ -1701,10 +1701,10 @@ abstract class CodegenVisitor
     visitForValue(receiver);
     visitForValue(index);
     // Load already evaluated receiver and index for '[]' call.
-    builder.loadLocal(1);
-    builder.loadLocal(1);
+    assembler.loadLocal(1);
+    assembler.loadLocal(1);
     invokeMethod(node, new Selector.index());
-    builder.loadLiteral(1);
+    assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     // Use existing evaluated receiver and index for '[]=' call.
     invokeMethod(node, new Selector.indexSet());
@@ -1733,19 +1733,19 @@ abstract class CodegenVisitor
     }
 
     // Reserve slot for result.
-    builder.loadLiteralNull();
+    assembler.loadLiteralNull();
     visitForValue(receiver);
     visitForValue(index);
     // Load already evaluated receiver and index for '[]' call.
-    builder.loadLocal(1);
-    builder.loadLocal(1);
+    assembler.loadLocal(1);
+    assembler.loadLocal(1);
     invokeMethod(node, new Selector.index());
-    builder.storeLocal(3);
-    builder.loadLiteral(1);
+    assembler.storeLocal(3);
+    assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     // Use existing evaluated receiver and index for '[]=' call.
     invokeMethod(node, new Selector.indexSet());
-    builder.pop();
+    assembler.pop();
     applyVisitState();
   }
 
@@ -1759,8 +1759,8 @@ abstract class CodegenVisitor
     visitForValue(receiver);
     visitForValue(index);
     // Load already evaluated receiver and index for '[]' call.
-    builder.loadLocal(1);
-    builder.loadLocal(1);
+    assembler.loadLocal(1);
+    assembler.loadLocal(1);
     invokeMethod(node, new Selector.index());
     visitForValue(rhs);
     invokeMethod(node, getAssignmentSelector(operator));
@@ -1798,13 +1798,13 @@ abstract class CodegenVisitor
     loadThis();
     invokeGetter(node, getterSelector);
     // For postfix, keep local, unmodified version, to 'return' after store.
-    builder.dup();
-    builder.loadLiteral(1);
+    assembler.dup();
+    assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     loadThis();
-    builder.loadLocal(1);
+    assembler.loadLocal(1);
     invokeSetter(node, setterSelector);
-    builder.popMany(2);
+    assembler.popMany(2);
     applyVisitState();
   }
 
@@ -1836,27 +1836,27 @@ abstract class CodegenVisitor
       return;
     }
 
-    int receiverSlot = builder.stackSize;
+    int receiverSlot = assembler.stackSize;
     visitForValue(receiver);
-    builder.loadSlot(receiverSlot);
+    assembler.loadSlot(receiverSlot);
     invokeGetter(node, getterSelector);
     // For postfix, keep local, unmodified version, to 'return' after store.
-    builder.dup();
-    builder.loadLiteral(1);
+    assembler.dup();
+    assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
-    builder.loadSlot(receiverSlot);
-    builder.loadLocal(1);
+    assembler.loadSlot(receiverSlot);
+    assembler.loadLocal(1);
     invokeSetter(node, setterSelector);
-    builder.popMany(2);
-    builder.storeLocal(1);
+    assembler.popMany(2);
+    assembler.storeLocal(1);
     // Pop receiver.
-    builder.pop();
+    assembler.pop();
     applyVisitState();
   }
 
   void visitThrow(Throw node) {
     visitForValue(node.expression);
-    builder.emitThrow();
+    assembler.emitThrow();
     // TODO(ahe): It seems suboptimal that each throw is followed by a pop.
     applyVisitState();
   }
@@ -1866,11 +1866,11 @@ abstract class CodegenVisitor
       doCompileError();
     } else {
       TryBlock block = tryBlockStack.head;
-      builder.loadSlot(block.stackSize - 1);
+      assembler.loadSlot(block.stackSize - 1);
       // TODO(ahe): It seems suboptimal that each throw is followed by a pop.
-      builder.emitThrow();
+      assembler.emitThrow();
     }
-    builder.pop();
+    assembler.pop();
   }
 
   void callConstructor(Node node,
@@ -1890,7 +1890,7 @@ abstract class CodegenVisitor
     var value = context.getConstantValue(constant);
     context.markConstantUsed(value);
     int constId = functionBuilder.allocateConstant(value);
-    builder.loadConst(constId);
+    assembler.loadConst(constId);
   }
 
   void visitConstConstructorInvoke(
@@ -2087,7 +2087,7 @@ abstract class CodegenVisitor
 
   void handleStaticGetterGet(Send node, FunctionElement getter, _) {
     if (getter == context.backend.fletchExternalNativeError) {
-      builder.loadSlot(0);
+      assembler.loadSlot(0);
       return;
     }
     registerStaticInvocation(getter);
@@ -2127,12 +2127,12 @@ abstract class CodegenVisitor
       if (element == function) {
         // If we capture ourself, remember index and assign into closure after
         // allocation.
-        builder.loadLiteralNull();
+        assembler.loadLiteralNull();
         assert(thisClosureIndex == -1);
         thisClosureIndex = index;
       } else {
         // Load the raw value (the 'Box' when by reference).
-        builder.loadSlot(scope[element].slot);
+        assembler.loadSlot(scope[element].slot);
       }
       index++;
     }
@@ -2153,11 +2153,11 @@ abstract class CodegenVisitor
         classBuilder.id);
     bool immutable = !closureEnvironment.closures[function].free.any(
         closureEnvironment.shouldBeBoxed);
-    builder.allocate(classConstant, classBuilder.fields, immutable: immutable);
+    assembler.allocate(classConstant, classBuilder.fields, immutable: immutable);
 
     if (thisClosureIndex >= 0) {
-      builder.dup();
-      builder.storeField(thisClosureIndex);
+      assembler.dup();
+      assembler.storeField(thisClosureIndex);
     }
 
     registerStaticInvocation(function);
@@ -2173,19 +2173,19 @@ abstract class CodegenVisitor
   void visitStatement(Node node) {
     generateUnimplementedError(
         node, "Missing visit of statement: ${node.runtimeType}");
-    builder.pop();
+    assembler.pop();
   }
 
   void doStatements(NodeList statements) {
     List<Element> oldBlockLocals = blockLocals;
     blockLocals = <Element>[];
-    int stackSize = builder.stackSize;
+    int stackSize = assembler.stackSize;
 
     for (Node statement in statements) {
       statement.accept(this);
     }
 
-    int stackSizeDifference = builder.stackSize - stackSize;
+    int stackSizeDifference = assembler.stackSize - stackSize;
     if (stackSizeDifference != blockLocals.length) {
       internalError(
           statements,
@@ -2194,7 +2194,7 @@ abstract class CodegenVisitor
 
     for (int i = blockLocals.length - 1; i >= 0; --i) {
       // TODO(ajohnsen): Pop range bytecode?
-      builder.pop();
+      assembler.pop();
       popVariableDeclaration(blockLocals[i]);
     }
 
@@ -2203,9 +2203,9 @@ abstract class CodegenVisitor
 
   void visitBlock(Block node) {
     var breakLabel = new BytecodeLabel();
-    jumpInfo[node] = new JumpInfo(builder.stackSize, null, breakLabel);
+    jumpInfo[node] = new JumpInfo(assembler.stackSize, null, breakLabel);
     doStatements(node.statements);
-    builder.bind(breakLabel);
+    assembler.bind(breakLabel);
   }
 
   void visitEmptyStatement(EmptyStatement node) {
@@ -2223,7 +2223,7 @@ abstract class CodegenVisitor
   void visitReturn(Return node) {
     Expression expression = node.expression;
     if (expression == null) {
-      builder.loadLiteralNull();
+      assembler.loadLiteralNull();
     } else {
       visitForValue(expression);
     }
@@ -2237,14 +2237,14 @@ abstract class CodegenVisitor
     JumpTarget target = elements.getTargetOf(node);
     if (target == null) {
       generateUnimplementedError(node, "'$node' not in loop");
-      builder.pop();
+      assembler.pop();
       return null;
     }
     Node statement = target.statement;
     JumpInfo info = jumpInfo[statement];
     if (info == null) {
       generateUnimplementedError(node, "'$node' has no target");
-      builder.pop();
+      assembler.pop();
     }
     return info;
   }
@@ -2260,24 +2260,24 @@ abstract class CodegenVisitor
       if (preserveTop) {
         // We reuse the exception slot as a temporary buffer for the top
         // element, which is located -1 relative to the block's stack size.
-        builder.storeSlot(block.stackSize - 1);
+        assembler.storeSlot(block.stackSize - 1);
       }
       // TODO(ajohnsen): Don't pop, but let subroutineCall take a 'pop count'
       // argument, just like popAndBranch.
-      while (builder.stackSize > block.stackSize) {
-        builder.pop();
+      while (assembler.stackSize > block.stackSize) {
+        assembler.pop();
         popCount++;
       }
-      builder.subroutineCall(block.finallyLabel, block.finallyReturnLabel);
+      assembler.subroutineCall(block.finallyLabel, block.finallyReturnLabel);
       if (preserveTop) {
-        builder.loadSlot(block.stackSize - 1);
+        assembler.loadSlot(block.stackSize - 1);
         popCount--;
       }
     }
     // Reallign stack (should be removed, according to above TODO).
     for (int i = 0; i < popCount; i++) {
       // Note we dup, to make sure the top element is the return value.
-      builder.dup();
+      assembler.dup();
     }
   }
 
@@ -2286,15 +2286,15 @@ abstract class CodegenVisitor
     if (info == null) return;
     callFinallyBlocks(info.stackSize, false);
     BytecodeLabel label = isBreak ? info.breakLabel : info.continueLabel;
-    int diff = builder.stackSize - info.stackSize;
-    builder.popAndBranch(diff, label);
+    int diff = assembler.stackSize - info.stackSize;
+    assembler.popAndBranch(diff, label);
   }
 
   void visitBreakStatement(BreakStatement node) {
     var breakLabel = new BytecodeLabel();
-    jumpInfo[node] = new JumpInfo(builder.stackSize, null, breakLabel);
+    jumpInfo[node] = new JumpInfo(assembler.stackSize, null, breakLabel);
     unbalancedBranch(node, true);
-    builder.bind(breakLabel);
+    assembler.bind(breakLabel);
   }
 
   void visitContinueStatement(ContinueStatement node) {
@@ -2305,19 +2305,19 @@ abstract class CodegenVisitor
     BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel ifFalse = new BytecodeLabel();
     visitForTest(node.condition, ifTrue, ifFalse);
-    builder.bind(ifTrue);
+    assembler.bind(ifTrue);
     if (node.hasElsePart) {
       BytecodeLabel end = new BytecodeLabel();
-      jumpInfo[node] = new JumpInfo(builder.stackSize, null, end);
+      jumpInfo[node] = new JumpInfo(assembler.stackSize, null, end);
       doScopedStatement(node.thenPart);
-      builder.branch(end);
-      builder.bind(ifFalse);
+      assembler.branch(end);
+      assembler.bind(ifFalse);
       doScopedStatement(node.elsePart);
-      builder.bind(end);
+      assembler.bind(end);
     } else {
-      jumpInfo[node] = new JumpInfo(builder.stackSize, null, ifFalse);
+      jumpInfo[node] = new JumpInfo(assembler.stackSize, null, ifFalse);
       doScopedStatement(node.thenPart);
-      builder.bind(ifFalse);
+      assembler.bind(ifFalse);
     }
   }
 
@@ -2330,23 +2330,23 @@ abstract class CodegenVisitor
     BytecodeLabel end = new BytecodeLabel();
     BytecodeLabel afterBody  = new BytecodeLabel();
 
-    int initStackSize = builder.stackSize;
+    int initStackSize = assembler.stackSize;
     Node initializer = node.initializer;
     if (initializer != null) visitForEffect(initializer);
 
-    jumpInfo[node] = new JumpInfo(builder.stackSize, afterBody, end);
+    jumpInfo[node] = new JumpInfo(assembler.stackSize, afterBody, end);
 
-    builder.bind(start);
+    assembler.bind(start);
 
     Expression condition = node.condition;
     if (condition != null) {
       visitForTest(condition, ifTrue, end);
-      builder.bind(ifTrue);
+      assembler.bind(ifTrue);
     }
 
     doScopedStatement(node.body);
 
-    builder.bind(afterBody);
+    assembler.bind(afterBody);
 
     for (int i = blockLocals.length - 1; i >= 0; --i) {
       LocalElement local = blockLocals[i];
@@ -2354,22 +2354,22 @@ abstract class CodegenVisitor
       // store it in a new boxed.
       if (closureEnvironment.shouldBeBoxed(local)) {
         LocalValue value = scope[local];
-        value.load(builder);
-        value.initialize(builder);
-        builder.storeSlot(value.slot);
-        builder.pop();
+        value.load(assembler);
+        value.initialize(assembler);
+        assembler.storeSlot(value.slot);
+        assembler.pop();
       }
     }
 
     for (Node update in node.update) {
       visitForEffect(update);
     }
-    builder.branch(start);
+    assembler.branch(start);
 
-    builder.bind(end);
+    assembler.bind(end);
 
     for (int i = blockLocals.length - 1; i >= 0; --i) {
-      builder.pop();
+      assembler.pop();
       popVariableDeclaration(blockLocals[i]);
     }
 
@@ -2388,61 +2388,61 @@ abstract class CodegenVisitor
     visitForValue(node.expression);
     invokeGetter(node.expression, new Selector.getter('iterator', null));
 
-    jumpInfo[node] = new JumpInfo(builder.stackSize, start, end);
+    jumpInfo[node] = new JumpInfo(assembler.stackSize, start, end);
 
-    builder.bind(start);
+    assembler.bind(start);
 
-    builder.dup();
+    assembler.dup();
     invokeMethod(node, new Selector.call('moveNext', null, 0));
-    builder.branchIfFalse(end);
+    assembler.branchIfFalse(end);
 
     bool isVariableDeclaration = node.declaredIdentifier.asSend() == null;
     Element element = elements[node];
     if (isVariableDeclaration) {
       // Create local value and load the current element to it.
       LocalValue value = createLocalValueFor(element);
-      builder.dup();
+      assembler.dup();
       invokeGetter(node, new Selector.getter('current', null));
-      value.initialize(builder);
+      value.initialize(assembler);
       pushVariableDeclaration(value);
     } else {
       if (element == null || element.isInstanceMember) {
         loadThis();
-        builder.loadLocal(1);
+        assembler.loadLocal(1);
         invokeGetter(node, new Selector.getter('current', null));
         Selector selector = elements.getSelector(node.declaredIdentifier);
         invokeSetter(node, selector);
       } else {
-        builder.dup();
+        assembler.dup();
         invokeGetter(node, new Selector.getter('current', null));
         if (element.isLocal) {
-          scope[element].store(builder);
+          scope[element].store(assembler);
         } else if (element.isField) {
           doStaticFieldSet(element);
         } else if (element.isErroneous) {
           doUnresolved(element.name);
-          builder.pop();
+          assembler.pop();
         } else {
           internalError(node, "Unhandled store in for-in");
         }
       }
-      builder.pop();
+      assembler.pop();
     }
 
     doScopedStatement(node.body);
 
     if (isVariableDeclaration) {
       // Pop the local again.
-      builder.pop();
+      assembler.pop();
       popVariableDeclaration(element);
     }
 
-    builder.branch(start);
+    assembler.branch(start);
 
-    builder.bind(end);
+    assembler.bind(end);
 
     // Pop iterator.
-    builder.pop();
+    assembler.pop();
   }
 
   void visitLabeledStatement(LabeledStatement node) {
@@ -2463,36 +2463,36 @@ abstract class CodegenVisitor
     BytecodeLabel start = new BytecodeLabel();
     BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
-    jumpInfo[node] = new JumpInfo(builder.stackSize, start, end);
-    builder.bind(start);
+    jumpInfo[node] = new JumpInfo(assembler.stackSize, start, end);
+    assembler.bind(start);
     visitForTest(node.condition, ifTrue, end);
-    builder.bind(ifTrue);
+    assembler.bind(ifTrue);
     doScopedStatement(node.body);
-    builder.branch(start);
-    builder.bind(end);
+    assembler.branch(start);
+    assembler.bind(end);
   }
 
   void visitDoWhile(DoWhile node) {
     BytecodeLabel start = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
     BytecodeLabel skipBody = new BytecodeLabel();
-    jumpInfo[node] = new JumpInfo(builder.stackSize, skipBody, end);
-    builder.bind(start);
+    jumpInfo[node] = new JumpInfo(assembler.stackSize, skipBody, end);
+    assembler.bind(start);
     doScopedStatement(node.body);
-    builder.bind(skipBody);
+    assembler.bind(skipBody);
     visitForTest(node.condition, start, end);
-    builder.bind(end);
+    assembler.bind(end);
   }
 
   LocalValue initializeLocal(LocalElement element, Expression initializer) {
-    int slot = builder.stackSize;
+    int slot = assembler.stackSize;
     if (initializer != null) {
       visitForValue(initializer);
     } else {
-      builder.loadLiteralNull();
+      assembler.loadLiteralNull();
     }
     LocalValue value = createLocalValueFor(element, slot);
-    value.initialize(builder);
+    value.initialize(assembler);
     pushVariableDeclaration(value);
     blockLocals.add(element);
     return value;
@@ -2515,13 +2515,13 @@ abstract class CodegenVisitor
 
     visitForValue(node.expression);
 
-    jumpInfo[node] = new JumpInfo(builder.stackSize, null, end);
+    jumpInfo[node] = new JumpInfo(assembler.stackSize, null, end);
 
     // Install cross-case jump targets.
     for (SwitchCase switchCase in node.cases) {
       BytecodeLabel continueLabel = new BytecodeLabel();
       jumpInfo[switchCase] = new JumpInfo(
-          builder.stackSize,
+          assembler.stackSize,
           continueLabel,
           null);
     }
@@ -2535,16 +2535,16 @@ abstract class CodegenVisitor
           if (caseMatch == null) continue;
           generateSwitchCaseMatch(caseMatch, ifTrue);
         }
-        builder.branch(next);
+        assembler.branch(next);
       }
-      builder.bind(ifTrue);
+      assembler.bind(ifTrue);
       doStatements(switchCase.statements);
-      builder.branch(end);
-      builder.bind(next);
+      assembler.branch(end);
+      assembler.bind(next);
     }
 
-    builder.bind(end);
-    builder.pop();
+    assembler.bind(end);
+    assembler.pop();
   }
 
   void doCatchBlock(CatchBlock node, int exceptionSlot, BytecodeLabel end) {
@@ -2552,9 +2552,9 @@ abstract class CodegenVisitor
 
     TypeAnnotation type = node.type;
     if (type != null) {
-      builder.loadSlot(exceptionSlot);
+      assembler.loadSlot(exceptionSlot);
       callIsSelector(type, elements.getType(type), type);
-      builder.branchIfFalse(wrongType);
+      assembler.branchIfFalse(wrongType);
     }
 
     List<Element> locals = <Element>[];
@@ -2562,8 +2562,8 @@ abstract class CodegenVisitor
     if (exception != null) {
       LocalVariableElement element = elements[exception];
       LocalValue value = createLocalValueFor(element);
-      builder.loadSlot(exceptionSlot);
-      value.initialize(builder);
+      assembler.loadSlot(exceptionSlot);
+      value.initialize(assembler);
       pushVariableDeclaration(value);
       locals.add(element);
 
@@ -2571,8 +2571,8 @@ abstract class CodegenVisitor
       if (trace != null) {
         LocalVariableElement element = elements[trace];
         LocalValue value = createLocalValueFor(element);
-        builder.loadLiteralNull();
-        value.initialize(builder);
+        assembler.loadLiteralNull();
+        value.initialize(assembler);
         pushVariableDeclaration(value);
         // TODO(ajohnsen): Set trace.
         locals.add(element);
@@ -2581,14 +2581,14 @@ abstract class CodegenVisitor
 
     node.block.accept(this);
 
-    builder.popMany(locals.length);
+    assembler.popMany(locals.length);
     for (Element e in locals) {
       popVariableDeclaration(e);
     }
 
-    builder.branch(end);
+    assembler.branch(end);
 
-    builder.bind(wrongType);
+    assembler.bind(wrongType);
   }
 
   void visitTryStatement(TryStatement node) {
@@ -2600,27 +2600,27 @@ abstract class CodegenVisitor
     bool hasFinally = finallyBlock != null;
 
     // Reserve slot for exception.
-    int exceptionSlot = builder.stackSize;
-    builder.loadLiteralNull();
+    int exceptionSlot = assembler.stackSize;
+    assembler.loadLiteralNull();
 
-    jumpInfo[node] = new JumpInfo(builder.stackSize, null, end);
+    jumpInfo[node] = new JumpInfo(assembler.stackSize, null, end);
 
-    int startBytecodeSize = builder.byteSize;
+    int startBytecodeSize = assembler.byteSize;
 
     tryBlockStack = tryBlockStack.prepend(
         new TryBlock(
-            builder.stackSize,
+            assembler.stackSize,
             hasFinally ? finallyLabel : null,
             hasFinally ? finallyReturnLabel: null));
 
     node.tryBlock.accept(this);
 
     // Go to end if no exceptions was thrown.
-    builder.branch(end);
-    int endBytecodeSize = builder.byteSize;
+    assembler.branch(end);
+    int endBytecodeSize = assembler.byteSize;
 
-    // Add catch-frame to the builder.
-    builder.addCatchFrameRange(startBytecodeSize, endBytecodeSize);
+    // Add catch-frame to the assembler.
+    assembler.addCatchFrameRange(startBytecodeSize, endBytecodeSize);
 
     for (Node catchBlock in node.catchBlocks) {
       doCatchBlock(catchBlock, exceptionSlot, end);
@@ -2630,44 +2630,44 @@ abstract class CodegenVisitor
 
     if (hasFinally) {
       if (!node.catchBlocks.isEmpty) {
-        builder.addCatchFrameRange(endBytecodeSize, builder.byteSize);
+        assembler.addCatchFrameRange(endBytecodeSize, assembler.byteSize);
       }
       // Catch exception from catch blocks.
-      builder.subroutineCall(finallyLabel, finallyReturnLabel);
+      assembler.subroutineCall(finallyLabel, finallyReturnLabel);
     }
 
     // The exception was not cought. Rethrow.
-    builder.emitThrow();
+    assembler.emitThrow();
 
-    builder.bind(end);
+    assembler.bind(end);
 
     if (hasFinally) {
       BytecodeLabel done = new BytecodeLabel();
-      builder.subroutineCall(finallyLabel, finallyReturnLabel);
-      builder.branch(done);
+      assembler.subroutineCall(finallyLabel, finallyReturnLabel);
+      assembler.branch(done);
 
-      builder.bind(finallyLabel);
-      builder.applyStackSizeFix(1);
+      assembler.bind(finallyLabel);
+      assembler.applyStackSizeFix(1);
       finallyBlock.accept(this);
-      builder.subroutineReturn(finallyReturnLabel);
+      assembler.subroutineReturn(finallyReturnLabel);
 
-      builder.bind(done);
+      assembler.bind(done);
     }
 
     // Pop exception slot.
-    builder.pop();
+    assembler.pop();
   }
 
   void doUnresolved(String name) {
     var constString = context.backend.constantSystem.createString(
         new DartString.literal(name));
     context.markConstantUsed(constString);
-    builder.loadConst(functionBuilder.allocateConstant(constString));
+    assembler.loadConst(functionBuilder.allocateConstant(constString));
     FunctionElement function = context.backend.fletchUnresolved;
     registerStaticInvocation(function);
     int methodId = context.backend.functionMethodId(function);
     int constId = functionBuilder.allocateConstantFromFunction(methodId);
-    builder.invokeStatic(constId, 1);
+    assembler.invokeStatic(constId, 1);
   }
 
   bool checkCompileError(Element element) {
@@ -2683,7 +2683,7 @@ abstract class CodegenVisitor
     registerStaticInvocation(function);
     int methodId = context.backend.functionMethodId(function);
     int constId = functionBuilder.allocateConstantFromFunction(methodId);
-    builder.invokeStatic(constId, 0);
+    assembler.invokeStatic(constId, 0);
   }
 
   void visitUnresolvedInvoke(

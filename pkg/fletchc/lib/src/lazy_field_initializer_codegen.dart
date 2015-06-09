@@ -38,7 +38,7 @@ class LazyFieldInitializerCodegen extends CodegenVisitor {
     Node initializer = field.initializer;
     visitForValue(initializer);
     // TODO(ajohnsen): Add cycle detection.
-    builder
+    assembler
         ..storeStatic(context.getStaticFieldIndex(field, null))
         ..ret()
         ..methodEnd();

@@ -409,26 +409,26 @@ class FletchBackend extends Backend {
           classBuilder);
       functions.add(functionBuilder);
 
-      BytecodeBuilder builder = functionBuilder.builder;
+      BytecodeAssembler assembler = functionBuilder.assembler;
       int argumentCount = signature.parameterCount;
       if (hasThis) {
         argumentCount++;
         // If the tearoff has a 'this' value, load it. It's the only field
         // in the tearoff class.
-        builder
+        assembler
             ..loadParameter(0)
             ..loadField(0);
       }
       for (int i = 0; i < signature.parameterCount; i++) {
         // The closure-class is at parameter index 0, so argument i is at
         // i + 1.
-        builder.loadParameter(i + 1);
+        assembler.loadParameter(i + 1);
       }
       int constId = functionBuilder.allocateConstantFromFunction(
           function.methodId);
       // TODO(ajohnsen): Create a tail-call bytecode, so we don't have to
       // load all the arguments.
-      builder
+      assembler
           ..invokeStatic(constId, argumentCount)
           ..ret()
           ..methodEnd();
@@ -453,7 +453,7 @@ class FletchBackend extends Backend {
         functions.add(equal);
 
         BytecodeLabel isFalse = new BytecodeLabel();
-        equal.builder
+        equal.assembler
           // First test for class. This ensures it's the exact function that
           // we expect.
           ..loadParameter(1)
@@ -488,7 +488,7 @@ class FletchBackend extends Backend {
             context.getSymbolId("hashCode"));
         int xorSelector = FletchSelector.encodeMethod(
             context.getSymbolId("^"), 1);
-        hashCode.builder
+        hashCode.assembler
           ..loadParameter(0)
           ..loadField(0)
           ..invokeMethod(hashCodeSelector, 0)
@@ -557,7 +557,7 @@ class FletchBackend extends Backend {
     function.debugInfo = new DebugInfo(function);
     AstElement element = function.element;
     if (element == null) return;
-    List<Bytecode> expectedBytecodes = function.builder.bytecodes;
+    List<Bytecode> expectedBytecodes = function.assembler.bytecodes;
     element = element.implementation;
     TreeElements elements = element.resolvedAst.elements;
     ClosureEnvironment closureEnvironment = createClosureEnvironment(
@@ -609,7 +609,7 @@ class FletchBackend extends Backend {
     // The debug codegen should generate the same bytecodes as the original
     // codegen. If that is not the case debug information will be useless.
     assert(Bytecode.identicalBytecodes(expectedBytecodes,
-                                       codegen.builder.bytecodes));
+                                       codegen.assembler.bytecodes));
   }
 
   WorldImpact codegen(CodegenWorkItem work) {
@@ -737,20 +737,20 @@ class FletchBackend extends Backend {
       throw "Unsupported native function: $name";
     }
 
-    int arity = codegen.builder.functionArity;
+    int arity = codegen.assembler.functionArity;
     if (name == "Port.send" ||
         name == "Port._sendList" ||
         name == "Port._sendExit" ||
         name == "Process._divide") {
-      codegen.builder.invokeNativeYield(arity, descriptor.index);
+      codegen.assembler.invokeNativeYield(arity, descriptor.index);
     } else {
-      codegen.builder.invokeNative(arity, descriptor.index);
+      codegen.assembler.invokeNative(arity, descriptor.index);
     }
 
     EmptyStatement empty = function.node.body.asEmptyStatement();
     if (empty != null) {
       // A native method without a body.
-      codegen.builder
+      codegen.assembler
           ..emitThrow()
           ..methodEnd();
     } else {
@@ -777,15 +777,15 @@ class FletchBackend extends Backend {
           {'text': 'External function is not supported'});
       codegen
           ..doCompileError()
-          ..builder.ret()
-          ..builder.methodEnd();
+          ..assembler.ret()
+          ..assembler.methodEnd();
     }
   }
 
   void codegenIdentical(
       FunctionElement function,
       FunctionCodegen codegen) {
-    codegen.builder
+    codegen.assembler
         ..loadLocal(2)
         ..loadLocal(2)
         ..identical()
@@ -796,7 +796,7 @@ class FletchBackend extends Backend {
   void codegenExternalYield(
       FunctionElement function,
       FunctionCodegen codegen) {
-    codegen.builder
+    codegen.assembler
         ..loadLocal(1)
         ..processYield()
         ..ret()
@@ -818,7 +818,7 @@ class FletchBackend extends Backend {
     int id = context.getSymbolId(
         context.mangleName(noSuchMethodName, compiler.coreLibrary));
     int fletchSelector = FletchSelector.encodeMethod(id, 1);
-    codegen.builder
+    codegen.assembler
         ..enterNoSuchMethod()
         ..invokeMethod(fletchSelector, 1)
         ..exitNoSuchMethod()
@@ -896,7 +896,7 @@ class FletchBackend extends Backend {
         false);
     functions.add(getter);
     int constId = getter.allocateConstantFromClass(tearoffClass.id);
-    getter.builder
+    getter.assembler
         ..loadParameter(0)
         ..allocate(constId, tearoffClass.fields)
         ..ret()
@@ -1051,12 +1051,12 @@ class FletchBackend extends Backend {
       FletchFunctionBuilder functionBuilder,
       List<Command> commands,
       List<Function> deferredActions) {
-    int arity = functionBuilder.builder.functionArity;
+    int arity = functionBuilder.assembler.functionArity;
     int constantCount = functionBuilder.constants.length;
     int methodId = functionBuilder.methodId;
 
     assert(functions[methodId] == functionBuilder);
-    assert(functionBuilder.builder.bytecodes.isNotEmpty);
+    assert(functionBuilder.assembler.bytecodes.isNotEmpty);
 
     functionBuilder.constants.forEach((constant, int index) {
       if (constant is ConstantValue) {
@@ -1098,8 +1098,8 @@ class FletchBackend extends Backend {
         new PushNewFunction(
             arity,
             constantCount,
-            functionBuilder.builder.bytecodes,
-            functionBuilder.builder.catchRanges));
+            functionBuilder.assembler.bytecodes,
+            functionBuilder.assembler.catchRanges));
 
     commands.add(new PopToMap(MapId.methods, methodId));
   }
@@ -1281,7 +1281,7 @@ class FletchBackend extends Backend {
           functions.length,
           false);
       functions.add(stub);
-      stub.builder
+      stub.assembler
           ..loadParameter(0)
           ..loadField(fieldIndex)
           ..ret()
@@ -1299,7 +1299,7 @@ class FletchBackend extends Backend {
           functions.length,
           true);
       functions.add(stub);
-      stub.builder
+      stub.assembler
           ..loadParameter(0)
           ..loadParameter(1)
           ..storeField(fieldIndex)
@@ -1320,8 +1320,8 @@ class FletchBackend extends Backend {
         new DartString.literal(reason));
     context.markConstantUsed(constString);
     function
-        ..builder.loadConst(function.allocateConstant(constString))
-        ..builder.emitThrow();
+        ..assembler.loadConst(function.allocateConstant(constString))
+        ..assembler.emitThrow();
   }
 
   void forgetElement(Element element) {

@@ -47,7 +47,7 @@ class FunctionCodegen extends CodegenVisitor {
       // TODO(ajohnsen): We can simply emit a MethodEnd here, but for now we
       // compile the method to stress our CodegenVisitor with erroneous
       // elements.
-      builder.pop();
+      assembler.pop();
     }
 
     ClassElement enclosing = function.enclosingClass;
@@ -56,23 +56,23 @@ class FunctionCodegen extends CodegenVisitor {
         enclosing.declaration != context.compiler.nullClass &&
         function.name == '==') {
       BytecodeLabel notNull = new BytecodeLabel();
-      builder.loadParameter(1);
-      builder.loadLiteralNull();
-      builder.identicalNonNumeric();
-      builder.branchIfFalse(notNull);
-      builder.loadLiteralFalse();
-      builder.ret();
-      builder.bind(notNull);
+      assembler.loadParameter(1);
+      assembler.loadLiteralNull();
+      assembler.identicalNonNumeric();
+      assembler.branchIfFalse(notNull);
+      assembler.loadLiteralFalse();
+      assembler.ret();
+      assembler.bind(notNull);
     }
 
     FunctionSignature functionSignature = function.functionSignature;
     int parameterCount = functionSignature.parameterCount;
 
     if (hasAssignmentSemantics) {
-      setterResultSlot = builder.stackSize;
+      setterResultSlot = assembler.stackSize;
       // The result is always the last argument (-1 for return address, -1 for
       // last parameter).
-      builder.loadSlot(-2);
+      assembler.loadSlot(-2);
     }
 
     int i = 0;
@@ -86,15 +86,15 @@ class FunctionCodegen extends CodegenVisitor {
     if (info != null) {
       int index = 0;
       if (info.isThisFree) {
-        thisValue = new UnboxedLocalValue(builder.stackSize, null);
-        builder.loadParameter(0);
-        builder.loadField(index++);
+        thisValue = new UnboxedLocalValue(assembler.stackSize, null);
+        assembler.loadParameter(0);
+        assembler.loadField(index++);
       }
       for (LocalElement local in info.free) {
         pushVariableDeclaration(createLocalValueFor(local));
         // TODO(ajohnsen): Use a specialized helper for loading the closure.
-        builder.loadParameter(0);
-        builder.loadField(index++);
+        assembler.loadParameter(0);
+        assembler.loadField(index++);
       }
     }
 
@@ -104,22 +104,22 @@ class FunctionCodegen extends CodegenVisitor {
     }
 
     // Emit implicit 'return null' if no terminator is present.
-    if (!builder.endsWithTerminator) {
+    if (!assembler.endsWithTerminator) {
       if (hasAssignmentSemantics) {
-        builder.loadSlot(setterResultSlot);
+        assembler.loadSlot(setterResultSlot);
       } else {
-        builder.loadLiteralNull();
+        assembler.loadLiteralNull();
       }
-      builder.ret();
+      assembler.ret();
     }
 
-    builder.methodEnd();
+    assembler.methodEnd();
   }
 
   void optionalReplaceResultValue() {
     if (hasAssignmentSemantics) {
-      builder.pop();
-      builder.loadSlot(setterResultSlot);
+      assembler.pop();
+      assembler.loadSlot(setterResultSlot);
     }
   }
 }

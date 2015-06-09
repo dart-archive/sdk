@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.bytecode_builder;
+library fletchc.bytecode_assembler;
 
 import '../bytecodes.dart';
 
@@ -37,7 +37,7 @@ class BytecodeLabel {
   bool get isBound => position != -1;
 }
 
-class BytecodeBuilder {
+class BytecodeAssembler {
   final List<Bytecode> bytecodes = <Bytecode>[];
   final List<int> catchRanges = <int>[];
 
@@ -47,7 +47,7 @@ class BytecodeBuilder {
   int stackSize = 0;
   int maxStackSize = 0;
 
-  BytecodeBuilder(this.functionArity);
+  BytecodeAssembler(this.functionArity);
 
   void reuse() {
     bytecodes.clear();

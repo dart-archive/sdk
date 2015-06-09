@@ -295,7 +295,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   }
 
   List<Bytecode> lookupFunctionBytecodes(int methodId) {
-    return lookupFletchFunctionBuilder(methodId).builder.bytecodes;
+    return lookupFletchFunctionBuilder(methodId).assembler.bytecodes;
   }
 
   Iterable<int> lookupFunctionIdsByName(String name) {
