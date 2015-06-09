@@ -11,9 +11,7 @@ import 'dart:async' show
     Future;
 
 import 'verbs.dart' show
-    Verb,
-    DoVerb,
-    verbs;
+    Verb;
 
 const Verb shutdownVerb = const Verb(shutdown, documentation);
 

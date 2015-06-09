@@ -8,7 +8,6 @@ import 'dart:async' show
     Future;
 
 import 'verbs.dart' show
-    DoVerb,
     Verb,
     commonVerbs,
     uncommonVerbs;

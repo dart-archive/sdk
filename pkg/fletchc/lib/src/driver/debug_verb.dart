@@ -4,16 +4,11 @@
 
 library fletchc.driver.debug_verb;
 
-import 'dart:io' show
-exit;
-
 import 'dart:async' show
-Future;
+    Future;
 
 import 'verbs.dart' show
-Verb,
-DoVerb,
-verbs;
+    Verb;
 
 const Verb debugVerb = const Verb(debug, documentation);
 

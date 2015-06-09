@@ -30,8 +30,7 @@ import 'driver_commands.dart' show
     makeErrorHandler;
 
 import 'verbs.dart' show
-    Verb,
-    DoVerb;
+    Verb;
 
 const Verb compileAndRunVerb = const Verb(compileAndRun, documentation);
 
