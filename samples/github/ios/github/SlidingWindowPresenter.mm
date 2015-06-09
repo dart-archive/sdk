@@ -26,7 +26,6 @@
 // Must be >= bufferSlack.
 @property int bufferAdvance;
 
-@property (strong, nonatomic) NSMutableSet* selectedIndexPaths;
 @property ImmiRoot* immiRoot;
 @property bool shifted;
 
@@ -43,7 +42,6 @@
   // TODO(zerny): The buffer size should be dynamically computed. Here we make
   // it large enough for the display of an iPad Air.
   self.bufferCount = 50;
-  self.selectedIndexPaths = [NSMutableSet set];
   self.tableView.rowHeight = UITableViewAutomaticDimension;
   self.tableView.estimatedRowHeight = 50.0;
   self.shifted = true;
@@ -73,7 +71,6 @@
   return [self.cellPresenter
       tableView:tableView
       indexPath:indexPath
-      withSelection: [self.selectedIndexPaths containsObject:indexPath]
       present:node];
 }
 
@@ -156,18 +153,12 @@
 
 - (void)tableView:(UITableView*)tableView
     didSelectRowAtIndexPath:(NSIndexPath*)indexPath {
+  self.shifted = true;
 
-  [tableView deselectRowAtIndexPath:indexPath animated:NO];
+  [self.root dispatchToggleIndex:indexPath.row];
 
-  if ([self.selectedIndexPaths containsObject:indexPath]) {
-    [self.selectedIndexPaths removeObject:indexPath];
-    [tableView reloadRowsAtIndexPaths:@[indexPath]
-                     withRowAnimation:UITableViewRowAnimationNone];
-  } else {
-    [self.selectedIndexPaths addObject:indexPath];
-    [tableView reloadRowsAtIndexPaths:@[indexPath]
-                     withRowAnimation:UITableViewRowAnimationNone];
-  }
+  [tableView reloadRowsAtIndexPaths:@[indexPath]
+                   withRowAnimation:UITableViewRowAnimationNone];
 }
 
 @end

@@ -11,6 +11,4 @@
 @property (weak, nonatomic) IBOutlet UILabel* messageLabel;
 @property (weak, nonatomic) IBOutlet UILabel* detailsLabel;
 
-@property (nonatomic, assign) BOOL withSelection;
-
 @end

@@ -55,7 +55,8 @@ class SlidingWindow<T extends Node> {
         windowOffset: _display.windowOffset,
         minimumCount: _minimumCount,
         maximumCount: _maximumCount,
-        display: _setDisplayRange);
+        display: _setDisplayRange,
+        toggle: _presenter.toggleAt);
   }
 
   void _setDisplayRange(int start, int end) {

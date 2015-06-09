@@ -45,6 +45,7 @@ class CommitListPresenter {
         windowOffset: window.windowOffset,
         minimumCount: window.minimumCount,
         maximumCount: window.maximumCount,
+        toggle: window.toggle,
         display: _wrapDisplayForPrefetching(window.display));
   }
 }

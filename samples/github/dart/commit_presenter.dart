@@ -13,12 +13,24 @@ export 'package:immi_gen/dart/commit_presenter.dart';
 
 class CommitPresenter extends SequencedPresenter<CommitNode> {
   Repository _repository;
+  Set<int> selectedIndices = new Set<int>();
+
   CommitPresenter(this._repository);
+
+  void toggleAt(int index) {
+    if (selectedIndices.contains(index)) {
+      selectedIndices.remove(index);
+    } else {
+      selectedIndices.add(index);
+    }
+  }
+
   CommitNode presentAt(int index) {
     Map<String, dynamic> json = _repository.getCommitAt(index);
     if (json == null) return null;
     return new CommitNode(
         author: json['commit']['author']['name'],
-        message: json['commit']['message']);
+        message: json['commit']['message'],
+        selected: selectedIndices.contains(index));
   }
 }

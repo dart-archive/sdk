@@ -11,7 +11,5 @@
 
 - (UITableViewCell*)tableView:(UITableView*)tableView
                     indexPath:(NSIndexPath*)indexPath
-                withSelection:(BOOL)withSelection
                       present:(Node*)node;
-
 @end

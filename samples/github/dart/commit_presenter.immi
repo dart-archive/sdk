@@ -5,4 +5,5 @@
 node Commit {
   String author;
   String message;
+  bool selected;
 }

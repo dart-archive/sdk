@@ -15,7 +15,6 @@
 
 - (UITableViewCell*)tableView:(UITableView*)tableView
                     indexPath:(NSIndexPath*)indexPath
-                withSelection:(BOOL)withSelection
                       present:(Node*)node {
   CommitNode* commitNode = (CommitNode*)node;
   CommitCellPresenter* cell = (CommitCellPresenter*)
@@ -24,18 +23,11 @@
   cell.authorLabel.text = commitNode.author;
   cell.messageLabel.text = commitNode.message;
   cell.detailsLabel.text = commitNode.message;
-  cell.withSelection = withSelection;
+
+  cell.detailsViewHeightConstraint.priority =
+      commitNode.selected ? 250.0 : 999.0;
+
   return cell;
-}
-
-- (void)setWithSelection:(BOOL)withSelection {
-  _withSelection = withSelection;
-
-  if (withSelection) {
-    self.detailsViewHeightConstraint.priority = 250.0;
-  } else {
-    self.detailsViewHeightConstraint.priority = 999.0;
-  }
 }
 
 @end

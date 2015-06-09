@@ -24,4 +24,8 @@ node SlidingWindow {
 
   // Event to update the sliding-window display range.
   void display(uint32 start, uint32 end);
+
+  // Event to toggle an item in the window.
+  void toggle(uint32 index);
+
 }

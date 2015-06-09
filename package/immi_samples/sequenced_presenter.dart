@@ -9,4 +9,6 @@ import 'package:immi/immi.dart';
 abstract class SequencedPresenter<T extends Node> {
   // Returns presentation graph for valid index otherwise null.
   T presentAt(int index);
+
+  void toggleAt(int index);
 }
