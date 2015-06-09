@@ -12,7 +12,7 @@ f: false
 t: true
 d: 42.42
 n: null
-a: instance of A
+a: Instance of 'A'
 i2: 8589934592
 i: 42
 str: 'spaß'

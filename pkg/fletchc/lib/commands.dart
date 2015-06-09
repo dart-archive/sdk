@@ -97,7 +97,7 @@ class CommandBuffer {
   }
 }
 
-class Command {
+abstract class Command {
   final CommandCode code;
 
   static final _buffer = new CommandBuffer();
@@ -164,11 +164,17 @@ class Command {
   void addTo(StreamSink<List<int>> sink) {
     buffer.sendOn(sink, code);
   }
+
+  String valuesToString();
+
+  String toString() => "$code(${valuesToString()})";
 }
 
 class Dup extends Command {
   const Dup()
       : super(CommandCode.Dup);
+
+  String valuesToString() => "";
 }
 
 class PushNewString extends Command {
@@ -186,12 +192,14 @@ class PushNewString extends Command {
         ..sendOn(sink, code);
   }
 
-  String toString() => "PushNewString('$value')";
+  String valuesToString() => "'$value'";
 }
 
 class PushNewInstance extends Command {
   const PushNewInstance()
       : super(CommandCode.PushNewInstance);
+
+  String valuesToString() => "";
 }
 
 class PushNewClass extends Command {
@@ -205,6 +213,8 @@ class PushNewClass extends Command {
         ..addUint32(fields)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$fields";
 }
 
 class PushBuiltinClass extends Command {
@@ -220,6 +230,8 @@ class PushBuiltinClass extends Command {
         ..addUint32(fields)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$name, $fields";
 }
 
 class PushConstantList extends Command {
@@ -233,6 +245,8 @@ class PushConstantList extends Command {
         ..addUint32(entries)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$entries";
 }
 
 class PushConstantMap extends Command {
@@ -246,6 +260,8 @@ class PushConstantMap extends Command {
         ..addUint32(entries)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$entries";
 }
 
 class Generic extends Command {
@@ -259,6 +275,10 @@ class Generic extends Command {
         ..addUint8List(payload)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$payload";
+
+  String toString() => "Generic($code, ${valuesToString()})";
 }
 
 class NewMap extends Command {
@@ -273,7 +293,7 @@ class NewMap extends Command {
         ..sendOn(sink, code);
   }
 
-  String toString() => "NewMap($map)";
+  String valuesToString() => "$map";
 }
 
 abstract class MapAccess extends Command {
@@ -295,14 +315,14 @@ class PopToMap extends MapAccess {
   const PopToMap(MapId map, int index)
       : super(map, index, CommandCode.PopToMap);
 
-  String toString() => "PopToMap($map, $index)";
+  String valuesToString() => "$map, $index";
 }
 
 class PushFromMap extends MapAccess {
   const PushFromMap(MapId map, int index)
       : super(map, index, CommandCode.PushFromMap);
 
-  String toString() => "PushFromMap($map, $index)";
+  String valuesToString() => "$map, $index";
 }
 
 class Drop extends Command {
@@ -317,14 +337,14 @@ class Drop extends Command {
         ..sendOn(sink, code);
   }
 
-  String toString() => "Drop($value)";
+  String valuesToString() => "$value";
 }
 
 class PushNull extends Command {
   const PushNull()
       : super(CommandCode.PushNull);
 
-  String toString() => "PushNull()";
+  String valuesToString() => "";
 }
 
 class PushBoolean extends Command {
@@ -339,7 +359,7 @@ class PushBoolean extends Command {
         ..sendOn(sink, code);
   }
 
-  String toString() => 'PushBoolean($value)';
+  String valuesToString() => '$value';
 }
 
 class BytecodeSink implements Sink<List<int>> {
@@ -390,14 +410,14 @@ class PushNewFunction extends Command {
     buffer.sendOn(sink, code);
   }
 
-  String toString() {
-    return "PushNewFunction($arity, $literals, $bytecodes, $catchRanges)";
-  }
+  String valuesToString() => "$arity, $literals, $bytecodes, $catchRanges";
 }
 
 class PushNewInitializer extends Command {
   const PushNewInitializer()
       : super(CommandCode.PushNewInitializer);
+
+  String valuesToString() => "";
 }
 
 class ChangeStatics extends Command {
@@ -411,6 +431,8 @@ class ChangeStatics extends Command {
         ..addUint32(count)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$count";
 }
 
 class ChangeMethodLiteral extends Command {
@@ -425,7 +447,7 @@ class ChangeMethodLiteral extends Command {
         ..sendOn(sink, code);
   }
 
-  String toString() => "ChangeMethodLiteral($index)";
+  String valuesToString() => "$index";
 }
 
 class ChangeMethodTable extends Command {
@@ -439,11 +461,15 @@ class ChangeMethodTable extends Command {
         ..addUint32(count)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$count";
 }
 
 class ChangeSuperClass extends Command {
   const ChangeSuperClass()
       : super(CommandCode.ChangeSuperClass);
+
+  String valuesToString() => "";
 }
 
 class ChangeSchemas extends Command {
@@ -460,14 +486,14 @@ class ChangeSchemas extends Command {
         ..sendOn(sink, code);
   }
 
-  String toString() => 'ChangeSchemas($count, $delta)';
+  String valuesToString() => '$count, $delta';
 }
 
 class PrepareForChanges extends Command {
   const PrepareForChanges()
       : super(CommandCode.PrepareForChanges);
 
-  String toString() => "PrepareForChanges()";
+  String valuesToString() => "";
 }
 
 class CommitChanges extends Command {
@@ -482,12 +508,14 @@ class CommitChanges extends Command {
         ..sendOn(sink, code);
   }
 
-  String toString() => 'CommitChanges($count)';
+  String valuesToString() => '$count';
 }
 
 class UncaughtException extends Command {
   const UncaughtException()
       : super(CommandCode.UncaughtException);
+
+  String valuesToString() => "";
 }
 
 class MapLookup extends Command {
@@ -501,6 +529,8 @@ class MapLookup extends Command {
         ..addUint32(mapId.index)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$mapId";
 }
 
 class ObjectId extends Command {
@@ -514,6 +544,8 @@ class ObjectId extends Command {
         ..addUint64(id)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$id";
 }
 
 class PushNewArray extends Command {
@@ -528,7 +560,7 @@ class PushNewArray extends Command {
         ..sendOn(sink, code);
   }
 
-  String toString() => 'PushNewArray($length)';
+  String valuesToString() => '$length';
 }
 
 class PushNewInteger extends Command {
@@ -543,7 +575,7 @@ class PushNewInteger extends Command {
         ..sendOn(sink, code);
   }
 
-  String toString() => "PushNewInteger($value)";
+  String valuesToString() => "$value";
 }
 
 class PushNewDouble extends Command {
@@ -557,16 +589,22 @@ class PushNewDouble extends Command {
         ..addDouble(value)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$value";
 }
 
 class ProcessSpawnForMain extends Command {
   const ProcessSpawnForMain()
       : super(CommandCode.ProcessSpawnForMain);
+
+  String valuesToString() => "";
 }
 
 class ProcessRun extends Command {
   const ProcessRun()
       : super(CommandCode.ProcessRun);
+
+  String valuesToString() => "";
 }
 
 class ProcessSetBreakpoint extends Command {
@@ -580,6 +618,8 @@ class ProcessSetBreakpoint extends Command {
         ..addUint32(value)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$value";
 }
 
 class ProcessDeleteBreakpoint extends Command {
@@ -593,6 +633,8 @@ class ProcessDeleteBreakpoint extends Command {
         ..addUint32(id)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$id";
 }
 
 class ProcessBacktrace extends Command {
@@ -605,6 +647,8 @@ class ProcessBacktrace extends Command {
         methodIds = new List<int>(frameCount),
         bytecodeIndices = new List<int>(frameCount),
         super(CommandCode.ProcessBacktrace);
+
+  String valuesToString() => "$frames, $methodIds, $bytecodeIndices";
 }
 
 class ProcessBacktraceRequest extends Command {
@@ -619,6 +663,7 @@ class ProcessBacktraceRequest extends Command {
         ..sendOn(sink, code);
   }
 
+  String valuesToString() => "$methodMap";
 }
 
 class ProcessBreakpoint extends Command {
@@ -626,6 +671,8 @@ class ProcessBreakpoint extends Command {
 
   const ProcessBreakpoint(this.breakpointId)
       : super(CommandCode.ProcessBreakpoint);
+
+  String valuesToString() => "$breakpointId";
 }
 
 class ProcessLocal extends Command {
@@ -643,21 +690,29 @@ class ProcessLocal extends Command {
         ..addUint32(slot)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$classMap, $frame, $slot";
 }
 
 class ProcessStep extends Command {
   const ProcessStep()
       : super(CommandCode.ProcessStep);
+
+  String valuesToString() => "";
 }
 
 class ProcessStepOver extends Command {
   const ProcessStepOver()
       : super(CommandCode.ProcessStepOver);
+
+  String valuesToString() => "";
 }
 
 class ProcessStepOut extends Command {
   const ProcessStepOut()
       : super(CommandCode.ProcessStepOut);
+
+  String valuesToString() => "";
 }
 
 class ProcessStepTo extends Command {
@@ -675,41 +730,43 @@ class ProcessStepTo extends Command {
         ..addUint32(bcp)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "$id, $methodId, $bcp";
 }
 
 class ProcessContinue extends Command {
   const ProcessContinue()
       : super(CommandCode.ProcessContinue);
 
-  String toString() => "ProcessContinue";
+  String valuesToString() => "";
 }
 
 class ProcessTerminated extends Command {
   const ProcessTerminated()
       : super(CommandCode.ProcessTerminated);
 
-  String toString() => "ProcessTerminated()";
+  String valuesToString() => "";
 }
 
 class SessionEnd extends Command {
   const SessionEnd()
       : super(CommandCode.SessionEnd);
 
-  String toString() => "SessionEnd()";
+  String valuesToString() => "";
 }
 
 class SessionReset extends Command {
   const SessionReset()
       : super(CommandCode.SessionReset);
 
-  String toString() => "SessionReset()";
+  String valuesToString() => "";
 }
 
 class Debugging extends Command {
   const Debugging()
       : super(CommandCode.Debugging);
 
-  String toString() => "Debugging";
+  String valuesToString() => "";
 }
 
 class WriteSnapshot extends Command {
@@ -725,11 +782,17 @@ class WriteSnapshot extends Command {
         ..addUint8List(payload)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "'$value'";
 }
 
-class DartValue extends Command {
+abstract class DartValue extends Command {
   const DartValue(CommandCode code)
       : super(code);
+
+  String valuesToString() => dartToString();
+
+  String dartToString();
 }
 
 class Instance extends DartValue {
@@ -737,6 +800,10 @@ class Instance extends DartValue {
 
   const Instance(this.classId)
       : super(CommandCode.Instance);
+
+  String valuesToString() => "$classId";
+
+  String dartToString() => "Instance of $classId";
 }
 
 class Integer extends DartValue {
@@ -751,7 +818,7 @@ class Integer extends DartValue {
         ..sendOn(sink, code);
   }
 
-  String toString() => '$value';
+  String dartToString() => '$value';
 }
 
 class Double extends DartValue {
@@ -760,7 +827,7 @@ class Double extends DartValue {
   const Double(this.value)
       : super(CommandCode.Double);
 
-  String toString() => '$value';
+  String dartToString() => '$value';
 }
 
 class Boolean extends DartValue {
@@ -769,14 +836,16 @@ class Boolean extends DartValue {
   const Boolean(this.value)
       : super(CommandCode.Boolean);
 
-  String toString() => '$value';
+  String dartToString() => '$value';
 }
 
 class NullValue extends DartValue {
   const NullValue()
       : super(CommandCode.Null);
 
-  String toString() => 'null';
+  String valuesToString() => '';
+
+  String dartToString() => 'null';
 }
 
 class StringValue extends DartValue {
@@ -785,7 +854,7 @@ class StringValue extends DartValue {
   const StringValue(this.value)
       : super(CommandCode.String);
 
-  String toString() => '\'$value\'';
+  String dartToString() => "'$value'";
 }
 
 enum CommandCode {

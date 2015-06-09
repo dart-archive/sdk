@@ -390,10 +390,10 @@ class Session {
     if (response is Instance) {
       Instance i = response;
       String className = compiler.lookupClassName(i.classId);
-      print('$name: instance of $className');
+      print("$name: Instance of '$className'");
     } else {
       DartValue value = response;
-      print('$name: $value');
+      print('$name: ${value.dartToString()}');
     }
   }
 
