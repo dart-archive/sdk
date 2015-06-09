@@ -612,6 +612,7 @@ class FletchBackend extends Backend {
   WorldImpact codegen(CodegenWorkItem work) {
     Element element = work.element;
     if (compiler.verbose) {
+      // TODO(johnniwinther): Use reportVerboseInfo once added.
       compiler.reportHint(
           element, MessageKind.GENERIC, {'text': 'Compiling ${element.name}'});
     }
@@ -715,7 +716,7 @@ class FletchBackend extends Backend {
     }
 
     if (compiler.verbose) {
-      print(compiledFunction.verboseToString());
+      compiler.log(compiledFunction.verboseToString());
     }
   }
 
@@ -1185,32 +1186,31 @@ class FletchBackend extends Backend {
 
     if (field.initializer == null) return index;
 
-    lazyFieldInitializers.putIfAbsent(field, () {
-      CompiledFunction compiledFunction = new CompiledFunction.lazyInit(
-          functions.length,
-          "${field.name} lazy initializer",
-          field,
-          0);
-      functions.add(compiledFunction);
+    if (lazyFieldInitializers.containsKey(field)) return index;
 
-      TreeElements elements = field.resolvedAst.elements;
+    CompiledFunction compiledFunction = new CompiledFunction.lazyInit(
+        functions.length,
+        "${field.name} lazy initializer",
+        field,
+        0);
+    functions.add(compiledFunction);
+    lazyFieldInitializers[field] = compiledFunction;
 
-      ClosureEnvironment closureEnvironment = createClosureEnvironment(
-          field,
-          elements);
+    TreeElements elements = field.resolvedAst.elements;
 
-      LazyFieldInitializerCodegen codegen = new LazyFieldInitializerCodegen(
-          compiledFunction,
-          context,
-          elements,
-          registry,
-          closureEnvironment,
-          field);
+    ClosureEnvironment closureEnvironment = createClosureEnvironment(
+        field,
+        elements);
 
-      codegen.compile();
+    LazyFieldInitializerCodegen codegen = new LazyFieldInitializerCodegen(
+        compiledFunction,
+        context,
+        elements,
+        registry,
+        closureEnvironment,
+        field);
 
-      return compiledFunction;
-    });
+    codegen.compile();
 
     return index;
   }
@@ -1218,51 +1218,54 @@ class FletchBackend extends Backend {
   CompiledFunction compileConstructor(ConstructorElement constructor,
                                       Registry registry) {
     assert(constructor.isDeclaration);
-    return constructors.putIfAbsent(constructor, () {
-      ClassElement classElement = constructor.enclosingClass;
-      CompiledClass compiledClass = registerClassElement(classElement);
+    CompiledFunction compiledFunction = constructors[constructor];
+    if (compiledFunction != null) return compiledFunction;
 
-      constructor = constructor.implementation;
+    ClassElement classElement = constructor.enclosingClass;
+    CompiledClass compiledClass = registerClassElement(classElement);
 
-      if (compiler.verbose) {
-        compiler.reportHint(
-            constructor,
-            MessageKind.GENERIC,
-            {'text': 'Compiling constructor ${constructor.name}'});
-      }
+    ConstructorElement implementation = constructor.implementation;
 
-      TreeElements elements = constructor.resolvedAst.elements;
-
-      ClosureEnvironment closureEnvironment = createClosureEnvironment(
+    if (compiler.verbose) {
+      // TODO(johnniwinther): Use reportVerboseInfo once added.
+      compiler.reportHint(
           constructor,
-          elements);
+          MessageKind.GENERIC,
+          {'text': 'Compiling constructor ${implementation.name}'});
+    }
 
-      CompiledFunction compiledFunction = new CompiledFunction(
-          functions.length,
-          constructor.name,
-          constructor,
-          constructor.functionSignature,
-          null,
-          kind: CompiledFunctionKind.INITIALIZER_LIST);
-      functions.add(compiledFunction);
+    TreeElements elements = implementation.resolvedAst.elements;
 
-      ConstructorCodegen codegen = new ConstructorCodegen(
-          compiledFunction,
-          context,
-          elements,
-          registry,
-          closureEnvironment,
-          constructor,
-          compiledClass);
+    ClosureEnvironment closureEnvironment = createClosureEnvironment(
+        implementation,
+        elements);
 
-      codegen.compile();
+    compiledFunction = new CompiledFunction(
+        functions.length,
+        implementation.name,
+        implementation,
+        implementation.functionSignature,
+        null,
+        kind: CompiledFunctionKind.INITIALIZER_LIST);
+    functions.add(compiledFunction);
+    constructors[constructor] = compiledFunction;
 
-      if (compiler.verbose) {
-        print(compiledFunction.verboseToString());
-      }
+    ConstructorCodegen codegen = new ConstructorCodegen(
+        compiledFunction,
+        context,
+        elements,
+        registry,
+        closureEnvironment,
+        implementation,
+        compiledClass);
 
-      return compiledFunction;
-    });
+    codegen.compile();
+
+    if (compiler.verbose) {
+      compiler.log(compiledFunction.verboseToString());
+    }
+
+    return compiledFunction;
   }
 
   /**

@@ -330,7 +330,7 @@ issue14014_test: Crash
 issue14242_test: Fail
 issue18628_1_test/01: Fail
 large_class_declaration_test: Crash, Timeout
-lazy_static3_test: Crash
+lazy_static3_test: Fail
 left_shift_test: Fail
 list_is_test: Fail
 list_literal4_test: Fail
