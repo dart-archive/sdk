@@ -308,7 +308,9 @@ Object* Process::ToInteger(int64 value) {
 
 Object* Process::Concatenate(String* x, String* y) {
   int xlen = x->length();
+  if (xlen == 0) return y;
   int ylen = y->length();
+  if (ylen == 0) return x;
   int length = xlen + ylen;
   Class* string_class = program()->string_class();
   Object* raw_result = heap_.CreateString(string_class, length);

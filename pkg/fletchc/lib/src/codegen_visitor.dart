@@ -1313,8 +1313,11 @@ abstract class CodegenVisitor
     for (StringInterpolationPart part in node.parts) {
       visitForValue(part.expression);
       invokeMethod(node, toString);
-      visitForValue(part.string);
-      invokeMethod(node, concat);
+      LiteralString string = part.string;
+      if (string.dartString.isNotEmpty) {
+        visitForValue(string);
+        invokeMethod(node, concat);
+      }
       invokeMethod(node, concat);
     }
     applyVisitState();

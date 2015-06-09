@@ -184,16 +184,49 @@ class _StringImpl implements String {
     throw "matchAsPrefix(string, [start]) isn't implemented";
   }
 
-  static bool _isWhitespace(int char) {
-    if (char >= 0x0009 && char <= 0x000D) return true;
-    if (char >= 0x2000 && char <= 0x200A) return true;
-    return const [0x0020, 0x0085, 0x00A0, 0x1680, 0x180E, 0x2028, 0x2029,
-                  0x202F, 0x205F, 0x3000, 0xFEFF].indexOf(char) >= 0;
+  // Characters with Whitespace property (Unicode 6.2).
+  // 0009..000D    ; White_Space # Cc       <control-0009>..<control-000D>
+  // 0020          ; White_Space # Zs       SPACE
+  // 0085          ; White_Space # Cc       <control-0085>
+  // 00A0          ; White_Space # Zs       NO-BREAK SPACE
+  // 1680          ; White_Space # Zs       OGHAM SPACE MARK
+  // 180E          ; White_Space # Zs       MONGOLIAN VOWEL SEPARATOR
+  // 2000..200A    ; White_Space # Zs       EN QUAD..HAIR SPACE
+  // 2028          ; White_Space # Zl       LINE SEPARATOR
+  // 2029          ; White_Space # Zp       PARAGRAPH SEPARATOR
+  // 202F          ; White_Space # Zs       NARROW NO-BREAK SPACE
+  // 205F          ; White_Space # Zs       MEDIUM MATHEMATICAL SPACE
+  // 3000          ; White_Space # Zs       IDEOGRAPHIC SPACE
+  //
+  // BOM: 0xFEFF
+  static bool _isWhitespace(int codeUnit) {
+    if (codeUnit <= 32) {
+      return (codeUnit == 32) ||
+             ((codeUnit <= 13) && (codeUnit >= 9));
+    }
+    if (codeUnit < 0x85) return false;
+    if ((codeUnit == 0x85) || (codeUnit == 0xA0)) return true;
+    return (codeUnit <= 0x200A)
+            ? ((codeUnit == 0x1680) ||
+               (codeUnit == 0x180E) ||
+               (0x2000 <= codeUnit))
+            : ((codeUnit == 0x2028) ||
+               (codeUnit == 0x2029) ||
+               (codeUnit == 0x202F) ||
+               (codeUnit == 0x205F) ||
+               (codeUnit == 0x3000) ||
+               (codeUnit == 0xFEFF));
   }
 
   String trim() {
-    // TODO(ajohnsen): Inline and only do one substring.
-    return trimLeft().trimRight();
+    int length = this.length;
+    int end = length - 1;
+    int start = 0;
+    while (end >= 0 && _isWhitespace(codeUnitAt(end))) end--;
+    while (start < end && _isWhitespace(codeUnitAt(start))) start++;
+    end++;
+    if (start == 0 && end == length) return this;
+    return substring(start, end);
   }
 
   String trimLeft() {
