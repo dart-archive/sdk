@@ -26,7 +26,7 @@ class CompiledClass {
   // TODO(kasperl): Hide these tables and go through a proper API to define
   // and lookup methods.
   final Map<int, int> implicitAccessorTable = <int, int>{};
-  final Map<int, int> methodTable = <int, int>{};
+  final Map<int, CompiledFunction> methodTable = <int, CompiledFunction>{};
 
   CompiledClass(this.id, this.element, this.superclass, {this.extraFields: 0});
 
@@ -50,6 +50,17 @@ class CompiledClass {
     return count;
   }
 
+  void addToMethodTable(int selector, CompiledFunction compiledFunction) {
+    methodTable[selector] = compiledFunction;
+  }
+
+  // Add a selector for is-tests. The selector is only to be hit with the
+  // InvokeTest bytecode, as the function is not guraranteed to be valid.
+  void addIsSelector(int selector) {
+    // TODO(ajohnsen): 'null' is a placeholder. Generate dummy function?
+    methodTable[selector] = null;
+  }
+
   // The method table for a class is a mapping from Fletch's integer
   // selectors to method ids. It contains all methods defined for a
   // class including the implicit accessors.
@@ -60,7 +71,8 @@ class CompiledClass {
         ..sort();
     for (int selector in selectors) {
       if (methodTable.containsKey(selector)) {
-        result[selector] = methodTable[selector];
+        CompiledFunction function = methodTable[selector];
+        result[selector] = function == null ? 0 : function.methodId;
       } else {
         result[selector] = implicitAccessorTable[selector];
       }
@@ -104,8 +116,7 @@ class CompiledClass {
     void createFor(ClassElement classElement) {
       if (superclasses.contains(classElement)) return;
       int fletchSelector = backend.context.toFletchIsSelector(classElement);
-      // TODO(ajohnsen): '0' is a placeholder. Generate dummy function?
-      methodTable[fletchSelector] = 0;
+      addIsSelector(fletchSelector);
     }
 
     // Create for the current element.
@@ -123,8 +134,7 @@ class CompiledClass {
   void createIsFunctionEntry(FletchBackend backend) {
     int fletchSelector = backend.context.toFletchIsSelector(
         backend.compiler.functionClass);
-    // TODO(ajohnsen): '0' is a placeholder. Generate dummy function?
-    methodTable[fletchSelector] = 0;
+    addIsSelector(fletchSelector);
   }
 
   String toString() => "CompiledClass(${element.name}, $id)";

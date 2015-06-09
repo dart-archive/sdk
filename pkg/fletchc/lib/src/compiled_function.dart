@@ -281,7 +281,7 @@ class CompiledFunction {
 
       if (memberOf != null) {
         int fletchSelector = context.toFletchSelector(selector);
-        memberOf.methodTable[fletchSelector] = compiledFunction.methodId;
+        memberOf.addToMethodTable(fletchSelector, compiledFunction);
       }
 
       return compiledFunction;

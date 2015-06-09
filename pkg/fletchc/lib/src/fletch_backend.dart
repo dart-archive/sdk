@@ -436,14 +436,14 @@ class FletchBackend extends Backend {
       int fletchSelector = FletchSelector.encodeMethod(
           id,
           signature.parameterCount);
-      compiledClass.methodTable[fletchSelector] = compiledFunction.methodId;
+      compiledClass.addToMethodTable(fletchSelector, compiledFunction);
 
       if (hasThis && function.memberOf.element != null) {
         // Create == function that tests for equality.
         int isSelector = context.toFletchTearoffIsSelector(
             function.name,
             function.memberOf.element);
-        compiledClass.methodTable[isSelector] = 0;
+        compiledClass.addIsSelector(isSelector);
 
         CompiledFunction equal = new CompiledFunction.normal(
             functions.length,
@@ -473,7 +473,7 @@ class FletchBackend extends Backend {
 
         int id = context.getSymbolId("==");
         int equalsSelector = FletchSelector.encodeMethod(id, 1);
-        compiledClass.methodTable[equalsSelector] = equal.methodId;
+        compiledClass.addToMethodTable(equalsSelector, equal);
 
         // Create hashCode getter. We simply xor the object hashCode and the
         // method id of the tearoff'ed function.
@@ -495,7 +495,7 @@ class FletchBackend extends Backend {
           ..ret()
           ..methodEnd();
 
-        compiledClass.methodTable[hashCodeSelector] = hashCode.methodId;
+        compiledClass.addToMethodTable(hashCodeSelector, hashCode);
       }
       return compiledClass;
     });
@@ -689,7 +689,8 @@ class FletchBackend extends Backend {
       if (function.isSetter) kind = SelectorKind.Setter;
       int fletchSelector = FletchSelector.encode(id, kind, arity);
       int methodId = compiledFunction.methodId;
-      compiledFunction.memberOf.methodTable[fletchSelector] = methodId;
+      compiledFunction.memberOf.addToMethodTable(
+          fletchSelector, compiledFunction);
       // Inject method into all mixin usages.
       Iterable<ClassElement> mixinUsage =
           compiler.world.mixinUsesOf(function.enclosingClass);
@@ -710,7 +711,7 @@ class FletchBackend extends Backend {
                 ? CompiledFunctionKind.ACCESSOR
                 : CompiledFunctionKind.NORMAL);
         functions.add(copy);
-        compiledUsage.methodTable[fletchSelector] = copy.methodId;
+        compiledUsage.addToMethodTable(fletchSelector, copy);
         copy.copyFrom(compiledFunction);
       }
     }
@@ -905,7 +906,7 @@ class FletchBackend extends Backend {
     }
     int fletchSelector = context.toFletchSelector(
         new Selector.getter(function.name, library));
-    function.memberOf.methodTable[fletchSelector] = getter.methodId;
+    function.memberOf.addToMethodTable(fletchSelector, getter);
   }
 
   int assembleProgram() {
