@@ -50,6 +50,9 @@ import '../bytecodes.dart' show
 import 'compiled_function.dart' show
     CompiledFunction;
 
+import 'compiled_class.dart' show
+    CompiledClass;
+
 import 'fletch_selector.dart';
 
 import 'closure_environment.dart';

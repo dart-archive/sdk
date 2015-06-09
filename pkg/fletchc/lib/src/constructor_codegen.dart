@@ -32,6 +32,9 @@ import '../bytecodes.dart' show
 import 'compiled_function.dart' show
     CompiledFunction;
 
+import 'compiled_class.dart' show
+    CompiledClass;
+
 import 'closure_environment.dart';
 
 import 'lazy_field_initializer_codegen.dart';

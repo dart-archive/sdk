@@ -25,7 +25,7 @@ import 'package:compiler/src/universe/universe.dart'
 import '../bytecodes.dart' show
     Bytecode;
 
-import 'fletch_backend.dart' show
+import 'compiled_class.dart' show
     CompiledClass;
 
 import 'fletch_context.dart';

@@ -58,8 +58,10 @@ import 'package:compiler/src/tree/tree.dart' show
     unparse;
 
 import '../src/fletch_backend.dart' show
-    CompiledClass,
     FletchBackend;
+
+import '../src/compiled_class.dart' show
+    CompiledClass;
 
 import '../commands.dart' show
     Command,

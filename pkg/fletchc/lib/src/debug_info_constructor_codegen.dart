@@ -25,6 +25,9 @@ import 'codegen_visitor.dart';
 import 'compiled_function.dart' show
     CompiledFunction;
 
+import 'compiled_class.dart' show
+    CompiledClass;
+
 import 'fletch_backend.dart';
 import 'fletch_context.dart';
 import 'constructor_codegen.dart';

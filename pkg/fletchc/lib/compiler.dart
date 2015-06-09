@@ -45,8 +45,10 @@ import 'src/fletch_native_descriptor.dart' show
     FletchNativeDescriptor;
 
 import 'src/fletch_backend.dart' show
-    CompiledClass,
     FletchBackend;
+
+import 'src/compiled_class.dart' show
+    CompiledClass;
 
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
