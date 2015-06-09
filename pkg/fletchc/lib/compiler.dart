@@ -36,8 +36,8 @@ import 'package:compiler/src/elements/elements.dart' show
 import 'package:compiler/src/filenames.dart' show
     appendSlash;
 
-import 'src/compiled_function.dart' show
-    CompiledFunction;
+import 'src/fletch_function_builder.dart' show
+    FletchFunctionBuilder;
 
 import 'src/debug_info.dart';
 
@@ -47,8 +47,8 @@ import 'src/fletch_native_descriptor.dart' show
 import 'src/fletch_backend.dart' show
     FletchBackend;
 
-import 'src/compiled_class.dart' show
-    CompiledClass;
+import 'src/fletch_class_builder.dart' show
+    FletchClassBuilder;
 
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
@@ -242,14 +242,15 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
 
   Uri get fletchVm => _compiler.fletchVm;
 
-  CompiledFunction lookupCompiledFunction(int methodId) {
-    CompiledFunction function = _compiler.context.backend.functions[methodId];
+  FletchFunctionBuilder lookupFletchFunctionBuilder(int methodId) {
+    FletchFunctionBuilder function =
+        _compiler.context.backend.functions[methodId];
     assert(function.methodId == methodId);
     return function;
   }
 
   String lookupFunctionName(int methodId) {
-    CompiledFunction function = lookupCompiledFunction(methodId);
+    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
     if (function == null) return '';
     if (function.isConstructor) {
       ConstructorElement constructor = function.element;
@@ -262,28 +263,28 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     }
     String functionName = function.name;
     if (functionName == null) return '';
-    CompiledClass memberOf = function.memberOf;
+    FletchClassBuilder memberOf = function.memberOf;
     if (memberOf == null) return functionName;
     if (memberOf.element == null) return functionName;
     if (functionName.isEmpty) return memberOf.element.name;
     return '${memberOf.element.name}.$functionName';
   }
 
-  CompiledClass lookupCompiledClass(int classId) {
-    CompiledClass klass = _compiler.context.backend.classes[classId];
+  FletchClassBuilder lookupFletchClassBuilder(int classId) {
+    FletchClassBuilder klass = _compiler.context.backend.classes[classId];
     assert(klass.id == classId);
     return klass;
   }
 
   String lookupClassName(int classId) {
-    CompiledClass klass = lookupCompiledClass(classId);
+    FletchClassBuilder klass = lookupFletchClassBuilder(classId);
     if (klass.element != null) return klass.element.name;
     // TODO(ager): Provide better information for closures.
     if (_compiler.context.backend.closureClasses.values.contains(klass)) {
       return 'closure';
     }
-    CompiledFunction function =
-        _compiler.context.backend.compiledFunctionFromTearoffClass(klass);
+    FletchFunctionBuilder function =
+        _compiler.context.backend.functionBuilderFromTearoffClass(klass);
     if (function != null) return 'tearoff of ${function.name}';
     return 'unknown';
   }
@@ -294,7 +295,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   }
 
   List<Bytecode> lookupFunctionBytecodes(int methodId) {
-    return lookupCompiledFunction(methodId).builder.bytecodes;
+    return lookupFletchFunctionBuilder(methodId).builder.bytecodes;
   }
 
   Iterable<int> lookupFunctionIdsByName(String name) {
@@ -305,19 +306,19 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
 
   int mainMethodId() {
     FunctionElement mainFunctionElement = _compiler.mainFunction;
-    CompiledFunction mainMethod =
-        _compiler.context.backend.compiledFunctions[mainFunctionElement];
+    FletchFunctionBuilder mainMethod =
+        _compiler.context.backend.functionBuilders[mainFunctionElement];
     return mainMethod.methodId;
   }
 
   String astString(int methodId, int bytecodeIndex) {
-    CompiledFunction function = lookupCompiledFunction(methodId);
+    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
     _compiler.context.backend.ensureDebugInfo(function);
     return function.debugInfo.astStringFor(bytecodeIndex);
   }
 
   String fileAndLineString(int methodId, int bytecodeIndex) {
-    CompiledFunction function = lookupCompiledFunction(methodId);
+    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
     _compiler.context.backend.ensureDebugInfo(function);
     return function.debugInfo.fileAndLineStringFor(bytecodeIndex);
   }
@@ -325,19 +326,19 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   String sourceListString(int methodId,
                           int bytecodeIndex,
                           {int contextLines : 5}) {
-    CompiledFunction function = lookupCompiledFunction(methodId);
+    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
     _compiler.context.backend.ensureDebugInfo(function);
     return function.debugInfo.sourceListStringFor(bytecodeIndex, contextLines);
   }
 
   SourceLocation sourceLocation(int methodId, int bytecodeIndex) {
-    CompiledFunction function = lookupCompiledFunction(methodId);
+    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
     _compiler.context.backend.ensureDebugInfo(function);
     return function.debugInfo.sourceLocationFor(bytecodeIndex);
   }
 
   ScopeInfo scopeInfo(int methodId, int bytecodeIndex) {
-    CompiledFunction function = lookupCompiledFunction(methodId);
+    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
     _compiler.context.backend.ensureDebugInfo(function);
     return function.debugInfo.scopeInfoFor(bytecodeIndex);
   }

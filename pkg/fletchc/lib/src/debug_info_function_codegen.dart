@@ -22,8 +22,8 @@ import 'bytecode_builder.dart';
 import 'closure_environment.dart';
 import 'codegen_visitor.dart';
 
-import 'compiled_function.dart' show
-    CompiledFunction;
+import 'fletch_function_builder.dart' show
+    FletchFunctionBuilder;
 
 import 'fletch_context.dart';
 import 'function_codegen.dart';
@@ -37,33 +37,33 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
   // function with incorrect bytecode.
   final BytecodeBuilder debugBuilder;
 
-  DebugInfoFunctionCodegen(CompiledFunction compiledFunction,
+  DebugInfoFunctionCodegen(FletchFunctionBuilder functionBuilder,
                            FletchContext context,
                            TreeElements elements,
                            Registry registry,
                            ClosureEnvironment closureEnvironment,
                            FunctionElement function,
                            this.compiler)
-      : debugBuilder = new BytecodeBuilder(compiledFunction.arity),
-        super(compiledFunction, context, elements, registry,
+      : debugBuilder = new BytecodeBuilder(functionBuilder.arity),
+        super(functionBuilder, context, elements, registry,
               closureEnvironment, function) {
-    if (compiledFunction.hasThisArgument) pushVariableDeclaration(thisValue);
+    if (functionBuilder.hasThisArgument) pushVariableDeclaration(thisValue);
   }
 
   BytecodeBuilder get builder => debugBuilder;
 
   void recordDebugInfo(Node node) {
-    compiledFunction.debugInfo.addLocation(compiler, builder.byteSize, node);
+    functionBuilder.debugInfo.addLocation(compiler, builder.byteSize, node);
   }
 
   void pushVariableDeclaration(LocalValue value) {
     super.pushVariableDeclaration(value);
-    compiledFunction.debugInfo.pushScope(builder.byteSize, value);
+    functionBuilder.debugInfo.pushScope(builder.byteSize, value);
   }
 
   void popVariableDeclaration(Element element) {
     super.popVariableDeclaration(element);
-    compiledFunction.debugInfo.popScope(builder.byteSize);
+    functionBuilder.debugInfo.popScope(builder.byteSize);
   }
 
   void registerDynamicInvocation(Selector selector) { }

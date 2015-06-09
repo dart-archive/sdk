@@ -23,7 +23,7 @@ import 'package:compiler/src/source_file_provider.dart' show
     SourceFileProvider;
 
 import 'codegen_visitor.dart';
-import 'compiled_function.dart';
+import 'fletch_function_builder.dart';
 
 import 'fletch_compiler.dart' show
     FletchCompiler;
@@ -80,7 +80,7 @@ class SourceLocation {
 }
 
 class DebugInfo {
-  final CompiledFunction function;
+  final FletchFunctionBuilder function;
   final List<SourceLocation> locations = <SourceLocation>[];
   final List<ScopeInfo> scopeInfos = <ScopeInfo>[ScopeInfo.sentinel];
 

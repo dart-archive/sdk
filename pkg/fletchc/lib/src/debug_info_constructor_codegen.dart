@@ -22,11 +22,11 @@ import 'bytecode_builder.dart';
 import 'closure_environment.dart';
 import 'codegen_visitor.dart';
 
-import 'compiled_function.dart' show
-    CompiledFunction;
+import 'fletch_function_builder.dart' show
+    FletchFunctionBuilder;
 
-import 'compiled_class.dart' show
-    CompiledClass;
+import 'fletch_class_builder.dart' show
+    FletchClassBuilder;
 
 import 'fletch_backend.dart';
 import 'fletch_context.dart';
@@ -43,22 +43,22 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
   // function with incorrect bytecode.
   final BytecodeBuilder debugBuilder;
 
-  DebugInfoConstructorCodegen(CompiledFunction compiledFunction,
+  DebugInfoConstructorCodegen(FletchFunctionBuilder functionBuilder,
                               FletchContext context,
                               TreeElements elements,
                               Registry registry,
                               ClosureEnvironment closureEnvironment,
                               ConstructorElement constructor,
-                              CompiledClass compiledClass,
+                              FletchClassBuilder classBuilder,
                               this.compiler)
-      : debugBuilder = new BytecodeBuilder(compiledFunction.arity),
-        super(compiledFunction, context, elements, registry,
-              closureEnvironment, constructor, compiledClass);
+      : debugBuilder = new BytecodeBuilder(functionBuilder.arity),
+        super(functionBuilder, context, elements, registry,
+              closureEnvironment, constructor, classBuilder);
 
   BytecodeBuilder get builder => debugBuilder;
 
   LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
-      CompiledFunction function,
+      FletchFunctionBuilder function,
       FieldElement field) {
     TreeElements elements = field.resolvedAst.elements;
     return new DebugInfoLazyFieldInitializerCodegen(
@@ -73,17 +73,17 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
   }
 
   void recordDebugInfo(Node node) {
-    compiledFunction.debugInfo.addLocation(compiler, builder.byteSize, node);
+    functionBuilder.debugInfo.addLocation(compiler, builder.byteSize, node);
   }
 
   void pushVariableDeclaration(LocalValue value) {
     super.pushVariableDeclaration(value);
-    compiledFunction.debugInfo.pushScope(builder.byteSize, value);
+    functionBuilder.debugInfo.pushScope(builder.byteSize, value);
   }
 
   void popVariableDeclaration(Element element) {
     super.popVariableDeclaration(element);
-    compiledFunction.debugInfo.popScope(builder.byteSize);
+    functionBuilder.debugInfo.popScope(builder.byteSize);
   }
 
   void registerDynamicInvocation(Selector selector) { }

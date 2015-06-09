@@ -23,17 +23,17 @@ import 'fletch_context.dart';
 import 'fletch_backend.dart';
 
 import 'fletch_constants.dart' show
-    CompiledFunctionConstant,
+    FletchFunctionBuilderConstant,
     FletchClassConstant;
 
 import '../bytecodes.dart' show
     Bytecode;
 
-import 'compiled_function.dart' show
-    CompiledFunction;
+import 'fletch_function_builder.dart' show
+    FletchFunctionBuilder;
 
-import 'compiled_class.dart' show
-    CompiledClass;
+import 'fletch_class_builder.dart' show
+    FletchClassBuilder;
 
 import 'closure_environment.dart';
 
@@ -42,7 +42,7 @@ import 'lazy_field_initializer_codegen.dart';
 import 'codegen_visitor.dart';
 
 class ConstructorCodegen extends CodegenVisitor {
-  final CompiledClass compiledClass;
+  final FletchClassBuilder classBuilder;
 
   final Map<FieldElement, LocalValue> fieldScope = <FieldElement, LocalValue>{};
 
@@ -50,19 +50,19 @@ class ConstructorCodegen extends CodegenVisitor {
 
   TreeElements initializerElements;
 
-  ConstructorCodegen(CompiledFunction compiledFunction,
+  ConstructorCodegen(FletchFunctionBuilder functionBuilder,
                      FletchContext context,
                      TreeElements elements,
                      Registry registry,
                      ClosureEnvironment closureEnvironment,
                      ConstructorElement constructor,
-                     this.compiledClass)
-      : super(compiledFunction, context, elements, registry,
+                     this.classBuilder)
+      : super(functionBuilder, context, elements, registry,
               closureEnvironment, constructor);
 
   ConstructorElement get constructor => element;
 
-  BytecodeBuilder get builder => compiledFunction.builder;
+  BytecodeBuilder get builder => functionBuilder.builder;
 
   TreeElements get elements {
     if (initializerElements != null) return initializerElements;
@@ -71,7 +71,7 @@ class ConstructorCodegen extends CodegenVisitor {
 
   void compile() {
     // Push all initial field values (including super-classes).
-    pushInitialFieldValues(compiledClass);
+    pushInitialFieldValues(classBuilder);
     // The stack is now:
     //  Value for field-0
     //  ...
@@ -88,7 +88,7 @@ class ConstructorCodegen extends CodegenVisitor {
   }
 
   LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
-      CompiledFunction function,
+      FletchFunctionBuilder function,
       FieldElement field) {
     TreeElements elements = field.resolvedAst.elements;
     return new LazyFieldInitializerCodegen(
@@ -104,7 +104,7 @@ class ConstructorCodegen extends CodegenVisitor {
     // TODO(ajohnsen): Let allocate take an offset to the field stack, so we
     // don't have to copy all the fields?
     // Copy all the fields to the end of the stack.
-    int fields = compiledClass.fields;
+    int fields = classBuilder.fields;
     for (int i = 0; i < fields; i++) {
       builder.loadSlot(i);
     }
@@ -119,8 +119,8 @@ class ConstructorCodegen extends CodegenVisitor {
     //  Value for field-n
 
     // Create the actual instance.
-    int classConstant = compiledFunction.allocateConstantFromClass(
-        compiledClass.id);
+    int classConstant = functionBuilder.allocateConstantFromClass(
+        classBuilder.id);
     // TODO(ajohnsen): Set immutable for all-final classes.
     builder.allocate(classConstant, fields, immutable: element.isConst);
 
@@ -331,7 +331,7 @@ class ConstructorCodegen extends CodegenVisitor {
     registerStaticInvocation(constructor.declaration);
 
     int methodId = context.backend.functionMethodId(constructor);
-    int constructorId = compiledFunction.allocateConstantFromFunction(methodId);
+    int constructorId = functionBuilder.allocateConstantFromFunction(methodId);
 
     FunctionSignature signature = constructor.functionSignature;
 
@@ -346,12 +346,12 @@ class ConstructorCodegen extends CodegenVisitor {
         ..pop();
   }
 
-  void pushInitialFieldValues(CompiledClass compiledClass) {
-    if (compiledClass.hasSuperClass) {
-      pushInitialFieldValues(compiledClass.superclass);
+  void pushInitialFieldValues(FletchClassBuilder classBuilder) {
+    if (classBuilder.hasSuperClass) {
+      pushInitialFieldValues(classBuilder.superclass);
     }
-    int fieldIndex = compiledClass.superclassFields;
-    ClassElement classElement = compiledClass.element.implementation;
+    int fieldIndex = classBuilder.superclassFields;
+    ClassElement classElement = classBuilder.element.implementation;
     classElement.forEachInstanceField((_, FieldElement field) {
       fieldScope[field] = new UnboxedLocalValue(fieldIndex++, field);
       Expression initializer = field.initializer;
@@ -359,10 +359,10 @@ class ConstructorCodegen extends CodegenVisitor {
         builder.loadLiteralNull();
       } else {
         // Create a LazyFieldInitializerCodegen for compiling the initializer.
-        // Note that we reuse the compiledFunction, to inline it into the
+        // Note that we reuse the functionBuilder, to inline it into the
         // constructor.
         LazyFieldInitializerCodegen codegen =
-            lazyFieldInitializerCodegenFor(compiledFunction, field);
+            lazyFieldInitializerCodegenFor(functionBuilder, field);
 
         // We only want the value of the actual initializer, not the usual
         // 'body'.

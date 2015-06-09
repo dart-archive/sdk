@@ -17,7 +17,7 @@ class StackFrame {
       : this.functionId = functionId,
         this.compiler = compiler,
         isInternal =
-            compiler.lookupCompiledFunction(functionId).isParameterStub;
+            compiler.lookupFletchFunctionBuilder(functionId).isParameterStub;
 
   String invokeString(Bytecode bytecode) {
     if (bytecode is InvokeMethod) {

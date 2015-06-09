@@ -40,18 +40,18 @@ import 'fletch_context.dart';
 import 'fletch_backend.dart';
 
 import 'fletch_constants.dart' show
-    CompiledFunctionConstant,
+    FletchFunctionBuilderConstant,
     FletchClassConstant,
     FletchClassInstanceConstant;
 
 import '../bytecodes.dart' show
     Bytecode;
 
-import 'compiled_function.dart' show
-    CompiledFunction;
+import 'fletch_function_builder.dart' show
+    FletchFunctionBuilder;
 
-import 'compiled_class.dart' show
-    CompiledClass;
+import 'fletch_class_builder.dart' show
+    FletchClassBuilder;
 
 import 'fletch_selector.dart';
 
@@ -168,7 +168,7 @@ abstract class CodegenVisitor
 
   final MemberElement member;
 
-  final CompiledFunction compiledFunction;
+  final FletchFunctionBuilder functionBuilder;
 
   final Map<Element, LocalValue> scope = <Element, LocalValue>{};
 
@@ -187,19 +187,19 @@ abstract class CodegenVisitor
 
   List<Element> blockLocals = <Element>[];
 
-  CodegenVisitor(CompiledFunction compiledFunction,
+  CodegenVisitor(FletchFunctionBuilder functionBuilder,
                  this.context,
                  TreeElements elements,
                  this.registry,
                  this.closureEnvironment,
                  this.element)
       : super(elements),
-        this.compiledFunction = compiledFunction,
+        this.functionBuilder = functionBuilder,
         thisValue = new UnboxedLocalValue(
-            -1 - compiledFunction.builder.functionArity,
+            -1 - functionBuilder.builder.functionArity,
             null);
 
-  BytecodeBuilder get builder => compiledFunction.builder;
+  BytecodeBuilder get builder => functionBuilder.builder;
 
   SemanticSendVisitor get sendVisitor => this;
   SemanticDeclarationVisitor get declVisitor => this;
@@ -219,18 +219,18 @@ abstract class CodegenVisitor
         node,
         elements: elements,
         isConst: false);
-    return compiledFunction.allocateConstant(
+    return functionBuilder.allocateConstant(
         context.getConstantValue(expression));
   }
 
   int allocateConstantClassInstance(int classId) {
     var constant = new FletchClassInstanceConstant(classId);
     context.markConstantUsed(constant);
-    return compiledFunction.allocateConstant(constant);
+    return functionBuilder.allocateConstant(constant);
   }
 
   int allocateStringConstant(String string) {
-    return compiledFunction.allocateConstant(
+    return functionBuilder.allocateConstant(
         context.backend.constantSystem.createString(
             new DartString.literal(string)));
   }
@@ -343,14 +343,14 @@ abstract class CodegenVisitor
     builder.branchIfTrue(ifTrue);
   }
 
-  CompiledFunction requireCompiledFunction(FunctionElement element) {
+  FletchFunctionBuilder requireFletchFunctionBuilder(FunctionElement element) {
     registerStaticInvocation(element);
-    return context.backend.createCompiledFunction(element);
+    return context.backend.createFletchFunctionBuilder(element);
   }
 
   void doStaticFunctionInvoke(
       Node node,
-      CompiledFunction function,
+      FletchFunctionBuilder function,
       NodeList arguments,
       CallStructure callStructure,
       {bool factoryInvoke: false}) {
@@ -365,7 +365,7 @@ abstract class CodegenVisitor
         methodId = function.methodId;
       } else if (function.canBeCalledAs(callStructure.callSelector)) {
         // TODO(ajohnsen): Inline parameter mapping?
-        CompiledFunction stub = function.createParameterMappingFor(
+        FletchFunctionBuilder stub = function.createParameterMappingFor(
             callStructure.callSelector, context);
         methodId = stub.methodId;
       } else {
@@ -385,7 +385,7 @@ abstract class CodegenVisitor
       arity = loadPositionalArguments(arguments, signature, function.name);
     }
     if (function.hasThisArgument) arity++;
-    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    int constId = functionBuilder.allocateConstantFromFunction(methodId);
     if (factoryInvoke) {
       invokeFactory(node, constId, arity);
     } else {
@@ -840,11 +840,12 @@ abstract class CodegenVisitor
       Send node,
       MethodElement function,
       _) {
-    CompiledFunction compiledFunctionTarget = requireCompiledFunction(function);
-    CompiledClass compiledClass = context.backend.createTearoffClass(
-        compiledFunctionTarget);
-    assert(compiledClass.fields == 0);
-    int constId = allocateConstantClassInstance(compiledClass.id);
+    FletchFunctionBuilder functionBuilderTarget = requireFletchFunctionBuilder(
+        function);
+    FletchClassBuilder classBuilder = context.backend.createTearoffClass(
+        functionBuilderTarget);
+    assert(classBuilder.fields == 0);
+    int constId = allocateConstantClassInstance(classBuilder.id);
     builder.loadConst(constId);
     applyVisitState();
   }
@@ -869,7 +870,7 @@ abstract class CodegenVisitor
       builder.loadLiteralNull();
     }
     int methodId = context.backend.functionMethodId(function);
-    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    int constId = functionBuilder.allocateConstantFromFunction(methodId);
     invokeStatic(node, constId, parameterCount);
   }
 
@@ -898,7 +899,7 @@ abstract class CodegenVisitor
       // TODO(ajohnsen): Define a known set of external functions we allow
       // calls to?
     }
-    CompiledFunction target = requireCompiledFunction(element);
+    FletchFunctionBuilder target = requireFletchFunctionBuilder(element);
     doStaticFunctionInvoke(node, target, arguments, callStructure);
   }
 
@@ -927,7 +928,7 @@ abstract class CodegenVisitor
     registerStaticInvocation(function);
     int arity = function.functionSignature.parameterCount + 1;
     int methodId = context.backend.functionMethodId(function);
-    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    int constId = functionBuilder.allocateConstantFromFunction(methodId);
     invokeStatic(node, constId, arity);
   }
 
@@ -945,12 +946,13 @@ abstract class CodegenVisitor
       MethodElement method,
       _) {
     loadThis();
-    CompiledFunction compiledFunctionTarget = requireCompiledFunction(method);
-    CompiledClass compiledClass = context.backend.createTearoffClass(
-        compiledFunctionTarget);
-    assert(compiledClass.fields == 1);
-    int constId = compiledFunction.allocateConstantFromClass(compiledClass.id);
-    builder.allocate(constId, compiledClass.fields);
+    FletchFunctionBuilder functionBuilderTarget = requireFletchFunctionBuilder(
+        method);
+    FletchClassBuilder classBuilder = context.backend.createTearoffClass(
+        functionBuilderTarget);
+    assert(classBuilder.fields == 1);
+    int constId = functionBuilder.allocateConstantFromClass(classBuilder.id);
+    builder.allocate(constId, classBuilder.fields);
     applyVisitState();
   }
 
@@ -1079,10 +1081,10 @@ abstract class CodegenVisitor
 
   int computeFieldIndex(FieldElement field) {
     ClassElement classElement = field.enclosingClass;
-    // We know the enclosing class is compiled, so we can use the CompiledClass
-    // as an optimization for getting the number of super fields, thus we only
-    // have to iterate the fields of the enclosing class.
-    CompiledClass compiledClass = context.backend.registerClassElement(
+    // We know the enclosing class is compiled, so we can use the
+    // FletchClassBuilder as an optimization for getting the number of super
+    // fields, thus we only have to iterate the fields of the enclosing class.
+    FletchClassBuilder classBuilder = context.backend.registerClassElement(
         classElement);
     int i = 0;
     int fieldIndex;
@@ -1094,7 +1096,7 @@ abstract class CodegenVisitor
       i++;
     });
     assert(fieldIndex != null);
-    fieldIndex += compiledClass.superclassFields;
+    fieldIndex += classBuilder.superclassFields;
     return fieldIndex;
   }
 
@@ -1877,17 +1879,17 @@ abstract class CodegenVisitor
                        CallStructure callStructure) {
     registerStaticInvocation(constructor);
     registerInstantiatedClass(constructor.enclosingClass);
-    CompiledFunction compiledFunction = context.backend.compileConstructor(
+    FletchFunctionBuilder functionBuilder = context.backend.compileConstructor(
         constructor,
         registry);
     doStaticFunctionInvoke(
-        node, compiledFunction, arguments, callStructure);
+        node, functionBuilder, arguments, callStructure);
   }
 
   void doConstConstructorInvoke(ConstantExpression constant) {
     var value = context.getConstantValue(constant);
     context.markConstantUsed(value);
-    int constId = compiledFunction.allocateConstant(value);
+    int constId = functionBuilder.allocateConstant(value);
     builder.loadConst(constId);
   }
 
@@ -1972,10 +1974,10 @@ abstract class CodegenVisitor
       return;
     }
     // TODO(ahe): Remove ".declaration" when issue 23135 is fixed.
-    CompiledFunction compiledFunction =
-        requireCompiledFunction(constructor.declaration);
+    FletchFunctionBuilder functionBuilder =
+        requireFletchFunctionBuilder(constructor.declaration);
     doStaticFunctionInvoke(
-        node, compiledFunction, arguments, callStructure, factoryInvoke: true);
+        node, functionBuilder, arguments, callStructure, factoryInvoke: true);
     applyVisitState();
   }
 
@@ -2090,7 +2092,7 @@ abstract class CodegenVisitor
     }
     registerStaticInvocation(getter);
     int methodId = context.backend.functionMethodId(getter);
-    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    int constId = functionBuilder.allocateConstantFromFunction(methodId);
     invokeStatic(node, constId, 0);
     applyVisitState();
   }
@@ -2103,7 +2105,7 @@ abstract class CodegenVisitor
     visitForValue(rhs);
     registerStaticInvocation(setter);
     int methodId = context.backend.functionMethodId(setter);
-    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    int constId = functionBuilder.allocateConstantFromFunction(methodId);
     invokeStatic(node, constId, 1);
     applyVisitState();
   }
@@ -2144,14 +2146,14 @@ abstract class CodegenVisitor
     // the closure.
     int thisClosureIndex = pushCapturedVariables(function);
 
-    CompiledClass compiledClass = context.backend.createClosureClass(
+    FletchClassBuilder classBuilder = context.backend.createClosureClass(
         function,
         closureEnvironment);
-    int classConstant = compiledFunction.allocateConstantFromClass(
-        compiledClass.id);
+    int classConstant = functionBuilder.allocateConstantFromClass(
+        classBuilder.id);
     bool immutable = !closureEnvironment.closures[function].free.any(
         closureEnvironment.shouldBeBoxed);
-    builder.allocate(classConstant, compiledClass.fields, immutable: immutable);
+    builder.allocate(classConstant, classBuilder.fields, immutable: immutable);
 
     if (thisClosureIndex >= 0) {
       builder.dup();
@@ -2660,11 +2662,11 @@ abstract class CodegenVisitor
     var constString = context.backend.constantSystem.createString(
         new DartString.literal(name));
     context.markConstantUsed(constString);
-    builder.loadConst(compiledFunction.allocateConstant(constString));
+    builder.loadConst(functionBuilder.allocateConstant(constString));
     FunctionElement function = context.backend.fletchUnresolved;
     registerStaticInvocation(function);
     int methodId = context.backend.functionMethodId(function);
-    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    int constId = functionBuilder.allocateConstantFromFunction(methodId);
     builder.invokeStatic(constId, 1);
   }
 
@@ -2680,7 +2682,7 @@ abstract class CodegenVisitor
     FunctionElement function = context.backend.fletchCompileError;
     registerStaticInvocation(function);
     int methodId = context.backend.functionMethodId(function);
-    int constId = compiledFunction.allocateConstantFromFunction(methodId);
+    int constId = functionBuilder.allocateConstantFromFunction(methodId);
     builder.invokeStatic(constId, 0);
   }
 
@@ -2733,7 +2735,7 @@ abstract class CodegenVisitor
     context.backend.generateUnimplementedError(
         spannable,
         reason,
-        compiledFunction);
+        functionBuilder);
   }
 
   String toString() => "FunctionCompiler(${element.name})";

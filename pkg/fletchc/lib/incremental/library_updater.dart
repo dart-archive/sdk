@@ -60,8 +60,8 @@ import 'package:compiler/src/tree/tree.dart' show
 import '../src/fletch_backend.dart' show
     FletchBackend;
 
-import '../src/compiled_class.dart' show
-    CompiledClass;
+import '../src/fletch_class_builder.dart' show
+    FletchClassBuilder;
 
 import '../commands.dart' show
     Command,
@@ -98,8 +98,8 @@ import 'fletchc_incremental.dart' show
     IncrementalCompilationFailed,
     IncrementalCompiler;
 
-import '../src/compiled_function.dart' show
-    CompiledFunction;
+import '../src/fletch_function_builder.dart' show
+    FletchFunctionBuilder;
 
 typedef void Logger(message);
 
@@ -862,12 +862,12 @@ class LibraryUpdater extends FletchFeatures {
     }
 
     for (ClassElementX element in _classesWithSchemaChanges) {
-      CompiledClass compiledClass = backend.compiledClasses[element];
-      int id = compiledClass.id;
+      FletchClassBuilder classBuilder = backend.classBuilders[element];
+      int id = classBuilder.id;
       updates.add(new commands_lib.PushFromMap(MapId.classes, id));
 
-      compiledClass.createImplicitAccessors(backend);
-      Map<int, int> methodTable = compiledClass.computeMethodTable(backend);
+      classBuilder.createImplicitAccessors(backend);
+      Map<int, int> methodTable = classBuilder.computeMethodTable(backend);
 
       methodTable.forEach((int selector, int methodId) {
         updates.add(new commands_lib.PushNewInteger(selector));
@@ -893,12 +893,12 @@ class LibraryUpdater extends FletchFeatures {
   }
 
   void computeMethodUpdateFletch(Element element, List<Command> commands) {
-    CompiledFunction function = lookupCompiledFunction(element);
+    FletchFunctionBuilder function = lookupFletchFunctionBuilder(element);
     backend.pushNewFunction(function, commands, deferredActions);
     if (element == backend.context.compiler.mainFunction) {
       deferredActions.add(() {
-        CompiledFunction callMain =
-            lookupCompiledFunction(
+        FletchFunctionBuilder callMain =
+            lookupFletchFunctionBuilder(
                 backend.fletchSystemLibrary.findLocal('callMain'));
         commands.add(
             new commands_lib.PushFromMap(MapId.methods, callMain.methodId));
@@ -912,7 +912,7 @@ class LibraryUpdater extends FletchFeatures {
   void computeSchemaChange(ClassElementX element,
                            Map<FieldElementX, int> beforeFields,
                            List<Command> commands) {
-    CompiledClass compiledClass = backend.compiledClasses[element];
+    FletchClassBuilder classBuilder = backend.classBuilders[element];
 
     // Collect the list of fields as they should exist after the transformation.
     List<FieldElementX> afterFields = [];
@@ -926,7 +926,7 @@ class LibraryUpdater extends FletchFeatures {
     Queue<ClassElementX> workQueue = new Queue<ClassElementX>()..add(element);
     while (workQueue.isNotEmpty) {
       ClassElementX current = workQueue.removeFirst();
-      int id = backend.compiledClasses[current].id;
+      int id = backend.classBuilders[current].id;
       commands.add(new commands_lib.PushFromMap(MapId.classes, id));
       numberOfClasses++;
       // Add all subclasses that aren't schema change target themselves to
@@ -1152,7 +1152,7 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
 
   bool wasStateCaptured = false;
 
-  CompiledClass beforeCompiledClass;
+  FletchClassBuilder beforeFletchClassBuilder;
   Map<FieldElement, int> beforeFields;
 
   RemovedFieldUpdate(Compiler compiler, this.element)
@@ -1376,8 +1376,8 @@ abstract class FletchFeatures {
 
   EnqueueTask get enqueuer => compiler.enqueuer;
 
-  CompiledFunction lookupCompiledFunction(FunctionElement function) {
-    return backend.compiledFunctions[function];
+  FletchFunctionBuilder lookupFletchFunctionBuilder(FunctionElement function) {
+    return backend.functionBuilders[function];
   }
 }
 

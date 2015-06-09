@@ -21,7 +21,7 @@ import 'package:compiler/src/elements/modelx.dart' show
 import 'package:compiler/src/util/uri_extras.dart' show
     relativize;
 
-import 'compiled_function.dart';
+import 'fletch_function_builder.dart';
 import 'debug_info.dart';
 import 'find_position_visitor.dart';
 import 'fletch_context.dart';
@@ -179,8 +179,8 @@ class FletchCompiler extends FletchCompilerHack {
     if (unit == null) return null;
     FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
     unit.accept(visitor, null);
-    CompiledFunction function =
-        _NO_WARN(backend).compiledFunctions[visitor.element];
+    FletchFunctionBuilder function =
+        _NO_WARN(backend).functionBuilders[visitor.element];
     if (function == null) return null;
     _NO_WARN(backend).ensureDebugInfo(function);
     return function.debugInfo;

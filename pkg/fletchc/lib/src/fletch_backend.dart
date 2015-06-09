@@ -88,13 +88,13 @@ import 'fletch_constants.dart' show
     FletchFunctionConstant,
     FletchClassInstanceConstant;
 
-import 'compiled_function.dart' show
-    CompiledFunctionKind,
-    CompiledFunction,
+import 'fletch_function_builder.dart' show
+    FletchFunctionBuilderKind,
+    FletchFunctionBuilder,
     DebugInfo;
 
-import 'compiled_class.dart' show
-    CompiledClass;
+import 'fletch_class_builder.dart' show
+    FletchClassBuilder;
 
 import 'codegen_visitor.dart';
 import 'debug_info.dart';
@@ -122,41 +122,41 @@ class FletchBackend extends Backend {
 
   final DartConstantTask constantCompilerTask;
 
-  final Map<FunctionElement, CompiledFunction> compiledFunctions =
-      <FunctionElement, CompiledFunction>{};
+  final Map<FunctionElement, FletchFunctionBuilder> functionBuilders =
+      <FunctionElement, FletchFunctionBuilder>{};
 
-  final Map<ConstructorElement, CompiledFunction> constructors =
-      <ConstructorElement, CompiledFunction>{};
+  final Map<ConstructorElement, FletchFunctionBuilder> constructors =
+      <ConstructorElement, FletchFunctionBuilder>{};
 
-  final List<CompiledFunction> functions = <CompiledFunction>[];
+  final List<FletchFunctionBuilder> functions = <FletchFunctionBuilder>[];
 
   final Set<FunctionElement> externals = new Set<FunctionElement>();
 
-  final Map<ClassElement, CompiledClass> compiledClasses =
-      <ClassElement, CompiledClass>{};
+  final Map<ClassElement, FletchClassBuilder> classBuilders =
+      <ClassElement, FletchClassBuilder>{};
   final Map<ClassElement, Set<ClassElement>> directSubclasses =
       <ClassElement, Set<ClassElement>>{};
 
-  final List<CompiledClass> classes = <CompiledClass>[];
+  final List<FletchClassBuilder> classes = <FletchClassBuilder>[];
 
   final Set<ClassElement> builtinClasses = new Set<ClassElement>();
 
   final Map<MemberElement, ClosureEnvironment> closureEnvironments =
       <MemberElement, ClosureEnvironment>{};
 
-  final Map<FunctionElement, CompiledClass> closureClasses =
-      <FunctionElement, CompiledClass>{};
+  final Map<FunctionElement, FletchClassBuilder> closureClasses =
+      <FunctionElement, FletchClassBuilder>{};
 
-  final Map<FieldElement, CompiledFunction> lazyFieldInitializers =
-      <FieldElement, CompiledFunction>{};
+  final Map<FieldElement, FletchFunctionBuilder> lazyFieldInitializers =
+      <FieldElement, FletchFunctionBuilder>{};
 
-  final Map<CompiledFunction, CompiledClass> tearoffClasses =
-      <CompiledFunction, CompiledClass>{};
+  final Map<FletchFunctionBuilder, FletchClassBuilder> tearoffClasses =
+      <FletchFunctionBuilder, FletchClassBuilder>{};
 
   final Map<int, int> getters = <int, int>{};
   final Map<int, int> setters = <int, int>{};
 
-  Map<CompiledClass, CompiledFunction> tearoffFunctions;
+  Map<FletchClassBuilder, FletchFunctionBuilder> tearoffFunctions;
 
   List<Command> commands;
 
@@ -179,7 +179,7 @@ class FletchBackend extends Backend {
   FunctionElement fletchUnresolved;
   FunctionElement fletchCompileError;
 
-  CompiledClass compiledObjectClass;
+  FletchClassBuilder compiledObjectClass;
 
   ClassElement stringClass;
   ClassElement smiClass;
@@ -197,33 +197,35 @@ class FletchBackend extends Backend {
     context.resolutionCallbacks = new FletchResolutionCallbacks(context);
   }
 
-  CompiledClass registerClassElement(ClassElement element) {
+  FletchClassBuilder registerClassElement(ClassElement element) {
     if (element == null) return null;
     assert(element.isDeclaration);
-    return compiledClasses.putIfAbsent(element, () {
+    return classBuilders.putIfAbsent(element, () {
       directSubclasses[element] = new Set<ClassElement>();
-      CompiledClass superclass = registerClassElement(element.superclass);
+      FletchClassBuilder superclass = registerClassElement(element.superclass);
       if (superclass != null) {
         Set<ClassElement> subclasses = directSubclasses[element.superclass];
         subclasses.add(element);
       }
       int id = classes.length;
-      CompiledClass compiledClass = new CompiledClass(id, element, superclass);
+      FletchClassBuilder classBuilder = new FletchClassBuilder(
+          id, element, superclass);
       if (element.lookupLocalMember(Compiler.CALL_OPERATOR_NAME) != null) {
-        compiledClass.createIsFunctionEntry(this);
+        classBuilder.createIsFunctionEntry(this);
       }
-      classes.add(compiledClass);
-      return compiledClass;
+      classes.add(classBuilder);
+      return classBuilder;
     });
   }
 
-  CompiledClass createCallableStubClass(int fields, CompiledClass superclass) {
+  FletchClassBuilder createCallableStubClass(
+      int fields, FletchClassBuilder superclass) {
     int id = classes.length;
-    CompiledClass compiledClass = new CompiledClass(
+    FletchClassBuilder classBuilder = new FletchClassBuilder(
         id, null, superclass, extraFields: fields);
-    classes.add(compiledClass);
-    compiledClass.createIsFunctionEntry(this);
-    return compiledClass;
+    classes.add(classBuilder);
+    classBuilder.createIsFunctionEntry(this);
+    return classBuilder;
   }
 
   FletchResolutionCallbacks get resolutionCallbacks {
@@ -281,7 +283,7 @@ class FletchBackend extends Backend {
     fletchCompileError = findExternal('compileError');
     world.registerStaticUse(fletchCompileError);
 
-    CompiledClass loadClass(String name, LibraryElement library) {
+    FletchClassBuilder loadClass(String name, LibraryElement library) {
       var classImpl = library.findLocal(name);
       if (classImpl == null) classImpl = library.implementation.find(name);
       if (classImpl == null) {
@@ -291,18 +293,18 @@ class FletchBackend extends Backend {
       // TODO(ahe): Register in ResolutionCallbacks. The 3 lines below should
       // not happen at this point in time.
       classImpl.ensureResolved(compiler);
-      CompiledClass compiledClass = registerClassElement(classImpl);
+      FletchClassBuilder classBuilder = registerClassElement(classImpl);
       world.registerInstantiatedType(classImpl.rawType, registry);
       // TODO(ahe): This is a hack to let both the world and the codegen know
       // about the instantiated type.
       registry.registerInstantiatedType(classImpl.rawType);
-      return compiledClass;
+      return classBuilder;
     }
 
-    CompiledClass loadBuiltinClass(String name, LibraryElement library) {
-      CompiledClass compiledClass = loadClass(name, library);
-      builtinClasses.add(compiledClass.element);
-      return compiledClass;
+    FletchClassBuilder loadBuiltinClass(String name, LibraryElement library) {
+      FletchClassBuilder classBuilder = loadClass(name, library);
+      builtinClasses.add(classBuilder.element);
+      return classBuilder;
     }
 
     compiledObjectClass = loadBuiltinClass("Object", compiler.coreLibrary);
@@ -371,7 +373,7 @@ class FletchBackend extends Backend {
     return super.stringImplementation;
   }
 
-  CompiledClass createClosureClass(
+  FletchClassBuilder createClosureClass(
       FunctionElement closure,
       ClosureEnvironment closureEnvironment) {
     return closureClasses.putIfAbsent(closure, () {
@@ -392,22 +394,22 @@ class FletchBackend extends Backend {
    * If [function] is an instance member, the class will have one field, the
    * instance.
    */
-  CompiledClass createTearoffClass(CompiledFunction function) {
+  FletchClassBuilder createTearoffClass(FletchFunctionBuilder function) {
     return tearoffClasses.putIfAbsent(function, () {
       FunctionSignature signature = function.signature;
       bool hasThis = function.hasThisArgument;
-      CompiledClass compiledClass = createCallableStubClass(
+      FletchClassBuilder classBuilder = createCallableStubClass(
           hasThis ? 1 : 0,
           compiledObjectClass);
-      CompiledFunction compiledFunction = new CompiledFunction(
+      FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder(
           functions.length,
           'call',
           null,
           signature,
-          compiledClass);
-      functions.add(compiledFunction);
+          classBuilder);
+      functions.add(functionBuilder);
 
-      BytecodeBuilder builder = compiledFunction.builder;
+      BytecodeBuilder builder = functionBuilder.builder;
       int argumentCount = signature.parameterCount;
       if (hasThis) {
         argumentCount++;
@@ -422,7 +424,7 @@ class FletchBackend extends Backend {
         // i + 1.
         builder.loadParameter(i + 1);
       }
-      int constId = compiledFunction.allocateConstantFromFunction(
+      int constId = functionBuilder.allocateConstantFromFunction(
           function.methodId);
       // TODO(ajohnsen): Create a tail-call bytecode, so we don't have to
       // load all the arguments.
@@ -436,16 +438,16 @@ class FletchBackend extends Backend {
       int fletchSelector = FletchSelector.encodeMethod(
           id,
           signature.parameterCount);
-      compiledClass.addToMethodTable(fletchSelector, compiledFunction);
+      classBuilder.addToMethodTable(fletchSelector, functionBuilder);
 
       if (hasThis && function.memberOf.element != null) {
         // Create == function that tests for equality.
         int isSelector = context.toFletchTearoffIsSelector(
             function.name,
             function.memberOf.element);
-        compiledClass.addIsSelector(isSelector);
+        classBuilder.addIsSelector(isSelector);
 
-        CompiledFunction equal = new CompiledFunction.normal(
+        FletchFunctionBuilder equal = new FletchFunctionBuilder.normal(
             functions.length,
             2);
         functions.add(equal);
@@ -473,11 +475,11 @@ class FletchBackend extends Backend {
 
         int id = context.getSymbolId("==");
         int equalsSelector = FletchSelector.encodeMethod(id, 1);
-        compiledClass.addToMethodTable(equalsSelector, equal);
+        classBuilder.addToMethodTable(equalsSelector, equal);
 
         // Create hashCode getter. We simply xor the object hashCode and the
         // method id of the tearoff'ed function.
-        CompiledFunction hashCode = new CompiledFunction.accessor(
+        FletchFunctionBuilder hashCode = new FletchFunctionBuilder.accessor(
             functions.length,
             false);
         functions.add(hashCode);
@@ -495,33 +497,33 @@ class FletchBackend extends Backend {
           ..ret()
           ..methodEnd();
 
-        compiledClass.addToMethodTable(hashCodeSelector, hashCode);
+        classBuilder.addToMethodTable(hashCodeSelector, hashCode);
       }
-      return compiledClass;
+      return classBuilder;
     });
   }
 
-  CompiledFunction createCompiledFunction(FunctionElement function) {
+  FletchFunctionBuilder createFletchFunctionBuilder(FunctionElement function) {
     assert(function.memberContext == function);
 
-    CompiledClass holderClass;
+    FletchClassBuilder holderClass;
     if (function.isInstanceMember || function.isGenerativeConstructor) {
       ClassElement enclosingClass = function.enclosingClass.declaration;
       holderClass = registerClassElement(enclosingClass);
     }
-    return internalCreateCompiledFunction(
+    return internalCreateFletchFunctionBuilder(
         function,
         function.name,
         holderClass);
   }
 
-  CompiledFunction internalCreateCompiledFunction(
+  FletchFunctionBuilder internalCreateFletchFunctionBuilder(
       FunctionElement function,
       String name,
-      CompiledClass holderClass) {
-    return compiledFunctions.putIfAbsent(function.declaration, () {
+      FletchClassBuilder holderClass) {
+    return functionBuilders.putIfAbsent(function.declaration, () {
       FunctionTypedElement implementation = function.implementation;
-      CompiledFunction compiledFunction = new CompiledFunction(
+      FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder(
           functions.length,
           name,
           function,
@@ -530,26 +532,27 @@ class FletchBackend extends Backend {
           implementation.functionSignature,
           holderClass,
           kind: function.isAccessor
-              ? CompiledFunctionKind.ACCESSOR
-              : CompiledFunctionKind.NORMAL);
-      functions.add(compiledFunction);
-      return compiledFunction;
+              ? FletchFunctionBuilderKind.ACCESSOR
+              : FletchFunctionBuilderKind.NORMAL);
+      functions.add(functionBuilder);
+      return functionBuilder;
     });
   }
 
   int functionMethodId(FunctionElement function) {
-    return createCompiledFunction(function).methodId;
+    return createFletchFunctionBuilder(function).methodId;
   }
 
-  CompiledFunction compiledFunctionFromTearoffClass(CompiledClass klass) {
+  FletchFunctionBuilder functionBuilderFromTearoffClass(
+      FletchClassBuilder klass) {
     if (tearoffFunctions == null) {
-      tearoffFunctions = <CompiledClass, CompiledFunction>{};
+      tearoffFunctions = <FletchClassBuilder, FletchFunctionBuilder>{};
       tearoffClasses.forEach((k, v) => tearoffFunctions[v] = k);
     }
     return tearoffFunctions[klass];
   }
 
-  void ensureDebugInfo(CompiledFunction function) {
+  void ensureDebugInfo(FletchFunctionBuilder function) {
     if (function.debugInfo != null) return;
     function.debugInfo = new DebugInfo(function);
     AstElement element = function.element;
@@ -572,7 +575,7 @@ class FletchBackend extends Backend {
           compiler);
     } else if (function.isInitializerList) {
       ClassElement enclosingClass = element.enclosingClass;
-      CompiledClass compiledClass = compiledClasses[enclosingClass];
+      FletchClassBuilder classBuilder = classBuilders[enclosingClass];
       codegen = new DebugInfoConstructorCodegen(
           function,
           context,
@@ -580,7 +583,7 @@ class FletchBackend extends Backend {
           null,
           closureEnvironment,
           element,
-          compiledClass,
+          classBuilder,
           compiler);
     } else {
       codegen = new DebugInfoFunctionCodegen(
@@ -643,19 +646,19 @@ class FletchBackend extends Backend {
         function,
         elements);
 
-    CompiledFunction compiledFunction;
+    FletchFunctionBuilder functionBuilder;
 
     if (function.memberContext != function) {
-      compiledFunction = internalCreateCompiledFunction(
+      functionBuilder = internalCreateFletchFunctionBuilder(
           function,
           Compiler.CALL_OPERATOR_NAME,
           createClosureClass(function, closureEnvironment));
     } else {
-      compiledFunction = createCompiledFunction(function);
+      functionBuilder = createFletchFunctionBuilder(function);
     }
 
     FunctionCodegen codegen = new FunctionCodegen(
-        compiledFunction,
+        functionBuilder,
         context,
         elements,
         registry,
@@ -673,13 +676,13 @@ class FletchBackend extends Backend {
     // TODO(ahe): Don't do this.
     compiler.enqueuer.codegen.generatedCode[function.declaration] = null;
 
-    if (compiledFunction.memberOf != null &&
+    if (functionBuilder.memberOf != null &&
         !function.isGenerativeConstructor) {
       // Inject the function into the method table of the 'holderClass' class.
       // Note that while constructor bodies has a this argument, we don't inject
       // them into the method table.
       String symbol = context.getSymbolForFunction(
-          compiledFunction.name,
+          functionBuilder.name,
           function.functionSignature,
           function.library);
       int id = context.getSymbolId(symbol);
@@ -688,36 +691,36 @@ class FletchBackend extends Backend {
       if (function.isGetter) kind = SelectorKind.Getter;
       if (function.isSetter) kind = SelectorKind.Setter;
       int fletchSelector = FletchSelector.encode(id, kind, arity);
-      int methodId = compiledFunction.methodId;
-      compiledFunction.memberOf.addToMethodTable(
-          fletchSelector, compiledFunction);
+      int methodId = functionBuilder.methodId;
+      functionBuilder.memberOf.addToMethodTable(
+          fletchSelector, functionBuilder);
       // Inject method into all mixin usages.
       Iterable<ClassElement> mixinUsage =
           compiler.world.mixinUsesOf(function.enclosingClass);
       for (ClassElement usage in mixinUsage) {
         // TODO(ajohnsen): Consider having multiple 'memberOf' in
-        // CompiledFunction, to avoid duplicates.
+        // FletchFunctionBuilder, to avoid duplicates.
         // Create a copy with a unique 'memberOf', so we can detect missing
         // stubs for the mixin applications as well.
-        CompiledClass compiledUsage = registerClassElement(usage);
+        FletchClassBuilder compiledUsage = registerClassElement(usage);
         FunctionTypedElement implementation = function.implementation;
-        CompiledFunction copy = new CompiledFunction(
+        FletchFunctionBuilder copy = new FletchFunctionBuilder(
             functions.length,
             function.name,
             implementation,
             implementation.functionSignature,
             compiledUsage,
             kind: function.isAccessor
-                ? CompiledFunctionKind.ACCESSOR
-                : CompiledFunctionKind.NORMAL);
+                ? FletchFunctionBuilderKind.ACCESSOR
+                : FletchFunctionBuilderKind.NORMAL);
         functions.add(copy);
         compiledUsage.addToMethodTable(fletchSelector, copy);
-        copy.copyFrom(compiledFunction);
+        copy.copyFrom(functionBuilder);
       }
     }
 
     if (compiler.verbose) {
-      compiler.log(compiledFunction.verboseToString());
+      compiler.log(functionBuilder.verboseToString());
     }
   }
 
@@ -858,7 +861,7 @@ class FletchBackend extends Backend {
   void createParameterMatchingStubs() {
     int length = functions.length;
     for (int i = 0; i < length; i++) {
-      CompiledFunction function = functions[i];
+      FletchFunctionBuilder function = functions[i];
       if (!function.hasThisArgument || function.isAccessor) continue;
       String name = function.name;
       Set<Selector> usage = compiler.resolverWorld.invokedNames[name];
@@ -877,7 +880,7 @@ class FletchBackend extends Backend {
   void createTearoffStubs() {
     int length = functions.length;
     for (int i = 0; i < length; i++) {
-      CompiledFunction function = functions[i];
+      FletchFunctionBuilder function = functions[i];
       if (!function.hasThisArgument || function.isAccessor) continue;
       String name = function.name;
       if (compiler.resolverWorld.invokedGetters.containsKey(name)) {
@@ -886,9 +889,9 @@ class FletchBackend extends Backend {
     }
   }
 
-  void createTearoffGetterForFunction(CompiledFunction function) {
-    CompiledClass tearoffClass = createTearoffClass(function);
-    CompiledFunction getter = new CompiledFunction.accessor(
+  void createTearoffGetterForFunction(FletchFunctionBuilder function) {
+    FletchClassBuilder tearoffClass = createTearoffClass(function);
+    FletchFunctionBuilder getter = new FletchFunctionBuilder.accessor(
         functions.length,
         false);
     functions.add(getter);
@@ -913,11 +916,11 @@ class FletchBackend extends Backend {
     createTearoffStubs();
     createParameterMatchingStubs();
 
-    for (CompiledClass compiledClass in classes) {
-      compiledClass.createIsEntries(this);
+    for (FletchClassBuilder classBuilder in classes) {
+      classBuilder.createIsEntries(this);
       // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
       // This is a workaround, where we basically add getters for all fields.
-      compiledClass.createImplicitAccessors(this);
+      classBuilder.createImplicitAccessors(this);
     }
 
     List<Command> commands = <Command>[
@@ -932,19 +935,19 @@ class FletchBackend extends Backend {
 
     int changes = 0;
 
-    for (CompiledClass compiledClass in classes) {
-      ClassElement element = compiledClass.element;
+    for (FletchClassBuilder classBuilder in classes) {
+      ClassElement element = classBuilder.element;
       if (builtinClasses.contains(element)) {
         int nameId = context.getSymbolId(element.name);
-        commands.add(new PushBuiltinClass(nameId, compiledClass.fields));
+        commands.add(new PushBuiltinClass(nameId, classBuilder.fields));
       } else {
-        commands.add(new PushNewClass(compiledClass.fields));
+        commands.add(new PushNewClass(classBuilder.fields));
       }
 
       commands.add(const Dup());
-      commands.add(new PopToMap(MapId.classes, compiledClass.id));
+      commands.add(new PopToMap(MapId.classes, classBuilder.id));
 
-      Map<int, int> methodTable = compiledClass.computeMethodTable(this);
+      Map<int, int> methodTable = classBuilder.computeMethodTable(this);
       methodTable.forEach((int selector, int methodId) {
         commands.add(new PushNewInteger(selector));
         commands.add(new PushFromMap(MapId.methods, methodId));
@@ -955,7 +958,7 @@ class FletchBackend extends Backend {
     }
 
     context.forEachStatic((element, index) {
-      CompiledFunction initializer = lazyFieldInitializers[element];
+      FletchFunctionBuilder initializer = lazyFieldInitializers[element];
       if (initializer != null) {
         commands.add(new PushFromMap(MapId.methods, initializer.methodId));
         commands.add(const PushNewInitializer());
@@ -999,13 +1002,13 @@ class FletchBackend extends Backend {
       } else if (constant.isConstructedObject) {
         ConstructedConstantValue value = constant;
         ClassElement classElement = value.type.element;
-        CompiledClass compiledClass = compiledClasses[classElement];
+        FletchClassBuilder classBuilder = classBuilders[classElement];
         for (ConstantValue field in value.fields.values) {
           int fieldId = context.compiledConstants[field];
           commands.add(new PushFromMap(MapId.constants, fieldId));
         }
         commands
-            ..add(new PushFromMap(MapId.classes, compiledClass.id))
+            ..add(new PushFromMap(MapId.classes, classBuilder.id))
             ..add(const PushNewInstance());
       } else if (constant is FletchClassInstanceConstant) {
         commands
@@ -1017,10 +1020,10 @@ class FletchBackend extends Backend {
       commands.add(new PopToMap(MapId.constants, id));
     });
 
-    for (CompiledClass compiledClass in classes) {
-      CompiledClass superclass = compiledClass.superclass;
+    for (FletchClassBuilder classBuilder in classes) {
+      FletchClassBuilder superclass = classBuilder.superclass;
       if (superclass == null) continue;
-      commands.add(new PushFromMap(MapId.classes, compiledClass.id));
+      commands.add(new PushFromMap(MapId.classes, classBuilder.id));
       commands.add(new PushFromMap(MapId.classes, superclass.id));
       commands.add(const ChangeSuperClass());
       changes++;
@@ -1037,7 +1040,7 @@ class FletchBackend extends Backend {
 
     commands.add(new PushFromMap(
         MapId.methods,
-        compiledFunctions[fletchSystemEntry].methodId));
+        functionBuilders[fletchSystemEntry].methodId));
 
     this.commands = commands;
 
@@ -1045,17 +1048,17 @@ class FletchBackend extends Backend {
   }
 
   void pushNewFunction(
-      CompiledFunction compiledFunction,
+      FletchFunctionBuilder functionBuilder,
       List<Command> commands,
       List<Function> deferredActions) {
-    int arity = compiledFunction.builder.functionArity;
-    int constantCount = compiledFunction.constants.length;
-    int methodId = compiledFunction.methodId;
+    int arity = functionBuilder.builder.functionArity;
+    int constantCount = functionBuilder.constants.length;
+    int methodId = functionBuilder.methodId;
 
-    assert(functions[methodId] == compiledFunction);
-    assert(compiledFunction.builder.bytecodes.isNotEmpty);
+    assert(functions[methodId] == functionBuilder);
+    assert(functionBuilder.builder.bytecodes.isNotEmpty);
 
-    compiledFunction.constants.forEach((constant, int index) {
+    functionBuilder.constants.forEach((constant, int index) {
       if (constant is ConstantValue) {
         if (constant is FletchFunctionConstant) {
           commands.add(const PushNull());
@@ -1095,8 +1098,8 @@ class FletchBackend extends Backend {
         new PushNewFunction(
             arity,
             constantCount,
-            compiledFunction.builder.bytecodes,
-            compiledFunction.builder.catchRanges));
+            functionBuilder.builder.bytecodes,
+            functionBuilder.builder.catchRanges));
 
     commands.add(new PopToMap(MapId.methods, methodId));
   }
@@ -1189,13 +1192,13 @@ class FletchBackend extends Backend {
 
     if (lazyFieldInitializers.containsKey(field)) return index;
 
-    CompiledFunction compiledFunction = new CompiledFunction.lazyInit(
+    FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder.lazyInit(
         functions.length,
         "${field.name} lazy initializer",
         field,
         0);
-    functions.add(compiledFunction);
-    lazyFieldInitializers[field] = compiledFunction;
+    functions.add(functionBuilder);
+    lazyFieldInitializers[field] = functionBuilder;
 
     TreeElements elements = field.resolvedAst.elements;
 
@@ -1204,7 +1207,7 @@ class FletchBackend extends Backend {
         elements);
 
     LazyFieldInitializerCodegen codegen = new LazyFieldInitializerCodegen(
-        compiledFunction,
+        functionBuilder,
         context,
         elements,
         registry,
@@ -1216,14 +1219,14 @@ class FletchBackend extends Backend {
     return index;
   }
 
-  CompiledFunction compileConstructor(ConstructorElement constructor,
+  FletchFunctionBuilder compileConstructor(ConstructorElement constructor,
                                       Registry registry) {
     assert(constructor.isDeclaration);
-    CompiledFunction compiledFunction = constructors[constructor];
-    if (compiledFunction != null) return compiledFunction;
+    FletchFunctionBuilder functionBuilder = constructors[constructor];
+    if (functionBuilder != null) return functionBuilder;
 
     ClassElement classElement = constructor.enclosingClass;
-    CompiledClass compiledClass = registerClassElement(classElement);
+    FletchClassBuilder classBuilder = registerClassElement(classElement);
 
     ConstructorElement implementation = constructor.implementation;
 
@@ -1241,32 +1244,32 @@ class FletchBackend extends Backend {
         implementation,
         elements);
 
-    compiledFunction = new CompiledFunction(
+    functionBuilder = new FletchFunctionBuilder(
         functions.length,
         implementation.name,
         implementation,
         implementation.functionSignature,
         null,
-        kind: CompiledFunctionKind.INITIALIZER_LIST);
-    functions.add(compiledFunction);
-    constructors[constructor] = compiledFunction;
+        kind: FletchFunctionBuilderKind.INITIALIZER_LIST);
+    functions.add(functionBuilder);
+    constructors[constructor] = functionBuilder;
 
     ConstructorCodegen codegen = new ConstructorCodegen(
-        compiledFunction,
+        functionBuilder,
         context,
         elements,
         registry,
         closureEnvironment,
         implementation,
-        compiledClass);
+        classBuilder);
 
     codegen.compile();
 
     if (compiler.verbose) {
-      compiler.log(compiledFunction.verboseToString());
+      compiler.log(functionBuilder.verboseToString());
     }
 
-    return compiledFunction;
+    return functionBuilder;
   }
 
   /**
@@ -1274,7 +1277,7 @@ class FletchBackend extends Backend {
    */
   int makeGetter(int fieldIndex) {
     return getters.putIfAbsent(fieldIndex, () {
-      CompiledFunction stub = new CompiledFunction.accessor(
+      FletchFunctionBuilder stub = new FletchFunctionBuilder.accessor(
           functions.length,
           false);
       functions.add(stub);
@@ -1292,7 +1295,7 @@ class FletchBackend extends Backend {
    */
   int makeSetter(int fieldIndex) {
     return setters.putIfAbsent(fieldIndex, () {
-      CompiledFunction stub = new CompiledFunction.accessor(
+      FletchFunctionBuilder stub = new FletchFunctionBuilder.accessor(
           functions.length,
           true);
       functions.add(stub);
@@ -1310,7 +1313,7 @@ class FletchBackend extends Backend {
   void generateUnimplementedError(
       Spannable spannable,
       String reason,
-      CompiledFunction function) {
+      FletchFunctionBuilder function) {
     compiler.reportError(
         spannable, MessageKind.GENERIC, {'text': reason});
     var constString = constantSystem.createString(
@@ -1322,8 +1325,8 @@ class FletchBackend extends Backend {
   }
 
   void forgetElement(Element element) {
-    CompiledFunction compiledFunction = compiledFunctions[element];
-    if (compiledFunction == null) return;
-    compiledFunction.reuse();
+    FletchFunctionBuilder functionBuilder = functionBuilders[element];
+    if (functionBuilder == null) return;
+    functionBuilder.reuse();
   }
 }

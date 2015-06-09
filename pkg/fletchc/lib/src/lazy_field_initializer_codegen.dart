@@ -14,8 +14,8 @@ import 'package:compiler/src/tree/tree.dart';
 
 import 'fletch_context.dart';
 
-import 'compiled_function.dart' show
-    CompiledFunction;
+import 'fletch_function_builder.dart' show
+    FletchFunctionBuilder;
 
 import 'closure_environment.dart';
 
@@ -23,13 +23,13 @@ import 'codegen_visitor.dart';
 
 class LazyFieldInitializerCodegen extends CodegenVisitor {
 
-  LazyFieldInitializerCodegen(CompiledFunction compiledFunction,
+  LazyFieldInitializerCodegen(FletchFunctionBuilder functionBuilder,
                               FletchContext context,
                               TreeElements elements,
                               Registry registry,
                               ClosureEnvironment closureEnvironment,
                               FieldElement field)
-      : super(compiledFunction, context, elements, registry,
+      : super(functionBuilder, context, elements, registry,
               closureEnvironment, field);
 
   FieldElement get field => element;

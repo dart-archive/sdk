@@ -2,21 +2,21 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.compiled_class;
+library fletchc.fletch_class_builder;
 
 import 'package:compiler/src/dart_types.dart';
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/universe/universe.dart';
 
-import 'compiled_function.dart' show
-    CompiledFunction;
+import 'fletch_function_builder.dart' show
+    FletchFunctionBuilder;
 
 import 'fletch_backend.dart';
 
-class CompiledClass {
+class FletchClassBuilder {
   final int id;
   final ClassElement element;
-  final CompiledClass superclass;
+  final FletchClassBuilder superclass;
 
   // The extra fields are synthetic fields not represented in any Dart source
   // code. They are used for the synthetic closure classes that are introduced
@@ -26,9 +26,11 @@ class CompiledClass {
   // TODO(kasperl): Hide these tables and go through a proper API to define
   // and lookup methods.
   final Map<int, int> implicitAccessorTable = <int, int>{};
-  final Map<int, CompiledFunction> methodTable = <int, CompiledFunction>{};
+  final Map<int, FletchFunctionBuilder> methodTable =
+      <int, FletchFunctionBuilder>{};
 
-  CompiledClass(this.id, this.element, this.superclass, {this.extraFields: 0});
+  FletchClassBuilder(
+      this.id, this.element, this.superclass, {this.extraFields: 0});
 
   /**
    * Returns the number of instance fields of all the super classes of this
@@ -50,8 +52,8 @@ class CompiledClass {
     return count;
   }
 
-  void addToMethodTable(int selector, CompiledFunction compiledFunction) {
-    methodTable[selector] = compiledFunction;
+  void addToMethodTable(int selector, FletchFunctionBuilder functionBuilder) {
+    methodTable[selector] = functionBuilder;
   }
 
   // Add a selector for is-tests. The selector is only to be hit with the
@@ -71,7 +73,7 @@ class CompiledClass {
         ..sort();
     for (int selector in selectors) {
       if (methodTable.containsKey(selector)) {
-        CompiledFunction function = methodTable[selector];
+        FletchFunctionBuilder function = methodTable[selector];
         result[selector] = function == null ? 0 : function.methodId;
       } else {
         result[selector] = implicitAccessorTable[selector];
@@ -107,7 +109,7 @@ class CompiledClass {
     if (element == null) return;
 
     Set superclasses = new Set();
-    for (CompiledClass current = superclass;
+    for (FletchClassBuilder current = superclass;
          current != null;
          current = current.superclass) {
       superclasses.add(current.element);
@@ -137,5 +139,5 @@ class CompiledClass {
     addIsSelector(fletchSelector);
   }
 
-  String toString() => "CompiledClass(${element.name}, $id)";
+  String toString() => "FletchClassBuilder(${element.name}, $id)";
 }

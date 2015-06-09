@@ -25,14 +25,14 @@ import 'package:compiler/src/universe/universe.dart'
 import '../bytecodes.dart' show
     Bytecode;
 
-import 'compiled_class.dart' show
-    CompiledClass;
+import 'fletch_class_builder.dart' show
+    FletchClassBuilder;
 
 import 'fletch_context.dart';
 import 'bytecode_builder.dart';
 import 'debug_info.dart';
 
-enum CompiledFunctionKind {
+enum FletchFunctionBuilderKind {
   NORMAL,
   LAZY_FIELD_INITIALIZER,
   INITIALIZER_LIST,
@@ -40,12 +40,12 @@ enum CompiledFunctionKind {
   ACCESSOR
 }
 
-class CompiledFunction {
+class FletchFunctionBuilder {
   final BytecodeBuilder builder;
   final int methodId;
 
   /**
-   * The signature of the CompiledFunction.
+   * The signature of the FletchFunctionBuilder.
    *
    * Som compiled functions does not have a signature (for example, generated
    * accessors).
@@ -59,53 +59,53 @@ class CompiledFunction {
    * If [memberOf] is set, the compiled function takes an 'this' argument in
    * addition to that of [signature].
    */
-  final CompiledClass memberOf;
+  final FletchClassBuilder memberOf;
   final String name;
   final Element element;
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
   final Map<int, ConstantValue> classConstantValues = <int, ConstantValue>{};
-  final Map<Selector, CompiledFunction> parameterMappings =
-      <Selector, CompiledFunction>{};
+  final Map<Selector, FletchFunctionBuilder> parameterMappings =
+      <Selector, FletchFunctionBuilder>{};
   final int arity;
-  final CompiledFunctionKind kind;
+  final FletchFunctionBuilderKind kind;
 
   DebugInfo debugInfo;
 
-  CompiledFunction(this.methodId,
+  FletchFunctionBuilder(this.methodId,
                    this.name,
                    this.element,
                    FunctionSignature signature,
-                   CompiledClass memberOf,
-                   {this.kind: CompiledFunctionKind.NORMAL})
+                   FletchClassBuilder memberOf,
+                   {this.kind: FletchFunctionBuilderKind.NORMAL})
       : this.signature = signature,
         this.memberOf = memberOf,
         arity = signature.parameterCount + (memberOf != null ? 1 : 0),
         builder = new BytecodeBuilder(
           signature.parameterCount + (memberOf != null ? 1 : 0));
 
-  CompiledFunction.normal(this.methodId, int argumentCount)
+  FletchFunctionBuilder.normal(this.methodId, int argumentCount)
       : arity = argumentCount,
         builder = new BytecodeBuilder(argumentCount),
-        kind = CompiledFunctionKind.NORMAL;
+        kind = FletchFunctionBuilderKind.NORMAL;
 
-  CompiledFunction.lazyInit(this.methodId,
+  FletchFunctionBuilder.lazyInit(this.methodId,
                             this.name,
                             this.element,
                             int argumentCount)
       : arity = argumentCount,
         builder = new BytecodeBuilder(argumentCount),
-        kind = CompiledFunctionKind.LAZY_FIELD_INITIALIZER;
+        kind = FletchFunctionBuilderKind.LAZY_FIELD_INITIALIZER;
 
-  CompiledFunction.parameterStub(this.methodId, int argumentCount)
+  FletchFunctionBuilder.parameterStub(this.methodId, int argumentCount)
       : arity = argumentCount,
         builder = new BytecodeBuilder(argumentCount),
-        kind = CompiledFunctionKind.PARAMETER_STUB;
+        kind = FletchFunctionBuilderKind.PARAMETER_STUB;
 
-  CompiledFunction.accessor(this.methodId, bool setter)
+  FletchFunctionBuilder.accessor(this.methodId, bool setter)
       : arity = setter ? 2 : 1,
         builder = new BytecodeBuilder(setter ? 2 : 1),
-        kind = CompiledFunctionKind.ACCESSOR;
+        kind = FletchFunctionBuilderKind.ACCESSOR;
 
   void reuse() {
     builder.reuse();
@@ -117,19 +117,19 @@ class CompiledFunction {
   bool get hasThisArgument => memberOf != null;
 
   bool get isLazyFieldInitializer {
-    return kind == CompiledFunctionKind.LAZY_FIELD_INITIALIZER;
+    return kind == FletchFunctionBuilderKind.LAZY_FIELD_INITIALIZER;
   }
 
   bool get isInitializerList {
-    return kind == CompiledFunctionKind.INITIALIZER_LIST;
+    return kind == FletchFunctionBuilderKind.INITIALIZER_LIST;
   }
 
   bool get isAccessor {
-    return kind == CompiledFunctionKind.ACCESSOR;
+    return kind == FletchFunctionBuilderKind.ACCESSOR;
   }
 
   bool get isParameterStub {
-    return kind == CompiledFunctionKind.PARAMETER_STUB;
+    return kind == FletchFunctionBuilderKind.PARAMETER_STUB;
   }
 
   bool get isConstructor => element != null && element.isConstructor;
@@ -155,7 +155,7 @@ class CompiledFunction {
 
   // TODO(ajohnsen): Remove this function when usage is avoided in
   // FletchBackend.
-  void copyFrom(CompiledFunction function) {
+  void copyFrom(FletchFunctionBuilder function) {
     builder.bytecodes.addAll(function.builder.bytecodes);
     builder.catchRanges.addAll(function.builder.catchRanges);
     constants.addAll(function.constants);
@@ -213,7 +213,7 @@ class CompiledFunction {
     }
   }
 
-  CompiledFunction createParameterMappingFor(
+  FletchFunctionBuilder createParameterMappingFor(
       Selector selector,
       FletchContext context) {
     return parameterMappings.putIfAbsent(selector, () {
@@ -221,12 +221,13 @@ class CompiledFunction {
       int arity = selector.argumentCount;
       if (hasThisArgument) arity++;
 
-      CompiledFunction compiledFunction = new CompiledFunction.parameterStub(
-          context.backend.functions.length,
-          arity);
-      context.backend.functions.add(compiledFunction);
+      FletchFunctionBuilder functionBuilder =
+          new FletchFunctionBuilder.parameterStub(
+              context.backend.functions.length,
+              arity);
+      context.backend.functions.add(functionBuilder);
 
-      BytecodeBuilder builder = compiledFunction.builder;
+      BytecodeBuilder builder = functionBuilder.builder;
 
       void loadInitializerOrNull(ParameterElement parameter) {
         Expression initializer = parameter.initializer;
@@ -235,7 +236,7 @@ class CompiledFunction {
               initializer,
               parameter.memberContext.resolvedAst.elements,
               isConst: true);
-          int constId = compiledFunction.allocateConstant(
+          int constId = functionBuilder.allocateConstant(
               context.getConstantValue(expression));
           builder.loadConst(constId);
         } else {
@@ -273,7 +274,7 @@ class CompiledFunction {
       // method that takes optional arguments. We really should
       // enumerate all the stubs in the superclasses and make sure
       // they're overridden.
-      int constId = compiledFunction.allocateConstantFromFunction(methodId);
+      int constId = functionBuilder.allocateConstantFromFunction(methodId);
       builder
           ..invokeStatic(constId, index)
           ..ret()
@@ -281,10 +282,10 @@ class CompiledFunction {
 
       if (memberOf != null) {
         int fletchSelector = context.toFletchSelector(selector);
-        memberOf.addToMethodTable(fletchSelector, compiledFunction);
+        memberOf.addToMethodTable(fletchSelector, functionBuilder);
       }
 
-      return compiledFunction;
+      return functionBuilder;
     });
   }
 

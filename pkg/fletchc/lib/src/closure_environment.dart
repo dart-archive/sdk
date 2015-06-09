@@ -31,20 +31,6 @@ import 'package:compiler/src/universe/universe.dart';
 import 'package:compiler/src/util/util.dart' show Spannable;
 import 'package:compiler/src/dart_types.dart';
 
-import 'fletch_context.dart';
-
-import 'fletch_constants.dart' show
-    CompiledFunctionConstant,
-    FletchClassConstant;
-
-import '../bytecodes.dart' show
-    Bytecode;
-
-import 'compiled_function.dart' show
-    CompiledFunction;
-
-import 'fletch_selector.dart';
-
 enum CaptureMode {
   /**
    * If a local is marked [ByValue], the local is read in closures.

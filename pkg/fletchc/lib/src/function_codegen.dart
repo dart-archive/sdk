@@ -14,8 +14,8 @@ import 'package:compiler/src/tree/tree.dart';
 
 import 'fletch_context.dart';
 
-import 'compiled_function.dart' show
-    CompiledFunction;
+import 'fletch_function_builder.dart' show
+    FletchFunctionBuilder;
 
 import 'closure_environment.dart';
 
@@ -25,13 +25,13 @@ class FunctionCodegen extends CodegenVisitor {
 
   int setterResultSlot;
 
-  FunctionCodegen(CompiledFunction compiledFunction,
+  FunctionCodegen(FletchFunctionBuilder functionBuilder,
                   FletchContext context,
                   TreeElements elements,
                   Registry registry,
                   ClosureEnvironment closureEnvironment,
                   FunctionElement function)
-      : super(compiledFunction, context, elements, registry,
+      : super(functionBuilder, context, elements, registry,
               closureEnvironment, function);
 
   FunctionElement get function => element;
@@ -39,7 +39,8 @@ class FunctionCodegen extends CodegenVisitor {
   // If the function is a setter, push the argument to later be returned.
   // TODO(ajohnsen): If the argument is semantically final, we don't have to
   // do this.
-  bool get hasAssignmentSemantics => function.isSetter || function.name == '[]=';
+  bool get hasAssignmentSemantics =>
+      function.isSetter || function.name == '[]=';
 
   void compile() {
     if (checkCompileError(function)) {
