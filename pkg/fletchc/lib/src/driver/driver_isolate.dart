@@ -36,6 +36,8 @@ import 'verbs.dart' show
 const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
 const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
 
+// TODO(ahe): Send DriverCommands directly when they are canonicalized
+// correctly, see issue 23244.
 class PortCommandSender extends CommandSender {
   final SendPort port;
 
@@ -58,7 +60,7 @@ class PortCommandSender extends CommandSender {
   }
 }
 
-/* void */ isolateMain(SendPort port) async {
+Future<Null> isolateMain(SendPort port) async {
   ReceivePort receivePort = new ReceivePort();
   port.send(receivePort.sendPort);
   port = null;
@@ -70,7 +72,7 @@ class PortCommandSender extends CommandSender {
 
 Future<Null> beginSession(SendPort port) async {
   ReceivePort receivePort = new ReceivePort();
-  port.send(receivePort.sendPort);
+  port.send([DriverCommand.SendPort.index, receivePort.sendPort]);
   handleClient(port, receivePort);
 }
 

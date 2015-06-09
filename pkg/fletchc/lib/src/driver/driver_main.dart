@@ -256,23 +256,24 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
   //
   // * Store completed isolates in a pool.
 
-  // Spawn or reuse isolate.
-  ManagedIsolate isolate = await pool.getIsolate();
+  // Spawn/reuse a worker isolate.
+  IsolateController worker = new IsolateController(await pool.getIsolate());
 
-  // Forward commands between C++ client [client], and worker isolate
-  // [worker]. This is done with two asynchronous tasks that communicate with
-  // each other. Also handles the signal command as mentioned above.
+  // Forward commands between C++ client [client], and worker isolate [worker].
+  // This is done with two asynchronous tasks that communicate with each other.
+  // Also handles the signal command as mentioned above.
   ClientController client = new ClientController(controlSocket);
-  IsolateController worker = new IsolateController(isolate);
+  await worker.beginSession();
   Future clientFuture = client.start();
-  Future workerFuture = worker.attachClient(client);
-  await workerFuture;
+  await worker.attachClient(client);
 
-  // At this point, the isolate has already been returned to the pool by
-  // [worker].
+  // Return the isolate to the pool *before* shutting down the client. This
+  // ensures that the next client will be able to reuse the isolate instead of
+  // spawning a new.
+  worker.endSession();
+  client.endSession();
 
   await clientFuture;
-
 }
 
 /// Handles communication with the C++ client.
@@ -318,22 +319,22 @@ class ClientController {
     completer.complete();
   }
 
-  void sendCommand(DriverCommand code, data) {
-    switch (code) {
+  void sendCommand(Command command) {
+    switch (command.code) {
       case DriverCommand.Stdout:
-        commandSender.sendStdoutBytes(data);
+        commandSender.sendStdoutBytes(command.data);
         break;
 
       case DriverCommand.Stderr:
-        commandSender.sendStderrBytes(data);
+        commandSender.sendStderrBytes(command.data);
         break;
 
       case DriverCommand.ExitCode:
-        commandSender.sendExitCode(data);
+        commandSender.sendExitCode(command.data);
         break;
 
       default:
-        throw "Unexpected command: $code";
+        throw "Unexpected command: $command";
     }
   }
 
@@ -347,41 +348,59 @@ class ClientController {
 
 /// Handles communication with a worker isolate.
 class IsolateController {
+  /// The worker isolate.
   final ManagedIsolate isolate;
 
+  /// An iterator commands from the worker isolate.
+  StreamIterator<Command> workerCommands;
+
+  /// A port used to send commands to the worker isolate.
+  SendPort workerSendPort;
+
+  /// A port used to read commands from the worker isolate.
+  ReceivePort workerReceivePort;
+
+  /// When true, the worker can be shutdown by sending it a
+  /// DriverCommand.Signal command.  Otherwise, it must be killed.
   bool eventLoopStarted = false;
 
   IsolateController(this.isolate);
 
-  /// Start processing commands from the worker isolate (and forward commands
-  /// from the C++ client). The returned future normally completes when the
-  /// worker isolate sends DriverCommand.ClosePort, or if the isolate is killed
-  /// due to DriverCommand.Signal arriving through client.commands.
-  Future<Null> attachClient(ClientController client) async {
-    ReceivePort port = isolate.beginSession();
-    StreamIterator iterator = new StreamIterator(port);
-    bool hasPort = await iterator.moveNext();
-    assert(hasPort);
-    SendPort sendPort = iterator.current;
+  /// Begin a session with the worker isolate.
+  Future<Null> beginSession() async {
+    workerReceivePort = isolate.beginSession();
+    Stream<Command> workerCommandStream = workerReceivePort.map(
+        (message) => new Command(DriverCommand.values[message[0]], message[1]));
+    workerCommands = new StreamIterator<Command>(workerCommandStream);
+    if (!await workerCommands.moveNext()) {
+      throw "Didn't get a sendPort from worker isolate.";
+    }
+    Command command = workerCommands.current;
+    assert(command.code == DriverCommand.SendPort);
+    assert(command.data != null);
+    workerSendPort = command.data;
+  }
 
+  /// Attach to a C++ client and forward commands to the worker isolate, and
+  /// vice versa.  The returned future normally completes when the worker
+  /// isolate sends DriverCommand.ClosePort, or if the isolate is killed due to
+  /// DriverCommand.Signal arriving through client.commands.
+  Future<Null> attachClient(ClientController client) async {
     handleCommand(Command command) {
       if (command.code == DriverCommand.Signal && !eventLoopStarted) {
         isolate.kill();
-        port.close();
+        workerReceivePort.close();
       } else {
-        sendPort.send([command.code.index, command.data]);
+        workerSendPort.send([command.code.index, command.data]);
       }
     }
     client.commands.listen(handleCommand);
 
-    while (await iterator.moveNext()) {
-      /// [message] is a pair of int (index into DriverCommand.values), and
-      /// command payload data.
-      List message = iterator.current;
-      DriverCommand code = DriverCommand.values[message[0]];
-      switch (code) {
+    while (await workerCommands.moveNext()) {
+      Command command = workerCommands.current;
+      switch (command.code) {
         case DriverCommand.ClosePort:
-          port.close();
+          workerReceivePort.close();
           break;
 
         case DriverCommand.EventLoopStarted:
@@ -389,14 +408,14 @@ class IsolateController {
           break;
 
         default:
-          client.sendCommand(code, message[1]);
+          client.sendCommand(command);
           break;
       }
     }
+  }
 
-    // Return the isolate to the pool *before* shutting down the client.
+  void endSession() {
     isolate.endSession();
-    client.endSession();
   }
 }
 

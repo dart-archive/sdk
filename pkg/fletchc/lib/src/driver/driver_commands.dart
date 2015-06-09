@@ -44,6 +44,9 @@ enum DriverCommand {
 
   /// Error in connection.
   DriverConnectionError,
+
+  /// A SendPort that the receiver can use to communicate with the sender.
+  SendPort,
 }
 
 class Command {
