@@ -23,8 +23,6 @@ import 'dart:async' show
     StreamIterator,
     StreamSubscription;
 
-import 'dart:async' show Zone;
-
 import 'dart:typed_data' show
     ByteData,
     Endianness,
@@ -232,7 +230,7 @@ Future main(List<String> arguments) async {
   IsolatePool pool = new IsolatePool(isolateMain);
   try {
     while (await connectionIterator.moveNext()) {
-      handleClient(
+      await handleClient(
           pool,
           handleSocketErrors(connectionIterator.current, "controlSocket"));
     }
@@ -256,24 +254,29 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
   //
   // * Store completed isolates in a pool.
 
-  // Spawn/reuse a worker isolate.
-  IsolateController worker = new IsolateController(await pool.getIsolate());
+  ClientController client = new ClientController(controlSocket)..start();
+  List<String> arguments = await client.arguments;
+  print("Got arguments: $arguments");
 
-  // Forward commands between C++ client [client], and worker isolate [worker].
-  // This is done with two asynchronous tasks that communicate with each other.
-  // Also handles the signal command as mentioned above.
-  ClientController client = new ClientController(controlSocket);
-  await worker.beginSession();
-  Future clientFuture = client.start();
-  await worker.attachClient(client);
+  // The rest is asynchronous, so we can respond to other requests.
+  new Future(() async {
+    // Spawn/reuse a worker isolate.
+    IsolateController worker = new IsolateController(await pool.getIsolate());
 
-  // Return the isolate to the pool *before* shutting down the client. This
-  // ensures that the next client will be able to reuse the isolate instead of
-  // spawning a new.
-  worker.endSession();
-  client.endSession();
+    // Forward commands between C++ client [client], and worker isolate
+    // [worker].  This is done with two asynchronous tasks that communicate
+    // with each other.  Also handles the signal command as mentioned above.
+    await worker.beginSession();
+    await worker.attachClient(client);
 
-  await clientFuture;
+    // Return the isolate to the pool *before* shutting down the client. This
+    // ensures that the next client will be able to reuse the isolate instead
+    // of spawning a new.
+    worker.endSession();
+    client.endSession();
+
+    await client.done;
+  });
 }
 
 /// Handles communication with the C++ client.
@@ -287,15 +290,22 @@ class ClientController {
   StreamSubscription<Command> subscription;
   Completer<Null> completer;
 
+  Completer<List<String>> argumentsCompleter = new Completer<List<String>>();
+
   ClientController(this.socket);
 
   /// A stream of commands from the client that should be forwarded to a worker
   /// isolate.
   Stream<Command> get commands => controller.stream;
 
-  /// Start processing commands from the client. The returned future completes
-  /// when [endSession] is called.
-  Future<Null> start() {
+  /// Completes when [endSession] is called.
+  Future<Null> get done => completer.future;
+
+  /// Completes with the command-line arguments from the client.
+  Future<List<String>> get arguments => argumentsCompleter.future;
+
+  /// Start processing commands from the client.
+  void start() {
     commandSender = new ByteCommandSender(socket);
     subscription = new ControlStream(socket).commandStream.listen(null);
     subscription
@@ -303,10 +313,13 @@ class ClientController {
         ..onError(handleCommandError)
         ..onDone(handleCommandsDone);
     completer = new Completer<Null>();
-    return completer.future;
   }
 
   void handleCommand(Command command) {
+    if (command.code == DriverCommand.Arguments) {
+      // This intentionally throws if arguments are sent more than once.
+      argumentsCompleter.complete(command.data);
+    }
     controller.add(command);
   }
 
