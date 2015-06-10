@@ -25,13 +25,6 @@
 
   self.tableView.dataSource = self.presenter;
   self.tableView.delegate = self.presenter;
-
-  CADisplayLink* consoleLink =
-      [CADisplayLink displayLinkWithTarget:self.presenter
-                                  selector:@selector(refresh)];
-  [consoleLink setFrameInterval:1];
-  [consoleLink addToRunLoop:[NSRunLoop currentRunLoop]
-                    forMode:NSDefaultRunLoopMode];
 }
 
 @end

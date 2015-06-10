@@ -102,6 +102,8 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     StructLayout layout = node.layout;
     String nodeName = "${node.name}Node";
     String nodeNameData = "${nodeName}Data";
+    String nodeObserverBlock = "${nodeName}ObserverBlock";
+    writeln('typedef void (^$nodeObserverBlock)(${nodeName}*);');
     writeln('@interface $nodeName : Node');
     writeln();
     forEachSlot(node, null, (Type slotType, String slotName) {
@@ -109,6 +111,8 @@ class _HeaderVisitor extends CodeGenerationVisitor {
       _writeNSType(slotType);
       writeln(' $slotName;');
     });
+    writeln();
+    writeln('- (void)observe:($nodeObserverBlock)block;');
     writeln();
     for (var method in node.methods) {
       write('- (void)dispatch${camelize(method.name)}');
@@ -303,6 +307,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
   _writeImmiRootExtendedInterface() {
     writeln('@interface ImmiRoot ()');
+    writeln('@property NSMutableSet* pendingObservers;');
     writeln('@property (readonly) uint16_t pid;');
     writeln('- (id)init:(uint16_t)pid;');
     writeln('@end');
@@ -324,6 +329,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('  assert(pid > 0);');
     writeln('  _pid = pid;');
     writeln('  _rootNode = nil;');
+    writeln('  _pendingObservers = [NSMutableSet set];');
     writeln('  return self;');
     writeln('}');
     writeln();
@@ -333,10 +339,22 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('                       atNode:&_rootNode');
     writeln('                      inGraph:self]) {');
     writeln('        block();');
+    writeln('        [self runPendingObservers];');
     writeln('      }');
+    writeln('      assert(self.pendingObservers.count == 0);');
     writeln('  };');
     writeln('  ${serviceName}::refreshAsync(');
     writeln('      self.pid, ImmiRefresh, (__bridge_retained void*)doApply);');
+    writeln('}');
+    writeln();
+    writeln('- (void)runPendingObservers {');
+    writeln('  [self.pendingObservers');
+    writeln('      enumerateObjectsUsingBlock:^(Node* node, BOOL* stop) {');
+    writeln('      for (int i = 0; i < node.observers.count; ++i) {');
+    writeln('        ((void (^)(Node*))node.observers[i])(node);');
+    writeln('      }');
+    writeln('  }];');
+    writeln('  [self.pendingObservers removeAllObjects];');
     writeln('}');
     writeln();
     writeln('- (void)reset {');
@@ -386,6 +404,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     String name = node.name;
     String nodeName = "${node.name}Node";
     String nodeNameData = "${nodeName}Data";
+    String nodeObserverBlock = "${nodeName}ObserverBlock";
     writeln('@implementation $nodeName');
     bool hasNodeSlots = false;
     bool hasListSlots = false;
@@ -512,6 +531,16 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('  default: abort();');
     writeln('  }');
     writeln('}');
+    writeln();
+
+    // Observation
+    writeln('- (void)observe:($nodeObserverBlock)block {');
+    writeln('  if (self.observers == nil) {');
+    writeln('    self.observers = [NSMutableArray array];');
+    writeln('  }');
+    writeln('  [self.observers addObject:block];');
+    writeln('}');
+    writeln();
 
     // Event dispatching
     String unitName = camelize(basenameWithoutExtension(path));
@@ -549,6 +578,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
   void _writeNodeBaseExtendedInterface() {
     writeln('@interface Node ()');
+    writeln('@property NSMutableArray* observers;');
     writeln('+ (Node*)node:(const NodeData&)data inGraph:(ImmiRoot*)root;');
     writeln('+ (void)applyListPatch:(const ListPatchData&)patch');
     writeln('               toArray:(NSMutableArray*)array');
@@ -611,6 +641,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     assert(patches[0].isContent());
     assert(patches[0].getContent().isNode());
     *node = [Node node:patches[0].getContent().getNode() inGraph:root];
+    [Node registerObservers:*node inGraph:root];
   } else {
     [Node applyPatches:patches atNode:*node inGraph:root];
   }
@@ -628,8 +659,10 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     int lastIndex = path.length() - 1;
     int lastSlot = path[lastIndex];
     for (int j = 0; j < lastIndex; ++j) {
+      [Node registerObservers:current inGraph:root];
       current = [current getSlot:path[j]];
     }
+    [Node registerObservers:current inGraph:root];
     [current applyPatch:patch atSlot:lastSlot inGraph:root];
   }
 }
@@ -659,11 +692,16 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         // TODO(zerny): Support lists of primitive types.
         assert(content.isNode());
         array[index + i] = [Node node:content.getNode() inGraph:root];
+        [Node registerObservers:array[index + i] inGraph:root];
       } else {
         [Node applyPatches:patches atNode:array[index + i] inGraph:root];
       }
     }
   }
+}
+
++ (void)registerObservers:(Node*)node inGraph:(ImmiRoot*)root {
+  if (node.observers != nil) [root.pendingObservers addObject:node];
 }
 
 @end

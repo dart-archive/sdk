@@ -15,6 +15,5 @@
 // TODO(zarah): Move access of tableView to controller.
 - (id)initWithCellPresenter:(id<CellPresenter>)cellPresenter
                   tableView:(UITableView*)tableView;
-- (void)refresh;
 
 @end

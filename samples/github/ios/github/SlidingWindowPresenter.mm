@@ -27,7 +27,6 @@
 @property int bufferAdvance;
 
 @property ImmiRoot* immiRoot;
-@property bool shifted;
 
 @end
 
@@ -44,16 +43,19 @@
   self.bufferCount = 50;
   self.tableView.rowHeight = UITableViewAutomaticDimension;
   self.tableView.estimatedRowHeight = 50.0;
-  self.shifted = true;
   return self;
 }
 
 - (void)immi_setupRoot:(ImmiRoot*)root {
   self.immiRoot = root;
   [root refresh:^{
-    [self.root dispatchDisplayStart:0 end:self.bufferCount];
-    [self refresh];
+    [self interpret:self.root];
+    [self refreshDisplayStart:0 end:self.bufferCount];
   }];
+}
+
+- (void)interpret:(SlidingWindowNode*)node {
+  [node observe:^(SlidingWindowNode*) { [self reload]; }];
 }
 
 - (SlidingWindowNode*)root {
@@ -109,16 +111,12 @@
 
 - (void)refreshDisplayStart:(int)start end:(int)end {
   [self.root dispatchDisplayStart:start end:end];
-  self.shifted = true;
+  [self refresh];
 }
 
-// TODO(zerny): Reload data using an change listener.
+// TODO(zerny): Make refresh implicit on dispatch events and remove this.
 - (void)refresh {
-  if (!self.shifted) return;
-  self.shifted = false;
-  [self.immiRoot refresh:^{
-    [self reload];
-  }];
+  [self.immiRoot refresh:^{}];
 }
 
 - (void)reload {
@@ -153,10 +151,8 @@
 
 - (void)tableView:(UITableView*)tableView
     didSelectRowAtIndexPath:(NSIndexPath*)indexPath {
-  self.shifted = true;
-
   [self.root dispatchToggleIndex:indexPath.row];
-
+  [self refresh];
   [tableView reloadRowsAtIndexPaths:@[indexPath]
                    withRowAnimation:UITableViewRowAnimationNone];
 }
