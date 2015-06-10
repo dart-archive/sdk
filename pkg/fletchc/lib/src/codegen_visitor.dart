@@ -1340,6 +1340,7 @@ abstract class CodegenVisitor
   void visitLiteralSymbol(LiteralSymbol node) {
     int constId = allocateConstantFromNode(node);
     assembler.loadConst(constId);
+    applyVisitState();
   }
 
   void visitLiteralBool(LiteralBool node) {
