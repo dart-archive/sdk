@@ -111,12 +111,6 @@
 
 - (void)refreshDisplayStart:(int)start end:(int)end {
   [self.root dispatchDisplayStart:start end:end];
-  [self refresh];
-}
-
-// TODO(zerny): Make refresh implicit on dispatch events and remove this.
-- (void)refresh {
-  [self.immiRoot refresh:^{}];
 }
 
 - (void)reload {
@@ -152,7 +146,6 @@
 - (void)tableView:(UITableView*)tableView
     didSelectRowAtIndexPath:(NSIndexPath*)indexPath {
   [self.root dispatchToggleIndex:indexPath.row];
-  [self refresh];
   [tableView reloadRowsAtIndexPaths:@[indexPath]
                    withRowAnimation:UITableViewRowAnimationNone];
 }

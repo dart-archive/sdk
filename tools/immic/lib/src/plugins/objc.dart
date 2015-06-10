@@ -307,8 +307,11 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
   _writeImmiRootExtendedInterface() {
     writeln('@interface ImmiRoot ()');
-    writeln('@property NSMutableSet* pendingObservers;');
     writeln('@property (readonly) uint16_t pid;');
+    writeln('@property bool refreshPending;');
+    writeln('@property bool refreshRequired;');
+    writeln('@property (nonatomic) dispatch_queue_t refreshQueue;');
+    writeln('@property NSMutableSet* pendingObservers;');
     writeln('- (id)init:(uint16_t)pid;');
     writeln('@end');
     writeln();
@@ -330,6 +333,10 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('  _pid = pid;');
     writeln('  _rootNode = nil;');
     writeln('  _pendingObservers = [NSMutableSet set];');
+    writeln('  _refreshPending = false;');
+    writeln('  _refreshRequired = false;');
+    writeln('  _refreshQueue = dispatch_queue_create(');
+    writeln('      "com.google.immi.refreshQueue", DISPATCH_QUEUE_SERIAL);');
     writeln('  return self;');
     writeln('}');
     writeln();
@@ -342,6 +349,14 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('        [self runPendingObservers];');
     writeln('      }');
     writeln('      assert(self.pendingObservers.count == 0);');
+    writeln('      dispatch_async(self.refreshQueue, ^{');
+    writeln('          if (self.refreshRequired) {');
+    writeln('            self.refreshRequired = false;');
+    writeln('            [self refresh:^{}];');
+    writeln('          } else {');
+    writeln('            self.refreshPending = false;');
+    writeln('          }');
+    writeln('      });');
     writeln('  };');
     writeln('  ${serviceName}::refreshAsync(');
     writeln('      self.pid, ImmiRefresh, (__bridge_retained void*)doApply);');
@@ -364,6 +379,18 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln();
     writeln('- (void)dispatch:(ImmiDispatchBlock)block {');
     writeln('  block();');
+    writeln('  [self requestRefresh];');
+    writeln('}');
+    writeln();
+    writeln('- (void)requestRefresh {');
+    writeln('  dispatch_async(self.refreshQueue, ^{');
+    writeln('      if (self.refreshPending) {');
+    writeln('        self.refreshRequired = true;');
+    writeln('      } else {');
+    writeln('        self.refreshPending = true;');
+    writeln('        [self refresh:^{}];');
+    writeln('      }');
+    writeln('  });');
     writeln('}');
     writeln();
     writeln('@end');
