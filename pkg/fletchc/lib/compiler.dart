@@ -272,7 +272,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
 
   FletchClassBuilder lookupFletchClassBuilder(int classId) {
     FletchClassBuilder klass = _compiler.context.backend.classes[classId];
-    assert(klass.id == classId);
+    assert(klass.classId == classId);
     return klass;
   }
 

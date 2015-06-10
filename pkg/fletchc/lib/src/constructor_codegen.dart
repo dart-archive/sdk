@@ -120,7 +120,7 @@ class ConstructorCodegen extends CodegenVisitor {
 
     // Create the actual instance.
     int classConstant = functionBuilder.allocateConstantFromClass(
-        classBuilder.id);
+        classBuilder.classId);
     // TODO(ajohnsen): Set immutable for all-final classes.
     assembler.allocate(classConstant, fields, immutable: element.isConst);
 

@@ -845,7 +845,7 @@ abstract class CodegenVisitor
     FletchClassBuilder classBuilder = context.backend.createTearoffClass(
         functionBuilderTarget);
     assert(classBuilder.fields == 0);
-    int constId = allocateConstantClassInstance(classBuilder.id);
+    int constId = allocateConstantClassInstance(classBuilder.classId);
     assembler.loadConst(constId);
     applyVisitState();
   }
@@ -951,7 +951,8 @@ abstract class CodegenVisitor
     FletchClassBuilder classBuilder = context.backend.createTearoffClass(
         functionBuilderTarget);
     assert(classBuilder.fields == 1);
-    int constId = functionBuilder.allocateConstantFromClass(classBuilder.id);
+    int constId = functionBuilder.allocateConstantFromClass(
+        classBuilder.classId);
     assembler.allocate(constId, classBuilder.fields);
     applyVisitState();
   }
@@ -2150,7 +2151,7 @@ abstract class CodegenVisitor
         function,
         closureEnvironment);
     int classConstant = functionBuilder.allocateConstantFromClass(
-        classBuilder.id);
+        classBuilder.classId);
     bool immutable = !closureEnvironment.closures[function].free.any(
         closureEnvironment.shouldBeBoxed);
     assembler.allocate(classConstant, classBuilder.fields, immutable: immutable);

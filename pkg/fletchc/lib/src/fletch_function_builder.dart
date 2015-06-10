@@ -25,8 +25,12 @@ import 'package:compiler/src/universe/universe.dart'
 import '../bytecodes.dart' show
     Bytecode;
 
+import '../commands.dart';
+
 import 'fletch_class_builder.dart' show
     FletchClassBuilder;
+
+import 'fletch_system.dart';
 
 import 'fletch_context.dart';
 import 'bytecode_assembler.dart';
@@ -72,12 +76,13 @@ class FletchFunctionBuilder {
 
   DebugInfo debugInfo;
 
-  FletchFunctionBuilder(this.methodId,
-                   this.name,
-                   this.element,
-                   FunctionSignature signature,
-                   FletchClassBuilder memberOf,
-                   {this.kind: FletchFunctionBuilderKind.NORMAL})
+  FletchFunctionBuilder(
+      this.methodId,
+      this.name,
+      this.element,
+      FunctionSignature signature,
+      FletchClassBuilder memberOf,
+      {this.kind: FletchFunctionBuilderKind.NORMAL})
       : this.signature = signature,
         this.memberOf = memberOf,
         arity = signature.parameterCount + (memberOf != null ? 1 : 0),
@@ -89,10 +94,11 @@ class FletchFunctionBuilder {
         assembler = new BytecodeAssembler(argumentCount),
         kind = FletchFunctionBuilderKind.NORMAL;
 
-  FletchFunctionBuilder.lazyInit(this.methodId,
-                            this.name,
-                            this.element,
-                            int argumentCount)
+  FletchFunctionBuilder.lazyInit(
+      this.methodId,
+      this.name,
+      this.element,
+      int argumentCount)
       : arity = argumentCount,
         assembler = new BytecodeAssembler(argumentCount),
         kind = FletchFunctionBuilderKind.LAZY_FIELD_INITIALIZER;
@@ -115,6 +121,8 @@ class FletchFunctionBuilder {
   }
 
   bool get hasThisArgument => memberOf != null;
+
+  bool get hasMemberOf => memberOf != null;
 
   bool get isLazyFieldInitializer {
     return kind == FletchFunctionBuilderKind.LAZY_FIELD_INITIALIZER;
@@ -280,13 +288,65 @@ class FletchFunctionBuilder {
           ..ret()
           ..methodEnd();
 
-      if (memberOf != null) {
+      if (hasMemberOf) {
         int fletchSelector = context.toFletchSelector(selector);
         memberOf.addToMethodTable(fletchSelector, functionBuilder);
       }
 
       return functionBuilder;
     });
+  }
+
+  FletchFunction finalizeFunction(
+      FletchContext context,
+      List<Command> commands) {
+    int constantCount = constants.length;
+    for (int i = 0; i < constantCount; i++) {
+      commands.add(const PushNull());
+    }
+
+    commands.add(
+        new PushNewFunction(
+            assembler.functionArity,
+            constantCount,
+            assembler.bytecodes,
+            assembler.catchRanges));
+
+    commands.add(new PopToMap(MapId.methods, methodId));
+
+    return new FletchFunction(
+        methodId,
+        name,
+        assembler.bytecodes,
+        createFletchConstants(context),
+        hasMemberOf ? memberOf.classId : -1);
+  }
+
+  List<FletchConstant> createFletchConstants(FletchContext context) {
+    List<FletchConstant> fletchConstants = <FletchConstant>[];
+
+    constants.forEach((constant, int index) {
+      if (constant is ConstantValue) {
+        if (constant is FletchFunctionConstant) {
+          fletchConstants.add(
+              new FletchConstant(constant.methodId, MapId.methods));
+        } else if (constant is FletchClassConstant) {
+          fletchConstants.add(
+              new FletchConstant(constant.classId, MapId.classes));
+        } else {
+          int id = context.compiledConstants[constant];
+          if (id == null) {
+            throw "Unsupported constant: ${constant.toStructuredString()}";
+          }
+          fletchConstants.add(
+              new FletchConstant(id, MapId.constants));
+        }
+      } else {
+        throw "Unsupported constant: ${constant.runtimeType}";
+      }
+    });
+
+    return fletchConstants;
   }
 
   String verboseToString() {

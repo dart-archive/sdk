@@ -863,11 +863,11 @@ class LibraryUpdater extends FletchFeatures {
 
     for (ClassElementX element in _classesWithSchemaChanges) {
       FletchClassBuilder classBuilder = backend.classBuilders[element];
-      int id = classBuilder.id;
+      int id = classBuilder.classId;
       updates.add(new commands_lib.PushFromMap(MapId.classes, id));
 
       classBuilder.createImplicitAccessors(backend);
-      Map<int, int> methodTable = classBuilder.computeMethodTable(backend);
+      Map<int, int> methodTable = classBuilder.computeMethodTable();
 
       methodTable.forEach((int selector, int methodId) {
         updates.add(new commands_lib.PushNewInteger(selector));
@@ -926,7 +926,7 @@ class LibraryUpdater extends FletchFeatures {
     Queue<ClassElementX> workQueue = new Queue<ClassElementX>()..add(element);
     while (workQueue.isNotEmpty) {
       ClassElementX current = workQueue.removeFirst();
-      int id = backend.classBuilders[current].id;
+      int id = backend.classBuilders[current].classId;
       commands.add(new commands_lib.PushFromMap(MapId.classes, id));
       numberOfClasses++;
       // Add all subclasses that aren't schema change target themselves to

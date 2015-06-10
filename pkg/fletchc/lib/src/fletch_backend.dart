@@ -96,6 +96,12 @@ import 'fletch_function_builder.dart' show
 import 'fletch_class_builder.dart' show
     FletchClassBuilder;
 
+import 'fletch_system.dart' show
+    FletchClass,
+    FletchConstant,
+    FletchFunction,
+    FletchSystem;
+
 import 'codegen_visitor.dart';
 import 'debug_info.dart';
 import 'debug_info_constructor_codegen.dart';
@@ -207,9 +213,9 @@ class FletchBackend extends Backend {
         Set<ClassElement> subclasses = directSubclasses[element.superclass];
         subclasses.add(element);
       }
-      int id = classes.length;
+      int classId = classes.length;
       FletchClassBuilder classBuilder = new FletchClassBuilder(
-          id, element, superclass);
+          classId, element, superclass, builtinClasses.contains(element));
       if (element.lookupLocalMember(Compiler.CALL_OPERATOR_NAME) != null) {
         classBuilder.createIsFunctionEntry(this);
       }
@@ -220,9 +226,9 @@ class FletchBackend extends Backend {
 
   FletchClassBuilder createCallableStubClass(
       int fields, FletchClassBuilder superclass) {
-    int id = classes.length;
+    int classId = classes.length;
     FletchClassBuilder classBuilder = new FletchClassBuilder(
-        id, null, superclass, extraFields: fields);
+        classId, null, superclass, false, extraFields: fields);
     classes.add(classBuilder);
     classBuilder.createIsFunctionEntry(this);
     return classBuilder;
@@ -283,13 +289,17 @@ class FletchBackend extends Backend {
     fletchCompileError = findExternal('compileError');
     world.registerStaticUse(fletchCompileError);
 
-    FletchClassBuilder loadClass(String name, LibraryElement library) {
+    FletchClassBuilder loadClass(
+        String name,
+        LibraryElement library,
+        [bool builtin = false]) {
       var classImpl = library.findLocal(name);
       if (classImpl == null) classImpl = library.implementation.find(name);
       if (classImpl == null) {
         compiler.internalError(library, "Internal class '$name' not found.");
         return null;
       }
+      if (builtin) builtinClasses.add(classImpl);
       // TODO(ahe): Register in ResolutionCallbacks. The 3 lines below should
       // not happen at this point in time.
       classImpl.ensureResolved(compiler);
@@ -301,26 +311,19 @@ class FletchBackend extends Backend {
       return classBuilder;
     }
 
-    FletchClassBuilder loadBuiltinClass(String name, LibraryElement library) {
-      FletchClassBuilder classBuilder = loadClass(name, library);
-      builtinClasses.add(classBuilder.element);
-      return classBuilder;
-    }
-
-    compiledObjectClass = loadBuiltinClass("Object", compiler.coreLibrary);
-    smiClass = loadBuiltinClass("_Smi", compiler.coreLibrary).element;
-    mintClass = loadBuiltinClass("_Mint", compiler.coreLibrary).element;
-    stringClass = loadBuiltinClass("_StringImpl", compiler.coreLibrary).element;
+    compiledObjectClass = loadClass("Object", compiler.coreLibrary, true);
+    smiClass = loadClass("_Smi", compiler.coreLibrary, true).element;
+    mintClass = loadClass("_Mint", compiler.coreLibrary, true).element;
+    stringClass = loadClass("_StringImpl", compiler.coreLibrary, true).element;
     // TODO(ahe): Register _ConstantList through ResolutionCallbacks.
-    loadBuiltinClass(constantListName, fletchSystemLibrary);
-    loadBuiltinClass(constantMapName, fletchSystemLibrary);
-    loadBuiltinClass("_DoubleImpl", compiler.coreLibrary);
-    loadBuiltinClass("Null", compiler.coreLibrary);
-    loadBuiltinClass("bool", compiler.coreLibrary);
-    coroutineClass =
-        loadBuiltinClass("Coroutine", compiler.coreLibrary).element;
-    loadBuiltinClass("Port", compiler.coreLibrary);
-    loadBuiltinClass("Foreign", fletchFFILibrary);
+    loadClass(constantListName, fletchSystemLibrary, true);
+    loadClass(constantMapName, fletchSystemLibrary, true);
+    loadClass("_DoubleImpl", compiler.coreLibrary, true);
+    loadClass("Null", compiler.coreLibrary, true);
+    loadClass("bool", compiler.coreLibrary, true);
+    coroutineClass = loadClass("Coroutine", compiler.coreLibrary, true).element;
+    loadClass("Port", compiler.coreLibrary, true);
+    loadClass("Foreign", fletchFFILibrary, true);
 
     growableListClass =
         loadClass(growableListName, fletchSystemLibrary).element;
@@ -895,7 +898,7 @@ class FletchBackend extends Backend {
         functions.length,
         false);
     functions.add(getter);
-    int constId = getter.allocateConstantFromClass(tearoffClass.id);
+    int constId = getter.allocateConstantFromClass(tearoffClass.classId);
     getter.assembler
         ..loadParameter(0)
         ..allocate(constId, tearoffClass.fields)
@@ -923,40 +926,35 @@ class FletchBackend extends Backend {
       classBuilder.createImplicitAccessors(this);
     }
 
+    createFletchSystem();
+
+    return 0;
+  }
+
+  FletchSystem createFletchSystem() {
     List<Command> commands = <Command>[
         const NewMap(MapId.methods),
         const NewMap(MapId.classes),
         const NewMap(MapId.constants),
     ];
 
-    List<Function> deferredActions = <Function>[];
-
-    functions.forEach((f) => pushNewFunction(f, commands, deferredActions));
-
     int changes = 0;
 
+    // Create all FletchFunctions.
+    List<FletchFunction> fletchFunctions = <FletchFunction>[];
+    for (FletchFunctionBuilder functionBuilder in functions) {
+      fletchFunctions.add(functionBuilder.finalizeFunction(context, commands));
+    }
+
+    // Create all FletchClasses.
+    List<FletchClass> fletchClasses = <FletchClass>[];
     for (FletchClassBuilder classBuilder in classes) {
-      ClassElement element = classBuilder.element;
-      if (builtinClasses.contains(element)) {
-        int nameId = context.getSymbolId(element.name);
-        commands.add(new PushBuiltinClass(nameId, classBuilder.fields));
-      } else {
-        commands.add(new PushNewClass(classBuilder.fields));
-      }
-
-      commands.add(const Dup());
-      commands.add(new PopToMap(MapId.classes, classBuilder.id));
-
-      Map<int, int> methodTable = classBuilder.computeMethodTable(this);
-      methodTable.forEach((int selector, int methodId) {
-        commands.add(new PushNewInteger(selector));
-        commands.add(new PushFromMap(MapId.methods, methodId));
-      });
-      commands.add(new ChangeMethodTable(methodTable.length));
-
+      fletchClasses.add(classBuilder.finalizeClass(context, commands));
       changes++;
     }
 
+    // Create all statics.
+    // TODO(ajohnsen): Should be part of the fletch system.
     context.forEachStatic((element, index) {
       FletchFunctionBuilder initializer = lazyFieldInitializers[element];
       if (initializer != null) {
@@ -969,6 +967,8 @@ class FletchBackend extends Backend {
     commands.add(new ChangeStatics(context.staticIndices.length));
     changes++;
 
+    // Create all FletchConstants.
+    // TODO(ajohnsen): Should be part of the fletch system.
     context.compiledConstants.forEach((constant, id) {
       void addList(List<ConstantValue> list) {
         for (ConstantValue entry in list) {
@@ -1008,7 +1008,7 @@ class FletchBackend extends Backend {
           commands.add(new PushFromMap(MapId.constants, fieldId));
         }
         commands
-            ..add(new PushFromMap(MapId.classes, classBuilder.id))
+            ..add(new PushFromMap(MapId.classes, classBuilder.classId))
             ..add(const PushNewInstance());
       } else if (constant is FletchClassInstanceConstant) {
         commands
@@ -1020,18 +1020,27 @@ class FletchBackend extends Backend {
       commands.add(new PopToMap(MapId.constants, id));
     });
 
-    for (FletchClassBuilder classBuilder in classes) {
-      FletchClassBuilder superclass = classBuilder.superclass;
-      if (superclass == null) continue;
-      commands.add(new PushFromMap(MapId.classes, classBuilder.id));
-      commands.add(new PushFromMap(MapId.classes, superclass.id));
+    // Set super class for classes, now they are resolved.
+    for (FletchClass fletchClass in fletchClasses) {
+      if (!fletchClass.hasSuperclassId) continue;
+      commands.add(new PushFromMap(MapId.classes, fletchClass.classId));
+      commands.add(new PushFromMap(MapId.classes, fletchClass.superclassId));
       commands.add(const ChangeSuperClass());
       changes++;
     }
 
-    for (Function action in deferredActions) {
-      action();
-      changes++;
+    // Change constants for the functions, now that classes and constants has
+    // been added.
+    for (FletchFunction function in fletchFunctions) {
+      List<FletchConstant> constants = function.constants;
+      for (int i = 0; i < constants.length; i++) {
+        FletchConstant constant = constants[i];
+        commands
+            ..add(new PushFromMap(MapId.methods, function.methodId))
+            ..add(new PushFromMap(constant.mapId, constant.id))
+            ..add(new ChangeMethodLiteral(i));
+        changes++;
+      }
     }
 
     commands.add(new CommitChanges(changes));
@@ -1044,9 +1053,11 @@ class FletchBackend extends Backend {
 
     this.commands = commands;
 
-    return 0;
+    // TODO(ajohnsen): Create the fletch system.
+    return null;
   }
 
+  // TODO(ajohnsen): Remove when incremental has moved to FletchSystem.
   void pushNewFunction(
       FletchFunctionBuilder functionBuilder,
       List<Command> commands,

@@ -11,12 +11,19 @@ import 'package:compiler/src/universe/universe.dart';
 import 'fletch_function_builder.dart' show
     FletchFunctionBuilder;
 
+import 'fletch_context.dart';
+
 import 'fletch_backend.dart';
 
+import 'fletch_system.dart';
+
+import '../commands.dart';
+
 class FletchClassBuilder {
-  final int id;
+  final int classId;
   final ClassElement element;
   final FletchClassBuilder superclass;
+  final bool isBuiltin;
 
   // The extra fields are synthetic fields not represented in any Dart source
   // code. They are used for the synthetic closure classes that are introduced
@@ -30,7 +37,11 @@ class FletchClassBuilder {
       <int, FletchFunctionBuilder>{};
 
   FletchClassBuilder(
-      this.id, this.element, this.superclass, {this.extraFields: 0});
+      this.classId,
+      this.element,
+      this.superclass,
+      this.isBuiltin,
+      {this.extraFields: 0});
 
   /**
    * Returns the number of instance fields of all the super classes of this
@@ -66,7 +77,7 @@ class FletchClassBuilder {
   // The method table for a class is a mapping from Fletch's integer
   // selectors to method ids. It contains all methods defined for a
   // class including the implicit accessors.
-  Map<int, int> computeMethodTable(FletchBackend backend) {
+  Map<int, int> computeMethodTable() {
     Map<int, int> result = <int, int>{};
     List<int> selectors = implicitAccessorTable.keys.toList()
         ..addAll(methodTable.keys)
@@ -139,5 +150,29 @@ class FletchClassBuilder {
     addIsSelector(fletchSelector);
   }
 
-  String toString() => "FletchClassBuilder(${element.name}, $id)";
+  FletchClass finalizeClass(FletchContext context, List<Command> commands) {
+    if (isBuiltin) {
+      int nameId = context.getSymbolId(element.name);
+      commands.add(new PushBuiltinClass(nameId, fields));
+    } else {
+      commands.add(new PushNewClass(fields));
+    }
+
+    commands.add(const Dup());
+    commands.add(new PopToMap(MapId.classes, classId));
+
+    Map<int, int> methodTable = computeMethodTable();
+    methodTable.forEach((int selector, int methodId) {
+      commands.add(new PushNewInteger(selector));
+      commands.add(new PushFromMap(MapId.methods, methodId));
+    });
+    commands.add(new ChangeMethodTable(methodTable.length));
+
+    return new FletchClass(
+        classId,
+        element == null ? '<none>' : element.name,
+        superclass == null ? -1 : superclass.classId);
+  }
+
+  String toString() => "FletchClassBuilder(${element.name}, $classId)";
 }
