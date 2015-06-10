@@ -140,32 +140,37 @@ growable_list_test: Fail
 list_test/01: Fail
 list_test/none: Fail
 
+# Unexpected command line arguments to compiler.
+bool_from_environment_test: Crash
+from_environment_const_type_test/01: Crash
+from_environment_const_type_test/02: Crash
+from_environment_const_type_test/03: Crash
+from_environment_const_type_test/04: Crash
+from_environment_const_type_test/05: Crash
+from_environment_const_type_test/06: Crash
+from_environment_const_type_test/07: Crash
+from_environment_const_type_test/08: Crash
+from_environment_const_type_test/09: Crash
+from_environment_const_type_test/10: Crash
+from_environment_const_type_test/11: Crash
+from_environment_const_type_test/12: Crash
+from_environment_const_type_test/13: Crash
+from_environment_const_type_test/14: Crash
+from_environment_const_type_test/15: Crash
+from_environment_const_type_test/16: Crash
+from_environment_const_type_test/none: Crash
+int_from_environment2_test: Crash
+int_from_environment_test: Crash
+string_from_environment2_test: Crash
+string_from_environment_test: Crash
+
+
 # Unsorted
-bool_from_environment_test: RuntimeError
 expando_test: CompileTimeError
-from_environment_const_type_test/01: RuntimeError
-from_environment_const_type_test/02: RuntimeError
-from_environment_const_type_test/03: RuntimeError
-from_environment_const_type_test/04: RuntimeError
-from_environment_const_type_test/05: RuntimeError
-from_environment_const_type_test/06: RuntimeError
-from_environment_const_type_test/07: RuntimeError
-from_environment_const_type_test/08: RuntimeError
-from_environment_const_type_test/09: RuntimeError
-from_environment_const_type_test/10: RuntimeError
-from_environment_const_type_test/11: RuntimeError
-from_environment_const_type_test/12: RuntimeError
-from_environment_const_type_test/13: RuntimeError
-from_environment_const_type_test/14: RuntimeError
-from_environment_const_type_test/15: RuntimeError
-from_environment_const_type_test/16: RuntimeError
-from_environment_const_type_test/none: RuntimeError
 indexed_list_access_test: Fail
 int_ceil_to_double_test: Fail
 int_floor_to_double_test: Fail
-int_from_environment2_test: RuntimeError
 int_from_environment_default_value_test: CompileTimeError
-int_from_environment_test: RuntimeError
 int_parse_radix_test/02: Fail
 int_round_to_double_test: Fail
 int_truncate_to_double_test: Fail
@@ -184,8 +189,6 @@ splay_tree_from_iterable_test: Fail
 splay_tree_from_iterables_test: Fail
 splay_tree_test: Fail
 string_case_test/01: Fail
-string_from_environment2_test: RuntimeError
-string_from_environment_test: RuntimeError
 string_fromcharcodes_test: CompileTimeError
 string_pattern_test: Fail
 string_replace_all_test: Fail

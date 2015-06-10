@@ -33,9 +33,6 @@ import 'verbs.dart' show
     commonVerbs,
     uncommonVerbs;
 
-const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
-const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
-
 // TODO(ahe): Send DriverCommands directly when they are canonicalized
 // correctly, see issue 23244.
 class PortCommandSender extends CommandSender {
@@ -76,88 +73,71 @@ Future<Null> beginSession(SendPort port) async {
   handleClient(port, receivePort);
 }
 
+Future<int> doInZone(void printLineOnStdout(line), Future<int> f()) async {
+  void printLineOnStdoutWrapper(_1, _2, _3, String line) {
+    printLineOnStdout(line);
+  }
+  Zone zone = Zone.current.fork(
+      specification: new ZoneSpecification(print: printLineOnStdoutWrapper));
+  return await zone.run(f);
+}
+
 Future handleClient(SendPort sendPort, ReceivePort receivePort) async {
   CommandSender commandSender = new PortCommandSender(sendPort);
-
-  StreamTransformer commandDecoder =
-      new StreamTransformer.fromHandlers(handleData: (message, sink) {
-        int code = message[0];
-        var data = message[1];
-        sink.add(new Command(DriverCommand.values[code], data));
-      });
-
-  StreamIterator<Command> commandIterator = new StreamIterator<Command>(
-      receivePort.transform(commandDecoder));
-
-  Command command;
-  if (await commandIterator.moveNext()) {
-    command = commandIterator.current;
+  printLineOnStdout(String line) {
+    commandSender.sendStdout("$line\n");
   }
-  if (command == null || command.code != DriverCommand.Arguments) {
-    print("Expected arguments from clients but got: $command");
-    // The client is misbehaving, shut it down now.
-    commandSender.sendClose();
-    return null;
-  }
+  int exitCode = await doInZone(printLineOnStdout, () async {
+    StreamTransformer commandDecoder =
+        new StreamTransformer.fromHandlers(handleData: (message, sink) {
+          int code = message[0];
+          var data = message[1];
+          sink.add(new Command(DriverCommand.values[code], data));
+        });
 
-  // This is argv from a C/C++ program. The first entry is the program name
-  // which isn't normally included in Dart arguments (as passed to main).
-  List<String> arguments = command.data;
-  String programName = arguments.first;
-  String fletchVm = "$programName-vm";
-  String verbName;
-  if (arguments.length < 2) {
-    verbName = 'help';
-    arguments = <String>[];
-  } else {
-    verbName = arguments[1];
-    arguments = arguments.skip(2).toList();
-  }
-  Verb verb = commonVerbs[verbName];
-  if (verb == null) {
-    verb = uncommonVerbs[verbName];
-  }
-  if (verb == null) {
-    commandSender.sendStderr("Unknown argument: $verbName\n");
-    verb = commonVerbs['help'];
-  }
+    StreamIterator<Command> commandIterator = new StreamIterator<Command>(
+        receivePort.transform(commandDecoder));
+    Command command;
+    if (await commandIterator.moveNext()) {
+      command = commandIterator.current;
+    }
+    if (command == null || command.code != DriverCommand.Arguments) {
+      throw "Expected arguments from clients but got: $command";
+    }
 
-  ZoneSpecification specification =
-      new ZoneSpecification(print: (_1, _2, _3, String line) {
-        commandSender.sendStdout('$line\n');
-      },
-      handleUncaughtError: (_1, _2, _3, error, StackTrace stackTrace) {
-        String message =
-            "\n\nExiting due to uncaught error.\n"
-            "${stringifyError(error, stackTrace)}";
-        Zone.ROOT.print(message);
-        commandSender.sendStderr('$message\n');
-        exit(1);
-      });
+    // This is argv from a C/C++ program. The first entry is the program
+    // name which isn't normally included in Dart arguments (as passed to
+    // main).
+    List<String> arguments = command.data;
+    String programName = arguments.first;
+    String fletchVm = "$programName-vm";
+    String verbName;
+    if (arguments.length < 2) {
+      verbName = 'help';
+      arguments = <String>[];
+    } else {
+      verbName = arguments[1];
+      arguments = arguments.skip(2).toList();
+    }
+    Verb verb = commonVerbs[verbName];
+    if (verb == null) {
+      verb = uncommonVerbs[verbName];
+    }
+    if (verb == null) {
+      commandSender.sendStderr("Unknown argument: $verbName\n");
+      verb = commonVerbs['help'];
+    }
 
-  int exitCode = await Zone.current.fork(specification: specification).run(
-      () async {
-        try {
-          return await verb.perform(
-              fletchVm,
-              arguments,
-              commandSender,
-              commandIterator);
-        } catch (error, stackTrace) {
-          String message =
-              "\n\nExiting due to uncaught error.\n"
-              "${stringifyError(error, stackTrace)}";
-          Zone.ROOT.print(message);
-          commandSender.sendStderr('$message\n');
-          return DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
-        }
-      });
+    return await verb.perform(
+        fletchVm,
+        arguments,
+        commandSender,
+        commandIterator);
+  });
+
+  receivePort.close();
 
   commandSender.sendExitCode(exitCode);
 
-  commandIterator.cancel();
-
   commandSender.sendClose();
-
-  receivePort.close();
 }

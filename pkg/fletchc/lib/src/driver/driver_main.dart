@@ -37,6 +37,9 @@ import 'dart:isolate' show
     ReceivePort,
     SendPort;
 
+import 'exit_codes.dart' show
+    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+
 import 'driver_commands.dart' show
     Command,
     CommandSender,
@@ -117,6 +120,7 @@ class ControlStream {
       controller.addError(
           new StateError("Stream closed with trailing bytes : $trailing"));
     }
+    controller.close();
   }
 
   List<String> decodeArgumentsCommand(ByteData view) {
@@ -261,13 +265,16 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
   // The rest is asynchronous, so we can respond to other requests.
   new Future(() async {
     // Spawn/reuse a worker isolate.
-    IsolateController worker = new IsolateController(await pool.getIsolate());
+    IsolateController worker =
+        new IsolateController(await pool.getIsolate(exitOnError: false));
 
     // Forward commands between C++ client [client], and worker isolate
     // [worker].  This is done with two asynchronous tasks that communicate
     // with each other.  Also handles the signal command as mentioned above.
     await worker.beginSession();
+    print("After beginSession");
     await worker.attachClient(client);
+    print("After attachClient");
 
     // Return the isolate to the pool *before* shutting down the client. This
     // ensures that the next client will be able to reuse the isolate instead
@@ -276,6 +283,7 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
     client.endSession();
 
     await client.done;
+    print("Client done");
   });
 }
 
@@ -352,10 +360,13 @@ class ClientController {
   }
 
   void endSession() {
-    subscription.cancel();
     socket.flush().then((_) {
       socket.close();
     });
+  }
+
+  void printLineOnStderr(String line) {
+    commandSender.sendStderrBytes(UTF8.encode("$line\n"));
   }
 }
 
@@ -377,10 +388,15 @@ class IsolateController {
   /// DriverCommand.Signal command.  Otherwise, it must be killed.
   bool eventLoopStarted = false;
 
+  /// Subscription for errors from [isolate].
+  StreamSubscription errorSubscription;
+
   IsolateController(this.isolate);
 
   /// Begin a session with the worker isolate.
   Future<Null> beginSession() async {
+    errorSubscription = isolate.errors.listen(null);
+    errorSubscription.pause();
     workerReceivePort = isolate.beginSession();
     Stream<Command> workerCommandStream = workerReceivePort.map(
         (message) => new Command(DriverCommand.values[message[0]], message[1]));
@@ -399,6 +415,16 @@ class IsolateController {
   /// isolate sends DriverCommand.ClosePort, or if the isolate is killed due to
   /// DriverCommand.Signal arriving through client.commands.
   Future<Null> attachClient(ClientController client) async {
+    errorSubscription.onData((errorList) {
+      String error = errorList[0];
+      String stackTrace = errorList[1];
+      client.printLineOnStderr(error);
+      if (stackTrace != null) {
+        client.printLineOnStderr(stackTrace);
+      }
+      workerReceivePort.close();
+    });
+    errorSubscription.resume();
     handleCommand(Command command) {
       if (command.code == DriverCommand.Signal && !eventLoopStarted) {
         isolate.kill();
@@ -407,6 +433,7 @@ class IsolateController {
         workerSendPort.send([command.code.index, command.data]);
       }
     }
+    // TODO(ahe): Add onDone event handler to detach the client.
     client.commands.listen(handleCommand);
 
     while (await workerCommands.moveNext()) {
@@ -425,6 +452,7 @@ class IsolateController {
           break;
       }
     }
+    errorSubscription.pause();
   }
 
   void endSession() {
@@ -436,9 +464,10 @@ class ManagedIsolate {
   final IsolatePool pool;
   final Isolate isolate;
   final SendPort port;
+  final Stream errors;
   bool wasKilled = false;
 
-  ManagedIsolate(this.pool, this.isolate, this.port);
+  ManagedIsolate(this.pool, this.isolate, this.port, this.errors);
 
   ReceivePort beginSession() {
     ReceivePort receivePort = new ReceivePort();
@@ -469,29 +498,36 @@ class IsolatePool {
 
   IsolatePool(this.isolateEntryPoint);
 
-  Future<ManagedIsolate> getIsolate() async {
+  Future<ManagedIsolate> getIsolate({bool exitOnError: true}) async {
     if (idleIsolates.isEmpty) {
-      return await spawnIsolate();
+      return await spawnIsolate(exitOnError: exitOnError);
     } else {
       return idleIsolates.removeFirst();
     }
   }
 
-  Future<ManagedIsolate> spawnIsolate() async {
+  Future<ManagedIsolate> spawnIsolate({bool exitOnError: true}) async {
+    StreamController errorController = new StreamController.broadcast();
     ReceivePort receivePort = new ReceivePort();
     Isolate isolate = await Isolate.spawn(
         isolateEntryPoint, receivePort.sendPort, paused: true);
+    isolate.setErrorsFatal(true);
     ReceivePort errorPort = new ReceivePort();
     ManagedIsolate managedIsolate;
     isolate.addErrorListener(errorPort.sendPort);
     errorPort.listen((errorList) {
-      String error = errorList[0];
-      String stackTrace = errorList[1];
-      io.stderr.writeln(error);
-      if (stackTrace != null) {
-        io.stderr.writeln(stackTrace);
+      if (exitOnError) {
+        String error = errorList[0];
+        String stackTrace = errorList[1];
+        io.stderr.writeln(error);
+        if (stackTrace != null) {
+          io.stderr.writeln(stackTrace);
+        }
+        exit(DART_VM_EXITCODE_UNCAUGHT_EXCEPTION);
+      } else {
+        managedIsolate.wasKilled = true;
+        errorController.add(errorList);
       }
-      exit(1);
     });
     ReceivePort exitPort = new ReceivePort();
     isolate.addOnExitListener(exitPort.sendPort);
@@ -507,8 +543,9 @@ class IsolatePool {
     bool hasElement = await iterator.moveNext();
     if (!hasElement) throw new StateError("No port received from isolate.");
     SendPort port = iterator.current;
-    await iterator.cancel();
-    managedIsolate = new ManagedIsolate(this, isolate, port);
+    receivePort.close();
+    managedIsolate =
+        new ManagedIsolate(this, isolate, port, errorController.stream);
     return managedIsolate;
   }
 }
