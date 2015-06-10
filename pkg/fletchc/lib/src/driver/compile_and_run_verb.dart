@@ -5,6 +5,7 @@
 library fletchc.driver.compile_and_run_verb;
 
 import 'dart:async' show
+    Completer,
     Future,
     StreamIterator,
     StreamSubscription,
@@ -95,24 +96,31 @@ Future<int> compileAndRun(
   }
 
   Process vmProcess;
+  int exitCode = 0;
   Socket vmSocket;
-  StreamSubscription vmStdoutSubscription;
-  StreamSubscription vmStderrSubscription;
-  String vmPath;
+  List futures = [];
+  trackSubscription(StreamSubscription subscription, String name) {
+    futures.add(doneFuture(handleSubscriptionErrors(subscription, name)));
+  }
   if (attachArgument == null) {
-
     var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 
     List<String> vmOptions = <String>[
         '--port=${server.port}',
       ];
 
-    vmPath = compiler.fletchVm.toFilePath();
+    String vmPath = compiler.fletchVm.toFilePath();
 
     if (compiler.verbose) {
       print("Running '$vmPath ${vmOptions.join(" ")}'");
     }
     vmProcess = await Process.start(vmPath, vmOptions);
+    futures.add(vmProcess.exitCode.then((int value) {
+      exitCode = value;
+      if (exitCode != 0) {
+        print("Non-zero exit code from '$vmPath' ($exitCode).");
+      }
+    }));
 
     readCommands(commandIterator, vmProcess);
 
@@ -121,9 +129,9 @@ Future<int> compileAndRun(
     // will be honored.
     commandSender.sendEventLoopStarted();
 
-    vmStdoutSubscription = handleSubscriptionErrors(
+    trackSubscription(
         vmProcess.stdout.listen(commandSender.sendStdoutBytes), "vm stdout");
-    vmStderrSubscription = handleSubscriptionErrors(
+    trackSubscription(
         vmProcess.stderr.listen(commandSender.sendStderrBytes), "vm stderr");
 
     vmSocket = handleSocketErrors(await server.first, "vmSocket");
@@ -135,7 +143,7 @@ Future<int> compileAndRun(
     vmSocket = handleSocketErrors(await Socket.connect(host, port), "vmSocket");
   }
 
-  vmSocket.listen(null).cancel();
+  trackSubscription(vmSocket.listen(null), "vmSocket");
   commands.forEach((command) => command.addTo(vmSocket));
 
   if (snapshotPath == null) {
@@ -148,20 +156,12 @@ Future<int> compileAndRun(
   vmSocket.close();
 
   if (vmProcess != null) {
-    int exitCode = await vmProcess.exitCode;
-
-    await vmProcess.stdin.close();
-    await vmStdoutSubscription.cancel();
-    await vmStderrSubscription.cancel();
-
-    if (exitCode != 0) {
-      print("Non-zero exit code from '$vmPath' ($exitCode).");
-    }
-
-    return exitCode;
-  } else {
-    return 0;
+    futures.add(vmProcess.stdin.close());
   }
+
+  await Future.wait(futures);
+
+  return exitCode;
 }
 
 Future<Null> readCommands(
@@ -196,4 +196,10 @@ StreamSubscription handleSubscriptionErrors(
   Zone.ROOT.print(info);
   return subscription
       ..onError(makeErrorHandler(info));
+}
+
+Future doneFuture(StreamSubscription subscription) {
+  var completer = new Completer();
+  subscription.onDone(() => completer.complete());
+  return completer.future;
 }

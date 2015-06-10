@@ -82,8 +82,8 @@ Future<int> doInZone(void printLineOnStdout(line), Future<int> f()) async {
   return await zone.run(f);
 }
 
-Future handleClient(SendPort sendPort, ReceivePort receivePort) async {
-  CommandSender commandSender = new PortCommandSender(sendPort);
+Future handleClient(SendPort clientOutgoing, ReceivePort clientIncoming) async {
+  CommandSender commandSender = new PortCommandSender(clientOutgoing);
   printLineOnStdout(String line) {
     commandSender.sendStdout("$line\n");
   }
@@ -96,7 +96,7 @@ Future handleClient(SendPort sendPort, ReceivePort receivePort) async {
         });
 
     StreamIterator<Command> commandIterator = new StreamIterator<Command>(
-        receivePort.transform(commandDecoder));
+        clientIncoming.transform(commandDecoder));
     Command command;
     if (await commandIterator.moveNext()) {
       command = commandIterator.current;
@@ -135,7 +135,7 @@ Future handleClient(SendPort sendPort, ReceivePort receivePort) async {
         commandIterator);
   });
 
-  receivePort.close();
+  clientIncoming.close();
 
   commandSender.sendExitCode(exitCode);
 
