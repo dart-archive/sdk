@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		07AEBC8F98495D7D40B118B6 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E3EF036F3882AE10C212AC /* libPods.a */; };
+		2D6E8DC71B283A6300FED492 /* dart-logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 2D6E8DC61B283A6300FED492 /* dart-logo.png */; };
 		2DB4917D1B0C797900912DA3 /* SlidingWindowPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4917C1B0C797900912DA3 /* SlidingWindowPresenter.mm */; };
 		2DB491831B0C83D200912DA3 /* CommitCellPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */; };
 		2DB4918A1B0C9B2000912DA3 /* CommitListPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */; };
@@ -39,6 +40,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		2D6E8DC61B283A6300FED492 /* dart-logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "dart-logo.png"; sourceTree = "<group>"; };
 		2DB4917B1B0C797900912DA3 /* SlidingWindowPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SlidingWindowPresenter.h; sourceTree = "<group>"; };
 		2DB4917C1B0C797900912DA3 /* SlidingWindowPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = SlidingWindowPresenter.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		2DB4917E1B0C806500912DA3 /* CellPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CellPresenter.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
@@ -72,9 +74,9 @@
 		DA7912491AFCEEB300E5F773 /* unicode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unicode.h; sourceTree = "<group>"; };
 		DA79124E1AFCEEE900E5F773 /* github.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = github.h; sourceTree = "<group>"; };
 		DA79124F1AFCEEE900E5F773 /* github.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = github.mm; sourceTree = "<group>"; };
-		DAEE2F331AD6AA2600945914 /* github.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; name = github.snapshot; path = ../generated/github.snapshot; sourceTree = SOURCE_ROOT; };
 		DA7EF8851B0F3B7D005F8E03 /* MenuController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MenuController.h; sourceTree = "<group>"; };
 		DA7EF8861B0F3B7D005F8E03 /* MenuController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MenuController.mm; sourceTree = "<group>"; };
+		DAEE2F331AD6AA2600945914 /* github.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; name = github.snapshot; path = ../generated/github.snapshot; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -142,6 +144,7 @@
 		DA313FA11AD665A6000089F9 /* github */ = {
 			isa = PBXGroup;
 			children = (
+				2D6E8DC61B283A6300FED492 /* dart-logo.png */,
 				DA313FA61AD665A6000089F9 /* AppDelegate.h */,
 				DA313FA71AD665A6000089F9 /* AppDelegate.mm */,
 				DA1D77011B037490009E936C /* MainController.h */,
@@ -308,6 +311,7 @@
 				DAEE2F341AD6AA2600945914 /* github.snapshot in Resources */,
 				DA313FAE1AD665A6000089F9 /* Main.storyboard in Resources */,
 				DA313FB31AD665A6000089F9 /* LaunchScreen.xib in Resources */,
+				2D6E8DC71B283A6300FED492 /* dart-logo.png in Resources */,
 				DA313FB01AD665A6000089F9 /* Images.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -23,6 +23,7 @@
   cell.authorLabel.text = commitNode.author;
   cell.messageLabel.text = commitNode.message;
   cell.detailsLabel.text = commitNode.message;
+  cell.avatarImage.image = [UIImage imageNamed:@"dart-logo.png"];
 
   cell.detailsViewHeightConstraint.priority =
       commitNode.selected ? 250.0 : 999.0;
