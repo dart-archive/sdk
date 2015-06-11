@@ -67,62 +67,65 @@ def Steps(config):
 
   # This makes us work from whereever we are called, and restores CWD in exit.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
+    with open('.debug.log', 'w') as debug_log:
 
-    with bot.BuildStep('GYP'):
-      Run(['ninja', '-v'])
+      with bot.BuildStep('GYP'):
+        Run(['ninja', '-v'])
 
-    configurations = []
+      configurations = []
 
-    for asan_variant in ['', 'Asan']:
-      for compiler_variant in compiler_variants:
-        for mode in ['Debug', 'Release']:
-          for arch in ['IA32', 'X64']:
-            build_conf = '%(mode)s%(arch)s%(clang)s%(asan)s' % {
-              'mode': mode,
-              'arch': arch,
-              'clang': compiler_variant,
-              'asan': asan_variant,
-            }
-            configurations.append({
-              'build_conf': build_conf,
-              'build_dir': 'out/%s' % build_conf,
-              'clang': bool(compiler_variant),
-              'asan': bool(asan_variant),
-              'mode': mode.lower(),
-              'arch': arch.lower(),
-            })
+      for asan_variant in ['', 'Asan']:
+        for compiler_variant in compiler_variants:
+          for mode in ['Debug', 'Release']:
+            for arch in ['IA32', 'X64']:
+              build_conf = '%(mode)s%(arch)s%(clang)s%(asan)s' % {
+                'mode': mode,
+                'arch': arch,
+                'clang': compiler_variant,
+                'asan': asan_variant,
+              }
+              configurations.append({
+                'build_conf': build_conf,
+                'build_dir': 'out/%s' % build_conf,
+                'clang': bool(compiler_variant),
+                'asan': bool(asan_variant),
+                'mode': mode.lower(),
+                'arch': arch.lower(),
+              })
 
-    for configuration in configurations:
-      with bot.BuildStep('Build %s' % configuration['build_conf']):
-        Run(['ninja', '-v', '-C', configuration['build_dir']])
-
-    for full_run in [True, False]:
       for configuration in configurations:
-        if mac and configuration['arch'] == 'x64' and configuration['asan']:
-          # Asan/x64 takes a long time on mac.
-          continue
+        with bot.BuildStep('Build %s' % configuration['build_conf']):
+          Run(['ninja', '-v', '-C', configuration['build_dir']])
 
-        full_run_configurations = ['DebugIA32', 'DebugIA32ClangAsan']
-        if full_run and (
-           configuration['build_conf'] not in full_run_configurations):
-          # We only do full runs on DebugIA32 and DebugIA32ClangAsan for now.
-          # full_run = compile to snapshot &
-          #            run shapshot &
-          #            run shapshot with `-Xunfold-program`
-          continue
+      for full_run in [True, False]:
+        for configuration in configurations:
+          if mac and configuration['arch'] == 'x64' and configuration['asan']:
+            # Asan/x64 takes a long time on mac.
+            continue
 
-        RunTests(
-          configuration['build_conf'],
-          configuration['mode'],
-          configuration['arch'],
-          config,
-          clang=configuration['clang'],
-          asan=configuration['asan'],
-          full_run=full_run)
+          full_run_configurations = ['DebugIA32', 'DebugIA32ClangAsan']
+          if full_run and (
+             configuration['build_conf'] not in full_run_configurations):
+            # We only do full runs on DebugIA32 and DebugIA32ClangAsan for now.
+            # full_run = compile to snapshot &
+            #            run shapshot &
+            #            run shapshot with `-Xunfold-program`
+            continue
+
+          RunTests(
+            configuration['build_conf'],
+            configuration['mode'],
+            configuration['arch'],
+            config,
+            clang=configuration['clang'],
+            asan=configuration['asan'],
+            full_run=full_run,
+            build_dir=configuration['build_dir'],
+            debug_log=debug_log)
 
 
 def RunTests(name, mode, arch, config, clang=True, asan=False,
-             full_run=False):
+             full_run=False, build_dir=None, debug_log=None):
   step_name = '%s%s' % (name, '-full' if full_run else '')
   with bot.BuildStep('Test %s' % step_name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
@@ -144,8 +147,21 @@ def RunTests(name, mode, arch, config, clang=True, asan=False,
 
     KillFletch(config)
 
+    persistent = subprocess.Popen(
+      ['%s/dart' % build_dir,
+       '-c',
+       '-p',
+       './package/',
+       'package:fletchc/src/driver/driver_main.dart',
+       './.fletch'],
+      stdout=debug_log,
+      stderr=subprocess.STDOUT,
+      close_fds=True)
+
     try:
       Run(args)
+      persistent.terminate()
+      persistent.wait()
     finally:
       KillFletch(config)
 
