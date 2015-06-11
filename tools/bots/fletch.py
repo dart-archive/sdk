@@ -65,9 +65,10 @@ def Steps(config):
 
   mac = config.system == 'mac'
 
-  # This makes us work from whereever we are called, and restores CWD in exit.
-  with utils.ChangedWorkingDirectory(FLETCH_PATH):
-    with open('.debug.log', 'w') as debug_log:
+  with open('.debug.log', 'w') as debug_log:
+
+    # This makes us work from whereever we are called, and restores CWD in exit.
+    with utils.ChangedWorkingDirectory(FLETCH_PATH):
 
       with bot.BuildStep('GYP'):
         Run(['ninja', '-v'])
