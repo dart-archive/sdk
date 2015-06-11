@@ -245,6 +245,7 @@ Future main(List<String> arguments) async {
 }
 
 Future handleClient(IsolatePool pool, Socket controlSocket) async {
+  ClientLogger log = ClientLogger.allocate();
   // This method needs to do the following:
   // * Spawn a new worker isolate (or reuse an existing) to perform the task.
   //
@@ -260,7 +261,7 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
 
   ClientController client = new ClientController(controlSocket)..start();
   List<String> arguments = await client.arguments;
-  print("Got arguments: $arguments");
+  log.gotArguments(arguments);
 
   // The rest is asynchronous, so we can respond to other requests.
   new Future(() async {
@@ -272,9 +273,9 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
     // [worker].  This is done with two asynchronous tasks that communicate
     // with each other.  Also handles the signal command as mentioned above.
     await worker.beginSession();
-    print("After beginSession");
+    log.note("After beginSession.");
     await worker.attachClient(client);
-    print("After attachClient");
+    log.note("After attachClient.");
 
     // Return the isolate to the pool *before* shutting down the client. This
     // ensures that the next client will be able to reuse the isolate instead
@@ -285,11 +286,9 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
     try {
       await client.done;
     } catch (error, stackTrace) {
-      // TODO(ahe): Collect these errors, so they can be investigated and
-      // prevented.
-      print("Crash: ${stringifyError(error, stackTrace)}");
+      log.error(error, stackTrace);
     }
-    print("Client done");
+    log.done();
   });
 }
 
@@ -558,4 +557,51 @@ class IsolatePool {
         new ManagedIsolate(this, isolate, port, errorController.stream);
     return managedIsolate;
   }
+}
+
+class ClientLogger {
+  static int clientsAllocated = 0;
+
+  static Set<ClientLogger> pendingClients = new Set<ClientLogger>();
+
+  static Set<ClientLogger> erroneousClients = new Set<ClientLogger>();
+
+  static ClientLogger allocate() {
+    ClientLogger client = new ClientLogger(clientsAllocated++);
+    pendingClients.add(client);
+    return client;
+  }
+
+  final int id;
+
+  final List<String> notes = <String>[];
+
+  List<String> arguments;
+
+  ClientLogger(this.id);
+
+  void note(object) {
+    String note = "$object";
+    notes.add(note);
+    print("$id: $note");
+  }
+
+  void gotArguments(List<String> arguments) {
+    this.arguments = arguments;
+    note("Got arguments: ${arguments.join(' ')}.");
+  }
+
+  void done() {
+    pendingClients.remove(this);
+    note("Client done ($pendingClients).");
+  }
+
+  void error(error, StackTrace stackTrace) {
+    // TODO(ahe): Modify shutdown verb to report these errors.
+    erroneousClients.add(this);
+    note("Crash (${arguments.join(' ')}).\n"
+         "${stringifyError(error, stackTrace)}");
+  }
+
+  String toString() => "$id";
 }
