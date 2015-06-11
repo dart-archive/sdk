@@ -31,14 +31,14 @@ class Heap {
 
   // Allocate heap object.
   Object* CreateComplexHeapObject(Class* the_class, Object* init_value,
-                                  bool immutable = false);
+                                  bool immutable);
 
   // Allocate array.
   Object* CreateArray(Class* the_class, int length, Object* init_value,
-                      bool immutable = false);
+                      bool immutable);
 
   // Allocate byte array.
-  Object* CreateByteArray(Class* the_class, int length, bool immutable = false);
+  Object* CreateByteArray(Class* the_class, int length, bool immutable);
 
   // Allocate heap integer.
   Object* CreateLargeInteger(Class* the_class, int64 value);
@@ -55,17 +55,17 @@ class Heap {
 
   // Create a string object initialized with zeros. Caller should set
   // the actual contents.
-  Object* CreateString(Class* the_class, int length, bool immutable = false);
+  Object* CreateString(Class* the_class, int length, bool immutable);
 
   // Create a string object where the payload is uninitialized.
   // The payload therefore contains whatever was in the heap at this
   // location before. This should only be used if you are going
   // to immediately overwrite the payload with the actual data.
   Object* CreateStringUninitialized(Class* the_class, int length,
-                                    bool immutable = false);
+                                    bool immutable);
 
   // Allocate stack.
-  Object* CreateStack(Class* the_class, int length, bool immutable = false);
+  Object* CreateStack(Class* the_class, int length, bool immutable);
 
   // Allocate class.
   Object* CreateMetaClass();
@@ -108,7 +108,7 @@ class Heap {
 
  private:
   Object* CreateStringInternal(Class* the_class, int length, bool clear,
-                               bool immutable = false);
+                               bool immutable);
 
   // Used for initializing identity hash codes for immutable objects.
   RandomLCG* random_;

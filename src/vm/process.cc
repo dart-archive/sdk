@@ -256,7 +256,7 @@ bool Process::HandleStackOverflow(int addition) {
 Object* Process::NewArray(int length) {
   Class* array_class = program()->array_class();
   Object* null = program()->null_object();
-  Object* result = heap_.CreateArray(array_class, length, null);
+  Object* result = heap_.CreateArray(array_class, length, null, false);
   return result;
 }
 
@@ -278,21 +278,22 @@ void Process::TryDeallocInteger(LargeInteger* object) {
 
 Object* Process::NewString(int length) {
   Class* string_class = program()->string_class();
-  Object* raw_result = heap_.CreateString(string_class, length);
+  Object* raw_result = heap_.CreateString(string_class, length, true);
   if (raw_result->IsFailure()) return raw_result;
   return String::cast(raw_result);
 }
 
 Object* Process::NewStringUninitialized(int length) {
   Class* string_class = program()->string_class();
-  Object* raw_result = heap_.CreateStringUninitialized(string_class, length);
+  Object* raw_result = heap_.CreateStringUninitialized(
+      string_class, length, true);
   if (raw_result->IsFailure()) return raw_result;
   return String::cast(raw_result);
 }
 
 Object* Process::NewStringFromAscii(List<const char> value) {
   Class* string_class = program()->string_class();
-  Object* raw_result = heap_.CreateString(string_class, value.length());
+  Object* raw_result = heap_.CreateString(string_class, value.length(), true);
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
   for (int i = 0; i < value.length(); i++) {
@@ -326,7 +327,7 @@ Object* Process::Concatenate(String* x, String* y) {
   if (ylen == 0) return x;
   int length = xlen + ylen;
   Class* string_class = program()->string_class();
-  Object* raw_result = heap_.CreateString(string_class, length);
+  Object* raw_result = heap_.CreateString(string_class, length, true);
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
   uint8_t* first_part = result->byte_address_for(0);
@@ -338,7 +339,7 @@ Object* Process::Concatenate(String* x, String* y) {
 
 Object* Process::NewStack(int length) {
   Class* stack_class = program()->stack_class();
-  Object* result = heap_.CreateStack(stack_class, length);
+  Object* result = heap_.CreateStack(stack_class, length, false);
   return result;
 }
 

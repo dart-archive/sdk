@@ -69,7 +69,8 @@ Object* Heap::CreateByteArray(Class* the_class, int length, bool immutable) {
 Object* Heap::CreateLargeInteger(Class* the_class, int64 value) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::LARGE_INTEGER_TYPE);
-  Object* raw_result = Allocate(LargeInteger::AllocationSize());
+  int size = LargeInteger::AllocationSize();
+  Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   LargeInteger* result = reinterpret_cast<LargeInteger*>(raw_result);
   result->set_class(the_class);
@@ -84,7 +85,8 @@ void Heap::TryDeallocInteger(LargeInteger* object) {
 Object* Heap::CreateDouble(Class* the_class, double value) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::DOUBLE_TYPE);
-  Object* raw_result = Allocate(Double::AllocationSize());
+  int size = Double::AllocationSize();
+  Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Double* result = reinterpret_cast<Double*>(raw_result);
   result->set_class(the_class);

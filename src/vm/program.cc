@@ -1067,7 +1067,8 @@ Process* Program::ProcessSpawnForMain() {
 }
 
 Object* Program::CreateArrayWith(int capacity, Object* initial_value) {
-  Object* result = heap()->CreateArray(array_class(), capacity, initial_value);
+  Object* result = heap()->CreateArray(
+      array_class(), capacity, initial_value, false);
   return result;
 }
 

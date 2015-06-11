@@ -31,6 +31,7 @@ class Node {
 }
 
 main() {
+  var string = 'abc';
   var leaf = new Node(null, null);
   var nonConstConstructorObj = new Node.nonConst(leaf, leaf);
 
@@ -42,6 +43,7 @@ main() {
   testImmutable(1.1);
   testImmutable(true);
   testImmutable(false);
+  testImmutable('$string$string');
 
   testImmutable(new Hund(1));
   testImmutable(leaf);
