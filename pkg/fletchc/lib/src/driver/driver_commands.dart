@@ -18,22 +18,25 @@ import 'dart:convert' show
     UTF8;
 
 enum DriverCommand {
-  // Data on stdin.
+  // Note: if you modify this enum, please modify src/tools/driver/connection.h
+  // as well.
+
+  /// Data on stdin.
   Stdin,
 
-  // Data on stdout.
+  /// Data on stdout.
   Stdout,
 
-  // Data on stderr.
+  /// Data on stderr.
   Stderr,
 
-  // Command-line arguments.
+  /// Command-line arguments.
   Arguments,
 
-  // Unix process signal received.
+  /// Unix process signal received.
   Signal,
 
-  // Set process exit code.
+  /// Set process exit code.
   ExitCode,
 
   /// Tell the receiver that commands will be processed immediatly.
@@ -42,11 +45,14 @@ enum DriverCommand {
   /// Tell receiver to close the port this was sent to.
   ClosePort,
 
+  /// A SendPort that the receiver can use to communicate with the sender.
+  SendPort,
+
   /// Error in connection.
   DriverConnectionError,
 
-  /// A SendPort that the receiver can use to communicate with the sender.
-  SendPort,
+  /// Connection closed.
+  DriverConnectionClosed,
 }
 
 class Command {
