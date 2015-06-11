@@ -674,6 +674,9 @@ class Thread {
   }
 
   static void yield() {
+    // Handle messages so that threads that are blocked on receiving
+    // messages can wake up.
+    Process._handleMessages();
     _current._coroutine = Coroutine._coroutineCurrent();
     fletch.coroutineChange(_scheduler, _current._next);
   }
