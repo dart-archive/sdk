@@ -282,7 +282,13 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
     worker.endSession();
     client.endSession();
 
-    await client.done;
+    try {
+      await client.done;
+    } catch (error, stackTrace) {
+      // TODO(ahe): Collect these errors, so they can be investigated and
+      // prevented.
+      print("Crash: ${stringifyError(error, stackTrace)}");
+    }
     print("Client done");
   });
 }
@@ -334,6 +340,10 @@ class ClientController {
   void handleCommandError(error, StackTrace trace) {
     print(stringifyError(error, trace));
     completer.completeError(error, trace);
+    // Cancel the subscription if an error occurred, this prevents
+    // [handleCommandsDone] from being called and attempt to complete
+    // [completer].
+    subscription.cancel();
   }
 
   void handleCommandsDone() {
