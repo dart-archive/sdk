@@ -15,7 +15,11 @@ from os.path import dirname
 import subprocess
 import sys
 
-DART_PATH = dirname(dirname(dirname(abspath(__file__))))
+import bot_utils
+
+utils = bot_utils.GetUtils()
+
+PROJECT_PATH = dirname(dirname(dirname(abspath(__file__))))
 
 BUILDER_NAME = 'BUILDBOT_BUILDERNAME'
 BUILDER_CLOBBER = 'BUILDBOT_CLOBBER'
@@ -148,13 +152,12 @@ def RunBot(parse_name, custom_steps, build_step=BuildSDK):
   # Print out the buildinfo for easy debugging.
   build_info.PrintBuildInfo()
 
-  # Make sure we are in the dart directory
-  os.chdir(DART_PATH)
-
   try:
-    Clobber()
-    if build_step:
-      build_step(build_info)
+    # This makes us work from whereever we are called, and restores CWD in exit.
+    with utils.ChangedWorkingDirectory(PROJECT_PATH):
+      Clobber()
+      if build_step:
+        build_step(build_info)
 
     custom_steps(build_info)
   except OSError as e:
