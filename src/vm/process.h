@@ -216,6 +216,8 @@ class Process {
   PortQueue* CurrentMessage();
   void AdvanceCurrentMessage();
 
+  void TakeChildHeaps();
+
   void RegisterFinalizer(HeapObject* object, WeakPointerCallback callback);
   void UnregisterFinalizer(HeapObject* object);
 

@@ -40,9 +40,13 @@ class ExitReference {
     return result;
   }
 
+  void VisitPointers(PointerVisitor* visitor) {
+    visitor->Visit(&message_);
+  }
+
  private:
   Space* space_;
-  Object* const message_;
+  Object* message_;
 };
 
 class PortQueue {
@@ -88,8 +92,17 @@ class PortQueue {
   void set_next(PortQueue* next) { next_ = next; }
 
   void VisitPointers(PointerVisitor* visitor) {
-    if (kind() == OBJECT) {
-      visitor->Visit(reinterpret_cast<Object**>(&value_));
+    switch (kind()) {
+      case OBJECT:
+        visitor->Visit(reinterpret_cast<Object**>(&value_));
+        break;
+      case EXIT: {
+        ExitReference* ref = reinterpret_cast<ExitReference*>(address());
+        ref->VisitPointers(visitor);
+        break;
+      }
+      default:
+        break;
     }
   }
 
@@ -435,10 +448,21 @@ int Process::CollectGarbageAndChainStacks(Process** list) {
   return visitor.number_of_stacks();
 }
 
+static void IteratePortQueuePointers(PortQueue* queue,
+                                     PointerVisitor* visitor) {
+  for (PortQueue* current = queue;
+       current != NULL;
+       current = current->next()) {
+     current->VisitPointers(visitor);
+  }
+}
+
 void Process::IterateRoots(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&statics_));
   visitor->Visit(reinterpret_cast<Object**>(&coroutine_));
   if (debug_info_ != NULL) debug_info_->VisitPointers(visitor);
+  IteratePortQueuePointers(last_message_, visitor);
+  IteratePortQueuePointers(current_message_, visitor);
 }
 
 class ProgramPointerVisitor : public HeapObjectVisitor {
@@ -454,21 +478,12 @@ class ProgramPointerVisitor : public HeapObjectVisitor {
   PointerVisitor* visitor_;
 };
 
-static void IteratePortQueueProgramPointers(PortQueue* queue,
-                                            PointerVisitor* visitor) {
-  for (PortQueue* current = queue;
-       current != NULL;
-       current = current->next()) {
-     current->VisitPointers(visitor);
-  }
-}
-
 void Process::IterateProgramPointers(PointerVisitor* visitor) {
   ProgramPointerVisitor program_pointer_visitor(visitor);
   heap()->IterateObjects(&program_pointer_visitor);
   if (debug_info_ != NULL) debug_info_->VisitProgramPointers(visitor);
-  IteratePortQueueProgramPointers(last_message_, visitor);
-  IteratePortQueueProgramPointers(current_message_, visitor);
+  IteratePortQueuePointers(last_message_, visitor);
+  IteratePortQueuePointers(current_message_, visitor);
 }
 
 static void CollectProcessesInQueue(PortQueue* queue, Process** list) {
@@ -749,6 +764,22 @@ void Process::AdvanceCurrentMessage() {
   delete temp;
 }
 
+static void TakePortQueueHeaps(PortQueue* queue, Space* space) {
+  for (PortQueue* current = queue;
+       current != NULL;
+       current = current->next()) {
+    if (current->kind() == PortQueue::EXIT) {
+      ExitReference* ref = reinterpret_cast<ExitReference*>(current->address());
+      space->PrependSpace(ref->TakeSpace());
+    }
+  }
+}
+
+void Process::TakeChildHeaps() {
+  TakePortQueueHeaps(current_message_, heap_.space());
+  TakePortQueueHeaps(last_message_, heap_.space());
+}
+
 PortQueue* Process::CurrentMessage() {
   ASSERT(Thread::IsCurrent(thread_state_.load()->thread()));
   if (current_message_ == NULL) TakeQueue();
@@ -867,7 +898,8 @@ NATIVE(ProcessQueueGetMessage) {
 
     case PortQueue::EXIT: {
       ExitReference* ref = reinterpret_cast<ExitReference*>(queue->address());
-      process->heap()->space()->PrependSpace(ref->TakeSpace());
+      Space* space = ref->TakeSpace();
+      if (space != NULL) space->PrependSpace(space);
       result = ref->message();
       break;
     }

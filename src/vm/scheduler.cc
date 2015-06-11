@@ -272,6 +272,13 @@ void Scheduler::DeleteProcess(Process* process, ThreadState* thread_state) {
   // Don't unblock until 'process' is deleted, to make sure all references to
   // 'blocked's heap are gone.
   if (blocked != NULL && blocked->DecrementBlocked()) {
+    // For Process.divide, we cannot deal with the merging of heap in Dart code
+    // in the parent process. That can lead to GC of the parent process before
+    // all child process heaps have been merged in. The child heaps that have
+    // not been merged in can then have stale pointers to immutable objects
+    // in the parent heap. Therefore, we have to explicitly take all child
+    // heaps before we allow the parent to return to Dart code.
+    blocked->TakeChildHeaps();
     blocked->ChangeState(Process::kBlocked, Process::kReady);
     EnqueueOnAnyThread(blocked, thread_state->thread_id() + 1);
   }
@@ -485,7 +492,9 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (result.IsBlocked()) {
       process->ChangeState(Process::kRunning, Process::kBlocked);
       if (process->DecrementBlocked()) {
-        // If the blocked process is resumed now, continue with it.
+        // If the blocked process is resumed now, continue with it but
+        // merge in all child heaps before doing so.
+        process->TakeChildHeaps();
         process->ChangeState(Process::kBlocked, Process::kRunning);
         return process;
       }
