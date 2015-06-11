@@ -4,6 +4,7 @@
 
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert' show UTF8;
 
 import 'package:http/http.dart';
 
@@ -20,7 +21,7 @@ dynamic getJson(Connection service, String resource) {
   if (response.statusCode != 200) {
     throw 'Failed request: $resource on port $port';
   }
-  return new JsonParser(new String.fromCharCodes(response.body)).parse();
+  return new JsonParser(UTF8.decode(response.body)).parse();
 }
 
 class JsonParser {
