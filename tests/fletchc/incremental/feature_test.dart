@@ -59,7 +59,8 @@ import 'package:fletchc/session.dart' show
 
 import 'program_result.dart';
 
-const bool testSessionReset = const bool.fromEnvironment("testSessionReset");
+const bool testSessionReset =
+    const bool.fromEnvironment("testSessionReset", defaultValue: true);
 
 typedef Future NoArgFuture();
 

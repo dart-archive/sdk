@@ -115,7 +115,8 @@ class Session {
     kProcessRun,
     kError,
     kSnapshotDone,
-    kSessionEnd
+    kSessionEnd,
+    kSessionReset
   };
 
   Connection* const connection_;

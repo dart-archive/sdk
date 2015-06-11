@@ -213,7 +213,6 @@ bool Scheduler::ProcessRunOnCurrentThread(Process* process, Port* port) {
   return true;
 }
 
-
 bool Scheduler::Run() {
   static const bool kProfile = Flags::profile;
   static const uint64 kProfileIntervalUs = Flags::profile_interval;

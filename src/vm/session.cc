@@ -244,7 +244,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kSessionReset: {
-        Reinitialize();
+        SignalMainThread(kSessionReset);
         break;
       }
 
@@ -482,6 +482,12 @@ bool Session::ProcessRun() {
       case kSessionEnd:
         ASSERT(!debugging_);
         if (has_result) return result;
+        break;
+      case kSessionReset:
+        ASSERT(debugging_);
+        has_result = false;
+        result = false;
+        Reinitialize();
         break;
       case kUnknown:
         UNREACHABLE();
