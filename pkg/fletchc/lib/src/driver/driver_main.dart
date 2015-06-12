@@ -63,7 +63,9 @@ class ControlStream {
 
   final StreamController<Command> controller = new StreamController<Command>();
 
-  ControlStream(Stream<List<int>> stream)
+  final ClientLogger log;
+
+  ControlStream(Stream<List<int>> stream, this.log)
       : this.stream = stream,
         this.subscription = stream.listen(null) {
     subscription
@@ -75,6 +77,13 @@ class ControlStream {
   Stream<Command> get commandStream => controller.stream;
 
   void handleData(Uint8List data) {
+    log.note(
+        "data=$data; "
+        "data.length = ${data.length}; "
+        "elementSizeInBytes=${data.elementSizeInBytes}; "
+        "offsetInBytes=${data.offsetInBytes}; "
+        "lengthInBytes=${data.lengthInBytes}; "
+        "buffer.lengthInBytes=${data.buffer.lengthInBytes}");
     // TODO(ahe): makeView(data, ...) to ensure monomorphism?
     builder.add(data);
     if (builder.length < headerSize) return;
@@ -320,7 +329,7 @@ class ClientController {
   /// Start processing commands from the client.
   void start() {
     commandSender = new ByteCommandSender(socket);
-    subscription = new ControlStream(socket).commandStream.listen(null);
+    subscription = new ControlStream(socket, log).commandStream.listen(null);
     subscription
         ..onData(handleCommand)
         ..onError(handleCommandError)
