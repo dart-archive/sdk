@@ -268,7 +268,7 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
   //
   // * Store completed isolates in a pool.
 
-  ClientController client = new ClientController(controlSocket)..start();
+  ClientController client = new ClientController(controlSocket, log)..start();
   List<String> arguments = await client.arguments;
   log.gotArguments(arguments);
 
@@ -308,13 +308,15 @@ class ClientController {
   /// Used to implement [commands].
   final StreamController<Command> controller = new StreamController<Command>();
 
+  final ClientLogger log;
+
   CommandSender commandSender;
   StreamSubscription<Command> subscription;
   Completer<Null> completer;
 
   Completer<List<String>> argumentsCompleter = new Completer<List<String>>();
 
-  ClientController(this.socket);
+  ClientController(this.socket, this.log);
 
   /// A stream of commands from the client that should be forwarded to a worker
   /// isolate.
