@@ -932,7 +932,7 @@ class Stack: public BaseArray {
   void StackReadFrom(SnapshotReader* reader, int length);
 
   // Layout descriptor.
-  static const int kTopOffset = BaseArray::kLengthOffset + kPointerSize;
+  static const int kTopOffset = BaseArray::kSize;
   static const int kNextOffset = kTopOffset + kPointerSize;
   static const int kSize = kNextOffset + kPointerSize;
 
@@ -945,7 +945,7 @@ class Stack: public BaseArray {
 
 class Coroutine: public Instance {
  public:
-  // [super]: field containing the stack.
+  // [stack]: field containing the stack.
   inline bool has_stack();
   inline Stack* stack();
   inline Object** stack_address();

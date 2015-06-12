@@ -968,6 +968,11 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
 class TransformInstancesProcessVisitor : public ProcessVisitor {
  public:
   virtual void VisitProcess(Process* process) {
+    // NOTE: We need to take all spaces which are getting merged into the
+    // process heap, because otherwise we'll not update the pointers it has to
+    // the program space / to the process heap objects which were transformed.
+    process->TakeChildHeaps();
+
     TransformInstancesPointerVisitor pointer_visitor(process->heap());
     Space* space = process->heap()->space();
     NoAllocationFailureScope scope(space);
@@ -993,6 +998,12 @@ void Session::TransformInstances() {
   program()->IterateRoots(&pointer_visitor);
   space->CompleteTransformations(&pointer_visitor);
 
+  // TODO(ager): TransformInstances needs to locate all processes. Currently,
+  // it only iterates processes in the scheduler and in the session. There
+  // could be processes that are only referenced from ports in other processes
+  // heaps; they need to be visited as well. See Program::CollectGarbage for
+  // how it is done there.
+  // Issue: https://github.com/dart-lang/fletch/issues/51
   TransformInstancesProcessVisitor process_visitor;
   Scheduler* scheduler = program()->scheduler();
   VisitProcesses(&process_visitor);

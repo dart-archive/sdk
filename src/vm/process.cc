@@ -430,6 +430,11 @@ class ScavengeAndChainStacksVisitor: public PointerVisitor {
 };
 
 int Process::CollectGarbageAndChainStacks(Process** list) {
+  // NOTE: We need to take all spaces which are getting merged into our
+  // heap, because otherwise we'll not update the pointers it has to the
+  // program space / to the process heap.
+  TakeChildHeaps();
+
   Space* to = new Space();
   // While garbage collecting, do not fail allocations. Instead grow
   // the to-space as needed.
@@ -438,8 +443,7 @@ int Process::CollectGarbageAndChainStacks(Process** list) {
   // Visit the current coroutine stack first and chain the rest of the
   // stacks starting from there.
   visitor.Visit(reinterpret_cast<Object**>(coroutine_->stack_address()));
-  visitor.Visit(reinterpret_cast<Object**>(&coroutine_));
-  visitor.Visit(reinterpret_cast<Object**>(&statics_));
+  IterateRoots(&visitor);
   to->CompleteScavenge(&visitor);
   WeakPointer::Process(&weak_pointers_);
   set_ports(Port::CleanupPorts(ports()));
