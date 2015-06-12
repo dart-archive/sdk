@@ -124,6 +124,27 @@ def Steps(config):
             build_dir=configuration['build_dir'],
             debug_log=debug_log)
 
+  AnalyzeLog()
+
+def AnalyzeLog():
+  # pkg/fletchc/lib/src/driver/driver_main.dart will (to .debug.log) print
+  # "1234: Crash (..." when an exception is thrown after shutting down a
+  # client.  In this case, there's no obvious place to report the exception, so
+  # the build bot must look for these crashes.
+  pattern=re.compile(r"^[0-9]+: Crash \(")
+  with open('.debug.log') as debug_log:
+    undiagnosed_crashes = False
+    for line in debug_log:
+      if pattern.match(line):
+        undiagnosed_crashes = True
+        # For information about build bot annotations below, see
+        # https://chromium.googlesource.com/chromium/tools/build/+/c63ec51491a8e47b724b5206a76f8b5e137ff1e7/scripts/master/chromium_step.py#472
+        print '@@@STEP_LOG_LINE@undiagnosed_crashes@%s@@@' % line.rstrip()
+    if undiagnosed_crashes:
+      print '@@@STEP_LOG_END@undiagnosed_crashes@@@'
+      print '@@@STEP_WARNING@@@'
+      sys.stdout.flush()
+
 
 def RunTests(name, mode, arch, config, clang=True, asan=False,
              full_run=False, build_dir=None, debug_log=None):
