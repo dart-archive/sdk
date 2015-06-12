@@ -106,6 +106,10 @@ abstract class Command {
 
   factory Command.fromBuffer(CommandCode code, Uint8List buffer) {
     switch (code) {
+      case CommandCode.InstanceStructure:
+        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        int fields = CommandBuffer.readInt32FromBuffer(buffer, 8);
+        return new InstanceStructure(classId, fields);
       case CommandCode.Instance:
         int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new Instance(classId);
@@ -694,6 +698,25 @@ class ProcessLocal extends Command {
   String valuesToString() => "$classMap, $frame, $slot";
 }
 
+class ProcessLocalStructure extends Command {
+  final MapId classMap;
+  final int frame;
+  final int slot;
+
+  const ProcessLocalStructure(this.classMap, this.frame, this.slot)
+      : super(CommandCode.ProcessLocalStructure);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(classMap.index)
+        ..addUint32(frame)
+        ..addUint32(slot)
+        ..sendOn(sink, code);
+  }
+
+  String valuesToString() => "$classMap, $frame, $slot";
+}
+
 class ProcessStep extends Command {
   const ProcessStep()
       : super(CommandCode.ProcessStep);
@@ -784,6 +807,16 @@ class WriteSnapshot extends Command {
   }
 
   String valuesToString() => "'$value'";
+}
+
+class InstanceStructure extends Command {
+  final int classId;
+  final int fields;
+
+  const InstanceStructure(this.classId, this.fields)
+      : super(CommandCode.InstanceStructure);
+
+  String valuesToString() => "$classId, $fields";
 }
 
 abstract class DartValue extends Command {
@@ -880,6 +913,7 @@ enum CommandCode {
   ProcessBacktrace,
   ProcessBreakpoint,
   ProcessLocal,
+  ProcessLocalStructure,
   ProcessTerminated,
   WriteSnapshot,
   CollectGarbage,
@@ -925,7 +959,8 @@ enum CommandCode {
   Null,
   Double,
   String,
-  Instance
+  Instance,
+  InstanceStructure
 }
 
 enum MapId {

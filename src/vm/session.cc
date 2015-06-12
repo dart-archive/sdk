@@ -88,6 +88,50 @@ void Session::SignalMainThread(MainThreadResumeKind kind) {
   main_thread_monitor_->Unlock();
 }
 
+void Session::SendDartValue(Object* value, int class_map) {
+  if (value->IsSmi() || value->IsLargeInteger()) {
+    int64_t int_value = value->IsSmi()
+        ? Smi::cast(value)->value()
+        : LargeInteger::cast(value)->value();
+    connection_->WriteInt64(int_value);
+    connection_->Send(Connection::kInteger);
+  } else if (value->IsTrue() || value->IsFalse()) {
+    connection_->WriteBoolean(value->IsTrue());
+    connection_->Send(Connection::kBoolean);
+  } else if (value->IsNull()) {
+    connection_->Send(Connection::kNull);
+  } else if (value->IsDouble()) {
+    connection_->WriteDouble(Double::cast(value)->value());
+    connection_->Send(Connection::kDouble);
+  } else if (value->IsString()) {
+    // TODO(ager): We should send the character data as 16-bit values
+    // instead of 32-bit values.
+    String* str = String::cast(value);
+    for (int i = 0; i < str->length(); i++) {
+      connection_->WriteInt(str->get_code_unit(i));
+    }
+    connection_->Send(Connection::kString);
+  } else {
+    Push(HeapObject::cast(value)->get_class());
+    int64 id = MapLookup(class_map);
+    connection_->WriteInt64(id);
+    connection_->Send(Connection::kInstance);
+  }
+}
+
+void Session::SendInstanceStructure(Instance* instance, int class_map) {
+  Class* klass = instance->get_class();
+  Push(klass);
+  int64 id = MapLookup(class_map);
+  connection_->WriteInt64(id);
+  int fields = klass->NumberOfInstanceFields();
+  connection_->WriteInt(fields);
+  connection_->Send(Connection::kInstanceStructure);
+  for (int i = 0; i < fields; i++) {
+    SendDartValue(instance->GetInstanceField(i), class_map);
+  }
+}
+
 void Session::ProcessMessages() {
   while (true) {
     Connection::Opcode opcode = connection_->Receive();
@@ -201,38 +245,17 @@ void Session::ProcessMessages() {
         break;
       }
 
-      case Connection::kProcessLocal: {
-        int classMap = connection_->ReadInt();
+      case Connection::kProcessLocal:
+      case Connection::kProcessLocalStructure: {
+        int class_map = connection_->ReadInt();
         int frame = connection_->ReadInt();
         int slot = connection_->ReadInt();
         Object* local = StackWalker::ComputeLocal(process_, frame, slot);
-        if (local->IsSmi() || local->IsLargeInteger()) {
-          int64_t value = local->IsSmi()
-              ? Smi::cast(local)->value()
-              : LargeInteger::cast(local)->value();
-          connection_->WriteInt64(value);
-          connection_->Send(Connection::kInteger);
-        } else if (local->IsTrue() || local->IsFalse()) {
-          connection_->WriteBoolean(local->IsTrue());
-          connection_->Send(Connection::kBoolean);
-        } else if (local->IsNull()) {
-          connection_->Send(Connection::kNull);
-        } else if (local->IsDouble()) {
-          connection_->WriteDouble(Double::cast(local)->value());
-          connection_->Send(Connection::kDouble);
-        } else if (local->IsString()) {
-          // TODO(ager): We should send the character data as 16-bit values
-          // instead of 32-bit values.
-          String* str = String::cast(local);
-          for (int i = 0; i < str->length(); i++) {
-            connection_->WriteInt(str->get_code_unit(i));
-          }
-          connection_->Send(Connection::kString);
+        if (opcode == Connection::kProcessLocalStructure &&
+            local->IsInstance()) {
+          SendInstanceStructure(Instance::cast(local), class_map);
         } else {
-          Push(HeapObject::cast(local)->get_class());
-          int64 id = MapLookup(classMap);
-          connection_->WriteInt64(id);
-          connection_->Send(Connection::kInstance);
+          SendDartValue(local, class_map);
         }
         break;
       }

@@ -380,20 +380,47 @@ class Session {
     currentStackTrace.write(currentFrame);
   }
 
-  Future printLocal(String name, LocalValue local) async {
+  String dartValueToString(DartValue value) {
+    if (value is Instance) {
+      Instance i = value;
+      String className = compiler.lookupClassName(i.classId);
+      return "Instance of '$className'";
+    } else {
+      return value.dartToString();
+    }
+  }
+
+  Future printLocal(LocalValue local, [String name]) async {
     var actualFrameNumber = currentStackTrace.actualFrameNumber(currentFrame);
     new ProcessLocal(MapId.classes,
                      actualFrameNumber,
                      local.slot).addTo(vmSocket);
     Command response = await nextVmCommand();
     assert(response is DartValue);
-    if (response is Instance) {
-      Instance i = response;
-      String className = compiler.lookupClassName(i.classId);
-      print("$name: Instance of '$className'");
+    String prefix = (name == null) ? '' : '$name: ';
+    print('$prefix${dartValueToString(response)}');
+  }
+
+  Future printLocalStructure(String name, LocalValue local) async {
+    var actualFrameNumber = currentStackTrace.actualFrameNumber(currentFrame);
+    new ProcessLocalStructure(MapId.classes,
+                              actualFrameNumber,
+                              local.slot).addTo(vmSocket);
+    Command response = await nextVmCommand();
+    if (response is DartValue) {
+      print(dartValueToString(response));
     } else {
-      DartValue value = response;
-      print('$name: ${value.dartToString()}');
+      assert(response is InstanceStructure);
+      InstanceStructure structure = response;
+      int classId = structure.classId;
+      String className = compiler.lookupClassName(classId);
+      print("Instance of '$className' {");
+      for (int i = 0; i < structure.fields; i++) {
+        DartValue value = await nextVmCommand();
+        var fieldName = compiler.lookupFieldName(classId, i);
+        print('  $fieldName: ${dartValueToString(value)}');
+      }
+      print('}');
     }
   }
 
@@ -403,7 +430,7 @@ class Session {
     for (ScopeInfo current = info;
          current != ScopeInfo.sentinel;
          current = current.previous) {
-      await printLocal(current.name, current.local);
+      await printLocal(current.local, current.name);
     }
   }
 
@@ -415,7 +442,18 @@ class Session {
       print('### No such variable: $name');
       return null;
     }
-    await printLocal(name, local);
+    await printLocal(local);
+  }
+
+  Future printVariableStructure(String name) async {
+    await getStackTrace();
+    ScopeInfo info = currentStackTrace.scopeInfo(currentFrame);
+    LocalValue local = info.lookup(name);
+    if (local == null) {
+      print('### No such variable: $name');
+      return null;
+    }
+    await printLocalStructure(name, local);
   }
 
   Future toggleInternal() async {

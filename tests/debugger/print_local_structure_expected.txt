@@ -1,0 +1,25 @@
+Starting session. Type 'help' for a list of commands.
+
+> b breakHere
+breakpoint set: 0: breakHere @0
+> r
+Stack trace:
+> 0: breakHere	
+  1: main     	@breakHere()
+> f 1
+> p *a
+Instance of 'A' {
+  S0.str: 'spaß'
+  S1.i: 42
+  S1.i2: 8589934592
+  S2.n: null
+  S2.d: 42.42
+  S3.shadowMe: 0
+  A.shadowMe: 42
+  A.t: true
+  A.f: false
+}
+> p *i
+42
+> c
+### process terminated

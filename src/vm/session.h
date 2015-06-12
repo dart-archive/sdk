@@ -138,6 +138,9 @@ class Session {
 
   void SignalMainThread(MainThreadResumeKind);
 
+  void SendDartValue(Object* value, int class_map);
+  void SendInstanceStructure(Instance* instance, int class_map);
+
   void Push(Object* object) { stack_.Add(object); }
   Object* Pop() { return stack_.RemoveLast(); }
   Object* Top() const { return stack_.Last(); }

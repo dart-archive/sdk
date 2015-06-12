@@ -289,6 +289,11 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return 'unknown';
   }
 
+  String lookupFieldName(int classId, int index) {
+    FletchClassBuilder klass = lookupFletchClassBuilder(classId);
+    return klass.fieldName(index);
+  }
+
   String lookupFunctionNameBySelector(int selector) {
     int id = FletchSelector.decodeId(selector);
     return _compiler.context.symbols[id];

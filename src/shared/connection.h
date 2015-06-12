@@ -69,6 +69,7 @@ class Connection {
     kProcessBacktrace,
     kProcessBreakpoint,
     kProcessLocal,
+    kProcessLocalStructure,
     kProcessTerminated,
     kWriteSnapshot,
     kCollectGarbage,
@@ -114,7 +115,8 @@ class Connection {
     kNull,
     kDouble,
     kString,
-    kInstance
+    kInstance,
+    kInstanceStructure
   };
 
   static Connection* Connect(const char* host, int port);

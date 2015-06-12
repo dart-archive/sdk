@@ -8,13 +8,10 @@ import 'package:compiler/src/dart_types.dart';
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/universe/universe.dart';
 
-import 'fletch_function_builder.dart' show
-    FletchFunctionBuilder;
-
+import 'class_debug_info.dart';
+import 'fletch_function_builder.dart';
 import 'fletch_context.dart';
-
 import 'fletch_backend.dart';
-
 import 'fletch_system.dart';
 
 import '../commands.dart';
@@ -35,6 +32,8 @@ class FletchClassBuilder {
   final Map<int, int> implicitAccessorTable = <int, int>{};
   final Map<int, FletchFunctionBuilder> methodTable =
       <int, FletchFunctionBuilder>{};
+
+  ClassDebugInfo debugInfo;
 
   FletchClassBuilder(
       this.classId,
@@ -172,6 +171,19 @@ class FletchClassBuilder {
         classId,
         element == null ? '<none>' : element.name,
         superclass == null ? -1 : superclass.classId);
+  }
+
+  ClassDebugInfo ensureDebugInfo() {
+    if (debugInfo == null) {
+      debugInfo = new ClassDebugInfo(this);
+    }
+    return debugInfo;
+  }
+
+  String fieldName(int index) {
+    ClassDebugInfo debugInfo = ensureDebugInfo();
+    if (index < superclassFields) return superclass.fieldName(index);
+    return debugInfo.fieldNames[index - superclassFields];
   }
 
   String toString() => "FletchClassBuilder(${element.name}, $classId)";

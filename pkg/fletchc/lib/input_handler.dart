@@ -26,6 +26,7 @@ Commands:
   'f <n>'                               select frame
   'l'                                   list source for frame
   'p <name>'                            print the value of local variable
+  'p *<name>'                           print the structure of local variable
   'p'                                   print the values of all locals
   'disasm'                              disassemble code for frame
   't <flag>'                            toggle one of the flags:
@@ -132,7 +133,12 @@ class InputHandler {
           await session.printAllVariables();
           break;
         }
-        await session.printVariable(commandComponents[1]);
+        String variableName = commandComponents[1];
+        if (variableName.startsWith('*')) {
+          await session.printVariableStructure(variableName.substring(1));
+        } else {
+          await session.printVariable(variableName);
+        }
         break;
       case 'q':
       case 'quit':
