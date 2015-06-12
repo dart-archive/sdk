@@ -114,12 +114,15 @@ Future<int> compileAndRun(
     if (compiler.verbose) {
       print("Running '$vmPath ${vmOptions.join(" ")}'");
     }
-    vmProcess = await Process.start(vmPath, vmOptions);
+    vmProcess = await Process.start(
+        vmPath, vmOptions,
+        environment: {'ASAN_OPTIONS': 'abort_on_error=1'});
     futures.add(vmProcess.exitCode.then((int value) {
       exitCode = value;
       if (exitCode != 0) {
         print("Non-zero exit code from '$vmPath' ($exitCode).");
       }
+      server.close();
     }));
 
     readCommands(commandIterator, vmProcess);
@@ -134,7 +137,14 @@ Future<int> compileAndRun(
     trackSubscription(
         vmProcess.stderr.listen(commandSender.sendStderrBytes), "vm stderr");
 
-    vmSocket = handleSocketErrors(await server.first, "vmSocket");
+    try {
+      vmSocket = await server.first;
+    } catch (e) {
+      // If this fails, the VM exited before it connected (the socket server is
+      // closed above when the vmProcess.exitCode future completes).
+      return exitCode;
+    }
+    vmSocket = handleSocketErrors(vmSocket, "vmSocket");
   } else {
     var address = attachArgument.split(":");
     String host = address[0];

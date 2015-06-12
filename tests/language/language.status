@@ -11,10 +11,6 @@ regress_14348_test: Crash
 [ ($compiler == fletchc || $runtime == fletchc) && $arch == ia32 ]
 bit_shift_test: Fail
 
-[ ($runtime == fletchc || $runtime == fletchvm) && $asan ]
-# Address sanitizer turns caught crashes into failures.
-large_class_declaration_test: Fail, Timeout
-
 [ $compiler == fletchc || $runtime == fletchc ]
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
