@@ -585,7 +585,6 @@ static int CommandFileDescriptor(DriverConnection::Command command) {
 
 static DriverConnection::Command HandleCommand(DriverConnection* connection) {
   DriverConnection::Command command = connection->Receive();
-  fprintf(stderr, "command = %i\n", command);
   switch (command) {
     case DriverConnection::kExitCode:
       exit_code = connection->ReadInt();
