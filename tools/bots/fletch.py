@@ -142,7 +142,7 @@ def AnalyzeLog():
         print '@@@STEP_LOG_LINE@undiagnosed_crashes@%s@@@' % line.rstrip()
     if undiagnosed_crashes:
       print '@@@STEP_LOG_END@undiagnosed_crashes@@@'
-      print '@@@STEP_WARNING@@@'
+      print '@@@STEP_WARNINGS@@@'
       sys.stdout.flush()
 
 
