@@ -132,7 +132,7 @@ cyclic_typedef_test/08: MissingCompileTimeError
 cyclic_typedef_test/09: MissingCompileTimeError
 cyclic_typedef_test/10: MissingCompileTimeError
 cyclic_typedef_test/11: MissingCompileTimeError
-deferred_closurize_load_library_test: Crash, Timeout
+deferred_closurize_load_library_test: CompileTimeError
 deferred_constraints_constants_test/none: Fail
 deferred_constraints_constants_test/reference_after_load: Fail
 deferred_constraints_type_annotation_test/as_operation: Fail

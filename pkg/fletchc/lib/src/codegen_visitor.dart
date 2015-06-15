@@ -2106,6 +2106,13 @@ abstract class CodegenVisitor
       assembler.loadSlot(0);
       return;
     }
+
+    if (getter.isDeferredLoaderGetter) {
+      generateUnimplementedError(node, "Deferred loading is not supported.");
+      applyVisitState();
+      return;
+    }
+
     registerStaticInvocation(getter);
     int methodId = context.backend.functionMethodId(getter);
     int constId = functionBuilder.allocateConstantFromFunction(methodId);

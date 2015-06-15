@@ -23,7 +23,8 @@ import 'package:compiler/src/universe/universe.dart'
     show Selector;
 
 import '../bytecodes.dart' show
-    Bytecode;
+    Bytecode,
+    Opcode;
 
 import '../commands.dart';
 
@@ -304,6 +305,8 @@ class FletchFunctionBuilder {
     for (int i = 0; i < constantCount; i++) {
       commands.add(const PushNull());
     }
+
+    assert(assembler.bytecodes.last.opcode == Opcode.MethodEnd);
 
     commands.add(
         new PushNewFunction(
