@@ -33,7 +33,8 @@ Session::Session(Connection* connection)
       stack_(0),
       changes_(0),
       main_thread_monitor_(Platform::CreateMonitor()),
-      main_thread_resume_kind_(kUnknown) {
+      main_thread_resume_kind_(kUnknown),
+      main_thread_done_(false) {
 }
 
 Session::~Session() {
@@ -84,6 +85,24 @@ void Session::SignalMainThread(MainThreadResumeKind kind) {
   main_thread_monitor_->Lock();
   while (main_thread_resume_kind_ != kUnknown) main_thread_monitor_->Wait();
   main_thread_resume_kind_ = kind;
+  main_thread_monitor_->Notify();
+  main_thread_monitor_->Unlock();
+}
+
+void Session::SignalMainThreadWaitUntilDone(MainThreadResumeKind kind) {
+  main_thread_monitor_->Lock();
+  while (main_thread_resume_kind_ != kUnknown) main_thread_monitor_->Wait();
+  main_thread_resume_kind_ = kind;
+  main_thread_done_ = false;
+  main_thread_monitor_->Notify();
+  while (!main_thread_done_) main_thread_monitor_->Wait();
+  main_thread_monitor_->Unlock();
+}
+
+void Session::MainThreadDone() {
+  main_thread_monitor_->Lock();
+  ASSERT(!main_thread_done_);
+  main_thread_done_ = true;
   main_thread_monitor_->Notify();
   main_thread_monitor_->Unlock();
 }
@@ -267,7 +286,10 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kSessionReset: {
-        SignalMainThread(kSessionReset);
+        // When a session reset is in progress we do not process any
+        // more messages. The session is in an inconsistent state
+        // until the reset has fully completed.
+        SignalMainThreadWaitUntilDone(kSessionReset);
         break;
       }
 
@@ -511,6 +533,7 @@ bool Session::ProcessRun() {
         has_result = false;
         result = false;
         Reinitialize();
+        MainThreadDone();
         break;
       case kUnknown:
         UNREACHABLE();

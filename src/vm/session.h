@@ -135,8 +135,11 @@ class Session {
 
   Monitor* main_thread_monitor_;
   MainThreadResumeKind main_thread_resume_kind_;
+  bool main_thread_done_;
 
   void SignalMainThread(MainThreadResumeKind);
+  void SignalMainThreadWaitUntilDone(MainThreadResumeKind);
+  void MainThreadDone();
 
   void SendDartValue(Object* value, int class_map);
   void SendInstanceStructure(Instance* instance, int class_map);
