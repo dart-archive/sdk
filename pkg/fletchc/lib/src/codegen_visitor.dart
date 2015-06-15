@@ -437,15 +437,29 @@ abstract class CodegenVisitor
     }
   }
 
-  // Visit the expression [node] with the result pushed on top of the stack.
-  void visitForValue(Node node) {
+  void doVisitForValue(Node node) {
     VisitState oldState = visitState;
     visitState = VisitState.Value;
     node.accept(this);
     visitState = oldState;
   }
 
-  // Visit the expression [node] without the result pushed on top of the stack.
+  // Visit the expression [node] and push the result on top of the stack.
+  void visitForValue(Node node) {
+    doVisitForValue(node);
+  }
+
+  // Visit the expression [node] and push the result on top of the stack.
+  // This method bypasses debug information collection and using this
+  // method will not generate breakpoints for the expression evaluation.
+  // This is useful when dealing with internal details that the programmer
+  // shouldn't care about such as the string concatenation aspects of
+  // of string interpolation.
+  void visitForValueNoDebugInfo(Node node) {
+    doVisitForValue(node);
+  }
+
+  // Visit the expression [node] without pushing the result on top of the stack.
   void visitForEffect(Node node) {
     VisitState oldState = visitState;
     visitState = VisitState.Effect;
@@ -1315,16 +1329,16 @@ abstract class CodegenVisitor
     // TODO(ajohnsen): Cache these in context/backend.
     Selector toString = new Selector.call('toString', null, 0);
     Selector concat = new Selector.binaryOperator('+');
-    visitForValue(node.string);
+    visitForValueNoDebugInfo(node.string);
     for (StringInterpolationPart part in node.parts) {
       visitForValue(part.expression);
-      invokeMethod(node, toString);
+      invokeMethod(part.expression, toString);
       LiteralString string = part.string;
       if (string.dartString.isNotEmpty) {
-        visitForValue(string);
-        invokeMethod(node, concat);
+        visitForValueNoDebugInfo(string);
+        invokeMethod(null, concat);
       }
-      invokeMethod(node, concat);
+      invokeMethod(null, concat);
     }
     applyVisitState();
   }
