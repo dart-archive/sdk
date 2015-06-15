@@ -12,20 +12,31 @@ const patch = "patch";
   }
 }
 
-// TODO(ajohnsen): Implement.
+/// This class implements a LCG (Linear Congruential Generator) pseudo random
+/// number generator.
 class _Random implements Random {
-  _Random([int seed]);
+  static const int _A = 1103515245;
+  static const int _C = 12345;
+  int _state;
+
+  _Random([int seed]) {
+    if (seed == null) seed = new Object().hashCode;
+    _state = seed;
+  }
 
   bool nextBool() {
-    return false;
+    return nextInt() & 1 == 0;
   }
 
   double nextDouble() {
-    return 0.0;
+    const int INT_MAX = 2147483647;
+    return nextInt(INT_MAX) / INT_MAX;
   }
 
   int nextInt([int max]) {
-    return 0;
+    _state = (_state * _A + _C) & 0x3FFFFFFF;
+    if (max != null) return _state % max;
+    return _state;
   }
 }
 
