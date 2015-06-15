@@ -11,6 +11,8 @@ import 'dart:async' show
 
 import 'self_tests.dart' as self;
 
+import 'verb_tests.dart' as verbs;
+
 import '../fletchc/incremental/feature_test.dart' as incremental;
 
 typedef Future NoArgFuture();
@@ -32,6 +34,8 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'self/testNeverCompletes': self.testNeverCompletes,
   'self/testMessages': self.testMessages,
   'self/testPrint': self.testPrint,
+
+  'verbs/helpTextFormat': verbs.testHelpTextFormatCompliance,
 
   'incremental/*': incremental.listTests,
 };
