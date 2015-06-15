@@ -46,7 +46,6 @@ call_property_test: Fail
 call_through_getter_test: Fail
 call_type_literal_test/01: Fail
 call_with_no_such_method_test: Fail
-canonical_const3_test: Crash
 cast_test/01: MissingRuntimeError
 cast_test/10: MissingRuntimeError
 cast_test/12: MissingRuntimeError
@@ -88,9 +87,6 @@ closure_in_initializer_test: Crash
 closure_type_variable_test: Fail
 closures_initializer2_test: Fail
 closures_initializer_test: Fail
-compile_time_constant10_test/01: Crash
-compile_time_constant10_test/02: Crash
-compile_time_constant10_test/none: Crash
 compile_time_constant_c_test/02: MissingCompileTimeError
 compile_time_constant_i_test: Fail
 compile_time_constant_l_test: Fail
@@ -348,8 +344,7 @@ method_invocation_test: Fail
 method_override4_test: Fail
 method_override5_test: Fail
 method_override_test: Fail
-methods_as_constants2_test: Crash
-methods_as_constants_test: Crash
+methods_as_constants2_test: Fail
 mint_compares_test: Fail
 missing_part_of_tag_test/01: MissingCompileTimeError
 mixin_generic_test: Fail
@@ -444,9 +439,9 @@ this_test/07: MissingCompileTimeError
 throwing_lazy_variable_test: Fail
 top_level_in_initializer_test: Fail
 try_catch_optimized1_test: Fail
-type_check_const_function_typedef2_test/00: Crash
-type_check_const_function_typedef2_test/none: Crash
-type_check_const_function_typedef_test: Crash
+type_check_const_function_typedef2_test/00: MissingCompileTimeError
+type_check_const_function_typedef2_test/none: Fail
+type_check_const_function_typedef_test: Fail
 type_check_test: Fail
 type_checks_in_factory_method_test: Fail
 type_error_test: Fail
@@ -490,7 +485,7 @@ type_variable_function_type_test: Fail
 type_variable_identifier_expression_test: Fail
 type_variable_nested_test: Fail
 type_variable_typedef_test: Fail
-typed_message_test: Crash
+typed_message_test: CompileTimeError
 typedef_is_test: Fail
 vm/allocation_sinking_vm_test: Crash
 vm/load_to_load_forwarding_vm_test: CompileTimeError
@@ -498,7 +493,7 @@ vm/no_such_method_error_message_vm_test: Fail
 vm/optimized_guarded_field_isolates_test: CompileTimeError
 vm/reflect_core_vm_test: CompileTimeError
 vm/reusable_boxes_test: CompileTimeError
-vm/store_to_load_forwarding_phis_vm_test: Crash
+vm/store_to_load_forwarding_phis_vm_test: CompileTimeError
 vm/type_cast_vm_test: Fail
 vm/type_vm_test: Fail
 vm/typed_data_polymorphic_view_test: Fail

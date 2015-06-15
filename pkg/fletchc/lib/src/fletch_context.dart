@@ -27,7 +27,8 @@ import 'package:compiler/src/constants/expressions.dart' show
 
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
-    ConstructedConstantValue;
+    ConstructedConstantValue,
+    FunctionConstantValue;
 
 import 'package:compiler/src/dart2jslib.dart' show
     CodegenRegistry,
@@ -218,6 +219,8 @@ class FletchContext {
                 compiler,
                 classElement.resolvedAst.elements);
             registry.registerInstantiatedClass(classElement);
+          } else if (constant.isFunction) {
+            backend.markFunctionConstantAsUsed(constant);
           }
           for (ConstantValue value in constant.getDependencies()) {
             markConstantUsed(value);
@@ -237,9 +240,7 @@ class FletchContext {
         compiler.resolver.constantCompiler.compileNode(
             node, elements, enforceConst: isConst);
     if (expression == null) return null;
-    // Don't mark function constants as used.
     ConstantValue value = getConstantValue(expression);
-    if (value.isFunction) return null;
     markConstantUsed(value);
     return expression;
   }

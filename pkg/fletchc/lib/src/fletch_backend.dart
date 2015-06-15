@@ -70,6 +70,7 @@ import 'package:compiler/src/compile_time_constants.dart' show
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
     ConstructedConstantValue,
+    FunctionConstantValue,
     ListConstantValue,
     MapConstantValue,
     StringConstantValue;
@@ -861,6 +862,16 @@ class FletchBackend extends Backend {
     });
   }
 
+  void markFunctionConstantAsUsed(FunctionConstantValue value) {
+    // TODO(ajohnsen): Use registry in CodegenVisitor to register the used
+    // constants.
+    FunctionElement function = value.element;
+    createTearoffClass(createFletchFunctionBuilder(function));
+    // Be sure to actually enqueue the function for compilation.
+    var registry = new CodegenRegistry(compiler, function.resolvedAst.elements);
+    registry.registerStaticInvocation(function);
+  }
+
   void createParameterMatchingStubs() {
     int length = functions.length;
     for (int i = 0; i < length; i++) {
@@ -999,6 +1010,14 @@ class FletchBackend extends Backend {
         addList(value.keys);
         addList(value.values);
         commands.add(new PushConstantMap(value.length * 2));
+      } else if (constant.isFunction) {
+        FunctionConstantValue value = constant;
+        FunctionElement element = value.element;
+        FletchFunctionBuilder function = functionBuilders[element];
+        FletchClassBuilder tearoffClass = tearoffClasses[function];
+        commands
+            ..add(new PushFromMap(MapId.classes, tearoffClass.classId))
+            ..add(const PushNewInstance());
       } else if (constant.isConstructedObject) {
         ConstructedConstantValue value = constant;
         ClassElement classElement = value.type.element;
