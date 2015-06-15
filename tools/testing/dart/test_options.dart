@@ -20,7 +20,6 @@ const List<String> defaultTestSelectors = const [
     'coroutine',
     'io',
     'ffi',
-    'lib',
     'samples',
     'warnings',
     'fletch_tests',
