@@ -16,115 +16,205 @@ import sys
 import bot
 import bot_utils
 
+from os.path import dirname, join
+
 utils = bot_utils.GetUtils()
 
-FLETCH_REGEXP = r'fletch-(linux|mac|windows)'
-dirname = os.path.dirname
+DEBUG_LOG=".debug.log"
+
+FLETCH_REGEXP = r'fletch-(linux|mac|windows)(-(debug|release|asan)-(x86))?'
+CROSS_REGEXP = r'cross-fletch-(linux)-(arm)'
+TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
+
 FLETCH_PATH = dirname(dirname(dirname(os.path.abspath(__file__))))
+GSUTIL = utils.GetBuildbotGSUtilPath()
 
-def Config(name, is_buildbot):
-  match = re.match(FLETCH_REGEXP, name)
-  if not match:
-    print('Builder regexp did not match')
-    exit(1)
-  # We don't really need this, but it is just much easier than doing all the
-  # boilerplate outselves
-  return bot.BuildInfo('none', 'none', 'release', match.group(1))
-
+GCS_BUCKET = 'gs://fletch-cross-compiled-binaries'
 
 def Run(args):
   print "Running: %s" % ' '.join(args)
   sys.stdout.flush()
   bot.RunProcess(args)
 
-
-def SetupEnvironment(config):
-  if config.system != 'windows':
+def SetupEnvironment(system):
+  if system != 'win32':
     os.environ['PATH'] = '%s/third_party/clang/%s/bin:%s' % (
-        FLETCH_PATH, config.system, os.environ['PATH'])
-  if config.system == 'mac':
+        FLETCH_PATH, system, os.environ['PATH'])
+  if system == 'macos':
     mac_library_path = "third_party/clang/mac/lib/clang/3.6.0/lib/darwin"
     os.environ['DYLD_LIBRARY_PATH'] = '%s/%s' % (FLETCH_PATH, mac_library_path)
 
-
-def KillFletch(config):
-  if config.system != 'windows':
+def KillFletch(system):
+  if system != 'windows':
     # Kill any lingering dart processes (from fletch_driver).
     subprocess.call("killall dart", shell=True)
     subprocess.call("killall fletch", shell=True)
     subprocess.call("killall fletch-vm", shell=True)
 
+def Main():
+  name, is_buildbot = bot.GetBotName()
 
-def Steps(config):
-  SetupEnvironment(config)
-  if config.system == 'mac':
-    # gcc on mac is just an alias for clang.
-    compiler_variants = ['Clang']
-  else:
-    compiler_variants = ['', 'Clang']
+  fletch_match = re.match(FLETCH_REGEXP, name)
+  cross_match = re.match(CROSS_REGEXP, name)
+  target_match = re.match(TARGET_REGEXP, name)
 
-  mac = config.system == 'mac'
+  if not fletch_match and not cross_match and not target_match:
+    raise Exception('Invalid buildername')
 
-  with open('.debug.log', 'w') as debug_log:
+  # Setup clang environment
+  SetupEnvironment(utils.GuessOS())
 
-    # This makes us work from whereever we are called, and restores CWD in exit.
+  # Clobber build directory if the checkbox was pressed on the BB.
+  with utils.ChangedWorkingDirectory(FLETCH_PATH):
+    bot.Clobber()
+
+  # Run either Cross&Target build for ARM or normal steps.
+  # Accumulate daemon logs messages in '.debug.log' to be displayed on the
+  # buildbot.Log
+  with open(DEBUG_LOG, 'w') as debug_log:
     with utils.ChangedWorkingDirectory(FLETCH_PATH):
 
-      with bot.BuildStep('GYP'):
-        Run(['ninja', '-v'])
+      if fletch_match:
+        system = fletch_match.group(1)
+        modes = ['debug', 'release']
+        archs = ['ia32', 'x64']
+        asans = [False, True]
 
-      configurations = []
+        # Split configurations?
+        if fletch_match.group(2):
+          mode_or_asan = fletch_match.group(3)
+          archs = {
+              'x86' : ['ia32', 'x64'],
+          }[fletch_match.group(4)]
 
-      for asan_variant in ['', 'Asan']:
-        for compiler_variant in compiler_variants:
-          for mode in ['Debug', 'Release']:
-            for arch in ['IA32', 'X64']:
-              build_conf = '%(mode)s%(arch)s%(clang)s%(asan)s' % {
-                'mode': mode,
-                'arch': arch,
-                'clang': compiler_variant,
-                'asan': asan_variant,
-              }
-              configurations.append({
-                'build_conf': build_conf,
-                'build_dir': 'out/%s' % build_conf,
-                'clang': bool(compiler_variant),
-                'asan': bool(asan_variant),
-                'mode': mode.lower(),
-                'arch': arch.lower(),
-              })
+          # We split our builders into:
+          #    fletch-linux-debug
+          #    fletch-linux-release
+          #    fletch-linux-asan
+          if mode_or_asan == 'asan':
+            modes = ['debug', 'release']
+            asans = [True]
+          else:
+            modes = [mode_or_asan]
+            asans = [False]
 
-      for configuration in configurations:
-        with bot.BuildStep('Build %s' % configuration['build_conf']):
-          Run(['ninja', '-v', '-C', configuration['build_dir']])
+        StepsNormal(debug_log, system, modes, archs, asans)
+      elif cross_match:
+        assert cross_match.group(1) == 'linux'
+        assert cross_match.group(2) == 'arm'
+        system = 'linux'
+        modes = ['debug', 'release']
+        arch = 'xarm'
+        StepsCrossBuilder(debug_log, system, modes, arch)
+      elif target_match:
+        assert cross_match.group(1) == 'linux'
+        system = 'linux'
+        mode = cross_match.group(2)
+        arch = 'xarm'
+        StepsTargetRunner(debug_log, system, mode, arch)
 
-      for full_run in [True, False]:
-        for configuration in configurations:
-          if mac and configuration['arch'] == 'x64' and configuration['asan']:
-            # Asan/x64 takes a long time on mac.
-            continue
+  # Grep through the '.debug.log' and issue warnings for certain log messages.
+  StepAnalyzeLog()
 
-          full_run_configurations = ['DebugIA32', 'DebugIA32ClangAsan']
-          if full_run and (
-             configuration['build_conf'] not in full_run_configurations):
-            # We only do full runs on DebugIA32 and DebugIA32ClangAsan for now.
-            # full_run = compile to snapshot &
-            #            run shapshot &
-            #            run shapshot with `-Xunfold-program`
-            continue
 
-          RunTests(
+#### Buildbot steps
+
+def StepsNormal(debug_log, system, modes, archs, asans):
+  configurations = GetBuildConfigurations(system, modes, archs, asans)
+
+  # Generate ninja files.
+  StepGyp()
+
+  # Build all necessary configurations.
+  for configuration in configurations:
+    StepBuild(configuration['build_conf'], configuration['build_dir']);
+
+  # Run tests on all necessary configurations.
+  for full_run in [True, False]:
+    for configuration in configurations:
+      if not ShouldSkipConfiguration(full_run, configuration):
+
+        # Use a new persistent daemon for every test run.
+        # Append it's stdout/stderr to the ".debug.log" file.
+        with PersistentFletchDaemon(configuration, debug_log):
+          StepTest(
             configuration['build_conf'],
             configuration['mode'],
             configuration['arch'],
-            config,
             clang=configuration['clang'],
             asan=configuration['asan'],
-            full_run=full_run,
-            build_dir=configuration['build_dir'],
-            debug_log=debug_log)
+            full_run=full_run)
 
-  AnalyzeLog()
+def StepsCrossBuilder(debug_log, system, modes, arch):
+  revision = os.environ['BUILDBOT_GOT_REVISION']
+  assert revision
+
+  for compiler_variant in GetCompilerVariants(system):
+    for mode in modes:
+      build_conf = GetBuildDirWithoutOut(mode, arch, compiler_variant, False)
+      # TODO(kustermann): Once we have sorted out gyp/building issues with arm,
+      # we should be able to build everything here.
+      args = ['fletch-vm', 'fletch']
+      StepBuild(build_conf, os.path.join('out', build_conf), args=args)
+
+  tarball = TarballName(arch, revision)
+  try:
+    with bot.BuildStep('Create build tarball'):
+      Run(['tar',
+           '-cjf', tarball,
+           '--exclude=**/obj',
+           '--exclude=**/obj.host',
+           '--exclude=**/obj.target',
+           'out'])
+
+    with bot.BuildStep('Upload build tarball'):
+      uri = "%s/%s" % (GCS_BUCKET, tarball)
+      Run([GSUTIL, 'cp', tarball, uri])
+      Run([GSUTIL, 'setacl', 'public-read', uri])
+  finally:
+    if os.path.exists(tarball):
+      os.remove(tarball)
+
+def StepsTargetRunner(debug_log, system, mode, arch):
+  revision = os.environ['BUILDBOT_GOT_REVISION']
+
+  tarball = TarballName(arch, revision)
+  try:
+    with bot.BuildStep('Fetch build tarball'):
+      Run([GSUTIL, 'cp', "%s/%s" % (GCS_BUCKET, tarball), tarball])
+
+    with bot.BuildStep('Unpack build tarball'):
+      Run(['tar', '-xjf', tarball])
+
+    # Run tests on all necessary configurations.
+    configurations = GetBuildConfigurations(system, [mode], [arch], [False])
+    for full_run in [True, False]:
+      for configuration in configurations:
+        if not ShouldSkipConfiguration(full_run, configuration):
+
+          # Use a new persistent daemon for every test run.
+          # Append it's stdout/stderr to the ".debug.log" file.
+          with PersistentFletchDaemon(configuration, debug_log):
+            StepTest(
+              configuration['build_conf'],
+              configuration['mode'],
+              configuration['arch'],
+              clang=configuration['clang'],
+              asan=configuration['asan'],
+              full_run=full_run)
+  finally:
+    if os.path.exists(tarball):
+      os.remove(tarball)
+
+    # We always clobber this to save disk on the arm board.
+    bot.Clobber(force=True)
+
+
+#### Buildbot steps helper
+
+def StepGyp():
+  with bot.BuildStep('GYP'):
+    Run(['ninja', '-v'])
 
 def AnalyzeLog():
   # pkg/fletchc/lib/src/driver/driver_main.dart will (to .debug.log) print
@@ -132,7 +222,7 @@ def AnalyzeLog():
   # client.  In this case, there's no obvious place to report the exception, so
   # the build bot must look for these crashes.
   pattern=re.compile(r"^[0-9]+: Crash \(")
-  with open('.debug.log') as debug_log:
+  with open(DEBUG_LOG) as debug_log:
     undiagnosed_crashes = False
     for line in debug_log:
       if pattern.match(line):
@@ -145,9 +235,11 @@ def AnalyzeLog():
       print '@@@STEP_WARNINGS@@@'
       sys.stdout.flush()
 
+def StepBuild(build_config, build_dir, args=()):
+  with bot.BuildStep('Build %s' % build_config):
+    Run(['ninja', '-v', '-C', build_dir] + list(args))
 
-def RunTests(name, mode, arch, config, clang=True, asan=False,
-             full_run=False, build_dir=None, debug_log=None):
+def StepTest(name, mode, arch, clang=True, asan=False, full_run=False):
   step_name = '%s%s' % (name, '-full' if full_run else '')
   with bot.BuildStep('Test %s' % step_name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
@@ -167,26 +259,104 @@ def RunTests(name, mode, arch, config, clang=True, asan=False,
     if clang:
       args.append('--clang')
 
-    KillFletch(config)
+    Run(args)
 
-    persistent = subprocess.Popen(
-      ['%s/dart' % build_dir,
+def StepAnalyzeLog():
+  with bot.BuildStep('Fletch daemon log warnings.'):
+    AnalyzeLog()
+
+
+#### Helper functionality
+
+class PersistentFletchDaemon(object):
+  def __init__(self, configuration, debug_log):
+    self._configuration = configuration
+    self._debug_log = debug_log
+    self._persistent = None
+
+  def __enter__(self):
+    print "Killing existing fletch processes"
+    KillFletch(self._configuration['system'])
+
+    print "Starting new persistent fletch daemon"
+    self._persistent = subprocess.Popen(
+      ['%s/dart' % self._configuration['build_dir'],
        '-c',
        '-p',
        './package/',
        'package:fletchc/src/driver/driver_main.dart',
        './.fletch'],
-      stdout=debug_log,
+      stdout=self._debug_log,
       stderr=subprocess.STDOUT,
       close_fds=True)
 
-    try:
-      Run(args)
-      persistent.terminate()
-      persistent.wait()
-    finally:
-      KillFletch(config)
+  def __exit__(self, *_):
+    print "Trying to wait for existing fletch daemon."
+    self._persistent.terminate()
+    self._persistent.wait()
+
+    print "Killing existing fletch processes"
+    KillFletch(self._configuration['system'])
+
+def GetBuildConfigurations(system, modes, archs, asans):
+  configurations = []
+
+  for asan in asans:
+    for compiler_variant in GetCompilerVariants(system):
+      for mode in modes:
+        for arch in archs:
+          build_conf = GetBuildDirWithoutOut(mode, arch, compiler_variant, asan)
+          configurations.append({
+            'build_conf': build_conf,
+            'build_dir': os.path.join('out', build_conf),
+            'clang': bool(compiler_variant),
+            'asan': asan,
+            'mode': mode.lower(),
+            'arch': arch.lower(),
+            'system': system,
+          })
+
+  return configurations
+
+def GetBuildDirWithoutOut(mode, arch, compiler_variant='', asan=False):
+  assert mode in ['release', 'debug']
+  return '%(mode)s%(arch)s%(clang)s%(asan)s' % {
+    'mode': 'Release' if mode == 'release' else 'Debug',
+    'arch': arch.upper(),
+    'clang': compiler_variant,
+    'asan': 'Asan' if asan else '',
+  }
+
+def ShouldSkipConfiguration(full_run, configuration):
+  mac = configuration['system'] == 'mac'
+  if mac and configuration['arch'] == 'x64' and configuration['asan']:
+    # Asan/x64 takes a long time on mac.
+    return True
+
+  full_run_configurations = ['DebugIA32', 'DebugIA32ClangAsan']
+  if full_run and (
+     configuration['build_conf'] not in full_run_configurations):
+    # We only do full runs on DebugIA32 and DebugIA32ClangAsan for now.
+    # full_run = compile to snapshot &
+    #            run shapshot &
+    #            run shapshot with `-Xunfold-program`
+    return True
+
+  return False
+
+def GetCompilerVariants(system):
+  # gcc on mac is just an alias for clang.
+  mac = system == 'mac'
+  return ['Clang'] if mac else ['', 'Clang']
+
+def TarballName(arch, revision):
+  return 'fletch_cross_build_%s_%s.tar.bz2' % (arch, revision)
 
 
 if __name__ == '__main__':
-  bot.RunBot(Config, Steps, build_step=None)
+  try:
+    Main()
+  except OSError as e:
+    sys.exit(e.errno)
+  sys.exit(0)
+
