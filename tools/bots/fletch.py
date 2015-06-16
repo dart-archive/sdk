@@ -108,9 +108,9 @@ def Main():
         arch = 'xarm'
         StepsCrossBuilder(debug_log, system, modes, arch)
       elif target_match:
-        assert cross_match.group(1) == 'linux'
+        assert target_match.group(1) == 'linux'
         system = 'linux'
-        mode = cross_match.group(2)
+        mode = target_match.group(2)
         arch = 'xarm'
         StepsTargetRunner(debug_log, system, mode, arch)
 
@@ -150,12 +150,12 @@ def StepsCrossBuilder(debug_log, system, modes, arch):
   revision = os.environ['BUILDBOT_GOT_REVISION']
   assert revision
 
-  for compiler_variant in GetCompilerVariants(system):
+  for compiler_variant in GetCompilerVariants(system, arch):
     for mode in modes:
       build_conf = GetBuildDirWithoutOut(mode, arch, compiler_variant, False)
       # TODO(kustermann): Once we have sorted out gyp/building issues with arm,
       # we should be able to build everything here.
-      args = ['fletch-vm', 'fletch_driver', 'natives.json']
+      args = ['fletch-vm', 'fletch', 'natives.json']
       StepBuild(build_conf, os.path.join('out', build_conf), args=args)
 
   tarball = TarballName(arch, revision)
@@ -202,6 +202,7 @@ def StepsTargetRunner(debug_log, system, mode, arch):
           dart_arm = 'third_party/bin/linux/dart-arm'
           destination = os.path.join(build_dir, 'dart')
           shutil.copyfile(dart_arm, destination)
+          shutil.copymode(dart_arm, destination)
 
           # Use a new persistent daemon for every test run.
           # Append it's stdout/stderr to the ".debug.log" file.
@@ -316,9 +317,9 @@ def GetBuildConfigurations(system, modes, archs, asans):
   configurations = []
 
   for asan in asans:
-    for compiler_variant in GetCompilerVariants(system):
-      for mode in modes:
-        for arch in archs:
+    for mode in modes:
+      for arch in archs:
+        for compiler_variant in GetCompilerVariants(system, arch):
           build_conf = GetBuildDirWithoutOut(mode, arch, compiler_variant, asan)
           configurations.append({
             'build_conf': build_conf,
@@ -342,8 +343,8 @@ def GetBuildDirWithoutOut(mode, arch, compiler_variant='', asan=False):
   }
 
 def ShouldSkipConfiguration(full_run, configuration):
-  mac = configuration['system'] == 'mac'
-  if mac and configuration['arch'] == 'x64' and configuration['asan']:
+  is_mac = configuration['system'] == 'mac'
+  if is_mac and configuration['arch'] == 'x64' and configuration['asan']:
     # Asan/x64 takes a long time on mac.
     return True
 
@@ -358,19 +359,25 @@ def ShouldSkipConfiguration(full_run, configuration):
 
   return False
 
-def GetCompilerVariants(system):
-  # gcc on mac is just an alias for clang.
-  mac = system == 'mac'
-  return ['Clang'] if mac else ['', 'Clang']
+def GetCompilerVariants(system, arch):
+  is_mac = system == 'mac'
+  is_arm = arch in ['arm', 'xarm']
+  if is_mac:
+    # gcc on mac is just an alias for clang.
+    return ['Clang']
+  elif is_arm:
+    # We don't support cross compiling to arm with clang ATM.
+    return ['']
+  else:
+    return ['', 'Clang']
 
 def TarballName(arch, revision):
   return 'fletch_cross_build_%s_%s.tar.bz2' % (arch, revision)
 
 
 if __name__ == '__main__':
-  try:
-    Main()
-  except OSError as e:
-    sys.exit(e.errno)
-  sys.exit(0)
+  # If main raises an exception we will get a very useful error message with
+  # traceback written to stderr. We therefore intentionally do not catch
+  # exceptions.
+  Main()
 
