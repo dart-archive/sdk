@@ -74,6 +74,9 @@ void testConfigurations(List<Map> configurations) {
   var startTime = new DateTime.now();
   // Extract global options from first configuration.
   var firstConf = configurations[0];
+  bool isKillPersistentProcessEnabled =
+      firstConf['kill_persistent_process'] != 0;
+  bool isBuildBeforeTestingEnabled = firstConf['build_before_testing'] != 0;
   var maxProcesses = firstConf['tasks'];
   var progressIndicator = firstConf['progress'];
   // TODO(kustermann): Remove this option once the buildbots don't use it
@@ -128,6 +131,9 @@ void testConfigurations(List<Map> configurations) {
   var runningBrowserTests = configurations.any((config) {
     return TestUtils.isBrowserRuntime(config['runtime']);
   });
+
+  if (isKillPersistentProcessEnabled) killDriverMain();
+  if (isBuildBeforeTestingEnabled) runBuilds(configurations);
 
   List<Future> serverFutures = [];
   var testSuites = new List<TestSuite>();
@@ -304,6 +310,44 @@ Future deleteTemporaryDartDirectories() {
     completer.complete();
   }
   return completer.future;
+}
+
+String runChecked(String executable, List<String> arguments) {
+  ProcessResult result = Process.runSync(executable, arguments);
+  if (result.exitCode != 0) {
+    throw "Running '$executable ${arguments.join(' ')}' failed "
+        "(exit code = ${result.exitCode}).\n${result.stdout}\n${result.stderr}";
+  }
+  return result.stdout;
+}
+
+void killDriverMain() {
+  String processes = runChecked("/bin/ps", <String>["x", "-opid,args"]);
+  for (String process in processes.split("\n")) {
+    // It's important to remove white space as output from ps is padded with
+    // whitespace.
+    process = process.trim();
+    if (process.contains("package:fletchc/src/driver/driver_main.dart")) {
+      int index = process.indexOf(" ");
+      String pidString = process.substring(0, index);
+      String arguments = process.substring(index + 1);
+      // TODO(ahe): Use [Process.killPid] instead.
+      print("Killing $pidString: $arguments");
+      runChecked("kill", <String>[pidString]);
+    }
+  }
+}
+
+void runBuilds(List<Map> configurations) {
+  Set<String> completedBuilds = new Set<String>();
+  for (Map configuration in configurations) {
+    String buildDir = TestUtils.buildDir(configuration);
+    if (completedBuilds.add(buildDir)) {
+      print("Building in $buildDir.");
+      runChecked("ninja", <String>["-C", buildDir]);
+    }
+  }
+  print("Building done.");
 }
 
 void main(List<String> arguments) {

@@ -245,6 +245,9 @@ def StepTest(name, mode, arch, clang=True, asan=False, full_run=False):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
             '--time', '--report', '-pbuildbot',
             '--step_name=test_%s' % step_name,
+            '--kill-persistent-process=0',
+            '--run-gclient-hooks=0',
+            '--build-before-testing=0',
             '--host-checked']
     if full_run:
       # We let package:fletchc/fletchc.dart compile tests to snapshots.

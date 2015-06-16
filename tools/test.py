@@ -10,9 +10,28 @@ import sys
 
 import utils
 
+def MaybeRunGclientHooks(arguments):
+  def ToInt(string):
+    try:
+      return int(string)
+    except ValueError:
+      return None
+
+  for argument in arguments:
+    if argument.startswith('--run-gclient-hooks'):
+      if ToInt(argument.split("=")[1]) == 0:
+        return
+
+  # This needs to happen here, before launching the Dart VM, as the hooks
+  # may update the Dart binary returned by utils.DartBinary().
+  gclient_command = ["gclient", "runhooks"];
+  print "Running: %s" % " ".join(gclient_command)
+  subprocess.check_call(gclient_command)
+
 
 def Main():
   args = sys.argv[1:]
+  MaybeRunGclientHooks(args)
   tools_dir = os.path.dirname(os.path.realpath(__file__))
   dart_script_name = 'test.dart'
   dart_test_script = string.join([tools_dir, dart_script_name], os.sep)

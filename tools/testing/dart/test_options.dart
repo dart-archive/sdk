@@ -474,6 +474,27 @@ Note: currently only implemented for dart2js.''',
               [],
               false,
               type: 'bool'),
+          new _TestOptionSpecification(
+              'kill_persistent_process',
+              "Kill persistent process before running tests.",
+              ['--kill-persistent-process'],
+              [],
+              1,
+              type: 'int'),
+          new _TestOptionSpecification(
+              'run_gclient_hooks',
+              "Run `glient runhooks` before running tests.",
+              ['--run-gclient-hooks'],
+              [],
+              1,
+              type: 'int'),
+          new _TestOptionSpecification(
+              'build_before_testing',
+              "Build before running tests.",
+              ['--build-before-testing'],
+              [],
+              1,
+              type: 'int'),
           ];
   }
 
