@@ -12,7 +12,7 @@
     {
       'target_name': 'fletch',
       'type': 'executable',
-      'toolsets': ['host'],
+      'toolsets': ['target'],
       'dependencies': [
         '../../shared/shared.gyp:fletch_shared',
       ],

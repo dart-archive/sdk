@@ -24,12 +24,12 @@
       ],
     },
     {
-      'target_name': 'fletch',
+      'target_name': 'toplevel_fletch',
       'type': 'none',
-      'toolsets': ['host'],
+      'toolsets': ['target'],
       'dependencies': [
         'src/tools/driver/driver.gyp:fletch',
-        'copy_dart',
+        'copy_dart#host',
       ],
     },
     {

@@ -11,6 +11,7 @@ Buildbot steps for fletch testing
 import os
 import re
 import subprocess
+import shutil
 import sys
 
 import bot
@@ -154,7 +155,7 @@ def StepsCrossBuilder(debug_log, system, modes, arch):
       build_conf = GetBuildDirWithoutOut(mode, arch, compiler_variant, False)
       # TODO(kustermann): Once we have sorted out gyp/building issues with arm,
       # we should be able to build everything here.
-      args = ['fletch-vm', 'fletch']
+      args = ['fletch-vm', 'fletch_driver', 'natives.json']
       StepBuild(build_conf, os.path.join('out', build_conf), args=args)
 
   tarball = TarballName(arch, revision)
@@ -191,6 +192,16 @@ def StepsTargetRunner(debug_log, system, mode, arch):
     for full_run in [True, False]:
       for configuration in configurations:
         if not ShouldSkipConfiguration(full_run, configuration):
+          build_dir = configuration['build_dir']
+
+          # Sanity check we got build artifacts which we expect.
+          assert os.path.exists(os.path.join(build_dir, 'fletch-vm'))
+
+          # TODO(kustermann): This is hackisch, but our current copying of the
+          # dart binary makes this a requirement.
+          dart_arm = 'third_party/bin/linux/dart-arm'
+          destination = os.path.join(build_dir, 'dart')
+          shutil.copyfile(dart_arm, destination)
 
           # Use a new persistent daemon for every test run.
           # Append it's stdout/stderr to the ".debug.log" file.
