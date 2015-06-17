@@ -1334,7 +1334,10 @@ Smi* ComplexHeapObject::IdentityHashCode() {
 }
 
 uint32 ComplexHeapObject::FlagsBits() {
-  uint64 bits = reinterpret_cast<uint64>(at(kFlagsOffset));
+  // Convert to unsigned word sized integer before expanding to 64
+  // bits. This is important on 32-bit systems where the conversion to
+  // integral types otherwise performs a sign extension first.
+  uint64 bits = reinterpret_cast<uword>(at(kFlagsOffset));
   ASSERT((bits >> 32) == 0);
   return static_cast<uint32>(bits);
 }
