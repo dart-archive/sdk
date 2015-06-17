@@ -11,6 +11,7 @@ import 'package:service/struct.dart';
 import '../github_services.dart';
 import '../github_mock.dart';
 import '../commit_list_presenter.dart';
+import '../commit_presenter.dart';
 
 import 'package:immi_gen/dart/github.dart';
 import 'package:immi_gen/dart/immi_service.dart';
@@ -29,6 +30,7 @@ void testPresent(Repository repo) {
   var presenter = new CommitListPresenter(repo);
   SlidingWindowNode previous = null;
   SlidingWindowNode current = null;
+  CommitNode commitNode = null;
 
   // Initial rendering (don't assume much about this).
   current = presenter.present(previous);
@@ -40,7 +42,8 @@ void testPresent(Repository repo) {
   current = presenter.present(previous);
   Expect.equals(0, current.startOffset);
   Expect.equals(5, current.window.length);
-  Expect.stringEquals("Ian Zerny", current.window[0].author);
+  commitNode = current.window[0];
+  Expect.stringEquals("Ian Zerny", commitNode.author);
   testDiff(previous, current);
 
   (current.display)(0, 6);
@@ -48,7 +51,8 @@ void testPresent(Repository repo) {
   current = presenter.present(previous);
   Expect.equals(0, current.startOffset);
   Expect.isTrue(current.window.length >= 6);
-  Expect.stringEquals("Ian Zerny", current.window[0].author);
+  commitNode = current.window[0];
+  Expect.stringEquals("Ian Zerny", commitNode.author);
   testDiff(previous, current);
 
   (current.display)(1, 6);
@@ -57,7 +61,8 @@ void testPresent(Repository repo) {
   Expect.equals(1, current.startOffset);
   Expect.equals(1, current.windowOffset);
   Expect.isTrue(current.window.length >= 5);
-  Expect.stringEquals("Anders Johnsen", current.window[1].author);
+  commitNode = current.window[1];
+  Expect.stringEquals("Anders Johnsen", commitNode.author);
   testDiff(previous, current);
 
   (current.display)(100, 105);
