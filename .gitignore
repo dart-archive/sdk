@@ -20,6 +20,7 @@ packages
 /third_party/libs/mac/x64/libtcmalloc_minimal.a
 /third_party/libs/mac/x86/libtcmalloc_minimal.a
 /tools/testing/bin/linux/dart
+/tools/testing/bin/linux/dart-arm
 /tools/testing/bin/mac/dart
 /out/
 /xcodebuild/
@@ -35,3 +36,4 @@ packages
 /samples/todomvc/java/
 /third_party/bin/mac/dart
 /third_party/bin/linux/dart
+/third_party/bin/linux/dart-arm
