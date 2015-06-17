@@ -16,19 +16,31 @@
 - (UITableViewCell*)tableView:(UITableView*)tableView
                     indexPath:(NSIndexPath*)indexPath
                       present:(Node*)node {
-  CommitNode* commitNode = (CommitNode*)node;
   CommitCellPresenter* cell = (CommitCellPresenter*)
       [tableView dequeueReusableCellWithIdentifier:@"CommitPrototypeCell"
                                       forIndexPath:indexPath];
+  CommitNode* commitNode = (CommitNode*)node;
+  NSString* decodedMessage = [self decodeJsonString:commitNode.message];
+
+  cell.detailsLabel.text = decodedMessage;
+  cell.messageLabel.text = decodedMessage;
   cell.authorLabel.text = commitNode.author;
-  cell.messageLabel.text = commitNode.message;
-  cell.detailsLabel.text = commitNode.message;
   cell.avatarImage.image = [UIImage imageNamed:@"dart-logo.png"];
 
   cell.detailsViewHeightConstraint.priority =
       commitNode.selected ? 250.0 : 999.0;
 
   return cell;
+}
+
+
+- (NSString*) decodeJsonString:(NSString*)text {
+  NSString* jsonString = [NSString stringWithFormat: @"\"%@\"", text];
+  NSData* data = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
+
+  return [NSJSONSerialization JSONObjectWithData:data
+                                         options:NSJSONReadingAllowFragments
+                                           error:NULL];
 }
 
 @end

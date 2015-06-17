@@ -70,10 +70,9 @@
 - (UITableViewCell*)tableView:(UITableView*)tableView
         cellForRowAtIndexPath:(NSIndexPath*)indexPath {
   Node* node = [self itemAtIndex:indexPath.row];
-  return [self.cellPresenter
-      tableView:tableView
-      indexPath:indexPath
-      present:node];
+  return [self.cellPresenter tableView:tableView
+                             indexPath:indexPath
+                               present:node];
 }
 
 // To track what items are visible on screen we rely on the fact that only
