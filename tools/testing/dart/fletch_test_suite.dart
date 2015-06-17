@@ -48,15 +48,13 @@ import '../../../tests/fletch_tests/messages.dart' show
 
 class FletchTestRuntimeConfiguration extends RuntimeConfiguration {
   final String system;
+  final String dartBinary;
 
   FletchTestRuntimeConfiguration(Map configuration)
       : system = configuration['system'],
+        dartBinary = '${TestUtils.buildDir(configuration)}'
+                     '${io.Platform.pathSeparator}dart',
         super.subclass();
-
-  String get dartBinary {
-    String os = (system == 'macos') ? 'mac' : 'linux';
-    return 'third_party/bin/$os/dart';
-  }
 }
 
 class FletchTestSuite extends TestSuite {

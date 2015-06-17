@@ -4,11 +4,14 @@
 
 library test.fletch_warnings_suite;
 
+import 'dart:io' as io;
+
 import 'dart:convert' show
     UTF8;
 
 import 'test_suite.dart' show
-    TestSuite;
+    TestSuite,
+    TestUtils;
 
 import 'test_runner.dart' show
     Command,
@@ -31,15 +34,13 @@ const Map<String, String> URIS_TO_ANALYZE = const <String, String>{
 
 class FletchWarningsRuntimeConfiguration extends RuntimeConfiguration {
   final String system;
+  final String dartBinary;
 
   FletchWarningsRuntimeConfiguration(Map configuration)
       : system = configuration['system'],
+        dartBinary = '${TestUtils.buildDir(configuration)}'
+                     '${io.Platform.pathSeparator}dart',
         super.subclass();
-
-  String get dartBinary {
-    String os = (system == 'macos') ? 'mac' : 'linux';
-    return 'third_party/bin/$os/dart';
-  }
 
   List<Command> computeRuntimeCommands(
       TestSuite suite,

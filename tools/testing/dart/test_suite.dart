@@ -2121,35 +2121,12 @@ class TestUtils {
       return configuration['build_directory'];
     }
 
-    return "${outputDir(configuration)}${configurationDir(configuration)}";
-  }
-
-  static getValidOutputDir(Map configuration, String mode, String arch) {
-    // We allow our code to have been cross compiled, i.e., that there
-    // is an X in front of the arch. We don't allow both a cross compiled
-    // and a normal version to be present (except if you specifically pass
-    // in the build_directory).
-    var normal = '$mode$arch';
-    var cross = '${mode}X$arch';
-    if (configuration['clang']) {
-      normal = '${normal}Clang';
-      cross = '${cross}Clang';
+    var buildDir =
+        "${outputDir(configuration)}${configurationDir(configuration)}";
+    if (!new Directory(buildDir).existsSync()) {
+      throw new Exception('Build directory $dir does not exist');
     }
-    if (configuration['asan']) {
-      normal = '${normal}Asan';
-      cross = '${cross}Asan';
-    }
-    var outDir = outputDir(configuration);
-    var normalDir = new Directory(new Path('$outDir$normal').toNativePath());
-    var crossDir = new Directory(new Path('$outDir$cross').toNativePath());
-    if (normalDir.existsSync() && crossDir.existsSync()) {
-      throw "You can't have both $normalDir and $crossDir, we don't know which"
-            " binary to use";
-    }
-    if (crossDir.existsSync()) {
-      return cross;
-    }
-    return normal;
+    return buildDir;
   }
 
   static String configurationDir(Map configuration) {
@@ -2159,11 +2136,14 @@ class TestUtils {
     // "output" directory is a sibling of the dart directory instead of a child.
     var mode = (configuration['mode'] == 'debug') ? 'Debug' : 'Release';
     var arch = configuration['arch'].toUpperCase();
-    if (currentWorkingDirectory != dartDir) {
-      return getValidOutputDir(configuration, mode, arch);
-    } else {
-      return mode;
+    var dir = '$mode$arch';
+    if (configuration['clang']) {
+      dir = '${dir}Clang';
     }
+    if (configuration['asan']) {
+      dir = '${dir}Asan';
+    }
+    return dir;
   }
 
   /**
