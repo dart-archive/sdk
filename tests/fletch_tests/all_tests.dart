@@ -15,6 +15,8 @@ import 'verb_tests.dart' as verbs;
 
 import '../fletchc/incremental/feature_test.dart' as incremental;
 
+import '../fletchc/driver/test_control_stream.dart' as controlStream;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -38,4 +40,6 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'verbs/helpTextFormat': verbs.testHelpTextFormatCompliance,
 
   'incremental/*': incremental.listTests,
+
+  'controlStream/testControlStream': controlStream.testControlStream,
 };

@@ -77,45 +77,53 @@ class ControlStream {
   Stream<Command> get commandStream => controller.stream;
 
   void handleData(Uint8List data) {
-    log.note(
-        "data=$data; "
-        "data.length = ${data.length}; "
-        "elementSizeInBytes=${data.elementSizeInBytes}; "
-        "offsetInBytes=${data.offsetInBytes}; "
-        "lengthInBytes=${data.lengthInBytes}; "
-        "buffer.lengthInBytes=${data.buffer.lengthInBytes}");
-    // TODO(ahe): makeView(data, ...) to ensure monomorphism?
-    builder.add(data);
-    if (builder.length < headerSize) return;
+    builder.add(toUint8ListView(data));
     Uint8List list = builder.takeBytes();
-    ByteData view = new ByteData.view(list.buffer, list.offsetInBytes);
-    int length = view.getUint32(0, commandEndianness);
-    if (list.length - headerSize < length) {
-      builder.add(list);
-      return;
-    }
-    int commandCode = view.getUint8(4);
 
-    DriverCommand command = DriverCommand.values[commandCode];
-    view = new ByteData.view(list.buffer, list.offsetInBytes + headerSize);
-    switch (command) {
-      case DriverCommand.Arguments:
-        controller.add(new Command(command, decodeArgumentsCommand(view)));
+    ByteData view = toByteData(list);
+
+    while (view.lengthInBytes >= headerSize) {
+      int length = view.getUint32(0, commandEndianness);
+      if ((view.lengthInBytes - headerSize) < length) {
+        // Not all of the payload has arrived yet.
         break;
+      }
+      int commandCode = view.getUint8(4);
+      DriverCommand driverCommand = DriverCommand.values[commandCode];
+
+      ByteData payload = toByteData(view, headerSize, length);
+
+      Command command = makeCommand(driverCommand, payload);
+
+      if (command != null) {
+        controller.add(command);
+      } else {
+        controller.addError("Command not implemented yet: $driverCommand");
+      }
+
+      view = toByteData(payload, length);
+    }
+
+    if (view.lengthInBytes > 0) {
+      builder.add(toUint8ListView(view));
+    }
+  }
+
+  Command makeCommand(DriverCommand code, ByteData payload) {
+    switch (code) {
+      case DriverCommand.Arguments:
+        return new Command(code, decodeArgumentsCommand(payload));
 
       case DriverCommand.Stdin:
-        int length = view.getUint32(0, commandEndianness);
-        controller.add(new Command(command, makeView(view, 4, length)));
-        break;
+        int length = payload.getUint32(0, commandEndianness);
+        return new Command(code, toUint8ListView(payload, 4, length));
 
       case DriverCommand.Signal:
-        int signal = view.getUint32(0, commandEndianness);
-        controller.add(new Command(command, signal));
-        break;
+        int signal = payload.getUint32(0, commandEndianness);
+        return new Command(code, signal);
 
       default:
-        controller.addError("Command not implemented yet: $command");
-        break;
+        return null;
     }
   }
 
@@ -140,11 +148,15 @@ class ControlStream {
     for (int i = 0; i < argc; i++) {
       int length = view.getUint32(offset, commandEndianness);
       offset += 4;
-      argv.add(UTF8.decode(makeView(view, offset, length)));
+      argv.add(UTF8.decode(toUint8ListView(view, offset, length)));
       offset += length;
     }
     return argv;
   }
+}
+
+ByteData toByteData(TypedData data, [int offset = 0, int length]) {
+  return data.buffer.asByteData(data.offsetInBytes + offset, length);
 }
 
 class ByteCommandSender extends CommandSender {
@@ -185,7 +197,7 @@ class ByteCommandSender extends CommandSender {
   }
 }
 
-Uint8List makeView(TypedData list, int offset, int length) {
+Uint8List toUint8ListView(TypedData list, [int offset = 0, int length]) {
   return new Uint8List.view(list.buffer, list.offsetInBytes + offset, length);
 }
 
