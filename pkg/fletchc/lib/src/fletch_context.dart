@@ -173,7 +173,7 @@ class FletchContext {
     return FletchSelector.encode(id, kind, selector.argumentCount);
   }
 
-  int toFletchIsSelector(ClassElement classElement) {
+  int toFletchIsSelector(ClassElement classElement, [int arity]) {
     LibraryElement library = classElement.library;
     StringBuffer buffer = new StringBuffer();
     buffer.write("?is?");
@@ -181,7 +181,8 @@ class FletchContext {
     buffer.write("?");
     buffer.write(getLibraryTag(library));
     int id = getSymbolId(buffer.toString());
-    return FletchSelector.encodeMethod(id, 0);
+    if (arity == null) return FletchSelector.encodeGetter(id);
+    return FletchSelector.encodeMethod(id, arity);
   }
 
   int toFletchTearoffIsSelector(

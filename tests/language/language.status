@@ -42,7 +42,6 @@ body_less_constructor_wrong_arg_negative_test: Fail
 built_in_identifier_prefix_test: Fail
 built_in_identifier_test/01: Fail
 call_nonexistent_constructor_test/01: Fail
-call_property_test: Fail
 call_through_getter_test: Fail
 call_type_literal_test/01: Fail
 call_with_no_such_method_test: Fail
@@ -214,7 +213,6 @@ full_stacktrace1_test: Fail
 full_stacktrace2_test: Fail
 full_stacktrace3_test: Fail
 function_field_test: Fail
-function_propagation_test: Fail
 function_subtype0_test: Fail
 function_subtype1_test: Fail
 function_subtype2_test: Fail
@@ -250,8 +248,6 @@ function_subtype_not2_test: Fail
 function_subtype_not3_test: Fail
 function_subtype_optional1_test: Fail
 function_subtype_optional2_test: Fail
-function_subtype_simple0_test: Fail
-function_subtype_simple1_test: Fail
 function_subtype_simple2_test: Fail
 function_subtype_top_level0_test: Fail
 function_subtype_top_level1_test: Fail
@@ -266,7 +262,6 @@ function_type_alias6_test/none: Fail
 function_type_alias7_test/00: MissingCompileTimeError
 function_type_alias7_test/02: MissingCompileTimeError
 function_type_alias_test: Fail
-function_type_call_getter_test: Fail
 function_type_parameter_test: Fail
 generic2_test: Fail
 generic_closure_test: Fail
@@ -453,21 +448,6 @@ type_parameter_test/04: Fail
 type_parameter_test/05: Fail
 type_parameter_test/06: Fail
 type_parameter_test/none: Fail
-type_promotion_functions_test/01: Fail
-type_promotion_functions_test/02: Fail
-type_promotion_functions_test/03: Fail
-type_promotion_functions_test/04: Fail
-type_promotion_functions_test/05: Fail
-type_promotion_functions_test/06: Fail
-type_promotion_functions_test/07: Fail
-type_promotion_functions_test/08: Fail
-type_promotion_functions_test/09: Fail
-type_promotion_functions_test/10: Fail
-type_promotion_functions_test/11: Fail
-type_promotion_functions_test/12: Fail
-type_promotion_functions_test/13: Fail
-type_promotion_functions_test/14: Fail
-type_promotion_functions_test/none: Fail
 type_variable_closure_test: Fail
 type_variable_conflict2_test/01: Fail
 type_variable_conflict2_test/05: Fail

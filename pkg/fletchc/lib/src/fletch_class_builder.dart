@@ -143,9 +143,12 @@ class FletchClassBuilder {
     }
   }
 
-  void createIsFunctionEntry(FletchBackend backend) {
+  void createIsFunctionEntry(FletchBackend backend, int arity) {
     int fletchSelector = backend.context.toFletchIsSelector(
         backend.compiler.functionClass);
+    addIsSelector(fletchSelector);
+    fletchSelector = backend.context.toFletchIsSelector(
+        backend.compiler.functionClass, arity);
     addIsSelector(fletchSelector);
   }
 

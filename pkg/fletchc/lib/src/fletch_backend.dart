@@ -217,8 +217,12 @@ class FletchBackend extends Backend {
       int classId = classes.length;
       FletchClassBuilder classBuilder = new FletchClassBuilder(
           classId, element, superclass, builtinClasses.contains(element));
-      if (element.lookupLocalMember(Compiler.CALL_OPERATOR_NAME) != null) {
-        classBuilder.createIsFunctionEntry(this);
+      Element callMember = element.lookupLocalMember(
+          Compiler.CALL_OPERATOR_NAME);
+      if (callMember != null && callMember.isFunction) {
+        FunctionElement function = callMember;
+        classBuilder.createIsFunctionEntry(
+            this, function.functionSignature.parameterCount);
       }
       classes.add(classBuilder);
       return classBuilder;
@@ -226,12 +230,12 @@ class FletchBackend extends Backend {
   }
 
   FletchClassBuilder createCallableStubClass(
-      int fields, FletchClassBuilder superclass) {
+      int fields, int arity, FletchClassBuilder superclass) {
     int classId = classes.length;
     FletchClassBuilder classBuilder = new FletchClassBuilder(
         classId, null, superclass, false, extraFields: fields);
     classes.add(classBuilder);
-    classBuilder.createIsFunctionEntry(this);
+    classBuilder.createIsFunctionEntry(this, arity);
     return classBuilder;
   }
 
@@ -384,7 +388,10 @@ class FletchBackend extends Backend {
       ClosureInfo info = closureEnvironment.closures[closure];
       int fields = info.free.length;
       if (info.isThisFree) fields++;
-      return createCallableStubClass(fields, compiledObjectClass);
+      return createCallableStubClass(
+          fields,
+          closure.functionSignature.parameterCount,
+          compiledObjectClass);
     });
   }
 
@@ -404,6 +411,7 @@ class FletchBackend extends Backend {
       bool hasThis = function.hasThisArgument;
       FletchClassBuilder classBuilder = createCallableStubClass(
           hasThis ? 1 : 0,
+          signature.parameterCount,
           compiledObjectClass);
       FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder(
           functions.length,

@@ -783,6 +783,17 @@ abstract class CodegenVisitor
       return;
     }
 
+    if (type.isTypedef) {
+      // TODO(ajohnsen): This only matches with the number of arguments, not
+      // the actual argument types.
+      TypedefType typedefType = type;
+      int arity = typedefType.element.functionSignature.parameterCount;
+      int fletchSelector = context.toFletchIsSelector(
+          context.backend.compiler.functionClass, arity);
+      assembler.invokeTest(fletchSelector, 0);
+      return;
+    }
+
     if (!type.isInterfaceType) {
       assembler.pop();
       generateUnimplementedError(
