@@ -360,8 +360,8 @@ class ComplexHeapObject: public HeapObject {
   inline void InitializeIdentityHashCode(RandomLCG* random);
   inline void SetIdentityHashCode(Smi* smi);
   inline Smi* IdentityHashCode();
-  inline word FlagsWord();
-  inline void SetFlagsWord(word flags);
+  inline uint32 FlagsBits();
+  inline void SetFlagsBits(uint32 bits);
 
   friend class Heap;
   friend class Program;
@@ -1333,14 +1333,17 @@ Smi* ComplexHeapObject::IdentityHashCode() {
   return Smi::FromWord(FlagsHashCodeField::decode(flags));
 }
 
-word ComplexHeapObject::FlagsWord() {
-  return Smi::cast(at(kFlagsOffset))->value();
+uint32 ComplexHeapObject::FlagsBits() {
+  uint64 bits = reinterpret_cast<uint64>(at(kFlagsOffset));
+  ASSERT((bits >> 32) == 0);
+  return static_cast<uint32>(bits);
 }
 
-void ComplexHeapObject::SetFlagsWord(word flags) {
-  at_put(kFlagsOffset, Smi::FromWord(flags));
+void ComplexHeapObject::SetFlagsBits(uint32 bits) {
+  Smi* value = reinterpret_cast<Smi*>(bits);
+  ASSERT(value->IsSmi());
+  at_put(kFlagsOffset, value);
 }
-
 
 void HeapObject::Initialize(int size, Object* null) {
   // Initialize the body of the instance.

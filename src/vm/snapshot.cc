@@ -562,14 +562,14 @@ void String::StringWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::STRING_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteWord(FlagsWord());
+  writer->WriteWord(FlagsBits());
   writer->WriteBytes(length() * sizeof(uint16_t), byte_address_for(0));
 }
 
 void String::StringReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
   set_hash_value(kNoHashValue);
-  SetFlagsWord(reader->ReadWord());
+  SetFlagsBits(reader->ReadWord());
   reader->ReadBytes(length * sizeof(uint16_t), byte_address_for(0));
 }
 
@@ -578,7 +578,7 @@ void Array::ArrayWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::ARRAY_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteWord(FlagsWord());
+  writer->WriteWord(FlagsBits());
   for (int i = 0; i < length(); i++) {
     writer->WriteObject(get(i));
   }
@@ -586,7 +586,7 @@ void Array::ArrayWriteTo(SnapshotWriter* writer, Class* klass) {
 
 void Array::ArrayReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
-  SetFlagsWord(reader->ReadWord());
+  SetFlagsBits(reader->ReadWord());
   for (int i = 0; i < length; i++) set(i, reader->ReadObject());
 }
 
@@ -595,13 +595,13 @@ void ByteArray::ByteArrayWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::BYTE_ARRAY_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteWord(FlagsWord());
+  writer->WriteWord(FlagsBits());
   writer->WriteBytes(length(), byte_address_for(0));
 }
 
 void ByteArray::ByteArrayReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
-  SetFlagsWord(reader->ReadWord());
+  SetFlagsBits(reader->ReadWord());
   reader->ReadBytes(length, byte_address_for(0));
 }
 
@@ -611,7 +611,7 @@ void Instance::InstanceWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(klass->instance_format().type(), nof);
   writer->Forward(this);
   // Body
-  writer->WriteWord(FlagsWord());
+  writer->WriteWord(FlagsBits());
   for (int i = 0; i < nof; i++) {
     writer->WriteObject(GetInstanceField(i));
   }
@@ -619,7 +619,7 @@ void Instance::InstanceWriteTo(SnapshotWriter* writer, Class* klass) {
 
 void Instance::InstanceReadFrom(SnapshotReader* reader, int fields) {
   int size = AllocationSize(fields);
-  SetFlagsWord(reader->ReadWord());
+  SetFlagsBits(reader->ReadWord());
   for (int offset = ComplexHeapObject::kSize;
        offset < size;
        offset += kPointerSize) {
