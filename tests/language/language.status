@@ -477,7 +477,3 @@ vm/store_to_load_forwarding_phis_vm_test: CompileTimeError
 vm/type_cast_vm_test: Fail
 vm/type_vm_test: Fail
 vm/typed_data_polymorphic_view_test: Fail
-
-[ ($runtime == fletchc || $runtime == fletchvm) && $arch == xarm ]
-interceptor9_test: Crash # Please triage this failure
-type_error_test: Crash # Please triage this failure

@@ -227,12 +227,3 @@ int_parse_radix_test/none: Pass, Slow
 int_parse_radix_test/01: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
 int_parse_radix_test/02: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
 int_parse_radix_test/none: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
-
-[ ($runtime == fletchc || $runtime == fletchvm) && $arch == xarm ]
-integer_to_string_test/none: Fail # Please triage this failure
-date_time_test: Crash # Please triage this failure
-date_time_parse_test: Crash # Please triage this failure
-date_time8_test: Crash # Please triage this failure
-date_time5_test: Crash # Please triage this failure
-is_operator_basic_types_test: Crash # Please triage this failure
-core_runtime_types_test: Crash # Please triage this failure

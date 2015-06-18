@@ -292,7 +292,7 @@ void InterpreterGeneratorARM::GeneratePrologue() {
   __ mov(R4, R0);
 
   // Pad the stack to gaurantee the right alignment for calls.
-  int padding = ComputeStackPadding(8 * kWordSize, 1 * kWordSize);
+  int padding = ComputeStackPadding(9 * kWordSize, 1 * kWordSize);
   if (padding > 0) __ sub(SP, SP, Immediate(padding));
 
   // Store the argument target yield address in the extra slot on the
@@ -312,7 +312,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   // Undo stack padding.
   Label undo_padding;
   __ Bind(&undo_padding);
-  int padding = ComputeStackPadding(8 * kWordSize, 1 * kWordSize);
+  int padding = ComputeStackPadding(9 * kWordSize, 1 * kWordSize);
   if (padding > 0) __ add(SP, SP, Immediate(padding));
 
   // Restore callee-saved registers and return.
