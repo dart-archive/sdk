@@ -37,6 +37,8 @@ namespace fletch {
       "GC the heap at when terminating isolate")   \
   BOOLEAN(debug, log_decoder, false,               \
       "Log decoding")                              \
+  BOOLEAN(debug, print_program_statistics, false,  \
+      "Print statistics about the program")        \
   BOOLEAN(release, verbose, false,                 \
       "Verbose output")                            \
   BOOLEAN(debug, print_flags, false,               \

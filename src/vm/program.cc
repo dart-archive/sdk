@@ -1047,6 +1047,10 @@ Process* Program::ProcessSpawnForMain() {
   }
   ASSERT(is_compact() == !unfold);
 
+  if (Flags::print_program_statistics) {
+    PrintStatistics();
+  }
+
   // TODO(ager): GC for testing only.
   CollectGarbage();
 
@@ -1219,6 +1223,107 @@ void Program::CollectGarbage() {
   FinishProgramGC(additional_processes);
 
   scheduler()->ResumeProgram(this);
+}
+
+class StatisticsVisitor : public HeapObjectVisitor {
+ public:
+  StatisticsVisitor()
+      : object_count_(0),
+        class_count_(0),
+        array_count_(0),
+        array_size_(0),
+        string_count_(0),
+        string_size_(0),
+        function_count_(0),
+        function_size_(0),
+        bytecode_size_(0) { }
+
+  int object_count() const { return object_count_; }
+  int class_count() const { return class_count_; }
+
+  int array_count() const { return array_count_; }
+  int array_size() const { return array_size_; }
+
+  int string_count() const { return string_count_; }
+  int string_size() const { return string_size_; }
+
+  int function_count() const { return function_count_; }
+  int function_size() const { return function_size_; }
+  int bytecode_size() const { return bytecode_size_; }
+
+  int function_header_size() const {
+    return function_count_ * Function::kSize;
+  }
+
+  void Visit(HeapObject* object) {
+    object_count_++;
+    if (object->IsClass()) {
+      VisitClass(Class::cast(object));
+    } else if (object->IsArray()) {
+      VisitArray(Array::cast(object));
+    } else if (object->IsString()) {
+      VisitString(String::cast(object));
+    } else if (object->IsFunction()) {
+      VisitFunction(Function::cast(object));
+    }
+  }
+
+ private:
+  int object_count_;
+
+  int class_count_;
+
+  int array_count_;
+  int array_size_;
+
+  int string_count_;
+  int string_size_;
+
+  int function_count_;
+  int function_size_;
+
+  int bytecode_size_;
+
+  void VisitClass(Class* clazz) {
+    class_count_++;
+  }
+
+  void VisitArray(Array* array) {
+    array_count_++;
+    array_size_ += array->ArraySize();
+  }
+
+  void VisitString(String* str) {
+    string_count_++;
+    string_size_ += str->StringSize();
+  }
+
+  void VisitFunction(Function* function) {
+    function_count_++;
+    function_size_ += function->FunctionSize();
+    bytecode_size_ += function->bytecode_size();
+  }
+};
+
+void Program::PrintStatistics() {
+  StatisticsVisitor statistics;
+  heap_.space()->IterateObjects(&statistics);
+  printf("Program\n");
+  printf("  - size = %d bytes\n", heap_.space()->Used());
+  printf("  - objects = %d\n", statistics.object_count());
+  printf("  Classes\n");
+  printf("    - count = %d\n", statistics.class_count());
+  printf("  Arrays\n");
+  printf("    - count = %d\n", statistics.array_count());
+  printf("    - size = %d bytes\n", statistics.array_size());
+  printf("  Strings\n");
+  printf("    - count = %d\n", statistics.string_count());
+  printf("    - size = %d bytes\n", statistics.string_size());
+  printf("  Functions\n");
+  printf("    - count = %d\n", statistics.function_count());
+  printf("    - size = %d bytes\n", statistics.function_size());
+  printf("    - header size = %d bytes\n", statistics.function_header_size());
+  printf("    - bytecode size = %d bytes\n", statistics.bytecode_size());
 }
 
 void Program::Initialize() {

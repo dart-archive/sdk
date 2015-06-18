@@ -176,6 +176,8 @@ class Program {
 
   void CollectGarbage();
 
+  void PrintStatistics();
+
   // Iterates over all roots in the program.
   void IterateRoots(PointerVisitor* visitor);
 
