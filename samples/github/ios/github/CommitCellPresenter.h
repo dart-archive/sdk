@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #import "CellPresenter.h"
+#import "LruCache.h"
 
 @interface CommitCellPresenter : UITableViewCell <CellPresenter>
 
@@ -11,5 +12,7 @@
 @property (weak, nonatomic) IBOutlet UILabel* messageLabel;
 @property (weak, nonatomic) IBOutlet UILabel* detailsLabel;
 @property (weak, nonatomic) IBOutlet UIImageView* avatarImage;
+
+@property NSIndexPath* index;
 
 @end

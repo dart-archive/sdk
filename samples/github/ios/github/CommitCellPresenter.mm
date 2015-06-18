@@ -9,9 +9,17 @@
 @property (strong, nonatomic) IBOutlet NSLayoutConstraint*
     detailsViewHeightConstraint;
 
+@property LruCache* imageCache;
+
 @end
 
 @implementation CommitCellPresenter
+
+- (id)init {
+  self.imageCache = [[LruCache alloc] initWithMaxSize:100];
+
+  return self;
+}
 
 - (UITableViewCell*)tableView:(UITableView*)tableView
                     indexPath:(NSIndexPath*)indexPath
@@ -19,13 +27,57 @@
   CommitCellPresenter* cell = (CommitCellPresenter*)
       [tableView dequeueReusableCellWithIdentifier:@"CommitPrototypeCell"
                                       forIndexPath:indexPath];
+
   CommitNode* commitNode = (CommitNode*)node;
   NSString* decodedMessage = [self decodeJsonString:commitNode.message];
-
   cell.detailsLabel.text = decodedMessage;
   cell.messageLabel.text = decodedMessage;
+  cell.index = indexPath;
   cell.authorLabel.text = commitNode.author;
   cell.avatarImage.image = [UIImage imageNamed:@"dart-logo.png"];
+
+  NSString* url = commitNode.imageUrl;
+
+  if (![url isEqual:@""]) {
+
+    NSAssert(NSThread.isMainThread,
+             @"Not on main thread",
+             NSThread.callStackSymbols);
+
+    id cachedImage = [self.imageCache get:url];
+    if (cachedImage != nil) {
+      if ([cachedImage isKindOfClass:NSMutableDictionary.class]) {
+        [cachedImage setObject:cell forKey:indexPath];
+      } else {
+        cell.avatarImage.image = [UIImage imageWithData:cachedImage];
+      }
+    } else {
+      NSMutableDictionary* waitingCells = [[NSMutableDictionary alloc] init];
+      [waitingCells setObject:cell forKey:indexPath];
+      [self.imageCache put:url value:waitingCells];
+
+      dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        NSData* imageData =
+            [[NSData alloc] initWithContentsOfURL:[NSURL URLWithString:url]];
+
+
+        if (imageData == nil) return;
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+          NSMutableDictionary* cells = [self.imageCache get:url];
+          [self.imageCache put:url value:imageData];
+
+          [cells enumerateKeysAndObjectsUsingBlock:^(NSIndexPath* index,
+                                                     CommitCellPresenter* cell,
+                                                     BOOL* stop) {
+            if ([cell.index isEqual:index]) {
+              cell.avatarImage.image = [UIImage imageWithData:imageData];
+            }
+          }];
+        });
+      });
+    }
+  }
 
   cell.detailsViewHeightConstraint.priority =
       commitNode.selected ? 250.0 : 999.0;

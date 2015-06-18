@@ -28,9 +28,15 @@ class CommitPresenter extends SequencedPresenter<CommitNode> {
   CommitNode presentAt(int index) {
     Map<String, dynamic> json = _repository.getCommitAt(index);
     if (json == null) return null;
+
+    String imageUrl = json['author'] == null
+      ? "" 
+      : json['author']['avatar_url'];
+    
     return new CommitNode(
         author: json['commit']['author']['name'],
         message: json['commit']['message'],
-        selected: selectedIndices.contains(index));
+        selected: selectedIndices.contains(index),
+        imageUrl: imageUrl);
   }
 }
