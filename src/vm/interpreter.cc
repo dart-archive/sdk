@@ -1006,6 +1006,10 @@ void HandleEnterNoSuchMethod(Process* process) {
       offset++;
     }
     selector = Smi::cast(state.Local(offset - 1))->value();
+    // The selector that was used was not this selector, but instead a 'call'
+    // selector with the same arity (see call_selector below).
+    int arity = Selector::ArityField::decode(selector);
+    selector = Selector::EncodeMethod(Names::kCall, arity);
   } else if (Bytecode::IsInvokeFast(opcode)) {
     int index = Utils::ReadInt32(return_address - 4);
     Array* table = program->dispatch_table();
@@ -1034,16 +1038,16 @@ void HandleEnterNoSuchMethod(Process* process) {
       : HeapObject::cast(receiver)->get_class();
 
   state.Push(program->sentinel_object());
-
-  int call_selector = Selector::EncodeMethod(Names::kCall, arity);
-
-  state.Push(Smi::FromWord(call_selector));
+  // This value is used by exitNoSuchMethod to pop arguments and detect if
+  // original selector was a setter.
+  state.Push(selector_smi);
 
   int selector_id = Selector::IdField::decode(selector);
   int get_selector = Selector::EncodeGetter(selector_id);
 
   // TODO(ajohnsen): We need to ensure that the getter is not a tearoff getter.
   if (clazz->LookupMethod(get_selector) != NULL) {
+    int call_selector = Selector::EncodeMethod(Names::kCall, arity);
     state.Push(program->null_object());
     for (int i = 0; i < arity; i++) {
       state.Push(state.Local(arity + 3));
