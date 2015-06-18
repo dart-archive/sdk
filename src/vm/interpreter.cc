@@ -269,6 +269,7 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_BEGIN(StoreField);
     Object* value = Pop();
     Instance* target = Instance::cast(Pop());
+    ASSERT(!target->IsImmutable());
     target->SetInstanceField(ReadByte(1), value);
     Push(value);
     Advance(kStoreFieldLength);

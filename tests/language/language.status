@@ -92,7 +92,7 @@ compile_time_constant_l_test: Fail
 compile_time_constant_p_test/01: MissingCompileTimeError
 compile_time_constant_test/01: MissingCompileTimeError
 compound_assignment_operator_test: Fail
-const_constructor_mixin2_test/01: MissingCompileTimeError
+const_constructor_mixin2_test/01: MissingCompileTimeError, Crash
 const_constructor_mixin3_test/01: MissingCompileTimeError
 const_constructor_mixin_test/01: MissingCompileTimeError
 const_constructor_nonconst_field_test/01: MissingCompileTimeError

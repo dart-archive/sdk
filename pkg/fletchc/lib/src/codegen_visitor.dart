@@ -2179,17 +2179,26 @@ abstract class CodegenVisitor
     // If the closure captures itself, thisClosureIndex is the field-index in
     // the closure.
     int thisClosureIndex = pushCapturedVariables(function);
+    bool needToStoreThisReference = thisClosureIndex >= 0;
 
     FletchClassBuilder classBuilder = context.backend.createClosureClass(
         function,
         closureEnvironment);
     int classConstant = functionBuilder.allocateConstantFromClass(
         classBuilder.classId);
-    bool immutable = !closureEnvironment.closures[function].free.any(
-        closureEnvironment.shouldBeBoxed);
-    assembler.allocate(classConstant, classBuilder.fields, immutable: immutable);
 
-    if (thisClosureIndex >= 0) {
+    // NOTE: Currently we emit a storeField instruction in case a closure
+    // captures itself. Changing fields makes it a mutable object.
+    // We can therefore not allocate the object with `immutable = true`.
+    // TODO(fletchc-team): Could we restrict this limitation.
+    bool immutable = !closureEnvironment.closures[function].free.any(
+        closureEnvironment.shouldBeBoxed) && !needToStoreThisReference;
+
+    assembler.allocate(
+        classConstant, classBuilder.fields, immutable: immutable);
+
+    if (needToStoreThisReference) {
+      assert (!immutable);
       assembler.dup();
       assembler.storeField(thisClosureIndex);
     }

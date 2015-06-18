@@ -74,6 +74,12 @@ main() {
   // Expect.isFalse(isImmutable(bool));
   // Expect.isFalse(isImmutable(String));
   // Expect.isFalse(isImmutable(Hest));
+
+  // TODO(kustermann/fletchc-experts): Allow self recursive closures.
+  // [The recursive reference causes a storeField instruction to be
+  //  emitted which makes it mutable ATM.]
+  void recurse(x) { if (x > 0) { return recurse(x - 1); } }
+  Expect.isFalse(isImmutable(recurse));
 }
 
 testImmutable(obj) {
