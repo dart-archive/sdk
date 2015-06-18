@@ -284,6 +284,10 @@ class BytecodeAssembler {
     internalAddStackPointerDifference(new InvokeTest(selector), -arity);
   }
 
+  void invokeSelector() {
+    internalAddStackPointerDifference(const InvokeSelector(0), 0);
+  }
+
   void pop() {
     internalAdd(new Pop());
   }
@@ -345,6 +349,11 @@ class BytecodeAssembler {
           bytecodes[index] = new PopAndBranchLong(
               bytecode.uint8Argument0,
               offset);
+          break;
+
+        case Opcode.EnterNoSuchMethod:
+          int offset = position - bytecode.uint8Argument0;
+          bytecodes[index] = new EnterNoSuchMethod(offset);
           break;
 
         case Opcode.SubroutineCall:
@@ -460,8 +469,10 @@ class BytecodeAssembler {
     return opcode == Opcode.Return || opcode == Opcode.Throw;
   }
 
-  void enterNoSuchMethod() {
-    internalAdd(const EnterNoSuchMethod());
+  void enterNoSuchMethod(BytecodeLabel skipGetterLabel) {
+    assert(!skipGetterLabel.isBound);
+    skipGetterLabel.addUsage(bytecodes.length);
+    internalAddStackPointerDifference(new EnterNoSuchMethod(byteSize), 0);
   }
 
   void exitNoSuchMethod() {

@@ -1398,6 +1398,14 @@ void Program::Initialize() {
         heap()->CreateComplexHeapObject(true_class, null_object(), true));
   }
 
+  { // Create sentinel singleton.
+    InstanceFormat format = InstanceFormat::instance_format(0);
+    Class* sentinel_class = Class::cast(
+        heap()->CreateClass(format, meta_class_, null_object_));
+    sentinel_object_ = ComplexHeapObject::cast(
+        heap()->CreateComplexHeapObject(sentinel_class, null_object(), true));
+  }
+
   // Create the retry after gc failure object payload.
   raw_retry_after_gc_ =
       String::cast(CreateStringFromAscii(StringFromCharZ("Retry after GC.")));

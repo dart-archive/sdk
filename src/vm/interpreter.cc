@@ -101,6 +101,14 @@ class State {
     return Function::FromBytecodePointer(bcp_);
   }
 
+  void PushReturnAddress(int offset) {
+    Push(reinterpret_cast<Object*>(ComputeReturnAddress(offset)));
+  }
+
+  void PopReturnAddress() {
+    Goto(reinterpret_cast<uint8*>(Pop()));
+  }
+
  protected:
   uint8* bcp() { return bcp_; }
   Object** sp() { return sp_; }
@@ -121,9 +129,6 @@ class Engine : public State {
 
  private:
   void Branch(int true_offset, int false_offset);
-
-  void PushReturnAddress(int offset);
-  void PopReturnAddress();
 
   void PushDelta(int delta);
   int PopDelta();
@@ -319,6 +324,13 @@ Interpreter::InterruptKind Engine::Interpret(
     PushReturnAddress(kInvokeMethodLength);
     Function* target = process()->LookupEntry(receiver, selector)->target;
     Goto(target->bytecode_address_for(0));
+    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+  OPCODE_END();
+
+  OPCODE_BEGIN(InvokeSelector);
+    SaveState();
+    HandleInvokeSelector(process());
+    RestoreState();
     if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
   OPCODE_END();
 
@@ -752,36 +764,15 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
   OPCODE_BEGIN(EnterNoSuchMethod);
-    uint8* return_address = reinterpret_cast<uint8*>(Local(0));
-    Opcode opcode = static_cast<Opcode>(*(return_address - 5));
-
-    int selector;
-    if (Bytecode::IsInvokeFast(opcode)) {
-      int index = Utils::ReadInt32(return_address - 4);
-      Array* table = program()->dispatch_table();
-      selector = Smi::cast(table->get(index + 1))->value();
-    } else if (Bytecode::IsInvokeVtable(opcode)) {
-      // TODO(kasperl): The id encoded in the selector is
-      // wrong because it is an offset.
-      selector = Utils::ReadInt32(return_address - 4);
-    } else {
-      ASSERT(Bytecode::IsInvokeNormal(opcode));
-      selector = Utils::ReadInt32(return_address - 4);
-    }
-
-    int arity = Selector::ArityField::decode(selector);
-    Smi* selector_smi = Smi::FromWord(selector);
-    Object* receiver = Local(arity + 1);
-
-    Push(selector_smi);
-    Push(receiver);
-    Push(selector_smi);
-    Advance(kEnterNoSuchMethodLength);
+    SaveState();
+    HandleEnterNoSuchMethod(process());
+    RestoreState();
   OPCODE_END();
 
   OPCODE_BEGIN(ExitNoSuchMethod);
     Object* result = Pop();
     word selector = Smi::cast(Pop())->value();
+    Drop(1);
     PopReturnAddress();
 
     // The result of invoking setters must be the assigned value,
@@ -820,14 +811,6 @@ void Engine::Branch(int true_offset, int false_offset) {
       ? true_offset
       : false_offset;
   Advance(offset);
-}
-
-void Engine::PushReturnAddress(int offset) {
-  Push(reinterpret_cast<Object*>(ComputeReturnAddress(offset)));
-}
-
-void Engine::PopReturnAddress() {
-  Goto(reinterpret_cast<uint8*>(Pop()));
 }
 
 void Engine::PushDelta(int delta) {
@@ -1004,6 +987,104 @@ uint8* HandleThrow(Process* process, Object* exception, int* stack_delta) {
     current->set_stack(process->program()->null_object());
     current->set_caller(current);
   }
+}
+
+void HandleEnterNoSuchMethod(Process* process) {
+  State state(process);
+
+  Program* program = state.program();
+
+  uint8* return_address = reinterpret_cast<uint8*>(state.Local(0));
+  Opcode opcode = static_cast<Opcode>(*(return_address - 5));
+
+  int selector;
+  if (opcode == Opcode::kInvokeSelector) {
+    // If we have nested noSuchMethod trampolines, find the sentinel value,
+    // and use the selector-smi right above it.
+    int offset = 1;
+    while (state.Local(offset) != program->sentinel_object()) {
+      offset++;
+    }
+    selector = Smi::cast(state.Local(offset - 1))->value();
+  } else if (Bytecode::IsInvokeFast(opcode)) {
+    int index = Utils::ReadInt32(return_address - 4);
+    Array* table = program->dispatch_table();
+    selector = Smi::cast(table->get(index + 1))->value();
+  } else if (Bytecode::IsInvokeVtable(opcode)) {
+    selector = Utils::ReadInt32(return_address - 4);
+    int offset = Selector::IdField::decode(selector);
+    for (int i = offset; true; i++) {
+      Array* entry = Array::cast(program->vtable()->get(i));
+      if (Smi::cast(entry->get(0))->value() == offset) {
+        selector = Smi::cast(entry->get(1))->value();
+        break;
+      }
+    }
+  } else {
+    ASSERT(Bytecode::IsInvokeNormal(opcode));
+    selector = Utils::ReadInt32(return_address - 4);
+  }
+
+  int arity = Selector::ArityField::decode(selector);
+  Smi* selector_smi = Smi::FromWord(selector);
+  Object* receiver = state.Local(arity + 1);
+
+  Class* clazz = receiver->IsSmi()
+      ? program->smi_class()
+      : HeapObject::cast(receiver)->get_class();
+
+  state.Push(program->sentinel_object());
+
+  int call_selector = Selector::EncodeMethod(Names::kCall, arity);
+
+  state.Push(Smi::FromWord(call_selector));
+
+  int selector_id = Selector::IdField::decode(selector);
+  int get_selector = Selector::EncodeGetter(selector_id);
+
+  // TODO(ajohnsen): We need to ensure that the getter is not a tearoff getter.
+  if (clazz->LookupMethod(get_selector) != NULL) {
+    state.Push(program->null_object());
+    for (int i = 0; i < arity; i++) {
+      state.Push(state.Local(arity + 3));
+    }
+    state.Push(Smi::FromWord(call_selector));
+    state.Push(program->null_object());
+    state.Push(Smi::FromWord(get_selector));
+    state.Push(receiver);
+    state.Advance(kEnterNoSuchMethodLength);
+  } else {
+    // Prepare for no such method. The code for invoking noSuchMethod is
+    // located at the delta specified in the bytecode argument.
+    state.Push(receiver);
+    state.Push(selector_smi);
+    state.Advance(state.ReadByte(1));
+  }
+
+  state.SaveState();
+}
+
+void HandleInvokeSelector(Process* process) {
+  State state(process);
+
+  Object* receiver = state.Pop();
+  Smi* selector_smi = Smi::cast(state.Pop());
+  int selector = selector_smi->value();
+  int arity = Selector::ArityField::decode(selector);
+  state.SetLocal(arity, receiver);
+  state.PushReturnAddress(kInvokeSelectorLength);
+
+  Class* clazz = receiver->IsSmi()
+      ? state.program()->smi_class()
+      : HeapObject::cast(receiver)->get_class();
+  Function* target = clazz->LookupMethod(selector);
+  if (target == NULL) {
+    static const Names::Id name = Names::kNoSuchMethodTrampoline;
+    target = clazz->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
+  }
+  state.Goto(target->bytecode_address_for(0));
+
+  state.SaveState();
 }
 
 }  // namespace fletch

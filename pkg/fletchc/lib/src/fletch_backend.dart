@@ -830,8 +830,16 @@ class FletchBackend extends Backend {
     int id = context.getSymbolId(
         context.mangleName(noSuchMethodName, compiler.coreLibrary));
     int fletchSelector = FletchSelector.encodeMethod(id, 1);
+    BytecodeLabel skipGetter = new BytecodeLabel();
     codegen.assembler
-        ..enterNoSuchMethod()
+        ..enterNoSuchMethod(skipGetter)
+        // First invoke the getter.
+        ..invokeSelector()
+        // Then invoke 'call', with the receiver being the result of the
+        // previous invokeSelector.
+        ..invokeSelector()
+        ..exitNoSuchMethod()
+        ..bind(skipGetter)
         ..invokeMethod(fletchSelector, 1)
         ..exitNoSuchMethod()
         ..methodEnd();

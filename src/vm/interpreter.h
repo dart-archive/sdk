@@ -120,6 +120,9 @@ extern "C" uint8* HandleThrow(Process* process,
                               Object* exception,
                               int* stack_delta);
 
+extern "C" void HandleEnterNoSuchMethod(Process* process);
+
+extern "C" void HandleInvokeSelector(Process* process);
 
 }  // namespace fletch
 

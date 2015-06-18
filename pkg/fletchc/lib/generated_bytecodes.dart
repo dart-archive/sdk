@@ -37,6 +37,7 @@ enum Opcode {
   InvokeFactoryUnfold,
   InvokeNative,
   InvokeNativeYield,
+  InvokeSelector,
   InvokeTest,
   InvokeTestFast,
   InvokeTestVtable,
@@ -1265,6 +1266,48 @@ class InvokeNativeYield extends Bytecode {
     int value = super.hashCode;
     value += uint8Argument0;
     value += uint8Argument1;
+    return value;
+  }
+}
+
+class InvokeSelector extends Bytecode {
+  final int uint32Argument0;
+  const InvokeSelector(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeSelector;
+
+  String get name => 'InvokeSelector';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'invoke selector';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke selector${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeSelector rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
     return value;
   }
 }
@@ -4427,7 +4470,8 @@ class IdenticalNonNumeric extends Bytecode {
 }
 
 class EnterNoSuchMethod extends Bytecode {
-  const EnterNoSuchMethod()
+  final int uint8Argument0;
+  const EnterNoSuchMethod(this.uint8Argument0)
       : super();
 
   Opcode get opcode => Opcode.EnterNoSuchMethod;
@@ -4436,21 +4480,35 @@ class EnterNoSuchMethod extends Bytecode {
 
   bool get isBranching => true;
 
-  String get format => '';
+  String get format => 'B';
 
-  int get size => 1;
+  int get size => 2;
 
-  int get stackPointerDifference => 3;
+  int get stackPointerDifference => VAR_DIFF;
 
-  String get formatString => 'enter noSuchMethod';
+  String get formatString => 'enter noSuchMethod +%d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint8(opcode.index)
+        ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
 
-  String toString() => 'enter noSuchMethod';
+  String toString() => 'enter noSuchMethod +${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    EnterNoSuchMethod rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class ExitNoSuchMethod extends Bytecode {

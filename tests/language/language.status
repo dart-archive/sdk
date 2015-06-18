@@ -42,7 +42,6 @@ body_less_constructor_wrong_arg_negative_test: Fail
 built_in_identifier_prefix_test: Fail
 built_in_identifier_test/01: Fail
 call_nonexistent_constructor_test/01: Fail
-call_through_getter_test: Fail
 call_type_literal_test/01: Fail
 call_with_no_such_method_test: Fail
 cast_test/01: MissingRuntimeError
@@ -81,7 +80,6 @@ class_literal_test/25: Crash
 class_literal_test/none: Crash
 closure_cycles_test: CompileTimeError
 closure_in_constructor_test: Fail
-closure_in_initializer2_test: Fail
 closure_in_initializer_test: Crash
 closure_type_variable_test: Fail
 closures_initializer2_test: Fail
@@ -212,7 +210,6 @@ fixed_type_variable_test/06: Fail
 full_stacktrace1_test: Fail
 full_stacktrace2_test: Fail
 full_stacktrace3_test: Fail
-function_field_test: Fail
 function_subtype0_test: Fail
 function_subtype1_test: Fail
 function_subtype2_test: Fail
@@ -262,7 +259,6 @@ function_type_alias6_test/none: Fail
 function_type_alias7_test/00: MissingCompileTimeError
 function_type_alias7_test/02: MissingCompileTimeError
 function_type_alias_test: Fail
-function_type_parameter_test: Fail
 generic2_test: Fail
 generic_closure_test: Fail
 generic_creation_test: CompileTimeError
@@ -281,15 +277,12 @@ generic_native_test: Fail
 generic_parameterized_extends_test: Fail
 generic_test: Fail
 getter_closure_execution_order_test: Fail
-implicit_closure_test: Fail
 incr_op_test: Fail
 inferrer_closure_test: Fail
 instanceof2_test: Fail
 instanceof3_test: Fail
 instanceof4_test/01: Fail
 instanceof4_test/none: Fail
-interceptor2_test: Fail
-interceptor5_test: Fail
 interface2_negative_test: Fail
 interface_cycle_test/01: MissingCompileTimeError
 interface_cycle_test/02: MissingCompileTimeError
@@ -309,7 +302,6 @@ issue10561_test: CompileTimeError
 issue10747_test: Fail
 issue13474_test: Fail
 issue13673_test: Fail
-issue14014_3_test: Fail
 issue14242_test: Fail
 issue18628_1_test/01: Fail
 large_class_declaration_test: Crash, Timeout
@@ -318,7 +310,6 @@ left_shift_test: Fail
 list_is_test: Fail
 list_literal4_test: Fail
 list_test: Fail
-list_tracer_call_last_test: Fail
 local_function3_test: Fail
 local_function_test: Fail
 malbounded_type_cast_test: Fail
@@ -334,12 +325,9 @@ map_literal4_test: Fail
 map_literal7_test: Fail
 map_literal8_test: Fail
 metadata_test: Fail
-method_binding_test: Fail
-method_invocation_test: Fail
 method_override4_test: Fail
 method_override5_test: Fail
 method_override_test: Fail
-methods_as_constants2_test: Fail
 mint_compares_test: Fail
 missing_part_of_tag_test/01: MissingCompileTimeError
 mixin_generic_test: Fail
@@ -432,11 +420,8 @@ this_test/03: MissingCompileTimeError
 this_test/05: MissingCompileTimeError
 this_test/07: MissingCompileTimeError
 throwing_lazy_variable_test: Fail
-top_level_in_initializer_test: Fail
 try_catch_optimized1_test: Fail
 type_check_const_function_typedef2_test/00: MissingCompileTimeError
-type_check_const_function_typedef2_test/none: Fail
-type_check_const_function_typedef_test: Fail
 type_check_test: Fail
 type_checks_in_factory_method_test: Fail
 type_error_test: Fail

@@ -130,6 +130,8 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoInvokeTestFast();
   virtual void DoInvokeTestVtable();
 
+  virtual void DoInvokeSelector();
+
 #define INVOKE_BUILTIN(kind)                \
   virtual void DoInvoke##kind() {           \
     Invoke##kind("BC_InvokeMethod");        \
@@ -583,6 +585,15 @@ void InterpreterGeneratorARM::DoInvokeNative() {
 
 void InterpreterGeneratorARM::DoInvokeNativeYield() {
   InvokeNative(true);
+}
+
+void InterpreterGeneratorARM::DoInvokeSelector() {
+  SaveState();
+  __ mov(R0, R4);
+  __ bl("HandleInvokeSelector");
+  RestoreState();
+  CheckStackOverflow(0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::InvokeEq(const char* fallback) {
@@ -1130,58 +1141,18 @@ void InterpreterGeneratorARM::DoIdenticalNonNumeric() {
 }
 
 void InterpreterGeneratorARM::DoEnterNoSuchMethod() {
-  // Load the return address from the stack.
-  LoadLocal(R0, 0);
-
-  // Load the caller opcode through the return address.
-  Label decode, fast;
-  __ ldrb(R0, Address(R0, -5));
-  __ bl("HandleIsInvokeFast");
-  __ mov(R1, R0);
-  LoadLocal(R0, 0);  // Restore value of R0.
-
-  // Check if it was a fast call.
-  __ cmp(R1, Immediate(0));
-  __ b(NE, &fast);
-
-  // Load the selector indirectly through the return address.
-  __ ldr(R0, Address(R0, -4));
-  __ b(&decode);
-
-  // Load the selector from the dispatch table.
-  __ Bind(&fast);
-  __ ldr(R0, Address(R0, -4));
-  __ ldr(R2, Address(R4, Process::ProgramOffset()));
-  __ ldr(R3, Address(R2, Program::DispatchTableOffset()));
-  __ add(R3, R3, Immediate(kPointerSize + Array::kSize - HeapObject::kTag));
-  __ ldr(R0, Address(R3, Operand(R0, TIMES_4)));
-  __ lsr(R0, R0, Immediate(Smi::kTagSize));
-
-  // Decode the arity from the selector.
-  ASSERT(Selector::ArityField::shift() == 0);
-  __ Bind(&decode);
-  __ and_(R1, R0, Immediate(Selector::ArityField::mask()));
-  __ neg(R1, R1);
-
-  // Get the receiver from the stack.
-  __ sub(R3, R6, Immediate(kWordSize));
-  __ ldr(R2, Address(R3, Operand(R1, TIMES_4)));
-
-  // Turn the selector into a smi.
-  ASSERT(Smi::kTag == 0);
-  __ lsl(R0, R0, Immediate(Smi::kTagSize));
-
-  // Push receiver and selector (as a smi) on the stack.
-  Push(R0);
-  Push(R2);
-  Push(R0);
-  Dispatch(kEnterNoSuchMethodLength);
+  SaveState();
+  __ mov(R0, R4);
+  __ bl("HandleEnterNoSuchMethod");
+  RestoreState();
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoExitNoSuchMethod() {
   Pop(R0);  // Result.
   Pop(R1);  // Selector.
   __ lsr(R1, R1, Immediate(Smi::kTagSize));
+  Drop(1);  // Sentinel.
   Pop(R5);
 
   Label done;

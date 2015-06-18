@@ -52,10 +52,7 @@ class StackWalker {
   int stack_offset() const { return stack_offset_; };
 
   // Compute the stack offset at [bcp].
-  static int ComputeStackOffset(Function* function,
-                                uint8* bcp,
-                                Program* program,
-                                bool include_last = false);
+  int ComputeStackOffset(uint8* bcp, bool include_last = false);
 
   // Compute the top catch block.
   static uint8* ComputeCatchBlock(Process* process, int* stack_delta);
@@ -67,6 +64,11 @@ class StackWalker {
   static Object* ComputeLocal(Process* process, int frame, int slot);
 
  private:
+  int StackDiff(uint8** bcp,
+                uint8* end_bcp,
+                int current_stack_offset,
+                bool include_last);
+
   NoAllocationFailureScope no_allocation_failure_scope_;
   Process* process_;
   Stack* stack_;

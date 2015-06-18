@@ -125,6 +125,8 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoInvokeNative();
   virtual void DoInvokeNativeYield();
 
+  virtual void DoInvokeSelector();
+
   virtual void DoInvokeTest();
   virtual void DoInvokeTestFast();
   virtual void DoInvokeTestVtable();
@@ -576,6 +578,15 @@ void InterpreterGeneratorX86::DoInvokeNative() {
 
 void InterpreterGeneratorX86::DoInvokeNativeYield() {
   InvokeNative(true);
+}
+
+void InterpreterGeneratorX86::DoInvokeSelector() {
+  SaveState();
+  __ movl(Address(ESP, 0 * kWordSize), EBP);
+  __ call("HandleInvokeSelector");
+  RestoreState();
+  CheckStackOverflow(0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorX86::InvokeEq(const char* fallback) {
@@ -1165,59 +1176,18 @@ void InterpreterGeneratorX86::DoIdenticalNonNumeric() {
 }
 
 void InterpreterGeneratorX86::DoEnterNoSuchMethod() {
-  // Load the return address from the stack.
-  LoadLocal(EAX, 0);
-
-  // Load the caller opcode through the return address.
-  Label decode, fast;
-  __ movzbl(EBX, Address(EAX, -5));
-  __ movl(Address(ESP, 0 * kWordSize), EBX);
-  __ call("HandleIsInvokeFast");
-  __ movl(EBX, EAX);
-  LoadLocal(EAX, 0);  // Restore value of EAX.
-
-  // Check if it was a fast call.
-  __ testl(EBX, EBX);
-  __ j(NOT_ZERO, &fast);
-
-  // Load the selector indirectly through the return address.
-  __ movl(EAX, Address(EAX, -4));
-  __ jmp(&decode);
-
-  // Load the selector from the dispatch table.
-  __ Bind(&fast);
-  __ movl(EAX, Address(EAX, -4));
-  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-  __ movl(ECX, Address(ECX, Program::DispatchTableOffset()));
-  __ movl(EAX, Address(ECX, EAX, TIMES_4,
-        kPointerSize + Array::kSize - HeapObject::kTag));
-  __ shrl(EAX, Immediate(Smi::kTagSize));
-
-  // Decode the arity from the selector.
-  ASSERT(Selector::ArityField::shift() == 0);
-  __ Bind(&decode);
-  __ movl(EBX, EAX);
-  __ andl(EBX, Immediate(Selector::ArityField::mask()));
-  __ negl(EBX);
-
-  // Get the receiver from the stack.
-  __ movl(ECX, Address(EDI, EBX, TIMES_4, -1 * kWordSize));
-
-  // Turn the selector into a smi.
-  ASSERT(Smi::kTag == 0);
-  __ shll(EAX, Immediate(Smi::kTagSize));
-
-  // Push receiver and selector (as a smi) on the stack.
-  Push(EAX);
-  Push(ECX);
-  Push(EAX);
-  Dispatch(kEnterNoSuchMethodLength);
+  SaveState();
+  __ movl(Address(ESP, 0 * kWordSize), EBP);
+  __ call("HandleEnterNoSuchMethod");
+  RestoreState();
+  Dispatch(0);
 }
 
 void InterpreterGeneratorX86::DoExitNoSuchMethod() {
   Pop(EAX);  // Result.
   Pop(EBX);  // Selector.
   __ shrl(EBX, Immediate(Smi::kTagSize));
+  Drop(1);   // Sentinel.
   Pop(ESI);
 
   Label done;

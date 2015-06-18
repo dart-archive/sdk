@@ -25,6 +25,7 @@ class Session;
   V(ComplexHeapObject, null_object)              \
   V(ComplexHeapObject, false_object)             \
   V(ComplexHeapObject, true_object)              \
+  V(ComplexHeapObject, sentinel_object)          \
   /* Global literals up to this line */          \
   V(Array, empty_array)                          \
   V(String, empty_string)                        \

@@ -170,6 +170,8 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   V("InvokeNative",          true,    "BB", 3,        1, "invoke native %d %d");
   V("InvokeNativeYield",     true,    "BB", 3,   1, "invoke native yield %d %d");
 
+  V("InvokeSelector",        true,    "I",  5, kVarDiff, "invoke selector");
+
   INVOKES(V, "Test", 0, "test ");
 
   INVOKES(V, "Eq", -1, "eq ");
@@ -229,7 +231,7 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   V("Identical",             true,    "",   1,       -1, "identical");
   V("IdenticalNonNumeric",   true,    "",   1,       -1, "identical non numeric");
 
-  V("EnterNoSuchMethod",     true,    "",   1,        3, "enter noSuchMethod");
+  V("EnterNoSuchMethod",     true,    "B",  2, kVarDiff, "enter noSuchMethod +%d");
   V("ExitNoSuchMethod",      true,    "",   1,       -1, "exit noSuchMethod");
 
   V("FrameSize",            false,    "B",  2, kVarDiff, "frame size %d");

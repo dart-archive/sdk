@@ -26,13 +26,13 @@ bool StackWalker::MoveNext() {
     return false;
   }
 
-  Program* program = process_->program();
-  ASSERT(program->heap()->space()->Includes(reinterpret_cast<uword>(bcp)));
+  ASSERT(process_->program()->heap()->space()->Includes(
+      reinterpret_cast<uword>(bcp)));
 
   return_address_ = bcp;
   bool first = function_ == NULL;
   function_ = Function::FromBytecodePointer(bcp, &frame_ranges_offset_);
-  frame_size_ = ComputeStackOffset(function_, bcp, program, first);
+  frame_size_ = ComputeStackOffset(bcp, first);
   stack_offset_ -= (frame_size_ + 1);
 
   return true;
@@ -58,11 +58,11 @@ Object* StackWalker::GetLocal(int slot) {
   return stack_->get(stack_index);
 }
 
-static int StackDiff(uint8** bcp,
-                     uint8* end_bcp,
-                     Program* program,
-                     int current_stack_offset,
-                     bool include_last) {
+int StackWalker::StackDiff(uint8** bcp,
+                           uint8* end_bcp,
+                           int current_stack_offset,
+                           bool include_last) {
+  Program* program = process_->program();
   int stack_diff = kVarDiff;
 
   Opcode opcode = static_cast<Opcode>(**bcp);
@@ -155,17 +155,27 @@ static int StackDiff(uint8** bcp,
   return stack_diff;
 }
 
-int StackWalker::ComputeStackOffset(Function* function,
-                                    uint8* end_bcp,
-                                    Program* program,
-                                    bool include_last) {
+int StackWalker::ComputeStackOffset(uint8* end_bcp, bool include_last) {
   int stack_offset = 0;
-  uint8* bcp = function->bytecode_address_for(0);
+  uint8* bcp = function_->bytecode_address_for(0);
+  if (bcp == end_bcp) return 0;
+
+  // The noSuchMethod trampoline does not contain any catch-blocks and has
+  // a dynamic height. Skip it by finding the sentinel value on the stack.
+  if (*bcp == Opcode::kEnterNoSuchMethod) {
+    int stack_start = stack_->top() + stack_offset_;
+    int offset = stack_start;
+    while (stack_->get(offset) != process_->program()->sentinel_object()) {
+      offset--;
+    }
+    return stack_start - offset;
+  }
+
   int next_diff = 0;
   while (bcp != end_bcp) {
     ASSERT(bcp < end_bcp);
     stack_offset += next_diff;
-    next_diff = StackDiff(&bcp, end_bcp, program, stack_offset, include_last);
+    next_diff = StackDiff(&bcp, end_bcp, stack_offset, include_last);
   }
   ASSERT(bcp == end_bcp);
   if (include_last) stack_offset += next_diff;
@@ -194,10 +204,7 @@ uint8* StackWalker::ComputeCatchBlock(Process* process, int* stack_delta) {
       if (start_address < return_address && end_address > return_address) {
         // The first hit is the one we use (due to the order they are
         // emitted).
-        delta -= StackWalker::ComputeStackOffset(function,
-                                                 end_address,
-                                                 process->program(),
-                                                 true);
+        delta -= walker.ComputeStackOffset(end_address, true);
         *stack_delta = delta;
         return end_address;
       }
