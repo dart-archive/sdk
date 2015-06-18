@@ -80,13 +80,6 @@ Port* Port::CleanupPorts(Port* head) {
     }
     current = next;
   }
-#ifdef DEBUG
-  current = head;
-  while (current != NULL) {
-    ASSERT(current->ref_count_ > 0);
-    current = current->next();
-  }
-#endif
   return head;
 }
 
