@@ -172,6 +172,7 @@ class FletchBackend extends Backend {
   LibraryElement fletchIOSystemLibrary;
   LibraryElement collectionLibrary;
   LibraryElement mathLibrary;
+  LibraryElement asyncLibrary;
 
   FunctionElement fletchSystemEntry;
 
@@ -1181,6 +1182,8 @@ class FletchBackend extends Backend {
       collectionLibrary = library;
     } else if (Uri.parse('dart:math') == library.canonicalUri) {
       mathLibrary = library;
+    } else if (Uri.parse('dart:async') == library.canonicalUri) {
+      asyncLibrary = library;
     }
 
     if (library.isPlatformLibrary && !library.isPatched) {
@@ -1217,6 +1220,8 @@ class FletchBackend extends Backend {
     } else if (element.library == compiler.coreLibrary) {
       // Nothing needed for now.
     } else if (element.library == mathLibrary) {
+      // Nothing needed for now.
+    } else if (element.library == asyncLibrary) {
       // Nothing needed for now.
     } else if (element.library == fletchFFILibrary) {
       // Nothing needed for now.

@@ -78,7 +78,6 @@ class_literal_test/23: Crash
 class_literal_test/24: Crash
 class_literal_test/25: Crash
 class_literal_test/none: Crash
-closure_cycles_test: CompileTimeError
 closure_in_constructor_test: Fail
 closure_in_initializer_test: Crash
 closure_type_variable_test: Fail
@@ -131,6 +130,13 @@ cyclic_typedef_test/10: MissingCompileTimeError
 cyclic_typedef_test/11: MissingCompileTimeError
 deferred_closurize_load_library_test: Fail
 deferred_constraints_constants_test/none: Fail
+deferred_constraints_constants_test/constructor1: MissingCompileTimeError
+deferred_constraints_constants_test/constructor2: MissingCompileTimeError
+deferred_constraints_constants_test/default_argument1: MissingCompileTimeError
+deferred_constraints_constants_test/default_argument2: MissingCompileTimeError
+deferred_constraints_constants_test/metadata1: MissingCompileTimeError
+deferred_constraints_constants_test/metadata2: MissingCompileTimeError
+deferred_constraints_constants_test/metadata3: MissingCompileTimeError
 deferred_constraints_constants_test/reference_after_load: Fail
 deferred_constraints_type_annotation_test/as_operation: Fail
 deferred_constraints_type_annotation_test/catch_check: Fail
@@ -458,7 +464,6 @@ vm/no_such_method_error_message_vm_test: Fail
 vm/optimized_guarded_field_isolates_test: CompileTimeError
 vm/reflect_core_vm_test: CompileTimeError
 vm/reusable_boxes_test: CompileTimeError
-vm/store_to_load_forwarding_phis_vm_test: CompileTimeError
 vm/type_cast_vm_test: Fail
 vm/type_vm_test: Fail
 vm/typed_data_polymorphic_view_test: Fail

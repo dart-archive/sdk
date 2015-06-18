@@ -40,6 +40,7 @@ const FLETCH_PATCHES = const <String, String>{
   "convert": "convert/convert_patch.dart",
   "core": "core/core_patch.dart",
   "math": "math/math_patch.dart",
+  "async": "async/async_patch.dart",
   "typed_data": "typed_data/typed_data_patch.dart",
 };
 

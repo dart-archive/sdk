@@ -1,0 +1,45 @@
+diff --git a/pkg/async_helper/lib/async_helper.dart b/pkg/async_helper/lib/async_helper.dart
+index 37496bc..24309c0 100644
+--- a/pkg/async_helper/lib/async_helper.dart
++++ b/pkg/async_helper/lib/async_helper.dart
+@@ -30,13 +30,19 @@ library async_helper;
+ import 'dart:isolate';
+ 
+ bool _initialized = false;
+-ReceivePort _port = null;
++Port _port = null;
+ int _asyncLevel = 0;
+ 
+ Exception _buildException(String msg) {
+   return new Exception('Fatal: $msg. This is most likely a bug in your test.');
+ }
+ 
++void _waitForMessage(Port port) {
++  Channel channel = new Channel();
++  port.send(new Port(channel));
++  channel.receive();
++}
++
+ /// Call this method before an asynchronous test is created.
+ void asyncStart() {
+   if (_initialized && _asyncLevel == 0) {
+@@ -46,7 +52,9 @@ void asyncStart() {
+   if (!_initialized) {
+     print('unittest-suite-wait-for-done');
+     _initialized = true;
+-    _port = new ReceivePort();
++    var channel = new Channel();
++    Process.spawn(_waitForMessage, new Port(channel));
++    _port = channel.receive();
+   }
+   _asyncLevel++;
+ }
+@@ -63,7 +71,7 @@ void asyncEnd() {
+   }
+   _asyncLevel--;
+   if (_asyncLevel == 0) {
+-    _port.close();
++    _port.send(null);
+     _port = null;
+     print('unittest-suite-success');
+   }
