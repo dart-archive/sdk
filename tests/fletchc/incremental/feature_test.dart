@@ -2148,9 +2148,9 @@ compileAndRun(EncodedResult encodedResult) async {
   print(numberedLines(program.code));
 
   IoCompilerTestCase test = new IoCompilerTestCase(program.code);
-  FletchSystem fletchSystem = await test.run();
+  FletchDelta fletchDelta = await test.run();
 
-  TestSession session = await runFletchVM(test, fletchSystem);
+  TestSession session = await runFletchVM(test, fletchDelta);
 
   bool hasStderrOutput = false;
   bool hasExtraStdoutOutput = false;
@@ -2397,7 +2397,7 @@ List<String> splitLines(String text) {
 
 Future<TestSession> runFletchVM(
     IoCompilerTestCase test,
-    FletchSystem fletchSystem) async {
+    FletchDelta fletchDelta) async {
   var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 
   List<String> vmOptions = <String>[
@@ -2435,7 +2435,7 @@ Future<TestSession> runFletchVM(
     session.vmCommands = new CommandReader(vmSocket).iterator;
 
     if (testSessionReset) {
-      for (Command command in fletchSystem.commands) {
+      for (Command command in fletchDelta.commands) {
         command.addTo(vmSocket);
       }
 
@@ -2457,7 +2457,7 @@ Future<TestSession> runFletchVM(
       const commands_lib.SessionReset().addTo(vmSocket);
     }
 
-    for (Command command in fletchSystem.commands) {
+    for (Command command in fletchDelta.commands) {
       command.addTo(vmSocket);
     }
 

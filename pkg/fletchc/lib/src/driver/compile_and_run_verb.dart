@@ -86,7 +86,7 @@ Future<int> compileAndRun(
           options: options, script: script, fletchVm: fletchVm,
           packageRoot: packageRoot);
   bool compilerCrashed = false;
-  FletchSystem fletchSystem = await compiler.run().catchError((e, trace) {
+  FletchDelta fletchDelta = await compiler.run().catchError((e, trace) {
     compilerCrashed = true;
     // TODO(ahe): Remove this catchError block when this bug is fixed:
     // https://code.google.com/p/dart/issues/detail?id=22437.
@@ -157,7 +157,7 @@ Future<int> compileAndRun(
   }
 
   trackSubscription(vmSocket.listen(null), "vmSocket");
-  fletchSystem.commands.forEach((command) => command.addTo(vmSocket));
+  fletchDelta.commands.forEach((command) => command.addTo(vmSocket));
 
   if (snapshotPath == null) {
     const commands_lib.ProcessSpawnForMain().addTo(vmSocket);

@@ -113,6 +113,9 @@ import '../bytecodes.dart';
 import '../commands.dart';
 import '../fletch_system.dart';
 
+const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
+    const <FletchFunction>[], const <FletchClass>[]);
+
 class FletchBackend extends Backend {
   static const String growableListName = '_GrowableList';
   static const String constantListName = '_ConstantList';
@@ -161,6 +164,8 @@ class FletchBackend extends Backend {
 
   Map<FletchClassBuilder, FletchFunctionBuilder> tearoffFunctions;
 
+  final FletchSystem predecessorSystem;
+
   List<Command> commands;
 
   LibraryElement fletchSystemLibrary;
@@ -194,7 +199,9 @@ class FletchBackend extends Backend {
 
   final Set<FunctionElement> alwaysEnqueue = new Set<FunctionElement>();
 
-  FletchBackend(FletchCompiler compiler)
+  FletchBackend(
+      FletchCompiler compiler,
+      {this.predecessorSystem: BASE_FLETCH_SYSTEM})
       : this.context = compiler.context,
         this.constantCompilerTask = new DartConstantTask(compiler),
         super(compiler) {
@@ -952,7 +959,7 @@ class FletchBackend extends Backend {
     return 0;
   }
 
-  FletchSystem finalizeFletchSystem() {
+  FletchDelta computeDelta() {
     List<Command> commands = <Command>[
         const NewMap(MapId.methods),
         const NewMap(MapId.classes),
@@ -1080,8 +1087,10 @@ class FletchBackend extends Backend {
         MapId.methods,
         functionBuilders[fletchSystemEntry].methodId));
 
-    // TODO(ajohnsen): Create the fletch system.
-    return new FletchSystem(fletchFunctions, fletchClasses, commands);
+    return new FletchDelta(
+        new FletchSystem(fletchFunctions, fletchClasses),
+        predecessorSystem,
+        commands);
   }
 
   // TODO(ajohnsen): Remove when incremental has moved to FletchSystem.

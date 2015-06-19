@@ -76,7 +76,7 @@ main(List<String> arguments) async {
       options: options,
       script: script,
       packageRoot: "package/");
-  FletchSystem fletchSystem = await compiler.run();
+  FletchDelta fletchDelta = await compiler.run();
 
   FletchVm vm;
   if (connectToExistingVm) {
@@ -86,7 +86,7 @@ main(List<String> arguments) async {
     vm = await FletchVm.start(compiler);
   }
 
-  fletchSystem.commands.forEach((command) => command.addTo(vm.socket));
+  fletchDelta.commands.forEach((command) => command.addTo(vm.socket));
 
   var session = new Session(vm.socket, compiler);
 

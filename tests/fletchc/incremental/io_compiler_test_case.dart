@@ -50,11 +50,11 @@ class IoCompilerTestCase extends CompilerTestCase {
   IoCompilerTestCase(/* Map or String */ source, [String path])
       : this.init(source, customUri(path == null ? 'main.dart' : path));
 
-  Future<FletchSystem> run() {
+  Future<FletchDelta> run() {
     return incrementalCompiler.compile(scriptUri).then((success) {
       if (!success) throw 'Compilation failed';
       FletchBackend backend = incrementalCompiler.compiler.backend;
-      return backend.finalizeFletchSystem();
+      return backend.computeDelta();
     });
   }
 

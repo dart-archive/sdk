@@ -60,7 +60,14 @@ class FletchFunction {
 class FletchSystem {
   final List<FletchFunction> functions;
   final List<FletchClass> classes;
+
+  const FletchSystem(this.functions, this.classes);
+}
+
+class FletchDelta {
+  final FletchSystem system;
+  final FletchSystem predecessorSystem;
   final List<Command> commands;
 
-  const FletchSystem(this.functions, this.classes, this.commands);
+  const FletchDelta(this.system, this.predecessorSystem, this.commands);
 }
