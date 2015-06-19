@@ -26,16 +26,15 @@ import '../bytecodes.dart' show
     Bytecode,
     Opcode;
 
-import '../commands.dart';
-
 import 'fletch_class_builder.dart' show
     FletchClassBuilder;
-
-import 'fletch_system.dart';
 
 import 'fletch_context.dart';
 import 'bytecode_assembler.dart';
 import 'debug_info.dart';
+
+import '../fletch_system.dart';
+import '../commands.dart';
 
 enum FletchFunctionBuilderKind {
   NORMAL,

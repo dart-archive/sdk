@@ -12,8 +12,8 @@ import 'class_debug_info.dart';
 import 'fletch_function_builder.dart';
 import 'fletch_context.dart';
 import 'fletch_backend.dart';
-import 'fletch_system.dart';
 
+import '../fletch_system.dart';
 import '../commands.dart';
 
 class FletchClassBuilder {

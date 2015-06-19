@@ -97,12 +97,6 @@ import 'fletch_function_builder.dart' show
 import 'fletch_class_builder.dart' show
     FletchClassBuilder;
 
-import 'fletch_system.dart' show
-    FletchClass,
-    FletchConstant,
-    FletchFunction,
-    FletchSystem;
-
 import 'codegen_visitor.dart';
 import 'debug_info.dart';
 import 'debug_info_constructor_codegen.dart';
@@ -114,8 +108,10 @@ import 'function_codegen.dart';
 import 'lazy_field_initializer_codegen.dart';
 import 'constructor_codegen.dart';
 import 'closure_environment.dart';
+
 import '../bytecodes.dart';
 import '../commands.dart';
+import '../fletch_system.dart';
 
 class FletchBackend extends Backend {
   static const String growableListName = '_GrowableList';

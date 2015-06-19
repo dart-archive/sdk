@@ -12,7 +12,7 @@ import 'compiler.dart' show
 
 import 'fletch_vm.dart';
 
-import 'src/fletch_system.dart';
+import 'fletch_system.dart';
 
 import 'session.dart';
 

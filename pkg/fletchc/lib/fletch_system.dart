@@ -4,9 +4,8 @@
 
 library fletchc.fletch_system;
 
-import '../bytecodes.dart';
-
-import '../commands.dart';
+import 'bytecodes.dart';
+import 'commands.dart';
 
 // TODO(ajohnsen): Move to separate file.
 class FletchConstant {

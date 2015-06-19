@@ -23,7 +23,7 @@ import '../../compiler.dart' show
 
 import '../../commands.dart' as commands_lib;
 
-import '../fletch_system.dart';
+import '../../fletch_system.dart';
 
 import 'driver_commands.dart' show
     Command,

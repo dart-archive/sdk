@@ -51,7 +51,7 @@ import 'package:fletchc/commands.dart' show
     Command,
     MapId;
 
-import 'package:fletchc/src/fletch_system.dart';
+import 'package:fletchc/fletch_system.dart';
 
 import 'package:fletchc/commands.dart' as commands_lib;
 

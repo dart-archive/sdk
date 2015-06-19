@@ -26,7 +26,7 @@ import 'package:fletchc/commands.dart' show
 import 'package:fletchc/src/fletch_backend.dart' show
     FletchBackend;
 
-import 'package:fletchc/src/fletch_system.dart';
+import 'package:fletchc/fletch_system.dart';
 
 import 'package:compiler/compiler.dart' show
     Diagnostic;
