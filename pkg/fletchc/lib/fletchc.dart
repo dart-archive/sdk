@@ -12,6 +12,8 @@ import 'compiler.dart' show
 
 import 'fletch_vm.dart';
 
+import 'src/fletch_system.dart';
+
 import 'session.dart';
 
 const COMPILER_CRASHED = 253;
@@ -74,7 +76,7 @@ main(List<String> arguments) async {
       options: options,
       script: script,
       packageRoot: "package/");
-  List commands = await compiler.run();
+  FletchSystem fletchSystem = await compiler.run();
 
   FletchVm vm;
   if (connectToExistingVm) {
@@ -84,7 +86,7 @@ main(List<String> arguments) async {
     vm = await FletchVm.start(compiler);
   }
 
-  commands.forEach((command) => command.addTo(vm.socket));
+  fletchSystem.commands.forEach((command) => command.addTo(vm.socket));
 
   var session = new Session(vm.socket, compiler);
 

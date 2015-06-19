@@ -59,4 +59,9 @@ class FletchFunction {
 }
 
 class FletchSystem {
+  final List<FletchFunction> functions;
+  final List<FletchClass> classes;
+  final List<Command> commands;
+
+  const FletchSystem(this.functions, this.classes, this.commands);
 }

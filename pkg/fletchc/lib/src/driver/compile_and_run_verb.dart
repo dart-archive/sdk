@@ -23,6 +23,8 @@ import '../../compiler.dart' show
 
 import '../../commands.dart' as commands_lib;
 
+import '../fletch_system.dart';
+
 import 'driver_commands.dart' show
     Command,
     CommandSender,
@@ -83,13 +85,13 @@ Future<int> compileAndRun(
           options: options, script: script, fletchVm: fletchVm,
           packageRoot: packageRoot);
   bool compilerCrashed = false;
-  List commands = await compiler.run().catchError((e, trace) {
+  FletchSystem fletchSystem = await compiler.run().catchError((e, trace) {
     compilerCrashed = true;
     // TODO(ahe): Remove this catchError block when this bug is fixed:
     // https://code.google.com/p/dart/issues/detail?id=22437.
     print(e);
     print(trace);
-    return [];
+    return null;
   });
   if (compilerCrashed) {
     return COMPILER_CRASHED;
@@ -154,7 +156,7 @@ Future<int> compileAndRun(
   }
 
   trackSubscription(vmSocket.listen(null), "vmSocket");
-  commands.forEach((command) => command.addTo(vmSocket));
+  fletchSystem.commands.forEach((command) => command.addTo(vmSocket));
 
   if (snapshotPath == null) {
     const commands_lib.ProcessSpawnForMain().addTo(vmSocket);

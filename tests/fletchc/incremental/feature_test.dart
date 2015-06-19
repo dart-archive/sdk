@@ -51,6 +51,8 @@ import 'package:fletchc/commands.dart' show
     Command,
     MapId;
 
+import 'package:fletchc/src/fletch_system.dart';
+
 import 'package:fletchc/commands.dart' as commands_lib;
 
 import 'package:fletchc/session.dart' show
@@ -2146,9 +2148,9 @@ compileAndRun(EncodedResult encodedResult) async {
   print(numberedLines(program.code));
 
   IoCompilerTestCase test = new IoCompilerTestCase(program.code);
-  List<Command> commands = await test.run();
+  FletchSystem fletchSystem = await test.run();
 
-  TestSession session = await runFletchVM(test, commands);
+  TestSession session = await runFletchVM(test, fletchSystem);
 
   bool hasStderrOutput = false;
   bool hasExtraStdoutOutput = false;
@@ -2395,7 +2397,7 @@ List<String> splitLines(String text) {
 
 Future<TestSession> runFletchVM(
     IoCompilerTestCase test,
-    List<Command> commands) async {
+    FletchSystem fletchSystem) async {
   var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 
   List<String> vmOptions = <String>[
@@ -2433,7 +2435,7 @@ Future<TestSession> runFletchVM(
     session.vmCommands = new CommandReader(vmSocket).iterator;
 
     if (testSessionReset) {
-      for (Command command in commands) {
+      for (Command command in fletchSystem.commands) {
         command.addTo(vmSocket);
       }
 
@@ -2455,7 +2457,7 @@ Future<TestSession> runFletchVM(
       const commands_lib.SessionReset().addTo(vmSocket);
     }
 
-    for (Command command in commands) {
+    for (Command command in fletchSystem.commands) {
       command.addTo(vmSocket);
     }
 

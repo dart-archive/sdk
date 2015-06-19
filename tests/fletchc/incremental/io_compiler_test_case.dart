@@ -26,6 +26,8 @@ import 'package:fletchc/commands.dart' show
 import 'package:fletchc/src/fletch_backend.dart' show
     FletchBackend;
 
+import 'package:fletchc/src/fletch_system.dart';
+
 import 'package:compiler/compiler.dart' show
     Diagnostic;
 
@@ -48,11 +50,11 @@ class IoCompilerTestCase extends CompilerTestCase {
   IoCompilerTestCase(/* Map or String */ source, [String path])
       : this.init(source, customUri(path == null ? 'main.dart' : path));
 
-  Future<List<Command>> run() {
+  Future<FletchSystem> run() {
     return incrementalCompiler.compile(scriptUri).then((success) {
       if (!success) throw 'Compilation failed';
       FletchBackend backend = incrementalCompiler.compiler.backend;
-      return backend.commands;
+      return backend.finalizeFletchSystem();
     });
   }
 

@@ -220,7 +220,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     }
     await _inititalizeContext();
     FletchBackend backend = _compiler.backend;
-    return _compiler.run(script).then((_) => backend.commands);
+    return _compiler.run(script).then((_) => backend.finalizeFletchSystem());
   }
 
   Future _inititalizeContext() async {

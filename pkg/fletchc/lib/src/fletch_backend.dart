@@ -953,13 +953,10 @@ class FletchBackend extends Backend {
       // This is a workaround, where we basically add getters for all fields.
       classBuilder.createImplicitAccessors(this);
     }
-
-    createFletchSystem();
-
     return 0;
   }
 
-  FletchSystem createFletchSystem() {
+  FletchSystem finalizeFletchSystem() {
     List<Command> commands = <Command>[
         const NewMap(MapId.methods),
         const NewMap(MapId.classes),
@@ -1087,10 +1084,8 @@ class FletchBackend extends Backend {
         MapId.methods,
         functionBuilders[fletchSystemEntry].methodId));
 
-    this.commands = commands;
-
     // TODO(ajohnsen): Create the fletch system.
-    return null;
+    return new FletchSystem(fletchFunctions, fletchClasses, commands);
   }
 
   // TODO(ajohnsen): Remove when incremental has moved to FletchSystem.
@@ -1270,8 +1265,9 @@ class FletchBackend extends Backend {
     return index;
   }
 
-  FletchFunctionBuilder compileConstructor(ConstructorElement constructor,
-                                      Registry registry) {
+  FletchFunctionBuilder compileConstructor(
+      ConstructorElement constructor,
+      Registry registry) {
     assert(constructor.isDeclaration);
     FletchFunctionBuilder functionBuilder = constructors[constructor];
     if (functionBuilder != null) return functionBuilder;
