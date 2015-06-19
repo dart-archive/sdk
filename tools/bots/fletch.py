@@ -244,8 +244,7 @@ def AnalyzeLog():
         print '@@@STEP_LOG_LINE@undiagnosed_crashes@%s@@@' % line.rstrip()
     if undiagnosed_crashes:
       print '@@@STEP_LOG_END@undiagnosed_crashes@@@'
-      print '@@@STEP_WARNINGS@@@'
-      sys.stdout.flush()
+      MarkCurrentStep(fatal=True)
 
 def StepBuild(build_config, build_dir, args=()):
   with bot.BuildStep('Build %s' % build_config):
@@ -374,10 +373,23 @@ def GetCompilerVariants(system, arch):
 def TarballName(arch, revision):
   return 'fletch_cross_build_%s_%s.tar.bz2' % (arch, revision)
 
+def MarkCurrentStep(fatal=True):
+  """Mark the current step as having a problem.
+
+If fatal is True, mark the current step as failed (red), otherwise mark it as
+having warnings (orange).
+
+  """
+  # See
+  # https://chromium.googlesource.com/chromium/tools/build/+/c63ec51491a8e47b724b5206a76f8b5e137ff1e7/scripts/master/chromium_step.py#495
+  if fatal:
+    print '@@@STEP_FAILURE@@@'
+  else:
+    print '@@@STEP_WARNINGS@@@'
+  sys.stdout.flush()
 
 if __name__ == '__main__':
   # If main raises an exception we will get a very useful error message with
   # traceback written to stderr. We therefore intentionally do not catch
   # exceptions.
   Main()
-
