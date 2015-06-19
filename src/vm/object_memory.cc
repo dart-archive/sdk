@@ -242,9 +242,8 @@ void ObjectMemory::TearDown() {
 
 #ifdef DEBUG
 void Chunk::Scramble() {
-  for (uword p = base(); p < limit(); p += sizeof(uword)) {
-    *reinterpret_cast<uword*>(p) = 0xcafebabe;
-  }
+  void* p = reinterpret_cast<void*>(base());
+  memset(p, 0xab, limit() - base());
 }
 #endif
 
