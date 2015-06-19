@@ -39,7 +39,12 @@ class Verb {
   final DoVerb perform;
   final String documentation;
 
-  const Verb(this.perform, this.documentation);
+  /// True if this verb needs to run in a separate worker isolate.
+  // TODO(ahe): Remove this option when all command-line processing is moved to
+  // main isolate.
+  final bool requiresWorker;
+
+  const Verb(this.perform, this.documentation, {this.requiresWorker: false});
 }
 
 /// Common verbs are displayed in the default help screen.

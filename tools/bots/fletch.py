@@ -302,7 +302,12 @@ class PersistentFletchDaemon(object):
        './.fletch'],
       stdout=self._debug_log,
       stderr=subprocess.STDOUT,
-      close_fds=True)
+      close_fds=True,
+      # Launch the persistent process in a new process group. When shutting
+      # down in response to a signal, the persistent process will kill its
+      # process group to ensure that any processes it has spawned also exit. If
+      # we don't use a new process group, that will also kill this process.
+      preexec_fn=os.setsid)
 
   def __exit__(self, *_):
     print "Trying to wait for existing fletch daemon."

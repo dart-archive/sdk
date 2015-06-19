@@ -105,6 +105,9 @@ Future handleClient(SendPort clientOutgoing, ReceivePort clientIncoming) async {
       throw "Expected arguments from clients but got: $command";
     }
 
+    // TODO(ahe): Remove the command-line processing below once it is fully
+    // moved to the main isolate.
+
     // This is argv from a C/C++ program. The first entry is the program
     // name which isn't normally included in Dart arguments (as passed to
     // main).

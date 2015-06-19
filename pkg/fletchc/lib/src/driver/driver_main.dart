@@ -21,7 +21,9 @@ import 'dart:async' show
     Stream,
     StreamController,
     StreamIterator,
-    StreamSubscription;
+    StreamSubscription,
+    Zone,
+    ZoneSpecification;
 
 import 'dart:typed_data' show
     ByteData,
@@ -50,9 +52,16 @@ import 'driver_commands.dart' show
 import 'driver_isolate.dart' show
     isolateMain;
 
+import 'verbs.dart' show
+    Verb,
+    commonVerbs,
+    uncommonVerbs;
+
 const Endianness commandEndianness = Endianness.LITTLE_ENDIAN;
 
 const headerSize = 5;
+
+Function gracefulShutdown;
 
 class ControlStream {
   final Stream<List<int>> stream;
@@ -212,31 +221,46 @@ Future main(List<String> arguments) async {
     // Ignored. There's no way to check if a socket file exists.
   }
 
-  void gracefulShutdown(ProcessSignal signal) {
-    print("Received signal $signal");
+  ServerSocket server;
 
+  gracefulShutdown = () {
     try {
       socketFile.deleteSync();
-      tmpdir.deleteSync(recursive: true);
     } catch (e) {
-      print(e);
+      print("Unable to delete ${socketFile.path}: $e");
     }
 
     try {
-      configFile.deleteSync();
+      tmpdir.deleteSync(recursive: true);
     } catch (e) {
-      print(e);
+      print("Unable to delete ${tmpdir.path}: $e");
     }
 
-    int exitCode = signal == ProcessSignal.SIGTERM ? 15 : 2;
-    exit(-exitCode);
+    if (server != null) {
+      server.close();
+    }
+  };
+
+  void handleSignal(StreamSubscription<ProcessSignal> subscription) {
+    subscription.onData((ProcessSignal signal) {
+      // Cancel the subscription to restore default signal handler.
+      subscription.cancel();
+      print("Received signal $signal");
+      gracefulShutdown();
+      // 0 means kill the current process group (including this process, which
+      // will now die as we restored the default signal handler above).  In
+      // addition, killing this process ensures that any processes waiting for
+      // it will observe that it was killed due to a signal. There's no way to
+      // fake that status using exit.
+      Process.killPid(0, signal);
+    });
   }
 
-  // When receiving SIGTERM or SIGINT, remove socket and config file.
-  ProcessSignal.SIGTERM.watch().listen(gracefulShutdown);
-  ProcessSignal.SIGINT.watch().listen(gracefulShutdown);
+  // When receiving SIGTERM or gracefully shut down.
+  handleSignal(ProcessSignal.SIGTERM.watch().listen(null));
+  handleSignal(ProcessSignal.SIGINT.watch().listen(null));
 
-  ServerSocket server = await ServerSocket.bind(
+  server = await ServerSocket.bind(
       new
       UnixDomainAddress // NO_LINT
       (socketFile.path), 0);
@@ -260,13 +284,27 @@ Future main(List<String> arguments) async {
           handleSocketErrors(connectionIterator.current, "controlSocket"));
     }
   } finally {
-    // TODO(ahe): Do this in a SIGTERM handler.
-    configFile.delete();
+    gracefulShutdown();
   }
 }
 
-Future handleClient(IsolatePool pool, Socket controlSocket) async {
+Future<Null> handleClient(IsolatePool pool, Socket controlSocket) async {
   ClientLogger log = ClientLogger.allocate();
+
+  ClientController client = new ClientController(controlSocket, log)..start();
+  List<String> arguments = await client.arguments;
+  log.gotArguments(arguments);
+
+  arguments = client.parseArguments(arguments);
+
+  if (client.requiresWorker) {
+    handleClientInWorker(pool, client);
+  } else {
+    await handleVerbHere(arguments, client);
+  }
+}
+
+void handleClientInWorker(IsolatePool pool, ClientController client) {
   // This method needs to do the following:
   // * Spawn a new worker isolate (or reuse an existing) to perform the task.
   //
@@ -280,12 +318,9 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
   //
   // * Store completed isolates in a pool.
 
-  ClientController client = new ClientController(controlSocket, log)..start();
-  List<String> arguments = await client.arguments;
-  log.gotArguments(arguments);
-
-  // The rest is asynchronous, so we can respond to other requests.
+  // This is asynchronous, so we can respond to other requests.
   new Future(() async {
+    ClientLogger log = client.log;
     // Spawn/reuse a worker isolate.
     IsolateController worker =
         new IsolateController(await pool.getIsolate(exitOnError: false));
@@ -313,6 +348,42 @@ Future handleClient(IsolatePool pool, Socket controlSocket) async {
   });
 }
 
+Future<Null> handleVerbHere(
+    List<String> arguments,
+    ClientController client) async {
+  ZoneSpecification specification =
+      new ZoneSpecification(print: (_1, _2, _3, String line) {
+        client.printLineOnStdout(line);
+      },
+      handleUncaughtError: (_1, _2, _3, error, StackTrace stackTrace) {
+        String message =
+            "\n\nExiting due to uncaught error.\n"
+            "${stringifyError(error, stackTrace)}";
+        Zone.ROOT.print(message);
+        client.printLineOnStderr(message);
+        exit(DART_VM_EXITCODE_UNCAUGHT_EXCEPTION);
+      });
+
+  int exitCode = await Zone.current.fork(specification: specification).run(
+      () async {
+        try {
+          return await client.verb.perform(
+              client.fletchVm,
+              arguments,
+              null,
+              null);
+        } catch (error, stackTrace) {
+          String message =
+              "\n\nExiting due to uncaught error.\n"
+              "${stringifyError(error, stackTrace)}";
+          Zone.ROOT.print(message);
+          client.printLineOnStderr(message);
+          return DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+        }
+      });
+  client.exit(exitCode);
+}
+
 /// Handles communication with the C++ client.
 class ClientController {
   final Socket socket;
@@ -328,6 +399,12 @@ class ClientController {
 
   Completer<List<String>> argumentsCompleter = new Completer<List<String>>();
 
+  /// The verb request by the client. Updated by [parseArguments].
+  Verb verb;
+
+  /// Path to the fletch VM. Updated by [parseArguments].
+  String fletchVm;
+
   ClientController(this.socket, this.log);
 
   /// A stream of commands from the client that should be forwarded to a worker
@@ -339,6 +416,8 @@ class ClientController {
 
   /// Completes with the command-line arguments from the client.
   Future<List<String>> get arguments => argumentsCompleter.future;
+
+  bool get requiresWorker => verb.requiresWorker;
 
   /// Start processing commands from the client.
   void start() {
@@ -399,6 +478,42 @@ class ClientController {
 
   void printLineOnStderr(String line) {
     commandSender.sendStderrBytes(UTF8.encode("$line\n"));
+  }
+
+  void printLineOnStdout(String line) {
+    commandSender.sendStdoutBytes(UTF8.encode('$line\n'));
+  }
+
+  void exit(int exitCode) {
+    commandSender.sendExitCode(exitCode);
+    endSession();
+  }
+
+  List<String> parseArguments(List<String> arguments) {
+    /// [programName] is the canonicalized absolute path to the fletch
+    /// executable (the C++ program).
+    String programName = arguments.first;
+    String fletchVm = "$programName-vm";
+    String verbName;
+    if (arguments.length < 2) {
+      verbName = 'help';
+      arguments = <String>[];
+    } else {
+      verbName = arguments[1];
+      arguments = arguments.skip(2).toList();
+    }
+    Verb verb = commonVerbs[verbName];
+    if (verb == null) {
+      verb = uncommonVerbs[verbName];
+    }
+    if (verb == null) {
+      printLineOnStderr("Unknown argument: $verbName");
+      verb = commonVerbs['help'];
+    }
+
+    this.verb = verb;
+    this.fletchVm = fletchVm;
+    return arguments;
   }
 }
 

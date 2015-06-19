@@ -35,7 +35,8 @@ import 'driver_commands.dart' show
 import 'verbs.dart' show
     Verb;
 
-const Verb compileAndRunVerb = const Verb(compileAndRun, documentation);
+const Verb compileAndRunVerb =
+    const Verb(compileAndRun, documentation, requiresWorker: true);
 
 const String documentation = """
    compile-and-run [options] dartfile

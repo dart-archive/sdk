@@ -13,6 +13,9 @@ import 'dart:async' show
 import 'verbs.dart' show
     Verb;
 
+import 'driver_main.dart' show
+    gracefulShutdown;
+
 const Verb shutdownVerb = const Verb(shutdown, documentation);
 
 const String documentation = """
@@ -24,9 +27,7 @@ Future<int> shutdown(
     List<String> arguments,
     _b,
     _c,
-    {packageRoot: "package/"}) async {
-  // TODO(ahe): Gracefully shutdown: remove the socket file and wait for other
-  // isolates to exit.
-  new Future.delayed(const Duration(milliseconds: 500), () => exit(0));
-  return 0;
+    {packageRoot: "package/"}) {
+  gracefulShutdown();
+  return new Future.value(0);
 }
