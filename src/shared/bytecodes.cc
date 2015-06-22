@@ -198,4 +198,21 @@ bool Bytecode::IsInvokeVtable(Opcode opcode) {
   return ComputeInvokeKind(opcode) == VTABLE;
 }
 
+// TODO(ager): use branches to skip forward by more than
+// a bytecode at a time as in StackWalker::StackDiff.
+uint8* Bytecode::PreviousBytecode(uint8* current_bcp) {
+  uint8* bcp = current_bcp;
+  while (*bcp != kMethodEnd) {
+    bcp += Bytecode::Size(static_cast<Opcode>(*bcp));
+  }
+  int delta = Utils::ReadInt32(bcp + 1);
+  bcp -= delta;
+  uint8* previous = NULL;
+  while (bcp != current_bcp) {
+    previous = bcp;
+    bcp += Bytecode::Size(static_cast<Opcode>(*bcp));
+  }
+  return previous;
+}
+
 }  // namespace fletch

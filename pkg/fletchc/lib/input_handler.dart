@@ -19,6 +19,7 @@ Commands:
   's'                                   step
   'so'                                  step over
   'finish'                              finish current method (step out)
+  'restart'                             restart the selected frame
   'sb'                                  step bytecode
   'sob'                                 step over bytecode
   'c'                                   continue execution
@@ -46,6 +47,10 @@ class InputHandler {
 
   Future handleLine(String line) async {
     if (line.isEmpty) line = previousLine;
+    if (line.isEmpty) {
+      printPrompt();
+      return;
+    }
     previousLine = line;
     if (stream != stdin) print(line);
     List<String> commandComponents =
@@ -124,6 +129,9 @@ class InputHandler {
         break;
       case 'finish':
         await session.stepOut();
+        break;
+      case 'restart':
+        await session.restart();
         break;
       case 'lb':
         session.listBreakpoints();

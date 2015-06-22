@@ -39,7 +39,7 @@ bool StackWalker::MoveNext() {
 }
 
 int StackWalker::CookFrame() {
-  uint8_t* start = function_->bytecode_address_for(0);
+  uint8* start = function_->bytecode_address_for(0);
   stack_->set(stack_->top() + stack_offset_ + frame_size_ + 1, function_);
   return return_address_ - start;
 }
@@ -48,7 +48,7 @@ void StackWalker::UncookFrame(int delta) {
   Object* current = stack_->get(stack_->top() + stack_offset_);
   if (current == NULL) return;
   Function* function = Function::cast(current);
-  uint8_t* start = function->bytecode_address_for(0);
+  uint8* start = function->bytecode_address_for(0);
   Object* bcp = reinterpret_cast<Object*>(start + delta);
   stack_->set(stack_->top() + stack_offset_, bcp);
 }
@@ -56,6 +56,16 @@ void StackWalker::UncookFrame(int delta) {
 Object* StackWalker::GetLocal(int slot) {
   int stack_index = stack_->top() + stack_offset_ + 1 + slot;
   return stack_->get(stack_index);
+}
+
+void StackWalker::RestartCurrentFrame() {
+  int bcp_offset = stack_->top() + stack_offset_;
+  uint8* return_bcp = reinterpret_cast<uint8*>(stack_->get(bcp_offset));
+  uint8* previous_bcp = return_bcp - Bytecode::Size(Opcode::kInvokeStatic);
+  ASSERT(previous_bcp == Bytecode::PreviousBytecode(return_bcp));
+  ASSERT(Bytecode::IsInvoke(static_cast<Opcode>(*previous_bcp)));
+  stack_->set(bcp_offset, reinterpret_cast<Object*>(previous_bcp));
+  stack_->set_top(bcp_offset);
 }
 
 int StackWalker::StackDiff(uint8** bcp,
@@ -232,6 +242,13 @@ int StackWalker::ComputeStackTrace(Process* process, Session* session) {
     ++frames;
   }
   return frames;
+}
+
+void StackWalker::RestartFrame(Process* process, int frame) {
+  StackWalker walker(process, process->stack());
+  walker.MoveNext();
+  for (int i = 0; i < frame; i++) walker.MoveNext();
+  return walker.RestartCurrentFrame();
 }
 
 Object* StackWalker::ComputeLocal(Process* process, int frame, int slot) {

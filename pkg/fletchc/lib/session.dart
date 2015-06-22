@@ -301,6 +301,17 @@ class Session {
     await backtrace();
   }
 
+  Future restart() async {
+    if (!checkRunning()) return null;
+    if (currentStackTrace.stackFrames.length <= 1) {
+      print("### cannot restart entry frame");
+      return null;
+    }
+    new ProcessRestartFrame(currentFrame).addTo(vmSocket);
+    await handleProcessStop();
+    await backtrace();
+  }
+
   Future stepBytecode() async {
     if (!checkRunning()) return null;
     const ProcessStep().addTo(vmSocket);

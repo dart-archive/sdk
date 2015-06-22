@@ -279,6 +279,14 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kProcessRestartFrame: {
+        int frame = connection_->ReadInt();
+        StackWalker::RestartFrame(process_, frame);
+        Scheduler* scheduler = program()->scheduler();
+        scheduler->ProcessContinue(process_);
+        break;
+      }
+
       case Connection::kSessionEnd: {
         debugging_ = false;
         SignalMainThread(kSessionEnd);

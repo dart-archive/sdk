@@ -70,6 +70,7 @@ class Connection {
     kProcessBreakpoint,
     kProcessLocal,
     kProcessLocalStructure,
+    kProcessRestartFrame,
     kProcessTerminated,
     kWriteSnapshot,
     kCollectGarbage,

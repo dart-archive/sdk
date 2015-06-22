@@ -170,6 +170,10 @@ class Bytecode {
   static bool IsInvokeFast(Opcode opcode);
   static bool IsInvokeVtable(Opcode opcode);
 
+  // Compute the previous bytecode. Takes time linear in the number of
+  // bytecodes in the method.
+  static uint8* PreviousBytecode(uint8* current_bcp);
+
  private:
   static int sizes_[];
   static int stack_diffs_[];

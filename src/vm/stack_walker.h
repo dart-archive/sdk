@@ -45,6 +45,10 @@ class StackWalker {
   // immediately after the return address in the current frame.
   Object* GetLocal(int slot);
 
+  // Manipulate the stack to restart the current frame when process
+  // continues.
+  void RestartCurrentFrame();
+
   Function* function() const { return function_; }
   uint8* return_address() const { return return_address_; }
   int frame_size() const { return frame_size_; }
@@ -59,6 +63,9 @@ class StackWalker {
 
   // Compute a stack trace and send it to the session.
   static int ComputeStackTrace(Process* process, Session* session);
+
+  // Manipulate the stack to restart frame |frame| when process continues.
+  static void RestartFrame(Process* process, int frame);
 
   // Compute the value of the local in stack frame |frame| in slot |slot|.
   static Object* ComputeLocal(Process* process, int frame, int slot);

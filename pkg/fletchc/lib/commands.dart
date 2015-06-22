@@ -717,6 +717,21 @@ class ProcessLocalStructure extends Command {
   String valuesToString() => "$classMap, $frame, $slot";
 }
 
+class ProcessRestartFrame extends Command {
+  final int frame;
+
+  const ProcessRestartFrame(this.frame)
+      : super(CommandCode.ProcessRestartFrame);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(frame)
+        ..sendOn(sink, code);
+  }
+
+  String valuesToString() => "$frame";
+}
+
 class ProcessStep extends Command {
   const ProcessStep()
       : super(CommandCode.ProcessStep);
@@ -914,6 +929,7 @@ enum CommandCode {
   ProcessBreakpoint,
   ProcessLocal,
   ProcessLocalStructure,
+  ProcessRestartFrame,
   ProcessTerminated,
   WriteSnapshot,
   CollectGarbage,
