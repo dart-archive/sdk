@@ -15,7 +15,7 @@ breakpoint set: 0: breakHere @0
 1
 0
 Stack trace:
-> 0: breakHere	
+> 0: breakHere	@void breakHere(){}
   1: foo      	@breakHere()
   2: foo      	@foo(i-1)
   3: foo      	@foo(i-1)
@@ -36,7 +36,7 @@ Stack trace:
 1
 0
 Stack trace:
-> 0: breakHere	
+> 0: breakHere	@void breakHere(){}
   1: foo      	@breakHere()
   2: foo      	@foo(i-1)
   3: foo      	@foo(i-1)
@@ -63,7 +63,7 @@ Stack trace:
 1
 0
 Stack trace:
-> 0: breakHere	
+> 0: breakHere	@void breakHere(){}
   1: foo      	@breakHere()
   2: foo      	@foo(i-1)
   3: foo      	@foo(i-1)
