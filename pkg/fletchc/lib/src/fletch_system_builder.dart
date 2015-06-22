@@ -17,17 +17,31 @@ import '../commands.dart';
 class FletchSystemBuilder {
   final FletchSystem predecessorSystem;
 
-  final List<FletchFunctionBuilder> newFunctions = <FletchFunctionBuilder>[];
-  final Map<int, ConstantValue> newConstants = <int, ConstantValue>{};
+  final List<FletchFunctionBuilder> _newFunctions = <FletchFunctionBuilder>[];
+  final Map<ConstantValue, int> _newConstants = <ConstantValue, int>{};
 
   FletchSystemBuilder(this.predecessorSystem);
 
-  void registerNewConstant(int value, ConstantValue constant) {
-    newConstants[value] = constant;
+  // TODO(ajohnsen): Remove and add a lookupConstant.
+  Map<ConstantValue, int> getCompiledConstants() => _newConstants;
+
+  void registerNewConstant(ConstantValue constant, FletchContext context) {
+    // TODO(ajohnsen): Look in predecessorSystem.
+    _newConstants.putIfAbsent(constant, () {
+      if (constant.isConstructedObject) {
+        context.registerConstructedConstantValue(constant);
+      } else if (constant.isFunction) {
+        context.registerFunctionConstantValue(constant);
+      }
+      for (ConstantValue value in constant.getDependencies()) {
+        registerNewConstant(value, context);
+      }
+      return _newConstants.length;
+    });
   }
 
   void registerNewFunction(FletchFunctionBuilder function) {
-    newFunctions.add(function);
+    _newFunctions.add(function);
   }
 
   // TODO(ajohnsen): Merge with FletchBackend's computeDelta.
@@ -37,16 +51,16 @@ class FletchSystemBuilder {
     int changes = 0;
 
     List<FletchFunction> fletchFunctions = <FletchFunction>[];
-    for (FletchFunctionBuilder functionBuilder in newFunctions) {
+    for (FletchFunctionBuilder functionBuilder in _newFunctions) {
       fletchFunctions.add(functionBuilder.finalizeFunction(context, commands));
     }
 
-    for (int id in newConstants.keys) {
+    _newConstants.forEach((ConstantValue constant, int id) {
       // TODO(ajohnsen): Support other constants.
-      StringConstantValue constant = newConstants[id];
-      commands.add(new PushNewString(constant.primitiveValue.slowToString()));
+      StringConstantValue value = constant;
+      commands.add(new PushNewString(value.primitiveValue.slowToString()));
       commands.add(new PopToMap(MapId.constants, id));
-    }
+    });
 
     for (FletchFunction function in fletchFunctions) {
       List<FletchConstant> constants = function.constants;
@@ -62,7 +76,7 @@ class FletchSystemBuilder {
 
     // TODO(ajohnsen): Big hack. We should not track method dependency like
     // this.
-    for (FletchFunctionBuilder function in newFunctions) {
+    for (FletchFunctionBuilder function in _newFunctions) {
       if (function.element == context.compiler.mainFunction) {
         FletchFunctionBuilder callMain =
             context.backend.functionBuilders[

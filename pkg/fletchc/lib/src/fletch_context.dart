@@ -85,8 +85,6 @@ class FletchContext {
   Map<String, int> symbolIds = <String, int>{};
   Map<Selector, String> selectorToSymbol = <Selector, String>{};
 
-  Map<ConstantValue, int> compiledConstants = <ConstantValue, int>{};
-
   FletchContext(this.compiler);
 
   FletchBackend get backend => compiler.backend;
@@ -206,33 +204,29 @@ class FletchContext {
     return SelectorKind.Method;
   }
 
-  void markConstantUsed(ConstantValue constant) {
-    // TODO(ajohnsen): compiledConstants should be a property in backend's
-    // FletchSystemBuilder.
-    compiledConstants.putIfAbsent(
-        constant,
-        () {
-          if (constant.isConstructedObject) {
-            ConstructedConstantValue value = constant;
-            ClassElement classElement = value.type.element;
-            backend.registerClassElement(classElement);
-            // TODO(ahe): This should not be required. Also, instantiate type,
-            // not class.
-            var registry = new CodegenRegistry(
-                compiler,
-                classElement.resolvedAst.elements);
-            registry.registerInstantiatedClass(classElement);
-          } else if (constant.isFunction) {
-            backend.markFunctionConstantAsUsed(constant);
-          }
-          for (ConstantValue value in constant.getDependencies()) {
-            markConstantUsed(value);
-          }
-          int id = compiledConstants.length;
-          backend.systemBuilder.registerNewConstant(id, constant);
-          return id;
-        });
+  void registerConstructedConstantValue(ConstructedConstantValue value) {
+    ClassElement classElement = value.type.element;
+    backend.registerClassElement(classElement);
+    // TODO(ahe): This should not be required. Also, instantiate type,
+    // not class.
+    var registry = new CodegenRegistry(
+        compiler,
+        classElement.resolvedAst.elements);
+    registry.registerInstantiatedClass(classElement);
   }
+
+  void registerFunctionConstantValue(FunctionConstantValue value) {
+    backend.markFunctionConstantAsUsed(value);
+  }
+
+  void markConstantUsed(ConstantValue constant) {
+    backend.systemBuilder.registerNewConstant(constant, this);
+  }
+
+  // TODO(ajohnsen): Remove this getter and use the systemBuilder in backend
+  // directly.
+  Map<ConstantValue, int> get compiledConstants =>
+      backend.systemBuilder.getCompiledConstants();
 
   /// If [isConst] is true, a compile-time error is reported.
   ConstantExpression compileConstant(
