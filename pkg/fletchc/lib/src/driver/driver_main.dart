@@ -260,10 +260,7 @@ Future main(List<String> arguments) async {
   handleSignal(ProcessSignal.SIGTERM.watch().listen(null));
   handleSignal(ProcessSignal.SIGINT.watch().listen(null));
 
-  server = await ServerSocket.bind(
-      new
-      UnixDomainAddress // NO_LINT
-      (socketFile.path), 0);
+  server = await ServerSocket.bind(new UnixDomainAddress(socketFile.path), 0);
 
   // Write the socket file to a config file. This lets multiple command line
   // programs share this persistent driver process, which in turn eliminates

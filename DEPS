@@ -12,7 +12,29 @@ vars = {
   "clang_rev": "@43229",
   "gyp_rev": "@1752",
 
-  "dart_hash": "@c03bbb79f9cbc3486d054dc832d8ed67679ba491",
+  # When updating this, please remember:
+  # 1. to use a commit is on the _temporary_fletch_patches branch.
+  # 2. update package revisions below.
+  "dart_rev": "@912f34106b02b07a37dbca1009cc0acffeafcde7",
+
+  # Please copy these from ../dart/DEPS when updating dart_rev:
+  "package_config_tag": "@0.0.3+1",
+  "path_rev": "@93b3e2aa1db0ac0c8bab9d341588d77acda60320",
+  "charcode_tag": "@1.1.0",
+
+  # We use mirrors of all github repos to guarantee reproducibility and
+  # consistency between what users see and what the bots see.
+  # We need the mirrors to not have 100+ bots pulling github constantly.
+  # We mirror our github repos on chromium git servers.
+  # DO NOT use this var if you don't see a mirror here:
+  #   https://chromium.googlesource.com/
+  # named like:
+  #   external/github.com/dart-lang/NAME
+  # It is ok to add a dependency directly on dart-lang (dart-lang only)
+  # github repo until the mirror has been created, but please do file a bug
+  # against infra to make that happen.
+  "github_mirror":
+      "https://chromium.googlesource.com/external/github.com/dart-lang/%s.git",
 }
 
 deps = {
@@ -24,7 +46,17 @@ deps = {
       ((Var("googlecode_url") % "dart") + "/third_party/clang" +
        Var("clang_rev")),
 
-  "dart": ((Var("github_url") % "dart-lang/sdk") + "/" + Var("dart_hash")),
+  "dart":
+      ((Var("github_url") % "dart-lang/sdk") + "/" + Var("dart_rev")),
+
+  "third_party/package_config":
+      (Var("github_mirror") % "package_config") + Var("package_config_tag"),
+
+  "third_party/charcode":
+      (Var("github_mirror") % "charcode") + Var("charcode_tag"),
+
+  "third_party/path":
+      (Var("github_mirror") % "path") + Var("path_rev"),
 }
 
 # To include Mac deps on other OSes, add this to your .gclient file:
