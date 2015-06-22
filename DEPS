@@ -11,6 +11,7 @@ vars = {
 
   "clang_rev": "@43229",
   "gyp_rev": "@1752",
+  "persistent_rev": "@6407f60650dd0a81cf376e8d7d49115f847f24e0",
 
   # When updating this, please remember:
   # 1. to use a commit is on the _temporary_fletch_patches branch.
@@ -57,6 +58,9 @@ deps = {
 
   "third_party/path":
       (Var("github_mirror") % "path") + Var("path_rev"),
+
+  "third_party/persistent":
+      (Var("github_url") % "polux/persistent") + Var("persistent_rev"),
 }
 
 # To include Mac deps on other OSes, add this to your .gclient file:
