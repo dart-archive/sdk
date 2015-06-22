@@ -104,16 +104,18 @@ class FunctionCodegen extends CodegenVisitor {
     }
 
     // Emit implicit 'return null' if no terminator is present.
-    if (!assembler.endsWithTerminator) {
-      if (hasAssignmentSemantics) {
-        assembler.loadSlot(setterResultSlot);
-      } else {
-        assembler.loadLiteralNull();
-      }
-      assembler.ret();
-    }
+    if (!assembler.endsWithTerminator) generateImplicitReturn(node);
 
     assembler.methodEnd();
+  }
+
+  void generateImplicitReturn(FunctionExpression node) {
+    if (hasAssignmentSemantics) {
+      assembler.loadSlot(setterResultSlot);
+    } else {
+      assembler.loadLiteralNull();
+    }
+    assembler.ret();
   }
 
   void optionalReplaceResultValue() {

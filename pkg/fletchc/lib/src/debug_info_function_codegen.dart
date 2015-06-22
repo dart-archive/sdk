@@ -110,6 +110,18 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
     super.generateReturn(node);
   }
 
+  void generateImplicitReturn(FunctionExpression node) {
+    // If the method is empty, generate debug information for the
+    // implicit 'return null' that covers the entire method. That was,
+    // the debugger will use the entire (empty) method as the source
+    // listing is a breakpoint is set in the method.
+    if (node.body is Block) {
+      Block body = node.body;
+      if (body.statements.isEmpty) recordDebugInfo(node);
+    }
+    super.generateImplicitReturn(node);
+  }
+
   void generateSwitchCaseMatch(CaseMatch caseMatch, BytecodeLabel ifTrue) {
     // We do not want to break on the evaluation of the individual
     // case equality tests.
