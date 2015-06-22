@@ -334,6 +334,7 @@ void killDriverMain() {
       String arguments = process.substring(index + 1);
       // TODO(ahe): Use [Process.killPid] instead.
       print("Killing $pidString: $arguments");
+      print("Use --kill_persistent_process=0 to skip this step.");
       runChecked("kill", <String>[pidString]);
     }
   }
@@ -345,6 +346,7 @@ void runBuilds(List<Map> configurations) {
     String buildDir = TestUtils.buildDir(configuration);
     if (completedBuilds.add(buildDir)) {
       print("Building in $buildDir.");
+      print("Use --build_before_testing=0 to skip this step.");
       runChecked("ninja", <String>["-C", buildDir]);
     }
   }

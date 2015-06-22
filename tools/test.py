@@ -26,6 +26,7 @@ def MaybeRunGclientHooks(arguments):
   # may update the Dart binary returned by utils.DartBinary().
   gclient_command = ["gclient", "runhooks"];
   print "Running: %s" % " ".join(gclient_command)
+  print "Use --run-gclient-hooks=0 to skip this step."
   subprocess.check_call(gclient_command)
 
 
