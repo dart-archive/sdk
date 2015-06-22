@@ -45,6 +45,8 @@ import '../src/fletch_backend.dart' show
 import '../commands.dart' show
     Command;
 
+import '../fletch_system.dart';
+
 part 'caching_compiler.dart';
 
 const List<String> INCREMENTAL_OPTIONS = const <String>[
@@ -119,6 +121,7 @@ class IncrementalCompiler {
   }
 
   Future<List<Command>> compileUpdates(
+      FletchSystem currentSystem,
       Map<Uri, Uri> updatedFiles,
       {Logger logTime,
        Logger logVerbose}) {
@@ -145,7 +148,7 @@ class IncrementalCompiler {
       if (compiler.compilationFailed) {
         return null;
       } else {
-        return updater.computeUpdateFletch();
+        return updater.computeUpdateFletch(currentSystem);
         // TODO(ahe): Do this:
         // List<Command> update = updater.computeUpdateFletch();
         // _updates.add(update);

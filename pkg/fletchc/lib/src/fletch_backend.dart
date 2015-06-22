@@ -214,9 +214,8 @@ class FletchBackend extends Backend {
     systemBuilder = new FletchSystemBuilder(BASE_FLETCH_SYSTEM);
   }
 
-  void newSystemBuilder() {
-    // TODO(ajohnsen): Pass along the previous fletch system result.
-    systemBuilder = new FletchSystemBuilder(BASE_FLETCH_SYSTEM);
+  void newSystemBuilder(FletchSystem predecessorSystem) {
+    systemBuilder = new FletchSystemBuilder(predecessorSystem);
   }
 
   FletchClassBuilder registerClassElement(ClassElement element) {

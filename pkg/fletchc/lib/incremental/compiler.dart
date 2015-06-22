@@ -129,6 +129,8 @@ compileToStream(
         Map<Uri, Uri> changes = watcher.readChanges();
 
         sw = new Stopwatch()..start();
+        // TODO(ahe/ajohnsen): compileUpdates does not match this signature any
+        // longer, and it returns a List<Command> not a String.
         String updates = await compiler.compileUpdates(changes);
         sw.stop();
 

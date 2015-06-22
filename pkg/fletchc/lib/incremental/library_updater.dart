@@ -69,6 +69,8 @@ import '../commands.dart' show
 
 import '../commands.dart' as commands_lib;
 
+import '../fletch_system.dart';
+
 import 'package:compiler/src/util/util.dart' show
     Link,
     LinkBuilder;
@@ -771,10 +773,10 @@ class LibraryUpdater extends FletchFeatures {
     }
   }
 
-  List<Command> computeUpdateFletch() {
+  List<Command> computeUpdateFletch(FletchSystem currentSystem) {
     if (USE_FLETCH_SYSTEM) {
       logVerbose("Using FletchSystem.");
-      backend.newSystemBuilder();
+      backend.newSystemBuilder(currentSystem);
     }
 
     int constantCount = backend.context.compiledConstants.length;

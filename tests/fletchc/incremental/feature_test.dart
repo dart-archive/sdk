@@ -2191,7 +2191,7 @@ compileAndRun(EncodedResult encodedResult) async {
         uriMap[base.resolve(name)] = uri;
       }
       Future future = test.incrementalCompiler.compileUpdates(
-          uriMap, logVerbose: logger, logTime: logger);
+          fletchDelta.system, uriMap, logVerbose: logger, logTime: logger);
       bool compileUpdatesThrew = false;
       future = future.catchError((error, trace) {
         String statusMessage;
