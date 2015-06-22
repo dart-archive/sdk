@@ -37,7 +37,7 @@ def Run(args):
   sys.stdout.flush()
   bot.RunProcess(args)
 
-def SetupEnvironment(system):
+def SetupClangEnvironment(system):
   if system != 'win32':
     os.environ['PATH'] = '%s/third_party/clang/%s/bin:%s' % (
         FLETCH_PATH, system, os.environ['PATH'])
@@ -53,7 +53,7 @@ def KillFletch(system):
     subprocess.call("killall fletch-vm", shell=True)
 
 def Main():
-  name, is_buildbot = bot.GetBotName()
+  name, _ = bot.GetBotName()
 
   fletch_match = re.match(FLETCH_REGEXP, name)
   cross_match = re.match(CROSS_REGEXP, name)
@@ -62,14 +62,12 @@ def Main():
   if not fletch_match and not cross_match and not target_match:
     raise Exception('Invalid buildername')
 
-  # Setup clang environment
-  SetupEnvironment(utils.GuessOS())
+  SetupClangEnvironment(utils.GuessOS())
 
   # Clobber build directory if the checkbox was pressed on the BB.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
     bot.Clobber()
 
-  # Run either Cross&Target build for ARM or normal steps.
   # Accumulate daemon logs messages in '.debug.log' to be displayed on the
   # buildbot.Log
   with open(DEBUG_LOG, 'w') as debug_log:
@@ -82,16 +80,18 @@ def Main():
         asans = [False, True]
 
         # Split configurations?
-        if fletch_match.group(2):
+        partial_configuration = fletch_match.group(2)
+        if partial_configuration:
           mode_or_asan = fletch_match.group(3)
+          architecture_match = fletch_match.group(4)
           archs = {
               'x86' : ['ia32', 'x64'],
-          }[fletch_match.group(4)]
+          }[architecture_match]
 
           # We split our builders into:
           #    fletch-linux-debug
           #    fletch-linux-release
-          #    fletch-linux-asan
+          #    fletch-linux-asan (includes debug and release)
           if mode_or_asan == 'asan':
             modes = ['debug', 'release']
             asans = [True]
@@ -101,9 +101,11 @@ def Main():
 
         StepsNormal(debug_log, system, modes, archs, asans)
       elif cross_match:
-        assert cross_match.group(1) == 'linux'
-        assert cross_match.group(2) == 'arm'
-        system = 'linux'
+        system = cross_match.group(1)
+        arch = cross_match.group(2)
+        assert system == 'linux'
+        assert arch == 'arm'
+
         modes = ['debug', 'release']
         arch = 'xarm'
         StepsCrossBuilder(debug_log, system, modes, arch)
@@ -131,12 +133,12 @@ def StepsNormal(debug_log, system, modes, archs, asans):
     StepBuild(configuration['build_conf'], configuration['build_dir']);
 
   # Run tests on all necessary configurations.
-  for full_run in [True, False]:
+  for snapshot_run in [True, False]:
     for configuration in configurations:
-      if not ShouldSkipConfiguration(full_run, configuration):
+      if not ShouldSkipConfiguration(snapshot_run, configuration):
 
         # Use a new persistent daemon for every test run.
-        # Append it's stdout/stderr to the ".debug.log" file.
+        # Append its stdout/stderr to the ".debug.log" file.
         with PersistentFletchDaemon(configuration, debug_log):
           StepTest(
             configuration['build_conf'],
@@ -144,15 +146,24 @@ def StepsNormal(debug_log, system, modes, archs, asans):
             configuration['arch'],
             clang=configuration['clang'],
             asan=configuration['asan'],
-            full_run=full_run)
+            snapshot_run=snapshot_run)
 
 def StepsCrossBuilder(debug_log, system, modes, arch):
+  """This step builds XARM configurations and archives the results.
+
+  The buildbot will trigger a build to run this cross builder. After it has
+  built and archived build artifacts, the buildbot master will schedule a build
+  for running the actual tests on a ARM device. The triggered build will
+  eventually invoke the `StepsTargetRunner` function defined blow, which will
+  take care of downloading/extracting the build artifacts and executing tests.
+  """
+
   revision = os.environ['BUILDBOT_GOT_REVISION']
   assert revision
 
   for compiler_variant in GetCompilerVariants(system, arch):
     for mode in modes:
-      build_conf = GetBuildDirWithoutOut(mode, arch, compiler_variant, False)
+      build_conf = GetConfigurationName(mode, arch, compiler_variant, False)
       # TODO(kustermann): Once we have sorted out gyp/building issues with arm,
       # we should be able to build everything here.
       args = ['fletch-vm', 'fletch', 'natives.json']
@@ -177,6 +188,13 @@ def StepsCrossBuilder(debug_log, system, modes, arch):
       os.remove(tarball)
 
 def StepsTargetRunner(debug_log, system, mode, arch):
+  """This step downloads XARM build artifacts and runs tests.
+
+  The buildbot master only triggers this step once the `StepCrossBuilder` step
+  (defined above) has already been executed. This `StepsTargetRunner` can
+  therefore download/extract the build artifacts which were archived by
+  `StepCrossBuilder` and run the tests."""
+
   revision = os.environ['BUILDBOT_GOT_REVISION']
 
   tarball = TarballName(arch, revision)
@@ -189,9 +207,9 @@ def StepsTargetRunner(debug_log, system, mode, arch):
 
     # Run tests on all necessary configurations.
     configurations = GetBuildConfigurations(system, [mode], [arch], [False])
-    for full_run in [True, False]:
+    for snapshot_run in [True, False]:
       for configuration in configurations:
-        if not ShouldSkipConfiguration(full_run, configuration):
+        if not ShouldSkipConfiguration(snapshot_run, configuration):
           build_dir = configuration['build_dir']
 
           # Sanity check we got build artifacts which we expect.
@@ -213,7 +231,7 @@ def StepsTargetRunner(debug_log, system, mode, arch):
               configuration['arch'],
               clang=configuration['clang'],
               asan=configuration['asan'],
-              full_run=full_run)
+              snapshot_run=snapshot_run)
   finally:
     if os.path.exists(tarball):
       os.remove(tarball)
@@ -250,8 +268,8 @@ def StepBuild(build_config, build_dir, args=()):
   with bot.BuildStep('Build %s' % build_config):
     Run(['ninja', '-v', '-C', build_dir] + list(args))
 
-def StepTest(name, mode, arch, clang=True, asan=False, full_run=False):
-  step_name = '%s%s' % (name, '-full' if full_run else '')
+def StepTest(name, mode, arch, clang=True, asan=False, snapshot_run=False):
+  step_name = '%s%s' % (name, '-snapshot' if snapshot_run else '')
   with bot.BuildStep('Test %s' % step_name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
             '--time', '--report', '-pbuildbot',
@@ -260,7 +278,7 @@ def StepTest(name, mode, arch, clang=True, asan=False, full_run=False):
             '--run-gclient-hooks=0',
             '--build-before-testing=0',
             '--host-checked']
-    if full_run:
+    if snapshot_run:
       # We let package:fletchc/fletchc.dart compile tests to snapshots.
       # Afterwards we run the snapshot with
       #  - normal fletch VM
@@ -324,7 +342,7 @@ def GetBuildConfigurations(system, modes, archs, asans):
     for mode in modes:
       for arch in archs:
         for compiler_variant in GetCompilerVariants(system, arch):
-          build_conf = GetBuildDirWithoutOut(mode, arch, compiler_variant, asan)
+          build_conf = GetConfigurationName(mode, arch, compiler_variant, asan)
           configurations.append({
             'build_conf': build_conf,
             'build_dir': os.path.join('out', build_conf),
@@ -337,7 +355,7 @@ def GetBuildConfigurations(system, modes, archs, asans):
 
   return configurations
 
-def GetBuildDirWithoutOut(mode, arch, compiler_variant='', asan=False):
+def GetConfigurationName(mode, arch, compiler_variant='', asan=False):
   assert mode in ['release', 'debug']
   return '%(mode)s%(arch)s%(clang)s%(asan)s' % {
     'mode': 'Release' if mode == 'release' else 'Debug',
@@ -346,19 +364,19 @@ def GetBuildDirWithoutOut(mode, arch, compiler_variant='', asan=False):
     'asan': 'Asan' if asan else '',
   }
 
-def ShouldSkipConfiguration(full_run, configuration):
+def ShouldSkipConfiguration(snapshot_run, configuration):
   is_mac = configuration['system'] == 'mac'
   if is_mac and configuration['arch'] == 'x64' and configuration['asan']:
     # Asan/x64 takes a long time on mac.
     return True
 
-  full_run_configurations = ['DebugIA32', 'DebugIA32ClangAsan']
-  if full_run and (
-     configuration['build_conf'] not in full_run_configurations):
+  snapshot_run_configurations = ['DebugIA32', 'DebugIA32ClangAsan']
+  if snapshot_run and (
+     configuration['build_conf'] not in snapshot_run_configurations):
     # We only do full runs on DebugIA32 and DebugIA32ClangAsan for now.
-    # full_run = compile to snapshot &
-    #            run shapshot &
-    #            run shapshot with `-Xunfold-program`
+    # snapshot_run = compile to snapshot &
+    #                run shapshot &
+    #                run shapshot with `-Xunfold-program`
     return True
 
   return False
