@@ -346,7 +346,7 @@ void runBuilds(List<Map> configurations) {
     String buildDir = TestUtils.buildDir(configuration);
     if (completedBuilds.add(buildDir)) {
       print("Building in $buildDir.");
-      print("Use --build_before_testing=0 to skip this step.");
+      print("Use --build-before-testing=0 to skip this step.");
       runChecked("ninja", <String>["-C", buildDir]);
     }
   }
