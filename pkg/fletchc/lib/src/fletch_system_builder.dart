@@ -1,0 +1,84 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+library fletchc.fletch_system_builder;
+
+import 'package:compiler/src/constants/values.dart' show
+    ConstantValue,
+    StringConstantValue;
+
+import 'fletch_context.dart';
+import 'fletch_function_builder.dart';
+
+import '../fletch_system.dart';
+import '../commands.dart';
+
+class FletchSystemBuilder {
+  final FletchSystem predecessorSystem;
+
+  final List<FletchFunctionBuilder> newFunctions = <FletchFunctionBuilder>[];
+  final Map<int, ConstantValue> newConstants = <int, ConstantValue>{};
+
+  FletchSystemBuilder(this.predecessorSystem);
+
+  void registerNewConstant(int value, ConstantValue constant) {
+    newConstants[value] = constant;
+  }
+
+  void registerNewFunction(FletchFunctionBuilder function) {
+    newFunctions.add(function);
+  }
+
+  // TODO(ajohnsen): Merge with FletchBackend's computeDelta.
+  FletchDelta computeDelta(FletchContext context) {
+    List<Command> commands = <Command>[const PrepareForChanges()];
+
+    int changes = 0;
+
+    List<FletchFunction> fletchFunctions = <FletchFunction>[];
+    for (FletchFunctionBuilder functionBuilder in newFunctions) {
+      fletchFunctions.add(functionBuilder.finalizeFunction(context, commands));
+    }
+
+    for (int id in newConstants.keys) {
+      // TODO(ajohnsen): Support other constants.
+      StringConstantValue constant = newConstants[id];
+      commands.add(new PushNewString(constant.primitiveValue.slowToString()));
+      commands.add(new PopToMap(MapId.constants, id));
+    }
+
+    for (FletchFunction function in fletchFunctions) {
+      List<FletchConstant> constants = function.constants;
+      for (int i = 0; i < constants.length; i++) {
+        FletchConstant constant = constants[i];
+        commands
+            ..add(new PushFromMap(MapId.methods, function.methodId))
+            ..add(new PushFromMap(constant.mapId, constant.id))
+            ..add(new ChangeMethodLiteral(i));
+        changes++;
+      }
+    }
+
+    // TODO(ajohnsen): Big hack. We should not track method dependency like
+    // this.
+    for (FletchFunctionBuilder function in newFunctions) {
+      if (function.element == context.compiler.mainFunction) {
+        FletchFunctionBuilder callMain =
+            context.backend.functionBuilders[
+                context.backend.fletchSystemLibrary.findLocal('callMain')];
+        commands.add(new PushFromMap(MapId.methods, callMain.methodId));
+        commands.add(new PushFromMap(MapId.methods, function.methodId));
+        commands.add(new ChangeMethodLiteral(0));
+        changes++;
+      }
+    }
+
+    commands.add(new CommitChanges(changes));
+
+    return new FletchDelta(
+        new FletchSystem(fletchFunctions, <FletchClass>[]),
+        predecessorSystem,
+        commands);
+  }
+}

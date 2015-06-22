@@ -101,6 +101,9 @@ import 'fletchc_incremental.dart' show
 import '../src/fletch_function_builder.dart' show
     FletchFunctionBuilder;
 
+// TODO(ajohnsen): Remove once fully implemented/enabled.
+const bool USE_FLETCH_SYSTEM = const bool.fromEnvironment('use-fletch-system');
+
 typedef void Logger(message);
 
 typedef bool Reuser(
@@ -769,6 +772,11 @@ class LibraryUpdater extends FletchFeatures {
   }
 
   List<Command> computeUpdateFletch() {
+    if (USE_FLETCH_SYSTEM) {
+      logVerbose("Using FletchSystem.");
+      backend.newSystemBuilder();
+    }
+
     int constantCount = backend.context.compiledConstants.length;
 
     // Collect the fields of the classes that are subject to schema
@@ -787,6 +795,7 @@ class LibraryUpdater extends FletchFeatures {
     if (compiler.progress != null) {
       compiler.progress.reset();
     }
+
     for (Element element in updatedElements) {
       if (!element.isClass) {
         enqueuer.resolution.addToWorkList(element);
@@ -828,6 +837,10 @@ class LibraryUpdater extends FletchFeatures {
           }
         }
       }
+    }
+
+    if (USE_FLETCH_SYSTEM) {
+      return backend.systemBuilder.computeDelta(backend.context).commands;
     }
 
     List<Command> updates = <Command>[const commands_lib.PrepareForChanges()];
@@ -884,7 +897,6 @@ class LibraryUpdater extends FletchFeatures {
     }
 
     updates.add(new commands_lib.CommitChanges(changes));
-
     return updates;
   }
 

@@ -207,6 +207,8 @@ class FletchContext {
   }
 
   void markConstantUsed(ConstantValue constant) {
+    // TODO(ajohnsen): compiledConstants should be a property in backend's
+    // FletchSystemBuilder.
     compiledConstants.putIfAbsent(
         constant,
         () {
@@ -226,7 +228,9 @@ class FletchContext {
           for (ConstantValue value in constant.getDependencies()) {
             markConstantUsed(value);
           }
-          return compiledConstants.length;
+          int id = compiledConstants.length;
+          backend.systemBuilder.registerNewConstant(id, constant);
+          return id;
         });
   }
 

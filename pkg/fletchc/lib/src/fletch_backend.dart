@@ -97,6 +97,9 @@ import 'fletch_function_builder.dart' show
 import 'fletch_class_builder.dart' show
     FletchClassBuilder;
 
+import 'fletch_system_builder.dart' show
+    FletchSystemBuilder;
+
 import 'codegen_visitor.dart';
 import 'debug_info.dart';
 import 'debug_info_constructor_codegen.dart';
@@ -197,6 +200,8 @@ class FletchBackend extends Backend {
   ClassElement linkedHashMapClass;
   ClassElement coroutineClass;
 
+  FletchSystemBuilder systemBuilder;
+
   final Set<FunctionElement> alwaysEnqueue = new Set<FunctionElement>();
 
   FletchBackend(
@@ -206,6 +211,12 @@ class FletchBackend extends Backend {
         this.constantCompilerTask = new DartConstantTask(compiler),
         super(compiler) {
     context.resolutionCallbacks = new FletchResolutionCallbacks(context);
+    systemBuilder = new FletchSystemBuilder(BASE_FLETCH_SYSTEM);
+  }
+
+  void newSystemBuilder() {
+    // TODO(ajohnsen): Pass along the previous fletch system result.
+    systemBuilder = new FletchSystemBuilder(BASE_FLETCH_SYSTEM);
   }
 
   FletchClassBuilder registerClassElement(ClassElement element) {
@@ -734,6 +745,10 @@ class FletchBackend extends Backend {
         copy.copyFrom(functionBuilder);
       }
     }
+
+    // TODO(ajohnsen): Replace FletchBackend's functions with the system
+    // builders.
+    systemBuilder.registerNewFunction(functionBuilder);
 
     if (compiler.verbose) {
       compiler.log(functionBuilder.verboseToString());
