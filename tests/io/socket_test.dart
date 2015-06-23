@@ -97,7 +97,7 @@ void testSpawnAccept() {
   server.close();
 }
 
-const LARGE_CHUNK_SIZE = 1024 * 1024;
+const LARGE_CHUNK_SIZE = 128 * 1024;
 
 void largeChunkClient(io.Socket client) {
   validateBuffer(client.read(LARGE_CHUNK_SIZE), LARGE_CHUNK_SIZE);
