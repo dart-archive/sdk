@@ -334,7 +334,7 @@ void killDriverMain() {
       String arguments = process.substring(index + 1);
       // TODO(ahe): Use [Process.killPid] instead.
       print("Killing $pidString: $arguments");
-      print("Use --kill_persistent_process=0 to skip this step.");
+      print("Use --kill-persistent-process=0 to skip this step.");
       runChecked("kill", <String>[pidString]);
     }
   }
