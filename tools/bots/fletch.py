@@ -10,9 +10,10 @@ Buildbot steps for fletch testing
 
 import os
 import re
-import subprocess
 import shutil
+import subprocess
 import sys
+import tempfile
 
 import bot
 import bot_utils
@@ -116,9 +117,6 @@ def Main():
         arch = 'xarm'
         StepsTargetRunner(debug_log, system, mode, arch)
 
-  # Grep through the '.debug.log' and issue warnings for certain log messages.
-  StepAnalyzeLog()
-
 
 #### Buildbot steps
 
@@ -136,17 +134,15 @@ def StepsNormal(debug_log, system, modes, archs, asans):
   for snapshot_run in [True, False]:
     for configuration in configurations:
       if not ShouldSkipConfiguration(snapshot_run, configuration):
-
-        # Use a new persistent daemon for every test run.
-        # Append its stdout/stderr to the ".debug.log" file.
-        with PersistentFletchDaemon(configuration, debug_log):
-          StepTest(
-            configuration['build_conf'],
-            configuration['mode'],
-            configuration['arch'],
-            clang=configuration['clang'],
-            asan=configuration['asan'],
-            snapshot_run=snapshot_run)
+        StepTest(
+          configuration['build_conf'],
+          configuration['mode'],
+          configuration['arch'],
+          clang=configuration['clang'],
+          asan=configuration['asan'],
+          snapshot_run=snapshot_run,
+          debug_log=debug_log,
+          configuration=configuration)
 
 def StepsCrossBuilder(debug_log, system, modes, arch):
   """This step builds XARM configurations and archives the results.
@@ -222,16 +218,15 @@ def StepsTargetRunner(debug_log, system, mode, arch):
           shutil.copyfile(dart_arm, destination)
           shutil.copymode(dart_arm, destination)
 
-          # Use a new persistent daemon for every test run.
-          # Append it's stdout/stderr to the ".debug.log" file.
-          with PersistentFletchDaemon(configuration, debug_log):
-            StepTest(
-              configuration['build_conf'],
-              configuration['mode'],
-              configuration['arch'],
-              clang=configuration['clang'],
-              asan=configuration['asan'],
-              snapshot_run=snapshot_run)
+          StepTest(
+            configuration['build_conf'],
+            configuration['mode'],
+            configuration['arch'],
+            clang=configuration['clang'],
+            asan=configuration['asan'],
+            snapshot_run=snapshot_run,
+            debug_log=debug_log,
+            configuration=configuration)
   finally:
     if os.path.exists(tarball):
       os.remove(tarball)
@@ -246,29 +241,41 @@ def StepGyp():
   with bot.BuildStep('GYP'):
     Run(['ninja', '-v'])
 
-def AnalyzeLog():
-  # pkg/fletchc/lib/src/driver/driver_main.dart will (to .debug.log) print
+def AnalyzeLog(log_file):
+  # pkg/fletchc/lib/src/driver/driver_main.dart will, in its log file, print
   # "1234: Crash (..." when an exception is thrown after shutting down a
   # client.  In this case, there's no obvious place to report the exception, so
   # the build bot must look for these crashes.
   pattern=re.compile(r"^[0-9]+: Crash \(")
-  with open(DEBUG_LOG) as debug_log:
-    undiagnosed_crashes = False
-    for line in debug_log:
-      if pattern.match(line):
-        undiagnosed_crashes = True
-        # For information about build bot annotations below, see
-        # https://chromium.googlesource.com/chromium/tools/build/+/c63ec51491a8e47b724b5206a76f8b5e137ff1e7/scripts/master/chromium_step.py#472
-        print '@@@STEP_LOG_LINE@undiagnosed_crashes@%s@@@' % line.rstrip()
-    if undiagnosed_crashes:
-      print '@@@STEP_LOG_END@undiagnosed_crashes@@@'
-      MarkCurrentStep(fatal=True)
+  undiagnosed_crashes = False
+  for line in log_file:
+    if pattern.match(line):
+      undiagnosed_crashes = True
+      # For information about build bot annotations below, see
+      # https://chromium.googlesource.com/chromium/tools/build/+/c63ec51491a8e47b724b5206a76f8b5e137ff1e7/scripts/master/chromium_step.py#472
+      print '@@@STEP_LOG_LINE@undiagnosed_crashes@%s@@@' % line.rstrip()
+  if undiagnosed_crashes:
+    print '@@@STEP_LOG_END@undiagnosed_crashes@@@'
+    MarkCurrentStep(fatal=True)
+
+def ProcessFletchLog(fletch_log, debug_log):
+  fletch_log.flush()
+  fletch_log.seek(0)
+  AnalyzeLog(fletch_log)
+  fletch_log.seek(0)
+  while True:
+    buffer = fletch_log.read(1014*1024)
+    if not buffer:
+      break
+    debug_log.write(buffer)
 
 def StepBuild(build_config, build_dir, args=()):
   with bot.BuildStep('Build %s' % build_config):
     Run(['ninja', '-v', '-C', build_dir] + list(args))
 
-def StepTest(name, mode, arch, clang=True, asan=False, snapshot_run=False):
+def StepTest(
+    name, mode, arch, clang=True, asan=False, snapshot_run=False,
+    debug_log=None, configuration=None):
   step_name = '%s%s' % (name, '-snapshot' if snapshot_run else '')
   with bot.BuildStep('Test %s' % step_name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
@@ -291,19 +298,24 @@ def StepTest(name, mode, arch, clang=True, asan=False, snapshot_run=False):
     if clang:
       args.append('--clang')
 
-    Run(args)
-
-def StepAnalyzeLog():
-  with bot.BuildStep('Fletch daemon log warnings.'):
-    AnalyzeLog()
+    with TemporaryHomeDirectory():
+      with open(os.path.expanduser("~/.fletch.log"), 'w+') as fletch_log:
+        # Use a new persistent daemon for every test run.
+        # Append it's stdout/stderr to the "~/.fletch.log" file.
+        try:
+          with PersistentFletchDaemon(configuration, fletch_log):
+            Run(args)
+        finally:
+          # Copy "~/.fletch.log" to ".debug.log" and look for crashes.
+          ProcessFletchLog(fletch_log, debug_log)
 
 
 #### Helper functionality
 
 class PersistentFletchDaemon(object):
-  def __init__(self, configuration, debug_log):
+  def __init__(self, configuration, log_file):
     self._configuration = configuration
-    self._debug_log = debug_log
+    self._log_file = log_file
     self._persistent = None
 
   def __enter__(self):
@@ -318,7 +330,7 @@ class PersistentFletchDaemon(object):
        './package/',
        'package:fletchc/src/driver/driver_main.dart',
        './.fletch'],
-      stdout=self._debug_log,
+      stdout=self._log_file,
       stderr=subprocess.STDOUT,
       close_fds=True,
       # Launch the persistent process in a new process group. When shutting
@@ -334,6 +346,30 @@ class PersistentFletchDaemon(object):
 
     print "Killing existing fletch processes"
     KillFletch(self._configuration['system'])
+
+class TemporaryHomeDirectory(object):
+  """Creates a temporary directory and uses that as the home directory.
+
+  This works by setting the environment variable HOME.
+  """
+
+  def __init__(self):
+    self._old_home_dir = None
+    self._tmp = None
+
+  def __enter__(self):
+    self._tmp = tempfile.mkdtemp()
+    self._old_home_dir = os.getenv('HOME')
+    # Note: os.putenv doesn't update os.environ, but assigning to os.environ
+    # will also call putenv.
+    os.environ['HOME'] = self._tmp
+
+  def __exit__(self, *_):
+    if self._old_home_dir:
+      os.putenv('HOME', self._old_home_dir)
+    else:
+      os.unsetenv('HOME')
+    shutil.rmtree(self._tmp)
 
 def GetBuildConfigurations(system, modes, archs, asans):
   configurations = []
@@ -399,9 +435,8 @@ def TarballName(arch, revision):
 def MarkCurrentStep(fatal=True):
   """Mark the current step as having a problem.
 
-If fatal is True, mark the current step as failed (red), otherwise mark it as
-having warnings (orange).
-
+  If fatal is True, mark the current step as failed (red), otherwise mark it as
+  having warnings (orange).
   """
   # See
   # https://chromium.googlesource.com/chromium/tools/build/+/c63ec51491a8e47b724b5206a76f8b5e137ff1e7/scripts/master/chromium_step.py#495
