@@ -19,9 +19,17 @@ static const int kSupportedSizeOfDouble = 8;
 static const int kReferenceTableSizeBytes = 4;
 static const int kHeapSizeBytes = 4;
 
+static bool Is32BitSmi(Smi* smi) {
+  // Min and max limits for 32 bit Smi values.
+  const word kMinValue = -(1L << (32 - (Smi::kTagSize + 1)));
+  const word kMaxValue = (1L << (32 - (Smi::kTagSize + 1))) - 1;
+  word value = smi->value();
+  return (value >= kMinValue) && (value <= kMaxValue);
+}
+
 class Header {
  public:
-  explicit Header(word value) : value_(value) {}
+  explicit Header(int64 value) : value_(value) {}
 
   static Header FromSmi(Smi* value) {
     Header h((value->value() << kSmiShift) | kSmiTag);
@@ -77,8 +85,11 @@ class Header {
   }
 
   bool is_smi() { return (value_ & kSmiMask) == kSmiTag; }
+  bool is_native_smi() {
+    return is_smi() && Smi::IsValid(value_ >> kSmiShift);
+  }
   Smi* as_smi() {
-    ASSERT(is_smi());
+    ASSERT(is_native_smi());
     return Smi::FromWord(value_ >> kSmiShift);
   }
 
@@ -99,7 +110,12 @@ class Header {
     return ElementsField::decode(value_);
   }
 
-  word as_word() { return value_; }
+  word as_word() {
+    ASSERT(static_cast<word>(value_) == value_);
+    return value_;
+  }
+
+  int64 value() { return value_; }
 
   // Lowest one/two bits are used for tagging between:
   // Smi, Indexed and Type+Elements.
@@ -117,7 +133,7 @@ class Header {
   class TypeField : public BitField<InstanceFormat::Type, 2, 4> {};
   class ElementsField: public BitField<word, 6, 26> {};
  private:
-  word value_;
+  int64 value_;
 };
 
 class ObjectInfo {
@@ -225,26 +241,6 @@ void SnapshotWriter::WriteBytes(int length, uint8* values) {
   position_ += length;
 }
 
-word SnapshotReader::ReadWord() {
-  word r = 0;
-  word s = 0;
-  uint8 b = ReadByte();
-  while (b < 128) {
-    r |= static_cast<word>(b) << s;
-    s += 7;
-    b = ReadByte();
-  }
-  return r | ((static_cast<word>(b) - 192) << s);
-}
-
-void SnapshotWriter::WriteWord(word value) {
-  while (value < -64 || value >= 64) {
-    WriteByte(static_cast<uint8>(value & 127));
-    value = value >> 7;
-  }
-  WriteByte(static_cast<uint8>(value + 192));
-}
-
 int64 SnapshotReader::ReadInt64() {
   int64 r = 0;
   int64 s = 0;
@@ -279,7 +275,7 @@ void SnapshotWriter::WriteDouble(double value) {
 }
 
 void SnapshotWriter::WriteHeader(InstanceFormat::Type type, int elements) {
-  WriteWord(Header::FromTypeAndElements(type, elements).as_word());
+  WriteInt64(Header::FromTypeAndElements(type, elements).as_word());
 }
 
 Program* SnapshotReader::ReadProgram() {
@@ -306,7 +302,7 @@ Program* SnapshotReader::ReadProgram() {
 
   // Read all the program state (except roots).
   program->set_entry(Function::cast(ReadObject()));
-  program->set_main_arity(ReadWord());
+  program->set_main_arity(ReadInt64());
   program->set_classes(ReadObject());
   program->set_constants(ReadObject());
   program->set_static_methods(ReadObject());
@@ -351,7 +347,7 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
 
   // Write all the program state (except roots).
   WriteObject(program->entry());
-  WriteWord(program->main_arity());
+  WriteInt64(program->main_arity());
   WriteObject(program->classes());
   WriteObject(program->constants());
   WriteObject(program->static_methods());
@@ -385,10 +381,20 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
 }
 
 Object* SnapshotReader::ReadObject() {
-  Header header(ReadWord());
+  Header header(ReadInt64());
   if (header.is_smi()) {
-    // The header word indicates that this is an encoded small integer.
-    return header.as_smi();
+    if (header.is_native_smi()) {
+      // The header word indicates that this is an encoded small integer.
+      return header.as_smi();
+    }
+
+    // The smi-tagged word doesn't fit on this platform.
+    ASSERT(large_integer_class_ != NULL);
+    HeapObject* object = Allocate(LargeInteger::AllocationSize());
+    LargeInteger* integer = reinterpret_cast<LargeInteger*>(object);
+    integer->set_class(large_integer_class_);
+    integer->set_value(header.value());
+    return object;
   } else if (header.is_index()) {
     // The header word indicates that this is a backreference.
     word index = header.as_index();
@@ -417,9 +423,15 @@ Object* SnapshotReader::ReadObject() {
     case InstanceFormat::LARGE_INTEGER_TYPE:
       reinterpret_cast<LargeInteger*>(object)->LargeIntegerReadFrom(this);
       break;
-    case InstanceFormat::CLASS_TYPE:
+    case InstanceFormat::CLASS_TYPE: {
       reinterpret_cast<Class*>(object)->ClassReadFrom(this);
+      Class* klass = reinterpret_cast<Class*>(object);
+      if (klass->instance_format().type() ==
+          InstanceFormat::LARGE_INTEGER_TYPE) {
+        large_integer_class_ = klass;
+      }
       break;
+    }
     case InstanceFormat::FUNCTION_TYPE:
       reinterpret_cast<Function*>(object)->FunctionReadFrom(this, elements);
       break;
@@ -444,7 +456,11 @@ Object* SnapshotReader::ReadObject() {
 void SnapshotWriter::WriteObject(Object* object) {
   // First check if object is small integer.
   if (object->IsSmi()) {
-    WriteWord(Header::FromSmi(Smi::cast(object)).as_word());
+    Smi* smi = Smi::cast(object);
+    if (!Is32BitSmi(smi)) {
+      alternative_heap_size_ += LargeInteger::AllocationSize();
+    }
+    WriteInt64(Header::FromSmi(smi).as_word());
     return;
   }
 
@@ -453,7 +469,7 @@ void SnapshotWriter::WriteObject(Object* object) {
   word f = heap_object->forwarding_word();
   if (f != 0) {
     ObjectInfo* info = reinterpret_cast<ObjectInfo*>(f);
-    WriteWord(Header::FromIndex(-info->index()).as_word());
+    WriteInt64(Header::FromIndex(-info->index()).as_word());
     return;
   }
 
@@ -562,14 +578,14 @@ void String::StringWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::STRING_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteWord(FlagsBits());
+  writer->WriteInt64(FlagsBits());
   writer->WriteBytes(length() * sizeof(uint16_t), byte_address_for(0));
 }
 
 void String::StringReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
   set_hash_value(kNoHashValue);
-  SetFlagsBits(reader->ReadWord());
+  SetFlagsBits(reader->ReadInt64());
   reader->ReadBytes(length * sizeof(uint16_t), byte_address_for(0));
 }
 
@@ -578,7 +594,7 @@ void Array::ArrayWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::ARRAY_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteWord(FlagsBits());
+  writer->WriteInt64(FlagsBits());
   for (int i = 0; i < length(); i++) {
     writer->WriteObject(get(i));
   }
@@ -586,7 +602,7 @@ void Array::ArrayWriteTo(SnapshotWriter* writer, Class* klass) {
 
 void Array::ArrayReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
-  SetFlagsBits(reader->ReadWord());
+  SetFlagsBits(reader->ReadInt64());
   for (int i = 0; i < length; i++) set(i, reader->ReadObject());
 }
 
@@ -595,13 +611,13 @@ void ByteArray::ByteArrayWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::BYTE_ARRAY_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteWord(FlagsBits());
+  writer->WriteInt64(FlagsBits());
   writer->WriteBytes(length(), byte_address_for(0));
 }
 
 void ByteArray::ByteArrayReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
-  SetFlagsBits(reader->ReadWord());
+  SetFlagsBits(reader->ReadInt64());
   reader->ReadBytes(length, byte_address_for(0));
 }
 
@@ -611,7 +627,7 @@ void Instance::InstanceWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(klass->instance_format().type(), nof);
   writer->Forward(this);
   // Body
-  writer->WriteWord(FlagsBits());
+  writer->WriteInt64(FlagsBits());
   for (int i = 0; i < nof; i++) {
     writer->WriteObject(GetInstanceField(i));
   }
@@ -619,7 +635,7 @@ void Instance::InstanceWriteTo(SnapshotWriter* writer, Class* klass) {
 
 void Instance::InstanceReadFrom(SnapshotReader* reader, int fields) {
   int size = AllocationSize(fields);
-  SetFlagsBits(reader->ReadWord());
+  SetFlagsBits(reader->ReadInt64());
   for (int offset = ComplexHeapObject::kSize;
        offset < size;
        offset += kPointerSize) {

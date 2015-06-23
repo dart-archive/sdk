@@ -20,6 +20,7 @@ class SnapshotReader {
   explicit SnapshotReader(List<uint8> snapshot)
       : snapshot_(snapshot),
         position_(0),
+        large_integer_class_(NULL),
         memory_(NULL),
         top_(0),
         index_(0) {
@@ -37,7 +38,6 @@ class SnapshotReader {
   // objects that need to read themselves from a snapshot.
   uint8 ReadByte() { return snapshot_[position_++]; }
   void ReadBytes(int length, uint8* values);
-  word ReadWord();
   int64 ReadInt64();
   double ReadDouble();
 
@@ -60,6 +60,8 @@ class SnapshotReader {
  private:
   List<uint8> snapshot_;
   int position_;
+
+  Class* large_integer_class_;
 
   // Memory area used for allocating objects as they are read in.
   Chunk* memory_;
@@ -92,7 +94,6 @@ class SnapshotWriter {
  protected:
   void WriteByte(uint8 value);
   void WriteBytes(int length, uint8* values);
-  void WriteWord(word value);
   void WriteInt64(int64 value);
   void WriteDouble(double value);
   void WriteHeader(InstanceFormat::Type type, int elements = 0);
