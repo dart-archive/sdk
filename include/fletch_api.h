@@ -39,4 +39,4 @@ FLETCH_EXPORT void FletchRunSnapshotFromFile(const char* path);
 // take over ownership of the passed in string.
 FLETCH_EXPORT void FletchAddDefaultSharedLibrary(const char* library);
 
-#endif  // INCLUDE_SERVICE_API_H_
+#endif  // INCLUDE_FLETCH_API_H_

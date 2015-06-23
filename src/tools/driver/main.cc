@@ -23,6 +23,7 @@
 #include "src/shared/assert.h"
 #include "src/shared/globals.h"
 #include "src/shared/native_socket.h"
+#include "src/shared/platform.h"
 #include "src/shared/utils.h"
 #include "src/tools/driver/connection.h"
 #include "src/tools/driver/platform.h"

@@ -7,12 +7,6 @@
 
 namespace fletch {
 
-// Computes the path of of this executable. This is similar to argv[0], but
-// since argv[0] is provided by the calling process, argv[0] may be an
-// arbitrary value where as this method uses an OS-dependent method of finding
-// the real path.
-void GetPathOfExecutable(char* path, size_t path_length);
-
 // Create a file descriptor from which signals can be read. The file descriptor
 // can be used with select, and signal numbers can be read using 'ReadSignal'.
 int SignalFileDescriptor();

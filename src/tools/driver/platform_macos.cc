@@ -16,13 +16,6 @@
 
 namespace fletch {
 
-void GetPathOfExecutable(char* path, size_t path_length) {
-  uint32_t bytes_copied = path_length;
-  if (_NSGetExecutablePath(path, &bytes_copied) != 0) {
-    FATAL1("_NSGetExecutablePath failed, %u bytes left.", bytes_copied);
-  }
-}
-
 static int signal_pipe[] = { -1, -1 };
 
 static void SignalHandler(int signal) {
