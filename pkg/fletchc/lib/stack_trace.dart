@@ -2,18 +2,18 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of fletch.session;
+part of fletch.debug_state;
 
 class StackFrame {
   final int functionId;
   final int bytecodePointer;
   final FletchCompiler compiler;
-  final Session session;
+  final DebugState debugState;
   final bool isBelowMain;
   final bool isInternal;
 
   StackFrame(int functionId, this.bytecodePointer, FletchCompiler compiler,
-             this.session, this.isBelowMain)
+             this.debugState, this.isBelowMain)
       : this.functionId = functionId,
         this.compiler = compiler,
         isInternal =
@@ -29,18 +29,20 @@ class StackFrame {
   }
 
   bool get isVisible {
-    return session.showInternalFrames || !(isInternal || isBelowMain);
+    return debugState.showInternalFrames || !(isInternal || isBelowMain);
   }
 
+  DebugInfo get debugInfo => debugState.getDebugInfo(functionId);
+
   void list() {
-    print(compiler.sourceListString(functionId, bytecodePointer - 1));
+    print(debugInfo.sourceListStringFor(bytecodePointer - 1));
   }
 
   void disasm() {
     var bytecodes = compiler.lookupFunctionBytecodes(functionId);
     var offset = 0;
     for (var i = 0; i  < bytecodes.length; i++) {
-      var source = compiler.astString(functionId, offset);
+      var source = debugInfo.astStringFor(offset);
       var current = bytecodes[i];
       var byteNumberString = '$offset'.padLeft(4);
       var invokeInfo = invokeString(current);
@@ -56,24 +58,23 @@ class StackFrame {
 
   String shortString(int maxNameLength) {
     String name = compiler.lookupFunctionName(functionId);
-    String astString =
-        compiler.astString(functionId, bytecodePointer - 1);
+    String astString = debugInfo.astStringFor(bytecodePointer - 1);
     astString = (astString != null) ? '@$astString' : '';
 
     return '${name.padRight(maxNameLength)}\t$astString';
   }
 
   SourceLocation sourceLocation() {
-    return compiler.sourceLocation(functionId, bytecodePointer - 1);
+    return debugInfo.sourceLocationFor(bytecodePointer - 1);
   }
 
   ScopeInfo scopeInfo() {
-    return compiler.scopeInfo(functionId, bytecodePointer - 1);
+    return debugInfo.scopeInfoFor(bytecodePointer - 1);
   }
 
   bool isSameSourceLocation(int offset,
                             SourceLocation current) {
-    SourceLocation location = compiler.sourceLocation(functionId, offset);
+    SourceLocation location = debugInfo.sourceLocationFor(offset);
     // Treat locations for which we have no source information as the same
     // as the previous location.
     if (location == null || location.node == null) return true;

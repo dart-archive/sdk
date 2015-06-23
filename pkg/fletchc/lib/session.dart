@@ -4,6 +4,7 @@
 
 library fletch.session;
 
+import 'dart:core' hide StackTrace;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' hide exit;
@@ -15,32 +16,26 @@ import 'commands.dart';
 import 'compiler.dart' show FletchCompiler;
 import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';
+import 'debug_state.dart';
 
 part 'command_reader.dart';
 part 'input_handler.dart';
-part 'stack_trace.dart';
-
-class Breakpoint {
-  final String methodName;
-  final int bytecodeIndex;
-  final int id;
-  Breakpoint(this.methodName, this.bytecodeIndex, this.id);
-  String toString() => "$id: $methodName @$bytecodeIndex";
-}
 
 class Session {
   final Socket vmSocket;
   final FletchCompiler compiler;
-  final Map<int, Breakpoint> breakpoints = new Map();
+  DebugState debugState;
 
   StreamIterator<Command> vmCommands;
   StackTrace currentStackTrace;
   int currentFrame = 0;
   SourceLocation currentLocation;
   bool running = false;
-  bool showInternalFrames = false;
 
-  Session(this.vmSocket, this.compiler);
+  Session(this.vmSocket, this.compiler) {
+    // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
+    debugState = new DebugState(this);
+  }
 
   bool get currentLocationIsVisible {
     return currentStackTrace.stackFrames[0].isVisible;
@@ -147,7 +142,7 @@ class Session {
     ProcessSetBreakpoint response = await nextVmCommand();
     int breakpointId = response.value;
     var breakpoint = new Breakpoint(name, bytecodeIndex, breakpointId);
-    breakpoints[breakpointId] = breakpoint;
+    debugState.breakpoints[breakpointId] = breakpoint;
     print("breakpoint set: $breakpoint");
   }
 
@@ -211,22 +206,22 @@ class Session {
   }
 
   Future deleteBreakpoint(int id) async {
-    if (!breakpoints.containsKey(id)) {
+    if (!debugState.breakpoints.containsKey(id)) {
       print("### invalid breakpoint id: $id");
       return null;
     }
     await doDeleteBreakpoint(id);
-    print("deleted breakpoint: ${breakpoints[id]}");
-    breakpoints.remove(id);
+    print("deleted breakpoint: ${debugState.breakpoints[id]}");
+    debugState.breakpoints.remove(id);
   }
 
   void listBreakpoints() {
-    if (breakpoints.isEmpty) {
+    if (debugState.breakpoints.isEmpty) {
       print('No breakpoints.');
       return;
     }
     print("Breakpoints:");
-    for (var bp in breakpoints.values) {
+    for (var bp in debugState.breakpoints.values) {
       print(bp);
     }
   }
@@ -379,7 +374,7 @@ class Session {
             new StackFrame(methodId,
                            backtraceResponse.bytecodeIndices[i],
                            compiler,
-                           this,
+                           debugState,
                            belowMain));
       }
       currentLocation = currentStackTrace.sourceLocation();
@@ -468,7 +463,7 @@ class Session {
   }
 
   Future toggleInternal() async {
-    showInternalFrames = !showInternalFrames;
+    debugState.showInternalFrames = !debugState.showInternalFrames;
     if (currentStackTrace != null) {
       currentStackTrace.visibilityChanged();
       await backtrace();

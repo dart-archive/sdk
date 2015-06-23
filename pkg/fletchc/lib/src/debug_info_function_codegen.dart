@@ -27,9 +27,11 @@ import 'fletch_function_builder.dart' show
 
 import 'fletch_context.dart';
 import 'function_codegen.dart';
+import 'debug_info.dart';
 
 class DebugInfoFunctionCodegen extends FunctionCodegen {
   final FletchCompiler compiler;
+  final DebugInfo debugInfo;
 
   // Regenerate the bytecode in a fresh buffer separately from the compiled
   // function. If we did not create a separate buffer, the bytecode would
@@ -37,7 +39,8 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
   // function with incorrect bytecode.
   final BytecodeAssembler debugAssembler;
 
-  DebugInfoFunctionCodegen(FletchFunctionBuilder functionBuilder,
+  DebugInfoFunctionCodegen(this.debugInfo,
+                           FletchFunctionBuilder functionBuilder,
                            FletchContext context,
                            TreeElements elements,
                            Registry registry,
@@ -53,17 +56,17 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
   BytecodeAssembler get assembler => debugAssembler;
 
   void recordDebugInfo(Node node) {
-    functionBuilder.debugInfo.addLocation(compiler, assembler.byteSize, node);
+    debugInfo.addLocation(compiler, assembler.byteSize, node);
   }
 
   void pushVariableDeclaration(LocalValue value) {
     super.pushVariableDeclaration(value);
-    functionBuilder.debugInfo.pushScope(assembler.byteSize, value);
+    debugInfo.pushScope(assembler.byteSize, value);
   }
 
   void popVariableDeclaration(Element element) {
     super.popVariableDeclaration(element);
-    functionBuilder.debugInfo.popScope(assembler.byteSize);
+    debugInfo.popScope(assembler.byteSize);
   }
 
   void registerDynamicInvocation(Selector selector) { }

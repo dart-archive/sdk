@@ -173,7 +173,7 @@ class DebugInfo {
   }
 
   // TODO(ager): Should something like this be upstreamed to dart2js?
-  String sourceListStringFor(int bytecodeIndex, int contextLines) {
+  String sourceListStringFor(int bytecodeIndex, {int contextLines: 5}) {
     SourceLocation location = locationFor(bytecodeIndex);
     if (location == null) return '';
     SourceSpan span = location.span;

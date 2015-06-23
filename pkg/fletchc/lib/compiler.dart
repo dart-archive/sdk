@@ -316,36 +316,9 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return mainMethod.methodId;
   }
 
-  String astString(int methodId, int bytecodeIndex) {
-    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
-    _compiler.context.backend.ensureDebugInfo(function);
-    return function.debugInfo.astStringFor(bytecodeIndex);
-  }
-
-  String fileAndLineString(int methodId, int bytecodeIndex) {
-    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
-    _compiler.context.backend.ensureDebugInfo(function);
-    return function.debugInfo.fileAndLineStringFor(bytecodeIndex);
-  }
-
-  String sourceListString(int methodId,
-                          int bytecodeIndex,
-                          {int contextLines : 5}) {
-    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
-    _compiler.context.backend.ensureDebugInfo(function);
-    return function.debugInfo.sourceListStringFor(bytecodeIndex, contextLines);
-  }
-
-  SourceLocation sourceLocation(int methodId, int bytecodeIndex) {
-    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
-    _compiler.context.backend.ensureDebugInfo(function);
-    return function.debugInfo.sourceLocationFor(bytecodeIndex);
-  }
-
-  ScopeInfo scopeInfo(int methodId, int bytecodeIndex) {
-    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
-    _compiler.context.backend.ensureDebugInfo(function);
-    return function.debugInfo.scopeInfoFor(bytecodeIndex);
+  DebugInfo createDebugInfo(int functionId) {
+    FletchFunctionBuilder function = lookupFletchFunctionBuilder(functionId);
+    return _compiler.context.backend.createDebugInfo(function);
   }
 
   DebugInfo debugInfoForPosition(String file, int position) {

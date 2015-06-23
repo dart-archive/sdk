@@ -33,8 +33,10 @@ import 'fletch_context.dart';
 import 'constructor_codegen.dart';
 import 'lazy_field_initializer_codegen.dart';
 import 'debug_info_lazy_field_initializer_codegen.dart';
+import 'debug_info.dart';
 
 class DebugInfoConstructorCodegen extends ConstructorCodegen {
+  final DebugInfo debugInfo;
   final FletchCompiler compiler;
 
   // Regenerate the bytecode in a fresh buffer separately from the compiled
@@ -43,7 +45,8 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
   // function with incorrect bytecode.
   final BytecodeAssembler debugAssembler;
 
-  DebugInfoConstructorCodegen(FletchFunctionBuilder functionBuilder,
+  DebugInfoConstructorCodegen(this.debugInfo,
+                              FletchFunctionBuilder functionBuilder,
                               FletchContext context,
                               TreeElements elements,
                               Registry registry,
@@ -62,6 +65,7 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
       FieldElement field) {
     TreeElements elements = field.resolvedAst.elements;
     return new DebugInfoLazyFieldInitializerCodegen(
+        debugInfo,
         function,
         context,
         elements,
@@ -73,17 +77,17 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
   }
 
   void recordDebugInfo(Node node) {
-    functionBuilder.debugInfo.addLocation(compiler, assembler.byteSize, node);
+    debugInfo.addLocation(compiler, assembler.byteSize, node);
   }
 
   void pushVariableDeclaration(LocalValue value) {
     super.pushVariableDeclaration(value);
-    functionBuilder.debugInfo.pushScope(assembler.byteSize, value);
+    debugInfo.pushScope(assembler.byteSize, value);
   }
 
   void popVariableDeclaration(Element element) {
     super.popVariableDeclaration(element);
-    functionBuilder.debugInfo.popScope(assembler.byteSize);
+    debugInfo.popScope(assembler.byteSize);
   }
 
   void registerDynamicInvocation(Selector selector) { }

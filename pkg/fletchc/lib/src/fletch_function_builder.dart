@@ -31,7 +31,6 @@ import 'fletch_class_builder.dart' show
 
 import 'fletch_context.dart';
 import 'bytecode_assembler.dart';
-import 'debug_info.dart';
 
 import '../fletch_system.dart';
 import '../commands.dart';
@@ -73,8 +72,6 @@ class FletchFunctionBuilder {
       <Selector, FletchFunctionBuilder>{};
   final int arity;
   final FletchFunctionBuilderKind kind;
-
-  DebugInfo debugInfo;
 
   FletchFunctionBuilder(
       this.methodId,

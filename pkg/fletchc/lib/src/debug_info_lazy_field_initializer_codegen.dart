@@ -27,9 +27,11 @@ import 'fletch_function_builder.dart' show
 import 'closure_environment.dart';
 import 'codegen_visitor.dart';
 import 'lazy_field_initializer_codegen.dart';
+import 'debug_info.dart';
 
 class DebugInfoLazyFieldInitializerCodegen
     extends LazyFieldInitializerCodegen {
+  final DebugInfo debugInfo;
   final FletchCompiler compiler;
 
   // Regenerate the bytecode in a fresh buffer separately from the compiled
@@ -41,7 +43,8 @@ class DebugInfoLazyFieldInitializerCodegen
   // TODO(ajohnsen): Consider creating a DebugFletchFunctionBuilder instead of
   // only intercepting the BytecodeAssembler, or simply replace the
   // BytecodeAssembler in the FletchFunctionBuilder.
-  DebugInfoLazyFieldInitializerCodegen(FletchFunctionBuilder functionBuilder,
+  DebugInfoLazyFieldInitializerCodegen(this.debugInfo,
+                                       FletchFunctionBuilder functionBuilder,
                                        FletchContext context,
                                        TreeElements elements,
                                        Registry registry,
@@ -58,17 +61,17 @@ class DebugInfoLazyFieldInitializerCodegen
   BytecodeAssembler get assembler => debugAssembler;
 
   void recordDebugInfo(Node node) {
-    functionBuilder.debugInfo.addLocation(compiler, assembler.byteSize, node);
+    debugInfo.addLocation(compiler, assembler.byteSize, node);
   }
 
   void pushVariableDeclaration(LocalValue value) {
     super.pushVariableDeclaration(value);
-    functionBuilder.debugInfo.pushScope(assembler.byteSize, value);
+    debugInfo.pushScope(assembler.byteSize, value);
   }
 
   void popVariableDeclaration(Element element) {
     super.popVariableDeclaration(element);
-    functionBuilder.debugInfo.popScope(assembler.byteSize);
+    debugInfo.popScope(assembler.byteSize);
   }
 
   void registerDynamicInvocation(Selector selector) { }

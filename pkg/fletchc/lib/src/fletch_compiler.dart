@@ -183,8 +183,7 @@ class FletchCompiler extends FletchCompilerHack {
     FletchFunctionBuilder function =
         _NO_WARN(backend).functionBuilders[visitor.element];
     if (function == null) return null;
-    _NO_WARN(backend).ensureDebugInfo(function);
-    return function.debugInfo;
+    return _NO_WARN(backend).createDebugInfo(function);
   }
 
   int positionInFileFromPattern(String file, int line, String pattern) {

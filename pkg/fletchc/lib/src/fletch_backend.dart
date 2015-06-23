@@ -578,11 +578,10 @@ class FletchBackend extends Backend {
     return tearoffFunctions[klass];
   }
 
-  void ensureDebugInfo(FletchFunctionBuilder function) {
-    if (function.debugInfo != null) return;
-    function.debugInfo = new DebugInfo(function);
+  DebugInfo createDebugInfo(FletchFunctionBuilder function) {
+    DebugInfo debugInfo = new DebugInfo(function);
     AstElement element = function.element;
-    if (element == null) return;
+    if (element == null) return debugInfo;
     List<Bytecode> expectedBytecodes = function.assembler.bytecodes;
     element = element.implementation;
     TreeElements elements = element.resolvedAst.elements;
@@ -592,6 +591,7 @@ class FletchBackend extends Backend {
     CodegenVisitor codegen;
     if (function.isLazyFieldInitializer) {
       codegen = new DebugInfoLazyFieldInitializerCodegen(
+          debugInfo,
           function,
           context,
           elements,
@@ -603,6 +603,7 @@ class FletchBackend extends Backend {
       ClassElement enclosingClass = element.enclosingClass;
       FletchClassBuilder classBuilder = classBuilders[enclosingClass];
       codegen = new DebugInfoConstructorCodegen(
+          debugInfo,
           function,
           context,
           elements,
@@ -613,6 +614,7 @@ class FletchBackend extends Backend {
           compiler);
     } else {
       codegen = new DebugInfoFunctionCodegen(
+          debugInfo,
           function,
           context,
           elements,
@@ -636,6 +638,7 @@ class FletchBackend extends Backend {
     // codegen. If that is not the case debug information will be useless.
     assert(Bytecode.identicalBytecodes(expectedBytecodes,
                                        codegen.assembler.bytecodes));
+    return debugInfo;
   }
 
   WorldImpact codegen(CodegenWorkItem work) {
