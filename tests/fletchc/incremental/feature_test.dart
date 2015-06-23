@@ -13,8 +13,10 @@ import 'dart:io' hide
 import 'dart:io' as io;
 
 import 'dart:async' show
+    Completer,
     Future,
     Stream,
+    StreamController,
     StreamIterator;
 
 import 'dart:convert' show
@@ -36,6 +38,7 @@ import 'compiler_test_case.dart' show
     CompilerTestCase;
 
 import 'package:compiler/src/elements/elements.dart' show
+    AbstractFieldElement,
     Element,
     FieldElement,
     FunctionElement,
@@ -51,6 +54,11 @@ import 'package:fletchc/commands.dart' show
     Command,
     MapId;
 
+import 'package:fletchc/compiler.dart' show
+    FletchCompiler;
+
+import 'package:fletchc/src/fletch_compiler.dart' as fletch_compiler_src;
+
 import 'package:fletchc/fletch_system.dart';
 
 import 'package:fletchc/commands.dart' as commands_lib;
@@ -58,6 +66,9 @@ import 'package:fletchc/commands.dart' as commands_lib;
 import 'package:fletchc/session.dart' show
     CommandReader,
     Session;
+
+import 'package:fletchc/src/fletch_backend.dart' show
+    FletchBackend;
 
 import 'program_result.dart';
 
@@ -2152,12 +2163,6 @@ compileAndRun(EncodedResult encodedResult) async {
 
   TestSession session = await runFletchVM(test, fletchDelta);
 
-  bool hasStderrOutput = false;
-  bool hasExtraStdoutOutput = false;
-  int vmExitCode;
-
-  // TODO(ahe): Replace new Future with try/finally when Dart VM bug 23537 is
-  // fixed.
   await new Future(() async {
     for (String expected in program.messages) {
       Expect.isTrue(await session.iterator.moveNext());
@@ -2240,33 +2245,14 @@ compileAndRun(EncodedResult encodedResult) async {
             test.incrementalCompiler.compiler).run();
       }
     }
-  }).whenComplete(() async {
-
-    var stderrFuture = new Future(() async {
-      await for (String line in session.stderr) {
-        hasStderrOutput = true;
-        print('fletch_vm_stderr: $line');
-      }
-    });
-
-    var stdoutFuture = new Future(() async {
-      while (await session.iterator.moveNext()) {
-        hasExtraStdoutOutput = true;
-        print('fletch_vm_stdout: ${session.iterator.current}');
-      }
-    });
-
-    var exitFuture = session.process.exitCode.then((int exitCode) {
-      vmExitCode = exitCode;
-      print("VM exited with exit code: $exitCode.");
-    });
-
+  }).catchError(session.handleError).then((_) {
     if (session.running) {
       // The session is still alive. Rewrite the program so that
       // the process will terminate.
       for (Command command in [
                const commands_lib.PrepareForChanges(),
-               new commands_lib.PushFromMap(MapId.methods, session.methodId),
+               new commands_lib.PushFromMap(
+                   MapId.methods, session.isMainDoneId),
                const commands_lib.PushBoolean(true),
                const commands_lib.ChangeMethodLiteral(0),
                const commands_lib.CommitChanges(1),
@@ -2275,38 +2261,31 @@ compileAndRun(EncodedResult encodedResult) async {
         command.addTo(session.vmSocket);
       }
       // Wait for process termination.
-      Command response = await session.nextVmCommand();
-      Expect.isTrue(response is commands_lib.ProcessTerminated,
-                    "Unexpected command $response, expected ProcessTerminated");
-      // Terminate the Fletch VM session so the Fletch VM will terminate.
-      const commands_lib.SessionEnd().addTo(session.vmSocket);
-      // Close the session socket to let the Dart VM running the tests
-      // terminate.
-      session.quit();
-      await Future.wait([stderrFuture, stdoutFuture, exitFuture]);
+      session.recordFuture(session.nextVmCommand().then((Command response) {
+        if (response is commands_lib.ProcessTerminated) {
+          // Terminate the Fletch VM session so the Fletch VM will terminate.
+          const commands_lib.SessionEnd().addTo(session.vmSocket);
+        } else {
+          session.process.kill();
+          throw new StateError(
+              "Expected ProcessTerminated, but got: $response");
+        }
+      }));
     } else {
       // We either failed before we got to start a process or there
       // was an uncaught exception in the program. If there was an
       // uncaught exception the VM is intentionally hanging to give
       // the debugger a chance to inspect the state at the point of
       // the throw. Therefore, we explicitly have to kill the VM
-      // process and close the session socket so the runner will
-      // terminate.
-      session.vmSocket.done.catchError((error, StackTrace stackTrace) {
-        print("Ignoring socket error: $error");
-        if (stackTrace != null) {
-          print(stackTrace);
-        }
-      });
+      // process.
       session.process.kill();
-      await Future.wait([stderrFuture, stdoutFuture, exitFuture]);
-      session.quit();
     }
   });
 
-  Expect.equals(0, vmExitCode, "Unexpected exit code from fletch VM");
-  Expect.isFalse(hasExtraStdoutOutput, "Unexpected fletch_vm_stdout");
-  Expect.isFalse(hasStderrOutput, "Unexpected fletch_vm_stderr");
+  await session.waitForCompletion();
+
+  Expect.equals(
+      0, await session.exitCode, "Unexpected exit code from fletch VM");
 }
 
 class SerializeScopeTestCase extends CompilerTestCase {
@@ -2398,42 +2377,10 @@ List<String> splitLines(String text) {
 Future<TestSession> runFletchVM(
     IoCompilerTestCase test,
     FletchDelta fletchDelta) async {
-  var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
-
-  List<String> vmOptions = <String>[
-      '--port=${server.port}',
-  ];
-
-  String vmPath = test.incrementalCompiler.compiler.fletchVm.toFilePath();
-
-  print("Running '$vmPath ${vmOptions.join(" ")}'");
-  Process vmProcess = await Process.start(vmPath, vmOptions);
-  var stdoutStream = vmProcess.stdout
-      .transform(new Utf8Decoder())
-      .transform(new LineSplitter());
-  var stderrStream = vmProcess.stderr
-      .transform(new Utf8Decoder())
-      .transform(new LineSplitter());
-
-  TestSession session;
+  TestSession session =
+      await TestSession.spawnVm(test.incrementalCompiler.compiler);
   try {
-    var vmSocket = await server.first;
-    server.close();
-
-    var compiler = test.incrementalCompiler.compiler;
-
-    FunctionElement isMainDone =
-        compiler.backend.fletchSystemLibrary.findLocal("isMainDone").getter;
-    int methodId = compiler.backend.functionBuilders[isMainDone].methodId;
-
-    session = new TestSession(
-        vmSocket, compiler.helper,
-        vmProcess,
-        new StreamIterator(stdoutStream),
-        stderrStream,
-        methodId);
-    session.vmCommands = new CommandReader(vmSocket).iterator;
-
+    Socket vmSocket = session.vmSocket;
     if (testSessionReset) {
       for (Command command in fletchDelta.commands) {
         command.addTo(vmSocket);
@@ -2464,7 +2411,7 @@ Future<TestSession> runFletchVM(
     for (Command command in [
         // Change isMainDone to always return false.
         const commands_lib.PrepareForChanges(),
-        new commands_lib.PushFromMap(MapId.methods, methodId),
+        new commands_lib.PushFromMap(MapId.methods, session.isMainDoneId),
         const commands_lib.PushBoolean(false),
         const commands_lib.ChangeMethodLiteral(0),
         const commands_lib.CommitChanges(1),
@@ -2474,7 +2421,7 @@ Future<TestSession> runFletchVM(
         const commands_lib.ProcessSpawnForMain(),
 
         // Set a breakpoint in isMainDone at the first bytecode.
-        new commands_lib.PushFromMap(MapId.methods, methodId),
+        new commands_lib.PushFromMap(MapId.methods, session.isMainDoneId),
         const commands_lib.ProcessSetBreakpoint(0)]) {
       print(command);
       command.addTo(vmSocket);
@@ -2485,44 +2432,7 @@ Future<TestSession> runFletchVM(
 
     return session;
   } catch (error, stackTrace) {
-    print("An error occurred, shutting down.");
-    print(error);
-    if (stackTrace != null) {
-      print(stackTrace);
-    }
-    var stderrFuture = new Future(() async {
-      await for (String line in stderrStream) {
-        print('fletch_vm_stderr: $line');
-      }
-    });
-    var stdoutFuture = new Future(() async {
-      if (session != null) {
-        while (await session.iterator.moveNext()) {
-          print('fletch_vm_stdout: ${session.iterator.current}');
-        }
-      } else {
-        await for (String line in stdoutStream) {
-          print('fletch_vm_stdout: $line');
-        }
-      }
-    });
-    var exitFuture = new Future.value();
-    if (session != null) {
-      session.quit();
-      exitFuture = session.process.exitCode.then((int exitCode) {
-        print("VM exited with exit code: $exitCode.");
-      });
-    }
-    var futures =
-        [stderrFuture, stdoutFuture, session.vmSocket.done, exitFuture];
-    return Future.wait(futures).catchError((error, StackTrace stackTrace) {
-      // An error already occurred, so we have to ignore any further
-      // errors.
-      print("Ignoring error: $error");
-      if (stackTrace != null) {
-        print(stackTrace);
-      }
-    }).then((_) => new Future.error(error, stackTrace));
+    return session.handleError(error, stackTrace);
   }
 }
 
@@ -2530,16 +2440,172 @@ class TestSession extends Session {
   final Process process;
   final StreamIterator iterator;
   final Stream<String> stderr;
-  final int methodId;
+
+  /// ID of the method `isMainDone`
+  /// [system.dart](../../../lib/system/system.dart).
+  final int isMainDoneId;
+
+  final List<Future> futures;
+
+  final Future<int> exitCode;
+
+  bool isWaitingForCompletion = false;
 
   TestSession(
       Socket vmSocket,
-      compiler,
+      FletchCompiler compiler,
       this.process,
       this.iterator,
       this.stderr,
-      this.methodId)
+      this.isMainDoneId,
+      this.futures,
+      this.exitCode)
       : super(vmSocket, compiler);
+
+  /// Add [future] to this session.  All futures that can fail after calling
+  /// [waitForCompletion] must be added to the session.
+  void recordFuture(Future future) {
+    futures.add(convertErrorToString(future));
+  }
+
+  void addError(error, StackTrace stackTrace) {
+    recordFuture(new Future.error(error, stackTrace));
+  }
+
+  /// Waits for the VM to shutdown and any futures added with [add] to
+  /// complete, and report all errors that occurred.
+  Future waitForCompletion() async {
+    if (isWaitingForCompletion) {
+      throw "waitForCompletion called more than once.";
+    }
+    isWaitingForCompletion = true;
+    // [stderr] and [iterator] (stdout) must have active listeners before
+    // waiting for [futures] below to avoid a deadlock.
+    Future<List<String>> stderrFuture = stderr.toList();
+    Future<List<String>> stdoutFuture = (() async {
+      List<String> result = <String>[];
+      while (await iterator.moveNext()) {
+        result.add(iterator.current);
+      }
+      return result;
+    })();
+
+    StringBuffer sb = new StringBuffer();
+    int problemCount = 0;
+    for (var error in await Future.wait(futures)) {
+      if (error != null) {
+        sb.writeln("Problem #${++problemCount}:");
+        sb.writeln(error);
+        sb.writeln("");
+      }
+    }
+    List<String> stdoutLines = await stdoutFuture;
+    List<String> stderrLines = await stderrFuture;
+    if (!stdoutLines.isEmpty) {
+      sb.writeln("Problem #${++problemCount}:");
+      sb.writeln("Unexpected stdout from fletch-vm:");
+      for (String line in stdoutLines) {
+        sb.writeln(line);
+      }
+      sb.writeln("");
+    }
+    if (!stderrLines.isEmpty) {
+      sb.writeln("Problem #${++problemCount}:");
+      sb.writeln("Unexpected stderr from fletch-vm:");
+      for (String line in stderrLines) {
+        sb.writeln(line);
+      }
+      sb.writeln("");
+    }
+    if (problemCount > 0) {
+      throw new StateError('Test has $problemCount problem(s). Details:\n$sb');
+    }
+  }
+
+  static Future<String> convertErrorToString(Future future) {
+    return future.then((_) => null).catchError((error, stackTrace) {
+      return "$error\n$stackTrace";
+    });
+  }
+
+  static Future<TestSession> spawnVm(
+      fletch_compiler_src.FletchCompiler compiler) async {
+    io.stderr.writeln("TestSession.spawnVm");
+    String vmPath = compiler.fletchVm.toFilePath();
+    FletchBackend backend = compiler.backend;
+    AbstractFieldElement isMainDone =
+        backend.fletchSystemLibrary.findLocal("isMainDone");
+    int isMainDoneId = backend.functionBuilders[isMainDone.getter].methodId;
+
+    List<Future> futures = <Future>[];
+    void recordFuture(String name, Future future) {
+      if (future != null) {
+        futures.add(convertErrorToString(future));
+      }
+    }
+
+    ServerSocket server =
+        await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
+
+    List<String> vmOptions = <String>[
+        '--port=${server.port}',
+    ];
+
+    print("Running '$vmPath ${vmOptions.join(" ")}'");
+    Process process = await Process.start(vmPath, vmOptions);
+    recordFuture("stdin", process.stdin.close());
+    Stream<String> stdout = process.stdout
+        .transform(new Utf8Decoder())
+        .transform(new LineSplitter());
+    Stream<String> stderr = process.stderr
+        .transform(new Utf8Decoder())
+        .transform(new LineSplitter());
+
+    // Unlike [stdout] and [stderr], their corresponding controller cannot
+    // produce an error.
+    StreamController<String> stdoutController = new StreamController<String>();
+    StreamController<String> stderrController = new StreamController<String>();
+    recordFuture("stdout", stdout.listen((String line) {
+      print('fletch_vm_stdout: $line');
+      stdoutController.add(line);
+    }).asFuture().whenComplete(stdoutController.close));
+    recordFuture("stderr", stderr.listen((String line) {
+      print('fletch_vm_stderr: $line');
+      stderrController.add(line);
+    }).asFuture().whenComplete(stderrController.close));
+
+    Completer<int> exitCodeCompleter = new Completer<int>();
+
+    // TODO(ahe): If the VM crashes on startup, this will never complete. This
+    // makes this program hang forever. But the exitCode completer might
+    // actually be ready to give us a crashed exit code. Exiting early with a
+    // failure in case exitCode is ready before server.first or having a
+    // timeout on server.first would be possible solutions.
+    var vmSocket = await server.first;
+    server.close();
+    recordFuture("vmSocket", vmSocket.done);
+
+    TestSession session = new TestSession(
+        vmSocket, compiler.helper, process,
+        new StreamIterator(stdoutController.stream),
+        stderrController.stream,
+        isMainDoneId, futures, exitCodeCompleter.future);
+
+    recordFuture("exitCode", process.exitCode.then((int exitCode) {
+      session.quit();
+      print("VM exited with exit code: $exitCode.");
+      exitCodeCompleter.complete(exitCode);
+    }));
+
+    session.vmCommands = new CommandReader(vmSocket).iterator;
+    return session;
+  }
+
+  Future handleError(error, StackTrace stackTrace) {
+    addError(error, stackTrace);
+    process.kill();
+    return waitForCompletion();
+  }
 
   void exit(int exitCode) {
     // TODO(ahe/ager): Rename exit to something less conflicting with io.exit.
