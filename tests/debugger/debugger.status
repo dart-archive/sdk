@@ -1,0 +1,7 @@
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+# Flaky because the VM standard output and debugger output
+# can be interleaved arbitrarily at this point. Issue #54.
+frame_restart_test: Pass, Fail
