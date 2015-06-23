@@ -38,6 +38,7 @@ abstract class Message {
       case 'TimedOut': return new TimedOut.fromJsonData(data);
       case 'TestFailed': return new TestFailed.fromJsonData(data);
       case 'TestPassed': return new TestPassed.fromJsonData(data);
+      case 'TestStdoutLine': return new TestStdoutLine.fromJsonData(data);
     }
 
     throw "Unknown message: $type";
@@ -163,45 +164,33 @@ class TimedOut extends NamedMessage {
 /// Test [name] failed. A possible reply to [RunTest].
 class TestFailed extends ErrorMessage implements NamedMessage {
   final String name;
-  final String stdout;
 
-  const TestFailed(this.name, this.stdout, String error, String stackTrace)
+  const TestFailed(this.name, String error, String stackTrace)
       : super(error, stackTrace);
 
   TestFailed.fromJsonData(Map<String, dynamic> data)
-      : this(data['name'], data['stdout'], data['error'], data['stackTrace']);
+      : this(data['name'], data['error'], data['stackTrace']);
 
   String get type => 'TestFailed';
 
   Map<String, dynamic> toJson() {
     Map<String, dynamic> result = super.toJson();
     result['name'] = name;
-    result['stdout'] = stdout;
     return result;
   }
 
-  String toString() => "$type($name, $stdout, $error, $stackTrace)";
+  String toString() => "$type($name, $error, $stackTrace)";
 }
 
 /// Test [name] passed. A possible reply to [RunTest].
 class TestPassed extends NamedMessage {
-  final String stdout;
-
-  const TestPassed(String name, this.stdout)
+  const TestPassed(String name)
       : super(name);
 
   TestPassed.fromJsonData(Map<String, dynamic> data)
-      : this(data['name'], data['stdout']);
+      : this(data['name']);
 
   String get type => 'TestPassed';
-
-  Map<String, dynamic> toJson() {
-    Map<String, dynamic> result = super.toJson();
-    result['stdout'] = stdout;
-    return result;
-  }
-
-  String toString() => "$type($name, $stdout)";
 }
 
 /// Debug information.
@@ -222,4 +211,25 @@ class Info extends Message {
   }
 
   String toString() => "$type('$data')";
+}
+
+/// A line on stdout from test [name].
+class TestStdoutLine extends NamedMessage {
+  final String line;
+
+  const TestStdoutLine(String name, this.line)
+      : super(name);
+
+  TestStdoutLine.fromJsonData(Map<String, dynamic> data)
+      : this(data['name'], data['line']);
+
+  String get type => 'TestStdoutLine';
+
+  Map<String, dynamic> toJson() {
+    Map<String, dynamic> result = super.toJson();
+    result['line'] = line;
+    return result;
+  }
+
+  String toString() => "$type($name, $line)";
 }

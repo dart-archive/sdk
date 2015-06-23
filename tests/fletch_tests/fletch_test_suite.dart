@@ -175,11 +175,13 @@ Future<Message> runTest(String name, NoArgFuture test) async {
   if (test == null) {
     throw "No such test: $name";
   }
-  StringBuffer sb = new StringBuffer();
+  printLineOnStdout(String line) {
+    new TestStdoutLine(name, line).print();
+  }
   try {
     await runGuarded(
         test,
-        printLineOnStdout: sb.writeln,
+        printLineOnStdout: printLineOnStdout,
         handleLateError: (error, StackTrace stackTrace) {
       if (name == 'zoneHelper/testAlwaysFails') {
         // This test always report a late error (to ensure the framework
@@ -192,9 +194,9 @@ Future<Message> runTest(String name, NoArgFuture test) async {
           "$error\n$stackTrace");
     });
   } catch (error, stackTrace) {
-    return new TestFailed(name, '$sb', '$error', '$stackTrace');
+    return new TestFailed(name, '$error', '$stackTrace');
   }
-  return new TestPassed(name, '$sb');
+  return new TestPassed(name);
 }
 
 Stream<String> utf8Lines(Stream<List<int>> stream) {

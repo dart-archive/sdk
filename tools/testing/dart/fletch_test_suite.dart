@@ -127,8 +127,13 @@ class FletchTestOutputCommand implements CommandOutput {
   final Command command;
   final Duration time;
   final Message message;
+  final List<String> stdoutLines;
 
-  FletchTestOutputCommand(this.command, this.message, this.time);
+  FletchTestOutputCommand(
+      this.command,
+      this.message,
+      this.time,
+      this.stdoutLines);
 
   Expectation result(TestCase testCase) {
     switch (message.type) {
@@ -165,21 +170,28 @@ class FletchTestOutputCommand implements CommandOutput {
   int get pid => 0;
 
   List<int> get stdout {
-    String type = message.type;
-    if (type == 'TestPassed' || type == 'TestFailed') {
-      return UTF8.encode(message.stdout);
+    if (stdoutLines != null) {
+      return UTF8.encode(stdoutLines.join("\n"));
     } else {
       return <int>[];
     }
   }
 
   List<int> get stderr {
-    if (message.type == 'TestPassed') return <int>[];
     String result;
-    if (message.type == 'TestFailed') {
-      result = '${message.error}\n${message.stackTrace}';
-    } else {
-      result = '$message';
+
+    switch (message.type) {
+      case 'TestPassed':
+      case 'TimedOut':
+        return <int>[];
+
+      case 'TestFailed':
+        result = '${message.error}\n${message.stackTrace}';
+        break;
+
+      default:
+        result = '$message';
+        break;
     }
     return UTF8.encode(result);
   }
@@ -204,7 +216,8 @@ class FletchTestCommand implements Command {
     Stopwatch sw = new Stopwatch()..start();
     return _completer.run(this, timeout).then((Message message) {
       FletchTestOutputCommand output =
-          new FletchTestOutputCommand(this, message, sw.elapsed);
+          new FletchTestOutputCommand(
+              this, message, sw.elapsed, _completer.testOutput[message.name]);
       _completer.done(this);
       return output;
     });
@@ -219,6 +232,7 @@ class TestCompleter {
   final Map<String, Completer> completers = new Map<String, Completer>();
   final Completer<List<String>> testNamesCompleter =
       new Completer<List<String>>();
+  final Map<String, List<String>> testOutput = new Map<String, List<String>>();
   final io.Process vmProcess;
 
   int exitCode;
@@ -320,6 +334,10 @@ class TestCompleter {
         print(message.error);
         print(message.stackTrace);
         throw "Internal error in helper process: ${message.error}";
+      case 'TestStdoutLine':
+        testOutput.putIfAbsent(message.name, () => <String>[])
+            .add(message.line);
+        break;
       default:
         throw "Unhandled message from helper process: $message";
     }
