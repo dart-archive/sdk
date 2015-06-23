@@ -17,6 +17,8 @@ import '../fletchc/incremental/feature_test.dart' as incremental;
 
 import '../fletchc/driver/test_control_stream.dart' as controlStream;
 
+import 'zone_helper_tests.dart' as zoneHelper;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -42,4 +44,9 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'incremental/*': incremental.listTests,
 
   'controlStream/testControlStream': controlStream.testControlStream,
+
+  'zoneHelper/testEarlyError': zoneHelper.testEarlyError,
+  'zoneHelper/testLateError': zoneHelper.testLateError,
+  'zoneHelper/testUnhandledLateError': zoneHelper.testUnhandledLateError,
+  'zoneHelper/testAlwaysFails': zoneHelper.testAlwaysFails,
 };

@@ -29,6 +29,9 @@ import 'dart:async' show
 
 import 'dart:isolate';
 
+import 'package:fletchc/src/zone_helper.dart' show
+    runGuarded;
+
 import 'package:fletchc/src/driver/driver_main.dart' show
     IsolatePool;
 
@@ -37,6 +40,9 @@ import 'messages.dart';
 import 'all_tests.dart' show
     NoArgFuture,
     TESTS;
+
+// TODO(ahe): Should be: "@@@STEP_FAILURE@@@".
+const String BUILDBOT_MARKER = "@@@STEP_WARNINGS@@@";
 
 Map<String, NoArgFuture> expandedTests;
 
@@ -169,23 +175,22 @@ Future<Message> runTest(String name, NoArgFuture test) async {
   if (test == null) {
     throw "No such test: $name";
   }
-  Completer completer = new Completer();
   StringBuffer sb = new StringBuffer();
-  ZoneSpecification specification = new ZoneSpecification(
-      print: (_1, _2, _3, String line) {
-        sb.writeln(line);
-      },
-      handleUncaughtError: (_1, _2, _3, error, StackTrace stackTrace) {
-        if (!completer.isCompleted) {
-          completer.completeError(error, stackTrace);
-        }
-      });
-
-  Zone.current.fork(specification: specification).runGuarded(test).then(
-      completer.complete);
-
   try {
-    await completer.future;
+    await runGuarded(
+        test,
+        printLineOnStdout: sb.writeln,
+        handleLateError: (error, StackTrace stackTrace) {
+      if (name == 'zoneHelper/testAlwaysFails') {
+        // This test always report a late error (to ensure the framework
+        // handles it).
+        return;
+      }
+      print(
+          // Print one string to avoid interleaved messages.
+          "\n$BUILDBOT_MARKER\nLate error in test '$name':\n"
+          "$error\n$stackTrace");
+    });
   } catch (error, stackTrace) {
     return new TestFailed(name, '$sb', '$error', '$stackTrace');
   }

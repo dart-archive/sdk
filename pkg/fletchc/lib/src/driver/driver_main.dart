@@ -21,9 +21,7 @@ import 'dart:async' show
     Stream,
     StreamController,
     StreamIterator,
-    StreamSubscription,
-    Zone,
-    ZoneSpecification;
+    StreamSubscription;
 
 import 'dart:typed_data' show
     ByteData,
@@ -38,6 +36,9 @@ import 'dart:isolate' show
     Isolate,
     ReceivePort,
     SendPort;
+
+import '../zone_helper.dart' show
+    runGuarded;
 
 import 'exit_codes.dart' show
     DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
@@ -348,36 +349,10 @@ void handleClientInWorker(IsolatePool pool, ClientController client) {
 Future<Null> handleVerbHere(
     List<String> arguments,
     ClientController client) async {
-  ZoneSpecification specification =
-      new ZoneSpecification(print: (_1, _2, _3, String line) {
-        client.printLineOnStdout(line);
-      },
-      handleUncaughtError: (_1, _2, _3, error, StackTrace stackTrace) {
-        String message =
-            "\n\nExiting due to uncaught error.\n"
-            "${stringifyError(error, stackTrace)}";
-        Zone.ROOT.print(message);
-        client.printLineOnStderr(message);
-        exit(DART_VM_EXITCODE_UNCAUGHT_EXCEPTION);
-      });
-
-  int exitCode = await Zone.current.fork(specification: specification).run(
-      () async {
-        try {
-          return await client.verb.perform(
-              client.fletchVm,
-              arguments,
-              null,
-              null);
-        } catch (error, stackTrace) {
-          String message =
-              "\n\nExiting due to uncaught error.\n"
-              "${stringifyError(error, stackTrace)}";
-          Zone.ROOT.print(message);
-          client.printLineOnStderr(message);
-          return DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
-        }
-      });
+  int exitCode = await runGuarded(
+      () => client.verb.perform(client.fletchVm, arguments, null, null),
+      printLineOnStdout: client.printLineOnStdout,
+      handleLateError: client.log.error);
   client.exit(exitCode);
 }
 
