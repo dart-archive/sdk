@@ -120,7 +120,7 @@ class Session {
   Future<int> handleProcessStop() async {
     currentStackTrace = null;
     currentFrame = 0;
-    Command response = await nextVmCommand();
+    Command response = await nextStopCommand();
     switch (response.code) {
       case CommandCode.UncaughtException:
         await backtrace();
