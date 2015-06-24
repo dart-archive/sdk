@@ -499,7 +499,7 @@ Interpreter::InterruptKind Engine::Interpret(
       if (class_id < lower->value()) continue;
       Smi* upper = Smi::cast(table->get(index + offset + 1));
       if (class_id >= upper->value()) continue;
-      SetTop(ToBool(upper != Smi::FromWord(Smi::kMaxValue)));
+      SetTop(ToBool(upper != Smi::FromWord(Smi::kMaxPortableValue)));
       break;
     }
 
@@ -885,8 +885,9 @@ void Interpreter::Run() {
   process_->RestoreErrno();
   process_->TakeLookupCache();
   int result = -1;
-  if (!process_->is_debugging()) result = InterpretFast(
-      process_, &target_yield_result_);
+  if (!process_->is_debugging()) {
+    result = InterpretFast(process_, &target_yield_result_);
+  }
   if (result < 0) {
     Engine engine(process_);
     interruption_ = engine.Interpret(&target_yield_result_);

@@ -1438,7 +1438,8 @@ void InterpreterGeneratorARM::InvokeMethodFast(bool test) {
 
   Label intrinsified;
   if (test) {
-    const int32 kMax = reinterpret_cast<int32>(Smi::FromWord(Smi::kMaxValue));
+    const int32 kMax = reinterpret_cast<int32>(
+        Smi::FromWord(Smi::kMaxPortableValue));
     __ cmp(R9, Immediate(kMax));
     __ str(EQ, R11, Address(R6, 0));  // Store false.
     __ str(NE, R10, Address(R6, 0));  // Store true.

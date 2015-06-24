@@ -1620,7 +1620,8 @@ void InterpreterGeneratorX86::InvokeMethodFast(bool test) {
   if (test) {
     Label false_case, done;
     __ cmpl(Address(EDX, 5 * kPointerSize),
-            Immediate(reinterpret_cast<int32>(Smi::FromWord(Smi::kMaxValue))));
+            Immediate(reinterpret_cast<int32>(
+                Smi::FromWord(Smi::kMaxPortableValue))));
     __ j(EQUAL, &false_case);
     __ movl(EAX, Address(EBP, Process::ProgramOffset()));
     __ movl(EAX, Address(EAX, Program::true_object_offset()));

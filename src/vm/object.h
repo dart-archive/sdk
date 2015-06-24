@@ -131,6 +131,10 @@ class Smi: public Object {
   static const word kMaxValue =
       (1L << (kBitsPerPointer - (kTagSize + 1))) - 1;
 
+  // Min and max limits for portable Smi values (32 bit).
+  static const word kMinPortableValue = -(1L << (32 - (kTagSize + 1)));
+  static const word kMaxPortableValue = (1L << (32 - (kTagSize + 1))) - 1;
+
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(Smi);
 };

@@ -699,7 +699,7 @@ int SelectorRow::FillLinear(Program* program, Array* table) {
       Selector::Encode(name, Selector::METHOD, 0));
 
   table->set(index++, Smi::FromWord(0));
-  table->set(index++, Smi::FromWord(Smi::kMaxValue));
+  table->set(index++, Smi::FromWord(Smi::kMaxPortableValue));
   table->set(index++, NULL);
   table->set(index++, target);
 

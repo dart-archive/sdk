@@ -29,9 +29,14 @@ TEST_CASE(Smi) {
   CheckValidSmi(1);
   CheckValidSmi(Smi::kMinValue);
   CheckValidSmi(Smi::kMaxValue);
+  CheckValidSmi(Smi::kMinPortableValue);
+  CheckValidSmi(Smi::kMaxPortableValue);
 
   CheckInvalidSmi(Smi::kMinValue - 1);
   CheckInvalidSmi(Smi::kMaxValue + 1);
+
+  EXPECT(Smi::kMinValue <= Smi::kMinPortableValue);
+  EXPECT(Smi::kMaxValue >= Smi::kMaxPortableValue);
 }
 
 }  // namespace fletch

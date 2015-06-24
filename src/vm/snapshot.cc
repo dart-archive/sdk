@@ -19,12 +19,9 @@ static const int kSupportedSizeOfDouble = 8;
 static const int kReferenceTableSizeBytes = 4;
 static const int kHeapSizeBytes = 4;
 
-static bool Is32BitSmi(Smi* smi) {
-  // Min and max limits for 32 bit Smi values.
-  const word kMinValue = -(1L << (32 - (Smi::kTagSize + 1)));
-  const word kMaxValue = (1L << (32 - (Smi::kTagSize + 1))) - 1;
+static bool IsSmiPortable(Smi* smi) {
   word value = smi->value();
-  return (value >= kMinValue) && (value <= kMaxValue);
+  return (value >= Smi::kMinPortableValue) && (value <= Smi::kMaxPortableValue);
 }
 
 class Header {
@@ -457,7 +454,7 @@ void SnapshotWriter::WriteObject(Object* object) {
   // First check if object is small integer.
   if (object->IsSmi()) {
     Smi* smi = Smi::cast(object);
-    if (!Is32BitSmi(smi)) {
+    if (!IsSmiPortable(smi)) {
       alternative_heap_size_ += LargeInteger::AllocationSize();
     }
     WriteInt64(Header::FromSmi(smi).as_word());
