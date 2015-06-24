@@ -6,9 +6,3 @@
 1_test: Fail
 3_test: Fail
 5_test: Fail
-
-[ $asan && $mode == debug ]
-4_test: Pass, Slow
-DeltaBlue_test: Pass, Slow
-messaging_latency_test: Pass, Slow
-simple_loop_test: Pass, Slow

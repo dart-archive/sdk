@@ -11,9 +11,6 @@ regress_14348_test: Crash
 [ ($compiler == fletchc || $runtime == fletchc) && $arch == ia32 ]
 bit_shift_test: Fail
 
-[ $mode == debug && $asan ]
-closure_cycles_test: Slow, Pass
-
 [ $compiler == fletchc || $runtime == fletchc ]
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail

@@ -120,6 +120,27 @@
         ],
 
         'xcode_settings': { # And ninja.
+          'GCC_OPTIMIZATION_LEVEL': '1',
+
+          'OTHER_CPLUSPLUSFLAGS': [
+            '-g',
+          ],
+        },
+
+        'cflags': [
+          '-g',
+          '-O1',
+        ],
+      },
+
+      'fletch_develop': {
+        'abstract': 1,
+
+        'defines': [
+          'DEBUG',
+        ],
+
+        'xcode_settings': { # And ninja.
           'GCC_OPTIMIZATION_LEVEL': '0',
 
           'OTHER_CPLUSPLUSFLAGS': [
@@ -398,26 +419,6 @@
         ],
       },
 
-      'DebugIA32': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_ia32', ],
-      },
-
-      'DebugIA32Asan': {
-        'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_ia32', 'fletch_asan',
-        ],
-      },
-
-      'DebugX64': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_x64' ],
-      },
-
-      'DebugX64Asan': {
-        'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_x64', 'fletch_asan',
-        ],
-      },
-
       'ReleaseIA32Clang': {
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_clang',
@@ -441,6 +442,43 @@
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_x64', 'fletch_asan',
           'fletch_clang',
+        ],
+      },
+
+      'ReleaseARM': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_arm' ],
+      },
+
+      'ReleaseXARM': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm' ],
+      },
+
+      'ReleaseXARMAndroid': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm'],
+        'defines': [ 'FLETCH_TARGET_ANDROID' ],
+      },
+
+      'ReleaseXARM64': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm64' ],
+      },
+
+      'DebugIA32': {
+        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_ia32', ],
+      },
+
+      'DebugIA32Asan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_debug', 'fletch_ia32', 'fletch_asan',
+        ],
+      },
+
+      'DebugX64': {
+        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_x64' ],
+      },
+
+      'DebugX64Asan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_debug', 'fletch_x64', 'fletch_asan',
         ],
       },
 
@@ -474,16 +512,8 @@
         'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_arm' ],
       },
 
-      'ReleaseARM': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_arm' ],
-      },
-
       'DebugXARM': {
         'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_xarm' ],
-      },
-
-      'ReleaseXARM': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm' ],
       },
 
       'DebugXARMAndroid': {
@@ -491,17 +521,71 @@
         'defines': [ 'FLETCH_TARGET_ANDROID' ],
       },
 
-      'ReleaseXARMAndroid': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm'],
-        'defines': [ 'FLETCH_TARGET_ANDROID' ],
-      },
-
       'DebugXARM64': {
         'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_xarm64' ],
       },
 
-      'ReleaseXARM64': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm64' ],
+      'DevelopIA32': {
+        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_ia32', ],
+      },
+
+      'DevelopIA32Asan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_develop', 'fletch_ia32', 'fletch_asan',
+        ],
+      },
+
+      'DevelopX64': {
+        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_x64' ],
+      },
+
+      'DevelopX64Asan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_develop', 'fletch_x64', 'fletch_asan',
+        ],
+      },
+
+      'DevelopIA32Clang': {
+        'inherit_from': [
+          'fletch_base', 'fletch_develop', 'fletch_ia32', 'fletch_clang',
+        ],
+      },
+
+      'DevelopIA32ClangAsan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_develop', 'fletch_ia32', 'fletch_asan',
+          'fletch_clang',
+        ],
+      },
+
+      'DevelopX64Clang': {
+        'inherit_from': [
+          'fletch_base', 'fletch_develop', 'fletch_x64', 'fletch_clang',
+        ],
+      },
+
+      'DevelopX64ClangAsan': {
+        'inherit_from': [
+          'fletch_base', 'fletch_develop', 'fletch_x64', 'fletch_asan',
+          'fletch_clang',
+        ],
+      },
+
+      'DevelopARM': {
+        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_arm' ],
+      },
+
+      'DevelopXARM': {
+        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_xarm' ],
+      },
+
+      'DevelopXARMAndroid': {
+        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_xarm' ],
+        'defines': [ 'FLETCH_TARGET_ANDROID' ],
+      },
+
+      'DevelopXARM64': {
+        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_xarm64' ],
       },
     },
 
