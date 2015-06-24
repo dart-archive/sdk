@@ -13,6 +13,7 @@ import 'dart:typed_data' show Uint8List;
 
 import 'bytecodes.dart';
 import 'commands.dart';
+import 'fletch_system.dart';
 import 'compiler.dart' show FletchCompiler;
 import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';
@@ -25,6 +26,7 @@ class Session {
   final Socket vmSocket;
   final FletchCompiler compiler;
   DebugState debugState;
+  FletchSystem fletchSystem;
 
   StreamIterator<Command> vmCommands;
   StackTrace currentStackTrace;
@@ -32,7 +34,7 @@ class Session {
   SourceLocation currentLocation;
   bool running = false;
 
-  Session(this.vmSocket, this.compiler) {
+  Session(this.vmSocket, this.compiler, this.fletchSystem) {
     // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
     debugState = new DebugState(this);
   }
@@ -369,9 +371,10 @@ class Session {
       for (int i = 0; i < frames; ++i) {
         int methodId = backtraceResponse.methodIds[i];
         if (methodId == mainMethodId) belowMain = false;
+        FletchFunction function = fletchSystem.functions[methodId];
         currentStackTrace.addFrame(
             compiler,
-            new StackFrame(methodId,
+            new StackFrame(function,
                            backtraceResponse.bytecodeIndices[i],
                            compiler,
                            debugState,

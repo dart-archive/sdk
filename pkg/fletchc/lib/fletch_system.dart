@@ -4,6 +4,9 @@
 
 library fletchc.fletch_system;
 
+import 'package:compiler/src/elements/elements.dart' show
+    Element;
+
 import 'bytecodes.dart';
 import 'commands.dart';
 
@@ -32,7 +35,9 @@ class FletchClass {
 // TODO(ajohnsen): Move to separate file.
 class FletchFunction {
   final int methodId;
+  // TODO(ajohnsen): Remove name?
   final String name;
+  final Element element;
   final List<Bytecode> bytecodes;
   final List<FletchConstant> constants;
   final int memberOf;
@@ -40,11 +45,14 @@ class FletchFunction {
   const FletchFunction(
       this.methodId,
       this.name,
+      this.element,
       this.bytecodes,
       this.constants,
       this.memberOf);
 
   bool get hasMemberOf => memberOf >= 0;
+
+  bool get isInternal => element == null;
 
   String toString() {
     StringBuffer buffer = new StringBuffer();

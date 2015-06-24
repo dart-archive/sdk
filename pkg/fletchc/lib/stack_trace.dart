@@ -5,19 +5,16 @@
 part of fletch.debug_state;
 
 class StackFrame {
-  final int functionId;
+  final FletchFunction function;
   final int bytecodePointer;
   final FletchCompiler compiler;
   final DebugState debugState;
   final bool isBelowMain;
-  final bool isInternal;
 
-  StackFrame(int functionId, this.bytecodePointer, FletchCompiler compiler,
-             this.debugState, this.isBelowMain)
-      : this.functionId = functionId,
-        this.compiler = compiler,
-        isInternal =
-            compiler.lookupFletchFunctionBuilder(functionId).isParameterStub;
+  StackFrame(this.function, this.bytecodePointer, this.compiler,
+             this.debugState, this.isBelowMain);
+
+  bool get isInternal => function.isInternal;
 
   String invokeString(Bytecode bytecode) {
     if (bytecode is InvokeMethod) {
@@ -32,14 +29,14 @@ class StackFrame {
     return debugState.showInternalFrames || !(isInternal || isBelowMain);
   }
 
-  DebugInfo get debugInfo => debugState.getDebugInfo(functionId);
+  DebugInfo get debugInfo => debugState.getDebugInfo(function);
 
   void list() {
     print(debugInfo.sourceListStringFor(bytecodePointer - 1));
   }
 
   void disasm() {
-    var bytecodes = compiler.lookupFunctionBytecodes(functionId);
+    var bytecodes = compiler.lookupFunctionBytecodes(function);
     var offset = 0;
     for (var i = 0; i  < bytecodes.length; i++) {
       var source = debugInfo.astStringFor(offset);
@@ -57,7 +54,7 @@ class StackFrame {
   }
 
   String shortString(int maxNameLength) {
-    String name = compiler.lookupFunctionName(functionId);
+    String name = compiler.lookupFunctionName(function);
     String astString = debugInfo.astStringFor(bytecodePointer - 1);
     astString = (astString != null) ? '@$astString' : '';
 
@@ -82,7 +79,7 @@ class StackFrame {
   }
 
   int stepBytecodePointer(SourceLocation current) {
-    var bytecodes = compiler.lookupFunctionBytecodes(functionId);
+    var bytecodes = compiler.lookupFunctionBytecodes(function);
     // Zip forward to the current bytecode. The bytecode pointer in the stack
     // frame is the return address which is one bytecode after the current one.
     var offset = 0;
@@ -116,7 +113,7 @@ class StackTrace {
 
   void addFrame(FletchCompiler compiler, StackFrame frame) {
     stackFrames[--framesToGo] = frame;
-    String name = compiler.lookupFunctionName(frame.functionId);
+    String name = compiler.lookupFunctionName(frame.function);
     var nameLength = name == null ? 0 : name.length;
     if (nameLength > maxNameLength) maxNameLength = nameLength;
   }
@@ -181,5 +178,5 @@ class StackTrace {
 
   int get bytecodePointer => stackFrames[0].bytecodePointer;
 
-  int get methodId => stackFrames[0].functionId;
+  int get methodId => stackFrames[0].function.methodId;
 }

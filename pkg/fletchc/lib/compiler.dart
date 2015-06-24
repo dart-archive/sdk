@@ -57,6 +57,8 @@ import 'src/fletch_compiler.dart' as implementation;
 import 'bytecodes.dart' show
     Bytecode;
 
+import 'fletch_system.dart';
+
 import 'src/fletch_selector.dart';
 
 const String _SDK_DIR = const String.fromEnvironment("dart-sdk");
@@ -243,27 +245,28 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   Uri get fletchVm => _compiler.fletchVm;
 
   FletchFunctionBuilder lookupFletchFunctionBuilder(int methodId) {
-    FletchFunctionBuilder function =
+    FletchFunctionBuilder builder =
         _compiler.context.backend.functions[methodId];
-    assert(function.methodId == methodId);
-    return function;
+    assert(builder.methodId == methodId);
+    return builder;
   }
 
-  String lookupFunctionName(int methodId) {
-    FletchFunctionBuilder function = lookupFletchFunctionBuilder(methodId);
-    if (function == null) return '';
-    if (function.isConstructor) {
-      ConstructorElement constructor = function.element;
+  String lookupFunctionName(FletchFunction function) {
+    int methodId = function.methodId;
+    FletchFunctionBuilder builder = lookupFletchFunctionBuilder(methodId);
+    if (builder == null) return '';
+    if (builder.isConstructor) {
+      ConstructorElement constructor = builder.element;
       ClassElement enclosing = constructor.enclosingClass;
       String name = (constructor.name == null || constructor.name.length == 0)
           ? ''
           : '.${constructor.name}';
-      String postfix = function.isInitializerList ? ' initializer' : '';
+      String postfix = builder.isInitializerList ? ' initializer' : '';
       return '${enclosing.name}$name$postfix';
     }
-    String functionName = function.name;
+    String functionName = builder.name;
     if (functionName == null) return '';
-    FletchClassBuilder memberOf = function.memberOf;
+    FletchClassBuilder memberOf = builder.memberOf;
     if (memberOf == null) return functionName;
     if (memberOf.element == null) return functionName;
     if (functionName.isEmpty) return memberOf.element.name;
@@ -299,7 +302,8 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return _compiler.context.symbols[id];
   }
 
-  List<Bytecode> lookupFunctionBytecodes(int methodId) {
+  List<Bytecode> lookupFunctionBytecodes(FletchFunction function) {
+    int methodId = function.methodId;
     return lookupFletchFunctionBuilder(methodId).assembler.bytecodes;
   }
 
@@ -316,9 +320,10 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return mainMethod.methodId;
   }
 
-  DebugInfo createDebugInfo(int functionId) {
-    FletchFunctionBuilder function = lookupFletchFunctionBuilder(functionId);
-    return _compiler.context.backend.createDebugInfo(function);
+  DebugInfo createDebugInfo(FletchFunction function) {
+    FletchFunctionBuilder builder = lookupFletchFunctionBuilder(
+        function.methodId);
+    return _compiler.context.backend.createDebugInfo(builder);
   }
 
   DebugInfo debugInfoForPosition(String file, int position) {

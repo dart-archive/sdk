@@ -316,6 +316,7 @@ class FletchFunctionBuilder {
     return new FletchFunction(
         methodId,
         name,
+        element,
         assembler.bytecodes,
         createFletchConstants(context),
         hasMemberOf ? memberOf.classId : -1);

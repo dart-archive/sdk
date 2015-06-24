@@ -578,8 +578,10 @@ class FletchBackend extends Backend {
     return tearoffFunctions[klass];
   }
 
+  // TODO(ajohnsen): This should not take a builder as argument, but instead a
+  // FletchFunction where FletchFunction has a FletchFunctionKind.
   DebugInfo createDebugInfo(FletchFunctionBuilder function) {
-    DebugInfo debugInfo = new DebugInfo(function);
+    DebugInfo debugInfo = new DebugInfo(function.finalizeFunction(context, []));
     AstElement element = function.element;
     if (element == null) return debugInfo;
     List<Bytecode> expectedBytecodes = function.assembler.bytecodes;

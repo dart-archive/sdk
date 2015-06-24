@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'bytecodes.dart';
 import 'compiler.dart' show FletchCompiler;
 import 'session.dart';
+import 'fletch_system.dart';
 import 'src/debug_info.dart';
 
 part 'stack_trace.dart';
@@ -24,7 +25,8 @@ class Breakpoint {
 
 class DebugState {
   final Map<int, Breakpoint> breakpoints = <int, Breakpoint>{};
-  final Map<int, DebugInfo> debugInfos = <int, DebugInfo>{};
+  final Map<FletchFunction, DebugInfo> debugInfos =
+      <FletchFunction, DebugInfo>{};
 
   bool showInternalFrames = false;
 
@@ -32,9 +34,9 @@ class DebugState {
 
   DebugState(this.session);
 
-  DebugInfo getDebugInfo(int functionId) {
-    return debugInfos.putIfAbsent(functionId, () {
-      return session.compiler.createDebugInfo(functionId);
+  DebugInfo getDebugInfo(FletchFunction function) {
+    return debugInfos.putIfAbsent(function, () {
+      return session.compiler.createDebugInfo(function);
     });
   }
 }

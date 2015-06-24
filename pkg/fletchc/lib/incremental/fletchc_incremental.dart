@@ -120,7 +120,7 @@ class IncrementalCompiler {
         reuseLibrary: reuseLibrary);
   }
 
-  Future<List<Command>> compileUpdates(
+  Future<FletchDelta> compileUpdates(
       FletchSystem currentSystem,
       Map<Uri, Uri> updatedFiles,
       {Logger logTime,

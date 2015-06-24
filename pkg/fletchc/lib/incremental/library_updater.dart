@@ -773,7 +773,7 @@ class LibraryUpdater extends FletchFeatures {
     }
   }
 
-  List<Command> computeUpdateFletch(FletchSystem currentSystem) {
+  FletchDelta computeUpdateFletch(FletchSystem currentSystem) {
     if (USE_FLETCH_SYSTEM) {
       logVerbose("Using FletchSystem.");
       backend.newSystemBuilder(currentSystem);
@@ -810,7 +810,9 @@ class LibraryUpdater extends FletchFeatures {
     compiler.phase = Compiler.PHASE_DONE_RESOLVING;
 
     // TODO(ahe): Clean this up. Don't call this method in analyze-only mode.
-    if (compiler.analyzeOnly) return <Command>[];
+    if (compiler.analyzeOnly) {
+      return new FletchDelta(currentSystem, currentSystem, <Command>[]);
+    }
 
     Set<ClassElementX> changedClasses =
         new Set<ClassElementX>.from(_classesWithSchemaChanges);
@@ -842,7 +844,7 @@ class LibraryUpdater extends FletchFeatures {
     }
 
     if (USE_FLETCH_SYSTEM) {
-      return backend.systemBuilder.computeDelta(backend.context).commands;
+      return backend.systemBuilder.computeDelta(backend.context);
     }
 
     List<Command> updates = <Command>[const commands_lib.PrepareForChanges()];
@@ -899,7 +901,8 @@ class LibraryUpdater extends FletchFeatures {
     }
 
     updates.add(new commands_lib.CommitChanges(changes));
-    return updates;
+    // TODO(ajohnsen): The new system is not updated.
+    return new FletchDelta(currentSystem, currentSystem, updates);
   }
 
   void computeFieldUpdateFletch(FieldElementX element, List<Command> commands) {
