@@ -340,7 +340,7 @@
               # having to set DYLD_LIBRARY_PATH.
               'destination': '<(PRODUCT_DIR)',
               'files': [
-                '../third_party/clang/mac/lib/clang/3.6.0/'
+                'third_party/clang/mac/lib/clang/3.7.0/'
                 'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
               ],
             },

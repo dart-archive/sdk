@@ -76,6 +76,8 @@ class LinuxSystem extends PosixSystem {
   }
 
   int removeFromEventHandler(int fd) {
+    // TODO(ajohnsen): If we increased the refcount of the port before adding it
+    // to the epoll set and we remove it now, we can leak memory.
     int eh = System.eventHandler;
     return _retry(() => _epollCtl.icall$4(eh, EPOLL_CTL_DEL, fd, Foreign.NULL));
   }

@@ -30,7 +30,7 @@
       }],
       [ 'OS=="mac"', {
         'clang_asan_rt_path%':
-          '<(DEPTH)/third_party/clang/mac/lib/clang/3.6.0/'
+          '<(DEPTH)/third_party/clang/mac/lib/clang/3.7.0/'
           'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
         'third_party_libs_path%': '<(DEPTH)/third_party/libs/mac',
         # TODO(zerny): Redirect stderr to work around gyp regarding a non-empty
@@ -306,16 +306,16 @@
                 ['OS=="mac"', {
                   'xcode_settings': { # And ninja.
                     'ARCHS': [ 'arm64' ],
-    
+
                     'LIBRARY_SEARCH_PATHS': [
                       '<(third_party_libs_path)/arm64',
                     ],
-    
+
                     'OTHER_CPLUSPLUSFLAGS' : [
                       '-isysroot',
                       '<(ios_sdk_path)',
                     ],
-    
+
                     'OTHER_CFLAGS' : [
                       '-isysroot',
                       '<(ios_sdk_path)',
@@ -351,6 +351,10 @@
 
         'cflags': [
           '-fsanitize=address',
+        ],
+
+        'defines': [
+          'FLETCH_ASAN',
         ],
 
         'ldflags': [

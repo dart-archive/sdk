@@ -92,7 +92,10 @@ static void GetAgeStatsCallback(AgeStats stats, void* data) {
 
 static void FlipTableCallback(TableFlip flip_result, void* data) {
   const char* expected_flip = "(╯°□°）╯︵ ┻━┻";
-  EXPECT(strcmp(flip_result.getFlip(), expected_flip) == 0);
+  char* result = flip_result.getFlip();
+  EXPECT(strcmp(result, expected_flip) == 0);
+  free(result);
+  flip_result.Delete();
 }
 
 static void RunPersonTests() {
@@ -206,7 +209,10 @@ static void RunPersonTests() {
     const char* expected_flip = "(╯°□°）╯︵ ┻━┻";
     flip.setFlip(expected_flip);
     TableFlip flip_result = ConformanceService::flipTable(flip);
-    EXPECT(strcmp(flip_result.getFlip(), expected_flip) == 0);
+    char* result = flip_result.getFlip();
+    EXPECT(strcmp(result, expected_flip) == 0);
+    free(result);
+    flip_result.Delete();
   }
 
   {

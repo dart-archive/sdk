@@ -173,6 +173,8 @@ Process::Process(Program* program)
 }
 
 Process::~Process() {
+  delete debug_info_;
+
   ASSERT(next_ == NULL);
   ASSERT(cooked_stack_deltas_.is_empty());
   // Clear out the process pointer from all the ports.
@@ -530,12 +532,6 @@ void Process::Profile() {
 void Process::AttachDebugger() {
   ASSERT(debug_info_ == NULL);
   debug_info_ = new DebugInfo();
-}
-
-void Process::DetachDebugger() {
-  ASSERT(debug_info_ != NULL);
-  delete debug_info_;
-  debug_info_ = NULL;
 }
 
 int Process::PrepareStepOver() {

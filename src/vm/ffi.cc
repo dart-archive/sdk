@@ -7,6 +7,7 @@
 #include <dlfcn.h>
 #include <errno.h>
 
+#include "src/shared/asan_helper.h"
 #include "src/vm/natives.h"
 #include "src/vm/object.h"
 #include "src/vm/port.h"
@@ -101,10 +102,16 @@ NATIVE(ForeignAllocate) {
   if (result == Failure::retry_after_gc()) return result;
   void* calloc_value = calloc(1, size);
   uint64 value = reinterpret_cast<uint64>(calloc_value);
+
+  // If we might be using a leak sanitizer, we'll always use a LargeInteger to
+  // hold the memory pointer in order for the leak sanitizer to find pointers to
+  // malloc()ed memory regions which are referenced by dart [Foreign] objects.
+#ifndef PROBABLY_USING_LEAK_SANITIZER
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
     return Smi::FromWord(value);
   }
+#endif
   LargeInteger::cast(result)->set_value(value);
   return result;
 }

@@ -12,7 +12,6 @@ import subprocess
 
 def invoke_clang(args):
   fletch_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-  fletch_root = os.path.dirname(fletch_path)
   os_name = utils.GuessOS()
   if os_name == "macos":
     os_name = "mac"
@@ -20,7 +19,7 @@ def invoke_clang(args):
       '-isysroot',
       subprocess.check_output(['xcrun', '--show-sdk-path']).strip()])
   clang_bin = os.path.join(
-    fletch_root, "third_party", "clang", os_name, "bin", "clang")
+    fletch_path, "third_party", "clang", os_name, "bin", "clang")
   print clang_bin
   args.insert(0, clang_bin)
   print "'%s'" % "' '".join(args)

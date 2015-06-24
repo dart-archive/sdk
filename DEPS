@@ -4,12 +4,16 @@
 
 
 vars = {
+  # NOTE: This revision will be used for looking at
+  #   gs://chromium-browser-clang/Mac/clang-<rev>-1.tgz
+  #   gs://chromium-browser-clang/Linux_x64/clang-<rev>-1.tgz
+  "clang_rev": "239765",
+
   # Use this googlecode_url variable only if there is an internal mirror for it.
   # If you do not know, use the full path while defining your new deps entry.
   "googlecode_url": "http://%s.googlecode.com/svn",
   "github_url": "https://github.com/%s.git",
 
-  "clang_rev": "@43229",
   "gyp_rev": "@1752",
   "persistent_rev": "@6407f60650dd0a81cf376e8d7d49115f847f24e0",
 
@@ -42,10 +46,6 @@ deps = {
   # Stuff needed for GYP to run.
   "third_party/gyp":
       (Var("googlecode_url") % "gyp") + "/trunk" + Var("gyp_rev"),
-
-  "third_party/clang":
-      ((Var("googlecode_url") % "dart") + "/third_party/clang" +
-       Var("clang_rev")),
 
   "dart":
       ((Var("github_url") % "dart-lang/sdk") + "/" + Var("dart_rev")),
@@ -128,6 +128,15 @@ hooks = [
       '-r',
       '--auto_platform',
       'fletch/tools/testing/bin',
+    ],
+  },
+  {
+    'name': 'lazy_update_clang',
+    'pattern': '.',
+    'action': [
+      'python',
+      'fletch/tools/clang_update.py',
+      '--revision=' + Var("clang_rev"),
     ],
   },
   {

@@ -163,7 +163,7 @@ void DynamicAssertionHelper::GreaterEqual(const E& left, const A& right) {
 // In order to avoid variable unused warnings for code that only uses
 // a variable in an ASSERT or EXPECT, we make sure to use the macro
 // argument.
-#define ASSERT(condition) while (false && (condition))
+#define ASSERT(condition) while (false && (condition)) {}
 
 #endif  // if defined(DEBUG)
 

@@ -310,10 +310,11 @@ void Session::ProcessMessages() {
 
       case Connection::kWriteSnapshot: {
         int length;
-        const uint8* data = connection_->ReadBytes(&length);
+        uint8* data = connection_->ReadBytes(&length);
         const char* path = reinterpret_cast<const char*>(data);
         ASSERT(static_cast<int>(strlen(path)) == length - 1);
         bool success = WriteSnapshot(path);
+        free(data);
         SignalMainThread(success ? kSnapshotDone : kError);
         return;
       }

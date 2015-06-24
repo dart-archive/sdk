@@ -158,7 +158,6 @@ class Process {
 
   // Debugging support.
   void AttachDebugger();
-  void DetachDebugger();
   int PrepareStepOver();
   int PrepareStepOut();
 
