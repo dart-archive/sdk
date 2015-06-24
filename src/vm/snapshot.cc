@@ -90,6 +90,11 @@ class Header {
     return Smi::FromWord(value_ >> kSmiShift);
   }
 
+  int64 as_large_integer_value() {
+    ASSERT(is_smi() && !is_native_smi());
+    return value_ >> kSmiShift;
+  }
+
   bool is_index() { return (value_ & kTagMask) == kIndexTag; }
   word as_index() {
     ASSERT(is_index());
@@ -111,8 +116,6 @@ class Header {
     ASSERT(static_cast<word>(value_) == value_);
     return value_;
   }
-
-  int64 value() { return value_; }
 
   // Lowest one/two bits are used for tagging between:
   // Smi, Indexed and Type+Elements.
@@ -390,7 +393,7 @@ Object* SnapshotReader::ReadObject() {
     HeapObject* object = Allocate(LargeInteger::AllocationSize());
     LargeInteger* integer = reinterpret_cast<LargeInteger*>(object);
     integer->set_class(large_integer_class_);
-    integer->set_value(header.value());
+    integer->set_value(header.as_large_integer_value());
     return object;
   } else if (header.is_index()) {
     // The header word indicates that this is a backreference.
