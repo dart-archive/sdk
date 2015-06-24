@@ -423,7 +423,7 @@ class FletchBackend extends Backend {
     return tearoffClasses.putIfAbsent(function, () {
       FunctionSignature signature = function.signature;
       bool hasThis = function.hasThisArgument;
-      FletchClassBuilder classBuilder = createCallableStubClass(
+      FletchClassBuilder tearoffClass = createCallableStubClass(
           hasThis ? 1 : 0,
           signature.parameterCount,
           compiledObjectClass);
@@ -432,7 +432,7 @@ class FletchBackend extends Backend {
           'call',
           null,
           signature,
-          classBuilder);
+          tearoffClass.classId);
       functions.add(functionBuilder);
 
       BytecodeAssembler assembler = functionBuilder.assembler;
@@ -464,68 +464,72 @@ class FletchBackend extends Backend {
       int fletchSelector = FletchSelector.encodeMethod(
           id,
           signature.parameterCount);
-      classBuilder.addToMethodTable(fletchSelector, functionBuilder);
+      tearoffClass.addToMethodTable(fletchSelector, functionBuilder);
 
-      if (hasThis && function.memberOf.element != null) {
-        // Create == function that tests for equality.
-        int isSelector = context.toFletchTearoffIsSelector(
-            function.name,
-            function.memberOf.element);
-        classBuilder.addIsSelector(isSelector);
+      if (!function.hasMemberOf) return tearoffClass;
 
-        FletchFunctionBuilder equal = new FletchFunctionBuilder.normal(
-            functions.length,
-            2);
-        functions.add(equal);
+      ClassElement classElement = classes[function.memberOf].element;
+      if (classElement == null) return tearoffClass;
 
-        BytecodeLabel isFalse = new BytecodeLabel();
-        equal.assembler
-          // First test for class. This ensures it's the exact function that
-          // we expect.
-          ..loadParameter(1)
-          ..invokeTest(isSelector, 0)
-          ..branchIfFalse(isFalse)
-          // Then test that the receiver is identical.
-          ..loadParameter(0)
-          ..loadField(0)
-          ..loadParameter(1)
-          ..loadField(0)
-          ..identicalNonNumeric()
-          ..branchIfFalse(isFalse)
-          ..loadLiteralTrue()
-          ..ret()
-          ..bind(isFalse)
-          ..loadLiteralFalse()
-          ..ret()
-          ..methodEnd();
+      // Create == function that tests for equality.
+      int isSelector = context.toFletchTearoffIsSelector(
+          function.name,
+          classElement);
+      tearoffClass.addIsSelector(isSelector);
 
-        int id = context.getSymbolId("==");
-        int equalsSelector = FletchSelector.encodeMethod(id, 1);
-        classBuilder.addToMethodTable(equalsSelector, equal);
+      FletchFunctionBuilder equal = new FletchFunctionBuilder.normal(
+          functions.length,
+          2);
+      functions.add(equal);
 
-        // Create hashCode getter. We simply xor the object hashCode and the
-        // method id of the tearoff'ed function.
-        FletchFunctionBuilder hashCode = new FletchFunctionBuilder.accessor(
-            functions.length,
-            false);
-        functions.add(hashCode);
+      BytecodeLabel isFalse = new BytecodeLabel();
+      equal.assembler
+        // First test for class. This ensures it's the exact function that
+        // we expect.
+        ..loadParameter(1)
+        ..invokeTest(isSelector, 0)
+        ..branchIfFalse(isFalse)
+        // Then test that the receiver is identical.
+        ..loadParameter(0)
+        ..loadField(0)
+        ..loadParameter(1)
+        ..loadField(0)
+        ..identicalNonNumeric()
+        ..branchIfFalse(isFalse)
+        ..loadLiteralTrue()
+        ..ret()
+        ..bind(isFalse)
+        ..loadLiteralFalse()
+        ..ret()
+        ..methodEnd();
 
-        int hashCodeSelector = FletchSelector.encodeGetter(
-            context.getSymbolId("hashCode"));
-        int xorSelector = FletchSelector.encodeMethod(
-            context.getSymbolId("^"), 1);
-        hashCode.assembler
-          ..loadParameter(0)
-          ..loadField(0)
-          ..invokeMethod(hashCodeSelector, 0)
-          ..loadLiteral(function.methodId)
-          ..invokeMethod(xorSelector, 1)
-          ..ret()
-          ..methodEnd();
+      id = context.getSymbolId("==");
+      int equalsSelector = FletchSelector.encodeMethod(id, 1);
+      tearoffClass.addToMethodTable(equalsSelector, equal);
 
-        classBuilder.addToMethodTable(hashCodeSelector, hashCode);
-      }
-      return classBuilder;
+      // Create hashCode getter. We simply xor the object hashCode and the
+      // method id of the tearoff'ed function.
+      FletchFunctionBuilder hashCode = new FletchFunctionBuilder.accessor(
+          functions.length,
+          false);
+      functions.add(hashCode);
+
+      int hashCodeSelector = FletchSelector.encodeGetter(
+          context.getSymbolId("hashCode"));
+      int xorSelector = FletchSelector.encodeMethod(
+          context.getSymbolId("^"), 1);
+      hashCode.assembler
+        ..loadParameter(0)
+        ..loadField(0)
+        ..invokeMethod(hashCodeSelector, 0)
+        ..loadLiteral(function.methodId)
+        ..invokeMethod(xorSelector, 1)
+        ..ret()
+        ..methodEnd();
+
+      tearoffClass.addToMethodTable(hashCodeSelector, hashCode);
+
+      return tearoffClass;
     });
   }
 
@@ -549,6 +553,7 @@ class FletchBackend extends Backend {
       FletchClassBuilder holderClass) {
     return functionBuilders.putIfAbsent(function.declaration, () {
       FunctionTypedElement implementation = function.implementation;
+      int memberOf = holderClass != null ? holderClass.classId : null;
       FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder(
           functions.length,
           name,
@@ -556,7 +561,7 @@ class FletchBackend extends Backend {
           // Parameter initializers are expressed in the potential
           // implementation.
           implementation.functionSignature,
-          holderClass,
+          memberOf,
           kind: function.isAccessor
               ? FletchFunctionKind.ACCESSOR
               : FletchFunctionKind.NORMAL);
@@ -707,8 +712,7 @@ class FletchBackend extends Backend {
     // TODO(ahe): Don't do this.
     compiler.enqueuer.codegen.generatedCode[function.declaration] = null;
 
-    if (functionBuilder.memberOf != null &&
-        !function.isGenerativeConstructor) {
+    if (functionBuilder.hasMemberOf && !function.isGenerativeConstructor) {
       // Inject the function into the method table of the 'holderClass' class.
       // Note that while constructor bodies has a this argument, we don't inject
       // them into the method table.
@@ -723,8 +727,8 @@ class FletchBackend extends Backend {
       if (function.isSetter) kind = SelectorKind.Setter;
       int fletchSelector = FletchSelector.encode(id, kind, arity);
       int methodId = functionBuilder.methodId;
-      functionBuilder.memberOf.addToMethodTable(
-          fletchSelector, functionBuilder);
+      FletchClassBuilder classBuilder = classes[functionBuilder.memberOf];
+      classBuilder.addToMethodTable(fletchSelector, functionBuilder);
       // Inject method into all mixin usages.
       Iterable<ClassElement> mixinUsage =
           compiler.world.mixinUsesOf(function.enclosingClass);
@@ -740,7 +744,7 @@ class FletchBackend extends Backend {
             function.name,
             implementation,
             implementation.functionSignature,
-            compiledUsage,
+            compiledUsage.classId,
             kind: function.isAccessor
                 ? FletchFunctionKind.ACCESSOR
                 : FletchFunctionKind.NORMAL);
@@ -957,12 +961,13 @@ class FletchBackend extends Backend {
     // If the name is private, we need the library.
     // Invariant: We only generate public stubs, e.g. 'call'.
     LibraryElement library;
-    if (function.memberOf.element != null) {
-      library = function.memberOf.element.library;
+    if (function.element != null) {
+      library = function.element.library;
     }
     int fletchSelector = context.toFletchSelector(
         new Selector.getter(function.name, library));
-    function.memberOf.addToMethodTable(fletchSelector, getter);
+    FletchClassBuilder classBuilder = classes[function.memberOf];
+    classBuilder.addToMethodTable(fletchSelector, getter);
   }
 
   int assembleProgram() {

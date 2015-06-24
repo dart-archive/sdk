@@ -76,7 +76,7 @@ class FletchFunction {
     return kind == FletchFunctionKind.PARAMETER_STUB;
   }
 
-  bool get hasMemberOf => memberOf >= 0;
+  bool get hasMemberOf => memberOf != null;
 
   bool get isInternal => element == null;
 

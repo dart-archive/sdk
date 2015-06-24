@@ -48,13 +48,13 @@ class FletchFunctionBuilder {
   final FunctionSignature signature;
 
   /**
-   * If the functions is an instance member, [memberOf] is set to the compiled
+   * If the functions is an instance member, [memberOf] is set to the id of the
    * class.
    *
    * If [memberOf] is set, the compiled function takes an 'this' argument in
    * addition to that of [signature].
    */
-  final FletchClassBuilder memberOf;
+  final int memberOf;
   final String name;
   final Element element;
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
@@ -70,7 +70,7 @@ class FletchFunctionBuilder {
       this.name,
       this.element,
       FunctionSignature signature,
-      FletchClassBuilder memberOf,
+      int memberOf,
       {this.kind: FletchFunctionKind.NORMAL})
       : this.signature = signature,
         this.memberOf = memberOf,
@@ -279,7 +279,8 @@ class FletchFunctionBuilder {
 
       if (hasMemberOf) {
         int fletchSelector = context.toFletchSelector(selector);
-        memberOf.addToMethodTable(fletchSelector, functionBuilder);
+        FletchClassBuilder classBuilder = context.backend.classes[memberOf];
+        classBuilder.addToMethodTable(fletchSelector, functionBuilder);
       }
 
       return functionBuilder;
@@ -312,7 +313,7 @@ class FletchFunctionBuilder {
         element,
         assembler.bytecodes,
         createFletchConstants(context),
-        hasMemberOf ? memberOf.classId : -1);
+        memberOf);
   }
 
   List<FletchConstant> createFletchConstants(FletchContext context) {
