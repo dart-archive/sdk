@@ -131,8 +131,9 @@ class Smi: public Object {
       -(1L << (kBitsPerPointer - (kTagSize + 1)));
   static const word kMaxValue =
       (1L << (kBitsPerPointer - (kTagSize + 1))) - 1;
+  // + 2 because of 1 for rounding up, and 1 for the sign.
   static const int kMaxSmiCharacters =
-      static_cast<int>((kBitsPerPointer - kTagSize) * (M_LN2 / M_LN10)) + 1;
+      static_cast<int>((kBitsPerPointer - kTagSize) * (M_LN2 / M_LN10)) + 2;
 
   // Min and max limits for portable Smi values (32 bit).
   static const word kMinPortableValue = -(1L << (32 - (kTagSize + 1)));

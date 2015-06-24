@@ -84,9 +84,10 @@ NATIVE(SmiToDouble) {
 
 NATIVE(SmiToString) {
   Smi* x = Smi::cast(arguments[0]);
-  char buffer[Smi::kMaxSmiCharacters];
+  // We need kMaxSmiCharacters + 1 since we need to null terminate the string.
+  char buffer[Smi::kMaxSmiCharacters + 1];
   int length = snprintf(buffer, ARRAY_SIZE(buffer), "%ld", x->value());
-  ASSERT(length <= Smi::kMaxSmiCharacters);
+  ASSERT(length > 0 && length <= Smi::kMaxSmiCharacters);
   return process->NewStringFromAscii(List<const char>(buffer, length));
 }
 
