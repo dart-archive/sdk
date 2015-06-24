@@ -128,6 +128,7 @@ class Session {
   Process* process_;
 
   bool debugging_;
+  bool output_synchronization_;
 
   ObjectList stack_;
   ObjectList changes_;
@@ -158,6 +159,8 @@ class Session {
   void CommitChangeSchemas(Array* change);
 
   void TransformInstances();
+
+  void PrintSynchronizationToken();
 };
 
 }  // namespace fletch

@@ -14,6 +14,7 @@ import 'dart:typed_data' show Uint8List;
 import 'bytecodes.dart';
 import 'commands.dart';
 import 'fletch_system.dart';
+import 'fletch_vm.dart';
 import 'compiler.dart' show FletchCompiler;
 import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';
@@ -25,6 +26,9 @@ part 'input_handler.dart';
 class Session {
   final Socket vmSocket;
   final FletchCompiler compiler;
+  final StreamIterator<bool> vmStdoutSyncMessages;
+  final StreamIterator<bool> vmStderrSyncMessages;
+
   DebugState debugState;
   FletchSystem fletchSystem;
 
@@ -34,7 +38,11 @@ class Session {
   SourceLocation currentLocation;
   bool running = false;
 
-  Session(this.vmSocket, this.compiler, this.fletchSystem) {
+  Session(this.vmSocket,
+          this.compiler,
+          this.fletchSystem,
+          [this.vmStdoutSyncMessages,
+           this.vmStderrSyncMessages]) {
     // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
     debugState = new DebugState(this);
   }
@@ -58,7 +66,7 @@ class Session {
 
   Future debug() async {
     vmCommands = new CommandReader(vmSocket).iterator;
-    const Debugging().addTo(vmSocket);
+    const Debugging(true).addTo(vmSocket);
     const ProcessSpawnForMain().addTo(vmSocket);
     await new InputHandler(this).run();
   }
@@ -78,7 +86,7 @@ class Session {
 
   Future testDebugger(String commands) async {
     vmCommands = new CommandReader(vmSocket).iterator;
-    const Debugging().addTo(vmSocket);
+    const Debugging(true).addTo(vmSocket);
     const ProcessSpawnForMain().addTo(vmSocket);
     if (commands.isEmpty) {
       await stepToCompletion();
@@ -91,6 +99,22 @@ class Session {
     var hasNext = await vmCommands.moveNext();
     assert(hasNext);
     return vmCommands.current;
+  }
+
+  Future nextOutputSynchronization() async {
+    if (vmStderrSyncMessages != null) {
+      assert(vmStdoutSyncMessages != null);
+      bool gotStdoutSync =
+          await vmStdoutSyncMessages.moveNext() &&
+          await vmStderrSyncMessages.moveNext();
+      assert(gotStdoutSync);
+    }
+    return null;
+  }
+
+  Future nextStopCommand() async {
+    await nextOutputSynchronization();
+    return nextVmCommand();
   }
 
   Future<int> handleProcessStop() async {

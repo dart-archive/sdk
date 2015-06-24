@@ -801,10 +801,18 @@ class SessionReset extends Command {
 }
 
 class Debugging extends Command {
-  const Debugging()
+  final bool outputSynchronization;
+
+  const Debugging(this.outputSynchronization)
       : super(CommandCode.Debugging);
 
-  String valuesToString() => "";
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint8(outputSynchronization ? 1 : 0)
+        ..sendOn(sink, code);
+  }
+
+  String valuesToString() => "$outputSynchronization";
 }
 
 class WriteSnapshot extends Command {

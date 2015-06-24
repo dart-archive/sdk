@@ -2391,7 +2391,7 @@ Future<TestSession> runFletchVM(
       // completion, then we reset the session and rebuild the program and carry
       // out the actual incremental compilation test.
       for (Command command in [
-               const commands_lib.Debugging(),
+               const commands_lib.Debugging(false),
                const commands_lib.ProcessSpawnForMain()]) {
         print(command);
         command.addTo(vmSocket);
@@ -2411,7 +2411,7 @@ Future<TestSession> runFletchVM(
 
     for (Command command in [
         // Turn on debugging.
-        const commands_lib.Debugging(),
+        const commands_lib.Debugging(false),
         const commands_lib.ProcessSpawnForMain()]) {
       print(command);
       command.addTo(vmSocket);

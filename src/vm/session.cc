@@ -30,6 +30,7 @@ Session::Session(Connection* connection)
       program_(NULL),
       process_(NULL),
       debugging_(false),
+      output_synchronization_(false),
       stack_(0),
       changes_(0),
       main_thread_monitor_(Platform::CreateMonitor()),
@@ -302,6 +303,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kDebugging: {
+        output_synchronization_ = connection_->ReadBoolean();
         debugging_ = true;
         break;
       }
@@ -934,6 +936,18 @@ void Session::PostponeChange(Change change, int count) {
   changes_.Add(array);
 }
 
+static const char kSynchronizationToken[] =
+    { 60, 61, 33, 123, 3, 2, 1, 2, 3, 125, 33, 61, 62, 0 };
+
+void Session::PrintSynchronizationToken() {
+  if (output_synchronization_) {
+    fprintf(stdout, "%s\n", kSynchronizationToken);
+    fflush(stdout);
+    fprintf(stderr, "%s\n", kSynchronizationToken);
+    fflush(stderr);
+  }
+}
+
 void Session::UncaughtException() {
   // TODO(ager): This is not thread safe. UncaughtException is called
   // from the interpreter on a thread from the thread pool and it is
@@ -941,6 +955,7 @@ void Session::UncaughtException() {
   // message handling and we need to enqueue a message for the event
   // loop here.
   connection_->Send(Connection::kUncaughtException);
+  PrintSynchronizationToken();
 }
 
 void Session::BreakPoint(Process* process) {
@@ -948,11 +963,13 @@ void Session::BreakPoint(Process* process) {
   debug_info->set_is_stepping(false);
   connection_->WriteInt(debug_info->current_breakpoint_id());
   connection_->Send(Connection::kProcessBreakpoint);
+  PrintSynchronizationToken();
 }
 
 void Session::ProcessTerminated(Process* process) {
   if (process_ == process) {
     connection_->Send(Connection::kProcessTerminated);
+    PrintSynchronizationToken();
     process_ = NULL;
   }
 }

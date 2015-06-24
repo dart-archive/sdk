@@ -88,7 +88,8 @@ main(List<String> arguments) async {
 
   fletchDelta.commands.forEach((command) => command.addTo(vm.socket));
 
-  var session = new Session(vm.socket, compiler, fletchDelta.system);
+  var session = new Session(vm.socket, compiler, fletchDelta.system,
+                            vm.stdoutSyncMessages, vm.stderrSyncMessages);
 
   if (snapshotPath != null) {
     session.writeSnapshot(snapshotPath);
