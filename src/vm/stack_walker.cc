@@ -53,6 +53,19 @@ void StackWalker::UncookFrame(int delta) {
   stack_->set(stack_->top() + stack_offset_, bcp);
 }
 
+Object** StackWalker::PointerToFirstFrameElement() {
+  return stack_->Pointer(stack_->top() + stack_offset_ + 1);
+}
+
+Object** StackWalker::PointerToLastFrameElement() {
+  return stack_->Pointer(stack_->top() + stack_offset_ + frame_size_);
+}
+
+void StackWalker::VisitPointersInFrame(PointerVisitor* visitor) {
+  visitor->VisitBlock(PointerToFirstFrameElement(),
+                      PointerToLastFrameElement() + 1);
+}
+
 Object* StackWalker::GetLocal(int slot) {
   int stack_index = stack_->top() + stack_offset_ + 1 + slot;
   return stack_->get(stack_index);

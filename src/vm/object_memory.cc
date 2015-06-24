@@ -12,6 +12,7 @@
 #include "src/vm/heap.h"
 #include "src/vm/object.h"
 #include "src/vm/platform.h"
+#include "src/vm/stack_walker.h"
 
 namespace fletch {
 
@@ -146,12 +147,12 @@ void Space::Append(Chunk* chunk) {
 void Space::IterateObjects(HeapObjectVisitor* visitor) {
   if (is_empty()) return;
   Flush();
-  for (Chunk* c = first(); c != NULL; c = c->next()) {
-    uword current = c->base();
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    uword current = chunk->base();
     while (!HasSentinelAt(current)) {
-      HeapObject* o = HeapObject::FromAddress(current);
-      current += o->Size();
-      visitor->Visit(o);
+      HeapObject* object = HeapObject::FromAddress(current);
+      current += object->Size();
+      visitor->Visit(object);
     }
   }
 }
@@ -159,39 +160,50 @@ void Space::IterateObjects(HeapObjectVisitor* visitor) {
 void Space::CompleteScavenge(PointerVisitor* visitor) {
   ASSERT(!is_empty());
   Flush();
-  for (Chunk* c = first(); c != NULL; c = c->next()) {
-    uword current = c->base();
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    uword current = chunk->base();
     // TODO(kasperl): I don't like the repeated checks to see if p is
     // the last chunk. Can't we just make sure to write the sentinel
     // whenever we've copied over an object, so this check becomes
     // simpler like in IterateObjects?
-    while ((c == last()) ? (current < top()) : !HasSentinelAt(current)) {
-      HeapObject* o = HeapObject::FromAddress(current);
-      o->IteratePointers(visitor);
-      current += o->Size();
+    while ((chunk == last()) ? (current < top()) : !HasSentinelAt(current)) {
+      HeapObject* object = HeapObject::FromAddress(current);
+      object->IteratePointers(visitor);
+      current += object->Size();
     }
   }
 }
 
-void Space::CompleteTransformations(PointerVisitor* visitor) {
+void Space::CompleteTransformations(PointerVisitor* visitor, Process* process) {
   ASSERT(!is_empty());
   Flush();
-  for (Chunk* c = first(); c != NULL; c = c->next()) {
-    uword current = c->base();
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    uword current = chunk->base();
     // TODO(kasperl): I don't like the repeated checks to see if p is
     // the last chunk. Can't we just make sure to write the sentinel
     // whenever we've copied over an object, so this check becomes
     // simpler like in IterateObjects?
-    while ((c == last()) ? (current < top()) : !HasSentinelAt(current)) {
-      HeapObject* o = HeapObject::FromAddress(current);
-      if (o->forwarding_address() != NULL) {
+    while ((chunk == last()) ? (current < top()) : !HasSentinelAt(current)) {
+      HeapObject* object = HeapObject::FromAddress(current);
+      if (object->forwarding_address() != NULL) {
         current += Instance::kSize;
         while (*reinterpret_cast<uword*>(current) == HeapObject::kTag) {
           current += kPointerSize;
         }
+      } else if (object->IsStack()) {
+        // We haven't cooked stacks when we perform object transformations.
+        // Therefore, we cannot simply iterate pointers in the stack because
+        // that would look at the raw bytecode pointers as well. Instead we
+        // iterate the actual pointers in each frame directly.
+        ASSERT(process != NULL);
+        StackWalker stack_walker(process, Stack::cast(object));
+        while (stack_walker.MoveNext()) {
+          stack_walker.VisitPointersInFrame(visitor);
+        }
+        current += object->Size();
       } else {
-        o->IteratePointers(visitor);
-        current += o->Size();
+        object->IteratePointers(visitor);
+        current += object->Size();
       }
     }
   }

@@ -41,6 +41,10 @@ class StackWalker {
   // Uncook frame given the delta returned by CookFrame.
   void UncookFrame(int delta);
 
+  // Visit object pointers in the current stack frame. This excludes
+  // the bytecode pointer.
+  void VisitPointersInFrame(PointerVisitor* visitor);
+
   // Get the local in the given slot. A slot is relative to the value
   // immediately after the return address in the current frame.
   Object* GetLocal(int slot);
@@ -75,6 +79,9 @@ class StackWalker {
                 uint8* end_bcp,
                 int current_stack_offset,
                 bool include_last);
+
+  Object** PointerToFirstFrameElement();
+  Object** PointerToLastFrameElement();
 
   NoAllocationFailureScope no_allocation_failure_scope_;
   Process* process_;

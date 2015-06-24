@@ -1008,7 +1008,7 @@ class TransformInstancesProcessVisitor : public ProcessVisitor {
     Space* space = process->heap()->space();
     NoAllocationFailureScope scope(space);
     process->IterateRoots(&pointer_visitor);
-    space->CompleteTransformations(&pointer_visitor);
+    space->CompleteTransformations(&pointer_visitor, process);
   }
 };
 
@@ -1027,7 +1027,7 @@ void Session::TransformInstances() {
   NoAllocationFailureScope scope(space);
   TransformInstancesPointerVisitor pointer_visitor(program()->heap());
   program()->IterateRoots(&pointer_visitor);
-  space->CompleteTransformations(&pointer_visitor);
+  space->CompleteTransformations(&pointer_visitor, NULL);
 
   // TODO(ager): TransformInstances needs to locate all processes. Currently,
   // it only iterates processes in the scheduler and in the session. There

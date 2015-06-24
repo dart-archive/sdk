@@ -15,6 +15,7 @@ class Heap;
 class HeapObject;
 class HeapObjectVisitor;
 class PointerVisitor;
+class Process;
 class Space;
 
 const int kPageSize = 4 * KB;
@@ -98,7 +99,7 @@ class Space {
   void CompleteScavenge(PointerVisitor* visitor);
 
   // Schema change support.
-  void CompleteTransformations(PointerVisitor* visitor);
+  void CompleteTransformations(PointerVisitor* visitor, Process* process);
 
   // Returns true if the address is inside this space.
   inline bool Includes(uword address) const;
