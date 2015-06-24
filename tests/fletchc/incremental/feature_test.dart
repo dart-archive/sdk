@@ -2228,7 +2228,12 @@ compileAndRun(EncodedResult encodedResult) async {
         command.addTo(session.vmSocket);
       }
 
-      await session.cont();
+      // Set breakpoint in main in case main was replaced.
+      await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
+      // Restart the current frame to rerun main.
+      await session.restart();
+      // Step out of main to finish execution of main.
+      await session.stepOut();
 
       for (String expected in program.messages) {
         Expect.isTrue(await session.iterator.moveNext());
@@ -2247,15 +2252,8 @@ compileAndRun(EncodedResult encodedResult) async {
     }
   }).catchError(session.handleError).then((_) {
     if (session.running) {
-      // The session is still alive. Rewrite the program so that
-      // the process will terminate.
+      // The session is still alive. Run to completion.
       for (Command command in [
-               const commands_lib.PrepareForChanges(),
-               new commands_lib.PushFromMap(
-                   MapId.methods, session.isMainDoneId),
-               const commands_lib.PushBoolean(true),
-               const commands_lib.ChangeMethodLiteral(0),
-               const commands_lib.CommitChanges(1),
                const commands_lib.ProcessContinue()]) {
         print(command);
         command.addTo(session.vmSocket);
@@ -2409,26 +2407,21 @@ Future<TestSession> runFletchVM(
     }
 
     for (Command command in [
-        // Change isMainDone to always return false.
-        const commands_lib.PrepareForChanges(),
-        new commands_lib.PushFromMap(MapId.methods, session.isMainDoneId),
-        const commands_lib.PushBoolean(false),
-        const commands_lib.ChangeMethodLiteral(0),
-        const commands_lib.CommitChanges(1),
-
         // Turn on debugging.
         const commands_lib.Debugging(),
-        const commands_lib.ProcessSpawnForMain(),
-
-        // Set a breakpoint in isMainDone at the first bytecode.
-        new commands_lib.PushFromMap(MapId.methods, session.isMainDoneId),
-        const commands_lib.ProcessSetBreakpoint(0)]) {
+        const commands_lib.ProcessSpawnForMain()]) {
       print(command);
       command.addTo(vmSocket);
     }
 
-    await session.nextVmCommand();
+    // Allow operations on internal frames.
+    await session.toggleInternal();
+    // Set breakpoint in main.
+    await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
+    // Run the program to hit the breakpoint in main.
     await session.debugRun();
+    // Step out of main to finish execution of main.
+    await session.stepOut();
 
     return session;
   } catch (error, stackTrace) {
@@ -2440,10 +2433,6 @@ class TestSession extends Session {
   final Process process;
   final StreamIterator iterator;
   final Stream<String> stderr;
-
-  /// ID of the method `isMainDone`
-  /// [system.dart](../../../lib/system/system.dart).
-  final int isMainDoneId;
 
   final List<Future> futures;
 
@@ -2457,7 +2446,6 @@ class TestSession extends Session {
       this.process,
       this.iterator,
       this.stderr,
-      this.isMainDoneId,
       this.futures,
       this.exitCode)
       : super(vmSocket, compiler);
@@ -2533,9 +2521,6 @@ class TestSession extends Session {
     io.stderr.writeln("TestSession.spawnVm");
     String vmPath = compiler.fletchVm.toFilePath();
     FletchBackend backend = compiler.backend;
-    AbstractFieldElement isMainDone =
-        backend.fletchSystemLibrary.findLocal("isMainDone");
-    int isMainDoneId = backend.functionBuilders[isMainDone.getter].methodId;
 
     List<Future> futures = <Future>[];
     void recordFuture(String name, Future future) {
@@ -2589,7 +2574,7 @@ class TestSession extends Session {
         vmSocket, compiler.helper, process,
         new StreamIterator(stdoutController.stream),
         stderrController.stream,
-        isMainDoneId, futures, exitCodeCompleter.future);
+        futures, exitCodeCompleter.future);
 
     recordFuture("exitCode", process.exitCode.then((int exitCode) {
       session.quit();
