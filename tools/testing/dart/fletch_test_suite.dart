@@ -254,7 +254,6 @@ class TestCompleter {
         completer.complete(
             new TestFailed(
                 name,
-                "",
                 "Helper program exited prematurely with exit code $exitCode.",
                 stderr));
       }
@@ -305,7 +304,6 @@ class TestCompleter {
       completer.complete(
           new TestFailed(
               command._name,
-              "",
               "Helper program exited prematurely with exit code $exitCode.",
               stderr));
     }
