@@ -28,8 +28,8 @@ class CommandReader {
   // TODO(ager): Don't use asBroadcastStream on the stream. However, at this
   // point if we don't make the stream a broadcast stream it terminates
   // prematurely.
-  StreamIterator get iterator
-      => new StreamIterator(stream().asBroadcastStream());
+  StreamIterator<Command> get iterator
+      => new StreamIterator<Command>(stream().asBroadcastStream());
 
   Stream<Command> stream() async* {
     await for (List data in socket) {

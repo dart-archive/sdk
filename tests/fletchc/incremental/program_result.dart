@@ -16,14 +16,20 @@ class ProgramResult {
 
   final bool compileUpdatesShouldThrow;
 
+  final bool commitChangesShouldFail;
+
   const ProgramResult(
-      this.code, this.messages, {this.compileUpdatesShouldThrow: false});
+      this.code,
+      this.messages,
+      {this.compileUpdatesShouldThrow: false,
+       this.commitChangesShouldFail: false});
 
   String toString() {
     return """
 ProgramResult(
     ${JSON.encode(code)},
     ${JSON.encode(messages)},
+    commitChangesShouldFail: $commitChangesShouldFail)
     compileUpdatesShouldThrow: $compileUpdatesShouldThrow)""";
   }
 }
@@ -33,16 +39,22 @@ class ProgramExpectation {
 
   final bool compileUpdatesShouldThrow;
 
+  final bool commitChangesShouldFail;
+
   final bool skip;
 
   const ProgramExpectation(
       this.messages,
       {this.compileUpdatesShouldThrow: false,
+       this.commitChangesShouldFail: false,
        this.skip: false});
 
   ProgramResult toResult(String code) {
     return new ProgramResult(
-        code, messages, compileUpdatesShouldThrow: compileUpdatesShouldThrow);
+        code,
+        messages,
+        compileUpdatesShouldThrow: compileUpdatesShouldThrow,
+        commitChangesShouldFail: commitChangesShouldFail);
   }
 }
 

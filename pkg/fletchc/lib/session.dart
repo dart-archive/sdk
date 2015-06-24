@@ -23,8 +23,145 @@ import 'debug_state.dart';
 part 'command_reader.dart';
 part 'input_handler.dart';
 
-class Session {
-  final Socket vmSocket;
+/// Encapsulates a TCP connection to a running fletch-vm and provides a
+/// [Command] based view on top of it.
+class FletchVmSession {
+  /// The outgoing connection to the fletch-vm.
+  final StreamSink<List<int>> _outgoingSink;
+
+  /// The stream of [Command]s from the fletch-vm.
+  final StreamIterator<Command> _incomingCommands;
+
+  /// Completes when the underlying TCP connection is terminated.
+  final Future _done;
+
+  bool _connectionIsDead = false;
+  bool _drainedIncomingCommands = false;
+
+  FletchVmSession(Socket vmSocket)
+      : _outgoingSink = vmSocket,
+        _done = vmSocket.done,
+        _incomingCommands = new CommandReader(vmSocket).iterator {
+    _done.catchError((_, __) {}).then((_) {
+      _connectionIsDead = true;
+    });
+  }
+
+  /// Convenience around [runCommands] for running just a single command.
+  Future<Command> runCommand(Command command) {
+    return runCommands([command]);
+  }
+
+  /// Sends the given commands to a fletch-vm and reads response commands
+  /// (if necessary).
+  ///
+  /// If all commands have been successfully applied and responses been awaited,
+  /// this function will complete with the last received [Command] from the
+  /// remote peer (or `null` if there was none).
+  Future<Command> runCommands(List<Command> commands) async {
+    if (commands.any((Command c) => c.numberOfResponsesExpected == null)) {
+      throw new ArgumentError(
+          'The runComands() method will read response commands and therefore '
+          'needs to know how many to read. One of the given commands does'
+          'not specify how many commands the response will have.');
+    }
+
+    Command lastResponse;
+    for (Command command in commands) {
+      await sendCommand(command);
+      for (int i = 0; i < command.numberOfResponsesExpected; i++) {
+        lastResponse = await readNextCommand();
+      }
+    }
+    return lastResponse;
+  }
+
+  /// Sends all given [Command]s to a fletch-vm.
+  Future sendCommands(List<Command> commands) async {
+    for (var command in commands) {
+      await sendCommand(command);
+    }
+  }
+
+  /// Sends a [Command] to a fletch-vm.
+  Future sendCommand(Command command) async {
+    if (_connectionIsDead) {
+      throw new StateError(
+          'Trying to send command ${command} to fletch-vm, but '
+          'the connection is already closed.');
+    }
+    command.addTo(_outgoingSink);
+  }
+
+  /// Will read the next [Command] the fletch-vm sends to us.
+  Future<Command> readNextCommand({bool force: true}) async {
+    if (_drainedIncomingCommands) {
+      throw new StateError(
+          'Tried to read a command from the fletch-vm, but the connection is '
+          'already closed.');
+    }
+
+    try {
+      if (await _incomingCommands.moveNext()) {
+        return _incomingCommands.current;
+      } else {
+        _drainedIncomingCommands = true;
+
+        if (!force) {
+          return null;
+        } else {
+          return new Future.error(new StateError(
+              'Expected response from fletch-vm but got EOF.'));
+        }
+      }
+    } catch (e) {
+      _drainedIncomingCommands = true;
+      return new Future.error(new StateError(
+          'Expected response from fletch-vm but got incoming socket error.'));
+    }
+    return _incomingCommands.current;
+  }
+
+  /// Closes the connection to the fletch-vm and drains the remaining response
+  /// commands.
+  ///
+  /// If [ignoreExtraCommands] is `false` it will throw a StateError if the
+  /// fletch-vm sent any commands.
+  Future shutdown({bool ignoreExtraCommands: false}) async {
+    await _outgoingSink.close().catchError((_) {});
+
+    while (!_drainedIncomingCommands) {
+      Command response = await readNextCommand(force: false);
+      if (!ignoreExtraCommands && response != null) {
+        await kill();
+        throw new StateError(
+            "Got unexpected command from fletch-vm during shutdown "
+            "($response)");
+      }
+    }
+
+    return _done;
+  }
+
+  /// Closes the connection to the fletch-vm. It does not wait until it shuts
+  /// down.
+  ///
+  /// This method will never complete with an exception.
+  Future kill() async {
+    _connectionIsDead = true;
+    _drainedIncomingCommands = true;
+
+    await _outgoingSink.close().catchError((_) {});
+    var value = _incomingCommands.cancel();
+    if (value != null) {
+      await value.catchError((_) {});
+    }
+    _drainedIncomingCommands = true;
+  }
+}
+
+/// Extends a bare [FletchVmSession] with debugging functionality.
+class Session extends FletchVmSession {
   final FletchCompiler compiler;
   final StreamIterator<bool> vmStdoutSyncMessages;
   final StreamIterator<bool> vmStderrSyncMessages;
@@ -32,17 +169,16 @@ class Session {
   DebugState debugState;
   FletchSystem fletchSystem;
 
-  StreamIterator<Command> vmCommands;
   StackTrace currentStackTrace;
   int currentFrame = 0;
   SourceLocation currentLocation;
   bool running = false;
 
-  Session(this.vmSocket,
+  Session(Socket fletchVmSocket,
           this.compiler,
           this.fletchSystem,
           [this.vmStdoutSyncMessages,
-           this.vmStderrSyncMessages]) {
+           this.vmStderrSyncMessages]) : super(fletchVmSocket) {
     // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
     debugState = new DebugState(this);
   }
@@ -51,23 +187,32 @@ class Session {
     return currentStackTrace.stackFrames[0].isVisible;
   }
 
-  void writeSnapshot(String snapshotPath) {
-    new WriteSnapshot(snapshotPath).addTo(vmSocket);
-    vmSocket.drain();
-    quit();
+  Future writeSnapshot(String snapshotPath) async {
+    await runCommand(new WriteSnapshot(snapshotPath));
+    await shutdown();
   }
 
-  void run() {
-    const ProcessSpawnForMain().addTo(vmSocket);
-    const ProcessRun().addTo(vmSocket);
-    vmSocket.drain();
-    quit();
+  Future run() async {
+    await sendCommands([const ProcessSpawnForMain(),
+                        const ProcessRun()]);
+    // NOTE: The [ProcessRun] command normally results in a
+    // [ProcessTerminated] command. But if the compiler emitted a compile time
+    // error, the fletch-vm will just halt()/exit() and we therefore get no
+    // response.
+    var command = await readNextCommand(force: false);
+    if (command != null && command is! ProcessTerminated) {
+      throw new Exception('Expected program to finish complete with '
+                          '[ProcessTerminated] but got [$command]');
+    }
+
+    await shutdown();
   }
 
   Future debug() async {
-    vmCommands = new CommandReader(vmSocket).iterator;
-    const Debugging(true).addTo(vmSocket);
-    const ProcessSpawnForMain().addTo(vmSocket);
+    await sendCommands([
+        const Debugging(true),
+        const ProcessSpawnForMain(),
+    ]);
     await new InputHandler(this).run();
   }
 
@@ -85,20 +230,15 @@ class Session {
   }
 
   Future testDebugger(String commands) async {
-    vmCommands = new CommandReader(vmSocket).iterator;
-    const Debugging(true).addTo(vmSocket);
-    const ProcessSpawnForMain().addTo(vmSocket);
+    await sendCommands([
+        const Debugging(true),
+        const ProcessSpawnForMain(),
+    ]);
     if (commands.isEmpty) {
       await stepToCompletion();
     } else {
       await new InputHandler(this, debugCommandsFromString(commands)).run();
     }
-  }
-
-  Future nextVmCommand() async {
-    var hasNext = await vmCommands.moveNext();
-    assert(hasNext);
-    return vmCommands.current;
   }
 
   Future nextOutputSynchronization() async {
@@ -114,13 +254,12 @@ class Session {
 
   Future nextStopCommand() async {
     await nextOutputSynchronization();
-    return nextVmCommand();
+    return readNextCommand();
   }
 
-  Future<int> handleProcessStop() async {
+  Future<int> handleProcessStop(Command response) async {
     currentStackTrace = null;
     currentFrame = 0;
-    Command response = await nextStopCommand();
     switch (response.code) {
       case CommandCode.UncaughtException:
         await backtrace();
@@ -128,7 +267,7 @@ class Session {
         break;
       case CommandCode.ProcessTerminated:
         print('### process terminated');
-        quit();
+        await shutdown();
         exit(0);
         break;
       default:
@@ -151,8 +290,8 @@ class Session {
       return null;
     }
     running = true;
-    const ProcessRun().addTo(vmSocket);
-    await handleProcessStop();
+    await sendCommand(const ProcessRun());
+    await handleProcessStop(await readNextCommand());
   }
 
   Future debugRun() async {
@@ -163,9 +302,10 @@ class Session {
   Future setBreakpointHelper(String name,
                              int methodId,
                              int bytecodeIndex) async {
-    new PushFromMap(MapId.methods, methodId).addTo(vmSocket);
-    new ProcessSetBreakpoint(bytecodeIndex).addTo(vmSocket);
-    ProcessSetBreakpoint response = await nextVmCommand();
+    ProcessSetBreakpoint response = await runCommands([
+        new PushFromMap(MapId.methods, methodId),
+        new ProcessSetBreakpoint(bytecodeIndex),
+    ]);
     int breakpointId = response.value;
     var breakpoint = new Breakpoint(name, bytecodeIndex, breakpointId);
     debugState.breakpoints[breakpointId] = breakpoint;
@@ -226,8 +366,8 @@ class Session {
   }
 
   Future doDeleteBreakpoint(int id) async {
-    new ProcessDeleteBreakpoint(id).addTo(vmSocket);
-    ProcessDeleteBreakpoint response = await nextVmCommand();
+    ProcessDeleteBreakpoint response =
+        await runCommand(new ProcessDeleteBreakpoint(id));
     assert(response.id == id);
   }
 
@@ -254,8 +394,9 @@ class Session {
 
   Future stepTo(int methodId, int bcp) async {
     if (!checkRunning()) return null;
-    new ProcessStepTo(MapId.methods, methodId, bcp).addTo(vmSocket);
-    await handleProcessStop();
+    Command response =
+      await runCommand(new ProcessStepTo(MapId.methods, methodId, bcp));
+    await handleProcessStop(response);
   }
 
   Future doStep() async {
@@ -307,13 +448,14 @@ class Session {
         await cont();
         return null;
       }
-      const ProcessStepOut().addTo(vmSocket);
-      ProcessSetBreakpoint response = await nextVmCommand();
-      assert(response.value != -1);
-      int id = await handleProcessStop();
-      if (id != response.value) {
+      await sendCommand(const ProcessStepOut());
+      ProcessSetBreakpoint setBreakpoint = await readNextCommand();
+      Command response = await readNextCommand();
+      assert(setBreakpoint.value != -1);
+      int id = await handleProcessStop(response);
+      if (id != setBreakpoint.value) {
         print("### 'finish' cancelled because another breakpoint was hit");
-        await doDeleteBreakpoint(response.value);
+        await doDeleteBreakpoint(setBreakpoint.value);
         await backtrace();
         return null;
       }
@@ -328,32 +470,33 @@ class Session {
       print("### cannot restart entry frame");
       return null;
     }
-    new ProcessRestartFrame(currentFrame).addTo(vmSocket);
-    await handleProcessStop();
+    await handleProcessStop(
+        await runCommand(new ProcessRestartFrame(currentFrame)));
     await backtrace();
   }
 
   Future stepBytecode() async {
     if (!checkRunning()) return null;
-    const ProcessStep().addTo(vmSocket);
-    await handleProcessStop();
+    await handleProcessStop(await runCommand(const ProcessStep()));
   }
 
   Future stepOverBytecode() async {
     if (!checkRunning()) return null;
-    const ProcessStepOver().addTo(vmSocket);
-    ProcessSetBreakpoint response = await nextVmCommand();
-    int id = await handleProcessStop();
-    if (id != response.value) {
+    await sendCommand(const ProcessStepOver());
+    ProcessSetBreakpoint setBreakpoint = await readNextCommand();
+    Command response = await readNextCommand();
+    int id = await handleProcessStop(response);
+    if (id != setBreakpoint.value) {
       print("### 'step over' cancelled because another breakpoint was hit");
-      if (response.value != -1) await doDeleteBreakpoint(response.value);
+      if (setBreakpoint.value != -1) {
+        await doDeleteBreakpoint(setBreakpoint.value);
+      }
     }
   }
 
   Future cont() async {
     if (!checkRunning()) return null;
-    const ProcessContinue().addTo(vmSocket);
-    await handleProcessStop();
+    await handleProcessStop(await runCommand(const ProcessContinue()));
     await backtrace();
   }
 
@@ -384,8 +527,8 @@ class Session {
 
   Future getStackTrace() async {
     if (currentStackTrace == null) {
-      const ProcessBacktraceRequest(MapId.methods).addTo(vmSocket);
-      ProcessBacktrace backtraceResponse = await nextVmCommand();
+      ProcessBacktrace backtraceResponse =
+          await runCommand(const ProcessBacktraceRequest(MapId.methods));
       var frames = backtraceResponse.frames;
       currentStackTrace = new StackTrace(frames);
       // The bottom frames below main are internal implementation details
@@ -425,21 +568,18 @@ class Session {
 
   Future printLocal(LocalValue local, [String name]) async {
     var actualFrameNumber = currentStackTrace.actualFrameNumber(currentFrame);
-    new ProcessLocal(MapId.classes,
-                     actualFrameNumber,
-                     local.slot).addTo(vmSocket);
-    Command response = await nextVmCommand();
+    Command response = await runCommand(
+        new ProcessLocal(MapId.classes, actualFrameNumber, local.slot));
     assert(response is DartValue);
     String prefix = (name == null) ? '' : '$name: ';
     print('$prefix${dartValueToString(response)}');
   }
 
   Future printLocalStructure(String name, LocalValue local) async {
-    var actualFrameNumber = currentStackTrace.actualFrameNumber(currentFrame);
-    new ProcessLocalStructure(MapId.classes,
-                              actualFrameNumber,
-                              local.slot).addTo(vmSocket);
-    Command response = await nextVmCommand();
+    var frameNumber = currentStackTrace.actualFrameNumber(currentFrame);
+    await sendCommand(
+        new ProcessLocalStructure(MapId.classes, frameNumber, local.slot));
+    Command response = await readNextCommand();
     if (response is DartValue) {
       print(dartValueToString(response));
     } else {
@@ -449,7 +589,7 @@ class Session {
       String className = compiler.lookupClassName(classId);
       print("Instance of '$className' {");
       for (int i = 0; i < structure.fields; i++) {
-        DartValue value = await nextVmCommand();
+        DartValue value = await readNextCommand();
         var fieldName = compiler.lookupFieldName(classId, i);
         print('  $fieldName: ${dartValueToString(value)}');
       }
@@ -495,10 +635,6 @@ class Session {
       currentStackTrace.visibilityChanged();
       await backtrace();
     }
-  }
-
-  void quit() {
-    vmSocket.close();
   }
 
   void exit(int exitCode) {

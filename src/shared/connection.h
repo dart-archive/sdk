@@ -104,6 +104,7 @@ class Connection {
 
     kPrepareForChanges,
     kCommitChanges,
+    kCommitChangesResult,
     kDiscardChanges,
 
     kUncaughtException,

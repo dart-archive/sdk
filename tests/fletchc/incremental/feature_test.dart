@@ -52,6 +52,8 @@ import 'package:fletchc/incremental/fletchc_incremental.dart' show
 
 import 'package:fletchc/commands.dart' show
     Command,
+    CommitChanges,
+    CommitChangesResult,
     MapId;
 
 import 'package:fletchc/compiler.dart' show
@@ -2165,16 +2167,16 @@ compileAndRun(EncodedResult encodedResult) async {
 
   await new Future(() async {
     for (String expected in program.messages) {
-      Expect.isTrue(await session.iterator.moveNext());
-      Expect.stringEquals(expected, session.iterator.current);
-      print("Got expected output: ${session.iterator.current}");
+      Expect.isTrue(await session.stdoutIterator.moveNext());
+      Expect.stringEquals(expected, session.stdoutIterator.current);
+      print("Got expected output: ${session.stdoutIterator.current}");
     }
 
     if (testSessionReset) {
       for (String expected in program.messages) {
-        Expect.isTrue(await session.iterator.moveNext());
-        Expect.stringEquals(expected, session.iterator.current);
-        print("Got expected output: ${session.iterator.current}");
+        Expect.isTrue(await session.stdoutIterator.moveNext());
+        Expect.stringEquals(expected, session.stdoutIterator.current);
+        print("Got expected output: ${session.stdoutIterator.current}");
       }
     }
 
@@ -2226,52 +2228,57 @@ compileAndRun(EncodedResult encodedResult) async {
       // Set the new system in the session.
       session.fletchSystem = fletchDelta.system;
 
-      for (Command command in fletchDelta.commands) {
+      List<Command> commands = fletchDelta.commands;
+      assert(commands.last is CommitChanges);
+      for (Command command in commands.take(commands.length - 1)) {
         print(command);
-        command.addTo(session.vmSocket);
+        await session.runCommand(command);
       }
 
-      // Set breakpoint in main in case main was replaced.
-      await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
-      // Restart the current frame to rerun main.
-      await session.restart();
-      // Step out of main to finish execution of main.
-      await session.stepOut();
+      CommitChangesResult result = await session.runCommand(commands.last);
+      Expect.equals(result.successful, !program.commitChangesShouldFail);
 
-      for (String expected in program.messages) {
-        Expect.isTrue(await session.iterator.moveNext());
-        String actual = session.iterator.current;
-        Expect.stringEquals(expected, actual);
-        print("Got expected output: $actual");
-      }
+      if (result.successful) {
+        // Set breakpoint in main in case main was replaced.
+        await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
+        // Restart the current frame to rerun main.
+        await session.restart();
+        // Step out of main to finish execution of main.
+        await session.stepOut();
 
-      // TODO(ahe): Enable SerializeScopeTestCase for multiple
-      // parts.
-      if (program.code is String) {
-        await new SerializeScopeTestCase(
-            program.code, test.incrementalCompiler.mainApp,
-            test.incrementalCompiler.compiler).run();
+        for (String expected in program.messages) {
+          Expect.isTrue(await session.stdoutIterator.moveNext());
+          String actual = session.stdoutIterator.current;
+          Expect.stringEquals(expected, actual);
+          print("Got expected output: $actual");
+        }
+
+        // TODO(ahe): Enable SerializeScopeTestCase for multiple
+        // parts.
+        if (program.code is String) {
+          await new SerializeScopeTestCase(
+              program.code, test.incrementalCompiler.mainApp,
+              test.incrementalCompiler.compiler).run();
+        }
       }
     }
-  }).catchError(session.handleError).then((_) {
+  }).catchError(session.handleError).then((_) async {
     if (session.running) {
       // The session is still alive. Run to completion.
-      for (Command command in [
-               const commands_lib.ProcessContinue()]) {
-        print(command);
-        command.addTo(session.vmSocket);
-      }
+      var continueCommand = const commands_lib.ProcessContinue();
+      print(continueCommand);
+
       // Wait for process termination.
-      session.recordFuture(session.nextVmCommand().then((Command response) {
-        if (response is commands_lib.ProcessTerminated) {
-          // Terminate the Fletch VM session so the Fletch VM will terminate.
-          const commands_lib.SessionEnd().addTo(session.vmSocket);
-        } else {
-          session.process.kill();
-          throw new StateError(
-              "Expected ProcessTerminated, but got: $response");
-        }
-      }));
+      Command response = await session.runCommand(continueCommand);
+      if (response is commands_lib.ProcessTerminated) {
+        // Terminate the Fletch VM session so the Fletch VM will terminate.
+        await session.runCommand(const commands_lib.SessionEnd());
+        await session.shutdown();
+      } else {
+        await session.kill();
+        throw new StateError(
+            "Expected ProcessTerminated, but got: $response");
+      }
     } else {
       // We either failed before we got to start a process or there
       // was an uncaught exception in the program. If there was an
@@ -2279,6 +2286,7 @@ compileAndRun(EncodedResult encodedResult) async {
       // the debugger a chance to inspect the state at the point of
       // the throw. Therefore, we explicitly have to kill the VM
       // process.
+      await session.kill();
       session.process.kill();
     }
   });
@@ -2381,11 +2389,8 @@ Future<TestSession> runFletchVM(
   TestSession session =
       await TestSession.spawnVm(test.incrementalCompiler.compiler, fletchDelta);
   try {
-    Socket vmSocket = session.vmSocket;
     if (testSessionReset) {
-      for (Command command in fletchDelta.commands) {
-        command.addTo(vmSocket);
-      }
+      await session.runCommands(fletchDelta.commands);
 
       // TODO(ager): Get rid of this again. We first run the program to
       // completion, then we reset the session and rebuild the program and carry
@@ -2394,27 +2399,25 @@ Future<TestSession> runFletchVM(
                const commands_lib.Debugging(false),
                const commands_lib.ProcessSpawnForMain()]) {
         print(command);
-        command.addTo(vmSocket);
+        await session.runCommand(command);
       }
 
       session.running = true;
-      const commands_lib.ProcessRun().addTo(vmSocket);
-      await session.nextVmCommand();
+      await session.sendCommand(const commands_lib.ProcessRun());
+      await session.readNextCommand();
       session.running = false;
 
-      const commands_lib.SessionReset().addTo(vmSocket);
+      await session.runCommand(const commands_lib.SessionReset());
     }
 
-    for (Command command in fletchDelta.commands) {
-      command.addTo(vmSocket);
-    }
+    await session.runCommands(fletchDelta.commands);
 
     for (Command command in [
         // Turn on debugging.
         const commands_lib.Debugging(false),
         const commands_lib.ProcessSpawnForMain()]) {
       print(command);
-      command.addTo(vmSocket);
+      await session.runCommand(command);
     }
 
     // Allow operations on internal frames.
@@ -2434,7 +2437,7 @@ Future<TestSession> runFletchVM(
 
 class TestSession extends Session {
   final Process process;
-  final StreamIterator iterator;
+  final StreamIterator stdoutIterator;
   final Stream<String> stderr;
 
   final List<Future> futures;
@@ -2448,7 +2451,7 @@ class TestSession extends Session {
       FletchCompiler compiler,
       FletchSystem fletchSystem,
       this.process,
-      this.iterator,
+      this.stdoutIterator,
       this.stderr,
       this.futures,
       this.exitCode)
@@ -2476,8 +2479,8 @@ class TestSession extends Session {
     Future<List<String>> stderrFuture = stderr.toList();
     Future<List<String>> stdoutFuture = (() async {
       List<String> result = <String>[];
-      while (await iterator.moveNext()) {
-        result.add(iterator.current);
+      while (await stdoutIterator.moveNext()) {
+        result.add(stdoutIterator.current);
       }
       return result;
     })();
@@ -2581,13 +2584,12 @@ class TestSession extends Session {
         stderrController.stream,
         futures, exitCodeCompleter.future);
 
-    recordFuture("exitCode", process.exitCode.then((int exitCode) {
-      session.quit();
+    recordFuture("exitCode", process.exitCode.then((int exitCode) async {
+      await session.shutdown();
       print("VM exited with exit code: $exitCode.");
       exitCodeCompleter.complete(exitCode);
     }));
 
-    session.vmCommands = new CommandReader(vmSocket).iterator;
     return session;
   }
 

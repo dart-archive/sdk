@@ -213,7 +213,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return helper;
   }
 
-  Future run([@StringOrUri script]) async {
+  Future<FletchDelta> run([@StringOrUri script]) async {
     script = _computeValidatedUri(script, name: 'script');
     if (script == null) {
       script = this.script;

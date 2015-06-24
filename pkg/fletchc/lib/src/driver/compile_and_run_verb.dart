@@ -32,6 +32,9 @@ import 'driver_commands.dart' show
     handleSocketErrors,
     makeErrorHandler;
 
+import '../../session.dart' show
+    FletchVmSession;
+
 import 'verbs.dart' show
     Verb;
 
@@ -156,17 +159,28 @@ Future<int> compileAndRun(
     vmSocket = handleSocketErrors(await Socket.connect(host, port), "vmSocket");
   }
 
-  trackSubscription(vmSocket.listen(null), "vmSocket");
-  fletchDelta.commands.forEach((command) => command.addTo(vmSocket));
+  // Apply all commands the compiler gave us & shut down.
+  var session = new FletchVmSession(vmSocket);
+  await session.runCommands(fletchDelta.commands);
 
   if (snapshotPath == null) {
-    const commands_lib.ProcessSpawnForMain().addTo(vmSocket);
-    const commands_lib.ProcessRun().addTo(vmSocket);
-  } else {
-    new commands_lib.WriteSnapshot(snapshotPath).addTo(vmSocket);
-  }
+    await session.runCommand(const commands_lib.ProcessSpawnForMain());
 
-  vmSocket.close();
+    await session.sendCommand(const commands_lib.ProcessRun());
+
+    // NOTE: The [ProcessRun] command normally results in a
+    // [ProcessTerminated] command. But if the compiler emitted a compile time
+    // error, the fletch-vm will just halt()/exit() and we therefore get no
+    // response.
+    var command = await session.readNextCommand(force: false);
+    if (command != null && command is! commands_lib.ProcessTerminated) {
+      throw new Exception('Expected program to finish complete with '
+                          '[ProcessTerminated] but got [$command]');
+    }
+  } else {
+    await session.runCommand(new commands_lib.WriteSnapshot(snapshotPath));
+  }
+  await session.shutdown();
 
   if (vmProcess != null) {
     futures.add(vmProcess.stdin.close());
@@ -213,6 +227,6 @@ StreamSubscription handleSubscriptionErrors(
 
 Future doneFuture(StreamSubscription subscription) {
   var completer = new Completer();
-  subscription.onDone(() => completer.complete());
+  subscription.onDone(completer.complete);
   return completer.future;
 }

@@ -18,6 +18,9 @@ import 'fletchc_incremental.dart' show
 import 'package:compiler/src/source_file_provider.dart' show
     FormattingDiagnosticHandler;
 
+import '../commands.dart'
+    show Command;
+
 import 'watcher.dart';
 
 // TODO(ahe): This file should be removed or merged into ../compiler.dart.
@@ -38,7 +41,7 @@ main(List<String> arguments) {
 
       case IncrementalKind.INCREMENTAL:
         Stopwatch sw = event.stopwatch..start();
-        String updates = '${event.compiler.allUpdates()}';
+        String updates = event.compiler.allUpdates();
         sw.stop();
 
         print('// Patch after ${++updateCount} updates,');
@@ -129,9 +132,7 @@ compileToStream(
         Map<Uri, Uri> changes = watcher.readChanges();
 
         sw = new Stopwatch()..start();
-        // TODO(ahe/ajohnsen): compileUpdates does not match this signature any
-        // longer, and it returns a List<Command> not a String.
-        String updates = await compiler.compileUpdates(changes);
+        List<Command> updates = await compiler.compileUpdates(changes);
         sw.stop();
 
         controller.add(
@@ -200,7 +201,7 @@ class CompilerEvent {
 
   final Stopwatch stopwatch;
 
-  final String updates;
+  final List<Command> updates;
 
   CompilerEvent(
       this.kind, this.compiler, this._output, this.stopwatch, {this.updates});

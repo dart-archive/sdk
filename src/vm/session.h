@@ -92,7 +92,7 @@ class Session {
   void ChangeSchemas(int count, int delta);
 
   void PrepareForChanges();
-  void CommitChanges(int count);
+  bool CommitChanges(int count);
   void DiscardChanges();
 
   void UncaughtException();

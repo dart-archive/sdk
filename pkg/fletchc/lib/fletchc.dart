@@ -10,6 +10,8 @@ import 'dart:io';
 import 'compiler.dart' show
     FletchCompiler;
 
+import 'commands.dart';
+
 import 'fletch_vm.dart';
 
 import 'fletch_system.dart';
@@ -86,13 +88,12 @@ main(List<String> arguments) async {
     vm = await FletchVm.start(compiler);
   }
 
-  fletchDelta.commands.forEach((command) => command.addTo(vm.socket));
-
   var session = new Session(vm.socket, compiler, fletchDelta.system,
                             vm.stdoutSyncMessages, vm.stderrSyncMessages);
 
+  await session.runCommands(fletchDelta.commands);
   if (snapshotPath != null) {
-    session.writeSnapshot(snapshotPath);
+    await session.writeSnapshot(snapshotPath);
   } else if (debugging) {
     if (testDebugger) {
       await session.testDebugger(testDebuggerCommands);
@@ -100,8 +101,9 @@ main(List<String> arguments) async {
       await session.debug();
     }
   } else {
-    session.run();
+    await session.run();
   }
+  await session.shutdown();
 
   if (!connectToExistingVm) {
     exitCode = await vm.process.exitCode;

@@ -208,12 +208,13 @@ class Conversation {
     }
   }
 
-  void pushUpdates(String updates) {
+  void pushUpdates(List<Command> updates) {
     if (updates == null) return;
     StreamController<String> controller = updateControllers[request.uri];
     if (controller == null) return;
     print("Adding updates to controller");
-    controller.add(updates);
+    throw new UnimplementedError('This code is broken and should be fixed');
+    //controller.add('$updates');
   }
 
   Future dispatch() async {

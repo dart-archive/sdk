@@ -470,7 +470,14 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kCommitChanges: {
-        CommitChanges(connection_->ReadInt());
+        bool success = CommitChanges(connection_->ReadInt());
+        connection_->WriteBoolean(success);
+        if (success) {
+          connection_->WriteString("Successfully applied program changes.");
+        } else {
+          connection_->WriteString("Could not apply program changes.");
+        }
+        connection_->Send(Connection::kCommitChangesResult);
         break;
       }
 
@@ -873,7 +880,7 @@ void Session::CommitChangeSchemas(Array* change) {
   }
 }
 
-void Session::CommitChanges(int count) {
+bool Session::CommitChanges(int count) {
   Scheduler* scheduler = program()->scheduler();
   if (!scheduler->StopProgram(program())) {
     FATAL("Failed to stop program, for committing changes\n");
@@ -882,6 +889,11 @@ void Session::CommitChanges(int count) {
   ASSERT(!program()->is_compact());
 
   ASSERT(count == changes_.length());
+
+  // TODO(kustermann): Sanity check all changes the compiler gave us.
+  // If we are unable to apply a change, we should continue the program
+  // and "return false".
+
   bool schemas_changed = false;
   for (int i = 0; i < count; i++) {
     Array* array = Array::cast(changes_[i]);
@@ -919,6 +931,8 @@ void Session::CommitChanges(int count) {
   program()->Fold();
 
   scheduler->ResumeProgram(program());
+
+  return true;
 }
 
 void Session::DiscardChanges() {
