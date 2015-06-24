@@ -84,9 +84,8 @@ NATIVE(SmiToDouble) {
 
 NATIVE(SmiToString) {
   Smi* x = Smi::cast(arguments[0]);
-  char buffer[Smi::kMaxSmiCharacters];
+  char buffer[128];  // TODO(kasperl): What's the right buffer size?
   int length = snprintf(buffer, ARRAY_SIZE(buffer), "%ld", x->value());
-  ASSERT(length <= Smi::kMaxSmiCharacters);
   return process->NewStringFromAscii(List<const char>(buffer, length));
 }
 
