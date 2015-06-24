@@ -131,6 +131,15 @@ void Space::PrependSpace(Space* space) {
   space->last()->set_next(this->first());
   first_ = first;
   used_ += space->Used();
+
+  // NOTE: The destructor of [Space] will use some of the fields, so we just
+  // reset all of them.
+  space->first_ = NULL;
+  space->last_ = NULL;
+  space->used_ = 0;
+  space->top_ = 0;
+  space->limit_ = 0;
+  delete space;
 }
 
 void Space::Append(Chunk* chunk) {

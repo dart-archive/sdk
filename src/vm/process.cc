@@ -775,7 +775,10 @@ static void TakePortQueueHeaps(PortQueue* queue, Space* space) {
        current = current->next()) {
     if (current->kind() == PortQueue::EXIT) {
       ExitReference* ref = reinterpret_cast<ExitReference*>(current->address());
-      space->PrependSpace(ref->TakeSpace());
+      Space* other_space = ref->TakeSpace();
+      if (other_space != NULL) {
+        space->PrependSpace(other_space);
+      }
     }
   }
 }
@@ -903,8 +906,10 @@ NATIVE(ProcessQueueGetMessage) {
 
     case PortQueue::EXIT: {
       ExitReference* ref = reinterpret_cast<ExitReference*>(queue->address());
-      Space* space = ref->TakeSpace();
-      if (space != NULL) space->PrependSpace(space);
+      Space* other_space = ref->TakeSpace();
+      if (other_space != NULL) {
+        process->heap()->space()->PrependSpace(other_space);
+      }
       result = ref->message();
       break;
     }

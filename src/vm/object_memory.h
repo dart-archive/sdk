@@ -119,6 +119,8 @@ class Space {
     limit_ = chunk->limit_;
   }
 
+  // Takes all chunks inside [space] and prepends it to this space.
+  // The given [space] will be deleted.
   void PrependSpace(Space* space);
 
  private:
