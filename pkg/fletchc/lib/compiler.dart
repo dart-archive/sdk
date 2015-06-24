@@ -29,8 +29,9 @@ import 'package:compiler/src/source_file_provider.dart' show
     SourceFileProvider;
 
 import 'package:compiler/src/elements/elements.dart' show
-    ConstructorElement,
     ClassElement,
+    ConstructorElement,
+    Element,
     FunctionElement;
 
 import 'package:compiler/src/filenames.dart' show
@@ -252,25 +253,21 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   }
 
   String lookupFunctionName(FletchFunction function) {
-    int methodId = function.methodId;
-    FletchFunctionBuilder builder = lookupFletchFunctionBuilder(methodId);
-    if (builder == null) return '';
-    if (builder.isConstructor) {
-      ConstructorElement constructor = builder.element;
+    Element element = function.element;
+    if (element == null) return function.name;
+    if (element.isConstructor) {
+      ConstructorElement constructor = element;
       ClassElement enclosing = constructor.enclosingClass;
       String name = (constructor.name == null || constructor.name.length == 0)
           ? ''
           : '.${constructor.name}';
-      String postfix = builder.isInitializerList ? ' initializer' : '';
+      String postfix = function.isInitializerList ? ' initializer' : '';
       return '${enclosing.name}$name$postfix';
     }
-    String functionName = builder.name;
-    if (functionName == null) return '';
-    FletchClassBuilder memberOf = builder.memberOf;
-    if (memberOf == null) return functionName;
-    if (memberOf.element == null) return functionName;
-    if (functionName.isEmpty) return memberOf.element.name;
-    return '${memberOf.element.name}.$functionName';
+
+    ClassElement enclosing = element.enclosingClass;
+    if (enclosing == null) return function.name;
+    return '${enclosing.name}.${function.name}';
   }
 
   FletchClassBuilder lookupFletchClassBuilder(int classId) {

@@ -90,7 +90,7 @@ import 'fletch_constants.dart' show
     FletchClassInstanceConstant;
 
 import 'fletch_function_builder.dart' show
-    FletchFunctionBuilderKind,
+    FletchFunctionKind,
     FletchFunctionBuilder,
     DebugInfo;
 
@@ -558,8 +558,8 @@ class FletchBackend extends Backend {
           implementation.functionSignature,
           holderClass,
           kind: function.isAccessor
-              ? FletchFunctionBuilderKind.ACCESSOR
-              : FletchFunctionBuilderKind.NORMAL);
+              ? FletchFunctionKind.ACCESSOR
+              : FletchFunctionKind.NORMAL);
       functions.add(functionBuilder);
       return functionBuilder;
     });
@@ -742,8 +742,8 @@ class FletchBackend extends Backend {
             implementation.functionSignature,
             compiledUsage,
             kind: function.isAccessor
-                ? FletchFunctionBuilderKind.ACCESSOR
-                : FletchFunctionBuilderKind.NORMAL);
+                ? FletchFunctionKind.ACCESSOR
+                : FletchFunctionKind.NORMAL);
         functions.add(copy);
         compiledUsage.addToMethodTable(fletchSelector, copy);
         copy.copyFrom(functionBuilder);
@@ -1321,7 +1321,7 @@ class FletchBackend extends Backend {
         implementation,
         implementation.functionSignature,
         null,
-        kind: FletchFunctionBuilderKind.INITIALIZER_LIST);
+        kind: FletchFunctionKind.INITIALIZER_LIST);
     functions.add(functionBuilder);
     constructors[constructor] = functionBuilder;
 

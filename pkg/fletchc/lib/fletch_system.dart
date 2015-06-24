@@ -10,6 +10,14 @@ import 'package:compiler/src/elements/elements.dart' show
 import 'bytecodes.dart';
 import 'commands.dart';
 
+enum FletchFunctionKind {
+  NORMAL,
+  LAZY_FIELD_INITIALIZER,
+  INITIALIZER_LIST,
+  PARAMETER_STUB,
+  ACCESSOR
+}
+
 // TODO(ajohnsen): Move to separate file.
 class FletchConstant {
   final int id;
@@ -35,6 +43,7 @@ class FletchClass {
 // TODO(ajohnsen): Move to separate file.
 class FletchFunction {
   final int methodId;
+  final FletchFunctionKind kind;
   // TODO(ajohnsen): Remove name?
   final String name;
   final Element element;
@@ -44,11 +53,28 @@ class FletchFunction {
 
   const FletchFunction(
       this.methodId,
+      this.kind,
       this.name,
       this.element,
       this.bytecodes,
       this.constants,
       this.memberOf);
+
+  bool get isLazyFieldInitializer {
+    return kind == FletchFunctionKind.LAZY_FIELD_INITIALIZER;
+  }
+
+  bool get isInitializerList {
+    return kind == FletchFunctionKind.INITIALIZER_LIST;
+  }
+
+  bool get isAccessor {
+    return kind == FletchFunctionKind.ACCESSOR;
+  }
+
+  bool get isParameterStub {
+    return kind == FletchFunctionKind.PARAMETER_STUB;
+  }
 
   bool get hasMemberOf => memberOf >= 0;
 

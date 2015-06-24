@@ -35,14 +35,6 @@ import 'bytecode_assembler.dart';
 import '../fletch_system.dart';
 import '../commands.dart';
 
-enum FletchFunctionBuilderKind {
-  NORMAL,
-  LAZY_FIELD_INITIALIZER,
-  INITIALIZER_LIST,
-  PARAMETER_STUB,
-  ACCESSOR
-}
-
 class FletchFunctionBuilder {
   final BytecodeAssembler assembler;
   final int methodId;
@@ -71,7 +63,7 @@ class FletchFunctionBuilder {
   final Map<Selector, FletchFunctionBuilder> parameterMappings =
       <Selector, FletchFunctionBuilder>{};
   final int arity;
-  final FletchFunctionBuilderKind kind;
+  final FletchFunctionKind kind;
 
   FletchFunctionBuilder(
       this.methodId,
@@ -79,7 +71,7 @@ class FletchFunctionBuilder {
       this.element,
       FunctionSignature signature,
       FletchClassBuilder memberOf,
-      {this.kind: FletchFunctionBuilderKind.NORMAL})
+      {this.kind: FletchFunctionKind.NORMAL})
       : this.signature = signature,
         this.memberOf = memberOf,
         arity = signature.parameterCount + (memberOf != null ? 1 : 0),
@@ -89,7 +81,7 @@ class FletchFunctionBuilder {
   FletchFunctionBuilder.normal(this.methodId, int argumentCount)
       : arity = argumentCount,
         assembler = new BytecodeAssembler(argumentCount),
-        kind = FletchFunctionBuilderKind.NORMAL;
+        kind = FletchFunctionKind.NORMAL;
 
   FletchFunctionBuilder.lazyInit(
       this.methodId,
@@ -98,17 +90,17 @@ class FletchFunctionBuilder {
       int argumentCount)
       : arity = argumentCount,
         assembler = new BytecodeAssembler(argumentCount),
-        kind = FletchFunctionBuilderKind.LAZY_FIELD_INITIALIZER;
+        kind = FletchFunctionKind.LAZY_FIELD_INITIALIZER;
 
   FletchFunctionBuilder.parameterStub(this.methodId, int argumentCount)
       : arity = argumentCount,
         assembler = new BytecodeAssembler(argumentCount),
-        kind = FletchFunctionBuilderKind.PARAMETER_STUB;
+        kind = FletchFunctionKind.PARAMETER_STUB;
 
   FletchFunctionBuilder.accessor(this.methodId, bool setter)
       : arity = setter ? 2 : 1,
         assembler = new BytecodeAssembler(setter ? 2 : 1),
-        kind = FletchFunctionBuilderKind.ACCESSOR;
+        kind = FletchFunctionKind.ACCESSOR;
 
   void reuse() {
     assembler.reuse();
@@ -122,19 +114,19 @@ class FletchFunctionBuilder {
   bool get hasMemberOf => memberOf != null;
 
   bool get isLazyFieldInitializer {
-    return kind == FletchFunctionBuilderKind.LAZY_FIELD_INITIALIZER;
+    return kind == FletchFunctionKind.LAZY_FIELD_INITIALIZER;
   }
 
   bool get isInitializerList {
-    return kind == FletchFunctionBuilderKind.INITIALIZER_LIST;
+    return kind == FletchFunctionKind.INITIALIZER_LIST;
   }
 
   bool get isAccessor {
-    return kind == FletchFunctionBuilderKind.ACCESSOR;
+    return kind == FletchFunctionKind.ACCESSOR;
   }
 
   bool get isParameterStub {
-    return kind == FletchFunctionBuilderKind.PARAMETER_STUB;
+    return kind == FletchFunctionKind.PARAMETER_STUB;
   }
 
   bool get isConstructor => element != null && element.isConstructor;
@@ -315,6 +307,7 @@ class FletchFunctionBuilder {
 
     return new FletchFunction(
         methodId,
+        kind,
         name,
         element,
         assembler.bytecodes,
