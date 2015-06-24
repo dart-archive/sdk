@@ -5,6 +5,7 @@
 #ifndef SRC_VM_OBJECT_H_
 #define SRC_VM_OBJECT_H_
 
+#include <math.h>
 #include <string.h>
 
 #include "src/shared/assert.h"
@@ -130,6 +131,8 @@ class Smi: public Object {
       -(1L << (kBitsPerPointer - (kTagSize + 1)));
   static const word kMaxValue =
       (1L << (kBitsPerPointer - (kTagSize + 1))) - 1;
+  static const word kMaxSmiCharacters =
+      ceil((kBitsPerPointer - kTagSize) * (M_LN2 / M_LN10));
 
   // Min and max limits for portable Smi values (32 bit).
   static const word kMinPortableValue = -(1L << (32 - (kTagSize + 1)));
