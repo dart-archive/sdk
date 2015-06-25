@@ -81,6 +81,15 @@ class FletchFunctionBuilder {
           signature: signature,
           memberOf: memberOf);
 
+  FletchFunctionBuilder.fromFletchFunction(FletchFunction function)
+      : this(
+          function.methodId,
+          function.kind,
+          function.arity,
+          name: function.name,
+          element: function.element,
+          memberOf: function.memberOf);
+
   FletchFunctionBuilder(
       this.methodId,
       this.kind,
@@ -302,6 +311,7 @@ class FletchFunctionBuilder {
     return new FletchFunction(
         methodId,
         kind,
+        arity,
         name,
         element,
         assembler.bytecodes,

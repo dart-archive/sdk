@@ -245,13 +245,6 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
 
   Uri get fletchVm => _compiler.fletchVm;
 
-  FletchFunctionBuilder lookupFletchFunctionBuilder(int methodId) {
-    FletchFunctionBuilder builder =
-        _compiler.context.backend.functions[methodId];
-    assert(builder.methodId == methodId);
-    return builder;
-  }
-
   String lookupFunctionName(FletchFunction function) {
     Element element = function.element;
     if (element == null) return function.name;
@@ -299,11 +292,6 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return _compiler.context.symbols[id];
   }
 
-  List<Bytecode> lookupFunctionBytecodes(FletchFunction function) {
-    int methodId = function.methodId;
-    return lookupFletchFunctionBuilder(methodId).assembler.bytecodes;
-  }
-
   Iterable<int> lookupFunctionIdsByName(String name) {
     return _compiler.context.backend.functions
         .where((f) => f.name == name)
@@ -318,9 +306,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   }
 
   DebugInfo createDebugInfo(FletchFunction function) {
-    FletchFunctionBuilder builder = lookupFletchFunctionBuilder(
-        function.methodId);
-    return _compiler.context.backend.createDebugInfo(builder);
+    return _compiler.context.backend.createDebugInfo(function);
   }
 
   DebugInfo debugInfoForPosition(String file, int position) {

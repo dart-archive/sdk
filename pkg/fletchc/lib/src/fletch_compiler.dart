@@ -26,6 +26,8 @@ import 'debug_info.dart';
 import 'find_position_visitor.dart';
 import 'fletch_context.dart';
 
+import '../fletch_system.dart';
+
 part 'fletch_compiler_hack.dart';
 
 const EXTRA_DART2JS_OPTIONS = const <String>[
@@ -180,9 +182,12 @@ class FletchCompiler extends FletchCompilerHack {
     if (unit == null) return null;
     FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
     unit.accept(visitor, null);
-    FletchFunctionBuilder function =
+    FletchFunctionBuilder builder =
         _NO_WARN(backend).functionBuilders[visitor.element];
-    if (function == null) return null;
+    if (builder == null) return null;
+    // TODO(ajohnsen): We need a mapping from element to functionId, that can
+    // be looked up in the current fletch system.
+    FletchFunction function = builder.finalizeFunction(context, []);
     return _NO_WARN(backend).createDebugInfo(function);
   }
 

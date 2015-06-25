@@ -169,8 +169,6 @@ class FletchBackend extends Backend {
 
   final FletchSystem predecessorSystem;
 
-  List<Command> commands;
-
   LibraryElement fletchSystemLibrary;
   LibraryElement fletchFFILibrary;
   LibraryElement fletchIOSystemLibrary;
@@ -590,33 +588,36 @@ class FletchBackend extends Backend {
 
   // TODO(ajohnsen): This should not take a builder as argument, but instead a
   // FletchFunction where FletchFunction has a FletchFunctionKind.
-  DebugInfo createDebugInfo(FletchFunctionBuilder function) {
-    DebugInfo debugInfo = new DebugInfo(function.finalizeFunction(context, []));
+  DebugInfo createDebugInfo(FletchFunction function) {
+    DebugInfo debugInfo = new DebugInfo(function);
     AstElement element = function.element;
     if (element == null) return debugInfo;
-    List<Bytecode> expectedBytecodes = function.assembler.bytecodes;
+    List<Bytecode> expectedBytecodes;
     element = element.implementation;
     TreeElements elements = element.resolvedAst.elements;
     ClosureEnvironment closureEnvironment = createClosureEnvironment(
         element,
         elements);
     CodegenVisitor codegen;
+    FletchFunctionBuilder builder =
+        new FletchFunctionBuilder.fromFletchFunction(function);
     if (function.isLazyFieldInitializer) {
       codegen = new DebugInfoLazyFieldInitializerCodegen(
           debugInfo,
-          function,
+          builder,
           context,
           elements,
           null,
           closureEnvironment,
           element,
           compiler);
+      expectedBytecodes = lazyFieldInitializers[element].assembler.bytecodes;
     } else if (function.isInitializerList) {
       ClassElement enclosingClass = element.enclosingClass;
       FletchClassBuilder classBuilder = classBuilders[enclosingClass];
       codegen = new DebugInfoConstructorCodegen(
           debugInfo,
-          function,
+          builder,
           context,
           elements,
           null,
@@ -624,16 +625,18 @@ class FletchBackend extends Backend {
           element,
           classBuilder,
           compiler);
+      expectedBytecodes = constructors[element].assembler.bytecodes;
     } else {
       codegen = new DebugInfoFunctionCodegen(
           debugInfo,
-          function,
+          builder,
           context,
           elements,
           null,
           closureEnvironment,
           element,
           compiler);
+      expectedBytecodes = functionBuilders[element].assembler.bytecodes;
     }
     if (isNative(element)) {
       compiler.withCurrentElement(element, () {

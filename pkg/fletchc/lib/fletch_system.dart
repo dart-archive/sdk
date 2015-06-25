@@ -44,6 +44,7 @@ class FletchClass {
 class FletchFunction {
   final int methodId;
   final FletchFunctionKind kind;
+  final int arity;
   // TODO(ajohnsen): Remove name?
   final String name;
   final Element element;
@@ -54,6 +55,7 @@ class FletchFunction {
   const FletchFunction(
       this.methodId,
       this.kind,
+      this.arity,
       this.name,
       this.element,
       this.bytecodes,

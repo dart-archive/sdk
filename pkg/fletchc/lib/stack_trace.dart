@@ -36,7 +36,7 @@ class StackFrame {
   }
 
   void disasm() {
-    var bytecodes = compiler.lookupFunctionBytecodes(function);
+    var bytecodes = function.bytecodes;
     var offset = 0;
     for (var i = 0; i  < bytecodes.length; i++) {
       var source = debugInfo.astStringFor(offset);
@@ -79,7 +79,7 @@ class StackFrame {
   }
 
   int stepBytecodePointer(SourceLocation current) {
-    var bytecodes = compiler.lookupFunctionBytecodes(function);
+    var bytecodes = function.bytecodes;
     // Zip forward to the current bytecode. The bytecode pointer in the stack
     // frame is the return address which is one bytecode after the current one.
     var offset = 0;
