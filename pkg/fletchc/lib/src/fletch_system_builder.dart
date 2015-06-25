@@ -8,6 +8,10 @@ import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
     StringConstantValue;
 
+import 'package:compiler/src/elements/elements.dart' show
+    Element,
+    FunctionSignature;
+
 import 'fletch_class_builder.dart';
 import 'fletch_context.dart';
 import 'fletch_function_builder.dart';
@@ -27,13 +31,41 @@ class FletchSystemBuilder {
   // TODO(ajohnsen): Remove and add a lookupConstant.
   Map<ConstantValue, int> getCompiledConstants() => _newConstants;
 
-  int get nextFunctionId {
-    return predecessorSystem.functions.length + _newFunctions.length;
+  FletchFunctionBuilder newFunctionBuilder(
+      FletchFunctionKind kind,
+      int arity,
+      {String name,
+       Element element,
+       FunctionSignature signature,
+       int memberOf}) {
+    int nextFunctionId =
+        predecessorSystem.functions.length + _newFunctions.length;
+    FletchFunctionBuilder builder = new FletchFunctionBuilder(
+        nextFunctionId,
+        kind,
+        arity,
+        name: name,
+        element: element,
+        signature: signature,
+        memberOf: memberOf);
+    _newFunctions.add(builder);
+    return builder;
   }
 
-  void registerNewFunction(FletchFunctionBuilder function) {
-    assert(function.methodId == nextFunctionId);
-    _newFunctions.add(function);
+  FletchFunctionBuilder newFunctionBuilderWithSignature(
+      String name,
+      Element element,
+      FunctionSignature signature,
+      int memberOf,
+      {FletchFunctionKind kind: FletchFunctionKind.NORMAL}) {
+    int arity = signature.parameterCount + (memberOf != null ? 1 : 0);
+    return newFunctionBuilder(
+          kind,
+          arity,
+          name: name,
+          element: element,
+          signature: signature,
+          memberOf: memberOf);
   }
 
   FletchFunction lookupFunction(int functionId) {

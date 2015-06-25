@@ -65,22 +65,6 @@ class FletchFunctionBuilder {
   final int arity;
   final FletchFunctionKind kind;
 
-  FletchFunctionBuilder.withSignature(
-      int methodId,
-      String name,
-      Element element,
-      FunctionSignature signature,
-      int memberOf,
-      {FletchFunctionKind kind: FletchFunctionKind.NORMAL})
-      : this(
-          methodId,
-          kind,
-          signature.parameterCount + (memberOf != null ? 1 : 0),
-          name: name,
-          element: element,
-          signature: signature,
-          memberOf: memberOf);
-
   FletchFunctionBuilder.fromFletchFunction(FletchFunction function)
       : this(
           function.methodId,
@@ -220,11 +204,10 @@ class FletchFunctionBuilder {
       int arity = selector.argumentCount;
       if (hasThisArgument) arity++;
 
-      FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder(
-          context.backend.systemBuilder.nextFunctionId,
-          FletchFunctionKind.PARAMETER_STUB,
-          arity);
-      context.backend.systemBuilder.registerNewFunction(functionBuilder);
+      FletchFunctionBuilder functionBuilder =
+          context.backend.systemBuilder.newFunctionBuilder(
+              FletchFunctionKind.PARAMETER_STUB,
+              arity);
 
       BytecodeAssembler assembler = functionBuilder.assembler;
 
