@@ -181,6 +181,8 @@ class Session extends FletchVmSession {
           [this.vmStdoutSyncMessages,
            this.vmStderrSyncMessages,
            this.processExitCodeFuture]) : super(fletchVmSocket) {
+    // We send many small packages, so use no-delay.
+    fletchVmSocket.setOption(SocketOption.TCP_NODELAY, true);
     // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
     debugState = new DebugState(this);
   }

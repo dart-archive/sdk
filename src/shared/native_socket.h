@@ -29,6 +29,8 @@ class Socket {
 
   int FileDescriptor();
 
+  void SetTCPNoDelay(bool value);
+
  private:
   bool ShouldRetryAccept(int error);
 

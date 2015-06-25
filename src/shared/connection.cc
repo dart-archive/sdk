@@ -121,7 +121,12 @@ uint8* ReadBuffer::ReadBytes(int* length) {
 Connection* Connection::Connect(const char* host, int port) {
   Socket* socket = new Socket();
 
-  if (socket->Connect(host, port)) return new Connection(host, port, socket);
+  if (socket->Connect(host, port)) {
+    // We send many small packages, so use no-delay.
+    socket->SetTCPNoDelay(true);
+    return new Connection(host, port, socket);
+  }
+
   fprintf(stderr, "Failed to connect to %s:%i\n", host, port);
   UNREACHABLE();
   return NULL;

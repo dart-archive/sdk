@@ -7,10 +7,11 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <netdb.h>
+#include <netinet/tcp.h>
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include "src/shared/assert.h"
 
@@ -139,6 +140,13 @@ uint8* Socket::Read(int length) {
 
 int Socket::FileDescriptor() {
   return data_->fd;
+}
+
+void Socket::SetTCPNoDelay(bool value) {
+  int option = value ? 1 : 0;
+  int status = setsockopt(data_->fd, IPPROTO_TCP, TCP_NODELAY,
+                          &option, sizeof(option));
+  if (status == -1) perror("Failed setting TCP_NODELAY socket options.");
 }
 
 }  // namespace fletch
