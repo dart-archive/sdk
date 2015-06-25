@@ -28,6 +28,9 @@
       [tableView dequeueReusableCellWithIdentifier:@"CommitPrototypeCell"
                                       forIndexPath:indexPath];
 
+  // TODO(zarah): Handle when a cell is viewed but its data is not yet loaded.
+  if (node == nil) return cell;
+
   CommitNode* commitNode = (CommitNode*)node;
   NSString* decodedMessage = [self decodeJsonString:commitNode.message];
   cell.detailsLabel.text = decodedMessage;
