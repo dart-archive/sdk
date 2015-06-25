@@ -247,7 +247,8 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
 
   String lookupFunctionName(FletchFunction function) {
     Element element = function.element;
-    if (element == null) return function.name;
+    if (function.isParameterStub) return "<parameter stub>";
+    if (element == null) return (function.name != null) ? function.name : '';
     if (element.isConstructor) {
       ConstructorElement constructor = element;
       ClassElement enclosing = constructor.enclosingClass;
@@ -259,7 +260,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     }
 
     ClassElement enclosing = element.enclosingClass;
-    if (enclosing == null) return function.name;
+    if (enclosing == null) return (function.name != null) ? function.name : '';
     return '${enclosing.name}.${function.name}';
   }
 
