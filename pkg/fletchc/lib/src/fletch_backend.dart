@@ -427,12 +427,14 @@ class FletchBackend extends Backend {
           hasThis ? 1 : 0,
           signature.parameterCount,
           compiledObjectClass);
-      FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder(
-          functions.length,
-          'call',
-          null,
-          signature,
-          tearoffClass.classId);
+
+      FletchFunctionBuilder functionBuilder =
+          new FletchFunctionBuilder.withSignature(
+              functions.length,
+              'call',
+              null,
+              signature,
+              tearoffClass.classId);
       functions.add(functionBuilder);
 
       BytecodeAssembler assembler = functionBuilder.assembler;
@@ -477,8 +479,9 @@ class FletchBackend extends Backend {
           classElement);
       tearoffClass.addIsSelector(isSelector);
 
-      FletchFunctionBuilder equal = new FletchFunctionBuilder.normal(
+      FletchFunctionBuilder equal = new FletchFunctionBuilder(
           functions.length,
+          FletchFunctionKind.NORMAL,
           2);
       functions.add(equal);
 
@@ -509,9 +512,10 @@ class FletchBackend extends Backend {
 
       // Create hashCode getter. We simply xor the object hashCode and the
       // method id of the tearoff'ed function.
-      FletchFunctionBuilder hashCode = new FletchFunctionBuilder.accessor(
+      FletchFunctionBuilder hashCode = new FletchFunctionBuilder(
           functions.length,
-          false);
+          FletchFunctionKind.ACCESSOR,
+          1);
       functions.add(hashCode);
 
       int hashCodeSelector = FletchSelector.encodeGetter(
@@ -554,17 +558,18 @@ class FletchBackend extends Backend {
     return functionBuilders.putIfAbsent(function.declaration, () {
       FunctionTypedElement implementation = function.implementation;
       int memberOf = holderClass != null ? holderClass.classId : null;
-      FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder(
-          functions.length,
-          name,
-          function,
-          // Parameter initializers are expressed in the potential
-          // implementation.
-          implementation.functionSignature,
-          memberOf,
-          kind: function.isAccessor
-              ? FletchFunctionKind.ACCESSOR
-              : FletchFunctionKind.NORMAL);
+      FletchFunctionBuilder functionBuilder =
+          new FletchFunctionBuilder.withSignature(
+              functions.length,
+              name,
+              function,
+              // Parameter initializers are expressed in the potential
+              // implementation.
+              implementation.functionSignature,
+              memberOf,
+              kind: function.isAccessor
+                  ? FletchFunctionKind.ACCESSOR
+                  : FletchFunctionKind.NORMAL);
       functions.add(functionBuilder);
       return functionBuilder;
     });
@@ -739,7 +744,7 @@ class FletchBackend extends Backend {
         // stubs for the mixin applications as well.
         FletchClassBuilder compiledUsage = registerClassElement(usage);
         FunctionTypedElement implementation = function.implementation;
-        FletchFunctionBuilder copy = new FletchFunctionBuilder(
+        FletchFunctionBuilder copy = new FletchFunctionBuilder.withSignature(
             functions.length,
             function.name,
             implementation,
@@ -948,9 +953,10 @@ class FletchBackend extends Backend {
 
   void createTearoffGetterForFunction(FletchFunctionBuilder function) {
     FletchClassBuilder tearoffClass = createTearoffClass(function);
-    FletchFunctionBuilder getter = new FletchFunctionBuilder.accessor(
+    FletchFunctionBuilder getter = new FletchFunctionBuilder(
         functions.length,
-        false);
+        FletchFunctionKind.ACCESSOR,
+        1);
     functions.add(getter);
     int constId = getter.allocateConstantFromClass(tearoffClass.classId);
     getter.assembler
@@ -1267,11 +1273,12 @@ class FletchBackend extends Backend {
 
     if (lazyFieldInitializers.containsKey(field)) return index;
 
-    FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder.lazyInit(
+    FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder(
         functions.length,
-        "${field.name} lazy initializer",
-        field,
-        0);
+        FletchFunctionKind.LAZY_FIELD_INITIALIZER,
+        0,
+        name: "${field.name} lazy initializer",
+        element: field);
     functions.add(functionBuilder);
     lazyFieldInitializers[field] = functionBuilder;
 
@@ -1320,7 +1327,7 @@ class FletchBackend extends Backend {
         implementation,
         elements);
 
-    functionBuilder = new FletchFunctionBuilder(
+    functionBuilder = new FletchFunctionBuilder.withSignature(
         functions.length,
         implementation.name,
         implementation,
@@ -1353,9 +1360,10 @@ class FletchBackend extends Backend {
    */
   int makeGetter(int fieldIndex) {
     return getters.putIfAbsent(fieldIndex, () {
-      FletchFunctionBuilder stub = new FletchFunctionBuilder.accessor(
+      FletchFunctionBuilder stub = new FletchFunctionBuilder(
           functions.length,
-          false);
+          FletchFunctionKind.ACCESSOR,
+          1);
       functions.add(stub);
       stub.assembler
           ..loadParameter(0)
@@ -1371,9 +1379,10 @@ class FletchBackend extends Backend {
    */
   int makeSetter(int fieldIndex) {
     return setters.putIfAbsent(fieldIndex, () {
-      FletchFunctionBuilder stub = new FletchFunctionBuilder.accessor(
+      FletchFunctionBuilder stub = new FletchFunctionBuilder(
           functions.length,
-          true);
+          FletchFunctionKind.ACCESSOR,
+          2);
       functions.add(stub);
       stub.assembler
           ..loadParameter(0)

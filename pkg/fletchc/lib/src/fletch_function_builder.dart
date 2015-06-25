@@ -65,42 +65,35 @@ class FletchFunctionBuilder {
   final int arity;
   final FletchFunctionKind kind;
 
-  FletchFunctionBuilder(
-      this.methodId,
-      this.name,
-      this.element,
+  FletchFunctionBuilder.withSignature(
+      int methodId,
+      String name,
+      Element element,
       FunctionSignature signature,
       int memberOf,
-      {this.kind: FletchFunctionKind.NORMAL})
-      : this.signature = signature,
-        this.memberOf = memberOf,
-        arity = signature.parameterCount + (memberOf != null ? 1 : 0),
-        assembler = new BytecodeAssembler(
-          signature.parameterCount + (memberOf != null ? 1 : 0));
+      {FletchFunctionKind kind: FletchFunctionKind.NORMAL})
+      : this(
+          methodId,
+          kind,
+          signature.parameterCount + (memberOf != null ? 1 : 0),
+          name: name,
+          element: element,
+          signature: signature,
+          memberOf: memberOf);
 
-  FletchFunctionBuilder.normal(this.methodId, int argumentCount)
-      : arity = argumentCount,
-        assembler = new BytecodeAssembler(argumentCount),
-        kind = FletchFunctionKind.NORMAL;
-
-  FletchFunctionBuilder.lazyInit(
+  FletchFunctionBuilder(
       this.methodId,
-      this.name,
-      this.element,
-      int argumentCount)
-      : arity = argumentCount,
-        assembler = new BytecodeAssembler(argumentCount),
-        kind = FletchFunctionKind.LAZY_FIELD_INITIALIZER;
-
-  FletchFunctionBuilder.parameterStub(this.methodId, int argumentCount)
-      : arity = argumentCount,
-        assembler = new BytecodeAssembler(argumentCount),
-        kind = FletchFunctionKind.PARAMETER_STUB;
-
-  FletchFunctionBuilder.accessor(this.methodId, bool setter)
-      : arity = setter ? 2 : 1,
-        assembler = new BytecodeAssembler(setter ? 2 : 1),
-        kind = FletchFunctionKind.ACCESSOR;
+      this.kind,
+      int arity,
+      {this.name,
+       this.element,
+       this.signature,
+       this.memberOf})
+      : this.arity = arity,
+        assembler = new BytecodeAssembler(arity) {
+    assert(signature == null ||
+        arity == (signature.parameterCount + (memberOf != null ? 1 : 0)));
+  }
 
   void reuse() {
     assembler.reuse();
@@ -218,10 +211,10 @@ class FletchFunctionBuilder {
       int arity = selector.argumentCount;
       if (hasThisArgument) arity++;
 
-      FletchFunctionBuilder functionBuilder =
-          new FletchFunctionBuilder.parameterStub(
-              context.backend.functions.length,
-              arity);
+      FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder(
+          context.backend.functions.length,
+          FletchFunctionKind.PARAMETER_STUB,
+          arity);
       context.backend.functions.add(functionBuilder);
 
       BytecodeAssembler assembler = functionBuilder.assembler;
