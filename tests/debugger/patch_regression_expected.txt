@@ -1,0 +1,5 @@
+breakpoint set: 0: main @0
+main    	@new Object()
+main    	@print(new Object())
+[object Object]
+### process terminated

@@ -613,7 +613,7 @@ class FletchBackend extends Backend {
           element,
           classBuilder,
           compiler);
-      expectedBytecodes = constructors[element].assembler.bytecodes;
+      expectedBytecodes = constructors[element.declaration].assembler.bytecodes;
     } else {
       codegen = new DebugInfoFunctionCodegen(
           debugInfo,
@@ -624,7 +624,8 @@ class FletchBackend extends Backend {
           closureEnvironment,
           element,
           compiler);
-      expectedBytecodes = functionBuilders[element].assembler.bytecodes;
+      expectedBytecodes =
+          functionBuilders[element.declaration].assembler.bytecodes;
     }
     if (isNative(element)) {
       compiler.withCurrentElement(element, () {
