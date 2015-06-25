@@ -150,8 +150,8 @@ abstract class Command {
         int frames = CommandBuffer.readInt32FromBuffer(buffer, 0);
         ProcessBacktrace backtrace = new ProcessBacktrace(frames);
         for (int i = 0; i < frames; i++) {
-          int offset = i * 12;
-          int methodId = CommandBuffer.readInt32FromBuffer(buffer, offset + 4);
+          int offset = i * 16 + 4;
+          int methodId = CommandBuffer.readInt64FromBuffer(buffer, offset);
           int bytecodeIndex =
               CommandBuffer.readInt64FromBuffer(buffer, offset + 8);
           backtrace.methodIds[i] = methodId;

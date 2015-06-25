@@ -133,8 +133,7 @@ void Session::SendDartValue(Object* value, int class_map) {
     connection_->Send(Connection::kString);
   } else {
     Push(HeapObject::cast(value)->get_class());
-    int64 id = MapLookup(class_map);
-    connection_->WriteInt64(id);
+    connection_->WriteInt64(MapLookup(class_map));
     connection_->Send(Connection::kInstance);
   }
 }
@@ -142,8 +141,7 @@ void Session::SendDartValue(Object* value, int class_map) {
 void Session::SendInstanceStructure(Instance* instance, int class_map) {
   Class* klass = instance->get_class();
   Push(klass);
-  int64 id = MapLookup(class_map);
-  connection_->WriteInt64(id);
+  connection_->WriteInt64(MapLookup(class_map));
   int fields = klass->NumberOfInstanceFields();
   connection_->WriteInt(fields);
   connection_->Send(Connection::kInstanceStructure);
@@ -255,7 +253,7 @@ void Session::ProcessMessages() {
         connection_->WriteInt(frames);
         for (int i = 0; i < frames; i++) {
           // Lookup method in method map and send id.
-          connection_->WriteInt(MapLookup(map_index));
+          connection_->WriteInt64(MapLookup(map_index));
           // Drop method from session stack.
           Drop(1);
           // Pop bytecode index from session stack and send it.
@@ -489,8 +487,7 @@ void Session::ProcessMessages() {
 
       case Connection::kMapLookup: {
         int map_index = connection_->ReadInt();
-        int id = MapLookup(map_index);
-        connection_->WriteInt64(id);
+        connection_->WriteInt64(MapLookup(map_index));
         connection_->Send(Connection::kObjectId);
         break;
       }
