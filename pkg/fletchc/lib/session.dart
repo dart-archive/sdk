@@ -291,7 +291,7 @@ class Session extends FletchVmSession {
     }
     running = true;
     await sendCommand(const ProcessRun());
-    await handleProcessStop(await readNextCommand());
+    await handleProcessStop(await nextStopCommand());
   }
 
   Future debugRun() async {
