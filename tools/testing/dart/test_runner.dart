@@ -1608,13 +1608,57 @@ class OutputDiffingVmCommandOutputImpl extends VmCommandOutputImpl {
                                    Duration time, int pid)
       : super(command, exitCode, timedOut, stdout, stderr, time, pid);
 
+  bool _printedDiagnostics = false;
+
   Expectation result(TestCase testCase) {
+
+    void printExpectationDiagnosticsFailure() {
+      if (_printedDiagnostics) return;
+      _printedDiagnostics = true;
+
+      diagnostics.add(
+          'Matching debugger output with expectation file failed:');
+
+      List<String> expectedLines =
+          UTF8.decode(command.expectedOutput).split('\n');
+      List<String> stdoutLines = UTF8.decode(stdout).split('\n');
+
+      var commonLines = math.min(expectedLines.length, stdoutLines.length);
+      for (int i = 0; i < commonLines; i++) {
+        if (expectedLines[i] != stdoutLines[i]) {
+          diagnostics.add('First mismatch on line $i:');
+          diagnostics.add('  Expected:');
+          diagnostics.add('    "${expectedLines[i]}"');
+          diagnostics.add('  Actual:');
+          diagnostics.add('    "${stdoutLines[i]}"');
+          diagnostics.add('');
+          break;
+        }
+      }
+      diagnostics.add(
+          'Expected ${expectedLines.length} lines, got ${stdoutLines.length} '
+          'lines.');
+    }
+
     Expectation outcome = super.result(testCase);
-    if (outcome != Expectation.PASS) return outcome;
+    if (outcome != Expectation.PASS) {
+      if (!_printedDiagnostics) {
+        _printedDiagnostics = true;
+        diagnostics.add('Normal failure (not due to wrong expectation file)');
+        diagnostics.add('Exit code was: $exitCode');
+      }
+      return outcome;
+    }
     List<int> expected = command.expectedOutput;
-    if (expected.length != stdout.length) return Expectation.FAIL;
+    if (expected.length != stdout.length) {
+      printExpectationDiagnosticsFailure();
+      return Expectation.FAIL;
+    }
     for (int i = 0; i < expected.length; i++) {
-      if (expected[i] != stdout[i]) return Expectation.FAIL;
+      if (expected[i] != stdout[i]) {
+        printExpectationDiagnosticsFailure();
+        return Expectation.FAIL;
+      }
     }
     return Expectation.PASS;
   }
