@@ -122,9 +122,9 @@ int StackWalker::StackDiff(uint8** bcp,
       break;
     }
 
-    case kBranchLong:
-    case kBranchIfTrueLong:
-    case kBranchIfFalseLong: {
+    case kBranchWide:
+    case kBranchIfTrueWide:
+    case kBranchIfFalseWide: {
       int delta = Utils::ReadInt32(*bcp + 1);
       stack_diff = Bytecode::StackDiff(opcode);
       uint8* target = *bcp + delta;

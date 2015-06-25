@@ -271,7 +271,6 @@ issue13474_test: Fail
 issue13673_test: Fail
 issue14242_test: Fail
 issue18628_1_test/01: Fail
-large_class_declaration_test: Crash, Timeout
 lazy_static3_test: Fail
 left_shift_test: Fail
 list_is_test: Fail

@@ -91,11 +91,13 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoLoadLocal1();
   virtual void DoLoadLocal2();
   virtual void DoLoadLocal();
+  virtual void DoLoadLocalWide();
 
   virtual void DoLoadBoxed();
   virtual void DoLoadStatic();
   virtual void DoLoadStaticInit();
   virtual void DoLoadField();
+  virtual void DoLoadFieldWide();
 
   virtual void DoLoadConst();
   virtual void DoLoadConstUnfold();
@@ -104,6 +106,7 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoStoreBoxed();
   virtual void DoStoreStatic();
   virtual void DoStoreField();
+  virtual void DoStoreFieldWide();
 
   virtual void DoLoadLiteralNull();
   virtual void DoLoadLiteralTrue();
@@ -165,21 +168,22 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
 
   virtual void DoPop();
   virtual void DoReturn();
+  virtual void DoReturnWide();
 
-  virtual void DoBranchLong();
-  virtual void DoBranchIfTrueLong();
-  virtual void DoBranchIfFalseLong();
+  virtual void DoBranchWide();
+  virtual void DoBranchIfTrueWide();
+  virtual void DoBranchIfFalseWide();
 
   virtual void DoBranchBack();
   virtual void DoBranchBackIfTrue();
   virtual void DoBranchBackIfFalse();
 
-  virtual void DoBranchBackLong();
-  virtual void DoBranchBackIfTrueLong();
-  virtual void DoBranchBackIfFalseLong();
+  virtual void DoBranchBackWide();
+  virtual void DoBranchBackIfTrueWide();
+  virtual void DoBranchBackIfFalseWide();
 
-  virtual void DoPopAndBranchLong();
-  virtual void DoPopAndBranchBackLong();
+  virtual void DoPopAndBranchWide();
+  virtual void DoPopAndBranchBackWide();
 
   virtual void DoAllocate();
   virtual void DoAllocateUnfold();
@@ -227,6 +231,8 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   void Push(Register reg);
   void Pop(Register reg);
   void Drop(int n);
+
+  void Return(bool wide);
 
   void Allocate(bool unfolded, bool immutable);
 
@@ -375,6 +381,14 @@ void InterpreterGeneratorX86::DoLoadLocal() {
   Dispatch(kLoadLocalLength);
 }
 
+void InterpreterGeneratorX86::DoLoadLocalWide() {
+  __ movl(EAX, Address(ESI, 1));
+  __ negl(EAX);
+  __ movl(EAX, Address(EDI, EAX, TIMES_4));
+  Push(EAX);
+  Dispatch(kLoadLocalWideLength);
+}
+
 void InterpreterGeneratorX86::DoLoadBoxed() {
   __ movzbl(EAX, Address(ESI, 1));
   __ negl(EAX);
@@ -432,6 +446,14 @@ void InterpreterGeneratorX86::DoLoadField() {
   Dispatch(kLoadFieldLength);
 }
 
+void InterpreterGeneratorX86::DoLoadFieldWide() {
+  __ movl(EBX, Address(ESI, 1));
+  LoadLocal(EAX, 0);
+  __ movl(EAX, Address(EAX, EBX, TIMES_4, Instance::kSize - HeapObject::kTag));
+  StoreLocal(EAX, 0);
+  Dispatch(kLoadFieldWideLength);
+}
+
 void InterpreterGeneratorX86::DoLoadConst() {
   __ movl(EAX, Address(ESI, 1));
   __ movl(EBX, Address(EBP, Process::ProgramOffset()));
@@ -481,6 +503,16 @@ void InterpreterGeneratorX86::DoStoreField() {
   StoreLocal(ECX, 1);
   Drop(1);
   Dispatch(kStoreFieldLength);
+}
+
+void InterpreterGeneratorX86::DoStoreFieldWide() {
+  __ movl(EBX, Address(ESI, 1));
+  LoadLocal(ECX, 0);
+  LoadLocal(EAX, 1);
+  __ movl(Address(EAX, EBX, TIMES_4, Instance::kSize - HeapObject::kTag), ECX);
+  StoreLocal(ECX, 1);
+  Drop(1);
+  Dispatch(kStoreFieldWideLength);
 }
 
 void InterpreterGeneratorX86::DoLoadLiteralNull() {
@@ -786,44 +818,27 @@ void InterpreterGeneratorX86::DoPop() {
 }
 
 void InterpreterGeneratorX86::DoReturn() {
-  // Get the result from the stack.
-  LoadLocal(EAX, 0);
-
-  // Fetch the number of locals and arguments from the bytecodes.
-  // Unfortunately, we have to negate the counts so we can use them
-  // to index into the stack (grows towards higher addresses).
-  __ movzbl(ECX, Address(ESI, 1));
-  __ movzbl(EBX, Address(ESI, 2));
-  __ negl(ECX);
-
-  // Load the return address.
-  __ movl(ESI, Address(EDI, ECX, TIMES_4));
-
-  // Drop both locals and arguments except one which we will overwrite
-  // with the result (we've left the return address on the stack).
-  __ subl(ECX, EBX);
-  __ leal(EDI, Address(EDI, ECX, TIMES_4));
-
-  // Overwrite the first argument (or the return address) with the result
-  // and dispatch to the next bytecode.
-  StoreLocal(EAX, 0);
-  Dispatch(0);
+  Return(false);
 }
 
-void InterpreterGeneratorX86::DoBranchLong() {
+void InterpreterGeneratorX86::DoReturnWide() {
+  Return(true);
+}
+
+void InterpreterGeneratorX86::DoBranchWide() {
   __ movl(EAX, Address(ESI, 1));
   __ addl(ESI, EAX);
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchIfTrueLong() {
+void InterpreterGeneratorX86::DoBranchIfTrueWide() {
   Label branch;
   Pop(EBX);
   __ movl(EAX, Address(EBP, Process::ProgramOffset()));
   __ movl(EAX, Address(EAX, Program::true_object_offset()));
   __ cmpl(EBX, EAX);
   __ j(EQUAL, &branch);
-  Dispatch(kBranchIfTrueLongLength);
+  Dispatch(kBranchIfTrueWideLength);
 
   __ Bind(&branch);
   __ movl(EAX, Address(ESI, 1));
@@ -831,14 +846,14 @@ void InterpreterGeneratorX86::DoBranchIfTrueLong() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchIfFalseLong() {
+void InterpreterGeneratorX86::DoBranchIfFalseWide() {
   Label branch;
   Pop(EBX);
   __ movl(EAX, Address(EBP, Process::ProgramOffset()));
   __ movl(EAX, Address(EAX, Program::true_object_offset()));
   __ cmpl(EBX, EAX);
   __ j(NOT_EQUAL, &branch);
-  Dispatch(kBranchIfFalseLongLength);
+  Dispatch(kBranchIfFalseWideLength);
 
   __ Bind(&branch);
   __ movl(EAX, Address(ESI, 1));
@@ -887,14 +902,14 @@ void InterpreterGeneratorX86::DoBranchBackIfFalse() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchBackLong() {
+void InterpreterGeneratorX86::DoBranchBackWide() {
   CheckStackOverflow(0);
   __ movl(EAX, Address(ESI, 1));
   __ subl(ESI, EAX);
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchBackIfTrueLong() {
+void InterpreterGeneratorX86::DoBranchBackIfTrueWide() {
   CheckStackOverflow(0);
 
   Label branch;
@@ -903,7 +918,7 @@ void InterpreterGeneratorX86::DoBranchBackIfTrueLong() {
   __ movl(EAX, Address(EAX, Program::true_object_offset()));
   __ cmpl(EBX, EAX);
   __ j(EQUAL, &branch);
-  Dispatch(kBranchBackIfTrueLongLength);
+  Dispatch(kBranchBackIfTrueWideLength);
 
   __ Bind(&branch);
   __ movl(EAX, Address(ESI, 1));
@@ -911,7 +926,7 @@ void InterpreterGeneratorX86::DoBranchBackIfTrueLong() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchBackIfFalseLong() {
+void InterpreterGeneratorX86::DoBranchBackIfFalseWide() {
   CheckStackOverflow(0);
 
   Label branch;
@@ -920,7 +935,7 @@ void InterpreterGeneratorX86::DoBranchBackIfFalseLong() {
   __ movl(EAX, Address(EAX, Program::true_object_offset()));
   __ cmpl(EBX, EAX);
   __ j(NOT_EQUAL, &branch);
-  Dispatch(kBranchBackIfFalseLongLength);
+  Dispatch(kBranchBackIfFalseWideLength);
 
   __ Bind(&branch);
   __ movl(EAX, Address(ESI, 1));
@@ -928,7 +943,7 @@ void InterpreterGeneratorX86::DoBranchBackIfFalseLong() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoPopAndBranchLong() {
+void InterpreterGeneratorX86::DoPopAndBranchWide() {
   __ movzbl(EAX, Address(ESI, 1));
   __ negl(EAX);
   __ leal(EDI, Address(EDI, EAX, TIMES_4));
@@ -938,7 +953,7 @@ void InterpreterGeneratorX86::DoPopAndBranchLong() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoPopAndBranchBackLong() {
+void InterpreterGeneratorX86::DoPopAndBranchBackWide() {
   CheckStackOverflow(0);
 
   __ movzbl(EAX, Address(ESI, 1));
@@ -1341,6 +1356,36 @@ void InterpreterGeneratorX86::LoadLocal(Register reg, int index) {
 
 void InterpreterGeneratorX86::StoreLocal(Register reg, int index) {
   __ movl(Address(EDI, -index * kWordSize), reg);
+}
+
+void InterpreterGeneratorX86::Return(bool wide) {
+  // Get the result from the stack.
+  LoadLocal(EAX, 0);
+
+  // Fetch the number of locals and arguments from the bytecodes.
+  // Unfortunately, we have to negate the counts so we can use them
+  // to index into the stack (grows towards higher addresses).
+  if (wide) {
+    __ movl(ECX, Address(ESI, 1));
+    __ movzbl(EBX, Address(ESI, 5));
+  } else {
+    __ movzbl(ECX, Address(ESI, 1));
+    __ movzbl(EBX, Address(ESI, 2));
+  }
+  __ negl(ECX);
+
+  // Load the return address.
+  __ movl(ESI, Address(EDI, ECX, TIMES_4));
+
+  // Drop both locals and arguments except one which we will overwrite
+  // with the result (we've left the return address on the stack).
+  __ subl(ECX, EBX);
+  __ leal(EDI, Address(EDI, ECX, TIMES_4));
+
+  // Overwrite the first argument (or the return address) with the result
+  // and dispatch to the next bytecode.
+  StoreLocal(EAX, 0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {

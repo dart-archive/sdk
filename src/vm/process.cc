@@ -232,7 +232,7 @@ bool Process::HandleStackOverflow(int addition) {
   int size_increase = Utils::RoundUpToPowerOfTwo(addition);
   size_increase = Utils::Maximum(256, size_increase);
   int new_size = stack()->length() + size_increase;
-  if (new_size >= 32768) FATAL("Stack overflow");
+  if (new_size > 128 * KB) FATAL("Stack overflow");
 
   Object* new_stack_object = NewStack(new_size);
   if (new_stack_object == Failure::retry_after_gc()) {

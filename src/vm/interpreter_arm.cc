@@ -92,11 +92,13 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoLoadLocal1();
   virtual void DoLoadLocal2();
   virtual void DoLoadLocal();
+  virtual void DoLoadLocalWide();
 
   virtual void DoLoadBoxed();
   virtual void DoLoadStatic();
   virtual void DoLoadStaticInit();
   virtual void DoLoadField();
+  virtual void DoLoadFieldWide();
 
   virtual void DoLoadConst();
   virtual void DoLoadConstUnfold();
@@ -105,6 +107,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoStoreBoxed();
   virtual void DoStoreStatic();
   virtual void DoStoreField();
+  virtual void DoStoreFieldWide();
 
   virtual void DoLoadLiteralNull();
   virtual void DoLoadLiteralTrue();
@@ -166,21 +169,22 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
 
   virtual void DoPop();
   virtual void DoReturn();
+  virtual void DoReturnWide();
 
-  virtual void DoBranchLong();
-  virtual void DoBranchIfTrueLong();
-  virtual void DoBranchIfFalseLong();
+  virtual void DoBranchWide();
+  virtual void DoBranchIfTrueWide();
+  virtual void DoBranchIfFalseWide();
 
   virtual void DoBranchBack();
   virtual void DoBranchBackIfTrue();
   virtual void DoBranchBackIfFalse();
 
-  virtual void DoBranchBackLong();
-  virtual void DoBranchBackIfTrueLong();
-  virtual void DoBranchBackIfFalseLong();
+  virtual void DoBranchBackWide();
+  virtual void DoBranchBackIfTrueWide();
+  virtual void DoBranchBackIfFalseWide();
 
-  virtual void DoPopAndBranchLong();
-  virtual void DoPopAndBranchBackLong();
+  virtual void DoPopAndBranchWide();
+  virtual void DoPopAndBranchBackWide();
 
   virtual void DoAllocate();
   virtual void DoAllocateUnfold();
@@ -228,6 +232,8 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Push(Register reg);
   void Pop(Register reg);
   void Drop(int n);
+
+  void Return(bool wide);
 
   void Allocate(bool unfolded, bool immutable);
 
@@ -382,6 +388,14 @@ void InterpreterGeneratorARM::DoLoadLocal() {
   Dispatch(kLoadLocalLength);
 }
 
+void InterpreterGeneratorARM::DoLoadLocalWide() {
+  __ ldr(R0, Address(R5, 1));
+  __ neg(R1, R0);
+  __ ldr(R0, Address(R6, Operand(R1, TIMES_4)));
+  Push(R0);
+  Dispatch(kLoadLocalWideLength);
+}
+
 void InterpreterGeneratorARM::DoLoadBoxed() {
   __ ldrb(R0, Address(R5, 1));
   __ neg(R0, R0);
@@ -442,6 +456,15 @@ void InterpreterGeneratorARM::DoLoadField() {
   Dispatch(kLoadFieldLength);
 }
 
+void InterpreterGeneratorARM::DoLoadFieldWide() {
+  __ ldr(R1, Address(R5, 1));
+  LoadLocal(R0, 0);
+  __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ ldr(R0, Address(R0, Operand(R1, TIMES_4)));
+  StoreLocal(R0, 0);
+  Dispatch(kLoadFieldWideLength);
+}
+
 void InterpreterGeneratorARM::DoLoadConst() {
   __ ldr(R0, Address(R5, 1));
   __ ldr(R1, Address(R4, Process::ProgramOffset()));
@@ -494,6 +517,17 @@ void InterpreterGeneratorARM::DoStoreField() {
   StoreLocal(R2, 1);
   Drop(1);
   Dispatch(kStoreFieldLength);
+}
+
+void InterpreterGeneratorARM::DoStoreFieldWide() {
+  __ ldr(R1, Address(R5, 1));
+  LoadLocal(R2, 0);
+  LoadLocal(R0, 1);
+  __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ str(R2, Address(R0, Operand(R1, TIMES_4)));
+  StoreLocal(R2, 1);
+  Drop(1);
+  Dispatch(kStoreFieldWideLength);
 }
 
 void InterpreterGeneratorARM::DoLoadLiteralNull() {
@@ -789,42 +823,25 @@ void InterpreterGeneratorARM::DoPop() {
 }
 
 void InterpreterGeneratorARM::DoReturn() {
-  // Get result from stack.
-  LoadLocal(R0, 0);
-
-  // Fetch the number of locals and arguments from the bytecodes.
-  // Unfortunately, we have to negate the counts so we can use them
-  // to index into the stack (grows towards higher addresses).
-  __ ldrb(R1, Address(R5, 1));
-  __ ldrb(R2, Address(R5, 2));
-  __ neg(R1, R1);
-
-  // Load the return address.
-  __ ldr(R5, Address(R6, Operand(R1, TIMES_4)));
-
-  // Drop both locals and arguments except one which we will overwrite
-  // with the result (we've left the return address on the stack).
-  __ sub(R1, R1, R2);
-  __ add(R6, R6, Operand(R1, TIMES_4));
-
-  // Overwrite the first argument (or the return address) with the result
-  // and dispatch to the next bytecode.
-  StoreLocal(R0, 0);
-  Dispatch(0);
+  Return(false);
 }
 
-void InterpreterGeneratorARM::DoBranchLong() {
+void InterpreterGeneratorARM::DoReturnWide() {
+  Return(true);
+}
+
+void InterpreterGeneratorARM::DoBranchWide() {
   __ ldr(R0, Address(R5, 1));
   __ add(R5, R5, R0);
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoBranchIfTrueLong() {
+void InterpreterGeneratorARM::DoBranchIfTrueWide() {
   Label branch;
   Pop(R7);
   __ cmp(R7, R10);
   __ b(EQ, &branch);
-  Dispatch(kBranchIfTrueLongLength);
+  Dispatch(kBranchIfTrueWideLength);
 
   __ Bind(&branch);
   __ ldr(R0, Address(R5, 1));
@@ -832,12 +849,12 @@ void InterpreterGeneratorARM::DoBranchIfTrueLong() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoBranchIfFalseLong() {
+void InterpreterGeneratorARM::DoBranchIfFalseWide() {
   Label branch;
   Pop(R7);
   __ cmp(R7, R10);
   __ b(NE, &branch);
-  Dispatch(kBranchIfFalseLongLength);
+  Dispatch(kBranchIfFalseWideLength);
 
   __ Bind(&branch);
   __ ldr(R0, Address(R5, 1));
@@ -882,21 +899,21 @@ void InterpreterGeneratorARM::DoBranchBackIfFalse() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoBranchBackLong() {
+void InterpreterGeneratorARM::DoBranchBackWide() {
   CheckStackOverflow(0);
   __ ldr(R0, Address(R5, 1));
   __ sub(R5, R5, R0);
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoBranchBackIfTrueLong() {
+void InterpreterGeneratorARM::DoBranchBackIfTrueWide() {
   CheckStackOverflow(0);
 
   Label branch;
   Pop(R1);
   __ cmp(R10, R1);
   __ b(EQ, &branch);
-  Dispatch(kBranchBackIfTrueLongLength);
+  Dispatch(kBranchBackIfTrueWideLength);
 
   __ Bind(&branch);
   __ ldr(R0, Address(R5, 1));
@@ -904,14 +921,14 @@ void InterpreterGeneratorARM::DoBranchBackIfTrueLong() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoBranchBackIfFalseLong() {
+void InterpreterGeneratorARM::DoBranchBackIfFalseWide() {
   CheckStackOverflow(0);
 
   Label branch;
   Pop(R1);
   __ cmp(R10, R1);
   __ b(NE, &branch);
-  Dispatch(kBranchBackIfTrueLongLength);
+  Dispatch(kBranchBackIfTrueWideLength);
 
   __ Bind(&branch);
   __ ldr(R0, Address(R5, 1));
@@ -919,7 +936,7 @@ void InterpreterGeneratorARM::DoBranchBackIfFalseLong() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoPopAndBranchLong() {
+void InterpreterGeneratorARM::DoPopAndBranchWide() {
   __ ldrb(R0, Address(R5, 1));
   __ sub(R6, R6, Operand(R0, TIMES_4));
 
@@ -928,7 +945,7 @@ void InterpreterGeneratorARM::DoPopAndBranchLong() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoPopAndBranchBackLong() {
+void InterpreterGeneratorARM::DoPopAndBranchBackWide() {
   CheckStackOverflow(0);
 
   __ ldrb(R0, Address(R5, 1));
@@ -1284,6 +1301,36 @@ void InterpreterGeneratorARM::Push(Register reg) {
 void InterpreterGeneratorARM::Pop(Register reg) {
   LoadLocal(reg, 0);
   Drop(1);
+}
+
+void InterpreterGeneratorARM::Return(bool wide) {
+  // Get result from stack.
+  LoadLocal(R0, 0);
+
+  // Fetch the number of locals and arguments from the bytecodes.
+  // Unfortunately, we have to negate the counts so we can use them
+  // to index into the stack (grows towards higher addresses).
+  if (wide) {
+    __ ldr(R1, Address(R5, 1));
+    __ ldrb(R2, Address(R5, 5));
+  } else {
+    __ ldrb(R1, Address(R5, 1));
+    __ ldrb(R2, Address(R5, 2));
+  }
+  __ neg(R1, R1);
+
+  // Load the return address.
+  __ ldr(R5, Address(R6, Operand(R1, TIMES_4)));
+
+  // Drop both locals and arguments except one which we will overwrite
+  // with the result (we've left the return address on the stack).
+  __ sub(R1, R1, R2);
+  __ add(R6, R6, Operand(R1, TIMES_4));
+
+  // Overwrite the first argument (or the return address) with the result
+  // and dispatch to the next bytecode.
+  StoreLocal(R0, 0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::LoadLocal(Register reg, int index) {

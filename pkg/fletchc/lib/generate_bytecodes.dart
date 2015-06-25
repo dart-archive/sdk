@@ -137,11 +137,13 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   V("LoadLocal1",           false,    "",   1,        1, "load local 1");
   V("LoadLocal2",           false,    "",   1,        1, "load local 2");
   V("LoadLocal",            false,    "B",  2,        1, "load local %d");
+  V("LoadLocalWide",        false,    "I",  5,        1, "load local %d");
 
   V("LoadBoxed",            false,    "B",  2,        1, "load boxed %d");
   V("LoadStatic",           false,    "I",  5,        1, "load static %d");
   V("LoadStaticInit",       false,    "I",  5,        1, "load static init %d");
   V("LoadField",            false,    "B",  2,        0, "load field %d");
+  V("LoadFieldWide",        false,    "I",  5,        0, "load field %d");
 
   V("LoadConst",            false,    "I",  5,        1, "load const %d");
   V("LoadConstUnfold",      false,    "I",  5,        1, "load const @%d");
@@ -150,6 +152,7 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   V("StoreBoxed",           false,    "B",  2,        0, "store boxed %d");
   V("StoreStatic",          false,    "I",  5,        0, "store static %d");
   V("StoreField",           false,    "B",  2,       -1, "store field %d");
+  V("StoreFieldWide",       false,    "I",  5,       -1, "store field %d");
 
   V("LoadLiteralNull",      false,    "",   1,        1, "load literal null");
   V("LoadLiteralTrue",      false,    "",   1,        1, "load literal true");
@@ -195,21 +198,22 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
 
   V("Pop",                  false,    "",   1,       -1, "pop");
   V("Return",                true,    "BB", 3,       -1, "return %d %d");
+  V("ReturnWide",            true,    "IB", 6,       -1, "return %d %d");
 
-  V("BranchLong",            true,    "I",  5,        0, "branch +%d");
-  V("BranchIfTrueLong",      true,    "I",  5,       -1, "branch if true +%d");
-  V("BranchIfFalseLong",     true,    "I",  5,       -1, "branch if false +%d");
+  V("BranchWide",            true,    "I",  5,        0, "branch +%d");
+  V("BranchIfTrueWide",      true,    "I",  5,       -1, "branch if true +%d");
+  V("BranchIfFalseWide",     true,    "I",  5,       -1, "branch if false +%d");
 
   V("BranchBack",            true,    "B",  2,        0, "branch -%d");
   V("BranchBackIfTrue",      true,    "B",  2,       -1, "branch if true -%d");
   V("BranchBackIfFalse",     true,    "B",  2,       -1, "branch if false -%d");
 
-  V("BranchBackLong",        true,    "I",  5,        0, "branch -%d");
-  V("BranchBackIfTrueLong",  true,    "I",  5,       -1, "branch if true -%d");
-  V("BranchBackIfFalseLong", true,    "I",  5,       -1, "branch if false -%d");
+  V("BranchBackWide",        true,    "I",  5,        0, "branch -%d");
+  V("BranchBackIfTrueWide",  true,    "I",  5,       -1, "branch if true -%d");
+  V("BranchBackIfFalseWide", true,    "I",  5,       -1, "branch if false -%d");
 
-  V("PopAndBranchLong",      true,    "BI", 6,   0, "pop %d and branch long +%d");
-  V("PopAndBranchBackLong",  true,    "BI", 6,   0, "pop %d and branch long -%d");
+  V("PopAndBranchWide",      true,    "BI", 6,        0, "pop %d and branch +%d");
+  V("PopAndBranchBackWide",  true,    "BI", 6,        0, "pop %d and branch -%d");
 
   V("Allocate",             false,    "I",  5, kVarDiff, "allocate %d");
   V("AllocateUnfold",       false,    "I",  5, kVarDiff, "allocate @%d");

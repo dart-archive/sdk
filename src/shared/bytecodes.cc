@@ -39,6 +39,8 @@ int Bytecode::Print(uint8* bcp, Writer* writer) {
     writer->Write(print_format, Utils::ReadInt32(bcp + 1));
   } else if (strcmp(bytecode_format, "BB") == 0) {
     writer->Write(print_format, bcp[1], bcp[2]);
+  } else if (strcmp(bytecode_format, "IB") == 0) {
+    writer->Write(print_format, Utils::ReadInt32(bcp + 1), bcp[5]);
   } else if (strcmp(bytecode_format, "BI") == 0) {
     writer->Write(print_format, bcp[1], Utils::ReadInt32(bcp + 2));
   } else if (strcmp(bytecode_format, "II") == 0) {

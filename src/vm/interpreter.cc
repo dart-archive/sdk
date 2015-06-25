@@ -204,6 +204,13 @@ Interpreter::InterruptKind Engine::Interpret(
     Advance(kLoadLocalLength);
   OPCODE_END();
 
+  OPCODE_BEGIN(LoadLocalWide);
+    int offset = ReadInt32(1);
+    Object* local = Local(offset);
+    Push(local);
+    Advance(kLoadLocalWideLength);
+  OPCODE_END();
+
   OPCODE_BEGIN(LoadBoxed);
     int offset = ReadByte(1);
     Boxed* boxed = Boxed::cast(Local(offset));
@@ -236,6 +243,12 @@ Interpreter::InterruptKind Engine::Interpret(
     Instance* target = Instance::cast(Pop());
     Push(target->GetInstanceField(ReadByte(1)));
     Advance(kLoadFieldLength);
+  OPCODE_END();
+
+  OPCODE_BEGIN(LoadFieldWide);
+    Instance* target = Instance::cast(Pop());
+    Push(target->GetInstanceField(ReadInt32(1)));
+    Advance(kLoadFieldWideLength);
   OPCODE_END();
 
   OPCODE_BEGIN(LoadConst);
@@ -278,6 +291,14 @@ Interpreter::InterruptKind Engine::Interpret(
     target->SetInstanceField(ReadByte(1), value);
     Push(value);
     Advance(kStoreFieldLength);
+  OPCODE_END();
+
+  OPCODE_BEGIN(StoreFieldWide);
+    Object* value = Pop();
+    Instance* target = Instance::cast(Pop());
+    target->SetInstanceField(ReadInt32(1), value);
+    Push(value);
+    Advance(kStoreFieldWideLength);
   OPCODE_END();
 
   OPCODE_BEGIN(LoadLiteralNull);
@@ -537,19 +558,29 @@ Interpreter::InterruptKind Engine::Interpret(
     Push(result);
   OPCODE_END();
 
-  OPCODE_BEGIN(BranchLong);
+  OPCODE_BEGIN(ReturnWide);
+    int locals = ReadInt32(1);
+    int arguments = ReadByte(5);
+    Object* result = Local(0);
+    Drop(locals);
+    PopReturnAddress();
+    Drop(arguments);
+    Push(result);
+  OPCODE_END();
+
+  OPCODE_BEGIN(BranchWide);
     int delta = ReadInt32(1);
     Advance(delta);
   OPCODE_END();
 
-  OPCODE_BEGIN(BranchIfTrueLong);
+  OPCODE_BEGIN(BranchIfTrueWide);
     int delta = ReadInt32(1);
-    Branch(delta, kBranchIfTrueLongLength);
+    Branch(delta, kBranchIfTrueWideLength);
   OPCODE_END();
 
-  OPCODE_BEGIN(BranchIfFalseLong);
+  OPCODE_BEGIN(BranchIfFalseWide);
     int delta = ReadInt32(1);
-    Branch(kBranchIfFalseLongLength, delta);
+    Branch(kBranchIfFalseWideLength, delta);
   OPCODE_END();
 
   OPCODE_BEGIN(BranchBack);
@@ -569,32 +600,32 @@ Interpreter::InterruptKind Engine::Interpret(
     Branch(kBranchBackIfTrueLength, delta);
   OPCODE_END();
 
-  OPCODE_BEGIN(BranchBackLong);
+  OPCODE_BEGIN(BranchBackWide);
     if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
     int delta = ReadInt32(1);
     Advance(-delta);
   OPCODE_END();
 
-  OPCODE_BEGIN(BranchBackIfTrueLong);
+  OPCODE_BEGIN(BranchBackIfTrueWide);
     if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
     int delta = -ReadInt32(1);
-    Branch(delta, kBranchBackIfTrueLongLength);
+    Branch(delta, kBranchBackIfTrueWideLength);
   OPCODE_END();
 
-  OPCODE_BEGIN(BranchBackIfFalseLong);
+  OPCODE_BEGIN(BranchBackIfFalseWide);
     if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
     int delta = -ReadInt32(1);
-    Branch(kBranchBackIfFalseLongLength, delta);
+    Branch(kBranchBackIfFalseWideLength, delta);
   OPCODE_END();
 
-  OPCODE_BEGIN(PopAndBranchLong);
+  OPCODE_BEGIN(PopAndBranchWide);
     int pop_count = ReadByte(1);
     int delta = ReadInt32(2);
     Drop(pop_count);
     Advance(delta);
   OPCODE_END();
 
-  OPCODE_BEGIN(PopAndBranchBackLong);
+  OPCODE_BEGIN(PopAndBranchBackWide);
     if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
     int pop_count = ReadByte(1);
     int delta = -ReadInt32(2);

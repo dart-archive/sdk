@@ -11,16 +11,19 @@ enum Opcode {
   LoadLocal1,
   LoadLocal2,
   LoadLocal,
+  LoadLocalWide,
   LoadBoxed,
   LoadStatic,
   LoadStaticInit,
   LoadField,
+  LoadFieldWide,
   LoadConst,
   LoadConstUnfold,
   StoreLocal,
   StoreBoxed,
   StoreStatic,
   StoreField,
+  StoreFieldWide,
   LoadLiteralNull,
   LoadLiteralTrue,
   LoadLiteralFalse,
@@ -91,17 +94,18 @@ enum Opcode {
   InvokeBitShlVtable,
   Pop,
   Return,
-  BranchLong,
-  BranchIfTrueLong,
-  BranchIfFalseLong,
+  ReturnWide,
+  BranchWide,
+  BranchIfTrueWide,
+  BranchIfFalseWide,
   BranchBack,
   BranchBackIfTrue,
   BranchBackIfFalse,
-  BranchBackLong,
-  BranchBackIfTrueLong,
-  BranchBackIfFalseLong,
-  PopAndBranchLong,
-  PopAndBranchBackLong,
+  BranchBackWide,
+  BranchBackIfTrueWide,
+  BranchBackIfFalseWide,
+  PopAndBranchWide,
+  PopAndBranchBackWide,
   Allocate,
   AllocateUnfold,
   AllocateImmutable,
@@ -241,6 +245,48 @@ class LoadLocal extends Bytecode {
   int get hashCode {
     int value = super.hashCode;
     value += uint8Argument0;
+    return value;
+  }
+}
+
+class LoadLocalWide extends Bytecode {
+  final int uint32Argument0;
+  const LoadLocalWide(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.LoadLocalWide;
+
+  String get name => 'LoadLocalWide';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 1;
+
+  String get formatString => 'load local %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'load local ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadLocalWide rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
     return value;
   }
 }
@@ -409,6 +455,48 @@ class LoadField extends Bytecode {
   int get hashCode {
     int value = super.hashCode;
     value += uint8Argument0;
+    return value;
+  }
+}
+
+class LoadFieldWide extends Bytecode {
+  final int uint32Argument0;
+  const LoadFieldWide(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.LoadFieldWide;
+
+  String get name => 'LoadFieldWide';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'load field %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'load field ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadFieldWide rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
     return value;
   }
 }
@@ -661,6 +749,48 @@ class StoreField extends Bytecode {
   int get hashCode {
     int value = super.hashCode;
     value += uint8Argument0;
+    return value;
+  }
+}
+
+class StoreFieldWide extends Bytecode {
+  final int uint32Argument0;
+  const StoreFieldWide(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.StoreFieldWide;
+
+  String get name => 'StoreFieldWide';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'store field %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'store field ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    StoreFieldWide rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
     return value;
   }
 }
@@ -3527,14 +3657,60 @@ class Return extends Bytecode {
   }
 }
 
-class BranchLong extends Bytecode {
+class ReturnWide extends Bytecode {
   final int uint32Argument0;
-  const BranchLong(this.uint32Argument0)
+  final int uint8Argument1;
+  const ReturnWide(this.uint32Argument0, this.uint8Argument1)
       : super();
 
-  Opcode get opcode => Opcode.BranchLong;
+  Opcode get opcode => Opcode.ReturnWide;
 
-  String get name => 'BranchLong';
+  String get name => 'ReturnWide';
+
+  bool get isBranching => true;
+
+  String get format => 'IB';
+
+  int get size => 6;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'return %d %d';
+
+  void addTo(Sink<List<int>> sink) {
+    buffer
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..addUint8(uint8Argument1)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'return ${uint32Argument0} ${uint8Argument1}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    ReturnWide rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    if (uint8Argument1 != rhs.uint8Argument1) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    value += uint8Argument1;
+    return value;
+  }
+}
+
+class BranchWide extends Bytecode {
+  final int uint32Argument0;
+  const BranchWide(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.BranchWide;
+
+  String get name => 'BranchWide';
 
   bool get isBranching => true;
 
@@ -3557,7 +3733,7 @@ class BranchLong extends Bytecode {
 
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
-    BranchLong rhs = other;
+    BranchWide rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -3569,14 +3745,14 @@ class BranchLong extends Bytecode {
   }
 }
 
-class BranchIfTrueLong extends Bytecode {
+class BranchIfTrueWide extends Bytecode {
   final int uint32Argument0;
-  const BranchIfTrueLong(this.uint32Argument0)
+  const BranchIfTrueWide(this.uint32Argument0)
       : super();
 
-  Opcode get opcode => Opcode.BranchIfTrueLong;
+  Opcode get opcode => Opcode.BranchIfTrueWide;
 
-  String get name => 'BranchIfTrueLong';
+  String get name => 'BranchIfTrueWide';
 
   bool get isBranching => true;
 
@@ -3599,7 +3775,7 @@ class BranchIfTrueLong extends Bytecode {
 
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
-    BranchIfTrueLong rhs = other;
+    BranchIfTrueWide rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -3611,14 +3787,14 @@ class BranchIfTrueLong extends Bytecode {
   }
 }
 
-class BranchIfFalseLong extends Bytecode {
+class BranchIfFalseWide extends Bytecode {
   final int uint32Argument0;
-  const BranchIfFalseLong(this.uint32Argument0)
+  const BranchIfFalseWide(this.uint32Argument0)
       : super();
 
-  Opcode get opcode => Opcode.BranchIfFalseLong;
+  Opcode get opcode => Opcode.BranchIfFalseWide;
 
-  String get name => 'BranchIfFalseLong';
+  String get name => 'BranchIfFalseWide';
 
   bool get isBranching => true;
 
@@ -3641,7 +3817,7 @@ class BranchIfFalseLong extends Bytecode {
 
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
-    BranchIfFalseLong rhs = other;
+    BranchIfFalseWide rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -3779,14 +3955,14 @@ class BranchBackIfFalse extends Bytecode {
   }
 }
 
-class BranchBackLong extends Bytecode {
+class BranchBackWide extends Bytecode {
   final int uint32Argument0;
-  const BranchBackLong(this.uint32Argument0)
+  const BranchBackWide(this.uint32Argument0)
       : super();
 
-  Opcode get opcode => Opcode.BranchBackLong;
+  Opcode get opcode => Opcode.BranchBackWide;
 
-  String get name => 'BranchBackLong';
+  String get name => 'BranchBackWide';
 
   bool get isBranching => true;
 
@@ -3809,7 +3985,7 @@ class BranchBackLong extends Bytecode {
 
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
-    BranchBackLong rhs = other;
+    BranchBackWide rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -3821,14 +3997,14 @@ class BranchBackLong extends Bytecode {
   }
 }
 
-class BranchBackIfTrueLong extends Bytecode {
+class BranchBackIfTrueWide extends Bytecode {
   final int uint32Argument0;
-  const BranchBackIfTrueLong(this.uint32Argument0)
+  const BranchBackIfTrueWide(this.uint32Argument0)
       : super();
 
-  Opcode get opcode => Opcode.BranchBackIfTrueLong;
+  Opcode get opcode => Opcode.BranchBackIfTrueWide;
 
-  String get name => 'BranchBackIfTrueLong';
+  String get name => 'BranchBackIfTrueWide';
 
   bool get isBranching => true;
 
@@ -3851,7 +4027,7 @@ class BranchBackIfTrueLong extends Bytecode {
 
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
-    BranchBackIfTrueLong rhs = other;
+    BranchBackIfTrueWide rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -3863,14 +4039,14 @@ class BranchBackIfTrueLong extends Bytecode {
   }
 }
 
-class BranchBackIfFalseLong extends Bytecode {
+class BranchBackIfFalseWide extends Bytecode {
   final int uint32Argument0;
-  const BranchBackIfFalseLong(this.uint32Argument0)
+  const BranchBackIfFalseWide(this.uint32Argument0)
       : super();
 
-  Opcode get opcode => Opcode.BranchBackIfFalseLong;
+  Opcode get opcode => Opcode.BranchBackIfFalseWide;
 
-  String get name => 'BranchBackIfFalseLong';
+  String get name => 'BranchBackIfFalseWide';
 
   bool get isBranching => true;
 
@@ -3893,7 +4069,7 @@ class BranchBackIfFalseLong extends Bytecode {
 
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
-    BranchBackIfFalseLong rhs = other;
+    BranchBackIfFalseWide rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -3905,15 +4081,15 @@ class BranchBackIfFalseLong extends Bytecode {
   }
 }
 
-class PopAndBranchLong extends Bytecode {
+class PopAndBranchWide extends Bytecode {
   final int uint8Argument0;
   final int uint32Argument1;
-  const PopAndBranchLong(this.uint8Argument0, this.uint32Argument1)
+  const PopAndBranchWide(this.uint8Argument0, this.uint32Argument1)
       : super();
 
-  Opcode get opcode => Opcode.PopAndBranchLong;
+  Opcode get opcode => Opcode.PopAndBranchWide;
 
-  String get name => 'PopAndBranchLong';
+  String get name => 'PopAndBranchWide';
 
   bool get isBranching => true;
 
@@ -3923,7 +4099,7 @@ class PopAndBranchLong extends Bytecode {
 
   int get stackPointerDifference => 0;
 
-  String get formatString => 'pop %d and branch long +%d';
+  String get formatString => 'pop %d and branch +%d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -3933,11 +4109,11 @@ class PopAndBranchLong extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'pop ${uint8Argument0} and branch long +${uint32Argument1}';
+  String toString() => 'pop ${uint8Argument0} and branch +${uint32Argument1}';
 
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
-    PopAndBranchLong rhs = other;
+    PopAndBranchWide rhs = other;
     if (uint8Argument0 != rhs.uint8Argument0) return false;
     if (uint32Argument1 != rhs.uint32Argument1) return false;
     return true;
@@ -3951,15 +4127,15 @@ class PopAndBranchLong extends Bytecode {
   }
 }
 
-class PopAndBranchBackLong extends Bytecode {
+class PopAndBranchBackWide extends Bytecode {
   final int uint8Argument0;
   final int uint32Argument1;
-  const PopAndBranchBackLong(this.uint8Argument0, this.uint32Argument1)
+  const PopAndBranchBackWide(this.uint8Argument0, this.uint32Argument1)
       : super();
 
-  Opcode get opcode => Opcode.PopAndBranchBackLong;
+  Opcode get opcode => Opcode.PopAndBranchBackWide;
 
-  String get name => 'PopAndBranchBackLong';
+  String get name => 'PopAndBranchBackWide';
 
   bool get isBranching => true;
 
@@ -3969,7 +4145,7 @@ class PopAndBranchBackLong extends Bytecode {
 
   int get stackPointerDifference => 0;
 
-  String get formatString => 'pop %d and branch long -%d';
+  String get formatString => 'pop %d and branch -%d';
 
   void addTo(Sink<List<int>> sink) {
     buffer
@@ -3979,11 +4155,11 @@ class PopAndBranchBackLong extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'pop ${uint8Argument0} and branch long -${uint32Argument1}';
+  String toString() => 'pop ${uint8Argument0} and branch -${uint32Argument1}';
 
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
-    PopAndBranchBackLong rhs = other;
+    PopAndBranchBackWide rhs = other;
     if (uint8Argument0 != rhs.uint8Argument0) return false;
     if (uint32Argument1 != rhs.uint32Argument1) return false;
     return true;

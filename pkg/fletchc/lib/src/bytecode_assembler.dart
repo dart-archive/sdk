@@ -89,14 +89,18 @@ class BytecodeAssembler {
         bytecode = const LoadLocal2();
         break;
       default:
-        bytecode = new LoadLocal(offset);
+        if (offset >= 256) {
+          bytecode = new LoadLocalWide(offset);
+        } else {
+          bytecode = new LoadLocal(offset);
+        }
         break;
     }
     internalAdd(bytecode);
   }
 
   void loadBoxed(int offset) {
-    assert(offset >= 0);
+    assert(offset >= 0 && offset <= 255);
     internalAdd(new LoadBoxed(offset));
   }
 
@@ -138,7 +142,11 @@ class BytecodeAssembler {
   }
 
   void loadField(int index) {
-    internalAdd(new LoadField(index));
+    if (index >= 256) {
+      internalAdd(new LoadFieldWide(index));
+    } else {
+      internalAdd(new LoadField(index));
+    }
   }
 
   void loadLiteralNull() {
@@ -166,12 +174,12 @@ class BytecodeAssembler {
   }
 
   void storeLocal(int offset) {
-    assert(offset >= 0);
+    assert(offset >= 0 && offset <= 255);
     internalAdd(new StoreLocal(offset));
   }
 
   void storeBoxed(int offset) {
-    assert(offset >= 0);
+    assert(offset >= 0 && offset <= 255);
     internalAdd(new StoreBoxed(offset));
   }
 
@@ -193,7 +201,11 @@ class BytecodeAssembler {
   }
 
   void storeField(int index) {
-    internalAdd(new StoreField(index));
+    if (index >= 256) {
+      internalAdd(new StoreFieldWide(index));
+    } else {
+      internalAdd(new StoreField(index));
+    }
   }
 
   void invokeStatic(int id, int arity) {
@@ -301,7 +313,12 @@ class BytecodeAssembler {
 
   void ret() {
     if (stackSize <= 0) throw "Bad stackSize for return bytecode: $stackSize";
-    internalAdd(new Return(stackSize, functionArity));
+    assert(functionArity <= 255);
+    if (stackSize >= 256) {
+      internalAdd(new ReturnWide(stackSize, functionArity));
+    } else {
+      internalAdd(new Return(stackSize, functionArity));
+    }
   }
 
   void identical() {
@@ -329,24 +346,24 @@ class BytecodeAssembler {
     label.forEach((int index) {
       var bytecode = bytecodes[index];
       switch (bytecode.opcode) {
-        case Opcode.BranchIfTrueLong:
+        case Opcode.BranchIfTrueWide:
           int offset = position - bytecode.uint32Argument0;
-          bytecodes[index] = new BranchIfTrueLong(offset);
+          bytecodes[index] = new BranchIfTrueWide(offset);
           break;
 
-        case Opcode.BranchIfFalseLong:
+        case Opcode.BranchIfFalseWide:
           int offset = position - bytecode.uint32Argument0;
-          bytecodes[index] = new BranchIfFalseLong(offset);
+          bytecodes[index] = new BranchIfFalseWide(offset);
           break;
 
-        case Opcode.BranchLong:
+        case Opcode.BranchWide:
           int offset = position - bytecode.uint32Argument0;
-          bytecodes[index] = new BranchLong(offset);
+          bytecodes[index] = new BranchWide(offset);
           break;
 
-        case Opcode.PopAndBranchLong:
+        case Opcode.PopAndBranchWide:
           int offset = position - bytecode.uint32Argument1;
-          bytecodes[index] = new PopAndBranchLong(
+          bytecodes[index] = new PopAndBranchWide(
               bytecode.uint8Argument0,
               offset);
           break;
@@ -383,10 +400,10 @@ class BytecodeAssembler {
       internalBranchBack(
           label,
           (v) => new BranchBackIfTrue(v),
-          (v) => new BranchBackIfTrueLong(v));
+          (v) => new BranchBackIfTrueWide(v));
     } else {
       label.addUsage(bytecodes.length);
-      internalAdd(new BranchIfTrueLong(byteSize));
+      internalAdd(new BranchIfTrueWide(byteSize));
     }
   }
 
@@ -395,10 +412,10 @@ class BytecodeAssembler {
       internalBranchBack(
           label,
           (v) => new BranchBackIfFalse(v),
-          (v) => new BranchBackIfFalseLong(v));
+          (v) => new BranchBackIfFalseWide(v));
     } else {
       label.addUsage(bytecodes.length);
-      internalAdd(new BranchIfFalseLong(byteSize));
+      internalAdd(new BranchIfFalseWide(byteSize));
     }
   }
 
@@ -407,22 +424,23 @@ class BytecodeAssembler {
       internalBranchBack(
           label,
           (v) => new BranchBack(v),
-          (v) => new BranchBackLong(v));
+          (v) => new BranchBackWide(v));
     } else {
       label.addUsage(bytecodes.length);
-      internalAdd(new BranchLong(byteSize));
+      internalAdd(new BranchWide(byteSize));
     }
   }
 
   void popAndBranch(int diff, BytecodeLabel label) {
+    assert(diff >= 0 && diff <= 255);
     if (label.isBound) {
       internalBranchBack(
           label,
-          (v) => new PopAndBranchBackLong(diff, v),
-          (v) => new PopAndBranchBackLong(diff, v));
+          (v) => new PopAndBranchBackWide(diff, v),
+          (v) => new PopAndBranchBackWide(diff, v));
     } else {
       label.addUsage(bytecodes.length);
-      internalAdd(new PopAndBranchLong(diff, byteSize));
+      internalAdd(new PopAndBranchWide(diff, byteSize));
     }
   }
 
