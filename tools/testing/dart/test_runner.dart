@@ -32,6 +32,7 @@ import 'fletch_warnings_suite.dart' show
 import 'fletch_test_suite.dart' show
     FletchTestCommand;
 
+const int MEMORY_LEAK_EXITCODE = 23;
 const int CRASHING_BROWSER_EXITCODE = -10;
 const int SLOW_TIMEOUT_MULTIPLIER = 4;
 
@@ -1564,6 +1565,7 @@ class VmCommandOutputImpl extends CommandOutputImpl
 
   Expectation result(TestCase testCase) {
     // Handle crashes and timeouts first
+    if (exitCode == MEMORY_LEAK_EXITCODE) return Expectation.MEMORY_LEAK;
     if (hasCrashed) return Expectation.CRASH;
     if (hasTimedOut) return Expectation.TIMEOUT;
 

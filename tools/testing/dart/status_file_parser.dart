@@ -29,6 +29,9 @@ class Expectation {
       byName('MissingStaticWarning');
   static Expectation PUB_GET_ERROR = byName('PubGetError');
 
+  // Special 'CRASH' cases
+  static Expectation MEMORY_LEAK = byName('MemoryLeak');
+
   // "meta expectations"
   static Expectation OK = byName('Ok');
   static Expectation SLOW = byName('Slow');
@@ -58,8 +61,8 @@ class Expectation {
       }
 
       var fail = build("Fail");
+      var crash = build("Crash");
       build("Pass");
-      build("Crash");
       build("Timeout");
 
       build("MissingCompileTimeError", group: fail);
@@ -71,6 +74,8 @@ class Expectation {
       build("StaticWarning", group: fail);
 
       build("PubGetError", group: fail);
+
+      build("MemoryLeak", group: crash);
 
       build("Skip", isMetaExpectation: true);
       build("SkipByDesign", isMetaExpectation: true);
