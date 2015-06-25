@@ -6,9 +6,6 @@
 
 @interface CommitCellPresenter ()
 
-@property (strong, nonatomic) IBOutlet NSLayoutConstraint*
-    detailsViewHeightConstraint;
-
 @property LruCache* imageCache;
 
 @end
@@ -27,7 +24,13 @@
   CommitCellPresenter* cell;
   CommitNode* commitNode = (CommitNode*)node;
 
-  if (commitNode.selected) {
+  if (commitNode == nil) {
+    cell = (CommitCellPresenter*)
+    [tableView dequeueReusableCellWithIdentifier:@"LoadingCell"
+                                    forIndexPath:indexPath];
+    [cell.spinner startAnimating];
+    return cell;
+  } else if (commitNode.selected) {
     cell = (CommitCellPresenter*)
         [tableView dequeueReusableCellWithIdentifier:@"CommitDetailsCell"
                                         forIndexPath:indexPath];
@@ -36,9 +39,6 @@
         [tableView dequeueReusableCellWithIdentifier:@"BasicCommitCell"
                                         forIndexPath:indexPath];
   }
-
-  // TODO(zarah): Handle when a cell is viewed but its data is not yet loaded.
-  if (node == nil) return cell;
 
   [self configureCell:cell atIndexPath:indexPath withNode:commitNode];
   return cell;

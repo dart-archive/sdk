@@ -12,6 +12,7 @@
 @property (weak, nonatomic) IBOutlet UILabel* messageLabel;
 @property (weak, nonatomic) IBOutlet UILabel* detailsLabel;
 @property (weak, nonatomic) IBOutlet UIImageView* avatarImage;
+@property (weak, nonatomic) IBOutlet UIActivityIndicatorView* spinner;
 
 @property NSIndexPath* index;
 
