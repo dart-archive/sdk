@@ -52,13 +52,13 @@ class InputHandler {
       return;
     }
     previousLine = line;
-    if (stream != stdin) print(line);
+    if (stream != stdin) stdout.writeln(line);
     List<String> commandComponents =
         line.split(' ').where((s) => !s.isEmpty).toList();
     String command = commandComponents[0];
     switch (command) {
       case 'help':
-        print(HELP);
+        stdout.writeln(HELP);
         break;
       case 'b':
         var method =
@@ -68,7 +68,7 @@ class InputHandler {
         try {
           bci = int.parse(bci);
         } catch(e) {
-          print('### invalid bytecode index: $bci');
+          stdout.writeln('### invalid bytecode index: $bci');
           break;
         }
         await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
@@ -83,7 +83,7 @@ class InputHandler {
         try {
           line = int.parse(line);
         } catch(e) {
-          print('### invalid line number: $line');
+          stdout.writeln('### invalid line number: $line');
           break;
         }
         try {
@@ -103,7 +103,7 @@ class InputHandler {
         try {
           frame = int.parse(frame);
         } catch(e) {
-          print('### invalid frame number: $frame');
+          stdout.writeln('### invalid frame number: $frame');
           break;
         }
         session.selectFrame(frame);
@@ -122,7 +122,7 @@ class InputHandler {
         try {
           id = int.parse(id);
         } catch(e) {
-          print('### invalid breakpoint number: $id');
+          stdout.writeln('### invalid breakpoint number: $id');
           break;
         }
         await session.deleteBreakpoint(id);
@@ -179,19 +179,19 @@ class InputHandler {
             await session.toggleInternal();
             break;
           default:
-            print('### invalid flag $toggle');
+            stdout.writeln('### invalid flag $toggle');
             break;
         }
         break;
       default:
-        print('### unknown command: $command');
+        stdout.writeln('### unknown command: $command');
         break;
     }
     printPrompt();
   }
 
   Future run() async {
-    print(BANNER);
+    stdout.writeln(BANNER);
     printPrompt();
     var inputLineStream = stream;
     if (inputLineStream == null) {
