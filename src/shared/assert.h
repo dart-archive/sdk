@@ -47,6 +47,8 @@ class DynamicAssertionHelper {
 #endif
 
  private:
+  void DumpStacktrace();
+
   const char* const file_;
   const int line_;
   const Kind kind_;
