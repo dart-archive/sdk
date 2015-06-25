@@ -26,7 +26,7 @@
 // Must be >= bufferSlack.
 @property int bufferAdvance;
 
-@property ImmiRoot* immiRoot;
+@property SlidingWindowNode* root;
 
 @end
 
@@ -46,21 +46,15 @@
   return self;
 }
 
-- (void)immi_setupRoot:(ImmiRoot*)root {
-  self.immiRoot = root;
-  [root refresh:^{
-    [self interpret:self.root];
-    [self refreshDisplayStart:0 end:self.bufferCount];
-  }];
+- (void)presentSlidingWindow:(SlidingWindowNode*)node {
+  self.root = node;
+  [self refreshDisplayStart:0 end:self.bufferCount];
 }
 
-- (void)interpret:(SlidingWindowNode*)node {
-  [node observe:^(SlidingWindowNode*) { [self reload]; }];
+- (void)patchSlidingWindow:(SlidingWindowPatch*)patch {
+  self.root = [patch applyWith:self.root];
+  [self reloadOnMainThread];
 }
-
-- (SlidingWindowNode*)root {
-  return (SlidingWindowNode*)self.immiRoot.rootNode;
-};
 
 - (NSInteger)tableView:(UITableView*)tableView
     numberOfRowsInSection:(NSInteger)section {
@@ -109,10 +103,12 @@
 }
 
 - (void)refreshDisplayStart:(int)start end:(int)end {
-  [self.root dispatchDisplayStart:start end:end];
+  self.root.display(start, end);
 }
 
-- (void)reload {
+- (void)reloadOnMainThread {
+  // TODO(zerny): Selectively reload the table based on patch data.
+  // TODO(zerny): Should this be run in the NSEventTrackingRunLoopMode?
   [self.tableView performSelectorOnMainThread:@selector(reloadData)
                                    withObject:nil
                                 waitUntilDone:NO];
@@ -144,7 +140,7 @@
 
 - (void)tableView:(UITableView*)tableView
     didSelectRowAtIndexPath:(NSIndexPath*)indexPath {
-  [self.root dispatchToggleIndex:indexPath.row];
+  self.root.toggle(indexPath.row);
   [tableView reloadRowsAtIndexPaths:@[indexPath]
                    withRowAnimation:UITableViewRowAnimationNone];
 }

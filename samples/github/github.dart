@@ -4,8 +4,10 @@
 
 import 'dart/commit_list_presenter.dart';
 import 'dart/commit_presenter.dart';
-import 'dart/menu_presenter.dart';
 import 'dart/github_services.dart';
+
+import 'package:immi_samples/drawer.dart';
+import 'package:immi_samples/menu.dart';
 
 import 'package:immi_gen/dart/immi_service_impl.dart';
 
@@ -13,9 +15,16 @@ main() {
   var server = new Server.invertedForTesting(8321);
   var user = server.getUser('dart-lang');
   var repo = user.getRepository('fletch');
-  var impl = new ImmiServiceImpl()
-    ..add('MenuPresenter', new MenuPresenter())
-    ..add('CommitListPresenter', new CommitListPresenter(repo));
+
+  var menu = new Menu('Menu');
+  var commits = new CommitListPresenter(repo);
+  var drawer = new Drawer(commits, left: menu);
+
+  menu.add(new MenuItem('Commits @ Fletch', () { drawer.center = commits; }));
+
+  var impl = new ImmiServiceImpl();
+  impl.add('DrawerPresenter', drawer);
+
   impl.run();
   server.close();
 }

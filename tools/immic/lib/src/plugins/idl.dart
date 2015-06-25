@@ -113,13 +113,9 @@ class _IDLVisitor extends CodeGenerationVisitor {
     writeln('service ${serviceName} {');
     writeln('  uint16 getPresenter(PresenterData* data);');
     writeln('  void reset(uint16 pid);');
-    writeln('  PatchSetData* refresh(uint16 pid);');
+    writeln('  PatchData* refresh(uint16 pid);');
     for (List<Type> formals in _methodSignatures.values) {
-      write('  void dispatch');
-      for (var formal in formals) {
-        write(camelize(formal.identifier));
-      }
-      write('(uint16 id');
+      write('  void dispatch${actionTypeSuffix(formals)}(uint16 id');
       int i = 0;
       for (var formal in formals) {
         write(', ${formal.identifier} arg${++i}');
@@ -141,59 +137,76 @@ class _IDLVisitor extends CodeGenerationVisitor {
     writeln('  }');
     writeln('}');
     writeln();
+
+    writeln('struct NodePatchData {');
+    writeln('  union {');
+    nodes.forEach((Struct node) {
+      String patchType = "${node.name}PatchData";
+      String nodeField = camelize(node.name);
+      writeln('    $patchType* $nodeField;');
+    });
+    writeln('  }');
+    writeln('}');
+    writeln();
+
+    nodes.forEach((Struct node) {
+      String nodeType = "${node.name}NodeData";
+      String patchType = "${node.name}PatchData";
+      String updateType = "${node.name}UpdateData";
+      writeln('struct $patchType {');
+      writeln('  union {');
+      writeln('    $nodeType* replace;');
+      writeln('    List<${updateType}> updates;');
+      writeln('  }');
+      writeln('}');
+      writeln('struct $updateType {');
+      writeln('  union {');
+      forEachSlot(node, null, (Type slotType, String slotName) {
+        if (slotType.isList) {
+          writeln('    ListPatchData $slotName;');
+        } else if (slotType.isNode || slotType.resolved != null) {
+          writeln('    ${camelize(slotType.identifier)}PatchData $slotName;');
+        } else {
+          write('    ');
+          writeType(slotType);
+          writeln(' $slotName;');
+        }
+      });
+      for (Method method in node.methods) {
+        writeln('    uint16 ${method.name};');
+      }
+      writeln('  }');
+      writeln('}');
+      writeln();
+      });
   }
 
   void _writePatchDataStructs() {
-    write("""
+    writeln("""
 struct PresenterData {
   String name;
 }
 
-struct PrimitiveData {
-  union {
-    bool boolData;
-    uint8 uint8Data;
-    uint16 uint16Data;
-    uint32 uint32Data;
-    uint64 uint64Data;
-    int8 int8Data;
-    int16 int16Data;
-    int32 int32Data;
-    int64 int64Data;
-    float32 float32Data;
-    float64 float64Data;
-    String StringData;
-  }
-}
-
-struct ContentData {
-  union {
-    PrimitiveData* primitive;
-    NodeData* node;
-  }
-}
-
 struct ListPatchData {
+  List<ListRegionData> regions;
+}
+
+// TODO(zerny): Support lists of primitives.
+struct ListRegionData {
   uint32 index;
   union {
     uint32 remove;
-    List<ContentData> insert;
-    List<PatchSetData> update;
+    List<NodeData> insert;
+    List<NodePatchData> update;
   }
 }
 
 struct PatchData {
-  List<uint8> path;
   union {
-    ContentData* content;
-    ListPatchData* listPatch;
+    void noPatch;
+    NodePatchData* node;
   }
 }
-
-struct PatchSetData {
-  List<PatchData> patches;
-}
-
 """);
   }
 }

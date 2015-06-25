@@ -79,17 +79,12 @@ void testPresent(Repository repo) {
 }
 
 testDiff(Node previous, Node current) {
-  var path = [];
-  var patches = [];
-  Expect.isTrue(current.diff(previous, path, patches));
-  Expect.isTrue(patches.length > 0);
+  NodePatch patch = current.diff(previous);
+  Expect.isNotNull(patch);
 
   // Check that we can successfully serialize the data.
   var manager = new ResourceManager();
-  var mb = new MessageBuilder(16);
-  var builder = mb.initRoot(new PatchSetDataBuilder(), 8);
-  var builders = builder.initPatches(patches.length);
-  for (int i = 0; i < patches.length; ++i) {
-    patches[i].serialize(builders[i], manager);
-  }
+  var mb = new MessageBuilder(24);
+  PatchDataBuilder builder = mb.initRoot(new PatchDataBuilder(), 16);
+  patch.serializeNode(builder.initNode(), manager);
 }

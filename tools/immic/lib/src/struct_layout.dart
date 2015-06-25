@@ -185,7 +185,9 @@ class _StructBuilder {
   }
 
   int computeSize(Type type) {
-    if (type.isPointer || type.isList || type.isString) return POINTER_SIZE;
+    if (type.isPointer || type.isList || type.isString || type.isNode) {
+      return POINTER_SIZE;
+    }
     if (type.isPrimitive) return primitives.size(type.primitiveType);
 
     Struct struct = type.resolved;

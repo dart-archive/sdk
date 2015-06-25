@@ -13,6 +13,8 @@ export '../parser.dart';
 abstract class CodeGenerationVisitor extends Visitor {
   final String path;
   final StringBuffer buffer = new StringBuffer();
+  HashMap<String, List<Type>> methodSignatures = {};
+
   CodeGenerationVisitor(this.path);
 
   String get libraryFile => basenameWithoutExtension(path);
@@ -64,5 +66,23 @@ abstract class CodeGenerationVisitor extends Visitor {
       if (first) first = false;
       visit(nodes[i]);
     }
+  }
+
+  void collectMethodSignatures(Unit unit) {
+    for (var node in unit.structs) {
+      for (var method in node.methods) {
+        assert(method.returnType.isVoid);
+        String signature =
+            method.arguments.map((formal) => formal.type.identifier);
+        methodSignatures.putIfAbsent('$signature', () {
+          return method.arguments.map((formal) => formal.type);
+        });
+      }
+    }
+  }
+
+  String actionTypeSuffix(List<Type> types) {
+    if (types.isEmpty) return 'Void';
+    return types.map((Type type) => camelize(type.identifier)).join();
   }
 }

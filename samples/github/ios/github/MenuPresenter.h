@@ -4,7 +4,8 @@
 
 #import <UIKit/UIKit.h>
 #import "github.h"
+#import "ViewPresenter.h"
 
-@interface MenuController : UITableViewController <RootPresenter>
+@interface MenuPresenter : UITableViewController <ViewPresenter, MenuPresenter>
 
 @end

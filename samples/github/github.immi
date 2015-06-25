@@ -2,8 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'package:immi_samples/drawer.immi';
+import 'package:immi_samples/menu.immi';
+
 // TODO(zerny): Inline the contents of commit_list_presenter.immi once its
 // presenter has been eliminated.
 import 'dart/commit_list_presenter.immi';
-
-import 'dart/menu_presenter.immi';

@@ -11,7 +11,7 @@ import 'package:service/struct.dart';
 // builder types.
 
 abstract class Node {
-  bool diff(Node previous, List<int> path, List<Patch> patches);
+  diff(Node previous);
   void serializeNode(/*NodeData*/Builder builder, ResourceManager manager);
   void unregisterHandlers(ResourceManager manager);
 }
@@ -50,178 +50,119 @@ class ResourceManager {
   }
 }
 
-abstract class Patch {
-  final List<int> path;
-  Patch(path) : this.path = path.toList();
-  void serialize(/*PatchDataBuilder*/ builder, ResourceManager manager) {
-    int length = path.length;
-    List pathBuilder = builder.initPath(length);
+abstract class NodePatch {
+  void serializeNode(/*NodePatchData*/Builder builder, ResourceManager manager);
+}
+
+class ListPatch {
+  final List<ListRegionPatch> regions;
+  ListPatch(this.regions);
+  void serializeList(/*ListPatchDataBuilder*/ builder,
+                     ResourceManager manager) {
+    int length = regions.length;
+    List</*ListRegionData*/Builder> builders = builder.initRegions(length);
     for (int i = 0; i < length; ++i) {
-      pathBuilder[i] = path[i];
+      ListRegionPatch region = regions[i];
+      /*ListRegionDataBuilder*/var regionBuilder = builders[i];
+      regionBuilder.index = region.index;
+      region.serializeRegion(regionBuilder, manager);
     }
   }
 }
 
-class PrimitivePatch extends Patch {
-  final String type;
-  final current;
-  final previous;
-  PrimitivePatch(this.type, this.current, this.previous, path) : super(path);
-  void serialize(/*PatchDataBuilder*/ builder, ResourceManager manager) {
-    super.serialize(builder, manager);
-    /*PrimitiveDataBuilder*/ var dataBuilder =
-        builder.initContent().initPrimitive();
-    switch (type) {
-      case 'bool': dataBuilder.boolData = current; break;
-      case 'uint8': dataBuilder.uint8Data = current; break;
-      case 'uint16': dataBuilder.uint16Data = current; break;
-      case 'uint32': dataBuilder.uint32Data = current; break;
-      case 'uint64': dataBuilder.uint64Data = current; break;
-      case 'int8': dataBuilder.int8Data = current; break;
-      case 'int16': dataBuilder.int16Data = current; break;
-      case 'int32': dataBuilder.int32Data = current; break;
-      case 'int64': dataBuilder.int64Data = current; break;
-      case 'float32': dataBuilder.float32Data = current; break;
-      case 'float64': dataBuilder.float64Data = current; break;
-      case 'String': dataBuilder.StringData = current; break;
-      default: throw 'Invalid primitive data type';
-    }
-  }
-}
-
-class MethodPatch extends Patch {
-  final Function current;
-  final Function previous;
-  MethodPatch(this.current, this.previous, path) : super(path);
-  void serialize(/*PatchDataBuilder*/ builder, ResourceManager manager) {
-    super.serialize(builder, manager);
-    manager.removeHandler(previous);
-    int id = manager.addHandler(current);
-    /*PrimitiveDataBuilder*/ var dataBuilder =
-        builder.initContent().initPrimitive();
-    dataBuilder.uint16Data = id;
-  }
-}
-
-class NodePatch extends Patch {
-  final Node current;
-  final Node previous;
-  NodePatch(this.current, this.previous, path) : super(path);
-  void serialize(/*PatchDataBuilder*/ builder, ResourceManager manager) {
-    if (previous != null) previous.unregisterHandlers(manager);
-    super.serialize(builder, manager);
-    current.serializeNode(builder.initContent().initNode(), manager);
-  }
-}
-
-abstract class ListPatch extends Patch {
+abstract class ListRegionPatch {
   final int index;
-  ListPatch(this.index, path) : super(path);
-  void serialize(/*PatchDataBuilder*/ builder, ResourceManager manager) {
-    super.serialize(builder, manager);
-    /*ListPatchDataBuilder*/ var listPatch = builder.initListPatch();
-    listPatch.index = index;
-    serializeListPatch(listPatch, manager);
-  }
-  void serializeListPatch(/*ListPatchDataBuilder*/ builder,
-                          ResourceManager manager);
+  ListRegionPatch(this.index);
+  void serializeRegion(/*ListRegionData*/Builder builder,
+                       ResourceManager manager);
 }
 
-class ListInsertPatch extends ListPatch {
+class ListInsertPatch extends ListRegionPatch {
   final int length;
   final List current;
-  ListInsertPatch(int index, this.length, this.current, path)
-      : super(index, path);
-  void serializeListPatch(/*ListPatchDataBuilder*/ builder,
-                          ResourceManager manager) {
-    List/*<ContentDataBuilder*/ builders = builder.initInsert(length);
+  ListInsertPatch(int index, this.length, this.current) : super(index);
+  void serializeRegion(/*ListRegionDataBuilder*/ builder,
+                       ResourceManager manager) {
+    List</*NodeData*/Builder> builders = builder.initInsert(length);
     for (int i = 0; i < length; ++i) {
-      // TODO(zerny): Abstract seralization of values to support non-nodes.
-      current[index + i].serializeNode(builders[i].initNode(), manager);
+      current[index + i].serializeNode(builders[i], manager);
     }
   }
 }
 
-class ListRemovePatch extends ListPatch {
+class ListRemovePatch extends ListRegionPatch {
   final int length;
   final List previous;
-  ListRemovePatch(int index, this.length, this.previous, path)
-      : super(index, path);
-  void serializeListPatch(/*ListPatchDataBuilder*/ builder,
-                          ResourceManager manager) {
+  ListRemovePatch(int index, this.length, this.previous) : super(index);
+  void serializeRegion(/*ListRegionDataBuilder*/ builder,
+                       ResourceManager manager) {
+    builder.remove = length;
     for (int i = 0; i < length; ++i) {
       previous[index + i].unregisterHandlers(manager);
     }
-    builder.remove = length;
   }
 }
 
-class ListUpdatePatch extends ListPatch {
+class ListUpdatePatch extends ListRegionPatch {
   final List updates;
-  ListUpdatePatch(int index, this.updates, path)
-      : super(index, path);
-  void serializeListPatch(/*ListPatchDataBuilder*/ builder,
-                          ResourceManager manager) {
+  ListUpdatePatch(int index, this.updates) : super(index);
+  void serializeRegion(/*ListRegionDataBuilder*/ builder,
+                       ResourceManager manager) {
     int length = updates.length;
-    List patchSetBuilders = builder.initUpdate(length);
+    List</*NodePatchData*/Builder> builders = builder.initUpdate(length);
     for (int i = 0; i < length; ++i) {
-      List patches = updates[i];
-      int patchesLength = patches.length;
-      List patchBuilders = patchSetBuilders[i].initPatches(patchesLength);
-      for (int j = 0; j < patchesLength; ++j) {
-        patches[j].serialize(patchBuilders[j], manager);
-      }
+      updates[i].serializeNode(builders[i], manager);
     }
   }
 }
 
-bool diffList(List current, List previous, List path, List patches) {
+ListPatch diffList(List current, List previous) {
   int currentLength = current.length;
   int previousLength = previous.length;
   if (currentLength == 0 && previousLength == 0) {
-    return false;
+    return null;
   }
   if (previousLength == 0) {
-    patches.add(new ListInsertPatch(0, currentLength, current, path));
-    return true;
+    return new ListPatch([new ListInsertPatch(0, currentLength, current)]);
   }
   if (currentLength == 0) {
-    patches.add(new ListRemovePatch(0, previousLength, previous, path));
-    return true;
+    return new ListPatch([new ListRemovePatch(0, previousLength, previous)]);
   }
 
   // TODO(zerny): be more clever about diffing a list.
-  int patchesLength = patches.length;
   int minLength =
       (currentLength < previousLength) ? currentLength : previousLength;
+
+  List patches = [];
+
   int regionStart = -1;
-  List regionPatches = [];
-  List regionPath = [];
-  List memberPatches = [];
+  List regionPatches;
+
   for (int i = 0; i < minLength; ++i) {
-    assert(regionPath.isEmpty);
-    assert(memberPatches.isEmpty);
-    if (current[i].diff(previous[i], regionPath, memberPatches)) {
-      regionPatches.add(memberPatches);
-      memberPatches = [];
-      if (regionStart < 0) regionStart = i;
+    // TODO(zerny): Support lists of primitives and lists of Node.
+    var patch = current[i].diff(previous[i]);
+    if (patch != null) {
+      if (regionStart < 0) {
+        regionStart = i;
+        regionPatches = [];
+      }
+      regionPatches.add(patch);
     } else if (regionStart >= 0) {
-      patches.add(new ListUpdatePatch(regionStart, regionPatches, path));
+      patches.add(new ListUpdatePatch(regionStart, regionPatches));
       regionStart = -1;
-      regionPatches = [];
     }
   }
   if (regionStart >= 0) {
-    patches.add(new ListUpdatePatch(regionStart, regionPatches, path));
+    patches.add(new ListUpdatePatch(regionStart, regionPatches));
   }
 
   if (currentLength > previousLength) {
     patches.add(new ListInsertPatch(
-        previousLength, currentLength - previousLength, current, path));
+        previousLength, currentLength - previousLength, current));
   } else if (currentLength < previousLength) {
     patches.add(new ListRemovePatch(
-        currentLength, previousLength - currentLength, previous, path));
+        currentLength, previousLength - currentLength, previous));
   }
 
-  return patches.length > patchesLength;
+  return patches.isEmpty ? null : new ListPatch(patches);
 }

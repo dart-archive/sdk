@@ -8,6 +8,7 @@
 
 @interface CommitListPresenter ()
 
+@property UINavigationController* navigationController;
 @property SlidingWindowPresenter* presenter;
 @property id<CellPresenter> cellPresenter;
 
@@ -15,16 +16,35 @@
 
 @implementation CommitListPresenter
 
-- (void)immi_setupRoot:(ImmiRoot*)root {
-  self.cellPresenter = [[CommitCellPresenter alloc] init];
-  self.presenter =
-      [[SlidingWindowPresenter alloc] initWithCellPresenter:self.cellPresenter
-                                                  tableView:self.tableView];
+- (instancetype)initWithCoder:(NSCoder*)aDecoder {
+  self = [super initWithCoder:aDecoder];
+  self.navigationController =
+      [[UINavigationController alloc] initWithRootViewController:self];
+  return self;
+}
 
-  [self.presenter immi_setupRoot:root];
+- (UIViewController*)viewController {
+  return self.navigationController;
+}
 
-  self.tableView.dataSource = self.presenter;
-  self.tableView.delegate = self.presenter;
+- (void)presentSlidingWindow:(SlidingWindowNode*)node {
+  // TODO(zerny): this setup should be done on allocation but can't because
+  // SlidingWindowPresenter depends on the table view. Remove the dependency in
+  // SlidingWindowPresenter and move allocation of the sub presenters to init.
+  if (self.presenter == nil) {
+    self.cellPresenter = [[CommitCellPresenter alloc] init];
+    self.presenter =
+        [[SlidingWindowPresenter alloc]
+         initWithCellPresenter:self.cellPresenter
+                     tableView:self.tableView];
+    self.tableView.dataSource = self.presenter;
+    self.tableView.delegate = self.presenter;
+  }
+  [self.presenter presentSlidingWindow:node];
+}
+
+- (void)patchSlidingWindow:(SlidingWindowPatch*)patch {
+  [self.presenter patchSlidingWindow:patch];
 }
 
 @end

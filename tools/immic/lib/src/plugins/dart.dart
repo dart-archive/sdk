@@ -40,7 +40,7 @@ void _generateServiceFile(String path,
                           Map<String, Unit> units,
                           String directory) {
   _DartVisitor visitor = new _DartVisitor(path);
-  units.values.forEach(visitor._collectMethodSignatures);
+  units.values.forEach(visitor.collectMethodSignatures);
   visitor._writeServiceImpl();
   String content = visitor.buffer.toString();
   String file = visitor.serviceImplFile;
@@ -49,8 +49,6 @@ void _generateServiceFile(String path,
 
 class _DartVisitor extends CodeGenerationVisitor {
   _DartVisitor(String path) : super(path);
-
-  HashMap<String, List<Type>> _methodSignatures = {};
 
   visitUnit(Unit node) {
     _writeHeader();
@@ -65,10 +63,33 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln("import '${immiGenPkg}/dart/${file}.dart';");
   }
 
+  getPatchType(Type type) {
+    if (type.isList) return 'ListPatch';
+    if (type.isNode) return 'NodePatch';
+    if (type.resolved != null) return '${type.name}Patch';
+    return _types[type.identifier];
+  }
+
+  getSerializeMethodName(Type type) {
+    if (type.isList) return 'serializeList';
+    if (type.isNode) return 'serializeNode';
+    if (type.resolved != null) return 'serialize${type.name}';
+    throw 'Unserializable type ${type.identifier}';
+  }
+
   visitStruct(Struct node) {
-    String nodeName = "${node.name}Node";
-    bool hasSlotsAndMethods =
-        !node.layout.slots.isEmpty && !node.methods.isEmpty;
+    String nodeName = '${node.name}Node';
+    String patchName = '${node.name}Patch';
+    String replacePatch = '${node.name}ReplacePatch';
+    String updatePatch = '${node.name}UpdatePatch';
+    String nodeBuilderName = '${node.name}NodeDataBuilder';
+    String patchBuilderName = '${node.name}PatchDataBuilder';
+    String updateBuilderName = '${node.name}UpdateDataBuilder';
+
+    bool hasFields = node.layout.slots.isNotEmpty;
+    bool hasMethods = node.methods.isNotEmpty;
+    bool hasSlotsAndMethods = hasFields && hasMethods;
+
     writeln('class $nodeName extends Node {');
     // Final fields.
     forEachSlot(node, null, (Type slotType, String slotName) {
@@ -80,52 +101,56 @@ class _DartVisitor extends CodeGenerationVisitor {
       writeln('  final Function ${method.name};');
     }
     // Public keyword constructor.
-    write('  factory $nodeName({');
-    forEachSlot(node, writeComma, (Type slotType, String slotName) {
-      writeType(slotType);
-      write(' $slotName');
-    });
-    if (hasSlotsAndMethods) write(', ');
-    write(node.methods.map((method) => 'Function ${method.name}').join(', '));
-    writeln('}) =>');
-    write('      new ${nodeName}._internal(');
-    forEachSlot(node, writeComma, (_, String slotName) {
-      write('$slotName');
-    });
-    if (hasSlotsAndMethods) write(', ');
-    write(node.methods.map((method) => method.name).join(', '));
-    writeln(');');
-    // Positional constructor.
-    write('  ${nodeName}._internal(');
-    forEachSlot(node, writeComma, (_, String slotName) {
-      write('this.${slotName}');
-    });
-    if (hasSlotsAndMethods) write(', ');
-    write(node.methods.map((method) => 'this.${method.name}').join(', '));
-    writeln(');');
+    if (node.layout.slots.isNotEmpty) {
+      write('  factory $nodeName({');
+      forEachSlot(node, writeComma, (Type slotType, String slotName) {
+        writeType(slotType);
+        write(' $slotName');
+      });
+      if (hasSlotsAndMethods) write(', ');
+      write(node.methods.map((method) => 'Function ${method.name}').join(', '));
+      writeln('}) =>');
+      write('      new ${nodeName}._internal(');
+      forEachSlot(node, writeComma, (_, String slotName) {
+        write('$slotName');
+      });
+      if (hasSlotsAndMethods) write(', ');
+      write(node.methods.map((method) => method.name).join(', '));
+      writeln(');');
+      // Positional constructor.
+      write('  ${nodeName}._internal(');
+      forEachSlot(node, writeComma, (_, String slotName) {
+        write('this.${slotName}');
+      });
+      if (hasSlotsAndMethods) write(', ');
+      write(node.methods.map((method) => 'this.${method.name}').join(', '));
+      writeln(');');
+    }
+
     // Serialization
+    String serializeSelf = 'serialize${node.name}';
     writeln('  void serializeNode(NodeDataBuilder builder, ResourceManager manager) {');
-    writeln('    serialize(builder.init${node.name}(), manager);');
+    writeln('    $serializeSelf(builder.init${node.name}(), manager);');
     writeln('  }');
-    writeln('  void serialize(${nodeName}DataBuilder builder, ResourceManager manager) {');
+    writeln('  void $serializeSelf(${nodeName}DataBuilder builder, ResourceManager manager) {');
     forEachSlot(node, null, (Type slotType, String slotName) {
       String slotNameCamel = camelize(slotName);
       if (slotType.isList) {
         String localSlotLength = "${slotName}Length";
         String localSlotBuilder = "${slotName}Builder";
-        String serialize =
-            slotType.elementType.isNode ? 'serializeNode' : 'serialize';
+        // TODO(zerny): Support list of primitives.
+        String serialize = slotType.elementType.isNode ?
+                           'serializeNode' :
+                           'serialize${slotType.elementType.identifier}';
         writeln('    var $localSlotLength = $slotName.length;');
         writeln('    List $localSlotBuilder =');
         writeln('        builder.init$slotNameCamel($localSlotLength);');
         writeln('    for (var i = 0; i < $localSlotLength; ++i) {');
         writeln('      $slotName[i].$serialize($localSlotBuilder[i], manager);');
         writeln('    }');
-      } else if (slotType.isNode) {
-        writeln('    $slotName.serializeNode(builder.init$slotNameCamel(), manager);');
-      } else if (slotType.resolved != null) {
-        writeln('var local$slotName = $slotName;');
-        writeln('    $slotName.serialize(builder.init$slotNameCamel(), manager);');
+      } else if (slotType.isNode || slotType.resolved != null) {
+        String serialize = getSerializeMethodName(slotType);
+        writeln('    $slotName.$serialize(builder.init$slotNameCamel(), manager);');
       } else {
         writeln('    builder.$slotName = $slotName;');
       }
@@ -143,65 +168,118 @@ class _DartVisitor extends CodeGenerationVisitor {
     }
     writeln('  }');
 
-    // Difference
-    writeln('  bool diff(Node previousNode, List<int> path, List<Patch> patches) {');
-    writeln('    if (identical(this, previousNode)) return false;');
-    writeln('    if (previousNode is! $nodeName) {');
-    writeln('      patches.add(new NodePatch(this, previousNode, path));');
-    writeln('      return true;');
-    writeln('    }');
-    writeln('    $nodeName previous = previousNode;');
-    bool hasFields = node.layout.slots.isNotEmpty;
-    bool hasMethods = node.methods.isNotEmpty;
+    // Difference.
+    writeln('  ${node.name}Patch diff(Node previousNode) {');
     if (!hasFields && !hasMethods) {
-      writeln('    return false;');
+      writeln('    if (previousNode is $nodeName) return null;');
+      writeln('    return new $replacePatch(this, previousNode);');
     } else {
-      writeln('    bool changed = false;');
-      writeln('    int pathIndex = path.length;');
-      writeln('    path.add(-1);');
-    }
-    int slotIndex = 0;
-    if (hasFields) {
+      writeln('    if (identical(this, previousNode)) return null;');
+      writeln('    if (previousNode is! $nodeName) {');
+      writeln('      return new $replacePatch(this, previousNode);');
+      writeln('    }');
+      writeln('    $nodeName previous = previousNode;');
+      writeln('    $updatePatch updates = null;');
       forEachSlot(node, null, (Type slotType, String slotName) {
         if (slotType.isList) {
-          writeln('    path[pathIndex] = $slotIndex;');
-          writeln('    if (diffList($slotName, previous.$slotName, path, patches)) {');
-          writeln('      changed = true;');
+          writeln('    ${getPatchType(slotType)} ${slotName}Patch =');
+          writeln('        diffList($slotName, previous.$slotName);');
+          writeln('    if (${slotName}Patch != null) {');
+          writeln('      if (updates == null) updates = new $updatePatch();');
+          writeln('      updates.$slotName = ${slotName}Patch;');
           writeln('    }');
-        } else if (slotType.resolved != null) {
-          writeln('    path[pathIndex] = $slotIndex;');
-          writeln('    if ($slotName.diff(previous.$slotName, path, patches)) {');
-          writeln('      changed = true;');
+        } else if (slotType.isNode || slotType.resolved != null) {
+          writeln('    ${getPatchType(slotType)} ${slotName}Patch =');
+          writeln('        $slotName.diff(previous.$slotName);');
+          writeln('    if (${slotName}Patch != null) {');
+          writeln('      if (updates == null) updates = new $updatePatch();');
+          writeln('      updates.$slotName = ${slotName}Patch;');
           writeln('    }');
         } else {
           writeln('    if ($slotName != previous.$slotName) {');
-          writeln('      changed = true;');
-          writeln('      path[pathIndex] = $slotIndex;');
-          writeln('      patches.add(new PrimitivePatch(');
-          writeln('          "${slotType.identifier}", $slotName, previous.$slotName, path));');
+          writeln('      if (updates == null) updates = new $updatePatch();');
+          writeln('      updates.$slotName = $slotName;');
           writeln('    }');
         }
-        ++slotIndex;
       });
-    }
-    if (hasMethods) {
-      for (var method in node.methods) {
-        String slotName = method.name;
-        writeln('    if ($slotName != previous.$slotName) {');
-        writeln('      changed = true;');
-        writeln('      path[pathIndex] = $slotIndex;');
-        writeln('      patches.add(new MethodPatch($slotName, previous.$slotName, path));');
+      for (Method method in node.methods) {
+        String name = method.name;
+        writeln('    if ($name != previous.$name) {');
+        writeln('      if (updates == null) updates = new $updatePatch();');
+        writeln('      updates.$name = $name;');
         writeln('    }');
-        ++slotIndex;
       }
+      writeln('    return updates;');
     }
-    if (hasFields || hasMethods) {
-      writeln('    path.length = pathIndex;');
-      writeln('    return changed;');
-    }
+    writeln('  }');
+    // Difference end.
+
+    writeln('}');
+    writeln();
+    // Node class end.
+
+    // Node specific patches.
+    String serializeSelfNode = 'serialize${node.name}';
+    String serializeSelfPatch = 'serialize${node.name}';
+    writeln('abstract class $patchName extends NodePatch {');
+    writeln('  void serializeNode(NodePatchDataBuilder builder, ResourceManager manager) {');
+    writeln('    $serializeSelfPatch(builder.init${node.name}(), manager);');
+    writeln('  }');
+    writeln('  void $serializeSelfPatch($patchBuilderName builder, ResourceManager manager);');
+    writeln('}');
+    writeln('class $replacePatch extends $patchName {');
+    writeln('  final $nodeName replacement;');
+    writeln('  final Node previous;');
+    writeln('  $replacePatch(this.replacement, this.previous);');
+    writeln('  void $serializeSelfPatch($patchBuilderName builder, ResourceManager manager) {');
+    writeln('    replacement.$serializeSelfNode(builder.initReplace(), manager);');
     writeln('  }');
     writeln('}');
     writeln();
+    if (hasFields || hasMethods) {
+      writeln('class $updatePatch extends $patchName {');
+      writeln('  int _count = 0;');
+      forEachSlot(node, null, (Type slotType, String slotName) {
+        writeln('  ${getPatchType(slotType)} _$slotName;');
+        writeln('  set $slotName(${getPatchType(slotType)} $slotName) {');
+        writeln('    ++_count;');
+        writeln('    _$slotName = $slotName;');
+        writeln('  }');
+      });
+      for (Method method in node.methods) {
+        String name = method.name;
+        writeln('  Function _$name;');
+        writeln('  set $name(Function $name) {');
+        writeln('    ++_count;');
+        writeln('    _$name = $name;');
+        writeln('  }');
+      }
+      writeln('  void $serializeSelfPatch($patchBuilderName builder, ResourceManager manager) {');
+      writeln('    List<${updateBuilderName}> builders = builder.initUpdates(_count);');
+      writeln('    int index = 0;');
+      forEachSlot(node, null, (Type slotType, String slotName) {
+        writeln('    if (_$slotName != null) {');
+        if (slotType.isList || slotType.isNode || slotType.resolved != null) {
+          String slotNameCamel = camelize(slotName);
+          String serializeSlot = getSerializeMethodName(slotType);
+          writeln('      _$slotName.$serializeSlot(builders[index++].init$slotNameCamel(), manager);');
+        } else {
+          writeln('      builders[index++].$slotName = _$slotName;');
+        }
+        writeln('    }');
+      });
+      for (Method method in node.methods) {
+        String name = method.name;
+        writeln('    if (_$name != null) {');
+        // TODO(zerny): Remove the old action handler!
+        writeln('      builders[index++].$name = manager.addHandler(_$name);');
+        writeln('    }');
+      }
+      writeln('    assert(index == _count);');
+      writeln('  }');
+      writeln('}');
+      writeln();
+    }
   }
 
   visitUnion(Union node) {
@@ -225,7 +303,6 @@ class ${serviceImplName} extends ${serviceName} {
   var _presenters = [null];
   var _presenterGraphs = [null];
   var _presenterNameToId = {};
-  var _patches = [];
 
   // TODO(zerny): Implement per-graph resource management.
   ResourceManager _manager = new ResourceManager();
@@ -258,21 +335,16 @@ class ${serviceImplName} extends ${serviceName} {
     _manager.clear();
   }
 
-  void refresh(int pid, PatchSetDataBuilder builder) {
+  void refresh(int pid, PatchDataBuilder builder) {
     assert(0 < pid && pid < _nextPresenterId);
-    var previous = _presenterGraphs[pid];
-    var current = _presenters[pid].present(previous);
-    var patches = _patches;
-    if (current.diff(previous, [], patches)) {
-      int length = _patches.length;
-      _presenterGraphs[pid] = current;
-      List<PatchDataBuilder> patchBuilder = builder.initPatches(length);
-      for (int i = 0; i < length; ++i) {
-        patches[i].serialize(patchBuilder[i], _manager);
-      }
-      patches.length = 0;
+    Node previous = _presenterGraphs[pid];
+    Node current = _presenters[pid].present(previous);
+    NodePatch patch = current.diff(previous);
+    if (patch == null) {
+      builder.setNoPatch();
     } else {
-      builder.initPatches(0);
+      _presenterGraphs[pid] = current;
+      patch.serializeNode(builder.initNode(), _manager);
     }
   }
 
@@ -284,12 +356,8 @@ class ${serviceImplName} extends ${serviceName} {
   }
 
 """);
-    for (List<Type> formals in _methodSignatures.values) {
-      write('  void dispatch');
-      for (var formal in formals) {
-        write(camelize(formal.identifier));
-      }
-      write('(int id');
+    for (List<Type> formals in methodSignatures.values) {
+      write('  void dispatch${actionTypeSuffix(formals)}(int id');
       int i = 0;
       for (var formal in formals) {
         write(', ');
@@ -308,10 +376,8 @@ class ${serviceImplName} extends ${serviceName} {
       writeln('  }');
       writeln();
     }
-    write("""
-}
-
-""");
+    writeln('}');
+    writeln();
   }
 
   void _writeHeader() {
@@ -349,31 +415,18 @@ class ${serviceImplName} extends ${serviceName} {
     'float64' : 'double',
 
     'String'  : 'String',
-    'node'    : 'Node',
   };
 
   void writeType(Type node) {
     if (node.isList) write('List<');
-    Node resolved = node.resolved;
-    if (resolved != null) {
+    if (node.isNode || (node.isList && node.elementType.isNode)) {
+      write('Node');
+    } else if (node.resolved != null) {
       write("${node.identifier}Node");
     } else {
       String type = _types[node.identifier];
       write(type);
     }
     if (node.isList) write('>');
-  }
-
-  void _collectMethodSignatures(Unit unit) {
-    for (var node in unit.structs) {
-      for (var method in node.methods) {
-        assert(method.returnType.isVoid);
-        String signature =
-            method.arguments.map((formal) => formal.type.identifier);
-        _methodSignatures.putIfAbsent('$signature', () {
-          return method.arguments.map((formal) => formal.type);
-        });
-      }
-    }
   }
 }

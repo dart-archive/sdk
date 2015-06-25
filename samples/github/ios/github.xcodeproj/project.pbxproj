@@ -25,7 +25,8 @@
 		DA79124B1AFCEEB300E5F773 /* struct.cc in Sources */ = {isa = PBXBuildFile; fileRef = DA7912461AFCEEB300E5F773 /* struct.cc */; };
 		DA79124C1AFCEEB300E5F773 /* unicode.cc in Sources */ = {isa = PBXBuildFile; fileRef = DA7912481AFCEEB300E5F773 /* unicode.cc */; };
 		DA7912501AFCEEE900E5F773 /* github.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA79124F1AFCEEE900E5F773 /* github.mm */; };
-		DA7EF8871B0F3B7D005F8E03 /* MenuController.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA7EF8861B0F3B7D005F8E03 /* MenuController.mm */; };
+		DA7EF8871B0F3B7D005F8E03 /* MenuPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA7EF8861B0F3B7D005F8E03 /* MenuPresenter.mm */; };
+		DADC871F1B298C90000F0BE7 /* DrawerPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DADC871E1B298C90000F0BE7 /* DrawerPresenter.mm */; };
 		DAEE2F341AD6AA2600945914 /* github.snapshot in Resources */ = {isa = PBXBuildFile; fileRef = DAEE2F331AD6AA2600945914 /* github.snapshot */; };
 /* End PBXBuildFile section */
 
@@ -74,8 +75,11 @@
 		DA7912491AFCEEB300E5F773 /* unicode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unicode.h; sourceTree = "<group>"; };
 		DA79124E1AFCEEE900E5F773 /* github.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = github.h; sourceTree = "<group>"; };
 		DA79124F1AFCEEE900E5F773 /* github.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = github.mm; sourceTree = "<group>"; };
-		DA7EF8851B0F3B7D005F8E03 /* MenuController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MenuController.h; sourceTree = "<group>"; };
-		DA7EF8861B0F3B7D005F8E03 /* MenuController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MenuController.mm; sourceTree = "<group>"; };
+		DA7EF8851B0F3B7D005F8E03 /* MenuPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MenuPresenter.h; sourceTree = "<group>"; };
+		DA7EF8861B0F3B7D005F8E03 /* MenuPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MenuPresenter.mm; sourceTree = "<group>"; };
+		DADC871D1B298C90000F0BE7 /* DrawerPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DrawerPresenter.h; sourceTree = "<group>"; };
+		DADC871E1B298C90000F0BE7 /* DrawerPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DrawerPresenter.mm; sourceTree = "<group>"; };
+		DADC87231B380B4A000F0BE7 /* ViewPresenter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewPresenter.h; sourceTree = "<group>"; };
 		DAEE2F331AD6AA2600945914 /* github.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; name = github.snapshot; path = ../generated/github.snapshot; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -149,8 +153,8 @@
 				DA313FA71AD665A6000089F9 /* AppDelegate.mm */,
 				DA1D77011B037490009E936C /* MainController.h */,
 				DA1D77021B037490009E936C /* MainController.mm */,
-				DA7EF8851B0F3B7D005F8E03 /* MenuController.h */,
-				DA7EF8861B0F3B7D005F8E03 /* MenuController.mm */,
+				DA7EF8851B0F3B7D005F8E03 /* MenuPresenter.h */,
+				DA7EF8861B0F3B7D005F8E03 /* MenuPresenter.mm */,
 				DA313FAC1AD665A6000089F9 /* Main.storyboard */,
 				DA313FAF1AD665A6000089F9 /* Images.xcassets */,
 				DA313FB11AD665A6000089F9 /* LaunchScreen.xib */,
@@ -158,10 +162,13 @@
 				2DB4917B1B0C797900912DA3 /* SlidingWindowPresenter.h */,
 				2DB4917C1B0C797900912DA3 /* SlidingWindowPresenter.mm */,
 				2DB4917E1B0C806500912DA3 /* CellPresenter.h */,
+				DADC871D1B298C90000F0BE7 /* DrawerPresenter.h */,
+				DADC871E1B298C90000F0BE7 /* DrawerPresenter.mm */,
 				2DB491811B0C83D200912DA3 /* CommitCellPresenter.h */,
 				2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */,
 				2DB491881B0C9B2000912DA3 /* CommitListPresenter.h */,
 				2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */,
+				DADC87231B380B4A000F0BE7 /* ViewPresenter.h */,
 			);
 			path = github;
 			sourceTree = "<group>";
@@ -385,8 +392,9 @@
 				2DB4917D1B0C797900912DA3 /* SlidingWindowPresenter.mm in Sources */,
 				DA313FA81AD665A6000089F9 /* AppDelegate.mm in Sources */,
 				2DB491831B0C83D200912DA3 /* CommitCellPresenter.mm in Sources */,
-				DA7EF8871B0F3B7D005F8E03 /* MenuController.mm in Sources */,
+				DA7EF8871B0F3B7D005F8E03 /* MenuPresenter.mm in Sources */,
 				DA313FA51AD665A6000089F9 /* main.m in Sources */,
+				DADC871F1B298C90000F0BE7 /* DrawerPresenter.mm in Sources */,
 				DA79124A1AFCEEB300E5F773 /* immi_service.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

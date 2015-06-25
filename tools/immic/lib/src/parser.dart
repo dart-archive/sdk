@@ -159,7 +159,7 @@ class NodeType extends Type {
   }
 
   bool operator==(Object other) {
-    return other is StringType;
+    return other is NodeType;
   }
 
   bool get isNode => true;
