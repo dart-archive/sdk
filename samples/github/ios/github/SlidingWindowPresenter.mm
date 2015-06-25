@@ -41,8 +41,7 @@
   // TODO(zerny): The buffer size should be dynamically computed. Here we make
   // it large enough for the display of an iPad Air.
   self.bufferCount = 50;
-  self.tableView.rowHeight = UITableViewAutomaticDimension;
-  self.tableView.estimatedRowHeight = 50.0;
+
   return self;
 }
 

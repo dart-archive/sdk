@@ -75,6 +75,10 @@
 		DA7912491AFCEEB300E5F773 /* unicode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unicode.h; sourceTree = "<group>"; };
 		DA79124E1AFCEEE900E5F773 /* github.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = github.h; sourceTree = "<group>"; };
 		DA79124F1AFCEEE900E5F773 /* github.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = github.mm; sourceTree = "<group>"; };
+		DAEE2F351AD6AEDA00945914 /* CommitCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitCell.h; sourceTree = "<group>"; };
+		DAEE2F361AD6AEDA00945914 /* CommitCell.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitCell.mm; sourceTree = "<group>"; };
+		DAEE2F381AD6B0FB00945914 /* CommitListPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitListPresenter.h; sourceTree = "<group>"; };
+		DAEE2F3A1AD6B13400945914 /* CommitListPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitListPresenter.mm; sourceTree = "<group>"; };
 		DA7EF8851B0F3B7D005F8E03 /* MenuPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MenuPresenter.h; sourceTree = "<group>"; };
 		DA7EF8861B0F3B7D005F8E03 /* MenuPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MenuPresenter.mm; sourceTree = "<group>"; };
 		DADC871D1B298C90000F0BE7 /* DrawerPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DrawerPresenter.h; sourceTree = "<group>"; };

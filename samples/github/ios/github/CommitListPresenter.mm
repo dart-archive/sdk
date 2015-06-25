@@ -39,6 +39,8 @@
                      tableView:self.tableView];
     self.tableView.dataSource = self.presenter;
     self.tableView.delegate = self.presenter;
+    self.tableView.rowHeight = UITableViewAutomaticDimension;
+    self.tableView.estimatedRowHeight = 100.5;
   }
   [self.presenter presentSlidingWindow:node];
 }
