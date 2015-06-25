@@ -220,7 +220,7 @@ class FletchContext {
   }
 
   void markConstantUsed(ConstantValue constant) {
-    backend.systemBuilder.registerNewConstant(constant, this);
+    backend.systemBuilder.registerConstant(constant, this);
   }
 
   // TODO(ajohnsen): Remove this getter and use the systemBuilder in backend

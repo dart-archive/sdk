@@ -137,8 +137,6 @@ class FletchBackend extends Backend {
   final Map<ConstructorElement, FletchFunctionBuilder> constructors =
       <ConstructorElement, FletchFunctionBuilder>{};
 
-  final List<FletchFunctionBuilder> functions = <FletchFunctionBuilder>[];
-
   final Set<FunctionElement> externals = new Set<FunctionElement>();
 
   final Map<ClassElement, FletchClassBuilder> classBuilders =
@@ -428,12 +426,12 @@ class FletchBackend extends Backend {
 
       FletchFunctionBuilder functionBuilder =
           new FletchFunctionBuilder.withSignature(
-              functions.length,
+              systemBuilder.nextFunctionId,
               'call',
               null,
               signature,
               tearoffClass.classId);
-      functions.add(functionBuilder);
+      systemBuilder.registerNewFunction(functionBuilder);
 
       BytecodeAssembler assembler = functionBuilder.assembler;
       int argumentCount = signature.parameterCount;
@@ -478,10 +476,10 @@ class FletchBackend extends Backend {
       tearoffClass.addIsSelector(isSelector);
 
       FletchFunctionBuilder equal = new FletchFunctionBuilder(
-          functions.length,
+          systemBuilder.nextFunctionId,
           FletchFunctionKind.NORMAL,
           2);
-      functions.add(equal);
+      systemBuilder.registerNewFunction(equal);
 
       BytecodeLabel isFalse = new BytecodeLabel();
       equal.assembler
@@ -511,10 +509,10 @@ class FletchBackend extends Backend {
       // Create hashCode getter. We simply xor the object hashCode and the
       // method id of the tearoff'ed function.
       FletchFunctionBuilder hashCode = new FletchFunctionBuilder(
-          functions.length,
+          systemBuilder.nextFunctionId,
           FletchFunctionKind.ACCESSOR,
           1);
-      functions.add(hashCode);
+      systemBuilder.registerNewFunction(hashCode);
 
       int hashCodeSelector = FletchSelector.encodeGetter(
           context.getSymbolId("hashCode"));
@@ -558,7 +556,7 @@ class FletchBackend extends Backend {
       int memberOf = holderClass != null ? holderClass.classId : null;
       FletchFunctionBuilder functionBuilder =
           new FletchFunctionBuilder.withSignature(
-              functions.length,
+              systemBuilder.nextFunctionId,
               name,
               function,
               // Parameter initializers are expressed in the potential
@@ -568,7 +566,7 @@ class FletchBackend extends Backend {
               kind: function.isAccessor
                   ? FletchFunctionKind.ACCESSOR
                   : FletchFunctionKind.NORMAL);
-      functions.add(functionBuilder);
+      systemBuilder.registerNewFunction(functionBuilder);
       return functionBuilder;
     });
   }
@@ -748,7 +746,7 @@ class FletchBackend extends Backend {
         FletchClassBuilder compiledUsage = registerClassElement(usage);
         FunctionTypedElement implementation = function.implementation;
         FletchFunctionBuilder copy = new FletchFunctionBuilder.withSignature(
-            functions.length,
+            systemBuilder.nextFunctionId,
             function.name,
             implementation,
             implementation.functionSignature,
@@ -756,15 +754,11 @@ class FletchBackend extends Backend {
             kind: function.isAccessor
                 ? FletchFunctionKind.ACCESSOR
                 : FletchFunctionKind.NORMAL);
-        functions.add(copy);
+        systemBuilder.registerNewFunction(copy);
         compiledUsage.addToMethodTable(fletchSelector, copy);
         copy.copyFrom(functionBuilder);
       }
     }
-
-    // TODO(ajohnsen): Replace FletchBackend's functions with the system
-    // builders.
-    systemBuilder.registerNewFunction(functionBuilder);
 
     if (compiler.verbose) {
       compiler.log(functionBuilder.verboseToString());
@@ -924,6 +918,7 @@ class FletchBackend extends Backend {
   }
 
   void createParameterMatchingStubs() {
+    List<FletchFunctionBuilder> functions = systemBuilder.getNewFunctions();
     int length = functions.length;
     for (int i = 0; i < length; i++) {
       FletchFunctionBuilder function = functions[i];
@@ -943,6 +938,7 @@ class FletchBackend extends Backend {
   }
 
   void createTearoffStubs() {
+    List<FletchFunctionBuilder> functions = systemBuilder.getNewFunctions();
     int length = functions.length;
     for (int i = 0; i < length; i++) {
       FletchFunctionBuilder function = functions[i];
@@ -957,10 +953,10 @@ class FletchBackend extends Backend {
   void createTearoffGetterForFunction(FletchFunctionBuilder function) {
     FletchClassBuilder tearoffClass = createTearoffClass(function);
     FletchFunctionBuilder getter = new FletchFunctionBuilder(
-        functions.length,
+        systemBuilder.nextFunctionId,
         FletchFunctionKind.ACCESSOR,
         1);
-    functions.add(getter);
+    systemBuilder.registerNewFunction(getter);
     int constId = getter.allocateConstantFromClass(tearoffClass.classId);
     getter.assembler
         ..loadParameter(0)
@@ -1003,7 +999,8 @@ class FletchBackend extends Backend {
 
     // Create all FletchFunctions.
     List<FletchFunction> fletchFunctions = <FletchFunction>[];
-    for (FletchFunctionBuilder functionBuilder in functions) {
+    for (FletchFunctionBuilder functionBuilder in
+        systemBuilder.getNewFunctions()) {
       fletchFunctions.add(functionBuilder.finalizeFunction(context, commands));
     }
 
@@ -1135,7 +1132,7 @@ class FletchBackend extends Backend {
     int constantCount = functionBuilder.constants.length;
     int methodId = functionBuilder.methodId;
 
-    assert(functions[methodId] == functionBuilder);
+    assert(systemBuilder.lookupFunctionBuilder(methodId) == functionBuilder);
     assert(functionBuilder.assembler.bytecodes.isNotEmpty);
 
     functionBuilder.constants.forEach((constant, int index) {
@@ -1277,12 +1274,12 @@ class FletchBackend extends Backend {
     if (lazyFieldInitializers.containsKey(field)) return index;
 
     FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder(
-        functions.length,
+        systemBuilder.nextFunctionId,
         FletchFunctionKind.LAZY_FIELD_INITIALIZER,
         0,
         name: "${field.name} lazy initializer",
         element: field);
-    functions.add(functionBuilder);
+    systemBuilder.registerNewFunction(functionBuilder);
     lazyFieldInitializers[field] = functionBuilder;
 
     TreeElements elements = field.resolvedAst.elements;
@@ -1331,13 +1328,13 @@ class FletchBackend extends Backend {
         elements);
 
     functionBuilder = new FletchFunctionBuilder.withSignature(
-        functions.length,
+        systemBuilder.nextFunctionId,
         implementation.name,
         implementation,
         implementation.functionSignature,
         null,
         kind: FletchFunctionKind.INITIALIZER_LIST);
-    functions.add(functionBuilder);
+    systemBuilder.registerNewFunction(functionBuilder);
     constructors[constructor] = functionBuilder;
 
     ConstructorCodegen codegen = new ConstructorCodegen(
@@ -1364,10 +1361,10 @@ class FletchBackend extends Backend {
   int makeGetter(int fieldIndex) {
     return getters.putIfAbsent(fieldIndex, () {
       FletchFunctionBuilder stub = new FletchFunctionBuilder(
-          functions.length,
+          systemBuilder.nextFunctionId,
           FletchFunctionKind.ACCESSOR,
           1);
-      functions.add(stub);
+      systemBuilder.registerNewFunction(stub);
       stub.assembler
           ..loadParameter(0)
           ..loadField(fieldIndex)
@@ -1383,10 +1380,10 @@ class FletchBackend extends Backend {
   int makeSetter(int fieldIndex) {
     return setters.putIfAbsent(fieldIndex, () {
       FletchFunctionBuilder stub = new FletchFunctionBuilder(
-          functions.length,
+          systemBuilder.nextFunctionId,
           FletchFunctionKind.ACCESSOR,
           2);
-      functions.add(stub);
+      systemBuilder.registerNewFunction(stub);
       stub.assembler
           ..loadParameter(0)
           ..loadParameter(1)

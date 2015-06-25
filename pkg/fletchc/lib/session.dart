@@ -305,10 +305,10 @@ class Session extends FletchVmSession {
   }
 
   Future setBreakpointHelper(String name,
-                             int methodId,
+                             FletchFunction function,
                              int bytecodeIndex) async {
     ProcessSetBreakpoint response = await runCommands([
-        new PushFromMap(MapId.methods, methodId),
+        new PushFromMap(MapId.methods, function.methodId),
         new ProcessSetBreakpoint(bytecodeIndex),
     ]);
     int breakpointId = response.value;
@@ -318,9 +318,10 @@ class Session extends FletchVmSession {
   }
 
   Future setBreakpoint({String methodName, int bytecodeIndex}) async {
-    Iterable<int> functionIds = compiler.lookupFunctionIdsByName(methodName);
-    for (int id in functionIds) {
-      await setBreakpointHelper(methodName, id, bytecodeIndex);
+    Iterable<FletchFunction> functions =
+        fletchSystem.functions.where((f) => f.name == methodName);
+    for (FletchFunction function in functions) {
+      await setBreakpointHelper(methodName, function, bytecodeIndex);
     }
   }
 
@@ -341,9 +342,9 @@ class Session extends FletchVmSession {
       print("### Failed setting breakpoint for $name");
       return null;
     }
-    int methodId = debugInfo.function.methodId;
+    FletchFunction function = debugInfo.function;
     int bytecodeIndex = location.bytecodeIndex;
-    await setBreakpointHelper(name, methodId, bytecodeIndex);
+    await setBreakpointHelper(name, function, bytecodeIndex);
   }
 
   Future setFileBreakpointFromPattern(String file,

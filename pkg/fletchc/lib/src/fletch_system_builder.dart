@@ -8,6 +8,7 @@ import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
     StringConstantValue;
 
+import 'fletch_class_builder.dart';
 import 'fletch_context.dart';
 import 'fletch_function_builder.dart';
 
@@ -18,6 +19,7 @@ class FletchSystemBuilder {
   final FletchSystem predecessorSystem;
 
   final List<FletchFunctionBuilder> _newFunctions = <FletchFunctionBuilder>[];
+  final List<FletchClassBuilder> _newClasses = <FletchClassBuilder>[];
   final Map<ConstantValue, int> _newConstants = <ConstantValue, int>{};
 
   FletchSystemBuilder(this.predecessorSystem);
@@ -25,7 +27,26 @@ class FletchSystemBuilder {
   // TODO(ajohnsen): Remove and add a lookupConstant.
   Map<ConstantValue, int> getCompiledConstants() => _newConstants;
 
-  void registerNewConstant(ConstantValue constant, FletchContext context) {
+  int get nextFunctionId {
+    return predecessorSystem.functions.length + _newFunctions.length;
+  }
+
+  void registerNewFunction(FletchFunctionBuilder function) {
+    assert(function.methodId == nextFunctionId);
+    _newFunctions.add(function);
+  }
+
+  FletchFunction lookupFunction(int functionId) {
+    return predecessorSystem.functions[functionId];
+  }
+
+  FletchFunctionBuilder lookupFunctionBuilder(int functionId) {
+    return _newFunctions[functionId - predecessorSystem.functions.length];
+  }
+
+  List<FletchFunctionBuilder> getNewFunctions() => _newFunctions;
+
+  void registerConstant(ConstantValue constant, FletchContext context) {
     // TODO(ajohnsen): Look in predecessorSystem.
     _newConstants.putIfAbsent(constant, () {
       if (constant.isConstructedObject) {
@@ -34,14 +55,10 @@ class FletchSystemBuilder {
         context.registerFunctionConstantValue(constant);
       }
       for (ConstantValue value in constant.getDependencies()) {
-        registerNewConstant(value, context);
+        registerConstant(value, context);
       }
       return _newConstants.length;
     });
-  }
-
-  void registerNewFunction(FletchFunctionBuilder function) {
-    _newFunctions.add(function);
   }
 
   // TODO(ajohnsen): Merge with FletchBackend's computeDelta.

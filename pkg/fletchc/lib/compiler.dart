@@ -292,12 +292,6 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return _compiler.context.symbols[id];
   }
 
-  Iterable<int> lookupFunctionIdsByName(String name) {
-    return _compiler.context.backend.functions
-        .where((f) => f.name == name)
-        .map((f) => f.methodId);
-  }
-
   int mainMethodId() {
     FunctionElement mainFunctionElement = _compiler.mainFunction;
     FletchFunctionBuilder mainMethod =

@@ -221,10 +221,10 @@ class FletchFunctionBuilder {
       if (hasThisArgument) arity++;
 
       FletchFunctionBuilder functionBuilder = new FletchFunctionBuilder(
-          context.backend.functions.length,
+          context.backend.systemBuilder.nextFunctionId,
           FletchFunctionKind.PARAMETER_STUB,
           arity);
-      context.backend.functions.add(functionBuilder);
+      context.backend.systemBuilder.registerNewFunction(functionBuilder);
 
       BytecodeAssembler assembler = functionBuilder.assembler;
 
