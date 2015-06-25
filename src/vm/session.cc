@@ -249,7 +249,7 @@ void Session::ProcessMessages() {
         break;
       }
 
-      case Connection::kProcessBacktrace: {
+      case Connection::kProcessBacktraceRequest: {
         int map_index = connection_->ReadInt();
         int frames = StackWalker::ComputeStackTrace(process_, this);
         connection_->WriteInt(frames);
@@ -490,7 +490,7 @@ void Session::ProcessMessages() {
       case Connection::kMapLookup: {
         int map_index = connection_->ReadInt();
         int id = MapLookup(map_index);
-        connection_->WriteInt(id);
+        connection_->WriteInt64(id);
         connection_->Send(Connection::kObjectId);
         break;
       }

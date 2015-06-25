@@ -144,7 +144,7 @@ abstract class Command {
         return new StringValue(
             CommandBuffer.readStringFromBuffer(buffer, 0, buffer.length));
       case CommandCode.ObjectId:
-        int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        int id = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new ObjectId(id);
       case CommandCode.ProcessBacktrace:
         int frames = CommandBuffer.readInt32FromBuffer(buffer, 0);
@@ -600,6 +600,10 @@ class CommitChangesResult extends Command {
   const CommitChangesResult(this.successful, this.message)
       : super(CommandCode.CommitChangesResult);
 
+  void addTo(StreamSink<List<int>> sink) {
+    throw new UnimplementedError();
+  }
+
   int get numberOfResponsesExpected => 0;
 
   String valuesToString() => 'success: $successful, message: $message';
@@ -769,6 +773,10 @@ class ProcessBacktrace extends Command {
         bytecodeIndices = new List<int>(frameCount),
         super(CommandCode.ProcessBacktrace);
 
+  void addTo(StreamSink<List<int>> sink) {
+    throw new UnimplementedError();
+  }
+
   int get numberOfResponsesExpected => 0;
 
   String valuesToString() => "$frames, $methodIds, $bytecodeIndices";
@@ -778,7 +786,7 @@ class ProcessBacktraceRequest extends Command {
   final MapId methodMap;
 
   const ProcessBacktraceRequest(this.methodMap)
-      : super(CommandCode.ProcessBacktrace);
+      : super(CommandCode.ProcessBacktraceRequest);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
@@ -797,6 +805,10 @@ class ProcessBreakpoint extends Command {
 
   const ProcessBreakpoint(this.breakpointId)
       : super(CommandCode.ProcessBreakpoint);
+
+  void addTo(StreamSink<List<int>> sink) {
+    throw new UnimplementedError();
+  }
 
   int get numberOfResponsesExpected => 0;
 
@@ -1008,6 +1020,10 @@ class InstanceStructure extends Command {
   const InstanceStructure(this.classId, this.fields)
       : super(CommandCode.InstanceStructure);
 
+  void addTo(StreamSink<List<int>> sink) {
+    throw new UnimplementedError();
+  }
+
   int get numberOfResponsesExpected => 0;
 
   String valuesToString() => "$classId, $fields";
@@ -1016,6 +1032,10 @@ class InstanceStructure extends Command {
 abstract class DartValue extends Command {
   const DartValue(CommandCode code)
       : super(code);
+
+  void addTo(StreamSink<List<int>> sink) {
+    throw new UnimplementedError();
+  }
 
   int get numberOfResponsesExpected => 0;
 
@@ -1106,6 +1126,7 @@ enum CommandCode {
   ProcessStepOut,
   ProcessStepTo,
   ProcessContinue,
+  ProcessBacktraceRequest,
   ProcessBacktrace,
   ProcessBreakpoint,
   ProcessLocal,
