@@ -220,7 +220,7 @@ class Session extends FletchVmSession {
     await setBreakpoint(methodName: 'main', bytecodeIndex: 0);
     await doDebugRun();
     while (true) {
-      stdout.writeln(currentStackTrace.shortStringForFrame(0));
+      print(currentStackTrace.shortStringForFrame(0));
       await doStep();
     }
   }
@@ -266,7 +266,7 @@ class Session extends FletchVmSession {
         running = false;
         break;
       case CommandCode.ProcessTerminated:
-        stdout.writeln('### process terminated');
+        print('### process terminated');
         await shutdown();
         exit(0);
         break;
@@ -280,13 +280,13 @@ class Session extends FletchVmSession {
   }
 
   bool checkRunning() {
-    if (!running) stdout.writeln("### process not running");
+    if (!running) print("### process not running");
     return running;
   }
 
   Future doDebugRun() async {
     if (running) {
-      stdout.writeln("### already running");
+      print("### already running");
       return null;
     }
     running = true;
@@ -309,7 +309,7 @@ class Session extends FletchVmSession {
     int breakpointId = response.value;
     var breakpoint = new Breakpoint(name, bytecodeIndex, breakpointId);
     debugState.breakpoints[breakpointId] = breakpoint;
-    stdout.writeln("breakpoint set: $breakpoint");
+    print("breakpoint set: $breakpoint");
   }
 
   Future setBreakpoint({String methodName, int bytecodeIndex}) async {
@@ -323,17 +323,17 @@ class Session extends FletchVmSession {
                                        String file,
                                        int position) async {
     if (position == null) {
-      stdout.writeln("### Failed setting breakpoint for $name");
+      print("### Failed setting breakpoint for $name");
       return null;
     }
     DebugInfo debugInfo = compiler.debugInfoForPosition(file, position);
     if (debugInfo == null) {
-      stdout.writeln("### Failed setting breakpoint for $name");
+      print("### Failed setting breakpoint for $name");
       return null;
     }
     SourceLocation location = debugInfo.locationForPosition(position);
     if (location == null) {
-      stdout.writeln("### Failed setting breakpoint for $name");
+      print("### Failed setting breakpoint for $name");
       return null;
     }
     int methodId = debugInfo.function.methodId;
@@ -345,7 +345,7 @@ class Session extends FletchVmSession {
                                       int line,
                                       String pattern) async {
     if (line < 1) {
-      stdout.writeln("### Invalid line number: $line");
+      print("### Invalid line number: $line");
       return null;
     }
     int position = compiler.positionInFileFromPattern(file, line - 1, pattern);
@@ -354,11 +354,11 @@ class Session extends FletchVmSession {
 
   Future setFileBreakpoint(String file, int line, int column) async {
     if (line < 1) {
-      stdout.writeln("### Invalid line number: $line");
+      print("### Invalid line number: $line");
       return null;
     }
     if (column < 1) {
-      stdout.writeln("### Invalid column number: $column");
+      print("### Invalid column number: $column");
       return null;
     }
     int position = compiler.positionInFile(file, line - 1, column - 1);
@@ -373,22 +373,22 @@ class Session extends FletchVmSession {
 
   Future deleteBreakpoint(int id) async {
     if (!debugState.breakpoints.containsKey(id)) {
-      stdout.writeln("### invalid breakpoint id: $id");
+      print("### invalid breakpoint id: $id");
       return null;
     }
     await doDeleteBreakpoint(id);
-    stdout.writeln("deleted breakpoint: ${debugState.breakpoints[id]}");
+    print("deleted breakpoint: ${debugState.breakpoints[id]}");
     debugState.breakpoints.remove(id);
   }
 
   void listBreakpoints() {
     if (debugState.breakpoints.isEmpty) {
-      stdout.writeln('No breakpoints.');
+      print('No breakpoints.');
       return;
     }
-    stdout.writeln("Breakpoints:");
+    print("Breakpoints:");
     for (var bp in debugState.breakpoints.values) {
-      stdout.writeln(bp);
+      print(bp);
     }
   }
 
@@ -454,8 +454,7 @@ class Session extends FletchVmSession {
       assert(setBreakpoint.value != -1);
       int id = await handleProcessStop(response);
       if (id != setBreakpoint.value) {
-        stdout.writeln("### 'finish' cancelled because another "
-                       "breakpoint was hit");
+        print("### 'finish' cancelled because another breakpoint was hit");
         await doDeleteBreakpoint(setBreakpoint.value);
         await backtrace();
         return null;
@@ -468,7 +467,7 @@ class Session extends FletchVmSession {
   Future restart() async {
     if (!checkRunning()) return null;
     if (currentStackTrace.stackFrames.length <= 1) {
-      stdout.writeln("### cannot restart entry frame");
+      print("### cannot restart entry frame");
       return null;
     }
     await handleProcessStop(
@@ -488,8 +487,7 @@ class Session extends FletchVmSession {
     Command response = await readNextCommand();
     int id = await handleProcessStop(response);
     if (id != setBreakpoint.value) {
-      stdout.writeln("### 'step over' cancelled because another "
-                     "breakpoint was hit");
+      print("### 'step over' cancelled because another breakpoint was hit");
       if (setBreakpoint.value != -1) {
         await doDeleteBreakpoint(setBreakpoint.value);
       }
@@ -504,7 +502,7 @@ class Session extends FletchVmSession {
 
   void list() {
     if (currentStackTrace == null) {
-      stdout.writeln("### no stack trace");
+      print("### no stack trace");
       return;
     }
     currentStackTrace.list(currentFrame);
@@ -512,7 +510,7 @@ class Session extends FletchVmSession {
 
   void disasm() {
     if (currentStackTrace == null) {
-      stdout.writeln("### no stack trace");
+      print("### no stack trace");
       return;
     }
     currentStackTrace.disasm(currentFrame);
@@ -521,7 +519,7 @@ class Session extends FletchVmSession {
   void selectFrame(int frame) {
     if (currentStackTrace == null ||
         currentStackTrace.actualFrameNumber(frame) == -1) {
-      stdout.writeln('### invalid frame number $frame');
+      print('### invalid frame number $frame');
       return;
     }
     currentFrame = frame;
@@ -574,7 +572,7 @@ class Session extends FletchVmSession {
         new ProcessLocal(MapId.classes, actualFrameNumber, local.slot));
     assert(response is DartValue);
     String prefix = (name == null) ? '' : '$name: ';
-    stdout.writeln('$prefix${dartValueToString(response)}');
+    print('$prefix${dartValueToString(response)}');
   }
 
   Future printLocalStructure(String name, LocalValue local) async {
@@ -583,19 +581,19 @@ class Session extends FletchVmSession {
         new ProcessLocalStructure(MapId.classes, frameNumber, local.slot));
     Command response = await readNextCommand();
     if (response is DartValue) {
-      stdout.writeln(dartValueToString(response));
+      print(dartValueToString(response));
     } else {
       assert(response is InstanceStructure);
       InstanceStructure structure = response;
       int classId = structure.classId;
       String className = compiler.lookupClassName(classId);
-      stdout.writeln("Instance of '$className' {");
+      print("Instance of '$className' {");
       for (int i = 0; i < structure.fields; i++) {
         DartValue value = await readNextCommand();
         var fieldName = compiler.lookupFieldName(classId, i);
-        stdout.writeln('  $fieldName: ${dartValueToString(value)}');
+        print('  $fieldName: ${dartValueToString(value)}');
       }
-      stdout.writeln('}');
+      print('}');
     }
   }
 
@@ -614,7 +612,7 @@ class Session extends FletchVmSession {
     ScopeInfo info = currentStackTrace.scopeInfo(currentFrame);
     LocalValue local = info.lookup(name);
     if (local == null) {
-      stdout.writeln('### No such variable: $name');
+      print('### No such variable: $name');
       return null;
     }
     await printLocal(local);
@@ -625,7 +623,7 @@ class Session extends FletchVmSession {
     ScopeInfo info = currentStackTrace.scopeInfo(currentFrame);
     LocalValue local = info.lookup(name);
     if (local == null) {
-      stdout.writeln('### No such variable: $name');
+      print('### No such variable: $name');
       return null;
     }
     await printLocalStructure(name, local);
