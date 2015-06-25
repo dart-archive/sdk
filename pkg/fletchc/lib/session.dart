@@ -252,12 +252,8 @@ class Session extends FletchVmSession {
     return null;
   }
 
-  Future nextStopCommand() async {
-    await nextOutputSynchronization();
-    return readNextCommand();
-  }
-
   Future<int> handleProcessStop(Command response) async {
+    await nextOutputSynchronization();
     currentStackTrace = null;
     currentFrame = 0;
     switch (response.code) {
@@ -291,7 +287,7 @@ class Session extends FletchVmSession {
     }
     running = true;
     await sendCommand(const ProcessRun());
-    await handleProcessStop(await nextStopCommand());
+    await handleProcessStop(await readNextCommand());
   }
 
   Future debugRun() async {
