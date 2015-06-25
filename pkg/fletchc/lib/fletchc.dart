@@ -89,7 +89,8 @@ main(List<String> arguments) async {
   }
 
   var session = new Session(vm.socket, compiler, fletchDelta.system,
-                            vm.stdoutSyncMessages, vm.stderrSyncMessages);
+                            vm.stdoutSyncMessages, vm.stderrSyncMessages,
+                            vm.process.exitCode);
 
   await session.runCommands(fletchDelta.commands);
   if (snapshotPath != null) {

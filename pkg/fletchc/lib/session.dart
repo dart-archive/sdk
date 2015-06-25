@@ -165,6 +165,7 @@ class Session extends FletchVmSession {
   final FletchCompiler compiler;
   final StreamIterator<bool> vmStdoutSyncMessages;
   final StreamIterator<bool> vmStderrSyncMessages;
+  final Future processExitCodeFuture;
 
   DebugState debugState;
   FletchSystem fletchSystem;
@@ -178,7 +179,8 @@ class Session extends FletchVmSession {
           this.compiler,
           this.fletchSystem,
           [this.vmStdoutSyncMessages,
-           this.vmStderrSyncMessages]) : super(fletchVmSocket) {
+           this.vmStderrSyncMessages,
+           this.processExitCodeFuture]) : super(fletchVmSocket) {
     // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
     debugState = new DebugState(this);
   }
@@ -244,10 +246,10 @@ class Session extends FletchVmSession {
   Future nextOutputSynchronization() async {
     if (vmStderrSyncMessages != null) {
       assert(vmStdoutSyncMessages != null);
-      bool gotStdoutSync =
+      bool gotSync =
           await vmStdoutSyncMessages.moveNext() &&
           await vmStderrSyncMessages.moveNext();
-      assert(gotStdoutSync);
+      assert(gotSync);
     }
     return null;
   }
@@ -262,9 +264,16 @@ class Session extends FletchVmSession {
         running = false;
         break;
       case CommandCode.ProcessTerminated:
+        int exitCode = 0;
         print('### process terminated');
+        await runCommand(const SessionEnd());
+        if (processExitCodeFuture != null) {
+          while (await vmStdoutSyncMessages.moveNext()) {}
+          while (await vmStderrSyncMessages.moveNext()) {}
+          exitCode = await processExitCodeFuture;
+        }
         await shutdown();
-        exit(0);
+        exit(exitCode);
         break;
       default:
         assert(response.code == CommandCode.ProcessBreakpoint);
