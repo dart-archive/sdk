@@ -9,12 +9,13 @@ class StackFrame {
   final int bytecodePointer;
   final FletchCompiler compiler;
   final DebugState debugState;
-  final bool isBelowMain;
 
   StackFrame(this.function, this.bytecodePointer, this.compiler,
-             this.debugState, this.isBelowMain);
+             this.debugState);
 
-  bool get isInternal => function.isInternal;
+  bool get inPlatformLibrary => function.element.library.isPlatformLibrary;
+
+  bool get isInternal => function.isInternal || inPlatformLibrary;
 
   String invokeString(Bytecode bytecode) {
     if (bytecode is InvokeMethod) {
@@ -25,9 +26,7 @@ class StackFrame {
     return '';
   }
 
-  bool get isVisible {
-    return debugState.showInternalFrames || !(isInternal || isBelowMain);
-  }
+  bool get isVisible => debugState.showInternalFrames || !isInternal;
 
   DebugInfo get debugInfo => debugState.getDebugInfo(function);
 

@@ -536,21 +536,15 @@ class Session extends FletchVmSession {
           await runCommand(const ProcessBacktraceRequest(MapId.methods));
       var frames = backtraceResponse.frames;
       currentStackTrace = new StackTrace(frames);
-      // The bottom frames below main are internal implementation details
-      // and should not be surfaced to debugger users by default.
-      int mainMethodId = compiler.mainMethodId();
-      bool belowMain = true;
       for (int i = 0; i < frames; ++i) {
         int methodId = backtraceResponse.methodIds[i];
-        if (methodId == mainMethodId) belowMain = false;
         FletchFunction function = fletchSystem.functions[methodId];
         currentStackTrace.addFrame(
             compiler,
             new StackFrame(function,
                            backtraceResponse.bytecodeIndices[i],
                            compiler,
-                           debugState,
-                           belowMain));
+                           debugState));
       }
       currentLocation = currentStackTrace.sourceLocation();
     }
