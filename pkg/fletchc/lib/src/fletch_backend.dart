@@ -985,132 +985,14 @@ class FletchBackend extends Backend {
         const NewMap(MapId.constants),
     ];
 
-    int changes = 0;
-
-    // Create all FletchFunctions.
-    List<FletchFunction> fletchFunctions = <FletchFunction>[];
-    for (FletchFunctionBuilder functionBuilder in
-        systemBuilder.getNewFunctions()) {
-      fletchFunctions.add(functionBuilder.finalizeFunction(context, commands));
-    }
-
-    // Create all FletchClasses.
-    List<FletchClass> fletchClasses = <FletchClass>[];
-    for (FletchClassBuilder classBuilder in systemBuilder.getNewClasses()) {
-      fletchClasses.add(classBuilder.finalizeClass(context, commands));
-      changes++;
-    }
-
-    // Create all statics.
-    // TODO(ajohnsen): Should be part of the fletch system.
-    context.forEachStatic((element, index) {
-      FletchFunctionBuilder initializer = lazyFieldInitializers[element];
-      if (initializer != null) {
-        commands.add(new PushFromMap(MapId.methods, initializer.methodId));
-        commands.add(const PushNewInitializer());
-      } else {
-        commands.add(const PushNull());
-      }
-    });
-    commands.add(new ChangeStatics(context.staticIndices.length));
-    changes++;
-
-    // Create all FletchConstants.
-    // TODO(ajohnsen): Should be part of the fletch system.
-    context.compiledConstants.forEach((constant, id) {
-      void addList(List<ConstantValue> list) {
-        for (ConstantValue entry in list) {
-          int entryId = context.compiledConstants[entry];
-          commands.add(new PushFromMap(MapId.constants, entryId));
-        }
-        commands.add(new PushConstantList(list.length));
-      }
-
-      if (constant.isInt) {
-        commands.add(new PushNewInteger(constant.primitiveValue));
-      } else if (constant.isDouble) {
-        commands.add(new PushNewDouble(constant.primitiveValue));
-      } else if (constant.isTrue) {
-        commands.add(new PushBoolean(true));
-      } else if (constant.isFalse) {
-        commands.add(new PushBoolean(false));
-      } else if (constant.isNull) {
-        commands.add(const PushNull());
-      } else if (constant.isString) {
-        commands.add(
-            new PushNewString(constant.primitiveValue.slowToString()));
-      } else if (constant.isList) {
-        ListConstantValue value = constant;
-        addList(constant.entries);
-      } else if (constant.isMap) {
-        MapConstantValue value = constant;
-        addList(value.keys);
-        addList(value.values);
-        commands.add(new PushConstantMap(value.length * 2));
-      } else if (constant.isFunction) {
-        FunctionConstantValue value = constant;
-        FunctionElement element = value.element;
-        FletchFunctionBuilder function = functionBuilders[element];
-        FletchClassBuilder tearoffClass = tearoffClasses[function];
-        commands
-            ..add(new PushFromMap(MapId.classes, tearoffClass.classId))
-            ..add(const PushNewInstance());
-      } else if (constant.isConstructedObject) {
-        ConstructedConstantValue value = constant;
-        ClassElement classElement = value.type.element;
-        FletchClassBuilder classBuilder = classBuilders[classElement];
-        for (ConstantValue field in value.fields.values) {
-          int fieldId = context.compiledConstants[field];
-          commands.add(new PushFromMap(MapId.constants, fieldId));
-        }
-        commands
-            ..add(new PushFromMap(MapId.classes, classBuilder.classId))
-            ..add(const PushNewInstance());
-      } else if (constant is FletchClassInstanceConstant) {
-        commands
-            ..add(new PushFromMap(MapId.classes, constant.classId))
-            ..add(const PushNewInstance());
-      } else {
-        throw "Unsupported constant: ${constant.toStructuredString()}";
-      }
-      commands.add(new PopToMap(MapId.constants, id));
-    });
-
-    // Set super class for classes, now they are resolved.
-    for (FletchClass fletchClass in fletchClasses) {
-      if (!fletchClass.hasSuperclassId) continue;
-      commands.add(new PushFromMap(MapId.classes, fletchClass.classId));
-      commands.add(new PushFromMap(MapId.classes, fletchClass.superclassId));
-      commands.add(const ChangeSuperClass());
-      changes++;
-    }
-
-    // Change constants for the functions, now that classes and constants has
-    // been added.
-    for (FletchFunction function in fletchFunctions) {
-      List<FletchConstant> constants = function.constants;
-      for (int i = 0; i < constants.length; i++) {
-        FletchConstant constant = constants[i];
-        commands
-            ..add(new PushFromMap(MapId.methods, function.methodId))
-            ..add(new PushFromMap(constant.mapId, constant.id))
-            ..add(new ChangeMethodLiteral(i));
-        changes++;
-      }
-    }
-
-    commands.add(new CommitChanges(changes));
+    FletchSystem system = systemBuilder.computeSystem(context, commands);
 
     commands.add(const PushNewInteger(0));
-
     commands.add(new PushFromMap(
         MapId.methods,
         functionBuilders[fletchSystemEntry].methodId));
 
-    return new FletchDelta(
-        new FletchSystem(fletchFunctions, fletchClasses),
-        predecessorSystem,
-        commands);
+    return new FletchDelta(system, predecessorSystem, commands);
   }
 
   // TODO(ajohnsen): Remove when incremental has moved to FletchSystem.

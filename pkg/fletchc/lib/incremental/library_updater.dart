@@ -843,11 +843,14 @@ class LibraryUpdater extends FletchFeatures {
       }
     }
 
-    if (USE_FLETCH_SYSTEM) {
-      return backend.systemBuilder.computeDelta(backend.context);
-    }
-
     List<Command> updates = <Command>[const commands_lib.PrepareForChanges()];
+
+    if (USE_FLETCH_SYSTEM) {
+      FletchSystem system = backend.systemBuilder.computeSystem(
+          backend.context,
+          updates);
+      return new FletchDelta(system, currentSystem, updates);
+    }
 
     // TODO(ahe): Compute this.
     Set<ClassElementX> newClasses = new Set();
