@@ -32,11 +32,11 @@ callMain(arguments) => invokeMain(arguments);
 /// This is the main entry point for a Fletch program, and it takes care of
 /// calling "main" and exiting the VM when "main" is done.
 void entry(int mainArity) {
-  Thread.exit(callMain([]));
+  Fiber.exit(callMain([]));
 }
 
 runToEnd(entry) {
-  Thread.exit(entry());
+  Fiber.exit(entry());
 }
 
 unresolved(name) {

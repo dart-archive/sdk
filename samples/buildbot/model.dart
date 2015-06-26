@@ -24,7 +24,7 @@ abstract class RemoteData {
   var _channel = new Channel();
 
   void updateData([onComplete = null]) {
-    Thread.fork(() {
+    Fiber.fork(() {
       this._run();
       if (onComplete != null)
         onComplete();

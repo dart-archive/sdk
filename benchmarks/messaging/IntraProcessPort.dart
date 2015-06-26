@@ -18,7 +18,7 @@ class IntraProcessPortBenchmark extends BenchmarkBase {
   void setup() {
     input = new Channel();
     var port = new Port(input);
-    Thread.fork(() => portResponder(port));
+    Fiber.fork(() => portResponder(port));
     output = input.receive();
   }
 

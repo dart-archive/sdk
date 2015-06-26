@@ -17,7 +17,7 @@ class IntraProcessChannelBenchmark extends BenchmarkBase {
 
   void setup() {
     input = new Channel();
-    Thread.fork(() => channelResponder(input));
+    Fiber.fork(() => channelResponder(input));
     output = input.receive();
   }
 

@@ -24,7 +24,7 @@ void _handleEvents() {
 Channel _ensureEventQueue() {
   if (_eventQueue == null) {
     _eventQueue = new Channel();
-    Thread.fork(_handleEvents);
+    Fiber.fork(_handleEvents);
   }
   return _eventQueue;
 }
@@ -53,14 +53,14 @@ class _FletchTimer implements Timer {
   int _timestamp = 0;
   _FletchTimer _next;
   bool _isActive = true;
-  bool _hasActiveWaitThread = false;
+  bool _hasActiveWaitFiber = false;
 
   bool get _isPeriodic => _milliseconds >= 0;
 
   _FletchTimer(this._timestamp, this._callback)
       : _milliseconds = -1 {
     _schedule();
-    _forkWaitThread();
+    _forkWaitFiber();
   }
 
   _FletchTimer.periodic(this._timestamp,
@@ -68,7 +68,7 @@ class _FletchTimer implements Timer {
                         this._milliseconds) {
     _callback = () { callback(this); };
     _schedule();
-    _forkWaitThread();
+    _forkWaitFiber();
   }
 
   static void _wait(Port timerPort) {
@@ -85,11 +85,11 @@ class _FletchTimer implements Timer {
     timerPort.send(null);
   }
 
-  void _forkWaitThread() {
+  void _forkWaitFiber() {
     if (_timers != this) return;
-    assert(!_hasActiveWaitThread);
-    _hasActiveWaitThread = true;
-    Thread.fork(() {
+    assert(!_hasActiveWaitFiber);
+    _hasActiveWaitFiber = true;
+    Fiber.fork(() {
       Channel channel = new Channel();
       Process.spawn(_wait, new Port(channel));
       var port = channel.receive();
@@ -97,7 +97,7 @@ class _FletchTimer implements Timer {
       if (sleepFor < 0) sleepFor = 0;
       port.send(sleepFor);
       channel.receive();
-      _hasActiveWaitThread = false;
+      _hasActiveWaitFiber = false;
       _fireExpiredTimers();
     });
   }
@@ -114,10 +114,10 @@ class _FletchTimer implements Timer {
         _timers = _timers._next;
         if (current._isPeriodic) current._reschedule();
       }
-      // Spin up a timer thread if there isn't already one for
+      // Spin up a timer fiber if there isn't already one for
       // the next timer to fire.
-      if (_timers != null && !_timers._hasActiveWaitThread) {
-        _timers._forkWaitThread();
+      if (_timers != null && !_timers._hasActiveWaitFiber) {
+        _timers._forkWaitFiber();
       }
     }
   }
