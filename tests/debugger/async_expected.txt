@@ -13,7 +13,7 @@ Stack trace:
   3: _handleEvents            	@event()
   4: call                     	
   5: runToEnd                 	@entry()
-  6: Fiber.call               	@fletch.runToEnd(entry)
+  6: Thread.call              	@fletch.runToEnd(entry)
   7: Coroutine._coroutineStart	@entry(argument)
 > c
 ### process terminated

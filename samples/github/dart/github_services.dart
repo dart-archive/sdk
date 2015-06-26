@@ -159,7 +159,7 @@ class Pagination {
       _pages[page] = channel;
       if (prefetch) {
         server.outstanding.add(channel);
-        Fiber.fork(() {
+        Thread.fork(() {
           _doFetch(channel, page);
           server.outstanding.remove(channel);
         });

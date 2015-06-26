@@ -69,7 +69,7 @@ class GithubMock {
   }
 
   void spawn() {
-    Fiber.fork(run);
+    Thread.fork(run);
   }
 
   void run() {

@@ -16,7 +16,7 @@ void main() {
 
 void testIntraprocessChannel() {
   Channel input = new Channel();
-  Fiber.fork(() => channelResponder(input));
+  Thread.fork(() => channelResponder(input));
   Channel output = input.receive();
   int i = MESSAGES;
   Stopwatch watch = new Stopwatch()..start();
@@ -33,7 +33,7 @@ void testIntraprocessChannel() {
 void testIntraprocessPort() {
   Channel input = new Channel();
   Port port = new Port(input);
-  Fiber.fork(() => portResponder(port));
+  Thread.fork(() => portResponder(port));
   Port output = input.receive();
   int i = MESSAGES;
   Stopwatch watch = new Stopwatch()..start();

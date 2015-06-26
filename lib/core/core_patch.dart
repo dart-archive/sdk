@@ -626,58 +626,55 @@ const patch = "patch";
   @fletch.native external static int _localTimeZoneOffset();
 }
 
-/// Fibers are lightweight co-operative multitask units of execution. They
-/// are scheduled on top of OS-level threads, but they are cheap to create
-/// and block.
-class Fiber {
+class Thread {
 
   // We keep track of the top of the coroutine stack and
-  // the list of other fibers that are waiting for this
-  // fiber to exit.
+  // the list of other threads that are waiting for this
+  // thread to exit.
   Coroutine _coroutine;
-  List<Fiber> _joiners;
+  List<Thread> _joiners;
 
-  // When a fiber exits, we keep the result of running
-  // its code around so we can return to other fibers
+  // When a thread exits, we keep the result of running
+  // its code around so we can return to other threads
   // that join it.
   bool _isDone = false;
   var _result;
 
-  // The ready fibers are linked together.
-  Fiber _previous;
-  Fiber _next;
+  // The ready threads are linked together.
+  Thread _previous;
+  Thread _next;
 
-  static Fiber _current = new Fiber._initial();
-  static Fiber _idleFibers;
+  static Thread _current = new Thread._initial();
+  static Thread _idleThreads;
 
   // This static is initialized as part of creating the
-  // initial fiber. This way we can avoid checking for
+  // initial thread. This way we can avoid checking for
   // lazy initialization for it.
   static Coroutine _scheduler;
 
-  Fiber._initial() {
+  Thread._initial() {
     _previous = this;
     _next = this;
     _scheduler = new Coroutine(_schedulerLoop);
   }
 
-  Fiber._forked(entry) {
+  Thread._forked(entry) {
     _coroutine = new Coroutine((ignore) {
       fletch.runToEnd(entry);
     });
   }
 
-  static Fiber get current => _current;
+  static Thread get current => _current;
 
-  static Fiber fork(entry) {
-    _current;  // Force initialization of fiber sub-system.
-    Fiber fiber = new Fiber._forked(entry);
-    _markReady(fiber);
-    return fiber;
+  static Thread fork(entry) {
+    _current;  // Force initialization of threading system.
+    Thread thread = new Thread._forked(entry);
+    _markReady(thread);
+    return thread;
   }
 
   static void yield() {
-    // Handle messages so that fibers that are blocked on receiving
+    // Handle messages so that threads that are blocked on receiving
     // messages can wake up.
     Process._handleMessages();
     _current._coroutine = Coroutine._coroutineCurrent();
@@ -689,94 +686,94 @@ class Fiber {
     // go ahead and halt now.
     if (_scheduler == null) fletch.halt(0);
 
-    Fiber fiber = _current;
-    List<Fiber> joiners = fiber._joiners;
+    Thread thread = _current;
+    List<Thread> joiners = thread._joiners;
     if (joiners != null) {
-      for (Fiber joiner in joiners) _resumeFiber(joiner);
+      for (Thread joiner in joiners) _resumeThread(joiner);
       joiners.clear();
     }
 
-    fiber._isDone = true;
-    fiber._result = value;
+    thread._isDone = true;
+    thread._result = value;
 
-    // Suspend the current fiber. It will never wake up again.
-    Fiber next = _suspendFiber(fiber, true);
-    fiber._coroutine = null;
-    fletch.coroutineChange(Fiber._scheduler, next);
+    // Suspend the current thread. It will never wake up again.
+    Thread next = _suspendThread(thread, true);
+    thread._coroutine = null;
+    fletch.coroutineChange(Thread._scheduler, next);
   }
 
   join() {
-    // If the fiber is already done, we just return the result.
+    // If the thread is already done, we just return the result.
     if (_isDone) return _result;
 
-    // Add the current fiber to the list of fibers waiting
-    // to join [this] fiber.
-    Fiber fiber = _current;
+    // Add the current thread to the list of threads waiting
+    // to join [this] thread.
+    Thread thread = _current;
     if (_joiners == null) {
-      _joiners = [ fiber ];
+      _joiners = [ thread ];
     } else {
-      _joiners.add(fiber);
+      _joiners.add(thread);
     }
 
-    // Suspend the current fiber and change to the scheduler.
-    // When we get back, the [this] fiber has exited and we
+    // Suspend the current thread and change to the scheduler.
+    // When we get back, the [this] thread has exited and we
     // can go ahead and return the result.
-    Fiber next = _suspendFiber(fiber, false);
-    fiber._coroutine = Coroutine._coroutineCurrent();
-    fletch.coroutineChange(Fiber._scheduler, next);
+    Thread next = _suspendThread(thread, false);
+    thread._coroutine = Coroutine._coroutineCurrent();
+    fletch.coroutineChange(Thread._scheduler, next);
     return _result;
   }
 
-  static void _resumeFiber(Fiber fiber) {
-    _idleFibers = _unlink(fiber);
-    _markReady(fiber);
+  static void _resumeThread(Thread thread) {
+    _idleThreads = _unlink(thread);
+    _markReady(thread);
   }
 
-  static void _markReady(Fiber fiber) {
-    _current = _link(fiber, _current);
+  static void _markReady(Thread thread) {
+    _current = _link(thread, _current);
   }
 
-  static Fiber _link(Fiber fiber, Fiber list) {
+  static Thread _link(Thread thread, Thread list) {
     if (list == null) {
-      fiber._next = fiber;
-      fiber._previous = fiber;
-      return fiber;
+      thread._next = thread;
+      thread._previous = thread;
+      return thread;
     }
 
-    Fiber next = list._next;
-    list._next = fiber;
-    next._previous = fiber;
-    fiber._previous = list;
-    fiber._next = next;
+    Thread next = list._next;
+    list._next = thread;
+    next._previous = thread;
+    thread._previous = list;
+    thread._next = next;
     return list;
   }
 
-  static Fiber _unlink(Fiber fiber) {
-    Fiber next = fiber._next;
-    if (identical(fiber, next)) {
+  static Thread _unlink(Thread thread) {
+    Thread next = thread._next;
+    if (identical(thread, next)) {
       return null;
     }
 
-    Fiber previous = fiber._previous;
+    Thread previous = thread._previous;
     previous._next = next;
     next._previous = previous;
     return next;
   }
 
-  static Fiber _suspendFiber(Fiber fiber, bool exiting) {
-    Fiber current = _current = _unlink(fiber);
+  static Thread _suspendThread(Thread thread, bool exiting) {
+    Thread current = _current = _unlink(thread);
 
     if (exiting) {
-      fiber._next = null;
-      fiber._previous = null;
+      thread._next = null;
+      thread._previous = null;
     } else {
-      _idleFibers = _link(fiber, _idleFibers);
+      _idleThreads = _link(thread, _idleThreads);
     }
 
     if (current != null) return current;
 
-    // If we don't have any idle fibers, halt.
-    if (exiting && _idleFibers == null) fletch.halt(0);
+    // If we don't have any idle threads, halt.
+    if (exiting && _idleThreads == null) fletch.halt(0);
 
     while (true) {
       Process._handleMessages();
@@ -789,26 +786,26 @@ class Fiber {
     }
   }
 
-  static void _yieldTo(Fiber from, Fiber to) {
+  static void _yieldTo(Thread from, Thread to) {
     from._coroutine = Coroutine._coroutineCurrent();
     fletch.coroutineChange(_scheduler, to);
   }
 
   // TODO(kasperl): This is temporary debugging support. We
   // should probably replace this support for passing in an
-  // id of some sort when forking a fiber.
+  // id of some sort when forking a thread.
   static int _count = 0;
   int _index = _count++;
-  toString() => "fiber:$_index";
+  toString() => "thread:$_index";
 
   // TODO(kasperl): Right now, we ignore the events -- and they
   // are always null -- but it is easy to imagine using the
   // events to communicate things to the scheduler.
   static void _schedulerLoop(next) {
     while (true) {
-      // Update the current fiber to the next one and change to
-      // its coroutine. In return, the scheduled fiber determines
-      // which fiber to schedule next.
+      // Update the current thread to the next one and change to
+      // its coroutine. In return, the scheduled thread determines
+      // which thread to schedule next.
       _current = next;
       next = fletch.coroutineChange(next._coroutine, null);
     }
@@ -1031,7 +1028,7 @@ class Port {
 }
 
 class Channel {
-  Fiber _receiver;  // TODO(kasperl): Should this be a queue too?
+  Thread _receiver;  // TODO(kasperl): Should this be a queue too?
 
   // TODO(kasperl): Maybe make this a bit smarter and store
   // the elements in a growable list? Consider allowing bounds
@@ -1042,11 +1039,11 @@ class Channel {
   // Deliver the message synchronously. If the receiver
   // isn't ready to receive yet, the sender blocks.
   void deliver(message) {
-    Fiber sender = Fiber._current;
+    Thread sender = Thread._current;
     _enqueue(new _ChannelEntry(message, sender));
-    Fiber next = Fiber._suspendFiber(sender, false);
+    Thread next = Thread._suspendThread(sender, false);
     // TODO(kasperl): Should we yield to receiver if possible?
-    Fiber._yieldTo(sender, next);
+    Thread._yieldTo(sender, next);
   }
 
   // Send a message to the channel. Not blocking.
@@ -1062,10 +1059,10 @@ class Channel {
     }
 
     if (_head == null) {
-      Fiber receiver = Fiber._current;
+      Thread receiver = Thread._current;
       _receiver = receiver;
-      Fiber next = Fiber._suspendFiber(receiver, false);
-      Fiber._yieldTo(receiver, next);
+      Thread next = Thread._suspendThread(receiver, false);
+      Thread._yieldTo(receiver, next);
     }
 
     var result = _dequeue();
@@ -1085,10 +1082,10 @@ class Channel {
     }
 
     // Signal the receiver (if any).
-    Fiber receiver = _receiver;
+    Thread receiver = _receiver;
     if (receiver != null) {
       _receiver = null;
-      Fiber._resumeFiber(receiver);
+      Thread._resumeThread(receiver);
     }
   }
 
@@ -1097,15 +1094,15 @@ class Channel {
     _ChannelEntry next = entry.next;
     _head = next;
     if (next == null) _tail = next;
-    Fiber sender = entry.sender;
-    if (sender != null) Fiber._resumeFiber(sender);
+    Thread sender = entry.sender;
+    if (sender != null) Thread._resumeThread(sender);
     return entry.message;
   }
 }
 
 class _ChannelEntry {
   final message;
-  final Fiber sender;
+  final Thread sender;
   _ChannelEntry next;
   _ChannelEntry(this.message, this.sender);
 }

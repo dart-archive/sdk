@@ -99,7 +99,7 @@ class RpcServer {
         throw "Server does not implement '$name' which is part of its API.";
       }
     }
-    Fiber.fork(_processMessages);
+    Thread.fork(_processMessages);
   }
 
   void _processMessages() {

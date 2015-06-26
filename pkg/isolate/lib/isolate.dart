@@ -22,7 +22,7 @@ class Isolate {
   join() {
     if (!_isDone) {
       // TODO(kasperl): This doesn't really work if multiple
-      // fibers join the same isolate. Please fix.
+      // threads join the same isolate. Please fix.
       _result = _channel.receive();
       _isDone = true;
     }
