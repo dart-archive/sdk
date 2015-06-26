@@ -21,14 +21,14 @@ test(x, y) {
   Function newWriter(n, marker) => () {
     for (int i = 0; i < n; i++) {
       result.add(marker);
-      Thread.yield();
+      Fiber.yield();
     }
   };
 
   Function xWriter = newWriter(x, "x");
   Function yWriter = newWriter(y, "y");
 
-  Thread other = Thread.fork(xWriter);
+  Fiber other = Fiber.fork(xWriter);
   yWriter();
   other.join();
 

@@ -5,16 +5,16 @@
 import 'package:expect/expect.dart';
 
 main() {
-  Expect.equals(10, Thread.fork(() => testDeliver(10)).join());
-  Expect.equals(42, Thread.fork(() => testDeliver(42)).join());
+  Expect.equals(10, Fiber.fork(() => testDeliver(10)).join());
+  Expect.equals(42, Fiber.fork(() => testDeliver(42)).join());
 
-  Expect.equals(10, Thread.fork(() => testSend(10)).join());
-  Expect.equals(42, Thread.fork(() => testSend(42)).join());
+  Expect.equals(10, Fiber.fork(() => testSend(10)).join());
+  Expect.equals(42, Fiber.fork(() => testSend(42)).join());
 }
 
 testDeliver(n) {
   Channel channel = new Channel();
-  Thread other = Thread.fork(() {
+  Fiber other = Fiber.fork(() {
     for (int i = 0; i < n; i++) channel.deliver(i);
   });
 
@@ -29,10 +29,10 @@ testDeliver(n) {
 
 testSend(n) {
   Channel channel = new Channel();
-  Thread other = Thread.fork(() {
+  Fiber other = Fiber.fork(() {
     for (int i = 0; i < n; i++) {
       channel.send(i);
-      Thread.yield();
+      Fiber.yield();
     }
   });
 
@@ -43,7 +43,7 @@ testSend(n) {
     received++;
   }
 
-  // We join the other thread here, so we force it to
+  // We join the other fiber here, so we force it to
   // enqueue all the remaining messages.
   Expect.isNull(other.join());
 
