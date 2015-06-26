@@ -35,17 +35,8 @@ import 'bytecode_assembler.dart';
 import '../fletch_system.dart';
 import '../commands.dart';
 
-class FletchFunctionBuilder {
+class FletchFunctionBuilder extends FletchFunctionBase {
   final BytecodeAssembler assembler;
-  final int methodId;
-
-  /**
-   * The signature of the FletchFunctionBuilder.
-   *
-   * Som compiled functions does not have a signature (for example, generated
-   * accessors).
-   */
-  final FunctionSignature signature;
 
   /**
    * If the functions is an instance member, [memberOf] is set to the id of the
@@ -54,16 +45,11 @@ class FletchFunctionBuilder {
    * If [memberOf] is set, the compiled function takes an 'this' argument in
    * addition to that of [signature].
    */
-  final int memberOf;
-  final String name;
-  final Element element;
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
   final Map<int, ConstantValue> classConstantValues = <int, ConstantValue>{};
   final Map<Selector, FletchFunctionBuilder> parameterMappings =
       <Selector, FletchFunctionBuilder>{};
-  final int arity;
-  final FletchFunctionKind kind;
 
   FletchFunctionBuilder.fromFletchFunction(FletchFunction function)
       : this(
@@ -75,14 +61,14 @@ class FletchFunctionBuilder {
           memberOf: function.memberOf);
 
   FletchFunctionBuilder(
-      this.methodId,
-      this.kind,
+      int methodId,
+      FletchFunctionKind kind,
       int arity,
-      {this.name,
-       this.element,
-       this.signature,
-       this.memberOf})
-      : this.arity = arity,
+      {String name,
+       Element element,
+       FunctionSignature signature,
+       int memberOf})
+      : super(methodId, kind, arity, name, element, signature, memberOf),
         assembler = new BytecodeAssembler(arity) {
     assert(signature == null ||
         arity == (signature.parameterCount + (memberOf != null ? 1 : 0)));
@@ -94,28 +80,6 @@ class FletchFunctionBuilder {
     functionConstantValues.clear();
     classConstantValues.clear();
   }
-
-  bool get hasThisArgument => memberOf != null;
-
-  bool get hasMemberOf => memberOf != null;
-
-  bool get isLazyFieldInitializer {
-    return kind == FletchFunctionKind.LAZY_FIELD_INITIALIZER;
-  }
-
-  bool get isInitializerList {
-    return kind == FletchFunctionKind.INITIALIZER_LIST;
-  }
-
-  bool get isAccessor {
-    return kind == FletchFunctionKind.ACCESSOR;
-  }
-
-  bool get isParameterStub {
-    return kind == FletchFunctionKind.PARAMETER_STUB;
-  }
-
-  bool get isConstructor => element != null && element.isConstructor;
 
   int allocateConstant(ConstantValue constant) {
     if (constant == null) throw "bad constant";
@@ -202,7 +166,7 @@ class FletchFunctionBuilder {
     return parameterMappings.putIfAbsent(selector, () {
       assert(canBeCalledAs(selector));
       int arity = selector.argumentCount;
-      if (hasThisArgument) arity++;
+      if (isInstanceMember) arity++;
 
       FletchFunctionBuilder functionBuilder =
           context.backend.systemBuilder.newFunctionBuilder(
@@ -227,16 +191,16 @@ class FletchFunctionBuilder {
       }
 
       // Load this.
-      if (hasThisArgument) assembler.loadParameter(0);
+      if (isInstanceMember) assembler.loadParameter(0);
 
-      int index = hasThisArgument ? 1 : 0;
+      int index = isInstanceMember ? 1 : 0;
       signature.orderedForEachParameter((ParameterElement parameter) {
         if (!parameter.isOptional) {
           assembler.loadParameter(index);
         } else if (parameter.isNamed) {
           int parameterIndex = selector.namedArguments.indexOf(parameter.name);
           if (parameterIndex >= 0) {
-            if (hasThisArgument) parameterIndex++;
+            if (isInstanceMember) parameterIndex++;
             int position = selector.positionalArgumentCount + parameterIndex;
             assembler.loadParameter(position);
           } else {
@@ -262,7 +226,7 @@ class FletchFunctionBuilder {
           ..ret()
           ..methodEnd();
 
-      if (hasMemberOf) {
+      if (isInstanceMember) {
         int fletchSelector = context.toFletchSelector(selector);
         FletchClassBuilder classBuilder =
             context.backend.systemBuilder.lookupClassBuilder(memberOf);
@@ -298,6 +262,7 @@ class FletchFunctionBuilder {
         arity,
         name,
         element,
+        signature,
         assembler.bytecodes,
         createFletchConstants(context),
         memberOf);

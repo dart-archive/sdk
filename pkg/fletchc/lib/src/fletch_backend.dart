@@ -413,7 +413,7 @@ class FletchBackend extends Backend {
   FletchClassBuilder createTearoffClass(FletchFunctionBuilder function) {
     return tearoffClasses.putIfAbsent(function, () {
       FunctionSignature signature = function.signature;
-      bool hasThis = function.hasThisArgument;
+      bool hasThis = function.isInstanceMember;
       FletchClassBuilder tearoffClass = createCallableStubClass(
           hasThis ? 1 : 0,
           signature.parameterCount,
@@ -457,7 +457,7 @@ class FletchBackend extends Backend {
           signature.parameterCount);
       tearoffClass.addToMethodTable(fletchSelector, functionBuilder);
 
-      if (!function.hasMemberOf) return tearoffClass;
+      if (!function.isInstanceMember) return tearoffClass;
 
       ClassElement classElement =
           systemBuilder.lookupClassBuilder(function.memberOf).element;
@@ -709,7 +709,7 @@ class FletchBackend extends Backend {
     // TODO(ahe): Don't do this.
     compiler.enqueuer.codegen.generatedCode[function.declaration] = null;
 
-    if (functionBuilder.hasMemberOf && !function.isGenerativeConstructor) {
+    if (functionBuilder.isInstanceMember && !function.isGenerativeConstructor) {
       // Inject the function into the method table of the 'holderClass' class.
       // Note that while constructor bodies has a this argument, we don't inject
       // them into the method table.
@@ -913,7 +913,7 @@ class FletchBackend extends Backend {
     int length = functions.length;
     for (int i = 0; i < length; i++) {
       FletchFunctionBuilder function = functions[i];
-      if (!function.hasThisArgument || function.isAccessor) continue;
+      if (!function.isInstanceMember || function.isAccessor) continue;
       String name = function.name;
       Set<Selector> usage = compiler.resolverWorld.invokedNames[name];
       if (usage == null) continue;
@@ -933,7 +933,7 @@ class FletchBackend extends Backend {
     int length = functions.length;
     for (int i = 0; i < length; i++) {
       FletchFunctionBuilder function = functions[i];
-      if (!function.hasThisArgument || function.isAccessor) continue;
+      if (!function.isInstanceMember || function.isAccessor) continue;
       String name = function.name;
       if (compiler.resolverWorld.invokedGetters.containsKey(name)) {
         createTearoffGetterForFunction(function);

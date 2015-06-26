@@ -50,7 +50,7 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
       : debugAssembler = new BytecodeAssembler(functionBuilder.arity),
         super(functionBuilder, context, elements, registry,
               closureEnvironment, function) {
-    if (functionBuilder.hasThisArgument) pushVariableDeclaration(thisValue);
+    if (functionBuilder.isInstanceMember) pushVariableDeclaration(thisValue);
   }
 
   BytecodeAssembler get assembler => debugAssembler;

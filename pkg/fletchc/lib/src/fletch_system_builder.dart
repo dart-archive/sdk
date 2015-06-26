@@ -79,8 +79,11 @@ class FletchSystemBuilder {
           memberOf: memberOf);
   }
 
-  FletchFunction lookupFunction(int functionId) {
-    return predecessorSystem.functions[functionId];
+  FletchFunctionBase lookupFunction(int functionId) {
+    if (functionId < predecessorSystem.functions.length) {
+      return predecessorSystem.functions[functionId];
+    }
+    return _newFunctions[functionId];
   }
 
   FletchFunctionBuilder lookupFunctionBuilder(int functionId) {

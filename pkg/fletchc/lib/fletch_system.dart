@@ -6,7 +6,8 @@ library fletchc.fletch_system;
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
-    Element;
+    Element,
+    FunctionSignature;
 
 import 'bytecodes.dart';
 import 'commands.dart';
@@ -51,26 +52,35 @@ class FletchClass {
 }
 
 // TODO(ajohnsen): Move to separate file.
-class FletchFunction {
+class FletchFunctionBase {
   final int methodId;
   final FletchFunctionKind kind;
+  // TODO(ajohnsen): Merge with function signature?
   final int arity;
   // TODO(ajohnsen): Remove name?
   final String name;
   final Element element;
-  final List<Bytecode> bytecodes;
-  final List<FletchConstant> constants;
+
+  /**
+   * The signature of the FletchFunctionBuilder.
+   *
+   * Some compiled functions does not have a signature (for example, generated
+   * accessors).
+   */
+  final FunctionSignature signature;
   final int memberOf;
 
-  const FletchFunction(
+  const FletchFunctionBase(
       this.methodId,
       this.kind,
       this.arity,
       this.name,
       this.element,
-      this.bytecodes,
-      this.constants,
+      this.signature,
       this.memberOf);
+
+  bool get isInstanceMember => memberOf != null;
+  bool get isInternal => element == null;
 
   bool get isLazyFieldInitializer {
     return kind == FletchFunctionKind.LAZY_FIELD_INITIALIZER;
@@ -88,14 +98,30 @@ class FletchFunction {
     return kind == FletchFunctionKind.PARAMETER_STUB;
   }
 
-  bool get hasMemberOf => memberOf != null;
+  bool get isConstructor => element != null && element.isConstructor;
+}
 
-  bool get isInternal => element == null;
+// TODO(ajohnsen): Move to separate file.
+class FletchFunction extends FletchFunctionBase {
+  final List<Bytecode> bytecodes;
+  final List<FletchConstant> constants;
+
+  const FletchFunction(
+      int methodId,
+      FletchFunctionKind kind,
+      int arity,
+      String name,
+      Element element,
+      FunctionSignature signature,
+      this.bytecodes,
+      this.constants,
+      int memberOf)
+      : super(methodId, kind, arity, name, element, signature, memberOf);
 
   String toString() {
     StringBuffer buffer = new StringBuffer();
     buffer.write("FletchFunction($methodId, '$name'");
-    if (hasMemberOf) {
+    if (isInstanceMember) {
       buffer.write(", memberOf=$memberOf");
     }
     buffer.write(")");

@@ -55,6 +55,8 @@ import 'fletch_class_builder.dart' show
 
 import 'fletch_selector.dart';
 
+import '../fletch_system.dart';
+
 import 'closure_environment.dart';
 
 enum VisitState {
@@ -354,7 +356,7 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       {bool factoryInvoke: false}) {
-    if (function.hasThisArgument) loadThis();
+    if (function.isInstanceMember) loadThis();
     FunctionSignature signature = function.signature;
     int methodId;
     int arity;
@@ -384,7 +386,7 @@ abstract class CodegenVisitor
       methodId = function.methodId;
       arity = loadPositionalArguments(arguments, signature, function.name);
     }
-    if (function.hasThisArgument) arity++;
+    if (function.isInstanceMember) arity++;
     int constId = functionBuilder.allocateConstantFromFunction(methodId);
     if (factoryInvoke) {
       invokeFactory(node, constId, arity);
