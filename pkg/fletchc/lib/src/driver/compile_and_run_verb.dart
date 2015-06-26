@@ -13,6 +13,7 @@ import 'dart:async' show
 
 import 'dart:io' show
     InternetAddress,
+    Platform,
     Process,
     ServerSocket,
     Socket;
@@ -122,7 +123,7 @@ Future<int> compileAndRun(
     }
     vmProcess = await Process.start(
         vmPath, vmOptions,
-        environment: {'ASAN_OPTIONS': 'abort_on_error=1'});
+        environment: fletchVmEnvironment());
     futures.add(vmProcess.exitCode.then((int value) {
       exitCode = value;
       if (exitCode != 0) {
@@ -214,6 +215,20 @@ Future<Null> readCommands(
         Zone.ROOT.print("Unexpected command from client: $command");
     }
   }
+}
+
+Map<String, String> fletchVmEnvironment() {
+  var environment = new Map<String, String>.from(Platform.environment);
+
+  var asanOptions = environment['ASAN_OPTIONS'];
+  if (asanOptions != null && asanOptions.length > 0) {
+    asanOptions = '$asanOptions,abort_on_error=1';
+  } else {
+    asanOptions = 'abort_on_error=1';
+  }
+  environment['ASAN_OPTIONS'] = asanOptions;
+
+  return environment;
 }
 
 StreamSubscription handleSubscriptionErrors(

@@ -46,6 +46,11 @@ def SetupClangEnvironment(system):
     mac_library_path = "third_party/clang/mac/lib/clang/3.6.0/lib/darwin"
     os.environ['DYLD_LIBRARY_PATH'] = '%s/%s' % (FLETCH_PATH, mac_library_path)
 
+def DisableMemoryLeakDetector():
+  # See here for flags to asan:
+  # https://code.google.com/p/address-sanitizer/wiki/Flags
+  os.environ['ASAN_OPTIONS'] = 'detect_leaks=0'
+
 def KillFletch(system):
   if system != 'windows':
     # Kill any lingering dart processes (from fletch_driver).
@@ -64,6 +69,15 @@ def Main():
     raise Exception('Invalid buildername')
 
   SetupClangEnvironment(utils.GuessOS())
+
+  # TODO(ager/kustermann): We temporarily disable the leak detector due to
+  # flakiness on our buildbot of the following form:
+  #
+  #   ASAN:SIGSEGV
+  #   ==10777==LeakSanitizer has encountered a fatal error.
+  #
+  # See https://github.com/dart-lang/fletch/issues/56.
+  DisableMemoryLeakDetector()
 
   # Clobber build directory if the checkbox was pressed on the BB.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
