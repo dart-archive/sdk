@@ -9,6 +9,7 @@ import 'package:compiler/src/constants/values.dart' show
     StringConstantValue;
 
 import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
     Element,
     FunctionSignature;
 
@@ -78,6 +79,33 @@ class FletchSystemBuilder {
 
   List<FletchFunctionBuilder> getNewFunctions() => _newFunctions;
 
+  FletchClassBuilder newClassBuilder(
+      ClassElement element,
+      FletchClassBuilder superclass,
+      bool isBuiltin,
+      {int extraFields: 0}) {
+    int nextClassId =
+        predecessorSystem.classes.length + _newClasses.length;
+    FletchClassBuilder builder = new FletchClassBuilder(
+        nextClassId,
+        element,
+        superclass,
+        isBuiltin,
+        extraFields);
+    _newClasses.add(builder);
+    return builder;
+  }
+
+  FletchClass lookupClass(int classId) {
+    return predecessorSystem.classes[classId];
+  }
+
+  FletchClassBuilder lookupClassBuilder(int classId) {
+    return _newClasses[classId - predecessorSystem.classes.length];
+  }
+
+  List<FletchClassBuilder> getNewClasses() => _newClasses;
+
   void registerConstant(ConstantValue constant, FletchContext context) {
     // TODO(ajohnsen): Look in predecessorSystem.
     _newConstants.putIfAbsent(constant, () {
@@ -99,9 +127,9 @@ class FletchSystemBuilder {
 
     int changes = 0;
 
-    List<FletchFunction> fletchFunctions = <FletchFunction>[];
-    for (FletchFunctionBuilder functionBuilder in _newFunctions) {
-      fletchFunctions.add(functionBuilder.finalizeFunction(context, commands));
+    List<FletchFunction> functions = <FletchFunction>[];
+    for (FletchFunctionBuilder builder in _newFunctions) {
+      functions.add(builder.finalizeFunction(context, commands));
     }
 
     _newConstants.forEach((ConstantValue constant, int id) {
@@ -111,7 +139,7 @@ class FletchSystemBuilder {
       commands.add(new PopToMap(MapId.constants, id));
     });
 
-    for (FletchFunction function in fletchFunctions) {
+    for (FletchFunction function in functions) {
       List<FletchConstant> constants = function.constants;
       for (int i = 0; i < constants.length; i++) {
         FletchConstant constant = constants[i];
@@ -138,9 +166,11 @@ class FletchSystemBuilder {
     }
 
     commands.add(new CommitChanges(changes));
+    functions = new List<FletchFunction>.from(predecessorSystem.functions)
+        ..addAll(functions);
 
     return new FletchDelta(
-        new FletchSystem(fletchFunctions, <FletchClass>[]),
+        new FletchSystem(functions, <FletchClass>[]),
         predecessorSystem,
         commands);
   }

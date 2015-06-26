@@ -264,7 +264,8 @@ class FletchFunctionBuilder {
 
       if (hasMemberOf) {
         int fletchSelector = context.toFletchSelector(selector);
-        FletchClassBuilder classBuilder = context.backend.classes[memberOf];
+        FletchClassBuilder classBuilder =
+            context.backend.systemBuilder.lookupClassBuilder(memberOf);
         classBuilder.addToMethodTable(fletchSelector, functionBuilder);
       }
 

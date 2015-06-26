@@ -543,7 +543,7 @@ class Session extends FletchVmSession {
       currentStackTrace = new StackTrace(frames);
       for (int i = 0; i < frames; ++i) {
         int methodId = backtraceResponse.methodIds[i];
-        FletchFunction function = fletchSystem.functions[methodId];
+        FletchFunction function = fletchSystem.lookupFunction(methodId);
         currentStackTrace.addFrame(
             compiler,
             new StackFrame(function,
@@ -563,7 +563,7 @@ class Session extends FletchVmSession {
   String dartValueToString(DartValue value) {
     if (value is Instance) {
       Instance i = value;
-      String className = compiler.lookupClassName(i.classId);
+      String className = fletchSystem.lookupClass(i.classId).name;
       return "Instance of '$className'";
     } else {
       return value.dartToString();
@@ -589,11 +589,11 @@ class Session extends FletchVmSession {
       assert(response is InstanceStructure);
       InstanceStructure structure = response;
       int classId = structure.classId;
-      String className = compiler.lookupClassName(classId);
-      print("Instance of '$className' {");
+      FletchClass klass = fletchSystem.lookupClass(classId);
+      print("Instance of '${klass.name}' {");
       for (int i = 0; i < structure.fields; i++) {
         DartValue value = await readNextCommand();
-        var fieldName = compiler.lookupFieldName(classId, i);
+        var fieldName = debugState.lookupFieldName(klass, i);
         print('  $fieldName: ${dartValueToString(value)}');
       }
       print('}');

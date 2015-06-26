@@ -12,6 +12,7 @@ import 'compiler.dart' show FletchCompiler;
 import 'session.dart';
 import 'fletch_system.dart';
 import 'src/debug_info.dart';
+import 'src/class_debug_info.dart';
 
 part 'stack_trace.dart';
 
@@ -27,6 +28,8 @@ class DebugState {
   final Map<int, Breakpoint> breakpoints = <int, Breakpoint>{};
   final Map<FletchFunction, DebugInfo> debugInfos =
       <FletchFunction, DebugInfo>{};
+  final Map<FletchClass, ClassDebugInfo> classDebugInfos =
+      <FletchClass, ClassDebugInfo>{};
 
   bool showInternalFrames = false;
 
@@ -38,5 +41,18 @@ class DebugState {
     return debugInfos.putIfAbsent(function, () {
       return session.compiler.createDebugInfo(function);
     });
+  }
+
+  ClassDebugInfo getClassDebugInfo(FletchClass klass) {
+    return classDebugInfos.putIfAbsent(klass, () {
+      return session.compiler.createClassDebugInfo(klass);
+    });
+  }
+
+  String lookupFieldName(FletchClass klass, int field) {
+    while (field < klass.superclassFields) {
+      klass = session.fletchSystem.lookupClass(klass.superclassId);
+    }
+    return getClassDebugInfo(klass).fieldNames[field - klass.superclassFields];
   }
 }

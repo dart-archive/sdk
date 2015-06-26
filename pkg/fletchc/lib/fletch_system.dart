@@ -5,6 +5,7 @@
 library fletchc.fletch_system;
 
 import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
     Element;
 
 import 'bytecodes.dart';
@@ -31,9 +32,18 @@ class FletchConstant {
 class FletchClass {
   final int classId;
   final String name;
+  final ClassElement element;
   final int superclassId;
+  final int fields;
+  final int superclassFields;
 
-  const FletchClass(this.classId, this.name, this.superclassId);
+  const FletchClass(
+      this.classId,
+      this.name,
+      this.element,
+      this.superclassId,
+      this.fields,
+      this.superclassFields);
 
   bool get hasSuperclassId => superclassId >= 0;
 
@@ -98,6 +108,14 @@ class FletchSystem {
   final List<FletchClass> classes;
 
   const FletchSystem(this.functions, this.classes);
+
+  FletchFunction lookupFunction(int functionId) {
+    return functions[functionId];
+  }
+
+  FletchClass lookupClass(int classId) {
+    return classes[classId];
+  }
 }
 
 class FletchDelta {

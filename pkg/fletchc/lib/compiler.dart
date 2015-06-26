@@ -41,6 +41,7 @@ import 'src/fletch_function_builder.dart' show
     FletchFunctionBuilder;
 
 import 'src/debug_info.dart';
+import 'src/class_debug_info.dart';
 
 import 'src/fletch_native_descriptor.dart' show
     FletchNativeDescriptor;
@@ -264,28 +265,8 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return '${enclosing.name}.${function.name}';
   }
 
-  FletchClassBuilder lookupFletchClassBuilder(int classId) {
-    FletchClassBuilder klass = _compiler.context.backend.classes[classId];
-    assert(klass.classId == classId);
-    return klass;
-  }
-
-  String lookupClassName(int classId) {
-    FletchClassBuilder klass = lookupFletchClassBuilder(classId);
-    if (klass.element != null) return klass.element.name;
-    // TODO(ager): Provide better information for closures.
-    if (_compiler.context.backend.closureClasses.values.contains(klass)) {
-      return 'closure';
-    }
-    FletchFunctionBuilder function =
-        _compiler.context.backend.functionBuilderFromTearoffClass(klass);
-    if (function != null) return 'tearoff of ${function.name}';
-    return 'unknown';
-  }
-
-  String lookupFieldName(int classId, int index) {
-    FletchClassBuilder klass = lookupFletchClassBuilder(classId);
-    return klass.fieldName(index);
+  ClassDebugInfo createClassDebugInfo(FletchClass klass) {
+    return _compiler.context.backend.createClassDebugInfo(klass);
   }
 
   String lookupFunctionNameBySelector(int selector) {

@@ -6,15 +6,19 @@ library fletchc.class_debug_info;
 
 import 'package:compiler/src/elements/elements.dart';
 
-import 'fletch_class_builder.dart';
+import '../fletch_system.dart';
 
 class ClassDebugInfo {
-  final FletchClassBuilder klass;
+  final FletchClass klass;
   List<String> fieldNames;
 
-  ClassDebugInfo(this.klass) {
+  ClassDebugInfo(FletchClass klass)
+      : this.klass = klass,
+        fieldNames = _computeFieldNames(klass);
+
+  static _computeFieldNames(FletchClass klass) {
     int localFields = klass.fields - klass.superclassFields;
-    fieldNames = new List(localFields);
+    List fieldNames = new List(localFields);
     int index = 0;
     ClassElement classElement = klass.element.implementation;
     String className = classElement.name != null ? '${classElement.name}.' : '';
@@ -22,5 +26,6 @@ class ClassDebugInfo {
       fieldNames[index++] = '$className${field.name}';
     });
     assert(index == localFields);
+    return fieldNames;
   }
 }

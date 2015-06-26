@@ -100,6 +100,7 @@ import 'fletch_class_builder.dart' show
 import 'fletch_system_builder.dart' show
     FletchSystemBuilder;
 
+import 'class_debug_info.dart';
 import 'codegen_visitor.dart';
 import 'debug_info.dart';
 import 'debug_info_constructor_codegen.dart';
@@ -143,8 +144,6 @@ class FletchBackend extends Backend {
       <ClassElement, FletchClassBuilder>{};
   final Map<ClassElement, Set<ClassElement>> directSubclasses =
       <ClassElement, Set<ClassElement>>{};
-
-  final List<FletchClassBuilder> classes = <FletchClassBuilder>[];
 
   final Set<ClassElement> builtinClasses = new Set<ClassElement>();
 
@@ -224,9 +223,8 @@ class FletchBackend extends Backend {
         Set<ClassElement> subclasses = directSubclasses[element.superclass];
         subclasses.add(element);
       }
-      int classId = classes.length;
-      FletchClassBuilder classBuilder = new FletchClassBuilder(
-          classId, element, superclass, builtinClasses.contains(element));
+      FletchClassBuilder classBuilder = systemBuilder.newClassBuilder(
+          element, superclass, builtinClasses.contains(element));
       Element callMember = element.lookupLocalMember(
           Compiler.CALL_OPERATOR_NAME);
       if (callMember != null && callMember.isFunction) {
@@ -234,17 +232,14 @@ class FletchBackend extends Backend {
         classBuilder.createIsFunctionEntry(
             this, function.functionSignature.parameterCount);
       }
-      classes.add(classBuilder);
       return classBuilder;
     });
   }
 
   FletchClassBuilder createCallableStubClass(
       int fields, int arity, FletchClassBuilder superclass) {
-    int classId = classes.length;
-    FletchClassBuilder classBuilder = new FletchClassBuilder(
-        classId, null, superclass, false, extraFields: fields);
-    classes.add(classBuilder);
+    FletchClassBuilder classBuilder = systemBuilder.newClassBuilder(
+        null, superclass, false, extraFields: fields);
     classBuilder.createIsFunctionEntry(this, arity);
     return classBuilder;
   }
@@ -464,7 +459,8 @@ class FletchBackend extends Backend {
 
       if (!function.hasMemberOf) return tearoffClass;
 
-      ClassElement classElement = classes[function.memberOf].element;
+      ClassElement classElement =
+          systemBuilder.lookupClassBuilder(function.memberOf).element;
       if (classElement == null) return tearoffClass;
 
       // Create == function that tests for equality.
@@ -574,6 +570,10 @@ class FletchBackend extends Backend {
       tearoffClasses.forEach((k, v) => tearoffFunctions[v] = k);
     }
     return tearoffFunctions[klass];
+  }
+
+  ClassDebugInfo createClassDebugInfo(FletchClass klass) {
+    return new ClassDebugInfo(klass);
   }
 
   DebugInfo createDebugInfo(FletchFunction function) {
@@ -724,7 +724,8 @@ class FletchBackend extends Backend {
       if (function.isSetter) kind = SelectorKind.Setter;
       int fletchSelector = FletchSelector.encode(id, kind, arity);
       int methodId = functionBuilder.methodId;
-      FletchClassBuilder classBuilder = classes[functionBuilder.memberOf];
+      FletchClassBuilder classBuilder =
+          systemBuilder.lookupClassBuilder(functionBuilder.memberOf);
       classBuilder.addToMethodTable(fletchSelector, functionBuilder);
       // Inject method into all mixin usages.
       Iterable<ClassElement> mixinUsage =
@@ -959,7 +960,8 @@ class FletchBackend extends Backend {
     }
     int fletchSelector = context.toFletchSelector(
         new Selector.getter(function.name, library));
-    FletchClassBuilder classBuilder = classes[function.memberOf];
+    FletchClassBuilder classBuilder = systemBuilder.lookupClassBuilder(
+        function.memberOf);
     classBuilder.addToMethodTable(fletchSelector, getter);
   }
 
@@ -967,7 +969,7 @@ class FletchBackend extends Backend {
     createTearoffStubs();
     createParameterMatchingStubs();
 
-    for (FletchClassBuilder classBuilder in classes) {
+    for (FletchClassBuilder classBuilder in systemBuilder.getNewClasses()) {
       classBuilder.createIsEntries(this);
       // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
       // This is a workaround, where we basically add getters for all fields.
@@ -994,7 +996,7 @@ class FletchBackend extends Backend {
 
     // Create all FletchClasses.
     List<FletchClass> fletchClasses = <FletchClass>[];
-    for (FletchClassBuilder classBuilder in classes) {
+    for (FletchClassBuilder classBuilder in systemBuilder.getNewClasses()) {
       fletchClasses.add(classBuilder.finalizeClass(context, commands));
       changes++;
     }
