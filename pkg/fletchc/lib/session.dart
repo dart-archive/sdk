@@ -169,11 +169,6 @@ class Session extends FletchVmSession {
 
   DebugState debugState;
   FletchSystem fletchSystem;
-
-  StackFrame topFrame;
-  StackTrace currentStackTrace;
-  int currentFrame = 0;
-  SourceLocation currentLocation;
   bool running = false;
 
   Session(Socket fletchVmSocket,
@@ -187,8 +182,6 @@ class Session extends FletchVmSession {
     // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
     debugState = new DebugState(this);
   }
-
-  bool get currentLocationIsVisible => topFrame.isVisible;
 
   Future writeSnapshot(String snapshotPath) async {
     await runCommand(new WriteSnapshot(snapshotPath));
@@ -223,7 +216,7 @@ class Session extends FletchVmSession {
     await setBreakpoint(methodName: 'main', bytecodeIndex: 0);
     await doDebugRun();
     while (true) {
-      print(topFrame.shortString());
+      print(debugState.topFrame.shortString());
       await doStep();
     }
   }
@@ -257,8 +250,7 @@ class Session extends FletchVmSession {
 
   Future<int> handleProcessStop(Command response) async {
     await nextOutputSynchronization();
-    currentStackTrace = null;
-    currentFrame = 0;
+    debugState.reset();
     switch (response.code) {
       case CommandCode.UncaughtException:
         await backtrace();
@@ -280,9 +272,8 @@ class Session extends FletchVmSession {
         assert(response.code == CommandCode.ProcessBreakpoint);
         ProcessBreakpoint command = response;
         var function = fletchSystem.functions[command.methodId];
-        topFrame = new StackFrame(function, command.bytecodeIndex,
-                                  compiler, debugState);
-        currentLocation = topFrame.sourceLocation();
+        debugState.topFrame = new StackFrame(
+            function, command.bytecodeIndex, compiler, debugState);
         return command.breakpointId;
     }
     return -1;
@@ -409,18 +400,15 @@ class Session extends FletchVmSession {
   }
 
   Future doStep() async {
-    SourceLocation previous = currentLocation;
+    SourceLocation previous = debugState.currentLocation;
     do {
-      var bcp = topFrame.stepBytecodePointer(previous);
+      var bcp = debugState.topFrame.stepBytecodePointer(previous);
       if (bcp != -1) {
-        await stepTo(topFrame.methodId, bcp);
+        await stepTo(debugState.topFrame.methodId, bcp);
       } else {
         await stepBytecode();
       }
-    } while (!currentLocationIsVisible ||
-             currentLocation == null ||
-             currentLocation.isSameSourceLevelLocationAs(previous) ||
-             currentLocation.node == null);
+    } while (debugState.atLocation(previous));
   }
 
   Future step() async {
@@ -431,13 +419,10 @@ class Session extends FletchVmSession {
 
   Future stepOver() async {
     if (!checkRunning()) return null;
-    SourceLocation previous = currentLocation;
+    SourceLocation previous = debugState.currentLocation;
     do {
       await stepOverBytecode();
-    } while (!currentLocationIsVisible ||
-             currentLocation == null ||
-             currentLocation == previous ||
-             currentLocation.node == null);
+    } while (debugState.atLocation(previous));
     await backtrace();
   }
 
@@ -445,16 +430,15 @@ class Session extends FletchVmSession {
     if (!checkRunning()) return null;
     await getStackTrace();
     // If last frame, just continue.
-    if (currentStackTrace.stackFrames.length <= 1) {
+    if (debugState.numberOfStackFrames <= 1) {
       await cont();
       return null;
     }
     // Get source location for call. We only want to break when the location
     // has changed from the call to something else.
-    SourceLocation return_location =
-        currentStackTrace.stackFrames[1].sourceLocation();
+    SourceLocation return_location = debugState.sourceLocationForFrame(1);
     do {
-      if (currentStackTrace.stackFrames.length <= 1) {
+      if (debugState.numberOfStackFrames <= 1) {
         await cont();
         return null;
       }
@@ -469,19 +453,19 @@ class Session extends FletchVmSession {
         await backtrace();
         return null;
       }
-    } while (!currentLocationIsVisible);
-    if (currentLocation == return_location) await doStep();
+    } while (!debugState.topFrame.isVisible);
+    if (debugState.atLocation(return_location)) await doStep();
     await backtrace();
   }
 
   Future restart() async {
     if (!checkRunning()) return null;
-    if (currentStackTrace.stackFrames.length <= 1) {
+    if (debugState.numberOfStackFrames <= 1) {
       print("### cannot restart entry frame");
       return null;
     }
     await handleProcessStop(
-        await runCommand(new ProcessRestartFrame(currentFrame)));
+        await runCommand(new ProcessRestartFrame(debugState.currentFrame)));
     await backtrace();
   }
 
@@ -511,53 +495,53 @@ class Session extends FletchVmSession {
   }
 
   void list() {
-    if (currentStackTrace == null) {
+    if (debugState.currentStackTrace == null) {
       print("### no stack trace");
       return;
     }
-    currentStackTrace.list(currentFrame);
+    debugState.list();
   }
 
   void disasm() {
-    if (currentStackTrace == null) {
+    if (debugState.currentStackTrace == null) {
       print("### no stack trace");
       return;
     }
-    currentStackTrace.disasm(currentFrame);
+    debugState.disasm();
   }
 
   void selectFrame(int frame) {
-    if (currentStackTrace == null ||
-        currentStackTrace.actualFrameNumber(frame) == -1) {
+    if (debugState.currentStackTrace == null ||
+        debugState.currentStackTrace.actualFrameNumber(frame) == -1) {
       print('### invalid frame number $frame');
       return;
     }
-    currentFrame = frame;
+    debugState.currentFrame = frame;
   }
 
   Future getStackTrace() async {
-    if (currentStackTrace == null) {
+    if (debugState.currentStackTrace == null) {
       ProcessBacktrace backtraceResponse =
           await runCommand(const ProcessBacktraceRequest());
       var frames = backtraceResponse.frames;
-      currentStackTrace = new StackTrace(frames);
+      StackTrace stackTrace = new StackTrace(frames);
       for (int i = 0; i < frames; ++i) {
         int methodId = backtraceResponse.methodIds[i];
         FletchFunction function = fletchSystem.lookupFunction(methodId);
-        currentStackTrace.addFrame(
+        stackTrace.addFrame(
             compiler,
             new StackFrame(function,
                            backtraceResponse.bytecodeIndices[i],
                            compiler,
                            debugState));
       }
-      currentLocation = currentStackTrace.sourceLocation();
+      debugState.currentStackTrace = stackTrace;
     }
   }
 
   Future backtrace() async {
     await getStackTrace();
-    currentStackTrace.write(currentFrame);
+    debugState.printStackTrace();
   }
 
   String dartValueToString(DartValue value) {
@@ -571,7 +555,7 @@ class Session extends FletchVmSession {
   }
 
   Future printLocal(LocalValue local, [String name]) async {
-    var actualFrameNumber = currentStackTrace.actualFrameNumber(currentFrame);
+    var actualFrameNumber = debugState.actualCurrentFrameNumber;
     Command response = await runCommand(
         new ProcessLocal(actualFrameNumber, local.slot));
     assert(response is DartValue);
@@ -580,7 +564,7 @@ class Session extends FletchVmSession {
   }
 
   Future printLocalStructure(String name, LocalValue local) async {
-    var frameNumber = currentStackTrace.actualFrameNumber(currentFrame);
+    var frameNumber = debugState.actualCurrentFrameNumber;
     await sendCommand(new ProcessLocalStructure(frameNumber, local.slot));
     Command response = await readNextCommand();
     if (response is DartValue) {
@@ -602,7 +586,7 @@ class Session extends FletchVmSession {
 
   Future printAllVariables() async {
     await getStackTrace();
-    ScopeInfo info = currentStackTrace.scopeInfo(currentFrame);
+    ScopeInfo info = debugState.currentScopeInfo;
     for (ScopeInfo current = info;
          current != ScopeInfo.sentinel;
          current = current.previous) {
@@ -612,7 +596,7 @@ class Session extends FletchVmSession {
 
   Future printVariable(String name) async {
     await getStackTrace();
-    ScopeInfo info = currentStackTrace.scopeInfo(currentFrame);
+    ScopeInfo info = debugState.currentScopeInfo;
     LocalValue local = info.lookup(name);
     if (local == null) {
       print('### No such variable: $name');
@@ -623,7 +607,7 @@ class Session extends FletchVmSession {
 
   Future printVariableStructure(String name) async {
     await getStackTrace();
-    ScopeInfo info = currentStackTrace.scopeInfo(currentFrame);
+    ScopeInfo info = debugState.currentScopeInfo;
     LocalValue local = info.lookup(name);
     if (local == null) {
       print('### No such variable: $name');
@@ -634,8 +618,8 @@ class Session extends FletchVmSession {
 
   Future toggleInternal() async {
     debugState.showInternalFrames = !debugState.showInternalFrames;
-    if (currentStackTrace != null) {
-      currentStackTrace.visibilityChanged();
+    if (debugState.currentStackTrace != null) {
+      debugState.currentStackTrace.visibilityChanged();
       await backtrace();
     }
   }

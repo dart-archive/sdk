@@ -25,6 +25,8 @@ class Breakpoint {
 }
 
 class DebugState {
+  final Session session;
+
   final Map<int, Breakpoint> breakpoints = <int, Breakpoint>{};
   final Map<FletchFunction, DebugInfo> debugInfos =
       <FletchFunction, DebugInfo>{};
@@ -32,10 +34,44 @@ class DebugState {
       <FletchClass, ClassDebugInfo>{};
 
   bool showInternalFrames = false;
-
-  final Session session;
+  StackFrame _topFrame;
+  StackTrace _currentStackTrace;
+  int currentFrame = 0;
+  SourceLocation _currentLocation;
 
   DebugState(this.session);
+
+  void reset() {
+    _topFrame = null;
+    _currentStackTrace = null;
+    _currentLocation = null;
+    currentFrame = 0;
+  }
+
+  int get actualCurrentFrameNumber {
+    return currentStackTrace.actualFrameNumber(currentFrame);
+  }
+
+  ScopeInfo get currentScopeInfo {
+    return currentStackTrace.scopeInfo(currentFrame);
+  }
+
+  SourceLocation get currentLocation => _currentLocation;
+
+  StackTrace get currentStackTrace => _currentStackTrace;
+
+  StackTrace set currentStackTrace(StackTrace stackTrace) {
+    _currentLocation = stackTrace.sourceLocation();
+    _topFrame = stackTrace.stackFrames[0];
+    return _currentStackTrace = stackTrace;
+  }
+
+  StackFrame get topFrame => _topFrame;
+
+  StackFrame set topFrame(StackFrame frame) {
+    _currentLocation = frame.sourceLocation();
+    _topFrame = frame;
+  }
 
   DebugInfo getDebugInfo(FletchFunction function) {
     return debugInfos.putIfAbsent(function, () {
@@ -54,5 +90,30 @@ class DebugState {
       klass = session.fletchSystem.lookupClass(klass.superclassId);
     }
     return getClassDebugInfo(klass).fieldNames[field - klass.superclassFields];
+  }
+
+  bool atLocation(SourceLocation previous) {
+    return (!topFrame.isVisible ||
+            currentLocation == null ||
+            currentLocation.isSameSourceLevelLocationAs(previous) ||
+            currentLocation.node == null);
+  }
+
+  int get numberOfStackFrames => currentStackTrace.stackFrames.length;
+
+  SourceLocation sourceLocationForFrame(int frame) {
+    return currentStackTrace.stackFrames[frame].sourceLocation();
+  }
+
+  void list() {
+    currentStackTrace.list(currentFrame);
+  }
+
+  void disasm() {
+    currentStackTrace.disasm(currentFrame);
+  }
+
+  void printStackTrace() {
+    currentStackTrace.write(currentFrame);
   }
 }
