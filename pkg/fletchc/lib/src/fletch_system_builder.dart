@@ -127,7 +127,7 @@ class FletchSystemBuilder {
       for (ConstantValue value in constant.getDependencies()) {
         registerConstant(value, context);
       }
-      return _newConstants.length;
+      return predecessorSystem.constants.length + _newConstants.length;
     });
   }
 
@@ -150,20 +150,23 @@ class FletchSystemBuilder {
     // Create all statics.
     // TODO(ajohnsen): Should be part of the fletch system. Does not work with
     // incremental.
-    context.forEachStatic((element, index) {
-      FletchFunctionBuilder initializer =
-          context.backend.lazyFieldInitializers[element];
-      if (initializer != null) {
-        commands.add(new PushFromMap(MapId.methods, initializer.methodId));
-        commands.add(const PushNewInitializer());
-      } else {
-        commands.add(const PushNull());
-      }
-    });
-    commands.add(new ChangeStatics(context.staticIndices.length));
-    changes++;
+    if (predecessorSystem.functions.isEmpty) {
+      context.forEachStatic((element, index) {
+        FletchFunctionBuilder initializer =
+            context.backend.lazyFieldInitializers[element];
+        if (initializer != null) {
+          commands.add(new PushFromMap(MapId.methods, initializer.methodId));
+          commands.add(const PushNewInitializer());
+        } else {
+          commands.add(const PushNull());
+        }
+      });
+      commands.add(new ChangeStatics(context.staticIndices.length));
+      changes++;
+    }
 
     // Create all FletchConstants.
+    List<FletchConstant> constants = <FletchConstant>[];
     _newConstants.forEach((constant, int id) {
       void addList(List<ConstantValue> list) {
         for (ConstantValue entry in list) {
@@ -226,6 +229,7 @@ class FletchSystemBuilder {
       } else {
         throw "Unsupported constant: ${constant.toStructuredString()}";
       }
+      constants.add(new FletchConstant(id, MapId.constants));
       commands.add(new PopToMap(MapId.constants, id));
     });
 
@@ -276,6 +280,6 @@ class FletchSystemBuilder {
     classes = new List<FletchClass>.from(predecessorSystem.classes)
         ..addAll(classes);
 
-    return new FletchSystem(functions, classes);
+    return new FletchSystem(functions, classes, constants);
   }
 }

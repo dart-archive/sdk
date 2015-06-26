@@ -106,8 +106,10 @@ class FletchFunction {
 class FletchSystem {
   final List<FletchFunction> functions;
   final List<FletchClass> classes;
+  // TODO(ajohnsen): Should it be a map?
+  final List<FletchConstant> constants;
 
-  const FletchSystem(this.functions, this.classes);
+  const FletchSystem(this.functions, this.classes, this.constants);
 
   FletchFunction lookupFunction(int functionId) {
     return functions[functionId];

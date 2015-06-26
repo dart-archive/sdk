@@ -118,7 +118,7 @@ import '../commands.dart';
 import '../fletch_system.dart';
 
 const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
-    const <FletchFunction>[], const <FletchClass>[]);
+    const <FletchFunction>[], const <FletchClass>[], const <FletchConstant>[]);
 
 class FletchBackend extends Backend {
   static const String growableListName = '_GrowableList';
