@@ -236,25 +236,35 @@ uint8* StackWalker::ComputeCatchBlock(Process* process, int* stack_delta) {
   return NULL;
 }
 
+void StackWalker::PushFrameOnSessionStack(Session* session, bool isFirstFrame) {
+  uint8* start_bcp = function()->bytecode_address_for(0);
+  int bytecode_offset = return_address() - start_bcp;
+  // The first byte-code offset is not a return address but the offset for
+  // the current bytecode. Make it look like a return address by adding
+  // the current bytecode size to the byte-code offset.
+  if (isFirstFrame) {
+    Opcode current = static_cast<Opcode>(*return_address());
+    bytecode_offset += Bytecode::Size(current);
+  }
+  session->PushNewInteger(bytecode_offset);
+  session->PushFunction(function());
+}
+
 int StackWalker::ComputeStackTrace(Process* process, Session* session) {
   int frames = 0;
   StackWalker walker(process, process->stack());
   while (walker.MoveNext()) {
-    Function* function = walker.function();
-    uint8* start_bcp = function->bytecode_address_for(0);
-    int bytecode_offset = walker.return_address() - start_bcp;
-    // The first byte-code offset is not a return address but the offset for
-    // the current bytecode. Make it look like a return address by adding
-    // the current bytecode size to the byte-code offset.
-    if (frames == 0) {
-      Opcode current = static_cast<Opcode>(*walker.return_address());
-      bytecode_offset += Bytecode::Size(current);
-    }
-    session->PushNewInteger(bytecode_offset);
-    session->PushFunction(function);
+    walker.PushFrameOnSessionStack(session, frames == 0);
     ++frames;
   }
   return frames;
+}
+
+void StackWalker::ComputeTopStackFrame(Process* process, Session* session) {
+  StackWalker walker(process, process->stack());
+  bool has_top_frame = walker.MoveNext();
+  ASSERT(has_top_frame);
+  walker.PushFrameOnSessionStack(session, true);
 }
 
 void StackWalker::RestartFrame(Process* process, int frame) {

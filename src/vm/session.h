@@ -130,6 +130,9 @@ class Session {
   bool debugging_;
   bool output_synchronization_;
 
+  int method_map_id_;
+  int class_map_id_;
+
   ObjectList stack_;
   ObjectList changes_;
   List<ObjectMap*> maps_;
@@ -142,8 +145,8 @@ class Session {
   void SignalMainThreadWaitUntilDone(MainThreadResumeKind);
   void MainThreadDone();
 
-  void SendDartValue(Object* value, int class_map);
-  void SendInstanceStructure(Instance* instance, int class_map);
+  void SendDartValue(Object* value);
+  void SendInstanceStructure(Instance* instance);
 
   void Push(Object* object) { stack_.Add(object); }
   Object* Pop() { return stack_.RemoveLast(); }

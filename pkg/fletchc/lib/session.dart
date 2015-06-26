@@ -170,6 +170,7 @@ class Session extends FletchVmSession {
   DebugState debugState;
   FletchSystem fletchSystem;
 
+  StackFrame topFrame;
   StackTrace currentStackTrace;
   int currentFrame = 0;
   SourceLocation currentLocation;
@@ -187,9 +188,7 @@ class Session extends FletchVmSession {
     debugState = new DebugState(this);
   }
 
-  bool get currentLocationIsVisible {
-    return currentStackTrace.stackFrames[0].isVisible;
-  }
+  bool get currentLocationIsVisible => topFrame.isVisible;
 
   Future writeSnapshot(String snapshotPath) async {
     await runCommand(new WriteSnapshot(snapshotPath));
@@ -224,7 +223,7 @@ class Session extends FletchVmSession {
     await setBreakpoint(methodName: 'main', bytecodeIndex: 0);
     await doDebugRun();
     while (true) {
-      print(currentStackTrace.shortStringForFrame(0));
+      print(topFrame.shortString());
       await doStep();
     }
   }
@@ -280,7 +279,10 @@ class Session extends FletchVmSession {
       default:
         assert(response.code == CommandCode.ProcessBreakpoint);
         ProcessBreakpoint command = response;
-        await getStackTrace();
+        var function = fletchSystem.functions[command.methodId];
+        topFrame = new StackFrame(function, command.bytecodeIndex,
+                                  compiler, debugState);
+        currentLocation = topFrame.sourceLocation();
         return command.breakpointId;
     }
     return -1;
@@ -402,17 +404,16 @@ class Session extends FletchVmSession {
 
   Future stepTo(int methodId, int bcp) async {
     if (!checkRunning()) return null;
-    Command response =
-      await runCommand(new ProcessStepTo(MapId.methods, methodId, bcp));
+    Command response = await runCommand(new ProcessStepTo(methodId, bcp));
     await handleProcessStop(response);
   }
 
   Future doStep() async {
     SourceLocation previous = currentLocation;
     do {
-      var bcp = currentStackTrace.stepBytecodePointer(previous);
+      var bcp = topFrame.stepBytecodePointer(previous);
       if (bcp != -1) {
-        await stepTo(currentStackTrace.methodId, bcp);
+        await stepTo(topFrame.methodId, bcp);
       } else {
         await stepBytecode();
       }
@@ -442,6 +443,7 @@ class Session extends FletchVmSession {
 
   Future stepOut() async {
     if (!checkRunning()) return null;
+    await getStackTrace();
     // If last frame, just continue.
     if (currentStackTrace.stackFrames.length <= 1) {
       await cont();
@@ -536,7 +538,7 @@ class Session extends FletchVmSession {
   Future getStackTrace() async {
     if (currentStackTrace == null) {
       ProcessBacktrace backtraceResponse =
-          await runCommand(const ProcessBacktraceRequest(MapId.methods));
+          await runCommand(const ProcessBacktraceRequest());
       var frames = backtraceResponse.frames;
       currentStackTrace = new StackTrace(frames);
       for (int i = 0; i < frames; ++i) {
@@ -571,7 +573,7 @@ class Session extends FletchVmSession {
   Future printLocal(LocalValue local, [String name]) async {
     var actualFrameNumber = currentStackTrace.actualFrameNumber(currentFrame);
     Command response = await runCommand(
-        new ProcessLocal(MapId.classes, actualFrameNumber, local.slot));
+        new ProcessLocal(actualFrameNumber, local.slot));
     assert(response is DartValue);
     String prefix = (name == null) ? '' : '$name: ';
     print('$prefix${dartValueToString(response)}');
@@ -579,8 +581,7 @@ class Session extends FletchVmSession {
 
   Future printLocalStructure(String name, LocalValue local) async {
     var frameNumber = currentStackTrace.actualFrameNumber(currentFrame);
-    await sendCommand(
-        new ProcessLocalStructure(MapId.classes, frameNumber, local.slot));
+    await sendCommand(new ProcessLocalStructure(frameNumber, local.slot));
     Command response = await readNextCommand();
     if (response is DartValue) {
       print(dartValueToString(response));

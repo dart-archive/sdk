@@ -160,7 +160,9 @@ abstract class Command {
         return backtrace;
       case CommandCode.ProcessBreakpoint:
         int breakpointId = CommandBuffer.readInt32FromBuffer(buffer, 0);
-        return new ProcessBreakpoint(breakpointId);
+        int methodId = CommandBuffer.readInt64FromBuffer(buffer, 4);
+        int bytecodeIndex = CommandBuffer.readInt64FromBuffer(buffer, 12);
+        return new ProcessBreakpoint(breakpointId, methodId, bytecodeIndex);
       case CommandCode.ProcessDeleteBreakpoint:
         int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ProcessDeleteBreakpoint(id);
@@ -783,27 +785,21 @@ class ProcessBacktrace extends Command {
 }
 
 class ProcessBacktraceRequest extends Command {
-  final MapId methodMap;
-
-  const ProcessBacktraceRequest(this.methodMap)
+  const ProcessBacktraceRequest()
       : super(CommandCode.ProcessBacktraceRequest);
-
-  void addTo(StreamSink<List<int>> sink) {
-    buffer
-        ..addUint32(methodMap.index)
-        ..sendOn(sink, code);
-  }
 
   /// Peer will respond with [ProcessBacktrace]
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$methodMap";
+  String valuesToString() => "";
 }
 
 class ProcessBreakpoint extends Command {
   final int breakpointId;
+  final int methodId;
+  final int bytecodeIndex;
 
-  const ProcessBreakpoint(this.breakpointId)
+  const ProcessBreakpoint(this.breakpointId, this.methodId, this.bytecodeIndex)
       : super(CommandCode.ProcessBreakpoint);
 
   void addTo(StreamSink<List<int>> sink) {
@@ -812,20 +808,18 @@ class ProcessBreakpoint extends Command {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$breakpointId";
+  String valuesToString() => "$breakpointId, $methodId, $bytecodeIndex";
 }
 
 class ProcessLocal extends Command {
-  final MapId classMap;
   final int frame;
   final int slot;
 
-  const ProcessLocal(this.classMap, this.frame, this.slot)
+  const ProcessLocal(this.frame, this.slot)
       : super(CommandCode.ProcessLocal);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
-        ..addUint32(classMap.index)
         ..addUint32(frame)
         ..addUint32(slot)
         ..sendOn(sink, code);
@@ -834,20 +828,18 @@ class ProcessLocal extends Command {
   /// Peer will respond with a [DartValue].
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$classMap, $frame, $slot";
+  String valuesToString() => "$frame, $slot";
 }
 
 class ProcessLocalStructure extends Command {
-  final MapId classMap;
   final int frame;
   final int slot;
 
-  const ProcessLocalStructure(this.classMap, this.frame, this.slot)
+  const ProcessLocalStructure(this.frame, this.slot)
       : super(CommandCode.ProcessLocalStructure);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
-        ..addUint32(classMap.index)
         ..addUint32(frame)
         ..addUint32(slot)
         ..sendOn(sink, code);
@@ -859,7 +851,7 @@ class ProcessLocalStructure extends Command {
   /// The number of responses is not fixed.
   int get numberOfResponsesExpected => null;
 
-  String valuesToString() => "$classMap, $frame, $slot";
+  String valuesToString() => "$frame, $slot";
 }
 
 class ProcessRestartFrame extends Command {
@@ -917,16 +909,14 @@ class ProcessStepOut extends Command {
 }
 
 class ProcessStepTo extends Command {
-  final MapId id;
   final int methodId;
   final int bcp;
 
-  const ProcessStepTo(this.id, this.methodId, this.bcp)
+  const ProcessStepTo(this.methodId, this.bcp)
       : super(CommandCode.ProcessStepTo);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
-        ..addUint32(id.index)
         ..addUint64(methodId)
         ..addUint32(bcp)
         ..sendOn(sink, code);
@@ -936,7 +926,7 @@ class ProcessStepTo extends Command {
   /// possible responses.
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$id, $methodId, $bcp";
+  String valuesToString() => "$methodId, $bcp";
 }
 
 class ProcessContinue extends Command {
@@ -986,6 +976,8 @@ class Debugging extends Command {
   void addTo(StreamSink<List<int>> sink) {
     buffer
         ..addUint8(outputSynchronization ? 1 : 0)
+        ..addUint32(MapId.methods.index)
+        ..addUint32(MapId.classes.index)
         ..sendOn(sink, code);
   }
 

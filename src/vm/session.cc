@@ -31,6 +31,8 @@ Session::Session(Connection* connection)
       process_(NULL),
       debugging_(false),
       output_synchronization_(false),
+      method_map_id_(-1),
+      class_map_id_(-1),
       stack_(0),
       changes_(0),
       main_thread_monitor_(Platform::CreateMonitor()),
@@ -108,7 +110,7 @@ void Session::MainThreadDone() {
   main_thread_monitor_->Unlock();
 }
 
-void Session::SendDartValue(Object* value, int class_map) {
+void Session::SendDartValue(Object* value) {
   if (value->IsSmi() || value->IsLargeInteger()) {
     int64_t int_value = value->IsSmi()
         ? Smi::cast(value)->value()
@@ -133,20 +135,20 @@ void Session::SendDartValue(Object* value, int class_map) {
     connection_->Send(Connection::kString);
   } else {
     Push(HeapObject::cast(value)->get_class());
-    connection_->WriteInt64(MapLookup(class_map));
+    connection_->WriteInt64(MapLookup(class_map_id_));
     connection_->Send(Connection::kInstance);
   }
 }
 
-void Session::SendInstanceStructure(Instance* instance, int class_map) {
+void Session::SendInstanceStructure(Instance* instance) {
   Class* klass = instance->get_class();
   Push(klass);
-  connection_->WriteInt64(MapLookup(class_map));
+  connection_->WriteInt64(MapLookup(class_map_id_));
   int fields = klass->NumberOfInstanceFields();
   connection_->WriteInt(fields);
   connection_->Send(Connection::kInstanceStructure);
   for (int i = 0; i < fields; i++) {
-    SendDartValue(instance->GetInstanceField(i), class_map);
+    SendDartValue(instance->GetInstanceField(i));
   }
 }
 
@@ -231,10 +233,10 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessStepTo: {
-        int map_id = connection_->ReadInt();
         int64 id = connection_->ReadInt64();
         int bcp = connection_->ReadInt();
-        Function* function = Function::cast(maps_[map_id]->LookupById(id));
+        Function* function =
+            Function::cast(maps_[method_map_id_]->LookupById(id));
         DebugInfo* debug_info = process_->debug_info();
         debug_info->SetBreakpoint(function, bcp, true);
         program()->scheduler()->ProcessContinue(process_);
@@ -248,12 +250,11 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessBacktraceRequest: {
-        int map_index = connection_->ReadInt();
         int frames = StackWalker::ComputeStackTrace(process_, this);
         connection_->WriteInt(frames);
         for (int i = 0; i < frames; i++) {
           // Lookup method in method map and send id.
-          connection_->WriteInt64(MapLookup(map_index));
+          connection_->WriteInt64(MapLookup(method_map_id_));
           // Drop method from session stack.
           Drop(1);
           // Pop bytecode index from session stack and send it.
@@ -265,15 +266,14 @@ void Session::ProcessMessages() {
 
       case Connection::kProcessLocal:
       case Connection::kProcessLocalStructure: {
-        int class_map = connection_->ReadInt();
         int frame = connection_->ReadInt();
         int slot = connection_->ReadInt();
         Object* local = StackWalker::ComputeLocal(process_, frame, slot);
         if (opcode == Connection::kProcessLocalStructure &&
             local->IsInstance()) {
-          SendInstanceStructure(Instance::cast(local), class_map);
+          SendInstanceStructure(Instance::cast(local));
         } else {
-          SendDartValue(local, class_map);
+          SendDartValue(local);
         }
         break;
       }
@@ -302,6 +302,8 @@ void Session::ProcessMessages() {
 
       case Connection::kDebugging: {
         output_synchronization_ = connection_->ReadBoolean();
+        method_map_id_ = connection_->ReadInt();
+        class_map_id_ = connection_->ReadInt();
         debugging_ = true;
         break;
       }
@@ -974,6 +976,12 @@ void Session::BreakPoint(Process* process) {
   DebugInfo* debug_info = process->debug_info();
   debug_info->set_is_stepping(false);
   connection_->WriteInt(debug_info->current_breakpoint_id());
+  StackWalker::ComputeTopStackFrame(process, this);
+  connection_->WriteInt64(MapLookup(method_map_id_));
+  // Drop function from session stack.
+  Drop(1);
+  // Pop bytecode index from session stack and send it.
+  connection_->WriteInt64(PopInteger());
   connection_->Send(Connection::kProcessBreakpoint);
   PrintSynchronizationToken();
 }

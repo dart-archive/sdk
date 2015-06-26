@@ -52,12 +52,12 @@ class StackFrame {
     print('');
   }
 
-  String shortString(int maxNameLength) {
+  String shortString([int namePadding = 0]) {
     String name = compiler.lookupFunctionName(function);
     String astString = debugInfo.astStringFor(bytecodePointer - 1);
     astString = (astString != null) ? '@$astString' : '';
 
-    return '${name.padRight(maxNameLength)}\t$astString';
+    return '${name.padRight(namePadding)}\t$astString';
   }
 
   SourceLocation sourceLocation() {
@@ -95,6 +95,8 @@ class StackFrame {
     }
     return offset <= bytecodePointer ? -1 : offset;
   }
+
+  int get methodId => function.methodId;
 }
 
 class StackTrace {
@@ -117,10 +119,6 @@ class StackTrace {
     if (nameLength > maxNameLength) maxNameLength = nameLength;
   }
 
-  String shortStringForFrame(int frame) {
-    return stackFrames[frame].shortString(maxNameLength);
-  }
-
   void write(int currentFrame) {
     assert(framesToGo == 0);
     print("Stack trace:");
@@ -128,7 +126,7 @@ class StackTrace {
     for (var i = 0; i < stackFrames.length; i++) {
       if (!stackFrames[i].isVisible) continue;
       var marker = currentFrame == frameNumber ? '> ' : '  ';
-      var line = shortStringForFrame(i);
+      var line = stackFrames[i].shortString(maxNameLength);
       String frameNumberString = '${frameNumber++}: '.padLeft(3);
       print('$marker$frameNumberString$line');
     }
@@ -174,8 +172,4 @@ class StackTrace {
   int stepBytecodePointer(SourceLocation location) {
     return stackFrames[0].stepBytecodePointer(location);
   }
-
-  int get bytecodePointer => stackFrames[0].bytecodePointer;
-
-  int get methodId => stackFrames[0].function.methodId;
 }

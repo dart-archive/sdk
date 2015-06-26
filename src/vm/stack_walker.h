@@ -53,6 +53,9 @@ class StackWalker {
   // continues.
   void RestartCurrentFrame();
 
+  // Push information about the current frame onto the session stack.
+  void PushFrameOnSessionStack(Session* session, bool isFirstFrame);
+
   Function* function() const { return function_; }
   uint8* return_address() const { return return_address_; }
   int frame_size() const { return frame_size_; }
@@ -67,6 +70,10 @@ class StackWalker {
 
   // Compute a stack trace and send it to the session.
   static int ComputeStackTrace(Process* process, Session* session);
+
+  // Compute the function for the top frame on the current process stack
+  // and push it on the session stack.
+  static void ComputeTopStackFrame(Process* process, Session* session);
 
   // Manipulate the stack to restart frame |frame| when process continues.
   static void RestartFrame(Process* process, int frame);
