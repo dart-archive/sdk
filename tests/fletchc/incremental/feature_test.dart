@@ -2222,7 +2222,7 @@ compileAndRun(EncodedResult encodedResult) async {
             compileUpdatesThrew,
             "Expected an exception in compileUpdates");
         Expect.isNull(fletchDelta, "Expected update == null");
-        return null;
+        break;
       }
 
       // Set the new system in the session.
@@ -2262,7 +2262,9 @@ compileAndRun(EncodedResult encodedResult) async {
         }
       }
     }
-  }).catchError(session.handleError).then((_) async {
+
+    // If everything went fine, we will try finishing the execution and do a
+    // graceful shutdown.
     if (session.running) {
       // The session is still alive. Run to completion.
       var continueCommand = const commands_lib.ProcessContinue();
@@ -2270,27 +2272,32 @@ compileAndRun(EncodedResult encodedResult) async {
 
       // Wait for process termination.
       Command response = await session.runCommand(continueCommand);
-      if (response is commands_lib.ProcessTerminated) {
-        // Terminate the Fletch VM session so the Fletch VM will terminate.
-        await session.runCommand(const commands_lib.SessionEnd());
-        await session.shutdown();
-      } else {
+      if (response is! commands_lib.ProcessTerminated) {
         await session.kill();
         throw new StateError(
             "Expected ProcessTerminated, but got: $response");
       }
-    } else {
-      // We either failed before we got to start a process or there
-      // was an uncaught exception in the program. If there was an
-      // uncaught exception the VM is intentionally hanging to give
-      // the debugger a chance to inspect the state at the point of
-      // the throw. Therefore, we explicitly have to kill the VM
-      // process.
-      await session.kill();
-      session.process.kill();
     }
+    await session.runCommand(const commands_lib.SessionEnd());
+    await session.shutdown();
+  }).catchError((e, s) async {
+    // If something went wrong, we'll kill the session forcefully.
+    session.addError(e, s);
+
+    // We either failed before we got to start a process or there
+    // was an uncaught exception in the program. If there was an
+    // uncaught exception the VM is intentionally hanging to give
+    // the debugger a chance to inspect the state at the point of
+    // the throw. Therefore, we explicitly have to kill the VM
+    // process.
+    await session.kill();
+    session.process.kill();
   });
 
+  // TODO(ahe/kustermann/ager): We really need to distinguish VM crashes from
+  // normal test failures. This information is based on exitCode and we need
+  // to propagate the exitCode back to test.dart, so we can have Fail/Crash
+  // outcomes of these tests.
   await session.waitForCompletion();
 
   Expect.equals(
