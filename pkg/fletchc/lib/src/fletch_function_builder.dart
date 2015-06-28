@@ -19,8 +19,9 @@ import 'fletch_constants.dart' show
     FletchFunctionConstant,
     FletchClassConstant;
 
-import 'package:compiler/src/universe/universe.dart'
-    show Selector;
+import 'package:compiler/src/universe/universe.dart' show
+    CallStructure,
+    Selector;
 
 import '../bytecodes.dart' show
     Bytecode,
@@ -48,8 +49,6 @@ class FletchFunctionBuilder extends FletchFunctionBase {
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
   final Map<int, ConstantValue> classConstantValues = <int, ConstantValue>{};
-  final Map<Selector, FletchFunctionBuilder> parameterMappings =
-      <Selector, FletchFunctionBuilder>{};
 
   FletchFunctionBuilder.fromFletchFunction(FletchFunction function)
       : this(
@@ -158,83 +157,6 @@ class FletchFunctionBuilder extends FletchFunctionBase {
       }
       return true;
     }
-  }
-
-  FletchFunctionBuilder createParameterMappingFor(
-      Selector selector,
-      FletchContext context) {
-    return parameterMappings.putIfAbsent(selector, () {
-      assert(canBeCalledAs(selector));
-      int arity = selector.argumentCount;
-      if (isInstanceMember) arity++;
-
-      FletchFunctionBuilder functionBuilder =
-          context.backend.systemBuilder.newFunctionBuilder(
-              FletchFunctionKind.PARAMETER_STUB,
-              arity);
-
-      BytecodeAssembler assembler = functionBuilder.assembler;
-
-      void loadInitializerOrNull(ParameterElement parameter) {
-        Expression initializer = parameter.initializer;
-        if (initializer != null) {
-          ConstantExpression expression = context.compileConstant(
-              initializer,
-              parameter.memberContext.resolvedAst.elements,
-              isConst: true);
-          int constId = functionBuilder.allocateConstant(
-              context.getConstantValue(expression));
-          assembler.loadConst(constId);
-        } else {
-          assembler.loadLiteralNull();
-        }
-      }
-
-      // Load this.
-      if (isInstanceMember) assembler.loadParameter(0);
-
-      int index = isInstanceMember ? 1 : 0;
-      signature.orderedForEachParameter((ParameterElement parameter) {
-        if (!parameter.isOptional) {
-          assembler.loadParameter(index);
-        } else if (parameter.isNamed) {
-          int parameterIndex = selector.namedArguments.indexOf(parameter.name);
-          if (parameterIndex >= 0) {
-            if (isInstanceMember) parameterIndex++;
-            int position = selector.positionalArgumentCount + parameterIndex;
-            assembler.loadParameter(position);
-          } else {
-            loadInitializerOrNull(parameter);
-          }
-        } else {
-          if (index < arity) {
-            assembler.loadParameter(index);
-          } else {
-            loadInitializerOrNull(parameter);
-          }
-        }
-        index++;
-      });
-
-      // TODO(ajohnsen): We have to be extra careful when overriding a
-      // method that takes optional arguments. We really should
-      // enumerate all the stubs in the superclasses and make sure
-      // they're overridden.
-      int constId = functionBuilder.allocateConstantFromFunction(methodId);
-      assembler
-          ..invokeStatic(constId, index)
-          ..ret()
-          ..methodEnd();
-
-      if (isInstanceMember) {
-        int fletchSelector = context.toFletchSelector(selector);
-        FletchClassBuilder classBuilder =
-            context.backend.systemBuilder.lookupClassBuilder(memberOf);
-        classBuilder.addToMethodTable(fletchSelector, functionBuilder);
-      }
-
-      return functionBuilder;
-    });
   }
 
   FletchFunction finalizeFunction(

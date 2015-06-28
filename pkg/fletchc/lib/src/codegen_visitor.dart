@@ -367,8 +367,9 @@ abstract class CodegenVisitor
         methodId = function.methodId;
       } else if (function.canBeCalledAs(callStructure.callSelector)) {
         // TODO(ajohnsen): Inline parameter mapping?
-        FletchFunctionBuilder stub = function.createParameterMappingFor(
-            callStructure.callSelector, context);
+        FletchFunctionBase stub = context.backend.createParameterStubFor(
+            function,
+            callStructure.callSelector);
         methodId = stub.methodId;
       } else {
         doUnresolved(function.name);

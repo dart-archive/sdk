@@ -18,6 +18,9 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionElement,
     FunctionSignature;
 
+import 'package:compiler/src/universe/universe.dart' show
+    CallStructure;
+
 import 'fletch_constants.dart' show
     FletchClassConstant,
     FletchFunctionConstant,
@@ -36,6 +39,9 @@ class FletchSystemBuilder {
   final List<FletchFunctionBuilder> _newFunctions = <FletchFunctionBuilder>[];
   final List<FletchClassBuilder> _newClasses = <FletchClassBuilder>[];
   final Map<ConstantValue, int> _newConstants = <ConstantValue, int>{};
+  final Map<FletchFunctionBase, Map<CallStructure, FletchFunctionBuilder>>
+      _newParameterStubs =
+          <FletchFunctionBase, Map<CallStructure, FletchFunctionBuilder>>{};
 
   FletchSystemBuilder(this.predecessorSystem);
 
@@ -132,6 +138,26 @@ class FletchSystemBuilder {
       }
       return predecessorSystem.constants.length + _newConstants.length;
     });
+  }
+
+  FletchFunctionBase parameterStubFor(
+      FletchFunctionBase function,
+      CallStructure callStructure) {
+    // TODO(ajohnsen): Look in predecessorSystem.
+    var stubs = _newParameterStubs[function];
+    if (stubs == null) return null;
+    return stubs[callStructure];
+  }
+
+  void registerParameterStubFor(
+      FletchFunctionBase function,
+      CallStructure callStructure,
+      FletchFunctionBuilder stub) {
+    var stubs = _newParameterStubs.putIfAbsent(
+        function,
+        () => <CallStructure, FletchFunctionBuilder>{});
+    assert(!stubs.containsKey(callStructure));
+    stubs[callStructure] = stub;
   }
 
   FletchSystem computeSystem(FletchContext context, List<Command> commands) {

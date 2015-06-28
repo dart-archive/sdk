@@ -40,7 +40,8 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionSignature,
     FunctionTypedElement,
     LibraryElement,
-    MemberElement;
+    MemberElement,
+    ParameterElement;
 
 import 'package:compiler/src/elements/modelx.dart' show
     LibraryElementX;
@@ -49,11 +50,12 @@ import 'package:compiler/src/dart_types.dart' show
     DartType,
     InterfaceType;
 
-import 'package:compiler/src/universe/universe.dart'
-    show Selector;
+import 'package:compiler/src/universe/universe.dart' show
+    CallStructure,
+    Selector;
 
-import 'package:compiler/src/util/util.dart'
-    show Spannable;
+import 'package:compiler/src/util/util.dart' show
+    Spannable;
 
 import 'package:compiler/src/elements/modelx.dart' show
     FunctionElementX;
@@ -922,10 +924,92 @@ class FletchBackend extends Backend {
         // libraries.
         if (function.canBeCalledAs(use) &&
             !function.matchesSelector(use)) {
-          function.createParameterMappingFor(use, context);
+          createParameterStubFor(function, use);
         }
       }
     }
+  }
+
+  FletchFunctionBase createParameterStubFor(
+      FletchFunctionBase function,
+      Selector selector) {
+    // TODO(ajohnsen): Assert that function can be called with selector.
+    CallStructure callStructure = selector.callStructure;
+    FletchFunctionBase stub = systemBuilder.parameterStubFor(
+        function,
+        callStructure);
+    if (stub != null) return stub;
+
+    int arity = selector.argumentCount;
+    if (function.isInstanceMember) arity++;
+
+    FletchFunctionBuilder builder = systemBuilder.newFunctionBuilder(
+        FletchFunctionKind.PARAMETER_STUB,
+        arity);
+
+    BytecodeAssembler assembler = builder.assembler;
+
+    void loadInitializerOrNull(ParameterElement parameter) {
+      Expression initializer = parameter.initializer;
+      if (initializer != null) {
+        ConstantExpression expression = context.compileConstant(
+            initializer,
+            parameter.memberContext.resolvedAst.elements,
+            isConst: true);
+        int constId = builder.allocateConstant(
+            context.getConstantValue(expression));
+        assembler.loadConst(constId);
+      } else {
+        assembler.loadLiteralNull();
+      }
+    }
+
+    // Load this.
+    if (function.isInstanceMember) assembler.loadParameter(0);
+
+    int index = function.isInstanceMember ? 1 : 0;
+    function.signature.orderedForEachParameter((ParameterElement parameter) {
+      if (!parameter.isOptional) {
+        assembler.loadParameter(index);
+      } else if (parameter.isNamed) {
+        int parameterIndex = selector.namedArguments.indexOf(parameter.name);
+        if (parameterIndex >= 0) {
+          if (function.isInstanceMember) parameterIndex++;
+          int position = selector.positionalArgumentCount + parameterIndex;
+          assembler.loadParameter(position);
+        } else {
+          loadInitializerOrNull(parameter);
+        }
+      } else {
+        if (index < arity) {
+          assembler.loadParameter(index);
+        } else {
+          loadInitializerOrNull(parameter);
+        }
+      }
+      index++;
+    });
+
+    // TODO(ajohnsen): We have to be extra careful when overriding a
+    // method that takes optional arguments. We really should
+    // enumerate all the stubs in the superclasses and make sure
+    // they're overridden.
+    int constId = builder.allocateConstantFromFunction(function.methodId);
+    assembler
+        ..invokeStatic(constId, index)
+        ..ret()
+        ..methodEnd();
+
+    if (function.isInstanceMember) {
+      int fletchSelector = context.toFletchSelector(selector);
+      FletchClassBuilder classBuilder = systemBuilder.lookupClassBuilder(
+          function.memberOf);
+      classBuilder.addToMethodTable(fletchSelector, builder);
+    }
+
+    systemBuilder.registerParameterStubFor(function, callStructure, builder);
+
+    return builder;
   }
 
   void createTearoffStubs() {
