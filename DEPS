@@ -15,7 +15,7 @@ vars = {
   "github_url": "https://github.com/%s.git",
 
   "gyp_rev": "@1752",
-  "persistent_rev": "@6407f60650dd0a81cf376e8d7d49115f847f24e0",
+  "persistent_rev": "@55daae1a038188c49e36a64e7ef132c4861da3d8",
 
   # When updating this, please remember:
   # 1. to use a commit is on the _temporary_fletch_patches branch.
