@@ -362,10 +362,9 @@ abstract class CodegenVisitor
     int arity;
     if (signature.hasOptionalParameters &&
         signature.optionalParametersAreNamed) {
-      if (FletchBackend.matchesCallStructure(signature, callStructure)) {
+      if (FletchBackend.isExactParameterMatch(signature, callStructure)) {
         methodId = function.methodId;
-      } else if (FletchFunctionBuilder.canBeCalledAs(
-                   signature, callStructure)) {
+      } else if (callStructure.signatureApplies(signature)) {
         // TODO(ajohnsen): Inline parameter stub?
         FletchFunctionBase stub = context.backend.createParameterStubFor(
             function,

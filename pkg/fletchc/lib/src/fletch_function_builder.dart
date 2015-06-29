@@ -109,49 +109,6 @@ class FletchFunctionBuilder extends FletchFunctionBase {
     classConstantValues.addAll(function.classConstantValues);
   }
 
-  // TODO(ajohnsen): Remove and use the one on CallStructure, when it takes a
-  // FunctionSignature directly.
-  // This is raw copy of CallStructure.signaturesApplies.
-  static bool canBeCalledAs(
-      FunctionSignature signature,
-      CallStructure callStructure) {
-    if (callStructure.argumentCount > signature.parameterCount) return false;
-    int requiredParameterCount = signature.requiredParameterCount;
-    int optionalParameterCount = signature.optionalParameterCount;
-    if (callStructure.positionalArgumentCount < requiredParameterCount) {
-      return false;
-    }
-
-    if (!signature.optionalParametersAreNamed) {
-      // We have already checked that the number of arguments are
-      // not greater than the number of signature. Therefore the
-      // number of positional arguments are not greater than the
-      // number of signature.
-      assert(callStructure.positionalArgumentCount <= signature.parameterCount);
-      return callStructure.namedArguments.isEmpty;
-    } else {
-      if (callStructure.positionalArgumentCount > requiredParameterCount) {
-        return false;
-      }
-      assert(callStructure.positionalArgumentCount == requiredParameterCount);
-      if (callStructure.namedArgumentCount > optionalParameterCount) {
-        return false;
-      }
-      Set<String> nameSet = new Set<String>();
-      signature.optionalParameters.forEach((Element element) {
-        nameSet.add(element.name);
-      });
-      for (String name in callStructure.namedArguments) {
-        if (!nameSet.contains(name)) return false;
-        // TODO(5213): By removing from the set we are checking
-        // that we are not passing the name twice. We should have this
-        // check in the resolver also.
-        nameSet.remove(name);
-      }
-      return true;
-    }
-  }
-
   FletchFunction finalizeFunction(
       FletchContext context,
       List<Command> commands) {

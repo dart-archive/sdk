@@ -922,8 +922,8 @@ class FletchBackend extends Backend {
           FunctionSignature signature = function.signature;
           // TODO(ajohnsen): Somehow filter out private selectors of other
           // libraries.
-          if (FletchFunctionBuilder.canBeCalledAs(signature, callStructure) &&
-              !matchesCallStructure(signature, callStructure)) {
+          if (callStructure.signatureApplies(signature) &&
+              !isExactParameterMatch(signature, callStructure)) {
             createParameterStubFor(function, use);
           }
         }
@@ -1373,10 +1373,10 @@ class FletchBackend extends Backend {
     functionBuilder.reuse();
   }
 
-  static bool matchesCallStructure(
+  static bool isExactParameterMatch(
       FunctionSignature signature,
       CallStructure callStructure) {
-    if (!FletchFunctionBuilder.canBeCalledAs(signature, callStructure)) {
+    if (!callStructure.signatureApplies(signature)) {
       return false;
     }
     if (callStructure.namedArguments.length !=
