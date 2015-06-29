@@ -158,8 +158,8 @@ class FletchBackend extends Backend {
   final Map<FieldElement, FletchFunctionBuilder> lazyFieldInitializers =
       <FieldElement, FletchFunctionBuilder>{};
 
-  final Map<FletchFunctionBuilder, FletchClassBuilder> tearoffClasses =
-      <FletchFunctionBuilder, FletchClassBuilder>{};
+  final Map<FletchFunctionBase, FletchClassBuilder> tearoffClasses =
+      <FletchFunctionBase, FletchClassBuilder>{};
 
   final Map<int, int> getters = <int, int>{};
   final Map<int, int> setters = <int, int>{};
@@ -412,7 +412,7 @@ class FletchBackend extends Backend {
    * If [function] is an instance member, the class will have one field, the
    * instance.
    */
-  FletchClassBuilder createTearoffClass(FletchFunctionBuilder function) {
+  FletchClassBuilder createTearoffClass(FletchFunctionBase function) {
     return tearoffClasses.putIfAbsent(function, () {
       FunctionSignature signature = function.signature;
       bool hasThis = function.isInstanceMember;
@@ -563,15 +563,6 @@ class FletchBackend extends Backend {
 
   int functionMethodId(FunctionElement function) {
     return createFletchFunctionBuilder(function).methodId;
-  }
-
-  FletchFunctionBuilder functionBuilderFromTearoffClass(
-      FletchClassBuilder klass) {
-    if (tearoffFunctions == null) {
-      tearoffFunctions = <FletchClassBuilder, FletchFunctionBuilder>{};
-      tearoffClasses.forEach((k, v) => tearoffFunctions[v] = k);
-    }
-    return tearoffFunctions[klass];
   }
 
   ClassDebugInfo createClassDebugInfo(FletchClass klass) {
@@ -920,10 +911,12 @@ class FletchBackend extends Backend {
       Set<Selector> usage = compiler.resolverWorld.invokedNames[name];
       if (usage == null) continue;
       for (Selector use in usage) {
+        CallStructure callStructure = use.callStructure;
+        FunctionSignature signature = function.signature;
         // TODO(ajohnsen): Somehow filter out private selectors of other
         // libraries.
-        if (function.canBeCalledAs(use) &&
-            !function.matchesSelector(use)) {
+        if (FletchFunctionBuilder.canBeCalledAs(signature, callStructure) &&
+            !matchesCallStructure(signature, callStructure)) {
           createParameterStubFor(function, use);
         }
       }
@@ -1255,7 +1248,7 @@ class FletchBackend extends Backend {
     return index;
   }
 
-  FletchFunctionBuilder compileConstructor(
+  FletchFunctionBase compileConstructor(
       ConstructorElement constructor,
       Registry registry) {
     assert(constructor.isDeclaration);
@@ -1361,5 +1354,23 @@ class FletchBackend extends Backend {
     FletchFunctionBuilder functionBuilder = functionBuilders[element];
     if (functionBuilder == null) return;
     functionBuilder.reuse();
+  }
+
+  static bool matchesCallStructure(
+      FunctionSignature signature,
+      CallStructure callStructure) {
+    if (!FletchFunctionBuilder.canBeCalledAs(signature, callStructure)) {
+      return false;
+    }
+    if (callStructure.namedArguments.length !=
+        signature.optionalParameterCount) {
+      return false;
+    }
+    int index = 0;
+    bool match = true;
+    for (var parameter in signature.orderedOptionalParameters) {
+      if (parameter.name != callStructure.namedArguments[index++]) return false;
+    }
+    return true;
   }
 }

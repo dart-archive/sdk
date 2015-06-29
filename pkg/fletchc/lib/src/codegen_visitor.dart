@@ -345,14 +345,14 @@ abstract class CodegenVisitor
     assembler.branchIfTrue(ifTrue);
   }
 
-  FletchFunctionBuilder requireFletchFunctionBuilder(FunctionElement element) {
+  FletchFunctionBase requireFunction(FunctionElement element) {
     registerStaticInvocation(element);
     return context.backend.createFletchFunctionBuilder(element);
   }
 
   void doStaticFunctionInvoke(
       Node node,
-      FletchFunctionBuilder function,
+      FletchFunctionBase function,
       NodeList arguments,
       CallStructure callStructure,
       {bool factoryInvoke: false}) {
@@ -362,11 +362,11 @@ abstract class CodegenVisitor
     int arity;
     if (signature.hasOptionalParameters &&
         signature.optionalParametersAreNamed) {
-      // TODO(ajohnsen): Don't use selectors.
-      if (function.matchesSelector(callStructure.callSelector)) {
+      if (FletchBackend.matchesCallStructure(signature, callStructure)) {
         methodId = function.methodId;
-      } else if (function.canBeCalledAs(callStructure.callSelector)) {
-        // TODO(ajohnsen): Inline parameter mapping?
+      } else if (FletchFunctionBuilder.canBeCalledAs(
+                   signature, callStructure)) {
+        // TODO(ajohnsen): Inline parameter stub?
         FletchFunctionBase stub = context.backend.createParameterStubFor(
             function,
             callStructure.callSelector);
@@ -868,10 +868,9 @@ abstract class CodegenVisitor
       Send node,
       MethodElement function,
       _) {
-    FletchFunctionBuilder functionBuilderTarget = requireFletchFunctionBuilder(
-        function);
-    FletchClassBuilder classBuilder = context.backend.createTearoffClass(
-        functionBuilderTarget);
+    FletchFunctionBase target = requireFunction(function);
+    FletchClassBuilder classBuilder =
+        context.backend.createTearoffClass(target);
     assert(classBuilder.fields == 0);
     int constId = allocateConstantClassInstance(classBuilder.classId);
     assembler.loadConst(constId);
@@ -927,7 +926,7 @@ abstract class CodegenVisitor
       // TODO(ajohnsen): Define a known set of external functions we allow
       // calls to?
     }
-    FletchFunctionBuilder target = requireFletchFunctionBuilder(element);
+    FletchFunctionBase target = requireFunction(element);
     doStaticFunctionInvoke(node, target, arguments, callStructure);
   }
 
@@ -974,10 +973,9 @@ abstract class CodegenVisitor
       MethodElement method,
       _) {
     loadThis();
-    FletchFunctionBuilder functionBuilderTarget = requireFletchFunctionBuilder(
-        method);
-    FletchClassBuilder classBuilder = context.backend.createTearoffClass(
-        functionBuilderTarget);
+    FletchFunctionBase target = requireFunction(method);
+    FletchClassBuilder classBuilder =
+        context.backend.createTearoffClass(target);
     assert(classBuilder.fields == 1);
     int constId = functionBuilder.allocateConstantFromClass(
         classBuilder.classId);
@@ -1909,11 +1907,10 @@ abstract class CodegenVisitor
                        CallStructure callStructure) {
     registerStaticInvocation(constructor);
     registerInstantiatedClass(constructor.enclosingClass);
-    FletchFunctionBuilder functionBuilder = context.backend.compileConstructor(
+    FletchFunctionBase function = context.backend.compileConstructor(
         constructor,
         registry);
-    doStaticFunctionInvoke(
-        node, functionBuilder, arguments, callStructure);
+    doStaticFunctionInvoke(node, function, arguments, callStructure);
   }
 
   void doConstConstructorInvoke(ConstantExpression constant) {
@@ -2004,10 +2001,9 @@ abstract class CodegenVisitor
       return;
     }
     // TODO(ahe): Remove ".declaration" when issue 23135 is fixed.
-    FletchFunctionBuilder functionBuilder =
-        requireFletchFunctionBuilder(constructor.declaration);
+    FletchFunctionBase function = requireFunction(constructor.declaration);
     doStaticFunctionInvoke(
-        node, functionBuilder, arguments, callStructure, factoryInvoke: true);
+        node, function, arguments, callStructure, factoryInvoke: true);
     applyVisitState();
   }
 

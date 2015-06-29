@@ -109,46 +109,39 @@ class FletchFunctionBuilder extends FletchFunctionBase {
     classConstantValues.addAll(function.classConstantValues);
   }
 
-  bool matchesSelector(Selector selector) {
-    if (!canBeCalledAs(selector)) return false;
-    if (selector.namedArguments.length != signature.optionalParameterCount) {
-      return false;
-    }
-    int index = 0;
-    bool match = true;
-    for (var parameter in signature.orderedOptionalParameters) {
-      if (parameter.name != selector.namedArguments[index++]) match = false;
-    }
-    return match;
-  }
-
-  // TODO(ajohnsen): Remove and use the one one Selector, when it takes a
+  // TODO(ajohnsen): Remove and use the one on CallStructure, when it takes a
   // FunctionSignature directly.
-  // This is raw copy of Selector.signaturesApplies.
-  bool canBeCalledAs(Selector selector) {
-    if (selector.argumentCount > signature.parameterCount) return false;
+  // This is raw copy of CallStructure.signaturesApplies.
+  static bool canBeCalledAs(
+      FunctionSignature signature,
+      CallStructure callStructure) {
+    if (callStructure.argumentCount > signature.parameterCount) return false;
     int requiredParameterCount = signature.requiredParameterCount;
     int optionalParameterCount = signature.optionalParameterCount;
-    if (selector.positionalArgumentCount < requiredParameterCount) return false;
+    if (callStructure.positionalArgumentCount < requiredParameterCount) {
+      return false;
+    }
 
     if (!signature.optionalParametersAreNamed) {
       // We have already checked that the number of arguments are
       // not greater than the number of signature. Therefore the
       // number of positional arguments are not greater than the
       // number of signature.
-      assert(selector.positionalArgumentCount <= signature.parameterCount);
-      return selector.namedArguments.isEmpty;
+      assert(callStructure.positionalArgumentCount <= signature.parameterCount);
+      return callStructure.namedArguments.isEmpty;
     } else {
-      if (selector.positionalArgumentCount > requiredParameterCount) {
+      if (callStructure.positionalArgumentCount > requiredParameterCount) {
         return false;
       }
-      assert(selector.positionalArgumentCount == requiredParameterCount);
-      if (selector.namedArgumentCount > optionalParameterCount) return false;
+      assert(callStructure.positionalArgumentCount == requiredParameterCount);
+      if (callStructure.namedArgumentCount > optionalParameterCount) {
+        return false;
+      }
       Set<String> nameSet = new Set<String>();
       signature.optionalParameters.forEach((Element element) {
         nameSet.add(element.name);
       });
-      for (String name in selector.namedArguments) {
+      for (String name in callStructure.namedArguments) {
         if (!nameSet.contains(name)) return false;
         // TODO(5213): By removing from the set we are checking
         // that we are not passing the name twice. We should have this
