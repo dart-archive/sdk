@@ -34,6 +34,9 @@ const EXTRA_DART2JS_OPTIONS = const <String>[
     // TODO(ahe): This doesn't completely disable type inference. Investigate.
     '--disable-type-inference',
     '--output-type=dart',
+    // We want to continue generating code in the case of errors, to support
+    // incremental fixes of erroneous code.
+    '--generate-code-with-compile-time-errors',
 ];
 
 const FLETCH_PATCHES = const <String, String>{

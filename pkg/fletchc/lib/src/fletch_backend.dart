@@ -43,6 +43,9 @@ import 'package:compiler/src/elements/elements.dart' show
     MemberElement,
     ParameterElement;
 
+import 'package:compiler/src/types/types.dart' show
+    TypeMask;
+
 import 'package:compiler/src/elements/modelx.dart' show
     LibraryElementX;
 
@@ -52,7 +55,8 @@ import 'package:compiler/src/dart_types.dart' show
 
 import 'package:compiler/src/universe/universe.dart' show
     CallStructure,
-    Selector;
+    Selector,
+    UniverseSelector;
 
 import 'package:compiler/src/util/util.dart' show
     Spannable;
@@ -351,8 +355,11 @@ class FletchBackend extends Backend {
     // TODO(ajohnsen): Remove? String interpolation does not enqueue '+'.
     // Investigate what else it may enqueue, could be StringBuilder, and then
     // consider using that instead.
-    world.registerDynamicInvocation(new Selector.binaryOperator('+'));
-    world.registerDynamicInvocation(new Selector.call('add', null, 1));
+    var selector = new UniverseSelector(new Selector.binaryOperator('+'), null);
+    world.registerDynamicInvocation(selector);
+
+    selector = new UniverseSelector(new Selector.call('add', null, 1), null);
+    world.registerDynamicInvocation(selector);
 
     alwaysEnqueue.add(coroutineClass.lookupLocalMember('_coroutineStart'));
     alwaysEnqueue.add(compiler.objectClass.implementation.lookupLocalMember(
@@ -907,19 +914,20 @@ class FletchBackend extends Backend {
     for (int i = 0; i < length; i++) {
       FletchFunctionBuilder function = functions[i];
       if (!function.isInstanceMember || function.isAccessor) continue;
-      String name = function.name;
-      Set<Selector> usage = compiler.resolverWorld.invokedNames[name];
-      if (usage == null) continue;
-      for (Selector use in usage) {
-        CallStructure callStructure = use.callStructure;
-        FunctionSignature signature = function.signature;
-        // TODO(ajohnsen): Somehow filter out private selectors of other
-        // libraries.
-        if (FletchFunctionBuilder.canBeCalledAs(signature, callStructure) &&
-            !matchesCallStructure(signature, callStructure)) {
-          createParameterStubFor(function, use);
+      // TODO(ajohnsen/johnniwinther): Expose getter on Universe.
+      compiler.resolverWorld.forEachInvokedName((name, usage) {
+        if (function.name != name) return;
+        for (Selector use in usage.keys) {
+          CallStructure callStructure = use.callStructure;
+          FunctionSignature signature = function.signature;
+          // TODO(ajohnsen): Somehow filter out private selectors of other
+          // libraries.
+          if (FletchFunctionBuilder.canBeCalledAs(signature, callStructure) &&
+              !matchesCallStructure(signature, callStructure)) {
+            createParameterStubFor(function, use);
+          }
         }
-      }
+      });
     }
   }
 
@@ -1011,10 +1019,11 @@ class FletchBackend extends Backend {
     for (int i = 0; i < length; i++) {
       FletchFunctionBuilder function = functions[i];
       if (!function.isInstanceMember || function.isAccessor) continue;
-      String name = function.name;
-      if (compiler.resolverWorld.invokedGetters.containsKey(name)) {
+      // TODO(ajohnsen/johnniwinther): Expose test on Universe.
+      compiler.resolverWorld.forEachInvokedGetter((name, _) {
+        if (function.name != name) return;
         createTearoffGetterForFunction(function);
-      }
+      });
     }
   }
 
@@ -1128,6 +1137,14 @@ class FletchBackend extends Backend {
             functionBuilder.assembler.catchRanges));
 
     commands.add(new PopToMap(MapId.methods, methodId));
+  }
+
+  bool enableCodegenWithErrorsIfSupported(Spannable spannable) {
+    return true;
+  }
+
+  bool enableDeferredLoadingIfSupported(Spannable spannable, Registry registry) {
+    return false;
   }
 
   bool registerDeferredLoading(Spannable node, Registry registry) {

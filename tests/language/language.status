@@ -42,12 +42,16 @@ body_less_constructor_wrong_arg_negative_test: Fail
 built_in_identifier_prefix_test: Fail
 built_in_identifier_test/01: Fail
 call_nonexistent_constructor_test/01: Fail
+call_nonexistent_static_test/10: Fail
 call_type_literal_test/01: Fail
 call_with_no_such_method_test: Fail
 cast_test/01: MissingRuntimeError
 cast_test/10: MissingRuntimeError
 cast_test/12: MissingRuntimeError
 cast_test/14: MissingRuntimeError
+cha_deopt1_test: Fail
+cha_deopt2_test: Fail
+cha_deopt3_test: Fail
 class_cycle2_test/02: MissingCompileTimeError
 class_literal_test/01: Crash
 class_literal_test/02: Crash
@@ -125,7 +129,43 @@ cyclic_typedef_test/08: MissingCompileTimeError
 cyclic_typedef_test/09: MissingCompileTimeError
 cyclic_typedef_test/10: MissingCompileTimeError
 cyclic_typedef_test/11: MissingCompileTimeError
+deferred_closurize_load_library_test: Fail
+deferred_constraints_constants_test/constructor1: MissingCompileTimeError
+deferred_constraints_constants_test/constructor2: MissingCompileTimeError
+deferred_constraints_constants_test/default_argument1: MissingCompileTimeError
+deferred_constraints_constants_test/default_argument2: MissingCompileTimeError
+deferred_constraints_constants_test/metadata1: MissingCompileTimeError
+deferred_constraints_constants_test/metadata2: MissingCompileTimeError
+deferred_constraints_constants_test/metadata3: MissingCompileTimeError
+deferred_constraints_constants_test/none: Fail
+deferred_constraints_constants_test/reference_after_load: Fail
+deferred_constraints_type_annotation_test/as_operation: Fail
+deferred_constraints_type_annotation_test/catch_check: Fail
+deferred_constraints_type_annotation_test/is_check: Fail
+deferred_constraints_type_annotation_test/new: Fail
+deferred_constraints_type_annotation_test/new_before_load: Fail
+deferred_constraints_type_annotation_test/new_generic1: Fail
+deferred_constraints_type_annotation_test/new_generic2: Fail
+deferred_constraints_type_annotation_test/new_generic3: Fail
+deferred_constraints_type_annotation_test/none: Fail
+deferred_constraints_type_annotation_test/static_method: Fail
+deferred_constraints_type_annotation_test/type_annotation1: Fail
+deferred_constraints_type_annotation_test/type_annotation_generic1: Fail
+deferred_constraints_type_annotation_test/type_annotation_generic2: Fail
+deferred_constraints_type_annotation_test/type_annotation_generic3: Fail
+deferred_constraints_type_annotation_test/type_annotation_generic4: Fail
+deferred_constraints_type_annotation_test/type_annotation_non_deferred: Fail
+deferred_constraints_type_annotation_test/type_annotation_null: Fail
+deferred_constraints_type_annotation_test/type_annotation_top_level: Fail
 deferred_in_isolate_test: CompileTimeError
+deferred_inheritance_constraints_test/redirecting_constructor: MissingRuntimeError
+deferred_inlined_test: Fail
+deferred_load_inval_code_test: Fail
+deferred_load_library_wrong_args_test/none: Fail
+deferred_no_such_method_test: Fail
+deferred_not_loaded_check_test: Fail
+deferred_optimized_test: Fail
+deferred_shadow_load_library_test: Fail
 duplicate_implements_test/03: MissingCompileTimeError
 duplicate_implements_test/04: MissingCompileTimeError
 dynamic_prefix_core_test/01: Fail
@@ -381,6 +421,7 @@ super_operator_index7_test: Fail
 super_operator_index8_test: Fail
 super_setter_interceptor_test: Fail
 switch_fallthru_test: Fail
+syntax_test/47: MissingCompileTimeError
 this_test/01: MissingCompileTimeError
 this_test/03: MissingCompileTimeError
 this_test/05: MissingCompileTimeError
@@ -427,55 +468,3 @@ vm/reusable_boxes_test: CompileTimeError
 vm/type_cast_vm_test: Fail
 vm/type_vm_test: Fail
 vm/typed_data_polymorphic_view_test: Fail
-
-# https://github.com/dart-lang/sdk/issues/23672
-cha_deopt1_test: Crash # NoSuchMethodError: method not found: 'getDependencies'
-cha_deopt3_test: Crash # NoSuchMethodError: method not found: 'getDependencies'
-cha_deopt2_test: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_closurize_load_library_test: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_inlined_test: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_load_inval_code_test: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_optimized_test: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_not_loaded_check_test: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_shadow_load_library_test: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_no_such_method_test: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/type_annotation_non_deferred: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/type_annotation_null: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/type_annotation1: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/type_annotation_generic2: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/type_annotation_generic4: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/new_generic3: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/new_before_load: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/type_annotation_generic3: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/type_annotation_generic1: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/new_generic2: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/new_generic1: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/as_operation: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/new: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/static_method: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/type_annotation_top_level: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/catch_check: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/is_check: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_duplicate_prefix1_test/01: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_constants_test/reference1: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_type_annotation_test/none: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_constants_test/default_argument2: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_constants_test/metadata3: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_constants_test/reference2: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_constants_test/default_argument1: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_duplicate_prefix2_test/01: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_duplicate_prefix3_test/01: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_constants_test/metadata1: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_constants_test/constructor1: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_constants_test/reference_after_load: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_constants_test/metadata2: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_constants_test/constructor2: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_constraints_constants_test/none: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_inheritance_constraints_test/extends: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_inheritance_constraints_test/implements: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_inheritance_constraints_test/redirecting_constructor: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_load_library_wrong_args_test/01: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_inheritance_constraints_test/none: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_load_library_wrong_args_test/none: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_inheritance_constraints_test/mixin: Crash # NoSuchMethodError: method not found: 'getDependencies'
-deferred_no_prefix_test/01: Crash # NoSuchMethodError: method not found: 'getDependencies'

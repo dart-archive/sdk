@@ -122,8 +122,16 @@ abstract class _IntBase implements int {
   }
 
   // From int.
-  modPow(exponent, modulus) {
+  int modPow(int exponent, int modulus) {
     throw "modPow(exponent, modulus) isn't implemented";
+  }
+
+  int modInverse(int modulus) {
+    throw "modInverse(modulus) isn't implemented";
+  }
+
+  int gcd(int other) {
+    throw "gcd(other) isn't implemented";
   }
 
   bool get isEven => (this & 1) == 0;

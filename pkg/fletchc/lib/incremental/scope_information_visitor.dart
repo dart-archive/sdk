@@ -24,6 +24,7 @@ import 'package:compiler/src/elements/elements.dart' show
     ElementCategory,
     FunctionElement,
     LibraryElement,
+    MemberElement,
     ScopeContainerElement;
 
 import 'package:compiler/src/dart_types.dart' show
@@ -231,7 +232,7 @@ class ScopeInformationVisitor extends ElementVisitor/* <void> */ {
     if (category == ElementCategory.FUNCTION ||
         category == ElementCategory.VARIABLE ||
         element.isConstructor) {
-      type = element.computeType(compiler);
+      type = (element as MemberElement).type;
     }
     if (name == null) {
       name = element.name;

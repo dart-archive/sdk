@@ -270,15 +270,15 @@ abstract class CodegenVisitor
   }
 
   void registerDynamicInvocation(Selector selector) {
-    registry.registerDynamicInvocation(selector);
+    registry.registerDynamicInvocation(new UniverseSelector(selector, null));
   }
 
   void registerDynamicGetter(Selector selector) {
-    registry.registerDynamicGetter(selector);
+    registry.registerDynamicGetter(new UniverseSelector(selector, null));
   }
 
   void registerDynamicSetter(Selector selector) {
-    registry.registerDynamicSetter(selector);
+    registry.registerDynamicSetter(new UniverseSelector(selector, null));
   }
 
   void registerStaticInvocation(FunctionElement function) {
@@ -2803,7 +2803,7 @@ abstract class CodegenVisitor
   }
 
   void handleStaticSetterGet(
-      SendSet node,
+      Send node,
       FunctionElement setter,
       _) {
     generateUnimplementedError(

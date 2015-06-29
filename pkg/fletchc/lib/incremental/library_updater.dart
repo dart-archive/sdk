@@ -84,7 +84,8 @@ import 'package:compiler/src/elements/modelx.dart' show
     LibraryElementX;
 
 import 'package:compiler/src/universe/universe.dart' show
-    Selector;
+    Selector,
+    UniverseSelector;
 
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue;
@@ -830,10 +831,11 @@ class LibraryUpdater extends FletchFeatures {
     for (Element e in enqueuer.codegen.generatedCode.keys) {
       if (e.isFunction && !e.isConstructor &&
           (e as dynamic).functionSignature.hasOptionalParameters) {
-        for (Selector selector in enqueuer.codegen.newlySeenSelectors) {
+        for (UniverseSelector selector in enqueuer.codegen.newlySeenSelectors) {
           // TODO(ahe): Group selectors by name at this point for improved
           // performance.
-          if (e.isInstanceMember && selector.applies(e, compiler.world)) {
+          if (e.isInstanceMember &&
+              selector.selector.applies(e, compiler.world)) {
             // TODO(ahe): Don't use
             // enqueuer.codegen.newlyEnqueuedElements directly like
             // this, make a copy.
