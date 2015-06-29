@@ -934,8 +934,8 @@ class FletchBackend extends Backend {
   FletchFunctionBase createParameterStubFor(
       FletchFunctionBase function,
       Selector selector) {
-    // TODO(ajohnsen): Assert that function can be called with selector.
     CallStructure callStructure = selector.callStructure;
+    assert(callStructure.signatureApplies(function.signature));
     FletchFunctionBase stub = systemBuilder.parameterStubFor(
         function,
         callStructure);
