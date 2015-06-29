@@ -2134,7 +2134,9 @@ class TestUtils {
     // For Dartium, the configDir by default is mode (as defined by the Chrome
     // build setup). We can detect this because in the dartium checkout, the
     // "output" directory is a sibling of the dart directory instead of a child.
-    var mode = (configuration['mode'] == 'debug') ? 'Debug' : 'Release';
+    var mode = configuration['mode'];
+    assert(mode.length > 1);
+    mode = '${mode.substring(0, 1).toUpperCase()}${mode.substring(1)}';
     var arch = configuration['arch'].toUpperCase();
     var dir = '$mode$arch';
     if (configuration['clang']) {
