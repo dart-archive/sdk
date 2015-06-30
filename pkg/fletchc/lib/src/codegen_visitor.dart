@@ -347,7 +347,7 @@ abstract class CodegenVisitor
 
   FletchFunctionBase requireFunction(FunctionElement element) {
     registerStaticInvocation(element);
-    return context.backend.createFletchFunctionBuilder(element);
+    return context.backend.getFunctionForElement(element);
   }
 
   void doStaticFunctionInvoke(

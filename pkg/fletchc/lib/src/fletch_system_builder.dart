@@ -21,6 +21,9 @@ import 'package:compiler/src/elements/elements.dart' show
 import 'package:compiler/src/universe/universe.dart' show
     CallStructure;
 
+import 'package:persistent/persistent.dart' show
+    PersistentMap;
+
 import 'fletch_constants.dart' show
     FletchClassConstant,
     FletchFunctionConstant,
@@ -42,6 +45,9 @@ class FletchSystemBuilder {
   final Map<FletchFunctionBase, Map<CallStructure, FletchFunctionBuilder>>
       _newParameterStubs =
           <FletchFunctionBase, Map<CallStructure, FletchFunctionBuilder>>{};
+
+  final Map<Element, FletchFunctionBuilder> _buildersByElement =
+      <Element, FletchFunctionBuilder>{};
 
   FletchSystemBuilder(this.predecessorSystem);
 
@@ -66,6 +72,7 @@ class FletchSystemBuilder {
         signature: signature,
         memberOf: memberOf);
     _newFunctions.add(builder);
+    if (element != null) _buildersByElement[element] = builder;
     return builder;
   }
 
@@ -94,6 +101,13 @@ class FletchSystemBuilder {
 
   FletchFunctionBuilder lookupFunctionBuilder(int functionId) {
     return _newFunctions[functionId - predecessorSystem.functions.length];
+  }
+
+  FletchFunctionBase lookupFunctionByElement(Element element) {
+    FletchFunction function =
+        predecessorSystem.lookupFunctionByElement(element);
+    if (function != null) return function;
+    return _buildersByElement[element];
   }
 
   List<FletchFunctionBuilder> getNewFunctions() => _newFunctions;
@@ -290,9 +304,9 @@ class FletchSystemBuilder {
     if (predecessorSystem.functions.isNotEmpty) {
       for (FletchFunctionBuilder function in _newFunctions) {
         if (function.element == context.compiler.mainFunction) {
-          FletchFunctionBuilder callMain =
-              context.backend.functionBuilders[
-                  context.backend.fletchSystemLibrary.findLocal('callMain')];
+          FletchFunctionBase callMain =
+              lookupFunctionByElement(
+                  context.backend.fletchSystemLibrary.findLocal('callMain'));
           commands.add(new PushFromMap(MapId.methods, callMain.methodId));
           commands.add(new PushFromMap(MapId.methods, function.methodId));
           commands.add(new ChangeMethodLiteral(0));
@@ -309,6 +323,15 @@ class FletchSystemBuilder {
     classes = new List<FletchClass>.from(predecessorSystem.classes)
         ..addAll(classes);
 
-    return new FletchSystem(functions, classes, constants);
+    PersistentMap<Element, FletchFunction> functionsByElement =
+        predecessorSystem.functionsByElement;
+    _buildersByElement.forEach((element, builder) {
+      functionsByElement = functionsByElement.insert(
+          element,
+          // TODO(ajohnsen): Will not work once we start removing functions.
+          functions[builder.methodId]);
+    });
+
+    return new FletchSystem(functions, classes, constants, functionsByElement);
   }
 }

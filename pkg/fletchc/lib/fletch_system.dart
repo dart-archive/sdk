@@ -9,6 +9,9 @@ import 'package:compiler/src/elements/elements.dart' show
     Element,
     FunctionSignature;
 
+import 'package:persistent/persistent.dart' show
+    PersistentMap;
+
 import 'bytecodes.dart';
 import 'commands.dart';
 
@@ -134,11 +137,20 @@ class FletchSystem {
   final List<FletchClass> classes;
   // TODO(ajohnsen): Should it be a map?
   final List<FletchConstant> constants;
+  final PersistentMap<Element, FletchFunction> functionsByElement;
 
-  const FletchSystem(this.functions, this.classes, this.constants);
+  const FletchSystem(
+      this.functions,
+      this.classes,
+      this.constants,
+      this.functionsByElement);
 
   FletchFunction lookupFunction(int functionId) {
     return functions[functionId];
+  }
+
+  FletchFunction lookupFunctionByElement(Element element) {
+    return functionsByElement[element];
   }
 
   FletchClass lookupClass(int classId) {

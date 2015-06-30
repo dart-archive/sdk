@@ -90,6 +90,9 @@ import 'package:compiler/src/resolution/resolution.dart' show
 import 'package:compiler/src/library_loader.dart' show
     LibraryLoader;
 
+import 'package:persistent/persistent.dart' show
+    PersistentMap;
+
 import 'fletch_constants.dart' show
     FletchClassConstant,
     FletchFunctionConstant,
@@ -124,7 +127,10 @@ import '../commands.dart';
 import '../fletch_system.dart';
 
 const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
-    const <FletchFunction>[], const <FletchClass>[], const <FletchConstant>[]);
+    const <FletchFunction>[],
+    const <FletchClass>[],
+    const <FletchConstant>[],
+    const PersistentMap<Element, FletchFunction>());
 
 class FletchBackend extends Backend {
   static const String growableListName = '_GrowableList';
@@ -218,6 +224,7 @@ class FletchBackend extends Backend {
 
   void newSystemBuilder(FletchSystem predecessorSystem) {
     systemBuilder = new FletchSystemBuilder(predecessorSystem);
+    functionBuilders.clear();
   }
 
   FletchClassBuilder registerClassElement(ClassElement element) {
@@ -533,6 +540,16 @@ class FletchBackend extends Backend {
 
       return tearoffClass;
     });
+  }
+
+  FletchFunctionBase getFunctionForElement(FunctionElement element) {
+    assert(element.memberContext == element);
+
+    FletchFunctionBase function =
+        systemBuilder.lookupFunctionByElement(element);
+    if (function != null) return function;
+
+    return createFletchFunctionBuilder(element);
   }
 
   FletchFunctionBuilder createFletchFunctionBuilder(FunctionElement function) {
