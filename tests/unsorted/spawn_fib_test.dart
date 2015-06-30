@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'dart:fletch';
+
 int fib(n) {
   if (n <= 2) return n;
   return fib(n - 1) + fib(n - 2);

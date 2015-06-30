@@ -5,6 +5,7 @@
 library system;
 
 import 'dart:ffi';
+import 'dart:fletch';
 import 'dart:io';
 import 'dart:typed_data';
 

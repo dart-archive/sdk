@@ -6,6 +6,7 @@ library dart.system;
 
 import 'dart:_internal';
 import 'dart:collection';
+import 'dart:fletch';
 import 'dart:math';
 
 part 'list.dart';

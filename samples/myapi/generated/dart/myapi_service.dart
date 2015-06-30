@@ -6,6 +6,7 @@
 
 library myapi_service;
 
+import "dart:fletch";
 import "dart:ffi";
 import "dart:service" as service;
 

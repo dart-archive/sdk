@@ -6,6 +6,7 @@
 
 library todomvc_service;
 
+import "dart:fletch";
 import "dart:ffi";
 import "dart:service" as service;
 import "package:service/struct.dart";

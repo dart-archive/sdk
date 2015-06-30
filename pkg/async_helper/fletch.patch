@@ -1,9 +1,12 @@
-diff --git a/pkg/async_helper/lib/async_helper.dart b/pkg/async_helper/lib/async_helper.dart
-index 37496bc..24309c0 100644
---- a/pkg/async_helper/lib/async_helper.dart
+diff --git a/pkg/async_helper/../../../dart/pkg/async_helper/lib/async_helper.dart b/pkg/async_helper/lib/async_helper.dart
+index 37496bc..f2239cb 100644
+--- a/pkg/async_helper/../../../dart/pkg/async_helper/lib/async_helper.dart
 +++ b/pkg/async_helper/lib/async_helper.dart
-@@ -30,13 +30,19 @@ library async_helper;
+@@ -28,15 +28,22 @@ library async_helper;
+ // It would be nice if we could use a different mechanism for different
+ // runtimes.
  import 'dart:isolate';
++import 'dart:fletch';
  
  bool _initialized = false;
 -ReceivePort _port = null;
@@ -23,7 +26,7 @@ index 37496bc..24309c0 100644
  /// Call this method before an asynchronous test is created.
  void asyncStart() {
    if (_initialized && _asyncLevel == 0) {
-@@ -46,7 +52,9 @@ void asyncStart() {
+@@ -46,7 +53,9 @@ void asyncStart() {
    if (!_initialized) {
      print('unittest-suite-wait-for-done');
      _initialized = true;
@@ -34,7 +37,7 @@ index 37496bc..24309c0 100644
    }
    _asyncLevel++;
  }
-@@ -63,7 +71,7 @@ void asyncEnd() {
+@@ -63,7 +72,7 @@ void asyncEnd() {
    }
    _asyncLevel--;
    if (_asyncLevel == 0) {

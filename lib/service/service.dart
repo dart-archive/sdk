@@ -8,6 +8,7 @@
 library dart.service;
 
 import 'dart:_fletch_system' as fletch;
+import 'dart:fletch';
 
 // TODO(ajohnsen): Rename file.
 

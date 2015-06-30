@@ -4,6 +4,8 @@
 
 library isolate;
 
+import 'dart:fletch';
+
 Function bind(Function fn, argument) {
   return new _BoundFunction(fn, argument);
 }

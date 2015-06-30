@@ -4,9 +4,10 @@
 //
 // FletchOptions=-Xexpose-gc
 
-import 'package:expect/expect.dart';
-
+import 'dart:fletch';
 import 'dart:io';
+
+import 'package:expect/expect.dart';
 
 main(arguments) {
   var forceGC = arguments.length == 1 ? arguments[0] : null;

@@ -76,7 +76,7 @@ class FletchContext {
 
   Map<String, FletchNativeDescriptor> nativeDescriptors;
 
-  Map<String, String> names;
+  Set<String> names = new Set<String>();
 
   Map<FieldElement, int> staticIndices = <FieldElement, int>{};
 
@@ -92,13 +92,14 @@ class FletchContext {
   void setNames(Map<String, String> names) {
     // Generate symbols of the values.
     for (String name in names.values) {
+      this.names.add(name);
       getSymbolId(name);
     }
-    this.names = names;
   }
 
   String mangleName(String name, LibraryElement library) {
     if (!isPrivateName(name)) return name;
+    if (library.isPlatformLibrary && names.contains(name)) return name;
     return name + getLibraryTag(library);
   }
 
@@ -118,14 +119,14 @@ class FletchContext {
 
   String getSymbolFromSelector(Selector selector) {
     return selectorToSymbol.putIfAbsent(selector, () {
-        StringBuffer buffer = new StringBuffer();
-        buffer.write(mangleName(selector.name, selector.library));
-        for (String namedArgument in selector.namedArguments) {
-          buffer.write(":");
-          buffer.write(namedArgument);
-        }
-        return buffer.toString();
-      });
+      StringBuffer buffer = new StringBuffer();
+      buffer.write(mangleName(selector.name, selector.library));
+      for (String namedArgument in selector.namedArguments) {
+        buffer.write(":");
+        buffer.write(namedArgument);
+      }
+      return buffer.toString();
+    });
   }
 
   void writeNamedArguments(StringBuffer buffer, FunctionSignature signature) {

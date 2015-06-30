@@ -28,6 +28,7 @@ library async_helper;
 // It would be nice if we could use a different mechanism for different
 // runtimes.
 import 'dart:isolate';
+import 'dart:fletch';
 
 bool _initialized = false;
 Port _port = null;

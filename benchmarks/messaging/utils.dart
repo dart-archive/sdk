@@ -4,6 +4,8 @@
 
 library messaging.utils;
 
+import 'dart:fletch';
+
 const int DEFAULT_MESSAGES = 1000;
 
 void channelResponder(Channel output) {

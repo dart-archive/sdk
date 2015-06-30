@@ -8,6 +8,7 @@
 library dart.ffi;
 
 import 'dart:_fletch_system' as fletch;
+import 'dart:fletch';
 
 class Foreign {
   static const int UNKNOWN = 0;

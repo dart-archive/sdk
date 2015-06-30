@@ -5,6 +5,8 @@
 // Test that fibers that are blocked in a receive on a channel wake up
 // when there are messages on that channel.
 
+import 'dart:fletch';
+
 main() {
   var channel = new Channel();
   Process.spawn(worker, new Port(channel));

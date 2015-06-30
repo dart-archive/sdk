@@ -64,6 +64,12 @@ const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
       documented: false,
       platforms: FLETCH_PLATFORM),
 
+  "fletch": const LibraryInfo(
+      "fletch/fletch.dart",
+      category: "Shared",
+      documented: false,
+      platforms: FLETCH_PLATFORM),
+
   "io": const LibraryInfo(
       "io/io.dart",
       category: "Shared",

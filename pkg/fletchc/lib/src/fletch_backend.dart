@@ -178,6 +178,7 @@ class FletchBackend extends Backend {
   LibraryElement collectionLibrary;
   LibraryElement mathLibrary;
   LibraryElement asyncLibrary;
+  LibraryElement fletchLibrary;
 
   FunctionElement fletchSystemEntry;
 
@@ -271,8 +272,9 @@ class FletchBackend extends Backend {
       CodegenRegistry registry) {
     compiler.patchAnnotationClass = patchAnnotationClass;
 
-    FunctionElement findHelper(String name) {
-      Element helper = fletchSystemLibrary.findLocal(name);
+    FunctionElement findHelper(String name, [LibraryElement library]) {
+      if (library == null) library = fletchSystemLibrary;
+      Element helper = library.findLocal(name);
       // TODO(ahe): Make it cleaner.
       if (helper.isAbstractField) {
         AbstractFieldElement abstractField = helper;
@@ -286,7 +288,7 @@ class FletchBackend extends Backend {
       return helper;
     }
 
-    FunctionElement findExternal(String name) {
+    FunctionElement findExternal(String name, [LibraryElement library]) {
       FunctionElement helper = findHelper(name);
       externals.add(helper);
       return helper;
@@ -298,7 +300,8 @@ class FletchBackend extends Backend {
     }
     fletchExternalInvokeMain = findExternal('invokeMain');
     fletchExternalYield = findExternal('yield');
-    fletchExternalCoroutineChange = findExternal('coroutineChange');
+    fletchExternalCoroutineChange =
+        findExternal('coroutineChange', fletchLibrary);
     fletchExternalNativeError = findExternal('nativeError');
     fletchUnresolved = findExternal('unresolved');
     world.registerStaticUse(fletchUnresolved);
@@ -337,8 +340,8 @@ class FletchBackend extends Backend {
     loadClass("_DoubleImpl", compiler.coreLibrary, true);
     loadClass("Null", compiler.coreLibrary, true);
     loadClass("bool", compiler.coreLibrary, true);
-    coroutineClass = loadClass("Coroutine", compiler.coreLibrary, true).element;
-    loadClass("Port", compiler.coreLibrary, true);
+    coroutineClass = loadClass("Coroutine", fletchLibrary, true).element;
+    loadClass("Port", fletchLibrary, true);
     loadClass("Foreign", fletchFFILibrary, true);
 
     growableListClass =
@@ -1156,18 +1159,6 @@ class FletchBackend extends Backend {
   }
 
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
-    // TODO(ajohnsen): Find a better way to do this.
-    // Inject non-patch members in a patch library, into the declaration
-    // library.
-    if (library.isPatch && library.declaration == compiler.coreLibrary) {
-      library.entryCompilationUnit.forEachLocalMember((element) {
-        if (!element.isPatch && !isPrivateName(element.name)) {
-          LibraryElementX declaration = library.declaration;
-          declaration.addToScope(element, compiler);
-        }
-      });
-    }
-
     if (Uri.parse('dart:_fletch_system') == library.canonicalUri) {
       fletchSystemLibrary = library;
     } else if (Uri.parse('dart:ffi') == library.canonicalUri) {
@@ -1180,6 +1171,8 @@ class FletchBackend extends Backend {
       mathLibrary = library;
     } else if (Uri.parse('dart:async') == library.canonicalUri) {
       asyncLibrary = library;
+    } else if (Uri.parse('dart:fletch') == library.canonicalUri) {
+      fletchLibrary = library;
     }
 
     if (library.isPlatformLibrary && !library.isPatched) {
@@ -1218,6 +1211,8 @@ class FletchBackend extends Backend {
     } else if (element.library == mathLibrary) {
       // Nothing needed for now.
     } else if (element.library == asyncLibrary) {
+      // Nothing needed for now.
+    } else if (element.library == fletchLibrary) {
       // Nothing needed for now.
     } else if (element.library == fletchFFILibrary) {
       // Nothing needed for now.
