@@ -398,11 +398,14 @@ NATIVE(ForeignGet##suffix) {                                             \
                                                                          \
 NATIVE(ForeignSet##suffix) {                                             \
   Object* value = arguments[1];                                          \
-  if (!value->IsSmi() && !value->IsLargeInteger()) {                     \
+  type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0]));  \
+  if (value->IsSmi()) {                                                  \
+    *address = Smi::cast(value)->value();                                \
+  } else if (value->IsLargeInteger()) {                                  \
+    *address = LargeInteger::cast(value)->value();                       \
+  } else {                                                               \
     return Failure::wrong_argument_type();                               \
   }                                                                      \
-  type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0]));  \
-  *address = AsForeignWord(value);                                       \
   return value;                                                          \
 }
 
