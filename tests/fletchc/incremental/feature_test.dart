@@ -2273,26 +2273,16 @@ compileAndRun(EncodedResult encodedResult) async {
       // Wait for process termination.
       Command response = await session.runCommand(continueCommand);
       if (response is! commands_lib.ProcessTerminated) {
-        await session.kill();
+        // TODO(ahe): It's probably an instance of
+        // commands_lib.UncaughtException, and if so, we should try to print
+        // the stack trace.
         throw new StateError(
             "Expected ProcessTerminated, but got: $response");
       }
     }
     await session.runCommand(const commands_lib.SessionEnd());
     await session.shutdown();
-  }).catchError((e, s) async {
-    // If something went wrong, we'll kill the session forcefully.
-    session.addError(e, s);
-
-    // We either failed before we got to start a process or there
-    // was an uncaught exception in the program. If there was an
-    // uncaught exception the VM is intentionally hanging to give
-    // the debugger a chance to inspect the state at the point of
-    // the throw. Therefore, we explicitly have to kill the VM
-    // process.
-    await session.kill();
-    session.process.kill();
-  });
+  }).catchError(session.handleError);
 
   // TODO(ahe/kustermann/ager): We really need to distinguish VM crashes from
   // normal test failures. This information is based on exitCode and we need
@@ -2591,8 +2581,7 @@ class TestSession extends Session {
         stderrController.stream,
         futures, exitCodeCompleter.future);
 
-    recordFuture("exitCode", process.exitCode.then((int exitCode) async {
-      await session.shutdown();
+    recordFuture("exitCode", process.exitCode.then((int exitCode) {
       print("VM exited with exit code: $exitCode.");
       exitCodeCompleter.complete(exitCode);
     }));
@@ -2602,7 +2591,21 @@ class TestSession extends Session {
 
   Future handleError(error, StackTrace stackTrace) {
     addError(error, stackTrace);
+
+    // We either failed before we got to start a process or there was an
+    // uncaught exception in the program. If there was an uncaught exception
+    // the VM is intentionally hanging to give the debugger a chance to inspect
+    // the state at the point of the throw. Therefore, we explicitly have to
+    // kill the VM process. Notice, it is important that we kill the VM before
+    // we close the socket to it. Otherwise, the VM may write a message on
+    // stderr claiming that the compiler died (due to the socket getting
+    // closed).
     process.kill();
+
+    // After the process has been killed, we need to close the socket and
+    // discard any commands that may have arrived.
+    recordFuture(process.exitCode.then((_) => kill()));
+
     return waitForCompletion();
   }
 

@@ -101,24 +101,16 @@ class FletchVmSession {
           'already closed.');
     }
 
-    try {
-      if (await _incomingCommands.moveNext()) {
-        return _incomingCommands.current;
-      } else {
-        _drainedIncomingCommands = true;
+    _drainedIncomingCommands =
+        !await _incomingCommands.moveNext().catchError((error) {
+          _drainedIncomingCommands = true;
+          throw error;
+        });
 
-        if (!force) {
-          return null;
-        } else {
-          return new Future.error(new StateError(
-              'Expected response from fletch-vm but got EOF.'));
-        }
-      }
-    } catch (e) {
-      _drainedIncomingCommands = true;
-      return new Future.error(new StateError(
-          'Expected response from fletch-vm but got incoming socket error.'));
+    if (_drainedIncomingCommands && force) {
+      throw new StateError('Expected response from fletch-vm but got EOF.');
     }
+
     return _incomingCommands.current;
   }
 
