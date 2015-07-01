@@ -5,7 +5,7 @@
 library http;
 
 import 'dart:collection';
-import 'dart:io';
+import 'dart:fletch.io';
 import 'dart:typed_data';
 
 ByteBuffer stringToByteBuffer(String str) {

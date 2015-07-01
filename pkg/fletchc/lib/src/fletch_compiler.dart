@@ -58,7 +58,7 @@ const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
       documented: false,
       platforms: FLETCH_PLATFORM),
 
-  "ffi": const LibraryInfo(
+  "fletch.ffi": const LibraryInfo(
       "ffi/ffi.dart",
       category: "Shared",
       documented: false,
@@ -70,7 +70,7 @@ const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
       documented: false,
       platforms: FLETCH_PLATFORM),
 
-  "io": const LibraryInfo(
+  "fletch.io": const LibraryInfo(
       "io/io.dart",
       category: "Shared",
       documented: false,

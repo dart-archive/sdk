@@ -1178,7 +1178,7 @@ class FletchBackend extends Backend {
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
     if (Uri.parse('dart:_fletch_system') == library.canonicalUri) {
       fletchSystemLibrary = library;
-    } else if (Uri.parse('dart:ffi') == library.canonicalUri) {
+    } else if (Uri.parse('dart:fletch.ffi') == library.canonicalUri) {
       fletchFFILibrary = library;
     } else if (Uri.parse('dart:system') == library.canonicalUri) {
       fletchIOSystemLibrary = library;

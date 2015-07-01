@@ -7,7 +7,7 @@
 library conformance_service;
 
 import "dart:fletch";
-import "dart:ffi";
+import "dart:fletch.ffi";
 import "dart:service" as service;
 import "package:service/struct.dart";
 
@@ -293,19 +293,19 @@ class TableFlipBuilder extends Builder {
   }
 }
 
-class _uint16List extends ListReader implements List<int> {
+class _uint16List extends ListReader<int> implements List<int> {
   int operator[](int index) => segment.memory.getUint16(offset + index * 2);
 }
 
-class _uint16BuilderList extends ListBuilder implements List<int> {
+class _uint16BuilderList extends ListBuilder<int> implements List<int> {
   int operator[](int index) => segment.memory.getUint16(offset + index * 2);
   void operator[]=(int index, int value) { segment.memory.setUint16(offset + index * 2, value); }
 }
 
-class _PersonList extends ListReader implements List<Person> {
+class _PersonList extends ListReader<Person> implements List<Person> {
   Person operator[](int index) => readListElement(new Person(), index, 24);
 }
 
-class _PersonBuilderList extends ListBuilder implements List<PersonBuilder> {
+class _PersonBuilderList extends ListBuilder<PersonBuilder> implements List<PersonBuilder> {
   PersonBuilder operator[](int index) => readListElement(new PersonBuilder(), index, 24);
 }

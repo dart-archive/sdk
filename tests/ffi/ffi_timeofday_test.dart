@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:ffi';
-import 'dart:io' as io;
+import 'dart:fletch.ffi';
+import 'dart:fletch.io' as io;
 import "package:expect/expect.dart";
 
 abstract class Timeval implements Foreign {

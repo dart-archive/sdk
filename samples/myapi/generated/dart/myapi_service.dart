@@ -7,7 +7,7 @@
 library myapi_service;
 
 import "dart:fletch";
-import "dart:ffi";
+import "dart:fletch.ffi";
 import "dart:service" as service;
 
 final Channel _channel = new Channel();

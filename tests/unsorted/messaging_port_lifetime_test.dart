@@ -5,7 +5,7 @@
 // FletchOptions=-Xexpose-gc
 
 import 'dart:fletch';
-import 'dart:io';
+import 'dart:fletch.io';
 
 import 'package:expect/expect.dart';
 

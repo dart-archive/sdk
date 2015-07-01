@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// The dart:ffi library is a low-level 'foreign function interface'
+// The dart:fletch.ffi library is a low-level 'foreign function interface'
 // library that allows Dart code to call arbitrary native platform
 // code defined outside the VM.
-library dart.ffi;
+library dart.fletch.ffi;
 
 import 'dart:_fletch_system' as fletch;
 import 'dart:fletch';

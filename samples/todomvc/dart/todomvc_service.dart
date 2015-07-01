@@ -7,7 +7,7 @@
 library todomvc_service;
 
 import "dart:fletch";
-import "dart:ffi";
+import "dart:fletch.ffi";
 import "dart:service" as service;
 import "package:service/struct.dart";
 
@@ -219,28 +219,28 @@ class BoxedStringBuilder extends Builder {
   }
 }
 
-class _uint16List extends ListReader implements List<int> {
+class _uint16List extends ListReader<int> implements List<int> {
   int operator[](int index) => segment.memory.getUint16(offset + index * 2);
 }
 
-class _uint16BuilderList extends ListBuilder implements List<int> {
+class _uint16BuilderList extends ListBuilder<int> implements List<int> {
   int operator[](int index) => segment.memory.getUint16(offset + index * 2);
   void operator[]=(int index, int value) { segment.memory.setUint16(offset + index * 2, value); }
 }
 
-class _uint8List extends ListReader implements List<int> {
+class _uint8List extends ListReader<int> implements List<int> {
   int operator[](int index) => segment.memory.getUint8(offset + index * 1);
 }
 
-class _uint8BuilderList extends ListBuilder implements List<int> {
+class _uint8BuilderList extends ListBuilder<int> implements List<int> {
   int operator[](int index) => segment.memory.getUint8(offset + index * 1);
   void operator[]=(int index, int value) { segment.memory.setUint8(offset + index * 1, value); }
 }
 
-class _PatchList extends ListReader implements List<Patch> {
+class _PatchList extends ListReader<Patch> implements List<Patch> {
   Patch operator[](int index) => readListElement(new Patch(), index, 32);
 }
 
-class _PatchBuilderList extends ListBuilder implements List<PatchBuilder> {
+class _PatchBuilderList extends ListBuilder<PatchBuilder> implements List<PatchBuilder> {
   PatchBuilder operator[](int index) => readListElement(new PatchBuilder(), index, 32);
 }

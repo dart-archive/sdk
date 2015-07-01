@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
-import 'dart:io' as io;
+import 'dart:fletch.io' as io;
 import 'package:expect/expect.dart';
 
 main() {

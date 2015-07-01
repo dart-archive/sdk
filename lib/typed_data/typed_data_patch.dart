@@ -4,7 +4,7 @@
 
 import 'dart:_fletch_system' as fletch;
 import 'dart:collection';
-import 'dart:ffi';
+import 'dart:fletch.ffi';
 
 const patch = "patch";
 

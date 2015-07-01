@@ -7,7 +7,7 @@
 library performance_service;
 
 import "dart:fletch";
-import "dart:ffi";
+import "dart:fletch.ffi";
 import "dart:service" as service;
 import "package:service/struct.dart";
 
@@ -83,10 +83,10 @@ class TreeNodeBuilder extends Builder {
   }
 }
 
-class _TreeNodeList extends ListReader implements List<TreeNode> {
+class _TreeNodeList extends ListReader<TreeNode> implements List<TreeNode> {
   TreeNode operator[](int index) => readListElement(new TreeNode(), index, 8);
 }
 
-class _TreeNodeBuilderList extends ListBuilder implements List<TreeNodeBuilder> {
+class _TreeNodeBuilderList extends ListBuilder<TreeNodeBuilder> implements List<TreeNodeBuilder> {
   TreeNodeBuilder operator[](int index) => readListElement(new TreeNodeBuilder(), index, 8);
 }

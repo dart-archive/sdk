@@ -4,7 +4,7 @@
 
 import 'dart:_fletch_system' as fletch;
 import 'dart:fletch';
-import 'dart:io';
+import 'dart:fletch.io';
 import 'dart:math';
 
 const patch = "patch";

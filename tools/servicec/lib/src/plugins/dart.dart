@@ -92,7 +92,7 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln();
 
     writeln('import "dart:fletch";');
-    writeln('import "dart:ffi";');
+    writeln('import "dart:fletch.ffi";');
     writeln('import "dart:service" as service;');
     if (node.structs.isNotEmpty) {
       writeln('import "package:service/struct.dart";');
@@ -116,8 +116,9 @@ class _DartVisitor extends CodeGenerationVisitor {
         String offset = 'offset + index * $elementSize';
 
         writeln();
-        write('class _${name}List extends ListReader '
-              'implements List<');
+        write('class _${name}List extends ListReader<');
+        writeType(listType);
+        write('> implements List<');
         writeType(listType);
         writeln('> {');
         write('  ');
@@ -126,8 +127,9 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeln('}');
 
         writeln();
-        write('class _${name}BuilderList extends ListBuilder '
-              'implements List<');
+        write('class _${name}BuilderList extends ListBuilder<');
+        writeType(listType);
+        write('> implements List<');
         writeType(listType);
         writeln('> {');
         write('  ');
@@ -143,15 +145,15 @@ class _DartVisitor extends CodeGenerationVisitor {
         int elementSize = elementLayout.size;
 
         writeln();
-        writeln('class _${name}List extends ListReader '
-                'implements List<$name> {');
+        write('class _${name}List extends ListReader<$name>');
+        writeln(' implements List<$name> {');
         writeln('  $name operator[](int index) => '
                 'readListElement(new $name(), index, $elementSize);');
         writeln('}');
 
         writeln();
-        writeln('class _${name}BuilderList extends ListBuilder '
-                'implements List<${name}Builder> {');
+        write('class _${name}BuilderList extends ListBuilder<${name}Builder>');
+        writeln(' implements List<${name}Builder> {');
         writeln('  ${name}Builder operator[](int index) => '
                 'readListElement(new ${name}Builder(), index, $elementSize);');
         writeln('}');

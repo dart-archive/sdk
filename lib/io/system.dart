@@ -4,9 +4,9 @@
 
 library system;
 
-import 'dart:ffi';
 import 'dart:fletch';
-import 'dart:io';
+import 'dart:fletch.ffi';
+import 'dart:fletch.io';
 import 'dart:typed_data';
 
 import 'dart:_fletch_system' as fletch;

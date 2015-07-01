@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
-import 'dart:io';
+import 'dart:fletch.io';
 import 'dart:typed_data';
 import '../BenchmarkBase.dart';
 

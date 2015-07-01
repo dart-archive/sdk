@@ -5,7 +5,7 @@
 // FletchOptions=-Xgc-on-delete
 
 import 'dart:fletch';
-import 'dart:io';
+import 'dart:fletch.io';
 
 import 'package:expect/expect.dart';
 

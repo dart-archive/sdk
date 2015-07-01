@@ -7,7 +7,7 @@
 library buildbot_service;
 
 import "dart:fletch";
-import "dart:ffi";
+import "dart:fletch.ffi";
 import "dart:service" as service;
 import "package:service/struct.dart";
 

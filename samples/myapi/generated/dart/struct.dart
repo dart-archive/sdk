@@ -4,7 +4,7 @@
 
 library struct;
 
-import "dart:ffi";
+import "dart:fletch.ffi";
 
 Reader getRoot(Reader reader, Foreign request) {
   int segments = request.getInt32(40);
