@@ -133,28 +133,42 @@ class FletchFunction extends FletchFunctionBase {
 }
 
 class FletchSystem {
-  final List<FletchFunction> functions;
-  final List<FletchClass> classes;
-  // TODO(ajohnsen): Should it be a map?
-  final List<FletchConstant> constants;
+  // functionsByElement is a subset of functionsById: Some functions does not
+  // have an element reference.
+  final PersistentMap<int, FletchFunction> functionsById;
   final PersistentMap<Element, FletchFunction> functionsByElement;
 
-  const FletchSystem(
-      this.functions,
-      this.classes,
-      this.constants,
-      this.functionsByElement);
+  final List<FletchClass> classes;
 
-  FletchFunction lookupFunction(int functionId) {
-    return functions[functionId];
+  // TODO(ajohnsen): Should it be a map?
+  final List<FletchConstant> constants;
+
+  const FletchSystem(
+      this.functionsById,
+      this.functionsByElement,
+      this.classes,
+      this.constants);
+
+  bool get isEmpty => functionsById.isEmpty;
+
+  FletchFunction lookupFunctionById(int functionId) {
+    return functionsById[functionId];
   }
 
   FletchFunction lookupFunctionByElement(Element element) {
     return functionsByElement[element];
   }
 
+  Iterable<FletchFunction> functionsWhere(bool f(FletchFunction function)) {
+    return functionsById.values.where(f);
+  }
+
   FletchClass lookupClass(int classId) {
     return classes[classId];
+  }
+
+  int computeMaxFunctionId() {
+    return functionsById.keys.fold(0, (x, y) => x > y ? x : y);
   }
 }
 

@@ -384,6 +384,15 @@ class PushFromMap extends MapAccess {
   String valuesToString() => "$map, $index";
 }
 
+class RemoveFromMap extends MapAccess {
+  const RemoveFromMap(MapId map, int index)
+      : super(map, index, CommandCode.RemoveFromMap);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "$map, $index";
+}
+
 class Drop extends Command {
   final int value;
 
@@ -1132,6 +1141,7 @@ enum CommandCode {
   DeleteMap,
   PushFromMap,
   PopToMap,
+  RemoveFromMap,
 
   Dup,
   Drop,

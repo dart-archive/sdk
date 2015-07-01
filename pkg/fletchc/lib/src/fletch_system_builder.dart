@@ -38,6 +38,7 @@ import '../commands.dart';
 
 class FletchSystemBuilder {
   final FletchSystem predecessorSystem;
+  final int functionIdStart;
 
   final List<FletchFunctionBuilder> _newFunctions = <FletchFunctionBuilder>[];
   final List<FletchClassBuilder> _newClasses = <FletchClassBuilder>[];
@@ -46,10 +47,14 @@ class FletchSystemBuilder {
       _newParameterStubs =
           <FletchFunctionBase, Map<CallStructure, FletchFunctionBuilder>>{};
 
+  final List<FletchFunction> _removedFunctions = <FletchFunction>[];
+
   final Map<Element, FletchFunctionBuilder> _buildersByElement =
       <Element, FletchFunctionBuilder>{};
 
-  FletchSystemBuilder(this.predecessorSystem);
+  FletchSystemBuilder(FletchSystem predecessorSystem)
+      : this.predecessorSystem = predecessorSystem,
+        this.functionIdStart = predecessorSystem.computeMaxFunctionId() + 1;
 
   // TODO(ajohnsen): Remove and add a lookupConstant.
   Map<ConstantValue, int> getCompiledConstants() => _newConstants;
@@ -61,8 +66,7 @@ class FletchSystemBuilder {
        Element element,
        FunctionSignature signature,
        int memberOf}) {
-    int nextFunctionId =
-        predecessorSystem.functions.length + _newFunctions.length;
+    int nextFunctionId = functionIdStart + _newFunctions.length;
     FletchFunctionBuilder builder = new FletchFunctionBuilder(
         nextFunctionId,
         kind,
@@ -93,14 +97,13 @@ class FletchSystemBuilder {
   }
 
   FletchFunctionBase lookupFunction(int functionId) {
-    if (functionId < predecessorSystem.functions.length) {
-      return predecessorSystem.functions[functionId];
-    }
+    FletchFunction function = predecessorSystem.lookupFunctionById(functionId);
+    if (function != null) return function;
     return _newFunctions[functionId];
   }
 
   FletchFunctionBuilder lookupFunctionBuilder(int functionId) {
-    return _newFunctions[functionId - predecessorSystem.functions.length];
+    return _newFunctions[functionId - functionIdStart];
   }
 
   FletchFunctionBase lookupFunctionByElement(Element element) {
@@ -108,6 +111,10 @@ class FletchSystemBuilder {
         predecessorSystem.lookupFunctionByElement(element);
     if (function != null) return function;
     return _buildersByElement[element];
+  }
+
+  void forgetFunction(FletchFunction function) {
+    _removedFunctions.add(function);
   }
 
   List<FletchFunctionBuilder> getNewFunctions() => _newFunctions;
@@ -177,6 +184,11 @@ class FletchSystemBuilder {
   FletchSystem computeSystem(FletchContext context, List<Command> commands) {
     int changes = 0;
 
+    // Remove all removed FletchFunctions.
+    for (FletchFunction function in _removedFunctions) {
+      commands.add(new RemoveFromMap(MapId.methods, function.methodId));
+    }
+
     // Create all new FletchFunctions.
     List<FletchFunction> functions = <FletchFunction>[];
     for (FletchFunctionBuilder builder in _newFunctions) {
@@ -193,7 +205,7 @@ class FletchSystemBuilder {
     // Create all statics.
     // TODO(ajohnsen): Should be part of the fletch system. Does not work with
     // incremental.
-    if (predecessorSystem.functions.isEmpty) {
+    if (predecessorSystem.isEmpty) {
       context.forEachStatic((element, index) {
         FletchFunctionBuilder initializer =
             context.backend.lazyFieldInitializers[element];
@@ -301,7 +313,7 @@ class FletchSystemBuilder {
 
     // TODO(ajohnsen): Big hack. We should not track method dependency like
     // this.
-    if (predecessorSystem.functions.isNotEmpty) {
+    if (!predecessorSystem.isEmpty) {
       for (FletchFunctionBuilder function in _newFunctions) {
         if (function.element == context.compiler.mainFunction) {
           FletchFunctionBase callMain =
@@ -317,21 +329,40 @@ class FletchSystemBuilder {
 
     commands.add(new CommitChanges(changes));
 
-    functions = new List<FletchFunction>.from(predecessorSystem.functions)
-        ..addAll(functions);
-
     classes = new List<FletchClass>.from(predecessorSystem.classes)
         ..addAll(classes);
 
+    PersistentMap<int, FletchFunction> functionsById =
+        predecessorSystem.functionsById;
+
     PersistentMap<Element, FletchFunction> functionsByElement =
         predecessorSystem.functionsByElement;
+
+    for (FletchFunction function in _removedFunctions) {
+      functionsById = functionsById.delete(function.methodId);
+      Element element = function.element;
+      if (element != null) {
+        functionsByElement = functionsByElement.delete(element);
+      }
+    }
+
+    for (FletchFunction function in functions) {
+      functionsById = functionsById.insert(function.methodId, function);
+    }
+
     _buildersByElement.forEach((element, builder) {
       functionsByElement = functionsByElement.insert(
           element,
-          // TODO(ajohnsen): Will not work once we start removing functions.
-          functions[builder.methodId]);
+          functionsById[builder.methodId],
+          (oldValue, newValue) {
+            throw "Unexpected element in predecessorSystem.";
+          });
     });
 
-    return new FletchSystem(functions, classes, constants, functionsByElement);
+    return new FletchSystem(
+        functionsById,
+        functionsByElement,
+        classes,
+        constants);
   }
 }

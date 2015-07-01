@@ -348,6 +348,13 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kRemoveFromMap: {
+        int index = connection_->ReadInt();
+        int64 id = connection_->ReadInt64();
+        RemoveFromMap(index, id);
+        break;
+      }
+
       case Connection::kDup: {
         Dup();
         break;
@@ -596,6 +603,10 @@ void Session::PushFromMap(int index, int64 id) {
 
 void Session::PopToMap(int index, int64 id) {
   maps_[index]->Add(id, Pop());
+}
+
+void Session::RemoveFromMap(int index, int64 id) {
+  maps_[index]->RemoveById(id);
 }
 
 int64 Session::MapLookup(int map_index) {

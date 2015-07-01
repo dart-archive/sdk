@@ -80,6 +80,7 @@ class Connection {
     kDeleteMap,
     kPushFromMap,
     kPopToMap,
+    kRemoveFromMap,
 
     kDup,
     kDrop,

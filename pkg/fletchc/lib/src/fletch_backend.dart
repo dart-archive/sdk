@@ -127,10 +127,10 @@ import '../commands.dart';
 import '../fletch_system.dart';
 
 const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
-    const <FletchFunction>[],
+    const PersistentMap<int, FletchFunction>(),
+    const PersistentMap<Element, FletchFunction>(),
     const <FletchClass>[],
-    const <FletchConstant>[],
-    const PersistentMap<Element, FletchFunction>());
+    const <FletchConstant>[]);
 
 class FletchBackend extends Backend {
   static const String growableListName = '_GrowableList';
@@ -176,8 +176,6 @@ class FletchBackend extends Backend {
 
   Map<FletchClassBuilder, FletchFunctionBuilder> tearoffFunctions;
 
-  final FletchSystem predecessorSystem;
-
   LibraryElement fletchSystemLibrary;
   LibraryElement fletchFFILibrary;
   LibraryElement fletchIOSystemLibrary;
@@ -212,14 +210,12 @@ class FletchBackend extends Backend {
 
   final Set<FunctionElement> alwaysEnqueue = new Set<FunctionElement>();
 
-  FletchBackend(
-      FletchCompiler compiler,
-      {this.predecessorSystem: BASE_FLETCH_SYSTEM})
+  FletchBackend(FletchCompiler compiler)
       : this.context = compiler.context,
         this.constantCompilerTask = new DartConstantTask(compiler),
+        this.systemBuilder = new FletchSystemBuilder(BASE_FLETCH_SYSTEM),
         super(compiler) {
     context.resolutionCallbacks = new FletchResolutionCallbacks(context);
-    systemBuilder = new FletchSystemBuilder(BASE_FLETCH_SYSTEM);
   }
 
   void newSystemBuilder(FletchSystem predecessorSystem) {
@@ -1096,9 +1092,9 @@ class FletchBackend extends Backend {
     commands.add(const PushNewInteger(0));
     commands.add(new PushFromMap(
         MapId.methods,
-        functionBuilders[fletchSystemEntry].methodId));
+        system.lookupFunctionByElement(fletchSystemEntry).methodId));
 
-    return new FletchDelta(system, predecessorSystem, commands);
+    return new FletchDelta(system, systemBuilder.predecessorSystem, commands);
   }
 
   // TODO(ajohnsen): Remove when incremental has moved to FletchSystem.
@@ -1380,6 +1376,14 @@ class FletchBackend extends Backend {
   }
 
   void forgetElement(Element element) {
+    // TODO(ajohnsen): Remove this check.
+    if (!systemBuilder.predecessorSystem.isEmpty) {
+      FletchFunctionBase function =
+          systemBuilder.lookupFunctionByElement(element);
+      if (function != null) {
+        systemBuilder.forgetFunction(function);
+      }
+    }
     FletchFunctionBuilder functionBuilder = functionBuilders[element];
     if (functionBuilder == null) return;
     functionBuilder.reuse();

@@ -263,7 +263,7 @@ class Session extends FletchVmSession {
       default:
         assert(response.code == CommandCode.ProcessBreakpoint);
         ProcessBreakpoint command = response;
-        var function = fletchSystem.functions[command.methodId];
+        var function = fletchSystem.lookupFunctionById(command.methodId);
         debugState.topFrame = new StackFrame(
             function, command.bytecodeIndex, compiler, debugState);
         return command.breakpointId;
@@ -306,7 +306,7 @@ class Session extends FletchVmSession {
 
   Future setBreakpoint({String methodName, int bytecodeIndex}) async {
     Iterable<FletchFunction> functions =
-        fletchSystem.functions.where((f) => f.name == methodName);
+        fletchSystem.functionsWhere((f) => f.name == methodName);
     for (FletchFunction function in functions) {
       await setBreakpointHelper(methodName, function, bytecodeIndex);
     }
@@ -519,7 +519,7 @@ class Session extends FletchVmSession {
       StackTrace stackTrace = new StackTrace(frames);
       for (int i = 0; i < frames; ++i) {
         int methodId = backtraceResponse.methodIds[i];
-        FletchFunction function = fletchSystem.lookupFunction(methodId);
+        FletchFunction function = fletchSystem.lookupFunctionById(methodId);
         stackTrace.addFrame(
             compiler,
             new StackFrame(function,

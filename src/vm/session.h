@@ -44,6 +44,7 @@ class Session {
 
   void PushFromMap(int index, int64 id);
   void PopToMap(int index, int64 id);
+  void RemoveFromMap(int index, int64 id);
 
   // Get the id for the top object on the session stack in the object
   // map with the given index. Returns -1 if the object does not exist
