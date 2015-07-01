@@ -237,6 +237,9 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
 
   void Allocate(bool unfolded, bool immutable);
 
+  // This function changes caller-saved registers.
+  void AddToStoreBufferSlow(Register reg);
+
   void InvokeEq(const char* fallback);
   void InvokeLt(const char* fallback);
   void InvokeLe(const char* fallback);
@@ -496,6 +499,9 @@ void InterpreterGeneratorARM::DoStoreBoxed() {
   __ neg(R0, R0);
   __ ldr(R1, Address(R6, Operand(R0, TIMES_4)));
   __ str(R2, Address(R1, Boxed::kValueOffset - HeapObject::kTag));
+
+  AddToStoreBufferSlow(R1);
+
   Dispatch(kStoreBoxedLength);
 }
 
@@ -503,8 +509,11 @@ void InterpreterGeneratorARM::DoStoreStatic() {
   LoadLocal(R2, 0);
   __ ldr(R0, Address(R5, 1));
   __ ldr(R1, Address(R4, Process::StaticsOffset()));
-  __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
-  __ str(R2, Address(R1, Operand(R0, TIMES_4)));
+  __ add(R3, R1, Immediate(Array::kSize - HeapObject::kTag));
+  __ str(R2, Address(R3, Operand(R0, TIMES_4)));
+
+  AddToStoreBufferSlow(R1);
+
   Dispatch(kStoreStaticLength);
 }
 
@@ -512,10 +521,13 @@ void InterpreterGeneratorARM::DoStoreField() {
   __ ldrb(R1, Address(R5, 1));
   LoadLocal(R2, 0);
   LoadLocal(R0, 1);
-  __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
-  __ str(R2, Address(R0, Operand(R1, TIMES_4)));
+  __ add(R3, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ str(R2, Address(R3, Operand(R1, TIMES_4)));
   StoreLocal(R2, 1);
   Drop(1);
+
+  AddToStoreBufferSlow(R0);
+
   Dispatch(kStoreFieldLength);
 }
 
@@ -1221,10 +1233,13 @@ void InterpreterGeneratorARM::DoIntrinsicSetField() {
   __ ldrb(R1, Address(R0, 3 + Function::kSize - HeapObject::kTag));
   LoadLocal(R0, 0);
   LoadLocal(R2, 1);
-  __ add(R2, R2, Immediate(Instance::kSize - HeapObject::kTag));
-  __ str(R0, Address(R2, Operand(R1, TIMES_4)));
+  __ add(R3, R2, Immediate(Instance::kSize - HeapObject::kTag));
+  __ str(R0, Address(R3, Operand(R1, TIMES_4)));
   StoreLocal(R0, 1);
   Drop(1);
+
+  AddToStoreBufferSlow(R2);
+
   Dispatch(kInvokeMethodLength);
 }
 
@@ -1277,10 +1292,13 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexSet() {
   // Store to the array and continue.
   ASSERT(Smi::kTagSize == 1);
   LoadLocal(R0, 0);
-  __ add(R2, R2, Immediate(Array::kSize - HeapObject::kTag));
-  __ str(R0, Address(R2, Operand(R1, TIMES_2)));
+  __ add(R12, R2, Immediate(Array::kSize - HeapObject::kTag));
+  __ str(R0, Address(R12, Operand(R1, TIMES_2)));
   StoreLocal(R0, 2);
   Drop(2);
+
+  AddToStoreBufferSlow(R2);
+
   Dispatch(kInvokeMethodLength);
 }
 
@@ -1726,6 +1744,11 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     __ ldr(R7, Address(R1, Operand(R0, TIMES_4)));
   }
 
+  // We initialize R12 with the 3rd argument to "HandleAllocate" to 0, meaning
+  // the object we're allocating will not be initialized with pointers to
+  // immutable space.
+  __ ldr(R12, Immediate(0));
+
   // Either directly jump to allocation code or determine first if arguments
   // on the stack have immutable flag set.
   Label allocate;
@@ -1745,6 +1768,8 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     __ sub(R3, R6, R2);
 
     Label loop;
+    Label loop_with_immutable_field;
+
     // Increment pointer to point to next field.
     __ Bind(&loop);
     __ add(R3, R3, Immediate(kPointerSize));
@@ -1795,7 +1820,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     // If this is not ComplexHeapObject, we consider it immutable.
     __ ldr(R1, Immediate(complex_heap_object_mask));
     __ cmp(R0, R1);
-    __ b(NE, &loop);
+    __ b(NE, &loop_with_immutable_field);
 
     // Else, we must have a ComplexHeapObject and check the runtime-tracked
     // immutable bit.
@@ -1803,7 +1828,13 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     __ ldr(R2, Address(R2, ComplexHeapObject::kFlagsOffset - HeapObject::kTag));
     __ and_(R2, R2, Immediate(im_mask));
     __ cmp(R2, Immediate(im_mask));
-    __ b(EQ, &loop);
+    __ b(EQ, &loop_with_immutable_field);
+
+    __ b(&allocate_mutable);
+
+    __ Bind(&loop_with_immutable_field);
+    __ ldr(R12, Immediate(1));
+    __ b(&loop);
   }
 
   __ Bind(&allocate_mutable);
@@ -1817,6 +1848,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
   __ Bind(&allocate);
   __ mov(R0, R4);
   __ mov(R1, R7);
+  __ mov(R3, R12);
   __ bl("HandleAllocate");
   __ cmp(R0, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
   __ b(EQ, &gc_);
@@ -1848,6 +1880,15 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
   __ Bind(&done);
   Push(R0);
   Dispatch(kAllocateLength);
+}
+
+
+void InterpreterGeneratorARM::AddToStoreBufferSlow(Register reg) {
+  __ mov(R0, R4);
+  if (reg != R1) {
+    __ mov(R1, reg);
+  }
+  __ bl("AddToStoreBufferSlow");
 }
 
 void InterpreterGeneratorARM::InvokeCompare(const char* fallback,

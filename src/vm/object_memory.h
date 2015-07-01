@@ -17,6 +17,7 @@ class HeapObjectVisitor;
 class PointerVisitor;
 class Process;
 class Space;
+class StoreBuffer;
 
 const int kPageSize = 4 * KB;
 
@@ -97,6 +98,9 @@ class Space {
 
   // Scavenge loop.
   void CompleteScavenge(PointerVisitor* visitor);
+  void CompleteScavengeMutable(PointerVisitor* visitor,
+                               Space* immutable_space,
+                               StoreBuffer* store_buffer);
 
   // Schema change support.
   void CompleteTransformations(PointerVisitor* visitor, Process* process);
@@ -123,6 +127,8 @@ class Space {
   // The given [space] will be deleted.
   void PrependSpace(Space* space);
 
+  bool is_empty() const { return first_ == NULL; }
+
  private:
   friend class NoAllocationFailureScope;
 
@@ -133,7 +139,6 @@ class Space {
 
   void Append(Chunk* chunk);
 
-  bool is_empty() {  return first_ == NULL; }
   Chunk* first() { return first_; }
   Chunk* last() { return last_; }
   uword top() { return top_; }

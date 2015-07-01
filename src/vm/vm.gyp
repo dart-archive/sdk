@@ -46,6 +46,7 @@
         'session.cc',
         'snapshot.cc',
         'stack_walker.cc',
+        'storebuffer.cc',
         'thread_pool.cc',
         'thread_posix.cc',
         'unicode.cc',

@@ -1007,7 +1007,8 @@ void Session::ProcessTerminated(Process* process) {
 
 class TransformInstancesPointerVisitor : public PointerVisitor {
  public:
-  explicit TransformInstancesPointerVisitor(Heap* heap) : heap_(heap) { }
+  explicit TransformInstancesPointerVisitor(Heap* heap, Heap* immutable_heap)
+      : heap_(heap), immutable_heap_(immutable_heap) { }
 
   virtual void VisitClass(Object** p) {
     // The class pointer in the header of an object should not
@@ -1027,7 +1028,15 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
       } else if (heap_object->IsInstance()) {
         Instance* instance = Instance::cast(heap_object);
         if (instance->get_class()->IsTransformed()) {
-          Instance* clone = instance->CloneTransformed(heap_);
+          Instance* clone;
+
+          if (heap_->space()->Includes(instance->address())) {
+            clone = instance->CloneTransformed(heap_);
+          } else {
+            ASSERT(immutable_heap_->space()->Includes(instance->address()));
+            clone = instance->CloneTransformed(immutable_heap_);
+          }
+
           instance->set_forwarding_address(clone);
           *p = clone;
         }
@@ -1042,6 +1051,7 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
 
  private:
   Heap* const heap_;
+  Heap* const immutable_heap_;
 };
 
 class TransformInstancesProcessVisitor : public ProcessVisitor {
@@ -1052,11 +1062,22 @@ class TransformInstancesProcessVisitor : public ProcessVisitor {
     // the program space / to the process heap objects which were transformed.
     process->TakeChildHeaps();
 
-    TransformInstancesPointerVisitor pointer_visitor(process->heap());
-    Space* space = process->heap()->space();
+    Heap* heap = process->heap();
+    Heap* immutable_heap = process->immutable_heap();
+
+    Space* space = heap->space();
+    Space* immutable_space = immutable_heap->space();
+
     NoAllocationFailureScope scope(space);
+    NoAllocationFailureScope scope2(immutable_space);
+
+    TransformInstancesPointerVisitor pointer_visitor(heap, immutable_heap);
+
     process->IterateRoots(&pointer_visitor);
+
+    ASSERT(!space->is_empty());
     space->CompleteTransformations(&pointer_visitor, process);
+    immutable_space->CompleteTransformations(&pointer_visitor, process);
   }
 };
 
@@ -1071,10 +1092,13 @@ void Session::TransformInstances() {
   // Deal with program space before the process spaces. This allows
   // the [TransformInstancesProcessVisitor] to use the already installed
   // forwarding pointers in program space.
-  Space* space = program()->heap()->space();
+
+  Heap* heap = program()->heap();
+  Space* space = heap->space();
   NoAllocationFailureScope scope(space);
-  TransformInstancesPointerVisitor pointer_visitor(program()->heap());
+  TransformInstancesPointerVisitor pointer_visitor(program()->heap(), NULL);
   program()->IterateRoots(&pointer_visitor);
+  ASSERT(!space->is_empty());
   space->CompleteTransformations(&pointer_visitor, NULL);
 
   // TODO(ager): TransformInstances needs to locate all processes. Currently,

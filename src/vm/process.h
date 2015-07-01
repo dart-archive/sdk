@@ -11,12 +11,15 @@
 #include "src/vm/heap.h"
 #include "src/vm/lookup_cache.h"
 #include "src/vm/program.h"
+#include "src/vm/storebuffer.h"
 #include "src/vm/thread.h"
 #include "src/vm/weak_pointer.h"
 #include "src/shared/random.h"
 
 namespace fletch {
 
+class Engine;
+class Interpreter;
 class Port;
 class PortQueue;
 class ProcessQueue;
@@ -83,6 +86,7 @@ class Process {
   Program* program() { return program_; }
   Array* statics() const { return statics_; }
   Heap* heap() { return &heap_; }
+  Heap* immutable_heap() { return &immutable_heap_; }
 
   Coroutine* coroutine() const { return coroutine_; }
   void UpdateCoroutine(Coroutine* coroutine);
@@ -134,12 +138,15 @@ class Process {
 
   // Perform garbage collection using the stack region
   // [stack_start, stack_end] as the root set.
+  void CollectImmutableGarbage();
+  void CollectMutableGarbage();
   void CollectGarbage();
 
   // Perform garbage collection and chain all stack objects. Additionally,
   // locate all processes in ports in the heap that are not yet known
   // by the program GC and link them in the argument list. Returns the
   // number of stacks found in the heap.
+  int CollectMutableGarbageAndChainStacks(Process** list);
   int CollectGarbageAndChainStacks(Process** list);
 
   // Iterate all pointers reachable from this process object.
@@ -254,7 +261,22 @@ class Process {
 
   RandomLCG* random() { return &random_; }
 
+  StoreBuffer* store_buffer() { return &store_buffer_; }
+
+  void RecordArrayWrite(Array* array, Object* obj) {
+    if (obj->IsHeapObject() && obj->IsImmutable()) {
+      ASSERT(!program()->heap()->space()->Includes(
+          array->address()));
+      ASSERT(heap()->space()->Includes(
+          array->address()));
+      store_buffer_.Insert(array);
+    }
+  }
+
  private:
+  friend class Interpreter;
+  friend class Engine;
+
   void UpdateStackLimit();
 
   // Put 'entry' at the end of the port's queue. This function is thread safe.
@@ -263,6 +285,8 @@ class Process {
   RandomLCG random_;
 
   Heap heap_;
+  Heap immutable_heap_;
+  StoreBuffer store_buffer_;
   Program* program_;
   Array* statics_;
 

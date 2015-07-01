@@ -8,6 +8,7 @@
 #include <atomic>
 
 #include "src/shared/globals.h"
+#include "src/vm/object_memory.h"
 #include "src/vm/platform.h"
 
 namespace fletch {
@@ -43,7 +44,7 @@ class Port {
   // Cleanup ports. Delete ports with zero ref count and update the channel
   // pointer. The channel pointer is weak and is set to NULL if the channel
   // is not referenced from anywhere else.
-  static Port* CleanupPorts(Port* head);
+  static Port* CleanupPorts(Space* from, Port* head);
 
   static void WeakCallback(HeapObject* port);
 

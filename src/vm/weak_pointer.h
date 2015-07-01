@@ -8,6 +8,7 @@
 namespace fletch {
 
 class HeapObject;
+class Space;
 
 typedef void (*WeakPointerCallback)(HeapObject* object);
 
@@ -17,7 +18,7 @@ class WeakPointer {
               WeakPointerCallback callback,
               WeakPointer* next);
 
-  static void Process(WeakPointer** pointers);
+  static void Process(Space* garbage_space, WeakPointer** pointers);
   static void ForceCallbacks(WeakPointer** pointers);
   static void Remove(WeakPointer** pointers, HeapObject* object);
 

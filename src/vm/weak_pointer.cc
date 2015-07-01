@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include "src/vm/object.h"
+#include "src/vm/object_memory.h"
 
 namespace fletch {
 
@@ -18,22 +19,28 @@ WeakPointer::WeakPointer(HeapObject* object,
       prev_(NULL),
       next_(next) { }
 
-void WeakPointer::Process(WeakPointer** pointers) {
+void WeakPointer::Process(Space* garbage_space, WeakPointer** pointers) {
   WeakPointer* new_list = NULL;
   WeakPointer* previous = NULL;
   WeakPointer* current = *pointers;
   while (current != NULL) {
     WeakPointer* next = current->next_;
-    HeapObject* forward = current->object_->forwarding_address();
-    if (forward != NULL) {
-      current->object_ = forward;
+    HeapObject* current_object = current->object_;
+    HeapObject* forward = current_object->forwarding_address();
+    if (garbage_space->Includes(current_object->address())) {
+      if (forward != NULL) {
+        current->object_ = forward;
+        if (new_list == NULL) new_list = current;
+        previous = current;
+      } else {
+        if (current->next_ != NULL) current->next_->prev_ = previous;
+        if (previous != NULL) previous->next_ = current->next_;
+        current->callback_(current_object);
+        delete current;
+      }
+    } else {
       if (new_list == NULL) new_list = current;
       previous = current;
-    } else {
-      if (current->next_ != NULL) current->next_->prev_ = previous;
-      if (previous != NULL) previous->next_ = current->next_;
-      current->callback_(current->object_);
-      delete current;
     }
     current = next;
   }

@@ -805,6 +805,7 @@ NATIVE(ListIndexSet) {
   }
   Object* value = arguments[2];
   array->set(index, value);
+  process->RecordArrayWrite(array, value);
   return value;
 }
 

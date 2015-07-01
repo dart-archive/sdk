@@ -11,6 +11,7 @@
 #include "src/shared/utils.h"
 #include "src/vm/heap.h"
 #include "src/vm/object.h"
+#include "src/vm/storebuffer.h"
 #include "src/vm/platform.h"
 #include "src/vm/stack_walker.h"
 
@@ -120,6 +121,8 @@ void Space::AdjustAllocationBudget() {
 }
 
 void Space::PrependSpace(Space* space) {
+  if (space->is_empty()) return;
+
   Chunk* first = space->first();
   Chunk* chunk = first;
   while (chunk != NULL) {
@@ -167,7 +170,6 @@ void Space::IterateObjects(HeapObjectVisitor* visitor) {
 }
 
 void Space::CompleteScavenge(PointerVisitor* visitor) {
-  ASSERT(!is_empty());
   Flush();
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->base();
@@ -183,8 +185,37 @@ void Space::CompleteScavenge(PointerVisitor* visitor) {
   }
 }
 
+void Space::CompleteScavengeMutable(PointerVisitor* visitor,
+                                    Space* immutable_space,
+                                    StoreBuffer* store_buffer) {
+  ASSERT(store_buffer->is_empty());
+
+  Flush();
+
+  FindImmutablePointerVisitor finder(immutable_space);
+
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    uword current = chunk->base();
+    // TODO(kasperl): I don't like the repeated checks to see if p is
+    // the last chunk. Can't we just make sure to write the sentinel
+    // whenever we've copied over an object, so this check becomes
+    // simpler like in IterateObjects?
+    while ((chunk == last()) ? (current < top()) : !HasSentinelAt(current)) {
+      HeapObject* object = HeapObject::FromAddress(current);
+      object->IteratePointers(visitor);
+
+      // We build up a new StoreBuffer, containing all mutable heap objects
+      // pointing to the immutable space.
+      if (finder.ContainsImmutablePointer(object)) {
+        store_buffer->Insert(object);
+      }
+
+      current += object->Size();
+    }
+  }
+}
+
 void Space::CompleteTransformations(PointerVisitor* visitor, Process* process) {
-  ASSERT(!is_empty());
   Flush();
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->base();

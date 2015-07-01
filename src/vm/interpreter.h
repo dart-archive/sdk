@@ -98,8 +98,12 @@ extern "C" bool HandleStackOverflow(Process* process, int size);
 
 extern "C" void HandleGC(Process* process);
 
-extern "C" Object* HandleAllocate(Process* process, Class* clazz,
-                                  int immutable);
+extern "C" Object* HandleAllocate(Process* process,
+                                  Class* clazz,
+                                  int immutable,
+                                  int has_immutable_heapobject_member);
+
+extern "C" void AddToStoreBufferSlow(Process* process, Object* object);
 
 extern "C" Object* HandleAllocateBoxed(Process* process, Object* value);
 

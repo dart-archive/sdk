@@ -236,6 +236,11 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
 
   void Allocate(bool unfolded, bool immutable);
 
+  // This function
+  //   * changes the first two stack slots
+  //   * changes caller-saved registers
+  void AddToStoreBufferSlow(Register reg);
+
   void InvokeMethod(bool test);
   void InvokeMethodFast(bool test);
   void InvokeMethodVtable(bool test);
@@ -484,6 +489,9 @@ void InterpreterGeneratorX86::DoStoreBoxed() {
   __ negl(EAX);
   __ movl(EBX, Address(EDI, EAX, TIMES_4));
   __ movl(Address(EBX, Boxed::kValueOffset - HeapObject::kTag), ECX);
+
+  AddToStoreBufferSlow(EBX);
+
   Dispatch(kStoreBoxedLength);
 }
 
@@ -491,7 +499,11 @@ void InterpreterGeneratorX86::DoStoreStatic() {
   LoadLocal(ECX, 0);
   __ movl(EAX, Address(ESI, 1));
   __ movl(EBX, Address(EBP, Process::StaticsOffset()));
-  __ movl(Address(EBX, EAX, TIMES_4, Array::kSize - HeapObject::kTag), ECX);
+  __ leal(EBX, Address(EBX, EAX, TIMES_4, Array::kSize - HeapObject::kTag));
+  __ movl(Address(EBX), ECX);
+
+  AddToStoreBufferSlow(EBX);
+
   Dispatch(kStoreStaticLength);
 }
 
@@ -502,6 +514,9 @@ void InterpreterGeneratorX86::DoStoreField() {
   __ movl(Address(EAX, EBX, TIMES_4, Instance::kSize - HeapObject::kTag), ECX);
   StoreLocal(ECX, 1);
   Drop(1);
+
+  AddToStoreBufferSlow(EAX);
+
   Dispatch(kStoreFieldLength);
 }
 
@@ -1268,6 +1283,9 @@ void InterpreterGeneratorX86::DoIntrinsicSetField() {
   __ movl(Address(ECX, EBX, TIMES_4, Instance::kSize - HeapObject::kTag), EAX);
   StoreLocal(EAX, 1);
   Drop(1);
+
+  AddToStoreBufferSlow(ECX);
+
   Dispatch(kInvokeMethodLength);
 }
 
@@ -1319,9 +1337,13 @@ void InterpreterGeneratorX86::DoIntrinsicListIndexSet() {
   // Store to the array and continue.
   ASSERT(Smi::kTagSize == 1);
   LoadLocal(EAX, 0);
+  // TODO(kustermann): Why ist this TIMES_2.
   __ movl(Address(ECX, EBX, TIMES_2, Array::kSize - HeapObject::kTag), EAX);
   StoreLocal(EAX, 2);
   Drop(2);
+
+  AddToStoreBufferSlow(ECX);
+
   Dispatch(kInvokeMethodLength);
 }
 
@@ -1400,6 +1422,10 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
     __ movl(EBX, Address(EBX, EAX, TIMES_4, Array::kSize - HeapObject::kTag));
   }
 
+  // We initialize the 3rd argument to "HandleAllocate" to 0, meaning the object
+  // we're allocating will not be initialized with pointers to immutable space.
+  __ movl(Address(ESP, 3 * kWordSize), Immediate(0));
+
   // Either directly jump to allocation code or determine first if arguments
   // on the stack have immutable flag set.
   Label allocate;
@@ -1419,6 +1445,8 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
     __ subl(EDX, ECX);
 
     Label loop;
+    Label loop_with_immutable_field;
+
     // Increment pointer to point to next field.
     __ Bind(&loop);
     __ addl(EDX, Immediate(kPointerSize));
@@ -1467,7 +1495,7 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
 
     // If this is not ComplexHeapObject, we consider it immutable.
     __ cmpl(EAX, Immediate(complex_heap_object_mask));
-    __ j(NOT_EQUAL, &loop);
+    __ j(NOT_EQUAL, &loop_with_immutable_field);
 
     // Else, we must have a ComplexHeapObject and check the runtime-tracked
     // immutable bit.
@@ -1475,7 +1503,13 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
     __ movl(ECX,
             Address(ECX, ComplexHeapObject::kFlagsOffset - HeapObject::kTag));
     __ testl(ECX, Immediate(im_mask));
-    __ j(NOT_ZERO, &loop);
+    __ j(NOT_ZERO, &loop_with_immutable_field);
+
+    __ jmp(&allocate_mutable);
+
+    __ Bind(&loop_with_immutable_field);
+    __ movl(Address(ESP, 3 * kWordSize), Immediate(1));
+    __ jmp(&loop);
   }
 
   __ Bind(&allocate_mutable);
@@ -1491,6 +1525,9 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
   __ movl(Address(ESP, 0 * kWordSize), EBP);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
   __ movl(Address(ESP, 2 * kWordSize), ECX);
+  // NOTE: The 3rd argument is already present in "Address(ESP, 3 * kWordSize)"
+  // It contains a bit indicating whether the object has pointers to immutable
+  // space.
   __ call("HandleAllocate");
   __ cmpl(EAX, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
   __ j(EQUAL, &gc_);
@@ -1520,6 +1557,12 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
   __ Bind(&done);
   Push(EAX);
   Dispatch(kAllocateLength);
+}
+
+void InterpreterGeneratorX86::AddToStoreBufferSlow(Register reg) {
+  __ movl(Address(ESP, 0 * kWordSize), EBP);
+  __ movl(Address(ESP, 1 * kWordSize), reg);
+  __ call("AddToStoreBufferSlow");
 }
 
 void InterpreterGeneratorX86::InvokeMethod(bool test) {

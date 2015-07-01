@@ -59,7 +59,7 @@ void Port::OwnerProcessTerminating() {
   Unlock();
 }
 
-Port* Port::CleanupPorts(Port* head) {
+Port* Port::CleanupPorts(Space* from, Port* head) {
   Port* current = head;
   Port* previous = NULL;
   while (current != NULL) {
@@ -70,11 +70,21 @@ Port* Port::CleanupPorts(Port* head) {
       } else {
         previous->set_next(next);
       }
+      current->channel_ = reinterpret_cast<Instance*>(0xcafecafe);
       delete current;
     } else {
-      if (current->channel_ != NULL) {
-        HeapObject* forward = current->channel_->forwarding_address();
-        current->channel_ = reinterpret_cast<Instance*>(forward);
+      HeapObject* channel = current->channel_;
+      if (channel != NULL) {
+        HeapObject* forward = channel->forwarding_address();
+        if (from->Includes(channel->address())) {
+          if (forward != NULL) {
+            current->channel_ = reinterpret_cast<Instance*>(forward);
+          } else {
+            current->channel_ = NULL;
+          }
+        } else {
+          ASSERT(forward == NULL);
+        }
       }
       previous = current;
     }

@@ -6,7 +6,7 @@ import 'package:isolate/isolate.dart';
 import 'package:expect/expect.dart';
 
 main() {
-  Expect.equals(10946, fib(20));
+  Expect.equals(4181, fib(18));
 }
 
 fib(n) {

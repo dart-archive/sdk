@@ -25,14 +25,21 @@ static Object** kProfileMarker = reinterpret_cast<Object**>(2);
 
 class ExitReference {
  public:
-  ExitReference(Space* space, Object* message)
-      : space_(space), message_(message) { }
+  ExitReference(Space* immutable_space, Space* space, Object* message)
+      : immutable_space_(immutable_space), space_(space), message_(message) { }
 
   ~ExitReference() {
+    delete immutable_space_;
     delete space_;
   }
 
   Object* message() const { return message_; }
+
+  Space* TakeImmutableSpace() {
+    Space* result = immutable_space_;
+    immutable_space_ = NULL;
+    return result;
+  }
 
   Space* TakeSpace() {
     Space* result = space_;
@@ -45,6 +52,7 @@ class ExitReference {
   }
 
  private:
+  Space* immutable_space_;
   Space* space_;
   Object* message_;
 };
@@ -141,6 +149,7 @@ ThreadState::~ThreadState() {
 Process::Process(Program* program)
     : random_(program->random()->NextUInt32() + 1),
       heap_(&random_, 4 * KB),
+      immutable_heap_(&random_),
       program_(program),
       statics_(NULL),
       coroutine_(NULL),
@@ -210,6 +219,7 @@ void Process::UpdateCoroutine(Coroutine* coroutine) {
   ASSERT(coroutine->has_stack());
   coroutine_ = coroutine;
   UpdateStackLimit();
+  store_buffer_.Insert(coroutine->stack());
 }
 
 bool Process::HandleStackOverflow(int addition) {
@@ -251,6 +261,7 @@ bool Process::HandleStackOverflow(int addition) {
   }
   ASSERT(coroutine_->has_stack());
   coroutine_->set_stack(new_stack);
+  store_buffer_.Insert(coroutine_->stack());
   UpdateStackLimit();
   return true;
 }
@@ -264,30 +275,31 @@ Object* Process::NewArray(int length) {
 
 Object* Process::NewDouble(double value) {
   Class* double_class = program()->double_class();
-  Object* result = heap_.CreateDouble(double_class, value);
+  Object* result = immutable_heap_.CreateDouble(double_class, value);
   return result;
 }
 
 Object* Process::NewInteger(int64 value) {
   Class* large_integer_class = program()->large_integer_class();
-  Object* result = heap_.CreateLargeInteger(large_integer_class, value);
+  Object* result = immutable_heap_.CreateLargeInteger(
+      large_integer_class, value);
   return result;
 }
 
 void Process::TryDeallocInteger(LargeInteger* object) {
-  heap_.TryDeallocInteger(object);
+  immutable_heap_.TryDeallocInteger(object);
 }
 
 Object* Process::NewString(int length) {
   Class* string_class = program()->string_class();
-  Object* raw_result = heap_.CreateString(string_class, length, true);
+  Object* raw_result = immutable_heap_.CreateString(string_class, length, true);
   if (raw_result->IsFailure()) return raw_result;
   return String::cast(raw_result);
 }
 
 Object* Process::NewStringUninitialized(int length) {
   Class* string_class = program()->string_class();
-  Object* raw_result = heap_.CreateStringUninitialized(
+  Object* raw_result = immutable_heap_.CreateStringUninitialized(
       string_class, length, true);
   if (raw_result->IsFailure()) return raw_result;
   return String::cast(raw_result);
@@ -295,25 +307,33 @@ Object* Process::NewStringUninitialized(int length) {
 
 Object* Process::NewStringFromAscii(List<const char> value) {
   Class* string_class = program()->string_class();
-  Object* raw_result = heap_.CreateString(string_class, value.length(), true);
+  Object* raw_result = immutable_heap_.CreateString(
+      string_class, value.length(), true);
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
   for (int i = 0; i < value.length(); i++) {
     result->set_code_unit(i, value[i]);
   }
+
   return result;
 }
 
 Object* Process::NewBoxed(Object* value) {
   Class* boxed_class = program()->boxed_class();
   Object* result = heap_.CreateBoxed(boxed_class, value);
+  if (value->IsHeapObject() && value->IsImmutable()) {
+    store_buffer_.Insert(HeapObject::cast(result));
+  }
   return result;
 }
 
 Object* Process::NewInstance(Class* klass, bool immutable) {
   Object* null = program()->null_object();
-  Object* result = heap_.CreateComplexHeapObject(klass, null, immutable);
-  return result;
+  if (immutable) {
+    return immutable_heap_.CreateComplexHeapObject(klass, null, immutable);
+  } else {
+    return heap_.CreateComplexHeapObject(klass, null, immutable);
+  }
 }
 
 Object* Process::ToInteger(int64 value) {
@@ -329,7 +349,7 @@ Object* Process::Concatenate(String* x, String* y) {
   if (ylen == 0) return x;
   int length = xlen + ylen;
   Class* string_class = program()->string_class();
-  Object* raw_result = heap_.CreateString(string_class, length, true);
+  Object* raw_result = immutable_heap_.CreateString(string_class, length, true);
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
   uint8_t* first_part = result->byte_address_for(0);
@@ -342,21 +362,61 @@ Object* Process::Concatenate(String* x, String* y) {
 Object* Process::NewStack(int length) {
   Class* stack_class = program()->stack_class();
   Object* result = heap_.CreateStack(stack_class, length, false);
+
+  if (result->IsFailure()) return result;
+  store_buffer_.Insert(HeapObject::cast(result));
   return result;
 }
 
-void Process::CollectGarbage() {
+void Process::CollectImmutableGarbage() {
+  Space* from = immutable_heap_.space();
   Space* to = new Space();
   // While garbage collecting, do not fail allocations. Instead grow
   // the to-space as needed.
   NoAllocationFailureScope scope(to);
-  ScavengeVisitor visitor(heap_.space(), to);
+
+  ScavengeVisitor visitor(from, to);
   IterateRoots(&visitor);
+  store_buffer_.IteratePointersToImmutableSpace(&visitor);
   to->CompleteScavenge(&visitor);
-  WeakPointer::Process(&weak_pointers_);
-  set_ports(Port::CleanupPorts(ports()));
+
+  WeakPointer::Process(from, &weak_pointers_);
+  set_ports(Port::CleanupPorts(from, ports()));
+
+  immutable_heap_.ReplaceSpace(to);
+}
+
+void Process::CollectMutableGarbage() {
+  Space* immutable_space = immutable_heap_.space();
+
+  Space* from = heap_.space();
+  Space* to = new Space();
+  StoreBuffer sb;
+
+  // While garbage collecting, do not fail allocations. Instead grow
+  // the to-space as needed.
+  NoAllocationFailureScope scope(to);
+
+  ScavengeVisitor visitor(from, to);
+  IterateRoots(&visitor);
+
+  ASSERT(!to->is_empty());
+  to->CompleteScavengeMutable(&visitor, immutable_space, &sb);
+  store_buffer_.ReplaceAfterMutableGC(&sb);
+
+  WeakPointer::Process(from, &weak_pointers_);
+  set_ports(Port::CleanupPorts(from, ports()));
+
   heap_.ReplaceSpace(to);
+
   UpdateStackLimit();
+}
+
+void Process::CollectGarbage() {
+  // TODO(kustermann): Combined mutable & immutable GC could be made
+  // faster by reducing redundant work.
+  CollectMutableGarbage();
+  CollectImmutableGarbage();
 }
 
 static void LinkProcessIfUnknownToProgramGC(Process* process, Process** list) {
@@ -431,28 +491,41 @@ class ScavengeAndChainStacksVisitor: public PointerVisitor {
   Process** process_list_;
 };
 
+int Process::CollectMutableGarbageAndChainStacks(Process** list) {
+  Space* immutable_space = immutable_heap_.space();
+
+  Space* from = heap_.space();
+  Space* to = new Space();
+  StoreBuffer sb;
+
+  // While garbage collecting, do not fail allocations. Instead grow
+  // the to-space as needed.
+  NoAllocationFailureScope scope(to);
+  ScavengeAndChainStacksVisitor visitor(this, from, to, list);
+
+  // Visit the current coroutine stack first and chain the rest of the
+  // stacks starting from there.
+  visitor.Visit(reinterpret_cast<Object**>(coroutine_->stack_address()));
+  IterateRoots(&visitor);
+  to->CompleteScavengeMutable(&visitor, immutable_space, &sb);
+  store_buffer_.ReplaceAfterMutableGC(&sb);
+
+  WeakPointer::Process(from, &weak_pointers_);
+  set_ports(Port::CleanupPorts(from, ports()));
+  heap_.ReplaceSpace(to);
+  UpdateStackLimit();
+  return visitor.number_of_stacks();
+}
+
 int Process::CollectGarbageAndChainStacks(Process** list) {
   // NOTE: We need to take all spaces which are getting merged into our
   // heap, because otherwise we'll not update the pointers it has to the
   // program space / to the process heap.
   TakeChildHeaps();
 
-  Space* to = new Space();
-  // While garbage collecting, do not fail allocations. Instead grow
-  // the to-space as needed.
-  NoAllocationFailureScope scope(to);
-  ScavengeAndChainStacksVisitor visitor(this, heap_.space(), to, list);
-  // Visit the current coroutine stack first and chain the rest of the
-  // stacks starting from there.
-  visitor.Visit(reinterpret_cast<Object**>(coroutine_->stack_address()));
-  IterateRoots(&visitor);
-  to->CompleteScavenge(&visitor);
-  WeakPointer::Process(&weak_pointers_);
-  set_ports(Port::CleanupPorts(ports()));
-  heap_.ReplaceSpace(to);
-  // Update stack_limit.
-  UpdateStackLimit();
-  return visitor.number_of_stacks();
+  int number_of_stacks = CollectMutableGarbageAndChainStacks(list);
+  CollectImmutableGarbage();
+  return number_of_stacks;
 }
 
 static void IteratePortQueuePointers(PortQueue* queue,
@@ -488,6 +561,8 @@ class ProgramPointerVisitor : public HeapObjectVisitor {
 void Process::IterateProgramPointers(PointerVisitor* visitor) {
   ProgramPointerVisitor program_pointer_visitor(visitor);
   heap()->IterateObjects(&program_pointer_visitor);
+  immutable_heap()->IterateObjects(&program_pointer_visitor);
+  store_buffer_.IteratePointersToImmutableSpace(visitor);
   if (debug_info_ != NULL) debug_info_->VisitProgramPointers(visitor);
   IteratePortQueuePointers(last_message_, visitor);
   IteratePortQueuePointers(current_message_, visitor);
@@ -692,8 +767,10 @@ bool Process::EnqueueForeign(Port* port,
 
 void Process::EnqueueExit(Process* sender, Port* port, Object* message) {
   // TODO(kasperl): Optimize this to avoid merging heaps if copying is cheaper.
+  Space* immutable_space = sender->immutable_heap()->TakeSpace();
   Space* space = sender->heap()->TakeSpace();
-  uword address = reinterpret_cast<uword>(new ExitReference(space, message));
+  uword address = reinterpret_cast<uword>(
+      new ExitReference(immutable_space, space, message));
   PortQueue* entry = new PortQueue(port, address, 0, PortQueue::EXIT);
   EnqueueEntry(entry);
 }
@@ -765,23 +842,39 @@ void Process::AdvanceCurrentMessage() {
   delete temp;
 }
 
-static void TakePortQueueHeaps(PortQueue* queue, Space* space) {
+// It's safe to call this method several times for the same ExitReference (e.g.
+// during GC and when processing the message in it). If the spaces were already
+// taken, this will be a NOP.
+static void TakeExitReferenceHeaps(ExitReference* ref,
+                                   Space* space,
+                                   Space* immutable_space) {
+  Space* new_space = ref->TakeSpace();
+  Space* new_immutable_space = ref->TakeImmutableSpace();
+
+  if (new_space != NULL) {
+    space->PrependSpace(new_space);
+  }
+  if (new_immutable_space != NULL) {
+    immutable_space->PrependSpace(new_immutable_space);
+  }
+}
+
+static void TakePortQueueHeaps(PortQueue* queue,
+                               Space* space,
+                               Space* immutable_space) {
   for (PortQueue* current = queue;
        current != NULL;
        current = current->next()) {
     if (current->kind() == PortQueue::EXIT) {
       ExitReference* ref = reinterpret_cast<ExitReference*>(current->address());
-      Space* other_space = ref->TakeSpace();
-      if (other_space != NULL) {
-        space->PrependSpace(other_space);
-      }
+      TakeExitReferenceHeaps(ref, space, immutable_space);
     }
   }
 }
 
 void Process::TakeChildHeaps() {
-  TakePortQueueHeaps(current_message_, heap_.space());
-  TakePortQueueHeaps(last_message_, heap_.space());
+  TakePortQueueHeaps(current_message_, heap_.space(), immutable_heap_.space());
+  TakePortQueueHeaps(last_message_, heap_.space(), immutable_heap_.space());
 }
 
 PortQueue* Process::CurrentMessage() {
@@ -902,10 +995,8 @@ NATIVE(ProcessQueueGetMessage) {
 
     case PortQueue::EXIT: {
       ExitReference* ref = reinterpret_cast<ExitReference*>(queue->address());
-      Space* other_space = ref->TakeSpace();
-      if (other_space != NULL) {
-        process->heap()->space()->PrependSpace(other_space);
-      }
+      TakeExitReferenceHeaps(
+          ref, process->heap()->space(), process->immutable_heap()->space());
       result = ref->message();
       break;
     }

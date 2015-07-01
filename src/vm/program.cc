@@ -1189,6 +1189,7 @@ void Program::PerformProgramGC(Space* to,
       }
       VisitProcesses(additional_processes, &iterate_program_roots_visitor);
     }
+    ASSERT(!to->is_empty());
     to->CompleteScavenge(visitor);
   }
   heap_.ReplaceSpace(to);
