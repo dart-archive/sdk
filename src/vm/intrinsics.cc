@@ -7,7 +7,7 @@
 namespace fletch {
 
 #define DEFINE_INTRINSIC(name) \
-  void Intrinsic_##name() { }
+  void __attribute__((aligned(4))) Intrinsic_##name() { }
 INTRINSICS_DO(DEFINE_INTRINSIC)
 #undef DEFINE_INTRINSIC
 

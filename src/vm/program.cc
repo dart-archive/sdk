@@ -1580,6 +1580,7 @@ void Program::SetupDispatchTableIntrinsics() {
     if (target == NULL) continue;
     Function* method = Function::cast(target);
     Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
+    ASSERT(intrinsic->IsSmi());
     table->set(i + 2, intrinsic);
   }
 
@@ -1595,6 +1596,7 @@ void Program::SetupDispatchTableIntrinsics() {
     if (target == NULL) continue;
     Function* method = Function::cast(target);
     Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
+    ASSERT(intrinsic->IsSmi());
     entry->set(3, intrinsic);
   }
 }
