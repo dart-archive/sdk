@@ -168,7 +168,7 @@ class FletchSystem {
   }
 
   int computeMaxFunctionId() {
-    return functionsById.keys.fold(0, (x, y) => x > y ? x : y);
+    return functionsById.keys.fold(-1, (x, y) => x > y ? x : y);
   }
 }
 
