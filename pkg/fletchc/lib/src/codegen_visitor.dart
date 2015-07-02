@@ -2110,7 +2110,7 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void handleStaticGetterGet(Send node, FunctionElement getter, _) {
+  void doStaticGetterGet(Send node, FunctionElement getter) {
     if (getter == context.backend.fletchExternalNativeError) {
       assembler.loadSlot(0);
       return;
@@ -2118,7 +2118,6 @@ abstract class CodegenVisitor
 
     if (getter.isDeferredLoaderGetter) {
       generateUnimplementedError(node, "Deferred loading is not supported.");
-      applyVisitState();
       return;
     }
 
@@ -2126,6 +2125,24 @@ abstract class CodegenVisitor
     int methodId = context.backend.functionMethodId(getter);
     int constId = functionBuilder.allocateConstantFromFunction(methodId);
     invokeStatic(node, constId, 0);
+  }
+
+  void handleStaticGetterGet(Send node, FunctionElement getter, _) {
+    doStaticGetterGet(node, getter);
+    applyVisitState();
+  }
+
+  void handleStaticGetterInvoke(
+      Send node,
+      FunctionElement getter,
+      NodeList arguments,
+      CallStructure callStructure,
+      _) {
+    doStaticGetterGet(node, getter);
+    for (Node argument in arguments) {
+      visitForValue(argument);
+    }
+    invokeMethod(node, callStructure.callSelector);
     applyVisitState();
   }
 
@@ -2828,17 +2845,6 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[handleStaticGetterSet] isn't implemented.");
-    applyVisitState();
-  }
-
-  void handleStaticGetterInvoke(
-      Send node,
-      FunctionElement getter,
-      NodeList arguments,
-      CallStructure callStructure,
-      _) {
-    generateUnimplementedError(
-        node, "[handleStaticGetterInvoke] isn't implemented.");
     applyVisitState();
   }
 

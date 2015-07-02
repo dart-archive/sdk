@@ -97,6 +97,11 @@ const patch = "patch";
     }
   }
 
+  @patch void writeln([Object obj = ""]) {
+    write(obj);
+    write('\n');
+  }
+
   @patch void writeAll(Iterable objects, [String separator = ""]) {
     bool first = true;
     for (var obj in objects) {

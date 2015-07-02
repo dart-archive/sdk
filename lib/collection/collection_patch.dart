@@ -438,7 +438,7 @@ class _HashMapEntry {
 
 abstract class _HashMapIterable<E> extends Iterable<E>
                                    implements EfficientLength {
-  final HashMap _map;
+  final _HashMap _map;
   _HashMapIterable(this._map);
   int get length => _map.length;
   bool get isEmpty => _map.isEmpty;
@@ -446,7 +446,7 @@ abstract class _HashMapIterable<E> extends Iterable<E>
 }
 
 class _HashMapKeyIterable<K> extends _HashMapIterable<K> {
-  _HashMapKeyIterable(HashMap map) : super(map);
+  _HashMapKeyIterable(_HashMap map) : super(map);
   Iterator<K> get iterator => new _HashMapKeyIterator<K>(_map);
   bool contains(Object key) => _map.containsKey(key);
   void forEach(void action(K key)) {
