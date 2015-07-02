@@ -235,6 +235,11 @@ class FletchBackend extends Backend {
       }
       FletchClassBuilder classBuilder = systemBuilder.newClassBuilder(
           element, superclass, builtinClasses.contains(element));
+
+      // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
+      // This is a workaround, where we basically add getters for all fields.
+      classBuilder.createImplicitAccessors(this);
+
       Element callMember = element.lookupLocalMember(
           Compiler.CALL_OPERATOR_NAME);
       if (callMember != null && callMember.isFunction) {
@@ -1073,9 +1078,6 @@ class FletchBackend extends Backend {
 
     for (FletchClassBuilder classBuilder in systemBuilder.getNewClasses()) {
       classBuilder.createIsEntries(this);
-      // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
-      // This is a workaround, where we basically add getters for all fields.
-      classBuilder.createImplicitAccessors(this);
     }
     return 0;
   }

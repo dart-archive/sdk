@@ -986,13 +986,8 @@ class FoldingVisitor: public PointerVisitor {
   void DefineMethods(Class* clazz) {
     if (!clazz->has_methods()) return;
     Array* methods = clazz->methods();
-    int last_selector = 0;
     for (int i = 0, length = methods->length(); i < length; i += 2) {
       int selector = Smi::cast(methods->get(i))->value();
-      // TODO(kasperl): It really shouldn't be necessary to filter out
-      // duplicates at this level.
-      if (i != 0 && selector == last_selector) continue;
-      last_selector = selector;
       Function* method = Function::cast(methods->get(i + 1));
       SelectorRow* row = rewriter_->LookupSelectorRow(selector, false);
       row->DefineMethod(clazz, method);

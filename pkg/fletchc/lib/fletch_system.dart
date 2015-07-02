@@ -40,6 +40,7 @@ class FletchClass {
   final int superclassId;
   final int fields;
   final int superclassFields;
+  final PersistentMap<int, int> methodTable;
 
   const FletchClass(
       this.classId,
@@ -47,7 +48,8 @@ class FletchClass {
       this.element,
       this.superclassId,
       this.fields,
-      this.superclassFields);
+      this.superclassFields,
+      this.methodTable);
 
   bool get hasSuperclassId => superclassId >= 0;
 

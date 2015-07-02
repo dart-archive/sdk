@@ -93,6 +93,9 @@ import 'package:compiler/src/constants/values.dart' show
 import 'package:compiler/src/library_loader.dart' show
     TagState;
 
+import 'package:persistent/persistent.dart' show
+    PersistentMap;
+
 import 'diff.dart' show
     Difference,
     computeDifference;
@@ -889,12 +892,13 @@ class LibraryUpdater extends FletchFeatures {
       updates.add(new commands_lib.PushFromMap(MapId.classes, id));
 
       classBuilder.createImplicitAccessors(backend);
-      Map<int, int> methodTable = classBuilder.computeMethodTable();
 
-      methodTable.forEach((int selector, int methodId) {
+      PersistentMap<int, int> methodTable = classBuilder.computeMethodTable();
+      for (int selector in methodTable.keys.toList()..sort()) {
+        int functionId = methodTable[selector];
         updates.add(new commands_lib.PushNewInteger(selector));
-        updates.add(new commands_lib.PushFromMap(MapId.methods, methodId));
-      });
+        updates.add(new commands_lib.PushFromMap(MapId.methods, functionId));
+      }
 
       updates.add(new commands_lib.ChangeMethodTable(methodTable.length));
       changes++;

@@ -7,6 +7,7 @@ library fletchc.fletch_class_builder;
 import 'package:compiler/src/dart_types.dart';
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/universe/universe.dart';
+import 'package:persistent/persistent.dart';
 
 import 'fletch_function_builder.dart';
 import 'fletch_context.dart';
@@ -26,11 +27,8 @@ class FletchClassBuilder {
   // behind the scenes.
   final int extraFields;
 
-  // TODO(kasperl): Hide these tables and go through a proper API to define
-  // and lookup methods.
-  final Map<int, int> implicitAccessorTable = <int, int>{};
-  final Map<int, FletchFunctionBuilder> methodTable =
-      <int, FletchFunctionBuilder>{};
+  final Map<int, int> _implicitAccessorTable = <int, int>{};
+  final Map<int, FletchFunctionBase> _methodTable = <int, FletchFunctionBase>{};
 
   FletchClassBuilder(
       this.classId,
@@ -60,37 +58,37 @@ class FletchClassBuilder {
   }
 
   void addToMethodTable(int selector, FletchFunctionBuilder functionBuilder) {
-    methodTable[selector] = functionBuilder;
+    _methodTable[selector] = functionBuilder;
   }
 
   // Add a selector for is-tests. The selector is only to be hit with the
   // InvokeTest bytecode, as the function is not guraranteed to be valid.
   void addIsSelector(int selector) {
     // TODO(ajohnsen): 'null' is a placeholder. Generate dummy function?
-    methodTable[selector] = null;
+    _methodTable[selector] = null;
   }
 
   // The method table for a class is a mapping from Fletch's integer
   // selectors to method ids. It contains all methods defined for a
-  // class including the implicit accessors.
-  Map<int, int> computeMethodTable() {
-    Map<int, int> result = <int, int>{};
-    List<int> selectors = implicitAccessorTable.keys.toList()
-        ..addAll(methodTable.keys)
-        ..sort();
+  // class including the implicit accessors. The returned map is not sorted.
+  PersistentMap<int, int> computeMethodTable() {
+    PersistentMap<int, int> result = new PersistentMap<int, int>();
+    List<int> selectors = _implicitAccessorTable.keys.toList()
+        ..addAll(_methodTable.keys);
     for (int selector in selectors) {
-      if (methodTable.containsKey(selector)) {
-        FletchFunctionBuilder function = methodTable[selector];
-        result[selector] = function == null ? 0 : function.methodId;
+      if (_methodTable.containsKey(selector)) {
+        FletchFunctionBase function = _methodTable[selector];
+        int functionId = function == null ? 0 : function.methodId;
+        result = result.insert(selector, functionId);
       } else {
-        result[selector] = implicitAccessorTable[selector];
+        result = result.insert(selector, _implicitAccessorTable[selector]);
       }
     }
     return result;
   }
 
   void createImplicitAccessors(FletchBackend backend) {
-    implicitAccessorTable.clear();
+    _implicitAccessorTable.clear();
     // If we don't have an element (stub class), we don't have anything to
     // generate accessors for.
     if (element == null) return;
@@ -100,12 +98,12 @@ class FletchClassBuilder {
     element.implementation.forEachInstanceField((enclosing, field) {
       var getter = new Selector.getter(field.name, field.library);
       int getterSelector = backend.context.toFletchSelector(getter);
-      implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
+      _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
 
       if (!field.isFinal) {
         var setter = new Selector.setter(field.name, field.library);
         var setterSelector = backend.context.toFletchSelector(setter);
-        implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
+        _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
       }
 
       fieldIndex++;
@@ -160,11 +158,12 @@ class FletchClassBuilder {
     commands.add(const Dup());
     commands.add(new PopToMap(MapId.classes, classId));
 
-    Map<int, int> methodTable = computeMethodTable();
-    methodTable.forEach((int selector, int methodId) {
+    PersistentMap<int, int> methodTable = computeMethodTable();
+    for (int selector in methodTable.keys.toList()..sort()) {
+      int functionId = methodTable[selector];
       commands.add(new PushNewInteger(selector));
-      commands.add(new PushFromMap(MapId.methods, methodId));
-    });
+      commands.add(new PushFromMap(MapId.methods, functionId));
+    }
     commands.add(new ChangeMethodTable(methodTable.length));
 
     return new FletchClass(
@@ -174,7 +173,8 @@ class FletchClassBuilder {
         element,
         superclass == null ? -1 : superclass.classId,
         fields,
-        superclassFields);
+        superclassFields,
+        methodTable);
   }
 
   String toString() => "FletchClassBuilder(${element.name}, $classId)";
