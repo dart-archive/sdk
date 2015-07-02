@@ -28,6 +28,7 @@ main(List<String> arguments) async {
   bool debugging = false;
   bool testDebugger = false;
   String testDebuggerCommands = "";
+  String packageRootPath = "package/";
   bool connectToExistingVm = false;
   int existingVmPort = 0;
 
@@ -48,16 +49,28 @@ main(List<String> arguments) async {
         testDebugger = true;
         break;
 
+      case '-p':
+        packageRootPath = arguments[++i];
+        break;
+
       default:
-        if (argument.startsWith('--test-debugger=')) {
-          testDebugger = true;
-          testDebuggerCommands = argument.substring(16);
+        const String packageRootFlag = '--package-root=';
+        if (argument.startsWith(packageRootFlag)) {
+          packageRootPath = argument.substring(packageRootFlag.length);
           break;
         }
 
-        if (argument.startsWith('--port=')) {
+        const String testDebuggerFlag = '--test-debugger=';
+        if (argument.startsWith(testDebuggerFlag)) {
+          testDebugger = true;
+          testDebuggerCommands = argument.substring(testDebuggerFlag.length);
+          break;
+        }
+
+        const String portFlag = '--port=';
+        if (argument.startsWith(portFlag)) {
           connectToExistingVm = true;
-          existingVmPort = int.parse(argument.substring(7));
+          existingVmPort = int.parse(argument.substring(portFlag.length));
           break;
         }
 
@@ -73,11 +86,10 @@ main(List<String> arguments) async {
 
   List<String> options = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
-  // TODO(ajohnsen): packageRoot should be a command line argument.
   FletchCompiler compiler = new FletchCompiler(
       options: options,
       script: script,
-      packageRoot: "package/");
+      packageRoot: packageRootPath);
   FletchDelta fletchDelta = await compiler.run();
 
   FletchVm vm;
