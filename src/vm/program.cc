@@ -1024,9 +1024,13 @@ void Program::Fold() {
   FoldingVisitor visitor(heap_.space(), to, &rewriter, this);
   PerformProgramGC(to, &visitor, additional_processes);
 
-  visitor.Finalize();
-  constants_ = rewriter.CreateConstantArray(this);
-  static_methods_ = rewriter.CreateStaticMethodArray(this);
+  {
+    NoAllocationFailureScope scope(to);
+    visitor.Finalize();
+    constants_ = rewriter.CreateConstantArray(this);
+    static_methods_ = rewriter.CreateStaticMethodArray(this);
+  }
+
   is_compact_ = true;
 
   FinishProgramGC(additional_processes);
