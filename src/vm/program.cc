@@ -1416,16 +1416,9 @@ void Program::Initialize() {
   }
 
   {
-    InstanceFormat format = InstanceFormat::instance_format(
-        1, InstanceFormat::FOREIGN_FUNCTION_MARKER);
-    foreign_function_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
-  }
-
-  {
-    InstanceFormat format = InstanceFormat::instance_format(
-        2, InstanceFormat::FOREIGN_MEMORY_MARKER);
-    foreign_memory_class_ = Class::cast(
+    InstanceFormat format =
+        InstanceFormat::instance_format(2, InstanceFormat::FOREIGN_MARKER);
+    foreign_class_ = Class::cast(
         heap()->CreateClass(format, meta_class_, null_object_));
   }
 

@@ -6,7 +6,7 @@ import 'dart:fletch.ffi';
 import 'dart:fletch.io' as io;
 import "package:expect/expect.dart";
 
-abstract class Timeval implements ForeignMemory {
+abstract class Timeval implements Foreign {
   factory Timeval() {
     switch (Foreign.bitsPerMachineWord) {
       case 32: return new Timeval32();
@@ -18,19 +18,19 @@ abstract class Timeval implements ForeignMemory {
   int get tv_usec;
 }
 
-class Timeval32 extends ForeignMemory implements Timeval {
+class Timeval32 extends Foreign implements Timeval {
   Timeval32() : super.allocated(8);
   int get tv_sec => getInt32(0);
   int get tv_usec => getInt32(4);
 }
 
-class Timeval64 extends ForeignMemory implements Timeval {
+class Timeval64 extends Foreign implements Timeval {
   Timeval64() : super.allocated(16);
   int get tv_sec => getInt64(0);
   int get tv_usec => getInt64(8);
 }
 
-final ForeignFunction gettimeofday = ForeignLibrary.main.lookup('gettimeofday');
+final Foreign gettimeofday = Foreign.lookup('gettimeofday');
 
 main() {
   Timeval timeval = new Timeval();

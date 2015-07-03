@@ -777,10 +777,8 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
     klass = program()->coroutine_class();
   } else if (name == Names::kPort) {
     klass = program()->port_class();
-  } else if (name == Names::kForeignMemory) {
-    klass = program()->foreign_memory_class();
-  } else if (name == Names::kForeignFunction) {
-    klass = program()->foreign_function_class();
+  } else if (name == Names::kForeign) {
+    klass = program()->foreign_class();
   } else {
     UNREACHABLE();
   }

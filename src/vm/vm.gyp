@@ -23,11 +23,7 @@
         'event_handler.cc',
         'event_handler_macos.cc',
         'event_handler_linux.cc',
-        'ffi.h',
         'ffi.cc',
-        'ffi_linux.cc',
-        'ffi_macos.cc',
-        'ffi_posix.cc',
         'fletch.cc',
         'fletch_api_impl.cc',
         'heap.cc',
@@ -74,7 +70,6 @@
         'fletch_vm_library_base',
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
-        'ffi_test_library',
       ],
 
       # TODO(kasperl): Remove the below conditions when we no longer use weak
@@ -219,25 +214,6 @@
         'platform_test.cc',
 
         '../shared/test_main.cc',
-      ],
-    },
-    {
-      'target_name': 'ffi_test_library',
-      'type': 'shared_library',
-      'dependencies': [
-      ],
-      # We need to unset a few cflags since they are not allowed when compiling
-      # a c library.
-      'cflags!': [
-        '-std=c++11',
-        '-fno-rtti',
-        '-Wno-non-virtual-dtor',
-      ],
-      'sources': [
-        'ffi_test_library.c',
-      ],
-      'defines': [
-        'PIC',
       ],
     },
   ],

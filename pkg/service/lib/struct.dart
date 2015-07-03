@@ -9,7 +9,7 @@ import "dart:collection";
 
 const int HEADER_SIZE = 56;
 
-Reader getRoot(Reader reader, ForeignMemory request) {
+Reader getRoot(Reader reader, Foreign request) {
   int segments = request.getInt32(HEADER_SIZE - 8);
   if (segments == 0) {
     MessageReader messageReader = new MessageReader();
@@ -23,7 +23,7 @@ Reader getRoot(Reader reader, ForeignMemory request) {
   }
 }
 
-Reader getSegmentedRoot(Reader reader, ForeignMemory request, int segments) {
+Reader getSegmentedRoot(Reader reader, Foreign request, int segments) {
   MessageReader messageReader = new MessageReader();
   int offset = HEADER_SIZE + 8;
   for (int i = 0; i < segments; i++) {
@@ -31,7 +31,7 @@ Reader getSegmentedRoot(Reader reader, ForeignMemory request, int segments) {
         ? request.getUint32(offset)
         : request.getUint64(offset);
     int size = request.getInt32(offset + 8);
-    ForeignMemory memory = new ForeignMemory.fromAddress(address, size);
+    Foreign memory = new Foreign.fromAddress(address, size);
     Segment segment = new Segment(messageReader, memory);
     messageReader.segments.add(segment);
     offset += 16;
@@ -45,27 +45,27 @@ int getResultMessage(Builder builder) {
   BuilderSegment segment = builder._segment;
   if (segment._next == null) {
     // Mark result as being non-segmented.
-    ForeignMemory memory = segment.memory;
+    Foreign memory = segment.memory;
     memory.setInt32(0, 0);
     memory.setInt32(4, memory.length);
-    return memory.address;
+    return memory.value;
   }
 
   // The result is a segmented message. Build a memory block that
   // contains the addresses and sizes of all of them.
   int segments = segment._builder._segments;
   int size = 8 + (segments * 16);
-  ForeignMemory buffer = new ForeignMemory.allocated(size);
+  Foreign buffer = new Foreign.allocated(size);
   // Mark the result as being segmented.
   buffer.setInt32(0, segments);
   int offset = 8;
   do {
-    buffer.setInt64(offset, segment.memory.address);
+    buffer.setInt64(offset, segment.memory.value);
     buffer.setInt32(offset + 8, segment._used);
     segment = segment._next;
     offset += 16;
   } while (segment != null);
-  return buffer.address;
+  return buffer.value;
 }
 
 class MessageReader {
@@ -77,7 +77,7 @@ class MessageReader {
 
 class Segment {
   final MessageReader reader;
-  final ForeignMemory memory;
+  final Foreign memory;
   Segment(this.reader, this.memory);
 }
 
@@ -99,7 +99,7 @@ class Reader {
     Segment segment = _segment;
     offset += _offset;
     while (true) {
-      ForeignMemory memory = segment.memory;
+      Foreign memory = segment.memory;
       int lo = memory.getInt32(offset + 0);
       int hi = memory.getInt32(offset + 4);
       int tag = lo & 3;
@@ -120,7 +120,7 @@ class Reader {
     Segment segment = _segment;
     offset += _offset;
     while (true) {
-      ForeignMemory memory = segment.memory;
+      Foreign memory = segment.memory;
       int lo = memory.getInt32(offset + 0);
       int hi = memory.getInt32(offset + 4);
       int tag = lo & 3;
@@ -168,13 +168,13 @@ abstract class ListReader<T> extends Reader with ListMixin<T> {
 
 class BuilderSegment {
   final MessageBuilder _builder;
-  final ForeignMemory memory;
+  final Foreign memory;
   int _id;
   int _used = 0;
   BuilderSegment _next;
 
   BuilderSegment(this._builder, this._id, int space)
-      : memory = new ForeignMemory.allocated(space);
+      : memory = new Foreign.allocated(space);
 
   bool HasSpaceForBytes(int bytes) => _used + bytes <= memory.length;
 
@@ -232,7 +232,7 @@ class Builder {
     BuilderSegment segment = _segment;
     while (true) {
       int result = segment.Allocate(size);
-      ForeignMemory memory = segment.memory;
+      Foreign memory = segment.memory;
       if (result >= 0) {
         memory.setInt32(offset + 0, (result << 2) | 1);
         memory.setInt32(offset + 4, 0);
@@ -261,7 +261,7 @@ class Builder {
     BuilderSegment segment = _segment;
     while (true) {
       int result = segment.Allocate(size);
-      ForeignMemory memory = segment.memory;
+      Foreign memory = segment.memory;
       if (result >= 0) {
         memory.setInt32(offset + 0, (result << 2) | 1);
         memory.setInt32(offset + 4, length);

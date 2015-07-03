@@ -350,8 +350,7 @@ class FletchBackend extends Backend {
     loadClass("bool", compiler.coreLibrary, true);
     coroutineClass = loadClass("Coroutine", fletchLibrary, true).element;
     loadClass("Port", fletchLibrary, true);
-    loadClass("ForeignMemory", fletchFFILibrary, true);
-    loadClass("ForeignPointer", fletchFFILibrary, true);
+    loadClass("Foreign", fletchFFILibrary, true);
 
     growableListClass =
         loadClass(growableListName, fletchSystemLibrary).element;

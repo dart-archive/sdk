@@ -89,7 +89,7 @@ abstract class System {
 
 final int hostWordSize = Foreign.bitsPerMachineWord ~/ 8;
 
-class Struct extends ForeignMemory {
+class Struct extends Foreign {
   final wordSize;
 
   Struct(int fields)

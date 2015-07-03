@@ -24,17 +24,6 @@ class ForeignFunctionInterface {
   static Mutex* mutex_;
 };
 
-// Platform specific ffi constants and methods.
-class ForeignUtils {
- public:
-  // We construct default bundle library paths from a prefix and a postfix.
-  static const char* kLibBundlePrefix;
-  static const char* kLibBundlePostfix;
-
-  // In preparation of supporting windows we have a function for this.
-  static char* DirectoryName(char* path);
-};
-
 }  // namespace fletch
 
 #endif  // SRC_VM_FFI_H_

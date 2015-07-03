@@ -45,8 +45,7 @@ class Session;
   V(Class, stack_class)                          \
   V(Class, coroutine_class)                      \
   V(Class, port_class)                           \
-  V(Class, foreign_function_class)               \
-  V(Class, foreign_memory_class)                 \
+  V(Class, foreign_class)                        \
   V(Class, initializer_class)                    \
   V(Class, constant_list_class)                  \
   V(Class, constant_map_class)                   \

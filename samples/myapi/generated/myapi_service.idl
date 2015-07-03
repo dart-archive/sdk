@@ -2,14 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#include "src/vm/ffi.h"
+service MyApiService {
+  
+  int32 create();
+  void destroy(int32 api);
 
-#include <libgen.h>
+  int32 foo(int32 api);
 
-namespace fletch {
+  void MyObject_funk(int32 api, int32 id, int32 o);
 
-char* ForeignUtils::DirectoryName(char* path) {
-  return dirname(path);
 }
-
-}  // namespace fletch

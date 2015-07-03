@@ -12,7 +12,7 @@
 namespace fletch {
 
 // Lists are light-weight data structures that hold a sequence of
-// contiguous elements. List never take ownership of the data they
+// contiguous elements. List never take ownership of the data their
 // are passed in, so as long as the data is either in a zone or
 // static, lists can be safely passed by value.
 template<typename T>
