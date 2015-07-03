@@ -63,12 +63,12 @@ class _Uint8List extends _TypedData with ListMixin<int> implements Uint8List {
 }
 
 abstract class _TypedData {
-  final Foreign _foreign;
+  final ForeignMemory _foreign;
   final int offsetInBytes;
   final int lengthInBytes;
 
   _TypedData._create(int sizeInBytes)
-    : _foreign = new Foreign.allocatedFinalize(sizeInBytes),
+    : _foreign = new ForeignMemory.allocatedFinalize(sizeInBytes),
       offsetInBytes = 0,
       lengthInBytes = sizeInBytes;
 
@@ -85,11 +85,11 @@ abstract class _TypedData {
 }
 
 class _ByteBuffer implements ByteBuffer {
-  final Foreign _foreign;
+  final ForeignMemory _foreign;
 
   _ByteBuffer._from(this._foreign);
 
-  Foreign getForeign() => _foreign;
+  ForeignMemory getForeign() => _foreign;
 
   int get lengthInBytes => _foreign.length;
 

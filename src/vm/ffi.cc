@@ -6,8 +6,10 @@
 
 #include <dlfcn.h>
 #include <errno.h>
+#include <sys/param.h>
 
 #include "src/shared/asan_helper.h"
+#include "src/shared/platform.h"
 #include "src/vm/natives.h"
 #include "src/vm/object.h"
 #include "src/vm/port.h"
@@ -70,6 +72,61 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
        current = current->next()) {
     void* result = PerformForeignLookup(current->library(), symbol);
     if (result != NULL) return result;
+  }
+  return NULL;
+}
+
+NATIVE(ForeignLibraryLookup) {
+  char* library = arguments[0]->IsString()
+      ? AsForeignString(String::cast(arguments[0]))
+      : NULL;
+  void* result = dlopen(library, RTLD_LOCAL | RTLD_LAZY);
+  if (result == NULL) {
+    fprintf(stderr, "Failed libary lookup(%s): %s\n", library, dlerror());
+  }
+  free(library);
+  return result != NULL
+      ? process->ToInteger(reinterpret_cast<intptr_t>(result))
+      : Failure::index_out_of_bounds();
+}
+
+NATIVE(ForeignLibraryGetFunction) {
+  word address = AsForeignWord(arguments[0]);
+  void* handle = reinterpret_cast<void*>(address);
+  char* name = AsForeignString(String::cast(arguments[1]));
+  if (handle == NULL) handle = dlopen(NULL, RTLD_LOCAL | RTLD_LAZY);
+  void* result = dlsym(handle, name);
+  free(name);
+  return result != NULL
+      ? process->ToInteger(reinterpret_cast<intptr_t>(result))
+      : Failure::index_out_of_bounds();
+}
+
+NATIVE(ForeignLibraryBundlePath) {
+  char* library = AsForeignString(String::cast(arguments[0]));
+  char executable[MAXPATHLEN + 1];
+  GetPathOfExecutable(executable, sizeof(executable));
+  char* directory = ForeignUtils::DirectoryName(executable);
+  // dirname on linux may mess with the content of the buffer, so we use a fresh
+  // buffer for the result. If anybody cares this can be optimized by manually
+  // writing the strings other than dirname to the executable buffer.
+  char result[MAXPATHLEN + 1];
+  int wrote = snprintf(result, MAXPATHLEN + 1, "%s%s%s%s", directory,
+                       ForeignUtils::kLibBundlePrefix, library,
+                       ForeignUtils::kLibBundlePostfix);
+  if (wrote > MAXPATHLEN) {
+    return Failure::index_out_of_bounds();
+  }
+  free(library);
+  return process->NewStringFromAscii(List<const char>(result, strlen(result)));
+}
+
+NATIVE(ForeignLibraryClose) {
+  word address = AsForeignWord(arguments[0]);
+  void* handle = reinterpret_cast<void*>(address);
+  if (dlclose(handle) != 0)  {
+    fprintf(stderr, "Failed to close handle: %s\n", dlerror());
+    return Failure::index_out_of_bounds();
   }
   return NULL;
 }

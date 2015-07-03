@@ -21,7 +21,8 @@ namespace fletch {
   N(Num,                    "num")                      \
   N(Coroutine,              "Coroutine")                \
   N(Port,                   "Port")                     \
-  N(Foreign,                "Foreign")                  \
+  N(ForeignMemory,          "ForeignMemory")            \
+  N(ForeignFunction,        "ForeignFunction")          \
   N(String,                 "_StringImpl")              \
                                                         \
   N(Equals,                 "==")                       \

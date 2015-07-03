@@ -2,13 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-service MyApiService {
-  
-  int32 create();
-  void destroy(int32 api);
+#include "src/vm/ffi.h"
 
-  int32 foo(int32 api);
+namespace fletch {
 
-  void MyObject_funk(int32 api, int32 id, int32 o);
+const char* ForeignLibraryConstants::kLibBundlePrefix = "/lib";
+const char* ForeignLibraryConstants::kLibBundlePostfix = ".dylib";
 
-}
+}  // namespace fletch

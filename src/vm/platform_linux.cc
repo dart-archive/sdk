@@ -17,5 +17,3 @@ int Platform::GetLocalTimeZoneOffset() {
 }
 
 }  // namespace fletch
-
-

@@ -6,7 +6,7 @@ import 'dart:fletch.ffi';
 import "package:expect/expect.dart";
 
 main() {
-  Foreign memory = new Foreign.allocated(8);
+  Foreign memory = new ForeignMemory.allocated(8);
   var bigint = 9223372036854775806;
   memory.setInt64(0, bigint);
   Expect.equals(memory.getInt64(0), bigint);
