@@ -6,7 +6,7 @@
 
 namespace fletch {
 
-const char* ForeignLibraryConstants::kLibBundlePrefix = "/lib";
-const char* ForeignLibraryConstants::kLibBundlePostfix = ".dylib";
+const char* ForeignUtils::kLibBundlePrefix::kLibBundlePrefix = "/lib";
+const char* ForeignUtils::kLibBundlePostfix = ".dylib";
 
 }  // namespace fletch
