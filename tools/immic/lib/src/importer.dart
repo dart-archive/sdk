@@ -11,49 +11,42 @@ import 'struct_layout.dart';
 
 import 'package:path/path.dart' show join, dirname;
 
-Map<String, Unit> parseImports(Unit unit,
-                               String path,
-                               String packageDirectory) {
-  Map<String, Unit> units = <String,Unit>{};
-  ImportParser.parse(unit, path, packageDirectory, units);
+Future<Map> parseImports(Unit unit, ImportResolver resolver, context) async {
+  Map units = {};
+  await ImportParser.parse(unit, resolver, context, units);
   return units;
 }
 
-class ImportParser extends Visitor {
-  final String unitPath;
-  final String packageDirectory;
-  final Map<String, Unit> units;
+abstract class ImportResolver<Context> {
+  Context resolve(Import import, Context context);
+  Future<String> read(Context context);
+}
 
-  static parse(Unit unit,
-               String unitPath,
-               String packageDirectory,
-               Map<String, Unit> units) {
-    var parser = new ImportParser(unitPath, packageDirectory, units);
-    parser.visit(unit);
+class ImportParser<Context> extends Visitor {
+  final ImportResolver resolver;
+  final Context context;
+  final Map<Context, Unit> units;
+
+  static parse(Unit unit, ImportResolver resolver, Context context, Map units) {
+    var parser = new ImportParser(resolver, context, units);
+    return parser.visitUnit(unit);
   }
 
-  ImportParser(this.unitPath, this.packageDirectory, this.units);
+  ImportParser(this.resolver, this.context, this.units);
 
-  visit(Node node) => node.accept(this);
-
-  visitUnit(Unit unit) {
-    // TODO(zerny): Canonicalize the file path!
-    if (!units.containsKey(unitPath)) {
-      unit.imports.forEach(visit);
-      units[unitPath] = unit;
+  visitUnit(Unit unit) async {
+    units[context] = unit;
+    for (var import in unit.imports) {
+      await visitImport(import);
     }
   }
 
-  visitImport(Import import) {
-    String importPath;
-    if (import.prefix == 'package') {
-      importPath = join(packageDirectory, import.file);
-    } else {
-      importPath = join(dirname(unitPath), import.file);
+  visitImport(Import import) async {
+    var newContext = resolver.resolve(import, context);
+    if (newContext != null) {
+      String input = await resolver.read(newContext);
+      Unit unit = parseUnit(input);
+      await parse(unit, resolver, newContext, units);
     }
-    List<int> bytes = new File(importPath).readAsBytesSync();
-    String input = UTF8.decode(bytes);
-    Unit unit = parseUnit(input);
-    parse(unit, importPath, packageDirectory, units);
   }
 }

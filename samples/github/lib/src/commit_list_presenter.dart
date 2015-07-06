@@ -9,8 +9,8 @@ import 'package:immi/immi.dart';
 import 'package:immi_samples/sliding_window.dart';
 
 // Export generated code for nodes in commit_list_presenter.immi
-import 'package:immi_gen/dart/commit_list_presenter.dart';
-export 'package:immi_gen/dart/commit_list_presenter.dart';
+import 'commit_list_presenter_immi.dart';
+export 'commit_list_presenter_immi.dart';
 
 class CommitListPresenter {
   Repository _repository;

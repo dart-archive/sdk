@@ -8,6 +8,7 @@ import 'package:petitparser/petitparser.dart';
 import 'grammar.dart';
 import 'primitives.dart' as primitives;
 import 'struct_layout.dart';
+import 'package:path/path.dart' as p;
 
 Unit parseUnit(String input) {
   Parser parser = new GrammarParser(new _ImmiParserDefinition());
@@ -46,25 +47,21 @@ class Unit extends Node {
 
 class Import extends Node {
   static const String packagePrefix = 'package:';
-  String file;
-  String prefix;
-  String extension;
-  Import(List<String> import) {
-    int i = 0;
-    int k = 0;
-    for (int j = 0; j < import.length; ++j) {
-      if (import[j] == ':') {
-        assert(prefix == null);
-        prefix = import.sublist(i, j).join();
-        i = j + 1;
-      } else if (import[j] == '.') {
-        k = j + 1;
-      }
+  String import;
+  String package;
+  String path;
+
+  Import(List<String> importData) {
+    import = importData.join();
+    if (import.startsWith(packagePrefix)) {
+      package = p.split(import)[0].split(':')[1];
+      path = import.substring(packagePrefix.length + package.length + 1);
+    } else {
+      path = import;
     }
-    assert(k > 0);
-    file = import.sublist(i).join();
-    extension = import.sublist(k).join();
   }
+
+  String get extension => p.extension(path);
 
   accept(Visitor visitor) => visitor.visitImport(this);
 }

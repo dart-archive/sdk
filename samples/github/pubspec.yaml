@@ -1,0 +1,17 @@
+name: github_sample
+version: 0.1.0
+description: A sample application demonstrating the immi application infrastructure.
+dependencies:
+  immic:
+    path: ../../tools/immic
+  immi:
+    path: ../../pkg/immi
+  immi_samples:
+    path: ../../pkg/immi_samples
+  http:
+    path: ../../pkg/http
+transformers:
+- immic:
+    root: 'lib/github.immi'
+- $dart2js:
+    $exclude: 'bin'

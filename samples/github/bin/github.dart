@@ -2,14 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart/commit_list_presenter.dart';
-import 'dart/commit_presenter.dart';
-import 'dart/github_services.dart';
+import 'package:github_sample/github_immi_service.dart';
+import 'package:github_sample/src/commit_list_presenter.dart';
+import 'package:github_sample/src/commit_presenter.dart';
+import 'package:github_sample/src/github_services.dart';
 
 import 'package:immi_samples/drawer.dart';
 import 'package:immi_samples/menu.dart';
-
-import 'package:immi_gen/dart/immi_service_impl.dart';
 
 main() {
   var server = new Server.invertedForTesting(8321);

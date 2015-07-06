@@ -9,8 +9,8 @@ import 'sequenced_presenter.dart';
 import 'package:immi/immi.dart';
 
 // Export generated code for nodes in sliding_window.immi
-import 'package:immi_gen/dart/sliding_window.dart';
-export 'package:immi_gen/dart/sliding_window.dart';
+import 'sliding_window_immi.dart';
+export 'sliding_window_immi.dart';
 
 class _Window {
   int startOffset = 0;

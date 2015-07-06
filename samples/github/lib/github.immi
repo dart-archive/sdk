@@ -7,4 +7,4 @@ import 'package:immi_samples/menu.immi';
 
 // TODO(zerny): Inline the contents of commit_list_presenter.immi once its
 // presenter has been eliminated.
-import 'dart/commit_list_presenter.immi';
+import 'src/commit_list_presenter.immi';

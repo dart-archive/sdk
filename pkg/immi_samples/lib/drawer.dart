@@ -5,8 +5,8 @@
 import 'package:immi/immi.dart';
 
 // Export generated code for nodes in drawer.immi
-import 'package:immi_gen/dart/drawer.dart';
-export 'package:immi_gen/dart/drawer.dart';
+import 'drawer_immi.dart';
+export 'drawer_immi.dart';
 
 class Drawer {
   var left;

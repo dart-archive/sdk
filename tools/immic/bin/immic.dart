@@ -3,11 +3,12 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:io';
+import 'dart:async';
 
 import 'package:immic/compiler.dart' as immic;
 import 'package:args/args.dart';
 
-main(List<String> arguments) {
+main(List<String> arguments) async {
   ArgParser parser = new ArgParser();
   parser.addOption('package');
   parser.addOption('out', defaultsTo: ".");
@@ -32,6 +33,6 @@ main(List<String> arguments) {
     exit(1);
   }
   for (String path in results.rest) {
-    immic.compile(path, outputDirectory, packageDirectory);
+    await immic.compile(path, outputDirectory, packageDirectory);
   }
 }

@@ -5,8 +5,8 @@
 import 'package:immi/immi.dart';
 
 // Export generated code for nodes in menu.immi
-import 'package:immi_gen/dart/menu.dart';
-export 'package:immi_gen/dart/menu.dart';
+import 'menu_immi.dart';
+export 'menu_immi.dart';
 
 class MenuItem {
   String title;

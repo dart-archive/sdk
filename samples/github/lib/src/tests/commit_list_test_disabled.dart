@@ -8,13 +8,13 @@ import 'package:immi/immi.dart';
 import 'package:immi_samples/sliding_window.dart';
 import 'package:service/struct.dart';
 
+import 'package:immi_gen/dart/immi_service.dart';
+
+import '../../github_immi.dart';
 import '../github_services.dart';
 import '../github_mock.dart';
 import '../commit_list_presenter.dart';
 import '../commit_presenter.dart';
-
-import 'package:immi_gen/dart/github.dart';
-import 'package:immi_gen/dart/immi_service.dart';
 
 void main() {
   var mock = new GithubMock()..spawn();

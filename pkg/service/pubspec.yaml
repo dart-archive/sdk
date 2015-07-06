@@ -1,0 +1,3 @@
+name: service
+version: 0.1.0
+description: Base types for the Dart fletch service layer.

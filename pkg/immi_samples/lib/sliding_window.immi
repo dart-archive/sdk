@@ -27,5 +27,4 @@ node SlidingWindow {
 
   // Event to toggle an item in the window.
   void toggle(uint32 index);
-
 }

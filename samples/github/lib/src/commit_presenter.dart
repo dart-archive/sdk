@@ -8,8 +8,8 @@ import 'package:immi/immi.dart';
 import 'package:immi_samples/sequenced_presenter.dart';
 
 // Export generated code for nodes in commit_presenter.immi
-import 'package:immi_gen/dart/commit_presenter.dart';
-export 'package:immi_gen/dart/commit_presenter.dart';
+import 'commit_presenter_immi.dart';
+export 'commit_presenter_immi.dart';
 
 class CommitPresenter extends SequencedPresenter<CommitNode> {
   Repository _repository;
@@ -30,9 +30,9 @@ class CommitPresenter extends SequencedPresenter<CommitNode> {
     if (json == null) return null;
 
     String imageUrl = json['author'] == null
-      ? "" 
+      ? ""
       : json['author']['avatar_url'];
-    
+
     return new CommitNode(
         author: json['commit']['author']['name'],
         message: json['commit']['message'],

@@ -122,7 +122,7 @@ class GithubMock {
     socket.close();
   }
 
-  String _dataDir = 'samples/github/dart/github_mock_data';
+  String _dataDir = 'samples/github/lib/src/github_mock_data';
 
   ByteBuffer _readResponseFile(String resource) {
     int code = 200;

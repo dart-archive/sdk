@@ -7,7 +7,7 @@ library immic.plugins.dart;
 import 'dart:core' hide Type;
 import 'dart:io' show Platform, File;
 
-import 'package:path/path.dart' show basenameWithoutExtension, join, dirname;
+import 'package:path/path.dart' show withoutExtension, join, dirname;
 import 'package:strings/strings.dart' as strings;
 
 import 'shared.dart';
@@ -21,30 +21,17 @@ const COPYRIGHT = """
 // BSD-style license that can be found in the LICENSE.md file.
 """;
 
-void generate(String path,
-              Map<String, Unit> units,
-              String outputDirectory) {
-  String directory = join(outputDirectory, 'dart');
-  units.forEach((path, unit) => _generateNodeFile(path, unit, directory));
-  _generateServiceFile(path, units, directory);
-}
-
-void _generateNodeFile(String unitPath, Unit unit, String directory) {
+String generateNodeString(String unitPath, Unit unit) {
   _DartVisitor visitor = new _DartVisitor(unitPath);
   visitor.visit(unit);
-  String content = visitor.buffer.toString();
-  writeToFile(directory, unitPath, content, extension: 'dart');
+  return visitor.buffer.toString();
 }
 
-void _generateServiceFile(String path,
-                          Map<String, Unit> units,
-                          String directory) {
+String generateServiceString(String path, Map units) {
   _DartVisitor visitor = new _DartVisitor(path);
   units.values.forEach(visitor.collectMethodSignatures);
   visitor._writeServiceImpl();
-  String content = visitor.buffer.toString();
-  String file = visitor.serviceImplFile;
-  writeToFile(directory, file, content, extension: 'dart');
+  return visitor.buffer.toString();
 }
 
 class _DartVisitor extends CodeGenerationVisitor {
@@ -55,12 +42,12 @@ class _DartVisitor extends CodeGenerationVisitor {
     _writeLibrary();
     _writeImports();
     node.imports.forEach(visit);
+    if (node.imports.isNotEmpty) writeln();
     node.structs.forEach(visit);
   }
 
   visitImport(Import import) {
-    String file = basenameWithoutExtension(import.file);
-    writeln("import '${immiGenPkg}/dart/${file}.dart';");
+    writeln("import '${withoutExtension(import.import)}_immi.dart';");
   }
 
   getPatchType(Type type) {
@@ -227,6 +214,7 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('  }');
     writeln('  void $serializeSelfPatch($patchBuilderName builder, ResourceManager manager);');
     writeln('}');
+    writeln();
     writeln('class $replacePatch extends $patchName {');
     writeln('  final $nodeName replacement;');
     writeln('  final Node previous;');

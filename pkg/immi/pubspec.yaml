@@ -1,0 +1,6 @@
+name: immi
+version: 0.1.0
+description: Base types for the immi UI infrastructure.
+dependencies:
+  service:
+    path: ../service
