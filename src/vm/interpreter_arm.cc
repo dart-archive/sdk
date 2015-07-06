@@ -238,7 +238,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Allocate(bool unfolded, bool immutable);
 
   // This function changes caller-saved registers.
-  void AddToStoreBufferSlow(Register reg);
+  void AddToStoreBufferSlow(Register object, Register value);
 
   void InvokeEq(const char* fallback);
   void InvokeLt(const char* fallback);
@@ -500,7 +500,7 @@ void InterpreterGeneratorARM::DoStoreBoxed() {
   __ ldr(R1, Address(R6, Operand(R0, TIMES_4)));
   __ str(R2, Address(R1, Boxed::kValueOffset - HeapObject::kTag));
 
-  AddToStoreBufferSlow(R1);
+  AddToStoreBufferSlow(R1, R2);
 
   Dispatch(kStoreBoxedLength);
 }
@@ -512,7 +512,7 @@ void InterpreterGeneratorARM::DoStoreStatic() {
   __ add(R3, R1, Immediate(Array::kSize - HeapObject::kTag));
   __ str(R2, Address(R3, Operand(R0, TIMES_4)));
 
-  AddToStoreBufferSlow(R1);
+  AddToStoreBufferSlow(R1, R2);
 
   Dispatch(kStoreStaticLength);
 }
@@ -526,7 +526,7 @@ void InterpreterGeneratorARM::DoStoreField() {
   StoreLocal(R2, 1);
   Drop(1);
 
-  AddToStoreBufferSlow(R0);
+  AddToStoreBufferSlow(R0, R2);
 
   Dispatch(kStoreFieldLength);
 }
@@ -535,10 +535,13 @@ void InterpreterGeneratorARM::DoStoreFieldWide() {
   __ ldr(R1, Address(R5, 1));
   LoadLocal(R2, 0);
   LoadLocal(R0, 1);
-  __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
-  __ str(R2, Address(R0, Operand(R1, TIMES_4)));
+  __ add(R3, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ str(R2, Address(R3, Operand(R1, TIMES_4)));
   StoreLocal(R2, 1);
   Drop(1);
+
+  AddToStoreBufferSlow(R0, R2);
+
   Dispatch(kStoreFieldWideLength);
 }
 
@@ -1238,7 +1241,7 @@ void InterpreterGeneratorARM::DoIntrinsicSetField() {
   StoreLocal(R0, 1);
   Drop(1);
 
-  AddToStoreBufferSlow(R2);
+  AddToStoreBufferSlow(R2, R0);
 
   Dispatch(kInvokeMethodLength);
 }
@@ -1297,7 +1300,7 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexSet() {
   StoreLocal(R0, 2);
   Drop(2);
 
-  AddToStoreBufferSlow(R2);
+  AddToStoreBufferSlow(R2, R0);
 
   Dispatch(kInvokeMethodLength);
 }
@@ -1744,17 +1747,22 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     __ ldr(R7, Address(R1, Operand(R0, TIMES_4)));
   }
 
-  // We initialize R12 with the 3rd argument to "HandleAllocate" to 0, meaning
-  // the object we're allocating will not be initialized with pointers to
-  // immutable space.
-  __ ldr(R12, Immediate(0));
+  const Register kRegisterAllocateImmutable = R9;
+  const Register kRegisterImmutableMembers = R12;
 
-  // Either directly jump to allocation code or determine first if arguments
-  // on the stack have immutable flag set.
+  // We initialize the 3rd argument to "HandleAllocate" to 0, meaning the object
+  // we're allocating will not be initialized with pointers to immutable space.
+  __ ldr(kRegisterImmutableMembers, Immediate(0));
+
+  // Loop over all arguments and find out if
+  //   * all of them are immutable
+  //   * there is at least one immutable member
   Label allocate;
-  Label allocate_mutable;
-  Label allocate_immutable;
-  if (immutable) {
+  {
+    // Initialization of [kRegisterAllocateImmutable] depended on [immutable]
+    __ ldr(kRegisterAllocateImmutable,
+           Immediate(immutable ? 1 : 0));
+
     __ ldr(R2, Address(R7, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ ldr(R3, Immediate(InstanceFormat::FixedSizeField::mask()));
     __ and_(R2, R2, R3);
@@ -1769,6 +1777,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
 
     Label loop;
     Label loop_with_immutable_field;
+    Label loop_with_mutable_field;
 
     // Increment pointer to point to next field.
     __ Bind(&loop);
@@ -1776,7 +1785,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
 
     // Test whether R3 > R6. If so we're done and it's immutable.
     __ cmp(R3, R6);
-    __ b(HI, &allocate_immutable);
+    __ b(HI, &allocate);
 
     // If Smi, continue the loop.
     __ ldr(R2, Address(R3, 0));
@@ -1815,7 +1824,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
 
     // If this is a Boxed, we bail out.
     __ cmp(R0, Immediate(boxed_mask));
-    __ b(EQ, &allocate_mutable);
+    __ b(EQ, &loop_with_mutable_field);
 
     // If this is not ComplexHeapObject, we consider it immutable.
     __ ldr(R1, Immediate(complex_heap_object_mask));
@@ -1830,25 +1839,23 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     __ cmp(R2, Immediate(im_mask));
     __ b(EQ, &loop_with_immutable_field);
 
-    __ b(&allocate_mutable);
+    __ b(&loop_with_mutable_field);
 
     __ Bind(&loop_with_immutable_field);
-    __ ldr(R12, Immediate(1));
+    __ ldr(kRegisterImmutableMembers, Immediate(1));
+    __ b(&loop);
+
+    __ Bind(&loop_with_mutable_field);
+    __ ldr(kRegisterAllocateImmutable, Immediate(0));
     __ b(&loop);
   }
-
-  __ Bind(&allocate_mutable);
-  __ mov(R2, Immediate(0));
-  __ b(&allocate);
-
-  __ Bind(&allocate_immutable);
-  __ mov(R2, Immediate(1));
 
   // TODO(kasperl): Consider inlining this in the interpreter.
   __ Bind(&allocate);
   __ mov(R0, R4);
   __ mov(R1, R7);
-  __ mov(R3, R12);
+  __ mov(R2, kRegisterAllocateImmutable);
+  __ mov(R3, kRegisterImmutableMembers);
   __ bl("HandleAllocate");
   __ cmp(R0, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
   __ b(EQ, &gc_);
@@ -1883,11 +1890,16 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
 }
 
 
-void InterpreterGeneratorARM::AddToStoreBufferSlow(Register reg) {
-  __ mov(R0, R4);
-  if (reg != R1) {
-    __ mov(R1, reg);
+void InterpreterGeneratorARM::AddToStoreBufferSlow(Register object,
+                                                   Register value) {
+  if (object != R1) {
+    ASSERT(value != R1);
+    __ mov(R1, object);
   }
+  if (value != R2) {
+    __ mov(R2, value);
+  }
+  __ mov(R0, R4);
   __ bl("AddToStoreBufferSlow");
 }
 

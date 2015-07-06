@@ -805,7 +805,7 @@ NATIVE(ListIndexSet) {
   }
   Object* value = arguments[2];
   array->set(index, value);
-  process->RecordArrayWrite(array, value);
+  process->RecordStore(array, value);
   return value;
 }
 
@@ -827,7 +827,9 @@ static Instance* ClonePort(Process* child, Instance* port) {
   ASSERT(port_class->NumberOfInstanceFields() == 1);
   Instance* clone = Instance::cast(child->NewInstance(port_class));
   Object* address = port->GetInstanceField(0);
-  clone->SetInstanceField(0, CloneInteger(child, address));
+  Object* integer = CloneInteger(child, address);
+  clone->SetInstanceField(0, integer);
+  child->RecordStore(clone, integer);
   reinterpret_cast<Port*>(AsForeignWord(address))->IncrementRef();
   child->RegisterFinalizer(clone, Port::WeakCallback);
   return clone;
@@ -920,8 +922,9 @@ static bool SpawnBlockingProcess(Process* process,
   Instance* port_instance = Instance::cast(child->NewInstance(port_class));
   Port* port = new Port(process, channel);
   child->RegisterFinalizer(port_instance, Port::WeakCallback);
-  port_instance->SetInstanceField(
-      0, child->ToInteger(reinterpret_cast<uword>(port)));
+  Object* integer = child->ToInteger(reinterpret_cast<uword>(port));
+  port_instance->SetInstanceField(0, integer);
+  child->RecordStore(port_instance, integer);
 
   // Set up the stack as a call of the entry with one argument: closure.
   child->SetupExecutionStack();

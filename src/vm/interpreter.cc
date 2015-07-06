@@ -21,7 +21,7 @@
 #define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp)                    \
   Object* var = (exp);                                                  \
   if (var == Failure::retry_after_gc()) {                               \
-    CollectGarbage();                                                   \
+    CollectGarbageIfNecessary();                                        \
     /* Re-try interpreting the bytecode by re-dispatching. */           \
     DISPATCH();                                                         \
   }                                                                     \
@@ -136,7 +136,9 @@ class Engine : public State {
   // Returns false if it was unable to grow the stack at this point, and the
   // immediate execution should halt.
   bool StackOverflowCheck(int size);
-  void CollectGarbage();
+
+  void CollectGarbageIfNecessary();
+  void CollectGarbage(bool collect_mutable, bool collect_immutable);
 
   void ValidateStack();
 
@@ -301,20 +303,19 @@ Interpreter::InterruptKind Engine::Interpret(
     ASSERT(!target->IsImmutable());
     target->SetInstanceField(ReadByte(1), value);
     Push(value);
+    Advance(kStoreFieldLength);
 
     if (value->IsHeapObject() && value->IsImmutable()) {
-      StoreBuffer* sb = process()->store_buffer();
-      sb->Insert(target);
+      StoreBuffer* store_buffer = process()->store_buffer();
+      store_buffer->Insert(target);
 
       // TODO(kustermann): We probably don't want to do this check on every
       // write. But we probably do want to do this check in other places as
       // well.
-      if (sb->ShouldGcMutableSpace()) {
-        CollectGarbage();
+      if (store_buffer->ShouldGcMutableSpace()) {
+        CollectGarbage(true, false);
       }
     }
-
-    Advance(kStoreFieldLength);
   OPCODE_END();
 
   OPCODE_BEGIN(StoreFieldWide);
@@ -323,6 +324,18 @@ Interpreter::InterruptKind Engine::Interpret(
     target->SetInstanceField(ReadInt32(1), value);
     Push(value);
     Advance(kStoreFieldWideLength);
+
+    if (value->IsHeapObject() && value->IsImmutable()) {
+      StoreBuffer* store_buffer = process()->store_buffer();
+      store_buffer->Insert(target);
+
+      // TODO(kustermann): We probably don't want to do this check on every
+      // write. But we probably do want to do this check in other places as
+      // well.
+      if (store_buffer->ShouldGcMutableSpace()) {
+        CollectGarbage(true, false);
+      }
+    }
   OPCODE_END();
 
   OPCODE_BEGIN(LoadLiteralNull);
@@ -712,7 +725,6 @@ Interpreter::InterruptKind Engine::Interpret(
       Object* local = Local(i);
       if (!local->IsImmutable()) {
         immutable = false;
-        break;
       } else if (local->IsHeapObject()) {
         has_immutable_pointers = true;
       }
@@ -742,7 +754,6 @@ Interpreter::InterruptKind Engine::Interpret(
       Object* local = Local(i);
       if (!local->IsImmutable()) {
         immutable = false;
-        break;
       } else if (local->IsHeapObject()) {
         has_immutable_pointers = true;
       }
@@ -920,12 +931,33 @@ bool Engine::StackOverflowCheck(int size) {
   return true;
 }
 
-void Engine::CollectGarbage() {
-  // Push bcp so that we can traverse frames when we get
-  // to the point where we GC methods.
-  SaveState();
-  process()->CollectGarbage();
-  RestoreState();
+void Engine::CollectGarbageIfNecessary() {
+  bool collect_mutable = process()->heap()->needs_garbage_collection() ||
+                         process()->store_buffer()->ShouldGcMutableSpace();
+  bool collect_immutable =
+      process()->immutable_heap()->needs_garbage_collection();
+  CollectGarbage(collect_mutable, collect_immutable);
+}
+
+void Engine::CollectGarbage(bool collect_mutable, bool collect_immutable) {
+  if (collect_mutable || collect_immutable) {
+    SaveState();
+
+    if (collect_mutable) process()->CollectMutableGarbage();
+    if (collect_immutable) process()->CollectImmutableGarbage();
+
+    RestoreState();
+
+    if (collect_mutable) {
+      // After a mutable GC a lot of stacks might no longer have pointers to
+      // immutable space on them. If so, the store buffer will no longer contain
+      // such a stack.
+      //
+      // Since we don't update the store buffer on every mutating operation
+      // - e.g. SetLocal() - we add it before we start using it.
+      process()->store_buffer()->Insert(process()->stack());
+    }
+  }
 }
 
 void Engine::ValidateStack() {
@@ -975,6 +1007,19 @@ void Interpreter::Run() {
   ASSERT(interruption_ == kReady);
   process_->RestoreErrno();
   process_->TakeLookupCache();
+
+  // Whenever we enter the interpreter, we might operate on a stack which
+  // doesn't contain any references to immutable space. This means the
+  // storebuffer might *NOT* contain the stack.
+  //
+  // Since we don't update the store buffer on every mutating operation - e.g.
+  // SetLocal() - we add it as soon as the interpreter uses it:
+  //   * once we enter the interpreter
+  //   * once we we're done with mutable GC
+  //   * once we we've done a coroutine change
+  // This is conservative.
+  process_->store_buffer()->Insert(process_->stack());
+
   int result = -1;
   if (!process_->is_debugging()) {
     result = InterpretFast(process_, &target_yield_result_);
@@ -1002,7 +1047,15 @@ bool HandleIsInvokeFast(int opcode) {
 }
 
 void HandleGC(Process* process) {
-  process->CollectGarbage();
+  process->CollectGarbageIfNecessary();
+
+  // After a mutable GC a lot of stacks might no longer have pointers to
+  // immutable space on them. If so, the store buffer will no longer contain
+  // such a stack.
+  //
+  // Since we don't update the store buffer on every mutating operation
+  // - e.g. SetLocal() - we add it before we start using it.
+  process->store_buffer()->Insert(process->stack());
 }
 
 Object* HandleObjectFromFailure(Process* process, Failure* failure) {
@@ -1015,21 +1068,26 @@ Object* HandleAllocate(Process* process,
                        int immutable_heapobject_member) {
   Object* result = process->NewInstance(clazz, immutable == 1);
   if (result->IsFailure()) return result;
-
   if (immutable != 1 && immutable_heapobject_member == 1) {
     process->store_buffer()->Insert(HeapObject::cast(result));
   }
   return result;
 }
 
-void AddToStoreBufferSlow(Process* process, Object* object) {
-  if (object->IsHeapObject() && object->IsImmutable()) {
+void AddToStoreBufferSlow(Process* process, Object* object, Object* value) {
+  ASSERT(object->IsHeapObject());
+  ASSERT(process->heap()->space()->Includes(
+      HeapObject::cast(object)->address()));
+  if (value->IsHeapObject() && value->IsImmutable()) {
     process->store_buffer()->Insert(HeapObject::cast(object));
   }
 }
 
 Object* HandleAllocateBoxed(Process* process, Object* value) {
-  return process->NewBoxed(value);
+  Object* boxed = process->NewBoxed(value);
+  if (boxed->IsFailure()) return boxed;
+  AddToStoreBufferSlow(process, boxed, value);
+  return boxed;
 }
 
 void HandleCoroutineChange(Process* process, Coroutine* coroutine) {

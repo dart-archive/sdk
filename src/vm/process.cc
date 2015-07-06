@@ -368,6 +368,16 @@ Object* Process::NewStack(int length) {
   return result;
 }
 
+void Process::CollectGarbageIfNecessary() {
+  if (heap()->needs_garbage_collection() ||
+      store_buffer()->ShouldGcMutableSpace()) {
+    CollectMutableGarbage();
+  }
+  if (immutable_heap()->needs_garbage_collection()) {
+    CollectImmutableGarbage();
+  }
+}
+
 void Process::CollectImmutableGarbage() {
   Space* from = immutable_heap_.space();
   Space* to = new Space();
@@ -963,6 +973,7 @@ NATIVE(ProcessQueueGetMessage) {
       reinterpret_cast<Port*>(address)->IncrementRef();
       process->RegisterFinalizer(port, Port::WeakCallback);
       port->SetInstanceField(0, object);
+      process->RecordStore(port, object);
       result = port;
       break;
     }
@@ -986,6 +997,7 @@ NATIVE(ProcessQueueGetMessage) {
       if (object == Failure::retry_after_gc()) return object;
       foreign->SetInstanceField(0, object);
       foreign->SetInstanceField(1, Smi::FromWord(queue->size()));
+      process->RecordStore(foreign, object);
       if (kind == PortQueue::FOREIGN_FINALIZED) {
         process->RegisterFinalizer(foreign, Process::FinalizeForeign);
       }

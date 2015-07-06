@@ -2,19 +2,53 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:fletch';
 import "dart:math" show pow;
 
 import "package:expect/expect.dart";
+
+class Tuple {
+  final first;
+  final second;
+  const Tuple(this.first, this.second);
+  Tuple.nonConst(this.first, this.second);
+}
 
 class Mutable {
   var value;
   Mutable(this.value);
 }
 
+void mutableToImmutableObjects(bool useConstConstructor) {
+  const int kNumber = 42;
+
+  var mutable = new Mutable(14);
+  var survivorContainer;
+  if (useConstConstructor) {
+    survivorContainer = new Tuple(mutable, 'number: $kNumber');
+  } else {
+    survivorContainer = new Tuple.nonConst(mutable, 'number: $kNumber');
+  }
+
+  Expect.isFalse(isImmutable(mutable));
+  Expect.isFalse(isImmutable(survivorContainer));
+  Expect.isTrue(isImmutable(survivorContainer.second));
+
+  var abc = "abc";
+  for (int i = 0; i < 500000; i++) {
+    abc = '$abc$abc'.substring(0, 3);
+    Expect.equals(abc, 'abc');
+  }
+
+  // [survivorContainer] was added to storebuffer and we therefore do not
+  // collect [survivorContainer.second] as garbage.
+  Expect.equals(survivorContainer.second, 'number: 42');
+}
+
 void immutableGarbage() {
   var abc = "abc";
   var survivor = '$abc$abc';
-  for (int i = 0; i < 100000; i++) {
+  for (int i = 0; i < 500000; i++) {
     abc = '$abc$abc'.substring(0, 3);
     Expect.equals(abc, 'abc');
   }
@@ -26,7 +60,7 @@ void immutableGarbage() {
 void mutableGarbage() {
   var abc = "abc";
   var survivor = new Mutable('$abc$abc');
-  for (int i = 0; i < 50000; i++) {
+  for (int i = 0; i < 500000; i++) {
     Expect.equals(new Mutable(abc).value, 'abc');
   }
   // [survivor] was moved by GC and we should still be able to
@@ -91,6 +125,8 @@ void staticStores() {
 }
 
 void main() {
+  mutableToImmutableObjects(true);
+  mutableToImmutableObjects(false);
   immutableGarbage();
   mutableGarbage();
   closuresGarbage();

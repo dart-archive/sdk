@@ -136,11 +136,10 @@ class Process {
 
   Object* Concatenate(String* x, String* y);
 
-  // Perform garbage collection using the stack region
-  // [stack_start, stack_end] as the root set.
+  void CollectGarbage();
+  void CollectGarbageIfNecessary();
   void CollectImmutableGarbage();
   void CollectMutableGarbage();
-  void CollectGarbage();
 
   // Perform garbage collection and chain all stack objects. Additionally,
   // locate all processes in ports in the heap that are not yet known
@@ -263,13 +262,13 @@ class Process {
 
   StoreBuffer* store_buffer() { return &store_buffer_; }
 
-  void RecordArrayWrite(Array* array, Object* obj) {
-    if (obj->IsHeapObject() && obj->IsImmutable()) {
+  void RecordStore(HeapObject* object, Object* value) {
+    if (value->IsHeapObject() && value->IsImmutable()) {
       ASSERT(!program()->heap()->space()->Includes(
-          array->address()));
+          object->address()));
       ASSERT(heap()->space()->Includes(
-          array->address()));
-      store_buffer_.Insert(array);
+          object->address()));
+      store_buffer_.Insert(object);
     }
   }
 
