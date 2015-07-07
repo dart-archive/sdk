@@ -749,9 +749,13 @@ class FletchBackend extends Backend {
           systemBuilder.lookupClassBuilder(functionBuilder.memberOf);
       classBuilder.addToMethodTable(fletchSelector, functionBuilder);
       // Inject method into all mixin usages.
-      Iterable<ClassElement> mixinUsage =
-          compiler.world.mixinUsesOf(function.enclosingClass);
-      for (ClassElement usage in mixinUsage) {
+      List<ClassElement> mixinUsage =
+          compiler.world.mixinUsesOf(function.enclosingClass).toList();
+      for (int i = 0; i < mixinUsage.length; i++) {
+        ClassElement usage = mixinUsage[i];
+        // Allso add to mixin-usage of the current 'usage'.
+        assert(!compiler.world.mixinUsesOf(usage).any(mixinUsage.contains));
+        mixinUsage.addAll(compiler.world.mixinUsesOf(usage));
         // TODO(ajohnsen): Consider having multiple 'memberOf' in
         // FletchFunctionBuilder, to avoid duplicates.
         // Create a copy with a unique 'memberOf', so we can detect missing
