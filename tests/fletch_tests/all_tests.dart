@@ -17,7 +17,7 @@ import '../fletchc/incremental/feature_test.dart' as incremental;
 
 import '../fletchc/driver/test_control_stream.dart' as controlStream;
 
-import 'zone_helper_tests.dart' as zoneHelper;
+import 'zone_helper_tests.dart' as zone_helper;
 
 import 'sentence_tests.dart' as sentence_tests;
 
@@ -47,10 +47,10 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
 
   'controlStream/testControlStream': controlStream.testControlStream,
 
-  'zoneHelper/testEarlyError': zoneHelper.testEarlyError,
-  'zoneHelper/testLateError': zoneHelper.testLateError,
-  'zoneHelper/testUnhandledLateError': zoneHelper.testUnhandledLateError,
-  'zoneHelper/testAlwaysFails': zoneHelper.testAlwaysFails,
+  'zone_helper/testEarlyError': zone_helper.testEarlyError,
+  'zone_helper/testLateError': zone_helper.testLateError,
+  'zone_helper/testUnhandledLateError': zone_helper.testUnhandledLateError,
+  'zone_helper/testAlwaysFails': zone_helper.testAlwaysFails,
 
   'sentence_tests': sentence_tests.main,
 };

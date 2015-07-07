@@ -183,7 +183,7 @@ Future<Message> runTest(String name, NoArgFuture test) async {
         test,
         printLineOnStdout: printLineOnStdout,
         handleLateError: (error, StackTrace stackTrace) {
-      if (name == 'zoneHelper/testAlwaysFails') {
+      if (name == 'zone_helper/testAlwaysFails') {
         // This test always report a late error (to ensure the framework
         // handles it).
         return;
