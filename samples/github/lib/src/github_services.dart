@@ -4,7 +4,9 @@
 
 import 'dart:fletch';
 import 'dart:fletch.io';
-import 'json.dart';
+import 'dart:convert' show JSON, UTF8;
+
+import 'package:http/http.dart';
 
 abstract class Connection {
   final String host;
@@ -32,6 +34,18 @@ class _ConnectionInvertedImpl implements Connection {
   }
   Socket connect() => _socket.accept();
   void close() { _socket.close(); }
+}
+
+getJson(Connection service, String resource) {
+  HttpConnection connection = new HttpConnection(service.connect());
+  HttpRequest request = new HttpRequest('${service.host}/$resource');
+  request.headers["Host"] = service.host;
+  request.headers["User-Agent"] = 'fletch';
+  HttpResponse response = connection.send(request);
+  if (response.statusCode != 200) {
+    throw 'Failed request: $resource on port $port';
+  }
+  return JSON.decode(UTF8.decode(response.body));
 }
 
 class Server {

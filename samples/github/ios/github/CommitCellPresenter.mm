@@ -47,11 +47,12 @@
 - (void)configureCell:(CommitCellPresenter*)cell
           atIndexPath:(NSIndexPath *)indexPath
              withNode:(CommitNode*)node{
-  NSString* decodedMessage = [self decodeJsonString:node.message];
+  NSString* decodedMessage = node.message;
   if (decodedMessage.length > 200) {
     decodedMessage = [NSString stringWithFormat:@"%@...",
                       [decodedMessage substringToIndex:200]];
   }
+  cell.detailsLabel.numberOfLines = 0;
   cell.detailsLabel.text = decodedMessage;
   cell.messageLabel.text = decodedMessage;
   cell.authorLabel.text = node.author;
@@ -105,15 +106,6 @@
       });
     });
   }
-}
-
-- (NSString*) decodeJsonString:(NSString*)text {
-  NSString* jsonString = [NSString stringWithFormat: @"\"%@\"", text];
-  NSData* data = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
-
-  return [NSJSONSerialization JSONObjectWithData:data
-                                         options:NSJSONReadingAllowFragments
-                                           error:NULL];
 }
 
 @end
