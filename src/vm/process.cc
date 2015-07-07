@@ -162,7 +162,6 @@ Process::Process(Program* program)
       queue_next_(NULL),
       queue_previous_(NULL),
       ports_(NULL),
-      weak_pointers_(NULL),
       last_message_(NULL),
       current_message_(NULL),
       program_gc_state_(kUnknown),
@@ -187,7 +186,8 @@ Process::~Process() {
   ASSERT(next_ == NULL);
   ASSERT(cooked_stack_deltas_.is_empty());
   // Clear out the process pointer from all the ports.
-  WeakPointer::ForceCallbacks(&weak_pointers_);
+  heap_.ProcessWeakPointers();
+  immutable_heap_.ProcessWeakPointers();
   while (ports_ != NULL) {
     Port* next = ports_->next();
     ports_->OwnerProcessTerminating();
@@ -380,9 +380,8 @@ void Process::CollectImmutableGarbage() {
   store_buffer_.IteratePointersToImmutableSpace(&visitor);
   to->CompleteScavenge(&visitor);
 
-  WeakPointer::Process(from, &weak_pointers_);
+  immutable_heap_.ProcessWeakPointers();
   set_ports(Port::CleanupPorts(from, ports()));
-
   immutable_heap_.ReplaceSpace(to);
 }
 
@@ -404,11 +403,9 @@ void Process::CollectMutableGarbage() {
   to->CompleteScavengeMutable(&visitor, immutable_space, &sb);
   store_buffer_.ReplaceAfterMutableGC(&sb);
 
-  WeakPointer::Process(from, &weak_pointers_);
+  heap_.ProcessWeakPointers();
   set_ports(Port::CleanupPorts(from, ports()));
-
   heap_.ReplaceSpace(to);
-
   UpdateStackLimit();
 }
 
@@ -510,7 +507,7 @@ int Process::CollectMutableGarbageAndChainStacks(Process** list) {
   to->CompleteScavengeMutable(&visitor, immutable_space, &sb);
   store_buffer_.ReplaceAfterMutableGC(&sb);
 
-  WeakPointer::Process(from, &weak_pointers_);
+  heap_.ProcessWeakPointers();
   set_ports(Port::CleanupPorts(from, ports()));
   heap_.ReplaceSpace(to);
   UpdateStackLimit();
@@ -805,11 +802,21 @@ void Process::TakeQueue() {
 
 void Process::RegisterFinalizer(HeapObject* object,
                                 WeakPointerCallback callback) {
-  weak_pointers_ = new WeakPointer(object, callback, weak_pointers_);
+  uword address = object->address();
+  if (heap()->space()->Includes(address)) {
+    heap()->AddWeakPointer(object, callback);
+  } else {
+    ASSERT(immutable_heap()->space()->Includes(address));
+    immutable_heap()->AddWeakPointer(object, callback);
+  }
 }
 
 void Process::UnregisterFinalizer(HeapObject* object) {
-  WeakPointer::Remove(&weak_pointers_, object);
+  uword address = object->address();
+  // We do not support unregistering weak pointers for the immutable heap (and
+  // it is currently also not used for immutable objects).
+  ASSERT(heap()->space()->Includes(address));
+  heap()->RemoveWeakPointer(object);
 }
 
 void Process::FinalizeForeign(HeapObject* foreign) {

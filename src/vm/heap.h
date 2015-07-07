@@ -9,18 +9,15 @@
 #include "src/shared/random.h"
 #include "src/vm/object.h"
 #include "src/vm/object_memory.h"
+#include "src/vm/weak_pointer.h"
 
 namespace fletch {
 
 // Heap represents the container for all HeapObjects.
 class Heap {
  public:
-  Heap(RandomLCG* random, int maximum_initial_size = 0) : random_(random) {
-    space_ = new Space(maximum_initial_size);
-    AdjustAllocationBudget();
-  }
-
-  virtual ~Heap() { delete space_; }
+  Heap(RandomLCG* random, int maximum_initial_size = 0);
+  ~Heap();
 
   // Allocate raw object.
   Object* Allocate(int size);
@@ -106,6 +103,10 @@ class Heap {
 
   RandomLCG* random() { return random_; }
 
+  void AddWeakPointer(HeapObject* object, WeakPointerCallback callback);
+  void RemoveWeakPointer(HeapObject* object);
+  void ProcessWeakPointers();
+
  private:
   Object* CreateStringInternal(Class* the_class, int length, bool clear,
                                bool immutable);
@@ -114,6 +115,9 @@ class Heap {
   RandomLCG* random_;
   Space* space_;
   Object* AllocateRawClass(int size);
+
+  // Linked list of weak pointers to heap objects in this heap.
+  WeakPointer* weak_pointers_;
 };
 
 // Helper class for copying HeapObjects.

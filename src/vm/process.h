@@ -13,7 +13,6 @@
 #include "src/vm/program.h"
 #include "src/vm/storebuffer.h"
 #include "src/vm/thread.h"
-#include "src/vm/weak_pointer.h"
 #include "src/shared/random.h"
 
 namespace fletch {
@@ -23,7 +22,6 @@ class Interpreter;
 class Port;
 class PortQueue;
 class ProcessQueue;
-class WeakPointer;
 
 class ThreadState {
  public:
@@ -316,9 +314,6 @@ class Process {
 
   // Linked list of ports owned by this process.
   Port* ports_;
-
-  // Linked List of weak pointers to heap objects in this process.
-  WeakPointer* weak_pointers_;
 
   // Pointer to the last PortQueue element of this process.
   std::atomic<PortQueue*> last_message_;

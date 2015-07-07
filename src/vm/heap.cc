@@ -12,6 +12,17 @@
 
 namespace fletch {
 
+Heap::Heap(RandomLCG* random, int maximum_initial_size)
+    : random_(random), space_(NULL), weak_pointers_(NULL) {
+  space_ = new Space(maximum_initial_size);
+  AdjustAllocationBudget();
+}
+
+Heap::~Heap() {
+  WeakPointer::ForceCallbacks(&weak_pointers_);
+  delete space_;
+}
+
 Object* Heap::Allocate(int size) {
   uword result = space_->Allocate(size);
   if (result == 0) return Failure::retry_after_gc();
@@ -216,6 +227,19 @@ Space* Heap::TakeSpace() {
   Space* result = space_;
   space_ = NULL;
   return result;
+}
+
+void Heap::AddWeakPointer(HeapObject* object,
+                          WeakPointerCallback callback) {
+  weak_pointers_ = new WeakPointer(object, callback, weak_pointers_);
+}
+
+void Heap::RemoveWeakPointer(HeapObject* object) {
+  WeakPointer::Remove(&weak_pointers_, object);
+}
+
+void Heap::ProcessWeakPointers() {
+  WeakPointer::Process(space(), &weak_pointers_);
 }
 
 }  // namespace fletch
