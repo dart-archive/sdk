@@ -51,8 +51,7 @@
 }
 
 - (void)patchSlidingWindow:(SlidingWindowPatch*)patch {
-  // TODO(zerny): Replace with caching of patch.current when implemented.
-  self.root = [patch applyWith:self.root];
+  self.root = patch.current;
   [self reloadOnMainThread];
 }
 

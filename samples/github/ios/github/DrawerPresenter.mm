@@ -62,7 +62,7 @@
 }
 
 - (void)patchDrawer:(DrawerPatch*)patch {
-  self.root = [patch applyWith:self.root];
+  self.root = patch.current;
   [patch.center applyTo:_centerPresenter];
   [patch.left applyTo:_leftPresenter];
   [patch.right applyTo:_rightPresenter];

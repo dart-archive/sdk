@@ -46,6 +46,22 @@ abstract class CodeGenerationVisitor extends Visitor {
     }
   }
 
+  void forEachSlotAndMethod(Struct node,
+                            void sep(),
+                            void f(field, String name)) {
+    bool first = true;
+    for (StructSlot slot in node.layout.slots) {
+      if (!first && sep != null) sep();
+      f(slot.slot, slot.slot.name);
+      first = false;
+    }
+    for (Method method in node.methods) {
+      if (!first && sep != null) sep();
+      f(method, method.name);
+      first = false;
+    }
+  }
+
   visit(Node node) => node.accept(this);
 
   visitStruct(Struct node) {
