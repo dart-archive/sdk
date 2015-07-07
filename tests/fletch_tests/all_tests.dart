@@ -19,6 +19,8 @@ import '../fletchc/driver/test_control_stream.dart' as controlStream;
 
 import 'zone_helper_tests.dart' as zoneHelper;
 
+import 'sentence_tests.dart' as sentence_tests;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -49,4 +51,6 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'zoneHelper/testLateError': zoneHelper.testLateError,
   'zoneHelper/testUnhandledLateError': zoneHelper.testUnhandledLateError,
   'zoneHelper/testAlwaysFails': zoneHelper.testAlwaysFails,
+
+  'sentence_tests': sentence_tests.main,
 };

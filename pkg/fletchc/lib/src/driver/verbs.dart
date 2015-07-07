@@ -27,6 +27,9 @@ import 'compile_and_run_verb.dart' show
 import 'shutdown_verb.dart' show
     shutdownVerb;
 
+import 'create_verb.dart' show
+    createVerb;
+
 typedef Future<int> DoVerb(
     String fletchVm,
     List<String> arguments,
@@ -65,4 +68,5 @@ const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "compile-and-run": compileAndRunVerb,
 
   "shutdown": shutdownVerb,
+  "create": createVerb,
 };
