@@ -1923,7 +1923,10 @@ abstract class CodegenVisitor
       NewExpression node,
       ConstructedConstantExpression constant,
       _) {
-    doConstConstructorInvoke(constant);
+    // TODO(johnniwinther): We should not end up here with an bad constructor.
+    if (!checkCompileError(elements[node.send])) {
+      doConstConstructorInvoke(constant);
+    }
     applyVisitState();
   }
 

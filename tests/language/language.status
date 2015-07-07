@@ -38,7 +38,6 @@ bit_operations_test/02: Fail
 bit_operations_test/03: Fail
 bit_operations_test/04: Fail
 bit_operations_test/none: Fail
-body_less_constructor_wrong_arg_negative_test: Fail
 built_in_identifier_prefix_test: Fail
 built_in_identifier_test/01: Fail
 call_nonexistent_constructor_test/01: Fail
@@ -87,16 +86,10 @@ closures_initializer_test: Fail
 compile_time_constant_c_test/02: MissingCompileTimeError
 compile_time_constant_i_test: Fail
 compile_time_constant_l_test: Fail
-compile_time_constant_p_test/01: MissingCompileTimeError
 compile_time_constant_test/01: MissingCompileTimeError
 compound_assignment_operator_test: Fail
-const_constructor_mixin2_test/01: MissingCompileTimeError, Crash
-const_constructor_mixin3_test/01: MissingCompileTimeError
-const_constructor_mixin_test/01: MissingCompileTimeError
 const_constructor_nonconst_field_test/01: MissingCompileTimeError
-const_constructor_syntax_test/05: MissingCompileTimeError
 const_evaluation_test/01: CompileTimeError
-const_factory_with_body_test/01: MissingCompileTimeError
 const_instance_field_test/01: MissingCompileTimeError
 const_locals_test: Fail
 const_native_factory_test/01: MissingCompileTimeError
@@ -195,7 +188,6 @@ field_increment_bailout_test: CompileTimeError
 field_initialization_order_test: Fail
 final_field_initialization_order_test: Fail
 final_syntax_test/08: Crash
-final_syntax_test/09: MissingCompileTimeError
 first_class_types_constants_test: Crash
 first_class_types_libraries_test: CompileTimeError
 first_class_types_literals_test/01: Fail
