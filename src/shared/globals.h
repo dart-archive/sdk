@@ -13,10 +13,11 @@
 #define __STDC_LIMIT_MACROS
 #endif
 
+#include <inttypes.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
-#include <inttypes.h>
 #include <unistd.h>
 
 // Types for native machine words. Guaranteed to be able to hold

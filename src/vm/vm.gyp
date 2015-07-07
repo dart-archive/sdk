@@ -42,6 +42,7 @@
         'process.cc',
         'program.cc',
         'scheduler.cc',
+        'selector_row.cc',
         'service_api_impl.cc',
         'session.cc',
         'snapshot.cc',

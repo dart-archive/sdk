@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <utility>
 
 #include "src/shared/bytecodes.h"
 #include "src/shared/flags.h"
@@ -22,14 +23,11 @@
 #include "src/vm/heap.h"
 #include "src/vm/object.h"
 #include "src/vm/process.h"
+#include "src/vm/selector_row.h"
 #include "src/vm/session.h"
 
 namespace fletch {
 
-class SelectorRow;
-
-typedef std::vector<Class*> ClassVector;
-typedef std::vector<Function*> FunctionVector;
 typedef std::unordered_map<Object*, int> ObjectIndexMap;
 typedef std::unordered_map<int, SelectorRow*> SelectorRowMap;
 typedef std::unordered_map<int, int> SelectorOffsetMap;
@@ -357,161 +355,6 @@ void Program::Unfold() {
   FinishProgramGC(additional_processes);
 }
 
-class ProgramTableRewriter;
-
-class SelectorRow {
- public:
-  enum Kind {
-    LINEAR,
-    TABLE,
-  };
-
-  explicit SelectorRow(int selector)
-      : selector_(selector),
-        offset_(-1),
-        variants_(0),
-        begin_(-1),
-        end_(-1) {
-  }
-
-  int begin() const {
-    return begin_;
-  }
-
-  Kind kind() const {
-    return (variants_ <= kFewVariantsThreshold) ? LINEAR : TABLE;
-  }
-
-  int offset() const {
-    return offset_;
-  }
-
-  void set_offset(int value) {
-    offset_ = value;
-  }
-
-  Kind Finalize() {
-    int variants = variants_;
-    ASSERT(variants > 0);
-    if (variants <= kFewVariantsThreshold) return LINEAR;
-
-    ASSERT(begin_ == -1 && end_ == -1);
-    Class* first = classes_[0];
-    begin_ = first->id();
-    end_ = first->child_id();
-
-    for (int i = 1; i < variants; i++) {
-      Class* clazz = classes_[i];
-      int begin = clazz->id();
-      int end = clazz->child_id();
-      if (begin < begin_) begin_ = begin;
-      if (end > end_) end_ = end;
-    }
-
-    return TABLE;
-  }
-
-  int SetLinearOffset(int offset) {
-    ASSERT(kind() == LINEAR);
-    offset_ = offset;
-    return offset + ComputeLinearSize();
-  }
-
-  int ComputeLinearSize() {
-    ASSERT(kind() == LINEAR);
-    return (variants_ + 2) * 4;
-  }
-
-  int ComputeTableSize() {
-    ASSERT(kind() == TABLE);
-    return end_ - begin_;
-  }
-
-  int FillLinear(Program* program, Array* table);
-  void FillTable(Program* program, Array* table);
-
-  // The bottom up construction order guarantees that more specific methods
-  // always get defined before less specific ones.
-  void DefineMethod(Class* clazz, Function* method) {
-#ifdef DEBUG
-    for (int i = 0; i < variants_; i++) {
-      // No class should have multiple method definitions for a
-      // single given selector.
-      ASSERT(classes_[i] != clazz);
-    }
-#endif
-    classes_.push_back(clazz);
-    methods_.push_back(method);
-    variants_++;
-  }
-
-  static bool Compare(SelectorRow* a, SelectorRow* b) {
-    int a_size = a->ComputeTableSize();
-    int b_size = b->ComputeTableSize();
-    // Sort by decreasing sizes (first) and decreasing begin index.
-    // According to the litterature, this leads to fewer holes and
-    // faster row offset computation.
-    return (a_size == b_size)
-        ? a->begin() > b->begin()
-        : a_size > b_size;
-  }
-
- private:
-  static const int kFewVariantsThreshold = 2;
-
-  const int selector_;
-  int offset_;
-
-  // We keep track of all the different implementations of
-  // the selector corresponding to this row.
-  int variants_;
-  ClassVector classes_;
-  FunctionVector methods_;
-
-  // All used entries in this row are in the [begin, end) interval.
-  int begin_;
-  int end_;
-};
-
-class RowFitter {
- public:
-  RowFitter() : next_(0), limit_(0) {
-  }
-
-  int limit() const { return limit_; }
-
-  int Fit(SelectorRow* row) {
-    ASSERT(row->kind() == SelectorRow::TABLE);
-
-    // Pad to avoid negative offsets.
-    int start = next_;
-    int offset = start - row->begin();
-    if (offset < 0) {
-      start += -offset;
-      offset = 0;
-    }
-
-    // Pad to guarantee unique offsets.
-    while (used_offsets_.count(offset) > 0) {
-      start++;
-      offset++;
-    }
-    used_offsets_.insert(offset);
-
-    // Keep track of the highest used offset.
-    if (offset > limit_) limit_ = offset;
-
-    // Allocate the necessary space.
-    next_ = start + row->ComputeTableSize();
-    return offset;
-  }
-
- private:
-  std::unordered_set<int> used_offsets_;
-  int next_;
-  int limit_;
-};
-
 class ProgramTableRewriter {
  public:
   ProgramTableRewriter() : linear_size_(0) { }
@@ -568,8 +411,14 @@ class ProgramTableRewriter {
     RowFitter fitter;
     for (unsigned i = 0; i < table_rows.size(); i++) {
       SelectorRow* row = table_rows[i];
-      int offset = fitter.Fit(row);
-      row->set_offset(offset + kHeaderSize);
+      // Sizes up to 2 cells in width can only be of one range.
+      if (row->ComputeTableSize() <= 2) {
+        int offset = fitter.FitRowWithSingleRange(row);
+        row->set_offset(offset + kHeaderSize);
+      } else {
+        int offset = fitter.Fit(row);
+        row->set_offset(offset + kHeaderSize);
+      }
     }
 
     // The combined table size is header plus enough space to guarantee
@@ -675,66 +524,6 @@ class ProgramTableRewriter {
   SelectorRowMap selector_rows_;
   int linear_size_;
 };
-
-int SelectorRow::FillLinear(Program* program, Array* table) {
-  ASSERT(kind() == LINEAR);
-  int index = offset_;
-
-  table->set(index++, Smi::FromWord(Selector::ArityField::decode(selector_)));
-  table->set(index++, Smi::FromWord(selector_));
-  table->set(index++, NULL);
-  table->set(index++, NULL);
-
-  for (int i = 0; i < variants_; i++) {
-    Class* clazz = classes_[i];
-    Function* method = methods_[i];
-    table->set(index++, Smi::FromWord(clazz->id()));
-    table->set(index++, Smi::FromWord(clazz->child_id()));
-    table->set(index++, NULL);
-    table->set(index++, method);
-  }
-
-  static const Names::Id name = Names::kNoSuchMethodTrampoline;
-  Function* target = program->object_class()->LookupMethod(
-      Selector::Encode(name, Selector::METHOD, 0));
-
-  table->set(index++, Smi::FromWord(0));
-  table->set(index++, Smi::FromWord(Smi::kMaxPortableValue));
-  table->set(index++, NULL);
-  table->set(index++, target);
-
-  ASSERT(index - offset_ == ComputeLinearSize());
-  return index;
-}
-
-void SelectorRow::FillTable(Program* program, Array* table) {
-  ASSERT(kind() == TABLE);
-  int offset = offset_;
-  for (int i = 0, length = variants_; i < length; i++) {
-    Class* clazz = classes_[i];
-    Function* method = methods_[i];
-    Array* entry = Array::cast(program->CreateArray(4));
-    entry->set(0, Smi::FromWord(offset));
-    entry->set(1, Smi::FromWord(selector_));
-    entry->set(2, method);
-    entry->set(3, NULL);
-
-    int id = clazz->id();
-    int limit = clazz->child_id();
-    while (id < limit) {
-      if (table->get(offset + id)->IsNull()) {
-        table->set(offset + id, entry);
-        id++;
-      } else {
-        // Because the variants are ordered so we deal with the most specific
-        // implementations first, we can skip the entire subclass hierarchy
-        // when we find that the method we're currently filling into the table
-        // is overridden by an already processed implementation.
-        id = program->class_at(id)->child_id();
-      }
-    }
-  }
-}
 
 void Program::FoldFunction(Function* old_function,
                            Function* new_function,
@@ -1050,8 +839,10 @@ Process* Program::ProcessSpawnForMain() {
     PrintStatistics();
   }
 
+#ifdef DEBUG
   // TODO(ager): GC for testing only.
   CollectGarbage();
+#endif
 
   ASSERT(scheduler() != NULL);
 
@@ -1563,7 +1354,7 @@ void Program::ClearDispatchTableIntrinsics() {
   length = table->length();
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
-    if (element->IsNull()) continue;
+    if (element == null_object()) continue;
     Array* entry = Array::cast(element);
     entry->set(3, NULL);
   }
@@ -1573,30 +1364,53 @@ void Program::SetupDispatchTableIntrinsics() {
   Array* table = dispatch_table();
   if (table == NULL) return;
   int length = table->length();
+  int hits = 0;
   for (int i = 0; i < length; i += 4) {
     ASSERT(table->get(i + 2) == NULL);
     Object* target = table->get(i + 3);
     if (target == NULL) continue;
+    hits += 4;
     Function* method = Function::cast(target);
     Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
     ASSERT(intrinsic->IsSmi());
     table->set(i + 2, intrinsic);
   }
 
+  if (Flags::print_program_statistics) {
+    printf("Dispatch table fill: %F%% (%i of %i)\n",
+           hits * 100.0 / length,
+           hits,
+           length);
+  }
+
   table = vtable();
   if (table == NULL) return;
   length = table->length();
+  hits = 0;
+
+  static const Names::Id name = Names::kNoSuchMethodTrampoline;
+  Function* trampoline = object_class()->LookupMethod(
+        Selector::Encode(name, Selector::METHOD, 0));
+
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
-    if (element->IsNull()) continue;
+    if (element == null_object()) continue;
     Array* entry = Array::cast(element);
     if (entry->get(3) != NULL) continue;
     Object* target = entry->get(2);
     if (target == NULL) continue;
+    if (target != trampoline) hits++;
     Function* method = Function::cast(target);
     Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
     ASSERT(intrinsic->IsSmi());
     entry->set(3, intrinsic);
+  }
+
+  if (Flags::print_program_statistics) {
+    printf("Vtable fill: %F%% (%i of %i)\n",
+           hits * 100.0 / length,
+           hits,
+           length);
   }
 }
 
