@@ -174,6 +174,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     writeln();
     writeln('@interface $patchName : NSObject <NodePatch>');
     writeln('@property (readonly) bool changed;');
+    writeln('@property (readonly) $nodeName* previous;');
     forEachSlot(node, null, (Type slotType, String slotName) {
       writeln('@property (readonly) ${patchType(slotType)}* $slotName;');
     });
@@ -220,12 +221,14 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     writeln('@protocol NodePatch <Patch>');
     writeln('@property (readonly) bool replaced;');
     writeln('@property (readonly) bool updated;');
+    // TODO(zerny): Remove this getter once previous/current are implemented.
     writeln('- (id <Node>)node;');
     writeln('- (id <Node>)applyWith:(id <Node>)node;');
     writeln('@end');
     writeln();
     writeln('@interface NodePatch : NSObject <NodePatch>');
     writeln('@property (readonly) bool changed;');
+    writeln('@property (readonly) Node* previous;');
     writeln('- (Node*)applyWith:(Node*)node;');
     writeln(applyToMethodDeclaration('Node'));
     nodes.forEach((node) { writeln('- (bool)is${node.name};'); });
@@ -239,7 +242,8 @@ class _HeaderVisitor extends CodeGenerationVisitor {
       if (idlType == 'void') return;
       writeln('@interface ${camelize(idlType)}Patch : NSObject <Patch>');
       writeln('@property (readonly) bool changed;');
-      writeln('@property (readonly) $objcType value;');
+      writeln('@property (readonly) $objcType previous;');
+      writeln('@property (readonly) $objcType current;');
       writeln('- ($objcType)applyWith:($objcType)value;');
       writeln('@end');
       writeln();
@@ -442,6 +446,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('@interface ImmiRoot ()');
     writeln('@property (readonly) uint16_t pid;');
     writeln('@property (readonly) id <NodePresenter> presenter;');
+    writeln('@property Node* previous;');
     writeln('@property bool refreshPending;');
     writeln('@property bool refreshRequired;');
     writeln('@property (nonatomic) dispatch_queue_t refreshQueue;');
@@ -476,7 +481,10 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('  ImmiRefreshCallback doApply = ^(const PatchData& patchData) {');
     writeln('      if (patchData.isNode()) {');
     writeln('        NodePatch* patch = [NodePatch patch:patchData.getNode()');
+    writeln('                                   previous:self.previous');
     writeln('                                    inGraph:self];');
+    // TODO(zerny): Update previous with patch.current once implemented.
+    writeln('        self.previous = [patch applyWith:self.previous];');
     writeln('        [patch applyTo:self.presenter];');
     writeln('      }');
     writeln('      dispatch_async(self.refreshQueue, ^{');
@@ -535,6 +543,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('@interface $patchName ()');
     writeln('@property (readonly) $nodeName* node;');
     writeln('- (id)initWith:(const $patchDataName&)data');
+    writeln('      previous:($nodeName*)previous');
     writeln('       inGraph:(ImmiRoot*)root;');
     writeln('@end');
     writeln();
@@ -606,13 +615,16 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('@end');
     writeln();
     writeln('@implementation $patchName');
-    writeln('- (id)initEmptyPatch {');
+    writeln('- (id)initEmptyPatch:($nodeName*)previous {');
     writeln('  _changed = false;');
+    writeln('  _previous = previous;');
     writeln('  return self;');
     writeln('}');
     writeln('- (id)initWith:(const $patchDataName&)data');
+    writeln('      previous:($nodeName*)previous');
     writeln('       inGraph:(ImmiRoot*)root {');
     writeln('  _changed = true;');
+    writeln('  _previous = previous;');
     writeln('  if (data.isReplace()) {');
     writeln('    _node = [[$nodeName alloc] initWith:data.getReplace()');
     writeln('                                inGraph:root];');
@@ -634,6 +646,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
         } else {
           writeln('initWith:update.get$slotNameCamel()');
         }
+        writeln('                      previous:previous.$slotName');
         writeln('                       inGraph:root];');
         writeln('        continue;');
         writeln('      }');
@@ -663,7 +676,8 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     forEachSlot(node, null, (Type slotType, String slotName) {
       writeln('  if (_$slotName == nil) {');
       String slotPatchType = patchType(slotType);
-      writeln('    _$slotName = [[$slotPatchType alloc] initEmptyPatch];');
+      writeln('    _$slotName = [[$slotPatchType alloc]');
+      writeln('                      initEmptyPatch:previous.$slotName];');
       writeln('  }');
     });
     for (Method method in node.methods) {
@@ -763,8 +777,9 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('@interface NodePatch ()');
     writeln('@property (readonly) id <NodePatch> patch;');
     writeln('@property (readonly) Node* node;');
-    writeln('- (id)initEmptyPatch;');
+    writeln('- (id)initEmptyPatch:(Node*)previous;');
     writeln('+ (NodePatch*)patch:(const NodePatchData&)data');
+    writeln('           previous:(Node*)previous');
     writeln('            inGraph:(ImmiRoot*)root;');
     writeln('@end');
     writeln();
@@ -773,22 +788,31 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
   void _writePatchBaseImplementation() {
     writeln('@implementation NodePatch');
     writeln('+ (NodePatch*)patch:(const NodePatchData&)data');
+    writeln('           previous:(Node*)previous');
     writeln('            inGraph:(ImmiRoot*)root {');
-    writeln('  return [[NodePatch alloc] initWith:data inGraph:root];');
+    writeln('  return [[NodePatch alloc] initWith:data');
+    writeln('                            previous:previous');
+    writeln('                             inGraph:root];');
     writeln('}');
-    writeln('- (id)initEmptyPatch {');
+    writeln('- (id)initEmptyPatch:(Node*)previous {');
     writeln('  _changed = false;');
+    writeln('  _previous = previous;');
     writeln('  _node = nil;');
     writeln('  return self;');
     writeln('}');
     writeln('- (id)initWith:(const NodePatchData&)data');
+    writeln('      previous:(Node*)previous');
     writeln('       inGraph:(ImmiRoot*)root {');
     writeln('  _changed = true;');
+    writeln('  _previous = previous;');
     write(' ');
     nodes.forEach((node) {
       writeln(' if (data.is${node.name}()) {');
       writeln('    _patch = [[${node.name}Patch alloc]');
       writeln('              initWith:data.get${node.name}()');
+      writeln('              previous:previous.is${node.name} ?');
+      writeln('                           previous.as${node.name} :');
+      writeln('                           nil');
       writeln('               inGraph:root];');
       write('  } else');
     });
@@ -841,8 +865,9 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       String patchTypeName = '${camelize(idlType)}Patch';
       String patchDataName = objcType;
       writeln('@interface $patchTypeName ()');
-      writeln('- (id)initEmptyPatch;');
+      writeln('- (id)initEmptyPatch:($objcType)previous;');
       writeln('- (id)initWith:($patchDataName)data');
+      writeln('      previous:($objcType)previous');
       writeln('       inGraph:(ImmiRoot*)root;');
       writeln('@end');
       writeln();
@@ -854,6 +879,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('- (int)applyTo:(NSMutableArray*)outArray');
     writeln('          with:(NSArray*)inArray;');
     writeln('+ (ListRegionPatch*)regionPatch:(const ListRegionData&)data');
+    writeln('                       previous:(NSArray*)previous');
     writeln('                        inGraph:(ImmiRoot*)root;');
     writeln('@end');
     writeln('@interface ListRegionRemovePatch : ListRegionPatch');
@@ -872,13 +898,15 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('@property (readonly) int index;');
     writeln('@property (readonly) NSArray* updates;');
     writeln('- (id)initWith:(const ListRegionData&)data');
+    writeln('      previous:(NSArray*)previous');
     writeln('       inGraph:(ImmiRoot*)root;');
     writeln('@end');
 
     writeln('@interface ListPatch ()');
     writeln('@property NSMutableArray* regionPatches;');
-    writeln('- (id)initEmptyPatch;');
+    writeln('- (id)initEmptyPatch:(NSArray*)previous;');
     writeln('- (id)initWith:(const ListPatchData&)data');
+    writeln('      previous:(NSArray*)previous');
     writeln('       inGraph:(ImmiRoot*)root;');
     writeln('@end');
     writeln();
@@ -889,25 +917,24 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       if (idlType == 'void') return;
       String patchTypeName = '${camelize(idlType)}Patch';
       String patchDataName = objcType;
-      writeln('@implementation $patchTypeName {');
-      writeln('  $objcType _value;');
-      writeln('}');
-      writeln('- (id)initEmptyPatch {');
-      writeln('  _changed = false;');
+      writeln('@implementation $patchTypeName');
+      writeln('- (id)initEmptyPatch:($objcType)previous {');
+      writeln('  _previous = previous;');
+      writeln('  _current = previous;');
       writeln('  return self;');
       writeln('}');
       writeln('- (id)initWith:($patchDataName)data');
+      writeln('      previous:($objcType)previous');
       writeln('       inGraph:(ImmiRoot*)root {');
-      writeln('  _changed = true;');
-      writeln('  _value = data;');
+      writeln('  _previous = previous;');
+      writeln('  _current = data;');
       writeln('  return self;');
       writeln('}');
-      writeln('- ($objcType)value {');
-      writeln('  assert(self.changed);');
-      writeln('  return _value;');
+      writeln('- (bool)changed {');
+      writeln('  return _previous != _current;');
       writeln('}');
       writeln('- ($objcType)applyWith:($objcType)value {');
-      writeln('  return self.changed ? self.value : value;');
+      writeln('  return self.changed ? _current : value;');
       writeln('}');
       writeln('@end');
       writeln();
@@ -915,6 +942,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
     writeln('@implementation ListRegionPatch');
     writeln('+ (ListRegionPatch*)regionPatch:(const ListRegionData&)data');
+    writeln('                       previous:(NSArray*)previous');
     writeln('                        inGraph:(ImmiRoot*)root {');
     writeln('  if (data.isRemove()) {');
     writeln('    return [[ListRegionRemovePatch alloc] initWith:data');
@@ -926,6 +954,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('  }');
     writeln('  NSAssert(data.isUpdate(), @"Invalid list patch for region");');
     writeln('  return [[ListRegionUpdatePatch alloc] initWith:data');
+    writeln('                                        previous:previous');
     writeln('                                         inGraph:root];');
     writeln('}');
     writeln('- (int)index {');
@@ -982,6 +1011,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln();
     writeln('@implementation ListRegionUpdatePatch');
     writeln('- (id)initWith:(const ListRegionData&)data');
+    writeln('      previous:(NSArray*)previous');
     writeln('       inGraph:(ImmiRoot*)root {');
     writeln('  _index = data.getIndex();');
     writeln('  const List<NodePatchData>& updateData = data.getUpdate();');
@@ -989,8 +1019,11 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('      [NSMutableArray arrayWithCapacity:updateData.length()];');
     writeln('  for (int i = 0; i < updateData.length(); ++i) {');
     // TODO(zerny): Support List<Node> in addition to List<FooNode>.
-    writeln('    updates[i] = [[NodePatch patch:updateData[i] inGraph:root]');
-    writeln('                  patch];');
+    writeln('    updates[i] = [[NodePatch');
+    writeln('               patch:updateData[i]');
+    writeln('            previous:[[Node alloc] init:previous[_index + i]]');
+    writeln('             inGraph:root]');
+    writeln('        patch];');
     writeln('  }');
     writeln('  _updates = updates;');
     writeln('  return self;');
@@ -1008,11 +1041,12 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('@end');
     writeln();
     writeln('@implementation ListPatch');
-    writeln('- (id)initEmptyPatch {');
+    writeln('- (id)initEmptyPatch:(NSArray*)previous {');
     writeln('  _changed = false;');
     writeln('  return self;');
     writeln('}');
     writeln('- (id)initWith:(const ListPatchData&)data');
+    writeln('      previous:(NSArray*)previous');
     writeln('       inGraph:(ImmiRoot*)root {');
     writeln('  _changed = true;');
     writeln('  const List<ListRegionData>& regions = data.getRegions();');
@@ -1020,7 +1054,9 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('      [NSMutableArray arrayWithCapacity:regions.length()];');
     writeln('  for (int i = 0; i < regions.length(); ++i) {');
     writeln('    patches[i] =');
-    writeln('        [ListRegionPatch regionPatch:regions[i] inGraph:root];');
+    writeln('        [ListRegionPatch regionPatch:regions[i]');
+    writeln('                            previous:previous');
+    writeln('                             inGraph:root];');
     writeln('  }');
     writeln('  _regionPatches = patches;');
     writeln('  return self;');
@@ -1096,18 +1132,12 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       writeln('id create$nodeName(const $nodeDataName& data, ImmiRoot* root) {');
       writeln('  return [[$nodeName alloc] initWith:data inGraph:root];');
       writeln('}');
-      writeln('id create$patchName(const $patchDataName& data, ImmiRoot* root) {');
-      writeln('  return [[$patchName alloc] initWith:data inGraph:root];');
-      writeln('}');
       writeln();
     });
     // TODO(zerny): Support lists of primitive types.
     writeln("""
 id createNode(const NodeData& data, ImmiRoot* root) {
   return [Node createNode:data inGraph:root];
-}
-id createNodePatch(const NodePatchData& data, ImmiRoot* root) {
-  return [NodePatch patch:data inGraph:root];
 }
 
 template<typename T>

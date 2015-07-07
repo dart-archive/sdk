@@ -164,9 +164,9 @@
     self.rightDrawerViewController =
         [self.drawerPresenter.rightPresenter viewController];
   }
-  if (patch.leftVisible.changed && patch.leftVisible.value) {
+  if (patch.leftVisible.changed && patch.leftVisible.current) {
     [self openPane:MMDrawerSideLeft];
-  } else if (patch.rightVisible.changed && patch.rightVisible.value) {
+  } else if (patch.rightVisible.changed && patch.rightVisible.current) {
     [self openPane:MMDrawerSideRight];
   } else if (patch.leftVisible.changed || patch.rightVisible.changed) {
     [self closeDrawerAnimated:YES completion:nil];

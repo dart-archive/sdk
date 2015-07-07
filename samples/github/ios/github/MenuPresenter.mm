@@ -40,7 +40,7 @@
 
 - (void)patchOnMainThread:(MenuPatch*)patch {
   if (patch.title.changed) {
-    self.navigationController.title = patch.title.value;
+    self.navigationController.title = patch.title.current;
   }
   if (patch.items.changed) {
     // TODO(zerny): selectively reload only changed cells.
