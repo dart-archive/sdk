@@ -47,6 +47,10 @@ class BytecodeAssembler {
   int stackSize = 0;
   int maxStackSize = 0;
 
+  // A bind after a terminator will still look like the last bytecode is a
+  // terminator, however, due to the bind it's not.
+  bool hasBindAfterTerminator = false;
+
   BytecodeAssembler(this.functionArity);
 
   void reuse() {
@@ -312,6 +316,7 @@ class BytecodeAssembler {
   }
 
   void ret() {
+    hasBindAfterTerminator = false;
     if (stackSize <= 0) throw "Bad stackSize for return bytecode: $stackSize";
     assert(functionArity <= 255);
     if (stackSize >= 256) {
@@ -338,6 +343,7 @@ class BytecodeAssembler {
   }
 
   void internalBind(BytecodeLabel label, bool isSubroutineReturn) {
+    hasBindAfterTerminator = true;
     assert(label.position == -1);
     // TODO(ajohnsen): If the previous bytecode is a branch to this label,
     // consider popping it - if no other binds has happened at this bytecode
@@ -483,6 +489,7 @@ class BytecodeAssembler {
 
   bool get endsWithTerminator {
     if (bytecodes.isEmpty) return false;
+    if (hasBindAfterTerminator) return false;
     Opcode opcode = bytecodes.last.opcode;
     return opcode == Opcode.Return || opcode == Opcode.Throw;
   }
@@ -539,6 +546,7 @@ class BytecodeAssembler {
   }
 
   void emitThrow() {
+    hasBindAfterTerminator = false;
     internalAdd(const Throw());
   }
 }
