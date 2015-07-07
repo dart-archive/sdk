@@ -153,8 +153,10 @@ class _StringImpl implements String {
       throw new ArgumentError(
           "String.indexOf only accepts String patterns for now");
     }
+    String str = pattern;
     int length = this.length;
     if (start == null) start = 0;
+    if (str.isEmpty) return start;
     // TODO(ajohnsen): Inline the other loop.
     for (int i = start; i < length; i++) {
       if (startsWith(pattern, i)) return i;
@@ -265,8 +267,34 @@ class _StringImpl implements String {
     throw "replaceFirstMapped(from, replace, [startIndex]) isn't implemented";
   }
 
-  replaceAll(from, replace) {
-    throw "replaceAll(from, replace) isn't implemented";
+  String replaceAll(Pattern from, String replace) {
+    if (from is! String) {
+      throw new ArgumentError(
+          "String.replaceAll only accepts String patterns for now");
+    }
+    String str = from;
+    StringBuffer buffer = new StringBuffer();
+    int length = this.length;
+    if (str.isEmpty) {
+      // Special case the empty string.
+      buffer.write(replace);
+      for (int i = 0; i < length; i++) {
+        buffer.write(this[i]);
+        buffer.write(replace);
+      }
+      return buffer.toString();
+    }
+    int offset = 0;
+    while(true) {
+      int index = indexOf(str, offset);
+      if (index < 0) {
+        buffer.write(substring(offset));
+        return buffer.toString();
+      }
+      buffer.write(substring(offset, index));
+      buffer.write(replace);
+      offset = index + str.length;
+    }
   }
 
   replaceAllMapped(from, replace) {

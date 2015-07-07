@@ -206,7 +206,6 @@ symbol_test/none: Fail
 unicode_test: Fail
 uri_base_test: CompileTimeError
 uri_file_test: Fail
-uri_test: Fail
 
 [ ($runtime == fletchc || $runtime == fletchvm) && $arch == x64 && $mode == debug && ($clang || $asan) ]
 int_parse_radix_test/01: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.

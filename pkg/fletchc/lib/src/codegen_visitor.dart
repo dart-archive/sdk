@@ -1970,7 +1970,7 @@ abstract class CodegenVisitor
       CallStructure callStructure,
       _) {
     if (!checkCompileError(constructor)) {
-      callConstructor(node, constructor, arguments, callStructure);
+      callConstructor(node, constructor.declaration, arguments, callStructure);
     }
     applyVisitState();
   }
