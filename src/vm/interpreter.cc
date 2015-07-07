@@ -18,13 +18,17 @@
 #include "src/vm/session.h"
 #include "src/vm/stack_walker.h"
 
-#define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp)                    \
-  Object* var = (exp);                                                  \
-  if (var == Failure::retry_after_gc()) {                               \
-    CollectGarbageIfNecessary();                                        \
-    /* Re-try interpreting the bytecode by re-dispatching. */           \
-    DISPATCH();                                                         \
-  }                                                                     \
+#define GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(var, exp) \
+  Object* var = (exp);                                                   \
+  if (var == Failure::retry_after_gc()) {                                \
+    if (CollectGarbageIfNecessary()) {                                   \
+      SaveState();                                                       \
+      /* Signal the scheduler that we need an immutable heap GC. */      \
+      return Interpreter::kImmutableAllocationFailure;                   \
+    }                                                                    \
+    /* Re-try interpreting the bytecode by re-dispatching. */            \
+    DISPATCH();                                                          \
+  }                                                                      \
 
 namespace fletch {
 
@@ -133,12 +137,14 @@ class Engine : public State {
   void PushDelta(int delta);
   int PopDelta();
 
-  // Returns false if it was unable to grow the stack at this point, and the
+  // Returns `false` if it was unable to grow the stack at this point, and the
   // immediate execution should halt.
   bool StackOverflowCheck(int size);
 
-  void CollectGarbageIfNecessary();
-  void CollectGarbage(bool collect_mutable, bool collect_immutable);
+  // Returns `true` if the interpretation should stop and we should signal to
+  // the scheduler that immutable garbage should be collected.
+  bool CollectGarbageIfNecessary();
+  void CollectMutableGarbage();
 
   void ValidateStack();
 
@@ -313,7 +319,7 @@ Interpreter::InterruptKind Engine::Interpret(
       // write. But we probably do want to do this check in other places as
       // well.
       if (store_buffer->ShouldGcMutableSpace()) {
-        CollectGarbage(true, false);
+        CollectMutableGarbage();
       }
     }
   OPCODE_END();
@@ -333,7 +339,7 @@ Interpreter::InterruptKind Engine::Interpret(
       // write. But we probably do want to do this check in other places as
       // well.
       if (store_buffer->ShouldGcMutableSpace()) {
-        CollectGarbage(true, false);
+        CollectMutableGarbage();
       }
     }
   OPCODE_END();
@@ -467,7 +473,7 @@ Interpreter::InterruptKind Engine::Interpret(
     int arity = ReadByte(1);
     Native native = static_cast<Native>(ReadByte(2));
     Object** arguments = LocalPointer(arity);
-    GC_AND_RETRY_ON_ALLOCATION_FAILURE(
+    GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
         result, kNativeTable[native](process(), arguments));
     if (result->IsFailure()) {
       Push(program()->ObjectFromFailure(Failure::cast(result)));
@@ -515,7 +521,7 @@ Interpreter::InterruptKind Engine::Interpret(
     int arity = ReadByte(1);
     Native native = static_cast<Native>(ReadByte(2));
     Object** arguments = LocalPointer(arity);
-    GC_AND_RETRY_ON_ALLOCATION_FAILURE(
+    GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
         result, kNativeTable[native](process(), arguments));
     if (result->IsFailure()) {
       Push(program()->ObjectFromFailure(Failure::cast(result)));
@@ -674,8 +680,8 @@ Interpreter::InterruptKind Engine::Interpret(
     int index = ReadInt32(1);
     Class* klass = program()->class_at(index);
     ASSERT(klass->id() == index);
-    GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
-        process()->NewInstance(klass));
+    GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
+        result, process()->NewInstance(klass));
     Instance* instance = Instance::cast(result);
     int fields = klass->NumberOfInstanceFields();
     bool in_store_buffer = false;
@@ -695,8 +701,8 @@ Interpreter::InterruptKind Engine::Interpret(
 
   OPCODE_BEGIN(AllocateUnfold);
     Class* klass = Class::cast(ReadConstant());
-    GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
-        process()->NewInstance(klass));
+    GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
+        result, process()->NewInstance(klass));
     Instance* instance = Instance::cast(result);
     int fields = klass->NumberOfInstanceFields();
     bool in_store_buffer = false;
@@ -729,8 +735,8 @@ Interpreter::InterruptKind Engine::Interpret(
         has_immutable_pointers = true;
       }
     }
-    GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
-        process()->NewInstance(klass, immutable));
+    GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
+        result, process()->NewInstance(klass, immutable));
     Instance* instance = Instance::cast(result);
     for (int i = fields - 1; i >= 0; --i) {
       Object* value = Pop();
@@ -758,8 +764,8 @@ Interpreter::InterruptKind Engine::Interpret(
         has_immutable_pointers = true;
       }
     }
-    GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
-        process()->NewInstance(klass, immutable));
+    GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
+        result, process()->NewInstance(klass, immutable));
     Instance* instance = Instance::cast(result);
     for (int i = fields - 1; i >= 0; --i) {
       Object* value = Pop();
@@ -776,8 +782,8 @@ Interpreter::InterruptKind Engine::Interpret(
 
   OPCODE_BEGIN(AllocateBoxed);
     Object* value = Local(0);
-    GC_AND_RETRY_ON_ALLOCATION_FAILURE(raw_boxed,
-        process()->NewBoxed(value));
+    GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
+        raw_boxed, process()->NewBoxed(value));
     Boxed* boxed = Boxed::cast(raw_boxed);
     SetTop(boxed);
     Advance(kAllocateBoxedLength);
@@ -931,33 +937,27 @@ bool Engine::StackOverflowCheck(int size) {
   return true;
 }
 
-void Engine::CollectGarbageIfNecessary() {
+bool Engine::CollectGarbageIfNecessary() {
   bool collect_mutable = process()->heap()->needs_garbage_collection() ||
                          process()->store_buffer()->ShouldGcMutableSpace();
-  bool collect_immutable =
-      process()->immutable_heap()->needs_garbage_collection();
-  CollectGarbage(collect_mutable, collect_immutable);
+  if (collect_mutable) {
+    CollectMutableGarbage();
+  }
+  return process()->immutable_heap()->needs_garbage_collection();
 }
 
-void Engine::CollectGarbage(bool collect_mutable, bool collect_immutable) {
-  if (collect_mutable || collect_immutable) {
-    SaveState();
+void Engine::CollectMutableGarbage() {
+  SaveState();
+  process()->CollectMutableGarbage();
+  RestoreState();
 
-    if (collect_mutable) process()->CollectMutableGarbage();
-    if (collect_immutable) process()->CollectImmutableGarbage();
-
-    RestoreState();
-
-    if (collect_mutable) {
-      // After a mutable GC a lot of stacks might no longer have pointers to
-      // immutable space on them. If so, the store buffer will no longer contain
-      // such a stack.
-      //
-      // Since we don't update the store buffer on every mutating operation
-      // - e.g. SetLocal() - we add it before we start using it.
-      process()->store_buffer()->Insert(process()->stack());
-    }
-  }
+  // After a mutable GC a lot of stacks might no longer have pointers to
+  // immutable space on them. If so, the store buffer will no longer contain
+  // such a stack.
+  //
+  // Since we don't update the store buffer on every mutating operation
+  // - e.g. SetLocal() - we add it before we start using it.
+  process()->store_buffer()->Insert(process()->stack());
 }
 
 void Engine::ValidateStack() {
@@ -1046,16 +1046,24 @@ bool HandleIsInvokeFast(int opcode) {
   return Bytecode::IsInvokeFast(static_cast<Opcode>(opcode));
 }
 
-void HandleGC(Process* process) {
-  process->CollectGarbageIfNecessary();
+int HandleGC(Process* process) {
+  bool collect_mutable = process->heap()->needs_garbage_collection() ||
+                         process->store_buffer()->ShouldGcMutableSpace();
+  if (collect_mutable) {
+    process->CollectMutableGarbage();
 
-  // After a mutable GC a lot of stacks might no longer have pointers to
-  // immutable space on them. If so, the store buffer will no longer contain
-  // such a stack.
-  //
-  // Since we don't update the store buffer on every mutating operation
-  // - e.g. SetLocal() - we add it before we start using it.
-  process->store_buffer()->Insert(process->stack());
+    // After a mutable GC a lot of stacks might no longer have pointers to
+    // immutable space on them. If so, the store buffer will no longer contain
+    // such a stack.
+    //
+    // Since we don't update the store buffer on every mutating operation
+    // - e.g. SetLocal() - we add it before we start using it.
+    process->store_buffer()->Insert(process->stack());
+  }
+
+  return process->immutable_heap()->needs_garbage_collection()
+      ? 1
+      : 0;
 }
 
 Object* HandleObjectFromFailure(Process* process, Failure* failure) {

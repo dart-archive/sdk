@@ -137,7 +137,6 @@ class Process {
   Object* Concatenate(String* x, String* y);
 
   void CollectGarbage();
-  void CollectGarbageIfNecessary();
   void CollectImmutableGarbage();
   void CollectMutableGarbage();
 

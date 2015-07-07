@@ -467,9 +467,22 @@ Process* Scheduler::InterpretProcess(Process* process,
   // Mark the process as owned by the current thread while interpreting.
   process->set_thread_state(thread_state);
   Interpreter interpreter(process);
-  interpreter.Run();
-  process->set_thread_state(NULL);
 
+  while (true) {
+    interpreter.Run();
+
+    if (!interpreter.IsImmutableAllocationFailure()) {
+      break;
+    }
+
+    // TODO(kustermann): Once we have shared immutable heaps, we can stop all
+    // processes and do a complete GC across them.
+
+    process->CollectImmutableGarbage();
+    interpreter.MarkReadyAfterImmutableGc();
+  }
+
+  process->set_thread_state(NULL);
   ClearCurrentProcessForThread(thread_id, process);
 
   if (interpreter.IsYielded()) {

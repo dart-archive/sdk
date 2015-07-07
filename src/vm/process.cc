@@ -368,16 +368,6 @@ Object* Process::NewStack(int length) {
   return result;
 }
 
-void Process::CollectGarbageIfNecessary() {
-  if (heap()->needs_garbage_collection() ||
-      store_buffer()->ShouldGcMutableSpace()) {
-    CollectMutableGarbage();
-  }
-  if (immutable_heap()->needs_garbage_collection()) {
-    CollectImmutableGarbage();
-  }
-}
-
 void Process::CollectImmutableGarbage() {
   Space* from = immutable_heap_.space();
   Space* to = new Space();

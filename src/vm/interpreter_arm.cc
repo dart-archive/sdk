@@ -330,11 +330,19 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   __ pop(RegisterRange(R4, R11) | RegisterRange(LR, LR));
   __ bx(LR);
 
+  // Handle immutable heap allocation failures.
+  Label immutable_alloc_failure;
+  __ Bind(&immutable_alloc_failure);
+  __ mov(R0, Immediate(Interpreter::kImmutableAllocationFailure));
+  __ b(&undo_padding);
+
   // Handle GC and re-interpret current bytecode.
   __ Bind(&gc_);
   SaveState();
   __ mov(R0, R4);
   __ bl("HandleGC");
+  __ tst(R0, R0);
+  __ b(NE, &immutable_alloc_failure);
   RestoreState();
   Dispatch(0);
 

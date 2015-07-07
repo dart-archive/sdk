@@ -325,11 +325,19 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ popl(EBP);
   __ ret();
 
+  // Handle immutable heap allocation failures.
+  Label immutable_alloc_failure;
+  __ Bind(&immutable_alloc_failure);
+  __ movl(EAX, Immediate(Interpreter::kImmutableAllocationFailure));
+  __ jmp(&undo_padding);
+
   // Handle GC and re-interpret current bytecode.
   __ Bind(&gc_);
   SaveState();
   __ movl(Address(ESP, 0 * kWordSize), EBP);
   __ call("HandleGC");
+  __ testl(EAX, EAX);
+  __ j(NOT_ZERO, &immutable_alloc_failure);
   RestoreState();
   Dispatch(0);
 
@@ -344,7 +352,7 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ movl(Address(ESP, 1 * kWordSize), EAX);
   __ call("HandleStackOverflow");
   __ testl(EAX, EAX);
-  __ j(NOT_EQUAL, &stay_fast);
+  __ j(NOT_ZERO, &stay_fast);
   __ movl(EAX, Immediate(Interpreter::kInterrupt));
   __ jmp(&undo_padding);
 

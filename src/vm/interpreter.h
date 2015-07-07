@@ -52,6 +52,7 @@ class Interpreter {
   enum InterruptKind {
     kReady,
     kTerminate,
+    kImmutableAllocationFailure,
     kInterrupt,
     kYield,
     kTargetYield,
@@ -68,6 +69,9 @@ class Interpreter {
   void Run();
 
   bool IsTerminated() const { return interruption_ == kTerminate; }
+  bool IsImmutableAllocationFailure() const {
+    return interruption_ == kImmutableAllocationFailure;
+  }
   bool IsInterrupted() const { return interruption_ == kInterrupt; }
   bool IsYielded() const { return interruption_ == kYield; }
   bool IsTargetYielded() const { return interruption_ == kTargetYield; }
@@ -75,6 +79,11 @@ class Interpreter {
     return interruption_ == kUncaughtException;
   }
   bool IsAtBreakPoint() const { return interruption_ == kBreakPoint; }
+
+  void MarkReadyAfterImmutableGc() {
+    ASSERT(interruption_ == kImmutableAllocationFailure);
+    interruption_ = kReady;
+  }
 
   TargetYieldResult target_yield_result() const { return target_yield_result_; }
 
@@ -96,7 +105,7 @@ extern "C" bool HandleIsInvokeFast(int opcode);
 
 extern "C" bool HandleStackOverflow(Process* process, int size);
 
-extern "C" void HandleGC(Process* process);
+extern "C" int HandleGC(Process* process);
 
 extern "C" Object* HandleAllocate(Process* process,
                                   Class* clazz,

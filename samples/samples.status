@@ -4,5 +4,5 @@
 
 [ ($runtime == fletchc || $runtime == fletchvm) && $clang && $asan]
 # ASAN detects memory leak in EventHandler implementation
-github/dart/tests/github_api_test: Pass, MemoryLeak
+github/lib/dart/tests/github_api_test: Pass, MemoryLeak
 
