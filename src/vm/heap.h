@@ -13,10 +13,12 @@
 
 namespace fletch {
 
+class ExitReference;
+
 // Heap represents the container for all HeapObjects.
 class Heap {
  public:
-  Heap(RandomLCG* random, int maximum_initial_size = 0);
+  explicit Heap(RandomLCG* random, int maximum_initial_size = 0);
   ~Heap();
 
   // Allocate raw object.
@@ -92,6 +94,9 @@ class Heap {
 
   void ReplaceSpace(Space* space);
   Space* TakeSpace();
+  WeakPointer* TakeWeakPointers();
+
+  void MergeInOtherHeap(Heap* heap);
 
   // Adjust the allocation budget based on the current heap size.
   void AdjustAllocationBudget() { space()->AdjustAllocationBudget(); }
@@ -108,14 +113,17 @@ class Heap {
   void ProcessWeakPointers();
 
  private:
+  friend class ExitReference;
+  Heap(Space* existing_space, WeakPointer* weak_pointers);
+
   Object* CreateStringInternal(Class* the_class, int length, bool clear,
                                bool immutable);
+
+  Object* AllocateRawClass(int size);
 
   // Used for initializing identity hash codes for immutable objects.
   RandomLCG* random_;
   Space* space_;
-  Object* AllocateRawClass(int size);
-
   // Linked list of weak pointers to heap objects in this heap.
   WeakPointer* weak_pointers_;
 };

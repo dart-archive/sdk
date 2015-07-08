@@ -78,4 +78,24 @@ void WeakPointer::Remove(WeakPointer** pointers, HeapObject* object) {
   }
 }
 
+void WeakPointer::PrependWeakPointers(WeakPointer** pointers,
+                                      WeakPointer* to_be_prepended) {
+  if (to_be_prepended != NULL) {
+    WeakPointer* head = *pointers;
+
+    ASSERT(head == NULL || head->prev_ == NULL);
+    ASSERT(to_be_prepended->prev_ == NULL);
+
+    WeakPointer* last = to_be_prepended;
+    while (last->next_ != NULL) {
+      last = last->next_;
+    }
+    last->next_ = head;
+    if (head != NULL) {
+      head->prev_ = last;
+    }
+    *pointers = to_be_prepended;
+  }
+}
+
 }  // namespace fletch

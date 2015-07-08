@@ -25,35 +25,26 @@ static Object** kProfileMarker = reinterpret_cast<Object**>(2);
 
 class ExitReference {
  public:
-  ExitReference(Space* immutable_space, Space* space, Object* message)
-      : immutable_space_(immutable_space), space_(space), message_(message) { }
-
-  ~ExitReference() {
-    delete immutable_space_;
-    delete space_;
+  ExitReference(Process* exiting_process, Object* message)
+      : mutable_heap_(NULL, reinterpret_cast<WeakPointer*>(NULL)),
+        immutable_heap_(NULL, reinterpret_cast<WeakPointer*>(NULL)),
+        message_(message) {
+    mutable_heap_.MergeInOtherHeap(exiting_process->heap());
+    immutable_heap_.MergeInOtherHeap(exiting_process->immutable_heap());
   }
 
   Object* message() const { return message_; }
-
-  Space* TakeImmutableSpace() {
-    Space* result = immutable_space_;
-    immutable_space_ = NULL;
-    return result;
-  }
-
-  Space* TakeSpace() {
-    Space* result = space_;
-    space_ = NULL;
-    return result;
-  }
 
   void VisitPointers(PointerVisitor* visitor) {
     visitor->Visit(&message_);
   }
 
+  Heap* mutable_heap() { return &mutable_heap_; }
+  Heap* immutable_heap() { return &immutable_heap_; }
+
  private:
-  Space* immutable_space_;
-  Space* space_;
+  Heap mutable_heap_;
+  Heap immutable_heap_;
   Object* message_;
 };
 
@@ -764,10 +755,7 @@ bool Process::EnqueueForeign(Port* port,
 
 void Process::EnqueueExit(Process* sender, Port* port, Object* message) {
   // TODO(kasperl): Optimize this to avoid merging heaps if copying is cheaper.
-  Space* immutable_space = sender->immutable_heap()->TakeSpace();
-  Space* space = sender->heap()->TakeSpace();
-  uword address = reinterpret_cast<uword>(
-      new ExitReference(immutable_space, space, message));
+  uword address = reinterpret_cast<uword>(new ExitReference(sender, message));
   PortQueue* entry = new PortQueue(port, address, 0, PortQueue::EXIT);
   EnqueueEntry(entry);
 }
@@ -853,35 +841,26 @@ void Process::AdvanceCurrentMessage() {
 // during GC and when processing the message in it). If the spaces were already
 // taken, this will be a NOP.
 static void TakeExitReferenceHeaps(ExitReference* ref,
-                                   Space* space,
-                                   Space* immutable_space) {
-  Space* new_space = ref->TakeSpace();
-  Space* new_immutable_space = ref->TakeImmutableSpace();
-
-  if (new_space != NULL) {
-    space->PrependSpace(new_space);
-  }
-  if (new_immutable_space != NULL) {
-    immutable_space->PrependSpace(new_immutable_space);
-  }
+                                   Process* destination_process) {
+  destination_process->heap()->MergeInOtherHeap(ref->mutable_heap());
+  destination_process->immutable_heap()->MergeInOtherHeap(
+      ref->immutable_heap());
 }
 
-static void TakePortQueueHeaps(PortQueue* queue,
-                               Space* space,
-                               Space* immutable_space) {
+static void TakePortQueueHeaps(PortQueue* queue, Process* destination_process) {
   for (PortQueue* current = queue;
        current != NULL;
        current = current->next()) {
     if (current->kind() == PortQueue::EXIT) {
       ExitReference* ref = reinterpret_cast<ExitReference*>(current->address());
-      TakeExitReferenceHeaps(ref, space, immutable_space);
+      TakeExitReferenceHeaps(ref, destination_process);
     }
   }
 }
 
 void Process::TakeChildHeaps() {
-  TakePortQueueHeaps(current_message_, heap_.space(), immutable_heap_.space());
-  TakePortQueueHeaps(last_message_, heap_.space(), immutable_heap_.space());
+  TakePortQueueHeaps(current_message_, this);
+  TakePortQueueHeaps(last_message_, this);
 }
 
 PortQueue* Process::CurrentMessage() {
@@ -1004,8 +983,7 @@ NATIVE(ProcessQueueGetMessage) {
 
     case PortQueue::EXIT: {
       ExitReference* ref = reinterpret_cast<ExitReference*>(queue->address());
-      TakeExitReferenceHeaps(
-          ref, process->heap()->space(), process->immutable_heap()->space());
+      TakeExitReferenceHeaps(ref, process);
       result = ref->message();
       break;
     }

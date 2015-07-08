@@ -21,6 +21,8 @@ class WeakPointer {
   static void Process(Space* garbage_space, WeakPointer** pointers);
   static void ForceCallbacks(WeakPointer** pointers);
   static void Remove(WeakPointer** pointers, HeapObject* object);
+  static void PrependWeakPointers(WeakPointer** pointers,
+                                  WeakPointer* to_be_prepended);
 
  private:
   HeapObject* object_;

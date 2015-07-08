@@ -18,6 +18,9 @@ Heap::Heap(RandomLCG* random, int maximum_initial_size)
   AdjustAllocationBudget();
 }
 
+Heap::Heap(Space* existing_space, WeakPointer* weak_pointers)
+    : random_(NULL), space_(existing_space), weak_pointers_(weak_pointers) { }
+
 Heap::~Heap() {
   WeakPointer::ForceCallbacks(&weak_pointers_);
   delete space_;
@@ -227,6 +230,24 @@ Space* Heap::TakeSpace() {
   Space* result = space_;
   space_ = NULL;
   return result;
+}
+
+WeakPointer* Heap::TakeWeakPointers() {
+  WeakPointer* weak_pointers = weak_pointers_;
+  weak_pointers_ = NULL;
+  return weak_pointers;
+}
+
+void Heap::MergeInOtherHeap(Heap* heap) {
+  Space* other_space = heap->TakeSpace();
+  if (space_ == NULL) {
+    space_ = other_space;
+  } else {
+    space_->PrependSpace(other_space);
+  }
+
+  WeakPointer* other_weak_pointers = heap->TakeWeakPointers();
+  WeakPointer::PrependWeakPointers(&weak_pointers_, other_weak_pointers);
 }
 
 void Heap::AddWeakPointer(HeapObject* object,
