@@ -622,73 +622,51 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('      previous:($nodeName*)previous');
     writeln('       inGraph:(ImmiRoot*)root {');
     writeln('  _previous = previous;');
-    writeln('  if (data.isReplace()) {');
-    writeln('    _type = kReplaceNodePatch;');
-    writeln('    _current = [[$nodeName alloc] initWith:data.getReplace()');
-    writeln('                                   inGraph:root];');
+    if (node.layout.slots.isNotEmpty || node.methods.isNotEmpty) {
+      // The updates list is ordered consistently with the struct fields.
+      writeln('  if (data.isUpdates()) {');
+      writeln('    List<$updateDataName> updates = data.getUpdates();');
+      writeln('    int length = updates.length();');
+      writeln('    int next = 0;');
+      forEachSlotAndMethod(node, null, (field, String name) {
+        String camelName = camelize(name);
+        String fieldPatchType =
+            field is Method ? actionPatchType(field) : patchType(field.type);
+        writeln('    if (next < length && updates[next].is${camelName}()) {');
+        writeln('      _$name = [[$fieldPatchType alloc]');
+        write('                      ');
+        String dataGetter = 'updates[next++].get${camelName}';
+        if (field is Formal && !field.type.isList && field.type.isString) {
+          writeln('initWith:decodeString(${dataGetter}Data())');
+        } else {
+          writeln('initWith:$dataGetter()');
+        }
+        writeln('                      previous:previous.$name');
+        writeln('                       inGraph:root];');
+        writeln('    } else {');
+        writeln('      _$name = [[$fieldPatchType alloc]');
+        writeln('                    initIdentityPatch:previous.$name];');
+        writeln('    }');
+      });
+      writeln('    assert(next == length);');
+      writeln('    _type = kUpdateNodePatch;');
+      writeln('    _current = [[$nodeName alloc] initWithPatch:self];');
+      writeln('    return self;');
+      writeln('  }');
+    }
+    writeln('  assert(data.isReplace());');
+    writeln('  _type = kReplaceNodePatch;');
+    writeln('  _current = [[$nodeName alloc] initWith:data.getReplace()');
+    writeln('                                 inGraph:root];');
     forEachSlotAndMethod(node, null, (field, String name) {
       String fieldPatchType =
           field is Method ? actionPatchType(field) : patchType(field.type);
-      writeln('    _$name = [[$fieldPatchType alloc]');
-      writeln('                  initIdentityPatch:previous.$name];');
+      writeln('  _$name = [[$fieldPatchType alloc]');
+      writeln('                initIdentityPatch:previous.$name];');
     });
-    writeln('    return self;');
-    writeln('  }');
-    writeln('  _type = kUpdateNodePatch;');
-    if (node.layout.slots.isNotEmpty || node.methods.isNotEmpty) {
-      // TODO(zerny): Ensure the order of updates and make the below O(n).
-      writeln('    assert(data.isUpdates());');
-      writeln('    List<$updateDataName> updates = data.getUpdates();');
-      writeln('    for (int i = 0; i < updates.length(); ++i) {');
-      writeln('      const ${updateDataName}& update = updates[i];');
-      forEachSlot(node, null, (Type slotType, String slotName) {
-        String slotPatchType = patchType(slotType);
-        String slotNameCamel = camelize(slotName);
-        writeln('      if (update.is${slotNameCamel}()) {');
-        writeln('        _$slotName = [[$slotPatchType alloc]');
-        write('                      ');
-        if (!slotType.isList && slotType.isString) {
-          writeln('initWith:decodeString(update.get${slotNameCamel}Data())');
-        } else {
-          writeln('initWith:update.get$slotNameCamel()');
-        }
-        writeln('                      previous:previous.$slotName');
-        writeln('                       inGraph:root];');
-        writeln('        continue;');
-        writeln('      }');
-      });
-      for (var method in node.methods) {
-        String name = method.name;
-        String camelName = camelize(name);
-        List<Formal> formals = method.arguments.map((formal) => formal.type);
-        String actionPatch = 'Action${actionTypeSuffix(formals)}Patch';
-        String actionBlock = 'Action${actionTypeSuffix(formals)}Block';
-        writeln('      if (update.is${camelName}()) {');
-        writeln('        uint16_t actionId = update.get${camelName}();');
-        write('        $actionBlock block =');
-        _writeActionBlockImpl(method, 'actionId', '        ');
-        writeln('        _${name} = [[$actionPatch alloc] initWith:block];');
-        writeln('        continue;');
-        writeln('      }');
-      }
-      writeln('    }');
-      forEachSlotAndMethod(node, null, (field, String name) {
-        String fieldPatchType =
-            field is Method ? actionPatchType(field) : patchType(field.type);
-        writeln('  if (_$name == nil) {');
-        writeln('    _$name = [[$fieldPatchType alloc]');
-        writeln('                  initIdentityPatch:previous.$name];');
-        writeln('  }');
-      });
-      writeln('  _current = [[$nodeName alloc] initWithPatch:self];');
-      writeln('  return self;');
-    } else {
-      writeln('  @throw [NSException');
-      writeln('      exceptionWithName:NSInternalInconsistencyException');
-      writeln('      reason:@"Singleton nodes cannot be updated"');
-      writeln('      userInfo:nil];');
-    }
+    writeln('  return self;');
     writeln('}');
+
     writeln('- (bool)changed { return _type != kIdentityNodePatch; }');
     writeln('- (bool)replaced { return _type == kReplaceNodePatch; }');
     writeln('- (bool)updated { return _type == kUpdateNodePatch; }');
@@ -1069,6 +1047,9 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       String actionPatch = '${actionName}Patch';
       writeln('@interface $actionPatch ()');
       writeln('- (id)initIdentityPatch:($actionBlock)previous;');
+      writeln('- (id)initWith:(uint16_t)actionId');
+      writeln('      previous:($actionBlock)previous');
+      writeln('       inGraph:(ImmiRoot*)root;');
       writeln('@end');
       writeln();
     }
@@ -1076,9 +1057,20 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
   void _writeActionsImplementation() {
     for (List<Type> formals in methodSignatures.values) {
-      String actionName = 'Action${actionTypeSuffix(formals)}';
+      String suffix = actionTypeSuffix(formals);
+      String actionName = 'Action$suffix';
       String actionBlock = '${actionName}Block';
       String actionPatch = '${actionName}Patch';
+
+      String actionFormals =
+          mapWithIndex(formals, (i, f) => '${getTypeName(f)} arg$i').join(', ');
+
+      String actionArgs =
+          mapWithIndex(formals, (i, _) => 'arg$i').join(', ');
+
+      String actionBlockFormals =
+          formals.isEmpty ? '' : '($actionFormals)';
+
       writeln('@implementation $actionPatch {');
       writeln('  NodePatchType _type;');
       writeln('}');
@@ -1087,9 +1079,21 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       writeln('  _current = previous;');
       writeln('  return self;');
       writeln('}');
-      writeln('- (id)initWith:($actionBlock)block {');
+      writeln('- (id)initWith:(uint16_t)actionId');
+      writeln('      previous:($actionBlock)previous');
+      writeln('       inGraph:(ImmiRoot*)root {');
       writeln('  _type = kReplaceNodePatch;');
-      writeln('  _current = block;');
+      writeln('  _current = ^$actionBlockFormals{');
+      writeln('      [root dispatch:^{');
+      writeln('          ${serviceName}::dispatch${suffix}Async(');
+      writeln('            actionId,');
+      if (formals.isNotEmpty) {
+        writeln('            $actionArgs,');
+      }
+      writeln('            noopVoidEventCallback,');
+      writeln('            NULL);');
+      writeln('      }];');
+      writeln('  };');
       writeln('  return self;');
       writeln('}');
       writeln('- (bool)changed { return _type != kIdentityNodePatch; }');
@@ -1207,25 +1211,5 @@ void encodeString(NSString* string, List<unichar> chars) {
   String actionBlockType(Method method) {
     List<Type> types = method.arguments.map((formal) => formal.type);
     return 'Action${actionTypeSuffix(types)}Block';
-  }
-
-  _writeActionBlockImpl(Method method, String idVar, String indent) {
-      List<Type> formals = method.arguments.map((formal) => formal.type);
-      String suffix = actionTypeSuffix(formals);
-      String actionName = 'Action$suffix';
-      String actionBlock = '${actionName}Block';
-      String actionBlockArgs = method.arguments.isEmpty ? '' :
-                               '(${actionTypedArguments(method.arguments)})';
-      String actionArgsComma = method.arguments.isEmpty ? '' :
-                               '${actionArguments(method.arguments)},';
-      String i1 = '$indent   ';
-      String i2 = '$i1    ';
-      String i3 = '$i2    ';
-      writeln(' ^$actionBlockArgs{');
-      writeln('$i1 [root dispatch:^{');
-      writeln('$i2 ${serviceName}::dispatch${suffix}Async(');
-      writeln('$i3 $idVar, $actionArgsComma noopVoidEventCallback, NULL);');
-      writeln('$i1 }];');
-      writeln('$indent};');
   }
 }

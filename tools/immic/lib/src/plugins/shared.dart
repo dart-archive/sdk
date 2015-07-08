@@ -101,4 +101,9 @@ abstract class CodeGenerationVisitor extends Visitor {
     if (types.isEmpty) return 'Void';
     return types.map((Type type) => camelize(type.identifier)).join();
   }
+
+  Iterable mapWithIndex(List list, f(int i, element)) {
+    int i = 0;
+    return list.map((e) => f(i++, e));
+  }
 }
