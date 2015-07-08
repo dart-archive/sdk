@@ -51,8 +51,11 @@
 }
 
 - (void)patchSlidingWindow:(SlidingWindowPatch*)patch {
-  self.root = patch.current;
-  [self reloadOnMainThread];
+
+  dispatch_async(dispatch_get_main_queue(), ^{
+    self.root = patch.current;
+    [self patchOnMainThread:patch];
+  });
 }
 
 - (NSInteger)tableView:(UITableView*)tableView
@@ -105,12 +108,71 @@
   self.root.display(start, end);
 }
 
-- (void)reloadOnMainThread {
-  // TODO(zerny): Selectively reload the table based on patch data.
-  // TODO(zerny): Should this be run in the NSEventTrackingRunLoopMode?
-  [self.tableView performSelectorOnMainThread:@selector(reloadData)
-                                   withObject:nil
-                                waitUntilDone:NO];
+- (void)patchOnMainThread:(SlidingWindowPatch*)patch {
+
+  NSMutableArray* insertPaths = [[NSMutableArray alloc] init];
+  NSMutableArray* updatePaths = [[NSMutableArray alloc] init];
+  NSMutableArray* removePaths = [[NSMutableArray alloc] init];
+  for (int i = 0; i < patch.window.regions.count; ++i) {
+    ListRegionPatch* region = patch.window.regions[i];
+
+    if (region.isRemove) {
+      ListRegionRemovePatch* remove = (id)region;
+
+      for (int j = 0; j < remove.count; ++j) {
+        int regionUpdateIndex =
+          [self windowIndexToTableIndex: region.index + j];
+
+
+        if (regionUpdateIndex >= self.root.minimumCount) {
+          // When reaching the end of the list we might have a case where we do
+          // not use the entire window. This has no effect on the UI table.
+          continue;
+        }
+
+        NSIndexPath* indexPath = [NSIndexPath indexPathForRow:regionUpdateIndex
+                                                    inSection:0];
+        [removePaths addObject:indexPath];
+      }
+    } else {
+      int regionLength;
+      if (region.isUpdate) {
+        ListRegionUpdatePatch* update = (id)region;
+        regionLength = update.updates.count;
+      } else {
+        assert(region.isInsert);
+        ListRegionInsertPatch* insert = (id)region;
+        regionLength = insert.nodes.count;
+      }
+
+      for (int j = 0; j < regionLength; ++j) {
+        int regionUpdateIndex =
+          [self windowIndexToTableIndex: region.index + j];
+
+        NSIndexPath* indexPath = [NSIndexPath indexPathForRow:regionUpdateIndex
+                                                    inSection:0];
+        if (regionUpdateIndex >= patch.minimumCount.previous) {
+          [insertPaths addObject:indexPath];
+        } else {
+          [updatePaths addObject:indexPath];
+        }
+      }
+    }
+  }
+
+  [self.tableView beginUpdates];
+  [self.tableView insertRowsAtIndexPaths:insertPaths
+                        withRowAnimation:UITableViewRowAnimationNone];
+  [self.tableView deleteRowsAtIndexPaths:removePaths
+                        withRowAnimation:UITableViewRowAnimationNone];
+  [self.tableView reloadRowsAtIndexPaths:updatePaths
+                        withRowAnimation:UITableViewRowAnimationNone];
+  [self.tableView endUpdates];
+}
+- (int)windowIndexToTableIndex:(int)index {
+  int indexDelta = index - self.root.windowOffset;
+  if (indexDelta < 0) indexDelta += self.root.window.count;
+  return [self windowStart] + indexDelta;
 }
 
 - (int)windowIndex:(int)index {
@@ -140,8 +202,6 @@
 - (void)tableView:(UITableView*)tableView
     didSelectRowAtIndexPath:(NSIndexPath*)indexPath {
   self.root.toggle(indexPath.row);
-  [tableView reloadRowsAtIndexPaths:@[indexPath]
-                   withRowAnimation:UITableViewRowAnimationNone];
 }
 
 @end
