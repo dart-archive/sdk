@@ -79,7 +79,6 @@ class_literal_test/24: Crash
 class_literal_test/25: Crash
 class_literal_test/none: Crash
 closure_in_constructor_test: Fail
-closure_in_initializer_test: Crash
 closure_type_variable_test: Fail
 closures_initializer2_test: Fail
 closures_initializer_test: Fail
@@ -104,7 +103,6 @@ const_types_test/28: MissingCompileTimeError
 const_types_test/29: MissingCompileTimeError
 const_types_test/30: MissingCompileTimeError
 const_types_test/41: MissingCompileTimeError
-constructor6_test: Crash
 cyclic_type2_test: Fail
 cyclic_type_test/00: Fail
 cyclic_type_test/01: Fail

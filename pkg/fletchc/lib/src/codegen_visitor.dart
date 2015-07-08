@@ -251,8 +251,10 @@ abstract class CodegenVisitor
 
   LocalValue createLocalValueForParameter(
       ParameterElement parameter,
-      int slot) {
+      int slot,
+      {bool isCapturedArgumentsBoxed: false}) {
     if (closureEnvironment.shouldBeBoxed(parameter)) {
+      if (isCapturedArgumentsBoxed) return new BoxedLocalValue(slot, parameter);
       LocalValue value = new BoxedLocalValue(assembler.stackSize, parameter);
       assembler.loadSlot(slot);
       value.initialize(assembler);

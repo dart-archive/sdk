@@ -75,10 +75,16 @@ class FunctionCodegen extends CodegenVisitor {
       assembler.loadSlot(-2);
     }
 
+
     int i = 0;
     functionSignature.orderedForEachParameter((ParameterElement parameter) {
       int slot = i++ - parameterCount - 1;
-      LocalValue value = createLocalValueForParameter(parameter, slot);
+      // For constructors, the argument is passed as boxed (from the initializer
+      // inlining).
+      LocalValue value = createLocalValueForParameter(
+          parameter,
+          slot,
+          isCapturedArgumentsBoxed: element.isGenerativeConstructor);
       pushVariableDeclaration(value);
     });
 

@@ -49,6 +49,7 @@ class ConstructorCodegen extends CodegenVisitor {
   final List<ConstructorElement> constructors = <ConstructorElement>[];
 
   TreeElements initializerElements;
+  ClosureEnvironment initializerClosureEnvironment;
 
   ConstructorCodegen(FletchFunctionBuilder functionBuilder,
                      FletchContext context,
@@ -67,6 +68,13 @@ class ConstructorCodegen extends CodegenVisitor {
   TreeElements get elements {
     if (initializerElements != null) return initializerElements;
     return super.elements;
+  }
+
+  ClosureEnvironment get closureEnvironment {
+    if (initializerClosureEnvironment != null) {
+      return initializerClosureEnvironment;
+    }
+    return super.closureEnvironment;
   }
 
   void compile() {
@@ -179,6 +187,10 @@ class ConstructorCodegen extends CodegenVisitor {
     FunctionSignature signature = constructor.functionSignature;
     int parameterIndex = 0;
 
+    initializerElements = constructor.resolvedAst.elements;
+    initializerClosureEnvironment = context.backend.createClosureEnvironment(
+        constructor, initializerElements);
+
     // Visit parameters and add them to scope. Note the scope is the scope of
     // locals, in VisitingCodegen.
     signature.orderedForEachParameter((ParameterElement parameter) {
@@ -196,7 +208,6 @@ class ConstructorCodegen extends CodegenVisitor {
       parameterIndex++;
     });
 
-    initializerElements = constructor.resolvedAst.elements;
     visitInitializers(constructor.node, null);
   }
 
@@ -228,9 +239,11 @@ class ConstructorCodegen extends CodegenVisitor {
     loadArguments(superConstructor, arguments, callStructure);
     int initSlot = assembler.stackSize -
         superConstructor.functionSignature.parameterCount;
-    var previous = initializerElements;
+    var previousElements = initializerElements;
+    var previousClosureEnvironment = initializerClosureEnvironment;
     inlineInitializers(superConstructor, initSlot);
-    initializerElements = previous;
+    initializerElements = previousElements;
+    initializerClosureEnvironment = previousClosureEnvironment;
   }
 
   void visitThisConstructorInvoke(
@@ -245,9 +258,7 @@ class ConstructorCodegen extends CodegenVisitor {
     loadArguments(thisConstructor, arguments, callStructure);
     int initSlot = assembler.stackSize -
         thisConstructor.functionSignature.parameterCount;
-    var previous = initializerElements;
     inlineInitializers(thisConstructor, initSlot);
-    initializerElements = previous;
   }
 
   void visitImplicitSuperConstructorInvoke(
@@ -338,7 +349,9 @@ class ConstructorCodegen extends CodegenVisitor {
     // Prepare for constructor body invoke.
     assembler.dup();
     signature.orderedForEachParameter((FormalElement parameter) {
-      scope[parameter].load(assembler);
+      // Boxed parameters are passed as boxed objects, not as the values
+      // contained within like we do for ordinary invokes
+      assembler.loadSlot(scope[parameter].slot);
     });
 
     assembler
