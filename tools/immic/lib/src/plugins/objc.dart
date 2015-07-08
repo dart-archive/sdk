@@ -494,7 +494,9 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('      });');
     writeln('  };');
     writeln('  ${serviceName}::refreshAsync(');
-    writeln('      self.pid, ImmiRefresh, (__bridge_retained void*)doApply);');
+    writeln('      self.pid,');
+    writeln('      ImmiRefresh,');
+    writeln('      (__bridge_retained void*)[doApply copy]);');
     writeln('}');
     writeln();
     writeln('- (void)reset {');

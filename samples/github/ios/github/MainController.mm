@@ -154,7 +154,9 @@
   if (patch.center.changed) {
     self.centerViewController =
         [self.drawerPresenter.centerPresenter viewController];
-    [self.drawerPresenter addDrawerButtons:self.centerViewController];
+    if (patch.center.replaced) {
+      [self.drawerPresenter addDrawerButtons:self.centerViewController];
+    }
   }
   if (patch.left.changed) {
     self.leftDrawerViewController =

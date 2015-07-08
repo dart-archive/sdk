@@ -167,24 +167,26 @@ class _DartVisitor extends CodeGenerationVisitor {
       writeln('    }');
       writeln('    $nodeName previous = previousNode;');
       writeln('    $updatePatch updates = null;');
+      String ensureUpdatePatch =
+          'if (updates == null) updates = new $updatePatch(previous);';
       forEachSlot(node, null, (Type slotType, String slotName) {
         if (slotType.isList) {
           writeln('    ${getPatchType(slotType)} ${slotName}Patch =');
           writeln('        diffList($slotName, previous.$slotName);');
           writeln('    if (${slotName}Patch != null) {');
-          writeln('      if (updates == null) updates = new $updatePatch();');
+          writeln('      $ensureUpdatePatch');
           writeln('      updates.$slotName = ${slotName}Patch;');
           writeln('    }');
         } else if (slotType.isNode || slotType.resolved != null) {
           writeln('    ${getPatchType(slotType)} ${slotName}Patch =');
           writeln('        $slotName.diff(previous.$slotName);');
           writeln('    if (${slotName}Patch != null) {');
-          writeln('      if (updates == null) updates = new $updatePatch();');
+          writeln('      $ensureUpdatePatch');
           writeln('      updates.$slotName = ${slotName}Patch;');
           writeln('    }');
         } else {
           writeln('    if ($slotName != previous.$slotName) {');
-          writeln('      if (updates == null) updates = new $updatePatch();');
+          writeln('      $ensureUpdatePatch');
           writeln('      updates.$slotName = $slotName;');
           writeln('    }');
         }
@@ -192,7 +194,7 @@ class _DartVisitor extends CodeGenerationVisitor {
       for (Method method in node.methods) {
         String name = method.name;
         writeln('    if ($name != previous.$name) {');
-        writeln('      if (updates == null) updates = new $updatePatch();');
+        writeln('      $ensureUpdatePatch');
         writeln('      updates.$name = $name;');
         writeln('    }');
       }
@@ -220,12 +222,15 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('  final Node previous;');
     writeln('  $replacePatch(this.replacement, this.previous);');
     writeln('  void $serializeSelfPatch($patchBuilderName builder, ResourceManager manager) {');
+    writeln('    if (previous != null) previous.unregisterHandlers(manager);');
     writeln('    replacement.$serializeSelfNode(builder.initReplace(), manager);');
     writeln('  }');
     writeln('}');
     writeln();
     if (hasFields || hasMethods) {
       writeln('class $updatePatch extends $patchName {');
+      writeln('  final $nodeName previous;');
+      writeln('  $updatePatch(this.previous);');
       writeln('  int _count = 0;');
       forEachSlot(node, null, (Type slotType, String slotName) {
         writeln('  ${getPatchType(slotType)} _$slotName;');
@@ -259,7 +264,7 @@ class _DartVisitor extends CodeGenerationVisitor {
       for (Method method in node.methods) {
         String name = method.name;
         writeln('    if (_$name != null) {');
-        // TODO(zerny): Remove the old action handler!
+        writeln('      manager.removeHandler(previous.$name);');
         writeln('      builders[index++].$name = manager.addHandler(_$name);');
         writeln('    }');
       }
