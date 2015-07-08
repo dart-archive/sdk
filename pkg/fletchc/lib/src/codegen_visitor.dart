@@ -1108,22 +1108,24 @@ abstract class CodegenVisitor
   }
 
   int computeFieldIndex(FieldElement field) {
-    ClassElement classElement = field.enclosingClass;
-    // We know the enclosing class is compiled, so we can use the
-    // FletchClassBuilder as an optimization for getting the number of super
-    // fields, thus we only have to iterate the fields of the enclosing class.
-    FletchClassBuilder classBuilder = context.backend.registerClassElement(
-        classElement);
-    int i = 0;
+    ClassElement classElement = element.enclosingClass;
     int fieldIndex;
-    classElement.implementation.forEachInstanceField((_, FieldElement member) {
-      if (member == field) {
-        assert(fieldIndex == null);
-        fieldIndex = i;
-      }
-      i++;
-    });
-    assert(fieldIndex != null);
+    FletchClassBuilder classBuilder;
+    do {
+      // We need to find the mixin application of the class, where the field
+      // is stored. Iterate until it's found.
+      classBuilder = context.backend.registerClassElement(classElement);
+      classElement = classElement.implementation;
+      int i = 0;
+      classElement.forEachInstanceField((_, FieldElement member) {
+        if (member == field) {
+          assert(fieldIndex == null);
+          fieldIndex = i;
+        }
+        i++;
+      });
+      classElement = classElement.superclass;
+    } while (fieldIndex == null);
     fieldIndex += classBuilder.superclassFields;
     return fieldIndex;
   }
@@ -2031,10 +2033,9 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
-    // TODO(ajohnsen): The arguments may need to be shuffled.
     visitGenerativeConstructorInvoke(
         node,
-        constructor.effectiveTarget,
+        constructor,
         type,
         arguments,
         callStructure,
