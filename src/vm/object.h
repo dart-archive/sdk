@@ -108,6 +108,9 @@ class Smi: public Object {
   // Check whether an integer can be represented as a Smi.
   inline static bool IsValid(int64 value);
 
+  // Check whether an integer can be represented as a portable Smi.
+  inline static bool IsValidAsPortable(int64 value);
+
   // Retrieve the integer value from this Smi.
   inline word value();
 
@@ -725,13 +728,14 @@ class String: public BaseArray {
   // threads at the same time. They will all compute the same result, so
   // they will all write the same value into the [hash_value] field.
   word SlowHash() {
-    word value = Utils::StringHash(address_for(0), length()) & Smi::kMaxValue;
+    word value = Utils::StringHash(address_for(0), length())
+        & Smi::kMaxPortableValue;
     if (value == kNoHashValue) {
       static const int kNoHashValueReplacement = 1;
       ASSERT(kNoHashValueReplacement != kNoHashValue);
       value = kNoHashValueReplacement;
     }
-    ASSERT(Smi::IsValid(value));
+    ASSERT(Smi::IsValidAsPortable(value));
     set_hash_value(value);
     return value;
   }
@@ -1242,6 +1246,10 @@ bool Smi::IsValid(int64 value) {
   return (value >= kMinValue) && (value <= kMaxValue);
 }
 
+bool Smi::IsValidAsPortable(int64 value) {
+  return (value >= kMinPortableValue) && (value <= kMaxPortableValue);
+}
+
 // Inlined HeapObject functions.
 HeapObject* HeapObject::cast(Object* object) {
   ASSERT(object->IsHeapObject());
@@ -1583,11 +1591,11 @@ void String::Initialize(int size, int length, bool clear) {
 }
 
 word String::hash_value() {
-  return *reinterpret_cast<word*>(address() + kHashValueOffset);
+  return Smi::cast(at(kHashValueOffset))->value();;
 }
 
 void String::set_hash_value(word value) {
-  *reinterpret_cast<word*>(address() + kHashValueOffset) = value;
+  at_put(kHashValueOffset, Smi::FromWord(value));
 }
 
 // Inlined Instance functions.

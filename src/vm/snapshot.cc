@@ -19,11 +19,6 @@ static const int kSupportedSizeOfDouble = 8;
 static const int kReferenceTableSizeBytes = 4;
 static const int kHeapSizeBytes = 4;
 
-static bool IsSmiPortable(Smi* smi) {
-  word value = smi->value();
-  return (value >= Smi::kMinPortableValue) && (value <= Smi::kMaxPortableValue);
-}
-
 class Header {
  public:
   explicit Header(int64 value) : value_(value) {}
@@ -457,7 +452,7 @@ void SnapshotWriter::WriteObject(Object* object) {
   // First check if object is small integer.
   if (object->IsSmi()) {
     Smi* smi = Smi::cast(object);
-    if (!IsSmiPortable(smi)) {
+    if (!Smi::IsValidAsPortable(smi->value())) {
       alternative_heap_size_ += LargeInteger::AllocationSize();
     }
     WriteInt64(Header::FromSmi(smi).as_word());
