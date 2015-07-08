@@ -405,7 +405,6 @@ super_operator_index7_test: Fail
 super_operator_index8_test: Fail
 super_setter_interceptor_test: Fail
 switch_fallthru_test: Fail
-syntax_test/47: MissingCompileTimeError
 this_test/01: MissingCompileTimeError
 this_test/03: MissingCompileTimeError
 this_test/05: MissingCompileTimeError

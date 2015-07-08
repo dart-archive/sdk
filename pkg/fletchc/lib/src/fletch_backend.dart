@@ -753,7 +753,7 @@ class FletchBackend extends Backend {
           compiler.world.mixinUsesOf(function.enclosingClass).toList();
       for (int i = 0; i < mixinUsage.length; i++) {
         ClassElement usage = mixinUsage[i];
-        // Allso add to mixin-usage of the current 'usage'.
+        // Also add to mixin-usage of the current 'usage'.
         assert(!compiler.world.mixinUsesOf(usage).any(mixinUsage.contains));
         mixinUsage.addAll(compiler.world.mixinUsesOf(usage));
         // TODO(ajohnsen): Consider having multiple 'memberOf' in
@@ -940,7 +940,7 @@ class FletchBackend extends Backend {
       FletchFunctionBuilder function = functions[i];
       if (!function.isInstanceMember || function.isAccessor) continue;
       // TODO(ajohnsen/johnniwinther): Expose getter on Universe.
-      compiler.resolverWorld.forEachInvokedName((name, usage) {
+      compiler.codegenWorld.forEachInvokedName((name, usage) {
         if (function.name != name) return;
         for (Selector use in usage.keys) {
           CallStructure callStructure = use.callStructure;
@@ -1045,7 +1045,7 @@ class FletchBackend extends Backend {
       FletchFunctionBuilder function = functions[i];
       if (!function.isInstanceMember || function.isAccessor) continue;
       // TODO(ajohnsen/johnniwinther): Expose test on Universe.
-      compiler.resolverWorld.forEachInvokedGetter((name, _) {
+      compiler.codegenWorld.forEachInvokedGetter((name, _) {
         if (function.name != name) return;
         createTearoffGetterForFunction(function);
       });
