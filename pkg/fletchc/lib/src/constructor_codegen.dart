@@ -316,7 +316,7 @@ class ConstructorCodegen extends CodegenVisitor {
     // There was no direct match. Push all unnamed arguments and all named
     // arguments that have already been evaluated, in signature order.
     for (int i = 0; i < unnamedArguments; i++) {
-      assembler.loadLocal(argumentCount);
+      assembler.loadLocal(argumentCount - 1);
     }
 
     int count = 0;
