@@ -225,16 +225,45 @@ class ErrorTarget extends Target {
   String toString() => "ErrorTarget(${quoteString(message)})";
 }
 
+
+/// A sentence is a written command to fletch. Normally, this command is
+/// written on the command-line and should be easy to write without having
+/// getting into conflict with Unix shell command line parsing.
+///
+/// An example sentence is:
+///   `create class MyClass in session MySession`
+///
+/// In this example, `create` is a [Verb], `class MyClass` is a [Target], and
+/// `in session MySession` is a [Preposition] in tail position.
 class Sentence {
+  /// For example, `create`.
   final ResolvedVerb verb;
+
+  /// For example, `in session MySession`
   final Preposition preposition;
+
+  /// For example, `class MyClass`
   final Target target;
+
+  /// For example, `in session MySession`
   final Preposition tailPreposition;
+
+  /// Any tokens found after this sentence.
   final List<String> trailing;
+
+  // TODO(ahe): Get rid of this.
   final String fletchVm;
+
+  // TODO(ahe): Get rid of this.
   final List<String> arguments;
+
+  // TODO(ahe): Get rid of this.
   final CommandSender commandSender;
+
+  // TODO(ahe): Get rid of this.
   final StreamIterator<Command> commandIterator;
+
+  // TODO(ahe): Get rid of this.
   @StringOrUri final packageRoot;
 
   const Sentence(
