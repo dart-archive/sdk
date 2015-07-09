@@ -9,6 +9,7 @@ import 'dart:async' show
 
 import 'verbs.dart' show
     Sentence,
+    TargetKind,
     Verb,
     commonVerbs,
     uncommonVerbs;
@@ -22,7 +23,8 @@ const String documentation = """
 
 Future<int> help(Sentence sentence, _) async {
   int exitCode = 0;
-  bool showAllVerbs = sentence.target != null && sentence.target.noun == 'all';
+  bool showAllVerbs =
+      sentence.target != null && sentence.target.kind == TargetKind.ALL;
   if (sentence.trailing != null) {
     print("Unknown arguments to help: ${sentence.trailing.join(' ')}");
     exitCode = 1;

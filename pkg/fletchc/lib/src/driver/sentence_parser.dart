@@ -83,13 +83,21 @@ class SentenceParser {
   Preposition parsePrepositionOpt() {
     // TODO(ahe): toLowerCase()?
     String word = tokens.current;
+    Preposition makePreposition(PrepositionKind kind) {
+      tokens.consume();
+      Target target = tokens.isAtEof ? null : parseTarget();
+      return new Preposition(kind, target);
+    }
     switch (word) {
       case "with":
+        return makePreposition(PrepositionKind.WITH);
+
       case "in":
+        return makePreposition(PrepositionKind.IN);
+
       case "to":
-        tokens.consume();
-        Target target = tokens.isAtEof ? null : parseTarget();
-        return new Preposition(word, target);
+        return makePreposition(PrepositionKind.TO);
+
 
       default:
         return null;
@@ -100,26 +108,49 @@ class SentenceParser {
   Target internalParseTarget() {
     // TODO(ahe): toLowerCase()?
     String word = tokens.current;
+
+    NamedTarget makeNamedTarget(TargetKind kind) {
+      tokens.consume();
+      return new NamedTarget(kind, parseName());
+    }
+
+    Target makeTarget(TargetKind kind) {
+      tokens.consume();
+      return new Target(kind);
+    }
+
     switch (word) {
       case "session":
+        return makeNamedTarget(TargetKind.SESSION);
+
       case "class":
+        return makeNamedTarget(TargetKind.CLASS);
+
       case "method":
+        return makeNamedTarget(TargetKind.METHOD);
+
       case "file":
-        tokens.consume();
-        return new NamedTarget(word, parseName());
+        return makeNamedTarget(TargetKind.FILE);
 
       case "sessions":
+        return makeTarget(TargetKind.SESSIONS);
+
       case "classes":
+        return makeTarget(TargetKind.CLASSES);
+
       case "methods":
+        return makeTarget(TargetKind.METHODS);
+
       case "files":
+        return makeTarget(TargetKind.FILES);
+
       case "all":
-        tokens.consume();
-        return new Target(word);
+        return makeTarget(TargetKind.ALL);
 
       default:
         return new ErrorTarget(
-            "Expected 'session(s)', 'class(s)', 'method(s)', or 'file', "
-            "but got: ${quoteString(word)}.");
+            "Expected 'session(s)', 'class(s)', 'method(s)', 'file(s)', "
+            "or 'all', but got: ${quoteString(word)}.");
     }
   }
 
@@ -187,31 +218,48 @@ class ResolvedVerb {
 }
 
 class Preposition {
-  final String word;
+  final PrepositionKind kind;
   final Target target;
 
-  const Preposition(this.word, this.target);
+  const Preposition(this.kind, this.target);
 
-  String toString() => "Preposition(${quoteString(word)}, $target)";
+  String toString() => "Preposition($kind, $target)";
+}
+
+enum PrepositionKind {
+  WITH,
+  IN,
+  TO,
 }
 
 class Target {
-  // TODO(ahe): Should be an enum.
-  final String noun;
+  final TargetKind kind;
 
-  const Target(this.noun);
+  const Target(this.kind);
 
-  String toString() => "Target(${quoteString(noun)})";
+  String toString() => "Target($kind)";
+}
+
+enum TargetKind {
+  SESSION,
+  CLASS,
+  METHOD,
+  FILE,
+  SESSIONS,
+  CLASSES,
+  METHODS,
+  FILES,
+  ALL,
 }
 
 class NamedTarget extends Target {
   final String name;
 
-  const NamedTarget(String noun, this.name)
-      : super(noun);
+  const NamedTarget(TargetKind kind, this.name)
+      : super(kind);
 
   String toString() {
-    return "NamedTarget(${quoteString(noun)}, ${quoteString(name)})";
+    return "NamedTarget($kind, ${quoteString(name)})";
   }
 }
 

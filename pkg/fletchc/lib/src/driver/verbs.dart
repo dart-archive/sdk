@@ -11,7 +11,9 @@ import 'sentence_parser.dart' show
     Sentence;
 
 export 'sentence_parser.dart' show
-    Sentence;
+    PrepositionKind,
+    Sentence,
+    TargetKind;
 
 import 'debug_verb.dart' show
     debugVerb;

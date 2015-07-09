@@ -18,18 +18,18 @@ Future main() {
     print("Verb '$name' as expected.");
   }
 
-  void checkTarget(String noun) {
+  void checkTarget(TargetKind kind) {
     Expect.isNotNull(sentence.target);
-    Expect.stringEquals(noun, sentence.target.noun);
-    print("Target '$noun' as expected.");
+    Expect.equals(kind, sentence.target.kind);
+    print("Target '$kind' as expected.");
   }
 
-  void checkNamedTarget(String noun, String name) {
+  void checkNamedTarget(TargetKind kind, String name) {
     Expect.isNotNull(sentence.target);
     NamedTarget namedTarget = sentence.target;
-    Expect.stringEquals(noun, namedTarget.noun);
+    Expect.equals(kind, namedTarget.kind);
     Expect.stringEquals(name, namedTarget.name);
-    print("NamedTarget '$noun $name' as expected.");
+    print("NamedTarget '$kind $name' as expected.");
   }
 
   void checkNoTarget() {
@@ -58,7 +58,7 @@ Future main() {
   print(sentence);
   checkVerb('create');
   Expect.isNull(sentence.preposition);
-  checkNamedTarget('session', 'fisk');
+  checkNamedTarget(TargetKind.SESSION, 'fisk');
   Expect.isNull(sentence.tailPreposition);
   Expect.isNull(sentence.trailing);
 
@@ -74,12 +74,12 @@ Future main() {
       Expect.isNull(sentence.tailPreposition);
     }
     Expect.isNotNull(preposition);
-    Expect.stringEquals('in', preposition.word);
+    Expect.equals(PrepositionKind.IN, preposition.kind);
     NamedTarget namedTarget = preposition.target;
     Expect.isNotNull(namedTarget);
-    Expect.stringEquals('session', namedTarget.noun);
+    Expect.equals(TargetKind.SESSION, namedTarget.kind);
     Expect.stringEquals('fisk', namedTarget.name);
-    checkNamedTarget('class', 'Foo');
+    checkNamedTarget(TargetKind.CLASS, 'Foo');
     Expect.isNull(sentence.trailing);
   }
   sentence = parseSentence(['create', 'in', 'session', 'fisk', 'class', 'Foo']);
@@ -94,7 +94,7 @@ Future main() {
   print(sentence);
   checkVerb('create');
   Expect.isNotNull(sentence.preposition);
-  Expect.stringEquals('in', sentence.preposition.word);
+  Expect.equals(PrepositionKind.IN, sentence.preposition.kind);
   Expect.isTrue(sentence.preposition.target is ErrorTarget);
   checkNoTarget();
   Expect.isNull(sentence.tailPreposition);
@@ -104,7 +104,7 @@ Future main() {
   print(sentence);
   checkVerb('create');
   Expect.isNotNull(sentence.preposition);
-  Expect.stringEquals('in', sentence.preposition.word);
+  Expect.equals(PrepositionKind.IN, sentence.preposition.kind);
   Expect.isTrue(sentence.preposition.target is ErrorTarget);
   checkNoTarget();
   Expect.isNull(sentence.tailPreposition);
@@ -115,7 +115,7 @@ Future main() {
   print(sentence);
   checkVerb('help');
   Expect.isNull(sentence.preposition);
-  checkTarget('all');
+  checkTarget(TargetKind.ALL);
   Expect.isNull(sentence.tailPreposition);
   Expect.isNull(sentence.trailing);
 
