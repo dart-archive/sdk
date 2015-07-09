@@ -14,6 +14,7 @@ class Options {
   final String attachArgument;
   final bool connectToExistingVm;
   final int existingVmPort;
+  final List<String> defines;  // List of all -D options.
 
   Options(
       this.script,
@@ -24,7 +25,10 @@ class Options {
       this.packageRootPath,
       this.attachArgument,
       this.connectToExistingVm,
-      this.existingVmPort);
+      this.existingVmPort,
+      this.defines);
+
+  static final RegExp defineFlagPattern = new RegExp('^-D.+=.*\$');
 
   /// Parse [options] which is a list of command-line arguments, such as those
   /// passed to `main`.
@@ -38,6 +42,7 @@ class Options {
     String attachArgument;
     bool connectToExistingVm = false;
     int existingVmPort = 0;
+    List<String> defines = <String>[];
 
     Iterator<String> iterator = options.iterator;
     String getRequiredArgument(String errorMessage) {
@@ -49,6 +54,7 @@ class Options {
         throw errorMessage;
       }
     }
+
     while (iterator.moveNext()) {
       String option = iterator.current;
       switch (option) {
@@ -115,6 +121,11 @@ class Options {
             break;
           }
 
+          if (defineFlagPattern.firstMatch(option) != null) {
+            defines.add(option.substring(2));
+            break;
+          }
+
           if (script != null) throw "Unknown option: $option";
           script = option;
           break;
@@ -123,6 +134,7 @@ class Options {
 
     return new Options(
         script, snapshotPath, debugging, testDebugger, testDebuggerCommands,
-        packageRootPath, attachArgument, connectToExistingVm, existingVmPort);
+        packageRootPath, attachArgument, connectToExistingVm, existingVmPort,
+        defines);
   }
 }

@@ -138,28 +138,27 @@ list_test/01: Fail
 list_test/none: Fail
 
 # Unexpected command line arguments to compiler.
-bool_from_environment_test: Crash
-from_environment_const_type_test/01: Crash
-from_environment_const_type_test/02: Crash
-from_environment_const_type_test/03: Crash
-from_environment_const_type_test/04: Crash
-from_environment_const_type_test/05: Crash
-from_environment_const_type_test/06: Crash
-from_environment_const_type_test/07: Crash
-from_environment_const_type_test/08: Crash
-from_environment_const_type_test/09: Crash
-from_environment_const_type_test/10: Crash
-from_environment_const_type_test/11: Crash
-from_environment_const_type_test/12: Crash
-from_environment_const_type_test/13: Crash
-from_environment_const_type_test/14: Crash
-from_environment_const_type_test/15: Crash
-from_environment_const_type_test/16: Crash
-from_environment_const_type_test/none: Crash
-int_from_environment2_test: Crash
-int_from_environment_test: Crash
-string_from_environment2_test: Crash
-string_from_environment_test: Crash
+bool_from_environment_test: Fail
+from_environment_const_type_test/01: Fail
+from_environment_const_type_test/02: Fail
+from_environment_const_type_test/03: Fail
+from_environment_const_type_test/04: Fail
+from_environment_const_type_test/05: Fail
+from_environment_const_type_test/06: Fail
+from_environment_const_type_test/07: Fail
+from_environment_const_type_test/08: Fail
+from_environment_const_type_test/09: Fail
+from_environment_const_type_test/10: Fail
+from_environment_const_type_test/11: Fail
+from_environment_const_type_test/12: Fail
+from_environment_const_type_test/13: Fail
+from_environment_const_type_test/14: Fail
+from_environment_const_type_test/15: Fail
+from_environment_const_type_test/16: Fail
+from_environment_const_type_test/none: Fail
+int_from_environment_test: Fail
+string_from_environment2_test: Fail
+string_from_environment_test: Fail
 
 
 # Unsorted
