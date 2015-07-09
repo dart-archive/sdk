@@ -47,7 +47,8 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
 
   'controlStream/testControlStream': controlStream.testControlStream,
 
-  'zone_helper/testEarlyError': zone_helper.testEarlyError,
+  'zone_helper/testEarlySyncError': zone_helper.testEarlySyncError,
+  'zone_helper/testEarlyAsyncError': zone_helper.testEarlyAsyncError,
   'zone_helper/testLateError': zone_helper.testLateError,
   'zone_helper/testUnhandledLateError': zone_helper.testUnhandledLateError,
   'zone_helper/testAlwaysFails': zone_helper.testAlwaysFails,

@@ -21,24 +21,23 @@ Future runGuarded(
 
   Completer completer = new Completer();
 
-  handleUncaughtError(
-      Zone self, ZoneDelegate parent, Zone zone, error, StackTrace stackTrace) {
+  handleUncaughtError(error, StackTrace stackTrace) {
     if (!completer.isCompleted) {
       completer.completeError(error, stackTrace);
     } else if (handleLateError != null) {
       handleLateError(error, stackTrace);
     } else {
-      parent.handleUncaughtError(zone, error, stackTrace);
+      // Delegate to parent.
+      throw error;
     }
   }
 
-  ZoneSpecification specification = new ZoneSpecification(
-      print: printWrapper,
-      handleUncaughtError: handleUncaughtError);
+  ZoneSpecification specification = new ZoneSpecification(print: printWrapper);
 
   runZoned(
       () => f().then(completer.complete),
-      zoneSpecification: specification);
+      zoneSpecification: specification,
+      onError: handleUncaughtError);
 
   return completer.future;
 }

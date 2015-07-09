@@ -13,55 +13,73 @@ import 'package:fletchc/src/zone_helper.dart';
 
 import 'package:expect/expect.dart';
 
-/// Test that runGuarded completes with an error.
-testEarlyError() async {
+/// Test that runGuarded completes with an error when a synchronous error is
+/// thrown.
+testEarlySyncError() {
   bool threw = false;
-  try {
-    await runGuarded(() {
-      throw "Early error";
-    }, handleLateError: (e, s) {
-      throw "Broken";
-    });
-  } catch (e) {
+  return runGuarded(() {
+    throw "Early error";
+  }, handleLateError: (e, s) {
+    throw "Broken";
+  }).catchError((e) {
+    Expect.stringEquals("Early error", e);
     threw = true;
-  }
-  Expect.isTrue(threw);
+  }).then((_) {
+    Expect.isTrue(threw);
+  });
+}
+
+/// Test that runGuarded completes with an error when an asynchronous error is
+/// thrown.
+testEarlyAsyncError() {
+  bool threw = false;
+  return runGuarded(() {
+    return new Future.error("Early error");
+  }, handleLateError: (e, s) {
+    throw "Broken";
+  }).catchError((e) {
+    Expect.stringEquals("Early error", e);
+    threw = true;
+  }).then((_) {
+    Expect.isTrue(threw);
+  });
 }
 
 /// Test that handleLateError is invoked if a late asynchronous error occurs.
-testLateError() async {
+testLateError() {
   Completer completer = new Completer();
   bool threw = false;
-  try {
-    await runGuarded(() {
-      new Future(() {
-        throw "Late error";
-      });
-      return new Future.value(0);
-    }, handleLateError: (e, s) {
-      completer.complete(e);
+  return runGuarded(() {
+    new Future(() {
+      throw "Late error";
     });
-  } catch (e) {
+    return new Future.value(42);
+  }, handleLateError: (e, s) {
+    completer.complete(e);
+  }).catchError((_) {
     threw = true;
-  }
-  Expect.isFalse(threw);
-  Expect.stringEquals("Late error", await completer.future);
+  }).then((value) {
+    Expect.isFalse(threw);
+    Expect.equals(42, value);
+    return completer.future;
+  }).then((String value) {
+    Expect.stringEquals("Late error", value);
+  });
 }
 
 /// Helper for [testUnhandledLateError].
-testUnhandledLateErrorIsolate(_) async {
+testUnhandledLateErrorIsolate(_) {
   bool threw = false;
-  try {
-    await runGuarded(() {
-      new Future(() {
-        throw "Late error";
-      });
-      return new Future.value(0);
+  return runGuarded(() {
+    new Future(() {
+      throw "Late error";
     });
-  } catch (e) {
+    return new Future.value(0);
+  }).catchError((_) {
     threw = true;
-  }
-  Expect.isFalse(threw);
+  }).then((_) {
+    Expect.isFalse(threw);
+  });
 }
 
 /// Test that a late asynchronous error is passed to the parent zone if no
