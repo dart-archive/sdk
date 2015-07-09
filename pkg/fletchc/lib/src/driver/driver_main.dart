@@ -58,6 +58,10 @@ import 'verbs.dart' show
     commonVerbs,
     uncommonVerbs;
 
+import 'sentence_parser.dart' show
+    parseSentence,
+    Sentence;
+
 const Endianness commandEndianness = Endianness.LITTLE_ENDIAN;
 
 const headerSize = 5;
@@ -462,30 +466,14 @@ class ClientController {
   }
 
   List<String> parseArguments(List<String> arguments) {
+    Sentence sentence = parseSentence(arguments, includesProgramName: true);
     /// [programName] is the canonicalized absolute path to the fletch
     /// executable (the C++ program).
-    String programName = arguments.first;
+    String programName = sentence.programName;
     String fletchVm = "$programName-vm";
-    String verbName;
-    if (arguments.length < 2) {
-      verbName = 'help';
-      arguments = <String>[];
-    } else {
-      verbName = arguments[1];
-      arguments = arguments.skip(2).toList();
-    }
-    Verb verb = commonVerbs[verbName];
-    if (verb == null) {
-      verb = uncommonVerbs[verbName];
-    }
-    if (verb == null) {
-      printLineOnStderr("Unknown argument: $verbName");
-      verb = commonVerbs['help'];
-    }
-
-    this.verb = verb;
+    this.verb = sentence.verb.verb;
     this.fletchVm = fletchVm;
-    return arguments;
+    return sentence.arguments;
   }
 }
 

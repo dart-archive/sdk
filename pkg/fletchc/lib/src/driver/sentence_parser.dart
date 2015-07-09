@@ -15,26 +15,21 @@ import "verbs.dart" show
 import 'dart:convert' show
     JSON;
 
-// TODO(ahe): Remove.
-import "driver_commands.dart" show
-    Command,
-    CommandSender;
-import "dart:async" show
-  StreamIterator;
-
-// TODO(ahe): Remove.
-const String StringOrUri = "String or Uri";
-
-Sentence parseSentence(Iterable<String> arguments) {
-  SentenceParser parser = new SentenceParser(arguments);
+Sentence parseSentence(
+    Iterable<String> arguments,
+    {bool includesProgramName}) {
+  SentenceParser parser =
+      new SentenceParser(arguments, includesProgramName == true);
   return parser.parseSentence();
 }
 
 class SentenceParser {
+  final String programName;
   Words tokens;
 
-  SentenceParser(Iterable<String> tokens)
-      : tokens = new Words(tokens);
+  SentenceParser(Iterable<String> tokens, bool includesProgramName)
+      : programName = includesProgramName ? tokens.first : null,
+        tokens = new Words(tokens.skip(includesProgramName ? 1 : 0));
 
   Sentence parseSentence() {
     ResolvedVerb verb;
@@ -43,7 +38,6 @@ class SentenceParser {
     } else {
       verb = new ResolvedVerb("help", commonVerbs["help"]);
     }
-    List<String> rest = <String>[];
     Preposition preposition = parsePrepositionOpt();
     Target target = parseTargetOpt();
     Preposition tailPreposition = parsePrepositionOpt();
@@ -57,7 +51,9 @@ class SentenceParser {
     }
     return new Sentence(
         verb, preposition, target, tailPreposition, trailing,
-        null, rest, null, null, null);
+        programName,
+        // TODO(ahe): Get rid of the following argument:
+        tokens.originalInput.skip(1).toList());
   }
 
   ResolvedVerb parseVerb() {
@@ -115,6 +111,7 @@ class SentenceParser {
       case "classes":
       case "methods":
       case "files":
+      case "all":
         tokens.consume();
         return new Target(word);
 
@@ -225,7 +222,6 @@ class ErrorTarget extends Target {
   String toString() => "ErrorTarget(${quoteString(message)})";
 }
 
-
 /// A sentence is a written command to fletch. Normally, this command is
 /// written on the command-line and should be easy to write without having
 /// getting into conflict with Unix shell command line parsing.
@@ -252,19 +248,10 @@ class Sentence {
   final List<String> trailing;
 
   // TODO(ahe): Get rid of this.
-  final String fletchVm;
+  final String programName;
 
   // TODO(ahe): Get rid of this.
   final List<String> arguments;
-
-  // TODO(ahe): Get rid of this.
-  final CommandSender commandSender;
-
-  // TODO(ahe): Get rid of this.
-  final StreamIterator<Command> commandIterator;
-
-  // TODO(ahe): Get rid of this.
-  @StringOrUri final packageRoot;
 
   const Sentence(
       this.verb,
@@ -272,16 +259,12 @@ class Sentence {
       this.target,
       this.tailPreposition,
       this.trailing,
-      this.fletchVm,
-      this.arguments,
-      this.commandSender,
-      this.commandIterator,
-      this.packageRoot);
+      this.programName,
+      this.arguments);
 
   Future<int> performVerb() {
     return verb.perform(
-        fletchVm, arguments, commandSender, commandIterator,
-        packageRoot: packageRoot);
+        programName == null ? null : "$programName-vm", arguments, null, null);
   }
 
   String toString() => "Sentence($verb, $preposition, $target)";
