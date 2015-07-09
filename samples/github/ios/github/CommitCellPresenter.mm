@@ -13,6 +13,7 @@
 @implementation CommitCellPresenter
 
 - (id)init {
+  self = [super init];
   self.imageCache = [[LruCache alloc] initWithMaxSize:100];
   return self;
 }

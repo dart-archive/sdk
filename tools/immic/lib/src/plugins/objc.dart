@@ -405,6 +405,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('@implementation ImmiService');
     writeln();
     writeln('- (id)init {');
+    writeln('  self = [super init];');
     writeln('  _storyboards = [NSMutableArray array];');
     writeln('  _roots = [NSMutableDictionary dictionary];');
     writeln('  return self;');
@@ -476,15 +477,18 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
   _writeImmiRootImplementation() {
     writeln('typedef void (^ImmiRefreshCallback)(const PatchData&);');
     writeln('void ImmiRefresh(PatchData patchData, void* callbackData) {');
-    writeln('  ImmiRefreshCallback block =');
-    writeln('      (__bridge_transfer ImmiRefreshCallback)callbackData;');
-    writeln('  block(patchData);');
-    writeln('  patchData.Delete();');
+    writeln('  @autoreleasepool {');
+    writeln('    ImmiRefreshCallback block =');
+    writeln('        (__bridge_transfer ImmiRefreshCallback)callbackData;');
+    writeln('    block(patchData);');
+    writeln('    patchData.Delete();');
+    writeln('  }');
     writeln('}');
     writeln('@implementation ImmiRoot');
     writeln();
     writeln('- (id)init:(uint16_t)pid');
     writeln('    presenter:(id <NodePresenter>)presenter {');
+    writeln('  self = [super init];');
     writeln('  assert(pid > 0);');
     writeln('  _pid = pid;');
     writeln('  _presenter = presenter;');
@@ -576,6 +580,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('@implementation $nodeName');
     writeln('- (id)initWith:(const $nodeDataName&)data');
     writeln('       inGraph:(ImmiRoot*)root {');
+    writeln('  self = [super init];');
     forEachSlot(node, null, (Type slotType, String slotName) {
       String camelName = camelize(slotName);
       write('  _$slotName = ');
@@ -620,6 +625,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('}');
 
     writeln('- (id)initWithPatch:($patchName*)patch {');
+    writeln('  self = [super init];');
     forEachSlot(node, null, (Type slotType, String slotName) {
       writeln('  _$slotName = patch.$slotName.current;');
     });
@@ -635,6 +641,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('  NodePatchType _type;');
     writeln('}');
     writeln('- (id)initIdentityPatch:($nodeName*)previous {');
+    writeln('  self = [super init];');
     writeln('  _type = kIdentityNodePatch;');
     writeln('  _previous = previous;');
     writeln('  _current = previous;');
@@ -643,6 +650,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('- (id)initWith:(const $patchDataName&)data');
     writeln('      previous:($nodeName*)previous');
     writeln('       inGraph:(ImmiRoot*)root {');
+    writeln('  self = [super init];');
     writeln('  _previous = previous;');
     if (node.layout.slots.isNotEmpty || node.methods.isNotEmpty) {
       // The updates list is ordered consistently with the struct fields.
@@ -746,6 +754,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('  return [[Node alloc] init:node];');
     writeln('}');
     writeln('- (id)init:(id <Node>)node {');
+    writeln('  self = [super init];');
     writeln('  _node = node;');
     writeln('  return self;');
     writeln('}');
@@ -778,6 +787,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('                             inGraph:root];');
     writeln('}');
     writeln('- (id)initIdentityPatch:(Node*)previous {');
+    writeln('  self = [super init];');
     writeln('  _type = kIdentityNodePatch;');
     writeln('  _previous = previous;');
     writeln('  _current = previous;');
@@ -786,6 +796,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('- (id)initWith:(const NodePatchData&)data');
     writeln('      previous:(Node*)previous');
     writeln('       inGraph:(ImmiRoot*)root {');
+    writeln('  self = [super init];');
     writeln('  _previous = previous;');
     write(' ');
     nodes.forEach((node) {
@@ -887,6 +898,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       String patchDataName = objcType;
       writeln('@implementation $patchTypeName');
       writeln('- (id)initIdentityPatch:($objcType)previous {');
+      writeln('  self = [super init];');
       writeln('  _previous = previous;');
       writeln('  _current = previous;');
       writeln('  return self;');
@@ -894,6 +906,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       writeln('- (id)initWith:($patchDataName)data');
       writeln('      previous:($objcType)previous');
       writeln('       inGraph:(ImmiRoot*)root {');
+      writeln('  self = [super init];');
       writeln('  _previous = previous;');
       writeln('  _current = data;');
       writeln('  return self;');
@@ -923,6 +936,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('                                         inGraph:root];');
     writeln('}');
     writeln('- (id)init:(int)index {');
+    writeln('  self = [super init];');
     writeln('  _index = index;');
     writeln('  return self;');
     writeln('}');
@@ -1012,6 +1026,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('  NSMutableArray* _regions;');
     writeln('}');
     writeln('- (id)initIdentityPatch:(NSArray*)previous {');
+    writeln('  self = [super init];');
     writeln('  _changed = false;');
     writeln('  _previous = previous;');
     writeln('  _current = previous;');
@@ -1020,6 +1035,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('- (id)initWith:(const ListPatchData&)data');
     writeln('      previous:(NSArray*)previous');
     writeln('       inGraph:(ImmiRoot*)root {');
+    writeln('  self = [super init];');
     writeln('  _changed = true;');
     writeln('  _previous = previous;');
     writeln('  const List<ListRegionData>& regions = data.getRegions();');
@@ -1095,6 +1111,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       writeln('  NodePatchType _type;');
       writeln('}');
       writeln('- (id)initIdentityPatch:($actionBlock)previous {');
+      writeln('  self = [super init];');
       writeln('  _type = kIdentityNodePatch;');
       writeln('  _current = previous;');
       writeln('  return self;');
@@ -1102,6 +1119,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
       writeln('- (id)initWith:(uint16_t)actionId');
       writeln('      previous:($actionBlock)previous');
       writeln('       inGraph:(ImmiRoot*)root {');
+      writeln('  self = [super init];');
       writeln('  _type = kReplaceNodePatch;');
       writeln('  _current = ^$actionBlockFormals{');
       writeln('      [root dispatch:^{');

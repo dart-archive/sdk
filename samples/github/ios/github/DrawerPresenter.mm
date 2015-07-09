@@ -131,6 +131,7 @@
 @implementation PanePresenter
 
 - (id)initWithPresenter:(DynamicPresenter)presenter {
+  self = [super init];
   self.empty = true;
   self.presenter = presenter;
   self.emptyViewController = [[UIViewController alloc] init];
