@@ -28,10 +28,9 @@ import 'driver_commands.dart' show
     DriverCommand,
     stringifyError;
 
-import 'verbs.dart' show
-    Verb,
-    commonVerbs,
-    uncommonVerbs;
+import 'sentence_parser.dart' show
+    Sentence,
+    parseSentence;
 
 // TODO(ahe): Send DriverCommands directly when they are canonicalized
 // correctly, see issue 23244.
@@ -107,35 +106,13 @@ Future handleClient(SendPort clientOutgoing, ReceivePort clientIncoming) async {
 
     // TODO(ahe): Remove the command-line processing below once it is fully
     // moved to the main isolate.
-
-    // This is argv from a C/C++ program. The first entry is the program
-    // name which isn't normally included in Dart arguments (as passed to
-    // main).
-    List<String> arguments = command.data;
-    String programName = arguments.first;
-    String fletchVm = "$programName-vm";
-    String verbName;
-    if (arguments.length < 2) {
-      verbName = 'help';
-      arguments = <String>[];
-    } else {
-      verbName = arguments[1];
-      arguments = arguments.skip(2).toList();
-    }
-    Verb verb = commonVerbs[verbName];
-    if (verb == null) {
-      verb = uncommonVerbs[verbName];
-    }
-    if (verb == null) {
-      commandSender.sendStderr("Unknown argument: $verbName\n");
-      verb = commonVerbs['help'];
-    }
-
-    return await verb.perform(
-        fletchVm,
-        arguments,
-        commandSender,
-        commandIterator);
+    Sentence sentence = parseSentence(command.data, includesProgramName: true);
+    Map<String, dynamic> context = <String, dynamic>{
+      'fletchVm': '${sentence.programName}-vm',
+      'commandSender': commandSender,
+      'commandIterator': commandIterator,
+    };
+    return await sentence.performVerb(context);
   });
 
   clientIncoming.close();

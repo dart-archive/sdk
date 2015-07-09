@@ -37,7 +37,11 @@ import '../../session.dart' show
     FletchVmSession;
 
 import 'verbs.dart' show
+    Sentence,
     Verb;
+
+import 'options.dart' show
+    Options;
 
 const Verb compileAndRunVerb =
     const Verb(compileAndRun, documentation, requiresWorker: true);
@@ -51,44 +55,23 @@ const String documentation = """
 const COMPILER_CRASHED = 253;
 
 Future<int> compileAndRun(
-    String fletchVm,
-    List<String> arguments,
-    CommandSender commandSender,
-    StreamIterator<Command> commandIterator,
-    // TODO(ahe): packageRoot should be an option.
-    {@StringOrUri packageRoot: "package/"}) async {
-  String script;
-  String snapshotPath;
-  String attachArgument;
+    Sentence sentence,
+    Map<String, dynamic> context) async {
+  String fletchVm = context['fletchVm'];
+  List<String> arguments = sentence.arguments;
+  CommandSender commandSender = context['commandSender'];
+  StreamIterator<Command> commandIterator = context['commandIterator'];
 
-  for (int i = 0; i < arguments.length; i++) {
-    String argument = arguments[i];
-    switch (argument) {
-      case '-o':
-      case '--out':
-        snapshotPath = arguments[++i];
-        break;
+  Options options = Options.parse(arguments);
 
-      case '-a':
-      case '--attach':
-        attachArgument = arguments[++i];
-        break;
+  if (options.script == null) throw "No script supplied";
 
-      default:
-        if (script != null) throw "Unknown option: $argument";
-        script = argument;
-        break;
-    }
-  }
-
-  if (script == null) throw "No script supplied";
-
-  List<String> options = const bool.fromEnvironment("fletchc-verbose")
+  List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   FletchCompiler compiler =
       new FletchCompiler(
-          options: options, script: script, fletchVm: fletchVm,
-          packageRoot: packageRoot);
+          options: compilerOptions, script: options.script, fletchVm: fletchVm,
+          packageRoot: options.packageRootPath);
   bool compilerCrashed = false;
   FletchDelta fletchDelta = await compiler.run().catchError((e, trace) {
     compilerCrashed = true;
@@ -109,7 +92,7 @@ Future<int> compileAndRun(
   trackSubscription(StreamSubscription subscription, String name) {
     futures.add(doneFuture(handleSubscriptionErrors(subscription, name)));
   }
-  if (attachArgument == null) {
+  if (options.attachArgument == null) {
     var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 
     List<String> vmOptions = <String>[
@@ -153,7 +136,7 @@ Future<int> compileAndRun(
     }
     vmSocket = handleSocketErrors(vmSocket, "vmSocket");
   } else {
-    var address = attachArgument.split(":");
+    var address = options.attachArgument.split(":");
     String host = address[0];
     int port = int.parse(address[1]);
     print("Connecting to $host:$port");
@@ -164,7 +147,7 @@ Future<int> compileAndRun(
   var session = new FletchVmSession(vmSocket);
   await session.runCommands(fletchDelta.commands);
 
-  if (snapshotPath == null) {
+  if (options.snapshotPath == null) {
     await session.runCommand(const commands_lib.ProcessSpawnForMain());
 
     await session.sendCommand(const commands_lib.ProcessRun());
@@ -179,7 +162,8 @@ Future<int> compileAndRun(
                           '[ProcessTerminated] but got [$command]');
     }
   } else {
-    await session.runCommand(new commands_lib.WriteSnapshot(snapshotPath));
+    await session.runCommand(
+        new commands_lib.WriteSnapshot(options.snapshotPath));
   }
   await session.shutdown();
 

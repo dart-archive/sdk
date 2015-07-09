@@ -5,15 +5,13 @@
 library fletchc.driver.verb;
 
 import 'dart:async' show
-    Future,
-    StreamIterator;
+    Future;
 
-import '../../compiler.dart' show
-    StringOrUri;
+import 'sentence_parser.dart' show
+    Sentence;
 
-import 'driver_commands.dart' show
-    Command,
-    CommandSender;
+export 'sentence_parser.dart' show
+    Sentence;
 
 import 'debug_verb.dart' show
     debugVerb;
@@ -30,13 +28,7 @@ import 'shutdown_verb.dart' show
 import 'create_verb.dart' show
     createVerb;
 
-typedef Future<int> DoVerb(
-    String fletchVm,
-    List<String> arguments,
-    CommandSender commandSender,
-    StreamIterator<Command> commandIterator,
-    // TODO(ahe): packageRoot should be an option.
-    {@StringOrUri packageRoot});
+typedef Future<int> DoVerb(Sentence sentence, context);
 
 class Verb {
   final DoVerb perform;

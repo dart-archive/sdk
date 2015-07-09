@@ -1,0 +1,128 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+library fletchc.driver.options;
+
+class Options {
+  final String script;
+  final String snapshotPath;
+  final bool debugging;
+  final bool testDebugger;
+  final String testDebuggerCommands;
+  final String packageRootPath;
+  final String attachArgument;
+  final bool connectToExistingVm;
+  final int existingVmPort;
+
+  Options(
+      this.script,
+      this.snapshotPath,
+      this.debugging,
+      this.testDebugger,
+      this.testDebuggerCommands,
+      this.packageRootPath,
+      this.attachArgument,
+      this.connectToExistingVm,
+      this.existingVmPort);
+
+  /// Parse [options] which is a list of command-line arguments, such as those
+  /// passed to `main`.
+  static Options parse(Iterable<String> options) {
+    String script;
+    String snapshotPath;
+    bool debugging = false;
+    bool testDebugger = false;
+    String testDebuggerCommands = "";
+    String packageRootPath = "package/";
+    String attachArgument;
+    bool connectToExistingVm = false;
+    int existingVmPort = 0;
+
+    Iterator<String> iterator = options.iterator;
+    String getRequiredArgument(String errorMessage) {
+      String option = iterator.current;
+      if (iterator.moveNext()) {
+        return iterator.current;
+      } else {
+        // TODO(ahe): Improve error recovery.
+        throw errorMessage;
+      }
+    }
+    while (iterator.moveNext()) {
+      String option = iterator.current;
+      switch (option) {
+        case '-o':
+        case '--out':
+          snapshotPath = getRequiredArgument(
+              "The option '$option' requires a file name.");
+          break;
+
+        case '-d':
+        case '--debug':
+          debugging = true;
+          break;
+
+        case '--test-debugger':
+          testDebugger = true;
+          break;
+
+        case '-p':
+        case '--package-root':
+          packageRootPath = getRequiredArgument(
+              "The option '$option' requires a directory name.");
+          break;
+
+        case '-a':
+        case '--attach':
+          attachArgument = getRequiredArgument(
+              "The option '$option' requires host name and port number in the "
+              "form of host:port.");
+          break;
+
+        // TODO(ahe): Remove this option (use --attach instead).
+        case '--port':
+          connectToExistingVm = true;
+          existingVmPort = int.parse(
+              getRequiredArgument(
+                  "The option '$option' requires a port number."));
+          break;
+
+        default:
+          const String packageRootFlag = '--package-root=';
+          if (option.startsWith(packageRootFlag)) {
+            packageRootPath = option.substring(packageRootFlag.length);
+            break;
+          }
+
+          const String testDebuggerFlag = '--test-debugger=';
+          if (option.startsWith(testDebuggerFlag)) {
+            testDebugger = true;
+            testDebuggerCommands = option.substring(testDebuggerFlag.length);
+            break;
+          }
+
+          const String portFlag = '--port=';
+          if (option.startsWith(portFlag)) {
+            connectToExistingVm = true;
+            existingVmPort = int.parse(option.substring(portFlag.length));
+            break;
+          }
+
+          const String attachFlag = '--attach=';
+          if (option.startsWith(attachFlag)) {
+            attachArgument = option.substring(attachFlag.length);
+            break;
+          }
+
+          if (script != null) throw "Unknown option: $option";
+          script = option;
+          break;
+      }
+    }
+
+    return new Options(
+        script, snapshotPath, debugging, testDebugger, testDebuggerCommands,
+        packageRootPath, attachArgument, connectToExistingVm, existingVmPort);
+  }
+}

@@ -4,13 +4,11 @@
 
 library fletchc.driver.shutdown_verb;
 
-import 'dart:io' show
-    exit;
-
 import 'dart:async' show
     Future;
 
 import 'verbs.dart' show
+    Sentence,
     Verb;
 
 import 'driver_main.dart' show
@@ -22,12 +20,7 @@ const String documentation = """
    shutdown      Terminate the background fletch compiler process.
 """;
 
-Future<int> shutdown(
-    _a,
-    List<String> arguments,
-    _b,
-    _c,
-    {packageRoot: "package/"}) {
+Future<int> shutdown(Sentence sentence, _) {
   gracefulShutdown();
   return new Future.value(0);
 }

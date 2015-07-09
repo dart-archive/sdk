@@ -18,83 +18,31 @@ import 'fletch_system.dart';
 
 import 'session.dart';
 
+import 'src/driver/options.dart' show
+    Options;
+
 const COMPILER_CRASHED = 253;
 const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
 const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
 
 main(List<String> arguments) async {
-  String script;
-  String snapshotPath;
-  bool debugging = false;
-  bool testDebugger = false;
-  String testDebuggerCommands = "";
-  String packageRootPath = "package/";
-  bool connectToExistingVm = false;
-  int existingVmPort = 0;
+  Options options = Options.parse(arguments);
 
-  for (int i = 0; i < arguments.length; i++) {
-    String argument = arguments[i];
-    switch (argument) {
-      case '-o':
-      case '--out':
-        snapshotPath = arguments[++i];
-        break;
-
-      case '-d':
-      case '--debug':
-        debugging = true;
-        break;
-
-      case '--test-debugger':
-        testDebugger = true;
-        break;
-
-      case '-p':
-        packageRootPath = arguments[++i];
-        break;
-
-      default:
-        const String packageRootFlag = '--package-root=';
-        if (argument.startsWith(packageRootFlag)) {
-          packageRootPath = argument.substring(packageRootFlag.length);
-          break;
-        }
-
-        const String testDebuggerFlag = '--test-debugger=';
-        if (argument.startsWith(testDebuggerFlag)) {
-          testDebugger = true;
-          testDebuggerCommands = argument.substring(testDebuggerFlag.length);
-          break;
-        }
-
-        const String portFlag = '--port=';
-        if (argument.startsWith(portFlag)) {
-          connectToExistingVm = true;
-          existingVmPort = int.parse(argument.substring(portFlag.length));
-          break;
-        }
-
-        if (script != null) throw "Unknown option: $argument";
-        script = argument;
-        break;
-    }
-  }
-
-  if (script == null) throw "No script supplied";
+  if (options.script == null) throw "No script supplied";
 
   exitCode = COMPILER_CRASHED;
 
-  List<String> options = const bool.fromEnvironment("fletchc-verbose")
+  List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   FletchCompiler compiler = new FletchCompiler(
-      options: options,
-      script: script,
-      packageRoot: packageRootPath);
+      options: compilerOptions,
+      script: options.script,
+      packageRoot: options.packageRootPath);
   FletchDelta fletchDelta = await compiler.run();
 
   FletchVm vm;
-  if (connectToExistingVm) {
-    var socket = await Socket.connect("127.0.0.1", existingVmPort);
+  if (options.connectToExistingVm) {
+    var socket = await Socket.connect("127.0.0.1", options.existingVmPort);
     vm = new FletchVm.existing(socket);
   } else {
     vm = await FletchVm.start(compiler);
@@ -105,11 +53,11 @@ main(List<String> arguments) async {
                             vm.process != null ? vm.process.exitCode : null);
 
   await session.runCommands(fletchDelta.commands);
-  if (snapshotPath != null) {
-    await session.writeSnapshot(snapshotPath);
-  } else if (debugging) {
-    if (testDebugger) {
-      await session.testDebugger(testDebuggerCommands);
+  if (options.snapshotPath != null) {
+    await session.writeSnapshot(options.snapshotPath);
+  } else if (options.debugging) {
+    if (options.testDebugger) {
+      await session.testDebugger(options.testDebuggerCommands);
     } else {
       await session.debug();
     }
@@ -118,7 +66,7 @@ main(List<String> arguments) async {
   }
   await session.shutdown();
 
-  if (!connectToExistingVm) {
+  if (!options.connectToExistingVm) {
     exitCode = await vm.process.exitCode;
     if (exitCode != 0) {
       print("Non-zero exit code from "

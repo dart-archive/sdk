@@ -8,6 +8,7 @@ import 'dart:async' show
     Future;
 
 import 'verbs.dart' show
+    Sentence,
     Verb;
 
 const Verb debugVerb = const Verb(debug, documentation);
@@ -18,11 +19,6 @@ const String documentation = """
              interactive debug session.
 """;
 
-Future debug(
-    _a,
-    List<String> arguments,
-    _b,
-    _c,
-    {packageRoot: "package/"}) async {
+Future debug(Sentence sentence, _) async {
   throw "Debug action not yet implemented.";
 }

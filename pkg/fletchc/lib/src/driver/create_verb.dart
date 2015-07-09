@@ -11,6 +11,7 @@ import 'dart:async' show
     Future;
 
 import 'verbs.dart' show
+    Sentence,
     Verb;
 
 const Verb createVerb = const Verb(create, documentation);
@@ -19,11 +20,6 @@ const String documentation = """
    create      Create something.
 """;
 
-Future<int> create(
-    _a,
-    List<String> arguments,
-    _b,
-    _c,
-    {packageRoot: "package/"}) {
+Future<int> create(Sentence sentence, _) {
   return new Future.value(0);
 }

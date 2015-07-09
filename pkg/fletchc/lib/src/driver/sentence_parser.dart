@@ -73,15 +73,15 @@ class SentenceParser {
 
   Verb makeErrorVerb(String message) {
     return
-        new Verb((a, List<String> arguments, b, c, {packageRoot}) {
+        new Verb((Sentence sentence, context) {
           print(message);
-          return commonVerbs["help"]
-              .perform(a, arguments, b, c, packageRoot: packageRoot)
+          return commonVerbs["help"].perform(sentence, context)
               .then((_) => 1);
         }, null);
   }
 
   Preposition parsePrepositionOpt() {
+    // TODO(ahe): toLowerCase()?
     String word = tokens.current;
     switch (word) {
       case "with":
@@ -98,6 +98,7 @@ class SentenceParser {
 
   // @private_to.instance
   Target internalParseTarget() {
+    // TODO(ahe): toLowerCase()?
     String word = tokens.current;
     switch (word) {
       case "session":
@@ -195,6 +196,7 @@ class Preposition {
 }
 
 class Target {
+  // TODO(ahe): Should be an enum.
   final String noun;
 
   const Target(this.noun);
@@ -262,10 +264,7 @@ class Sentence {
       this.programName,
       this.arguments);
 
-  Future<int> performVerb() {
-    return verb.perform(
-        programName == null ? null : "$programName-vm", arguments, null, null);
-  }
+  Future<int> performVerb(context) => verb.verb.perform(this, context);
 
   String toString() => "Sentence($verb, $preposition, $target)";
 }

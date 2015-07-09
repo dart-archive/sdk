@@ -297,12 +297,12 @@ Future<Null> handleClient(IsolatePool pool, Socket controlSocket) async {
   List<String> arguments = await client.arguments;
   log.gotArguments(arguments);
 
-  arguments = client.parseArguments(arguments);
+  Sentence sentence = client.parseArguments(arguments);
 
   if (client.requiresWorker) {
     handleClientInWorker(pool, client);
   } else {
-    await handleVerbHere(arguments, client);
+    await handleVerbHere(sentence, client);
   }
 }
 
@@ -350,11 +350,9 @@ void handleClientInWorker(IsolatePool pool, ClientController client) {
   });
 }
 
-Future<Null> handleVerbHere(
-    List<String> arguments,
-    ClientController client) async {
+Future<Null> handleVerbHere(Sentence sentence, ClientController client) async {
   int exitCode = await runGuarded(
-      () => client.verb.perform(client.fletchVm, arguments, null, null),
+      () => client.verb.perform(sentence, null),
       printLineOnStdout: client.printLineOnStdout,
       handleLateError: client.log.error);
   client.exit(exitCode);
@@ -465,7 +463,7 @@ class ClientController {
     endSession();
   }
 
-  List<String> parseArguments(List<String> arguments) {
+  Sentence parseArguments(List<String> arguments) {
     Sentence sentence = parseSentence(arguments, includesProgramName: true);
     /// [programName] is the canonicalized absolute path to the fletch
     /// executable (the C++ program).
@@ -473,7 +471,7 @@ class ClientController {
     String fletchVm = "$programName-vm";
     this.verb = sentence.verb.verb;
     this.fletchVm = fletchVm;
-    return sentence.arguments;
+    return sentence;
   }
 }
 

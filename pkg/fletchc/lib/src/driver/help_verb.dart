@@ -8,6 +8,7 @@ import 'dart:async' show
     Future;
 
 import 'verbs.dart' show
+    Sentence,
     Verb,
     commonVerbs,
     uncommonVerbs;
@@ -19,16 +20,11 @@ const String documentation = """
              Use 'fletch help all' for a list of all actions.
 """;
 
-Future<int> help(
-    _a,
-    List<String> arguments,
-    _b,
-    _c,
-    {packageRoot: "package/"}) async {
+Future<int> help(Sentence sentence, _) async {
   int exitCode = 0;
-  bool showAllVerbs = arguments.length == 1 && arguments.single == "all";
-  if (!showAllVerbs && !arguments.isEmpty) {
-    print("Unknown arguments to help: ${arguments.join(' ')}");
+  bool showAllVerbs = sentence.target != null && sentence.target.noun == 'all';
+  if (sentence.trailing != null) {
+    print("Unknown arguments to help: ${sentence.trailing.join(' ')}");
     exitCode = 1;
   }
   print(generateHelpText(showAllVerbs));
