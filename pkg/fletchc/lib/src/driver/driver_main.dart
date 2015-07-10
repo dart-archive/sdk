@@ -53,7 +53,7 @@ import 'driver_commands.dart' show
 import 'driver_isolate.dart' show
     isolateMain;
 
-import 'verbs.dart' show
+import '../verbs/verbs.dart' show
     Verb,
     commonVerbs,
     uncommonVerbs;

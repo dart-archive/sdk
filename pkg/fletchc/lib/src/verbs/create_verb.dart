@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.driver.create_verb;
+library fletchc.verbs.create_verb;
 
 import 'dart:io' show
     exit;
@@ -15,10 +15,10 @@ import 'verbs.dart' show
     TargetKind,
     Verb;
 
-import 'sentence_parser.dart' show
+import '../driver/sentence_parser.dart' show
     NamedTarget;
 
-import 'session_manager.dart' show
+import '../driver/session_manager.dart' show
     UserSession,
     createSession;
 

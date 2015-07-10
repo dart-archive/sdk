@@ -11,7 +11,7 @@ import 'dart:async' show
 import 'package:expect/expect.dart' show
     Expect;
 
-import 'package:fletchc/src/driver/help_verb.dart' as help_verb;
+import 'package:fletchc/src/verbs/help_verb.dart' as help_verb;
 
 /// Test verifies that the help text is the right shape.
 ///

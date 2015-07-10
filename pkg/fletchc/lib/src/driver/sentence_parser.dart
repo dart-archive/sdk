@@ -7,7 +7,7 @@ library fletchc.driver.sentence_parser;
 import "dart:async" show
   Future;
 
-import "verbs.dart" show
+import "../verbs/verbs.dart" show
     Verb,
     commonVerbs,
     uncommonVerbs;

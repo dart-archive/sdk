@@ -2,15 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.driver.verb;
+library fletchc.verbs.verbs;
 
 import 'dart:async' show
     Future;
 
-import 'sentence_parser.dart' show
+import '../driver/sentence_parser.dart' show
     Sentence;
 
-export 'sentence_parser.dart' show
+export '../driver/sentence_parser.dart' show
     PrepositionKind,
     Sentence,
     TargetKind;

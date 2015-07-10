@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.driver.compile_and_run_verb;
+library fletchc.verbs.compile_and_run_verb;
 
 import 'dart:async' show
     Completer,
@@ -26,7 +26,7 @@ import '../../commands.dart' as commands_lib;
 
 import '../../fletch_system.dart';
 
-import 'driver_commands.dart' show
+import '../driver/driver_commands.dart' show
     Command,
     CommandSender,
     DriverCommand,
@@ -40,7 +40,7 @@ import 'verbs.dart' show
     Sentence,
     Verb;
 
-import 'options.dart' show
+import '../driver/options.dart' show
     Options;
 
 const Verb compileAndRunVerb =

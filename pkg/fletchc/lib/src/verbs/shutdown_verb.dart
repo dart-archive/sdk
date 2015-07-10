@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.driver.debug_verb;
+library fletchc.verbs.shutdown_verb;
 
 import 'dart:async' show
     Future;
@@ -11,14 +11,16 @@ import 'verbs.dart' show
     Sentence,
     Verb;
 
-const Verb debugVerb = const Verb(debug, documentation);
+import '../driver/driver_main.dart' show
+    gracefulShutdown;
+
+const Verb shutdownVerb = const Verb(shutdown, documentation);
 
 const String documentation = """
-   debug [command]
-             Perform a debug command, or if none are specified start an
-             interactive debug session.
+   shutdown      Terminate the background fletch compiler process.
 """;
 
-Future debug(Sentence sentence, _) async {
-  throw "Debug action not yet implemented.";
+Future<int> shutdown(Sentence sentence, _) {
+  gracefulShutdown();
+  return new Future.value(0);
 }
