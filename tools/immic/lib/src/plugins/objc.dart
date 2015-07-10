@@ -687,12 +687,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('  _type = kReplaceNodePatch;');
     writeln('  _current = [[$nodeName alloc] initWith:data.getReplace()');
     writeln('                                 inGraph:root];');
-    forEachSlotAndMethod(node, null, (field, String name) {
-      String fieldPatchType =
-          field is Method ? actionPatchType(field) : patchType(field.type);
-      writeln('  _$name = [[$fieldPatchType alloc]');
-      writeln('                initIdentityPatch:previous.$name];');
-    });
+    // For replace patches we leave fields and methods as default initialized.
     writeln('  return self;');
     writeln('}');
 
