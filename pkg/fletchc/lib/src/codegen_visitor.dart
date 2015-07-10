@@ -253,6 +253,19 @@ abstract class CodegenVisitor
       ParameterElement parameter,
       int slot,
       {bool isCapturedArgumentsBoxed: false}) {
+    // TODO(kasperl): Use [ParameterElement.constant] instead when
+    // [ConstantValue] can be computed on-the-fly from a [ConstantExpression].
+    Expression initializer = parameter.initializer;
+    if (initializer != null) {
+      // If the parameter has an initializer expression, we ask the context
+      // to compile it right away to make sure we enqueue all dependent
+      // elements correctly before we start assembling the program.
+      context.compileConstant(
+            initializer,
+            parameter.memberContext.resolvedAst.elements,
+            isConst: true);
+    }
+
     if (closureEnvironment.shouldBeBoxed(parameter)) {
       if (isCapturedArgumentsBoxed) return new BoxedLocalValue(slot, parameter);
       LocalValue value = new BoxedLocalValue(assembler.stackSize, parameter);

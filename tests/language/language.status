@@ -15,7 +15,6 @@ bit_shift_test: Fail
 final_syntax_test/08: Crash
 stack_overflow_stacktrace_test: Crash
 stack_overflow_test: Crash
-vm/allocation_sinking_vm_test: Crash
 
 [ $compiler == fletchc || $runtime == fletchc ]
 abstract_runtime_error_test/01: Fail
@@ -445,6 +444,7 @@ type_variable_nested_test: Fail
 type_variable_typedef_test: Fail
 typed_message_test: CompileTimeError
 typedef_is_test: Fail
+vm/allocation_sinking_vm_test: CompileTimeError
 vm/load_to_load_forwarding_vm_test: CompileTimeError
 vm/no_such_method_error_message_vm_test: Fail
 vm/optimized_guarded_field_isolates_test: CompileTimeError
