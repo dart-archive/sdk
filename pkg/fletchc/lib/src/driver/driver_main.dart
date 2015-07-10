@@ -354,7 +354,14 @@ Future<Null> handleVerbHere(Sentence sentence, ClientController client) async {
   int exitCode = await runGuarded(
       () => client.verb.perform(sentence, null),
       printLineOnStdout: client.printLineOnStdout,
-      handleLateError: client.log.error);
+      handleLateError: client.log.error)
+      .catchError((error, StackTrace stackTrace) {
+        client.printLineOnStderr('$error');
+        if (stackTrace != null) {
+          client.printLineOnStderr('$stackTrace');
+        }
+        return DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+      });
   client.exit(exitCode);
 }
 
