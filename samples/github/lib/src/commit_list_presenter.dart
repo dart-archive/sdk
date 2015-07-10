@@ -8,10 +8,6 @@ import 'commit_presenter.dart';
 import 'package:immi/immi.dart';
 import 'package:immi_samples/sliding_window.dart';
 
-// Export generated code for nodes in commit_list_presenter.immi
-import 'commit_list_presenter_immi.dart';
-export 'commit_list_presenter_immi.dart';
-
 class CommitListPresenter {
   Repository _repository;
   SlidingWindow _presenter;
@@ -37,7 +33,6 @@ class CommitListPresenter {
   }
 
   SlidingWindowNode present(Node previous) {
-    // TODO(zerny): Eliminate this wrapping of the sliding-window presenter.
     SlidingWindowNode window = _presenter.present();
     return new SlidingWindowNode(
         window: window.window,
