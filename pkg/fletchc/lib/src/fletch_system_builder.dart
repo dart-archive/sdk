@@ -281,6 +281,12 @@ class FletchSystemBuilder {
         commands
             ..add(new PushFromMap(MapId.classes, constant.classId))
             ..add(const PushNewInstance());
+      } else if (constant.isType) {
+        // TODO(kasperl): Implement proper support for class literals. At this
+        // point, we've already issues unimplemented errors for the individual
+        // accesses to the class literals, so we just let the class literal
+        // turn into null in the runtime.
+        commands.add(const PushNull());
       } else {
         throw "Unsupported constant: ${constant.toStructuredString()}";
       }

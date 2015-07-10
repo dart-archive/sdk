@@ -12,6 +12,12 @@ regress_14348_test: Crash
 bit_shift_test: Fail
 
 [ $compiler == fletchc || $runtime == fletchc ]
+final_syntax_test/08: Crash
+stack_overflow_stacktrace_test: Crash
+stack_overflow_test: Crash
+vm/allocation_sinking_vm_test: Crash
+
+[ $compiler == fletchc || $runtime == fletchc ]
 abstract_runtime_error_test/01: Fail
 abstract_runtime_error_test/02: Fail
 arithmetic_test: Fail
@@ -52,32 +58,32 @@ cha_deopt1_test: Fail
 cha_deopt2_test: Fail
 cha_deopt3_test: Fail
 class_cycle2_test/02: MissingCompileTimeError
-class_literal_test/01: Crash
-class_literal_test/02: Crash
-class_literal_test/03: Crash
-class_literal_test/04: Crash
-class_literal_test/05: Crash
-class_literal_test/06: Crash
-class_literal_test/07: Crash
-class_literal_test/08: Crash
-class_literal_test/09: Crash
-class_literal_test/10: Crash
-class_literal_test/11: Crash
-class_literal_test/12: Crash
-class_literal_test/13: Crash
-class_literal_test/14: Crash
-class_literal_test/15: Crash
-class_literal_test/16: Crash
-class_literal_test/17: Crash
-class_literal_test/18: Crash
-class_literal_test/19: Crash
-class_literal_test/20: Crash
-class_literal_test/21: Crash
-class_literal_test/22: Crash
-class_literal_test/23: Crash
-class_literal_test/24: Crash
-class_literal_test/25: Crash
-class_literal_test/none: Crash
+class_literal_test/01: Fail
+class_literal_test/02: Fail
+class_literal_test/03: Fail
+class_literal_test/04: Fail
+class_literal_test/05: Fail
+class_literal_test/06: Fail
+class_literal_test/07: Fail
+class_literal_test/08: Fail
+class_literal_test/09: Fail
+class_literal_test/10: Fail
+class_literal_test/11: Fail
+class_literal_test/12: Fail
+class_literal_test/13: Fail
+class_literal_test/14: Fail
+class_literal_test/15: Fail
+class_literal_test/16: Fail
+class_literal_test/17: Fail
+class_literal_test/18: Fail
+class_literal_test/19: Fail
+class_literal_test/20: Fail
+class_literal_test/21: Fail
+class_literal_test/22: Fail
+class_literal_test/23: Fail
+class_literal_test/24: Fail
+class_literal_test/25: Fail
+class_literal_test/none: Fail
 closure_in_constructor_test: Fail
 closure_type_variable_test: Fail
 closures_initializer2_test: Fail
@@ -162,7 +168,7 @@ duplicate_implements_test/04: MissingCompileTimeError
 dynamic_prefix_core_test/01: Fail
 dynamic_prefix_core_test/none: Fail
 dynamic_test: Fail
-dynamic_type_literal_test: Crash
+dynamic_type_literal_test: Fail
 empty_block_case_test: Fail
 error_stacktrace_test: Fail
 exception_test: Fail
@@ -185,8 +191,7 @@ field_decl_missing_var_type_test/01: MissingCompileTimeError
 field_increment_bailout_test: CompileTimeError
 field_initialization_order_test: Fail
 final_field_initialization_order_test: Fail
-final_syntax_test/08: Crash
-first_class_types_constants_test: Crash
+first_class_types_constants_test: Fail
 first_class_types_libraries_test: CompileTimeError
 first_class_types_literals_test/01: Fail
 first_class_types_literals_test/02: Fail
@@ -390,8 +395,6 @@ scope_variable_test/01: MissingCompileTimeError
 script2_negative_test: Fail
 smi_type_test: Fail
 source_self_negative_test: Fail
-stack_overflow_stacktrace_test: Crash
-stack_overflow_test: Crash
 stack_trace_test: Fail
 stacktrace_rethrow_error_test/none: Fail
 stacktrace_rethrow_error_test/withtraceparameter: Fail
@@ -442,7 +445,6 @@ type_variable_nested_test: Fail
 type_variable_typedef_test: Fail
 typed_message_test: CompileTimeError
 typedef_is_test: Fail
-vm/allocation_sinking_vm_test: Crash
 vm/load_to_load_forwarding_vm_test: CompileTimeError
 vm/no_such_method_error_message_vm_test: Fail
 vm/optimized_guarded_field_isolates_test: CompileTimeError

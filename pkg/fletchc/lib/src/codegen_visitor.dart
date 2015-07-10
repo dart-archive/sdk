@@ -1236,6 +1236,15 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void visitClassTypeLiteralGet(
+      Send node,
+      ConstantExpression constant,
+      _) {
+    generateUnimplementedError(
+        node, "[visitClassTypeLiteralGet] isn't implemented.");
+    applyVisitState();
+  }
+
   void visitDynamicPropertyGet(
       Send node,
       Node receiver,
