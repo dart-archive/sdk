@@ -54,11 +54,18 @@ abstract class NodePatch {
   void serializeNode(/*NodePatchData*/Builder builder, ResourceManager manager);
 }
 
+enum ListPatchType {
+  AnyNode,
+  SpecificNode
+}
+
 class ListPatch {
+  final ListPatchType type;
   final List<ListRegionPatch> regions;
-  ListPatch(this.regions);
+  ListPatch(this.type, this.regions);
   void serializeList(/*ListPatchDataBuilder*/ builder,
                      ResourceManager manager) {
+    builder.type = type.index;
     int length = regions.length;
     List</*ListRegionData*/Builder> builders = builder.initRegions(length);
     for (int i = 0; i < length; ++i) {
@@ -116,17 +123,19 @@ class ListUpdatePatch extends ListRegionPatch {
   }
 }
 
-ListPatch diffList(List current, List previous) {
+ListPatch diffList(List current, List previous, ListPatchType type) {
   int currentLength = current.length;
   int previousLength = previous.length;
   if (currentLength == 0 && previousLength == 0) {
     return null;
   }
   if (previousLength == 0) {
-    return new ListPatch([new ListInsertPatch(0, currentLength, current)]);
+    return new ListPatch(
+        type, [new ListInsertPatch(0, currentLength, current)]);
   }
   if (currentLength == 0) {
-    return new ListPatch([new ListRemovePatch(0, previousLength, previous)]);
+    return new ListPatch(
+        type, [new ListRemovePatch(0, previousLength, previous)]);
   }
 
   // TODO(zerny): be more clever about diffing a list.
@@ -164,5 +173,5 @@ ListPatch diffList(List current, List previous) {
         currentLength, previousLength - currentLength, previous));
   }
 
-  return patches.isEmpty ? null : new ListPatch(patches);
+  return patches.isEmpty ? null : new ListPatch(type, patches);
 }

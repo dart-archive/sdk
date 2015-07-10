@@ -23,7 +23,7 @@
                       present:(Node*)node {
 
   CommitCellPresenter* cell;
-  CommitNode* commitNode = (CommitNode*)node;
+  CommitNode* commitNode = node.asCommit;
 
   if (commitNode == nil) {
     cell = (CommitCellPresenter*)

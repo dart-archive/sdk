@@ -188,6 +188,7 @@ struct PresenterData {
 }
 
 struct ListPatchData {
+  uint8 type;
   List<ListRegionData> regions;
 }
 

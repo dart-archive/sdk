@@ -171,8 +171,12 @@ class _DartVisitor extends CodeGenerationVisitor {
           'if (updates == null) updates = new $updatePatch(previous);';
       forEachSlot(node, null, (Type slotType, String slotName) {
         if (slotType.isList) {
+          // TODO(zerny): Support lists of primitives.
+          String type = slotType.elementType.isNode ?
+                        'ListPatchType.AnyNode' :
+                        'ListPatchType.SpecificNode';
           writeln('    ${getPatchType(slotType)} ${slotName}Patch =');
-          writeln('        diffList($slotName, previous.$slotName);');
+          writeln('        diffList($slotName, previous.$slotName, $type);');
           writeln('    if (${slotName}Patch != null) {');
           writeln('      $ensureUpdatePatch');
           writeln('      updates.$slotName = ${slotName}Patch;');
