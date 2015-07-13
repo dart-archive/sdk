@@ -961,10 +961,9 @@ void Session::PostponeChange(Change change, int count) {
   changes_.Add(array);
 }
 
-static const char kSynchronizationToken[] =
-    { 60, 61, 33, 123, 3, 2, 1, 2, 3, 125, 33, 61, 62, 0 };
-
 void Session::PrintSynchronizationToken() {
+  static const char kSynchronizationToken[] =
+      { 60, 61, 33, 123, 3, 2, 1, 2, 3, 125, 33, 61, 62, 0 };
   if (output_synchronization_) {
     fprintf(stdout, "%s\n", kSynchronizationToken);
     fflush(stdout);

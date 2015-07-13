@@ -229,6 +229,12 @@ class Session extends FletchVmSession {
     }
   }
 
+  /// Stdout/stderr from the VM is delivered through a stream. The
+  /// output from the VM can therefore be delayed. In order to prevent
+  /// random interleavings of stdout/stderr from the VM and debugger,
+  /// output synchronization tokens are emitted on stdout/stderr by the
+  /// VM whenever it reaches a process stop. We wait for those
+  /// synchronization tokens before printing debugger output.
   Future nextOutputSynchronization() async {
     if (vmStderrSyncMessages != null) {
       assert(vmStdoutSyncMessages != null);

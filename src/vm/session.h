@@ -164,6 +164,10 @@ class Session {
 
   void TransformInstances();
 
+  // Emit synchronization token on stdout and stderr if the session user
+  // requested it. The synchronization tokens can be used to make sure
+  // that all output from the VM is received before further actions are
+  // performed.
   void PrintSynchronizationToken();
 };
 
