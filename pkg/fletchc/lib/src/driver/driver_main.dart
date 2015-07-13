@@ -54,13 +54,20 @@ import 'driver_isolate.dart' show
     isolateMain;
 
 import '../verbs/verbs.dart' show
+    PrepositionKind,
+    Sentence,
+    TargetKind,
     Verb,
     commonVerbs,
     uncommonVerbs;
 
 import 'sentence_parser.dart' show
-    parseSentence,
-    Sentence;
+    NamedTarget,
+    parseSentence;
+
+import 'session_manager.dart' show
+    UserSession,
+    lookupSession;
 
 const Endianness commandEndianness = Endianness.LITTLE_ENDIAN;
 
@@ -302,7 +309,7 @@ Future<Null> handleClient(IsolatePool pool, Socket controlSocket) async {
   if (client.requiresWorker) {
     handleClientInWorker(pool, client);
   } else {
-    await handleVerbHere(sentence, client);
+    await handleVerbHere(sentence, client, pool);
   }
 }
 
@@ -350,9 +357,91 @@ void handleClientInWorker(IsolatePool pool, ClientController client) {
   });
 }
 
-Future<Null> handleVerbHere(Sentence sentence, ClientController client) async {
+Future<Null> handleVerbHere(
+    Sentence sentence,
+    ClientController client,
+    IsolatePool pool) async {
+  Map<String, dynamic> context = <String, dynamic>{
+    'client': client,
+    'pool': pool,
+  };
+
+  bool isRunningInWorker = false;
+
+  UserSession discoverSession() {
+    String sessionName = null;
+    if (sentence.preposition != null &&
+        sentence.preposition.kind == PrepositionKind.IN &&
+        sentence.preposition.target.kind == TargetKind.SESSION) {
+      NamedTarget sessionTarget = sentence.preposition.target;
+      sessionName = sessionTarget.name;
+    } else if (sentence.tailPreposition != null &&
+               sentence.tailPreposition.kind == PrepositionKind.IN &&
+               sentence.tailPreposition.target.kind == TargetKind.SESSION) {
+      NamedTarget sessionTarget = sentence.tailPreposition.target;
+      sessionName = sessionTarget.name;
+    }
+    if (sentence.verb.verb.requiresSession) {
+      if (sessionName == null) {
+        throw "Can't perform '${sentence.verb.name}' without a session. "
+            "Try adding 'in session SESSION_NAME'";
+      }
+    } else {
+      if (sessionName != null) {
+        throw "Can't perform '${sentence.verb.name}' in a session. "
+            "Try removing 'in session $sessionName'";
+      }
+    }
+    UserSession session;
+    if (sessionName != null) {
+      session = lookupSession(sessionName);
+      if (session == null) {
+        // TODO(lukechurch): Ensure UX repair text is good.
+        throw "No session named: '$sessionName'. "
+            "Try running 'fletch create session $sessionName'";
+      }
+    }
+    return session;
+  }
+
+  Future<int> performVerb() {
+    UserSession session = discoverSession();
+    if (session != null) {
+      assert(client.verb.requiresSession);
+      isRunningInWorker = true;
+
+      // This is asynchronous, so we can respond to other requests.
+      new Future(() async {
+        ClientLogger log = client.log;
+        IsolateController worker = session.worker;
+
+        // Forward commands between C++ client [client], and worker isolate
+        // [worker].  Also, Intercept signal command and potentially kill
+        // isolate (isolate needs to tell if it is interuptible or needs to be
+        // killed, latter, for example, if compiler is running).
+        await worker.attachClient(client);
+        // The verb (which was performed in the worker) is done.
+        log.note("After attachClient.");
+
+        worker.detachClient();
+        client.endSession();
+
+        try {
+          await client.done;
+        } catch (error, stackTrace) {
+          log.error(error, stackTrace);
+        }
+        log.done();
+      });
+
+      return new Future<int>.value(null);
+    } else {
+      return client.verb.perform(sentence, context);
+    }
+  }
+
   int exitCode = await runGuarded(
-      () => client.verb.perform(sentence, null),
+      performVerb,
       printLineOnStdout: client.printLineOnStdout,
       handleLateError: client.log.error)
       .catchError((error, StackTrace stackTrace) {
@@ -362,7 +451,10 @@ Future<Null> handleVerbHere(Sentence sentence, ClientController client) async {
         }
         return DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
       });
-  client.exit(exitCode);
+
+  if (!isRunningInWorker) {
+    client.exit(exitCode);
+  }
 }
 
 /// Handles communication with the C++ client.
@@ -569,6 +661,11 @@ class IsolateController {
 
   void endSession() {
     isolate.endSession();
+  }
+
+  void detachClient() {
+    // TODO(ahe): Perform the reverse of attachClient here.
+    beginSession();
   }
 }
 

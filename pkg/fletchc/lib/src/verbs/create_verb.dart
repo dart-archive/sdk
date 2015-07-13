@@ -4,9 +4,6 @@
 
 library fletchc.verbs.create_verb;
 
-import 'dart:io' show
-    exit;
-
 import 'dart:async' show
     Future;
 
@@ -21,6 +18,11 @@ import '../driver/sentence_parser.dart' show
 import '../driver/session_manager.dart' show
     UserSession,
     createSession;
+
+import '../driver/driver_main.dart' show
+    ClientController,
+    IsolateController,
+    IsolatePool;
 
 const Verb createVerb = const Verb(create, documentation);
 
@@ -49,7 +51,9 @@ void checkNoTrailing(Sentence sentence) {
   }
 }
 
-Future<int> create(Sentence sentence, _) {
+Future<int> create(Sentence sentence, Map<String, dynamic> context) async {
+  IsolatePool pool = context['pool'];
+  ClientController client = context['client'];
   if (sentence.target != null &&
       sentence.target.kind == TargetKind.SESSION) {
     NamedTarget target = sentence.target;
@@ -57,8 +61,18 @@ Future<int> create(Sentence sentence, _) {
     checkNoPreposition(sentence);
     checkNoTailPreposition(sentence);
     checkNoTrailing(sentence);
-    UserSession session = createSession(name);
+
+    // Spawn/reuse a worker isolate.
+    IsolateController worker =
+        new IsolateController(await pool.getIsolate(exitOnError: false));
+
+    await worker.beginSession();
+    // TODO(ahe): Investigate why this message shows in client console, not
+    // server console.
+    client.log.note("Worker session started.");
+
+    UserSession session = createSession(name, worker);
     print("Created session '${session.name}'.");
   }
-  return new Future.value(0);
+  return 0;
 }

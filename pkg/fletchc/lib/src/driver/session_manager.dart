@@ -4,16 +4,19 @@
 
 library fletchc.driver.session_manager;
 
+import 'driver_main.dart' show
+    IsolateController;
+
 final Map<String, UserSession> internalSessions = <String, UserSession>{};
 
-UserSession createSession(String name) {
+UserSession createSession(String name, IsolateController worker) {
   UserSession session = lookupSession(name);
   if (session != null) {
     throw new StateError(
         "Can't create session named '$name'; "
         "There already is a session named '$name'.");
   }
-  session = new UserSession(name);
+  session = new UserSession(name, worker);
   internalSessions[name] = session;
   return session;
 }
@@ -23,5 +26,7 @@ UserSession lookupSession(String name) => internalSessions[name];
 class UserSession {
   final String name;
 
-  UserSession(this.name);
+  final IsolateController worker;
+
+  UserSession(this.name, this.worker);
 }

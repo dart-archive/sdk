@@ -30,6 +30,9 @@ import 'shutdown_verb.dart' show
 import 'create_verb.dart' show
     createVerb;
 
+import 'compile_verb.dart' show
+    compileVerb;
+
 typedef Future<int> DoVerb(Sentence sentence, context);
 
 class Verb {
@@ -41,7 +44,14 @@ class Verb {
   // main isolate.
   final bool requiresWorker;
 
-  const Verb(this.perform, this.documentation, {this.requiresWorker: false});
+  /// True if this verb needs to run in the context of a [UserSession].
+  final bool requiresSession;
+
+  const Verb(
+      this.perform,
+      this.documentation,
+      {this.requiresWorker: false,
+       this.requiresSession: false});
 }
 
 /// Common verbs are displayed in the default help screen.
@@ -63,4 +73,5 @@ const Map<String, Verb> uncommonVerbs = const <String, Verb>{
 
   "shutdown": shutdownVerb,
   "create": createVerb,
+  "compile": compileVerb,
 };
