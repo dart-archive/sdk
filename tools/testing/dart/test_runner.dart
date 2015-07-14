@@ -376,7 +376,7 @@ class OutputDiffingVmCommand extends VmCommand {
     builder.add(expectedOutput);
   }
 
-  void _equal(Command other) {
+  bool _equal(Command other) {
     if (other is! OutputDiffingVmCommand) return false;
     if (other.expectedOutput.length != expectedOutput.length) return false;
     for (int i = 0; i < expectedOutput.length; i++) {
