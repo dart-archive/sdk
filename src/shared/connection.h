@@ -73,6 +73,7 @@ class Connection {
     kProcessLocalStructure,
     kProcessRestartFrame,
     kProcessTerminated,
+    kProcessCompileTimeError,
     kWriteSnapshot,
     kCollectGarbage,
 

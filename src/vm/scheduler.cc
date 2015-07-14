@@ -561,6 +561,17 @@ Process* Scheduler::InterpretProcess(Process* process,
     return NULL;
   }
 
+  if (interpreter.IsCompileTimeError()) {
+    // Forcefully exit the VM on compile-time errors when not
+    // debugging. When debugging, just hang by not enqueueing nor
+    // deleting the process. The session will terminate the program
+    // (or restart it after program rewriting) on compile-time errors.
+    Session* session = process->program()->session();
+    if (session == NULL || !session->is_debugging()) exit(254);
+    session->CompileTimeError(process);
+    return NULL;
+  }
+
   if (interpreter.IsAtBreakPoint()) {
     process->ChangeState(Process::kRunning, Process::kBreakPoint);
     Session* session = process->program()->session();

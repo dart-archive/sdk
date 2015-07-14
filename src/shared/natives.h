@@ -9,7 +9,6 @@ namespace fletch {
 
 #define NATIVES_DO(N)                                                    \
   N(PrintString,                 "<none>", "_printString")               \
-  N(Halt,                        "<none>", "_halt")                      \
   N(ExposeGC,                    "<none>", "_exposeGC")                  \
   N(GC,                          "<none>", "_gc")                        \
                                                                          \

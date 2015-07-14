@@ -1004,6 +1004,13 @@ void Session::ProcessTerminated(Process* process) {
   }
 }
 
+void Session::CompileTimeError(Process* process) {
+  if (process_ == process) {
+    connection_->Send(Connection::kProcessCompileTimeError);
+    PrintSynchronizationToken();
+  }
+}
+
 class TransformInstancesPointerVisitor : public PointerVisitor {
  public:
   explicit TransformInstancesPointerVisitor(Heap* heap, Heap* immutable_heap)

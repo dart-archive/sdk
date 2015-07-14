@@ -49,6 +49,8 @@ class TargetYieldResult {
 
 class Interpreter {
  public:
+  // This enum needs to be kept in sync with the corresponding enum in
+  // lib/system/system.dart.
   enum InterruptKind {
     kReady,
     kTerminate,
@@ -57,6 +59,7 @@ class Interpreter {
     kYield,
     kTargetYield,
     kUncaughtException,
+    kCompileTimeError,
     kBreakPoint
   };
 
@@ -78,6 +81,7 @@ class Interpreter {
   bool IsUncaughtException() const {
     return interruption_ == kUncaughtException;
   }
+  bool IsCompileTimeError() const { return interruption_ == kCompileTimeError; }
   bool IsAtBreakPoint() const { return interruption_ == kBreakPoint; }
 
   void MarkReadyAfterImmutableGc() {

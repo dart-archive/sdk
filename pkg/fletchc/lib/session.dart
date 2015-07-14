@@ -251,7 +251,7 @@ class Session extends FletchVmSession {
     debugState.reset();
     switch (response.code) {
       case CommandCode.UncaughtException:
-        await backtrace();
+      case CommandCode.ProcessCompileTimeError:
         running = false;
         break;
       case CommandCode.ProcessTerminated:

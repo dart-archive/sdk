@@ -14,9 +14,25 @@ part 'map.dart';
 
 const native = "native";
 
+// These strings need to be kept in sync with the strings allocated
+// for the raw failure objects in src/vm/program.cc.
 const wrongArgumentType = "Wrong argument type.";
 const indexOutOfBounds = "Index out of bounds.";
 const illegalState = "Illegal state.";
+
+// This enum must be kept in sync with the Interpreter::InterruptKind
+// enum in src/vm/interpreter.h.
+enum InterruptKind {
+  ready,
+  terminate,
+  immutableAllocationFailure,
+  interrupt,
+  yield,
+  targetYield,
+  uncaughtException,
+  compileTimeError,
+  breakPoint
+}
 
 /// This is a magic method recognized by the compiler, and references to it
 /// will be substituted for the actual main method.
@@ -50,17 +66,18 @@ unresolved(name) {
 
 compileError() {
   print("Compile error");
-  halt(254);
+  yield(InterruptKind.compileTimeError.index);
 }
 
-@native halt(int code) {
-  yield(true);
+halt() {
+  yield(InterruptKind.terminate.index);
 }
 
 @native external printString(String s);
 
-/// Exits the VM cleanly.
-external yield(bool halt);
+/// Make the current process yield. Either to allow other fibers to
+/// make progress or to terminate execution.
+external yield(int reason);
 
 external get nativeError;
 

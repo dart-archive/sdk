@@ -42,12 +42,6 @@ NATIVE(PrintString) {
   return process->program()->null_object();
 }
 
-NATIVE(Halt) {
-  word value = Smi::cast(arguments[0])->value();
-  if (value == 0) return Failure::should_preempt();
-  exit(value);
-}
-
 NATIVE(ExposeGC) {
   return ToBool(process, Flags::expose_gc);
 }

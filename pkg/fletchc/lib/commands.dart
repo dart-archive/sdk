@@ -171,6 +171,8 @@ abstract class Command {
         return new ProcessSetBreakpoint(value);
       case CommandCode.ProcessTerminated:
         return const ProcessTerminated();
+      case CommandCode.ProcessCompileTimeError:
+        return const ProcessCompileTimeError();
       case CommandCode.UncaughtException:
         return const UncaughtException();
       case CommandCode.CommitChangesResult:
@@ -198,6 +200,7 @@ abstract class Command {
   /// the program. The response [Command] can be one of
   ///    * ProcessBreakpoint
   ///    * ProcessTerminated
+  ///    * ProcessCompileTimeError
   ///    * UncaughtException
   int get numberOfResponsesExpected => null;
 
@@ -958,6 +961,15 @@ class ProcessTerminated extends Command {
   String valuesToString() => "";
 }
 
+class ProcessCompileTimeError extends Command {
+  const ProcessCompileTimeError()
+      : super(CommandCode.ProcessCompileTimeError);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "";
+}
+
 class SessionEnd extends Command {
   const SessionEnd()
       : super(CommandCode.SessionEnd);
@@ -1134,6 +1146,7 @@ enum CommandCode {
   ProcessLocalStructure,
   ProcessRestartFrame,
   ProcessTerminated,
+  ProcessCompileTimeError,
   WriteSnapshot,
   CollectGarbage,
 

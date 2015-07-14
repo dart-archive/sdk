@@ -97,10 +97,9 @@ class Session {
   void DiscardChanges();
 
   void UncaughtException();
-
   void BreakPoint(Process* process);
-
   void ProcessTerminated(Process* process);
+  void CompileTimeError(Process* process);
 
  private:
   enum Change {

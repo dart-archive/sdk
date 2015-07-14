@@ -1091,19 +1091,9 @@ void InterpreterGeneratorX86::DoSubroutineReturn() {
 
 void InterpreterGeneratorX86::DoProcessYield() {
   __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EDX, Address(ECX, Program::true_object_offset()));
   __ movl(EBX, Address(ECX, Program::null_object_offset()));
-
-  Label done, yield;
   LoadLocal(EAX, 0);
-  __ cmpl(EAX, EDX);
-  __ j(NOT_EQUAL, &yield);
-  __ movl(EAX, Immediate(Interpreter::kTerminate));
-  __ jmp(&done);
-  __ Bind(&yield);
-  __ movl(EAX, Immediate(Interpreter::kYield));
-
-  __ Bind(&done);
+  __ sarl(EAX, Immediate(1));
   __ addl(ESI, Immediate(kProcessYieldLength));
   StoreLocal(EBX, 0);
   __ jmp(&done_);

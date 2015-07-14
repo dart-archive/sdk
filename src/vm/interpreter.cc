@@ -837,8 +837,7 @@ Interpreter::InterruptKind Engine::Interpret(
     SetTop(program()->null_object());
     Advance(kProcessYieldLength);
     SaveState();
-    bool terminated = value == program()->true_object();
-    return terminated ? Interpreter::kTerminate : Interpreter::kYield;
+    return static_cast<Interpreter::InterruptKind>(Smi::cast(value)->value());
   OPCODE_END();
 
   OPCODE_BEGIN(CoroutineChange);

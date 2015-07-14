@@ -1080,16 +1080,8 @@ void InterpreterGeneratorARM::DoSubroutineReturn() {
 }
 
 void InterpreterGeneratorARM::DoProcessYield() {
-  Label done, yield;
   LoadLocal(R0, 0);
-  __ cmp(R0, R10);
-  __ b(NE, &yield);
-  __ mov(R0, Immediate(Interpreter::kTerminate));
-  __ b(&done);
-  __ Bind(&yield);
-  __ mov(R0, Immediate(Interpreter::kYield));
-
-  __ Bind(&done);
+  __ asr(R0, R0, Immediate(1));
   __ add(R5, R5, Immediate(kProcessYieldLength));
   StoreLocal(R8, 0);
   __ b(&done_);

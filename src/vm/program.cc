@@ -1306,7 +1306,8 @@ void Program::Initialize() {
   raw_retry_after_gc_ =
       String::cast(CreateStringFromAscii(StringFromCharZ("Retry after GC.")));
 
-  // Create the wrong argument type failure object payload.
+  // Create the failure object payloads. These need to be kept in sync with the
+  // constants in lib/system/system.dart.
   raw_wrong_argument_type_ =
       String::cast(
           CreateStringFromAscii(StringFromCharZ("Wrong argument type.")));
@@ -1317,9 +1318,6 @@ void Program::Initialize() {
 
   raw_illegal_state_ =
       String::cast(CreateStringFromAscii(StringFromCharZ("Illegal state.")));
-
-  raw_should_preempt_ =
-      String::cast(CreateStringFromAscii(StringFromCharZ("Should preempt.")));
 
   native_failure_result_ = null_object_;
 }

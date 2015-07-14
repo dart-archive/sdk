@@ -67,7 +67,7 @@ class Fiber {
   static void exit([value]) {
     // If we never needed the scheduler coroutine, we can just
     // go ahead and halt now.
-    if (_scheduler == null) fletch.halt(0);
+    if (_scheduler == null) fletch.halt();
 
     Fiber fiber = _current;
     List<Fiber> joiners = fiber._joiners;
@@ -156,7 +156,7 @@ class Fiber {
     if (current != null) return current;
 
     // If we don't have any idle fibers, halt.
-    if (exiting && _idleFibers == null) fletch.halt(0);
+    if (exiting && _idleFibers == null) fletch.halt();
 
     while (true) {
       Process._handleMessages();
@@ -165,7 +165,7 @@ class Fiber {
       // set, simply yield again.
       current = _current;
       if (current != null) return current;
-      fletch.yield(false);
+      fletch.yield(fletch.InterruptKind.yield.index);
     }
   }
 
@@ -290,7 +290,7 @@ class Process {
     try {
       if (to != null) to._sendExit(value);
     } finally {
-      fletch.yield(true);
+      fletch.yield(fletch.InterruptKind.terminate.index);
     }
   }
 
