@@ -96,7 +96,7 @@ class Session {
   bool CommitChanges(int count);
   void DiscardChanges();
 
-  void UncaughtException();
+  void UncaughtException(Process* process);
   void BreakPoint(Process* process);
   void ProcessTerminated(Process* process);
   void CompileTimeError(Process* process);
@@ -127,6 +127,7 @@ class Session {
   // process (with implicit id 0).
   Process* process_;
 
+  bool execution_paused_;
   bool debugging_;
   bool output_synchronization_;
 
@@ -144,6 +145,8 @@ class Session {
   void SignalMainThread(MainThreadResumeKind);
   void SignalMainThreadWaitUntilDone(MainThreadResumeKind);
   void MainThreadDone();
+
+  void ProcessContinue(Process* process);
 
   void SendDartValue(Object* value);
   void SendInstanceStructure(Instance* instance);

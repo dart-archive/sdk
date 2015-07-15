@@ -59,6 +59,10 @@ class Scheduler {
 
   bool Run();
 
+  // Terminate and delete a process that is paused at a breakpoint. Used
+  // by the debugger to terminate gracefully.
+  void DeleteProcessAtBreakpoint(Process* process);
+
  private:
   struct ProcessList {
     ProcessList() : head(NULL) {}
@@ -82,7 +86,8 @@ class Scheduler {
   std::atomic<bool> pause_;
   std::atomic<Process*>* current_processes_;
 
-  void DeleteProcess(Process* process, ThreadState* thread_state);
+  void DeleteProcess(Process* process);
+  void DeleteProcessAndMergeHeaps(Process* process, ThreadState* thread_state);
   void RescheduleProcess(Process* process, ThreadState* state, bool terminate);
 
   void PreemptThreadProcess(int thread_id);

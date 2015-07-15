@@ -150,8 +150,7 @@ class InputHandler {
         break;
       case 'q':
       case 'quit':
-        await session.shutdown();
-        io.exit(0);
+        await session.terminateSession();
         break;
       case 'r':
       case 'run':

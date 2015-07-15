@@ -15,7 +15,6 @@
 #include "src/vm/natives.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
-#include "src/vm/session.h"
 #include "src/vm/stack_walker.h"
 
 #define GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(var, exp) \
@@ -1140,14 +1139,7 @@ uint8* HandleThrow(Process* process, Object* exception, int* stack_delta) {
       // Uncaught exception.
       printf("Uncaught exception:\n");
       exception->Print();
-
-      // Send stack trace information to attached session if debugging.
-      Session* session = process->program()->session();
-      if (session != NULL && session->is_debugging()) {
-        session->UncaughtException();
-        return NULL;
-      }
-      exit(1);
+      return NULL;
     }
 
     Coroutine* caller = current->caller();

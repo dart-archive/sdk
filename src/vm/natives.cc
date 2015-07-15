@@ -20,6 +20,7 @@
 #include "src/vm/platform.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
+#include "src/vm/session.h"
 #include "src/vm/unicode.h"
 
 #include "third_party/double-conversion/src/double-conversion.h"

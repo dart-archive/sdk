@@ -29,6 +29,7 @@ Session::Session(Connection* connection)
     : connection_(connection),
       program_(NULL),
       process_(NULL),
+      execution_paused_(false),
       debugging_(false),
       output_synchronization_(false),
       method_map_id_(-1),
@@ -64,6 +65,7 @@ void Session::Reinitialize() {
   for (int i = 0; i < maps_.length(); ++i) delete maps_[i];
   maps_.Delete();
   maps_ = List<ObjectMap*>();
+  execution_paused_ = false;
 }
 
 static void* MessageProcessingThread(void* data) {
@@ -152,6 +154,11 @@ void Session::SendInstanceStructure(Instance* instance) {
   }
 }
 
+void Session::ProcessContinue(Process* process) {
+  execution_paused_ = false;
+  process->program()->scheduler()->ProcessContinue(process);
+}
+
 void Session::ProcessMessages() {
   while (true) {
     Connection::Opcode opcode = connection_->Receive();
@@ -208,27 +215,24 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessStep: {
-        Scheduler* scheduler = program()->scheduler();
         process_->debug_info()->set_is_stepping(true);
-        scheduler->ProcessContinue(process_);
+        ProcessContinue(process_);
         break;
       }
 
       case Connection::kProcessStepOver: {
-        Scheduler* scheduler = program()->scheduler();
         int breakpoint_id = process_->PrepareStepOver();
         connection_->WriteInt(breakpoint_id);
         connection_->Send(Connection::kProcessSetBreakpoint);
-        scheduler->ProcessContinue(process_);
+        ProcessContinue(process_);
         break;
       }
 
       case Connection::kProcessStepOut: {
-        Scheduler* scheduler = program()->scheduler();
         int breakpoint_id = process_->PrepareStepOut();
         connection_->WriteInt(breakpoint_id);
         connection_->Send(Connection::kProcessSetBreakpoint);
-        scheduler->ProcessContinue(process_);
+        ProcessContinue(process_);
         break;
       }
 
@@ -239,13 +243,12 @@ void Session::ProcessMessages() {
             Function::cast(maps_[method_map_id_]->LookupById(id));
         DebugInfo* debug_info = process_->debug_info();
         debug_info->SetBreakpoint(function, bcp, true);
-        program()->scheduler()->ProcessContinue(process_);
+        ProcessContinue(process_);
         break;
       }
 
       case Connection::kProcessContinue: {
-        Scheduler* scheduler = program()->scheduler();
-        scheduler->ProcessContinue(process_);
+        ProcessContinue(process_);
         break;
       }
 
@@ -281,13 +284,18 @@ void Session::ProcessMessages() {
       case Connection::kProcessRestartFrame: {
         int frame = connection_->ReadInt();
         StackWalker::RestartFrame(process_, frame);
-        Scheduler* scheduler = program()->scheduler();
-        scheduler->ProcessContinue(process_);
+        ProcessContinue(process_);
         break;
       }
 
       case Connection::kSessionEnd: {
         debugging_ = false;
+        // If execution is paused we delete the process to allow the
+        // VM to terminate.
+        if (execution_paused_) {
+          Scheduler* scheduler = program()->scheduler();
+          scheduler->DeleteProcessAtBreakpoint(process_);
+        }
         SignalMainThread(kSessionEnd);
         return;
       }
@@ -526,6 +534,7 @@ void Session::VisitProcesses(ProcessVisitor* visitor) {
 }
 
 bool Session::ProcessRun() {
+  bool process_started = false;
   bool has_result = false;
   bool result = false;
   while (true) {
@@ -544,16 +553,19 @@ bool Session::ProcessRun() {
         ASSERT(!debugging_);
         return true;
       case kProcessRun:
+        process_started = true;
         result = program()->ProcessRun(process_);
         has_result = true;
         if (!debugging_) return result;
         break;
       case kSessionEnd:
         ASSERT(!debugging_);
+        if (!process_started) return true;
         if (has_result) return result;
         break;
       case kSessionReset:
         ASSERT(debugging_);
+        process_started = false;
         has_result = false;
         result = false;
         Reinitialize();
@@ -972,28 +984,29 @@ void Session::PrintSynchronizationToken() {
   }
 }
 
-void Session::UncaughtException() {
-  // TODO(ager): This is not thread safe. UncaughtException is called
-  // from the interpreter on a thread from the thread pool and it is
-  // writing on the connection.  We need a real event loop for the
-  // message handling and we need to enqueue a message for the event
-  // loop here.
-  connection_->Send(Connection::kUncaughtException);
-  PrintSynchronizationToken();
+void Session::UncaughtException(Process* process) {
+  if (process_ == process) {
+    execution_paused_ = true;
+    connection_->Send(Connection::kUncaughtException);
+    PrintSynchronizationToken();
+  }
 }
 
 void Session::BreakPoint(Process* process) {
-  DebugInfo* debug_info = process->debug_info();
-  debug_info->set_is_stepping(false);
-  connection_->WriteInt(debug_info->current_breakpoint_id());
-  StackWalker::ComputeTopStackFrame(process, this);
-  connection_->WriteInt64(MapLookup(method_map_id_));
-  // Drop function from session stack.
-  Drop(1);
-  // Pop bytecode index from session stack and send it.
-  connection_->WriteInt64(PopInteger());
-  connection_->Send(Connection::kProcessBreakpoint);
-  PrintSynchronizationToken();
+  if (process_ == process) {
+    execution_paused_ = true;
+    DebugInfo* debug_info = process->debug_info();
+    debug_info->set_is_stepping(false);
+    connection_->WriteInt(debug_info->current_breakpoint_id());
+    StackWalker::ComputeTopStackFrame(process, this);
+    connection_->WriteInt64(MapLookup(method_map_id_));
+    // Drop function from session stack.
+    Drop(1);
+    // Pop bytecode index from session stack and send it.
+    connection_->WriteInt64(PopInteger());
+    connection_->Send(Connection::kProcessBreakpoint);
+    PrintSynchronizationToken();
+  }
 }
 
 void Session::ProcessTerminated(Process* process) {
@@ -1006,6 +1019,7 @@ void Session::ProcessTerminated(Process* process) {
 
 void Session::CompileTimeError(Process* process) {
   if (process_ == process) {
+    execution_paused_ = true;
     connection_->Send(Connection::kProcessCompileTimeError);
     PrintSynchronizationToken();
   }

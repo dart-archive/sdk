@@ -189,10 +189,6 @@ Process::~Process() {
     last_message_ = entry->next();
     delete entry;
   }
-  Session* session = program()->session();
-  if (session != NULL) {
-    session->ProcessTerminated(this);
-  }
   ASSERT(last_message_ == NULL);
 }
 

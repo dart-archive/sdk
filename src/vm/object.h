@@ -508,7 +508,6 @@ class Failure: public Object {
   static Failure* wrong_argument_type() { return Create(WRONG_ARGUMENT_TYPE); }
   static Failure* index_out_of_bounds() { return Create(INDEX_OUT_OF_BOUNDS); }
   static Failure* illegal_state() { return Create(ILLEGAL_STATE); }
-  static Failure* should_preempt() { return Create(SHOULD_PREEMPT); }
 
   // Casting.
   static inline Failure* cast(Object* object);

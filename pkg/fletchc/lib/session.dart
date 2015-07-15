@@ -246,6 +246,18 @@ class Session extends FletchVmSession {
     return null;
   }
 
+  Future terminateSession() async {
+    int exitCode = 0;
+    await runCommand(const SessionEnd());
+    if (processExitCodeFuture != null) {
+      while (await vmStdoutSyncMessages.moveNext()) {}
+      while (await vmStderrSyncMessages.moveNext()) {}
+      exitCode = await processExitCodeFuture;
+    }
+    await shutdown();
+    exit(exitCode);
+  }
+
   Future<int> handleProcessStop(Command response) async {
     await nextOutputSynchronization();
     debugState.reset();
@@ -255,16 +267,8 @@ class Session extends FletchVmSession {
         running = false;
         break;
       case CommandCode.ProcessTerminated:
-        int exitCode = 0;
         print('### process terminated');
-        await runCommand(const SessionEnd());
-        if (processExitCodeFuture != null) {
-          while (await vmStdoutSyncMessages.moveNext()) {}
-          while (await vmStderrSyncMessages.moveNext()) {}
-          exitCode = await processExitCodeFuture;
-        }
-        await shutdown();
-        exit(exitCode);
+        await terminateSession();
         break;
       default:
         assert(response.code == CommandCode.ProcessBreakpoint);
@@ -457,13 +461,16 @@ class Session extends FletchVmSession {
   }
 
   Future restart() async {
-    if (!checkRunning()) return null;
+    if (debugState.currentStackTrace == null) {
+      print("### Cannot restart when nothing is executing.");
+      return null;
+    }
     if (debugState.numberOfStackFrames <= 1) {
       print("### cannot restart entry frame");
       return null;
     }
-    await handleProcessStop(
-        await runCommand(new ProcessRestartFrame(debugState.currentFrame)));
+    int frame = debugState.actualCurrentFrameNumber;
+    await handleProcessStop(await runCommand(new ProcessRestartFrame(frame)));
     await backtrace();
   }
 

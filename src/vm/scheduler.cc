@@ -264,10 +264,29 @@ bool Scheduler::Run() {
   return true;
 }
 
-void Scheduler::DeleteProcess(Process* process, ThreadState* thread_state) {
+void Scheduler::DeleteProcess(Process* process) {
+  // Tell the debugger that this process has terminated.
+  Session* session = process->program()->session();
+  if (session != NULL && session->is_debugging()) {
+    session->ProcessTerminated(process);
+  }
+  // Get rid of the process.
+  delete process;
+}
+
+void Scheduler::DeleteProcessAtBreakpoint(Process* process) {
+  ASSERT(process->blocked() == NULL);
+  ASSERT(process->state() == Process::kBreakPoint);
+  DeleteProcess(process);
+  if (--processes_ == 0) NotifyAllThreads();
+}
+
+void Scheduler::DeleteProcessAndMergeHeaps(Process* process,
+                                           ThreadState* thread_state) {
+  ASSERT(thread_state != NULL);
   Process* blocked = process->blocked();
   Program* program = process->program();
-  delete process;
+  DeleteProcess(process);
   // Don't unblock until 'process' is deleted, to make sure all references to
   // 'blocked's heap are gone.
   if (blocked != NULL && blocked->DecrementBlocked()) {
@@ -297,7 +316,7 @@ void Scheduler::RescheduleProcess(Process* process,
                                   bool terminate) {
   ASSERT(process->state() == Process::kRunning);
   if (terminate) {
-    DeleteProcess(process, state);
+    DeleteProcessAndMergeHeaps(process, state);
   } else {
     process->ChangeState(Process::kRunning, Process::kReady);
     EnqueueOnAnyThread(process, state->thread_id() + 1);
@@ -544,7 +563,7 @@ Process* Scheduler::InterpretProcess(Process* process,
   }
 
   if (interpreter.IsTerminated()) {
-    DeleteProcess(process, thread_state);
+    DeleteProcessAndMergeHeaps(process, thread_state);
     return NULL;
   }
 
@@ -556,6 +575,11 @@ Process* Scheduler::InterpretProcess(Process* process,
   }
 
   if (interpreter.IsUncaughtException()) {
+    process->ChangeState(Process::kRunning, Process::kBreakPoint);
+    Session* session = process->program()->session();
+    if (session == NULL || !session->is_debugging()) exit(1);
+    // Send stack trace information to attached session if debugging.
+    session->UncaughtException(process);
     // Just hang by not enqueueing the process. The session
     // will terminate the program on uncaught exceptions.
     return NULL;
@@ -566,6 +590,10 @@ Process* Scheduler::InterpretProcess(Process* process,
     // debugging. When debugging, just hang by not enqueueing nor
     // deleting the process. The session will terminate the program
     // (or restart it after program rewriting) on compile-time errors.
+    process->ChangeState(Process::kRunning, Process::kBreakPoint);
+    // Just hang by not enqueueing nor deleting the process.
+    // The session will terminate the program (or restart it
+    // after program rewriting) on compile-time errors.
     Session* session = process->program()->session();
     if (session == NULL || !session->is_debugging()) exit(254);
     session->CompileTimeError(process);
@@ -575,9 +603,7 @@ Process* Scheduler::InterpretProcess(Process* process,
   if (interpreter.IsAtBreakPoint()) {
     process->ChangeState(Process::kRunning, Process::kBreakPoint);
     Session* session = process->program()->session();
-    if (session != NULL) {
-      session->BreakPoint(process);
-    }
+    if (session != NULL) session->BreakPoint(process);
     return NULL;
   }
 
