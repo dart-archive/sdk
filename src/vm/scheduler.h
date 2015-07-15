@@ -55,7 +55,7 @@ class Scheduler {
   // TODO(ajohnsen): This could be improved by taking a Port and a 'message',
   // and avoid the extra allocation on the process queue (in the case where it's
   // empty).
-  bool ProcessRunOnCurrentThread(Process* process, Port* port);
+  bool ProcessRunOnCurrentForeignThread(Process* process, Port* port);
 
   bool Run();
 

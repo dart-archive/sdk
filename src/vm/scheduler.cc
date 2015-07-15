@@ -176,38 +176,52 @@ void Scheduler::ProcessContinue(Process* process) {
   EnqueueOnAnyThread(process, 0);
 }
 
-bool Scheduler::ProcessRunOnCurrentThread(Process* process, Port* port) {
+bool Scheduler::ProcessRunOnCurrentForeignThread(Process* process, Port* port) {
   ASSERT(port->IsLocked());
-  if (!process->ChangeState(Process::kSleeping, Process::kRunning)) {
+
+  // TODO(ajohnsen): Foreign threads are not stopped by
+  // Scheduler::StopProgram. We need to fix that before
+  // foreign threads can directly interpret dart code.
+  // See issue: https://github.com/dart-lang/fletch/issues/73
+  if (Flags::run_on_foreign_thread) {
+    if (!process->ChangeState(Process::kSleeping, Process::kRunning)) {
+      port->Unlock();
+      return false;
+    }
     port->Unlock();
-    return false;
-  }
-  port->Unlock();
 
-  foreign_threads_++;
+    foreign_threads_++;
 
-  // TODO(ajohnsen): It's important that the thread state caches are cleared
-  // when any Program changes. I'm not convinced this is the case.
-  ThreadState* thread_state = TakeThreadState();
+    // TODO(ajohnsen): It's important that the thread state caches are cleared
+    // when any Program changes. I'm not convinced this is the case.
+    ThreadState* thread_state = TakeThreadState();
 
-  // This thread-state moves between threads. Attach thread-state to current
-  // thread.
-  thread_state->AttachToCurrentThread();
+    // This thread-state moves between threads. Attach thread-state to current
+    // thread.
+    thread_state->AttachToCurrentThread();
 
-  // Use the temp thread state to run he process.
-  process = InterpretProcess(process, thread_state);
-  if (process != NULL) EnqueueOnAnyThread(process);
-  ASSERT(thread_state->queue()->is_empty());
+    // Use the temp thread state to run he process.
+    process = InterpretProcess(process, thread_state);
+    if (process != NULL) EnqueueOnAnyThread(process);
+    ASSERT(thread_state->queue()->is_empty());
 
-  ReturnThreadState(thread_state);
+    ReturnThreadState(thread_state);
 
-  foreign_threads_--;
-  if (processes_ == 0) {
-    // If the last process was delete by this thread, notify the main thread
-    // that it's safe to terminate.
-    preempt_monitor_->Lock();
-    preempt_monitor_->Notify();
-    preempt_monitor_->Unlock();
+    foreign_threads_--;
+    if (processes_ == 0) {
+      // If the last process was delete by this thread, notify the main thread
+      // that it's safe to terminate.
+      preempt_monitor_->Lock();
+      preempt_monitor_->Notify();
+      preempt_monitor_->Unlock();
+    }
+  } else {
+    if (!process->ChangeState(Process::kSleeping, Process::kReady)) {
+      port->Unlock();
+      return false;
+    }
+    port->Unlock();
+    EnqueueOnAnyThread(process);
   }
 
   return true;

@@ -26,32 +26,34 @@ namespace fletch {
 #define CSTRING(macro, name, value, doc) \
   macro(const char*, String, name, value, doc)
 
-#define APPLY_TO_FLAGS(debug, release)             \
-  BOOLEAN(release, expose_gc, false,               \
-      "Expose invoking GC to native call.")        \
-  BOOLEAN(debug, validate_stack, false,            \
-      "Validate stack at each interperter step")   \
-  BOOLEAN(release, unfold_program, false,          \
-      "Unfold the program before running")         \
-  BOOLEAN(release, gc_on_delete, false,            \
-      "GC the heap at when terminating isolate")   \
-  BOOLEAN(debug, log_decoder, false,               \
-      "Log decoding")                              \
-  BOOLEAN(debug, print_program_statistics, false,  \
-      "Print statistics about the program")        \
-  BOOLEAN(release, verbose, false,                 \
-      "Verbose output")                            \
-  BOOLEAN(debug, print_flags, false,               \
-      "Print flags")                               \
-  BOOLEAN(release, profile, false,                 \
-      "Profile the execution of the entire VM")    \
-  INTEGER(release, profile_interval, 1000,         \
-      "Profile interval in us")                    \
-  CSTRING(release, filter, NULL,                   \
-      "Filter string for unit testing")            \
-  /* Temporary compiler flags */                   \
-  BOOLEAN(release, trace_compiler, false, "")      \
-  BOOLEAN(release, trace_library, false, "")       \
+#define APPLY_TO_FLAGS(debug, release)                 \
+  BOOLEAN(release, expose_gc, false,                   \
+      "Expose invoking GC to native call.")            \
+  BOOLEAN(debug, validate_stack, false,                \
+      "Validate stack at each interperter step")       \
+  BOOLEAN(release, unfold_program, false,              \
+      "Unfold the program before running")             \
+  BOOLEAN(release, gc_on_delete, false,                \
+      "GC the heap at when terminating isolate")       \
+  BOOLEAN(release, run_on_foreign_thread, false,       \
+      "Allow a foreign thread to run the interpreter") \
+  BOOLEAN(debug, log_decoder, false,                   \
+      "Log decoding")                                  \
+  BOOLEAN(debug, print_program_statistics, false,      \
+      "Print statistics about the program")            \
+  BOOLEAN(release, verbose, false,                     \
+      "Verbose output")                                \
+  BOOLEAN(debug, print_flags, false,                   \
+      "Print flags")                                   \
+  BOOLEAN(release, profile, false,                     \
+      "Profile the execution of the entire VM")        \
+  INTEGER(release, profile_interval, 1000,             \
+      "Profile interval in us")                        \
+  CSTRING(release, filter, NULL,                       \
+      "Filter string for unit testing")                \
+  /* Temporary compiler flags */                       \
+  BOOLEAN(release, trace_compiler, false, "")          \
+  BOOLEAN(release, trace_library, false, "")           \
 
 
 #ifdef DEBUG
