@@ -173,6 +173,9 @@ abstract class Command {
         return const ProcessTerminated();
       case CommandCode.ProcessCompileTimeError:
         return const ProcessCompileTimeError();
+      case CommandCode.ProcessNumberOfStacks:
+        int value = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new ProcessNumberOfStacks(value);
       case CommandCode.UncaughtException:
         return const UncaughtException();
       case CommandCode.CommitChangesResult:
@@ -342,6 +345,23 @@ class NewMap extends Command {
 
   const NewMap(this.map)
       : super(CommandCode.NewMap);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint32(map.index)
+        ..sendOn(sink, code);
+  }
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "$map";
+}
+
+class DeleteMap extends Command {
+  final MapId map;
+
+  const DeleteMap(this.map)
+      : super(CommandCode.DeleteMap);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
@@ -806,6 +826,24 @@ class ProcessBacktraceRequest extends Command {
   String valuesToString() => "";
 }
 
+class ProcessFiberBacktraceRequest extends Command {
+  final int fiber;
+
+  const ProcessFiberBacktraceRequest(this.fiber)
+      : super(CommandCode.ProcessFiberBacktraceRequest);
+
+  void addTo(StreamSink<List<int>> sink) {
+    buffer
+        ..addUint64(fiber)
+        ..sendOn(sink, code);
+  }
+
+  /// Peer will respond with [ProcessBacktrace]
+  int get numberOfResponsesExpected => 1;
+
+  String valuesToString() => "$fiber";
+}
+
 class ProcessBreakpoint extends Command {
   final int breakpointId;
   final int methodId;
@@ -970,6 +1008,27 @@ class ProcessCompileTimeError extends Command {
   String valuesToString() => "";
 }
 
+class ProcessAddFibersToMap extends Command {
+  const ProcessAddFibersToMap()
+      : super(CommandCode.ProcessAddFibersToMap);
+
+  /// The peer will respond with [ProcessNumberOfStacks].
+  int get numberOfResponsesExpected => 1;
+
+  String valuesToString() => "";
+}
+
+class ProcessNumberOfStacks extends Command {
+  final int value;
+
+  const ProcessNumberOfStacks(this.value)
+      : super(CommandCode.ProcessNumberOfStacks);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "$value";
+}
+
 class SessionEnd extends Command {
   const SessionEnd()
       : super(CommandCode.SessionEnd);
@@ -999,6 +1058,7 @@ class Debugging extends Command {
         ..addUint8(outputSynchronization ? 1 : 0)
         ..addUint32(MapId.methods.index)
         ..addUint32(MapId.classes.index)
+        ..addUint32(MapId.fibers.index)
         ..sendOn(sink, code);
   }
 
@@ -1140,6 +1200,7 @@ enum CommandCode {
   ProcessStepTo,
   ProcessContinue,
   ProcessBacktraceRequest,
+  ProcessFiberBacktraceRequest,
   ProcessBacktrace,
   ProcessBreakpoint,
   ProcessLocal,
@@ -1147,6 +1208,8 @@ enum CommandCode {
   ProcessRestartFrame,
   ProcessTerminated,
   ProcessCompileTimeError,
+  ProcessAddFibersToMap,
+  ProcessNumberOfStacks,
   WriteSnapshot,
   CollectGarbage,
 
@@ -1201,4 +1264,5 @@ enum MapId {
   methods,
   classes,
   constants,
+  fibers,
 }

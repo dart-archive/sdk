@@ -34,6 +34,7 @@ Session::Session(Connection* connection)
       output_synchronization_(false),
       method_map_id_(-1),
       class_map_id_(-1),
+      fibers_map_id_(-1),
       stack_(0),
       changes_(0),
       main_thread_monitor_(Platform::CreateMonitor()),
@@ -137,7 +138,7 @@ void Session::SendDartValue(Object* value) {
     connection_->Send(Connection::kString);
   } else {
     Push(HeapObject::cast(value)->get_class());
-    connection_->WriteInt64(MapLookup(class_map_id_));
+    connection_->WriteInt64(MapLookupByObject(class_map_id_, Top()));
     connection_->Send(Connection::kInstance);
   }
 }
@@ -145,7 +146,7 @@ void Session::SendDartValue(Object* value) {
 void Session::SendInstanceStructure(Instance* instance) {
   Class* klass = instance->get_class();
   Push(klass);
-  connection_->WriteInt64(MapLookup(class_map_id_));
+  connection_->WriteInt64(MapLookupByObject(class_map_id_, Top()));
   int fields = klass->NumberOfInstanceFields();
   connection_->WriteInt(fields);
   connection_->Send(Connection::kInstanceStructure);
@@ -157,6 +158,18 @@ void Session::SendInstanceStructure(Instance* instance) {
 void Session::ProcessContinue(Process* process) {
   execution_paused_ = false;
   process->program()->scheduler()->ProcessContinue(process);
+}
+
+void Session::SendStackTrace(Stack* stack) {
+  int frames = StackWalker::ComputeStackTrace(process_, stack, this);
+  connection_->WriteInt(frames);
+  for (int i = 0; i < frames; i++) {
+    // Lookup method in method map and send id.
+    connection_->WriteInt64(MapLookupByObject(method_map_id_, Pop()));
+    // Pop bytecode index from session stack and send it.
+    connection_->WriteInt64(PopInteger());
+  }
+  connection_->Send(Connection::kProcessBacktrace);
 }
 
 void Session::ProcessMessages() {
@@ -253,17 +266,15 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessBacktraceRequest: {
-        int frames = StackWalker::ComputeStackTrace(process_, this);
-        connection_->WriteInt(frames);
-        for (int i = 0; i < frames; i++) {
-          // Lookup method in method map and send id.
-          connection_->WriteInt64(MapLookup(method_map_id_));
-          // Drop method from session stack.
-          Drop(1);
-          // Pop bytecode index from session stack and send it.
-          connection_->WriteInt64(PopInteger());
-        }
-        connection_->Send(Connection::kProcessBacktrace);
+        Stack* stack = process_->stack();
+        SendStackTrace(stack);
+        break;
+      }
+
+      case Connection::kProcessFiberBacktraceRequest: {
+        int64 fiber_id = connection_->ReadInt64();
+        Stack* stack = Stack::cast(MapLookupById(fibers_map_id_, fiber_id));
+        SendStackTrace(stack);
         break;
       }
 
@@ -312,7 +323,26 @@ void Session::ProcessMessages() {
         output_synchronization_ = connection_->ReadBoolean();
         method_map_id_ = connection_->ReadInt();
         class_map_id_ = connection_->ReadInt();
+        fibers_map_id_ = connection_->ReadInt();
         debugging_ = true;
+        break;
+      }
+
+      case Connection::kProcessAddFibersToMap: {
+        // TODO(ager): Potentially optimize this to not require a full
+        // process GC to locate the live stacks?
+        int number_of_stacks = process_->CollectGarbageAndChainStacks(NULL);
+        Object* current = process_->stack();
+        for (int i = 0; i < number_of_stacks; i++) {
+          Stack* stack = Stack::cast(current);
+          AddToMap(fibers_map_id_, i, stack);
+          current = stack->next();
+          // Unchain stacks.
+          stack->set_next(Smi::FromWord(0));
+        }
+        ASSERT(current == NULL);
+        connection_->WriteInt(number_of_stacks);
+        connection_->Send(Connection::kProcessNumberOfStacks);
         break;
       }
 
@@ -504,7 +534,7 @@ void Session::ProcessMessages() {
 
       case Connection::kMapLookup: {
         int map_index = connection_->ReadInt();
-        connection_->WriteInt64(MapLookup(map_index));
+        connection_->WriteInt64(MapLookupByObject(map_index, Top()));
         connection_->Send(Connection::kObjectId);
         break;
       }
@@ -589,43 +619,51 @@ bool Session::WriteSnapshot(const char* path) {
   return success;
 }
 
-void Session::NewMap(int index) {
+void Session::NewMap(int map_index) {
   int length = maps_.length();
-  if (index >= length) {
-    maps_.Reallocate(index + 1);
-    for (int i = length; i <= index; i++) {
+  if (map_index >= length) {
+    maps_.Reallocate(map_index + 1);
+    for (int i = length; i <= map_index; i++) {
       maps_[i] = NULL;
     }
   }
-  ObjectMap* existing = maps_[index];
+  ObjectMap* existing = maps_[map_index];
   if (existing != NULL) delete existing;
-  maps_[index] = new ObjectMap(64);
+  maps_[map_index] = new ObjectMap(64);
 }
 
-void Session::DeleteMap(int index) {
-  ObjectMap* map = maps_[index];
+void Session::DeleteMap(int map_index) {
+  ObjectMap* map = maps_[map_index];
   if (map == NULL) return;
   delete map;
-  maps_[index] = NULL;
+  maps_[map_index] = NULL;
 }
 
-void Session::PushFromMap(int index, int64 id) {
-  Push(maps_[index]->LookupById(id));
+void Session::PushFromMap(int map_index, int64 id) {
+  Push(maps_[map_index]->LookupById(id));
 }
 
-void Session::PopToMap(int index, int64 id) {
-  maps_[index]->Add(id, Pop());
+void Session::PopToMap(int map_index, int64 id) {
+  maps_[map_index]->Add(id, Pop());
 }
 
-void Session::RemoveFromMap(int index, int64 id) {
-  maps_[index]->RemoveById(id);
+void Session::AddToMap(int map_index, int64 id, Object* value) {
+  maps_[map_index]->Add(id, value);
 }
 
-int64 Session::MapLookup(int map_index) {
+void Session::RemoveFromMap(int map_index, int64 id) {
+  maps_[map_index]->RemoveById(id);
+}
+
+int64 Session::MapLookupByObject(int map_index, Object* object) {
   int64 id = -1;
   ObjectMap* map = maps_[map_index];
-  if (map != NULL) id = map->LookupByObject(Top());
+  if (map != NULL) id = map->LookupByObject(object);
   return id;
+}
+
+Object* Session::MapLookupById(int map_index, int64 id) {
+  return maps_[map_index]->LookupById(id);
 }
 
 void Session::PushNull() {
@@ -999,7 +1037,7 @@ void Session::BreakPoint(Process* process) {
     debug_info->set_is_stepping(false);
     connection_->WriteInt(debug_info->current_breakpoint_id());
     StackWalker::ComputeTopStackFrame(process, this);
-    connection_->WriteInt64(MapLookup(method_map_id_));
+    connection_->WriteInt64(MapLookupByObject(method_map_id_, Top()));
     // Drop function from session stack.
     Drop(1);
     // Pop bytecode index from session stack and send it.

@@ -67,6 +67,7 @@ class Connection {
     kProcessStepTo,
     kProcessContinue,
     kProcessBacktraceRequest,
+    kProcessFiberBacktraceRequest,
     kProcessBacktrace,
     kProcessBreakpoint,
     kProcessLocal,
@@ -74,6 +75,8 @@ class Connection {
     kProcessRestartFrame,
     kProcessTerminated,
     kProcessCompileTimeError,
+    kProcessAddFibersToMap,
+    kProcessNumberOfStacks,
     kWriteSnapshot,
     kCollectGarbage,
 

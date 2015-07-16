@@ -250,9 +250,11 @@ void StackWalker::PushFrameOnSessionStack(Session* session, bool isFirstFrame) {
   session->PushFunction(function());
 }
 
-int StackWalker::ComputeStackTrace(Process* process, Session* session) {
+int StackWalker::ComputeStackTrace(Process* process,
+                                   Stack* stack,
+                                   Session* session) {
   int frames = 0;
-  StackWalker walker(process, process->stack());
+  StackWalker walker(process, stack);
   while (walker.MoveNext()) {
     walker.PushFrameOnSessionStack(session, frames == 0);
     ++frames;

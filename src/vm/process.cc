@@ -404,8 +404,7 @@ void Process::CollectGarbage() {
 }
 
 static void LinkProcessIfUnknownToProgramGC(Process* process, Process** list) {
-  if (process != NULL &&
-      process->program_gc_state() == Process::kUnknown) {
+  if (process != NULL && process->program_gc_state() == Process::kUnknown) {
     ASSERT(process->next() == NULL)
     process->set_program_gc_state(Process::kFound);
     process->set_next(*list);
@@ -448,6 +447,7 @@ class ScavengeAndChainStacksVisitor: public PointerVisitor {
   }
 
   void ChainPort(Instance* instance) {
+    if (process_list_ == NULL) return;
     uword address = AsForeignWord(instance->GetInstanceField(0));
     Port* port = reinterpret_cast<Port*>(address);
     LinkProcessIfUnknownToProgramGC(port->process(), process_list_);

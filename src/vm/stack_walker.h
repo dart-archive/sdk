@@ -69,7 +69,9 @@ class StackWalker {
   static uint8* ComputeCatchBlock(Process* process, int* stack_delta);
 
   // Compute a stack trace and send it to the session.
-  static int ComputeStackTrace(Process* process, Session* session);
+  static int ComputeStackTrace(Process* process,
+                               Stack* stack,
+                               Session* session);
 
   // Compute the function for the top frame on the current process stack
   // and push it on the session stack.

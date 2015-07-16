@@ -524,29 +524,57 @@ class Session extends FletchVmSession {
     debugState.currentFrame = frame;
   }
 
+  StackTrace stackTraceFromBacktraceResponse(
+      ProcessBacktrace backtraceResponse) {
+    int frames = backtraceResponse.frames;
+    StackTrace stackTrace = new StackTrace(frames);
+    for (int i = 0; i < frames; ++i) {
+      int methodId = backtraceResponse.methodIds[i];
+      FletchFunction function = fletchSystem.lookupFunctionById(methodId);
+      stackTrace.addFrame(
+          compiler,
+          new StackFrame(function,
+                         backtraceResponse.bytecodeIndices[i],
+                         compiler,
+                         debugState));
+    }
+    return stackTrace;
+  }
+
   Future getStackTrace() async {
     if (debugState.currentStackTrace == null) {
       ProcessBacktrace backtraceResponse =
           await runCommand(const ProcessBacktraceRequest());
-      var frames = backtraceResponse.frames;
-      StackTrace stackTrace = new StackTrace(frames);
-      for (int i = 0; i < frames; ++i) {
-        int methodId = backtraceResponse.methodIds[i];
-        FletchFunction function = fletchSystem.lookupFunctionById(methodId);
-        stackTrace.addFrame(
-            compiler,
-            new StackFrame(function,
-                           backtraceResponse.bytecodeIndices[i],
-                           compiler,
-                           debugState));
-      }
-      debugState.currentStackTrace = stackTrace;
+      debugState.currentStackTrace =
+          stackTraceFromBacktraceResponse(backtraceResponse);
     }
   }
 
   Future backtrace() async {
     await getStackTrace();
     debugState.printStackTrace();
+  }
+
+  Future backtraceForFiber(int fiber) async {
+    ProcessBacktrace backtraceResponse =
+        await runCommand(new ProcessFiberBacktraceRequest(fiber));
+    StackTrace stackTrace = stackTraceFromBacktraceResponse(backtraceResponse);
+    print('fiber $fiber');
+    stackTrace.write(0);
+  }
+
+  Future fibers() async {
+    if (!checkRunning()) return null;
+    await runCommand(const NewMap(MapId.fibers));
+    ProcessNumberOfStacks response =
+        await runCommand(const ProcessAddFibersToMap());
+    int numberOfFibers = response.value;
+    for (int i = 0; i < numberOfFibers; i++) {
+      print('');
+      await backtraceForFiber(i);
+    }
+    print('');
+    await runCommand(const DeleteMap(MapId.fibers));
   }
 
   String dartValueToString(DartValue value) {

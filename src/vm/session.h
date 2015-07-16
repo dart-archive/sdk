@@ -39,17 +39,20 @@ class Session {
   void CollectGarbage();
 
   // Map operations.
-  void NewMap(int index);
-  void DeleteMap(int index);
+  void NewMap(int map_index);
+  void DeleteMap(int map_index);
 
-  void PushFromMap(int index, int64 id);
-  void PopToMap(int index, int64 id);
-  void RemoveFromMap(int index, int64 id);
+  void PushFromMap(int map_index, int64 id);
+  void PopToMap(int map_index, int64 id);
+  void RemoveFromMap(int map_index, int64 id);
 
-  // Get the id for the top object on the session stack in the object
-  // map with the given index. Returns -1 if the object does not exist
-  // in the map.
-  int64 MapLookup(int map_index);
+  // Get the id for the object in the map with the given
+  // index. Returns -1 if the object does not exist in the map.
+  int64 MapLookupByObject(int map_index, Object* object);
+
+  // Get the object for the id in the map with the given
+  // index. Returns NULL if the id does not exist in the map.
+  Object* MapLookupById(int map_index, int64 id);
 
   // Stack operations.
   void Dup() { Push(Top()); }
@@ -133,6 +136,7 @@ class Session {
 
   int method_map_id_;
   int class_map_id_;
+  int fibers_map_id_;
 
   ObjectList stack_;
   ObjectList changes_;
@@ -142,12 +146,15 @@ class Session {
   MainThreadResumeKind main_thread_resume_kind_;
   bool main_thread_done_;
 
+  void AddToMap(int map_index, int64 id, Object* value);
+
   void SignalMainThread(MainThreadResumeKind);
   void SignalMainThreadWaitUntilDone(MainThreadResumeKind);
   void MainThreadDone();
 
   void ProcessContinue(Process* process);
 
+  void SendStackTrace(Stack* stack);
   void SendDartValue(Object* value);
   void SendInstanceStructure(Instance* instance);
 

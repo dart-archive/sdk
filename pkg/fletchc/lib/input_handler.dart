@@ -18,6 +18,7 @@ Commands:
   'lb'                                  list breakpoints
   's'                                   step
   'so'                                  step over
+  'fibers'                              list all process fibers
   'finish'                              finish current method (step out)
   'restart'                             restart the selected frame
   'sb'                                  step bytecode
@@ -126,6 +127,9 @@ class InputHandler {
           break;
         }
         await session.deleteBreakpoint(id);
+        break;
+      case 'fibers':
+        await session.fibers();
         break;
       case 'finish':
         await session.stepOut();
