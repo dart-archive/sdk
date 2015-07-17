@@ -6,3 +6,13 @@
 1_test: Fail
 3_test: Fail
 5_test: Fail
+
+[ $compiler == fletchc && $runtime == fletchvm ]
+messaging_process_die_early_gc_on_delete_test: Crash # Issue(74): Program GC fails to find all processes.
+
+[ $compiler == none && $runtime == fletchc ]
+messaging_drop_messages_expose_gc_test: Crash # Issue(75): Driver doesn't support -X flags.
+messaging_port_lifetime_expose_gc_test: Crash # Issue(75): Driver doesn't support -X flags.
+messaging_process_die_early_gc_on_delete_test: Crash # Issue(75): Driver doesn't support -X flags.
+messaging_program_gc_gc_on_delete_test: Crash # Issue(75): Driver doesn't support -X flags.
+

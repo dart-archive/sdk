@@ -1642,13 +1642,17 @@ class StandardTestSuite extends TestSuite {
   }
 
   List<List<String>> getVmOptions(Map optionsFromFile) {
-    var COMPILERS = const ['none', 'dart2dart', 'fletch'];
+    if (['fletchc', 'fletchvm'].contains(configuration['runtime'])) {
+      return optionsFromFile['fletchOptions'];
+    }
+
+    var vmOptions = optionsFromFile['vmOptiosn'];
+    var COMPILERS = const ['none', 'dart2dart'];
     var RUNTIMES = const ['none', 'vm', 'drt', 'dartium',
                           'ContentShellOnAndroid', 'DartiumOnAndroid'];
     var needsVmOptions = COMPILERS.contains(configuration['compiler']) &&
                          RUNTIMES.contains(configuration['runtime']);
     if (!needsVmOptions) return [[]];
-    final vmOptions = optionsFromFile['fletchOptions'];
     if (configuration['compiler'] != 'dart2dart') return vmOptions;
     // Temporary workaround for race in test suite: tests with different
     // vm options are still compiled into the same output file which
