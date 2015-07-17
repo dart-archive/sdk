@@ -136,9 +136,16 @@ class Engine : public State {
   void PushDelta(int delta);
   int PopDelta();
 
-  // Returns `false` if it was unable to grow the stack at this point, and the
-  // immediate execution should halt.
-  bool StackOverflowCheck(int size);
+  // If the result is different from |Process::kStackCheckContinue|,
+  // |SaveState| will have been called. If the result is
+  // |Process::kStackCheckContinue| the state will have been restored
+  // and execution can continue directly.
+  Process::StackCheckResult StackOverflowCheck(int size);
+
+  // Throws exception. Expects SaveState to have been called. Returns
+  // true if the exception was caught and false if the exception was
+  // uncaught.
+  bool DoThrow(Object* exception);
 
   // Returns `true` if the interpretation should stop and we should signal to
   // the scheduler that immutable garbage should be collected.
@@ -155,7 +162,21 @@ class Engine : public State {
   }
 };
 
-// Dispatching helper macros.
+#define STACK_OVERFLOW_CHECK(size)                                       \
+  do {                                                                   \
+    Process::StackCheckResult result = StackOverflowCheck(size);         \
+    if (result != Process::kStackCheckContinue) {                        \
+      if (result == Process::kStackCheckInterrupt) {                     \
+        return Interpreter::kInterrupt;                                  \
+      }                                                                  \
+      if (result == Process::kStackCheckOverflow) {                      \
+        Object* exception = program()->raw_stack_overflow();             \
+        if (!DoThrow(exception)) return Interpreter::kUncaughtException; \
+        DISPATCH();                                                      \
+      }                                                                  \
+    }                                                                    \
+  } while (false);
+
 #define DISPATCH()                                        \
   if (ShouldBreak()) return Interpreter::kBreakPoint;     \
   goto *kDispatchTable[ReadOpcode()]
@@ -239,7 +260,7 @@ Interpreter::InterruptKind Engine::Interpret(
       Function* target = Initializer::cast(value)->function();
       PushReturnAddress(kLoadStaticInitLength);
       Goto(target->bytecode_address_for(0));
-      if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+      STACK_OVERFLOW_CHECK(0);
     } else {
       Push(value);
       Advance(kLoadStaticInitLength);
@@ -387,14 +408,14 @@ Interpreter::InterruptKind Engine::Interpret(
     PushReturnAddress(kInvokeMethodLength);
     Function* target = process()->LookupEntry(receiver, selector)->target;
     Goto(target->bytecode_address_for(0));
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeSelector);
     SaveState();
     HandleInvokeSelector(process());
     RestoreState();
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeMethodFast);
@@ -421,7 +442,7 @@ Interpreter::InterruptKind Engine::Interpret(
     }
 
     Goto(target->bytecode_address_for(0));
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeMethodVtable);
@@ -442,7 +463,7 @@ Interpreter::InterruptKind Engine::Interpret(
     }
     Function* target = Function::cast(entry->get(2));
     Goto(target->bytecode_address_for(0));
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeStatic);
@@ -450,7 +471,7 @@ Interpreter::InterruptKind Engine::Interpret(
     Function* target = program()->static_method_at(index);
     PushReturnAddress(kInvokeStaticLength);
     Goto(target->bytecode_address_for(0));
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeFactory);
@@ -461,7 +482,7 @@ Interpreter::InterruptKind Engine::Interpret(
     Function* target = Function::cast(ReadConstant());
     PushReturnAddress(kInvokeStaticLength);
     Goto(target->bytecode_address_for(0));
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeFactoryUnfold);
@@ -626,36 +647,36 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
   OPCODE_BEGIN(BranchBack);
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
     Advance(-ReadByte(1));
   OPCODE_END();
 
   OPCODE_BEGIN(BranchBackIfTrue);
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
     int delta = -ReadByte(1);
     Branch(delta, kBranchBackIfTrueLength);
   OPCODE_END();
 
   OPCODE_BEGIN(BranchBackIfFalse);
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
     int delta = -ReadByte(1);
     Branch(kBranchBackIfTrueLength, delta);
   OPCODE_END();
 
   OPCODE_BEGIN(BranchBackWide);
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
     int delta = ReadInt32(1);
     Advance(-delta);
   OPCODE_END();
 
   OPCODE_BEGIN(BranchBackIfTrueWide);
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
     int delta = -ReadInt32(1);
     Branch(delta, kBranchBackIfTrueWideLength);
   OPCODE_END();
 
   OPCODE_BEGIN(BranchBackIfFalseWide);
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
     int delta = -ReadInt32(1);
     Branch(kBranchBackIfFalseWideLength, delta);
   OPCODE_END();
@@ -668,7 +689,7 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
   OPCODE_BEGIN(PopAndBranchBackWide);
-    if (!StackOverflowCheck(0)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(0);
     int pop_count = ReadByte(1);
     int delta = -ReadInt32(2);
     Drop(pop_count);
@@ -802,7 +823,7 @@ Interpreter::InterruptKind Engine::Interpret(
 
   OPCODE_BEGIN(StackOverflowCheck);
     int size = ReadInt32(1);
-    if (!StackOverflowCheck(size)) return Interpreter::kInterrupt;
+    STACK_OVERFLOW_CHECK(size);
     Advance(kStackOverflowCheckLength);
   OPCODE_END();
 
@@ -814,21 +835,7 @@ Interpreter::InterruptKind Engine::Interpret(
     // Push next address, to make the frame look complete.
     SaveState();
 
-    // Find the catch block address.
-    int stack_delta = 0;
-    uint8* catch_bcp = HandleThrow(process(), exception, &stack_delta);
-    if (catch_bcp == NULL) return Interpreter::kUncaughtException;
-
-    // Restore stack pointer and bcp.
-    RestoreState();
-
-    Goto(catch_bcp);
-
-    // The delta is computed given that bcp is pushed on the
-    // stack. We have already pop'ed bcp as part of RestoreState.
-    Drop(stack_delta - 1);
-
-    SetTop(exception);
+    if (!DoThrow(exception)) return Interpreter::kUncaughtException;
   OPCODE_END();
 
   OPCODE_BEGIN(ProcessYield);
@@ -927,11 +934,26 @@ int Engine::PopDelta() {
   return Smi::cast(Pop())->value();
 }
 
-bool Engine::StackOverflowCheck(int size) {
-  if (HasStackSpaceFor(size)) return true;
+Process::StackCheckResult Engine::StackOverflowCheck(int size) {
+  if (HasStackSpaceFor(size)) return Process::kStackCheckContinue;
   SaveState();
-  if (!process()->HandleStackOverflow(size)) return false;
+  Process::StackCheckResult result = process()->HandleStackOverflow(size);
+  if (result == Process::kStackCheckContinue) RestoreState();
+  return result;
+}
+
+bool Engine::DoThrow(Object* exception) {
+  // Find the catch block address.
+  int stack_delta = 0;
+  uint8* catch_bcp = HandleThrow(process(), exception, &stack_delta);
+  if (catch_bcp == NULL) return false;
+  // Restore stack pointer and bcp.
   RestoreState();
+  Goto(catch_bcp);
+  // The delta is computed given that bcp is pushed on the
+  // stack. We have already pop'ed bcp as part of RestoreState.
+  Drop(stack_delta - 1);
+  SetTop(exception);
   return true;
 }
 
@@ -1036,7 +1058,7 @@ void Interpreter::Run() {
 
 // -------------------- Native interpreter support --------------------
 
-bool HandleStackOverflow(Process* process, int size) {
+Process::StackCheckResult HandleStackOverflow(Process* process, int size) {
   return process->HandleStackOverflow(size);
 }
 

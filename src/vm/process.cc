@@ -209,13 +209,13 @@ void Process::UpdateCoroutine(Coroutine* coroutine) {
   store_buffer_.Insert(coroutine->stack());
 }
 
-bool Process::HandleStackOverflow(int addition) {
+Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   Object** current_limit = stack_limit();
 
   if (current_limit == kProfileMarker) {
     stack_limit_ = NULL;
     UpdateStackLimit();
-    return true;
+    return kStackCheckContinue;
   }
 
   // When the stack_limit is kPreemptMarker, the process has been explicitly
@@ -223,13 +223,13 @@ bool Process::HandleStackOverflow(int addition) {
   if (current_limit == kPreemptMarker) {
     stack_limit_ = NULL;
     UpdateStackLimit();
-    return false;
+    return kStackCheckInterrupt;
   }
 
   int size_increase = Utils::RoundUpToPowerOfTwo(addition);
   size_increase = Utils::Maximum(256, size_increase);
   int new_size = stack()->length() + size_increase;
-  if (new_size > 128 * KB) FATAL("Stack overflow");
+  if (new_size > 128 * KB) return kStackCheckOverflow;
 
   Object* new_stack_object = NewStack(new_size);
   if (new_stack_object == Failure::retry_after_gc()) {
@@ -250,7 +250,7 @@ bool Process::HandleStackOverflow(int addition) {
   coroutine_->set_stack(new_stack);
   store_buffer_.Insert(coroutine_->stack());
   UpdateStackLimit();
-  return true;
+  return kStackCheckContinue;
 }
 
 Object* Process::NewArray(int length) {

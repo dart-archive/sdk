@@ -75,6 +75,12 @@ class Process {
     kProcessed,
   };
 
+  enum StackCheckResult {
+    kStackCheckContinue,
+    kStackCheckInterrupt,
+    kStackCheckOverflow
+  };
+
   explicit Process(Program* program);
 
   virtual ~Process();
@@ -96,7 +102,7 @@ class Process {
   void set_ports(Port* port) { ports_ = port; }
 
   void SetupExecutionStack();
-  bool HandleStackOverflow(int addition);
+  StackCheckResult HandleStackOverflow(int addition);
 
   inline LookupCache::Entry* LookupEntry(Object* receiver, int selector);
 

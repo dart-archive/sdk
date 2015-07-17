@@ -196,6 +196,8 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoStackOverflowCheck();
 
   virtual void DoThrow();
+  // Expects to be called after SaveState with the exception object in EBX.
+  virtual void DoThrowAfterSaveState();
   virtual void DoSubroutineCall();
   virtual void DoSubroutineReturn();
 
@@ -342,7 +344,7 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   Dispatch(0);
 
   // Stack overflow handling (slow case).
-  Label stay_fast;
+  Label stay_fast, overflow;
   __ Bind(&check_stack_overflow_0_);
   __ xorl(EAX, EAX);
   __ Bind(&check_stack_overflow_);
@@ -352,13 +354,21 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ movl(Address(ESP, 1 * kWordSize), EAX);
   __ call("HandleStackOverflow");
   __ testl(EAX, EAX);
-  __ j(NOT_ZERO, &stay_fast);
+  ASSERT(Process::kStackCheckContinue == 0);
+  __ j(ZERO, &stay_fast);
+  __ cmpl(EAX, Immediate(Process::kStackCheckInterrupt));
+  __ j(NOT_EQUAL, &overflow);
   __ movl(EAX, Immediate(Interpreter::kInterrupt));
   __ jmp(&undo_padding);
 
   __ Bind(&stay_fast);
   RestoreState();
   Dispatch(0);
+
+  __ Bind(&overflow);
+  __ movl(EBX, Address(EBP, Process::ProgramOffset()));
+  __ movl(EBX, Address(EBX, Program::raw_stack_overflow_offset()));
+  DoThrowAfterSaveState();
 
   // Intrinsic failure: Just invoke the method.
   __ Bind(&intrinsic_failure_);
@@ -1042,7 +1052,10 @@ void InterpreterGeneratorX86::DoStackOverflowCheck() {
 void InterpreterGeneratorX86::DoThrow() {
   LoadLocal(EBX, 0);
   SaveState();
+  DoThrowAfterSaveState();
+}
 
+void InterpreterGeneratorX86::DoThrowAfterSaveState() {
   // Use the stack to store the stack delta initialized to zero.
   __ leal(EAX, Address(ESP, 3 * kWordSize));
   __ movl(Address(EAX, 0), Immediate(0));

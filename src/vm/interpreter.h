@@ -9,6 +9,7 @@
 
 #include "src/vm/lookup_cache.h"
 #include "src/vm/natives.h"
+#include "src/vm/process.h"
 
 namespace fletch {
 
@@ -16,7 +17,6 @@ class Coroutine;
 class Failure;
 class Function;
 class Port;
-class Process;
 
 class TargetYieldResult {
  public:
@@ -107,7 +107,8 @@ extern "C" const NativeFunction kNativeTable[];
 
 extern "C" bool HandleIsInvokeFast(int opcode);
 
-extern "C" bool HandleStackOverflow(Process* process, int size);
+extern "C" Process::StackCheckResult HandleStackOverflow(Process* process,
+                                                         int size);
 
 extern "C" int HandleGC(Process* process);
 

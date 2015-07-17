@@ -12,9 +12,8 @@ regress_14348_test: Crash
 bit_shift_test: Fail
 
 [ $compiler == fletchc || $runtime == fletchc ]
-final_syntax_test/08: Crash
-stack_overflow_stacktrace_test: Crash
-stack_overflow_test: Crash
+stack_overflow_stacktrace_test: Fail
+stack_overflow_test: Fail
 
 [ $compiler == fletchc || $runtime == fletchc ]
 abstract_runtime_error_test/01: Fail

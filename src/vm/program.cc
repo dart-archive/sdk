@@ -1319,6 +1319,9 @@ void Program::Initialize() {
   raw_illegal_state_ =
       String::cast(CreateStringFromAscii(StringFromCharZ("Illegal state.")));
 
+  raw_stack_overflow_ =
+      String::cast(CreateStringFromAscii(StringFromCharZ("Stack overflow.")));
+
   native_failure_result_ = null_object_;
 }
 

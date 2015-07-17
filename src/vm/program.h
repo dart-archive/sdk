@@ -53,6 +53,7 @@ class Session;
   V(HeapObject, raw_wrong_argument_type)         \
   V(HeapObject, raw_index_out_of_bounds)         \
   V(HeapObject, raw_illegal_state)               \
+  V(HeapObject, raw_stack_overflow)              \
   V(Object, native_failure_result)
 
 class Program {

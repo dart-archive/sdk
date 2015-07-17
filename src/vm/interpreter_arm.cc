@@ -197,6 +197,8 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoStackOverflowCheck();
 
   virtual void DoThrow();
+  // Expects to be called after SaveState with the exception object in R7.
+  virtual void DoThrowAfterSaveState();
   virtual void DoSubroutineCall();
   virtual void DoSubroutineReturn();
 
@@ -347,7 +349,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   Dispatch(0);
 
   // Stack overflow handling (slow case).
-  Label stay_fast;
+  Label stay_fast, overflow;
   __ Bind(&check_stack_overflow_0_);
   __ mov(R0, Immediate(0));
   __ Bind(&check_stack_overflow_);
@@ -357,13 +359,21 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   __ mov(R0, R4);
   __ bl("HandleStackOverflow");
   __ tst(R0, R0);
-  __ b(NE, &stay_fast);
+  ASSERT(Process::kStackCheckContinue == 0);
+  __ b(EQ, &stay_fast);
+  __ cmp(R0, Immediate(Process::kStackCheckInterrupt));
+  __ b(NE, &overflow);
   __ mov(R0, Immediate(Interpreter::kInterrupt));
   __ b(&undo_padding);
 
   __ Bind(&stay_fast);
   RestoreState();
   Dispatch(0);
+
+  __ Bind(&overflow);
+  __ ldr(R7, Address(R4, Process::ProgramOffset()));
+  __ ldr(R7, Address(R7, Program::raw_stack_overflow_offset()));
+  DoThrowAfterSaveState();
 
   // Intrinsic failure: Just invoke the method.
   __ Bind(&intrinsic_failure_);
@@ -1022,12 +1032,7 @@ void InterpreterGeneratorARM::DoStackOverflowCheck() {
   Dispatch(kStackOverflowCheckLength);
 }
 
-void InterpreterGeneratorARM::DoThrow() {
-  // Load object into callee-save register not touched by
-  // save and restore state.
-  LoadLocal(R7, 0);
-  SaveState();
-
+void InterpreterGeneratorARM::DoThrowAfterSaveState() {
   // Use the stack to store the stack delta initialized to zero.
   __ sub(SP, SP, Immediate(8));
   __ add(R2, SP, Immediate(kWordSize));
@@ -1057,6 +1062,14 @@ void InterpreterGeneratorARM::DoThrow() {
 
   StoreLocal(R7, 0);
   Dispatch(0);
+}
+
+void InterpreterGeneratorARM::DoThrow() {
+  // Load object into callee-save register not touched by
+  // save and restore state.
+  LoadLocal(R7, 0);
+  SaveState();
+  DoThrowAfterSaveState();
 }
 
 void InterpreterGeneratorARM::DoSubroutineCall() {

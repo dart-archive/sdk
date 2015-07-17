@@ -130,7 +130,7 @@ string_split_test: CompileTimeError
 
 # Stacktrace
 error_stack_trace1_test: Fail
-error_stack_trace2_test: Crash
+error_stack_trace2_test: Fail
 error_stack_trace_test: Fail
 
 # dart:typed_data
