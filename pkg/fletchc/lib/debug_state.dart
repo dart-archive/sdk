@@ -87,7 +87,7 @@ class DebugState {
 
   String lookupFieldName(FletchClass klass, int field) {
     while (field < klass.superclassFields) {
-      klass = session.fletchSystem.lookupClass(klass.superclassId);
+      klass = session.fletchSystem.lookupClassById(klass.superclassId);
     }
     return getClassDebugInfo(klass).fieldNames[field - klass.superclassFields];
   }

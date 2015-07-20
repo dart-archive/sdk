@@ -39,6 +39,7 @@ import '../commands.dart';
 class FletchSystemBuilder {
   final FletchSystem predecessorSystem;
   final int functionIdStart;
+  final int classIdStart;
 
   final List<FletchFunctionBuilder> _newFunctions = <FletchFunctionBuilder>[];
   final List<FletchClassBuilder> _newClasses = <FletchClassBuilder>[];
@@ -54,7 +55,8 @@ class FletchSystemBuilder {
 
   FletchSystemBuilder(FletchSystem predecessorSystem)
       : this.predecessorSystem = predecessorSystem,
-        this.functionIdStart = predecessorSystem.computeMaxFunctionId() + 1;
+        this.functionIdStart = predecessorSystem.computeMaxFunctionId() + 1,
+        this.classIdStart = predecessorSystem.computeMaxClassId() + 1;
 
   // TODO(ajohnsen): Remove and add a lookupConstant.
   Map<ConstantValue, int> getCompiledConstants() => _newConstants;
@@ -124,8 +126,8 @@ class FletchSystemBuilder {
       FletchClassBuilder superclass,
       bool isBuiltin,
       {int extraFields: 0}) {
-    int nextClassId =
-        predecessorSystem.classes.length + _newClasses.length;
+    FletchClass klass = predecessorSystem.lookupClassByElement(element);
+    int nextClassId = classIdStart + _newClasses.length;
     FletchClassBuilder builder = new FletchClassBuilder(
         nextClassId,
         element,
@@ -141,7 +143,7 @@ class FletchSystemBuilder {
   }
 
   FletchClassBuilder lookupClassBuilder(int classId) {
-    return _newClasses[classId - predecessorSystem.classes.length];
+    return _newClasses[classId - classIdStart];
   }
 
   List<FletchClassBuilder> getNewClasses() => _newClasses;
@@ -335,12 +337,19 @@ class FletchSystemBuilder {
 
     commands.add(new CommitChanges(changes));
 
-    classes = new List<FletchClass>.from(predecessorSystem.classes)
-        ..addAll(classes);
+    PersistentMap<int, FletchClass> classesById = predecessorSystem.classesById;
+    PersistentMap<ClassElement, FletchClass> classesByElement =
+        predecessorSystem.classesByElement;
+
+    for (FletchClass klass in classes) {
+      classesById = classesById.insert(klass.classId, klass);
+      if (klass.element != null) {
+        classesByElement = classesByElement.insert(klass.element, klass);
+      }
+    }
 
     PersistentMap<int, FletchFunction> functionsById =
         predecessorSystem.functionsById;
-
     PersistentMap<Element, FletchFunction> functionsByElement =
         predecessorSystem.functionsByElement;
 
@@ -368,7 +377,8 @@ class FletchSystemBuilder {
     return new FletchSystem(
         functionsById,
         functionsByElement,
-        classes,
+        classesById,
+        classesByElement,
         constants);
   }
 }

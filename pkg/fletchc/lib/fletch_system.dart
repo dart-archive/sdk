@@ -135,12 +135,15 @@ class FletchFunction extends FletchFunctionBase {
 }
 
 class FletchSystem {
-  // functionsByElement is a subset of functionsById: Some functions does not
+  // functionsByElement is a subset of functionsById: Some functions do not
   // have an element reference.
   final PersistentMap<int, FletchFunction> functionsById;
   final PersistentMap<Element, FletchFunction> functionsByElement;
 
-  final List<FletchClass> classes;
+  // classesByElement is a subset of classesById: Some classes do not
+  // have an element reference.
+  final PersistentMap<int, FletchClass> classesById;
+  final PersistentMap<ClassElement, FletchClass> classesByElement;
 
   // TODO(ajohnsen): Should it be a map?
   final List<FletchConstant> constants;
@@ -148,7 +151,8 @@ class FletchSystem {
   const FletchSystem(
       this.functionsById,
       this.functionsByElement,
-      this.classes,
+      this.classesById,
+      this.classesByElement,
       this.constants);
 
   bool get isEmpty => functionsById.isEmpty;
@@ -165,12 +169,20 @@ class FletchSystem {
     return functionsById.values.where(f);
   }
 
-  FletchClass lookupClass(int classId) {
-    return classes[classId];
+  FletchClass lookupClassById(int classId) {
+    return classesById[classId];
+  }
+
+  FletchClass lookupClassByElement(ClassElement element) {
+    return classesByElement[element];
   }
 
   int computeMaxFunctionId() {
     return functionsById.keys.fold(-1, (x, y) => x > y ? x : y);
+  }
+
+  int computeMaxClassId() {
+    return classesById.keys.fold(-1, (x, y) => x > y ? x : y);
   }
 }
 

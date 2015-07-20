@@ -580,7 +580,7 @@ class Session extends FletchVmSession {
   String dartValueToString(DartValue value) {
     if (value is Instance) {
       Instance i = value;
-      String className = fletchSystem.lookupClass(i.classId).name;
+      String className = fletchSystem.lookupClassById(i.classId).name;
       return "Instance of '$className'";
     } else {
       return value.dartToString();
@@ -606,7 +606,7 @@ class Session extends FletchVmSession {
       assert(response is InstanceStructure);
       InstanceStructure structure = response;
       int classId = structure.classId;
-      FletchClass klass = fletchSystem.lookupClass(classId);
+      FletchClass klass = fletchSystem.lookupClassById(classId);
       print("Instance of '${klass.name}' {");
       for (int i = 0; i < structure.fields; i++) {
         DartValue value = await readNextCommand();

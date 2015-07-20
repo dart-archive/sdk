@@ -129,7 +129,8 @@ import '../fletch_system.dart';
 const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<int, FletchFunction>(),
     const PersistentMap<Element, FletchFunction>(),
-    const <FletchClass>[],
+    const PersistentMap<int, FletchClass>(),
+    const PersistentMap<ClassElement, FletchClass>(),
     const <FletchConstant>[]);
 
 class FletchBackend extends Backend {
