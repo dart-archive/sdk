@@ -4,6 +4,9 @@
 
 library fletchc.driver.session_manager;
 
+import 'dart:async' show
+    Future;
+
 import 'driver_main.dart' show
     IsolateController;
 
@@ -11,15 +14,19 @@ import '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
 
+import '../../fletch_system.dart' show
+    FletchDelta;
+
 final Map<String, UserSession> internalSessions = <String, UserSession>{};
 
-UserSession createSession(String name, IsolateController worker) {
+Future<UserSession> createSession(
+    String name,
+    Future<IsolateController> allocateWorker()) async {
   UserSession session = lookupSession(name);
   if (session != null) {
-    worker.endSession();
     throwFatalError(DiagnosticKind.sessionAlreadyExists, sessionName: name);
   }
-  session = new UserSession(name, worker);
+  session = new UserSession(name, await allocateWorker());
   internalSessions[name] = session;
   return session;
 }
@@ -34,10 +41,24 @@ void endAllSessions() {
   internalSessions.clear();
 }
 
+/// A session in the main isolate.
 class UserSession {
   final String name;
 
   final IsolateController worker;
 
   UserSession(this.name, this.worker);
+}
+
+/// The state stored in a worker isolate of a [UserSession].
+class SessionState {
+  final String name;
+
+  FletchDelta compilationResult;
+
+  SessionState(this.name);
+
+  static SessionState internalCurrent;
+
+  static SessionState get current => internalCurrent;
 }

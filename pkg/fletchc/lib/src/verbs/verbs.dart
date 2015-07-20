@@ -42,8 +42,6 @@ import '../driver/session_manager.dart' show
 
 typedef Future<int> DoVerb(Sentence sentence, VerbContext context);
 
-typedef Future<Null> PerformTaskInWorker(task, {bool withTemporarySession});
-
 class Verb {
   final DoVerb perform;
   final String documentation;
@@ -57,16 +55,18 @@ class Verb {
       {this.requiresSession: false});
 }
 
-class VerbContext {
+abstract class VerbContext {
   final ClientController client;
 
   final IsolatePool pool;
 
   final UserSession session;
 
-  final PerformTaskInWorker performTaskInWorker;
+  VerbContext(this.client, this.pool, this.session);
 
-  VerbContext(this.client, this.pool, this.session, this.performTaskInWorker);
+  Future<Null> performTaskInWorker(task);
+
+  VerbContext copyWithSession(UserSession session);
 }
 
 /// Common verbs are displayed in the default help screen.

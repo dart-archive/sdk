@@ -6,6 +6,7 @@ import 'dart:async' show
     Completer,
     Future,
     Stream,
+    StreamController,
     Zone;
 
 import 'dart:convert' show
@@ -123,6 +124,8 @@ class MockClientController implements ClientController {
 
   final List<String> stderrMessages = <String>[];
 
+  final StreamController<Command> controller = new StreamController<Command>();
+
   MockClientController(this.mockVerb, this.mockArguments);
 
   get completer => mockCompleter;
@@ -131,13 +134,50 @@ class MockClientController implements ClientController {
 
   get done => completer.future;
 
+  get commands => controller.stream;
+
+  void enqueCommandToWorker(Command command) {
+    controller.add(command);
+  }
+
+  sendCommand(Command command) {
+    switch (command.code) {
+      case DriverCommand.ExitCode:
+        exit(command.data);
+        break;
+
+      case DriverCommand.Stderr:
+        printLineOnStderr(UTF8.decode(command.data));
+        break;
+
+      case DriverCommand.Stdout:
+        printLineOnStdout(UTF8.decode(command.data));
+        break;
+
+      default:
+        throw "Unexpected command: ${command.code}";
+    }
+  }
+
+  endSession() {
+    completer.complete(null);
+  }
+
   printLineOnStderr(line) {
     stderrMessages.add(line);
-    Zone.current.parent.print('stderr: $line');
+    Zone zone = Zone.current.parent;
+    if (zone == null) {
+      zone = Zone.current;
+    }
+    zone.print('stderr: $line');
   }
 
   printLineOnStdout(line) {
-    Zone.current.parent.print('stdout: $line');
+    Zone zone = Zone.current.parent;
+    if (zone == null) {
+      zone = Zone.current;
+    }
+    zone.print('stdout: $line');
   }
 
   exit(int exitCode) {

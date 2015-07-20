@@ -5,7 +5,8 @@
 library fletchc.verbs.create_verb;
 
 import 'dart:async' show
-    Future;
+    Future,
+    StreamIterator;
 
 import 'verbs.dart' show
     Sentence,
@@ -17,6 +18,7 @@ import '../driver/sentence_parser.dart' show
     NamedTarget;
 
 import '../driver/session_manager.dart' show
+    SessionState,
     UserSession,
     createSession;
 
@@ -24,6 +26,10 @@ import '../driver/driver_main.dart' show
     ClientController,
     IsolateController,
     IsolatePool;
+
+import '../driver/driver_commands.dart' show
+    Command,
+    CommandSender;
 
 const Verb createVerb = const Verb(create, documentation);
 
@@ -63,17 +69,41 @@ Future<int> create(Sentence sentence, VerbContext context) async {
     checkNoTailPreposition(sentence);
     checkNoTrailing(sentence);
 
-    // Spawn/reuse a worker isolate.
-    IsolateController worker =
-        new IsolateController(await pool.getIsolate(exitOnError: false));
+    Future<IsolateController> allocateWorker() async {
+      IsolateController worker =
+          new IsolateController(await pool.getIsolate(exitOnError: false));
+      await worker.beginSession();
+      client.log.note("Worker session '$name' started");
+      return worker;
+    }
 
-    await worker.beginSession();
-    // TODO(ahe): Investigate why this message shows in client console, not
-    // server console.
-    client.log.note("Worker session started.");
+    UserSession session = await createSession(name, allocateWorker);
 
-    UserSession session = createSession(name, worker);
-    print("Created session '${session.name}'.");
+    context = context.copyWithSession(session);
+
+    await context.performTaskInWorker(new CreateSessionTask(name));
   }
+
   return 0;
+}
+
+class CreateSessionTask {
+  // Keep this class simple, it is transported across an isolate port.
+
+  final String name;
+
+  const CreateSessionTask(this.name);
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<Command> commandIterator) {
+    return createSessionTask(name);
+  }
+}
+
+Future<int> createSessionTask(String name) {
+  assert(SessionState.internalCurrent == null);
+  SessionState.internalCurrent = new SessionState(name);
+  print("Created session '$name'.");
+  return new Future<int>.value(0);
 }

@@ -33,6 +33,9 @@ import '../driver/driver_commands.dart' show
     Command,
     CommandSender;
 
+import '../driver/session_manager.dart' show
+    SessionState;
+
 const Verb compileVerb =
     const Verb(compile, documentation, requiresSession: true);
 
@@ -69,14 +72,11 @@ class CompileTask {
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return compileTask(script, commandSender, commandIterator);
+    return compileTask(script);
   }
 }
 
-Future<int> compileTask(
-    String script,
-    CommandSender commandSender,
-    StreamIterator<Command> commandIterator) async {
+Future<int> compileTask(String script) async {
   // TODO(ahe): Allow user to specify dart2js options.
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
@@ -85,9 +85,10 @@ Future<int> compileTask(
           options: compilerOptions, script: script,
           packageRoot: null /* TODO(ahe): Provide package root. */);
 
-  FletchDelta fletchDelta = await compiler.run();
+  FletchDelta result = await compiler.run();
+  SessionState.current.compilationResult = result;
 
-  print("Compiled '$script' to ${fletchDelta.commands.length} commands.");
+  print("Compiled '$script' to ${result.commands.length} commands.");
 
   return 0;
 }

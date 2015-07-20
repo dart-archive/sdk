@@ -21,7 +21,8 @@ import 'dart:async' show
     Stream,
     StreamController,
     StreamIterator,
-    StreamSubscription;
+    StreamSubscription,
+    Zone;
 
 import 'dart:typed_data' show
     ByteData,
@@ -357,52 +358,7 @@ Future<Null> handleVerb(
     UserSession session = discoverSession();
     assert(session == null || client.verb.requiresSession);
 
-    Future<Null> performTaskInWorker(
-        task,
-        {bool withTemporarySession: false}) async {
-      client.enqueCommandToWorker(new Command(DriverCommand.PerformTask, task));
-
-      ClientLogger log = client.log;
-      IsolateController worker;
-
-      if (withTemporarySession) {
-        worker =
-            new IsolateController(await pool.getIsolate(exitOnError: false));
-        await worker.beginSession();
-        log.note("After beginSession.");
-      } else {
-        worker = session.worker;
-      }
-
-      // Forward commands between the C++ client [client], and the worker
-      // isolate [worker].  Also, Intercept the signal command and potentially
-      // kill the isolate (the isolate needs to tell if it is interuptible or
-      // needs to be killed, an example of the latter is, if compiler is
-      // running).
-      await worker.attachClient(client);
-      // The verb (which was performed in the worker) is done.
-      log.note("After attachClient.");
-
-      if (withTemporarySession) {
-        // Return the isolate to the pool *before* shutting down the
-        // client. This ensures that the next client will be able to reuse the
-        // isolate instead of spawning a new.
-        worker.endSession();
-      } else {
-        worker.detachClient();
-      }
-      client.endSession();
-
-      try {
-        await client.done;
-      } catch (error, stackTrace) {
-        log.error(error, stackTrace);
-      }
-      log.done();
-    }
-
-    VerbContext context =
-        new VerbContext(client, pool, session, performTaskInWorker);
+    DriverVerbContext context = new DriverVerbContext(client, pool, session);
     return client.verb.perform(sentence, context);
   }
 
@@ -421,6 +377,22 @@ Future<Null> handleVerb(
 
   if (exitCode != null) {
     client.exit(exitCode);
+  }
+}
+
+class DriverVerbContext extends VerbContext {
+  DriverVerbContext(
+      ClientController client,
+      IsolatePool pool,
+      UserSession session)
+      : super(client, pool, session);
+
+  DriverVerbContext copyWithSession(UserSession session) {
+    return new DriverVerbContext(client, pool, session);
+  }
+
+  Future<Null> performTaskInWorker(task) {
+    return session.worker.performTask(task, client);
   }
 }
 
@@ -655,6 +627,40 @@ class IsolateController {
     // TODO(ahe): Perform the reverse of attachClient here.
     beginSession();
   }
+
+  Future<Null> performTask(
+      task,
+      ClientController client,
+      {bool endSession: false /* TODO(ahe): Remove this parameter. */}) async {
+    ClientLogger log = client.log;
+
+    client.enqueCommandToWorker(new Command(DriverCommand.PerformTask, task));
+
+    // Forward commands between the C++ client [client], and the worker isolate
+    // `this`.  Also, Intercept the signal command and potentially kill the
+    // isolate (the isolate needs to tell if it is interuptible or needs to be
+    // killed, an example of the latter is, if compiler is running).
+    await attachClient(client);
+    // The verb (which was performed in the worker) is done.
+    log.note("After attachClient.");
+
+    if (endSession) {
+      // Return the isolate to the pool *before* shutting down the client. This
+      // ensures that the next client will be able to reuse the isolate instead
+      // of spawning a new.
+      this.endSession();
+    } else {
+      detachClient();
+    }
+    client.endSession();
+
+    try {
+      await client.done;
+    } catch (error, stackTrace) {
+      log.error(error, stackTrace);
+    }
+    log.done();
+  }
 }
 
 class ManagedIsolate {
@@ -786,7 +792,9 @@ class ClientLogger {
   void note(object) {
     String note = "$object";
     notes.add(note);
-    print("$id: $note");
+    // Print directly to stdout (via Zone.ROOT). We assume that stdout of this
+    // process is piped to a log file.
+    Zone.ROOT.print("$id: $note");
   }
 
   void gotArguments(List<String> arguments) {

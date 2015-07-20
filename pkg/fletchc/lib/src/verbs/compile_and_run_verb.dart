@@ -49,6 +49,9 @@ import '../diagnostic.dart' show
     throwFatalError,
     throwInternalError;
 
+import '../driver/driver_main.dart' show
+    IsolateController;
+
 const Verb compileAndRunVerb = const Verb(compileAndRun, documentation);
 
 const String documentation = """
@@ -59,7 +62,7 @@ const String documentation = """
 
 const COMPILER_CRASHED = 253;
 
-Future<int> compileAndRun(Sentence sentence, VerbContext context) {
+Future<int> compileAndRun(Sentence sentence, VerbContext context) async {
   Options options = Options.parse(sentence.arguments);
 
   if (options.script == null) {
@@ -69,11 +72,17 @@ Future<int> compileAndRun(Sentence sentence, VerbContext context) {
   CompileAndRunTask task =
       new CompileAndRunTask('${sentence.programName}-vm', options);
 
+  // Create a temporary worker/session.
+  IsolateController worker =
+      new IsolateController(await context.pool.getIsolate(exitOnError: false));
+  await worker.beginSession();
+  context.client.log.note("After beginSession.");
+
   // This is asynchronous, but we don't await the result so we can respond to
   // other requests.
-  context.performTaskInWorker(task, withTemporarySession: true);
+  worker.performTask(task, context.client, endSession: true);
 
-  return new Future<int>.value(null);
+  return null;
 }
 
 class CompileAndRunTask {
