@@ -10,7 +10,8 @@ import 'dart:async' show
 import 'verbs.dart' show
     Sentence,
     TargetKind,
-    Verb;
+    Verb,
+    VerbContext;
 
 import '../driver/sentence_parser.dart' show
     NamedTarget;
@@ -51,9 +52,9 @@ void checkNoTrailing(Sentence sentence) {
   }
 }
 
-Future<int> create(Sentence sentence, Map<String, dynamic> context) async {
-  IsolatePool pool = context['pool'];
-  ClientController client = context['client'];
+Future<int> create(Sentence sentence, VerbContext context) async {
+  IsolatePool pool = context.pool;
+  ClientController client = context.client;
   if (sentence.target != null &&
       sentence.target.kind == TargetKind.SESSION) {
     NamedTarget target = sentence.target;

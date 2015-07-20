@@ -38,6 +38,10 @@ List<Example> getExamples(DiagnosticKind kind) {
       return <Example>[new CommandLineExample(
           <String>['create', 'session', 'foo'],
           <String>['compile', 'session', 'foo', 'in', 'session', 'foo'])];
+
+    case DiagnosticKind.noFile:
+      // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.
+      return <Example>[new CommandLineExample(<String>['compile-and-run'])];
   }
 }
 

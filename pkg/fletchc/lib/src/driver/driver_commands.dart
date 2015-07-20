@@ -48,6 +48,9 @@ enum DriverCommand {
   /// A SendPort that the receiver can use to communicate with the sender.
   SendPort,
 
+  /// The the receiver to perform a task.
+  PerformTask,
+
   /// Error in connection.
   DriverConnectionError,
 

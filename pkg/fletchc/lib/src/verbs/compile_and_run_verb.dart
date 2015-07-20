@@ -38,16 +38,18 @@ import '../../session.dart' show
 
 import 'verbs.dart' show
     Sentence,
-    Verb;
+    Verb,
+    VerbContext;
 
 import '../driver/options.dart' show
     Options;
 
 import '../diagnostic.dart' show
+    DiagnosticKind,
+    throwFatalError,
     throwInternalError;
 
-const Verb compileAndRunVerb =
-    const Verb(compileAndRun, documentation, requiresWorker: true);
+const Verb compileAndRunVerb = const Verb(compileAndRun, documentation);
 
 const String documentation = """
    compile-and-run [options] dartfile
@@ -57,20 +59,44 @@ const String documentation = """
 
 const COMPILER_CRASHED = 253;
 
-Future<int> compileAndRun(
-    Sentence sentence,
-    Map<String, dynamic> context) async {
-  String fletchVm = context['fletchVm'];
-  List<String> arguments = sentence.arguments;
-  CommandSender commandSender = context['commandSender'];
-  StreamIterator<Command> commandIterator = context['commandIterator'];
-
-  Options options = Options.parse(arguments);
+Future<int> compileAndRun(Sentence sentence, VerbContext context) {
+  Options options = Options.parse(sentence.arguments);
 
   if (options.script == null) {
-    throwInternalError("No script supplied");
+    throwFatalError(DiagnosticKind.noFile);
   }
 
+  CompileAndRunTask task =
+      new CompileAndRunTask('${sentence.programName}-vm', options);
+
+  // This is asynchronous, but we don't await the result so we can respond to
+  // other requests.
+  context.performTaskInWorker(task, withTemporarySession: true);
+
+  return new Future<int>.value(null);
+}
+
+class CompileAndRunTask {
+  // Keep this class simple, it is transported across an isolate port.
+
+  final String fletchVm;
+
+  final Options options;
+
+  const CompileAndRunTask(this.fletchVm, this.options);
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<Command> commandIterator) {
+    return compileAndRunTask(fletchVm, options, commandSender, commandIterator);
+  }
+}
+
+Future<int> compileAndRunTask(
+    String fletchVm,
+    Options options,
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator) async {
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   FletchCompiler compiler =

@@ -33,16 +33,20 @@ import 'create_verb.dart' show
 import 'compile_verb.dart' show
     compileVerb;
 
-typedef Future<int> DoVerb(Sentence sentence, context);
+import '../driver/driver_main.dart' show
+    IsolatePool,
+    ClientController;
+
+import '../driver/session_manager.dart' show
+    UserSession;
+
+typedef Future<int> DoVerb(Sentence sentence, VerbContext context);
+
+typedef Future<Null> PerformTaskInWorker(task, {bool withTemporarySession});
 
 class Verb {
   final DoVerb perform;
   final String documentation;
-
-  /// True if this verb needs to run in a separate worker isolate.
-  // TODO(ahe): Remove this option when all command-line processing is moved to
-  // main isolate.
-  final bool requiresWorker;
 
   /// True if this verb needs to run in the context of a [UserSession].
   final bool requiresSession;
@@ -50,8 +54,19 @@ class Verb {
   const Verb(
       this.perform,
       this.documentation,
-      {this.requiresWorker: false,
-       this.requiresSession: false});
+      {this.requiresSession: false});
+}
+
+class VerbContext {
+  final ClientController client;
+
+  final IsolatePool pool;
+
+  final UserSession session;
+
+  final PerformTaskInWorker performTaskInWorker;
+
+  VerbContext(this.client, this.pool, this.session, this.performTaskInWorker);
 }
 
 /// Common verbs are displayed in the default help screen.

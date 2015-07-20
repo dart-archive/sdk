@@ -5,13 +5,15 @@
 library fletchc.verbs.compile_verb;
 
 import 'dart:async' show
-    Future;
+    Future,
+    StreamIterator;
 
 import 'verbs.dart' show
     PrepositionKind,
     Sentence,
     TargetKind,
-    Verb;
+    Verb,
+    VerbContext;
 
 import '../driver/sentence_parser.dart' show
     Preposition,
@@ -27,6 +29,10 @@ import '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
 
+import '../driver/driver_commands.dart' show
+    Command,
+    CommandSender;
+
 const Verb compileVerb =
     const Verb(compile, documentation, requiresSession: true);
 
@@ -35,7 +41,7 @@ const String documentation = """
                Compile file named FILE.
 """;
 
-Future<int> compile(Sentence sentence, _) async {
+Future<int> compile(Sentence sentence, VerbContext context) {
   if (sentence.target == null) {
     throwFatalError(DiagnosticKind.noFileTarget);
   }
@@ -46,6 +52,31 @@ Future<int> compile(Sentence sentence, _) async {
   NamedTarget target = sentence.target;
   String script = target.name;
 
+  // This is asynchronous, but we don't await the result so we can respond to
+  // other requests.
+  context.performTaskInWorker(new CompileTask(script));
+
+  return new Future<int>.value(null);
+}
+
+class CompileTask {
+  // Keep this class simple, it is transported across an isolate port.
+
+  final String script;
+
+  const CompileTask(this.script);
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<Command> commandIterator) {
+    return compileTask(script, commandSender, commandIterator);
+  }
+}
+
+Future<int> compileTask(
+    String script,
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator) async {
   // TODO(ahe): Allow user to specify dart2js options.
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];

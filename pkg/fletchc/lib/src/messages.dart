@@ -16,6 +16,7 @@ enum DiagnosticKind {
   sessionAlreadyExists,
   noFileTarget,
   compileRequiresFileTarget,
+  noFile, // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
 }
 
 /// Returns the diagnostic message template for [kind]. A diagnostic message
@@ -59,11 +60,16 @@ String getMessage(DiagnosticKind kind) {
           "'${DiagnosticParameter.sessionName}'.";
 
     case DiagnosticKind.noFileTarget:
-      return "No file  provided. "
+      return "No file provided. "
           "Try adding 'file FILE_NAME' to the command line";
 
     case DiagnosticKind.compileRequiresFileTarget:
       // TODO(ahe): Be more explicit about what is wrong with the target.
       return "Can only compile files, not '${DiagnosticParameter.target}";
+
+    case DiagnosticKind.noFile:
+      // TODO(ahe): Remove this message when compile_and_run_verb.dart is
+      // removed.
+      return "No file  provided. Try adding 'FILE_NAME' to the command line";
   }
 }

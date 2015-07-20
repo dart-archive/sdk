@@ -11,12 +11,16 @@ import 'dart:io' hide
     stdout;
 
 import 'dart:async' show
+    Completer,
+    EventSink,
     Future,
+    Stream,
+    StreamController,
     StreamIterator,
     StreamSubscription,
     StreamTransformer,
-    Zone,
-    ZoneSpecification;
+    ZoneSpecification,
+    runZoned;
 
 import 'dart:isolate' show
     ReceivePort,
@@ -38,7 +42,7 @@ import '../diagnostic.dart' show
     throwInternalError;
 
 import 'exit_codes.dart' show
-    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+    COMPILER_EXITCODE_CRASH;
 
 // TODO(ahe): Send DriverCommands directly when they are canonicalized
 // correctly, see issue 23244.
@@ -70,72 +74,112 @@ Future<Null> isolateMain(SendPort port) async {
   port = null;
   StreamIterator iterator = new StreamIterator(receivePort);
   while (await iterator.moveNext()) {
-    beginSession(iterator.current);
+    await beginSession(iterator.current);
   }
 }
 
-Future<Null> beginSession(SendPort port) async {
+Future<Null> beginSession(SendPort port) {
   ReceivePort receivePort = new ReceivePort();
   port.send([DriverCommand.SendPort.index, receivePort.sendPort]);
-  handleClient(port, receivePort);
+  return handleClient(port, receivePort);
 }
 
-Future<int> doInZone(void printLineOnStdout(line), Future<int> f()) async {
-  void printLineOnStdoutWrapper(_1, _2, _3, String line) {
-    printLineOnStdout(line);
-  }
-  Zone zone = Zone.current.fork(
-      specification: new ZoneSpecification(print: printLineOnStdoutWrapper));
-  return await zone.run(f);
+Future<int> doInZone(void printLineOnStdout(line), Future<int> f()) {
+  ZoneSpecification specification = new ZoneSpecification(
+      print: (_1, _2, _3, String line) => printLineOnStdout(line));
+  return runZoned(f, zoneSpecification: specification);
 }
 
-Future handleClient(SendPort clientOutgoing, ReceivePort clientIncoming) async {
-  CommandSender commandSender = new PortCommandSender(clientOutgoing);
-  printLineOnStdout(String line) {
+Future<Null> handleClient(SendPort clientOutgoing, ReceivePort clientIncoming) {
+  Task task = new Task(clientIncoming, new PortCommandSender(clientOutgoing));
+
+  return doInZone(task.printLineOnStdout, task.perform).then((int exitCode) {
+    task.endTask(exitCode);
+  });
+}
+
+class Task {
+  final ReceivePort clientIncoming;
+
+  final CommandSender commandSender;
+
+  final StreamController<Command> filteredIncomingCommands =
+      new StreamController<Command>();
+
+  final Completer<int> taskCompleter = new Completer<int>();
+
+  List<String> receivedArguments;
+
+  Task(this.clientIncoming, this.commandSender);
+
+  void printLineOnStdout(String line) {
     commandSender.sendStdout("$line\n");
   }
-  int exitCode = await doInZone(printLineOnStdout, () async {
-    StreamTransformer commandDecoder =
-        new StreamTransformer.fromHandlers(handleData: (message, sink) {
-          int code = message[0];
-          var data = message[1];
-          sink.add(new Command(DriverCommand.values[code], data));
-        });
 
-    StreamIterator<Command> commandIterator = new StreamIterator<Command>(
-        clientIncoming.transform(commandDecoder));
-    Command command;
-    if (await commandIterator.moveNext()) {
-      command = commandIterator.current;
+  Stream<Command> buildIncomingCommandStream() {
+    void handleData(List message, EventSink<Command> sink) {
+      int code = message[0];
+      var data = message[1];
+      sink.add(new Command(DriverCommand.values[code], data));
     }
-    if (command == null || command.code != DriverCommand.Arguments) {
-      throwInternalError("Expected arguments from clients but got: $command");
-    }
+    StreamTransformer<List, Command> commandDecoder =
+        new StreamTransformer<List, Command>.fromHandlers(
+            handleData: handleData);
+    return clientIncoming.transform(commandDecoder);
+  }
 
-    // TODO(ahe): Remove the command-line processing below once it is fully
-    // moved to the main isolate.
-    Sentence sentence = parseSentence(command.data, includesProgramName: true);
-    Map<String, dynamic> context = <String, dynamic>{
-      'fletchVm': '${sentence.programName}-vm',
-      'commandSender': commandSender,
-      'commandIterator': commandIterator,
-    };
+  void handleIncomingCommand(Command command) {
+    if (command.code == DriverCommand.PerformTask) {
+      performTask(command.data).then(taskCompleter.complete);
+    } else {
+      filteredIncomingCommands.add(command);
+    }
+  }
+
+  void handleError(error, StackTrace stackTrace) {
+    filteredIncomingCommands.addError(error, stackTrace);
+  }
+
+  void handleDone() {
+    filteredIncomingCommands.close();
+  }
+
+  Future<int> performTask(
+      Future<int> task(
+          CommandSender commandSender,
+          StreamIterator<Command> commandIterator)) async {
+    StreamIterator<Command> commandIterator =
+        new StreamIterator<Command>(filteredIncomingCommands.stream);
+
     try {
-      return await sentence.performVerb(context);
+      return await task(commandSender, commandIterator);
     } on InputError catch (error, stackTrace) {
+      // TODO(ahe): Send [error] instead.
       commandSender.sendStderr("${error.asDiagnostic().formatMessage()}\n");
       if (error.kind == DiagnosticKind.internalError) {
         commandSender.sendStderr("$stackTrace\n");
-        return DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+        return COMPILER_EXITCODE_CRASH;
       } else {
         return 1;
       }
     }
-  });
+  }
 
-  clientIncoming.close();
+  Future<int> perform() {
+    StreamSubscription<Command> subscription =
+        buildIncomingCommandStream().listen(null);
+    subscription
+        ..onData(handleIncomingCommand)
+        ..onError(handleError)
+        ..onDone(handleDone);
+    return taskCompleter.future;
+  }
 
-  commandSender.sendExitCode(exitCode);
+  void endTask(int exitCode) {
+    clientIncoming.close();
 
-  commandSender.sendClose();
+    commandSender.sendExitCode(exitCode);
+
+    commandSender.sendClose();
+  }
 }

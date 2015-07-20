@@ -41,7 +41,7 @@ import '../zone_helper.dart' show
     runGuarded;
 
 import 'exit_codes.dart' show
-    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+    COMPILER_EXITCODE_CRASH;
 
 import 'driver_commands.dart' show
     Command,
@@ -58,6 +58,7 @@ import '../verbs/verbs.dart' show
     Sentence,
     TargetKind,
     Verb,
+    VerbContext,
     commonVerbs,
     uncommonVerbs;
 
@@ -309,69 +310,13 @@ Future<Null> handleClient(IsolatePool pool, Socket controlSocket) async {
   List<String> arguments = await client.arguments;
   log.gotArguments(arguments);
 
-  Sentence sentence = client.parseArguments(arguments);
-
-  if (client.requiresWorker) {
-    handleClientInWorker(pool, client);
-  } else {
-    await handleVerbHere(sentence, client, pool);
-  }
+  await handleVerb(client.parseArguments(arguments), client, pool);
 }
 
-void handleClientInWorker(IsolatePool pool, ClientController client) {
-  // This method needs to do the following:
-  // * Spawn a new worker isolate (or reuse an existing) to perform the task.
-  //
-  // * Forward commands from C++ client to isolate.
-  //
-  // * Intercept signal command and potentially kill isolate (isolate needs to
-  //   tell if it is interuptible or needs to be killed, latter, for example,
-  //   if compiler is running).
-  //
-  // * Forward commands from isolate to C++.
-  //
-  // * Store completed isolates in a pool.
-
-  // This is asynchronous, so we can respond to other requests.
-  new Future(() async {
-    ClientLogger log = client.log;
-    // Spawn/reuse a worker isolate.
-    IsolateController worker =
-        new IsolateController(await pool.getIsolate(exitOnError: false));
-
-    // Forward commands between C++ client [client], and worker isolate
-    // [worker].  This is done with two asynchronous tasks that communicate
-    // with each other.  Also handles the signal command as mentioned above.
-    await worker.beginSession();
-    log.note("After beginSession.");
-    await worker.attachClient(client);
-    log.note("After attachClient.");
-
-    // Return the isolate to the pool *before* shutting down the client. This
-    // ensures that the next client will be able to reuse the isolate instead
-    // of spawning a new.
-    worker.endSession();
-    client.endSession();
-
-    try {
-      await client.done;
-    } catch (error, stackTrace) {
-      log.error(error, stackTrace);
-    }
-    log.done();
-  });
-}
-
-Future<Null> handleVerbHere(
+Future<Null> handleVerb(
     Sentence sentence,
     ClientController client,
     IsolatePool pool) async {
-  Map<String, dynamic> context = <String, dynamic>{
-    'client': client,
-    'pool': pool,
-  };
-
-  bool isRunningInWorker = false;
 
   UserSession discoverSession() {
     String sessionName = null;
@@ -410,38 +355,55 @@ Future<Null> handleVerbHere(
 
   Future<int> performVerb() {
     UserSession session = discoverSession();
-    if (session != null) {
-      assert(client.verb.requiresSession);
-      isRunningInWorker = true;
+    assert(session == null || client.verb.requiresSession);
 
-      // This is asynchronous, so we can respond to other requests.
-      new Future(() async {
-        ClientLogger log = client.log;
-        IsolateController worker = session.worker;
+    Future<Null> performTaskInWorker(
+        task,
+        {bool withTemporarySession: false}) async {
+      client.enqueCommandToWorker(new Command(DriverCommand.PerformTask, task));
 
-        // Forward commands between C++ client [client], and worker isolate
-        // [worker].  Also, Intercept signal command and potentially kill
-        // isolate (isolate needs to tell if it is interuptible or needs to be
-        // killed, latter, for example, if compiler is running).
-        await worker.attachClient(client);
-        // The verb (which was performed in the worker) is done.
-        log.note("After attachClient.");
+      ClientLogger log = client.log;
+      IsolateController worker;
 
+      if (withTemporarySession) {
+        worker =
+            new IsolateController(await pool.getIsolate(exitOnError: false));
+        await worker.beginSession();
+        log.note("After beginSession.");
+      } else {
+        worker = session.worker;
+      }
+
+      // Forward commands between the C++ client [client], and the worker
+      // isolate [worker].  Also, Intercept the signal command and potentially
+      // kill the isolate (the isolate needs to tell if it is interuptible or
+      // needs to be killed, an example of the latter is, if compiler is
+      // running).
+      await worker.attachClient(client);
+      // The verb (which was performed in the worker) is done.
+      log.note("After attachClient.");
+
+      if (withTemporarySession) {
+        // Return the isolate to the pool *before* shutting down the
+        // client. This ensures that the next client will be able to reuse the
+        // isolate instead of spawning a new.
+        worker.endSession();
+      } else {
         worker.detachClient();
-        client.endSession();
+      }
+      client.endSession();
 
-        try {
-          await client.done;
-        } catch (error, stackTrace) {
-          log.error(error, stackTrace);
-        }
-        log.done();
-      });
-
-      return new Future<int>.value(null);
-    } else {
-      return client.verb.perform(sentence, context);
+      try {
+        await client.done;
+      } catch (error, stackTrace) {
+        log.error(error, stackTrace);
+      }
+      log.done();
     }
+
+    VerbContext context =
+        new VerbContext(client, pool, session, performTaskInWorker);
+    return client.verb.perform(sentence, context);
   }
 
   int exitCode = await runGuarded(
@@ -454,10 +416,10 @@ Future<Null> handleVerbHere(
         if (stackTrace != null) {
           client.printLineOnStderr('$stackTrace');
         }
-        return DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+        return COMPILER_EXITCODE_CRASH;
       });
 
-  if (!isRunningInWorker) {
+  if (exitCode != null) {
     client.exit(exitCode);
   }
 }
@@ -512,7 +474,14 @@ class ClientController {
     if (command.code == DriverCommand.Arguments) {
       // This intentionally throws if arguments are sent more than once.
       argumentsCompleter.complete(command.data);
+    } else {
+      enqueCommandToWorker(command);
     }
+  }
+
+  void enqueCommandToWorker(Command command) {
+    // TODO(ahe): It is a bit weird that this method is on the client. Ideally,
+    // this would be a method on IsolateController.
     controller.add(command);
   }
 
@@ -582,7 +551,7 @@ class ClientController {
     printLineOnStderr(error.asDiagnostic().formatMessage());
     if (error.kind == DiagnosticKind.internalError) {
       printLineOnStderr('$stackTrace');
-      return DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+      return COMPILER_EXITCODE_CRASH;
     } else {
       return 1;
     }
@@ -756,7 +725,7 @@ class IsolatePool {
         if (stackTrace != null) {
           io.stderr.writeln(stackTrace);
         }
-        exit(DART_VM_EXITCODE_UNCAUGHT_EXCEPTION);
+        exit(COMPILER_EXITCODE_CRASH);
       } else {
         managedIsolate.wasKilled = true;
         errorController.add(errorList);

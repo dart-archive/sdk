@@ -27,6 +27,7 @@ class DriverConnection {
     kEventLoopStarted,  // Not used.
     kClosePort,  // Not used.
     kSendPort,  // Not used.
+    kPerformTask,  // Not used.
 
     kDriverConnectionError,  // Error in connection.
     kDriverConnectionClosed,  // Connection closed.
