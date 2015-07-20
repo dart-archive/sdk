@@ -23,6 +23,10 @@ import '../../fletch_system.dart' show
 import '../../compiler.dart' show
     FletchCompiler;
 
+import '../diagnostic.dart' show
+    DiagnosticKind,
+    throwFatalError;
+
 const Verb compileVerb =
     const Verb(compile, documentation, requiresSession: true);
 
@@ -33,11 +37,11 @@ const String documentation = """
 
 Future<int> compile(Sentence sentence, _) async {
   if (sentence.target == null) {
-    throw "No file name provided.";
+    throwFatalError(DiagnosticKind.noFileTarget);
   }
   if (sentence.target.kind != TargetKind.FILE) {
-    // TODO(ahe): Be more explicit about what is wrong with the target.
-    throw "Can only compile files, not ${sentence.target}.";
+    throwFatalError(
+        DiagnosticKind.compileRequiresFileTarget, target: sentence.target);
   }
   NamedTarget target = sentence.target;
   String script = target.name;

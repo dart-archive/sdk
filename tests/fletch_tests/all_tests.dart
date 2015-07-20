@@ -21,6 +21,8 @@ import 'zone_helper_tests.dart' as zone_helper;
 
 import 'sentence_tests.dart' as sentence_tests;
 
+import 'message_tests.dart' as message_tests;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -54,4 +56,6 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'zone_helper/testAlwaysFails': zone_helper.testAlwaysFails,
 
   'sentence_tests': sentence_tests.main,
+
+  'message_tests': message_tests.main,
 };

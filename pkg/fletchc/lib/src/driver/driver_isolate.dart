@@ -32,6 +32,14 @@ import 'sentence_parser.dart' show
     Sentence,
     parseSentence;
 
+import '../diagnostic.dart' show
+    DiagnosticKind,
+    InputError,
+    throwInternalError;
+
+import 'exit_codes.dart' show
+    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+
 // TODO(ahe): Send DriverCommands directly when they are canonicalized
 // correctly, see issue 23244.
 class PortCommandSender extends CommandSender {
@@ -101,7 +109,7 @@ Future handleClient(SendPort clientOutgoing, ReceivePort clientIncoming) async {
       command = commandIterator.current;
     }
     if (command == null || command.code != DriverCommand.Arguments) {
-      throw "Expected arguments from clients but got: $command";
+      throwInternalError("Expected arguments from clients but got: $command");
     }
 
     // TODO(ahe): Remove the command-line processing below once it is fully
@@ -112,7 +120,17 @@ Future handleClient(SendPort clientOutgoing, ReceivePort clientIncoming) async {
       'commandSender': commandSender,
       'commandIterator': commandIterator,
     };
-    return await sentence.performVerb(context);
+    try {
+      return await sentence.performVerb(context);
+    } on InputError catch (error, stackTrace) {
+      commandSender.sendStderr("${error.asDiagnostic().formatMessage()}\n");
+      if (error.kind == DiagnosticKind.internalError) {
+        commandSender.sendStderr("$stackTrace\n");
+        return DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+      } else {
+        return 1;
+      }
+    }
   });
 
   clientIncoming.close();

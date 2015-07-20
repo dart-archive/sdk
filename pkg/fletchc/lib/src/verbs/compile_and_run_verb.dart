@@ -43,6 +43,9 @@ import 'verbs.dart' show
 import '../driver/options.dart' show
     Options;
 
+import '../diagnostic.dart' show
+    throwInternalError;
+
 const Verb compileAndRunVerb =
     const Verb(compileAndRun, documentation, requiresWorker: true);
 
@@ -64,7 +67,9 @@ Future<int> compileAndRun(
 
   Options options = Options.parse(arguments);
 
-  if (options.script == null) throw "No script supplied";
+  if (options.script == null) {
+    throwInternalError("No script supplied");
+  }
 
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
@@ -158,8 +163,9 @@ Future<int> compileAndRun(
     // response.
     var command = await session.readNextCommand(force: false);
     if (command != null && command is! commands_lib.ProcessTerminated) {
-      throw new Exception('Expected program to finish complete with '
-                          '[ProcessTerminated] but got [$command]');
+      throwInternalError(
+          "Expected program to finish complete with 'ProcessTerminated' "
+          "but got '$command'");
     }
   } else {
     await session.runCommand(

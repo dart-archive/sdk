@@ -69,6 +69,12 @@ import 'session_manager.dart' show
     UserSession,
     lookupSession;
 
+import '../diagnostic.dart' show
+    DiagnosticKind,
+    InputError,
+    throwInternalError,
+    throwFatalError;
+
 const Endianness commandEndianness = Endianness.LITTLE_ENDIAN;
 
 const headerSize = 5;
@@ -208,12 +214,11 @@ class ByteCommandSender extends CommandSender {
   }
 
   void sendClose() {
-    throw new UnsupportedError(
-        "Client (C++) doesn't support DriverCommand.Close.");
+    throwInternalError("Client (C++) doesn't support DriverCommand.Close.");
   }
 
   void sendEventLoopStarted() {
-    throw new UnsupportedError(
+    throwInternalError(
         "Client (C++) doesn't support DriverCommand.EventLoopStarted.");
   }
 }
@@ -383,22 +388,21 @@ Future<Null> handleVerbHere(
     }
     if (sentence.verb.verb.requiresSession) {
       if (sessionName == null) {
-        throw "Can't perform '${sentence.verb.name}' without a session. "
-            "Try adding 'in session SESSION_NAME'";
+        throwFatalError(
+            DiagnosticKind.verbRequiresSession, verb: sentence.verb);
       }
     } else {
       if (sessionName != null) {
-        throw "Can't perform '${sentence.verb.name}' in a session. "
-            "Try removing 'in session $sessionName'";
+        throwFatalError(
+            DiagnosticKind.verbRequiresNoSession,
+            verb: sentence.verb, sessionName: sessionName);
       }
     }
     UserSession session;
     if (sessionName != null) {
       session = lookupSession(sessionName);
       if (session == null) {
-        // TODO(lukechurch): Ensure UX repair text is good.
-        throw "No session named: '$sessionName'. "
-            "Try running 'fletch create session $sessionName'";
+        throwFatalError(DiagnosticKind.noSuchSession, sessionName: sessionName);
       }
     }
     return session;
@@ -444,6 +448,7 @@ Future<Null> handleVerbHere(
       performVerb,
       printLineOnStdout: client.printLineOnStdout,
       handleLateError: client.log.error)
+      .catchError(client.reportErrorToClient, test: (e) => e is InputError)
       .catchError((error, StackTrace stackTrace) {
         client.printLineOnStderr('$error');
         if (stackTrace != null) {
@@ -539,7 +544,7 @@ class ClientController {
         break;
 
       default:
-        throw "Unexpected command: $command";
+        throwInternalError("Unexpected command: $command");
     }
   }
 
@@ -571,6 +576,16 @@ class ClientController {
     this.verb = sentence.verb.verb;
     this.fletchVm = fletchVm;
     return sentence;
+  }
+
+  int reportErrorToClient(InputError error, StackTrace stackTrace) {
+    printLineOnStderr(error.asDiagnostic().formatMessage());
+    if (error.kind == DiagnosticKind.internalError) {
+      printLineOnStderr('$stackTrace');
+      return DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+    } else {
+      return 1;
+    }
   }
 }
 
@@ -606,7 +621,10 @@ class IsolateController {
         (message) => new Command(DriverCommand.values[message[0]], message[1]));
     workerCommands = new StreamIterator<Command>(workerCommandStream);
     if (!await workerCommands.moveNext()) {
-      throw "Didn't get a sendPort from worker isolate.";
+      // The worker must have been killed, or died in some other way.
+      // TODO(ahe): Add this assertion: assert(isolate.wasKilled);
+      endSession();
+      return;
     }
     Command command = workerCommands.current;
     assert(command.code == DriverCommand.SendPort);
@@ -660,6 +678,7 @@ class IsolateController {
   }
 
   void endSession() {
+    workerReceivePort.close();
     isolate.endSession();
   }
 
@@ -674,9 +693,13 @@ class ManagedIsolate {
   final Isolate isolate;
   final SendPort port;
   final Stream errors;
+  final ReceivePort exitPort;
+  final ReceivePort errorPort;
   bool wasKilled = false;
 
-  ManagedIsolate(this.pool, this.isolate, this.port, this.errors);
+  ManagedIsolate(
+      this.pool, this.isolate, this.port, this.errors,
+      this.exitPort, this.errorPort);
 
   ReceivePort beginSession() {
     ReceivePort receivePort = new ReceivePort();
@@ -692,10 +715,11 @@ class ManagedIsolate {
 
   void kill() {
     wasKilled = true;
-    isolate.kill();
-    // TODO(ahe): Should be:
-    // isolate.kill(priority: Isolate.IMMEDIATE);
-    // This is due to this (unannounced) breaking change: 1074223002.
+    isolate.kill(priority: Isolate.IMMEDIATE);
+    isolate.removeOnExitListener(exitPort.sendPort);
+    isolate.removeErrorListener(errorPort.sendPort);
+    exitPort.close();
+    errorPort.close();
   }
 }
 
@@ -750,12 +774,22 @@ class IsolatePool {
     isolate.resume(isolate.pauseCapability);
     StreamIterator iterator = new StreamIterator(receivePort);
     bool hasElement = await iterator.moveNext();
-    if (!hasElement) throw new StateError("No port received from isolate.");
+    if (!hasElement) {
+      throwInternalError("No port received from isolate");
+    }
     SendPort port = iterator.current;
     receivePort.close();
     managedIsolate =
-        new ManagedIsolate(this, isolate, port, errorController.stream);
+        new ManagedIsolate(
+            this, isolate, port, errorController.stream, exitPort, errorPort);
+
     return managedIsolate;
+  }
+
+  void shutdown() {
+    while (!idleIsolates.isEmpty) {
+      idleIsolates.removeFirst().kill();
+    }
   }
 }
 
@@ -776,7 +810,7 @@ class ClientLogger {
 
   final List<String> notes = <String>[];
 
-  List<String> arguments;
+  List<String> arguments = <String>[];
 
   ClientLogger(this.id);
 

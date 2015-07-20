@@ -11,6 +11,9 @@ import 'verbs.dart' show
     Sentence,
     Verb;
 
+import '../diagnostic.dart' show
+    throwInternalError;
+
 const Verb debugVerb = const Verb(debug, documentation);
 
 const String documentation = """
@@ -20,5 +23,5 @@ const String documentation = """
 """;
 
 Future debug(Sentence sentence, _) async {
-  throw "Debug action not yet implemented.";
+  throwInternalError("Debug action not yet implemented.");
 }
