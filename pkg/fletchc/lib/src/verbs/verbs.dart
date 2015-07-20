@@ -16,6 +16,17 @@ export '../driver/sentence_parser.dart' show
     Sentence,
     TargetKind;
 
+import '../driver/driver_main.dart' show
+    IsolatePool,
+    ClientController;
+
+import '../driver/driver_commands.dart' show
+    Command,
+    CommandSender;
+
+import '../driver/session_manager.dart' show
+    UserSession;
+
 import 'debug_verb.dart' show
     debugVerb;
 
@@ -37,16 +48,8 @@ import 'compile_verb.dart' show
 import 'attach_verb.dart' show
     attachVerb;
 
-import '../driver/driver_main.dart' show
-    IsolatePool,
-    ClientController;
-
-import '../driver/driver_commands.dart' show
-    Command,
-    CommandSender;
-
-import '../driver/session_manager.dart' show
-    UserSession;
+import 'run_verb.dart' show
+    runVerb;
 
 typedef Future<int> DoVerb(Sentence sentence, VerbContext context);
 
@@ -115,4 +118,5 @@ const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "create": createVerb,
   "compile": compileVerb,
   "attach": attachVerb,
+  "x-run": runVerb,
 };

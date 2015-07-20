@@ -20,6 +20,8 @@ enum DiagnosticKind {
   attachRequiresSocketTarget,
   expectedAPortNumber,
   socketConnectError,
+  attachToVmBeforeRun,
+  compileBeforeRun,
   noFile, // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
 }
 
@@ -87,6 +89,13 @@ String getMessage(DiagnosticKind kind) {
       return
           "Unable to establish connection to "
           "${DiagnosticParameter.address}: ${DiagnosticParameter.message}";
+
+    case DiagnosticKind.attachToVmBeforeRun:
+      return "Unable to run program without being attached to a VM. "
+          "Try running 'fletch attach'";
+
+    case DiagnosticKind.compileBeforeRun:
+      return "No program to run. Try running 'fletch compile'";
 
     case DiagnosticKind.noFile:
       // TODO(ahe): Remove this message when compile_and_run_verb.dart is

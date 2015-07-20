@@ -625,6 +625,10 @@ class IsolateController {
   }
 
   Future<Null> detachClient() async {
+    if (isolate.wasKilled) {
+      // TODO(ahe): The session is dead. Tell the user about this.
+      return null;
+    }
     // TODO(ahe): Perform the reverse of attachClient here.
     await beginSession();
   }

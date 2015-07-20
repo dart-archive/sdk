@@ -14,6 +14,8 @@ const String invalidIP = '0.42.42.42';
 
 const String invalidAddress = '$invalidIP:61366';
 
+const String exampleAddress = 'example.com:54321';
+
 List<Example> getExamples(DiagnosticKind kind) {
   switch (kind) {
     case DiagnosticKind.internalError:
@@ -74,6 +76,18 @@ List<Example> getExamples(DiagnosticKind kind) {
             <String>['attach', 'in', 'session', 'foo',
                      'tcp_socket', invalidAddress])];
 
+    case DiagnosticKind.attachToVmBeforeRun:
+      return <Example>[new CommandLineExample(
+            <String>['create', 'session', 'foo'],
+            <String>['x-run', 'in', 'session', 'foo'])];
+
+    case DiagnosticKind.compileBeforeRun:
+      return <Example>[new CommandLineExample(
+            <String>['create', 'session', 'foo'],
+            <String>['attach', 'in', 'session', 'foo',
+                     'tcp_socket', exampleAddress],
+            <String>['x-run', 'in', 'session', 'foo'])];
+
     case DiagnosticKind.noFile:
       // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.
       return <Example>[new CommandLineExample(<String>['compile-and-run'])];
@@ -89,5 +103,7 @@ class CommandLineExample extends Example {
 
   final List<String> line2;
 
-  const CommandLineExample(this.line1, [this.line2]);
+  final List<String> line3;
+
+  const CommandLineExample(this.line1, [this.line2, this.line3]);
 }

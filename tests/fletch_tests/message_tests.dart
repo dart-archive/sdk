@@ -55,6 +55,10 @@ Future<Null> main() async {
     List<Example> examples = getExamples(kind);
     Expect.isNotNull(examples);
     Expect.isFalse(examples.isEmpty);
+    if (kind == DiagnosticKind.compileBeforeRun) {
+      // TODO(ahe): Need to mock up a VM socket to test this.
+      continue;
+    }
     int exampleCount = 1;
     for (Example example in examples) {
       print("\n\nTesting $kind ${exampleCount++}");
@@ -78,16 +82,18 @@ Future<Null> checkExample(DiagnosticKind kind, Example example) async {
 Future<Null> checkCommandLineExample(
     DiagnosticKind kind,
     CommandLineExample example) async {
-  List<String> setup;
-  List<String> lastLine;
-  if (example.line2 == null) {
-    setup = null;
-    lastLine = example.line1;
-  } else {
-    setup = example.line1;
-    lastLine = example.line2;
+  List<List<String>> lines = <List<String>>[];
+  if (example.line1 != null) {
+    lines.add(example.line1);
   }
-  if (setup != null) {
+  if (example.line2 != null) {
+    lines.add(example.line2);
+  }
+  if (example.line3 != null) {
+    lines.add(example.line3);
+  }
+  List<String> lastLine = lines.removeLast();
+  for (List<String> setup in lines) {
     MockClientController mock = await mockCommandLine(setup);
     await mock.done;
     Expect.isNull(mock.recordedError);
@@ -107,6 +113,9 @@ Future<Null> checkCommandLineExample(
     Expect.stringEquals(
         message,
         new RegExp(expectedMessage).stringMatch(message));
+  } else if (kind == DiagnosticKind.attachToVmBeforeRun) {
+    await mock.done;
+    Expect.stringEquals(getMessage(kind), mock.stderrMessages.single);
   } else {
     Expect.isNotNull(mock.recordedError);
     Expect.equals(kind, mock.recordedError.kind);
