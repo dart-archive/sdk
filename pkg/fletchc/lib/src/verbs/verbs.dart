@@ -5,7 +5,8 @@
 library fletchc.verbs.verbs;
 
 import 'dart:async' show
-    Future;
+    Future,
+    StreamIterator;
 
 import '../driver/sentence_parser.dart' show
     Sentence;
@@ -33,9 +34,16 @@ import 'create_verb.dart' show
 import 'compile_verb.dart' show
     compileVerb;
 
+import 'attach_verb.dart' show
+    attachVerb;
+
 import '../driver/driver_main.dart' show
     IsolatePool,
     ClientController;
+
+import '../driver/driver_commands.dart' show
+    Command,
+    CommandSender;
 
 import '../driver/session_manager.dart' show
     UserSession;
@@ -64,9 +72,26 @@ abstract class VerbContext {
 
   VerbContext(this.client, this.pool, this.session);
 
-  Future<Null> performTaskInWorker(task);
+  Future<Null> performTaskInWorker(SharedTask task);
 
   VerbContext copyWithSession(UserSession session);
+}
+
+/// Represents a task that is shared between the main isolate and a worker
+/// isolate. Since instances of this class are copied from main isolate to a
+/// worker isolate, they should be kept simple:
+///
+/// *   Pay attention to the transitive closure of its fields. The closure
+///     should be kept as small as possible to avoid too much copying.
+///
+/// *   Avoid enums and other compile-time constants in the transitive closure,
+///     as they aren't canonicalized by the Dart VM, see issue 23244.
+abstract class SharedTask {
+  const SharedTask();
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<Command> commandIterator);
 }
 
 /// Common verbs are displayed in the default help screen.
@@ -89,4 +114,5 @@ const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "shutdown": shutdownVerb,
   "create": createVerb,
   "compile": compileVerb,
+  "attach": attachVerb,
 };

@@ -11,6 +11,7 @@ import 'dart:async' show
 import 'verbs.dart' show
     PrepositionKind,
     Sentence,
+    SharedTask,
     TargetKind,
     Verb,
     VerbContext;
@@ -62,8 +63,8 @@ Future<int> compile(Sentence sentence, VerbContext context) {
   return new Future<int>.value(null);
 }
 
-class CompileTask {
-  // Keep this class simple, it is transported across an isolate port.
+class CompileTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
 
   final String script;
 

@@ -10,6 +10,7 @@ import 'dart:async' show
 
 import 'verbs.dart' show
     Sentence,
+    SharedTask,
     TargetKind,
     Verb,
     VerbContext;
@@ -87,8 +88,8 @@ Future<int> create(Sentence sentence, VerbContext context) async {
   return 0;
 }
 
-class CreateSessionTask {
-  // Keep this class simple, it is transported across an isolate port.
+class CreateSessionTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
 
   final String name;
 

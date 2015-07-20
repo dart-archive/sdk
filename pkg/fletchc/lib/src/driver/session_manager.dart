@@ -7,6 +7,9 @@ library fletchc.driver.session_manager;
 import 'dart:async' show
     Future;
 
+import 'dart:io' show
+    Socket;
+
 import 'driver_main.dart' show
     IsolateController;
 
@@ -55,6 +58,8 @@ class SessionState {
   final String name;
 
   FletchDelta compilationResult;
+
+  Socket vmSocket;
 
   SessionState(this.name);
 

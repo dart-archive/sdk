@@ -41,6 +41,12 @@ class DiagnosticParameter {
 
   static const DiagnosticParameter target = const DiagnosticParameter(
       DiagnosticParameterType.target, 'target');
+
+  static const DiagnosticParameter userInput = const DiagnosticParameter(
+      DiagnosticParameterType.string, 'userInput');
+
+  static const DiagnosticParameter address = const DiagnosticParameter(
+      DiagnosticParameterType.string, 'address');
 }
 
 enum DiagnosticParameterType {
@@ -129,7 +135,9 @@ void throwFatalError(
     {String message,
      ResolvedVerb verb,
      String sessionName,
-     Target target}) {
+     Target target,
+     String address,
+     String userInput}) {
   Map<DiagnosticParameter, dynamic> arguments =
       <DiagnosticParameter, dynamic>{};
   if (message != null) {
@@ -143,6 +151,12 @@ void throwFatalError(
   }
   if (target != null) {
     arguments[DiagnosticParameter.target] = target;
+  }
+  if (address != null) {
+    arguments[DiagnosticParameter.address] = address;
+  }
+  if (userInput != null) {
+    arguments[DiagnosticParameter.userInput] = address;
   }
   throw new InputError(kind, arguments);
 }

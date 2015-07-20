@@ -16,6 +16,10 @@ enum DiagnosticKind {
   sessionAlreadyExists,
   noFileTarget,
   compileRequiresFileTarget,
+  noTcpSocketTarget,
+  attachRequiresSocketTarget,
+  expectedAPortNumber,
+  socketConnectError,
   noFile, // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
 }
 
@@ -66,6 +70,23 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.compileRequiresFileTarget:
       // TODO(ahe): Be more explicit about what is wrong with the target.
       return "Can only compile files, not '${DiagnosticParameter.target}";
+
+    case DiagnosticKind.noTcpSocketTarget:
+      return "No TCP socket provided. "
+          "Try adding 'tcp_socket HOST:PORT' to the command line";
+
+    case DiagnosticKind.attachRequiresSocketTarget:
+      // TODO(ahe): Be more explicit about what is wrong with the target.
+      return "Can only attach to a socket, not '${DiagnosticParameter.target}";
+
+    case DiagnosticKind.expectedAPortNumber:
+      return
+          "Expected a port number, but got '${DiagnosticParameter.userInput}'";
+
+    case DiagnosticKind.socketConnectError:
+      return
+          "Unable to establish connection to "
+          "${DiagnosticParameter.address}: ${DiagnosticParameter.message}";
 
     case DiagnosticKind.noFile:
       // TODO(ahe): Remove this message when compile_and_run_verb.dart is

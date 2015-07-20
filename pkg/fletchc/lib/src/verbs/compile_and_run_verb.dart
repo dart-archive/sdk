@@ -24,7 +24,8 @@ import '../../compiler.dart' show
 
 import '../../commands.dart' as commands_lib;
 
-import '../../fletch_system.dart';
+import '../../fletch_system.dart' show
+    FletchDelta;
 
 import '../driver/driver_commands.dart' show
     Command,
@@ -38,6 +39,7 @@ import '../../session.dart' show
 
 import 'verbs.dart' show
     Sentence,
+    SharedTask,
     Verb,
     VerbContext;
 
@@ -85,8 +87,8 @@ Future<int> compileAndRun(Sentence sentence, VerbContext context) async {
   return null;
 }
 
-class CompileAndRunTask {
-  // Keep this class simple, it is transported across an isolate port.
+class CompileAndRunTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
 
   final String fletchVm;
 

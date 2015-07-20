@@ -57,6 +57,7 @@ import 'driver_isolate.dart' show
 import '../verbs/verbs.dart' show
     PrepositionKind,
     Sentence,
+    SharedTask,
     TargetKind,
     Verb,
     VerbContext,
@@ -391,7 +392,7 @@ class DriverVerbContext extends VerbContext {
     return new DriverVerbContext(client, pool, session);
   }
 
-  Future<Null> performTaskInWorker(task) {
+  Future<Null> performTaskInWorker(SharedTask task) {
     return session.worker.performTask(task, client);
   }
 }
@@ -623,13 +624,13 @@ class IsolateController {
     isolate.endSession();
   }
 
-  void detachClient() {
+  Future<Null> detachClient() async {
     // TODO(ahe): Perform the reverse of attachClient here.
-    beginSession();
+    await beginSession();
   }
 
   Future<Null> performTask(
-      task,
+      SharedTask task,
       ClientController client,
       {bool endSession: false /* TODO(ahe): Remove this parameter. */}) async {
     ClientLogger log = client.log;
@@ -650,7 +651,7 @@ class IsolateController {
       // of spawning a new.
       this.endSession();
     } else {
-      detachClient();
+      await detachClient();
     }
     client.endSession();
 

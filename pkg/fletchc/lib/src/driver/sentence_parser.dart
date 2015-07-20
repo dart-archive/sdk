@@ -132,6 +132,9 @@ class SentenceParser {
       case "file":
         return makeNamedTarget(TargetKind.FILE);
 
+      case "tcp_socket":
+        return makeNamedTarget(TargetKind.TCP_SOCKET);
+
       case "sessions":
         return makeTarget(TargetKind.SESSIONS);
 
@@ -168,6 +171,8 @@ class SentenceParser {
   }
 
   String parseName() {
+    // TODO(ahe): Rename this method? It doesn't necessarily parse a name, just
+    // whatever is the next word.
     String name = tokens.current;
     tokens.consume();
     return name;
@@ -245,6 +250,7 @@ enum TargetKind {
   CLASS,
   METHOD,
   FILE,
+  TCP_SOCKET,
   SESSIONS,
   CLASSES,
   METHODS,

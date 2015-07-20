@@ -91,14 +91,16 @@ Future<int> doInZone(void printLineOnStdout(line), Future<int> f()) {
 }
 
 Future<Null> handleClient(SendPort clientOutgoing, ReceivePort clientIncoming) {
-  Task task = new Task(clientIncoming, new PortCommandSender(clientOutgoing));
+  WorkerSideTask task =
+      new WorkerSideTask(clientIncoming, new PortCommandSender(clientOutgoing));
 
   return doInZone(task.printLineOnStdout, task.perform).then((int exitCode) {
     task.endTask(exitCode);
   });
 }
 
-class Task {
+/// Represents a task running in this worker isolate.
+class WorkerSideTask {
   final ReceivePort clientIncoming;
 
   final CommandSender commandSender;
@@ -110,7 +112,7 @@ class Task {
 
   List<String> receivedArguments;
 
-  Task(this.clientIncoming, this.commandSender);
+  WorkerSideTask(this.clientIncoming, this.commandSender);
 
   void printLineOnStdout(String line) {
     commandSender.sendStdout("$line\n");

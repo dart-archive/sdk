@@ -22,6 +22,7 @@ import 'package:fletchc/src/messages.dart';
 import 'package:fletchc/src/message_examples.dart';
 
 import 'package:fletchc/src/driver/sentence_parser.dart' show
+    NamedTarget,
     Sentence,
     parseSentence;
 
@@ -51,16 +52,17 @@ Future<Null> main() async {
     Expect.isNotNull(getMessage(kind));
     if (kind == DiagnosticKind.internalError) continue;
 
-    print("Testing $kind");
     List<Example> examples = getExamples(kind);
     Expect.isNotNull(examples);
     Expect.isFalse(examples.isEmpty);
+    int exampleCount = 1;
     for (Example example in examples) {
+      print("\n\nTesting $kind ${exampleCount++}");
       Expect.isNotNull(example);
       await checkExample(kind, example);
+      endAllSessions();
+      pool.shutdown();
     }
-    endAllSessions();
-    pool.shutdown();
     print("Done testing $kind");
   }
 }
@@ -87,23 +89,39 @@ Future<Null> checkCommandLineExample(
   }
   if (setup != null) {
     MockClientController mock = await mockCommandLine(setup);
+    await mock.done;
     Expect.isNull(mock.recordedError);
     Expect.equals(0, mock.recordedExitCode);
   }
   MockClientController mock = await mockCommandLine(lastLine);
-  Expect.isNotNull(mock.recordedError);
-  Expect.equals(kind, mock.recordedError.kind);
+  if (kind == DiagnosticKind.socketConnectError) {
+    await mock.done;
+    Sentence sentence = parseSentence(lastLine);
+    NamedTarget target = sentence.target;
+    String message = mock.stderrMessages.single;
+    String expectedMessage = new Diagnostic(
+        kind, getMessage(kind),
+        {DiagnosticParameter.address: target.name,
+         DiagnosticParameter.message: '.*'})
+        .formatMessage();
+    Expect.stringEquals(
+        message,
+        new RegExp(expectedMessage).stringMatch(message));
+  } else {
+    Expect.isNotNull(mock.recordedError);
+    Expect.equals(kind, mock.recordedError.kind);
+  }
   Expect.equals(1, mock.recordedExitCode);
 }
 
 Future<MockClientController> mockCommandLine(List<String> arguments) async {
+  print("Command line: ${arguments.join(' ')}");
   Sentence sentence = parseSentence(arguments, includesProgramName: false);
 
   MockClientController client = new MockClientController(
       sentence.verb.verb, arguments);
 
   await handleVerb(sentence, client, pool);
-
 
   return client;
 }
@@ -147,11 +165,11 @@ class MockClientController implements ClientController {
         break;
 
       case DriverCommand.Stderr:
-        printLineOnStderr(UTF8.decode(command.data));
+        printLineOnStderr(mockStripNewline(UTF8.decode(command.data)));
         break;
 
       case DriverCommand.Stdout:
-        printLineOnStdout(UTF8.decode(command.data));
+        printLineOnStdout(mockStripNewline(UTF8.decode(command.data)));
         break;
 
       default:
@@ -159,25 +177,33 @@ class MockClientController implements ClientController {
     }
   }
 
+  mockStripNewline(String line) {
+    if (line.endsWith("\n")) {
+      return line.substring(0, line.length - 1);
+    } else {
+      return line;
+    }
+  }
+
   endSession() {
     completer.complete(null);
   }
 
-  printLineOnStderr(line) {
-    stderrMessages.add(line);
+  mockPrintLine(String line) {
     Zone zone = Zone.current.parent;
     if (zone == null) {
       zone = Zone.current;
     }
-    zone.print('stderr: $line');
+    zone.print(line);
+  }
+
+  printLineOnStderr(line) {
+    stderrMessages.add(line);
+    mockPrintLine('stderr: $line');
   }
 
   printLineOnStdout(line) {
-    Zone zone = Zone.current.parent;
-    if (zone == null) {
-      zone = Zone.current;
-    }
-    zone.print('stdout: $line');
+    mockPrintLine('stdout: $line');
   }
 
   exit(int exitCode) {

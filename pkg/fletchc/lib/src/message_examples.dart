@@ -7,6 +7,13 @@ library fletchc.message_examples;
 import 'messages.dart' show
     DiagnosticKind;
 
+/// According to
+/// http://stackoverflow.com/questions/10456044/what-is-a-good-invalid-ip-address-to-use-for-unit-tests,
+/// any IP address starting with 0 is unroutable.
+const String invalidIP = '0.42.42.42';
+
+const String invalidAddress = '$invalidIP:61366';
+
 List<Example> getExamples(DiagnosticKind kind) {
   switch (kind) {
     case DiagnosticKind.internalError:
@@ -38,6 +45,34 @@ List<Example> getExamples(DiagnosticKind kind) {
       return <Example>[new CommandLineExample(
           <String>['create', 'session', 'foo'],
           <String>['compile', 'session', 'foo', 'in', 'session', 'foo'])];
+
+    case DiagnosticKind.noTcpSocketTarget:
+      return <Example>[new CommandLineExample(
+          <String>['create', 'session', 'foo'],
+          <String>['attach', 'in', 'session', 'foo'])];
+
+    case DiagnosticKind.attachRequiresSocketTarget:
+      return <Example>[new CommandLineExample(
+          <String>['create', 'session', 'foo'],
+          <String>['attach', 'in', 'session', 'foo', 'file', 'fisk'])];
+
+    case DiagnosticKind.expectedAPortNumber:
+      return <Example>[
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['attach', 'in', 'session', 'foo',
+                       'tcp_socket', ':fisk']),
+
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['attach', 'in', 'session', 'foo',
+                       'tcp_socket', '$invalidIP:fisk'])];
+
+    case DiagnosticKind.socketConnectError:
+      return <Example>[new CommandLineExample(
+            <String>['create', 'session', 'foo'],
+            <String>['attach', 'in', 'session', 'foo',
+                     'tcp_socket', invalidAddress])];
 
     case DiagnosticKind.noFile:
       // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.
