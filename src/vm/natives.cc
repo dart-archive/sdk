@@ -1053,12 +1053,6 @@ char* AsForeignString(String* s) {
   return s->ToCString();
 }
 
-word AsForeignWord(Object* object) {
-  return object->IsSmi()
-      ? Smi::cast(object)->value()
-      : LargeInteger::cast(object)->value();
-}
-
 NATIVE(StringLength) {
   String* x = String::cast(arguments[0]);
   return Smi::FromWord(x->length());

@@ -111,6 +111,9 @@ class Heap {
   void AddWeakPointer(HeapObject* object, WeakPointerCallback callback);
   void RemoveWeakPointer(HeapObject* object);
   void ProcessWeakPointers();
+  void VisitWeakObjectPointers(PointerVisitor* visitor) {
+    WeakPointer::Visit(weak_pointers_, visitor);
+  }
 
  private:
   friend class ExitReference;
@@ -151,6 +154,16 @@ class ScavengeVisitor: public PointerVisitor {
   Space* from_;
   Space* to_;
 };
+
+// Extract a raw void* pointer from [object].
+//
+// [object] must be either a Smi or a LargeInteger.
+inline word AsForeignWord(Object* object) {
+  return object->IsSmi()
+      ? Smi::cast(object)->value()
+      : LargeInteger::cast(object)->value();
+}
+
 
 }  // namespace fletch
 

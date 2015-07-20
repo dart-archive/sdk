@@ -18,7 +18,6 @@ class Process;
 
 // TODO(kasperl): Move this elsewhere.
 char* AsForeignString(String* value);
-word AsForeignWord(Object* value);
 
 typedef Object* (*NativeFunction)(Process*, Object**);
 

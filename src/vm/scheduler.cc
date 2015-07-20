@@ -627,7 +627,7 @@ Process* Scheduler::InterpretProcess(Process* process,
 
 void Scheduler::ThreadEnter(ThreadState* thread_state) {
   // TODO(ajohnsen): This only works because we never return threads, unless
-  // the scheduler in done.
+  // the scheduler is done.
   int thread_id = thread_count_++;
   ASSERT(thread_id < max_threads_);
   thread_state->set_thread_id(thread_id);

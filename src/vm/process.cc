@@ -156,6 +156,7 @@ Process::Process(Program* program)
       last_message_(NULL),
       current_message_(NULL),
       program_gc_state_(kUnknown),
+      program_gc_next_(NULL),
       errno_cache_(0),
       debug_info_(NULL),
       block_count_(0),
@@ -403,28 +404,17 @@ void Process::CollectGarbage() {
   CollectImmutableGarbage();
 }
 
-static void LinkProcessIfUnknownToProgramGC(Process* process, Process** list) {
-  if (process != NULL && process->program_gc_state() == Process::kUnknown) {
-    ASSERT(process->next() == NULL)
-    process->set_program_gc_state(Process::kFound);
-    process->set_next(*list);
-    *list = process;
-  }
-}
-
 // Helper class for copying HeapObjects and chaining stacks for a
 // process..
 class ScavengeAndChainStacksVisitor: public PointerVisitor {
  public:
   ScavengeAndChainStacksVisitor(Process* process,
                                 Space* from,
-                                Space* to,
-                                Process** list)
+                                Space* to)
       : process_(process),
         from_(from),
         to_(to),
-        number_of_stacks_(0),
-        process_list_(list) { }
+        number_of_stacks_(0) { }
 
   void VisitBlock(Object** start, Object** end) {
     // Copy all HeapObject pointers in [start, end)
@@ -446,13 +436,6 @@ class ScavengeAndChainStacksVisitor: public PointerVisitor {
     }
   }
 
-  void ChainPort(Instance* instance) {
-    if (process_list_ == NULL) return;
-    uword address = AsForeignWord(instance->GetInstanceField(0));
-    Port* port = reinterpret_cast<Port*>(address);
-    LinkProcessIfUnknownToProgramGC(port->process(), process_list_);
-  }
-
   void ScavengePointerAndChainStack(Object** p) {
     Object* object = *p;
     if (!object->IsHeapObject()) return;
@@ -462,8 +445,6 @@ class ScavengeAndChainStacksVisitor: public PointerVisitor {
     if (!forwarded) {
       if ((*p)->IsStack()) {
         ChainStack(Stack::cast(*p));
-      } else if ((*p)->IsPort()) {
-        ChainPort(Instance::cast(*p));
       }
     }
   }
@@ -472,10 +453,9 @@ class ScavengeAndChainStacksVisitor: public PointerVisitor {
   Space* from_;
   Space* to_;
   int number_of_stacks_;
-  Process** process_list_;
 };
 
-int Process::CollectMutableGarbageAndChainStacks(Process** list) {
+int Process::CollectMutableGarbageAndChainStacks() {
   Space* immutable_space = immutable_heap_.space();
 
   Space* from = heap_.space();
@@ -485,7 +465,7 @@ int Process::CollectMutableGarbageAndChainStacks(Process** list) {
   // While garbage collecting, do not fail allocations. Instead grow
   // the to-space as needed.
   NoAllocationFailureScope scope(to);
-  ScavengeAndChainStacksVisitor visitor(this, from, to, list);
+  ScavengeAndChainStacksVisitor visitor(this, from, to);
 
   // Visit the current coroutine stack first and chain the rest of the
   // stacks starting from there.
@@ -501,13 +481,13 @@ int Process::CollectMutableGarbageAndChainStacks(Process** list) {
   return visitor.number_of_stacks();
 }
 
-int Process::CollectGarbageAndChainStacks(Process** list) {
+int Process::CollectGarbageAndChainStacks() {
   // NOTE: We need to take all spaces which are getting merged into our
   // heap, because otherwise we'll not update the pointers it has to the
   // program space / to the process heap.
   TakeChildHeaps();
 
-  int number_of_stacks = CollectMutableGarbageAndChainStacks(list);
+  int number_of_stacks = CollectMutableGarbageAndChainStacks();
   CollectImmutableGarbage();
   return number_of_stacks;
 }
@@ -525,8 +505,7 @@ void Process::IterateRoots(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&statics_));
   visitor->Visit(reinterpret_cast<Object**>(&coroutine_));
   if (debug_info_ != NULL) debug_info_->VisitPointers(visitor);
-  IteratePortQueuePointers(last_message_, visitor);
-  IteratePortQueuePointers(current_message_, visitor);
+  IteratePortQueuesPointers(visitor);
 }
 
 class ProgramPointerVisitor : public HeapObjectVisitor {
@@ -548,24 +527,32 @@ void Process::IterateProgramPointers(PointerVisitor* visitor) {
   immutable_heap()->IterateObjects(&program_pointer_visitor);
   store_buffer_.IteratePointersToImmutableSpace(visitor);
   if (debug_info_ != NULL) debug_info_->VisitProgramPointers(visitor);
-  IteratePortQueuePointers(last_message_, visitor);
-  IteratePortQueuePointers(current_message_, visitor);
+  IteratePortQueuesPointers(visitor);
 }
 
-static void CollectProcessesInQueue(PortQueue* queue, Process** list) {
+static void IteratePortQueueProcesses(PortQueue* queue,
+                                      ProcessVisitor* visitor) {
   for (PortQueue* current = queue;
        current != NULL;
        current = current->next()) {
     if (current->kind() == PortQueue::PORT) {
       Port* port = reinterpret_cast<Port*>(current->address());
-      LinkProcessIfUnknownToProgramGC(port->process(), list);
+      Process* process = port->process();
+      if (process != NULL) {
+        visitor->VisitProcess(process);
+      }
     }
   }
 }
 
-void Process::CollectProcessesInQueues(Process** list) {
-  CollectProcessesInQueue(last_message_, list);
-  CollectProcessesInQueue(current_message_, list);
+void Process::IteratePortQueuesProcesses(ProcessVisitor* visitor) {
+  IteratePortQueueProcesses(last_message_, visitor);
+  IteratePortQueueProcesses(current_message_, visitor);
+}
+
+void Process::IteratePortQueuesPointers(PointerVisitor* visitor) {
+  IteratePortQueuePointers(last_message_, visitor);
+  IteratePortQueuePointers(current_message_, visitor);
 }
 
 void Process::TakeLookupCache() {

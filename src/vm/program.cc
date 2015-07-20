@@ -23,6 +23,7 @@
 #include "src/vm/heap.h"
 #include "src/vm/object.h"
 #include "src/vm/process.h"
+#include "src/vm/port.h"
 #include "src/vm/selector_row.h"
 #include "src/vm/session.h"
 
@@ -72,66 +73,82 @@ static Array* MapToArray(ObjectIndexMap* map, Program* program) {
   return result;
 }
 
-class MarkProcessesFoundVisitor : public ProcessVisitor {
+class ProcessInPortFinder : public PointerVisitor {
  public:
-  virtual void VisitProcess(Process* process) {
-    process->set_program_gc_state(Process::kFound);
-  }
-};
+  explicit ProcessInPortFinder(ProcessVisitor* visitor)
+      : process_visitor_(visitor) {}
+  virtual ~ProcessInPortFinder() {}
 
-class CollectGarbageAndCookStacksVisitor : public ProcessVisitor {
- public:
-  explicit CollectGarbageAndCookStacksVisitor(Process** list) : list_(list) { }
-
-  virtual void VisitProcess(Process* process) {
-    ASSERT(process->program_gc_state() == Process::kFound);
-    process->set_program_gc_state(Process::kProcessed);
-    int number_of_stacks = process->CollectGarbageAndChainStacks(list_);
-    process->CookStacks(number_of_stacks);
-    process->CollectProcessesInQueues(list_);
-  }
- private:
-  Process** list_;
-};
-
-class IterateProgramRootsVisitor : public ProcessVisitor {
- public:
-  explicit IterateProgramRootsVisitor(PointerVisitor* visitor)
-      : visitor_(visitor) { }
-
-  virtual void VisitProcess(Process* process) {
-    process->IterateProgramPointers(visitor_);
+  virtual void VisitBlock(Object** start, Object** end) {
+    for (Object** current = start; current < end; current++) {
+      Object* object = *current;
+      if (object->IsPort()) {
+        Instance* instance = Instance::cast(object);
+        uword address = AsForeignWord(instance->GetInstanceField(0));
+        Port* port = reinterpret_cast<Port*>(address);
+        Process* process = port->process();
+        if (process != NULL) {
+          process_visitor_->VisitProcess(process);
+        }
+      }
+    }
   }
 
  private:
-  PointerVisitor* visitor_;
+  ProcessVisitor* process_visitor_;
 };
 
-class UncookStacksVisitor : public ProcessVisitor {
+class LinkProcessesForGc : public ProcessVisitor {
  public:
-  UncookStacksVisitor() : unlink_(false) { }
-
-  void set_unlink(bool value) { unlink_ = value; }
+  explicit LinkProcessesForGc(Process** all_processes)
+      : all_processes_(all_processes), process_count_(0) {
+    *all_processes = NULL;
+  }
+  virtual ~LinkProcessesForGc() {}
 
   virtual void VisitProcess(Process* process) {
-    process->UncookAndUnchainStacks();
-    process->UpdateBreakpoints();
-    process->set_program_gc_state(Process::kUnknown);
-    if (unlink_) process->set_next(NULL);
+    ASSERT(process != NULL);
+
+    if (process->program_gc_state() == Process::kUnknown) {
+      ASSERT(process->program_gc_next() == NULL)
+      process->set_program_gc_state(Process::kFound);
+      process->set_program_gc_next(*all_processes_);
+      *all_processes_ = process;
+      process_count_++;
+    }
   }
+
+  void Finish() {
+    while (*all_processes_ != NULL &&
+           (*all_processes_)->program_gc_state() == Process::kFound) {
+      // At each iteration, start from the beginning of the all_processes
+      // list and go until we find a process that we have already processed
+      // or we hit the end. During the iteration we can discover more processes
+      // that are added to the front of the list and picked up in the next
+      // iteration.
+      Process* current = *all_processes_;
+      while (current != NULL &&
+             current->program_gc_state() == Process::kFound) {
+        current->set_program_gc_state(Process::kProcessed);
+
+        // Traverse object pointers in the weak pointer list and in the port
+        // queues. In case they contain port ojects, we call [process_visitor_]
+        // with the process of the port.
+        ProcessInPortFinder finder(this);
+        current->heap()->VisitWeakObjectPointers(&finder);
+        current->IteratePortQueuesProcesses(this);
+
+        current = current->program_gc_next();
+      }
+    }
+  }
+
+  size_t process_count() { return process_count_; }
 
  private:
-  bool unlink_;
+  Process** all_processes_;
+  size_t process_count_;
 };
-
-static void VisitProcesses(Process* processes, ProcessVisitor* visitor) {
-  for (Process* current = processes;
-       current != NULL;
-       current = current->next()) {
-    ASSERT(current->program_gc_state() == Process::kProcessed);
-    visitor->VisitProcess(current);
-  }
-}
 
 class LiteralsRewriter {
  public:
@@ -339,11 +356,11 @@ void Program::Unfold() {
 
   // List of processes that are only referenced by ports floating
   // around in the system.
-  Process* additional_processes = NULL;
-  PrepareProgramGC(&additional_processes);
+  Process* all_processes = NULL;
+  PrepareProgramGC(&all_processes);
   Space* to = new Space();
   UnfoldingVisitor visitor(this, heap_.space(), to, &map);
-  PerformProgramGC(to, &visitor, additional_processes);
+  PerformProgramGC(to, &visitor, all_processes);
 
   classes_ = NULL;
   constants_ = NULL;
@@ -352,7 +369,7 @@ void Program::Unfold() {
   vtable_ = NULL;
   is_compact_ = false;
 
-  FinishProgramGC(additional_processes);
+  FinishProgramGC(&all_processes);
 }
 
 class ProgramTableRewriter {
@@ -800,13 +817,13 @@ void Program::Fold() {
 
   // List of processes that are only referenced by ports floating
   // around in the system.
-  Process* additional_processes = NULL;
-  PrepareProgramGC(&additional_processes);
+  Process* all_processes = NULL;
+  PrepareProgramGC(&all_processes);
 
   ProgramTableRewriter rewriter;
   Space* to = new Space();
   FoldingVisitor visitor(heap_.space(), to, &rewriter, this);
-  PerformProgramGC(to, &visitor, additional_processes);
+  PerformProgramGC(to, &visitor, all_processes);
 
   {
     NoAllocationFailureScope scope(to);
@@ -817,7 +834,7 @@ void Program::Fold() {
 
   is_compact_ = true;
 
-  FinishProgramGC(additional_processes);
+  FinishProgramGC(&all_processes);
 }
 
 Process* Program::SpawnProcess() {
@@ -937,60 +954,77 @@ Object* Program::CreateInitializer(Function* function) {
   return heap()->CreateInitializer(initializer_class_, function);
 }
 
-void Program::PrepareProgramGC(Process** additional_processes) {
+void Program::PrepareProgramGC(Process** all_processes) {
+  LinkProcessesForGc process_linker(all_processes);
+
+  // Discover all processes and link them.
   {
-    MarkProcessesFoundVisitor visitor;
-    scheduler()->VisitProcesses(this, &visitor);
-    if (session_ != NULL) session_->VisitProcesses(&visitor);
+    scheduler()->VisitProcesses(this, &process_linker);
+    if (session_ != NULL) session_->VisitProcesses(&process_linker);
+    process_linker.Finish();
   }
 
+  // Make sure that the number of processes we find equals to the number
+  // of processes the scheduler knows about.
+  //
+  // WARNING: This assert assumes we execute only one program and that
+  // program has been stopped.
+  ASSERT(scheduler()->process_count() == process_linker.process_count());
+
+  // Loop over all processes and cook all stacks.
   {
-    CollectGarbageAndCookStacksVisitor visitor(additional_processes);
-    scheduler()->VisitProcesses(this, &visitor);
-    if (session_ != NULL) session_->VisitProcesses(&visitor);
-    while (*additional_processes != NULL &&
-           (*additional_processes)->program_gc_state() == Process::kFound) {
-      // At each iteration, start from the beginning of the additional_processes
-      // list and go until we find a process that we have already processed
-      // or we hit the end. During the iteration we can discover more processes
-      // that are added to the front of the list and picked up in the next
-      // iteration.
-      Process* current = *additional_processes;
-      while (current != NULL &&
-             current->program_gc_state() == Process::kFound) {
-        visitor.VisitProcess(current);
-        current = current->next();
-      }
+    Process* current = *all_processes;
+    while (current != NULL) {
+      ASSERT(current->program_gc_state() == Process::kProcessed);
+      int number_of_stacks = current->CollectGarbageAndChainStacks();
+      current->CookStacks(number_of_stacks);
+      current = current->program_gc_next();
     }
   }
 }
 
 void Program::PerformProgramGC(Space* to,
                                PointerVisitor* visitor,
-                               Process* additional_processes) {
+                               Process* all_processes) {
   {
     NoAllocationFailureScope scope(to);
+
+    // Iterate program roots.
     IterateRoots(visitor);
+
+    // Iterate over all process program pointers.
     {
-      IterateProgramRootsVisitor iterate_program_roots_visitor(visitor);
-      scheduler()->VisitProcesses(this, &iterate_program_roots_visitor);
-      if (session_ != NULL) {
-        session_->VisitProcesses(&iterate_program_roots_visitor);
+      Process* current = all_processes;
+      while (current != NULL) {
+        current->IterateProgramPointers(visitor);
+        current = current->program_gc_next();
       }
-      VisitProcesses(additional_processes, &iterate_program_roots_visitor);
     }
+
+    // Finish collection.
     ASSERT(!to->is_empty());
     to->CompleteScavenge(visitor);
   }
   heap_.ReplaceSpace(to);
 }
 
-void Program::FinishProgramGC(Process* additional_processes) {
-  UncookStacksVisitor uncook_visitor;
-  scheduler()->VisitProcesses(this, &uncook_visitor);
-  if (session_ != NULL) session_->VisitProcesses(&uncook_visitor);
-  uncook_visitor.set_unlink(true);
-  VisitProcesses(additional_processes, &uncook_visitor);
+void Program::FinishProgramGC(Process** all_processes) {
+  Process* current = *all_processes;
+  while (current != NULL) {
+    ASSERT(current->program_gc_state() == Process::kProcessed);
+
+    // Uncook process
+    current->UncookAndUnchainStacks();
+    current->UpdateBreakpoints();
+
+    // Unlink the process.
+    Process* next = current->program_gc_next();
+    current->set_program_gc_state(Process::kUnknown);
+    current->set_program_gc_next(NULL);
+    current = next;
+  }
+
+  *all_processes = NULL;
 }
 
 void Program::CollectGarbage() {
@@ -1001,17 +1035,13 @@ void Program::CollectGarbage() {
   if (scheduler() == NULL) return;
   if (!scheduler()->StopProgram(this)) return;
 
-  // List of processes that are only referenced by ports floating
-  // around in the system.
-  Process* additional_processes = NULL;
-
-  PrepareProgramGC(&additional_processes);
-
   Space* to = new Space();
-  ScavengeVisitor visitor(heap_.space(), to);
-  PerformProgramGC(to, &visitor, additional_processes);
+  ScavengeVisitor scavenger(heap_.space(), to);
 
-  FinishProgramGC(additional_processes);
+  Process* all_processes = NULL;
+  PrepareProgramGC(&all_processes);
+  PerformProgramGC(to, &scavenger, all_processes);
+  FinishProgramGC(&all_processes);
 
   scheduler()->ResumeProgram(this);
 }

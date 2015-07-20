@@ -217,7 +217,7 @@ class Program {
   void PerformProgramGC(Space* to,
                         PointerVisitor* visitor,
                         Process* additional_processes);
-  void FinishProgramGC(Process* additional_processes);
+  void FinishProgramGC(Process** additional_processes);
 
   RandomLCG random_;
 

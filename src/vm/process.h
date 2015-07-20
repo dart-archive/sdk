@@ -148,8 +148,8 @@ class Process {
   // locate all processes in ports in the heap that are not yet known
   // by the program GC and link them in the argument list. Returns the
   // number of stacks found in the heap.
-  int CollectMutableGarbageAndChainStacks(Process** list);
-  int CollectGarbageAndChainStacks(Process** list);
+  int CollectMutableGarbageAndChainStacks();
+  int CollectGarbageAndChainStacks();
 
   // Iterate all pointers reachable from this process object.
   void IterateRoots(PointerVisitor* visitor);
@@ -158,8 +158,11 @@ class Process {
   // program garbage collection.
   void IterateProgramPointers(PointerVisitor* visitor);
 
-  // Locate all process pointers in message queues in the process.
-  void CollectProcessesInQueues(Process** list);
+  // Iterate over, and find pointers in the port queue.
+  void IteratePortQueuesPointers(PointerVisitor* visitor);
+
+  // Iterate over, and find processes (via ports) in the port queue.
+  void IteratePortQueuesProcesses(ProcessVisitor* visitor);
 
   void Preempt();
 
@@ -192,6 +195,9 @@ class Process {
 
   void set_program_gc_state(ProgramGCState value) { program_gc_state_ = value; }
   ProgramGCState program_gc_state() const { return program_gc_state_; }
+
+  void set_program_gc_next(Process* next) { program_gc_next_ = next; }
+  Process* program_gc_next() { return program_gc_next_; }
 
   // Change the state from 'from' to 'to. Return 'true' if the operation was
   // successful.
@@ -328,6 +334,7 @@ class Process {
   PortQueue* current_message_;
 
   ProgramGCState program_gc_state_;
+  Process* program_gc_next_;
 
   int errno_cache_;
 

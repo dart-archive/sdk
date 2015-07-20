@@ -331,7 +331,7 @@ void Session::ProcessMessages() {
       case Connection::kProcessAddFibersToMap: {
         // TODO(ager): Potentially optimize this to not require a full
         // process GC to locate the live stacks?
-        int number_of_stacks = process_->CollectGarbageAndChainStacks(NULL);
+        int number_of_stacks = process_->CollectGarbageAndChainStacks();
         Object* current = process_->stack();
         for (int i = 0; i < number_of_stacks; i++) {
           Stack* stack = Stack::cast(current);

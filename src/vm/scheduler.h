@@ -63,6 +63,8 @@ class Scheduler {
   // by the debugger to terminate gracefully.
   void DeleteProcessAtBreakpoint(Process* process);
 
+  size_t process_count() const { return processes_; }
+
  private:
   struct ProcessList {
     ProcessList() : head(NULL) {}
