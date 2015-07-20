@@ -74,9 +74,6 @@ import 'package:fletchc/src/fletch_backend.dart' show
 
 import 'program_result.dart';
 
-const bool testSessionReset =
-    const bool.fromEnvironment("testSessionReset", defaultValue: true);
-
 typedef Future NoArgFuture();
 
 const Map<String, EncodedResult> tests = const <String, EncodedResult>{
@@ -2172,14 +2169,6 @@ compileAndRun(EncodedResult encodedResult) async {
       print("Got expected output: ${session.stdoutIterator.current}");
     }
 
-    if (testSessionReset) {
-      for (String expected in program.messages) {
-        Expect.isTrue(await session.stdoutIterator.moveNext());
-        Expect.stringEquals(expected, session.stdoutIterator.current);
-        print("Got expected output: ${session.stdoutIterator.current}");
-      }
-    }
-
     int version = 2;
     for (ProgramResult program in programs.skip(1)) {
       print("Update:");
@@ -2386,27 +2375,6 @@ Future<TestSession> runFletchVM(
   TestSession session =
       await TestSession.spawnVm(test.incrementalCompiler.compiler, fletchDelta);
   try {
-    if (testSessionReset) {
-      await session.runCommands(fletchDelta.commands);
-
-      // TODO(ager): Get rid of this again. We first run the program to
-      // completion, then we reset the session and rebuild the program and carry
-      // out the actual incremental compilation test.
-      for (Command command in [
-               const commands_lib.Debugging(false),
-               const commands_lib.ProcessSpawnForMain()]) {
-        print(command);
-        await session.runCommand(command);
-      }
-
-      session.running = true;
-      await session.sendCommand(const commands_lib.ProcessRun());
-      await session.readNextCommand();
-      session.running = false;
-
-      await session.runCommand(const commands_lib.SessionReset());
-    }
-
     await session.runCommands(fletchDelta.commands);
 
     for (Command command in [

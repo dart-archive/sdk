@@ -26,7 +26,6 @@ class Session {
   bool is_debugging() const { return debugging_; }
 
   void Initialize();
-  void Reinitialize();
   void StartMessageProcessingThread();
   void ProcessMessages();
 
@@ -118,8 +117,7 @@ class Session {
     kProcessRun,
     kError,
     kSnapshotDone,
-    kSessionEnd,
-    kSessionReset
+    kSessionEnd
   };
 
   Connection* const connection_;
@@ -144,13 +142,10 @@ class Session {
 
   Monitor* main_thread_monitor_;
   MainThreadResumeKind main_thread_resume_kind_;
-  bool main_thread_done_;
 
   void AddToMap(int map_index, int64 id, Object* value);
 
   void SignalMainThread(MainThreadResumeKind);
-  void SignalMainThreadWaitUntilDone(MainThreadResumeKind);
-  void MainThreadDone();
 
   void ProcessContinue(Process* process);
 

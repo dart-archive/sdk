@@ -1038,15 +1038,6 @@ class SessionEnd extends Command {
   String valuesToString() => "";
 }
 
-class SessionReset extends Command {
-  const SessionReset()
-      : super(CommandCode.SessionReset);
-
-  int get numberOfResponsesExpected => 0;
-
-  String valuesToString() => "";
-}
-
 class Debugging extends Command {
   final bool outputSynchronization;
 
@@ -1187,7 +1178,6 @@ enum CommandCode {
   ConnectionError,
   CompilerError,
   SessionEnd,
-  SessionReset,
   Debugging,
 
   ProcessSpawnForMain,
