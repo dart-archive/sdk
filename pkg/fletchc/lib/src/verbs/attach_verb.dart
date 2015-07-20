@@ -35,13 +35,11 @@ import '../driver/driver_commands.dart' show
 import '../driver/session_manager.dart' show
     SessionState;
 
-const Verb attachVerb =
-    const Verb(attach, documentation, requiresSession: true);
+import 'documentation.dart' show
+    attachDocumentation;
 
-const String documentation = """
-   attach tcp_socket [HOST:]PORT
-               Attach to Fletch VM on the given socket.
-""";
+const Verb attachVerb =
+    const Verb(attach, attachDocumentation, requiresSession: true);
 
 Future<int> attach(Sentence sentence, VerbContext context) async {
   if (sentence.target == null) {

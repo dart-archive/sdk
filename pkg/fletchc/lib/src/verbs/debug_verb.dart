@@ -14,13 +14,10 @@ import 'verbs.dart' show
 import '../diagnostic.dart' show
     throwInternalError;
 
-const Verb debugVerb = const Verb(debug, documentation);
+import 'documentation.dart' show
+    debugDocumentation;
 
-const String documentation = """
-   debug [command]
-             Perform a debug command, or if none are specified start an
-             interactive debug session.
-""";
+const Verb debugVerb = const Verb(debug, debugDocumentation);
 
 Future debug(Sentence sentence, _) async {
   throwInternalError("Debug action not yet implemented.");

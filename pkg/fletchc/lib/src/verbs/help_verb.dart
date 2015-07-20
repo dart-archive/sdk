@@ -14,12 +14,10 @@ import 'verbs.dart' show
     commonVerbs,
     uncommonVerbs;
 
-const Verb helpVerb = const Verb(help, documentation);
+import 'documentation.dart' show
+    helpDocumentation;
 
-const String documentation = """
-   help      Display this information.
-             Use 'fletch help all' for a list of all actions.
-""";
+const Verb helpVerb = const Verb(help, helpDocumentation);
 
 Future<int> help(Sentence sentence, _) async {
   int exitCode = 0;

@@ -54,13 +54,11 @@ import '../diagnostic.dart' show
 import '../driver/driver_main.dart' show
     IsolateController;
 
-const Verb compileAndRunVerb = const Verb(compileAndRun, documentation);
+import 'documentation.dart' show
+    compileAndRunDocumentation;
 
-const String documentation = """
-   compile-and-run [options] dartfile
-             Compile and run dartfile in a temporary session.  This is a
-             provisionary feature that will be removed shortly.
-""";
+const Verb compileAndRunVerb =
+    const Verb(compileAndRun, compileAndRunDocumentation);
 
 const COMPILER_CRASHED = 253;
 

@@ -32,11 +32,10 @@ import '../driver/driver_commands.dart' show
     Command,
     CommandSender;
 
-const Verb createVerb = const Verb(create, documentation);
+import 'documentation.dart' show
+    createDocumentation;
 
-const String documentation = """
-   create      Create something.
-""";
+const Verb createVerb = const Verb(create, createDocumentation);
 
 void checkNoPreposition(Sentence sentence) {
   if (sentence.preposition != null) {

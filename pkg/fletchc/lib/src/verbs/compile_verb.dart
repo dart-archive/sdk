@@ -37,13 +37,11 @@ import '../driver/driver_commands.dart' show
 import '../driver/session_manager.dart' show
     SessionState;
 
-const Verb compileVerb =
-    const Verb(compile, documentation, requiresSession: true);
+import 'documentation.dart' show
+    compileDocumentation;
 
-const String documentation = """
-   compile file FILE
-               Compile file named FILE.
-""";
+const Verb compileVerb =
+    const Verb(compile, compileDocumentation, requiresSession: true);
 
 Future<int> compile(Sentence sentence, VerbContext context) {
   if (sentence.target == null) {

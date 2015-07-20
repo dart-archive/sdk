@@ -37,12 +37,11 @@ import '../diagnostic.dart' show
 import '../../fletch_system.dart' show
     FletchDelta;
 
-const Verb runVerb =
-    const Verb(run, documentation, requiresSession: true);
+import 'documentation.dart' show
+    runDocumentation;
 
-const String documentation = """
-   x-run       Run the compiled code on the Fletch VM.
-""";
+const Verb runVerb =
+    const Verb(run, runDocumentation, requiresSession: true);
 
 Future<int> run(Sentence sentence, VerbContext context) async {
   // This is asynchronous, but we don't await the result so we can respond to

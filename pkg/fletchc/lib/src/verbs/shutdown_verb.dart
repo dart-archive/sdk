@@ -14,11 +14,10 @@ import 'verbs.dart' show
 import '../driver/driver_main.dart' show
     gracefulShutdown;
 
-const Verb shutdownVerb = const Verb(shutdown, documentation);
+import 'documentation.dart' show
+    shutdownDocumentation;
 
-const String documentation = """
-   shutdown      Terminate the background fletch compiler process.
-""";
+const Verb shutdownVerb = const Verb(shutdown, shutdownDocumentation);
 
 Future<int> shutdown(Sentence sentence, _) {
   gracefulShutdown();
