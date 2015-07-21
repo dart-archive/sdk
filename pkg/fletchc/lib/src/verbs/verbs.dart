@@ -84,8 +84,8 @@ abstract class VerbContext {
 }
 
 /// Represents a task that is shared between the main isolate and a worker
-/// isolate. Since instances of this class are copied from main isolate to a
-/// worker isolate, they should be kept simple:
+/// isolate. Since instances of this class are copied from the main isolate to
+/// a worker isolate, they should be kept simple:
 ///
 /// *   Pay attention to the transitive closure of its fields. The closure
 ///     should be kept as small as possible to avoid too much copying.
