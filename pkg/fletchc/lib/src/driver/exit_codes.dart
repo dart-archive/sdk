@@ -4,6 +4,16 @@
 
 library fletchc.driver.exit_codes;
 
+/// Exit code to use when the compiler crashed. This is recognized by our test
+/// runner (test.dart) as status `Crash`.
 const COMPILER_EXITCODE_CRASH = 253;
+
+/// Exit code to use when the program running on the Fletch VM encounters a
+/// compile-time error. This is recognized by our test runner (test.dart) as
+/// status `CompileTimeError`.
 const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
+
+/// Exit code to use when the program running on the Fletch VM throws an
+/// uncaught exception. This is recognized by out test runner (test.dart) as
+/// status `RuntimeError`.
 const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
