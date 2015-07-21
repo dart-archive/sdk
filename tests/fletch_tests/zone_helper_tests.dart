@@ -119,29 +119,7 @@ testUnhandledLateError() async {
 
 /// Test that a bad test will fail, not crash the test runner.
 testAlwaysFails() async {
-  // TODO(ahe): Simplify this test. It will probably be enough to just throw in
-  // a listen method.
-  Isolate isolate =
-      await Isolate.spawn(testUnhandledLateErrorIsolate, null, paused: true);
-  ReceivePort exitPort = new ReceivePort();
-  ReceivePort errorPort = new ReceivePort();
-  isolate
-      ..addOnExitListener(exitPort.sendPort)
-      ..setErrorsFatal(true)
-      ..addErrorListener(errorPort.sendPort)
-      ..resume(isolate.pauseCapability);
-  await errorPort.listen((errorList) {
-    errorPort.close();
-    var lines = errorList[0].split("\n");
-    if (lines.length > 1) {
-      // Bug (not getting the correct error from the system).
-      Expect.isTrue(lines[0].endsWith("Late error"));
-    } else {
-      Expect.stringEquals("Late error", errorList[0]);
-    }
-  }).asFuture();
-  await exitPort.listen((message) {
-    exitPort.close();
+  await new Stream.fromIterable([null]).listen((_) {
     throw "BROKEN";
   }).asFuture();
 }
