@@ -153,8 +153,6 @@ class FletchBackend extends Backend {
 
   final Set<FunctionElement> externals = new Set<FunctionElement>();
 
-  final Map<ClassElement, FletchClassBuilder> classBuilders =
-      <ClassElement, FletchClassBuilder>{};
   final Map<ClassElement, Set<ClassElement>> directSubclasses =
       <ClassElement, Set<ClassElement>>{};
 
@@ -227,29 +225,32 @@ class FletchBackend extends Backend {
   FletchClassBuilder registerClassElement(ClassElement element) {
     if (element == null) return null;
     assert(element.isDeclaration);
-    return classBuilders.putIfAbsent(element, () {
-      directSubclasses[element] = new Set<ClassElement>();
-      FletchClassBuilder superclass = registerClassElement(element.superclass);
-      if (superclass != null) {
-        Set<ClassElement> subclasses = directSubclasses[element.superclass];
-        subclasses.add(element);
-      }
-      FletchClassBuilder classBuilder = systemBuilder.newClassBuilder(
-          element, superclass, builtinClasses.contains(element));
 
-      // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
-      // This is a workaround, where we basically add getters for all fields.
-      classBuilder.createImplicitAccessors(this);
+    FletchClassBuilder classBuilder =
+        systemBuilder.lookupClassBuilderByElement(element);
+    if (classBuilder != null) return classBuilder;
 
-      Element callMember = element.lookupLocalMember(
-          Compiler.CALL_OPERATOR_NAME);
-      if (callMember != null && callMember.isFunction) {
-        FunctionElement function = callMember;
-        classBuilder.createIsFunctionEntry(
-            this, function.functionSignature.parameterCount);
-      }
-      return classBuilder;
-    });
+    directSubclasses[element] = new Set<ClassElement>();
+    FletchClassBuilder superclass = registerClassElement(element.superclass);
+    if (superclass != null) {
+      Set<ClassElement> subclasses = directSubclasses[element.superclass];
+      subclasses.add(element);
+    }
+    classBuilder = systemBuilder.newClassBuilder(
+        element, superclass, builtinClasses.contains(element));
+
+    // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
+    // This is a workaround, where we basically add getters for all fields.
+    classBuilder.createImplicitAccessors(this);
+
+    Element callMember = element.lookupLocalMember(
+        Compiler.CALL_OPERATOR_NAME);
+    if (callMember != null && callMember.isFunction) {
+      FunctionElement function = callMember;
+      classBuilder.createIsFunctionEntry(
+          this, function.functionSignature.parameterCount);
+    }
+    return classBuilder;
   }
 
   FletchClassBuilder createCallableStubClass(
@@ -624,7 +625,9 @@ class FletchBackend extends Backend {
       expectedBytecodes = lazyFieldInitializers[element].assembler.bytecodes;
     } else if (function.isInitializerList) {
       ClassElement enclosingClass = element.enclosingClass;
-      FletchClassBuilder classBuilder = classBuilders[enclosingClass];
+      // TODO(ajohnsen): Don't depend on the class builder.
+      FletchClassBuilder classBuilder =
+          systemBuilder.lookupClassBuilderByElement(enclosingClass);
       codegen = new DebugInfoConstructorCodegen(
           debugInfo,
           builder,

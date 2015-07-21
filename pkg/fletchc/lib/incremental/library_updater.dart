@@ -887,7 +887,9 @@ class LibraryUpdater extends FletchFeatures {
     }
 
     for (ClassElementX element in _classesWithSchemaChanges) {
-      FletchClassBuilder classBuilder = backend.classBuilders[element];
+      FletchClassBuilder classBuilder =
+          backend.systemBuilder.lookupClassBuilderByElement(element);
+
       int id = classBuilder.classId;
       updates.add(new commands_lib.PushFromMap(MapId.classes, id));
 
@@ -938,7 +940,8 @@ class LibraryUpdater extends FletchFeatures {
   void computeSchemaChange(ClassElementX element,
                            Map<FieldElementX, int> beforeFields,
                            List<Command> commands) {
-    FletchClassBuilder classBuilder = backend.classBuilders[element];
+    FletchClassBuilder classBuilder =
+        backend.systemBuilder.lookupClassBuilderByElement(element);
 
     // Collect the list of fields as they should exist after the transformation.
     List<FieldElementX> afterFields = [];
@@ -952,8 +955,10 @@ class LibraryUpdater extends FletchFeatures {
     Queue<ClassElementX> workQueue = new Queue<ClassElementX>()..add(element);
     while (workQueue.isNotEmpty) {
       ClassElementX current = workQueue.removeFirst();
-      int id = backend.classBuilders[current].classId;
-      commands.add(new commands_lib.PushFromMap(MapId.classes, id));
+      FletchClassBuilder builder =
+          backend.systemBuilder.lookupClassBuilderByElement(current);
+      int classId = builder.classId;
+      commands.add(new commands_lib.PushFromMap(MapId.classes, classId));
       numberOfClasses++;
       // Add all subclasses that aren't schema change target themselves to
       // the work queue.

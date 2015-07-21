@@ -50,8 +50,11 @@ class FletchSystemBuilder {
 
   final List<FletchFunction> _removedFunctions = <FletchFunction>[];
 
-  final Map<Element, FletchFunctionBuilder> _buildersByElement =
+  final Map<Element, FletchFunctionBuilder> _functionBuildersByElement =
       <Element, FletchFunctionBuilder>{};
+
+  final Map<ClassElement, FletchClassBuilder> _classBuildersByElement =
+      <ClassElement, FletchClassBuilder>{};
 
   FletchSystemBuilder(FletchSystem predecessorSystem)
       : this.predecessorSystem = predecessorSystem,
@@ -78,7 +81,7 @@ class FletchSystemBuilder {
         signature: signature,
         memberOf: memberOf);
     _newFunctions.add(builder);
-    if (element != null) _buildersByElement[element] = builder;
+    if (element != null) _functionBuildersByElement[element] = builder;
     return builder;
   }
 
@@ -112,7 +115,7 @@ class FletchSystemBuilder {
     FletchFunction function =
         predecessorSystem.lookupFunctionByElement(element);
     if (function != null) return function;
-    return _buildersByElement[element];
+    return _functionBuildersByElement[element];
   }
 
   void forgetFunction(FletchFunction function) {
@@ -126,7 +129,6 @@ class FletchSystemBuilder {
       FletchClassBuilder superclass,
       bool isBuiltin,
       {int extraFields: 0}) {
-    FletchClass klass = predecessorSystem.lookupClassByElement(element);
     int nextClassId = classIdStart + _newClasses.length;
     FletchClassBuilder builder = new FletchClassBuilder(
         nextClassId,
@@ -135,6 +137,7 @@ class FletchSystemBuilder {
         isBuiltin,
         extraFields);
     _newClasses.add(builder);
+    if (element != null) _classBuildersByElement[element] = builder;
     return builder;
   }
 
@@ -144,6 +147,10 @@ class FletchSystemBuilder {
 
   FletchClassBuilder lookupClassBuilder(int classId) {
     return _newClasses[classId - classIdStart];
+  }
+
+  FletchClassBuilder lookupClassBuilderByElement(ClassElement element) {
+    return _classBuildersByElement[element];
   }
 
   List<FletchClassBuilder> getNewClasses() => _newClasses;
@@ -269,9 +276,8 @@ class FletchSystemBuilder {
       } else if (constant.isConstructedObject) {
         ConstructedConstantValue value = constant;
         ClassElement classElement = value.type.element;
-        // TODO(ajohnsen): Avoid usage of classBuilders.
-        FletchClassBuilder classBuilder =
-            context.backend.classBuilders[classElement];
+        // TODO(ajohnsen): Avoid usage of builders (should be FletchClass).
+        FletchClassBuilder classBuilder = _classBuildersByElement[classElement];
         for (ConstantValue field in value.fields.values) {
           int fieldId = context.compiledConstants[field];
           commands.add(new PushFromMap(MapId.constants, fieldId));
@@ -365,7 +371,7 @@ class FletchSystemBuilder {
       functionsById = functionsById.insert(function.methodId, function);
     }
 
-    _buildersByElement.forEach((element, builder) {
+    _functionBuildersByElement.forEach((element, builder) {
       functionsByElement = functionsByElement.insert(
           element,
           functionsById[builder.methodId],
