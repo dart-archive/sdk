@@ -18,11 +18,12 @@ vars = {
   "persistent_rev": "@55daae1a038188c49e36a64e7ef132c4861da3d8",
 
   # When updating this, please remember:
-  # 1. to use a commit is on the _temporary_fletch_patches branch.
+  # 1. to use a commit on the branch "_temporary_fletch_patches".
   # 2. update package revisions below.
   "dart_rev": "@b2ccdc92f8f87e8ccdac6a7468e2e69ca726fbc9",
 
-  # Please copy these from ../dart/DEPS when updating dart_rev:
+  # Please copy these package revisions from ../dart/DEPS when updating
+  # dart_rev:
   "package_config_tag": "@0.1.1",
   "path_rev": "@93b3e2aa1db0ac0c8bab9d341588d77acda60320",
   "charcode_tag": "@1.1.0",
@@ -48,7 +49,7 @@ deps = {
       (Var("googlecode_url") % "gyp") + "/trunk" + Var("gyp_rev"),
 
   "dart":
-      ((Var("github_url") % "dart-lang/sdk") + "/" + Var("dart_rev")),
+      (Var("github_mirror") % "sdk") + Var("dart_rev"),
 
   "third_party/package_config":
       (Var("github_mirror") % "package_config") + Var("package_config_tag"),
