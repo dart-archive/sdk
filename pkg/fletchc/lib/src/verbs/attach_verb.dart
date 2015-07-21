@@ -35,6 +35,11 @@ import '../driver/driver_commands.dart' show
 import '../driver/session_manager.dart' show
     SessionState;
 
+import '../../commands.dart' as commands_lib;
+
+import '../../session.dart' show
+    FletchVmSession;
+
 import 'documentation.dart' show
     attachDocumentation;
 
@@ -111,12 +116,15 @@ Future<int> attachTask(String host, int port) async {
     // other side.
   }
 
-  // TODO(ahe): Perform some kind of handshake so we know that we're actually
-  // connected to a Fletch VM.
+  FletchVmSession session =
+      new FletchVmSession(handleSocketErrors(socket, "vmSocket"));
+
+  // Enable debugging as a form of handshake.
+  await session.runCommand(const commands_lib.Debugging(false));
 
   print("Connected to Fletch VM on TCP socket ${socket.port} -> $remotePort");
 
-  SessionState.current.vmSocket = handleSocketErrors(socket, "vmSocket");
+  SessionState.current.vmSession = session;
 
   return 0;
 }
