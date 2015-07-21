@@ -636,7 +636,9 @@ class IsolateController {
   Future<Null> performTask(
       SharedTask task,
       ClientController client,
-      {bool endSession: false /* TODO(ahe): Remove this parameter. */}) async {
+      {
+       /// End this session and return this isolate to the pool.
+       bool endSession: false}) async {
     ClientLogger log = client.log;
 
     client.enqueCommandToWorker(new Command(DriverCommand.PerformTask, task));

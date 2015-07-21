@@ -42,3 +42,8 @@ const String attachDocumentation = """
 const String runDocumentation = """
    x-run     Run the compiled code on the Fletch VM
 """;
+
+const String endDocumentation = """
+   x-end session NAME
+             End the named session
+""";

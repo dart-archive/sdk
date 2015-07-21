@@ -36,6 +36,17 @@ Future<UserSession> createSession(
 
 UserSession lookupSession(String name) => internalSessions[name];
 
+// Remove the session named [name] from [internalSessions], but caller must
+// ensure that [worker] has its static state cleaned up and returned to the
+// isolate pool.
+UserSession endSession(String name) {
+  UserSession session = internalSessions.remove(name);
+  if (session == null) {
+    throwFatalError(DiagnosticKind.noSuchSession, sessionName: name);
+  }
+  return session;
+}
+
 void endAllSessions() {
   internalSessions.forEach((String name, UserSession session) {
     print("Ending session: $name");

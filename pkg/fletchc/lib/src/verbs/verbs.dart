@@ -51,6 +51,9 @@ import 'attach_verb.dart' show
 import 'run_verb.dart' show
     runVerb;
 
+import 'x_end_verb.dart' show
+    endVerb;
+
 typedef Future<int> DoVerb(Sentence sentence, VerbContext context);
 
 class Verb {
@@ -119,4 +122,5 @@ const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "compile": compileVerb,
   "attach": attachVerb,
   "x-run": runVerb,
+  "x-end": endVerb,
 };

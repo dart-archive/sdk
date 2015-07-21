@@ -35,6 +35,10 @@ import '../driver/driver_commands.dart' show
 import 'documentation.dart' show
     createDocumentation;
 
+import '../diagnostic.dart' show
+    DiagnosticKind,
+    throwFatalError;
+
 const Verb createVerb = const Verb(create, createDocumentation);
 
 void checkNoPreposition(Sentence sentence) {
@@ -59,30 +63,33 @@ void checkNoTrailing(Sentence sentence) {
 }
 
 Future<int> create(Sentence sentence, VerbContext context) async {
+  if (sentence.target == null ||
+      sentence.target.kind != TargetKind.SESSION) {
+    throwFatalError(
+        DiagnosticKind.verbRequiresSessionTarget, verb: sentence.verb);
+  }
+
   IsolatePool pool = context.pool;
   ClientController client = context.client;
-  if (sentence.target != null &&
-      sentence.target.kind == TargetKind.SESSION) {
-    NamedTarget target = sentence.target;
-    String name = target.name;
-    checkNoPreposition(sentence);
-    checkNoTailPreposition(sentence);
-    checkNoTrailing(sentence);
+  NamedTarget target = sentence.target;
+  String name = target.name;
+  checkNoPreposition(sentence);
+  checkNoTailPreposition(sentence);
+  checkNoTrailing(sentence);
 
-    Future<IsolateController> allocateWorker() async {
-      IsolateController worker =
-          new IsolateController(await pool.getIsolate(exitOnError: false));
-      await worker.beginSession();
-      client.log.note("Worker session '$name' started");
-      return worker;
-    }
-
-    UserSession session = await createSession(name, allocateWorker);
-
-    context = context.copyWithSession(session);
-
-    await context.performTaskInWorker(new CreateSessionTask(name));
+  Future<IsolateController> allocateWorker() async {
+    IsolateController worker =
+        new IsolateController(await pool.getIsolate(exitOnError: false));
+    await worker.beginSession();
+    client.log.note("Worker session '$name' started");
+    return worker;
   }
+
+  UserSession session = await createSession(name, allocateWorker);
+
+  context = context.copyWithSession(session);
+
+  await context.performTaskInWorker(new CreateSessionTask(name));
 
   return 0;
 }

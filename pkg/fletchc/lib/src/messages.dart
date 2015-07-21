@@ -12,6 +12,7 @@ enum DiagnosticKind {
   internalError,
   verbRequiresSession,
   verbRequiresNoSession,
+  verbRequiresSessionTarget,
   noSuchSession,
   sessionAlreadyExists,
   noFileTarget,
@@ -53,6 +54,10 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.verbRequiresNoSession:
       return "Can't perform '${DiagnosticParameter.verb}' in a session. "
           "Try removing 'in session ${DiagnosticParameter.sessionName}'";
+
+    case DiagnosticKind.verbRequiresSessionTarget:
+      return "Can't perform '${DiagnosticParameter.verb}' without a session "
+          "target. Try adding 'session SESSION_NAME'";
 
     case DiagnosticKind.noSuchSession:
       // TODO(lukechurch): Ensure UX repair text is good.

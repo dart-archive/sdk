@@ -29,9 +29,19 @@ List<Example> getExamples(DiagnosticKind kind) {
           <String>['create', 'session', 'foo'],
           <String>['create', 'session', 'bar', 'in', 'session', 'foo'])];
 
+    case DiagnosticKind.verbRequiresSessionTarget:
+      return <Example>[
+          new CommandLineExample(
+              <String>['create']),
+          new CommandLineExample(
+              <String>['x-end'])];
+
     case DiagnosticKind.noSuchSession:
-      return <Example>[new CommandLineExample(
-          <String>['compile', 'in', 'session', 'foo'])];
+      return <Example>[
+          new CommandLineExample(
+              <String>['compile', 'in', 'session', 'foo']),
+          new CommandLineExample(
+              <String>['x-end', 'session', 'foo'])];
 
     case DiagnosticKind.sessionAlreadyExists:
       return <Example>[new CommandLineExample(
