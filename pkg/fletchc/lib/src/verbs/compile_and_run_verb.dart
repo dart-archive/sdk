@@ -60,7 +60,6 @@ import 'documentation.dart' show
 const Verb compileAndRunVerb =
     const Verb(compileAndRun, compileAndRunDocumentation);
 
-const COMPILER_CRASHED = 253;
 
 Future<int> compileAndRun(Sentence sentence, VerbContext context) async {
   Options options = Options.parse(sentence.arguments);
@@ -112,18 +111,7 @@ Future<int> compileAndRunTask(
       new FletchCompiler(
           options: compilerOptions, script: options.script, fletchVm: fletchVm,
           packageRoot: options.packageRootPath);
-  bool compilerCrashed = false;
-  FletchDelta fletchDelta = await compiler.run().catchError((e, trace) {
-    compilerCrashed = true;
-    // TODO(ahe): Remove this catchError block when this bug is fixed:
-    // https://code.google.com/p/dart/issues/detail?id=22437.
-    print(e);
-    print(trace);
-    return null;
-  });
-  if (compilerCrashed) {
-    return COMPILER_CRASHED;
-  }
+  FletchDelta fletchDelta = await compiler.run();
 
   Process vmProcess;
   int exitCode = 0;
