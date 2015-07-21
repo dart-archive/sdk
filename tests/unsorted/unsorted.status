@@ -10,6 +10,7 @@
 messaging_process_die_early_gc_on_delete_test: Pass, Slow # Uses -Xgc-on-delete.
 
 [ $compiler == none && $runtime == fletchc ]
+immutable_and_mutable_heap_validate_heaps_test: Crash # Issue(75): Driver doesn't support -X flags.
 messaging_drop_messages_expose_gc_test: Crash # Issue(75): Driver doesn't support -X flags.
 messaging_port_lifetime_expose_gc_test: Crash # Issue(75): Driver doesn't support -X flags.
 messaging_process_die_early_gc_on_delete_test: Crash # Issue(75): Driver doesn't support -X flags.

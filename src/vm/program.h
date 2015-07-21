@@ -219,6 +219,8 @@ class Program {
                         Process* all_processes);
   void FinishProgramGC(Process** all_processes);
 
+  void ValidateGlobalHeapsAreConsistent();
+
   RandomLCG random_;
 
   Heap heap_;

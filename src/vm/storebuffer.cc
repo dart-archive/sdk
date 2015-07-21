@@ -13,6 +13,12 @@ void StoreBufferChunk::IteratePointersToImmutableSpace(
   }
 }
 
+void StoreBufferChunk::IterateObjects(HeapObjectVisitor* visitor) {
+  for (int i = 0; i < pos_; i++) {
+    visitor->Visit(objects_[i]);
+  }
+}
+
 void StoreBufferChunk::Scramble() {
   memset(static_cast<void*>(objects_),
          0xbe,
@@ -35,6 +41,14 @@ void StoreBuffer::IteratePointersToImmutableSpace(PointerVisitor* visitor) {
   StoreBufferChunk* chunk = current_chunk_;
   while (chunk != NULL) {
     chunk->IteratePointersToImmutableSpace(visitor);
+    chunk = chunk->next();
+  }
+}
+
+void StoreBuffer::IterateObjects(HeapObjectVisitor* visitor) {
+  StoreBufferChunk* chunk = current_chunk_;
+  while (chunk != NULL) {
+    chunk->IterateObjects(visitor);
     chunk = chunk->next();
   }
 }

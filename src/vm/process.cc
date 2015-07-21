@@ -8,9 +8,11 @@
 #include <stdlib.h>
 
 #include "src/shared/bytecodes.h"
+#include "src/shared/flags.h"
 #include "src/shared/names.h"
 #include "src/shared/selectors.h"
 
+#include "src/vm/heap_validator.h"
 #include "src/vm/natives.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/port.h"
@@ -357,6 +359,10 @@ Object* Process::NewStack(int length) {
 }
 
 void Process::CollectImmutableGarbage() {
+  if (Flags::validate_heaps) {
+    ValidateHeaps();
+  }
+
   Space* from = immutable_heap_.space();
   Space* to = new Space();
   // While garbage collecting, do not fail allocations. Instead grow
@@ -371,9 +377,17 @@ void Process::CollectImmutableGarbage() {
   immutable_heap_.ProcessWeakPointers();
   set_ports(Port::CleanupPorts(from, ports()));
   immutable_heap_.ReplaceSpace(to);
+
+  if (Flags::validate_heaps) {
+    ValidateHeaps();
+  }
 }
 
 void Process::CollectMutableGarbage() {
+  if (Flags::validate_heaps) {
+    ValidateHeaps();
+  }
+
   Space* immutable_space = immutable_heap_.space();
 
   Space* from = heap_.space();
@@ -395,6 +409,10 @@ void Process::CollectMutableGarbage() {
   set_ports(Port::CleanupPorts(from, ports()));
   heap_.ReplaceSpace(to);
   UpdateStackLimit();
+
+  if (Flags::validate_heaps) {
+    ValidateHeaps();
+  }
 }
 
 void Process::CollectGarbage() {
@@ -490,6 +508,11 @@ int Process::CollectGarbageAndChainStacks() {
   int number_of_stacks = CollectMutableGarbageAndChainStacks();
   CollectImmutableGarbage();
   return number_of_stacks;
+}
+
+void Process::ValidateHeaps() {
+  ProcessHeapValidatorVisitor v(program()->heap());
+  v.VisitProcess(this);
 }
 
 static void IteratePortQueuePointers(PortQueue* queue,

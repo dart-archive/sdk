@@ -151,6 +151,8 @@ class Process {
   int CollectMutableGarbageAndChainStacks();
   int CollectGarbageAndChainStacks();
 
+  void ValidateHeaps();
+
   // Iterate all pointers reachable from this process object.
   void IterateRoots(PointerVisitor* visitor);
 

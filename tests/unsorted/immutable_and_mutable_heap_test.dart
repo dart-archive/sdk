@@ -35,7 +35,7 @@ void mutableToImmutableObjects(bool useConstConstructor) {
   Expect.isTrue(isImmutable(survivorContainer.second));
 
   var abc = "abc";
-  for (int i = 0; i < 500000; i++) {
+  for (int i = 0; i < 100000; i++) {
     abc = '$abc$abc'.substring(0, 3);
     Expect.equals(abc, 'abc');
   }
@@ -48,7 +48,7 @@ void mutableToImmutableObjects(bool useConstConstructor) {
 void immutableGarbage() {
   var abc = "abc";
   var survivor = '$abc$abc';
-  for (int i = 0; i < 500000; i++) {
+  for (int i = 0; i < 100000; i++) {
     abc = '$abc$abc'.substring(0, 3);
     Expect.equals(abc, 'abc');
   }
@@ -60,7 +60,7 @@ void immutableGarbage() {
 void mutableGarbage() {
   var abc = "abc";
   var survivor = new Mutable('$abc$abc');
-  for (int i = 0; i < 500000; i++) {
+  for (int i = 0; i < 100000; i++) {
     Expect.equals(new Mutable(abc).value, 'abc');
   }
   // [survivor] was moved by GC and we should still be able to
@@ -70,7 +70,7 @@ void mutableGarbage() {
 
 void closuresGarbage() {
   var survivor = (i) => 'survivor $i';
-  for (int i = 0; i < 500000; i++) {
+  for (int i = 0; i < 100000; i++) {
     void closure(i) {
       return i + 1;
     }
@@ -83,7 +83,7 @@ void closuresGarbage() {
 
 void boxedObjectGarbage() {
   var survivorBox = 10;
-  for (int i = 0; i < 500000; i++) {
+  for (int i = 0; i < 100000; i++) {
     var box = 11;
     void closure() {
       survivorBox = i;
@@ -94,7 +94,7 @@ void boxedObjectGarbage() {
   }
   // [survivorBox] was moved by GC and we should still be able to
   // access it.
-  Expect.equals(survivorBox, 499999);
+  Expect.equals(survivorBox, 99999);
 }
 
 void arrayStores() {
@@ -105,7 +105,7 @@ void arrayStores() {
   // Put a survivor value into the array.
   survivorContainer[0] = '$kConst';
 
-  for (int i = 0; i < 500000; i++) {
+  for (int i = 0; i < 100000; i++) {
     survivorContainer[1] = '$i';
     Expect.equals(survivorContainer[1], '$i');
   }
@@ -117,7 +117,7 @@ void arrayStores() {
 var staticSurvivor;
 void staticStores() {
   staticSurvivor = '${100}';
-  for (int i = 0; i < 500000; i++) {
+  for (int i = 0; i < 100000; i++) {
     Expect.equals('${i - i + 1}', '1');
     Expect.equals(new Mutable(10).value, 10);
   }

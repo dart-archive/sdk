@@ -21,6 +21,7 @@
 #include "src/shared/selectors.h"
 
 #include "src/vm/heap.h"
+#include "src/vm/heap_validator.h"
 #include "src/vm/object.h"
 #include "src/vm/process.h"
 #include "src/vm/port.h"
@@ -967,6 +968,10 @@ void Program::PrepareProgramGC(Process** all_processes) {
     process_linker.Finish();
   }
 
+  if (Flags::validate_heaps) {
+    ValidateGlobalHeapsAreConsistent();
+  }
+
   // Make sure that the number of processes we find equals to the number
   // of processes the scheduler knows about.
   //
@@ -979,6 +984,11 @@ void Program::PrepareProgramGC(Process** all_processes) {
     Process* current = *all_processes;
     while (current != NULL) {
       ASSERT(current->program_gc_state() == Process::kProcessed);
+
+      if (Flags::validate_heaps) {
+        current->ValidateHeaps();
+      }
+
       int number_of_stacks = current->CollectGarbageAndChainStacks();
       current->CookStacks(number_of_stacks);
       current = current->program_gc_next();
@@ -1020,6 +1030,10 @@ void Program::FinishProgramGC(Process** all_processes) {
     current->UncookAndUnchainStacks();
     current->UpdateBreakpoints();
 
+    if (Flags::validate_heaps) {
+      current->ValidateHeaps();
+    }
+
     // Unlink the process.
     Process* next = current->program_gc_next();
     current->set_program_gc_state(Process::kUnknown);
@@ -1027,7 +1041,18 @@ void Program::FinishProgramGC(Process** all_processes) {
     current = next;
   }
 
+  if (Flags::validate_heaps) {
+    ValidateGlobalHeapsAreConsistent();
+  }
+
   *all_processes = NULL;
+}
+
+void Program::ValidateGlobalHeapsAreConsistent() {
+  ProgramHeapPointerValidator validator(heap());
+  HeapObjectPointerVisitor visitor(&validator);
+  IterateRoots(&validator);
+  heap()->IterateObjects(&visitor);
 }
 
 void Program::CollectGarbage() {

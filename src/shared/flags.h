@@ -35,6 +35,8 @@ namespace fletch {
       "Unfold the program before running")             \
   BOOLEAN(release, gc_on_delete, false,                \
       "GC the heap at when terminating isolate")       \
+  BOOLEAN(release, validate_heaps, false,              \
+      "Validate consistency of heaps.")                \
   BOOLEAN(release, run_on_foreign_thread, false,       \
       "Allow a foreign thread to run the interpreter") \
   BOOLEAN(debug, log_decoder, false,                   \

@@ -21,6 +21,8 @@ class StoreBufferChunk {
 
   void IteratePointersToImmutableSpace(PointerVisitor* visitor);
 
+  void IterateObjects(HeapObjectVisitor* visitor);
+
   StoreBufferChunk* next() { return next_; }
 
   bool is_empty() const { return pos_ == 0; }
@@ -59,6 +61,8 @@ class StoreBuffer {
   }
 
   void IteratePointersToImmutableSpace(PointerVisitor* visitor);
+
+  void IterateObjects(HeapObjectVisitor* visitor);
 
   // After a mutable GC this function will replace the current storebuffer
   // entries with the ones collected during a mutable GC.

@@ -38,6 +38,7 @@ namespace fletch {
 //           Coroutine
 
 class Heap;
+class Process;
 class Program;
 class SnapshotReader;
 class SnapshotWriter;
@@ -1017,6 +1018,22 @@ class HeapObjectPointerVisitor : public HeapObjectVisitor {
   }
 
  private:
+  PointerVisitor* visitor_;
+};
+
+// Class for vising pointers inside heap objects.
+//
+// NOTE: This class protects against raw bytecode pointers on the stack.
+class SafeObjectPointerVisitor : public HeapObjectVisitor {
+ public:
+  SafeObjectPointerVisitor(Process* process, PointerVisitor* visitor)
+      : process_(process), visitor_(visitor) {}
+  virtual ~SafeObjectPointerVisitor() {}
+
+  virtual void Visit(HeapObject* object);
+
+ private:
+  Process* process_;
   PointerVisitor* visitor_;
 };
 

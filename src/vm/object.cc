@@ -12,7 +12,9 @@
 
 #include "src/vm/intrinsics.h"
 #include "src/vm/natives.h"
+#include "src/vm/process.h"
 #include "src/vm/program.h"
+#include "src/vm/stack_walker.h"
 #include "src/vm/unicode.h"
 
 namespace fletch {
@@ -626,6 +628,19 @@ void HeapObject::HeapObjectShortPrint() {
       break;
     default:
       UNREACHABLE();
+  }
+}
+
+void SafeObjectPointerVisitor::Visit(HeapObject* object) {
+  if (object->IsStack() && !process_->stacks_are_cooked()) {
+    // To avoid visiting raw bytecode pointers lying on the stack we use a
+    // stack walker.
+    StackWalker stack_walker(process_, Stack::cast(object));
+    while (stack_walker.MoveNext()) {
+      stack_walker.VisitPointersInFrame(visitor_);
+    }
+  } else {
+    object->IteratePointers(visitor_);
   }
 }
 
