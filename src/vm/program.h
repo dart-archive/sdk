@@ -213,11 +213,11 @@ class Program {
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
   Object** last_root_address() { return &native_failure_result_; }
 
-  void PrepareProgramGC(Process** additional_processes);
+  void PrepareProgramGC(Process** all_processes);
   void PerformProgramGC(Space* to,
                         PointerVisitor* visitor,
-                        Process* additional_processes);
-  void FinishProgramGC(Process** additional_processes);
+                        Process* all_processes);
+  void FinishProgramGC(Process** all_processes);
 
   RandomLCG random_;
 

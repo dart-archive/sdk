@@ -84,11 +84,14 @@ class ProcessInPortFinder : public PointerVisitor {
       Object* object = *current;
       if (object->IsPort()) {
         Instance* instance = Instance::cast(object);
-        uword address = AsForeignWord(instance->GetInstanceField(0));
-        Port* port = reinterpret_cast<Port*>(address);
-        Process* process = port->process();
-        if (process != NULL) {
-          process_visitor_->VisitProcess(process);
+        Object* field = instance->GetInstanceField(0);
+        if (!field->IsNull()) {
+          uword address = AsForeignWord(field);
+          Port* port = reinterpret_cast<Port*>(address);
+          Process* process = port->process();
+          if (process != NULL) {
+            process_visitor_->VisitProcess(process);
+          }
         }
       }
     }

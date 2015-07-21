@@ -189,6 +189,8 @@ class Process {
   void CookStacks(int number_of_stacks);
   void UncookAndUnchainStacks();
 
+  bool stacks_are_cooked() { return !cooked_stack_deltas_.is_empty(); }
+
   // Program GC support. Update breakpoints after having moved function.
   // Bytecode pointers need to be updated.
   void UpdateBreakpoints();

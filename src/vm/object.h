@@ -1003,6 +1003,23 @@ class HeapObjectVisitor {
   virtual void Visit(HeapObject* object) = 0;
 };
 
+// Class for visiting pointers inside heap objects.
+//
+// NOTE: This class does not protect against raw bytecode pointers on the stack.
+class HeapObjectPointerVisitor : public HeapObjectVisitor {
+ public:
+  explicit HeapObjectPointerVisitor(PointerVisitor* visitor)
+      : visitor_(visitor) {}
+  virtual ~HeapObjectPointerVisitor() {}
+
+  virtual void Visit(HeapObject* object) {
+    object->IteratePointers(visitor_);
+  }
+
+ private:
+  PointerVisitor* visitor_;
+};
+
 // Inlined InstanceFormat functions.
 
 InstanceFormat::InstanceFormat(Type type,

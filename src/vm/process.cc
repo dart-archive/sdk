@@ -508,21 +508,9 @@ void Process::IterateRoots(PointerVisitor* visitor) {
   IteratePortQueuesPointers(visitor);
 }
 
-class ProgramPointerVisitor : public HeapObjectVisitor {
- public:
-  explicit ProgramPointerVisitor(PointerVisitor* visitor)
-      : visitor_(visitor) { }
-
-  virtual void Visit(HeapObject* object) {
-    object->IteratePointers(visitor_);
-  }
-
- private:
-  PointerVisitor* visitor_;
-};
-
 void Process::IterateProgramPointers(PointerVisitor* visitor) {
-  ProgramPointerVisitor program_pointer_visitor(visitor);
+  ASSERT(stacks_are_cooked());
+  HeapObjectPointerVisitor program_pointer_visitor(visitor);
   heap()->IterateObjects(&program_pointer_visitor);
   immutable_heap()->IterateObjects(&program_pointer_visitor);
   store_buffer_.IteratePointersToImmutableSpace(visitor);
