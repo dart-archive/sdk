@@ -651,7 +651,7 @@ class LibraryUpdater extends FletchFeatures {
     ClassElement cls = container;
 
     var externalSubtypes =
-        compiler.world.subtypesOf(cls).where((e) => e.library != library);
+        compiler.world.subclassesOf(cls).where((e) => e.library != library);
 
     return result..addAll(externalSubtypes);
   }

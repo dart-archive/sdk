@@ -2880,6 +2880,10 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void previsitDeferredAccess(Send node, PrefixElement prefix, _) {
+    // We don't support deferred access, so nothing to do for now.
+  }
+
   void bulkHandleNode(Node node, String msg, _) {
     generateUnimplementedError(node, msg.replaceAll('#', node.toString()));
     applyVisitState();

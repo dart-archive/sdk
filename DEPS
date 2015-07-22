@@ -20,12 +20,12 @@ vars = {
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_fletch_patches".
   # 2. update package revisions below.
-  "dart_rev": "@b2ccdc92f8f87e8ccdac6a7468e2e69ca726fbc9",
+  "dart_rev": "@30b2d8ed7b5f97ab6dbbd7c68da98981df493d61",
 
   # Please copy these package revisions from ../dart/DEPS when updating
   # dart_rev:
   "package_config_tag": "@0.1.1",
-  "path_rev": "@93b3e2aa1db0ac0c8bab9d341588d77acda60320",
+  "path_tag": "@1.3.6",
   "charcode_tag": "@1.1.0",
 
   # We use mirrors of all github repos to guarantee reproducibility and
@@ -58,7 +58,7 @@ deps = {
       (Var("github_mirror") % "charcode") + Var("charcode_tag"),
 
   "third_party/path":
-      (Var("github_mirror") % "path") + Var("path_rev"),
+      (Var("github_mirror") % "path") + Var("path_tag"),
 
   "third_party/persistent":
       (Var("github_url") % "polux/persistent") + Var("persistent_rev"),

@@ -17,8 +17,14 @@ import 'compiler_test_case.dart' show
     CompilerTestCase;
 
 import 'package:fletchc/incremental/fletchc_incremental.dart' show
-    IncrementalCompiler,
+    IncrementalCompiler;
+
+import 'package:fletchc/incremental/compiler.dart' show
     OutputProvider;
+
+import 'package:compiler/compiler_new.dart' show
+    CompilerDiagnostics,
+    CompilerInput;
 
 import 'package:fletchc/commands.dart' show
     Command;
@@ -78,29 +84,31 @@ class IoCompilerTestCase extends CompilerTestCase {
     IoInputProvider inputProvider =
         new IoInputProvider(sources, libraryRoot, packageRoot);
 
-    void diagnosticHandler(
-        Uri uri, int begin, int end, String message, Diagnostic kind) {
-      if (uri == null) {
-        print('[$kind] $message');
-      } else {
-        print('$uri@$begin+${end - begin}: [$kind] $message');
-      }
-    }
-
     return new IncrementalCompiler(
         // options: ['--verbose'],
         // libraryRoot: libraryRoot,
         packageRoot: packageRoot,
         inputProvider: inputProvider,
-        diagnosticHandler: diagnosticHandler,
+        diagnosticHandler: new DiagnosticHandler(),
         outputProvider: new OutputProvider());
+  }
+}
+
+class DiagnosticHandler implements CompilerDiagnostics {
+  void report(var code,
+              Uri uri, int begin, int end, String text, Diagnostic kind) {
+    if (uri == null) {
+      print('[$kind] $text');
+    } else {
+      print('$uri@$begin+${end - begin}: [$kind] $text');
+    }
   }
 }
 
 /// An input provider which provides input via [HttpRequest].  Includes
 /// in-memory compilation units [sources] which are returned when a matching
 /// key requested.
-class IoInputProvider {
+class IoInputProvider implements CompilerInput {
   final Map<Uri, String> sources;
 
   final Uri libraryRoot;
@@ -113,7 +121,7 @@ class IoInputProvider {
 
   IoInputProvider(this.sources, this.libraryRoot, this.packageRoot);
 
-  Future call(Uri uri) {
+  Future readFromUri(Uri uri) {
     return cachedSources.putIfAbsent(uri, () {
       if (sources.containsKey(uri)) return new Future.value(sources[uri]);
       if (uri.scheme == SDK_SCHEME) {

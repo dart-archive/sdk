@@ -4,11 +4,11 @@
 
 library fletchc.fletch_compiler;
 
-import 'package:_internal/libraries.dart' show
+import 'package:sdk_library_metadata/libraries.dart' show
     LIBRARIES,
     LibraryInfo;
 
-import 'package:compiler/compiler.dart' as api;
+import 'package:compiler/compiler_new.dart' as api;
 
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
@@ -105,9 +105,9 @@ class FletchCompiler extends FletchCompilerHack {
   var helper;
 
   FletchCompiler(
-      api.CompilerInputProvider provider,
-      api.CompilerOutputProvider outputProvider,
-      api.DiagnosticHandler handler,
+      api.CompilerInput provider,
+      api.CompilerOutput outputProvider,
+      api.CompilerDiagnostics handler,
       Uri libraryRoot,
       Uri packageRoot,
       this.patchRoot,

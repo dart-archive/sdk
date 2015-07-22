@@ -6,9 +6,9 @@ part of fletchc.fletch_compiler;
 
 abstract class FletchCompilerHack extends apiimpl.Compiler {
   FletchCompilerHack(
-      api.CompilerInputProvider provider,
-      api.CompilerOutputProvider outputProvider,
-      api.DiagnosticHandler handler,
+      api.CompilerInput provider,
+      api.CompilerOutput outputProvider,
+      api.CompilerDiagnostics handler,
       Uri libraryRoot,
       Uri packageRoot,
       List<String> options,

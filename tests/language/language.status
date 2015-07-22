@@ -46,7 +46,6 @@ built_in_identifier_prefix_test: Fail
 built_in_identifier_test/01: Fail
 call_nonexistent_constructor_test/01: Fail
 call_nonexistent_static_test/10: Fail
-call_type_literal_test/01: Fail
 call_with_no_such_method_test: Fail
 cast_test/01: MissingRuntimeError
 cast_test/10: MissingRuntimeError
@@ -93,6 +92,7 @@ compile_time_constant_test/01: MissingCompileTimeError
 compound_assignment_operator_test: Fail
 const_constructor_nonconst_field_test/01: MissingCompileTimeError
 const_evaluation_test/01: CompileTimeError
+const_evaluation_test/none: CompileTimeError
 const_instance_field_test/01: MissingCompileTimeError
 const_locals_test: Fail
 const_native_factory_test/01: MissingCompileTimeError
@@ -125,13 +125,7 @@ cyclic_typedef_test/09: MissingCompileTimeError
 cyclic_typedef_test/10: MissingCompileTimeError
 cyclic_typedef_test/11: MissingCompileTimeError
 deferred_closurize_load_library_test: Fail
-deferred_constraints_constants_test/constructor1: MissingCompileTimeError
-deferred_constraints_constants_test/constructor2: MissingCompileTimeError
-deferred_constraints_constants_test/default_argument1: MissingCompileTimeError
-deferred_constraints_constants_test/default_argument2: MissingCompileTimeError
-deferred_constraints_constants_test/metadata1: MissingCompileTimeError
-deferred_constraints_constants_test/metadata2: MissingCompileTimeError
-deferred_constraints_constants_test/metadata3: MissingCompileTimeError
+deferred_constraints_constants_test/default_argument1: Crash
 deferred_constraints_constants_test/none: Fail
 deferred_constraints_constants_test/reference_after_load: Fail
 deferred_constraints_type_annotation_test/as_operation: Fail
@@ -276,6 +270,7 @@ generic_is_check_test: Fail
 generic_native_test: Fail
 generic_parameterized_extends_test: Fail
 generic_test: Fail
+illegal_invocation_test/01: Crash # TODO(johnniwinther): Issue in the semantic visitor.
 incr_op_test: Fail
 instanceof2_test: Fail
 instanceof3_test: Fail

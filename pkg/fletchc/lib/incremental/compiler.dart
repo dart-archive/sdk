@@ -16,6 +16,9 @@ import 'fletchc_incremental.dart' show
 import 'package:compiler/src/source_file_provider.dart' show
     FormattingDiagnosticHandler;
 
+import 'package:compiler/compiler_new.dart' show
+    CompilerOutput;
+
 import '../commands.dart'
     show Command;
 
@@ -147,10 +150,10 @@ compileToStream(
 }
 
 /// Output provider which collects output in [output].
-class OutputProvider {
+class OutputProvider implements CompilerOutput {
   final Map<String, String> output = new Map<String, String>();
 
-  EventSink<String> call(String name, String extension) {
+  EventSink<String> createEventSink(String name, String extension) {
     return new StringEventSink((String data) {
       output['$name.$extension'] = data;
     });

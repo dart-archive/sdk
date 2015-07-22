@@ -15,10 +15,10 @@ import 'dart:io' show
     Link,
     Platform;
 
-import 'package:compiler/compiler.dart' show
-    CompilerInputProvider,
-    CompilerOutputProvider,
-    DiagnosticHandler;
+import 'package:compiler/compiler_new.dart' show
+    CompilerInput,
+    CompilerOutput,
+    CompilerDiagnostics;
 
 import 'incremental/compiler.dart' show
     OutputProvider;
@@ -84,9 +84,9 @@ class FletchCompiler {
   Backdoor get backdoor => new Backdoor(this);
 
   factory FletchCompiler(
-      {CompilerInputProvider provider,
-       CompilerOutputProvider outputProvider,
-       DiagnosticHandler handler,
+      {CompilerInput provider,
+       CompilerOutput outputProvider,
+       CompilerDiagnostics handler,
        @StringOrUri libraryRoot,
        @StringOrUri packageRoot,
        /// Location of fletch patch files.
@@ -318,7 +318,8 @@ bool _containsFile(Uri uri, String expectedFile) {
 }
 
 bool _looksLikeLibraryRoot(Uri uri) {
-  return _containsFile(uri, 'lib/_internal/libraries.dart');
+  return _containsFile(
+      uri, 'lib/_internal/sdk_library_metadata/lib/libraries.dart');
 }
 
 Uri _computeValidatedUri(

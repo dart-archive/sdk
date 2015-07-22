@@ -14,14 +14,11 @@ import 'dart:profiler' show
 import 'package:compiler/src/apiimpl.dart' show
     Compiler;
 
-import 'package:compiler/compiler.dart' show
-    CompilerInputProvider,
-    CompilerOutputProvider,
-    Diagnostic,
-    DiagnosticHandler;
-
-import 'package:compiler/src/dart2jslib.dart' show
-    NullSink;
+import 'package:compiler/compiler_new.dart' show
+    CompilerDiagnostics,
+    CompilerInput,
+    CompilerOutput,
+    Diagnostic;
 
 import 'package:compiler/src/elements/elements.dart' show
     LibraryElement;
@@ -34,15 +31,18 @@ import 'library_updater.dart' show
 import 'package:compiler/src/js/js.dart' as jsAst;
 
 import '../compiler.dart' show
-   FletchCompiler;
+    FletchCompiler;
 
 import '../src/fletch_compiler.dart' as implementation show
-   FletchCompiler;
+    FletchCompiler;
 
 import '../commands.dart' show
     Command;
 
 import '../fletch_system.dart';
+
+import 'compiler.dart' show
+    OutputProvider;
 
 part 'caching_compiler.dart';
 
@@ -56,10 +56,10 @@ const List<String> INCREMENTAL_OPTIONS = const <String>[
 class IncrementalCompiler {
   final Uri libraryRoot;
   final Uri packageRoot;
-  final CompilerInputProvider inputProvider;
-  final DiagnosticHandler diagnosticHandler;
+  final CompilerInput inputProvider;
+  final CompilerDiagnostics diagnosticHandler;
   final List<String> options;
-  final CompilerOutputProvider outputProvider;
+  final CompilerOutput outputProvider;
   final Map<String, dynamic> environment;
   final List<Command> _updates = <Command>[];
   final IncrementalCompilerContext _context = new IncrementalCompilerContext();
@@ -130,7 +130,7 @@ class IncrementalCompiler {
     }
     Future mappingInputProvider(Uri uri) {
       Uri updatedFile = updatedFiles[uri];
-      return inputProvider(updatedFile == null ? uri : updatedFile);
+      return inputProvider.readFromUri(updatedFile == null ? uri : updatedFile);
     }
     LibraryUpdater updater = new LibraryUpdater(
         _compiler,

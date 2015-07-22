@@ -1168,6 +1168,8 @@ class FletchBackend extends Backend {
     return false;
   }
 
+  bool get supportsReflection => false;
+
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
     if (Uri.parse('dart:_fletch_system') == library.canonicalUri) {
       fletchSystemLibrary = library;
