@@ -39,7 +39,7 @@ class FletchVm {
     vmProcess.stderr
         .transform(new Utf8Decoder())
         .transform(new LineSplitter())
-        .listen((line) { print('stderr: $line'); });
+        .listen((line) { stderr.writeln('stderr: $line'); });
 
     bool hasValue = await connectionIterator.moveNext();
     assert(hasValue);

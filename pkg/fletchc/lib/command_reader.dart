@@ -35,6 +35,10 @@ class CommandReader {
 
   Stream<Command> filterCommandStream(EventSink<List<int>> stdoutSink,
                                       EventSink<List<int>> stderrSink) async* {
+    // When done with the data on the socket, we do not close
+    // stdoutSink and stderrSink. They are usually stdout and stderr
+    // and the user will probably want to add more on those streams
+    // independently of the messages added here.
     await for (List data in socket) {
       addData(data);
       Command command = readCommand();
