@@ -66,7 +66,10 @@ class Process {
     kRunning,
     kYielding,
     kBreakPoint,
+    kCompileTimeError,
+    kUncaughtException,
     kBlocked,
+    kTerminated,
   };
 
   enum ProgramGCState {

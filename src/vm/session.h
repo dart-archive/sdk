@@ -97,10 +97,14 @@ class Session {
   bool CommitChanges(int count);
   void DiscardChanges();
 
-  void UncaughtException(Process* process);
-  void BreakPoint(Process* process);
-  void ProcessTerminated(Process* process);
-  void CompileTimeError(Process* process);
+  // These functions return `true` if the session knows about [process] and was
+  // able to take action on the event.
+  // In case the session does not know about [process] these functions will
+  // return `false` and the caller is responsible for handling the event.
+  bool UncaughtException(Process* process);
+  bool BreakPoint(Process* process);
+  bool ProcessTerminated(Process* process);
+  bool CompileTimeError(Process* process);
 
  private:
   enum Change {

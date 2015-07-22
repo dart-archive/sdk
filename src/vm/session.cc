@@ -306,7 +306,20 @@ void Session::ProcessMessages() {
         // VM to terminate.
         if (execution_paused_) {
           Scheduler* scheduler = program()->scheduler();
-          scheduler->DeleteProcessAtBreakpoint(process_);
+          switch (process_->state()) {
+            case Process::kBreakPoint:
+              scheduler->ExitAtBreakpoint(process_);
+              break;
+            case Process::kCompileTimeError:
+              scheduler->ExitAtCompileTimeError(process_);
+              break;
+            case Process::kUncaughtException:
+              scheduler->ExitAtUncaughtException(process_);
+              break;
+            default:
+              UNREACHABLE();
+              break;
+          }
         }
         SignalMainThread(kSessionEnd);
         return;
@@ -1007,15 +1020,17 @@ void Session::PostponeChange(Change change, int count) {
   changes_.Add(array);
 }
 
-void Session::UncaughtException(Process* process) {
+bool Session::UncaughtException(Process* process) {
   if (process_ == process) {
     execution_paused_ = true;
     WriteBuffer buffer;
     connection_->Send(Connection::kUncaughtException, buffer);
+    return true;
   }
+  return false;
 }
 
-void Session::BreakPoint(Process* process) {
+bool Session::BreakPoint(Process* process) {
   if (process_ == process) {
     execution_paused_ = true;
     DebugInfo* debug_info = process->debug_info();
@@ -1029,23 +1044,30 @@ void Session::BreakPoint(Process* process) {
     // Pop bytecode index from session stack and send it.
     buffer.WriteInt64(PopInteger());
     connection_->Send(Connection::kProcessBreakpoint, buffer);
+    return true;
   }
+  return false;
 }
 
-void Session::ProcessTerminated(Process* process) {
+bool Session::ProcessTerminated(Process* process) {
   if (process_ == process) {
     WriteBuffer buffer;
     connection_->Send(Connection::kProcessTerminated, buffer);
     process_ = NULL;
+    program_->scheduler()->ExitAtTermination(process);
+    return true;
   }
+  return false;
 }
 
-void Session::CompileTimeError(Process* process) {
+bool Session::CompileTimeError(Process* process) {
   if (process_ == process) {
     execution_paused_ = true;
     WriteBuffer buffer;
     connection_->Send(Connection::kProcessCompileTimeError, buffer);
+    return true;
   }
+  return false;
 }
 
 class TransformInstancesPointerVisitor : public PointerVisitor {

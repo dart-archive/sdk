@@ -154,7 +154,10 @@ void Scheduler::ResumeProcess(Process* process) {
 }
 
 void Scheduler::ProcessContinue(Process* process) {
-  bool success = process->ChangeState(Process::kBreakPoint, Process::kReady);
+  bool success =
+      process->ChangeState(Process::kBreakPoint, Process::kReady) ||
+      process->ChangeState(Process::kCompileTimeError, Process::kReady) ||
+      process->ChangeState(Process::kUncaughtException, Process::kReady);
   ASSERT(success);
   EnqueueOnAnyThread(process, 0);
 }
@@ -261,29 +264,11 @@ bool Scheduler::Run() {
   return true;
 }
 
-void Scheduler::DeleteProcess(Process* process) {
-  // Tell the debugger that this process has terminated.
-  Session* session = process->program()->session();
-  if (session != NULL && session->is_debugging()) {
-    session->ProcessTerminated(process);
-  }
-  // Get rid of the process.
-  process->program()->DeleteProcess(process);
-}
-
-void Scheduler::DeleteProcessAtBreakpoint(Process* process) {
-  ASSERT(process->blocked() == NULL);
-  ASSERT(process->state() == Process::kBreakPoint);
-  DeleteProcess(process);
-  if (--processes_ == 0) NotifyAllThreads();
-}
-
-void Scheduler::DeleteProcessAndMergeHeaps(Process* process,
-                                           ThreadState* thread_state) {
-  ASSERT(thread_state != NULL);
+void Scheduler::ExitAtTermination(Process* process,
+                                              ThreadState* thread_state) {
   Process* blocked = process->blocked();
   Program* program = process->program();
-  DeleteProcess(process);
+  program->DeleteProcess(process);
   // Don't unblock until 'process' is deleted, to make sure all references to
   // 'blocked's heap are gone.
   if (blocked != NULL && blocked->DecrementBlocked()) {
@@ -295,17 +280,40 @@ void Scheduler::DeleteProcessAndMergeHeaps(Process* process,
     // heaps before we allow the parent to return to Dart code.
     blocked->TakeChildHeaps();
     blocked->ChangeState(Process::kBlocked, Process::kReady);
-    EnqueueOnAnyThread(blocked, thread_state->thread_id() + 1);
+    int id = thread_state != NULL ? thread_state->thread_id() + 1 : 0;
+    EnqueueOnAnyThread(blocked, id);
   }
   if (--processes_ == 0) {
     NotifyAllThreads();
   } else if (Flags::gc_on_delete) {
-    sleeping_threads_++;
-    LookupCache* cache = thread_state->cache();
-    if (cache != NULL) cache->Clear();
-    program->CollectGarbage();
-    sleeping_threads_--;
+    // TODO(kustermann): Get rid of this code.
+    if (thread_state == NULL) {
+      program->CollectGarbage();
+    } else {
+      sleeping_threads_++;
+      LookupCache* cache = thread_state->cache();
+      if (cache != NULL) cache->Clear();
+      program->CollectGarbage();
+      sleeping_threads_--;
+    }
   }
+}
+
+void Scheduler::ExitAtUncaughtException(Process* process) {
+  ASSERT(process->state() == Process::kUncaughtException);
+  exit(1);
+}
+
+void Scheduler::ExitAtCompileTimeError(Process* process) {
+  ASSERT(process->state() == Process::kCompileTimeError);
+  exit(254);
+}
+
+void Scheduler::ExitAtBreakpoint(Process* process) {
+  ASSERT(process->state() == Process::kBreakPoint);
+  // We should only reach a breakpoint if a session is attached which will take
+  // care of continuing the process.
+  FATAL("We should never hit a breakpoint without a session being attached.");
 }
 
 void Scheduler::RescheduleProcess(Process* process,
@@ -313,7 +321,7 @@ void Scheduler::RescheduleProcess(Process* process,
                                   bool terminate) {
   ASSERT(process->state() == Process::kRunning);
   if (terminate) {
-    DeleteProcessAndMergeHeaps(process, state);
+    ExitAtTermination(process, state);
   } else {
     process->ChangeState(Process::kRunning, Process::kReady);
     EnqueueOnAnyThread(process, state->thread_id() + 1);
@@ -559,11 +567,6 @@ Process* Scheduler::InterpretProcess(Process* process,
     return NULL;
   }
 
-  if (interpreter.IsTerminated()) {
-    DeleteProcessAndMergeHeaps(process, thread_state);
-    return NULL;
-  }
-
   if (interpreter.IsInterrupted()) {
     // No need to notify threads, as 'this' is now available.
     process->ChangeState(Process::kRunning, Process::kReady);
@@ -571,36 +574,47 @@ Process* Scheduler::InterpretProcess(Process* process,
     return NULL;
   }
 
-  if (interpreter.IsUncaughtException()) {
-    process->ChangeState(Process::kRunning, Process::kBreakPoint);
+  if (interpreter.IsTerminated()) {
+    process->ChangeState(Process::kRunning, Process::kTerminated);
     Session* session = process->program()->session();
-    if (session == NULL || !session->is_debugging()) exit(1);
-    // Send stack trace information to attached session if debugging.
-    session->UncaughtException(process);
-    // Just hang by not enqueueing the process. The session
-    // will terminate the program on uncaught exceptions.
+    if (session == NULL ||
+        !session->is_debugging() ||
+        !session->ProcessTerminated(process)) {
+      ExitAtTermination(process, thread_state);
+    }
+    return NULL;
+  }
+
+  if (interpreter.IsUncaughtException()) {
+    process->ChangeState(Process::kRunning, Process::kUncaughtException);
+    Session* session = process->program()->session();
+    if (session == NULL ||
+        !session->is_debugging() ||
+        !session->UncaughtException(process)) {
+      ExitAtUncaughtException(process);
+    }
     return NULL;
   }
 
   if (interpreter.IsCompileTimeError()) {
-    // Forcefully exit the VM on compile-time errors when not
-    // debugging. When debugging, just hang by not enqueueing nor
-    // deleting the process. The session will terminate the program
-    // (or restart it after program rewriting) on compile-time errors.
-    process->ChangeState(Process::kRunning, Process::kBreakPoint);
-    // Just hang by not enqueueing nor deleting the process.
-    // The session will terminate the program (or restart it
-    // after program rewriting) on compile-time errors.
+    process->ChangeState(Process::kRunning, Process::kCompileTimeError);
     Session* session = process->program()->session();
-    if (session == NULL || !session->is_debugging()) exit(254);
-    session->CompileTimeError(process);
+    if (session == NULL ||
+        !session->is_debugging() ||
+        !session->CompileTimeError(process)) {
+      ExitAtCompileTimeError(process);
+    }
     return NULL;
   }
 
   if (interpreter.IsAtBreakPoint()) {
     process->ChangeState(Process::kRunning, Process::kBreakPoint);
     Session* session = process->program()->session();
-    if (session != NULL) session->BreakPoint(process);
+    if (session == NULL ||
+        !session->is_debugging() ||
+        !session->BreakPoint(process)) {
+      ExitAtBreakpoint(process);
+    }
     return NULL;
   }
 

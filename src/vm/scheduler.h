@@ -58,9 +58,20 @@ class Scheduler {
 
   bool Run();
 
-  // Terminate and delete a process that is paused at a breakpoint. Used
-  // by the debugger to terminate gracefully.
-  void DeleteProcessAtBreakpoint(Process* process);
+  // There are 4 reasons for the interpretation of a process to be interrupted:
+  //   * termination
+  //   * uncaught exception
+  //   * compile-time error
+  //   * break point
+  // these are the default implementations. They might be invoked if no session
+  // is attached or the session might call them if it is about to end.
+  //
+  // TODO(kustermann): Once we've made more progress on the design of a
+  // multiprocess system, we should consider making an abstraction for these.
+  void ExitAtTermination(Process* process, ThreadState* thread_state = NULL);
+  void ExitAtUncaughtException(Process* process);
+  void ExitAtCompileTimeError(Process* process);
+  void ExitAtBreakpoint(Process* process);
 
   size_t process_count() const { return processes_; }
 
@@ -87,7 +98,6 @@ class Scheduler {
   std::atomic<bool> pause_;
   std::atomic<Process*>* current_processes_;
 
-  void DeleteProcess(Process* process);
   void DeleteProcessAndMergeHeaps(Process* process, ThreadState* thread_state);
   void RescheduleProcess(Process* process, ThreadState* state, bool terminate);
 
