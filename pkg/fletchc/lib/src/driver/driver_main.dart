@@ -430,8 +430,6 @@ class ClientController {
   /// Completes with the command-line arguments from the client.
   Future<List<String>> get arguments => argumentsCompleter.future;
 
-  bool get requiresWorker => verb.requiresWorker;
-
   /// Start processing commands from the client.
   void start() {
     commandSender = new ByteCommandSender(socket);

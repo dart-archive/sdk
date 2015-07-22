@@ -4,15 +4,8 @@
 
 library fletchc.fletch_constants;
 
-import 'package:compiler/src/constants/expressions.dart' show
-    ConstantExpression;
-
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue;
-
-import 'package:compiler/src/elements/elements.dart' show
-    ClassElement,
-    FunctionElement;
 
 import 'package:compiler/src/core_types.dart' show
     CoreTypes;

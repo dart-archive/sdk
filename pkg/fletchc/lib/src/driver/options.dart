@@ -46,7 +46,6 @@ class Options {
 
     Iterator<String> iterator = options.iterator;
     String getRequiredArgument(String errorMessage) {
-      String option = iterator.current;
       if (iterator.moveNext()) {
         return iterator.current;
       } else {

@@ -39,9 +39,6 @@ import '../compiler.dart' show
 import '../src/fletch_compiler.dart' as implementation show
    FletchCompiler;
 
-import '../src/fletch_backend.dart' show
-    FletchBackend;
-
 import '../commands.dart' show
     Command;
 

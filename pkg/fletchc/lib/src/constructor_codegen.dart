@@ -4,9 +4,6 @@
 
 library fletchc.constructor_codegen;
 
-import 'package:compiler/src/constants/expressions.dart' show
-    ConstantExpression;
-
 import 'package:compiler/src/dart2jslib.dart' show
     MessageKind,
     Registry;
@@ -15,19 +12,9 @@ import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
 import 'package:compiler/src/universe/universe.dart';
-import 'package:compiler/src/util/util.dart' show Spannable;
 import 'package:compiler/src/dart_types.dart';
 
 import 'fletch_context.dart';
-
-import 'fletch_backend.dart';
-
-import 'fletch_constants.dart' show
-    FletchFunctionBuilderConstant,
-    FletchClassConstant;
-
-import '../bytecodes.dart' show
-    Bytecode;
 
 import 'fletch_function_builder.dart' show
     FletchFunctionBuilder;
@@ -319,7 +306,6 @@ class ConstructorCodegen extends CodegenVisitor {
       assembler.loadLocal(argumentCount - 1);
     }
 
-    int count = 0;
     for (ParameterElement parameter in signature.orderedOptionalParameters) {
       int slot = namedArguments[parameter.name];
       if (slot != null) {
@@ -327,7 +313,6 @@ class ConstructorCodegen extends CodegenVisitor {
       } else {
         doParameterInitializer(parameter);
       }
-      count++;
     }
 
     // Some parameters may have defaulted to default value, making the

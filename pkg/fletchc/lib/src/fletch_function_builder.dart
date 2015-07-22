@@ -7,28 +7,15 @@ library fletchc.compiled_function;
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue;
 
-import 'package:compiler/src/constants/expressions.dart' show
-    ConstantExpression;
-
-import 'package:compiler/src/tree/tree.dart' show
-    Expression;
-
 import 'package:compiler/src/elements/elements.dart';
 
 import 'fletch_constants.dart' show
     FletchFunctionConstant,
     FletchClassConstant;
 
-import 'package:compiler/src/universe/universe.dart' show
-    CallStructure,
-    Selector;
-
 import '../bytecodes.dart' show
     Bytecode,
     Opcode;
-
-import 'fletch_class_builder.dart' show
-    FletchClassBuilder;
 
 import 'fletch_context.dart';
 import 'bytecode_assembler.dart';

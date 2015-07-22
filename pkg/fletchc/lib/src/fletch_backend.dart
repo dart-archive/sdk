@@ -43,16 +43,6 @@ import 'package:compiler/src/elements/elements.dart' show
     MemberElement,
     ParameterElement;
 
-import 'package:compiler/src/types/types.dart' show
-    TypeMask;
-
-import 'package:compiler/src/elements/modelx.dart' show
-    LibraryElementX;
-
-import 'package:compiler/src/dart_types.dart' show
-    DartType,
-    InterfaceType;
-
 import 'package:compiler/src/universe/universe.dart' show
     CallStructure,
     Selector,
@@ -748,7 +738,6 @@ class FletchBackend extends Backend {
       if (function.isGetter) kind = SelectorKind.Getter;
       if (function.isSetter) kind = SelectorKind.Setter;
       int fletchSelector = FletchSelector.encode(id, kind, arity);
-      int methodId = functionBuilder.methodId;
       FletchClassBuilder classBuilder =
           systemBuilder.lookupClassBuilder(functionBuilder.memberOf);
       classBuilder.addToMethodTable(fletchSelector, functionBuilder);
@@ -1410,7 +1399,6 @@ class FletchBackend extends Backend {
       return false;
     }
     int index = 0;
-    bool match = true;
     for (var parameter in signature.orderedOptionalParameters) {
       if (parameter.name != callStructure.namedArguments[index++]) return false;
     }

@@ -7,9 +7,6 @@ library fletchc_incremental.library_updater;
 import 'dart:async' show
     Future;
 
-import 'dart:convert' show
-    UTF8;
-
 import 'dart:collection' show
     Queue;
 
@@ -155,7 +152,6 @@ class IncrementalCompilerContext extends _IncrementalCompilerContext {
   }
 
   void _captureState(Compiler compiler) {
-    FletchBackend backend = compiler.backend;
     // TODO(ahe): Compute this.
     _emittedClasses = new Set();
 
@@ -940,9 +936,6 @@ class LibraryUpdater extends FletchFeatures {
   void computeSchemaChange(ClassElementX element,
                            Map<FieldElementX, int> beforeFields,
                            List<Command> commands) {
-    FletchClassBuilder classBuilder =
-        backend.systemBuilder.lookupClassBuilderByElement(element);
-
     // Collect the list of fields as they should exist after the transformation.
     List<FieldElementX> afterFields = [];
     forEachField(element, (field) {

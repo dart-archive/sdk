@@ -79,8 +79,6 @@ Future<Compiler> reuseCompiler(
         ..enqueuer.codegen.hasEnqueuedReflectiveElements = false
         ..enqueuer.codegen.hasEnqueuedReflectiveStaticFields = false
         ..compilationFailed = false;
-    FletchBackend backend = compiler.backend;
-
     compiler.enqueuer.codegen
         ..newlyEnqueuedElements.clear()
         ..newlySeenSelectors.clear();

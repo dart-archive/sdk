@@ -44,9 +44,6 @@ import 'fletch_constants.dart' show
     FletchClassConstant,
     FletchClassInstanceConstant;
 
-import '../bytecodes.dart' show
-    Bytecode;
-
 import 'fletch_function_builder.dart' show
     FletchFunctionBuilder;
 
@@ -708,7 +705,6 @@ abstract class CodegenVisitor
     BytecodeLabel isFirstTrue = new BytecodeLabel();
     BytecodeLabel isTrue = new BytecodeLabel();
     BytecodeLabel isFalse = new BytecodeLabel();
-    BytecodeLabel done = new BytecodeLabel();
 
     assembler.loadLiteralFalse();
 
@@ -741,7 +737,6 @@ abstract class CodegenVisitor
     BytecodeLabel isFirstFalse = new BytecodeLabel();
     BytecodeLabel isTrue = new BytecodeLabel();
     BytecodeLabel isFalse = new BytecodeLabel();
-    BytecodeLabel done = new BytecodeLabel();
 
     assembler.loadLiteralTrue();
 
@@ -2416,7 +2411,6 @@ abstract class CodegenVisitor
     BytecodeLabel end = new BytecodeLabel();
     BytecodeLabel afterBody  = new BytecodeLabel();
 
-    int initStackSize = assembler.stackSize;
     Node initializer = node.initializer;
     if (initializer != null) visitForEffect(initializer);
 
@@ -2900,10 +2894,10 @@ abstract class CodegenVisitor
   }
 
   void applyInitializers(FunctionExpression initializers, _) {
-    internalError(node, "[applyInitializers] isn't implemented.");
+    internalError(initializers, "[applyInitializers] isn't implemented.");
   }
 
   void applyParameters(NodeList parameters, _) {
-    internalError(node, "[applyParameters] isn't implemented.");
+    internalError(parameters, "[applyParameters] isn't implemented.");
   }
 }

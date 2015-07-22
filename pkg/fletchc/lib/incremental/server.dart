@@ -203,7 +203,7 @@ class Conversation {
         break;
 
       case IncrementalKind.ERROR:
-        generatedFiles.removeKey(outputUri);
+        generatedFiles.remove(outputUri);
         break;
     }
   }

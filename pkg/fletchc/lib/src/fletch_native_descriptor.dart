@@ -35,10 +35,8 @@ class FletchNativeDescriptor {
         natives['$cls._fletchNative$name'] =
             new FletchNativeDescriptor(native['enum'], cls, name, index);
       }
-      String key;
       if (cls == "<none>") {
         cls = null;
-        key = name;
         add("", name);
         if (name.startsWith("_")) {
           // For private top-level methods, create a public version as well.

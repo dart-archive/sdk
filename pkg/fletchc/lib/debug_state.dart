@@ -4,9 +4,6 @@
 
 library fletch.debug_state;
 
-import 'dart:async';
-import 'dart:convert';
-
 import 'bytecodes.dart';
 import 'compiler.dart' show FletchCompiler;
 import 'session.dart';
@@ -60,15 +57,15 @@ class DebugState {
 
   StackTrace get currentStackTrace => _currentStackTrace;
 
-  StackTrace set currentStackTrace(StackTrace stackTrace) {
+  void set currentStackTrace(StackTrace stackTrace) {
     _currentLocation = stackTrace.sourceLocation();
     _topFrame = stackTrace.stackFrames[0];
-    return _currentStackTrace = stackTrace;
+    _currentStackTrace = stackTrace;
   }
 
   StackFrame get topFrame => _topFrame;
 
-  StackFrame set topFrame(StackFrame frame) {
+  void set topFrame(StackFrame frame) {
     _currentLocation = frame.sourceLocation();
     _topFrame = frame;
   }

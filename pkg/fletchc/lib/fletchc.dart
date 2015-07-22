@@ -3,14 +3,10 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 library fletchc;
-
-import 'dart:async';
 import 'dart:io';
 
 import 'compiler.dart' show
     FletchCompiler;
-
-import 'commands.dart';
 
 import 'fletch_vm.dart';
 

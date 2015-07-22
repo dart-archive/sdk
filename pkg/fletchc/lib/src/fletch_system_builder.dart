@@ -142,7 +142,7 @@ class FletchSystemBuilder {
   }
 
   FletchClass lookupClass(int classId) {
-    return predecessorSystem.classes[classId];
+    return predecessorSystem.classesById[classId];
   }
 
   FletchClassBuilder lookupClassBuilder(int classId) {
@@ -254,7 +254,6 @@ class FletchSystemBuilder {
         commands.add(
             new PushNewString(constant.primitiveValue.slowToString()));
       } else if (constant.isList) {
-        ListConstantValue value = constant;
         addList(constant.entries);
       } else if (constant.isMap) {
         MapConstantValue value = constant;

@@ -11,10 +11,8 @@ import 'dart:io' hide exit;
 import 'dart:io' as io;
 import 'dart:typed_data' show Uint8List;
 
-import 'bytecodes.dart';
 import 'commands.dart';
 import 'fletch_system.dart';
-import 'fletch_vm.dart';
 import 'compiler.dart' show FletchCompiler;
 import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';

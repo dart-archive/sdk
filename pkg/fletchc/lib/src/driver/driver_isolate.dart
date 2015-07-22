@@ -4,12 +4,6 @@
 
 library fletchc.driver_isolate;
 
-import 'dart:io' hide
-    exitCode,
-    stderr,
-    stdin,
-    stdout;
-
 import 'dart:async' show
     Completer,
     EventSink,
@@ -31,10 +25,6 @@ import 'driver_commands.dart' show
     CommandSender,
     DriverCommand,
     stringifyError;
-
-import 'sentence_parser.dart' show
-    Sentence,
-    parseSentence;
 
 import '../diagnostic.dart' show
     DiagnosticKind,

@@ -49,15 +49,9 @@ import 'src/fletch_native_descriptor.dart' show
 import 'src/fletch_backend.dart' show
     FletchBackend;
 
-import 'src/fletch_class_builder.dart' show
-    FletchClassBuilder;
-
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
 import 'src/fletch_compiler.dart' as implementation;
-
-import 'bytecodes.dart' show
-    Bytecode;
 
 import 'fletch_system.dart';
 

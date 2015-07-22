@@ -40,15 +40,9 @@ class CommandReader {
       Command command = readCommand();
       while (command != null) {
         if (command is StdoutData) {
-          if (stdoutSink != null) {
-            StdoutData data = command;
-            stdoutSink.add(command.value);
-          }
+          if (stdoutSink != null) stdoutSink.add(command.value);
         } else if (command is StderrData) {
-          if (stderrSink != null) {
-            StderrData data = command;
-            stderrSink.add(command.value);
-          }
+          if (stderrSink != null) stderrSink.add(command.value);
         } else {
           yield command;
         }

@@ -15,15 +15,6 @@ import 'package:compiler/src/resolution/operators.dart' show
     IncDecOperator,
     UnaryOperator;
 
-import 'package:compiler/src/constants/expressions.dart' show
-    ConstantExpression,
-    ConstructedConstantExpression,
-    TypeConstantExpression;
-
-import 'package:compiler/src/dart2jslib.dart' show
-    MessageKind,
-    Registry;
-
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
@@ -336,15 +327,6 @@ class ClosureVisitor
     super.visitSuperFieldSet(node, field, rhs, null);
   }
 
-  void errorFinalSuperFieldSet(
-      SendSet node,
-      FieldElement field,
-      Node rhs,
-      _) {
-    markThisUsed(); // For invoking noSuchMethod.
-    super.errorFinalSuperFieldSet(node, field, rhs, null);
-  }
-
   void visitSuperFieldInvoke(
       Send node,
       FieldElement field,
@@ -407,15 +389,6 @@ class ClosureVisitor
     markThisUsed();
     super.visitTypeVariableTypeLiteralInvoke(
         node, element, arguments, callStructure, null);
-  }
-
-  void errorTypeVariableTypeLiteralSet(
-      SendSet node,
-      TypeVariableElement element,
-      Node rhs,
-      _) {
-    markThisUsed();
-    super.errorTypeVariableTypeLiteralSet(node, element, rhs, null);
   }
 
   void visitSuperBinary(
@@ -766,17 +739,6 @@ class ClosureVisitor
     markThisUsed();
     super.visitSuperIndexPrefix(
         node, indexFunction, indexSetFunction, index, operator, null);
-  }
-
-  void errorUnresolvedSuperIndexPrefix(
-      Send node,
-      Element function,
-      Node index,
-      IncDecOperator operator,
-      _) {
-    markThisUsed();
-    super.errorUnresolvedSuperIndexPrefix(
-        node, function, index, operator, null);
   }
 
   void handleImmutableLocalSet(

@@ -34,9 +34,6 @@ import 'package:compiler/src/dart2jslib.dart' show
     CodegenRegistry,
     isPrivateName;
 
-import 'package:compiler/src/compile_time_constants.dart' show
-    DartConstantCompiler;
-
 import 'fletch_compiler.dart' show
     FletchCompiler;
 

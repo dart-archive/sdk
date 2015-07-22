@@ -66,9 +66,8 @@ class InputHandler {
             (commandComponents.length > 1) ? commandComponents[1] : 'main';
         var bci =
             (commandComponents.length > 2) ? commandComponents[2] : '0';
-        try {
-          bci = int.parse(bci);
-        } catch(e) {
+        bci = int.parse(bci, onError: (_) => null);
+        if (bci == null) {
           print('### invalid bytecode index: $bci');
           break;
         }
@@ -81,19 +80,17 @@ class InputHandler {
             (commandComponents.length > 2) ? commandComponents[2] : '1';
         var column =
             (commandComponents.length > 3) ? commandComponents[3] : '1';
-        try {
-          line = int.parse(line);
-        } catch(e) {
+        line = int.parse(line, onError: (_) => null);
+        if (line == null) {
           print('### invalid line number: $line');
           break;
         }
-        try {
-          column = int.parse(column);
-        } catch(e) {
+        int columnNumber = int.parse(column, onError: (_) => null);
+        if (columnNumber == null) {
           await session.setFileBreakpointFromPattern(file, line, column);
-          break;
+        } else {
+          await session.setFileBreakpoint(file, line, columnNumber);
         }
-        await session.setFileBreakpoint(file, line, column);
         break;
       case 'bt':
         await session.backtrace();
@@ -101,9 +98,8 @@ class InputHandler {
       case 'f':
         var frame =
             (commandComponents.length > 1) ? commandComponents[1] : "-1";
-        try {
-          frame = int.parse(frame);
-        } catch(e) {
+        frame = int.parse(frame, onError: (_) => null);
+        if (frame == null) {
           print('### invalid frame number: $frame');
           break;
         }
@@ -120,9 +116,8 @@ class InputHandler {
         break;
       case 'd':
         var id = (commandComponents.length > 1) ? commandComponents[1] : null;
-        try {
-          id = int.parse(id);
-        } catch(e) {
+        id = int.parse(id, onError: (_) => null);
+        if (id == null) {
           print('### invalid breakpoint number: $id');
           break;
         }

@@ -6,10 +6,6 @@ library trydart.poi.scope_information_visitor;
 
 import 'package:compiler/src/elements/modelx.dart' as modelx;
 
-import 'package:compiler/src/elements/modelx.dart' show
-    CompilationUnitElementX,
-    FieldElementX;
-
 import 'package:compiler/src/elements/visitor.dart' show
     ElementVisitor;
 
