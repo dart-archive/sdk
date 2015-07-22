@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "src/shared/utils.h"
+
 namespace fletch {
 
 #ifdef DEBUG
@@ -33,17 +35,17 @@ static bool IsValidFlag(const char* argument) {
 
 static void PrintFlagBoolean(const char* name, bool value,
                              bool init, const char* doc) {
-  printf(" - bool %s = %s\n", name, value ? "true" : "false");
+  Print::Out(" - bool %s = %s\n", name, value ? "true" : "false");
 }
 
 static void PrintFlagInteger(const char* name, int value,
                              int init, const char* doc) {
-  printf(" - int %s = %d\n", name, value);
+  Print::Out(" - int %s = %d\n", name, value);
 }
 
 static void PrintFlagString(const char* name, const char* value,
                             const char* init, const char* doc) {
-  printf(" - char* %s = \"%s\"\n", name, value);
+  Print::Out(" - char* %s = \"%s\"\n", name, value);
 }
 
 #define XSTR(n) #n
@@ -60,7 +62,7 @@ static void PrintFlagString(const char* name, const char* value,
   PrintFlag##prefix(XSTR(name), Flags::name, value, doc);
 
 static void PrintFlags() {
-  printf("List of command line flags:\n");
+  Print::Out("List of command line flags:\n");
 
   APPLY_TO_FLAGS(PRINT_DEBUG_FLAG, PRINT_RELEASE_FLAG);
 
@@ -143,7 +145,7 @@ static void ProcessArgument(const char* argument) {
   const char* value_ptr = equals_ptr != NULL ? equals_ptr + 1 : NULL;
 
   APPLY_TO_FLAGS(PROCESS_DEBUG_FLAG, PROCESS_RELEASE_FLAG);
-  printf("Failed to recognize flag argument: %s\n", argument);
+  Print::Out("Failed to recognize flag argument: %s\n", argument);
   // Terminate the process with error code.
   exit(-1);
 }

@@ -1159,7 +1159,7 @@ uint8* HandleThrow(Process* process, Object* exception, int* stack_delta) {
     Coroutine* current = process->coroutine();
     if (!current->has_caller()) {
       // Uncaught exception.
-      printf("Uncaught exception:\n");
+      Print::Out("Uncaught exception:\n");
       exception->Print();
       return NULL;
     }

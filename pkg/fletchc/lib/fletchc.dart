@@ -45,7 +45,7 @@ main(List<String> arguments) async {
   }
 
   var session = new Session(vm.socket, compiler, fletchDelta.system,
-                            vm.stdoutSyncMessages, vm.stderrSyncMessages,
+                            stdout, stderr,
                             vm.process != null ? vm.process.exitCode : null);
 
   await session.runCommands(fletchDelta.commands);

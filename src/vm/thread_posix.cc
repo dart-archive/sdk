@@ -9,6 +9,8 @@
 
 #include "src/shared/platform.h"
 
+#include "src/shared/utils.h"
+
 namespace fletch {
 
 bool Thread::IsCurrent(const ThreadIdentifier* thread) {
@@ -20,9 +22,9 @@ void Thread::Run(RunSignature run, void* data) {
   int result = pthread_create(&thread, NULL, run, data);
   if (result != 0) {
     if (result == EAGAIN) {
-      fprintf(stderr, "Insufficient resources\n");
+      Print::Error("Insufficient resources\n");
     } else {
-      fprintf(stderr, "Error %d", result);
+      Print::Error("Error %d", result);
     }
   }
 }

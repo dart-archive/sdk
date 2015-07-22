@@ -5,10 +5,42 @@
 #ifndef SRC_SHARED_UTILS_H_
 #define SRC_SHARED_UTILS_H_
 
+#include <cstdarg>
+#include <cstdlib>
+
 #include "src/shared/assert.h"
 #include "src/shared/globals.h"
 
 namespace fletch {
+
+class PrintInterceptor {
+public:
+  PrintInterceptor() {}
+  virtual ~PrintInterceptor() {}
+  virtual void Out(char* message) = 0;
+  virtual void Error(char* message) = 0;
+};
+
+// All stdout and stderr output from the VM should go through this
+// Print class in order to allow the output to be intercepted.
+class Print {
+public:
+  static void Out(const char* format, ...);
+  static void Error(const char* format, ...);
+
+  static void RegisterPrintInterceptor(PrintInterceptor* interceptor) {
+    if (interceptor_ != NULL) delete interceptor_;
+    interceptor_ = interceptor;
+  }
+
+  static void UnregisterPrintInterceptor() {
+    delete interceptor_;
+    interceptor_ = NULL;
+  }
+
+private:
+  static PrintInterceptor* interceptor_;
+};
 
 class Utils {
  public:

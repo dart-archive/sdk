@@ -2379,7 +2379,7 @@ Future<TestSession> runFletchVM(
 
     for (Command command in [
         // Turn on debugging.
-        const commands_lib.Debugging(false),
+        const commands_lib.Debugging(),
         const commands_lib.ProcessSpawnForMain()]) {
       print(command);
       await session.runCommand(command);
@@ -2420,7 +2420,7 @@ class TestSession extends Session {
       this.stderr,
       this.futures,
       this.exitCode)
-      : super(vmSocket, compiler, fletchSystem);
+      : super(vmSocket, compiler, fletchSystem, null, null);
 
   /// Add [future] to this session.  All futures that can fail after calling
   /// [waitForCompletion] must be added to the session.
