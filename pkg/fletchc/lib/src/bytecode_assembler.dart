@@ -532,6 +532,7 @@ class BytecodeAssembler {
       Bytecode bytecode,
       int stackPointerDifference) {
     assert(stackPointerDifference != VAR_DIFF);
+    assert(bytecodes.isEmpty || bytecodes.last.opcode != Opcode.MethodEnd);
     bytecodes.add(bytecode);
     byteSize += bytecode.size;
     applyStackSizeFix(stackPointerDifference);

@@ -70,7 +70,8 @@ class FletchSystemBuilder {
       {String name,
        Element element,
        FunctionSignature signature,
-       int memberOf}) {
+       int memberOf,
+       Element mapByElement}) {
     int nextFunctionId = functionIdStart + _newFunctions.length;
     FletchFunctionBuilder builder = new FletchFunctionBuilder(
         nextFunctionId,
@@ -81,7 +82,9 @@ class FletchSystemBuilder {
         signature: signature,
         memberOf: memberOf);
     _newFunctions.add(builder);
-    if (element != null) _functionBuildersByElement[element] = builder;
+    if (mapByElement != null) {
+      _functionBuildersByElement[mapByElement] = builder;
+    }
     return builder;
   }
 
@@ -90,7 +93,8 @@ class FletchSystemBuilder {
       Element element,
       FunctionSignature signature,
       int memberOf,
-      {FletchFunctionKind kind: FletchFunctionKind.NORMAL}) {
+      {FletchFunctionKind kind: FletchFunctionKind.NORMAL,
+       Element mapByElement}) {
     int arity = signature.parameterCount + (memberOf != null ? 1 : 0);
     return newFunctionBuilder(
           kind,
@@ -98,7 +102,8 @@ class FletchSystemBuilder {
           name: name,
           element: element,
           signature: signature,
-          memberOf: memberOf);
+          memberOf: memberOf,
+          mapByElement: mapByElement);
   }
 
   FletchFunctionBase lookupFunction(int functionId) {
@@ -115,6 +120,10 @@ class FletchSystemBuilder {
     FletchFunction function =
         predecessorSystem.lookupFunctionByElement(element);
     if (function != null) return function;
+    return _functionBuildersByElement[element];
+  }
+
+  FletchFunctionBuilder lookupFunctionBuilderByElement(Element element) {
     return _functionBuildersByElement[element];
   }
 
@@ -263,9 +272,9 @@ class FletchSystemBuilder {
       } else if (constant.isFunction) {
         FunctionConstantValue value = constant;
         FunctionElement element = value.element;
-        // TODO(ajohnsen): Avoid usage of functionBuilders.
+        // TODO(ajohnsen): Should not use the builder, but instead the base.
         FletchFunctionBuilder function =
-            context.backend.functionBuilders[element];
+            lookupFunctionBuilderByElement(element);
         // TODO(ajohnsen): Avoid usage of tearoffClasses.
         FletchClassBuilder tearoffClass =
             context.backend.tearoffClasses[function];

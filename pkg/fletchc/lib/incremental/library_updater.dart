@@ -1401,7 +1401,7 @@ abstract class FletchFeatures {
   EnqueueTask get enqueuer => compiler.enqueuer;
 
   FletchFunctionBuilder lookupFletchFunctionBuilder(FunctionElement function) {
-    return backend.functionBuilders[function];
+    return backend.systemBuilder.lookupFunctionBuilderByElement(function);
   }
 }
 

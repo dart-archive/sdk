@@ -268,13 +268,6 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     return _compiler.context.symbols[id];
   }
 
-  int mainMethodId() {
-    FunctionElement mainFunctionElement = _compiler.mainFunction;
-    FletchFunctionBuilder mainMethod =
-        _compiler.context.backend.functionBuilders[mainFunctionElement];
-    return mainMethod.methodId;
-  }
-
   DebugInfo createDebugInfo(FletchFunction function) {
     return _compiler.context.backend.createDebugInfo(function);
   }

@@ -135,9 +135,6 @@ class FletchBackend extends Backend {
 
   final DartConstantTask constantCompilerTask;
 
-  final Map<FunctionElement, FletchFunctionBuilder> functionBuilders =
-      <FunctionElement, FletchFunctionBuilder>{};
-
   final Map<ConstructorElement, FletchFunctionBuilder> constructors =
       <ConstructorElement, FletchFunctionBuilder>{};
 
@@ -209,7 +206,6 @@ class FletchBackend extends Backend {
 
   void newSystemBuilder(FletchSystem predecessorSystem) {
     systemBuilder = new FletchSystemBuilder(predecessorSystem);
-    functionBuilders.clear();
   }
 
   FletchClassBuilder registerClassElement(ClassElement element) {
@@ -563,22 +559,23 @@ class FletchBackend extends Backend {
       FunctionElement function,
       String name,
       FletchClassBuilder holderClass) {
-    return functionBuilders.putIfAbsent(function.declaration, () {
-      FunctionTypedElement implementation = function.implementation;
-      int memberOf = holderClass != null ? holderClass.classId : null;
-      FletchFunctionBuilder functionBuilder =
-          systemBuilder.newFunctionBuilderWithSignature(
-              name,
-              function,
-              // Parameter initializers are expressed in the potential
-              // implementation.
-              implementation.functionSignature,
-              memberOf,
-              kind: function.isAccessor
-                  ? FletchFunctionKind.ACCESSOR
-                  : FletchFunctionKind.NORMAL);
-      return functionBuilder;
-    });
+    FletchFunctionBuilder functionBuilder =
+        systemBuilder.lookupFunctionBuilderByElement(function.declaration);
+    if (functionBuilder != null) return functionBuilder;
+
+    FunctionTypedElement implementation = function.implementation;
+    int memberOf = holderClass != null ? holderClass.classId : null;
+    return systemBuilder.newFunctionBuilderWithSignature(
+        name,
+        function,
+        // Parameter initializers are expressed in the potential
+        // implementation.
+        implementation.functionSignature,
+        memberOf,
+        kind: function.isAccessor
+            ? FletchFunctionKind.ACCESSOR
+            : FletchFunctionKind.NORMAL,
+        mapByElement: function.declaration);
   }
 
   int functionMethodId(FunctionElement function) {
@@ -640,7 +637,8 @@ class FletchBackend extends Backend {
           element,
           compiler);
       expectedBytecodes =
-          functionBuilders[element.declaration].assembler.bytecodes;
+          systemBuilder.lookupFunctionBuilderByElement(element.declaration)
+              .assembler.bytecodes;
     }
     if (isNative(element)) {
       compiler.withCurrentElement(element, () {
@@ -1383,7 +1381,8 @@ class FletchBackend extends Backend {
         systemBuilder.forgetFunction(function);
       }
     }
-    FletchFunctionBuilder functionBuilder = functionBuilders[element];
+    FletchFunctionBuilder functionBuilder =
+        systemBuilder.lookupFunctionBuilderByElement(element);
     if (functionBuilder == null) return;
     functionBuilder.reuse();
   }

@@ -192,7 +192,8 @@ class FletchCompiler extends FletchCompilerHack {
     FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
     unit.accept(visitor, null);
     FletchFunctionBuilder builder =
-        _NO_WARN(backend).functionBuilders[visitor.element];
+        _NO_WARN(backend).systemBuilder.lookupFunctionBuilderByElement(
+            visitor.element);
     if (builder == null) return null;
     // TODO(ajohnsen): We need a mapping from element to functionId, that can
     // be looked up in the current fletch system.
