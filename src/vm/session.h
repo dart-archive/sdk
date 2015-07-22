@@ -30,7 +30,6 @@ class Session {
   void ProcessMessages();
 
   void IteratePointers(PointerVisitor* visitor);
-  void VisitProcesses(ProcessVisitor* visitor);
 
   // High-level operations.
   bool ProcessRun();

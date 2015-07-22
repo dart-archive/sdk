@@ -156,6 +156,10 @@ class Program {
 
   Process* SpawnProcess();
   Process* ProcessSpawnForMain();
+  void DeleteProcess(Process* process);
+
+  // This function should only be called once the program has been stopped.
+  void VisitProcesses(ProcessVisitor* visitor);
 
   Object* CreateArray(int capacity) {
     return CreateArrayWith(capacity, null_object());
@@ -213,13 +217,19 @@ class Program {
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
   Object** last_root_address() { return &native_failure_result_; }
 
-  void PrepareProgramGC(Process** all_processes);
-  void PerformProgramGC(Space* to,
-                        PointerVisitor* visitor,
-                        Process* all_processes);
-  void FinishProgramGC(Process** all_processes);
+  void PrepareProgramGC();
+  void PerformProgramGC(Space* to, PointerVisitor* visitor);
+  void FinishProgramGC();
 
   void ValidateGlobalHeapsAreConsistent();
+
+  // Chaining of all processes of this program.
+  void AddToProcessList(Process* process);
+  void RemoveFromProcessList(Process* process);
+
+  // Chained doubly linked list of all processes protected by a lock.
+  Mutex* process_list_mutex_;
+  Process* process_list_head_;
 
   RandomLCG random_;
 

@@ -34,7 +34,6 @@ class Scheduler {
 
   bool StopProgram(Program* program);
   void ResumeProgram(Program* program);
-  void VisitProcesses(Program* program, ProcessVisitor* visitor);
 
   // Enqueue [process] in the scheduler. The [process] will be run until
   // termination.

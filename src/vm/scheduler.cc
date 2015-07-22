@@ -142,23 +142,6 @@ void Scheduler::ResumeProgram(Program* program) {
   NotifyAllThreads();
 }
 
-void Scheduler::VisitProcesses(Program* program, ProcessVisitor* visitor) {
-  ASSERT(program->scheduler() == this);
-  pause_monitor_->Lock();
-
-  if (stopped_processes_map_.find(program) != stopped_processes_map_.end()) {
-    ProcessList& list = stopped_processes_map_[program];
-
-    Process* process = list.head;
-    while (process != NULL) {
-      visitor->VisitProcess(process);
-      process = process->next();
-    }
-  }
-
-  pause_monitor_->Unlock();
-}
-
 void Scheduler::EnqueueProcess(Process* process, ThreadState* thread_state) {
   ++processes_;
   if (!process->ChangeState(Process::kSleeping, Process::kReady)) UNREACHABLE();
@@ -285,7 +268,7 @@ void Scheduler::DeleteProcess(Process* process) {
     session->ProcessTerminated(process);
   }
   // Get rid of the process.
-  delete process;
+  process->program()->DeleteProcess(process);
 }
 
 void Scheduler::DeleteProcessAtBreakpoint(Process* process) {

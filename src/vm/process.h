@@ -81,10 +81,6 @@ class Process {
     kStackCheckOverflow
   };
 
-  explicit Process(Program* program);
-
-  virtual ~Process();
-
   Function* entry() { return program_->entry(); }
   int main_arity() { return program_->main_arity(); }
   Program* program() { return program_; }
@@ -197,12 +193,6 @@ class Process {
   // Bytecode pointers need to be updated.
   void UpdateBreakpoints();
 
-  void set_program_gc_state(ProgramGCState value) { program_gc_state_ = value; }
-  ProgramGCState program_gc_state() const { return program_gc_state_; }
-
-  void set_program_gc_next(Process* next) { program_gc_next_ = next; }
-  Process* program_gc_next() { return program_gc_next_; }
-
   // Change the state from 'from' to 'to. Return 'true' if the operation was
   // successful.
   inline bool ChangeState(State from, State to);
@@ -288,11 +278,21 @@ class Process {
  private:
   friend class Interpreter;
   friend class Engine;
+  friend class Program;
+
+  // Creation and deletion of processes is managed by a [Program].
+  explicit Process(Program* program);
+  virtual ~Process();
 
   void UpdateStackLimit();
 
   // Put 'entry' at the end of the port's queue. This function is thread safe.
   void EnqueueEntry(PortQueue* entry);
+
+  void set_process_list_next(Process* process) { process_list_next_ = process; }
+  Process* process_list_next() { return process_list_next_; }
+  void set_process_list_prev(Process* process) { process_list_prev_ = process; }
+  Process* process_list_prev() { return process_list_prev_; }
 
   RandomLCG random_;
 
@@ -337,8 +337,10 @@ class Process {
   // Process-local list of PortQueue elements currently being processed.
   PortQueue* current_message_;
 
-  ProgramGCState program_gc_state_;
-  Process* program_gc_next_;
+  // Used for chaining all processes of a program. It is protected by a lock
+  // in the program.
+  Process* process_list_next_;
+  Process* process_list_prev_;
 
   int errno_cache_;
 

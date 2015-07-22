@@ -545,10 +545,6 @@ void Session::IteratePointers(PointerVisitor* visitor) {
   }
 }
 
-void Session::VisitProcesses(ProcessVisitor* visitor) {
-  if (process_ != NULL) visitor->VisitProcess(process_);
-}
-
 bool Session::ProcessRun() {
   bool process_started = false;
   bool has_result = false;
@@ -576,6 +572,11 @@ bool Session::ProcessRun() {
         break;
       case kSessionEnd:
         ASSERT(!debugging_);
+        if (!process_started && process_ != NULL) {
+          // If the process was spawned but not started, the scheduler does not
+          // know about it and we are therefore responsible for deleting it.
+          program()->DeleteProcess(process_);
+        }
         if (!process_started) return true;
         if (has_result) return result;
         break;
@@ -1122,16 +1123,8 @@ void Session::TransformInstances() {
   ASSERT(!space->is_empty());
   space->CompleteTransformations(&pointer_visitor, NULL);
 
-  // TODO(ager): TransformInstances needs to locate all processes. Currently,
-  // it only iterates processes in the scheduler and in the session. There
-  // could be processes that are only referenced from ports in other processes
-  // heaps; they need to be visited as well. See Program::CollectGarbage for
-  // how it is done there.
-  // Issue: https://github.com/dart-lang/fletch/issues/51
   TransformInstancesProcessVisitor process_visitor;
-  Scheduler* scheduler = program()->scheduler();
-  VisitProcesses(&process_visitor);
-  scheduler->VisitProcesses(program(), &process_visitor);
+  program()->VisitProcesses(&process_visitor);
 }
 
 }  // namespace fletch
