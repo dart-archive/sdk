@@ -6,7 +6,8 @@
 #define SRC_VM_THREAD_H_
 
 #include "src/shared/globals.h"
-#include "src/vm/platform.h"
+#include "src/shared/platform.h"
+
 #include "src/vm/thread_posix.h"
 
 namespace fletch {

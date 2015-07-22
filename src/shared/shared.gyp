@@ -26,9 +26,15 @@
         'platform.h',
         'platform_linux.cc',
         'platform_macos.cc',
+        'platform_posix.cc',
         'test_case.cc',
         'utils.cc',
       ],
+      'link_settings': {
+        'libraries': [
+          '-lpthread',
+        ],
+      },
     },
     {
       'target_name': 'shared_run_tests',

@@ -11,7 +11,8 @@
 #include "include/fletch_api.h"
 
 #include "src/shared/assert.h"
-#include "src/vm/platform.h"
+#include "src/shared/platform.h"
+
 #include "src/vm/thread_pool.h"
 
 #include "cc/performance_service.h"

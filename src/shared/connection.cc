@@ -13,7 +13,11 @@
 
 namespace fletch {
 
-static const int kBufferGrowthSize = 1 * KB;
+// TODO(ager,ajohnsen): Instead of dynamically allocating the actual
+// buffer, we can get away with inline allocation of a small buffer
+// and only use dynamic allocation if that inline buffer doesn't have
+// a large enough capacity.
+static const int kBufferGrowthSize = 64;
 
 Buffer::Buffer() : buffer_(NULL), buffer_offset_(0), buffer_length_(0) {
 }
@@ -76,13 +80,9 @@ void WriteBuffer::WriteString(const char* str) {
   buffer_offset_ += length;
 }
 
-void WriteBuffer::WriteTo(Socket* socket) {
+void WriteBuffer::WriteTo(Socket* socket) const {
   if (buffer_offset_ == 0) return;
-  // Just reuse the buffer_ between 'message'.
-  // TODO(ajohnsen): Shrink if larger than e.g. 16k?
-  int offset = buffer_offset_;
-  buffer_offset_ = 0;
-  socket->Write(buffer_, offset);
+  socket->Write(buffer_, buffer_offset_);
 }
 
 int ReadBuffer::ReadInt() {
@@ -133,6 +133,7 @@ Connection* Connection::Connect(const char* host, int port) {
 }
 
 Connection::~Connection() {
+  delete send_mutex_;
   delete socket_;
 }
 
@@ -151,16 +152,18 @@ Connection::Opcode Connection::Receive() {
   return opcode;
 }
 
-void Connection::Send(Opcode opcode) {
+void Connection::Send(Opcode opcode, const WriteBuffer& buffer) {
+  ScopedLock scoped_lock(send_mutex_);
   uint8 header[5];
-  Utils::WriteInt32(header, outgoing_.offset());
+  Utils::WriteInt32(header, buffer.offset());
   header[4] = opcode;
   socket_->Write(header, 5);
-  outgoing_.WriteTo(socket_);
+  buffer.WriteTo(socket_);
 }
 
 Connection::Connection(const char* host, int port, Socket* socket)
-    : socket_(socket) {
+    : socket_(socket),
+      send_mutex_(Platform::CreateMutex()) {
 }
 
 ConnectionListener::ConnectionListener(const char* host, int port)

@@ -7,9 +7,9 @@
 #include "src/shared/assert.h"
 #include "src/shared/connection.h"
 #include "src/shared/fletch.h"
+#include "src/shared/list.h"
 
 #include "src/vm/ffi.h"
-#include "src/vm/list.h"
 #include "src/vm/program.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/session.h"

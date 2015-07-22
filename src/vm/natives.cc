@@ -14,10 +14,10 @@
 #include "src/shared/flags.h"
 #include "src/shared/names.h"
 #include "src/shared/selectors.h"
+#include "src/shared/platform.h"
 
 #include "src/vm/event_handler.h"
 #include "src/vm/interpreter.h"
-#include "src/vm/platform.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
 #include "src/vm/session.h"

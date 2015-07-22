@@ -11,7 +11,7 @@
 #include "src/shared/assert.h"
 #include "src/shared/globals.h"
 #include "src/shared/random.h"
-#include "src/vm/list.h"
+#include "src/shared/list.h"
 #include "src/shared/utils.h"
 
 namespace fletch {

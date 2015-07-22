@@ -4,9 +4,10 @@
 
 #include "src/shared/fletch.h"
 
+#include "src/shared/platform.h"
+
 #include "src/vm/ffi.h"
 #include "src/vm/object_memory.h"
-#include "src/vm/platform.h"
 #include "src/vm/thread.h"
 
 namespace fletch {

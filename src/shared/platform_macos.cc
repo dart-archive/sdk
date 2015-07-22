@@ -4,6 +4,8 @@
 
 #include <mach-o/dyld.h>
 
+#include <CoreFoundation/CFTimeZone.h>
+
 #include "src/shared/assert.h"
 #include "src/shared/platform.h"
 
@@ -14,6 +16,15 @@ void GetPathOfExecutable(char* path, size_t path_length) {
   if (_NSGetExecutablePath(path, &bytes_copied) != 0) {
     FATAL1("_NSGetExecutablePath failed, %u bytes left.", bytes_copied);
   }
+}
+
+int Platform::GetLocalTimeZoneOffset() {
+  CFTimeZoneRef tz = CFTimeZoneCopySystem();
+  // Even if the offset was 24 hours it would still easily fit into 32 bits.
+  int offset = CFTimeZoneGetSecondsFromGMT(tz, CFAbsoluteTimeGetCurrent());
+  CFRelease(tz);
+  // Note that Unix and Dart disagree on the sign.
+  return static_cast<int>(-offset);
 }
 
 }  // namespace fletch

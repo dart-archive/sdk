@@ -7,7 +7,7 @@
 
 #include <atomic>
 
-#include "src/vm/platform.h"
+#include "src/shared/platform.h"
 
 namespace fletch {
 

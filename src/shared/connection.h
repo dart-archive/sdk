@@ -6,6 +6,7 @@
 #define SRC_SHARED_CONNECTION_H_
 
 #include "src/shared/globals.h"
+#include "src/shared/platform.h"
 
 namespace fletch {
 
@@ -45,7 +46,7 @@ class WriteBuffer : public Buffer {
   void WriteBoolean(bool value);
   void WriteBytes(const uint8* bytes, int length);
   void WriteString(const char* str);
-  void WriteTo(Socket* socket);
+  void WriteTo(Socket* socket) const;
 };
 
 class Connection {
@@ -136,22 +137,14 @@ class Connection {
   bool ReadBoolean() { return incoming_.ReadBoolean(); }
   uint8* ReadBytes(int* length) { return incoming_.ReadBytes(length); }
 
-  void WriteInt(int value) { outgoing_.WriteInt(value); }
-  void WriteInt64(int64 value) { outgoing_.WriteInt64(value); }
-  void WriteDouble(double value) { outgoing_.WriteDouble(value); }
-  void WriteBoolean(bool value) { outgoing_.WriteBoolean(value); }
-  void WriteBytes(const uint8* bytes, int length) {
-    outgoing_.WriteBytes(bytes, length);
-  }
-  void WriteString(const char* str) { outgoing_.WriteString(str); }
-
-  void Send(Opcode opcode);
+  void Send(Opcode opcode, const WriteBuffer& buffer);
   Opcode Receive();
 
  private:
   Socket* socket_;
   ReadBuffer incoming_;
-  WriteBuffer outgoing_;
+
+  Mutex* send_mutex_;
 
   friend class ConnectionListener;
   Connection(const char* host, int port, Socket* socket);

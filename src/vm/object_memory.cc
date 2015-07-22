@@ -8,11 +8,12 @@
 #include <stdio.h>
 
 #include "src/shared/assert.h"
+#include "src/shared/platform.h"
 #include "src/shared/utils.h"
+
 #include "src/vm/heap.h"
 #include "src/vm/object.h"
 #include "src/vm/storebuffer.h"
-#include "src/vm/platform.h"
 #include "src/vm/stack_walker.h"
 
 namespace fletch {

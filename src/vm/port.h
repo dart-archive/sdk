@@ -8,8 +8,9 @@
 #include <atomic>
 
 #include "src/shared/globals.h"
+#include "src/shared/platform.h"
+
 #include "src/vm/object_memory.h"
-#include "src/vm/platform.h"
 
 namespace fletch {
 

@@ -6,9 +6,10 @@
 #include <unistd.h>
 
 #include "src/shared/assert.h"
-#include "src/vm/platform.h"
-#include "src/vm/thread.h"
+#include "src/shared/platform.h"
 #include "src/shared/test_case.h"
+
+#include "src/vm/thread.h"
 
 namespace fletch {
 

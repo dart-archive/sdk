@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "src/shared/assert.h"
 #include "src/shared/platform.h"
@@ -19,6 +20,14 @@ void GetPathOfExecutable(char* path, size_t path_length) {
     FATAL("readlink returned too much data");
   }
   path[length] = '\0';
+}
+
+int Platform::GetLocalTimeZoneOffset() {
+  // TODO(ajohnsen): avoid excessive calls to tzset?
+  tzset();
+  // Even if the offset was 24 hours it would still easily fit into 32 bits.
+  // Note that Unix and Dart disagree on the sign.
+  return static_cast<int>(-timezone);
 }
 
 }  // namespace fletch

@@ -6,7 +6,7 @@
 #define SRC_VM_OBJECT_MEMORY_H_
 
 #include "src/shared/globals.h"
-#include "src/vm/platform.h"
+#include "src/shared/platform.h"
 #include "src/shared/utils.h"
 
 namespace fletch {

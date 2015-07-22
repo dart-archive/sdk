@@ -6,10 +6,10 @@
 #define SRC_VM_SNAPSHOT_H_
 
 #include "src/shared/globals.h"
+#include "src/shared/list.h"
+#include "src/shared/platform.h"
 
-#include "src/vm/list.h"
 #include "src/vm/object.h"
-#include "src/vm/platform.h"
 #include "src/vm/process.h"
 #include "src/vm/program.h"
 

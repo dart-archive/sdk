@@ -7,9 +7,9 @@
 #include "src/shared/bytecodes.h"
 #include "src/shared/connection.h"
 #include "src/shared/flags.h"
+#include "src/shared/platform.h"
 
 #include "src/vm/object_map.h"
-#include "src/vm/platform.h"
 #include "src/vm/process.h"
 #include "src/vm/snapshot.h"
 #include "src/vm/stack_walker.h"
@@ -85,42 +85,44 @@ void Session::SignalMainThread(MainThreadResumeKind kind) {
 }
 
 void Session::SendDartValue(Object* value) {
+  WriteBuffer buffer;
   if (value->IsSmi() || value->IsLargeInteger()) {
     int64_t int_value = value->IsSmi()
         ? Smi::cast(value)->value()
         : LargeInteger::cast(value)->value();
-    connection_->WriteInt64(int_value);
-    connection_->Send(Connection::kInteger);
+    buffer.WriteInt64(int_value);
+    connection_->Send(Connection::kInteger, buffer);
   } else if (value->IsTrue() || value->IsFalse()) {
-    connection_->WriteBoolean(value->IsTrue());
-    connection_->Send(Connection::kBoolean);
+    buffer.WriteBoolean(value->IsTrue());
+    connection_->Send(Connection::kBoolean, buffer);
   } else if (value->IsNull()) {
-    connection_->Send(Connection::kNull);
+    connection_->Send(Connection::kNull, buffer);
   } else if (value->IsDouble()) {
-    connection_->WriteDouble(Double::cast(value)->value());
-    connection_->Send(Connection::kDouble);
+    buffer.WriteDouble(Double::cast(value)->value());
+    connection_->Send(Connection::kDouble, buffer);
   } else if (value->IsString()) {
     // TODO(ager): We should send the character data as 16-bit values
     // instead of 32-bit values.
     String* str = String::cast(value);
     for (int i = 0; i < str->length(); i++) {
-      connection_->WriteInt(str->get_code_unit(i));
+      buffer.WriteInt(str->get_code_unit(i));
     }
-    connection_->Send(Connection::kString);
+    connection_->Send(Connection::kString, buffer);
   } else {
     Push(HeapObject::cast(value)->get_class());
-    connection_->WriteInt64(MapLookupByObject(class_map_id_, Top()));
-    connection_->Send(Connection::kInstance);
+    buffer.WriteInt64(MapLookupByObject(class_map_id_, Top()));
+    connection_->Send(Connection::kInstance, buffer);
   }
 }
 
 void Session::SendInstanceStructure(Instance* instance) {
+  WriteBuffer buffer;
   Class* klass = instance->get_class();
   Push(klass);
-  connection_->WriteInt64(MapLookupByObject(class_map_id_, Top()));
+  buffer.WriteInt64(MapLookupByObject(class_map_id_, Top()));
   int fields = klass->NumberOfInstanceFields();
-  connection_->WriteInt(fields);
-  connection_->Send(Connection::kInstanceStructure);
+  buffer.WriteInt(fields);
+  connection_->Send(Connection::kInstanceStructure, buffer);
   for (int i = 0; i < fields; i++) {
     SendDartValue(instance->GetInstanceField(i));
   }
@@ -133,14 +135,15 @@ void Session::ProcessContinue(Process* process) {
 
 void Session::SendStackTrace(Stack* stack) {
   int frames = StackWalker::ComputeStackTrace(process_, stack, this);
-  connection_->WriteInt(frames);
+  WriteBuffer buffer;
+  buffer.WriteInt(frames);
   for (int i = 0; i < frames; i++) {
     // Lookup method in method map and send id.
-    connection_->WriteInt64(MapLookupByObject(method_map_id_, Pop()));
+    buffer.WriteInt64(MapLookupByObject(method_map_id_, Pop()));
     // Pop bytecode index from session stack and send it.
-    connection_->WriteInt64(PopInteger());
+    buffer.WriteInt64(PopInteger());
   }
-  connection_->Send(Connection::kProcessBacktrace);
+  connection_->Send(Connection::kProcessBacktrace, buffer);
 }
 
 void Session::ProcessMessages() {
@@ -176,6 +179,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessSetBreakpoint: {
+        WriteBuffer buffer;
         if (process_->debug_info() == NULL) {
           process_->AttachDebugger();
         }
@@ -183,18 +187,19 @@ void Session::ProcessMessages() {
         Function* function = Function::cast(Pop());
         DebugInfo* debug_info = process_->debug_info();
         int id = debug_info->SetBreakpoint(function, bytecode_index);
-        connection_->WriteInt(id);
-        connection_->Send(Connection::kProcessSetBreakpoint);
+        buffer.WriteInt(id);
+        connection_->Send(Connection::kProcessSetBreakpoint, buffer);
         break;
       }
 
       case Connection::kProcessDeleteBreakpoint: {
+        WriteBuffer buffer;
         ASSERT(process_->debug_info() != NULL);
         int id = connection_->ReadInt();
         bool deleted = process_->debug_info()->DeleteBreakpoint(id);
         ASSERT(deleted);
-        connection_->WriteInt(id);
-        connection_->Send(Connection::kProcessDeleteBreakpoint);
+        buffer.WriteInt(id);
+        connection_->Send(Connection::kProcessDeleteBreakpoint, buffer);
         break;
       }
 
@@ -206,16 +211,18 @@ void Session::ProcessMessages() {
 
       case Connection::kProcessStepOver: {
         int breakpoint_id = process_->PrepareStepOver();
-        connection_->WriteInt(breakpoint_id);
-        connection_->Send(Connection::kProcessSetBreakpoint);
+        WriteBuffer buffer;
+        buffer.WriteInt(breakpoint_id);
+        connection_->Send(Connection::kProcessSetBreakpoint, buffer);
         ProcessContinue(process_);
         break;
       }
 
       case Connection::kProcessStepOut: {
         int breakpoint_id = process_->PrepareStepOut();
-        connection_->WriteInt(breakpoint_id);
-        connection_->Send(Connection::kProcessSetBreakpoint);
+        WriteBuffer buffer;
+        buffer.WriteInt(breakpoint_id);
+        connection_->Send(Connection::kProcessSetBreakpoint, buffer);
         ProcessContinue(process_);
         break;
       }
@@ -304,8 +311,9 @@ void Session::ProcessMessages() {
           stack->set_next(Smi::FromWord(0));
         }
         ASSERT(current == NULL);
-        connection_->WriteInt(number_of_stacks);
-        connection_->Send(Connection::kProcessNumberOfStacks);
+        WriteBuffer buffer;
+        buffer.WriteInt(number_of_stacks);
+        connection_->Send(Connection::kProcessNumberOfStacks, buffer);
         break;
       }
 
@@ -480,13 +488,14 @@ void Session::ProcessMessages() {
 
       case Connection::kCommitChanges: {
         bool success = CommitChanges(connection_->ReadInt());
-        connection_->WriteBoolean(success);
+        WriteBuffer buffer;
+        buffer.WriteBoolean(success);
         if (success) {
-          connection_->WriteString("Successfully applied program changes.");
+          buffer.WriteString("Successfully applied program changes.");
         } else {
-          connection_->WriteString("Could not apply program changes.");
+          buffer.WriteString("Could not apply program changes.");
         }
-        connection_->Send(Connection::kCommitChangesResult);
+        connection_->Send(Connection::kCommitChangesResult, buffer);
         break;
       }
 
@@ -497,8 +506,9 @@ void Session::ProcessMessages() {
 
       case Connection::kMapLookup: {
         int map_index = connection_->ReadInt();
-        connection_->WriteInt64(MapLookupByObject(map_index, Top()));
-        connection_->Send(Connection::kObjectId);
+        WriteBuffer buffer;
+        buffer.WriteInt64(MapLookupByObject(map_index, Top()));
+        connection_->Send(Connection::kObjectId, buffer);
         break;
       }
 
@@ -981,7 +991,8 @@ void Session::PrintSynchronizationToken() {
 void Session::UncaughtException(Process* process) {
   if (process_ == process) {
     execution_paused_ = true;
-    connection_->Send(Connection::kUncaughtException);
+    WriteBuffer buffer;
+    connection_->Send(Connection::kUncaughtException, buffer);
     PrintSynchronizationToken();
   }
 }
@@ -991,21 +1002,23 @@ void Session::BreakPoint(Process* process) {
     execution_paused_ = true;
     DebugInfo* debug_info = process->debug_info();
     debug_info->set_is_stepping(false);
-    connection_->WriteInt(debug_info->current_breakpoint_id());
+    WriteBuffer buffer;
+    buffer.WriteInt(debug_info->current_breakpoint_id());
     StackWalker::ComputeTopStackFrame(process, this);
-    connection_->WriteInt64(MapLookupByObject(method_map_id_, Top()));
+    buffer.WriteInt64(MapLookupByObject(method_map_id_, Top()));
     // Drop function from session stack.
     Drop(1);
     // Pop bytecode index from session stack and send it.
-    connection_->WriteInt64(PopInteger());
-    connection_->Send(Connection::kProcessBreakpoint);
+    buffer.WriteInt64(PopInteger());
+    connection_->Send(Connection::kProcessBreakpoint, buffer);
     PrintSynchronizationToken();
   }
 }
 
 void Session::ProcessTerminated(Process* process) {
   if (process_ == process) {
-    connection_->Send(Connection::kProcessTerminated);
+    WriteBuffer buffer;
+    connection_->Send(Connection::kProcessTerminated, buffer);
     PrintSynchronizationToken();
     process_ = NULL;
   }
@@ -1014,7 +1027,8 @@ void Session::ProcessTerminated(Process* process) {
 void Session::CompileTimeError(Process* process) {
   if (process_ == process) {
     execution_paused_ = true;
-    connection_->Send(Connection::kProcessCompileTimeError);
+    WriteBuffer buffer;
+    connection_->Send(Connection::kProcessCompileTimeError, buffer);
     PrintSynchronizationToken();
   }
 }
