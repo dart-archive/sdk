@@ -77,7 +77,7 @@ class Program {
   // constants are stored in global tables in the program instead of
   // duplicated out in the literals sections of methods. The caller of
   // Fold should stop all processes running for this program before calling.
-  void Fold();
+  void Fold(bool disable_heap_validation_before_gc = false);
   void FoldFunction(Function* old_function,
                     Function* new_function,
                     ProgramTableRewriter* rewriter);
@@ -217,7 +217,7 @@ class Program {
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
   Object** last_root_address() { return &native_failure_result_; }
 
-  void PrepareProgramGC();
+  void PrepareProgramGC(bool disable_heap_validation_before_gc = false);
   void PerformProgramGC(Space* to, PointerVisitor* visitor);
   void FinishProgramGC();
 

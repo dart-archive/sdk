@@ -2506,6 +2506,7 @@ class TestSession extends Session {
         await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 
     List<String> vmOptions = <String>[
+        '-Xvalidate-heaps',
         '--port=${server.port}',
     ];
 

@@ -980,7 +980,12 @@ bool Session::CommitChanges(int count) {
 
   // Fold the program after applying changes to continue running in the
   // optimized compact form.
-  program()->Fold();
+  //
+  // NOTE: We disable heap validation always if we changed any objects in the
+  // heaps, because [TransformInstances] will install a forwarding pointer and
+  // thereby destroy the class pointer. The heap verification code will traverse
+  // all heaps and doing so requires a valid class pointer.
+  program()->Fold(schemas_changed);
 
   scheduler->ResumeProgram(program());
 
@@ -1131,8 +1136,7 @@ void Session::TransformInstances() {
   // the [TransformInstancesProcessVisitor] to use the already installed
   // forwarding pointers in program space.
 
-  Heap* heap = program()->heap();
-  Space* space = heap->space();
+  Space* space = program()->heap()->space();
   NoAllocationFailureScope scope(space);
   TransformInstancesPointerVisitor pointer_visitor(program()->heap(), NULL);
   program()->IterateRoots(&pointer_visitor);

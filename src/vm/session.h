@@ -164,6 +164,9 @@ class Session {
   void CommitChangeStatics(Array* change);
   void CommitChangeSchemas(Array* change);
 
+  // This will leave process and program heaps with old and new objects behind.
+  // Where the old objects will have a forwarding pointer installed. It is
+  // therefore not safe to traverse heap objects after calling this method.
   void TransformInstances();
 };
 

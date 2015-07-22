@@ -736,13 +736,13 @@ class FoldingVisitor: public PointerVisitor {
   int class_count_;
 };
 
-void Program::Fold() {
+void Program::Fold(bool disable_heap_validation_before_gc) {
   // TODO(ager): Can we add an assert that there are no processes running
   // for this program. Either because we haven't enqueued any or because
   // the program is stopped?
   ASSERT(!is_compact());
 
-  PrepareProgramGC();
+  PrepareProgramGC(disable_heap_validation_before_gc);
 
   ProgramTableRewriter rewriter;
   Space* to = new Space();
@@ -893,15 +893,15 @@ Object* Program::CreateInitializer(Function* function) {
   return heap()->CreateInitializer(initializer_class_, function);
 }
 
-void Program::PrepareProgramGC() {
-  if (Flags::validate_heaps) {
+void Program::PrepareProgramGC(bool disable_heap_validation_before_gc) {
+  if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
     ValidateGlobalHeapsAreConsistent();
   }
 
   // Loop over all processes and cook all stacks.
   Process* current = process_list_head_;
   while (current != NULL) {
-    if (Flags::validate_heaps) {
+    if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
       current->ValidateHeaps();
     }
     int number_of_stacks = current->CollectGarbageAndChainStacks();
