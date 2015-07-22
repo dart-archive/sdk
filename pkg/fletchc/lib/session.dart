@@ -29,8 +29,10 @@ class FletchVmSession {
   /// The outgoing connection to the fletch-vm.
   final StreamSink<List<int>> _outgoingSink;
 
-  /// The stream of [Command]s from the fletch-vm.
-  final StreamIterator<Command> _incomingCommands;
+  /// The command reader producing a stream iterator for [Commands]s
+  /// from the fletch-vm as well as a stream for stdout from the VM as
+  /// well as stderr from the VM.
+  final CommandReader _commandReader;
 
   /// Completes when the underlying TCP connection is terminated.
   final Future _done;
@@ -38,10 +40,12 @@ class FletchVmSession {
   bool _connectionIsDead = false;
   bool _drainedIncomingCommands = false;
 
-  FletchVmSession(Socket vmSocket)
+  FletchVmSession(Socket vmSocket,
+                  EventSink<List<int>> stdoutSink,
+                  EventSink<List<int>> stderrSink)
       : _outgoingSink = vmSocket,
         _done = vmSocket.done,
-        _incomingCommands = new CommandReader(vmSocket).iterator {
+        _commandReader = new CommandReader(vmSocket, stdoutSink, stderrSink) {
     _done.catchError((_, __) {}).then((_) {
       _connectionIsDead = true;
     });
@@ -102,7 +106,7 @@ class FletchVmSession {
     }
 
     _drainedIncomingCommands =
-        !await _incomingCommands.moveNext().catchError((error) {
+        !await _commandReader.iterator.moveNext().catchError((error) {
           _drainedIncomingCommands = true;
           throw error;
         });
@@ -111,7 +115,7 @@ class FletchVmSession {
       throw new StateError('Expected response from fletch-vm but got EOF.');
     }
 
-    return _incomingCommands.current;
+    return _commandReader.iterator.current;
   }
 
   /// Closes the connection to the fletch-vm and drains the remaining response
@@ -144,7 +148,7 @@ class FletchVmSession {
     _drainedIncomingCommands = true;
 
     await _outgoingSink.close().catchError((_) {});
-    var value = _incomingCommands.cancel();
+    var value = _commandReader.iterator.cancel();
     if (value != null) {
       await value.catchError((_) {});
     }
@@ -155,8 +159,6 @@ class FletchVmSession {
 /// Extends a bare [FletchVmSession] with debugging functionality.
 class Session extends FletchVmSession {
   final FletchCompiler compiler;
-  final StreamIterator<bool> vmStdoutSyncMessages;
-  final StreamIterator<bool> vmStderrSyncMessages;
   final Future processExitCodeFuture;
 
   DebugState debugState;
@@ -166,9 +168,10 @@ class Session extends FletchVmSession {
   Session(Socket fletchVmSocket,
           this.compiler,
           this.fletchSystem,
-          [this.vmStdoutSyncMessages,
-           this.vmStderrSyncMessages,
-           this.processExitCodeFuture]) : super(fletchVmSocket) {
+          EventSink<List<int>> stdoutSink,
+          EventSink<List<int>> stderrSink,
+          [this.processExitCodeFuture])
+      : super(fletchVmSocket, stdoutSink, stderrSink) {
     // We send many small packages, so use no-delay.
     fletchVmSocket.setOption(SocketOption.TCP_NODELAY, true);
     // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
@@ -198,7 +201,7 @@ class Session extends FletchVmSession {
 
   Future debug() async {
     await sendCommands([
-        const Debugging(true),
+        const Debugging(),
         const ProcessSpawnForMain(),
     ]);
     await new InputHandler(this).run();
@@ -219,7 +222,7 @@ class Session extends FletchVmSession {
 
   Future testDebugger(String commands) async {
     await sendCommands([
-        const Debugging(true),
+        const Debugging(),
         const ProcessSpawnForMain(),
     ]);
     if (commands.isEmpty) {
@@ -229,29 +232,10 @@ class Session extends FletchVmSession {
     }
   }
 
-  /// Stdout/stderr from the VM is delivered through a stream. The
-  /// output from the VM can therefore be delayed. In order to prevent
-  /// random interleavings of stdout/stderr from the VM and debugger,
-  /// output synchronization tokens are emitted on stdout/stderr by the
-  /// VM whenever it reaches a process stop. We wait for those
-  /// synchronization tokens before printing debugger output.
-  Future nextOutputSynchronization() async {
-    if (vmStderrSyncMessages != null) {
-      assert(vmStdoutSyncMessages != null);
-      bool gotSync =
-          await vmStdoutSyncMessages.moveNext() &&
-          await vmStderrSyncMessages.moveNext();
-      assert(gotSync);
-    }
-    return null;
-  }
-
   Future terminateSession() async {
     int exitCode = 0;
     await runCommand(const SessionEnd());
     if (processExitCodeFuture != null) {
-      while (await vmStdoutSyncMessages.moveNext()) {}
-      while (await vmStderrSyncMessages.moveNext()) {}
       exitCode = await processExitCodeFuture;
     }
     await shutdown();
@@ -259,7 +243,6 @@ class Session extends FletchVmSession {
   }
 
   Future<int> handleProcessStop(Command response) async {
-    await nextOutputSynchronization();
     debugState.reset();
     switch (response.code) {
       case CommandCode.UncaughtException:

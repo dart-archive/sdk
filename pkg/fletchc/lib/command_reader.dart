@@ -16,6 +16,9 @@ class Chunk {
 
 class CommandReader {
   final Socket socket;
+
+  StreamIterator<Command> iterator;
+
   Chunk first;
   Chunk last;
   int index;
@@ -23,20 +26,32 @@ class CommandReader {
   Chunk currentChunk;
   int currentIndex;
 
-  CommandReader(this.socket) : index = 0;
+  CommandReader(this.socket,
+                EventSink<List<int>> stdoutSink,
+                EventSink<List<int>> stderrSink) : index = 0 {
+    iterator = new StreamIterator<Command>(
+        filterCommandStream(stdoutSink, stderrSink));
+  }
 
-  // TODO(ager): Don't use asBroadcastStream on the stream. However, at this
-  // point if we don't make the stream a broadcast stream it terminates
-  // prematurely.
-  StreamIterator<Command> get iterator
-      => new StreamIterator<Command>(stream().asBroadcastStream());
-
-  Stream<Command> stream() async* {
+  Stream<Command> filterCommandStream(EventSink<List<int>> stdoutSink,
+                                      EventSink<List<int>> stderrSink) async* {
     await for (List data in socket) {
       addData(data);
       Command command = readCommand();
       while (command != null) {
-        yield command;
+        if (command is StdoutData) {
+          if (stdoutSink != null) {
+            StdoutData data = command;
+            stdoutSink.add(command.value);
+          }
+        } else if (command is StderrData) {
+          if (stderrSink != null) {
+            StderrData data = command;
+            stderrSink.add(command.value);
+          }
+        } else {
+          yield command;
+        }
         command = readCommand();
       }
     }

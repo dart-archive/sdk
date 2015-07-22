@@ -152,8 +152,7 @@ void Object::Print() {
   } else {
     HeapObject::cast(this)->HeapObjectPrint();
   }
-  printf("\n\n");
-  fflush(stdout);
+  Print::Out("\n\n");
 }
 
 void Object::ShortPrint() {
@@ -165,19 +164,19 @@ void Object::ShortPrint() {
 }
 
 void Smi::SmiPrint() {
-  printf("%ld", value());
+  Print::Out("%ld", value());
 }
 
 void String::StringPrint() {
   RawPrint("String");
-  printf("\"");
+  Print::Out("\"");
   StringShortPrint();
-  printf("\"");
+  Print::Out("\"");
 }
 
 void String::StringShortPrint() {
   char* result = ToCString();
-  printf("%s", result);
+  Print::Out("%s", result);
   free(result);
 }
 
@@ -245,103 +244,103 @@ Instance* Instance::CloneTransformed(Heap* heap) {
 
 void Instance::InstancePrint() {
   RawPrint("Instance");
-  printf("\n");
-  printf("  - class = ");
+  Print::Out("\n");
+  Print::Out("  - class = ");
   get_class()->ShortPrint();
   int fields = get_class()->NumberOfInstanceFields();
   for (int i = 0; i < fields; i++) {
-    printf("  - @%d = ", i);
+    Print::Out("  - @%d = ", i);
     GetInstanceField(i)->ShortPrint();
-    printf("\n");
+    Print::Out("\n");
   }
 }
 
 void Instance::InstanceShortPrint() {
   if (IsNull()) {
-    printf("null");
+    Print::Out("null");
   } else {
     Class* clazz = get_class();
-    printf("instance of ");
+    Print::Out("instance of ");
     clazz->ShortPrint();
   }
 }
 
 void Array::ArrayPrint() {
   RawPrint("Array");
-  printf("\n");
-  printf("  - length = %d\n", length());
+  Print::Out("\n");
+  Print::Out("  - length = %d\n", length());
   int len  = length();
   for (int i = 0; i < len; i++) {
-    printf("  - [%d] = ", i);
+    Print::Out("  - [%d] = ", i);
     get(i)->ShortPrint();
-    printf("\n");
+    Print::Out("\n");
   }
 }
 
 void Array::ArrayShortPrint() {
-  printf("[");
+  Print::Out("[");
   int len  = length();
   for (int i = 0; i < len; i++) {
     get(i)->ShortPrint();
-    if (i + 1 < len) printf(", ");
+    if (i + 1 < len) Print::Out(", ");
   }
-  printf("]");
+  Print::Out("]");
 }
 
 void ByteArray::ByteArrayPrint() {
   RawPrint("ByteArray");
-  printf("\n");
-  printf("  - length = %d\n", length());
+  Print::Out("\n");
+  Print::Out("  - length = %d\n", length());
   int len  = length();
   for (int i = 0; i < len; i++) {
-    printf("  - [%d] = %d\n", i, get(i));
+    Print::Out("  - [%d] = %d\n", i, get(i));
   }
 }
 
 void ByteArray::ByteArrayShortPrint() {
-  printf("[");
+  Print::Out("[");
   int len  = length();
   for (int i = 0; i < len; i++) {
-    printf("%d", get(i));
-    if (i + 1 < len) printf(", ");
+    Print::Out("%d", get(i));
+    if (i + 1 < len) Print::Out(", ");
   }
-  printf("]");
+  Print::Out("]");
 }
 
 void Function::FunctionPrint() {
   RawPrint("Function");
-  printf("\n");
-  printf("  - bytecode_size = %d\n", bytecode_size());
+  Print::Out("\n");
+  Print::Out("  - bytecode_size = %d\n", bytecode_size());
 }
 
 void Function::FunctionShortPrint() {
-  printf("function #%d", bytecode_size());
+  Print::Out("function #%d", bytecode_size());
 }
 
 void LargeInteger::LargeIntegerPrint() {
-  printf("- large integer: ");
+  Print::Out("- large integer: ");
   LargeIntegerShortPrint();
-  printf("\n");
+  Print::Out("\n");
 }
 
 void LargeInteger::LargeIntegerShortPrint() {
-  printf("%lld", static_cast<long long int>(value()));  // NOLINT
+  Print::Out("%lld", static_cast<long long int>(value()));  // NOLINT
 }
 
 void Double::DoublePrint() {
-  printf("- double: ");
+  Print::Out("- double: ");
   DoubleShortPrint();
-  printf("\n");
+  Print::Out("\n");
 }
 
 void Double::DoubleShortPrint() {
-  printf("%f", value());
+  Print::Out("%f", value());
 }
 
 void Boxed::BoxedPrint() {
-  printf("- boxed: ");
+  Print::Out("- boxed: ");
   BoxedShortPrint();
-  printf("\n");
+  Print::Out("\n");
 }
 
 void Boxed::BoxedShortPrint() {
@@ -349,16 +348,16 @@ void Boxed::BoxedShortPrint() {
 }
 
 void Initializer::InitializerPrint() {
-  printf("- initializer: ");
-  printf("initializer: ");
+  Print::Out("- initializer: ");
+  Print::Out("initializer: ");
   function()->Print();
-  printf("\n");
+  Print::Out("\n");
 }
 
 void Initializer::InitializerShortPrint() {
-  printf("initializer ");
+  Print::Out("initializer ");
   function()->ShortPrint();
-  printf("\n");
+  Print::Out("\n");
 }
 
 void Class::Transform(Class* target, Array* transformation) {
@@ -407,20 +406,21 @@ bool Class:: IsSubclassOf(Class* klass) {
 
 void Class::ClassPrint() {
   RawPrint("Class");
-  printf("\n");
-  printf("\n");
+  Print::Out("\n");
+  Print::Out("\n");
   if (instance_format().type() == InstanceFormat::INSTANCE_TYPE) {
-    printf("  - number of instance fields = %d\n", NumberOfInstanceFields());
+    Print::Out("  - number of instance fields = %d\n",
+                 NumberOfInstanceFields());
   }
   int size = instance_format().fixed_size();
-  printf("  - instance object size = %d\n", size);
-  printf("  - methods = ");
+  Print::Out("  - instance object size = %d\n", size);
+  Print::Out("  - methods = ");
   methods()->ShortPrint();
-  printf("\n");
+  Print::Out("\n");
 }
 
 void Class::ClassShortPrint() {
-  printf("class");
+  Print::Out("class");
 }
 
 void HeapObject::IteratePointers(PointerVisitor* visitor) {
@@ -547,17 +547,20 @@ class PrintVisitor: public PointerVisitor {
 
  private:
   void PrintPointer(Object** p) {
-    printf(" [0x%lx] = ", reinterpret_cast<uword>(p));
+    Print::Out(" [0x%lx] = ", reinterpret_cast<uword>(p));
     (*p)->ShortPrint();
-    printf("\n");
+    Print::Out("\n");
   }
 };
 
 void HeapObject::RawPrint(const char* title) {
   if (!Flags::verbose) {
-    printf("a %s: ", title);
+    Print::Out("a %s: ", title);
   } else {
-    printf("0x%lx: [%s] (%d): ", address(), title, static_cast<int>(Size()));
+    Print::Out("0x%lx: [%s] (%d): ",
+                 address(),
+                 title,
+                 static_cast<int>(Size()));
     PrintVisitor v;
     IteratePointers(&v);
   }
