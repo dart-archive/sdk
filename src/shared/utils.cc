@@ -18,7 +18,7 @@ void Print::Out(const char* format, ...) {
   int printed = vsnprintf(message, size + 1, format, args);
   ASSERT(printed == size);
   va_end(args);
-  fprintf(stdout, message);
+  fputs(message, stdout);
   fflush(stdout);
   if (interceptor_) interceptor_->Out(message);
   free(message);
@@ -34,7 +34,7 @@ void Print::Error(const char* format, ...) {
   int printed = vsnprintf(message, size, format, args);
   ASSERT(printed == size);
   va_end(args);
-  fprintf(stderr, message);
+  fputs(message, stderr);
   fflush(stderr);
   if (interceptor_) interceptor_->Error(message);
   fflush(stderr);
