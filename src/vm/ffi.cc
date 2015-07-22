@@ -86,7 +86,7 @@ NATIVE(ForeignLookup) {
     result = ForeignFunctionInterface::LookupInDefaultLibraries(name);
   }
 
-  if (result == NULL) Print::Error("Failed foreign lookup: %s\n", name);
+  if (result == NULL) fprintf(stderr, "Failed foreign lookup: %s\n", name);
 
   free(library);
   free(name);

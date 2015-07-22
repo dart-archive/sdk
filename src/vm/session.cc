@@ -25,32 +25,13 @@
 
 namespace fletch {
 
-class ConnectionPrintInterceptor : public PrintInterceptor {
- public:
-  explicit ConnectionPrintInterceptor(Connection* connection)
-      : connection_(connection) {}
-  virtual ~ConnectionPrintInterceptor() {}
-
-  virtual void Out(char* message) {
-    connection_->WriteString(message);
-    connection_->Send(Connection::kStdoutData);
-  }
-
-  virtual void Error(char* message) {
-    connection_->WriteString(message);
-    connection_->Send(Connection::kStderrData);
-  }
-
- private:
-  Connection* connection_;
-};
-
 Session::Session(Connection* connection)
     : connection_(connection),
       program_(NULL),
       process_(NULL),
       execution_paused_(false),
       debugging_(false),
+      output_synchronization_(false),
       method_map_id_(-1),
       class_map_id_(-1),
       fibers_map_id_(-1),
@@ -168,7 +149,6 @@ void Session::ProcessMessages() {
 
     switch (opcode) {
       case Connection::kConnectionError: {
-        Print::UnregisterPrintInterceptor();
         FATAL("Compiler crashed. So do we.");
       }
 
@@ -291,7 +271,6 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kSessionEnd: {
-        Print::UnregisterPrintInterceptor();
         debugging_ = false;
         // If execution is paused we delete the process to allow the
         // VM to terminate.
@@ -304,12 +283,10 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kDebugging: {
+        output_synchronization_ = connection_->ReadBoolean();
         method_map_id_ = connection_->ReadInt();
         class_map_id_ = connection_->ReadInt();
         fibers_map_id_ = connection_->ReadInt();
-        ConnectionPrintInterceptor* interceptor =
-            new ConnectionPrintInterceptor(connection_);
-        Print::RegisterPrintInterceptor(interceptor);
         debugging_ = true;
         break;
       }
@@ -752,15 +729,15 @@ void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
   Push(function);
 
   if (Flags::log_decoder) {
-    Print::Out("Method:\n");
+    printf("Method:\n");
     uint8* bytes = function->bytecode_address_for(0);
     Opcode opcode;
     int i = 0;
     do {
       opcode = static_cast<Opcode>(bytes[i]);
-      Print::Out("  %04d: ", i);
+      printf("  %04d: ", i);
       i += Bytecode::Print(bytes + i);
-      Print::Out("\n");
+      printf("\n");
     } while (opcode != kMethodEnd);
   }
 }
@@ -990,10 +967,22 @@ void Session::PostponeChange(Change change, int count) {
   changes_.Add(array);
 }
 
+void Session::PrintSynchronizationToken() {
+  static const char kSynchronizationToken[] =
+      { 60, 61, 33, 123, 3, 2, 1, 2, 3, 125, 33, 61, 62, 0 };
+  if (output_synchronization_) {
+    fprintf(stdout, "%s\n", kSynchronizationToken);
+    fflush(stdout);
+    fprintf(stderr, "%s\n", kSynchronizationToken);
+    fflush(stderr);
+  }
+}
+
 void Session::UncaughtException(Process* process) {
   if (process_ == process) {
     execution_paused_ = true;
     connection_->Send(Connection::kUncaughtException);
+    PrintSynchronizationToken();
   }
 }
 
@@ -1010,12 +999,14 @@ void Session::BreakPoint(Process* process) {
     // Pop bytecode index from session stack and send it.
     connection_->WriteInt64(PopInteger());
     connection_->Send(Connection::kProcessBreakpoint);
+    PrintSynchronizationToken();
   }
 }
 
 void Session::ProcessTerminated(Process* process) {
   if (process_ == process) {
     connection_->Send(Connection::kProcessTerminated);
+    PrintSynchronizationToken();
     process_ = NULL;
   }
 }
@@ -1024,6 +1015,7 @@ void Session::CompileTimeError(Process* process) {
   if (process_ == process) {
     execution_paused_ = true;
     connection_->Send(Connection::kProcessCompileTimeError);
+    PrintSynchronizationToken();
   }
 }
 

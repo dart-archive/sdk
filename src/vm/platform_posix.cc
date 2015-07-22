@@ -14,8 +14,6 @@
 #include <signal.h>
 #include <unistd.h>
 
-#include "src/shared/utils.h"
-
 namespace fletch {
 
 static uint64 time_launch;
@@ -57,13 +55,13 @@ List<uint8> Platform::LoadFile(const char* name) {
   // Open the file.
   FILE* file = fopen(name, "rb");
   if (file == NULL) {
-    Print::Error("ERROR: Cannot open %s\n", name);
+    printf("ERROR: Cannot open %s\n", name);
     return List<uint8>();
   }
 
   // Determine the size of the file.
   if (fseek(file, 0, SEEK_END) != 0) {
-    Print::Error("ERROR: Cannot seek in file %s\n", name);
+    printf("ERROR: Cannot seek in file %s\n", name);
     fclose(file);
     return List<uint8>();
   }
@@ -75,7 +73,7 @@ List<uint8> Platform::LoadFile(const char* name) {
   int result = fread(buffer, 1, size, file);
   fclose(file);
   if (result != size) {
-    Print::Error("ERROR: Unable to read entire file %s\n", name);
+    printf("ERROR: Unable to read entire file %s\n", name);
     return List<uint8>();
   }
   return List<uint8>(buffer, size);
@@ -85,14 +83,14 @@ bool Platform::StoreFile(const char* uri, List<uint8> bytes) {
   // Open the file.
   FILE* file = fopen(uri, "wb");
   if (file == NULL) {
-    Print::Error("ERROR: Cannot open %s\n", uri);
+    printf("ERROR: Cannot open %s\n", uri);
     return false;
   }
 
   int result = fwrite(bytes.data(), 1, bytes.length(), file);
   fclose(file);
   if (result != bytes.length()) {
-    Print::Error("ERROR: Unable to write entire file %s\n", uri);
+    printf("ERROR: Unable to write entire file %s\n", uri);
     return false;
   }
 

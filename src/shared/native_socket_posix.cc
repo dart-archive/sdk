@@ -14,7 +14,6 @@
 #include <unistd.h>
 
 #include "src/shared/assert.h"
-#include "src/shared/utils.h"
 
 namespace fletch {
 
@@ -116,7 +115,7 @@ void Socket::Write(uint8* data, int length) {
     int bytes = TEMP_FAILURE_RETRY(
         write(data_->fd, data + offset, length - offset));
     if (bytes < 0) {
-      Print::Error("Failed to write to socket: %i\n", data_->fd);
+      fprintf(stderr, "Failed to write to socket: %i\n", data_->fd);
       UNREACHABLE();
     }
     offset += bytes;
@@ -130,7 +129,7 @@ uint8* Socket::Read(int length) {
     int bytes = TEMP_FAILURE_RETRY(
         read(data_->fd, data + offset, length - offset));
     if (bytes <= 0) {
-      Print::Error("Failed to read from socket\n");
+      fprintf(stderr, "Failed to read from socket\n");
       free(data);
       return NULL;
     }

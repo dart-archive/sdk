@@ -127,7 +127,7 @@ Connection* Connection::Connect(const char* host, int port) {
     return new Connection(host, port, socket);
   }
 
-  Print::Error("Failed to connect to %s:%i\n", host, port);
+  fprintf(stderr, "Failed to connect to %s:%i\n", host, port);
   UNREACHABLE();
   return NULL;
 }

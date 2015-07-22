@@ -6,41 +6,6 @@
 
 namespace fletch {
 
-PrintInterceptor* Print::interceptor_ = NULL;
-
-void Print::Out(const char* format, ...) {
-  va_list args;
-  va_start(args, format);
-  int size = vsnprintf(NULL, 0, format, args);
-  va_end(args);
-  char* message = reinterpret_cast<char*>(malloc(size + 1));
-  va_start(args, format);
-  int printed = vsnprintf(message, size + 1, format, args);
-  ASSERT(printed == size);
-  va_end(args);
-  fputs(message, stdout);
-  fflush(stdout);
-  if (interceptor_) interceptor_->Out(message);
-  free(message);
-}
-
-void Print::Error(const char* format, ...) {
-  va_list args;
-  va_start(args, format);
-  int size = vsnprintf(NULL, 0, format, args);
-  va_end(args);
-  char* message = reinterpret_cast<char*>(malloc(size + 1));
-  va_start(args, format);
-  int printed = vsnprintf(message, size, format, args);
-  ASSERT(printed == size);
-  va_end(args);
-  fputs(message, stderr);
-  fflush(stderr);
-  if (interceptor_) interceptor_->Error(message);
-  fflush(stderr);
-  free(message);
-}
-
 uint32 Utils::StringHash(const uint16* data, int length) {
   // This implementation is based on the public domain MurmurHash
   // version 2.0. The constants M and R have been determined work

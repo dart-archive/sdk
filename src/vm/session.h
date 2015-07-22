@@ -129,6 +129,7 @@ class Session {
 
   bool execution_paused_;
   bool debugging_;
+  bool output_synchronization_;
 
   int method_map_id_;
   int class_map_id_;
@@ -165,6 +166,12 @@ class Session {
   void CommitChangeSchemas(Array* change);
 
   void TransformInstances();
+
+  // Emit synchronization token on stdout and stderr if the session user
+  // requested it. The synchronization tokens can be used to make sure
+  // that all output from the VM is received before further actions are
+  // performed.
+  void PrintSynchronizationToken();
 };
 
 }  // namespace fletch

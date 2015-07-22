@@ -1088,23 +1088,22 @@ class StatisticsVisitor : public HeapObjectVisitor {
 void Program::PrintStatistics() {
   StatisticsVisitor statistics;
   heap_.space()->IterateObjects(&statistics);
-  Print::Out("Program\n");
-  Print::Out("  - size = %d bytes\n", heap_.space()->Used());
-  Print::Out("  - objects = %d\n", statistics.object_count());
-  Print::Out("  Classes\n");
-  Print::Out("    - count = %d\n", statistics.class_count());
-  Print::Out("  Arrays\n");
-  Print::Out("    - count = %d\n", statistics.array_count());
-  Print::Out("    - size = %d bytes\n", statistics.array_size());
-  Print::Out("  Strings\n");
-  Print::Out("    - count = %d\n", statistics.string_count());
-  Print::Out("    - size = %d bytes\n", statistics.string_size());
-  Print::Out("  Functions\n");
-  Print::Out("    - count = %d\n", statistics.function_count());
-  Print::Out("    - size = %d bytes\n", statistics.function_size());
-  Print::Out("    - header size = %d bytes\n",
-             statistics.function_header_size());
-  Print::Out("    - bytecode size = %d bytes\n", statistics.bytecode_size());
+  printf("Program\n");
+  printf("  - size = %d bytes\n", heap_.space()->Used());
+  printf("  - objects = %d\n", statistics.object_count());
+  printf("  Classes\n");
+  printf("    - count = %d\n", statistics.class_count());
+  printf("  Arrays\n");
+  printf("    - count = %d\n", statistics.array_count());
+  printf("    - size = %d bytes\n", statistics.array_size());
+  printf("  Strings\n");
+  printf("    - count = %d\n", statistics.string_count());
+  printf("    - size = %d bytes\n", statistics.string_size());
+  printf("  Functions\n");
+  printf("    - count = %d\n", statistics.function_count());
+  printf("    - size = %d bytes\n", statistics.function_size());
+  printf("    - header size = %d bytes\n", statistics.function_header_size());
+  printf("    - bytecode size = %d bytes\n", statistics.bytecode_size());
 }
 
 void Program::Initialize() {
@@ -1368,10 +1367,10 @@ void Program::SetupDispatchTableIntrinsics() {
   }
 
   if (Flags::print_program_statistics) {
-    Print::Out("Dispatch table fill: %F%% (%i of %i)\n",
-               hits * 100.0 / length,
-               hits,
-               length);
+    printf("Dispatch table fill: %F%% (%i of %i)\n",
+           hits * 100.0 / length,
+           hits,
+           length);
   }
 
   table = vtable();
@@ -1398,10 +1397,10 @@ void Program::SetupDispatchTableIntrinsics() {
   }
 
   if (Flags::print_program_statistics) {
-    Print::Out("Vtable fill: %F%% (%i of %i)\n",
-               hits * 100.0 / length,
-               hits,
-               length);
+    printf("Vtable fill: %F%% (%i of %i)\n",
+           hits * 100.0 / length,
+           hits,
+           length);
   }
 }
 

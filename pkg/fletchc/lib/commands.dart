@@ -143,10 +143,6 @@ abstract class Command {
       case CommandCode.String:
         return new StringValue(
             CommandBuffer.readStringFromBuffer(buffer, 0, buffer.length));
-      case CommandCode.StdoutData:
-        return new StdoutData(buffer);
-      case CommandCode.StderrData:
-        return new StderrData(buffer);
       case CommandCode.ObjectId:
         int id = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new ObjectId(id);
@@ -1043,11 +1039,14 @@ class SessionEnd extends Command {
 }
 
 class Debugging extends Command {
-  const Debugging()
+  final bool outputSynchronization;
+
+  const Debugging(this.outputSynchronization)
       : super(CommandCode.Debugging);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
+        ..addUint8(outputSynchronization ? 1 : 0)
         ..addUint32(MapId.methods.index)
         ..addUint32(MapId.classes.index)
         ..addUint32(MapId.fibers.index)
@@ -1056,29 +1055,7 @@ class Debugging extends Command {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "";
-}
-
-class StdoutData extends Command {
-  final Uint8List value;
-
-  const StdoutData(this.value)
-      : super(CommandCode.StdoutData);
-
-  int get numberOfResponsesExpected => 0;
-
-  String valuesToString() => "$value";
-}
-
-class StderrData extends Command {
-  final Uint8List value;
-
-  const StderrData(this.value)
-      : super(CommandCode.StderrData);
-
-  int get numberOfResponsesExpected => 0;
-
-  String valuesToString() => "$value";
+  String valuesToString() => "$outputSynchronization";
 }
 
 class WriteSnapshot extends Command {
@@ -1202,8 +1179,6 @@ enum CommandCode {
   CompilerError,
   SessionEnd,
   Debugging,
-  StdoutData,
-  StderrData,
 
   ProcessSpawnForMain,
   ProcessRun,

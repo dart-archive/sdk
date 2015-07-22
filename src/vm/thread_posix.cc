@@ -7,7 +7,6 @@
 #include <errno.h>
 #include <stdio.h>
 
-#include "src/shared/utils.h"
 #include "src/vm/platform.h"
 
 namespace fletch {
@@ -21,9 +20,9 @@ void Thread::Run(RunSignature run, void* data) {
   int result = pthread_create(&thread, NULL, run, data);
   if (result != 0) {
     if (result == EAGAIN) {
-      Print::Error("Insufficient resources\n");
+      fprintf(stderr, "Insufficient resources\n");
     } else {
-      Print::Error("Error %d", result);
+      fprintf(stderr, "Error %d", result);
     }
   }
 }

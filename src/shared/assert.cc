@@ -10,19 +10,17 @@
 
 #include <cstdlib>
 
-#include "src/shared/utils.h"
-
 namespace fletch {
 
 void DynamicAssertionHelper::Fail(const char* format, ...) {
   // Print out the error.
-  Print::Error("%s:%d: error: ", file_, line_);
+  fprintf(stderr, "%s:%d: error: ", file_, line_);
   va_list arguments;
   va_start(arguments, format);
   char buffer[KB];
   vsnprintf(buffer, sizeof(buffer), format, arguments);
   va_end(arguments);
-  Print::Error("%s\n", buffer);
+  fprintf(stderr, "%s\n", buffer);
 
   DumpStacktrace();
 
@@ -44,7 +42,7 @@ void DynamicAssertionHelper::DumpStacktrace() {
   int number_of_frames = backtrace(buffer, kMaxFrames);
   char** strings = backtrace_symbols(buffer, number_of_frames);
   if (strings != NULL) {
-    Print::Error("\nCurrent stacktrace:\n");
+    fprintf(stderr, "\nCurrent stacktrace:\n");
     for (int i = 0; i < number_of_frames; i++) {
       char* string = strings[i];
 
@@ -79,21 +77,21 @@ void DynamicAssertionHelper::DumpStacktrace() {
             mangled_name, NULL, NULL, &status);
         if (status == 0) {
           *open_paren = '\0';
-          Print::Error("  %s(%s%s\n", string, demangled_string, plus);
+          fprintf(stderr, "  %s(%s%s\n", string, demangled_string, plus);
         } else {
-          Print::Error("  %s\n", string);
+          fprintf(stderr, "  %s\n", string);
         }
         free(demangled_string);
 
         free(mangled_name);
       } else {
-        Print::Error("  %s\n", string);
+        fprintf(stderr, "  %s\n", string);
       }
     }
-    Print::Error("\n");
+    fprintf(stderr, "\n");
     free(strings);
   } else {
-    Print::Error("\nCould not get a stacktrace.\n");
+    fprintf(stderr, "\nCould not get a stacktrace.\n");
   }
 }
 

@@ -172,7 +172,7 @@ Future<int> compileAndRunTask(
   }
 
   // Apply all commands the compiler gave us & shut down.
-  var session = new FletchVmSession(vmSocket, null, null);
+  var session = new FletchVmSession(vmSocket);
   await session.runCommands(fletchDelta.commands);
 
   if (options.snapshotPath == null) {

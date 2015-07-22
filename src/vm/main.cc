@@ -10,7 +10,6 @@
 
 #include "src/shared/connection.h"
 #include "src/shared/flags.h"
-#include "src/shared/utils.h"
 
 #include "src/vm/session.h"
 
@@ -32,7 +31,7 @@ static Connection* WaitForCompilerConnection() {
   // Listen for new connections.
   ConnectionListener listener(host, 0);
 
-  Print::Out("Waiting for compiler on %s:%i\n", host, listener.Port());
+  printf("Waiting for compiler on %s:%i\n", host, listener.Port());
 
   return listener.Accept();
 }
