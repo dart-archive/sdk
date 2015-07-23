@@ -33,6 +33,9 @@ import 'debug_verb.dart' show
 import 'help_verb.dart' show
     helpVerb;
 
+import 'show_verb.dart' show
+    showVerb;
+
 import 'compile_and_run_verb.dart' show
     compileAndRunVerb;
 
@@ -109,6 +112,7 @@ abstract class SharedTask {
 const Map<String, Verb> commonVerbs = const <String, Verb>{
   "debug": debugVerb,
   "help": helpVerb,
+  "show": showVerb
 };
 
 /// Uncommon verbs aren't displayed in the normal help screen.
@@ -116,7 +120,6 @@ const Map<String, Verb> commonVerbs = const <String, Verb>{
 /// These verbs are displayed when running `fletch help all`.
 const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "compile-and-run": compileAndRunVerb,
-
   "shutdown": shutdownVerb,
   "create": createVerb,
   "compile": compileVerb,

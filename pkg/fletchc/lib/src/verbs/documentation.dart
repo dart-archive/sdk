@@ -34,6 +34,10 @@ const String compileDocumentation = """
              Compile file named FILE
 """;
 
+const String showDocumentation = """
+   show      List things or show information about a thing
+""";
+
 const String attachDocumentation = """
    attach tcp_socket [HOST:]PORT
              Attach to Fletch VM on the given socket

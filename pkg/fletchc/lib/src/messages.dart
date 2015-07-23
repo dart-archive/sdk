@@ -13,6 +13,7 @@ enum DiagnosticKind {
   verbRequiresSession,
   verbRequiresNoSession,
   verbRequiresSessionTarget,
+  verbRequiresTarget,
   noSuchSession,
   sessionAlreadyExists,
   noFileTarget,
@@ -58,6 +59,11 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.verbRequiresSessionTarget:
       return "Can't perform '${DiagnosticParameter.verb}' without a session "
           "target. Try adding 'session SESSION_NAME'";
+
+    case DiagnosticKind.verbRequiresTarget:
+    // TODO(lukechurch): Revisit this to improve suggestion text.
+      return "Can't perform '${DiagnosticParameter.verb}' without a target. "
+          "Try adding a thing or group of things.";
 
     case DiagnosticKind.noSuchSession:
       // TODO(lukechurch): Ensure UX repair text is good.

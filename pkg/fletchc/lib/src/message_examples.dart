@@ -36,6 +36,11 @@ List<Example> getExamples(DiagnosticKind kind) {
           new CommandLineExample(
               <String>['x-end'])];
 
+    case DiagnosticKind.verbRequiresTarget:
+      return <Example>[
+        new CommandLineExample(
+            <String>['show'])];
+
     case DiagnosticKind.noSuchSession:
       return <Example>[
           new CommandLineExample(
