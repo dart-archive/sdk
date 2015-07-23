@@ -300,7 +300,6 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kSessionEnd: {
-        Print::UnregisterPrintInterceptor();
         debugging_ = false;
         // If execution is paused we delete the process to allow the
         // VM to terminate.
@@ -602,6 +601,7 @@ bool Session::ProcessRun() {
           // know about it and we are therefore responsible for deleting it.
           program()->DeleteProcess(process_);
         }
+        Print::UnregisterPrintInterceptor();
         if (!process_started) return true;
         if (has_result) return result;
         break;
