@@ -2128,7 +2128,7 @@ class TestUtils {
     var buildDir =
         "${outputDir(configuration)}${configurationDir(configuration)}";
     if (!new Directory(buildDir).existsSync()) {
-      throw new Exception('Build directory $dir does not exist');
+      throw new Exception('Build directory $buildDir does not exist');
     }
     return buildDir;
   }

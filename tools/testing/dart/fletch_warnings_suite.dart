@@ -26,6 +26,9 @@ import 'status_file_parser.dart' show
     Expectation,
     TestExpectations;
 
+import 'compiler_configuration.dart' show
+    CommandArtifact;
+
 const Map<String, String> URIS_TO_ANALYZE = const <String, String>{
     "fletchc": "package:fletchc/fletchc.dart",
     "driver_main": "package:fletchc/src/driver/driver_main.dart",

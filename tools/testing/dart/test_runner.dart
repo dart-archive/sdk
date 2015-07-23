@@ -377,12 +377,14 @@ class OutputDiffingVmCommand extends VmCommand {
   }
 
   bool _equal(Command other) {
-    if (other is! OutputDiffingVmCommand) return false;
-    if (other.expectedOutput.length != expectedOutput.length) return false;
-    for (int i = 0; i < expectedOutput.length; i++) {
-      if (other.expectedOutput[i] != expectedOutput[i]) return false;
+    if (other is OutputDiffingVmCommand) {
+      if (other.expectedOutput.length != expectedOutput.length) return false;
+      for (int i = 0; i < expectedOutput.length; i++) {
+        if (other.expectedOutput[i] != expectedOutput[i]) return false;
+      }
+      return super._equal(other);
     }
-    return super._equal(other);
+    return false;
   }
 }
 
@@ -1603,10 +1605,13 @@ class VmCommandOutputImpl extends CommandOutputImpl
 }
 
 class OutputDiffingVmCommandOutputImpl extends VmCommandOutputImpl {
-  OutputDiffingVmCommandOutputImpl(Command command, int exitCode, bool timedOut,
-                                   List<int> stdout, List<int> stderr,
-                                   Duration time, int pid)
+  OutputDiffingVmCommandOutputImpl(
+      OutputDiffingVmCommand command, int exitCode, bool timedOut,
+      List<int> stdout, List<int> stderr,
+      Duration time, int pid)
       : super(command, exitCode, timedOut, stdout, stderr, time, pid);
+
+  OutputDiffingVmCommand get command => super.command;
 
   bool _printedDiagnostics = false;
 

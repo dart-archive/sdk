@@ -39,10 +39,15 @@ import 'status_file_parser.dart' show
     TestExpectations;
 
 import '../../../tests/fletch_tests/messages.dart' show
+    ErrorMessage,
+    Info,
     ListTests,
+    ListTestsReply,
     Message,
+    NamedMessage,
     RunTest,
     TestFailed,
+    TestStdoutLine,
     TimedOut,
     messageTransformer;
 
@@ -75,7 +80,7 @@ class FletchTestSuite extends TestSuite {
       return;
     }
 
-    RuntimeConfiguration runtimeConfiguration =
+    FletchTestRuntimeConfiguration runtimeConfiguration =
         new RuntimeConfiguration(configuration);
 
     // TODO(ahe): Add status files.
@@ -186,7 +191,8 @@ class FletchTestOutputCommand implements CommandOutput {
         return <int>[];
 
       case 'TestFailed':
-        result = '${message.error}\n${message.stackTrace}';
+        TestFailed failed = message;
+        result = '${failed.error}\n${failed.stackTrace}';
         break;
 
       default:
@@ -214,7 +220,7 @@ class FletchTestCommand implements Command {
 
   Future<FletchTestOutputCommand> run(int timeout) {
     Stopwatch sw = new Stopwatch()..start();
-    return _completer.run(this, timeout).then((Message message) {
+    return _completer.run(this, timeout).then((NamedMessage message) {
       FletchTestOutputCommand output =
           new FletchTestOutputCommand(
               this, message, sw.elapsed, _completer.testOutput[message.name]);
@@ -224,6 +230,15 @@ class FletchTestCommand implements Command {
   }
 
   String toString() => 'FletchTestCommand($_name)';
+
+  set displayName(_) => throw "not supported";
+
+  get commandLine => throw "not supported";
+  set commandLine(_) => throw "not supported";
+
+  String get reproductionCommand => throw "not supported";
+
+  get outputIsUpToDate => throw "not supported";
 }
 
 class TestCompleter {
@@ -316,25 +331,29 @@ class TestCompleter {
   void processMessage(Message message) {
     switch (message.type) {
       case 'Info':
+        Info info = message;
         // For debugging, shouldn't normally be called.
-        print(message.data);
+        print(info.data);
         break;
       case 'TestPassed':
       case 'TestFailed':
       case 'TimedOut':
-        Completer completer = completers.remove(message.name);
+        NamedMessage namedMessage = message;
+        Completer completer = completers.remove(namedMessage.name);
         completer.complete(message);
         break;
       case 'ListTestsReply':
-        testNamesCompleter.complete(message.tests);
+        ListTestsReply reply = message;
+        testNamesCompleter.complete(reply.tests);
         break;
       case 'InternalErrorMessage':
-        print(message.error);
-        print(message.stackTrace);
-        throw "Internal error in helper process: ${message.error}";
+        ErrorMessage error = message;
+        print(error.error);
+        print(error.stackTrace);
+        throw "Internal error in helper process: ${error.error}";
       case 'TestStdoutLine':
-        testOutput.putIfAbsent(message.name, () => <String>[])
-            .add(message.line);
+        TestStdoutLine line = message;
+        testOutput.putIfAbsent(line.name, () => <String>[]).add(line.line);
         break;
       default:
         throw "Unhandled message from helper process: $message";

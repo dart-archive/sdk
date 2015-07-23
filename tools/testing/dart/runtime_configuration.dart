@@ -14,6 +14,7 @@ import 'compiler_configuration.dart' show
 // TODO(ahe): Remove this import, we can precompute all the values required
 // from TestSuite once the refactoring is complete.
 import 'test_suite.dart' show
+    StandardTestSuite,
     TestSuite;
 
 import 'test_runner.dart' show
@@ -176,7 +177,7 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
 
 class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
   List<Command> computeRuntimeCommands(
-      TestSuite suite,
+      StandardTestSuite suite,
       CommandBuilder commandBuilder,
       CommandArtifact artifact,
       List<String> basicArguments,
