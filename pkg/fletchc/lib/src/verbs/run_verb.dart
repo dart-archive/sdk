@@ -153,7 +153,7 @@ Future<Null> printBacktraceHack(
       await session.runCommand(const commands_lib.ProcessBacktraceRequest());
   for (int i = backtrace.frames - 1; i >= 0; i--) {
     FletchFunction function =
-        delta.system.lookupFunctionById(backtrace.methodIds[i]);
+        delta.system.lookupFunctionById(backtrace.functionIds[i]);
     if (function.element.implementation.library.isInternalLibrary) {
       // TODO(ahe): This hides implementation details, which should be a
       // user-controlled option.

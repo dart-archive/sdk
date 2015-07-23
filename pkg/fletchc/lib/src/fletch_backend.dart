@@ -450,7 +450,7 @@ class FletchBackend extends Backend {
         assembler.loadParameter(i + 1);
       }
       int constId = functionBuilder.allocateConstantFromFunction(
-          function.methodId);
+          function.functionId);
       // TODO(ajohnsen): Create a tail-call bytecode, so we don't have to
       // load all the arguments.
       assembler
@@ -520,7 +520,7 @@ class FletchBackend extends Backend {
         ..loadParameter(0)
         ..loadField(0)
         ..invokeMethod(hashCodeSelector, 0)
-        ..loadLiteral(function.methodId)
+        ..loadLiteral(function.functionId)
         ..invokeMethod(xorSelector, 1)
         ..ret()
         ..methodEnd();
@@ -576,10 +576,6 @@ class FletchBackend extends Backend {
             ? FletchFunctionKind.ACCESSOR
             : FletchFunctionKind.NORMAL,
         mapByElement: function.declaration);
-  }
-
-  int functionMethodId(FunctionElement function) {
-    return createFletchFunctionBuilder(function).methodId;
   }
 
   ClassDebugInfo createClassDebugInfo(FletchClass klass) {
@@ -1011,7 +1007,7 @@ class FletchBackend extends Backend {
     // method that takes optional arguments. We really should
     // enumerate all the stubs in the superclasses and make sure
     // they're overridden.
-    int constId = builder.allocateConstantFromFunction(function.methodId);
+    int constId = builder.allocateConstantFromFunction(function.functionId);
     assembler
         ..invokeStatic(constId, index)
         ..ret()
@@ -1089,7 +1085,7 @@ class FletchBackend extends Backend {
     commands.add(const PushNewInteger(0));
     commands.add(new PushFromMap(
         MapId.methods,
-        system.lookupFunctionByElement(fletchSystemEntry).methodId));
+        system.lookupFunctionByElement(fletchSystemEntry).functionId));
 
     return new FletchDelta(system, systemBuilder.predecessorSystem, commands);
   }
@@ -1101,9 +1097,9 @@ class FletchBackend extends Backend {
       List<Function> deferredActions) {
     int arity = functionBuilder.assembler.functionArity;
     int constantCount = functionBuilder.constants.length;
-    int methodId = functionBuilder.methodId;
+    int functionId = functionBuilder.functionId;
 
-    assert(systemBuilder.lookupFunctionBuilder(methodId) == functionBuilder);
+    assert(systemBuilder.lookupFunctionBuilder(functionId) == functionBuilder);
     assert(functionBuilder.assembler.bytecodes.isNotEmpty);
 
     functionBuilder.constants.forEach((constant, int index) {
@@ -1112,15 +1108,15 @@ class FletchBackend extends Backend {
           commands.add(const PushNull());
           deferredActions.add(() {
             commands
-                ..add(new PushFromMap(MapId.methods, methodId))
-                ..add(new PushFromMap(MapId.methods, constant.methodId))
+                ..add(new PushFromMap(MapId.methods, functionId))
+                ..add(new PushFromMap(MapId.methods, constant.functionId))
                 ..add(new ChangeMethodLiteral(index));
           });
         } else if (constant is FletchClassConstant) {
           commands.add(const PushNull());
           deferredActions.add(() {
             commands
-                ..add(new PushFromMap(MapId.methods, methodId))
+                ..add(new PushFromMap(MapId.methods, functionId))
                 ..add(new PushFromMap(MapId.classes, constant.classId))
                 ..add(new ChangeMethodLiteral(index));
           });
@@ -1132,7 +1128,7 @@ class FletchBackend extends Backend {
               throw "Unsupported constant: ${constant.toStructuredString()}";
             }
             commands
-                ..add(new PushFromMap(MapId.methods, methodId))
+                ..add(new PushFromMap(MapId.methods, functionId))
                 ..add(new PushFromMap(MapId.constants, id))
                 ..add(new ChangeMethodLiteral(index));
           });
@@ -1149,7 +1145,7 @@ class FletchBackend extends Backend {
             functionBuilder.assembler.bytecodes,
             functionBuilder.assembler.catchRanges));
 
-    commands.add(new PopToMap(MapId.methods, methodId));
+    commands.add(new PopToMap(MapId.methods, functionId));
   }
 
   bool enableCodegenWithErrorsIfSupported(Spannable spannable) {
@@ -1337,7 +1333,7 @@ class FletchBackend extends Backend {
           ..loadField(fieldIndex)
           ..ret()
           ..methodEnd();
-      return stub.methodId;
+      return stub.functionId;
     });
   }
 
@@ -1356,7 +1352,7 @@ class FletchBackend extends Backend {
           // Top is at this point the rhs argument, thus the return value.
           ..ret()
           ..methodEnd();
-      return stub.methodId;
+      return stub.functionId;
     });
   }
 

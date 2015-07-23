@@ -96,7 +96,7 @@ class StackFrame {
     return offset <= bytecodePointer ? -1 : offset;
   }
 
-  int get methodId => function.methodId;
+  int get functionId => function.functionId;
 }
 
 class StackTrace {

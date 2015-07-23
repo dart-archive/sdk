@@ -15,9 +15,9 @@ import 'package:compiler/src/dart_types.dart' show
     DynamicType;
 
 class FletchFunctionConstant extends ConstantValue {
-  final int methodId;
+  final int functionId;
 
-  FletchFunctionConstant(this.methodId);
+  FletchFunctionConstant(this.functionId);
 
   DartType getType(CoreTypes types) => const DynamicType();
 
@@ -30,7 +30,7 @@ class FletchFunctionConstant extends ConstantValue {
   String unparse() => toStructuredString();
 
   String toStructuredString() {
-    return 'FletchFunctionConstant($methodId)';
+    return 'FletchFunctionConstant($functionId)';
   }
 }
 

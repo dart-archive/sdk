@@ -155,18 +155,18 @@ abstract class Command {
         ProcessBacktrace backtrace = new ProcessBacktrace(frames);
         for (int i = 0; i < frames; i++) {
           int offset = i * 16 + 4;
-          int methodId = CommandBuffer.readInt64FromBuffer(buffer, offset);
+          int functionId = CommandBuffer.readInt64FromBuffer(buffer, offset);
           int bytecodeIndex =
               CommandBuffer.readInt64FromBuffer(buffer, offset + 8);
-          backtrace.methodIds[i] = methodId;
+          backtrace.functionIds[i] = functionId;
           backtrace.bytecodeIndices[i] = bytecodeIndex;
         }
         return backtrace;
       case CommandCode.ProcessBreakpoint:
         int breakpointId = CommandBuffer.readInt32FromBuffer(buffer, 0);
-        int methodId = CommandBuffer.readInt64FromBuffer(buffer, 4);
+        int functionId = CommandBuffer.readInt64FromBuffer(buffer, 4);
         int bytecodeIndex = CommandBuffer.readInt64FromBuffer(buffer, 12);
-        return new ProcessBreakpoint(breakpointId, methodId, bytecodeIndex);
+        return new ProcessBreakpoint(breakpointId, functionId, bytecodeIndex);
       case CommandCode.ProcessDeleteBreakpoint:
         int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ProcessDeleteBreakpoint(id);
@@ -802,12 +802,12 @@ class ProcessDeleteBreakpoint extends Command {
 
 class ProcessBacktrace extends Command {
   final int frames;
-  final List<int> methodIds;
+  final List<int> functionIds;
   final List<int> bytecodeIndices;
 
   ProcessBacktrace(int frameCount)
       : frames = frameCount,
-        methodIds = new List<int>(frameCount),
+        functionIds = new List<int>(frameCount),
         bytecodeIndices = new List<int>(frameCount),
         super(CommandCode.ProcessBacktrace);
 
@@ -817,7 +817,7 @@ class ProcessBacktrace extends Command {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$frames, $methodIds, $bytecodeIndices";
+  String valuesToString() => "$frames, $functionIds, $bytecodeIndices";
 }
 
 class ProcessBacktraceRequest extends Command {
@@ -850,10 +850,10 @@ class ProcessFiberBacktraceRequest extends Command {
 
 class ProcessBreakpoint extends Command {
   final int breakpointId;
-  final int methodId;
+  final int functionId;
   final int bytecodeIndex;
 
-  const ProcessBreakpoint(this.breakpointId, this.methodId, this.bytecodeIndex)
+  const ProcessBreakpoint(this.breakpointId, this.functionId, this.bytecodeIndex)
       : super(CommandCode.ProcessBreakpoint);
 
   void addTo(StreamSink<List<int>> sink) {
@@ -862,7 +862,7 @@ class ProcessBreakpoint extends Command {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$breakpointId, $methodId, $bytecodeIndex";
+  String valuesToString() => "$breakpointId, $functionId, $bytecodeIndex";
 }
 
 class ProcessLocal extends Command {
@@ -963,15 +963,15 @@ class ProcessStepOut extends Command {
 }
 
 class ProcessStepTo extends Command {
-  final int methodId;
+  final int functionId;
   final int bcp;
 
-  const ProcessStepTo(this.methodId, this.bcp)
+  const ProcessStepTo(this.functionId, this.bcp)
       : super(CommandCode.ProcessStepTo);
 
   void addTo(StreamSink<List<int>> sink) {
     buffer
-        ..addUint64(methodId)
+        ..addUint64(functionId)
         ..addUint32(bcp)
         ..sendOn(sink, code);
   }
@@ -980,7 +980,7 @@ class ProcessStepTo extends Command {
   /// possible responses.
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$methodId, $bcp";
+  String valuesToString() => "$functionId, $bcp";
 }
 
 class ProcessContinue extends Command {

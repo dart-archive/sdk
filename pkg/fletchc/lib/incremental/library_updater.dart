@@ -925,9 +925,9 @@ class LibraryUpdater extends FletchFeatures {
             lookupFletchFunctionBuilder(
                 backend.fletchSystemLibrary.findLocal('callMain'));
         commands.add(
-            new commands_lib.PushFromMap(MapId.methods, callMain.methodId));
+            new commands_lib.PushFromMap(MapId.methods, callMain.functionId));
         commands.add(
-            new commands_lib.PushFromMap(MapId.methods, function.methodId));
+            new commands_lib.PushFromMap(MapId.methods, function.functionId));
         commands.add(new commands_lib.ChangeMethodLiteral(0));
       });
     }

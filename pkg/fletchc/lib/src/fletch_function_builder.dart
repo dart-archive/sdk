@@ -39,7 +39,7 @@ class FletchFunctionBuilder extends FletchFunctionBase {
 
   FletchFunctionBuilder.fromFletchFunction(FletchFunction function)
       : this(
-          function.methodId,
+          function.functionId,
           function.kind,
           function.arity,
           name: function.name,
@@ -47,14 +47,14 @@ class FletchFunctionBuilder extends FletchFunctionBase {
           memberOf: function.memberOf);
 
   FletchFunctionBuilder(
-      int methodId,
+      int functionId,
       FletchFunctionKind kind,
       int arity,
       {String name,
        Element element,
        FunctionSignature signature,
        int memberOf})
-      : super(methodId, kind, arity, name, element, signature, memberOf),
+      : super(functionId, kind, arity, name, element, signature, memberOf),
         assembler = new BytecodeAssembler(arity) {
     assert(signature == null ||
         arity == (signature.parameterCount + (memberOf != null ? 1 : 0)));
@@ -72,10 +72,10 @@ class FletchFunctionBuilder extends FletchFunctionBase {
     return constants.putIfAbsent(constant, () => constants.length);
   }
 
-  int allocateConstantFromFunction(int methodId) {
+  int allocateConstantFromFunction(int functionId) {
     FletchFunctionConstant constant =
         functionConstantValues.putIfAbsent(
-            methodId, () => new FletchFunctionConstant(methodId));
+            functionId, () => new FletchFunctionConstant(functionId));
     return allocateConstant(constant);
   }
 
@@ -113,10 +113,10 @@ class FletchFunctionBuilder extends FletchFunctionBase {
             assembler.bytecodes,
             assembler.catchRanges));
 
-    commands.add(new PopToMap(MapId.methods, methodId));
+    commands.add(new PopToMap(MapId.methods, functionId));
 
     return new FletchFunction(
-        methodId,
+        functionId,
         kind,
         arity,
         name,
@@ -134,7 +134,7 @@ class FletchFunctionBuilder extends FletchFunctionBase {
       if (constant is ConstantValue) {
         if (constant is FletchFunctionConstant) {
           fletchConstants.add(
-              new FletchConstant(constant.methodId, MapId.methods));
+              new FletchConstant(constant.functionId, MapId.methods));
         } else if (constant is FletchClassConstant) {
           fletchConstants.add(
               new FletchConstant(constant.classId, MapId.classes));
@@ -157,7 +157,7 @@ class FletchFunctionBuilder extends FletchFunctionBase {
   String verboseToString() {
     StringBuffer sb = new StringBuffer();
 
-    sb.writeln("Method $methodId, Arity=${assembler.functionArity}");
+    sb.writeln("Function $functionId, Arity=${assembler.functionArity}");
     sb.writeln("Constants:");
     constants.forEach((constant, int index) {
       if (constant is ConstantValue) {

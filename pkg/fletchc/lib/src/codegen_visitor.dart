@@ -370,18 +370,18 @@ abstract class CodegenVisitor
       {bool factoryInvoke: false}) {
     if (function.isInstanceMember) loadThis();
     FunctionSignature signature = function.signature;
-    int methodId;
+    int functionId;
     int arity;
     if (signature.hasOptionalParameters &&
         signature.optionalParametersAreNamed) {
       if (FletchBackend.isExactParameterMatch(signature, callStructure)) {
-        methodId = function.methodId;
+        functionId = function.functionId;
       } else if (callStructure.signatureApplies(signature)) {
         // TODO(ajohnsen): Inline parameter stub?
         FletchFunctionBase stub = context.backend.createParameterStubFor(
             function,
             callStructure.callSelector);
-        methodId = stub.methodId;
+        functionId = stub.functionId;
       } else {
         doUnresolved(function.name);
         return;
@@ -395,11 +395,11 @@ abstract class CodegenVisitor
       doUnresolved(function.name);
       return;
     } else {
-      methodId = function.methodId;
+      functionId = function.functionId;
       arity = loadPositionalArguments(arguments, signature, function.name);
     }
     if (function.isInstanceMember) arity++;
-    int constId = functionBuilder.allocateConstantFromFunction(methodId);
+    int constId = functionBuilder.allocateConstantFromFunction(functionId);
     if (factoryInvoke) {
       invokeFactory(node, constId, arity);
     } else {
@@ -893,7 +893,7 @@ abstract class CodegenVisitor
       return;
     }
     if (context.compiler.libraryLoader.libraries.any(checkCompileError)) return;
-    registerStaticInvocation(function);
+
     // Load up to 'parameterCount' arguments, padding with nulls.
     int parameterCount = function.functionSignature.parameterCount;
     int argumentCount = 0;
@@ -905,8 +905,9 @@ abstract class CodegenVisitor
     for (int i = argumentCount; i < parameterCount; i++) {
       assembler.loadLiteralNull();
     }
-    int methodId = context.backend.functionMethodId(function);
-    int constId = functionBuilder.allocateConstantFromFunction(methodId);
+
+    FletchFunctionBase base = requireFunction(function);
+    int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
     invokeStatic(node, constId, parameterCount);
   }
 
@@ -963,8 +964,8 @@ abstract class CodegenVisitor
   void doSuperCall(Node node, FunctionElement function) {
     registerStaticInvocation(function);
     int arity = function.functionSignature.parameterCount + 1;
-    int methodId = context.backend.functionMethodId(function);
-    int constId = functionBuilder.allocateConstantFromFunction(methodId);
+    FletchFunctionBase base = requireFunction(function);
+    int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
     invokeStatic(node, constId, arity);
   }
 
@@ -2144,9 +2145,8 @@ abstract class CodegenVisitor
       return;
     }
 
-    registerStaticInvocation(getter);
-    int methodId = context.backend.functionMethodId(getter);
-    int constId = functionBuilder.allocateConstantFromFunction(methodId);
+    FletchFunctionBase base = requireFunction(getter);
+    int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
     invokeStatic(node, constId, 0);
   }
 
@@ -2175,9 +2175,8 @@ abstract class CodegenVisitor
       Node rhs,
       _) {
     visitForValue(rhs);
-    registerStaticInvocation(setter);
-    int methodId = context.backend.functionMethodId(setter);
-    int constId = functionBuilder.allocateConstantFromFunction(methodId);
+    FletchFunctionBase base = requireFunction(setter);
+    int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
     invokeStatic(node, constId, 1);
     applyVisitState();
   }
@@ -2744,9 +2743,8 @@ abstract class CodegenVisitor
     context.markConstantUsed(constString);
     assembler.loadConst(functionBuilder.allocateConstant(constString));
     FunctionElement function = context.backend.fletchUnresolved;
-    registerStaticInvocation(function);
-    int methodId = context.backend.functionMethodId(function);
-    int constId = functionBuilder.allocateConstantFromFunction(methodId);
+    FletchFunctionBase base = requireFunction(function);
+    int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
     assembler.invokeStatic(constId, 1);
   }
 
@@ -2760,9 +2758,8 @@ abstract class CodegenVisitor
 
   void doCompileError() {
     FunctionElement function = context.backend.fletchCompileError;
-    registerStaticInvocation(function);
-    int methodId = context.backend.functionMethodId(function);
-    int constId = functionBuilder.allocateConstantFromFunction(methodId);
+    FletchFunctionBase base = requireFunction(function);
+    int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
     assembler.invokeStatic(constId, 0);
   }
 

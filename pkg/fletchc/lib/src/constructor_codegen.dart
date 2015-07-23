@@ -324,10 +324,8 @@ class ConstructorCodegen extends CodegenVisitor {
     FunctionExpression node = constructor.node;
     if (node == null || node.body.asEmptyStatement() != null) return;
 
-    registerStaticInvocation(constructor.declaration);
-
-    int methodId = context.backend.functionMethodId(constructor);
-    int constructorId = functionBuilder.allocateConstantFromFunction(methodId);
+    int functionId = requireFunction(constructor.declaration).functionId;
+    int constructorId = functionBuilder.allocateConstantFromFunction(functionId);
 
     FunctionSignature signature = constructor.functionSignature;
 

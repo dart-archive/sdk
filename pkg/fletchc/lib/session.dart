@@ -254,7 +254,7 @@ class Session extends FletchVmSession {
       default:
         assert(response.code == CommandCode.ProcessBreakpoint);
         ProcessBreakpoint command = response;
-        var function = fletchSystem.lookupFunctionById(command.methodId);
+        var function = fletchSystem.lookupFunctionById(command.functionId);
         debugState.topFrame = new StackFrame(
             function, command.bytecodeIndex, compiler, debugState);
         return command.breakpointId;
@@ -286,7 +286,7 @@ class Session extends FletchVmSession {
                              FletchFunction function,
                              int bytecodeIndex) async {
     ProcessSetBreakpoint response = await runCommands([
-        new PushFromMap(MapId.methods, function.methodId),
+        new PushFromMap(MapId.methods, function.functionId),
         new ProcessSetBreakpoint(bytecodeIndex),
     ]);
     int breakpointId = response.value;
@@ -376,9 +376,9 @@ class Session extends FletchVmSession {
     }
   }
 
-  Future stepTo(int methodId, int bcp) async {
+  Future stepTo(int functionId, int bcp) async {
     if (!checkRunning()) return null;
-    Command response = await runCommand(new ProcessStepTo(methodId, bcp));
+    Command response = await runCommand(new ProcessStepTo(functionId, bcp));
     await handleProcessStop(response);
   }
 
@@ -387,7 +387,7 @@ class Session extends FletchVmSession {
     do {
       var bcp = debugState.topFrame.stepBytecodePointer(previous);
       if (bcp != -1) {
-        await stepTo(debugState.topFrame.methodId, bcp);
+        await stepTo(debugState.topFrame.functionId, bcp);
       } else {
         await stepBytecode();
       }
@@ -510,8 +510,8 @@ class Session extends FletchVmSession {
     int frames = backtraceResponse.frames;
     StackTrace stackTrace = new StackTrace(frames);
     for (int i = 0; i < frames; ++i) {
-      int methodId = backtraceResponse.methodIds[i];
-      FletchFunction function = fletchSystem.lookupFunctionById(methodId);
+      int functionId = backtraceResponse.functionIds[i];
+      FletchFunction function = fletchSystem.lookupFunctionById(functionId);
       stackTrace.addFrame(
           compiler,
           new StackFrame(function,

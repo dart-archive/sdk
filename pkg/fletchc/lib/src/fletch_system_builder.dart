@@ -204,7 +204,7 @@ class FletchSystemBuilder {
 
     // Remove all removed FletchFunctions.
     for (FletchFunction function in _removedFunctions) {
-      commands.add(new RemoveFromMap(MapId.methods, function.methodId));
+      commands.add(new RemoveFromMap(MapId.methods, function.functionId));
     }
 
     // Create all new FletchFunctions.
@@ -228,7 +228,7 @@ class FletchSystemBuilder {
         FletchFunctionBuilder initializer =
             context.backend.lazyFieldInitializers[element];
         if (initializer != null) {
-          commands.add(new PushFromMap(MapId.methods, initializer.methodId));
+          commands.add(new PushFromMap(MapId.methods, initializer.functionId));
           commands.add(const PushNewInitializer());
         } else {
           commands.add(const PushNull());
@@ -326,7 +326,7 @@ class FletchSystemBuilder {
       for (int i = 0; i < constants.length; i++) {
         FletchConstant constant = constants[i];
         commands
-            ..add(new PushFromMap(MapId.methods, function.methodId))
+            ..add(new PushFromMap(MapId.methods, function.functionId))
             ..add(new PushFromMap(constant.mapId, constant.id))
             ..add(new ChangeMethodLiteral(i));
         changes++;
@@ -341,8 +341,8 @@ class FletchSystemBuilder {
           FletchFunctionBase callMain =
               lookupFunctionByElement(
                   context.backend.fletchSystemLibrary.findLocal('callMain'));
-          commands.add(new PushFromMap(MapId.methods, callMain.methodId));
-          commands.add(new PushFromMap(MapId.methods, function.methodId));
+          commands.add(new PushFromMap(MapId.methods, callMain.functionId));
+          commands.add(new PushFromMap(MapId.methods, function.functionId));
           commands.add(new ChangeMethodLiteral(0));
           changes++;
         }
@@ -368,7 +368,7 @@ class FletchSystemBuilder {
         predecessorSystem.functionsByElement;
 
     for (FletchFunction function in _removedFunctions) {
-      functionsById = functionsById.delete(function.methodId);
+      functionsById = functionsById.delete(function.functionId);
       Element element = function.element;
       if (element != null) {
         functionsByElement = functionsByElement.delete(element);
@@ -376,13 +376,13 @@ class FletchSystemBuilder {
     }
 
     for (FletchFunction function in functions) {
-      functionsById = functionsById.insert(function.methodId, function);
+      functionsById = functionsById.insert(function.functionId, function);
     }
 
     _functionBuildersByElement.forEach((element, builder) {
       functionsByElement = functionsByElement.insert(
           element,
-          functionsById[builder.methodId],
+          functionsById[builder.functionId],
           (oldValue, newValue) {
             throw "Unexpected element in predecessorSystem.";
           });

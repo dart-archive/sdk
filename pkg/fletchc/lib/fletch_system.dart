@@ -58,7 +58,7 @@ class FletchClass {
 
 // TODO(ajohnsen): Move to separate file.
 class FletchFunctionBase {
-  final int methodId;
+  final int functionId;
   final FletchFunctionKind kind;
   // TODO(ajohnsen): Merge with function signature?
   final int arity;
@@ -76,7 +76,7 @@ class FletchFunctionBase {
   final int memberOf;
 
   const FletchFunctionBase(
-      this.methodId,
+      this.functionId,
       this.kind,
       this.arity,
       this.name,
@@ -112,7 +112,7 @@ class FletchFunction extends FletchFunctionBase {
   final List<FletchConstant> constants;
 
   const FletchFunction(
-      int methodId,
+      int functionId,
       FletchFunctionKind kind,
       int arity,
       String name,
@@ -121,11 +121,11 @@ class FletchFunction extends FletchFunctionBase {
       this.bytecodes,
       this.constants,
       int memberOf)
-      : super(methodId, kind, arity, name, element, signature, memberOf);
+      : super(functionId, kind, arity, name, element, signature, memberOf);
 
   String toString() {
     StringBuffer buffer = new StringBuffer();
-    buffer.write("FletchFunction($methodId, '$name'");
+    buffer.write("FletchFunction($functionId, '$name'");
     if (isInstanceMember) {
       buffer.write(", memberOf=$memberOf");
     }

@@ -78,7 +78,7 @@ class FletchClassBuilder {
     for (int selector in selectors) {
       if (_methodTable.containsKey(selector)) {
         FletchFunctionBase function = _methodTable[selector];
-        int functionId = function == null ? 0 : function.methodId;
+        int functionId = function == null ? 0 : function.functionId;
         result = result.insert(selector, functionId);
       } else {
         result = result.insert(selector, _implicitAccessorTable[selector]);
