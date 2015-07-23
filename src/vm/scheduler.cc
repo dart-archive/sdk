@@ -311,14 +311,7 @@ void Scheduler::ExitAtCompileTimeError(Process* process) {
 
 void Scheduler::ExitAtBreakpoint(Process* process) {
   ASSERT(process->state() == Process::kBreakPoint);
-
-  // TODO(kustermann): Remove this once we have our tests work in a way that
-  // we never let a process be at a breakpoint and disconnect the session.
   exit(0);
-
-  // We should only reach a breakpoint if a session is attached which will take
-  // care of continuing the process.
-  FATAL("We should never hit a breakpoint without a session being attached.");
 }
 
 void Scheduler::RescheduleProcess(Process* process,
@@ -618,7 +611,10 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->BreakPoint(process)) {
-      ExitAtBreakpoint(process);
+      // We should only reach a breakpoint if a session is attached and it can
+      // handle [process].
+      FATAL("We should never hit a breakpoint without a session being able to "
+            "handle it.");
     }
     return NULL;
   }
