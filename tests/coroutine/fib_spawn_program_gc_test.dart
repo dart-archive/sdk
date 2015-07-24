@@ -7,7 +7,7 @@ import 'dart:fletch';
 import 'package:expect/expect.dart';
 
 main() {
-  Expect.equals(144, fib(12));
+  Expect.equals(13, fib(7));
 }
 
 noop() { }

@@ -892,7 +892,8 @@ NATIVE(ProcessSpawn) {
   stack->set(4, reinterpret_cast<Object*>(bcp));
   stack->set_top(4);
 
-  program->scheduler()->EnqueueProcess(child, process->thread_state());
+  program->scheduler()->EnqueueProcessOnSchedulerWorkerThread(
+      process, child);
   return process->program()->null_object();
 }
 
@@ -943,7 +944,8 @@ static bool SpawnBlockingProcess(Process* process,
 
   child->set_blocked(process);
   process->IncrementBlocked();
-  program->scheduler()->EnqueueProcess(child, process->thread_state());
+  program->scheduler()->EnqueueProcessOnSchedulerWorkerThread(
+      process, child);
   return true;
 }
 

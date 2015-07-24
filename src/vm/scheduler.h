@@ -30,23 +30,16 @@ class Scheduler {
   Scheduler();
   ~Scheduler();
 
-  void ScheduleProgram(Program* program);
+  void ScheduleProgram(Program* program, Process* main_process);
+  void UnscheduleProgram(Program* program);
 
-  bool StopProgram(Program* program);
+  void StopProgram(Program* program);
   void ResumeProgram(Program* program);
 
-  // Enqueue [process] in the scheduler. The [process] will be run until
-  // termination.
-  // If [thread_state] is not NULL, the scheduler will use [thread_state] as a
-  // hint when deciding what thread to schedule the process for.
-  void EnqueueProcess(Process* process, ThreadState* thread_state = NULL);
-
-  // Resume a process. If the process is already running, this function will do
-  // nothing. This function is thread safe.
-  void ResumeProcess(Process* process);
-
-  // Continue a process that is stopped at a break point.
-  void ProcessContinue(Process* process);
+  // This method should only be called from a thread which is currently
+  // interpreting a process.
+  void EnqueueProcessOnSchedulerWorkerThread(Process* interpreting_process,
+                                             Process* process);
 
   // Run the [process] on the current thread if possible.
   // The [port] must be locked, and will be unlocked by this method.
@@ -54,7 +47,14 @@ class Scheduler {
   // TODO(ajohnsen): This could be improved by taking a Port and a 'message',
   // and avoid the extra allocation on the process queue (in the case where it's
   // empty).
-  bool ProcessRunOnCurrentForeignThread(Process* process, Port* port);
+  bool EnqueueProcessOnCurrentForeignThread(Process* process, Port* port);
+
+  // Resume a process. If the process is already running, this function will do
+  // nothing. This function is thread safe.
+  void ResumeProcess(Process* process);
+
+  // Continue a process that is stopped at a break point.
+  void ProcessContinue(Process* process);
 
   bool Run();
 
@@ -76,9 +76,14 @@ class Scheduler {
   size_t process_count() const { return processes_; }
 
  private:
-  struct ProcessList {
-    ProcessList() : head(NULL) {}
-    Process* head;
+  struct ProgramState {
+    ProgramState() : paused_processes_head_(NULL), is_paused_(false) {}
+
+    // The [Scheduler::pause_monitor_] must be locked when calling this method.
+    void AddPausedProcess(Process* process) ;
+
+    Process* paused_processes_head_;
+    bool is_paused_;
   };
 
   const int max_threads_;
@@ -91,12 +96,14 @@ class Scheduler {
   std::atomic<ThreadState*>* threads_;
   std::atomic<ThreadState*> temporary_thread_states_;
   std::atomic<int> foreign_threads_;
-  std::unordered_map<Program*, ProcessList> stopped_processes_map_;
   ProcessQueue* startup_queue_;
 
   Monitor* pause_monitor_;
   std::atomic<bool> pause_;
   std::atomic<Process*>* current_processes_;
+  // TODO(kustermann): Consider moving [ProgramState] to the program object to
+  // get rid of STL usage.
+  std::unordered_map<Program*, ProgramState*> program_state_map_;
 
   void DeleteProcessAndMergeHeaps(Process* process, ThreadState* thread_state);
   void RescheduleProcess(Process* process, ThreadState* state, bool terminate);

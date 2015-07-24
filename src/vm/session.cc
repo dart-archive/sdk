@@ -64,7 +64,6 @@ Session::Session(Connection* connection)
 
 Session::~Session() {
   delete connection_;
-  delete program_->scheduler();
   delete program_;
   delete main_thread_monitor_;
   for (int i = 0; i < maps_.length(); ++i) delete maps_[i];
@@ -73,8 +72,6 @@ Session::~Session() {
 
 void Session::Initialize() {
   program_ = new Program();
-  Scheduler* scheduler = new Scheduler();
-  scheduler->ScheduleProgram(program_);
   program()->Initialize();
   program()->AddSession(this);
 }
@@ -590,7 +587,14 @@ bool Session::ProcessRun() {
         return true;
       case kProcessRun:
         process_started = true;
-        result = program()->ProcessRun(process_);
+
+        {
+          Scheduler scheduler;
+          scheduler.ScheduleProgram(program_, process_);
+          result = scheduler.Run();
+          scheduler.UnscheduleProgram(program_);
+        }
+
         has_result = true;
         if (!debugging_) return result;
         break;
@@ -870,9 +874,7 @@ void Session::PushConstantMap(int length) {
 void Session::PrepareForChanges() {
   if (program()->is_compact()) {
     Scheduler* scheduler = program()->scheduler();
-    if (!scheduler->StopProgram(program())) {
-     FATAL("Failed to stop program for unfolding\n");
-    }
+    scheduler->StopProgram(program());
     program()->Unfold();
     scheduler->ResumeProgram(program());
   }
@@ -947,8 +949,8 @@ void Session::CommitChangeSchemas(Array* change) {
 
 bool Session::CommitChanges(int count) {
   Scheduler* scheduler = program()->scheduler();
-  if (!scheduler->StopProgram(program())) {
-    FATAL("Failed to stop program, for committing changes\n");
+  if (scheduler != NULL) {
+    scheduler->StopProgram(program());
   }
 
   ASSERT(!program()->is_compact());
@@ -1000,7 +1002,9 @@ bool Session::CommitChanges(int count) {
   // all heaps and doing so requires a valid class pointer.
   program()->Fold(schemas_changed);
 
-  scheduler->ResumeProgram(program());
+  if (scheduler != NULL) {
+    scheduler->ResumeProgram(program());
+  }
 
   return true;
 }

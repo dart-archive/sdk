@@ -2,5 +2,8 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
+
+fib_spawn_program_gc_gc_on_delete_test: Pass, Slow # Uses -Xgc-on-delete - now on *every* delete.
+
 [ $compiler == none && $runtime == fletchc ]
 fib_spawn_program_gc_gc_on_delete_test: Crash # Issue(75): Driver doesn't support -X flags.

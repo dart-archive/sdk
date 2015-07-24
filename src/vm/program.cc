@@ -787,8 +787,6 @@ Process* Program::ProcessSpawnForMain() {
   CollectGarbage();
 #endif
 
-  ASSERT(scheduler() != NULL);
-
   Process* process = SpawnProcess();
   Function* entry = process->entry();
   int main_arity = process->main_arity();
@@ -959,12 +957,9 @@ void Program::ValidateGlobalHeapsAreConsistent() {
 }
 
 void Program::CollectGarbage() {
-  // If there is no scheduler or we fail to stop the program we just
-  // bail.
-  // TODO(ager): Would it make sense to make StopProgram blocking
-  // until it can stop the program?
-  if (scheduler() == NULL) return;
-  if (!scheduler()->StopProgram(this)) return;
+  if (scheduler() != NULL) {
+    scheduler()->StopProgram(this);
+  }
 
   Space* to = new Space();
   ScavengeVisitor scavenger(heap_.space(), to);
@@ -973,7 +968,9 @@ void Program::CollectGarbage() {
   PerformProgramGC(to, &scavenger);
   FinishProgramGC();
 
-  scheduler()->ResumeProgram(this);
+  if (scheduler() != NULL) {
+    scheduler()->ResumeProgram(this);
+  }
 }
 
 void Program::AddToProcessList(Process* process) {
@@ -1313,11 +1310,6 @@ void Program::Initialize() {
       String::cast(CreateStringFromAscii(StringFromCharZ("Stack overflow.")));
 
   native_failure_result_ = null_object_;
-}
-
-bool Program::ProcessRun(Process* process) {
-  scheduler()->EnqueueProcess(process);
-  return scheduler()->Run();
 }
 
 void Program::IterateRoots(PointerVisitor* visitor) {

@@ -63,8 +63,6 @@ class Program {
 
   void Initialize();
 
-  bool ProcessRun(Process* process);
-
   // Unfold the program into a new heap where all indices are resolved
   // and stored in the literals section of methods. Having
   // self-contained methods makes it easier to do changes to the live
@@ -125,7 +123,8 @@ class Program {
 
   Scheduler* scheduler() const { return scheduler_; }
   void set_scheduler(Scheduler* scheduler) {
-    ASSERT(scheduler_ == NULL);
+    ASSERT((scheduler_ == NULL && scheduler != NULL) ||
+           (scheduler_ != NULL && scheduler == NULL));
     scheduler_ = scheduler;
   }
 

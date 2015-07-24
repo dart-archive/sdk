@@ -55,96 +55,132 @@ Scheduler::~Scheduler() {
   }
 }
 
-void Scheduler::ScheduleProgram(Program* program) {
-  program->set_scheduler(this);
+void Scheduler::ProgramState::AddPausedProcess(Process* process) {
+  process->set_next(paused_processes_head_);
+  paused_processes_head_ = process;
+  ASSERT(paused_processes_head_ != paused_processes_head_->next());
 }
 
-bool Scheduler::StopProgram(Program* program) {
+void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
+  program->set_scheduler(this);
+
+  ScopedMonitorLock locker(pause_monitor_);
+  ASSERT(program_state_map_.find(program) == program_state_map_.end());
+  program_state_map_[program] = new ProgramState();
+
+  // NOTE: Even though this method might be run on any thread, we don't need to
+  // guard against the program being stopped, since we insert it the very first
+  // time.
+  ++processes_;
+  if (!main_process->ChangeState(Process::kSleeping, Process::kReady)) {
+    UNREACHABLE();
+  }
+  EnqueueProcessAndNotifyThreads(NULL, main_process);
+}
+
+void Scheduler::UnscheduleProgram(Program* program) {
+  ScopedMonitorLock locker(pause_monitor_);
+
+  ASSERT(program_state_map_.find(program) != program_state_map_.end());
+  ProgramState* program_state = program_state_map_[program];
+  delete program_state;
+  program_state_map_.erase(program);
+  program->set_scheduler(NULL);
+}
+
+void Scheduler::StopProgram(Program* program) {
   ASSERT(program->scheduler() == this);
-  pause_monitor_->Lock();
 
-  if (stopped_processes_map_.find(program) != stopped_processes_map_.end()) {
-    pause_monitor_->Unlock();
-    return false;
+  {
+    ScopedMonitorLock pause_locker(pause_monitor_);
+
+    ASSERT(program_state_map_.find(program) != program_state_map_.end());
+    ProgramState* program_state = program_state_map_[program];
+    while (program_state->is_paused_) {
+      pause_monitor_->Wait();
+    }
+    program_state->is_paused_ = true;
+
+    pause_ = true;
+
+    NotifyAllThreads();
+
+    while (true) {
+      int count = 0;
+      // Preempt running processes, only if it was possibly to 'take' the
+      // current process. This makes sure we don't preempt while deleting.
+      // Loop to ensure we continue to preempt until all threads are sleeping.
+      for (int i = 0; i < max_threads_; i++) {
+        if (threads_[i] != NULL) count++;
+        PreemptThreadProcess(i);
+      }
+      if (count == sleeping_threads_) break;
+      pause_monitor_->Wait();
+    }
+
+    Process* to_enqueue = NULL;
+
+    while (true) {
+      Process* process = NULL;
+      // All processes dequeued are marked as Running.
+      if (!TryDequeueFromAnyThread(&process)) continue;  // Retry.
+      if (process == NULL) break;
+
+      if (process->program() == program) {
+        process->ChangeState(Process::kRunning, Process::kReady);
+        program_state->AddPausedProcess(process);
+      } else {
+        process->set_next(to_enqueue);
+        to_enqueue = process;
+      }
+    }
+
+    while (to_enqueue != NULL) {
+      to_enqueue->ChangeState(Process::kRunning, Process::kReady);
+      EnqueueOnAnyThread(to_enqueue);
+      Process* next = to_enqueue->next();
+      to_enqueue->set_next(NULL);
+      to_enqueue = next;
+    }
+
+    FlushCacheInThreadStates();
+
+    pause_ = false;
   }
-
-  pause_ = true;
 
   NotifyAllThreads();
-
-  ProcessList& list = stopped_processes_map_[program];
-
-  while (true) {
-    int count = 0;
-    // Preempt running processes, only if it was possibly to 'take' the current
-    // process. This makes sure we don't preempt while deleting. Loop to
-    // ensure we continue to preempt until all threads are sleeping.
-    for (int i = 0; i < max_threads_; i++) {
-      if (threads_[i] != NULL) count++;
-      PreemptThreadProcess(i);
-    }
-    if (count == sleeping_threads_) break;
-    pause_monitor_->Wait();
-  }
-
-  Process* to_enqueue = NULL;
-
-  while (true) {
-    Process* process = NULL;
-    // All processes dequeued are marked as Running.
-    if (!TryDequeueFromAnyThread(&process)) continue;  // Retry.
-    if (process == NULL) break;
-    if (process->program() == program) {
-      process->set_next(list.head);
-      list.head = process;
-    } else {
-      process->set_next(to_enqueue);
-      to_enqueue = process;
-    }
-  }
-
-  while (to_enqueue != NULL) {
-    to_enqueue->ChangeState(Process::kRunning, Process::kReady);
-    EnqueueOnAnyThread(to_enqueue);
-    Process* next = to_enqueue->next();
-    to_enqueue->set_next(NULL);
-    to_enqueue = next;
-  }
-
-  FlushCacheInThreadStates();
-
-  pause_ = false;
-  pause_monitor_->Unlock();
-  NotifyAllThreads();
-
-  return true;
 }
 
 void Scheduler::ResumeProgram(Program* program) {
   ASSERT(program->scheduler() == this);
-  pause_monitor_->Lock();
 
-  ASSERT(stopped_processes_map_.find(program) != stopped_processes_map_.end());
-  ProcessList& list = stopped_processes_map_[program];
+  {
+    ScopedMonitorLock locker(pause_monitor_);
 
-  Process* process = list.head;
-  while (process != NULL) {
-    Process* next = process->next();
-    process->set_next(NULL);
-    process->ChangeState(Process::kRunning, Process::kReady);
-    EnqueueOnAnyThread(process);
-    process = next;
+    ASSERT(program_state_map_.find(program) != program_state_map_.end());
+    ProgramState* program_state = program_state_map_[program];
+    ASSERT(program_state->is_paused_);
+
+    Process* process = program_state->paused_processes_head_;
+    while (process != NULL) {
+      Process* next = process->next();
+      process->set_next(NULL);
+      EnqueueOnAnyThread(process);
+      process = next;
+    }
+    program_state->paused_processes_head_ = NULL;
+    program_state->is_paused_ = false;
+    pause_monitor_->NotifyAll();
   }
-
-  stopped_processes_map_.erase(program);
-
-  pause_monitor_->Unlock();
   NotifyAllThreads();
 }
 
-void Scheduler::EnqueueProcess(Process* process, ThreadState* thread_state) {
+void Scheduler::EnqueueProcessOnSchedulerWorkerThread(
+    Process* interpreting_process, Process* process) {
   ++processes_;
   if (!process->ChangeState(Process::kSleeping, Process::kReady)) UNREACHABLE();
+
+  ThreadState* thread_state = interpreting_process->thread_state();
   EnqueueProcessAndNotifyThreads(thread_state, process);
 }
 
@@ -162,7 +198,8 @@ void Scheduler::ProcessContinue(Process* process) {
   EnqueueOnAnyThread(process, 0);
 }
 
-bool Scheduler::ProcessRunOnCurrentForeignThread(Process* process, Port* port) {
+bool Scheduler::EnqueueProcessOnCurrentForeignThread(Process* process,
+                                                     Port* port) {
   ASSERT(port->IsLocked());
 
   // TODO(ajohnsen): Foreign threads are not stopped by
@@ -207,7 +244,29 @@ bool Scheduler::ProcessRunOnCurrentForeignThread(Process* process, Port* port) {
       return false;
     }
     port->Unlock();
-    EnqueueOnAnyThread(process);
+
+    // There can be two cases: Either the program is stopped at the moment or
+    // not. If it is stopped, we add the process to the list of paused processes
+    // and otherwise we enqueue it on any thread.
+    ScopedMonitorLock locker(pause_monitor_);
+
+    Program* program = process->program();
+    ASSERT(program_state_map_.find(program) != program_state_map_.end());
+    ProgramState* state = program_state_map_[program];
+    if (state->is_paused_) {
+      // If the program is paused, there is no way the process can be enqueued
+      // on any process queues.
+      ASSERT(process->process_queue() == NULL);
+
+      // Only add the process into the paused list if it is not already in
+      // there (this can e.g. happen if a foreign thread is sending several
+      // messages to the port while the program is stopped).
+      if (process->next() == NULL) {
+        state->AddPausedProcess(process);
+      }
+    } else {
+      EnqueueOnAnyThread(process);
+    }
   }
 
   return true;
@@ -265,7 +324,7 @@ bool Scheduler::Run() {
 }
 
 void Scheduler::ExitAtTermination(Process* process,
-                                              ThreadState* thread_state) {
+                                  ThreadState* thread_state) {
   Process* blocked = process->blocked();
   Program* program = process->program();
   program->DeleteProcess(process);
@@ -287,14 +346,22 @@ void Scheduler::ExitAtTermination(Process* process,
     NotifyAllThreads();
   } else if (Flags::gc_on_delete) {
     // TODO(kustermann): Get rid of this code.
-    if (thread_state == NULL) {
-      program->CollectGarbage();
-    } else {
-      sleeping_threads_++;
+
+    if (thread_state != NULL) {
       LookupCache* cache = thread_state->cache();
       if (cache != NULL) cache->Clear();
-      program->CollectGarbage();
+
+      ScopedMonitorLock locker(pause_monitor_);
+      sleeping_threads_++;
+      pause_monitor_->NotifyAll();
+    }
+
+    program->CollectGarbage();
+
+    if (thread_state != NULL) {
+      ScopedMonitorLock locker(pause_monitor_);
       sleeping_threads_--;
+      pause_monitor_->NotifyAll();
     }
   }
 }
@@ -438,17 +505,24 @@ void Scheduler::RunInThread() {
     } else if (pause_) {
       LookupCache* cache = thread_state->cache();
       if (cache != NULL) cache->Clear();
+
       // Take lock to be sure StopProgram is waiting.
-      pause_monitor_->Lock();
-      sleeping_threads_++;
-      pause_monitor_->Notify();
-      pause_monitor_->Unlock();
-      thread_state->idle_monitor()->Lock();
-      while (pause_) {
-        thread_state->idle_monitor()->Wait();
+      {
+        ScopedMonitorLock locker(pause_monitor_);
+        sleeping_threads_++;
+        pause_monitor_->NotifyAll();
       }
-      sleeping_threads_--;
-      thread_state->idle_monitor()->Unlock();
+      {
+        ScopedMonitorLock idle_locker(thread_state->idle_monitor());
+        while (pause_) {
+          thread_state->idle_monitor()->Wait();
+        }
+      }
+      {
+        ScopedMonitorLock locker(pause_monitor_);
+        sleeping_threads_--;
+        pause_monitor_->NotifyAll();
+      }
     } else {
       while (!pause_) {
         Process* process = NULL;
@@ -632,7 +706,7 @@ void Scheduler::ThreadEnter(ThreadState* thread_state) {
   threads_[thread_id] = thread_state;
   // Notify pause_monitor_ when changing threads_.
   pause_monitor_->Lock();
-  pause_monitor_->Notify();
+  pause_monitor_->NotifyAll();
   pause_monitor_->Unlock();
 }
 
@@ -641,7 +715,7 @@ void Scheduler::ThreadExit(ThreadState* thread_state) {
   ReturnThreadState(thread_state);
   // Notify pause_monitor_ when changing threads_.
   pause_monitor_->Lock();
-  pause_monitor_->Notify();
+  pause_monitor_->NotifyAll();
   pause_monitor_->Unlock();
 }
 

@@ -26,9 +26,10 @@ static bool RunSnapshot(List<uint8> bytes) {
     SnapshotReader reader(bytes);
     Program* program = reader.ReadProgram();
     Scheduler scheduler;
-    scheduler.ScheduleProgram(program);
     Process* process = program->ProcessSpawnForMain();
-    bool success = program->ProcessRun(process);
+    scheduler.ScheduleProgram(program, process);
+    bool success = scheduler.Run();
+    scheduler.UnscheduleProgram(program);
     delete program;
     return success;
   }
