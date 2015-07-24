@@ -28,6 +28,7 @@
         'fletch_api_impl.cc',
         'heap.cc',
         'heap_validator.cc',
+        'gc_thread.cc',
         'interpreter.cc',
         'intrinsics.cc',
         'lookup_cache.cc',

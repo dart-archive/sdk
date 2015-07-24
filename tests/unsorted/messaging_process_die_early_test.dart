@@ -6,7 +6,7 @@ import 'dart:fletch';
 
 import 'package:expect/expect.dart';
 
-const int PROCESSES = 500;
+const int PROCESSES = 5000;
 const int MESSAGES = 10;
 
 void main() {

@@ -8,6 +8,7 @@
 
 #include "src/shared/flags.h"
 
+#include "src/vm/gc_thread.h"
 #include "src/vm/interpreter.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
@@ -34,7 +35,8 @@ Scheduler::Scheduler()
       startup_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
       pause_(false),
-      current_processes_(new std::atomic<Process*>[max_threads_]) {
+      current_processes_(new std::atomic<Process*>[max_threads_]),
+      gc_thread_(NULL) {
   for (int i = 0; i < max_threads_; i++) {
     threads_[i] = NULL;
     current_processes_[i] = NULL;
@@ -273,6 +275,9 @@ bool Scheduler::EnqueueProcessOnCurrentForeignThread(Process* process,
 }
 
 bool Scheduler::Run() {
+  gc_thread_ = new GCThread();
+  gc_thread_->StartThread();
+
   static const bool kProfile = Flags::profile;
   static const uint64 kProfileIntervalUs = Flags::profile_interval;
   // Start initial thread.
@@ -320,6 +325,10 @@ bool Scheduler::Run() {
   }
   preempt_monitor_->Unlock();
 
+  gc_thread_->StopThread();
+  delete gc_thread_;
+  gc_thread_ = NULL;
+
   return true;
 }
 
@@ -327,6 +336,7 @@ void Scheduler::ExitAtTermination(Process* process,
                                   ThreadState* thread_state) {
   Process* blocked = process->blocked();
   Program* program = process->program();
+
   program->DeleteProcess(process);
   // Don't unblock until 'process' is deleted, to make sure all references to
   // 'blocked's heap are gone.
@@ -342,27 +352,14 @@ void Scheduler::ExitAtTermination(Process* process,
     int id = thread_state != NULL ? thread_state->thread_id() + 1 : 0;
     EnqueueOnAnyThread(blocked, id);
   }
+
+  if (Flags::gc_on_delete) {
+    ASSERT(gc_thread_ != NULL);
+    gc_thread_->TriggerGC(program);
+  }
+
   if (--processes_ == 0) {
     NotifyAllThreads();
-  } else if (Flags::gc_on_delete) {
-    // TODO(kustermann): Get rid of this code.
-
-    if (thread_state != NULL) {
-      LookupCache* cache = thread_state->cache();
-      if (cache != NULL) cache->Clear();
-
-      ScopedMonitorLock locker(pause_monitor_);
-      sleeping_threads_++;
-      pause_monitor_->NotifyAll();
-    }
-
-    program->CollectGarbage();
-
-    if (thread_state != NULL) {
-      ScopedMonitorLock locker(pause_monitor_);
-      sleeping_threads_--;
-      pause_monitor_->NotifyAll();
-    }
   }
 }
 

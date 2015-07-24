@@ -11,6 +11,7 @@
 
 namespace fletch {
 
+class GCThread;
 class Object;
 class Port;
 class Process;
@@ -104,6 +105,8 @@ class Scheduler {
   // TODO(kustermann): Consider moving [ProgramState] to the program object to
   // get rid of STL usage.
   std::unordered_map<Program*, ProgramState*> program_state_map_;
+
+  GCThread* gc_thread_;
 
   void DeleteProcessAndMergeHeaps(Process* process, ThreadState* thread_state);
   void RescheduleProcess(Process* process, ThreadState* state, bool terminate);
