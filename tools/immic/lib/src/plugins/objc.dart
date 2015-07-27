@@ -198,8 +198,8 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     nodes.forEach((node) { writeln('@class ${node.name}Node;'); });
     writeln();
     writeln('@interface Node : NSObject <Node>');
-    nodes.forEach((node) { writeln('- (bool)is${node.name};'); });
-    nodes.forEach((node) { writeln('- (${node.name}Node*)as${node.name};'); });
+    writeln('- (bool)is:(Class)klass;');
+    writeln('- (id)as:(Class)klass;');
     writeln('@end');
     writeln();
   }
@@ -229,8 +229,8 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     writeln('@property (readonly) Node* previous;');
     writeln('@property (readonly) Node* current;');
     writeln(applyToMethodDeclaration('Node'));
-    nodes.forEach((node) { writeln('- (bool)is${node.name};'); });
-    nodes.forEach((node) { writeln('- (${node.name}Patch*)as${node.name};'); });
+    writeln('- (bool)is:(Class)klass;');
+    writeln('- (id)as:(Class)klass;');
     writeln('@end');
     writeln();
   }
@@ -721,18 +721,13 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
 
   void _writeNodeBaseImplementation() {
     writeln('@implementation Node');
-    nodes.forEach((node) {
-      writeln('- (bool)is${node.name} {');
-      writeln('  return [self.node isMemberOfClass:${node.name}Node.class];');
-      writeln('}');
-      writeln('- (${node.name}Node*)as${node.name} {');
-      writeln('  NSAssert(');
-      writeln('    self.is${node.name},');
-      writeln('    @"Invalid cast. Expected ${node.name}Node, found %@",');
-      writeln('    self.node.class);');
-      writeln('  return (${node.name}Node*)self.node;');
-      writeln('}');
-    });
+    writeln('- (bool)is:(Class)klass {');
+    writeln('  return [self.node isMemberOfClass:klass];');
+    writeln('}');
+    writeln('- (id)as:(Class)klass {');
+    writeln('  assert([self is:klass]);');
+    writeln('  return self.node;');
+    writeln('}');
     writeln('- (id)init:(id <Node>)node {');
     writeln('  self = [super init];');
     writeln('  _node = node;');
@@ -831,18 +826,13 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('    [presenter patchNode:self];');
     writeln('  }');
     writeln('}');
-    nodes.forEach((node) {
-      writeln('- (bool)is${node.name} {');
-      writeln('  return [self.patch isMemberOfClass:${node.name}Patch.class];');
-      writeln('}');
-      writeln('- (${node.name}Patch*)as${node.name} {');
-      writeln('  NSAssert(');
-      writeln('    self.is${node.name},');
-      writeln('    @"Invalid cast. Expected ${node.name}Patch, found %@",');
-      writeln('    self.patch.class);');
-      writeln('  return (${node.name}Patch*)self.patch;');
-      writeln('}');
-    });
+    writeln('- (bool)is:(Class)klass {');
+    writeln('  return [self.patch isMemberOfClass:klass];');
+    writeln('}');
+    writeln('- (id)as:(Class)klass {');
+    writeln('  assert([self is:klass]);');
+    writeln('  return self.patch;');
+    writeln('}');
     writeln('@end');
     writeln();
   }

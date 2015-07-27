@@ -69,7 +69,6 @@ class ImmiNodeTransformer extends Transformer {
     if (path == _root) {
       AssetId serviceFile = asset.id.changeExtension('_immi_service.dart');
       String serviceContent = dart.generateServiceString(path, units);
-      print('root: $_root == current: $path');
       transform.addOutput(new Asset.fromString(serviceFile, serviceContent));
     }
   }

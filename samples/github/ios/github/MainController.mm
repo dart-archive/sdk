@@ -7,6 +7,7 @@
 #import "CommitListPresenter.h"
 #import "DrawerPresenter.h"
 #import "MenuPresenter.h"
+#import "SlidingWindowPresenter.h"
 
 @interface CenterPresenter : NSObject <ViewPresenter, NodePresenter>
 @property CommitListPresenter* presenter;
@@ -34,11 +35,11 @@
 }
 
 - (void)presentNode:(Node*)node {
-  [self.presenter presentSlidingWindow:node.asSlidingWindow];
+  [self.presenter presentSlidingWindow:[node as:SlidingWindowNode.class]];
 }
 
 - (void)patchNode:(NodePatch*)patch {
-  [self.presenter patchSlidingWindow:patch.asSlidingWindow];
+  [self.presenter patchSlidingWindow:[patch as:SlidingWindowPatch.class]];
 }
 
 - (UIViewController*)viewController {
@@ -56,11 +57,11 @@
 }
 
 - (void)presentNode:(Node*)node {
-  [self.presenter presentMenu:node.asMenu];
+  [self.presenter presentMenu:[node as:MenuNode.class]];
 }
 
 - (void)patchNode:(NodePatch*)patch {
-  [self.presenter patchMenu:patch.asMenu];
+  [self.presenter patchMenu:[patch as:MenuPatch.class]];
 }
 
 - (UIViewController*)viewController {
@@ -115,15 +116,11 @@
 }
 
 - (void)presentNode:(Node*)node {
-  NSAssert(node.isDrawer,
-           @"Expected presentation graph root to be a Drawer");
-  [self presentDrawer:node.asDrawer];
+  [self presentDrawer:[node as:DrawerNode.class]];
 }
 
 - (void)patchNode:(NodePatch*)patch {
-  NSAssert(patch.isDrawer,
-           @"Expected presentation graph root to be a Drawer");
-  [self patchDrawer:patch.asDrawer];
+  [self patchDrawer:[patch as:DrawerPatch.class]];
 }
 
 - (void)presentDrawer:(DrawerNode*)node {

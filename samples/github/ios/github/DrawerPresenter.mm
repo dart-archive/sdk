@@ -139,7 +139,7 @@
 }
 
 - (void)presentNode:(Node*)node {
-  self.empty = node.isEmptyPane;
+  self.empty = [node is:EmptyPaneNode.class];
   if (!self.empty) [self.presenter presentNode:node];
 }
 
