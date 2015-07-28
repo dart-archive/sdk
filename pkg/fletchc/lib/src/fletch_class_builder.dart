@@ -33,6 +33,7 @@ abstract class FletchClassBuilder {
   bool get hasSuperClass => superclass != null;
 
   void addToMethodTable(int selector, FletchFunctionBuilder functionBuilder);
+  void removeFromMethodTable(FletchFunctionBase function);
 
   // Add a selector for is-tests. The selector is only to be hit with the
   // InvokeTest bytecode, as the function is not guraranteed to be valid.
@@ -83,6 +84,10 @@ class FletchNewClassBuilder extends FletchClassBuilder {
 
   void addToMethodTable(int selector, FletchFunctionBuilder functionBuilder) {
     _methodTable[selector] = functionBuilder;
+  }
+
+  void removeFromMethodTable(FletchFunctionBase function) {
+    throw new StateError("Methods should not be removed from a new class.");
   }
 
   void addIsSelector(int selector) {
@@ -204,6 +209,7 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
   final FletchClassBuilder superclass;
 
   final Map<int, FletchFunctionBase> _newMethods = <int, FletchFunctionBase>{};
+  final Set<FletchFunctionBase> _removedMethods = new Set<FletchFunctionBase>();
 
   // TODO(ajohnsen): Can the element change?
   FletchPatchClassBuilder(this.klass, this.superclass);
@@ -214,6 +220,10 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
 
   void addToMethodTable(int selector, FletchFunctionBuilder functionBuilder) {
     _newMethods[selector] = functionBuilder;
+  }
+
+  void removeFromMethodTable(FletchFunctionBase function) {
+    _removedMethods.add(function);
   }
 
   void addIsSelector(int selector) {
@@ -234,6 +244,14 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
 
   PersistentMap<int, int> computeMethodTable() {
     PersistentMap<int, int> methodTable = klass.methodTable;
+
+    for (FletchFunctionBase function in _removedMethods) {
+      methodTable.forEachKeyValue((int selector, int functionId) {
+        if (functionId == function.functionId) {
+          methodTable = methodTable.delete(selector);
+        }
+      });
+    }
 
     _newMethods.forEach((int selector, FletchFunctionBase function) {
       methodTable = methodTable.insert(selector, function.functionId);

@@ -1376,6 +1376,11 @@ class FletchBackend extends Backend {
       if (function != null) {
         systemBuilder.forgetFunction(function);
       }
+      ClassElement enclosingClass = element.enclosingClass;
+      if (enclosingClass != null) {
+        FletchClassBuilder builder = registerClassElement(enclosingClass);
+        builder.removeFromMethodTable(function);
+      }
     }
     FletchFunctionBuilder functionBuilder =
         systemBuilder.lookupFunctionBuilderByElement(element);
