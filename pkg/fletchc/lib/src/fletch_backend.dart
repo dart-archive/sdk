@@ -926,20 +926,18 @@ class FletchBackend extends Backend {
     for (int i = 0; i < length; i++) {
       FletchFunctionBuilder function = functions[i];
       if (!function.isInstanceMember || function.isAccessor) continue;
-      // TODO(ajohnsen/johnniwinther): Expose getter on Universe.
-      compiler.codegenWorld.forEachInvokedName((name, usage) {
-        if (function.name != name) return;
-        for (Selector use in usage.keys) {
-          CallStructure callStructure = use.callStructure;
-          FunctionSignature signature = function.signature;
-          // TODO(ajohnsen): Somehow filter out private selectors of other
-          // libraries.
-          if (callStructure.signatureApplies(signature) &&
-              !isExactParameterMatch(signature, callStructure)) {
-            createParameterStubFor(function, use);
-          }
+      Map selectors = compiler.codegenWorld.invocationsByName(function.name);
+      if (selectors == null) continue;
+      for (Selector use in selectors.keys) {
+        CallStructure callStructure = use.callStructure;
+        FunctionSignature signature = function.signature;
+        // TODO(ajohnsen): Somehow filter out private selectors of other
+        // libraries.
+        if (callStructure.signatureApplies(signature) &&
+            !isExactParameterMatch(signature, callStructure)) {
+          createParameterStubFor(function, use);
         }
-      });
+      }
     }
   }
 
