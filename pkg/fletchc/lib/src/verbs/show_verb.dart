@@ -4,45 +4,16 @@
 
 library fletchc.verbs.show_verb;
 
-import 'dart:async' show
-    Future;
-
-import 'verbs.dart' show
-    Sentence,
-    SharedTask,
-    TargetKind,
-    Verb,
-    VerbContext;
-
-// TODO: Move these out of create_verb when the next refactoring is complete.
-import 'create_verb.dart' show
-    checkNoPreposition,
-    checkNoTailPreposition,
-    checkNoTrailing;
-
-import '../driver/sentence_parser.dart' show
-    NamedTarget;
+import 'infrastructure.dart';
 
 import 'documentation.dart' show
     showDocumentation;
 
 import '../diagnostic.dart' show
-    DiagnosticKind,
-    throwInternalError,
-    throwFatalError;
+    throwInternalError;
 
-const Verb showVerb = const Verb(show, showDocumentation);
+const Verb showVerb = const Verb(show, showDocumentation, requiresTarget: true);
 
-Future<int> show(Sentence sentence, VerbContext context) async {
-  if (sentence.target == null) {
-    throwFatalError(
-        DiagnosticKind.verbRequiresTarget, verb: sentence.verb);
-  }
-  NamedTarget target = sentence.target;
-  String name = target.name;
-  checkNoPreposition(sentence);
-  checkNoTailPreposition(sentence);
-  checkNoTrailing(sentence);
-
+Future<int> show(AnalyzedSentence sentence, VerbContext context) async {
   throwInternalError("Show not yet implemented.");
 }

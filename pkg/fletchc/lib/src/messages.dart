@@ -14,12 +14,12 @@ enum DiagnosticKind {
   verbRequiresNoSession,
   verbRequiresSessionTarget,
   verbRequiresTarget,
+  verbRequiresFileTarget,
+  verbRequiresSocketTarget,
   noSuchSession,
   sessionAlreadyExists,
   noFileTarget,
-  compileRequiresFileTarget,
   noTcpSocketTarget,
-  attachRequiresSocketTarget,
   expectedAPortNumber,
   socketConnectError,
   attachToVmBeforeRun,
@@ -61,9 +61,19 @@ String getMessage(DiagnosticKind kind) {
           "target. Try adding 'session SESSION_NAME'";
 
     case DiagnosticKind.verbRequiresTarget:
-    // TODO(lukechurch): Revisit this to improve suggestion text.
+      // TODO(lukechurch): Revisit this to improve suggestion text.
       return "Can't perform '${DiagnosticParameter.verb}' without a target. "
           "Try adding a thing or group of things.";
+
+    case DiagnosticKind.verbRequiresFileTarget:
+      // TODO(ahe): Be more explicit about what is wrong with the target.
+      return "Can't perform '${DiagnosticParameter.verb}' without a file, "
+          "but got '${DiagnosticParameter.target}'";
+
+    case DiagnosticKind.verbRequiresSocketTarget:
+      // TODO(ahe): Be more explicit about what is wrong with the target.
+      return "Can't perform '${DiagnosticParameter.verb}' without a socket, "
+          "but got '${DiagnosticParameter.target}'";
 
     case DiagnosticKind.noSuchSession:
       // TODO(lukechurch): Ensure UX repair text is good.
@@ -80,17 +90,9 @@ String getMessage(DiagnosticKind kind) {
       return "No file provided. "
           "Try adding 'file FILE_NAME' to the command line";
 
-    case DiagnosticKind.compileRequiresFileTarget:
-      // TODO(ahe): Be more explicit about what is wrong with the target.
-      return "Can only compile files, not '${DiagnosticParameter.target}";
-
     case DiagnosticKind.noTcpSocketTarget:
       return "No TCP socket provided. "
           "Try adding 'tcp_socket HOST:PORT' to the command line";
-
-    case DiagnosticKind.attachRequiresSocketTarget:
-      // TODO(ahe): Be more explicit about what is wrong with the target.
-      return "Can only attach to a socket, not '${DiagnosticParameter.target}";
 
     case DiagnosticKind.expectedAPortNumber:
       return

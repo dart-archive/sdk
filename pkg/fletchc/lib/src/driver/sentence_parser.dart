@@ -4,16 +4,19 @@
 
 library fletchc.driver.sentence_parser;
 
-import "dart:async" show
+import 'dart:async' show
   Future;
 
-import "../verbs/verbs.dart" show
+import 'dart:convert' show
+    JSON;
+
+import '../verbs/verbs.dart' show
     Verb,
     commonVerbs,
     uncommonVerbs;
 
-import 'dart:convert' show
-    JSON;
+import '../verbs/infrastructure.dart' show
+    AnalyzedSentence;
 
 Sentence parseSentence(
     Iterable<String> arguments,
@@ -73,7 +76,7 @@ class SentenceParser {
 
   Verb makeErrorVerb(String message) {
     return
-        new Verb((Sentence sentence, context) {
+        new Verb((AnalyzedSentence sentence, context) {
           print(message);
           return commonVerbs["help"].perform(sentence, context)
               .then((_) => 1);
@@ -317,8 +320,6 @@ class Sentence {
       this.trailing,
       this.programName,
       this.arguments);
-
-  Future<int> performVerb(context) => verb.verb.perform(this, context);
 
   String toString() => "Sentence($verb, $preposition, $target)";
 }

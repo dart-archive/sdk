@@ -4,58 +4,27 @@
 
 library fletchc.verbs.attach_verb;
 
-import 'dart:async' show
-    Future,
-    StreamIterator;
+import 'infrastructure.dart';
 
 import 'dart:io' show
     InternetAddress,
     Socket,
     SocketException;
 
-import 'verbs.dart' show
-    Sentence,
-    SharedTask,
-    TargetKind,
-    Verb,
-    VerbContext;
-
-import '../driver/sentence_parser.dart' show
-    NamedTarget;
-
-import '../diagnostic.dart' show
-    DiagnosticKind,
-    throwFatalError;
-
 import '../driver/driver_commands.dart' show
-    Command,
-    CommandSender,
     handleSocketErrors;
 
-import '../driver/session_manager.dart' show
-    SessionState;
-
 import '../../commands.dart' as commands_lib;
-
-import '../../session.dart' show
-    FletchVmSession;
 
 import 'documentation.dart' show
     attachDocumentation;
 
-const Verb attachVerb =
-    const Verb(attach, attachDocumentation, requiresSession: true);
+const Verb attachVerb = const Verb(
+    attach, attachDocumentation, requiresSession: true, requiresTarget: true,
+    supportsTarget: TargetKind.TCP_SOCKET);
 
-Future<int> attach(Sentence sentence, VerbContext context) async {
-  if (sentence.target == null) {
-    throwFatalError(DiagnosticKind.noTcpSocketTarget);
-  }
-  if (sentence.target.kind != TargetKind.TCP_SOCKET) {
-    throwFatalError(
-        DiagnosticKind.attachRequiresSocketTarget, target: sentence.target);
-  }
-  NamedTarget target = sentence.target;
-  List<String> address = target.name.split(":");
+Future<int> attach(AnalyzedSentence sentence, VerbContext context) async {
+  List<String> address = sentence.targetName.split(":");
   String host;
   int port;
   if (address.length == 1) {

@@ -17,10 +17,8 @@ import 'dart:io' as io;
 
 import 'dart:async' show
     Completer,
-    Future,
     Stream,
     StreamController,
-    StreamIterator,
     StreamSubscription,
     Zone;
 
@@ -45,8 +43,6 @@ import 'exit_codes.dart' show
     COMPILER_EXITCODE_CRASH;
 
 import 'driver_commands.dart' show
-    Command,
-    CommandSender,
     DriverCommand,
     handleSocketErrors,
     stringifyError;
@@ -54,29 +50,15 @@ import 'driver_commands.dart' show
 import 'driver_isolate.dart' show
     isolateMain;
 
-import '../verbs/verbs.dart' show
-    PrepositionKind,
-    Sentence,
-    SharedTask,
-    TargetKind,
-    Verb,
-    VerbContext,
-    commonVerbs,
-    uncommonVerbs;
+import '../verbs/infrastructure.dart';
 
 import 'sentence_parser.dart' show
-    NamedTarget,
+    Sentence,
     parseSentence;
 
-import 'session_manager.dart' show
-    UserSession,
-    lookupSession;
-
 import '../diagnostic.dart' show
-    DiagnosticKind,
     InputError,
-    throwInternalError,
-    throwFatalError;
+    throwInternalError;
 
 const Endianness commandEndianness = Endianness.LITTLE_ENDIAN;
 
@@ -312,55 +294,19 @@ Future<Null> handleClient(IsolatePool pool, Socket controlSocket) async {
   List<String> arguments = await client.arguments;
   log.gotArguments(arguments);
 
-  await handleVerb(client.parseArguments(arguments), client, pool);
+  await handleVerb(arguments, client, pool);
 }
 
 Future<Null> handleVerb(
-    Sentence sentence,
+    List<String> arguments,
     ClientController client,
     IsolatePool pool) async {
 
-  UserSession discoverSession() {
-    String sessionName = null;
-    if (sentence.preposition != null &&
-        sentence.preposition.kind == PrepositionKind.IN &&
-        sentence.preposition.target.kind == TargetKind.SESSION) {
-      NamedTarget sessionTarget = sentence.preposition.target;
-      sessionName = sessionTarget.name;
-    } else if (sentence.tailPreposition != null &&
-               sentence.tailPreposition.kind == PrepositionKind.IN &&
-               sentence.tailPreposition.target.kind == TargetKind.SESSION) {
-      NamedTarget sessionTarget = sentence.tailPreposition.target;
-      sessionName = sessionTarget.name;
-    }
-    if (sentence.verb.verb.requiresSession) {
-      if (sessionName == null) {
-        throwFatalError(
-            DiagnosticKind.verbRequiresSession, verb: sentence.verb);
-      }
-    } else {
-      if (sessionName != null) {
-        throwFatalError(
-            DiagnosticKind.verbRequiresNoSession,
-            verb: sentence.verb, sessionName: sessionName);
-      }
-    }
-    UserSession session;
-    if (sessionName != null) {
-      session = lookupSession(sessionName);
-      if (session == null) {
-        throwFatalError(DiagnosticKind.noSuchSession, sessionName: sessionName);
-      }
-    }
-    return session;
-  }
-
   Future<int> performVerb() {
-    UserSession session = discoverSession();
-    assert(session == null || client.verb.requiresSession);
-
-    DriverVerbContext context = new DriverVerbContext(client, pool, session);
-    return client.verb.perform(sentence, context);
+    client.parseArguments(arguments);
+    DriverVerbContext context =
+        new DriverVerbContext(client, pool, client.sentence.session);
+    return client.sentence.performVerb(context);
   }
 
   int exitCode = await runGuarded(
@@ -412,8 +358,8 @@ class ClientController {
 
   Completer<List<String>> argumentsCompleter = new Completer<List<String>>();
 
-  /// The verb request by the client. Updated by [parseArguments].
-  Verb verb;
+  /// The request from the client. Updated by [parseArguments].
+  AnalyzedSentence sentence;
 
   /// Path to the fletch VM. Updated by [parseArguments].
   String fletchVm;
@@ -507,15 +453,15 @@ class ClientController {
     endSession();
   }
 
-  Sentence parseArguments(List<String> arguments) {
+  AnalyzedSentence parseArguments(List<String> arguments) {
     Sentence sentence = parseSentence(arguments, includesProgramName: true);
     /// [programName] is the canonicalized absolute path to the fletch
     /// executable (the C++ program).
     String programName = sentence.programName;
     String fletchVm = "$programName-vm";
-    this.verb = sentence.verb.verb;
+    this.sentence = analyzeSentence(sentence);
     this.fletchVm = fletchVm;
-    return sentence;
+    return this.sentence;
   }
 
   int reportErrorToClient(InputError error, StackTrace stackTrace) {

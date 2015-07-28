@@ -4,38 +4,10 @@
 
 library fletchc.verbs.compile_verb;
 
-import 'dart:async' show
-    Future,
-    StreamIterator;
-
-import 'verbs.dart' show
-    PrepositionKind,
-    Sentence,
-    SharedTask,
-    TargetKind,
-    Verb,
-    VerbContext;
-
-import '../driver/sentence_parser.dart' show
-    Preposition,
-    NamedTarget;
-
-import '../../fletch_system.dart' show
-    FletchDelta;
+import 'infrastructure.dart';
 
 import '../../compiler.dart' show
     FletchCompiler;
-
-import '../diagnostic.dart' show
-    DiagnosticKind,
-    throwFatalError;
-
-import '../driver/driver_commands.dart' show
-    Command,
-    CommandSender;
-
-import '../driver/session_manager.dart' show
-    SessionState;
 
 import '../driver/exit_codes.dart' show
     COMPILER_EXITCODE_CRASH;
@@ -43,19 +15,12 @@ import '../driver/exit_codes.dart' show
 import 'documentation.dart' show
     compileDocumentation;
 
-const Verb compileVerb =
-    const Verb(compile, compileDocumentation, requiresSession: true);
+const Verb compileVerb = const Verb(
+    compile, compileDocumentation, requiresSession: true,
+    requiresTarget: true, supportsTarget: TargetKind.FILE);
 
-Future<int> compile(Sentence sentence, VerbContext context) {
-  if (sentence.target == null) {
-    throwFatalError(DiagnosticKind.noFileTarget);
-  }
-  if (sentence.target.kind != TargetKind.FILE) {
-    throwFatalError(
-        DiagnosticKind.compileRequiresFileTarget, target: sentence.target);
-  }
-  NamedTarget target = sentence.target;
-  String script = target.name;
+Future<int> compile(AnalyzedSentence sentence, VerbContext context) {
+  String script = sentence.targetName;
 
   // This is asynchronous, but we don't await the result so we can respond to
   // other requests.

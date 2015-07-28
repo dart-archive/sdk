@@ -4,27 +4,27 @@
 
 library fletchc.verbs.help_verb;
 
-import 'dart:async' show
-    Future;
+import 'infrastructure.dart';
 
 import 'verbs.dart' show
-    Sentence,
-    TargetKind,
-    Verb,
     commonVerbs,
     uncommonVerbs;
 
 import 'documentation.dart' show
     helpDocumentation;
 
-const Verb helpVerb = const Verb(help, helpDocumentation);
+const Verb helpVerb =
+    const Verb(
+        help, helpDocumentation,
+        supportsTarget: TargetKind.ALL, allowsTrailing: true);
 
-Future<int> help(Sentence sentence, _) async {
+Future<int> help(AnalyzedSentence sentence, _) async {
   int exitCode = 0;
-  bool showAllVerbs =
-      sentence.target != null && sentence.target.kind == TargetKind.ALL;
+  bool showAllVerbs = sentence.target != null;
   if (sentence.trailing != null) {
-    print("Unknown arguments to help: ${sentence.trailing.join(' ')}");
+    exitCode = 1;
+  }
+  if (sentence.verb.name != "help") {
     exitCode = 1;
   }
   print(generateHelpText(showAllVerbs));

@@ -4,12 +4,7 @@
 
 library fletchc.verbs.debug_verb;
 
-import 'dart:async' show
-    Future;
-
-import 'verbs.dart' show
-    Sentence,
-    Verb;
+import 'infrastructure.dart';
 
 import '../diagnostic.dart' show
     throwInternalError;
@@ -19,6 +14,6 @@ import 'documentation.dart' show
 
 const Verb debugVerb = const Verb(debug, debugDocumentation);
 
-Future debug(Sentence sentence, _) async {
+Future debug(AnalyzedSentence sentence, _) async {
   throwInternalError("Debug action not yet implemented.");
 }

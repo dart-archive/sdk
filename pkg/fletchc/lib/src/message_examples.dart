@@ -22,12 +22,17 @@ List<Example> getExamples(DiagnosticKind kind) {
       throw new StateError("No example for $kind");
 
     case DiagnosticKind.verbRequiresSession:
-      return <Example>[new CommandLineExample(<String>['compile'])];
+      return <Example>[new CommandLineExample(
+            <String>['compile', 'file', 'file.dart'])];
 
     case DiagnosticKind.verbRequiresNoSession:
-      return <Example>[new CommandLineExample(
-          <String>['create', 'session', 'foo'],
-          <String>['create', 'session', 'bar', 'in', 'session', 'foo'])];
+      return <Example>[
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['create', 'session', 'bar', 'in', 'session', 'foo']),
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['help', 'all', 'in', 'session', 'foo'])];
 
     case DiagnosticKind.verbRequiresSessionTarget:
       return <Example>[
@@ -41,10 +46,20 @@ List<Example> getExamples(DiagnosticKind kind) {
         new CommandLineExample(
             <String>['show'])];
 
+    case DiagnosticKind.verbRequiresFileTarget:
+      return <Example>[new CommandLineExample(
+          <String>['create', 'session', 'foo'],
+          <String>['compile', 'session', 'foo', 'in', 'session', 'foo'])];
+
+    case DiagnosticKind.verbRequiresSocketTarget:
+      return <Example>[new CommandLineExample(
+          <String>['create', 'session', 'foo'],
+          <String>['attach', 'in', 'session', 'foo', 'file', 'fisk'])];
+
     case DiagnosticKind.noSuchSession:
       return <Example>[
           new CommandLineExample(
-              <String>['compile', 'in', 'session', 'foo']),
+              <String>['compile', 'file', 'file.dart', 'in', 'session', 'foo']),
           new CommandLineExample(
               <String>['x-end', 'session', 'foo'])];
 
@@ -58,20 +73,10 @@ List<Example> getExamples(DiagnosticKind kind) {
           <String>['create', 'session', 'foo'],
           <String>['compile', 'in', 'session', 'foo'])];
 
-    case DiagnosticKind.compileRequiresFileTarget:
-      return <Example>[new CommandLineExample(
-          <String>['create', 'session', 'foo'],
-          <String>['compile', 'session', 'foo', 'in', 'session', 'foo'])];
-
     case DiagnosticKind.noTcpSocketTarget:
       return <Example>[new CommandLineExample(
           <String>['create', 'session', 'foo'],
           <String>['attach', 'in', 'session', 'foo'])];
-
-    case DiagnosticKind.attachRequiresSocketTarget:
-      return <Example>[new CommandLineExample(
-          <String>['create', 'session', 'foo'],
-          <String>['attach', 'in', 'session', 'foo', 'file', 'fisk'])];
 
     case DiagnosticKind.expectedAPortNumber:
       return <Example>[

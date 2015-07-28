@@ -4,10 +4,10 @@
 
 library fletchc.verbs.compile_and_run_verb;
 
+import 'infrastructure.dart';
+
 import 'dart:async' show
     Completer,
-    Future,
-    StreamIterator,
     StreamSubscription,
     Zone;
 
@@ -24,44 +24,30 @@ import '../../compiler.dart' show
 
 import '../../commands.dart' as commands_lib;
 
-import '../../fletch_system.dart' show
-    FletchDelta;
-
 import '../driver/driver_commands.dart' show
-    Command,
-    CommandSender,
     DriverCommand,
     handleSocketErrors,
     makeErrorHandler;
 
-import '../../session.dart' show
-    FletchVmSession;
-
-import 'verbs.dart' show
-    Sentence,
-    SharedTask,
-    Verb,
-    VerbContext;
-
 import '../driver/options.dart' show
     Options;
 
-import '../diagnostic.dart' show
-    DiagnosticKind,
-    throwFatalError,
-    throwInternalError;
-
 import '../driver/driver_main.dart' show
     IsolateController;
+
+import '../diagnostic.dart' show
+    throwInternalError;
 
 import 'documentation.dart' show
     compileAndRunDocumentation;
 
 const Verb compileAndRunVerb =
-    const Verb(compileAndRun, compileAndRunDocumentation);
+    const Verb(compileAndRun, compileAndRunDocumentation, allowsTrailing: true);
 
 
-Future<int> compileAndRun(Sentence sentence, VerbContext context) async {
+Future<int> compileAndRun(
+    AnalyzedSentence sentence,
+    VerbContext context) async {
   Options options = Options.parse(sentence.arguments);
 
   if (options.script == null) {

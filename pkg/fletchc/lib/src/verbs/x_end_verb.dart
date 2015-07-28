@@ -4,60 +4,21 @@
 
 library fletchc.verbs.end_verb;
 
-import 'dart:async' show
-    Future,
-    StreamIterator;
-
-import 'verbs.dart' show
-    Sentence,
-    SharedTask,
-    TargetKind,
-    Verb,
-    VerbContext;
-
-import '../driver/sentence_parser.dart' show
-    NamedTarget;
+import 'infrastructure.dart';
 
 import '../driver/session_manager.dart' show
-    SessionState,
-    UserSession,
     endSession;
-
-import '../driver/driver_commands.dart' show
-    Command,
-    CommandSender;
 
 import 'documentation.dart' show
     endDocumentation;
 
-import 'create_verb.dart' show
-    checkNoPreposition,
-    checkNoTailPreposition,
-    checkNoTrailing;
+const Verb endVerb =
+    const Verb(end, endDocumentation, requiresTargetSession: true);
 
-import '../diagnostic.dart' show
-    DiagnosticKind,
-    throwFatalError;
-
-const Verb endVerb = const Verb(end, endDocumentation);
-
-Future<int> end(Sentence sentence, VerbContext context) async {
-  if (sentence.target == null ||
-      sentence.target.kind != TargetKind.SESSION) {
-    throwFatalError(
-        DiagnosticKind.verbRequiresSessionTarget, verb: sentence.verb);
-  }
-
-  NamedTarget target = sentence.target;
-  String name = target.name;
-  checkNoPreposition(sentence);
-  checkNoTailPreposition(sentence);
-  checkNoTrailing(sentence);
-
+Future<int> end(AnalyzedSentence sentence, VerbContext context) async {
+  String name = sentence.targetName;
   UserSession session = endSession(name);
-
   context = context.copyWithSession(session);
-
   await session.worker.performTask(
       new EndSessionTask(name), context.client, endSession: true);
 

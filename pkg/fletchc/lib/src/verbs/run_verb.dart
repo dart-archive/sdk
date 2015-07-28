@@ -4,44 +4,21 @@
 
 library fletchc.verbs.run_verb;
 
+import 'infrastructure.dart';
+
 import 'dart:async' show
-    Future,
-    StreamIterator,
     Timer;
 
-import 'verbs.dart' show
-    Sentence,
-    SharedTask,
-    Verb,
-    VerbContext;
-
-import '../driver/driver_commands.dart' show
-    Command,
-    CommandSender;
-
 import '../../session.dart' show
-    FletchVmSession,
     Session; // Only for documentation.
-
-import '../driver/session_manager.dart' show
-    SessionState;
 
 import '../../commands.dart' as commands_lib;
 
 import '../../commands.dart' show
     CommandCode;
 
-import '../diagnostic.dart' show
-    DiagnosticKind,
-    throwFatalError,
-    throwInternalError;
-
 import '../../fletch_system.dart' show
-    FletchDelta,
     FletchFunction;
-
-import 'documentation.dart' show
-    runDocumentation;
 
 import '../driver/exit_codes.dart' as exit_codes;
 
@@ -49,10 +26,16 @@ import '../../bytecodes.dart' show
     Bytecode,
     MethodEnd;
 
+import '../diagnostic.dart' show
+    throwInternalError;
+
+import 'documentation.dart' show
+    runDocumentation;
+
 const Verb runVerb =
     const Verb(run, runDocumentation, requiresSession: true);
 
-Future<int> run(Sentence sentence, VerbContext context) async {
+Future<int> run(AnalyzedSentence sentence, VerbContext context) async {
   // This is asynchronous, but we don't await the result so we can respond to
   // other requests.
   context.performTaskInWorker(new RunTask());

@@ -4,78 +4,21 @@
 
 library fletchc.verbs.create_verb;
 
-import 'dart:async' show
-    Future,
-    StreamIterator;
-
-import 'verbs.dart' show
-    Sentence,
-    SharedTask,
-    TargetKind,
-    Verb,
-    VerbContext;
-
-import '../driver/sentence_parser.dart' show
-    NamedTarget;
-
-import '../driver/session_manager.dart' show
-    SessionState,
-    UserSession,
-    createSession;
+import 'infrastructure.dart';
 
 import '../driver/driver_main.dart' show
-    ClientController,
-    IsolateController,
-    IsolatePool;
-
-import '../driver/driver_commands.dart' show
-    Command,
-    CommandSender;
+    IsolateController;
 
 import 'documentation.dart' show
     createDocumentation;
 
-import '../diagnostic.dart' show
-    DiagnosticKind,
-    throwFatalError;
+const Verb createVerb = const Verb(
+    create, createDocumentation, requiresTargetSession: true);
 
-const Verb createVerb = const Verb(create, createDocumentation);
-
-void checkNoPreposition(Sentence sentence) {
-  if (sentence.preposition != null) {
-    // TODO(ahe): Improve this.
-    print("Ignoring ${sentence.preposition}.");
-  }
-}
-
-void checkNoTailPreposition(Sentence sentence) {
-  if (sentence.tailPreposition != null) {
-    // TODO(ahe): Improve this.
-    print("Ignoring ${sentence.tailPreposition}.");
-  }
-}
-
-void checkNoTrailing(Sentence sentence) {
-  if (sentence.trailing != null) {
-    // TODO(ahe): Improve this.
-    print("Ignoring: ${sentence.trailing.join(' ')}.");
-  }
-}
-
-Future<int> create(Sentence sentence, VerbContext context) async {
-  if (sentence.target == null ||
-      sentence.target.kind != TargetKind.SESSION) {
-    throwFatalError(
-        DiagnosticKind.verbRequiresSessionTarget, verb: sentence.verb);
-  }
-
+Future<int> create(AnalyzedSentence sentence, VerbContext context) async {
   IsolatePool pool = context.pool;
   ClientController client = context.client;
-  NamedTarget target = sentence.target;
-  String name = target.name;
-  checkNoPreposition(sentence);
-  checkNoTailPreposition(sentence);
-  checkNoTrailing(sentence);
+  String name = sentence.targetName;
 
   Future<IsolateController> allocateWorker() async {
     IsolateController worker =

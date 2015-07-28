@@ -4,28 +4,11 @@
 
 library fletchc.verbs.verbs;
 
-import 'dart:async' show
+import 'infrastructure.dart' show
+    AnalyzedSentence,
     Future,
-    StreamIterator;
-
-import '../driver/sentence_parser.dart' show
-    Sentence;
-
-export '../driver/sentence_parser.dart' show
-    PrepositionKind,
-    Sentence,
-    TargetKind;
-
-import '../driver/driver_main.dart' show
-    IsolatePool,
-    ClientController;
-
-import '../driver/driver_commands.dart' show
-    Command,
-    CommandSender;
-
-import '../driver/session_manager.dart' show
-    UserSession;
+    TargetKind,
+    VerbContext;
 
 import 'debug_verb.dart' show
     debugVerb;
@@ -57,50 +40,39 @@ import 'run_verb.dart' show
 import 'x_end_verb.dart' show
     endVerb;
 
-typedef Future<int> DoVerb(Sentence sentence, VerbContext context);
+typedef Future<int> DoVerb(AnalyzedSentence sentence, VerbContext context);
 
 class Verb {
   final DoVerb perform;
+
   final String documentation;
 
-  /// True if this verb needs to run in the context of a [UserSession].
+  /// True if this verb needs "in session NAME".
   final bool requiresSession;
+
+  /// True if this verb requires a sesion target (that is, "session NAME"
+  /// without "in").
+  final bool requiresTargetSession;
+
+  /// True if this verb allows trailing arguments.
+  final bool allowsTrailing;
+
+  /// True if this verb requires a target.
+  final bool requiresTarget;
+
+  /// An optional kind of target supported by this verb.
+  final TargetKind supportsTarget;
 
   const Verb(
       this.perform,
       this.documentation,
-      {this.requiresSession: false});
-}
-
-abstract class VerbContext {
-  final ClientController client;
-
-  final IsolatePool pool;
-
-  final UserSession session;
-
-  VerbContext(this.client, this.pool, this.session);
-
-  Future<Null> performTaskInWorker(SharedTask task);
-
-  VerbContext copyWithSession(UserSession session);
-}
-
-/// Represents a task that is shared between the main isolate and a worker
-/// isolate. Since instances of this class are copied from the main isolate to
-/// a worker isolate, they should be kept simple:
-///
-/// *   Pay attention to the transitive closure of its fields. The closure
-///     should be kept as small as possible to avoid too much copying.
-///
-/// *   Avoid enums and other compile-time constants in the transitive closure,
-///     as they aren't canonicalized by the Dart VM, see issue 23244.
-abstract class SharedTask {
-  const SharedTask();
-
-  Future<int> call(
-      CommandSender commandSender,
-      StreamIterator<Command> commandIterator);
+      {this.requiresSession: false,
+       this.allowsTrailing: false,
+       bool requiresTarget: false,
+       bool requiresTargetSession: false,
+       this.supportsTarget})
+      : this.requiresTarget = requiresTarget || requiresTargetSession,
+        this.requiresTargetSession = requiresTargetSession;
 }
 
 /// Common verbs are displayed in the default help screen.

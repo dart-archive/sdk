@@ -45,6 +45,10 @@ import 'package:fletchc/src/driver/driver_commands.dart' show
     Command,
     DriverCommand;
 
+import 'package:fletchc/src/verbs/infrastructure.dart' show
+    AnalyzedSentence,
+    analyzeSentence;
+
 final IsolatePool pool = new IsolatePool(isolateMain);
 
 Future<Null> main() async {
@@ -118,7 +122,10 @@ Future<Null> checkCommandLineExample(
     Expect.stringEquals(getMessage(kind), mock.stderrMessages.single);
   } else {
     Expect.isNotNull(mock.recordedError);
-    Expect.equals(kind, mock.recordedError.kind);
+    Expect.equals(kind, mock.recordedError.kind, '${mock.recordedError}');
+    // Ensure that the diagnostic can be turned into a formatted error message.
+    String message = mock.recordedError.asDiagnostic().formatMessage();
+    Expect.isNotNull(message);
   }
   Expect.equals(1, mock.recordedExitCode);
 }
@@ -126,16 +133,11 @@ Future<Null> checkCommandLineExample(
 Future<MockClientController> mockCommandLine(List<String> arguments) async {
   print("Command line: ${arguments.join(' ')}");
   Sentence sentence = parseSentence(arguments, includesProgramName: false);
-
-  MockClientController client = new MockClientController(
-      sentence.verb.verb, arguments);
-
-  await handleVerb(sentence, client, pool);
-
+  MockClientController client = new MockClientController();
+  await handleVerb(arguments, client, pool);
   return client;
 }
 
-@proxy
 class MockClientController implements ClientController {
   InputError recordedError;
 
@@ -143,21 +145,17 @@ class MockClientController implements ClientController {
 
   final ClientLogger log = new MockClientLogger();
 
-  final Verb mockVerb;
-
-  final List<String> mockArguments;
-
   final Completer mockCompleter = new Completer();
 
   final List<String> stderrMessages = <String>[];
 
   final StreamController<Command> controller = new StreamController<Command>();
 
-  MockClientController(this.mockVerb, this.mockArguments);
+  AnalyzedSentence sentence;
+
+  MockClientController();
 
   get completer => mockCompleter;
-
-  get verb => mockVerb;
 
   get done => completer.future;
 
@@ -225,14 +223,30 @@ class MockClientController implements ClientController {
     return 1;
   }
 
-  noSuchMethod(Invocation invocation) {
-    // Override noSuchMethod to enable @proxy. Use as dynamic to work around
-    // dart2js issue 23843.
-    return super.noSuchMethod(invocation) as dynamic;
+  AnalyzedSentence parseArguments(List<String> arguments) {
+    Sentence sentence = parseSentence(arguments);
+    this.sentence = analyzeSentence(sentence);
+    return this.sentence;
   }
+
+  handleCommand(_) => throw "not supported";
+  handleCommandError(e, s) => throw "not supported";
+  handleCommandsDone() => throw "not supported";
+  start() => throw "not supported";
+  get arguments => throw "not supported";
+  get argumentsCompleter => throw "not supported";
+  set argumentsCompleter(_) => throw "not supported";
+  get commandSender => throw "not supported";
+  set commandSender(_) => throw "not supported";
+  set completer(_) => throw "not supported";
+  get fletchVm => throw "not supported";
+  set fletchVm(_) => throw "not supported";
+  get requiresWorker => throw "not supported";
+  get socket => throw "not supported";
+  get subscription => throw "not supported";
+  set subscription(_) => throw "not supported";
 }
 
-@proxy
 class MockClientLogger implements ClientLogger {
   static int clientsAllocated = 0;
 
@@ -252,9 +266,7 @@ class MockClientLogger implements ClientLogger {
     throw error;
   }
 
-  noSuchMethod(Invocation invocation) {
-    // Override noSuchMethod to enable @proxy. Use as dynamic to work around
-    // dart2js issue 23843.
-    return super.noSuchMethod(invocation) as dynamic;
-  }
+  get arguments => throw "not supported";
+  set arguments(_) => throw "not supported";
+  get notes => throw "not supported";
 }

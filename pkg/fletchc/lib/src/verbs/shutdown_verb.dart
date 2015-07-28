@@ -4,12 +4,7 @@
 
 library fletchc.verbs.shutdown_verb;
 
-import 'dart:async' show
-    Future;
-
-import 'verbs.dart' show
-    Sentence,
-    Verb;
+import 'infrastructure.dart';
 
 import '../driver/driver_main.dart' show
     gracefulShutdown;
@@ -19,7 +14,7 @@ import 'documentation.dart' show
 
 const Verb shutdownVerb = const Verb(shutdown, shutdownDocumentation);
 
-Future<int> shutdown(Sentence sentence, _) {
+Future<int> shutdown(AnalyzedSentence sentence, _) {
   gracefulShutdown();
   return new Future.value(0);
 }
