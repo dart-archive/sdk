@@ -2,11 +2,12 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-[ $compiler == fletchc || $runtime == fletchc ]
-nan_infinity_test/01: Fail, OK # The VM has odd negate semantics.
-
+[ $runtime == fletchc ]
 # -D option not implemented.
 int_from_environment2_test: CompileTimeError
+
+[ $compiler == fletchc || $runtime == fletchc ]
+nan_infinity_test/01: Fail, OK # The VM has odd negate semantics.
 
 # Function.apply
 apply2_test: Fail

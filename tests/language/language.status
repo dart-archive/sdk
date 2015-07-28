@@ -421,6 +421,40 @@ vm/type_cast_vm_test: Fail
 vm/type_vm_test: Fail
 vm/typed_data_polymorphic_view_test: Fail
 
+
+[ $compiler == fletchc ]
+
+async_test/constructor2: MissingCompileTimeError
+async_test/constructor3: MissingCompileTimeError
+async_test/constructor4: MissingCompileTimeError
+async_test/setter1: MissingCompileTimeError
+await_backwards_compatibility_test/await2: MissingCompileTimeError
+await_backwards_compatibility_test/await3: MissingCompileTimeError
+await_backwards_compatibility_test/await4: MissingCompileTimeError
+compile_time_constant_test/01: MissingCompileTimeError
+const_types_test/23: MissingCompileTimeError
+const_types_test/24: MissingCompileTimeError
+const_types_test/25: MissingCompileTimeError
+const_types_test/26: MissingCompileTimeError
+const_types_test/27: MissingCompileTimeError
+const_types_test/28: MissingCompileTimeError
+const_types_test/29: MissingCompileTimeError
+const_types_test/30: MissingCompileTimeError
+const_types_test/41: MissingCompileTimeError
+duplicate_implements_test/03: MissingCompileTimeError
+duplicate_implements_test/04: MissingCompileTimeError
+factory_redirection2_test/01: MissingCompileTimeError
+factory_redirection3_cyclic_test/01: MissingCompileTimeError
+factory_redirection_test/04: MissingCompileTimeError
+factory_redirection_test/07: MissingCompileTimeError
+this_test/01: MissingCompileTimeError
+this_test/03: MissingCompileTimeError
+this_test/05: MissingCompileTimeError
+this_test/07: MissingCompileTimeError
+
+
+[ $runtime == fletchc ]
+
 # Fletch reports runtime error, but should report compile-time error.
 async_test/constructor2: RuntimeError
 async_test/constructor3: RuntimeError
