@@ -32,6 +32,9 @@ import 'fletch_warnings_suite.dart' show
 import 'fletch_test_suite.dart' show
     FletchTestCommand;
 
+import 'fletch_session_command.dart' show
+    FletchSessionCommand;
+
 const int MEMORY_LEAK_EXITCODE = 23;
 const int CRASHING_BROWSER_EXITCODE = -10;
 const int SLOW_TIMEOUT_MULTIPLIER = 4;
@@ -2634,6 +2637,8 @@ class CommandExecutorImpl implements CommandExecutor {
       return command.run();
     } else if (command is FletchTestCommand) {
       return command.run(timeout);
+    } else if (command is FletchSessionCommand) {
+      return command.run(timeout, globalConfiguration['verbose']);
     } else {
       return new RunningProcess(command, timeout).run();
     }

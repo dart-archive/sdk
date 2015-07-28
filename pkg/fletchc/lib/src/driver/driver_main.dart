@@ -624,6 +624,13 @@ class IsolateController {
 
   Future<Null> detachClient() async {
     if (isolate.wasKilled) {
+      // Setting these to null will ensure that [attachClient] causes a crash
+      // if called after isolate was killed.
+      errorSubscription = null;
+      workerReceivePort = null;
+      workerCommands = null;
+      workerSendPort = null;
+
       // TODO(ahe): The session is dead. Tell the user about this.
       return null;
     }

@@ -49,6 +49,7 @@ class FletchWarningsRuntimeConfiguration extends RuntimeConfiguration {
       TestSuite suite,
       CommandBuilder commandBuilder,
       CommandArtifact artifact,
+      String script,
       List<String> arguments,
       Map<String, String> environmentOverrides) {
     return <Command>[
@@ -93,6 +94,7 @@ class FletchWarningsSuite extends TestSuite {
           this,
           CommandBuilder.instance,
           null,
+          uri,
           <String>[uri],
           null);
       var testCase = new TestCase(

@@ -1017,6 +1017,7 @@ class StandardTestSuite extends TestSuite {
                 this,
                 CommandBuilder.instance,
                 compilationArtifact,
+                info.filePath.toNativePath(),
                 runtimeArguments,
                 environmentOverrides));
   }

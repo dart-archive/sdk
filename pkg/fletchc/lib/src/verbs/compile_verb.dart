@@ -37,6 +37,9 @@ import '../driver/driver_commands.dart' show
 import '../driver/session_manager.dart' show
     SessionState;
 
+import '../driver/exit_codes.dart' show
+    COMPILER_EXITCODE_CRASH;
+
 import 'documentation.dart' show
     compileDocumentation;
 
@@ -82,12 +85,23 @@ Future<int> compileTask(String script) async {
   FletchCompiler compiler =
       new FletchCompiler(
           options: compilerOptions, script: script,
-          packageRoot: null /* TODO(ahe): Provide package root. */);
+          // TODO(ahe): packageRoot should be a user provided option.
+          packageRoot: 'package/' );
 
-  FletchDelta result = await compiler.run();
+  FletchDelta result;
+  try {
+    result = await compiler.run();
+  } catch (error, stackTrace) {
+    // Don't let a compiler crash bring down the session.
+    print(error);
+    if (stackTrace != null) {
+      print(stackTrace);
+    }
+    return COMPILER_EXITCODE_CRASH;
+  }
   SessionState.current.compilationResult = result;
 
-  print("Compiled '$script' to ${result.commands.length} commands.");
+  print("Compiled '$script' to ${result.commands.length} commands");
 
   return 0;
 }

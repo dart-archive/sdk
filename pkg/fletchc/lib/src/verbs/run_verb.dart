@@ -6,7 +6,8 @@ library fletchc.verbs.run_verb;
 
 import 'dart:async' show
     Future,
-    StreamIterator;
+    StreamIterator,
+    Timer;
 
 import 'verbs.dart' show
     Sentence,
@@ -98,12 +99,14 @@ Future<int> runTask(
         print("Uncaught error");
         exitCode = exit_codes.DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
         await printBacktraceHack(session, compilationResult);
+        // TODO(ahe): Need to continue to unwind stack.
         break;
 
       case CommandCode.ProcessCompileTimeError:
         print("Compile-time error");
         exitCode = exit_codes.DART_VM_EXITCODE_COMPILE_TIME_ERROR;
         await printBacktraceHack(session, compilationResult);
+        // TODO(ahe): Continue to unwind stack?
         break;
 
       case CommandCode.ProcessTerminated:
@@ -117,7 +120,16 @@ Future<int> runTask(
   } finally {
     // TODO(ahe): Do not shut down the session.
     await session.runCommand(const commands_lib.SessionEnd());
+    bool done = false;
+    Timer timer = new Timer(const Duration(seconds: 5), () {
+      if (!done) {
+        print("Timed out waiting for Fletch VM to shutdown; killing session");
+        session.kill();
+      }
+    });
     await session.shutdown();
+    done = true;
+    timer.cancel();
   };
 
   return exitCode;
@@ -154,7 +166,8 @@ Future<Null> printBacktraceHack(
   for (int i = backtrace.frames - 1; i >= 0; i--) {
     FletchFunction function =
         delta.system.lookupFunctionById(backtrace.functionIds[i]);
-    if (function.element.implementation.library.isInternalLibrary) {
+    if (function.element != null &&
+        function.element.implementation.library.isInternalLibrary) {
       // TODO(ahe): This hides implementation details, which should be a
       // user-controlled option.
       continue;

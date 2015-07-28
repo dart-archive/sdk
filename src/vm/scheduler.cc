@@ -365,7 +365,7 @@ void Scheduler::ExitAtTermination(Process* process,
 
 void Scheduler::ExitAtUncaughtException(Process* process) {
   ASSERT(process->state() == Process::kUncaughtException);
-  exit(1);
+  exit(255);
 }
 
 void Scheduler::ExitAtCompileTimeError(Process* process) {

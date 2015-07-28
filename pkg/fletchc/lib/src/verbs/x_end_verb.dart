@@ -61,7 +61,7 @@ Future<int> end(Sentence sentence, VerbContext context) async {
   await session.worker.performTask(
       new EndSessionTask(name), context.client, endSession: true);
 
-  return 0;
+  return null;
 }
 
 class EndSessionTask extends SharedTask {

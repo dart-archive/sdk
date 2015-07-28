@@ -5,6 +5,9 @@
 [ $compiler == fletchc || $runtime == fletchc ]
 nan_infinity_test/01: Fail, OK # The VM has odd negate semantics.
 
+# -D option not implemented.
+int_from_environment2_test: CompileTimeError
+
 # Function.apply
 apply2_test: Fail
 apply3_test: Fail

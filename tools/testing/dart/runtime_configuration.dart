@@ -29,6 +29,9 @@ import 'fletch_warnings_suite.dart' show
 import 'fletch_test_suite.dart' show
     FletchTestRuntimeConfiguration;
 
+import 'fletch_session_command.dart' show
+    FletchSessionCommand;
+
 // TODO(ahe): I expect this class will become abstract very soon.
 class RuntimeConfiguration {
   // TODO(ahe): Remove this constructor and move the switch to
@@ -75,6 +78,7 @@ class RuntimeConfiguration {
       TestSuite suite,
       CommandBuilder commandBuilder,
       CommandArtifact artifact,
+      String script,
       List<String> arguments,
       Map<String, String> environmentOverrides) {
     // TODO(ahe): Make this method abstract.
@@ -93,6 +97,7 @@ class NoneRuntimeConfiguration extends RuntimeConfiguration {
       TestSuite suite,
       CommandBuilder commandBuilder,
       CommandArtifact artifact,
+      String script,
       List<String> arguments,
       Map<String, String> environmentOverrides) {
     return <Command>[];
@@ -139,12 +144,11 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
       TestSuite suite,
       CommandBuilder commandBuilder,
       CommandArtifact artifact,
+      String script,
       List<String> basicArguments,
       Map<String, String> environmentOverrides) {
-    String script = artifact.filename;
-    String type = artifact.mimeType;
-    if (script != null && type != 'application/dart') {
-      throw "Dart VM cannot run files of type '$type'.";
+    if (artifact.filename != null && artifact.mimeType != 'application/dart') {
+      throw "Dart VM cannot run files of type '${artifact.mimeType}'.";
     }
     String executable;
     List<String> arguments;
@@ -162,12 +166,15 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
       environment = environmentOverrides;
     } else {
       executable = '${suite.buildDir}/fletch';
-      arguments = <String>['compile-and-run'];
-      arguments.addAll(basicArguments);
       environment = {
         'DART_VM': suite.dartVmBinaryFileName,
       };
+
+      return <Command>[
+          new FletchSessionCommand(
+              executable, script, basicArguments, environment)];
     }
+
     // NOTE: We assume that `fletch` behaves the same as invoking
     // the DartVM in terms of exit codes.
     return <Command>[
@@ -180,6 +187,7 @@ class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
       StandardTestSuite suite,
       CommandBuilder commandBuilder,
       CommandArtifact artifact,
+      String script,
       List<String> basicArguments,
       Map<String, String> environmentOverrides) {
     String script = artifact.filename;
@@ -227,6 +235,7 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
       TestSuite suite,
       CommandBuilder commandBuilder,
       CommandArtifact artifact,
+      String script,
       List<String> arguments,
       Map<String, String> environmentOverrides) {
     String script = artifact.filename;
@@ -255,6 +264,7 @@ class DummyRuntimeConfiguration extends DartVmRuntimeConfiguration {
       TestSuite suite,
       CommandBuilder commandBuilder,
       CommandArtifact artifact,
+      String script,
       List<String> arguments,
       Map<String, String> environmentOverrides) {
     throw "Unimplemented runtime '$runtimeType'";

@@ -2,6 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+/// Exit codes recognized by our test infrastructure. This file is shared with
+/// our test infrastructure and should be kept simple and only contain
+/// int-valued top-level compile-time constants.
 library fletchc.driver.exit_codes;
 
 /// Exit code to use when the compiler crashed. This is recognized by our test
