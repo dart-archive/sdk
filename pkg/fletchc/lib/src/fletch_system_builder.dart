@@ -42,7 +42,7 @@ class FletchSystemBuilder {
   final int classIdStart;
 
   final List<FletchFunctionBuilder> _newFunctions = <FletchFunctionBuilder>[];
-  final List<FletchClassBuilder> _newClasses = <FletchClassBuilder>[];
+  final Map<int, FletchClassBuilder> _newClasses = <int, FletchClassBuilder>{};
   final Map<ConstantValue, int> _newConstants = <ConstantValue, int>{};
   final Map<FletchFunctionBase, Map<CallStructure, FletchFunctionBuilder>>
       _newParameterStubs =
@@ -138,14 +138,25 @@ class FletchSystemBuilder {
       FletchClassBuilder superclass,
       bool isBuiltin,
       {int extraFields: 0}) {
+    if (element != null) {
+      FletchClass klass = predecessorSystem.lookupClassByElement(element);
+      if (klass != null) {
+        FletchClassBuilder builder = new FletchPatchClassBuilder(
+            klass, superclass);
+        _newClasses[klass.classId] = builder;
+        _classBuildersByElement[element] = builder;
+        return builder;
+      }
+    }
+
     int nextClassId = classIdStart + _newClasses.length;
-    FletchClassBuilder builder = new FletchClassBuilder(
+    FletchClassBuilder builder = new FletchNewClassBuilder(
         nextClassId,
         element,
         superclass,
         isBuiltin,
         extraFields);
-    _newClasses.add(builder);
+    _newClasses[nextClassId] = builder;
     if (element != null) _classBuildersByElement[element] = builder;
     return builder;
   }
@@ -155,14 +166,14 @@ class FletchSystemBuilder {
   }
 
   FletchClassBuilder lookupClassBuilder(int classId) {
-    return _newClasses[classId - classIdStart];
+    return _newClasses[classId];
   }
 
   FletchClassBuilder lookupClassBuilderByElement(ClassElement element) {
     return _classBuildersByElement[element];
   }
 
-  List<FletchClassBuilder> getNewClasses() => _newClasses;
+  Iterable<FletchClassBuilder> getNewClasses() => _newClasses.values;
 
   void registerConstant(ConstantValue constant, FletchContext context) {
     // TODO(ajohnsen): Look in predecessorSystem.
@@ -215,7 +226,7 @@ class FletchSystemBuilder {
 
     // Create all new FletchClasses.
     List<FletchClass> classes = <FletchClass>[];
-    for (FletchClassBuilder builder in _newClasses) {
+    for (FletchClassBuilder builder in _newClasses.values) {
       classes.add(builder.finalizeClass(context, commands));
       changes++;
     }
