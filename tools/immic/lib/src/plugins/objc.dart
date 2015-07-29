@@ -134,13 +134,8 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     units.values.forEach(collectMethodSignatures);
     units.values.forEach((unit) { nodes.addAll(unit.structs); });
     _writeHeader();
-    _writeNodeBase();
-    _writePatchBase();
-    _writePatchPrimitives();
     _writeActions();
     units.values.forEach(visit);
-    _writeImmiRoot();
-    _writeImmiService();
   }
 
   visitUnit(Unit unit) {
@@ -167,6 +162,8 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     }
     writeln('@end');
     writeln();
+    writeln('@class $patchName;');
+    writeln();
     writeln('@protocol $presenterName');
     writeln(presentMethodDeclaration(node));
     writeln(patchMethodDeclaration(node));
@@ -176,6 +173,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     writeln('@property (readonly) bool changed;');
     writeln('@property (readonly) $nodeName* previous;');
     writeln('@property (readonly) $nodeName* current;');
+    writeln(applyToMethodDeclaration(node));
     forEachSlot(node, null, (Type slotType, String slotName) {
       writeln('@property (readonly) ${patchType(slotType)}* $slotName;');
     });
@@ -189,88 +187,6 @@ class _HeaderVisitor extends CodeGenerationVisitor {
 
   void _writeFormalWithKeyword(String keyword, Formal formal) {
     write('$keyword:(${getTypeName(formal.type)})${formal.name}');
-  }
-
-  void _writeNodeBase() {
-    writeln('@protocol Node <NSObject>');
-    writeln('@end');
-    writeln();
-    nodes.forEach((node) { writeln('@class ${node.name}Node;'); });
-    writeln();
-    writeln('@interface Node : NSObject <Node>');
-    writeln('- (bool)is:(Class)klass;');
-    writeln('- (id)as:(Class)klass;');
-    writeln('@end');
-    writeln();
-  }
-
-  void _writePatchBase() {
-    writeln('@protocol Patch <NSObject>');
-    writeln('@property (readonly) bool changed;');
-    writeln('@end');
-    writeln();
-    writeln('@class NodePatch;');
-    nodes.forEach((node) { writeln('@class ${node.name}Patch;'); });
-    writeln();
-    writeln('@protocol NodePresenter <NSObject>');
-    writeln(presentMethodDeclaration('Node'));
-    writeln(patchMethodDeclaration('Node'));
-    writeln('@end');
-    writeln();
-    writeln('@protocol NodePatch <Patch>');
-    writeln('@property (readonly) bool replaced;');
-    writeln('@property (readonly) bool updated;');
-    writeln('@property (readonly) id <Node> previous;');
-    writeln('@property (readonly) id <Node> current;');
-    writeln('@end');
-    writeln();
-    writeln('@interface NodePatch : NSObject <NodePatch>');
-    writeln('@property (readonly) bool changed;');
-    writeln('@property (readonly) Node* previous;');
-    writeln('@property (readonly) Node* current;');
-    writeln(applyToMethodDeclaration('Node'));
-    writeln('- (bool)is:(Class)klass;');
-    writeln('- (id)as:(Class)klass;');
-    writeln('@end');
-    writeln();
-  }
-
-  void _writePatchPrimitives() {
-    _TYPES.forEach((String idlType, String objcType) {
-      if (idlType == 'void') return;
-      writeln('@interface ${camelize(idlType)}Patch : NSObject <Patch>');
-      writeln('@property (readonly) bool changed;');
-      writeln('@property (readonly) $objcType previous;');
-      writeln('@property (readonly) $objcType current;');
-      writeln('@end');
-      writeln();
-    });
-    writeln('@interface ListRegionPatch : NSObject');
-    writeln('@property (readonly) bool isRemove;');
-    writeln('@property (readonly) bool isInsert;');
-    writeln('@property (readonly) bool isUpdate;');
-    writeln('@property (readonly) int index;');
-    writeln('@end');
-    writeln();
-    writeln('@interface ListRegionRemovePatch : ListRegionPatch');
-    writeln('@property (readonly) int count;');
-    writeln('@end');
-    writeln();
-    writeln('@interface ListRegionInsertPatch : ListRegionPatch');
-    writeln('@property (readonly) NSArray* nodes;');
-    writeln('@end');
-    writeln();
-    writeln('@interface ListRegionUpdatePatch : ListRegionPatch');
-    writeln('@property (readonly) NSArray* updates;');
-    writeln('@end');
-    writeln();
-    writeln('@interface ListPatch : NSObject <Patch>');
-    writeln('@property (readonly) bool changed;');
-    writeln('@property (readonly) NSArray* regions;');
-    writeln('@property (readonly) NSArray* previous;');
-    writeln('@property (readonly) NSArray* current;');
-    writeln('@end');
-    writeln();
   }
 
   _writeActions() {
@@ -287,27 +203,6 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     }
   }
 
-  void _writeImmiService() {
-    writeln('@interface ImmiService : NSObject');
-    writeln('- (ImmiRoot*)registerPresenter:(id <NodePresenter>)presenter');
-    writeln('                       forName:(NSString*)name;');
-    writeln('- (void)registerStoryboard:(UIStoryboard*)storyboard;');
-    writeln('- (ImmiRoot*)getRootByName:(NSString*)name;');
-    writeln('- (id <NodePresenter>)getPresenterByName:(NSString*)name;');
-    writeln('@end');
-    writeln();
-  }
-
-  void _writeImmiRoot() {
-    writeln('typedef void (^ImmiDispatchBlock)();');
-    writeln('@interface ImmiRoot : NSObject');
-    writeln('- (void)refresh;');
-    writeln('- (void)reset;');
-    writeln('- (void)dispatch:(ImmiDispatchBlock)block;');
-    writeln('@end');
-    writeln();
-  }
-
   void _writeNSType(Type type) {
     if (type.isList) {
       write('NSArray*');
@@ -321,9 +216,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     writeln(COPYRIGHT);
     writeln('// Generated file. Do not edit.');
     writeln();
-    writeln('#import <Foundation/Foundation.h>');
-    writeln('#import <UIKit/UIKit.h>');
-    writeln('#include "${serviceFile}.h"');
+    writeln('#import "Immi.h"');
     writeln();
   }
 
