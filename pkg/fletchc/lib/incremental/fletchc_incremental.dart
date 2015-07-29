@@ -44,6 +44,9 @@ import '../fletch_system.dart';
 import 'compiler.dart' show
     OutputProvider;
 
+import '../src/fletch_backend.dart' show
+    FletchBackend;
+
 part 'caching_compiler.dart';
 
 const List<String> INCREMENTAL_OPTIONS = const <String>[
@@ -154,22 +157,9 @@ class IncrementalCompiler {
     });
   }
 
-  String allUpdates() {
-    jsAst.Node updates = jsAst.js.escapedString(_updates.join(""));
-
-    JavaScriptBackend backend = _compiler.backend;
-
-    jsAst.FunctionDeclaration mainRunner = jsAst.js.statement(r"""
-function dartMainRunner(main, args) {
-  #helper.patch(#updates + '\n//# sourceURL=initial_patch.js\n');
-  return main(args);
-}""", {'updates': updates, 'helper': backend.namer.accessIncrementalHelper});
-
-    jsAst.Printer printer = new jsAst.Printer(
-        new jsAst.JavaScriptPrintingOptions(),
-        new jsAst.SimpleJavaScriptPrintingContext());
-    printer.blockOutWithoutBraces(mainRunner);
-    return printer.context.getText();
+  FletchDelta computeInitialDelta() {
+    FletchBackend backend = _compiler.backend;
+    return backend.computeDelta();
   }
 }
 

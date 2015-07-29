@@ -32,9 +32,6 @@ import '../driver/driver_commands.dart' show
 import '../driver/options.dart' show
     Options;
 
-import '../driver/driver_main.dart' show
-    IsolateController;
-
 import '../diagnostic.dart' show
     throwInternalError;
 

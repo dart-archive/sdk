@@ -6,9 +6,6 @@ library fletchc.verbs.create_verb;
 
 import 'infrastructure.dart';
 
-import '../driver/driver_main.dart' show
-    IsolateController;
-
 import 'documentation.dart' show
     createDocumentation;
 
@@ -53,7 +50,18 @@ class CreateSessionTask extends SharedTask {
 
 Future<int> createSessionTask(String name) {
   assert(SessionState.internalCurrent == null);
-  SessionState.internalCurrent = new SessionState(name);
+
+  // TODO(ahe): Allow user to specify dart2js options.
+  List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
+      ? <String>['--verbose'] : <String>[];
+  FletchCompiler compilerHelper = new FletchCompiler(
+      options: compilerOptions,
+      // TODO(ahe): packageRoot should be a user provided option.
+      packageRoot: 'package/');
+
+  SessionState.internalCurrent = new SessionState(
+      name, compilerHelper, compilerHelper.newIncrementalCompiler());
+
   print("Created session '$name'.");
   return new Future<int>.value(0);
 }

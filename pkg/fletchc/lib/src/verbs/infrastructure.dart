@@ -42,24 +42,22 @@ export '../driver/driver_commands.dart' show
     CommandSender;
 
 import '../driver/session_manager.dart' show
+    FletchCompiler,
+    FletchDelta,
+    FletchVmSession,
+    IncrementalCompiler,
+    IsolateController,
     SessionState,
     UserSession;
 
 export '../driver/session_manager.dart' show
+    FletchCompiler,
+    FletchDelta,
+    FletchVmSession,
+    IncrementalCompiler,
+    IsolateController,
     SessionState,
     UserSession;
-
-import '../../fletch_system.dart' show
-    FletchDelta;
-
-export '../../fletch_system.dart' show
-    FletchDelta;
-
-import '../../session.dart' show
-    FletchVmSession;
-
-export '../../session.dart' show
-    FletchVmSession;
 
 import '../diagnostic.dart' show
     DiagnosticKind,

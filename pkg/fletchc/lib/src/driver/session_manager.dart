@@ -10,6 +10,9 @@ import 'dart:async' show
 import 'driver_main.dart' show
     IsolateController;
 
+export 'driver_main.dart' show
+    IsolateController;
+
 import '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
@@ -17,8 +20,26 @@ import '../diagnostic.dart' show
 import '../../fletch_system.dart' show
     FletchDelta;
 
+export '../../fletch_system.dart' show
+    FletchDelta;
+
 import '../../session.dart' show
     FletchVmSession;
+
+export '../../session.dart' show
+    FletchVmSession;
+
+import '../../compiler.dart' show
+    FletchCompiler;
+
+export '../../compiler.dart' show
+    FletchCompiler;
+
+import '../../incremental/fletchc_incremental.dart' show
+    IncrementalCompiler;
+
+export '../../incremental/fletchc_incremental.dart' show
+    IncrementalCompiler;
 
 final Map<String, UserSession> internalSessions = <String, UserSession>{};
 
@@ -68,11 +89,15 @@ class UserSession {
 class SessionState {
   final String name;
 
+  final FletchCompiler compilerHelper;
+
+  final IncrementalCompiler compiler;
+
   FletchDelta compilationResult;
 
   FletchVmSession vmSession;
 
-  SessionState(this.name);
+  SessionState(this.name, this.compilerHelper, this.compiler);
 
   static SessionState internalCurrent;
 

@@ -57,6 +57,9 @@ import 'fletch_system.dart';
 
 import 'src/fletch_selector.dart';
 
+import 'incremental/fletchc_incremental.dart' show
+    IncrementalCompiler;
+
 const String _SDK_DIR = const String.fromEnvironment("dart-sdk");
 
 const String _FLETCH_VM = const String.fromEnvironment("fletch-vm");
@@ -282,6 +285,19 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
 
   int positionInFile(String file, int line, int column) {
     return _compiler.positionInFile(file, line, column);
+  }
+
+  /// Create a new instance of [IncrementalCompiler].
+  IncrementalCompiler newIncrementalCompiler(
+      {List<String> options: const <String>[]}) {
+    return new IncrementalCompiler(
+        libraryRoot: _compiler.libraryRoot,
+        packageRoot: _compiler.packageRoot,
+        inputProvider: _compiler.provider,
+        diagnosticHandler: _compiler.handler,
+        options: options,
+        outputProvider: _compiler.userOutputProvider,
+        environment: _compiler.environment);
   }
 }
 

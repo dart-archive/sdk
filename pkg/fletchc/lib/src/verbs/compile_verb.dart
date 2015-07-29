@@ -6,9 +6,6 @@ library fletchc.verbs.compile_verb;
 
 import 'infrastructure.dart';
 
-import '../../compiler.dart' show
-    FletchCompiler;
-
 import '../driver/exit_codes.dart' show
     COMPILER_EXITCODE_CRASH;
 
@@ -44,18 +41,16 @@ class CompileTask extends SharedTask {
 }
 
 Future<int> compileTask(String script) async {
-  // TODO(ahe): Allow user to specify dart2js options.
-  List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
-      ? <String>['--verbose'] : <String>[];
-  FletchCompiler compiler =
-      new FletchCompiler(
-          options: compilerOptions, script: script,
-          // TODO(ahe): packageRoot should be a user provided option.
-          packageRoot: 'package/' );
+  // TODO(ahe): Get base from current directory of C++ client.
+  Uri base = Uri.base;
+  Uri scriptUri = base.resolve(script);
+
+  IncrementalCompiler compiler = SessionState.current.compiler;
 
   FletchDelta result;
   try {
-    result = await compiler.run();
+    await compiler.compile(scriptUri);
+    result = compiler.computeInitialDelta();
   } catch (error, stackTrace) {
     // Don't let a compiler crash bring down the session.
     print(error);
