@@ -94,9 +94,11 @@ NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
   void* handle = reinterpret_cast<void*>(address);
   char* name = AsForeignString(String::cast(arguments[1]));
-  if (handle == NULL) handle = dlopen(NULL, RTLD_LOCAL | RTLD_LAZY);
+  bool default_lookup = handle == NULL;
+  if (default_lookup) handle = dlopen(NULL, RTLD_LOCAL | RTLD_LAZY);
   void* result = dlsym(handle, name);
   free(name);
+  if (default_lookup) dlclose(handle);
   return result != NULL
       ? process->ToInteger(reinterpret_cast<intptr_t>(result))
       : Failure::index_out_of_bounds();
@@ -114,10 +116,10 @@ NATIVE(ForeignLibraryBundlePath) {
   int wrote = snprintf(result, MAXPATHLEN + 1, "%s%s%s%s", directory,
                        ForeignUtils::kLibBundlePrefix, library,
                        ForeignUtils::kLibBundlePostfix);
+  free(library);
   if (wrote > MAXPATHLEN) {
     return Failure::index_out_of_bounds();
   }
-  free(library);
   return process->NewStringFromAscii(List<const char>(result, strlen(result)));
 }
 
