@@ -57,6 +57,26 @@ class Session;
   V(HeapObject, raw_stack_overflow)              \
   V(Object, native_failure_result)
 
+class ProgramState {
+ public:
+  ProgramState() : paused_processes_head_(NULL), is_paused_(false) {}
+
+  // The [Scheduler::pause_monitor_] must be locked when calling this method.
+  void AddPausedProcess(Process* process) ;
+
+  bool is_paused() const { return is_paused_; }
+  void set_is_paused(bool value) { is_paused_ = value; }
+
+  Process* paused_processes_head() const { return paused_processes_head_; }
+  void set_paused_processes_head(Process* value) {
+    paused_processes_head_ = value;
+  }
+
+ private:
+  Process* paused_processes_head_;
+  bool is_paused_;
+};
+
 class Program {
  public:
   Program();
@@ -126,8 +146,12 @@ class Program {
   void set_scheduler(Scheduler* scheduler) {
     ASSERT((scheduler_ == NULL && scheduler != NULL) ||
            (scheduler_ != NULL && scheduler == NULL));
+    ASSERT(program_state_.paused_processes_head() == NULL);
+    ASSERT(!program_state_.is_paused());
     scheduler_ = scheduler;
   }
+
+  ProgramState* program_state() { return &program_state_; }
 
   EventHandler* event_handler() { return &event_handler_; }
 
@@ -236,6 +260,7 @@ class Program {
   Heap heap_;
 
   Scheduler* scheduler_;
+  ProgramState program_state_;
 
   EventHandler event_handler_;
 

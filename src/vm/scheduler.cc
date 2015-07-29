@@ -55,18 +55,10 @@ Scheduler::~Scheduler() {
   }
 }
 
-void Scheduler::ProgramState::AddPausedProcess(Process* process) {
-  process->set_next(paused_processes_head_);
-  paused_processes_head_ = process;
-  ASSERT(paused_processes_head_ != paused_processes_head_->next());
-}
-
 void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
   program->set_scheduler(this);
 
   ScopedMonitorLock locker(pause_monitor_);
-  ASSERT(program_state_map_.find(program) == program_state_map_.end());
-  program_state_map_[program] = new ProgramState();
 
   // NOTE: Even though this method might be run on any thread, we don't need to
   // guard against the program being stopped, since we insert it the very first
@@ -81,10 +73,7 @@ void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
 void Scheduler::UnscheduleProgram(Program* program) {
   ScopedMonitorLock locker(pause_monitor_);
 
-  ASSERT(program_state_map_.find(program) != program_state_map_.end());
-  ProgramState* program_state = program_state_map_[program];
-  delete program_state;
-  program_state_map_.erase(program);
+  ASSERT(program->scheduler() == this);
   program->set_scheduler(NULL);
 }
 
@@ -94,12 +83,11 @@ void Scheduler::StopProgram(Program* program) {
   {
     ScopedMonitorLock pause_locker(pause_monitor_);
 
-    ASSERT(program_state_map_.find(program) != program_state_map_.end());
-    ProgramState* program_state = program_state_map_[program];
-    while (program_state->is_paused_) {
+    ProgramState* program_state = program->program_state();
+    while (program_state->is_paused()) {
       pause_monitor_->Wait();
     }
-    program_state->is_paused_ = true;
+    program_state->set_is_paused(true);
 
     pause_ = true;
 
@@ -157,19 +145,18 @@ void Scheduler::ResumeProgram(Program* program) {
   {
     ScopedMonitorLock locker(pause_monitor_);
 
-    ASSERT(program_state_map_.find(program) != program_state_map_.end());
-    ProgramState* program_state = program_state_map_[program];
-    ASSERT(program_state->is_paused_);
+    ProgramState* program_state = program->program_state();
+    ASSERT(program_state->is_paused());
 
-    Process* process = program_state->paused_processes_head_;
+    Process* process = program_state->paused_processes_head();
     while (process != NULL) {
       Process* next = process->next();
       process->set_next(NULL);
       EnqueueOnAnyThread(process);
       process = next;
     }
-    program_state->paused_processes_head_ = NULL;
-    program_state->is_paused_ = false;
+    program_state->set_paused_processes_head(NULL);
+    program_state->set_is_paused(false);
     pause_monitor_->NotifyAll();
   }
   NotifyAllThreads();
@@ -251,9 +238,9 @@ bool Scheduler::EnqueueProcessOnCurrentForeignThread(Process* process,
     ScopedMonitorLock locker(pause_monitor_);
 
     Program* program = process->program();
-    ASSERT(program_state_map_.find(program) != program_state_map_.end());
-    ProgramState* state = program_state_map_[program];
-    if (state->is_paused_) {
+    ASSERT(program->scheduler() == this);
+    ProgramState* state = program->program_state();
+    if (state->is_paused()) {
       // If the program is paused, there is no way the process can be enqueued
       // on any process queues.
       ASSERT(process->process_queue() == NULL);

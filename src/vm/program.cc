@@ -38,6 +38,13 @@ static List<const char> StringFromCharZ(const char* str) {
   return List<const char>(str, strlen(str));
 }
 
+void ProgramState::AddPausedProcess(Process* process) {
+  ASSERT(process->next() == NULL);
+  process->set_next(paused_processes_head_);
+  set_paused_processes_head(process);
+  ASSERT(paused_processes_head_ != paused_processes_head_->next());
+}
+
 Program::Program()
     : process_list_mutex_(Platform::CreateMutex()),
       process_list_head_(NULL),

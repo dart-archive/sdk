@@ -5,8 +5,6 @@
 #ifndef SRC_VM_SCHEDULER_H_
 #define SRC_VM_SCHEDULER_H_
 
-#include <unordered_map>
-
 #include "src/vm/thread_pool.h"
 
 namespace fletch {
@@ -77,16 +75,6 @@ class Scheduler {
   size_t process_count() const { return processes_; }
 
  private:
-  struct ProgramState {
-    ProgramState() : paused_processes_head_(NULL), is_paused_(false) {}
-
-    // The [Scheduler::pause_monitor_] must be locked when calling this method.
-    void AddPausedProcess(Process* process) ;
-
-    Process* paused_processes_head_;
-    bool is_paused_;
-  };
-
   const int max_threads_;
   ThreadPool thread_pool_;
   Monitor* preempt_monitor_;
@@ -102,9 +90,6 @@ class Scheduler {
   Monitor* pause_monitor_;
   std::atomic<bool> pause_;
   std::atomic<Process*>* current_processes_;
-  // TODO(kustermann): Consider moving [ProgramState] to the program object to
-  // get rid of STL usage.
-  std::unordered_map<Program*, ProgramState*> program_state_map_;
 
   GCThread* gc_thread_;
 
