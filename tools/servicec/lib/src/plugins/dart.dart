@@ -101,8 +101,8 @@ class _DartVisitor extends CodeGenerationVisitor {
 
     writeln('final Channel _channel = new Channel();');
     writeln('final Port _port = new Port(_channel);');
-    write('final Foreign _postResult = ');
-    writeln('Foreign.lookup("PostResultToService");');
+    write('final ForeignFunction _postResult = ');
+    writeln('ForeignLibrary.main.lookup("PostResultToService");');
 
     node.services.forEach(visit);
     node.structs.forEach(visit);
