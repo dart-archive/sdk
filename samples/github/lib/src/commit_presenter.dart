@@ -11,6 +11,8 @@ import 'package:immi_samples/sequenced_presenter.dart';
 import 'commit_presenter_immi.dart';
 export 'commit_presenter_immi.dart';
 
+import 'image_immi.dart';
+
 class CommitPresenter extends SequencedPresenter<CommitNode> {
   Repository _repository;
   Set<int> selectedIndices = new Set<int>();
@@ -37,6 +39,6 @@ class CommitPresenter extends SequencedPresenter<CommitNode> {
         author: json['commit']['author']['name'],
         message: json['commit']['message'],
         selected: selectedIndices.contains(index),
-        imageUrl: imageUrl);
+        image: new ImageNode(url: imageUrl));
   }
 }

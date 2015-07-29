@@ -7,3 +7,5 @@ import 'package:immi_samples/menu.immi';
 import 'package:immi_samples/sliding_window.immi';
 
 import 'src/commit_presenter.immi';
+import 'src/image.immi';
+

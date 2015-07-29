@@ -4,6 +4,7 @@
 
 #import "CellPresenter.h"
 #import "LruCache.h"
+#import "ImagePresenter.h"
 
 @interface CommitCellPresenter : UITableViewCell <CellPresenter>
 
@@ -11,7 +12,7 @@
 @property (weak, nonatomic) IBOutlet UILabel* authorLabel;
 @property (weak, nonatomic) IBOutlet UILabel* messageLabel;
 @property (weak, nonatomic) IBOutlet UILabel* detailsLabel;
-@property (weak, nonatomic) IBOutlet UIImageView* avatarImage;
+@property (weak, nonatomic) IBOutlet ImagePresenter* avatarImage;
 @property (weak, nonatomic) IBOutlet UIActivityIndicatorView* spinner;
 
 @property NSIndexPath* index;

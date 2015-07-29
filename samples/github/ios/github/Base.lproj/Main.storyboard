@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="7702" systemVersion="14D136" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="Paw-B4-2Sa">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="7702" systemVersion="14E46" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="Paw-B4-2Sa">
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="7701"/>
         <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
@@ -14,7 +14,6 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                         <prototypes>
-
                             <tableViewCell contentMode="scaleToFill" selectionStyle="none" indentationWidth="10" reuseIdentifier="LoadingCell" rowHeight="141" id="hYo-Zg-hKv" userLabel="LoadingCell" customClass="CommitCellPresenter">
                                 <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>
                                 <autoresizingMask key="autoresizingMask"/>
@@ -64,7 +63,7 @@
                                             <color key="textColor" white="0.66666666666666663" alpha="1" colorSpace="calibratedWhite"/>
                                             <nil key="highlightedColor"/>
                                         </label>
-                                        <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="w6T-LR-hDQ">
+                                        <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="w6T-LR-hDQ" customClass="ImagePresenter">
                                             <rect key="frame" x="20" y="20" width="60" height="60"/>
                                             <constraints>
                                                 <constraint firstAttribute="height" priority="999" constant="60" id="JuZ-nT-49J"/>
@@ -87,7 +86,7 @@
                                 </tableViewCellContentView>
                                 <connections>
                                     <outlet property="authorLabel" destination="RIn-LJ-dmH" id="ybN-tZ-Svv"/>
-                                    <outlet property="avatarImage" destination="w6T-LR-hDQ" id="PGU-cE-LqW"/>
+                                    <outlet property="avatarImage" destination="w6T-LR-hDQ" id="BNd-fp-co3"/>
                                     <outlet property="messageLabel" destination="FZ0-uL-deD" id="7p3-rm-QDm"/>
                                 </connections>
                             </tableViewCell>
@@ -109,7 +108,7 @@
                                             <color key="textColor" white="0.66666666666666663" alpha="1" colorSpace="calibratedWhite"/>
                                             <nil key="highlightedColor"/>
                                         </label>
-                                        <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="UmH-du-5hb">
+                                        <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="UmH-du-5hb" customClass="ImagePresenter">
                                             <rect key="frame" x="20" y="20" width="60" height="60"/>
                                             <constraints>
                                                 <constraint firstAttribute="width" priority="999" constant="60" id="fUz-WP-DET"/>
@@ -141,7 +140,7 @@
                                 </tableViewCellContentView>
                                 <connections>
                                     <outlet property="authorLabel" destination="Ia2-zX-tG2" id="pb2-6Q-Rap"/>
-                                    <outlet property="avatarImage" destination="UmH-du-5hb" id="jHE-i5-T44"/>
+                                    <outlet property="avatarImage" destination="UmH-du-5hb" id="nCk-gm-R4u"/>
                                     <outlet property="detailsLabel" destination="LrF-vb-BQa" id="aXF-zB-hO0"/>
                                     <outlet property="messageLabel" destination="lkM-ie-fVv" id="HHk-Xp-C9k"/>
                                 </connections>

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		07AEBC8F98495D7D40B118B6 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E3EF036F3882AE10C212AC /* libPods.a */; };
 		2D6E8DC71B283A6300FED492 /* dart-logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 2D6E8DC61B283A6300FED492 /* dart-logo.png */; };
+		2DA416301B638EC500660667 /* ImagePresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DA4162F1B638EC500660667 /* ImagePresenter.mm */; };
 		2DB4917D1B0C797900912DA3 /* SlidingWindowPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4917C1B0C797900912DA3 /* SlidingWindowPresenter.mm */; };
 		2DB491831B0C83D200912DA3 /* CommitCellPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */; };
 		2DB4918A1B0C9B2000912DA3 /* CommitListPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */; };
@@ -42,6 +43,8 @@
 
 /* Begin PBXFileReference section */
 		2D6E8DC61B283A6300FED492 /* dart-logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "dart-logo.png"; sourceTree = "<group>"; };
+		2DA4162E1B638EC500660667 /* ImagePresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImagePresenter.h; sourceTree = "<group>"; };
+		2DA4162F1B638EC500660667 /* ImagePresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ImagePresenter.mm; sourceTree = "<group>"; };
 		2DB4917B1B0C797900912DA3 /* SlidingWindowPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SlidingWindowPresenter.h; sourceTree = "<group>"; };
 		2DB4917C1B0C797900912DA3 /* SlidingWindowPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = SlidingWindowPresenter.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		2DB4917E1B0C806500912DA3 /* CellPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CellPresenter.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
@@ -75,10 +78,6 @@
 		DA7912491AFCEEB300E5F773 /* unicode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unicode.h; sourceTree = "<group>"; };
 		DA79124E1AFCEEE900E5F773 /* github.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = github.h; sourceTree = "<group>"; };
 		DA79124F1AFCEEE900E5F773 /* github.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = github.mm; sourceTree = "<group>"; };
-		DAEE2F351AD6AEDA00945914 /* CommitCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitCell.h; sourceTree = "<group>"; };
-		DAEE2F361AD6AEDA00945914 /* CommitCell.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitCell.mm; sourceTree = "<group>"; };
-		DAEE2F381AD6B0FB00945914 /* CommitListPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitListPresenter.h; sourceTree = "<group>"; };
-		DAEE2F3A1AD6B13400945914 /* CommitListPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CommitListPresenter.mm; sourceTree = "<group>"; };
 		DA7EF8851B0F3B7D005F8E03 /* MenuPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MenuPresenter.h; sourceTree = "<group>"; };
 		DA7EF8861B0F3B7D005F8E03 /* MenuPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MenuPresenter.mm; sourceTree = "<group>"; };
 		DADC871D1B298C90000F0BE7 /* DrawerPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DrawerPresenter.h; sourceTree = "<group>"; };
@@ -173,6 +172,8 @@
 				2DB491881B0C9B2000912DA3 /* CommitListPresenter.h */,
 				2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */,
 				DADC87231B380B4A000F0BE7 /* ViewPresenter.h */,
+				2DA4162E1B638EC500660667 /* ImagePresenter.h */,
+				2DA4162F1B638EC500660667 /* ImagePresenter.mm */,
 			);
 			path = github;
 			sourceTree = "<group>";
@@ -395,6 +396,7 @@
 				DA4370BD1AE9328D00EEE52F /* unix_ia32_hack.c in Sources */,
 				2DB4917D1B0C797900912DA3 /* SlidingWindowPresenter.mm in Sources */,
 				DA313FA81AD665A6000089F9 /* AppDelegate.mm in Sources */,
+				2DA416301B638EC500660667 /* ImagePresenter.mm in Sources */,
 				2DB491831B0C83D200912DA3 /* CommitCellPresenter.mm in Sources */,
 				DA7EF8871B0F3B7D005F8E03 /* MenuPresenter.mm in Sources */,
 				DA313FA51AD665A6000089F9 /* main.m in Sources */,
