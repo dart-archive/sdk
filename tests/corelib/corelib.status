@@ -207,7 +207,6 @@ symbol_reserved_word_test/10: MissingCompileTimeError
 symbol_reserved_word_test/12: Fail
 symbol_test/none: Fail
 unicode_test: Fail
-uri_base_test: CompileTimeError
 uri_test: Fail # Test is too old for the current SDK (uri changes).
 uri_file_test: Fail
 

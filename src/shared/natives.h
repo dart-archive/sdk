@@ -211,6 +211,8 @@ namespace fletch {
   N(StringToLowerCase,           "_StringImpl", "toLowerCase")           \
   N(StringToUpperCase,           "_StringImpl", "toUpperCase")           \
                                                                          \
+  N(UriBase,                     "Uri", "_base")                         \
+                                                                         \
   N(PortCreate,                  "Port", "_create")                      \
   N(PortClose,                   "Port", "_close")                       \
   N(PortSend,                    "Port", "send")                         \

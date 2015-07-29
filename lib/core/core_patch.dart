@@ -630,3 +630,15 @@ const patch = "patch";
 
   @fletch.native external static int _localTimeZoneOffset();
 }
+
+@patch class Uri {
+  @patch static Uri get base {
+    return new Uri.file(_base());
+  }
+
+  @patch static bool get _isWindows => false;
+
+  @fletch.native static String _base() {
+    throw new RangeError("The Uri.base path is too large");
+  }
+}

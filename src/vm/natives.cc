@@ -9,6 +9,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include "src/shared/bytecodes.h"
 #include "src/shared/flags.h"
@@ -1197,6 +1198,18 @@ NATIVE(DateTimeTimeZoneOffset) {
 NATIVE(DateTimeLocalTimeZoneOffset) {
   int offset = Platform::GetLocalTimeZoneOffset();
   return process->ToInteger(offset);
+}
+
+NATIVE(UriBase) {
+  char* buffer = reinterpret_cast<char*>(malloc(PATH_MAX + 1));
+  char* path = getcwd(buffer, PATH_MAX);
+  if (path == NULL) return Failure::index_out_of_bounds();
+  int length = strlen(path);
+  path[length++] = '/';
+  path[length] = 0;
+  Object* result = process->NewStringFromAscii(List<const char>(path, length));
+  free(buffer);
+  return result;
 }
 
 NATIVE(SystemGetEventHandler) {
