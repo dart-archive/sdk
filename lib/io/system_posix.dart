@@ -56,32 +56,52 @@ abstract class AddrInfo extends Struct {
 
   int get ai_addrlen => getInt32(_addrlenOffset);
 
-  Foreign get ai_addr;
+  ForeignMemory get ai_addr;
   get ai_canonname;
   AddrInfo get ai_next;
 }
 
 abstract class PosixSystem implements System {
-  static final Foreign _accept = Foreign.lookup("accept");
-  static final Foreign _access = Foreign.lookup("access");
-  static final Foreign _bind = Foreign.lookup("bind");
-  static final Foreign _close = Foreign.lookup("close");
-  static final Foreign _connect = Foreign.lookup("connect");
-  static final Foreign _fcntl = Foreign.lookup("fcntl");
-  static final Foreign _freeaddrinfo = Foreign.lookup("freeaddrinfo");
-  static final Foreign _getaddrinfo = Foreign.lookup("getaddrinfo");
-  static final Foreign _getsockname = Foreign.lookup("getsockname");
-  static final Foreign _ioctl = Foreign.lookup("ioctl");
-  static final Foreign _listen = Foreign.lookup("listen");
-  static final Foreign _memcpy = Foreign.lookup("memcpy");
-  static final Foreign _mkstemp = Foreign.lookup("mkstemp");
-  static final Foreign _nanosleep = Foreign.lookup("nanosleep");
-  static final Foreign _read = Foreign.lookup("read");
-  static final Foreign _setsockopt = Foreign.lookup("setsockopt");
-  static final Foreign _shutdown = Foreign.lookup("shutdown");
-  static final Foreign _socket = Foreign.lookup("socket");
-  static final Foreign _unlink = Foreign.lookup("unlink");
-  static final Foreign _write = Foreign.lookup("write");
+  static final ForeignFunction _accept =
+      ForeignLibrary.main.lookup("accept");
+  static final ForeignFunction _access =
+      ForeignLibrary.main.lookup("access");
+  static final ForeignFunction _bind =
+      ForeignLibrary.main.lookup("bind");
+  static final ForeignFunction _close =
+      ForeignLibrary.main.lookup("close");
+  static final ForeignFunction _connect =
+      ForeignLibrary.main.lookup("connect");
+  static final ForeignFunction _fcntl =
+      ForeignLibrary.main.lookup("fcntl");
+  static final ForeignFunction _freeaddrinfo =
+      ForeignLibrary.main.lookup("freeaddrinfo");
+  static final ForeignFunction _getaddrinfo =
+      ForeignLibrary.main.lookup("getaddrinfo");
+  static final ForeignFunction _getsockname =
+      ForeignLibrary.main.lookup("getsockname");
+  static final ForeignFunction _ioctl =
+      ForeignLibrary.main.lookup("ioctl");
+  static final ForeignFunction _listen =
+      ForeignLibrary.main.lookup("listen");
+  static final ForeignFunction _memcpy =
+      ForeignLibrary.main.lookup("memcpy");
+  static final ForeignFunction _mkstemp =
+      ForeignLibrary.main.lookup("mkstemp");
+  static final ForeignFunction _nanosleep =
+      ForeignLibrary.main.lookup("nanosleep");
+  static final ForeignFunction _read =
+      ForeignLibrary.main.lookup("read");
+  static final ForeignFunction _setsockopt =
+      ForeignLibrary.main.lookup("setsockopt");
+  static final ForeignFunction _shutdown =
+      ForeignLibrary.main.lookup("shutdown");
+  static final ForeignFunction _socket =
+      ForeignLibrary.main.lookup("socket");
+  static final ForeignFunction _unlink =
+      ForeignLibrary.main.lookup("unlink");
+  static final ForeignFunction _write =
+      ForeignLibrary.main.lookup("write");
 
   int get FIONREAD;
 
@@ -89,28 +109,28 @@ abstract class PosixSystem implements System {
 
   int get SO_REUSEADDR;
 
-  Foreign get _open;
-  Foreign get _lseek;
+  ForeignFunction get _open;
+  ForeignFunction get _lseek;
 
   int socket() {
     return _retry(() => _socket.icall$3(AF_INET, SOCK_STREAM, 0));
   }
 
   InternetAddress lookup(String host) {
-    Foreign node = new Foreign.fromString(host);
+    ForeignMemory node = new ForeignMemory.fromString(host);
     // TODO(ajohnsen): Actually apply hints.
     AddrInfo hints = new AddrInfo();
     // TODO(ajohnsen): Allow IPv6 results.
     hints.ai_family = AF_INET;
     Struct result = new Struct(1);
     int status = _retry(() => _getaddrinfo.icall$4(node,
-                                                   Foreign.NULL,
+                                                   ForeignPointer.NULL,
                                                    hints,
                                                    result));
     AddrInfo start = new AddrInfo.fromAddress(result.getField(0));
     AddrInfo info = start;
     var address;
-    while (info.value != 0) {
+    while (info.address != 0) {
       int length;
       int offset;
       // Loop until we find the right type.
@@ -124,7 +144,7 @@ abstract class PosixSystem implements System {
         info = info.ai_next;
         continue;
       }
-      Foreign addr = info.ai_addr;
+      ForeignMemory addr = info.ai_addr;
       List<int> bytes = new List<int>(length);
       addr.copyBytesToList(bytes, offset, offset + length, 0);
       address = new _InternetAddress(bytes);
@@ -145,7 +165,7 @@ abstract class PosixSystem implements System {
       if (append) flags = flags | O_TRUNC;
     }
     flags |= O_CLOEXEC;
-    Foreign cPath = new Foreign.fromString(path);
+    ForeignMemory cPath = new ForeignMemory.fromString(path);
     int fd = _retry(() => _open.icall$2(cPath, flags));
     cPath.free();
     return fd;
@@ -156,7 +176,7 @@ abstract class PosixSystem implements System {
   }
 
   TempFile mkstemp(String path) {
-    Foreign cPath = new Foreign.fromString(path + "XXXXXX");
+    ForeignMemory cPath = new ForeignMemory.fromString(path + "XXXXXX");
     int result = _retry(() => _mkstemp.icall$1(cPath));
     if (result != -1) {
       var bytes = new List(cPath.length - 1);
@@ -168,21 +188,21 @@ abstract class PosixSystem implements System {
   }
 
   int access(String path) {
-    Foreign cPath = new Foreign.fromString(path);
+    ForeignMemory cPath = new ForeignMemory.fromString(path);
     int result = _retry(() => _access.icall$2(cPath, 0));
     cPath.free();
     return result;
   }
 
   int unlink(String path) {
-    Foreign cPath = new Foreign.fromString(path);
+    ForeignMemory cPath = new ForeignMemory.fromString(path);
     int result = _retry(() => _unlink.icall$1(cPath));
     cPath.free();
     return result;
   }
 
   int bind(int fd, _InternetAddress address, int port) {
-    Foreign sockaddr = _createSocketAddress(address, port);
+    ForeignMemory sockaddr = _createSocketAddress(address, port);
     int status = _retry(() => _bind.icall$3(fd, sockaddr, sockaddr.length));
     sockaddr.free();
     return status;
@@ -205,13 +225,14 @@ abstract class PosixSystem implements System {
   }
 
   int accept(int fd) {
-    return _retry(() => _accept.icall$3(fd, Foreign.NULL, Foreign.NULL));
+    return _retry(() => _accept.icall$3(fd, ForeignPointer.NULL,
+                                        ForeignPointer.NULL));
   }
 
   int port(int fd) {
     const int LENGTH = 28;
-    var sockaddr = new Foreign.allocated(LENGTH);
-    var addrlen = new Foreign.allocated(4);
+    var sockaddr = new ForeignMemory.allocated(LENGTH);
+    var addrlen = new ForeignMemory.allocated(4);
     addrlen.setInt32(0, LENGTH);
     int status = _retry(() => _getsockname.icall$3(fd, sockaddr, addrlen));
     int port = -1;
@@ -225,7 +246,7 @@ abstract class PosixSystem implements System {
   }
 
   int connect(int fd, _InternetAddress address, int port) {
-    Foreign sockaddr = _createSocketAddress(address, port);
+    ForeignMemory sockaddr = _createSocketAddress(address, port);
     int status = _retry(() => _connect.icall$3(fd, sockaddr, sockaddr.length));
     sockaddr.free();
     return status;
@@ -257,13 +278,13 @@ abstract class PosixSystem implements System {
 
   int read(int fd, var buffer, int offset, int length) {
     _rangeCheck(buffer, offset, length);
-    var address = buffer.getForeign().value + offset;
+    var address = buffer.getForeign().address + offset;
     return _retry(() => _read.icall$3(fd, address, length));
   }
 
   int write(int fd, var buffer, int offset, int length) {
     _rangeCheck(buffer, offset, length);
-    var address = buffer.getForeign().value + offset;
+    var address = buffer.getForeign().address + offset;
     return _retry(() => _write.icall$3(fd, address, length));
   }
 
@@ -272,8 +293,8 @@ abstract class PosixSystem implements System {
               var src,
               int srcOffset,
               int length) {
-    var destAddress = dest.getForeign().value + destOffset;
-    var srcAddress = src.getForeign().value + srcOffset;
+    var destAddress = dest.getForeign().address + destOffset;
+    var srcAddress = src.getForeign().address + srcOffset;
     _memcpy.icall$3(destAddress, srcAddress, length);
   }
 
@@ -304,18 +325,18 @@ abstract class PosixSystem implements System {
     }
   }
 
-  Foreign _createSocketAddress(_InternetAddress address, int port) {
+  ForeignMemory _createSocketAddress(_InternetAddress address, int port) {
     var bytes = address._bytes;
-    Foreign sockaddr;
+    ForeignMemory sockaddr;
     int length;
     if (bytes.length == 4) {
       length = 16;
-      sockaddr = new Foreign.allocated(length);
+      sockaddr = new ForeignMemory.allocated(length);
       sockaddr.setUint16(0, AF_INET);
       sockaddr.copyBytesFromList(bytes, 4, 8, 0);
     } else if (bytes.length == 16) {
       length = 28;
-      sockaddr = new Foreign.allocated(length);
+      sockaddr = new ForeignMemory.allocated(length);
       sockaddr.setUint16(0, AF_INET6);
       sockaddr.copyBytesFromList(bytes, 8, 24, 0);
     } else {

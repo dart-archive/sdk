@@ -134,59 +134,72 @@ namespace fletch {
   N(StopwatchFrequency,          "Stopwatch", "_frequency")              \
   N(StopwatchNow,                "Stopwatch", "_now")                    \
                                                                          \
-  N(ForeignLookup,               "Foreign", "_lookup")                   \
-  N(ForeignAllocate,             "Foreign", "_allocate")                 \
-  N(ForeignFree,                 "Foreign", "_free")                     \
-  N(ForeignMarkForFinalization,  "Foreign", "_markForFinalization")      \
+  N(ForeignLibraryLookup,        "ForeignLibrary", "_lookupLibrary")     \
+  N(ForeignLibraryClose,         "ForeignLibrary", "_closeLibrary")      \
+  N(ForeignLibraryGetFunction,   "ForeignLibrary", "_lookupFunction")    \
+  N(ForeignLibraryBundlePath,    "ForeignLibrary", "bundleLibraryName")  \
+                                                                         \
   N(ForeignBitsPerWord,          "Foreign", "_bitsPerMachineWord")       \
   N(ForeignErrno,                "Foreign", "_errno")                    \
   N(ForeignPlatform,             "Foreign", "_platform")                 \
   N(ForeignArchitecture,         "Foreign", "_architecture")             \
   N(ForeignConvertPort,          "Foreign", "_convertPort")              \
                                                                          \
-  N(ForeignICall0,               "Foreign", "_icall$0")                  \
-  N(ForeignICall1,               "Foreign", "_icall$1")                  \
-  N(ForeignICall2,               "Foreign", "_icall$2")                  \
-  N(ForeignICall3,               "Foreign", "_icall$3")                  \
-  N(ForeignICall4,               "Foreign", "_icall$4")                  \
-  N(ForeignICall5,               "Foreign", "_icall$5")                  \
-  N(ForeignICall6,               "Foreign", "_icall$6")                  \
+  N(ForeignICall0,               "ForeignFunction", "_icall$0")          \
+  N(ForeignICall1,               "ForeignFunction", "_icall$1")          \
+  N(ForeignICall2,               "ForeignFunction", "_icall$2")          \
+  N(ForeignICall3,               "ForeignFunction", "_icall$3")          \
+  N(ForeignICall4,               "ForeignFunction", "_icall$4")          \
+  N(ForeignICall5,               "ForeignFunction", "_icall$5")          \
+  N(ForeignICall6,               "ForeignFunction", "_icall$6")          \
                                                                          \
-  N(ForeignVCall0,               "Foreign", "_vcall$0")                  \
-  N(ForeignVCall1,               "Foreign", "_vcall$1")                  \
-  N(ForeignVCall2,               "Foreign", "_vcall$2")                  \
-  N(ForeignVCall3,               "Foreign", "_vcall$3")                  \
-  N(ForeignVCall4,               "Foreign", "_vcall$4")                  \
-  N(ForeignVCall5,               "Foreign", "_vcall$5")                  \
-  N(ForeignVCall6,               "Foreign", "_vcall$6")                  \
+  N(ForeignPCall0,               "ForeignFunction", "_pcall$0")          \
+  N(ForeignPCall1,               "ForeignFunction", "_pcall$1")          \
+  N(ForeignPCall2,               "ForeignFunction", "_pcall$2")          \
+  N(ForeignPCall3,               "ForeignFunction", "_pcall$3")          \
+  N(ForeignPCall4,               "ForeignFunction", "_pcall$4")          \
+  N(ForeignPCall5,               "ForeignFunction", "_pcall$5")          \
+  N(ForeignPCall6,               "ForeignFunction", "_pcall$6")          \
                                                                          \
-  N(ForeignLCallwLw,             "Foreign", "_Lcall$wLw")                \
+  N(ForeignVCall0,               "ForeignFunction", "_vcall$0")          \
+  N(ForeignVCall1,               "ForeignFunction", "_vcall$1")          \
+  N(ForeignVCall2,               "ForeignFunction", "_vcall$2")          \
+  N(ForeignVCall3,               "ForeignFunction", "_vcall$3")          \
+  N(ForeignVCall4,               "ForeignFunction", "_vcall$4")          \
+  N(ForeignVCall5,               "ForeignFunction", "_vcall$5")          \
+  N(ForeignVCall6,               "ForeignFunction", "_vcall$6")          \
                                                                          \
-  N(ForeignGetInt8,              "Foreign", "_getInt8")                  \
-  N(ForeignGetInt16,             "Foreign", "_getInt16")                 \
-  N(ForeignGetInt32,             "Foreign", "_getInt32")                 \
-  N(ForeignGetInt64,             "Foreign", "_getInt64")                 \
+  N(ForeignLCallwLw,             "ForeignFunction", "_Lcall$wLw")        \
                                                                          \
-  N(ForeignSetInt8,              "Foreign", "_setInt8")                  \
-  N(ForeignSetInt16,             "Foreign", "_setInt16")                 \
-  N(ForeignSetInt32,             "Foreign", "_setInt32")                 \
-  N(ForeignSetInt64,             "Foreign", "_setInt64")                 \
+  N(ForeignMarkForFinalization,  "ForeignMemory", "_markForFinalization")\
+  N(ForeignAllocate,             "ForeignMemory", "_allocate")           \
+  N(ForeignFree,                 "ForeignMemory", "_free")               \
                                                                          \
-  N(ForeignGetUint8,             "Foreign", "_getUint8")                 \
-  N(ForeignGetUint16,            "Foreign", "_getUint16")                \
-  N(ForeignGetUint32,            "Foreign", "_getUint32")                \
-  N(ForeignGetUint64,            "Foreign", "_getUint64")                \
+  N(ForeignGetInt8,              "ForeignMemory", "_getInt8")            \
+  N(ForeignGetInt16,             "ForeignMemory", "_getInt16")           \
+  N(ForeignGetInt32,             "ForeignMemory", "_getInt32")           \
+  N(ForeignGetInt64,             "ForeignMemory", "_getInt64")           \
                                                                          \
-  N(ForeignSetUint8,             "Foreign", "_setUint8")                 \
-  N(ForeignSetUint16,            "Foreign", "_setUint16")                \
-  N(ForeignSetUint32,            "Foreign", "_setUint32")                \
-  N(ForeignSetUint64,            "Foreign", "_setUint64")                \
+  N(ForeignSetInt8,              "ForeignMemory", "_setInt8")            \
+  N(ForeignSetInt16,             "ForeignMemory", "_setInt16")           \
+  N(ForeignSetInt32,             "ForeignMemory", "_setInt32")           \
+  N(ForeignSetInt64,             "ForeignMemory", "_setInt64")           \
                                                                          \
-  N(ForeignGetFloat32,            "Foreign", "_getFloat32")              \
-  N(ForeignGetFloat64,            "Foreign", "_getFloat64")              \
+  N(ForeignGetUint8,             "ForeignMemory", "_getUint8")           \
+  N(ForeignGetUint16,            "ForeignMemory", "_getUint16")          \
+  N(ForeignGetUint32,            "ForeignMemory", "_getUint32")          \
+  N(ForeignGetUint64,            "ForeignMemory", "_getUint64")          \
                                                                          \
-  N(ForeignSetFloat32,            "Foreign", "_setFloat32")              \
-  N(ForeignSetFloat64,            "Foreign", "_setFloat64")              \
+  N(ForeignSetUint8,             "ForeignMemory", "_setUint8")           \
+  N(ForeignSetUint16,            "ForeignMemory", "_setUint16")          \
+  N(ForeignSetUint32,            "ForeignMemory", "_setUint32")          \
+  N(ForeignSetUint64,            "ForeignMemory", "_setUint64")          \
+                                                                         \
+  N(ForeignGetFloat32,           "ForeignMemory", "_getFloat32")         \
+  N(ForeignGetFloat64,           "ForeignMemory", "_getFloat64")         \
+                                                                         \
+  N(ForeignSetFloat32,           "ForeignMemory", "_setFloat32")         \
+  N(ForeignSetFloat64,           "ForeignMemory", "_setFloat64")         \
                                                                          \
   N(StringAdd,                   "_StringImpl", "+")                     \
   N(StringCodeUnitAt,            "_StringImpl", "codeUnitAt")            \

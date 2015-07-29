@@ -19,9 +19,9 @@ class LinuxAddrInfo extends AddrInfo {
   LinuxAddrInfo() : super._();
   LinuxAddrInfo.fromAddress(int address) : super._fromAddress(address);
 
-  Foreign get ai_addr {
+  ForeignMemory get ai_addr {
     int offset = _addrlenOffset + wordSize;
-    return new Foreign.fromAddress(getWord(offset), ai_addrlen);
+    return new ForeignMemory.fromAddress(getWord(offset), ai_addrlen);
   }
 
   get ai_canonname {
@@ -35,7 +35,7 @@ class LinuxAddrInfo extends AddrInfo {
   }
 }
 
-class EpollEvent extends Foreign {
+class EpollEvent extends ForeignMemory {
   // epoll_event is packed on ia32/x64, but not on arm.
   static int eventSize = Foreign.architecture == Foreign.ARM ? 8 : 4;
 
@@ -53,9 +53,12 @@ class EpollEvent extends Foreign {
 }
 
 class LinuxSystem extends PosixSystem {
-  static final Foreign _epollCtl = Foreign.lookup("epoll_ctl");
-  static final Foreign _lseekLinux = Foreign.lookup("lseek64");
-  static final Foreign _openLinux = Foreign.lookup("open64");
+  static final ForeignFunction _epollCtl =
+      ForeignLibrary.main.lookup("epoll_ctl");
+  static final ForeignFunction _lseekLinux =
+      ForeignLibrary.main.lookup("lseek64");
+  static final ForeignFunction _openLinux =
+      ForeignLibrary.main.lookup("open64");
 
   final EpollEvent _epollEvent = new EpollEvent();
 
@@ -65,8 +68,8 @@ class LinuxSystem extends PosixSystem {
 
   int get SO_REUSEADDR => 2;
 
-  Foreign get _lseek => _lseekLinux;
-  Foreign get _open => _openLinux;
+  ForeignFunction get _lseek => _lseekLinux;
+  ForeignFunction get _open => _openLinux;
 
   int addToEventHandler(int fd) {
     _epollEvent.events = 0;
@@ -79,7 +82,8 @@ class LinuxSystem extends PosixSystem {
     // TODO(ajohnsen): If we increased the refcount of the port before adding it
     // to the epoll set and we remove it now, we can leak memory.
     int eh = System.eventHandler;
-    return _retry(() => _epollCtl.icall$4(eh, EPOLL_CTL_DEL, fd, Foreign.NULL));
+    return _retry(() => _epollCtl.icall$4(eh, EPOLL_CTL_DEL, fd,
+                                          ForeignPointer.NULL));
   }
 
   int setPortForNextEvent(int fd, Port port, int mask) {

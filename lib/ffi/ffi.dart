@@ -11,6 +11,10 @@ import 'dart:_fletch_system' as fletch;
 import 'dart:fletch';
 
 class Foreign {
+  int _value;
+
+  Foreign._(this._value);
+
   static const int UNKNOWN = 0;
 
   static const int LINUX   = 1;
@@ -20,48 +24,234 @@ class Foreign {
   static const int X64     = 2;
   static const int ARM     = 3;
 
-  static final Foreign NULL = new Foreign();
-
-  int _value;
-  int _length;
-
-  Foreign() : _value = 0, _length = 0;
-
-  Foreign.allocated(this._length) {
-    _value = _allocate(_length);
-  }
-
-  Foreign.allocatedFinalize(this._length) {
-    _value = _allocate(_length);
-    _markForFinalization();
-  }
-
-  Foreign.fromAddress(this._value, this._length);
-
-  Foreign.fromAddressFinalize(this._value, this._length) {
-    _markForFinalization();
-  }
-
-  factory Foreign.fromString(String str) {
-    var foreign = new Foreign.allocated(str.length + 1);
-    for (int i = 0; i < str.length; i++) {
-      foreign.setUint8(i, str.codeUnitAt(i));
-    }
-    return foreign;
-  }
-
-  static Foreign lookup(String name, {String library}) {
-    if (library != null && library.isEmpty) library = null;
-    return new Foreign.fromAddress(_lookup(name, library), 0);
-  }
-
   // TODO(kasperl): Not quite sure where this fits in.
   static final int bitsPerMachineWord = _bitsPerMachineWord();
   static final int platform = _platform();
   static final int architecture = _architecture();
 
-  int get value => _value;
+  static int get errno => _errno();
+
+  // Helper for converting the argument to a machine word.
+  int _convert(argument) {
+    if (argument is Foreign) return argument._value;
+    if (argument is Port) return _convertPort(argument);
+    if (argument is int) return argument;
+    throw new ArgumentError();
+  }
+
+  @fletch.native external static int _bitsPerMachineWord();
+  @fletch.native external static int _errno();
+  @fletch.native external static int _platform();
+  @fletch.native external static int _architecture();
+  @fletch.native external static int _convertPort(Port port);
+
+}
+
+class ForeignFunction extends Foreign {
+  int get address => _value;
+
+  ForeignFunction.fromAddress(int value) : super._(value);
+
+  // Support for calling foreign functions that return
+  // integers.
+  int icall$0() => _icall$0(_value);
+  int icall$1(a0) => _icall$1(_value, _convert(a0));
+  int icall$2(a0, a1) => _icall$2(_value, _convert(a0), _convert(a1));
+  int icall$3(a0, a1, a2) {
+    return _icall$3(_value, _convert(a0), _convert(a1), _convert(a2));
+  }
+  int icall$4(a0, a1, a2, a3) {
+    return _icall$4(_value, _convert(a0), _convert(a1), _convert(a2),
+                    _convert(a3));
+  }
+  int icall$5(a0, a1, a2, a3, a4) {
+    return _icall$5(_value, _convert(a0), _convert(a1), _convert(a2),
+                    _convert(a3), _convert(a4));
+  }
+  int icall$6(a0, a1, a2, a3, a4, a5) {
+    return _icall$6(_value, _convert(a0), _convert(a1), _convert(a2),
+                    _convert(a3), _convert(a4), _convert(a5));
+  }
+
+  // Support for calling foreign functions that return
+  // machine words -- typically pointers -- encapulated in
+  // the given foreign object arguments.
+  ForeignPointer pcall$0(ForeignPointer p) {
+    p._value = _pcall$0(_value);
+    return p;
+  }
+  ForeignPointer pcall$1(ForeignPointer p, a0) {
+    p._value = _pcall$1(_value, a0);
+    return p;
+  }
+  ForeignPointer pcall$2(ForeignPointer p, a0, a1) {
+    p._value = _pcall$2(_value, _convert(a0), _convert(a1));
+    return p;
+  }
+  ForeignPointer pcall$3(ForeignPointer p, a0, a1, a2) {
+    p._value = _pcall$3(_value, _convert(a0), _convert(a1), _convert(a2));
+    return p;
+  }
+  ForeignPointer pcall$4(ForeignPointer p, a0, a1, a2, a3) {
+    p._value = _pcall$4(_value, _convert(a0), _convert(a1), _convert(a2),
+                        _convert(a3));
+  }
+  ForeignPointer pcall$5(ForeignPointer p, a0, a1, a2, a3, a4) {
+    p._value = _pcall$5(_value, _convert(a0), _convert(a1), _convert(a2),
+                        _convert(a3), _convert(a4));
+    return p;
+  }
+  ForeignPointer pcall$6(ForeignPointer p, a0, a1, a2, a3, a4, a5) {
+    p._value = _pcall$6(_value, _convert(a0), _convert(a1), _convert(a2),
+                        _convert(a3), _convert(a4), _convert(a5));
+    return p;
+  }
+
+  // Support for calling foreign functions with no return value.
+  void vcall$0() {
+    _vcall$0(_value);
+  }
+  void vcall$1(a0) {
+    _vcall$1(_value, _convert(a0));
+  }
+  void vcall$2(a0, a1) {
+    _vcall$2(_value, _convert(a0), _convert(a1));
+  }
+  void vcall$3(a0, a1, a2) {
+    _vcall$3(_value, _convert(a0), _convert(a1), _convert(a2));
+  }
+  void vcall$4(a0, a1, a2, a3) {
+    _vcall$4(_value, _convert(a0), _convert(a1), _convert(a2),_convert(a3));
+  }
+  void vcall$5(a0, a1, a2, a3, a4) {
+    _vcall$5(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
+             _convert(a4));
+  }
+  void vcall$6(a0, a1, a2, a3, a4, a5) {
+    _vcall$6(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
+             _convert(a4), _convert(a5));
+  }
+
+  // TODO(ricow): this is insanely specific and only used for rseek.
+  // Support for calling foreign functions that
+  //  - Returns a 64 bit integer value.
+  //  - Takes:
+  //    * a word,
+  //    * a 64 bit int
+  //    * a word
+  int Lcall$wLw(a0, a1, a2) {
+    return _Lcall$wLw(_value,
+                      _convert(a0),
+                      _convert(a1),
+                      _convert(a2));
+  }
+
+  @fletch.native external static int _icall$0(int address);
+  @fletch.native external static int _icall$1(int address, a0);
+  @fletch.native external static int _icall$2(int address, a0, a1);
+  @fletch.native external static int _icall$3(int address, a0, a1, a2);
+  @fletch.native external static int _icall$4(int address, a0, a1, a2, a3);
+  @fletch.native external static int _icall$5(int address, a0, a1, a2, a3, a4);
+  @fletch.native external static int _icall$6(
+      int address, a0, a1, a2, a3, a4, a5);
+
+  @fletch.native external static int _pcall$0(int address);
+  @fletch.native external static int _pcall$1(int address, a0);
+  @fletch.native external static int _pcall$2(int address, a0, a1);
+  @fletch.native external static int _pcall$3(int address, a0, a1, a2);
+  @fletch.native external static int _pcall$4(int address, a0, a1, a2, a3);
+  @fletch.native external static int _pcall$5(int address, a0, a1, a2, a3, a4);
+  @fletch.native external static int _pcall$6(
+      int address, a0, a1, a2, a3, a4, a5);
+
+  @fletch.native external static int _vcall$0(int address);
+  @fletch.native external static int _vcall$1(int address, a0);
+  @fletch.native external static int _vcall$2(int address, a0, a1);
+  @fletch.native external static int _vcall$3(int address, a0, a1, a2);
+  @fletch.native external static int _vcall$4(int address, a0, a1, a2, a3);
+  @fletch.native external static int _vcall$5(int address, a0, a1, a2, a3, a4);
+  @fletch.native external static int _vcall$6(
+      int address, a0, a1, a2, a3, a4, a5);
+
+  @fletch.native external static int _Lcall$wLw(int address, a0, a1, a2);
+}
+
+class ForeignPointer extends Foreign {
+  int get address => _value;
+  ForeignPointer.fromAddress(int address) : super._(address);
+  ForeignPointer() : super._(0);
+
+  static final ForeignPointer NULL = new ForeignPointer();
+
+}
+
+class ForeignLibrary extends ForeignPointer {
+  /// The ForeignLibrary main is used for looking up functions in the libraries
+  /// linked in to the main Fletch binary.
+  static ForeignLibrary main = new ForeignLibrary.fromName(null);
+
+  ForeignLibrary.fromAddress(int address) : super.fromAddress(address);
+
+  factory ForeignLibrary.fromName(String name) {
+    return new ForeignLibrary.fromAddress(_lookupLibrary(name));
+  }
+
+  ForeignFunction lookup(String name) {
+    return new ForeignFunction.fromAddress(_lookupFunction(_value, name));
+  }
+
+  /// Provides a platform specific location for a library relative to the
+  /// location of the Fletch vm. Takes the name without lib in front and
+  /// returns a platform specific path. Example, on linux, foobar_hash
+  /// become PATH_TO_EXECUTABLE/lib/libfoobar_hash.so.
+  @fletch.native external static String bundleLibraryName(String libraryName);
+
+  void close() {
+    _closeLibrary(_value);
+  }
+
+  @fletch.native static int _lookupLibrary(String name) {
+    var error = fletch.nativeError;
+    throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
+  }
+
+  @fletch.native static int _lookupFunction(int _value, String name) {
+    var error = fletch.nativeError;
+    throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
+  }
+
+  @fletch.native static int _closeLibrary(int _value) {
+    var error = fletch.nativeError;
+    throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
+  }
+}
+
+class ForeignMemory extends ForeignPointer {
+  int _length;
   int get length => _length;
+
+  ForeignMemory.fromAddress(int address, this._length) :
+      super.fromAddress(address);
+
+  ForeignMemory.fromForeignPointer(ForeignPointer pointer, this._length) :
+      super.fromAddress(pointer.address);
+
+  ForeignMemory.allocated(this._length) {
+    _value = _allocate(_length);
+  }
+
+  ForeignMemory.allocatedFinalize(this._length) {
+    _value = _allocate(_length);
+    _markForFinalization();
+  }
+
+  factory ForeignMemory.fromString(String str) {
+    var memory = new ForeignMemory.allocated(str.length + 1);
+    for (int i = 0; i < str.length; i++) {
+      memory.setUint8(i, str.codeUnitAt(i));
+    }
+    return memory;
+  }
 
   int getInt8(int offset)
       => _getInt8(_computeAddress(offset, 1));
@@ -109,6 +299,13 @@ class Foreign {
   double setFloat64(int offset, double value)
       => _setFloat64(_computeAddress(offset, 8), value);
 
+  // Helper for checking bounds and computing derived
+  // addresses for memory address functionality.
+  int _computeAddress(int offset, int n) {
+    if (offset < 0 || offset + n > _length) throw new IndexError(offset, this);
+    return _value + offset;
+  }
+
   void copyBytesToList(List<int> list, int from, int to, int listOffset) {
     int length = to - from;
     for (int i = 0; i < length; i++) {
@@ -128,126 +325,6 @@ class Foreign {
     _value = 0;
     _length = 0;
   }
-
-  // Support for calling foreign functions that return
-  // machine words as immediate integer value.
-  int icall$0() => _icall$0(_value);
-  int icall$1(a0) => _icall$1(_value, _convert(a0));
-  int icall$2(a0, a1) => _icall$2(_value, _convert(a0), _convert(a1));
-  int icall$3(a0, a1, a2) {
-    return _icall$3(_value, _convert(a0), _convert(a1), _convert(a2));
-  }
-  int icall$4(a0, a1, a2, a3) {
-    return _icall$4(_value, _convert(a0), _convert(a1), _convert(a2),
-                    _convert(a3));
-  }
-  int icall$5(a0, a1, a2, a3, a4) {
-    return _icall$5(_value, _convert(a0), _convert(a1), _convert(a2),
-                    _convert(a3), _convert(a4));
-  }
-  int icall$6(a0, a1, a2, a3, a4, a5) {
-    return _icall$6(_value, _convert(a0), _convert(a1), _convert(a2),
-                    _convert(a3), _convert(a4), _convert(a5));
-  }
-
-  // Support for calling foreign functions with no return value.
-  void vcall$0() {
-    _vcall$0(_value);
-  }
-  void vcall$1(a0) {
-    _vcall$1(_value, _convert(a0));
-  }
-  void vcall$2(a0, a1) {
-    _vcall$2(_value, _convert(a0), _convert(a1));
-  }
-  void vcall$3(a0, a1, a2) {
-    _vcall$3(_value, _convert(a0), _convert(a1), _convert(a2));
-  }
-  void vcall$4(a0, a1, a2, a3) {
-    _vcall$4(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3));
-  }
-  void vcall$5(a0, a1, a2, a3, a4) {
-    _vcall$5(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
-             _convert(a4));
-  }
-  void vcall$6(a0, a1, a2, a3, a4, a5) {
-    _vcall$6(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
-             _convert(a4), _convert(a5));
-  }
-
-  // Support for calling foreign functions that
-  //  - Returns a 64 bit integer value.
-  //  - Takes:
-  //    * a word,
-  //    * a 64 bit int
-  //    * a word
-  int Lcall$wLw(a0, a1, a2) {
-    return _Lcall$wLw(_value,
-                      _convert(a0),
-                      _convert(a1),
-                      _convert(a2));
-  }
-
-  // Support for calling foreign functions that return
-  // machine words -- typically pointers -- encapulated in
-  // the given foreign object arguments.
-  Foreign pcall$0(Foreign foreign) {
-    foreign._value = _icall$0(_value);
-    return foreign;
-  }
-
-  Foreign pcall$1(Foreign foreign, a0) {
-    foreign._value = _icall$1(_value, _convert(a0));
-    return foreign;
-  }
-
-  Foreign pcall$2(Foreign foreign, a0, a1) {
-    foreign._value = _icall$2(_value, _convert(a0), _convert(a1));
-    return foreign;
-  }
-
-  static int get errno => _errno();
-
-  // Helper for checking bounds and computing derived
-  // address for memory address functionality.
-  int _computeAddress(int offset, int n) {
-    if (offset < 0 || offset + n > _length) throw new IndexError(offset, this);
-    return _value + offset;
-  }
-
-  // Helper for converting the argument to a machine word.
-  int _convert(argument) {
-    if (argument is Foreign) return argument._value;
-    if (argument is Port) return _convertPort(argument);
-    if (argument is int) return argument;
-    throw new ArgumentError();
-  }
-
-  // Natives needed for FFI support.
-  @fletch.native static int _lookup(String name, String library) {
-    var error = fletch.nativeError;
-    throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
-  }
-
-  @fletch.native external static int _icall$0(int address);
-  @fletch.native external static int _icall$1(int address, a0);
-  @fletch.native external static int _icall$2(int address, a0, a1);
-  @fletch.native external static int _icall$3(int address, a0, a1, a2);
-  @fletch.native external static int _icall$4(int address, a0, a1, a2, a3);
-  @fletch.native external static int _icall$5(int address, a0, a1, a2, a3, a4);
-  @fletch.native external static int _icall$6(
-      int address, a0, a1, a2, a3, a4, a5);
-
-  @fletch.native external static int _vcall$0(int address);
-  @fletch.native external static int _vcall$1(int address, a0);
-  @fletch.native external static int _vcall$2(int address, a0, a1);
-  @fletch.native external static int _vcall$3(int address, a0, a1, a2);
-  @fletch.native external static int _vcall$4(int address, a0, a1, a2, a3);
-  @fletch.native external static int _vcall$5(int address, a0, a1, a2, a3, a4);
-  @fletch.native external static int _vcall$6(
-      int address, a0, a1, a2, a3, a4, a5);
-
-  @fletch.native external static int _Lcall$wLw(int address, a0, a1, a2);
 
   @fletch.native external static int _allocate(int length);
   @fletch.native external static void _free(int address);
@@ -298,10 +375,4 @@ class Foreign {
   @fletch.native static double _setFloat64(int address, double value) {
     throw new ArgumentError();
   }
-
-  @fletch.native external static int _bitsPerMachineWord();
-  @fletch.native external static int _errno();
-  @fletch.native external static int _platform();
-  @fletch.native external static int _architecture();
-  @fletch.native external static int _convertPort(Port port);
 }

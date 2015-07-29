@@ -71,7 +71,8 @@ class Object {
   inline bool IsStack();
   inline bool IsCoroutine();
   inline bool IsPort();
-  inline bool IsForeign();
+  inline bool IsForeignFunction();
+  inline bool IsForeignMemory();
 
   // - based on marker field in class.
   inline bool IsNull();
@@ -159,28 +160,29 @@ class Smi: public Object {
 class InstanceFormat {
  public:
   enum Type {
-    CLASS_TYPE           = 0,
-    INSTANCE_TYPE        = 1,
-    STRING_TYPE          = 2,
-    ARRAY_TYPE           = 3,
-    FUNCTION_TYPE        = 4,
-    LARGE_INTEGER_TYPE   = 5,
-    BYTE_ARRAY_TYPE      = 6,
-    DOUBLE_TYPE          = 7,
-    BOXED_TYPE           = 8,
-    STACK_TYPE           = 9,
-    INITIALIZER_TYPE     = 10,
-    IMMEDIATE_TYPE       = 15  // No instances.
+    CLASS_TYPE              = 0,
+    INSTANCE_TYPE           = 1,
+    STRING_TYPE             = 2,
+    ARRAY_TYPE              = 3,
+    FUNCTION_TYPE           = 4,
+    LARGE_INTEGER_TYPE      = 5,
+    BYTE_ARRAY_TYPE         = 6,
+    DOUBLE_TYPE             = 7,
+    BOXED_TYPE              = 8,
+    STACK_TYPE              = 9,
+    INITIALIZER_TYPE        = 10,
+    IMMEDIATE_TYPE          = 15  // No instances.
   };
 
   enum Marker {
-    NULL_MARKER          = 0,
-    TRUE_MARKER          = 1,
-    FALSE_MARKER         = 2,
-    COROUTINE_MARKER     = 3,
-    PORT_MARKER          = 4,
-    FOREIGN_MARKER       = 5,
-    NO_MARKER            = 7  // Else marker.
+    NULL_MARKER             = 0,
+    TRUE_MARKER             = 1,
+    FALSE_MARKER            = 2,
+    COROUTINE_MARKER        = 3,
+    PORT_MARKER             = 4,
+    FOREIGN_FUNCTION_MARKER = 5,
+    FOREIGN_MEMORY_MARKER   = 6,
+    NO_MARKER               = 7  // Else marker.
   };
 
   // Factory functions.
@@ -1224,10 +1226,16 @@ bool Object::IsPort() {
   return h->format().marker() == InstanceFormat::PORT_MARKER;
 }
 
-bool Object::IsForeign() {
+bool Object::IsForeignFunction() {
   if (IsSmi()) return false;
   HeapObject* h = HeapObject::cast(this);
-  return h->format().marker() == InstanceFormat::FOREIGN_MARKER;
+  return h->format().marker() == InstanceFormat::FOREIGN_FUNCTION_MARKER;
+}
+
+bool Object::IsForeignMemory() {
+  if (IsSmi()) return false;
+  HeapObject* h = HeapObject::cast(this);
+  return h->format().marker() == InstanceFormat::FOREIGN_MEMORY_MARKER;
 }
 
 bool Object::IsNull() {

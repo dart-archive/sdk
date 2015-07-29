@@ -13,7 +13,8 @@ import "package:service/struct.dart";
 
 final Channel _channel = new Channel();
 final Port _port = new Port(_channel);
-final Foreign _postResult = Foreign.lookup("PostResultToService");
+final ForeignFunction _postResult =
+    ForeignLibrary.main.lookup("PostResultToService");
 
 bool _terminated = false;
 PerformanceService _impl;

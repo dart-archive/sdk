@@ -24,9 +24,9 @@ class MacOSAddrInfo extends AddrInfo {
     return getWord(offset);
   }
 
-  Foreign get ai_addr {
+  ForeignMemory get ai_addr {
     int offset = _addrlenOffset + wordSize * 2;
-    return new Foreign.fromAddress(getWord(offset), ai_addrlen);
+    return new ForeignMemory.fromAddress(getWord(offset), ai_addrlen);
   }
 
   AddrInfo get ai_next {
@@ -66,9 +66,9 @@ class KEvent extends Struct {
 }
 
 class MacOSSystem extends PosixSystem {
-  static final Foreign _kevent = Foreign.lookup("kevent");
-  static final Foreign _lseekMac = Foreign.lookup("lseek");
-  static final Foreign _openMac = Foreign.lookup("open");
+  static final ForeignFunction _kevent = ForeignLibrary.main.lookup("kevent");
+  static final ForeignFunction _lseekMac = ForeignLibrary.main.lookup("lseek");
+  static final ForeignFunction _openMac = ForeignLibrary.main.lookup("open");
 
   final KEvent _kEvent = new KEvent();
 
@@ -78,8 +78,8 @@ class MacOSSystem extends PosixSystem {
 
   int get SO_REUSEADDR => 0x4;
 
-  Foreign get _lseek => _lseekMac;
-  Foreign get _open => _openMac;
+  ForeignFunction get _lseek => _lseekMac;
+  ForeignFunction get _open => _openMac;
 
   int _setEvents(bool read, bool write) {
     int eh = System.eventHandler;
@@ -89,18 +89,18 @@ class MacOSSystem extends PosixSystem {
       status = _retry(() => _kevent.icall$6(eh,
                                             _kEvent,
                                             1,
-                                            Foreign.NULL,
+                                            ForeignPointer.NULL,
                                             0,
-                                            Foreign.NULL));
+                                            ForeignPointer.NULL));
     }
     if (status != -1 && write) {
       _kEvent.filter = EVFILT_WRITE;
       status = _retry(() => _kevent.icall$6(eh,
                                             _kEvent,
                                             1,
-                                            Foreign.NULL,
+                                            ForeignPointer.NULL,
                                             0,
-                                            Foreign.NULL));
+                                            ForeignPointer.NULL));
     }
     return status;
   }

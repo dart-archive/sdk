@@ -6,8 +6,10 @@
 
 #include <dlfcn.h>
 #include <errno.h>
+#include <sys/param.h>
 
 #include "src/shared/asan_helper.h"
+#include "src/shared/platform.h"
 #include "src/vm/natives.h"
 #include "src/vm/object.h"
 #include "src/vm/port.h"
@@ -70,6 +72,61 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
        current = current->next()) {
     void* result = PerformForeignLookup(current->library(), symbol);
     if (result != NULL) return result;
+  }
+  return NULL;
+}
+
+NATIVE(ForeignLibraryLookup) {
+  char* library = arguments[0]->IsString()
+      ? AsForeignString(String::cast(arguments[0]))
+      : NULL;
+  void* result = dlopen(library, RTLD_LOCAL | RTLD_LAZY);
+  if (result == NULL) {
+    fprintf(stderr, "Failed libary lookup(%s): %s\n", library, dlerror());
+  }
+  free(library);
+  return result != NULL
+      ? process->ToInteger(reinterpret_cast<intptr_t>(result))
+      : Failure::index_out_of_bounds();
+}
+
+NATIVE(ForeignLibraryGetFunction) {
+  word address = AsForeignWord(arguments[0]);
+  void* handle = reinterpret_cast<void*>(address);
+  char* name = AsForeignString(String::cast(arguments[1]));
+  if (handle == NULL) handle = dlopen(NULL, RTLD_LOCAL | RTLD_LAZY);
+  void* result = dlsym(handle, name);
+  free(name);
+  return result != NULL
+      ? process->ToInteger(reinterpret_cast<intptr_t>(result))
+      : Failure::index_out_of_bounds();
+}
+
+NATIVE(ForeignLibraryBundlePath) {
+  char* library = AsForeignString(String::cast(arguments[0]));
+  char executable[MAXPATHLEN + 1];
+  GetPathOfExecutable(executable, sizeof(executable));
+  char* directory = ForeignUtils::DirectoryName(executable);
+  // dirname on linux may mess with the content of the buffer, so we use a fresh
+  // buffer for the result. If anybody cares this can be optimized by manually
+  // writing the strings other than dirname to the executable buffer.
+  char result[MAXPATHLEN + 1];
+  int wrote = snprintf(result, MAXPATHLEN + 1, "%s%s%s%s", directory,
+                       ForeignUtils::kLibBundlePrefix, library,
+                       ForeignUtils::kLibBundlePostfix);
+  if (wrote > MAXPATHLEN) {
+    return Failure::index_out_of_bounds();
+  }
+  free(library);
+  return process->NewStringFromAscii(List<const char>(result, strlen(result)));
+}
+
+NATIVE(ForeignLibraryClose) {
+  word address = AsForeignWord(arguments[0]);
+  void* handle = reinterpret_cast<void*>(address);
+  if (dlclose(handle) != 0)  {
+    fprintf(stderr, "Failed to close handle: %s\n", dlerror());
+    return Failure::index_out_of_bounds();
   }
   return NULL;
 }
@@ -277,6 +334,133 @@ NATIVE(ForeignICall6) {
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
   int value = function(a0, a1, a2, a3, a4, a5);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
+  LargeInteger::cast(result)->set_value(value);
+  return result;
+}
+
+typedef word (*PF0)();
+typedef word (*PF1)(word);
+typedef word (*PF2)(word, word);
+typedef word (*PF3)(word, word, word);
+typedef word (*PF4)(word, word, word, word);
+typedef word (*PF5)(word, word, word, word, word);
+typedef word (*PF6)(word, word, word, word, word, word);
+
+NATIVE(ForeignPCall0) {
+  word address = AsForeignWord(arguments[0]);
+  PF0 function = reinterpret_cast<PF0>(address);
+  Object* result = process->NewInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  word value = function();
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
+  LargeInteger::cast(result)->set_value(value);
+  return result;
+}
+
+NATIVE(ForeignPCall1) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  PF1 function = reinterpret_cast<PF1>(address);
+  Object* result = process->NewInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  word value = function(a0);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+     return Smi::FromWord(value);
+  }
+  LargeInteger::cast(result)->set_value(value);
+  return result;
+}
+
+NATIVE(ForeignPCall2) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  PF2 function = reinterpret_cast<PF2>(address);
+  Object* result = process->NewInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  word value = function(a0, a1);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
+  LargeInteger::cast(result)->set_value(value);
+  return result;
+}
+
+NATIVE(ForeignPCall3) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  word a2 = AsForeignWord(arguments[3]);
+  PF3 function = reinterpret_cast<PF3>(address);
+  Object* result = process->NewInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  word value = function(a0, a1, a2);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
+  LargeInteger::cast(result)->set_value(value);
+  return result;
+}
+
+NATIVE(ForeignPCall4) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  word a2 = AsForeignWord(arguments[3]);
+  word a3 = AsForeignWord(arguments[4]);
+  PF4 function = reinterpret_cast<PF4>(address);
+  Object* result = process->NewInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  word value = function(a0, a1, a2, a3);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
+  LargeInteger::cast(result)->set_value(value);
+  return result;
+}
+
+NATIVE(ForeignPCall5) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  word a2 = AsForeignWord(arguments[3]);
+  word a3 = AsForeignWord(arguments[4]);
+  word a4 = AsForeignWord(arguments[5]);
+  PF5 function = reinterpret_cast<PF5>(address);
+  Object* result = process->NewInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  word value = function(a0, a1, a2, a3, a4);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
+  LargeInteger::cast(result)->set_value(value);
+  return result;
+}
+
+NATIVE(ForeignPCall6) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  word a2 = AsForeignWord(arguments[3]);
+  word a3 = AsForeignWord(arguments[4]);
+  word a4 = AsForeignWord(arguments[5]);
+  word a5 = AsForeignWord(arguments[6]);
+  PF6 function = reinterpret_cast<PF6>(address);
+  Object* result = process->NewInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  word value = function(a0, a1, a2, a3, a4, a5);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
     return Smi::FromWord(value);
