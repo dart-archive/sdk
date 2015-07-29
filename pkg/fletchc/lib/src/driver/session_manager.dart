@@ -93,11 +93,17 @@ class SessionState {
 
   final IncrementalCompiler compiler;
 
-  FletchDelta compilationResult;
+  final List<FletchDelta> compilationResults = <FletchDelta>[];
+
+  Uri script;
 
   FletchVmSession vmSession;
 
   SessionState(this.name, this.compilerHelper, this.compiler);
+
+  void addCompilationResult(FletchDelta delta) {
+    compilationResults.add(delta);
+  }
 
   static SessionState internalCurrent;
 

@@ -40,17 +40,28 @@ class CompileTask extends SharedTask {
   }
 }
 
+Uri resolveUserInputFile(String script) {
+  // TODO(ahe): Get base from current directory of C++ client. Also, this
+  // method should probably be moved to infrastructure.dart or something.
+  return Uri.base.resolve(script);
+}
+
 Future<int> compileTask(String script) async {
-  // TODO(ahe): Get base from current directory of C++ client.
-  Uri base = Uri.base;
-  Uri scriptUri = base.resolve(script);
+  Uri previousScript = SessionState.current.script;
+  List<FletchDelta> previousResults = SessionState.current.compilationResults;
+  Uri newScript = resolveUserInputFile(script);
 
   IncrementalCompiler compiler = SessionState.current.compiler;
 
-  FletchDelta result;
+  FletchDelta newResult;
   try {
-    await compiler.compile(scriptUri);
-    result = compiler.computeInitialDelta();
+    if (previousResults.isEmpty) {
+      await compiler.compile(newScript);
+      newResult = compiler.computeInitialDelta();
+    } else {
+      newResult = await compiler.compileUpdates(
+          previousResults.last.system, <Uri, Uri>{previousScript: newScript});
+    }
   } catch (error, stackTrace) {
     // Don't let a compiler crash bring down the session.
     print(error);
@@ -59,9 +70,10 @@ Future<int> compileTask(String script) async {
     }
     return COMPILER_EXITCODE_CRASH;
   }
-  SessionState.current.compilationResult = result;
+  SessionState.current.script = newScript;
+  SessionState.current.addCompilationResult(newResult);
 
-  print("Compiled '$script' to ${result.commands.length} commands");
+  print("Compiled '$script' to ${newResult.commands.length} commands");
 
   return 0;
 }

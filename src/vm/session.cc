@@ -876,9 +876,13 @@ void Session::PushConstantMap(int length) {
 void Session::PrepareForChanges() {
   if (program()->is_compact()) {
     Scheduler* scheduler = program()->scheduler();
-    scheduler->StopProgram(program());
+    if (scheduler != NULL) {
+      scheduler->StopProgram(program());
+    }
     program()->Unfold();
-    scheduler->ResumeProgram(program());
+    if (scheduler != NULL) {
+      scheduler->ResumeProgram(program());
+    }
   }
 }
 

@@ -9,6 +9,9 @@ import 'infrastructure.dart';
 import 'dart:async' show
     Timer;
 
+import 'dart:collection' show
+    Queue;
+
 import '../../session.dart' show
     Session; // Only for documentation.
 
@@ -18,7 +21,8 @@ import '../../commands.dart' show
     CommandCode;
 
 import '../../fletch_system.dart' show
-    FletchFunction;
+    FletchFunction,
+    FletchSystem;
 
 import '../driver/exit_codes.dart' as exit_codes;
 
@@ -58,17 +62,20 @@ class RunTask extends SharedTask {
 Future<int> runTask(
     CommandSender commandSender,
     StreamIterator<Command> commandIterator) async {
-  FletchDelta compilationResult = SessionState.current.compilationResult;
+  List<FletchDelta> compilationResults =
+      SessionState.current.compilationResults;
   FletchVmSession session = SessionState.current.vmSession;
   if (session == null) {
     throwFatalError(DiagnosticKind.attachToVmBeforeRun);
   }
-  if (compilationResult == null) {
+  if (compilationResults.isEmpty) {
     throwFatalError(DiagnosticKind.compileBeforeRun);
   }
 
   SessionState.current.vmSession = null;
-  await session.runCommands(compilationResult.commands);
+  for (FletchDelta delta in compilationResults) {
+    await session.runCommands(delta.commands);
+  }
 
   await session.runCommand(const commands_lib.ProcessSpawnForMain());
 
@@ -81,14 +88,14 @@ Future<int> runTask(
       case CommandCode.UncaughtException:
         print("Uncaught error");
         exitCode = exit_codes.DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
-        await printBacktraceHack(session, compilationResult);
+        await printBacktraceHack(session, compilationResults.last.system);
         // TODO(ahe): Need to continue to unwind stack.
         break;
 
       case CommandCode.ProcessCompileTimeError:
         print("Compile-time error");
         exitCode = exit_codes.DART_VM_EXITCODE_COMPILE_TIME_ERROR;
-        await printBacktraceHack(session, compilationResult);
+        await printBacktraceHack(session, compilationResults.last.system);
         // TODO(ahe): Continue to unwind stack?
         break;
 
@@ -143,12 +150,12 @@ Future<int> runTask(
 // coordinate with ager first.
 Future<Null> printBacktraceHack(
     FletchVmSession session,
-    FletchDelta delta) async {
+    FletchSystem system) async {
   commands_lib.ProcessBacktrace backtrace =
       await session.runCommand(const commands_lib.ProcessBacktraceRequest());
   for (int i = backtrace.frames - 1; i >= 0; i--) {
     FletchFunction function =
-        delta.system.lookupFunctionById(backtrace.functionIds[i]);
+        system.lookupFunctionById(backtrace.functionIds[i]);
     if (function.element != null &&
         function.element.implementation.library.isInternalLibrary) {
       // TODO(ahe): This hides implementation details, which should be a
