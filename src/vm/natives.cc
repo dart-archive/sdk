@@ -1203,11 +1203,13 @@ NATIVE(DateTimeLocalTimeZoneOffset) {
 NATIVE(UriBase) {
   char* buffer = reinterpret_cast<char*>(malloc(PATH_MAX + 1));
   char* path = getcwd(buffer, PATH_MAX);
-  if (path == NULL) return Failure::index_out_of_bounds();
-  int length = strlen(path);
-  path[length++] = '/';
-  path[length] = 0;
-  Object* result = process->NewStringFromAscii(List<const char>(path, length));
+  Object* result = Failure::index_out_of_bounds();
+  if (path != NULL) {
+    int length = strlen(path);
+    path[length++] = '/';
+    path[length] = 0;
+    result = process->NewStringFromAscii(List<const char>(path, length));
+  }
   free(buffer);
   return result;
 }
