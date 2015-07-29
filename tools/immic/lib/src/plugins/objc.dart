@@ -564,6 +564,7 @@ class _ImplementationVisitor extends CodeGenerationVisitor {
     writeln('@end');
     writeln();
     writeln('@interface $patchName ()');
+    writeln('- (id)initIdentityPatch:($nodeName*)previous;');
     writeln('- (id)initWith:(const $patchDataName&)data');
     writeln('      previous:($nodeName*)previous');
     writeln('       inGraph:(ImmiRoot*)root;');

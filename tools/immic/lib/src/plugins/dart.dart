@@ -53,14 +53,14 @@ class _DartVisitor extends CodeGenerationVisitor {
   getPatchType(Type type) {
     if (type.isList) return 'ListPatch';
     if (type.isNode) return 'NodePatch';
-    if (type.resolved != null) return '${type.name}Patch';
+    if (type.resolved != null) return '${type.identifier}Patch';
     return _types[type.identifier];
   }
 
   getSerializeMethodName(Type type) {
     if (type.isList) return 'serializeList';
     if (type.isNode) return 'serializeNode';
-    if (type.resolved != null) return 'serialize${type.name}';
+    if (type.resolved != null) return 'serialize${type.identifier}';
     throw 'Unserializable type ${type.identifier}';
   }
 
