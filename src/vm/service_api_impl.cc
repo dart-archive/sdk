@@ -7,6 +7,7 @@
 #include "src/vm/natives.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
+#include "src/vm/scheduler.h"
 #include "src/vm/thread.h"
 
 static const int kRequestHeaderSize = 32;

@@ -9,7 +9,7 @@
 #include "src/shared/random.h"
 #include "src/vm/event_handler.h"
 #include "src/vm/heap.h"
-#include "src/vm/scheduler.h"
+#include "src/vm/program_folder.h"
 
 namespace fletch {
 
@@ -17,7 +17,9 @@ class Class;
 class Function;
 class Method;
 class Process;
+class ProcessVisitor;
 class ProgramTableRewriter;
+class Scheduler;
 class Session;
 
 // Defines all the roots in the program heap.
@@ -84,23 +86,6 @@ class Program {
 
   void Initialize();
 
-  // Unfold the program into a new heap where all indices are resolved
-  // and stored in the literals section of methods. Having
-  // self-contained methods makes it easier to do changes to the live
-  // system. The caller of Unfold should stop all processes running for this
-  // program before calling.
-  void Unfold();
-  Object* UnfoldFunction(Function* function, Space* to, void* map);
-
-  // Fold the program into a compact format where methods, classes and
-  // constants are stored in global tables in the program instead of
-  // duplicated out in the literals sections of methods. The caller of
-  // Fold should stop all processes running for this program before calling.
-  void Fold(bool disable_heap_validation_before_gc = false);
-  void FoldFunction(Function* old_function,
-                    Function* new_function,
-                    ProgramTableRewriter* rewriter);
-
   // Is the program in the compact table representation?
   bool is_compact() const { return is_compact_; }
   void set_is_compact(bool value) { is_compact_ = value; }
@@ -112,34 +97,34 @@ class Program {
   void set_main_arity(int value) { main_arity_ = value; }
 
   Array* classes() const { return classes_; }
-  void set_classes(Object* classes) { classes_ = Array::cast(classes); }
+  void set_classes(Array* classes) { classes_ = classes; }
   Class* class_at(int index) const { return Class::cast(classes_->get(index)); }
 
   Array* constants() const { return constants_; }
-  void set_constants(Object* constants) { constants_ = Array::cast(constants); }
+  void set_constants(Array* constants) { constants_ = constants; }
   Object* constant_at(int index) const { return constants_->get(index); }
 
   Array* static_methods() const { return static_methods_; }
-  void set_static_methods(Object* static_methods) {
-    static_methods_ = Array::cast(static_methods);
+  void set_static_methods(Array* static_methods) {
+    static_methods_ = static_methods;
   }
   Function* static_method_at(int index) const {
     return Function::cast(static_methods_->get(index));
   }
 
   Array* static_fields() const { return static_fields_; }
-  void set_static_fields(Object* static_fields) {
-    static_fields_ = Array::cast(static_fields);
+  void set_static_fields(Array* static_fields) {
+    static_fields_ = static_fields;
   }
 
   Array* dispatch_table() const { return dispatch_table_; }
-  void set_dispatch_table(Object* dispatch_table) {
-    dispatch_table_ = Array::cast(dispatch_table);
+  void set_dispatch_table(Array* dispatch_table) {
+    dispatch_table_ = dispatch_table;
   }
 
   Array* vtable() const { return vtable_; }
-  void set_vtable(Object* vtable) {
-    vtable_ = Array::cast(vtable);
+  void set_vtable(Array* vtable) {
+    vtable_ = vtable;
   }
 
   Scheduler* scheduler() const { return scheduler_; }
@@ -236,14 +221,14 @@ class Program {
 
   RandomLCG* random() { return &random_; }
 
+  void PrepareProgramGC(bool disable_heap_validation_before_gc = false);
+  void PerformProgramGC(Space* to, PointerVisitor* visitor);
+  void FinishProgramGC();
+
  private:
   // Access to the address of the first and last root.
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
   Object** last_root_address() { return &native_failure_result_; }
-
-  void PrepareProgramGC(bool disable_heap_validation_before_gc = false);
-  void PerformProgramGC(Space* to, PointerVisitor* visitor);
-  void FinishProgramGC();
 
   void ValidateGlobalHeapsAreConsistent();
 

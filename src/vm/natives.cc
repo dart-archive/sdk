@@ -21,6 +21,7 @@
 #include "src/vm/interpreter.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
+#include "src/vm/scheduler.h"
 #include "src/vm/session.h"
 #include "src/vm/unicode.h"
 

@@ -44,6 +44,7 @@
         'port.cc',
         'process.cc',
         'program.cc',
+        'program_folder.cc',
         'scheduler.cc',
         'selector_row.cc',
         'service_api_impl.cc',

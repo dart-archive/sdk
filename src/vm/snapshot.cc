@@ -298,12 +298,12 @@ Program* SnapshotReader::ReadProgram() {
   // Read all the program state (except roots).
   program->set_entry(Function::cast(ReadObject()));
   program->set_main_arity(ReadInt64());
-  program->set_classes(ReadObject());
-  program->set_constants(ReadObject());
-  program->set_static_methods(ReadObject());
-  program->set_static_fields(ReadObject());
-  program->set_dispatch_table(ReadObject());
-  program->set_vtable(ReadObject());
+  program->set_classes(Array::cast(ReadObject()));
+  program->set_constants(Array::cast(ReadObject()));
+  program->set_static_methods(Array::cast(ReadObject()));
+  program->set_static_fields(Array::cast(ReadObject()));
+  program->set_dispatch_table(Array::cast(ReadObject()));
+  program->set_vtable(Array::cast(ReadObject()));
 
   // Read the roots.
   ReaderVisitor visitor(this);
@@ -329,7 +329,11 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
 
   // Make sure that the program is in the compact form before
   // snapshotting.
-  if (!program->is_compact()) program->Fold();
+  if (!program->is_compact()) {
+    // TODO(ajohnsen): Don't do this here, move to Session.
+    ProgramFolder program_folder(program);
+    program_folder.Fold();
+  }
   ASSERT(program->is_compact());
   program->ClearDispatchTableIntrinsics();
 

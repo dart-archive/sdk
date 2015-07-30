@@ -11,6 +11,7 @@
 
 #include "src/vm/object_map.h"
 #include "src/vm/process.h"
+#include "src/vm/scheduler.h"
 #include "src/vm/snapshot.h"
 #include "src/vm/stack_walker.h"
 #include "src/vm/thread.h"
@@ -879,7 +880,10 @@ void Session::PrepareForChanges() {
     if (scheduler != NULL) {
       scheduler->StopProgram(program());
     }
-    program()->Unfold();
+    {
+      ProgramFolder program_folder(program());
+      program_folder.Unfold();
+    }
     if (scheduler != NULL) {
       scheduler->ResumeProgram(program());
     }
@@ -1006,7 +1010,10 @@ bool Session::CommitChanges(int count) {
   // heaps, because [TransformInstances] will install a forwarding pointer and
   // thereby destroy the class pointer. The heap verification code will traverse
   // all heaps and doing so requires a valid class pointer.
-  program()->Fold(schemas_changed);
+  {
+    ProgramFolder program_folder(program());
+    program_folder.Fold(schemas_changed);
+  }
 
   if (scheduler != NULL) {
     scheduler->ResumeProgram(program());

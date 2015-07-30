@@ -6,6 +6,7 @@
 #define SRC_VM_HEAP_VALIDATOR_H_
 
 #include "src/vm/heap.h"
+#include "src/vm/scheduler.h"
 #include "src/vm/stack_walker.h"
 
 namespace fletch {
