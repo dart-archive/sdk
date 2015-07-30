@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_ARM64) && defined(FLETCH_TARGET_OS_MAXOS)
+#if defined(FLETCH_TARGET_ARM64) && defined(FLETCH_TARGET_OS_MACOS)
 
 #include <stdio.h>
 #include "src/vm/assembler.h"
@@ -15,4 +15,4 @@ void Assembler::Bind(const char* name) {
 
 }  // namespace fletch
 
-#endif  // defined(FLETCH_TARGET_ARM64) && defined(FLETCH_TARGET_OS_MAXOS)
+#endif  // defined(FLETCH_TARGET_ARM64) && defined(FLETCH_TARGET_OS_MACOS)
