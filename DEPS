@@ -9,12 +9,9 @@ vars = {
   #   gs://chromium-browser-clang/Linux_x64/clang-<rev>-1.tgz
   "clang_rev": "239765",
 
-  # Use this googlecode_url variable only if there is an internal mirror for it.
-  # If you do not know, use the full path while defining your new deps entry.
-  "googlecode_url": "http://%s.googlecode.com/svn",
   "github_url": "https://github.com/%s.git",
 
-  "gyp_rev": "@1752",
+  "gyp_rev": "@6ee91ad8659871916f9aa840d42e1513befdf638",
   "persistent_rev": "@55daae1a038188c49e36a64e7ef132c4861da3d8",
 
   # When updating this, please remember:
@@ -41,12 +38,14 @@ vars = {
   # against infra to make that happen.
   "github_mirror":
       "https://chromium.googlesource.com/external/github.com/dart-lang/%s.git",
+
+  "chromium_git": "https://chromium.googlesource.com",
 }
 
 deps = {
   # Stuff needed for GYP to run.
   "third_party/gyp":
-      (Var("googlecode_url") % "gyp") + "/trunk" + Var("gyp_rev"),
+      Var('chromium_git') + '/external/gyp.git' + Var("gyp_rev"),
 
   "dart":
       (Var("github_mirror") % "sdk") + Var("dart_rev"),
