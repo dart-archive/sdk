@@ -33,6 +33,9 @@ class ProgramFolder {
 
   Program* program() const { return program_; }
 
+  // Will fold the program if not overridden by -Xunfold-program.
+  static void FoldProgramByDefault(Program* program);
+
  private:
   friend class FoldingVisitor;
   friend class UnfoldingVisitor;

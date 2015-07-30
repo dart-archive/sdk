@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "src/shared/bytecodes.h"
+#include "src/shared/flags.h"
 #include "src/shared/names.h"
 #include "src/shared/selectors.h"
 
@@ -726,5 +727,19 @@ void ProgramFolder::Unfold() {
   program_->FinishProgramGC();
 }
 
+void ProgramFolder::FoldProgramByDefault(Program* program) {
+  // For testing purposes, we support unfolding the program
+  // before running it.
+  bool unfold = Flags::unfold_program;
+  ProgramFolder program_folder(program);
+  if (program->is_compact()) {
+    if (unfold) {
+      program_folder.Unfold();
+    }
+  } else if (!unfold) {
+    program_folder.Fold();
+  }
+  ASSERT(program->is_compact() == !unfold);
+}
 
 }  // namespace fletch

@@ -185,6 +185,7 @@ void Session::ProcessMessages() {
         // Setup entry point for main thread.
         program()->set_entry(Function::cast(Pop()));
         program()->set_main_arity(Smi::cast(Pop())->value());
+        ProgramFolder::FoldProgramByDefault(program());
         process_ = program()->ProcessSpawnForMain();
         break;
       }
@@ -621,6 +622,12 @@ bool Session::ProcessRun() {
 bool Session::WriteSnapshot(const char* path) {
   program()->set_entry(Function::cast(Pop()));
   program()->set_main_arity(Smi::cast(Pop())->value());
+  // Make sure that the program is in the compact form before
+  // snapshotting.
+  if (!program()->is_compact()) {
+    ProgramFolder program_folder(program());
+    program_folder.Fold();
+  }
   SnapshotWriter writer;
   List<uint8> snapshot = writer.WriteProgram(program());
   bool success = Platform::StoreFile(path, snapshot);

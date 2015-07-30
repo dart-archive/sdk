@@ -61,21 +61,6 @@ Process* Program::SpawnProcess() {
 }
 
 Process* Program::ProcessSpawnForMain() {
-  // TODO(ajohnsen): Move folding/unfolding out of this method.
-  // For testing purposes, we support unfolding the program
-  // before running it.
-  bool unfold = Flags::unfold_program;
-  if (is_compact()) {
-    if (unfold) {
-      ProgramFolder program_folder(this);
-      program_folder.Unfold();
-    }
-  } else if (!unfold) {
-    ProgramFolder program_folder(this);
-    program_folder.Fold();
-  }
-  ASSERT(is_compact() == !unfold);
-
   if (Flags::print_program_statistics) {
     PrintStatistics();
   }

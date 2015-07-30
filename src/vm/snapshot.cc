@@ -320,22 +320,16 @@ Program* SnapshotReader::ReadProgram() {
 }
 
 List<uint8> SnapshotWriter::WriteProgram(Program* program) {
+  ASSERT(program->is_compact());
+
+  program->ClearDispatchTableIntrinsics();
+
   WriteByte(0xbe);
   WriteByte(0xef);
 
   // Reserve space for the backward reference table size.
   int reference_count_position = position_;
   for (int i = 0; i < kReferenceTableSizeBytes; i++) WriteByte(0);
-
-  // Make sure that the program is in the compact form before
-  // snapshotting.
-  if (!program->is_compact()) {
-    // TODO(ajohnsen): Don't do this here, move to Session.
-    ProgramFolder program_folder(program);
-    program_folder.Fold();
-  }
-  ASSERT(program->is_compact());
-  program->ClearDispatchTableIntrinsics();
 
   // Reserve space for the size of the heap.
   int size_position =

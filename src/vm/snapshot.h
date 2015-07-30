@@ -89,6 +89,7 @@ class SnapshotWriter {
         alternative_heap_size_(0) { }
   virtual ~SnapshotWriter() { }
 
+  // Create a snapshot of a program. The program must be folded.
   List<uint8> WriteProgram(Program* program);
 
  protected:

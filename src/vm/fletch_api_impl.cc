@@ -11,6 +11,7 @@
 
 #include "src/vm/ffi.h"
 #include "src/vm/program.h"
+#include "src/vm/program_folder.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/session.h"
 #include "src/vm/snapshot.h"
@@ -26,6 +27,7 @@ static bool RunSnapshot(List<uint8> bytes) {
     SnapshotReader reader(bytes);
     Program* program = reader.ReadProgram();
     Scheduler scheduler;
+    ProgramFolder::FoldProgramByDefault(program);
     Process* process = program->ProcessSpawnForMain();
     scheduler.ScheduleProgram(program, process);
     bool success = scheduler.Run();
