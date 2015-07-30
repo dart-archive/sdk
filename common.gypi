@@ -90,6 +90,19 @@
           '-fno-rtti',
           '-fno-exceptions',
         ],
+
+        'target_conditions': [
+          ['OS=="mac"', {
+            'defines': [
+              'FLETCH_TARGET_OS_MACOS',
+              'FLETCH_TARGET_OS_POSIX' ],
+          }],
+          ['OS=="linux"', {
+            'defines': [
+              'FLETCH_TARGET_OS_LINUX',
+              'FLETCH_TARGET_OS_POSIX' ],
+          }],
+        ],
       },
 
       'fletch_release': {
@@ -592,22 +605,6 @@
         'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_xarm64' ],
       },
     },
-
-    'target_conditions': [
-      # Exclude sources that do not match the platform.
-      ['OS!="mac"', {
-        'sources/': [
-          ['exclude', '_macos(_test)?\\.(h|cc|mm?)$' ], ],
-      }],
-      ['OS!="linux"', {
-        'sources/': [
-          ['exclude', '_linux(_test)?\\.(h|cc|mm?)$' ], ],
-      }],
-      ['OS!="linux" and OS!="mac"', {
-        'sources/': [
-          ['exclude', '_posix(_test)?\\.(h|cc|mm?)$' ], ],
-      }],
-    ],
 
     'rules': [
       {
