@@ -134,6 +134,11 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     units.values.forEach(collectMethodSignatures);
     units.values.forEach((unit) { nodes.addAll(unit.structs); });
     _writeHeader();
+    nodes.forEach((node) {
+      writeln('@class ${node.name}Node;');
+      writeln('@class ${node.name}Patch;');
+    });
+    writeln();
     _writeActions();
     units.values.forEach(visit);
   }
