@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_ARM) && defined(FLETCH_TARGET_OS_LINUX)
+#if defined(FLETCH_TARGET_ARM)
 
 #include <stdio.h>
 #include "src/vm/assembler.h"
@@ -27,4 +27,4 @@ const char* Assembler::LabelPrefix() {
 
 }  // namespace fletch
 
-#endif  // defined(FLETCH_TARGET_ARM) && defined(FLETCH_TARGET_OS_LINUX)
+#endif  // defined(FLETCH_TARGET_ARM)

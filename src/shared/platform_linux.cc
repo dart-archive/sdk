@@ -2,8 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LINUX)
-
 #include <errno.h>
 #include <stdlib.h>
 #include <time.h>
@@ -33,5 +31,3 @@ int Platform::GetLocalTimeZoneOffset() {
 }
 
 }  // namespace fletch
-
-#endif  // defined(FLETCH_TARGET_OS_LINUX)

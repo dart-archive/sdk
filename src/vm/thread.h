@@ -8,9 +8,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 
-#if defined(FLETCH_TARGET_OS_POSIX)
 #include "src/vm/thread_posix.h"
-#endif
 
 namespace fletch {
 

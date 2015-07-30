@@ -2,8 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_POSIX)
-
 #include "src/shared/native_socket.h"
 
 #include <arpa/inet.h>
@@ -153,5 +151,3 @@ void Socket::SetTCPNoDelay(bool value) {
 }
 
 }  // namespace fletch
-
-#endif  // defined(FLETCH_TARGET_OS_POSIX)
