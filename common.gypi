@@ -16,11 +16,15 @@
       '-Wno-comment',
     ],
 
-    'common_gcc_cflags': [
-      '-std=c++11',
+    'common_gcc_cflags_c': [
       '-fdata-sections',
       '-ffunction-sections',
       '-fPIC',
+    ],
+
+    'common_gcc_cflags_cc': [
+      '-std=c++11',
+      '<@(common_gcc_cflags_c)',
     ],
 
     'conditions': [
@@ -68,7 +72,7 @@
           'GCC_ENABLE_CPP_EXCEPTIONS': 'NO', # -fno-exceptions
 
           'OTHER_CPLUSPLUSFLAGS' : [
-            '<@(common_gcc_cflags)',
+            '<@(common_gcc_cflags_cc)',
             '-stdlib=libc++',
           ],
 
@@ -82,12 +86,19 @@
           ],
         },
 
-        'cflags': [
+        'cflags_cc': [
           '<@(common_gcc_warning_flags)',
           '-Wno-non-virtual-dtor',
           '-Werror',
-          '<@(common_gcc_cflags)',
+          '<@(common_gcc_cflags_cc)',
           '-fno-rtti',
+          '-fno-exceptions',
+        ],
+
+        'cflags_c': [
+          '<@(common_gcc_warning_flags)',
+          '-Werror',
+          '<@(common_gcc_cflags_c)',
           '-fno-exceptions',
         ],
 

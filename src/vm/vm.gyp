@@ -225,18 +225,8 @@
       'type': 'shared_library',
       'dependencies': [
       ],
-      # We need to unset a few cflags since they are not allowed when compiling
-      # a c library.
-      'cflags!': [
-        '-std=c++11',
-        '-fno-rtti',
-        '-Wno-non-virtual-dtor',
-      ],
       'sources': [
         'ffi_test_library.c',
-      ],
-      'defines': [
-        'PIC',
       ],
     },
   ],
