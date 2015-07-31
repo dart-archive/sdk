@@ -95,6 +95,7 @@ class ForeignFunction extends Foreign {
   ForeignPointer pcall$4(ForeignPointer p, a0, a1, a2, a3) {
     p._value = _pcall$4(_value, _convert(a0), _convert(a1), _convert(a2),
                         _convert(a3));
+    return p;
   }
   ForeignPointer pcall$5(ForeignPointer p, a0, a1, a2, a3, a4) {
     p._value = _pcall$5(_value, _convert(a0), _convert(a1), _convert(a2),

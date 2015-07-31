@@ -67,6 +67,46 @@ testPCallAndMemory() {
   Expect.equals(memory.getInt32(12), 43);
   memory.free();
 
+  var pcall3 = fl.lookup('pfun3');
+  foreignPointer = pcall3.pcall$3(p, 42, 43, 44);
+  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  Expect.equals(memory.address, foreignPointer.address);
+  Expect.equals(memory.getInt32(0), 42);
+  Expect.equals(memory.getInt32(4), 43);
+  Expect.equals(memory.getInt32(8), 44);
+  Expect.equals(memory.getInt32(12), 43);
+  memory.free();
+
+  var pcall4 = fl.lookup('pfun4');
+  foreignPointer = pcall4.pcall$4(p, 42, 43, 44, 45);
+  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  Expect.equals(memory.address, foreignPointer.address);
+  Expect.equals(memory.getInt32(0), 42);
+  Expect.equals(memory.getInt32(4), 43);
+  Expect.equals(memory.getInt32(8), 44);
+  Expect.equals(memory.getInt32(12), 45);
+  memory.free();
+
+  var pcall5 = fl.lookup('pfun5');
+  foreignPointer = pcall5.pcall$5(p, 42, 43, 44, 45, 46);
+  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  Expect.equals(memory.address, foreignPointer.address);
+  Expect.equals(memory.getInt32(0), 42);
+  Expect.equals(memory.getInt32(4), 43);
+  Expect.equals(memory.getInt32(8), 44);
+  Expect.equals(memory.getInt32(12), 45 + 46);
+  memory.free();
+
+  var pcall6 = fl.lookup('pfun6');
+  foreignPointer = pcall6.pcall$6(p, 42, 43, 44, 45, 46, 47);
+  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  Expect.equals(memory.address, foreignPointer.address);
+  Expect.equals(memory.getInt32(0), 42);
+  Expect.equals(memory.getInt32(4), 43);
+  Expect.equals(memory.getInt32(8), 44);
+  Expect.equals(memory.getInt32(12), 45 + 46 + 47);
+  memory.free();
+
   // All tetsts below here is basically sanity checking that we correctly
   // convert the values to and from c, and that we can also set and read
   // back values correctly.

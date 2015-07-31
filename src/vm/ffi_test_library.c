@@ -133,6 +133,44 @@ void* pfun2(int value, int value2) {
   return data;
 }
 
+void* pfun3(int value, int value2, int value3) {
+  int32* data = malloc(sizeof(int32) * 4);
+  *data = value;
+  *(data + 1) = value2;
+  *(data + 2) = value3;
+  *(data + 3) = value2;
+  return data;
+}
+
+void* pfun4(int value, int value2, int value3, int value4) {
+  int32* data = malloc(sizeof(int32) * 4);
+  *data = value;
+  *(data + 1) = value2;
+  *(data + 2) = value3;
+  *(data + 3) = value4;
+  return data;
+}
+
+void* pfun5(int value, int value2, int value3, int value4, int value5) {
+  int32* data = malloc(sizeof(int32) * 4);
+  *data = value;
+  *(data + 1) = value2;
+  *(data + 2) = value3;
+  *(data + 3) = value4 + value5;
+  return data;
+}
+
+void* pfun6(int value, int value2, int value3, int value4, int value5,
+            int value6) {
+  int32* data = malloc(sizeof(int32) * 4);
+  *data = value;
+  *(data + 1) = value2;
+  *(data + 2) = value3;
+  *(data + 3) = value4 + value5 + value6;
+  return data;
+}
+
+
 void* memint8() {
   int8* data = malloc(sizeof(int8) * 4);
   *data = -1;
