@@ -2,11 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:immi/immi.dart';
+import 'package:immi/dart/immi.dart';
 
 // Export generated code for nodes in drawer.immi
-import 'drawer_immi.dart';
-export 'drawer_immi.dart';
+import 'package:immi/dart/drawer.dart';
+export 'package:immi/dart/drawer.dart';
 
 class Drawer {
   var left;

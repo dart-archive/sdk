@@ -25,7 +25,8 @@ abstract class CodeGenerationVisitor extends Visitor {
   String serviceImplName = 'ImmiServiceImpl';
   String serviceImplFile = 'immi_service_impl';
   String serviceImplLib = 'immi_service_impl';
-  String immiGenPkg = 'package:immi_gen';
+  String immiGenPkg = 'package:immi';
+  String serviceGenPkg = 'package:service';
 
   void write(String s) => buffer.write(s);
   void writeln([String s = '']) => buffer.writeln(s);

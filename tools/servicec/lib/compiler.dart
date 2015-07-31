@@ -7,6 +7,7 @@ library servicec.compiler;
 import 'dart:io';
 import 'dart:convert';
 
+import 'src/emitter.dart';
 import 'src/parser.dart';
 import 'src/pretty_printer.dart';
 import 'src/resolver.dart';
@@ -14,6 +15,12 @@ import 'src/resolver.dart';
 import 'src/plugins/cc.dart' as cc;
 import 'src/plugins/dart.dart' as dart;
 import 'src/plugins/java.dart' as java;
+
+import 'package:path/path.dart' show join, dirname;
+
+const List<String> RESOURCES = const [
+  "Service.podspec",
+];
 
 void compile(String path, String outputDirectory) {
   List<int> bytes = new File(path).readAsBytesSync();
@@ -26,6 +33,15 @@ void compile(String path, String outputDirectory) {
   cc.generate(path, unit, outputDirectory);
   dart.generate(path, unit, outputDirectory);
   java.generate(path, unit, outputDirectory);
+
+  String resourcesDirectory = join(dirname(Platform.script.path),
+      '..', 'lib', 'src', 'resources');
+  for (String resource in RESOURCES) {
+    String resourcePath = join(resourcesDirectory, resource);
+    File file = new File(resourcePath);
+    String contents = file.readAsStringSync();
+    writeToFile(outputDirectory, resource, contents);
+  }
 }
 
 void dump(String path, Unit unit) {

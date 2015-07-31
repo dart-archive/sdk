@@ -9,10 +9,14 @@
 /* Begin PBXBuildFile section */
 		07AEBC8F98495D7D40B118B6 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37E3EF036F3882AE10C212AC /* libPods.a */; };
 		2D6E8DC71B283A6300FED492 /* dart-logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 2D6E8DC61B283A6300FED492 /* dart-logo.png */; };
-		2DA416301B638EC500660667 /* ImagePresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DA4162F1B638EC500660667 /* ImagePresenter.mm */; };
-		2DB4917D1B0C797900912DA3 /* SlidingWindowPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB4917C1B0C797900912DA3 /* SlidingWindowPresenter.mm */; };
 		2DB491831B0C83D200912DA3 /* CommitCellPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */; };
 		2DB4918A1B0C9B2000912DA3 /* CommitListPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */; };
+		DA155C1F1B6A2F2100022EA8 /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA155C1E1B6A2F2100022EA8 /* libfletch.a */; };
+		DA155C241B6A2FAA00022EA8 /* github.snapshot in Resources */ = {isa = PBXBuildFile; fileRef = DA155C231B6A2FAA00022EA8 /* github.snapshot */; };
+		DA155C2F1B6B49BF00022EA8 /* DrawerPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA155C271B6B49BF00022EA8 /* DrawerPresenter.mm */; };
+		DA155C301B6B49BF00022EA8 /* ImagePresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA155C291B6B49BF00022EA8 /* ImagePresenter.mm */; };
+		DA155C311B6B49BF00022EA8 /* MenuPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA155C2B1B6B49BF00022EA8 /* MenuPresenter.mm */; };
+		DA155C321B6B49BF00022EA8 /* SlidingWindowPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA155C2D1B6B49BF00022EA8 /* SlidingWindowPresenter.mm */; };
 		DA1D77031B037490009E936C /* MainController.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1D77021B037490009E936C /* MainController.mm */; };
 		DA313FA51AD665A6000089F9 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = DA313FA41AD665A6000089F9 /* main.m */; };
 		DA313FA81AD665A6000089F9 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA313FA71AD665A6000089F9 /* AppDelegate.mm */; };
@@ -20,15 +24,6 @@
 		DA313FB01AD665A6000089F9 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DA313FAF1AD665A6000089F9 /* Images.xcassets */; };
 		DA313FB31AD665A6000089F9 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = DA313FB11AD665A6000089F9 /* LaunchScreen.xib */; };
 		DA313FBF1AD665A7000089F9 /* githubTests.m in Sources */ = {isa = PBXBuildFile; fileRef = DA313FBE1AD665A7000089F9 /* githubTests.m */; };
-		DA4370BB1AE9321600EEE52F /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA4370BA1AE9321600EEE52F /* libfletch.a */; };
-		DA4370BD1AE9328D00EEE52F /* unix_ia32_hack.c in Sources */ = {isa = PBXBuildFile; fileRef = DA4370BC1AE9328D00EEE52F /* unix_ia32_hack.c */; };
-		DA79124A1AFCEEB300E5F773 /* immi_service.cc in Sources */ = {isa = PBXBuildFile; fileRef = DA7912441AFCEEB300E5F773 /* immi_service.cc */; };
-		DA79124B1AFCEEB300E5F773 /* struct.cc in Sources */ = {isa = PBXBuildFile; fileRef = DA7912461AFCEEB300E5F773 /* struct.cc */; };
-		DA79124C1AFCEEB300E5F773 /* unicode.cc in Sources */ = {isa = PBXBuildFile; fileRef = DA7912481AFCEEB300E5F773 /* unicode.cc */; };
-		DA7912501AFCEEE900E5F773 /* github.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA79124F1AFCEEE900E5F773 /* github.mm */; };
-		DA7EF8871B0F3B7D005F8E03 /* MenuPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA7EF8861B0F3B7D005F8E03 /* MenuPresenter.mm */; };
-		DADC871F1B298C90000F0BE7 /* DrawerPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DADC871E1B298C90000F0BE7 /* DrawerPresenter.mm */; };
-		DAEE2F341AD6AA2600945914 /* github.snapshot in Resources */ = {isa = PBXBuildFile; fileRef = DAEE2F331AD6AA2600945914 /* github.snapshot */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -43,11 +38,6 @@
 
 /* Begin PBXFileReference section */
 		2D6E8DC61B283A6300FED492 /* dart-logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "dart-logo.png"; sourceTree = "<group>"; };
-		2DA4162E1B638EC500660667 /* ImagePresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImagePresenter.h; sourceTree = "<group>"; };
-		2DA4162F1B638EC500660667 /* ImagePresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ImagePresenter.mm; sourceTree = "<group>"; };
-		2DB4917B1B0C797900912DA3 /* SlidingWindowPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SlidingWindowPresenter.h; sourceTree = "<group>"; };
-		2DB4917C1B0C797900912DA3 /* SlidingWindowPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = SlidingWindowPresenter.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		2DB4917E1B0C806500912DA3 /* CellPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CellPresenter.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		2DB491811B0C83D200912DA3 /* CommitCellPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CommitCellPresenter.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = CommitCellPresenter.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		2DB491881B0C9B2000912DA3 /* CommitListPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitListPresenter.h; sourceTree = "<group>"; };
@@ -55,6 +45,18 @@
 		37E3EF036F3882AE10C212AC /* libPods.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPods.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		4E37F34647C00D8D3201F7A7 /* Pods.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.debug.xcconfig; path = "Pods/Target Support Files/Pods/Pods.debug.xcconfig"; sourceTree = "<group>"; };
 		CF6A9C448DE9E3E165408184 /* Pods.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.release.xcconfig; path = "Pods/Target Support Files/Pods/Pods.release.xcconfig"; sourceTree = "<group>"; };
+		DA155C1E1B6A2F2100022EA8 /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libfletch.a; sourceTree = "<group>"; };
+		DA155C231B6A2FAA00022EA8 /* github.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; path = github.snapshot; sourceTree = "<group>"; };
+		DA155C251B6B49BF00022EA8 /* CellPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CellPresenter.h; sourceTree = "<group>"; };
+		DA155C261B6B49BF00022EA8 /* DrawerPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DrawerPresenter.h; sourceTree = "<group>"; };
+		DA155C271B6B49BF00022EA8 /* DrawerPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DrawerPresenter.mm; sourceTree = "<group>"; };
+		DA155C281B6B49BF00022EA8 /* ImagePresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImagePresenter.h; sourceTree = "<group>"; };
+		DA155C291B6B49BF00022EA8 /* ImagePresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ImagePresenter.mm; sourceTree = "<group>"; };
+		DA155C2A1B6B49BF00022EA8 /* MenuPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MenuPresenter.h; sourceTree = "<group>"; };
+		DA155C2B1B6B49BF00022EA8 /* MenuPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MenuPresenter.mm; sourceTree = "<group>"; };
+		DA155C2C1B6B49BF00022EA8 /* SlidingWindowPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SlidingWindowPresenter.h; sourceTree = "<group>"; };
+		DA155C2D1B6B49BF00022EA8 /* SlidingWindowPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SlidingWindowPresenter.mm; sourceTree = "<group>"; };
+		DA155C2E1B6B49BF00022EA8 /* ViewPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ViewPresenter.h; sourceTree = "<group>"; };
 		DA1D77011B037490009E936C /* MainController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MainController.h; sourceTree = "<group>"; };
 		DA1D77021B037490009E936C /* MainController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MainController.mm; sourceTree = "<group>"; };
 		DA313F9F1AD665A6000089F9 /* github.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = github.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -68,22 +70,6 @@
 		DA313FB81AD665A7000089F9 /* githubTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = githubTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA313FBD1AD665A7000089F9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DA313FBE1AD665A7000089F9 /* githubTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = githubTests.m; sourceTree = "<group>"; };
-		DA4370BA1AE9321600EEE52F /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libfletch.a; sourceTree = "<group>"; };
-		DA4370BC1AE9328D00EEE52F /* unix_ia32_hack.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = unix_ia32_hack.c; sourceTree = "<group>"; };
-		DA7912441AFCEEB300E5F773 /* immi_service.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = immi_service.cc; sourceTree = "<group>"; };
-		DA7912451AFCEEB300E5F773 /* immi_service.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = immi_service.h; sourceTree = "<group>"; };
-		DA7912461AFCEEB300E5F773 /* struct.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = struct.cc; sourceTree = "<group>"; };
-		DA7912471AFCEEB300E5F773 /* struct.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = struct.h; sourceTree = "<group>"; };
-		DA7912481AFCEEB300E5F773 /* unicode.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unicode.cc; sourceTree = "<group>"; };
-		DA7912491AFCEEB300E5F773 /* unicode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unicode.h; sourceTree = "<group>"; };
-		DA79124E1AFCEEE900E5F773 /* github.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = github.h; sourceTree = "<group>"; };
-		DA79124F1AFCEEE900E5F773 /* github.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = github.mm; sourceTree = "<group>"; };
-		DA7EF8851B0F3B7D005F8E03 /* MenuPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MenuPresenter.h; sourceTree = "<group>"; };
-		DA7EF8861B0F3B7D005F8E03 /* MenuPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MenuPresenter.mm; sourceTree = "<group>"; };
-		DADC871D1B298C90000F0BE7 /* DrawerPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DrawerPresenter.h; sourceTree = "<group>"; };
-		DADC871E1B298C90000F0BE7 /* DrawerPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DrawerPresenter.mm; sourceTree = "<group>"; };
-		DADC87231B380B4A000F0BE7 /* ViewPresenter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewPresenter.h; sourceTree = "<group>"; };
-		DAEE2F331AD6AA2600945914 /* github.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; name = github.snapshot; path = ../generated/github.snapshot; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,8 +77,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DA4370BB1AE9321600EEE52F /* libfletch.a in Frameworks */,
 				07AEBC8F98495D7D40B118B6 /* libPods.a in Frameworks */,
+				DA155C1F1B6A2F2100022EA8 /* libfletch.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,21 +104,26 @@
 		7C592E2EDA0570FB00C78420 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				DA155C1E1B6A2F2100022EA8 /* libfletch.a */,
 				37E3EF036F3882AE10C212AC /* libPods.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		DA155C221B6A2F6100022EA8 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				DA155C231B6A2FAA00022EA8 /* github.snapshot */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
 		DA313F961AD665A6000089F9 = {
 			isa = PBXGroup;
 			children = (
-				DA79124D1AFCEEE900E5F773 /* objc */,
-				DA7912431AFCEEB300E5F773 /* cc */,
-				DA4370BC1AE9328D00EEE52F /* unix_ia32_hack.c */,
-				DA4370BA1AE9321600EEE52F /* libfletch.a */,
-				DAEE2F321AD6AA1800945914 /* Resources */,
 				DA313FA11AD665A6000089F9 /* github */,
 				DA313FBB1AD665A7000089F9 /* githubTests */,
+				DA155C221B6A2F6100022EA8 /* Resources */,
 				DA313FA01AD665A6000089F9 /* Products */,
 				7571D039A9294E04FEB11AEA /* Pods */,
 				7C592E2EDA0570FB00C78420 /* Frameworks */,
@@ -156,24 +147,24 @@
 				DA313FA71AD665A6000089F9 /* AppDelegate.mm */,
 				DA1D77011B037490009E936C /* MainController.h */,
 				DA1D77021B037490009E936C /* MainController.mm */,
-				DA7EF8851B0F3B7D005F8E03 /* MenuPresenter.h */,
-				DA7EF8861B0F3B7D005F8E03 /* MenuPresenter.mm */,
 				DA313FAC1AD665A6000089F9 /* Main.storyboard */,
 				DA313FAF1AD665A6000089F9 /* Images.xcassets */,
 				DA313FB11AD665A6000089F9 /* LaunchScreen.xib */,
 				DA313FA21AD665A6000089F9 /* Supporting Files */,
-				2DB4917B1B0C797900912DA3 /* SlidingWindowPresenter.h */,
-				2DB4917C1B0C797900912DA3 /* SlidingWindowPresenter.mm */,
-				2DB4917E1B0C806500912DA3 /* CellPresenter.h */,
-				DADC871D1B298C90000F0BE7 /* DrawerPresenter.h */,
-				DADC871E1B298C90000F0BE7 /* DrawerPresenter.mm */,
 				2DB491811B0C83D200912DA3 /* CommitCellPresenter.h */,
 				2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */,
 				2DB491881B0C9B2000912DA3 /* CommitListPresenter.h */,
 				2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */,
-				DADC87231B380B4A000F0BE7 /* ViewPresenter.h */,
-				2DA4162E1B638EC500660667 /* ImagePresenter.h */,
-				2DA4162F1B638EC500660667 /* ImagePresenter.mm */,
+				DA155C251B6B49BF00022EA8 /* CellPresenter.h */,
+				DA155C261B6B49BF00022EA8 /* DrawerPresenter.h */,
+				DA155C271B6B49BF00022EA8 /* DrawerPresenter.mm */,
+				DA155C281B6B49BF00022EA8 /* ImagePresenter.h */,
+				DA155C291B6B49BF00022EA8 /* ImagePresenter.mm */,
+				DA155C2A1B6B49BF00022EA8 /* MenuPresenter.h */,
+				DA155C2B1B6B49BF00022EA8 /* MenuPresenter.mm */,
+				DA155C2C1B6B49BF00022EA8 /* SlidingWindowPresenter.h */,
+				DA155C2D1B6B49BF00022EA8 /* SlidingWindowPresenter.mm */,
+				DA155C2E1B6B49BF00022EA8 /* ViewPresenter.h */,
 			);
 			path = github;
 			sourceTree = "<group>";
@@ -202,39 +193,6 @@
 				DA313FBD1AD665A7000089F9 /* Info.plist */,
 			);
 			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
-		DA7912431AFCEEB300E5F773 /* cc */ = {
-			isa = PBXGroup;
-			children = (
-				DA7912441AFCEEB300E5F773 /* immi_service.cc */,
-				DA7912451AFCEEB300E5F773 /* immi_service.h */,
-				DA7912461AFCEEB300E5F773 /* struct.cc */,
-				DA7912471AFCEEB300E5F773 /* struct.h */,
-				DA7912481AFCEEB300E5F773 /* unicode.cc */,
-				DA7912491AFCEEB300E5F773 /* unicode.h */,
-			);
-			name = cc;
-			path = ../../../package/immi_gen/cc;
-			sourceTree = "<group>";
-		};
-		DA79124D1AFCEEE900E5F773 /* objc */ = {
-			isa = PBXGroup;
-			children = (
-				DA79124E1AFCEEE900E5F773 /* github.h */,
-				DA79124F1AFCEEE900E5F773 /* github.mm */,
-			);
-			name = objc;
-			path = ../../../package/immi_gen/objc;
-			sourceTree = "<group>";
-		};
-		DAEE2F321AD6AA1800945914 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				DAEE2F331AD6AA2600945914 /* github.snapshot */,
-			);
-			name = Resources;
-			path = github/Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -284,7 +242,7 @@
 		DA313F971AD665A6000089F9 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 0630;
 				ORGANIZATIONNAME = "Google Inc";
 				TargetAttributes = {
 					DA313F9E1AD665A6000089F9 = {
@@ -320,11 +278,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DAEE2F341AD6AA2600945914 /* github.snapshot in Resources */,
 				DA313FAE1AD665A6000089F9 /* Main.storyboard in Resources */,
 				DA313FB31AD665A6000089F9 /* LaunchScreen.xib in Resources */,
 				2D6E8DC71B283A6300FED492 /* dart-logo.png in Resources */,
 				DA313FB01AD665A6000089F9 /* Images.xcassets in Resources */,
+				DA155C241B6A2FAA00022EA8 /* github.snapshot in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -389,19 +347,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				2DB4918A1B0C9B2000912DA3 /* CommitListPresenter.mm in Sources */,
-				DA79124C1AFCEEB300E5F773 /* unicode.cc in Sources */,
-				DA7912501AFCEEE900E5F773 /* github.mm in Sources */,
-				DA79124B1AFCEEB300E5F773 /* struct.cc in Sources */,
 				DA1D77031B037490009E936C /* MainController.mm in Sources */,
-				DA4370BD1AE9328D00EEE52F /* unix_ia32_hack.c in Sources */,
-				2DB4917D1B0C797900912DA3 /* SlidingWindowPresenter.mm in Sources */,
 				DA313FA81AD665A6000089F9 /* AppDelegate.mm in Sources */,
-				2DA416301B638EC500660667 /* ImagePresenter.mm in Sources */,
 				2DB491831B0C83D200912DA3 /* CommitCellPresenter.mm in Sources */,
-				DA7EF8871B0F3B7D005F8E03 /* MenuPresenter.mm in Sources */,
+				DA155C301B6B49BF00022EA8 /* ImagePresenter.mm in Sources */,
+				DA155C311B6B49BF00022EA8 /* MenuPresenter.mm in Sources */,
 				DA313FA51AD665A6000089F9 /* main.m in Sources */,
-				DADC871F1B298C90000F0BE7 /* DrawerPresenter.mm in Sources */,
-				DA79124A1AFCEEB300E5F773 /* immi_service.cc in Sources */,
+				DA155C2F1B6B49BF00022EA8 /* DrawerPresenter.mm in Sources */,
+				DA155C321B6B49BF00022EA8 /* SlidingWindowPresenter.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -462,6 +415,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -504,6 +458,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
+				DEAD_CODE_STRIPPING = NO;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -525,13 +480,11 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 4E37F34647C00D8D3201F7A7 /* Pods.debug.xcconfig */;
 			buildSettings = {
-				ARCHS = armv7;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEAD_CODE_STRIPPING = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
-					"$(PROJECT_DIR)/../../..",
 				);
 				INFOPLIST_FILE = github/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
@@ -549,13 +502,11 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = CF6A9C448DE9E3E165408184 /* Pods.release.xcconfig */;
 			buildSettings = {
-				ARCHS = armv7;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEAD_CODE_STRIPPING = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
-					"$(PROJECT_DIR)/../../..",
 				);
 				INFOPLIST_FILE = github/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";

@@ -1,8 +1,0 @@
-name: immi_samples
-version: 0.1.0
-description: A collection of sample components for the immi UI infrastructure.
-dependencies:
-  immic:
-    path: ../../tools/immic
-transformers:
-- immic

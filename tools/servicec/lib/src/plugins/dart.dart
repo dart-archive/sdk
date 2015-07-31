@@ -23,7 +23,9 @@ const COPYRIGHT = """
 
 const int HEADER_SIZE = 56;
 
-const List<String> RESOURCES = const [];
+const List<String> RESOURCES = const [
+  "struct.dart",
+];
 
 void generate(String path, Unit unit, String outputDirectory) {
   _DartVisitor visitor = new _DartVisitor(path);
@@ -95,7 +97,7 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('import "dart:fletch.ffi";');
     writeln('import "dart:service" as service;');
     if (node.structs.isNotEmpty) {
-      writeln('import "package:service/struct.dart";');
+      writeln('import "package:service/dart/struct.dart";');
     }
     writeln();
 

@@ -6,11 +6,11 @@ library immi_samples.sliding_window;
 
 import 'sequenced_presenter.dart';
 
-import 'package:immi/immi.dart';
+import 'package:immi/dart/immi.dart';
 
 // Export generated code for nodes in sliding_window.immi
-import 'sliding_window_immi.dart';
-export 'sliding_window_immi.dart';
+import 'package:immi/dart/sliding_window.dart';
+export 'package:immi/dart/sliding_window.dart';
 
 class _Window {
   int startOffset = 0;

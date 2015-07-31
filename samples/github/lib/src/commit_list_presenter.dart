@@ -5,7 +5,7 @@
 import 'github_services.dart';
 import 'commit_presenter.dart';
 
-import 'package:immi/immi.dart';
+import 'package:immi/dart/immi.dart';
 import 'package:immi_samples/sliding_window.dart';
 
 class CommitListPresenter {

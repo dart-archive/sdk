@@ -4,14 +4,14 @@
 
 import 'github_services.dart';
 
-import 'package:immi/immi.dart';
+import 'package:immi/dart/immi.dart';
+import 'package:immi/dart/image.dart';
+
 import 'package:immi_samples/sequenced_presenter.dart';
 
 // Export generated code for nodes in commit_presenter.immi
-import 'commit_presenter_immi.dart';
-export 'commit_presenter_immi.dart';
-
-import 'image_immi.dart';
+import 'package:immi/dart/commit_presenter.dart';
+export 'package:immi/dart/commit_presenter.dart';
 
 class CommitPresenter extends SequencedPresenter<CommitNode> {
   Repository _repository;

@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #import <UIKit/UIKit.h>
-#import "github.h"
+#import "Immi.h"
 #import "ViewPresenter.h"
 
 @interface CommitListPresenter

@@ -2,11 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:immi/immi.dart';
+import 'package:immi/dart/immi.dart';
 
 // Export generated code for nodes in menu.immi
-import 'menu_immi.dart';
-export 'menu_immi.dart';
+import 'package:immi/dart/menu.dart';
+export 'package:immi/dart/menu.dart';
 
 class MenuItem {
   String title;

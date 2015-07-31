@@ -5,7 +5,7 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
-#import "github.h"
+#import "Immi.h"
 
 @protocol CellPresenter
 

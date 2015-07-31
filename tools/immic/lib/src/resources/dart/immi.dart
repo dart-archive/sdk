@@ -4,7 +4,7 @@
 
 library immi;
 
-import 'package:service/struct.dart';
+import 'package:service/dart/struct.dart';
 
 // TODO(zerny): Can we find a way to depend on the generated builder hierarchy
 // so we can use the actual builder types below? Otherwise, remove the commented

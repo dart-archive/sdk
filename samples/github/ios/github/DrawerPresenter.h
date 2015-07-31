@@ -4,7 +4,7 @@
 
 #import <UIKit/UIKit.h>
 
-#import "github.h"
+#import "Immi.h"
 #import "ViewPresenter.h"
 
 @interface DrawerPresenter : NSObject <DrawerPresenter>

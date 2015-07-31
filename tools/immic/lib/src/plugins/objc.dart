@@ -15,6 +15,10 @@ import '../emitter.dart';
 import '../primitives.dart' as primitives;
 import '../struct_layout.dart';
 
+const List<String> RESOURCES = const [
+  "ImmiBase.h",
+];
+
 const COPYRIGHT = """
 // Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
@@ -61,20 +65,31 @@ void generate(String path, Map units, String outputDirectory) {
   String directory = join(outputDirectory, "objc");
   _generateHeaderFile(path, units, directory);
   _generateImplementationFile(path, units, directory);
+
+  String resourcesDirectory = join(dirname(Platform.script.path),
+      '..', 'lib', 'src', 'resources', 'objc');
+  for (String resource in RESOURCES) {
+    String resourcePath = join(resourcesDirectory, resource);
+    File file = new File(resourcePath);
+    String contents = file.readAsStringSync();
+    writeToFile(directory, resource, contents);
+  }
 }
 
 void _generateHeaderFile(String path, Map units, String directory) {
   _HeaderVisitor visitor = new _HeaderVisitor(path);
   visitor.visitUnits(units);
   String contents = visitor.buffer.toString();
-  writeToFile(directory, path, contents, extension: 'h');
+  String file = visitor.immiImplFile;
+  writeToFile(directory, file, contents, extension: 'h');
 }
 
 void _generateImplementationFile(String path, Map units, String directory) {
   _ImplementationVisitor visitor = new _ImplementationVisitor(path);
   visitor.visitUnits(units);
   String contents = visitor.buffer.toString();
-  writeToFile(directory, path, contents, extension: 'mm');
+  String file = visitor.immiImplFile;
+  writeToFile(directory, file, contents, extension: 'mm');
 }
 
   String getName(node) {
@@ -125,7 +140,15 @@ void _generateImplementationFile(String path, Map units, String directory) {
     return patchMethodSignature(node) + ';';
   }
 
-class _HeaderVisitor extends CodeGenerationVisitor {
+
+abstract class _ObjCVisitor extends CodeGenerationVisitor {
+  _ObjCVisitor(String path) : super(path);
+
+  String immiBaseFile = 'ImmiBase.h';
+  String immiImplFile = 'Immi.h';
+}
+
+class _HeaderVisitor extends _ObjCVisitor {
   _HeaderVisitor(String path) : super(path);
 
   List nodes = [];
@@ -134,10 +157,9 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     units.values.forEach(collectMethodSignatures);
     units.values.forEach((unit) { nodes.addAll(unit.structs); });
     _writeHeader();
-    nodes.forEach((node) {
-      writeln('@class ${node.name}Node;');
-      writeln('@class ${node.name}Patch;');
-    });
+    nodes.forEach((node) { writeln('@class ${node.name}Node;'); });
+    writeln();
+    nodes.forEach((node) { writeln('@class ${node.name}Patch;'); });
     writeln();
     _writeActions();
     units.values.forEach(visit);
@@ -154,6 +176,11 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     String patchName = "${node.name}Patch";
     String patchNameData = "${nodeName}PatchData";
     String presenterName = "${node.name}Presenter";
+    writeln('@protocol $presenterName');
+    writeln(presentMethodDeclaration(node));
+    writeln(patchMethodDeclaration(node));
+    writeln('@end');
+    writeln();
     writeln('@interface $nodeName : NSObject <Node>');
     forEachSlot(node, null, (Type slotType, String slotName) {
       write('@property (readonly) ');
@@ -167,18 +194,10 @@ class _HeaderVisitor extends CodeGenerationVisitor {
     }
     writeln('@end');
     writeln();
-    writeln('@class $patchName;');
-    writeln();
-    writeln('@protocol $presenterName');
-    writeln(presentMethodDeclaration(node));
-    writeln(patchMethodDeclaration(node));
-    writeln('@end');
-    writeln();
     writeln('@interface $patchName : NSObject <NodePatch>');
     writeln('@property (readonly) bool changed;');
     writeln('@property (readonly) $nodeName* previous;');
     writeln('@property (readonly) $nodeName* current;');
-    writeln(applyToMethodDeclaration(node));
     forEachSlot(node, null, (Type slotType, String slotName) {
       writeln('@property (readonly) ${patchType(slotType)}* $slotName;');
     });
@@ -186,6 +205,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
       String actionPatch = actionPatchType(method);
       writeln('@property (readonly) $actionPatch* ${method.name};');
     }
+    writeln(applyToMethodDeclaration(node));
     writeln('@end');
     writeln();
   }
@@ -217,11 +237,10 @@ class _HeaderVisitor extends CodeGenerationVisitor {
   }
 
   void _writeHeader() {
-    String fileName = basenameWithoutExtension(path);
     writeln(COPYRIGHT);
     writeln('// Generated file. Do not edit.');
     writeln();
-    writeln('#import "Immi.h"');
+    writeln('#import "$immiBaseFile"');
     writeln();
   }
 
@@ -250,7 +269,7 @@ class _HeaderVisitor extends CodeGenerationVisitor {
   }
 }
 
-class _ImplementationVisitor extends CodeGenerationVisitor {
+class _ImplementationVisitor extends _ObjCVisitor {
   _ImplementationVisitor(String path) : super(path);
 
   List<Struct> nodes = [];
@@ -1125,7 +1144,7 @@ void encodeString(NSString* string, List<unichar> chars) {
     writeln(COPYRIGHT);
     writeln('// Generated file. Do not edit.');
     writeln();
-    writeln('#import "${fileName}.h"');
+    writeln('#import "$immiImplFile"');
     writeln();
   }
 

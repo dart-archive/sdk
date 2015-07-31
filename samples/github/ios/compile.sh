@@ -1,18 +1,25 @@
 #!/bin/bash
 
-# Manual setup in xcode.
-# Add $(PROJECT_DIR)/../../.. to Build Settings / Header Search Path
-# Add $(PROJECT_DIR)/../generated to Build Settings / User Header Search Path
-# Add out/ReleaseXARM/libfletch.a to Build Phases / Link Binary with Libraries
-# Set 'no' in Build Settings / Dead Code Stripping
-# Add directory group to objc and to cc in <FLETCH_ROOT>/package/immi_gen
-# Add Resources directory reference to ./generated
-# Add a "Run Script" with content ./compile.sh in Build Phases
-# and place it between Target Dependencies and Compile Sources (drag it there).
-# Install cocoapods: sudo gem install cocoapods
-# Install pod dependencies: pod install (run in the samples/github/ios dir).
-# Open the project/workspace: open github.xcworkspace
-# Hit the 'run' button and it should work.
+# Setup
+#  - Install and build fletch.
+#  - Install Cocoapods.
+#  - Run immic (output in packages/immi).
+#  - Run servicec (output in packages/service).
+#  - Generate libfletch.a for your choice of platforms and add it to xcode.
+#  - Generate snapshot of your Dart program and add it to xcode.
+#  - Write Podfile that links to {Fletch,Service,Immi}.podspec.
+#  - Run pod install.
+
+# Build (implemented by the present script).
+#  - Run immic.
+#  - Run servicec.
+#  - Generate snapshot of your Dart program.
+#  - Hit the 'run' button in xcode.
+
+# To run the above as part of xcode 'run'
+# Open your <proj>.xcodeproj (not the xcworkspace)
+# and add a "Run Script" with content ./compile.sh in Build Phases and place it
+# between Target Dependencies and Compile Sources (drag it there).
 
 set -uxe
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,38 +27,31 @@ PROJ=github
 
 FLETCH_DIR="$(cd "$DIR/../../.." && pwd)"
 FLETCH_PKG_DIR="$FLETCH_DIR/package"
-IMMI_GEN_DIR="$FLETCH_PKG_DIR/immi_gen"
 
 TARGET_DIR="$(cd "$DIR/.." && pwd)"
-TARGET_BUILD_DIR="$TARGET_DIR/build"
-TARGET_PKG_DIR="$TARGET_BUILD_DIR/bin/packages"
+TARGET_BUILD_DIR="$TARGET_DIR"
+TARGET_PKG_DIR="$TARGET_BUILD_DIR/packages"
 
-mkdir -p $DIR/../generated
-OUT_DIR="$(cd "$DIR/../generated" && pwd)"
+IMMI_GEN_DIR="$TARGET_PKG_DIR/immi"
+SERVICE_GEN_DIR="$TARGET_PKG_DIR/service"
 
 DART="$FLETCH_DIR/out/ReleaseIA32/dart"
-
 IMMIC="$DART $FLETCH_DIR/tools/immic/bin/immic.dart"
 SERVICEC="$DART $FLETCH_DIR/tools/servicec/bin/servicec.dart"
 FLETCHC="$DART -p $FLETCH_PKG_DIR $FLETCH_DIR/pkg/fletchc/lib/fletchc.dart"
 
-# Generate dart node files with the pub transformer for immi.
-(cd $TARGET_DIR && pub build bin -v --mode=debug)
-
-# Generate dart service file and other immi files with the compiler.
-# TODO(zerny): Rewrite the compilers to eliminate the 'global' immi_gen dir.
-mkdir -p "$IMMI_GEN_DIR"
-if [[ ! -L "$TARGET_PKG_DIR/immi_gen" ]]; then
-    ln -s "$IMMI_GEN_DIR" "$TARGET_PKG_DIR/immi_gen"
+# TODO(zerny): Create a project specific package directory.
+if [[ ! -d "$TARGET_PKG_DIR" ]]; then
+    ln -s "$FLETCH_PKG_DIR" "$TARGET_PKG_DIR"
 fi
 
+# Generate dart service file and other immi files with the compiler.
+mkdir -p "$IMMI_GEN_DIR"
 $IMMIC --package "$FLETCH_PKG_DIR" --out "$IMMI_GEN_DIR" "$TARGET_DIR/lib/$PROJ.immi"
-$SERVICEC --out "$IMMI_GEN_DIR" "$IMMI_GEN_DIR/idl/immi_service.idl"
 
-lipo -create -output "$DIR/libfletch.a" \
-     "$FLETCH_DIR/out/ReleaseIA32/libfletch.a" \
-     "$FLETCH_DIR/out/ReleaseXARM/libfletch.a"
+mkdir -p "$SERVICE_GEN_DIR"
+$SERVICEC --out "$SERVICE_GEN_DIR" "$IMMI_GEN_DIR/idl/immi_service.idl"
 
 exec $FLETCHC "$TARGET_BUILD_DIR/bin/$PROJ.dart" \
      --package-root="$TARGET_PKG_DIR" \
-     --out "$OUT_DIR/$PROJ.snapshot"
+     --out "$DIR/$PROJ.snapshot"

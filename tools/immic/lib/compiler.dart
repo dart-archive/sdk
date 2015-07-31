@@ -9,13 +9,20 @@ import 'dart:convert';
 
 import 'package:path/path.dart' as p;
 
+import 'src/emitter.dart';
+import 'src/importer.dart';
 import 'src/parser.dart';
 import 'src/resolver.dart';
-import 'src/importer.dart';
 
 import 'src/plugins/idl.dart' as idl;
 import 'src/plugins/dart.dart' as dart;
 import 'src/plugins/objc.dart' as objc;
+
+import 'package:path/path.dart' show join, dirname;
+
+const List<String> RESOURCES = const [
+  "Immi.podspec",
+];
 
 class ImportResolverWithPackageRoot implements ImportResolver<String> {
   final String packageDirectory;
@@ -52,6 +59,17 @@ void compile(String path,
       topUnit, new ImportResolverWithPackageRoot(packageDirectory), path);
 
   resolve(units);
+
+  dart.generate(path, units, outputDirectory);
   idl.generate(path, units, outputDirectory);
   objc.generate(path, units, outputDirectory);
+
+  String resourcesDirectory = join(dirname(Platform.script.path),
+      '..', 'lib', 'src', 'resources');
+  for (String resource in RESOURCES) {
+    String resourcePath = join(resourcesDirectory, resource);
+    File file = new File(resourcePath);
+    String contents = file.readAsStringSync();
+    writeToFile(outputDirectory, resource, contents);
+  }
 }

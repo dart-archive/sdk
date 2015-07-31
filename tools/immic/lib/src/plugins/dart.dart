@@ -15,11 +15,32 @@ import '../emitter.dart';
 import '../struct_layout.dart';
 import '../primitives.dart' as primitives;
 
+const List<String> RESOURCES = const [
+  "immi.dart",
+];
+
 const COPYRIGHT = """
 // Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 """;
+
+void generate(String path,
+              Map<String, Unit> units,
+              String outputDirectory) {
+  String directory = join(outputDirectory, 'dart');
+  units.forEach((path, unit) => _generateNodeFile(path, unit, directory));
+  _generateServiceFile(path, units, directory);
+
+  String resourcesDirectory = join(dirname(Platform.script.path),
+      '..', 'lib', 'src', 'resources', 'dart');
+  for (String resource in RESOURCES) {
+    String resourcePath = join(resourcesDirectory, resource);
+    File file = new File(resourcePath);
+    String contents = file.readAsStringSync();
+    writeToFile(directory, resource, contents);
+  }
+}
 
 String generateNodeString(String unitPath, Unit unit) {
   _DartVisitor visitor = new _DartVisitor(unitPath);
@@ -32,6 +53,20 @@ String generateServiceString(String path, Map units) {
   units.values.forEach(visitor.collectMethodSignatures);
   visitor._writeServiceImpl();
   return visitor.buffer.toString();
+}
+
+void _generateNodeFile(String unitPath, Unit unit, String directory) {
+  String content = generateNodeString(unitPath, unit);
+  writeToFile(directory, unitPath, content, extension: 'dart');
+}
+
+void _generateServiceFile(String path,
+                          Map<String, Unit> units,
+                          String directory) {
+  _DartVisitor visitor = new _DartVisitor(path);
+  String content = generateServiceString(path, units);
+  String file = visitor.serviceImplFile;
+  writeToFile(directory, file, content, extension: 'dart');
 }
 
 class _DartVisitor extends CodeGenerationVisitor {
@@ -47,7 +82,7 @@ class _DartVisitor extends CodeGenerationVisitor {
   }
 
   visitImport(Import import) {
-    writeln("import '${withoutExtension(import.import)}_immi.dart';");
+    writeln("import '${withoutExtension(import.import)}.dart';");
   }
 
   getPatchType(Type type) {
@@ -292,8 +327,8 @@ class _DartVisitor extends CodeGenerationVisitor {
     write("""
 library ${serviceImplLib};
 
-import 'package:immi/immi.dart';
-import '${immiGenPkg}/dart/${serviceFile}.dart';
+import '${immiGenPkg}/dart/immi.dart';
+import '${serviceGenPkg}/dart/${serviceFile}.dart';
 
 class ${serviceImplName} extends ${serviceName} {
   var _nextPresenterId = 1;
@@ -389,8 +424,8 @@ class ${serviceImplName} extends ${serviceName} {
   }
 
   void _writeImports() {
-    writeln('import "package:immi/immi.dart";');
-    writeln('import "package:immi_gen/dart/$serviceFile.dart";');
+    writeln('import "$immiGenPkg/dart/immi.dart";');
+    writeln('import "$serviceGenPkg/dart/$serviceFile.dart";');
     writeln();
   }
 

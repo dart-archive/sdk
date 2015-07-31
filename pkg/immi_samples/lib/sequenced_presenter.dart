@@ -4,7 +4,7 @@
 
 library immi_samples.sequenced_presenter;
 
-import 'package:immi/immi.dart';
+import 'package:immi/dart/immi.dart';
 
 abstract class SequencedPresenter<T extends Node> {
   // Returns presentation graph for valid index otherwise null.
