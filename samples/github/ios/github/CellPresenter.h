@@ -9,6 +9,8 @@
 
 @protocol CellPresenter
 
+@property (readonly) CGFloat minimumCellHeight;
+
 - (UITableViewCell*)tableView:(UITableView*)tableView
                     indexPath:(NSIndexPath*)indexPath
                       present:(Node*)node;

@@ -28,6 +28,10 @@ static UIImage* dartLogo = [UIImage imageNamed:@"dart-logo.png"];
   return self;
 }
 
+- (CGFloat) minimumCellHeight {
+  return 100.5;
+}
+
 - (UITableViewCell*)tableView:(UITableView*)tableView
                     indexPath:(NSIndexPath*)indexPath
                       present:(Node*)node {

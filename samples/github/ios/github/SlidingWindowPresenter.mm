@@ -36,13 +36,18 @@
                   tableView:(UITableView*)tableView {
   self.cellPresenter = presenter;
   self.tableView = tableView;
-  self.bufferSlack = 1;
-  self.bufferAdvance = 4;
-  // TODO(zerny): The buffer size should be dynamically computed. Here we make
-  // it large enough for the display of an iPad Air.
-  self.bufferCount = 50;
-
+  [self setBufferParametersBasedOnViewSize];
   return self;
+}
+
+- (void)setBufferParametersBasedOnViewSize {
+  CGFloat rowHeight = self.cellPresenter.minimumCellHeight;
+  CGFloat tableHeight = self.tableView.bounds.size.height;
+  int cellCount = (int) (tableHeight / rowHeight);
+
+  self.bufferSlack = 1;
+  self.bufferAdvance = cellCount;
+  self.bufferCount = 3 * self.bufferAdvance + cellCount;
 }
 
 - (void)presentSlidingWindow:(SlidingWindowNode*)node {
