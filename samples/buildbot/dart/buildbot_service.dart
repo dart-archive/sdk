@@ -9,12 +9,11 @@ library buildbot_service;
 import "dart:fletch";
 import "dart:fletch.ffi";
 import "dart:service" as service;
-import "package:service/struct.dart";
+import "struct.dart";
 
 final Channel _channel = new Channel();
 final Port _port = new Port(_channel);
-final ForeignFunction _postResult =
-    ForeignFunction.standard.lookup("PostResultToService");
+final ForeignFunction _postResult = ForeignLibrary.main.lookup("PostResultToService");
 
 bool _terminated = false;
 BuildBotService _impl;
@@ -351,51 +350,51 @@ class CommitListUpdatePatchDataBuilder extends Builder {
   }
 }
 
-class _uint16List extends ListReader implements List<int> {
+class _uint16List extends ListReader<int> implements List<int> {
   int operator[](int index) => segment.memory.getUint16(offset + index * 2);
 }
 
-class _uint16BuilderList extends ListBuilder implements List<int> {
+class _uint16BuilderList extends ListBuilder<int> implements List<int> {
   int operator[](int index) => segment.memory.getUint16(offset + index * 2);
   void operator[]=(int index, int value) { segment.memory.setUint16(offset + index * 2, value); }
 }
 
-class _CommitNodeDataList extends ListReader implements List<CommitNodeData> {
+class _CommitNodeDataList extends ListReader<CommitNodeData> implements List<CommitNodeData> {
   CommitNodeData operator[](int index) => readListElement(new CommitNodeData(), index, 24);
 }
 
-class _CommitNodeDataBuilderList extends ListBuilder implements List<CommitNodeDataBuilder> {
+class _CommitNodeDataBuilderList extends ListBuilder<CommitNodeDataBuilder> implements List<CommitNodeDataBuilder> {
   CommitNodeDataBuilder operator[](int index) => readListElement(new CommitNodeDataBuilder(), index, 24);
 }
 
-class _ConsoleUpdatePatchDataList extends ListReader implements List<ConsoleUpdatePatchData> {
+class _ConsoleUpdatePatchDataList extends ListReader<ConsoleUpdatePatchData> implements List<ConsoleUpdatePatchData> {
   ConsoleUpdatePatchData operator[](int index) => readListElement(new ConsoleUpdatePatchData(), index, 16);
 }
 
-class _ConsoleUpdatePatchDataBuilderList extends ListBuilder implements List<ConsoleUpdatePatchDataBuilder> {
+class _ConsoleUpdatePatchDataBuilderList extends ListBuilder<ConsoleUpdatePatchDataBuilder> implements List<ConsoleUpdatePatchDataBuilder> {
   ConsoleUpdatePatchDataBuilder operator[](int index) => readListElement(new ConsoleUpdatePatchDataBuilder(), index, 16);
 }
 
-class _CommitUpdatePatchDataList extends ListReader implements List<CommitUpdatePatchData> {
+class _CommitUpdatePatchDataList extends ListReader<CommitUpdatePatchData> implements List<CommitUpdatePatchData> {
   CommitUpdatePatchData operator[](int index) => readListElement(new CommitUpdatePatchData(), index, 16);
 }
 
-class _CommitUpdatePatchDataBuilderList extends ListBuilder implements List<CommitUpdatePatchDataBuilder> {
+class _CommitUpdatePatchDataBuilderList extends ListBuilder<CommitUpdatePatchDataBuilder> implements List<CommitUpdatePatchDataBuilder> {
   CommitUpdatePatchDataBuilder operator[](int index) => readListElement(new CommitUpdatePatchDataBuilder(), index, 16);
 }
 
-class _CommitListUpdatePatchDataList extends ListReader implements List<CommitListUpdatePatchData> {
+class _CommitListUpdatePatchDataList extends ListReader<CommitListUpdatePatchData> implements List<CommitListUpdatePatchData> {
   CommitListUpdatePatchData operator[](int index) => readListElement(new CommitListUpdatePatchData(), index, 16);
 }
 
-class _CommitListUpdatePatchDataBuilderList extends ListBuilder implements List<CommitListUpdatePatchDataBuilder> {
+class _CommitListUpdatePatchDataBuilderList extends ListBuilder<CommitListUpdatePatchDataBuilder> implements List<CommitListUpdatePatchDataBuilder> {
   CommitListUpdatePatchDataBuilder operator[](int index) => readListElement(new CommitListUpdatePatchDataBuilder(), index, 16);
 }
 
-class _CommitPatchDataList extends ListReader implements List<CommitPatchData> {
+class _CommitPatchDataList extends ListReader<CommitPatchData> implements List<CommitPatchData> {
   CommitPatchData operator[](int index) => readListElement(new CommitPatchData(), index, 24);
 }
 
-class _CommitPatchDataBuilderList extends ListBuilder implements List<CommitPatchDataBuilder> {
+class _CommitPatchDataBuilderList extends ListBuilder<CommitPatchDataBuilder> implements List<CommitPatchDataBuilder> {
   CommitPatchDataBuilder operator[](int index) => readListElement(new CommitPatchDataBuilder(), index, 24);
 }

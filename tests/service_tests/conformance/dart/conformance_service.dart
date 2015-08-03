@@ -9,12 +9,11 @@ library conformance_service;
 import "dart:fletch";
 import "dart:fletch.ffi";
 import "dart:service" as service;
-import "package:service/struct.dart";
+import "struct.dart";
 
 final Channel _channel = new Channel();
 final Port _port = new Port(_channel);
-final ForeignFunction _postResult =
-    ForeignLibrary.main.lookup("PostResultToService");
+final ForeignFunction _postResult = ForeignLibrary.main.lookup("PostResultToService");
 
 bool _terminated = false;
 ConformanceService _impl;
