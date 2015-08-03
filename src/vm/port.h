@@ -5,8 +5,7 @@
 #ifndef SRC_VM_PORT_H_
 #define SRC_VM_PORT_H_
 
-#include <atomic>
-
+#include "src/shared/atomic.h"
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 
@@ -32,8 +31,8 @@ class Port {
 
   // Spin lock implementation.
   bool IsLocked() const { return lock_; }
-  void Lock() { while (lock_.exchange(true, std::memory_order_acquire)) { } }
-  void Unlock() { lock_.store(false, std::memory_order_release); }
+  void Lock() { while (lock_.exchange(true, kAcquire)) { } }
+  void Unlock() { lock_.store(false, kRelease); }
 
   // Increment the ref count. This function is thread safe.
   void IncrementRef();
@@ -60,8 +59,8 @@ class Port {
 
   Process* process_;
   Instance* channel_;
-  std::atomic<int> ref_count_;
-  std::atomic<bool> lock_;
+  Atomic<int> ref_count_;
+  Atomic<bool> lock_;
 
   // The ports are in a list in the process so that we can GC the channel
   // pointer.

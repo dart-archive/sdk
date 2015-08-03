@@ -27,13 +27,13 @@ Scheduler::Scheduler()
       sleeping_threads_(0),
       thread_count_(0),
       idle_threads_(kEmptyThreadState),
-      threads_(new std::atomic<ThreadState*>[max_threads_]),
+      threads_(new Atomic<ThreadState*>[max_threads_]),
       temporary_thread_states_(NULL),
       foreign_threads_(0),
       startup_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
       pause_(false),
-      current_processes_(new std::atomic<Process*>[max_threads_]),
+      current_processes_(new Atomic<Process*>[max_threads_]),
       gc_thread_(NULL) {
   for (int i = 0; i < max_threads_; i++) {
     threads_[i] = NULL;

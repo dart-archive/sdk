@@ -5,8 +5,7 @@
 #ifndef SRC_VM_THREAD_POOL_H_
 #define SRC_VM_THREAD_POOL_H_
 
-#include <atomic>
-
+#include "src/shared/atomic.h"
 #include "src/shared/platform.h"
 
 namespace fletch {
@@ -31,7 +30,7 @@ class ThreadPool {
  private:
   Monitor* monitor_;
   const int max_threads_;
-  std::atomic<int> threads_;
+  Atomic<int> threads_;
 
   static void* RunThread(void* arg);
   void ThreadDone();

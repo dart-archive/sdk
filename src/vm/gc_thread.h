@@ -5,7 +5,7 @@
 #ifndef SRC_VM_GC_THREAD_H_
 #define SRC_VM_GC_THREAD_H_
 
-#include <atomic>
+#include "src/shared/atomic.h"
 
 #include "src/vm/thread.h"
 #include "src/vm/program.h"
@@ -28,11 +28,11 @@ class GCThread {
 
   Monitor* gc_thread_monitor_;
   Program* program_;
-  std::atomic<bool> shutting_down_;
-  std::atomic<bool> requesting_gc_;
+  Atomic<bool> shutting_down_;
+  Atomic<bool> requesting_gc_;
 
   Monitor* shutdown_monitor_;
-  std::atomic<bool> did_shutdown_;
+  Atomic<bool> did_shutdown_;
 };
 
 }  // namespace fletch

@@ -5,9 +5,9 @@
 #ifndef SRC_VM_PROCESS_QUEUE_H_
 #define SRC_VM_PROCESS_QUEUE_H_
 
-#include <atomic>
-
 #include "src/shared/assert.h"
+#include "src/shared/atomic.h"
+
 #include "src/vm/process.h"
 
 namespace fletch {
@@ -140,13 +140,9 @@ class ProcessQueue {
   bool is_empty() const { return head_.load(kAcquire) == NULL; }
 
  private:
-  static const std::memory_order kRelaxed = std::memory_order_relaxed;
-  static const std::memory_order kRelease = std::memory_order_release;
-  static const std::memory_order kAcquire = std::memory_order_acquire;
-
   Process* const kSentinel = reinterpret_cast<Process*>(1);
 
-  std::atomic<Process*> head_;
+  Atomic<Process*> head_;
   // The tail_ field is only modified under a lock on head_. This gives us the
   // right memory-order on tail_, without read/writes being explicit atomic.
   Process* tail_;

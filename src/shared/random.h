@@ -5,9 +5,9 @@
 #ifndef SRC_SHARED_RANDOM_H_
 #define SRC_SHARED_RANDOM_H_
 
-namespace fletch {
-
 #include "src/shared/globals.h"
+
+namespace fletch {
 
 // This class implements a LCG (Linear Congruential Generator) pseudo random
 // number generator.

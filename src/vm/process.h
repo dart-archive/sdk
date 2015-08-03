@@ -5,7 +5,8 @@
 #ifndef SRC_VM_PROCESS_H_
 #define SRC_VM_PROCESS_H_
 
-#include <atomic>
+#include "src/shared/atomic.h"
+#include "src/shared/random.h"
 
 #include "src/vm/debug_info.h"
 #include "src/vm/heap.h"
@@ -13,7 +14,6 @@
 #include "src/vm/program.h"
 #include "src/vm/storebuffer.h"
 #include "src/vm/thread.h"
-#include "src/shared/random.h"
 
 namespace fletch {
 
@@ -55,7 +55,7 @@ class ThreadState {
   ProcessQueue* const queue_;
   LookupCache* cache_;
   Monitor* idle_monitor_;
-  std::atomic<ThreadState*> next_idle_thread_;
+  Atomic<ThreadState*> next_idle_thread_;
 };
 
 class Process {
@@ -306,10 +306,10 @@ class Process {
   Array* statics_;
 
   Coroutine* coroutine_;
-  std::atomic<Object**> stack_limit_;
+  Atomic<Object**> stack_limit_;
 
-  std::atomic<State> state_;
-  std::atomic<ThreadState*> thread_state_;
+  Atomic<State> state_;
+  Atomic<ThreadState*> thread_state_;
 
   // We need extremely fast access to the primary lookup cache, so we
   // store a reference to it in the process whenever we're interpreting
@@ -323,7 +323,7 @@ class Process {
 
   // Fields used by ProcessQueue, when holding the Process.
   friend class ProcessQueue;
-  std::atomic<ProcessQueue*> queue_;
+  Atomic<ProcessQueue*> queue_;
   // While the ProcessQueue is lock-free, we have an 'atomic lock' on the
   // head_ element. That will ensure we have the right memory order on
   // queue_next_/queue_previous_, as they are always read/modified while
@@ -335,7 +335,7 @@ class Process {
   Port* ports_;
 
   // Pointer to the last PortQueue element of this process.
-  std::atomic<PortQueue*> last_message_;
+  Atomic<PortQueue*> last_message_;
 
   // Process-local list of PortQueue elements currently being processed.
   PortQueue* current_message_;
@@ -349,7 +349,7 @@ class Process {
 
   DebugInfo* debug_info_;
 
-  std::atomic<int> block_count_;
+  Atomic<int> block_count_;
   Process* blocked_;
 
 #ifdef DEBUG

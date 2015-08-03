@@ -5,6 +5,8 @@
 #ifndef SRC_VM_SCHEDULER_H_
 #define SRC_VM_SCHEDULER_H_
 
+#include "src/shared/atomic.h"
+
 #include "src/vm/thread_pool.h"
 
 namespace fletch {
@@ -78,18 +80,18 @@ class Scheduler {
   const int max_threads_;
   ThreadPool thread_pool_;
   Monitor* preempt_monitor_;
-  std::atomic<int> processes_;
-  std::atomic<int> sleeping_threads_;
-  std::atomic<int> thread_count_;
-  std::atomic<ThreadState*> idle_threads_;
-  std::atomic<ThreadState*>* threads_;
-  std::atomic<ThreadState*> temporary_thread_states_;
-  std::atomic<int> foreign_threads_;
+  Atomic<int> processes_;
+  Atomic<int> sleeping_threads_;
+  Atomic<int> thread_count_;
+  Atomic<ThreadState*> idle_threads_;
+  Atomic<ThreadState*>* threads_;
+  Atomic<ThreadState*> temporary_thread_states_;
+  Atomic<int> foreign_threads_;
   ProcessQueue* startup_queue_;
 
   Monitor* pause_monitor_;
-  std::atomic<bool> pause_;
-  std::atomic<Process*>* current_processes_;
+  Atomic<bool> pause_;
+  Atomic<Process*>* current_processes_;
 
   GCThread* gc_thread_;
 
