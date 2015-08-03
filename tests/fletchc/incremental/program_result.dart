@@ -41,13 +41,24 @@ class ProgramExpectation {
 
   final bool commitChangesShouldFail;
 
-  final bool skip;
-
   const ProgramExpectation(
       this.messages,
       {this.compileUpdatesShouldThrow: false,
-       this.commitChangesShouldFail: false,
-       this.skip: false});
+       this.commitChangesShouldFail: false});
+
+  factory ProgramExpectation.fromJson(String json) {
+    var data = JSON.decode(json);
+    if (data is String) {
+      data = <String>[data];
+    }
+    if (data is List) {
+      return new ProgramExpectation(data);
+    }
+    return new ProgramExpectation(
+        extractMessages(data),
+        compileUpdatesShouldThrow: extractCompileUpdatesShouldThrow(data),
+        commitChangesShouldFail: extractCommitChangesShouldFail(data));
+  }
 
   ProgramResult toResult(String code) {
     return new ProgramResult(
@@ -55,6 +66,34 @@ class ProgramExpectation {
         messages,
         compileUpdatesShouldThrow: compileUpdatesShouldThrow,
         commitChangesShouldFail: commitChangesShouldFail);
+  }
+
+  toJson() {
+    if (!compileUpdatesShouldThrow && !commitChangesShouldFail) {
+      return messages.length == 1 ? messages.first : messages;
+    }
+    Map<String, dynamic> result = <String, dynamic>{
+      "messages": messages,
+    };
+    if (compileUpdatesShouldThrow) {
+      result['compileUpdatesShouldThrow'] = 1;
+    }
+    if (commitChangesShouldFail) {
+      result['commitChangesShouldFail'] = 1;
+    }
+    return result;
+  }
+
+  static List<String> extractMessages(Map<String, dynamic> json) {
+    return new List<String>.from(json["messages"]);
+  }
+
+  static bool extractCompileUpdatesShouldThrow(Map<String, dynamic> json) {
+    return json["compileUpdatesShouldThrow"] == 1;
+  }
+
+  static bool extractCommitChangesShouldFail(Map<String, dynamic> json) {
+    return json["commitChangesShouldFail"] == 1;
   }
 }
 
@@ -72,9 +111,6 @@ class EncodedResult {
       }
       List<String> sources = expandUpdates(updates);
       List expectations = this.expectations;
-      if (expectations.first.skip) {
-        expectations = expectations.sublist(1);
-      }
       if (sources.length != expectations.length) {
         throw new StateError(
             "Number of sources and expectations differ"
@@ -157,4 +193,33 @@ ProgramExpectation decodeExpectation(expectation) {
   } else {
     throw new ArgumentError("Don't know how to decode $expectation");
   }
+}
+
+Map<String, EncodedResult> computeTests(List<String> tests) {
+  Map<String, EncodedResult> result = <String, EncodedResult>{};
+  for (String test in tests) {
+    int firstLineEnd = test.indexOf("\n");
+    String testName = test.substring(0, firstLineEnd);
+    test = test.substring(firstLineEnd + 1);
+    Map<String, String> files = splitFiles(test);
+    bool isFirstPatch = true;
+    List<ProgramExpectation> expectations;
+    files.forEach((String filename, String source) {
+      if (filename.endsWith(".patch")) {
+        if (isFirstPatch) {
+          expectations = extractJsonExpectations(source);
+        }
+        isFirstPatch = false;
+      }
+    });
+    result[testName] = new EncodedResult(test, expectations);
+  }
+  return result;
+}
+
+List<ProgramExpectation> extractJsonExpectations(String source) {
+  return new List<ProgramExpectation>.from(source.split("\n")
+      .where((l) => l.startsWith("<<<<<<< ") || l.startsWith("======= "))
+      .map((l) => l.substring("<<<<<<< ".length))
+      .map((l) => new ProgramExpectation.fromJson(l)));
 }
