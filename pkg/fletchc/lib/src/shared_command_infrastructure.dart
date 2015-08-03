@@ -192,6 +192,11 @@ class CommandBuffer<E> {
         .getUint64(offset, commandEndianness);
   }
 
+  static int readInt64FromBuffer(Uint8List buffer, int offset) {
+    return buffer.buffer.asByteData(buffer.offsetInBytes)
+        .getInt64(offset, commandEndianness);
+  }
+
   static double readDoubleFromBuffer(Uint8List buffer, int offset) {
     // TODO(ahe): Dart VM crash if reading a double from unaligned
     // address. Remove the next line when bug is fixed

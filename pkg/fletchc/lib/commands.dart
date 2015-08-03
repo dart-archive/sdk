@@ -58,7 +58,7 @@ abstract class Command {
         ProcessBacktrace backtrace = new ProcessBacktrace(frames);
         for (int i = 0; i < frames; i++) {
           int offset = i * 16 + 4;
-          int functionId = CommandBuffer.readUint64FromBuffer(buffer, offset);
+          int functionId = CommandBuffer.readInt64FromBuffer(buffer, offset);
           int bytecodeIndex =
               CommandBuffer.readUint64FromBuffer(buffer, offset + 8);
           backtrace.functionIds[i] = functionId;
@@ -67,7 +67,7 @@ abstract class Command {
         return backtrace;
       case CommandCode.ProcessBreakpoint:
         int breakpointId = CommandBuffer.readUint32FromBuffer(buffer, 0);
-        int functionId = CommandBuffer.readUint64FromBuffer(buffer, 4);
+        int functionId = CommandBuffer.readInt64FromBuffer(buffer, 4);
         int bytecodeIndex = CommandBuffer.readUint64FromBuffer(buffer, 12);
         return new ProcessBreakpoint(breakpointId, functionId, bytecodeIndex);
       case CommandCode.ProcessDeleteBreakpoint:
