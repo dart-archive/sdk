@@ -4,16 +4,10 @@
 
 library fletchc.commands;
 
-import 'dart:async' show
-    StreamSink;
-
 import 'dart:convert' show
     UTF8;
 
 import 'dart:typed_data' show
-    ByteData,
-    Endianness,
-    Float64List,
     Uint16List,
     Uint8List;
 
@@ -21,118 +15,27 @@ import 'bytecodes.dart' show
     Bytecode,
     MethodEnd;
 
-class CommandBuffer {
-  static const int headerSize = 5 /* 32 bit package length + 1 byte code */;
-
-  int position = headerSize;
-
-  Uint8List list = new Uint8List(16);
-
-  ByteData get view => new ByteData.view(list.buffer);
-
-  void growBytes(int size) {
-    while (position + size >= list.length) {
-      list = new Uint8List(list.length * 2)
-          ..setRange(0, list.length, list);
-    }
-  }
-
-  void addUint8(int value) {
-    growBytes(1);
-    view.setUint8(position++, value);
-  }
-
-  void addUint32(int value) {
-    // TODO(ahe): The C++ appears to often read 32-bit values into a signed
-    // integer. Figure which is signed and which is unsigned.
-    growBytes(4);
-    view.setUint32(position, value, Endianness.LITTLE_ENDIAN);
-    position += 4;
-  }
-
-  void addUint64(int value) {
-    growBytes(8);
-    view.setUint64(position, value, Endianness.LITTLE_ENDIAN);
-    position += 8;
-  }
-
-  void addDouble(double value) {
-    growBytes(8);
-    view.setFloat64(position, value, Endianness.LITTLE_ENDIAN);
-    position += 8;
-  }
-
-  void addUint8List(List<int> value) {
-    growBytes(value.length);
-    list.setRange(position, position + value.length, value);
-    position += value.length;
-  }
-
-  void sendOn(StreamSink<List<int>> sink, CommandCode code) {
-    view.setUint32(0, position - headerSize, Endianness.LITTLE_ENDIAN);
-    view.setUint8(4, code.index);
-    sink.add(list.sublist(0, position));
-    position = headerSize;
-  }
-
-  static bool readBoolFromBuffer(List<int> buffer, int offset) {
-    return buffer[offset] != 0;
-  }
-
-  static String readStringFromBuffer(List<int> buffer, int offset, int length) {
-    int numberOfCharacters = length ~/ 4;
-    List<int> codeUnits = new List<int>(numberOfCharacters);
-    for (int i = 0; i < numberOfCharacters; i++) {
-      codeUnits[i] = CommandBuffer.readInt32FromBuffer(buffer, offset + i * 4);
-    }
-    return new String.fromCharCodes(codeUnits);
-  }
-
-  static String readAsciiStringFromBuffer(
-      List<int> buffer, int offset, int length) {
-    return new String.fromCharCodes(buffer.sublist(offset, offset + length));
-  }
-
-  static int readInt32FromBuffer(List<int> buffer, int offset) {
-    return _readIntFromBuffer(buffer, offset, 4);
-  }
-
-  static int readInt64FromBuffer(List<int> buffer, int offset) {
-    return _readIntFromBuffer(buffer, offset, 8);
-  }
-
-  static int _readIntFromBuffer(List<int> buffer, int offset, int sizeInBytes) {
-    assert(buffer.length >= offset + sizeInBytes);
-    int result = 0;
-    for (int i = 0; i < sizeInBytes; ++i) {
-      result |= buffer[i + offset] << (i * 8);
-    }
-    return result;
-  }
-
-  static double readDoubleFromBuffer(Uint8List buffer, int offset) {
-    return new Float64List.view(buffer.buffer, offset, 1).first;
-  }
-}
+import 'src/shared_command_infrastructure.dart' show
+    CommandBuffer;
 
 abstract class Command {
   final CommandCode code;
 
-  static final _buffer = new CommandBuffer();
+  static final _buffer = new CommandBuffer<CommandCode>();
 
   const Command(this.code);
 
   factory Command.fromBuffer(CommandCode code, Uint8List buffer) {
     switch (code) {
       case CommandCode.InstanceStructure:
-        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
-        int fields = CommandBuffer.readInt32FromBuffer(buffer, 8);
+        int classId = CommandBuffer.readUint64FromBuffer(buffer, 0);
+        int fields = CommandBuffer.readUint32FromBuffer(buffer, 8);
         return new InstanceStructure(classId, fields);
       case CommandCode.Instance:
-        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        int classId = CommandBuffer.readUint64FromBuffer(buffer, 0);
         return new Instance(classId);
       case CommandCode.Integer:
-        int value = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        int value = CommandBuffer.readUint64FromBuffer(buffer, 0);
         return new Integer(value);
       case CommandCode.Double:
         return new Double(CommandBuffer.readDoubleFromBuffer(buffer, 0));
@@ -148,37 +51,37 @@ abstract class Command {
       case CommandCode.StderrData:
         return new StderrData(buffer);
       case CommandCode.ObjectId:
-        int id = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        int id = CommandBuffer.readUint64FromBuffer(buffer, 0);
         return new ObjectId(id);
       case CommandCode.ProcessBacktrace:
-        int frames = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        int frames = CommandBuffer.readUint32FromBuffer(buffer, 0);
         ProcessBacktrace backtrace = new ProcessBacktrace(frames);
         for (int i = 0; i < frames; i++) {
           int offset = i * 16 + 4;
-          int functionId = CommandBuffer.readInt64FromBuffer(buffer, offset);
+          int functionId = CommandBuffer.readUint64FromBuffer(buffer, offset);
           int bytecodeIndex =
-              CommandBuffer.readInt64FromBuffer(buffer, offset + 8);
+              CommandBuffer.readUint64FromBuffer(buffer, offset + 8);
           backtrace.functionIds[i] = functionId;
           backtrace.bytecodeIndices[i] = bytecodeIndex;
         }
         return backtrace;
       case CommandCode.ProcessBreakpoint:
-        int breakpointId = CommandBuffer.readInt32FromBuffer(buffer, 0);
-        int functionId = CommandBuffer.readInt64FromBuffer(buffer, 4);
-        int bytecodeIndex = CommandBuffer.readInt64FromBuffer(buffer, 12);
+        int breakpointId = CommandBuffer.readUint32FromBuffer(buffer, 0);
+        int functionId = CommandBuffer.readUint64FromBuffer(buffer, 4);
+        int bytecodeIndex = CommandBuffer.readUint64FromBuffer(buffer, 12);
         return new ProcessBreakpoint(breakpointId, functionId, bytecodeIndex);
       case CommandCode.ProcessDeleteBreakpoint:
-        int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        int id = CommandBuffer.readUint32FromBuffer(buffer, 0);
         return new ProcessDeleteBreakpoint(id);
       case CommandCode.ProcessSetBreakpoint:
-        int value = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        int value = CommandBuffer.readUint32FromBuffer(buffer, 0);
         return new ProcessSetBreakpoint(value);
       case CommandCode.ProcessTerminated:
         return const ProcessTerminated();
       case CommandCode.ProcessCompileTimeError:
         return const ProcessCompileTimeError();
       case CommandCode.ProcessNumberOfStacks:
-        int value = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        int value = CommandBuffer.readUint32FromBuffer(buffer, 0);
         return new ProcessNumberOfStacks(value);
       case CommandCode.UncaughtException:
         return const UncaughtException();
@@ -193,9 +96,9 @@ abstract class Command {
   }
 
   /// Shared command buffer. Not safe to use in asynchronous operations.
-  CommandBuffer get buffer => _buffer;
+  CommandBuffer<CommandCode> get buffer => _buffer;
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer.sendOn(sink, code);
   }
 
@@ -231,7 +134,7 @@ class PushNewString extends Command {
   const PushNewString(this.value)
       : super(CommandCode.PushNewString);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     List<int> payload = new Uint16List.fromList(value.codeUnits)
         .buffer.asUint8List();
     buffer
@@ -260,7 +163,7 @@ class PushNewClass extends Command {
   const PushNewClass(this.fields)
       : super(CommandCode.PushNewClass);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(fields)
         ..sendOn(sink, code);
@@ -278,7 +181,7 @@ class PushBuiltinClass extends Command {
   const PushBuiltinClass(this.name, this.fields)
       : super(CommandCode.PushBuiltinClass);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(name)
         ..addUint32(fields)
@@ -296,7 +199,7 @@ class PushConstantList extends Command {
   const PushConstantList(this.entries)
       : super(CommandCode.PushConstantList);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(entries)
         ..sendOn(sink, code);
@@ -313,7 +216,7 @@ class PushConstantMap extends Command {
   const PushConstantMap(this.entries)
       : super(CommandCode.PushConstantMap);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(entries)
         ..sendOn(sink, code);
@@ -330,7 +233,7 @@ class Generic extends Command {
   const Generic(CommandCode code, this.payload)
       : super(code);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint8List(payload)
         ..sendOn(sink, code);
@@ -350,7 +253,7 @@ class NewMap extends Command {
   const NewMap(this.map)
       : super(CommandCode.NewMap);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(map.index)
         ..sendOn(sink, code);
@@ -367,7 +270,7 @@ class DeleteMap extends Command {
   const DeleteMap(this.map)
       : super(CommandCode.DeleteMap);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(map.index)
         ..sendOn(sink, code);
@@ -385,7 +288,7 @@ abstract class MapAccess extends Command {
   const MapAccess(this.map, this.index, CommandCode code)
       : super(code);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(map.index)
         ..addUint64(index)
@@ -426,7 +329,7 @@ class Drop extends Command {
   const Drop(this.value)
       : super(CommandCode.Drop);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(value)
         ..sendOn(sink, code);
@@ -452,7 +355,7 @@ class PushBoolean extends Command {
   const PushBoolean(this.value)
       : super(CommandCode.PushBoolean);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint8(value ? 1 : 0)
         ..sendOn(sink, code);
@@ -498,7 +401,7 @@ class PushNewFunction extends Command {
     return sink.bytes;
   }
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     List<int> bytes = computeBytes(bytecodes);
     int size = bytes.length + 4 + catchRanges.length * 4;
     buffer
@@ -531,7 +434,7 @@ class ChangeStatics extends Command {
   const ChangeStatics(this.count)
       : super(CommandCode.ChangeStatics);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(count)
         ..sendOn(sink, code);
@@ -548,7 +451,7 @@ class ChangeMethodLiteral extends Command {
   const ChangeMethodLiteral(this.index)
       : super(CommandCode.ChangeMethodLiteral);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(index)
         ..sendOn(sink, code);
@@ -565,7 +468,7 @@ class ChangeMethodTable extends Command {
   const ChangeMethodTable(this.count)
       : super(CommandCode.ChangeMethodTable);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(count)
         ..sendOn(sink, code);
@@ -592,7 +495,7 @@ class ChangeSchemas extends Command {
   const ChangeSchemas(this.count, this.delta)
       : super(CommandCode.ChangeSchemas);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(count)
         ..addUint32(delta)
@@ -619,7 +522,7 @@ class CommitChanges extends Command {
   const CommitChanges(this.count)
       : super(CommandCode.CommitChanges);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(count)
         ..sendOn(sink, code);
@@ -638,7 +541,7 @@ class CommitChangesResult extends Command {
   const CommitChangesResult(this.successful, this.message)
       : super(CommandCode.CommitChangesResult);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     throw new UnimplementedError();
   }
 
@@ -662,7 +565,7 @@ class MapLookup extends Command {
   const MapLookup(this.mapId)
       : super(CommandCode.MapLookup);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(mapId.index)
         ..sendOn(sink, code);
@@ -680,7 +583,7 @@ class ObjectId extends Command {
   const ObjectId(this.id)
       : super(CommandCode.ObjectId);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint64(id)
         ..sendOn(sink, code);
@@ -697,7 +600,7 @@ class PushNewArray extends Command {
   const PushNewArray(this.length)
       : super(CommandCode.PushNewArray);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(length)
         ..sendOn(sink, code);
@@ -714,7 +617,7 @@ class PushNewInteger extends Command {
   const PushNewInteger(this.value)
       : super(CommandCode.PushNewInteger);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint64(value)
         ..sendOn(sink, code);
@@ -731,7 +634,7 @@ class PushNewDouble extends Command {
   const PushNewDouble(this.value)
       : super(CommandCode.PushNewDouble);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addDouble(value)
         ..sendOn(sink, code);
@@ -770,7 +673,7 @@ class ProcessSetBreakpoint extends Command {
   const ProcessSetBreakpoint(this.value)
       : super(CommandCode.ProcessSetBreakpoint);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(value)
         ..sendOn(sink, code);
@@ -788,7 +691,7 @@ class ProcessDeleteBreakpoint extends Command {
   const ProcessDeleteBreakpoint(this.id)
       : super(CommandCode.ProcessDeleteBreakpoint);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(id)
         ..sendOn(sink, code);
@@ -811,7 +714,7 @@ class ProcessBacktrace extends Command {
         bytecodeIndices = new List<int>(frameCount),
         super(CommandCode.ProcessBacktrace);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     throw new UnimplementedError();
   }
 
@@ -836,7 +739,7 @@ class ProcessFiberBacktraceRequest extends Command {
   const ProcessFiberBacktraceRequest(this.fiber)
       : super(CommandCode.ProcessFiberBacktraceRequest);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint64(fiber)
         ..sendOn(sink, code);
@@ -856,7 +759,7 @@ class ProcessBreakpoint extends Command {
   const ProcessBreakpoint(this.breakpointId, this.functionId, this.bytecodeIndex)
       : super(CommandCode.ProcessBreakpoint);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     throw new UnimplementedError();
   }
 
@@ -872,7 +775,7 @@ class ProcessLocal extends Command {
   const ProcessLocal(this.frame, this.slot)
       : super(CommandCode.ProcessLocal);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(frame)
         ..addUint32(slot)
@@ -892,7 +795,7 @@ class ProcessLocalStructure extends Command {
   const ProcessLocalStructure(this.frame, this.slot)
       : super(CommandCode.ProcessLocalStructure);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(frame)
         ..addUint32(slot)
@@ -914,7 +817,7 @@ class ProcessRestartFrame extends Command {
   const ProcessRestartFrame(this.frame)
       : super(CommandCode.ProcessRestartFrame);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(frame)
         ..sendOn(sink, code);
@@ -969,7 +872,7 @@ class ProcessStepTo extends Command {
   const ProcessStepTo(this.functionId, this.bcp)
       : super(CommandCode.ProcessStepTo);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint64(functionId)
         ..addUint32(bcp)
@@ -1046,7 +949,7 @@ class Debugging extends Command {
   const Debugging()
       : super(CommandCode.Debugging);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint32(MapId.methods.index)
         ..addUint32(MapId.classes.index)
@@ -1087,7 +990,7 @@ class WriteSnapshot extends Command {
   const WriteSnapshot(this.value)
       : super(CommandCode.WriteSnapshot);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     List<int> payload = UTF8.encode(value).toList()..add(0);
     buffer
         ..addUint32(payload.length)
@@ -1107,7 +1010,7 @@ class InstanceStructure extends Command {
   const InstanceStructure(this.classId, this.fields)
       : super(CommandCode.InstanceStructure);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     throw new UnimplementedError();
   }
 
@@ -1120,7 +1023,7 @@ abstract class DartValue extends Command {
   const DartValue(CommandCode code)
       : super(code);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     throw new UnimplementedError();
   }
 
@@ -1148,7 +1051,7 @@ class Integer extends DartValue {
   const Integer(this.value)
       : super(CommandCode.Integer);
 
-  void addTo(StreamSink<List<int>> sink) {
+  void addTo(Sink<List<int>> sink) {
     buffer
         ..addUint64(value)
         ..sendOn(sink, code);

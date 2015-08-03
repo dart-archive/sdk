@@ -20,6 +20,7 @@ import 'dart:async' show
     Stream,
     StreamController,
     StreamSubscription,
+    StreamTransformer,
     Zone;
 
 import 'dart:typed_data' show
@@ -60,68 +61,19 @@ import '../diagnostic.dart' show
     InputError,
     throwInternalError;
 
-const Endianness commandEndianness = Endianness.LITTLE_ENDIAN;
-
-const headerSize = 5;
+import '../shared_command_infrastructure.dart' show
+    CommandBuffer,
+    CommandTransformerBuilder,
+    commandEndianness,
+    headerSize,
+    toUint8ListView;
 
 Function gracefulShutdown;
 
-class ControlStream {
-  final Stream<List<int>> stream;
-
-  final StreamSubscription<List<int>> subscription;
-
-  final BytesBuilder builder = new BytesBuilder(copy: false);
-
-  final StreamController<Command> controller = new StreamController<Command>();
-
-  final ClientLogger log;
-
-  ControlStream(Stream<List<int>> stream, this.log)
-      : this.stream = stream,
-        this.subscription = stream.listen(null) {
-    subscription
-        ..onData(handleData)
-        ..onError(handleError)
-        ..onDone(handleDone);
-  }
-
-  Stream<Command> get commandStream => controller.stream;
-
-  void handleData(Uint8List data) {
-    builder.add(toUint8ListView(data));
-    Uint8List list = builder.takeBytes();
-
-    ByteData view = toByteData(list);
-
-    while (view.lengthInBytes >= headerSize) {
-      int length = view.getUint32(0, commandEndianness);
-      if ((view.lengthInBytes - headerSize) < length) {
-        // Not all of the payload has arrived yet.
-        break;
-      }
-      int commandCode = view.getUint8(4);
-      DriverCommand driverCommand = DriverCommand.values[commandCode];
-
-      ByteData payload = toByteData(view, headerSize, length);
-
-      Command command = makeCommand(driverCommand, payload);
-
-      if (command != null) {
-        controller.add(command);
-      } else {
-        controller.addError("Command not implemented yet: $driverCommand");
-      }
-
-      view = toByteData(payload, length);
-    }
-
-    if (view.lengthInBytes > 0) {
-      builder.add(toUint8ListView(view));
-    }
-  }
-
-  Command makeCommand(DriverCommand code, ByteData payload) {
+class DriverCommandTransformerBuilder
+    extends CommandTransformerBuilder<Command> {
+  Command makeCommand(int commandCode, ByteData payload) {
+    DriverCommand code = DriverCommand.values[commandCode];
     switch (code) {
       case DriverCommand.Arguments:
         return new Command(code, decodeArgumentsCommand(payload));
@@ -139,19 +91,6 @@ class ControlStream {
     }
   }
 
-  void handleError(error, StackTrace stackTrace) {
-    controller.addError(error, stackTrace);
-  }
-
-  void handleDone() {
-    List trailing = builder.takeBytes();
-    if (trailing.length != 0) {
-      controller.addError(
-          new StateError("Stream closed with trailing bytes : $trailing"));
-    }
-    controller.close();
-  }
-
   List<String> decodeArgumentsCommand(ByteData view) {
     int offset = 0;
     int argc = view.getUint32(offset, commandEndianness);
@@ -167,35 +106,28 @@ class ControlStream {
   }
 }
 
-ByteData toByteData(TypedData data, [int offset = 0, int length]) {
-  return data.buffer.asByteData(data.offsetInBytes + offset, length);
-}
-
 class ByteCommandSender extends CommandSender {
   final Sink<List<int>> sink;
 
+  static final _buffer = new CommandBuffer<DriverCommand>();
+
   ByteCommandSender(this.sink);
 
+  /// Shared command buffer. Not safe to use in asynchronous operations.
+  CommandBuffer<DriverCommand> get buffer => _buffer;
+
   void sendExitCode(int exitCode) {
-    int payloadSize = 4;
-    Uint8List list = new Uint8List(headerSize + payloadSize);
-    ByteData view = list.buffer.asByteData();
-    view.setUint32(0, payloadSize, commandEndianness);
-    view.setUint8(4, DriverCommand.ExitCode.index);
-    view.setUint32(headerSize, exitCode, commandEndianness);
-    sink.add(list);
+    buffer
+        ..addUint32(exitCode)
+        ..sendOn(sink, DriverCommand.ExitCode);
   }
 
   void sendDataCommand(DriverCommand command, List<int> data) {
     int payloadSize = data.length + 4;
-    Uint8List list = new Uint8List(headerSize + payloadSize);
-    ByteData view = list.buffer.asByteData();
-    view.setUint32(0, payloadSize, commandEndianness);
-    view.setUint8(4, command.index);
-    view.setUint32(headerSize, data.length, commandEndianness);
-    int dataOffset = headerSize + 4;
-    list.setRange(dataOffset, dataOffset + data.length, data);
-    sink.add(list);
+    buffer
+        ..addUint32(data.length)
+        ..addUint8List(data)
+        ..sendOn(sink, command);
   }
 
   void sendClose() {
@@ -206,10 +138,6 @@ class ByteCommandSender extends CommandSender {
     throwInternalError(
         "Client (C++) doesn't support DriverCommand.EventLoopStarted.");
   }
-}
-
-Uint8List toUint8ListView(TypedData list, [int offset = 0, int length]) {
-  return new Uint8List.view(list.buffer, list.offsetInBytes + offset, length);
 }
 
 Future main(List<String> arguments) async {
@@ -379,7 +307,9 @@ class ClientController {
   /// Start processing commands from the client.
   void start() {
     commandSender = new ByteCommandSender(socket);
-    subscription = new ControlStream(socket, log).commandStream.listen(null);
+    StreamTransformer<List<int>, Command> transformer =
+        new DriverCommandTransformerBuilder().build();
+    subscription = socket.transform(transformer).listen(null);
     subscription
         ..onData(handleCommand)
         ..onError(handleCommandError)

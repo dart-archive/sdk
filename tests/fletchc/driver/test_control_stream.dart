@@ -14,31 +14,8 @@ import 'package:fletchc/src/driver/driver_main.dart';
 
 const List<int> stdinCommandData = const <int>[4, 0, 0, 0, 0, 0, 0, 0, 0];
 
-class NoLog implements ClientLogger {
-  final int id;
-
-  final List<String> notes;
-
-  List<String> arguments;
-
-  void note(object) {
-    gotArguments(null); // Removes an "unused" warning from dart2js.
-  }
-
-  void gotArguments(List<String> arguments) {
-  }
-
-  void done() {
-  }
-
-  void error(error, StackTrace stackTrace) {
-  }
-}
-
 Future<Null> testControlStream() async {
   StreamController<Uint8List> controller = new StreamController<Uint8List>();
-
-  ControlStream cs = new ControlStream(controller.stream, new NoLog());
 
   // Test that one byte at the time is handled.
   for (int byte in stdinCommandData) {
@@ -72,9 +49,14 @@ Future<Null> testControlStream() async {
       ..addAll(stdinCommandData);
   controller.add(new Uint8List.fromList(testData));
 
+  StreamTransformer<List<int>, Command> transformer =
+      new DriverCommandTransformerBuilder().build();
+  Future<List<Command>> commandsFuture =
+      controller.stream.transform(transformer).toList();
+
   await controller.close();
 
-  List<Command> commands = await cs.commandStream.toList();
+  List<Command> commands = await commandsFuture;
   Expect.equals(6, commands.length);
   for (Command command in commands) {
     Expect.stringEquals('Command(DriverCommand.Stdin, [])', '$command');

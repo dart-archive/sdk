@@ -9,7 +9,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' hide exit;
 import 'dart:io' as io;
-import 'dart:typed_data' show Uint8List;
+
+import 'dart:typed_data' show
+    ByteData,
+    Uint8List;
 
 import 'commands.dart';
 import 'fletch_system.dart';
@@ -17,6 +20,10 @@ import 'compiler.dart' show FletchCompiler;
 import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';
 import 'debug_state.dart';
+
+import 'src/shared_command_infrastructure.dart' show
+    CommandTransformerBuilder,
+    toUint8ListView;
 
 part 'command_reader.dart';
 part 'input_handler.dart';
@@ -39,8 +46,8 @@ class FletchVmSession {
   bool _drainedIncomingCommands = false;
 
   FletchVmSession(Socket vmSocket,
-                  EventSink<List<int>> stdoutSink,
-                  EventSink<List<int>> stderrSink)
+                  Sink<List<int>> stdoutSink,
+                  Sink<List<int>> stderrSink)
       : _outgoingSink = vmSocket,
         _done = vmSocket.done,
         _commandReader = new CommandReader(vmSocket, stdoutSink, stderrSink) {
@@ -166,8 +173,8 @@ class Session extends FletchVmSession {
   Session(Socket fletchVmSocket,
           this.compiler,
           this.fletchSystem,
-          EventSink<List<int>> stdoutSink,
-          EventSink<List<int>> stderrSink,
+          Sink<List<int>> stdoutSink,
+          Sink<List<int>> stderrSink,
           [this.processExitCodeFuture])
       : super(fletchVmSocket, stdoutSink, stderrSink) {
     // We send many small packages, so use no-delay.

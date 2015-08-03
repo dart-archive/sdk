@@ -254,6 +254,7 @@ class MockClientLogger implements ClientLogger {
 
   void note(object) {
     print("$id: $object");
+    gotArguments(null); // Removes an "unused" warning from dart2js.
   }
 
   void gotArguments(_) {

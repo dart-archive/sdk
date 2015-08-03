@@ -4,116 +4,43 @@
 
 part of fletch.session;
 
-class Chunk {
-  List data;
-  Chunk next;
+class SessionCommandTransformerBuilder
+    extends CommandTransformerBuilder<Command> {
 
-  Chunk(this.data);
-
-  int get length => data.length;
-  int operator [](int index) => data[index];
+  Command makeCommand(int code, ByteData payload) {
+    return new Command.fromBuffer(
+        CommandCode.values[code], toUint8ListView(payload));
+  }
 }
 
 class CommandReader {
-  final Socket socket;
+  final StreamIterator<Command> iterator;
 
-  StreamIterator<Command> iterator;
+  CommandReader(
+      Stream<List<int>> stream,
+      Sink<List<int>> stdoutSink,
+      Sink<List<int>> stderrSink)
+      : iterator = new StreamIterator<Command>(
+          filterCommandStream(stream, stdoutSink, stderrSink));
 
-  Chunk first;
-  Chunk last;
-  int index;
-
-  Chunk currentChunk;
-  int currentIndex;
-
-  CommandReader(this.socket,
-                EventSink<List<int>> stdoutSink,
-                EventSink<List<int>> stderrSink) : index = 0 {
-    iterator = new StreamIterator<Command>(
-        filterCommandStream(stdoutSink, stderrSink));
-  }
-
-  Stream<Command> filterCommandStream(EventSink<List<int>> stdoutSink,
-                                      EventSink<List<int>> stderrSink) async* {
+  static Stream<Command> filterCommandStream(
+      Stream<List<int>> stream,
+      Sink<List<int>> stdoutSink,
+      Sink<List<int>> stderrSink) async* {
     // When done with the data on the socket, we do not close
     // stdoutSink and stderrSink. They are usually stdout and stderr
     // and the user will probably want to add more on those streams
     // independently of the messages added here.
-    await for (List data in socket) {
-      addData(data);
-      Command command = readCommand();
-      while (command != null) {
-        if (command is StdoutData) {
-          if (stdoutSink != null) stdoutSink.add(command.value);
-        } else if (command is StderrData) {
-          if (stderrSink != null) stderrSink.add(command.value);
-        } else {
-          yield command;
-        }
-        command = readCommand();
+    StreamTransformer<List<int>, Command> transformer =
+        new SessionCommandTransformerBuilder().build();
+    await for (Command command in stream.transform(transformer)) {
+      if (command is StdoutData) {
+        if (stdoutSink != null) stdoutSink.add(command.value);
+      } else if (command is StderrData) {
+        if (stderrSink != null) stderrSink.add(command.value);
+      } else {
+        yield command;
       }
     }
-  }
-
-  void addData(List data) {
-    if (first == null) {
-      first = last = new Chunk(data);
-    } else {
-      last.next = new Chunk(data);
-      last = last.next;
-    }
-  }
-
-  int readByte() {
-    if (currentChunk == null) return null;
-    if (currentIndex < currentChunk.length) {
-      return currentChunk[currentIndex++];
-    }
-    currentChunk = currentChunk.next;
-    currentIndex = 0;
-    return readByte();
-  }
-
-  int readInt() {
-    var result = 0;
-    for (int i = 0; i < 4; ++i) {
-      var byte = readByte();
-      if (byte == null) return null;
-      result |= byte << (i * 8);
-    }
-    return result;
-  }
-
-  Uint8List readBytes(int size) {
-    var result = new Uint8List(size);
-    for (int i = 0; i < size; ++i) {
-      int byte = readByte();
-      if (byte == null) return null;
-      result[i] = byte;
-    }
-    return result;
-  }
-
-  void advance() {
-    first = currentChunk;
-    if (first == null) last = first;
-    index = currentIndex;
-  }
-
-  void reset() {
-    currentChunk = first;
-    currentIndex = index;
-  }
-
-  Command readCommand() {
-    reset();
-    var length = readInt();
-    if (length == null) return null;
-    var code = readByte();
-    if (code == null) return null;
-    var buffer = readBytes(length);
-    if (buffer == null) return null;
-    advance();
-    return new Command.fromBuffer(CommandCode.values[code], buffer);
   }
 }
