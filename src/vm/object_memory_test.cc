@@ -38,4 +38,34 @@ TEST_CASE(ObjectMemory) {
   ObjectMemory::FreeChunk(second);
 }
 
+TEST_CASE(Space_PrependSpace) {
+  // Test prepending onto non-empty space.
+  {
+    Space* space = new Space(32);
+    Space* space2 = new Space(32);
+
+    space->Allocate(8);
+    uword space2_object = space2->Allocate(8);
+    space2->PrependSpace(space);
+    uword space2_object2 = space2->Allocate(8);
+
+    ASSERT(space2_object2 == (space2_object + 8));
+
+    delete space2;
+  }
+  // Test prepending onto empty space.
+  {
+    Space* space = new Space(32);
+    Space* space2 = new Space();
+
+    uword space_object = space->Allocate(8);
+    space2->PrependSpace(space);
+    uword space_object2 = space2->Allocate(8);
+
+    ASSERT(space_object2 == (space_object + 8));
+
+    delete space2;
+  }
+}
+
 }  // namespace fletch

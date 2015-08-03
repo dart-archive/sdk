@@ -38,6 +38,7 @@ Space::Space(int maximum_initial_size)
   if (maximum_initial_size > 0) {
     int size = Utils::Minimum(maximum_initial_size, kDefaultChunkSize);
     Chunk* chunk = ObjectMemory::AllocateChunk(this, size);
+    if (chunk == NULL) FATAL1("Failed to allocate %d bytes.\n", size);
     Append(chunk);
     top_ = chunk->base();
     limit_ = chunk->limit();
@@ -122,7 +123,11 @@ void Space::AdjustAllocationBudget() {
 }
 
 void Space::PrependSpace(Space* space) {
+  bool was_empty = is_empty();
+
   if (space->is_empty()) return;
+
+  space->Flush();
 
   Chunk* first = space->first();
   Chunk* chunk = first;
@@ -135,6 +140,11 @@ void Space::PrependSpace(Space* space) {
   space->last()->set_next(this->first());
   first_ = first;
   used_ += space->Used();
+  if (was_empty) {
+    last_ = space->last();
+    top_ = space->top_;
+    limit_ = space->limit_;
+  }
 
   // NOTE: The destructor of [Space] will use some of the fields, so we just
   // reset all of them.
