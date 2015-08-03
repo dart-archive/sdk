@@ -817,10 +817,12 @@ class LibraryUpdater extends FletchFeatures {
     Set<ClassElementX> changedClasses =
         new Set<ClassElementX>.from(_classesWithSchemaChanges);
     for (Element element in updatedElements) {
-      if (!element.isClass) {
-        enqueuer.codegen.addToWorkList(element);
-      } else {
+      if (element.isField) {
+        backend.newElement(element);
+      } else if (element.isClass) {
         changedClasses.add(element);
+      } else {
+        enqueuer.codegen.addToWorkList(element);
       }
     }
     compiler.processQueue(enqueuer.codegen, null);

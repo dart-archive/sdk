@@ -1369,18 +1369,33 @@ class FletchBackend extends Backend {
         ..assembler.emitThrow();
   }
 
+  void newElement(Element element) {
+    if (!systemBuilder.predecessorSystem.isEmpty) {
+      if (element.isField && element.isInstanceMember) {
+        ClassElement enclosingClass = element.enclosingClass;
+        FletchClassBuilder builder = registerClassElement(enclosingClass);
+        builder.addField(element);
+      }
+    }
+  }
+
   void forgetElement(Element element) {
     // TODO(ajohnsen): Remove this check.
     if (!systemBuilder.predecessorSystem.isEmpty) {
-      FletchFunctionBase function =
-          systemBuilder.lookupFunctionByElement(element);
-      if (function != null) {
-        systemBuilder.forgetFunction(function);
-      }
       ClassElement enclosingClass = element.enclosingClass;
-      if (enclosingClass != null) {
+      if (element.isField && element.isInstanceMember) {
         FletchClassBuilder builder = registerClassElement(enclosingClass);
-        builder.removeFromMethodTable(function);
+        builder.removeField(element);
+      } else {
+        FletchFunctionBase function =
+            systemBuilder.lookupFunctionByElement(element);
+        if (function != null) {
+          systemBuilder.forgetFunction(function);
+          if (enclosingClass != null) {
+            FletchClassBuilder builder = registerClassElement(enclosingClass);
+            builder.removeFromMethodTable(function);
+          }
+        }
       }
     }
     FletchFunctionBuilder functionBuilder =

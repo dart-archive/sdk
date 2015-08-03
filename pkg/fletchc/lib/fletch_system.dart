@@ -7,6 +7,7 @@ library fletchc.fletch_system;
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     Element,
+    FieldElement,
     FunctionSignature;
 
 import 'package:persistent/persistent.dart' show
@@ -38,18 +39,18 @@ class FletchClass {
   final String name;
   final ClassElement element;
   final int superclassId;
-  final int fields;
   final int superclassFields;
   final PersistentMap<int, int> methodTable;
+  final List<FieldElement> fields;
 
   const FletchClass(
       this.classId,
       this.name,
       this.element,
       this.superclassId,
-      this.fields,
       this.superclassFields,
-      this.methodTable);
+      this.methodTable,
+      this.fields);
 
   bool get hasSuperclassId => superclassId >= 0;
 

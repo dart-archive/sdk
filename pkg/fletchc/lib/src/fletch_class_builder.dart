@@ -35,6 +35,9 @@ abstract class FletchClassBuilder {
   void addToMethodTable(int selector, FletchFunctionBuilder functionBuilder);
   void removeFromMethodTable(FletchFunctionBase function);
 
+  void addField(FieldElement field);
+  void removeField(FieldElement field);
+
   // Add a selector for is-tests. The selector is only to be hit with the
   // InvokeTest bytecode, as the function is not guraranteed to be valid.
   void addIsSelector(int selector);
@@ -49,6 +52,19 @@ abstract class FletchClassBuilder {
   // class including the implicit accessors. The returned map is not sorted.
   // TODO(ajohnsen): Remove once not used by feature_test anymore.
   PersistentMap<int, int> computeMethodTable();
+}
+
+void forEachField(ClassElement c, void action(FieldElement field)) {
+  List classes = [];
+  while (c != null) {
+    classes.add(c);
+    c = c.superclass;
+  }
+  for (int i = classes.length - 1; i >= 0; i--) {
+    classes[i].implementation.forEachInstanceField((_, FieldElement field) {
+      action(field);
+    });
+  }
 }
 
 class FletchNewClassBuilder extends FletchClassBuilder {
@@ -84,6 +100,14 @@ class FletchNewClassBuilder extends FletchClassBuilder {
 
   void addToMethodTable(int selector, FletchFunctionBuilder functionBuilder) {
     _methodTable[selector] = functionBuilder;
+  }
+
+  void addField(FieldElement field) {
+    throw new StateError("Fields should not be added to a new class.");
+  }
+
+  void removeField(FieldElement field) {
+    throw new StateError("Fields should not be removed from a new class.");
   }
 
   void removeFromMethodTable(FletchFunctionBase function) {
@@ -190,15 +214,21 @@ class FletchNewClassBuilder extends FletchClassBuilder {
     }
     commands.add(new ChangeMethodTable(methodTable.length));
 
+    List<FieldElement> fieldsList = new List<FieldElement>(fields);
+    int index = 0;
+    forEachField(element, (field) {
+      fieldsList[index++] = field;
+    });
+
     return new FletchClass(
         classId,
         // TODO(ajohnsen): Take name in FletchClassBuilder constructor.
         element == null ? '<internal>' : element.name,
         element,
         superclass == null ? -1 : superclass.classId,
-        fields,
         superclassFields,
-        methodTable);
+        methodTable,
+        fieldsList);
   }
 
   String toString() => "FletchClassBuilder($element, $classId)";
@@ -208,15 +238,17 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
   final FletchClass klass;
   final FletchClassBuilder superclass;
 
+  final Map<int, int> _implicitAccessorTable = <int, int>{};
   final Map<int, FletchFunctionBase> _newMethods = <int, FletchFunctionBase>{};
   final Set<FletchFunctionBase> _removedMethods = new Set<FletchFunctionBase>();
+  bool _fieldsChanged = false;
 
   // TODO(ajohnsen): Can the element change?
   FletchPatchClassBuilder(this.klass, this.superclass);
 
   int get classId => klass.classId;
   ClassElement get element => klass.element;
-  int get fields => klass.fields;
+  int get fields => klass.fields.length;
 
   void addToMethodTable(int selector, FletchFunctionBuilder functionBuilder) {
     _newMethods[selector] = functionBuilder;
@@ -224,6 +256,14 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
 
   void removeFromMethodTable(FletchFunctionBase function) {
     _removedMethods.add(function);
+  }
+
+  void removeField(FieldElement field) {
+    _fieldsChanged = true;
+  }
+
+  void addField(FieldElement field) {
+    _fieldsChanged = true;
   }
 
   void addIsSelector(int selector) {
@@ -235,7 +275,25 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
   }
 
   void createImplicitAccessors(FletchBackend backend) {
-    // TODO(ajohnsen): Implement.
+    // If we don't have an element (stub class), we don't have anything to
+    // generate accessors for.
+    if (element == null) return;
+    // TODO(ajohnsen): Don't do this once dart2js can enqueue field getters in
+    // CodegenEnqueuer.
+    int fieldIndex = superclassFields;
+    element.implementation.forEachInstanceField((enclosing, field) {
+      var getter = new Selector.getter(field.name, field.library);
+      int getterSelector = backend.context.toFletchSelector(getter);
+      _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
+
+      if (!field.isFinal) {
+        var setter = new Selector.setter(field.name, field.library);
+        var setterSelector = backend.context.toFletchSelector(setter);
+        _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
+      }
+
+      fieldIndex++;
+    });
   }
 
   void createIsEntries(FletchBackend backend) {
@@ -252,6 +310,11 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
         }
       });
     }
+
+    // TODO(ajohnsen): Generate this from add/remove field operations.
+    _implicitAccessorTable.forEach((int selector, int functionId) {
+      methodTable = methodTable.insert(selector, functionId);
+    });
 
     _newMethods.forEach((int selector, FletchFunctionBase function) {
       methodTable = methodTable.insert(selector, function.functionId);
@@ -271,14 +334,51 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
     }
     commands.add(new ChangeMethodTable(methodTable.length));
 
+    List<FieldElement> fieldsList = <FieldElement>[];
+    forEachField(element, (field) { fieldsList.add(field); });
+
+    if (_fieldsChanged) {
+      computeSchemaChange(fieldsList, commands);
+    }
+
     return new FletchClass(
         classId,
         // TODO(ajohnsen): Take name in FletchClassBuilder constructor.
         element == null ? '<internal>' : element.name,
         element,
         superclass == null ? -1 : superclass.classId,
-        fields,
         superclassFields,
-        methodTable);
+        methodTable,
+        fieldsList);
+  }
+
+  void computeSchemaChange(
+      List<FieldElement> afterFields, List<Command> commands) {
+    // TODO(ajohnsen): Handle sub/super classes.
+    int numberOfClasses = 1;
+    commands.add(new PushFromMap(MapId.classes, classId));
+
+    // Then we push a transformation mapping that tells the runtime system how
+    // to build the values for the first part of all instances of the classes.
+    // Pre-existing fields that fall after the mapped part will be copied with
+    // no changes.
+    const VALUE_FROM_ELSEWHERE = 0;
+    const VALUE_FROM_OLD_INSTANCE = 1;
+    for (int i = 0; i < afterFields.length; i++) {
+      FieldElement field = afterFields[i];
+      int beforeIndex = klass.fields.indexOf(field);
+      if (beforeIndex >= 0) {
+        commands.add(const PushNewInteger(VALUE_FROM_OLD_INSTANCE));
+        commands.add(new PushNewInteger(beforeIndex));
+      } else {
+        commands.add(const PushNewInteger(VALUE_FROM_ELSEWHERE));
+        commands.add(const PushNull());
+      }
+    }
+    commands.add(new PushNewArray(afterFields.length * 2));
+
+    // Finally, ask the runtime to change the schemas!
+    int fieldCountDelta = afterFields.length - klass.fields.length;
+    commands.add(new ChangeSchemas(numberOfClasses, fieldCountDelta));
   }
 }

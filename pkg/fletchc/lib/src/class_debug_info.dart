@@ -17,7 +17,7 @@ class ClassDebugInfo {
         fieldNames = _computeFieldNames(klass);
 
   static _computeFieldNames(FletchClass klass) {
-    int localFields = klass.fields - klass.superclassFields;
+    int localFields = klass.fields.length - klass.superclassFields;
     List fieldNames = new List(localFields);
     int index = 0;
     ClassElement classElement = klass.element.implementation;
