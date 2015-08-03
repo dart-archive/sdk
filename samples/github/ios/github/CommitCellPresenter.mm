@@ -4,6 +4,8 @@
 
 #import "CommitCellPresenter.h"
 
+#import "LruCache.h"
+
 static UIImage* dartLogo = [UIImage imageNamed:@"dart-logo.png"];
 
 @interface ImageCache : LruCache <ImageCache>

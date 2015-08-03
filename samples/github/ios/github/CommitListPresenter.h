@@ -4,7 +4,7 @@
 
 #import <UIKit/UIKit.h>
 #import "Immi.h"
-#import "ViewPresenter.h"
+#import "ImmiSamples/ViewPresenter.h"
 
 @interface CommitListPresenter
     : UITableViewController <ViewPresenter, SlidingWindowPresenter>

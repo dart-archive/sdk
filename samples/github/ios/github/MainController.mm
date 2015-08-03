@@ -5,9 +5,9 @@
 #import "MainController.h"
 
 #import "CommitListPresenter.h"
-#import "DrawerPresenter.h"
-#import "MenuPresenter.h"
-#import "SlidingWindowPresenter.h"
+#import "ImmiSamples/DrawerPresenter.h"
+#import "ImmiSamples/MenuPresenter.h"
+#import "ImmiSamples/SlidingWindowPresenter.h"
 
 @interface CenterPresenter : NSObject <ViewPresenter, NodePresenter>
 @property CommitListPresenter* presenter;

@@ -2,9 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#import "CellPresenter.h"
-#import "LruCache.h"
-#import "ImagePresenter.h"
+#import "ImmiSamples/CellPresenter.h"
+#import "ImmiSamples/ImagePresenter.h"
 
 @interface CommitCellPresenter : UITableViewCell <CellPresenter>
 

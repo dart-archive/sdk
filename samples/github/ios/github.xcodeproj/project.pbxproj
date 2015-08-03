@@ -13,10 +13,6 @@
 		2DB4918A1B0C9B2000912DA3 /* CommitListPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */; };
 		DA155C1F1B6A2F2100022EA8 /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA155C1E1B6A2F2100022EA8 /* libfletch.a */; };
 		DA155C241B6A2FAA00022EA8 /* github.snapshot in Resources */ = {isa = PBXBuildFile; fileRef = DA155C231B6A2FAA00022EA8 /* github.snapshot */; };
-		DA155C2F1B6B49BF00022EA8 /* DrawerPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA155C271B6B49BF00022EA8 /* DrawerPresenter.mm */; };
-		DA155C301B6B49BF00022EA8 /* ImagePresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA155C291B6B49BF00022EA8 /* ImagePresenter.mm */; };
-		DA155C311B6B49BF00022EA8 /* MenuPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA155C2B1B6B49BF00022EA8 /* MenuPresenter.mm */; };
-		DA155C321B6B49BF00022EA8 /* SlidingWindowPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA155C2D1B6B49BF00022EA8 /* SlidingWindowPresenter.mm */; };
 		DA1D77031B037490009E936C /* MainController.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1D77021B037490009E936C /* MainController.mm */; };
 		DA313FA51AD665A6000089F9 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = DA313FA41AD665A6000089F9 /* main.m */; };
 		DA313FA81AD665A6000089F9 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA313FA71AD665A6000089F9 /* AppDelegate.mm */; };
@@ -37,7 +33,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		2D6E8DC61B283A6300FED492 /* dart-logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "dart-logo.png"; sourceTree = "<group>"; };
+		2D6E8DC61B283A6300FED492 /* dart-logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "dart-logo.png"; path = "github/dart-logo.png"; sourceTree = "<group>"; };
 		2DB491811B0C83D200912DA3 /* CommitCellPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CommitCellPresenter.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = CommitCellPresenter.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		2DB491881B0C9B2000912DA3 /* CommitListPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommitListPresenter.h; sourceTree = "<group>"; };
@@ -47,16 +43,6 @@
 		CF6A9C448DE9E3E165408184 /* Pods.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.release.xcconfig; path = "Pods/Target Support Files/Pods/Pods.release.xcconfig"; sourceTree = "<group>"; };
 		DA155C1E1B6A2F2100022EA8 /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libfletch.a; sourceTree = "<group>"; };
 		DA155C231B6A2FAA00022EA8 /* github.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; path = github.snapshot; sourceTree = "<group>"; };
-		DA155C251B6B49BF00022EA8 /* CellPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CellPresenter.h; sourceTree = "<group>"; };
-		DA155C261B6B49BF00022EA8 /* DrawerPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DrawerPresenter.h; sourceTree = "<group>"; };
-		DA155C271B6B49BF00022EA8 /* DrawerPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = DrawerPresenter.mm; sourceTree = "<group>"; };
-		DA155C281B6B49BF00022EA8 /* ImagePresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImagePresenter.h; sourceTree = "<group>"; };
-		DA155C291B6B49BF00022EA8 /* ImagePresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ImagePresenter.mm; sourceTree = "<group>"; };
-		DA155C2A1B6B49BF00022EA8 /* MenuPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MenuPresenter.h; sourceTree = "<group>"; };
-		DA155C2B1B6B49BF00022EA8 /* MenuPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MenuPresenter.mm; sourceTree = "<group>"; };
-		DA155C2C1B6B49BF00022EA8 /* SlidingWindowPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SlidingWindowPresenter.h; sourceTree = "<group>"; };
-		DA155C2D1B6B49BF00022EA8 /* SlidingWindowPresenter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SlidingWindowPresenter.mm; sourceTree = "<group>"; };
-		DA155C2E1B6B49BF00022EA8 /* ViewPresenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ViewPresenter.h; sourceTree = "<group>"; };
 		DA1D77011B037490009E936C /* MainController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MainController.h; sourceTree = "<group>"; };
 		DA1D77021B037490009E936C /* MainController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MainController.mm; sourceTree = "<group>"; };
 		DA313F9F1AD665A6000089F9 /* github.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = github.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -113,6 +99,7 @@
 		DA155C221B6A2F6100022EA8 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				2D6E8DC61B283A6300FED492 /* dart-logo.png */,
 				DA155C231B6A2FAA00022EA8 /* github.snapshot */,
 			);
 			name = Resources;
@@ -142,29 +129,18 @@
 		DA313FA11AD665A6000089F9 /* github */ = {
 			isa = PBXGroup;
 			children = (
-				2D6E8DC61B283A6300FED492 /* dart-logo.png */,
 				DA313FA61AD665A6000089F9 /* AppDelegate.h */,
 				DA313FA71AD665A6000089F9 /* AppDelegate.mm */,
 				DA1D77011B037490009E936C /* MainController.h */,
 				DA1D77021B037490009E936C /* MainController.mm */,
-				DA313FAC1AD665A6000089F9 /* Main.storyboard */,
-				DA313FAF1AD665A6000089F9 /* Images.xcassets */,
-				DA313FB11AD665A6000089F9 /* LaunchScreen.xib */,
-				DA313FA21AD665A6000089F9 /* Supporting Files */,
 				2DB491811B0C83D200912DA3 /* CommitCellPresenter.h */,
 				2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */,
 				2DB491881B0C9B2000912DA3 /* CommitListPresenter.h */,
 				2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */,
-				DA155C251B6B49BF00022EA8 /* CellPresenter.h */,
-				DA155C261B6B49BF00022EA8 /* DrawerPresenter.h */,
-				DA155C271B6B49BF00022EA8 /* DrawerPresenter.mm */,
-				DA155C281B6B49BF00022EA8 /* ImagePresenter.h */,
-				DA155C291B6B49BF00022EA8 /* ImagePresenter.mm */,
-				DA155C2A1B6B49BF00022EA8 /* MenuPresenter.h */,
-				DA155C2B1B6B49BF00022EA8 /* MenuPresenter.mm */,
-				DA155C2C1B6B49BF00022EA8 /* SlidingWindowPresenter.h */,
-				DA155C2D1B6B49BF00022EA8 /* SlidingWindowPresenter.mm */,
-				DA155C2E1B6B49BF00022EA8 /* ViewPresenter.h */,
+				DA313FAC1AD665A6000089F9 /* Main.storyboard */,
+				DA313FAF1AD665A6000089F9 /* Images.xcassets */,
+				DA313FB11AD665A6000089F9 /* LaunchScreen.xib */,
+				DA313FA21AD665A6000089F9 /* Supporting Files */,
 			);
 			path = github;
 			sourceTree = "<group>";
@@ -350,11 +326,7 @@
 				DA1D77031B037490009E936C /* MainController.mm in Sources */,
 				DA313FA81AD665A6000089F9 /* AppDelegate.mm in Sources */,
 				2DB491831B0C83D200912DA3 /* CommitCellPresenter.mm in Sources */,
-				DA155C301B6B49BF00022EA8 /* ImagePresenter.mm in Sources */,
-				DA155C311B6B49BF00022EA8 /* MenuPresenter.mm in Sources */,
 				DA313FA51AD665A6000089F9 /* main.m in Sources */,
-				DA155C2F1B6B49BF00022EA8 /* DrawerPresenter.mm in Sources */,
-				DA155C321B6B49BF00022EA8 /* SlidingWindowPresenter.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
