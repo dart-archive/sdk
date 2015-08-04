@@ -173,7 +173,7 @@ void Scheduler::EnqueueProcessOnSchedulerWorkerThread(
 
 void Scheduler::ResumeProcess(Process* process) {
   if (!process->ChangeState(Process::kSleeping, Process::kReady)) return;
-  EnqueueOnAnyThread(process, 0);
+  EnqueueOnAnyThreadSafe(process);
 }
 
 void Scheduler::ProcessContinue(Process* process) {
@@ -182,11 +182,10 @@ void Scheduler::ProcessContinue(Process* process) {
       process->ChangeState(Process::kCompileTimeError, Process::kReady) ||
       process->ChangeState(Process::kUncaughtException, Process::kReady);
   ASSERT(success);
-  EnqueueOnAnyThread(process, 0);
+  EnqueueOnAnyThreadSafe(process);
 }
 
-bool Scheduler::EnqueueProcessOnCurrentForeignThread(Process* process,
-                                                     Port* port) {
+bool Scheduler::EnqueueProcess(Process* process, Port* port) {
   ASSERT(port->IsLocked());
 
   // TODO(ajohnsen): Foreign threads are not stopped by
@@ -231,29 +230,7 @@ bool Scheduler::EnqueueProcessOnCurrentForeignThread(Process* process,
       return false;
     }
     port->Unlock();
-
-    // There can be two cases: Either the program is stopped at the moment or
-    // not. If it is stopped, we add the process to the list of paused processes
-    // and otherwise we enqueue it on any thread.
-    ScopedMonitorLock locker(pause_monitor_);
-
-    Program* program = process->program();
-    ASSERT(program->scheduler() == this);
-    ProgramState* state = program->program_state();
-    if (state->is_paused()) {
-      // If the program is paused, there is no way the process can be enqueued
-      // on any process queues.
-      ASSERT(process->process_queue() == NULL);
-
-      // Only add the process into the paused list if it is not already in
-      // there (this can e.g. happen if a foreign thread is sending several
-      // messages to the port while the program is stopped).
-      if (process->next() == NULL) {
-        state->AddPausedProcess(process);
-      }
-    } else {
-      EnqueueOnAnyThread(process);
-    }
+    EnqueueOnAnyThreadSafe(process);
   }
 
   return true;
@@ -334,8 +311,15 @@ void Scheduler::ExitAtTermination(Process* process,
     // heaps before we allow the parent to return to Dart code.
     blocked->TakeChildHeaps();
     blocked->ChangeState(Process::kBlocked, Process::kReady);
-    int id = thread_state != NULL ? thread_state->thread_id() + 1 : 0;
-    EnqueueOnAnyThread(blocked, id);
+
+    // If this function is called from [Scheduler::InterpretProcess] we can
+    // enqueue directly (since we are guaranteed that the program is not
+    // stopped yet).
+    if (thread_state != NULL && program == blocked->program()) {
+      EnqueueOnAnyThread(blocked, thread_state->thread_id() + 1);
+    } else {
+      EnqueueOnAnyThreadSafe(blocked);
+    }
   }
 
   if (Flags::gc_on_delete) {
@@ -842,6 +826,31 @@ bool Scheduler::EnqueueOnAnyThread(Process* process, int start_id) {
   }
   UNREACHABLE();
   return false;
+}
+
+void Scheduler::EnqueueOnAnyThreadSafe(Process* process, int start_id) {
+  // There can be two cases: Either the program is stopped at the moment or
+  // not. If it is stopped, we add the process to the list of paused processes
+  // and otherwise we enqueue it on any thread.
+  ScopedMonitorLock locker(pause_monitor_);
+
+  Program* program = process->program();
+  ASSERT(program->scheduler() == this);
+  ProgramState* state = program->program_state();
+  if (state->is_paused()) {
+    // If the program is paused, there is no way the process can be enqueued
+    // on any process queues.
+    ASSERT(process->process_queue() == NULL);
+
+    // Only add the process into the paused list if it is not already in
+    // there (this can e.g. happen if a foreign thread is sending several
+    // messages to the port while the program is stopped).
+    if (process->next() == NULL) {
+      state->AddPausedProcess(process);
+    }
+  } else {
+    EnqueueOnAnyThread(process, start_id);
+  }
 }
 
 void Scheduler::RunThread(void* data) {

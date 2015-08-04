@@ -48,7 +48,7 @@ class Scheduler {
   // TODO(ajohnsen): This could be improved by taking a Port and a 'message',
   // and avoid the extra allocation on the process queue (in the case where it's
   // empty).
-  bool EnqueueProcessOnCurrentForeignThread(Process* process, Port* port);
+  bool EnqueueProcess(Process* process, Port* port);
 
   // Resume a process. If the process is already running, this function will do
   // nothing. This function is thread safe.
@@ -133,6 +133,10 @@ class Scheduler {
   bool TryEnqueueOnIdleThread(Process* process);
   // Returns true if it was able to enqueue the process on an idle thread.
   bool EnqueueOnAnyThread(Process* process, int start_id = 0);
+
+  // The [process] will be enqueued on any thread. In case the program is paused
+  // the process will be enqueued once the program is resumed.
+  void EnqueueOnAnyThreadSafe(Process* process, int start_id = 0);
 
   static void RunThread(void* data);
 };
