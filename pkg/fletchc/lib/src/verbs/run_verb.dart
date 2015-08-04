@@ -72,6 +72,7 @@ Future<int> runTask(
     throwFatalError(DiagnosticKind.compileBeforeRun);
   }
 
+  SessionState.current.attachCommandSender(commandSender);
   SessionState.current.vmSession = null;
   for (FletchDelta delta in compilationResults) {
     await session.runCommands(delta.commands);
@@ -120,6 +121,7 @@ Future<int> runTask(
     await session.shutdown();
     done = true;
     timer.cancel();
+    SessionState.current.detachCommandSender();
   };
 
   return exitCode;

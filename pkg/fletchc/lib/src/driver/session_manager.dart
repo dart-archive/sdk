@@ -7,6 +7,9 @@ library fletchc.driver.session_manager;
 import 'dart:async' show
     Future;
 
+import 'driver_commands.dart' show
+    CommandSender;
+
 import 'driver_main.dart' show
     IsolateController;
 
@@ -85,9 +88,42 @@ class UserSession {
   UserSession(this.name, this.worker);
 }
 
+typedef void SendBytesFunction(List<int> bytes);
+
+class BufferingOutputSink implements Sink<List<int>> {
+  SendBytesFunction sendBytes;
+
+  List<List<int>> buffer = new List();
+
+  void attachCommandSender(SendBytesFunction sendBytes) {
+    for (List<int> data in buffer) {
+      sendBytes(data);
+    }
+    buffer = new List();
+    this.sendBytes = sendBytes;
+  }
+
+  void detachCommandSender() {
+    assert(sendBytes != null);
+    sendBytes = null;
+  }
+
+  void add(List<int> bytes) {
+    if (sendBytes != null) {
+      sendBytes(bytes);
+    } else {
+      buffer.add(bytes);
+    }
+  }
+}
+
 /// The state stored in a worker isolate of a [UserSession].
 class SessionState {
   final String name;
+
+  final BufferingOutputSink stdoutSink = new BufferingOutputSink();
+
+  final BufferingOutputSink stderrSink = new BufferingOutputSink();
 
   final FletchCompiler compilerHelper;
 
@@ -103,6 +139,16 @@ class SessionState {
 
   void addCompilationResult(FletchDelta delta) {
     compilationResults.add(delta);
+  }
+
+  void attachCommandSender(CommandSender sender) {
+    stdoutSink.attachCommandSender((d) => sender.sendStdoutBytes(d));
+    stderrSink.attachCommandSender((d) => sender.sendStderrBytes(d));
+  }
+
+  void detachCommandSender() {
+    stdoutSink.detachCommandSender();
+    stderrSink.detachCommandSender();
   }
 
   static SessionState internalCurrent;
