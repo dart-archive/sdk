@@ -174,10 +174,7 @@ def StepsCrossBuilder(debug_log, system, modes, arch):
   for compiler_variant in GetCompilerVariants(system, arch):
     for mode in modes:
       build_conf = GetConfigurationName(mode, arch, compiler_variant, False)
-      # TODO(kustermann): Once we have sorted out gyp/building issues with arm,
-      # we should be able to build everything here.
-      args = ['fletch-vm', 'fletch', 'natives.json', 'c_test_library']
-      StepBuild(build_conf, os.path.join('out', build_conf), args=args)
+      StepBuild(build_conf, os.path.join('out', build_conf))
 
   tarball = TarballName(arch, revision)
   try:
