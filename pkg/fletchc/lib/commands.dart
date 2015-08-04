@@ -28,14 +28,14 @@ abstract class Command {
   factory Command.fromBuffer(CommandCode code, Uint8List buffer) {
     switch (code) {
       case CommandCode.InstanceStructure:
-        int classId = CommandBuffer.readUint64FromBuffer(buffer, 0);
-        int fields = CommandBuffer.readUint32FromBuffer(buffer, 8);
+        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        int fields = CommandBuffer.readInt32FromBuffer(buffer, 8);
         return new InstanceStructure(classId, fields);
       case CommandCode.Instance:
-        int classId = CommandBuffer.readUint64FromBuffer(buffer, 0);
+        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new Instance(classId);
       case CommandCode.Integer:
-        int value = CommandBuffer.readUint64FromBuffer(buffer, 0);
+        int value = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new Integer(value);
       case CommandCode.Double:
         return new Double(CommandBuffer.readDoubleFromBuffer(buffer, 0));
@@ -51,37 +51,37 @@ abstract class Command {
       case CommandCode.StderrData:
         return new StderrData(buffer);
       case CommandCode.ObjectId:
-        int id = CommandBuffer.readUint64FromBuffer(buffer, 0);
+        int id = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new ObjectId(id);
       case CommandCode.ProcessBacktrace:
-        int frames = CommandBuffer.readUint32FromBuffer(buffer, 0);
+        int frames = CommandBuffer.readInt32FromBuffer(buffer, 0);
         ProcessBacktrace backtrace = new ProcessBacktrace(frames);
         for (int i = 0; i < frames; i++) {
           int offset = i * 16 + 4;
           int functionId = CommandBuffer.readInt64FromBuffer(buffer, offset);
           int bytecodeIndex =
-              CommandBuffer.readUint64FromBuffer(buffer, offset + 8);
+              CommandBuffer.readInt64FromBuffer(buffer, offset + 8);
           backtrace.functionIds[i] = functionId;
           backtrace.bytecodeIndices[i] = bytecodeIndex;
         }
         return backtrace;
       case CommandCode.ProcessBreakpoint:
-        int breakpointId = CommandBuffer.readUint32FromBuffer(buffer, 0);
+        int breakpointId = CommandBuffer.readInt32FromBuffer(buffer, 0);
         int functionId = CommandBuffer.readInt64FromBuffer(buffer, 4);
-        int bytecodeIndex = CommandBuffer.readUint64FromBuffer(buffer, 12);
+        int bytecodeIndex = CommandBuffer.readInt64FromBuffer(buffer, 12);
         return new ProcessBreakpoint(breakpointId, functionId, bytecodeIndex);
       case CommandCode.ProcessDeleteBreakpoint:
-        int id = CommandBuffer.readUint32FromBuffer(buffer, 0);
+        int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ProcessDeleteBreakpoint(id);
       case CommandCode.ProcessSetBreakpoint:
-        int value = CommandBuffer.readUint32FromBuffer(buffer, 0);
+        int value = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ProcessSetBreakpoint(value);
       case CommandCode.ProcessTerminated:
         return const ProcessTerminated();
       case CommandCode.ProcessCompileTimeError:
         return const ProcessCompileTimeError();
       case CommandCode.ProcessNumberOfStacks:
-        int value = CommandBuffer.readUint32FromBuffer(buffer, 0);
+        int value = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ProcessNumberOfStacks(value);
       case CommandCode.UncaughtException:
         return const UncaughtException();

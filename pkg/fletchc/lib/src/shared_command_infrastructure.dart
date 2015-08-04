@@ -182,14 +182,9 @@ class CommandBuffer<E> {
             buffer.buffer, buffer.offsetInBytes + offset, length));
   }
 
-  static int readUint32FromBuffer(Uint8List buffer, int offset) {
+  static int readInt32FromBuffer(Uint8List buffer, int offset) {
     return buffer.buffer.asByteData(buffer.offsetInBytes)
-        .getUint32(offset, commandEndianness);
-  }
-
-  static int readUint64FromBuffer(Uint8List buffer, int offset) {
-    return buffer.buffer.asByteData(buffer.offsetInBytes)
-        .getUint64(offset, commandEndianness);
+        .getInt32(offset, commandEndianness);
   }
 
   static int readInt64FromBuffer(Uint8List buffer, int offset) {
