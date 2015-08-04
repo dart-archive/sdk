@@ -14,4 +14,10 @@
 - (UITableViewCell*)tableView:(UITableView*)tableView
                     indexPath:(NSIndexPath*)indexPath
                       present:(Node*)node;
+
+- (CGFloat)tableView:(UITableView*)tableView
+    heightForRowAtIndexPath:(NSIndexPath*)indexPath;
+
+- (CGFloat)tableView:(UITableView*)tableView
+    estimatedHeightForRowAtIndexPath:(NSIndexPath*)indexPath;
 @end

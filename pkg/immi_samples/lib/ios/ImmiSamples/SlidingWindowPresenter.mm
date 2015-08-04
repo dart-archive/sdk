@@ -209,4 +209,15 @@
   self.root.toggle(indexPath.row);
 }
 
+- (CGFloat)tableView:(UITableView*)tableView
+    heightForRowAtIndexPath:(NSIndexPath*)indexPath {
+  return [self.cellPresenter tableView:tableView
+               heightForRowAtIndexPath:indexPath];
+}
+
+- (CGFloat)tableView:(UITableView*)tableView
+    estimatedHeightForRowAtIndexPath:(NSIndexPath*)indexPath {
+  return [self.cellPresenter tableView:tableView
+      estimatedHeightForRowAtIndexPath:indexPath];
+}
 @end

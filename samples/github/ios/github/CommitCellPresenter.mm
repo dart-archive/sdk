@@ -16,6 +16,7 @@ static UIImage* dartLogo = [UIImage imageNamed:@"dart-logo.png"];
 
 @interface CommitCellPresenter ()
 @property ImageCache* imageCache;
+@property NSMutableSet* selectedRows;
 @end
 
 @implementation CommitCellPresenter
@@ -27,6 +28,7 @@ static UIImage* dartLogo = [UIImage imageNamed:@"dart-logo.png"];
 - (id)init {
   self = [super init];
   self.imageCache = [[ImageCache alloc] initWithMaxSize:100];
+  self.selectedRows = [[NSMutableSet alloc] init];
   return self;
 }
 
@@ -51,10 +53,12 @@ static UIImage* dartLogo = [UIImage imageNamed:@"dart-logo.png"];
     cell = (CommitCellPresenter*)
         [tableView dequeueReusableCellWithIdentifier:@"CommitDetailsCell"
                                         forIndexPath:indexPath];
+    [self.selectedRows addObject:[NSNumber numberWithInt:indexPath.row]];
   } else {
     cell = (CommitCellPresenter*)
         [tableView dequeueReusableCellWithIdentifier:@"BasicCommitCell"
                                         forIndexPath:indexPath];
+    [self.selectedRows removeObject:[NSNumber numberWithInt:indexPath.row]];
   }
 
   [self configureCell:cell atIndexPath:indexPath withNode:commitNode];
@@ -78,6 +82,23 @@ static UIImage* dartLogo = [UIImage imageNamed:@"dart-logo.png"];
   [cell.avatarImage setCache:self.imageCache];
   [cell.avatarImage setDefaultImage:dartLogo];
   [cell.avatarImage presentImage:node.image];
+}
+
+- (CGFloat)tableView:(UITableView*)tableView
+    heightForRowAtIndexPath:(NSIndexPath*)indexPath {
+  if ([self isSelected:indexPath]) return 220.0;
+  return 100.5;
+}
+
+- (CGFloat)tableView:(UITableView*)tableView
+    estimatedHeightForRowAtIndexPath:(NSIndexPath*)indexPath {
+  if ([self isSelected:indexPath]) return 220.0;
+  return 100.5;
+}
+
+- (BOOL)isSelected:(NSIndexPath*)indexPath {
+  return
+    [self.selectedRows containsObject:[NSNumber numberWithInt:indexPath.row]];
 }
 
 @end
