@@ -61,6 +61,9 @@ Session::Session(Connection* connection)
       changes_(0),
       main_thread_monitor_(Platform::CreateMonitor()),
       main_thread_resume_kind_(kUnknown) {
+  ConnectionPrintInterceptor* interceptor =
+      new ConnectionPrintInterceptor(connection_);
+  Print::RegisterPrintInterceptor(interceptor);
 }
 
 Session::~Session() {
@@ -327,9 +330,6 @@ void Session::ProcessMessages() {
         method_map_id_ = connection_->ReadInt();
         class_map_id_ = connection_->ReadInt();
         fibers_map_id_ = connection_->ReadInt();
-        ConnectionPrintInterceptor* interceptor =
-            new ConnectionPrintInterceptor(connection_);
-        Print::RegisterPrintInterceptor(interceptor);
         debugging_ = true;
         break;
       }
