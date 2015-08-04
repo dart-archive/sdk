@@ -155,7 +155,6 @@ class CommandBuffer<E> {
     view.setUint32(0, position - headerSize, commandEndianness);
     view.setUint8(4, (code as dynamic).index);
     sink.add(list.sublist(0, position));
-    position = headerSize;
   }
 
   static bool readBoolFromBuffer(Uint8List buffer, int offset) {

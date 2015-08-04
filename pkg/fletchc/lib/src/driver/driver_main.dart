@@ -109,22 +109,17 @@ class DriverCommandTransformerBuilder
 class ByteCommandSender extends CommandSender {
   final Sink<List<int>> sink;
 
-  static final _buffer = new CommandBuffer<DriverCommand>();
-
   ByteCommandSender(this.sink);
 
-  /// Shared command buffer. Not safe to use in asynchronous operations.
-  CommandBuffer<DriverCommand> get buffer => _buffer;
-
   void sendExitCode(int exitCode) {
-    buffer
+    new CommandBuffer<DriverCommand>()
         ..addUint32(exitCode)
         ..sendOn(sink, DriverCommand.ExitCode);
   }
 
   void sendDataCommand(DriverCommand command, List<int> data) {
     int payloadSize = data.length + 4;
-    buffer
+    new CommandBuffer<DriverCommand>()
         ..addUint32(data.length)
         ..addUint8List(data)
         ..sendOn(sink, command);
