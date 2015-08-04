@@ -18,7 +18,8 @@ export 'driver_main.dart' show
 
 import '../diagnostic.dart' show
     DiagnosticKind,
-    throwFatalError;
+    throwFatalError,
+    throwInternalError;
 
 import '../../fletch_system.dart' show
     FletchDelta;
@@ -114,6 +115,10 @@ class BufferingOutputSink implements Sink<List<int>> {
     } else {
       buffer.add(bytes);
     }
+  }
+
+  void close() {
+    throwInternalError("BufferingOutputSinks shouldn't be closed");
   }
 }
 
