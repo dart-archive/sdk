@@ -194,10 +194,16 @@ Instance* Instance::CloneTransformed(Heap* heap) {
   Class* new_class = old_class->TransformationTarget();
   Array* transformation = old_class->Transformation();
 
+  // NOTE: We do not pass 'immmutable = get_immutable()' here, since the
+  // immutability bit and the identity hascode will get copied via the flags
+  // word.
   Object* clone = heap->CreateComplexHeapObject(
-      new_class, Smi::FromWord(0), get_immutable());
+      new_class, Smi::FromWord(0), false);
   ASSERT(!clone->IsFailure());  // Needs to be in no-allocation-failure scope.
   Instance* target = Instance::cast(clone);
+
+  // Copy the flags word from the old instance.
+  target->SetFlagsBits(FlagsBits());
 
   int old_fields = old_class->NumberOfInstanceFields();
   int new_fields = new_class->NumberOfInstanceFields();
@@ -499,6 +505,7 @@ HeapObject* HeapObject::CloneInToSpace(Space* to) {
             object_size);
   // Set the forwarding address.
   set_forwarding_address(target);
+
   return target;
 }
 

@@ -59,6 +59,27 @@ library fletchc.test.tests_with_expectations;
 ///     ```
 ///
 /// With expectation `ex3`
+///
+///
+/// It is possible to have several independent changes in the same patch. One
+/// should only specify the expectations once. For example:
+///
+///     ==> main.dart.patch <==
+///     class Foo {
+///       <<<<<<< "a"
+///       ======= "b"
+///       var bar;
+///       >>>>>>>
+///     }
+///     main() {
+///       var foo = new Foo();
+///       <<<<<<<
+///       print("a");
+///       =======
+///       print("b");
+///       >>>>>>>
+///     }
+///
 const List<String> tests = const <String>[
   r'''
 hello_world
@@ -72,6 +93,29 @@ main() { print(
 >>>>>>>
 ); }
 
+''',
+
+  r'''
+preserving_identity_hashcode
+==> main.dart.patch <==
+class Foo {
+<<<<<<< "Generated firstHashCode"
+======= "firstHashCode == secondHashCode: true"
+  var bar;
+>>>>>>>
+}
+Foo foo;
+int firstHashCode;
+main() {
+<<<<<<<
+  foo = new Foo();
+  firstHashCode = foo.hashCode;
+  print("Generated firstHashCode");
+=======
+  int secondHashCode = foo.hashCode;
+  print("firstHashCode == secondHashCode: ${firstHashCode == secondHashCode}");
+>>>>>>>
+}
 ''',
 
   r'''
