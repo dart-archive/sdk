@@ -43,7 +43,7 @@ class ResourceManager {
     }
     Function handler = _eventHandlers[id];
     if (handler == null) {
-      print('Request with unallocated event id: \$id');
+      print('Request with unallocated event id: $id');
       return null;
     }
     return handler;

@@ -389,18 +389,32 @@ class ${serviceImplName} extends ${serviceName} {
 
 """);
     for (List<Type> formals in methodSignatures.values) {
-      write('  void dispatch${actionTypeSuffix(formals)}(int id');
+      String suffix = actionTypeSuffix(formals);
+      bool boxedArguments = formals.any((t) => t.isString);
+      if (boxedArguments) {
+        writeln('  void dispatch$suffix(Action${suffix}Args args) {');
+        writeln('    var handler = _manager.getHandler(args.id);');
+        writeln('    if (handler != null) handler(');
+        for (int j = 0; j <= formals.length - 1; ++j) {
+          if (j != 0) write(',');
+          write('args.arg$j');
+        }
+        writeln(');');
+        writeln('  }');
+        continue;
+      }
+      write('  void dispatch$suffix(int id');
       int i = 0;
       for (var formal in formals) {
         write(', ');
         writeType(formal);
-        write(' arg${++i}');
+        write(' arg${i++}');
       }
       writeln(') {');
       writeln('    var handler = _manager.getHandler(id);');
       write('    if (handler != null) handler(');
-      for (int j = 1; j <= i; ++j) {
-        if (j != 1) write(', ');
+      for (int j = 0; j <= i - 1; ++j) {
+        if (j != 0) write(', ');
         write('arg$j');
       }
       writeln(');');

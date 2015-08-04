@@ -47,6 +47,7 @@ class _IDLVisitor extends CodeGenerationVisitor {
     // Genereate shared definitions.
     _writeNodeDataStruct(nodes);
     _writePatchDataStructs();
+    _writeActionArgumentStructs();
   }
 
   visitUnit(Unit node) {
@@ -115,10 +116,16 @@ class _IDLVisitor extends CodeGenerationVisitor {
     writeln('  void reset(uint16 pid);');
     writeln('  PatchData* refresh(uint16 pid);');
     for (List<Type> formals in _methodSignatures.values) {
-      write('  void dispatch${actionTypeSuffix(formals)}(uint16 id');
+      String suffix = actionTypeSuffix(formals);
+      bool boxedArguments = formals.any((t) => t.isString);
+      if (boxedArguments) {
+        writeln('  void dispatch$suffix(Action${suffix}Args* args);');
+        continue;
+      }
+      write('  void dispatch$suffix(uint16 id');
       int i = 0;
       for (var formal in formals) {
-        write(', ${formal.identifier} arg${++i}');
+        write(', ${formal.identifier} arg${i++}');
       }
       writeln(');');
     }
@@ -209,5 +216,20 @@ struct PatchData {
   }
 }
 """);
+  }
+
+  void _writeActionArgumentStructs() {
+    for (List<Type> formals in _methodSignatures.values) {
+      String suffix = actionTypeSuffix(formals);
+      bool boxedArguments = formals.any((t) => t.isString);
+      if (!boxedArguments) continue;
+      writeln('struct Action${suffix}Args {');
+      int i = 0;
+      writeln('  uint16 id;');
+      for (Type formal in formals) {
+        writeln('  ${formal.identifier} arg${i++};');
+      }
+      writeln('}');
+    }
   }
 }

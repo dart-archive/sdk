@@ -521,22 +521,12 @@ class _ImplementationVisitor extends _ObjCVisitor {
       }
     });
     for (var method in node.methods) {
-      List<Type> formals = method.arguments.map((formal) => formal.type);
-      String suffix = actionTypeSuffix(formals);
-      String actionBlock = actionBlockType(method);
-      String actionBlockArgs = method.arguments.isEmpty ? '' :
-                               '(${actionTypedArguments(method.arguments)})';
-      String actionArgsComma = method.arguments.isEmpty ? '' :
-                               '${actionArguments(method.arguments)}, ';
       String actionId = '${method.name}Id';
       writeln('  uint16_t $actionId = data.get${camelize(method.name)}();');
-      writeln('  _${method.name} = ^$actionBlockArgs{');
-      writeln('      [root dispatch:^{');
-      writeln('          ${serviceName}::dispatch${suffix}Async(');
-      writeln('            $actionId, $actionArgsComma');
-      writeln('            noopVoidEventCallback, NULL);');
-      writeln('      }];');
-      writeln('  };');
+      write('  _${method.name} = ');
+      List<Type> formals = method.arguments.map((formal) => formal.type);
+      _writeActionBlockImplementation(actionId, formals);
+      writeln(';');
     }
     writeln('  return self;');
     writeln('}');
@@ -1038,15 +1028,6 @@ class _ImplementationVisitor extends _ObjCVisitor {
       String actionBlock = '${actionName}Block';
       String actionPatch = '${actionName}Patch';
 
-      String actionFormals =
-          mapWithIndex(formals, (i, f) => '${getTypeName(f)} arg$i').join(', ');
-
-      String actionArgs =
-          mapWithIndex(formals, (i, _) => 'arg$i').join(', ');
-
-      String actionBlockFormals =
-          formals.isEmpty ? '' : '($actionFormals)';
-
       writeln('@implementation $actionPatch {');
       writeln('  NodePatchType _type;');
       writeln('}');
@@ -1061,23 +1042,67 @@ class _ImplementationVisitor extends _ObjCVisitor {
       writeln('       inGraph:(ImmiRoot*)root {');
       writeln('  self = [super init];');
       writeln('  _type = kReplaceNodePatch;');
-      writeln('  _current = ^$actionBlockFormals{');
-      writeln('      [root dispatch:^{');
-      writeln('          ${serviceName}::dispatch${suffix}Async(');
-      writeln('            actionId,');
-      if (formals.isNotEmpty) {
-        writeln('            $actionArgs,');
-      }
-      writeln('            noopVoidEventCallback,');
-      writeln('            NULL);');
-      writeln('      }];');
-      writeln('  };');
+      write('  _current = ');
+      _writeActionBlockImplementation('actionId', formals);
+      writeln(';');
       writeln('  return self;');
       writeln('}');
       writeln('- (bool)changed { return _type != kIdentityNodePatch; }');
       writeln('@end');
       writeln();
     }
+  }
+
+  void _writeActionBlockImplementation(String actionId, List<Type> formals) {
+      String suffix = actionTypeSuffix(formals);
+      bool boxedArguments = formals.any((t) => t.isString);
+      String actionFormals = '';
+      if (formals.isNotEmpty) {
+        var typedFormals =
+          mapWithIndex(formals, (i, f) => '${getTypeName(f)} arg$i').join(', ');
+        actionFormals = '(${typedFormals})';
+      }
+      writeln('^$actionFormals{');
+      writeln('      [root dispatch:^{');
+      if (boxedArguments) {
+        writeln('          int size = 48 + Action${suffix}ArgsBuilder::kSize;');
+        int i = 0;
+        for (Type formal in formals) {
+          if (formal.isString) {
+            writeln('          size += arg$i.length;');
+          }
+          i++;
+        }
+        writeln('          MessageBuilder message(size);');
+        writeln('          Action${suffix}ArgsBuilder args =');
+        writeln('            message.initRoot<Action${suffix}ArgsBuilder>();');
+        writeln('          args.setId($actionId);');
+        i = 0;
+        for (Type formal in formals) {
+          if (formal.isString) {
+            String charBuffer = 'args.initArg${i}Data(arg$i.length).data()';
+            writeln('          [arg$i');
+            writeln('           getCharacters:$charBuffer');
+            writeln('                   range:NSMakeRange(0, arg$i.length)];');
+          } else {
+            writeln('          args.setArg$i(arg$i);');
+          }
+          i++;
+        }
+      }
+      writeln('          ${serviceName}::dispatch${suffix}Async(');
+      if (boxedArguments) {
+        writeln('              args,');
+      } else {
+        writeln('              $actionId,');
+        for (int i = 0; i < formals.length; ++i) {
+          writeln('              arg$i,');
+        }
+      }
+      writeln('              noopVoidEventCallback,');
+      writeln('              NULL);');
+      writeln('      }];');
+      write('  }');
   }
 
   void _writeListUtils() {
