@@ -37,7 +37,7 @@
       },
     },
     {
-      'target_name': 'shared_run_tests',
+      'target_name': 'shared_cc_tests',
       'type': 'executable',
       'dependencies': [
         'fletch_shared',

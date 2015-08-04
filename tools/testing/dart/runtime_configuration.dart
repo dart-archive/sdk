@@ -60,6 +60,12 @@ class RuntimeConfiguration {
       case 'fletch_tests':
         return new FletchTestRuntimeConfiguration(configuration);
 
+      case 'snapshot_tests':
+        return new SnapshotRuntimeConfiguration();
+
+      case 'fletch_cc_tests':
+        return new CCRuntimeConfiguration();
+
       default:
         throw "Unknown runtime '$runtime'";
     }
@@ -200,7 +206,6 @@ class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
     Map<String, String> environment;
 
     String testFile = basicArguments[0];
-
     Map options = suite.readOptionsFromFile(new Path(testFile));
     String debuggerCommands = options["fletchDebuggerCommands"];
     String testDebuggerArgument = "--test-debugger";
@@ -255,6 +260,51 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
             environmentOverrides)];
   }
 }
+
+class SnapshotRuntimeConfiguration extends DartVmRuntimeConfiguration {
+  SnapshotRuntimeConfiguration();
+
+  List<Command> computeRuntimeCommands(
+      StandardTestSuite suite,
+      CommandBuilder commandBuilder,
+      CommandArtifact artifact,
+      String script,
+      List<String> arguments,
+      Map<String, String> environmentOverrides) {
+    Map options = suite.readOptionsFromFile(new Path(arguments[0]));
+    List<String> snapshotOptions = options["fletchSnapshotOptions"];
+    String snapshotLocation =
+        "${suite.buildDir}/${snapshotOptions[1]}.snapshot";
+    List<String> executableArguments =
+        <String>["-p", "package", "package:fletchc/fletchc.dart",
+                 snapshotOptions[0], '--out', snapshotLocation];
+    var buildSnapshotCommand = commandBuilder.getVmCommand(
+        suite.dartVmBinaryFileName, executableArguments, environmentOverrides);
+    var testExecutable = "${suite.buildDir}/${snapshotOptions[1]}";
+    var runSnapshotCommand = commandBuilder.getVmCommand(
+        testExecutable, [snapshotLocation], environmentOverrides);
+    return <Command>[buildSnapshotCommand, runSnapshotCommand];
+  }
+}
+
+class CCRuntimeConfiguration extends DartVmRuntimeConfiguration {
+  CCRuntimeConfiguration();
+
+  List<Command> computeRuntimeCommands(
+      StandardTestSuite suite,
+      CommandBuilder commandBuilder,
+      CommandArtifact artifact,
+      String script,
+      List<String> arguments,
+      Map<String, String> environmentOverrides) {
+    Map options = suite.readOptionsFromFile(new Path(arguments[0]));
+    List<String> ccOptions = options["fletchCCOptions"];
+    var executable = "${suite.buildDir}/${ccOptions[0]}";
+    return <Command>[commandBuilder.getVmCommand(
+        executable, ccOptions.sublist(1), environmentOverrides)];
+  }
+}
+
 
 /// Temporary runtime configuration for browser runtimes that haven't been
 /// migrated yet.

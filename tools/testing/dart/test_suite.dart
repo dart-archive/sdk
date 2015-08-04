@@ -1530,6 +1530,9 @@ class StandardTestSuite extends TestSuite {
     RegExp fletchOptionsRegExp = new RegExp(r"// FletchOptions=(.*)");
     RegExp fletchDebuggerCommandsRegExp
         = new RegExp(r"// FletchDebuggerCommands=(.*)");
+    RegExp fletchSnapshotRegExp
+        = new RegExp(r"// FletchSnapshotOptions=(.*)");
+    RegExp fletchCCRegExp = new RegExp(r"// FletchCCOptions=(.*)");
     RegExp sharedOptionsRegExp = new RegExp(r"// SharedOptions=(.*)");
     RegExp dartOptionsRegExp = new RegExp(r"// DartOptions=(.*)");
     RegExp otherScriptsRegExp = new RegExp(r"// OtherScripts=(.*)");
@@ -1548,8 +1551,10 @@ class StandardTestSuite extends TestSuite {
     List<List> result = new List<List>();
     List<List> fletchOptions = new List<List>();
     String fletchDebuggerCommands = "";
+    List<String> fletchSnapshotOptions;
     List<String> dartOptions;
     List<String> sharedOptions;
+    List<String> fletchCCOptions;
     String packageRoot;
 
     Iterable<Match> matches = testOptionsRegExp.allMatches(contents);
@@ -1581,6 +1586,29 @@ class StandardTestSuite extends TestSuite {
             'More than one "// DartOptions=" line in test $filePath');
       }
       dartOptions = match[1].split(' ').where((e) => e != '').toList();
+    }
+
+    matches = fletchCCRegExp.allMatches(contents);
+    for (var match in matches) {
+      if (fletchCCOptions != null) {
+        throw new Exception(
+            'More than one "// FletchCCOptions=" line in test $filePath');
+      }
+      fletchCCOptions = match[1].split(' ').where((e) => e != '').toList();
+    }
+
+    matches = fletchSnapshotRegExp.allMatches(contents);
+    for (var match in matches) {
+      if (fletchSnapshotOptions != null) {
+        throw new Exception(
+            'More than one "// FletchSnapshotOptions=" line in test $filePath');
+      }
+      fletchSnapshotOptions =
+          match[1].split(' ').where((e) => e != '').toList();
+      if (fletchSnapshotOptions.length != 2) {
+        throw new Exception(
+            '// "FletchSnapshotOptions=" takes two arguments in $filePath');
+      }
     }
 
     matches = sharedOptionsRegExp.allMatches(contents);
@@ -1628,6 +1656,8 @@ class StandardTestSuite extends TestSuite {
     return { "vmOptions": result,
              "fletchOptions": fletchOptions,
              "fletchDebuggerCommands": fletchDebuggerCommands,
+             "fletchSnapshotOptions": fletchSnapshotOptions,
+             "fletchCCOptions": fletchCCOptions,
              "sharedOptions": sharedOptions == null ? [] : sharedOptions,
              "dartOptions": dartOptions,
              "packageRoot": packageRoot,
@@ -1917,7 +1947,6 @@ class PkgBuildTestSuite extends TestSuite {
     });
   }
 }
-
 
 class LastModifiedCache {
   Map<String, DateTime> _cache = <String, DateTime>{};

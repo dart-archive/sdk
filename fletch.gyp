@@ -40,241 +40,29 @@
       ],
     },
     {
-      'target_name': 'run_shared_tests',
-      # Note: this target_name needs to be different from its dependency.
-      # This is due to the ninja GYP generator which doesn't generate unique
-      # names.
+      # C based test executables. See also tests/cc_tests/README.md.
+      'target_name': 'cc_tests',
       'type': 'none',
+      'toolsets': ['target'],
       'dependencies': [
-        'src/shared/shared.gyp:shared_run_tests',
+        'src/shared/shared.gyp:shared_cc_tests',
+        'src/vm/vm.gyp:vm_cc_tests',
         'copy_asan',
-      ],
-      'actions': [
-        {
-          'action_name': 'run_shared_tests',
-          'command': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'shared_run_tests'
-            '<(EXECUTABLE_SUFFIX)',
-          ],
-          'inputs': [
-            '<@(_command)',
-            '<(mac_asan_dylib)',
-          ],
-          'outputs': [
-            '<(PRODUCT_DIR)/test_outcomes/shared_run_tests.pass',
-          ],
-          'action': [
-            "bash", "-c",
-            "<(_command) && LANG=POSIX date '+Test passed on %+' > <(_outputs)",
-          ],
-        },
       ],
     },
     {
-      'target_name': 'run_vm_tests',
-      # Note: this target_name needs to be different from its dependency.
-      # This is due to the ninja GYP generator which doesn't generate unique
-      # names.
+      # The actual snapshots used in these tests are generated at test time.
+      # See also tests/snapshot_tests/README.md.
+      'target_name': 'snapshot_tests',
       'type': 'none',
-      'dependencies': [
-        'src/vm/vm.gyp:vm_run_tests',
-        'copy_asan',
-      ],
-      'actions': [
-        {
-          'action_name': 'run_vm_tests',
-          'command': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'vm_run_tests'
-            '<(EXECUTABLE_SUFFIX)',
-          ],
-          'inputs': [
-            '<@(_command)',
-            '<(mac_asan_dylib)',
-          ],
-          'outputs': [
-            '<(PRODUCT_DIR)/test_outcomes/vm_run_tests.pass',
-          ],
-          'action': [
-            "bash", "-c",
-            "<(_command) && LANG=POSIX date '+Test passed on %+' > <(_outputs)",
-          ],
-        },
-      ],
-    },
-    {
-      'target_name': 'run_service_performance_test',
-      # Note: this target_name needs to be different from its dependency.
-      # This is due to the ninja GYP generator which doesn't generate unique
-      # names.
-      'type': 'none',
+      'toolsets': ['target'],
       'dependencies': [
         'src/vm/vm.gyp:fletch-vm',
         'copy_dart#host',
         'tests/service_tests/service_tests.gyp:service_performance_test',
-        'copy_asan',
-      ],
-      'actions': [
-        {
-          'action_name': 'generate_service_performance_snapshot',
-          'command': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
-            '-p',
-            '<(PRODUCT_DIR)/../../package/',
-            '<(PRODUCT_DIR)/../../pkg/fletchc/lib/fletchc.dart',
-            'tests/service_tests/performance/performance_service_impl.dart',
-          ],
-          'inputs': [
-            '<(mac_asan_dylib)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch-vm<(EXECUTABLE_SUFFIX)',
-            # TODO(ahe): Also depend on .dart files in the core libraries.
-            'tests/service_tests/performance/dart/performance_service.dart',
-          ],
-          'outputs': [
-            '<(SHARED_INTERMEDIATE_DIR)/service_performance.snapshot',
-          ],
-          'action': [
-            '<@(_command)',
-            '--out',
-            '<(SHARED_INTERMEDIATE_DIR)/service_performance.snapshot',
-          ],
-        },
-        {
-          'action_name': 'run_service_performance_test',
-          'inputs': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'service_performance_test'
-            '<(EXECUTABLE_SUFFIX)',
-            '<(SHARED_INTERMEDIATE_DIR)/service_performance.snapshot',
-          ],
-          'outputs': [
-            '<(PRODUCT_DIR)/test_outcomes/service_performance_test.pass',
-          ],
-          'action': [
-            "bash", "-c",
-            "<(_inputs) && LANG=POSIX date '+Test passed on %+' > "
-            "<(_outputs)",
-          ],
-        },
-      ],
-    },
-    {
-      'target_name': 'run_service_conformance_test',
-      # Note: this target_name needs to be different from its dependency.
-      # This is due to the ninja GYP generator which doesn't generate unique
-      # names.
-      'type': 'none',
-      'dependencies': [
-        'src/vm/vm.gyp:fletch-vm',
-        'copy_dart#host',
         'tests/service_tests/service_tests.gyp:service_conformance_test',
-        'copy_asan',
-      ],
-      'actions': [
-        {
-          'action_name': 'generate_service_conformance_snapshot',
-          'command': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
-            '-p',
-            '<(PRODUCT_DIR)/../../package/',
-            '<(PRODUCT_DIR)/../../pkg/fletchc/lib/fletchc.dart',
-            'tests/service_tests/conformance/conformance_service_impl.dart',
-          ],
-          'inputs': [
-            '<(mac_asan_dylib)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch-vm<(EXECUTABLE_SUFFIX)',
-            # TODO(ahe): Also depend on .dart files in the core libraries.
-            'tests/service_tests/conformance/dart/conformance_service.dart',
-          ],
-          'outputs': [
-            '<(SHARED_INTERMEDIATE_DIR)/service_conformance.snapshot',
-          ],
-          'action': [
-            '<@(_command)',
-            '--out',
-            '<(SHARED_INTERMEDIATE_DIR)/service_conformance.snapshot',
-          ],
-        },
-        {
-          'action_name': 'run_service_conformance_test',
-          'inputs': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'service_conformance_test'
-            '<(EXECUTABLE_SUFFIX)',
-            '<(SHARED_INTERMEDIATE_DIR)/service_conformance.snapshot',
-          ],
-          'outputs': [
-            '<(PRODUCT_DIR)/test_outcomes/service_conformance_test.pass',
-          ],
-          'action': [
-            "bash", "-c",
-            "<(_inputs) && LANG=POSIX date '+Test passed on %+' > "
-            "<(_outputs)",
-          ],
-        },
-      ],
-    },
-    {
-      'target_name': 'run_todomvc_sample',
-      # Note: this target_name needs to be different from its dependency.
-      # This is due to the ninja GYP generator which doesn't generate unique
-      # names.
-      'type': 'none',
-      'dependencies': [
-        'src/vm/vm.gyp:fletch-vm',
-        'copy_dart#host',
         'samples/todomvc/todomvc.gyp:todomvc_sample',
         'copy_asan',
-      ],
-      'actions': [
-        {
-          'action_name': 'generate_todomvc_snapshot',
-          'command': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
-            '-p',
-            '<(PRODUCT_DIR)/../../package/',
-            '<(PRODUCT_DIR)/../../pkg/fletchc/lib/fletchc.dart',
-            'samples/todomvc/todomvc.dart',
-          ],
-          'inputs': [
-            '<(mac_asan_dylib)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)dart<(EXECUTABLE_SUFFIX)',
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)fletch-vm<(EXECUTABLE_SUFFIX)',
-            # TODO(ahe): Also depend on .dart files in the core libraries.
-            'samples/todomvc/model.dart',
-            'samples/todomvc/todomvc_impl.dart',
-            'samples/todomvc/dart/presentation_graph.dart',
-            'samples/todomvc/dart/todomvc_service.dart',
-            'samples/todomvc/dart/todomvc_presenter.dart',
-            'samples/todomvc/dart/todomvc_presenter_model.dart',
-          ],
-          'outputs': [
-            '<(SHARED_INTERMEDIATE_DIR)/todomvc.snapshot',
-          ],
-          'action': [
-            '<@(_command)', '--out', '<(SHARED_INTERMEDIATE_DIR)/todomvc.snapshot',
-          ],
-        },
-        {
-          'action_name': 'run_todomvc_sample',
-          'inputs': [
-            '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'todomvc_sample'
-            '<(EXECUTABLE_SUFFIX)',
-            '<(SHARED_INTERMEDIATE_DIR)/todomvc.snapshot',
-          ],
-          'outputs': [
-            '<(PRODUCT_DIR)/test_outcomes/todomvc_sample.pass',
-          ],
-          'action': [
-            "bash", "-c",
-            "<(_inputs) && LANG=POSIX date '+Test passed on %+' > "
-            "<(_outputs)",
-          ],
-        },
       ],
     },
     {

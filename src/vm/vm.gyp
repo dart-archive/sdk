@@ -201,7 +201,7 @@
       ],
     },
     {
-      'target_name': 'vm_run_tests',
+      'target_name': 'vm_cc_tests',
       'type': 'executable',
       'dependencies': [
         'libfletch',
