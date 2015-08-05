@@ -8,6 +8,7 @@ self/testNeverCompletes: Timeout # This is a test of this suite, timeout is expe
 
 incremental/encoded/add_class: Fail
 incremental/encoded/add_instance_method: Fail
+incremental/encoded/bad_stack_trace_repro: Fail
 incremental/encoded/call_instance_tear_off_named: Fail
 incremental/encoded/call_named_arguments_1: Fail
 incremental/encoded/call_named_arguments_2: Fail

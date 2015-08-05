@@ -1618,4 +1618,25 @@ method() {
 >>>>>>>
 }
 ''',
+  r'''
+bad_stack_trace_repro
+==> main.dart.patch <==
+// Reproduces a problem where the stack trace includes an old method that
+// should have been removed by the incremental compiler.
+main() {
+  bar();
+}
+
+bar() {
+<<<<<<< []
+  foo(true);
+======= []
+  foo(false);
+>>>>>>>
+}
+
+foo(a) {
+  if (a) throw "throw";
+}
+''',
 ];
