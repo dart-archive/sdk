@@ -118,7 +118,7 @@ class BufferingOutputSink implements Sink<List<int>> {
   }
 
   void close() {
-    throwInternalError("BufferingOutputSinks shouldn't be closed");
+    throwInternalError("Unimplemented");
   }
 }
 
