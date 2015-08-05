@@ -122,6 +122,10 @@ void Space::AdjustAllocationBudget() {
   allocation_budget_ = Utils::Maximum(512 * KB, Used());
 }
 
+void Space::SetAllocationBudget(int new_budget) {
+  allocation_budget_ = new_budget;
+}
+
 void Space::PrependSpace(Space* space) {
   bool was_empty = is_empty();
 

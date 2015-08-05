@@ -32,6 +32,7 @@
         'fletch_api_impl.cc',
         'heap.cc',
         'heap_validator.cc',
+        'immutable_heap.cc',
         'gc_thread.cc',
         'interpreter.cc',
         'intrinsics.cc',

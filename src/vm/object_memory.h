@@ -72,6 +72,8 @@ class Chunk {
 // Space is a chain of chunks. It supports allocation and traversal.
 class Space {
  public:
+  static const int kDefaultChunkSize = 128 * KB;
+
   explicit Space(int maximum_initial_size = 0);
 
   ~Space();
@@ -111,6 +113,8 @@ class Space {
   // Adjust the allocation budget based on the current heap size.
   void AdjustAllocationBudget();
 
+  void SetAllocationBudget(int new_budget);
+
   // Tells whether garbage collection is needed.
   bool needs_garbage_collection() { return allocation_budget_ <= 0; }
 
@@ -131,8 +135,6 @@ class Space {
 
  private:
   friend class NoAllocationFailureScope;
-
-  static const int kDefaultChunkSize = 128 * KB;
 
   uword TryAllocate(int size);
   uword AllocateInNewChunk(int size);

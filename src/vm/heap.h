@@ -117,6 +117,7 @@ class Heap {
 
  private:
   friend class ExitReference;
+  friend class ImmutableHeap;
   Heap(Space* existing_space, WeakPointer* weak_pointers);
 
   Object* CreateStringInternal(Class* the_class, int length, bool clear,
