@@ -124,6 +124,23 @@ Map<String, String> toDart2jsArguments(
   return result;
 }
 
+/// Throw an internal error that will be recorded as a compiler crash.
+///
+/// In general, assume, no matter how unlikely, that [message] may be read by a
+/// user (that is, a developer using Fletch). For this reason, try to:
+///
+/// * Avoid phrases that can be interpreted as blaming the user (all error
+///   messages should state what is wrong, in a way that doesn't assign blame).
+///
+/// * Avoid being cute or funny (there's nothing more frustrating than being
+///   affected by a bug and see a cute or funny message, especially if it
+///   happens a lot).
+///
+/// * Avoid phrases like "unreachable", "can't happen", "shouldn't happen",
+///   "shouldn't be called", simply because it is wrong: it did happen. In most
+///   cases a factual message would be "unimplemented", "unhandled case",
+///   etc. Remember that the stacktrace will pinpoint the exact location of the
+///   problem, so no need to repeat a method name.
 void throwInternalError(String message) {
   throw new InputError(
       DiagnosticKind.internalError,
