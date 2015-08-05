@@ -123,7 +123,7 @@ class _DartVisitor extends CodeGenerationVisitor {
       writeln('  final Function ${method.name};');
     }
     // Public keyword constructor.
-    if (node.layout.slots.isNotEmpty) {
+    if (hasFields || hasMethods) {
       write('  factory $nodeName({');
       forEachSlot(node, writeComma, (Type slotType, String slotName) {
         writeType(slotType);
