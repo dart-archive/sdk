@@ -71,7 +71,7 @@ static int exit_code = COMPILER_CRASHED;
 
 static void WriteFully(int fd, uint8* data, ssize_t length);
 
-void Die(const char *format, ...) {
+void Die(const char* format, ...) {
   va_list args;
   va_start(args, format);
   vfprintf(stderr, format, args);
@@ -142,7 +142,7 @@ bool FileExists(const char* name) {
   return false;
 }
 
-void FletchConfigFile(char *result, const char* directory) {
+void FletchConfigFile(char* result, const char* directory) {
   // TODO(ahe): Use StrCat or StrCpy instead.
   char* ptr = stpncpy(result, directory, MAXPATHLEN);
   if (ptr[-1] != '/') {
@@ -153,7 +153,7 @@ void FletchConfigFile(char *result, const char* directory) {
   strncpy(ptr, fletch_config_name, sizeof(fletch_config_name));
 }
 
-void ParentDir(char *directory) {
+void ParentDir(char* directory) {
   char copy[MAXPATHLEN + 1];
   // On Linux, dirname's argument may be modified. On Mac OS X, it returns a
   // pointer to internal memory. Probably not thread safe. So we first copy
@@ -534,7 +534,7 @@ static void WaitForDaemonHandshake(
         // received from the server process via its stdout. We're looking for
         // a handshake which is a file name on the first line. So we look for
         // a newline character.
-        char *match = strchr(stdout_buffer, '\n');
+        char* match = strchr(stdout_buffer, '\n');
         if (match != NULL) {
           match[0] = '\0';
           StrCpy(
@@ -562,7 +562,7 @@ static void WriteFully(int fd, uint8* data, ssize_t length) {
   }
 }
 
-static void SendArgv(DriverConnection *connection, int argc, char** argv) {
+static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   connection->WriteInt(argc);
   for (int i = 0; i < argc; i++) {
     connection->WriteInt(strlen(argv[i]));
@@ -648,7 +648,7 @@ static int Main(int argc, char** argv) {
   LockConfigFile();
   ReadDriverConfig();
 
-  Socket *control_socket = Connect();
+  Socket* control_socket = Connect();
 
   if (control_socket == NULL) {
     StartDriverDaemon();
