@@ -5,8 +5,6 @@
 #ifndef SRC_VM_GC_THREAD_H_
 #define SRC_VM_GC_THREAD_H_
 
-#include "src/shared/atomic.h"
-
 #include "src/vm/thread.h"
 #include "src/vm/program.h"
 
@@ -18,6 +16,7 @@ class GCThread {
   ~GCThread();
 
   void StartThread();
+  void TriggerImmutableGC(Program* program);
   void TriggerGC(Program* program);
   void StopThread();
 
@@ -28,11 +27,12 @@ class GCThread {
 
   Monitor* gc_thread_monitor_;
   Program* program_;
-  Atomic<bool> shutting_down_;
-  Atomic<bool> requesting_gc_;
+  bool shutting_down_;
+  bool requesting_immutable_gc_;
+  bool requesting_gc_;
 
   Monitor* shutdown_monitor_;
-  Atomic<bool> did_shutdown_;
+  bool did_shutdown_;
 };
 
 }  // namespace fletch

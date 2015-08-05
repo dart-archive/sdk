@@ -187,6 +187,7 @@ class Program {
   Object* CreateInitializer(Function* function);
 
   void CollectGarbage();
+  void CollectImmutableGarbage();
 
   void PrintStatistics();
 

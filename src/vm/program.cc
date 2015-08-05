@@ -285,6 +285,19 @@ void Program::RemoveFromProcessList(Process* process) {
   process->set_process_list_prev(NULL);
 }
 
+void Program::CollectImmutableGarbage() {
+  Scheduler* scheduler = this->scheduler();
+  ASSERT(scheduler != NULL);
+
+  // This will make sure all partial immutable heaps got merged into
+  // [program_->immutable_heap()].
+  scheduler->StopProgram(this);
+
+  // TODO(kustermann): Implement collection of immutable heap once we have it.
+
+  scheduler->ResumeProgram(this);
+}
+
 class StatisticsVisitor : public HeapObjectVisitor {
  public:
   StatisticsVisitor()

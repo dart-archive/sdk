@@ -20,6 +20,7 @@ GCThread::GCThread()
     : gc_thread_monitor_(Platform::CreateMonitor()),
       program_(NULL),
       shutting_down_(false),
+      requesting_immutable_gc_(false),
       requesting_gc_(false),
       shutdown_monitor_(Platform::CreateMonitor()),
       did_shutdown_(false) {
@@ -32,6 +33,15 @@ GCThread::~GCThread() {
 
 void GCThread::StartThread() {
   Thread::Run(&GCThread::GCThreadEntryPoint, this);
+}
+
+void GCThread::TriggerImmutableGC(Program* program) {
+  ScopedMonitorLock lock(gc_thread_monitor_);
+  // NOTE: We don't support multiple programs ATM.
+  ASSERT(program_ == NULL || program_ == program);
+  program_ = program;
+  requesting_immutable_gc_ = true;
+  gc_thread_monitor_->Notify();
 }
 
 void GCThread::TriggerGC(Program* program) {
@@ -62,17 +72,26 @@ void GCThread::MainLoop() {
   // Handle gc and shutdown messages.
   while (true) {
     bool do_gc = false;
+    bool do_immutable_gc = false;
     bool do_shutdown = false;
     {
       ScopedMonitorLock lock(gc_thread_monitor_);
-      while (!requesting_gc_ && !shutting_down_) {
+      while (!requesting_gc_ &&
+             !requesting_immutable_gc_ &&
+             !shutting_down_) {
         gc_thread_monitor_->Wait();
       }
       do_gc = requesting_gc_;
+      do_immutable_gc = requesting_immutable_gc_;
       do_shutdown = shutting_down_;
 
+      requesting_immutable_gc_ = false;
       requesting_gc_ = false;
       shutting_down_ = false;
+    }
+
+    if (do_immutable_gc) {
+      program_->CollectImmutableGarbage();
     }
 
     if (do_gc) {
