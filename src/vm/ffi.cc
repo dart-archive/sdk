@@ -97,8 +97,11 @@ NATIVE(ForeignLibraryGetFunction) {
   bool default_lookup = handle == NULL;
   if (default_lookup) handle = dlopen(NULL, RTLD_LOCAL | RTLD_LAZY);
   void* result = dlsym(handle, name);
-  free(name);
   if (default_lookup) dlclose(handle);
+  if (result == NULL) {
+    result = ForeignFunctionInterface::LookupInDefaultLibraries(name);
+  }
+  free(name);
   return result != NULL
       ? process->ToInteger(reinterpret_cast<intptr_t>(result))
       : Failure::index_out_of_bounds();
@@ -131,28 +134,6 @@ NATIVE(ForeignLibraryClose) {
     return Failure::index_out_of_bounds();
   }
   return NULL;
-}
-
-NATIVE(ForeignLookup) {
-  char* library = arguments[1]->IsString()
-      ? AsForeignString(String::cast(arguments[1]))
-      : NULL;
-
-  char* name = AsForeignString(String::cast(arguments[0]));
-  void* result = PerformForeignLookup(library, name);
-
-  if (result == NULL) {
-    result = ForeignFunctionInterface::LookupInDefaultLibraries(name);
-  }
-
-  if (result == NULL) Print::Error("Failed foreign lookup: %s\n", name);
-
-  free(library);
-  free(name);
-
-  return result != NULL
-      ? process->ToInteger(reinterpret_cast<intptr_t>(result))
-      : Failure::index_out_of_bounds();
 }
 
 NATIVE(ForeignAllocate) {
