@@ -611,7 +611,7 @@ class FletchBackend extends Backend {
       ClassElement enclosingClass = element.enclosingClass;
       // TODO(ajohnsen): Don't depend on the class builder.
       FletchClassBuilder classBuilder =
-          systemBuilder.lookupClassBuilderByElement(enclosingClass);
+          systemBuilder.lookupClassBuilderByElement(enclosingClass.declaration);
       codegen = new DebugInfoConstructorCodegen(
           debugInfo,
           builder,

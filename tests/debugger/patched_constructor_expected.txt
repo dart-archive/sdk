@@ -1,0 +1,9 @@
+tests/debugger/patched_constructor_test.dart:6:3:
+Hint: Using 'new Symbol' may lead to unnecessarily large generated code.
+Try using 'const Symbol' or adding '@MirrorsUsed(...)' as described at https://goo.gl/Akrrog.
+  new Symbol('foo.void');
+  ^^^
+breakpoint set: 0: main @0
+main	@'foo.void'
+main	@new Symbol('foo.void')
+### process terminated
