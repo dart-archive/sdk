@@ -46,12 +46,12 @@ DriverConnection::Command DriverConnection::Receive() {
   return command;
 }
 
-void DriverConnection::Send(Command command) {
+void DriverConnection::Send(Command command, const WriteBuffer& buffer) {
   uint8 header[5];
-  Utils::WriteInt32(header, outgoing_.offset());
+  Utils::WriteInt32(header, buffer.offset());
   header[4] = command;
   socket_->Write(header, 5);
-  outgoing_.WriteTo(socket_);
+  buffer.WriteTo(socket_);
 }
 
 }  // namespace fletch

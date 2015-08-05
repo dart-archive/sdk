@@ -46,22 +46,12 @@ class DriverConnection {
   bool ReadBoolean() { return incoming_.ReadBoolean(); }
   uint8* ReadBytes(int* length) { return incoming_.ReadBytes(length); }
 
-  void WriteInt(int value) { outgoing_.WriteInt(value); }
-  void WriteInt64(int64 value) { outgoing_.WriteInt64(value); }
-  void WriteDouble(double value) { outgoing_.WriteDouble(value); }
-  void WriteBoolean(bool value) { outgoing_.WriteBoolean(value); }
-  void WriteBytes(const uint8* bytes, int length) {
-    outgoing_.WriteBytes(bytes, length);
-  }
-  void WriteString(const char* str) { outgoing_.WriteString(str); }
-
-  void Send(Command command);
+  void Send(Command command, const WriteBuffer& buffer);
   Command Receive();
 
  private:
   Socket* socket_;
   ReadBuffer incoming_;
-  WriteBuffer outgoing_;
 };
 
 }  // namespace fletch

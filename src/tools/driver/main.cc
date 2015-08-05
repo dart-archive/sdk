@@ -563,12 +563,13 @@ static void WriteFully(int fd, uint8* data, ssize_t length) {
 }
 
 static void SendArgv(DriverConnection* connection, int argc, char** argv) {
-  connection->WriteInt(argc);
+  WriteBuffer buffer;
+  buffer.WriteInt(argc);
   for (int i = 0; i < argc; i++) {
-    connection->WriteInt(strlen(argv[i]));
-    connection->WriteString(argv[i]);
+    buffer.WriteInt(strlen(argv[i]));
+    buffer.WriteString(argv[i]);
   }
-  connection->Send(DriverConnection::kArguments);
+  connection->Send(DriverConnection::kArguments, buffer);
 }
 
 static int CommandFileDescriptor(DriverConnection::Command command) {
@@ -637,9 +638,10 @@ Socket* Connect() {
 }
 
 static void HandleSignal(int signal_pipe, DriverConnection* connection) {
+  WriteBuffer buffer;
   int signal = ReadSignal(signal_pipe);
-  connection->WriteInt(signal);
-  connection->Send(DriverConnection::kSignal);
+  buffer.WriteInt(signal);
+  connection->Send(DriverConnection::kSignal, buffer);
 }
 
 static int Main(int argc, char** argv) {
@@ -704,8 +706,9 @@ static int Main(int argc, char** argv) {
         ssize_t bytes_count =
             TEMP_FAILURE_RETRY(read(STDIN_FILENO, &buffer, sizeof(buffer)));
         if (bytes_count >= 0) {
-          connection->WriteBytes(buffer, bytes_count);
-          connection->Send(DriverConnection::kStdin);
+          WriteBuffer write_buffer;
+          write_buffer.WriteBytes(buffer, bytes_count);
+          connection->Send(DriverConnection::kStdin, write_buffer);
           if (bytes_count == 0) {
             close(STDIN_FILENO);
             stdin_closed = true;
