@@ -6,7 +6,8 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := fletch-library
-LOCAL_CFLAGS := -DFLETCH32 -DANDROID -I$(LOCAL_PATH)/../../../ -std=c++11
+LOCAL_CFLAGS := -DFLETCH32 -DFLETCH_TARGET_OS_POSIX -DFLETCH_TARGET_OS_LINUX \
+  -DANDROID -I$(LOCAL_PATH)/../../../ -std=c++11
 
 LOCAL_SRC_FILES := \
 	../../../src/shared/assert.cc \
@@ -16,14 +17,20 @@ LOCAL_SRC_FILES := \
 	../../../src/shared/native_process_posix.cc \
 	../../../src/shared/native_socket_linux.cc \
 	../../../src/shared/native_socket_posix.cc \
+	../../../src/shared/platform_linux.cc \
+	../../../src/shared/platform_posix.cc \
 	../../../src/shared/utils.cc \
 	../../../src/vm/debug_info.cc \
 	../../../src/vm/event_handler.cc \
 	../../../src/vm/event_handler_linux.cc \
 	../../../src/vm/ffi.cc \
+	../../../src/vm/ffi_linux.cc \
+	../../../src/vm/ffi_posix.cc \
 	../../../src/vm/fletch.cc \
 	../../../src/vm/fletch_api_impl.cc \
+	../../../src/vm/gc_thread.cc \
 	../../../src/vm/heap.cc \
+	../../../src/vm/heap_validator.cc \
 	../../../src/vm/interpreter.cc \
 	../../../src/vm/intrinsics.cc \
 	../../../src/vm/lookup_cache.cc \
@@ -32,15 +39,17 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/object_list.cc \
 	../../../src/vm/object_map.cc \
 	../../../src/vm/object_memory.cc \
-	../../../src/vm/platform_posix.cc \
 	../../../src/vm/port.cc \
 	../../../src/vm/process.cc \
 	../../../src/vm/program.cc \
+	../../../src/vm/program_folder.cc \
 	../../../src/vm/scheduler.cc \
+	../../../src/vm/selector_row.cc \
 	../../../src/vm/service_api_impl.cc \
 	../../../src/vm/session.cc \
 	../../../src/vm/snapshot.cc \
 	../../../src/vm/stack_walker.cc \
+	../../../src/vm/storebuffer.cc \
 	../../../src/vm/thread_pool.cc \
 	../../../src/vm/thread_posix.cc \
 	../../../src/vm/unicode.cc \

@@ -4,4 +4,5 @@
 
 # Generated file. Do not edit.
 APP_STL := gnustl_static
-APP_ABI := arm64-v8a armeabi-v7a x86_64 x86
+APP_ABI := x86 armeabi-v7a
+APP_PLATFORM := android-8

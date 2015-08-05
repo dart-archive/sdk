@@ -1281,7 +1281,9 @@ void _generateServiceJniMakeFiles(String path,
 
   buffer = new StringBuffer(HEADER_MK);
   buffer.writeln('APP_STL := gnustl_static');
-  buffer.writeln('APP_ABI := arm64-v8a armeabi-v7a x86_64 x86');
+  buffer.writeln('APP_ABI := x86 armeabi-v7a');
+  // TODO(zerny): Is this the right place and way to ensure ABI >= 8?
+  buffer.writeln('APP_PLATFORM := android-8');
   writeToFile(join(out, 'jni'), 'Application', buffer.toString(),
       extension: 'mk');
 

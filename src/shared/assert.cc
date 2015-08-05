@@ -6,7 +6,10 @@
 
 #include <stdarg.h>
 #include <cxxabi.h>
+
+#ifndef __ANDROID__
 #include <execinfo.h>
+#endif
 
 #include <cstdlib>
 
@@ -38,6 +41,7 @@ void DynamicAssertionHelper::Fail(const char* format, ...) {
 // NOTE: This function uses compiler-specific features to retrieve
 // the current stacktrace.
 void DynamicAssertionHelper::DumpStacktrace() {
+#ifndef __ANDROID__
   const int kMaxFrames = 200;
   void* buffer[kMaxFrames];
 
@@ -95,6 +99,9 @@ void DynamicAssertionHelper::DumpStacktrace() {
   } else {
     Print::Error("\nCould not get a stacktrace.\n");
   }
+#else
+  Print::Error("\nCannot get a stacktrace on android.\n");
+#endif
 }
 
 
