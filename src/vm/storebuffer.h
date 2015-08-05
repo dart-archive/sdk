@@ -97,8 +97,8 @@ class StoreBuffer {
 // Records pointers to an immutable space.
 class FindImmutablePointerVisitor: public PointerVisitor {
  public:
-  FindImmutablePointerVisitor(Space* immutable_space)
-      : immutable_space_(immutable_space),
+  FindImmutablePointerVisitor(Space* mutable_space)
+      : mutable_space_(mutable_space),
         had_immutable_pointer_(false) {}
 
   bool ContainsImmutablePointer(HeapObject* object) {
@@ -111,7 +111,7 @@ class FindImmutablePointerVisitor: public PointerVisitor {
     for (Object** p = start; p < end; p++) {
       Object* object = *p;
       if (object->IsHeapObject()) {
-        if (immutable_space_->Includes(HeapObject::cast(object)->address())) {
+        if (!mutable_space_->Includes(HeapObject::cast(object)->address())) {
           had_immutable_pointer_ = true;
           return;
         }
@@ -120,7 +120,7 @@ class FindImmutablePointerVisitor: public PointerVisitor {
   }
 
  private:
-  Space* immutable_space_;
+  Space* mutable_space_;
   bool had_immutable_pointer_;
 };
 

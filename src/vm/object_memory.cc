@@ -197,13 +197,13 @@ void Space::CompleteScavenge(PointerVisitor* visitor) {
 }
 
 void Space::CompleteScavengeMutable(PointerVisitor* visitor,
-                                    Space* immutable_space,
+                                    Space* mutable_space,
                                     StoreBuffer* store_buffer) {
   ASSERT(store_buffer->is_empty());
 
   Flush();
 
-  FindImmutablePointerVisitor finder(immutable_space);
+  FindImmutablePointerVisitor finder(mutable_space);
 
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->base();

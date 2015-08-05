@@ -99,7 +99,7 @@ class Space {
   // Scavenge loop.
   void CompleteScavenge(PointerVisitor* visitor);
   void CompleteScavengeMutable(PointerVisitor* visitor,
-                               Space* immutable_space,
+                               Space* mutable_space,
                                StoreBuffer* store_buffer);
 
   // Schema change support.
