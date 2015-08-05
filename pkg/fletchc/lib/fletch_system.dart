@@ -124,6 +124,13 @@ class FletchFunction extends FletchFunctionBase {
       int memberOf)
       : super(functionId, kind, arity, name, element, signature, memberOf);
 
+  /// Represents a function we have lost track off, for example, -1 in a
+  /// backtrace from the Fletch VM.
+  const FletchFunction.missing()
+    : this(
+        -1, FletchFunctionKind.NORMAL, 0, "<missing>", null, null,
+        const <Bytecode>[], const <FletchConstant>[], null);
+
   String toString() {
     StringBuffer buffer = new StringBuffer();
     buffer.write("FletchFunction($functionId, '$name'");

@@ -519,6 +519,9 @@ class Session extends FletchVmSession {
     for (int i = 0; i < frames; ++i) {
       int functionId = backtraceResponse.functionIds[i];
       FletchFunction function = fletchSystem.lookupFunctionById(functionId);
+      if (function == null) {
+        function = const FletchFunction.missing();
+      }
       stackTrace.addFrame(
           compiler,
           new StackFrame(function,

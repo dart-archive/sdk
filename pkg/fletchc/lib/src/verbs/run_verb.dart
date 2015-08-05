@@ -55,16 +55,13 @@ class RunTask extends SharedTask {
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return runTask(commandSender, commandIterator);
+    return runTask(commandSender, SessionState.current);
   }
 }
 
-Future<int> runTask(
-    CommandSender commandSender,
-    StreamIterator<Command> commandIterator) async {
-  List<FletchDelta> compilationResults =
-      SessionState.current.compilationResults;
-  FletchVmSession session = SessionState.current.vmSession;
+Future<int> runTask(CommandSender commandSender, SessionState state) async {
+  List<FletchDelta> compilationResults = state.compilationResults;
+  FletchVmSession session = state.vmSession;
   if (session == null) {
     throwFatalError(DiagnosticKind.attachToVmBeforeRun);
   }
@@ -72,8 +69,8 @@ Future<int> runTask(
     throwFatalError(DiagnosticKind.compileBeforeRun);
   }
 
-  SessionState.current.attachCommandSender(commandSender);
-  SessionState.current.vmSession = null;
+  state.attachCommandSender(commandSender);
+  state.vmSession = null;
   for (FletchDelta delta in compilationResults) {
     await session.runCommands(delta.commands);
   }
@@ -84,6 +81,11 @@ Future<int> runTask(
 
   var command = await session.readNextCommand(force: false);
   int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
+  if (command == null) {
+    await session.kill();
+    await session.shutdown();
+    throwInternalError("No command received from Fletch VM");
+  }
   try {
     switch (command.code) {
       case CommandCode.UncaughtException:
@@ -121,7 +123,7 @@ Future<int> runTask(
     await session.shutdown();
     done = true;
     timer.cancel();
-    SessionState.current.detachCommandSender();
+    state.detachCommandSender();
   };
 
   return exitCode;
@@ -155,16 +157,27 @@ Future<Null> printBacktraceHack(
     FletchSystem system) async {
   commands_lib.ProcessBacktrace backtrace =
       await session.runCommand(const commands_lib.ProcessBacktraceRequest());
+  if (backtrace == null) {
+    await session.kill();
+    await session.shutdown();
+    throwInternalError("No command received from Fletch VM");
+  }
+  bool isBadBacktrace = false;
   for (int i = backtrace.frames - 1; i >= 0; i--) {
-    FletchFunction function =
-        system.lookupFunctionById(backtrace.functionIds[i]);
+    int id = backtrace.functionIds[i];
+    int stoppedPc = backtrace.bytecodeIndices[i];
+    FletchFunction function = system.lookupFunctionById(id);
+    if (function == null) {
+      print("#$id+${stoppedPc} // COMPILER BUG!!!");
+      isBadBacktrace = true;
+      continue;
+    }
     if (function.element != null &&
         function.element.implementation.library.isInternalLibrary) {
       // TODO(ahe): This hides implementation details, which should be a
       // user-controlled option.
       continue;
     }
-    int stoppedPc = backtrace.bytecodeIndices[i];
     print("@${function.name}+${stoppedPc}");
 
     // The last bytecode is always a MethodEnd. It always contains its own
@@ -186,5 +199,8 @@ Future<Null> printBacktraceHack(
       print("$prefix: $bytecode");
       pc += bytecode.size;
     }
+  }
+  if (isBadBacktrace) {
+    throwInternalError("COMPILER BUG in above stacktrace");
   }
 }

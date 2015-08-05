@@ -23,6 +23,8 @@ import 'sentence_tests.dart' as sentence_tests;
 
 import 'message_tests.dart' as message_tests;
 
+import 'print_backtrace_tests.dart' as print_backtrace;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -58,4 +60,11 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'sentence_tests': sentence_tests.main,
 
   'message_tests': message_tests.main,
+
+  'print_backtrace/simulateVmCrash': print_backtrace.simulateVmCrash,
+  'print_backtrace/simulateNullBacktrace':
+      print_backtrace.simulateNullBacktrace,
+  'print_backtrace/simulateBadBacktraceHack':
+      print_backtrace.simulateBadBacktraceHack,
+  'print_backtrace/simulateBadBacktrace': print_backtrace.simulateBadBacktrace,
 };
