@@ -6,6 +6,7 @@
 #define SRC_VM_EVENT_HANDLER_H_
 
 #include "src/shared/globals.h"
+#include "src/vm/thread.h"
 
 namespace fletch {
 
@@ -32,10 +33,12 @@ class EventHandler {
   void Run();
 
  private:
+  Monitor* monitor_;
   int fd_;
+  ThreadIdentifier thread_;
+
   int read_fd_;
   int write_fd_;
-  Monitor* monitor_;
 
   void Send(Port* port, uword mask);
 };

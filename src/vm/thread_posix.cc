@@ -19,7 +19,7 @@ bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
 }
 
-void Thread::Run(RunSignature run, void* data) {
+ThreadIdentifier Thread::Run(RunSignature run, void* data) {
   pthread_t thread;
   int result = pthread_create(&thread, NULL, run, data);
   if (result != 0) {
@@ -28,7 +28,9 @@ void Thread::Run(RunSignature run, void* data) {
     } else {
       Print::Error("Error %d", result);
     }
+    FATAL1("pthread_create failed with error %d\n", result);
   }
+  return ThreadIdentifier(thread);
 }
 
 }  // namespace fletch

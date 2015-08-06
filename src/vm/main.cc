@@ -20,7 +20,9 @@ static bool RunSession(Connection* connection) {
   Session session(connection);
   session.Initialize();
   session.StartMessageProcessingThread();
-  return session.ProcessRun();
+  bool result = session.ProcessRun();
+  session.JoinMessageProcessingThread();
+  return result;
 }
 
 static Connection* ConnectToExistingCompiler(int port) {

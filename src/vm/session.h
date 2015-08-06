@@ -9,6 +9,7 @@
 
 #include "src/vm/object_list.h"
 #include "src/vm/program.h"
+#include "src/vm/thread.h"
 
 namespace fletch {
 
@@ -27,6 +28,7 @@ class Session {
 
   void Initialize();
   void StartMessageProcessingThread();
+  void JoinMessageProcessingThread();
   void ProcessMessages();
 
   void IteratePointers(PointerVisitor* visitor);
@@ -122,6 +124,8 @@ class Session {
     kSnapshotDone,
     kSessionEnd
   };
+
+  ThreadIdentifier message_handling_thread_;
 
   Connection* const connection_;
   Program* program_;

@@ -37,10 +37,10 @@ void EventHandler::Run() {
     if (event.data.fd == read_fd_) {
       close(read_fd_);
       close(fd_);
-      monitor_->Lock();
+
+      ScopedMonitorLock locker(monitor_);
       fd_ = -1;
       monitor_->Notify();
-      monitor_->Unlock();
       return;
     }
 

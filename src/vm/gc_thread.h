@@ -25,6 +25,8 @@ class GCThread {
 
   void MainLoop();
 
+  ThreadIdentifier thread_;
+
   Monitor* gc_thread_monitor_;
   Program* program_;
   bool shutting_down_;

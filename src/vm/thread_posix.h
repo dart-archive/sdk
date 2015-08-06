@@ -10,6 +10,9 @@
 #endif
 
 #include <pthread.h>
+#include <errno.h>
+
+#include "src/shared/assert.h"
 
 namespace fletch {
 
@@ -25,7 +28,24 @@ class ThreadIdentifier {
     return pthread_equal(thread_, pthread_self());
   }
 
+  // Try to join the thread identified by this [ThreadIdentifier].
+  //
+  // A thread can only be joined once.
+  void Join() {
+    int result = pthread_join(thread_, NULL);
+    ASSERT(result != EDEADLK);
+    ASSERT(result != EINVAL);
+    ASSERT(result != ESRCH);
+    if (result != 0) {
+      FATAL1("Joining thead with pthread_join() failed with %d", result);
+    }
+  }
+
  private:
+  friend class Thread;
+
+  ThreadIdentifier(pthread_t thread) : thread_(thread) { }
+
   pthread_t thread_;
 };
 

@@ -32,7 +32,7 @@ GCThread::~GCThread() {
 }
 
 void GCThread::StartThread() {
-  Thread::Run(&GCThread::GCThreadEntryPoint, this);
+  thread_ = Thread::Run(&GCThread::GCThreadEntryPoint, this);
 }
 
 void GCThread::TriggerImmutableGC(Program* program) {
@@ -66,6 +66,9 @@ void GCThread::StopThread() {
     ScopedMonitorLock lock(shutdown_monitor_);
     while (!did_shutdown_) shutdown_monitor_->Wait();
   }
+
+  // And join it to make sure it's actually dead.
+  thread_.Join();
 }
 
 void GCThread::MainLoop() {

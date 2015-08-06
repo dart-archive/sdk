@@ -31,10 +31,9 @@ void EventHandler::Run() {
     if (event.ident == static_cast<uintptr_t>(read_fd_)) {
       close(read_fd_);
       close(fd_);
-      monitor_->Lock();
+      ScopedMonitorLock locker(monitor_);
       fd_ = -1;
       monitor_->Notify();
-      monitor_->Unlock();
       return;
     }
 

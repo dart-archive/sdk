@@ -10,6 +10,8 @@
 
 namespace fletch {
 
+struct ThreadInfo;
+
 class ThreadPool {
  public:
   typedef void (*Runable)(void *data);
@@ -31,6 +33,7 @@ class ThreadPool {
   Monitor* monitor_;
   const int max_threads_;
   Atomic<int> threads_;
+  ThreadInfo* thread_info_;
 
   static void* RunThread(void* arg);
   void ThreadDone();

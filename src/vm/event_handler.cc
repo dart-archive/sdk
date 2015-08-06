@@ -17,18 +17,22 @@
 namespace fletch {
 
 EventHandler::EventHandler()
-    : fd_(-1),
+    : monitor_(Platform::CreateMonitor()),
+      fd_(-1),
       read_fd_(-1),
-      write_fd_(-1),
-      monitor_(Platform::CreateMonitor()) {
+      write_fd_(-1) {
 }
 
 EventHandler::~EventHandler() {
   if (fd_ != -1) {
-    monitor_->Lock();
+    // TODO(runtime-developers): This is pretty nasty, inside the destructor we
+    // notify the other thread (via close()) to shut down. The other thread will
+    // then access members of the [EventHandler] object which is in the middle
+    // of destruction.
+    ScopedMonitorLock locker(monitor_);
     close(write_fd_);
     while (fd_ != -1) monitor_->Wait();
-    monitor_->Unlock();
+    thread_.Join();
   }
 
   delete monitor_;
@@ -41,18 +45,19 @@ void* RunEventHandler(void* peer) {
 }
 
 int EventHandler::GetEventHandler() {
-  monitor_->Lock();
+  ScopedMonitorLock locker(monitor_);
+
   if (fd_ >= 0) {
-    monitor_->Unlock();
     return fd_;
   }
   fd_ = Create();
-  monitor_->Unlock();
+  if (fd_ < 0) FATAL("Failed to start event handler\n");
+
   int fds[2];
   if (pipe(fds) != 0) FATAL("Failed to start the event handler pipe\n");
   read_fd_ = fds[0];
   write_fd_ = fds[1];
-  Thread::Run(RunEventHandler, reinterpret_cast<void*>(this));
+  thread_ = Thread::Run(RunEventHandler, reinterpret_cast<void*>(this));
   return fd_;
 }
 

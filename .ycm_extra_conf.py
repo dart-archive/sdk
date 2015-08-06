@@ -53,6 +53,7 @@ global_flags = [
     '-DFLETCH_CLANG',
     '-DFLETCH_TARGET_IA32',
     '-DFLETCH_TARGET_X64',
+    '-DFLETCH_TARGET_OS_POSIX',
     '-DNDEBUG',
     '-DTESTING',
     '-I.',

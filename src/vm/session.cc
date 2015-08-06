@@ -67,6 +67,8 @@ Session::Session(Connection* connection)
 }
 
 Session::~Session() {
+  Print::UnregisterPrintInterceptors();
+
   delete connection_;
   delete program_;
   delete main_thread_monitor_;
@@ -87,7 +89,11 @@ static void* MessageProcessingThread(void* data) {
 }
 
 void Session::StartMessageProcessingThread() {
-  Thread::Run(MessageProcessingThread, this);
+  message_handling_thread_ = Thread::Run(MessageProcessingThread, this);
+}
+
+void Session::JoinMessageProcessingThread() {
+  message_handling_thread_.Join();
 }
 
 int64_t Session::PopInteger() {

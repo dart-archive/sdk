@@ -26,7 +26,7 @@ class Thread {
   static bool IsCurrent(const ThreadIdentifier* thread);
 
   typedef void* (*RunSignature)(void*);
-  static void Run(RunSignature run, void* data = NULL);
+  static ThreadIdentifier Run(RunSignature run, void* data = NULL);
 
  private:
   DISALLOW_ALLOCATION();
