@@ -64,7 +64,6 @@ class IncrementalCompiler {
   final List<String> options;
   final CompilerOutput outputProvider;
   final Map<String, dynamic> environment;
-  final List<Command> _updates = <Command>[];
   final IncrementalCompilerContext _context = new IncrementalCompilerContext();
 
   implementation.FletchCompiler _compiler;
@@ -142,18 +141,9 @@ class IncrementalCompiler {
         logVerbose,
         _context);
     _context.registerUriWithUpdates(updatedFiles.keys);
-    Future<Compiler> future = _reuseCompiler(updater.reuseLibrary);
-    return future.then((Compiler compiler) {
+    return _reuseCompiler(updater.reuseLibrary).then((Compiler compiler) {
       _compiler = compiler;
-      if (compiler.compilationFailed) {
-        return null;
-      } else {
-        return updater.computeUpdateFletch(currentSystem);
-        // TODO(ahe): Do this:
-        // List<Command> update = updater.computeUpdateFletch();
-        // _updates.add(update);
-        // return update;
-      }
+      return updater.computeUpdateFletch(currentSystem);
     });
   }
 

@@ -1645,7 +1645,9 @@ compile_time_error_001
 // Reproduce a crash when a compile-time error is added
 main() {
 <<<<<<< []
-======= []
+======= {"messages":[],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
+// reported instead
   do for while if;
 >>>>>>>
 }
