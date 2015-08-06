@@ -84,7 +84,7 @@ const List<String> tests = const <String>[
   r'''
 hello_world
 ==> main.dart.patch <==
-// Basic hello-world test.
+// Basic hello-world test
 main() { print(
 <<<<<<< "Hello, World!"
 'Hello, World!'
@@ -122,14 +122,14 @@ main() {
 instance_field_end
 ==> main.dart.patch <==
 // Test that we can manipulate a field from an instance
-// of a class from the end of the field list.
+// of a class from the end of the field list
 class A {
   var x;
 <<<<<<< "instance is null"
   var y;
 ======= "x = 0"
 ======= "x = 0"
-  int y;  // TODO(ahe): We don't add the field unless the tokens change.
+  int y;  // TODO(ahe): We don't add the field unless the tokens change
 >>>>>>>
 }
 
@@ -150,14 +150,14 @@ main() {
 instance_field_middle
 ==> main.dart.patch <==
 // Test that we can manipulate a field from an instance
-// of a class from the middle of the field list.
+// of a class from the middle of the field list
 class A {
   var x;
 <<<<<<< "instance is null"
   var y;
 ======= "x = 0"
 ======= ["x = 3","y = null","z = 2"]
-  int y;  // TODO(ahe): We don't add the field unless the tokens change.
+  int y;  // TODO(ahe): We don't add the field unless the tokens change
 >>>>>>>
   var z;
 }
@@ -185,14 +185,14 @@ main() {
   r'''
 subclass_schema_1
 ==> main.dart.patch <==
-// Test that schema changes affect subclasses correctly.
+// Test that schema changes affect subclasses correctly
 class A {
   var x;
 <<<<<<< "instance is null"
   var y;
 ======= "x = 0"
 ======= ["x = 3","y = null","z = 2"]
-  int y;  // TODO(ahe): We don't add the field unless the tokens change.
+  int y;  // TODO(ahe): We don't add the field unless the tokens change
 >>>>>>>
 }
 
@@ -223,14 +223,14 @@ main() {
   r'''
 subclass_schema_2
 ==> main.dart.patch <==
-// Test that schema changes affect subclasses of subclasses correctly.
+// Test that schema changes affect subclasses of subclasses correctly
 class A {
   var x;
 <<<<<<< "instance is null"
   var y;
 ======= "x = 0"
 ======= ["x = 3","y = null","z = 2"]
- int y;  // TODO(ahe): We don't add the field unless the tokens change.
+ int y;  // TODO(ahe): We don't add the field unless the tokens change
 >>>>>>>
 }
 
@@ -264,7 +264,7 @@ main() {
   r'''
 super_schema
 ==> main.dart.patch <==
-// Test that schema changes work in the presence of fields in the superclass.
+// Test that schema changes work in the presence of fields in the superclass
 class A {
   var x;
 }
@@ -274,7 +274,7 @@ class B extends A {
   var y;
 ======= "x = 0"
 ======= ["x = 3","y = null","z = 2"]
-  int y;  // TODO(ahe): We don't add the field unless the tokens change.
+  int y;  // TODO(ahe): We don't add the field unless the tokens change
 >>>>>>>
   var z;
 }
@@ -302,7 +302,7 @@ main() {
   r'''
 add_instance_field
 ==> main.dart.patch <==
-// Test adding a field to a class works.
+// Test adding a field to a class works
 
 class A {
 <<<<<<< ["instance is null","setter threw","getter threw"]
@@ -334,7 +334,7 @@ main() {
   r'''
 remove_instance_field
 ==> main.dart.patch <==
-// Test removing a field from a class works.
+// Test removing a field from a class works
 
 class A {
 <<<<<<< ["instance is null","v1"]
@@ -366,7 +366,7 @@ main() {
   r'''
 two_updates
 ==> main.dart.patch <==
-// Test that the test framework handles more than one update.
+// Test that the test framework handles more than one update
 main() { print(
 <<<<<<< "Hello darkness, my old friend"
 'Hello darkness, my old friend'
@@ -382,7 +382,7 @@ main() { print(
   r'''
 main_args
 ==> main.dart.patch <==
-// Test that that isolate support works.
+// Test that that isolate support works
 main(arguments) { print(
 <<<<<<< "Hello, Isolated World!"
 'Hello, Isolated World!'
@@ -396,7 +396,7 @@ arguments
   r'''
 stored_closure
 ==> main.dart.patch <==
-// Test that a stored closure changes behavior when updated.
+// Test that a stored closure changes behavior when updated
 
 var closure;
 
@@ -423,7 +423,7 @@ main() {
   r'''
 modify_static_method
 ==> main.dart.patch <==
-// Test modifying a static method works.
+// Test modifying a static method works
 
 class C {
   static m() {
@@ -444,14 +444,14 @@ main() {
   r'''
 modify_instance_method
 ==> main.dart.patch <==
-// Test modifying an instance method works.
+// Test modifying an instance method works
 
 class C {
   m() {
 <<<<<<< ["instance is null","v1"]
   print('v1');
 ======= ["instance is null","v2"]
-  // TODO(ahe): Should not print 'instance is null'.
+  // TODO(ahe): Should not print 'instance is null'
   print('v2');
 >>>>>>>
   }
@@ -471,7 +471,7 @@ main() {
   r'''
 stored_instance_tearoff
 ==> main.dart.patch <==
-// Test that a stored instance tearoff changes behavior when updated.
+// Test that a stored instance tearoff changes behavior when updated
 
 class C {
   m() {
@@ -497,7 +497,7 @@ main() {
   r'''
 remove_instance_method
 ==> main.dart.patch <==
-// Test that deleting an instance method works.
+// Test that deleting an instance method works
 
 class C {
 <<<<<<< ["instance is null","v1"]
@@ -505,7 +505,7 @@ class C {
     print('v1');
   }
 ======= {"messages":["threw"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
 >>>>>>>
 }
 var instance;
@@ -528,7 +528,7 @@ main() {
 remove_instance_method_super_access
 ==> main.dart.patch <==
 // Test that deleting an instance method works, even when accessed through
-// super.
+// super
 
 class A {
   m() {
@@ -541,7 +541,7 @@ class B extends A {
     print('v1');
   }
 ======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
 >>>>>>>
 }
 class C extends B {
@@ -564,14 +564,14 @@ main() {
   r'''
 remove_top_level_method
 ==> main.dart.patch <==
-// Test that deleting a top-level method works.
+// Test that deleting a top-level method works
 
 <<<<<<< ["instance is null","v1"]
 toplevel() {
   print('v1');
 }
 ======= {"messages":["threw"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
 >>>>>>>
 class C {
   m() {
@@ -597,7 +597,7 @@ main() {
   r'''
 remove_static_method
 ==> main.dart.patch <==
-// Test that deleting a static method works.
+// Test that deleting a static method works
 
 class B {
 <<<<<<< ["instance is null","v1"]
@@ -605,7 +605,7 @@ class B {
     print('v1');
   }
 ======= {"messages":["threw"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
 >>>>>>>
 }
 class C {
@@ -639,7 +639,7 @@ main() {
   r'''
 newly_instantiated_class
 ==> main.dart.patch <==
-// Test that a newly instantiated class is handled.
+// Test that a newly instantiated class is handled
 
 class A {
   m() {
@@ -660,7 +660,7 @@ main() {
     instance = new A();
 <<<<<<< ["instance is null","Called A.m"]
 ======= ["instance is null","Called A.m"]
-// TODO(ahe): Should only print 'B.m'.
+// TODO(ahe): Should only print 'B.m'
   } else {
     instance = new B();
 >>>>>>>
@@ -674,7 +674,7 @@ main() {
   r'''
 source_maps_no_throw
 ==> main.dart.patch <==
-// Test that source maps don't throw exceptions.
+// Test that source maps don't throw exceptions
 
 main() {
   print('a');
@@ -691,9 +691,9 @@ main() {
   r'''
 newly_instantiated_class_X
 ==> main.dart.patch <==
-// Test that a newly instantiated class is handled.
+// Test that a newly instantiated class is handled
 
-// TODO(ahe): How is this different from the other test with same comment.
+// TODO(ahe): How is this different from the other test with same comment?
 
 class A {
   get name => 'A.m';
@@ -714,7 +714,7 @@ main() {
     instance = new A();
 <<<<<<< ["instance is null","Called A.m"]
 ======= ["instance is null","Called A.m"]
-// TODO(ahe): Should print only 'Called B.m'.
+// TODO(ahe): Should print only 'Called B.m'
   } else {
     instance = new B();
 >>>>>>>
@@ -728,7 +728,7 @@ main() {
   r'''
 newly_instantiated_class_with_fields
 ==> main.dart.patch <==
-// Test that fields of a newly instantiated class are handled.
+// Test that fields of a newly instantiated class are handled
 
 class A {
   var x;
@@ -756,7 +756,7 @@ main() {
   r'''
 add_top_level_method
 ==> main.dart.patch <==
-// Test that top-level functions can be added.
+// Test that top-level functions can be added
 
 <<<<<<< "threw"
 ======= "v2"
@@ -778,7 +778,7 @@ main() {
   r'''
 add_static_method
 ==> main.dart.patch <==
-// Test that static methods can be added.
+// Test that static methods can be added
 
 class C {
 <<<<<<< "threw"
@@ -803,12 +803,12 @@ main() {
   r'''
 add_instance_method
 ==> main.dart.patch <==
-// Test that instance methods can be added.
+// Test that instance methods can be added
 
 class C {
 <<<<<<< ["instance is null","threw"]
 ======= ["instance is null","v2"]
-  // TODO(ahe): Should only print 'v2'.
+  // TODO(ahe): Should only print 'v2'
   foo() {
     print('v2');
   }
@@ -836,13 +836,13 @@ main() {
   r'''
 signature_change_top_level_method
 ==> main.dart.patch <==
-// Test that top-level functions can have signature changed.
+// Test that top-level functions can have signature changed
 
 <<<<<<< "v1"
 foo() {
   print('v1');
 ======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
 void foo() {
   print('v2');
 >>>>>>>
@@ -858,14 +858,14 @@ main() {
   r'''
 signature_change_static_method
 ==> main.dart.patch <==
-// Test that static methods can have signature changed.
+// Test that static methods can have signature changed
 
 class C {
 <<<<<<< "v1"
   static foo() {
     print('v1');
 ======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
   static void foo() {
     print('v2');
 >>>>>>>
@@ -882,14 +882,14 @@ main() {
   r'''
 signature_change_instance_method
 ==> main.dart.patch <==
-// Test that instance methods can have signature changed.
+// Test that instance methods can have signature changed
 
 class C {
 <<<<<<< ["instance is null","v1"]
   foo() {
     print('v1');
 ======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw.
+  // TODO(ahe): Should not throw
   void foo() {
     print('v2');
 >>>>>>>
@@ -913,7 +913,7 @@ main() {
   r'''
 add_class
 ==> main.dart.patch <==
-// Test that adding a class is supported.
+// Test that adding a class is supported
 
 <<<<<<< "v1"
 ======= "v2"
@@ -938,13 +938,13 @@ main() {
   r'''
 remove_class
 ==> main.dart.patch <==
-// Test that removing a class is supported, using constructor.
+// Test that removing a class is supported, using constructor
 
 <<<<<<< "v1"
 class C {
 }
 ======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
 >>>>>>>
 main() {
   try {
@@ -961,7 +961,7 @@ main() {
   r'''
 remove_class_with_static_method
 ==> main.dart.patch <==
-// Test that removing a class is supported, using a static method.
+// Test that removing a class is supported, using a static method
 
 <<<<<<< "v1"
 class C {
@@ -970,7 +970,7 @@ class C {
   }
 }
 ======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
 >>>>>>>
 main() {
   try {
@@ -986,7 +986,7 @@ main() {
   r'''
 change_supertype
 ==> main.dart.patch <==
-// Test that changing the supertype of a class works.
+// Test that changing the supertype of a class works
 
 class A {
   m() {
@@ -1001,7 +1001,7 @@ class B extends A {
 <<<<<<< ["instance is null","v1"]
 class C extends B {
 ======= ["instance is null","v2"]
-// TODO(ahe): Should only print 'v2'.
+// TODO(ahe): Should only print 'v2'
 class C extends A {
 >>>>>>>
   m() {
@@ -1025,7 +1025,7 @@ main() {
   r'''
 call_named_arguments_1
 ==> main.dart.patch <==
-// Test that named arguments can be called.
+// Test that named arguments can be called
 
 class C {
   foo({a, named: 'v1', x}) {
@@ -1043,7 +1043,7 @@ main() {
 <<<<<<< ["instance is null","v1"]
   instance.foo();
 ======= ["instance is null","v2"]
-  // TODO(ahe): Should only print 'v2'.
+  // TODO(ahe): Should only print 'v2'
   instance.foo(named: 'v2');
 >>>>>>>
 }
@@ -1054,7 +1054,7 @@ main() {
   r'''
 call_named_arguments_2
 ==> main.dart.patch <==
-// Test that named arguments can be called.
+// Test that named arguments can be called
 
 class C {
   foo({a, named: 'v2', x}) {
@@ -1072,7 +1072,7 @@ main() {
 <<<<<<< ["instance is null","v1"]
   instance.foo(named: 'v1');
 ======= ["instance is null","v2"]
-   // TODO(ahe): Should only print 'v2'.
+   // TODO(ahe): Should only print 'v2'
   instance.foo();
 >>>>>>>
 }
@@ -1083,7 +1083,7 @@ main() {
   r'''
 call_instance_tear_off_named
 ==> main.dart.patch <==
-// Test that an instance tear-off with named parameters can be called.
+// Test that an instance tear-off with named parameters can be called
 
 class C {
   foo({a, named: 'v1', x}) {
@@ -1111,7 +1111,7 @@ main() {
   r'''
 lazy_static
 ==> main.dart.patch <==
-// Test that a lazy static is supported.
+// Test that a lazy static is supported
 
 var normal;
 
@@ -1147,7 +1147,7 @@ main() {
   r'''
 super_classes_of_directly_instantiated
 ==> main.dart.patch <==
-// Test that superclasses of directly instantiated classes are also emitted.
+// Test that superclasses of directly instantiated classes are also emitted
 class A {
 }
 
@@ -1169,7 +1169,7 @@ main() {
   r'''
 interceptor_classes
 ==> main.dart.patch <==
-// Test that interceptor classes are handled correctly.
+// Test that interceptor classes are handled correctly
 
 main() {
 <<<<<<< "v1"
@@ -1186,7 +1186,7 @@ main() {
 newly_instantiated_superclasses_two_updates
 ==> main.dart.patch <==
 // Test that newly instantiated superclasses are handled correctly when there
-// is more than one change.
+// is more than one change
 
 class A {
   foo() {
@@ -1218,7 +1218,7 @@ main() {
 newly_instantiated_subclases_two_updates
 ==> main.dart.patch <==
 // Test that newly instantiated subclasses are handled correctly when there is
-// more than one change.
+// more than one change
 
 class A {
   foo() {
@@ -1249,7 +1249,7 @@ main() {
   r'''
 constants
 ==> main.dart.patch <==
-// Test that constants are handled correctly.
+// Test that constants are handled correctly
 
 class C {
   final String value;
@@ -1270,13 +1270,13 @@ main() {
   r'''
 add_compound_instance_field
 ==> main.dart.patch <==
-// Test that an instance field can be added to a compound declaration.
+// Test that an instance field can be added to a compound declaration
 
 class C {
 <<<<<<< ["[instance] is null","v1","[instance.y] threw"]
   int x;
 ======= {"messages":["v1","v2"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw.
+  // TODO(ahe): Should not throw
   int x, y;
 >>>>>>>
 }
@@ -1309,13 +1309,13 @@ main() {
   r'''
 remove_compound_instance_field
 ==> main.dart.patch <==
-// Test that an instance field can be removed from a compound declaration.
+// Test that an instance field can be removed from a compound declaration
 
 class C {
 <<<<<<< ["[instance] is null","v1","v2"]
   int x, y;
 ======= {"messages":["v1","[instance.y] threw"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw.
+  // TODO(ahe): Should not throw
   int x;
 >>>>>>>
 }
@@ -1347,13 +1347,13 @@ main() {
   r'''
 static_field_to_instance_field
 ==> main.dart.patch <==
-// Test that a static field can be made an instance field.
+// Test that a static field can be made an instance field
 
 class C {
 <<<<<<< ["[instance] is null","v1","[instance.x] threw"]
   static int x;
 ======= {"messages":["[C.x] threw","v2"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw.
+  // TODO(ahe): Should not throw
   int x;
 >>>>>>>
 }
@@ -1386,13 +1386,13 @@ main() {
   r'''
 instance_field_to_static_field
 ==> main.dart.patch <==
-// Test that instance field can be made static.
+// Test that instance field can be made static
 
 class C {
 <<<<<<< ["[instance] is null","[C.x] threw","v1"]
   int x;
 ======= {"messages":["v2","[instance.x] threw"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw.
+  // TODO(ahe): Should not throw
   static int x;
 >>>>>>>
 }
@@ -1425,7 +1425,7 @@ main() {
   r'''
 compound_constants
 ==> main.dart.patch <==
-// Test compound constants.
+// Test compound constants
 
 class A {
   final value;
@@ -1457,7 +1457,7 @@ main() {
   r'''
 constants_of_new_classes
 ==> main.dart.patch <==
-// Test constants of new classes.
+// Test constants of new classes
 
 class A {
   final value;
@@ -1493,7 +1493,7 @@ main() {
   r'''
 change_in_part
 ==> main.dart <==
-// Test that a change in a part is handled.
+// Test that a change in a part is handled
 library test.main;
 
 part 'part.dart';
@@ -1514,11 +1514,11 @@ main() {
   r'''
 change_library_name
 ==> main.dart.patch <==
-// Test that a change in library name is handled.
+// Test that a change in library name is handled
 <<<<<<< "Hello, World!"
 library test.main1;
 ======= {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
 library test.main2;
 >>>>>>>
 
@@ -1530,10 +1530,10 @@ main() {
   r'''
 add_import
 ==> main.dart.patch <==
-// Test that adding an import is handled.
+// Test that adding an import is handled
 <<<<<<< "Hello, World!"
 ======= {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
 import 'dart:core';
 >>>>>>>
 
@@ -1545,10 +1545,10 @@ main() {
   r'''
 add_export
 ==> main.dart.patch <==
-// Test that adding an export is handled.
+// Test that adding an export is handled
 <<<<<<< "Hello, World!"
 ======= {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
 export 'dart:core';
 >>>>>>>
 
@@ -1560,12 +1560,12 @@ main() {
   r'''
 add_part
 ==> main.dart.patch <==
-// Test that adding a part is handled.
+// Test that adding a part is handled
 library test.main;
 
 <<<<<<< "Hello, World!"
 ======= {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+// TODO(ahe): Should not throw
 part 'part.dart';
 >>>>>>>
 
@@ -1581,7 +1581,7 @@ part of test.main
   r'''
 multiple_libraries
 ==> main.dart <==
-// Test that changes in multiple libraries is handled.
+// Test that changes in multiple libraries is handled
 import 'library1.dart' as lib1;
 import 'library2.dart' as lib2;
 
@@ -1622,7 +1622,7 @@ method() {
 bad_stack_trace_repro
 ==> main.dart.patch <==
 // Reproduces a problem where the stack trace includes an old method that
-// should have been removed by the incremental compiler.
+// should have been removed by the incremental compiler
 main() {
   bar();
 }
@@ -1637,6 +1637,17 @@ bar() {
 
 foo(a) {
   if (a) throw "throw";
+}
+''',
+  r'''
+compile_time_error_001
+==> main.dart.patch <==
+// Reproduce a crash when a compile-time error is added
+main() {
+<<<<<<< []
+======= []
+  do for while if;
+>>>>>>>
 }
 ''',
 ];

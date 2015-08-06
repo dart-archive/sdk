@@ -29,3 +29,4 @@ incremental/encoded/newly_instantiated_superclasses_two_updates: Fail
 incremental/encoded/stored_closure: Fail
 incremental/encoded/stored_instance_tearoff: Fail
 incremental/encoded/super_classes_of_directly_instantiated: Fail
+incremental/encoded/compile_time_error_001: Fail
