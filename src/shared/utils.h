@@ -13,12 +13,20 @@
 
 namespace fletch {
 
+class Mutex;
+
 class PrintInterceptor {
 public:
-  PrintInterceptor() {}
-  virtual ~PrintInterceptor() {}
+  PrintInterceptor() : next_(NULL) {}
+  virtual ~PrintInterceptor() {
+    delete next_;
+    next_ = NULL;
+  }
   virtual void Out(char* message) = 0;
   virtual void Error(char* message) = 0;
+ private:
+  friend class Print;
+  PrintInterceptor* next_;
 };
 
 // All stdout and stderr output from the VM should go through this
@@ -27,18 +35,11 @@ class Print {
 public:
   static void Out(const char* format, ...);
   static void Error(const char* format, ...);
-
-  static void RegisterPrintInterceptor(PrintInterceptor* interceptor) {
-    if (interceptor_ != NULL) delete interceptor_;
-    interceptor_ = interceptor;
-  }
-
-  static void UnregisterPrintInterceptor() {
-    delete interceptor_;
-    interceptor_ = NULL;
-  }
+  static void RegisterPrintInterceptor(PrintInterceptor* interceptor);
+  static void UnregisterPrintInterceptors();
 
 private:
+  static Mutex* mutex_;  // Mutex for interceptor modification and iteration.
   static PrintInterceptor* interceptor_;
 };
 

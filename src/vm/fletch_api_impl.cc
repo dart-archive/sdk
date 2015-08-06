@@ -9,6 +9,7 @@
 #include "src/shared/fletch.h"
 #include "src/shared/list.h"
 
+#include "src/vm/android_print_interceptor.h"
 #include "src/vm/ffi.h"
 #include "src/vm/program.h"
 #include "src/vm/program_folder.h"
@@ -24,6 +25,10 @@ static bool IsSnapshot(List<uint8> snapshot) {
 
 static bool RunSnapshot(List<uint8> bytes) {
   if (IsSnapshot(bytes)) {
+#if defined(__ANDROID__)
+    // TODO(zerny): Consider making print interceptors part of the public API.
+    Print::RegisterPrintInterceptor(new AndroidPrintInterceptor());
+#endif
     SnapshotReader reader(bytes);
     Program* program = reader.ReadProgram();
     Scheduler scheduler;
@@ -33,6 +38,9 @@ static bool RunSnapshot(List<uint8> bytes) {
     bool success = scheduler.Run();
     scheduler.UnscheduleProgram(program);
     delete program;
+#if defined(__ANDROID__)
+    Print::UnregisterPrintInterceptors();
+#endif
     return success;
   }
   return false;

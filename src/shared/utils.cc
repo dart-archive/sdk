@@ -4,8 +4,11 @@
 
 #include "src/shared/utils.h"
 
+#include "src/shared/platform.h"
+
 namespace fletch {
 
+Mutex* Print::mutex_ = Platform::CreateMutex();
 PrintInterceptor* Print::interceptor_ = NULL;
 
 void Print::Out(const char* format, ...) {
@@ -20,7 +23,12 @@ void Print::Out(const char* format, ...) {
   va_end(args);
   fputs(message, stdout);
   fflush(stdout);
-  if (interceptor_) interceptor_->Out(message);
+  ScopedLock scope(mutex_);
+  for (PrintInterceptor* interceptor = interceptor_;
+       interceptor != NULL;
+       interceptor = interceptor->next_) {
+    interceptor_->Out(message);
+  }
   free(message);
 }
 
@@ -36,9 +44,28 @@ void Print::Error(const char* format, ...) {
   va_end(args);
   fputs(message, stderr);
   fflush(stderr);
-  if (interceptor_) interceptor_->Error(message);
+  ScopedLock scope(mutex_);
+  for (PrintInterceptor* interceptor = interceptor_;
+       interceptor != NULL;
+       interceptor = interceptor->next_) {
+     interceptor_->Error(message);
+  }
   free(message);
 }
+
+void Print::RegisterPrintInterceptor(PrintInterceptor* interceptor) {
+  ScopedLock scope(mutex_);
+  ASSERT(!interceptor->next_);
+  interceptor->next_ = interceptor_;
+  interceptor_ = interceptor;
+}
+
+void Print::UnregisterPrintInterceptors() {
+  ScopedLock scope(mutex_);
+  delete interceptor_;
+  interceptor_ = NULL;
+}
+
 
 uint32 Utils::StringHash(const uint16* data, int length) {
   // This implementation is based on the public domain MurmurHash

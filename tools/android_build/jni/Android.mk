@@ -20,6 +20,7 @@ LOCAL_SRC_FILES := \
 	../../../src/shared/platform_linux.cc \
 	../../../src/shared/platform_posix.cc \
 	../../../src/shared/utils.cc \
+	../../../src/vm/android_print_interceptor.cc \
 	../../../src/vm/debug_info.cc \
 	../../../src/vm/event_handler.cc \
 	../../../src/vm/event_handler_linux.cc \

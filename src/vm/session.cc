@@ -174,7 +174,7 @@ void Session::ProcessMessages() {
 
     switch (opcode) {
       case Connection::kConnectionError: {
-        Print::UnregisterPrintInterceptor();
+        Print::UnregisterPrintInterceptors();
         FATAL("Compiler crashed. So do we.");
       }
 
@@ -607,7 +607,7 @@ bool Session::ProcessRun() {
           // know about it and we are therefore responsible for deleting it.
           program()->DeleteProcess(process_);
         }
-        Print::UnregisterPrintInterceptor();
+        Print::UnregisterPrintInterceptors();
         if (!process_started) return true;
         if (has_result) return result;
         break;
