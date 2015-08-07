@@ -107,6 +107,12 @@ void testConfigurations(List<Map> configurations) {
     exit(1);
   }
 
+  if (!hasSameModeAndArch(configurations)) {
+    print("Persistent Fletch process doesn't support multiple "
+          "arch and mode configurations");
+    exit(1);
+  }
+
   if (!firstConf['append_logs'])  {
     var files = [new File(TestUtils.flakyFileName()),
                  new File(TestUtils.testOutcomeFileName())];
@@ -317,6 +323,16 @@ void testConfigurations(List<Map> configurations) {
   } else {
     Future.wait(serverFutures).then((_) => startProcessQueue());
   }
+}
+
+bool hasSameModeAndArch(List<Map> configurations) {
+  String mode = configurations[0]['mode'];
+  String arch = configurations[0]['arch'];
+  for (Map configuration in configurations.skip(1)) {
+    if (configuration['mode'] != mode) return false;
+    if (configuration['arch'] != arch) return false;
+  }
+  return true;
 }
 
 Future deleteTemporaryDartDirectories() {
