@@ -80,6 +80,19 @@ library fletchc.test.tests_with_expectations;
 ///       >>>>>>>
 ///     }
 ///
+/// Expectations
+/// ------------
+///
+/// An expectation is a JSON string. It is decoded and the resulting object,
+/// `o`, is converted to a [ProgramExpectation] in the following way:
+///
+/// * If `o` is a [String]: `new ProgramExpectation([o])`, otherwise
+///
+/// * if `o` is a [List]: `new ProgramExpectation(o)`, otherwise
+///
+/// * a new [ProgramExpectation] instance is instantiated with its fields
+///   initialized to the corresponding properties of the JSON object. See
+///   [ProgramExpectation.fromJson].
 const List<String> tests = const <String>[
   r'''
 hello_world
