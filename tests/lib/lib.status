@@ -50,3 +50,23 @@ async/timer_cancel_test: CompileTimeError
 async/timer_isActive_test: CompileTimeError
 async/timer_repeat_test: CompileTimeError
 async/timer_test: CompileTimeError
+
+# Unknown failures, need triaging.
+async/catch_errors16_test: Fail
+async/catch_errors17_test: Fail
+async/catch_errors19_test: RuntimeError
+async/catch_errors21_test: Crash
+async/catch_errors22_test: RuntimeError
+async/catch_errors23_test: Fail
+async/catch_errors24_test: RuntimeError
+async/catch_errors25_test: Fail
+async/catch_errors26_test: RuntimeError
+async/catch_errors27_test: RuntimeError
+async/future_test/01: Fail
+async/future_test/none: Fail
+async/stream_controller_test: Fail
+async/stream_empty_test: RuntimeError
+async/stream_event_transformed_test: Fail
+async/stream_listen_zone_test: Crash
+async/stream_zones_test: Fail
+async/zone_error_callback_test: Crash

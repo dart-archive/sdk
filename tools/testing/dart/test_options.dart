@@ -19,6 +19,7 @@ const List<String> defaultTestSelectors = const [
     'isolate',
     'coroutine',
     'io',
+    'lib',
     'ffi',
     'samples',
     'warnings',
