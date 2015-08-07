@@ -63,7 +63,7 @@ incremental/encoded/stored_instance_tearoff: Fail
 incremental/encoded/subclass_schema_1: Fail
 incremental/encoded/subclass_schema_2: Fail
 
-[ $mode == debug ]
+[ $mode == debug || $mode == develop ]
 incremental/encoded/add_instance_field: Fail
 incremental/encoded/instance_field_end: Fail
 incremental/encoded/instance_field_middle: Fail
