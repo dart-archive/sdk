@@ -102,15 +102,15 @@ class DebugState {
     return currentStackTrace.stackFrames[frame].sourceLocation();
   }
 
-  void list() {
-    currentStackTrace.list(currentFrame);
+  String list() {
+    return currentStackTrace.list(currentFrame);
   }
 
-  void disasm() {
-    currentStackTrace.disasm(currentFrame);
+  String disasm() {
+    return currentStackTrace.disasm(currentFrame);
   }
 
-  void printStackTrace() {
-    currentStackTrace.write(currentFrame);
+  String formatStackTrace() {
+    return currentStackTrace.format(currentFrame);
   }
 }

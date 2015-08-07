@@ -35,11 +35,15 @@ class FletchVm {
     }
     var vmProcess = await Process.start(vmPath, vmOptions);
 
-    vmProcess.stdout.drain();
+    vmProcess.stdout
+        .transform(new Utf8Decoder())
+        .transform(new LineSplitter())
+        .listen((line) { stderr.writeln('vm stdout: $line'); });
+
     vmProcess.stderr
         .transform(new Utf8Decoder())
         .transform(new LineSplitter())
-        .listen((line) { stderr.writeln('stderr: $line'); });
+        .listen((line) { stderr.writeln('vm stderr: $line'); });
 
     bool hasValue = await connectionIterator.moveNext();
     assert(hasValue);

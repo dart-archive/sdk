@@ -961,6 +961,15 @@ class Debugging extends Command {
   String valuesToString() => "";
 }
 
+class DisableStandardOutput extends Command {
+  const DisableStandardOutput()
+      : super(CommandCode.DisableStandardOutput);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "";
+}
+
 class StdoutData extends Command {
   final Uint8List value;
 
@@ -1104,6 +1113,7 @@ enum CommandCode {
   CompilerError,
   SessionEnd,
   Debugging,
+  DisableStandardOutput,
   StdoutData,
   StderrData,
 

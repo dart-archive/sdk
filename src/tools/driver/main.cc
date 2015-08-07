@@ -373,13 +373,6 @@ static void StartDriverDaemon() {
   argv[5] = fletch_config_file;
   argv[6] = NULL;
 
-  printf("Starting");
-  for (int i = 0; argv[i] != NULL; i++) {
-    printf(" '%s'", argv[i]);
-  }
-  printf("\n");
-  fflush(stdout);
-
   int file_descriptors[2];
   if (pipe(file_descriptors) != 0) {
     Die("%s: pipe failed: %s", program_name, strerror(errno));
@@ -525,9 +518,8 @@ static void WaitForDaemonHandshake(
             parent_stderr, STDERR_FILENO, buffer, &bytes_read);
       }
       if (FD_ISSET(parent_stdout, &readfds)) {
-        ssize_t bytes_read = sizeof(buffer) - 1;
-        stdout_is_closed = ForwardWithBuffer(
-            parent_stdout, STDOUT_FILENO, buffer, &bytes_read);
+        ssize_t bytes_read = Read(parent_stdout, buffer, sizeof(buffer) - 1);
+        stdout_is_closed = bytes_read == 0;
         buffer[bytes_read] = '\0';
         StrCat(stdout_buffer, sizeof(stdout_buffer), buffer, sizeof(buffer));
         // At this point, stdout_buffer contains all the data we have
@@ -536,6 +528,15 @@ static void WaitForDaemonHandshake(
         // a newline character.
         char* match = strchr(stdout_buffer, '\n');
         if (match != NULL) {
+          // If we do not have a precise match the VM is printing
+          // something unexpected and we print it out to make
+          // debugging easier.
+          if (match[1] != '\0') {
+            FlushAllStreams();
+            WriteFully(STDOUT_FILENO,
+                       reinterpret_cast<uint8*>(buffer),
+                       bytes_read);
+          }
           match[0] = '\0';
           StrCpy(
               fletch_socket_file, sizeof(fletch_socket_file),

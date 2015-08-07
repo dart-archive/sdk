@@ -30,11 +30,12 @@ class StackFrame {
 
   DebugInfo get debugInfo => debugState.getDebugInfo(function);
 
-  void list() {
-    print(debugInfo.sourceListStringFor(bytecodePointer - 1));
+  String list() {
+    return debugInfo.sourceListStringFor(bytecodePointer - 1);
   }
 
-  void disasm() {
+  String disasm() {
+    StringBuffer buffer = new StringBuffer();
     var bytecodes = function.bytecodes;
     var offset = 0;
     for (var i = 0; i  < bytecodes.length; i++) {
@@ -47,9 +48,10 @@ class StackFrame {
       var printString = bytecodeString.padRight(30) + sourceString;
       offset += current.size;
       var marker = (offset == bytecodePointer) ? '>' : ' ';
-      print("  $marker$printString");
+      buffer.writeln("  $marker$printString");
     }
-    print('');
+    buffer.writeln('');
+    return buffer.toString();
   }
 
   String shortString([int namePadding = 0]) {
@@ -119,17 +121,19 @@ class StackTrace {
     if (nameLength > maxNameLength) maxNameLength = nameLength;
   }
 
-  void write(int currentFrame) {
+  String format(int currentFrame) {
+    StringBuffer buffer = new StringBuffer();
     assert(framesToGo == 0);
-    print("Stack trace:");
+    buffer.writeln("Stack trace:");
     var frameNumber = 0;
     for (var i = 0; i < stackFrames.length; i++) {
       if (!stackFrames[i].isVisible) continue;
       var marker = currentFrame == frameNumber ? '> ' : '  ';
       var line = stackFrames[i].shortString(maxNameLength);
       String frameNumberString = '${frameNumber++}: '.padLeft(3);
-      print('$marker$frameNumberString$line');
+      buffer.writeln('$marker$frameNumberString$line');
     }
+    return buffer.toString();
   }
 
   // Map user visible frame numbers to actual frame numbers.
@@ -153,12 +157,12 @@ class StackTrace {
     visibleFrameMapping = null;
   }
 
-  void list(int frame) {
-    visibleFrame(frame).list();
+  String list(int frame) {
+    return visibleFrame(frame).list();
   }
 
-  void disasm(int frame) {
-    visibleFrame(frame).disasm();
+  String disasm(int frame) {
+    return visibleFrame(frame).disasm();
   }
 
   SourceLocation sourceLocation() {

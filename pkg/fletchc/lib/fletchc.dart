@@ -3,6 +3,9 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 library fletchc;
+
+import 'dart:convert';
+
 import 'dart:io';
 
 import 'compiler.dart' show
@@ -44,9 +47,16 @@ main(List<String> arguments) async {
     vm = await FletchVm.start(compiler);
   }
 
+  var lineStream = stdin.transform(new Utf8Decoder())
+                        .transform(new LineSplitter());
+
   var session = new Session(vm.socket, compiler, fletchDelta.system,
-                            stdout, stderr,
+                            lineStream, stdout, stderr,
                             vm.process != null ? vm.process.exitCode : null);
+
+  // If we started a vmProcess ourselves, we disable the normal
+  // VM standard output as we already get it via the wire protocol.
+  if (!options.connectToExistingVm) await session.disableVMStandardOutput();
 
   await session.runCommands(fletchDelta.commands);
   if (options.snapshotPath != null) {

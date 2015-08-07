@@ -8,8 +8,13 @@ import 'infrastructure.dart';
 
 import 'dart:async' show
     Completer,
+    StreamController,
     StreamSubscription,
     Zone;
+
+import 'dart:convert' show
+    Utf8Decoder,
+    LineSplitter;
 
 import 'dart:io' show
     InternetAddress,
@@ -24,10 +29,15 @@ import '../../compiler.dart' show
 
 import '../../commands.dart' as commands_lib;
 
+import '../../session.dart';
+
 import '../driver/driver_commands.dart' show
     DriverCommand,
     handleSocketErrors,
     makeErrorHandler;
+
+import '../driver/session_manager.dart' show
+    BufferingOutputSink;
 
 import '../driver/options.dart' show
     Options;
@@ -40,7 +50,6 @@ import 'documentation.dart' show
 
 const Verb compileAndRunVerb =
     const Verb(compileAndRun, compileAndRunDocumentation, allowsTrailing: true);
-
 
 Future<int> compileAndRun(
     AnalyzedSentence sentence,
@@ -99,6 +108,7 @@ Future<int> compileAndRunTask(
   Process vmProcess;
   int exitCode = 0;
   Socket vmSocket;
+  StreamController stdinController = new StreamController();
   List futures = [];
   trackSubscription(StreamSubscription subscription, String name) {
     futures.add(doneFuture(handleSubscriptionErrors(subscription, name)));
@@ -126,12 +136,7 @@ Future<int> compileAndRunTask(
       server.close();
     }));
 
-    readCommands(commandIterator, vmProcess);
-
-    // Notify controlling isolate (driver_main) that the event loop
-    // [readCommands] has been started, and commands like DriverCommand.Signal
-    // will be honored.
-    commandSender.sendEventLoopStarted();
+    vmProcess.stdin.close();
 
     trackSubscription(
         vmProcess.stdout.listen(commandSender.sendStdoutBytes), "vm stdout");
@@ -154,28 +159,40 @@ Future<int> compileAndRunTask(
     vmSocket = handleSocketErrors(await Socket.connect(host, port), "vmSocket");
   }
 
+  readCommands(commandIterator, vmProcess, stdinController);
+
+  // Notify controlling isolate (driver_main) that the event loop
+  // [readCommands] has been started, and commands like DriverCommand.Signal
+  // will be honored.
+  commandSender.sendEventLoopStarted();
+
+  BufferingOutputSink stdoutSink = new BufferingOutputSink();
+  BufferingOutputSink stderrSink = new BufferingOutputSink();
+  stdoutSink.attachCommandSender((d) => commandSender.sendStdoutBytes(d));
+  stderrSink.attachCommandSender((d) => commandSender.sendStderrBytes(d));
+
+  var inputStream = stdinController.stream
+      .transform(new Utf8Decoder())
+      .transform(new LineSplitter());
+
   // Apply all commands the compiler gave us & shut down.
-  var session = new FletchVmSession(vmSocket, null, null);
+  var session = new Session(
+      vmSocket, compiler, fletchDelta.system,
+      inputStream, stdoutSink, stderrSink,
+      vmProcess != null ? vmProcess.exitCode : null);
+
+  // If we started a vmProcess ourselves, we disable the normal
+  // VM standard output as we already get it via the wire protocol.
+  if (vmProcess != null) await session.disableVMStandardOutput();
+
   await session.runCommands(fletchDelta.commands);
 
-  if (options.snapshotPath == null) {
-    await session.runCommand(const commands_lib.ProcessSpawnForMain());
-
-    await session.sendCommand(const commands_lib.ProcessRun());
-
-    // NOTE: The [ProcessRun] command normally results in a
-    // [ProcessTerminated] command. But if the compiler emitted a compile time
-    // error, the fletch-vm will just halt()/exit() and we therefore get no
-    // response.
-    var command = await session.readNextCommand(force: false);
-    if (command != null && command is! commands_lib.ProcessTerminated) {
-      throwInternalError(
-          "Expected program to finish complete with 'ProcessTerminated' "
-          "but got '$command'");
-    }
+  if (options.snapshotPath != null) {
+    await session.writeSnapshot(options.snapshotPath);
+  } if (options.testDebugger) {
+    await session.testDebugger(options.testDebuggerCommands);
   } else {
-    await session.runCommand(
-        new commands_lib.WriteSnapshot(options.snapshotPath));
+    await session.debug();
   }
   await session.shutdown();
 
@@ -190,15 +207,16 @@ Future<int> compileAndRunTask(
 
 Future<Null> readCommands(
     StreamIterator<Command> commandIterator,
-    Process vmProcess) async {
+    Process vmProcess,
+    StreamController stdinController) async {
   while (await commandIterator.moveNext()) {
     Command command = commandIterator.current;
     switch (command.code) {
       case DriverCommand.Stdin:
         if (command.data.length == 0) {
-          await vmProcess.stdin.close();
+          await stdinController.close();
         } else {
-          vmProcess.stdin.add(command.data);
+          stdinController.add(command.data);
         }
         break;
 

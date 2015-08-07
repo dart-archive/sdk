@@ -38,13 +38,14 @@ Commands:
 
 class InputHandler {
   final Session session;
+  final Stream<String> stream;
+  final bool echo;
 
-  Stream stream;
   String previousLine = '';
 
-  InputHandler(this.session, [this.stream]);
+  InputHandler(this.session, this.stream, this.echo);
 
-  printPrompt() => stdout.write('> ');
+  void printPrompt() => session.writeStdout('> ');
 
   Future handleLine(String line) async {
     if (line.isEmpty) line = previousLine;
@@ -53,13 +54,13 @@ class InputHandler {
       return;
     }
     previousLine = line;
-    if (stream != stdin) print(line);
+    if (echo) session.writeStdoutLine(line);
     List<String> commandComponents =
         line.split(' ').where((s) => !s.isEmpty).toList();
     String command = commandComponents[0];
     switch (command) {
       case 'help':
-        print(HELP);
+        session.writeStdoutLine(HELP);
         break;
       case 'b':
         var method =
@@ -68,7 +69,7 @@ class InputHandler {
             (commandComponents.length > 2) ? commandComponents[2] : '0';
         bci = int.parse(bci, onError: (_) => null);
         if (bci == null) {
-          print('### invalid bytecode index: $bci');
+          session.writeStdoutLine('### invalid bytecode index: $bci');
           break;
         }
         await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
@@ -82,7 +83,7 @@ class InputHandler {
             (commandComponents.length > 3) ? commandComponents[3] : '1';
         line = int.parse(line, onError: (_) => null);
         if (line == null) {
-          print('### invalid line number: $line');
+          session.writeStdoutLine('### invalid line number: $line');
           break;
         }
         int columnNumber = int.parse(column, onError: (_) => null);
@@ -100,7 +101,7 @@ class InputHandler {
             (commandComponents.length > 1) ? commandComponents[1] : "-1";
         frame = int.parse(frame, onError: (_) => null);
         if (frame == null) {
-          print('### invalid frame number: $frame');
+          session.writeStdoutLine('### invalid frame number: $frame');
           break;
         }
         session.selectFrame(frame);
@@ -118,7 +119,7 @@ class InputHandler {
         var id = (commandComponents.length > 1) ? commandComponents[1] : null;
         id = int.parse(id, onError: (_) => null);
         if (id == null) {
-          print('### invalid breakpoint number: $id');
+          session.writeStdoutLine('### invalid breakpoint number: $id');
           break;
         }
         await session.deleteBreakpoint(id);
@@ -177,28 +178,25 @@ class InputHandler {
             await session.toggleInternal();
             break;
           default:
-            print('### invalid flag $toggle');
+            session.writeStdoutLine('### invalid flag $toggle');
             break;
         }
         break;
       default:
-        print('### unknown command: $command');
+        session.writeStdoutLine('### unknown command: $command');
         break;
     }
-    printPrompt();
+    if (!session.terminated) printPrompt();
   }
 
   Future run() async {
-    print(BANNER);
+    session.writeStdoutLine(BANNER);
     printPrompt();
-    var inputLineStream = stream;
-    if (inputLineStream == null) {
-      stream = stdin;
-      inputLineStream = stdin.transform(new Utf8Decoder())
-                             .transform(new LineSplitter());
-    }
-    await for(var line in inputLineStream) {
+    await for(var line in stream) {
       await handleLine(line);
+      // Breaking out of the await for closes the input
+      // stream subscription.
+      if (session.terminated) break;
     }
   }
 }

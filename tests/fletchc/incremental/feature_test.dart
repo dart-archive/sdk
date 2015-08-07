@@ -390,7 +390,7 @@ class TestSession extends Session {
       this.stderr,
       this.futures,
       this.exitCode)
-      : super(vmSocket, compiler, fletchSystem, null, null);
+  : super(vmSocket, compiler, fletchSystem, null, null, null);
 
   /// Add [future] to this session.  All futures that can fail after calling
   /// [waitForCompletion] must be added to the session.
@@ -546,11 +546,6 @@ class TestSession extends Session {
     recordFuture(process.exitCode.then((_) => kill()));
 
     return waitForCompletion();
-  }
-
-  void exit(int exitCode) {
-    // TODO(ahe/ager): Rename exit to something less conflicting with io.exit.
-    throw "Unexpected exit from TestSession ($exitCode).";
   }
 }
 

@@ -190,6 +190,11 @@ void Session::ProcessMessages() {
         return;
       }
 
+      case Connection::kDisableStandardOutput: {
+        Print::DisableStandardOutput();
+        break;
+      }
+
       case Connection::kProcessSpawnForMain: {
         // Setup entry point for main thread.
         program()->set_entry(Function::cast(Pop()));

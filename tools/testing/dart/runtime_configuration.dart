@@ -215,17 +215,16 @@ class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
 
     // TODO(ager): We should be able to run debugger tests through the
     // persistent fletch as well.
-    List<String> vmArguments =
-        <String>["-c", "-p", "package", "package:fletchc/fletchc.dart",
-                 "-d", testDebuggerArgument];
-    vmArguments.addAll(basicArguments);
+    List<String> fletchArguments =
+        <String>["compile-and-run", testDebuggerArgument];
+    fletchArguments.addAll(basicArguments);
 
     String expectationFile =
         testFile.replaceAll("_test.dart", "_expected.txt");
     List<int> expectedOutput = new File(expectationFile).readAsBytesSync();
 
-    executable = suite.dartVmBinaryFileName;
-    arguments = vmArguments;
+    executable = "${suite.buildDir}/fletch";
+    arguments = fletchArguments;
     environment = environmentOverrides;
     return <Command>[
         commandBuilder.getOutputDiffingVmCommand(

@@ -9,6 +9,7 @@
 #include <cstdlib>
 
 #include "src/shared/assert.h"
+#include "src/shared/atomic.h"
 #include "src/shared/globals.h"
 
 namespace fletch {
@@ -38,9 +39,14 @@ public:
   static void RegisterPrintInterceptor(PrintInterceptor* interceptor);
   static void UnregisterPrintInterceptors();
 
+  // Disable printing to stdout and stderr and only pass output
+  // to print interceptors.
+  static void DisableStandardOutput() { standard_output_enabled_ = false; }
+
 private:
   static Mutex* mutex_;  // Mutex for interceptor modification and iteration.
   static PrintInterceptor* interceptor_;
+  static Atomic<bool> standard_output_enabled_;
 };
 
 class Utils {

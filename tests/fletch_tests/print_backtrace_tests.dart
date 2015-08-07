@@ -160,7 +160,7 @@ simulateBadBacktrace() async {
 
   session_lib.Session session = new session_lib.Session(
       socketInCompiler, new FletchCompiler(),
-      new MockFletchSystemProxy(), null, null);
+      new MockFletchSystemProxy(), null, null, null);
 
   await session.stackTraceFromBacktraceResponse(backtrace);
   await session.shutdown();

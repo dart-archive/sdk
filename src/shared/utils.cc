@@ -10,6 +10,7 @@ namespace fletch {
 
 Mutex* Print::mutex_ = Platform::CreateMutex();
 PrintInterceptor* Print::interceptor_ = NULL;
+Atomic<bool> Print::standard_output_enabled_ = true;
 
 void Print::Out(const char* format, ...) {
   va_list args;
@@ -21,8 +22,10 @@ void Print::Out(const char* format, ...) {
   int printed = vsnprintf(message, size + 1, format, args);
   ASSERT(printed == size);
   va_end(args);
-  fputs(message, stdout);
-  fflush(stdout);
+  if (standard_output_enabled_) {
+    fputs(message, stdout);
+    fflush(stdout);
+  }
   ScopedLock scope(mutex_);
   for (PrintInterceptor* interceptor = interceptor_;
        interceptor != NULL;
@@ -42,8 +45,10 @@ void Print::Error(const char* format, ...) {
   int printed = vsnprintf(message, size + 1, format, args);
   ASSERT(printed == size);
   va_end(args);
-  fputs(message, stderr);
-  fflush(stderr);
+  if (standard_output_enabled_) {
+    fputs(message, stderr);
+    fflush(stderr);
+  }
   ScopedLock scope(mutex_);
   for (PrintInterceptor* interceptor = interceptor_;
        interceptor != NULL;
@@ -65,7 +70,6 @@ void Print::UnregisterPrintInterceptors() {
   delete interceptor_;
   interceptor_ = NULL;
 }
-
 
 uint32 Utils::StringHash(const uint16* data, int length) {
   // This implementation is based on the public domain MurmurHash
