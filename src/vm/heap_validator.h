@@ -15,12 +15,12 @@ namespace fletch {
 // depending on [immutable_heap], [mutable_heap], [program_heap].
 class HeapPointerValidator: public PointerVisitor {
  public:
-  HeapPointerValidator(Heap* immutable_heap,
-                       Heap* mutable_heap,
-                       Heap* program_heap)
-      : immutable_heap_(immutable_heap),
-        mutable_heap_(mutable_heap),
-        program_heap_(program_heap) {}
+  HeapPointerValidator(Heap* program_heap,
+                       ImmutableHeap* immutable_heap,
+                       Heap* mutable_heap)
+      : program_heap_(program_heap),
+        immutable_heap_(immutable_heap),
+        mutable_heap_(mutable_heap) {}
   virtual ~HeapPointerValidator() {}
 
   virtual void VisitBlock(Object** start, Object** end);
@@ -28,17 +28,18 @@ class HeapPointerValidator: public PointerVisitor {
  private:
   void ValidatePointer(Object* object);
 
-  Heap* immutable_heap_;
-  Heap* mutable_heap_;
   Heap* program_heap_;
+  ImmutableHeap* immutable_heap_;
+  Heap* mutable_heap_;
 };
 
 // Validates that all pointers it gets called with lie inside program/immutable
 // heaps.
 class ImmutableHeapPointerValidator: public HeapPointerValidator {
  public:
-  ImmutableHeapPointerValidator(Heap* immutable_heap, Heap* program_heap)
-      : HeapPointerValidator(immutable_heap, NULL, program_heap) {}
+  ImmutableHeapPointerValidator(Heap* program_heap,
+                                ImmutableHeap* immutable_heap)
+      : HeapPointerValidator(program_heap, immutable_heap, NULL) {}
   virtual ~ImmutableHeapPointerValidator() {}
 };
 
@@ -46,7 +47,7 @@ class ImmutableHeapPointerValidator: public HeapPointerValidator {
 class ProgramHeapPointerValidator: public HeapPointerValidator {
  public:
   explicit ProgramHeapPointerValidator(Heap* program_heap)
-      : HeapPointerValidator(NULL, NULL, program_heap) {}
+      : HeapPointerValidator(program_heap, NULL, NULL) {}
   virtual ~ProgramHeapPointerValidator() {}
 };
 
@@ -54,14 +55,16 @@ class ProgramHeapPointerValidator: public HeapPointerValidator {
 // inside them are valid.
 class ProcessHeapValidatorVisitor : public ProcessVisitor {
  public:
-  explicit ProcessHeapValidatorVisitor(Heap* program_heap)
-      : program_heap_(program_heap) {}
+  explicit ProcessHeapValidatorVisitor(Heap* program_heap,
+                                       ImmutableHeap* immutable_heap)
+      : program_heap_(program_heap), immutable_heap_(immutable_heap) {}
   virtual ~ProcessHeapValidatorVisitor() {}
 
   virtual void VisitProcess(Process* process);
 
  private:
   Heap* program_heap_;
+  ImmutableHeap* immutable_heap_;
 };
 
 }  // namespace fletch

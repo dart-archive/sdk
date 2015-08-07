@@ -29,10 +29,8 @@ class ExitReference {
  public:
   ExitReference(Process* exiting_process, Object* message)
       : mutable_heap_(NULL, reinterpret_cast<WeakPointer*>(NULL)),
-        immutable_heap_(NULL, reinterpret_cast<WeakPointer*>(NULL)),
         message_(message) {
     mutable_heap_.MergeInOtherHeap(exiting_process->heap());
-    immutable_heap_.MergeInOtherHeap(exiting_process->immutable_heap());
   }
 
   Object* message() const { return message_; }
@@ -42,11 +40,9 @@ class ExitReference {
   }
 
   Heap* mutable_heap() { return &mutable_heap_; }
-  Heap* immutable_heap() { return &immutable_heap_; }
 
  private:
   Heap mutable_heap_;
-  Heap immutable_heap_;
   Object* message_;
 };
 
@@ -142,7 +138,7 @@ ThreadState::~ThreadState() {
 Process::Process(Program* program)
     : random_(program->random()->NextUInt32() + 1),
       heap_(&random_, 4 * KB),
-      immutable_heap_(&random_),
+      immutable_heap_(NULL),
       program_(program),
       statics_(NULL),
       coroutine_(NULL),
@@ -181,7 +177,7 @@ Process::~Process() {
   ASSERT(cooked_stack_deltas_.is_empty());
   // Clear out the process pointer from all the ports.
   heap_.ProcessWeakPointers();
-  immutable_heap_.ProcessWeakPointers();
+  ASSERT(immutable_heap_ == NULL);
   while (ports_ != NULL) {
     Port* next = ports_->next();
     ports_->OwnerProcessTerminating();
@@ -236,7 +232,7 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
 
   Object* new_stack_object = NewStack(new_size);
   if (new_stack_object == Failure::retry_after_gc()) {
-    CollectGarbage();
+    CollectMutableGarbage();
     new_stack_object = NewStack(new_size);
     if (new_stack_object->IsFailure()) {
       FATAL("Failed to increase stack size");
@@ -265,31 +261,32 @@ Object* Process::NewArray(int length) {
 
 Object* Process::NewDouble(double value) {
   Class* double_class = program()->double_class();
-  Object* result = immutable_heap_.CreateDouble(double_class, value);
+  Object* result = immutable_heap_->CreateDouble(double_class, value);
   return result;
 }
 
 Object* Process::NewInteger(int64 value) {
   Class* large_integer_class = program()->large_integer_class();
-  Object* result = immutable_heap_.CreateLargeInteger(
+  Object* result = immutable_heap_->CreateLargeInteger(
       large_integer_class, value);
   return result;
 }
 
 void Process::TryDeallocInteger(LargeInteger* object) {
-  immutable_heap_.TryDeallocInteger(object);
+  immutable_heap_->TryDeallocInteger(object);
 }
 
 Object* Process::NewString(int length) {
   Class* string_class = program()->string_class();
-  Object* raw_result = immutable_heap_.CreateString(string_class, length, true);
+  Object* raw_result =
+      immutable_heap_->CreateString(string_class, length, true);
   if (raw_result->IsFailure()) return raw_result;
   return String::cast(raw_result);
 }
 
 Object* Process::NewStringUninitialized(int length) {
   Class* string_class = program()->string_class();
-  Object* raw_result = immutable_heap_.CreateStringUninitialized(
+  Object* raw_result = immutable_heap_->CreateStringUninitialized(
       string_class, length, true);
   if (raw_result->IsFailure()) return raw_result;
   return String::cast(raw_result);
@@ -297,7 +294,7 @@ Object* Process::NewStringUninitialized(int length) {
 
 Object* Process::NewStringFromAscii(List<const char> value) {
   Class* string_class = program()->string_class();
-  Object* raw_result = immutable_heap_.CreateString(
+  Object* raw_result = immutable_heap_->CreateString(
       string_class, value.length(), true);
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
@@ -320,7 +317,7 @@ Object* Process::NewBoxed(Object* value) {
 Object* Process::NewInstance(Class* klass, bool immutable) {
   Object* null = program()->null_object();
   if (immutable) {
-    return immutable_heap_.CreateComplexHeapObject(klass, null, immutable);
+    return immutable_heap_->CreateComplexHeapObject(klass, null, immutable);
   } else {
     return heap_.CreateComplexHeapObject(klass, null, immutable);
   }
@@ -339,7 +336,8 @@ Object* Process::Concatenate(String* x, String* y) {
   if (ylen == 0) return x;
   int length = xlen + ylen;
   Class* string_class = program()->string_class();
-  Object* raw_result = immutable_heap_.CreateString(string_class, length, true);
+  Object* raw_result =
+      immutable_heap_->CreateString(string_class, length, true);
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
   uint8_t* first_part = result->byte_address_for(0);
@@ -358,37 +356,9 @@ Object* Process::NewStack(int length) {
   return result;
 }
 
-void Process::CollectImmutableGarbage() {
-  if (Flags::validate_heaps) {
-    ValidateHeaps();
-  }
-
-  Space* from = immutable_heap_.space();
-  Space* to = new Space();
-  // While garbage collecting, do not fail allocations. Instead grow
-  // the to-space as needed.
-  NoAllocationFailureScope scope(to);
-
-  ScavengeVisitor visitor(from, to);
-  IterateRoots(&visitor);
-  store_buffer_.IteratePointersToImmutableSpace(&visitor);
-  to->CompleteScavenge(&visitor);
-
-  immutable_heap_.ProcessWeakPointers();
-  set_ports(Port::CleanupPorts(from, ports()));
-  immutable_heap_.ReplaceSpace(to);
-
-  if (Flags::validate_heaps) {
-    ValidateHeaps();
-  }
-}
 
 void Process::CollectMutableGarbage() {
-  if (Flags::validate_heaps) {
-    ValidateHeaps();
-  }
-
-  Space* immutable_space = immutable_heap_.space();
+  TakeChildHeaps();
 
   Space* from = heap_.space();
   Space* to = new Space();
@@ -402,24 +372,13 @@ void Process::CollectMutableGarbage() {
   IterateRoots(&visitor);
 
   ASSERT(!to->is_empty());
-  to->CompleteScavengeMutable(&visitor, immutable_space, &sb);
+  to->CompleteScavengeMutable(&visitor, from, &sb);
   store_buffer_.ReplaceAfterMutableGC(&sb);
 
   heap_.ProcessWeakPointers();
   set_ports(Port::CleanupPorts(from, ports()));
   heap_.ReplaceSpace(to);
   UpdateStackLimit();
-
-  if (Flags::validate_heaps) {
-    ValidateHeaps();
-  }
-}
-
-void Process::CollectGarbage() {
-  // TODO(kustermann): Combined mutable & immutable GC could be made
-  // faster by reducing redundant work.
-  CollectMutableGarbage();
-  CollectImmutableGarbage();
 }
 
 // Helper class for copying HeapObjects and chaining stacks for a
@@ -474,8 +433,6 @@ class ScavengeAndChainStacksVisitor: public PointerVisitor {
 };
 
 int Process::CollectMutableGarbageAndChainStacks() {
-  Space* immutable_space = immutable_heap_.space();
-
   Space* from = heap_.space();
   Space* to = new Space();
   StoreBuffer sb;
@@ -489,7 +446,7 @@ int Process::CollectMutableGarbageAndChainStacks() {
   // stacks starting from there.
   visitor.Visit(reinterpret_cast<Object**>(coroutine_->stack_address()));
   IterateRoots(&visitor);
-  to->CompleteScavengeMutable(&visitor, immutable_space, &sb);
+  to->CompleteScavengeMutable(&visitor, from, &sb);
   store_buffer_.ReplaceAfterMutableGC(&sb);
 
   heap_.ProcessWeakPointers();
@@ -506,12 +463,11 @@ int Process::CollectGarbageAndChainStacks() {
   TakeChildHeaps();
 
   int number_of_stacks = CollectMutableGarbageAndChainStacks();
-  CollectImmutableGarbage();
   return number_of_stacks;
 }
 
-void Process::ValidateHeaps() {
-  ProcessHeapValidatorVisitor v(program()->heap());
+void Process::ValidateHeaps(ImmutableHeap *immutable_heap) {
+  ProcessHeapValidatorVisitor v(program()->heap(), immutable_heap);
   v.VisitProcess(this);
 }
 
@@ -535,7 +491,6 @@ void Process::IterateProgramPointers(PointerVisitor* visitor) {
   ASSERT(stacks_are_cooked());
   HeapObjectPointerVisitor program_pointer_visitor(visitor);
   heap()->IterateObjects(&program_pointer_visitor);
-  immutable_heap()->IterateObjects(&program_pointer_visitor);
   store_buffer_.IteratePointersToImmutableSpace(visitor);
   if (debug_info_ != NULL) debug_info_->VisitProgramPointers(visitor);
   IteratePortQueuesPointers(visitor);
@@ -837,8 +792,6 @@ void Process::AdvanceCurrentMessage() {
 static void TakeExitReferenceHeaps(ExitReference* ref,
                                    Process* destination_process) {
   destination_process->heap()->MergeInOtherHeap(ref->mutable_heap());
-  destination_process->immutable_heap()->MergeInOtherHeap(
-      ref->immutable_heap());
 }
 
 static void TakePortQueueHeaps(PortQueue* queue, Process* destination_process) {

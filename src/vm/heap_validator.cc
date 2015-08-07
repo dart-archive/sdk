@@ -21,7 +21,7 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
   bool is_immutable_heap_obj = false;
   if (immutable_heap_ != NULL) {
     is_immutable_heap_obj =
-        immutable_heap_->space()->Includes(address);
+        immutable_heap_->heap()->space()->Includes(address);
   }
   bool is_mutable_heap_obj = false;
   if (mutable_heap_ != NULL) {
@@ -51,21 +51,11 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
 
 void ProcessHeapValidatorVisitor::VisitProcess(Process* process) {
   Heap* process_heap = process->heap();
-  Heap* process_immutable_heap = process->immutable_heap();
-
-  // Validate pointers in immutable heap.
-  {
-    ImmutableHeapPointerValidator validator(
-        process_immutable_heap, program_heap_);
-
-    HeapObjectPointerVisitor pointer_visitor(&validator);
-    process_immutable_heap->IterateObjects(&pointer_visitor);
-  }
 
   // Validate pointers in roots, queues, weak pointers and mutable heap.
   {
     HeapPointerValidator validator(
-        process_immutable_heap, process_heap, program_heap_);
+        program_heap_, immutable_heap_, process_heap);
 
     SafeObjectPointerVisitor pointer_visitor(process, &validator);
     process->IterateRoots(&validator);

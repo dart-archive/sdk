@@ -9,6 +9,7 @@
 #include "src/shared/random.h"
 #include "src/vm/event_handler.h"
 #include "src/vm/heap.h"
+#include "src/vm/immutable_heap.h"
 #include "src/vm/program_folder.h"
 
 namespace fletch {
@@ -149,6 +150,7 @@ class Program {
   Session* session() { return session_; }
 
   Heap* heap() { return &heap_; }
+  ImmutableHeap* immutable_heap() { return &immutable_heap_; }
 
   HeapObject* ObjectFromFailure(Failure* failure) {
     if (failure == Failure::wrong_argument_type()) {
@@ -185,6 +187,8 @@ class Program {
   Object* CreateString(List<uint16> str);
   Object* CreateInstance(Class* klass);
   Object* CreateInitializer(Function* function);
+
+  void ValidateHeapsAreConsistent();
 
   void CollectGarbage();
   void CollectImmutableGarbage();
@@ -244,6 +248,7 @@ class Program {
   RandomLCG random_;
 
   Heap heap_;
+  ImmutableHeap immutable_heap_;
 
   Scheduler* scheduler_;
   ProgramState program_state_;

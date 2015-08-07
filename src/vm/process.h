@@ -19,9 +19,11 @@ namespace fletch {
 
 class Engine;
 class Interpreter;
+class ImmutableHeap;
 class Port;
 class PortQueue;
 class ProcessQueue;
+class ProcessVisitor;
 
 class ThreadState {
  public:
@@ -89,7 +91,8 @@ class Process {
   Program* program() { return program_; }
   Array* statics() const { return statics_; }
   Heap* heap() { return &heap_; }
-  Heap* immutable_heap() { return &immutable_heap_; }
+  Heap* immutable_heap() { return immutable_heap_; }
+  void set_immutable_heap(Heap* heap) { immutable_heap_ = heap; }
 
   Coroutine* coroutine() const { return coroutine_; }
   void UpdateCoroutine(Coroutine* coroutine);
@@ -139,8 +142,6 @@ class Process {
 
   Object* Concatenate(String* x, String* y);
 
-  void CollectGarbage();
-  void CollectImmutableGarbage();
   void CollectMutableGarbage();
 
   // Perform garbage collection and chain all stack objects. Additionally,
@@ -150,7 +151,7 @@ class Process {
   int CollectMutableGarbageAndChainStacks();
   int CollectGarbageAndChainStacks();
 
-  void ValidateHeaps();
+  void ValidateHeaps(ImmutableHeap* immutable_heap);
 
   // Iterate all pointers reachable from this process object.
   void IterateRoots(PointerVisitor* visitor);
@@ -300,7 +301,7 @@ class Process {
   RandomLCG random_;
 
   Heap heap_;
-  Heap immutable_heap_;
+  Heap* immutable_heap_;
   StoreBuffer store_buffer_;
   Program* program_;
   Array* statics_;

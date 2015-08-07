@@ -12,10 +12,11 @@
 namespace fletch {
 
 class GCThread;
+class Heap;
 class Object;
 class Port;
-class Process;
 class ProcessQueue;
+class Process;
 class Program;
 class ThreadState;
 
@@ -107,12 +108,16 @@ class Scheduler {
   void PushIdleThread(ThreadState* thread_state);
   ThreadState* PopIdleThread();
   void RunInThread();
+  void RunInterpreterLoop(ThreadState* thread_state);
 
   void SetCurrentProcessForThread(int thread_id, Process* process);
   void ClearCurrentProcessForThread(int thread_id, Process* process);
   // Interpret [process] as thread [thread] with id [thread_id]. Returns the
   // next Process that should be run on this thraed.
-  Process* InterpretProcess(Process* process, ThreadState* thread_state);
+  Process* InterpretProcess(Process* process,
+                            Heap* immutable_heap,
+                            ThreadState* thread_state,
+                            bool* allocation_failure);
   void ThreadEnter(ThreadState* thread_state);
   void ThreadExit(ThreadState* thread_state);
   void NotifyAllThreads();

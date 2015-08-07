@@ -10,6 +10,9 @@
 
 namespace fletch {
 
+// TODO(kustermann): The current tick based mechanism for determining when a GC
+// should happen is a little bit fragile. We should take the exact number of
+// newly allocated bytes into account.
 class ImmutableHeap {
  public:
   ImmutableHeap();

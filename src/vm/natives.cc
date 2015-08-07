@@ -813,17 +813,20 @@ static Function* FunctionForClosure(Object* argument, unsigned arity) {
   return closure_class->LookupMethod(selector);
 }
 
-static Object* CloneInteger(Process* child, Object* value) {
+static Object* CloneInteger(Process* parent, Object* value) {
   if (value->IsSmi()) return value;
-  return child->ToInteger(LargeInteger::cast(value)->value());
+  return parent->ToInteger(LargeInteger::cast(value)->value());
 }
 
-static Instance* ClonePort(Process* child, Instance* port) {
+static Instance* ClonePort(Process* parent, Process* child, Instance* port) {
   Class* port_class = port->get_class();
   ASSERT(port_class->NumberOfInstanceFields() == 1);
   Instance* clone = Instance::cast(child->NewInstance(port_class));
   Object* address = port->GetInstanceField(0);
-  Object* integer = CloneInteger(child, address);
+  // NOTE: We use the parent process for creating a cloned integer, since the
+  // child does not have an immutable space (it's only available when the
+  // scheduler is actually interpreting it's code).
+  Object* integer = CloneInteger(parent, address);
   clone->SetInstanceField(0, integer);
   child->RecordStore(clone, integer);
   reinterpret_cast<Port*>(AsForeignWord(address))->IncrementRef();
@@ -870,9 +873,9 @@ NATIVE(ProcessSpawn) {
   if (argument->IsSmi() || is_argument_constant) {
     // Do nothing.
   } else if (argument->IsPort()) {
-    argument = ClonePort(child, Instance::cast(argument));
+    argument = ClonePort(process, child, Instance::cast(argument));
   } else if (argument->IsLargeInteger()) {
-    argument = CloneInteger(child, argument);
+    argument = CloneInteger(process, argument);
   } else {
     UNREACHABLE();
   }
@@ -919,7 +922,7 @@ static bool SpawnBlockingProcess(Process* process,
   Instance* port_instance = Instance::cast(child->NewInstance(port_class));
   Port* port = new Port(process, channel);
   child->RegisterFinalizer(port_instance, Port::WeakCallback);
-  Object* integer = child->ToInteger(reinterpret_cast<uword>(port));
+  Object* integer = process->ToInteger(reinterpret_cast<uword>(port));
   port_instance->SetInstanceField(0, integer);
   child->RecordStore(port_instance, integer);
 

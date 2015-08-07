@@ -1107,8 +1107,9 @@ bool Session::CompileTimeError(Process* process) {
 
 class TransformInstancesPointerVisitor : public PointerVisitor {
  public:
-  explicit TransformInstancesPointerVisitor(Heap* heap, Heap* immutable_heap)
-      : heap_(heap), immutable_heap_(immutable_heap) { }
+  explicit TransformInstancesPointerVisitor(Heap* heap,
+                                            ImmutableHeap* immutable_heap)
+      : heap_(heap), immutable_heap_(immutable_heap->heap()) { }
 
   virtual void VisitClass(Object** p) {
     // The class pointer in the header of an object should not
@@ -1156,6 +1157,9 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
 
 class TransformInstancesProcessVisitor : public ProcessVisitor {
  public:
+  explicit TransformInstancesProcessVisitor(ImmutableHeap* immutable_heap)
+      : immutable_heap_(immutable_heap) {}
+
   virtual void VisitProcess(Process* process) {
     // NOTE: We need to take all spaces which are getting merged into the
     // process heap, because otherwise we'll not update the pointers it has to
@@ -1163,15 +1167,14 @@ class TransformInstancesProcessVisitor : public ProcessVisitor {
     process->TakeChildHeaps();
 
     Heap* heap = process->heap();
-    Heap* immutable_heap = process->immutable_heap();
 
     Space* space = heap->space();
-    Space* immutable_space = immutable_heap->space();
+    Space* immutable_space = immutable_heap_->heap()->space();
 
     NoAllocationFailureScope scope(space);
     NoAllocationFailureScope scope2(immutable_space);
 
-    TransformInstancesPointerVisitor pointer_visitor(heap, immutable_heap);
+    TransformInstancesPointerVisitor pointer_visitor(heap, immutable_heap_);
 
     process->IterateRoots(&pointer_visitor);
 
@@ -1179,6 +1182,9 @@ class TransformInstancesProcessVisitor : public ProcessVisitor {
     space->CompleteTransformations(&pointer_visitor, process);
     immutable_space->CompleteTransformations(&pointer_visitor, process);
   }
+
+ private:
+  ImmutableHeap* immutable_heap_;
 };
 
 void Session::TransformInstances() {
@@ -1195,12 +1201,13 @@ void Session::TransformInstances() {
 
   Space* space = program()->heap()->space();
   NoAllocationFailureScope scope(space);
-  TransformInstancesPointerVisitor pointer_visitor(program()->heap(), NULL);
+  TransformInstancesPointerVisitor pointer_visitor(
+      program()->heap(), program()->immutable_heap());
   program()->IterateRoots(&pointer_visitor);
   ASSERT(!space->is_empty());
   space->CompleteTransformations(&pointer_visitor, NULL);
 
-  TransformInstancesProcessVisitor process_visitor;
+  TransformInstancesProcessVisitor process_visitor(program()->immutable_heap());
   program()->VisitProcesses(&process_visitor);
 }
 

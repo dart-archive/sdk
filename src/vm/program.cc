@@ -175,6 +175,10 @@ Object* Program::CreateInitializer(Function* function) {
 }
 
 void Program::PrepareProgramGC(bool disable_heap_validation_before_gc) {
+  // All threads are stopped and have given their parts back to the
+  // [ImmutableHeap], so we can merge them now.
+  immutable_heap()->MergeParts();
+
   if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
     ValidateGlobalHeapsAreConsistent();
   }
@@ -183,8 +187,9 @@ void Program::PrepareProgramGC(bool disable_heap_validation_before_gc) {
   Process* current = process_list_head_;
   while (current != NULL) {
     if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
-      current->ValidateHeaps();
+      current->ValidateHeaps(&immutable_heap_);
     }
+
     int number_of_stacks = current->CollectGarbageAndChainStacks();
     current->CookStacks(number_of_stacks);
     current = current->process_list_next();
@@ -198,13 +203,15 @@ void Program::PerformProgramGC(Space* to, PointerVisitor* visitor) {
     // Iterate program roots.
     IterateRoots(visitor);
 
+    // Iterate all immutable objects.
+    HeapObjectPointerVisitor object_pointer_visitor(visitor);
+    immutable_heap_.heap()->IterateObjects(&object_pointer_visitor);
+
     // Iterate over all process program pointers.
-    {
-      Process* current = process_list_head_;
-      while (current != NULL) {
-        current->IterateProgramPointers(visitor);
-        current = current->process_list_next();
-      }
+    Process* current = process_list_head_;
+    while (current != NULL) {
+      current->IterateProgramPointers(visitor);
+      current = current->process_list_next();
     }
 
     // Finish collection.
@@ -222,7 +229,7 @@ void Program::FinishProgramGC() {
     current->UpdateBreakpoints();
 
     if (Flags::validate_heaps) {
-      current->ValidateHeaps();
+      current->ValidateHeaps(&immutable_heap_);
     }
     current = current->process_list_next();
   }
@@ -237,6 +244,28 @@ void Program::ValidateGlobalHeapsAreConsistent() {
   HeapObjectPointerVisitor visitor(&validator);
   IterateRoots(&validator);
   heap()->IterateObjects(&visitor);
+}
+
+void Program::ValidateHeapsAreConsistent() {
+  // Validate the program heap.
+  {
+    ProgramHeapPointerValidator validator(heap());
+    HeapObjectPointerVisitor object_pointer_visitor(&validator);
+    IterateRoots(&validator);
+    heap()->IterateObjects(&object_pointer_visitor);
+  }
+  // Validate the immutable heap
+  {
+    ImmutableHeapPointerValidator validator(heap(), &immutable_heap_);
+    HeapObjectPointerVisitor object_pointer_visitor(&validator);
+    immutable_heap_.heap()->IterateObjects(&object_pointer_visitor);
+    immutable_heap_.heap()->VisitWeakObjectPointers(&validator);
+  }
+  // Validate all process heaps.
+  {
+    ProcessHeapValidatorVisitor validator(heap(), &immutable_heap_);
+    VisitProcesses(&validator);
+  }
 }
 
 void Program::CollectGarbage() {
@@ -293,7 +322,39 @@ void Program::CollectImmutableGarbage() {
   // [program_->immutable_heap()].
   scheduler->StopProgram(this);
 
-  // TODO(kustermann): Implement collection of immutable heap once we have it.
+  // All threads are stopped and have given their parts back to the
+  // [ImmutableHeap], so we can merge them now.
+  immutable_heap()->MergeParts();
+
+#ifdef DEBUG
+  ValidateHeapsAreConsistent();
+#endif
+
+  Heap* heap = immutable_heap()->heap();
+  Space* from = heap->space();
+  Space* to = new Space();
+  NoAllocationFailureScope alloc(to);
+
+  ScavengeVisitor scavenger(from, to);
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->TakeChildHeaps();
+    if (current->store_buffer()->ShouldGcMutableSpace()) {
+      current->CollectMutableGarbage();
+    }
+    current->IterateRoots(&scavenger);
+    current->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
+
+    current = current->process_list_next();
+  }
+
+  to->CompleteScavenge(&scavenger);
+  heap->ProcessWeakPointers();
+  heap->ReplaceSpace(to);
+
+#ifdef DEBUG
+  ValidateHeapsAreConsistent();
+#endif
 
   scheduler->ResumeProgram(this);
 }

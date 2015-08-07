@@ -84,11 +84,6 @@ class Interpreter {
   bool IsCompileTimeError() const { return interruption_ == kCompileTimeError; }
   bool IsAtBreakPoint() const { return interruption_ == kBreakPoint; }
 
-  void MarkReadyAfterImmutableGc() {
-    ASSERT(interruption_ == kImmutableAllocationFailure);
-    interruption_ = kReady;
-  }
-
   TargetYieldResult target_yield_result() const { return target_yield_result_; }
 
  private:

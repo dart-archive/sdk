@@ -118,12 +118,18 @@ class Heap {
  private:
   friend class ExitReference;
   friend class ImmutableHeap;
+  friend class Scheduler;
+
   Heap(Space* existing_space, WeakPointer* weak_pointers);
 
   Object* CreateStringInternal(Class* the_class, int length, bool clear,
                                bool immutable);
 
   Object* AllocateRawClass(int size);
+
+  void set_random(RandomLCG* random) {
+    random_ = random;
+  }
 
   // Used for initializing identity hash codes for immutable objects.
   RandomLCG* random_;
