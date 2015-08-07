@@ -122,10 +122,7 @@ jni/libfletch.jnilib: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o 
 	g++ -framework CoreFoundation -shared -o $@ $^
 
 conformance.snapshot: ../conformance_service_impl.dart
-	# TODO: support the --out option in fletch/fletch-driver.
-	# ${FLETCH_BUILD_DIR}/fletch_driver $< --out=$@
-	# change to the fletch root so that fletch uses the right package directory.
-	cd ${FLETCH_DIR}; ${FLETCH_BUILD_DIR}/dart --checked -p package pkg/fletchc/lib/fletchc.dart ${THIS_DIR}$< --out ${THIS_DIR}$@
+	cd ${FLETCH_DIR}; ${FLETCH_BUILD_DIR}/fletch compile-and-run -o ${THIS_DIR}$@ ${THIS_DIR}$<
 
 test: all
 	java -Djava.library.path=jni -ea -cp fletch/ConformanceService.jar:. ConformanceTest conformance.snapshot

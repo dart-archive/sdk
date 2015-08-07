@@ -297,7 +297,7 @@ def StepTest(
             '--build-before-testing=0',
             '--host-checked']
     if snapshot_run:
-      # We let package:fletchc/fletchc.dart compile tests to snapshots.
+      # We let the fletch compiler compile tests to snapshots.
       # Afterwards we run the snapshot with
       #  - normal fletch VM
       #  - fletch VM with -Xunfold-program enabled

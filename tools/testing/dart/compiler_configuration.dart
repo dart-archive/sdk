@@ -196,21 +196,16 @@ class Dart2xCompilerConfiguration extends CompilerConfiguration {
 }
 
 class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
-  final bool persist;
-  final bool hostChecked;
-
   FletchCCompilerConfiguration({
       bool isDebug,
       bool isChecked,
       bool isHostChecked,
-      bool useSdk,
-      this.hostChecked: true,
-      this.persist: true})
+      bool useSdk})
       : super(
           'fletchc',
           isDebug: isDebug, isChecked: isChecked,
           isHostChecked: isHostChecked, useSdk: useSdk) {
-    if (persist && !hostChecked) {
+    if (!isHostChecked) {
       throw "fletch only works with --host-checked option.";
     }
   }
@@ -224,28 +219,12 @@ class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
     String snapshotFileName = '$tempDir/fletch.snapshot';
     basicArguments.insertAll(0, ['-o', snapshotFileName]);
 
-    String executable;
-    List<String> arguments;
-    Map<String, String> environment;
-    if (!persist) {
-      List<String> vmArguments = [];
-      if (hostChecked) {
-        vmArguments.add("-c");
-      }
-      vmArguments.addAll(["-p", "package", "package:fletchc/fletchc.dart"]);
-      vmArguments.addAll(basicArguments);
-
-      executable = '$buildDir/dart';
-      arguments = vmArguments;
-      environment = environmentOverrides;
-    } else {
-      executable = '$buildDir/fletch';
-      arguments = <String>['compile-and-run'];
-      arguments.addAll(basicArguments);
-      environment = {
-        'DART_VM' : '$buildDir/dart',
-      }..addAll(environmentOverrides);
-    }
+    String executable = '$buildDir/fletch';
+    List<String> arguments = <String>['compile-and-run'];
+    Map<String, String> environment = {
+      'DART_VM' : '$buildDir/dart',
+    }..addAll(environmentOverrides);
+    arguments.addAll(basicArguments);
 
     // NOTE: We assume that `fletch` behaves the same as invoking
     // the DartVM in terms of exit codes.

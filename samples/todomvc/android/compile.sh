@@ -47,4 +47,4 @@ cd $FLETCH_DIR
 ninja -C out/ReleaseIA32 fletch
 mkdir -p $DIR/TodoMVC/app/src/main/res/raw
 
-./out/ReleaseIA32/dart -p package package/fletchc/fletchc.dart $DIR/../todomvc.dart --out $DIR/TodoMVC/app/src/main/res/raw/todomvc_snapshot
+./out/ReleaseIA32/fletch compile-and-run -o $DIR/TodoMVC/app/src/main/res/raw/todomvc_snapshot $DIR/../todomvc.dart

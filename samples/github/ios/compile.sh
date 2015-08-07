@@ -38,7 +38,7 @@ SERVICE_GEN_DIR="$TARGET_PKG_DIR/service"
 DART="$FLETCH_DIR/out/ReleaseIA32/dart"
 IMMIC="$DART $FLETCH_DIR/tools/immic/bin/immic.dart"
 SERVICEC="$DART $FLETCH_DIR/tools/servicec/bin/servicec.dart"
-FLETCHC="$DART -p $FLETCH_PKG_DIR $FLETCH_DIR/pkg/fletchc/lib/fletchc.dart"
+FLETCH="$FLETCH_DIR/out/ReleaseIA32/fletch"
 
 # TODO(zerny): Create a project specific package directory.
 if [[ ! -d "$TARGET_PKG_DIR" ]]; then
@@ -52,6 +52,5 @@ $IMMIC --package "$FLETCH_PKG_DIR" --out "$IMMI_GEN_DIR" "$TARGET_DIR/lib/$PROJ.
 mkdir -p "$SERVICE_GEN_DIR"
 $SERVICEC --out "$SERVICE_GEN_DIR" "$IMMI_GEN_DIR/idl/immi_service.idl"
 
-exec $FLETCHC "$TARGET_BUILD_DIR/bin/$PROJ.dart" \
-     --package-root="$TARGET_PKG_DIR" \
-     --out "$DIR/$PROJ.snapshot"
+exec $FLETCH compile-and-run -o "$DIR/$PROJ.snapshot" \
+     "$TARGET_BUILD_DIR/bin/$PROJ.dart"

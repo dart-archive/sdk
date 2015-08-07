@@ -471,13 +471,6 @@ Note: currently only implemented for dart2js.''',
               Platform.operatingSystem == "macos",
               type: 'bool'),
           new _TestOptionSpecification(
-              'no_persist',
-              'Disable persistent compiler process.',
-              ['--no-persist'],
-              [],
-              false,
-              type: 'bool'),
-          new _TestOptionSpecification(
               'kill_persistent_process',
               "Kill persistent process before running tests.",
               ['--kill-persistent-process'],
@@ -709,8 +702,7 @@ Note: currently only implemented for dart2js.''',
             "--use-public-packages");
     }
 
-    if (config['runtime'] == 'fletchc' &&
-        config['persist'] && !config['host_checked']) {
+    if (config['runtime'] == 'fletchc' && !config['host_checked']) {
       isValid = false;
       // TODO(ahe): Find a way to make this optional.
       print("fletch requires --host-checked option.");
@@ -744,7 +736,6 @@ Note: currently only implemented for dart2js.''',
     configuration['host_unchecked'] = !configuration['host_checked'];
     configuration['unminified'] = !configuration['minified'];
     configuration['nocsp'] = !configuration['csp'];
-    configuration['persist'] = !configuration['no_persist'];
 
     String runtime = configuration['runtime'];
     if (runtime == 'firefox') {
