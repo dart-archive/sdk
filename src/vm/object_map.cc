@@ -68,14 +68,18 @@ bool ObjectMap::RemoveByObject(Object* object) {
   return true;
 }
 
-Object* ObjectMap::LookupById(int64 id, Object* none) {
+Object* ObjectMap::LookupById(int64 id, bool* entry_exists) {
   int index = BucketIndexFromId(id);
   Bucket* current = table_by_id_[index];
   while (current != NULL) {
-    if (current->id == id) return current->object;
+    if (current->id == id) {
+      if (entry_exists != NULL) *entry_exists = true;
+      return current->object;
+    }
     current = current->next;
   }
-  return none;
+  if (entry_exists != NULL) *entry_exists = false;
+  return NULL;
 }
 
 int64 ObjectMap::LookupByObject(Object* object, int64 none) {

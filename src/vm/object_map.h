@@ -22,7 +22,7 @@ class ObjectMap {
   bool RemoveById(int64 id);
   bool RemoveByObject(Object* object);
 
-  Object* LookupById(int64 id, Object* none = NULL);
+  Object* LookupById(int64 id, bool* entry_exists = NULL);
   int64 LookupByObject(Object* object, int64 none = -1);
 
   bool HasTableByObject() const { return !table_by_object_.is_empty(); }

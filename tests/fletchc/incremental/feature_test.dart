@@ -199,7 +199,12 @@ compileAndRun(bool useFletchSystem, EncodedResult encodedResult) async {
       }
 
       CommitChangesResult result = await session.runCommand(commands.last);
-      Expect.equals(result.successful, !program.commitChangesShouldFail);
+      if (!result.successful) {
+        print("The CommitChanges() command was not successful: "
+              "${result.message}");
+      }
+      Expect.equals(result.successful, !program.commitChangesShouldFail,
+                    result.message);
 
       if (result.successful) {
         // Set breakpoint in main in case main was replaced.

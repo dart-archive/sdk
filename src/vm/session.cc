@@ -59,6 +59,8 @@ Session::Session(Connection* connection)
       fibers_map_id_(-1),
       stack_(0),
       changes_(0),
+      has_program_update_error_(false),
+      program_update_error_(NULL),
       main_thread_monitor_(Platform::CreateMonitor()),
       main_thread_resume_kind_(kUnknown) {
   ConnectionPrintInterceptor* interceptor =
@@ -538,9 +540,14 @@ void Session::ProcessMessages() {
         WriteBuffer buffer;
         buffer.WriteBoolean(success);
         if (success) {
-          buffer.WriteString("Successfully applied program changes.");
+          buffer.WriteString("Successfully applied program update.");
         } else {
-          buffer.WriteString("Could not apply program changes.");
+          if (program_update_error_ != NULL) {
+            buffer.WriteString(program_update_error_);
+          } else {
+            buffer.WriteString(
+                "An unknown error occured during program update.");
+          }
         }
         connection_->Send(Connection::kCommitChangesResult, buffer);
         break;
@@ -667,7 +674,15 @@ void Session::DeleteMap(int map_index) {
 }
 
 void Session::PushFromMap(int map_index, int64 id) {
-  Push(maps_[map_index]->LookupById(id));
+  bool entry_exists;
+  Object* object = maps_[map_index]->LookupById(id, &entry_exists);
+  if (!entry_exists && !has_program_update_error_) {
+    has_program_update_error_ = true;
+    program_update_error_ =
+        "Received PushFromMap command which referes to a "
+        "non-existent map entry.";
+  }
+  Push(object);
 }
 
 void Session::PopToMap(int map_index, int64 id) {
@@ -983,61 +998,71 @@ bool Session::CommitChanges(int count) {
 
   ASSERT(!program()->is_compact());
 
-  ASSERT(count == changes_.length());
-
-  // TODO(kustermann): Sanity check all changes the compiler gave us.
-  // If we are unable to apply a change, we should continue the program
-  // and "return false".
-
-  bool schemas_changed = false;
-  for (int i = 0; i < count; i++) {
-    Array* array = Array::cast(changes_[i]);
-    Change change = static_cast<Change>(Smi::cast(array->get(0))->value());
-    switch (change) {
-      case kChangeSuperClass:
-        ASSERT(!schemas_changed);
-        CommitChangeSuperClass(array);
-        break;
-      case kChangeMethodTable:
-        ASSERT(!schemas_changed);
-        CommitChangeMethodTable(array);
-        break;
-      case kChangeMethodLiteral:
-        CommitChangeMethodLiteral(array);
-        break;
-      case kChangeStatics:
-        CommitChangeStatics(array);
-        break;
-      case kChangeSchemas:
-        CommitChangeSchemas(array);
-        schemas_changed = true;
-        break;
-      default:
-        UNREACHABLE();
-        break;
+  if (count != changes_.length()) {
+    if (!has_program_update_error_) {
+      has_program_update_error_ = true;
+      program_update_error_ =
+          "The CommitChanges command had a different count of changes than "
+          "the buffered changes.";
     }
+    changes_.Clear();
   }
-  changes_.Clear();
 
-  if (schemas_changed) TransformInstances();
+  if (!has_program_update_error_) {
+    // TODO(kustermann): Sanity check all changes the compiler gave us.
+    // If we are unable to apply a change, we should continue the program
+    // and "return false".
 
-  // Fold the program after applying changes to continue running in the
-  // optimized compact form.
-  //
-  // NOTE: We disable heap validation always if we changed any objects in the
-  // heaps, because [TransformInstances] will install a forwarding pointer and
-  // thereby destroy the class pointer. The heap verification code will traverse
-  // all heaps and doing so requires a valid class pointer.
-  {
-    ProgramFolder program_folder(program());
-    program_folder.Fold(schemas_changed);
+    bool schemas_changed = false;
+    for (int i = 0; i < count; i++) {
+      Array* array = Array::cast(changes_[i]);
+      Change change = static_cast<Change>(Smi::cast(array->get(0))->value());
+      switch (change) {
+        case kChangeSuperClass:
+          ASSERT(!schemas_changed);
+          CommitChangeSuperClass(array);
+          break;
+        case kChangeMethodTable:
+          ASSERT(!schemas_changed);
+          CommitChangeMethodTable(array);
+          break;
+        case kChangeMethodLiteral:
+          CommitChangeMethodLiteral(array);
+          break;
+        case kChangeStatics:
+          CommitChangeStatics(array);
+          break;
+        case kChangeSchemas:
+          CommitChangeSchemas(array);
+          schemas_changed = true;
+          break;
+        default:
+          UNREACHABLE();
+          break;
+      }
+    }
+    changes_.Clear();
+
+    if (schemas_changed) TransformInstances();
+
+    // Fold the program after applying changes to continue running in the
+    // optimized compact form.
+    //
+    // NOTE: We disable heap validation always if we changed any objects in the
+    // heaps, because [TransformInstances] will install a forwarding pointer and
+    // thereby destroy the class pointer. The heap verification code will
+    // traverse all heaps and doing so requires a valid class pointer.
+    {
+      ProgramFolder program_folder(program());
+      program_folder.Fold(schemas_changed);
+    }
   }
 
   if (scheduler != NULL) {
     scheduler->ResumeProgram(program());
   }
 
-  return true;
+  return !has_program_update_error_;
 }
 
 void Session::DiscardChanges() {

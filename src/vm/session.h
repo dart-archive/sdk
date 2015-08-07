@@ -145,6 +145,8 @@ class Session {
   ObjectList stack_;
   ObjectList changes_;
   List<ObjectMap*> maps_;
+  bool has_program_update_error_;
+  const char* program_update_error_;
 
   Monitor* main_thread_monitor_;
   MainThreadResumeKind main_thread_resume_kind_;
