@@ -32,6 +32,7 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/gc_thread.cc \
 	../../../src/vm/heap.cc \
 	../../../src/vm/heap_validator.cc \
+	../../../src/vm/immutable_heap.cc \
 	../../../src/vm/interpreter.cc \
 	../../../src/vm/intrinsics.cc \
 	../../../src/vm/lookup_cache.cc \
