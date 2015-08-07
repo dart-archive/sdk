@@ -22,8 +22,7 @@ import 'dart:collection' show
 
 import 'dart:convert' show
     UTF8,
-    LineSplitter,
-    Utf8Decoder;
+    LineSplitter;
 
 import 'dart:io' show
     BytesBuilder,
@@ -43,6 +42,9 @@ import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
     COMPILER_EXITCODE_CRASH,
     DART_VM_EXITCODE_COMPILE_TIME_ERROR,
     DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+
+import '../../../pkg/fletchc/lib/fletch_vm.dart' show
+    FletchVm;
 
 final Queue<int> sessions = new Queue<int>();
 
@@ -356,8 +358,9 @@ class FletchSessionHelper {
   }
 
   Future<String> spawnVm() async {
-    vmProcess = await Process.start(
-        "$executable-vm", <String>[], environment: environmentOverrides);
+    FletchVm fletchVm = await FletchVm.start(
+        "$executable-vm", environment: environmentOverrides);
+    vmProcess = fletchVm.process;
     String commandDescription = "$executable-vm";
     if (isVerbose) {
       print("Running $commandDescription");
@@ -366,31 +369,27 @@ class FletchSessionHelper {
     vmStdout.writeln(commandDescriptionForLog);
     stdout.writeln('$commandDescriptionForLog &');
 
-    Completer<String> addressCompleter = new Completer<String>();
-    Future stdoutFuture = vmProcess.stdout
-        .transform(new Utf8Decoder())
-        .transform(new LineSplitter())
-        .listen((String line) {
-          if (!addressCompleter.isCompleted) {
-            addressCompleter.complete(
-                line.substring("Waiting for compiler on ".length));
-          }
-          vmStdout.add(UTF8.encode("$line\n"));
-        })
-        .asFuture();
+    Future stdoutFuture =
+        fletchVm.stdoutLines.listen(vmStdout.writeln).asFuture();
+    bool isFirstStderrLine = true;
     Future stderrFuture =
-        addPrefixWhenNotEmpty(vmProcess.stderr, commandDescriptionForLog)
-        .listen(vmStderr.add)
+        fletchVm.stderrLines.listen(
+            (String line) {
+              if (isFirstStderrLine) {
+                vmStdout.writeln(commandDescriptionForLog);
+                isFirstStderrLine = false;
+              }
+              vmStdout.writeln(line);
+            })
         .asFuture();
-    await vmProcess.stdin.close();
 
-    vmExitCodeFuture = vmProcess.exitCode.then((int exitCode) async {
+    vmExitCodeFuture = fletchVm.exitCode.then((int exitCode) async {
       await stdoutFuture;
       await stderrFuture;
       return exitCode;
     });
 
-    return addressCompleter.future;
+    return "${fletchVm.host}:${fletchVm.port}";
   }
 
   Future<bool> shutdownVm(int expectedExitCode) async {

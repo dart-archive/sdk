@@ -39,20 +39,31 @@ main(List<String> arguments) async {
       packageRoot: options.packageRootPath);
   FletchDelta fletchDelta = await compiler.run();
 
+  Socket socket;
   FletchVm vm;
   if (options.connectToExistingVm) {
-    var socket = await Socket.connect("127.0.0.1", options.existingVmPort);
-    vm = new FletchVm.existing(socket);
+    socket = await Socket.connect(
+        InternetAddress.LOOPBACK_IP_V4, options.existingVmPort);
   } else {
-    vm = await FletchVm.start(compiler);
+    String vmPath = compiler.fletchVm.toFilePath();
+    vm = await FletchVm.start(vmPath);
+    vm.stdoutLines.listen((String line) {
+      stdout.writeln('stdout: $line');
+    });
+    vm.stderrLines.listen((String line) {
+      stderr.writeln('stderr: $line');
+    });
+    if (compiler.verbose) {
+      print("Running '$vmPath'");
+    }
+    socket = await vm.connect();
   }
 
-  var lineStream = stdin.transform(new Utf8Decoder())
+  var lineStream = stdin.transform(UTF8.decoder)
                         .transform(new LineSplitter());
-
-  var session = new Session(vm.socket, compiler, fletchDelta.system,
-                            lineStream, stdout, stderr,
-                            vm.process != null ? vm.process.exitCode : null);
+  var session = new Session(
+      socket, compiler, fletchDelta.system,
+      lineStream, stdout, stderr, vm != null ? vm.exitCode : null);
 
   // If we started a vmProcess ourselves, we disable the normal
   // VM standard output as we already get it via the wire protocol.
@@ -72,8 +83,8 @@ main(List<String> arguments) async {
   }
   await session.shutdown();
 
-  if (!options.connectToExistingVm) {
-    exitCode = await vm.process.exitCode;
+  if (vm != null) {
+    exitCode = await vm.exitCode;
     if (exitCode != 0) {
       print("Non-zero exit code from "
             "'${compiler.fletchVm.toFilePath()}' ($exitCode).");

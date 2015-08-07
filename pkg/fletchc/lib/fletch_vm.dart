@@ -2,54 +2,104 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletch.vm;
+library fletchc.fletch_vm;
 
-import 'compiler.dart' show
-    FletchCompiler;
-
+// Please keep this file independent of other libraries in this package as we
+// import this directly into test.dart.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 class FletchVm {
   final Process process;
-  final Socket socket;
 
-  FletchVm(this.process, this.socket);
+  final String host;
 
-  FletchVm.existing(this.socket);
+  final int port;
 
-  static Future<FletchVm> start(FletchCompiler compiler) async {
-    var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
+  final Future<int> exitCode;
 
-    List<String> vmOptions = <String>[
-        '--port=${server.port}',
-    ];
+  final Stream<String> stdoutLines;
 
-    var connectionIterator = new StreamIterator(server);
+  final Stream<String> stderrLines;
 
-    String vmPath = compiler.fletchVm.toFilePath();
+  const FletchVm(
+      this.process,
+      this.host,
+      this.port,
+      this.exitCode,
+      this.stdoutLines,
+      this.stderrLines);
 
-    if (compiler.verbose) {
-      print("Running '$vmPath ${vmOptions.join(" ")}'");
+  Future<Socket> connect() => Socket.connect(host, port);
+
+  static Future<FletchVm> start(
+      String vmPath,
+      {List<String> arguments: const <String>[],
+       Map<String, String> environment}) async {
+    Process process =
+        await Process.start(vmPath, arguments, environment: environment);
+
+    Completer<String> addressCompleter = new Completer<String>();
+    Completer stdoutCompleter = new Completer();
+    Stream<String> stdoutLines = convertStream(
+        process.stdout, stdoutCompleter,
+        (String line) {
+          if (!addressCompleter.isCompleted) {
+            addressCompleter.complete(
+                line.substring("Waiting for compiler on ".length));
+            return false;
+          }
+          return true;
+        });
+
+    Completer stderrCompleter = new Completer();
+    Stream<String> stderrLines = convertStream(process.stderr, stderrCompleter);
+
+    await process.stdin.close();
+
+    Future exitCode = process.exitCode.then((int exitCode) async {
+      await stdoutCompleter.future;
+      await stderrCompleter.future;
+      if (!addressCompleter.isCompleted) {
+        addressCompleter.completeError(
+            "VM exited before print an address on stdout");
+      }
+      return exitCode;
+    });
+
+    List<String> address = (await addressCompleter.future).split(":");
+
+    return new FletchVm(
+        process, address[0], int.parse(address[1]), exitCode,
+        stdoutLines, stderrLines);
+  }
+
+  static Stream<String> convertStream(
+      Stream<List<int>> stream,
+      Completer doneCompleter,
+      [bool onData(String line)]) {
+    StreamController<String> controller = new StreamController<String>();
+    Function handleData;
+    if (onData == null) {
+      handleData = controller.add;
+    } else {
+      handleData = (String line) {
+        if (onData(line)) {
+          controller.add(line);
+        }
+      };
     }
-    var vmProcess = await Process.start(vmPath, vmOptions);
-
-    vmProcess.stdout
+    stream
         .transform(new Utf8Decoder())
         .transform(new LineSplitter())
-        .listen((line) { stderr.writeln('vm stdout: $line'); });
-
-    vmProcess.stderr
-        .transform(new Utf8Decoder())
-        .transform(new LineSplitter())
-        .listen((line) { stderr.writeln('vm stderr: $line'); });
-
-    bool hasValue = await connectionIterator.moveNext();
-    assert(hasValue);
-    var vmSocket = connectionIterator.current;
-    server.close();
-
-    return new FletchVm(vmProcess, vmSocket);
+        .listen(
+            handleData,
+            onError: controller.addError,
+            onDone: () {
+              controller.close();
+              doneCompleter.complete();
+            });
+    return controller.stream;
   }
 }

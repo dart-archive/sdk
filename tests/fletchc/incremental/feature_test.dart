@@ -72,6 +72,9 @@ import 'package:fletchc/session.dart' show
 import 'package:fletchc/src/fletch_backend.dart' show
     FletchBackend;
 
+import 'package:fletchc/fletch_vm.dart' show
+    FletchVm;
+
 import 'program_result.dart';
 
 import 'tests_with_expectations.dart' as tests_with_expectations;
@@ -473,33 +476,22 @@ class TestSession extends Session {
       }
     }
 
-    ServerSocket server =
-        await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
-
     List<String> vmOptions = <String>[
         '-Xvalidate-heaps',
-        '--port=${server.port}',
     ];
 
     print("Running '$vmPath ${vmOptions.join(" ")}'");
-    Process process = await Process.start(vmPath, vmOptions);
-    recordFuture("stdin", process.stdin.close());
-    Stream<String> stdout = process.stdout
-        .transform(new Utf8Decoder())
-        .transform(new LineSplitter());
-    Stream<String> stderr = process.stderr
-        .transform(new Utf8Decoder())
-        .transform(new LineSplitter());
+    FletchVm fletchVm = await FletchVm.start(vmPath, arguments: vmOptions);
 
-    // Unlike [stdout] and [stderr], their corresponding controller cannot
-    // produce an error.
+    // Unlike [fletchvm.stdoutLines] and [fletchvm.stderrLines], their
+    // corresponding controller cannot produce an error.
     StreamController<String> stdoutController = new StreamController<String>();
     StreamController<String> stderrController = new StreamController<String>();
-    recordFuture("stdout", stdout.listen((String line) {
+    recordFuture("stdout", fletchVm.stdoutLines.listen((String line) {
       print('fletch_vm_stdout: $line');
       stdoutController.add(line);
     }).asFuture().whenComplete(stdoutController.close));
-    recordFuture("stderr", stderr.listen((String line) {
+    recordFuture("stderr", fletchVm.stderrLines.listen((String line) {
       print('fletch_vm_stderr: $line');
       stderrController.add(line);
     }).asFuture().whenComplete(stderrController.close));
@@ -511,17 +503,16 @@ class TestSession extends Session {
     // actually be ready to give us a crashed exit code. Exiting early with a
     // failure in case exitCode is ready before server.first or having a
     // timeout on server.first would be possible solutions.
-    var vmSocket = await server.first;
-    server.close();
+    var vmSocket = await fletchVm.connect();
     recordFuture("vmSocket", vmSocket.done);
 
     TestSession session = new TestSession(
-        vmSocket, compiler.helper, fletchDelta.system, process,
+        vmSocket, compiler.helper, fletchDelta.system, fletchVm.process,
         new StreamIterator(stdoutController.stream),
         stderrController.stream,
         futures, exitCodeCompleter.future);
 
-    recordFuture("exitCode", process.exitCode.then((int exitCode) {
+    recordFuture("exitCode", fletchVm.exitCode.then((int exitCode) {
       print("VM exited with exit code: $exitCode.");
       exitCodeCompleter.complete(exitCode);
     }));
