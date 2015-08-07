@@ -1665,4 +1665,15 @@ main() {
 >>>>>>>
 }
 ''',
+  r'''
+compile_time_error_002
+==> main.dart.patch <==
+// Reproduce a crash when a *recoverable* compile-time error is added
+main() {
+<<<<<<< []
+======= []
+  new new();
+>>>>>>>
+}
+''',
 ];
