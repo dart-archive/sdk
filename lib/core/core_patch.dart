@@ -9,6 +9,7 @@ import 'dart:_fletch_system' as fletch;
 part 'double.dart';
 part 'int.dart';
 part 'string.dart';
+part 'case.dart';
 
 const patch = "patch";
 

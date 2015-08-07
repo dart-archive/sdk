@@ -149,52 +149,6 @@ class Utf16 {
   static const int32 kSurrogateOffset = (0x10000 - (0xD800 << 10) - 0xDC00);
 };
 
-class CaseMapping {
- public:
-  // Maps a code point to uppercase.
-  static int32 ToUpper(int32 code_point) {
-    return Convert(code_point, kUppercase);
-  }
-
-  // Maps a code point to lowercase.
-  static int32 ToLower(int32 code_point) {
-    return Convert(code_point, kLowercase);
-  }
-
- private:
-  // Property is a delta to the uppercase mapping.
-  static const int32 kUppercase = 1;
-
-  // Property is a delta to the uppercase mapping.
-  static const int32 kLowercase = 2;
-
-  // Property is an index into the exception table.
-  static const int32 kException = 3;
-
-  // Type bit-field parameters
-  static const int32 kTypeShift = 2;
-  static const int32 kTypeMask = 3;
-
-  // The size of the stage 1 index.
-  // TODO(cshapiro): improve indexing so this value is unnecessary.
-  static const int kStage1Size = 261;
-
-  // The size of a stage 2 block in bytes.
-  static const int kBlockSizeLog2 = 8;
-  static const int kBlockSize = 1 << kBlockSizeLog2;
-
-  static int32 Convert(int32 ch, int32 mapping);
-
-  // Index into the data array.
-  static const uint8_t kStage1[];
-
-  // Data for small code points with one mapping
-  static const int16_t kStage2[];
-
-  // Data for large code points or code points with both mappings.
-  static const int32 kStage2Exception[][2];
-};
-
 }  // namespace fletch
 
 #endif  // SRC_VM_UNICODE_H_

@@ -1132,48 +1132,6 @@ NATIVE(StringSubstring) {
   return result;
 }
 
-static Object* StringTransform(Process* process,
-                               String* str,
-                               int32 (*mapping)(int32 ch)) {
-  // TODO(ajohnsen): A two-pass iteration could filter out the no-transform
-  // cases, thus avoiding allocations.
-  Object* result = process->NewStringUninitialized(str->length());
-  if (result->IsFailure()) return result;
-  String* other = String::cast(result);
-  bool has_mapping = false;
-  int32 dst_max = 0;
-  uword i = 0;
-  CodePointIterator it(str);
-  while (it.Next()) {
-    int32 src = it.Current();
-    int32 dst = mapping(src);
-    if (src != dst) has_mapping = true;
-    word len = Utf16::Length(dst);
-    ASSERT(len == Utf16::Length(src));
-    if (len == 1) {
-      other->set_code_unit(i, dst);
-    } else {
-      ASSERT(len == 2);
-      Utf16::Encode(dst, reinterpret_cast<uint16*>(other->byte_address_for(i)));
-    }
-    i += len;
-    dst_max = Utils::Maximum(dst_max, dst);
-  }
-  if (!has_mapping) return str;
-  ASSERT(Utf::IsBmp(dst_max) || Utf::IsSupplementary(dst_max));
-  return other;
-}
-
-NATIVE(StringToLowerCase) {
-  String* x = String::cast(arguments[0]);
-  return StringTransform(process, x, CaseMapping::ToLower);
-}
-
-NATIVE(StringToUpperCase) {
-  String* x = String::cast(arguments[0]);
-  return StringTransform(process, x, CaseMapping::ToUpper);
-}
-
 NATIVE(DateTimeGetCurrentMs) {
   uint64 us = Platform::GetMicroseconds();
   return process->ToInteger(us / 1000);

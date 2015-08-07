@@ -208,8 +208,6 @@ namespace fletch {
   N(StringLength,                "_StringImpl", "length")                \
   N(StringSetCodeUnitAt,         "_StringImpl", "_setCodeUnitAt")        \
   N(StringSubstring,             "_StringImpl", "_substring")            \
-  N(StringToLowerCase,           "_StringImpl", "toLowerCase")           \
-  N(StringToUpperCase,           "_StringImpl", "toUpperCase")           \
                                                                          \
   N(UriBase,                     "Uri", "_base")                         \
                                                                          \

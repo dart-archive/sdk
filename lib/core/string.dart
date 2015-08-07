@@ -357,9 +357,9 @@ class _StringImpl implements String {
 
   Runes get runes => new Runes(this);
 
-  @fletch.native external String toLowerCase();
+  String toLowerCase() => internalToLowerCase(this);
 
-  @fletch.native external String toUpperCase();
+  String toUpperCase() => internalToUpperCase(this);
 
   static int _charCodeLength(int charCode) {
     return (charCode <= _MAX_CODE_UNIT) ? 1 : 2;
