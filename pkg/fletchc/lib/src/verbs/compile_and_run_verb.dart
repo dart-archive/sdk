@@ -189,7 +189,7 @@ Future<int> compileAndRunTask(
 
   if (options.snapshotPath != null) {
     await session.writeSnapshot(options.snapshotPath);
-  } if (options.testDebugger) {
+  } else if (options.testDebugger) {
     await session.testDebugger(options.testDebuggerCommands);
   } else {
     await session.debug();
