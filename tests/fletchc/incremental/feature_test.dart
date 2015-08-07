@@ -95,7 +95,7 @@ Future<Null> main(List<String> arguments) async {
     testsToRun = arguments.map((String name) => tests[name]);
   }
   for (EncodedResult test in testsToRun) {
-    await compileAndRun(test);
+    await compileAndRun(true, test);
   }
   updateSummary();
 }
@@ -114,7 +114,7 @@ void updateSummary() {
       "($skippedCount skipped, $updateFailedCount failed).");
 }
 
-compileAndRun(EncodedResult encodedResult) async {
+compileAndRun(bool useFletchSystem, EncodedResult encodedResult) async {
   testCount++;
 
   updateSummary();
@@ -127,7 +127,8 @@ compileAndRun(EncodedResult encodedResult) async {
   print("Full program #$testCount:");
   print(numberedLines(program.code));
 
-  IoCompilerTestCase test = new IoCompilerTestCase(program.code);
+  IoCompilerTestCase test =
+      new IoCompilerTestCase(useFletchSystem, program.code);
   FletchDelta fletchDelta = await test.run();
 
   TestSession session = await runFletchVM(test, fletchDelta);
@@ -552,9 +553,9 @@ class TestSession extends Session {
 /// Invoked by ../../fletch_tests/fletch_test_suite.dart.
 Future<Map<String, NoArgFuture>> listTests() {
   Map<String, NoArgFuture> result = <String, NoArgFuture>{};
-  tests.forEach((String name, _) {
-    String testName = 'incremental/encoded/$name';
-    result[testName] = () => main(<String>[name]);
+  tests.forEach((String name, EncodedResult test) {
+    result['incremental/encoded/$name'] = () => main(<String>[name]);
+    result['incremental/deprecated/$name'] = () => compileAndRun(false, test);
   });
   return new Future<Map<String, NoArgFuture>>.value(result);
 }

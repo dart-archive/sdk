@@ -104,9 +104,6 @@ import 'fletchc_incremental.dart' show
 import '../src/fletch_function_builder.dart' show
     FletchFunctionBuilder;
 
-// TODO(ajohnsen): Remove once fully implemented/enabled.
-const bool USE_FLETCH_SYSTEM = const bool.fromEnvironment('use-fletch-system');
-
 typedef void Logger(message);
 
 typedef bool Reuser(
@@ -139,6 +136,10 @@ abstract class _IncrementalCompilerContext {
 
 class IncrementalCompilerContext extends _IncrementalCompilerContext {
   final Set<Uri> _uriWithUpdates = new Set<Uri>();
+
+  final bool useFletchSystem;
+
+  IncrementalCompilerContext(this.useFletchSystem);
 
   void set incrementalCompiler(IncrementalCompiler value) {
     if (super.incrementalCompiler != null) {
@@ -774,7 +775,7 @@ class LibraryUpdater extends FletchFeatures {
   }
 
   FletchDelta computeUpdateFletch(FletchSystem currentSystem) {
-    if (USE_FLETCH_SYSTEM) {
+    if (_context.useFletchSystem) {
       logVerbose("Using FletchSystem.");
       backend.newSystemBuilder(currentSystem);
     }
@@ -848,7 +849,7 @@ class LibraryUpdater extends FletchFeatures {
 
     List<Command> updates = <Command>[const commands_lib.PrepareForChanges()];
 
-    if (USE_FLETCH_SYSTEM) {
+    if (_context.useFletchSystem) {
       FletchSystem system = backend.systemBuilder.computeSystem(
           backend.context,
           updates);

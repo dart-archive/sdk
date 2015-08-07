@@ -64,18 +64,20 @@ class IncrementalCompiler {
   final List<String> options;
   final CompilerOutput outputProvider;
   final Map<String, dynamic> environment;
-  final IncrementalCompilerContext _context = new IncrementalCompilerContext();
+  final IncrementalCompilerContext _context;
 
   implementation.FletchCompiler _compiler;
 
-  IncrementalCompiler({
-      this.libraryRoot,
-      this.packageRoot,
-      this.inputProvider,
-      this.diagnosticHandler,
-      this.options,
-      this.outputProvider,
-      this.environment}) {
+  IncrementalCompiler(
+      bool useFletchSystem,
+      {this.libraryRoot,
+       this.packageRoot,
+       this.inputProvider,
+       this.diagnosticHandler,
+       this.options,
+       this.outputProvider,
+       this.environment})
+      : _context = new IncrementalCompilerContext(useFletchSystem) {
     // if (libraryRoot == null) {
     //   throw new ArgumentError('libraryRoot is null.');
     // }

@@ -49,12 +49,16 @@ const String _SDK_DIR =
 class IoCompilerTestCase extends CompilerTestCase {
   final IncrementalCompiler incrementalCompiler;
 
-  IoCompilerTestCase.init(/* Map or String */ source, Uri uri)
-      : this.incrementalCompiler = makeCompiler(source, uri),
+  IoCompilerTestCase.init(
+      bool useFletchSystem, /* Map or String */ source, Uri uri)
+      : this.incrementalCompiler = makeCompiler(useFletchSystem, source, uri),
         super(uri);
 
-  IoCompilerTestCase(/* Map or String */ source, [String path])
-      : this.init(source, customUri(path == null ? 'main.dart' : path));
+  IoCompilerTestCase(
+      bool useFletchSystem, /* Map or String */ source, [String path])
+      : this.init(
+          useFletchSystem,
+          source, customUri(path == null ? 'main.dart' : path));
 
   Future<FletchDelta> run() {
     return incrementalCompiler.compile(scriptUri).then((success) {
@@ -65,6 +69,7 @@ class IoCompilerTestCase extends CompilerTestCase {
   }
 
   static IncrementalCompiler makeCompiler(
+      bool useFletchSystem,
       /* Map or String */ source,
       Uri mainUri) {
     Uri libraryRoot = new Uri(scheme: SDK_SCHEME, path: '/');
@@ -85,6 +90,7 @@ class IoCompilerTestCase extends CompilerTestCase {
         new IoInputProvider(sources, libraryRoot, packageRoot);
 
     return new IncrementalCompiler(
+        useFletchSystem,
         // options: ['--verbose'],
         // libraryRoot: libraryRoot,
         packageRoot: packageRoot,

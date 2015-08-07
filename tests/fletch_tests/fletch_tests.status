@@ -6,26 +6,63 @@ self/testAlwaysFails: Fail, OK # This is a test of this suite, failure is expect
 zone_helper/testAlwaysFails: Fail, OK # This is a test of this suite, failure is expected.
 self/testNeverCompletes: Timeout # This is a test of this suite, timeout is expected.
 
-incremental/encoded/add_class: Fail
+# The following tests use the deprecated LibraryUpdater method for computing
+# updates
+incremental/deprecated/add_class: Fail
+incremental/deprecated/add_instance_method: Fail
+incremental/deprecated/bad_stack_trace_repro: Fail
+incremental/deprecated/call_instance_tear_off_named: Fail
+incremental/deprecated/call_named_arguments_1: Fail
+incremental/deprecated/call_named_arguments_2: Fail
+incremental/deprecated/change_supertype: Fail
+incremental/deprecated/compile_time_error_002: Fail
+incremental/deprecated/compound_constants: Fail
+incremental/deprecated/constants: Fail
+incremental/deprecated/constants_of_new_classes: Fail
+incremental/deprecated/interceptor_classes: Fail
+incremental/deprecated/lazy_static: Fail
+incremental/deprecated/modify_instance_method: Fail
+incremental/deprecated/modify_static_method: Fail
+incremental/deprecated/multiple_libraries: Fail
+incremental/deprecated/newly_instantiated_class: Fail
+incremental/deprecated/newly_instantiated_class_X: Fail
+incremental/deprecated/newly_instantiated_class_with_fields: Fail
+incremental/deprecated/newly_instantiated_subclases_two_updates: Fail
+incremental/deprecated/newly_instantiated_superclasses_two_updates: Fail
+incremental/deprecated/stored_closure: Fail
+incremental/deprecated/stored_instance_tearoff: Fail
+incremental/deprecated/super_classes_of_directly_instantiated: Fail
+
+# The following tests use FletchSystem/FletchDelta
+incremental/encoded/add_instance_field: Fail
 incremental/encoded/add_instance_method: Fail
 incremental/encoded/bad_stack_trace_repro: Fail
 incremental/encoded/call_instance_tear_off_named: Fail
 incremental/encoded/call_named_arguments_1: Fail
 incremental/encoded/call_named_arguments_2: Fail
 incremental/encoded/change_supertype: Fail
-incremental/encoded/compound_constants: Fail
-incremental/encoded/constants: Fail
-incremental/encoded/constants_of_new_classes: Fail
-incremental/encoded/interceptor_classes: Fail
+incremental/encoded/compile_time_error_002: Fail
+incremental/encoded/instance_field_end: Fail
+incremental/encoded/instance_field_middle: Fail
 incremental/encoded/lazy_static: Fail
 incremental/encoded/modify_instance_method: Fail
 incremental/encoded/modify_static_method: Fail
 incremental/encoded/multiple_libraries: Fail
 incremental/encoded/newly_instantiated_class: Fail
 incremental/encoded/newly_instantiated_class_X: Fail
-incremental/encoded/newly_instantiated_class_with_fields: Fail
-incremental/encoded/newly_instantiated_subclases_two_updates: Fail
-incremental/encoded/newly_instantiated_superclasses_two_updates: Fail
+incremental/encoded/preserving_identity_hashcode: Fail
+incremental/encoded/remove_class: Fail
+incremental/encoded/remove_class_with_static_method: Fail
+incremental/encoded/remove_instance_field: Fail
+incremental/encoded/remove_instance_method: Fail
+incremental/encoded/remove_instance_method_super_access: Fail
+incremental/encoded/remove_static_method: Fail
+incremental/encoded/remove_top_level_method: Fail
+incremental/encoded/signature_change_instance_method: Fail
+incremental/encoded/signature_change_static_method: Fail
+incremental/encoded/signature_change_top_level_method: Fail
 incremental/encoded/stored_closure: Fail
 incremental/encoded/stored_instance_tearoff: Fail
-incremental/encoded/super_classes_of_directly_instantiated: Fail
+incremental/encoded/subclass_schema_1: Fail
+incremental/encoded/subclass_schema_2: Fail
+incremental/encoded/super_schema: Fail

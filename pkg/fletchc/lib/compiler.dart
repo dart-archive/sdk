@@ -291,6 +291,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   IncrementalCompiler newIncrementalCompiler(
       {List<String> options: const <String>[]}) {
     return new IncrementalCompiler(
+        true, // Use FletchSystem
         libraryRoot: _compiler.libraryRoot,
         packageRoot: _compiler.packageRoot,
         inputProvider: _compiler.provider,
