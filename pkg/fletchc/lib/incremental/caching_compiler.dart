@@ -41,15 +41,18 @@ Future<Compiler> reuseCompiler(
       compiler.enqueuer.resolution.hasEnqueuedReflectiveElements ||
       compiler.deferredLoadTask.isProgramSplit) {
     if (compiler != null && compiler.hasIncrementalSupport) {
-      print('***FLUSH***');
       if (compiler.hasCrashed) {
-        print('Unable to reuse compiler due to crash.');
+        throw new IncrementalCompilationFailed(
+            "Unable to reuse compiler due to crash");
       } else if (compiler.enqueuer.resolution.hasEnqueuedReflectiveElements) {
-        print('Unable to reuse compiler due to dart:mirrors.');
+        throw new IncrementalCompilationFailed(
+            "Unable to reuse compiler due to dart:mirrors");
       } else if (compiler.deferredLoadTask.isProgramSplit) {
-        print('Unable to reuse compiler due to deferred loading.');
+        throw new IncrementalCompilationFailed(
+            "Unable to reuse compiler due to deferred loading");
       } else {
-        print('Unable to reuse compiler.');
+        throw new IncrementalCompilationFailed(
+            "Unable to reuse compiler");
       }
     }
     oldTag.makeCurrent();

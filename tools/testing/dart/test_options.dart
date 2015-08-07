@@ -491,6 +491,13 @@ Note: currently only implemented for dart2js.''',
               [],
               1,
               type: 'int'),
+          new _TestOptionSpecification(
+              'enable_incremental_compilation',
+              "Enable incremental compilation during testing.",
+              ['--enable-incremental-compilation'],
+              [],
+              false,
+              type: 'bool'),
           ];
   }
 

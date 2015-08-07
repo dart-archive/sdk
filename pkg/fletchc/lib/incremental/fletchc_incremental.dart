@@ -97,7 +97,10 @@ class IncrementalCompiler {
 
   implementation.FletchCompiler get compiler => _compiler;
 
+  /// Perform a full compile of [script]. This will reset the incremental
+  /// compiler.
   Future<bool> compile(Uri script) {
+    _compiler = null;
     return _reuseCompiler(null).then((Compiler compiler) {
       _compiler = compiler;
       return compiler.run(script);
@@ -121,6 +124,8 @@ class IncrementalCompiler {
         reuseLibrary: reuseLibrary);
   }
 
+  /// Perform an incremental compilation of [updatedFiles]. [compile] must have
+  /// been called once before calling this method.
   Future<FletchDelta> compileUpdates(
       FletchSystem currentSystem,
       Map<Uri, Uri> updatedFiles,

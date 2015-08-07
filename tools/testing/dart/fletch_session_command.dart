@@ -46,20 +46,24 @@ import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
 import '../../../pkg/fletchc/lib/fletch_vm.dart' show
     FletchVm;
 
-final Queue<int> sessions = new Queue<int>();
+const String isIncrementalCompilationEnabledFlag =
+    "test.fletch_session_command.is_incremental_enabled";
+
+final Queue<FletchSessionMirror> sessions = new Queue<FletchSessionMirror>();
 
 int sessionCount = 0;
 
-int getAvailableSessionId() {
+/// Return an available [FletchSessionMirror] or construct a new.
+FletchSessionMirror getAvailableSession() {
   if (sessions.isEmpty) {
-    return sessionCount++;
+    return new FletchSessionMirror(sessionCount++);
   } else {
     return sessions.removeFirst();
   }
 }
 
-void returnSessionId(int id) {
-  sessions.addLast(id);
+void returnSession(FletchSessionMirror session) {
+  sessions.addLast(session);
 }
 
 class FletchSessionCommand implements Command {
@@ -67,12 +71,14 @@ class FletchSessionCommand implements Command {
   final String script;
   final List<String> arguments;
   final Map<String, String> environmentOverrides;
+  final bool isIncrementalCompilationEnabled;
 
   FletchSessionCommand(
       this.executable,
       this.script,
       this.arguments,
-      this.environmentOverrides);
+      this.environmentOverrides,
+      this.isIncrementalCompilationEnabled);
 
   String get displayName => "fletch_session";
 
@@ -80,6 +86,8 @@ class FletchSessionCommand implements Command {
 
   String get reproductionCommand {
     return "${Platform.executable} -c "
+        "-D$isIncrementalCompilationEnabledFlag="
+        "$isIncrementalCompilationEnabled "
         "tools/testing/dart/fletch_session_command.dart "
         "$executable $script ${arguments.join(' ')}";
   }
@@ -101,26 +109,57 @@ class FletchSessionCommand implements Command {
 
     FletchSessionHelper fletch =
         new FletchSessionHelper(
-            getAvailableSessionId(), executable, environmentOverrides,
+            getAvailableSession(), executable, environmentOverrides,
             verbose, superVerbose);
+
+    fletch.sessionMirror.printLoggedCommands(fletch.stdout, executable);
 
     Stopwatch sw = new Stopwatch()..start();
     int exitCode = COMPILER_EXITCODE_CRASH;
+    bool endedSession = false;
     try {
-      await fletch.run(["create", "session", fletch.session]);
+      if (!fletch.sessionMirror.isCreatedInPersistentProcess) {
+        int createSessionStatus = await fletch.run(
+            ["create", "session", fletch.sessionName], checkExitCode: false);
+        if (createSessionStatus != 0 && createSessionStatus != 1) {
+          throw new UnexpectedExitCode(
+              createSessionStatus, executable,
+              ["create", "session", fletch.sessionName]);
+        }
+        fletch.sessionMirror.isCreatedInPersistentProcess = true;
+      }
       try {
         await fletch.runInSession(["compile", "file", script]);
         String vmSocketAddress = await fletch.spawnVm();
         await fletch.runInSession(["attach", "tcp_socket", vmSocketAddress]);
         exitCode = await fletch.runInSession(["x-run"], checkExitCode: false);
       } finally {
-        await fletch.run(["x-end", "session", fletch.session]);
-        returnSessionId(fletch.sessionId);
         await fletch.shutdownVm(exitCode);
+      }
+      if (!isIncrementalCompilationEnabled) {
+        endedSession = true;
+        await fletch.run(["x-end", "session", fletch.sessionName]);
       }
     } on UnexpectedExitCode catch (error) {
       fletch.stderr.writeln("$error");
       exitCode = error.exitCode;
+      try {
+        if (!endedSession) {
+          // TODO(ahe): Only end if there's a crash.
+          endedSession = true;
+          await fletch.run(["x-end", "session", fletch.sessionName]);
+        }
+      } on UnexpectedExitCode catch (error) {
+        fletch.stderr.writeln("$error");
+        // TODO(ahe): Error ignored, long term we should be able to guarantee
+        // that shutting down a session never leads to an error.
+      }
+    }
+
+    if (endedSession) {
+      returnSession(new FletchSessionMirror(fletch.sessionMirror.id));
+    } else {
+      returnSession(fletch.sessionMirror);
     }
 
     return new FletchTestCommandOutput(
@@ -259,7 +298,11 @@ class BytesOutputSink implements Sink<List<int>> {
   }
 
   void writeln(String text) {
-    add(UTF8.encode("$text\n"));
+    writeText("$text\n");
+  }
+
+  void writeText(String text) {
+    add(UTF8.encode(text));
   }
 
   void close() {
@@ -270,9 +313,9 @@ class BytesOutputSink implements Sink<List<int>> {
 class FletchSessionHelper {
   final String executable;
 
-  final int sessionId;
+  final FletchSessionMirror sessionMirror;
 
-  final String session;
+  final String sessionName;
 
   final Map<String, String> environmentOverrides;
 
@@ -291,13 +334,13 @@ class FletchSessionHelper {
   Future<int> vmExitCodeFuture;
 
   FletchSessionHelper(
-      int sessionId,
+      FletchSessionMirror sessionMirror,
       this.executable,
       this.environmentOverrides,
       this.isVerbose,
       bool superVerbose)
-      : sessionId = sessionId,
-        session = '$sessionId',
+      : sessionMirror = sessionMirror,
+        sessionName = sessionMirror.makeSessionName(),
         stdout = new BytesOutputSink(superVerbose),
         stderr = new BytesOutputSink(superVerbose),
         vmStdout = new BytesOutputSink(superVerbose),
@@ -324,6 +367,7 @@ class FletchSessionHelper {
   Future<int> run(
       List<String> arguments,
       {bool checkExitCode: true}) async {
+    sessionMirror.logCommand(arguments);
     Process process = await Process.start(
         "$executable", arguments, environment: environmentOverrides);
     String commandDescription = "$executable ${arguments.join(' ')}";
@@ -353,7 +397,7 @@ class FletchSessionHelper {
       List<String> arguments,
       {bool checkExitCode: true}) {
     return run(
-        []..addAll(arguments)..addAll(["in", "session", session]),
+        []..addAll(arguments)..addAll(["in", "session", sessionName]),
         checkExitCode: checkExitCode);
   }
 
@@ -413,13 +457,48 @@ class FletchSessionHelper {
   }
 }
 
+/// Represents a session in the persistent Fletch driver process.
+class FletchSessionMirror {
+  final int id;
+
+  final List<List<String>> internalLoggedCommands = <List<String>>[];
+
+  /// When this object is created, its corresponding session in the fletch
+  /// driver process hasn't been created yet.
+  bool isCreatedInPersistentProcess = false;
+
+  FletchSessionMirror(this.id);
+
+  void logCommand(List<String> command) {
+    internalLoggedCommands.add(command);
+  }
+
+  void printLoggedCommands(BytesOutputSink sink, String executable) {
+    sink.writeln("Previous commands in this sesssion:");
+    for (List<String> command in internalLoggedCommands) {
+      sink.writeText(executable);
+      for (String argument in command) {
+        sink.writeText(" ");
+        sink.writeText(argument);
+      }
+      sink.writeln("");
+    }
+    sink.writeln("");
+  }
+
+  String makeSessionName() => '$id';
+}
+
 Future<Null> main(List<String> arguments) async {
   String executable = arguments.first;
   String script = arguments[1];
   arguments = arguments.skip(2).toList();
   Map<String, String> environmentOverrides = <String, String>{};
+  bool isIncrementalCompilationEnabled = const bool.fromEnvironment(
+      isIncrementalCompilationEnabledFlag);
   FletchSessionCommand command = new FletchSessionCommand(
-      executable, script, arguments, environmentOverrides);
+      executable, script, arguments, environmentOverrides,
+      isIncrementalCompilationEnabled);
   FletchTestCommandOutput output =
       await command.run(0, true, superVerbose: true);
   print("Test outcome: ${output.decodeExitCode()}");

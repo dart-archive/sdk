@@ -146,6 +146,10 @@ class SessionState {
     compilationResults.add(delta);
   }
 
+  void resetCompiler() {
+    compilationResults.clear();
+  }
+
   void attachCommandSender(CommandSender sender) {
     stdoutSink.attachCommandSender((d) => sender.sendStdoutBytes(d));
     stderrSink.attachCommandSender((d) => sender.sendStderrBytes(d));

@@ -6,6 +6,9 @@ library fletchc.verbs.compile_verb;
 
 import 'infrastructure.dart';
 
+import '../../incremental/fletchc_incremental.dart' show
+    IncrementalCompilationFailed;
+
 import '../driver/exit_codes.dart' show
     COMPILER_EXITCODE_CRASH;
 
@@ -47,7 +50,7 @@ Uri resolveUserInputFile(String script) {
 }
 
 Future<int> compileTask(String script) async {
-  Uri previousScript = SessionState.current.script;
+  Uri firstScript = SessionState.current.script;
   List<FletchDelta> previousResults = SessionState.current.compilationResults;
   Uri newScript = resolveUserInputFile(script);
 
@@ -56,11 +59,23 @@ Future<int> compileTask(String script) async {
   FletchDelta newResult;
   try {
     if (previousResults.isEmpty) {
+      SessionState.current.script = newScript;
       await compiler.compile(newScript);
       newResult = compiler.computeInitialDelta();
     } else {
-      newResult = await compiler.compileUpdates(
-          previousResults.last.system, <Uri, Uri>{previousScript: newScript});
+      try {
+        print("Compiling difference from $firstScript to $newScript");
+        newResult = await compiler.compileUpdates(
+            previousResults.last.system, <Uri, Uri>{firstScript: newScript},
+            logTime: print, logVerbose: print);
+      } on IncrementalCompilationFailed catch (error) {
+        print(error);
+        print("Attempting full compile...");
+        SessionState.current.resetCompiler();
+        SessionState.current.script = newScript;
+        await compiler.compile(newScript);
+        newResult = compiler.computeInitialDelta();
+      }
     }
   } catch (error, stackTrace) {
     // Don't let a compiler crash bring down the session.
@@ -70,10 +85,9 @@ Future<int> compileTask(String script) async {
     }
     return COMPILER_EXITCODE_CRASH;
   }
-  SessionState.current.script = newScript;
   SessionState.current.addCompilationResult(newResult);
 
-  print("Compiled '$script' to ${newResult.commands.length} commands");
+  print("Compiled '$script' to ${newResult.commands.length} commands\n\n\n");
 
   return 0;
 }
