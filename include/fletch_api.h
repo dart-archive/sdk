@@ -12,11 +12,11 @@
 #endif
 
 // Setup must be called before using any of the other API methods.
-FLETCH_EXPORT void FletchSetup();
+FLETCH_EXPORT void FletchSetup(void);
 
 // TearDown should be called when an application is done using the
 // fletch API in order to free up resources.
-FLETCH_EXPORT void FletchTearDown();
+FLETCH_EXPORT void FletchTearDown(void);
 
 // Wait for a debugger connection. The debugger will build the program
 // to run in the VM and start it.
