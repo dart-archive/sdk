@@ -25,6 +25,8 @@ import 'message_tests.dart' as message_tests;
 
 import 'print_backtrace_tests.dart' as print_backtrace;
 
+import '../service_tests/service_tests.dart' as service_tests;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -67,4 +69,6 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'print_backtrace/simulateBadBacktraceHack':
       print_backtrace.simulateBadBacktraceHack,
   'print_backtrace/simulateBadBacktrace': print_backtrace.simulateBadBacktrace,
+
+  'service_tests/*': service_tests.listTests,
 };

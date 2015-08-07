@@ -92,6 +92,7 @@ class FletchTestSuite extends TestSuite {
         runtimeConfiguration.dartBinary,
         ['-Dfletch-vm=$buildDir/fletch-vm',
          '-Ddart-sdk=../dart/sdk/',
+         '-Dtest.dart.build-dir=$buildDir',
          '-c',
          '-ppackage/',
          '$testSuiteDir/fletch_test_suite.dart']);
