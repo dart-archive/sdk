@@ -9,12 +9,6 @@ import 'infrastructure.dart';
 import 'dart:async' show
     Timer;
 
-import 'dart:collection' show
-    Queue;
-
-import '../../session.dart' show
-    Session; // Only for documentation.
-
 import '../../commands.dart' as commands_lib;
 
 import '../../commands.dart' show

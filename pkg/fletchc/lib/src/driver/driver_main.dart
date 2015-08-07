@@ -118,7 +118,6 @@ class ByteCommandSender extends CommandSender {
   }
 
   void sendDataCommand(DriverCommand command, List<int> data) {
-    int payloadSize = data.length + 4;
     new CommandBuffer<DriverCommand>()
         ..addUint32(data.length)
         ..addUint8List(data)

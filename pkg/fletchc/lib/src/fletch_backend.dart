@@ -1189,6 +1189,8 @@ class FletchBackend extends Backend {
         return compiler.patchParser.patchLibrary(loader, patchUri, library);
       }
     }
+
+    return null;
   }
 
   bool isBackendLibrary(LibraryElement library) {

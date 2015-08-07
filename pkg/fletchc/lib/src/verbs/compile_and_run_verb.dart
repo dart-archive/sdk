@@ -27,8 +27,6 @@ import '../../compiler.dart' show
     FletchCompiler,
     StringOrUri;
 
-import '../../commands.dart' as commands_lib;
-
 import '../../session.dart';
 
 import '../driver/driver_commands.dart' show
@@ -41,9 +39,6 @@ import '../driver/session_manager.dart' show
 
 import '../driver/options.dart' show
     Options;
-
-import '../diagnostic.dart' show
-    throwInternalError;
 
 import 'documentation.dart' show
     compileAndRunDocumentation;

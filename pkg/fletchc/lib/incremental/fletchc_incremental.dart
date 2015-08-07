@@ -28,16 +28,11 @@ import 'library_updater.dart' show
     LibraryUpdater,
     Logger;
 
-import 'package:compiler/src/js/js.dart' as jsAst;
-
 import '../compiler.dart' show
     FletchCompiler;
 
 import '../src/fletch_compiler.dart' as implementation show
     FletchCompiler;
-
-import '../commands.dart' show
-    Command;
 
 import '../fletch_system.dart';
 

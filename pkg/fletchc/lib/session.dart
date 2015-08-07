@@ -8,7 +8,6 @@ import 'dart:core' hide StackTrace;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' hide exit;
-import 'dart:io' as io;
 
 import 'dart:typed_data' show
     ByteData,
@@ -397,7 +396,7 @@ class Session extends FletchVmSession {
     }
     writeStdoutLine("Breakpoints:");
     for (var bp in debugState.breakpoints.values) {
-      writeStdoutLine(bp);
+      writeStdoutLine('$bp');
     }
   }
 

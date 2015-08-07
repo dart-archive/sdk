@@ -59,10 +59,6 @@ export '../driver/session_manager.dart' show
     SessionState,
     UserSession;
 
-import '../diagnostic.dart' show
-    DiagnosticKind,
-    throwFatalError;
-
 export '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;

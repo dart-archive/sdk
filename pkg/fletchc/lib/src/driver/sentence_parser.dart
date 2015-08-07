@@ -4,9 +4,6 @@
 
 library fletchc.driver.sentence_parser;
 
-import 'dart:async' show
-  Future;
-
 import 'dart:convert' show
     JSON;
 

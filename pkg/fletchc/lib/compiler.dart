@@ -37,9 +37,6 @@ import 'package:compiler/src/elements/elements.dart' show
 import 'package:compiler/src/filenames.dart' show
     appendSlash;
 
-import 'src/fletch_function_builder.dart' show
-    FletchFunctionBuilder;
-
 import 'src/debug_info.dart';
 import 'src/class_debug_info.dart';
 
