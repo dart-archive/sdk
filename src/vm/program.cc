@@ -326,9 +326,9 @@ void Program::CollectImmutableGarbage() {
   // [ImmutableHeap], so we can merge them now.
   immutable_heap()->MergeParts();
 
-#ifdef DEBUG
-  ValidateHeapsAreConsistent();
-#endif
+  if (Flags::validate_heaps) {
+    ValidateHeapsAreConsistent();
+  }
 
   Heap* heap = immutable_heap()->heap();
   Space* from = heap->space();
@@ -338,10 +338,12 @@ void Program::CollectImmutableGarbage() {
   ScavengeVisitor scavenger(from, to);
   Process* current = process_list_head_;
   while (current != NULL) {
+    // NOTE: We could check here if the storebuffer grew to big and do a mutable
+    // collection, but if a session thread is accessing the stacks of a process
+    // at the same time, this is not safe.
+    // TODO(kustermann): We should allow the session thread to pause immutable
+    // collections so a debugger can inspect everything else.
     current->TakeChildHeaps();
-    if (current->store_buffer()->ShouldGcMutableSpace()) {
-      current->CollectMutableGarbage();
-    }
     current->IterateRoots(&scavenger);
     current->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
 
@@ -352,9 +354,9 @@ void Program::CollectImmutableGarbage() {
   heap->ProcessWeakPointers();
   heap->ReplaceSpace(to);
 
-#ifdef DEBUG
-  ValidateHeapsAreConsistent();
-#endif
+  if (Flags::validate_heaps) {
+    ValidateHeapsAreConsistent();
+  }
 
   scheduler->ResumeProgram(this);
 }
