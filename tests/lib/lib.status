@@ -55,7 +55,7 @@ async/timer_test: CompileTimeError
 async/catch_errors16_test: Fail
 async/catch_errors17_test: Fail
 async/catch_errors19_test: RuntimeError
-async/catch_errors21_test: Crash
+async/catch_errors21_test: Crash, Fail
 async/catch_errors22_test: RuntimeError
 async/catch_errors23_test: Fail
 async/catch_errors24_test: RuntimeError
