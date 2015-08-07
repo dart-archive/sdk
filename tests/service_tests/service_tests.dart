@@ -14,9 +14,12 @@ import 'dart:async' show
 import 'package:expect/expect.dart' show
     Expect;
 
-const SERVICE_TESTS = const <String>[
-    'conformance',
-    'performance',
+import '../../samples/todomvc/todomvc_service_tests.dart' as todomvc;
+
+List<ServiceTest> SERVICE_TESTS = <ServiceTest>[
+    new StandardServiceTest('conformance'),
+    new StandardServiceTest('performance'),
+    todomvc.serviceTest,
 ];
 
 /// Absolute path to the build directory.
@@ -29,16 +32,23 @@ final String generatedDirectory = '$buildDirectory/generated_service_tests';
 
 final String fletchExecutable = '$buildDirectory/fletch';
 
-class ServiceTest {
+abstract class ServiceTest {
+  String name;
+  String servicePath;
+  String snapshotPath;
+  String executablePath;
+  String get outputDirectory => '$generatedDirectory/$name';
+}
+
+class StandardServiceTest extends ServiceTest {
   final String name;
-  ServiceTest(this.name);
+  StandardServiceTest(this.name);
 
   String get serviceFile => '${name}_service_impl.dart';
   String get snapshotFile => '$name.snapshot';
   String get executableFile => 'service_${name}_test';
 
   String get inputDirectory => '$thisDirectory/$name';
-  String get outputDirectory => '$generatedDirectory/$name';
 
   String get servicePath => '$inputDirectory/$serviceFile';
   String get snapshotPath => '$outputDirectory/$snapshotFile';
@@ -82,8 +92,8 @@ typedef Future NoArgFuture();
 
 Future<Map<String, NoArgFuture>> listTests() async {
   var tests = <String, NoArgFuture>{};
-  for (var test in SERVICE_TESTS) {
-    tests['service_tests/$test'] = () => performTest(new ServiceTest(test));
+  for (ServiceTest test in SERVICE_TESTS) {
+    tests['service_tests/${test.name}'] = () => performTest(test);
   }
   return tests;
 }
