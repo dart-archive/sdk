@@ -25,9 +25,9 @@ const String buildDirectory =
 
 const String thisDirectory = 'tests/service_tests';
 
-const String generatedDirectory = '$buildDirectory/generated_service_tests';
+final String generatedDirectory = '$buildDirectory/generated_service_tests';
 
-const String fletchExecutable = '$buildDirectory/fletch';
+final String fletchExecutable = '$buildDirectory/fletch';
 
 class ServiceTest {
   final String name;
@@ -76,21 +76,14 @@ Future<Null> performTest(ServiceTest test) async {
   await runSnapshot(test);
 }
 
-// Test entry points.
+// Test entry point.
 
 typedef Future NoArgFuture();
 
 Future<Map<String, NoArgFuture>> listTests() async {
-  var tests = new Map();
+  var tests = <String, NoArgFuture>{};
   for (var test in SERVICE_TESTS) {
     tests['service_tests/$test'] = () => performTest(new ServiceTest(test));
   }
   return tests;
-}
-
-Future<Null> main(List<String> arguments) async {
-  List<String> tests = arguments.isEmpty ? SERVICE_TESTS : arguments;
-  for (String test in tests) {
-    await performTest(new ServiceTest(test));
-  }
 }
