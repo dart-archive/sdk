@@ -38,70 +38,7 @@ void TodoMVCService::createItemAsync(BoxedStringBuilder title, void (*callback)(
   title.InvokeMethodAsync(service_id_, kCreateItemId_, Unwrap_void_8, reinterpret_cast<void*>(callback), callback_data);
 }
 
-static const MethodId kDeleteItemId_ = reinterpret_cast<MethodId>(2);
-
-void TodoMVCService::deleteItem(int32_t id) {
-  static const int kSize = 64;
-  char _bits[kSize];
-  char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 56) = id;
-  ServiceApiInvoke(service_id_, kDeleteItemId_, _buffer, kSize);
-}
-
-void TodoMVCService::deleteItemAsync(int32_t id, void (*callback)(void*), void* callback_data) {
-  static const int kSize = 64 + 0 * sizeof(void*);
-  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 56) = id;
-  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
-  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
-  ServiceApiInvokeAsync(service_id_, kDeleteItemId_, Unwrap_void_8, _buffer, kSize);
-}
-
-static const MethodId kCompleteItemId_ = reinterpret_cast<MethodId>(3);
-
-void TodoMVCService::completeItem(int32_t id) {
-  static const int kSize = 64;
-  char _bits[kSize];
-  char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 56) = id;
-  ServiceApiInvoke(service_id_, kCompleteItemId_, _buffer, kSize);
-}
-
-void TodoMVCService::completeItemAsync(int32_t id, void (*callback)(void*), void* callback_data) {
-  static const int kSize = 64 + 0 * sizeof(void*);
-  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 56) = id;
-  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
-  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
-  ServiceApiInvokeAsync(service_id_, kCompleteItemId_, Unwrap_void_8, _buffer, kSize);
-}
-
-static const MethodId kUncompleteItemId_ = reinterpret_cast<MethodId>(4);
-
-void TodoMVCService::uncompleteItem(int32_t id) {
-  static const int kSize = 64;
-  char _bits[kSize];
-  char* _buffer = _bits;
-  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 56) = id;
-  ServiceApiInvoke(service_id_, kUncompleteItemId_, _buffer, kSize);
-}
-
-void TodoMVCService::uncompleteItemAsync(int32_t id, void (*callback)(void*), void* callback_data) {
-  static const int kSize = 64 + 0 * sizeof(void*);
-  char* _buffer = reinterpret_cast<char*>(malloc(kSize));
-  *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
-  *reinterpret_cast<int32_t*>(_buffer + 56) = id;
-  *reinterpret_cast<void**>(_buffer + 40) = reinterpret_cast<void*>(callback);
-  *reinterpret_cast<void**>(_buffer + 32) = callback_data;
-  ServiceApiInvokeAsync(service_id_, kUncompleteItemId_, Unwrap_void_8, _buffer, kSize);
-}
-
-static const MethodId kClearItemsId_ = reinterpret_cast<MethodId>(5);
+static const MethodId kClearItemsId_ = reinterpret_cast<MethodId>(2);
 
 void TodoMVCService::clearItems() {
   static const int kSize = 64;
@@ -120,7 +57,7 @@ void TodoMVCService::clearItemsAsync(void (*callback)(void*), void* callback_dat
   ServiceApiInvokeAsync(service_id_, kClearItemsId_, Unwrap_void_8, _buffer, kSize);
 }
 
-static const MethodId kDispatchId_ = reinterpret_cast<MethodId>(6);
+static const MethodId kDispatchId_ = reinterpret_cast<MethodId>(3);
 
 void TodoMVCService::dispatch(uint16_t id) {
   static const int kSize = 64;
@@ -141,7 +78,7 @@ void TodoMVCService::dispatchAsync(uint16_t id, void (*callback)(void*), void* c
   ServiceApiInvokeAsync(service_id_, kDispatchId_, Unwrap_void_8, _buffer, kSize);
 }
 
-static const MethodId kSyncId_ = reinterpret_cast<MethodId>(7);
+static const MethodId kSyncId_ = reinterpret_cast<MethodId>(4);
 
 PatchSet TodoMVCService::sync() {
   static const int kSize = 64;
@@ -176,7 +113,7 @@ void TodoMVCService::syncAsync(void (*callback)(PatchSet, void*), void* callback
   ServiceApiInvokeAsync(service_id_, kSyncId_, Unwrap_PatchSet_8, _buffer, kSize);
 }
 
-static const MethodId kResetId_ = reinterpret_cast<MethodId>(8);
+static const MethodId kResetId_ = reinterpret_cast<MethodId>(5);
 
 void TodoMVCService::reset() {
   static const int kSize = 64;

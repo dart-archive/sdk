@@ -27,12 +27,6 @@ class TodoMVCService {
   static void tearDown();
   static void createItem(BoxedStringBuilder title);
   static void createItemAsync(BoxedStringBuilder title, void (*callback)(void*), void* callback_data);
-  static void deleteItem(int32_t id);
-  static void deleteItemAsync(int32_t id, void (*callback)(void*), void* callback_data);
-  static void completeItem(int32_t id);
-  static void completeItemAsync(int32_t id, void (*callback)(void*), void* callback_data);
-  static void uncompleteItem(int32_t id);
-  static void uncompleteItemAsync(int32_t id, void (*callback)(void*), void* callback_data);
   static void clearItems();
   static void clearItemsAsync(void (*callback)(void*), void* callback_data);
   static void dispatch(uint16_t id);

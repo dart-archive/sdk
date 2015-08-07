@@ -33,7 +33,7 @@ abstract class TodoMVCPresenter {
 
   public void createItem(String title) {
     int length = title.length();
-    int messageSize = 48 + BoxedStringBuilder.kSize + length;
+    int messageSize = 56 + BoxedStringBuilder.kSize + length;
     MessageBuilder builder = new MessageBuilder(messageSize);
     BoxedStringBuilder box = new BoxedStringBuilder();
     builder.initRoot(box, BoxedStringBuilder.kSize);

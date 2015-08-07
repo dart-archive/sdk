@@ -11,6 +11,11 @@ SERVICEC_DIR=$DIR/../../../tools/servicec
 JAVA_DIR=$DIR/../java
 FLETCH_DIR=$DIR/../../..
 
+if [[ $# -eq 1 ]] && [[ "$1" == "snapshot" ]]; then
+    echo "Only rebuilding the Dart snapshot."
+    echo "If Fletch or any IMMI files changed re-run compile.sh without arguments."
+else
+
 # Regenerate java and jni sources.
 cd $SERVICEC_DIR
 dart bin/servicec.dart --out=../../samples/todomvc/ ../../samples/todomvc/todomvc_service.idl
@@ -34,6 +39,8 @@ mkdir -p $DIR/TodoMVC/app/src/main/java/fletch
 cp -R fletch/*.java $DIR/TodoMVC/app/src/main/java/fletch/
 mkdir -p $DIR/TodoMVC/app/src/main/jniLibs/
 cp -R libs/* $DIR/TodoMVC/app/src/main/jniLibs/
+
+fi
 
 # Build snapshot.
 cd $FLETCH_DIR

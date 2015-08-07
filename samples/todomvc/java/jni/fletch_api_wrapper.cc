@@ -30,6 +30,11 @@ JNIEXPORT void JNICALL Java_fletch_FletchApi_RunSnapshot(JNIEnv* env,
   delete copy;
 }
 
+JNIEXPORT void JNICALL Java_fletch_FletchApi_WaitForDebuggerConnection(
+    JNIEnv* env, jclass, int port) {
+  FletchWaitForDebuggerConnection(port);
+}
+
 JNIEXPORT void JNICALL Java_fletch_FletchApi_AddDefaultSharedLibrary(
     JNIEnv* env, jclass, jstring str) {
   const char* library = env->GetStringUTFChars(str, 0);

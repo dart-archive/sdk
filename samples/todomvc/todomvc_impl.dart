@@ -27,18 +27,6 @@ class TodoMVCImpl extends TodoMVCPresenter {
     _model.createItem(title.str);
   }
 
-  void deleteItem(int id) {
-    _model.deleteItem(id);
-  }
-
-  void completeItem(int id) {
-    _model.completeItem(id);
-  }
-
-  void uncompleteItem(int id) {
-    _model.uncompleteItem(id);
-  }
-
   void clearItems() {
     _model.clearItems();
   }

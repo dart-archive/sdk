@@ -17,27 +17,6 @@ public class TodoMVCService {
   public static native void createItem(BoxedStringBuilder title);
   public static native void createItemAsync(BoxedStringBuilder title, CreateItemCallback callback);
 
-  public interface DeleteItemCallback {
-    public void handle();
-  }
-
-  public static native void deleteItem(int id);
-  public static native void deleteItemAsync(int id, DeleteItemCallback callback);
-
-  public interface CompleteItemCallback {
-    public void handle();
-  }
-
-  public static native void completeItem(int id);
-  public static native void completeItemAsync(int id, CompleteItemCallback callback);
-
-  public interface UncompleteItemCallback {
-    public void handle();
-  }
-
-  public static native void uncompleteItem(int id);
-  public static native void uncompleteItemAsync(int id, UncompleteItemCallback callback);
-
   public interface ClearItemsCallback {
     public void handle();
   }

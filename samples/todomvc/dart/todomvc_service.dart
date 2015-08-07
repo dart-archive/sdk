@@ -20,9 +20,6 @@ TodoMVCService _impl;
 
 abstract class TodoMVCService {
   void createItem(BoxedString title);
-  void deleteItem(int id);
-  void completeItem(int id);
-  void uncompleteItem(int id);
   void clearItems();
   void dispatch(int id);
   void sync(PatchSetBuilder result);
@@ -52,18 +49,6 @@ abstract class TodoMVCService {
         _impl.createItem(getRoot(new BoxedString(), request));
         _postResult.vcall$1(request);
         break;
-      case _DELETE_ITEM_METHOD_ID:
-        _impl.deleteItem(request.getInt32(56));
-        _postResult.vcall$1(request);
-        break;
-      case _COMPLETE_ITEM_METHOD_ID:
-        _impl.completeItem(request.getInt32(56));
-        _postResult.vcall$1(request);
-        break;
-      case _UNCOMPLETE_ITEM_METHOD_ID:
-        _impl.uncompleteItem(request.getInt32(56));
-        _postResult.vcall$1(request);
-        break;
       case _CLEAR_ITEMS_METHOD_ID:
         _impl.clearItems();
         _postResult.vcall$1(request);
@@ -91,13 +76,10 @@ abstract class TodoMVCService {
 
   static const int _TERMINATE_METHOD_ID = 0;
   static const int _CREATE_ITEM_METHOD_ID = 1;
-  static const int _DELETE_ITEM_METHOD_ID = 2;
-  static const int _COMPLETE_ITEM_METHOD_ID = 3;
-  static const int _UNCOMPLETE_ITEM_METHOD_ID = 4;
-  static const int _CLEAR_ITEMS_METHOD_ID = 5;
-  static const int _DISPATCH_METHOD_ID = 6;
-  static const int _SYNC_METHOD_ID = 7;
-  static const int _RESET_METHOD_ID = 8;
+  static const int _CLEAR_ITEMS_METHOD_ID = 2;
+  static const int _DISPATCH_METHOD_ID = 3;
+  static const int _SYNC_METHOD_ID = 4;
+  static const int _RESET_METHOD_ID = 5;
 }
 
 class Node extends Reader {

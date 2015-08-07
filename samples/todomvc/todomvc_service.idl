@@ -4,9 +4,6 @@
 
 service TodoMVCService {
   void createItem(BoxedString* title);
-  void deleteItem(int32 id);
-  void completeItem(int32 id);
-  void uncompleteItem(int32 id);
   void clearItems();
 
   // Event dispatching.

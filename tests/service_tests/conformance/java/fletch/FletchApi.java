@@ -10,5 +10,6 @@ public class FletchApi {
   public static native void Setup();
   public static native void TearDown();
   public static native void RunSnapshot(byte[] snapshot);
+  public static native void WaitForDebuggerConnection(int port);
   public static native void AddDefaultSharedLibrary(String library);
 }

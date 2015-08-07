@@ -14,7 +14,17 @@ import fletch.FletchServiceApi;
 import fletch.TodoMVCService;
 
 public class TodoMVC extends Application {
+
+  static boolean attachDebugger = false;
+  static int debugPortNumber = 8123;
+
   private void startDartServiceThread() {
+    if (attachDebugger) {
+      System.out.println("Waiting for debugger connection on port " + debugPortNumber);
+      Thread dartThread = new Thread(new DartDebugger(debugPortNumber));
+      dartThread.start();
+      return;
+    }
     // Load snapshot and start dart code on a separate thread.
     InputStream snapshotStream = getResources().openRawResource(R.raw.todomvc_snapshot);
     try {
