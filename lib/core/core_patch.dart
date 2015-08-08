@@ -6,10 +6,11 @@ library dart.core_patch;
 
 import 'dart:_fletch_system' as fletch;
 
+part 'case.dart';
 part 'double.dart';
 part 'int.dart';
+part 'regexp.dart';
 part 'string.dart';
-part 'case.dart';
 
 const patch = "patch";
 
@@ -174,6 +175,13 @@ const patch = "patch";
   }
 
   @fletch.native external static int _fletchNative_frequency();
+}
+
+@patch class RegExp {
+  @patch factory RegExp(String source, {bool multiLine: false,
+                                        bool caseSensitive: true}) {
+    return new _MiniExp(source, multiLine, caseSensitive);
+  }
 }
 
 @patch class List {
