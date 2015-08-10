@@ -149,7 +149,7 @@ class SelectorRow {
   }
 
   static bool RangeBeginCompare(const Range& a, const Range& b) {
-    return a.begin() < b.end();
+    return a.begin() < b.begin();
   }
 
   static bool Compare(SelectorRow* a, SelectorRow* b) {
