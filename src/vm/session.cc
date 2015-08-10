@@ -164,7 +164,7 @@ void Session::ProcessContinue(Process* process) {
 }
 
 void Session::SendStackTrace(Stack* stack) {
-  int frames = StackWalker::ComputeStackTrace(process_, stack, this);
+  int frames = PushStackFrames(process_, stack);
   WriteBuffer buffer;
   buffer.WriteInt(frames);
   for (int i = 0; i < frames; i++) {
@@ -1097,7 +1097,7 @@ bool Session::BreakPoint(Process* process) {
     debug_info->set_is_stepping(false);
     WriteBuffer buffer;
     buffer.WriteInt(debug_info->current_breakpoint_id());
-    StackWalker::ComputeTopStackFrame(process, this);
+    PushTopStackFrame(process);
     buffer.WriteInt64(MapLookupByObject(method_map_id_, Top()));
     // Drop function from session stack.
     Drop(1);
@@ -1234,6 +1234,41 @@ void Session::TransformInstances() {
 
   TransformInstancesProcessVisitor process_visitor(program()->immutable_heap());
   program()->VisitProcesses(&process_visitor);
+}
+
+void Session::PushFrameOnSessionStack(bool is_first_name,
+                                      StackWalker* stack_walker) {
+  Function* function = stack_walker->function();
+  uint8* start_bcp = function->bytecode_address_for(0);
+
+  uint8* return_address = stack_walker->return_address();
+  int bytecode_offset = return_address - start_bcp;
+  // The first byte-code offset is not a return address but the offset for
+  // the current bytecode. Make it look like a return address by adding
+  // the current bytecode size to the byte-code offset.
+  if (is_first_name) {
+    Opcode current = static_cast<Opcode>(*return_address);
+    bytecode_offset += Bytecode::Size(current);
+  }
+  PushNewInteger(bytecode_offset);
+  PushFunction(function);
+}
+
+int Session::PushStackFrames(Process* process, Stack* stack) {
+  int frames = 0;
+  StackWalker walker(process, stack);
+  while (walker.MoveNext()) {
+    PushFrameOnSessionStack(frames == 0, &walker);
+    ++frames;
+  }
+  return frames;
+}
+
+void Session::PushTopStackFrame(Process* process) {
+  StackWalker walker(process, process->stack());
+  bool has_top_frame = walker.MoveNext();
+  ASSERT(has_top_frame);
+  PushFrameOnSessionStack(true, &walker);
 }
 
 }  // namespace fletch

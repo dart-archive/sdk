@@ -16,6 +16,7 @@ namespace fletch {
 class Connection;
 class ObjectMap;
 class PointerVisitor;
+class StackWalker;
 
 class Session {
  public:
@@ -178,6 +179,15 @@ class Session {
   // Where the old objects will have a forwarding pointer installed. It is
   // therefore not safe to traverse heap objects after calling this method.
   void TransformInstances();
+
+  void PushFrameOnSessionStack(bool is_first_name, StackWalker* stack_walker);
+
+  // Compute a stack trace and push it on the session stack.
+  int PushStackFrames(Process* process, Stack* stack);
+
+  // Compute the function for the top frame on the current process stack
+  // and push it on the session stack.
+  void PushTopStackFrame(Process* process);
 };
 
 }  // namespace fletch
