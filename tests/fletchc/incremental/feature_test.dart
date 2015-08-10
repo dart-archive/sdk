@@ -188,21 +188,14 @@ compileAndRun(bool useFletchSystem, EncodedResult encodedResult) async {
         break;
       }
 
-      // Set the new system in the session.
-      session.fletchSystem = fletchDelta.system;
+      CommitChangesResult result = await session.applyDelta(fletchDelta);
+      for (Command command in fletchDelta.commands) print(command);
 
-      List<Command> commands = fletchDelta.commands;
-      assert(commands.last is CommitChanges);
-      for (Command command in commands.take(commands.length - 1)) {
-        print(command);
-        await session.runCommand(command);
-      }
-
-      CommitChangesResult result = await session.runCommand(commands.last);
       if (!result.successful) {
         print("The CommitChanges() command was not successful: "
               "${result.message}");
       }
+
       Expect.equals(result.successful, !program.commitChangesShouldFail,
                     result.message);
 
@@ -352,9 +345,10 @@ Future<TestSession> runFletchVM(
     IoCompilerTestCase test,
     FletchDelta fletchDelta) async {
   TestSession session =
-      await TestSession.spawnVm(test.incrementalCompiler.compiler, fletchDelta);
+      await TestSession.spawnVm(test.incrementalCompiler.compiler);
   try {
-    await session.runCommands(fletchDelta.commands);
+    await session.applyDelta(fletchDelta);
+    for (Command command in fletchDelta.commands) print(command);
 
     for (Command command in [
         // Turn on debugging.
@@ -393,13 +387,12 @@ class TestSession extends Session {
   TestSession(
       Socket vmSocket,
       FletchCompiler compiler,
-      FletchSystem fletchSystem,
       this.process,
       this.stdoutIterator,
       this.stderr,
       this.futures,
       this.exitCode)
-  : super(vmSocket, compiler, fletchSystem, null, null, null);
+  : super(vmSocket, compiler, null, null);
 
   /// Add [future] to this session.  All futures that can fail after calling
   /// [waitForCompletion] must be added to the session.
@@ -468,8 +461,7 @@ class TestSession extends Session {
   }
 
   static Future<TestSession> spawnVm(
-      fletch_compiler_src.FletchCompiler compiler,
-      FletchDelta fletchDelta) async {
+      fletch_compiler_src.FletchCompiler compiler) async {
     print("TestSession.spawnVm");
     String vmPath = compiler.fletchVm.toFilePath();
     FletchBackend backend = compiler.backend;
@@ -512,7 +504,7 @@ class TestSession extends Session {
     recordFuture("vmSocket", vmSocket.done);
 
     TestSession session = new TestSession(
-        vmSocket, compiler.helper, fletchDelta.system, fletchVm.process,
+        vmSocket, compiler.helper, fletchVm.process,
         new StreamIterator(stdoutController.stream),
         stderrController.stream,
         futures, exitCodeCompleter.future);

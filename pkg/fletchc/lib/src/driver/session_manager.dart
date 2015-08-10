@@ -28,10 +28,10 @@ export '../../fletch_system.dart' show
     FletchDelta;
 
 import '../../session.dart' show
-    FletchVmSession;
+    Session;
 
 export '../../session.dart' show
-    FletchVmSession;
+    Session;
 
 import '../../compiler.dart' show
     FletchCompiler;
@@ -138,7 +138,7 @@ class SessionState {
 
   Uri script;
 
-  FletchVmSession vmSession;
+  Session session;
 
   SessionState(this.name, this.compilerHelper, this.compiler);
 
