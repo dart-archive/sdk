@@ -37,6 +37,23 @@ StoreBuffer::~StoreBuffer() {
   }
 }
 
+void StoreBuffer::Prepend(StoreBuffer* store_buffer) {
+  number_of_chunks_ += store_buffer->number_of_chunks_;
+  number_of_chunks_in_last_gc_ += store_buffer->number_of_chunks_in_last_gc_;
+
+  StoreBufferChunk* last = store_buffer->last_chunk_;
+  ASSERT(last->next() == NULL);
+  StoreBufferChunk* chunks = store_buffer->TakeChunks();
+  if (current_chunk_ == NULL) {
+    ASSERT(last_chunk_ == NULL);
+    last_chunk_ = last;
+  } else {
+    ASSERT(last_chunk_ != NULL);
+    last->set_next(current_chunk_);
+  }
+  current_chunk_ = chunks;
+}
+
 void StoreBuffer::IteratePointersToImmutableSpace(PointerVisitor* visitor) {
   StoreBufferChunk* chunk = current_chunk_;
   while (chunk != NULL) {
@@ -64,7 +81,9 @@ void StoreBuffer::ReplaceAfterMutableGC(StoreBuffer* new_store_buffer) {
     current = next;
   }
   number_of_chunks_ = new_store_buffer->number_of_chunks_;
-  number_of_chunks_in_last_gc = number_of_chunks_;
+  number_of_chunks_in_last_gc_ = number_of_chunks_;
+  last_chunk_ = new_store_buffer->last_chunk_;
+  ASSERT(last_chunk_->next() == NULL);
   current_chunk_ = new_store_buffer->TakeChunks();
 }
 

@@ -24,6 +24,7 @@ class StoreBufferChunk {
   void IterateObjects(HeapObjectVisitor* visitor);
 
   StoreBufferChunk* next() { return next_; }
+  void set_next(StoreBufferChunk* next) { ASSERT(next_ == NULL); next_ = next; }
 
   bool is_empty() const { return pos_ == 0; }
 
@@ -45,10 +46,11 @@ class StoreBufferChunk {
 
 class StoreBuffer {
  public:
-  StoreBuffer()
-      : current_chunk_(new StoreBufferChunk()),
-        number_of_chunks_(1),
-        number_of_chunks_in_last_gc(1) {}
+  StoreBuffer(bool empty = false)
+      : current_chunk_(empty ? NULL : new StoreBufferChunk()),
+        last_chunk_(current_chunk_),
+        number_of_chunks_(empty ? 0 : 1),
+        number_of_chunks_in_last_gc_(empty ? 0 : 1) {}
 
   ~StoreBuffer();
 
@@ -68,10 +70,13 @@ class StoreBuffer {
   // entries with the ones collected during a mutable GC.
   void ReplaceAfterMutableGC(StoreBuffer* new_store_buffer);
 
+  // Prepend all entries in [store_buffer] to [this] store buffer.
+  void Prepend(StoreBuffer* store_buffer);
+
   // If the references from mutable to immutable heap have doubled since
   // the last GC we will signal that another Mutable GC would be good.
   bool ShouldGcMutableSpace() {
-    return number_of_chunks_ > 2 * number_of_chunks_in_last_gc;
+    return number_of_chunks_ > 2 * number_of_chunks_in_last_gc_;
   }
 
   bool is_empty() const {
@@ -84,14 +89,16 @@ class StoreBuffer {
   StoreBufferChunk* TakeChunks() {
     StoreBufferChunk* chunk = current_chunk_;
     current_chunk_ = NULL;
+    last_chunk_ = NULL;
     number_of_chunks_ = 0;
-    number_of_chunks_in_last_gc = 0;
+    number_of_chunks_in_last_gc_ = 0;
     return chunk;
   }
 
   StoreBufferChunk* current_chunk_;
+  StoreBufferChunk* last_chunk_;
   int number_of_chunks_;
-  int number_of_chunks_in_last_gc;
+  int number_of_chunks_in_last_gc_;
 };
 
 // Records pointers to an immutable space.

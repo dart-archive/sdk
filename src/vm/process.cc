@@ -29,8 +29,10 @@ class ExitReference {
  public:
   ExitReference(Process* exiting_process, Object* message)
       : mutable_heap_(NULL, reinterpret_cast<WeakPointer*>(NULL)),
+        store_buffer_(true),
         message_(message) {
     mutable_heap_.MergeInOtherHeap(exiting_process->heap());
+    store_buffer_.Prepend(exiting_process->store_buffer());
   }
 
   Object* message() const { return message_; }
@@ -41,8 +43,11 @@ class ExitReference {
 
   Heap* mutable_heap() { return &mutable_heap_; }
 
+  StoreBuffer* store_buffer() { return &store_buffer_; }
+
  private:
   Heap mutable_heap_;
+  StoreBuffer store_buffer_;
   Object* message_;
 };
 
@@ -766,6 +771,7 @@ void Process::AdvanceCurrentMessage() {
 static void TakeExitReferenceHeaps(ExitReference* ref,
                                    Process* destination_process) {
   destination_process->heap()->MergeInOtherHeap(ref->mutable_heap());
+  destination_process->store_buffer()->Prepend(ref->store_buffer());
 }
 
 static void TakePortQueueHeaps(PortQueue* queue, Process* destination_process) {
