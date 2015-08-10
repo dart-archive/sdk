@@ -499,6 +499,3 @@ not_enough_positional_arguments_test/01: CompileTimeError
 not_enough_positional_arguments_test/05: CompileTimeError
 not_enough_positional_arguments_test/02: CompileTimeError
 
-[ $mode == debug || $mode == develop || $asan ]
-closure_cycles_test: Pass, Slow  # Many processes cause slow Immutable GC, Martin working on it.
-

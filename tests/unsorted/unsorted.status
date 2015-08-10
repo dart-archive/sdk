@@ -19,11 +19,3 @@ messaging_port_lifetime_expose_gc_test: CompileTimeError # Issue(75): Driver doe
 messaging_process_die_early_gc_on_delete_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 messaging_program_gc_gc_on_delete_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 
-[ $mode == debug || $mode == develop || $asan ]
-messaging_benchmark_test: Pass, Slow # Many processes cause slow Immutable GC, Martin working on it.
-messaging_benchmark_test: Pass, Slow # Many processes cause slow Immutable GC, Martin working on it.
-messaging_many_to_single_test: Pass, Slow # Many processes cause slow Immutable GC, Martin working on it.
-messaging_many_to_single_test: Pass, Slow # Many processes cause slow Immutable GC, Martin working on it.
-messaging_latency_test: Pass, Slow # Many processes cause slow Immutable GC, Martin working on it.
-messaging_latency_test: Pass, Slow # Many processes cause slow Immutable GC, Martin working on it.
-

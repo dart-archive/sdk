@@ -10,11 +10,29 @@
 
 namespace fletch {
 
-// TODO(kustermann): The current tick based mechanism for determining when a GC
-// should happen is a little bit fragile. We should take the exact number of
-// newly allocated bytes into account.
 class ImmutableHeap {
  public:
+  class Part {
+   public:
+    Part(Part* next, int budget)
+        : heap_(NULL, budget), used_original_(0), next_(next) {}
+
+    Heap* heap() { return &heap_; }
+
+    int Used() { return used_original_; }
+    void ResetUsed() { used_original_ = heap_.space()->Used(); }
+
+    int NewlyAllocated() { return heap_.space()->Used() - Used(); }
+
+    Part* next() { return next_; }
+    void set_next(Part* next) { next_ = next; }
+
+   private:
+    Heap heap_;
+    int used_original_;
+    Part* next_;
+  };
+
   ImmutableHeap();
   ~ImmutableHeap();
 
@@ -24,12 +42,12 @@ class ImmutableHeap {
   //
   // TODO(kustermann): instead of `number_of_hw_threads_` we could make this
   // better by keeping track of the current number of used scheduler threads.
-  Heap* AcquirePart();
+  Part* AcquirePart();
 
   // Will return `true` if the caller should trigger an immutable GC.
   //
   // It is assumed that this function is only called on allocation failures.
-  bool ReleasePart(Heap* part);
+  bool ReleasePart(Part* part);
 
   // Merges all parts which have been acquired and subsequently released into
   // the accumulated immutable heap.
@@ -51,29 +69,21 @@ class ImmutableHeap {
   }
 
  private:
-  // TODO(kustermann): Instead of having a linked list which requires heap
-  // allocations we should make a simple version of `std::vector` and use it
-  // here.
-  // [The number of parts is almost always fixed (i.e. the number of threads)]
-  class HeapPart {
-   public:
-    HeapPart(HeapPart* next_part) : heap_part(NULL), next(next_part) {}
-
-    Heap* heap_part;
-    HeapPart* next;
-  };
-
   bool HasUnmergedParts() { return unmerged_parts_ != NULL; }
-  void AddUnmergedPart(Heap* heap);
-  Heap* RemoveUnmergedPart();
+  void AddUnmergedPart(Part* part);
+  Part* RemoveUnmergedPart();
+
+  int ImmutableAllocationLimit();
 
   int number_of_hw_threads_;
 
   Mutex* heap_mutex_;
   Heap heap_;
   int outstanding_parts_;
-  HeapPart* unmerged_parts_;
-  int ticks_;
+  Part* unmerged_parts_;
+
+  // The amount of memory consumed by outstanding parts/unmerged parts.
+  int consumed_memory_;
 };
 
 }  // namespace fletch

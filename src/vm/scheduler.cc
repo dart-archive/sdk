@@ -212,11 +212,12 @@ bool Scheduler::EnqueueProcess(Process* process, Port* port) {
     // Use the temp thread state to run the process.
     Program* program = process->program();
     ImmutableHeap* immutable_heap = program->immutable_heap();
-    Heap* immutable_heap_part = immutable_heap->AcquirePart();
+    ImmutableHeap::Part* immutable_heap_part = immutable_heap->AcquirePart();
 
     bool allocation_failure = false;
     Process* new_process = InterpretProcess(
-        process, immutable_heap_part, thread_state, &allocation_failure);
+        process, immutable_heap_part->heap(), thread_state,
+        &allocation_failure);
     if (immutable_heap->ReleasePart(immutable_heap_part)) {
       gc_thread_->TriggerImmutableGC(process->program());
     }
@@ -508,7 +509,7 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
   // We use this heap for allocating new immutable objects.
   Program* program = NULL;
   ImmutableHeap* immutable_heap = NULL;
-  Heap* immutable_heap_part = NULL;
+  ImmutableHeap::Part* immutable_heap_part = NULL;
 
   while (!pause_) {
     Process* process = NULL;
@@ -534,7 +535,8 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
       // allocation failure.
       bool allocation_failure = false;
       Process* new_process = InterpretProcess(
-          process, immutable_heap_part, thread_state, &allocation_failure);
+          process, immutable_heap_part->heap(), thread_state,
+          &allocation_failure);
       if (allocation_failure) {
         if (immutable_heap->ReleasePart(immutable_heap_part)) {
           gc_thread_->TriggerImmutableGC(program);
