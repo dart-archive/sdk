@@ -175,6 +175,7 @@ class FletchVmSession {
 class Session extends FletchVmSession {
   final FletchCompiler compiler;
   final Future processExitCodeFuture;
+  final Stream<String> inputLines;
 
   DebugState debugState;
   FletchSystem fletchSystem;
@@ -183,6 +184,8 @@ class Session extends FletchVmSession {
 
   Session(Socket fletchVmSocket,
           this.compiler,
+          this.fletchSystem,
+          this.inputLines,
           Sink<List<int>> stdoutSink,
           Sink<List<int>> stderrSink,
           [this.processExitCodeFuture])
@@ -191,12 +194,6 @@ class Session extends FletchVmSession {
     fletchVmSocket.setOption(SocketOption.TCP_NODELAY, true);
     // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
     debugState = new DebugState(this);
-  }
-
-  Future applyDelta(FletchDelta delta) async {
-    Command response = await runCommands(delta.commands);
-    fletchSystem = delta.system;
-    return response;
   }
 
   Future disableVMStandardOutput() async {
@@ -224,7 +221,7 @@ class Session extends FletchVmSession {
     await shutdown();
   }
 
-  Future debug(Stream<String> inputLines) async {
+  Future debug() async {
     await sendCommands([
         const Debugging(),
         const ProcessSpawnForMain(),

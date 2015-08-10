@@ -87,19 +87,17 @@ Future<int> attachTask(String host, int port) async {
 
   SessionState sessionState = SessionState.current;
 
-  Session session =
-      new Session(handleSocketErrors(socket, "vmSocket"),
-                  sessionState.compilerHelper,
-                  sessionState.stdoutSink,
-                  sessionState.stderrSink,
-                  null);
+  FletchVmSession session =
+      new FletchVmSession(handleSocketErrors(socket, "vmSocket"),
+                          sessionState.stdoutSink,
+                          sessionState.stderrSink);
 
   // Enable debugging as a form of handshake.
   await session.runCommand(const commands_lib.Debugging());
 
   print("Connected to Fletch VM on TCP socket ${socket.port} -> $remotePort");
 
-  sessionState.session = session;
+  sessionState.vmSession = session;
 
   return 0;
 }

@@ -44,7 +44,7 @@ export '../driver/driver_commands.dart' show
 import '../driver/session_manager.dart' show
     FletchCompiler,
     FletchDelta,
-    Session,
+    FletchVmSession,
     IncrementalCompiler,
     IsolateController,
     SessionState,
@@ -53,7 +53,7 @@ import '../driver/session_manager.dart' show
 export '../driver/session_manager.dart' show
     FletchCompiler,
     FletchDelta,
-    Session,
+    FletchVmSession,
     IncrementalCompiler,
     IsolateController,
     SessionState,

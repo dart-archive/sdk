@@ -21,7 +21,7 @@ import 'package:fletchc/src/diagnostic.dart';
 
 import 'package:fletchc/session.dart' as session_lib;
 
-abstract class MockSession implements session_lib.Session {
+abstract class MockSession implements FletchVmSession {
   final Iterator replies;
 
   MockSession(this.replies);
@@ -32,8 +32,6 @@ abstract class MockSession implements session_lib.Session {
     }
     return replies.current;
   }
-
-  Future applyDelta(_) => null;
 
   Future runCommand(_) => _getNextReply();
 
@@ -85,7 +83,7 @@ Iterable nullForever() sync* {
 simulateVmCrash() async {
   SessionState state = new SessionState(null, null, null);
   state.compilationResults.add(new MockFletchDeltaProxy());
-  state.session = new MockSessionProxy(nullForever().iterator);
+  state.vmSession = new MockSessionProxy(nullForever().iterator);
 
   try {
     await runTask(null, state);
@@ -161,9 +159,8 @@ simulateBadBacktrace() async {
   var closeSocketInVmFuture = socketInVm.close();
 
   session_lib.Session session = new session_lib.Session(
-      socketInCompiler, new FletchCompiler(), null, null);
-
-  session.fletchSystem = new MockFletchSystemProxy();
+      socketInCompiler, new FletchCompiler(),
+      new MockFletchSystemProxy(), null, null, null);
 
   await session.stackTraceFromBacktraceResponse(backtrace);
   await session.shutdown();

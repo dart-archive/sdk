@@ -171,23 +171,23 @@ Future<int> compileAndRunTask(
       .transform(new LineSplitter());
 
   // Apply all commands the compiler gave us & shut down.
-  var session = new Session(vmSocket,
-                            compiler,
-                            stdoutSink,
-                            stderrSink,
-                            vmProcess != null ? vmProcess.exitCode : null);
+  var session = new Session(
+      vmSocket, compiler, fletchDelta.system,
+      inputStream, stdoutSink, stderrSink,
+      vmProcess != null ? vmProcess.exitCode : null);
 
   // If we started a vmProcess ourselves, we disable the normal
   // VM standard output as we already get it via the wire protocol.
   if (vmProcess != null) await session.disableVMStandardOutput();
-  await session.applyDelta(fletchDelta);
+
+  await session.runCommands(fletchDelta.commands);
 
   if (options.snapshotPath != null) {
     await session.writeSnapshot(options.snapshotPath);
   } else if (options.testDebugger) {
     await session.testDebugger(options.testDebuggerCommands);
   } else {
-    await session.debug(inputStream);
+    await session.debug();
   }
   await session.shutdown();
 

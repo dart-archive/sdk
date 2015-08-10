@@ -55,7 +55,7 @@ class RunTask extends SharedTask {
 
 Future<int> runTask(CommandSender commandSender, SessionState state) async {
   List<FletchDelta> compilationResults = state.compilationResults;
-  Session session = state.session;
+  FletchVmSession session = state.vmSession;
   if (session == null) {
     throwFatalError(DiagnosticKind.attachToVmBeforeRun);
   }
@@ -64,9 +64,9 @@ Future<int> runTask(CommandSender commandSender, SessionState state) async {
   }
 
   state.attachCommandSender(commandSender);
-  state.session = null;
+  state.vmSession = null;
   for (FletchDelta delta in compilationResults) {
-    await session.applyDelta(delta);
+    await session.runCommands(delta.commands);
   }
 
   await session.runCommand(const commands_lib.ProcessSpawnForMain());
@@ -146,7 +146,9 @@ Future<int> runTask(CommandSender commandSender, SessionState state) async {
 /// asterisk).
 // TODO(ahe): Clearly this should use the class [Session], but need to
 // coordinate with ager first.
-Future<Null> printBacktraceHack(Session session, FletchSystem system) async {
+Future<Null> printBacktraceHack(
+    FletchVmSession session,
+    FletchSystem system) async {
   commands_lib.ProcessBacktrace backtrace =
       await session.runCommand(const commands_lib.ProcessBacktraceRequest());
   if (backtrace == null) {
