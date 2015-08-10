@@ -17,7 +17,7 @@ import 'dart:io';
 import 'dart:convert' show
     JSON,
     LineSplitter,
-    Utf8Decoder;
+    UTF8;
 
 import 'dart:async' show
     Completer,
@@ -46,12 +46,17 @@ const String BUILDBOT_MARKER = "@@@STEP_WARNINGS@@@";
 
 Map<String, NoArgFuture> expandedTests;
 
+Sink<Message> messageSink;
+
 main() async {
+  int port = const int.fromEnvironment("test.fletch_test_suite.port");
+  Socket socket = await Socket.connect(InternetAddress.LOOPBACK_IP_V4, port);
+  messageSink = new SocketSink(socket);
   IsolatePool pool = new IsolatePool(isolateMain);
   Set isolates = new Set();
   Map<String, RunningTest> runningTests = <String, RunningTest>{};
   try {
-    var messages = utf8Lines(stdin).transform(messageTransformer);
+    var messages = utf8Lines(socket).transform(messageTransformer);
     await for (Message message in messages) {
       if (message is TimedOut) {
         handleTimeout(message, runningTests);
@@ -63,11 +68,12 @@ main() async {
           isolate.beginSession(), isolate, message, runningTests);
     }
   } catch (error, stackTrace) {
-    new InternalErrorMessage('$error', '$stackTrace').print();
+    new InternalErrorMessage('$error', '$stackTrace').addTo(socket);
   }
   for (var isolate in isolates) {
     isolate.port.send(null);
   }
+  await socket.close();
 }
 
 class RunningTest {
@@ -85,7 +91,7 @@ void handleTimeout(TimedOut message, Map<String, RunningTest> runningTests) {
   RunningTest test = runningTests.remove(message.name);
   if (test != null) {
     test.kill();
-    message.print();
+    messageSink.add(message);
   } else {
     // This can happen for two reasons:
     // 1. There's a bug, and test.dart will hang.
@@ -130,12 +136,17 @@ void runInIsolate(
       return null;
     }
     assert(hasNext);
+    do {
+      if (iterator.current == null) {
+        iterator.cancel();
+        continue;
+      }
+      messageSink.add(iterator.current);
+    } while (await iterator.moveNext());
     runningTests.remove(name);
-    iterator.current.print();
-    iterator.cancel();
     isolate.endSession();
   }).catchError((error, stackTrace) {
-    new InternalErrorMessage('$error', '$stackTrace').print();
+    messageSink.add(new InternalErrorMessage('$error', '$stackTrace'));
   });
 }
 
@@ -156,6 +167,7 @@ void runInIsolate(
 }
 
 Future<Null> handleClient(SendPort sendPort, ReceivePort receivePort) async {
+  messageSink = new PortSink(sendPort);
   Message message = await receivePort.first;
   Message reply;
   if (message is RunTest) {
@@ -168,7 +180,9 @@ Future<Null> handleClient(SendPort sendPort, ReceivePort receivePort) async {
         new InternalErrorMessage("Unhandled message: ${message.type}", null);
   }
   sendPort.send(reply);
+  sendPort.send(null); // Ask the main isolate to stop listening.
   receivePort.close();
+  messageSink = null;
 }
 
 Future<Message> runTest(String name, NoArgFuture test) async {
@@ -176,7 +190,11 @@ Future<Message> runTest(String name, NoArgFuture test) async {
     throw "No such test: $name";
   }
   printLineOnStdout(String line) {
-    new TestStdoutLine(name, line).print();
+    if (messageSink != null) {
+      messageSink.add(new TestStdoutLine(name, line));
+    } else {
+      stdout.writeln(line);
+    }
   }
   try {
     await runGuarded(
@@ -200,11 +218,15 @@ Future<Message> runTest(String name, NoArgFuture test) async {
 }
 
 Stream<String> utf8Lines(Stream<List<int>> stream) {
-  return stream.transform(new Utf8Decoder()).transform(new LineSplitter());
+  return stream.transform(UTF8.decoder).transform(new LineSplitter());
 }
 
 void print(object) {
-  new Info('$object').print();
+  if (messageSink != null) {
+    messageSink.add(new Info('$object'));
+  } else {
+    stdout.writeln('$object');
+  }
 }
 
 Future<Map<String, NoArgFuture>> expandTests(Map<String, NoArgFuture> tests) {
@@ -223,4 +245,32 @@ Future<Map<String, NoArgFuture>> expandTests(Map<String, NoArgFuture> tests) {
     }
   });
   return Future.wait(futures).then((_) => result);
+}
+
+class SocketSink implements Sink<Message> {
+  final Socket socket;
+
+  SocketSink(this.socket);
+
+  void add(Message message) {
+    message.addTo(socket);
+  }
+
+  void close() {
+    throw "not supported";
+  }
+}
+
+class PortSink implements Sink<Message> {
+  final SendPort port;
+
+  PortSink(this.port);
+
+  void add(Message message) {
+    port.send(message);
+  }
+
+  void close() {
+    throw "not supported";
+  }
 }

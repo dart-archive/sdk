@@ -83,23 +83,34 @@ class FletchTestSuite extends TestSuite {
     FletchTestRuntimeConfiguration runtimeConfiguration =
         new RuntimeConfiguration(configuration);
 
-    // TODO(ahe): Add status files.
     TestExpectations expectations = new TestExpectations();
-    var expectationsFuture = ReadTestExpectationsInto(
-        expectations, '$testSuiteDir/fletch_tests.status', configuration);
     String buildDir = TestUtils.buildDir(configuration);
-    var processFuture = io.Process.start(
-        runtimeConfiguration.dartBinary,
-        ['-Dfletch-vm=$buildDir/fletch-vm',
-         '-Ddart-sdk=../dart/sdk/',
-         '-Dtest.dart.build-dir=$buildDir',
-         '-c',
-         '-ppackage/',
-         '$testSuiteDir/fletch_test_suite.dart']);
+
     io.Process vmProcess;
-    Future.wait([processFuture, expectationsFuture]).then((value) {
-      vmProcess = value[0];
-      completer = new TestCompleter(vmProcess);
+    ReadTestExpectationsInto(
+        expectations, '$testSuiteDir/fletch_tests.status',
+        configuration).then((_) {
+      return io.ServerSocket.bind(io.InternetAddress.LOOPBACK_IP_V4, 0);
+    }).then((io.ServerSocket server) {
+      return io.Process.start(
+          runtimeConfiguration.dartBinary,
+          ['-Dfletch-vm=$buildDir/fletch-vm',
+           '-Ddart-sdk=../dart/sdk/',
+           '-Dtest.dart.build-dir=$buildDir',
+           '-c',
+           '-ppackage/',
+           '-Dtest.fletch_test_suite.port=${server.port}',
+           '$testSuiteDir/fletch_test_suite.dart']).then((io.Process process) {
+             vmProcess = process;
+             return process.stdin.close();
+           }).then((_) {
+             return server.first;
+           }).then((io.Socket socket) {
+             server.close();
+             return socket;
+           });
+    }).then((io.Socket socket) {
+      completer = new TestCompleter(vmProcess, socket);
       completer.initialize();
       return completer.requestTestNames();
     }).then((List<String> testNames) {
@@ -250,21 +261,44 @@ class TestCompleter {
       new Completer<List<String>>();
   final Map<String, List<String>> testOutput = new Map<String, List<String>>();
   final io.Process vmProcess;
+  final io.Socket socket;
 
   int exitCode;
   String stderr = "";
 
-  TestCompleter(this.vmProcess);
+  TestCompleter(this.vmProcess, this.socket);
 
   void initialize() {
-    var stderrStream = vmProcess.stderr
-        .transform(new Utf8Decoder())
-        .transform(new LineSplitter());
+    List<String> stderrLines = <String>[];
+    vmProcess.stdout.transform(UTF8.decoder).transform(new LineSplitter())
+        .listen(io.stdout.writeln);
+    bool inDartVmUncaughtMessage = false;
+    vmProcess.stderr.transform(UTF8.decoder).transform(new LineSplitter())
+        .listen((String line) {
+          // Unfortunately, the Dart VM always prints a stack trace in response
+          // to an uncaught exception even if we have installed an error
+          // listener. We have one test, "zone_helper/testUnhandledLateError",
+          // which provokes such a message and we use the following logic to
+          // suppress it. Unfortunately, this may suppress other error
+          // messages, but hopefully, these messages will be printed as part of
+          // the regular test status (as we collect all messages printed on
+          // stderr and include them if the helper program exits with a
+          // non-zero exit code). If a test is hanging, try running test.dart
+          // with -j1 to work around this problem.
+          if (line.startsWith("Please ignore this error: ")) {
+            inDartVmUncaughtMessage = true;
+          }
+          if (!inDartVmUncaughtMessage) {
+            io.stderr.writeln(line);
+          }
+          if (line == "Please ignore the above error") {
+            inDartVmUncaughtMessage = false;
+          }
+          stderrLines.add(line);
+        });
     vmProcess.exitCode.then((value) {
       exitCode = value;
-      return stderrStream.toList();
-    }).then((value) {
-      stderr = value.join("\n");
+      stderr = stderrLines.join("\n");
       for (String name in completers.keys) {
         Completer completer = completers[name];
         completer.complete(
@@ -281,13 +315,13 @@ class TestCompleter {
         // TODO(ahe): Don't use StreamIterator here, just use listen and
         // processMessage.
         new StreamIterator<Message>(
-            vmProcess.stdout
-                .transform(new Utf8Decoder()).transform(new LineSplitter())
+            socket
+                .transform(UTF8.decoder).transform(new LineSplitter())
                 .transform(messageTransformer)));
   }
 
   Future<List<String>> requestTestNames() {
-    vmProcess.stdin.writeln(JSON.encode(const ListTests().toJson()));
+    socket.writeln(JSON.encode(const ListTests().toJson()));
     return testNamesCompleter.future;
   }
 
@@ -307,10 +341,10 @@ class TestCompleter {
       // Ensure timeout test times out quickly.
       timeout = 1;
     }
-    vmProcess.stdin.writeln(
+    socket.writeln(
         JSON.encode(new RunTest(command._name).toJson()));
     Timer timer = new Timer(new Duration(seconds: timeout), () {
-      vmProcess.stdin.writeln(
+      socket.writeln(
           JSON.encode(new TimedOut(command._name).toJson()));
     });
 
@@ -372,6 +406,6 @@ class TestCompleter {
 
   void allDone() {
     // This should cause the vmProcess to exit.
-    vmProcess.stdin.close();
+    socket.close();
   }
 }

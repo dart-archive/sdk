@@ -5,8 +5,6 @@
 /// Messages used by fletch_test_suite.dart to communicate with test.py.
 library fletch_tests.messages;
 
-import 'dart:core' hide print;
-
 import 'dart:convert' show
     JSON;
 
@@ -50,8 +48,8 @@ abstract class Message {
 
   Map<String, dynamic> toJson() => <String, dynamic>{'type': type};
 
-  void print() {
-    io.stdout.write('${JSON.encode(this)}\n');
+  void addTo(StringSink sink) {
+    sink.writeln(JSON.encode(this));
   }
 }
 

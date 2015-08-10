@@ -470,7 +470,7 @@ class TestSession extends Session {
   static Future<TestSession> spawnVm(
       fletch_compiler_src.FletchCompiler compiler,
       FletchDelta fletchDelta) async {
-    io.stderr.writeln("TestSession.spawnVm");
+    print("TestSession.spawnVm");
     String vmPath = compiler.fletchVm.toFilePath();
     FletchBackend backend = compiler.backend;
 

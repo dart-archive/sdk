@@ -13,6 +13,9 @@ import 'package:fletchc/src/zone_helper.dart';
 
 import 'package:expect/expect.dart';
 
+import 'dart:io' show
+    stderr;
+
 /// Test that runGuarded completes with an error when a synchronous error is
 /// thrown.
 testEarlySyncError() {
@@ -72,6 +75,9 @@ testUnhandledLateErrorIsolate(_) {
   bool threw = false;
   return runGuarded(() {
     new Future(() {
+      // Unfortunately, the Dart VM always prints a stack trace in response to
+      // an uncaught exception even if we have installed an error listener.
+      stderr.write("Please ignore this error: ");
       throw "Late error";
     });
     return new Future.value(0);
@@ -115,6 +121,7 @@ testUnhandledLateError() async {
   Expect.isTrue(errorPortListenWasCalled);
   Expect.isTrue(exitPortListenWasCalled);
   print("Test succeeded.");
+  stderr.writeln("\nPlease ignore the above error");
 }
 
 /// Test that a bad test will fail, not crash the test runner.
