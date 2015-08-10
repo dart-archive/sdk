@@ -647,9 +647,10 @@ Note: currently only implemented for dart2js.''',
             var key = possibleOptions[0];
             if (key.startsWith('--')) {
               // long version
-              arguments.add(key);
-              if (!isBooleanOption) {
-                arguments.add("$configValue");
+              if (isBooleanOption) {
+                arguments.add(key);
+              } else {
+                arguments.add('$key=$configValue');
               }
             } else {
               // short version
