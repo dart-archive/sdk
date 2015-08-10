@@ -212,7 +212,6 @@ namespace fletch {
   N(UriBase,                     "Uri", "_base")                         \
                                                                          \
   N(PortCreate,                  "Port", "_create")                      \
-  N(PortClose,                   "Port", "_close")                       \
   N(PortSend,                    "Port", "send")                         \
   N(PortSendList,                "Port", "_sendList")                    \
   N(PortSendExit,                "Port", "_sendExit")                    \

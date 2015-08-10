@@ -163,9 +163,6 @@ class Process {
   // Iterate over, and find pointers in the port queue.
   void IteratePortQueuesPointers(PointerVisitor* visitor);
 
-  // Iterate over, and find processes (via ports) in the port queue.
-  void IteratePortQueuesProcesses(ProcessVisitor* visitor);
-
   void Preempt();
 
   void Profile();

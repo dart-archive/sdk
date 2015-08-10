@@ -808,77 +808,39 @@ NATIVE(ListIndexSet) {
 static Function* FunctionForClosure(Object* argument, unsigned arity) {
   Instance* closure = Instance::cast(argument);
   Class* closure_class = closure->get_class();
-  ASSERT(closure_class->NumberOfInstanceFields() == 0);
   word selector = Selector::EncodeMethod(Names::kCall, arity);
   return closure_class->LookupMethod(selector);
 }
 
-static Object* CloneInteger(Process* parent, Object* value) {
-  if (value->IsSmi()) return value;
-  return parent->ToInteger(LargeInteger::cast(value)->value());
-}
-
-static Instance* ClonePort(Process* parent, Process* child, Instance* port) {
-  Class* port_class = port->get_class();
-  ASSERT(port_class->NumberOfInstanceFields() == 1);
-  Instance* clone = Instance::cast(child->NewInstance(port_class));
-  Object* address = port->GetInstanceField(0);
-  // NOTE: We use the parent process for creating a cloned integer, since the
-  // child does not have an immutable space (it's only available when the
-  // scheduler is actually interpreting it's code).
-  Object* integer = CloneInteger(parent, address);
-  clone->SetInstanceField(0, integer);
-  child->RecordStore(clone, integer);
-  reinterpret_cast<Port*>(AsForeignWord(address))->IncrementRef();
-  child->RegisterFinalizer(clone, Port::WeakCallback);
-  return clone;
-}
-
 NATIVE(ProcessSpawn) {
   Program* program = process->program();
-  Space* program_space = program->heap()->space();
 
-  Function* entry = FunctionForClosure(Instance::cast(arguments[0]), 2);
-  ASSERT(entry != NULL);
-
+  Instance* entrypoint = Instance::cast(arguments[0]);
+  Instance* closure = Instance::cast(arguments[1]);
   Object* argument = arguments[2];
+
+  if (!closure->IsImmutable()) {
+    // TODO(kasperl): Return a proper failure.
+    return Failure::index_out_of_bounds();
+  }
+
   bool has_argument = !argument->IsNull();
-
-  bool is_argument_constant = argument->IsHeapObject()
-      && program_space->Includes(HeapObject::cast(argument)->address());
-
-  bool is_argument_allowed = argument->IsSmi()
-      || argument->IsLargeInteger()
-      || argument->IsPort()
-      || is_argument_constant;
-
-  if (has_argument && !is_argument_allowed) {
+  if (has_argument && !argument->IsImmutable()) {
     // TODO(kasperl): Return a proper failure.
     return Failure::index_out_of_bounds();
   }
 
-  Instance* fn = Instance::cast(arguments[1]);
-  Class* fn_class = fn->get_class();
-  if (FunctionForClosure(fn, has_argument ? 1 : 0) == NULL) {
+  if (FunctionForClosure(closure, has_argument ? 1 : 0) == NULL) {
     // TODO(kasperl): Return a proper failure.
     return Failure::index_out_of_bounds();
   }
+
+  Function* entry = FunctionForClosure(entrypoint, 2);
+  ASSERT(entry != NULL);
 
   // Spawn a new process and create a copy of the closure in the
   // new process' heap.
   Process* child = program->SpawnProcess();
-  Instance* closure = Instance::cast(child->NewInstance(fn_class));
-
-  // Clone the argument if necessary.
-  if (argument->IsSmi() || is_argument_constant) {
-    // Do nothing.
-  } else if (argument->IsPort()) {
-    argument = ClonePort(process, child, Instance::cast(argument));
-  } else if (argument->IsLargeInteger()) {
-    argument = CloneInteger(process, argument);
-  } else {
-    UNREACHABLE();
-  }
 
   // Set up the stack as a call of the entry with one argument: closure.
   child->SetupExecutionStack();

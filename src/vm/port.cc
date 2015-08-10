@@ -103,24 +103,25 @@ void Port::WeakCallback(HeapObject* object) {
 }
 
 NATIVE(PortCreate) {
+  Instance* channel = Instance::cast(arguments[0]);
+
+  // TODO(kustermann): We really shouldn't have two allocations in a native.
   Object* object = process->NewInteger(0);
   if (object == Failure::retry_after_gc()) return object;
-  LargeInteger* value = LargeInteger::cast(object);
-  Instance* channel = Instance::cast(arguments[0]);
-  Instance* dart_port = Instance::cast(arguments[1]);
-  Port* port = new Port(process, channel);
-  process->RegisterFinalizer(dart_port, Port::WeakCallback);
-  value->set_value(reinterpret_cast<uword>(port));
-  return value;
-}
+  LargeInteger* integer = LargeInteger::cast(object);
 
-NATIVE(PortClose) {
-  word address = AsForeignWord(arguments[0]);
-  Instance* dart_port = Instance::cast(arguments[1]);
-  Port* port = reinterpret_cast<Port*>(address);
-  process->UnregisterFinalizer(dart_port);
-  port->DecrementRef();
-  return process->program()->null_object();
+  Object* dart_port =
+      process->NewInstance(process->program()->port_class(), true);
+  if (dart_port == Failure::retry_after_gc()) return object;
+  Instance* port_instance = Instance::cast(dart_port);
+
+  Port* port = new Port(process, channel);
+  process->RegisterFinalizer(port_instance, Port::WeakCallback);
+  integer->set_value(reinterpret_cast<uword>(port));
+
+  port_instance->SetInstanceField(0, integer);
+
+  return port_instance;
 }
 
 NATIVE(PortSend) {

@@ -38,7 +38,6 @@ otherProcess(Port replyPort) {
   for (int i = 0; i < 3; i++) {
     var port = channel.receive();
     port.send(i);
-    port.close();
   }
   if (forceGC != null) forceGC();
 }

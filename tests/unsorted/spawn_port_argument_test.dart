@@ -8,7 +8,7 @@ import 'package:expect/expect.dart';
 
 main() {
   Channel channel = new Channel();
-  Port port = new Port(channel);
+  final Port port = new Port(channel);
   Process.spawn(run, port);
   int id = channel.receive();
   Expect.equals(port.id, id);
@@ -17,7 +17,7 @@ main() {
   Expect.equals(true, channel.receive());
   Expect.equals(false, channel.receive());
   Expect.equals("foo", channel.receive());
-  Expect.equals(const Bar(), channel.receive());
+  Expect.equals(const Immutable(), channel.receive());
   Expect.equals(400000000000, channel.receive());
   Expect.equals(run, channel.receive());
   Expect.equals(0, channel.receive());
@@ -25,19 +25,23 @@ main() {
 
 run(Port port) {
   Expect.isTrue(port != null);
-  Expect.throws(() => port.send(new Object()), (e) => e is ArgumentError);
+  Expect.throws(() => port.send(new Mutable()), (e) => e is ArgumentError);
   port.send(port.id);
   port.send(port);
   port.send(null);
   port.send(true);
   port.send(false);
   port.send("foo");
-  port.send(const Bar());
+  port.send(const Immutable());
   port.send(400000000000);
   port.send(run);
   port.send(0);
 }
 
-class Bar {
-  const Bar();
+class Immutable {
+  const Immutable();
+}
+
+class Mutable {
+  var bar;
 }

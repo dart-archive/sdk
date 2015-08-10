@@ -50,38 +50,30 @@ class PortQueue {
  public:
   enum Kind {
     IMMEDIATE,
-    PORT,
-    LARGE_INTEGER,
     OBJECT,
     FOREIGN,
     FOREIGN_FINALIZED,
     EXIT
   };
 
-  PortQueue(Port* port, int64 value, int size, Kind kind)
+  PortQueue(Port* port, uword value, int size, Kind kind)
       : port_(port),
         value_(value),
         next_(NULL),
         kind_and_size_(KindField::encode(kind) | SizeField::encode(size)) {
     port_->IncrementRef();
-    if (kind == PORT) {
-      reinterpret_cast<Port*>(value_)->IncrementRef();
-    }
   }
 
   ~PortQueue() {
     port_->DecrementRef();
-    if (kind() == PORT) {
-      reinterpret_cast<Port*>(value_)->DecrementRef();
-    } else if (kind() == EXIT) {
+    if (kind() == EXIT) {
       ExitReference* ref = reinterpret_cast<ExitReference*>(address());
       delete ref;
     }
   }
 
   Port* port() const { return port_; }
-  int64 value() const { ASSERT(kind() == LARGE_INTEGER); return value_; }
-  uword address() const { ASSERT(kind() != LARGE_INTEGER); return value_; }
+  uword address() const { return value_; }
   int size() const { return SizeField::decode(kind_and_size_); }
   Kind kind() const { return KindField::decode(kind_and_size_); }
 
@@ -105,7 +97,7 @@ class PortQueue {
 
  private:
   Port* port_;
-  int64 value_;
+  uword value_;
   PortQueue* next_;
   class KindField: public BitField<Kind, 0, 3> { };
   class SizeField: public BitField<int, 3, 32 - 3> { };
@@ -496,26 +488,6 @@ void Process::IterateProgramPointers(PointerVisitor* visitor) {
   IteratePortQueuesPointers(visitor);
 }
 
-static void IteratePortQueueProcesses(PortQueue* queue,
-                                      ProcessVisitor* visitor) {
-  for (PortQueue* current = queue;
-       current != NULL;
-       current = current->next()) {
-    if (current->kind() == PortQueue::PORT) {
-      Port* port = reinterpret_cast<Port*>(current->address());
-      Process* process = port->process();
-      if (process != NULL) {
-        visitor->VisitProcess(process);
-      }
-    }
-  }
-}
-
-void Process::IteratePortQueuesProcesses(ProcessVisitor* visitor) {
-  IteratePortQueueProcesses(last_message_, visitor);
-  IteratePortQueueProcesses(current_message_, visitor);
-}
-
 void Process::IteratePortQueuesPointers(PointerVisitor* visitor) {
   IteratePortQueuePointers(last_message_, visitor);
   IteratePortQueuePointers(current_message_, visitor);
@@ -667,22 +639,24 @@ void Process::UpdateBreakpoints() {
 }
 
 bool Process::Enqueue(Port* port, Object* message) {
-  PortQueue* entry;
+  PortQueue* entry = NULL;
   if (!message->IsHeapObject()) {
     uword address = reinterpret_cast<uword>(message);
     entry = new PortQueue(port, address, 0, PortQueue::IMMEDIATE);
-  } else if (message->IsPort()) {
-    Instance* instance = Instance::cast(message);
-    uword address = AsForeignWord(instance->GetInstanceField(0));
-    entry = new PortQueue(port, address, 0, PortQueue::PORT);
-  } else if (message->IsLargeInteger()) {
-    int64 value = LargeInteger::cast(message)->value();
-    entry = new PortQueue(port, value, 0, PortQueue::LARGE_INTEGER);
+  } else if (message->IsImmutable()) {
+    uword address = reinterpret_cast<uword>(message);
+    entry = new PortQueue(port, address, 0, PortQueue::OBJECT);
   } else {
     Space* space = program_->heap()->space();
     if (!space->Includes(HeapObject::cast(message)->address())) return false;
-    uword address = reinterpret_cast<uword>(message);
-    entry = new PortQueue(port, address, 0, PortQueue::OBJECT);
+
+    // NOTE: The only case when we go into this else block is if [message] is
+    // mutable. The objects in program space should all be immutable, so
+    // [message] must be a mutable process heap message, in which case we
+    // return `false` and the caller can use [Process::EnqueueExit].
+    //
+    // Any other scenario must be a bug and will hit this UNREACHABLE().
+    UNREACHABLE();
   }
 
   EnqueueEntry(entry);
@@ -879,31 +853,6 @@ NATIVE(ProcessQueueGetMessage) {
     case PortQueue::IMMEDIATE:
     case PortQueue::OBJECT:
       result = reinterpret_cast<Object*>(queue->address());
-      break;
-
-    case PortQueue::PORT: {
-      Class* port_class = process->program()->port_class();
-      ASSERT(port_class->NumberOfInstanceFields() == 1);
-      Object* object = process->NewInstance(port_class);
-      if (object == Failure::retry_after_gc()) return object;
-      Instance* port = Instance::cast(object);
-      uword address = queue->address();
-      // TODO(kasperl): This really doesn't work. We cannot do
-      // two allocations within a single native call with the
-      // retry-after-GC strategy we're currently employing.
-      object = process->ToInteger(address);
-      if (object == Failure::retry_after_gc()) return object;
-      reinterpret_cast<Port*>(address)->IncrementRef();
-      process->RegisterFinalizer(port, Port::WeakCallback);
-      port->SetInstanceField(0, object);
-      process->RecordStore(port, object);
-      result = port;
-      break;
-    }
-
-    case PortQueue::LARGE_INTEGER:
-      result = process->NewInteger(queue->value());
-      if (result == Failure::retry_after_gc()) return result;
       break;
 
     case PortQueue::FOREIGN:

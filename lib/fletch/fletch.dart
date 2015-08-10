@@ -254,6 +254,16 @@ class Process {
    * Spawn a top-level function.
    */
   static void spawn(Function fn, [argument]) {
+    if (!isImmutable(fn)) {
+      throw new ArgumentError(
+          'The closure passed to Process.spawn() must be immutable.');
+    }
+
+    if (!isImmutable(argument)) {
+      throw new ArgumentError(
+          'The optional argument passed to Process.spawn() must be immutable.');
+    }
+
     _spawn(_entry, fn, argument);
   }
 
@@ -356,10 +366,13 @@ const _portListSentinel = const _PortListSentinel();
 // Ports allow you to send messages to a channel. Ports are
 // are transferable and can be sent between processes.
 class Port {
-  int _port;
-  Port(Channel channel) {
-    _port = _create(channel, this);
+  final int _port;
+
+  factory Port(Channel channel) {
+    return Port._create(channel);
   }
+
+  const Port._(this._port);
 
   // TODO(kasperl): Temporary debugging aid.
   int get id => _port;
@@ -396,17 +409,7 @@ class Port {
     throw new StateError("Port is closed.");
   }
 
-  // Close the port. Messages already sent to a port will still
-  // be delivered to the corresponding channel.
-  void close() {
-    int port = _port;
-    if (port == 0) throw new StateError("Port already closed.");
-    _port = 0;
-    _close(port, this);
-  }
-
-  @fletch.native external static int _create(Channel channel, Port port);
-  @fletch.native external static void _close(int port, Port portObject);
+  @fletch.native external static Port _create(Channel channel);
   @fletch.native external static void _incrementRef(int port);
 }
 
