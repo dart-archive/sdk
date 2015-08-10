@@ -21,12 +21,12 @@ const Map _handlers = const {
 
 void show(List<String> args) {
   _log(args.join(','));
-  
+
   if (args.length < 2) {
     print(help.SHOW_HELP_TEXT);
     io.exit(1);
   }
-  
+
   var handler = _handlers[args[1]];
   if (handler != null) {
     handler(args);
@@ -51,7 +51,7 @@ Entrypoint  (main, main.dart - line 34):
 
   /*
   *   Main entry point for application.
-  */ 
+  */
   void main() {
      ...
 
@@ -129,9 +129,9 @@ Diff        (colorProp._red, lib/view/display.dart - line 23):
 
 void _handleUnknownThing(List<String> args) {
   _log("Invalid entity type");
-  
-  // For now just print help text. 
-  // TODO(lukechurch): Replace this with did you mean suggestor 
+
+  // For now just print help text.
+  // TODO(lukechurch): Replace this with did you mean suggestor
   // from service.
   print(help.SHOW_HELP_TEXT);
   io.exit(1);

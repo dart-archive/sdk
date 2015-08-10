@@ -42,11 +42,11 @@ void help(args) {
     case "show":
       print(SHOW_HELP_TEXT);
       break;
-    
+
     case "start":
       print(START_HELP_TEXT);
       break;
-    
+
     default:
       failAndHelp(args, "Unrecognized command: ${args[1]}");
   }

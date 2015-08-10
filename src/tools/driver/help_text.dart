@@ -40,7 +40,7 @@ Supported things:
 const START_HELP_TEXT = r'''
 Usage fletch start [entrypoint]
 
-Begin execution at the specified entrypoint. If no entrypoint is specified 
+Begin execution at the specified entrypoint. If no entrypoint is specified
 main is executed if it is present and unique.
 ''';
 
