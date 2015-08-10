@@ -71,10 +71,6 @@ final DEBUGGER_TEST_SUITE_DIRECTORIES = [
     new Path('tests/debugger')
 ];
 
-final SNAPSHOT_TEST_SUITE_DIRECTORIES = [
-    new Path('tests/snapshot_tests')
-];
-
 final CC_TEST_SUITE_DIRECTORIES = [
     new Path('tests/cc_tests')
 ];
@@ -211,14 +207,6 @@ void testConfigurations(List<Map> configurations) {
       testSuites.add(new PKGTestSuite(conf, suite_path));
     } else if (conf['runtime'] == 'fletchd') {
       for (final testSuiteDir in DEBUGGER_TEST_SUITE_DIRECTORIES) {
-        final name = testSuiteDir.filename;
-        if (selectors.containsKey(name)) {
-          testSuites.add(
-            new StandardTestSuite.forDirectory(conf, testSuiteDir));
-        }
-      }
-    } else if (conf['runtime'] == 'snapshot_tests') {
-      for (final testSuiteDir in SNAPSHOT_TEST_SUITE_DIRECTORIES) {
         final name = testSuiteDir.filename;
         if (selectors.containsKey(name)) {
           testSuites.add(

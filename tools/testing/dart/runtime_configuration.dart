@@ -61,9 +61,6 @@ class RuntimeConfiguration {
       case 'fletch_tests':
         return new FletchTestRuntimeConfiguration(configuration);
 
-      case 'snapshot_tests':
-        return new SnapshotRuntimeConfiguration();
-
       case 'fletch_cc_tests':
         return new CCRuntimeConfiguration();
 
@@ -240,32 +237,6 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
         commandBuilder.getVmCommand(
             "${suite.buildDir}/fletch-vm", argumentsUnfold,
             environmentOverrides)];
-  }
-}
-
-class SnapshotRuntimeConfiguration extends DartVmRuntimeConfiguration {
-  SnapshotRuntimeConfiguration();
-
-  List<Command> computeRuntimeCommands(
-      StandardTestSuite suite,
-      CommandBuilder commandBuilder,
-      CommandArtifact artifact,
-      String script,
-      List<String> arguments,
-      Map<String, String> environmentOverrides) {
-    Map options = suite.readOptionsFromFile(new Path(arguments[0]));
-    List<String> snapshotOptions = options["fletchSnapshotOptions"];
-    String snapshotLocation =
-        "${suite.buildDir}/${snapshotOptions[1]}.snapshot";
-    String fletchExecutable = "${suite.buildDir}/fletch";
-    List<String> fletchArguments =
-        <String>["compile-and-run", snapshotOptions[0], '-o', snapshotLocation];
-    var buildSnapshotCommand = commandBuilder.getVmCommand(
-        fletchExecutable, fletchArguments, environmentOverrides);
-    var testExecutable = "${suite.buildDir}/${snapshotOptions[1]}";
-    var runSnapshotCommand = commandBuilder.getVmCommand(
-        testExecutable, [snapshotLocation], environmentOverrides);
-    return <Command>[buildSnapshotCommand, runSnapshotCommand];
   }
 }
 

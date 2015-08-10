@@ -52,7 +52,7 @@
     },
     {
       # The actual snapshots used in these tests are generated at test time.
-      # See also tests/snapshot_tests/README.md.
+      # TODO(zerny): Compile these programs at test time and remove this target.
       'target_name': 'snapshot_tests',
       'type': 'none',
       'toolsets': ['target'],
