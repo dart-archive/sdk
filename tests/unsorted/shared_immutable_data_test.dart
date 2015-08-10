@@ -8,7 +8,7 @@ import 'package:expect/expect.dart';
 import 'package:immutable/immutable.dart';
 
 const int INSERTS_PER_PROCESS = 1000;
-const int NUM_PROCESSES = 1000;
+const int NUM_PROCESSES = 500;
 
 // This function:
 //   * inserts [INSERTS_PER_PROCESS/2] numbers into a tree
