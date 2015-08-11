@@ -62,7 +62,6 @@ class IoCompilerTestCase extends CompilerTestCase {
 
   Future<FletchDelta> run() {
     return incrementalCompiler.compile(scriptUri).then((success) {
-      if (!success) throw 'Compilation failed';
       FletchBackend backend = incrementalCompiler.compiler.backend;
       return backend.computeDelta();
     });

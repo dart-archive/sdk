@@ -764,6 +764,9 @@ class LibraryUpdater extends FletchFeatures {
   static void forEachField(ClassElement c, void action(FieldElement field)) {
     List classes = [];
     while (c != null) {
+      if (!c.isResolved) {
+        throw new IncrementalCompilationFailed("Class not resolved: $c");
+      }
       classes.add(c);
       c = c.superclass;
     }

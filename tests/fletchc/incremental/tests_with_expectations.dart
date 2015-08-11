@@ -1676,4 +1676,34 @@ main() {
 >>>>>>>
 }
 ''',
+
+r'''
+compile_time_error_004
+==> main.dart.patch <==
+// Reproduce a crash when a class has a bad hierarchy
+<<<<<<< []
+typedef A(C c);
+======= {"messages":[],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
+// reported instead
+typedef A(Class c);
+>>>>>>>
+
+typedef B(A a);
+
+typedef C(B b);
+
+class Class {
+<<<<<<<
+=======
+  A a;
+>>>>>>>
+}
+
+void testA(A a) {}
+
+void main() {
+  testA(null);
+}
+''',
 ];
