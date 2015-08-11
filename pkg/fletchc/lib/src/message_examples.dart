@@ -97,16 +97,26 @@ List<Example> getExamples(DiagnosticKind kind) {
                      'tcp_socket', invalidAddress])];
 
     case DiagnosticKind.attachToVmBeforeRun:
-      return <Example>[new CommandLineExample(
-            <String>['create', 'session', 'foo'],
-            <String>['x-run', 'in', 'session', 'foo'])];
+      return <Example>[
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['x-run', 'in', 'session', 'foo']),
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['debug', 'in', 'session', 'foo'])];
 
     case DiagnosticKind.compileBeforeRun:
-      return <Example>[new CommandLineExample(
-            <String>['create', 'session', 'foo'],
-            <String>['attach', 'in', 'session', 'foo',
-                     'tcp_socket', exampleAddress],
-            <String>['x-run', 'in', 'session', 'foo'])];
+      return <Example>[
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['attach', 'in', 'session', 'foo',
+                       'tcp_socket', exampleAddress],
+              <String>['x-run', 'in', 'session', 'foo']),
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['attach', 'in', 'session', 'foo',
+                       'tcp_socket', exampleAddress],
+              <String>['debug', 'in', 'session', 'foo'])];
 
     case DiagnosticKind.noFile:
       // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.

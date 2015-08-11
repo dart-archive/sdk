@@ -189,7 +189,7 @@ class InputHandler {
     if (!session.terminated) printPrompt();
   }
 
-  Future run() async {
+  Future<int> run() async {
     session.writeStdoutLine(BANNER);
     printPrompt();
     await for(var line in stream) {
@@ -198,5 +198,6 @@ class InputHandler {
       // stream subscription.
       if (session.terminated) break;
     }
+    return 0;
   }
 }

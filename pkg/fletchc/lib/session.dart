@@ -227,12 +227,12 @@ class Session extends FletchVmSession {
     await shutdown();
   }
 
-  Future debug(Stream<String> inputLines) async {
+  Future<int> debug(Stream<String> inputLines) async {
     await sendCommands([
         const Debugging(),
         const ProcessSpawnForMain(),
     ]);
-    await new InputHandler(this, inputLines, false).run();
+    return await new InputHandler(this, inputLines, false).run();
   }
 
   Future stepToCompletion() async {
