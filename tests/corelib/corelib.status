@@ -68,9 +68,7 @@ regexp/compile_test: Fail
 regexp/constructor_test: Fail
 regexp/early-acid3-86_test: Fail
 regexp/ecma-regex-examples_test: Fail
-regexp/extended-characters-more_test: Fail
 regexp/global_test: Fail
-regexp/indexof_test: Fail
 regexp/invalid-range-in-class_test: Fail
 regexp/lookahead_test: Fail
 regexp/loop-capture_test: Fail
@@ -86,8 +84,6 @@ regexp/quantified-assertions_test: Fail
 regexp/range-bound-ffff_test: Fail
 regexp/regexp_kde_test: Fail
 regexp/regexp_test: Fail
-regexp/regress-regexp-codeflush_test: Fail
-regexp/results-cache_test: Fail
 regexp/stack-overflow2_test: Fail
 regexp/unicode-handling_test: Fail
 regexp/unicodeCaseInsensitive_test: Fail
@@ -152,7 +148,6 @@ splay_tree_test: Fail
 string_fromcharcodes_test: CompileTimeError
 string_pattern_test: Fail
 string_replace_all_test: Fail
-string_replace_dollar_test: Fail
 string_replace_test: Fail
 string_test: Fail
 symbol_operator_test/03: Fail

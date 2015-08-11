@@ -259,21 +259,66 @@ class _StringImpl implements String {
     return indexOf(other, startIndex) >= 0;
   }
 
-  replaceFirst(from, to, [startIndex]) {
-    throw "replaceFirst(from, to, [startIndex]) isn't implemented";
+  String _replaceWithMatches(List<Match> matches, String replace) {
+    StringBuffer buffer = new StringBuffer();
+    int endOfLast = 0;
+    for (Match match in matches) {
+      buffer.write(substring(endOfLast, match.start));
+      buffer.write(replace);
+      endOfLast = match.end;
+    }
+    buffer.write(substring(endOfLast));
+    return buffer.toString();
   }
 
-  replaceFirstMapped(from, replace, [startIndex]) {
-    throw "replaceFirstMapped(from, replace, [startIndex]) isn't implemented";
+  String _replaceWithMatchesMapped(
+      List<Match> matches, String replace(Match)) {
+    StringBuffer buffer = new StringBuffer();
+    int endOfLast = 0;
+    for (Match match in matches) {
+      buffer.write(substring(endOfLast, match.start));
+      buffer.write(replace(match));
+      endOfLast = match.end;
+    }
+    buffer.write(substring(endOfLast));
+    return buffer.toString();
+  }
+
+  replaceFirst(Pattern from, String to, [int startIndex = 0]) {
+    if (from is! String) {
+      _MiniExp re = from;
+      List<Match> matches = <Match>[re._match(this, startIndex, 0)];
+      return _replaceWithMatches(matches, to);
+    }
+    String str = from;
+    int index = indexOf(str);
+    if (index == -1) return this;
+    StringBuffer buffer = new StringBuffer();
+    buffer.write(substring(0, index));
+    buffer.write(to);
+    buffer.write(substring(index + str.length, length));
+    return buffer.toString();
+  }
+
+  replaceFirstMapped(Pattern from, String replace(Match),
+                     [int startIndex = 0]) {
+    if (from is! String) {
+      _MiniExp re = from;
+      Match match = re._match(this, startIndex, 0);
+      if (match == null) return this;
+      return _replaceWithMatchesMapped(<Match>[match], replace);
+    }
+    throw "replaceFirstMapped(from, replace, [startIndex]) isn't implemented "
+          "for String patterns";
   }
 
   String replaceAll(Pattern from, String replace) {
     if (from is! String) {
-      throw new ArgumentError(
-          "String.replaceAll only accepts String patterns for now");
+      List<Match> matches = from.allMatches(this);
+      return _replaceWithMatches(matches, replace);
     }
-    String str = from;
     StringBuffer buffer = new StringBuffer();
+    String str = from;
     int length = this.length;
     if (str.isEmpty) {
       // Special case the empty string.
@@ -297,8 +342,13 @@ class _StringImpl implements String {
     }
   }
 
-  replaceAllMapped(from, replace) {
-    throw "replaceAllMapped(from, replace) isn't implemented";
+  replaceAllMapped(Pattern from, String replace(Match)) {
+    if (from is! String) {
+      List<Match> matches = from.allMatches(this);
+      return _replaceWithMatchesMapped(matches, replace);
+    }
+    throw "replaceAllMapped(from, replace) isn't implemented for String "
+          "patterns";
   }
 
   String replaceRange(int start, int end, String replacement) {
