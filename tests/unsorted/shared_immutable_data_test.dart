@@ -17,6 +17,7 @@ const int NUM_PROCESSES = 500;
 //   * inserts [INSERTS_PER_PROCESS/2] numbers into a tree
 //   * sends the modified tree to the caller
 stackProcess(Port caller, tree, int process) {
+  Expect.isNotNull(tree, 'Expected initial tree to be non-null.');
   if (process < 0) {
     caller.send(tree);
     return;
@@ -32,6 +33,7 @@ stackProcess(Port caller, tree, int process) {
   final finalTree = tree;
   Process.spawn(() => stackProcess(port, finalTree, process - 1));
   var tree2 = channel.receive();
+  Expect.isNotNull(tree2, 'Expected partial tree to be non-null.');
 
   offset += INSERTS_PER_PROCESS ~/ 2;
   for (int i = offset; i < offset + count; i++) tree2 = tree2.insert(i, i);
@@ -44,6 +46,7 @@ void main() {
   final port = new Port(channel);
   Process.spawn(() => stackProcess(port, new RedBlackTree(), NUM_PROCESSES));
   var modifiedTree = channel.receive();
+  Expect.isNotNull(modifiedTree, 'Expected computed tree to be non-null.');
   for (int i = 0; i < NUM_PROCESSES * INSERTS_PER_PROCESS; i++) {
     Expect.equals(i, modifiedTree.lookup(i));
   }
