@@ -68,7 +68,6 @@ class IncrementalCompiler {
   final Uri libraryRoot;
   final Uri packageRoot;
   final CompilerInput inputProvider;
-  final CompilerDiagnostics diagnosticHandler;
   final List<String> options;
   final CompilerOutput outputProvider;
   final Map<String, dynamic> environment;
@@ -81,11 +80,12 @@ class IncrementalCompiler {
       {this.libraryRoot,
        this.packageRoot,
        this.inputProvider,
-       this.diagnosticHandler,
+       CompilerDiagnostics diagnosticHandler,
        this.options,
        this.outputProvider,
        this.environment})
-      : _context = new IncrementalCompilerContext(useFletchSystem) {
+      : this._context =
+            new IncrementalCompilerContext(useFletchSystem, diagnosticHandler) {
     // if (libraryRoot == null) {
     //   throw new ArgumentError('libraryRoot is null.');
     // }
@@ -125,7 +125,7 @@ class IncrementalCompiler {
         libraryRoot: libraryRoot,
         packageRoot: packageRoot,
         inputProvider: inputProvider,
-        diagnosticHandler: diagnosticHandler,
+        diagnosticHandler: _context,
         options: options,
         outputProvider: outputProvider,
         environment: environment,

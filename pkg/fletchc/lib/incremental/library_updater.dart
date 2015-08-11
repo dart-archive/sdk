@@ -10,6 +10,10 @@ import 'dart:async' show
 import 'dart:collection' show
     Queue;
 
+import 'package:compiler/compiler_new.dart' show
+    CompilerDiagnostics,
+    Diagnostic;
+
 import 'package:compiler/compiler.dart' as api;
 
 import 'package:compiler/src/dart2jslib.dart' show
@@ -135,16 +139,19 @@ abstract class _IncrementalCompilerContext {
   Set<ConstantValue> _compiledConstants;
 }
 
-class IncrementalCompilerContext extends _IncrementalCompilerContext {
-  final Set<Uri> _uriWithUpdates = new Set<Uri>();
-
+class IncrementalCompilerContext extends _IncrementalCompilerContext
+    implements CompilerDiagnostics {
   final bool useFletchSystem;
 
-  IncrementalCompilerContext(this.useFletchSystem);
+  final CompilerDiagnostics diagnostics;
+
+  final Set<Uri> _uriWithUpdates = new Set<Uri>();
+
+  IncrementalCompilerContext(this.useFletchSystem, this.diagnostics);
 
   void set incrementalCompiler(IncrementalCompiler value) {
     if (super.incrementalCompiler != null) {
-      throw new StateError("Can't set [incrementalCompiler] more than once.");
+      throw new StateError("Can't set [incrementalCompiler] more than once");
     }
     super.incrementalCompiler = value;
   }
@@ -167,6 +174,21 @@ class IncrementalCompilerContext extends _IncrementalCompilerContext {
   }
 
   bool _uriHasUpdate(Uri uri) => _uriWithUpdates.contains(uri);
+
+  void report(
+      var code,
+      Uri uri,
+      int begin,
+      int end,
+      String text,
+      Diagnostic kind) {
+    if (_uriHasUpdate(uri)) {
+      // TODO(ahe): Map location to updated source file.
+      print("$uri+$begin-$end: $text");
+    } else {
+      diagnostics.report(code, uri, begin, end, text, kind);
+    }
+  }
 }
 
 class LibraryUpdater extends FletchFeatures {

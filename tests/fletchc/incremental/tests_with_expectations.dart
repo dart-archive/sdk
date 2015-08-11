@@ -1812,4 +1812,18 @@ main() {
 >>>>
 }
 ''',
+
+  r'''
+bad_diagnostics
+==> main.dart.patch <==
+// Test that our diagnostics handler doesn't crash
+main() {
+<<<< []
+==== []
+  // This is a long comment to guarantee that we have a position beyond the end
+  // of the first version of this file.
+  NoSuchClass c = null; // Provoke a warning to exercise the diagnostic handler.
+>>>>
+}
+''',
 ];

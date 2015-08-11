@@ -22,10 +22,6 @@ import 'package:fletchc/incremental/fletchc_incremental.dart' show
 import 'package:fletchc/incremental/compiler.dart' show
     OutputProvider;
 
-import 'package:compiler/compiler_new.dart' show
-    CompilerDiagnostics,
-    CompilerInput;
-
 import 'package:fletchc/commands.dart' show
     Command;
 
@@ -36,6 +32,13 @@ import 'package:fletchc/fletch_system.dart';
 
 import 'package:compiler/compiler.dart' show
     Diagnostic;
+
+import 'package:compiler/src/source_file_provider.dart' show
+    FormattingDiagnosticHandler,
+    SourceFileProvider;
+
+import 'package:compiler/src/io/source_file.dart' show
+    StringSourceFile;
 
 const String SDK_SCHEME = 'org.trydart.sdk';
 
@@ -94,26 +97,15 @@ class IoCompilerTestCase extends CompilerTestCase {
         // libraryRoot: libraryRoot,
         packageRoot: packageRoot,
         inputProvider: inputProvider,
-        diagnosticHandler: new DiagnosticHandler(),
+        diagnosticHandler: new FormattingDiagnosticHandler(inputProvider),
         outputProvider: new OutputProvider());
   }
 }
 
-class DiagnosticHandler implements CompilerDiagnostics {
-  void report(var code,
-              Uri uri, int begin, int end, String text, Diagnostic kind) {
-    if (uri == null) {
-      print('[$kind] $text');
-    } else {
-      print('$uri@$begin+${end - begin}: [$kind] $text');
-    }
-  }
-}
-
-/// An input provider which provides input via [HttpRequest].  Includes
+/// An input provider which provides input via the class [File].  Includes
 /// in-memory compilation units [sources] which are returned when a matching
 /// key requested.
-class IoInputProvider implements CompilerInput {
+class IoInputProvider extends SourceFileProvider {
   final Map<Uri, String> sources;
 
   final Uri libraryRoot;
@@ -122,25 +114,43 @@ class IoInputProvider implements CompilerInput {
 
   final Map<Uri, Future> cachedSources = new Map<Uri, Future>();
 
-  static final Map<Uri, Future> cachedFiles = new Map<Uri, Future>();
+  static final Map<Uri, String> cachedFiles = new Map<Uri, String>();
 
   IoInputProvider(this.sources, this.libraryRoot, this.packageRoot);
 
   Future readFromUri(Uri uri) {
     return cachedSources.putIfAbsent(uri, () {
-      if (sources.containsKey(uri)) return new Future.value(sources[uri]);
-      if (uri.scheme == SDK_SCHEME) {
-        return readCachedFile(new Uri.file('${_SDK_DIR}${uri.path}'));
-      } else if (uri.scheme == PACKAGE_SCHEME) {
-        throw "packages not supported";
+      String text;
+      String name;
+      if (sources.containsKey(uri)) {
+        name = '$uri';
+        text = sources[uri];
       } else {
-        return readCachedFile(uri);
+        if (uri.scheme == SDK_SCHEME) {
+          uri = cwd.resolve('${_SDK_DIR}${uri.path}');
+        } else if (uri.scheme == PACKAGE_SCHEME) {
+          throw "packages not supported";
+        }
+        text = readCachedFile(uri);
+        name = new File.fromUri(uri).path;
       }
+      sourceFiles[uri] = new StringSourceFile(uri, name, text);
+      return new Future<String>.value(text);
     });
   }
 
-  static Future readCachedFile(Uri uri) {
+  Future call(Uri uri) => readStringFromUri(uri);
+
+  Future<String> readStringFromUri(Uri uri) {
+    return readFromUri(uri);
+  }
+
+  Future<List<int>> readUtf8BytesFromUri(Uri uri) {
+    throw "not supported";
+  }
+
+  static String readCachedFile(Uri uri) {
     return cachedFiles.putIfAbsent(
-        uri, () => new File.fromUri(uri).readAsString());
+        uri, () => new File.fromUri(uri).readAsStringSync());
   }
 }
