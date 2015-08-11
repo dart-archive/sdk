@@ -219,7 +219,7 @@ Map<String, EncodedResult> computeTests(List<String> tests) {
 
 List<ProgramExpectation> extractJsonExpectations(String source) {
   return new List<ProgramExpectation>.from(source.split("\n")
-      .where((l) => l.startsWith("<<<<<<< ") || l.startsWith("======= "))
-      .map((l) => l.substring("<<<<<<< ".length))
+      .where((l) => l.startsWith("<<<< ") || l.startsWith("==== "))
+      .map((l) => l.substring("<<<< ".length))
       .map((l) => new ProgramExpectation.fromJson(l)));
 }

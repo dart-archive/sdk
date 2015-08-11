@@ -10,25 +10,25 @@ library fletchc.test.tests_with_expectations;
 ///     TEST_NAME
 ///     ==> a_test_file.dart <==
 ///     ... source code for a_test_file.dart ...
-///     === another_test_file.dart.patch <==
+///     ==> another_test_file.dart.patch <==
 ///     ... source code for another_test_file.dart ...
 ///     ```
 ///
 /// Filenames ending with ".patch" are special and are expanded into multiple
 /// versions of a file. The parts of the file that vary between versions are
-/// surrounded by `<<<<<<<` and `>>>>>>>` and the alternatives are separated by
-/// `=======`. For example:
+/// surrounded by `<<<<` and `>>>>` and the alternatives are separated by
+/// `====`. For example:
 ///
 ///     ```
 ///     ==> file.txt.patch <==
 ///     first
-///     <<<<<<< "ex1"
+///     <<<< "ex1"
 ///     v1
-///     ======= "ex2"
+///     ==== "ex2"
 ///     v2
-///     ======= "ex2"
+///     ==== "ex2"
 ///     v3
-///     >>>>>>>
+///     >>>>
 ///     last
 ///     ```
 ///
@@ -66,18 +66,18 @@ library fletchc.test.tests_with_expectations;
 ///
 ///     ==> main.dart.patch <==
 ///     class Foo {
-///       <<<<<<< "a"
-///       ======= "b"
+///     <<<< "a"
+///     ==== "b"
 ///       var bar;
-///       >>>>>>>
+///     >>>>
 ///     }
 ///     main() {
 ///       var foo = new Foo();
-///       <<<<<<<
+///     <<<<
 ///       print("a");
-///       =======
+///     ====
 ///       print("b");
-///       >>>>>>>
+///     >>>>
 ///     }
 ///
 /// Expectations
@@ -99,11 +99,11 @@ hello_world
 ==> main.dart.patch <==
 // Basic hello-world test
 main() { print(
-<<<<<<< "Hello, World!"
+<<<< "Hello, World!"
 'Hello, World!'
-======= "Hello, Brave New World!"
+==== "Hello, Brave New World!"
 'Hello, Brave New World!'
->>>>>>>
+>>>>
 ); }
 
 ''',
@@ -112,22 +112,22 @@ main() { print(
 preserving_identity_hashcode
 ==> main.dart.patch <==
 class Foo {
-<<<<<<< "Generated firstHashCode"
-======= "firstHashCode == secondHashCode: true"
+<<<< "Generated firstHashCode"
+==== "firstHashCode == secondHashCode: true"
   var bar;
->>>>>>>
+>>>>
 }
 Foo foo;
 int firstHashCode;
 main() {
-<<<<<<<
+<<<<
   foo = new Foo();
   firstHashCode = foo.hashCode;
   print("Generated firstHashCode");
-=======
+====
   int secondHashCode = foo.hashCode;
   print("firstHashCode == secondHashCode: ${firstHashCode == secondHashCode}");
->>>>>>>
+>>>>
 }
 ''',
 
@@ -138,12 +138,12 @@ instance_field_end
 // of a class from the end of the field list
 class A {
   var x;
-<<<<<<< "instance is null"
+<<<< "instance is null"
   var y;
-======= "x = 0"
-======= "x = 0"
+==== "x = 0"
+==== "x = 0"
   int y;  // TODO(ahe): We don't add the field unless the tokens change
->>>>>>>
+>>>>
 }
 
 var instance;
@@ -166,12 +166,12 @@ instance_field_middle
 // of a class from the middle of the field list
 class A {
   var x;
-<<<<<<< "instance is null"
+<<<< "instance is null"
   var y;
-======= "x = 0"
-======= ["x = 3","y = null","z = 2"]
+==== "x = 0"
+==== ["x = 3","y = null","z = 2"]
   int y;  // TODO(ahe): We don't add the field unless the tokens change
->>>>>>>
+>>>>
   var z;
 }
 
@@ -201,12 +201,12 @@ subclass_schema_1
 // Test that schema changes affect subclasses correctly
 class A {
   var x;
-<<<<<<< "instance is null"
+<<<< "instance is null"
   var y;
-======= "x = 0"
-======= ["x = 3","y = null","z = 2"]
+==== "x = 0"
+==== ["x = 3","y = null","z = 2"]
   int y;  // TODO(ahe): We don't add the field unless the tokens change
->>>>>>>
+>>>>
 }
 
 class B extends A {
@@ -239,12 +239,12 @@ subclass_schema_2
 // Test that schema changes affect subclasses of subclasses correctly
 class A {
   var x;
-<<<<<<< "instance is null"
+<<<< "instance is null"
   var y;
-======= "x = 0"
-======= ["x = 3","y = null","z = 2"]
+==== "x = 0"
+==== ["x = 3","y = null","z = 2"]
  int y;  // TODO(ahe): We don't add the field unless the tokens change
->>>>>>>
+>>>>
 }
 
 class B extends A {
@@ -283,12 +283,12 @@ class A {
 }
 
 class B extends A {
-<<<<<<< "instance is null"
+<<<< "instance is null"
   var y;
-======= "x = 0"
-======= ["x = 3","y = null","z = 2"]
+==== "x = 0"
+==== ["x = 3","y = null","z = 2"]
   int y;  // TODO(ahe): We don't add the field unless the tokens change
->>>>>>>
+>>>>
   var z;
 }
 
@@ -318,10 +318,10 @@ add_instance_field
 // Test adding a field to a class works
 
 class A {
-<<<<<<< ["instance is null","setter threw","getter threw"]
-======= "v2"
+<<<< ["instance is null","setter threw","getter threw"]
+==== "v2"
   var x;
->>>>>>>
+>>>>
 }
 
 var instance;
@@ -350,10 +350,10 @@ remove_instance_field
 // Test removing a field from a class works
 
 class A {
-<<<<<<< ["instance is null","v1"]
+<<<< ["instance is null","v1"]
   var x;
-======= ["setter threw","getter threw"]
->>>>>>>
+==== ["setter threw","getter threw"]
+>>>>
 }
 
 var instance;
@@ -381,13 +381,13 @@ two_updates
 ==> main.dart.patch <==
 // Test that the test framework handles more than one update
 main() { print(
-<<<<<<< "Hello darkness, my old friend"
+<<<< "Hello darkness, my old friend"
 'Hello darkness, my old friend'
-======= "I've come to talk with you again"
+==== "I've come to talk with you again"
 'I\'ve come to talk with you again'
-======= "Because a vision softly creeping"
+==== "Because a vision softly creeping"
 'Because a vision softly creeping'
->>>>>>>
+>>>>
 ); }
 
 ''',
@@ -397,11 +397,11 @@ main_args
 ==> main.dart.patch <==
 // Test that that isolate support works
 main(arguments) { print(
-<<<<<<< "Hello, Isolated World!"
+<<<< "Hello, Isolated World!"
 'Hello, Isolated World!'
-======= "[]"
+==== "[]"
 arguments
->>>>>>>
+>>>>
 ); }
 
 ''',
@@ -414,11 +414,11 @@ stored_closure
 var closure;
 
 foo(a, [b = 'b']) {
-<<<<<<< ["[closure] is null.","a b","a c"]
+<<<< ["[closure] is null.","a b","a c"]
   print('$a $b');
-======= ["b a","c a"]
+==== ["b a","c a"]
   print('$b $a');
->>>>>>>
+>>>>
 }
 
 main() {
@@ -440,11 +440,11 @@ modify_static_method
 
 class C {
   static m() {
-<<<<<<< "v1"
+<<<< "v1"
   print('v1');
-======= "v2"
+==== "v2"
   print('v2');
->>>>>>>
+>>>>
   }
 }
 main() {
@@ -461,12 +461,12 @@ modify_instance_method
 
 class C {
   m() {
-<<<<<<< ["instance is null","v1"]
+<<<< ["instance is null","v1"]
   print('v1');
-======= ["instance is null","v2"]
+==== ["instance is null","v2"]
   // TODO(ahe): Should not print 'instance is null'
   print('v2');
->>>>>>>
+>>>>
   }
 }
 var instance;
@@ -488,11 +488,11 @@ stored_instance_tearoff
 
 class C {
   m() {
-<<<<<<< ["closure is null","v1"]
+<<<< ["closure is null","v1"]
   print('v1');
-======= "v2"
+==== "v2"
   print('v2');
->>>>>>>
+>>>>
   }
 }
 var closure;
@@ -513,13 +513,13 @@ remove_instance_method
 // Test that deleting an instance method works
 
 class C {
-<<<<<<< ["instance is null","v1"]
+<<<< ["instance is null","v1"]
   m() {
     print('v1');
   }
-======= {"messages":["threw"],"compileUpdatesShouldThrow":1}
+==== {"messages":["threw"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
->>>>>>>
+>>>>
 }
 var instance;
 main() {
@@ -549,13 +549,13 @@ class A {
   }
 }
 class B extends A {
-<<<<<<< ["instance is null","v1"]
+<<<< ["instance is null","v1"]
   m() {
     print('v1');
   }
-======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
+==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
->>>>>>>
+>>>>
 }
 class C extends B {
   m() {
@@ -579,13 +579,13 @@ remove_top_level_method
 ==> main.dart.patch <==
 // Test that deleting a top-level method works
 
-<<<<<<< ["instance is null","v1"]
+<<<< ["instance is null","v1"]
 toplevel() {
   print('v1');
 }
-======= {"messages":["threw"],"compileUpdatesShouldThrow":1}
+==== {"messages":["threw"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
->>>>>>>
+>>>>
 class C {
   m() {
     try {
@@ -613,13 +613,13 @@ remove_static_method
 // Test that deleting a static method works
 
 class B {
-<<<<<<< ["instance is null","v1"]
+<<<< ["instance is null","v1"]
   static staticMethod() {
     print('v1');
   }
-======= {"messages":["threw"],"compileUpdatesShouldThrow":1}
+==== {"messages":["threw"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
->>>>>>>
+>>>>
 }
 class C {
   m() {
@@ -671,12 +671,12 @@ main() {
   if (instance == null) {
     print('instance is null');
     instance = new A();
-<<<<<<< ["instance is null","Called A.m"]
-======= ["instance is null","Called A.m"]
+<<<< ["instance is null","Called A.m"]
+==== ["instance is null","Called A.m"]
 // TODO(ahe): Should only print 'B.m'
   } else {
     instance = new B();
->>>>>>>
+>>>>
   }
   instance.m();
 }
@@ -691,11 +691,11 @@ source_maps_no_throw
 
 main() {
   print('a');
-<<<<<<< "a"
-======= ["a","b","c"]
+<<<< "a"
+==== ["a","b","c"]
   print('b');
   print('c');
->>>>>>>
+>>>>
 }
 
 
@@ -725,12 +725,12 @@ main() {
   if (instance == null) {
     print('instance is null');
     instance = new A();
-<<<<<<< ["instance is null","Called A.m"]
-======= ["instance is null","Called A.m"]
+<<<< ["instance is null","Called A.m"]
+==== ["instance is null","Called A.m"]
 // TODO(ahe): Should print only 'Called B.m'
   } else {
     instance = new B();
->>>>>>>
+>>>>
   }
   instance.m();
 }
@@ -756,10 +756,10 @@ foo() {
   }
 }
 main() {
-<<<<<<< "v1"
-======= "v2"
+<<<< "v1"
+==== "v2"
   instance = new A('v2');
->>>>>>>
+>>>>
   foo();
 }
 
@@ -771,12 +771,12 @@ add_top_level_method
 ==> main.dart.patch <==
 // Test that top-level functions can be added
 
-<<<<<<< "threw"
-======= "v2"
+<<<< "threw"
+==== "v2"
 foo() {
   print('v2');
 }
->>>>>>>
+>>>>
 main() {
   try {
     foo();
@@ -794,12 +794,12 @@ add_static_method
 // Test that static methods can be added
 
 class C {
-<<<<<<< "threw"
-======= "v2"
+<<<< "threw"
+==== "v2"
   static foo() {
     print('v2');
   }
->>>>>>>
+>>>>
 }
 
 main() {
@@ -819,13 +819,13 @@ add_instance_method
 // Test that instance methods can be added
 
 class C {
-<<<<<<< ["instance is null","threw"]
-======= ["instance is null","v2"]
+<<<< ["instance is null","threw"]
+==== ["instance is null","v2"]
   // TODO(ahe): Should only print 'v2'
   foo() {
     print('v2');
   }
->>>>>>>
+>>>>
 }
 
 var instance;
@@ -851,14 +851,14 @@ signature_change_top_level_method
 ==> main.dart.patch <==
 // Test that top-level functions can have signature changed
 
-<<<<<<< "v1"
+<<<< "v1"
 foo() {
   print('v1');
-======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
+==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
 void foo() {
   print('v2');
->>>>>>>
+>>>>
 }
 
 main() {
@@ -874,14 +874,14 @@ signature_change_static_method
 // Test that static methods can have signature changed
 
 class C {
-<<<<<<< "v1"
+<<<< "v1"
   static foo() {
     print('v1');
-======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
+==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
   static void foo() {
     print('v2');
->>>>>>>
+>>>>
   }
 }
 
@@ -898,14 +898,14 @@ signature_change_instance_method
 // Test that instance methods can have signature changed
 
 class C {
-<<<<<<< ["instance is null","v1"]
+<<<< ["instance is null","v1"]
   foo() {
     print('v1');
-======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
+==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
   // TODO(ahe): Should not throw
   void foo() {
     print('v2');
->>>>>>>
+>>>>
   }
 }
 
@@ -928,21 +928,21 @@ add_class
 ==> main.dart.patch <==
 // Test that adding a class is supported
 
-<<<<<<< "v1"
-======= "v2"
+<<<< "v1"
+==== "v2"
 class C {
   void foo() {
     print('v2');
   }
 }
->>>>>>>
+>>>>
 main() {
-<<<<<<<
+<<<<
   print('v1');
 
-=======
+====
   new C().foo();
->>>>>>>
+>>>>
 }
 
 
@@ -953,12 +953,12 @@ remove_class
 ==> main.dart.patch <==
 // Test that removing a class is supported, using constructor
 
-<<<<<<< "v1"
+<<<< "v1"
 class C {
 }
-======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
+==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
->>>>>>>
+>>>>
 main() {
   try {
     new C();
@@ -976,15 +976,15 @@ remove_class_with_static_method
 ==> main.dart.patch <==
 // Test that removing a class is supported, using a static method
 
-<<<<<<< "v1"
+<<<< "v1"
 class C {
   static m() {
     print('v1');
   }
 }
-======= {"messages":["v2"],"compileUpdatesShouldThrow":1}
+==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
->>>>>>>
+>>>>
 main() {
   try {
     C.m();
@@ -1011,12 +1011,12 @@ class B extends A {
     print('v1');
   }
 }
-<<<<<<< ["instance is null","v1"]
+<<<< ["instance is null","v1"]
 class C extends B {
-======= ["instance is null","v2"]
+==== ["instance is null","v2"]
 // TODO(ahe): Should only print 'v2'
 class C extends A {
->>>>>>>
+>>>>
   m() {
     super.m();
   }
@@ -1053,12 +1053,12 @@ main() {
     print('instance is null');
     instance = new C();
   }
-<<<<<<< ["instance is null","v1"]
+<<<< ["instance is null","v1"]
   instance.foo();
-======= ["instance is null","v2"]
+==== ["instance is null","v2"]
   // TODO(ahe): Should only print 'v2'
   instance.foo(named: 'v2');
->>>>>>>
+>>>>
 }
 
 
@@ -1082,12 +1082,12 @@ main() {
     print('instance is null');
     instance = new C();
   }
-<<<<<<< ["instance is null","v1"]
+<<<< ["instance is null","v1"]
   instance.foo(named: 'v1');
-======= ["instance is null","v2"]
+==== ["instance is null","v2"]
    // TODO(ahe): Should only print 'v2'
   instance.foo();
->>>>>>>
+>>>>
 }
 
 
@@ -1111,11 +1111,11 @@ main() {
     print('closure is null');
     closure = new C().foo;
   }
-<<<<<<< ["closure is null","v1"]
+<<<< ["closure is null","v1"]
   closure();
-======= "v2"
+==== "v2"
   closure(named: 'v2');
->>>>>>>
+>>>>
 }
 
 
@@ -1128,11 +1128,11 @@ lazy_static
 
 var normal;
 
-<<<<<<< "v1"
+<<<< "v1"
 foo() {
   print(normal);
 }
-======= ["v2","lazy"]
+==== ["v2","lazy"]
 var lazy = bar();
 
 foo() {
@@ -1144,7 +1144,7 @@ bar() {
   return 'lazy';
 }
 
->>>>>>>
+>>>>
 main() {
   if (normal == null) {
     normal = 'v1';
@@ -1168,12 +1168,12 @@ class B extends A {
 }
 
 main() {
-<<<<<<< "v1"
+<<<< "v1"
   print('v1');
-======= "v2"
+==== "v2"
   new B();
   print('v2');
->>>>>>>
+>>>>
 }
 
 
@@ -1185,11 +1185,11 @@ interceptor_classes
 // Test that interceptor classes are handled correctly
 
 main() {
-<<<<<<< "v1"
+<<<< "v1"
   print('v1');
-======= "v2"
+==== "v2"
   ['v2'].forEach(print);
->>>>>>>
+>>>>
 }
 
 
@@ -1215,13 +1215,13 @@ class B extends A {
 }
 
 main() {
-<<<<<<< "Called foo"
+<<<< "Called foo"
   new B().foo();
-======= "Called foo"
+==== "Called foo"
   new B().foo();
-======= "Called bar"
+==== "Called bar"
   new A().bar();
->>>>>>>
+>>>>
 }
 
 
@@ -1247,13 +1247,13 @@ class B extends A {
 }
 
 main() {
-<<<<<<< "Called foo"
+<<<< "Called foo"
   new A().foo();
-======= "Called foo"
+==== "Called foo"
   new A().foo();
-======= "Called bar"
+==== "Called bar"
   new B().bar();
->>>>>>>
+>>>>
 }
 
 
@@ -1270,11 +1270,11 @@ class C {
 }
 
 main() {
-<<<<<<< "v1"
+<<<< "v1"
   print(const C('v1').value);
-======= "v2"
+==== "v2"
   print(const C('v2').value);
->>>>>>>
+>>>>
 }
 
 
@@ -1286,12 +1286,12 @@ add_compound_instance_field
 // Test that an instance field can be added to a compound declaration
 
 class C {
-<<<<<<< ["[instance] is null","v1","[instance.y] threw"]
+<<<< ["[instance] is null","v1","[instance.y] threw"]
   int x;
-======= {"messages":["v1","v2"],"compileUpdatesShouldThrow":1}
+==== {"messages":["v1","v2"],"compileUpdatesShouldThrow":1}
   // TODO(ahe): Should not throw
   int x, y;
->>>>>>>
+>>>>
 }
 
 var instance;
@@ -1325,12 +1325,12 @@ remove_compound_instance_field
 // Test that an instance field can be removed from a compound declaration
 
 class C {
-<<<<<<< ["[instance] is null","v1","v2"]
+<<<< ["[instance] is null","v1","v2"]
   int x, y;
-======= {"messages":["v1","[instance.y] threw"],"compileUpdatesShouldThrow":1}
+==== {"messages":["v1","[instance.y] threw"],"compileUpdatesShouldThrow":1}
   // TODO(ahe): Should not throw
   int x;
->>>>>>>
+>>>>
 }
 
 var instance;
@@ -1363,12 +1363,12 @@ static_field_to_instance_field
 // Test that a static field can be made an instance field
 
 class C {
-<<<<<<< ["[instance] is null","v1","[instance.x] threw"]
+<<<< ["[instance] is null","v1","[instance.x] threw"]
   static int x;
-======= {"messages":["[C.x] threw","v2"],"compileUpdatesShouldThrow":1}
+==== {"messages":["[C.x] threw","v2"],"compileUpdatesShouldThrow":1}
   // TODO(ahe): Should not throw
   int x;
->>>>>>>
+>>>>
 }
 
 var instance;
@@ -1402,12 +1402,12 @@ instance_field_to_static_field
 // Test that instance field can be made static
 
 class C {
-<<<<<<< ["[instance] is null","[C.x] threw","v1"]
+<<<< ["[instance] is null","[C.x] threw","v1"]
   int x;
-======= {"messages":["v2","[instance.x] threw"],"compileUpdatesShouldThrow":1}
+==== {"messages":["v2","[instance.x] threw"],"compileUpdatesShouldThrow":1}
   // TODO(ahe): Should not throw
   static int x;
->>>>>>>
+>>>>
 }
 
 var instance;
@@ -1455,13 +1455,13 @@ class B {
 }
 
 main() {
-<<<<<<< ["A(v1)","B(v1)"]
+<<<< ["A(v1)","B(v1)"]
   print(const A('v1'));
   print(const B('v1'));
-======= ["B(A(v2))","A(B(v2))"]
+==== ["B(A(v2))","A(B(v2))"]
   print(const B(const A('v2')));
   print(const A(const B('v2')));
->>>>>>>
+>>>>
 }
 
 
@@ -1478,8 +1478,8 @@ class A {
 
   toString() => 'A($value)';
 }
-<<<<<<< "A(v1)"
-======= ["A(v2)","B(v2)","B(A(v2))","A(B(v2))"]
+<<<< "A(v1)"
+==== ["A(v2)","B(v2)","B(A(v2))","A(B(v2))"]
 class B {
   final value;
   const B(this.value);
@@ -1487,17 +1487,17 @@ class B {
   toString() => 'B($value)';
 }
 
->>>>>>>
+>>>>
 main() {
-<<<<<<<
+<<<<
   print(const A('v1'));
 
-=======
+====
   print(const A('v2'));
   print(const B('v2'));
   print(const B(const A('v2')));
   print(const A(const B('v2')));
->>>>>>>
+>>>>
 }
 
 
@@ -1516,11 +1516,11 @@ part 'part.dart';
 part of test.main;
 
 main() {
-<<<<<<< "Hello, World!"
+<<<< "Hello, World!"
   print('Hello, World!');
-======= "Hello, Brave New World!"
+==== "Hello, Brave New World!"
   print('Hello, Brave New World!');
->>>>>>>
+>>>>
 }
 ''',
 
@@ -1528,12 +1528,12 @@ main() {
 change_library_name
 ==> main.dart.patch <==
 // Test that a change in library name is handled
-<<<<<<< "Hello, World!"
+<<<< "Hello, World!"
 library test.main1;
-======= {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
+==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
 library test.main2;
->>>>>>>
+>>>>
 
 main() {
   print('Hello, World!');
@@ -1544,11 +1544,11 @@ main() {
 add_import
 ==> main.dart.patch <==
 // Test that adding an import is handled
-<<<<<<< "Hello, World!"
-======= {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
+<<<< "Hello, World!"
+==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
 import 'dart:core';
->>>>>>>
+>>>>
 
 main() {
   print('Hello, World!');
@@ -1559,11 +1559,11 @@ main() {
 add_export
 ==> main.dart.patch <==
 // Test that adding an export is handled
-<<<<<<< "Hello, World!"
-======= {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
+<<<< "Hello, World!"
+==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
 export 'dart:core';
->>>>>>>
+>>>>
 
 main() {
   print('Hello, World!');
@@ -1576,11 +1576,11 @@ add_part
 // Test that adding a part is handled
 library test.main;
 
-<<<<<<< "Hello, World!"
-======= {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
+<<<< "Hello, World!"
+==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
 // TODO(ahe): Should not throw
 part 'part.dart';
->>>>>>>
+>>>>
 
 main() {
   print('Hello, World!');
@@ -1608,13 +1608,13 @@ main() {
 library test.library1;
 
 method() {
-<<<<<<< ["lib1.v1","lib2.v1"]
+<<<< ["lib1.v1","lib2.v1"]
   print('lib1.v1');
-======= ["lib1.v2","lib2.v2"]
+==== ["lib1.v2","lib2.v2"]
   print('lib1.v2');
-======= ["lib1.v3","lib2.v3"]
+==== ["lib1.v3","lib2.v3"]
   print('lib1.v3');
->>>>>>>
+>>>>
 }
 
 
@@ -1622,13 +1622,13 @@ method() {
 library test.library2;
 
 method() {
-<<<<<<<
+<<<<
   print('lib2.v1');
-=======
+====
   print('lib2.v2');
-=======
+====
   print('lib2.v3');
->>>>>>>
+>>>>
 }
 ''',
 
@@ -1642,11 +1642,11 @@ main() {
 }
 
 bar() {
-<<<<<<< []
+<<<< []
   foo(true);
-======= []
+==== []
   foo(false);
->>>>>>>
+>>>>
 }
 
 foo(a) {
@@ -1659,12 +1659,12 @@ compile_time_error_001
 ==> main.dart.patch <==
 // Reproduce a crash when a compile-time error is added
 main() {
-<<<<<<< []
-======= {"messages":[],"compileUpdatesShouldThrow":1}
+<<<< []
+==== {"messages":[],"compileUpdatesShouldThrow":1}
 // TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
 // reported instead
   do for while if;
->>>>>>>
+>>>>
 }
 ''',
 
@@ -1673,10 +1673,10 @@ compile_time_error_002
 ==> main.dart.patch <==
 // Reproduce a crash when a *recoverable* compile-time error is added
 main() {
-<<<<<<< []
-======= []
+<<<< []
+==== []
   new new();
->>>>>>>
+>>>>
 }
 ''',
 
@@ -1684,27 +1684,27 @@ main() {
 compile_time_error_003
 ==> main.dart.patch <==
 // Reproduce a crash when a compile-time error is reported on a new class
-<<<<<<< []
-======= {"messages":[],"compileUpdatesShouldThrow":1}
+<<<< []
+==== {"messages":[],"compileUpdatesShouldThrow":1}
 // TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
 // reported instead
 abstract class A implements bool default F {
   A();
 }
->>>>>>>
+>>>>
 
 class F {
-<<<<<<<
-=======
+<<<<
+====
   factory A() { return null; }
->>>>>>>
+>>>>
 }
 
 main() {
-<<<<<<<
-=======
+<<<<
+====
   new A();
->>>>>>>
+>>>>
 }
 ''',
 
@@ -1712,23 +1712,23 @@ r'''
 compile_time_error_004
 ==> main.dart.patch <==
 // Reproduce a crash when a class has a bad hierarchy
-<<<<<<< []
+<<<< []
 typedef A(C c);
-======= {"messages":[],"compileUpdatesShouldThrow":1}
+==== {"messages":[],"compileUpdatesShouldThrow":1}
 // TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
 // reported instead
 typedef A(Class c);
->>>>>>>
+>>>>
 
 typedef B(A a);
 
 typedef C(B b);
 
 class Class {
-<<<<<<<
-=======
+<<<<
+====
   A a;
->>>>>>>
+>>>>
 }
 
 void testA(A a) {}
@@ -1741,19 +1741,19 @@ void main() {
   r'''
 generic_types_001
 ==> main.dart.patch <==
-<<<<<<< []
+<<<< []
 class A<T> {
 }
-======= {"messages":[],"compileUpdatesShouldThrow":1}
+==== {"messages":[],"compileUpdatesShouldThrow":1}
 // TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
 // instead
->>>>>>>
+>>>>
 
 main() {
-<<<<<<<
+<<<<
   new A();
-=======
->>>>>>>
+====
+>>>>
 }
 ''',
 
@@ -1762,18 +1762,18 @@ add_named_mixin_application
 ==> main.dart.patch <==
 // Test that we can add a mixin application.
 class A {}
-<<<<<<< []
-======= {"messages":[],"compileUpdatesShouldThrow":1}
+<<<< []
+==== {"messages":[],"compileUpdatesShouldThrow":1}
 // TODO(ahe): compileUpdates shouldn't throw, we should be able to handle named
 // mixin applications.
 class C = Object with A;
->>>>>>>
+>>>>
 main() {
   new A();
-<<<<<<<
-=======
+<<<<
+====
   new C();
->>>>>>>
+>>>>
 }
 ''',
 
@@ -1782,18 +1782,18 @@ remove_named_mixin_application
 ==> main.dart.patch <==
 // Test that we can remove a mixin application.
 class A {}
-<<<<<<< []
+<<<< []
 class C = Object with A;
-======= {"messages":[],"compileUpdatesShouldThrow":1}
+==== {"messages":[],"compileUpdatesShouldThrow":1}
 // TODO(ahe): compileUpdates shouldn't throw, we should be able to handle named
 // mixin applications.
->>>>>>>
+>>>>
 main() {
   new A();
-<<<<<<<
+<<<<
   new C();
-=======
->>>>>>>
+====
+>>>>
 }
 ''',
 
@@ -1806,10 +1806,10 @@ class C = Object with A;
 
 main() {
   new C();
-<<<<<<< []
-======= {"messages":[],"compileUpdatesShouldThrow":1}
+<<<< []
+==== {"messages":[],"compileUpdatesShouldThrow":1}
   new C();
->>>>>>>
+>>>>
 }
 ''',
 ];

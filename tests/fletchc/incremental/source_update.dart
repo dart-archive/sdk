@@ -118,13 +118,13 @@ List<String> splitLines(String text) {
 ///
 /// For example:
 ///     first
-///     <<<<<<<
+///     <<<<
 ///     v1
-///     =======
+///     ====
 ///     v2
-///     =======
+///     ====
 ///     v3
-///     >>>>>>>
+///     >>>>
 ///     last
 ///
 /// Would be expanded to something equivalent to:
@@ -135,15 +135,15 @@ List expandDiff(String text) {
   bool inDiff = false;
   for (String line in splitLines(text)) {
     if (inDiff) {
-      if (line.startsWith("=======")) {
+      if (line.startsWith("====")) {
         result.last.add(new StringBuffer());
-      } else if (line.startsWith(">>>>>>>")) {
+      } else if (line.startsWith(">>>>")) {
         inDiff = false;
         result.add(new StringBuffer());
       } else {
         result.last.last.write(line);
       }
-    } else if (line.startsWith("<<<<<<<")) {
+    } else if (line.startsWith("<<<<")) {
       inDiff = true;
       result.add(<StringBuffer>[new StringBuffer()]);
     } else {
