@@ -1631,6 +1631,7 @@ method() {
 >>>>>>>
 }
 ''',
+
   r'''
 bad_stack_trace_repro
 ==> main.dart.patch <==
@@ -1652,6 +1653,7 @@ foo(a) {
   if (a) throw "throw";
 }
 ''',
+
   r'''
 compile_time_error_001
 ==> main.dart.patch <==
@@ -1665,6 +1667,7 @@ main() {
 >>>>>>>
 }
 ''',
+
   r'''
 compile_time_error_002
 ==> main.dart.patch <==
@@ -1750,6 +1753,62 @@ main() {
 <<<<<<<
   new A();
 =======
+>>>>>>>
+}
+''',
+
+  r'''
+add_named_mixin_application
+==> main.dart.patch <==
+// Test that we can add a mixin application.
+class A {}
+<<<<<<< []
+======= {"messages":[],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw, we should be able to handle named
+// mixin applications.
+class C = Object with A;
+>>>>>>>
+main() {
+  new A();
+<<<<<<<
+=======
+  new C();
+>>>>>>>
+}
+''',
+
+  r'''
+remove_named_mixin_application
+==> main.dart.patch <==
+// Test that we can remove a mixin application.
+class A {}
+<<<<<<< []
+class C = Object with A;
+======= {"messages":[],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw, we should be able to handle named
+// mixin applications.
+>>>>>>>
+main() {
+  new A();
+<<<<<<<
+  new C();
+=======
+>>>>>>>
+}
+''',
+
+  r'''
+unchanged_named_mixin_application
+==> main.dart.patch <==
+// Test that we can handle a mixin application that doesn't change.
+class A {}
+class C = Object with A;
+
+main() {
+  new C();
+<<<<<<< []
+======= {"messages":[],"compileUpdatesShouldThrow":1}
+  new C();
 >>>>>>>
 }
 ''',

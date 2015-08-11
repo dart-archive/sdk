@@ -28,6 +28,9 @@ import 'package:compiler/src/scanner/scannerlib.dart' show
     PartialElement,
     Token;
 
+import 'fletchc_incremental.dart' show
+    IncrementalCompilationFailed;
+
 class Difference {
   final DeclarationSite before;
   final DeclarationSite after;
@@ -54,6 +57,11 @@ List<Difference> computeDifference(
     ScopeContainerElement after) {
   Map<String, DeclarationSite> beforeMap = <String, DeclarationSite>{};
   before.forEachLocalMember((modelx.ElementX element) {
+    if (element.isMixinApplication) {
+      // TODO(ahe): issue 91
+      throw new IncrementalCompilationFailed(
+          "Mixin applications not supported: $element");
+    }
     DeclarationSite site = element.declarationSite;
     assert(site != null || element.isSynthesized);
     if (!element.isSynthesized) {
@@ -63,6 +71,11 @@ List<Difference> computeDifference(
   List<Difference> modifications = <Difference>[];
   List<Difference> potentiallyChanged = <Difference>[];
   after.forEachLocalMember((modelx.ElementX element) {
+    if (element.isMixinApplication) {
+      // TODO(ahe): issue 91
+      throw new IncrementalCompilationFailed(
+          "Mixin applications not supported: $element");
+    }
     DeclarationSite existing = beforeMap.remove(element.name);
     if (existing == null) {
       modifications.add(new Difference(null, element.declarationSite));
