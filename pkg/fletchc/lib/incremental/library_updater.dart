@@ -26,7 +26,8 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionElement,
     LibraryElement,
     STATE_NOT_STARTED,
-    ScopeContainerElement;
+    ScopeContainerElement,
+    TypeDeclarationElement;
 
 import 'package:compiler/src/scanner/scannerlib.dart' show
     EOF_TOKEN,
@@ -617,6 +618,16 @@ class LibraryUpdater extends FletchFeatures {
         // TODO(ahe): Cache qualifiedNamesIn to avoid quadratic behavior.
         Set<String> names = qualifiedNamesIn(site);
         if (canNamesResolveStaticallyTo(names, element, container)) {
+          if (member is TypeDeclarationElement) {
+            if (!member.isResolved) {
+              cannotReuse(element, "Not resolved");
+              return;
+            }
+            if (!member.thisType.isRaw) {
+              cannotReuse(element, "Generic types not supported yet");
+              return;
+            }
+          }
           _elementsToInvalidate.add(member);
         }
       });

@@ -1677,6 +1677,34 @@ main() {
 }
 ''',
 
+  r'''
+compile_time_error_003
+==> main.dart.patch <==
+// Reproduce a crash when a compile-time error is reported on a new class
+<<<<<<< []
+======= {"messages":[],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
+// reported instead
+abstract class A implements bool default F {
+  A();
+}
+>>>>>>>
+
+class F {
+<<<<<<<
+=======
+  factory A() { return null; }
+>>>>>>>
+}
+
+main() {
+<<<<<<<
+=======
+  new A();
+>>>>>>>
+}
+''',
+
 r'''
 compile_time_error_004
 ==> main.dart.patch <==
@@ -1704,6 +1732,25 @@ void testA(A a) {}
 
 void main() {
   testA(null);
+}
+''',
+
+  r'''
+generic_types_001
+==> main.dart.patch <==
+<<<<<<< []
+class A<T> {
+}
+======= {"messages":[],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
+// instead
+>>>>>>>
+
+main() {
+<<<<<<<
+  new A();
+=======
+>>>>>>>
 }
 ''',
 ];
