@@ -605,12 +605,14 @@ void ByteArray::ByteArrayWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->Forward(this);
   // Body.
   writer->WriteInt64(FlagsBits());
+  if (length() == 0) return;
   writer->WriteBytes(length(), byte_address_for(0));
 }
 
 void ByteArray::ByteArrayReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
   SetFlagsBits(reader->ReadInt64());
+  if (length == 0) return;
   reader->ReadBytes(length, byte_address_for(0));
 }
 
