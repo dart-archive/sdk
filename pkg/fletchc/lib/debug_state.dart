@@ -5,9 +5,9 @@
 library fletch.debug_state;
 
 import 'bytecodes.dart';
-import 'compiler.dart' show FletchCompiler;
-import 'session.dart';
 import 'fletch_system.dart';
+import 'incremental/fletchc_incremental.dart';
+import 'session.dart';
 import 'src/debug_info.dart';
 import 'src/class_debug_info.dart';
 

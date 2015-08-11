@@ -48,6 +48,7 @@ import 'package:compiler/src/dart2jslib.dart' show
     Compiler;
 
 import 'package:fletchc/incremental/fletchc_incremental.dart' show
+    IncrementalCompiler,
     IncrementalCompilationFailed;
 
 import 'package:fletchc/commands.dart' show
@@ -345,7 +346,7 @@ Future<TestSession> runFletchVM(
     IoCompilerTestCase test,
     FletchDelta fletchDelta) async {
   TestSession session =
-      await TestSession.spawnVm(test.incrementalCompiler.compiler);
+      await TestSession.spawnVm(test.incrementalCompiler);
   try {
     await session.applyDelta(fletchDelta);
     for (Command command in fletchDelta.commands) print(command);
@@ -386,7 +387,7 @@ class TestSession extends Session {
 
   TestSession(
       Socket vmSocket,
-      FletchCompiler compiler,
+      IncrementalCompiler compiler,
       this.process,
       this.stdoutIterator,
       this.stderr,
@@ -460,11 +461,10 @@ class TestSession extends Session {
     });
   }
 
-  static Future<TestSession> spawnVm(
-      fletch_compiler_src.FletchCompiler compiler) async {
+  static Future<TestSession> spawnVm(IncrementalCompiler compiler) async {
     print("TestSession.spawnVm");
-    String vmPath = compiler.fletchVm.toFilePath();
-    FletchBackend backend = compiler.backend;
+    String vmPath = compiler.compiler.fletchVm.toFilePath();
+    FletchBackend backend = compiler.compiler.backend;
 
     List<Future> futures = <Future>[];
     void recordFuture(String name, Future future) {
@@ -504,7 +504,7 @@ class TestSession extends Session {
     recordFuture("vmSocket", vmSocket.done);
 
     TestSession session = new TestSession(
-        vmSocket, compiler.helper, fletchVm.process,
+        vmSocket, compiler, fletchVm.process,
         new StreamIterator(stdoutController.stream),
         stderrController.stream,
         futures, exitCodeCompleter.future);

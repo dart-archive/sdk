@@ -94,11 +94,14 @@ Future<int> compileAndRunTask(
     StreamIterator<Command> commandIterator) async {
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
-  FletchCompiler compiler =
-      new FletchCompiler(
-          options: compilerOptions, script: options.script, fletchVm: fletchVm,
-          packageRoot: options.packageRootPath);
-  FletchDelta fletchDelta = await compiler.run();
+  FletchCompiler compilerHelper = new FletchCompiler(
+      options: compilerOptions,
+      packageRoot: options.packageRootPath,
+      script: options.script,
+      fletchVm: fletchVm);
+  IncrementalCompiler compiler = compilerHelper.newIncrementalCompiler();
+  await compiler.compile(compilerHelper.script);
+  FletchDelta fletchDelta = compiler.computeInitialDelta();
 
   Process vmProcess;
   int exitCode = 0;
@@ -115,9 +118,9 @@ Future<int> compileAndRunTask(
         '--port=${server.port}',
       ];
 
-    String vmPath = compiler.fletchVm.toFilePath();
+    String vmPath = compilerHelper.fletchVm.toFilePath();
 
-    if (compiler.verbose) {
+    if (compilerHelper.verbose) {
       print("Running '$vmPath ${vmOptions.join(" ")}'");
     }
     vmProcess = await Process.start(

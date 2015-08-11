@@ -89,7 +89,7 @@ Future<int> attachTask(String host, int port) async {
 
   Session session =
       new Session(handleSocketErrors(socket, "vmSocket"),
-                  sessionState.compilerHelper,
+                  sessionState.compiler,
                   sessionState.stdoutSink,
                   sessionState.stderrSink,
                   null);

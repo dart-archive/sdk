@@ -15,7 +15,10 @@ import 'dart:typed_data' show
 
 import 'commands.dart';
 import 'fletch_system.dart';
-import 'compiler.dart' show FletchCompiler;
+
+import 'incremental/fletchc_incremental.dart'
+    show IncrementalCompiler;
+
 import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';
 import 'debug_state.dart';
@@ -173,7 +176,7 @@ class FletchVmSession {
 
 /// Extends a bare [FletchVmSession] with debugging functionality.
 class Session extends FletchVmSession {
-  final FletchCompiler compiler;
+  final IncrementalCompiler compiler;
   final Future processExitCodeFuture;
 
   DebugState debugState;

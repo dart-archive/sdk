@@ -7,7 +7,7 @@ part of fletch.debug_state;
 class StackFrame {
   final FletchFunction function;
   final int bytecodePointer;
-  final FletchCompiler compiler;
+  final IncrementalCompiler compiler;
   final DebugState debugState;
 
   StackFrame(this.function, this.bytecodePointer, this.compiler,
@@ -114,7 +114,7 @@ class StackTrace {
 
   int get frames => stackFrames.length;
 
-  void addFrame(FletchCompiler compiler, StackFrame frame) {
+  void addFrame(IncrementalCompiler compiler, StackFrame frame) {
     stackFrames[--framesToGo] = frame;
     String name = compiler.lookupFunctionName(frame.function);
     var nameLength = name == null ? 0 : name.length;

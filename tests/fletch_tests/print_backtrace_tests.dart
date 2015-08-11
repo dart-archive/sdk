@@ -160,8 +160,10 @@ simulateBadBacktrace() async {
   await server.close();
   var closeSocketInVmFuture = socketInVm.close();
 
+  FletchCompiler compilerHelper = new FletchCompiler();
+
   session_lib.Session session = new session_lib.Session(
-      socketInCompiler, new FletchCompiler(), null, null);
+      socketInCompiler, compilerHelper.newIncrementalCompiler(), null, null);
 
   session.fletchSystem = new MockFletchSystemProxy();
 

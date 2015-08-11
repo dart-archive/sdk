@@ -21,6 +21,10 @@ import 'package:compiler/compiler_new.dart' show
     Diagnostic;
 
 import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
+    ConstructorElement,
+    Element,
+    FunctionElement,
     LibraryElement;
 
 import 'library_updater.dart' show
@@ -30,6 +34,15 @@ import 'library_updater.dart' show
 
 import '../compiler.dart' show
     FletchCompiler;
+
+import '../src/debug_info.dart' show
+    DebugInfo;
+
+import '../src/class_debug_info.dart' show
+    ClassDebugInfo;
+
+import '../src/fletch_selector.dart' show
+    FletchSelector;
 
 import '../src/fletch_compiler.dart' as implementation show
     FletchCompiler;
@@ -152,6 +165,50 @@ class IncrementalCompiler {
   FletchDelta computeInitialDelta() {
     FletchBackend backend = _compiler.backend;
     return backend.computeDelta();
+  }
+
+  String lookupFunctionName(FletchFunction function) {
+    if (function.isParameterStub) return "<parameter stub>";
+    Element element = function.element;
+    if (element == null) return function.name;
+    if (element.isConstructor) {
+      ConstructorElement constructor = element;
+      ClassElement enclosing = constructor.enclosingClass;
+      String name = (constructor.name == null || constructor.name.length == 0)
+          ? ''
+          : '.${constructor.name}';
+      String postfix = function.isInitializerList ? ' initializer' : '';
+      return '${enclosing.name}$name$postfix';
+    }
+
+    ClassElement enclosing = element.enclosingClass;
+    if (enclosing == null) return function.name;
+    return '${enclosing.name}.${function.name}';
+  }
+
+  ClassDebugInfo createClassDebugInfo(FletchClass klass) {
+    return _compiler.context.backend.createClassDebugInfo(klass);
+  }
+
+  String lookupFunctionNameBySelector(int selector) {
+    int id = FletchSelector.decodeId(selector);
+    return _compiler.context.symbols[id];
+  }
+
+  DebugInfo createDebugInfo(FletchFunction function) {
+    return _compiler.context.backend.createDebugInfo(function);
+  }
+
+  DebugInfo debugInfoForPosition(String file, int position) {
+    return _compiler.debugInfoForPosition(file, position);
+  }
+
+  int positionInFileFromPattern(String file, int line, String pattern) {
+    return _compiler.positionInFileFromPattern(file, line, pattern);
+  }
+
+  int positionInFile(String file, int line, int column) {
+    return _compiler.positionInFile(file, line, column);
   }
 }
 

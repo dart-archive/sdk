@@ -28,17 +28,8 @@ import 'package:compiler/src/source_file_provider.dart' show
     FormattingDiagnosticHandler,
     SourceFileProvider;
 
-import 'package:compiler/src/elements/elements.dart' show
-    ClassElement,
-    ConstructorElement,
-    Element,
-    FunctionElement;
-
 import 'package:compiler/src/filenames.dart' show
     appendSlash;
-
-import 'src/debug_info.dart';
-import 'src/class_debug_info.dart';
 
 import 'src/fletch_native_descriptor.dart' show
     FletchNativeDescriptor;
@@ -51,8 +42,6 @@ import 'package:compiler/src/apiimpl.dart' as apiimpl;
 import 'src/fletch_compiler.dart' as implementation;
 
 import 'fletch_system.dart';
-
-import 'src/fletch_selector.dart';
 
 import 'incremental/fletchc_incremental.dart' show
     IncrementalCompiler;
@@ -239,50 +228,6 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   }
 
   Uri get fletchVm => _compiler.fletchVm;
-
-  String lookupFunctionName(FletchFunction function) {
-    Element element = function.element;
-    if (function.isParameterStub) return "<parameter stub>";
-    if (element == null) return (function.name != null) ? function.name : '';
-    if (element.isConstructor) {
-      ConstructorElement constructor = element;
-      ClassElement enclosing = constructor.enclosingClass;
-      String name = (constructor.name == null || constructor.name.length == 0)
-          ? ''
-          : '.${constructor.name}';
-      String postfix = function.isInitializerList ? ' initializer' : '';
-      return '${enclosing.name}$name$postfix';
-    }
-
-    ClassElement enclosing = element.enclosingClass;
-    if (enclosing == null) return (function.name != null) ? function.name : '';
-    return '${enclosing.name}.${function.name}';
-  }
-
-  ClassDebugInfo createClassDebugInfo(FletchClass klass) {
-    return _compiler.context.backend.createClassDebugInfo(klass);
-  }
-
-  String lookupFunctionNameBySelector(int selector) {
-    int id = FletchSelector.decodeId(selector);
-    return _compiler.context.symbols[id];
-  }
-
-  DebugInfo createDebugInfo(FletchFunction function) {
-    return _compiler.context.backend.createDebugInfo(function);
-  }
-
-  DebugInfo debugInfoForPosition(String file, int position) {
-    return _compiler.debugInfoForPosition(file, position);
-  }
-
-  int positionInFileFromPattern(String file, int line, String pattern) {
-    return _compiler.positionInFileFromPattern(file, line, pattern);
-  }
-
-  int positionInFile(String file, int line, int column) {
-    return _compiler.positionInFile(file, line, column);
-  }
 
   /// Create a new instance of [IncrementalCompiler].
   IncrementalCompiler newIncrementalCompiler(
