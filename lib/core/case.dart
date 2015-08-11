@@ -4,8 +4,10 @@
 
 part of dart.core_patch;
 
-CaseConverter toUpper;
-CaseConverter toLower;
+ToUpperConverter toUpper;
+ToLowerConverter toLower;
+RegExpCanonicalizer regExpCanonicalize;
+RegExpEquivalenceClasses regExpEquivalenceClasses;
 
 // This is a case conversion library.  It is based on the idea of running a
 // little program written in a bytecode.  The program makes calls to a user-
@@ -28,15 +30,27 @@ CaseConverter toLower;
 // running the program when the first codepoint appears that is above the page
 // we are currently interested in.
 
-// The maps of the code point pages are simply lists of 256 strings, containing
-// the 1-character string that is the mapping for the corresponding character
-// (or rarely 2 or 3 characters).  Most Unicode characters do not have any case
-// mapping (only about 1100 out of 29 thousand), and we do not want to store
-// lots of short strings for characters that are unchanged by case mapping, so
-// a null represents "no change", and a null instead of an array provides a
-// compact representation of a page where all characters map to themselves.
+// For toUpperCase and toLowerCase, the maps of the code point pages are simply
+// lists of 256 strings, containing the 1-character string that is the mapping
+// for the corresponding character (or rarely 2 or 3 characters).  Most Unicode
+// characters do not have any case mapping (only about 1100 out of 29
+// thousand), and we do not want to store lots of short strings for characters
+// that are unchanged by case mapping, so a null represents "no change", and a
+// null instead of an array provides a compact representation of a page where
+// all characters map to themselves.
 
-String toSomeCase(CaseConverter converter, String src) {
+// For case canonicalization in JS-compatible regexps we only use the single-
+// character upper case mappings.  In this case we use integer code points
+// instead of strings in the page lists.  We also generate equivalence classes
+// for use in regular expression []-style character classes.  These are in the
+// form of small integer lists, where null represents the single entry
+// equivalence class with just the original character in it.
+
+const pageShift = 8;
+const pageSize = 1 << pageShift;
+const pageMask = pageSize - 1;
+
+String toSomeCase(CaseConverter<String> converter, String src) {
   if (src.isEmpty) return src;
   StringBuffer b = new StringBuffer();
   int index = 0;
@@ -75,50 +89,87 @@ String internalToLowerCase(String src) {
   return toSomeCase(toLower, src);
 }
 
-abstract class CaseConverter {
-  Map <int, List<String>> _pages = new Map <int, List<String>>();
-  void _run(bool f(int from, int to, bool append));
-  int _lastPageNumber = -1;
-  List<String> _lastPageMap;
+List<int> internalRegExpEquivalenceClass(int charCode) {
+  if (regExpEquivalenceClasses == null) {
+    regExpEquivalenceClasses = new RegExpEquivalenceClasses();
+  }
+  return regExpEquivalenceClasses.map(charCode);
+}
 
-  String map(int charCode) {
-    int page = charCode >> 8;
+abstract class CaseTable<T> {
+  Map <int, List<T>> _pages = new Map <int, List<T>>();
+  int _lastPageNumber = -1;
+  List<T> _lastPageMap;
+
+  List<T> _addPage(int page);
+
+  T map(int charCode) {
+    int page = charCode >> pageShift;
     if (page != _lastPageNumber) {
-      if (!_pages.containsKey(page)) _addPage(page);
+      if (!_pages.containsKey(page)) _pages[page] = _addPage(page);
       _lastPageNumber = page;
       _lastPageMap = _pages[page];
     }
-    return _lastPageMap == null ? null : _lastPageMap[charCode & 0xff];
+    return _lastPageMap == null ? null : _lastPageMap[charCode & pageMask];
   }
+}
 
-  void _addPage(int page) {
-    int min = page << 8;
-    int max = min + 0xff;
-    List<String> pageList;
+abstract class CaseConverter<T> extends CaseTable<T> {
+  void _run(bool f(int from, int to, bool append));
+
+  void addEntry(List<T> pageList, int from, int to, bool append);
+
+  List<T> _addPage(int page) {
+    int min = page << pageShift;
+    int max = min + pageMask;
+    List<T> pageList;
     bool f(int from, int to, bool append) {
       if (from > max) return false;  // Stop now.
       if (from >= min) {
-        String toString = new String.fromCharCode(to);
-        if (pageList == null) pageList = new List<String>(0x100);
-        int lowBits = (from & 0xff);
-        if (append && pageList[lowBits] != null) {
-          // This is relatively rare, and the string never ends up larger than
-          // 3 characters.
-          pageList[lowBits] += toString;
-        } else {
-          pageList[lowBits] = toString;
-        }
+        if (pageList == null) pageList = new List<T>(pageSize);
+        addEntry(pageList, from, to, append);
       }
       return true;  // Continue.
     }
     _run(f);
     // May be null, meaning none of the characters on this page are mapped to
     // different characters.
-    _pages[page] = pageList;
+    return pageList;
   }
 }
 
-class ToUpperConverter extends CaseConverter {
+abstract class StringCaseConverter extends CaseConverter<String> {
+  void addEntry(List<String> pageList, int from, int to, bool append) {
+    String toString = new String.fromCharCode(to);
+    int lowBits = (from & pageMask);
+    if (append && pageList[lowBits] != null) {
+      // This is relatively rare, and the string never ends up larger than
+      // 3 characters.
+      pageList[lowBits] += toString;
+    } else {
+      pageList[lowBits] = toString;
+    }
+  }
+}
+
+// Regular expression canonicalization uses the to-upper tables, but is specced
+// to only use the single character mappings.  We use char codes, not short
+// strings.
+abstract class RegExpCanonicalizer extends CaseConverter<int> {
+  void addEntry(List<int> pageList, int from, int to, bool append) {
+    int lowBits = (from & pageMask);
+    pageList[lowBits] = to;
+  }
+
+  void _run(bool f(int from, int to, bool append)) {
+    final doMap =
+        (int from, int to) => f(from, to, false);  // Unused boolean argument.
+    new Interpreter(toUpperProgram, true).interpret(doMap);
+  }
+}
+
+// toUpperCase maps from char codes to short strings (1-3 characters).
+class ToUpperConverter extends StringCaseConverter {
   void _run(bool f(int from, int to, bool append)) {
     final overwriteMap = (int from, int to) => f(from, to, false);
     final appendMap = (int from, int to) => f(from, to, true);
@@ -134,10 +185,86 @@ class ToUpperConverter extends CaseConverter {
   }
 }
 
-class ToLowerConverter extends CaseConverter {
+// toLowerCase maps from char codes to one-character strings.
+class ToLowerConverter extends StringCaseConverter {
   void _run(bool f(int from, int to, bool append)) {
     final overwriteMap = (int from, int to) => f(from, to, false);
     new Interpreter(toLowerProgram, false).interpret(overwriteMap);
+  }
+}
+
+// The equivalence classes map from char codes to short lists of
+// equivalent char codes.
+class RegExpEquivalenceClasses extends CaseTable<List<int>> {
+  static const lastAsciiCharCode = 0x7f;
+
+  List<List<int>> _addPage(int page) {
+    int min = page << pageShift;
+    int max = min + pageMask;
+    // This will be the result from this method, a list of char codes for each
+    // input char code, which the input char code is equivalent to.
+    List<List<int>> pageList = new List<List<int>>(pageSize);
+
+    // Temporary working map, that is discarded after this method returns.
+    Map<int, List<int>> charsThatMapToEachCanonical = new Map<int, List<int>>();
+
+    // For the first run of the case interpreter, this collects the upper case
+    // characters that this block of characters map to.
+    bool collectCanonicals(int from, int to) {
+      if (from > max) return false;  // Stop now.
+      // Due to a strange rule in 21.2.2.8.2 step 3g we ignore mappings from
+      // ASCII to non-ASCII.
+      if (from >= min &&
+          (to > lastAsciiCharCode || from <= lastAsciiCharCode)) {
+        if (pageList == null) pageList = new List<List<int>>(pageSize);
+        pageList[from & pageMask] =
+            charsThatMapToEachCanonical[to] = new List<int>();
+      }
+      return true;  // Continue.
+    }
+
+    // Get single character upper case mappings.
+    new Interpreter(toUpperProgram, true).interpret(collectCanonicals);
+
+    if (pageList == null) return null;
+
+    // For those characters that are not mentioned by the interpreter, this
+    // means they map to themselves.  Add single-entry lists to the page to
+    // reflect that.
+    for (int code = min; code <= max; code++) {
+      if (pageList[code & pageMask] == null) {
+        pageList[code & pageMask] =
+            charsThatMapToEachCanonical.putIfAbsent(code, () => new List<int>())
+              ..add(code);
+      }
+    }
+
+    // For the second run of the case interpreter this collects all the
+    // characters that map to one of the upper case forms we are interested in.
+    bool collectSets(int from, int to) {
+      if ((to > lastAsciiCharCode || from <= lastAsciiCharCode) &&
+          charsThatMapToEachCanonical.containsKey(to)) {
+        charsThatMapToEachCanonical[to].add(from);
+      }
+      // Always continue, we have to run through all the toUpperCase byte codes.
+      return true;
+    }
+
+    new Interpreter(toUpperProgram, true).interpret(collectSets);
+
+    bool atLeastOneMapping = false;
+
+    for (int i = 0; i < pageSize; i++) {
+      if (pageList[i].length == 1) {
+        pageList[i] = null;
+      } else {
+        atLeastOneMapping = true;
+      }
+    }
+
+    if (!atLeastOneMapping) return null;
+
+    return pageList;
   }
 }
 
@@ -302,7 +429,7 @@ const List<int> commonOffsets = const [1, 2, 8, 16, 26, 32, 48, 80];
 // Since bytecodes have limited space for constant operands, we provide the
 // extend instruction, which can provide high bits for later instructions.  It
 // is also used to indicate repeat counts for EMITx instructions.
-// 
+//
 // Instructions/Bit pattern/Pseudocode
 // extend:      00nnnnnn    X := (X << 6) + n;
 // emitL:       010nnmmm    Repeat (X == 0 ? 1 : X) times:
@@ -336,7 +463,7 @@ const emitRMask = 0x07;
 const emitLMask = 0x07;
 const emitRBias = 2;
 
-// Other instructions: 
+// Other instructions:
 const argumentBits = 6;
 const argumentMask = 0x3f;
 

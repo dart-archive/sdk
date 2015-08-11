@@ -86,15 +86,16 @@ const BACKTRACK_NE = 5;  // reg reg
 const BACKTRACK_GT = 6;  // reg reg
 const BACKTRACK_IF_NO_MATCH = 7;  // constant-pool-offset
 const BACKTRACK_IF_IN_RANGE = 8;  // from to
-const GOTO_IF_IN_RANGE = 9;  // from to label
-const GOTO_EQ = 10; // reg reg label
-const GOTO_GE = 11; // reg reg label
-const GOTO_IF_WORD_CHARACTER = 12;  // position-offset label
-const ADD_TO_REGISTER = 13; // reg const
-const COPY_REGISTER = 14; // dest-reg source-reg
-const BACKTRACK = 15;
-const SUCCEED = 16;
-const FAIL = 17;
+const GOTO_IF_MATCH = 9;  // charCode label
+const GOTO_IF_IN_RANGE = 10;  // from to label
+const GOTO_EQ = 11; // reg reg label
+const GOTO_GE = 12; // reg reg label
+const GOTO_IF_WORD_CHARACTER = 13;  // position-offset label
+const ADD_TO_REGISTER = 14; // reg const
+const COPY_REGISTER = 15; // dest-reg source-reg
+const BACKTRACK = 16;
+const SUCCEED = 17;
+const FAIL = 18;
 
 // Format is name, number of register arguments, number of other arguments.
 const BYTE_CODE_NAMES = const [
@@ -107,6 +108,7 @@ const BYTE_CODE_NAMES = const [
   "BACKTRACK_GT", 2, 0,
   "BACKTRACK_IF_NO_MATCH", 0, 1,
   "BACKTRACK_IF_IN_RANGE", 0, 2,
+  "GOTO_IF_MATCH", 0, 2,
   "GOTO_IF_IN_RANGE", 0, 3,
   "GOTO_EQ", 2, 1,
   "GOTO_GE", 2, 1,
@@ -173,6 +175,8 @@ const CHAR_CODE_IDEOGRAPHIC_SPACE = 0x3000;
 const CHAR_CODE_ZERO_WIDTH_NO_BREAK_SPACE = 0xfeff;
 
 class MiniExpCompiler {
+  final String pattern;
+  final bool caseSensitive;
   final List<int> registers = new List<int>();
   int captureRegisterCount = 0;
   int firstCaptureRegister;
@@ -180,13 +184,26 @@ class MiniExpCompiler {
   final List<int> _extraConstants = new List<int>();
   MiniExpLabel _pendingGoto;
 
-  MiniExpCompiler() {
+  MiniExpCompiler(this.pattern, this.caseSensitive) {
     for (int i = 0; i < FIXED_REGISTERS; i++) registers.add(0);
   }
 
   List<int> get codes {
     flushPendingGoto();
     return _codes;
+  }
+
+  String get constantPool {
+    if (_extraConstants.isEmpty) {
+      return pattern;
+    } else {
+      return pattern + new String.fromCharCodes(_extraConstants);
+    }
+  }
+
+  int constantPoolEntry(int index) {
+    if (index < pattern.length) return pattern.codeUnitAt(index);
+    return _extraConstants[index - pattern.length];
   }
 
   void _emit(int code, [int arg1, int arg2]) {
@@ -236,14 +253,6 @@ class MiniExpCompiler {
   int addToConstantPool(int codeUnit) {
     _extraConstants.add(codeUnit);
     return _extraConstants.length - 1;
-  }
-
-  String constantPool(String pattern) {
-    if (_extraConstants.isEmpty) {
-      return pattern;
-    } else {
-      return pattern + new String.fromCharCodes(_extraConstants);
-    }
   }
 
   void pushBacktrack(MiniExpLabel label) {
@@ -309,9 +318,18 @@ class MiniExpCompiler {
     _emit(BACKTRACK_IF_IN_RANGE, from, to);
   }
 
-  void gotoIfInRange(int from, int to, MiniExpLabel label) {
-    _emit(GOTO_IF_IN_RANGE, from, to);
+  void gotoIfMatches(int charCode, MiniExpLabel label) {
+    _emit(GOTO_IF_MATCH, charCode);
     link(label);
+  }
+
+  void gotoIfInRange(int from, int to, MiniExpLabel label) {
+    if (from == to) {
+      gotoIfMatches(from, label);
+    } else {
+      _emit(GOTO_IF_IN_RANGE, from, to);
+      link(label);
+    }
   }
 
   void backtrackIfNotAtWordBoundary() {
@@ -585,7 +603,8 @@ class Quantifier extends MiniExpAst {
       compiler.generate(_body, onSuccess);
       return;
     }
-    // The above means if _max is 1 then _min must be 0, which simplifies things.
+    // The above means if _max is 1 then _min must be 0, which simplifies
+    // things.
     MiniExpLabel bodyMatched = _max == 1 ? onSuccess : new MiniExpLabel();
     MiniExpLabel checkEmptyMatchLabel;
     MiniExpLabel didntMatch = new MiniExpLabel();
@@ -624,7 +643,8 @@ class Quantifier extends MiniExpAst {
       if (_minCheck) {
         // If there's a minimum and we haven't reached it we should not try to
         // run the continuation, but go straight to the _body.
-        // TODO: if we had a gotoIfLess we could save instructions here.
+        // TODO(erikcorry): if we had a gotoIfLess we could save instructions
+        // here.
         MiniExpLabel jumpToContinuation = new MiniExpLabel();
         compiler.gotoIfGreaterEqual(
             _counterRegister, _minRegister, jumpToContinuation);
@@ -686,7 +706,20 @@ class Atom extends MiniExpAst {
 
   void generate(MiniExpCompiler compiler, MiniExpLabel onSuccess) {
     compiler.backtrackIfEqual(CURRENT_POSITION, STRING_LENGTH);
+    MiniExpLabel match;
+    int charCode = compiler.constantPoolEntry(_constantIndex);
+    if (!compiler.caseSensitive) {
+      List<int> equivalents = internalRegExpEquivalenceClass(charCode);
+      if (equivalents != null && equivalents.length > 1) {
+        match = new MiniExpLabel();
+        for (int equivalent in equivalents) {
+          if (equivalent == charCode) continue;
+          compiler.gotoIfMatches(equivalent, match);
+        }
+      }
+    }
     compiler.backtrackIfNoMatch(_constantIndex);
+    if (match != null) compiler.bind(match);
     compiler.addToRegister(CURRENT_POSITION, 1);
     compiler.goto(onSuccess);
   }
@@ -756,18 +789,54 @@ class CharClass extends MiniExpAst {
     }
   }
 
+  List<int> caseInsensitiveRanges(List<int> oldRanges) {
+    List<int> ranges = new List<int>();
+    for (int i = 0; i < oldRanges.length; i += 2) {
+      int start = oldRanges[i];
+      int end = oldRanges[i + 1];
+      int previousStart = -1;
+      int previousEnd = -1;
+      for (int j = start; j <= end; j++) {
+        List<int> equivalents = internalRegExpEquivalenceClass(j);
+        if (equivalents != null && equivalents.length > 1) {
+          for (int equivalent in equivalents) {
+            if ((equivalent < start || equivalent > end) &&
+                (equivalent < previousStart || equivalent > previousEnd)) {
+              if (equivalent == previousEnd + 1) {
+                previousEnd = ranges[ranges.length - 1] = equivalent;
+              } else {
+                ranges.add(equivalent);
+                ranges.add(equivalent);
+                previousStart = equivalent;
+                previousEnd = equivalent;
+              }
+            }
+          }
+        }
+      }
+      ranges.add(start);
+      ranges.add(end);
+    }
+    // TODO(erikcorry): Sort and merge ranges.
+    return ranges;
+  }
+
   void generate(MiniExpCompiler compiler, MiniExpLabel onSuccess) {
     compiler.backtrackIfEqual(CURRENT_POSITION, STRING_LENGTH);
+    List<int> ranges = _ranges;
+    if (!compiler.caseSensitive) {
+      ranges = caseInsensitiveRanges(_ranges);
+    }
     MiniExpLabel match = new MiniExpLabel();
     if (_positive) {
-      for (int i = 0; i < _ranges.length; i += 2) {
-        compiler.gotoIfInRange(_ranges[i], _ranges[i + 1], match);
+      for (int i = 0; i < ranges.length; i += 2) {
+        compiler.gotoIfInRange(ranges[i], ranges[i + 1], match);
       }
       compiler.backtrack();
       compiler.bind(match);
     } else {
-      for (int i = 0; i < _ranges.length; i += 2) {
-        compiler.backtrackIfInRange(_ranges[i], _ranges[i + 1]);
+      for (int i = 0; i < ranges.length; i += 2) {
+        compiler.backtrackIfInRange(ranges[i], ranges[i + 1]);
       }
     }
     compiler.addToRegister(CURRENT_POSITION, 1);
@@ -783,7 +852,7 @@ class BackReference extends MiniExpAst {
   BackReference(this._backReferenceIndex);
 
   void generate(MiniExpCompiler compiler, MiniExpLabel onSuccess) {
-    // TODO: Implement.
+    // TODO(erikcorry): Implement.
     throw("Back references not yet implemented");
     compiler.goto(onSuccess);
   }
@@ -832,13 +901,19 @@ class Capture extends MiniExpAst {
 }
 
 class MiniExpMatch implements Match {
-  final Pattern _pattern;
-  final String _subject;
+  final Pattern pattern;
+  final String input;
   final List<int> _registers;
   final int _firstCaptureReg;
 
   MiniExpMatch(
-      this._pattern, this._subject, this._registers, this._firstCaptureReg);
+      this.pattern, this.input, this._registers, this._firstCaptureReg);
+
+  int get groupCount => (_registers.length - 2 - _firstCaptureReg) >> 1;
+
+  int get start => _registers[_firstCaptureReg];
+
+  int get end => _registers[_firstCaptureReg + 1];
 
   String group(index) {
     if (index > groupCount) {
@@ -847,7 +922,7 @@ class MiniExpMatch implements Match {
     index *= 2;
     index += _firstCaptureReg;
     if (_registers[index] == -1) return null;
-    return _subject.substring(_registers[index], _registers[index + 1]);
+    return input.substring(_registers[index], _registers[index + 1]);
   }
 
   List<String> groups(List<int> groupIndices) {
@@ -859,16 +934,6 @@ class MiniExpMatch implements Match {
   }
 
   String operator[](index) => group(index);
-
-  int get groupCount => (_registers.length - 2 - _firstCaptureReg) >> 1;
-
-  int get start => _registers[_firstCaptureReg];
-
-  int get end => _registers[_firstCaptureReg + 1];
-
-  String get input => _subject;
-
-  String get pattern => _pattern;
 }
 
 class _MiniExp implements RegExp {
@@ -882,8 +947,7 @@ class _MiniExp implements RegExp {
   final bool isCaseSensitive;
 
   _MiniExp(this.pattern, this.isMultiLine, this.isCaseSensitive) {
-    if (!isCaseSensitive) throw "Case insensitive regexps not yet implemented";
-    var compiler = new MiniExpCompiler();
+    var compiler = new MiniExpCompiler(pattern, isCaseSensitive);
     var parser =
         new MiniExpParser(compiler, pattern, isMultiLine, isCaseSensitive);
     MiniExpAst ast = parser.parse();
@@ -972,7 +1036,7 @@ class _MiniExp implements RegExp {
     compiler.goto(stickyStart);
 
     _byteCodes = compiler.codes;
-    _constantPool = compiler.constantPool(source);
+    _constantPool = compiler.constantPool;
     _initialRegisterValues = compiler.registers;
     _firstCaptureRegister = compiler.firstCaptureRegister;
     _stickyEntryPoint = stickyEntryPoint.location;
@@ -1016,7 +1080,7 @@ class MiniExpParser {
   final bool _isCaseSensitive;
 
   int _captureCount = 0;
-  String constantPool;
+  String _constantPool;
 
   // State of the parser and lexer.
   int _position = 0;  // Location in source.
@@ -1416,9 +1480,11 @@ class MiniExpParser {
       int charCode = _at(_position + i);
       if (charCode >= CHAR_CODE_0 && charCode <= CHAR_CODE_9) {
         total += charCode - CHAR_CODE_0;
-      } else if (charCode >= CHAR_CODE_UPPER_A && charCode <= CHAR_CODE_UPPER_F) {
+      } else if (charCode >= CHAR_CODE_UPPER_A &&
+                 charCode <= CHAR_CODE_UPPER_F) {
         total += 10 + charCode - CHAR_CODE_UPPER_A;
-      } else if (charCode >= CHAR_CODE_LOWER_A && charCode <= CHAR_CODE_LOWER_F) {
+      } else if (charCode >= CHAR_CODE_LOWER_A &&
+                 charCode <= CHAR_CODE_LOWER_F) {
         total += 10 + charCode - CHAR_CODE_LOWER_A;
       } else {
         return -1;
@@ -1646,6 +1712,12 @@ class MiniExpInterpreter {
             _registers[CURRENT_POSITION] = stack[--stackPointer];
             programCounter = stack[--stackPointer];
           }
+          break;
+        case GOTO_IF_MATCH:
+          int code = _subject.codeUnitAt(_registers[CURRENT_POSITION]);
+          int expected = _byteCodes[programCounter++];
+          int dest = _byteCodes[programCounter++];
+          if (code == expected) programCounter = dest;
           break;
         case GOTO_IF_IN_RANGE:
           int code = _subject.codeUnitAt(_registers[CURRENT_POSITION]);

@@ -51,7 +51,6 @@ map_values4_test: Fail
 bool_from_environment_default_value_test: CompileTimeError
 
 # Regexp
-reg_exp1_test: Fail
 reg_exp4_test: Fail
 regexp/UC16_test: Fail
 regexp/alternative-length-miscalculation_test: Fail
@@ -62,30 +61,21 @@ regexp/backreferences_test: Fail
 # backtracking.
 regexp/capture-3_test: Skip
 regexp/capture_test: Fail
-regexp/char-insensitive_test: Fail
 regexp/compile-crash_test: Fail
-regexp/compile_test: Fail
-regexp/constructor_test: Fail
 regexp/early-acid3-86_test: Fail
 regexp/ecma-regex-examples_test: Fail
-regexp/global_test: Fail
 regexp/invalid-range-in-class_test: Fail
 regexp/lookahead_test: Fail
 regexp/loop-capture_test: Fail
 regexp/malformed-escapes_test: Fail
-regexp/multiline_test: Fail
-regexp/negative-special-characters_test: Fail
 regexp/no-extensions_test: Fail
 regexp/non-capturing-groups_test: Fail
 regexp/parentheses_test: Fail
-regexp/pcre-test-4_test: Fail
 regexp/pcre_test: Fail
 regexp/quantified-assertions_test: Fail
-regexp/range-bound-ffff_test: Fail
 regexp/regexp_kde_test: Fail
 regexp/regexp_test: Fail
 regexp/stack-overflow2_test: Fail
-regexp/unicode-handling_test: Fail
 regexp/unicodeCaseInsensitive_test: Fail
 string_split_test: Fail
 
