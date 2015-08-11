@@ -775,7 +775,7 @@ NATIVE(ListNew) {
 
 NATIVE(ListLength) {
   Object* list = Instance::cast(arguments[0])->GetInstanceField(0);
-  return Smi::FromWord(Array::cast(list)->length());
+  return Smi::FromWord(BaseArray::cast(list)->length());
 }
 
 NATIVE(ListIndexGet) {
@@ -788,6 +788,18 @@ NATIVE(ListIndexGet) {
     return Failure::index_out_of_bounds();
   }
   return array->get(index);
+}
+
+NATIVE(ByteListIndexGet) {
+  Object* list = Instance::cast(arguments[0])->GetInstanceField(0);
+  ByteArray* array = ByteArray::cast(list);
+  Object* x = arguments[1];
+  if (!x->IsSmi()) return Failure::wrong_argument_type();
+  int index = Smi::cast(x)->value();
+  if (index < 0 || index >= array->length()) {
+    return Failure::index_out_of_bounds();
+  }
+  return Smi::FromWord(array->get(index));
 }
 
 NATIVE(ListIndexSet) {

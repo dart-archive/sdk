@@ -497,6 +497,12 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kPushConstantByteList: {
+        int length = connection_->ReadInt();
+        PushConstantByteList(length);
+        break;
+      }
+
       case Connection::kPushConstantMap: {
         int length = connection_->ReadInt();
         PushConstantMap(length);
@@ -859,6 +865,8 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
     klass = program()->large_integer_class();
   } else if (name == Names::kConstantList) {
     klass = program()->constant_list_class();
+  } else if (name == Names::kConstantByteList) {
+    klass = program()->constant_byte_list_class();
   } else if (name == Names::kConstantMap) {
     klass = program()->constant_map_class();
   } else if (name == Names::kNum) {
@@ -892,6 +900,28 @@ void Session::PushConstantList(int length) {
   ASSERT(list->get_class()->NumberOfInstanceFields() == 1);
   list->SetInstanceField(0, Pop());
   Push(list);
+}
+
+void Session::PushConstantByteList(int length) {
+  {
+    GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
+                                       program()->CreateByteArray(length));
+    ByteArray* array = ByteArray::cast(result);
+    for (int i = length - 1; i >= 0; i--) {
+      array->set(i, Smi::cast(Pop())->value());
+    }
+    Push(array);
+  }
+
+  {
+    GC_AND_RETRY_ON_ALLOCATION_FAILURE(
+        result,
+        program()->CreateInstance(program()->constant_byte_list_class()));
+    Instance* list = Instance::cast(result);
+    ASSERT(list->get_class()->NumberOfInstanceFields() == 1);
+    list->SetInstanceField(0, Pop());
+    Push(list);
+  }
 }
 
 void Session::PushConstantMap(int length) {

@@ -59,6 +59,7 @@ class Object {
 
   // - based on type field in class.
   inline bool IsClass();
+  inline bool IsBaseArray();
   inline bool IsArray();
   inline bool IsInstance();
   inline bool IsString();
@@ -546,6 +547,9 @@ class BaseArray: public ComplexHeapObject {
   // Layout descriptor.
   static const int kLengthOffset = ComplexHeapObject::kSize;
   static const int kSize = kLengthOffset + kPointerSize;
+
+  // Casting.
+  static inline BaseArray* cast(Object* obj);
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(BaseArray);
@@ -1160,6 +1164,16 @@ bool Object::IsString() {
   return h->format().type() == InstanceFormat::STRING_TYPE;
 }
 
+bool Object::IsBaseArray() {
+  if (IsSmi()) return false;
+  HeapObject* h = HeapObject::cast(this);
+  InstanceFormat::Type type = h->format().type();
+  return type == InstanceFormat::ARRAY_TYPE ||
+      type == InstanceFormat::BYTE_ARRAY_TYPE ||
+      type == InstanceFormat::STACK_TYPE ||
+      type == InstanceFormat::STRING_TYPE;
+}
+
 bool Object::IsArray() {
   if (IsSmi()) return false;
   HeapObject* h = HeapObject::cast(this);
@@ -1431,6 +1445,11 @@ void BaseArray::set_length(int value) {
   at_put(kLengthOffset, Smi::FromWord(value));
 }
 
+BaseArray* BaseArray::cast(Object* object) {
+  ASSERT(object->IsBaseArray());
+  return reinterpret_cast<BaseArray*>(object);
+}
+
 // Inlined Array functions.
 
 Array* Array::cast(Object* object) {
@@ -1483,7 +1502,7 @@ void ByteArray::set(int index, uint8 value) {
 
 void ByteArray::Initialize(int length) {
   set_length(length);
-  memset(reinterpret_cast<void*>(address() + kSize), 0, length - kSize);
+  memset(reinterpret_cast<void*>(address() + kSize), 0, length);
 }
 
 // Inlined Class functions.

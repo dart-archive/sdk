@@ -9,10 +9,12 @@ List newList(int length) {
   return (length == null) ? new _GrowableList() : new _FixedList(length);
 }
 
-abstract class _FixedListBase<E> implements List<E> {
+abstract class _FixedListBase<E>
+    extends Object with ListMixin<E>
+    implements List<E> {
   final _list;
 
-  _FixedListBase(int length)
+  _FixedListBase([int length])
       : this._list = _new(length);
 
   // Not external, to match non-external setter.
@@ -35,18 +37,22 @@ abstract class _FixedListBase<E> implements List<E> {
   }
 }
 
-class _ConstantList<E>
-    extends _FixedListBase<E>
-    with ListMixin<E>,
-         UnmodifiableListMixin<E> {
-  _ConstantList([int length])
-      : super(length);
+class _ConstantList<E> extends _FixedListBase<E> with UnmodifiableListMixin<E> {
 }
 
-class _FixedList<E>
-    extends _FixedListBase<E>
-    with ListMixin<E>,
-         FixedLengthListMixin<E> {
+class _ConstantByteList<E> extends _ConstantList<E> {
+  @native E operator[](int index) {
+    switch (nativeError) {
+      case wrongArgumentType:
+        throw new ArgumentError(index);
+
+      case indexOutOfBounds:
+        throw new IndexError(index, this);
+    }
+  }
+}
+
+class _FixedList<E> extends _FixedListBase<E> with FixedLengthListMixin<E> {
   _FixedList([int length])
       : super(length);
 

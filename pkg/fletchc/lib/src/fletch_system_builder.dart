@@ -8,6 +8,7 @@ import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
     ConstructedConstantValue,
     FunctionConstantValue,
+    IntConstantValue,
     ListConstantValue,
     MapConstantValue,
     StringConstantValue;
@@ -252,12 +253,24 @@ class FletchSystemBuilder {
     // Create all FletchConstants.
     List<FletchConstant> constants = <FletchConstant>[];
     _newConstants.forEach((constant, int id) {
-      void addList(List<ConstantValue> list) {
+      void addList(List<ConstantValue> list, bool isByteList) {
         for (ConstantValue entry in list) {
           int entryId = context.compiledConstants[entry];
           commands.add(new PushFromMap(MapId.constants, entryId));
+          if (entry.isInt) {
+            IntConstantValue constant = entry;
+            int value = constant.primitiveValue;
+            if (value & 0xFF == value) continue;
+          }
+          isByteList = false;
         }
-        commands.add(new PushConstantList(list.length));
+        if (isByteList) {
+          // TODO(ajohnsen): The PushConstantByteList command could take a
+          // paylod with the data content.
+          commands.add(new PushConstantByteList(list.length));
+        } else {
+          commands.add(new PushConstantList(list.length));
+        }
       }
 
       if (constant.isInt) {
@@ -274,11 +287,11 @@ class FletchSystemBuilder {
         commands.add(
             new PushNewString(constant.primitiveValue.slowToString()));
       } else if (constant.isList) {
-        addList(constant.entries);
+        addList(constant.entries, true);
       } else if (constant.isMap) {
         MapConstantValue value = constant;
-        addList(value.keys);
-        addList(value.values);
+        addList(value.keys, false);
+        addList(value.values, false);
         commands.add(new PushConstantMap(value.length * 2));
       } else if (constant.isFunction) {
         FunctionConstantValue value = constant;

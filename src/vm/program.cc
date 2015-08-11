@@ -103,6 +103,11 @@ Object* Program::CreateArrayWith(int capacity, Object* initial_value) {
   return result;
 }
 
+Object* Program::CreateByteArray(int capacity) {
+  Object* result = heap()->CreateByteArray(byte_array_class(), capacity, true);
+  return result;
+}
+
 Object* Program::CreateClass(int fields) {
   InstanceFormat format = InstanceFormat::instance_format(fields);
   Object* raw_class = heap()->CreateClass(
@@ -575,6 +580,12 @@ void Program::Initialize() {
   {
     InstanceFormat format = InstanceFormat::instance_format(1);
     constant_list_class_ = Class::cast(
+        heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  {
+    InstanceFormat format = InstanceFormat::instance_format(1);
+    constant_byte_list_class_ = Class::cast(
         heap()->CreateClass(format, meta_class_, null_object_));
   }
 

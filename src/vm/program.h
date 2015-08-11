@@ -52,6 +52,7 @@ class Session;
   V(Class, foreign_memory_class)                 \
   V(Class, initializer_class)                    \
   V(Class, constant_list_class)                  \
+  V(Class, constant_byte_list_class)             \
   V(Class, constant_map_class)                   \
   V(HeapObject, raw_retry_after_gc)              \
   V(HeapObject, raw_wrong_argument_type)         \
@@ -176,6 +177,7 @@ class Program {
     return CreateArrayWith(capacity, null_object());
   }
   Object* CreateArrayWith(int capacity, Object* initial_value);
+  Object* CreateByteArray(int capacity);
   Object* CreateClass(int fields);
   Object* CreateDouble(double value);
   Object* CreateFunction(int arity,

@@ -126,6 +126,7 @@ const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
 class FletchBackend extends Backend {
   static const String growableListName = '_GrowableList';
   static const String constantListName = '_ConstantList';
+  static const String constantByteListName = '_ConstantByteList';
   static const String constantMapName = '_ConstantMap';
   static const String linkedHashMapName = '_CompactLinkedHashMap';
   static const String noSuchMethodName = '_noSuchMethod';
@@ -332,6 +333,7 @@ class FletchBackend extends Backend {
     stringClass = loadClass("_StringImpl", compiler.coreLibrary, true).element;
     // TODO(ahe): Register _ConstantList through ResolutionCallbacks.
     loadClass(constantListName, fletchSystemLibrary, true);
+    loadClass(constantByteListName, fletchSystemLibrary, true);
     loadClass(constantMapName, fletchSystemLibrary, true);
     loadClass("_DoubleImpl", compiler.coreLibrary, true);
     loadClass("Null", compiler.coreLibrary, true);

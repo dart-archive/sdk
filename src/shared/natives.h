@@ -121,6 +121,8 @@ namespace fletch {
   N(ListLength,                  "_FixedListBase", "length")             \
   N(ListIndexGet,                "_FixedListBase", "[]")                 \
                                                                          \
+  N(ByteListIndexGet,            "_ConstantByteList", "[]")              \
+                                                                         \
   N(ListIndexSet,                "_FixedList", "[]=")                    \
                                                                          \
   N(ProcessSpawn,                "Process", "_spawn")                    \

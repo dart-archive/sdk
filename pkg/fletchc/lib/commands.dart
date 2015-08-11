@@ -209,6 +209,23 @@ class PushConstantList extends Command {
   String valuesToString() => "$entries";
 }
 
+class PushConstantByteList extends Command {
+  final int entries;
+
+  const PushConstantByteList(this.entries)
+      : super(CommandCode.PushConstantByteList);
+
+  void internalAddTo(Sink<List<int>> sink, CommandBuffer<CommandCode> buffer) {
+    buffer
+        ..addUint32(entries)
+        ..sendOn(sink, code);
+  }
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "$entries";
+}
+
 class PushConstantMap extends Command {
   final int entries;
 
@@ -1160,6 +1177,7 @@ enum CommandCode {
   PushNewClass,
   PushBuiltinClass,
   PushConstantList,
+  PushConstantByteList,
   PushConstantMap,
 
   ChangeSuperClass,

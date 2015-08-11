@@ -103,6 +103,7 @@ class Connection {
     kPushNewClass,
     kPushBuiltinClass,
     kPushConstantList,
+    kPushConstantByteList,
     kPushConstantMap,
 
     kChangeSuperClass,

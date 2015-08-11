@@ -84,6 +84,7 @@ class Session {
   void PushBuiltinClass(Names::Id name, int fields);
 
   void PushConstantList(int length);
+  void PushConstantByteList(int length);
   void PushConstantMap(int length);
 
   void PushFunction(Function* function) { Push(function); }
