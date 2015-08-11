@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "ffi_test_library.h"
+
 // Copied from globals.h to have consistent values
 // TODO(ricow): we could split globals into a c only part and a c++ part.
 typedef signed char int8;
@@ -28,8 +30,6 @@ typedef long long int int64;  // NOLINT
 typedef long long unsigned uint64;
 typedef int foobar;
 #endif
-
-static int count;
 
 void setup() {
   count = 0;
