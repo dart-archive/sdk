@@ -84,7 +84,7 @@ class IncrementalCompiler {
        this.options,
        this.outputProvider,
        this.environment})
-      : this._context =
+      : _context =
             new IncrementalCompilerContext(useFletchSystem, diagnosticHandler) {
     // if (libraryRoot == null) {
     //   throw new ArgumentError('libraryRoot is null.');
