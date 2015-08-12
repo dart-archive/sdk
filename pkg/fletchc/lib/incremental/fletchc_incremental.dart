@@ -76,7 +76,6 @@ class IncrementalCompiler {
   implementation.FletchCompiler _compiler;
 
   IncrementalCompiler(
-      bool useFletchSystem,
       {this.libraryRoot,
        this.packageRoot,
        this.inputProvider,
@@ -84,8 +83,7 @@ class IncrementalCompiler {
        this.options,
        this.outputProvider,
        this.environment})
-      : _context =
-            new IncrementalCompilerContext(useFletchSystem, diagnosticHandler) {
+      : _context = new IncrementalCompilerContext(diagnosticHandler) {
     // if (libraryRoot == null) {
     //   throw new ArgumentError('libraryRoot is null.');
     // }

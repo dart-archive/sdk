@@ -1101,64 +1101,6 @@ class FletchBackend extends Backend {
     return new FletchDelta(system, systemBuilder.predecessorSystem, commands);
   }
 
-  // TODO(ajohnsen): Remove when incremental has moved to FletchSystem.
-  void pushNewFunction(
-      FletchFunctionBuilder functionBuilder,
-      List<Command> commands,
-      List<Function> deferredActions) {
-    int arity = functionBuilder.assembler.functionArity;
-    int constantCount = functionBuilder.constants.length;
-    int functionId = functionBuilder.functionId;
-
-    assert(systemBuilder.lookupFunctionBuilder(functionId) == functionBuilder);
-    assert(functionBuilder.assembler.bytecodes.isNotEmpty);
-
-    functionBuilder.constants.forEach((constant, int index) {
-      if (constant is ConstantValue) {
-        if (constant is FletchFunctionConstant) {
-          commands.add(const PushNull());
-          deferredActions.add(() {
-            commands
-                ..add(new PushFromMap(MapId.methods, functionId))
-                ..add(new PushFromMap(MapId.methods, constant.functionId))
-                ..add(new ChangeMethodLiteral(index));
-          });
-        } else if (constant is FletchClassConstant) {
-          commands.add(const PushNull());
-          deferredActions.add(() {
-            commands
-                ..add(new PushFromMap(MapId.methods, functionId))
-                ..add(new PushFromMap(MapId.classes, constant.classId))
-                ..add(new ChangeMethodLiteral(index));
-          });
-        } else {
-          commands.add(const PushNull());
-          deferredActions.add(() {
-            int id = context.compiledConstants[constant];
-            if (id == null) {
-              throw "Unsupported constant: ${constant.toStructuredString()}";
-            }
-            commands
-                ..add(new PushFromMap(MapId.methods, functionId))
-                ..add(new PushFromMap(MapId.constants, id))
-                ..add(new ChangeMethodLiteral(index));
-          });
-        }
-      } else {
-        throw "Unsupported constant: ${constant.runtimeType}";
-      }
-    });
-
-    commands.add(
-        new PushNewFunction(
-            arity,
-            constantCount,
-            functionBuilder.assembler.bytecodes,
-            functionBuilder.assembler.catchRanges));
-
-    commands.add(new PopToMap(MapId.methods, functionId));
-  }
-
   bool enableCodegenWithErrorsIfSupported(Spannable spannable) {
     return true;
   }
@@ -1384,50 +1326,41 @@ class FletchBackend extends Backend {
   }
 
   void newElement(Element element) {
-    if (!systemBuilder.predecessorSystem.isEmpty) {
-      if (element.isField && element.isInstanceMember) {
-        ClassElement enclosingClass = element.enclosingClass;
-        Queue<ClassElement> queue = new Queue<ClassElement>();
-        queue.add(enclosingClass);
-        while (queue.isNotEmpty) {
-          var klass = queue.removeFirst();
-          queue.addAll(compiler.world.strictSubclassesOf(klass));
-          FletchClassBuilder builder = registerClassElement(klass);
-          builder.addField(element);
-        }
+    if (element.isField && element.isInstanceMember) {
+      ClassElement enclosingClass = element.enclosingClass;
+      Queue<ClassElement> queue = new Queue<ClassElement>();
+      queue.add(enclosingClass);
+      while (queue.isNotEmpty) {
+        var klass = queue.removeFirst();
+        queue.addAll(compiler.world.strictSubclassesOf(klass));
+        FletchClassBuilder builder = registerClassElement(klass);
+        builder.addField(element);
       }
     }
   }
 
   void forgetElement(Element element) {
-    // TODO(ajohnsen): Remove this check.
-    if (!systemBuilder.predecessorSystem.isEmpty) {
-      ClassElement enclosingClass = element.enclosingClass;
-      if (element.isField && element.isInstanceMember) {
-        Queue<ClassElement> queue = new Queue<ClassElement>();
-        queue.add(enclosingClass);
-        while (queue.isNotEmpty) {
-          var klass = queue.removeFirst();
-          queue.addAll(compiler.world.strictSubclassesOf(klass));
-          FletchClassBuilder builder = registerClassElement(klass);
-          builder.removeField(element);
-        }
-      } else {
-        FletchFunctionBase function =
-            systemBuilder.lookupFunctionByElement(element);
-        if (function != null) {
-          systemBuilder.forgetFunction(function);
-          if (enclosingClass != null) {
-            FletchClassBuilder builder = registerClassElement(enclosingClass);
-            builder.removeFromMethodTable(function);
-          }
+    ClassElement enclosingClass = element.enclosingClass;
+    if (element.isField && element.isInstanceMember) {
+      Queue<ClassElement> queue = new Queue<ClassElement>();
+      queue.add(enclosingClass);
+      while (queue.isNotEmpty) {
+        var klass = queue.removeFirst();
+        queue.addAll(compiler.world.strictSubclassesOf(klass));
+        FletchClassBuilder builder = registerClassElement(klass);
+        builder.removeField(element);
+      }
+    } else {
+      FletchFunctionBase function =
+          systemBuilder.lookupFunctionByElement(element);
+      if (function != null) {
+        systemBuilder.forgetFunction(function);
+        if (enclosingClass != null) {
+          FletchClassBuilder builder = registerClassElement(enclosingClass);
+          builder.removeFromMethodTable(function);
         }
       }
     }
-    FletchFunctionBuilder functionBuilder =
-        systemBuilder.lookupFunctionBuilderByElement(element);
-    if (functionBuilder == null) return;
-    functionBuilder.reuse();
   }
 
   static bool isExactParameterMatch(

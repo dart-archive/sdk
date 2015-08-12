@@ -99,7 +99,7 @@ Future<Null> main(List<String> arguments) async {
     testsToRun = arguments.map((String name) => tests[name]);
   }
   for (EncodedResult test in testsToRun) {
-    await compileAndRun(true, test);
+    await compileAndRun(test);
   }
   updateSummary();
 }
@@ -118,7 +118,7 @@ void updateSummary() {
       "($skippedCount skipped, $updateFailedCount failed).");
 }
 
-compileAndRun(bool useFletchSystem, EncodedResult encodedResult) async {
+compileAndRun(EncodedResult encodedResult) async {
   testCount++;
 
   updateSummary();
@@ -131,8 +131,7 @@ compileAndRun(bool useFletchSystem, EncodedResult encodedResult) async {
   print("Full program #$testCount:");
   print(numberedLines(program.code));
 
-  IoCompilerTestCase test =
-      new IoCompilerTestCase(useFletchSystem, program.code);
+  IoCompilerTestCase test = new IoCompilerTestCase(program.code);
   FletchDelta fletchDelta = await test.run();
 
   TestSession session = await runFletchVM(test, fletchDelta);
@@ -542,8 +541,7 @@ class TestSession extends Session {
 Future<Map<String, NoArgFuture>> listTests() {
   Map<String, NoArgFuture> result = <String, NoArgFuture>{};
   tests.forEach((String name, EncodedResult test) {
-    result['incremental/encoded/$name'] = () => main(<String>[name]);
-    result['incremental/deprecated/$name'] = () => compileAndRun(false, test);
+    result['incremental/$name'] = () => main(<String>[name]);
   });
   return new Future<Map<String, NoArgFuture>>.value(result);
 }

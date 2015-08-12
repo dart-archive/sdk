@@ -141,13 +141,11 @@ abstract class _IncrementalCompilerContext {
 
 class IncrementalCompilerContext extends _IncrementalCompilerContext
     implements CompilerDiagnostics {
-  final bool useFletchSystem;
-
   final CompilerDiagnostics diagnostics;
 
   final Set<Uri> _uriWithUpdates = new Set<Uri>();
 
-  IncrementalCompilerContext(this.useFletchSystem, this.diagnostics);
+  IncrementalCompilerContext(this.diagnostics);
 
   void set incrementalCompiler(IncrementalCompiler value) {
     if (super.incrementalCompiler != null) {
@@ -202,16 +200,11 @@ class LibraryUpdater extends FletchFeatures {
 
   final List<Update> updates = <Update>[];
 
-  final List<Function> deferredActions = <Function>[];
-
   final List<FailedUpdate> _failedUpdates = <FailedUpdate>[];
 
   final Set<ElementX> _elementsToInvalidate = new Set<ElementX>();
 
   final Set<ElementX> _removedElements = new Set<ElementX>();
-
-  final Set<ClassElementX> _classesWithSchemaChanges =
-      new Set<ClassElementX>();
 
   final IncrementalCompilerContext _context;
 
@@ -224,8 +217,6 @@ class LibraryUpdater extends FletchFeatures {
   /// Cached source files for entry compilation units.
   final Map<LibraryElementX, SourceFile> _entrySourceFiles =
       <LibraryElementX, SourceFile>{};
-
-  bool _hasComputedNeeds = false;
 
   bool _hasCapturedCompilerState = false;
 
@@ -550,9 +541,6 @@ class LibraryUpdater extends FletchFeatures {
   void addField(FieldElementX element, ScopeContainerElement container) {
     logVerbose("Add field $element to $container.");
     invalidateScopesAffectedBy(element, container);
-    if (element.isInstanceMember) {
-      _classesWithSchemaChanges.add(container);
-    }
     updates.add(new AddedFieldUpdate(compiler, element, container));
   }
 
@@ -624,7 +612,6 @@ class LibraryUpdater extends FletchFeatures {
   void removeInstanceField(FieldElementX element) {
     PartialClassElement cls = element.enclosingClass;
 
-    _classesWithSchemaChanges.add(cls);
     invalidateScopesAffectedBy(element, cls);
 
     _removedElements.add(element);
@@ -762,9 +749,8 @@ class LibraryUpdater extends FletchFeatures {
   }
 
   /// Apply the collected [updates]. Return a list of elements that needs to be
-  /// recompiled after applying the updates. Any elements removed as a
-  /// consequence of applying the patches are added to [removals] if provided.
-  List<Element> applyUpdates([List<Update> removals]) {
+  /// recompiled after applying the updates.
+  List<Element> applyUpdates() {
     for (Update update in updates) {
       update.captureState();
     }
@@ -783,11 +769,7 @@ class LibraryUpdater extends FletchFeatures {
     }
     for (Update update in updates) {
       Element element = update.apply();
-      if (update.isRemoval) {
-        if (removals != null) {
-          removals.add(update);
-        }
-      } else {
+      if (!update.isRemoval) {
         elementsToInvalidate.add(element);
       }
     }
@@ -811,26 +793,10 @@ class LibraryUpdater extends FletchFeatures {
   }
 
   FletchDelta computeUpdateFletch(FletchSystem currentSystem) {
-    if (_context.useFletchSystem) {
-      logVerbose("Using FletchSystem.");
-      backend.newSystemBuilder(currentSystem);
-    }
+    backend.newSystemBuilder(currentSystem);
 
-    int constantCount = backend.context.compiledConstants.length;
+    List<Element> updatedElements = applyUpdates();
 
-    // Collect the fields of the classes that are subject to schema
-    // changes before applying updates.
-    Map<ClassElement, Map<FieldElementX, int>> beforeFields = {};
-    for (ClassElementX element in _classesWithSchemaChanges) {
-      Map<FieldElementX, int> map = beforeFields[element] = {};
-      int index = 0;
-      forEachField(element, (FieldElement field) {
-        map[field] = index++;
-      });
-    }
-
-    List<Update> removals = <Update>[];
-    List<Element> updatedElements = applyUpdates(removals);
     if (compiler.progress != null) {
       compiler.progress.reset();
     }
@@ -851,14 +817,10 @@ class LibraryUpdater extends FletchFeatures {
       return new FletchDelta(currentSystem, currentSystem, <Command>[]);
     }
 
-    Set<ClassElementX> changedClasses =
-        new Set<ClassElementX>.from(_classesWithSchemaChanges);
     for (Element element in updatedElements) {
       if (element.isField) {
         backend.newElement(element);
-      } else if (element.isClass) {
-        changedClasses.add(element);
-      } else {
+      } else if (!element.isClass) {
         enqueuer.codegen.addToWorkList(element);
       }
     }
@@ -883,164 +845,11 @@ class LibraryUpdater extends FletchFeatures {
       }
     }
 
-    List<Command> updates = <Command>[const commands_lib.PrepareForChanges()];
-
-    if (_context.useFletchSystem) {
-      FletchSystem system = backend.systemBuilder.computeSystem(
-          backend.context,
-          updates);
-      return new FletchDelta(system, currentSystem, updates);
-    }
-
-    // TODO(ahe): Compute this.
-    Set<ClassElementX> newClasses = new Set();
-
-    int changes = 0;
-    for (RemovalUpdate update in removals) {
-      update.writeUpdateFletchOn(updates);
-    }
-    for (Element element in enqueuer.codegen.newlyEnqueuedElements) {
-      if (element.isField) {
-        computeFieldUpdateFletch(element, updates);
-      } else {
-        computeMethodUpdateFletch(element, updates);
-      }
-    }
-
-    backend.context.compiledConstants.forEach((constant, id) {
-      if (id >= constantCount) {
-        updates.add(
-            new commands_lib.PushNewString(
-                constant.primitiveValue.slowToString()));
-        updates.add(new commands_lib.PopToMap(MapId.constants, id));
-      }
-    });
-
-    for (Function action in deferredActions) {
-      action();
-      changes++;
-    }
-
-    for (ClassElementX element in _classesWithSchemaChanges) {
-      FletchClassBuilder classBuilder =
-          backend.systemBuilder.lookupClassBuilderByElement(element);
-
-      int id = classBuilder.classId;
-      updates.add(new commands_lib.PushFromMap(MapId.classes, id));
-
-      classBuilder.createImplicitAccessors(backend);
-
-      PersistentMap<int, int> methodTable = classBuilder.computeMethodTable();
-      for (int selector in methodTable.keys.toList()..sort()) {
-        int functionId = methodTable[selector];
-        updates.add(new commands_lib.PushNewInteger(selector));
-        updates.add(new commands_lib.PushFromMap(MapId.methods, functionId));
-      }
-
-      updates.add(new commands_lib.ChangeMethodTable(methodTable.length));
-      changes++;
-    }
-
-    for (ClassElementX element in _classesWithSchemaChanges) {
-      computeSchemaChange(element, beforeFields[element], updates);
-      changes++;
-    }
-
-    updates.add(new commands_lib.CommitChanges(changes));
-    // TODO(ajohnsen): The new system is not updated.
-    return new FletchDelta(currentSystem, currentSystem, updates);
-  }
-
-  void computeFieldUpdateFletch(FieldElementX element, List<Command> commands) {
-    throw new IncrementalCompilationFailed("Not implemented yet.");
-  }
-
-  void computeMethodUpdateFletch(Element element, List<Command> commands) {
-    FletchFunctionBuilder function = lookupFletchFunctionBuilder(element);
-    backend.pushNewFunction(function, commands, deferredActions);
-    if (element == backend.context.compiler.mainFunction) {
-      deferredActions.add(() {
-        FletchFunctionBuilder callMain =
-            lookupFletchFunctionBuilder(
-                backend.fletchSystemLibrary.findLocal('callMain'));
-        commands.add(
-            new commands_lib.PushFromMap(MapId.methods, callMain.functionId));
-        commands.add(
-            new commands_lib.PushFromMap(MapId.methods, function.functionId));
-        commands.add(new commands_lib.ChangeMethodLiteral(0));
-      });
-    }
-  }
-
-  void computeSchemaChange(ClassElementX element,
-                           Map<FieldElementX, int> beforeFields,
-                           List<Command> commands) {
-    // Collect the list of fields as they should exist after the transformation.
-    List<FieldElementX> afterFields = [];
-    forEachField(element, (field) {
-      afterFields.add(field);
-    });
-
-    // First, we push all the classes we want to change the schema of. This
-    // includes all subclasses.
-    int numberOfClasses = 0;
-    Queue<ClassElementX> workQueue = new Queue<ClassElementX>()..add(element);
-    while (workQueue.isNotEmpty) {
-      ClassElementX current = workQueue.removeFirst();
-      FletchClassBuilder builder =
-          backend.systemBuilder.lookupClassBuilderByElement(current);
-      int classId = builder.classId;
-      commands.add(new commands_lib.PushFromMap(MapId.classes, classId));
-      numberOfClasses++;
-      // Add all subclasses that aren't schema change target themselves to
-      // the work queue.
-      for (ClassElementX subclass in backend.directSubclasses[current]) {
-        if (!_classesWithSchemaChanges.contains(subclass)) {
-          workQueue.add(subclass);
-        }
-      }
-    }
-
-    // Then we push a transformation mapping that tells the runtime system how
-    // to build the values for the first part of all instances of the classes.
-    // Pre-existing fields that fall after the mapped part will be copied with
-    // no changes.
-    const VALUE_FROM_ELSEWHERE = 0;
-    const VALUE_FROM_OLD_INSTANCE = 1;
-    for (int i = 0; i < afterFields.length; i++) {
-      FieldElementX field = afterFields[i];
-      int beforeIndex = beforeFields[field];
-      if (beforeIndex != null) {
-        commands.add(
-            const commands_lib.PushNewInteger(VALUE_FROM_OLD_INSTANCE));
-        commands.add(
-            new commands_lib.PushNewInteger(beforeIndex));
-      } else {
-        commands.add(
-            const commands_lib.PushNewInteger(VALUE_FROM_ELSEWHERE));
-        commands.add(
-            const commands_lib.PushNull());
-      }
-    }
-    commands.add(new commands_lib.PushNewArray(afterFields.length * 2));
-
-    // Finally, ask the runtime to change the schemas!
-    int fieldCountDelta = afterFields.length - beforeFields.length;
-    commands.add(
-        new commands_lib.ChangeSchemas(numberOfClasses, fieldCountDelta));
-  }
-
-  String callNameFor(FunctionElement element) {
-    // TODO(ahe): Call a method in the compiler to obtain this name.
-    String callPrefix = namer.callPrefix;
-    int parameterCount = element.functionSignature.parameterCount;
-    return '$callPrefix\$$parameterCount';
-  }
-
-  void _ensureAllNeededEntitiesComputed() {
-    if (_hasComputedNeeds) return;
-    emitter.computeAllNeededEntities();
-    _hasComputedNeeds = true;
+    List<Command> commands = <Command>[const commands_lib.PrepareForChanges()];
+    FletchSystem system = backend.systemBuilder.computeSystem(
+        backend.context,
+        commands);
+    return new FletchDelta(system, currentSystem, commands);
   }
 }
 
@@ -1216,7 +1025,6 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
   bool wasStateCaptured = false;
 
   FletchClassBuilder beforeFletchClassBuilder;
-  Map<FieldElement, int> beforeFields;
 
   RemovedFieldUpdate(Compiler compiler, this.element)
       : super(compiler);
