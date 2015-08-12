@@ -275,25 +275,7 @@ class TestCompleter {
     bool inDartVmUncaughtMessage = false;
     vmProcess.stderr.transform(UTF8.decoder).transform(new LineSplitter())
         .listen((String line) {
-          // Unfortunately, the Dart VM always prints a stack trace in response
-          // to an uncaught exception even if we have installed an error
-          // listener. We have one test, "zone_helper/testUnhandledLateError",
-          // which provokes such a message and we use the following logic to
-          // suppress it. Unfortunately, this may suppress other error
-          // messages, but hopefully, these messages will be printed as part of
-          // the regular test status (as we collect all messages printed on
-          // stderr and include them if the helper program exits with a
-          // non-zero exit code). If a test is hanging, try running test.dart
-          // with -j1 to work around this problem.
-          if (line.startsWith("Please ignore this error: ")) {
-            inDartVmUncaughtMessage = true;
-          }
-          if (!inDartVmUncaughtMessage) {
-            io.stderr.writeln(line);
-          }
-          if (line == "Please ignore the above error") {
-            inDartVmUncaughtMessage = false;
-          }
+          io.stderr.writeln(line);
           stderrLines.add(line);
         });
     vmProcess.exitCode.then((value) {

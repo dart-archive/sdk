@@ -75,9 +75,6 @@ testUnhandledLateErrorIsolate(_) {
   bool threw = false;
   return runGuarded(() {
     new Future(() {
-      // Unfortunately, the Dart VM always prints a stack trace in response to
-      // an uncaught exception even if we have installed an error listener.
-      stderr.write("Please ignore this error: ");
       throw "Late error";
     });
     return new Future.value(0);
@@ -97,7 +94,7 @@ testUnhandledLateError() async {
   ReceivePort errorPort = new ReceivePort();
   isolate
       ..addOnExitListener(exitPort.sendPort)
-      ..setErrorsFatal(true)
+      ..setErrorsFatal(false)
       ..addErrorListener(errorPort.sendPort)
       ..resume(isolate.pauseCapability);
   bool errorPortListenWasCalled = false;
@@ -111,6 +108,7 @@ testUnhandledLateError() async {
     } else {
       Expect.stringEquals("Late error", errorList[0]);
     }
+    isolate.kill();
   }).asFuture();
   bool exitPortListenWasCalled = false;
   await exitPort.listen((message) {
@@ -121,7 +119,6 @@ testUnhandledLateError() async {
   Expect.isTrue(errorPortListenWasCalled);
   Expect.isTrue(exitPortListenWasCalled);
   print("Test succeeded.");
-  stderr.writeln("\nPlease ignore the above error");
 }
 
 /// Test that a bad test will fail, not crash the test runner.
