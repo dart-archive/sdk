@@ -446,7 +446,7 @@ class CoredumpArchiver(object):
     for filename in coredumps:
       os.remove(filename)
 
-    print '@@@STEP_LOG_END@coredumps@@@'
+    print '@@@STEP_LOG_END@coredumps %s@@@' % self._conf
     MarkCurrentStep(fatal=False)
 
 def RunWithCoreDumpArchiving(run, build_dir, build_conf):
