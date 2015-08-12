@@ -20,6 +20,12 @@ import '../commands.dart';
 import '../incremental/fletchc_incremental.dart' show
     IncrementalCompilationFailed;
 
+class FletchClassUpdate {
+  final FletchClass klass;
+  final int changes;
+  FletchClassUpdate(this.klass, this.changes);
+}
+
 abstract class FletchClassBuilder {
   int get classId;
   ClassElement get element;
@@ -49,7 +55,9 @@ abstract class FletchClassBuilder {
   void createImplicitAccessors(FletchBackend backend);
   void createIsEntries(FletchBackend backend);
 
-  FletchClass finalizeClass(FletchContext context, List<Command> commands);
+  FletchClassUpdate finalizeClass(
+      FletchContext context,
+      List<Command> commands);
 
   // The method table for a class is a mapping from Fletch's integer
   // selectors to method ids. It contains all methods defined for a
@@ -202,7 +210,9 @@ class FletchNewClassBuilder extends FletchClassBuilder {
     addIsSelector(fletchSelector);
   }
 
-  FletchClass finalizeClass(FletchContext context, List<Command> commands) {
+  FletchClassUpdate finalizeClass(
+      FletchContext context,
+      List<Command> commands) {
     if (isBuiltin) {
       int nameId = context.getSymbolId(element.name);
       commands.add(new PushBuiltinClass(nameId, fields));
@@ -227,15 +237,17 @@ class FletchNewClassBuilder extends FletchClassBuilder {
       fieldsList[index++] = field;
     });
 
-    return new FletchClass(
-        classId,
-        // TODO(ajohnsen): Take name in FletchClassBuilder constructor.
-        element == null ? '<internal>' : element.name,
-        element,
-        superclass == null ? -1 : superclass.classId,
-        superclassFields,
-        methodTable,
-        fieldsList);
+    return new FletchClassUpdate(
+        new FletchClass(
+          classId,
+          // TODO(ajohnsen): Take name in FletchClassBuilder constructor.
+          element == null ? '<internal>' : element.name,
+          element,
+          superclass == null ? -1 : superclass.classId,
+          superclassFields,
+          methodTable,
+          fieldsList),
+        1);
   }
 
   String toString() => "FletchClassBuilder($element, $classId)";
@@ -249,6 +261,10 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
   final Map<int, FletchFunctionBase> _newMethods = <int, FletchFunctionBase>{};
   final Set<FletchFunctionBase> _removedMethods = new Set<FletchFunctionBase>();
   bool _fieldsChanged = false;
+
+  // TODO(ajohnsen): Reconsider bookkeeping of extra fields (this is really only
+  // extra super-class fields).
+  int extraFields = 0;
 
   // TODO(ajohnsen): Can the element change?
   FletchPatchClassBuilder(this.klass, this.superclass);
@@ -266,10 +282,12 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
   }
 
   void removeField(FieldElement field) {
+    if (field.enclosingClass != element) extraFields--;
     _fieldsChanged = true;
   }
 
   void addField(FieldElement field) {
+    if (field.enclosingClass != element) extraFields++;
     _fieldsChanged = true;
   }
 
@@ -287,7 +305,7 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
     if (element == null) return;
     // TODO(ajohnsen): Don't do this once dart2js can enqueue field getters in
     // CodegenEnqueuer.
-    int fieldIndex = superclassFields;
+    int fieldIndex = superclassFields + extraFields;
     element.implementation.forEachInstanceField((enclosing, field) {
       var getter = new Selector.getter(field.name, field.library);
       int getterSelector = backend.context.toFletchSelector(getter);
@@ -330,7 +348,14 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
     return methodTable;
   }
 
-  FletchClass finalizeClass(FletchContext context, List<Command> commands) {
+  FletchClassUpdate finalizeClass(
+      FletchContext context,
+      List<Command> commands) {
+    // TODO(ajohnsen): We need to figure out when to do this. It should be after
+    // we have updated class fields, but before we hit 'computeSystem'.
+    createImplicitAccessors(context.backend);
+
+    int changes = 1;
     commands.add(new PushFromMap(MapId.classes, classId));
 
     PersistentMap<int, int> methodTable = computeMethodTable();
@@ -346,17 +371,20 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
 
     if (_fieldsChanged) {
       computeSchemaChange(fieldsList, commands);
+      changes++;
     }
 
-    return new FletchClass(
-        classId,
-        // TODO(ajohnsen): Take name in FletchClassBuilder constructor.
-        element == null ? '<internal>' : element.name,
-        element,
-        superclass == null ? -1 : superclass.classId,
-        superclassFields,
-        methodTable,
-        fieldsList);
+    return new FletchClassUpdate(
+        new FletchClass(
+          classId,
+          // TODO(ajohnsen): Take name in FletchClassBuilder constructor.
+          element == null ? '<internal>' : element.name,
+          element,
+          superclass == null ? -1 : superclass.classId,
+          superclassFields + extraFields,
+          methodTable,
+          fieldsList),
+        changes);
   }
 
   void computeSchemaChange(

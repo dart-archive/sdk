@@ -35,7 +35,6 @@ incremental/deprecated/super_classes_of_directly_instantiated: Fail
 incremental/deprecated/super_is_parameter: Fail
 
 # The following tests use FletchSystem/FletchDelta
-incremental/encoded/add_instance_field: Fail
 incremental/encoded/add_instance_method: Fail
 incremental/encoded/bad_stack_trace_repro: Fail
 incremental/encoded/call_instance_tear_off_named: Fail
@@ -43,15 +42,12 @@ incremental/encoded/call_named_arguments_1: Fail
 incremental/encoded/call_named_arguments_2: Fail
 incremental/encoded/change_supertype: Fail
 incremental/encoded/compile_time_error_002: Fail
-incremental/encoded/instance_field_end: Fail
-incremental/encoded/instance_field_middle: Fail
 incremental/encoded/lazy_static: Fail
 incremental/encoded/modify_instance_method: Fail
 incremental/encoded/modify_static_method: Fail
 incremental/encoded/multiple_libraries: Fail
 incremental/encoded/newly_instantiated_class: Fail
 incremental/encoded/newly_instantiated_class_X: Fail
-incremental/encoded/preserving_identity_hashcode: Fail
 incremental/encoded/remove_class: Fail
 incremental/encoded/remove_class_with_static_method: Fail
 incremental/encoded/remove_instance_field: Fail
@@ -64,6 +60,3 @@ incremental/encoded/signature_change_static_method: Fail
 incremental/encoded/signature_change_top_level_method: Fail
 incremental/encoded/stored_closure: Fail
 incremental/encoded/stored_instance_tearoff: Fail
-incremental/encoded/subclass_schema_1: Fail
-incremental/encoded/subclass_schema_2: Fail
-incremental/encoded/super_schema: Fail

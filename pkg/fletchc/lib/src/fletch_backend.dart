@@ -7,6 +7,9 @@ library fletchc.fletch_backend;
 import 'dart:async' show
     Future;
 
+import 'dart:collection' show
+    Queue;
+
 import 'package:compiler/src/dart2jslib.dart' show
     Backend,
     BackendConstantEnvironment,
@@ -1384,8 +1387,14 @@ class FletchBackend extends Backend {
     if (!systemBuilder.predecessorSystem.isEmpty) {
       if (element.isField && element.isInstanceMember) {
         ClassElement enclosingClass = element.enclosingClass;
-        FletchClassBuilder builder = registerClassElement(enclosingClass);
-        builder.addField(element);
+        Queue<ClassElement> queue = new Queue<ClassElement>();
+        queue.add(enclosingClass);
+        while (queue.isNotEmpty) {
+          var klass = queue.removeFirst();
+          queue.addAll(compiler.world.strictSubclassesOf(klass));
+          FletchClassBuilder builder = registerClassElement(klass);
+          builder.addField(element);
+        }
       }
     }
   }
@@ -1395,8 +1404,14 @@ class FletchBackend extends Backend {
     if (!systemBuilder.predecessorSystem.isEmpty) {
       ClassElement enclosingClass = element.enclosingClass;
       if (element.isField && element.isInstanceMember) {
-        FletchClassBuilder builder = registerClassElement(enclosingClass);
-        builder.removeField(element);
+        Queue<ClassElement> queue = new Queue<ClassElement>();
+        queue.add(enclosingClass);
+        while (queue.isNotEmpty) {
+          var klass = queue.removeFirst();
+          queue.addAll(compiler.world.strictSubclassesOf(klass));
+          FletchClassBuilder builder = registerClassElement(klass);
+          builder.removeField(element);
+        }
       } else {
         FletchFunctionBase function =
             systemBuilder.lookupFunctionByElement(element);

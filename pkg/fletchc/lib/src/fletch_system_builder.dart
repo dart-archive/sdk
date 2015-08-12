@@ -228,8 +228,9 @@ class FletchSystemBuilder {
     // Create all new FletchClasses.
     List<FletchClass> classes = <FletchClass>[];
     for (FletchClassBuilder builder in _newClasses.values) {
-      classes.add(builder.finalizeClass(context, commands));
-      changes++;
+      var update = builder.finalizeClass(context, commands);
+      classes.add(update.klass);
+      changes += update.changes;
     }
 
     // Create all statics.
