@@ -60,9 +60,6 @@ incremental/encoded/signature_change_static_method: Fail
 incremental/encoded/signature_change_top_level_method: Fail
 incremental/encoded/stored_closure: Fail
 incremental/encoded/stored_instance_tearoff: Fail
-incremental/encoded/subclass_schema_1: Fail
-incremental/encoded/subclass_schema_2: Fail
-incremental/encoded/super_schema: Fail
 
 [ $arch == arm || $arch == arm64 ]
 
