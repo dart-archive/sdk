@@ -152,13 +152,11 @@ class CcRule extends Rule {
   void addBuildFlags(List<String> arguments) {
     arguments.add('-std=${language}');
     if (buildArchitecture == 'ia32') {
-      if (isGNU) arguments.add('-m32');
-      if (isClang) arguments..add('-arch')..add('i386');
+      arguments.add('-m32');
       arguments.add('-DFLETCH32');
       arguments.add('-DFLETCH_TARGET_IA32');
-    } else if (buildArchitecture == 'X64') {
-      if (isGNU) arguments.add('-m64');
-      if (isClang) arguments..add('-arch')..add('x86_64');
+    } else if (buildArchitecture == 'x64') {
+      arguments.add('-m64');
       arguments.add('-DFLETCH64');
       arguments.add('-DFLETCH_TARGET_X64');
     } else {
@@ -224,6 +222,7 @@ class CcRule extends Rule {
 
   Future<Null> build() async {
     List<String> arguments = <String>[];
+    if (isClang) arguments.add('-DFLETCH_CLANG');
     addBuildFlags(arguments);
     addHostFlags(arguments);
     addUserFlags(arguments);
