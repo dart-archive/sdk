@@ -8,12 +8,15 @@
 Buildbot steps for fletch testing
 """
 
+import glob
 import os
 import re
+import resource
 import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 
 import bot
 import bot_utils
@@ -23,6 +26,8 @@ from os.path import dirname, join
 utils = bot_utils.GetUtils()
 
 DEBUG_LOG=".debug.log"
+
+GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
 
 FLETCH_REGEXP = r'fletch-(linux|mac|windows)(-(debug|release|asan)-(x86))?'
 CROSS_REGEXP = r'cross-fletch-(linux)-(arm)'
@@ -148,15 +153,21 @@ def StepsNormal(debug_log, system, modes, archs, asans):
   for snapshot_run in [True, False]:
     for configuration in configurations:
       if not ShouldSkipConfiguration(snapshot_run, configuration):
-        StepTest(
-          configuration['build_conf'],
-          configuration['mode'],
-          configuration['arch'],
-          clang=configuration['clang'],
-          asan=configuration['asan'],
-          snapshot_run=snapshot_run,
-          debug_log=debug_log,
-          configuration=configuration)
+        build_conf = configuration['build_conf']
+        build_dir = configuration['build_dir']
+
+        def run():
+          StepTest(
+            build_conf,
+            configuration['mode'],
+            configuration['arch'],
+            clang=configuration['clang'],
+            asan=configuration['asan'],
+            snapshot_run=snapshot_run,
+            debug_log=debug_log,
+            configuration=configuration)
+
+        RunWithCoreDumpArchiving(run, build_dir, build_conf)
 
 def StepsCrossBuilder(debug_log, system, modes, arch):
   """This step builds XARM configurations and archives the results.
@@ -381,6 +392,71 @@ class TemporaryHomeDirectory(object):
     else:
       os.unsetenv('HOME')
     shutil.rmtree(self._tmp)
+
+class CoredumpEnabler(object):
+  def __init__(self):
+    self._old_limits = None
+
+  def __enter__(self):
+    self._old_limits = resource.getrlimit(resource.RLIMIT_CORE)
+    resource.setrlimit(resource.RLIMIT_CORE, (-1, -1))
+
+  def __exit__(self, *_):
+    resource.setrlimit(resource.RLIMIT_CORE, self._old_limits)
+
+class CoredumpArchiver(object):
+  def __init__(self, bucket, build_dir, conf):
+    self._bucket = bucket
+    self._build_dir = build_dir
+    self._conf = conf
+
+  def __enter__(self):
+    # TODO(kustermann): Assert that the core pattern is correctly set (at least
+    # on linux)
+    pass
+
+  def __exit__(self, *_):
+    coredumps = self._find_coredumps()
+    if coredumps:
+      print 'Archiving coredumps: %s' % ', '.join(coredumps)
+      sys.stdout.flush()
+      self._archive(os.path.join(self._build_dir, 'fletch-vm'), coredumps)
+
+  def _find_coredumps(self):
+    # TODO(kustermann): Make this work for mac as well.
+    if utils.GuessOS() == 'linux':
+      # Finds all files named 'core.*' in the current working directory.
+      return glob.glob('core.*')
+
+  def _archive(self, fletch_vm, coredumps):
+    assert coredumps
+    files = [fletch_vm] + coredumps
+
+    for filename in files:
+      assert os.path.exists(filename)
+
+    gsutil = bot_utils.GSUtil()
+    prefix = 'gs://%s/%s/' % (self._bucket, uuid.uuid4())
+
+    for filename in files:
+      destination = '%s%s' % (prefix, filename)
+      gsutil.upload(filename, destination)
+      print '@@@STEP_LOG_LINE@coredumps %s@%s@@@' % (self._conf, destination)
+
+    for filename in coredumps:
+      os.remove(filename)
+
+    print '@@@STEP_LOG_END@coredumps@@@'
+    MarkCurrentStep(fatal=False)
+
+def RunWithCoreDumpArchiving(run, build_dir, build_conf):
+  # TODO(kustermann): Make this work on mac as well.
+  if utils.GuessOS() == 'linux':
+    with CoredumpEnabler():
+      with CoredumpArchiver(GCS_COREDUMP_BUCKET, build_dir, build_conf):
+        run()
+  else:
+    run()
 
 def GetBuildConfigurations(system, modes, archs, asans):
   configurations = []

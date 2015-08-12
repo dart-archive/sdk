@@ -248,10 +248,11 @@ def RunProcess(command):
   If a non-zero exit code is returned, raises an OSError with errno as the exit
   code.
   """
-  no_color_env = dict(os.environ)
-  no_color_env['TERM'] = 'nocolor'
+  env = dict(os.environ)
+  env['TERM'] = 'nocolor'
+  env['BOT_RUN_PROCESS_CMD'] = ' '.join(command)
 
-  exit_code = subprocess.call(command, env=no_color_env)
+  exit_code = subprocess.call(command, env=env)
   if exit_code != 0:
     raise OSError(exit_code)
 

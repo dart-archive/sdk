@@ -248,7 +248,7 @@ class GSUtil(object):
           for directory in possible_locations:
             location = os.path.join(directory, 'gsutil')
             if os.path.isfile(location):
-              GSUtil.GSUTIL_IS_SHELL_SCRIPT = False
+              GSUtil.GSUTIL_IS_SHELL_SCRIPT = True
               GSUtil.GSUTIL_PATH = location
               break
       assert GSUtil.GSUTIL_PATH
