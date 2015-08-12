@@ -739,36 +739,29 @@ class FletchBackend extends Backend {
           systemBuilder.lookupClassBuilder(functionBuilder.memberOf);
       classBuilder.addToMethodTable(fletchSelector, functionBuilder);
       // Inject method into all mixin usages.
-      List<ClassElement> mixinUsage =
-          compiler.world.mixinUsesOf(function.enclosingClass).toList();
-      for (int i = 0; i < mixinUsage.length; i++) {
-        ClassElement usage = mixinUsage[i];
-        // Also add to mixin-usage of the current 'usage'.
-        assert(!compiler.world.mixinUsesOf(usage).any(mixinUsage.contains));
-        mixinUsage.addAll(compiler.world.mixinUsesOf(usage));
-        // TODO(ajohnsen): Consider having multiple 'memberOf' in
-        // FletchFunctionBuilder, to avoid duplicates.
-        // Create a copy with a unique 'memberOf', so we can detect missing
-        // stubs for the mixin applications as well.
+      getMixinApplicationsOfClass(classBuilder).forEach((ClassElement usage) {
         FletchClassBuilder compiledUsage = registerClassElement(usage);
-        FunctionTypedElement implementation = function.implementation;
-        FletchFunctionBuilder copy =
-            systemBuilder.newFunctionBuilderWithSignature(
-                function.name,
-                implementation,
-                implementation.functionSignature,
-                compiledUsage.classId,
-                kind: function.isAccessor
-                    ? FletchFunctionKind.ACCESSOR
-                    : FletchFunctionKind.NORMAL);
-        compiledUsage.addToMethodTable(fletchSelector, copy);
-        copy.copyFrom(functionBuilder);
-      }
+        compiledUsage.addToMethodTable(fletchSelector, functionBuilder);
+      });
     }
 
     if (compiler.verbose) {
       compiler.log(functionBuilder.verboseToString());
     }
+  }
+
+  List<ClassElement> getMixinApplicationsOfClass(FletchClassBuilder builder) {
+    ClassElement element = builder.element;
+    if (element == null) return [];
+    List<ClassElement> mixinUsage =
+        compiler.world.mixinUsesOf(element).toList();
+    for (int i = 0; i < mixinUsage.length; i++) {
+      ClassElement usage = mixinUsage[i];
+      // Recursively add mixin-usage of the current 'usage'.
+      assert(!compiler.world.mixinUsesOf(usage).any(mixinUsage.contains));
+      mixinUsage.addAll(compiler.world.mixinUsesOf(usage));
+    }
+    return mixinUsage;
   }
 
   void codegenNativeFunction(
@@ -1019,6 +1012,13 @@ class FletchBackend extends Backend {
       FletchClassBuilder classBuilder = systemBuilder.lookupClassBuilder(
           function.memberOf);
       classBuilder.addToMethodTable(fletchSelector, builder);
+
+      // Inject parameter stub into all mixin usages.
+      getMixinApplicationsOfClass(classBuilder).forEach((ClassElement usage) {
+        FletchClassBuilder classBuilder =
+            systemBuilder.lookupClassBuilderByElement(usage);
+        classBuilder.addToMethodTable(fletchSelector, builder);
+      });
     }
 
     systemBuilder.registerParameterStubFor(function, callStructure, builder);
@@ -1062,6 +1062,13 @@ class FletchBackend extends Backend {
     FletchClassBuilder classBuilder = systemBuilder.lookupClassBuilder(
         function.memberOf);
     classBuilder.addToMethodTable(fletchSelector, getter);
+
+    // Inject getter into all mixin usages.
+    getMixinApplicationsOfClass(classBuilder).forEach((ClassElement usage) {
+      FletchClassBuilder classBuilder =
+          systemBuilder.lookupClassBuilderByElement(usage);
+      classBuilder.addToMethodTable(fletchSelector, getter);
+    });
   }
 
   int assembleProgram() {
