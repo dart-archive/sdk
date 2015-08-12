@@ -1799,6 +1799,8 @@ main() {
   new C();
 <<<< []
 ==== {"messages":[],"compileUpdatesShouldThrow":1}
+  // TODO(ahe): compileUpdates shouldn't throw, we should be able to handle
+  // named mixin applications.
   new C();
 >>>>
 }
@@ -1836,6 +1838,21 @@ class B<T> implements A<T> {
 
 main() {
   new B<int>();
+}
+''',
+
+  r'''
+closure_capture
+==> main.dart.patch <==
+main() {
+  var a = "hello";
+<<<< "hello"
+  print(a);
+==== {"messages":["hello from closure"],"compileUpdatesShouldThrow":1}
+  // TODO(ahe): compileUpdates shouldn't throw, we should be able to handle
+  // capture variables in closures.
+  (() => print('$a from closure'))();
+>>>>
 }
 ''',
 ];

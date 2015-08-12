@@ -56,6 +56,9 @@ import '../fletch_system.dart';
 
 import 'closure_environment.dart';
 
+import '../incremental/fletchc_incremental.dart' show
+    IncrementalCompilationFailed; // TODO(ahe): Remove this import.
+
 enum VisitState {
   Value,
   Effect,
@@ -2188,6 +2191,12 @@ abstract class CodegenVisitor
    */
   int pushCapturedVariables(FunctionElement function) {
     ClosureInfo info = closureEnvironment.closures[function];
+    if (info == null) {
+      // TODO(ahe): Do not throw here, instead fix bug in incremental compiler
+      // (see test closure_capture).
+      throw new IncrementalCompilationFailed(
+          "Internal error: no closure info for $function");
+    }
     int index = 0;
     if (info.isThisFree) {
       loadThis();
