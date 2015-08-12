@@ -1826,4 +1826,25 @@ main() {
 >>>>
 }
 ''',
+
+  r'''
+super_is_parameter
+==> main.dart.patch <==
+<<<< []
+class A<S> {
+==== {"messages":[],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw.
+class A<S extends S> {
+>>>>
+  S field;
+}
+
+class B<T> implements A<T> {
+  T field;
+}
+
+main() {
+  new B<int>();
+}
+''',
 ];

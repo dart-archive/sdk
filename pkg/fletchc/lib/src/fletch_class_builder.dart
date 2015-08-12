@@ -16,6 +16,10 @@ import 'fletch_backend.dart';
 import '../fletch_system.dart';
 import '../commands.dart';
 
+// TODO(ahe): Remove this import.
+import '../incremental/fletchc_incremental.dart' show
+    IncrementalCompilationFailed;
+
 abstract class FletchClassBuilder {
   int get classId;
   ClassElement get element;
@@ -107,7 +111,10 @@ class FletchNewClassBuilder extends FletchClassBuilder {
   }
 
   void removeField(FieldElement field) {
-    throw new StateError("Fields should not be removed from a new class.");
+    // TODO(ahe): Change this to a StateError when bug in incremental compiler
+    // is fixed (tested by super_is_parameter).
+    throw new IncrementalCompilationFailed(
+        "Can't remove a field ($field) from a new class ($element)");
   }
 
   void removeFromMethodTable(FletchFunctionBase function) {

@@ -32,6 +32,7 @@ incremental/deprecated/newly_instantiated_superclasses_two_updates: Fail
 incremental/deprecated/stored_closure: Fail
 incremental/deprecated/stored_instance_tearoff: Fail
 incremental/deprecated/super_classes_of_directly_instantiated: Fail
+incremental/deprecated/super_is_parameter: Fail
 
 # The following tests use FletchSystem/FletchDelta
 incremental/encoded/add_instance_field: Fail
