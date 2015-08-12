@@ -463,8 +463,7 @@ class C {
   m() {
 <<<< ["instance is null","v1"]
   print('v1');
-==== ["instance is null","v2"]
-  // TODO(ahe): Should not print 'instance is null'
+==== ["v2"]
   print('v2');
 >>>>
   }
@@ -517,8 +516,7 @@ class C {
   m() {
     print('v1');
   }
-==== {"messages":["threw"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== {"messages":["threw"]}
 >>>>
 }
 var instance;
@@ -583,8 +581,7 @@ remove_top_level_method
 toplevel() {
   print('v1');
 }
-==== {"messages":["threw"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== {"messages":["threw"]}
 >>>>
 class C {
   m() {
@@ -672,8 +669,7 @@ main() {
     print('instance is null');
     instance = new A();
 <<<< ["instance is null","Called A.m"]
-==== ["instance is null","Called A.m"]
-// TODO(ahe): Should only print 'B.m'
+==== ["Called B.m"]
   } else {
     instance = new B();
 >>>>
@@ -726,8 +722,7 @@ main() {
     print('instance is null');
     instance = new A();
 <<<< ["instance is null","Called A.m"]
-==== ["instance is null","Called A.m"]
-// TODO(ahe): Should print only 'Called B.m'
+==== ["Called B.m"]
   } else {
     instance = new B();
 >>>>
@@ -820,8 +815,7 @@ add_instance_method
 
 class C {
 <<<< ["instance is null","threw"]
-==== ["instance is null","v2"]
-  // TODO(ahe): Should only print 'v2'
+==== ["v2"]
   foo() {
     print('v2');
   }
@@ -854,8 +848,7 @@ signature_change_top_level_method
 <<<< "v1"
 foo() {
   print('v1');
-==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== {"messages":["v2"]}
 void foo() {
   print('v2');
 >>>>
@@ -901,8 +894,7 @@ class C {
 <<<< ["instance is null","v1"]
   foo() {
     print('v1');
-==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw
+==== {"messages":["v2"]}
   void foo() {
     print('v2');
 >>>>
@@ -956,8 +948,7 @@ remove_class
 <<<< "v1"
 class C {
 }
-==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== {"messages":["v2"]}
 >>>>
 main() {
   try {
