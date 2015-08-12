@@ -20,12 +20,6 @@ import '../commands.dart';
 import '../incremental/fletchc_incremental.dart' show
     IncrementalCompilationFailed;
 
-class FletchClassUpdate {
-  final FletchClass klass;
-  final int changes;
-  FletchClassUpdate(this.klass, this.changes);
-}
-
 abstract class FletchClassBuilder {
   int get classId;
   ClassElement get element;
@@ -55,7 +49,7 @@ abstract class FletchClassBuilder {
   void createImplicitAccessors(FletchBackend backend);
   void createIsEntries(FletchBackend backend);
 
-  FletchClassUpdate finalizeClass(
+  FletchClass finalizeClass(
       FletchContext context,
       List<Command> commands);
 
@@ -64,6 +58,10 @@ abstract class FletchClassBuilder {
   // class including the implicit accessors. The returned map is not sorted.
   // TODO(ajohnsen): Remove once not used by feature_test anymore.
   PersistentMap<int, int> computeMethodTable();
+
+  bool computeSchemaChange(List<Command> commands) {
+    return false;
+  }
 }
 
 void forEachField(ClassElement c, void action(FieldElement field)) {
@@ -210,7 +208,7 @@ class FletchNewClassBuilder extends FletchClassBuilder {
     addIsSelector(fletchSelector);
   }
 
-  FletchClassUpdate finalizeClass(
+  FletchClass finalizeClass(
       FletchContext context,
       List<Command> commands) {
     if (isBuiltin) {
@@ -237,17 +235,15 @@ class FletchNewClassBuilder extends FletchClassBuilder {
       fieldsList[index++] = field;
     });
 
-    return new FletchClassUpdate(
-        new FletchClass(
-          classId,
-          // TODO(ajohnsen): Take name in FletchClassBuilder constructor.
-          element == null ? '<internal>' : element.name,
-          element,
-          superclass == null ? -1 : superclass.classId,
-          superclassFields,
-          methodTable,
-          fieldsList),
-        1);
+    return new FletchClass(
+        classId,
+        // TODO(ajohnsen): Take name in FletchClassBuilder constructor.
+        element == null ? '<internal>' : element.name,
+        element,
+        superclass == null ? -1 : superclass.classId,
+        superclassFields,
+        methodTable,
+        fieldsList);
   }
 
   String toString() => "FletchClassBuilder($element, $classId)";
@@ -348,14 +344,13 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
     return methodTable;
   }
 
-  FletchClassUpdate finalizeClass(
+  FletchClass finalizeClass(
       FletchContext context,
       List<Command> commands) {
     // TODO(ajohnsen): We need to figure out when to do this. It should be after
     // we have updated class fields, but before we hit 'computeSystem'.
     createImplicitAccessors(context.backend);
 
-    int changes = 1;
     commands.add(new PushFromMap(MapId.classes, classId));
 
     PersistentMap<int, int> methodTable = computeMethodTable();
@@ -369,26 +364,24 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
     List<FieldElement> fieldsList = <FieldElement>[];
     forEachField(element, (field) { fieldsList.add(field); });
 
-    if (_fieldsChanged) {
-      computeSchemaChange(fieldsList, commands);
-      changes++;
-    }
-
-    return new FletchClassUpdate(
-        new FletchClass(
-          classId,
-          // TODO(ajohnsen): Take name in FletchClassBuilder constructor.
-          element == null ? '<internal>' : element.name,
-          element,
-          superclass == null ? -1 : superclass.classId,
-          superclassFields + extraFields,
-          methodTable,
-          fieldsList),
-        changes);
+    return new FletchClass(
+        classId,
+        // TODO(ajohnsen): Take name in FletchClassBuilder constructor.
+        element == null ? '<internal>' : element.name,
+        element,
+        superclass == null ? -1 : superclass.classId,
+        superclassFields + extraFields,
+        methodTable,
+        fieldsList);
   }
 
-  void computeSchemaChange(
-      List<FieldElement> afterFields, List<Command> commands) {
+  bool computeSchemaChange(List<Command> commands) {
+    if (!_fieldsChanged) return false;
+
+    // TODO(ajohnsen): Don't recompute this list.
+    List<FieldElement> afterFields = <FieldElement>[];
+    forEachField(element, (field) { afterFields.add(field); });
+
     // TODO(ajohnsen): Handle sub/super classes.
     int numberOfClasses = 1;
     commands.add(new PushFromMap(MapId.classes, classId));
@@ -415,5 +408,7 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
     // Finally, ask the runtime to change the schemas!
     int fieldCountDelta = afterFields.length - klass.fields.length;
     commands.add(new ChangeSchemas(numberOfClasses, fieldCountDelta));
+
+    return true;
   }
 }

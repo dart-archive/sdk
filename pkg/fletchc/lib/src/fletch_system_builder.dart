@@ -228,9 +228,8 @@ class FletchSystemBuilder {
     // Create all new FletchClasses.
     List<FletchClass> classes = <FletchClass>[];
     for (FletchClassBuilder builder in _newClasses.values) {
-      var update = builder.finalizeClass(context, commands);
-      classes.add(update.klass);
-      changes += update.changes;
+      classes.add(builder.finalizeClass(context, commands));
+      changes++;
     }
 
     // Create all statics.
@@ -356,6 +355,11 @@ class FletchSystemBuilder {
             ..add(new ChangeMethodLiteral(i));
         changes++;
       }
+    }
+
+    // Compute all scheme changes.
+    for (FletchClassBuilder builder in _newClasses.values) {
+      if (builder.computeSchemaChange(commands)) changes++;
     }
 
     // TODO(ajohnsen): Big hack. We should not track method dependency like
