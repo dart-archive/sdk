@@ -51,3 +51,8 @@ const String endDocumentation = """
    x-end session NAME
              End the named session
 """;
+
+const String servicecDocumentation = """
+   x-servicec file FILE
+             Compile service IDL file named FILE to custom fletch interface
+""";

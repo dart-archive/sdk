@@ -40,6 +40,9 @@ import 'run_verb.dart' show
 import 'x_end_verb.dart' show
     endVerb;
 
+import 'x_servicec_verb.dart' show
+    servicecVerb;
+
 typedef Future<int> DoVerb(AnalyzedSentence sentence, VerbContext context);
 
 class Verb {
@@ -98,4 +101,5 @@ const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "attach": attachVerb,
   "x-run": runVerb,
   "x-end": endVerb,
+  "x-servicec": servicecVerb,
 };
