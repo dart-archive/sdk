@@ -24,6 +24,7 @@ vars = {
   "package_config_tag": "@0.1.1",
   "path_tag": "@1.3.6",
   "charcode_tag": "@1.1.0",
+  "crypto_tag": "@dd0ff8b95269b11f7bd925d2f58e5e938c1f03fc",
 
   # We use mirrors of all github repos to guarantee reproducibility and
   # consistency between what users see and what the bots see.
@@ -61,6 +62,9 @@ deps = {
 
   "third_party/persistent":
       (Var("github_url") % "polux/persistent") + Var("persistent_rev"),
+
+  "third_party/crypto":
+      (Var("github_mirror") % "crypto") + Var("crypto_tag")
 }
 
 # To include Mac deps on other OSes, add this to your .gclient file:

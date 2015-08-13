@@ -3,9 +3,10 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #import "MainController.h"
-
 #import "CommitListPresenter.h"
+
 #import "ImmiSamples/DrawerPresenter.h"
+#import "ImmiSamples/LoginPresenter.h"
 #import "ImmiSamples/MenuPresenter.h"
 #import "ImmiSamples/SlidingWindowPresenter.h"
 
@@ -19,11 +20,17 @@
 - (id)init:(UIStoryboard*)storyboard;
 @end
 
+@interface RightPresenter : NSObject <ViewPresenter, NodePresenter>
+@property LoginPresenter* presenter;
+- (id)init:(UIStoryboard*)storyboard;
+@end
+
 @interface MainController () <NodePresenter, DrawerPresenter>
 @property ImmiRoot* immiRoot;
 @property DrawerPresenter* drawerPresenter;
 @property CenterPresenter* centerPresenter;
 @property LeftPresenter* leftPresenter;
+@property RightPresenter* rightPresenter;
 @end
 
 @implementation CenterPresenter
@@ -67,6 +74,27 @@
 - (UIViewController*)viewController {
   return [self.presenter viewController];
 }
+@end
+
+@implementation RightPresenter
+
+- (id)init:(UIStoryboard*)storyboard {
+  self.presenter =
+    [storyboard instantiateViewControllerWithIdentifier:@"LoginPresenter"];
+  return self;
+}
+
+- (void)presentNode:(Node*)node {
+  [self.presenter presentLogin:[node as:LoginNode.class]];
+}
+
+- (void)patchNode:(NodePatch*)patch {
+  [self.presenter patchLogin:[patch as:LoginPatch.class]];
+}
+
+- (UIViewController*)viewController {
+  return [self.presenter viewController];
+}
 
 @end
 
@@ -80,11 +108,13 @@
 
   self.centerPresenter = [[CenterPresenter alloc] init:storyboard];
   self.leftPresenter = [[LeftPresenter alloc] init:storyboard];
+  self.rightPresenter = [[RightPresenter alloc] init:storyboard];
 
   // Create a drawer presenter do to the interpretation work.
   self.drawerPresenter =
       [[DrawerPresenter alloc] initWithCenterPresenter:self.centerPresenter
-                                         leftPresenter:self.leftPresenter];
+                                         leftPresenter:self.leftPresenter
+                                        rightPresenter:self.rightPresenter];
 
   // Create the IMMI service.
   ImmiService* immi = [[ImmiService alloc] init];

@@ -10,6 +10,7 @@ import 'package:github_sample/src/github_services.dart';
 
 import 'package:immi_samples/drawer.dart';
 import 'package:immi_samples/menu.dart';
+import 'package:immi_samples/login_presenter.dart';
 
 main() {
   var server = new Server.invertedForTesting(8321);
@@ -18,7 +19,8 @@ main() {
 
   var menu = new Menu('Menu');
   var commits = new CommitListPresenter(repo);
-  var drawer = new Drawer(commits, left: menu);
+  var login = new LoginPresenter('https://api.github.com/user/repos');
+  var drawer = new Drawer(commits, left: menu, right: login);
 
   menu.add(new MenuItem('Commits @ Fletch', () { drawer.center = commits; }));
 

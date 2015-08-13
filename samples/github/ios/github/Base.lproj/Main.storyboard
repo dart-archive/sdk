@@ -186,6 +186,24 @@
             </objects>
             <point key="canvasLocation" x="832" y="757"/>
         </scene>
+        <!--View Controller-->
+        <scene sceneID="Cjt-Fr-qda">
+            <objects>
+                <viewController id="VEM-SL-3yL" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="tcT-aZ-7cK"/>
+                        <viewControllerLayoutGuide type="bottom" id="Jaz-RU-NqT"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="Kbv-QB-ETG">
+                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="UfF-BW-Rx2" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="175" y="35"/>
+        </scene>
         <!--Main Controller-->
         <scene sceneID="jUC-Qb-CRZ">
             <objects>
@@ -204,10 +222,10 @@
             </objects>
             <point key="canvasLocation" x="1132" y="41"/>
         </scene>
-        <!--View Controller-->
+        <!--LoginScreen-->
         <scene sceneID="6mi-Fk-T4l">
             <objects>
-                <viewController storyboardIdentifier="hello" id="NI5-UX-JPn" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="LoginPresenter" id="NI5-UX-JPn" userLabel="LoginScreen" customClass="LoginPresenter" sceneMemberID="viewController">
                     <layoutGuides>
                         <viewControllerLayoutGuide type="top" id="kgi-Iw-EMY"/>
                         <viewControllerLayoutGuide type="bottom" id="JkX-yY-hEW"/>
@@ -216,19 +234,73 @@
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Hello World" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="gfC-Sp-2PB">
-                                <rect key="frame" x="258" y="289" width="98" height="21"/>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Username" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="n3b-dS-2WF">
+                                <rect key="frame" x="18" y="116" width="79" height="21"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Password" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Ta3-ve-IgI">
+                                <rect key="frame" x="19" y="192" width="76" height="21"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="suE-B6-6BL">
+                                <rect key="frame" x="221" y="213" width="38" height="30"/>
+                                <state key="normal" title="Login">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="handleLogin:" destination="NI5-UX-JPn" eventType="touchUpInside" id="vXS-0q-r7z"/>
+                                </connections>
+                            </button>
+                            <textField opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="Ss7-vF-0rA">
+                                <rect key="frame" x="17" y="213" width="200" height="30"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                <textInputTraits key="textInputTraits" secureTextEntry="YES"/>
+                            </textField>
+                            <textField opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="GNB-Il-vbd">
+                                <rect key="frame" x="19" y="138" width="240" height="30"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                <textInputTraits key="textInputTraits"/>
+                            </textField>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="J4l-xM-GEB">
+                                <rect key="frame" x="207" y="67" width="52" height="30"/>
+                                <state key="normal" title="Logout">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="handleLogout:" destination="NI5-UX-JPn" eventType="touchUpInside" id="2jf-zs-UvR"/>
+                                </connections>
+                            </button>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="I85-2B-CCg">
+                                <rect key="frame" x="106" y="93" width="151" height="21"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="12"/>
+                                <color key="textColor" red="0.0" green="0.47843137250000001" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="tr7-SX-uQe">
+                                <rect key="frame" x="26" y="272" width="226" height="68"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                 <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                     </view>
+                    <connections>
+                        <outlet property="loginButton" destination="suE-B6-6BL" id="tmc-Wr-Fk1"/>
+                        <outlet property="logoutButton" destination="J4l-xM-GEB" id="wo0-II-khz"/>
+                        <outlet property="password" destination="Ss7-vF-0rA" id="B2a-xk-fRe"/>
+                        <outlet property="response" destination="tr7-SX-uQe" id="Ckk-bY-e6z"/>
+                        <outlet property="user" destination="I85-2B-CCg" id="KdK-Ly-eG1"/>
+                        <outlet property="username" destination="GNB-Il-vbd" id="soo-uc-3Zt"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="keP-HD-Roo" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1766" y="95"/>
+            <point key="canvasLocation" x="1828" y="35"/>
         </scene>
     </scenes>
 </document>
