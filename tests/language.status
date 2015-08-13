@@ -9,7 +9,7 @@
 regress_14348_test: Crash
 
 [ ($compiler == fletchc || $runtime == fletchc) && $arch == ia32 ]
-bit_shift_test: Fail
+bit_shift_test: RuntimeError
 
 [ $compiler == fletchc || $runtime == fletchc ]
 stack_overflow_stacktrace_test: Fail
@@ -125,7 +125,6 @@ bit_operations_test/02: RuntimeError
 bit_operations_test/03: RuntimeError
 bit_operations_test/04: RuntimeError
 bit_operations_test/none: RuntimeError
-bit_shift_test: RuntimeError
 built_in_identifier_prefix_test: Fail
 built_in_identifier_test/01: CompileTimeError
 call_function_apply_test: RuntimeError
