@@ -45,8 +45,9 @@ def main():
   args = sys.argv[1:]
   if "-L/FLETCH_ASAN" in args:
     args.remove("-L/FLETCH_ASAN")
-    args.insert(0, '-fsanitize-undefined-trap-on-error')
     args.insert(0, '-fsanitize=address')
+    if "-L/FLETCH_CLANG" in args:
+      args.insert(0, '-fsanitize-undefined-trap-on-error')
   if "-DFLETCH_CLANG" in args:
     invoke_clang(args)
   elif "-L/FLETCH_CLANG" in args:

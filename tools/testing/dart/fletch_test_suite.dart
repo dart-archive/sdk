@@ -85,9 +85,6 @@ class FletchTestSuite extends TestSuite {
 
     TestExpectations expectations = new TestExpectations();
     String buildDir = TestUtils.buildDir(configuration);
-    String buildArch = configuration['arch'];
-    String buildSystem = configuration['system'];
-    String buildCxx = configuration['clang'] ? 'clang' : 'g++';
 
     io.Process vmProcess;
     ReadTestExpectationsInto(
@@ -100,9 +97,10 @@ class FletchTestSuite extends TestSuite {
           ['-Dfletch-vm=$buildDir/fletch-vm',
            '-Ddart-sdk=../dart/sdk/',
            '-Dtest.dart.build-dir=$buildDir',
-           '-Dtest.dart.build-arch=$buildArch',
-           '-Dtest.dart.build-system=$buildSystem',
-           '-Dtest.dart.build-cxx-compiler=$buildCxx',
+           '-Dtest.dart.build-arch=${configuration["arch"]}',
+           '-Dtest.dart.build-system=${configuration["system"]}',
+           '-Dtest.dart.build-clang=${configuration["clang"]}',
+           '-Dtest.dart.build-asan=${configuration["asan"]}',
            '-c',
            '-ppackage/',
            '-Dtest.fletch_test_suite.port=${server.port}',

@@ -23,6 +23,6 @@ incremental/signature_change_static_method: Fail
 incremental/stored_closure: Fail
 incremental/stored_instance_tearoff: Fail
 
-[ $asan || ($arch != ia32 && $arch != x64) ]
+[ $arch != ia32 && $arch != x64 ]
 
 service_tests/*: Skip

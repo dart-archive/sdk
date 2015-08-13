@@ -42,18 +42,28 @@ const String buildDirectory =
 const String buildArchitecture =
     const String.fromEnvironment('test.dart.build-arch');
 
-/// Compiler configuration from test.py
-const String buildCxxCompiler =
-    const String.fromEnvironment('test.dart.build-cxx-compiler');
+/// Use clang as configured by test.py
+const bool buildClang =
+    const bool.fromEnvironment('test.dart.build-clang');
 
 /// Host system configuration from test.py
 const String buildSystem =
     const String.fromEnvironment('test.dart.build-system');
 
+/// Use asan as configured by test.py
+const bool buildAsan =
+    const bool.fromEnvironment('test.dart.build-asan');
+
 // TODO(zerny): Provide the below constants via configuration from test.py
 final String generatedDirectory = '$buildDirectory/generated_service_tests';
 final String fletchExecutable = '$buildDirectory/fletch';
 final String fletchLibrary = '${buildDirectory}/libfletch.a';
+
+const bool isAsan = buildAsan;
+const bool isClang = buildClang;
+const bool isGNU = !buildClang;
+const bool isMacOS = buildSystem == 'macos';
+const bool isLinux = buildSystem == 'linux';
 
 abstract class ServiceTest {
   final String name;
@@ -103,10 +113,18 @@ abstract class Rule {
 
   Future<Null> build();
 
-  static Future<ProcessResult> runCommand(String executable,
-                                          List<String> arguments) async {
-    print("Running: '$executable' $arguments");
-    ProcessResult result = await Process.run(executable, arguments);
+  static Future<ProcessResult> runCommand(
+      String executable,
+      List<String> arguments,
+      [Map<String,String> environment]) async {
+    String environmentString = '';
+    if (environment != null) {
+      environmentString =
+          environment.keys.map((k) => '$k=${environment[k]}').join(' ');
+    }
+    print("Running: $environmentString $executable ${arguments.join(' ')}");
+    ProcessResult result =
+        await Process.run(executable, arguments, environment: environment);
     print('stdout:');
     print(result.stdout);
     print('stderr:');
@@ -140,12 +158,6 @@ class CcRule extends Rule {
       throw "CcRule expects a valid output path for the executable";
     }
   }
-
-  bool get isClang => buildCxxCompiler == 'clang';
-  bool get isGNU => buildCxxCompiler == 'g++';
-  bool get isMacOS => buildSystem == 'macos';
-  bool get isLinux => buildSystem == 'linux';
-  bool get isWindows => buildSystem == 'windows';
 
   String get compiler => 'tools/cxx_wrapper.py';
 
@@ -223,6 +235,10 @@ class CcRule extends Rule {
   Future<Null> build() async {
     List<String> arguments = <String>[];
     if (isClang) arguments.add('-DFLETCH_CLANG');
+    if (isAsan) {
+      arguments.add('-DFLETCH_ASAN');
+      arguments.add('-L/FLETCH_ASAN');
+    }
     addBuildFlags(arguments);
     addHostFlags(arguments);
     addUserFlags(arguments);
@@ -257,7 +273,11 @@ class RunSnapshotRule extends Rule {
   RunSnapshotRule(this.executable, this.snapshot);
 
   Future<Null> build() {
-    return Rule.runCommand(executable, [snapshot]);
+    Map<String, String> env;
+    if (isMacOS && isAsan) {
+      env = <String, String>{'DYLD_LIBRARY_PATH': buildDirectory};
+    }
+    return Rule.runCommand(executable, [snapshot], env);
   }
 }
 
