@@ -40,6 +40,9 @@ import '../driver/session_manager.dart' show
 import '../driver/options.dart' show
     Options;
 
+import '../driver/exit_codes.dart' show
+    DART_VM_EXITCODE_COMPILE_TIME_ERROR;
+
 import 'documentation.dart' show
     compileAndRunDocumentation;
 
@@ -50,6 +53,11 @@ Future<int> compileAndRun(
     AnalyzedSentence sentence,
     VerbContext context) async {
   Options options = Options.parse(sentence.arguments);
+
+  if (!options.defines.isEmpty) {
+    print("Unsupported options: ${options.defines.join(' ')}");
+    return DART_VM_EXITCODE_COMPILE_TIME_ERROR;
+  }
 
   if (options.script == null) {
     throwFatalError(DiagnosticKind.noFile);
