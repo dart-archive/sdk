@@ -440,7 +440,8 @@ class CoredumpArchiver(object):
 
     for filename in files:
       destination = '%s%s' % (prefix, filename)
-      gsutil.upload(filename, destination)
+      # Disabled until we find the cause of upload failure
+      # gsutil.upload(filename, destination)
       print '@@@STEP_LOG_LINE@coredumps %s@%s@@@' % (self._conf, destination)
 
     for filename in coredumps:
