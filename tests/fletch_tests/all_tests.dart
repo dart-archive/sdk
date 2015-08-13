@@ -60,6 +60,7 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'zone_helper/testLateError': zone_helper.testLateError,
   'zone_helper/testUnhandledLateError': zone_helper.testUnhandledLateError,
   'zone_helper/testAlwaysFails': zone_helper.testAlwaysFails,
+  'zone_helper/testCompileTimeError': zone_helper.testCompileTimeError,
 
   'sentence_tests': sentence_tests.main,
 

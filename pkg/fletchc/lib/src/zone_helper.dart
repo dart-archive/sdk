@@ -7,6 +7,8 @@ library fletchc.zone_helper;
 
 import 'dart:async';
 
+import 'dart:isolate';
+
 Future runGuarded(
     Future f(),
     {void printLineOnStdout(line),
@@ -34,10 +36,43 @@ Future runGuarded(
 
   ZoneSpecification specification = new ZoneSpecification(print: printWrapper);
 
-  runZoned(
-      () => f().then(completer.complete),
-      zoneSpecification: specification,
-      onError: handleUncaughtError);
+  ReceivePort errorPort = new ReceivePort();
+  Future errorFuture = errorPort.listen((List errors) {
+    Isolate.current.removeErrorListener(errorPort.sendPort);
+    errorPort.close();
+    var error = errors[0];
+    var stackTrace = errors[1];
+    if (stackTrace != null) {
+      stackTrace = new StackTrace.fromString(stackTrace);
+    }
+    handleUncaughtError(error, stackTrace);
+  }).asFuture();
 
-  return completer.future;
+  Isolate.current.addErrorListener(errorPort.sendPort);
+  Isolate.current.setErrorsFatal(false);
+  return acknowledgeControlMessages(Isolate.current).then((_) {
+    runZoned(
+        () => new Future(f).then(completer.complete),
+        zoneSpecification: specification,
+        onError: handleUncaughtError);
+
+    return completer.future.whenComplete(() {
+      errorPort.close();
+      Isolate.current.removeErrorListener(errorPort.sendPort);
+      return errorFuture;
+    });
+  });
+}
+
+/// Ping [isolate] to ensure control messages have been delivered.  Control
+/// messages are things like [Isolate.addErrorListener] and
+/// [Isolate.addOnExitListener].
+Future acknowledgeControlMessages(Isolate isolate, {Capability resume}) {
+  ReceivePort ping = new ReceivePort();
+  Isolate.current.ping(ping.sendPort);
+  if (resume == null) {
+    return ping.first;
+  } else {
+    return ping.first.then((_) => isolate.resume(resume));
+  }
 }

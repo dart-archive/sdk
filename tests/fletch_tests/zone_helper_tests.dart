@@ -14,7 +14,10 @@ import 'package:fletchc/src/zone_helper.dart';
 import 'package:expect/expect.dart';
 
 import 'dart:io' show
-    stderr;
+    Platform;
+
+final Uri fileWithCompileTimeError =
+    Uri.base.resolve("tests/fletch_tests/file_with_compile_time_error.dart");
 
 /// Test that runGuarded completes with an error when a synchronous error is
 /// thrown.
@@ -95,8 +98,8 @@ testUnhandledLateError() async {
   isolate
       ..addOnExitListener(exitPort.sendPort)
       ..setErrorsFatal(false)
-      ..addErrorListener(errorPort.sendPort)
-      ..resume(isolate.pauseCapability);
+      ..addErrorListener(errorPort.sendPort);
+  acknowledgeControlMessages(isolate, resume: isolate.pauseCapability);
   bool errorPortListenWasCalled = false;
   await errorPort.listen((errorList) {
     errorPort.close();
@@ -126,4 +129,65 @@ testAlwaysFails() async {
   await new Stream.fromIterable([null]).listen((_) {
     throw "BROKEN";
   }).asFuture();
+}
+
+testCompileTimeError() async {
+  Isolate isolate;
+  ReceivePort exitPort = new ReceivePort();
+  ReceivePort errorPort = new ReceivePort();
+  ReceivePort port = new ReceivePort();
+
+  bool exited = false;
+  bool hadError = false;
+  var messageFromIsolate;
+
+  Future exitFuture = exitPort.listen((_) {
+    exited = true;
+    exitPort.close();
+    errorPort.close();
+    port.close();
+  }).asFuture();
+
+  Future errorFuture = errorPort.listen((List message) {
+    hadError = true;
+    var error = message[0];
+    var stackTrace = message[1];
+    if (stackTrace != null) {
+      print(stackTrace);
+    }
+  }).asFuture();
+
+  Future portFuture = port.listen((message) {
+    Expect.isNull(messageFromIsolate);
+    messageFromIsolate = message;
+    isolate.kill();
+  }).asFuture();
+
+  isolate = await Isolate.spawnUri(
+      fileWithCompileTimeError, <String>[], port.sendPort, paused: true,
+      checked: true, packageRoot: Uri.base.resolve(Platform.packageRoot));
+
+  isolate.setErrorsFatal(true);
+  isolate.addOnExitListener(exitPort.sendPort);
+  isolate.addErrorListener(errorPort.sendPort);
+  await acknowledgeControlMessages(isolate, resume: isolate.pauseCapability);
+  await exitFuture;
+  await errorFuture;
+  await portFuture;
+  Expect.isTrue(exited);
+  Expect.isTrue(hadError);
+  Expect.isNotNull(messageFromIsolate);
+
+  print("Test passed, got message: $messageFromIsolate");
+
+  // No-op call to let dart2js know this method is actually used.
+  testCompileTimeErrorHelper(null, () {});
+}
+
+testCompileTimeErrorHelper(SendPort port, void methodWithCompileTimeError()) {
+  return runGuarded(() {
+    methodWithCompileTimeError();
+  }).catchError((e, s) {
+    port.send("Error in isolate: $e\nStack trace: $s");
+  });
 }

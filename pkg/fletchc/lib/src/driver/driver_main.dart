@@ -38,6 +38,7 @@ import 'dart:isolate' show
     SendPort;
 
 import '../zone_helper.dart' show
+    acknowledgeControlMessages,
     runGuarded;
 
 import 'exit_codes.dart' show
@@ -628,7 +629,7 @@ class IsolatePool {
       exitPort.close();
       idleIsolates.remove(managedIsolate);
     });
-    isolate.resume(isolate.pauseCapability);
+    await acknowledgeControlMessages(isolate, resume: isolate.pauseCapability);
     StreamIterator iterator = new StreamIterator(receivePort);
     bool hasElement = await iterator.moveNext();
     if (!hasElement) {
