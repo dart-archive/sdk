@@ -57,14 +57,6 @@ def DisableMemoryLeakDetector():
   # https://code.google.com/p/address-sanitizer/wiki/Flags
   os.environ['ASAN_OPTIONS'] = 'detect_leaks=0'
 
-def KillFletch(system):
-  # TODO(ahe): Get rid of this method when TaskKill supports fletch and
-  # fletch-vm
-  if system != 'windows':
-    # Kill any lingering dart processes (from fletch_driver).
-    subprocess.call("killall fletch", shell=True)
-    subprocess.call("killall fletch-vm", shell=True)
-
 def Main():
   name, _ = bot.GetBotName()
 
@@ -343,9 +335,6 @@ class PersistentFletchDaemon(object):
     self._persistent = None
 
   def __enter__(self):
-    print "Killing existing fletch processes"
-    KillFletch(self._configuration['system'])
-
     print "Starting new persistent fletch daemon"
     self._persistent = subprocess.Popen(
       ['%s/dart' % self._configuration['build_dir'],
@@ -374,9 +363,6 @@ class PersistentFletchDaemon(object):
     print "Trying to wait for existing fletch daemon."
     self._persistent.terminate()
     self._persistent.wait()
-
-    print "Killing existing fletch processes"
-    KillFletch(self._configuration['system'])
 
 class TemporaryHomeDirectory(object):
   """Creates a temporary directory and uses that as the home directory.
