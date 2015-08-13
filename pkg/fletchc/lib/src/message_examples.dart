@@ -137,6 +137,16 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.noFile:
       // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.
       return <Example>[new CommandLineExample(<String>['compile-and-run'])];
+
+    case DiagnosticKind.unknownOption:
+      // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.
+      return <Example>[new CommandLineExample(
+            <String>['compile-and-run', '--fisk'])];
+
+    case DiagnosticKind.missingRequiredArgument:
+      // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.
+      return <Example>[new CommandLineExample(
+            <String>['compile-and-run', '-o'])];
   }
 }
 

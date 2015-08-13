@@ -4,6 +4,10 @@
 
 library fletchc.driver.options;
 
+import '../diagnostic.dart' show
+    DiagnosticKind,
+    throwFatalError;
+
 class Options {
   final String script;
   final String snapshotPath;
@@ -50,7 +54,9 @@ class Options {
         return iterator.current;
       } else {
         // TODO(ahe): Improve error recovery.
-        throw errorMessage;
+        throwFatalError(
+            DiagnosticKind.missingRequiredArgument,
+            message: errorMessage);
       }
     }
 
@@ -125,7 +131,10 @@ class Options {
             break;
           }
 
-          if (script != null) throw "Unknown option: $option";
+          if (script != null || option.startsWith("-")) {
+            throwFatalError(DiagnosticKind.unknownOption, userInput: option);
+          }
+
           script = option;
           break;
       }

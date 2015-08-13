@@ -173,7 +173,7 @@ void throwFatalError(
     arguments[DiagnosticParameter.address] = address;
   }
   if (userInput != null) {
-    arguments[DiagnosticParameter.userInput] = address;
+    arguments[DiagnosticParameter.userInput] = userInput;
   }
   throw new InputError(kind, arguments);
 }

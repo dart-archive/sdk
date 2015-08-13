@@ -35,7 +35,13 @@ import 'fletch_test_suite.dart' show
 import 'fletch_session_command.dart' show
     FletchSessionCommand;
 
-const int MEMORY_LEAK_EXITCODE = 23;
+import 'decode_exit_code.dart' show
+    DecodeExitCode;
+
+import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
+    DART_VM_EXITCODE_COMPILE_TIME_ERROR,
+    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+
 const int CRASHING_BROWSER_EXITCODE = -10;
 const int SLOW_TIMEOUT_MULTIPLIER = 4;
 
@@ -1559,52 +1565,11 @@ class AnalysisCommandOutputImpl extends CommandOutputImpl {
 }
 
 class VmCommandOutputImpl extends CommandOutputImpl
-                          with UnittestSuiteMessagesMixin {
-  static const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
-  static const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
-
+    with UnittestSuiteMessagesMixin, DecodeExitCode {
   VmCommandOutputImpl(Command command, int exitCode, bool timedOut,
                       List<int> stdout, List<int> stderr, Duration time,
                       int pid)
       : super(command, exitCode, timedOut, stdout, stderr, time, false, pid);
-
-  Expectation result(TestCase testCase) {
-    // Handle crashes and timeouts first
-    if (exitCode == MEMORY_LEAK_EXITCODE) return Expectation.MEMORY_LEAK;
-    if (hasCrashed) return Expectation.CRASH;
-    if (hasTimedOut) return Expectation.TIMEOUT;
-
-    // Multitests are handled specially
-    if (testCase.expectCompileError) {
-      if (exitCode == DART_VM_EXITCODE_COMPILE_TIME_ERROR) {
-        return Expectation.PASS;
-      }
-      return Expectation.MISSING_COMPILETIME_ERROR;
-    }
-    if (testCase.hasRuntimeError) {
-      // TODO(kustermann): Do we consider a "runtimeError" only an uncaught
-      // exception or does any nonzero exit code fullfil this requirement?
-      if (exitCode != 0) {
-        return Expectation.PASS;
-      }
-      return Expectation.MISSING_RUNTIME_ERROR;
-    }
-
-    // The actual outcome depends on the exitCode
-    Expectation outcome;
-    if (exitCode == DART_VM_EXITCODE_COMPILE_TIME_ERROR) {
-      outcome = Expectation.COMPILETIME_ERROR;
-    } else if (exitCode == DART_VM_EXITCODE_UNCAUGHT_EXCEPTION) {
-      outcome = Expectation.RUNTIME_ERROR;
-    } else if (exitCode != 0) {
-      // This is a general fail, in case we get an unknown nonzero exitcode.
-      outcome = Expectation.FAIL;
-    } else {
-      outcome = Expectation.PASS;
-    }
-    outcome = _negateOutcomeIfIncompleteAsyncTest(outcome, decodeUtf8(stdout));
-    return _negateOutcomeIfNegativeTest(outcome, testCase.isNegative);
-  }
 }
 
 class OutputDiffingVmCommandOutputImpl extends VmCommandOutputImpl {
@@ -1688,8 +1653,8 @@ class CompilationCommandOutputImpl extends CommandOutputImpl {
 
     // Handle dart2js/dart2dart specific crash detection
     if (exitCode == DART2JS_EXITCODE_CRASH ||
-        exitCode == VmCommandOutputImpl.DART_VM_EXITCODE_COMPILE_TIME_ERROR ||
-        exitCode == VmCommandOutputImpl.DART_VM_EXITCODE_UNCAUGHT_EXCEPTION) {
+        exitCode == DART_VM_EXITCODE_COMPILE_TIME_ERROR ||
+        exitCode == DART_VM_EXITCODE_UNCAUGHT_EXCEPTION) {
       return Expectation.CRASH;
     }
 

@@ -32,16 +32,14 @@ import 'dart:io' show
 
 import 'test_runner.dart' show
     Command,
-    CommandOutputImpl,
-    TestCase;
+    CommandOutputImpl;
 
-import 'status_file_parser.dart' show
-    Expectation;
+import 'decode_exit_code.dart' show
+    DecodeExitCode;
 
 import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
     COMPILER_EXITCODE_CRASH,
-    DART_VM_EXITCODE_COMPILE_TIME_ERROR,
-    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+    DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 import '../../../pkg/fletchc/lib/fletch_vm.dart' show
     FletchVm;
@@ -196,7 +194,7 @@ class UnexpectedExitCode extends Error {
   }
 }
 
-class FletchTestCommandOutput extends CommandOutputImpl {
+class FletchTestCommandOutput extends CommandOutputImpl with DecodeExitCode {
   FletchTestCommandOutput(
       Command command,
       int exitCode,
@@ -206,57 +204,6 @@ class FletchTestCommandOutput extends CommandOutputImpl {
       Duration time,
       int pid)
       : super(command, exitCode, timedOut, stdout, stderr, time, false, pid);
-
-  Expectation decodeExitCode() {
-    switch (exitCode) {
-      case 0:
-        return Expectation.PASS;
-
-      case COMPILER_EXITCODE_CRASH:
-        return Expectation.CRASH;
-
-      case DART_VM_EXITCODE_COMPILE_TIME_ERROR:
-        return Expectation.COMPILETIME_ERROR;
-
-      case DART_VM_EXITCODE_UNCAUGHT_EXCEPTION:
-        return Expectation.RUNTIME_ERROR;
-
-      default:
-        return Expectation.FAIL;
-    }
-  }
-
-  Expectation result(TestCase testCase) {
-    Expectation outcome = decodeExitCode();
-
-    if (testCase.hasRuntimeError) {
-      if (!outcome.canBeOutcomeOf(Expectation.RUNTIME_ERROR)) {
-        if (outcome == Expectation.PASS) {
-          return Expectation.MISSING_RUNTIME_ERROR;
-        } else {
-          return outcome;
-        }
-      }
-    }
-
-    if (testCase.hasCompileError) {
-      if (!outcome.canBeOutcomeOf(Expectation.COMPILETIME_ERROR)) {
-        if (outcome == Expectation.PASS) {
-          return Expectation.MISSING_COMPILETIME_ERROR;
-        } else {
-          return outcome;
-        }
-      }
-    }
-
-    if (testCase.isNegative) {
-      return outcome.canBeOutcomeOf(Expectation.FAIL)
-          ? Expectation.PASS
-          : Expectation.FAIL;
-    }
-
-    return outcome;
-  }
 }
 
 Stream<List<int>> addPrefixWhenNotEmpty(

@@ -42,7 +42,8 @@ import '../zone_helper.dart' show
     runGuarded;
 
 import 'exit_codes.dart' show
-    COMPILER_EXITCODE_CRASH;
+    COMPILER_EXITCODE_CRASH,
+    DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 import 'driver_commands.dart' show
     DriverCommand,
@@ -395,7 +396,7 @@ class ClientController {
       printLineOnStderr('$stackTrace');
       return COMPILER_EXITCODE_CRASH;
     } else {
-      return 1;
+      return DART_VM_EXITCODE_COMPILE_TIME_ERROR;
     }
   }
 }

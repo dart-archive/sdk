@@ -25,7 +25,15 @@ enum DiagnosticKind {
   socketConnectError,
   attachToVmBeforeRun,
   compileBeforeRun,
-  noFile, // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
+
+  // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
+  noFile,
+
+  // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
+  unknownOption,
+
+  // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
+  missingRequiredArgument,
 }
 
 /// Returns the diagnostic message template for [kind]. A diagnostic message
@@ -120,5 +128,11 @@ String getMessage(DiagnosticKind kind) {
       // TODO(ahe): Remove this message when compile_and_run_verb.dart is
       // removed.
       return "No file  provided. Try adding 'FILE_NAME' to the command line";
+
+    case DiagnosticKind.unknownOption:
+      return "Unknown option: '${DiagnosticParameter.userInput}'";
+
+    case DiagnosticKind.missingRequiredArgument:
+      return "Error in option: ${DiagnosticParameter.message}";
   }
 }
