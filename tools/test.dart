@@ -56,15 +56,18 @@ import 'testing/dart/fletch_test_suite.dart' show
  * moved to here, if possible.
 */
 final TEST_SUITE_DIRECTORIES = [
-    new Path('tests/corelib'),
     new Path('tests/coroutine'),
     new Path('tests/ffi'),
     new Path('tests/io'),
     new Path('tests/isolate'),
     new Path('tests/unsorted'),
-    new Path('tests/language'),
     new Path('tests/lib'),
     new Path('samples'),
+];
+
+final DART_SDK_TEST_SUITE_DIRECTORIES = [
+    new Path('tests/corelib'),
+    new Path('tests/language'),
 ];
 
 final DEBUGGER_TEST_SUITE_DIRECTORIES = [
@@ -235,6 +238,18 @@ void testConfigurations(List<Map> configurations) {
         if (selectors.containsKey(name)) {
           testSuites.add(
               new StandardTestSuite.forDirectory(conf, testSuiteDir));
+        }
+      }
+      for (final testSuiteDir in DART_SDK_TEST_SUITE_DIRECTORIES) {
+        final name = testSuiteDir.filename;
+        if (selectors.containsKey(name)) {
+          // For these tests suites that we get from the dart repository, the
+          // status file is in tests/NAME_OF_SUIITE.status
+          testSuites.add(
+              new StandardTestSuite.forDirectory(
+                  conf,
+                  testSuiteDir,
+                  statusFilePaths: ['$testSuiteDir.status']));
         }
       }
     }

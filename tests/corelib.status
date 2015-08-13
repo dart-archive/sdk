@@ -1,0 +1,184 @@
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+[ $runtime == fletchc ]
+# -D option not implemented.
+int_from_environment2_test: CompileTimeError
+
+[ $compiler == fletchc || $runtime == fletchc ]
+# Function.apply
+apply2_test: RuntimeError
+apply3_test: CompileTimeError
+apply4_test: RuntimeError
+apply_test: RuntimeError
+
+# Bigint
+big_integer_arith_vm_test/add: RuntimeError
+big_integer_arith_vm_test/div: RuntimeError
+big_integer_arith_vm_test/gcd: RuntimeError
+big_integer_arith_vm_test/mod: RuntimeError
+big_integer_arith_vm_test/modInv: RuntimeError
+big_integer_arith_vm_test/modPow: RuntimeError
+big_integer_arith_vm_test/mul: RuntimeError
+big_integer_arith_vm_test/negate: RuntimeError
+big_integer_arith_vm_test/none: RuntimeError
+big_integer_arith_vm_test/overflow: RuntimeError
+big_integer_arith_vm_test/shift: RuntimeError
+big_integer_arith_vm_test/sub: RuntimeError
+big_integer_arith_vm_test/trunDiv: RuntimeError
+big_integer_huge_mul_vm_test: RuntimeError
+big_integer_parsed_arith_vm_test: RuntimeError
+big_integer_parsed_div_rem_vm_test: RuntimeError
+big_integer_parsed_mul_div_vm_test: RuntimeError
+bit_twiddling_bigint_test: RuntimeError
+bit_twiddling_test: RuntimeError
+compare_to2_test: Fail
+double_ceil_test: RuntimeError
+double_floor_test: RuntimeError
+double_round_test: RuntimeError
+double_truncate_test: RuntimeError
+integer_to_radix_string_test: RuntimeError
+
+# Object.runtimeType / type check
+collection_length_test: CompileTimeError
+iterable_fold_test: CompileTimeError
+iterable_generate_test: RuntimeError
+iterable_reduce_test: CompileTimeError
+iterable_to_list_test: RuntimeError
+iterable_to_set_test: RuntimeError
+linked_hash_map_from_iterable_test: RuntimeError
+linked_hash_map_from_iterables_test: RuntimeError
+list_filled_type_argument_test: RuntimeError
+map_from_iterable_test: RuntimeError
+map_from_iterables_test: RuntimeError
+map_keys2_test: RuntimeError
+map_test: RuntimeError
+map_values2_test: RuntimeError
+map_values3_test: RuntimeError
+map_values4_test: RuntimeError
+
+# Isolate/Ports
+bool_from_environment_default_value_test: CompileTimeError
+int_from_environment_default_value_test: CompileTimeError
+
+# Regexp
+reg_exp4_test: RuntimeError
+regexp/UC16_test: Fail
+regexp/alternative-length-miscalculation_test: Fail
+regexp/alternatives_test: Fail
+regexp/assertion_test: Fail
+regexp/backreferences_test: Fail
+# Without the optimization for Latin1 strings this test goes into catastrophic
+# backtracking.
+regexp/capture-3_test: Skip
+regexp/capture_test: Fail
+regexp/compile-crash_test: Fail
+regexp/early-acid3-86_test: Fail
+regexp/ecma-regex-examples_test: Fail
+regexp/invalid-range-in-class_test: Fail
+regexp/issue_19193_test: RuntimeError
+regexp/lookahead_test: Fail
+regexp/loop-capture_test: Fail
+regexp/malformed-escapes_test: Fail
+regexp/no-extensions_test: Fail
+regexp/non-capturing-groups_test: Fail
+regexp/parentheses_test: Fail
+regexp/pcre_test: Fail
+regexp/quantified-assertions_test: Fail
+regexp/regexp_kde_test: Fail
+regexp/regexp_test: Fail
+regexp/stack-overflow2_test: Fail
+regexp/unicodeCaseInsensitive_test: Fail
+string_split_test: RuntimeError
+
+# Stacktrace
+error_stack_trace1_test: RuntimeError
+error_stack_trace2_test: RuntimeError
+error_stack_trace_test: RuntimeError
+
+# dart:typed_data
+list_test/01: Fail
+list_test/none: Fail
+
+# Unexpected command line arguments to compiler.
+bool_from_environment_test: CompileTimeError
+from_environment_const_type_test/01: CompileTimeError
+from_environment_const_type_test/02: CompileTimeError
+from_environment_const_type_test/03: CompileTimeError
+from_environment_const_type_test/04: CompileTimeError
+from_environment_const_type_test/05: CompileTimeError
+from_environment_const_type_test/06: CompileTimeError
+from_environment_const_type_test/07: CompileTimeError
+from_environment_const_type_test/08: CompileTimeError
+from_environment_const_type_test/09: CompileTimeError
+from_environment_const_type_test/10: CompileTimeError
+from_environment_const_type_test/11: CompileTimeError
+from_environment_const_type_test/12: CompileTimeError
+from_environment_const_type_test/13: CompileTimeError
+from_environment_const_type_test/14: CompileTimeError
+from_environment_const_type_test/15: CompileTimeError
+from_environment_const_type_test/16: CompileTimeError
+from_environment_const_type_test/none: CompileTimeError
+int_from_environment2_test: CompileTimeError
+int_from_environment_test: CompileTimeError
+string_from_environment2_test: CompileTimeError
+string_from_environment_test: CompileTimeError
+
+
+# Unsorted
+errors_test: RuntimeError
+expando_test: CompileTimeError
+hash_set_test/01: RuntimeError
+hash_set_test/none: RuntimeError
+indexed_list_access_test: RuntimeError
+int_ceil_to_double_test: RuntimeError
+int_floor_to_double_test: RuntimeError
+int_modulo_arith_test/bignum: RuntimeError
+int_modulo_arith_test/modPow: RuntimeError
+int_modulo_arith_test/none: RuntimeError
+int_parse_radix_test/02: RuntimeError
+int_round_to_double_test: RuntimeError
+int_truncate_to_double_test: RuntimeError
+integer_to_string_test/01: RuntimeError
+iterable_empty_test: RuntimeError
+iterable_return_type_test/01: Fail
+iterable_return_type_test/02: Fail
+iterable_return_type_test/none: RuntimeError
+list_test/01: RuntimeError
+list_test/none: RuntimeError
+list_unmodifiable_test: CompileTimeError
+null_test: CompileTimeError
+num_clamp_test: RuntimeError
+num_parse_test/01: RuntimeError
+num_parse_test/none: RuntimeError
+range_error_test: RuntimeError
+safe_to_string_test: RuntimeError
+set_test: RuntimeError
+shuffle_test: CompileTimeError
+splay_tree_from_iterable_test: RuntimeError
+splay_tree_from_iterables_test: RuntimeError
+splay_tree_test: RuntimeError
+string_buffer_test: RuntimeError
+string_fromcharcodes_test: CompileTimeError
+string_pattern_test: RuntimeError
+string_replace_all_test: RuntimeError
+string_replace_test: RuntimeError
+string_test: RuntimeError
+symbol_operator_test/03: Fail
+symbol_operator_test/none: RuntimeError
+symbol_reserved_word_test/02: CompileTimeError
+symbol_reserved_word_test/04: MissingCompileTimeError
+symbol_reserved_word_test/05: CompileTimeError
+symbol_reserved_word_test/06: Fail
+symbol_reserved_word_test/07: MissingCompileTimeError
+symbol_reserved_word_test/09: Fail
+symbol_reserved_word_test/10: MissingCompileTimeError
+symbol_reserved_word_test/12: Fail
+symbol_test/none: Fail
+uri_file_test: RuntimeError
+
+[ ($runtime == fletchc || $runtime == fletchvm) && $arch == x64 && $mode == debug && ($clang || $asan) ]
+int_parse_radix_test/01: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
+int_parse_radix_test/02: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
+int_parse_radix_test/none: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.

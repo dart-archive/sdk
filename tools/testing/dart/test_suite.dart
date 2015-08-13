@@ -638,18 +638,21 @@ class StandardTestSuite extends TestSuite {
    * particular, if you add 'path/to/mytestsuite' to [TEST_SUITE_DIRECTORIES]
    * in test.dart, this will all be set up for you.
    */
-  factory StandardTestSuite.forDirectory(Map configuration, Path directory) {
+  factory StandardTestSuite.forDirectory(
+      Map configuration, Path directory, {List<String> statusFilePaths}) {
     var name = directory.filename;
-    var status_paths = ['$directory/$name.status',
-                        '$directory/.status',
-                        '$directory/${name}_dart2js.status',
-                        '$directory/${name}_analyzer.status',
-                        '$directory/${name}_analyzer2.status',
-                        '$directory/${name}_fletchc.status'];
+    if (statusFilePaths == null) {
+      statusFilePaths = ['$directory/$name.status',
+                         '$directory/.status',
+                         '$directory/${name}_dart2js.status',
+                         '$directory/${name}_analyzer.status',
+                         '$directory/${name}_analyzer2.status',
+                         '$directory/${name}_fletchc.status'];
+    }
 
     return new StandardTestSuite(configuration,
         name, directory,
-        status_paths,
+        statusFilePaths,
         isTestFilePredicate: (filename) => filename.endsWith('_test.dart'),
         recursive: true);
   }
