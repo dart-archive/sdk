@@ -1,3 +1,2 @@
-breakpoint set: 0: main @0
 main	@main(){}
 ### process terminated

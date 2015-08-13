@@ -17,7 +17,7 @@ import 'documentation.dart' show
 
 const Verb compileVerb = const Verb(
     compile, compileDocumentation, requiresSession: true,
-    requiresTarget: true, supportsTarget: TargetKind.FILE);
+    requiredTarget: TargetKind.FILE);
 
 Future<int> compile(AnalyzedSentence sentence, VerbContext context) {
   String script = sentence.targetName;

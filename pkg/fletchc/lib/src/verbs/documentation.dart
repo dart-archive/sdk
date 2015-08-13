@@ -5,9 +5,14 @@
 library fletchc.verbs.documentation;
 
 const String debugDocumentation = """
-   debug [command]
-             Perform a debug command, or if none are specified start an
-             interactive debug session
+   debug
+             Start an interactive debug session
+
+   debug run-to-main
+             Run the compiled code on the Fletch VM and break at the main method
+
+   debug backtrace
+             Print the current stack trace
 """;
 
 const String helpDocumentation = """

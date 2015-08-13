@@ -120,8 +120,8 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
   }
 
   if (target != null &&
-      !verb.verb.requiresTarget &&
-      verb.verb.supportsTarget == null) {
+      verb.verb.requiredTarget == null &&
+      verb.verb.supportedTargets == null) {
     throwInternalError("Can't use '$target' with '$verb'");
   }
 
@@ -135,9 +135,9 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
     throwInternalError("Can't use '$preposition' with '$verb'");
   }
 
-  if (verb.verb.requiresTarget) {
+  if (verb.verb.requiredTarget != null) {
     if (target == null) {
-      switch (verb.verb.supportsTarget) {
+      switch (verb.verb.requiredTarget) {
         case TargetKind.TCP_SOCKET:
           throwFatalError(DiagnosticKind.noTcpSocketTarget);
           break;
@@ -155,12 +155,8 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
           }
           break;
       }
-    }
-  }
-
-  if (verb.verb.supportsTarget != null && target != null) {
-    if (target.kind != verb.verb.supportsTarget) {
-      switch (verb.verb.supportsTarget) {
+    } else if (target.kind != verb.verb.requiredTarget) {
+      switch (verb.verb.requiredTarget) {
         case TargetKind.TCP_SOCKET:
           throwFatalError(
               DiagnosticKind.verbRequiresSocketTarget,
@@ -174,11 +170,17 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
           break;
 
         default:
-          throwInternalError("$verb requires a ${verb.verb.supportsTarget}");
+          throwInternalError("$verb requires a ${verb.verb.requiredTarget}");
       }
     }
   }
 
+  if (verb.verb.supportedTargets != null && target != null) {
+    if (!verb.verb.supportedTargets.contains(target.kind)) {
+      throwFatalError(
+          DiagnosticKind.verbDoesNotSupportTarget, verb: verb, target: target);
+    }
+  }
 
   UserSession session;
   if (sessionTarget != null) {

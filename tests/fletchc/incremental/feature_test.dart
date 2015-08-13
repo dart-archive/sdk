@@ -350,14 +350,10 @@ Future<TestSession> runFletchVM(
     await session.applyDelta(fletchDelta);
     for (Command command in fletchDelta.commands) print(command);
 
-    for (Command command in [
-        // Turn on debugging.
-        const commands_lib.Debugging(),
-        const commands_lib.ProcessSpawnForMain()]) {
-      print(command);
-      await session.runCommand(command);
-    }
-
+    // Turn on debugging.
+    await session.enableDebugger();
+    // Spawn the process to run.
+    await session.spawnProcess();
     // Allow operations on internal frames.
     await session.toggleInternal();
     // Set breakpoint in main.

@@ -16,7 +16,7 @@ import 'documentation.dart' show
 const Verb helpVerb =
     const Verb(
         help, helpDocumentation,
-        supportsTarget: TargetKind.ALL, allowsTrailing: true);
+        supportedTargets: const [ TargetKind.ALL ], allowsTrailing: true);
 
 Future<int> help(AnalyzedSentence sentence, _) async {
   int exitCode = 0;

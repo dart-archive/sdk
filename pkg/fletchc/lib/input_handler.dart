@@ -72,7 +72,11 @@ class InputHandler {
           session.writeStdoutLine('### invalid bytecode index: $bci');
           break;
         }
-        await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
+        List<Breakpoint> breakpoints =
+            await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
+        for (Breakpoint breakpoint in breakpoints) {
+          session.writeStdoutLine("breakpoint set: $breakpoint");
+        }
         break;
       case 'bf':
         var file =
@@ -155,6 +159,7 @@ class InputHandler {
       case 'r':
       case 'run':
         await session.debugRun();
+        await session.backtrace();
         break;
       case 's':
         await session.step();

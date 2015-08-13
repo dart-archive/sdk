@@ -12,7 +12,8 @@ import 'documentation.dart' show
 import '../diagnostic.dart' show
     throwInternalError;
 
-const Verb showVerb = const Verb(show, showDocumentation, requiresTarget: true);
+const Verb showVerb =
+    const Verb(show, showDocumentation, requiredTarget: TargetKind.ALL);
 
 Future<int> show(AnalyzedSentence sentence, VerbContext context) async {
   throwInternalError("Show not yet implemented.");

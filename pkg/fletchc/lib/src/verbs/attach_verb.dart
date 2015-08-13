@@ -20,8 +20,8 @@ import 'documentation.dart' show
     attachDocumentation;
 
 const Verb attachVerb = const Verb(
-    attach, attachDocumentation, requiresSession: true, requiresTarget: true,
-    supportsTarget: TargetKind.TCP_SOCKET);
+    attach, attachDocumentation, requiresSession: true,
+    requiredTarget: TargetKind.TCP_SOCKET);
 
 Future<int> attach(AnalyzedSentence sentence, VerbContext context) async {
   List<String> address = sentence.targetName.split(":");

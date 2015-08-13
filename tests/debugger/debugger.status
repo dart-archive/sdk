@@ -4,4 +4,3 @@
 
 restart_uncaught_exception_test: Fail, OK
 restart_compile_time_error_test: CompileTimeError, OK
-

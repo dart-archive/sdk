@@ -14,7 +14,7 @@ import 'documentation.dart' show
 const Verb servicecVerb = const Verb(
     // A session is required for a worker.
     servicecAct, servicecDocumentation, requiresSession: true,
-    requiresTarget: true, supportsTarget: TargetKind.FILE);
+    requiredTarget: TargetKind.FILE);
 
 Future<int> servicecAct(AnalyzedSentence sentence, VerbContext context) async {
   String fileName = sentence.targetName;

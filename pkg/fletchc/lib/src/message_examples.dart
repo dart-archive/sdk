@@ -56,6 +56,11 @@ List<Example> getExamples(DiagnosticKind kind) {
           <String>['create', 'session', 'foo'],
           <String>['attach', 'in', 'session', 'foo', 'file', 'fisk'])];
 
+    case DiagnosticKind.verbDoesNotSupportTarget:
+      return <Example>[new CommandLineExample(
+          <String>['create', 'session', 'foo'],
+          <String>['debug', 'sessions', 'in', 'session', 'foo'])];
+
     case DiagnosticKind.noSuchSession:
       return <Example>[
           new CommandLineExample(
@@ -103,7 +108,13 @@ List<Example> getExamples(DiagnosticKind kind) {
               <String>['x-run', 'in', 'session', 'foo']),
           new CommandLineExample(
               <String>['create', 'session', 'foo'],
-              <String>['debug', 'in', 'session', 'foo'])];
+              <String>['debug', 'in', 'session', 'foo']),
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['debug', 'run-to-main', 'in', 'session', 'foo']),
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['debug', 'backtrace', 'in', 'session', 'foo'])];
 
     case DiagnosticKind.compileBeforeRun:
       return <Example>[
@@ -116,7 +127,12 @@ List<Example> getExamples(DiagnosticKind kind) {
               <String>['create', 'session', 'foo'],
               <String>['attach', 'in', 'session', 'foo',
                        'tcp_socket', exampleAddress],
-              <String>['debug', 'in', 'session', 'foo'])];
+              <String>['debug', 'in', 'session', 'foo']),
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['attach', 'in', 'session', 'foo',
+                       'tcp_socket', exampleAddress],
+              <String>['debug', 'attach', 'in', 'session', 'foo'])];
 
     case DiagnosticKind.noFile:
       // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.

@@ -1,4 +1,3 @@
-breakpoint set: 0: main @0
 main	@'${foo()} and ${bar()}'
 main	@foo()
 foo	@new A()

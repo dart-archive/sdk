@@ -16,6 +16,7 @@ enum DiagnosticKind {
   verbRequiresTarget,
   verbRequiresFileTarget,
   verbRequiresSocketTarget,
+  verbDoesNotSupportTarget,
   noSuchSession,
   sessionAlreadyExists,
   noFileTarget,
@@ -74,6 +75,11 @@ String getMessage(DiagnosticKind kind) {
       // TODO(ahe): Be more explicit about what is wrong with the target.
       return "Can't perform '${DiagnosticParameter.verb}' without a socket, "
           "but got '${DiagnosticParameter.target}'";
+
+    case DiagnosticKind.verbDoesNotSupportTarget:
+      // TODO(lukechurch): Review this error message.
+      return "'${DiagnosticParameter.verb}' does not support target "
+          "'${DiagnosticParameter.target}'";
 
     case DiagnosticKind.noSuchSession:
       // TODO(lukechurch): Ensure UX repair text is good.

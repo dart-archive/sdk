@@ -53,29 +53,30 @@ class Verb {
   /// True if this verb needs "in session NAME".
   final bool requiresSession;
 
-  /// True if this verb requires a sesion target (that is, "session NAME"
+  /// True if this verb requires a session target (that is, "session NAME"
   /// without "in").
   final bool requiresTargetSession;
 
   /// True if this verb allows trailing arguments.
   final bool allowsTrailing;
 
-  /// True if this verb requires a target.
-  final bool requiresTarget;
+  /// Optional kind of target required by this verb.
+  final TargetKind requiredTarget;
 
-  /// An optional kind of target supported by this verb.
-  final TargetKind supportsTarget;
+  /// Optional list of targets supported (but not required) by this verb.
+  final List<TargetKind> supportedTargets;
 
   const Verb(
       this.perform,
       this.documentation,
       {this.requiresSession: false,
        this.allowsTrailing: false,
-       bool requiresTarget: false,
        bool requiresTargetSession: false,
-       this.supportsTarget})
-      : this.requiresTarget = requiresTarget || requiresTargetSession,
-        this.requiresTargetSession = requiresTargetSession;
+       TargetKind requiredTarget,
+       this.supportedTargets})
+      : this.requiresTargetSession = requiresTargetSession,
+        this.requiredTarget =
+            requiresTargetSession ? TargetKind.SESSION : requiredTarget;
 }
 
 /// Common verbs are displayed in the default help screen.

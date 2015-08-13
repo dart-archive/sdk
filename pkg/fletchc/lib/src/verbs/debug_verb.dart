@@ -24,26 +24,32 @@ import '../driver/driver_commands.dart' show
     DriverCommand;
 
 const Verb debugVerb =
-    const Verb(debug, debugDocumentation, requiresSession: true);
+    const Verb(
+        debug,
+        debugDocumentation,
+        requiresSession: true,
+        supportedTargets: const [
+          TargetKind.RUN_TO_MAIN,
+          TargetKind.BACKTRACE
+        ]);
 
 Future debug(AnalyzedSentence sentence, VerbContext context) async {
-  context.performTaskInWorker(new InteractiveDebuggerTask());
-  return null;
-}
-
-class InteractiveDebuggerTask extends SharedTask {
-  // Keep this class simple, see note in superclass.
-
-  const InteractiveDebuggerTask();
-
-  Future<int> call(
-      CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
-    return interactiveDebuggerTask(
-        commandSender,
-        SessionState.current,
-        commandIterator);
+  if (sentence.target == null) {
+    context.performTaskInWorker(new InteractiveDebuggerTask());
+    return null;
   }
+
+  switch (sentence.target.kind) {
+    case TargetKind.RUN_TO_MAIN:
+      context.performTaskInWorker(new RunToMainDebuggerTask());
+      break;
+    case TargetKind.BACKTRACE:
+      context.performTaskInWorker(new BacktraceDebuggerTask());
+      break;
+    default:
+      throwInternalError("Unimplemented ${sentence.target}");
+  }
+  return null;
 }
 
 Future<Null> readCommands(
@@ -67,6 +73,20 @@ Future<Null> readCommands(
       default:
         throwInternalError("Unexpected command from client: $command");
     }
+  }
+}
+class InteractiveDebuggerTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
+
+  const InteractiveDebuggerTask();
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<Command> commandIterator) {
+    return interactiveDebuggerTask(
+        commandSender,
+        SessionState.current,
+        commandIterator);
   }
 }
 
@@ -98,4 +118,72 @@ Future<int> interactiveDebuggerTask(
       .transform(new LineSplitter());
 
   return await session.debug(inputStream);
+}
+
+class RunToMainDebuggerTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
+
+  RunToMainDebuggerTask();
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<Command> commandIterator) {
+    return runToMainDebuggerTask(commandSender, SessionState.current);
+  }
+}
+
+Future<int> runToMainDebuggerTask(
+    CommandSender commandSender,
+    SessionState state) async {
+  List<FletchDelta> compilationResults = state.compilationResults;
+  Session session = state.session;
+  if (session == null) {
+    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
+  }
+  if (compilationResults.isEmpty) {
+    throwFatalError(DiagnosticKind.compileBeforeRun);
+  }
+
+  state.attachCommandSender(commandSender);
+  for (FletchDelta delta in compilationResults) {
+    await session.applyDelta(delta);
+  }
+
+  await session.enableDebugger();
+  await session.spawnProcess();
+  await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
+  await session.debugRun();
+
+  return 0;
+}
+
+class BacktraceDebuggerTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
+
+  BacktraceDebuggerTask();
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<Command> commandIterator) {
+    return backtraceDebuggerTask(commandSender, SessionState.current);
+  }
+}
+
+Future<int> backtraceDebuggerTask(
+    CommandSender commandSender,
+    SessionState state) async {
+  Session session = state.session;
+  if (session == null) {
+    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
+  }
+
+  state.attachCommandSender(commandSender);
+
+  // TODO(ager): change the backtrace command to not do the printing
+  // directly.
+  // TODO(ager): deal gracefully with situations where there is a VM
+  // session, but the VM terminated.
+  await session.backtrace();
+
+  return 0;
 }

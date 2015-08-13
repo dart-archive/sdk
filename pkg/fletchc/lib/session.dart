@@ -211,9 +211,17 @@ class Session extends FletchVmSession {
     await shutdown();
   }
 
+  Future enableDebugger() async {
+    await runCommand(const Debugging());
+  }
+
+  Future spawnProcess() async {
+    await runCommand(const ProcessSpawnForMain());
+  }
+
   Future run() async {
-    await sendCommands([const ProcessSpawnForMain(),
-                        const ProcessRun()]);
+    await spawnProcess();
+    await runCommand(const ProcessRun());
     // NOTE: The [ProcessRun] command normally results in a
     // [ProcessTerminated] command. But if the compiler emitted a compile time
     // error, the fletch-vm will just halt()/exit() and we therefore get no
@@ -228,16 +236,14 @@ class Session extends FletchVmSession {
   }
 
   Future<int> debug(Stream<String> inputLines) async {
-    await sendCommands([
-        const Debugging(),
-        const ProcessSpawnForMain(),
-    ]);
+    await enableDebugger();
+    await spawnProcess();
     return await new InputHandler(this, inputLines, false).run();
   }
 
   Future stepToCompletion() async {
     await setBreakpoint(methodName: 'main', bytecodeIndex: 0);
-    await doDebugRun();
+    await debugRun();
     while (!terminated) {
       writeStdoutLine(debugState.topFrame.shortString());
       await doStep();
@@ -249,10 +255,8 @@ class Session extends FletchVmSession {
   }
 
   Future testDebugger(String commands) async {
-    await sendCommands([
-        const Debugging(),
-        const ProcessSpawnForMain(),
-    ]);
+    await enableDebugger();
+    await spawnProcess();
     if (commands.isEmpty) {
       await stepToCompletion();
     } else {
@@ -297,7 +301,7 @@ class Session extends FletchVmSession {
     return running;
   }
 
-  Future doDebugRun() async {
+  Future debugRun() async {
     if (running) {
       writeStdoutLine("### already running");
       return null;
@@ -305,11 +309,6 @@ class Session extends FletchVmSession {
     running = true;
     await sendCommand(const ProcessRun());
     await handleProcessStop(await readNextCommand());
-  }
-
-  Future debugRun() async {
-    await doDebugRun();
-    await backtrace();
   }
 
   Future setBreakpointHelper(String name,
@@ -322,15 +321,21 @@ class Session extends FletchVmSession {
     int breakpointId = response.value;
     var breakpoint = new Breakpoint(name, bytecodeIndex, breakpointId);
     debugState.breakpoints[breakpointId] = breakpoint;
-    writeStdoutLine("breakpoint set: $breakpoint");
+    return breakpoint;
   }
 
+  // TODO(ager): Let setBreakpoint return a stream instead and deal with
+  // error situations such as bytecode indices that are out of bounds for
+  // some of the methods with the given name.
   Future setBreakpoint({String methodName, int bytecodeIndex}) async {
     Iterable<FletchFunction> functions =
         fletchSystem.functionsWhere((f) => f.name == methodName);
+    List<Breakpoint> breakpoints = [];
     for (FletchFunction function in functions) {
-      await setBreakpointHelper(methodName, function, bytecodeIndex);
+      breakpoints.add(
+          await setBreakpointHelper(methodName, function, bytecodeIndex));
     }
+    return breakpoints;
   }
 
   Future setFileBreakpointFromPosition(String name,
