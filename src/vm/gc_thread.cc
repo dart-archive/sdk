@@ -4,7 +4,6 @@
 
 #include "src/shared/bytecodes.h"
 #include "src/vm/gc_thread.h"
-#include "src/vm/scheduler.h"
 #include "src/vm/program.h"
 #include "src/vm/process.h"
 
@@ -22,13 +21,15 @@ GCThread::GCThread()
       shutting_down_(false),
       requesting_immutable_gc_(false),
       requesting_gc_(false),
-      shutdown_monitor_(Platform::CreateMonitor()),
+      pause_count_(0),
+      client_monitor_(Platform::CreateMonitor()),
+      did_pause_(false),
       did_shutdown_(false) {
 }
 
 GCThread::~GCThread() {
   delete gc_thread_monitor_;
-  delete shutdown_monitor_;
+  delete client_monitor_;
 }
 
 void GCThread::StartThread() {
@@ -53,6 +54,39 @@ void GCThread::TriggerGC(Program* program) {
   gc_thread_monitor_->Notify();
 }
 
+void GCThread::Pause() {
+  // Tell thread it should pause.
+  {
+    ScopedMonitorLock lock(gc_thread_monitor_);
+    pause_count_++;
+    if (pause_count_ == 1) {
+      gc_thread_monitor_->Notify();
+    }
+  }
+  // And wait until it says it's paused.
+  {
+    ScopedMonitorLock lock(client_monitor_);
+    while (!did_pause_) client_monitor_->Wait();
+  }
+}
+
+void GCThread::Resume() {
+  // Tell thread it should resume.
+  {
+    ScopedMonitorLock lock(gc_thread_monitor_);
+    ASSERT(pause_count_ > 0);
+    pause_count_--;
+    if (pause_count_ == 0) {
+      gc_thread_monitor_->Notify();
+    }
+  }
+  // And wait until it says it's resumed.
+  {
+    ScopedMonitorLock lock(client_monitor_);
+    while (did_pause_) client_monitor_->Wait();
+  }
+}
+
 void GCThread::StopThread() {
   // Tell thread he should stop.
   {
@@ -60,11 +94,10 @@ void GCThread::StopThread() {
     shutting_down_ = true;
     gc_thread_monitor_->Notify();
   }
-
   // And wait until it says it's done.
   {
-    ScopedMonitorLock lock(shutdown_monitor_);
-    while (!did_shutdown_) shutdown_monitor_->Wait();
+    ScopedMonitorLock lock(client_monitor_);
+    while (!did_shutdown_) client_monitor_->Wait();
   }
 
   // And join it to make sure it's actually dead.
@@ -76,17 +109,42 @@ void GCThread::MainLoop() {
   while (true) {
     bool do_gc = false;
     bool do_immutable_gc = false;
+    bool do_pause = false;
     bool do_shutdown = false;
     {
-      ScopedMonitorLock lock(gc_thread_monitor_);
-      while (!requesting_gc_ &&
-             !requesting_immutable_gc_ &&
-             !shutting_down_) {
-        gc_thread_monitor_->Wait();
+      {
+        ScopedMonitorLock lock(gc_thread_monitor_);
+        while (!requesting_gc_ &&
+               !requesting_immutable_gc_ &&
+               pause_count_ == 0 &&
+               !shutting_down_) {
+          gc_thread_monitor_->Wait();
+        }
+
+        do_gc = requesting_gc_;
+        do_immutable_gc = requesting_immutable_gc_;
+        do_shutdown = shutting_down_;
+        do_pause = pause_count_ > 0;
       }
-      do_gc = requesting_gc_;
-      do_immutable_gc = requesting_immutable_gc_;
-      do_shutdown = shutting_down_;
+
+      if (do_pause) {
+        {
+          ScopedMonitorLock locker(client_monitor_);
+          did_pause_ = true;
+          client_monitor_->NotifyAll();
+        }
+        {
+          ScopedMonitorLock locker(gc_thread_monitor_);
+          while (pause_count_ > 0) {
+            gc_thread_monitor_->Wait();
+          }
+        }
+        {
+          ScopedMonitorLock locker(client_monitor_);
+          did_pause_ = false;
+          client_monitor_->NotifyAll();
+        }
+      }
 
       requesting_immutable_gc_ = false;
       requesting_gc_ = false;
@@ -108,9 +166,9 @@ void GCThread::MainLoop() {
 
   // Tell caller of GCThread.Shutdown() we're done.
   {
-    ScopedMonitorLock lock(shutdown_monitor_);
+    ScopedMonitorLock lock(client_monitor_);
     did_shutdown_ = true;
-    shutdown_monitor_->Notify();
+    client_monitor_->NotifyAll();
   }
 }
 

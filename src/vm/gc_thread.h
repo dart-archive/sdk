@@ -18,6 +18,8 @@ class GCThread {
   void StartThread();
   void TriggerImmutableGC(Program* program);
   void TriggerGC(Program* program);
+  void Pause();
+  void Resume();
   void StopThread();
 
  private:
@@ -32,8 +34,10 @@ class GCThread {
   bool shutting_down_;
   bool requesting_immutable_gc_;
   bool requesting_gc_;
+  int pause_count_;
 
-  Monitor* shutdown_monitor_;
+  Monitor* client_monitor_;
+  bool did_pause_;
   bool did_shutdown_;
 };
 

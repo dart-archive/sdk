@@ -162,6 +162,16 @@ void Scheduler::ResumeProgram(Program* program) {
   NotifyAllThreads();
 }
 
+void Scheduler::PauseGcThread() {
+  ASSERT(gc_thread_ != NULL);
+  gc_thread_->Pause();
+}
+
+void Scheduler::ResumeGcThread() {
+  ASSERT(gc_thread_ != NULL);
+  gc_thread_->Resume();
+}
+
 void Scheduler::EnqueueProcessOnSchedulerWorkerThread(
     Process* interpreting_process, Process* process) {
   ++processes_;

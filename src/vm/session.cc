@@ -942,12 +942,14 @@ void Session::PrepareForChanges() {
     Scheduler* scheduler = program()->scheduler();
     if (scheduler != NULL) {
       scheduler->StopProgram(program());
+      scheduler->PauseGcThread();
     }
     {
       ProgramFolder program_folder(program());
       program_folder.Unfold();
     }
     if (scheduler != NULL) {
+      scheduler->ResumeGcThread();
       scheduler->ResumeProgram(program());
     }
   }
@@ -1024,6 +1026,7 @@ bool Session::CommitChanges(int count) {
   Scheduler* scheduler = program()->scheduler();
   if (scheduler != NULL) {
     scheduler->StopProgram(program());
+    scheduler->PauseGcThread();
   }
 
   ASSERT(!program()->is_compact());
@@ -1089,6 +1092,7 @@ bool Session::CommitChanges(int count) {
   }
 
   if (scheduler != NULL) {
+    scheduler->ResumeGcThread();
     scheduler->ResumeProgram(program());
   }
 
