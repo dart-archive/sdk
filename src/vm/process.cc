@@ -305,6 +305,7 @@ Object* Process::NewStringFromAscii(List<const char> value) {
 Object* Process::NewBoxed(Object* value) {
   Class* boxed_class = program()->boxed_class();
   Object* result = heap_.CreateBoxed(boxed_class, value);
+  if (result->IsFailure()) return result;
   if (value->IsHeapObject() && value->IsImmutable()) {
     store_buffer_.Insert(HeapObject::cast(result));
   }
