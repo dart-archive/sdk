@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 
 import bot
@@ -57,9 +58,10 @@ def DisableMemoryLeakDetector():
   os.environ['ASAN_OPTIONS'] = 'detect_leaks=0'
 
 def KillFletch(system):
+  # TODO(ahe): Get rid of this method when TaskKill supports fletch and
+  # fletch-vm
   if system != 'windows':
     # Kill any lingering dart processes (from fletch_driver).
-    subprocess.call("killall dart", shell=True)
     subprocess.call("killall fletch", shell=True)
     subprocess.call("killall fletch-vm", shell=True)
 
@@ -360,6 +362,13 @@ class PersistentFletchDaemon(object):
       # process group to ensure that any processes it has spawned also exit. If
       # we don't use a new process group, that will also kill this process.
       preexec_fn=os.setsid)
+
+    while not self._log_file.tell():
+      # We're waiting for the persistent process to write a line on stdout. It
+      # always does so as it is part of a handshake when started by the
+      # "fletch" program.
+      print "Waiting for persistent process to start"
+      time.sleep(0.5)
 
   def __exit__(self, *_):
     print "Trying to wait for existing fletch daemon."
