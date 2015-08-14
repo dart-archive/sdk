@@ -7,9 +7,5 @@ library test.dart2js_hello_world;
 import 'dart2js_helper.dart';
 
 main() {
-  var source = """
-    void main() {
-      print('Hello World');
-    }""";
-  compileScript(source);
+  compileUri(Uri.base.resolve('benchmarks/DeltaBlue.dart'));
 }
