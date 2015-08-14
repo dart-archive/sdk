@@ -79,7 +79,6 @@ regexp/ecma-regex-examples_test: Fail
 regexp/invalid-range-in-class_test: Fail
 regexp/issue_19193_test: RuntimeError
 regexp/lookahead_test: Fail
-regexp/loop-capture_test: Fail
 regexp/malformed-escapes_test: Fail
 regexp/no-extensions_test: Fail
 regexp/non-capturing-groups_test: Fail

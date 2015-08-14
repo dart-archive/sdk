@@ -54,13 +54,15 @@ class MiniExpLabel {
 
 // Registers.
 const ZERO_REGISTER = 0;
-const CURRENT_POSITION = 1;
-const STRING_LENGTH = 2;
-const STACK_POINTER = 3;
-const FIXED_REGISTERS = 4;
+const NO_POSITION_REGISTER = 1;
+const CURRENT_POSITION = 2;
+const STRING_LENGTH = 3;
+const STACK_POINTER = 4;
+const FIXED_REGISTERS = 5;
 
 const REGISTER_NAMES = const <String>[
   "ZERO",
+  "NO_POSITION_REGISTER",
   "CURRENT_POSITION",
   "STRING_LENGTH",
   "STACK_POINTER",
@@ -73,8 +75,18 @@ const REGISTER_NAMES = const <String>[
   "TEMP_6",
   "TEMP_7",
   "TEMP_8",
-  "TEMP_9"
+  "TEMP_9",
+  "TEMP_10",
+  "TEMP_11",
+  "TEMP_12",
+  "TEMP_13",
+  "TEMP_14",
+  "TEMP_15"
 ];
+
+// Used for capture registers that have not captured any position in the
+// string.
+const NO_POSITION = -1;
 
 // Byte codes.
 const GOTO = 0;  // label
@@ -185,7 +197,9 @@ class MiniExpCompiler {
   MiniExpLabel _pendingGoto;
 
   MiniExpCompiler(this.pattern, this.caseSensitive) {
-    for (int i = 0; i < FIXED_REGISTERS; i++) registers.add(0);
+    for (int i = 0; i < FIXED_REGISTERS; i++) {
+      registers.add(i == NO_POSITION_REGISTER ? NO_POSITION : 0);
+    }
   }
 
   List<int> get codes {
@@ -235,19 +249,31 @@ class MiniExpCompiler {
   int allocateWorkingRegister() => allocateConstantRegister(0);
 
   int allocateConstantRegister(int value) {
-    assert(captureRegisterCount == 0);
     int register = registers.length;
     registers.add(value);
     return register;
   }
 
+  // Returns negative numbers, starting at -1. This is so that we can
+  // interleave allocation of capture registers and regular registers, but
+  // still end up with the capture registers being contiguous.
   int allocateCaptureRegisters() {
-    int register = registers.length;
-    registers.add(-1);
-    registers.add(-1);
-    if (captureRegisterCount == 0) firstCaptureRegister = register;
     captureRegisterCount += 2;
-    return register;
+    return -captureRegisterCount + 1;
+  }
+
+  void addCaptureRegisters() {
+    firstCaptureRegister = registers.length;
+    for (int i = 0; i < captureRegisterCount; i++) {
+      registers.add(NO_POSITION);
+    }
+  }
+
+  // Raw register numbers are negative for capture registers, positive for
+  // constant and working registers.
+  int registerNumber(int rawRegisterNumber) {
+    if (rawRegisterNumber >= 0) return rawRegisterNumber;
+    return -(rawRegisterNumber + 1) + firstCaptureRegister;
   }
 
   int addToConstantPool(int codeUnit) {
@@ -265,11 +291,11 @@ class MiniExpCompiler {
   }
 
   void push(int reg) {
-    _emit(PUSH_REGISTER, reg);
+    _emit(PUSH_REGISTER, registerNumber(reg));
   }
 
   void pop(int reg) {
-    _emit(POP_REGISTER, reg);
+    _emit(POP_REGISTER, registerNumber(reg));
   }
 
   void goto(MiniExpLabel label) {
@@ -286,27 +312,28 @@ class MiniExpCompiler {
   }
 
   void backtrackIfEqual(int register1, int register2) {
-    _emit(BACKTRACK_EQ, register1, register2);
+    _emit(BACKTRACK_EQ, registerNumber(register1), registerNumber(register2));
   }
 
   void backtrackIfNotEqual(int register1, int register2) {
-    _emit(BACKTRACK_NE, register1, register2);
+    _emit(BACKTRACK_NE, registerNumber(register1), registerNumber(register2));
   }
 
   void addToRegister(int reg, int offset) {
-    _emit(ADD_TO_REGISTER, reg, offset);
+    _emit(ADD_TO_REGISTER, registerNumber(reg), offset);
   }
 
   void copyRegister(int destRegister, int sourceRegister) {
-    _emit(COPY_REGISTER, destRegister, sourceRegister);
+    _emit(COPY_REGISTER, registerNumber(destRegister),
+        registerNumber(sourceRegister));
   }
 
   void backtrackIfGreater(int register1, int register2) {
-    _emit(BACKTRACK_GT, register1, register2);
+    _emit(BACKTRACK_GT, registerNumber(register1), registerNumber(register2));
   }
 
   void gotoIfGreaterEqual(int register1, int register2, MiniExpLabel label) {
-    _emit(GOTO_GE, register1, register2);
+    _emit(GOTO_GE, registerNumber(register1), registerNumber(register2));
     link(label);
   }
 
@@ -360,6 +387,109 @@ class MiniExpCompiler {
   }
 }
 
+// MiniExpAnalysis objects reflect properties of an AST subtree.  They are
+// immutable and are reused to some extent.
+class MiniExpAnalysis {
+  // Can this subtree match an empty string?  If we know that's not possible,
+  // we can optimize away the test that ensures we are making progress when we
+  // match repetitions.
+  final bool canMatchEmpty;
+
+  // Set to null if the AST does not match something with a fixed length.  That
+  // fixed length thing has to be something that does not touch the stack.  This
+  // is an important optimization that prevents .* from using huge amounts of
+  // stack space when running.
+  final int fixedLength;
+
+  // Can this subtree only match at the start of the regexp?  Can't pass all
+  // tests without being able to spot this.
+  final bool anchored;
+
+  // Allows the AST to notify a surrounding loop (a quantifier higher up the
+  // tree) that it has registers it expects to be saved on the back edge.
+  final List<int> registersToSave;
+
+  static List<int> combineRegisters(List<int> left, List<int> right) {
+    if (right == null || right.isEmpty) {
+      return left;
+    } else if (left == null || left.isEmpty) {
+      return right;
+    } else {
+      return new List<int>()..addAll(left)..addAll(right);
+    }
+  }
+
+  static int combineFixedLengths(MiniExpAnalysis left, MiniExpAnalysis right) {
+    if (left.fixedLength == null || right.fixedLength == null) {
+      return null;
+    } else {
+      return left.fixedLength + right.fixedLength;
+    }
+  }
+
+  MiniExpAnalysis.or(MiniExpAnalysis left, MiniExpAnalysis right)
+      : canMatchEmpty = left.canMatchEmpty || right.canMatchEmpty,
+        // Even if both alternatives are the same length we can't handle a
+        // disjunction without pushing backtracking information on the stack.
+        fixedLength = null,
+        anchored = left.anchored && right.anchored,
+        registersToSave =
+            combineRegisters(left.registersToSave, right.registersToSave);
+
+  MiniExpAnalysis.and(MiniExpAnalysis left, MiniExpAnalysis right)
+      : canMatchEmpty = left.canMatchEmpty && right.canMatchEmpty,
+        fixedLength = combineFixedLengths(left, right),
+        anchored = left.anchored,
+        registersToSave =
+            combineRegisters(left.registersToSave, right.registersToSave);
+
+  const MiniExpAnalysis.empty()
+      : canMatchEmpty = true,
+        fixedLength = 0,
+        anchored = false,
+        registersToSave = null;
+
+  const MiniExpAnalysis.atStart()
+      : canMatchEmpty = true,
+        fixedLength = 0,
+        anchored = true,
+        registersToSave = null;
+
+  MiniExpAnalysis.lookahead(MiniExpAnalysis bodyAnalysis, bool positive)
+      : canMatchEmpty = true,
+        fixedLength = 0,
+        anchored = positive && bodyAnalysis.anchored,
+        registersToSave = bodyAnalysis.registersToSave;
+
+  MiniExpAnalysis.quantifier(
+      MiniExpAnalysis bodyAnalysis, int min, int max, List<int> regs)
+      : canMatchEmpty = min == 0 || bodyAnalysis.canMatchEmpty,
+        fixedLength = (min == 1 && max == 1) ? bodyAnalysis.fixedLength : null,
+        anchored = min > 0 && bodyAnalysis.anchored,
+        registersToSave = combineRegisters(bodyAnalysis.registersToSave, regs);
+
+  const MiniExpAnalysis.atom()
+      : canMatchEmpty = false,
+        fixedLength = 1,
+        anchored = false,
+        registersToSave = null;
+
+  const MiniExpAnalysis.knowNothing()
+      : canMatchEmpty = true,
+        fixedLength = null,
+        anchored = false,
+        registersToSave = null;
+
+  MiniExpAnalysis.capture(MiniExpAnalysis bodyAnalysis, int start, int end)
+      : canMatchEmpty = bodyAnalysis.canMatchEmpty,
+        // We can't generate a capture without pushing backtracking information
+        // on the stack.
+        fixedLength = null,
+        anchored = bodyAnalysis.anchored,
+        registersToSave =
+            combineRegisters(bodyAnalysis.registersToSave, <int>[start, end]);
+}
+
 abstract class MiniExpAst {
   // When generating code for an AST, note that:
   // * The previous code may fall through to this AST, but it might also
@@ -373,14 +503,7 @@ abstract class MiniExpAst {
   //   top of the stack.
   void generate(MiniExpCompiler compiler, MiniExpLabel onSuccess);
 
-  // Can this subtree match an empty string?  If we know that's not possible,
-  // we can optimize away the test that ensures we are making progress when we
-  // match repetitions.
-  bool get canMatchEmpty;
-
-  // Can this subtree only match at the start of the regexp?  Can't pass all
-  // tests without being able to spot this.
-  bool get anchored => false;
+  MiniExpAnalysis analyze(MiniExpCompiler);
 
   // Label is bound at the entry point for the AST tree.
   final MiniExpLabel label = new MiniExpLabel();
@@ -400,9 +523,10 @@ class Disjunction extends MiniExpAst {
     compiler.generate(_right, onSuccess);
   }
 
-  bool get canMatchEmpty => _left.canMatchEmpty || _right.canMatchEmpty;
-
-  bool get anchored => _left.anchored && _right.anchored;
+  MiniExpAnalysis analyze(MiniExpCompiler compiler) {
+    return new MiniExpAnalysis.or(
+        _left.analyze(compiler), _right.analyze(compiler));
+  }
 }
 
 class EmptyAlternative extends MiniExpAst {
@@ -410,7 +534,9 @@ class EmptyAlternative extends MiniExpAst {
     compiler.goto(onSuccess);
   }
 
-  bool get canMatchEmpty => true;
+  MiniExpAnalysis analyze(MiniExpCompiler compiler) {
+    return const MiniExpAnalysis.empty();
+  }
 }
 
 class Alternative extends MiniExpAst {
@@ -424,13 +550,14 @@ class Alternative extends MiniExpAst {
     compiler.generate(_right, onSuccess);
   }
 
-  bool get canMatchEmpty => _left.canMatchEmpty && _right.canMatchEmpty;
-
-  bool get anchored => _left.anchored;
+  MiniExpAnalysis analyze(MiniExpCompiler compiler) {
+    return new MiniExpAnalysis.and(
+        _left.analyze(compiler), _right.analyze(compiler));
+  }
 }
 
 abstract class Assertion extends MiniExpAst {
-  bool get canMatchEmpty => true;
+  MiniExpAnalysis analyze(MiniExpCompiler) => const MiniExpAnalysis.empty();
 }
 
 class AtStart extends Assertion {
@@ -439,7 +566,7 @@ class AtStart extends Assertion {
     compiler.goto(onSuccess);
   }
 
-  bool get anchored => true;
+  MiniExpAnalysis analyze(MiniExpCompiler) => const MiniExpAnalysis.atStart();
 }
 
 class AtEnd extends Assertion {
@@ -544,7 +671,9 @@ class LookAhead extends Assertion {
     }
   }
 
-  bool get anchored => _positive && _body.anchored;
+  MiniExpAnalysis analyze(compiler) {
+    return new MiniExpAnalysis.lookahead(_body.analyze(compiler), _positive);
+  }
 }
 
 class Quantifier extends MiniExpAst {
@@ -552,53 +681,140 @@ class Quantifier extends MiniExpAst {
   final int _max;
   final bool _greedy;
   final MiniExpAst _body;
-  int _counterRegister = -1;
-  int _startOfMatchRegister = -1;  // Implements 21.2.2.5.1 note 4.
+  int _counterRegister;
+  int _startOfMatchRegister;  // Implements 21.2.2.5.1 note 4.
   int _minRegister;
   int _maxRegister;
+  List<int> _subtreeRegistersThatNeedSaving;
+  int _optimizedGreedyRegister;
+  int _savePositionRegister;
+  int _bodyLength;
+
+  bool get _isOptimizedGreedy => _optimizedGreedyRegister != null;
 
   Quantifier(this._min,
              this._max,
              this._greedy,
              this._body,
              MiniExpCompiler compiler) {
-    if (_min != 0 || (_max != 1 && _max != null)) {
+    if (_counterCheck) {
       _counterRegister = compiler.allocateWorkingRegister();
       _minRegister = compiler.allocateConstantRegister(_min);
       _maxRegister = compiler.allocateConstantRegister(_max);
     }
-    if (_body.canMatchEmpty) {
-      _startOfMatchRegister = compiler.allocateWorkingRegister();
-    }
   }
 
-  void prepareToMatch(MiniExpCompiler compiler, MiniExpLabel didntMatch) {
+  // We fall through to the top of this, when it is time to match the body of
+  // the quantifier.  If the body matches successfully, we should go to
+  // onBodySuccess, otherwise clean up and backtrack.
+  void generateCommon(
+      MiniExpCompiler compiler, MiniExpLabel onBodySuccess) {
+    bool needToCatchDidntMatch = _greedy || _bodyCanMatchEmpty ||
+        _counterCheck || _saveAndRestoreRegisters;
+    MiniExpLabel didntMatch = new MiniExpLabel();
+
+    if (_saveAndRestoreRegisters) {
+      for (int reg in _subtreeRegistersThatNeedSaving) {
+        compiler.push(reg);
+        compiler.copyRegister(reg, NO_POSITION_REGISTER);
+      }
+    }
+
     if (_bodyCanMatchEmpty) {
       compiler.push(_startOfMatchRegister);
       compiler.copyRegister(_startOfMatchRegister, CURRENT_POSITION);
     }
-    compiler.pushBacktrack(didntMatch);
+
+    if (needToCatchDidntMatch) {
+      compiler.pushBacktrack(didntMatch);
+    }
+
     if (_counterCheck) {
-      // If we increment the counter, we have to push a backtrack that will
-      // decrement it again.
       compiler.addToRegister(_counterRegister, 1);
       if (_maxCheck) {
         compiler.backtrackIfGreater(_counterRegister, _maxRegister);
       }
     }
+
+    compiler.generate(_body, onBodySuccess);
+
+    if (needToCatchDidntMatch) {
+      compiler.bind(didntMatch);
+      if (_bodyCanMatchEmpty) {
+        compiler.pop(_startOfMatchRegister);
+      }
+      if (_counterCheck) {
+        compiler.addToRegister(_counterRegister, -1);
+      }
+      if (_saveAndRestoreRegisters) {
+        for (int i = _subtreeRegistersThatNeedSaving.length - 1; i >= 0; --i) {
+          compiler.pop(_subtreeRegistersThatNeedSaving[i]);
+        }
+      }
+      if (!_greedy) compiler.backtrack();
+    }
   }
 
-  void afterMatch(MiniExpCompiler compiler, MiniExpLabel didntMatch) {
-    compiler.bind(didntMatch);
-    if (_bodyCanMatchEmpty) {
-      compiler.pop(_startOfMatchRegister);
+  void generateFixedLengthGreedy(
+      MiniExpCompiler compiler, MiniExpLabel onSuccess) {
+    MiniExpLabel newIteration = new MiniExpLabel();
+    MiniExpLabel cantAdvanceMore = new MiniExpLabel();
+    MiniExpLabel continuationFailed = new MiniExpLabel();
+
+    // Save the current position, so we know when the quantifier has been
+    // unwound enough.
+    compiler.copyRegister(_optimizedGreedyRegister, CURRENT_POSITION);
+    if (_min != 0) {
+      compiler.addToRegister(_optimizedGreedyRegister, _min * _bodyLength);
     }
-    if (_counterCheck) {
-      compiler.addToRegister(_counterRegister, -1);
+
+    // This backtrack doesn't trigger until the quantifier has eaten as much as
+    // possible.  Unfortunately, whenever we backtrack in this simple system,
+    // the old current position in the subject string is also rewound.  That's
+    // not so convenient here, so we will have to save the current position in
+    // a special register.  It would be faster to generate the body in a
+    // special mode where we use a different backtrack instruction that just
+    // rewinds the current position a certain number of characters instead of
+    // popping it.
+    compiler.pushBacktrack(cantAdvanceMore);
+
+    // The loop.
+    compiler.bind(newIteration);
+    compiler.copyRegister(_savePositionRegister, CURRENT_POSITION);
+    compiler.generate(_body, newIteration);
+
+    // The greedy quantifier has eaten as much as it can.  Time to try the
+    // continuation of the regexp after the quantifier.
+    compiler.bind(cantAdvanceMore);
+
+    if (_min != 0) {
+      compiler.backtrackIfGreater(
+          _optimizedGreedyRegister, _savePositionRegister);
     }
+
+    compiler.addToRegister(_savePositionRegister, _bodyLength);
+    compiler.copyRegister(CURRENT_POSITION, _savePositionRegister);
+
+    // The continuation of the regexp failed.  We backtrack the greedy
+    // quantifier by one step and retry.
+    compiler.bind(continuationFailed);
+    compiler.addToRegister(CURRENT_POSITION, -_bodyLength);
+    // If we got back to where the quantifier started matching, then jump
+    // to the continuation (we haven't pushed a backtrack, so if that fails, it
+    // will backtrack further).
+    // We don't have gotoIfEqual, so use gotoIfGreaterEqual.
+    compiler.gotoIfGreaterEqual(
+        _optimizedGreedyRegister, CURRENT_POSITION, onSuccess);
+    compiler.pushBacktrack(continuationFailed);
+    compiler.goto(onSuccess);
   }
 
   void generate(MiniExpCompiler compiler, MiniExpLabel onSuccess) {
+    // We optimize loops of the form .* to avoid big backtrack stacks.
+    if (_isOptimizedGreedy) {
+      generateFixedLengthGreedy(compiler, onSuccess);
+      return;
+    }
     if (_min == 1 && _max == 1) {
       compiler.generate(_body, onSuccess);
       return;
@@ -607,28 +823,21 @@ class Quantifier extends MiniExpAst {
     // things.
     MiniExpLabel bodyMatched = _max == 1 ? onSuccess : new MiniExpLabel();
     MiniExpLabel checkEmptyMatchLabel;
-    MiniExpLabel didntMatch = new MiniExpLabel();
     MiniExpLabel onBodySuccess = bodyMatched;
     if (_bodyCanMatchEmpty) {
       checkEmptyMatchLabel = new MiniExpLabel();
       onBodySuccess = checkEmptyMatchLabel;
     }
-    MiniExpLabel restoreCounter;
     if (_counterCheck) {
-      compiler.push(_counterRegister);
       compiler.copyRegister(_counterRegister, ZERO_REGISTER);
-      restoreCounter = new MiniExpLabel();
-      compiler.pushBacktrack(restoreCounter);
     }
 
-    if (_max != 1) {
+    if (bodyMatched != onSuccess) {
       compiler.bind(bodyMatched);
     }
 
     if (_greedy) {
-      prepareToMatch(compiler, didntMatch);
-      compiler.generate(_body, onBodySuccess);
-      afterMatch(compiler, didntMatch);
+      generateCommon(compiler, onBodySuccess);
 
       if (_minCheck) {
         compiler.gotoIfGreaterEqual(_counterRegister, _minRegister, onSuccess);
@@ -658,14 +867,7 @@ class Quantifier extends MiniExpAst {
       // We failed to match the continuation, so lets match the _body once more
       // and then try again.
       compiler.bind(tryBody);
-      if (_bodyCanMatchEmpty || _counterCheck) {
-        prepareToMatch(compiler, didntMatch);
-        compiler.generate(_body, onBodySuccess);
-        afterMatch(compiler, didntMatch);
-        compiler.backtrack();
-      } else {
-        compiler.generate(_body, onBodySuccess);
-      }
+      generateCommon(compiler, onBodySuccess);
     }
 
     if (_bodyCanMatchEmpty) {
@@ -677,17 +879,25 @@ class Quantifier extends MiniExpAst {
       compiler.backtrackIfEqual(_startOfMatchRegister, CURRENT_POSITION);
       compiler.goto(bodyMatched);
     }
-
-    if (_counterCheck) {
-      compiler.bind(restoreCounter);
-      compiler.pop(_counterRegister);
-      compiler.backtrack();
-    }
   }
 
-  bool get canMatchEmpty => _min == 0 || _body.canMatchEmpty;
-
-  bool get anchored => _min > 0 && _body.anchored;
+  MiniExpAnalysis analyze(compiler) {
+    MiniExpAnalysis bodyAnalysis = _body.analyze(compiler);
+    _subtreeRegistersThatNeedSaving = bodyAnalysis.registersToSave;
+    _bodyLength = bodyAnalysis.fixedLength;
+    if (bodyAnalysis.canMatchEmpty) {
+      _startOfMatchRegister = compiler.allocateWorkingRegister();
+    } else if (_max == null && _greedy && _bodyLength != null) {
+      // This also put us in a mode where code is generated differently for
+      // this AST.
+      _optimizedGreedyRegister = compiler.allocateWorkingRegister();
+      _savePositionRegister = compiler.allocateWorkingRegister();
+    }
+    List<int> myRegs = [
+        _counterRegister, _optimizedGreedyRegister, _savePositionRegister]
+            .where((x) => x != null).toList(growable: false);
+    return new MiniExpAnalysis.quantifier(bodyAnalysis, _min, _max, myRegs);
+  }
 
   bool get _maxCheck => _max != 1 && _max != null;
 
@@ -695,8 +905,12 @@ class Quantifier extends MiniExpAst {
 
   bool get _counterCheck => _maxCheck || _minCheck;
 
-  bool get _bodyCanMatchEmpty => _startOfMatchRegister != -1;
+  bool get _bodyCanMatchEmpty => _startOfMatchRegister != null;
 
+  bool get _saveAndRestoreRegisters {
+    return _subtreeRegistersThatNeedSaving != null &&
+           !_subtreeRegistersThatNeedSaving.isEmpty;
+  }
 }
 
 class Atom extends MiniExpAst {
@@ -724,7 +938,7 @@ class Atom extends MiniExpAst {
     compiler.goto(onSuccess);
   }
 
-  bool get canMatchEmpty => false;
+  MiniExpAnalysis analyze(compiler) => const MiniExpAnalysis.atom();
 }
 
 class CharClass extends MiniExpAst {
@@ -843,7 +1057,7 @@ class CharClass extends MiniExpAst {
     compiler.goto(onSuccess);
   }
 
-  bool get canMatchEmpty => false;
+  MiniExpAnalysis analyze(compiler) => const MiniExpAnalysis.atom();
 }
 
 class BackReference extends MiniExpAst {
@@ -857,46 +1071,52 @@ class BackReference extends MiniExpAst {
     compiler.goto(onSuccess);
   }
 
-  bool get canMatchEmpty => true;
+  MiniExpAnalysis analyze(compiler) => const MiniExpAnalysis.knowNothing();
 }
 
 class Capture extends MiniExpAst {
   final int _captureCount;
   final MiniExpAst _body;
-  int _startRegister = -1;
-  int _endRegister = -1;
+  int _startRegister;
+  int _endRegister;
 
   Capture(this._captureCount, MiniExpAst this._body);
 
-  bool get canMatchEmpty => _body.canMatchEmpty;
-
-  bool get anchored => _body.anchored;
+  void allocateRegisters(MiniExpCompiler compiler) {
+    if (_startRegister == null) {
+      _startRegister = compiler.allocateCaptureRegisters();
+      _endRegister = _startRegister - 1;
+    }
+  }
 
   void generate(MiniExpCompiler compiler, MiniExpLabel onSuccess) {
-    _startRegister = compiler.allocateCaptureRegisters();
-    _endRegister = _startRegister + 1;
     MiniExpLabel undoStart = new MiniExpLabel();
     MiniExpLabel writeEnd = new MiniExpLabel();
     MiniExpLabel undoEnd = new MiniExpLabel();
-    compiler.push(_startRegister);
     compiler.copyRegister(_startRegister, CURRENT_POSITION);
     compiler.pushBacktrack(undoStart);
 
     compiler.generate(_body, writeEnd);
 
     compiler.bind(writeEnd);
-    compiler.push(_endRegister);
     compiler.copyRegister(_endRegister, CURRENT_POSITION);
     compiler.pushBacktrack(undoEnd);
     compiler.goto(onSuccess);
 
     compiler.bind(undoStart);
-    compiler.pop(_startRegister);
+    compiler.copyRegister(_startRegister, NO_POSITION_REGISTER);
     compiler.backtrack();
 
     compiler.bind(undoEnd);
-    compiler.pop(_endRegister);
+    compiler.copyRegister(_endRegister, NO_POSITION_REGISTER);
     compiler.backtrack();
+  }
+
+  MiniExpAnalysis analyze(MiniExpCompiler compiler) {
+    allocateRegisters(compiler);
+    MiniExpAnalysis bodyAnalysis = _body.analyze(compiler);
+    return new MiniExpAnalysis.capture(
+        bodyAnalysis, _startRegister, _endRegister);
   }
 }
 
@@ -921,7 +1141,7 @@ class MiniExpMatch implements Match {
     }
     index *= 2;
     index += _firstCaptureReg;
-    if (_registers[index] == -1) return null;
+    if (_registers[index] == NO_POSITION) return null;
     return input.substring(_registers[index], _registers[index + 1]);
   }
 
@@ -948,12 +1168,10 @@ class _MiniExp implements RegExp {
 
   _MiniExp(this.pattern, this.isMultiLine, this.isCaseSensitive) {
     var compiler = new MiniExpCompiler(pattern, isCaseSensitive);
-    var parser =
-        new MiniExpParser(compiler, pattern, isMultiLine, isCaseSensitive);
+    var parser = new MiniExpParser(compiler, pattern, isMultiLine);
     MiniExpAst ast = parser.parse();
     _generateCode(compiler, ast, pattern);
   }
-
 
   Match matchAsPrefix(String a, [int a1 = 0]) {
     return _match(a, a1, _stickyEntryPoint);
@@ -1000,6 +1218,11 @@ class _MiniExp implements RegExp {
   void _generateCode(MiniExpCompiler compiler, MiniExpAst ast, String source) {
     // Top level capture regs.
     int topLevelCaptureReg = compiler.allocateCaptureRegisters();
+
+    MiniExpAnalysis topAnalysis = ast.analyze(compiler);
+
+    compiler.addCaptureRegisters();
+
     var stickyEntryPoint = new MiniExpLabel();
     var stickyStart = new MiniExpLabel();
     var failSticky = new MiniExpLabel();
@@ -1017,7 +1240,7 @@ class _MiniExp implements RegExp {
     compiler.generate(ast, succeed);
 
     compiler.bind(fail);
-    if (!ast.anchored) {
+    if (!topAnalysis.anchored) {
       var end = new MiniExpLabel();
       compiler.gotoIfGreaterEqual(CURRENT_POSITION, STRING_LENGTH, end);
       compiler.addToRegister(CURRENT_POSITION, 1);
@@ -1028,7 +1251,7 @@ class _MiniExp implements RegExp {
     compiler.fail();
 
     compiler.bind(succeed);
-    compiler.copyRegister(topLevelCaptureReg + 1, CURRENT_POSITION);
+    compiler.copyRegister(topLevelCaptureReg - 1, CURRENT_POSITION);
     compiler.succeed();
 
     compiler.bind(stickyEntryPoint);
@@ -1077,7 +1300,6 @@ class MiniExpParser {
   final MiniExpCompiler _compiler;
   final String _source;
   final bool _isMultiLine;
-  final bool _isCaseSensitive;
 
   int _captureCount = 0;
   String _constantPool;
@@ -1094,8 +1316,7 @@ class MiniExpParser {
   int _minimumRepeats;
   int _maximumRepeats;
 
-  MiniExpParser(
-      this._compiler, this._source, this._isMultiLine, this._isCaseSensitive);
+  MiniExpParser(this._compiler, this._source, this._isMultiLine);
 
   MiniExpAst parse() {
     getToken();
