@@ -1855,4 +1855,22 @@ main() {
 >>>>
 }
 ''',
+
+  r'''
+add_top_level_field
+==> main.dart.patch <==
+// Test that we can add a top-level field.
+<<<< "0"
+==== "1"
+  const c = 1;
+>>>>
+
+main() {
+<<<<
+  print(0);
+====
+  print(c);
+>>>>
+}
+''',
 ];
