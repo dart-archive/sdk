@@ -26,3 +26,6 @@ messaging_program_gc_gc_on_delete_test: CompileTimeError # Issue(75): Driver doe
 [ $arch != ia32 ]
 dart2js_hello_world_test: Skip  # Rather big and slow test.
 dart2js_deltablue_test: Skip  # Rather big and slow test.
+
+[ $asan ]
+shared_immutable_data_test: Pass, Fail # Issue(97): Test is flaky.
