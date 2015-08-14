@@ -813,10 +813,8 @@ Interpreter::InterruptKind Engine::Interpret(
     Object* condition = Local(0);
     if (condition == program()->true_object()) {
       SetTop(program()->false_object());
-    } else if (condition == program()->false_object()) {
-      SetTop(program()->true_object());
     } else {
-      UNIMPLEMENTED();
+      SetTop(program()->true_object());
     }
     Advance(kNegateLength);
   OPCODE_END();
