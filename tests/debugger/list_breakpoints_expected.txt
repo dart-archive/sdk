@@ -1,11 +1,11 @@
 Starting session. Type 'help' for a list of commands.
 
 > b main
-breakpoint set: 0: main @0
+breakpoint set: id: '0' method: 'main' bytecode index: '0'
 > b breakHere
-breakpoint set: 1: breakHere @0
+breakpoint set: id: '1' method: 'breakHere' bytecode index: '0'
 > lb
 Breakpoints:
-0: main @0
-1: breakHere @0
+id: '0' method: 'main' bytecode index: '0'
+id: '1' method: 'breakHere' bytecode index: '0'
 > q

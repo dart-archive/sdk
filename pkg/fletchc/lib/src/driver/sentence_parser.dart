@@ -156,6 +156,12 @@ class SentenceParser {
       case "backtrace":
         return makeTarget(TargetKind.BACKTRACE);
 
+      case "continue":
+        return makeTarget(TargetKind.CONTINUE);
+
+      case "break":
+        return makeNamedTarget(TargetKind.BREAK);
+
       default:
         return new ErrorTarget(
             "Expected 'session(s)', 'class(s)', 'method(s)', 'file(s)', "
@@ -263,7 +269,9 @@ enum TargetKind {
   FILES,
   ALL,
   RUN_TO_MAIN,
-  BACKTRACE
+  BACKTRACE,
+  CONTINUE,
+  BREAK
 }
 
 class NamedTarget extends Target {

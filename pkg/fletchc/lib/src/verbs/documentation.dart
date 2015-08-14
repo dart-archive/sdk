@@ -13,6 +13,13 @@ const String debugDocumentation = """
 
    debug backtrace
              Print the current stack trace
+
+   debug continue
+             Resume execution of a program when at a breakpoint
+
+   debug break LOCATION
+             Set a breakpoint at LOCATION. LOCATION should have one of the
+             formats methodName@bytecodeIndex or filename:line:column
 """;
 
 const String helpDocumentation = """

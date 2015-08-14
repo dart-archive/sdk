@@ -104,20 +104,33 @@ class InputHandler {
         var frame =
             (commandComponents.length > 1) ? commandComponents[1] : "-1";
         frame = int.parse(frame, onError: (_) => null);
-        if (frame == null) {
+        if (frame == null || !session.selectFrame(frame)) {
           session.writeStdoutLine('### invalid frame number: $frame');
-          break;
         }
-        session.selectFrame(frame);
         break;
       case 'l':
-        session.list();
+        String listing = session.list();
+        if (listing == null) {
+          session.writeStdoutLine("### failed listing source");
+        } else {
+          session.writeStdoutLine(listing);
+        }
         break;
       case 'disasm':
-        session.disasm();
+        String disassembly = session.disasm();
+        if (disassembly == null) {
+          session.writeStdoutLine("### failed disassembling source");
+        } else {
+          session.writeStdoutLine(disassembly);
+        }
         break;
       case 'c':
-        await session.cont();
+        if (checkRunning()) {
+          Command response = await session.cont();
+          if (response is! ProcessTerminated) {
+            await session.backtrace();
+          }
+        }
         break;
       case 'd':
         var id = (commandComponents.length > 1) ? commandComponents[1] : null;
@@ -158,17 +171,31 @@ class InputHandler {
         break;
       case 'r':
       case 'run':
-        await session.debugRun();
-        await session.backtrace();
+        if (checkNotRunning()) {
+          Command response = await session.debugRun();
+          if (response is! ProcessTerminated) {
+            await session.backtrace();
+          }
+        }
         break;
       case 's':
-        await session.step();
+        if (checkRunning()) {
+          Command response = await session.step();
+          if (response is! ProcessTerminated) {
+            await session.backtrace();
+          }
+        }
         break;
       case 'sb':
-        await session.stepBytecode();
+        if (checkRunning()) await session.stepBytecode();
         break;
       case 'so':
-        await session.stepOver();
+        if (checkRunning()) {
+          Command response = await session.stepOver();
+          if (response is! ProcessTerminated) {
+            await session.backtrace();
+          }
+        }
         break;
       case 'sob':
         await session.stepOverBytecode();
@@ -192,6 +219,18 @@ class InputHandler {
         break;
     }
     if (!session.terminated) printPrompt();
+  }
+
+  bool checkNotRunning() {
+    if (!session.running) return true;
+    session.writeStdoutLine('### program already running');
+    return false;
+  }
+
+  bool checkRunning() {
+    if (session.running) return true;
+    session.writeStdoutLine('### program not running');
+    return false;
   }
 
   Future<int> run() async {

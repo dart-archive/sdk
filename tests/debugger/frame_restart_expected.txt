@@ -1,7 +1,7 @@
 Starting session. Type 'help' for a list of commands.
 
 > b breakHere
-breakpoint set: 0: breakHere @0
+breakpoint set: id: '0' method: 'breakHere' bytecode index: '0'
 > r
 10
 9
@@ -77,7 +77,7 @@ Stack trace:
   11: foo      	@foo(i-1)
   12: main     	@foo(10)
 > d 0
-deleted breakpoint: 0: breakHere @0
+deleted breakpoint: id: '0' method: 'breakHere' bytecode index: '0'
 > f 3
 > restart
 2

@@ -1,7 +1,7 @@
 Starting session. Type 'help' for a list of commands.
 
 > b breakHere
-breakpoint set: 0: breakHere @0
+breakpoint set: id: '0' method: 'breakHere' bytecode index: '0'
 > r
 Stack trace:
 > 0: breakHere                	@void breakHere(){}

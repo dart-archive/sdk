@@ -18,7 +18,8 @@ class Breakpoint {
   final int bytecodeIndex;
   final int id;
   Breakpoint(this.methodName, this.bytecodeIndex, this.id);
-  String toString() => "$id: $methodName @$bytecodeIndex";
+  String toString() => "id: '$id' method: '$methodName' "
+      "bytecode index: '$bytecodeIndex'";
 }
 
 class DebugState {

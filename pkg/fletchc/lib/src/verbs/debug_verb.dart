@@ -23,6 +23,9 @@ import '../diagnostic.dart' show
 import '../driver/driver_commands.dart' show
     DriverCommand;
 
+import 'package:fletchc/debug_state.dart' show
+    Breakpoint;
+
 const Verb debugVerb =
     const Verb(
         debug,
@@ -30,7 +33,9 @@ const Verb debugVerb =
         requiresSession: true,
         supportedTargets: const [
           TargetKind.RUN_TO_MAIN,
-          TargetKind.BACKTRACE
+          TargetKind.BACKTRACE,
+          TargetKind.BREAK,
+          TargetKind.CONTINUE
         ]);
 
 Future debug(AnalyzedSentence sentence, VerbContext context) async {
@@ -39,16 +44,25 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
     return null;
   }
 
+  DebuggerTask task;
   switch (sentence.target.kind) {
     case TargetKind.RUN_TO_MAIN:
-      context.performTaskInWorker(new RunToMainDebuggerTask());
+      task = new DebuggerTask(TargetKind.RUN_TO_MAIN.index);
       break;
     case TargetKind.BACKTRACE:
-      context.performTaskInWorker(new BacktraceDebuggerTask());
+      task = new DebuggerTask(TargetKind.BACKTRACE.index);
+      break;
+    case TargetKind.CONTINUE:
+      task = new DebuggerTask(TargetKind.CONTINUE.index);
+      break;
+    case TargetKind.BREAK:
+      task = new DebuggerTask(TargetKind.BREAK.index, sentence.targetName);
       break;
     default:
       throwInternalError("Unimplemented ${sentence.target}");
   }
+
+  context.performTaskInWorker(task);
   return null;
 }
 
@@ -75,6 +89,7 @@ Future<Null> readCommands(
     }
   }
 }
+
 class InteractiveDebuggerTask extends SharedTask {
   // Keep this class simple, see note in superclass.
 
@@ -120,15 +135,29 @@ Future<int> interactiveDebuggerTask(
   return await session.debug(inputStream);
 }
 
-class RunToMainDebuggerTask extends SharedTask {
+class DebuggerTask extends SharedTask {
   // Keep this class simple, see note in superclass.
+  final int kind;
+  final String argument;
 
-  RunToMainDebuggerTask();
+  DebuggerTask(this.kind, [this.argument]);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return runToMainDebuggerTask(commandSender, SessionState.current);
+    switch (TargetKind.values[kind]) {
+      case TargetKind.RUN_TO_MAIN:
+        return runToMainDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.BACKTRACE:
+        return backtraceDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.CONTINUE:
+        return continueDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.BREAK:
+        return breakDebuggerTask(commandSender, SessionState.current, argument);
+      default:
+        throwInternalError("Unimplemented ${TargetKind.values[kind]}");
+    }
+    return null;
   }
 }
 
@@ -157,18 +186,6 @@ Future<int> runToMainDebuggerTask(
   return 0;
 }
 
-class BacktraceDebuggerTask extends SharedTask {
-  // Keep this class simple, see note in superclass.
-
-  BacktraceDebuggerTask();
-
-  Future<int> call(
-      CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
-    return backtraceDebuggerTask(commandSender, SessionState.current);
-  }
-}
-
 Future<int> backtraceDebuggerTask(
     CommandSender commandSender,
     SessionState state) async {
@@ -184,6 +201,102 @@ Future<int> backtraceDebuggerTask(
   // TODO(ager): deal gracefully with situations where there is a VM
   // session, but the VM terminated.
   await session.backtrace();
+
+  return 0;
+}
+
+Future<int> continueDebuggerTask(
+    CommandSender commandSender,
+    SessionState state) async {
+  Session session = state.session;
+  if (session == null) {
+    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
+  }
+
+  state.attachCommandSender(commandSender);
+
+  if (!session.running) {
+    // TODO(ager, lukechurch): Fix error reporting.
+    throwInternalError('Program not running');
+  }
+
+  // TODO(ager): Print information about the stop condition. Which breakpoint
+  // was hit? Did the session terminate?
+  await session.cont();
+
+  if (session.terminated) state.session = null;
+
+  return 0;
+}
+
+Future<int> breakDebuggerTask(
+    CommandSender commandSender,
+    SessionState state,
+    String breakpointSpecification) async {
+  Session session = state.session;
+  if (session == null) {
+    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
+  }
+
+  state.attachCommandSender(commandSender);
+
+  if (breakpointSpecification.contains('@')) {
+    List<String> parts = breakpointSpecification.split('@');
+
+    if (parts.length > 2) {
+      // TODO(ager, lukechurch): Fix error reporting.
+      throwInternalError('Invalid breakpoint format');
+    }
+
+    String name = parts[0];
+    int index = 0;
+
+    if (parts.length == 2) {
+      index = int.parse(parts[1], onError: (_) => -1);
+      if (index == -1) {
+        // TODO(ager, lukechurch): Fix error reporting.
+        throwInternalError('Invalid bytecode index');
+      }
+    }
+
+    List<Breakpoint> breakpoints =
+    await session.setBreakpoint(methodName: name, bytecodeIndex: index);
+    for (Breakpoint breakpoint in breakpoints) {
+      print("Breakpoint set: $breakpoint");
+    }
+  } else if (breakpointSpecification.contains(':')) {
+    List<String> parts = breakpointSpecification.split(':');
+
+    if (parts.length != 3) {
+      // TODO(ager, lukechurch): Fix error reporting.
+      throwInternalError('Invalid breakpoint format');
+    }
+
+    String file = parts[0];
+    int line = int.parse(parts[1], onError: (_) => -1);
+    int column = int.parse(parts[2], onError: (_) => -1);
+
+    if (line == -1 || column == -1) {
+      // TODO(ager, lukechurch): Fix error reporting.
+      throwInternalError('Invalid line or column number');
+    }
+
+    // TODO(ager): Refactor session so that setFileBreakpoint
+    // does not print automatically but gives us information about what
+    // happened.
+    Breakpoint breakpoint =
+        await session.setFileBreakpoint(file, line, column);
+    if (breakpoint != null) {
+      print("Breakpoint set: $breakpoint");
+    }
+  } else {
+    List<Breakpoint> breakpoints =
+        await session.setBreakpoint(
+            methodName: breakpointSpecification, bytecodeIndex: 0);
+    for (Breakpoint breakpoint in breakpoints) {
+      print("Breakpoint set: $breakpoint");
+    }
+  }
 
   return 0;
 }

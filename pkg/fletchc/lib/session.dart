@@ -246,7 +246,7 @@ class Session extends FletchVmSession {
     await debugRun();
     while (!terminated) {
       writeStdoutLine(debugState.topFrame.shortString());
-      await doStep();
+      await step();
     }
   }
 
@@ -273,7 +273,7 @@ class Session extends FletchVmSession {
     terminated = true;
   }
 
-  Future<int> handleProcessStop(Command response) async {
+  Future<Command> handleProcessStop(Command response) async {
     debugState.reset();
     switch (response.code) {
       case CommandCode.UncaughtException:
@@ -291,9 +291,9 @@ class Session extends FletchVmSession {
         var function = fletchSystem.lookupFunctionById(command.functionId);
         debugState.topFrame = new StackFrame(
             function, command.bytecodeIndex, compiler, debugState);
-        return command.breakpointId;
+        break;
     }
-    return -1;
+    return response;
   }
 
   bool checkRunning() {
@@ -302,13 +302,10 @@ class Session extends FletchVmSession {
   }
 
   Future debugRun() async {
-    if (running) {
-      writeStdoutLine("### already running");
-      return null;
-    }
+    assert(!running);
     running = true;
     await sendCommand(const ProcessRun());
-    await handleProcessStop(await readNextCommand());
+    return handleProcessStop(await readNextCommand());
   }
 
   Future setBreakpointHelper(String name,
@@ -357,7 +354,7 @@ class Session extends FletchVmSession {
     }
     FletchFunction function = debugInfo.function;
     int bytecodeIndex = location.bytecodeIndex;
-    await setBreakpointHelper(name, function, bytecodeIndex);
+    return setBreakpointHelper(function.name, function, bytecodeIndex);
   }
 
   Future setFileBreakpointFromPattern(String file,
@@ -381,7 +378,7 @@ class Session extends FletchVmSession {
       return null;
     }
     int position = compiler.positionInFile(file, line - 1, column - 1);
-    await setFileBreakpointFromPosition('$file:$line:$column', file, position);
+    return setFileBreakpointFromPosition('$file:$line:$column', file, position);
   }
 
   Future doDeleteBreakpoint(int id) async {
@@ -412,36 +409,31 @@ class Session extends FletchVmSession {
   }
 
   Future stepTo(int functionId, int bcp) async {
-    if (!checkRunning()) return null;
     Command response = await runCommand(new ProcessStepTo(functionId, bcp));
-    await handleProcessStop(response);
+    return await handleProcessStop(response);
   }
 
-  Future doStep() async {
+  Future step() async {
+    Command response;
     SourceLocation previous = debugState.currentLocation;
     do {
       var bcp = debugState.topFrame.stepBytecodePointer(previous);
       if (bcp != -1) {
-        await stepTo(debugState.topFrame.functionId, bcp);
+        response = await stepTo(debugState.topFrame.functionId, bcp);
       } else {
-        await stepBytecode();
+        response = await stepBytecode();
       }
     } while (running && debugState.atLocation(previous));
-  }
-
-  Future step() async {
-    if (!checkRunning()) return null;
-    await doStep();
-    await backtrace();
+    return response;
   }
 
   Future stepOver() async {
-    if (!checkRunning()) return null;
+    Command response;
     SourceLocation previous = debugState.currentLocation;
     do {
-      await stepOverBytecode();
+      response = await stepOverBytecode();
     } while (running && debugState.atLocation(previous));
-    await backtrace();
+    return response;
   }
 
   Future stepOut() async {
@@ -462,10 +454,12 @@ class Session extends FletchVmSession {
       }
       await sendCommand(const ProcessStepOut());
       ProcessSetBreakpoint setBreakpoint = await readNextCommand();
-      Command response = await readNextCommand();
       assert(setBreakpoint.value != -1);
-      int id = await handleProcessStop(response);
-      if (id != setBreakpoint.value) {
+      Command response = await handleProcessStop(await readNextCommand());
+      bool success =
+          response is ProcessBreakpoint &&
+          response.breakpointId == setBreakpoint.value;
+      if (!success) {
         writeStdoutLine("### 'finish' cancelled because "
                         "another breakpoint was hit");
         await doDeleteBreakpoint(setBreakpoint.value);
@@ -474,7 +468,7 @@ class Session extends FletchVmSession {
       }
     } while (!debugState.topFrame.isVisible);
     if (running && debugState.atLocation(return_location)) {
-      await doStep();
+      await step();
     }
     await backtrace();
   }
@@ -494,17 +488,18 @@ class Session extends FletchVmSession {
   }
 
   Future stepBytecode() async {
-    if (!checkRunning()) return null;
-    await handleProcessStop(await runCommand(const ProcessStep()));
+    return await handleProcessStop(await runCommand(const ProcessStep()));
   }
 
   Future stepOverBytecode() async {
     if (!checkRunning()) return null;
     await sendCommand(const ProcessStepOver());
     ProcessSetBreakpoint setBreakpoint = await readNextCommand();
-    Command response = await readNextCommand();
-    int id = await handleProcessStop(response);
-    if (id != setBreakpoint.value) {
+    Command response = await handleProcessStop(await readNextCommand());
+    bool success =
+        response is ProcessBreakpoint &&
+        response.breakpointId == setBreakpoint.value;
+    if (!success) {
       writeStdoutLine("### 'step over' cancelled because "
                       "another breakpoint was hit");
       if (setBreakpoint.value != -1) {
@@ -514,36 +509,26 @@ class Session extends FletchVmSession {
   }
 
   Future cont() async {
-    if (!checkRunning()) return null;
-    await handleProcessStop(await runCommand(const ProcessContinue()));
-    await backtrace();
+    return handleProcessStop(await runCommand(const ProcessContinue()));
   }
 
-  void list() {
-    if (debugState.currentStackTrace == null) {
-      writeStdoutLine("### no stack trace");
-      return;
-    }
-    String listing = debugState.list();
-    writeStdoutLine(listing);
+  String list() {
+    if (debugState.currentStackTrace == null) return null;
+    return debugState.list();
   }
 
-  void disasm() {
-    if (debugState.currentStackTrace == null) {
-      writeStdoutLine("### no stack trace");
-      return;
-    }
-    String disasm = debugState.disasm();
-    writeStdout(disasm);
+  String disasm() {
+    if (debugState.currentStackTrace == null) return null;
+    return debugState.disasm();
   }
 
-  void selectFrame(int frame) {
+  bool selectFrame(int frame) {
     if (debugState.currentStackTrace == null ||
         debugState.currentStackTrace.actualFrameNumber(frame) == -1) {
-      writeStdoutLine('### invalid frame number $frame');
-      return;
+      return false;
     }
     debugState.currentFrame = frame;
+    return true;
   }
 
   StackTrace stackTraceFromBacktraceResponse(

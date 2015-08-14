@@ -1,7 +1,7 @@
 Starting session. Type 'help' for a list of commands.
 
 > b
-breakpoint set: 0: main @0
+breakpoint set: id: '0' method: 'main' bytecode index: '0'
 > r
 Stack trace:
 > 0: main    	@foo()
@@ -27,7 +27,7 @@ Stack trace:
 Stack trace:
 > 0: main    	@a
 > b y
-breakpoint set: 6: y @0
+breakpoint set: id: '6' method: 'y' bytecode index: '0'
 > s
 Stack trace:
 > 0: main    	@a.y()
