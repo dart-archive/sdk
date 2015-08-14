@@ -274,6 +274,7 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
   }
 
   void removeFromMethodTable(FletchFunctionBase function) {
+    assert(function != null);
     _removedMethods.add(function);
   }
 
