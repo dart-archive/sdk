@@ -11,7 +11,7 @@ main() {
 
 fib(n) {
   if (n <= 1) return 1;
-  var n1 = Isolate.spawn(bind(fib, n - 1));
-  var n2 = Isolate.spawn(bind(fib, n - 2));
+  var n1 = Isolate.spawn(() => fib(n - 1));
+  var n2 = Isolate.spawn(() => fib(n - 2));
   return n1.join() + n2.join();
 }
