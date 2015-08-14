@@ -96,6 +96,15 @@ List<int> internalRegExpEquivalenceClass(int charCode) {
   return regExpEquivalenceClasses.map(charCode);
 }
 
+int internalRegExpCanonicalize(int codeUnit) {
+  if (regExpCanonicalize == null) {
+    regExpCanonicalize = new RegExpCanonicalizer();
+  }
+  int answer = regExpCanonicalize.map(codeUnit);
+  if (answer == null) return codeUnit;  // Unchanged.
+  return answer;
+}
+
 abstract class CaseTable<T> {
   Map <int, List<T>> _pages = new Map <int, List<T>>();
   int _lastPageNumber = -1;
@@ -155,7 +164,7 @@ abstract class StringCaseConverter extends CaseConverter<String> {
 // Regular expression canonicalization uses the to-upper tables, but is specced
 // to only use the single character mappings.  We use char codes, not short
 // strings.
-abstract class RegExpCanonicalizer extends CaseConverter<int> {
+class RegExpCanonicalizer extends CaseConverter<int> {
   void addEntry(List<int> pageList, int from, int to, bool append) {
     int lowBits = (from & pageMask);
     pageList[lowBits] = to;

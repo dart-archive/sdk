@@ -105,9 +105,10 @@ const GOTO_GE = 12; // reg reg label
 const GOTO_IF_WORD_CHARACTER = 13;  // position-offset label
 const ADD_TO_REGISTER = 14; // reg const
 const COPY_REGISTER = 15; // dest-reg source-reg
-const BACKTRACK = 16;
-const SUCCEED = 17;
-const FAIL = 18;
+const BACKTRACK_ON_BACK_REFERENCE = 16; // capture-reg
+const BACKTRACK = 17;
+const SUCCEED = 18;
+const FAIL = 19;
 
 // Format is name, number of register arguments, number of other arguments.
 const BYTE_CODE_NAMES = const [
@@ -127,6 +128,7 @@ const BYTE_CODE_NAMES = const [
   "GOTO_IF_WORD_CHARACTER", 0, 2,
   "ADD_TO_REGISTER", 1, 1,
   "COPY_REGISTER", 2, 0,
+  "BACKTRACK_ON_BACK_REFERENCE", 1, 1,
   "BACKTRACK", 0, 0,
   "SUCCEED", 0, 0,
   "FAIL", 0, 0];
@@ -194,6 +196,7 @@ class MiniExpCompiler {
   int firstCaptureRegister;
   final List<int> _codes = new List<int>();
   final List<int> _extraConstants = new List<int>();
+  final List<BackReference> _backReferences = new List<BackReference>();
   MiniExpLabel _pendingGoto;
 
   MiniExpCompiler(this.pattern, this.caseSensitive) {
@@ -262,10 +265,29 @@ class MiniExpCompiler {
     return -captureRegisterCount + 1;
   }
 
+  void addBackReference(BackReference b) {
+    _backReferences.add(b);
+  }
+
   void addCaptureRegisters() {
     firstCaptureRegister = registers.length;
     for (int i = 0; i < captureRegisterCount; i++) {
       registers.add(NO_POSITION);
+    }
+    processBackRefences();
+  }
+
+  void processBackRefences() {
+    for (BackReference b in _backReferences) {
+      // 1-based index (you can't refer back to capture zero).
+      if (b.index * 2 >= captureRegisterCount) {
+        // Web compatible strangeness - if the index is more than the number of
+        // captures it turns into a decimal character code escape.
+        int poolIndex = addToConstantPool(b.index);
+        b.replaceWithAtom(new Atom(poolIndex));
+      } else {
+        b.register = firstCaptureRegister + b.index * 2;
+      }
     }
   }
 
@@ -278,7 +300,7 @@ class MiniExpCompiler {
 
   int addToConstantPool(int codeUnit) {
     _extraConstants.add(codeUnit);
-    return _extraConstants.length - 1;
+    return pattern.length + _extraConstants.length - 1;
   }
 
   void pushBacktrack(MiniExpLabel label) {
@@ -326,6 +348,11 @@ class MiniExpCompiler {
   void copyRegister(int destRegister, int sourceRegister) {
     _emit(COPY_REGISTER, registerNumber(destRegister),
         registerNumber(sourceRegister));
+  }
+
+  void backtrackOnBackReferenceFail(int register, bool caseSensitive) {
+    _emit(BACKTRACK_ON_BACK_REFERENCE,
+          registerNumber(register), caseSensitive ? 1 : 0);
   }
 
   void backtrackIfGreater(int register1, int register2) {
@@ -1062,16 +1089,34 @@ class CharClass extends MiniExpAst {
 
 class BackReference extends MiniExpAst {
   int _backReferenceIndex;
+  int _register;
+  Atom _atomThatReplacesUs;
 
   BackReference(this._backReferenceIndex);
 
+  int get index => _backReferenceIndex;
+
+  void set register(int r) {
+    _register = r;
+  }
+
+  void replaceWithAtom(Atom atom) {
+    _atomThatReplacesUs = atom;
+  }
+
   void generate(MiniExpCompiler compiler, MiniExpLabel onSuccess) {
-    // TODO(erikcorry): Implement.
-    throw("Back references not yet implemented");
+    if (_atomThatReplacesUs != null) {
+      compiler.generate(_atomThatReplacesUs, onSuccess);
+      return;
+    }
+    compiler.backtrackOnBackReferenceFail(_register, compiler.caseSensitive);
     compiler.goto(onSuccess);
   }
 
-  MiniExpAnalysis analyze(compiler) => const MiniExpAnalysis.knowNothing();
+  MiniExpAnalysis analyze(compiler) {
+    compiler.addBackReference(this);
+    return const MiniExpAnalysis.knowNothing();
+  }
 }
 
 class Capture extends MiniExpAst {
@@ -1693,7 +1738,7 @@ class MiniExpParser {
     } else if (CONTROL_CHARACTERS.containsKey(nextCode)) {
       _position += 2;
       _lastToken = Token.other;
-      _lastTokenIndex = _source.length +
+      _lastTokenIndex =
           _compiler.addToConstantPool(CONTROL_CHARACTERS[nextCode]);
     } else if (onDigit(_position + 1)) {
       _position++;
@@ -1706,8 +1751,7 @@ class MiniExpParser {
       if (codeUnit == -1) {
         _lastTokenIndex = _position - 1;
       } else {
-        _lastTokenIndex =
-            _source.length + _compiler.addToConstantPool(codeUnit);
+        _lastTokenIndex = _compiler.addToConstantPool(codeUnit);
       }
     } else {
       _lastToken = Token.other;
@@ -1879,8 +1923,8 @@ class MiniExpInterpreter {
   List<int> stack = new List<int>();
   int stackPointer = 0;
 
-  bool interpret(String _subject, int startPosition, int programCounter) {
-    _registers[STRING_LENGTH] = _subject.length;
+  bool interpret(String subject, int startPosition, int programCounter) {
+    _registers[STRING_LENGTH] = subject.length;
     _registers[CURRENT_POSITION] = startPosition;
     while (true) {
       int byteCode = _byteCodes[programCounter];
@@ -1942,14 +1986,14 @@ class MiniExpInterpreter {
           }
           break;
         case BACKTRACK_IF_NO_MATCH:
-          if (_subject.codeUnitAt(_registers[CURRENT_POSITION]) !=
+          if (subject.codeUnitAt(_registers[CURRENT_POSITION]) !=
               _constantPool.codeUnitAt(_byteCodes[programCounter++])) {
             _registers[CURRENT_POSITION] = stack[--stackPointer];
             programCounter = stack[--stackPointer];
           }
           break;
         case BACKTRACK_IF_IN_RANGE:
-          int code = _subject.codeUnitAt(_registers[CURRENT_POSITION]);
+          int code = subject.codeUnitAt(_registers[CURRENT_POSITION]);
           int from = _byteCodes[programCounter++];
           int to = _byteCodes[programCounter++];
           if (from <= code && code <= to) {
@@ -1958,13 +2002,13 @@ class MiniExpInterpreter {
           }
           break;
         case GOTO_IF_MATCH:
-          int code = _subject.codeUnitAt(_registers[CURRENT_POSITION]);
+          int code = subject.codeUnitAt(_registers[CURRENT_POSITION]);
           int expected = _byteCodes[programCounter++];
           int dest = _byteCodes[programCounter++];
           if (code == expected) programCounter = dest;
           break;
         case GOTO_IF_IN_RANGE:
-          int code = _subject.codeUnitAt(_registers[CURRENT_POSITION]);
+          int code = subject.codeUnitAt(_registers[CURRENT_POSITION]);
           int from = _byteCodes[programCounter++];
           int to = _byteCodes[programCounter++];
           int dest = _byteCodes[programCounter++];
@@ -1985,7 +2029,7 @@ class MiniExpInterpreter {
         case GOTO_IF_WORD_CHARACTER:
           int offset = _byteCodes[programCounter++];
           int charCode =
-              _subject.codeUnitAt(_registers[CURRENT_POSITION] + offset);
+              subject.codeUnitAt(_registers[CURRENT_POSITION] + offset);
           int dest = _byteCodes[programCounter++];
           if (charCode >= CHAR_CODE_0) {
             if (charCode <= CHAR_CODE_9) {
@@ -2015,6 +2059,15 @@ class MiniExpInterpreter {
           _registers[registerIndex] = value;
           stackPointer = _registers[STACK_POINTER];
           break;
+        case BACKTRACK_ON_BACK_REFERENCE:
+          int registerIndex = _byteCodes[programCounter++];
+          bool case_sensitive = _byteCodes[programCounter++] != 0;
+          if (!checkBackReference(subject, case_sensitive, registerIndex)) {
+            // Backtrack.
+            _registers[CURRENT_POSITION] = stack[--stackPointer];
+            programCounter = stack[--stackPointer];
+          }
+          break;
         case BACKTRACK:
           _registers[CURRENT_POSITION] = stack[--stackPointer];
           programCounter = stack[--stackPointer];
@@ -2028,5 +2081,26 @@ class MiniExpInterpreter {
           break;
       }
     }
+  }
+
+  bool checkBackReference(
+      String subject, bool caseSensitive, int registerIndex) {
+    int start = _registers[registerIndex];
+    if (start == NO_POSITION) return true;
+    int end = _registers[registerIndex + 1];
+    int length = end - start;
+    int currentPosition = _registers[CURRENT_POSITION];
+    if (currentPosition + end - start > subject.length) return false;
+    for (int i = 0; i < length; i++) {
+      int x = subject.codeUnitAt(start + i);
+      int y = subject.codeUnitAt(currentPosition + i);
+      if (!caseSensitive) {
+        x = internalRegExpCanonicalize(x);
+        y = internalRegExpCanonicalize(y);
+      }
+      if (x != y) return false;
+    }
+    _registers[CURRENT_POSITION] += length;
+    return true;
   }
 }

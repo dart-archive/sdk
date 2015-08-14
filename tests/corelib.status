@@ -64,17 +64,11 @@ int_from_environment_default_value_test: CompileTimeError
 
 # Regexp
 reg_exp4_test: RuntimeError
-regexp/UC16_test: Fail
-regexp/alternatives_test: Fail
 regexp/assertion_test: Fail
-regexp/backreferences_test: Fail
 # Without the optimization for Latin1 strings this test goes into catastrophic
 # backtracking.
 regexp/capture-3_test: Skip
 regexp/capture_test: Fail
-regexp/compile-crash_test: Fail
-regexp/early-acid3-86_test: Fail
-regexp/ecma-regex-examples_test: Fail
 regexp/invalid-range-in-class_test: Fail
 regexp/lookahead_test: Fail
 regexp/malformed-escapes_test: Fail
@@ -85,7 +79,6 @@ regexp/pcre_test: Fail
 regexp/quantified-assertions_test: Fail
 regexp/regexp_kde_test: Fail
 regexp/regexp_test: Fail
-regexp/stack-overflow2_test: Fail
 regexp/unicodeCaseInsensitive_test: Fail
 string_split_test: RuntimeError
 
