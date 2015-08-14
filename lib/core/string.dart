@@ -4,6 +4,33 @@
 
 part of dart.core_patch;
 
+class StringMatch implements Match {
+  final int start;
+  final String input;
+  final String pattern;
+
+  const StringMatch(this.start, this.input, this.pattern);
+
+  int get end => start + pattern.length;
+  String operator[](int g) => group(g);
+  int get groupCount => 0;
+
+  String group(int group) {
+    if (group != 0) {
+      throw new RangeError.value(group);
+    }
+    return pattern;
+  }
+
+  List<String> groups(List<int> groups) {
+    List<String> result = new List<String>();
+    for (int g in groups) {
+      result.add(group(g));
+    }
+    return result;
+  }
+}
+
 class _StringImpl implements String {
   static const int _MAX_CODE_UNIT = 0xFFFF;
   static const int _LEAD_SURROGATE_OFFSET = (0xD800 - (0x10000 >> 10));
@@ -123,19 +150,8 @@ class _StringImpl implements String {
     return str;
   }
 
-  startsWith(Pattern pattern, [int index]) {
-    if (pattern is! String) {
-      throw new ArgumentError(
-          "String.startsWith only accepts String patterns for now");
-    }
-    String other = pattern;
-    if (index == null) index = 0;
-    int otherLength = other.length;
-    if (index + otherLength > length) return false;
-    for (int i = 0; i < otherLength; i++) {
-      if (codeUnitAt(index + i) != other.codeUnitAt(i)) return false;
-    }
-    return true;
+  bool startsWith(Pattern pattern, [int index = 0]) {
+    return pattern.matchAsPrefix(this, index) != null;
   }
 
   bool endsWith(String other) {
@@ -148,29 +164,35 @@ class _StringImpl implements String {
     return true;
   }
 
-  int indexOf(Pattern pattern, [int start]) {
-    if (pattern is! String) {
-      throw new ArgumentError(
-          "String.indexOf only accepts String patterns for now");
+  int indexOf(Pattern pattern, [int start = 0]) {
+    if ((start < 0) || (start > this.length)) {
+      throw new RangeError.range(start, 0, this.length);
     }
+
+    if (pattern is! String) {
+      Iterator<Match> iterator = pattern.allMatches(this, start).iterator;
+      if (iterator.moveNext()) return iterator.current.start;
+      return -1;
+    }
+    // For string, allMatches is implemented using indexOf, so we need a real
+    // implementation here.
     String str = pattern;
     int length = this.length;
-    if (start == null) start = 0;
     if (str.isEmpty) return start;
     // TODO(ajohnsen): Inline the other loop.
     for (int i = start; i < length; i++) {
-      if (startsWith(pattern, i)) return i;
+      if (startsWith(str, i)) return i;
     }
     return -1;
   }
 
-  int lastIndexOf(Pattern pattern, [int start]) {
-    if (pattern is! String) {
-      throw new ArgumentError(
-          "String.lastIndexOf only accepts String patterns for now");
-    }
+  int lastIndexOf(Pattern pattern, [int start = null]) {
     int length = this.length;
-    if (start == null) start = length;
+    if (start == null) {
+      start = length;
+    } else if (start < 0 || start > length) {
+      throw new RangeError.range(start, 0, length);
+    }
     // TODO(ajohnsen): Inline the other looping.
     for (int i = start; i >= 0; i--) {
       if (startsWith(pattern, i)) return i;
@@ -178,12 +200,42 @@ class _StringImpl implements String {
     return -1;
   }
 
-  allMatches(string, [start]) {
-    throw "allMatches(string, [start]) isn't implemented";
+  // Taken from the VM's implementation.  TODO(erikcorry): Update with a lazy
+  // version once VM has that.
+  Iterable<Match> allMatches(String string, [int start = 0]) {
+    List<Match> result = new List<Match>();
+    int length = string.length;
+    int patternLength = this.length;
+    int startIndex = start;
+    while (true) {
+      int position = string.indexOf(this, startIndex);
+      if (position == -1) {
+        break;
+      }
+      result.add(new StringMatch(position, string, this));
+      int endIndex = position + patternLength;
+      if (endIndex == length) {
+        break;
+      } else if (position == endIndex) {
+        ++startIndex;  // empty match, advance and restart
+      } else {
+        startIndex = endIndex;
+      }
+    }
+    return result;
   }
 
-  matchAsPrefix(string, [start]) {
-    throw "matchAsPrefix(string, [start]) isn't implemented";
+  Match matchAsPrefix(String string, [int start = 0]) {
+    if (start < 0 || start > string.length) {
+      throw new RangeError.range(start, 0, string.length);
+    }
+    if (start + this.length > string.length) return null;
+    for (int i = 0; i < this.length; i++) {
+      if (string.codeUnitAt(start + i) != this.codeUnitAt(i)) {
+        return null;
+      }
+    }
+    return new StringMatch(start, string, this);
   }
 
   // Characters with Whitespace property (Unicode 6.2).
@@ -247,19 +299,32 @@ class _StringImpl implements String {
     return substring(0, i + 1);
   }
 
-  padLeft(width, [padding]) {
-    throw "padLeft(width, [padding]) isn't implemented";
+  String padLeft(int width, [String padding = ' ']) {
+    int delta = width - this.length;
+    if (delta <= 0) return this;
+    StringBuffer buffer = new StringBuffer();
+    for (int i = 0; i < delta; i++) {
+      buffer.write(padding);
+    }
+    buffer.write(this);
+    return buffer.toString();
   }
 
-  padRight(width, [padding]) {
-    throw "padRight(width, [padding]) isn't implemented";
+  String padRight(int width, [String padding = ' ']) {
+    int delta = width - this.length;
+    if (delta <= 0) return this;
+    StringBuffer buffer = new StringBuffer(this);
+    for (int i = 0; i < delta; i++) {
+      buffer.write(padding);
+    }
+    return buffer.toString();
   }
 
-  bool contains(Pattern other, [int startIndex]) {
+  bool contains(Pattern other, [int startIndex = 0]) {
     return indexOf(other, startIndex) >= 0;
   }
 
-  String _replaceWithMatches(List<Match> matches, String replace) {
+  String _replaceWithMatches(Iterable<Match> matches, String replace) {
     StringBuffer buffer = new StringBuffer();
     int endOfLast = 0;
     for (Match match in matches) {
@@ -272,7 +337,7 @@ class _StringImpl implements String {
   }
 
   String _replaceWithMatchesMapped(
-      List<Match> matches, String replace(Match)) {
+      Iterable<Match> matches, String replace(Match)) {
     StringBuffer buffer = new StringBuffer();
     int endOfLast = 0;
     for (Match match in matches) {
@@ -284,71 +349,35 @@ class _StringImpl implements String {
     return buffer.toString();
   }
 
-  replaceFirst(Pattern from, String to, [int startIndex = 0]) {
-    if (from is! String) {
-      _MiniExp re = from;
-      List<Match> matches = <Match>[re._match(this, startIndex, 0)];
-      return _replaceWithMatches(matches, to);
+  replaceFirst(Pattern pattern, String replace, [int startIndex = 0]) {
+    Iterator<Match> iterator = pattern.allMatches(this, startIndex).iterator;
+    if (iterator.moveNext()) {
+      return _replaceWithMatches([iterator.current], replace);
     }
-    String str = from;
-    int index = indexOf(str);
-    if (index == -1) return this;
-    StringBuffer buffer = new StringBuffer();
-    buffer.write(substring(0, index));
-    buffer.write(to);
-    buffer.write(substring(index + str.length, length));
-    return buffer.toString();
+    return this;
   }
 
-  replaceFirstMapped(Pattern from, String replace(Match),
+  replaceFirstMapped(Pattern pattern, String replace(Match),
                      [int startIndex = 0]) {
-    if (from is! String) {
-      _MiniExp re = from;
-      Match match = re._match(this, startIndex, 0);
-      if (match == null) return this;
-      return _replaceWithMatchesMapped(<Match>[match], replace);
+    if (pattern == null) throw new ArgumentError.notNull("pattern");
+    if (replace == null) throw new ArgumentError.notNull("replace");
+    if (startIndex == null) throw new ArgumentError.notNull("startIndex");
+
+    Iterator<Match> iterator = pattern.allMatches(this, startIndex).iterator;
+    if (iterator.moveNext()) {
+      return _replaceWithMatchesMapped([iterator.current], replace);
     }
-    throw "replaceFirstMapped(from, replace, [startIndex]) isn't implemented "
-          "for String patterns";
+    return this;
   }
 
-  String replaceAll(Pattern from, String replace) {
-    if (from is! String) {
-      List<Match> matches = from.allMatches(this);
-      return _replaceWithMatches(matches, replace);
-    }
-    StringBuffer buffer = new StringBuffer();
-    String str = from;
-    int length = this.length;
-    if (str.isEmpty) {
-      // Special case the empty string.
-      buffer.write(replace);
-      for (int i = 0; i < length; i++) {
-        buffer.write(this[i]);
-        buffer.write(replace);
-      }
-      return buffer.toString();
-    }
-    int offset = 0;
-    while(true) {
-      int index = indexOf(str, offset);
-      if (index < 0) {
-        buffer.write(substring(offset));
-        return buffer.toString();
-      }
-      buffer.write(substring(offset, index));
-      buffer.write(replace);
-      offset = index + str.length;
-    }
+  String replaceAll(Pattern pattern, String replace) {
+    Iterable<Match> matches = pattern.allMatches(this);
+    return _replaceWithMatches(matches, replace);
   }
 
-  replaceAllMapped(Pattern from, String replace(Match)) {
-    if (from is! String) {
-      List<Match> matches = from.allMatches(this);
-      return _replaceWithMatchesMapped(matches, replace);
-    }
-    throw "replaceAllMapped(from, replace) isn't implemented for String "
-          "patterns";
+  replaceAllMapped(Pattern pattern, String replace(Match)) {
+    Iterable<Match> matches = pattern.allMatches(this);
+    return _replaceWithMatchesMapped(matches, replace);
   }
 
   String replaceRange(int start, int end, String replacement) {

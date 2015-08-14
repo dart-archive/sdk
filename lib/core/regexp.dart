@@ -1156,6 +1156,39 @@ class MiniExpMatch implements Match {
   String operator[](index) => group(index);
 }
 
+class AllMatchesIterator implements Iterator<Match> {
+  int _position;
+  final _MiniExp _regexp;
+  final String _subject;
+  MiniExpMatch _current;
+
+  AllMatchesIterator(this._regexp, this._subject, this._position);
+
+  bool moveNext() {
+    if (_position > _subject.length) return false;
+    _current = _regexp._match(_subject, _position, 0);
+    if (_current == null) return false;
+    if (_current.start == _current.end) {
+      _position = _current.end + 1;
+    } else {
+      _position = _current.end;
+    }
+    return true;
+  }
+
+  MiniExpMatch get current => _current;
+}
+
+class AllMatchesIterable extends Iterable<Match> {
+  final int _position;
+  final _MiniExp _regexp;
+  final String _subject;
+
+  AllMatchesIterable(this._regexp, this._subject, this._position);
+
+  AllMatchesIterator get iterator => new AllMatchesIterator(_regexp, _subject, _position);
+}
+
 class _MiniExp implements RegExp {
   List<int> _byteCodes;
   List<int> _initialRegisterValues;
@@ -1191,17 +1224,7 @@ class _MiniExp implements RegExp {
     if (start < 0 || start > a.length) {
       throw new RangeError("Start index out of range");
     }
-    List<Match> answer = new List<Match>();
-    Match m;
-    while (start <= a.length && (m = _match(a, start, 0)) != null) {
-      if (m.start == m.end) {
-        start = m.end + 1;
-      } else {
-        start = m.end;
-      }
-      answer.add(m);
-    }
-    return answer;
+    return new AllMatchesIterable(this, a, start);
   }
 
   Match _match(String a, int startPosition, int startProgramCounter) {

@@ -65,7 +65,6 @@ int_from_environment_default_value_test: CompileTimeError
 # Regexp
 reg_exp4_test: RuntimeError
 regexp/UC16_test: Fail
-regexp/alternative-length-miscalculation_test: Fail
 regexp/alternatives_test: Fail
 regexp/assertion_test: Fail
 regexp/backreferences_test: Fail
@@ -77,7 +76,6 @@ regexp/compile-crash_test: Fail
 regexp/early-acid3-86_test: Fail
 regexp/ecma-regex-examples_test: Fail
 regexp/invalid-range-in-class_test: Fail
-regexp/issue_19193_test: RuntimeError
 regexp/lookahead_test: Fail
 regexp/malformed-escapes_test: Fail
 regexp/no-extensions_test: Fail
@@ -151,7 +149,6 @@ null_test: CompileTimeError
 num_clamp_test: RuntimeError
 num_parse_test/01: RuntimeError
 num_parse_test/none: RuntimeError
-range_error_test: RuntimeError
 safe_to_string_test: RuntimeError
 set_test: RuntimeError
 shuffle_test: CompileTimeError
@@ -160,10 +157,8 @@ splay_tree_from_iterables_test: RuntimeError
 splay_tree_test: RuntimeError
 string_buffer_test: RuntimeError
 string_fromcharcodes_test: CompileTimeError
-string_pattern_test: RuntimeError
 string_replace_all_test: RuntimeError
 string_replace_test: RuntimeError
-string_test: RuntimeError
 symbol_operator_test/03: Fail
 symbol_operator_test/none: RuntimeError
 symbol_reserved_word_test/02: CompileTimeError
@@ -175,7 +170,6 @@ symbol_reserved_word_test/09: Fail
 symbol_reserved_word_test/10: MissingCompileTimeError
 symbol_reserved_word_test/12: Fail
 symbol_test/none: Fail
-uri_file_test: RuntimeError
 
 [ ($runtime == fletchc || $runtime == fletchvm) && $arch == x64 && $mode == debug && ($clang || $asan) ]
 int_parse_radix_test/01: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
