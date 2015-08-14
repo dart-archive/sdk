@@ -7,6 +7,8 @@
 3_test: Fail
 5_test: Fail
 
+dart2js_hello_world_test: Slow, Pass
+
 # Crash reported in https://github.com/dart-lang/fletch/issues/94
 messaging_process_die_early_gc_on_delete_test: Crash, Pass, Slow # Uses -Xgc-on-delete.
 
@@ -20,3 +22,5 @@ messaging_port_lifetime_expose_gc_test: CompileTimeError # Issue(75): Driver doe
 messaging_process_die_early_gc_on_delete_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 messaging_program_gc_gc_on_delete_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 
+[ $arch != ia32 ]
+dart2js_hello_world_test: Skip  # Rather big and slow test.
