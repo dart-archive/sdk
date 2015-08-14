@@ -15,6 +15,7 @@ class ConformanceTest {
     // Expecting a snapshot of the dart service code on the command line.
     if (args.length != 1) {
       System.out.println("Usage: java ConformanceTest <snapshot>");
+      System.out.println("   or: java ConformanceTest <port>");
       System.exit(1);
     }
 
@@ -26,20 +27,34 @@ class ConformanceTest {
     FletchServiceApi.Setup();
     FletchApi.AddDefaultSharedLibrary("libfletch.so");
 
+    int port = 0;
     try {
-      // Load snapshot and start Dart code on a separate thread.
-      FileInputStream snapshotStream = new FileInputStream(args[0]);
-      int available = snapshotStream.available();
-      byte[] snapshot = new byte[available];
-      snapshotStream.read(snapshot);
-      Thread dartThread = new Thread(new SnapshotRunner(snapshot));
+      port = Integer.parseInt(args[0]);
+    } catch (NumberFormatException e) {
+      // Since the argument is not a number we expect it to be the snapshot.
+    }
+
+    if (port > 0) {
+      System.out.println(
+          "Waiting for debugger connection on localhost:" + port);
+      Thread dartThread = new Thread(new DebugRunner(port));
       dartThread.start();
-    } catch (FileNotFoundException e) {
-      System.err.println("Failed loading snapshot");
-      System.exit(1);
-    } catch (IOException e) {
-      System.err.println("Failed loading snapshot");
-      System.exit(1);
+    } else {
+      try {
+        // Load snapshot and start Dart code on a separate thread.
+        FileInputStream snapshotStream = new FileInputStream(args[0]);
+        int available = snapshotStream.available();
+        byte[] snapshot = new byte[available];
+        snapshotStream.read(snapshot);
+        Thread dartThread = new Thread(new SnapshotRunner(snapshot));
+        dartThread.start();
+      } catch (FileNotFoundException e) {
+        System.err.println("Failed loading snapshot");
+        System.exit(1);
+      } catch (IOException e) {
+        System.err.println("Failed loading snapshot");
+        System.exit(1);
+      }
     }
 
     // Run conformance tests.

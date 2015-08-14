@@ -20,12 +20,15 @@ FLETCH_BUILD=ReleaseX64
 FLETCH_DIR=$(abspath ../../../..)
 FLETCH_BUILD_DIR=$(abspath ${FLETCH_DIR}/out/${FLETCH_BUILD})
 
-all: ConformanceTest.class SnapshotRunner.class fletch/ConformanceService.jar jni/libfletch.${PLATFORM_LIB_SUFFIX} conformance.snapshot
+all: ConformanceTest.class SnapshotRunner.class DebugRunner.class fletch/ConformanceService.jar jni/libfletch.${PLATFORM_LIB_SUFFIX} conformance.snapshot
 
 ConformanceTest.class: ConformanceTest.java
 	javac $<
 
 SnapshotRunner.class: SnapshotRunner.java
+	javac $<
+
+DebugRunner.class: DebugRunner.java
 	javac $<
 
 fletch/ConformanceService.jar: fletch/AgeStatsBuilder.class fletch/AgeStats.class fletch/ConformanceService.class fletch/ConsBuilder.class fletch/Cons.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/LargeBuilder.class fletch/Large.class fletch/NodeBuilder.class fletch/Node.class fletch/PersonBoxBuilder.class fletch/PersonBox.class fletch/PersonBuilder.class fletch/Person.class fletch/PersonList.class fletch/PersonListBuilder.class fletch/Reader.class fletch/ListReader.class fletch/MessageReader.class fletch/Segment.class fletch/SmallBuilder.class fletch/Small.class fletch/Uint8List.class fletch/Uint8ListBuilder.class fletch/BuilderSegment.class fletch/Builder.class fletch/MessageBuilder.class
@@ -125,7 +128,13 @@ conformance.snapshot: ../conformance_service_impl.dart
 	cd ${FLETCH_DIR}; ${FLETCH_BUILD_DIR}/fletch compile-and-run -o ${THIS_DIR}$@ ${THIS_DIR}$<
 
 test: all
+	LD_LIBRARY_PATH=jni \
 	java -Djava.library.path=jni -ea -cp fletch/ConformanceService.jar:. ConformanceTest conformance.snapshot
+
+PORT=8123
+debug: all
+	LD_LIBRARY_PATH=jni \
+	java -Djava.library.path=jni -ea -cp fletch/ConformanceService.jar:. ConformanceTest $(PORT)
 
 clean:
 	rm -f fletch/*.class fletch/ConformanceService.jar jni/*.o jni/*.so jni/*.jnilib *.class conformance.snapshot

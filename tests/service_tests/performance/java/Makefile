@@ -69,7 +69,8 @@ performance.snapshot: ../performance_service_impl.dart
 	${FLETCH_BUILD_DIR}/fletch $< --out=$@
 
 test: all
-	LD_LIBRARY_PATH=jni java -cp fletch/PerformanceService.jar:. PerformanceTest performance.snapshot
+	LD_LIBRARY_PATH=jni \
+	java -Djava.library.path=jni -cp fletch/PerformanceService.jar:. PerformanceTest performance.snapshot
 
 clean:
 	rm -f fletch/*.class fletch/PerformanceService.jar jni/*.o jni/*.so *.class performance.snapshot
