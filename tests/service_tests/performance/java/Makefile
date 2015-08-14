@@ -2,75 +2,98 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-INCLUDES=-I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux
-CPPFLAGS=-fPIC -I../../../../include ${INCLUDES}
-FLETCH_BUILD_DIR=../../../../out/ReleaseX64
+UNAME := $(shell uname)
 
-all: PerformanceTest.class SnapshotRunner.class fletch/PerformanceService.jar jni/libfletch.so performance.snapshot
+ifeq ($(UNAME), Linux)
+PLATFORM_INCLUDES=-I${JAVA_HOME}/include/linux
+PLATFORM_LIB_SUFFIX=so
+endif
+
+ifeq ($(UNAME), Darwin)
+PLATFORM_INCLUDES=-I${JAVA_HOME}/include/darwin
+PLATFORM_LIB_SUFFIX=jnilib
+endif
+
+ARCH=64
+FLETCH_BUILD=ReleaseX64
+
+CPPFLAGS=-m${ARCH} -fPIC -I../../../../include -I${JAVA_HOME}/include ${PLATFORM_INCLUDES}
+THIS_DIR=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+FLETCH_DIR=$(abspath ../../../..)
+FLETCH_BUILD_DIR=$(abspath ${FLETCH_DIR}/out/${FLETCH_BUILD})
+
+JAR=${JAVA_HOME}/bin/jar
+JAVA=${JAVA_HOME}/bin/java
+JAVAC=${JAVA_HOME}/bin/javac
+
+all: PerformanceTest.class SnapshotRunner.class fletch/PerformanceService.jar jni/libfletch.${PLATFORM_LIB_SUFFIX} performance.snapshot
 
 PerformanceTest.class: PerformanceTest.java
-	javac $<
+	$(JAVAC) $<
 
 SnapshotRunner.class: SnapshotRunner.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/PerformanceService.jar: fletch/PerformanceService.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/Reader.class fletch/Builder.class fletch/BuilderSegment.class fletch/ListBuilder.class fletch/ListReader.class fletch/Segment.class fletch/MessageReader.class fletch/MessageBuilder.class fletch/TreeNode.class fletch/TreeNodeList.class fletch/TreeNodeListBuilder.class fletch/TreeNodeBuilder.class
-	jar cvf $@ $^
+	$(JAR) cvf $@ $^
 
 fletch/PerformanceService.class: fletch/PerformanceService.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/FletchApi.class: fletch/FletchApi.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/FletchServiceApi.class: fletch/FletchServiceApi.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/Builder.class: fletch/Builder.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/BuilderSegment.class: fletch/BuilderSegment.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/Reader.class: fletch/Reader.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/ListReader.class: fletch/ListReader.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/ListBuilder.class: fletch/ListBuilder.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/MessageBuilder.class: fletch/MessageBuilder.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/Segment.class: fletch/Segment.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/MessageReader.class: fletch/MessageReader.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/TreeNode.class: fletch/TreeNode.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/TreeNodeList.class: fletch/TreeNodeList.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/TreeNodeListBuilder.class: fletch/TreeNodeListBuilder.java
-	javac $<
+	$(JAVAC) $<
 
 fletch/TreeNodeBuilder.class: fletch/TreeNodeBuilder.java
-	javac $<
+	$(JAVAC) $<
 
 jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/performance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
-	g++ -shared -o $@ $^
+	g++ -m${ARCH} -shared -o $@ $^
+
+jni/libfletch.jnilib: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/performance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
+	g++ -m${ARCH} -framework CoreFoundation -shared -o $@ $^
 
 performance.snapshot: ../performance_service_impl.dart
-	${FLETCH_BUILD_DIR}/fletch $< --out=$@
+	cd ${FLETCH_DIR}; ${FLETCH_BUILD_DIR}/fletch compile-and-run -o ${THIS_DIR}$@ ${THIS_DIR}$<
 
 test: all
 	LD_LIBRARY_PATH=jni \
-	java -Djava.library.path=jni -cp fletch/PerformanceService.jar:. PerformanceTest performance.snapshot
+	$(JAVA) -Djava.library.path=jni -cp fletch/PerformanceService.jar:. PerformanceTest performance.snapshot
 
 clean:
-	rm -f fletch/*.class fletch/PerformanceService.jar jni/*.o jni/*.so *.class performance.snapshot
+	rm -f fletch/*.class fletch/PerformanceService.jar jni/*.o jni/*.so jni/*.jnilib *.class performance.snapshot
