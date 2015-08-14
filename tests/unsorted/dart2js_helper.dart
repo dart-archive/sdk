@@ -15,7 +15,7 @@ final mainScriptUri = new Uri(
     scheme: "org.dartlang.fletch",
     path: "/main.dart");
 
-void run(Uri uri, String mainScript) {
+void run(Uri uri, String mainScript, bool isServer) {
 
   void diagnosticHandler(
       Uri uri, int begin, int end, String message, Diagnostic kind) {
@@ -55,7 +55,7 @@ void run(Uri uri, String mainScript) {
       new Uri(path: 'package/'),
       compilerInputProvider,
       diagnosticHandler,
-      [],
+      isServer ? ['--categories=Server'] : [],
       compilerOutputProvider).then((result) {
     Expect.isTrue(result.isSuccess);
     Expect.isTrue(hasOutput);
@@ -63,10 +63,10 @@ void run(Uri uri, String mainScript) {
   });
 }
 
-void compileUri(Uri uri) {
-  run(uri, null);
+void compileUri(Uri uri, {bool isServer : false}) {
+  run(uri, null, isServer);
 }
 
-void compileScript(String script) {
-  run(mainScriptUri, script);
+void compileScript(String script, {bool isServer : false}) {
+  run(mainScriptUri, script, isServer);
 }
