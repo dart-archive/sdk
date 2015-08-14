@@ -153,9 +153,7 @@ Process::Process(Program* program)
       process_list_next_(NULL),
       process_list_prev_(NULL),
       errno_cache_(0),
-      debug_info_(NULL),
-      block_count_(0),
-      blocked_(NULL) {
+      debug_info_(NULL) {
   Array* static_fields = program->static_fields();
   int length = static_fields->length();
   statics_ = Array::cast(NewArray(length));

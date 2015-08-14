@@ -169,7 +169,7 @@ NATIVE(PortSendExit) {
       port_process->EnqueueExit(process, port, message);
     }
 
-    return TargetYieldResult(port, true, false).AsObject();
+    return TargetYieldResult(port, true).AsObject();
   }
 
   port->Unlock();

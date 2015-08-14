@@ -554,8 +554,7 @@ Interpreter::InterruptKind Engine::Interpret(
       if (result != null) {
         SaveState();
         *target_yield_result = TargetYieldResult(result);
-        ASSERT((*target_yield_result).IsBlocked() ||
-               (*target_yield_result).port()->IsLocked());
+        ASSERT((*target_yield_result).port()->IsLocked());
         return Interpreter::kTargetYield;
       }
     }

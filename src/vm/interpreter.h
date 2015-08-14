@@ -23,26 +23,20 @@ class TargetYieldResult {
   explicit TargetYieldResult(const Object* object)
       : value_(reinterpret_cast<uword>(object)) { }
 
-  TargetYieldResult(Port* port, bool terminate, bool blocked)
+  TargetYieldResult(Port* port, bool terminate)
       : value_(reinterpret_cast<uword>(port) |
-               Terminate::encode(terminate) |
-               Blocked::encode(blocked)) { }
+               Terminate::encode(terminate)) { }
 
   bool ShouldTerminate() const { return Terminate::decode(value_); }
 
-  bool IsBlocked() const { return Blocked::decode(value_); }
-
   Port* port() const {
-    return reinterpret_cast<Port*>(value_ &
-                                   ~Terminate::mask() &
-                                   ~Blocked::mask());
+    return reinterpret_cast<Port*>(value_ & ~Terminate::mask());
   }
 
   Object* AsObject() const { return reinterpret_cast<Object*>(value_); }
 
  private:
   class Terminate : public BoolField<0> {};
-  class Blocked : public BoolField<1> {};
 
   uword value_;
 };
@@ -66,7 +60,7 @@ class Interpreter {
   explicit Interpreter(Process* process)
       : process_(process),
         interruption_(kReady),
-        target_yield_result_(NULL, false, false) { }
+        target_yield_result_(NULL, false) { }
 
   // Run the Process until interruption.
   void Run();

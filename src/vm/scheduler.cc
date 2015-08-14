@@ -317,31 +317,8 @@ bool Scheduler::Run() {
 
 void Scheduler::ExitAtTermination(Process* process,
                                   ThreadState* thread_state) {
-  Process* blocked = process->blocked();
   Program* program = process->program();
-
   program->DeleteProcess(process);
-  // Don't unblock until 'process' is deleted, to make sure all references to
-  // 'blocked's heap are gone.
-  if (blocked != NULL && blocked->DecrementBlocked()) {
-    // For Process.divide, we cannot deal with the merging of heap in Dart code
-    // in the parent process. That can lead to GC of the parent process before
-    // all child process heaps have been merged in. The child heaps that have
-    // not been merged in can then have stale pointers to immutable objects
-    // in the parent heap. Therefore, we have to explicitly take all child
-    // heaps before we allow the parent to return to Dart code.
-    blocked->TakeChildHeaps();
-    blocked->ChangeState(Process::kBlocked, Process::kReady);
-
-    // If this function is called from [Scheduler::InterpretProcess] we can
-    // enqueue directly (since we are guaranteed that the program is not
-    // stopped yet).
-    if (thread_state != NULL && program == blocked->program()) {
-      EnqueueOnAnyThread(blocked, thread_state->thread_id() + 1);
-    } else {
-      EnqueueOnAnyThreadSafe(blocked);
-    }
-  }
 
   if (Flags::gc_on_delete) {
     ASSERT(gc_thread_ != NULL);
@@ -625,20 +602,6 @@ Process* Scheduler::InterpretProcess(Process* process,
 
   if (interpreter.IsTargetYielded()) {
     TargetYieldResult result = interpreter.target_yield_result();
-
-    // If the process became blocked, change state to blocked and decrement to
-    // guarding increment, and resume if completed.
-    if (result.IsBlocked()) {
-      process->ChangeState(Process::kRunning, Process::kBlocked);
-      if (process->DecrementBlocked()) {
-        // If the blocked process is resumed now, continue with it but
-        // merge in all child heaps before doing so.
-        process->TakeChildHeaps();
-        process->ChangeState(Process::kBlocked, Process::kRunning);
-        return process;
-      }
-      return NULL;
-    }
 
     // The returned port currently has the lock. Unlock as soon as we know the
     // process is not kRunning (ChangeState either succeeded or failed).

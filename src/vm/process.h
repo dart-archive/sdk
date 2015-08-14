@@ -70,7 +70,6 @@ class Process {
     kBreakPoint,
     kCompileTimeError,
     kUncaughtException,
-    kBlocked,
     kTerminated,
   };
 
@@ -249,19 +248,6 @@ class Process {
   void StoreErrno();
   void RestoreErrno();
 
-  void IncrementBlocked() {
-    ++block_count_;
-  }
-
-  bool DecrementBlocked() {
-    return (--block_count_) == 0;
-  }
-
-  bool IsBlocked() const { return block_count_ > 0; }
-
-  void set_blocked(Process* value) { blocked_ = value; }
-  Process* blocked() const { return blocked_; }
-
   RandomLCG* random() { return &random_; }
 
   StoreBuffer* store_buffer() { return &store_buffer_; }
@@ -347,9 +333,6 @@ class Process {
 
   DebugInfo* debug_info_;
 
-  Atomic<int> block_count_;
-  Process* blocked_;
-
 #ifdef DEBUG
   bool true_then_false_;
 #endif
@@ -372,7 +355,7 @@ inline LookupCache::Entry* Process::LookupEntry(Object* receiver,
 }
 
 inline bool Process::ChangeState(State from, State to) {
-  if (from == kRunning || from == kYielding || from == kBlocked) {
+  if (from == kRunning || from == kYielding) {
     ASSERT(thread_state_ == NULL);
     ASSERT(state_ == from);
     state_ = to;

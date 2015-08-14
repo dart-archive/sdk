@@ -278,13 +278,42 @@ class Process {
    * The function [fn] must be a top-level or static function.
    */
   static List divide(fn(argument), List arguments) {
-    // TODO(ajohnsen): Type check arguments.
+    if (fn == null) {
+      throw new ArgumentError.notNull("fn");
+    }
+    if (!isImmutable(fn)) {
+      throw new ArgumentError.value(
+          fn, "fn", "Closure passed to Process.divide must be immutable.");
+    }
+    if (arguments == null) {
+      throw new ArgumentError.notNull("arguments");
+    }
+
     int length = arguments.length;
+    for (int i = 0; i < length; i++) {
+      if (!isImmutable(arguments[i])) {
+        throw new ArgumentError.value(
+            arguments[i], "@$i",
+            "Cannot pass mutable arguments to subprocess via Process.divide.");
+      }
+    }
+
     List channels = new List(length);
     for (int i = 0; i < length; i++) {
       channels[i] = new Channel();
+
+      final argument = arguments[i];
+      final port = new Port(channels[i]);
+      Process.spawn(() {
+        try {
+          Process.exit(value: fn(argument), to: port);
+        } finally {
+          // TODO(kustermann): Handle error properly. Once we do this, we can
+          // remove the 'fn == null' check above.
+          Process.exit(to: port);
+        }
+      });
     }
-    _divide(_entryDivide, fn, channels, arguments);
     for (int i = 0; i < length; i++) {
       channels[i] = channels[i].receive();
     }
@@ -316,31 +345,6 @@ class Process {
   // Low-level helper function for spawning.
   @fletch.native static void _spawn(Function entry, Function fn, argument) {
     throw new ArgumentError();
-  }
-
-  // Low-level entry for dividing processes.
-  static void _entryDivide(fn, port, argument) {
-    try {
-      Process.exit(value: fn(argument), to: port);
-    } finally {
-      // TODO(ajohnsen): Handle exceptions?
-      Process.exit(to: port);
-    }
-  }
-
-  // Low-level helper function for dividing.
-  @fletch.native static _divide(
-      Function entry,
-      Function fn,
-      List<Port> ports,
-      List arguments) {
-    for (int i = 0; i < arguments.length; i++) {
-      if (!isImmutable(arguments[i])) {
-        throw new ArgumentError.value(
-            arguments[i], "@$i", "Cannot pass mutable data");
-      }
-    }
-    throw new ArgumentError.value(fn, "fn", "Entry function must be static");
   }
 
   static void _handleMessages() {
