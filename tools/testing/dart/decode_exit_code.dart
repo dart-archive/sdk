@@ -18,6 +18,7 @@ import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
 
 abstract class DecodeExitCode {
   int get exitCode;
+  bool get hasTimedOut;
 
   Expectation decodeExitCode() {
     switch (exitCode) {
@@ -36,8 +37,11 @@ abstract class DecodeExitCode {
       case MEMORY_LEAK_EXITCODE:
         return Expectation.MEMORY_LEAK;
 
+      case -15:
+        return hasTimedOut ? Expectation.TIMEOUT : Expectation.CRASH;
+
       default:
-        return Expectation.FAIL;
+        return exitCode < 0 ? Expectation.CRASH : Expectation.FAIL;
     }
   }
 
