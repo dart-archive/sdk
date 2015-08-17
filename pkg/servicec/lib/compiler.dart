@@ -8,12 +8,19 @@ import 'dart:io';
 
 import 'errors.dart';
 
-void compile(String path, {String outputDirectory}) {
+import 'targets.dart' show
+    Target;
+
+void compile(String path, [String outputDirectory, Target target]) {
   String input = new File(path).readAsStringSync();
-  compileInput(input, path, outputDirectory: outputDirectory);
+  compileInput(input, path, outputDirectory, target);
 }
 
-void compileInput(String input, String path, {String outputDirectory}) {
+void compileInput(
+    String input,
+    String path,
+    [String outputDirectory,
+     Target target]) {
   if (input.isEmpty)
     throw new UndefinedServiceError(path);
 }
