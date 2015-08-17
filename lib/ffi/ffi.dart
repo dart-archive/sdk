@@ -19,6 +19,7 @@ class Foreign {
 
   static const int LINUX   = 1;
   static const int MACOS   = 2;
+  static const int ANDROID = 3;
 
   static const int IA32    = 1;
   static const int X64     = 2;

@@ -29,6 +29,7 @@ abstract class AddrInfo extends Struct {
     switch (Foreign.platform) {
       case Foreign.LINUX: return new LinuxAddrInfo();
       case Foreign.MACOS: return new MacOSAddrInfo();
+      case Foreign.ANDROID: return new AndroidAddrInfo();
       default:
         throw "Unsupported platform for dart:io";
     }
@@ -38,6 +39,7 @@ abstract class AddrInfo extends Struct {
     switch (Foreign.platform) {
       case Foreign.LINUX: return new LinuxAddrInfo.fromAddress(address);
       case Foreign.MACOS: return new MacOSAddrInfo.fromAddress(address);
+      case Foreign.ANDROID: return new AndroidAddrInfo.fromAddress(address);
       default:
         throw "Unsupported platform for dart:io";
     }

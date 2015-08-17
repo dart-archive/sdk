@@ -29,6 +29,7 @@ class Platform {
     kUnknownOS = 0,
     kLinux     = 1,
     kMacOS     = 2,
+    kAndroid   = 3,
   };
 
   enum Architecture {
@@ -76,7 +77,9 @@ class Platform {
   static int GetLocalTimeZoneOffset();
 
   static OperatingSystem OS() {
-#if defined(__linux__)
+#if defined(__ANDROID__)
+    return kAndroid;
+#elif defined(__linux__)
     return kLinux;
 #elif defined(__APPLE__)
     return kMacOS;

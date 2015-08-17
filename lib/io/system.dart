@@ -11,6 +11,7 @@ import 'dart:typed_data';
 
 import 'dart:_fletch_system' as fletch;
 
+part 'system_android.dart';
 part 'system_linux.dart';
 part 'system_macos.dart';
 part 'system_posix.dart';
@@ -38,8 +39,11 @@ final System sys = getSystem();
 
 System getSystem() {
   switch (Foreign.platform) {
-    case Foreign.LINUX: return new LinuxSystem();
-    case Foreign.MACOS: return new MacOSSystem();
+    case Foreign.ANDROID:
+    case Foreign.LINUX:
+      return new LinuxSystem();
+    case Foreign.MACOS:
+      return new MacOSSystem();
     default:
       throw "Unsupported system for dart:io";
   }
