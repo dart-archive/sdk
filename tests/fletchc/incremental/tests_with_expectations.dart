@@ -1768,6 +1768,7 @@ main() {
   r'''
 generic_types_001
 ==> main.dart.patch <==
+// Test removing a generic class.
 <<<< []
 class A<T> {
 }
@@ -1781,6 +1782,64 @@ main() {
   new A();
 ====
 >>>>
+}
+''',
+
+  r'''
+generic_types_002
+==> main.dart.patch <==
+// Test adding a generic class.
+<<<< []
+==== {"messages":[],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
+// instead
+class A<T> {
+}
+>>>>
+
+main() {
+<<<<
+====
+  new A();
+>>>>
+}
+''',
+
+  r'''
+generic_types_003
+==> main.dart.patch <==
+// Test adding type variables to a class.
+<<<< []
+class A {
+}
+==== {"messages":[],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
+// instead
+class A<T> {
+}
+>>>>
+
+main() {
+  new A();
+}
+''',
+
+  r'''
+generic_types_004
+==> main.dart.patch <==
+// Test removing type variables from a class.
+<<<< []
+class A<T> {
+}
+==== {"messages":[],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
+// instead
+class A {
+}
+>>>>
+
+main() {
+  new A();
 }
 ''',
 

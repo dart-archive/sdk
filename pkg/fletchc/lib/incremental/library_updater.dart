@@ -435,6 +435,8 @@ class LibraryUpdater extends FletchFeatures {
   bool canReuseScopeContainerElement(
       ScopeContainerElement element,
       ScopeContainerElement newElement) {
+    if (checkForGenericTypes(element)) return false;
+    if (checkForGenericTypes(newElement)) return false;
     List<Difference> differences = computeDifference(element, newElement);
     logTime('Differences computed.');
     for (Difference difference in differences) {
@@ -620,21 +622,56 @@ class LibraryUpdater extends FletchFeatures {
     updates.add(new RemovedFieldUpdate(compiler, element));
   }
 
+  /// Returns true if [element] has generic types (or if we cannot rule out
+  /// that it has generic types).
+  bool checkForGenericTypes(Element element) {
+    if (element is TypeDeclarationElement) {
+      if (!element.isResolved) {
+        if (element is PartialClassElement) {
+          ClassNode node = element.parseNode(compiler).asClassNode();
+          if (node == null) {
+            cannotReuse(
+                element, "Class body isn't a ClassNode on $element");
+            return true;
+          }
+          bool isGeneric =
+              node.typeParameters != null && !node.typeParameters.isEmpty;
+          if (isGeneric) {
+            // TODO(ahe): Support generic types.
+            cannotReuse(
+                element,
+                "Type variables not supported: '${node.typeParameters}'");
+            return true;
+          }
+        } else {
+          cannotReuse(
+              element, "Can't check for generic types on $element");
+          return true;
+        }
+      } else if (!element.thisType.isRaw) {
+        cannotReuse(
+            element, "Generic types not supported: '${element.thisType}'");
+        return true;
+      }
+    }
+    return false;
+  }
+
   void invalidateScopesAffectedBy(
       ElementX element,
       /* ScopeContainerElement */ container) {
+    if (checkForGenericTypes(element)) return;
     for (ScopeContainerElement scope in scopesAffectedBy(element, container)) {
       scanSites(scope, (Element member, DeclarationSite site) {
         // TODO(ahe): Cache qualifiedNamesIn to avoid quadratic behavior.
         Set<String> names = qualifiedNamesIn(site);
         if (canNamesResolveStaticallyTo(names, element, container)) {
+          if (checkForGenericTypes(member)) return;
           if (member is TypeDeclarationElement) {
             if (!member.isResolved) {
-              cannotReuse(element, "Not resolved");
-              return;
-            }
-            if (!member.thisType.isRaw) {
-              cannotReuse(element, "Generic types not supported yet");
+              // TODO(ahe): This is a bug in dart2js' forgetElement which
+              // attempts to check if member is a generic type.
+              cannotReuse(member, "Not resolved");
               return;
             }
           }
@@ -718,7 +755,7 @@ class LibraryUpdater extends FletchFeatures {
     if (body == null) {
       return cannotReuse(after, "Class has no body.");
     }
-    if (isTokenBetween(diffToken, node.beginToken, body.beginToken)) {
+    if (isTokenBetween(diffToken, node.beginToken, body.beginToken.next)) {
       logVerbose('Class header modified in ${after}');
       updates.add(new ClassUpdate(compiler, before, after));
       before.forEachLocalMember((ElementX member) {
@@ -729,6 +766,8 @@ class LibraryUpdater extends FletchFeatures {
     return canReuseScopeContainerElement(before, after);
   }
 
+  /// Returns true if [token] is found between [first] (included) and [last]
+  /// (excluded).
   bool isTokenBetween(Token token, Token first, Token last) {
     Token current = first;
     while (current != last && current.kind != EOF_TOKEN) {
