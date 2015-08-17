@@ -201,9 +201,9 @@ struct ListPatchData {
 
 // TODO(zerny): Support lists of primitives.
 struct ListRegionData {
-  uint32 index;
+  int32 index;
   union {
-    uint32 remove;
+    int32 remove;
     List<NodeData> insert;
     List<NodePatchData> update;
   }

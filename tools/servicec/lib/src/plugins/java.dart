@@ -348,8 +348,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'uint8'   : 'segment.getUnsigned',
     'uint16'  : 'segment.getUnsignedChar',
-    'uint32'  : 'segment.getUnsignedInt',
-    'uint64'  : 'segment.buffer().getLong',
 
     'int8'    : 'segment.buffer().get',
     'int16'   : 'segment.buffer().getShort',
@@ -365,8 +363,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'uint8'   : 'segment.buffer().put',
     'uint16'  : 'segment.buffer().putChar',
-    'uint32'  : 'segment.buffer().putInt',
-    'uint64'  : 'segment.buffer().putLong',
 
     'int8'    : 'segment.buffer().put',
     'int16'   : 'segment.buffer().putShort',
@@ -382,8 +378,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'uint8'    : 'byte',
     'uint16'   : 'char',
-    'uint32'   : 'int',
-    'uint64_t' : 'long',
 
     'int8'     : 'byte',
     'int16'    : 'char',
@@ -404,8 +398,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'uint8'   : 'int',
     'uint16'  : 'int',
-    'uint32'  : 'int',
-    'uint64'  : 'long',
 
     'int8'    : 'int',
     'int16'   : 'int',
@@ -421,8 +413,6 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     'uint8'   : 'int',
     'uint16'  : 'int',
-    'uint32'  : 'int',
-    'uint64'  : 'long',
 
     'int8'    : 'int',
     'int16'   : 'int',
@@ -1115,7 +1105,6 @@ class _JniVisitor extends CcVisitor {
 
     'uint8' : 'jboolean',
     'uint16' : 'jchar',
-    // TODO(ager): uint32 and uint64.
 
     'int8' : 'jbyte',
     'int16' : 'jshort',
@@ -1147,7 +1136,6 @@ class _JniVisitor extends CcVisitor {
 
     'uint8' : 'Z',
     'uint16' : 'C',
-    // TODO(ager): uint32 and uint64.
 
     'int8' : 'B',
     'int16' : 'S',

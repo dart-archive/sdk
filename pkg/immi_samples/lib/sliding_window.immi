@@ -11,20 +11,20 @@ node SlidingWindow {
   List<Node> window;
 
   // Offset of the window start from the original list.
-  uint32 startOffset;
+  int32 startOffset;
 
   // Offset of the first sliding-window item in the window.
   uint16 windowOffset;
 
   // Number of items known to be in the list.
-  uint32 minimumCount;
+  int32 minimumCount;
 
   // Number of items in the list. A negative value denotes an unknown size.
   int32 maximumCount;
 
   // Event to update the sliding-window display range.
-  void display(uint32 start, uint32 end);
+  void display(int32 start, int32 end);
 
   // Event to toggle an item in the window.
-  void toggle(uint32 index);
+  void toggle(int32 index);
 }

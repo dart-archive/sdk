@@ -10,8 +10,6 @@ enum PrimitiveType {
 
   UINT8,
   UINT16,
-  UINT32,
-  UINT64,
 
   INT8,
   INT16,
@@ -34,12 +32,10 @@ int size(PrimitiveType type) {
     case PrimitiveType.UINT16: return 2;
 
     case PrimitiveType.FLOAT32:
-    case PrimitiveType.INT32:
-    case PrimitiveType.UINT32: return 4;
+    case PrimitiveType.INT32: return 4;
 
     case PrimitiveType.FLOAT64:
-    case PrimitiveType.INT64:
-    case PrimitiveType.UINT64: return 8;
+    case PrimitiveType.INT64: return 8;
   }
   return -1;
 }
@@ -51,8 +47,6 @@ PrimitiveType lookup(String identifier) {
 
     'uint8'   : PrimitiveType.UINT8,
     'uint16'  : PrimitiveType.UINT16,
-    'uint32'  : PrimitiveType.UINT32,
-    'uint64'  : PrimitiveType.UINT64,
 
     'int8'    : PrimitiveType.INT8,
     'int16'   : PrimitiveType.INT16,

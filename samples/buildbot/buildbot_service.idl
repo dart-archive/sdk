@@ -108,10 +108,10 @@ struct CommitListPatchData {
 }
 
 struct CommitListUpdatePatchData {
-  uint32 index;
+  int32 index;
   union {
     List<CommitNodeData> insert;
     List<CommitPatchData> patch;
-    uint32 remove;
+    int32 remove;
   }
 }

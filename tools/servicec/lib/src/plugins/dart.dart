@@ -54,8 +54,6 @@ class _DartVisitor extends CodeGenerationVisitor {
 
     'uint8'   : 'getUint8',
     'uint16'  : 'getUint16',
-    'uint32'  : 'getUint32',
-    'uint64'  : 'getUint64',
 
     'int8'    : 'getInt8',
     'int16'   : 'getInt16',
@@ -71,8 +69,6 @@ class _DartVisitor extends CodeGenerationVisitor {
 
     'uint8'   : 'setUint8',
     'uint16'  : 'setUint16',
-    'uint32'  : 'setUint32',
-    'uint64'  : 'setUint64',
 
     'int8'    : 'setInt8',
     'int16'   : 'setInt16',
@@ -451,8 +447,6 @@ class _DartVisitor extends CodeGenerationVisitor {
 
     'uint8'   : 'int',
     'uint16'  : 'int',
-    'uint32'  : 'int',
-    'uint64'  : 'int',
 
     'int8'    : 'int',
     'int16'   : 'int',

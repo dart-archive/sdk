@@ -449,8 +449,6 @@ class ${serviceImplName} extends ${serviceName} {
 
     'uint8'   : 'int',
     'uint16'  : 'int',
-    'uint32'  : 'int',
-    'uint64'  : 'int',
 
     'int8'    : 'int',
     'int16'   : 'int',

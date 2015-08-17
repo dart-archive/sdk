@@ -286,8 +286,8 @@ class CommitListUpdatePatchData : public Reader {
   bool isPatch() const { return 2 == getTag(); }
   List<CommitPatchData> getPatch() const { return ReadList<CommitPatchData>(0); }
   bool isRemove() const { return 3 == getTag(); }
-  uint32_t getRemove() const { return *PointerTo<uint32_t>(0); }
-  uint32_t getIndex() const { return *PointerTo<uint32_t>(8); }
+  int32_t getRemove() const { return *PointerTo<int32_t>(0); }
+  int32_t getIndex() const { return *PointerTo<int32_t>(8); }
   uint16_t getTag() const { return *PointerTo<uint16_t>(12); }
 };
 
@@ -302,8 +302,8 @@ class CommitListUpdatePatchDataBuilder : public Builder {
 
   List<CommitNodeDataBuilder> initInsert(int length);
   List<CommitPatchDataBuilder> initPatch(int length);
-  void setRemove(uint32_t value) { setTag(3); *PointerTo<uint32_t>(0) = value; }
-  void setIndex(uint32_t value) { *PointerTo<uint32_t>(8) = value; }
+  void setRemove(int32_t value) { setTag(3); *PointerTo<int32_t>(0) = value; }
+  void setIndex(int32_t value) { *PointerTo<int32_t>(8) = value; }
   void setTag(uint16_t value) { *PointerTo<uint16_t>(12) = value; }
 };
 

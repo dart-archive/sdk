@@ -174,8 +174,6 @@ class List<T> : public PrimitiveList<T> {                \
 
 PRIMITIVE_LIST(uint8_t)
 PRIMITIVE_LIST(uint16_t)
-PRIMITIVE_LIST(uint32_t)
-PRIMITIVE_LIST(uint64_t)
 
 PRIMITIVE_LIST(int8_t)
 PRIMITIVE_LIST(int16_t)

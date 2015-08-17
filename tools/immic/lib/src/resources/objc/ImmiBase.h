@@ -60,18 +60,6 @@
 @property (readonly) uint16_t current;
 @end
 
-@interface Uint32Patch : NSObject <Patch>
-@property (readonly) bool changed;
-@property (readonly) uint32_t previous;
-@property (readonly) uint32_t current;
-@end
-
-@interface Uint64Patch : NSObject <Patch>
-@property (readonly) bool changed;
-@property (readonly) uint64_t previous;
-@property (readonly) uint64_t current;
-@end
-
 @interface Int8Patch : NSObject <Patch>
 @property (readonly) bool changed;
 @property (readonly) int8_t previous;

@@ -322,8 +322,8 @@ class CommitListUpdatePatchData extends Reader {
   bool get isPatch => 2 == this.tag;
   List<CommitPatchData> get patch => readList(new _CommitPatchDataList(), 0);
   bool get isRemove => 3 == this.tag;
-  int get remove => segment.memory.getUint32(offset + 0);
-  int get index => segment.memory.getUint32(offset + 8);
+  int get remove => segment.memory.getInt32(offset + 0);
+  int get index => segment.memory.getInt32(offset + 8);
   int get tag => segment.memory.getUint16(offset + 12);
 }
 
@@ -340,10 +340,10 @@ class CommitListUpdatePatchDataBuilder extends Builder {
   }
   void set remove(int value) {
     tag = 3;
-    segment.memory.setUint32(offset + 0, value);
+    segment.memory.setInt32(offset + 0, value);
   }
   void set index(int value) {
-    segment.memory.setUint32(offset + 8, value);
+    segment.memory.setInt32(offset + 8, value);
   }
   void set tag(int value) {
     segment.memory.setUint16(offset + 12, value);
