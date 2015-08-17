@@ -23,6 +23,7 @@ import 'package:compiler/src/dart2jslib.dart' show
     Script;
 
 import 'package:compiler/src/elements/elements.dart' show
+    AstElement,
     ClassElement,
     CompilationUnitElement,
     Element,
@@ -818,7 +819,11 @@ class LibraryUpdater extends FletchFeatures {
       return new FletchDelta(currentSystem, currentSystem, <Command>[]);
     }
 
-    for (Element element in updatedElements) {
+    for (AstElement element in updatedElements) {
+      if (element.node.isErroneous) {
+        throw new IncrementalCompilationFailed(
+            "Unable to incrementally compile $element with syntax error");
+      }
       if (element.isField) {
         backend.newElement(element);
       } else if (!element.isClass) {

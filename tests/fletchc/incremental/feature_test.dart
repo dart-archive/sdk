@@ -348,7 +348,11 @@ Future<TestSession> runFletchVM(
       await TestSession.spawnVm(test.incrementalCompiler);
   try {
     await session.applyDelta(fletchDelta);
-    for (Command command in fletchDelta.commands) print(command);
+    if (const bool.fromEnvironment("feature_test.print_initial_commands")) {
+      for (Command command in fletchDelta.commands) {
+        print(command);
+      }
+    }
 
     // Turn on debugging.
     await session.enableDebugger();

@@ -1744,6 +1744,27 @@ main() {
 }
 ''',
 
+r'''
+compile_time_error_006
+==> main.dart.patch <==
+<<<< "error"
+==== {"messages":[],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
+// reported instead
+test({b}) {
+  if (?b) return b;
+}
+>>>>
+main() {
+  try {
+    test(b: 2);
+  } catch (e) {
+    print("error");
+  }
+}
+
+''',
+
   r'''
 generic_types_001
 ==> main.dart.patch <==
