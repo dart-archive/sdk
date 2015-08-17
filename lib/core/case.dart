@@ -226,8 +226,8 @@ class RegExpEquivalenceClasses extends CaseTable<List<int>> {
       if (from >= min &&
           (to > lastAsciiCharCode || from <= lastAsciiCharCode)) {
         if (pageList == null) pageList = new List<List<int>>(pageSize);
-        pageList[from & pageMask] =
-            charsThatMapToEachCanonical[to] = new List<int>();
+        charsThatMapToEachCanonical.putIfAbsent(to, () => new List<int>());
+        pageList[from & pageMask] = charsThatMapToEachCanonical[to];
       }
       return true;  // Continue.
     }
@@ -245,6 +245,16 @@ class RegExpEquivalenceClasses extends CaseTable<List<int>> {
         pageList[code & pageMask] =
             charsThatMapToEachCanonical.putIfAbsent(code, () => new List<int>())
               ..add(code);
+      }
+    }
+    for (int canonical in charsThatMapToEachCanonical.keys) {
+      List<int> equivalenceClass = charsThatMapToEachCanonical[canonical];
+      // If the canonical upper case character is not in the from-to range it
+      // will not yet have been added to its own equivalence class.  Fix that.
+      // It's OK to do "contains" on this list because they are never longer
+      // than 4 elements.
+      if (!equivalenceClass.contains(canonical)) {
+        equivalenceClass.add(canonical);
       }
     }
 

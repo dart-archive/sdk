@@ -387,44 +387,40 @@ class _StringImpl implements String {
   }
 
   List<String> split(Pattern pattern) {
-    if (pattern is! String) {
-      throw new ArgumentError(
-          "String.split only accepts String patterns for now");
-    }
-    String stringPattern = pattern;
-    List<String> result = new List<String>();
     int length = this.length;
-
-    // If the pattern is empty, split all characters.
-    if (stringPattern.isEmpty) {
-      for (int i = 0; i < length; i++) result.add(this[i]);
+    if (pattern is String && pattern.isEmpty) {
+      List<String> result = new List<String>(length);
+      for (int i = 0; i < length; i++) {
+        result[i] = this[i];
+      }
       return result;
     }
-
-    // If the string is empty, return it in a list.
-    if (length == 0) return [this];
-
-    int patternLength = stringPattern.length;
-    int startIndex = 0;
-    int i = 0;
-    int limit = length - patternLength + 1;
-    while (i < limit) {
-      bool match = true;
-      for (int j = 0; j < patternLength; j++) {
-        if (codeUnitAt(i + j) != stringPattern.codeUnitAt(j)) {
-          match = false;
-          break;
-        }
-      }
-      if (match) {
-        result.add(substring(startIndex, i));
-        startIndex = i + patternLength;
-        i += patternLength;
-      } else {
-        i++;
-      }
+    Iterator iterator = pattern.allMatches(this).iterator;
+    if (length == 0 && iterator.moveNext()) {
+      // A matched empty string input returns the empty list.
+      return <String>[];
     }
-    result.add(substring(startIndex, length));
+    List<String> result = new List<String>();
+    int startIndex = 0;
+    int previousIndex = 0;
+    while (true) {
+      if (startIndex == length || !iterator.moveNext()) {
+        result.add(this.substring(previousIndex, length));
+        break;
+      }
+      Match match = iterator.current;
+      if (match.start == length) {
+        result.add(this.substring(previousIndex, length));
+        break;
+      }
+      int endIndex = match.end;
+      if (startIndex == endIndex && endIndex == previousIndex) {
+        startIndex++;  // Empty match, advance and restart.
+        continue;
+      }
+      result.add(this.substring(previousIndex, match.start));
+      startIndex = previousIndex = endIndex;
+    }
     return result;
   }
 

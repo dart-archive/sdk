@@ -147,6 +147,7 @@ const CHAR_CODE_PLUS = 43;
 const CHAR_CODE_COMMA = 44;
 const CHAR_CODE_DASH = 45;
 const CHAR_CODE_0 = 48;
+const CHAR_CODE_7 = 55;
 const CHAR_CODE_9 = 57;
 const CHAR_CODE_COLON = 58;
 const CHAR_CODE_EQUALS = 61;
@@ -164,6 +165,7 @@ const CHAR_CODE_CARET = 94;
 const CHAR_CODE_UNDERSCORE = 95;
 const CHAR_CODE_LOWER_A = 97;
 const CHAR_CODE_LOWER_B = 98;
+const CHAR_CODE_LOWER_C = 99;
 const CHAR_CODE_LOWER_D = 100;
 const CHAR_CODE_LOWER_F = 102;
 const CHAR_CODE_LOWER_N = 110;
@@ -280,13 +282,39 @@ class MiniExpCompiler {
   void processBackRefences() {
     for (BackReference b in _backReferences) {
       // 1-based index (you can't refer back to capture zero).
-      if (b.index * 2 >= captureRegisterCount) {
+      int numericIndex = int.parse(b.index);
+      if (b.index.codeUnitAt(0) == CHAR_CODE_0 ||
+          numericIndex * 2 >= captureRegisterCount) {
         // Web compatible strangeness - if the index is more than the number of
-        // captures it turns into a decimal character code escape.
-        int poolIndex = addToConstantPool(b.index);
-        b.replaceWithAtom(new Atom(poolIndex));
+        // captures it turns into an octal character code escape.
+        int codeUnit = 0;
+        int octalsFound = 0;
+        MiniExpAst replace;
+        bool nonOctalsFound = false;
+        // The first 0-3 octal digits form an octal character escape, the rest
+        // are literals.
+        for (int octalDigit in b.index.codeUnits) {
+          if (!nonOctalsFound &&
+              CHAR_CODE_0 <= octalDigit && octalDigit <= CHAR_CODE_7 &&
+              codeUnit * 8 < 0x100 && octalsFound < 3) {
+            codeUnit *= 8;
+            codeUnit += octalDigit - CHAR_CODE_0;
+            octalsFound++;
+          } else {
+            int poolIndex = addToConstantPool(octalDigit);
+            MiniExpAst atom = new Atom(poolIndex);
+            replace = (replace == null) ? atom : new Alternative(replace, atom);
+            nonOctalsFound = true;
+          }
+        }
+        if (octalsFound != 0) {
+          int poolIndex = addToConstantPool(codeUnit);
+          MiniExpAst atom = new Atom(poolIndex);
+          replace = (replace == null) ? atom : new Alternative(atom, replace);
+        }
+        b.replaceWithAst(replace);
       } else {
-        b.register = firstCaptureRegister + b.index * 2;
+        b.register = firstCaptureRegister + numericIndex * 2;
       }
     }
   }
@@ -663,6 +691,7 @@ class WordBoundary extends Assertion {
 class LookAhead extends Assertion {
   final bool _positive;
   final MiniExpAst _body;
+  List<int> _subtreeRegisters;
 
   int _savedStackPointerRegister;
   int _savedPosition;
@@ -679,6 +708,7 @@ class LookAhead extends Assertion {
     // stack will be naturally unwound.
     MiniExpLabel body_succeeded = new MiniExpLabel();
     MiniExpLabel succeed_on_failure = new MiniExpLabel();
+    MiniExpLabel undoCaptures;
     compiler.copyRegister(_savedStackPointerRegister, STACK_POINTER);
     compiler.copyRegister(_savedPosition, CURRENT_POSITION);
     if (!_positive) {
@@ -689,17 +719,43 @@ class LookAhead extends Assertion {
     compiler.bind(body_succeeded);
     compiler.copyRegister(STACK_POINTER, _savedStackPointerRegister);
     compiler.copyRegister(CURRENT_POSITION, _savedPosition);
-    if (_positive) {
-      compiler.goto(onSuccess);
-    } else {
+    if (!_positive) {
+      // For negative lookahead always zap the captures when the body succeeds
+      // and the lookahead thus fails.  The captures are only needed for any
+      // backrefs inside the negative lookahead.
+      if (_subtreeRegisters != null) {
+        for (int register in _subtreeRegisters) {
+          compiler.copyRegister(register, NO_POSITION_REGISTER);
+        }
+      }
       compiler.backtrack();
       compiler.bind(succeed_on_failure);
-      compiler.goto(onSuccess);
+    } else {
+      // For positive lookahead, the backtrack stack has been unwound, because
+      // we don't ever backtrack into a lookahead, but if we backtrack past
+      // this point we have to undo any captures that happened in there.
+      // Register a backtrack to do that before continuing.
+      if (_subtreeRegisters != null && !_subtreeRegisters.isEmpty) {
+        undoCaptures = new MiniExpLabel();
+        compiler.pushBacktrack(undoCaptures);
+      }
+    }
+
+    compiler.goto(onSuccess);
+
+    if (undoCaptures != null) {
+      compiler.bind(undoCaptures);
+      for (int register in _subtreeRegisters) {
+        compiler.copyRegister(register, NO_POSITION_REGISTER);
+      }
+      compiler.backtrack();
     }
   }
 
   MiniExpAnalysis analyze(compiler) {
-    return new MiniExpAnalysis.lookahead(_body.analyze(compiler), _positive);
+    MiniExpAnalysis bodyAnalysis = _body.analyze(compiler);
+    _subtreeRegisters = bodyAnalysis.registersToSave;
+    return new MiniExpAnalysis.lookahead(bodyAnalysis, _positive);
   }
 }
 
@@ -1087,30 +1143,34 @@ class CharClass extends MiniExpAst {
   MiniExpAnalysis analyze(compiler) => const MiniExpAnalysis.atom();
 }
 
+// This class is used for all backslashes followed by numbers.  For web
+// compatibility, if the number (interpreted as decimal) is smaller than the
+// number of captures, then it will be interpreted as a back reference.
+// Otherwise the number will be interpreted as an octal character code escape.
 class BackReference extends MiniExpAst {
-  int _backReferenceIndex;
+  String _backReferenceIndex;
   int _register;
-  Atom _atomThatReplacesUs;
+  MiniExpAst _astThatReplacesUs;
 
   BackReference(this._backReferenceIndex);
 
-  int get index => _backReferenceIndex;
+  String get index => _backReferenceIndex;
 
   void set register(int r) {
     _register = r;
   }
 
-  void replaceWithAtom(Atom atom) {
-    _atomThatReplacesUs = atom;
+  void replaceWithAst(MiniExpAst ast) {
+    _astThatReplacesUs = ast;
   }
 
   void generate(MiniExpCompiler compiler, MiniExpLabel onSuccess) {
-    if (_atomThatReplacesUs != null) {
-      compiler.generate(_atomThatReplacesUs, onSuccess);
-      return;
+    if (_register == null) {
+      compiler.generate(_astThatReplacesUs, onSuccess);
+    } else {
+      compiler.backtrackOnBackReferenceFail(_register, compiler.caseSensitive);
+      compiler.goto(onSuccess);
     }
-    compiler.backtrackOnBackReferenceFail(_register, compiler.caseSensitive);
-    compiler.goto(onSuccess);
   }
 
   MiniExpAnalysis analyze(compiler) {
@@ -1231,7 +1291,9 @@ class AllMatchesIterable extends Iterable<Match> {
 
   AllMatchesIterable(this._regexp, this._subject, this._position);
 
-  AllMatchesIterator get iterator => new AllMatchesIterator(_regexp, _subject, _position);
+  AllMatchesIterator get iterator {
+    return new AllMatchesIterator(_regexp, _subject, _position);
+  }
 }
 
 class _MiniExp implements RegExp {
@@ -1245,6 +1307,7 @@ class _MiniExp implements RegExp {
   final bool isCaseSensitive;
 
   _MiniExp(this.pattern, this.isMultiLine, this.isCaseSensitive) {
+    if (pattern is! String) throw new ArgumentError();
     var compiler = new MiniExpCompiler(pattern, isCaseSensitive);
     var parser = new MiniExpParser(compiler, pattern, isMultiLine);
     MiniExpAst ast = parser.parse();
@@ -1266,6 +1329,7 @@ class _MiniExp implements RegExp {
   }
 
   Iterable<Match> allMatches(String a, [int start = 0]) {
+    if (a is! String) throw new ArgumentError();
     if (start < 0 || start > a.length) {
       throw new RangeError("Start index out of range");
     }
@@ -1273,6 +1337,7 @@ class _MiniExp implements RegExp {
   }
 
   Match _match(String a, int startPosition, int startProgramCounter) {
+    if (a is! String) throw new ArgumentError();
     List<int> registers =
         new List<int>.from(_initialRegisterValues, growable: false);
     var interpreter =
@@ -1380,7 +1445,7 @@ class MiniExpParser {
   int _lastTokenIndex;
   // Greedyness of the last single-character quantifier.
   bool _lastWasGreedy;
-  int _lastBackReferenceIndex;
+  String _lastBackReferenceIndex;
   int _minimumRepeats;
   int _maximumRepeats;
 
@@ -1435,15 +1500,24 @@ class MiniExpParser {
     }
     if (acceptToken(Token.wordBoundary)) return new WordBoundary(true);
     if (acceptToken(Token.notWordBoundary)) return new WordBoundary(false);
+    var lookaheadAst;
     if (acceptToken(Token.lookAhead)) {
-      var ast = new LookAhead(true, parseDisjunction(), _compiler);
-      expectToken(Token.rParen);
-      return ast;
+      lookaheadAst = new LookAhead(true, parseDisjunction(), _compiler);
+    } else if (acceptToken(Token.negativeLookAhead)) {
+      lookaheadAst = new LookAhead(false, parseDisjunction(), _compiler);
     }
-    if (acceptToken(Token.negativeLookAhead)) {
-      var ast = new LookAhead(false, parseDisjunction(), _compiler);
+    if (lookaheadAst != null) {
       expectToken(Token.rParen);
-      return ast;
+      // The normal syntax does not allow a quantifier here, but the web
+      // compatible one does.  Slightly nasty hack for compatibility:
+      if (peekToken(Token.quant)) {
+        MiniExpAst quant = new Quantifier(
+            _minimumRepeats, _maximumRepeats, _lastWasGreedy,
+            lookaheadAst, _compiler);
+        expectToken(Token.quant);
+        return quant;
+      }
+      return lookaheadAst;
     }
     return null;
   }
@@ -1536,6 +1610,15 @@ class MiniExpParser {
 
   MiniExpAst parseCharacterClass() {
     CharClass charClass;
+
+    void addCharCode(code) {
+      if (code < 0) {
+        charClass.addSpecial(_at(-code + 1));
+      } else {
+        charClass.add(code, code);
+      }
+    }
+
     if (_has(_position) && _at(_position) == CHAR_CODE_CARET) {
       _position++;
       charClass = new CharClass(false);
@@ -1544,6 +1627,7 @@ class MiniExpParser {
     }
     while (_has(_position)) {
       int code = _at(_position);
+      bool degenerateRange = false;
       if (code == CHAR_CODE_R_SQUARE) {
         // End of character class.  This reads the terminating square bracket.
         getToken();
@@ -1551,46 +1635,37 @@ class MiniExpParser {
       }
       // Single character or escape code representing a single character.
       code = _readCharacterClassCode();
-      // If code is -1 then we found an escape code representing several
-      // characters.
-      if (code == -1) {
-        if (!_has(_position + 1)) error("Unexpected end of regexp");
-        int code2 = _at(_position + 1);
-        charClass.addSpecial(code2);
-        _position += 2;
-        // These escape codes can't be part of a range, so move on.
+
+      // Check if there are at least 2 more characters and the next is a dash.
+      if (!_has(_position + 1) ||
+          _at(_position) != CHAR_CODE_DASH ||
+          _at(_position + 1) == CHAR_CODE_R_SQUARE) {
+        // No dash-something here, so it's not part of a range.  Add the code
+        // and move on.
+        addCharCode(code);
         continue;
       }
-      if (!_has(_position) || _at(_position) != CHAR_CODE_DASH) {
-        // No dash here, so it's not part of a range.  Add the code and
-        // move on.
-        charClass.add(code, code);
-        continue;
-      }
-      _position++;
-      if (!_has(_position)) error("Unexpected end of regexp");
-      int rawCode = _at(_position);
-      int code3 = -1;
-      if (rawCode != CHAR_CODE_R_SQUARE) {
-        code3 = _readCharacterClassCode();
-      }
-      // If we hit a raw right square or an escape that represents more than
-      // a single character then the dash is not to be interpreted as part of
-      // a range. Output the single character and the dash separately, and move
-      // on.
-      if (rawCode == CHAR_CODE_R_SQUARE || code3 == -1) {
-        charClass.add(code, code);
+      // Found a dash, try to parse a range.
+      _position++;  // Skip the dash.
+      int code2 = _readCharacterClassCode();
+      if (code < 0 || code2 < 0) {
+        // One end of the range is not a single character, so the range is
+        // degenerate.  We add either and and the dash, instead of a range.
+        addCharCode(code);
         charClass.add(CHAR_CODE_DASH, CHAR_CODE_DASH);
-        continue;
+        addCharCode(code2);
+      } else {
+        // Found a range.
+        if (code > code2) error("Character range out of order");
+        charClass.add(code, code2);
       }
-      // Found a range.
-      if (code > code3) error("Character range out of order");
-      charClass.add(code, code3);
     }
     expectToken(Token.other);  // The terminating right square bracket.
     return charClass;
   }
 
+  // Returns a character (possibly from a parsed escape) or a negative number
+  // indicating the position of a character class special \s \d or \w.
   int _readCharacterClassCode() {
     int code = _at(_position);
     if (code != CHAR_CODE_BACKSLASH) {
@@ -1602,12 +1677,27 @@ class MiniExpParser {
     int lower = (code2 | 0x20);
     if (lower == CHAR_CODE_LOWER_D || lower == CHAR_CODE_LOWER_S ||
         lower == CHAR_CODE_LOWER_W) {
-      return -1;
+      int answer = -_position;
+      _position += 2;
+      return answer;
+    }
+    if (code2 == CHAR_CODE_LOWER_C) {
+      // For web compatibility, the set of characters that can follow \c inside
+      // a character class is different from the a-zA-Z that are allowed outside
+      // a character class.
+      if (_has(_position + 2) && isBackslashCCharacter(_at(_position + 2))) {
+        _position += 3;
+        return _at(_position - 1) % 32;
+      }
+      // This makes little sense, but for web compatibility, \c followed by an
+      // invalid character is interpreted as a literal backslash, followed by
+      // the "c", etc.
+      _position++;
+      return CHAR_CODE_BACKSLASH;
     }
     if (CHAR_CODE_0 <= code2 && code2 <= CHAR_CODE_9) {
       _position++;
-      code = lexInteger();
-      return code;
+      return lexInteger(8, 0x100);
     }
     _position += 2;
     if (code2 == CHAR_CODE_LOWER_U) {
@@ -1689,7 +1779,6 @@ class MiniExpParser {
   };
 
   static const CONTROL_CHARACTERS = const {
-    CHAR_CODE_0: CHAR_CODE_NUL,
     CHAR_CODE_LOWER_B: CHAR_CODE_BACKSPACE,
     CHAR_CODE_LOWER_F: CHAR_CODE_FORM_FEED,
     CHAR_CODE_LOWER_N: CHAR_CODE_NEWLINE,
@@ -1729,6 +1818,19 @@ class MiniExpParser {
     _position++;
   }
 
+  // This may be a bug in Irregexp, but there are tests for it: \c_ and \c0
+  // work like \cc which means Control-C.  But only in character classes.
+  static bool isBackslashCCharacter(int code) {
+    if (isAsciiLetter(code)) return true;
+    if (code >= CHAR_CODE_0 && code <= CHAR_CODE_9) return true;
+    return code == CHAR_CODE_UNDERSCORE;
+  }
+
+  static bool isAsciiLetter(int code) {
+    if (code >= CHAR_CODE_UPPER_A && code <= CHAR_CODE_UPPER_Z) return true;
+    return code >= CHAR_CODE_LOWER_A && code <= CHAR_CODE_LOWER_Z;
+  }
+
   void lexBackslash() {
     if (!_has(_position + 1)) error("\\ at end of pattern");
     int nextCode = _at(_position + 1);
@@ -1740,9 +1842,20 @@ class MiniExpParser {
       _lastToken = Token.other;
       _lastTokenIndex =
           _compiler.addToConstantPool(CONTROL_CHARACTERS[nextCode]);
+    } else if (nextCode == CHAR_CODE_LOWER_C) {
+       if (_has(_position + 2) && isAsciiLetter(_at(_position + 2))) {
+         _lastToken = Token.other;
+         _lastTokenIndex = _compiler.addToConstantPool(_at(_position + 2) % 32);
+         _position += 3;
+       } else {
+         // \c_ is interpreted as a literal backslash and literal "c_".
+         _lastToken = Token.other;
+         _lastTokenIndex = _position;
+         _position++;
+       }
     } else if (onDigit(_position + 1)) {
       _position++;
-      _lastBackReferenceIndex = lexInteger();
+      _lastBackReferenceIndex = lexIntegerAsString();
       _lastToken = Token.backReference;
     } else if (nextCode == CHAR_CODE_LOWER_X || nextCode == CHAR_CODE_LOWER_U) {
       _position += 2;
@@ -1782,14 +1895,29 @@ class MiniExpParser {
     return total;
   }
 
-  int lexInteger() {
+  String lexIntegerAsString() {
+    StringBuffer b = new StringBuffer();
+    while (true) {
+      if (!_has(_position)) return b.toString();
+      int code = _at(_position);
+      if (code >= CHAR_CODE_0 && code <= CHAR_CODE_9) {
+        b.write(new String.fromCharCode(code));
+        _position++;
+      } else {
+        return b.toString();
+      }
+    }
+  }
+
+  int lexInteger(int base, int max) {
     int total = 0;
     while (true) {
       if (!_has(_position)) return total;
       int code = _at(_position);
-      if (code >= CHAR_CODE_0 && code <= CHAR_CODE_9) {
+      if (code >= CHAR_CODE_0 && code < CHAR_CODE_0 + base &&
+          (max == null || total * base < max)) {
         _position++;
-        total *= 10;
+        total *= base;
         total += code - CHAR_CODE_0;
       } else {
         return total;
@@ -1825,7 +1953,7 @@ class MiniExpParser {
         _position++;
         // We parse the repeats in the lexer.  Forms allowed are {n}, {n,}
         // and {n,m}.
-        _minimumRepeats = lexInteger();
+        _minimumRepeats = lexInteger(10, null);
         if (_has(_position)) {
           if (_at(_position) == CHAR_CODE_R_BRACE) {
             _maximumRepeats = _minimumRepeats;
@@ -1837,7 +1965,7 @@ class MiniExpParser {
                 _maximumRepeats = null;  // No maximum.
                 parsedRepeats = true;
               } else if (onDigit(_position)) {
-                _maximumRepeats = lexInteger();
+                _maximumRepeats = lexInteger(10, null);
                 if (_has(_position) &&
                     _at(_position) == CHAR_CODE_R_BRACE) {
                   parsedRepeats = true;
@@ -2086,8 +2214,8 @@ class MiniExpInterpreter {
   bool checkBackReference(
       String subject, bool caseSensitive, int registerIndex) {
     int start = _registers[registerIndex];
-    if (start == NO_POSITION) return true;
     int end = _registers[registerIndex + 1];
+    if (end == NO_POSITION) return true;
     int length = end - start;
     int currentPosition = _registers[CURRENT_POSITION];
     if (currentPosition + end - start > subject.length) return false;
