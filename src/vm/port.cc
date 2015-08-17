@@ -112,7 +112,7 @@ NATIVE(PortCreate) {
 
   Object* dart_port =
       process->NewInstance(process->program()->port_class(), true);
-  if (dart_port == Failure::retry_after_gc()) return object;
+  if (dart_port == Failure::retry_after_gc()) return dart_port;
   Instance* port_instance = Instance::cast(dart_port);
 
   Port* port = new Port(process, channel);
