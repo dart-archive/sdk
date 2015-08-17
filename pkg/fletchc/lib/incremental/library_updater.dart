@@ -694,7 +694,8 @@ class LibraryUpdater extends FletchFeatures {
     if (node.body != null) {
       last = node.body.getBeginToken();
     }
-    if (isTokenBetween(diffToken, after.beginToken, last)) {
+    if (before.isErroneous ||
+        isTokenBetween(diffToken, after.beginToken, last)) {
       removeFunction(before);
       addFunction(after, before.enclosingElement);
       return true;

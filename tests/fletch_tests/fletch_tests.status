@@ -12,6 +12,7 @@ incremental/call_named_arguments_1: Fail
 incremental/call_named_arguments_2: Fail
 incremental/change_supertype: Fail
 incremental/compile_time_error_002: Fail
+incremental/compile_time_error_005: Fail
 incremental/lazy_static: Fail
 incremental/modify_static_method: Fail
 incremental/multiple_libraries: Fail

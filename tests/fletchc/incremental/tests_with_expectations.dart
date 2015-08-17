@@ -1699,7 +1699,7 @@ main() {
 }
 ''',
 
-r'''
+  r'''
 compile_time_error_004
 ==> main.dart.patch <==
 // Reproduce a crash when a class has a bad hierarchy
@@ -1726,6 +1726,21 @@ void testA(A a) {}
 
 void main() {
   testA(null);
+}
+''',
+
+  r'''
+compile_time_error_005
+==> main.dart.patch <==
+// Regression for crash when attempting to reuse method with compile-time
+// error.
+main() {
+<<<< "Compile error"
+  var funcnuf = (x) => ((x))=((x)) <= (x);
+==== []
+  // TODO(ahe): Should expect "Hello"
+  print("Hello");
+>>>>
 }
 ''',
 
