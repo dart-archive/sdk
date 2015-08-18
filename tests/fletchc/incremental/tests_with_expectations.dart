@@ -1967,4 +1967,25 @@ main() {
 >>>>
 }
 ''',
+
+  r'''
+remove_class_with_field_and_subclass
+==> main.dart.patch <==
+<<<< []
+class A {
+  var x;
+}
+
+class B extends A {
+}
+==== []
+>>>>
+
+main() {
+<<<<
+  new B();
+====
+>>>>
+}
+''',
 ];

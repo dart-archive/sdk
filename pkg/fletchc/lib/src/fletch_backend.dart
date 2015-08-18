@@ -1345,7 +1345,9 @@ class FletchBackend extends Backend {
       queue.add(enclosingClass);
       while (queue.isNotEmpty) {
         var klass = queue.removeFirst();
-        queue.addAll(compiler.world.strictSubclassesOf(klass));
+        if (compiler.world.isInstantiated(klass.declaration)) {
+          queue.addAll(compiler.world.strictSubclassesOf(klass));
+        }
         FletchClassBuilder builder = registerClassElement(klass);
         builder.removeField(element);
       }
