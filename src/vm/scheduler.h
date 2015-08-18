@@ -149,6 +149,21 @@ class Scheduler {
   static void RunThread(void* data);
 };
 
+class StoppedGcThreadScope {
+ public:
+  explicit StoppedGcThreadScope(Scheduler* scheduler)
+      : scheduler_(scheduler) {
+    scheduler->PauseGcThread();
+  }
+
+  ~StoppedGcThreadScope() {
+    scheduler_->ResumeGcThread();
+  }
+
+ private:
+  Scheduler* scheduler_;
+};
+
 }  // namespace fletch
 
 #endif  // SRC_VM_SCHEDULER_H_
