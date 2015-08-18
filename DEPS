@@ -14,17 +14,19 @@ vars = {
   "gyp_rev": "@6ee91ad8659871916f9aa840d42e1513befdf638",
   "persistent_rev": "@55daae1a038188c49e36a64e7ef132c4861da3d8",
 
+  # Used by pkg/immi_samples.
+  "crypto_rev": "@dd0ff8b95269b11f7bd925d2f58e5e938c1f03fc",
+
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_fletch_patches".
   # 2. update package revisions below.
-  "dart_rev": "@822ff5970e4cd452c48eee06bbe308e4c3bea7de",
+  "dart_rev": "@79c288b760e7daf88872da2e1fa07b34488f3e0a",
 
   # Please copy these package revisions from ../dart/DEPS when updating
   # dart_rev:
   "package_config_tag": "@0.1.1",
   "path_tag": "@1.3.6",
   "charcode_tag": "@1.1.0",
-  "crypto_tag": "@dd0ff8b95269b11f7bd925d2f58e5e938c1f03fc",
 
   # We use mirrors of all github repos to guarantee reproducibility and
   # consistency between what users see and what the bots see.
@@ -64,7 +66,7 @@ deps = {
       (Var("github_url") % "polux/persistent") + Var("persistent_rev"),
 
   "third_party/crypto":
-      (Var("github_mirror") % "crypto") + Var("crypto_tag")
+      (Var("github_mirror") % "crypto") + Var("crypto_rev")
 }
 
 # To include Mac deps on other OSes, add this to your .gclient file:
