@@ -32,26 +32,28 @@ final String generatedDirectory = '$buildDirectory/generated_servicec_tests';
 
 abstract class InputTest {
   final String name;
+  final String outputDirectory;
 
-  InputTest(this.name);
+  InputTest(String name)
+      : this.name = name,
+        outputDirectory = "$generatedDirectory/$name";
 
   Future perform();
 }
 
 class Success extends InputTest {
   final String input;
-  final String outputDirectory;
   final Target target;
 
   Success(
       String name,
       this.input,
       {this.target: Target.ALL})
-      : super(name),
-        outputDirectory = generatedDirectory + "/$name";
+      : super(name);
+
   Future perform() async {
     try {
-      servicec.compileInput(input, name, outputDirectory, target);
+      await servicec.compileInput(input, name, outputDirectory, target: target);
       await checkOutputDirectoryStructure(outputDirectory, target);
     } finally {
       nukeDirectory(outputDirectory);
@@ -67,7 +69,13 @@ class Failure<T> extends InputTest {
       : super(name);
 
   Future perform() async {
-    Expect.throws(() => servicec.compileInput(input, name), (e) => e is T);
+    try {
+      await servicec.compileInput(input, name, outputDirectory);
+    } on T catch (e) {
+      return;
+    }
+
+    Expect.isTrue(false, "Expected to throw $T");
   }
 }
 

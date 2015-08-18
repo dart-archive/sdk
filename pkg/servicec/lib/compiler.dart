@@ -4,6 +4,9 @@
 
 library servicec.compiler;
 
+import 'dart:async' show
+    Future;
+
 import 'dart:io';
 
 import 'errors.dart';
@@ -11,16 +14,48 @@ import 'errors.dart';
 import 'targets.dart' show
     Target;
 
-void compile(String path, [String outputDirectory, Target target]) {
+Future compile(
+    String path,
+    String outputDirectory,
+    {Target target: Target.ALL}) async {
   String input = new File(path).readAsStringSync();
-  compileInput(input, path, outputDirectory, target);
+  await compileInput(input, path, outputDirectory, target: target);
 }
 
-void compileInput(
+Future compileInput(
     String input,
     String path,
-    [String outputDirectory,
-     Target target]) {
-  if (input.isEmpty)
+    String outputDirectory,
+    {Target target: Target.ALL}) async {
+  if (input.isEmpty) {
     throw new UndefinedServiceError(path);
+  }
+  // TODO(stanm): parse input
+
+  // TODO(stanm): validate
+
+  // TODO(stanm): generate output
+
+  createDirectories(outputDirectory, target);
+
+  // TODO(stanm): write files
+}
+
+void createDirectories(String outputDirectory, Target target) {
+  new Directory(outputDirectory).createSync(recursive: true);
+
+  if (target.includes(Target.JAVA)) {
+    createJavaDirectories(outputDirectory);
+  }
+  if (target.includes(Target.CC)) {
+    createCCDirectories(outputDirectory);
+  }
+}
+
+void createJavaDirectories(String outputDirectory) {
+  new Directory("$outputDirectory/java").createSync(recursive: true);
+}
+
+void createCCDirectories(String outputDirectory) {
+  new Directory("$outputDirectory/cc").createSync(recursive: true);
 }
