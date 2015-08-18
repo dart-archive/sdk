@@ -4,7 +4,6 @@
 
 #include "src/vm/natives.h"
 
-#include <dlfcn.h>
 #include <errno.h>
 #include <math.h>
 #include <stdlib.h>
