@@ -1,3 +1,7 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
 package com.google.fletch.githubsample;
 
 import android.app.Activity;
@@ -17,6 +21,9 @@ import android.view.ViewGroup;
 import android.support.v4.widget.DrawerLayout;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.DefaultItemAnimator;
 
 public class MainActivity extends Activity
     implements NavigationDrawerFragment.NavigationDrawerCallbacks {
@@ -44,6 +51,17 @@ public class MainActivity extends Activity
     mNavigationDrawerFragment.setUp(
         R.id.navigation_drawer,
         (DrawerLayout) findViewById(R.id.drawer_layout));
+
+    RecyclerView recyclerView = (RecyclerView)findViewById(R.id.recycler_view);
+    // As long as the adapter does not cause size changes, this is set to true to gain performance.
+    recyclerView.setHasFixedSize(true);
+    recyclerView.setItemAnimator(new DefaultItemAnimator());
+
+    LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+    recyclerView.setLayoutManager(layoutManager);
+
+    RecyclerViewAdapter adapter = new RecyclerViewAdapter(new CommitList().commitList);
+    recyclerView.setAdapter(adapter);
   }
 
   @Override

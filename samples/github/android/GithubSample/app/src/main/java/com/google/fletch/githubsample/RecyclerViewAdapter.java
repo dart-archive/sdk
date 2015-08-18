@@ -1,0 +1,64 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+package com.google.fletch.githubsample;
+
+import android.support.v7.widget.CardView;
+import android.support.v7.widget.RecyclerView;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import java.util.List;
+
+public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.CommitViewHolder>{
+
+  List<Commit> commitList;
+
+  RecyclerViewAdapter(List<Commit> commitList) {
+    this.commitList = commitList;
+  }
+
+  @Override
+  public CommitViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    View view =
+        LayoutInflater.from(parent.getContext()).inflate(R.layout.cards_layout, parent, false);
+    return new CommitViewHolder(view);
+  }
+
+  @Override
+  public void onBindViewHolder(CommitViewHolder holder, int position) {
+    holder.author.setText(commitList.get(position).author);
+    holder.title.setText(commitList.get(position).title);
+    holder.avatar.setImageResource(commitList.get(position).imageId);
+  }
+
+  @Override
+  public int getItemCount() {
+    return commitList.size();
+  }
+
+  @Override
+  public void onAttachedToRecyclerView(RecyclerView recyclerView) {
+    super.onAttachedToRecyclerView(recyclerView);
+  }
+
+  public static class CommitViewHolder extends RecyclerView.ViewHolder {
+
+    CardView cardView;
+    TextView author;
+    TextView title;
+    ImageView avatar;
+
+    public CommitViewHolder(View itemView) {
+      super(itemView);
+      cardView = (CardView)itemView.findViewById(R.id.card_view);
+      author = (TextView)itemView.findViewById(R.id.author);
+      title = (TextView)itemView.findViewById(R.id.title);
+      avatar = (ImageView)itemView.findViewById(R.id.avatar);
+    }
+  }
+}
