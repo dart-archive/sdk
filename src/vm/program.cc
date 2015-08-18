@@ -342,21 +342,37 @@ void Program::CollectImmutableGarbage() {
   NoAllocationFailureScope alloc(to);
 
   ScavengeVisitor scavenger(from, to);
-  Process* current = process_list_head_;
-  int process_heap_sizes = 0;
-  while (current != NULL) {
-    // NOTE: We could check here if the storebuffer grew to big and do a mutable
-    // collection, but if a session thread is accessing the stacks of a process
-    // at the same time, this is not safe.
-    current->TakeChildHeaps();
-    current->IterateRoots(&scavenger);
-    current->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
 
-    process_heap_sizes += current->heap()->space()->Used();
-
-    current = current->process_list_next();
+  // Pass 1: Storebuffer compaction.
+  // We do this as a separate pass to ensure the mutable collection can access
+  // all objects (including immutable ones) and for example do
+  // "ASSERT(object->IsImmutable()". If we did everthing in one pass some
+  // immutable objects will contain forwarding pointers and others won't, which
+  // can make the mentioned assert just crash the program.
+  //
+  // TODO(kustermann): Do a storebuffer de-duplication instead of a mutable
+  // GC.
+  {
+    Process* current = process_list_head_;
+    while (current != NULL) {
+      current->CollectMutableGarbage();
+      current = current->process_list_next();
+    }
   }
-  immutable_heap()->UpdateLimitAfterImmutableGC(process_heap_sizes);
+
+  // Pass 2: Iterate all process roots to immutable heap.
+  {
+    int process_heap_sizes = 0;
+    Process* current = process_list_head_;
+    while (current != NULL) {
+      current->TakeChildHeaps();
+      current->IterateRoots(&scavenger);
+      current->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
+      process_heap_sizes += current->heap()->space()->Used();
+      current = current->process_list_next();
+    }
+    immutable_heap()->UpdateLimitAfterImmutableGC(process_heap_sizes);
+  }
 
   to->CompleteScavenge(&scavenger);
   heap->ProcessWeakPointers();
