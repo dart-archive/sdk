@@ -162,6 +162,15 @@ class SentenceParser {
       case "break":
         return makeNamedTarget(TargetKind.BREAK);
 
+      case "list":
+        return makeTarget(TargetKind.LIST);
+
+      case "disasm":
+        return makeTarget(TargetKind.DISASM);
+
+      case "frame":
+        return makeNamedTarget(TargetKind.FRAME);
+
       default:
         return new ErrorTarget(
             "Expected 'session(s)', 'class(s)', 'method(s)', 'file(s)', "
@@ -271,7 +280,10 @@ enum TargetKind {
   RUN_TO_MAIN,
   BACKTRACE,
   CONTINUE,
-  BREAK
+  BREAK,
+  LIST,
+  DISASM,
+  FRAME
 }
 
 class NamedTarget extends Target {

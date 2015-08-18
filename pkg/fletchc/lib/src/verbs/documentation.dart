@@ -8,18 +8,27 @@ const String debugDocumentation = """
    debug
              Start an interactive debug session
 
-   debug run-to-main
-             Run the compiled code on the Fletch VM and break at the main method
-
    debug backtrace
              Print the current stack trace
+
+   debug break LOCATION
+             Set a breakpoint at LOCATION. LOCATION must have one of the formats
+             methodName@bytecodeIndex or filename:line:column
 
    debug continue
              Resume execution of a program when at a breakpoint
 
-   debug break LOCATION
-             Set a breakpoint at LOCATION. LOCATION should have one of the
-             formats methodName@bytecodeIndex or filename:line:column
+   debug frame n
+             Select frame n in the stack trace
+
+   debug list
+             Print source listing for the selected frame
+
+   debug disasm
+             Print bytecodes for the selected frame
+
+   debug run-to-main
+             Run the compiled code on the Fletch VM and break at the main method
 """;
 
 const String helpDocumentation = """

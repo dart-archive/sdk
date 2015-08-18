@@ -512,12 +512,14 @@ class Session extends FletchVmSession {
     return handleProcessStop(await runCommand(const ProcessContinue()));
   }
 
-  String list() {
+  Future<String> list() async {
+    await getStackTrace();
     if (debugState.currentStackTrace == null) return null;
     return debugState.list();
   }
 
-  String disasm() {
+  Future<String> disasm() async {
+    await getStackTrace();
     if (debugState.currentStackTrace == null) return null;
     return debugState.disasm();
   }

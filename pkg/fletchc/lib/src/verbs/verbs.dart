@@ -79,6 +79,9 @@ class Verb {
             requiresTargetSession ? TargetKind.SESSION : requiredTarget;
 }
 
+
+// TODO(ahe): Support short and long documentation.
+
 /// Common verbs are displayed in the default help screen.
 ///
 /// Please make sure their combined documentation fit in in 80 columns by 20
@@ -86,7 +89,6 @@ class Verb {
 /// for the prompts before and after running fletch.  Another two lines may be
 /// used to print an error message.
 const Map<String, Verb> commonVerbs = const <String, Verb>{
-  "debug": debugVerb,
   "help": helpVerb,
   "show": showVerb
 };
@@ -96,6 +98,7 @@ const Map<String, Verb> commonVerbs = const <String, Verb>{
 /// These verbs are displayed when running `fletch help all`.
 const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "compile-and-run": compileAndRunVerb,
+  "debug": debugVerb,
   "shutdown": shutdownVerb,
   "create": createVerb,
   "compile": compileVerb,

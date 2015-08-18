@@ -109,7 +109,7 @@ class InputHandler {
         }
         break;
       case 'l':
-        String listing = session.list();
+        String listing = await session.list();
         if (listing == null) {
           session.writeStdoutLine("### failed listing source");
         } else {
@@ -117,7 +117,7 @@ class InputHandler {
         }
         break;
       case 'disasm':
-        String disassembly = session.disasm();
+        String disassembly = await session.disasm();
         if (disassembly == null) {
           session.writeStdoutLine("### failed disassembling source");
         } else {

@@ -35,7 +35,10 @@ const Verb debugVerb =
           TargetKind.RUN_TO_MAIN,
           TargetKind.BACKTRACE,
           TargetKind.BREAK,
-          TargetKind.CONTINUE
+          TargetKind.CONTINUE,
+          TargetKind.LIST,
+          TargetKind.DISASM,
+          TargetKind.FRAME
         ]);
 
 Future debug(AnalyzedSentence sentence, VerbContext context) async {
@@ -57,6 +60,15 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
       break;
     case TargetKind.BREAK:
       task = new DebuggerTask(TargetKind.BREAK.index, sentence.targetName);
+      break;
+    case TargetKind.LIST:
+      task = new DebuggerTask(TargetKind.LIST.index);
+      break;
+    case TargetKind.DISASM:
+      task = new DebuggerTask(TargetKind.DISASM.index);
+      break;
+    case TargetKind.FRAME:
+      task = new DebuggerTask(TargetKind.FRAME.index, sentence.targetName);
       break;
     default:
       throwInternalError("Unimplemented ${sentence.target}");
@@ -154,6 +166,12 @@ class DebuggerTask extends SharedTask {
         return continueDebuggerTask(commandSender, SessionState.current);
       case TargetKind.BREAK:
         return breakDebuggerTask(commandSender, SessionState.current, argument);
+      case TargetKind.LIST:
+        return listDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.DISASM:
+        return disasmDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.FRAME:
+        return frameDebuggerTask(commandSender, SessionState.current, argument);
       default:
         throwInternalError("Unimplemented ${TargetKind.values[kind]}");
     }
@@ -296,6 +314,72 @@ Future<int> breakDebuggerTask(
     for (Breakpoint breakpoint in breakpoints) {
       print("Breakpoint set: $breakpoint");
     }
+  }
+
+  return 0;
+}
+
+Future<int> listDebuggerTask(
+    CommandSender commandSender, SessionState state) async {
+  Session session = state.session;
+  if (session == null) {
+    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
+  }
+
+  state.attachCommandSender(commandSender);
+
+  String listing = await session.list();
+
+  if (listing == null) {
+    // TODO(ager,lukechurch): Fix error reporting.
+    throwInternalError('Source listing failed');
+  }
+
+  print(listing);
+
+  return 0;
+}
+
+Future<int> disasmDebuggerTask(
+    CommandSender commandSender, SessionState state) async {
+  Session session = state.session;
+  if (session == null) {
+    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
+  }
+
+  state.attachCommandSender(commandSender);
+
+  String disasm = await session.disasm();
+
+  if (disasm == null) {
+    // TODO(ager,lukechurch): Fix error reporting.
+    throwInternalError('Bytecode disassembly failed');
+  }
+
+  print(disasm);
+
+  return 0;
+}
+
+Future<int> frameDebuggerTask(
+    CommandSender commandSender, SessionState state, String frame) async {
+  Session session = state.session;
+  if (session == null) {
+    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
+  }
+
+  state.attachCommandSender(commandSender);
+
+  int frameNumber = int.parse(frame, onError: (_) => -1);
+  if (frameNumber == -1) {
+    // TODO(ager,lukechurch): Fix error reporting.
+    throwInternalError('Invalid frame number');
+  }
+
+  bool frameSelected = await session.selectFrame(frameNumber);
+  if (!frameSelected) {
+    // TODO(ager,lukechurch): Fix error reporting.
+    throwInternalError('Frame selection failed');
   }
 
   return 0;
