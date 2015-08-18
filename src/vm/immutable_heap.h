@@ -68,12 +68,15 @@ class ImmutableHeap {
     return &heap_;
   }
 
+  // This method can only be called if
+  //   * all acquired parts were released again
+  //   * all cached parts were merged via [MergeParts]
+  void UpdateLimitAfterImmutableGC(int mutable_size_at_last_gc);
+
  private:
   bool HasUnmergedParts() { return unmerged_parts_ != NULL; }
   void AddUnmergedPart(Part* part);
   Part* RemoveUnmergedPart();
-
-  int ImmutableAllocationLimit();
 
   int number_of_hw_threads_;
 
@@ -81,6 +84,9 @@ class ImmutableHeap {
   Heap heap_;
   int outstanding_parts_;
   Part* unmerged_parts_;
+
+  // The limit of bytes we give out before a immutable GC should happen.
+  int immutable_allocation_limit_;
 
   // The amount of memory consumed by outstanding parts/unmerged parts.
   int consumed_memory_;

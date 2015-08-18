@@ -343,6 +343,7 @@ void Program::CollectImmutableGarbage() {
 
   ScavengeVisitor scavenger(from, to);
   Process* current = process_list_head_;
+  int process_heap_sizes = 0;
   while (current != NULL) {
     // NOTE: We could check here if the storebuffer grew to big and do a mutable
     // collection, but if a session thread is accessing the stacks of a process
@@ -353,8 +354,11 @@ void Program::CollectImmutableGarbage() {
     current->IterateRoots(&scavenger);
     current->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
 
+    process_heap_sizes += current->heap()->space()->Used();
+
     current = current->process_list_next();
   }
+  immutable_heap()->UpdateLimitAfterImmutableGC(process_heap_sizes);
 
   to->CompleteScavenge(&scavenger);
   heap->ProcessWeakPointers();
