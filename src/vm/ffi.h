@@ -18,12 +18,15 @@ class ForeignFunctionInterface {
   static void Setup();
   static void TearDown();
   static void AddDefaultSharedLibrary(const char* library);
+#ifdef FLETCH_ENABLE_FFI
   static void* LookupInDefaultLibraries(const char* symbol);
  private:
   static DefaultLibraryEntry* libraries_;
   static Mutex* mutex_;
+#endif  // FLETCH_ENABLE_FFI
 };
 
+#ifdef FLETCH_ENABLE_FFI
 // Platform specific ffi constants and methods.
 class ForeignUtils {
  public:
@@ -34,6 +37,8 @@ class ForeignUtils {
   // In preparation of supporting windows we have a function for this.
   static char* DirectoryName(char* path);
 };
+
+#endif  // FLETCH_ENABLE_FFI
 
 }  // namespace fletch
 

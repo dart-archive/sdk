@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#ifdef FLETCH_ENABLE_FFI
+
 #include "src/vm/ffi.h"
 
 #include <dlfcn.h>
@@ -607,3 +609,5 @@ DEFINE_FOREIGN_ACCESSORS_DOUBLE(Float64, double)
 #undef DEFINE_FOREIGN_ACCESSORS
 
 }  // namespace fletch
+
+#endif  // FLETCH_ENABLE_FFI

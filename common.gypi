@@ -64,6 +64,7 @@
 
         'defines': [
           'FLETCH_ENABLE_LIVE_CODING',
+          'FLETCH_ENABLE_FFI',
         ],
 
         'xcode_settings': {
@@ -439,6 +440,14 @@
         ],
       },
 
+      'fletch_disable_ffi': {
+        'abstract': 1,
+
+        'defines!': [
+          'FLETCH_ENABLE_FFI',
+        ],
+      },
+
       'ReleaseIA32': {
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
       },
@@ -633,6 +642,14 @@
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_ia32',
           'fletch_disable_live_coding'
+        ],
+      },
+
+      # TODO(herhut): Test configuration - to be removed.
+      'ReleaseIA32DisableFFI': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_ia32',
+          'fletch_disable_ffi'
         ],
       },
     },

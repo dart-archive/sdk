@@ -4,6 +4,8 @@
 
 #if defined(FLETCH_TARGET_OS_POSIX)
 
+#ifdef FLETCH_ENABLE_FFI
+
 #include "src/vm/ffi.h"
 
 #include <libgen.h>
@@ -15,5 +17,7 @@ char* ForeignUtils::DirectoryName(char* path) {
 }
 
 }  // namespace fletch
+
+#endif  // FLETCH_ENABLE_FFI
 
 #endif  // defined(FLETCH_TARGET_OS_POSIX)

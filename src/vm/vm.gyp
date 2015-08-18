@@ -28,6 +28,7 @@
         'ffi_linux.cc',
         'ffi_macos.cc',
         'ffi_posix.cc',
+        'ffi_disabled.cc',
         'fletch.cc',
         'fletch_api_impl.cc',
         'heap.cc',
