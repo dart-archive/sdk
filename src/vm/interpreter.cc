@@ -334,13 +334,6 @@ Interpreter::InterruptKind Engine::Interpret(
     if (value->IsHeapObject() && value->IsImmutable()) {
       StoreBuffer* store_buffer = process()->store_buffer();
       store_buffer->Insert(target);
-
-      // TODO(kustermann): We probably don't want to do this check on every
-      // write. But we probably do want to do this check in other places as
-      // well.
-      if (store_buffer->ShouldGcMutableSpace()) {
-        CollectMutableGarbage();
-      }
     }
   OPCODE_END();
 
@@ -354,13 +347,6 @@ Interpreter::InterruptKind Engine::Interpret(
     if (value->IsHeapObject() && value->IsImmutable()) {
       StoreBuffer* store_buffer = process()->store_buffer();
       store_buffer->Insert(target);
-
-      // TODO(kustermann): We probably don't want to do this check on every
-      // write. But we probably do want to do this check in other places as
-      // well.
-      if (store_buffer->ShouldGcMutableSpace()) {
-        CollectMutableGarbage();
-      }
     }
   OPCODE_END();
 
@@ -704,17 +690,24 @@ Interpreter::InterruptKind Engine::Interpret(
     Instance* instance = Instance::cast(result);
     int fields = klass->NumberOfInstanceFields();
     bool in_store_buffer = false;
+    bool storebuffer_full = false;
     for (int i = fields - 1; i >= 0; --i) {
       Object* value = Pop();
       if (!in_store_buffer &&
           value->IsImmutable() &&
           value->IsHeapObject()) {
-        process()->store_buffer()->Insert(instance);
         in_store_buffer = true;
+        StoreBuffer* store_buffer = process()->store_buffer();
+        store_buffer->Insert(instance);
+        storebuffer_full = store_buffer->ShouldGcMutableSpace();
       }
       instance->SetInstanceField(i, value);
     }
     Push(instance);
+
+    if (storebuffer_full) {
+      CollectMutableGarbage();
+    }
     Advance(kAllocateLength);
   OPCODE_END();
 
@@ -725,17 +718,24 @@ Interpreter::InterruptKind Engine::Interpret(
     Instance* instance = Instance::cast(result);
     int fields = klass->NumberOfInstanceFields();
     bool in_store_buffer = false;
+    bool storebuffer_full = false;
     for (int i = fields - 1; i >= 0; --i) {
       Object* value = Pop();
       if (!in_store_buffer &&
           value->IsImmutable() &&
           value->IsHeapObject()) {
-        process()->store_buffer()->Insert(instance);
         in_store_buffer = true;
+        StoreBuffer* store_buffer = process()->store_buffer();
+        store_buffer->Insert(instance);
+        storebuffer_full = store_buffer->ShouldGcMutableSpace();
       }
       instance->SetInstanceField(i, value);
     }
     Push(instance);
+
+    if (storebuffer_full) {
+      CollectMutableGarbage();
+    }
     Advance(kAllocateLength);
   OPCODE_END();
 
@@ -764,7 +764,11 @@ Interpreter::InterruptKind Engine::Interpret(
     Push(instance);
 
     if (!immutable && has_immutable_pointers) {
-      process()->store_buffer()->Insert(instance);
+      StoreBuffer* store_buffer = process()->store_buffer();
+      store_buffer->Insert(instance);
+      if (store_buffer->ShouldGcMutableSpace()) {
+        CollectMutableGarbage();
+      }
     }
 
     Advance(kAllocateImmutableLength);
@@ -793,7 +797,11 @@ Interpreter::InterruptKind Engine::Interpret(
     Push(instance);
 
     if (!immutable && has_immutable_pointers) {
-      process()->store_buffer()->Insert(instance);
+      StoreBuffer* store_buffer = process()->store_buffer();
+      store_buffer->Insert(instance);
+      if (store_buffer->ShouldGcMutableSpace()) {
+        CollectMutableGarbage();
+      }
     }
 
     Advance(kAllocateImmutableUnfoldLength);
@@ -802,7 +810,7 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_BEGIN(AllocateBoxed);
     Object* value = Local(0);
     GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
-        raw_boxed, process()->NewBoxed(value));
+        raw_boxed, HandleAllocateBoxed(process(), value));
     Boxed* boxed = Boxed::cast(raw_boxed);
     SetTop(boxed);
     Advance(kAllocateBoxedLength);
@@ -1048,6 +1056,16 @@ void Interpreter::Run() {
     interruption_ = static_cast<InterruptKind>(result);
   }
 
+  // NOTE: We compact storebuffers on explicit yields or implicit preemptive
+  // interrupts by the scheduler. The amount of additional entries is thereby
+  // upper bounded by the preemptive intervals.
+  //
+  // TODO(kustermann): Implement storebuffer de-duplication instead of doing
+  // GCs.
+  if (process_->store_buffer()->ShouldGcMutableSpace()) {
+    process_->CollectMutableGarbage();
+  }
+
   process_->ReleaseLookupCache();
   process_->StoreErrno();
   ASSERT(interruption_ != kReady);
@@ -1093,8 +1111,14 @@ Object* HandleAllocate(Process* process,
                        int immutable_heapobject_member) {
   Object* result = process->NewInstance(clazz, immutable == 1);
   if (result->IsFailure()) return result;
+
   if (immutable != 1 && immutable_heapobject_member == 1) {
-    process->store_buffer()->Insert(HeapObject::cast(result));
+    StoreBuffer* store_buffer = process->store_buffer();
+    store_buffer->Insert(HeapObject::cast(result));
+    // TODO(kustermann): Do storebuffer de-dupping instead.
+    if (store_buffer->ShouldGcMutableSpace()) {
+      return Failure::retry_after_gc();
+    }
   }
   return result;
 }
@@ -1111,7 +1135,15 @@ void AddToStoreBufferSlow(Process* process, Object* object, Object* value) {
 Object* HandleAllocateBoxed(Process* process, Object* value) {
   Object* boxed = process->NewBoxed(value);
   if (boxed->IsFailure()) return boxed;
-  AddToStoreBufferSlow(process, boxed, value);
+
+  if (value->IsHeapObject() && !value->IsNull() && value->IsImmutable()) {
+    StoreBuffer* store_buffer = process->store_buffer();
+    store_buffer->Insert(HeapObject::cast(boxed));
+    // TODO(kustermann): Do storebuffer de-dupping instead.
+    if (store_buffer->ShouldGcMutableSpace()) {
+      return Failure::retry_after_gc();
+    }
+  }
   return boxed;
 }
 
