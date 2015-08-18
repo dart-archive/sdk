@@ -181,7 +181,7 @@ class ScopeInformationVisitor extends ElementVisitor/* <void> */ {
   }
 
   void visitCompilationUnitElement(CompilationUnitElement e, _) {
-    e.enclosingElement.accept(this, _);
+    e.library.accept(this, _);
   }
 
   void visitAbstractFieldElement(AbstractFieldElement e, _) {

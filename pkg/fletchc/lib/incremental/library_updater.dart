@@ -7,9 +7,6 @@ library fletchc_incremental.library_updater;
 import 'dart:async' show
     Future;
 
-import 'dart:collection' show
-    Queue;
-
 import 'package:compiler/compiler_new.dart' show
     CompilerDiagnostics,
     Diagnostic;
@@ -95,9 +92,6 @@ import 'package:compiler/src/constants/values.dart' show
 
 import 'package:compiler/src/library_loader.dart' show
     TagState;
-
-import 'package:persistent/persistent.dart' show
-    PersistentMap;
 
 import 'diff.dart' show
     Difference,

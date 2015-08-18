@@ -86,11 +86,6 @@ import 'package:compiler/src/library_loader.dart' show
 import 'package:persistent/persistent.dart' show
     PersistentMap;
 
-import 'fletch_constants.dart' show
-    FletchClassConstant,
-    FletchFunctionConstant,
-    FletchClassInstanceConstant;
-
 import 'fletch_function_builder.dart' show
     FletchFunctionKind,
     FletchFunctionBuilder,
