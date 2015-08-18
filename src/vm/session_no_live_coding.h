@@ -6,7 +6,7 @@
 #define SRC_VM_SESSION_NO_LIVE_CODING_H_
 
 #ifndef SRC_VM_SESSION_H_
-#error "Do not import session_no_liveness.h directly, import session.h"
+#error "Do not import session_no_live_coding.h directly, import session.h"
 #endif  // SRC_VM_SESSION_H_
 
 namespace fletch {

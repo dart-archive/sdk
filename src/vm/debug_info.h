@@ -5,6 +5,10 @@
 #ifndef SRC_VM_DEBUG_INFO_H_
 #define SRC_VM_DEBUG_INFO_H_
 
+#ifndef FLETCH_ENABLE_LIVE_CODING
+#include "src/vm/debug_info_no_live_coding.h"
+#else  // FLETCH_ENABLE_LIVE_CODING
+
 #include <unordered_map>
 
 #include "src/vm/object.h"
@@ -93,5 +97,7 @@ class DebugInfo {
 };
 
 }  // namespace fletch
+
+#endif  // FLETCH_ENABLE_LIVE_CODING
 
 #endif  // SRC_VM_DEBUG_INFO_H_
