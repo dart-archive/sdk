@@ -201,13 +201,15 @@ void Space::CompleteScavenge(PointerVisitor* visitor) {
 }
 
 void Space::CompleteScavengeMutable(PointerVisitor* visitor,
-                                    Space* mutable_space,
+                                    Space* program_space,
                                     StoreBuffer* store_buffer) {
   ASSERT(store_buffer->is_empty());
 
   Flush();
 
-  FindImmutablePointerVisitor finder(mutable_space);
+  // NOTE: This finder is only called on objects which have been forwarded and
+  // whos fields have been forwarded.
+  FindImmutablePointerVisitor finder(this, program_space);
 
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->base();

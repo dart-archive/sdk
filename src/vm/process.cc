@@ -368,7 +368,8 @@ void Process::CollectMutableGarbage() {
   IterateRoots(&visitor);
 
   ASSERT(!to->is_empty());
-  to->CompleteScavengeMutable(&visitor, from, &sb);
+  Space* program_space = program()->heap()->space();
+  to->CompleteScavengeMutable(&visitor, program_space, &sb);
   store_buffer_.ReplaceAfterMutableGC(&sb);
 
   heap_.ProcessWeakPointers();
@@ -442,7 +443,8 @@ int Process::CollectMutableGarbageAndChainStacks() {
   // stacks starting from there.
   visitor.Visit(reinterpret_cast<Object**>(coroutine_->stack_address()));
   IterateRoots(&visitor);
-  to->CompleteScavengeMutable(&visitor, from, &sb);
+  Space* program_space = program()->heap()->space();
+  to->CompleteScavengeMutable(&visitor, program_space, &sb);
   store_buffer_.ReplaceAfterMutableGC(&sb);
 
   heap_.ProcessWeakPointers();
