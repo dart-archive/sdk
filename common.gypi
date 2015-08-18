@@ -62,6 +62,10 @@
       'fletch_base': {
         'abstract': 1,
 
+        'defines': [
+          'FLETCH_ENABLE_LIVE_CODING',
+        ],
+
         'xcode_settings': {
           # Settings for Xcode and ninja. Huh? Yeah, GYP is awesome!
 
@@ -427,6 +431,14 @@
         },
       },
 
+      'fletch_disable_live_coding': {
+        'abstract': 1,
+
+        'defines!': [
+          'FLETCH_ENABLE_LIVE_CODING',
+        ],
+      },
+
       'ReleaseIA32': {
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
       },
@@ -614,6 +626,14 @@
 
       'DevelopXARM64': {
         'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_xarm64' ],
+      },
+
+      # TODO(ajohnsen): Test configuration - to be removed.
+      'ReleaseIA32DisableLiveCoding': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_ia32',
+          'fletch_disable_live_coding'
+        ],
       },
     },
 

@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#ifdef FLETCH_ENABLE_LIVE_CODING
+
 #include "src/vm/selector_row.h"
 
 #include <algorithm>
@@ -356,3 +358,5 @@ size_t RowFitter::FitInFreeSlot(const Range range, size_t slot_index) {
 }
 
 }  // namespace fletch
+
+#endif  // FLETCH_ENABLE_LIVE_CODING

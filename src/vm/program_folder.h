@@ -5,6 +5,8 @@
 #ifndef SRC_VM_PROGRAM_FOLDER_H_
 #define SRC_VM_PROGRAM_FOLDER_H_
 
+#ifdef FLETCH_ENABLE_LIVE_CODING
+
 namespace fletch {
 
 class Function;
@@ -50,5 +52,7 @@ class ProgramFolder {
 };
 
 }  // namespace fletch
+
+#endif  // FLETCH_ENABLE_LIVE_CODING
 
 #endif  // SRC_VM_PROGRAM_FOLDER_H_

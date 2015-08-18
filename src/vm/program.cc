@@ -9,9 +9,10 @@
 
 #include "src/shared/flags.h"
 #include "src/shared/globals.h"
-#include "src/shared/utils.h"
-#include "src/shared/selectors.h"
+#include "src/shared/names.h"
 #include "src/shared/platform.h"
+#include "src/shared/selectors.h"
+#include "src/shared/utils.h"
 
 #include "src/vm/heap_validator.h"
 #include "src/vm/object.h"

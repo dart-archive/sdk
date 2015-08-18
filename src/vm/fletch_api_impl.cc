@@ -32,7 +32,9 @@ static bool RunSnapshot(List<uint8> bytes) {
     SnapshotReader reader(bytes);
     Program* program = reader.ReadProgram();
     Scheduler scheduler;
+#ifdef FLETCH_ENABLE_LIVE_CODING
     ProgramFolder::FoldProgramByDefault(program);
+#endif  // FLETCH_ENABLE_LIVE_CODING
     Process* process = program->ProcessSpawnForMain();
     scheduler.ScheduleProgram(program, process);
     bool success = scheduler.Run();

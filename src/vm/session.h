@@ -5,6 +5,10 @@
 #ifndef SRC_VM_SESSION_H_
 #define SRC_VM_SESSION_H_
 
+#ifndef FLETCH_ENABLE_LIVE_CODING
+#include "src/vm/session_no_live_coding.h"
+#else  // FLETCH_ENABLE_LIVE_CODING
+
 #include "src/shared/names.h"
 
 #include "src/vm/object_list.h"
@@ -192,5 +196,7 @@ class Session {
 };
 
 }  // namespace fletch
+
+#endif  // FLETCH_ENABLE_LIVE_CODING
 
 #endif  // SRC_VM_SESSION_H_

@@ -5,6 +5,8 @@
 #ifndef SRC_VM_SELECTOR_ROW_H_
 #define SRC_VM_SELECTOR_ROW_H_
 
+#ifdef FLETCH_ENABLE_LIVE_CODING
+
 #include <vector>
 #include <unordered_set>
 
@@ -223,7 +225,8 @@ class RowFitter {
   int limit_;
 };
 
-
 }  // namespace fletch
+
+#endif  // FLETCH_ENABLE_LIVE_CODING
 
 #endif  // SRC_VM_SELECTOR_ROW_H_
