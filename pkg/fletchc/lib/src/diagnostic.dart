@@ -8,9 +8,6 @@ import 'messages.dart' show
     DiagnosticKind,
     getMessage;
 
-import 'package:compiler/src/dart2jslib.dart' show
-    MessageKind;
-
 import 'driver/sentence_parser.dart' show
     ResolvedVerb,
     Target;
@@ -71,9 +68,53 @@ class Diagnostic {
   /// all occurences of `"#{parameterName}"` with the corresponding value in
   /// [arguments].
   String formatMessage() {
-    return new MessageKind(template)
-        .message(toDart2jsArguments(arguments), false)
-        .computeMessage();
+    String formattedMessage = template;
+    Set<String> suppliedParameters = new Set<String>();
+    arguments.forEach((DiagnosticParameter parameter, value) {
+      suppliedParameters.add('$parameter');
+      String stringValue;
+      switch (parameter.type) {
+        case DiagnosticParameterType.string:
+          stringValue = value;
+          break;
+
+        case DiagnosticParameterType.verb:
+          ResolvedVerb verb = value;
+          stringValue = verb.name;
+          break;
+
+        case DiagnosticParameterType.sessionName:
+          stringValue = value;
+          break;
+
+        case DiagnosticParameterType.target:
+          Target target = value;
+          // TODO(ahe): Improve this conversion.
+          stringValue = target.toString();
+          break;
+      }
+      formattedMessage = formattedMessage.replaceAll('$parameter', stringValue);
+    });
+
+    Set<String> missingParameters = new Set<String>();
+    for (Match match in new RegExp("#{[^}]*}").allMatches(template)) {
+      String parameter = match.group(0);
+      if (!suppliedParameters.contains(parameter)) {
+        missingParameters.add(parameter);
+      }
+    }
+
+    if (!missingParameters.isEmpty) {
+      throw """
+Error when formatting diagnostic:
+  kind: $kind
+  template: $template
+  arguments: $arguments
+  missingParameters: ${missingParameters.join(', ')}
+  formattedMessage: $formattedMessage""";
+    }
+
+    return formattedMessage;
   }
 }
 
@@ -89,39 +130,6 @@ class InputError {
   }
 
   String toString() => 'InputError($kind, $arguments)';
-}
-
-/// Converts an argument map with [DiagnosticParameter] keys and their
-/// corresponding values to a map that can be processed by dart2js'
-/// `Message.computeMessage` (see package:compiler/src/warnings.dart).
-Map<String, String> toDart2jsArguments(
-    Map<DiagnosticParameter, dynamic> arguments) {
-  Map<String, String> result = <String, String>{};
-  arguments.forEach((DiagnosticParameter parameter, value) {
-    String stringValue;
-    switch (parameter.type) {
-      case DiagnosticParameterType.string:
-        stringValue = value;
-        break;
-
-      case DiagnosticParameterType.verb:
-        ResolvedVerb verb = value;
-        stringValue = verb.name;
-        break;
-
-      case DiagnosticParameterType.sessionName:
-        stringValue = value;
-        break;
-
-      case DiagnosticParameterType.target:
-        Target target = value;
-        // TODO(ahe): Improve this conversion.
-        stringValue = target.toString();
-        break;
-    }
-    result[parameter.name] = stringValue;
-  });
-  return result;
 }
 
 /// Throw an internal error that will be recorded as a compiler crash.
