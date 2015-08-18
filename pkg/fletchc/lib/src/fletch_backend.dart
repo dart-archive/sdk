@@ -1354,7 +1354,7 @@ class FletchBackend extends Backend {
           systemBuilder.lookupFunctionByElement(element);
       if (function != null) {
         systemBuilder.forgetFunction(function);
-        if (enclosingClass != null) {
+        if (enclosingClass != null && element.isInstanceMember) {
           FletchClassBuilder builder = registerClassElement(enclosingClass);
           builder.removeFromMethodTable(function);
         }

@@ -19,7 +19,6 @@ incremental/multiple_libraries: Fail
 incremental/remove_class_with_static_method: Fail
 incremental/remove_instance_field: Fail
 incremental/remove_instance_method_super_access: Fail
-incremental/remove_static_method: Fail
 incremental/signature_change_static_method: Fail
 incremental/stored_closure: Fail
 incremental/stored_instance_tearoff: Fail

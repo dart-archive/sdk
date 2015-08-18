@@ -614,8 +614,7 @@ class B {
   static staticMethod() {
     print('v1');
   }
-==== {"messages":["threw"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "threw"
 >>>>
 }
 class C {
