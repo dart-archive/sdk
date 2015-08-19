@@ -15,9 +15,25 @@ part 'legacy_path.dart';
 const Duration MAX_STDIO_DELAY = const Duration(seconds: 30);
 
 String MAX_STDIO_DELAY_PASSED_MESSAGE =
-"""Not waiting for stdout/stderr from subprocess anymore 
-($MAX_STDIO_DELAY passed). Please note that this could be an indicator 
+"""Not waiting for stdout/stderr from subprocess anymore
+($MAX_STDIO_DELAY passed). Please note that this could be an indicator
 that there is a hanging process which we were unable to kill.""";
+
+// After we send a SIGTERM to a process, and it did not die within
+// this delay, send a SIGKILL.
+const Duration MAX_SIGTERM_DELAY = const Duration(seconds: 15);
+
+String MAX_SIGTERM_DELAY_PASSED_MESSAGE =
+"""
+
+********
+Test timed out, but did not terminate on SIGTERM.
+Attempting to kill process using SIGKILL, this might get reported as a
+crash.
+*******
+
+
+""";
 
 class DebugLogger {
   static IOSink _sink;

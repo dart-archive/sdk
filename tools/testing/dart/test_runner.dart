@@ -1931,11 +1931,22 @@ class RunningProcess {
 
           // Close stdin so that tests that try to block on input will fail.
           process.stdin.close();
+          // If the sigterm we are given below did not cause us to close
+          // send a sigkill after MAX_SIGTERM_DELAY.
+          Timer sigkillTimer;
           void timeoutHandler() {
             timedOut = true;
             if (process != null) {
               if (!process.kill()) {
                 DebugLogger.error("Unable to kill ${process.pid}");
+              } else {
+                sigkillTimer = new Timer(MAX_SIGTERM_DELAY, () {
+                  DebugLogger.error("Unable to sigterm ${process.pid}");
+                  stderr.add(UTF8.encode(MAX_SIGTERM_DELAY_PASSED_MESSAGE));
+                  if (!process.kill(io.ProcessSignal.SIGKILL)) {
+                    DebugLogger.error("Unable to sigkill ${process.pid}");
+                  }
+                });
               }
             }
           }
@@ -1944,6 +1955,9 @@ class RunningProcess {
           stderrSubscription.asFuture().then(closeStderr);
 
           process.exitCode.then((exitCode) {
+            if (sigkillTimer != null) {
+              sigkillTimer.cancel();
+            }
             if (!stdoutDone || !stderrDone) {
               watchdogTimer = new Timer(MAX_STDIO_DELAY, () {
                 DebugLogger.warning(
@@ -1955,7 +1969,6 @@ class RunningProcess {
                 closeStderr();
               });
             }
-
             Future.wait([stdoutCompleter.future,
                          stderrCompleter.future]).then((_) {
               _commandComplete(exitCode);

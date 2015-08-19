@@ -26,7 +26,8 @@ abstract class DecodeExitCode {
         return Expectation.PASS;
 
       case COMPILER_EXITCODE_CRASH:
-        return Expectation.CRASH;
+        // TODO(ahe): change this once issue #101 is fixed.
+        return hasTimedOut ? Expectation.TIMEOUT : Expectation.CRASH;
 
       case DART_VM_EXITCODE_COMPILE_TIME_ERROR:
         return Expectation.COMPILETIME_ERROR;
@@ -39,6 +40,12 @@ abstract class DecodeExitCode {
 
       case -15:
         return hasTimedOut ? Expectation.TIMEOUT : Expectation.CRASH;
+
+      case -9:
+        // When this happens we actually report it as a CRASH, even though
+        // it is really a timeout (to notify people that something here is
+        // really wrong.
+        return Expectation.CRASH;
 
       default:
         return exitCode < 0 ? Expectation.CRASH : Expectation.FAIL;
