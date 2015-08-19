@@ -36,7 +36,7 @@ Space::Space(int maximum_initial_size)
       limit_(0),
       no_allocation_nesting_(0) {
   if (maximum_initial_size > 0) {
-    int size = Utils::Minimum(maximum_initial_size, kDefaultChunkSize);
+    int size = Utils::Minimum(maximum_initial_size, kDefaultMaximumChunkSize);
     Chunk* chunk = ObjectMemory::AllocateChunk(this, size);
     if (chunk == NULL) FATAL1("Failed to allocate %d bytes.\n", size);
     Append(chunk);
@@ -83,9 +83,10 @@ uword Space::TryAllocate(int size) {
 
 uword Space::AllocateInNewChunk(int size) {
   // Allocate new chunk that is big enough to fit the object.
-  int chunk_size = size >= kDefaultChunkSize
+  int default_chunk_size = DefaultChunkSize(Used());
+  int chunk_size = size >= default_chunk_size
       ? (size + kPointerSize)  // Make sure there is room for sentinel.
-      : kDefaultChunkSize;
+      : default_chunk_size;
 
   Chunk* chunk = ObjectMemory::AllocateChunk(this, chunk_size);
   if (chunk != NULL) {
@@ -119,7 +120,8 @@ void Space::TryDealloc(uword location, int size) {
 }
 
 void Space::AdjustAllocationBudget() {
-  allocation_budget_ = Utils::Maximum(512 * KB, Used());
+  int used = Used();
+  allocation_budget_ = Utils::Maximum(DefaultChunkSize(used), used);
 }
 
 void Space::SetAllocationBudget(int new_budget) {

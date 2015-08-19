@@ -44,7 +44,7 @@ void ImmutableHeap::UpdateLimitAfterImmutableGC(int mutable_size_at_last_gc) {
   ASSERT(outstanding_parts_ == 0 && unmerged_parts_ == NULL);
 
   // Without knowing anything, we use the default [Space] size.
-  int limit = number_of_hw_threads_ * Space::kDefaultChunkSize;
+  int limit = number_of_hw_threads_ * Space::kDefaultMinimumChunkSize;
 
   // If we know the size of what survived during the last immutable GC we
   // make sure the limit is at least that high - thereby making this a 2x

@@ -72,7 +72,8 @@ class Chunk {
 // Space is a chain of chunks. It supports allocation and traversal.
 class Space {
  public:
-  static const int kDefaultChunkSize = 128 * KB;
+  static const int kDefaultMinimumChunkSize = 4 * KB;
+  static const int kDefaultMaximumChunkSize = 256 * KB;
 
   explicit Space(int maximum_initial_size = 0);
 
@@ -132,6 +133,15 @@ class Space {
   void PrependSpace(Space* space);
 
   bool is_empty() const { return first_ == NULL; }
+
+  static int DefaultChunkSize(int heap_size) {
+    // We return a value between kDefaultMinimumChunkSize and
+    // kDefaultMaximumChunkSize - and try to keep the chunks smaller than 20% of
+    // the heap.
+    return Utils::Minimum(
+        Utils::Maximum(kDefaultMinimumChunkSize, heap_size / 5),
+        kDefaultMaximumChunkSize);
+  }
 
  private:
   friend class NoAllocationFailureScope;

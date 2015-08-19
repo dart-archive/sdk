@@ -354,7 +354,7 @@ void Process::CollectMutableGarbage() {
   TakeChildHeaps();
 
   Space* from = heap_.space();
-  Space* to = new Space();
+  Space* to = new Space(from->Used() / 10);
   StoreBuffer sb;
 
   // While garbage collecting, do not fail allocations. Instead grow
@@ -428,7 +428,7 @@ class ScavengeAndChainStacksVisitor: public PointerVisitor {
 
 int Process::CollectMutableGarbageAndChainStacks() {
   Space* from = heap_.space();
-  Space* to = new Space();
+  Space* to = new Space(from->Used() / 10);
   StoreBuffer sb;
 
   // While garbage collecting, do not fail allocations. Instead grow

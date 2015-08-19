@@ -279,7 +279,7 @@ void Program::CollectGarbage() {
     scheduler()->StopProgram(this);
   }
 
-  Space* to = new Space();
+  Space* to = new Space(heap_.space()->Used() / 10);
   ScavengeVisitor scavenger(heap_.space(), to);
 
   PrepareProgramGC();
@@ -357,7 +357,7 @@ void Program::CollectImmutableGarbage() {
   {
     Heap* heap = immutable_heap()->heap();
     Space* from = heap->space();
-    Space* to = new Space();
+    Space* to = new Space(from->Used() / 10);
     NoAllocationFailureScope alloc(to);
 
     ScavengeVisitor scavenger(from, to);
