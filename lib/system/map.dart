@@ -5,17 +5,19 @@
 part of dart.system;
 
 class _ConstantMap<K, V> implements Map<K, V> {
-  var _keys = [];
-  var _values = [];
+  final _keys;
+  final _values;
 
   bool containsValue(Object value) => _values.contains(value);
 
   bool containsKey(Object key) => _keys.contains(key);
 
   V operator[](Object key) {
-    int index = _keys.indexOf(key);
-    if (index < 0) return null;
-    return _values[index];
+    int length = _keys.length;
+    for (int i = 0; i < length; i++) {
+      if (_keys[i] == key) return _values[i];
+    }
+    return null;
   }
 
   void operator[]=(K key, V value) {
@@ -39,7 +41,8 @@ class _ConstantMap<K, V> implements Map<K, V> {
   }
 
   void forEach(void f(K key, V value)) {
-    for (int i = 0; i < _keys.length; i++) {
+    int length = _keys.length;
+    for (int i = 0; i < length; i++) {
       f(_keys[i], _values[i]);
     }
   }
