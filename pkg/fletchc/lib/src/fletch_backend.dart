@@ -1029,11 +1029,10 @@ class FletchBackend extends Backend {
     for (int i = 0; i < length; i++) {
       FletchFunctionBuilder function = functions[i];
       if (!function.isInstanceMember || function.isAccessor) continue;
-      // TODO(ajohnsen/johnniwinther): Expose test on Universe.
-      compiler.codegenWorld.forEachInvokedGetter((name, _) {
-        if (function.name != name) return;
+      String name = function.name;
+      if (compiler.codegenWorld.getterInvocationsByName(name) != null) {
         createTearoffGetterForFunction(function);
-      });
+      }
     }
   }
 
