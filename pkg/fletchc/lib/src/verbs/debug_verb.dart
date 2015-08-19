@@ -38,7 +38,19 @@ const Verb debugVerb =
           TargetKind.CONTINUE,
           TargetKind.LIST,
           TargetKind.DISASM,
-          TargetKind.FRAME
+          TargetKind.FRAME,
+          TargetKind.DELETE_BREAKPOINT,
+          TargetKind.LIST_BREAKPOINTS,
+          TargetKind.STEP,
+          TargetKind.STEP_OVER,
+          TargetKind.FIBERS,
+          TargetKind.FINISH,
+          TargetKind.RESTART,
+          TargetKind.STEP_BYTECODE,
+          TargetKind.STEP_OVER_BYTECODE,
+          TargetKind.PRINT,
+          TargetKind.PRINT_ALL,
+          TargetKind.TOGGLE,
         ]);
 
 Future debug(AnalyzedSentence sentence, VerbContext context) async {
@@ -69,6 +81,43 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
       break;
     case TargetKind.FRAME:
       task = new DebuggerTask(TargetKind.FRAME.index, sentence.targetName);
+      break;
+    case TargetKind.DELETE_BREAKPOINT:
+      task = new DebuggerTask(TargetKind.DELETE_BREAKPOINT.index,
+                              sentence.targetName);
+      break;
+    case TargetKind.LIST_BREAKPOINTS:
+      task = new DebuggerTask(TargetKind.LIST_BREAKPOINTS.index);
+      break;
+    case TargetKind.STEP:
+      task = new DebuggerTask(TargetKind.STEP.index);
+      break;
+    case TargetKind.STEP_OVER:
+      task = new DebuggerTask(TargetKind.STEP_OVER.index);
+      break;
+    case TargetKind.FIBERS:
+      task = new DebuggerTask(TargetKind.FIBERS.index);
+      break;
+    case TargetKind.FINISH:
+      task = new DebuggerTask(TargetKind.FINISH.index);
+      break;
+    case TargetKind.RESTART:
+      task = new DebuggerTask(TargetKind.RESTART.index);
+      break;
+    case TargetKind.STEP_BYTECODE:
+      task = new DebuggerTask(TargetKind.STEP_BYTECODE.index);
+      break;
+    case TargetKind.STEP_OVER_BYTECODE:
+      task = new DebuggerTask(TargetKind.STEP_OVER_BYTECODE.index);
+      break;
+    case TargetKind.PRINT:
+      task = new DebuggerTask(TargetKind.PRINT.index, sentence.targetName);
+      break;
+    case TargetKind.PRINT_ALL:
+      task = new DebuggerTask(TargetKind.PRINT_ALL.index);
+      break;
+    case TargetKind.TOGGLE:
+      task = new DebuggerTask(TargetKind.TOGGLE.index, sentence.targetName);
       break;
     default:
       throwInternalError("Unimplemented ${sentence.target}");
@@ -172,11 +221,48 @@ class DebuggerTask extends SharedTask {
         return disasmDebuggerTask(commandSender, SessionState.current);
       case TargetKind.FRAME:
         return frameDebuggerTask(commandSender, SessionState.current, argument);
+      case TargetKind.DELETE_BREAKPOINT:
+        return deleteBreakpointDebuggerTask(
+            commandSender, SessionState.current, argument);
+      case TargetKind.LIST_BREAKPOINTS:
+        return listBreakpointsDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.STEP:
+        return stepDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.STEP_OVER:
+        return stepOverDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.FIBERS:
+        return fibersDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.FINISH:
+        return finishDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.RESTART:
+        return restartDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.STEP_BYTECODE:
+        return stepBytecodeDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.STEP_OVER_BYTECODE:
+        return stepOverBytecodeDebuggerTask(
+            commandSender, SessionState.current);
+      case TargetKind.PRINT:
+        return printDebuggerTask(commandSender, SessionState.current, argument);
+      case TargetKind.PRINT_ALL:
+        return printAllDebuggerTask(commandSender, SessionState.current);
+      case TargetKind.TOGGLE:
+        return toggleDebuggerTask(
+            commandSender, SessionState.current, argument);
+
       default:
         throwInternalError("Unimplemented ${TargetKind.values[kind]}");
     }
     return null;
   }
+}
+
+Session attachToSession(SessionState state, CommandSender commandSender) {
+  Session session = state.session;
+  if (session == null) {
+    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
+  }
+  state.attachCommandSender(commandSender);
+  return session;
 }
 
 Future<int> runToMainDebuggerTask(
@@ -207,12 +293,7 @@ Future<int> runToMainDebuggerTask(
 Future<int> backtraceDebuggerTask(
     CommandSender commandSender,
     SessionState state) async {
-  Session session = state.session;
-  if (session == null) {
-    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
-  }
-
-  state.attachCommandSender(commandSender);
+  Session session = attachToSession(state, commandSender);
 
   // TODO(ager): change the backtrace command to not do the printing
   // directly.
@@ -226,12 +307,7 @@ Future<int> backtraceDebuggerTask(
 Future<int> continueDebuggerTask(
     CommandSender commandSender,
     SessionState state) async {
-  Session session = state.session;
-  if (session == null) {
-    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
-  }
-
-  state.attachCommandSender(commandSender);
+  Session session = attachToSession(state, commandSender);
 
   if (!session.running) {
     // TODO(ager, lukechurch): Fix error reporting.
@@ -251,12 +327,7 @@ Future<int> breakDebuggerTask(
     CommandSender commandSender,
     SessionState state,
     String breakpointSpecification) async {
-  Session session = state.session;
-  if (session == null) {
-    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
-  }
-
-  state.attachCommandSender(commandSender);
+  Session session = attachToSession(state, commandSender);
 
   if (breakpointSpecification.contains('@')) {
     List<String> parts = breakpointSpecification.split('@');
@@ -321,12 +392,7 @@ Future<int> breakDebuggerTask(
 
 Future<int> listDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = state.session;
-  if (session == null) {
-    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
-  }
-
-  state.attachCommandSender(commandSender);
+  Session session = attachToSession(state, commandSender);
 
   String listing = await session.list();
 
@@ -342,12 +408,7 @@ Future<int> listDebuggerTask(
 
 Future<int> disasmDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = state.session;
-  if (session == null) {
-    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
-  }
-
-  state.attachCommandSender(commandSender);
+  Session session = attachToSession(state, commandSender);
 
   String disasm = await session.disasm();
 
@@ -363,12 +424,7 @@ Future<int> disasmDebuggerTask(
 
 Future<int> frameDebuggerTask(
     CommandSender commandSender, SessionState state, String frame) async {
-  Session session = state.session;
-  if (session == null) {
-    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
-  }
-
-  state.attachCommandSender(commandSender);
+  Session session = attachToSession(state, commandSender);
 
   int frameNumber = int.parse(frame, onError: (_) => -1);
   if (frameNumber == -1) {
@@ -381,6 +437,112 @@ Future<int> frameDebuggerTask(
     // TODO(ager,lukechurch): Fix error reporting.
     throwInternalError('Frame selection failed');
   }
+
+  return 0;
+}
+
+Future<int> deleteBreakpointDebuggerTask(
+    CommandSender commandSender, SessionState state, String breakpoint) async {
+  Session session = attachToSession(state, commandSender);
+
+  int id = int.parse(breakpoint, onError: (_) => -1);
+  if (id == -1) {
+    // TODO(ager,lukechurch): Fix error reporting.
+    throwInternalError('Invalid breakpoint id: $breakpoint');
+  }
+
+  await session.deleteBreakpoint(id);
+
+  return 0;
+}
+
+Future<int> listBreakpointsDebuggerTask(
+    CommandSender commandSender, SessionState state) async {
+  Session session = attachToSession(state, commandSender);
+  session.listBreakpoints();
+  return 0;
+}
+
+Future<int> stepDebuggerTask(
+    CommandSender commandSender, SessionState state) async {
+  Session session = attachToSession(state, commandSender);
+  await session.step();
+  return 0;
+}
+
+Future<int> stepOverDebuggerTask(
+    CommandSender commandSender, SessionState state) async {
+  Session session = attachToSession(state, commandSender);
+  await session.stepOver();
+  return 0;
+}
+
+Future<int> fibersDebuggerTask(
+    CommandSender commandSender, SessionState state) async {
+  Session session = attachToSession(state, commandSender);
+  await session.fibers();
+  return 0;
+}
+
+Future<int> finishDebuggerTask(
+    CommandSender commandSender, SessionState state) async {
+  Session session = attachToSession(state, commandSender);
+  await session.stepOut();
+  return 0;
+}
+
+Future<int> restartDebuggerTask(
+    CommandSender commandSender, SessionState state) async {
+  Session session = attachToSession(state, commandSender);
+  await session.restart();
+  return 0;
+}
+
+Future<int> stepBytecodeDebuggerTask(
+    CommandSender commandSender, SessionState state) async {
+  Session session = attachToSession(state, commandSender);
+  await session.stepBytecode();
+  return 0;
+}
+
+Future<int> stepOverBytecodeDebuggerTask(
+    CommandSender commandSender, SessionState state) async {
+  Session session = attachToSession(state, commandSender);
+  await session.stepOverBytecode();
+  return 0;
+}
+
+Future<int> printDebuggerTask(
+    CommandSender commandSender, SessionState state, String name) async {
+  Session session = attachToSession(state, commandSender);
+
+  if (name.startsWith('*')) {
+    await session.printVariableStructure(name.substring(1));
+  } else {
+    await session.printVariable(name);
+  }
+
+  return 0;
+}
+
+Future<int> printAllDebuggerTask(
+    CommandSender commandSender, SessionState state) async {
+  Session session = attachToSession(state, commandSender);
+  await session.printAllVariables();
+  return 0;
+}
+
+Future<int> toggleDebuggerTask(
+    CommandSender commandSender, SessionState state, String argument) async {
+  Session session = attachToSession(state, commandSender);
+
+  if (argument != 'internal') {
+    // TODO(ager, lukechurch): Fix error reporting.
+    throwInternalError("Invalid argument to toggle. "
+                       "Valid arguments: 'internal'.");
+  }
+
+  await session.toggleInternal();
 
   return 0;
 }

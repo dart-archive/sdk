@@ -171,6 +171,42 @@ class SentenceParser {
       case "frame":
         return makeNamedTarget(TargetKind.FRAME);
 
+      case "delete-breakpoint":
+        return makeNamedTarget(TargetKind.DELETE_BREAKPOINT);
+
+      case "list-breakpoints":
+        return makeTarget(TargetKind.LIST_BREAKPOINTS);
+
+      case "step":
+        return makeTarget(TargetKind.STEP);
+
+      case "step-over":
+        return makeTarget(TargetKind.STEP_OVER);
+
+      case "fibers":
+        return makeTarget(TargetKind.FIBERS);
+
+      case "finish":
+        return makeTarget(TargetKind.FINISH);
+
+      case "restart":
+        return makeTarget(TargetKind.RESTART);
+
+      case "step-bytecode":
+        return makeTarget(TargetKind.STEP_BYTECODE);
+
+      case "step-over-bytecode":
+        return makeTarget(TargetKind.STEP_OVER_BYTECODE);
+
+      case "print":
+        return makeNamedTarget(TargetKind.PRINT);
+
+      case "print-all":
+        return makeTarget(TargetKind.PRINT_ALL);
+
+      case "toggle":
+        return makeNamedTarget(TargetKind.TOGGLE);
+
       default:
         return new ErrorTarget(
             "Expected 'session(s)', 'class(s)', 'method(s)', 'file(s)', "
@@ -283,7 +319,19 @@ enum TargetKind {
   BREAK,
   LIST,
   DISASM,
-  FRAME
+  FRAME,
+  DELETE_BREAKPOINT,
+  LIST_BREAKPOINTS,
+  STEP,
+  STEP_OVER,
+  FIBERS,
+  FINISH,
+  RESTART,
+  STEP_BYTECODE,
+  STEP_OVER_BYTECODE,
+  PRINT,
+  PRINT_ALL,
+  TOGGLE,
 }
 
 class NamedTarget extends Target {

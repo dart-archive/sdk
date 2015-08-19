@@ -18,17 +18,56 @@ const String debugDocumentation = """
    debug continue
              Resume execution of a program when at a breakpoint
 
+   debug delete-breakpoint n
+             Delete breakpoint with id n
+
+   debug disasm
+             Print bytecodes for the selected frame
+
+   debug fibers
+             Print a stack trace for all fibers
+
+   debug finish
+             Finish execution of the current frame
+
    debug frame n
              Select frame n in the stack trace
 
    debug list
              Print source listing for the selected frame
 
-   debug disasm
-             Print bytecodes for the selected frame
+   debug list breakpoints
+             Print a list of all breakpoints
+
+   debug print name
+             Print the value of the local variable with the given name
+
+   debug print *name
+             Print the structure of the local variable with the given name
+
+   debug print-all
+             Print the value of all local variables
+
+   debug restart
+             Restart the selected frame
 
    debug run-to-main
              Run the compiled code on the Fletch VM and break at the main method
+
+   debug step
+             Step to next source position
+
+   debug step-bytecode
+             Step one bytecode
+
+   debug step-over
+             Step to next source location; do not follow calls
+
+   debug step-over-bytecode
+             Step one bytecode; do not follow calls
+
+   debug toggle internal
+             Toggle visibility of internal frames
 """;
 
 const String helpDocumentation = """
