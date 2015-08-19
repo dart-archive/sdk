@@ -1319,33 +1319,34 @@ class FletchBackend extends Backend {
         ..assembler.emitThrow();
   }
 
+  void forEachSubclassOf(ClassElement cls, void f(ClassElement cls)) {
+    Queue<ClassElement> queue = new Queue<ClassElement>();
+    queue.add(cls);
+    while (queue.isNotEmpty) {
+      ClassElement cls = queue.removeFirst();
+      if (compiler.world.isInstantiated(cls.declaration)) {
+        queue.addAll(compiler.world.strictSubclassesOf(cls));
+      }
+      f(cls);
+    }
+  }
+
   void newElement(Element element) {
     if (element.isField && element.isInstanceMember) {
-      ClassElement enclosingClass = element.enclosingClass;
-      Queue<ClassElement> queue = new Queue<ClassElement>();
-      queue.add(enclosingClass);
-      while (queue.isNotEmpty) {
-        var klass = queue.removeFirst();
-        queue.addAll(compiler.world.strictSubclassesOf(klass));
-        FletchClassBuilder builder = registerClassElement(klass);
+      forEachSubclassOf(element.enclosingClass, (ClassElement cls) {
+        FletchClassBuilder builder = registerClassElement(cls);
         builder.addField(element);
-      }
+      });
     }
   }
 
   void forgetElement(Element element) {
     ClassElement enclosingClass = element.enclosingClass;
     if (element.isField && element.isInstanceMember) {
-      Queue<ClassElement> queue = new Queue<ClassElement>();
-      queue.add(enclosingClass);
-      while (queue.isNotEmpty) {
-        var klass = queue.removeFirst();
-        if (compiler.world.isInstantiated(klass.declaration)) {
-          queue.addAll(compiler.world.strictSubclassesOf(klass));
-        }
-        FletchClassBuilder builder = registerClassElement(klass);
+      forEachSubclassOf(enclosingClass, (ClassElement cls) {
+        FletchClassBuilder builder = registerClassElement(cls);
         builder.removeField(element);
-      }
+      });
     } else {
       FletchFunctionBase function =
           systemBuilder.lookupFunctionByElement(element);

@@ -703,6 +703,12 @@ class LibraryUpdater extends FletchFeatures {
 
     ClassElement cls = container;
 
+    if (!compiler.world.isInstantiated(cls.declaration)) {
+      // dart2js currently only maintain subclasses for classes that are
+      // instantiated.
+      throw new IncrementalCompilationFailed(
+          "Unable to compute subclasses of ${cls.declaration}");
+    }
     var externalSubtypes =
         compiler.world.subclassesOf(cls).where((e) => e.library != library);
 

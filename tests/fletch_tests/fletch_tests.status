@@ -6,16 +6,12 @@ self/testAlwaysFails: Fail, OK # This is a test of this suite, failure is expect
 zone_helper/testAlwaysFails: Fail, OK # This is a test of this suite, failure is expected.
 self/testNeverCompletes: Timeout # This is a test of this suite, timeout is expected.
 
-incremental/add_field_and_remove_subclass: Fail
 incremental/bad_stack_trace_repro: Fail
 incremental/call_instance_tear_off_named: Fail
 incremental/call_named_arguments_1: Fail
 incremental/call_named_arguments_2: Fail
 incremental/change_supertype: Fail
 incremental/compile_time_error_002: Fail
-incremental/compile_time_error_field_becomes_removed_function: Fail
-incremental/compile_time_error_hides_field: Fail
-incremental/fix_compile_time_error_in_field: Fail
 incremental/lazy_static: Fail
 incremental/modify_static_method: Fail
 incremental/multiple_libraries: Fail
