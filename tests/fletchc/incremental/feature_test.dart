@@ -80,6 +80,9 @@ import 'program_result.dart';
 
 import 'tests_with_expectations.dart' as tests_with_expectations;
 
+import 'package:fletchc/src/driver/exit_codes.dart' show
+    DART_VM_EXITCODE_COMPILE_TIME_ERROR;
+
 typedef Future NoArgFuture();
 
 Map<String, EncodedResult> tests = computeTests(tests_with_expectations.tests);
@@ -127,7 +130,7 @@ compileAndRun(EncodedResult encodedResult) async {
   // The first program is compiled "fully". There rest are compiled below
   // as incremental updates to this first program.
   ProgramResult program = programs.first;
-
+  bool hasCompileTimeError = program.hasCompileTimeError;
   print("Full program #$testCount:");
   print(numberedLines(program.code));
 
@@ -137,7 +140,13 @@ compileAndRun(EncodedResult encodedResult) async {
   TestSession session = await runFletchVM(test, fletchDelta);
 
   await new Future(() async {
-    for (String expected in program.messages) {
+    List<String> messages = new List<String>.from(program.messages);
+    if (program.hasCompileTimeError) {
+      print("Compile-time error expected");
+      // TODO(ahe): This message shouldn't be printed by the Fletch VM.
+      messages.add("Compile error");
+    }
+    for (String expected in messages) {
       Expect.isTrue(await session.stdoutIterator.moveNext());
       Expect.stringEquals(expected, session.stdoutIterator.current);
       print("Got expected output: ${session.stdoutIterator.current}");
@@ -145,6 +154,9 @@ compileAndRun(EncodedResult encodedResult) async {
 
     int version = 2;
     for (ProgramResult program in programs.skip(1)) {
+      if (program.hasCompileTimeError) {
+        hasCompileTimeError = true;
+      }
       print("Update:");
       print(numberedLines(program.code));
 
@@ -207,7 +219,14 @@ compileAndRun(EncodedResult encodedResult) async {
         // Step out of main to finish execution of main.
         await session.stepOut();
 
-        for (String expected in program.messages) {
+        List<String> messages = new List<String>.from(program.messages);
+        if (program.hasCompileTimeError) {
+          print("Compile-time error expected");
+          // TODO(ahe): This message shouldn't be printed by the Fletch VM.
+          messages.add("Compile error");
+        }
+
+        for (String expected in messages) {
           Expect.isTrue(await session.stdoutIterator.moveNext());
           String actual = session.stdoutIterator.current;
           Expect.stringEquals(expected, actual);
@@ -251,8 +270,13 @@ compileAndRun(EncodedResult encodedResult) async {
   // outcomes of these tests.
   await session.waitForCompletion();
 
+  int actualExitCode = await session.exitCode;
+  // TODO(ahe): We should expect exit code 0, and instead be able to detect
+  // compile-time errors directly via the session.
+  int expectedExitCode = hasCompileTimeError
+      ? DART_VM_EXITCODE_COMPILE_TIME_ERROR : 0;
   Expect.equals(
-      0, await session.exitCode, "Unexpected exit code from fletch VM");
+      expectedExitCode, actualExitCode, "Unexpected exit code from fletch VM");
 }
 
 class SerializeScopeTestCase extends CompilerTestCase {

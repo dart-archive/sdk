@@ -18,19 +18,23 @@ class ProgramResult {
 
   final bool commitChangesShouldFail;
 
+  final bool hasCompileTimeError;
+
   const ProgramResult(
       this.code,
       this.messages,
       {this.compileUpdatesShouldThrow: false,
-       this.commitChangesShouldFail: false});
+       this.commitChangesShouldFail: false,
+       this.hasCompileTimeError: false});
 
   String toString() {
     return """
 ProgramResult(
     ${JSON.encode(code)},
     ${JSON.encode(messages)},
-    commitChangesShouldFail: $commitChangesShouldFail)
-    compileUpdatesShouldThrow: $compileUpdatesShouldThrow)""";
+    commitChangesShouldFail: $commitChangesShouldFail,
+    compileUpdatesShouldThrow: $compileUpdatesShouldThrow,
+    hasCompileTimeError: $hasCompileTimeError)""";
   }
 }
 
@@ -41,10 +45,13 @@ class ProgramExpectation {
 
   final bool commitChangesShouldFail;
 
+  final bool hasCompileTimeError;
+
   const ProgramExpectation(
       this.messages,
       {this.compileUpdatesShouldThrow: false,
-       this.commitChangesShouldFail: false});
+       this.commitChangesShouldFail: false,
+       this.hasCompileTimeError: false});
 
   factory ProgramExpectation.fromJson(String json) {
     var data = JSON.decode(json);
@@ -57,15 +64,17 @@ class ProgramExpectation {
     return new ProgramExpectation(
         extractMessages(data),
         compileUpdatesShouldThrow: extractCompileUpdatesShouldThrow(data),
-        commitChangesShouldFail: extractCommitChangesShouldFail(data));
+        commitChangesShouldFail: extractCommitChangesShouldFail(data),
+        hasCompileTimeError: extractHasCompileTimeError(data));
   }
 
-  ProgramResult toResult(String code) {
+  ProgramResult toResult(/* Map<String, String> or String */ code) {
     return new ProgramResult(
         code,
         messages,
         compileUpdatesShouldThrow: compileUpdatesShouldThrow,
-        commitChangesShouldFail: commitChangesShouldFail);
+        commitChangesShouldFail: commitChangesShouldFail,
+        hasCompileTimeError: hasCompileTimeError);
   }
 
   toJson() {
@@ -81,7 +90,19 @@ class ProgramExpectation {
     if (commitChangesShouldFail) {
       result['commitChangesShouldFail'] = 1;
     }
+    if (hasCompileTimeError) {
+      result['hasCompileTimeError'] = 1;
+    }
     return result;
+  }
+
+  String toString() {
+    return """
+ProgramExpectation(
+    ${JSON.encode(messages)},
+    commitChangesShouldFail: $commitChangesShouldFail,
+    compileUpdatesShouldThrow: $compileUpdatesShouldThrow,
+    hasCompileTimeError: $hasCompileTimeError)""";
   }
 
   static List<String> extractMessages(Map<String, dynamic> json) {
@@ -94,6 +115,10 @@ class ProgramExpectation {
 
   static bool extractCommitChangesShouldFail(Map<String, dynamic> json) {
     return json["commitChangesShouldFail"] == 1;
+  }
+
+  static bool extractHasCompileTimeError(Map<String, dynamic> json) {
+    return json["hasCompileTimeError"] == 1;
   }
 }
 
@@ -166,10 +191,7 @@ class EncodedResult {
       List<ProgramResult> result = new List<ProgramResult>(updateCount);
       for (int i = 0; i < updateCount; i++) {
         ProgramExpectation expectation = decodeExpectation(expectations[i]);
-        result[i] = new ProgramResult(
-            <String, String>{},
-            expectation.messages,
-            compileUpdatesShouldThrow: expectation.compileUpdatesShouldThrow);
+        result[i] = expectation.toResult(<String, String>{});
       }
       for (String name in fileMap.keys) {
         for (int i = 0; i < updateCount; i++) {

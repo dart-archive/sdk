@@ -1734,7 +1734,7 @@ compile_time_error_005
 // Regression for crash when attempting to reuse method with compile-time
 // error.
 main() {
-<<<< "Compile error"
+<<<< {"messages":[],"hasCompileTimeError":1}
   var funcnuf = (x) => ((x))=((x)) <= (x);
 ==== []
   // TODO(ahe): Should expect "Hello"
@@ -1743,7 +1743,7 @@ main() {
 }
 ''',
 
-r'''
+  r'''
 compile_time_error_006
 ==> main.dart.patch <==
 <<<< "error"
@@ -1986,6 +1986,106 @@ main() {
   new B();
 ====
 >>>>
+}
+''',
+
+  r'''
+fix_compile_time_error_in_field
+==> main.dart.patch <==
+// Regression test for a bad assertion in dart2js (can't compute subclasses of
+// C because C isn't recorded as instantiated, which it really is, it's just
+// that a compile-time error was encountered when attempting to resolve C).
+class C {
+<<<< []
+  int sync*;
+==== []
+  int sync;
+>>>>
+}
+main() {
+  new C();
+}
+''',
+
+  r'''
+compile_time_error_partial_file
+==> main.dart.patch <==
+// Regression test for problem noticed when a mistake was made in
+// fix_compile_time_error_in_field.
+class C {
+<<<< {"messages":[],"hasCompileTimeError":1}
+  int sync*;
+==== {"messages":[],"compileUpdatesShouldThrow":1}
+  // TODO(ahe): compileUpdates should not throw.
+  int sync;
+}
+main() {
+  new C();
+}
+>>>>
+''',
+
+  r'''
+compile_time_error_field_becomes_removed_function
+==> main.dart.patch <==
+// Regression test for a syntax error in a field becomes a function that is
+// subsequently removed.
+class C {
+<<<< {"messages":[],"hasCompileTimeError":1}
+  int sync*;
+==== []
+  sync();
+==== []
+>>>>
+}
+main() {
+  new C();
+}
+''',
+
+  r'''
+add_field_and_remove_subclass
+==> main.dart.patch <==
+// Regression test for what happens when a field is added at the same time a
+// class is removed.
+class A {
+<<<< []
+==== []
+  var field;
+>>>>
+}
+
+<<<<
+class B extends A {
+}
+====
+>>>>
+
+main() {
+<<<<
+  new B();
+====
+  new A();
+>>>>
+}
+''',
+
+  r'''
+compile_time_error_hides_field
+==> main.dart.patch <==
+// Regression test for what happens when the parser doesn't recover.
+class A {
+<<<< {"messages":[],"hasCompileTimeError":1}
+// TODO(ahe): should just expect "null"
+  bool operator ===(A other) { return true; }
+==== "null"
+>>>>
+
+  int field;
+}
+
+main() {
+  print(new A().field);
 }
 ''',
 ];
