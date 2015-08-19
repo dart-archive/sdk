@@ -336,13 +336,6 @@ void Program::CollectImmutableGarbage() {
     ValidateHeapsAreConsistent();
   }
 
-  Heap* heap = immutable_heap()->heap();
-  Space* from = heap->space();
-  Space* to = new Space();
-  NoAllocationFailureScope alloc(to);
-
-  ScavengeVisitor scavenger(from, to);
-
   // Pass 1: Storebuffer compaction.
   // We do this as a separate pass to ensure the mutable collection can access
   // all objects (including immutable ones) and for example do
@@ -362,6 +355,13 @@ void Program::CollectImmutableGarbage() {
 
   // Pass 2: Iterate all process roots to immutable heap.
   {
+    Heap* heap = immutable_heap()->heap();
+    Space* from = heap->space();
+    Space* to = new Space();
+    NoAllocationFailureScope alloc(to);
+
+    ScavengeVisitor scavenger(from, to);
+
     int process_heap_sizes = 0;
     Process* current = process_list_head_;
     while (current != NULL) {
@@ -371,12 +371,13 @@ void Program::CollectImmutableGarbage() {
       process_heap_sizes += current->heap()->space()->Used();
       current = current->process_list_next();
     }
+
+    to->CompleteScavenge(&scavenger);
+    heap->ProcessWeakPointers();
+    heap->ReplaceSpace(to);
+
     immutable_heap()->UpdateLimitAfterImmutableGC(process_heap_sizes);
   }
-
-  to->CompleteScavenge(&scavenger);
-  heap->ProcessWeakPointers();
-  heap->ReplaceSpace(to);
 
   if (Flags::validate_heaps) {
     ValidateHeapsAreConsistent();
