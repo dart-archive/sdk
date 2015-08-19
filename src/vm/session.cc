@@ -283,12 +283,14 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessBacktraceRequest: {
+        StoppedGcThreadScope scope(program()->scheduler());
         Stack* stack = process_->stack();
         SendStackTrace(stack);
         break;
       }
 
       case Connection::kProcessFiberBacktraceRequest: {
+        StoppedGcThreadScope scope(program()->scheduler());
         int64 fiber_id = connection_->ReadInt64();
         Stack* stack = Stack::cast(MapLookupById(fibers_map_id_, fiber_id));
         SendStackTrace(stack);
@@ -297,6 +299,7 @@ void Session::ProcessMessages() {
 
       case Connection::kProcessLocal:
       case Connection::kProcessLocalStructure: {
+        StoppedGcThreadScope scope(program()->scheduler());
         int frame = connection_->ReadInt();
         int slot = connection_->ReadInt();
         Object* local = StackWalker::ComputeLocal(process_, frame, slot);
@@ -310,6 +313,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessRestartFrame: {
+        StoppedGcThreadScope scope(program()->scheduler());
         int frame = connection_->ReadInt();
         StackWalker::RestartFrame(process_, frame);
         ProcessContinue(process_);
@@ -350,6 +354,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessAddFibersToMap: {
+        StoppedGcThreadScope scope(program()->scheduler());
         // TODO(ager): Potentially optimize this to not require a full
         // process GC to locate the live stacks?
         int number_of_stacks = process_->CollectGarbageAndChainStacks();
