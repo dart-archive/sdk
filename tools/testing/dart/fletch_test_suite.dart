@@ -17,6 +17,7 @@ import 'dart:convert' show
 import 'dart:async' show
     Completer,
     Future,
+    Stream,
     StreamIterator,
     Timer;
 
@@ -86,6 +87,7 @@ class FletchTestSuite extends TestSuite {
     TestExpectations expectations = new TestExpectations();
     String buildDir = TestUtils.buildDir(configuration);
 
+    bool helperProgramExited = false;
     io.Process vmProcess;
     ReadTestExpectationsInto(
         expectations, '$testSuiteDir/fletch_tests.status',
@@ -105,15 +107,24 @@ class FletchTestSuite extends TestSuite {
            '-ppackage/',
            '-Dtest.fletch_test_suite.port=${server.port}',
            '$testSuiteDir/fletch_test_suite.dart']).then((io.Process process) {
+             process.exitCode.then((_) {
+               helperProgramExited = true;
+               server.close();
+             });
              vmProcess = process;
              return process.stdin.close();
            }).then((_) {
-             return server.first;
+             return server.first.catchError((error) {
+               // The VM died before we got a connection.
+               assert(helperProgramExited);
+               return null;
+             });
            }).then((io.Socket socket) {
              server.close();
              return socket;
            });
     }).then((io.Socket socket) {
+      assert(socket != null || helperProgramExited);
       completer = new TestCompleter(vmProcess, socket);
       completer.initialize();
       return completer.requestTestNames();
@@ -274,14 +285,16 @@ class TestCompleter {
 
   void initialize() {
     List<String> stderrLines = <String>[];
-    vmProcess.stdout.transform(UTF8.decoder).transform(new LineSplitter())
-        .listen(io.stdout.writeln);
+    Future stdoutFuture =
+        vmProcess.stdout.transform(UTF8.decoder).transform(new LineSplitter())
+        .listen(io.stdout.writeln).asFuture();
     bool inDartVmUncaughtMessage = false;
-    vmProcess.stderr.transform(UTF8.decoder).transform(new LineSplitter())
+    Future stderrFuture =
+        vmProcess.stderr.transform(UTF8.decoder).transform(new LineSplitter())
         .listen((String line) {
           io.stderr.writeln(line);
           stderrLines.add(line);
-        });
+        }).asFuture();
     vmProcess.exitCode.then((value) {
       exitCode = value;
       stderr = stderrLines.join("\n");
@@ -294,19 +307,28 @@ class TestCompleter {
                 stderr));
       }
       if (exitCode != 0) {
-        throw "Helper program exited with exit code $exitCode.\n$stderr";
+        stdoutFuture.then((_) => stderrFuture).then((_) {
+          throw "Helper program exited with exit code $exitCode.\n$stderr";
+        });
       }
     });
-    process(
-        // TODO(ahe): Don't use StreamIterator here, just use listen and
-        // processMessage.
-        new StreamIterator<Message>(
-            socket
-                .transform(UTF8.decoder).transform(new LineSplitter())
-                .transform(messageTransformer)));
+    // TODO(ahe): Don't use StreamIterator here, just use listen and
+    // processMessage.
+    StreamIterator<Message> messages;
+    if (socket == null) {
+      messages = new StreamIterator<Message>(
+          new Stream<Message>.fromIterable(<Message>[]));
+    } else {
+      messages = new StreamIterator<Message>(
+          socket
+          .transform(UTF8.decoder).transform(new LineSplitter())
+          .transform(messageTransformer));
+    }
+    process(messages);
   }
 
   Future<List<String>> requestTestNames() {
+    if (socket == null) return new Future.value(<String>[]);
     socket.writeln(JSON.encode(const ListTests().toJson()));
     return testNamesCompleter.future;
   }
