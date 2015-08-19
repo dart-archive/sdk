@@ -15,22 +15,16 @@ import sys
 
 utils = bot_utils.GetUtils()
 
-PATCHED_X64_BUILDER = r'dart-sdk-fletch-patched-(linux|mac)-x64'
-PATCHED_ARM_BUILDER = r'dart-sdk-fletch-patched-cross-linux-arm'
-
+PATCHED_BUILDER = r'dart-sdk-fletch-patched-(linux|mac)-(x64|arm)'
 
 def BuildConfig(name, is_buildbot):
   """Returns info for the current buildbot."""
-  x64_pattern = re.match(PATCHED_X64_BUILDER, name)
-  if x64_pattern:
-    system = x64_pattern.group(1)
+  pattern = re.match(PATCHED_BUILDER, name)
+  if pattern:
+    system = pattern.group(1)
+    arch = pattern.group(2)
     if system == 'mac': system = 'macos'
-    return bot.BuildInfo('none', 'none', 'release', system, arch='x64')
-
-  arm_pattern = re.match(PATCHED_ARM_BUILDER, name)
-  if arm_pattern:
-    return bot.BuildInfo('none', 'none', 'release', 'linux', arch='arm')
-
+    return bot.BuildInfo('none', 'none', 'release', system, arch=arch)
   return None
 
 
