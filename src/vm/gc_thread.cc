@@ -125,6 +125,10 @@ void GCThread::MainLoop() {
         do_immutable_gc = requesting_immutable_gc_;
         do_shutdown = shutting_down_;
         do_pause = pause_count_ > 0;
+
+        requesting_immutable_gc_ = false;
+        requesting_gc_ = false;
+        shutting_down_ = false;
       }
 
       if (do_pause) {
@@ -145,10 +149,6 @@ void GCThread::MainLoop() {
           client_monitor_->NotifyAll();
         }
       }
-
-      requesting_immutable_gc_ = false;
-      requesting_gc_ = false;
-      shutting_down_ = false;
     }
 
     if (do_immutable_gc) {
