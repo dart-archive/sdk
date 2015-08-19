@@ -20,6 +20,7 @@
       '-fdata-sections',
       '-ffunction-sections',
       '-fPIC',
+      '-fvisibility=hidden',
     ],
 
     'common_gcc_cflags_cc': [

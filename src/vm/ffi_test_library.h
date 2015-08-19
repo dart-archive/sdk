@@ -6,74 +6,75 @@
 // There are no tests in this file, but we keep this to have a single place
 // for functionality that we want to test in the FFI implementation.
 
+#define EXPORT __attribute__((visibility("default")))
+
 static int count;
 
-void setup();
+EXPORT void setup();
 
-int getcount();
+EXPORT int getcount();
 
-void inc();
+EXPORT void inc();
 
-int setcount(int val);
+EXPORT int setcount(int val);
 
-int ifun0();
+EXPORT int ifun0();
 
-int ifun1(int a);
+EXPORT int ifun1(int a);
 
-int ifun2(int a, int b);
+EXPORT int ifun2(int a, int b);
 
-int ifun3(int a, int b, int c);
+EXPORT int ifun3(int a, int b, int c);
 
-int ifun4(int a, int b, int c, int d);
+EXPORT int ifun4(int a, int b, int c, int d);
 
-int ifun5(int a, int b, int c, int d, int e);
+EXPORT int ifun5(int a, int b, int c, int d, int e);
 
-int ifun6(int a, int b, int c, int d, int e, int f);
+EXPORT int ifun6(int a, int b, int c, int d, int e, int f);
 
-void vfun0();
+EXPORT void vfun0();
 
-void vfun1(int a);
+EXPORT void vfun1(int a);
 
-void vfun2(int a, int b);
+EXPORT void vfun2(int a, int b);
 
-void vfun3(int a, int b, int c);
+EXPORT void vfun3(int a, int b, int c);
 
-void vfun4(int a, int b, int c, int d);
+EXPORT void vfun4(int a, int b, int c, int d);
 
-void vfun5(int a, int b, int c, int d, int e);
+EXPORT void vfun5(int a, int b, int c, int d, int e);
 
-void vfun6(int a, int b, int c, int d, int e, int f);
+EXPORT void vfun6(int a, int b, int c, int d, int e, int f);
 
 // We assume int are 32 bits, short is 16 bits, char is 8 bits,
 // float is 32 bits, double is 64 bits.
-void* pfun0();
+EXPORT void* pfun0();
 
-void* pfun1(int value);
+EXPORT void* pfun1(int value);
 
-void* pfun2(int value, int value2);
+EXPORT void* pfun2(int value, int value2);
 
-void* pfun3(int value, int value2, int value3);
+EXPORT void* pfun3(int value, int value2, int value3);
 
-void* pfun4(int value, int value2, int value3, int value4);
+EXPORT void* pfun4(int value, int value2, int value3, int value4);
 
-void* pfun5(int value, int value2, int value3, int value4, int value5);
+EXPORT void* pfun5(int value, int value2, int value3, int value4, int value5);
 
-void* pfun6(int value, int value2, int value3, int value4, int value5,
-            int value6);
+EXPORT void* pfun6(int value, int value2, int value3, int value4, int value5,
+                   int value6);
 
+EXPORT void* memint8();
 
-void* memint8();
+EXPORT void* memint16();
 
-void* memint16();
+EXPORT void* memuint16();
 
-void* memuint16();
+EXPORT void* memuint32();
 
-void* memuint32();
+EXPORT void* memint64();
 
-void* memint64();
+EXPORT void* memuint64();
 
-void* memuint64();
+EXPORT void* memfloat32();
 
-void* memfloat32();
-
-void* memfloat64();
+EXPORT void* memfloat64();
