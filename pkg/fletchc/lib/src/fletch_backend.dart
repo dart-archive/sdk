@@ -189,7 +189,6 @@ class FletchBackend extends Backend {
   ClassElement mintClass;
   ClassElement growableListClass;
   ClassElement linkedHashMapClass;
-  ClassElement coroutineClass;
 
   FletchSystemBuilder systemBuilder;
 
@@ -336,7 +335,6 @@ class FletchBackend extends Backend {
     loadClass("_DoubleImpl", compiler.coreLibrary, true);
     loadClass("Null", compiler.coreLibrary, true);
     loadClass("bool", compiler.coreLibrary, true);
-    coroutineClass = loadClass("Coroutine", fletchLibrary, true).element;
     loadClass("Port", fletchLibrary, true);
     loadClass("ForeignMemory", fletchFFILibrary, true);
     loadClass("ForeignPointer", fletchFFILibrary, true);
@@ -361,7 +359,6 @@ class FletchBackend extends Backend {
     selector = new UniverseSelector(new Selector.call('add', null, 1), null);
     world.registerDynamicInvocation(selector);
 
-    alwaysEnqueue.add(coroutineClass.lookupLocalMember('_coroutineStart'));
     alwaysEnqueue.add(compiler.objectClass.implementation.lookupLocalMember(
         noSuchMethodTrampolineName));
     alwaysEnqueue.add(compiler.objectClass.implementation.lookupLocalMember(
@@ -371,6 +368,19 @@ class FletchBackend extends Backend {
       world.registerStaticUse(element);
     }
   }
+
+  void registerInstantiatedClass(ClassElement cls,
+                                 Enqueuer enqueuer,
+                                 Registry registry) {
+    if (cls.library == fletchLibrary) {
+      // Always enqueue _coroutineStart if Coroutine is used.
+      if (cls.name == "Coroutine") {
+        Element member = cls.lookupLocalMember('_coroutineStart');
+        enqueuer.registerStaticUse(member);
+      }
+    }
+  }
+
 
   void onElementResolved(Element element, TreeElements elements) {
     if (alwaysEnqueue.contains(element)) {
