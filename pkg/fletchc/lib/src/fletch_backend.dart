@@ -1339,9 +1339,7 @@ class FletchBackend extends Backend {
     }
   }
 
-  void replaceFunctionUsageElement(
-      FunctionElement element,
-      List<Element> users) {
+  void replaceFunctionUsageElement(Element element, List<Element> users) {
     for (Element user in users) {
       systemBuilder.replaceUsage(user, element);
     }
