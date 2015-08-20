@@ -11,8 +11,8 @@ incremental/call_instance_tear_off_named: Fail
 incremental/call_named_arguments_1: Fail
 incremental/call_named_arguments_2: Fail
 incremental/change_supertype: Fail
-incremental/compile_time_error_002: Fail
-incremental/lazy_static: Fail
+incremental/compile_time_error_002: Fail # Crashes fletch-vm: OOM static array access
+incremental/lazy_static: Fail # Crashes fletch-vm: OOM static array access
 incremental/modify_static_method: Fail
 incremental/multiple_libraries: Fail
 incremental/remove_class_with_static_method: Fail

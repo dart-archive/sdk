@@ -88,21 +88,20 @@ typedef Future NoArgFuture();
 Map<String, EncodedResult> tests = computeTests(tests_with_expectations.tests);
 
 Future<Null> main(List<String> arguments) async {
-  var testsToRun;
+  List<String> testNamesToRun;
+
   if (arguments.isEmpty) {
     int skip = const int.fromEnvironment("skip", defaultValue: 0);
     testCount += skip;
     skippedCount += skip;
 
-    testsToRun = tests.values.skip(skip);
-    // TODO(ahe): Remove the following line, as it means only run the
-    // first few tests.
-    testsToRun = testsToRun.take(8);
+    testNamesToRun = tests.keys.skip(skip);
   } else {
-    testsToRun = arguments.map((String name) => tests[name]);
+    testNamesToRun = arguments;
   }
-  for (EncodedResult test in testsToRun) {
-    await compileAndRun(test);
+  for (var testName in testNamesToRun) {
+    EncodedResult test = tests[testName];
+    await compileAndRun(testName, test);
   }
   updateSummary();
 }
@@ -121,7 +120,7 @@ void updateSummary() {
       "($skippedCount skipped, $updateFailedCount failed).");
 }
 
-compileAndRun(EncodedResult encodedResult) async {
+compileAndRun(String testName, EncodedResult encodedResult) async {
   testCount++;
 
   updateSummary();
@@ -137,7 +136,7 @@ compileAndRun(EncodedResult encodedResult) async {
   IoCompilerTestCase test = new IoCompilerTestCase(program.code);
   FletchDelta fletchDelta = await test.run();
 
-  TestSession session = await runFletchVM(test, fletchDelta);
+  TestSession session = await runFletchVM(testName, test, fletchDelta);
 
   await new Future(() async {
     List<String> messages = new List<String>.from(program.messages);
@@ -366,10 +365,11 @@ List<String> splitLines(String text) {
 }
 
 Future<TestSession> runFletchVM(
+    String testName,
     IoCompilerTestCase test,
     FletchDelta fletchDelta) async {
   TestSession session =
-      await TestSession.spawnVm(test.incrementalCompiler);
+      await TestSession.spawnVm(test.incrementalCompiler, testName: testName);
   try {
     await session.applyDelta(fletchDelta);
     if (const bool.fromEnvironment("feature_test.print_initial_commands")) {
@@ -484,7 +484,8 @@ class TestSession extends Session {
     });
   }
 
-  static Future<TestSession> spawnVm(IncrementalCompiler compiler) async {
+  static Future<TestSession> spawnVm(IncrementalCompiler compiler,
+                                     {String testName}) async {
     print("TestSession.spawnVm");
     String vmPath = compiler.compiler.fletchVm.toFilePath();
     FletchBackend backend = compiler.compiler.backend;
@@ -501,7 +502,9 @@ class TestSession extends Session {
     ];
 
     print("Running '$vmPath ${vmOptions.join(" ")}'");
-    FletchVm fletchVm = await FletchVm.start(vmPath, arguments: vmOptions);
+    var environment = getProcessEnvironment(testName);
+    FletchVm fletchVm = await FletchVm.start(
+        vmPath, arguments: vmOptions, environment: environment);
 
     // Unlike [fletchvm.stdoutLines] and [fletchvm.stderrLines], their
     // corresponding controller cannot produce an error.
@@ -538,6 +541,14 @@ class TestSession extends Session {
     }));
 
     return session;
+  }
+
+  static Map<String, String> getProcessEnvironment(String testName) {
+    if (testName == null) return null;
+
+    var environment = new Map.from(Platform.environment);
+    environment['FEATURE_TEST_TESTNAME'] = testName;
+    return environment;
   }
 
   Future handleError(error, StackTrace stackTrace) {
