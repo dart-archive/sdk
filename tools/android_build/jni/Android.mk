@@ -7,7 +7,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := fletch-library
 LOCAL_CFLAGS := -DFLETCH32 -DFLETCH_TARGET_OS_POSIX -DFLETCH_TARGET_OS_LINUX \
-  -DANDROID -I$(LOCAL_PATH)/../../../ -std=c++11
+  -DFLETCH_ENABLE_FFI -DANDROID -I$(LOCAL_PATH)/../../../ -std=c++11
 
 LOCAL_SRC_FILES := \
 	../../../src/shared/assert.cc \
@@ -66,11 +66,13 @@ LOCAL_SRC_FILES := \
 	../../../third_party/double-conversion/src/strtod.cc \
 
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
+  LOCAL_CFLAGS += -DFLETCH_TARGET_ARM
   LOCAL_SRC_FILES += \
     ../../../out/ReleaseXARMAndroid/obj/src/vm/fletch_vm.gen/generated.S
 endif
 
 ifeq ($(TARGET_ARCH_ABI), x86)
+  LOCAL_CFLAGS += -DFLETCH_TARGET_IA32
   LOCAL_SRC_FILES += \
     ../../../out/ReleaseIA32/obj/src/vm/fletch_vm.gen/generated.S
 endif
