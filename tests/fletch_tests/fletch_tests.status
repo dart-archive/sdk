@@ -21,6 +21,7 @@ incremental/remove_instance_method_super_access: Fail
 incremental/signature_change_static_method: Fail
 incremental/stored_closure: Fail
 incremental/stored_instance_tearoff: Fail
+incremental/update_dependencies: Fail
 
 [ $arch != ia32 && $arch != x64 ]
 

@@ -2093,4 +2093,60 @@ main() {
   print(new A().field);
 }
 ''',
+
+  r'''
+update_dependencies
+==> main.dart.patch <==
+foo() {
+<<<< "v1"
+  print("v1");
+==== "v2"
+  print("v2");
+>>>>
+}
+
+bar() => foo();
+
+main() {
+  bar();
+}
+''',
+
+  r'''
+update_dependencies_recoverable_compile_time_error
+==> main.dart.patch <==
+foo() {
+<<<< {"messages":[],"hasCompileTimeError":1}
+  new new();
+==== []
+  // TODO(ahe): Should expect just "v2"
+  print("v2");
+>>>>
+}
+
+bar() => foo();
+
+main() {
+  bar();
+}
+''',
+
+  r'''
+update_dependencies_unrecoverable_compile_time_error
+==> main.dart.patch <==
+foo() {
+<<<< {"messages":[],"hasCompileTimeError":1}
+  for do while default if else new;
+==== []
+  // TODO(ahe): Should expect just "v2"
+  print("v2");
+>>>>
+}
+
+bar() => foo();
+
+main() {
+  bar();
+}
+''',
 ];
