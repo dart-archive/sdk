@@ -4,10 +4,12 @@ model {
     android {
         compileSdkVersion = 22
         buildToolsVersion = "22.0.1"
+        sourceCompatibility = 1.7
+        targetCompatibility = 1.7
 
         defaultConfig.with {
             applicationId = "com.google.fletch.githubsample"
-            minSdkVersion.apiLevel = 11
+            minSdkVersion.apiLevel = 21
             targetSdkVersion.apiLevel = 22
         }
     }

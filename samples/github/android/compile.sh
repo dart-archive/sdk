@@ -63,6 +63,7 @@ if [[ $# -eq 0 ]] || [[ "$1" == "immi" ]]; then
     $SERVICEC --out "$SERVICE_GEN_DIR" "$IMMI_GEN_DIR/idl/immi_service.idl"
 
     # Copy servicec generated wrappers.
+    mkdir -p $JNI_DIR
     cp $SERVICE_GEN_DIR/java/jni/*.cc $JNI_DIR/
 
     # Copy servicec generated structures.
