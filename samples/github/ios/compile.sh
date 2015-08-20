@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
 # Setup
 #  - Install and build fletch.
 #  - Install Cocoapods.
@@ -15,11 +19,6 @@
 #  - Run servicec.
 #  - Generate snapshot of your Dart program.
 #  - Hit the 'run' button in xcode.
-
-# To run the above as part of xcode 'run'
-# Open your <proj>.xcodeproj (not the xcworkspace)
-# and add a "Run Script" with content ./compile.sh in Build Phases and place it
-# between Target Dependencies and Compile Sources (drag it there).
 
 set -uxe
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
