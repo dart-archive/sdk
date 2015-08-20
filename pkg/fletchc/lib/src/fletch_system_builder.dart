@@ -57,6 +57,10 @@ class FletchSystemBuilder {
   final Map<ClassElement, FletchClassBuilder> _classBuildersByElement =
       <ClassElement, FletchClassBuilder>{};
 
+  // TODO(ajohnsen): By function/class?
+  final Map<Element, List<FunctionElement>> _replaceUsage =
+      <Element, List<FunctionElement>>{};
+
   FletchSystemBuilder(FletchSystem predecessorSystem)
       : this.predecessorSystem = predecessorSystem,
         this.functionIdStart = predecessorSystem.computeMaxFunctionId() + 1,
@@ -64,6 +68,10 @@ class FletchSystemBuilder {
 
   // TODO(ajohnsen): Remove and add a lookupConstant.
   Map<ConstantValue, int> getCompiledConstants() => _newConstants;
+
+  void replaceUsage(Element element, FunctionElement usage) {
+    _replaceUsage.putIfAbsent(element, () => []).add(usage);
+  }
 
   FletchFunctionBuilder newFunctionBuilder(
       FletchFunctionKind kind,
@@ -360,6 +368,32 @@ class FletchSystemBuilder {
     // Compute all scheme changes.
     for (FletchClassBuilder builder in _newClasses.values) {
       if (builder.computeSchemaChange(commands)) changes++;
+    }
+
+    for (Element element in _replaceUsage.keys) {
+      FletchFunction function =
+          predecessorSystem.lookupFunctionByElement(element);
+      if (function == null) continue;
+      List<FletchConstant> constants = function.constants;
+      for (int i = 0; i < constants.length; i++) {
+        FletchConstant constant = constants[i];
+        if (constant.mapId != MapId.methods) continue;
+        for (var usage in _replaceUsage[element]) {
+          FletchFunction oldFunction =
+              predecessorSystem.lookupFunctionByElement(usage);
+          if (oldFunction == null) continue;
+          if (oldFunction.functionId == constant.id) {
+            FletchFunctionBuilder newFunction =
+                lookupFunctionBuilderByElement(usage);
+            commands
+                ..add(new PushFromMap(MapId.methods, function.functionId))
+                ..add(new PushFromMap(MapId.methods, newFunction.functionId))
+                ..add(new ChangeMethodLiteral(i));
+            changes++;
+            break;
+          }
+        }
+      }
     }
 
     // TODO(ajohnsen): Big hack. We should not track method dependency like
