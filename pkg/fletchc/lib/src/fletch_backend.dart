@@ -375,6 +375,7 @@ class FletchBackend extends Backend {
     if (cls.library == fletchLibrary) {
       // Always enqueue _coroutineStart if Coroutine is used.
       if (cls.name == "Coroutine") {
+        builtinClasses.add(cls);
         Element member = cls.lookupLocalMember('_coroutineStart');
         enqueuer.registerStaticUse(member);
       }
