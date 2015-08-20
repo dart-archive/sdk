@@ -433,16 +433,19 @@ class CoredumpArchiver(object):
 
     gsutil = bot_utils.GSUtil()
     storage_path = '%s/%s/' % (self._bucket, uuid.uuid4())
-    prefix = 'gs://%s' % storage_path
-    link_prefix = 'https://storage.cloud.google.com/%s' % storage_path
+    gs_prefix = 'gs://%s' % storage_path
+    http_prefix = 'https://storage.cloud.google.com/%s' % storage_path
 
     for filename in files:
-      destination = '%s%s' % (prefix, filename)
-      web_location = '%s%s' % (link_prefix, filename)
-      web_link = '<a href="%s">%s</a>' % (web_location, destination)
-      # Disabled until we find the cause of upload failure
-      # gsutil.upload(filename, destination)
-      print '@@@STEP_LOG_LINE@coredumps@%s@@@' % web_link
+      gs_url = '%s%s' % (gs_prefix, filename)
+      http_url = '%s%s' % (http_prefix, filename)
+
+      try:
+        gsutil.upload(filename, gs_url)
+        print '@@@STEP_LOG_LINE@coredumps@%s (%s)@@@' % (gs_url, http_url)
+      except Exception as error:
+        message = "Failed to upload coredump %s, error: %s" % (filename, error)
+        print '@@@STEP_LOG_LINE@coredumps@%s@@@' % message
 
     for filename in coredumps:
       os.remove(filename)
