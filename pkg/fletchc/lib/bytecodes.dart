@@ -14,8 +14,6 @@ part 'generated_bytecodes.dart';
 const int VAR_DIFF = 0x3FFFFFFF;
 
 abstract class Bytecode {
-  static final BytecodeBuffer _buffer = new BytecodeBuffer();
-
   static bool identicalBytecodes(List<Bytecode> expected,
                                  List<Bytecode> actual) {
     if (expected.length != actual.length) return false;
@@ -45,15 +43,12 @@ abstract class Bytecode {
   bool operator==(Bytecode other) => other.opcode == opcode;
 
   int get hashCode => opcode.index;
-
-  /// Shared buffer. Not safe to use in asynchronous operations.
-  BytecodeBuffer get buffer => _buffer;
 }
 
 class BytecodeBuffer {
   int position = 0;
 
-  Uint8List list = new Uint8List(16);
+  Uint8List list = new Uint8List(8);
 
   ByteData get view => new ByteData.view(list.buffer);
 
@@ -81,15 +76,7 @@ class BytecodeBuffer {
     position += 8;
   }
 
-  void addUint8List(List<int> value) {
-    growBytes(value.length);
-    list.setRange(position, position + value.length, value);
-    position += value.length;
-  }
-
   void sendOn(Sink<List<int>> sink) {
-    // TODO(ahe): Avoid all the copying, redesign this method.
-    sink.add(list.sublist(0, position));
-    position = 0;
+    sink.add(new Uint8List.view(list.buffer, list.offsetInBytes, position));
   }
 }

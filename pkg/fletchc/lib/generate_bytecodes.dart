@@ -109,7 +109,7 @@ ${
   String get formatString => '$formatString';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
 ${
   encode.join("")

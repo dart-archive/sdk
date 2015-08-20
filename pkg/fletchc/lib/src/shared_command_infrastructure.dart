@@ -111,12 +111,17 @@ class CommandBuffer<E> {
 
   Uint8List list = new Uint8List(16);
 
-  ByteData get view => new ByteData.view(list.buffer);
+  ByteData view;
+
+  CommandBuffer() {
+    view = new ByteData.view(list.buffer, list.offsetInBytes);
+  }
 
   void growBytes(int size) {
     while (position + size >= list.length) {
       list = new Uint8List(list.length * 2)
           ..setRange(0, list.length, list);
+      view = new ByteData.view(list.buffer, list.offsetInBytes);
     }
   }
 
@@ -154,7 +159,7 @@ class CommandBuffer<E> {
   void sendOn(Sink<List<int>> sink, E code) {
     view.setUint32(0, position - headerSize, commandEndianness);
     view.setUint8(4, (code as dynamic).index);
-    sink.add(list.sublist(0, position));
+    sink.add(new Uint8List.view(list.buffer, list.offsetInBytes, position));
   }
 
   static bool readBoolFromBuffer(Uint8List buffer, int offset) {

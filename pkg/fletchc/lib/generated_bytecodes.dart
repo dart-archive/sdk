@@ -145,7 +145,7 @@ class LoadLocal0 extends Bytecode {
   String get formatString => 'load local 0';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -172,7 +172,7 @@ class LoadLocal1 extends Bytecode {
   String get formatString => 'load local 1';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -199,7 +199,7 @@ class LoadLocal2 extends Bytecode {
   String get formatString => 'load local 2';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -227,7 +227,7 @@ class LoadLocal extends Bytecode {
   String get formatString => 'load local %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -269,7 +269,7 @@ class LoadLocalWide extends Bytecode {
   String get formatString => 'load local %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -311,7 +311,7 @@ class LoadBoxed extends Bytecode {
   String get formatString => 'load boxed %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -353,7 +353,7 @@ class LoadStatic extends Bytecode {
   String get formatString => 'load static %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -395,7 +395,7 @@ class LoadStaticInit extends Bytecode {
   String get formatString => 'load static init %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -437,7 +437,7 @@ class LoadField extends Bytecode {
   String get formatString => 'load field %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -479,7 +479,7 @@ class LoadFieldWide extends Bytecode {
   String get formatString => 'load field %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -521,7 +521,7 @@ class LoadConst extends Bytecode {
   String get formatString => 'load const %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -563,7 +563,7 @@ class LoadConstUnfold extends Bytecode {
   String get formatString => 'load const @%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -605,7 +605,7 @@ class StoreLocal extends Bytecode {
   String get formatString => 'store local %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -647,7 +647,7 @@ class StoreBoxed extends Bytecode {
   String get formatString => 'store boxed %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -689,7 +689,7 @@ class StoreStatic extends Bytecode {
   String get formatString => 'store static %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -731,7 +731,7 @@ class StoreField extends Bytecode {
   String get formatString => 'store field %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -773,7 +773,7 @@ class StoreFieldWide extends Bytecode {
   String get formatString => 'store field %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -814,7 +814,7 @@ class LoadLiteralNull extends Bytecode {
   String get formatString => 'load literal null';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -841,7 +841,7 @@ class LoadLiteralTrue extends Bytecode {
   String get formatString => 'load literal true';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -868,7 +868,7 @@ class LoadLiteralFalse extends Bytecode {
   String get formatString => 'load literal false';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -895,7 +895,7 @@ class LoadLiteral0 extends Bytecode {
   String get formatString => 'load literal 0';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -922,7 +922,7 @@ class LoadLiteral1 extends Bytecode {
   String get formatString => 'load literal 1';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -950,7 +950,7 @@ class LoadLiteral extends Bytecode {
   String get formatString => 'load literal %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -992,7 +992,7 @@ class LoadLiteralWide extends Bytecode {
   String get formatString => 'load literal %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1034,7 +1034,7 @@ class InvokeMethod extends Bytecode {
   String get formatString => 'invoke %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1076,7 +1076,7 @@ class InvokeMethodFast extends Bytecode {
   String get formatString => 'invoke fast %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1118,7 +1118,7 @@ class InvokeMethodVtable extends Bytecode {
   String get formatString => 'invoke vtable %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1160,7 +1160,7 @@ class InvokeStatic extends Bytecode {
   String get formatString => 'invoke static %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1202,7 +1202,7 @@ class InvokeStaticUnfold extends Bytecode {
   String get formatString => 'invoke static @%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1244,7 +1244,7 @@ class InvokeFactory extends Bytecode {
   String get formatString => 'invoke factory %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1286,7 +1286,7 @@ class InvokeFactoryUnfold extends Bytecode {
   String get formatString => 'invoke factory @%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1329,7 +1329,7 @@ class InvokeNative extends Bytecode {
   String get formatString => 'invoke native %d %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..addUint8(uint8Argument1)
@@ -1375,7 +1375,7 @@ class InvokeNativeYield extends Bytecode {
   String get formatString => 'invoke native yield %d %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..addUint8(uint8Argument1)
@@ -1420,7 +1420,7 @@ class InvokeSelector extends Bytecode {
   String get formatString => 'invoke selector';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1462,7 +1462,7 @@ class InvokeTest extends Bytecode {
   String get formatString => 'invoke test %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1504,7 +1504,7 @@ class InvokeTestFast extends Bytecode {
   String get formatString => 'invoke fast test %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1546,7 +1546,7 @@ class InvokeTestVtable extends Bytecode {
   String get formatString => 'invoke vtable test %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1588,7 +1588,7 @@ class InvokeEq extends Bytecode {
   String get formatString => 'invoke eq %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1630,7 +1630,7 @@ class InvokeEqFast extends Bytecode {
   String get formatString => 'invoke fast eq %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1672,7 +1672,7 @@ class InvokeEqVtable extends Bytecode {
   String get formatString => 'invoke vtable eq %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1714,7 +1714,7 @@ class InvokeLt extends Bytecode {
   String get formatString => 'invoke lt %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1756,7 +1756,7 @@ class InvokeLtFast extends Bytecode {
   String get formatString => 'invoke fast lt %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1798,7 +1798,7 @@ class InvokeLtVtable extends Bytecode {
   String get formatString => 'invoke vtable lt %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1840,7 +1840,7 @@ class InvokeLe extends Bytecode {
   String get formatString => 'invoke le %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1882,7 +1882,7 @@ class InvokeLeFast extends Bytecode {
   String get formatString => 'invoke fast le %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1924,7 +1924,7 @@ class InvokeLeVtable extends Bytecode {
   String get formatString => 'invoke vtable le %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -1966,7 +1966,7 @@ class InvokeGt extends Bytecode {
   String get formatString => 'invoke gt %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2008,7 +2008,7 @@ class InvokeGtFast extends Bytecode {
   String get formatString => 'invoke fast gt %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2050,7 +2050,7 @@ class InvokeGtVtable extends Bytecode {
   String get formatString => 'invoke vtable gt %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2092,7 +2092,7 @@ class InvokeGe extends Bytecode {
   String get formatString => 'invoke ge %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2134,7 +2134,7 @@ class InvokeGeFast extends Bytecode {
   String get formatString => 'invoke fast ge %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2176,7 +2176,7 @@ class InvokeGeVtable extends Bytecode {
   String get formatString => 'invoke vtable ge %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2218,7 +2218,7 @@ class InvokeAdd extends Bytecode {
   String get formatString => 'invoke add %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2260,7 +2260,7 @@ class InvokeAddFast extends Bytecode {
   String get formatString => 'invoke fast add %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2302,7 +2302,7 @@ class InvokeAddVtable extends Bytecode {
   String get formatString => 'invoke vtable add %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2344,7 +2344,7 @@ class InvokeSub extends Bytecode {
   String get formatString => 'invoke sub %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2386,7 +2386,7 @@ class InvokeSubFast extends Bytecode {
   String get formatString => 'invoke fast sub %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2428,7 +2428,7 @@ class InvokeSubVtable extends Bytecode {
   String get formatString => 'invoke vtable sub %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2470,7 +2470,7 @@ class InvokeMod extends Bytecode {
   String get formatString => 'invoke mod %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2512,7 +2512,7 @@ class InvokeModFast extends Bytecode {
   String get formatString => 'invoke fast mod %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2554,7 +2554,7 @@ class InvokeModVtable extends Bytecode {
   String get formatString => 'invoke vtable mod %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2596,7 +2596,7 @@ class InvokeMul extends Bytecode {
   String get formatString => 'invoke mul %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2638,7 +2638,7 @@ class InvokeMulFast extends Bytecode {
   String get formatString => 'invoke fast mul %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2680,7 +2680,7 @@ class InvokeMulVtable extends Bytecode {
   String get formatString => 'invoke vtable mul %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2722,7 +2722,7 @@ class InvokeTruncDiv extends Bytecode {
   String get formatString => 'invoke trunc div %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2764,7 +2764,7 @@ class InvokeTruncDivFast extends Bytecode {
   String get formatString => 'invoke fast trunc div %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2806,7 +2806,7 @@ class InvokeTruncDivVtable extends Bytecode {
   String get formatString => 'invoke vtable trunc div %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2848,7 +2848,7 @@ class InvokeBitNot extends Bytecode {
   String get formatString => 'invoke bit not %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2890,7 +2890,7 @@ class InvokeBitNotFast extends Bytecode {
   String get formatString => 'invoke fast bit not %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2932,7 +2932,7 @@ class InvokeBitNotVtable extends Bytecode {
   String get formatString => 'invoke vtable bit not %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -2974,7 +2974,7 @@ class InvokeBitAnd extends Bytecode {
   String get formatString => 'invoke bit and %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3016,7 +3016,7 @@ class InvokeBitAndFast extends Bytecode {
   String get formatString => 'invoke fast bit and %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3058,7 +3058,7 @@ class InvokeBitAndVtable extends Bytecode {
   String get formatString => 'invoke vtable bit and %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3100,7 +3100,7 @@ class InvokeBitOr extends Bytecode {
   String get formatString => 'invoke bit or %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3142,7 +3142,7 @@ class InvokeBitOrFast extends Bytecode {
   String get formatString => 'invoke fast bit or %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3184,7 +3184,7 @@ class InvokeBitOrVtable extends Bytecode {
   String get formatString => 'invoke vtable bit or %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3226,7 +3226,7 @@ class InvokeBitXor extends Bytecode {
   String get formatString => 'invoke bit xor %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3268,7 +3268,7 @@ class InvokeBitXorFast extends Bytecode {
   String get formatString => 'invoke fast bit xor %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3310,7 +3310,7 @@ class InvokeBitXorVtable extends Bytecode {
   String get formatString => 'invoke vtable bit xor %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3352,7 +3352,7 @@ class InvokeBitShr extends Bytecode {
   String get formatString => 'invoke bit shr %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3394,7 +3394,7 @@ class InvokeBitShrFast extends Bytecode {
   String get formatString => 'invoke fast bit shr %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3436,7 +3436,7 @@ class InvokeBitShrVtable extends Bytecode {
   String get formatString => 'invoke vtable bit shr %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3478,7 +3478,7 @@ class InvokeBitShl extends Bytecode {
   String get formatString => 'invoke bit shl %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3520,7 +3520,7 @@ class InvokeBitShlFast extends Bytecode {
   String get formatString => 'invoke fast bit shl %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3562,7 +3562,7 @@ class InvokeBitShlVtable extends Bytecode {
   String get formatString => 'invoke vtable bit shl %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3603,7 +3603,7 @@ class Pop extends Bytecode {
   String get formatString => 'pop';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -3632,7 +3632,7 @@ class Return extends Bytecode {
   String get formatString => 'return %d %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..addUint8(uint8Argument1)
@@ -3678,7 +3678,7 @@ class ReturnWide extends Bytecode {
   String get formatString => 'return %d %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..addUint8(uint8Argument1)
@@ -3723,7 +3723,7 @@ class BranchWide extends Bytecode {
   String get formatString => 'branch +%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3765,7 +3765,7 @@ class BranchIfTrueWide extends Bytecode {
   String get formatString => 'branch if true +%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3807,7 +3807,7 @@ class BranchIfFalseWide extends Bytecode {
   String get formatString => 'branch if false +%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -3849,7 +3849,7 @@ class BranchBack extends Bytecode {
   String get formatString => 'branch -%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -3891,7 +3891,7 @@ class BranchBackIfTrue extends Bytecode {
   String get formatString => 'branch if true -%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -3933,7 +3933,7 @@ class BranchBackIfFalse extends Bytecode {
   String get formatString => 'branch if false -%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -3975,7 +3975,7 @@ class BranchBackWide extends Bytecode {
   String get formatString => 'branch -%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -4017,7 +4017,7 @@ class BranchBackIfTrueWide extends Bytecode {
   String get formatString => 'branch if true -%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -4059,7 +4059,7 @@ class BranchBackIfFalseWide extends Bytecode {
   String get formatString => 'branch if false -%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -4102,7 +4102,7 @@ class PopAndBranchWide extends Bytecode {
   String get formatString => 'pop %d and branch +%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..addUint32(uint32Argument1)
@@ -4148,7 +4148,7 @@ class PopAndBranchBackWide extends Bytecode {
   String get formatString => 'pop %d and branch -%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..addUint32(uint32Argument1)
@@ -4193,7 +4193,7 @@ class Allocate extends Bytecode {
   String get formatString => 'allocate %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -4235,7 +4235,7 @@ class AllocateUnfold extends Bytecode {
   String get formatString => 'allocate @%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -4277,7 +4277,7 @@ class AllocateImmutable extends Bytecode {
   String get formatString => 'allocateim %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -4319,7 +4319,7 @@ class AllocateImmutableUnfold extends Bytecode {
   String get formatString => 'allocateim @%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -4360,7 +4360,7 @@ class AllocateBoxed extends Bytecode {
   String get formatString => 'allocate boxed';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -4387,7 +4387,7 @@ class Negate extends Bytecode {
   String get formatString => 'negate';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -4415,7 +4415,7 @@ class StackOverflowCheck extends Bytecode {
   String get formatString => 'stack overflow check %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
@@ -4456,7 +4456,7 @@ class Throw extends Bytecode {
   String get formatString => 'throw';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -4485,7 +4485,7 @@ class SubroutineCall extends Bytecode {
   String get formatString => 'subroutine call +%d -%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..addUint32(uint32Argument1)
@@ -4529,7 +4529,7 @@ class SubroutineReturn extends Bytecode {
   String get formatString => 'subroutine return';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -4556,7 +4556,7 @@ class ProcessYield extends Bytecode {
   String get formatString => 'process yield';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -4583,7 +4583,7 @@ class CoroutineChange extends Bytecode {
   String get formatString => 'coroutine change';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -4610,7 +4610,7 @@ class Identical extends Bytecode {
   String get formatString => 'identical';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -4637,7 +4637,7 @@ class IdenticalNonNumeric extends Bytecode {
   String get formatString => 'identical non numeric';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -4665,7 +4665,7 @@ class EnterNoSuchMethod extends Bytecode {
   String get formatString => 'enter noSuchMethod +%d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -4706,7 +4706,7 @@ class ExitNoSuchMethod extends Bytecode {
   String get formatString => 'exit noSuchMethod';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..sendOn(sink);
   }
@@ -4734,7 +4734,7 @@ class FrameSize extends Bytecode {
   String get formatString => 'frame size %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint8(uint8Argument0)
         ..sendOn(sink);
@@ -4776,7 +4776,7 @@ class MethodEnd extends Bytecode {
   String get formatString => 'method end %d';
 
   void addTo(Sink<List<int>> sink) {
-    buffer
+    new BytecodeBuffer()
         ..addUint8(opcode.index)
         ..addUint32(uint32Argument0)
         ..sendOn(sink);
