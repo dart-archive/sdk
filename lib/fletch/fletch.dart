@@ -27,7 +27,7 @@ class Fiber {
   Fiber _previous;
   Fiber _next;
 
-  static Fiber _current = new Fiber._initial();
+  static Fiber _current;
   static Fiber _idleFibers;
 
   // This static is initialized as part of creating the
@@ -42,12 +42,17 @@ class Fiber {
   }
 
   Fiber._forked(entry) {
+    current;
     _coroutine = new Coroutine((ignore) {
       fletch.runToEnd(entry);
     });
   }
 
-  static Fiber get current => _current;
+  static Fiber get current {
+    var current = _current;
+    if (current != null) return current;
+    return _current = new Fiber._initial();
+  }
 
   static Fiber fork(entry) {
     _current;  // Force initialization of fiber sub-system.
@@ -69,20 +74,7 @@ class Fiber {
     // go ahead and halt now.
     if (_scheduler == null) fletch.halt();
 
-    Fiber fiber = _current;
-    List<Fiber> joiners = fiber._joiners;
-    if (joiners != null) {
-      for (Fiber joiner in joiners) _resumeFiber(joiner);
-      joiners.clear();
-    }
-
-    fiber._isDone = true;
-    fiber._result = value;
-
-    // Suspend the current fiber. It will never wake up again.
-    Fiber next = _suspendFiber(fiber, true);
-    fiber._coroutine = null;
-    fletch.coroutineChange(Fiber._scheduler, next);
+    _current._exit(value);
   }
 
   join() {
@@ -105,6 +97,23 @@ class Fiber {
     fiber._coroutine = Coroutine._coroutineCurrent();
     fletch.coroutineChange(Fiber._scheduler, next);
     return _result;
+  }
+
+  void _exit(value) {
+    Fiber fiber = this;
+    List<Fiber> joiners = fiber._joiners;
+    if (joiners != null) {
+      for (Fiber joiner in joiners) _resumeFiber(joiner);
+      joiners.clear();
+    }
+
+    fiber._isDone = true;
+    fiber._result = value;
+
+    // Suspend the current fiber. It will never wake up again.
+    Fiber next = _suspendFiber(fiber, true);
+    fiber._coroutine = null;
+    fletch.coroutineChange(Fiber._scheduler, next);
   }
 
   static void _resumeFiber(Fiber fiber) {
@@ -429,7 +438,7 @@ class Channel {
   // Deliver the message synchronously. If the receiver
   // isn't ready to receive yet, the sender blocks.
   void deliver(message) {
-    Fiber sender = Fiber._current;
+    Fiber sender = Fiber.current;
     _enqueue(new _ChannelEntry(message, sender));
     Fiber next = Fiber._suspendFiber(sender, false);
     // TODO(kasperl): Should we yield to receiver if possible?
@@ -449,7 +458,7 @@ class Channel {
     }
 
     if (_head == null) {
-      Fiber receiver = Fiber._current;
+      Fiber receiver = Fiber.current;
       _receiver = receiver;
       Fiber next = Fiber._suspendFiber(receiver, false);
       Fiber._yieldTo(receiver, next);
