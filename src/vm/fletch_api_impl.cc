@@ -5,7 +5,9 @@
 #include "src/vm/fletch_api_impl.h"
 
 #include "src/shared/assert.h"
+#ifdef FLETCH_ENABLE_LIVE_CODING
 #include "src/shared/connection.h"
+#endif
 #include "src/shared/fletch.h"
 #include "src/shared/list.h"
 
@@ -56,6 +58,7 @@ static void RunShapshotFromFile(const char* path) {
 }
 
 static void WaitForDebuggerConnection(int port) {
+#ifdef FLETCH_ENABLE_LIVE_CODING
   ConnectionListener listener("127.0.0.1", port);
   Connection* connection = listener.Accept();
   Session session(connection);
@@ -63,6 +66,9 @@ static void WaitForDebuggerConnection(int port) {
   session.StartMessageProcessingThread();
   bool success = session.ProcessRun();
   if (!success) FATAL("Failed to run via debugger connection");
+#else
+  FATAL("fletch was built without live coding support.");
+#endif
 }
 
 }  // namespace fletch

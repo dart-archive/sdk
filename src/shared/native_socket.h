@@ -5,6 +5,10 @@
 #ifndef SRC_SHARED_NATIVE_SOCKET_H_
 #define SRC_SHARED_NATIVE_SOCKET_H_
 
+#ifndef FLETCH_ENABLE_LIVE_CODING
+#error "native_socket.h is only available when live coding is enabled."
+#endif
+
 #include "src/shared/globals.h"
 
 namespace fletch {
