@@ -28,7 +28,7 @@ class Expect {
 
 
 const int MILLIS_PER_SECOND = 1000;
-//const double MICROS_PER_SECOND = 1000000;
+const int MICROS_PER_SECOND = 1000000;
 
 
 class BenchmarkBase {
@@ -61,36 +61,34 @@ class BenchmarkBase {
 
   // Measures the score for this benchmark by executing it repeately until
   // millisMinimum milliseconds has been reached.
-  double measureFor(int millisMinimum) {
+  int measureFor(int millisMinimum) {
     int iter = 0;
     int elapsed = 0;
     Stopwatch watch = new Stopwatch();
     // StopWatch.frequency is in Hz.
-    double secondsMinimum = millisMinimum / MILLIS_PER_SECOND;
-    int ticksMinimum = (secondsMinimum * watch.frequency).ceil();
+    int ticksMinimum = watch.frequency * millisMinimum ~/ MILLIS_PER_SECOND;
     watch.start();
     while (elapsed < ticksMinimum) {
       exercise();
       elapsed = watch.elapsedTicks;
       iter++;
     }
-    double totalSeconds = elapsed / watch.frequency;
-    return (totalSeconds / iter) * 1000000;
+    return (elapsed * MICROS_PER_SECOND) ~/ watch.frequency ~/ iter;
   }
 
   // Measures the score for the benchmark and returns it.
-  double measure() {
+  int measure() {
     setup();
     // Warmup for at least 100ms. Discard result.
     measureFor(100);
     // Run the benchmark for at least 2000ms.
-    double result = measureFor(2000);
+    int result = measureFor(2000);
     teardown();
     return result;
   }
 
   void report() {
-    double score = measure();
+    int score = measure();
     print("$name(RunTime): $score us.");
   }
 
