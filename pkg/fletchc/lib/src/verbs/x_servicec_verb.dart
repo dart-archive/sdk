@@ -41,10 +41,14 @@ class CompileTask extends SharedTask {
 }
 
 Future<int> compileTask(String fileName) async {
-  print("[servicec] Compiling $fileName...");
+  print("Compiling $fileName...");
 
   // TODO(stanm): take directory as argument
-  await servicec.compile(fileName, "/tmp/servicec-out");
+  String outputDirectory = "/tmp/servicec-out";
+
+  await servicec.compile(fileName, outputDirectory);
+
+  print("Compiled $fileName to $outputDirectory");
 
   return 0;
 }

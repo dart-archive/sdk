@@ -15,6 +15,12 @@ import 'package:servicec/errors.dart' as errors;
 import 'package:servicec/targets.dart' show
     Target;
 
+import 'scanner_tests.dart' show
+    SCANNER_TESTS;
+
+import 'test.dart' show
+    Test;
+
 List<InputTest> SERVICEC_TESTS = <InputTest>[
     new Failure<errors.UndefinedServiceError>('empty_input', '''
 '''),
@@ -30,26 +36,20 @@ const String buildDirectory =
 // TODO(zerny): Provide the below constant via configuration from test.py
 final String generatedDirectory = '$buildDirectory/generated_servicec_tests';
 
-abstract class InputTest {
-  final String name;
+abstract class InputTest extends Test{
+  final String input;
   final String outputDirectory;
 
-  InputTest(String name)
-      : this.name = name,
-        outputDirectory = "$generatedDirectory/$name";
-
-  Future perform();
+  InputTest(String name, this.input)
+      : outputDirectory = "$generatedDirectory/$name",
+        super(name);
 }
 
 class Success extends InputTest {
-  final String input;
   final Target target;
 
-  Success(
-      String name,
-      this.input,
-      {this.target: Target.ALL})
-      : super(name);
+  Success(String name, String input, {this.target: Target.ALL})
+      : super(name, input);
 
   Future perform() async {
     try {
@@ -62,11 +62,10 @@ class Success extends InputTest {
 }
 
 class Failure<T> extends InputTest {
-  final String input;
   final exception;
 
-  Failure(name, this.input)
-      : super(name);
+  Failure(String name, String input)
+      : super(name, input);
 
   Future perform() async {
     try {
@@ -112,8 +111,12 @@ typedef Future NoArgFuture();
 
 Future<Map<String, NoArgFuture>> listTests() async {
   var tests = <String, NoArgFuture>{};
-  for (InputTest test in SERVICEC_TESTS) {
+  for (Test test in SERVICEC_TESTS) {
     tests['servicec/${test.name}'] = test.perform;
+  }
+
+  for (Test test in SCANNER_TESTS) {
+    tests['servicec/scanner/${test.name}'] = test.perform;
   }
   return tests;
 }

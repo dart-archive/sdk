@@ -14,6 +14,10 @@ import 'errors.dart';
 import 'targets.dart' show
     Target;
 
+import 'package:compiler/src/scanner/scannerlib.dart' show
+    Token,
+    StringScanner;
+
 Future compile(
     String path,
     String outputDirectory,
@@ -30,6 +34,10 @@ Future compileInput(
   if (input.isEmpty) {
     throw new UndefinedServiceError(path);
   }
+
+  var scanner = new StringScanner.fromString(input);
+  Token tokenLinkedList = scanner.tokenize();
+
   // TODO(stanm): parse input
 
   // TODO(stanm): validate

@@ -22,6 +22,8 @@ incremental/signature_change_static_method: Fail
 incremental/stored_closure: Fail
 incremental/stored_instance_tearoff: Fail
 
+servicec/scanner/empty_service: Fail # Tests a non-implemented feature.
+
 [ $arch != ia32 && $arch != x64 ]
 
 service_tests/*: Skip
