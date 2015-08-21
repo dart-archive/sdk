@@ -64,7 +64,7 @@ INTRINSICS_DO(V)
 #undef V
 
   // TODO(kasperl): Let this go through the assembler.
-  assembler()->Align(16);
+  assembler()->AlignToPowerOfTwo(4);
   printf("\nInterpretFast_DispatchTable:\n");
 #define V(name, branching, format, size, stack_diff, print)      \
   assembler()->DefineLong("BC_" #name);

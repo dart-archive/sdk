@@ -63,7 +63,7 @@ void InterpreterGenerator::Generate() {
 INTRINSICS_DO(V)
 #undef V
 
-  assembler()->Align(4);
+  assembler()->AlignToPowerOfTwo(4);
   printf("\n%sInterpretFast_DispatchTable:\n", assembler()->LabelPrefix());
 #define V(name, branching, format, size, stack_diff, print)      \
   assembler()->DefineLong("BC_" #name);

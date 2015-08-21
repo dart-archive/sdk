@@ -23,7 +23,7 @@ void Assembler::jmp(const char* name) {
 }
 
 void Assembler::Bind(const char* name) {
-  printf("\n\t.text\n\t.align 16,0x90\n\t.global %s\n%s:\n", name, name);
+  printf("\n\t.text\n\t.p2align 4,0x90\n\t.global %s\n%s:\n", name, name);
 }
 
 void Assembler::DefineLong(const char* name) {

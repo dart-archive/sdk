@@ -300,7 +300,8 @@ class Assembler {
   void jmp(const char* name);
   void jmp(Label* label);
 
-  void Align(int alignment);
+  // Align what follows to a 2^power address.
+  void AlignToPowerOfTwo(int power);
 
   void Bind(const char* name);
   void Bind(Label* label);

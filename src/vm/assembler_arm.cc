@@ -19,8 +19,8 @@ static const char* ConditionToString(Condition cond) {
   return kConditionNames[cond];
 }
 
-void Assembler::Align(int alignment) {
-  printf("\t.align %d\n", alignment);
+void Assembler::AlignToPowerOfTwo(int power) {
+  printf("\t.p2align %d\n", power);
 }
 
 void Assembler::Bind(Label* label) {

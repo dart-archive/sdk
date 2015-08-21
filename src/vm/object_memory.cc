@@ -318,7 +318,6 @@ void Chunk::Scramble() {
 }
 #endif
 
-
 Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   ASSERT(owner != NULL);
 
