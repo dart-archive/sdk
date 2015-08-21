@@ -8,9 +8,13 @@ import 'package:expect/expect.dart';
 
 void main() {
   // Sleep 200 ms.
+  int ms = 200;
   Stopwatch stopwatch = new Stopwatch()..start();
-  io.sleep(200);
+  io.sleep(ms);
+  // There is a chance that it'll resume slightly early on some system, so we
+  // just ensure that at least 50% of the time is spent sleeping.
+  int elapsed = stopwatch.elapsedMilliseconds;
   Expect.isTrue(
-      stopwatch.elapsedMilliseconds >= 200,
-      "${stopwatch.elapsedMilliseconds} >= 200");
+      elapsedMilliseconds >= ms ~/ 2,
+      "$elapsedMilliseconds >= ${ms ~/ 2}");
 }
