@@ -16,7 +16,11 @@ import 'targets.dart' show
 
 import 'package:compiler/src/scanner/scannerlib.dart' show
     Token,
-    StringScanner;
+    StringScanner,
+    Scanner;
+
+import 'parser.dart' show
+    Parser;
 
 Future compile(
     String path,
@@ -35,10 +39,11 @@ Future compileInput(
     throw new UndefinedServiceError(path);
   }
 
-  var scanner = new StringScanner.fromString(input);
-  Token tokenLinkedList = scanner.tokenize();
+  Scanner scanner = new StringScanner.fromString(input);
+  Token tokens = scanner.tokenize();
 
-  // TODO(stanm): parse input
+  var parser = new Parser();
+  Token unit = parser.parseUnit(tokens);
 
   // TODO(stanm): validate
 
