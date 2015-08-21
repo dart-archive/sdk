@@ -17,6 +17,7 @@ import 'src/resolver.dart';
 import 'src/plugins/idl.dart' as idl;
 import 'src/plugins/dart.dart' as dart;
 import 'src/plugins/objc.dart' as objc;
+import 'src/plugins/java.dart' as java;
 
 import 'package:path/path.dart' show join, dirname;
 
@@ -63,6 +64,7 @@ void compile(String path,
   dart.generate(path, units, outputDirectory);
   idl.generate(path, units, outputDirectory);
   objc.generate(path, units, outputDirectory);
+  java.generate(path, units, outputDirectory);
 
   String resourcesDirectory = join(dirname(Platform.script.path),
       '..', 'lib', 'src', 'resources');

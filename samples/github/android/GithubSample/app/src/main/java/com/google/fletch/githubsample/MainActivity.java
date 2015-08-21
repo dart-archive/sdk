@@ -23,8 +23,17 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.DefaultItemAnimator;
 
+import immi.AnyNode;
+import immi.AnyNodePatch;
+import immi.AnyNodePresenter;
+import immi.ImmiRoot;
+import immi.ImmiService;
+
 public class MainActivity extends Activity
-    implements NavigationDrawerFragment.NavigationDrawerCallbacks {
+    implements NavigationDrawerFragment.NavigationDrawerCallbacks, AnyNodePresenter {
+
+  public void presentNode(AnyNode node) {}
+  public void patchNode(AnyNodePatch patch) {}
 
   /**
    * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
@@ -60,6 +69,10 @@ public class MainActivity extends Activity
 
     RecyclerViewAdapter adapter = new RecyclerViewAdapter(new CommitList().commitList);
     recyclerView.setAdapter(adapter);
+
+    ImmiService immi = new ImmiService();
+    ImmiRoot root = immi.registerPresenter(this, "DrawerPresenter");
+    root.refresh();
   }
 
   @Override

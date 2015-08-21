@@ -30,6 +30,9 @@
     <output url="file://$MODULE_DIR$/build/intermediates/classes/x86/debug" />
     <output-test url="file://$MODULE_DIR$/build/intermediates/classes/androidTest/x86/debug" />
     <exclude-output />
+    <content url="file://$MODULE_DIR$/../../../../../package/immi/java">
+      <sourceFolder url="file://$MODULE_DIR$/../../../../../package/immi/java" isTestSource="false" />
+    </content>
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/build/generated/source/r/x86/debug" isTestSource="false" generated="true" />
       <sourceFolder url="file://$MODULE_DIR$/build/generated/source/aidl/x86/debug" isTestSource="false" generated="true" />

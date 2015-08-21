@@ -63,10 +63,12 @@ if [[ $# -eq 0 ]] || [[ "$1" == "immi" ]]; then
     $SERVICEC --out "$SERVICE_GEN_DIR" "$IMMI_GEN_DIR/idl/immi_service.idl"
 
     # Copy servicec generated wrappers.
+    # TODO(zerny): Avoid copying by directly linking it from app/build.gradle
     mkdir -p $JNI_DIR
     cp $SERVICE_GEN_DIR/java/jni/*.cc $JNI_DIR/
 
     # Copy servicec generated structures.
+    # TODO(zerny): Avoid copying by directly linking it from app/build.gradle
     mkdir -p $JAVA_DIR
     cp $SERVICE_GEN_DIR/java/fletch/*.java $JAVA_DIR/
 fi
@@ -142,6 +144,7 @@ if [[ $# -eq 0 ]] || [[ "$1" == "fletch" ]]; then
 	third_party/double-conversion/src/strtod.cc"
 
     # Copy fletch sources to the android project.
+    # TODO(zerny): Avoid copying by directly linking it from app/build.gradle
     for f in $SOURCES; do
 	src="$FLETCH_DIR/$f"
 	dst="$JNI_DIR/$f"

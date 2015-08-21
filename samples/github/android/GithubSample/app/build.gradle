@@ -20,6 +20,7 @@ model {
                      "-DFLETCH_TARGET_OS_POSIX",
                      "-DFLETCH_TARGET_OS_LINUX",
                      "-DFLETCH_ENABLE_FFI",
+                     "-DFLETCH_ENABLE_LIVE_CODING",
                      "-DANDROID",
                      "-std=c++11"]
         cppFlags += "-I${file("../../../../..")}".toString()
@@ -31,6 +32,12 @@ model {
 
     android.sources {
         main {
+            java {
+                source {
+                    srcDir "src/main/java"
+                    srcDir "../../../../../package/immi/java"
+                }
+            }
             jni {
                 source {
                     srcDir "src/main/jni"
