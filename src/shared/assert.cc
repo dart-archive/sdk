@@ -4,13 +4,7 @@
 
 #include "src/shared/assert.h"
 
-#include <stdarg.h>
-#include <cxxabi.h>
-
-#ifndef __ANDROID__
-#include <execinfo.h>
-#endif
-
+#include <cstdarg>
 #include <cstdlib>
 
 #include "src/shared/utils.h"
