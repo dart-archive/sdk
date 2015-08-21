@@ -6,8 +6,6 @@
 
 #include "src/shared/connection.h"
 
-#include <cstdlib>
-
 #include "src/shared/assert.h"
 #include "src/shared/globals.h"
 #include "src/shared/native_socket.h"

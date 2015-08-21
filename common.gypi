@@ -28,6 +28,12 @@
       '<@(common_gcc_cflags_c)',
     ],
 
+    'LK_PROJECT%': 'vexpress-a9-test',
+
+    'LK_CPU%': 'cortex-a9',
+
+    'lk_location': '../../../third_party/lk',
+
     'conditions': [
       [ 'OS=="linux"', {
         'clang_asan_rt_path%': '.',
@@ -262,55 +268,54 @@
 
         'target_conditions': [
           ['_toolset=="target"', {
-              'conditions': [
-                ['OS=="linux"', {
-                  'defines': [
-                    # Fake define intercepted by cc_wrapper.py to change the
-                    # compiler binary to an ARM cross compiler. This is only
-                    # needed on linux.
-                    'FLETCH_ARM',
-                   ],
-                 }],
-                ['OS=="mac"', {
-                  'xcode_settings': { # And ninja.
-                    'ARCHS': [ 'armv7' ],
+            'conditions': [
+              ['OS=="linux"', {
+                'defines': [
+                  # Fake define intercepted by cc_wrapper.py to change the
+                  # compiler binary to an ARM cross compiler. This is only
+                  # needed on linux.
+                  'FLETCH_ARM',
+                 ],
+               }],
+              ['OS=="mac"', {
+                'xcode_settings': { # And ninja.
+                  'ARCHS': [ 'armv7' ],
 
-                    'LIBRARY_SEARCH_PATHS': [
-                      '<(third_party_libs_path)/arm',
-                    ],
+                  'LIBRARY_SEARCH_PATHS': [
+                    '<(third_party_libs_path)/arm',
+                  ],
 
-                    'OTHER_CPLUSPLUSFLAGS' : [
-                      '-isysroot',
-                      '<(ios_sdk_path)',
-                    ],
+                  'OTHER_CPLUSPLUSFLAGS' : [
+                    '-isysroot',
+                    '<(ios_sdk_path)',
+                  ],
 
-                    'OTHER_CFLAGS' : [
-                      '-isysroot',
-                      '<(ios_sdk_path)',
-                    ],
-                  },
-                 }]
-              ],
+                  'OTHER_CFLAGS' : [
+                    '-isysroot',
+                    '<(ios_sdk_path)',
+                  ],
+                },
+               }]
+            ],
 
-              'ldflags': [
-                '-L<(third_party_libs_path)/arm',
-                # Fake define intercepted by cc_wrapper.py.
-                '-L/FLETCH_ARM',
-                '-static-libstdc++',
-              ],
-            },
-          ],
+            'ldflags': [
+              '-L<(third_party_libs_path)/arm',
+              # Fake define intercepted by cc_wrapper.py.
+              '-L/FLETCH_ARM',
+              '-static-libstdc++',
+            ],
+          }],
 
           ['_toolset=="host"', {
-              # Compile host targets as IA32, to get same word size.
-              'inherit_from': [ 'fletch_ia32' ],
+            # Compile host targets as IA32, to get same word size.
+            'inherit_from': [ 'fletch_ia32' ],
 
-              # Undefine IA32 target and using existing ARM target.
-              'defines!': [
-                'FLETCH_TARGET_IA32',
-              ],
-            },
-          ],
+            # The 'fletch_ia32' target will define IA32 as the target. Since
+            # the host should still target ARM, undefine it.
+            'defines!': [
+              'FLETCH_TARGET_IA32',
+            ],
+          }],
         ],
       },
 
@@ -324,55 +329,107 @@
 
         'target_conditions': [
           ['_toolset=="target"', {
-              'conditions': [
-                ['OS=="linux"', {
-                  'defines': [
-                    # Fake define intercepted by cc_wrapper.py to change the
-                    # compiler binary to an ARM64 cross compiler. This is only
-                    # needed on linux.
-                    'FLETCH_ARM64',
-                   ],
-                 }],
-                ['OS=="mac"', {
-                  'xcode_settings': { # And ninja.
-                    'ARCHS': [ 'arm64' ],
+            'conditions': [
+              ['OS=="linux"', {
+                'defines': [
+                  # Fake define intercepted by cc_wrapper.py to change the
+                  # compiler binary to an ARM64 cross compiler. This is only
+                  # needed on linux.
+                  'FLETCH_ARM64',
+                 ],
+               }],
+              ['OS=="mac"', {
+                'xcode_settings': { # And ninja.
+                  'ARCHS': [ 'arm64' ],
 
-                    'LIBRARY_SEARCH_PATHS': [
-                      '<(third_party_libs_path)/arm64',
-                    ],
+                  'LIBRARY_SEARCH_PATHS': [
+                    '<(third_party_libs_path)/arm64',
+                  ],
 
-                    'OTHER_CPLUSPLUSFLAGS' : [
-                      '-isysroot',
-                      '<(ios_sdk_path)',
-                    ],
+                  'OTHER_CPLUSPLUSFLAGS' : [
+                    '-isysroot',
+                    '<(ios_sdk_path)',
+                  ],
 
-                    'OTHER_CFLAGS' : [
-                      '-isysroot',
-                      '<(ios_sdk_path)',
-                    ],
-                  },
-                 }],
-              ],
+                  'OTHER_CFLAGS' : [
+                    '-isysroot',
+                    '<(ios_sdk_path)',
+                  ],
+                },
+               }],
+            ],
 
-              'ldflags': [
-                '-L<(third_party_libs_path)/arm64',
-                # Fake define intercepted by cc_wrapper.py.
-                '-L/FLETCH_ARM64',
-                '-static-libstdc++',
-              ],
-            },
-          ],
+            'ldflags': [
+              '-L<(third_party_libs_path)/arm64',
+              # Fake define intercepted by cc_wrapper.py.
+              '-L/FLETCH_ARM64',
+              '-static-libstdc++',
+            ],
+          }],
 
           ['_toolset=="host"', {
-              # Compile host targets as X64, to get same word size.
-              'inherit_from': [ 'fletch_x64' ],
+            # Compile host targets as X64, to get same word size.
+            'inherit_from': [ 'fletch_x64' ],
 
-              # Undefine X64 target and using existing ARM target.
-              'defines!': [
-                'FLETCH_TARGET_X64',
-              ],
-            },
-          ],
+            # The 'fletch_x64' target will define IA32 as the target. Since
+            # the host should still target ARM, undefine it.
+            'defines!': [
+              'FLETCH_TARGET_X64',
+            ],
+          }],
+        ],
+      },
+
+      'fletch_lk': {
+        'abstract': 1,
+
+        'defines': [
+          'FLETCH32',
+          'FLETCH_TARGET_ARM',
+          'FLETCH_LK_PROJECT=<(LK_PROJECT)',
+        ],
+
+        'target_conditions': [
+          ['_toolset=="target"', {
+            'defines': [
+              'FLETCH_LK',
+             ],
+
+            'cflags': [
+              '-mcpu=<(LK_CPU)',
+              '-mthumb',
+              '-include',
+              '<(lk_location)/build-<(LK_PROJECT)/config.h',
+            ],
+
+            'include_dirs': [
+              '-I<(lk_location)/include/',
+              '-I<(lk_location)/arch/arm/include/',
+              '-I<(lk_location)/lib/libm/include/',
+            ],
+
+            'ldflags': [
+              # Fake define intercepted by cc_wrapper.py.
+              '-L/FLETCH_LK',
+            ],
+
+            'defines!': [
+              'FLETCH_TARGET_OS_MACOS',
+              'FLETCH_TARGET_OS_LINUX',
+              'FLETCH_TARGET_OS_POSIX',
+            ],
+          }],
+
+          ['_toolset=="host"', {
+            # Compile host targets as IA32, to get same word size.
+            'inherit_from': [ 'fletch_ia32' ],
+
+            # The 'fletch_ia32' target will define IA32 as the target. Since
+            # the host should still target ARM, undefine it.
+            'defines!': [
+              'FLETCH_TARGET_IA32',
+            ],
+          }],
         ],
       },
 
@@ -651,6 +708,13 @@
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_ia32',
           'fletch_disable_ffi'
+        ],
+      },
+
+      'ReleaseLK': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_lk',
+          'fletch_disable_live_coding', 'fletch_disable_ffi'
         ],
       },
     },

@@ -25,21 +25,21 @@ def invoke_clang(args):
   print "'%s'" % "' '".join(args)
   os.execv(clang_bin, args)
 
-
 def invoke_gcc(args):
   args.insert(0, "g++")
   os.execv("/usr/bin/g++", args)
-
 
 def invoke_gcc_arm(args):
   args.insert(0, "arm-linux-gnueabihf-g++-4.8")
   os.execv("/usr/bin/arm-linux-gnueabihf-g++-4.8", args)
 
-
 def invoke_gcc_arm64(args):
   args.insert(0, "aarch64-linux-gnu-g++-4.8")
   os.execv("/usr/bin/aarch64-linux-gnu-g++-4.8", args)
 
+def invoke_gcc_lk(args):
+  args.insert(0, "arm-none-eabi-g++")
+  os.execv("/usr/bin/arm-none-eabi-g++", args)
 
 def main():
   args = sys.argv[1:]
@@ -63,6 +63,11 @@ def main():
   elif "-L/FLETCH_ARM64" in args:
     args.remove("-L/FLETCH_ARM64")
     invoke_gcc_arm64(args)
+  elif "-DFLETCH_LK" in args:
+    invoke_gcc_lk(args)
+  elif "-L/FLETCH_LK" in args:
+    args.remove("-L/FLETCH_LK")
+    invoke_gcc_lk(args)
   else:
     invoke_gcc(args)
 
