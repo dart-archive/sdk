@@ -14,7 +14,5 @@ void main() {
   // There is a chance that it'll resume slightly early on some system, so we
   // just ensure that at least 50% of the time is spent sleeping.
   int elapsed = stopwatch.elapsedMilliseconds;
-  Expect.isTrue(
-      elapsedMilliseconds >= ms ~/ 2,
-      "$elapsedMilliseconds >= ${ms ~/ 2}");
+  Expect.isTrue(elapsed >= ms ~/ 2, "$elapsed >= ${ms ~/ 2}");
 }
