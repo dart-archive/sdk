@@ -22,6 +22,9 @@ import 'package:compiler/src/scanner/scannerlib.dart' show
 import 'parser.dart' show
     Parser;
 
+import 'listener.dart' show
+    Listener;
+
 Future compile(
     String path,
     String outputDirectory,
@@ -42,7 +45,7 @@ Future compileInput(
   Scanner scanner = new StringScanner.fromString(input);
   Token tokens = scanner.tokenize();
 
-  var parser = new Parser();
+  var parser = new Parser(new Listener());
   Token unit = parser.parseUnit(tokens);
 
   // TODO(stanm): validate
