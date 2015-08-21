@@ -20,9 +20,6 @@ import 'package:compiler/compiler_new.dart' show
     CompilerOutput,
     CompilerDiagnostics;
 
-import 'incremental/compiler.dart' show
-    OutputProvider;
-
 import 'package:compiler/src/source_file_provider.dart' show
     CompilerSourceFileProvider,
     FormattingDiagnosticHandler,
@@ -46,18 +43,13 @@ import 'fletch_system.dart';
 import 'incremental/fletchc_incremental.dart' show
     IncrementalCompiler;
 
+import 'src/guess_configuration.dart' show
+    executable,
+    guessFletchVm;
+
 const String _SDK_DIR = const String.fromEnvironment("dart-sdk");
 
-const String _FLETCH_VM = const String.fromEnvironment("fletch-vm");
-
 const String _PATCH_ROOT = const String.fromEnvironment("fletch-patch-root");
-
-const List<String> _fletchVmSuggestions = const <String> [
-    'out/DebugX64Clang/fletch-vm',
-    'out/DebugX64/fletch-vm',
-    'out/ReleaseX64Clang/fletch-vm',
-    'out/ReleaseX64/fletch-vm',
-];
 
 const String StringOrUri = "String or Uri";
 
@@ -105,7 +97,7 @@ class FletchCompiler {
     }
 
     if (outputProvider == null) {
-      outputProvider = new OutputProvider();
+      outputProvider = new implementation.OutputProvider();
     }
 
     if (libraryRoot == null  && _SDK_DIR != null) {
@@ -137,25 +129,9 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
       }
     }
 
-    if (fletchVm == null && _FLETCH_VM != null) {
-      fletchVm = Uri.base.resolve(_FLETCH_VM);
-    }
-    if (fletchVm == null) {
-      var path = _executable.resolve('fletch-vm');
-      if (new File.fromUri(path).existsSync()) fletchVm = path;
-    }
-    fletchVm = _computeValidatedUri(
-        fletchVm, name: 'fletchVm', ensureTrailingSlash: false);
-    if (fletchVm == null) {
-      fletchVm = _guessFletchVm();
-      if (fletchVm == null) {
-        throw new StateError("""
-Unable to guess the location of the fletch VM (fletchVm).
-Try adding command-line option '-Dfletch-vm=<path to fletch VM>.""");
-      }
-    } else if (!_looksLikeFletchVm(fletchVm)) {
-      throw new ArgumentError("[fletchVm]: No fletch VM at '$fletchVm'.");
-    }
+    fletchVm = guessFletchVm(
+        _computeValidatedUri(
+            fletchVm, name: 'fletchVm', ensureTrailingSlash: false));
 
     if (patchRoot == null  && _PATCH_ROOT != null) {
       patchRoot = Uri.base.resolve(appendSlash(_PATCH_ROOT));
@@ -300,18 +276,18 @@ Uri _computeValidatedUri(
 }
 
 Uri _guessLibraryRoot() {
-  // When running from fletch-repo, [_executable] is
+  // When running from fletch-repo, [executable] is
   // ".../fletch-repo/fletch/out/$CONFIGURATION/dart", which means that the
   // fletch-repo root is 3th parent directory (due to how URI resolution works,
   // the filename ("dart") is removed before resolving, for example,
   // ".../fletch-repo/fletch/out/$CONFIGURATION/../../../" becomes
   // ".../fletch-repo/").
-  Uri fletchRepoRoot = _executable.resolve('../../../');
+  Uri fletchRepoRoot = executable.resolve('../../../');
   Uri guess = fletchRepoRoot.resolve('dart/sdk/');
   if (_looksLikeLibraryRoot(guess)) {
     return _resolveSymbolicLinks(guess);
   }
-  guess = _executable.resolve('../');
+  guess = executable.resolve('../');
   if (_looksLikeLibraryRoot(guess)) {
     return _resolveSymbolicLinks(guess);
   }
@@ -320,31 +296,6 @@ Uri _guessLibraryRoot() {
     return _resolveSymbolicLinks(guess);
   }
   return null;
-}
-
-Uri get _executable {
-  // TODO(ajohnsen): This is a workaround for #16994. Clean up this code once
-  // the bug is fixed.
-  if (Platform.isLinux) {
-    return new Uri.file(new Link('/proc/self/exe').targetSync());
-  }
-  return Uri.base.resolveUri(new Uri.file(Platform.executable));
-}
-
-Uri _guessFletchVm() {
-  for (String suggestion in _fletchVmSuggestions) {
-    Uri guess = Uri.base.resolve(suggestion);
-    if (_looksLikeFletchVm(guess)) {
-      return _resolveSymbolicLinks(guess);
-    }
-  }
-  return null;
-}
-
-bool _looksLikeFletchVm(Uri uri) {
-  if (!new File.fromUri(uri).existsSync()) return false;
-  String expectedFile = 'natives.json';
-  return new File.fromUri(uri.resolve(expectedFile)).existsSync();
 }
 
 Uri _guessPatchRoot(Uri libraryRoot) {

@@ -30,10 +30,6 @@ import 'package:expect/expect.dart' show
 import 'package:fletchc/incremental/scope_information_visitor.dart' show
     ScopeInformationVisitor;
 
-import 'io_compiler_test_case.dart' show
-    IoCompilerTestCase,
-    IoInputProvider;
-
 import 'compiler_test_case.dart' show
     CompilerTestCase;
 
@@ -46,6 +42,13 @@ import 'package:compiler/src/elements/elements.dart' show
 
 import 'package:compiler/src/dart2jslib.dart' show
     Compiler;
+
+import 'package:compiler/src/source_file_provider.dart' show
+    FormattingDiagnosticHandler,
+    SourceFileProvider;
+
+import 'package:compiler/src/io/source_file.dart' show
+    StringSourceFile;
 
 import 'package:fletchc/incremental/fletchc_incremental.dart' show
     IncrementalCompiler,
@@ -61,6 +64,9 @@ import 'package:fletchc/compiler.dart' show
     FletchCompiler;
 
 import 'package:fletchc/src/fletch_compiler.dart' as fletch_compiler_src;
+
+import 'package:fletchc/src/guess_configuration.dart' show
+    guessFletchVm;
 
 import 'package:fletchc/fletch_system.dart';
 
@@ -83,6 +89,12 @@ import 'tests_with_expectations.dart' as tests_with_expectations;
 import 'package:fletchc/src/driver/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
+const String PACKAGE_SCHEME = 'org.dartlang.fletch.packages';
+
+const String CUSTOM_SCHEME = 'org.dartlang.fletch.test-case';
+
+final Uri customUriBase = new Uri(scheme: CUSTOM_SCHEME, path: '/');
+
 typedef Future NoArgFuture();
 
 Map<String, EncodedResult> tests = computeTests(tests_with_expectations.tests);
@@ -102,6 +114,7 @@ Future<Null> main(List<String> arguments) async {
   for (var testName in testNamesToRun) {
     EncodedResult test = tests[testName];
     await compileAndRun(testName, test);
+    testCount++;
   }
   updateSummary();
 }
@@ -121,74 +134,52 @@ void updateSummary() {
 }
 
 compileAndRun(String testName, EncodedResult encodedResult) async {
-  testCount++;
+  IncrementalTestHelper helper = new IncrementalTestHelper();
+  TestSession session =
+      await TestSession.spawnVm(helper.compiler, testName: testName);
 
-  updateSummary();
-  List<ProgramResult> programs = encodedResult.decode();
-
-  // The first program is compiled "fully". There rest are compiled below
-  // as incremental updates to this first program.
-  ProgramResult program = programs.first;
-  bool hasCompileTimeError = program.hasCompileTimeError;
-  print("Full program #$testCount:");
-  print(numberedLines(program.code));
-
-  IoCompilerTestCase test = new IoCompilerTestCase(program.code);
-  FletchDelta fletchDelta = await test.run();
-
-  TestSession session = await runFletchVM(testName, test, fletchDelta);
+  bool hasCompileTimeError = false;
 
   await new Future(() async {
-    List<String> messages = new List<String>.from(program.messages);
-    if (program.hasCompileTimeError) {
-      print("Compile-time error expected");
-      // TODO(ahe): This message shouldn't be printed by the Fletch VM.
-      messages.add("Compile error");
-    }
+    updateSummary();
 
-    List<String> actualMessages = session.stdoutSink.takeLines();
-    Expect.listEquals(messages, actualMessages);
+    int version = 0;
 
-    int version = 2;
-    for (ProgramResult program in programs.skip(1)) {
+    for (ProgramResult program in encodedResult.decode()) {
+      bool isFirstProgram = version == 0;
+      version++;
+
       if (program.hasCompileTimeError) {
         hasCompileTimeError = true;
       }
-      print("Update:");
+
+      print("Program version $version #$testCount:");
       print(numberedLines(program.code));
 
-      IoInputProvider inputProvider =
-          test.incrementalCompiler.inputProvider;
-      Uri base = test.scriptUri;
-      Map<String, String> code = program.code is String
-          ? { 'main.dart': program.code }
-          : program.code;
-      Map<Uri, Uri> uriMap = <Uri, Uri>{};
-      for (String name in code.keys) {
-        Uri uri = base.resolve('$name?v${version++}');
-        inputProvider.cachedSources[uri] = new Future.value(code[name]);
-        uriMap[base.resolve(name)] = uri;
-      }
-      Future<FletchDelta> future = test.incrementalCompiler.compileUpdates(
-          fletchDelta.system, uriMap, logVerbose: logger, logTime: logger);
-      bool compileUpdatesThrew = false;
-      future = future.catchError((error, trace) {
-        String statusMessage;
-        Future result;
-        compileUpdatesThrew = true;
-        if (program.compileUpdatesShouldThrow &&
-            error is IncrementalCompilationFailed) {
-          statusMessage = "Expected error in compileUpdates.";
-          result = null;
-        } else {
-          statusMessage = "Unexpected error in compileUpdates.";
-          result = new Future.error(error, trace);
+      bool compileUpdatesThrew = true;
+      FletchDelta fletchDelta;
+      if (isFirstProgram) {
+        // The first program is compiled "fully".
+        fletchDelta = await helper.fullCompile(program);
+        compileUpdatesThrew = false;
+      } else {
+        // An update to the first program, all updates are compiled as
+        // incremental updates to the first program.
+        try {
+          fletchDelta = await helper.incrementalCompile(program, version);
+          compileUpdatesThrew = false;
+        } on IncrementalCompilationFailed catch (error) {
+          if (program.compileUpdatesShouldThrow) {
+            print("Expected error in compileUpdates.");
+          } else {
+            print("Unexpected error in compileUpdates.");
+            rethrow;
+          }
         }
-        print(statusMessage);
-        return result;
-      });
-      fletchDelta = await future;
+      }
+
       if (program.compileUpdatesShouldThrow) {
+        Expect.isFalse(isFirstProgram);
         updateFailedCount++;
         Expect.isTrue(
             compileUpdatesThrew,
@@ -197,8 +188,14 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
         break;
       }
 
+      if (!isFirstProgram ||
+          const bool.fromEnvironment("feature_test.print_initial_commands")) {
+        for (Command command in fletchDelta.commands) {
+          print(command);
+        }
+      }
+
       CommitChangesResult result = await session.applyDelta(fletchDelta);
-      for (Command command in fletchDelta.commands) print(command);
 
       if (!result.successful) {
         print("The CommitChanges() command was not successful: "
@@ -208,11 +205,25 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
       Expect.equals(result.successful, !program.commitChangesShouldFail,
                     result.message);
 
+      if (isFirstProgram) {
+        // Turn on debugging.
+        await session.enableDebugger();
+        // Spawn the process to run.
+        await session.spawnProcess();
+        // Allow operations on internal frames.
+        await session.toggleInternal();
+      }
+
       if (result.successful) {
         // Set breakpoint in main in case main was replaced.
         await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
-        // Restart the current frame to rerun main.
-        await session.restart();
+        if (isFirstProgram) {
+          // Run the program to hit the breakpoint in main.
+          await session.debugRun();
+        } else {
+          // Restart the current frame to rerun main.
+          await session.restart();
+        }
         // Step out of main to finish execution of main.
         await session.stepOut();
 
@@ -226,12 +237,11 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
         List<String> actualMessages = session.stdoutSink.takeLines();
         Expect.listEquals(messages, actualMessages);
 
-        // TODO(ahe): Enable SerializeScopeTestCase for multiple
-        // parts.
-        if (program.code is String) {
+        // TODO(ahe): Enable SerializeScopeTestCase for multiple parts.
+        if (!isFirstProgram && program.code is String) {
           await new SerializeScopeTestCase(
-              program.code, test.incrementalCompiler.mainApp,
-              test.incrementalCompiler.compiler).run();
+              program.code, helper.compiler.mainApp,
+              helper.compiler.compiler).run();
         }
       }
     }
@@ -358,39 +368,6 @@ List<String> splitLines(String text) {
   return text.split(new RegExp('^', multiLine: true));
 }
 
-Future<TestSession> runFletchVM(
-    String testName,
-    IoCompilerTestCase test,
-    FletchDelta fletchDelta) async {
-  TestSession session =
-      await TestSession.spawnVm(test.incrementalCompiler, testName: testName);
-  try {
-    await session.applyDelta(fletchDelta);
-    if (const bool.fromEnvironment("feature_test.print_initial_commands")) {
-      for (Command command in fletchDelta.commands) {
-        print(command);
-      }
-    }
-
-    // Turn on debugging.
-    await session.enableDebugger();
-    // Spawn the process to run.
-    await session.spawnProcess();
-    // Allow operations on internal frames.
-    await session.toggleInternal();
-    // Set breakpoint in main.
-    await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
-    // Run the program to hit the breakpoint in main.
-    await session.debugRun();
-    // Step out of main to finish execution of main.
-    await session.stepOut();
-
-    return session;
-  } catch (error, stackTrace) {
-    return session.handleError(error, stackTrace);
-  }
-}
-
 class TestSession extends Session {
   final Process process;
   final StreamIterator stdoutIterator;
@@ -495,11 +472,10 @@ class TestSession extends Session {
     });
   }
 
-  static Future<TestSession> spawnVm(IncrementalCompiler compiler,
-                                     {String testName}) async {
-    print("TestSession.spawnVm");
-    String vmPath = compiler.compiler.fletchVm.toFilePath();
-    FletchBackend backend = compiler.compiler.backend;
+  static Future<TestSession> spawnVm(
+      IncrementalCompiler compiler,
+      {String testName}) async {
+    String vmPath = guessFletchVm(null).toFilePath();
 
     List<Future> futures = <Future>[];
     void recordFuture(String name, Future future) {
@@ -603,4 +579,119 @@ Future<Map<String, NoArgFuture>> listTests() {
     result['incremental/$name'] = () => main(<String>[name]);
   });
   return new Future<Map<String, NoArgFuture>>.value(result);
+}
+
+class IncrementalTestHelper {
+  final Uri packageRoot;
+
+  final IoInputProvider inputProvider;
+
+  final IncrementalCompiler compiler;
+
+  FletchSystem system;
+
+  IncrementalTestHelper.internal(
+      this.packageRoot,
+      this.inputProvider,
+      this.compiler);
+
+  factory IncrementalTestHelper() {
+    Uri packageRoot = new Uri(scheme: PACKAGE_SCHEME, path: '/');
+    IoInputProvider inputProvider = new IoInputProvider(packageRoot);
+    FormattingDiagnosticHandler diagnosticHandler =
+        new FormattingDiagnosticHandler(inputProvider);
+    IncrementalCompiler compiler = new IncrementalCompiler(
+        packageRoot: packageRoot,
+        inputProvider: inputProvider,
+        diagnosticHandler: diagnosticHandler,
+        outputProvider: new fletch_compiler_src.OutputProvider());
+    return new IncrementalTestHelper.internal(
+        packageRoot,
+        inputProvider,
+        compiler);
+  }
+
+  Future<FletchDelta> fullCompile(ProgramResult program) async {
+    Map<String, String> code = computeCode(program);
+    inputProvider.sources.clear();
+    code.forEach((String name, String code) {
+      inputProvider.sources[customUriBase.resolve(name)] = code;
+    });
+
+    await compiler.compile(customUriBase.resolve('main.dart'));
+    FletchDelta delta = compiler.compiler.context.backend.computeDelta();
+    system = delta.system;
+    return delta;
+  }
+
+  Future<FletchDelta> incrementalCompile(
+      ProgramResult program,
+      int version) async {
+    Map<String, String> code = computeCode(program);
+    Map<Uri, Uri> uriMap = <Uri, Uri>{};
+    for (String name in code.keys) {
+      Uri uri = customUriBase.resolve('$name?v$version');
+      inputProvider.cachedSources[uri] = new Future.value(code[name]);
+      uriMap[customUriBase.resolve(name)] = uri;
+    }
+    FletchDelta delta = await compiler.compileUpdates(
+        system, uriMap, logVerbose: logger, logTime: logger);
+    system = delta.system;
+    return delta;
+  }
+
+  Map<String, String> computeCode(ProgramResult program) {
+    return program.code is String
+        ? <String,String>{ 'main.dart': program.code }
+        : program.code;
+  }
+}
+
+/// An input provider which provides input via the class [File].  Includes
+/// in-memory compilation units [sources] which are returned when a matching
+/// key requested.
+class IoInputProvider extends SourceFileProvider {
+  final Map<Uri, String> sources = <Uri, String>{};
+
+  final Uri packageRoot;
+
+  final Map<Uri, Future> cachedSources = new Map<Uri, Future>();
+
+  static final Map<Uri, String> cachedFiles = new Map<Uri, String>();
+
+  IoInputProvider(this.packageRoot);
+
+  Future readFromUri(Uri uri) {
+    return cachedSources.putIfAbsent(uri, () {
+      String text;
+      String name;
+      if (sources.containsKey(uri)) {
+        name = '$uri';
+        text = sources[uri];
+      } else {
+        if (uri.scheme == PACKAGE_SCHEME) {
+          throw "packages not supported";
+        }
+        text = readCachedFile(uri);
+        name = new File.fromUri(uri).path;
+      }
+      sourceFiles[uri] = new StringSourceFile(uri, name, text);
+      return new Future<String>.value(text);
+    });
+  }
+
+  Future call(Uri uri) => readStringFromUri(uri);
+
+  Future<String> readStringFromUri(Uri uri) {
+    return readFromUri(uri);
+  }
+
+  Future<List<int>> readUtf8BytesFromUri(Uri uri) {
+    throw "not supported";
+  }
+
+  static String readCachedFile(Uri uri) {
+    return cachedFiles.putIfAbsent(
+        uri, () => new File.fromUri(uri).readAsStringSync());
+  }
 }

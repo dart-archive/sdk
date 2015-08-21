@@ -4,6 +4,9 @@
 
 library fletchc.fletch_compiler;
 
+import 'dart:async' show
+    EventSink;
+
 import 'package:sdk_library_metadata/libraries.dart' show
     LIBRARIES,
     LibraryInfo;
@@ -14,9 +17,15 @@ import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
 import 'package:compiler/src/io/source_file.dart';
 
+import 'package:compiler/src/source_file_provider.dart' show
+    SourceFileProvider;
+
 import 'package:compiler/src/elements/modelx.dart' show
     CompilationUnitElementX,
     LibraryElementX;
+
+import 'package:compiler/compiler_new.dart' show
+    CompilerOutput;
 
 import 'package:compiler/src/util/uri_extras.dart' show
     relativize;
@@ -192,18 +201,18 @@ class FletchCompiler extends FletchCompilerHack {
     FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
     unit.accept(visitor, null);
     FletchFunctionBuilder builder =
-        _NO_WARN(backend).systemBuilder.lookupFunctionBuilderByElement(
+        context.backend.systemBuilder.lookupFunctionBuilderByElement(
             visitor.element);
     if (builder == null) return null;
     // TODO(ajohnsen): We need a mapping from element to functionId, that can
     // be looked up in the current fletch system.
     FletchFunction function = builder.finalizeFunction(context, []);
-    return _NO_WARN(backend).createDebugInfo(function);
+    return context.backend.createDebugInfo(function);
   }
 
   int positionInFileFromPattern(String file, int line, String pattern) {
     Uri uri = Uri.base.resolve(file);
-    SourceFile sourceFile = _NO_WARN(provider).sourceFiles[uri];
+    SourceFile sourceFile = getSourceFile(provider, uri);
     if (sourceFile == null) return null;
     List<int> lineStarts = sourceFile.lineStarts;
     if (line >= lineStarts.length) return null;
@@ -219,7 +228,7 @@ class FletchCompiler extends FletchCompilerHack {
 
   int positionInFile(String file, int line, int column) {
     Uri uri = Uri.base.resolve(file);
-    SourceFile sourceFile = _NO_WARN(provider).sourceFiles[uri];
+    SourceFile sourceFile = getSourceFile(provider, uri);
     if (sourceFile == null) return null;
     if (line >= sourceFile.lineStarts.length) return null;
     return sourceFile.lineStarts[line] + column;
@@ -228,5 +237,48 @@ class FletchCompiler extends FletchCompilerHack {
   bool inUserCode(element, {bool assumeInUserCode: false}) => true;
 }
 
-// TODO(ahe): Remove this method.
-_NO_WARN(object) => object;
+/// Output provider which collects output in [output].
+class OutputProvider implements CompilerOutput {
+  final Map<String, String> output = new Map<String, String>();
+
+  EventSink<String> createEventSink(String name, String extension) {
+    return new StringEventSink((String data) {
+      output['$name.$extension'] = data;
+    });
+  }
+
+  String operator[](String key) => output[key];
+}
+
+/// Helper class to collect sources.
+class StringEventSink implements EventSink<String> {
+  List<String> data = <String>[];
+
+  final Function onClose;
+
+  StringEventSink(this.onClose);
+
+  void add(String event) {
+    if (data == null) throw 'StringEventSink is closed.';
+    data.add(event);
+  }
+
+  void addError(errorEvent, [StackTrace stackTrace]) {
+    throw 'addError($errorEvent, $stackTrace)';
+  }
+
+  void close() {
+    if (data != null) {
+      onClose(data.join());
+      data = null;
+    }
+  }
+}
+
+SourceFile getSourceFile(api.CompilerInput provider, Uri uri) {
+  if (provider is SourceFileProvider) {
+    return provider.sourceFiles[uri];
+  } else {
+    return null;
+  }
+}

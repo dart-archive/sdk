@@ -49,7 +49,7 @@ import '../src/fletch_compiler.dart' as implementation show
 
 import '../fletch_system.dart';
 
-import 'compiler.dart' show
+import '../src/fletch_compiler.dart' show
     OutputProvider;
 
 import '../src/fletch_backend.dart' show
