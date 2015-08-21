@@ -145,11 +145,9 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
       // TODO(ahe): This message shouldn't be printed by the Fletch VM.
       messages.add("Compile error");
     }
-    for (String expected in messages) {
-      Expect.isTrue(await session.stdoutIterator.moveNext());
-      Expect.stringEquals(expected, session.stdoutIterator.current);
-      print("Got expected output: ${session.stdoutIterator.current}");
-    }
+
+    List<String> actualMessages = session.stdoutSink.takeLines();
+    Expect.listEquals(messages, actualMessages);
 
     int version = 2;
     for (ProgramResult program in programs.skip(1)) {
@@ -225,12 +223,8 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
           messages.add("Compile error");
         }
 
-        for (String expected in messages) {
-          Expect.isTrue(await session.stdoutIterator.moveNext());
-          String actual = session.stdoutIterator.current;
-          Expect.stringEquals(expected, actual);
-          print("Got expected output: $actual");
-        }
+        List<String> actualMessages = session.stdoutSink.takeLines();
+        Expect.listEquals(messages, actualMessages);
 
         // TODO(ahe): Enable SerializeScopeTestCase for multiple
         // parts.
@@ -416,7 +410,23 @@ class TestSession extends Session {
       this.stderr,
       this.futures,
       this.exitCode)
-  : super(vmSocket, compiler, null, null);
+      : super(vmSocket, compiler, new BytesSink(), null);
+
+  // Refines type of [stdoutSink].
+  BytesSink get stdoutSink => super.stdoutSink;
+
+  void writeStdout(String s) {
+    // Unfortunately, print will always add a newline, and the alternative is
+    // to use stdout.write. However, to make it easier to debug problems in
+    // this and other fletch_tests, everything that is printed to stdout ends
+    // up on the console of test.dart. This is good enough for testing, but DO
+    // NOT COPY TO PRODUCTION CODE.
+    print(s);
+  }
+
+  void writeStdoutLine(String s) {
+    print(s);
+  }
 
   /// Add [future] to this session.  All futures that can fail after calling
   /// [waitForCompletion] must be added to the session.
@@ -455,7 +465,8 @@ class TestSession extends Session {
         sb.writeln("");
       }
     }
-    List<String> stdoutLines = await stdoutFuture;
+    await stdoutFuture;
+    List<String> stdoutLines = stdoutSink.takeLines();
     List<String> stderrLines = await stderrFuture;
     if (!stdoutLines.isEmpty) {
       sb.writeln("Problem #${++problemCount}:");
@@ -569,6 +580,19 @@ class TestSession extends Session {
     recordFuture(process.exitCode.then((_) => kill()));
 
     return waitForCompletion();
+  }
+}
+
+class BytesSink implements Sink<List<int>> {
+  final BytesBuilder builder = new BytesBuilder();
+
+  void add(List<int> data) => builder.add(data);
+
+  void close() {
+  }
+
+  List<String> takeLines() {
+    return new LineSplitter().convert(UTF8.decode(builder.takeBytes()));
   }
 }
 

@@ -1006,8 +1006,7 @@ class B extends A {
 }
 <<<< ["instance is null","v1"]
 class C extends B {
-==== ["instance is null","v2"]
-// TODO(ahe): Should only print 'v2'
+==== ["v2"]
 class C extends A {
 >>>>
   m() {
@@ -1048,8 +1047,7 @@ main() {
   }
 <<<< ["instance is null","v1"]
   instance.foo();
-==== ["instance is null","v2"]
-  // TODO(ahe): Should only print 'v2'
+==== ["v2"]
   instance.foo(named: 'v2');
 >>>>
 }
@@ -1077,8 +1075,7 @@ main() {
   }
 <<<< ["instance is null","v1"]
   instance.foo(named: 'v1');
-==== ["instance is null","v2"]
-   // TODO(ahe): Should only print 'v2'
+==== ["v2"]
   instance.foo();
 >>>>
 }
@@ -1739,8 +1736,7 @@ compile_time_error_005
 main() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   var funcnuf = (x) => ((x))=((x)) <= (x);
-==== []
-  // TODO(ahe): Should expect "Hello"
+==== "Hello"
   print("Hello");
 >>>>
 }
@@ -2082,8 +2078,7 @@ class A {
 <<<< {"messages":[],"hasCompileTimeError":1}
 // TODO(ahe): should just expect "null"
   bool operator ===(A other) { return true; }
-==== []
-// TODO(ahe): Should expect: "null"
+==== "null"
 >>>>
 
   int field;
@@ -2118,8 +2113,7 @@ update_dependencies_recoverable_compile_time_error
 foo() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   new new();
-==== []
-  // TODO(ahe): Should expect just "v2"
+==== "v2"
   print("v2");
 >>>>
 }
@@ -2137,8 +2131,7 @@ update_dependencies_unrecoverable_compile_time_error
 foo() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   for do while default if else new;
-==== []
-  // TODO(ahe): Should expect just "v2"
+==== "v2"
   print("v2");
 >>>>
 }
