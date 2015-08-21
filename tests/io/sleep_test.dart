@@ -10,5 +10,7 @@ void main() {
   // Sleep 200 ms.
   Stopwatch stopwatch = new Stopwatch()..start();
   io.sleep(200);
-  Expect.isTrue(stopwatch.elapsedMilliseconds >= 200);
+  Expect.isTrue(
+      stopwatch.elapsedMilliseconds >= 200,
+      "${stopwatch.elapsedMilliseconds} >= 200");
 }
