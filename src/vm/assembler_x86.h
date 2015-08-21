@@ -300,10 +300,8 @@ class Assembler {
   void jmp(const char* name);
   void jmp(Label* label);
 
-  // Align what follows to a 2^power address.
-  void AlignToPowerOfTwo(int power);
-
   void Bind(const char* name);
+  void BindWithPowerOfTwoAlignment(const char* name, int power);
   void Bind(Label* label);
 
   void DefineLong(const char* name);
@@ -312,6 +310,9 @@ class Assembler {
  private:
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
+
+  // Align what follows to a 2^power address.
+  void AlignToPowerOfTwo(int power);
 
   static const char* ConditionMnemonic(Condition condition);
 

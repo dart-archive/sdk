@@ -249,9 +249,7 @@ class Assembler {
   INSTRUCTION_2(tst, "tst %r, %i", Register, const Immediate&);
   INSTRUCTION_2(tst, "tst %r, %r", Register, Register);
 
-  // Align what follows to a 2^power address.
-  void AlignToPowerOfTwo(int power);
-
+  void BindWithPowerOfTwoAlignment(const char* name, int power);
   void Bind(const char* name);
   void Bind(Label* label);
 
@@ -265,6 +263,9 @@ class Assembler {
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
   void PrintOperand(const Operand* operand);
+
+  // Align what follows to a 2^power address.
+  void AlignToPowerOfTwo(int power);
 
   static int NewLabelPosition();
 

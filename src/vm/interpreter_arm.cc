@@ -63,8 +63,8 @@ void InterpreterGenerator::Generate() {
 INTRINSICS_DO(V)
 #undef V
 
-  assembler()->AlignToPowerOfTwo(4);
-  printf("\n%sInterpretFast_DispatchTable:\n", assembler()->LabelPrefix());
+
+  assembler()->BindWithPowerOfTwoAlignment("InterpretFast_DispatchTable", 4);
 #define V(name, branching, format, size, stack_diff, print)      \
   assembler()->DefineLong("BC_" #name);
   BYTECODES_DO(V)

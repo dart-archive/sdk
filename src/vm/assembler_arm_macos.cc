@@ -17,7 +17,7 @@ static const char* kPrefix = "_";
 
 void Assembler::Bind(const char* name) {
   putchar('\n');
-  printf("\t.p2align 4,0x90\n");
+  AlignToPowerOfTwo(4);
   printf("\t.code 32\n");
   printf("\t.global %s%s\n%s%s:\n", kPrefix, name, kPrefix, name);
 }

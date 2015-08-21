@@ -63,9 +63,7 @@ BYTECODES_DO(V)
 INTRINSICS_DO(V)
 #undef V
 
-  // TODO(kasperl): Let this go through the assembler.
-  assembler()->AlignToPowerOfTwo(4);
-  printf("\nInterpretFast_DispatchTable:\n");
+  assembler()->BindWithPowerOfTwoAlignment("InterpretFast_DispatchTable", 4);
 #define V(name, branching, format, size, stack_diff, print)      \
   assembler()->DefineLong("BC_" #name);
 BYTECODES_DO(V)

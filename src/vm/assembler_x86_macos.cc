@@ -23,7 +23,11 @@ void Assembler::jmp(const char* name) {
 }
 
 void Assembler::Bind(const char* name) {
-  printf("\n\t.text\n\t.p2align 4,0x90\n.globl _%s\n_%s:\n", name, name);
+  putchar('\n');
+  printf("\t.text\n");
+  AlignToPowerOfTwo(4);
+  printf("\t.globl _%s\n", name);
+  printf("_%s:\n", name);
 }
 
 void Assembler::DefineLong(const char* name) {

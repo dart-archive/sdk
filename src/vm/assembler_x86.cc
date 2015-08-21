@@ -24,8 +24,14 @@ void Assembler::jmp(Label* label) {
   printf("\tjmp %d%s\n", label->position(), direction);
 }
 
+void Assembler::BindWithPowerOfTwoAlignment(const char* name, int power) {
+  puts("\n");
+  AlignToPowerOfTwo(power);
+  printf("%s:\n", name);
+}
+
 void Assembler::AlignToPowerOfTwo(int power) {
-  printf("\t.p2align %d\n", power);
+  printf("\t.p2align %d,0x90\n", power);
 }
 
 void Assembler::Bind(Label* label) {

@@ -12,7 +12,7 @@ namespace fletch {
 void Assembler::Bind(const char* name) {
   putchar('\n');
   printf("\t.type %s, %%function\n", name);
-  printf("\t.p2align 4,0x90\n");
+  AlignToPowerOfTwo(4);
   printf("\t.code 32\n");
   printf("\t.global %s\n%s:\n", name, name);
 }
