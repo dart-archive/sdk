@@ -19,4 +19,4 @@ void Assembler::Bind(const char* name) {
 
 }  // namespace fletch
 
-#endif  // defined FLETCH_TARGET_X64 && defined(FLETCH_TARGET_OS_MACOS)
+#endif  // defined(FLETCH_TARGET_X64) && defined(FLETCH_TARGET_OS_MACOS)

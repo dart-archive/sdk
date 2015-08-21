@@ -296,6 +296,9 @@ class Assembler {
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
 
+  // Align what follows to a 2^power address.
+  void AlignToPowerOfTwo(int power);
+
   static int ComputeLabelPosition(Label* label);
 
   // Helper functions for wrapping operand types before passing them

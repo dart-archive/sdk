@@ -10,7 +10,11 @@
 namespace fletch {
 
 void Assembler::Bind(const char* name) {
-  printf("\n\t.global %s\n%s:\n", name, name);
+  putchar('\n');
+  printf("\t.text\n");
+  AlignToPowerOfTwo(4);
+  printf("\t.global %s\n", name);
+  printf("%s:\n", name);
 }
 
 }  // namespace fletch

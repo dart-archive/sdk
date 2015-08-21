@@ -38,6 +38,10 @@ void Assembler::j(Condition condition, Label* label) {
   printf("\tj%s L%d\n", mnemonic, ComputeLabelPosition(label));
 }
 
+void Assembler::AlignToPowerOfTwo(int power) {
+  printf("\t.p2align %d,0x90\n", power);
+}
+
 void Assembler::jmp(Label* label) {
   printf("\tjmp L%d\n", ComputeLabelPosition(label));
 }
