@@ -1464,15 +1464,22 @@ abstract class CodegenVisitor
       applyVisitState();
       return;
     }
-    ClassElement literalClass = context.backend.linkedHashMapClass;
+    ClassElement literalClass = context.backend.mapImplementation;
     ConstructorElement constructor = literalClass.lookupDefaultConstructor();
     if (constructor == null) {
-      internalError(literalClass,
-                    "Failed to lookup default list constructor");
+      internalError(literalClass, "Failed to lookup default map constructor");
       return;
     }
-    callConstructor(
-        node, constructor, new NodeList.empty(), CallStructure.NO_ARGS);
+    // The default constructor is a redirecting factory constructor. Follow it.
+    constructor = constructor.effectiveTarget;
+    FletchFunctionBase function = requireFunction(constructor.declaration);
+    doStaticFunctionInvoke(
+        node,
+        function,
+        new NodeList.empty(),
+        CallStructure.NO_ARGS,
+        factoryInvoke: true);
+
     Selector selector = new Selector.indexSet();
     for (Node element in node.entries) {
       assembler.dup();

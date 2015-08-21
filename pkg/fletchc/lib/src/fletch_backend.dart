@@ -21,9 +21,13 @@ import 'package:compiler/src/dart2jslib.dart' show
     Enqueuer,
     MessageKind,
     Registry,
+    ResolutionCallbacks,
     ResolutionEnqueuer,
     WorldImpact,
     isPrivateName;
+
+import 'package:compiler/src/dart_types.dart' show
+    DartType;
 
 import 'package:compiler/src/tree/tree.dart' show
     DartString,
@@ -121,12 +125,11 @@ const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<ClassElement, FletchClass>(),
     const <FletchConstant>[]);
 
-class FletchBackend extends Backend {
+class FletchBackend extends Backend with ResolutionCallbacks {
   static const String growableListName = '_GrowableList';
   static const String constantListName = '_ConstantList';
   static const String constantByteListName = '_ConstantByteList';
   static const String constantMapName = '_ConstantMap';
-  static const String linkedHashMapName = '_CompactLinkedHashMap';
   static const String noSuchMethodName = '_noSuchMethod';
   static const String noSuchMethodTrampolineName = '_noSuchMethodTrampoline';
 
@@ -188,7 +191,6 @@ class FletchBackend extends Backend {
   ClassElement smiClass;
   ClassElement mintClass;
   ClassElement growableListClass;
-  ClassElement linkedHashMapClass;
 
   FletchSystemBuilder systemBuilder;
 
@@ -198,9 +200,7 @@ class FletchBackend extends Backend {
       : this.context = compiler.context,
         this.constantCompilerTask = new DartConstantTask(compiler),
         this.systemBuilder = new FletchSystemBuilder(BASE_FLETCH_SYSTEM),
-        super(compiler) {
-    context.resolutionCallbacks = new FletchResolutionCallbacks(context);
-  }
+        super(compiler);
 
   void newSystemBuilder(FletchSystem predecessorSystem) {
     systemBuilder = new FletchSystemBuilder(predecessorSystem);
@@ -245,9 +245,7 @@ class FletchBackend extends Backend {
     return classBuilder;
   }
 
-  FletchResolutionCallbacks get resolutionCallbacks {
-    return context.resolutionCallbacks;
-  }
+  ResolutionCallbacks get resolutionCallbacks => this;
 
   List<CompilerTask> get tasks => <CompilerTask>[];
 
@@ -305,7 +303,8 @@ class FletchBackend extends Backend {
     FletchClassBuilder loadClass(
         String name,
         LibraryElement library,
-        [bool builtin = false]) {
+        [bool builtin = false,
+         bool forCodegen = true]) {
       var classImpl = library.findLocal(name);
       if (classImpl == null) classImpl = library.implementation.find(name);
       if (classImpl == null) {
@@ -316,12 +315,14 @@ class FletchBackend extends Backend {
       // TODO(ahe): Register in ResolutionCallbacks. The 3 lines below should
       // not happen at this point in time.
       classImpl.ensureResolved(compiler);
-      FletchClassBuilder classBuilder = registerClassElement(classImpl);
       world.registerInstantiatedType(classImpl.rawType, registry);
       // TODO(ahe): This is a hack to let both the world and the codegen know
       // about the instantiated type.
-      registry.registerInstantiatedType(classImpl.rawType);
-      return classBuilder;
+      if (forCodegen) {
+        registry.registerInstantiatedType(classImpl.rawType);
+        return registerClassElement(classImpl);
+      }
+      return null;
     }
 
     compiledObjectClass = loadClass("Object", compiler.coreLibrary, true);
@@ -341,14 +342,9 @@ class FletchBackend extends Backend {
 
     growableListClass =
         loadClass(growableListName, fletchSystemLibrary).element;
-    // The linked hash map depends on LinkedHashMap.
-    loadClass("LinkedHashMap", collectionLibrary).element;
-    linkedHashMapClass =
-        loadClass(linkedHashMapName, collectionLibrary).element;
     // Register list constructors to world.
     // TODO(ahe): Register growableListClass through ResolutionCallbacks.
     growableListClass.constructors.forEach(world.registerStaticUse);
-    linkedHashMapClass.constructors.forEach(world.registerStaticUse);
 
     // TODO(ajohnsen): Remove? String interpolation does not enqueue '+'.
     // Investigate what else it may enqueue, could be StringBuilder, and then
@@ -382,12 +378,18 @@ class FletchBackend extends Backend {
     }
   }
 
-
   void onElementResolved(Element element, TreeElements elements) {
     if (alwaysEnqueue.contains(element)) {
       var registry = new CodegenRegistry(compiler, elements);
       registry.registerStaticInvocation(element);
     }
+  }
+
+  void onMapLiteral(Registry registry, DartType type, bool isConstant) {
+    if (isConstant) return;
+    ClassElement classImpl = mapImplementation;
+    registry.registerInstantiation(classImpl.rawType);
+    registry.registerStaticInvocation(classImpl.lookupDefaultConstructor());
   }
 
   ClassElement get stringImplementation => stringClass;
@@ -518,7 +520,7 @@ class FletchBackend extends Backend {
       int equalsSelector = FletchSelector.encodeMethod(id, 1);
       tearoffClass.addToMethodTable(equalsSelector, equal);
 
-      // Create hashCode getter. We simply xor the object hashCode and the
+      // Create hashCode getter. We simply add the object hashCode and the
       // method id of the tearoff'ed function.
       FletchFunctionBuilder hashCode = systemBuilder.newFunctionBuilder(
           FletchFunctionKind.ACCESSOR,
@@ -526,14 +528,18 @@ class FletchBackend extends Backend {
 
       int hashCodeSelector = FletchSelector.encodeGetter(
           context.getSymbolId("hashCode"));
-      int xorSelector = FletchSelector.encodeMethod(
-          context.getSymbolId("^"), 1);
+
+      // TODO(ajohnsen): Use plus, we plus is always enqueued. Consider using
+      // xor when we have a way to enqueue it from here.
+      int plusSelector = FletchSelector.encodeMethod(
+          context.getSymbolId("+"), 1);
+
       hashCode.assembler
         ..loadParameter(0)
         ..loadField(0)
         ..invokeMethod(hashCodeSelector, 0)
         ..loadLiteral(function.functionId)
-        ..invokeMethod(xorSelector, 1)
+        ..invokeMethod(plusSelector, 1)
         ..ret()
         ..methodEnd();
 

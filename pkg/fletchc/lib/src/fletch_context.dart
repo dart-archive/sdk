@@ -46,12 +46,6 @@ import 'fletch_backend.dart' show
 export 'fletch_backend.dart' show
     FletchBackend;
 
-import 'fletch_resolution_callbacks.dart' show
-    FletchResolutionCallbacks;
-
-export 'fletch_resolution_callbacks.dart' show
-    FletchResolutionCallbacks;
-
 export 'bytecode_assembler.dart' show
     BytecodeAssembler,
     BytecodeLabel;
@@ -68,8 +62,6 @@ export 'fletch_native_descriptor.dart' show
 
 class FletchContext {
   final FletchCompiler compiler;
-
-  FletchResolutionCallbacks resolutionCallbacks;
 
   Map<String, FletchNativeDescriptor> nativeDescriptors;
 
