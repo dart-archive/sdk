@@ -551,8 +551,7 @@ class B extends A {
   m() {
     print('v1');
   }
-==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "v2"
 >>>>
 }
 class C extends B {
@@ -871,8 +870,7 @@ class C {
 <<<< "v1"
   static foo() {
     print('v1');
-==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "v2"
   static void foo() {
     print('v2');
 >>>>
@@ -975,8 +973,7 @@ class C {
     print('v1');
   }
 }
-==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "v2"
 >>>>
 main() {
   try {
@@ -1632,7 +1629,7 @@ main() {
 }
 
 bar() {
-<<<< []
+<<<< ["Uncaught exception:", "a String: \"throw\"", ""]
   foo(true);
 ==== []
   foo(false);
