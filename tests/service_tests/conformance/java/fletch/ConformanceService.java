@@ -11,7 +11,6 @@ public class ConformanceService {
   public static native void TearDown();
 
   public static abstract class GetAgeCallback {
-    public final java.lang.Class returnType = int.class;
     public abstract void handle(int result);
   }
 
@@ -19,7 +18,6 @@ public class ConformanceService {
   public static native void getAgeAsync(PersonBuilder person, GetAgeCallback callback);
 
   public static abstract class GetBoxedAgeCallback {
-    public final java.lang.Class returnType = int.class;
     public abstract void handle(int result);
   }
 
@@ -59,7 +57,6 @@ public class ConformanceService {
   public static native void createNodeAsync(int depth, CreateNodeCallback callback);
 
   public static abstract class CountCallback {
-    public final java.lang.Class returnType = int.class;
     public abstract void handle(int result);
   }
 
@@ -67,7 +64,6 @@ public class ConformanceService {
   public static native void countAsync(PersonBuilder person, CountCallback callback);
 
   public static abstract class DepthCallback {
-    public final java.lang.Class returnType = int.class;
     public abstract void handle(int result);
   }
 
@@ -82,7 +78,6 @@ public class ConformanceService {
   public static native void fooAsync(FooCallback callback);
 
   public static abstract class BarCallback {
-    public final java.lang.Class returnType = int.class;
     public abstract void handle(int result);
   }
 
@@ -90,7 +85,6 @@ public class ConformanceService {
   public static native void barAsync(EmptyBuilder empty, BarCallback callback);
 
   public static abstract class PingCallback {
-    public final java.lang.Class returnType = int.class;
     public abstract void handle(int result);
   }
 

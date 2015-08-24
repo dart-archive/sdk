@@ -490,7 +490,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
     String camelName = name.substring(0, 1).toUpperCase() + name.substring(1);
     writeln();
     writeln('  public static abstract class ${camelName}Callback {');
-    if (!node.returnType.isVoid) {
+    if (!node.returnType.isVoid && !node.returnType.isPrimitive) {
       write('    public final java.lang.Class returnType = ');
       writeReturnType(node.returnType);
       writeln('.class;');

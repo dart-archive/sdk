@@ -11,7 +11,6 @@ public class PerformanceService {
   public static native void TearDown();
 
   public static abstract class EchoCallback {
-    public final java.lang.Class returnType = int.class;
     public abstract void handle(int result);
   }
 
@@ -19,7 +18,6 @@ public class PerformanceService {
   public static native void echoAsync(int n, EchoCallback callback);
 
   public static abstract class CountTreeNodesCallback {
-    public final java.lang.Class returnType = int.class;
     public abstract void handle(int result);
   }
 
