@@ -313,9 +313,11 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessRestartFrame: {
-        StoppedGcThreadScope scope(program()->scheduler());
-        int frame = connection_->ReadInt();
-        StackWalker::RestartFrame(process_, frame);
+        {
+          StoppedGcThreadScope scope(program()->scheduler());
+          int frame = connection_->ReadInt();
+          StackWalker::RestartFrame(process_, frame);
+        }
         ProcessContinue(process_);
         break;
       }
