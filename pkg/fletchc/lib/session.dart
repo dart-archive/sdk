@@ -342,7 +342,10 @@ class Session extends FletchVmSession {
       writeStdoutLine("### Failed setting breakpoint for $name");
       return null;
     }
-    DebugInfo debugInfo = compiler.debugInfoForPosition(file, position);
+    DebugInfo debugInfo = compiler.debugInfoForPosition(
+        file,
+        position,
+        fletchSystem);
     if (debugInfo == null) {
       writeStdoutLine("### Failed setting breakpoint for $name");
       return null;

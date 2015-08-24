@@ -194,7 +194,10 @@ class FletchCompiler extends FletchCompilerHack {
     return compilationUnits[uri];
   }
 
-  DebugInfo debugInfoForPosition(String file, int position) {
+  DebugInfo debugInfoForPosition(
+      String file,
+      int position,
+      FletchSystem currentSystem) {
     Uri uri = Uri.base.resolve(file);
     CompilationUnitElementX unit = compilationUnitForUri(uri);
     if (unit == null) return null;
@@ -207,7 +210,7 @@ class FletchCompiler extends FletchCompilerHack {
     // TODO(ajohnsen): We need a mapping from element to functionId, that can
     // be looked up in the current fletch system.
     FletchFunction function = builder.finalizeFunction(context, []);
-    return context.backend.createDebugInfo(function);
+    return context.backend.createDebugInfo(function, currentSystem);
   }
 
   int positionInFileFromPattern(String file, int line, String pattern) {
