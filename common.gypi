@@ -82,6 +82,7 @@
           'GCC_WARN_NON_VIRTUAL_DESTRUCTOR': 'NO', # -Wno-non-virtual-dtor
           'GCC_ENABLE_CPP_RTTI': 'NO', # -fno-rtti
           'GCC_ENABLE_CPP_EXCEPTIONS': 'NO', # -fno-exceptions
+	  'DEAD_CODE_STRIPPING': 'YES', # -Wl,-dead_strip (mac --gc-sections)
 
           'OTHER_CPLUSPLUSFLAGS' : [
             '<@(common_gcc_cflags_cc)',
@@ -112,6 +113,10 @@
           '-Werror',
           '<@(common_gcc_cflags_c)',
           '-fno-exceptions',
+        ],
+
+        'ldflags': [
+          '-Wl,--gc-sections',
         ],
 
         'target_conditions': [
