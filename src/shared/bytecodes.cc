@@ -207,7 +207,8 @@ uint8* Bytecode::PreviousBytecode(uint8* current_bcp) {
   while (*bcp != kMethodEnd) {
     bcp += Bytecode::Size(static_cast<Opcode>(*bcp));
   }
-  int delta = Utils::ReadInt32(bcp + 1);
+  int value = Utils::ReadInt32(bcp + 1);
+  int delta = value >> 1;
   bcp -= delta;
   uint8* previous = NULL;
   while (bcp != current_bcp) {

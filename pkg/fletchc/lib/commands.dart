@@ -419,14 +419,17 @@ class PushNewFunction extends Command {
 
   void internalAddTo(Sink<List<int>> sink, CommandBuffer<CommandCode> buffer) {
     List<int> bytes = computeBytes(bytecodes);
-    int size = bytes.length + 4 + catchRanges.length * 4;
+    int size = bytes.length;
+    if (catchRanges.isNotEmpty) size += 4 + catchRanges.length * 4;
     buffer
         ..addUint32(arity)
         ..addUint32(literals)
         ..addUint32(size)
-        ..addUint8List(bytes)
-        ..addUint32(catchRanges.length ~/ 2);
-    catchRanges.forEach(buffer.addUint32);
+        ..addUint8List(bytes);
+    if (catchRanges.isNotEmpty) {
+      buffer.addUint32(catchRanges.length ~/ 2);
+      catchRanges.forEach(buffer.addUint32);
+    }
     buffer.sendOn(sink, code);
   }
 

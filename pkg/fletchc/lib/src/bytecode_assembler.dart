@@ -511,7 +511,8 @@ class BytecodeAssembler {
       bytecodes.insert(0, bytecode);
       byteSize += bytecode.size;
     }
-    internalAdd(new MethodEnd(byteSize));
+    int value = (byteSize << 1) | (catchRanges.isNotEmpty ? 1 : 0);
+    internalAdd(new MethodEnd(value));
   }
 
   void processYield() {

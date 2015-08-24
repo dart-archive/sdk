@@ -100,10 +100,15 @@ Function* Function::FromBytecodePointer(uint8* bcp, int* frame_ranges_offset) {
   while (*bcp != kMethodEnd) {
     bcp += Bytecode::Size(static_cast<Opcode>(*bcp));
   }
-  // Read delta.
-  int delta = Utils::ReadInt32(bcp + 1);
+  // Read value.
+  int value = Utils::ReadInt32(bcp + 1);
+  int delta = value >> 1;
   if (frame_ranges_offset != NULL) {
-    *frame_ranges_offset = delta + kMethodEndLength;
+    if ((value & 1) == 1) {
+      *frame_ranges_offset = delta + kMethodEndLength;
+    } else {
+      *frame_ranges_offset = -1;
+    }
   }
   uword address = reinterpret_cast<uword>(bcp - delta - kSize);
   return Function::cast(HeapObject::FromAddress(address));

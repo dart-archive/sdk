@@ -212,6 +212,10 @@ uint8* StackWalker::ComputeCatchBlock(Process* process, int* stack_delta) {
     Function* function = walker.function();
     delta += 1 + walker.frame_size();
     int offset = walker.frame_ranges_offset();
+
+    // Skip if there are no catch blocks.
+    if (offset == -1) continue;
+
     uint8* range_bcp = function->bytecode_address_for(offset);
     int count = Utils::ReadInt32(range_bcp);
     range_bcp += 4;
