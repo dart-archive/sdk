@@ -7,6 +7,7 @@
 package immi;
 
 import fletch.ImmiServiceLayer;
+import fletch.ImmiServiceLayer.RefreshCallback;
 import fletch.PatchData;
 
 public final class ImmiRoot {
@@ -14,18 +15,20 @@ public final class ImmiRoot {
   // Public interface.
 
   public void refresh() {
-    // TODO(zerny): Implement async refresh.
-    PatchData data = ImmiServiceLayer.refresh(id);
-    if (data.isNode()) {
-      AnyNodePatch patch = new AnyNodePatch(data.getNode(), previous, this);
-      previous = patch.getCurrent();
-      patch.applyTo(presenter);
-    }
+    ImmiServiceLayer.refreshAsync(id, new RefreshCallback() {
+        @Override
+        public void handle(PatchData data) {
+          if (data.isNode()) {
+            AnyNodePatch patch = new AnyNodePatch(data.getNode(), previous, ImmiRoot.this);
+            previous = patch.getCurrent();
+            patch.applyTo(presenter);
+          }
+        }
+      });
   }
 
   public void reset() {
-    // TODO(zerny): Implement async reset.
-    ImmiServiceLayer.reset(id);
+    ImmiServiceLayer.resetAsync(id, null);
   }
 
   // Package private implementation.

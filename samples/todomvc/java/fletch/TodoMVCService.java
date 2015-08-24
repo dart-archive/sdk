@@ -10,36 +10,37 @@ public class TodoMVCService {
   public static native void Setup();
   public static native void TearDown();
 
-  public interface CreateItemCallback {
-    public void handle();
+  public static abstract class CreateItemCallback {
+    public abstract void handle();
   }
 
   public static native void createItem(BoxedStringBuilder title);
   public static native void createItemAsync(BoxedStringBuilder title, CreateItemCallback callback);
 
-  public interface ClearItemsCallback {
-    public void handle();
+  public static abstract class ClearItemsCallback {
+    public abstract void handle();
   }
 
   public static native void clearItems();
   public static native void clearItemsAsync(ClearItemsCallback callback);
 
-  public interface DispatchCallback {
-    public void handle();
+  public static abstract class DispatchCallback {
+    public abstract void handle();
   }
 
   public static native void dispatch(int id);
   public static native void dispatchAsync(int id, DispatchCallback callback);
 
-  public interface SyncCallback {
-    public void handle(PatchSet result);
+  public static abstract class SyncCallback {
+    public final java.lang.Class returnType = PatchSet.class;
+    public abstract void handle(PatchSet result);
   }
 
   public static native PatchSet sync();
   public static native void syncAsync(SyncCallback callback);
 
-  public interface ResetCallback {
-    public void handle();
+  public static abstract class ResetCallback {
+    public abstract void handle();
   }
 
   public static native void reset();

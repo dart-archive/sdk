@@ -45,7 +45,7 @@ public class MainApplication extends Application {
     if (attachNativeDebugger) {
       try {
         System.out.println("sleeping for native debugger attatch");
-        Thread.sleep(15000);
+        Thread.sleep(20000);
         System.out.println("resumed execution");
       } catch (InterruptedException e) {
         e.printStackTrace();

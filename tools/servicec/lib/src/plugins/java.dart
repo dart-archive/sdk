@@ -489,8 +489,13 @@ class _JavaVisitor extends CodeGenerationVisitor {
     String name = node.name;
     String camelName = name.substring(0, 1).toUpperCase() + name.substring(1);
     writeln();
-    writeln('  public interface ${camelName}Callback {');
-    write('    public void handle(');
+    writeln('  public static abstract class ${camelName}Callback {');
+    if (!node.returnType.isVoid) {
+      write('    public final java.lang.Class returnType = ');
+      writeReturnType(node.returnType);
+      writeln('.class;');
+    }
+    write('    public abstract void handle(');
     if (!node.returnType.isVoid) {
       writeReturnType(node.returnType);
       write(' result');
@@ -962,9 +967,12 @@ class _JniVisitor extends CcVisitor {
       visitArguments(node.arguments);
     }
     writeln(', jobject _callback) {');
-    writeln('  jobject callback = _env->NewGlobalRef(_callback);');
-    writeln('  JavaVM* vm;');
-    writeln('  _env->GetJavaVM(&vm);');
+    writeln('  jobject callback = NULL;');
+    writeln('  JavaVM* vm = NULL;');
+    writeln('  if (_callback) {');
+    writeln('    callback = _env->NewGlobalRef(_callback);');
+    writeln('    _env->GetJavaVM(&vm);');
+    writeln('  }');
     // TODO(zerny): Issue #45. Store VM pointer in 'callback data' header field.
     if (node.inputKind != InputKind.PRIMITIVES) {
       visitStructArgumentMethodBody(id,
@@ -1025,7 +1033,7 @@ class _JniVisitor extends CcVisitor {
     }
 
     if (async) {
-      writeln('  CallbackInfo* info = new CallbackInfo(callback, vm);');
+      writeln('  CallbackInfo* info = callback ? new CallbackInfo(callback, vm) : NULL;');
       writeln('  *${pointerToArgument(-16, 0, "CallbackInfo*")} = info;');
       write('  ServiceApiInvokeAsync(service_id_, $id, $callback, ');
       writeln('_buffer, kSize);');
@@ -1170,7 +1178,9 @@ class _JniVisitor extends CcVisitor {
       writeln('  char* buffer = ${cast('char*')}(raw);');
       write('  CallbackInfo* info =');
       writeln(' *${pointerToArgument(-16, "CallbackInfo*")};');
+      writeln('  if (info == NULL) return;');
       writeln('  JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);');
+      writeln('  jclass clazz = env->GetObjectClass(info->callback);');
       if (!type.isVoid) {
         write('  int64_t result =');
         writeln(' *${pointerToArgument(0, 'int64_t')};');
@@ -1178,8 +1188,10 @@ class _JniVisitor extends CcVisitor {
         if (!type.isPrimitive) {
           writeln('  char* memory = reinterpret_cast<char*>(result);');
           writeln('  jobject rootSegment = GetRootSegment(env, memory);');
-          writeln('  jclass resultClass = '
-                  'env->FindClass("fletch/${type.identifier}");');
+          write('  jfieldID returnTypeField = env->GetFieldID(');
+          writeln('clazz, "returnType", "Ljava/lang/Class;");');
+          write('  jclass resultClass = (jclass)');
+          writeln('env->GetObjectField(info->callback, returnTypeField);');
           writeln('  jmethodID create = env->GetStaticMethodID('
                   'resultClass, "create", '
                   '"(Ljava/lang/Object;)Lfletch/${type.identifier};");');
@@ -1189,7 +1201,6 @@ class _JniVisitor extends CcVisitor {
       } else {
         writeln('  DeleteMessage(buffer);');
       }
-      writeln('  jclass clazz = env->GetObjectClass(info->callback);');
       write('  jmethodID methodId = env->GetMethodID');
       write('(clazz, "handle", ');
       if (type.isVoid) {

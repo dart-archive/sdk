@@ -10,22 +10,25 @@ public class PerformanceService {
   public static native void Setup();
   public static native void TearDown();
 
-  public interface EchoCallback {
-    public void handle(int result);
+  public static abstract class EchoCallback {
+    public final java.lang.Class returnType = int.class;
+    public abstract void handle(int result);
   }
 
   public static native int echo(int n);
   public static native void echoAsync(int n, EchoCallback callback);
 
-  public interface CountTreeNodesCallback {
-    public void handle(int result);
+  public static abstract class CountTreeNodesCallback {
+    public final java.lang.Class returnType = int.class;
+    public abstract void handle(int result);
   }
 
   public static native int countTreeNodes(TreeNodeBuilder node);
   public static native void countTreeNodesAsync(TreeNodeBuilder node, CountTreeNodesCallback callback);
 
-  public interface BuildTreeCallback {
-    public void handle(TreeNode result);
+  public static abstract class BuildTreeCallback {
+    public final java.lang.Class returnType = TreeNode.class;
+    public abstract void handle(TreeNode result);
   }
 
   public static native TreeNode buildTree(int n);

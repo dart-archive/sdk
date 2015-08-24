@@ -168,10 +168,11 @@ JNIEXPORT jint JNICALL Java_fletch_PerformanceService_echo(JNIEnv* _env, jclass,
 static void Unwrap_int32_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
   CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
+  if (info == NULL) return;
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
+  jclass clazz = env->GetObjectClass(info->callback);
   int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
-  jclass clazz = env->GetObjectClass(info->callback);
   jmethodID methodId = env->GetMethodID(clazz, "handle", "(I)V");
   env->CallVoidMethod(info->callback, methodId, result);
   env->DeleteGlobalRef(info->callback);
@@ -180,14 +181,17 @@ static void Unwrap_int32_8(void* raw) {
 }
 
 JNIEXPORT void JNICALL Java_fletch_PerformanceService_echoAsync(JNIEnv* _env, jclass, jint n, jobject _callback) {
-  jobject callback = _env->NewGlobalRef(_callback);
-  JavaVM* vm;
-  _env->GetJavaVM(&vm);
+  jobject callback = NULL;
+  JavaVM* vm = NULL;
+  if (_callback) {
+    callback = _env->NewGlobalRef(_callback);
+    _env->GetJavaVM(&vm);
+  }
   static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
   *reinterpret_cast<jint*>(_buffer + 56) = n;
-  CallbackInfo* info = new CallbackInfo(callback, vm);
+  CallbackInfo* info = callback ? new CallbackInfo(callback, vm) : NULL;
   *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kechoId, Unwrap_int32_8, _buffer, kSize);
 }
@@ -204,9 +208,12 @@ JNIEXPORT jint JNICALL Java_fletch_PerformanceService_countTreeNodes(JNIEnv* _en
 }
 
 JNIEXPORT void JNICALL Java_fletch_PerformanceService_countTreeNodesAsync(JNIEnv* _env, jclass, jobject node, jobject _callback) {
-  jobject callback = _env->NewGlobalRef(_callback);
-  JavaVM* vm;
-  _env->GetJavaVM(&vm);
+  jobject callback = NULL;
+  JavaVM* vm = NULL;
+  if (_callback) {
+    callback = _env->NewGlobalRef(_callback);
+    _env->GetJavaVM(&vm);
+  }
   char* buffer = NULL;
   int size = ComputeMessage(_env, node, callback, vm, &buffer);
   ServiceApiInvokeAsync(service_id_, _kcountTreeNodesId, Unwrap_int32_8, buffer, size);
@@ -233,15 +240,17 @@ JNIEXPORT jobject JNICALL Java_fletch_PerformanceService_buildTree(JNIEnv* _env,
 static void Unwrap_TreeNode_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
   CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
+  if (info == NULL) return;
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
+  jclass clazz = env->GetObjectClass(info->callback);
   int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(env, memory);
-  jclass resultClass = env->FindClass("fletch/TreeNode");
+  jfieldID returnTypeField = env->GetFieldID(clazz, "returnType", "Ljava/lang/Class;");
+  jclass resultClass = (jclass)env->GetObjectField(info->callback, returnTypeField);
   jmethodID create = env->GetStaticMethodID(resultClass, "create", "(Ljava/lang/Object;)Lfletch/TreeNode;");
   jobject resultObject = env->CallStaticObjectMethod(resultClass, create, rootSegment);
-  jclass clazz = env->GetObjectClass(info->callback);
   jmethodID methodId = env->GetMethodID(clazz, "handle", "(Lfletch/TreeNode;)V");
   env->CallVoidMethod(info->callback, methodId, resultObject);
   env->DeleteGlobalRef(info->callback);
@@ -250,14 +259,17 @@ static void Unwrap_TreeNode_8(void* raw) {
 }
 
 JNIEXPORT void JNICALL Java_fletch_PerformanceService_buildTreeAsync(JNIEnv* _env, jclass, jint n, jobject _callback) {
-  jobject callback = _env->NewGlobalRef(_callback);
-  JavaVM* vm;
-  _env->GetJavaVM(&vm);
+  jobject callback = NULL;
+  JavaVM* vm = NULL;
+  if (_callback) {
+    callback = _env->NewGlobalRef(_callback);
+    _env->GetJavaVM(&vm);
+  }
   static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
   *reinterpret_cast<jint*>(_buffer + 56) = n;
-  CallbackInfo* info = new CallbackInfo(callback, vm);
+  CallbackInfo* info = callback ? new CallbackInfo(callback, vm) : NULL;
   *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kbuildTreeId, Unwrap_TreeNode_8, _buffer, kSize);
 }

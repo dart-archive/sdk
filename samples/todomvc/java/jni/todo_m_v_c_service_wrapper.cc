@@ -166,9 +166,10 @@ JNIEXPORT void JNICALL Java_fletch_TodoMVCService_createItem(JNIEnv* _env, jclas
 static void Unwrap_void_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
   CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
+  if (info == NULL) return;
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
-  DeleteMessage(buffer);
   jclass clazz = env->GetObjectClass(info->callback);
+  DeleteMessage(buffer);
   jmethodID methodId = env->GetMethodID(clazz, "handle", "()V");
   env->CallVoidMethod(info->callback, methodId);
   env->DeleteGlobalRef(info->callback);
@@ -177,9 +178,12 @@ static void Unwrap_void_8(void* raw) {
 }
 
 JNIEXPORT void JNICALL Java_fletch_TodoMVCService_createItemAsync(JNIEnv* _env, jclass, jobject title, jobject _callback) {
-  jobject callback = _env->NewGlobalRef(_callback);
-  JavaVM* vm;
-  _env->GetJavaVM(&vm);
+  jobject callback = NULL;
+  JavaVM* vm = NULL;
+  if (_callback) {
+    callback = _env->NewGlobalRef(_callback);
+    _env->GetJavaVM(&vm);
+  }
   char* buffer = NULL;
   int size = ComputeMessage(_env, title, callback, vm, &buffer);
   ServiceApiInvokeAsync(service_id_, _kcreateItemId, Unwrap_void_8, buffer, size);
@@ -196,13 +200,16 @@ JNIEXPORT void JNICALL Java_fletch_TodoMVCService_clearItems(JNIEnv* _env, jclas
 }
 
 JNIEXPORT void JNICALL Java_fletch_TodoMVCService_clearItemsAsync(JNIEnv* _env, jclass, jobject _callback) {
-  jobject callback = _env->NewGlobalRef(_callback);
-  JavaVM* vm;
-  _env->GetJavaVM(&vm);
+  jobject callback = NULL;
+  JavaVM* vm = NULL;
+  if (_callback) {
+    callback = _env->NewGlobalRef(_callback);
+    _env->GetJavaVM(&vm);
+  }
   static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
-  CallbackInfo* info = new CallbackInfo(callback, vm);
+  CallbackInfo* info = callback ? new CallbackInfo(callback, vm) : NULL;
   *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kclearItemsId, Unwrap_void_8, _buffer, kSize);
 }
@@ -219,14 +226,17 @@ JNIEXPORT void JNICALL Java_fletch_TodoMVCService_dispatch(JNIEnv* _env, jclass,
 }
 
 JNIEXPORT void JNICALL Java_fletch_TodoMVCService_dispatchAsync(JNIEnv* _env, jclass, jchar id, jobject _callback) {
-  jobject callback = _env->NewGlobalRef(_callback);
-  JavaVM* vm;
-  _env->GetJavaVM(&vm);
+  jobject callback = NULL;
+  JavaVM* vm = NULL;
+  if (_callback) {
+    callback = _env->NewGlobalRef(_callback);
+    _env->GetJavaVM(&vm);
+  }
   static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
   *reinterpret_cast<jchar*>(_buffer + 56) = id;
-  CallbackInfo* info = new CallbackInfo(callback, vm);
+  CallbackInfo* info = callback ? new CallbackInfo(callback, vm) : NULL;
   *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kdispatchId, Unwrap_void_8, _buffer, kSize);
 }
@@ -251,15 +261,17 @@ JNIEXPORT jobject JNICALL Java_fletch_TodoMVCService_sync(JNIEnv* _env, jclass) 
 static void Unwrap_PatchSet_8(void* raw) {
   char* buffer = reinterpret_cast<char*>(raw);
   CallbackInfo* info = *reinterpret_cast<CallbackInfo**>(buffer + 40);
+  if (info == NULL) return;
   JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
+  jclass clazz = env->GetObjectClass(info->callback);
   int64_t result = *reinterpret_cast<int64_t*>(buffer + 56);
   DeleteMessage(buffer);
   char* memory = reinterpret_cast<char*>(result);
   jobject rootSegment = GetRootSegment(env, memory);
-  jclass resultClass = env->FindClass("fletch/PatchSet");
+  jfieldID returnTypeField = env->GetFieldID(clazz, "returnType", "Ljava/lang/Class;");
+  jclass resultClass = (jclass)env->GetObjectField(info->callback, returnTypeField);
   jmethodID create = env->GetStaticMethodID(resultClass, "create", "(Ljava/lang/Object;)Lfletch/PatchSet;");
   jobject resultObject = env->CallStaticObjectMethod(resultClass, create, rootSegment);
-  jclass clazz = env->GetObjectClass(info->callback);
   jmethodID methodId = env->GetMethodID(clazz, "handle", "(Lfletch/PatchSet;)V");
   env->CallVoidMethod(info->callback, methodId, resultObject);
   env->DeleteGlobalRef(info->callback);
@@ -268,13 +280,16 @@ static void Unwrap_PatchSet_8(void* raw) {
 }
 
 JNIEXPORT void JNICALL Java_fletch_TodoMVCService_syncAsync(JNIEnv* _env, jclass, jobject _callback) {
-  jobject callback = _env->NewGlobalRef(_callback);
-  JavaVM* vm;
-  _env->GetJavaVM(&vm);
+  jobject callback = NULL;
+  JavaVM* vm = NULL;
+  if (_callback) {
+    callback = _env->NewGlobalRef(_callback);
+    _env->GetJavaVM(&vm);
+  }
   static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
-  CallbackInfo* info = new CallbackInfo(callback, vm);
+  CallbackInfo* info = callback ? new CallbackInfo(callback, vm) : NULL;
   *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _ksyncId, Unwrap_PatchSet_8, _buffer, kSize);
 }
@@ -290,13 +305,16 @@ JNIEXPORT void JNICALL Java_fletch_TodoMVCService_reset(JNIEnv* _env, jclass) {
 }
 
 JNIEXPORT void JNICALL Java_fletch_TodoMVCService_resetAsync(JNIEnv* _env, jclass, jobject _callback) {
-  jobject callback = _env->NewGlobalRef(_callback);
-  JavaVM* vm;
-  _env->GetJavaVM(&vm);
+  jobject callback = NULL;
+  JavaVM* vm = NULL;
+  if (_callback) {
+    callback = _env->NewGlobalRef(_callback);
+    _env->GetJavaVM(&vm);
+  }
   static const int kSize = 64 + 1 * sizeof(void*);
   char* _buffer = reinterpret_cast<char*>(malloc(kSize));
   *reinterpret_cast<int64_t*>(_buffer + 48) = 0;
-  CallbackInfo* info = new CallbackInfo(callback, vm);
+  CallbackInfo* info = callback ? new CallbackInfo(callback, vm) : NULL;
   *reinterpret_cast<CallbackInfo**>(_buffer + 40) = info;
   ServiceApiInvokeAsync(service_id_, _kresetId, Unwrap_void_8, _buffer, kSize);
 }

@@ -30,7 +30,7 @@ void generate(String path, Map units, String outputDirectory) {
   _generateNodeFiles(path, units, directory);
 
   String resourcesDirectory = join(dirname(Platform.script.path),
-      '..', 'lib', 'src', 'resources', 'java');
+      '..', 'lib', 'src', 'resources', 'java', 'immi');
   for (String resource in RESOURCES) {
     String resourcePath = join(resourcesDirectory, resource);
     File file = new File(resourcePath);
