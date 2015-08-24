@@ -224,7 +224,30 @@ class ObjectMemory {
   // Release the chunk.
   static void FreeChunk(Chunk* chunk);
 
-  // Determine if the address is in the given space.
+  // Determine if the address is in the given space using page tables
+  // mapping an address to the space containing it.
+  //
+  // The page tables rely on 4k size-aligned chunks which makes the
+  // least significant 12 bits of a chunk zero. An address is mapped
+  // to its chunk address by masking out the least significant 12
+  // bits. Then that chunk address is mapped to a space using tables.
+  //
+  // On 32-bit systems, the remaining 20 bits of the chunk address are
+  // used as indices into two table. The most significant 10 bits
+  // identify a page table in a page directory. The least significant
+  // 10 bits identify a space in that page table:
+  //
+  // 32-bit: [ 10: table | 10: space | 12: zeros ]
+  //
+  // On 64-bit systems we rely on the virtual address space only being
+  // 48 bits. This is true for x64 and for arm64 as well.  With 4k
+  // alignment that leaves 36 bits of the chunk address which are used
+  // as indices into three tables. The most significant 13 bits identify
+  // a page directory. The next 13 bits identify a page table in the
+  // page directory. The least significant 10 bits identify a space in
+  // that page table:
+  //
+  // 64-bit: [ 16: zeros | 13: directory | 13: table | 10 space | 12: zeros ]
   static bool IsAddressInSpace(uword address, const Space* space);
 
   // Setup and tear-down support.
