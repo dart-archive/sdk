@@ -1119,7 +1119,8 @@ var normal;
 foo() {
   print(normal);
 }
-==== ["v2","lazy"]
+==== {"messages":["v2","lazy"],"compileUpdatesShouldThrow":1}
+// TODO(ahe): Should not throw.
 var lazy = bar();
 
 foo() {
@@ -1660,8 +1661,10 @@ compile_time_error_002
 ==> main.dart.patch <==
 // Reproduce a crash when a *recoverable* compile-time error is added
 main() {
-<<<< []
-==== []
+<<<< "fisk"
+  print("fisk");
+==== {"messages":[],"hasCompileTimeError":1}
+// TODO(ahe): compileUpdates shouldn't throw.
   new new();
 >>>>
 }
@@ -1947,7 +1950,7 @@ main() {
 ''',
 
   r'''
-add_top_level_field
+add_top_level_const_field
 ==> main.dart.patch <==
 // Test that we can add a top-level field.
 <<<< "0"
@@ -2137,6 +2140,47 @@ bar() => foo();
 
 main() {
   bar();
+}
+''',
+
+  r'''
+add_top_level_field
+==> main.dart.patch <==
+<<<< "v1"
+==== {"messages":["null","value"],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw.
+var field;
+>>>>
+main() {
+<<<<
+  print("v1");
+====
+  print(field);
+  field = "value";
+  print(field);
+>>>>
+}
+''',
+
+  r'''
+add_static_field
+==> main.dart.patch <==
+class C {
+<<<< "v1"
+==== {"messages":["null","value"],"compileUpdatesShouldThrow":1}
+// TODO(ahe): compileUpdates shouldn't throw.
+  static var field;
+>>>>
+}
+
+main() {
+<<<<
+  print("v1");
+====
+  print(C.field);
+  field = "value";
+  print(C.field);
+>>>>
 }
 ''',
 ];

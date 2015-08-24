@@ -234,6 +234,9 @@ Map<String, EncodedResult> computeTests(List<String> tests) {
         isFirstPatch = false;
       }
     });
+    if (result.containsKey(testName)) {
+      throw new StateError("'$testName' is duplicated");
+    }
     result[testName] = new EncodedResult(test, expectations);
   }
   return result;

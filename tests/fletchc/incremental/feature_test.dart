@@ -170,7 +170,7 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
           compileUpdatesThrew = false;
         } on IncrementalCompilationFailed catch (error) {
           if (program.compileUpdatesShouldThrow) {
-            print("Expected error in compileUpdates.");
+            print("Expected error in compileUpdates: $error");
           } else {
             print("Unexpected error in compileUpdates.");
             rethrow;
