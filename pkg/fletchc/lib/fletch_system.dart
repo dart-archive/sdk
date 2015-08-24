@@ -124,6 +124,19 @@ class FletchFunction extends FletchFunctionBase {
       int memberOf)
       : super(functionId, kind, arity, name, element, signature, memberOf);
 
+  FletchFunction withReplacedConstants(List<FletchConstant> constants) {
+    return new FletchFunction(
+        functionId,
+        kind,
+        arity,
+        name,
+        element,
+        signature,
+        bytecodes,
+        constants,
+        memberOf);
+  }
+
   /// Represents a function we have lost track off, for example, -1 in a
   /// backtrace from the Fletch VM.
   const FletchFunction.missing()

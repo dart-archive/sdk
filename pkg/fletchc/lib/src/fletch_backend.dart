@@ -600,7 +600,9 @@ class FletchBackend extends Backend with ResolutionCallbacks {
     return new ClassDebugInfo(klass);
   }
 
-  DebugInfo createDebugInfo(FletchFunction function) {
+  DebugInfo createDebugInfo(
+      FletchFunction function,
+      FletchSystem currentSystem) {
     DebugInfo debugInfo = new DebugInfo(function);
     AstElement element = function.element;
     if (element == null) return debugInfo;
@@ -651,8 +653,7 @@ class FletchBackend extends Backend with ResolutionCallbacks {
           element,
           compiler);
       expectedBytecodes =
-          systemBuilder.lookupFunctionBuilderByElement(element.declaration)
-              .assembler.bytecodes;
+          currentSystem.lookupFunctionByElement(element.declaration).bytecodes;
     }
     if (isNative(element)) {
       compiler.withCurrentElement(element, () {

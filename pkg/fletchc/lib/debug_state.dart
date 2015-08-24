@@ -73,7 +73,7 @@ class DebugState {
 
   DebugInfo getDebugInfo(FletchFunction function) {
     return debugInfos.putIfAbsent(function, () {
-      return session.compiler.createDebugInfo(function);
+      return session.compiler.createDebugInfo(function, session.fletchSystem);
     });
   }
 

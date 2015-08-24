@@ -220,6 +220,12 @@ class FletchSystemBuilder {
   }
 
   FletchSystem computeSystem(FletchContext context, List<Command> commands) {
+    // TODO(ajohnsen): Consider if the incremental compiler should be aware of
+    // callMain, when detecting changes.
+    FunctionElement callMain =
+        context.backend.fletchSystemLibrary.findLocal('callMain');
+    replaceUsage(callMain, context.compiler.mainFunction);
+
     int changes = 0;
 
     // Remove all removed FletchFunctions.
@@ -370,11 +376,18 @@ class FletchSystemBuilder {
       if (builder.computeSchemaChange(commands)) changes++;
     }
 
+    List<FletchFunction> changedFunctions = <FletchFunction>[];
     for (Element element in _replaceUsage.keys) {
+      // Don't modify already replaced elements.
+      if (lookupFunctionBuilderByElement(element) != null) continue;
+
       FletchFunction function =
           predecessorSystem.lookupFunctionByElement(element);
+      // Due to false positive, the element can be uncompiled.
       if (function == null) continue;
-      List<FletchConstant> constants = function.constants;
+
+      bool constantsChanged = false;
+      List<FletchConstant> constants = function.constants.toList();
       for (int i = 0; i < constants.length; i++) {
         FletchConstant constant = constants[i];
         if (constant.mapId != MapId.methods) continue;
@@ -382,33 +395,27 @@ class FletchSystemBuilder {
           FletchFunction oldFunction =
               predecessorSystem.lookupFunctionByElement(usage);
           if (oldFunction == null) continue;
-          if (oldFunction.functionId == constant.id) {
-            FletchFunctionBuilder newFunction =
-                lookupFunctionBuilderByElement(usage);
-            commands
-                ..add(new PushFromMap(MapId.methods, function.functionId))
-                ..add(new PushFromMap(MapId.methods, newFunction.functionId))
-                ..add(new ChangeMethodLiteral(i));
-            changes++;
-            break;
-          }
+          if (oldFunction.functionId != constant.id) continue;
+          FletchFunctionBuilder newFunction =
+              lookupFunctionBuilderByElement(usage);
+
+          // If the method didn't really change, ignore.
+          if (newFunction == null) continue;
+
+          constant = new FletchConstant(newFunction.functionId, MapId.methods);
+          commands
+              ..add(new PushFromMap(MapId.methods, function.functionId))
+              ..add(new PushFromMap(constant.mapId, constant.id))
+              ..add(new ChangeMethodLiteral(i));
+          constants[i] = constant;
+          constantsChanged = true;
+          changes++;
+          break;
         }
       }
-    }
 
-    // TODO(ajohnsen): Big hack. We should not track method dependency like
-    // this.
-    if (!predecessorSystem.isEmpty) {
-      for (FletchFunctionBuilder function in _newFunctions) {
-        if (function.element == context.compiler.mainFunction) {
-          FletchFunctionBase callMain =
-              lookupFunctionByElement(
-                  context.backend.fletchSystemLibrary.findLocal('callMain'));
-          commands.add(new PushFromMap(MapId.methods, callMain.functionId));
-          commands.add(new PushFromMap(MapId.methods, function.functionId));
-          commands.add(new ChangeMethodLiteral(0));
-          changes++;
-        }
+      if (constantsChanged) {
+        changedFunctions.add(function.withReplacedConstants(constants));
       }
     }
 
@@ -429,6 +436,16 @@ class FletchSystemBuilder {
         predecessorSystem.functionsById;
     PersistentMap<Element, FletchFunction> functionsByElement =
         predecessorSystem.functionsByElement;
+
+    for (FletchFunction function in changedFunctions) {
+      assert(functionsById[function.functionId] != null);
+      functionsById = functionsById.insert(function.functionId, function);
+      Element element = function.element;
+      if (element != null) {
+        assert(functionsByElement[element] != null);
+        functionsByElement = functionsByElement.insert(element, function);
+      }
+    }
 
     for (FletchFunction function in _removedFunctions) {
       functionsById = functionsById.delete(function.functionId);
