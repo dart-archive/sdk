@@ -19,7 +19,6 @@
         'bytecodes.cc',
         'connection.cc',
         'flags.cc',
-        'native_process_posix.cc',
         'native_socket_macos.cc',
         'native_socket_linux.cc',
         'native_socket_posix.cc',
