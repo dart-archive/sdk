@@ -32,7 +32,7 @@
 
     'LK_CPU%': 'cortex-a9',
 
-    'lk_location': '../../../third_party/lk',
+    'lk_path': '<(DEPTH)/../third_party/lk',
 
     'conditions': [
       [ 'OS=="linux"', {
@@ -404,13 +404,14 @@
               '-mcpu=<(LK_CPU)',
               '-mthumb',
               '-include',
-              '<(lk_location)/build-<(LK_PROJECT)/config.h',
+              'build-<(LK_PROJECT)/config.h',
             ],
 
             'include_dirs': [
-              '-I<(lk_location)/include/',
-              '-I<(lk_location)/arch/arm/include/',
-              '-I<(lk_location)/lib/libm/include/',
+              '<(lk_path)/',
+              '<(lk_path)/include/',
+              '<(lk_path)/arch/arm/include/',
+              '<(lk_path)/lib/libm/include/',
             ],
 
             'ldflags': [
