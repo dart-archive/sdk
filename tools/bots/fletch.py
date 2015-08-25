@@ -222,6 +222,7 @@ def StepsTargetRunner(debug_log, system, mode, arch):
     for snapshot_run in [True, False]:
       for configuration in configurations:
         if not ShouldSkipConfiguration(snapshot_run, configuration):
+          build_conf = configuration['build_conf']
           build_dir = configuration['build_dir']
 
           # Sanity check we got build artifacts which we expect.
@@ -234,15 +235,18 @@ def StepsTargetRunner(debug_log, system, mode, arch):
           shutil.copyfile(dart_arm, destination)
           shutil.copymode(dart_arm, destination)
 
-          StepTest(
-            configuration['build_conf'],
-            configuration['mode'],
-            configuration['arch'],
-            clang=configuration['clang'],
-            asan=configuration['asan'],
-            snapshot_run=snapshot_run,
-            debug_log=debug_log,
-            configuration=configuration)
+          def run():
+            StepTest(
+              build_conf,
+              configuration['mode'],
+              configuration['arch'],
+              clang=configuration['clang'],
+              asan=configuration['asan'],
+              snapshot_run=snapshot_run,
+              debug_log=debug_log,
+              configuration=configuration)
+
+          RunWithCoreDumpArchiving(run, build_dir, build_conf)
   finally:
     if os.path.exists(tarball):
       os.remove(tarball)
@@ -407,9 +411,12 @@ class CoredumpArchiver(object):
     self._conf = conf
 
   def __enter__(self):
-    # TODO(kustermann): Assert that the core pattern is correctly set (at least
-    # on linux)
-    pass
+    if utils.GuessOS() == 'linux':
+      core_pattern = open('/proc/sys/kernel/core_pattern').read()
+      core_pattern_uses_pid = open('/proc/sys/kernel/core_uses_pid').read()
+
+      assert core_pattern.strip() == 'core', "core_pattern must be 'core'."
+      assert core_pattern_uses_pid.strip() == '1', "core_uses_pid must be '1'."
 
   def __exit__(self, *_):
     coredumps = self._find_coredumps()
