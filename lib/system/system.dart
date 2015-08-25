@@ -73,8 +73,6 @@ halt() {
   yield(InterruptKind.terminate.index);
 }
 
-@native external printString(String s);
-
 /// Make the current process yield. Either to allow other fibers to
 /// make progress or to terminate execution.
 external yield(int reason);

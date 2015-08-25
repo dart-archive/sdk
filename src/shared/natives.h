@@ -8,7 +8,7 @@
 namespace fletch {
 
 #define NATIVES_DO(N)                                                    \
-  N(PrintString,                 "<none>", "_printString")               \
+  N(PrintToConsole,              "<none>", "printToConsole")             \
   N(ExposeGC,                    "<none>", "_exposeGC")                  \
   N(GC,                          "<none>", "_gc")                        \
                                                                          \

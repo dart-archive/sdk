@@ -6,9 +6,7 @@ import 'dart:_fletch_system' as fletch;
 
 const patch = "patch";
 
-@patch void printToConsole(String line) {
-  fletch.printString(line);
-}
+@patch @fletch.native external void printToConsole(String line);
 
 @patch class Symbol {
   // TODO(ajohnsen): Decide what to do with 'name'.

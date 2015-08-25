@@ -37,7 +37,7 @@ static Object* ToBool(Process* process, bool value) {
   return value ? program->true_object() : program->false_object();
 }
 
-NATIVE(PrintString) {
+NATIVE(PrintToConsole) {
   arguments[0]->ShortPrint();
   Print::Out("\n");
   return process->program()->null_object();

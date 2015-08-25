@@ -68,12 +68,10 @@ class _FixedList<E> extends _FixedListBase<E> with FixedLengthListMixin<E> {
 }
 
 class _GrowableList<E> extends ListBase<E> implements List<E> {
-  int _length;
-  _FixedList<E> _list;
+  int _length = 0;
+  _FixedList<E> _list = new _FixedList<E>(4);
 
-  _GrowableList()
-      : _length = 0,
-        _list = new _FixedList<E>(4);
+  _GrowableList();
 
   int get length => _length;
 
