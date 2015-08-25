@@ -35,6 +35,8 @@ class BytecodeLabel {
   }
 
   bool get isBound => position != -1;
+
+  bool get isUsed => usage.isNotEmpty;
 }
 
 class BytecodeAssembler {
@@ -343,7 +345,7 @@ class BytecodeAssembler {
   }
 
   void internalBind(BytecodeLabel label, bool isSubroutineReturn) {
-    hasBindAfterTerminator = true;
+    if (label.isUsed) hasBindAfterTerminator = true;
     assert(label.position == -1);
     // TODO(ajohnsen): If the previous bytecode is a branch to this label,
     // consider popping it - if no other binds has happened at this bytecode

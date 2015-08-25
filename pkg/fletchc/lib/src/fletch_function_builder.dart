@@ -166,7 +166,7 @@ class FletchFunctionBuilder extends FletchFunctionBase {
       sb.writeln("  #$index: $constant");
     });
 
-    sb.writeln("Bytecodes:");
+    sb.writeln("Bytecodes (${assembler.byteSize} bytes):");
     int offset = 0;
     for (Bytecode bytecode in assembler.bytecodes) {
       sb.writeln("  $offset: $bytecode");
