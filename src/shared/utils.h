@@ -5,9 +5,6 @@
 #ifndef SRC_SHARED_UTILS_H_
 #define SRC_SHARED_UTILS_H_
 
-#include <cstdarg>
-#include <cstdlib>
-
 #include "src/shared/assert.h"
 #include "src/shared/atomic.h"
 #include "src/shared/globals.h"

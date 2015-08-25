@@ -72,6 +72,7 @@
         'defines': [
           'FLETCH_ENABLE_LIVE_CODING',
           'FLETCH_ENABLE_FFI',
+          'FLETCH_ENABLE_PRINT_INTERCEPTORS',
         ],
 
         'xcode_settings': {
@@ -512,6 +513,14 @@
         ],
       },
 
+      'fletch_disable_print_interceptors': {
+        'abstract': 1,
+
+        'defines!': [
+          'FLETCH_ENABLE_PRINT_INTERCEPTORS',
+        ],
+      },
+
       'ReleaseIA32': {
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
       },
@@ -720,7 +729,8 @@
       'ReleaseLK': {
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_lk',
-          'fletch_disable_live_coding', 'fletch_disable_ffi'
+          'fletch_disable_live_coding', 'fletch_disable_ffi',
+          'fletch_disable_print_interceptors',
         ],
       },
     },

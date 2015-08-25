@@ -21,6 +21,7 @@ model {
                      "-DFLETCH_TARGET_OS_LINUX",
                      "-DFLETCH_ENABLE_FFI",
                      "-DFLETCH_ENABLE_LIVE_CODING",
+                     "-DFLETCH_ENABLE_PRINT_INTERCEPTORS",
                      "-DANDROID",
                      "-std=c++11"]
         cppFlags += "-I${file("../../../../..")}".toString()

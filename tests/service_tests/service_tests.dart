@@ -163,6 +163,9 @@ class CcRule extends Rule {
 
   void addBuildFlags(List<String> arguments) {
     arguments.add('-std=${language}');
+    arguments.add('-DFLETCH_ENABLE_FFI');
+    arguments.add('-DFLETCH_ENABLE_LIVE_CODING');
+    arguments.add('-DFLETCH_ENABLE_PRINT_INTERCEPTORS');
     if (buildArchitecture == 'ia32') {
       arguments.add('-m32');
       arguments.add('-DFLETCH32');

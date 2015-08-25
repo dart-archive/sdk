@@ -2,17 +2,23 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#include <stdarg.h>
+#include <stdlib.h>
+
 #include "src/shared/utils.h"
 
 #include "src/shared/platform.h"
 
 namespace fletch {
 
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
 Mutex* Print::mutex_ = Platform::CreateMutex();
 PrintInterceptor* Print::interceptor_ = NULL;
 Atomic<bool> Print::standard_output_enabled_ = true;
+#endif
 
 void Print::Out(const char* format, ...) {
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   va_list args;
   va_start(args, format);
   int size = vsnprintf(NULL, 0, format, args);
@@ -33,9 +39,16 @@ void Print::Out(const char* format, ...) {
     interceptor_->Out(message);
   }
   free(message);
+#else
+  va_list args;
+  va_start(args, format);
+  vfprintf(stdout, format, args);
+  va_end(args);
+#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 }
 
 void Print::Error(const char* format, ...) {
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   va_list args;
   va_start(args, format);
   int size = vsnprintf(NULL, 0, format, args);
@@ -56,19 +69,31 @@ void Print::Error(const char* format, ...) {
      interceptor_->Error(message);
   }
   free(message);
+#else
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 }
 
 void Print::RegisterPrintInterceptor(PrintInterceptor* interceptor) {
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   ScopedLock scope(mutex_);
   ASSERT(!interceptor->next_);
   interceptor->next_ = interceptor_;
   interceptor_ = interceptor;
+#else
+  UNIMPLEMENTED();
+#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 }
 
 void Print::UnregisterPrintInterceptors() {
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   ScopedLock scope(mutex_);
   delete interceptor_;
   interceptor_ = NULL;
+#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 }
 
 uint32 Utils::StringHash(const uint16* data, int length) {
