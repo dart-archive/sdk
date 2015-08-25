@@ -25,7 +25,7 @@ typedef Object* (*NativeFunction)(Process*, Object**);
   Object* Native_##n(Process* process, Object** arguments)
 
 #define N(e, c, n) \
-  NATIVE(e) __attribute__((weak));
+  NATIVE(e);
 NATIVES_DO(N)
 #undef N
 

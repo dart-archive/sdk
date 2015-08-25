@@ -16,7 +16,7 @@ namespace fletch {
   V(ListLength)
 
 #define DECLARE_EXTERN(name) \
-  extern "C" void Intrinsic_##name() __attribute__((weak));
+  extern "C" void Intrinsic_##name();
 INTRINSICS_DO(DECLARE_EXTERN)
 #undef DECLARE_EXTERN
 

@@ -12,6 +12,7 @@
 #include "src/shared/names.h"
 #include "src/shared/selectors.h"
 
+#include "src/vm/native_interpreter.h"
 #include "src/vm/natives.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
@@ -1021,12 +1022,6 @@ bool Engine::IsAtBreakPoint() {
   }
   return false;
 }
-
-extern "C"
-int InterpretFast(Process* process,
-                  TargetYieldResult* target_yield_result) __attribute__((weak));
-int InterpretFast(Process* process,
-                  TargetYieldResult* target_yield_result) { return -1; }
 
 void Interpreter::Run() {
   ASSERT(interruption_ == kReady);

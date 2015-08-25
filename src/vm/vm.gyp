@@ -167,7 +167,6 @@
       'type': 'executable',
       'toolsets': ['host'],
       'dependencies': [
-        'fletch_vm_library_base',
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
       ],
@@ -187,8 +186,6 @@
         'generator.cc',
         'interpreter_arm.cc',
         'interpreter_x86.cc',
-        'natives_x64.cc',
-        'natives_x86.cc',
       ],
     },
     {
