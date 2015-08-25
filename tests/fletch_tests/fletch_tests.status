@@ -31,3 +31,7 @@ servicec/unmatched_curly: Fail # Tests a non-implemented feature.
 [ $arch != ia32 && $arch != x64 ]
 
 service_tests/*: Skip
+
+[ $system == macos && $arch == x64 ]
+
+service_tests/performance: Fail, Pass # Issue 111
