@@ -27,6 +27,9 @@ import '../../compiler.dart' show
     FletchCompiler,
     StringOrUri;
 
+import '../../fletch_vm.dart' show
+    FletchVm;
+
 import '../../session.dart';
 
 import '../driver/driver_commands.dart' show
@@ -119,51 +122,37 @@ Future<int> compileAndRunTask(
   trackSubscription(StreamSubscription subscription, String name) {
     futures.add(doneFuture(handleSubscriptionErrors(subscription, name)));
   }
-  if (options.attachArgument == null) {
-    var server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
-
-    List<String> vmOptions = <String>[
-        '--port=${server.port}',
-      ];
-
+  String host;
+  int port;
+  if (options.attachArgument != null) {
+    var address = options.attachArgument.split(":");
+    host = address[0];
+    port = int.parse(address[1]);
+    print("Connecting to $host:$port");
+  } else {
     String vmPath = compilerHelper.fletchVm.toFilePath();
-
     if (compilerHelper.verbose) {
-      print("Running '$vmPath ${vmOptions.join(" ")}'");
+      print("Running '$vmPath'");
     }
-    vmProcess = await Process.start(
-        vmPath, vmOptions,
-        environment: fletchVmEnvironment());
-    futures.add(vmProcess.exitCode.then((int value) {
+    FletchVm vm =
+        await FletchVm.start(vmPath, environment: fletchVmEnvironment());
+    futures.add(vm.exitCode.then((int value) {
       exitCode = value;
       if (exitCode != 0) {
         print("Non-zero exit code from '$vmPath' ($exitCode).");
       }
-      server.close();
     }));
-
-    vmProcess.stdin.close();
-
     trackSubscription(
-        vmProcess.stdout.listen(commandSender.sendStdoutBytes), "vm stdout");
+        vm.stdoutLines.listen(
+            (line) => commandSender.sendStdout('$line\n')), "vm stdout");
     trackSubscription(
-        vmProcess.stderr.listen(commandSender.sendStderrBytes), "vm stderr");
-
-    try {
-      vmSocket = await server.first;
-    } catch (e) {
-      // If this fails, the VM exited before it connected (the socket server is
-      // closed above when the vmProcess.exitCode future completes).
-      return exitCode;
-    }
-    vmSocket = handleSocketErrors(vmSocket, "vmSocket");
-  } else {
-    var address = options.attachArgument.split(":");
-    String host = address[0];
-    int port = int.parse(address[1]);
-    print("Connecting to $host:$port");
-    vmSocket = handleSocketErrors(await Socket.connect(host, port), "vmSocket");
+        vm.stderrLines.listen(
+            (line) => commandSender.sendStderr('$line\n')), "vm stderr");
+    host = vm.host;
+    port = vm.port;
+    vmProcess = vm.process;
   }
+  vmSocket = handleSocketErrors(await Socket.connect(host, port), "vmSocket");
 
   readCommands(commandIterator, vmProcess, stdinController);
 

@@ -25,14 +25,9 @@ static bool RunSession(Connection* connection) {
   return result;
 }
 
-static Connection* ConnectToExistingCompiler(int port) {
-  return Connection::Connect("127.0.0.1", port);
-}
-
-static Connection* WaitForCompilerConnection() {
-  const char* host = "127.0.0.1";
+static Connection* WaitForCompilerConnection(const char* host, int port) {
   // Listen for new connections.
-  ConnectionListener listener(host, 0);
+  ConnectionListener listener(host, port);
 
   Print::Out("Waiting for compiler on %s:%i\n", host, listener.Port());
 
@@ -41,6 +36,20 @@ static Connection* WaitForCompilerConnection() {
 
 static bool IsSnapshot(List<uint8> snapshot) {
   return snapshot.length() > 2 && snapshot[0] == 0xbe && snapshot[1] == 0xef;
+}
+
+static void printUsage() {
+  Print::Out("fletch-vm - The Dart virtual machine for IOT.\n\n");
+  Print::Out("  fletch-vm [--port=<port>] [--host=<address>] "
+             "[snaphost file]\n\n");
+  Print::Out("When specifying a snapshot other options are ignored.\n\n");
+  Print::Out("Options:\n");
+  Print::Out("  --port: specifies which port to listen on. Defaults "
+             "to random port.\n");
+  Print::Out("  --host: specifies which host address to listen on. "
+             "Defaults to 127.0.0.1.\n");
+  Print::Out("  --help: print out 'fletch-vm' usage.\n");
+  Print::Out("\n");
 }
 
 static int Main(int argc, char** argv) {
@@ -54,25 +63,43 @@ static int Main(int argc, char** argv) {
   }
 
   // Handle the arguments.
-  bool compile = false;
-  bool attach_to_existing_compiler = false;
+  const char* host = "127.0.0.1";
+  int port = 0;
   const char* input = NULL;
 
-  if (argc > 1) {
-    input = argv[1];
-    if (strncmp(input, "--port=", 7) == 0) {
-      compile = true;
-      attach_to_existing_compiler = true;
-    }
-  } else {
-    compile = true;
-  }
+  // We run a snapshot only if the arguments contain a file name.
+  bool runSnapshot = false;
+  bool invalidOption = false;
 
+  for (int i = 1; i < argc; ++i) {
+    const char* argument = argv[i];
+    if (strncmp(argument, "--port=", 7) == 0) {
+      port = atoi(argument + 7);
+    } else if (strncmp(argument, "--host=", 7) == 0) {
+      host = argument + 7;
+    } else if (strncmp(argument, "--help", 6) == 0) {
+      printUsage();
+      exit(0);
+    } else if (strncmp(argument, "-", 1) == 0) {
+      Print::Out("Invalid option: %s.\n", argument);
+      invalidOption = true;
+    } else {
+      // No matching option given, assume it is a snapshot.
+      input = argument;
+      runSnapshot = true;
+    }
+  }
+  if (invalidOption) {
+    // Don't continue if one or more invalid/unknown options were passed.
+    Print::Out("\n");
+    printUsage();
+    exit(1);
+  }
   bool success = true;
   bool interactive = true;
 
   // Check if we're passed an snapshot file directly.
-  if (!compile) {
+  if (runSnapshot) {
     List<uint8> bytes = Platform::LoadFile(input);
     if (IsSnapshot(bytes)) {
       FletchRunSnapshot(bytes.data(), bytes.length());
@@ -85,9 +112,7 @@ static int Main(int argc, char** argv) {
   // interactive programming session that talks to a separate
   // compiler process.
   if (interactive) {
-    Connection* connection = attach_to_existing_compiler
-      ? ConnectToExistingCompiler(atoi(input + 7))
-      : WaitForCompilerConnection();
+    Connection* connection = WaitForCompilerConnection(host, port);
     success = RunSession(connection);
   }
 
