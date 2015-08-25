@@ -117,7 +117,18 @@ bool areDifferentElements(Difference diff) {
         }
       }
 
-      if (beforeToken == stop) return false;
+      if (beforeToken == stop) {
+        diff.token = afterToken;
+        // We didn't find a difference, and normally that would mean that the
+        // element hasn't changed. However, for elements with members, the
+        // situation is more tricky. For example, consider a class that never
+        // has any changes to its header (everything before the first `{`). The
+        // tokens of this class aren't patched up if one of its members
+        // change. So we can't actually look at the tokens of the class to see
+        // if one of its members changed. Instead, we must say that the class
+        // changed, and then look at its members one by one.
+        return before is ScopeContainerElement;
+      }
 
       beforeToken = beforeToken.next;
       afterToken = afterToken.next;

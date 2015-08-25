@@ -17,6 +17,7 @@ incremental/modify_static_method: Fail
 incremental/multiple_libraries: Fail
 incremental/remove_instance_field: Fail
 incremental/remove_instance_method_super_access: Fail
+incremental/same_tokens_variant: Fail
 incremental/stored_closure: Fail
 incremental/stored_instance_tearoff: Fail
 incremental/update_dependencies_recoverable_compile_time_error: Fail

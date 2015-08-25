@@ -796,6 +796,8 @@ class LibraryUpdater extends FletchFeatures {
         // TODO(ahe): Quadratic.
         invalidateScopesAffectedBy(member, before);
       });
+    } else {
+      logVerbose('Simple modification of ${after} detected');
     }
     return canReuseScopeContainerElement(before, after);
   }
