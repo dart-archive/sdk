@@ -4,13 +4,7 @@
 
 library servicec.errors;
 
-abstract class ServiceCompilerError {
-  final String path;
-
-  ServiceCompilerError(this.path);
-}
-
-class UndefinedServiceError extends ServiceCompilerError {
-  UndefinedServiceError(path)
-      : super(path);
+enum CompilerError {
+  undefinedService,
+  syntax
 }

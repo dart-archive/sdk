@@ -9,7 +9,8 @@ import 'dart:async' show
 
 import 'dart:io';
 
-import 'errors.dart';
+import 'errors.dart' show
+    CompilerError;
 
 import 'targets.dart' show
     Target;
@@ -23,29 +24,33 @@ import 'parser.dart' show
     Parser;
 
 import 'listener.dart' show
+    DebugListener,
     Listener;
 
-Future compile(
+// Temporary output type
+Future<List<CompilerError>> compile(
     String path,
     String outputDirectory,
     {Target target: Target.ALL}) async {
   String input = new File(path).readAsStringSync();
-  await compileInput(input, path, outputDirectory, target: target);
+  return compileInput(input, path, outputDirectory, target: target);
 }
 
-Future compileInput(
+// Temporary output type
+Future<List<CompilerError>> compileInput(
     String input,
     String path,
     String outputDirectory,
     {Target target: Target.ALL}) async {
   if (input.isEmpty) {
-    throw new UndefinedServiceError(path);
+    return [CompilerError.undefinedService];
   }
 
   Scanner scanner = new StringScanner.fromString(input);
   Token tokens = scanner.tokenize();
 
-  var parser = new Parser(new Listener());
+  Listener listener = new Listener();
+  var parser = new Parser(new DebugListener(listener));
   Token unit = parser.parseUnit(tokens);
 
   // TODO(stanm): validate
@@ -55,6 +60,8 @@ Future compileInput(
   createDirectories(outputDirectory, target);
 
   // TODO(stanm): write files
+
+  return listener.errors;
 }
 
 void createDirectories(String outputDirectory, Target target) {

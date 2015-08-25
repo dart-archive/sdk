@@ -22,31 +22,30 @@ class Parser {
   ///
   /// <unit> ::= <top-level-declaration>*
   Token parseUnit(Token tokens) {
-    listener.beginCompilationUnit(tokens);
+    tokens = listener.beginCompilationUnit(tokens);
     int count = 0;
     while (!identical(tokens.kind, EOF_TOKEN)) {
       tokens = parseTopLevelDeclaration(tokens);
       ++count;
     }
-    listener.endCompilationUnit(tokens, count);
+    tokens = listener.endCompilationUnit(tokens, count);
     return tokens;
   }
 
   /// A top-level declaration is a service or a struct.
-  /// 
+  ///
   /// <top-level-declaration> ::= <service> | <struct>
   Token parseTopLevelDeclaration(Token tokens) {
-    listener.beginTopLevelDeclaration(tokens);
+    tokens = listener.beginTopLevelDeclaration(tokens);
     final String value = tokens.stringValue;
     if (identical(value, 'service')) {
       tokens = parseService(tokens);
     } else if (identical(value, 'struct')) {
       tokens = parseStruct(tokens);
     } else {
-      listener.expectedTopLevelDeclaration(tokens);
-      tokens = tokens.next;
+      tokens = listener.expectedTopLevelDeclaration(tokens);
     }
-    listener.endTopLevelDeclaration(tokens);
+    tokens = listener.endTopLevelDeclaration(tokens);
     return tokens;
   }
 
@@ -55,7 +54,7 @@ class Parser {
   ///
   /// <service> ::= 'service' <identifier> '{' <func-decl>* '}'
   Token parseService(Token tokens) {
-    listener.beginService(tokens);
+    tokens = listener.beginService(tokens);
     tokens = parseIdentifier(tokens.next);
     tokens = expect('{', tokens);
     int count = 0;
@@ -64,7 +63,7 @@ class Parser {
       ++count;
     }
     tokens = expect('}', tokens);
-    listener.endService(tokens, count);
+    tokens = listener.endService(tokens, count);
     return tokens;
   }
 
@@ -73,7 +72,7 @@ class Parser {
   ///
   /// <struct> ::= 'struct' <identifier> '{' <member-decl>* '}'
   Token parseStruct(Token tokens) {
-    listener.beginStruct(tokens);
+    tokens = listener.beginStruct(tokens);
     tokens = parseIdentifier(tokens.next);
     tokens = expect('{', tokens);
     int count = 0;
@@ -82,17 +81,20 @@ class Parser {
       ++count;
     }
     tokens = expect('}', tokens);
-    listener.endStruct(tokens, count);
+    tokens = listener.endStruct(tokens, count);
     print("end struct");
     return tokens;
   }
 
   Token parseIdentifier(Token tokens) {
-    if (!tokens.isIdentifier()) {
-      listener.expectedIdentifier(tokens);
+    tokens = listener.beginIdentifier(tokens);
+    if (tokens.isIdentifier()) {
+      tokens = tokens.next;
+    } else {
+      tokens = listener.expectedIdentifier(tokens);
     }
-    listener.handleIdentifier(tokens);
-    return tokens.next;
+    tokens = listener.endIdentifier(tokens);
+    return tokens;
   }
 
   /// A function declaration contains a type, an identifier, formal parameters,
@@ -100,19 +102,12 @@ class Parser {
   ///
   /// <func-decl> ::= <type> <identifier> <formal-params> ';'
   Token parseFunctionDeclaration(Token tokens) {
-    listener.beginFunctionDeclaration(tokens);
-
+    tokens = listener.beginFunctionDeclaration(tokens);
     tokens = parseType(tokens);
-
-    listener.beginFunctionName(tokens);
     tokens = parseIdentifier(tokens);
-    listener.endFunctionName(tokens);
-
     tokens = parseFormalParameters(tokens);
-
     tokens = expect(';', tokens);
-
-    listener.endFunctionDeclaration(tokens);
+    tokens = listener.endFunctionDeclaration(tokens);
     return tokens;
   }
 
@@ -120,28 +115,22 @@ class Parser {
   ///
   /// <member-decl> ::= <type> <identifier> ';'
   Token parseMemberDeclaration(Token tokens) {
-    listener.beginMember(tokens);
-
+    tokens = listener.beginMemberDeclaration(tokens);
     tokens = parseType(tokens);
-
-    listener.beginMemberName(tokens);
     tokens = parseIdentifier(tokens);
-    listener.endMemberName(tokens);
-
     tokens = expect(';', tokens);
-
-    listener.endMember(tokens);
+    tokens = listener.endMemberDeclaration(tokens);
     return tokens;
   }
 
   Token parseType(Token tokens) {
-    listener.beginType(tokens);
+    tokens = listener.beginType(tokens);
     if (isValidTypeReference(tokens)) {
       tokens = parseIdentifier(tokens);
     } else {
-      listener.expectedType(tokens);
+      tokens = listener.expectedType(tokens);
     }
-    listener.endType(tokens);
+    tokens = listener.endType(tokens);
     return tokens;
   }
 
@@ -150,22 +139,19 @@ class Parser {
   ///
   /// <formal-params> ::= '(' (<formal-param> (',' <formal-param>)*)? ')'
   Token parseFormalParameters(Token tokens) {
-    listener.beginFormalParameters(tokens);
-
+    tokens = listener.beginFormalParameters(tokens);
     tokens = expect('(', tokens);
-
     int count = 0;
     if (!optional(')', tokens)) {
       tokens = parseFormalParameter(tokens);
       while (optional(',', tokens)) {
         tokens = tokens.next;
         tokens = parseFormalParameter(tokens);
+        ++count;
       }
     }
-
     tokens = expect(')', tokens);
-
-    listener.endFormalParameters(tokens);
+    tokens = listener.endFormalParameters(tokens, count);
     return tokens;
   }
 
@@ -173,13 +159,10 @@ class Parser {
   ///
   /// <param> ::= <type> <identifier>
   Token parseFormalParameter(Token tokens) {
-    listener.beginFormalParameter(tokens);
-
+    tokens = listener.beginFormalParameter(tokens);
     tokens = parseType(tokens);
-
     tokens = parseIdentifier(tokens);
-
-    listener.endFormalParameter(tokens);
+    tokens = listener.endFormalParameter(tokens);
   }
 
   bool isValidTypeReference(Token tokens) {
@@ -196,8 +179,10 @@ class Parser {
   /// stringValue [value].
   Token expect(String string, Token tokens) {
     if (!identical(string, tokens.stringValue)) {
-      listener.expected(string, tokens);
+      tokens = listener.expected(string, tokens);
+    } else {
+      tokens = tokens.next;
     }
-    return tokens.next;
+    return tokens;
   }
 }

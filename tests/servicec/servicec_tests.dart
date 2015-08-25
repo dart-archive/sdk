@@ -10,7 +10,8 @@ import 'dart:io' show
 
 import 'package:expect/expect.dart';
 import 'package:servicec/compiler.dart' as servicec;
-import 'package:servicec/errors.dart' as errors;
+import 'package:servicec/errors.dart' show
+    CompilerError;
 
 import 'package:servicec/targets.dart' show
     Target;
@@ -22,11 +23,43 @@ import 'test.dart' show
     Test;
 
 List<InputTest> SERVICEC_TESTS = <InputTest>[
-    new Failure<errors.UndefinedServiceError>('empty_input', '''
-'''),
+    new Failure('empty_input', '''
+''',
+                [CompilerError.undefinedService]),
     new Success('empty_service', '''
 service EmptyService {}
 '''),
+    new Failure('missing_semicolon', '''
+service DrawService {
+  void drawCircle(Circle circle)
+}
+
+struct Circle {
+  int radius;
+  Point2D position position;
+}
+
+struct Point2D {
+  int x;
+  int y;
+}
+''',
+                [CompilerError.syntax, CompilerError.syntax]),
+    new Failure('unmatched_curly', '''
+service DrawService {
+  void drawCircle(Circle circle);
+
+struct Circle {
+  int radius;
+  Point2D position;
+}
+
+struct Point2D {
+  int x;
+  int y;
+}
+''',
+                [CompilerError.syntax, CompilerError.syntax])
 ];
 
 /// Absolute path to the build directory used by test.py.
@@ -61,20 +94,19 @@ class Success extends InputTest {
   }
 }
 
-class Failure<T> extends InputTest {
-  final exception;
+class Failure extends InputTest {
+  final List<CompilerError> errors;
 
-  Failure(String name, String input)
+  Failure(String name, String input, this.errors)
       : super(name, input);
 
   Future perform() async {
-    try {
+    List<CompilerError> compilerErrors =
       await servicec.compileInput(input, name, outputDirectory);
-    } on T catch (e) {
-      return;
-    }
 
-    Expect.isTrue(false, "Expected to throw $T");
+    for (int i = 0; i < compilerErrors.length; ++i) {
+      Expect.equals(compilerErrors[i], errors[i]);
+    }
   }
 }
 

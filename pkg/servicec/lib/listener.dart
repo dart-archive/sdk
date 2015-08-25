@@ -7,113 +7,239 @@ library servicec.listener;
 import 'package:compiler/src/scanner/scannerlib.dart' show
     Token;
 
+import 'errors.dart' show
+    CompilerError;
+
+/// Identity listener: methods just propagate the argument.
 class Listener {
-  beginCompilationUnit(Token token) {
-    print("begin unit");
+  List<CompilerError> errors;
+  Listener()
+    : errors = <CompilerError>[];
+
+  Token beginCompilationUnit(Token tokens) {
+    return tokens;
   }
 
-  endCompilationUnit(Token token, int count) {
-    print("end unit; count = $count");
+  Token endCompilationUnit(Token tokens, int count) {
+    return tokens;
   }
 
-  beginTopLevelDeclaration(Token token) {
-    print("begin top-level declaration");
+  Token beginTopLevelDeclaration(Token tokens) {
+    return tokens;
   }
 
-  endTopLevelDeclaration(Token token) {
-    print("end top-level declaration");
+  Token endTopLevelDeclaration(Token tokens) {
+    return tokens;
   }
 
-  beginService(Token token) {
-    print("begin service");
+  Token beginService(Token tokens) {
+    return tokens;
   }
 
-  endService(Token token, int count) {
-    print("end service; count = $count");
+  Token endService(Token tokens, int count) {
+    return tokens;
   }
 
-  beginStruct(Token token) {
-    print("begin struct");
+  Token beginStruct(Token tokens) {
+    return tokens;
   }
 
-  endStruct(Token token, int count) {
-    print("end struct; count = $count");
+  Token endStruct(Token tokens, int count) {
+    return tokens;
   }
 
-  handleIdentifier(Token token) {
-    print("handle identifier");
+  Token beginIdentifier(Token tokens) {
+    return tokens;
   }
 
-  beginFunctionDeclaration(Token token) {
-    print("begin function declaration");
+  Token endIdentifier(Token tokens) {
+    return tokens;
   }
 
-  beginFunctionName(Token token) {
-    print("begin function name");
+  Token beginFunctionDeclaration(Token tokens) {
+    return tokens;
   }
 
-  endFunctionName(Token token) {
-    print("end function name");
+  Token endFunctionDeclaration(Token tokens) {
+    return tokens;
   }
 
-  endFunctionDeclaration(Token token) {
-    print("end function declaration");
+  Token beginMemberDeclaration(Token tokens) {
+    return tokens;
   }
 
-  beginMember(Token token) {
-    print("begin member");
+  Token endMemberDeclaration(Token tokens) {
+    return tokens;
   }
 
-  beginMemberName(Token token) {
-    print("begin member name");
+  Token beginType(Token tokens) {
+    return tokens;
   }
 
-  endMemberName(Token token) {
-    print("end member name");
+  Token endType(Token tokens) {
+    return tokens;
   }
 
-  endMember(Token token) {
-    print("end member");
+  Token beginFormalParameters(Token tokens) {
+    return tokens;
   }
 
-  beginType(Token token) {
-    print("begin type");
+  Token endFormalParameters(Token tokens, int count) {
+    return tokens;
   }
 
-  endType(Token token) {
-    print("end type");
+  Token beginFormalParameter(Token tokens) {
+    return tokens;
   }
 
-  beginFormalParameters(Token token) {
-    print("begin formal parameters");
+  Token endFormalParameter(Token tokens) {
+    return tokens;
   }
 
-  endFormalParameters(Token token) {
-    print("end formal parameters");
+  Token expectedTopLevelDeclaration(Token tokens) {
+    errors.add(CompilerError.syntax);
+    return tokens.next;
   }
 
-  beginFormalParameter(Token token) {
-    print("begin formal parameter");
+  Token expectedIdentifier(Token tokens) {
+    errors.add(CompilerError.syntax);
+    return tokens.next;
   }
 
-  endFormalParameter(Token token) {
-    print("end formal parameter");
+  Token expectedType(Token tokens) {
+    errors.add(CompilerError.syntax);
+    return tokens.next;
   }
 
-  expectedTopLevelDeclaration(Token token) {
-      print("error: $token is not a top-level declaration");
-  }
-
-  expectedIdentifier(Token token) {
-      print("error: $token is not an identifier");
-  }
-
-  expectedType(Token token) {
-      print("error: $token is not a type");
-  }
-
-  expected(String string, Token token) {
-      print("error: $token is not the symbol $string");
+  Token expected(String string, Token tokens) {
+    errors.add(CompilerError.syntax);
+    return tokens.next;
   }
 }
 
+/// Used for debugging other listeners.
+class DebugListener implements Listener {
+  Listener debugSubject;
+  List<CompilerError> errors = null;
+  DebugListener(this.debugSubject);
+
+  Token beginCompilationUnit(Token tokens) {
+    print("begin unit");
+    return debugSubject.beginCompilationUnit(tokens);
+  }
+
+  Token endCompilationUnit(Token tokens, int count) {
+    print("end unit; count = $count");
+    return debugSubject.endCompilationUnit(tokens, count);
+  }
+
+  Token beginTopLevelDeclaration(Token tokens) {
+    print("begin top-level declaration");
+    return debugSubject.beginTopLevelDeclaration(tokens);
+  }
+
+  Token endTopLevelDeclaration(Token tokens) {
+    print("end top-level declaration");
+    return debugSubject.endTopLevelDeclaration(tokens);
+  }
+
+  Token beginService(Token tokens) {
+    print("begin service");
+    return debugSubject.beginService(tokens);
+  }
+
+  Token endService(Token tokens, int count) {
+    print("end service; count = $count");
+    return debugSubject.endService(tokens, count);
+  }
+
+  Token beginStruct(Token tokens) {
+    print("begin struct");
+    return debugSubject.beginStruct(tokens);
+  }
+
+  Token endStruct(Token tokens, int count) {
+    print("end struct; count = $count");
+    return debugSubject.endStruct(tokens, count);
+  }
+
+  Token beginIdentifier(Token tokens) {
+    print("begin identifier");
+    return debugSubject.beginIdentifier(tokens);
+  }
+
+  Token endIdentifier(Token tokens) {
+    print("end identifier");
+    return debugSubject.endIdentifier(tokens);
+  }
+
+  Token beginFunctionDeclaration(Token tokens) {
+    print("begin function declaration");
+    return debugSubject.beginFunctionDeclaration(tokens);
+  }
+
+  Token endFunctionDeclaration(Token tokens) {
+    print("end function declaration");
+    return debugSubject.endFunctionDeclaration(tokens);
+  }
+
+  Token beginMemberDeclaration(Token tokens) {
+    print("begin member declaration");
+    return debugSubject.beginMemberDeclaration(tokens);
+  }
+
+  Token endMemberDeclaration(Token tokens) {
+    print("end member declaration");
+    return debugSubject.endMemberDeclaration(tokens);
+  }
+
+  Token beginType(Token tokens) {
+    print("begin type");
+    return debugSubject.beginType(tokens);
+  }
+
+  Token endType(Token tokens) {
+    print("end type");
+    return debugSubject.endType(tokens);
+  }
+
+  Token beginFormalParameters(Token tokens) {
+    print("begin formal parameters");
+    return debugSubject.beginFormalParameters(tokens);
+  }
+
+  Token endFormalParameters(Token tokens, int count) {
+    print("end formal parameters");
+    return debugSubject.endFormalParameters(tokens, count);
+  }
+
+  Token beginFormalParameter(Token tokens) {
+    print("begin formal parameter");
+    return debugSubject.beginFormalParameter(tokens);
+  }
+
+  Token endFormalParameter(Token tokens) {
+    print("end formal parameter");
+    return debugSubject.endFormalParameter(tokens);
+  }
+
+  Token expectedTopLevelDeclaration(Token tokens) {
+    print("error: $tokens is not a top-level declaration");
+    return debugSubject.expectedTopLevelDeclaration(tokens);
+  }
+
+  Token expectedIdentifier(Token tokens) {
+    print("error: $tokens is not an identifier");
+    return debugSubject.expectedIdentifier(tokens);
+  }
+
+  Token expectedType(Token tokens) {
+    print("error: $tokens is not a type");
+    return debugSubject.expectedType(tokens);
+  }
+
+  Token expected(String string, Token tokens) {
+    print("error: $tokens is not the symbol $string");
+    return debugSubject.expected(string, tokens);
+  }
+}

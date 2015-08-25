@@ -25,6 +25,9 @@ incremental/update_dependencies_unrecoverable_compile_time_error: Fail
 
 servicec/scanner/empty_service: Fail # Tests a non-implemented feature.
 
+servicec/missing_semicolon: Fail # Tests a non-implemented feature.
+servicec/unmatched_curly: Fail # Tests a non-implemented feature.
+
 [ $arch != ia32 && $arch != x64 ]
 
 service_tests/*: Skip
