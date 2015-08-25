@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "src/shared/utils.h"
+#include "src/shared/platform.h"
 
 namespace fletch {
 
@@ -29,17 +30,11 @@ void DynamicAssertionHelper::Fail(const char* format, ...) {
   va_end(arguments);
 #endif  // FLETCH_SUPPORT_PRINT_INTERCEPTORS
 
-#ifdef FLETCH_TARGET_OS_POSIX
   // In case of failed assertions, abort right away. Otherwise, wait
   // until the program is exiting before producing a non-zero exit
   // code through abort.
-  if (kind_ == ASSERT) abort();
-  static bool failed = false;
-  if (!failed) atexit(abort);
-  failed = true;
-#else
-  abort();
-#endif  // FLETCH_TARGET_OS_POSIX
+  if (kind_ == ASSERT) Platform::ImmediateAbort();
+  Platform::ScheduleAbort();
 }
 
 }  // namespace fletch

@@ -332,17 +332,17 @@ void Scheduler::ExitAtTermination(Process* process,
 
 void Scheduler::ExitAtUncaughtException(Process* process) {
   ASSERT(process->state() == Process::kUncaughtException);
-  exit(255);
+  Platform::Exit(255);
 }
 
 void Scheduler::ExitAtCompileTimeError(Process* process) {
   ASSERT(process->state() == Process::kCompileTimeError);
-  exit(254);
+  Platform::Exit(254);
 }
 
 void Scheduler::ExitAtBreakpoint(Process* process) {
   ASSERT(process->state() == Process::kBreakPoint);
-  exit(0);
+  Platform::Exit(0);
 }
 
 void Scheduler::RescheduleProcess(Process* process,

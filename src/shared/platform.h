@@ -76,6 +76,12 @@ class Platform {
 
   static int GetLocalTimeZoneOffset();
 
+  static void Exit(int exit_code);
+
+  static void ScheduleAbort();
+
+  static void ImmediateAbort();
+
   static OperatingSystem OS() {
 #if defined(__ANDROID__)
     return kAndroid;

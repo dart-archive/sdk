@@ -123,6 +123,20 @@ int Platform::GetTimeZoneOffset(int64_t seconds_since_epoch) {
   return succeeded ? static_cast<int>(decomposed.tm_gmtoff) : 0;
 }
 
+void Platform::Exit(int exit_code) {
+  exit(exit_code);
+}
+
+void Platform::ScheduleAbort() {
+  static bool failed = false;
+  if (!failed) atexit(abort);
+  failed = true;
+}
+
+void Platform::ImmediateAbort() {
+  abort();
+}
+
 // Constants used for mmap.
 static const int kMmapFd = -1;
 static const int kMmapFdOffset = 0;

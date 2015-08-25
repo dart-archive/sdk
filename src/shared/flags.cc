@@ -5,10 +5,10 @@
 #include "src/shared/flags.h"
 
 #include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
 
 #include "src/shared/utils.h"
+#include "src/shared/platform.h"
 
 namespace fletch {
 
@@ -67,7 +67,7 @@ static void PrintFlags() {
   APPLY_TO_FLAGS(PRINT_DEBUG_FLAG, PRINT_RELEASE_FLAG);
 
   // Terminate the process with error code.
-  exit(-1);
+  Platform::Exit(-1);
 }
 
 static bool FlagMatches(const char* a, const char* b) {
@@ -147,7 +147,7 @@ static void ProcessArgument(const char* argument) {
   APPLY_TO_FLAGS(PROCESS_DEBUG_FLAG, PROCESS_RELEASE_FLAG);
   Print::Out("Failed to recognize flag argument: %s\n", argument);
   // Terminate the process with error code.
-  exit(-1);
+  Platform::Exit(-1);
 }
 
 void Flags::ExtractFromCommandLine(int* argc, char** argv) {
