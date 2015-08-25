@@ -2183,4 +2183,19 @@ main() {
 >>>>
 }
 ''',
+
+  r'''
+main_signature_change
+==> main.dart.patch <==
+<<<< "v1"
+void main() {
+  print("v1");
+}
+==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
+// TODO(ahe): Should not throw.
+main() {
+  print("v2");
+}
+>>>>
+''',
 ];

@@ -765,6 +765,11 @@ class LibraryUpdater extends FletchFeatures {
         isTokenBetween(diffToken, after.beginToken, last)) {
       removeFunction(before);
       addFunction(after, before.enclosingElement);
+      if (compiler.mainFunction == before) {
+        return cannotReuse(
+            after,
+            "Unable to handle when signature of '${after.name}' changes");
+      }
       return true;
     }
     logVerbose('Simple modification of ${after} detected');
