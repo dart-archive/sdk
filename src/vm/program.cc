@@ -342,13 +342,10 @@ void Program::CollectImmutableGarbage() {
   // "ASSERT(object->IsImmutable()". If we did everthing in one pass some
   // immutable objects will contain forwarding pointers and others won't, which
   // can make the mentioned assert just crash the program.
-  //
-  // TODO(kustermann): Do a storebuffer de-duplication instead of a mutable
-  // GC.
   {
     Process* current = process_list_head_;
     while (current != NULL) {
-      current->CollectMutableGarbage();
+      current->store_buffer()->Deduplicate();
       current = current->process_list_next();
     }
   }

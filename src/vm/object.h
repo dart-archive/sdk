@@ -344,6 +344,7 @@ class HeapObject: public Object {
   friend class Heap;
   friend class Program;
   friend class SnapshotWriter;
+  friend class StoreBuffer;
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(HeapObject);

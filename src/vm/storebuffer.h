@@ -73,9 +73,13 @@ class StoreBuffer {
   // Prepend all entries in [store_buffer] to [this] store buffer.
   void Prepend(StoreBuffer* store_buffer);
 
+  // Deduplicate the storebuffer (does not necessarily produce a minimal set).
+  // WARNING: This uses forwarding words.
+  void Deduplicate();
+
   // If the references from mutable to immutable heap have doubled since
   // the last GC we will signal that another Mutable GC would be good.
-  bool ShouldGcMutableSpace() {
+  bool ShouldDeduplicate() {
     return number_of_chunks_ > 2 * number_of_chunks_in_last_gc_;
   }
 

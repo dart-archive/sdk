@@ -700,14 +700,14 @@ Interpreter::InterruptKind Engine::Interpret(
         in_store_buffer = true;
         StoreBuffer* store_buffer = process()->store_buffer();
         store_buffer->Insert(instance);
-        storebuffer_full = store_buffer->ShouldGcMutableSpace();
+        storebuffer_full = store_buffer->ShouldDeduplicate();
       }
       instance->SetInstanceField(i, value);
     }
     Push(instance);
 
     if (storebuffer_full) {
-      CollectMutableGarbage();
+      process()->store_buffer()->Deduplicate();
     }
     Advance(kAllocateLength);
   OPCODE_END();
@@ -728,14 +728,14 @@ Interpreter::InterruptKind Engine::Interpret(
         in_store_buffer = true;
         StoreBuffer* store_buffer = process()->store_buffer();
         store_buffer->Insert(instance);
-        storebuffer_full = store_buffer->ShouldGcMutableSpace();
+        storebuffer_full = store_buffer->ShouldDeduplicate();
       }
       instance->SetInstanceField(i, value);
     }
     Push(instance);
 
     if (storebuffer_full) {
-      CollectMutableGarbage();
+      process()->store_buffer()->Deduplicate();
     }
     Advance(kAllocateLength);
   OPCODE_END();
@@ -767,8 +767,8 @@ Interpreter::InterruptKind Engine::Interpret(
     if (!immutable && has_immutable_pointers) {
       StoreBuffer* store_buffer = process()->store_buffer();
       store_buffer->Insert(instance);
-      if (store_buffer->ShouldGcMutableSpace()) {
-        CollectMutableGarbage();
+      if (store_buffer->ShouldDeduplicate()) {
+        process()->store_buffer()->Deduplicate();
       }
     }
 
@@ -800,8 +800,8 @@ Interpreter::InterruptKind Engine::Interpret(
     if (!immutable && has_immutable_pointers) {
       StoreBuffer* store_buffer = process()->store_buffer();
       store_buffer->Insert(instance);
-      if (store_buffer->ShouldGcMutableSpace()) {
-        CollectMutableGarbage();
+      if (store_buffer->ShouldDeduplicate()) {
+        process()->store_buffer()->Deduplicate();
       }
     }
 
@@ -964,10 +964,11 @@ bool Engine::DoThrow(Object* exception) {
 }
 
 bool Engine::CollectGarbageIfNecessary() {
-  bool collect_mutable = process()->heap()->needs_garbage_collection() ||
-                         process()->store_buffer()->ShouldGcMutableSpace();
-  if (collect_mutable) {
+  if (process()->heap()->needs_garbage_collection()) {
     CollectMutableGarbage();
+  }
+  if (process()->store_buffer()->ShouldDeduplicate()) {
+    process()->store_buffer()->Deduplicate();
   }
   return process()->immutable_heap()->needs_garbage_collection();
 }
@@ -1054,11 +1055,8 @@ void Interpreter::Run() {
   // NOTE: We compact storebuffers on explicit yields or implicit preemptive
   // interrupts by the scheduler. The amount of additional entries is thereby
   // upper bounded by the preemptive intervals.
-  //
-  // TODO(kustermann): Implement storebuffer de-duplication instead of doing
-  // GCs.
-  if (process_->store_buffer()->ShouldGcMutableSpace()) {
-    process_->CollectMutableGarbage();
+  if (process_->store_buffer()->ShouldDeduplicate()) {
+    process_->store_buffer()->Deduplicate();
   }
 
   process_->ReleaseLookupCache();
@@ -1077,9 +1075,7 @@ bool HandleIsInvokeFast(int opcode) {
 }
 
 int HandleGC(Process* process) {
-  bool collect_mutable = process->heap()->needs_garbage_collection() ||
-                         process->store_buffer()->ShouldGcMutableSpace();
-  if (collect_mutable) {
+  if (process->heap()->needs_garbage_collection()) {
     process->CollectMutableGarbage();
 
     // After a mutable GC a lot of stacks might no longer have pointers to
@@ -1089,6 +1085,9 @@ int HandleGC(Process* process) {
     // Since we don't update the store buffer on every mutating operation
     // - e.g. SetLocal() - we add it before we start using it.
     process->store_buffer()->Insert(process->stack());
+  }
+  if (process->store_buffer()->ShouldDeduplicate()) {
+    process->store_buffer()->Deduplicate();
   }
 
   return process->immutable_heap()->needs_garbage_collection()
@@ -1110,9 +1109,8 @@ Object* HandleAllocate(Process* process,
   if (immutable != 1 && immutable_heapobject_member == 1) {
     StoreBuffer* store_buffer = process->store_buffer();
     store_buffer->Insert(HeapObject::cast(result));
-    // TODO(kustermann): Do storebuffer de-dupping instead.
-    if (store_buffer->ShouldGcMutableSpace()) {
-      return Failure::retry_after_gc();
+    if (store_buffer->ShouldDeduplicate()) {
+      store_buffer->Deduplicate();
     }
   }
   return result;
@@ -1134,9 +1132,8 @@ Object* HandleAllocateBoxed(Process* process, Object* value) {
   if (value->IsHeapObject() && !value->IsNull() && value->IsImmutable()) {
     StoreBuffer* store_buffer = process->store_buffer();
     store_buffer->Insert(HeapObject::cast(boxed));
-    // TODO(kustermann): Do storebuffer de-dupping instead.
-    if (store_buffer->ShouldGcMutableSpace()) {
-      return Failure::retry_after_gc();
+    if (store_buffer->ShouldDeduplicate()) {
+      store_buffer->Deduplicate();
     }
   }
   return boxed;
