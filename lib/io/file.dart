@@ -5,9 +5,10 @@
 part of dart.fletch.io;
 
 class File {
-  static const int READ   = 0;
-  static const int WRITE  = 1;
-  static const int APPEND = 2;
+  static const int READ       = 0;
+  static const int WRITE      = 1;
+  static const int APPEND     = 2;
+  static const int WRITE_ONLY = 3;
 
   final String path;
   int _fd;
@@ -18,10 +19,13 @@ class File {
    * A [FileException] is thrown if it was unable to open the specified file.
    */
   factory File.open(String path, {int mode: READ}) {
-    if (mode < 0 || mode > 2) {
+    if (mode < 0 || mode > 3) {
       throw new ArgumentError("Invalid open mode: $mode");
     }
-    int fd = sys.open(path, mode == WRITE, mode == APPEND);
+    int fd = sys.open(path,
+                      mode == READ || mode == WRITE,
+                      mode == WRITE || mode == WRITE_ONLY,
+                      mode == APPEND);
     if (fd == -1) throw new FileException("Failed to open file '$path'");
     return new File._(path, fd);
   }
@@ -39,6 +43,15 @@ class File {
   }
 
   File._(this.path, this._fd);
+
+  /**
+   * Return the file descriptor value for this file.
+   *
+   * This is especially useful in conjunction with `dart:fletch.ffi`. However it
+   * should be used with care, as the `File` object assumes full control over the
+   * file descriptor.
+   */
+  int get fd => _fd;
 
   /**
    * Write [buffer] to the file. The file must have been opened with [WRITE]

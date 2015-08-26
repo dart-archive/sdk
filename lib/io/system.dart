@@ -22,6 +22,7 @@ const int CLOSE_EVENT       = 1 << 2;
 const int ERROR_EVENT       = 1 << 3;
 
 const int O_RDONLY  = 0;
+const int O_WRONLY  = 1;
 const int O_RDWR    = 2;
 const int O_CREAT   = 64;
 const int O_TRUNC   = 512;
@@ -60,7 +61,7 @@ class TempFile {
 abstract class System {
   int socket();
   InternetAddress lookup(String host);
-  int open(String path, bool write, bool append);
+  int open(String path, bool read, bool write, bool append);
   TempFile mkstemp(String path);
   int access(String path);
   int unlink(String path);

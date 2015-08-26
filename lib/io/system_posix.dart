@@ -160,11 +160,20 @@ abstract class PosixSystem implements System {
     return address;
   }
 
-  int open(String path, bool write, bool append) {
-    int flags = O_RDONLY;
+  int open(String path, bool read, bool write, bool append) {
+    int flags = 0;
+    if (read && !write) {
+      flags = O_RDONLY;
+    } else if (!read && write) {
+      flags = O_WRONLY;
+    } else if (read && write) {
+      flags = O_RDWR;
+    } else {
+      throw "Neither 'read' nor 'write' was specified";
+    }
     if (write || append) {
-      flags = O_RDWR | O_CREAT;
-      if (append) flags = flags | O_TRUNC;
+      flags |= O_CREAT;
+      if (!append) flags = flags | O_TRUNC;
     }
     flags |= O_CLOEXEC;
     ForeignMemory cPath = new ForeignMemory.fromString(path);
