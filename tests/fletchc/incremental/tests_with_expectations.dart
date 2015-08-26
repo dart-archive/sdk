@@ -2251,4 +2251,86 @@ var z;
   C.m();
 }
 ''',
+
+  r'''
+change_optional_arguments
+==> main.dart.patch <==
+// Test that a method with optional arguments can change.
+<<<< ["1:3","1:2"]
+foo(x, [y = 3]) {
+  print("$x:$y");
+}
+
+void main() {
+  foo(1);
+  foo(1, 2);
+}
+==== ["3","2"]
+foo([x = 3]) {
+  print(x);
+}
+
+void main() {
+  var f = foo;
+  f();
+  f(2);
+}
+>>>>
+''',
+
+  r'''
+closure
+==> main.dart.patch <==
+// Tests what happens when an added method is closurized.
+
+class A {
+<<<< "v1"
+  foo() {
+    print("v1");
+  }
+==== "v2"
+  a() {
+    print("v2");
+  }
+>>>>
+}
+
+void main() {
+<<<<
+  var a = new A();
+  a.foo();
+====
+  var a = new A();
+  var f = a.a;
+  f();
+>>>>
+}
+''',
+
+  r'''
+no_closure
+==> main.dart.patch <==
+// Similar to closure, but doesn't use closures.
+class A {
+<<<< "v1"
+  foo() {
+    print("v1");
+  }
+==== "v2"
+  a() {
+    print("v2");
+  }
+>>>>
+}
+
+void main() {
+<<<<
+  var a = new A();
+  a.foo();
+====
+  var a = new A();
+  a.a();
+>>>>
+}
+''',
 ];

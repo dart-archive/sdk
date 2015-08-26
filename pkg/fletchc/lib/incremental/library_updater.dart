@@ -942,6 +942,8 @@ class LibraryUpdater extends FletchFeatures {
       }
     }
 
+    backend.assembleProgram();
+
     List<Command> commands = <Command>[const commands_lib.PrepareForChanges()];
     FletchSystem system = backend.systemBuilder.computeSystem(
         backend.context,
