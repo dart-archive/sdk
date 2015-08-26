@@ -17,11 +17,11 @@ import 'package:compiler/src/scanner/scannerlib.dart' show
     KeywordToken,
     StringToken,
     SymbolToken,
-    ErrorToken,
+    ErrorToken;
 
-    Keyword,
-
-    StringScanner;
+import 'package:servicec/scanner.dart' show
+    Scanner,
+    keywords;
 
 import 'test.dart' show
     Test;
@@ -34,7 +34,7 @@ List<ScannerTest> SCANNER_TESTS = <ScannerTest>[
 service EmptyService {}
 ''',
                 <Token>[
-                  new KeywordToken(new Keyword("service"), 0),
+                  new KeywordToken(keywords["service"], 0),
                   new StringToken.fromString(STRING_INFO, "EmptyService", 8),
                   new SymbolToken(OPEN_CURLY_BRACKET_INFO, 22),
                   new SymbolToken(CLOSE_CURLY_BRACKET_INFO, 23)
@@ -62,7 +62,7 @@ class Success extends ScannerTest {
         input,
         (token, index, _) {
           Expect.isTrue(
-              token == output[index],
+              token.toString() == output[index].toString(),
               "Expected $token at index $index to be ${output[index]}");
         },
         null);
@@ -89,7 +89,7 @@ dynamic foldScannerOutputTokens(
     String input,
     TokenReduction reduce,
     dynamic identity) {
-  var scanner = new StringScanner.fromString(input);
+  var scanner = new Scanner(input);
   Token tokenLinkedList = scanner.tokenize();
 
   int index = 0;

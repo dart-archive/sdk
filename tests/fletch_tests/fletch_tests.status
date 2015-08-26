@@ -23,8 +23,6 @@ incremental/stored_instance_tearoff: Fail
 incremental/update_dependencies_recoverable_compile_time_error: Fail
 incremental/update_dependencies_unrecoverable_compile_time_error: Fail
 
-servicec/scanner/empty_service: Fail # Tests a non-implemented feature.
-
 servicec/missing_semicolon: Fail # Tests a non-implemented feature.
 servicec/unmatched_curly: Fail # Tests a non-implemented feature.
 

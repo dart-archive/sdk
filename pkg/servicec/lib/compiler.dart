@@ -16,9 +16,7 @@ import 'targets.dart' show
     Target;
 
 import 'package:compiler/src/scanner/scannerlib.dart' show
-    Token,
-    StringScanner,
-    Scanner;
+    Token;
 
 import 'parser.dart' show
     Parser;
@@ -26,6 +24,9 @@ import 'parser.dart' show
 import 'listener.dart' show
     DebugListener,
     Listener;
+
+import 'scanner.dart' show
+    Scanner;
 
 // Temporary output type
 Future<List<CompilerError>> compile(
@@ -46,7 +47,7 @@ Future<List<CompilerError>> compileInput(
     return [CompilerError.undefinedService];
   }
 
-  Scanner scanner = new StringScanner.fromString(input);
+  Scanner scanner = new Scanner(input);
   Token tokens = scanner.tokenize();
 
   Listener listener = new Listener();
