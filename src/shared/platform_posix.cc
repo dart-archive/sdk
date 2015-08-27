@@ -178,15 +178,8 @@ class PosixMutex : public Mutex {
   ~PosixMutex() { pthread_mutex_destroy(&mutex_); }
 
   int Lock() { return pthread_mutex_lock(&mutex_); }
+  int TryLock() { return pthread_mutex_trylock(&mutex_); }
   int Unlock() { return pthread_mutex_unlock(&mutex_); }
-
-  bool IsLocked() {
-    if (pthread_mutex_trylock(&mutex_) == 0) {
-      pthread_mutex_unlock(&mutex_);
-      return false;
-    }
-    return true;
-  }
 
  private:
   pthread_mutex_t mutex_;   // Pthread mutex for POSIX platforms.

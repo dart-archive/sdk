@@ -367,7 +367,6 @@ PageTable* ObjectMemory::GetPageTable(uword address) {
 }
 
 void ObjectMemory::SetPageTable(uword address, PageTable* table) {
-  ASSERT(mutex_->IsLocked());
 #ifdef FLETCH32
   page_directory_.Set(address >> 22, table);
 #else

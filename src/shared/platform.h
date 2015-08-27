@@ -150,12 +150,14 @@ class Mutex {
   // the mutex is unlocked.
   virtual int Lock() = 0;
 
+  // Locks the given mutex. If the mutex is currently unlocked, it becomes
+  // locked and owned by the calling thread. If the mutex is currently
+  // locked, a value other than 0 is returned.
+  virtual int TryLock() = 0;
+
   // Unlocks the given mutex. The mutex is assumed to be locked and owned by
   // the calling thread on entrance.
   virtual int Unlock() = 0;
-
-  // Returns true if the Mutex is currently locked by any thread.
-  virtual bool IsLocked() = 0;
 };
 
 // Stack-allocated ScopedLocks provide block-scoped locking and unlocking
