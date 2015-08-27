@@ -81,18 +81,17 @@ if [[ $# -eq 0 ]] || [[ "$1" == "fletch" ]]; then
     ninja
     ninja -C out/ReleaseIA32
     ninja -C out/${MODE}XARMAndroid fletch_vm_library_generator
-    ninja -C out/${MODE}IA32 fletch_vm_library_generator
+    ninja -C out/${MODE}IA32Android fletch_vm_library_generator
     mkdir -p $JNI_ARM7_DIR
     mkdir -p $JNI_IA32_DIR
     out/${MODE}XARMAndroid/fletch_vm_library_generator > $JNI_ARM7_DIR/generated.S
-    out/${MODE}IA32/fletch_vm_library_generator > $JNI_IA32_DIR/generated.S
+    out/${MODE}IA32Android/fletch_vm_library_generator > $JNI_IA32_DIR/generated.S
 
     SOURCES="\
 	src/shared/assert.cc \
 	src/shared/bytecodes.cc \
 	src/shared/connection.cc \
 	src/shared/flags.cc \
-	src/shared/native_process_posix.cc \
 	src/shared/native_socket_linux.cc \
 	src/shared/native_socket_posix.cc \
 	src/shared/platform_linux.cc \

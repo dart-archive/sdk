@@ -24,11 +24,11 @@ dart bin/servicec.dart --out=../../samples/todomvc/ ../../samples/todomvc/todomv
 cd $FLETCH_DIR
 ninja
 ninja -C out/ReleaseXARMAndroid fletch_vm_library_generator
-ninja -C out/ReleaseIA32 fletch_vm_library_generator
+ninja -C out/ReleaseIA32Android fletch_vm_library_generator
 mkdir -p out/ReleaseXARMAndroid/obj/src/vm/fletch_vm.gen
-mkdir -p out/ReleaseIA32/obj/src/vm/fletch_vm.gen
+mkdir -p out/ReleaseIA32Android/obj/src/vm/fletch_vm.gen
 out/ReleaseXARMAndroid/fletch_vm_library_generator > out/ReleaseXARMAndroid/obj/src/vm/fletch_vm.gen/generated.S
-out/ReleaseIA32/fletch_vm_library_generator > out/ReleaseIA32/obj/src/vm/fletch_vm.gen/generated.S
+out/ReleaseIA32Android/fletch_vm_library_generator > out/ReleaseIA32Android/obj/src/vm/fletch_vm.gen/generated.S
 
 # Compile Fletch runtime and jni code into libfletch.so.
 cd $JAVA_DIR
@@ -44,7 +44,7 @@ fi
 
 # Build snapshot.
 cd $FLETCH_DIR
-ninja -C out/ReleaseIA32 fletch
+ninja -C out/ReleaseIA32
 mkdir -p $DIR/TodoMVC/app/src/main/res/raw
 
 ./out/ReleaseIA32/fletch compile-and-run -o $DIR/TodoMVC/app/src/main/res/raw/todomvc_snapshot $DIR/../todomvc.dart

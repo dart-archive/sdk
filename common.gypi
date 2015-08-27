@@ -525,6 +525,11 @@
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
       },
 
+      'ReleaseIA32Android': {
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
+        'defines': [ 'FLETCH_TARGET_ANDROID' ],
+      },
+
       'ReleaseIA32Asan': {
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_asan',
@@ -588,6 +593,11 @@
         'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_ia32', ],
       },
 
+      'DebugIA32Android': {
+        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_ia32', ],
+        'defines': [ 'FLETCH_TARGET_ANDROID' ],
+      },
+
       'DebugIA32Asan': {
         'inherit_from': [
           'fletch_base', 'fletch_debug', 'fletch_ia32', 'fletch_asan',
@@ -649,6 +659,11 @@
 
       'DevelopIA32': {
         'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_ia32', ],
+      },
+
+      'DevelopIA32Android': {
+        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_ia32', ],
+        'defines': [ 'FLETCH_TARGET_ANDROID' ],
       },
 
       'DevelopIA32Asan': {

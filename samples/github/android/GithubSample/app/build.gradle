@@ -19,6 +19,7 @@ model {
         cppFlags += ["-DFLETCH32",
                      "-DFLETCH_TARGET_OS_POSIX",
                      "-DFLETCH_TARGET_OS_LINUX",
+                     "-DFLETCH_TARGET_ANDROID",
                      "-DFLETCH_ENABLE_FFI",
                      "-DFLETCH_ENABLE_LIVE_CODING",
                      "-DFLETCH_ENABLE_PRINT_INTERCEPTORS",

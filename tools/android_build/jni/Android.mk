@@ -15,7 +15,6 @@ LOCAL_SRC_FILES := \
 	../../../src/shared/bytecodes.cc \
 	../../../src/shared/connection.cc \
 	../../../src/shared/flags.cc \
-	../../../src/shared/native_process_posix.cc \
 	../../../src/shared/native_socket_linux.cc \
 	../../../src/shared/native_socket_posix.cc \
 	../../../src/shared/platform_linux.cc \
@@ -75,7 +74,7 @@ endif
 ifeq ($(TARGET_ARCH_ABI), x86)
   LOCAL_CFLAGS += -DFLETCH_TARGET_IA32
   LOCAL_SRC_FILES += \
-    ../../../out/ReleaseIA32/obj/src/vm/fletch_vm.gen/generated.S
+    ../../../out/ReleaseIA32Android/obj/src/vm/fletch_vm.gen/generated.S
 endif
 
 include $(BUILD_STATIC_LIBRARY)
