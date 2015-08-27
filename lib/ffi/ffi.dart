@@ -230,21 +230,27 @@ class ForeignLibrary extends ForeignPointer {
 
 class ForeignMemory extends ForeignPointer {
   int _length;
+  bool _markedForFinalization;
+
   int get length => _length;
 
   ForeignMemory.fromAddress(int address, this._length) :
+      _markedForFinalization = false,
       super.fromAddress(address);
 
   ForeignMemory.fromForeignPointer(ForeignPointer pointer, this._length) :
+      _markedForFinalization = false,
       super.fromAddress(pointer.address);
 
   ForeignMemory.allocated(this._length) {
     _value = _allocate(_length);
+    _markedForFinalization = false;
   }
 
   ForeignMemory.allocatedFinalize(this._length) {
     _value = _allocate(_length);
     _markForFinalization();
+    _markedForFinalization = true;
   }
 
   factory ForeignMemory.fromString(String str) {
@@ -253,6 +259,12 @@ class ForeignMemory extends ForeignPointer {
       memory.setUint8(i, str.codeUnitAt(i));
     }
     return memory;
+  }
+
+  void setFinalize() {
+    if (_markedForFinalization) return;
+    _markForFinalization();
+    _markedForFinalization = true;
   }
 
   int getInt8(int offset)

@@ -860,7 +860,7 @@ NATIVE(ProcessQueueGetMessage) {
     case PortQueue::FOREIGN:
     case PortQueue::FOREIGN_FINALIZED: {
       Class* foreign_memory_class = process->program()->foreign_memory_class();
-      ASSERT(foreign_memory_class->NumberOfInstanceFields() == 2);
+      ASSERT(foreign_memory_class->NumberOfInstanceFields() == 3);
       Object* object = process->NewInstance(foreign_memory_class);
       if (object == Failure::retry_after_gc()) return object;
       Instance* foreign = Instance::cast(object);

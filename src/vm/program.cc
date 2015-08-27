@@ -582,7 +582,7 @@ void Program::Initialize() {
 
   {
     InstanceFormat format = InstanceFormat::instance_format(
-        2, InstanceFormat::FOREIGN_MEMORY_MARKER);
+        3, InstanceFormat::FOREIGN_MEMORY_MARKER);
     foreign_memory_class_ = Class::cast(
         heap()->CreateClass(format, meta_class_, null_object_));
   }
