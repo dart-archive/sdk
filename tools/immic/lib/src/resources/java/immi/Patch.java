@@ -7,4 +7,5 @@
 package immi;
 
 public interface Patch {
+  boolean hasChanged();
 }

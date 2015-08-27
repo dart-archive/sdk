@@ -7,6 +7,6 @@
 package immi;
 
 public interface AnyNodePresenter extends NodePresenter<AnyNode, AnyNodePatch> {
-  public void presentNode(AnyNode node);
-  public void patchNode(AnyNodePatch patch);
+  void presentNode(AnyNode node);
+  void patchNode(AnyNodePatch patch);
 }

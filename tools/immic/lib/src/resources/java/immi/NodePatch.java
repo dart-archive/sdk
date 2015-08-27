@@ -7,7 +7,17 @@
 package immi;
 
 public interface NodePatch<N extends Node, P extends NodePresenter> extends Patch {
-  public N getCurrent();
-  public N getPrevious();
-  public void applyTo(P presenter);
+  boolean wasReplaced();
+  boolean wasUpdated();
+
+  N getCurrent();
+  N getPrevious();
+
+  void applyTo(P presenter);
+
+  enum PatchType {
+    IdentityNodePatch,
+    ReplaceNodePatch,
+    UpdateNodePatch
+  }
 }

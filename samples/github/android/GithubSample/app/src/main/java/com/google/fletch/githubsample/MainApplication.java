@@ -15,7 +15,6 @@ import fletch.ImmiServiceLayer;
 
 public class MainApplication extends Application {
 
-  static boolean attachNativeDebugger = false;
   static boolean attachDartDebugger = false;
   static int debugPortNumber = 8123;
 
@@ -42,15 +41,6 @@ public class MainApplication extends Application {
   }
 
   private void startFletchService() {
-    if (attachNativeDebugger) {
-      try {
-        System.out.println("sleeping for native debugger attatch");
-        Thread.sleep(20000);
-        System.out.println("resumed execution");
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-    }
     System.loadLibrary("fletch");
     FletchApi.Setup();
     FletchServiceApi.Setup();
