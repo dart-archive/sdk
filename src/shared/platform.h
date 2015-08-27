@@ -9,6 +9,10 @@
 #include "src/shared/globals.h"
 #include "src/shared/list.h"
 
+#if defined(FLETCH_TARGET_OS_POSIX)
+#include "src/shared/platform_posix.h"
+#endif
+
 namespace fletch {
 
 // Computes the path of of this executable. This is similar to argv[0], but
@@ -23,8 +27,7 @@ class Semaphore;
 class Monitor;
 
 // Interface to the underlying platform.
-class Platform {
- public:
+namespace Platform {
   enum OperatingSystem {
     kUnknownOS = 0,
     kLinux     = 1,
@@ -40,49 +43,49 @@ class Platform {
   };
 
   // Initialize the Platform class.
-  static void Setup();
+  void Setup();
 
   // Set thread in thread local storage.
-  static void SetCurrentThread(Thread* thread);
+  void SetCurrentThread(Thread* thread);
 
   // Get thread from thread local storage.
-  static Thread* GetCurrentThread();
+  Thread* GetCurrentThread();
 
   // Factory method for creating platform dependent Mutex.
   // Use delete to reclaim the storage for the returned Mutex.
-  static Mutex* CreateMutex();
+  Mutex* CreateMutex();
 
   // Use delete to reclaim the storage for the returned Monitor.
-  static Monitor* CreateMonitor();
+  Monitor* CreateMonitor();
 
   // Returns the number of microseconds since epoch.
-  static uint64 GetMicroseconds();
+  uint64 GetMicroseconds();
 
   // Returns the number of microseconds since this process got started.
-  static uint64 GetProcessMicroseconds();
+  uint64 GetProcessMicroseconds();
 
   // Returns the number of available hardware threads.
-  static int GetNumberOfHardwareThreads();
+  int GetNumberOfHardwareThreads();
 
   // Load file at 'uri'.
-  static List<uint8> LoadFile(const char* name);
+  List<uint8> LoadFile(const char* name);
 
   // Store file at 'ur'.
-  static bool StoreFile(const char* uri, List<uint8> bytes);
+  bool StoreFile(const char* uri, List<uint8> bytes);
 
-  static const char* GetTimeZoneName(int64_t seconds_since_epoch);
+  const char* GetTimeZoneName(int64_t seconds_since_epoch);
 
-  static int GetTimeZoneOffset(int64_t seconds_since_epoch);
+  int GetTimeZoneOffset(int64_t seconds_since_epoch);
 
-  static int GetLocalTimeZoneOffset();
+  int GetLocalTimeZoneOffset();
 
-  static void Exit(int exit_code);
+  void Exit(int exit_code);
 
-  static void ScheduleAbort();
+  void ScheduleAbort();
 
-  static void ImmediateAbort();
+  void ImmediateAbort();
 
-  static OperatingSystem OS() {
+  inline OperatingSystem OS() {
 #if defined(__ANDROID__)
     return kAndroid;
 #elif defined(__linux__)
@@ -94,7 +97,7 @@ class Platform {
 #endif
   }
 
-  static Architecture Arch() {
+  inline Architecture Arch() {
 #if defined(FLETCH_TARGET_IA32)
     return kIA32;
 #elif defined(FLETCH_TARGET_X64)
@@ -105,7 +108,7 @@ class Platform {
     return kUnknownArch;
 #endif
   }
-};
+}  // namespace Platform
 
 // Interface for manipulating virtual memory.
 class VirtualMemory {
@@ -148,16 +151,19 @@ class Mutex {
   // locked and owned by the calling thread, and immediately. If the mutex
   // is already locked by another thread, suspends the calling thread until
   // the mutex is unlocked.
-  virtual int Lock() = 0;
+  int Lock() { return impl_.Lock(); }
 
   // Locks the given mutex. If the mutex is currently unlocked, it becomes
   // locked and owned by the calling thread. If the mutex is currently
   // locked, a value other than 0 is returned.
-  virtual int TryLock() = 0;
+  int TryLock() { return impl_.TryLock(); }
 
   // Unlocks the given mutex. The mutex is assumed to be locked and owned by
   // the calling thread on entrance.
-  virtual int Unlock() = 0;
+  int Unlock() { return impl_.Unlock(); }
+
+ private:
+  MutexImpl impl_;
 };
 
 // Stack-allocated ScopedLocks provide block-scoped locking and unlocking
@@ -173,14 +179,20 @@ class ScopedLock {
 
 class Monitor {
  public:
-  virtual ~Monitor() {}
-  virtual int Lock() = 0;
-  virtual int Unlock() = 0;
-  virtual int Wait() = 0;
-  virtual bool Wait(uint64 microseconds) = 0;
-  virtual bool WaitUntil(uint64 microseconds_since_epoch) = 0;
-  virtual int Notify() = 0;
-  virtual int NotifyAll() = 0;
+  Monitor() {}
+
+  int Lock() { return impl_.Lock(); }
+  int Unlock() { return impl_.Unlock(); }
+  int Wait() { return impl_.Wait(); }
+  bool Wait(uint64 microseconds) { return impl_.Wait(microseconds); }
+  bool WaitUntil(uint64 microseconds_since_epoch) {
+    return impl_.WaitUntil(microseconds_since_epoch);
+  }
+  int Notify() { return impl_.Notify(); }
+  int NotifyAll() { return impl_.NotifyAll(); }
+
+ private:
+  MonitorImpl impl_;
 };
 
 class ScopedMonitorLock {
@@ -195,6 +207,16 @@ class ScopedMonitorLock {
   DISALLOW_COPY_AND_ASSIGN(ScopedMonitorLock);
 };
 
+
+inline Mutex* Platform::CreateMutex() {
+  return new Mutex();
+}
+
+inline Monitor* Platform::CreateMonitor() {
+  return new Monitor();
+}
+
 }  // namespace fletch
+
 
 #endif  // SRC_SHARED_PLATFORM_H_

@@ -172,64 +172,6 @@ bool VirtualMemory::Uncommit(uword address, int size) {
               kMmapFd, kMmapFdOffset) != MAP_FAILED;
 }
 
-class PosixMutex : public Mutex {
- public:
-  PosixMutex() { pthread_mutex_init(&mutex_, NULL);  }
-  ~PosixMutex() { pthread_mutex_destroy(&mutex_); }
-
-  int Lock() { return pthread_mutex_lock(&mutex_); }
-  int TryLock() { return pthread_mutex_trylock(&mutex_); }
-  int Unlock() { return pthread_mutex_unlock(&mutex_); }
-
- private:
-  pthread_mutex_t mutex_;   // Pthread mutex for POSIX platforms.
-};
-
-Mutex* Platform::CreateMutex() {
-  return new PosixMutex();
-}
-
-class PosixMonitor : public Monitor {
- public:
-  PosixMonitor() {
-    pthread_mutex_init(&mutex_, NULL);
-    pthread_cond_init(&cond_, NULL);
-  }
-
-  ~PosixMonitor() {
-    pthread_mutex_destroy(&mutex_);
-    pthread_cond_destroy(&cond_);
-  }
-
-  int Lock() { return pthread_mutex_lock(&mutex_); }
-  int Unlock() { return pthread_mutex_unlock(&mutex_); }
-
-  int Wait() { return pthread_cond_wait(&cond_, &mutex_); }
-
-  bool Wait(uint64 microseconds) {
-    uint64 us = Platform::GetMicroseconds() + microseconds;
-    return WaitUntil(us);
-  }
-
-  bool WaitUntil(uint64 microseconds_since_epoch) {
-    timespec ts;
-    ts.tv_sec = microseconds_since_epoch / 1000000;
-    ts.tv_nsec = (microseconds_since_epoch % 1000000) * 1000;
-    return pthread_cond_timedwait(&cond_, &mutex_, &ts) == ETIMEDOUT;
-  }
-
-  int Notify() { return pthread_cond_signal(&cond_); }
-  int NotifyAll() { return pthread_cond_broadcast(&cond_); }
-
- private:
-  pthread_mutex_t mutex_;   // Pthread mutex for POSIX platforms.
-  pthread_cond_t cond_;   // Pthread condition for POSIX platforms.
-};
-
-Monitor* Platform::CreateMonitor() {
-  return new PosixMonitor();
-}
-
 }  // namespace fletch
 
 #endif  // defined(FLETCH_TARGET_OS_POSIX)
