@@ -189,14 +189,6 @@ class ServerSocket extends _SocketBase {
     return value;
   }
 
-  static void _callAcceptCallback(port) {
-    var channel = new Channel();
-    port.send(new Port(channel));
-    var fn = channel.receive();
-    int client = channel.receive();
-    fn(new Socket._fromFd(client));
-  }
-
   /**
    * Accept the incoming socket. This function will block until a socket is
    * accepted.
@@ -204,14 +196,13 @@ class ServerSocket extends _SocketBase {
    * with the new socket as argument.
    */
   void spawnAccept(void fn(Socket socket)) {
+    if (!isImmutable(fn)) {
+      throw new ArgumentError(
+          'Cosure passed to ServerSocket.spawnAccept() must be immutable.');
+    }
+
     int client = _accept();
-    // TODO(ajohnsen): This is a bit slow. Change to sending a blob of data
-    // containing the two entries, once we have support for that.
-    var channel = new Channel();
-    Process.spawn(_callAcceptCallback, new Port(channel));
-    var port = channel.receive();
-    port.send(fn);
-    port.send(client);
+    Process.spawn(() => fn(new Socket._fromFd(client)));
   }
 
   /**

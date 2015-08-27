@@ -72,32 +72,28 @@ class _FletchTimer implements Timer {
     _forkWaitFiber();
   }
 
-  static void _wait(Port timerPort) {
-    Channel channel = new Channel();
-    timerPort.send(new Port(channel));
-    int milliseconds = channel.receive();
-    // Cap the sleep time so that a timer that is set way in the
-    // future will not cause the system to keep running if it is
-    // cancelled.
-    if (milliseconds > _maxWaitTimeInMilliseconds) {
-      milliseconds = _maxWaitTimeInMilliseconds;
-    }
-    sleep(milliseconds);
-    timerPort.send(null);
-  }
-
   void _forkWaitFiber() {
     if (_timers != this) return;
     assert(!_hasActiveWaitFiber);
     _hasActiveWaitFiber = true;
     Fiber.fork(() {
+      var milliseconds = _timestamp - _currentTimestamp;
+      if (milliseconds < 0) milliseconds = 0;
+      // Cap the sleep time so that a timer that is set way in the
+      // future will not cause the system to keep running if it is
+      // cancelled.
+      if (milliseconds > _maxWaitTimeInMilliseconds) {
+        milliseconds = _maxWaitTimeInMilliseconds;
+      }
+
       Channel channel = new Channel();
-      Process.spawn(_wait, new Port(channel));
-      var port = channel.receive();
-      var sleepFor = _timestamp - _currentTimestamp;
-      if (sleepFor < 0) sleepFor = 0;
-      port.send(sleepFor);
+      Port port = new Port(channel);
+      Process.spawn((int milliseconds) {
+        sleep(milliseconds);
+        port.send(null);
+      }, milliseconds);
       channel.receive();
+
       _hasActiveWaitFiber = false;
       _fireExpiredTimers();
     });
