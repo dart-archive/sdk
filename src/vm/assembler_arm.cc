@@ -4,7 +4,7 @@
 
 #if defined(FLETCH_TARGET_ARM)
 
-#include "src/vm/assembler.h"
+#include "src/vm/assembler.h" // NOLINT we don't include assembler_arm.h.
 
 #include <stdio.h>
 #include <stdarg.h>

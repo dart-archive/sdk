@@ -195,7 +195,7 @@ class Engine : public State {
 
 Interpreter::InterruptKind Engine::Interpret(
     TargetYieldResult* target_yield_result) {
-#define LABEL(name, branching, format, length, stack_diff, print) &&name##Label,
+#define LABEL(name, branching, format, length, stack_diff, print) &&name##Label, // NOLINT
   static void* kDispatchTable[] = {
     BYTECODES_DO(LABEL)
   };

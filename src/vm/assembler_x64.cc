@@ -4,7 +4,7 @@
 
 #if defined(FLETCH_TARGET_X64)
 
-#include <stdarg.h>
+#include <stdarg.h>  // NOLINT we don't include assembler_x64.h
 #include "src/vm/assembler.h"
 
 namespace fletch {

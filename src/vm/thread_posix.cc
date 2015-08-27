@@ -4,7 +4,7 @@
 
 #if defined(FLETCH_TARGET_OS_POSIX)
 
-#include "src/vm/thread.h"
+#include "src/vm/thread.h"  // NOLINT we don't include thread_posix.h.
 
 #include <errno.h>
 #include <stdio.h>
