@@ -1,82 +1,27 @@
-apply plugin: 'com.android.model.application'
+apply plugin: 'com.android.application'
 
-model {
-    android {
-        compileSdkVersion = 22
-        buildToolsVersion = "22.0.1"
-        sourceCompatibility = 1.7
-        targetCompatibility = 1.7
+android {
+    compileSdkVersion 22
+    buildToolsVersion "23.0.0"
 
-        defaultConfig.with {
-            applicationId = "com.google.fletch.githubsample"
-            minSdkVersion.apiLevel = 21
-            targetSdkVersion.apiLevel = 22
-        }
+    defaultConfig {
+        applicationId "com.google.fletch.githubsample"
+        minSdkVersion 21
+        targetSdkVersion 22
+        versionCode 1
+        versionName "1.0"
     }
 
-    android.ndk {
-        moduleName = "fletch"
-        cppFlags += ["-DFLETCH32",
-                     "-DFLETCH_TARGET_OS_POSIX",
-                     "-DFLETCH_TARGET_OS_LINUX",
-                     "-DFLETCH_TARGET_ANDROID",
-                     "-DFLETCH_ENABLE_FFI",
-                     "-DFLETCH_ENABLE_LIVE_CODING",
-                     "-DFLETCH_ENABLE_PRINT_INTERCEPTORS",
-                     "-DANDROID",
-                     "-std=c++11"]
-        cppFlags += "-I${file("../../../../..")}".toString()
-        cppFlags += "-I${file("../../../../../include")}".toString()
-        cppFlags += "-I${file("../../../../../third_party/double-conversion/src")}".toString()
-        ldLibs += ["android", "dl", "log"]
-        stl = "gnustl_static"
-    }
-
-    android.sources {
-        main {
-            java {
-                source {
-                    srcDir "src/main/java"
-                    srcDir "../../../../../package/immi/java"
-                }
-            }
-            jni {
-                source {
-                    srcDir "src/main/jni"
-                }
-            }
-        }
-        arm7 {
-            jni {
-                source {
-                    srcDir "src/arm7/jni"
-                }
-            }
-        }
-        x86 {
-            jni {
-                source {
-                    srcDir "src/x86/jni"
-                }
-            }
-        }
-    }
-
-    android.buildTypes {
+    buildTypes {
         release {
-            minifyEnabled = false
-            proguardFiles += file('proguard-rules.pro')
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 
-    android.productFlavors {
-        create ("x86") {
-            ndk.abiFilters += "x86"
-            ndk.cppFlags += "-DFLETCH_TARGET_IA32"
-        }
-        create("arm7") {
-            ndk.abiFilters += "armeabi-v7a"
-            ndk.cppFlags += "-DFLETCH_TARGET_ARM"
+    sourceSets {
+        main {
+            java.srcDir '../../../../../package/immi/java'
         }
     }
 }
