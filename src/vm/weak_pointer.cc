@@ -98,7 +98,7 @@ void WeakPointer::PrependWeakPointers(WeakPointer** pointers,
   }
 }
 
-void WeakPointer::Visit(WeakPointer* pointers, PointerVisitor *visitor) {
+void WeakPointer::Visit(WeakPointer* pointers, PointerVisitor* visitor) {
   while (pointers != NULL) {
     visitor->Visit(reinterpret_cast<Object**>(&pointers->object_));
     pointers = pointers->next_;

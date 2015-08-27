@@ -459,7 +459,7 @@ int Process::CollectGarbageAndChainStacks() {
   return number_of_stacks;
 }
 
-void Process::ValidateHeaps(ImmutableHeap *immutable_heap) {
+void Process::ValidateHeaps(ImmutableHeap* immutable_heap) {
   ProcessHeapValidatorVisitor v(program()->heap(), immutable_heap);
   v.VisitProcess(this);
 }

@@ -14,7 +14,7 @@ struct ThreadInfo;
 
 class ThreadPool {
  public:
-  typedef void (*Runable)(void *data);
+  typedef void (*Runable)(void* data);
 
   explicit ThreadPool(int max_threads = Platform::GetNumberOfHardwareThreads());
   ~ThreadPool();

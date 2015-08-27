@@ -23,7 +23,7 @@ class GCThread {
   void StopThread();
 
  private:
-  static void* GCThreadEntryPoint(void *data);
+  static void* GCThreadEntryPoint(void* data);
 
   void MainLoop();
 

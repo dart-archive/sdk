@@ -9,7 +9,7 @@
 
 namespace fletch {
 
-void* GCThread::GCThreadEntryPoint(void *data) {
+void* GCThread::GCThreadEntryPoint(void* data) {
   GCThread* thread = reinterpret_cast<GCThread*>(data);
   thread->MainLoop();
   return NULL;
