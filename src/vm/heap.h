@@ -29,15 +29,13 @@ class Heap {
   void TryDealloc(Object* object, int size);
 
   // Allocate heap object.
-  Object* CreateComplexHeapObject(Class* the_class, Object* init_value,
-                                  bool immutable);
+  Object* CreateInstance(Class* the_class, Object* init_value, bool immutable);
 
   // Allocate array.
-  Object* CreateArray(Class* the_class, int length, Object* init_value,
-                      bool immutable);
+  Object* CreateArray(Class* the_class, int length, Object* init_value);
 
   // Allocate byte array.
-  Object* CreateByteArray(Class* the_class, int length, bool immutable);
+  Object* CreateByteArray(Class* the_class, int length);
 
   // Allocate heap integer.
   Object* CreateLargeInteger(Class* the_class, int64 value);
@@ -54,17 +52,16 @@ class Heap {
 
   // Create a string object initialized with zeros. Caller should set
   // the actual contents.
-  Object* CreateString(Class* the_class, int length, bool immutable);
+  Object* CreateString(Class* the_class, int length);
 
   // Create a string object where the payload is uninitialized.
   // The payload therefore contains whatever was in the heap at this
   // location before. This should only be used if you are going
   // to immediately overwrite the payload with the actual data.
-  Object* CreateStringUninitialized(Class* the_class, int length,
-                                    bool immutable);
+  Object* CreateStringUninitialized(Class* the_class, int length);
 
   // Allocate stack.
-  Object* CreateStack(Class* the_class, int length, bool immutable);
+  Object* CreateStack(Class* the_class, int length);
 
   // Allocate class.
   Object* CreateMetaClass();
@@ -122,8 +119,7 @@ class Heap {
 
   Heap(Space* existing_space, WeakPointer* weak_pointers);
 
-  Object* CreateStringInternal(Class* the_class, int length, bool clear,
-                               bool immutable);
+  Object* CreateStringInternal(Class* the_class, int length, bool clear);
 
   Object* AllocateRawClass(int size);
 

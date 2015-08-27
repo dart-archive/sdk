@@ -202,8 +202,7 @@ Instance* Instance::CloneTransformed(Heap* heap) {
   // NOTE: We do not pass 'immmutable = get_immutable()' here, since the
   // immutability bit and the identity hascode will get copied via the flags
   // word.
-  Object* clone = heap->CreateComplexHeapObject(
-      new_class, Smi::FromWord(0), false);
+  Object* clone = heap->CreateInstance(new_class, Smi::FromWord(0), false);
   ASSERT(!clone->IsFailure());  // Needs to be in no-allocation-failure scope.
   Instance* target = Instance::cast(clone);
 

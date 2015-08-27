@@ -1782,8 +1782,8 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
     __ asr(R2, R2, Immediate(size_shift));
 
-    // R2 = SizeOfEntireObject - ComplexHeapObject::kSize
-    __ sub(R2, R2, Immediate(ComplexHeapObject::kSize));
+    // R2 = SizeOfEntireObject - Instance::kSize
+    __ sub(R2, R2, Immediate(Instance::kSize));
 
     // R3 = StackPointer(R6) - NumberOfFields*kPointerSize
     __ sub(R3, R6, R2);
@@ -1810,26 +1810,19 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
 
     // Load instance format & handle the three cases:
     //  - boxed => not immutable
-    //  - simple HeapObject => immutable
-    //  - ComplexHeapObject => check runtime-tracked bit
+    //  - array => not immutable
+    //  - Instance => check runtime-tracked bit
+    //  - otherwise => immutable
 
-    // NOTE: Our goal is to test whether a value is a [Boxed] or a
-    // [ComplexHeapObject]. We cannot just compare the [InstanceFormat], since
+    // NOTE: Our goal is to test whether a value is a [Boxed], an [Array] or an
+    // [Instance]. We cannot just compare the [InstanceFormat], since
     // it contains varying information (e.g. size of the instance).
     // But we can take the non-varying parts of the [InstanceFormat], namely the
-    // [TypeField] and the [ComplexHeapObjectField].
-    //
-    // We assume all [ComplexHeapObjects] have a [InstanceFormat.INSTANCE] type.
-    //
-    // Given this, we can take "a prototypical"
-    //   - `boxed_format()`
-    //   - `instance_format()`
-    // to generate masks which can be used for boxed/complex-instance tests.
-    uword mask = InstanceFormat::TypeField::mask() |
-                 InstanceFormat::ComplexHeapObjectField::mask();
-    uword complex_heap_object_mask =
-        InstanceFormat::instance_format(0).as_uword() & mask;
+    // [TypeField].
+    uword mask = InstanceFormat::TypeField::mask();
+    uword instance_mask = InstanceFormat::instance_format(0).as_uword() & mask;
     uword boxed_mask = InstanceFormat::boxed_format().as_uword() & mask;
+    uword array_mask = InstanceFormat::array_format().as_uword() & mask;
 
     __ ldr(R0, Address(R0, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ ldr(R1, Immediate(mask));
@@ -1839,15 +1832,19 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     __ cmp(R0, Immediate(boxed_mask));
     __ b(EQ, &loop_with_mutable_field);
 
-    // If this is not ComplexHeapObject, we consider it immutable.
-    __ ldr(R1, Immediate(complex_heap_object_mask));
+    // If this is an Array, we bail out.
+    __ cmp(R0, Immediate(array_mask));
+    __ b(EQ, &loop_with_mutable_field);
+
+    // If this is not an Instance, we consider it immutable.
+    __ ldr(R1, Immediate(instance_mask));
     __ cmp(R0, R1);
     __ b(NE, &loop_with_immutable_field);
 
-    // Else, we must have a ComplexHeapObject and check the runtime-tracked
+    // Else, we must have an Instance and check the runtime-tracked
     // immutable bit.
-    uword im_mask = ComplexHeapObject::FlagsImmutabilityField::encode(true);
-    __ ldr(R2, Address(R2, ComplexHeapObject::kFlagsOffset - HeapObject::kTag));
+    uword im_mask = Instance::FlagsImmutabilityField::encode(true);
+    __ ldr(R2, Address(R2, Instance::kFlagsOffset - HeapObject::kTag));
     __ and_(R2, R2, Immediate(im_mask));
     __ cmp(R2, Immediate(im_mask));
     __ b(EQ, &loop_with_immutable_field);

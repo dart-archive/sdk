@@ -28,14 +28,13 @@ namespace fletch {
 //       Function
 //       Initializer
 //       LargeInteger
-//       ComplexHeapObject
-//         BaseArray
-//           Array
-//           ByteArray
-//           Stack
-//           String
-//         Instance
-//           Coroutine
+//       BaseArray
+//         Array
+//         ByteArray
+//         Stack
+//         String
+//       Instance
+//         Coroutine
 
 class Heap;
 class Process;
@@ -80,10 +79,7 @@ class Object {
   inline bool IsTrue();
   inline bool IsFalse();
 
-  // - based on complex heap object field in class.
-  inline bool IsComplexHeapObject();
-
-  // - based on the flags field in class ComplexHeapObject.
+  // - based on the flags field in class Instance.
   inline bool IsImmutable();
 
   // Print object on stdout.
@@ -151,8 +147,7 @@ class Smi: public Object {
 
 // The instance format describes how an instance of a class looks.
 // The bit format of the word is as follows:
-//   [MSB...11] Contains the non variable size of the instance.
-//   [10]       Whether the object is a ComplexHeapObject.
+//   [MSB...10] Contains the non variable size of the instance.
 //   [9-7]      The marker of the instance.
 //   [6]        Tells whether all pointers are in the non variable part.
 //   [5]        Tells whether the object has a variable part.
@@ -228,10 +223,6 @@ class InstanceFormat {
     return OnlyPointersInFixedPartField::decode(as_uword());
   }
 
-  bool is_complex_heap_object() {
-    return ComplexHeapObjectField::decode(as_uword());
-  }
-
   Marker marker() {
     return MarkerField::decode(as_uword());
   }
@@ -243,8 +234,7 @@ class InstanceFormat {
   class HasVariablePartField: public BoolField<5> {};
   class OnlyPointersInFixedPartField: public BoolField<6> {};
   class MarkerField: public BitField<Marker, 7, 3>{};
-  class ComplexHeapObjectField: public BoolField<10> {};
-  class FixedSizeField: public BitField<int, 11, 31-11> {};
+  class FixedSizeField: public BitField<int, 10, 31-10> {};
 
  private:
   // Constructor only used by factory functions.
@@ -252,7 +242,6 @@ class InstanceFormat {
                                  int fixed_size,
                                  bool has_variable_part,
                                  bool only_pointers_in_fixed_part,
-                                 bool is_complex_heap_object,
                                  Marker marker);
 
   // Exclusive access to Class contructing from Smi.
@@ -348,43 +337,6 @@ class HeapObject: public Object {
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(HeapObject);
-};
-
-class ComplexHeapObject: public HeapObject {
- public:
-  // Casting.
-  static inline ComplexHeapObject* cast(Object* obj);
-
-  // [immutable]: field indicating immutability of an object.
-  inline bool get_immutable();
-  // NOTE: This method will also initialize the idendity hash code to 0.
-  inline void set_immutable(bool immutable);
-
-  inline Smi* LazyIdentityHashCode(RandomLCG* random);
-
-  // Sizing.
-  static const int kFlagsOffset = HeapObject::kSize;
-  static const int kSize = kFlagsOffset + kPointerSize;
-
-  // Leave LSB for Smi tag.
-  class FlagsImmutabilityField: public BoolField<1> {};
-  class FlagsHashCodeField: public BitField<word, 2, 32 - 2> { };
-
- protected:
-  inline void Initialize(int size, Object* init_value);
-
-  inline void InitializeIdentityHashCode(RandomLCG* random);
-  inline void SetIdentityHashCode(Smi* smi);
-  inline Smi* IdentityHashCode();
-  inline uint32 FlagsBits();
-  inline void SetFlagsBits(uint32 bits);
-
-  friend class Heap;
-  friend class Program;
-  friend class SnapshotWriter;
-
- private:
-  DISALLOW_IMPLICIT_CONSTRUCTORS(ComplexHeapObject);
 };
 
 // Heap allocated integer object with a 64-bit value.
@@ -539,14 +491,14 @@ class Failure: public Object {
 };
 
 // Abstract base class for arrays. It provides length behavior.
-class BaseArray: public ComplexHeapObject {
+class BaseArray: public HeapObject {
  public:
   // [length]: length of the array.
   inline int length();
   inline void set_length(int value);
 
   // Layout descriptor.
-  static const int kLengthOffset = ComplexHeapObject::kSize;
+  static const int kLengthOffset = HeapObject::kSize;
   static const int kSize = kLengthOffset + kPointerSize;
 
   // Casting.
@@ -633,13 +585,20 @@ class ByteArray : public BaseArray {
   DISALLOW_IMPLICIT_CONSTRUCTORS(ByteArray);
 };
 
-class Instance: public ComplexHeapObject {
+class Instance: public HeapObject {
  public:
   inline static Instance* cast(Object* value);
 
   // Fields operations.
   inline Object* GetInstanceField(int index);
   inline void SetInstanceField(int index, Object* object);
+
+  // [immutable]: field indicating immutability of an object.
+  inline bool get_immutable();
+  // NOTE: This method will also initialize the idendity hash code to 0.
+  inline void set_immutable(bool immutable);
+
+  inline Smi* LazyIdentityHashCode(RandomLCG* random);
 
   // Sizing.
   inline static int AllocationSize(int number_of_fields) {
@@ -663,6 +622,27 @@ class Instance: public ComplexHeapObject {
   // Printing.
   void InstancePrint();
   void InstanceShortPrint();
+
+  // Sizing.
+  static const int kFlagsOffset = HeapObject::kSize;
+  static const int kSize = kFlagsOffset + kPointerSize;
+
+  // Leave LSB for Smi tag.
+  class FlagsImmutabilityField: public BoolField<1> {};
+  class FlagsHashCodeField: public BitField<word, 2, 32 - 2> { };
+
+ protected:
+  inline void Initialize(int size, Object* init_value);
+
+  inline void InitializeIdentityHashCode(RandomLCG* random);
+  inline void SetIdentityHashCode(Smi* smi);
+  inline Smi* IdentityHashCode();
+  inline uint32 FlagsBits();
+  inline void SetFlagsBits(uint32 bits);
+
+  friend class Heap;
+  friend class Program;
+  friend class SnapshotWriter;
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(Instance);
@@ -1050,14 +1030,12 @@ InstanceFormat::InstanceFormat(Type type,
                                int fixed_size,
                                bool has_variable_part,
                                bool only_pointers_in_fixed_part,
-                               bool is_complex_heap_object,
                                Marker marker = NO_MARKER) {
   ASSERT(Utils::IsAligned(fixed_size, kPointerSize));
   uword v = TypeField::encode(type)
       | HasVariablePartField::encode(has_variable_part)
       | OnlyPointersInFixedPartField::encode(only_pointers_in_fixed_part)
       | MarkerField::encode(marker)
-      | ComplexHeapObjectField::encode(is_complex_heap_object)
       | FixedSizeField::encode(fixed_size / kPointerSize);
   value_ = Smi::cast(reinterpret_cast<Smi*>(v));
   ASSERT(type == this->type());
@@ -1067,29 +1045,27 @@ InstanceFormat::InstanceFormat(Type type,
 }
 
 const InstanceFormat InstanceFormat::heap_integer_format() {
-  return InstanceFormat(
-      LARGE_INTEGER_TYPE, LargeInteger::kSize, true, true, false);
+  return InstanceFormat(LARGE_INTEGER_TYPE, LargeInteger::kSize, true, true);
 }
 
 const InstanceFormat InstanceFormat::byte_array_format() {
-  return InstanceFormat(BYTE_ARRAY_TYPE, ByteArray::kSize, true, true, true);
+  return InstanceFormat(BYTE_ARRAY_TYPE, ByteArray::kSize, true, true);
 }
 
 const InstanceFormat InstanceFormat::double_format() {
-  return InstanceFormat(DOUBLE_TYPE, Double::kSize, true, true, false);
+  return InstanceFormat(DOUBLE_TYPE, Double::kSize, true, true);
 }
 
 const InstanceFormat InstanceFormat::boxed_format() {
-  return InstanceFormat(BOXED_TYPE, Boxed::kSize, false, true, false);
+  return InstanceFormat(BOXED_TYPE, Boxed::kSize, false, true);
 }
 
 const InstanceFormat InstanceFormat::initializer_format() {
-  return InstanceFormat(
-      INITIALIZER_TYPE, Initializer::kSize, false, true, false);
+  return InstanceFormat(INITIALIZER_TYPE, Initializer::kSize, false, true);
 }
 
 const InstanceFormat InstanceFormat::function_format() {
-  return InstanceFormat(FUNCTION_TYPE, Function::kSize, true, false, false);
+  return InstanceFormat(FUNCTION_TYPE, Function::kSize, true, false);
 }
 
 const InstanceFormat InstanceFormat::instance_format(int number_of_fields,
@@ -1098,35 +1074,33 @@ const InstanceFormat InstanceFormat::instance_format(int number_of_fields,
                         Instance::AllocationSize(number_of_fields),
                         false,
                         true,
-                        true,
                         marker);
 }
 
 const InstanceFormat InstanceFormat::class_format() {
-  return InstanceFormat(
-      CLASS_TYPE, Class::AllocationSize(), false, true, false);
+  return InstanceFormat(CLASS_TYPE, Class::AllocationSize(), false, true);
 }
 
 const InstanceFormat InstanceFormat::smi_format() {
-  return InstanceFormat(IMMEDIATE_TYPE, 0, false, false, false);
+  return InstanceFormat(IMMEDIATE_TYPE, 0, false, false);
 }
 
 const InstanceFormat InstanceFormat::num_format() {
   // TODO(ager): This is not really an immediate type. It is an
   // abstract class and therefore doesn't have any instances.
-  return InstanceFormat(IMMEDIATE_TYPE, 0, false, false, false);
+  return InstanceFormat(IMMEDIATE_TYPE, 0, false, false);
 }
 
 const InstanceFormat InstanceFormat::string_format() {
-  return InstanceFormat(STRING_TYPE, String::kSize, true, true, true);
+  return InstanceFormat(STRING_TYPE, String::kSize, true, true);
 }
 
 const InstanceFormat InstanceFormat::array_format() {
-  return InstanceFormat(ARRAY_TYPE, Array::kSize, true, false, true);
+  return InstanceFormat(ARRAY_TYPE, Array::kSize, true, false);
 }
 
 const InstanceFormat InstanceFormat::stack_format() {
-  return InstanceFormat(STACK_TYPE, Stack::kSize, true, false, true);
+  return InstanceFormat(STACK_TYPE, Stack::kSize, true, false);
 }
 
 // Inlined Object functions.
@@ -1139,11 +1113,6 @@ bool Object::IsSmi() {
 bool Object::IsHeapObject() {
   int tag = reinterpret_cast<uword>(this) & HeapObject::kTagMask;
   return tag == HeapObject::kTag;
-}
-
-bool Object::IsComplexHeapObject() {
-  if (IsSmi()) return false;
-  return HeapObject::cast(this)->format().is_complex_heap_object();
 }
 
 bool Object::IsFailure() {
@@ -1276,9 +1245,8 @@ bool Object::IsImmutable() {
 
   ASSERT(IsHeapObject());
   if (IsBoxed()) return false;
-  if (IsComplexHeapObject()) {
-    return ComplexHeapObject::cast(this)->get_immutable();
-  }
+  if (IsArray()) return false;
+  if (IsInstance()) return Instance::cast(this)->get_immutable();
   return true;
 }
 
@@ -1346,22 +1314,17 @@ void HeapObject::set_class(Class* value) {
   at_put(kClassOffset, value);
 }
 
-ComplexHeapObject* ComplexHeapObject::cast(Object* object) {
-  ASSERT(object->IsComplexHeapObject());
-  return reinterpret_cast<ComplexHeapObject*>(object);
-}
-
-bool ComplexHeapObject::get_immutable() {
+bool Instance::get_immutable() {
   return FlagsImmutabilityField::decode(
       reinterpret_cast<word>(Smi::cast(at(kFlagsOffset))));
 }
 
-void ComplexHeapObject::set_immutable(bool immutable) {
+void Instance::set_immutable(bool immutable) {
   word flags = FlagsImmutabilityField::encode(immutable);
   at_put(kFlagsOffset, reinterpret_cast<Smi*>(flags));
 }
 
-Smi* ComplexHeapObject::LazyIdentityHashCode(RandomLCG* random) {
+Smi* Instance::LazyIdentityHashCode(RandomLCG* random) {
   Smi* hash_code = IdentityHashCode();
   if (hash_code->value() == 0) {
     InitializeIdentityHashCode(random);
@@ -1370,14 +1333,14 @@ Smi* ComplexHeapObject::LazyIdentityHashCode(RandomLCG* random) {
   return hash_code;
 }
 
-void ComplexHeapObject::Initialize(int size, Object* null) {
+void Instance::Initialize(int size, Object* null) {
   // Initialize the body of the instance.
   for (int offset = kSize; offset < size; offset += kPointerSize) {
     at_put(offset, null);
   }
 }
 
-void ComplexHeapObject::InitializeIdentityHashCode(RandomLCG* random) {
+void Instance::InitializeIdentityHashCode(RandomLCG* random) {
   // Taking the most significant FlagsHashCodeField size bits of a
   // random number might be 0. So we keep getting random numbers until
   // we've received a non-0 value.
@@ -1390,7 +1353,7 @@ void ComplexHeapObject::InitializeIdentityHashCode(RandomLCG* random) {
   }
 }
 
-void ComplexHeapObject::SetIdentityHashCode(Smi* smi) {
+void Instance::SetIdentityHashCode(Smi* smi) {
   word hash_code = smi->value();
   word flags = reinterpret_cast<word>(at(kFlagsOffset));
   flags = FlagsHashCodeField::update(hash_code, flags);
@@ -1400,12 +1363,12 @@ void ComplexHeapObject::SetIdentityHashCode(Smi* smi) {
   ASSERT(FlagsHashCodeField::decode(flags) == hash_code);
 }
 
-Smi* ComplexHeapObject::IdentityHashCode() {
+Smi* Instance::IdentityHashCode() {
   word flags = reinterpret_cast<word>(at(kFlagsOffset));
   return Smi::FromWord(FlagsHashCodeField::decode(flags));
 }
 
-uint32 ComplexHeapObject::FlagsBits() {
+uint32 Instance::FlagsBits() {
   // Convert to unsigned word sized integer before expanding to 64
   // bits. This is important on 32-bit systems where the conversion to
   // integral types otherwise performs a sign extension first.
@@ -1414,7 +1377,7 @@ uint32 ComplexHeapObject::FlagsBits() {
   return static_cast<uint32>(bits);
 }
 
-void ComplexHeapObject::SetFlagsBits(uint32 bits) {
+void Instance::SetFlagsBits(uint32 bits) {
   Smi* value = reinterpret_cast<Smi*>(bits);
   ASSERT(value->IsSmi());
   at_put(kFlagsOffset, value);
@@ -1667,11 +1630,11 @@ Instance* Instance::cast(Object* object) {
 }
 
 Object* Instance::GetInstanceField(int index) {
-  return at(ComplexHeapObject::kSize + (index * kPointerSize));
+  return at(Instance::kSize + (index * kPointerSize));
 }
 
 void Instance::SetInstanceField(int index, Object* object) {
-  at_put(ComplexHeapObject::kSize + (index * kPointerSize), object);
+  at_put(Instance::kSize + (index * kPointerSize), object);
 }
 
 int Instance::AlternativeSize(Class* klass) {

@@ -99,13 +99,12 @@ void Program::VisitProcesses(ProcessVisitor* visitor) {
 }
 
 Object* Program::CreateArrayWith(int capacity, Object* initial_value) {
-  Object* result = heap()->CreateArray(
-      array_class(), capacity, initial_value, false);
+  Object* result = heap()->CreateArray(array_class(), capacity, initial_value);
   return result;
 }
 
 Object* Program::CreateByteArray(int capacity) {
-  Object* result = heap()->CreateByteArray(byte_array_class(), capacity, true);
+  Object* result = heap()->CreateByteArray(byte_array_class(), capacity);
   return result;
 }
 
@@ -147,7 +146,7 @@ Object* Program::CreateInteger(int64 value) {
 
 Object* Program::CreateStringFromAscii(List<const char> str) {
   Object* raw_result = heap()->CreateStringUninitialized(
-      string_class(), str.length(), true);
+      string_class(), str.length());
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
   ASSERT(result->length() == str.length());
@@ -160,7 +159,7 @@ Object* Program::CreateStringFromAscii(List<const char> str) {
 
 Object* Program::CreateString(List<uint16> str) {
   Object* raw_result = heap()->CreateStringUninitialized(
-      string_class(), str.length(), true);
+      string_class(), str.length());
   if (raw_result->IsFailure()) return raw_result;
   String* result = String::cast(raw_result);
   ASSERT(result->length() == str.length());
@@ -173,7 +172,7 @@ Object* Program::CreateString(List<uint16> str) {
 
 Object* Program::CreateInstance(Class* klass) {
   bool immutable = true;
-  return heap()->CreateComplexHeapObject(klass, null_object(), immutable);
+  return heap()->CreateInstance(klass, null_object(), immutable);
 }
 
 Object* Program::CreateInitializer(Function* function) {
@@ -494,7 +493,7 @@ void Program::Initialize() {
   // null_object for initial values.
   InstanceFormat null_format =
       InstanceFormat::instance_format(0, InstanceFormat::NULL_MARKER);
-  null_object_ = reinterpret_cast<ComplexHeapObject*>(
+  null_object_ = reinterpret_cast<Instance*>(
       heap()->Allocate(null_format.fixed_size()));
 
   meta_class_ = Class::cast(heap()->CreateMetaClass());
@@ -619,7 +618,7 @@ void Program::Initialize() {
     string_class_->set_super_class(object_class_);
   }
 
-  empty_string_ = String::cast(heap()->CreateString(string_class(), 0, true));
+  empty_string_ = String::cast(heap()->CreateString(string_class(), 0));
 
   {
     InstanceFormat format = InstanceFormat::function_format();
@@ -660,8 +659,8 @@ void Program::Initialize() {
         heap()->CreateClass(format, meta_class_, null_object_));
     false_class->set_super_class(bool_class_);
     false_class->set_methods(empty_array_);
-    false_object_ = ComplexHeapObject::cast(
-        heap()->CreateComplexHeapObject(false_class, null_object(), true));
+    false_object_ = Instance::cast(
+        heap()->CreateInstance(false_class, null_object(), true));
   }
 
   { // Create True class and the true object.
@@ -671,16 +670,16 @@ void Program::Initialize() {
         heap()->CreateClass(format, meta_class_, null_object_));
     true_class->set_super_class(bool_class_);
     true_class->set_methods(empty_array_);
-    true_object_ = ComplexHeapObject::cast(
-        heap()->CreateComplexHeapObject(true_class, null_object(), true));
+    true_object_ = Instance::cast(
+        heap()->CreateInstance(true_class, null_object(), true));
   }
 
   { // Create sentinel singleton.
     InstanceFormat format = InstanceFormat::instance_format(0);
     Class* sentinel_class = Class::cast(
         heap()->CreateClass(format, meta_class_, null_object_));
-    sentinel_object_ = ComplexHeapObject::cast(
-        heap()->CreateComplexHeapObject(sentinel_class, null_object(), true));
+    sentinel_object_ = Instance::cast(
+        heap()->CreateInstance(sentinel_class, null_object(), true));
   }
 
   // Create the retry after gc failure object payload.

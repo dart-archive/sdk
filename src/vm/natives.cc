@@ -930,8 +930,7 @@ NATIVE(IdentityHashCode) {
     double value = Double::cast(object)->value();
     return process->ToInteger(static_cast<int64>(value));
   } else {
-    return ComplexHeapObject::cast(object)->LazyIdentityHashCode(
-        process->random());
+    return Instance::cast(object)->LazyIdentityHashCode(process->random());
   }
 }
 

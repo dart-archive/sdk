@@ -37,13 +37,13 @@ void Heap::TryDealloc(Object* object, int size) {
   space_->TryDealloc(location, size);
 }
 
-Object* Heap::CreateComplexHeapObject(Class* the_class,
-                                      Object* init_value,
-                                      bool immutable) {
+Object* Heap::CreateInstance(Class* the_class,
+                             Object* init_value,
+                             bool immutable) {
   int size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
-  ComplexHeapObject* result = reinterpret_cast<ComplexHeapObject*>(raw_result);
+  Instance* result = reinterpret_cast<Instance*>(raw_result);
   result->set_class(the_class);
   result->set_immutable(immutable);
   if (immutable) result->InitializeIdentityHashCode(random());
@@ -52,21 +52,18 @@ Object* Heap::CreateComplexHeapObject(Class* the_class,
   return result;
 }
 
-Object* Heap::CreateArray(Class* the_class, int length, Object* init_value,
-                          bool immutable) {
+Object* Heap::CreateArray(Class* the_class, int length, Object* init_value) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::ARRAY_TYPE);
   int size = Array::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Array* result = reinterpret_cast<Array*>(raw_result);
   result->set_class(the_class);
-  result->set_immutable(immutable);
-  if (immutable) result->InitializeIdentityHashCode(random());
   result->Initialize(length, size, init_value);
   return Array::cast(result);
 }
 
-Object* Heap::CreateByteArray(Class* the_class, int length, bool immutable) {
+Object* Heap::CreateByteArray(Class* the_class, int length) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::BYTE_ARRAY_TYPE);
   int size = ByteArray::AllocationSize(length);
@@ -74,8 +71,6 @@ Object* Heap::CreateByteArray(Class* the_class, int length, bool immutable) {
   if (raw_result->IsFailure()) return raw_result;
   ByteArray* result = reinterpret_cast<ByteArray*>(raw_result);
   result->set_class(the_class);
-  result->set_immutable(immutable);
-  if (immutable) result->InitializeIdentityHashCode(random());
   result->Initialize(length);
   return ByteArray::cast(result);
 }
@@ -132,8 +127,7 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function) {
   return Initializer::cast(result);
 }
 
-Object* Heap::CreateStringInternal(Class* the_class, int length, bool clear,
-                                   bool immutable) {
+Object* Heap::CreateStringInternal(Class* the_class, int length, bool clear) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::STRING_TYPE);
   int size = String::AllocationSize(length);
@@ -141,30 +135,25 @@ Object* Heap::CreateStringInternal(Class* the_class, int length, bool clear,
   if (raw_result->IsFailure()) return raw_result;
   String* result = reinterpret_cast<String*>(raw_result);
   result->set_class(the_class);
-  result->set_immutable(immutable);
-  if (immutable) result->InitializeIdentityHashCode(random());
   result->Initialize(size, length, clear);
   return String::cast(result);
 }
 
-Object* Heap::CreateString(Class* the_class, int length, bool immutable) {
-  return CreateStringInternal(the_class, length, true, immutable);
+Object* Heap::CreateString(Class* the_class, int length) {
+  return CreateStringInternal(the_class, length, true);
 }
 
-Object* Heap::CreateStringUninitialized(Class* the_class, int length,
-                                        bool immutable) {
-  return CreateStringInternal(the_class, length, false, immutable);
+Object* Heap::CreateStringUninitialized(Class* the_class, int length) {
+  return CreateStringInternal(the_class, length, false);
 }
 
-Object* Heap::CreateStack(Class* the_class, int length, bool immutable) {
+Object* Heap::CreateStack(Class* the_class, int length) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::STACK_TYPE);
   int size = Stack::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Stack* result = reinterpret_cast<Stack*>(raw_result);
   result->set_class(the_class);
-  result->set_immutable(immutable);
-  if (immutable) result->InitializeIdentityHashCode(random());
   result->Initialize(length);
   return Stack::cast(result);
 }

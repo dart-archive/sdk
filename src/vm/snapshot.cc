@@ -571,14 +571,12 @@ void String::StringWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::STRING_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteInt64(FlagsBits());
   writer->WriteBytes(length() * sizeof(uint16_t), byte_address_for(0));
 }
 
 void String::StringReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
   set_hash_value(kNoHashValue);
-  SetFlagsBits(reader->ReadInt64());
   reader->ReadBytes(length * sizeof(uint16_t), byte_address_for(0));
 }
 
@@ -587,7 +585,6 @@ void Array::ArrayWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::ARRAY_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteInt64(FlagsBits());
   for (int i = 0; i < length(); i++) {
     writer->WriteObject(get(i));
   }
@@ -595,7 +592,6 @@ void Array::ArrayWriteTo(SnapshotWriter* writer, Class* klass) {
 
 void Array::ArrayReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
-  SetFlagsBits(reader->ReadInt64());
   for (int i = 0; i < length; i++) set(i, reader->ReadObject());
 }
 
@@ -604,14 +600,12 @@ void ByteArray::ByteArrayWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::BYTE_ARRAY_TYPE, length());
   writer->Forward(this);
   // Body.
-  writer->WriteInt64(FlagsBits());
   if (length() == 0) return;
   writer->WriteBytes(length(), byte_address_for(0));
 }
 
 void ByteArray::ByteArrayReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
-  SetFlagsBits(reader->ReadInt64());
   if (length == 0) return;
   reader->ReadBytes(length, byte_address_for(0));
 }
@@ -631,9 +625,7 @@ void Instance::InstanceWriteTo(SnapshotWriter* writer, Class* klass) {
 void Instance::InstanceReadFrom(SnapshotReader* reader, int fields) {
   int size = AllocationSize(fields);
   SetFlagsBits(reader->ReadInt64());
-  for (int offset = ComplexHeapObject::kSize;
-       offset < size;
-       offset += kPointerSize) {
+  for (int offset = Instance::kSize; offset < size; offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
 }
