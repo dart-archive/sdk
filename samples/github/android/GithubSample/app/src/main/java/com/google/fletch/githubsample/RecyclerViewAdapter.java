@@ -17,9 +17,11 @@ import java.util.List;
 public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.CommitViewHolder>{
 
   List<Commit> commitList;
+  ImageLoader imageLoader;
 
-  RecyclerViewAdapter(List<Commit> commitList) {
+  RecyclerViewAdapter(List<Commit> commitList, ImageLoader imageLoader) {
     this.commitList = commitList;
+    this.imageLoader = imageLoader;
   }
 
   @Override
@@ -33,7 +35,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
   public void onBindViewHolder(CommitViewHolder holder, int position) {
     holder.author.setText(commitList.get(position).author);
     holder.title.setText(commitList.get(position).title);
-    holder.avatar.setImageResource(commitList.get(position).imageId);
+    imageLoader.loadImageFromUrl(holder.avatar, commitList.get(position).imageUrl);
   }
 
   @Override

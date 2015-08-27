@@ -14,7 +14,7 @@ public class CommitList {
   CommitList() {
     this.commitList = new ArrayList<Commit>();
     for (int i = 0; i < 50; i++) {
-      commitList.add(new Commit("Title", "Author", R.drawable.dart_logo));
+      commitList.add(new Commit("Title", "Author", "https://www.dartlang.org/logos/dart-logo.png"));
     }
   }
 }

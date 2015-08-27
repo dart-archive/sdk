@@ -10,11 +10,11 @@ import java.util.List;
 public class Commit {
   String title;
   String author;
-  int imageId;
+  String imageUrl;
 
-  Commit(String title, String author, int imageId){
+  Commit(String title, String author, String imageUrl){
     this.title = title;
     this.author = author;
-    this.imageId = imageId;
+    this.imageUrl = imageUrl;
   }
 }
