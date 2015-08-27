@@ -44,7 +44,7 @@ class ThreadIdentifier {
  private:
   friend class Thread;
 
-  ThreadIdentifier(pthread_t thread) : thread_(thread) { }
+  explicit ThreadIdentifier(pthread_t thread) : thread_(thread) { }
 
   pthread_t thread_;
 };

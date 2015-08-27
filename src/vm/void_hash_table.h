@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 //
-#ifndef SRC_VM_VOID_HASHTABLE_H_
-#define SRC_VM_VOID_HASHTABLE_H_
+#ifndef SRC_VM_VOID_HASH_TABLE_H_
+#define SRC_VM_VOID_HASH_TABLE_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -14,7 +14,7 @@ namespace fletch {
 
 class VoidHashTable {
  public:
-  VoidHashTable(size_t value_size);
+  explicit VoidHashTable(size_t value_size);
 
   char* Find(const void* key);
 
@@ -189,4 +189,4 @@ class VoidHashTable {
 
 }  // namespace fletch.
 
-#endif  // SRC_VM_VOID_HASHTABLE_H_
+#endif  // SRC_VM_VOID_HASH_TABLE_H_

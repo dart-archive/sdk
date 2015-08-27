@@ -201,9 +201,9 @@ class InstanceFormat {
   InstanceFormat set_fixed_size(int value) {
     ASSERT(Utils::IsAligned(value, kPointerSize));
     int pointers = value / kPointerSize;
-    return InstanceFormat(
-        Smi::cast(
-            reinterpret_cast<Smi*>(FixedSizeField::update(pointers, as_uword()))));
+    Smi* updated_field =
+        reinterpret_cast<Smi*>(FixedSizeField::update(pointers, as_uword()));
+    return InstanceFormat(Smi::cast(updated_field));
   }
 
   // Accessors.

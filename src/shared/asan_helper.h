@@ -34,4 +34,3 @@
 #endif
 
 #endif  // SRC_SHARED_ASAN_HELPER_H_
-

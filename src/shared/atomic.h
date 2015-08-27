@@ -25,7 +25,7 @@ class Atomic {
  public:
   Atomic() : value_(T()) { }
 
-  Atomic(T value) : value_(value) { }
+  Atomic(T value) : value_(value) { }  // NOLINT
 
   T operator=(T other) {
     store(other);
@@ -76,14 +76,14 @@ class Atomic {
     return result;
   }
 
-  bool compare_exchange_weak(T& expected,
+  bool compare_exchange_weak(T& expected,  // NOLINT
                              T other,
                              MemoryOrder order = kSeqCst) {
     return __atomic_compare_exchange(
         &value_, &expected, &other, true, order, order);
   }
 
-  bool compare_exchange_weak(T& expected,
+  bool compare_exchange_weak(T& expected,  // NOLINT
                              T other,
                              MemoryOrder success,
                              MemoryOrder failure) {
@@ -91,14 +91,14 @@ class Atomic {
         &value_, &expected, &other, true, success, failure);
   }
 
-  bool compare_exchange_strong(T& expected,
+  bool compare_exchange_strong(T& expected,  // NOLINT
                                T other,
                                MemoryOrder order = kSeqCst) {
     return __atomic_compare_exchange(
         &value_, &expected, &other, false, order, order);
   }
 
-  bool compare_exchange_strong(T& expected,
+  bool compare_exchange_strong(T& expected,  // NOLINT
                                T other,
                                MemoryOrder success,
                                MemoryOrder failure) {
@@ -126,6 +126,6 @@ class Atomic {
   T value_;
 };
 
-}
+}  // namespace fletch
 
 #endif  // SRC_SHARED_ATOMIC_H_

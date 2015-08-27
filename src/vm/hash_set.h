@@ -11,7 +11,7 @@ namespace fletch {
 
 template<typename Key>
 struct SetKeyExtractor {
-  static Key& GetKey(Key& key) {
+  static Key& GetKey(Key& key) {  // NOLINT
     return key;
   }
 
@@ -35,4 +35,4 @@ class HashSet : public UnorderedHashTable<Key, Key, SetKeyExtractor<Key> > {
 
 }  // namespace fletch
 
-#endif  // SRC_VM_HASHSET_H_
+#endif  // SRC_VM_HASH_SET_H_

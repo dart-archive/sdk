@@ -2,6 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#ifndef SRC_VM_NATIVE_INTERPRETER_H_
+#define SRC_VM_NATIVE_INTERPRETER_H_
+
 namespace fletch {
 
 class Process;
@@ -30,3 +33,5 @@ int InterpretFast(Process* process, TargetYieldResult* target_yield_result) {
 #endif  // defined(FLETCH_TARGET_IA32) || defined(FLETCH_TARGET_ARM)
 
 }  // namespace fletch
+
+#endif  // SRC_VM_NATIVE_INTERPRETER_H_

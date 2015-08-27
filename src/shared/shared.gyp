@@ -14,20 +14,33 @@
       'type': 'static_library',
       'toolsets': ['target', 'host'],
       'sources': [
-        # TODO(ahe): Add header (.h) files.
+        'asan_helper.h',
         'assert.cc',
+        'assert.h',
+        'atomic.h',
         'bytecodes.cc',
+        'bytecodes.h',
         'connection.cc',
+        'connection.h',
         'flags.cc',
-        'native_socket_macos.cc',
+        'flags.h',
+        'fletch.h',
+        'globals.h',
+        'list.h',
+        'names.h',
+        'natives.h',
+        'native_socket.h',
         'native_socket_linux.cc',
+        'native_socket_macos.cc',
         'native_socket_posix.cc',
         'platform.h',
         'platform_linux.cc',
         'platform_macos.cc',
         'platform_posix.cc',
-        'test_case.cc',
+        'random.h',
+        'selectors.h',
         'utils.cc',
+        'utils.h',
       ],
       'link_settings': {
         'libraries': [
@@ -36,24 +49,33 @@
       },
     },
     {
+      'target_name': 'cc_test_base',
+      'type': 'static_library',
+      'dependencies': [
+        'fletch_shared',
+      ],
+      'sources': [
+        'test_case.h',
+        'test_case.cc',
+        'test_main.cc',
+      ],
+    },
+    {
       'target_name': 'shared_cc_tests',
       'type': 'executable',
       'dependencies': [
-        'fletch_shared',
+        'cc_test_base',
       ],
       'defines': [
         'TESTING',
       ],
       'sources': [
-        # TODO(ahe): Add header (.h) files.
         'assert_test.cc',
         'flags_test.cc',
         'globals_test.cc',
         'random_test.cc',
         'utils_test.cc',
-
         'fletch.cc',
-        'test_main.cc',
       ],
     },
     {

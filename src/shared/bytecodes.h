@@ -128,7 +128,8 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
                                                                                \
   V(MethodEnd,            false,    "I",  5,        0, "method end %d")        \
 
-#define BYTECODE_OPCODE(name, branching, format, length, stack_diff, print) k##name,
+#define BYTECODE_OPCODE(name, branching, format, length, stack_diff, print) \
+  k##name,
 enum Opcode {
   BYTECODES_DO(BYTECODE_OPCODE)
 };

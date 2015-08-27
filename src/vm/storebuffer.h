@@ -46,7 +46,7 @@ class StoreBufferChunk {
 
 class StoreBuffer {
  public:
-  StoreBuffer(bool empty = false)
+  explicit StoreBuffer(bool empty = false)
       : current_chunk_(empty ? NULL : new StoreBufferChunk()),
         last_chunk_(current_chunk_),
         number_of_chunks_(empty ? 0 : 1),

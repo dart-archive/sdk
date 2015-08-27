@@ -6,6 +6,9 @@
 // There are no tests in this file, but we keep this to have a single place
 // for functionality that we want to test in the FFI implementation.
 
+#ifndef SRC_VM_FFI_TEST_LIBRARY_H_
+#define SRC_VM_FFI_TEST_LIBRARY_H_
+
 #define EXPORT __attribute__((visibility("default")))
 
 static int count;
@@ -78,3 +81,5 @@ EXPORT void* memuint64();
 EXPORT void* memfloat32();
 
 EXPORT void* memfloat64();
+
+#endif  // SRC_VM_FFI_TEST_LIBRARY_H_

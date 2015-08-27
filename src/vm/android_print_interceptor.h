@@ -23,4 +23,4 @@ class AndroidPrintInterceptor : public PrintInterceptor {
 
 #endif  // defined(__ANDROID__)
 
-#endif // SRC_VM_ANDROID_PRINT_INTERCEPTOR_H_
+#endif  // SRC_VM_ANDROID_PRINT_INTERCEPTOR_H_

@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef SRC_VM_LIST_H_
-#define SRC_VM_LIST_H_
+#ifndef SRC_SHARED_LIST_H_
+#define SRC_SHARED_LIST_H_
 
 #include <stdlib.h>
 #include <string.h>
@@ -72,4 +72,4 @@ class List {
 
 }  // namespace fletch
 
-#endif  // SRC_VM_LIST_H_
+#endif  // SRC_SHARED_LIST_H_

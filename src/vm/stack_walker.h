@@ -57,7 +57,7 @@ class StackWalker {
   uint8* return_address() const { return return_address_; }
   int frame_size() const { return frame_size_; }
   int frame_ranges_offset() const { return frame_ranges_offset_; }
-  int stack_offset() const { return stack_offset_; };
+  int stack_offset() const { return stack_offset_; }
 
   // Compute the stack offset at [bcp].
   int ComputeStackOffset(uint8* bcp, bool include_last = false);
@@ -94,4 +94,3 @@ class StackWalker {
 
 
 #endif  // SRC_VM_STACK_WALKER_H_
-

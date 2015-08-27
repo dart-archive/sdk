@@ -11,7 +11,7 @@ namespace fletch {
 
 template<typename Key, typename Mapped>
 struct MapKeyExtractor {
-  static Key& GetKey(Pair<Key, Mapped>& pair) {
+  static Key& GetKey(Pair<Key, Mapped>& pair) {  // NOLINT
     return pair.first;
   }
 

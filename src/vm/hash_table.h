@@ -64,7 +64,7 @@ class UnorderedHashTable {
     VoidHashTable::Iterator<Pointer> void_iterator_;
 
     template<typename T>
-    CommonIterator(const VoidHashTable::Iterator<T>& other)
+    CommonIterator(const VoidHashTable::Iterator<T>& other)  // NOLINT
         : void_iterator_(other) { }
 
    private:
@@ -95,7 +95,8 @@ class UnorderedHashTable {
    public:
     inline ConstIterator() : Super() { }
 
-     ConstIterator(const Iterator& other) : Super(other.void_iterator_) { }
+    ConstIterator(const Iterator& other)  // NOLINT
+        : Super(other.void_iterator_) { }
 
    private:
     typedef CommonIterator<const char*, const ValueType> Super;

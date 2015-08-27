@@ -66,7 +66,7 @@ class ProgramState {
   ProgramState() : paused_processes_head_(NULL), is_paused_(false) {}
 
   // The [Scheduler::pause_monitor_] must be locked when calling this method.
-  void AddPausedProcess(Process* process) ;
+  void AddPausedProcess(Process* process);
 
   bool is_paused() const { return is_paused_; }
   void set_is_paused(bool value) { is_paused_ = value; }

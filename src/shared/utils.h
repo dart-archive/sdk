@@ -14,7 +14,7 @@ namespace fletch {
 class Mutex;
 
 class PrintInterceptor {
-public:
+ public:
   PrintInterceptor() : next_(NULL) {}
   virtual ~PrintInterceptor() {
     delete next_;
@@ -30,7 +30,7 @@ public:
 // All stdout and stderr output from the VM should go through this
 // Print class in order to allow the output to be intercepted.
 class Print {
-public:
+ public:
   static void Out(const char* format, ...);
   static void Error(const char* format, ...);
   static void RegisterPrintInterceptor(PrintInterceptor* interceptor);
@@ -40,7 +40,7 @@ public:
   // to print interceptors.
   static void DisableStandardOutput() { standard_output_enabled_ = false; }
 
-private:
+ private:
   static Mutex* mutex_;  // Mutex for interceptor modification and iteration.
   static PrintInterceptor* interceptor_;
   static Atomic<bool> standard_output_enabled_;

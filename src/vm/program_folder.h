@@ -18,7 +18,7 @@ class Space;
 // ProgramFolder used for folding and unfolding a Program.
 class ProgramFolder {
  public:
-  ProgramFolder(Program* program) : program_(program) { }
+  explicit ProgramFolder(Program* program) : program_(program) { }
 
   // Fold the program into a compact format where methods, classes and
   // constants are stored in global tables in the program instead of

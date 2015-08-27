@@ -22,7 +22,6 @@
 #include "src/vm/process.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/session.h"
-#include "src/vm/unicode.h"
 
 #include "third_party/double-conversion/src/double-conversion.h"
 
