@@ -31,7 +31,7 @@ class Session;
   V(Instance, sentinel_object)                   \
   /* Global literals up to this line */          \
   V(Array, empty_array)                          \
-  V(String, empty_string)                        \
+  V(TwoByteString, empty_string)                 \
   V(Class, meta_class)                           \
   V(Class, smi_class)                            \
   V(Class, boxed_class)                          \

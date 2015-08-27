@@ -132,10 +132,10 @@ void Session::SendDartValue(Object* value) {
   } else if (value->IsDouble()) {
     buffer.WriteDouble(Double::cast(value)->value());
     connection_->Send(Connection::kDouble, buffer);
-  } else if (value->IsString()) {
+  } else if (value->IsTwoByteString()) {
     // TODO(ager): We should send the character data as 16-bit values
     // instead of 32-bit values.
-    String* str = String::cast(value);
+    TwoByteString* str = TwoByteString::cast(value);
     for (int i = 0; i < str->length(); i++) {
       buffer.WriteInt(str->get_code_unit(i));
     }
@@ -880,7 +880,7 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
     klass = program()->constant_map_class();
   } else if (name == Names::kNum) {
     klass = program()->num_class();
-  } else if (name == Names::kString) {
+  } else if (name == Names::kTwoByteString) {
     klass = program()->string_class();
   } else if (name == Names::kCoroutine) {
     klass = program()->coroutine_class();

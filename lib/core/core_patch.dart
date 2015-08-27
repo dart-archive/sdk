@@ -72,9 +72,9 @@ const patch = "patch";
   @patch factory String.fromCharCodes(
       Iterable<int> charCode,
       [int start,
-       int end]) = _StringImpl.fromCharCodes;
+       int end]) = _StringBase.fromCharCodes;
 
-  @patch factory String.fromCharCode(int charCode) = _StringImpl.fromCharCode;
+  @patch factory String.fromCharCode(int charCode) = _StringBase.fromCharCode;
 
   @patch factory String.fromEnvironment(
       String name,
@@ -130,7 +130,7 @@ const patch = "patch";
   @patch int get length => _length;
 
   @patch String toString() {
-    _StringImpl result = _StringImpl._create(length);
+    _TwoByteString result = _TwoByteString._create(length);
     int offset = 0;
     int count = _strings.length;
     for (int i = 0; i < count; i++) {

@@ -10,11 +10,11 @@
 
 namespace fletch {
 
-class String;
+class TwoByteString;
 
 class CodePointIterator {
  public:
-  explicit CodePointIterator(String* str);
+  explicit CodePointIterator(TwoByteString* str);
 
   int32 Current() const {
     ASSERT(index_ >= 0);
@@ -25,7 +25,7 @@ class CodePointIterator {
   bool Next();
 
  private:
-  String* str_;
+  TwoByteString* str_;
   int32 ch_;
   word index_;
   word end_;
@@ -62,10 +62,10 @@ class Utf8 {
   };
 
   static word Length(int32 ch);
-  static word Length(String* str);
+  static word Length(TwoByteString* str);
 
   static word Encode(int32 ch, char* dst);
-  static word Encode(String* src, char* dst, word len);
+  static word Encode(TwoByteString* src, char* dst, word len);
 
   static const int32 kMaxOneByteChar   = 0x7F;
   static const int32 kMaxTwoByteChar   = 0x7FF;

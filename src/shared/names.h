@@ -24,7 +24,7 @@ namespace fletch {
   N(Port,                   "Port")                     \
   N(ForeignMemory,          "ForeignMemory")            \
   N(ForeignFunction,        "ForeignFunction")          \
-  N(String,                 "_StringImpl")              \
+  N(TwoByteString,          "_TwoByteString")           \
                                                         \
   N(Equals,                 "==")                       \
   N(LessThan,               "<")                        \
@@ -65,7 +65,7 @@ NAMES_LIST(N)
   };
 
   static bool IsBuiltinClassName(int id) {
-    return id >= kObject && id <= kString;
+    return id >= kObject && id <= kTwoByteString;
   }
 };
 

@@ -13,11 +13,11 @@ namespace fletch {
 // Forward declarations.
 class Assembler;
 class Object;
-class String;
 class Process;
+class TwoByteString;
 
 // TODO(kasperl): Move this elsewhere.
-char* AsForeignString(String* value);
+char* AsForeignString(TwoByteString* value);
 
 typedef Object* (*NativeFunction)(Process*, Object**);
 

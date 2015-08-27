@@ -328,7 +328,8 @@ class FletchBackend extends Backend with ResolutionCallbacks {
     compiledObjectClass = loadClass("Object", compiler.coreLibrary, true);
     smiClass = loadClass("_Smi", compiler.coreLibrary, true).element;
     mintClass = loadClass("_Mint", compiler.coreLibrary, true).element;
-    stringClass = loadClass("_StringImpl", compiler.coreLibrary, true).element;
+    stringClass = loadClass(
+        "_TwoByteString", compiler.coreLibrary, true).element;
     // TODO(ahe): Register _ConstantList through ResolutionCallbacks.
     loadClass(constantListName, fletchSystemLibrary, true);
     loadClass(constantByteListName, fletchSystemLibrary, true);

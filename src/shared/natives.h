@@ -202,13 +202,13 @@ namespace fletch {
   N(ForeignSetFloat32,           "ForeignMemory", "_setFloat32")         \
   N(ForeignSetFloat64,           "ForeignMemory", "_setFloat64")         \
                                                                          \
-  N(StringAdd,                   "_StringImpl", "+")                     \
-  N(StringCodeUnitAt,            "_StringImpl", "codeUnitAt")            \
-  N(StringCreate,                "_StringImpl", "_create")               \
-  N(StringEqual,                 "_StringImpl", "==")                    \
-  N(StringLength,                "_StringImpl", "length")                \
-  N(StringSetCodeUnitAt,         "_StringImpl", "_setCodeUnitAt")        \
-  N(StringSubstring,             "_StringImpl", "_substring")            \
+  N(TwoByteStringAdd,            "_TwoByteString", "+")                  \
+  N(TwoByteStringCodeUnitAt,     "_TwoByteString", "codeUnitAt")         \
+  N(TwoByteStringCreate,         "_TwoByteString", "_create")            \
+  N(TwoByteStringEqual,          "_TwoByteString", "==")                 \
+  N(TwoByteStringLength,         "_TwoByteString", "length")             \
+  N(TwoByteStringSetCodeUnitAt,  "_TwoByteString", "_setCodeUnitAt")     \
+  N(TwoByteStringSubstring,      "_TwoByteString", "_substring")         \
                                                                          \
   N(UriBase,                     "Uri", "_base")                         \
                                                                          \

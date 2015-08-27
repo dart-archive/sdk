@@ -56,7 +56,8 @@ abstract class _IntBase implements int {
     } while (value > 0);
     if (isNegative) temp.add(0x2d);  // '-'.
 
-    _StringImpl string = _StringImpl._create(temp.length);
+    // TODO(ajohnsen): This is a one-byte string.
+    _TwoByteString string = _TwoByteString._create(temp.length);
     for (int i = 0, j = temp.length; j > 0; i++) {
       string._setCodeUnitAt(i, temp[--j]);
     }
@@ -76,7 +77,9 @@ abstract class _IntBase implements int {
     }
     // Integer division, rounding up, to find number of _digits.
     length += (value.bitLength + bitsPerDigit - 1) ~/ bitsPerDigit;
-    _StringImpl string = _StringImpl._create(length);
+
+    // TODO(ajohnsen): This is a one-byte string.
+    _TwoByteString string = _TwoByteString._create(length);
     string._setCodeUnitAt(0, 0x2d);  // '-'. Is overwritten if not negative.
     var mask = radix - 1;
     do {

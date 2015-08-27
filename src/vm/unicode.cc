@@ -49,7 +49,7 @@ const uint32 Utf8::kOverlongMinimum[7] = {
   0xFFFFFFFF
 };
 
-CodePointIterator::CodePointIterator(String* str)
+CodePointIterator::CodePointIterator(TwoByteString* str)
     : str_(str),
       ch_(0),
       index_(-1),
@@ -86,7 +86,7 @@ word Utf8::Length(int32 ch) {
   return 4;
 }
 
-word Utf8::Length(String* str) {
+word Utf8::Length(TwoByteString* str) {
   word length = 0;
   CodePointIterator it(str);
   while (it.Next()) {
@@ -121,7 +121,7 @@ word Utf8::Encode(int32 ch, char* dst) {
   return 4;
 }
 
-word Utf8::Encode(String* src, char* dst, word len) {
+word Utf8::Encode(TwoByteString* src, char* dst, word len) {
   word pos = 0;
   CodePointIterator it(src);
   while (it.Next()) {

@@ -129,14 +129,14 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function) {
 
 Object* Heap::CreateStringInternal(Class* the_class, int length, bool clear) {
   ASSERT(the_class->instance_format().type() ==
-         InstanceFormat::STRING_TYPE);
-  int size = String::AllocationSize(length);
+         InstanceFormat::TWO_BYTE_STRING_TYPE);
+  int size = TwoByteString::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
-  String* result = reinterpret_cast<String*>(raw_result);
+  TwoByteString* result = reinterpret_cast<TwoByteString*>(raw_result);
   result->set_class(the_class);
   result->Initialize(size, length, clear);
-  return String::cast(result);
+  return TwoByteString::cast(result);
 }
 
 Object* Heap::CreateString(Class* the_class, int length) {

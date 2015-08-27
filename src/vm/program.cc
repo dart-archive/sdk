@@ -148,7 +148,7 @@ Object* Program::CreateStringFromAscii(List<const char> str) {
   Object* raw_result = heap()->CreateStringUninitialized(
       string_class(), str.length());
   if (raw_result->IsFailure()) return raw_result;
-  String* result = String::cast(raw_result);
+  TwoByteString* result = TwoByteString::cast(raw_result);
   ASSERT(result->length() == str.length());
   // Set the content.
   for (int i = 0; i < str.length(); i++) {
@@ -161,7 +161,7 @@ Object* Program::CreateString(List<uint16> str) {
   Object* raw_result = heap()->CreateStringUninitialized(
       string_class(), str.length());
   if (raw_result->IsFailure()) return raw_result;
-  String* result = String::cast(raw_result);
+  TwoByteString* result = TwoByteString::cast(raw_result);
   ASSERT(result->length() == str.length());
   // Set the content.
   for (int i = 0; i < str.length(); i++) {
@@ -418,8 +418,8 @@ class StatisticsVisitor : public HeapObjectVisitor {
       VisitClass(Class::cast(object));
     } else if (object->IsArray()) {
       VisitArray(Array::cast(object));
-    } else if (object->IsString()) {
-      VisitString(String::cast(object));
+    } else if (object->IsTwoByteString()) {
+      VisitTwoByteString(TwoByteString::cast(object));
     } else if (object->IsFunction()) {
       VisitFunction(Function::cast(object));
     }
@@ -450,7 +450,7 @@ class StatisticsVisitor : public HeapObjectVisitor {
     array_size_ += array->ArraySize();
   }
 
-  void VisitString(String* str) {
+  void VisitTwoByteString(TwoByteString* str) {
     string_count_++;
     string_size_ += str->StringSize();
   }
@@ -618,7 +618,7 @@ void Program::Initialize() {
     string_class_->set_super_class(object_class_);
   }
 
-  empty_string_ = String::cast(heap()->CreateString(string_class(), 0));
+  empty_string_ = TwoByteString::cast(heap()->CreateString(string_class(), 0));
 
   {
     InstanceFormat format = InstanceFormat::function_format();
@@ -684,23 +684,26 @@ void Program::Initialize() {
 
   // Create the retry after gc failure object payload.
   raw_retry_after_gc_ =
-      String::cast(CreateStringFromAscii(StringFromCharZ("Retry after GC.")));
+      TwoByteString::cast(
+          CreateStringFromAscii(StringFromCharZ("Retry after GC.")));
 
   // Create the failure object payloads. These need to be kept in sync with the
   // constants in lib/system/system.dart.
   raw_wrong_argument_type_ =
-      String::cast(
+      TwoByteString::cast(
           CreateStringFromAscii(StringFromCharZ("Wrong argument type.")));
 
   raw_index_out_of_bounds_ =
-      String::cast(
+      TwoByteString::cast(
           CreateStringFromAscii(StringFromCharZ("Index out of bounds.")));
 
   raw_illegal_state_ =
-      String::cast(CreateStringFromAscii(StringFromCharZ("Illegal state.")));
+      TwoByteString::cast(
+          CreateStringFromAscii(StringFromCharZ("Illegal state.")));
 
   raw_stack_overflow_ =
-      String::cast(CreateStringFromAscii(StringFromCharZ("Stack overflow.")));
+      TwoByteString::cast(
+          CreateStringFromAscii(StringFromCharZ("Stack overflow.")));
 
   native_failure_result_ = null_object_;
 }

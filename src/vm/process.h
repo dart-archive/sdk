@@ -139,7 +139,7 @@ class Process {
   // Returns either a Smi or a LargeInteger.
   Object* ToInteger(int64 value);
 
-  Object* Concatenate(String* x, String* y);
+  Object* Concatenate(TwoByteString* x, TwoByteString* y);
 
   void CollectMutableGarbage();
 

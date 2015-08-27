@@ -144,8 +144,8 @@ void Service::InvokeAsync(int id,
 }
 
 NATIVE(ServiceRegister) {
-  if (!arguments[0]->IsString()) return Failure::illegal_state();
-  String* name = String::cast(arguments[0]);
+  if (!arguments[0]->IsTwoByteString()) return Failure::illegal_state();
+  TwoByteString* name = TwoByteString::cast(arguments[0]);
   if (!arguments[1]->IsInstance()) return Failure::illegal_state();
   Instance* port_instance = Instance::cast(arguments[1]);
   if (!port_instance->IsPort()) return Failure::illegal_state();

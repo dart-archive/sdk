@@ -58,8 +58,8 @@ NATIVE(GC) {
 
 NATIVE(IntParse) {
   Object* x = arguments[0];
-  if (!x->IsString()) return Failure::wrong_argument_type();
-  String* str = String::cast(x);
+  if (!x->IsTwoByteString()) return Failure::wrong_argument_type();
+  TwoByteString* str = TwoByteString::cast(x);
   Object* y = arguments[1];
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   Smi* radix = Smi::cast(y);
@@ -702,7 +702,7 @@ NATIVE(DoubleToStringAsPrecision) {
 
 NATIVE(DoubleParse) {
   Object* x = arguments[0];
-  if (!x->IsString()) return Failure::wrong_argument_type();
+  if (!x->IsTwoByteString()) return Failure::wrong_argument_type();
 
   // We trim in Dart to handle all the whitespaces.
   static const int kConversionFlags =
@@ -715,7 +715,7 @@ NATIVE(DoubleParse) {
       kDoubleInfinitySymbol,
       kDoubleNaNSymbol);
 
-  String* source = String::cast(x);
+  TwoByteString* source = TwoByteString::cast(x);
   int length = source->length();
   uint16* buffer = reinterpret_cast<uint16_t*>(source->byte_address_for(0));
   int consumed = 0;
@@ -922,8 +922,8 @@ NATIVE(StopwatchNow) {
 
 NATIVE(IdentityHashCode) {
   Object* object = arguments[0];
-  if (object->IsString()) {
-    return Smi::FromWord(String::cast(object)->Hash());
+  if (object->IsTwoByteString()) {
+    return Smi::FromWord(TwoByteString::cast(object)->Hash());
   } else if (object->IsSmi() || object->IsLargeInteger()) {
     return object;
   } else if (object->IsDouble()) {
@@ -934,24 +934,24 @@ NATIVE(IdentityHashCode) {
   }
 }
 
-char* AsForeignString(String* s) {
+char* AsForeignString(TwoByteString* s) {
   return s->ToCString();
 }
 
-NATIVE(StringLength) {
-  String* x = String::cast(arguments[0]);
+NATIVE(TwoByteStringLength) {
+  TwoByteString* x = TwoByteString::cast(arguments[0]);
   return Smi::FromWord(x->length());
 }
 
-NATIVE(StringAdd) {
-  String* x = String::cast(arguments[0]);
+NATIVE(TwoByteStringAdd) {
+  TwoByteString* x = TwoByteString::cast(arguments[0]);
   Object* y = arguments[1];
-  if (!y->IsString()) return Failure::wrong_argument_type();
-  return process->Concatenate(x, String::cast(y));
+  if (!y->IsTwoByteString()) return Failure::wrong_argument_type();
+  return process->Concatenate(x, TwoByteString::cast(y));
 }
 
-NATIVE(StringCodeUnitAt) {
-  String* x = String::cast(arguments[0]);
+NATIVE(TwoByteStringCodeUnitAt) {
+  TwoByteString* x = TwoByteString::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word index = Smi::cast(y)->value();
@@ -960,7 +960,7 @@ NATIVE(StringCodeUnitAt) {
   return process->ToInteger(x->get_code_unit(index));
 }
 
-NATIVE(StringCreate) {
+NATIVE(TwoByteStringCreate) {
   Object* z = arguments[0];
   if (!z->IsSmi()) return Failure::wrong_argument_type();
   word length = Smi::cast(z)->value();
@@ -969,14 +969,15 @@ NATIVE(StringCreate) {
   return result;
 }
 
-NATIVE(StringEqual) {
-  String* x = String::cast(arguments[0]);
+NATIVE(TwoByteStringEqual) {
+  TwoByteString* x = TwoByteString::cast(arguments[0]);
   Object* y = arguments[1];
-  return ToBool(process, y->IsString() && x->Equals(String::cast(y)));
+  return ToBool(process, y->IsTwoByteString() &&
+                x->Equals(TwoByteString::cast(y)));
 }
 
-NATIVE(StringSetCodeUnitAt) {
-  String* x = String::cast(arguments[0]);
+NATIVE(TwoByteStringSetCodeUnitAt) {
+  TwoByteString* x = TwoByteString::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word index = Smi::cast(y)->value();
@@ -989,8 +990,8 @@ NATIVE(StringSetCodeUnitAt) {
   return process->program()->null_object();
 }
 
-NATIVE(StringSubstring) {
-  String* x = String::cast(arguments[0]);
+NATIVE(TwoByteStringSubstring) {
+  TwoByteString* x = TwoByteString::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   Object* z = arguments[2];
@@ -1006,7 +1007,7 @@ NATIVE(StringSubstring) {
   int data_size = substring_length * sizeof(uint16_t);
   Object* raw_string = process->NewStringUninitialized(substring_length);
   if (raw_string->IsFailure()) return raw_string;
-  String* result = String::cast(raw_string);
+  TwoByteString* result = TwoByteString::cast(raw_string);
   memcpy(result->byte_address_for(0), x->byte_address_for(start), data_size);
   return result;
 }

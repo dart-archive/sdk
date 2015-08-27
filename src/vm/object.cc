@@ -45,8 +45,8 @@ int HeapObject::Size() {
   if (!format.has_variable_part()) return format.fixed_size();
   int type = format.type();
   switch (type) {
-    case InstanceFormat::STRING_TYPE:
-      return String::cast(this)->StringSize();
+    case InstanceFormat::TWO_BYTE_STRING_TYPE:
+      return TwoByteString::cast(this)->StringSize();
     case InstanceFormat::ARRAY_TYPE:
       return Array::cast(this)->ArraySize();
     case InstanceFormat::BYTE_ARRAY_TYPE:
@@ -71,7 +71,7 @@ int HeapObject::FixedSize() {
   return format.fixed_size();
 }
 
-bool String::Equals(List<const uint16_t> str) {
+bool TwoByteString::Equals(List<const uint16_t> str) {
   int us = str.length();
   if (length() != us) return false;
   for (int i = 0; i < us; i++) {
@@ -80,7 +80,7 @@ bool String::Equals(List<const uint16_t> str) {
   return true;
 }
 
-bool String::Equals(String* str) {
+bool TwoByteString::Equals(TwoByteString* str) {
   if (this == str) return true;
   int len  = str->length();
   if (length() != len) return false;
@@ -172,20 +172,20 @@ void Smi::SmiPrint() {
   Print::Out("%ld", value());
 }
 
-void String::StringPrint() {
-  RawPrint("String");
+void TwoByteString::TwoByteStringPrint() {
+  RawPrint("TwoByteString");
   Print::Out("\"");
-  StringShortPrint();
+  TwoByteStringShortPrint();
   Print::Out("\"");
 }
 
-void String::StringShortPrint() {
+void TwoByteString::TwoByteStringShortPrint() {
   char* result = ToCString();
   Print::Out("%s", result);
   free(result);
 }
 
-char* String::ToCString() {
+char* TwoByteString::ToCString() {
   intptr_t len = Utf8::Length(this);
   char* result = reinterpret_cast<char*>(malloc(len + 1));
   Utf8::Encode(this, result, len);
@@ -585,8 +585,8 @@ void HeapObject::HeapObjectPrint() {
     case InstanceFormat::INSTANCE_TYPE:
       Instance::cast(this)->InstancePrint();
       break;
-    case InstanceFormat::STRING_TYPE:
-      String::cast(this)->StringPrint();
+    case InstanceFormat::TWO_BYTE_STRING_TYPE:
+      TwoByteString::cast(this)->TwoByteStringPrint();
       break;
     case InstanceFormat::ARRAY_TYPE:
       Array::cast(this)->ArrayPrint();
@@ -619,8 +619,8 @@ void HeapObject::HeapObjectShortPrint() {
     case InstanceFormat::INSTANCE_TYPE:
       Instance::cast(this)->InstanceShortPrint();
       break;
-    case InstanceFormat::STRING_TYPE:
-      String::cast(this)->StringShortPrint();
+    case InstanceFormat::TWO_BYTE_STRING_TYPE:
+      TwoByteString::cast(this)->TwoByteStringShortPrint();
       break;
     case InstanceFormat::ARRAY_TYPE:
       Array::cast(this)->ArrayShortPrint();

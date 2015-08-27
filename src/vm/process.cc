@@ -275,7 +275,7 @@ Object* Process::NewString(int length) {
   Class* string_class = program()->string_class();
   Object* raw_result = immutable_heap_->CreateString(string_class, length);
   if (raw_result->IsFailure()) return raw_result;
-  return String::cast(raw_result);
+  return TwoByteString::cast(raw_result);
 }
 
 Object* Process::NewStringUninitialized(int length) {
@@ -283,7 +283,7 @@ Object* Process::NewStringUninitialized(int length) {
   Object* raw_result = immutable_heap_->CreateStringUninitialized(
       string_class, length);
   if (raw_result->IsFailure()) return raw_result;
-  return String::cast(raw_result);
+  return TwoByteString::cast(raw_result);
 }
 
 Object* Process::NewStringFromAscii(List<const char> value) {
@@ -291,7 +291,7 @@ Object* Process::NewStringFromAscii(List<const char> value) {
   Object* raw_result = immutable_heap_->CreateString(
       string_class, value.length());
   if (raw_result->IsFailure()) return raw_result;
-  String* result = String::cast(raw_result);
+  TwoByteString* result = TwoByteString::cast(raw_result);
   for (int i = 0; i < value.length(); i++) {
     result->set_code_unit(i, value[i]);
   }
@@ -321,7 +321,7 @@ Object* Process::ToInteger(int64 value) {
       : NewInteger(value);
 }
 
-Object* Process::Concatenate(String* x, String* y) {
+Object* Process::Concatenate(TwoByteString* x, TwoByteString* y) {
   int xlen = x->length();
   if (xlen == 0) return y;
   int ylen = y->length();
@@ -330,7 +330,7 @@ Object* Process::Concatenate(String* x, String* y) {
   Class* string_class = program()->string_class();
   Object* raw_result = immutable_heap_->CreateString(string_class, length);
   if (raw_result->IsFailure()) return raw_result;
-  String* result = String::cast(raw_result);
+  TwoByteString* result = TwoByteString::cast(raw_result);
   uint8_t* first_part = result->byte_address_for(0);
   uint8_t* second_part = first_part + xlen * sizeof(uint16_t);
   memcpy(first_part, x->byte_address_for(0), xlen * sizeof(uint16_t));

@@ -54,8 +54,8 @@ class Header {
   // Compute the object size based on type and elements.
   int Size() {
     switch (as_type()) {
-      case InstanceFormat::STRING_TYPE:
-        return String::AllocationSize(elements());
+      case InstanceFormat::TWO_BYTE_STRING_TYPE:
+        return TwoByteString::AllocationSize(elements());
       case InstanceFormat::ARRAY_TYPE:
         return Array::AllocationSize(elements());
       case InstanceFormat::BYTE_ARRAY_TYPE:
@@ -406,8 +406,9 @@ Object* SnapshotReader::ReadObject() {
   AddReference(object);
   object->set_class(reinterpret_cast<Class*>(ReadObject()));
   switch (type) {
-    case InstanceFormat::STRING_TYPE:
-      reinterpret_cast<String*>(object)->StringReadFrom(this, elements);
+    case InstanceFormat::TWO_BYTE_STRING_TYPE:
+      reinterpret_cast<TwoByteString*>(object)->TwoByteStringReadFrom(
+          this, elements);
       break;
     case InstanceFormat::ARRAY_TYPE:
       reinterpret_cast<Array*>(object)->ArrayReadFrom(this, elements);
@@ -473,10 +474,10 @@ void SnapshotWriter::WriteObject(Object* object) {
 
   // Serialize the object.
   switch (type) {
-    case InstanceFormat::STRING_TYPE: {
-      String* str = String::cast(object);
+    case InstanceFormat::TWO_BYTE_STRING_TYPE: {
+      TwoByteString* str = TwoByteString::cast(object);
       alternative_heap_size_ += str->AlternativeSize();
-      str->StringWriteTo(this, klass);
+      str->TwoByteStringWriteTo(this, klass);
       break;
     }
     case InstanceFormat::ARRAY_TYPE: {
@@ -568,15 +569,15 @@ void SnapshotWriter::GrowCapacity(int extra) {
   snapshot_ = List<uint8>(data, capacity);
 }
 
-void String::StringWriteTo(SnapshotWriter* writer, Class* klass) {
+void TwoByteString::TwoByteStringWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  writer->WriteHeader(InstanceFormat::STRING_TYPE, length());
+  writer->WriteHeader(InstanceFormat::TWO_BYTE_STRING_TYPE, length());
   writer->Forward(this);
   // Body.
   writer->WriteBytes(length() * sizeof(uint16_t), byte_address_for(0));
 }
 
-void String::StringReadFrom(SnapshotReader* reader, int length) {
+void TwoByteString::TwoByteStringReadFrom(SnapshotReader* reader, int length) {
   set_length(length);
   set_hash_value(kNoHashValue);
   reader->ReadBytes(length * sizeof(uint16_t), byte_address_for(0));
