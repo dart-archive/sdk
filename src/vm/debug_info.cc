@@ -41,8 +41,8 @@ DebugInfo::DebugInfo()
       next_breakpoint_id_(0) { }
 
 bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
-  BreakpointMap::const_iterator it = breakpoints_.find(bcp);
-  if (it != breakpoints_.end()) {
+  BreakpointMap::ConstIterator it = breakpoints_.Find(bcp);
+  if (it != breakpoints_.End()) {
     const Breakpoint& breakpoint = it->second;
     Stack* breakpoint_stack = breakpoint.stack();
     if (breakpoint_stack != NULL) {
@@ -76,36 +76,36 @@ int DebugInfo::SetBreakpoint(Function* function,
                         coroutine,
                         stack_height);
   uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
-  BreakpointMap::const_iterator it = breakpoints_.find(bcp);
-  if (it != breakpoints_.end()) return it->second.id();
-  breakpoints_.insert({bcp, breakpoint});
+  BreakpointMap::ConstIterator it = breakpoints_.Find(bcp);
+  if (it != breakpoints_.End()) return it->second.id();
+  breakpoints_.Insert({bcp, breakpoint});
   return breakpoint.id();
 }
 
 bool DebugInfo::DeleteBreakpoint(int id) {
-  BreakpointMap::const_iterator it = breakpoints_.begin();
-  BreakpointMap::const_iterator end = breakpoints_.end();
+  BreakpointMap::ConstIterator it = breakpoints_.Begin();
+  BreakpointMap::ConstIterator end = breakpoints_.End();
   for (; it != end; ++it) {
     if (it->second.id() == id) break;
   }
   if (it != end) {
-    breakpoints_.erase(it);
+    breakpoints_.Erase(it);
     return true;
   }
   return false;
 }
 
 void DebugInfo::VisitPointers(PointerVisitor* visitor) {
-  BreakpointMap::iterator it = breakpoints_.begin();
-  BreakpointMap::iterator end = breakpoints_.end();
+  BreakpointMap::Iterator it = breakpoints_.Begin();
+  BreakpointMap::Iterator end = breakpoints_.End();
   for (; it != end; ++it) {
     it->second.VisitPointers(visitor);
   }
 }
 
 void DebugInfo::VisitProgramPointers(PointerVisitor* visitor) {
-  BreakpointMap::iterator it = breakpoints_.begin();
-  BreakpointMap::iterator end = breakpoints_.end();
+  BreakpointMap::Iterator it = breakpoints_.Begin();
+  BreakpointMap::Iterator end = breakpoints_.End();
   for (; it != end; ++it) {
     it->second.VisitProgramPointers(visitor);
   }
@@ -113,15 +113,15 @@ void DebugInfo::VisitProgramPointers(PointerVisitor* visitor) {
 
 void DebugInfo::UpdateBreakpoints() {
   BreakpointMap new_breakpoints;
-  BreakpointMap::const_iterator it = breakpoints_.begin();
-  BreakpointMap::const_iterator end = breakpoints_.end();
+  BreakpointMap::ConstIterator it = breakpoints_.Begin();
+  BreakpointMap::ConstIterator end = breakpoints_.End();
   for (; it != end; ++it) {
     Function* function = it->second.function();
     uint8_t* bcp =
         function->bytecode_address_for(0) + it->second.bytecode_index();
-    new_breakpoints.insert({bcp, it->second});
+    new_breakpoints.Insert({bcp, it->second});
   }
-  breakpoints_.swap(new_breakpoints);
+  breakpoints_.Swap(new_breakpoints);
 }
 
 }  // namespace fletch

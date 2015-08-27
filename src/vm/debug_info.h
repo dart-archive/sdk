@@ -9,8 +9,7 @@
 #include "src/vm/debug_info_no_live_coding.h"
 #else  // FLETCH_ENABLE_LIVE_CODING
 
-#include <unordered_map>
-
+#include "src/vm/hash_map.h"
 #include "src/vm/object.h"
 
 namespace fletch {
@@ -91,7 +90,7 @@ class DebugInfo {
   bool is_at_breakpoint_;
   int current_breakpoint_id_;
 
-  typedef std::unordered_map<uint8_t*, Breakpoint> BreakpointMap;
+  typedef HashMap<uint8_t*, Breakpoint> BreakpointMap;
   BreakpointMap breakpoints_;
   int next_breakpoint_id_;
 };

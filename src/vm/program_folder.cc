@@ -7,8 +7,6 @@
 #include "src/vm/program_folder.h"
 
 #include <algorithm>
-// TODO(ager): Implement a self-contained simple hash map.
-#include <unordered_map>
 #include <vector>
 
 #include "src/shared/bytecodes.h"
@@ -16,31 +14,32 @@
 #include "src/shared/names.h"
 #include "src/shared/selectors.h"
 
+#include "src/vm/hash_map.h"
 #include "src/vm/heap.h"
 #include "src/vm/program.h"
 #include "src/vm/selector_row.h"
 
 namespace fletch {
 
-typedef std::unordered_map<Object*, int> ObjectIndexMap;
-typedef std::unordered_map<int, SelectorRow*> SelectorRowMap;
-typedef std::unordered_map<int, int> SelectorOffsetMap;
+typedef HashMap<Object*, int> ObjectIndexMap;
+typedef HashMap<intptr_t, SelectorRow*> SelectorRowMap;
+typedef HashMap<intptr_t, int> SelectorOffsetMap;
 
 static int AddToMap(ObjectIndexMap* map, Object* value) {
-  ObjectIndexMap::const_iterator it = map->find(value);
-  if (it != map->end()) {
+  ObjectIndexMap::ConstIterator it = map->Find(value);
+  if (it != map->End()) {
     return it->second;
   } else {
     int index = map->size();
-    map->insert({value, index});
+    map->Insert({value, index});
     return index;
   }
 }
 
 static Array* MapToArray(ObjectIndexMap* map, Program* program) {
   Array* result = Array::cast(program->CreateArray(map->size()));
-  ObjectIndexMap::const_iterator it = map->begin();
-  ObjectIndexMap::const_iterator end = map->end();
+  ObjectIndexMap::ConstIterator it = map->Begin();
+  ObjectIndexMap::ConstIterator end = map->End();
   for (; it != end; ++it) result->set(it->second, it->first);
   return result;
 }
@@ -50,8 +49,8 @@ class ProgramTableRewriter {
   ProgramTableRewriter() : linear_size_(0) { }
 
   ~ProgramTableRewriter() {
-    SelectorRowMap::const_iterator it = selector_rows_.begin();
-    SelectorRowMap::const_iterator end = selector_rows_.end();
+    SelectorRowMap::ConstIterator it = selector_rows_.Begin();
+    SelectorRowMap::ConstIterator end = selector_rows_.End();
     for (; it != end; ++it) delete it->second;
   }
 
@@ -73,13 +72,13 @@ class ProgramTableRewriter {
   }
 
   void ProcessSelectorRows(Program* program) {
-    SelectorRowMap::const_iterator it;
-    SelectorRowMap::const_iterator end = selector_rows_.end();
+    SelectorRowMap::ConstIterator it;
+    SelectorRowMap::ConstIterator end = selector_rows_.End();
 
     // Compute the sizes of the dispatch tables.
     std::vector<SelectorRow*> table_rows;
     int linear_size = 0;
-    for (it = selector_rows_.begin(); it != end; ++it) {
+    for (it = selector_rows_.Begin(); it != end; ++it) {
       SelectorRow* row = it->second;
       SelectorRow::Kind kind = row->Finalize();
       if (kind == SelectorRow::LINEAR) {
@@ -150,12 +149,12 @@ class ProgramTableRewriter {
   }
 
   void FinalizeSelectorRows(Program* program) {
-    SelectorRowMap::const_iterator it;
-    SelectorRowMap::const_iterator end = selector_rows_.end();
+    SelectorRowMap::ConstIterator it;
+    SelectorRowMap::ConstIterator end = selector_rows_.End();
 
     // Fill in the linear dispatch table entries.
     Array* linear = Array::cast(program->CreateArray(linear_size_));
-    for (it = selector_rows_.begin(); it != end; ++it) {
+    for (it = selector_rows_.Begin(); it != end; ++it) {
       SelectorRow* row = it->second;
       if (row->kind() == SelectorRow::LINEAR) {
         row->FillLinear(program, linear);
@@ -530,8 +529,8 @@ class LiteralsRewriter {
   int NumberOfLiterals() { return literals_index_map_.size(); }
 
   void FillInLiterals(Function* function) {
-    ObjectIndexMap::const_iterator it = literals_index_map_.begin();
-    ObjectIndexMap::const_iterator end = literals_index_map_.end();
+    ObjectIndexMap::ConstIterator it = literals_index_map_.Begin();
+    ObjectIndexMap::ConstIterator end = literals_index_map_.End();
     for (; it != end; ++it) function->set_literal_at(it->second, it->first);
   }
 
@@ -615,7 +614,7 @@ Object* ProgramFolder::UnfoldFunction(Function* function,
       case kInvokeTestVtable:
       case kInvokeMethodVtable: {
         int offset = Selector::IdField::decode(Utils::ReadInt32(bcp + 1));
-        int selector = map->at(offset);
+        int selector = map->At(offset);
         *bcp = opcode + (kInvokeMethod - kInvokeMethodVtable);
         Utils::WriteInt32(bcp + 1, selector);
         break;
@@ -708,7 +707,7 @@ void ProgramFolder::Unfold() {
       Array* entry = Array::cast(element);
       int offset = Smi::cast(entry->get(0))->value();
       int selector = Smi::cast(entry->get(1))->value();
-      ASSERT(map.count(offset) == 0 || map[offset] == selector);
+      ASSERT(map.Count(offset) == 0 || map[offset] == selector);
       map[offset] = selector;
     }
   }

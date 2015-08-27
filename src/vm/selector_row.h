@@ -8,11 +8,11 @@
 #ifdef FLETCH_ENABLE_LIVE_CODING
 
 #include <vector>
-#include <unordered_set>
 
 #include "src/shared/globals.h"
 #include "src/shared/utils.h"
 
+#include "src/vm/hash_set.h"
 #include "src/vm/object.h"
 
 namespace fletch {
@@ -219,7 +219,7 @@ class RowFitter {
 
   size_t FitInFreeSlot(const Range range, size_t slot_index);
 
-  std::unordered_set<int> used_offsets_;
+  HashSet<intptr_t> used_offsets_;
   Range::List free_slots_;
   int single_range_start_index_;
   int limit_;

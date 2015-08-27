@@ -57,6 +57,7 @@
         'thread_pool.cc',
         'thread_posix.cc',
         'unicode.cc',
+        'void_hash_table.cc',
         'weak_pointer.cc',
       ],
       'link_settings': {
@@ -212,6 +213,7 @@
       ],
       'sources': [
         # TODO(ahe): Add header (.h) files.
+        'hash_table_test.cc',
         'object_map_test.cc',
         'object_memory_test.cc',
         'object_test.cc',

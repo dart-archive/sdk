@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <cstdarg>
+
 #include "src/shared/assert.h"
 #include "src/shared/utils.h"
 
