@@ -113,10 +113,15 @@ Future<Null> main(List<String> arguments) async {
   }
   for (var testName in testNamesToRun) {
     EncodedResult test = tests[testName];
-    await compileAndRun(testName, test);
+    try {
+      await compileAndRun(testName, test);
+    } catch (e, s) {
+      print("Test '$testName' failed");
+      rethrow;
+    }
     testCount++;
+    updateSummary();
   }
-  updateSummary();
 }
 
 int testCount = 1;
@@ -125,15 +130,17 @@ int skippedCount = 0;
 
 int updateFailedCount = 0;
 
-bool verboseStatus = const bool.fromEnvironment("verbose", defaultValue: false);
+const bool verboseStatus = const bool.fromEnvironment(
+    "verbose", defaultValue: false);
 
 void updateSummary() {
   print(
-      "\n\nTest ${testCount - 1} of ${tests.length} "
-      "($skippedCount skipped, $updateFailedCount failed).");
+      "Test ${testCount - 1} of ${tests.length} "
+      "($skippedCount skipped, $updateFailedCount failed)\n\n");
 }
 
 compileAndRun(String testName, EncodedResult encodedResult) async {
+  print("Test '$testName'");
   IncrementalTestHelper helper = new IncrementalTestHelper();
   TestSession session =
       await TestSession.spawnVm(helper.compiler, testName: testName);
@@ -141,7 +148,6 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
   bool hasCompileTimeError = false;
 
   await new Future(() async {
-    updateSummary();
 
     int version = 0;
 

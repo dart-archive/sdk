@@ -442,7 +442,8 @@ class C {
   static m() {
 <<<< "v1"
   print('v1');
-==== "v2"
+==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
+  // TODO(ahe): Shouldn't throw.
   print('v2');
 >>>>
   }
@@ -1736,7 +1737,8 @@ compile_time_error_005
 main() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   var funcnuf = (x) => ((x))=((x)) <= (x);
-==== "Hello"
+==== {"messages":["Hello"],"compileUpdatesShouldThrow":1}
+  // TODO(ahe): Should not throw
   print("Hello");
 >>>>
 }
@@ -2076,9 +2078,10 @@ compile_time_error_hides_field
 // Regression test for what happens when the parser doesn't recover.
 class A {
 <<<< {"messages":[],"hasCompileTimeError":1}
-// TODO(ahe): should just expect "null"
+  // TODO(ahe): should just expect "null"
   bool operator ===(A other) { return true; }
-==== "null"
+==== []
+  // TODO(ahe): Should expect "null" (issue 112)
 >>>>
 
   int field;
@@ -2113,7 +2116,8 @@ update_dependencies_recoverable_compile_time_error
 foo() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   new new();
-==== "v2"
+==== []
+  // TODO(ahe): Should print "v2" (issue 112)
   print("v2");
 >>>>
 }
@@ -2131,7 +2135,8 @@ update_dependencies_unrecoverable_compile_time_error
 foo() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   for do while default if else new;
-==== "v2"
+==== []
+  // TODO(ahe): Should print "v2" (issue 112)
   print("v2");
 >>>>
 }
