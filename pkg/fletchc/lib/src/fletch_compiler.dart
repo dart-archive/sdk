@@ -30,6 +30,13 @@ import 'package:compiler/compiler_new.dart' show
 import 'package:compiler/src/util/uri_extras.dart' show
     relativize;
 
+import 'package:compiler/src/dart2jslib.dart' show
+    MessageKind,
+    MessageTemplate;
+
+import 'package:compiler/src/util/util.dart' show
+    Spannable;
+
 import 'fletch_function_builder.dart';
 import 'debug_info.dart';
 import 'find_position_visitor.dart';
@@ -238,6 +245,15 @@ class FletchCompiler extends FletchCompilerHack {
   }
 
   bool inUserCode(element, {bool assumeInUserCode: false}) => true;
+
+  void reportVerboseInfo(Spannable node, String message) {
+    // TODO(johnniwinther): Use super.reportVerboseInfo once added.
+    if (verbose) {
+      MessageTemplate template = MessageTemplate.TEMPLATES[MessageKind.GENERIC];
+      reportDiagnostic(
+          node, template.message({'text': message}, true), api.Diagnostic.HINT);
+    }
+  }
 }
 
 /// Output provider which collects output in [output].

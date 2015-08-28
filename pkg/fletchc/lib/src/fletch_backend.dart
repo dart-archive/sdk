@@ -675,27 +675,22 @@ class FletchBackend extends Backend with ResolutionCallbacks {
   }
 
   WorldImpact codegen(CodegenWorkItem work) {
-    Element element = work.element;
-    if (compiler.verbose) {
-      // TODO(johnniwinther): Use reportVerboseInfo once added.
-      compiler.reportHint(
-          element, MessageKind.GENERIC, {'text': 'Compiling ${element.name}'});
-    }
+    Element element = work.element.implementation;
+    return compiler.withCurrentElement(element, () {
+      context.compiler.reportVerboseInfo(element, 'Compiling $element');
 
-    if (element.isFunction ||
-        element.isGetter ||
-        element.isSetter ||
-        element.isGenerativeConstructor) {
-      compiler.withCurrentElement(element.implementation, () {
-        codegenFunction(
-            element.implementation, work.resolutionTree, work.registry);
-      });
-    } else {
-      compiler.internalError(
-          element, "Uninimplemented element kind: ${element.kind}");
-    }
+      if (element.isFunction ||
+          element.isGetter ||
+          element.isSetter ||
+          element.isGenerativeConstructor) {
+        codegenFunction(element, work.resolutionTree, work.registry);
+      } else {
+        compiler.internalError(
+            element, "Uninimplemented element kind: ${element.kind}");
+      }
 
-    return const WorldImpact();
+      return const WorldImpact();
+    });
   }
 
   void codegenFunction(
@@ -1247,13 +1242,8 @@ class FletchBackend extends Backend with ResolutionCallbacks {
 
     ConstructorElement implementation = constructor.implementation;
 
-    if (compiler.verbose) {
-      // TODO(johnniwinther): Use reportVerboseInfo once added.
-      compiler.reportHint(
-          constructor,
-          MessageKind.GENERIC,
-          {'text': 'Compiling constructor ${implementation.name}'});
-    }
+    context.compiler.reportVerboseInfo(
+        constructor, 'Compiling initializer $constructor');
 
     TreeElements elements = implementation.resolvedAst.elements;
 
