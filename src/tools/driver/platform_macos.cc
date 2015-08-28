@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/errno.h>
+#include <unistd.h>
 
 #include "src/shared/assert.h"
 
