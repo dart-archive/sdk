@@ -762,6 +762,7 @@ class LibraryUpdater extends FletchFeatures {
       last = node.body.getBeginToken();
     }
     if (before.isErroneous ||
+        compiler.elementsWithCompileTimeErrors.contains(before) ||
         isTokenBetween(diffToken, after.beginToken, last)) {
       removeFunction(before);
       addFunction(after, before.enclosingElement);
@@ -837,6 +838,9 @@ class LibraryUpdater extends FletchFeatures {
     for (ElementX element in _elementsToInvalidate) {
       compiler.forgetElement(element);
       element.reuseElement();
+      if (element.isFunction) {
+        replaceFunctionInBackend(element, element.enclosingElement);
+      }
     }
     List<Element> elementsToInvalidate = <Element>[];
     for (ElementX element in _elementsToInvalidate) {

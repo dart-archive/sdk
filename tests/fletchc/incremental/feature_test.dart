@@ -158,8 +158,10 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
       bool isFirstProgram = version == 0;
       version++;
 
-      if (program.hasCompileTimeError) {
-        hasCompileTimeError = true;
+      if (!program.compileUpdatesShouldThrow) {
+        // We should only update the status of hasCompileTimeError when we run
+        // something on the VM.
+        hasCompileTimeError = program.hasCompileTimeError;
       }
 
       print("Program version $version #$testCount:");

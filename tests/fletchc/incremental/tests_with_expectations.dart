@@ -2132,8 +2132,7 @@ update_dependencies_recoverable_compile_time_error
 foo() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   new new();
-==== {"messages":[],"hasCompileTimeError":1}
-  // TODO(ahe): Should just expect "v2", not a compile-time error
+==== "v2"
   print("v2");
 >>>>
 }
@@ -2151,8 +2150,7 @@ update_dependencies_unrecoverable_compile_time_error
 foo() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   for do while default if else new;
-==== {"messages":[],"hasCompileTimeError":1}
-  // TODO(ahe): Should just expect "v2", not a compile-time error
+==== "v2"
   print("v2");
 >>>>
 }

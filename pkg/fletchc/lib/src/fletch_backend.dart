@@ -1365,6 +1365,9 @@ class FletchBackend extends Backend with ResolutionCallbacks {
   }
 
   void forgetElement(Element element) {
+    // TODO(ahe): The front-end should remove the element from
+    // elementsWithCompileTimeErrors.
+    compiler.elementsWithCompileTimeErrors.remove(element);
     FletchFunctionBase function =
         systemBuilder.lookupFunctionByElement(element);
     if (function == null) return;
