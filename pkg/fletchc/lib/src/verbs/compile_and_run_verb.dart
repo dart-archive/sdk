@@ -110,7 +110,8 @@ Future<int> compileAndRunTask(
       packageRoot: options.packageRootPath,
       script: options.script,
       fletchVm: fletchVm);
-  IncrementalCompiler compiler = compilerHelper.newIncrementalCompiler();
+  IncrementalCompiler compiler =
+      compilerHelper.newIncrementalCompiler(options: compilerOptions);
   await compiler.compile(compilerHelper.script);
   FletchDelta fletchDelta = compiler.computeInitialDelta();
 
