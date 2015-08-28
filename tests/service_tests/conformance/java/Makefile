@@ -17,7 +17,7 @@ endif
 ARCH=64
 FLETCH_BUILD=ReleaseX64
 
-CPPFLAGS=-m${ARCH} -fPIC -I../../../../include -I${JAVA_HOME}/include ${PLATFORM_INCLUDES}
+CPPFLAGS=-m${ARCH} -I../../../../include -I${JAVA_HOME}/include ${PLATFORM_INCLUDES}
 THIS_DIR=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 FLETCH_DIR=$(abspath ../../../..)
 FLETCH_BUILD_DIR=$(abspath ${FLETCH_DIR}/out/${FLETCH_BUILD})

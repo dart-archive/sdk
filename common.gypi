@@ -19,7 +19,6 @@
     'common_gcc_cflags_c': [
       '-fdata-sections',
       '-ffunction-sections',
-      '-fPIC',
       '-fvisibility=hidden',
     ],
 
@@ -63,6 +62,21 @@
   ],
 
   'target_defaults': {
+
+    'target_conditions': [
+      ['_type=="shared_library"', {
+        # Shared libraries on x64 require compilation with position
+        # independent code. Load-time relocation is not supported on
+        # x64. For simplicity we compile all shared libraries with
+        # position independent code.
+        'cflags': ['-fPIC'],
+        'xcode_settings': {
+          'OTHER_CPLUSPLUSFLAGS': [
+            '-fPIC',
+          ],
+        },
+      }],
+    ],
 
     'configurations': {
 
