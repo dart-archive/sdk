@@ -5,8 +5,7 @@
 #include "src/tools/driver/connection.h"
 
 #include <errno.h>
-
-#include <cstdlib>
+#include <unistd.h>
 
 #include "src/shared/native_socket.h"
 #include "src/shared/utils.h"

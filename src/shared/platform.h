@@ -11,6 +11,10 @@
 
 #if defined(FLETCH_TARGET_OS_POSIX)
 #include "src/shared/platform_posix.h"
+#elif defined(FLETCH_TARGET_OS_LK)
+#include "src/shared/platform_lk.h"
+#else
+#error "Platform not implemented for target os."
 #endif
 
 namespace fletch {

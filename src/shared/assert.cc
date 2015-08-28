@@ -13,7 +13,7 @@
 namespace fletch {
 
 void DynamicAssertionHelper::Fail(const char* format, ...) {
-#ifdef FLETCH_SUPPORT_PRINT_INTERCEPTORS
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   // Print out the error.
   Print::Error("%s:%d: error: ", file_, line_);
   va_list arguments;

@@ -300,7 +300,7 @@ class Process {
   // code in this process.
   LookupCache::Entry* primary_lookup_cache_;
 
-  List<List<int>> cooked_stack_deltas_;
+  List<List<int> > cooked_stack_deltas_;
 
   // Next pointer used by the Scheduler.
   Process* next_;

@@ -323,7 +323,7 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
 
   size = Utils::RoundUp(size, kPageSize);
   void* memory;
-#ifdef ANDROID
+#if defined(ANDROID) || defined(FLETCH_TARGET_OS_LK)
   // posix_memalign doesn't exist on Android. We fallback to
   // memalign.
   memory = memalign(kPageSize, size);

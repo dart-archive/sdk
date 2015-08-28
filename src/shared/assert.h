@@ -10,6 +10,8 @@
 #include <string>
 #endif
 
+#include <assert.h>
+
 #include "src/shared/globals.h"
 
 namespace fletch {
@@ -148,6 +150,12 @@ void DynamicAssertionHelper::GreaterEqual(const E& left, const A& right) {
 #if !defined(TESTING)
 // Only define the minimal set of assertions when not building the test
 // binaries.
+
+// If the system already has an assert of its own, undefine it here so that
+// ours gets used.
+#ifdef ASSERT
+#undef ASSERT
+#endif
 
 #if defined(DEBUG)
 // DEBUG binaries use assertions in the code. Due to concerns about the code

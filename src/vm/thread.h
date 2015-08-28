@@ -10,6 +10,10 @@
 
 #if defined(FLETCH_TARGET_OS_POSIX)
 #include "src/vm/thread_posix.h"
+#elif defined(FLETCH_TARGET_OS_LK)
+#include "src/vm/thread_lk.h"
+#else
+#warning "OS is lacking thread implementation."
 #endif
 
 namespace fletch {

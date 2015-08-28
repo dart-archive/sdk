@@ -9,7 +9,7 @@
 
 #ifdef FLETCH32
 
-#ifdef FLETCH_TARGET_ARM
+#if defined(FLETCH_TARGET_ARM)
 #include "src/vm/assembler_arm.h"
 #else
 #include "src/vm/assembler_x86.h"

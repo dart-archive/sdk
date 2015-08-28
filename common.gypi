@@ -413,6 +413,7 @@
           ['_toolset=="target"', {
             'defines': [
               'FLETCH_LK',
+              'FLETCH_TARGET_OS_LK',
              ],
 
             'cflags': [
@@ -420,6 +421,15 @@
               '-mthumb',
               '-include',
               'build-<(LK_PROJECT)/config.h',
+              '-Wno-unused-function',
+            ],
+
+            'cflags_c': [
+              '--std=c99',
+            ],
+
+            'cflags_cc': [
+              '--std=c++11',
             ],
 
             'include_dirs': [
@@ -427,6 +437,7 @@
               '<(lk_path)/include/',
               '<(lk_path)/arch/arm/include/',
               '<(lk_path)/lib/libm/include/',
+              '<(lk_path)/arch/arm/arm/include',
             ],
 
             'ldflags': [
