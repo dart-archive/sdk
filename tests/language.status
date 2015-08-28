@@ -12,10 +12,6 @@ regress_14348_test: Crash
 bit_shift_test: RuntimeError
 
 [ $compiler == fletchc || $runtime == fletchc ]
-stack_overflow_stacktrace_test: Fail
-stack_overflow_test: Fail
-
-[ $compiler == fletchc || $runtime == fletchc ]
 abstract_runtime_error_test/01: RuntimeError
 abstract_runtime_error_test/02: RuntimeError
 arithmetic_test: RuntimeError
@@ -803,7 +799,9 @@ scope_variable_test/01: MissingCompileTimeError
 script2_negative_test: Fail
 smi_type_test: RuntimeError
 source_self_negative_test: Fail
+stack_overflow_stacktrace_test: Fail
 stack_overflow_stacktrace_test: RuntimeError
+stack_overflow_test: Fail
 stack_overflow_test: RuntimeError
 stack_trace_test: RuntimeError
 stacktrace_rethrow_error_test/none: RuntimeError
