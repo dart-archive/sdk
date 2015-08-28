@@ -23,9 +23,6 @@ incremental/call_named_arguments_2: Fail
 # Missing support for multiple libraries
 incremental/multiple_libraries: Fail
 
-# Method reference not updated
-incremental/bad_stack_trace_repro: Fail
-
 servicec/missing_semicolon: Fail # Tests a non-implemented feature.
 servicec/unmatched_curly: Fail # Tests a non-implemented feature.
 

@@ -1631,7 +1631,7 @@ main() {
 }
 
 bar() {
-<<<< ["Uncaught exception:", "a String: \"throw\"", ""]
+<<<< ["Uncaught exception:", "a TwoByteString: \"throw\"", ""]
   foo(true);
 ==== []
   foo(false);
@@ -1665,7 +1665,6 @@ main() {
 <<<< "fisk"
   print("fisk");
 ==== {"messages":[],"hasCompileTimeError":1}
-// TODO(ahe): compileUpdates shouldn't throw.
   new new();
 >>>>
 }
@@ -1999,7 +1998,8 @@ fix_compile_time_error_in_field
 class C {
 <<<< {"messages":[],"hasCompileTimeError":1}
   int sync*;
-==== []
+==== {"messages":[],"hasCompileTimeError":1}
+  // TODO(ahe): There's no compile-time error here
   int sync;
 >>>>
 }
@@ -2034,10 +2034,11 @@ compile_time_error_field_becomes_removed_function
 class C {
 <<<< {"messages":[],"hasCompileTimeError":1}
   int sync*;
-==== []
+==== {"messages":[],"hasCompileTimeError":1}
+  // TODO(ahe): Should just expect [], no compile-time error
   sync();
 ==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should just expect [].
+  // TODO(ahe): Should just expect [], not throw
 >>>>
 }
 main() {
@@ -2080,15 +2081,30 @@ class A {
 <<<< {"messages":[],"hasCompileTimeError":1}
   // TODO(ahe): should just expect "null"
   bool operator ===(A other) { return true; }
-==== []
-  // TODO(ahe): Should expect "null" (issue 112)
+==== {"messages":[],"hasCompileTimeError":1}
+  // TODO(ahe): Should expect just: ["getter ok", "null", "setter ok"], not a
+  // compile-time error.
 >>>>
 
   int field;
 }
 
 main() {
-  print(new A().field);
+  var a = new A();
+  var value;
+  try {
+    value = a.field;
+    print("getter ok");
+  } catch (e) {
+    print("getter threw");
+  }
+  print(value);
+  try {
+    a.field = "fisk"
+    print("setter ok");
+  } catch (e) {
+    print("setter threw");
+  }
 }
 ''',
 
@@ -2116,8 +2132,8 @@ update_dependencies_recoverable_compile_time_error
 foo() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   new new();
-==== []
-  // TODO(ahe): Should print "v2" (issue 112)
+==== {"messages":[],"hasCompileTimeError":1}
+  // TODO(ahe): Should just expect "v2", not a compile-time error
   print("v2");
 >>>>
 }
@@ -2135,8 +2151,8 @@ update_dependencies_unrecoverable_compile_time_error
 foo() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   for do while default if else new;
-==== []
-  // TODO(ahe): Should print "v2" (issue 112)
+==== {"messages":[],"hasCompileTimeError":1}
+  // TODO(ahe): Should just expect "v2", not a compile-time error
   print("v2");
 >>>>
 }

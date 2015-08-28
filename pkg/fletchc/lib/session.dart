@@ -291,6 +291,7 @@ class Session extends FletchVmSession {
         var function = fletchSystem.lookupFunctionById(command.functionId);
         debugState.topFrame = new StackFrame(
             function, command.bytecodeIndex, compiler, debugState);
+        running = true;
         break;
     }
     return response;

@@ -82,6 +82,9 @@ import 'package:fletchc/src/fletch_backend.dart' show
 import 'package:fletchc/fletch_vm.dart' show
     FletchVm;
 
+import 'package:fletchc/debug_state.dart' show
+    StackFrame;
+
 import 'program_result.dart';
 
 import 'tests_with_expectations.dart' as tests_with_expectations;
@@ -184,6 +187,8 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
         }
       }
 
+      FletchBackend backend = helper.compiler.compiler.context.backend;
+
       if (program.compileUpdatesShouldThrow) {
         Expect.isFalse(isFirstProgram);
         updateFailedCount++;
@@ -222,7 +227,17 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
 
       if (result.successful) {
         // Set breakpoint in main in case main was replaced.
-        await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
+        var breakpoints =
+            await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
+        for (var breakpoint in breakpoints) {
+          print("Added breakpoint: $breakpoint");
+        }
+        if (!helper.compiler.compiler.mainFunction.isErroneous) {
+          // If there's a syntax error in main, we cannot find it to set a
+          // breakpoint.
+          // TODO(ahe): Consider if this is a problem?
+          Expect.equals(1, breakpoints.length);
+        }
         if (isFirstProgram) {
           // Run the program to hit the breakpoint in main.
           await session.debugRun();
@@ -232,6 +247,21 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
         }
         // Step out of main to finish execution of main.
         await session.stepOut();
+
+        // Select the stack frame of callMain.
+        await session.getStackTrace();
+        FunctionElement callMainElement =
+            backend.fletchSystemLibrary.findLocal("callMain");
+        FletchFunction callMain =
+            helper.system.lookupFunctionByElement(callMainElement);
+        StackFrame stackFrame =
+            session.debugState.currentStackTrace.stackFrames.firstWhere(
+                (StackFrame frame) => frame.function == callMain);
+        int frame = session.debugState.currentStackTrace.stackFrames.indexOf(
+            stackFrame);
+        Expect.notEquals(1, frame);
+        session.selectFrame(frame);
+        await session.backtrace();
 
         List<String> messages = new List<String>.from(program.messages);
         if (program.hasCompileTimeError) {
