@@ -6,7 +6,7 @@
 #define SRC_VM_ASSEMBLER_ARM_H_
 
 #ifndef SRC_VM_ASSEMBLER_H_
-#error Do not include assembler_x64.h directly; use assembler.h instead.
+#error Do not include assembler_arm.h directly; use assembler.h instead.
 #endif
 
 #include "src/shared/assert.h"

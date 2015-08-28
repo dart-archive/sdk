@@ -5,6 +5,10 @@
 #ifndef SRC_SHARED_PLATFORM_POSIX_H_
 #define SRC_SHARED_PLATFORM_POSIX_H_
 
+#ifndef SRC_SHARED_PLATFORM_H_
+#error Do not include platform_posix.h directly; use platform.h instead.
+#endif
+
 #if defined(FLETCH_TARGET_OS_POSIX)
 
 #include <errno.h>

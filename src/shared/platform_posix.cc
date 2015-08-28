@@ -4,7 +4,10 @@
 
 #if defined(FLETCH_TARGET_OS_POSIX)
 
-#include "src/shared/platform.h"
+// We do not include platform_posix.h on purpose. That file
+// should never be directly inported. platform.h is always
+// the platform header to include.
+#include "src/shared/platform.h"  // NOLINT
 
 #include <errno.h>
 #include <pthread.h>
