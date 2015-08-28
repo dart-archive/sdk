@@ -893,7 +893,8 @@ class LibraryUpdater extends FletchFeatures {
       if (!element.isClass) {
         enqueuer.resolution.addToWorkList(element);
       } else {
-        NO_WARN(element).ensureResolved(compiler);
+        ClassElement cls = element;
+        cls.ensureResolved(compiler);
       }
     }
     compiler.processQueue(enqueuer.resolution, null);
@@ -1184,7 +1185,7 @@ class AddedFunctionUpdate extends Update with FletchFeatures {
       enclosing = enclosing.compilationUnit;
     }
     PartialFunctionElement copy = element.copyWithEnclosing(enclosing);
-    NO_WARN(container).addMember(copy, compiler);
+    container.addMember(copy, compiler);
     return copy;
   }
 }
@@ -1213,7 +1214,7 @@ class AddedClassUpdate extends Update with FletchFeatures {
 class AddedFieldUpdate extends Update with FletchFeatures {
   final FieldElementX element;
 
-  final ScopeContainerElement container;
+  final /* ScopeContainerElement */ container;
 
   AddedFieldUpdate(Compiler compiler, this.element, this.container)
       : super(compiler);
@@ -1229,7 +1230,7 @@ class AddedFieldUpdate extends Update with FletchFeatures {
       enclosing = enclosing.compilationUnit;
     }
     FieldElementX copy = element.copyWithEnclosing(enclosing);
-    NO_WARN(container).addMember(copy, compiler);
+    container.addMember(copy, compiler);
     return copy;
   }
 }
@@ -1358,6 +1359,3 @@ abstract class FletchFeatures {
     return backend.systemBuilder.lookupFunctionBuilderByElement(function);
   }
 }
-
-// TODO(ahe): Remove this method.
-NO_WARN(x) => x;
