@@ -1481,7 +1481,7 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
     // Load class of object we want to test immutability of.
     __ movl(EAX, Address(ECX, HeapObject::kClassOffset - HeapObject::kTag));
 
-    // Load instance format & handle the three cases:
+    // Load instance format & handle the four cases:
     //  - boxed => not immutable
     //  - array => not immutable
     //  - Instance => check runtime-tracked bit

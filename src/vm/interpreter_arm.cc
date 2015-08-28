@@ -1808,7 +1808,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     // Load class of object we want to test immutability of.
     __ ldr(R0, Address(R2, HeapObject::kClassOffset - HeapObject::kTag));
 
-    // Load instance format & handle the three cases:
+    // Load instance format & handle the four cases:
     //  - boxed => not immutable
     //  - array => not immutable
     //  - Instance => check runtime-tracked bit

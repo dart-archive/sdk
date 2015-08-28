@@ -198,7 +198,7 @@ class ServerSocket extends _SocketBase {
   void spawnAccept(void fn(Socket socket)) {
     if (!isImmutable(fn)) {
       throw new ArgumentError(
-          'Cosure passed to ServerSocket.spawnAccept() must be immutable.');
+          'Closure passed to ServerSocket.spawnAccept() must be immutable.');
     }
 
     int client = _accept();

@@ -12,11 +12,20 @@ const patch = "patch";
   @patch factory Uint8List(int length) {
     return new _Uint8List(length);
   }
+
+  @patch factory Uint8List.fromList(List<int> elements) {
+    return new _Uint8List.fromList(elements);
+  }
 }
 
-class _Uint8List extends _TypedData with ListMixin<int> implements Uint8List {
+class _Uint8List extends _TypedList implements Uint8List {
 
   _Uint8List(int length) : super._create(length);
+
+  _Uint8List._fromList(List<int> elements)
+      : super._create(elements.length) {
+    this.setRange(0, elements.length, elements);
+  }
 
   _Uint8List._view(ByteBuffer buffer, int offsetInBytes, int length)
       : super._wrap(buffer, offsetInBytes, length);
@@ -26,40 +35,80 @@ class _Uint8List extends _TypedData with ListMixin<int> implements Uint8List {
     _foreign.setUint8(offsetInBytes + index, value);
   }
 
-  void setRange(int start, int end, Iterable iterable, [int skipCount = 0]) {
-    int length = this.length;
-    if (start < 0 || start > length) {
-      throw new RangeError.range(start, 0, length);
-    }
-    if (end < start || end > length) {
-      throw new RangeError.range(end, start, length);
-    }
-    if ((end - start) == 0) return;
-    if (iterable is List) {
-      // TODO(ajohnsen): Use memcpy for Uint8List
-      int count = end - start;
-      for (int i = 0; i < count; i++) {
-        this[start + i] = iterable[skipCount + i];
-      }
-    } else {
-      Iterator it = iterable.iterator;
-      while (skipCount > 0) {
-        if (!it.moveNext()) return;
-        skipCount--;
-      }
-      for (int i = start; i < end; i++) {
-        if (!it.moveNext()) return;
-        this[i] = it.current;
-      }
-    }
-  }
-
   int get length => lengthInBytes;
   int get elementSizeInBytes => 1;
+}
 
-  void set length(int value) {
-    throw new UnsupportedError("A Uint8List cannot change length");
+@patch class Uint16List {
+  @patch factory Uint16List(int length) {
+    return new _Uint16List(length);
   }
+
+  @patch factory Uint16List.fromList(List<int> elements) {
+    return new _Uint16List.fromList(elements);
+  }
+}
+
+class _Uint16List extends _TypedList implements Uint16List {
+  static const int _elementSizeInBytes = 2;
+
+  _Uint16List(int length)
+       : super._create(length * _elementSizeInBytes);
+
+  _Uint16List._fromList(List<int> elements)
+      : super._create(elements.length * _elementSizeInBytes) {
+    this.setRange(0, elements.length, elements);
+  }
+
+  _Uint16List._view(ByteBuffer buffer, int offsetInBytes, int length)
+      : super._wrap(buffer, offsetInBytes,
+          length == null ? null : length * _elementSizeInBytes);
+
+  int operator[](int index) =>
+      _foreign.getUint16(offsetInBytes + (index * elementSizeInBytes));
+  void operator[]=(int index, int value) {
+    _foreign.setUint16(offsetInBytes + (index * elementSizeInBytes), value);
+  }
+
+  // Number of elements in the list.
+  int get length => lengthInBytes ~/ _elementSizeInBytes;
+  int get elementSizeInBytes => _elementSizeInBytes;
+}
+
+@patch class Uint32List {
+  @patch factory Uint32List(int length) {
+    return new _Uint32List(length);
+  }
+
+  @patch factory Uint32List.fromList(List<int> elements) {
+    return new _Uint32List.fromList(elements);
+  }
+}
+
+class _Uint32List extends _TypedList implements Uint32List {
+  static const int _elementSizeInBytes = 4;
+
+  _Uint32List(int length)
+      : super._create(length * _elementSizeInBytes);
+
+  _Uint32List._fromList(List<int> elements)
+      : super._create(elements.length * _elementSizeInBytes) {
+    this.setRange(0, elements.length, elements);
+  }
+
+  _Uint32List._view(ByteBuffer buffer, int offsetInBytes, int length)
+      : super._wrap(buffer, offsetInBytes,
+           length == null ? null : length * _elementSizeInBytes);
+
+  int operator[](int index) =>
+      _foreign.getUint32(offsetInBytes + (index * elementSizeInBytes));
+  void operator[]=(int index, int value) {
+    _foreign.setUint32(offsetInBytes + (index * elementSizeInBytes), value);
+  }
+
+  // Number of elements in the list.
+  int get length => lengthInBytes ~/ _elementSizeInBytes;
+  int get elementSizeInBytes => _elementSizeInBytes;
 }
 
 abstract class _TypedData {
@@ -84,6 +133,45 @@ abstract class _TypedData {
   int get elementSizeInBytes;
 }
 
+abstract class _TypedList extends _TypedData with ListMixin<int> {
+  _TypedList._create(int sizeInBytes) : super._create(sizeInBytes);
+
+  _TypedList._wrap(_ByteBuffer other, int offsetInBytes, int lengthInBytes)
+      : super._wrap(other, offsetInBytes, lengthInBytes);
+
+  int get length;
+  void set length(int value) {
+    throw new UnsupportedError("A typed data list cannot change length");
+  }
+
+  void setRange(int start, int end, Iterable iterable, [int skipCount = 0]) {
+    int length = this.length;
+    if (start < 0 || start > length) {
+      throw new RangeError.range(start, 0, length);
+    }
+    if (end < start || end > length) {
+      throw new RangeError.range(end, start, length);
+    }
+    if ((end - start) == 0) return;
+    if (iterable is List) {
+      int count = end - start;
+      for (int i = 0; i < count; i++) {
+        this[start + i] = iterable[skipCount + i];
+      }
+    } else {
+      Iterator it = iterable.iterator;
+      while (skipCount > 0) {
+        if (!it.moveNext()) return;
+        skipCount--;
+      }
+      for (int i = start; i < end; i++) {
+        if (!it.moveNext()) return;
+        this[i] = it.current;
+      }
+    }
+  }
+}
+
 class _ByteBuffer implements ByteBuffer {
   final ForeignMemory _foreign;
 
@@ -105,16 +193,16 @@ class _ByteBuffer implements ByteBuffer {
     throw "asUint8ClampedList([offsetInBytes, length]) isn't implemented";
   }
 
-  asUint16List([offsetInBytes, length]) {
-    throw "asUint16List([offsetInBytes, length]) isn't implemented";
+  Uint16List asUint16List([offsetInBytes = 0, length]) {
+    return new _Uint16List._view(this, offsetInBytes, length);
   }
 
   asInt16List([offsetInBytes, length]) {
     throw "asInt16List([offsetInBytes, length]) isn't implemented";
   }
 
-  asUint32List([offsetInBytes, length]) {
-    throw "asUint32List([offsetInBytes, length]) isn't implemented";
+  Uint32List asUint32List([offsetInBytes = 0, length]) {
+    return new _Uint32List._view(this, offsetInBytes, length);
   }
 
   asInt32List([offsetInBytes, length]) {
