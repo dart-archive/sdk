@@ -100,7 +100,7 @@ typedef Future NoArgFuture();
 Map<String, EncodedResult> tests = computeTests(tests_with_expectations.tests);
 
 Future<Null> main(List<String> arguments) async {
-  List<String> testNamesToRun;
+  Iterable<String> testNamesToRun;
 
   if (arguments.isEmpty) {
     int skip = const int.fromEnvironment("skip", defaultValue: 0);
