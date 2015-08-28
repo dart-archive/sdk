@@ -46,7 +46,7 @@ abstract class FletchClassBuilder {
   // InvokeTest bytecode, as the function is not guraranteed to be valid.
   void addIsSelector(int selector);
   void createIsFunctionEntry(FletchBackend backend, int arity);
-  void createImplicitAccessors(FletchBackend backend);
+  void updateImplicitAccessors(FletchBackend backend);
   void createIsEntries(FletchBackend backend);
 
   FletchClass finalizeClass(
@@ -148,7 +148,7 @@ class FletchNewClassBuilder extends FletchClassBuilder {
     return result;
   }
 
-  void createImplicitAccessors(FletchBackend backend) {
+  void updateImplicitAccessors(FletchBackend backend) {
     _implicitAccessorTable.clear();
     // If we don't have an element (stub class), we don't have anything to
     // generate accessors for.
@@ -256,6 +256,8 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
   final Map<int, int> _implicitAccessorTable = <int, int>{};
   final Map<int, FletchFunctionBase> _newMethods = <int, FletchFunctionBase>{};
   final Set<FletchFunctionBase> _removedMethods = new Set<FletchFunctionBase>();
+  final Set<FieldElement> _removedFields = new Set<FieldElement>();
+  final List<int> _removedAccessors = <int>[];
   bool _fieldsChanged = false;
 
   // TODO(ajohnsen): Reconsider bookkeeping of extra fields (this is really only
@@ -281,6 +283,7 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
   void removeField(FieldElement field) {
     if (field.enclosingClass != element) extraFields--;
     _fieldsChanged = true;
+    _removedFields.add(field);
   }
 
   void addField(FieldElement field) {
@@ -296,7 +299,7 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
     // TODO(ajohnsen): Implement.
   }
 
-  void createImplicitAccessors(FletchBackend backend) {
+  void updateImplicitAccessors(FletchBackend backend) {
     // If we don't have an element (stub class), we don't have anything to
     // generate accessors for.
     if (element == null) return;
@@ -316,6 +319,18 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
 
       fieldIndex++;
     });
+
+    for (FieldElement field in _removedFields) {
+      Selector getter = new Selector.getter(field.name, field.library);
+      int getterSelector = backend.context.toFletchSelector(getter);
+      _removedAccessors.add(getterSelector);
+
+      if (!field.isFinal) {
+        Selector setter = new Selector.setter(field.name, field.library);
+        int setterSelector = backend.context.toFletchSelector(setter);
+        _removedAccessors.add(setterSelector);
+      }
+    }
   }
 
   void createIsEntries(FletchBackend backend) {
@@ -324,6 +339,10 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
 
   PersistentMap<int, int> computeMethodTable() {
     PersistentMap<int, int> methodTable = klass.methodTable;
+
+    for (int selector in _removedAccessors) {
+      methodTable = methodTable.delete(selector);
+    }
 
     for (FletchFunctionBase function in _removedMethods) {
       methodTable.forEachKeyValue((int selector, int functionId) {
@@ -350,7 +369,7 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
       List<Command> commands) {
     // TODO(ajohnsen): We need to figure out when to do this. It should be after
     // we have updated class fields, but before we hit 'computeSystem'.
-    createImplicitAccessors(context.backend);
+    updateImplicitAccessors(context.backend);
 
     commands.add(new PushFromMap(MapId.classes, classId));
 

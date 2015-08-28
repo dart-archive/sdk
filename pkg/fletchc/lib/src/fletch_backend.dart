@@ -225,7 +225,7 @@ class FletchBackend extends Backend with ResolutionCallbacks {
 
     // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
     // This is a workaround, where we basically add getters for all fields.
-    classBuilder.createImplicitAccessors(this);
+    classBuilder.updateImplicitAccessors(this);
 
     Element callMember = element.lookupLocalMember(
         Compiler.CALL_OPERATOR_NAME);
@@ -1365,22 +1365,29 @@ class FletchBackend extends Backend with ResolutionCallbacks {
   }
 
   void forgetElement(Element element) {
+    FletchFunctionBase function =
+        systemBuilder.lookupFunctionByElement(element);
+    if (function == null) return;
+    systemBuilder.forgetFunction(function);
+  }
+
+  void removeField(Element element) {
+    if (!element.isInstanceMember) return;
     ClassElement enclosingClass = element.enclosingClass;
-    if (element.isField && element.isInstanceMember) {
-      forEachSubclassOf(enclosingClass, (ClassElement cls) {
-        FletchClassBuilder builder = registerClassElement(cls);
-        builder.removeField(element);
-      });
-    } else {
-      FletchFunctionBase function =
-          systemBuilder.lookupFunctionByElement(element);
-      if (function != null) {
-        systemBuilder.forgetFunction(function);
-        if (enclosingClass != null && element.isInstanceMember) {
-          FletchClassBuilder builder = registerClassElement(enclosingClass);
-          builder.removeFromMethodTable(function);
-        }
-      }
+    forEachSubclassOf(enclosingClass, (ClassElement cls) {
+      FletchClassBuilder builder = registerClassElement(cls);
+      builder.removeField(element);
+    });
+  }
+
+  void removeFunction(FunctionElement element) {
+    FletchFunctionBase function =
+        systemBuilder.lookupFunctionByElement(element);
+    if (function == null) return;
+    if (element.isInstanceMember) {
+      ClassElement enclosingClass = element.enclosingClass;
+      FletchClassBuilder builder = registerClassElement(enclosingClass);
+      builder.removeFromMethodTable(function);
     }
   }
 

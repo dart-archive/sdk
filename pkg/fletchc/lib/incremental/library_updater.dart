@@ -845,7 +845,7 @@ class LibraryUpdater extends FletchFeatures {
       }
     }
     for (Update update in updates) {
-      Element element = update.apply();
+      Element element = update.apply(backend);
       if (!update.isRemoval) {
         elementsToInvalidate.add(element);
       }
@@ -964,7 +964,7 @@ abstract class Update {
   Update(this.compiler);
 
   /// Applies the update to [before] and returns that element.
-  Element apply();
+  Element apply(FletchBackend backend);
 
   bool get isRemoval => false;
 
@@ -983,7 +983,7 @@ class FunctionUpdate extends Update with ReuseFunction {
   FunctionUpdate(Compiler compiler, this.before, this.after)
       : super(compiler);
 
-  PartialFunctionElement apply() {
+  PartialFunctionElement apply(FletchBackend backend) {
     patchElement();
     reuseElement();
     return before;
@@ -1061,9 +1061,10 @@ class RemovedFunctionUpdate extends RemovalUpdate
     wasStateCaptured = true;
   }
 
-  PartialFunctionElement apply() {
+  PartialFunctionElement apply(FletchBackend backend) {
     if (!wasStateCaptured) throw "captureState must be called before apply.";
     removeFromEnclosing();
+    backend.removeFunction(element);
     reuseElement();
     return null;
   }
@@ -1090,7 +1091,7 @@ class RemovedClassUpdate extends RemovalUpdate with FletchFeatures {
     wasStateCaptured = true;
   }
 
-  PartialClassElement apply() {
+  PartialClassElement apply(FletchBackend backend) {
     if (!wasStateCaptured) {
       throw new StateError("captureState must be called before apply.");
     }
@@ -1137,12 +1138,13 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
     wasStateCaptured = true;
   }
 
-  FieldElementX apply() {
+  FieldElementX apply(FletchBackend backend) {
     if (!wasStateCaptured) {
       throw new StateError("captureState must be called before apply.");
     }
 
     removeFromEnclosing();
+    backend.removeField(element);
 
     return element;
   }
@@ -1171,7 +1173,7 @@ class AddedFunctionUpdate extends Update with FletchFeatures {
 
   PartialFunctionElement get after => element;
 
-  PartialFunctionElement apply() {
+  PartialFunctionElement apply(FletchBackend backend) {
     Element enclosing = container;
     if (enclosing.isLibrary) {
       // TODO(ahe): Reuse compilation unit of element instead?
@@ -1195,7 +1197,7 @@ class AddedClassUpdate extends Update with FletchFeatures {
 
   PartialClassElement get after => element;
 
-  PartialClassElement apply() {
+  PartialClassElement apply(FletchBackend backend) {
     // TODO(ahe): Reuse compilation unit of element instead?
     CompilationUnitElementX compilationUnit = library.compilationUnit;
     PartialClassElement copy = element.copyWithEnclosing(compilationUnit);
@@ -1216,7 +1218,7 @@ class AddedFieldUpdate extends Update with FletchFeatures {
 
   PartialFieldList get after => element.declarationSite;
 
-  FieldElementX apply() {
+  FieldElementX apply(FletchBackend backend) {
     Element enclosing = container;
     if (enclosing.isLibrary) {
       // TODO(ahe): Reuse compilation unit of element instead?
@@ -1237,7 +1239,7 @@ class ClassUpdate extends Update with FletchFeatures {
   ClassUpdate(Compiler compiler, this.before, this.after)
       : super(compiler);
 
-  PartialClassElement apply() {
+  PartialClassElement apply(FletchBackend backend) {
     patchElement();
     reuseElement();
     return before;
