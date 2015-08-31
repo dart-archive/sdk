@@ -22,7 +22,7 @@ LOCAL_SRC_FILES := \
 	../../../src/shared/utils.cc \
 	../../../src/vm/android_print_interceptor.cc \
 	../../../src/vm/debug_info.cc \
-	../../../src/vm/event_handler.cc \
+	../../../src/vm/event_handler_posix.cc \
 	../../../src/vm/event_handler_linux.cc \
 	../../../src/vm/ffi.cc \
 	../../../src/vm/ffi_linux.cc \
@@ -37,6 +37,7 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/intrinsics.cc \
 	../../../src/vm/lookup_cache.cc \
 	../../../src/vm/natives.cc \
+	../../../src/vm/natives_posix.cc \
 	../../../src/vm/object.cc \
 	../../../src/vm/object_list.cc \
 	../../../src/vm/object_map.cc \
