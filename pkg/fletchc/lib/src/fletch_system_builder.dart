@@ -4,6 +4,8 @@
 
 library fletchc.fletch_system_builder;
 
+import 'dart:typed_data';
+
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
     ConstructedConstantValue,
@@ -298,8 +300,12 @@ class FletchSystemBuilder {
       } else if (constant.isNull) {
         commands.add(const PushNull());
       } else if (constant.isString) {
-        commands.add(
-            new PushNewString(constant.primitiveValue.slowToString()));
+        Iterable<int> list = constant.primitiveValue.slowToString().codeUnits;
+        if (list.any((codeUnit) => codeUnit >= 256)) {
+          commands.add(new PushNewTwoByteString(new Uint16List.fromList(list)));
+        } else {
+          commands.add(new PushNewOneByteString(new Uint8List.fromList(list)));
+        }
       } else if (constant.isList) {
         addList(constant.entries, true);
       } else if (constant.isMap) {

@@ -24,6 +24,7 @@ namespace fletch {
   N(Port,                   "Port")                     \
   N(ForeignMemory,          "ForeignMemory")            \
   N(ForeignFunction,        "ForeignFunction")          \
+  N(OneByteString,          "_OneByteString")           \
   N(TwoByteString,          "_TwoByteString")           \
                                                         \
   N(Equals,                 "==")                       \

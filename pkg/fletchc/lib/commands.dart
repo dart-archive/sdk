@@ -127,15 +127,14 @@ class Dup extends Command {
   String valuesToString() => "";
 }
 
-class PushNewString extends Command {
-  final String value;
+class PushNewOneByteString extends Command {
+  final Uint8List value;
 
-  const PushNewString(this.value)
-      : super(CommandCode.PushNewString);
+  const PushNewOneByteString(this.value)
+      : super(CommandCode.PushNewOneByteString);
 
   void internalAddTo(Sink<List<int>> sink, CommandBuffer<CommandCode> buffer) {
-    List<int> payload = new Uint16List.fromList(value.codeUnits)
-        .buffer.asUint8List();
+    List<int> payload = value;
     buffer
         ..addUint32(payload.length)
         ..addUint8List(payload)
@@ -144,7 +143,26 @@ class PushNewString extends Command {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "'$value'";
+  String valuesToString() => "'${new String.fromCharCodes(value)}'";
+}
+
+class PushNewTwoByteString extends Command {
+  final Uint16List value;
+
+  const PushNewTwoByteString(this.value)
+      : super(CommandCode.PushNewTwoByteString);
+
+  void internalAddTo(Sink<List<int>> sink, CommandBuffer<CommandCode> buffer) {
+    List<int> payload = value.buffer.asUint8List();
+    buffer
+        ..addUint32(payload.length)
+        ..addUint8List(payload)
+        ..sendOn(sink, code);
+  }
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "'${new String.fromCharCodes(value)}'";
 }
 
 class PushNewInstance extends Command {
@@ -1172,7 +1190,8 @@ enum CommandCode {
   PushBoolean,
   PushNewInteger,
   PushNewDouble,
-  PushNewString,
+  PushNewOneByteString,
+  PushNewTwoByteString,
   PushNewInstance,
   PushNewArray,
   PushNewFunction,

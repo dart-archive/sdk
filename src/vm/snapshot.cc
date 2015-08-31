@@ -53,6 +53,8 @@ class Header {
   // Compute the object size based on type and elements.
   int Size() {
     switch (as_type()) {
+      case InstanceFormat::ONE_BYTE_STRING_TYPE:
+        return OneByteString::AllocationSize(elements());
       case InstanceFormat::TWO_BYTE_STRING_TYPE:
         return TwoByteString::AllocationSize(elements());
       case InstanceFormat::ARRAY_TYPE:
@@ -405,6 +407,10 @@ Object* SnapshotReader::ReadObject() {
   AddReference(object);
   object->set_class(reinterpret_cast<Class*>(ReadObject()));
   switch (type) {
+    case InstanceFormat::ONE_BYTE_STRING_TYPE:
+      reinterpret_cast<OneByteString*>(object)->OneByteStringReadFrom(
+          this, elements);
+      break;
     case InstanceFormat::TWO_BYTE_STRING_TYPE:
       reinterpret_cast<TwoByteString*>(object)->TwoByteStringReadFrom(
           this, elements);
@@ -473,6 +479,12 @@ void SnapshotWriter::WriteObject(Object* object) {
 
   // Serialize the object.
   switch (type) {
+    case InstanceFormat::ONE_BYTE_STRING_TYPE: {
+      OneByteString* str = OneByteString::cast(object);
+      alternative_heap_size_ += str->AlternativeSize();
+      str->OneByteStringWriteTo(this, klass);
+      break;
+    }
     case InstanceFormat::TWO_BYTE_STRING_TYPE: {
       TwoByteString* str = TwoByteString::cast(object);
       alternative_heap_size_ += str->AlternativeSize();
@@ -566,6 +578,20 @@ void SnapshotWriter::GrowCapacity(int extra) {
   int capacity = snapshot_.length() + growth;
   uint8* data = static_cast<uint8*>(realloc(snapshot_.data(), capacity));
   snapshot_ = List<uint8>(data, capacity);
+}
+
+void OneByteString::OneByteStringWriteTo(SnapshotWriter* writer, Class* klass) {
+  // Header.
+  writer->WriteHeader(InstanceFormat::ONE_BYTE_STRING_TYPE, length());
+  writer->Forward(this);
+  // Body.
+  writer->WriteBytes(length(), byte_address_for(0));
+}
+
+void OneByteString::OneByteStringReadFrom(SnapshotReader* reader, int length) {
+  set_length(length);
+  set_hash_value(kNoHashValue);
+  reader->ReadBytes(length, byte_address_for(0));
 }
 
 void TwoByteString::TwoByteStringWriteTo(SnapshotWriter* writer, Class* klass) {

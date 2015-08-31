@@ -271,31 +271,47 @@ void Process::TryDeallocInteger(LargeInteger* object) {
   immutable_heap_->TryDeallocInteger(object);
 }
 
-Object* Process::NewString(int length) {
-  Class* string_class = program()->string_class();
-  Object* raw_result = immutable_heap_->CreateString(string_class, length);
+Object* Process::NewOneByteString(int length) {
+  Class* string_class = program()->one_byte_string_class();
+  Object* raw_result = immutable_heap_->CreateOneByteString(
+      string_class, length);
+  if (raw_result->IsFailure()) return raw_result;
+  return OneByteString::cast(raw_result);
+}
+
+Object* Process::NewTwoByteString(int length) {
+  Class* string_class = program()->two_byte_string_class();
+  Object* raw_result = immutable_heap_->CreateTwoByteString(
+      string_class, length);
   if (raw_result->IsFailure()) return raw_result;
   return TwoByteString::cast(raw_result);
 }
 
-Object* Process::NewStringUninitialized(int length) {
-  Class* string_class = program()->string_class();
-  Object* raw_result = immutable_heap_->CreateStringUninitialized(
+Object* Process::NewOneByteStringUninitialized(int length) {
+  Class* string_class = program()->one_byte_string_class();
+  Object* raw_result = immutable_heap_->CreateOneByteStringUninitialized(
+      string_class, length);
+  if (raw_result->IsFailure()) return raw_result;
+  return OneByteString::cast(raw_result);
+}
+
+Object* Process::NewTwoByteStringUninitialized(int length) {
+  Class* string_class = program()->two_byte_string_class();
+  Object* raw_result = immutable_heap_->CreateTwoByteStringUninitialized(
       string_class, length);
   if (raw_result->IsFailure()) return raw_result;
   return TwoByteString::cast(raw_result);
 }
 
 Object* Process::NewStringFromAscii(List<const char> value) {
-  Class* string_class = program()->string_class();
-  Object* raw_result = immutable_heap_->CreateString(
+  Class* string_class = program()->one_byte_string_class();
+  Object* raw_result = immutable_heap_->CreateOneByteStringUninitialized(
       string_class, value.length());
   if (raw_result->IsFailure()) return raw_result;
-  TwoByteString* result = TwoByteString::cast(raw_result);
+  OneByteString* result = OneByteString::cast(raw_result);
   for (int i = 0; i < value.length(); i++) {
-    result->set_code_unit(i, value[i]);
+    result->set_char_code(i, value[i]);
   }
-
   return result;
 }
 
@@ -319,23 +335,6 @@ Object* Process::ToInteger(int64 value) {
   return Smi::IsValid(value)
       ? Smi::FromWord(value)
       : NewInteger(value);
-}
-
-Object* Process::Concatenate(TwoByteString* x, TwoByteString* y) {
-  int xlen = x->length();
-  if (xlen == 0) return y;
-  int ylen = y->length();
-  if (ylen == 0) return x;
-  int length = xlen + ylen;
-  Class* string_class = program()->string_class();
-  Object* raw_result = immutable_heap_->CreateString(string_class, length);
-  if (raw_result->IsFailure()) return raw_result;
-  TwoByteString* result = TwoByteString::cast(raw_result);
-  uint8_t* first_part = result->byte_address_for(0);
-  uint8_t* second_part = first_part + xlen * sizeof(uint16_t);
-  memcpy(first_part, x->byte_address_for(0), xlen * sizeof(uint16_t));
-  memcpy(second_part, y->byte_address_for(0), ylen * sizeof(uint16_t));
-  return result;
 }
 
 Object* Process::NewStack(int length) {

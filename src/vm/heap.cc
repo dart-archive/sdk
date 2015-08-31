@@ -127,7 +127,21 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function) {
   return Initializer::cast(result);
 }
 
-Object* Heap::CreateStringInternal(Class* the_class, int length, bool clear) {
+Object* Heap::CreateOneByteStringInternal(
+    Class* the_class, int length, bool clear) {
+  ASSERT(the_class->instance_format().type() ==
+         InstanceFormat::ONE_BYTE_STRING_TYPE);
+  int size = OneByteString::AllocationSize(length);
+  Object* raw_result = Allocate(size);
+  if (raw_result->IsFailure()) return raw_result;
+  OneByteString* result = reinterpret_cast<OneByteString*>(raw_result);
+  result->set_class(the_class);
+  result->Initialize(size, length, clear);
+  return OneByteString::cast(result);
+}
+
+Object* Heap::CreateTwoByteStringInternal(
+    Class* the_class, int length, bool clear) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::TWO_BYTE_STRING_TYPE);
   int size = TwoByteString::AllocationSize(length);
@@ -139,12 +153,20 @@ Object* Heap::CreateStringInternal(Class* the_class, int length, bool clear) {
   return TwoByteString::cast(result);
 }
 
-Object* Heap::CreateString(Class* the_class, int length) {
-  return CreateStringInternal(the_class, length, true);
+Object* Heap::CreateOneByteString(Class* the_class, int length) {
+  return CreateOneByteStringInternal(the_class, length, true);
 }
 
-Object* Heap::CreateStringUninitialized(Class* the_class, int length) {
-  return CreateStringInternal(the_class, length, false);
+Object* Heap::CreateTwoByteString(Class* the_class, int length) {
+  return CreateTwoByteStringInternal(the_class, length, true);
+}
+
+Object* Heap::CreateOneByteStringUninitialized(Class* the_class, int length) {
+  return CreateOneByteStringInternal(the_class, length, false);
+}
+
+Object* Heap::CreateTwoByteStringUninitialized(Class* the_class, int length) {
+  return CreateTwoByteStringInternal(the_class, length, false);
 }
 
 Object* Heap::CreateStack(Class* the_class, int length) {

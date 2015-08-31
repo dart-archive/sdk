@@ -96,37 +96,48 @@ void Print::UnregisterPrintInterceptors() {
 #endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 }
 
-uint32 Utils::StringHash(const uint16* data, int length) {
+uint32 Utils::StringHash(const uint8* data, int length, int char_width) {
   // This implementation is based on the public domain MurmurHash
   // version 2.0. The constants M and R have been determined work
   // well experimentally.
   const uint32 M = 0x5bd1e995;
   const int R = 24;
-  int size = length * sizeof(uint16);
-  uint32 hash = size;
+  int remaining = length;
+  uint32 hash = length;
 
-  // We'll be reading four bytes at a time. On certain systems that
+  // We'll be reading up to two bytes at a time. On certain systems that
   // is only allowed if the pointers are properly aligned.
   ASSERT(IsAligned(reinterpret_cast<uword>(data), 4));
 
-  // Mix four bytes at a time into the hash.
-  const uint8* cursor = reinterpret_cast<const uint8*>(data);
-  while (size >= 4) {
-    uint32 part = *reinterpret_cast<const uint32*>(cursor);
+  // Mix one char at a time into the hash.
+  const uint8* cursor = data;
+  while (remaining >= 2) {
+    uint32 part = 0;
+    if (char_width == 2) {
+      part = *reinterpret_cast<const uint32*>(cursor);
+    } else {
+      part = (*cursor) | (*(cursor + 1) << 16);
+    }
     part *= M;
     part ^= part >> R;
     part *= M;
     hash *= M;
     hash ^= part;
-    cursor += 4;
-    size -= 4;
+    cursor += 2 * char_width;
+    remaining -= 2;
   }
 
-  // Handle the last two bytes of the string if necessary.
-  if (size != 0) {
-    ASSERT(size == 2);
-    hash ^= *reinterpret_cast<const uint16*>(cursor);
+  // Handle the last byte of the string if necessary.
+  if (remaining != 0) {
+    ASSERT(remaining == 1);
+    uint32 part = (char_width == 2)
+        ? *reinterpret_cast<const uint16*>(cursor)
+        : *cursor;
+    part *= M;
+    part ^= part >> R;
+    part *= M;
     hash *= M;
+    hash ^= part;
   }
 
   // Do a few final mixes of the hash to ensure the last few bytes are

@@ -52,13 +52,15 @@ class Heap {
 
   // Create a string object initialized with zeros. Caller should set
   // the actual contents.
-  Object* CreateString(Class* the_class, int length);
+  Object* CreateOneByteString(Class* the_class, int length);
+  Object* CreateTwoByteString(Class* the_class, int length);
 
   // Create a string object where the payload is uninitialized.
   // The payload therefore contains whatever was in the heap at this
   // location before. This should only be used if you are going
   // to immediately overwrite the payload with the actual data.
-  Object* CreateStringUninitialized(Class* the_class, int length);
+  Object* CreateOneByteStringUninitialized(Class* the_class, int length);
+  Object* CreateTwoByteStringUninitialized(Class* the_class, int length);
 
   // Allocate stack.
   Object* CreateStack(Class* the_class, int length);
@@ -119,7 +121,8 @@ class Heap {
 
   Heap(Space* existing_space, WeakPointer* weak_pointers);
 
-  Object* CreateStringInternal(Class* the_class, int length, bool clear);
+  Object* CreateOneByteStringInternal(Class* the_class, int length, bool clear);
+  Object* CreateTwoByteStringInternal(Class* the_class, int length, bool clear);
 
   Object* AllocateRawClass(int size);
 

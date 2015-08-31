@@ -202,12 +202,22 @@ namespace fletch {
   N(ForeignSetFloat32,           "ForeignMemory", "_setFloat32")         \
   N(ForeignSetFloat64,           "ForeignMemory", "_setFloat64")         \
                                                                          \
+  N(StringLength,                "_StringBase", "length")                \
+                                                                         \
+  N(OneByteStringAdd,            "_OneByteString", "+")                  \
+  N(OneByteStringCodeUnitAt,     "_OneByteString", "codeUnitAt")         \
+  N(OneByteStringCreate,         "_OneByteString", "_create")            \
+  N(OneByteStringEqual,          "_OneByteString", "==")                 \
+  N(OneByteStringSetCodeUnitAt,  "_OneByteString", "_setCodeUnitAt")     \
+  N(OneByteStringSetContent,     "_OneByteString", "_setContent")        \
+  N(OneByteStringSubstring,      "_OneByteString", "_substring")         \
+                                                                         \
   N(TwoByteStringAdd,            "_TwoByteString", "+")                  \
   N(TwoByteStringCodeUnitAt,     "_TwoByteString", "codeUnitAt")         \
   N(TwoByteStringCreate,         "_TwoByteString", "_create")            \
   N(TwoByteStringEqual,          "_TwoByteString", "==")                 \
-  N(TwoByteStringLength,         "_TwoByteString", "length")             \
   N(TwoByteStringSetCodeUnitAt,  "_TwoByteString", "_setCodeUnitAt")     \
+  N(TwoByteStringSetContent,     "_TwoByteString", "_setContent")        \
   N(TwoByteStringSubstring,      "_TwoByteString", "_substring")         \
                                                                          \
   N(UriBase,                     "Uri", "_base")                         \

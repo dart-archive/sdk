@@ -84,6 +84,7 @@ const patch = "patch";
 @patch class StringBuffer {
   final List<String> _strings = [];
   int _length = 0;
+  bool _isTwoByteString = false;
 
   @patch StringBuffer([String contents = ""]) {
     write(contents);
@@ -94,6 +95,7 @@ const patch = "patch";
     if (str is! String) throw new ArgumentError(obj);
     int length = str.length;
     if (length > 0) {
+      if (str is _TwoByteString) _isTwoByteString = true;
       _strings.add(str);
       _length += length;
     }
@@ -118,6 +120,7 @@ const patch = "patch";
 
   @patch void writeCharCode(int charCode) {
     String char = new String.fromCharCode(charCode);
+    if (char is _TwoByteString) _isTwoByteString = true;
     _strings.add(char);
     _length += char.length;
   }
@@ -125,22 +128,21 @@ const patch = "patch";
   @patch void clear() {
     _strings.clear();
     _length = 0;
+    _isTwoByteString = false;
   }
 
   @patch int get length => _length;
 
   @patch String toString() {
-    _TwoByteString result = _TwoByteString._create(length);
+    _StringBase result = _isTwoByteString
+        ? new _TwoByteString(length)
+        : new _OneByteString(length);
     int offset = 0;
     int count = _strings.length;
     for (int i = 0; i < count; i++) {
       String str = _strings[i];
-      int length = str.length;
-      // TODO(ajohnsen): Create a native '_setStringContent' to speed it up.
-      for (int j = 0; j < length; j++) {
-        result._setCodeUnitAt(offset + j, str.codeUnitAt(j));
-      }
-      offset += length;
+      result._setContent(offset, str);
+      offset += str.length;
     }
     return result;
   }

@@ -132,6 +132,14 @@ void Session::SendDartValue(Object* value) {
   } else if (value->IsDouble()) {
     buffer.WriteDouble(Double::cast(value)->value());
     connection_->Send(Connection::kDouble, buffer);
+  } else if (value->IsOneByteString()) {
+    // TODO(ager): We should send the character data as 8-bit values
+    // instead of 32-bit values.
+    OneByteString* str = OneByteString::cast(value);
+    for (int i = 0; i < str->length(); i++) {
+      buffer.WriteInt(str->get_char_code(i));
+    }
+    connection_->Send(Connection::kString, buffer);
   } else if (value->IsTwoByteString()) {
     // TODO(ager): We should send the character data as 16-bit values
     // instead of 32-bit values.
@@ -452,12 +460,21 @@ void Session::ProcessMessages() {
         break;
       }
 
-      case Connection::kPushNewString: {
+      case Connection::kPushNewOneByteString: {
+        int length;
+        uint8* bytes = connection_->ReadBytes(&length);
+        List<uint8> contents(bytes, length);
+        PushNewOneByteString(contents);
+        contents.Delete();
+        break;
+      }
+
+      case Connection::kPushNewTwoByteString: {
         int length;
         uint8* bytes = connection_->ReadBytes(&length);
         ASSERT((length & 1) == 0);
         List<uint16> contents(reinterpret_cast<uint16*>(bytes), length >> 1);
-        PushNewString(contents);
+        PushNewTwoByteString(contents);
         contents.Delete();
         break;
       }
@@ -749,8 +766,17 @@ void Session::PushNewDouble(double value) {
   Push(result);
 }
 
-void Session::PushNewString(List<uint16> contents) {
-  GC_AND_RETRY_ON_ALLOCATION_FAILURE(result, program()->CreateString(contents));
+void Session::PushNewOneByteString(List<uint8> contents) {
+  GC_AND_RETRY_ON_ALLOCATION_FAILURE(
+      result,
+      program()->CreateOneByteString(contents));
+  Push(result);
+}
+
+void Session::PushNewTwoByteString(List<uint16> contents) {
+  GC_AND_RETRY_ON_ALLOCATION_FAILURE(
+      result,
+      program()->CreateTwoByteString(contents));
   Push(result);
 }
 
@@ -880,8 +906,10 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
     klass = program()->constant_map_class();
   } else if (name == Names::kNum) {
     klass = program()->num_class();
+  } else if (name == Names::kOneByteString) {
+    klass = program()->one_byte_string_class();
   } else if (name == Names::kTwoByteString) {
-    klass = program()->string_class();
+    klass = program()->two_byte_string_class();
   } else if (name == Names::kCoroutine) {
     klass = program()->coroutine_class();
   } else if (name == Names::kPort) {

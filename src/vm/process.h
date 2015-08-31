@@ -123,13 +123,16 @@ class Process {
 
   // NewString allocates a string of the given length and fills the payload
   // with zeroes.
-  Object* NewString(int length);
+  Object* NewOneByteString(int length);
+  Object* NewTwoByteString(int length);
 
-  // NewStringUninitialized allocates a string of the given length and
-  // leaves the payload uninitialized. The payload contains whatever
+  // New[One/Two]ByteStringUninitialized allocates a string of the given length
+  // and leaves the payload uninitialized. The payload contains whatever
   // was in that heap space before. Only use this if you intend to
   // immediately overwrite the payload with something else.
-  Object* NewStringUninitialized(int length);
+  Object* NewOneByteStringUninitialized(int length);
+  Object* NewTwoByteStringUninitialized(int length);
+
   Object* NewStringFromAscii(List<const char> value);
   Object* NewBoxed(Object* value);
   Object* NewStack(int length);
@@ -138,8 +141,6 @@ class Process {
 
   // Returns either a Smi or a LargeInteger.
   Object* ToInteger(int64 value);
-
-  Object* Concatenate(TwoByteString* x, TwoByteString* y);
 
   void CollectMutableGarbage();
 

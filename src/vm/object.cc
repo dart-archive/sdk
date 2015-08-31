@@ -45,6 +45,8 @@ int HeapObject::Size() {
   if (!format.has_variable_part()) return format.fixed_size();
   int type = format.type();
   switch (type) {
+    case InstanceFormat::ONE_BYTE_STRING_TYPE:
+      return OneByteString::cast(this)->StringSize();
     case InstanceFormat::TWO_BYTE_STRING_TYPE:
       return TwoByteString::cast(this)->StringSize();
     case InstanceFormat::ARRAY_TYPE:
@@ -69,6 +71,34 @@ int HeapObject::FixedSize() {
   ASSERT(forwarding_address() == NULL);
   InstanceFormat format = raw_class()->instance_format();
   return format.fixed_size();
+}
+
+bool OneByteString::Equals(List<const uint8> str) {
+  int us = str.length();
+  if (length() != us) return false;
+  for (int i = 0; i < us; i++) {
+    if (get_char_code(i) != str[i]) return false;
+  }
+  return true;
+}
+
+bool OneByteString::Equals(OneByteString* str) {
+  if (this == str) return true;
+  int len  = str->length();
+  if (length() != len) return false;
+  for (int i = 0; i < len; i++) {
+    if (get_char_code(i) != str->get_char_code(i)) return false;
+  }
+  return true;
+}
+
+bool OneByteString::Equals(TwoByteString* str) {
+  int len  = str->length();
+  if (length() != len) return false;
+  for (int i = 0; i < len; i++) {
+    if (get_char_code(i) != str->get_code_unit(i)) return false;
+  }
+  return true;
 }
 
 bool TwoByteString::Equals(List<const uint16_t> str) {
@@ -170,6 +200,49 @@ void Object::ShortPrint() {
 
 void Smi::SmiPrint() {
   Print::Out("%ld", value());
+}
+
+void OneByteString::FillFrom(OneByteString* x, int offset) {
+  int xlen = x->length();
+  ASSERT(offset + xlen <= length());
+  memcpy(byte_address_for(offset), x->byte_address_for(0), xlen);
+}
+
+void OneByteString::OneByteStringPrint() {
+  RawPrint("OneByteString");
+  Print::Out("\"");
+  OneByteStringShortPrint();
+  Print::Out("\"");
+}
+
+void OneByteString::OneByteStringShortPrint() {
+  char* result = ToCString();
+  Print::Out("%s", result);
+  free(result);
+}
+
+char* OneByteString::ToCString() {
+  intptr_t len = length();
+  char* result = reinterpret_cast<char*>(malloc(len + 1));
+  memcpy(result, byte_address_for(0), len);
+  result[len] = 0;
+  return result;
+}
+
+void TwoByteString::FillFrom(OneByteString* x, int offset) {
+  int xlen = x->length();
+  ASSERT(offset + xlen <= length());
+  for (int i = 0; i < xlen; i++) {
+    set_code_unit(offset + i, x->get_char_code(i));
+  }
+}
+
+void TwoByteString::FillFrom(TwoByteString* x, int offset) {
+  int xlen = x->length();
+  ASSERT(offset + xlen <= length());
+  memcpy(byte_address_for(offset),
+         x->byte_address_for(0),
+         xlen * sizeof(uint16));
 }
 
 void TwoByteString::TwoByteStringPrint() {
@@ -585,6 +658,9 @@ void HeapObject::HeapObjectPrint() {
     case InstanceFormat::INSTANCE_TYPE:
       Instance::cast(this)->InstancePrint();
       break;
+    case InstanceFormat::ONE_BYTE_STRING_TYPE:
+      OneByteString::cast(this)->OneByteStringPrint();
+      break;
     case InstanceFormat::TWO_BYTE_STRING_TYPE:
       TwoByteString::cast(this)->TwoByteStringPrint();
       break;
@@ -618,6 +694,9 @@ void HeapObject::HeapObjectShortPrint() {
       break;
     case InstanceFormat::INSTANCE_TYPE:
       Instance::cast(this)->InstanceShortPrint();
+      break;
+    case InstanceFormat::ONE_BYTE_STRING_TYPE:
+      OneByteString::cast(this)->OneByteStringShortPrint();
       break;
     case InstanceFormat::TWO_BYTE_STRING_TYPE:
       TwoByteString::cast(this)->TwoByteStringShortPrint();

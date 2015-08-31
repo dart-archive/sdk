@@ -187,7 +187,6 @@ class FletchBackend extends Backend with ResolutionCallbacks {
 
   FletchClassBuilder compiledObjectClass;
 
-  ClassElement stringClass;
   ClassElement smiClass;
   ClassElement mintClass;
   ClassElement growableListClass;
@@ -328,8 +327,8 @@ class FletchBackend extends Backend with ResolutionCallbacks {
     compiledObjectClass = loadClass("Object", compiler.coreLibrary, true);
     smiClass = loadClass("_Smi", compiler.coreLibrary, true).element;
     mintClass = loadClass("_Mint", compiler.coreLibrary, true).element;
-    stringClass = loadClass(
-        "_TwoByteString", compiler.coreLibrary, true).element;
+    loadClass("_OneByteString", compiler.coreLibrary, true);
+    loadClass("_TwoByteString", compiler.coreLibrary, true);
     // TODO(ahe): Register _ConstantList through ResolutionCallbacks.
     loadClass(constantListName, fletchSystemLibrary, true);
     loadClass(constantByteListName, fletchSystemLibrary, true);
@@ -392,8 +391,6 @@ class FletchBackend extends Backend with ResolutionCallbacks {
     registry.registerInstantiation(classImpl.rawType);
     registry.registerStaticInvocation(classImpl.lookupDefaultConstructor());
   }
-
-  ClassElement get stringImplementation => stringClass;
 
   ClassElement get intImplementation => smiClass;
 

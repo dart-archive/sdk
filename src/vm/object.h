@@ -61,6 +61,8 @@ class Object {
   inline bool IsBaseArray();
   inline bool IsArray();
   inline bool IsInstance();
+  inline bool IsString();
+  inline bool IsOneByteString();
   inline bool IsTwoByteString();
   inline bool IsFunction();
   inline bool IsLargeInteger();
@@ -158,15 +160,16 @@ class InstanceFormat {
   enum Type {
     CLASS_TYPE              = 0,
     INSTANCE_TYPE           = 1,
-    TWO_BYTE_STRING_TYPE    = 2,
-    ARRAY_TYPE              = 3,
-    FUNCTION_TYPE           = 4,
-    LARGE_INTEGER_TYPE      = 5,
-    BYTE_ARRAY_TYPE         = 6,
-    DOUBLE_TYPE             = 7,
-    BOXED_TYPE              = 8,
-    STACK_TYPE              = 9,
-    INITIALIZER_TYPE        = 10,
+    ONE_BYTE_STRING_TYPE    = 2,
+    TWO_BYTE_STRING_TYPE    = 3,
+    ARRAY_TYPE              = 4,
+    FUNCTION_TYPE           = 5,
+    LARGE_INTEGER_TYPE      = 6,
+    BYTE_ARRAY_TYPE         = 7,
+    DOUBLE_TYPE             = 8,
+    BOXED_TYPE              = 9,
+    STACK_TYPE              = 10,
+    INITIALIZER_TYPE        = 11,
     IMMEDIATE_TYPE          = 15  // No instances.
   };
 
@@ -187,7 +190,8 @@ class InstanceFormat {
   inline static const InstanceFormat class_format();
   inline static const InstanceFormat num_format();
   inline static const InstanceFormat smi_format();
-  inline static const InstanceFormat string_format();
+  inline static const InstanceFormat one_byte_string_format();
+  inline static const InstanceFormat two_byte_string_format();
   inline static const InstanceFormat array_format();
   inline static const InstanceFormat function_format();
   inline static const InstanceFormat heap_integer_format();
@@ -648,6 +652,91 @@ class Instance: public HeapObject {
   DISALLOW_IMPLICIT_CONSTRUCTORS(Instance);
 };
 
+class TwoByteString;
+
+class OneByteString: public BaseArray {
+ public:
+  // Access to individual chars.
+  inline uint8 get_char_code(int offset);
+  inline void set_char_code(int offset, uint8 value);
+
+  // Byte-level access to the payload.
+  inline uint8* byte_address_for(int index);
+
+  inline static OneByteString* cast(Object* value);
+
+  // [hash_value]: Raw hash value, might not be computed yet.
+  inline word hash_value();
+  inline void set_hash_value(word value);
+
+  // Is the content equal to the given string.
+  bool Equals(List<const uint8> str);
+  bool Equals(OneByteString* str);
+  bool Equals(TwoByteString* str);
+
+  // Sizing.
+  int StringSize() { return AllocationSize(length()); }
+  static int AllocationSize(int length) {
+    int bytes = length * sizeof(uint8);
+    return Utils::RoundUp(kSize + bytes, kPointerSize);
+  }
+
+  int AlternativeSize() {
+    return ComputeAlternativeSize(kSize, length() * sizeof(uint8));
+  }
+
+  void FillFrom(OneByteString* x, int offset);
+
+  // Hashing.
+  word Hash() {
+    word value = hash_value();
+    if (value != kNoHashValue) return value;
+    return SlowHash();
+  }
+
+  // Printing.
+  void OneByteStringPrint();
+  void OneByteStringShortPrint();
+
+  // Conversion to C string. The result is allocated with malloc and
+  // should be freed by the caller.
+  char* ToCString();
+
+  // Snapshotting.
+  void OneByteStringWriteTo(SnapshotWriter* writer, Class* klass);
+  void OneByteStringReadFrom(SnapshotReader* reader, int length);
+
+  // Layout descriptor.
+  static const int kHashValueOffset = BaseArray::kSize;
+  static const int kSize = kHashValueOffset + kPointerSize;
+
+ private:
+  // Only Heap should initialize objects.
+  inline void Initialize(int size, int length, bool clear);
+  friend class Heap;
+  friend class Program;
+  friend class Process;
+
+  static const word kNoHashValue = 0;
+
+  // For strings in program space, this function may be called by multiple
+  // threads at the same time. They will all compute the same result, so
+  // they will all write the same value into the [hash_value] field.
+  word SlowHash() {
+    word value = Utils::StringHash(byte_address_for(0), length(), 1)
+        & Smi::kMaxPortableValue;
+    if (value == kNoHashValue) {
+      static const int kNoHashValueReplacement = 1;
+      ASSERT(kNoHashValueReplacement != kNoHashValue);
+      value = kNoHashValueReplacement;
+    }
+    ASSERT(Smi::IsValidAsPortable(value));
+    set_hash_value(value);
+    return value;
+  }
+  DISALLOW_IMPLICIT_CONSTRUCTORS(OneByteString);
+};
+
 class TwoByteString: public BaseArray {
  public:
   // Access to individual chars.
@@ -678,6 +767,9 @@ class TwoByteString: public BaseArray {
     return ComputeAlternativeSize(kSize, length() * sizeof(uint16_t));
   }
 
+  void FillFrom(OneByteString* x, int offset);
+  void FillFrom(TwoByteString* x, int offset);
+
   // Hashing.
   word Hash() {
     word value = hash_value();
@@ -704,7 +796,6 @@ class TwoByteString: public BaseArray {
  private:
   // Only Heap should initialize objects.
   inline void Initialize(int size, int length, bool clear);
-  inline uint16* address_for(int offset);
   friend class Heap;
   friend class Program;
   friend class Process;
@@ -715,7 +806,7 @@ class TwoByteString: public BaseArray {
   // threads at the same time. They will all compute the same result, so
   // they will all write the same value into the [hash_value] field.
   word SlowHash() {
-    word value = Utils::StringHash(address_for(0), length())
+    word value = Utils::StringHash(byte_address_for(0), length(), 2)
         & Smi::kMaxPortableValue;
     if (value == kNoHashValue) {
       static const int kNoHashValueReplacement = 1;
@@ -1091,7 +1182,11 @@ const InstanceFormat InstanceFormat::num_format() {
   return InstanceFormat(IMMEDIATE_TYPE, 0, false, false);
 }
 
-const InstanceFormat InstanceFormat::string_format() {
+const InstanceFormat InstanceFormat::one_byte_string_format() {
+  return InstanceFormat(ONE_BYTE_STRING_TYPE, OneByteString::kSize, true, true);
+}
+
+const InstanceFormat InstanceFormat::two_byte_string_format() {
   return InstanceFormat(TWO_BYTE_STRING_TYPE, TwoByteString::kSize, true, true);
 }
 
@@ -1128,6 +1223,16 @@ bool Object::IsClass() {
   return false;
 }
 
+bool Object::IsString() {
+  return IsOneByteString() || IsTwoByteString();
+}
+
+bool Object::IsOneByteString() {
+  if (IsSmi()) return false;
+  HeapObject* h = HeapObject::cast(this);
+  return h->format().type() == InstanceFormat::ONE_BYTE_STRING_TYPE;
+}
+
 bool Object::IsTwoByteString() {
   if (IsSmi()) return false;
   HeapObject* h = HeapObject::cast(this);
@@ -1141,6 +1246,7 @@ bool Object::IsBaseArray() {
   return type == InstanceFormat::ARRAY_TYPE ||
       type == InstanceFormat::BYTE_ARRAY_TYPE ||
       type == InstanceFormat::STACK_TYPE ||
+      type == InstanceFormat::ONE_BYTE_STRING_TYPE ||
       type == InstanceFormat::TWO_BYTE_STRING_TYPE;
 }
 
@@ -1578,6 +1684,43 @@ void Class::SetStaticField(int index, Object* object) {
   at_put(kSize + (index * kPointerSize), object);
 }
 
+// Inlined OneByteString functions.
+
+OneByteString* OneByteString::cast(Object* object) {
+  ASSERT(object->IsOneByteString());
+  return reinterpret_cast<OneByteString*>(object);
+}
+
+uint8 OneByteString::get_char_code(int offset) {
+  return *reinterpret_cast<uint8*>(address() + kSize + offset);
+}
+
+void OneByteString::set_char_code(int offset, uint8 value) {
+  *reinterpret_cast<uint8*>(address() + kSize + offset) = value;
+}
+
+uint8* OneByteString::byte_address_for(int offset) {
+  offset *= sizeof(uint8);
+  return reinterpret_cast<uint8*>(address() + kSize + offset);
+}
+
+void OneByteString::Initialize(int size, int length, bool clear) {
+  set_length(length);
+  set_hash_value(kNoHashValue);
+  // Clear the body.
+  if (clear) {
+    memset(reinterpret_cast<void*>(address() + kSize), 0, size - kSize);
+  }
+}
+
+word OneByteString::hash_value() {
+  return Smi::cast(at(kHashValueOffset))->value();;
+}
+
+void OneByteString::set_hash_value(word value) {
+  at_put(kHashValueOffset, Smi::FromWord(value));
+}
+
 // Inlined TwoByteString functions.
 
 TwoByteString* TwoByteString::cast(Object* object) {
@@ -1598,11 +1741,6 @@ void TwoByteString::set_code_unit(int offset, uint16_t value) {
 uint8_t* TwoByteString::byte_address_for(int offset) {
   offset *= sizeof(uint16_t);
   return reinterpret_cast<uint8_t*>(address() + kSize + offset);
-}
-
-uint16_t* TwoByteString::address_for(int offset) {
-  offset *= sizeof(uint16_t);
-  return reinterpret_cast<uint16_t*>(address() + kSize + offset);
 }
 
 void TwoByteString::Initialize(int size, int length, bool clear) {

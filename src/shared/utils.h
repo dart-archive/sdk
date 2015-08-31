@@ -94,7 +94,7 @@ class Utils {
   }
 
   // Computes a hash value for the given string.
-  static uint32 StringHash(const uint16* data, int length);
+  static uint32 StringHash(const uint8* data, int length, int char_width);
 
   // Bit width testers.
   static bool IsInt8(word value) {

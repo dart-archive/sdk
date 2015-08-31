@@ -51,6 +51,7 @@ class SnapshotReader {
   friend class Instance;
   friend class ExternalMemory;
   friend class Array;
+  friend class OneByteString;
   friend class TwoByteString;
   friend class LargeInteger;
   friend class Double;
@@ -111,6 +112,7 @@ class SnapshotWriter {
   friend class ExternalMemory;
   friend class Array;
   friend class HashTable;
+  friend class OneByteString;
   friend class TwoByteString;
   friend class LargeInteger;
   friend class Double;

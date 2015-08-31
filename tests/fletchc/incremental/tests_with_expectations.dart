@@ -1631,7 +1631,7 @@ main() {
 }
 
 bar() {
-<<<< ["Uncaught exception:", "a TwoByteString: \"throw\"", ""]
+<<<< ["Uncaught exception:", "a OneByteString: \"throw\"", ""]
   foo(true);
 ==== []
   foo(false);

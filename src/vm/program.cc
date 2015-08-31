@@ -145,21 +145,34 @@ Object* Program::CreateInteger(int64 value) {
 }
 
 Object* Program::CreateStringFromAscii(List<const char> str) {
-  Object* raw_result = heap()->CreateStringUninitialized(
-      string_class(), str.length());
+  Object* raw_result = heap()->CreateOneByteStringUninitialized(
+      one_byte_string_class(), str.length());
   if (raw_result->IsFailure()) return raw_result;
-  TwoByteString* result = TwoByteString::cast(raw_result);
+  OneByteString* result = OneByteString::cast(raw_result);
   ASSERT(result->length() == str.length());
   // Set the content.
   for (int i = 0; i < str.length(); i++) {
-    result->set_code_unit(i, str[i]);
+    result->set_char_code(i, str[i]);
   }
   return result;
 }
 
-Object* Program::CreateString(List<uint16> str) {
-  Object* raw_result = heap()->CreateStringUninitialized(
-      string_class(), str.length());
+Object* Program::CreateOneByteString(List<uint8> str) {
+  Object* raw_result = heap()->CreateOneByteStringUninitialized(
+      one_byte_string_class(), str.length());
+  if (raw_result->IsFailure()) return raw_result;
+  OneByteString* result = OneByteString::cast(raw_result);
+  ASSERT(result->length() == str.length());
+  // Set the content.
+  for (int i = 0; i < str.length(); i++) {
+    result->set_char_code(i, str[i]);
+  }
+  return result;
+}
+
+Object* Program::CreateTwoByteString(List<uint16> str) {
+  Object* raw_result = heap()->CreateTwoByteStringUninitialized(
+      two_byte_string_class(), str.length());
   if (raw_result->IsFailure()) return raw_result;
   TwoByteString* result = TwoByteString::cast(raw_result);
   ASSERT(result->length() == str.length());
@@ -418,6 +431,8 @@ class StatisticsVisitor : public HeapObjectVisitor {
       VisitClass(Class::cast(object));
     } else if (object->IsArray()) {
       VisitArray(Array::cast(object));
+    } else if (object->IsOneByteString()) {
+      VisitOneByteString(OneByteString::cast(object));
     } else if (object->IsTwoByteString()) {
       VisitTwoByteString(TwoByteString::cast(object));
     } else if (object->IsFunction()) {
@@ -448,6 +463,11 @@ class StatisticsVisitor : public HeapObjectVisitor {
   void VisitArray(Array* array) {
     array_count_++;
     array_size_ += array->ArraySize();
+  }
+
+  void VisitOneByteString(OneByteString* str) {
+    string_count_++;
+    string_size_ += str->StringSize();
   }
 
   void VisitTwoByteString(TwoByteString* str) {
@@ -612,13 +632,21 @@ void Program::Initialize() {
   }
 
   {
-    InstanceFormat format = InstanceFormat::string_format();
-    string_class_ = Class::cast(
+    InstanceFormat format = InstanceFormat::one_byte_string_format();
+    one_byte_string_class_ = Class::cast(
         heap()->CreateClass(format, meta_class_, null_object_));
-    string_class_->set_super_class(object_class_);
+    one_byte_string_class_->set_super_class(object_class_);
   }
 
-  empty_string_ = TwoByteString::cast(heap()->CreateString(string_class(), 0));
+  {
+    InstanceFormat format = InstanceFormat::two_byte_string_format();
+    two_byte_string_class_ = Class::cast(
+        heap()->CreateClass(format, meta_class_, null_object_));
+    two_byte_string_class_->set_super_class(object_class_);
+  }
+
+  empty_string_ = OneByteString::cast(
+      heap()->CreateOneByteString(one_byte_string_class(), 0));
 
   {
     InstanceFormat format = InstanceFormat::function_format();
@@ -684,25 +712,25 @@ void Program::Initialize() {
 
   // Create the retry after gc failure object payload.
   raw_retry_after_gc_ =
-      TwoByteString::cast(
+      OneByteString::cast(
           CreateStringFromAscii(StringFromCharZ("Retry after GC.")));
 
   // Create the failure object payloads. These need to be kept in sync with the
   // constants in lib/system/system.dart.
   raw_wrong_argument_type_ =
-      TwoByteString::cast(
+      OneByteString::cast(
           CreateStringFromAscii(StringFromCharZ("Wrong argument type.")));
 
   raw_index_out_of_bounds_ =
-      TwoByteString::cast(
+      OneByteString::cast(
           CreateStringFromAscii(StringFromCharZ("Index out of bounds.")));
 
   raw_illegal_state_ =
-      TwoByteString::cast(
+      OneByteString::cast(
           CreateStringFromAscii(StringFromCharZ("Illegal state.")));
 
   raw_stack_overflow_ =
-      TwoByteString::cast(
+      OneByteString::cast(
           CreateStringFromAscii(StringFromCharZ("Stack overflow.")));
 
   native_failure_result_ = null_object_;

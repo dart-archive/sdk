@@ -31,7 +31,7 @@ class Session;
   V(Instance, sentinel_object)                   \
   /* Global literals up to this line */          \
   V(Array, empty_array)                          \
-  V(TwoByteString, empty_string)                 \
+  V(OneByteString, empty_string)                 \
   V(Class, meta_class)                           \
   V(Class, smi_class)                            \
   V(Class, boxed_class)                          \
@@ -39,7 +39,8 @@ class Session;
   V(Class, num_class)                            \
   V(Class, bool_class)                           \
   V(Class, int_class)                            \
-  V(Class, string_class)                         \
+  V(Class, one_byte_string_class)                \
+  V(Class, two_byte_string_class)                \
   V(Class, object_class)                         \
   V(Class, array_class)                          \
   V(Class, function_class)                       \
@@ -186,7 +187,8 @@ class Program {
   Object* CreateInteger(int64 value);
   Object* CreateLargeInteger(int64 value);
   Object* CreateStringFromAscii(List<const char> str);
-  Object* CreateString(List<uint16> str);
+  Object* CreateOneByteString(List<uint8> str);
+  Object* CreateTwoByteString(List<uint16> str);
   Object* CreateInstance(Class* klass);
   Object* CreateInitializer(Function* function);
 

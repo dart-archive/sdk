@@ -32,14 +32,89 @@ class StringMatch implements Match {
 }
 
 abstract class _StringBase implements String {
+  static const int _MAX_CODE_UNIT = 0xFFFF;
+  static const int _LEAD_SURROGATE_OFFSET = (0xD800 - (0x10000 >> 10));
+  static const int _MAX_CHAR_CODE = 0x10FFFF;
+
   factory _StringBase.fromCharCodes(
       Iterable<int> charCodes,
-      [int start,
-       int end]) = _TwoByteString.fromCharCodes;
+      [int start = 0,
+       int end]) {
+    if (end == null) end = charCodes.length;
+    int length = end - start;
+    if (start < 0 || length < 0) throw new RangeError.range(start, 0, length);
+    bool oneByteString = true;
+    int stringLength = 0;
+    // TODO(ajohnsen): Uint8List checks?
+    if (charCodes is List) {
+      List list = charCodes;
+      for (int i = 0; i < length; i++) {
+        int char = list[start + i];
+        stringLength += _charCodeLength(char);
+        if (char >= 256) oneByteString = false;
+      }
+    } else {
+      int i = -start;
+      charCodes.forEach((char) {
+        if (i >= 0 && i < length) {
+          stringLength += _charCodeLength(char);
+        }
+        if (char >= 256) oneByteString = false;
+        i++;
+      });
+      if (i < length) throw new RangeError.range(start, 0, length);
+    }
+    _StringBase str = oneByteString
+        ? new _OneByteString(stringLength)
+        : new _TwoByteString(stringLength);
+    int offset = 0;
+    if (charCodes is List) {
+      List list = charCodes;
+      for (int i = 0; i < length; i++) {
+        offset += _encodeCharCode(str, list[start + i], offset);
+      }
+    } else {
+      int i = -start;
+      charCodes.forEach((value) {
+        if (i >= 0 && i < length) {
+          offset += _encodeCharCode(str, value, offset);
+        }
+        i++;
+      });
+    }
+    return str;
+  }
 
-  factory _StringBase.fromCharCode(int charCode) = _TwoByteString.fromCharCode;
+  factory _StringBase.fromCharCode(int charCode) {
+    if (charCode >= 0 && charCode < 256) {
+      return new _OneByteString(1)
+          .._setCodeUnitAt(0, charCode);
+    }
+    _TwoByteString result = new _TwoByteString(_charCodeLength(charCode));
+    _encodeCharCode(result, charCode, 0);
+    return result;
+  }
+
+  static int _charCodeLength(int charCode) {
+    return (charCode <= _MAX_CODE_UNIT) ? 1 : 2;
+  }
+
+  static int _encodeCharCode(_TwoByteString char, int charCode, int offset) {
+    if (charCode < 0 || charCode > _MAX_CHAR_CODE) {
+      throw new ArgumentError(charCode);
+    }
+    int length = _charCodeLength(charCode);
+    if (length == 2) {
+      char._setCodeUnitAt(offset, _LEAD_SURROGATE_OFFSET + (charCode >> 10));
+      char._setCodeUnitAt(offset + 1, (0xDC00 + (charCode & 0x3FF)));
+    } else {
+      char._setCodeUnitAt(offset, charCode);
+    }
+    return length;
+  }
 
   String _substring(int startIndex, int endIndex);
+  void _setContent(int offset, _StringBase content);
 
   String toString() => this;
 
@@ -308,6 +383,20 @@ abstract class _StringBase implements String {
     return substring(0, start) + replacement + substring(end);
   }
 
+  String operator *(int times) {
+    if (times <= 0) return "";
+    if (times == 1) return this;
+    int length = this.length;
+    int newLength = length * times;
+    _StringBase str = this is _OneByteString
+        ? new _OneByteString(newLength)
+        : new _TwoByteString(newLength);
+    for (int i = 0; i < times; i++) {
+      str._setContent(i * length, this);
+    }
+    return str;
+  }
+
   List<String> split(Pattern pattern) {
     int length = this.length;
     if (pattern is String && pattern.isEmpty) {
@@ -357,95 +446,12 @@ abstract class _StringBase implements String {
   String toLowerCase() => internalToLowerCase(this);
 
   String toUpperCase() => internalToUpperCase(this);
+
+  @fletch.native external int get length;
 }
 
-class _TwoByteString extends _StringBase {
-  static const int _MAX_CODE_UNIT = 0xFFFF;
-  static const int _LEAD_SURROGATE_OFFSET = (0xD800 - (0x10000 >> 10));
-  static const int _MAX_CHAR_CODE = 0x10FFFF;
-
-  factory _TwoByteString.fromCharCodes(
-      Iterable<int> charCodes,
-      [int start = 0,
-       int end]) {
-    if (end == null) end = charCodes.length;
-    int length = end - start;
-    if (start < 0 || length < 0) throw new RangeError.range(start, 0, length);
-    var str = _create(_stringLength(charCodes, start, length));
-    int offset = 0;
-    if (charCodes is List) {
-      List list = charCodes;
-      for (int i = 0; i < length; i++) {
-        offset += _encodeCharCode(str, list[start + i], offset);
-      }
-    } else {
-      int i = -start;
-      charCodes.forEach((value) {
-        if (i >= 0 && i < length) {
-          offset += _encodeCharCode(str, value, offset);
-        }
-        i++;
-      });
-    }
-    return str;
-  }
-
-  factory _TwoByteString.fromCharCode(int charCode) {
-    _TwoByteString result = _create(_charCodeLength(charCode));
-    _encodeCharCode(result, charCode, 0);
-    return result;
-  }
-
-  static int _stringLength(Iterable<int> charCodes, int start, int length) {
-    int stringLength = 0;
-    if (charCodes is List) {
-      List list = charCodes;
-      for (int i = 0; i < length; i++) {
-        stringLength += _charCodeLength(list[start + i]);
-      }
-    } else {
-      int i = -start;
-      charCodes.forEach((value) {
-        if (i >= 0 && i < length) stringLength += _charCodeLength(value);
-        i++;
-      });
-      if (i < length) throw new RangeError.range(start, 0, length);
-    }
-    return stringLength;
-  }
-
-
-  static int _charCodeLength(int charCode) {
-    return (charCode <= _MAX_CODE_UNIT) ? 1 : 2;
-  }
-
-  static int _encodeCharCode(_TwoByteString char, int charCode, int offset) {
-    if (charCode < 0 || charCode > _MAX_CHAR_CODE) {
-      throw new ArgumentError(charCode);
-    }
-    int length = _charCodeLength(charCode);
-    if (length == 2) {
-      char._setCodeUnitAt(offset, _LEAD_SURROGATE_OFFSET + (charCode >> 10));
-      char._setCodeUnitAt(offset + 1, (0xDC00 + (charCode & 0x3FF)));
-    } else {
-      char._setCodeUnitAt(offset, charCode);
-    }
-    return length;
-  }
-
-  String operator *(int times) {
-    if (times <= 0) return "";
-    if (times == 1) return this;
-    int length = this.length;
-    _TwoByteString str = _create(length * times);
-    for (int i = 0; i < times; i++) {
-      int offset = i * length;
-      for (int j = 0; j < length; j++) {
-        str._setCodeUnitAt(offset + j, codeUnitAt(j));
-      }
-    }
-    return str;
-  }
+class _OneByteString extends _StringBase {
+  factory _OneByteString(int length) => _create(length);
 
   @fletch.native int codeUnitAt(int index) {
     switch (fletch.nativeError) {
@@ -455,8 +461,6 @@ class _TwoByteString extends _StringBase {
         throw new IndexError(index, this);
     }
   }
-
-  @fletch.native external int get length;
 
   @fletch.native external bool operator ==(Object other);
 
@@ -474,6 +478,51 @@ class _TwoByteString extends _StringBase {
         throw new IndexError(start, this);
     }
   }
+
+  @fletch.native external void _setContent(int offset, _StringBase content);
+
+  @fletch.native void _setCodeUnitAt(int index, int char) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        throw new ArgumentError();
+      case fletch.indexOutOfBounds:
+        throw new IndexError(index, this);
+    }
+  }
+
+  @fletch.native external static _OneByteString _create(int length);
+}
+
+class _TwoByteString extends _StringBase {
+  factory _TwoByteString(int length) => _create(length);
+
+  @fletch.native int codeUnitAt(int index) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        throw new ArgumentError();
+      case fletch.indexOutOfBounds:
+        throw new IndexError(index, this);
+    }
+  }
+
+  @fletch.native external bool operator ==(Object other);
+
+  int get hashCode => identityHashCode(this);
+
+  @fletch.native String operator +(String other) {
+    throw new ArgumentError(other);
+  }
+
+  @fletch.native String _substring(int start, int end) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        throw new ArgumentError();
+      case fletch.indexOutOfBounds:
+        throw new IndexError(start, this);
+    }
+  }
+
+  @fletch.native external void _setContent(int offset, _StringBase content);
 
   @fletch.native void _setCodeUnitAt(int index, int char) {
     switch (fletch.nativeError) {

@@ -79,9 +79,7 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
 }
 
 NATIVE(ForeignLibraryLookup) {
-  char* library = arguments[0]->IsTwoByteString()
-      ? AsForeignString(TwoByteString::cast(arguments[0]))
-      : NULL;
+  char* library = AsForeignString(arguments[0]);
   void* result = dlopen(library, RTLD_LOCAL | RTLD_LAZY);
   if (result == NULL) {
     fprintf(stderr, "Failed libary lookup(%s): %s\n", library, dlerror());
@@ -95,7 +93,7 @@ NATIVE(ForeignLibraryLookup) {
 NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
   void* handle = reinterpret_cast<void*>(address);
-  char* name = AsForeignString(TwoByteString::cast(arguments[1]));
+  char* name = AsForeignString(arguments[1]);
   bool default_lookup = handle == NULL;
   if (default_lookup) handle = dlopen(NULL, RTLD_LOCAL | RTLD_LAZY);
   void* result = dlsym(handle, name);
@@ -110,7 +108,7 @@ NATIVE(ForeignLibraryGetFunction) {
 }
 
 NATIVE(ForeignLibraryBundlePath) {
-  char* library = AsForeignString(TwoByteString::cast(arguments[0]));
+  char* library = AsForeignString(arguments[0]);
   char executable[MAXPATHLEN + 1];
   GetPathOfExecutable(executable, sizeof(executable));
   char* directory = ForeignUtils::DirectoryName(executable);
