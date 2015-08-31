@@ -141,31 +141,43 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
   final DartConstantTask constantCompilerTask;
 
+  /// Constructors that need to have an initilizer compiled. See
+  /// [compilePendingConstructorInitializers].
+  final Queue<FletchFunctionBuilder> pendingConstructorInitializers =
+      new Queue<FletchFunctionBuilder>();
+
+  // TODO(ahe): This should be moved to [FletchSystem].
   final Map<ConstructorElement, FletchFunctionBuilder> constructors =
       <ConstructorElement, FletchFunctionBuilder>{};
 
   final Set<FunctionElement> externals = new Set<FunctionElement>();
 
+  // TODO(ahe): This should be queried from World.
   final Map<ClassElement, Set<ClassElement>> directSubclasses =
       <ClassElement, Set<ClassElement>>{};
 
   final Set<ClassElement> builtinClasses = new Set<ClassElement>();
 
+  // TODO(ahe): This should be invalidated by a new [FletchSystem].
   final Map<MemberElement, ClosureEnvironment> closureEnvironments =
       <MemberElement, ClosureEnvironment>{};
 
+  // TODO(ahe): This should be moved to [FletchSystem].
   final Map<FunctionElement, FletchClassBuilder> closureClasses =
       <FunctionElement, FletchClassBuilder>{};
 
+  // TODO(ahe): This should be moved to [FletchSystem].
   final Map<FieldElement, FletchFunctionBuilder> lazyFieldInitializers =
       <FieldElement, FletchFunctionBuilder>{};
 
+  // TODO(ahe): This should be moved to [FletchSystem].
   final Map<FletchFunctionBase, FletchClassBuilder> tearoffClasses =
       <FletchFunctionBase, FletchClassBuilder>{};
 
   final Map<int, int> getters = <int, int>{};
   final Map<int, int> setters = <int, int>{};
 
+  // TODO(ahe): This should be moved to [FletchSystem].
   Map<FletchClassBuilder, FletchFunctionBuilder> tearoffFunctions;
 
   LibraryElement fletchSystemLibrary;
@@ -561,6 +573,32 @@ class FletchBackend extends Backend with ResolutionCallbacks
     return createFletchFunctionBuilder(element);
   }
 
+  /// Get the constructor initializer function for [constructor]. The function
+  /// will be created the first time it's called for [constructor].
+  ///
+  /// See [compilePendingConstructorInitializers] for an overview of
+  /// constructor intializers and constructor bodies.
+  FletchFunctionBase getConstructorInitializerFunction(
+      ConstructorElement constructor) {
+    assert(constructor.isDeclaration);
+    FletchFunctionBuilder functionBuilder = constructors[constructor];
+    if (functionBuilder != null) return functionBuilder;
+
+    ClassElement classElement = constructor.enclosingClass;
+    ConstructorElement implementation = constructor.implementation;
+
+    functionBuilder = systemBuilder.newFunctionBuilderWithSignature(
+        implementation.name,
+        implementation,
+        implementation.functionSignature,
+        null,
+        kind: FletchFunctionKind.INITIALIZER_LIST);
+    constructors[constructor] = functionBuilder;
+    pendingConstructorInitializers.addFirst(functionBuilder);
+
+    return functionBuilder;
+  }
+
   FletchFunctionBuilder createFletchFunctionBuilder(FunctionElement function) {
     assert(function.memberContext == function);
 
@@ -684,6 +722,9 @@ class FletchBackend extends Backend with ResolutionCallbacks
           element.isGetter ||
           element.isSetter ||
           element.isGenerativeConstructor) {
+        // For a generative constructor, this means compile the constructor
+        // body. See [compilePendingConstructorInitializers] for an overview of
+        // how constructor initializers and constructor bodies are compiled.
         codegenFunction(element, work.resolutionTree, work.registry);
       } else {
         compiler.internalError(
@@ -759,7 +800,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
     }
 
     if (compiler.verbose) {
-      compiler.log(functionBuilder.verboseToString());
+      context.compiler.reportVerboseInfo(
+          function, functionBuilder.verboseToString());
     }
   }
 
@@ -1231,51 +1273,49 @@ class FletchBackend extends Backend with ResolutionCallbacks
     return index;
   }
 
-  FletchFunctionBase compileConstructor(
-      ConstructorElement constructor,
-      Registry registry) {
-    assert(constructor.isDeclaration);
-    FletchFunctionBuilder functionBuilder = constructors[constructor];
-    if (functionBuilder != null) return functionBuilder;
+  /// Compiles the initializer part of a constructor.
+  ///
+  /// See [compilePendingConstructorInitializers] for an overview of how
+  /// constructor initializer and bodies are compiled.
+  void compileConstructorInitializer(FletchFunctionBuilder functionBuilder) {
+    ConstructorElement implementation = functionBuilder.element;
+    ConstructorElement constructor = implementation.declaration;
+    compiler.withCurrentElement(implementation, () {
+      assert(implementation.isImplementation);
+      assert(constructor.isDeclaration);
+      assert(functionBuilder == constructors[constructor]);
+      context.compiler.reportVerboseInfo(
+          implementation, 'Compiling constructor initializer $implementation');
 
-    ClassElement classElement = constructor.enclosingClass;
-    FletchClassBuilder classBuilder = registerClassElement(classElement);
+      TreeElements elements = constructor.resolvedAst.elements;
 
-    ConstructorElement implementation = constructor.implementation;
+      // TODO(ahe): We shouldn't create a registry, but we have to as long as
+      // the enqueuer doesn't support elements with more than one compilation
+      // artifact.
+      CodegenRegistry registry = new CodegenRegistry(compiler, elements);
 
-    context.compiler.reportVerboseInfo(
-        constructor, 'Compiling initializer $constructor');
+      FletchClassBuilder classBuilder =
+          registerClassElement(constructor.enclosingClass);
 
-    TreeElements elements = implementation.resolvedAst.elements;
+      ClosureEnvironment closureEnvironment =
+          createClosureEnvironment(implementation, elements);
 
-    ClosureEnvironment closureEnvironment = createClosureEnvironment(
-        implementation,
-        elements);
+      ConstructorCodegen codegen = new ConstructorCodegen(
+          functionBuilder,
+          context,
+          elements,
+          registry,
+          closureEnvironment,
+          implementation,
+          classBuilder);
 
-    functionBuilder = systemBuilder.newFunctionBuilderWithSignature(
-        implementation.name,
-        implementation,
-        implementation.functionSignature,
-        null,
-        kind: FletchFunctionKind.INITIALIZER_LIST);
-    constructors[constructor] = functionBuilder;
+      codegen.compile();
 
-    ConstructorCodegen codegen = new ConstructorCodegen(
-        functionBuilder,
-        context,
-        elements,
-        registry,
-        closureEnvironment,
-        implementation,
-        classBuilder);
-
-    codegen.compile();
-
-    if (compiler.verbose) {
-      compiler.log(functionBuilder.verboseToString());
-    }
-
-    return functionBuilder;
+      if (compiler.verbose) {
+        context.compiler.reportVerboseInfo(
+            implementation, functionBuilder.verboseToString());
+      }
+    });
   }
 
   /**
@@ -1383,6 +1423,41 @@ class FletchBackend extends Backend with ResolutionCallbacks
       FletchClassBuilder builder = registerClassElement(enclosingClass);
       builder.removeFromMethodTable(function);
     }
+  }
+
+  /// Invoked during codegen enqueuing to compile constructor initializers.
+  ///
+  /// There's only one [Element] representing a constructor, but Fletch uses
+  /// two different functions for implementing a constructor.
+  ///
+  /// The first function takes care of allocating the instance and initializing
+  /// fields (called the constructor initializer), the other function
+  /// implements the body of the constructor (what is between the curly
+  /// braces). A constructor initializer never calls constructor initializers
+  /// of a superclass. Instead field initializers from the superclass are
+  /// inlined in the constructor initializer. The constructor initializer will
+  /// call all the constructor bodies from superclasses in the correct order.
+  ///
+  /// The constructor bodies are basically special instance methods that can
+  /// only be called from constructor initializers.  Unlike constructor bodies,
+  /// we only need constructor initializer for classes that are directly
+  /// instantiated (excluding, for example, abstract classes).
+  ///
+  /// Given this, we compile constructor bodies when the normal enqueuer tells
+  /// us to compile a generative constructor (see [codegen]), and track
+  /// constructor initializers in a separate queue.
+  void compilePendingConstructorInitializers() {
+    while (!pendingConstructorInitializers.isEmpty) {
+      compileConstructorInitializer(
+          pendingConstructorInitializers.removeLast());
+    }
+  }
+
+  bool onQueueEmpty(Enqueuer enqueuer, Iterable<ClassElement> recentClasses) {
+    if (!enqueuer.isResolutionQueue) {
+      compilePendingConstructorInitializers();
+    }
+    return super.onQueueEmpty(enqueuer, recentClasses);
   }
 
   static bool isExactParameterMatch(

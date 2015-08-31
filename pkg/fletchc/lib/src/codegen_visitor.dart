@@ -365,6 +365,14 @@ abstract class CodegenVisitor
     return context.backend.getFunctionForElement(element);
   }
 
+  FletchFunctionBase requireConstructorInitializer(
+      ConstructorElement constructor) {
+    assert(constructor.isGenerativeConstructor);
+    registerInstantiatedClass(constructor.enclosingClass);
+    registerStaticInvocation(constructor);
+    return context.backend.getConstructorInitializerFunction(constructor);
+  }
+
   void doStaticFunctionInvoke(
       Node node,
       FletchFunctionBase function,
@@ -1936,11 +1944,7 @@ abstract class CodegenVisitor
                        ConstructorElement constructor,
                        NodeList arguments,
                        CallStructure callStructure) {
-    registerStaticInvocation(constructor);
-    registerInstantiatedClass(constructor.enclosingClass);
-    FletchFunctionBase function = context.backend.compileConstructor(
-        constructor,
-        registry);
+    FletchFunctionBase function = requireConstructorInitializer(constructor);
     doStaticFunctionInvoke(node, function, arguments, callStructure);
   }
 
