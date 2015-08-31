@@ -5,7 +5,14 @@
 rule gyp
   command = $
     GYP_CROSSCOMPILE=1 $
-    ../third_party/gyp/gyp --depth=. -Icommon.gypi $
+    ../third_party/gyp/gyp --depth=. -Idefault_targets.gypi $
+        -Goutput_dir=out $
+        --format=ninja fletch.gyp
+
+rule gyp-lk
+  command = $
+    GYP_CROSSCOMPILE=1 $
+    ../third_party/gyp/gyp --depth=. -Ilk_targets.gypi $
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 
@@ -34,6 +41,7 @@ build $
     out/ReleaseXARM64/build.ninja: $
     gyp $
         common.gypi $
+        default_targets.gypi $
         fletch.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
@@ -41,3 +49,48 @@ build $
         src/vm/vm.gyp $
         tests/service_tests/service_tests.gyp $
         samples/todomvc/todomvc.gyp
+
+build gyp: phony$
+    out/DebugIA32/build.ninja $
+    out/DebugIA32Asan/build.ninja $
+    out/DebugIA32Clang/build.ninja $
+    out/DebugIA32ClangAsan/build.ninja $
+    out/DebugX64/build.ninja $
+    out/DebugX64Asan/build.ninja $
+    out/DebugX64Clang/build.ninja $
+    out/DebugX64ClangAsan/build.ninja $
+    out/DebugARM/build.ninja $
+    out/DebugXARM/build.ninja $
+    out/DebugXARM64/build.ninja $
+    out/ReleaseIA32/build.ninja $
+    out/ReleaseIA32Asan/build.ninja $
+    out/ReleaseIA32Clang/build.ninja $
+    out/ReleaseIA32ClangAsan/build.ninja $
+    out/ReleaseX64/build.ninja $
+    out/ReleaseX64Asan/build.ninja $
+    out/ReleaseX64Clang/build.ninja $
+    out/ReleaseX64ClangAsan/build.ninja $
+    out/ReleaseARM/build.ninja $
+    out/ReleaseXARM/build.ninja $
+    out/ReleaseXARM64/build.ninja
+
+build $
+    out/DebugLK/build.ninja $
+    out/ReleaseLK/build.ninja: $
+    gyp-lk $
+        common.gypi $
+        lk_targets.gypi $
+        fletch.gyp $
+        src/double_conversion.gyp $
+        src/shared/shared.gyp $
+        src/tools/driver/driver.gyp $
+        src/vm/vm.gyp $
+        tests/service_tests/service_tests.gyp $
+        samples/todomvc/todomvc.gyp
+
+build lk: phony$
+    out/DebugLK/build.ninja $
+    out/ReleaseLK/build.ninja $
+
+
+default gyp
