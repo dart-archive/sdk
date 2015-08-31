@@ -5,19 +5,19 @@
 library servicec.scanner;
 
 import "package:compiler/src/scanner/scannerlib.dart" show
-    Token,
-    ErrorToken,
-    StringToken,
-    KeywordToken,
-    KEYWORD_TOKEN,
-
-    Keyword,
-    PrecedenceInfo,
-
-    StringScanner,
-
     EOF_INFO,
-    STRING_INFO;
+    ErrorToken,
+    IDENTIFIER_INFO,
+    KEYWORD_TOKEN,
+    Keyword,
+    KeywordToken,
+    PrecedenceInfo,
+    STRING_INFO,
+    StringScanner,
+    StringToken,
+    Token;
+
+import "keyword.dart" as own;
 
 class Scanner extends StringScanner {
   Scanner(String input)
@@ -25,12 +25,19 @@ class Scanner extends StringScanner {
 
   void appendKeywordToken(Keyword keyword) {
     if (isServicecKeyword(keyword.syntax)) {
-      super.appendKeywordToken(keyword);
+      super.appendKeywordToken(own.Keyword.keywords[keyword.syntax]);
     } else {
-      tail.next = new StringToken.fromString(STRING_INFO,
-                                             keyword.syntax,
-                                             tokenStart);
-      tail = tail.next;
+      if (identical(keyword.syntax, "void")) {
+        bool doesNotMatter = true;
+        super.appendSubstringToken(IDENTIFIER_INFO,
+                                   scanOffset - 4,
+                                   doesNotMatter);
+      } else {
+        tail.next = new StringToken.fromString(STRING_INFO,
+                                               keyword.syntax,
+                                               tokenStart);
+        tail = tail.next;
+      }
     }
   }
 
@@ -38,7 +45,7 @@ class Scanner extends StringScanner {
                             bool asciiOnly, [int extraOffset = 0]) {
     String syntax = string.substring(start, scanOffset + extraOffset);
     if (isServicecKeyword(syntax)) {
-      Keyword keyword = keywords[syntax];
+      Keyword keyword = own.Keyword.keywords[syntax];
       super.appendKeywordToken(keyword);
     } else {
       super.appendSubstringToken(info, start, asciiOnly, extraOffset);
@@ -46,11 +53,6 @@ class Scanner extends StringScanner {
   }
 }
 
-Map<String, Keyword> keywords = {
-    "service": const Keyword("service"),
-    "struct" : const Keyword("struct")
-};
-
-bool isServicecKeyword(String word) {
-  return keywords.containsKey(word);
+bool isServicecKeyword(String string) {
+  return own.Keyword.keywords.containsKey(string);
 }

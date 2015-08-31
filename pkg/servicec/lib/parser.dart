@@ -6,7 +6,11 @@ library servicec.parser;
 
 import 'package:compiler/src/scanner/scannerlib.dart' show
     EOF_TOKEN,
+    ErrorToken,
     IDENTIFIER_TOKEN,
+    KEYWORD_TOKEN,
+    Keyword,
+    KeywordToken,
     Token;
 
 import 'listener.dart' show
@@ -24,7 +28,7 @@ class Parser {
   Token parseUnit(Token tokens) {
     tokens = listener.beginCompilationUnit(tokens);
     int count = 0;
-    while (!identical(tokens.kind, EOF_TOKEN)) {
+    while (valid(tokens)) {
       tokens = parseTopLevelDeclaration(tokens);
       ++count;
     }
@@ -58,9 +62,12 @@ class Parser {
     tokens = parseIdentifier(tokens.next);
     tokens = expect('{', tokens);
     int count = 0;
-    while (!optional('}', tokens)) {
-      tokens = parseFunctionDeclaration(tokens);
-      ++count;
+    if (valid(tokens)) {
+      while (!optional('}', tokens)) {
+        tokens = parseFunctionDeclaration(tokens);
+        if (!valid(tokens)) break;  // Don't count unsuccessful declarations
+        ++count;
+      }
     }
     tokens = expect('}', tokens);
     tokens = listener.endService(tokens, count);
@@ -76,19 +83,21 @@ class Parser {
     tokens = parseIdentifier(tokens.next);
     tokens = expect('{', tokens);
     int count = 0;
-    while (!optional('}', tokens)) {
-      tokens = parseMemberDeclaration(tokens);
-      ++count;
+    if (valid(tokens)) {
+      while (!optional('}', tokens)) {
+        tokens = parseMemberDeclaration(tokens);
+        if (!valid(tokens)) break;  // Don't count unsuccessful declarations
+        ++count;
+      }
     }
     tokens = expect('}', tokens);
     tokens = listener.endStruct(tokens, count);
-    print("end struct");
     return tokens;
   }
 
   Token parseIdentifier(Token tokens) {
     tokens = listener.beginIdentifier(tokens);
-    if (tokens.isIdentifier()) {
+    if (isValidIdentifier(tokens)) {
       tokens = tokens.next;
     } else {
       tokens = listener.expectedIdentifier(tokens);
@@ -163,26 +172,36 @@ class Parser {
     tokens = parseType(tokens);
     tokens = parseIdentifier(tokens);
     tokens = listener.endFormalParameter(tokens);
+    return tokens;
   }
 
   bool isValidTypeReference(Token tokens) {
-    return identical(tokens.kind, IDENTIFIER_TOKEN);
+    final kind = tokens.kind;
+    return kind == IDENTIFIER_TOKEN;
+  }
+
+  bool isValidIdentifier(Token tokens) {
+    return tokens.kind == IDENTIFIER_TOKEN;
   }
 
   /// Returns true if the [tokens] is a SymbolToken or a KeywordToken with
-  /// stringValue [value].
+  /// stringValue [string].
   bool optional(String string, Token tokens) {
-    return identical(string, tokens.stringValue);
+    return string == tokens.stringValue;
   }
 
   /// Checks that the [tokens] is a SymbolToken or a KeywordToken with
   /// stringValue [value].
   Token expect(String string, Token tokens) {
-    if (!identical(string, tokens.stringValue)) {
+    if (string != tokens.stringValue) {
       tokens = listener.expected(string, tokens);
     } else {
       tokens = tokens.next;
     }
     return tokens;
+  }
+
+  bool valid(Token token) {
+    return token.kind != EOF_TOKEN && token is! ErrorToken;
   }
 }

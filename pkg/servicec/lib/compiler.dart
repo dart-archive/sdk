@@ -22,6 +22,7 @@ import 'parser.dart' show
     Parser;
 
 import 'listener.dart' show
+    ErrorHandlingListener,
     DebugListener,
     Listener;
 
@@ -50,8 +51,8 @@ Future<List<CompilerError>> compileInput(
   Scanner scanner = new Scanner(input);
   Token tokens = scanner.tokenize();
 
-  Listener listener = new Listener();
-  var parser = new Parser(new DebugListener(listener));
+  Listener listener = new ErrorHandlingListener();
+  Parser parser = new Parser(new DebugListener(listener));
   Token unit = parser.parseUnit(tokens);
 
   // TODO(stanm): validate

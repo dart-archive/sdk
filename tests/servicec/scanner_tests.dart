@@ -19,12 +19,14 @@ import 'package:compiler/src/scanner/scannerlib.dart' show
     SymbolToken,
     ErrorToken;
 
-import 'package:servicec/scanner.dart' show
-    Scanner,
-    keywords;
-
 import 'test.dart' show
     Test;
+
+import 'package:servicec/scanner.dart' show
+    Scanner;
+
+import 'package:servicec/keyword.dart' show
+    Keyword;
 
 List<ScannerTest> SCANNER_TESTS = <ScannerTest>[
     new Success('empty_input', '''
@@ -34,7 +36,7 @@ List<ScannerTest> SCANNER_TESTS = <ScannerTest>[
 service EmptyService {}
 ''',
                 <Token>[
-                  new KeywordToken(keywords["service"], 0),
+                  new KeywordToken(Keyword.keywords["service"], 0),
                   new StringToken.fromString(STRING_INFO, "EmptyService", 8),
                   new SymbolToken(OPEN_CURLY_BRACKET_INFO, 22),
                   new SymbolToken(CLOSE_CURLY_BRACKET_INFO, 23)
