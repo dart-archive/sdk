@@ -101,6 +101,9 @@ import 'fletch_class_builder.dart' show
 import 'fletch_system_builder.dart' show
     FletchSystemBuilder;
 
+import '../incremental_backend.dart' show
+    IncrementalFletchBackend;
+
 import 'class_debug_info.dart';
 import 'codegen_visitor.dart';
 import 'debug_info.dart';
@@ -125,7 +128,8 @@ const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<ClassElement, FletchClass>(),
     const <FletchConstant>[]);
 
-class FletchBackend extends Backend with ResolutionCallbacks {
+class FletchBackend extends Backend with ResolutionCallbacks
+    implements IncrementalFletchBackend {
   static const String growableListName = '_GrowableList';
   static const String constantListName = '_ConstantList';
   static const String constantByteListName = '_ConstantByteList';
@@ -1361,7 +1365,7 @@ class FletchBackend extends Backend with ResolutionCallbacks {
     systemBuilder.forgetFunction(function);
   }
 
-  void removeField(Element element) {
+  void removeField(FieldElement element) {
     if (!element.isInstanceMember) return;
     ClassElement enclosingClass = element.enclosingClass;
     forEachSubclassOf(enclosingClass, (ClassElement cls) {

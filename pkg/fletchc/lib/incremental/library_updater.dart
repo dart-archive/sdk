@@ -57,8 +57,9 @@ import 'package:compiler/src/tree/tree.dart' show
     StringNode,
     unparse;
 
-import '../src/fletch_backend.dart' show
-    FletchBackend;
+import '../incremental_backend.dart' show
+    IncrementalBackend,
+    IncrementalFletchBackend;
 
 import '../src/fletch_class_builder.dart' show
     FletchClassBuilder;
@@ -66,13 +67,18 @@ import '../src/fletch_class_builder.dart' show
 import '../src/fletch_context.dart' show
     FletchContext;
 
+import '../src/fletch_compiler.dart' as fletch_compiler_implementation show
+    FletchCompiler;
+
 import '../commands.dart' show
     Command,
     MapId;
 
 import '../commands.dart' as commands_lib;
 
-import '../fletch_system.dart';
+import '../fletch_system.dart' show
+    FletchDelta,
+    FletchSystem;
 
 import 'package:compiler/src/util/util.dart' show
     Link,
@@ -950,9 +956,8 @@ class LibraryUpdater extends FletchFeatures {
     backend.assembleProgram();
 
     List<Command> commands = <Command>[const commands_lib.PrepareForChanges()];
-    FletchSystem system = backend.systemBuilder.computeSystem(
-        backend.context,
-        commands);
+    FletchSystem system =
+        backend.systemBuilder.computeSystem(fletchContext, commands);
     return new FletchDelta(system, currentSystem, commands);
   }
 }
@@ -969,7 +974,7 @@ abstract class Update {
   Update(this.compiler);
 
   /// Applies the update to [before] and returns that element.
-  Element apply(FletchBackend backend);
+  Element apply(IncrementalBackend backend);
 
   bool get isRemoval => false;
 
@@ -988,7 +993,7 @@ class FunctionUpdate extends Update with ReuseFunction {
   FunctionUpdate(Compiler compiler, this.before, this.after)
       : super(compiler);
 
-  PartialFunctionElement apply(FletchBackend backend) {
+  PartialFunctionElement apply(IncrementalBackend backend) {
     patchElement();
     reuseElement();
     return before;
@@ -1066,7 +1071,7 @@ class RemovedFunctionUpdate extends RemovalUpdate
     wasStateCaptured = true;
   }
 
-  PartialFunctionElement apply(FletchBackend backend) {
+  PartialFunctionElement apply(IncrementalBackend backend) {
     if (!wasStateCaptured) throw "captureState must be called before apply.";
     removeFromEnclosing();
     backend.removeFunction(element);
@@ -1096,7 +1101,7 @@ class RemovedClassUpdate extends RemovalUpdate with FletchFeatures {
     wasStateCaptured = true;
   }
 
-  PartialClassElement apply(FletchBackend backend) {
+  PartialClassElement apply(IncrementalBackend backend) {
     if (!wasStateCaptured) {
       throw new StateError("captureState must be called before apply.");
     }
@@ -1143,7 +1148,7 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
     wasStateCaptured = true;
   }
 
-  FieldElementX apply(FletchBackend backend) {
+  FieldElementX apply(IncrementalBackend backend) {
     if (!wasStateCaptured) {
       throw new StateError("captureState must be called before apply.");
     }
@@ -1178,7 +1183,7 @@ class AddedFunctionUpdate extends Update with FletchFeatures {
 
   PartialFunctionElement get after => element;
 
-  PartialFunctionElement apply(FletchBackend backend) {
+  PartialFunctionElement apply(IncrementalBackend backend) {
     Element enclosing = container;
     if (enclosing.isLibrary) {
       // TODO(ahe): Reuse compilation unit of element instead?
@@ -1202,7 +1207,7 @@ class AddedClassUpdate extends Update with FletchFeatures {
 
   PartialClassElement get after => element;
 
-  PartialClassElement apply(FletchBackend backend) {
+  PartialClassElement apply(IncrementalBackend backend) {
     // TODO(ahe): Reuse compilation unit of element instead?
     CompilationUnitElementX compilationUnit = library.compilationUnit;
     PartialClassElement copy = element.copyWithEnclosing(compilationUnit);
@@ -1223,7 +1228,7 @@ class AddedFieldUpdate extends Update with FletchFeatures {
 
   PartialFieldList get after => element.declarationSite;
 
-  FieldElementX apply(FletchBackend backend) {
+  FieldElementX apply(IncrementalBackend backend) {
     Element enclosing = container;
     if (enclosing.isLibrary) {
       // TODO(ahe): Reuse compilation unit of element instead?
@@ -1244,7 +1249,7 @@ class ClassUpdate extends Update with FletchFeatures {
   ClassUpdate(Compiler compiler, this.before, this.after)
       : super(compiler);
 
-  PartialClassElement apply(FletchBackend backend) {
+  PartialClassElement apply(IncrementalBackend backend) {
     patchElement();
     reuseElement();
     return before;
@@ -1347,13 +1352,15 @@ DeclarationSite declarationSite(Element element) {
 }
 
 abstract class FletchFeatures {
-  Compiler get compiler;
+  fletch_compiler_implementation.FletchCompiler get compiler;
 
-  FletchBackend get backend => compiler.backend;
+  IncrementalFletchBackend get backend {
+    return compiler.backend as IncrementalFletchBackend;
+  }
 
   EnqueueTask get enqueuer => compiler.enqueuer;
 
-  FletchContext get fletchContext => backend.context;
+  FletchContext get fletchContext => compiler.context;
 
   FletchFunctionBuilder lookupFletchFunctionBuilder(FunctionElement function) {
     return backend.systemBuilder.lookupFunctionBuilderByElement(function);
