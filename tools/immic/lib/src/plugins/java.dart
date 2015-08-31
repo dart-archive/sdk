@@ -182,6 +182,11 @@ class _JavaPrimitivePatchWriter extends _JavaWriter {
     writeln();
     writeln('  // Package private implementation.');
     writeln();
+    writeln('  $className($javaType previous) {');
+    writeln('    this.previous = previous;');
+    writeln('    current = previous;');
+    writeln('  }');
+    writeln();
     writeln('  $className($javaType data, $javaType previous, ImmiRoot root) {');
     writeln('    this.previous = previous;');
     writeln('    current = data;');
@@ -407,6 +412,8 @@ class _JavaNodePatchWriter extends _JavaNodeBaseWriter {
     writeln('      if (next < length && updates.get(next).is$camelName()) {');
     writeln('        $name = new $patchTypeName(');
     writeln('            $dataGetter(), previous.get$camelName(), root);');
+    writeln('      } else {');
+    writeln('        $name = new $patchTypeName(previous.get$camelName());');
     writeln('      }');
   }
 }
@@ -498,7 +505,15 @@ class _AnyNodePatchWriter extends _JavaNodeBaseWriter {
     writeln();
     writeln('  // Package private implementation.');
     writeln();
-    writeln('  $patchName(NodePatchData data, $nodeName previous, ImmiRoot root) {');
+    writeln('  $patchName($nodeName previous) {');
+    writeln('    this.previous = previous;');
+    writeln('    current = previous;');
+    writeln('  }');
+    writeln();
+    writeln('  $patchName(');
+    writeln('      NodePatchData data,');
+    writeln('      $nodeName previous,');
+    writeln('      ImmiRoot root) {');
     writeln('    this.previous = previous;');
     // Create the patch based on the concrete type-tag.
     units.values.forEach(visit);

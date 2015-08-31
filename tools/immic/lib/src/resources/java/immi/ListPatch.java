@@ -24,6 +24,11 @@ public final class ListPatch implements Patch {
 
   // Package private implementation.
 
+  ListPatch(List previous) {
+    this.previous = previous;
+    current = previous;
+  }
+
   ListPatch(ListPatchData data, List previous, ImmiRoot root) {
     // TODO(zerny): Implement list patches.
     this.previous = previous;
