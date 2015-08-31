@@ -157,9 +157,9 @@ class ErrorHandlingListener extends Listener {
     return super.beginService(tokens);
   }
 
-  Token endService(Token tokens) {
+  Token endService(Token tokens, int count) {
     topLevelScopeStart = null;
-    return super.endService(tokens);
+    return super.endService(tokens, count);
   }
 
   Token beginStruct(Token tokens) {
@@ -167,9 +167,9 @@ class ErrorHandlingListener extends Listener {
     return super.beginStruct(tokens);
   }
 
-  Token endStruct(Token tokens) {
+  Token endStruct(Token tokens, int count) {
     topLevelScopeStart = null;
-    return super.endStruct(tokens);
+    return super.endStruct(tokens, count);
   }
 
   Token beginFunctionDeclaration(Token tokens) {
