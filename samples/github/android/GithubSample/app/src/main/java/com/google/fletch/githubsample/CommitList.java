@@ -13,8 +13,16 @@ public class CommitList {
 
   CommitList() {
     this.commitList = new ArrayList<Commit>();
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 50; i += 5) {
       commitList.add(new Commit("Title", "Author", "https://www.dartlang.org/logos/dart-logo.png"));
+      commitList.add(new Commit("Title", "Author",
+                                "https://avatars.githubusercontent.com/u/2156198?v=3"));
+      commitList.add(new Commit("Title", "Author",
+                                "https://avatars.githubusercontent.com/u/2909286?v=3"));
+      commitList.add(new Commit("Title", "Author",
+                                "https://avatars.githubusercontent.com/u/22043?v=3"));
+      commitList.add(new Commit("Title", "Author",
+                                "https://avatars.githubusercontent.com/u/5689005?v=3"));
     }
   }
 }

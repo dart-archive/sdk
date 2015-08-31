@@ -22,14 +22,29 @@ import java.net.URL;
 public class ImageLoader {
 
   private LruCache<String, Bitmap> imageCache;
+  private BitmapFormatter bitmapFormatter;
+
+  private ImageLoader(BitmapFormatter bitmapFormatter) {
+    this.bitmapFormatter = bitmapFormatter;
+    imageCache = new LruCache<String, Bitmap>(100);
+  }
 
   public ImageLoader() {
-    imageCache = new LruCache<String, Bitmap>(100);
+    this(new BitmapFormatter() {
+      @Override
+      public Bitmap formatBitmap(Bitmap bitmap) {
+        return bitmap;
+      }
+    });
+  }
+
+  public static ImageLoader createWithBitmapFormatter(BitmapFormatter bitmapFormatter) {
+    return new ImageLoader(bitmapFormatter);
   }
 
   public void loadImageFromUrl(ImageView imageView, String url) {
     // This method should be called on the UI thread since it is setting the drawable on imageView.
-    assert(Looper.getMainLooper() == Looper.myLooper());
+    assert (Looper.getMainLooper() == Looper.myLooper());
 
     Bitmap bitmap = getFromCache(url);
     if (bitmap != null) {
@@ -47,6 +62,11 @@ public class ImageLoader {
         task.execute(url);
       }
     }
+  }
+
+  public interface BitmapFormatter {
+
+    public Bitmap formatBitmap(Bitmap bitmap);
   }
 
   private Bitmap getFromCache(String key) {
@@ -119,8 +139,10 @@ public class ImageLoader {
       } catch (Exception e) {
         e.printStackTrace();
       }
-      putInCache(url, bitmap);
-      return bitmap;
+
+      Bitmap formattedBitmap = bitmapFormatter.formatBitmap(bitmap);
+      putInCache(url, formattedBitmap);
+      return formattedBitmap;
     }
 
     @Override

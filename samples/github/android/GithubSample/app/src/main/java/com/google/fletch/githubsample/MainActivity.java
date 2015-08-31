@@ -11,6 +11,12 @@ import android.app.ActivityOptions;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapShader;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.graphics.Shader;
 import android.os.Bundle;
 import android.transition.Explode;
 import android.view.LayoutInflater;
@@ -45,13 +51,11 @@ public class MainActivity extends Activity
    */
   private CharSequence title;
 
-  ImageLoader imageLoader;
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    imageLoader = new ImageLoader();
     navigationDrawerFragment = (NavigationDrawerFragment)
         getFragmentManager().findFragmentById(R.id.navigation_drawer);
     title = getTitle();
@@ -61,7 +65,7 @@ public class MainActivity extends Activity
         R.id.navigation_drawer,
         (DrawerLayout) findViewById(R.id.drawer_layout));
 
-    RecyclerView recyclerView = (RecyclerView)findViewById(R.id.recycler_view);
+    RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
     // As long as the adapter does not cause size changes, this is set to true to gain performance.
     recyclerView.setHasFixedSize(true);
     recyclerView.setItemAnimator(new DefaultItemAnimator());
@@ -69,8 +73,24 @@ public class MainActivity extends Activity
     LinearLayoutManager layoutManager = new LinearLayoutManager(this);
     recyclerView.setLayoutManager(layoutManager);
 
+
+    ImageLoader imageLoader =
+        ImageLoader.createWithBitmapFormatter(new ImageLoader.BitmapFormatter() {
+          @Override
+          public Bitmap formatBitmap(Bitmap bitmap) {
+            final Bitmap output =
+                Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
+            final Canvas canvas = new Canvas(output);
+            final Paint paint = new Paint();
+            paint.setAntiAlias(true);
+            paint.setShader(new BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
+            canvas.drawOval(new RectF(0, 0, bitmap.getWidth(), bitmap.getHeight()), paint);
+            return output;
+          }
+        });
+
     RecyclerViewAdapter adapter = new RecyclerViewAdapter(new CommitList().commitList,
-                                                          new ImageLoader());
+                                                          imageLoader);
     recyclerView.setAdapter(adapter);
 
     ImmiService immi = new ImmiService();
@@ -137,7 +157,7 @@ public class MainActivity extends Activity
     return super.onOptionsItemSelected(item);
   }
 
-  public void showDetails (View view) {
+  public void showDetails(View view) {
     Intent intent = new Intent(this, DetailsViewActivity.class);
     ActivityOptions options =
         ActivityOptions.makeSceneTransitionAnimation(this, view, "transition_card");
