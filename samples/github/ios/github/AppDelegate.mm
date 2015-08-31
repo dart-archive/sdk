@@ -35,7 +35,9 @@ static int debugPortNumber = 8123;
     unsigned char* bytes =
         reinterpret_cast<unsigned char*>(const_cast<void*>(data.bytes));
     NSLog(@"Fletch execution started\n");
-    FletchRunSnapshot(bytes, data.length);
+    FletchProgram program = FletchLoadSnapshot(bytes, data.length);
+    FletchRunMain(program);
+    FletchDeleteProgram(program);
     NSLog(@"Fletch execution terminated\n");
   }
 }

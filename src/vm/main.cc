@@ -102,7 +102,9 @@ static int Main(int argc, char** argv) {
   if (runSnapshot) {
     List<uint8> bytes = Platform::LoadFile(input);
     if (IsSnapshot(bytes)) {
-      FletchRunSnapshot(bytes.data(), bytes.length());
+      FletchProgram program = FletchLoadSnapshot(bytes.data(), bytes.length());
+      FletchRunMain(program);
+      FletchDeleteProgram(program);
       interactive = false;
     }
     bytes.Delete();

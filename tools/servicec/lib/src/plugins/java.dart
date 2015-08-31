@@ -81,8 +81,10 @@ JNIEXPORT void JNICALL Java_fletch_FletchApi_RunSnapshot(JNIEnv* env,
   int len = env->GetArrayLength(snapshot);
   unsigned char* copy = new unsigned char[len];
   env->GetByteArrayRegion(snapshot, 0, len, reinterpret_cast<jbyte*>(copy));
-  FletchRunSnapshot(copy, len);
+  FletchProgram program = FletchLoadSnapshot(copy, len);
   delete copy;
+  FletchRunMain(program);
+  FletchDeleteProgram(program);
 }
 
 JNIEXPORT void JNICALL Java_fletch_FletchApi_WaitForDebuggerConnection(

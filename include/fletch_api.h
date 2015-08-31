@@ -11,6 +11,8 @@
 #define FLETCH_EXPORT __attribute__((visibility("default")))
 #endif
 
+typedef void* FletchProgram;
+
 // Setup must be called before using any of the other API methods.
 FLETCH_EXPORT void FletchSetup(void);
 
@@ -22,9 +24,15 @@ FLETCH_EXPORT void FletchTearDown(void);
 // to run in the VM and start it.
 FLETCH_EXPORT void FletchWaitForDebuggerConnection(int port);
 
-// Load the program from the snapshot, start a process from that
-// program, and run main in that process.
-FLETCH_EXPORT void FletchRunSnapshot(unsigned char* snapshot, int length);
+// Load a program from a snapshot.
+FLETCH_EXPORT FletchProgram FletchLoadSnapshot(unsigned char* snapshot,
+                                               int length);
+
+// Delete a program.
+FLETCH_EXPORT void FletchDeleteProgram(FletchProgram program);
+
+// Start a process at main, from the program.
+FLETCH_EXPORT void FletchRunMain(FletchProgram program);
 
 // Load the snapshot from the file, load the program from the
 // snapshot, start a process from that program, and run main in that

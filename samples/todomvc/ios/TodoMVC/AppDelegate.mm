@@ -28,7 +28,9 @@ static dispatch_queue_t queue;
   unsigned char* bytes =
   reinterpret_cast<unsigned char*>(const_cast<void*>(data.bytes));
   NSLog(@"Fletch execution started\n");
-  FletchRunSnapshot(bytes, data.length);
+  FletchProgram program = FletchLoadSnapshot(bytes, data.length);
+  FletchRunMain(program);
+  FletchDeleteProgram(program);
   NSLog(@"Fletch execution terminated\n");
 }
 

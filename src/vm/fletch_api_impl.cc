@@ -25,36 +25,44 @@ static bool IsSnapshot(List<uint8> snapshot) {
   return snapshot.length() > 2 && snapshot[0] == 0xbe && snapshot[1] == 0xef;
 }
 
-static bool RunSnapshot(List<uint8> bytes) {
+static Program* LoadSnapshot(List<uint8> bytes) {
   if (IsSnapshot(bytes)) {
 #if defined(__ANDROID__)
     // TODO(zerny): Consider making print interceptors part of the public API.
     Print::RegisterPrintInterceptor(new AndroidPrintInterceptor());
 #endif
     SnapshotReader reader(bytes);
-    Program* program = reader.ReadProgram();
-    Scheduler scheduler;
-#ifdef FLETCH_ENABLE_LIVE_CODING
-    ProgramFolder::FoldProgramByDefault(program);
-#endif  // FLETCH_ENABLE_LIVE_CODING
-    Process* process = program->ProcessSpawnForMain();
-    scheduler.ScheduleProgram(program, process);
-    bool success = scheduler.Run();
-    scheduler.UnscheduleProgram(program);
-    delete program;
-#if defined(__ANDROID__)
-    Print::UnregisterPrintInterceptors();
-#endif
-    return success;
+    return reader.ReadProgram();
   }
-  return false;
+  return NULL;
+}
+
+static bool RunProgram(Program* program) {
+#if defined(__ANDROID__)
+  // TODO(zerny): Consider making print interceptors part of the public API.
+  Print::RegisterPrintInterceptor(new AndroidPrintInterceptor());
+#endif
+  Scheduler scheduler;
+#ifdef FLETCH_ENABLE_LIVE_CODING
+  ProgramFolder::FoldProgramByDefault(program);
+#endif  // FLETCH_ENABLE_LIVE_CODING
+  Process* process = program->ProcessSpawnForMain();
+  scheduler.ScheduleProgram(program, process);
+  bool success = scheduler.Run();
+  scheduler.UnscheduleProgram(program);
+#if defined(__ANDROID__)
+  Print::UnregisterPrintInterceptors();
+#endif
+  return success;
 }
 
 static void RunShapshotFromFile(const char* path) {
   List<uint8> bytes = Platform::LoadFile(path);
-  bool success = RunSnapshot(bytes);
-  if (!success) FATAL1("Failed to run snapshot: %s\n", path);
+  Program* program = LoadSnapshot(bytes);
   bytes.Delete();
+  bool success = RunProgram(program);
+  delete program;
+  if (!success) FATAL1("Failed to run snapshot: %s\n", path);
 }
 
 static void WaitForDebuggerConnection(int port) {
@@ -85,10 +93,22 @@ void FletchWaitForDebuggerConnection(int port) {
   fletch::WaitForDebuggerConnection(port);
 }
 
-void FletchRunSnapshot(unsigned char* snapshot, int length) {
+FletchProgram FletchLoadSnapshot(unsigned char* snapshot, int length) {
   fletch::List<uint8> bytes(snapshot, length);
-  bool success = fletch::RunSnapshot(bytes);
-  if (!success) FATAL("Failed to run snapshot.\n");
+  fletch::Program* program = fletch::LoadSnapshot(bytes);
+  if (program == NULL) FATAL("Failed to load snapshot.\n");
+  return reinterpret_cast<FletchProgram>(program);
+}
+
+void FletchRunMain(FletchProgram raw_program) {
+  fletch::Program* program = reinterpret_cast<fletch::Program*>(raw_program);
+  bool success = fletch::RunProgram(program);
+  if (!success) FATAL("Failed to run program.\n");
+}
+
+void FletchDeleteProgram(FletchProgram raw_program) {
+  fletch::Program* program = reinterpret_cast<fletch::Program*>(raw_program);
+  delete program;
 }
 
 void FletchRunSnapshotFromFile(const char* path) {
