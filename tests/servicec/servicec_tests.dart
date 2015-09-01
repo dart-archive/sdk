@@ -9,9 +9,6 @@ import 'dart:io' show
     File,
     Directory;
 
-import 'dart:math' show
-    min;
-
 import 'package:expect/expect.dart';
 import 'package:servicec/compiler.dart' as servicec;
 import 'package:servicec/errors.dart' show
@@ -32,31 +29,9 @@ List<InputTest> SERVICEC_TESTS = <InputTest>[
     new Failure('missing_semicolon',
                 [CompilerError.syntax, CompilerError.syntax]),
     new Failure('mistyped_keyword', [CompilerError.syntax]),
-    new Success('painter_service'),
     new Failure('unfinished_struct', [CompilerError.syntax]),
     new Failure('unmatched_curly',
-                [CompilerError.syntax, CompilerError.syntax]),
-    new Failure('unmatched_curly_2',
-                [CompilerError.syntax, CompilerError.syntax]),
-    new Failure('unmatched_curly_3',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
-    new Failure('unmatched_curly_4',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
-    new Failure('unmatched_curly_5',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
-    new Failure('unmatched_curly_6',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
-    new Failure('unmatched_curly_7',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
-    new Failure('unmatched_curly_8',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
-    new Failure('unmatched_parenthesis', [CompilerError.syntax])
+                [CompilerError.syntax, CompilerError.syntax])
 ];
 
 /// Absolute path to the build directory used by test.py.
@@ -93,13 +68,7 @@ class Success extends InputTest {
 
   Future perform() async {
     try {
-      List<CompilerError> compilerErrors =
-        await servicec.compileInput(input,
-                                    name,
-                                    outputDirectory,
-                                    target: target);
-
-      Expect.equals(compilerErrors.length, 0, "Expected no errors");
+      await servicec.compileInput(input, name, outputDirectory, target: target);
       await checkOutputDirectoryStructure(outputDirectory, target);
     } finally {
       nukeDirectory(outputDirectory);
@@ -117,12 +86,9 @@ class Failure extends InputTest {
     List<CompilerError> compilerErrors =
       await servicec.compileInput(input, name, outputDirectory);
 
-    int length = min(errors.length, compilerErrors.length);
-    for (int i = 0; i < length; ++i) {
+    for (int i = 0; i < compilerErrors.length; ++i) {
       Expect.equals(errors[i], compilerErrors[i]);
     }
-    Expect.equals(errors.length, compilerErrors.length,
-                  "Expected a different amount of errors");
   }
 }
 

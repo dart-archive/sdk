@@ -4,7 +4,7 @@
 
 service Painter {
   void draw(Circle c);
-// unfinished service declaration (missing '}')
+// missing }
 
 struct Circle {
   int radius;
