@@ -405,18 +405,14 @@ class CoredumpEnabler(object):
     resource.setrlimit(resource.RLIMIT_CORE, self._old_limits)
 
 class CoredumpArchiver(object):
-  def __init__(self, bucket, build_dir, conf):
+  def __init__(self, search_dir, bucket, build_dir, conf):
+    self._search_dir = search_dir
     self._bucket = bucket
     self._build_dir = build_dir
     self._conf = conf
 
   def __enter__(self):
-    if utils.GuessOS() == 'linux':
-      core_pattern = open('/proc/sys/kernel/core_pattern').read()
-      core_pattern_uses_pid = open('/proc/sys/kernel/core_uses_pid').read()
-
-      assert core_pattern.strip() == 'core', "core_pattern must be 'core'."
-      assert core_pattern_uses_pid.strip() == '1', "core_uses_pid must be '1'."
+    pass
 
   def __exit__(self, *_):
     coredumps = self._find_coredumps()
@@ -426,10 +422,8 @@ class CoredumpArchiver(object):
       self._archive(os.path.join(self._build_dir, 'fletch-vm'), coredumps)
 
   def _find_coredumps(self):
-    # TODO(kustermann): Make this work for mac as well.
-    if utils.GuessOS() == 'linux':
-      # Finds all files named 'core.*' in the current working directory.
-      return glob.glob('core.*')
+    # Finds all files named 'core.*' in the search directory.
+    return glob.glob(os.path.join(self._search_dir, 'core.*'))
 
   def _archive(self, fletch_vm, coredumps):
     assert coredumps
@@ -460,11 +454,37 @@ class CoredumpArchiver(object):
     print '@@@STEP_LOG_END@coredumps@@@'
     MarkCurrentStep(fatal=False)
 
+class LinuxCoredumpArchiver(CoredumpArchiver):
+  def __init__(self, *args):
+    super(LinuxCoredumpArchiver, self).__init__(os.getcwd(), *args)
+
+  def __enter__(self):
+    super(LinuxCoredumpArchiver, self).__enter__()
+
+    core_pattern = open('/proc/sys/kernel/core_pattern').read()
+    core_pattern_uses_pid = open('/proc/sys/kernel/core_uses_pid').read()
+
+    assert core_pattern.strip() == 'core', "core_pattern must be 'core'."
+    assert core_pattern_uses_pid.strip() == '1', "core_uses_pid must be '1'."
+
+class MacosCoredumpArchiver(CoredumpArchiver):
+  def __init__(self, *args):
+    super(MacosCoredumpArchiver, self).__init__('/cores', *args)
+
+  def __enter__(self):
+    super(MacosCoredumpArchiver, self).__enter__()
+
+    assert os.path.exists(self._search_dir)
+
 def RunWithCoreDumpArchiving(run, build_dir, build_conf):
-  # TODO(kustermann): Make this work on mac as well.
-  if utils.GuessOS() == 'linux':
+  guessed_os = utils.GuessOS()
+  if guessed_os == 'linux':
     with CoredumpEnabler():
-      with CoredumpArchiver(GCS_COREDUMP_BUCKET, build_dir, build_conf):
+      with LinuxCoredumpArchiver(GCS_COREDUMP_BUCKET, build_dir, build_conf):
+        run()
+  elif guessed_os == 'macos':
+    with CoredumpEnabler():
+      with MacosCoredumpArchiver(GCS_COREDUMP_BUCKET, build_dir, build_conf):
         run()
   else:
     run()
