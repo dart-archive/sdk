@@ -112,7 +112,7 @@ abstract class Listener {
 /// Used for debugging other listeners.
 class DebugListener implements Listener {
   Listener debugSubject;
-  List<CompilerError> errors = null;
+  List<CompilerError> errors;
 
   DebugListener(this.debugSubject);
 

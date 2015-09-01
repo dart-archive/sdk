@@ -6,6 +6,7 @@ import 'dart:async' show
     Future;
 
 import 'dart:io' show
+    File,
     Directory;
 
 import 'package:expect/expect.dart';
@@ -23,42 +24,13 @@ import 'test.dart' show
     Test;
 
 List<InputTest> SERVICEC_TESTS = <InputTest>[
-    new Failure('empty_input', '''
-''',
-                [CompilerError.undefinedService]),
-    new Success('empty_service', '''
-service EmptyService {}
-'''),
-    new Failure('missing_semicolon', '''
-service DrawService {
-  void drawCircle(Circle circle)
-}
-
-struct Circle {
-  int radius;
-  Point2D position position;
-}
-
-struct Point2D {
-  int x;
-  int y;
-}
-''',
+    new Failure('empty_input', [CompilerError.undefinedService]),
+    new Success('empty_service'),
+    new Failure('missing_semicolon',
                 [CompilerError.syntax, CompilerError.syntax]),
-    new Failure('unmatched_curly', '''
-service DrawService {
-  void drawCircle(Circle circle);
-
-struct Circle {
-  int radius;
-  Point2D position;
-}
-
-struct Point2D {
-  int x;
-  int y;
-}
-''',
+    new Failure('mistyped_keyword', [CompilerError.syntax]),
+    new Failure('unfinished_struct', [CompilerError.syntax]),
+    new Failure('unmatched_curly',
                 [CompilerError.syntax, CompilerError.syntax])
 ];
 
@@ -66,14 +38,24 @@ struct Point2D {
 const String buildDirectory =
     const String.fromEnvironment('test.dart.build-dir');
 
+/// Relative path to the directory containing input files.
+const String filesDirectory = "tests/servicec/input_files";
+
 // TODO(zerny): Provide the below constant via configuration from test.py
 final String generatedDirectory = '$buildDirectory/generated_servicec_tests';
 
-abstract class InputTest extends Test{
-  final String input;
+abstract class InputTest extends Test {
+  String _input;
+  String get input {
+    if (_input == null) {
+      _input = new File("$filesDirectory/$name.idl").readAsStringSync();
+    }
+    return _input;
+  }
+
   final String outputDirectory;
 
-  InputTest(String name, this.input)
+  InputTest(String name)
       : outputDirectory = "$generatedDirectory/$name",
         super(name);
 }
@@ -81,8 +63,8 @@ abstract class InputTest extends Test{
 class Success extends InputTest {
   final Target target;
 
-  Success(String name, String input, {this.target: Target.ALL})
-      : super(name, input);
+  Success(String name, {this.target: Target.ALL})
+      : super(name);
 
   Future perform() async {
     try {
@@ -97,15 +79,15 @@ class Success extends InputTest {
 class Failure extends InputTest {
   final List<CompilerError> errors;
 
-  Failure(String name, String input, this.errors)
-      : super(name, input);
+  Failure(String name, this.errors)
+      : super(name);
 
   Future perform() async {
     List<CompilerError> compilerErrors =
       await servicec.compileInput(input, name, outputDirectory);
 
     for (int i = 0; i < compilerErrors.length; ++i) {
-      Expect.equals(compilerErrors[i], errors[i]);
+      Expect.equals(errors[i], compilerErrors[i]);
     }
   }
 }
