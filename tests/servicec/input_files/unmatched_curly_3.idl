@@ -1,0 +1,14 @@
+service Painter {
+  void  // unfinished function declaration (missing identifier, formal
+        // parameters, and ';')
+// unfinished service declaration (missing '}')
+
+struct Circle {
+  int radius;
+  Point2d position position;  // extra token 'position'
+}
+
+struct Point2d {
+  int x;
+  int y;
+}

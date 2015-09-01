@@ -3,7 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Painter {
-  void draw(Circle c);
+  void draw(Circle  // unfinished function declaration (missing identifier, ')',
+                    // and ';')
 // unfinished service declaration (missing '}')
 
 struct Circle {
