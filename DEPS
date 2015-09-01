@@ -20,6 +20,8 @@ vars = {
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_fletch_patches".
   # 2. update package revisions below.
+  # TODO(whoever_updates_next): Please remove cls specified by:
+  #   https://github.com/dart-lang/fletch/issues/116
   "dart_rev": "@d5e250ba56b9e3a3f9a7e1994530423ecb61126f",
 
   # Please copy these package revisions from ../dart/DEPS when updating
