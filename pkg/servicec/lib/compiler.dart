@@ -22,9 +22,11 @@ import 'parser.dart' show
     Parser;
 
 import 'listener.dart' show
-    ErrorHandlingListener,
     DebugListener,
     Listener;
+
+import 'error_handling_listener.dart' show
+    ErrorHandlingListener;
 
 import 'scanner.dart' show
     Scanner;
