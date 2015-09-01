@@ -22,6 +22,8 @@ dart2js_hello_world_test: Skip  # Rather big and slow test.
 dart2js_deltablue_test: Skip  # Rather big and slow test.
 
 [ $arch == arm || $arch == xarm ]
-# Failing because strtod is less precise on arm.
-# See https://github.com/dart-lang/fletch/issues/115
-temp_double_parse_test: Fail
+# Failing because strtod is less precise on arm. Once we update the
+# corelib/double_parse_test from the Dart sdk repo we should remove
+# the temp_double_parse_test again.
+# See https://github.com/dart-lang/fletch/issues/114
+temp_double_parse_test/01: Fail
