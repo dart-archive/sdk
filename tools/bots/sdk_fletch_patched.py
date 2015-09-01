@@ -7,11 +7,14 @@
 """
 Buildbot steps for building Dart SDK with Fletch-specific patches.
 """
+import os
+import sys
+# We run this as third_party/fletch/tools/bots/sdk_fletch_patched.py
+sys.path.insert(0, os.path.join('tools', 'bots'))
+
 import bot
 import bot_utils
-import os
 import re
-import sys
 
 utils = bot_utils.GetUtils()
 
