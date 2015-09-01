@@ -9,10 +9,14 @@ const int AF_INET6 = 10;
 
 const int SOCK_STREAM = 1;
 
+const int F_GETFD = 1;
+const int F_SETFD = 2;
 const int F_GETFL = 3;
 const int F_SETFL = 4;
 
 const int O_NONBLOCK = 0x800;
+
+const int FD_CLOEXEC = 0x1;
 
 class Timespec extends Struct {
   Timespec() : super(2);
@@ -276,6 +280,17 @@ abstract class PosixSystem implements System {
 
   int setReuseaddr(int fd) {
     return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 1);
+  }
+
+  int setCloseOnExec(int fd, bool closeOnExec) {
+    int flags = _retry(() => _fcntl.icall$3(fd, F_GETFD, 0));
+    if (flags == -1) return -1;
+    if (closeOnExec) {
+      flags |= FD_CLOEXEC;
+    } else {
+      flags &= ~FD_CLOEXEC;
+    }
+    return _retry(() => _fcntl.icall$3(fd, F_SETFD, flags));
   }
 
   int available(int fd) {

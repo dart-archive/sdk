@@ -6,6 +6,7 @@
 
 #include "src/vm/event_handler.h"
 
+#include <fcntl.h>
 #include <unistd.h>
 
 #include "src/shared/flags.h"
@@ -57,6 +58,10 @@ int EventHandler::GetEventHandler() {
 
   int fds[2];
   if (pipe(fds) != 0) FATAL("Failed to start the event handler pipe\n");
+  int status = fcntl(fds[0], F_SETFD, FD_CLOEXEC);
+  if (status == -1) FATAL("Failed making read pipe close on exec.");
+  status = fcntl(fds[1], F_SETFD, FD_CLOEXEC);
+  if (status == -1) FATAL("Failed making write pipe close on exec.");
   read_fd_ = fds[0];
   write_fd_ = fds[1];
   thread_ = Thread::Run(RunEventHandler, reinterpret_cast<void*>(this));

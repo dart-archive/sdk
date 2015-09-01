@@ -27,7 +27,7 @@ struct Socket::SocketData {
 Socket::Socket() : data_(new SocketData()) {
   data_->fd = socket(AF_INET, SOCK_STREAM, 0);
   if (data_->fd < 0) FATAL("Failed socket creation.");
-  int status = fcntl(data_->fd, FD_CLOEXEC);
+  int status = fcntl(data_->fd, F_SETFD, FD_CLOEXEC);
   if (status == -1) FATAL("Failed making socket close on exec.");
   int optval = 1;
   status = setsockopt(data_->fd, SOL_SOCKET, SO_REUSEADDR,
@@ -38,7 +38,7 @@ Socket::Socket() : data_(new SocketData()) {
 Socket::Socket(int fd) : data_(new SocketData()) {
   data_->fd = fd;
   ASSERT(data_->fd >= 0);
-  int status = fcntl(data_->fd, FD_CLOEXEC);
+  int status = fcntl(data_->fd, F_SETFD, FD_CLOEXEC);
   if (status == -1) FATAL("Failed making socket close on exec.");
 }
 
@@ -99,8 +99,7 @@ Socket* Socket::Accept() {
   while (true) {
     int socket = TEMP_FAILURE_RETRY(accept(data_->fd, &clientaddr, &addrlen));
     if (socket >= 0) {
-      Socket* child = new Socket();
-      child->data_->fd = socket;
+      Socket* child = new Socket(socket);
       return child;
     } else {
       int error = errno;

@@ -8,6 +8,7 @@
 
 #include <sys/epoll.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #include "src/vm/thread.h"
@@ -22,7 +23,10 @@
 namespace fletch {
 
 int EventHandler::Create() {
-  return epoll_create(1);
+  int fd = epoll_create(1);
+  int status = fcntl(fd, F_SETFD, FD_CLOEXEC);
+  if (status == -1) FATAL("Failed making epoll descriptor close on exec.");
+  return fd;
 }
 
 void EventHandler::Run() {

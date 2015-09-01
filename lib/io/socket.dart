@@ -51,6 +51,7 @@ class Socket extends _SocketBase {
     _fd = sys.socket();
     if (_fd == -1) _error("Failed to create socket");
     sys.setBlocking(_fd, false);
+    sys.setCloseOnExec(_fd, true);
     if (sys.connect(_fd, address, port) == -1 &&
         sys.errno() != Errno.EAGAIN) {
       _error("Failed to connect to $host:$port");
@@ -171,6 +172,7 @@ class ServerSocket extends _SocketBase {
       _error("Failed to set socket option");
     }
     sys.setBlocking(_fd, false);
+    sys.setCloseOnExec(_fd, true);
     if (sys.bind(_fd, address, port) == -1) {
       _error("Failed to bind to $host:$port");
     }
@@ -221,6 +223,7 @@ class ServerSocket extends _SocketBase {
     int client = sys.accept(_fd);
     if (client == -1) _error("Failed to accept socket");
     sys.setBlocking(client, false);
+    sys.setCloseOnExec(client, true);
     return client;
   }
 }

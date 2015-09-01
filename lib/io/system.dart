@@ -86,6 +86,7 @@ abstract class System {
 
   int setBlocking(int fd, bool blocking);
   int setReuseaddr(int fd);
+  int setCloseOnExec(int fd, bool closeOnExec);
 
   static int eventHandler = _getEventHandler();
   @fletch.native external static int _getEventHandler();
