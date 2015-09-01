@@ -9,7 +9,7 @@
 # get that change we have our own version of our test in
 # unsorted/temp_double_parse_test and mark the originals as failing.
 # Tracked at: https://github.com/dart-lang/fletch/issues/114
-[ $system == macos ]
+[ $system == macos  || $arch == arm ]
 double_parse_test/none: Fail
 double_parse_test/01: Fail
 
