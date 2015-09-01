@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.fletch_compiler;
+library fletchc.fletch_compiler_implementation;
 
 import 'dart:async' show
     EventSink;
@@ -103,7 +103,7 @@ const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
       platforms: FLETCH_PLATFORM),
 };
 
-class FletchCompiler extends apiimpl.Compiler {
+class FletchCompilerImplementation extends apiimpl.Compiler {
   final Map<String, LibraryInfo> fletchLibraries = <String, LibraryInfo>{};
 
   final Uri fletchVm;
@@ -118,7 +118,7 @@ class FletchCompiler extends apiimpl.Compiler {
   // TODO(ahe): Clean this up and remove this.
   var helper;
 
-  FletchCompiler(
+  FletchCompilerImplementation(
       api.CompilerInput provider,
       api.CompilerOutput outputProvider,
       api.CompilerDiagnostics handler,
@@ -131,7 +131,7 @@ class FletchCompiler extends apiimpl.Compiler {
       : super(
           provider, outputProvider, handler, libraryRoot, packageRoot,
           EXTRA_DART2JS_OPTIONS.toList()..addAll(options), environment,
-          null, null, (FletchCompiler compiler) => new FletchBackend(compiler));
+          null, null, FletchBackend.newInstance);
 
   FletchContext get context {
     if (internalContext == null) {

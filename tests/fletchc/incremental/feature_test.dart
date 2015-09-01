@@ -60,10 +60,11 @@ import 'package:fletchc/commands.dart' show
     CommitChangesResult,
     MapId;
 
-import 'package:fletchc/compiler.dart' show
+import 'package:fletchc/fletch_compiler.dart' show
     FletchCompiler;
 
-import 'package:fletchc/src/fletch_compiler.dart' as fletch_compiler_src;
+import 'package:fletchc/src/fletch_compiler_implementation.dart' show
+    OutputProvider;
 
 import 'package:fletchc/src/guess_configuration.dart' show
     guessFletchVm;
@@ -642,7 +643,7 @@ class IncrementalTestHelper {
         packageRoot: packageRoot,
         inputProvider: inputProvider,
         diagnosticHandler: diagnosticHandler,
-        outputProvider: new fletch_compiler_src.OutputProvider());
+        outputProvider: new OutputProvider());
     return new IncrementalTestHelper.internal(
         packageRoot,
         inputProvider,

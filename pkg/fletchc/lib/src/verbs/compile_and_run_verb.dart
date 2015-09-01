@@ -23,7 +23,7 @@ import 'dart:io' show
     ServerSocket,
     Socket;
 
-import '../../compiler.dart' show
+import '../../fletch_compiler.dart' show
     FletchCompiler,
     StringOrUri;
 

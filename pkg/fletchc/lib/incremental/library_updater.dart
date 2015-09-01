@@ -67,8 +67,8 @@ import '../src/fletch_class_builder.dart' show
 import '../src/fletch_context.dart' show
     FletchContext;
 
-import '../src/fletch_compiler.dart' as fletch_compiler_implementation show
-    FletchCompiler;
+import '../src/fletch_compiler_implementation.dart' show
+    FletchCompilerImplementation;
 
 import '../commands.dart' show
     Command,
@@ -1352,7 +1352,7 @@ DeclarationSite declarationSite(Element element) {
 }
 
 abstract class FletchFeatures {
-  fletch_compiler_implementation.FletchCompiler get compiler;
+  FletchCompilerImplementation get compiler;
 
   IncrementalFletchBackend get backend {
     return compiler.backend as IncrementalFletchBackend;

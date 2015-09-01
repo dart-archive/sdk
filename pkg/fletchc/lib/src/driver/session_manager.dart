@@ -33,10 +33,10 @@ import '../../session.dart' show
 export '../../session.dart' show
     Session;
 
-import '../../compiler.dart' show
+import '../../fletch_compiler.dart' show
     FletchCompiler;
 
-export '../../compiler.dart' show
+export '../../fletch_compiler.dart' show
     FletchCompiler;
 
 import '../../incremental/fletchc_incremental.dart' show

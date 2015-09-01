@@ -30,7 +30,7 @@ import 'function_codegen.dart';
 import 'debug_info.dart';
 
 class DebugInfoFunctionCodegen extends FunctionCodegen {
-  final FletchCompiler compiler;
+  final FletchCompilerImplementation compiler;
   final DebugInfo debugInfo;
 
   // Regenerate the bytecode in a fresh buffer separately from the compiled

@@ -20,10 +20,10 @@ import 'package:compiler/src/elements/elements.dart' show
 export 'package:compiler/src/elements/elements.dart' show
     LibraryElement;
 
-import 'package:fletchc/compiler.dart' show
+import 'package:fletchc/fletch_compiler.dart' show
     StringOrUri;
 
-export 'package:fletchc/compiler.dart' show
+export 'package:fletchc/fletch_compiler.dart' show
     StringOrUri;
 
 const String SCHEME = 'org.trydart.compiler-test-case';

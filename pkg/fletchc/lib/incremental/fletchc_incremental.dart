@@ -32,7 +32,7 @@ import 'library_updater.dart' show
     LibraryUpdater,
     Logger;
 
-import '../compiler.dart' show
+import '../fletch_compiler.dart' show
     FletchCompiler;
 
 import '../src/debug_info.dart' show
@@ -44,13 +44,11 @@ import '../src/class_debug_info.dart' show
 import '../src/fletch_selector.dart' show
     FletchSelector;
 
-import '../src/fletch_compiler.dart' as implementation show
-    FletchCompiler;
+import '../src/fletch_compiler_implementation.dart' show
+    FletchCompilerImplementation,
+    OutputProvider;
 
 import '../fletch_system.dart';
-
-import '../src/fletch_compiler.dart' show
-    OutputProvider;
 
 import '../src/fletch_backend.dart' show
     FletchBackend;
@@ -73,7 +71,7 @@ class IncrementalCompiler {
   final Map<String, dynamic> environment;
   final IncrementalCompilerContext _context;
 
-  implementation.FletchCompiler _compiler;
+  FletchCompilerImplementation _compiler;
 
   IncrementalCompiler(
       {this.libraryRoot,
@@ -101,7 +99,7 @@ class IncrementalCompiler {
 
   LibraryElement get mainApp => _compiler.mainApp;
 
-  implementation.FletchCompiler get compiler => _compiler;
+  FletchCompilerImplementation get compiler => _compiler;
 
   /// Perform a full compile of [script]. This will reset the incremental
   /// compiler.

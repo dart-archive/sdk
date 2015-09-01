@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.compiler;
+library fletchc.fletch_compiler;
 
 import 'dart:async' show
     Future;
@@ -36,7 +36,9 @@ import 'src/fletch_backend.dart' show
 
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
-import 'src/fletch_compiler.dart' as implementation;
+import 'src/fletch_compiler_implementation.dart' show
+    FletchCompilerImplementation,
+    OutputProvider;
 
 import 'fletch_system.dart';
 
@@ -54,7 +56,7 @@ const String _PATCH_ROOT = const String.fromEnvironment("fletch-patch-root");
 const String StringOrUri = "String or Uri";
 
 class FletchCompiler {
-  final implementation.FletchCompiler _compiler;
+  final FletchCompilerImplementation _compiler;
 
   final Uri script;
 
@@ -97,7 +99,7 @@ class FletchCompiler {
     }
 
     if (outputProvider == null) {
-      outputProvider = new implementation.OutputProvider();
+      outputProvider = new OutputProvider();
     }
 
     if (libraryRoot == null  && _SDK_DIR != null) {
@@ -154,7 +156,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
       environment = <String, dynamic>{};
     }
 
-    implementation.FletchCompiler compiler = new implementation.FletchCompiler(
+    FletchCompilerImplementation compiler = new FletchCompilerImplementation(
         provider,
         outputProvider,
         handler,
@@ -228,7 +230,7 @@ class Backdoor {
 
   Backdoor(this._compiler);
 
-  Future<implementation.FletchCompiler> get compilerImplementation async {
+  Future<FletchCompilerImplementation> get compilerImplementation async {
     await _compiler._inititalizeContext();
     return _compiler._compiler;
   }

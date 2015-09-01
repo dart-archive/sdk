@@ -25,8 +25,8 @@ import 'package:compiler/src/source_file_provider.dart' show
 import 'codegen_visitor.dart';
 import '../fletch_system.dart';
 
-import 'fletch_compiler.dart' show
-    FletchCompiler;
+import 'fletch_compiler_implementation.dart' show
+    FletchCompilerImplementation;
 
 class ScopeInfo {
   static const ScopeInfo sentinel = const ScopeInfo(0, null, null);
@@ -86,7 +86,10 @@ class DebugInfo {
 
   DebugInfo(this.function);
 
-  void addLocation(FletchCompiler compiler, int bytecodeIndex, Node node) {
+  void addLocation(
+      FletchCompilerImplementation compiler,
+      int bytecodeIndex,
+      Node node) {
     SourceSpan span = compiler.spanFromSpannable(node);
     SourceFile file = null;
     // TODO(ahe): What to do if compiler.provider isn't a SourceFileProvider?

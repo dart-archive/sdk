@@ -7,14 +7,14 @@ library fletchc.fletch_enqueuer;
 import 'package:compiler/src/dart2jslib.dart' show
     EnqueueTask;
 
-import 'fletch_compiler.dart' show
-    FletchCompiler;
+import 'fletch_compiler_implementation.dart' show
+    FletchCompilerImplementation;
 
 /// Custom enqueuer for Fletch.
 class FletchEnqueueTask extends EnqueueTask {
   // TODO(ahe): Change to implementing [EnqueueTask] and store a custom
   // enqueuer in this class' [codegen] property.
 
-  FletchEnqueueTask(FletchCompiler compiler)
+  FletchEnqueueTask(FletchCompilerImplementation compiler)
       : super(compiler);
 }

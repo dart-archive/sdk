@@ -214,7 +214,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
   final Set<FunctionElement> alwaysEnqueue = new Set<FunctionElement>();
 
-  FletchBackend(FletchCompiler compiler)
+  FletchBackend(FletchCompilerImplementation compiler)
       : this.context = compiler.context,
         this.constantCompilerTask = new DartConstantTask(compiler),
         this.systemBuilder = new FletchSystemBuilder(BASE_FLETCH_SYSTEM),
@@ -1480,5 +1480,9 @@ class FletchBackend extends Backend with ResolutionCallbacks
       if (parameter.name != callStructure.namedArguments[index++]) return false;
     }
     return true;
+  }
+
+  static FletchBackend newInstance(FletchCompilerImplementation compiler) {
+    return new FletchBackend(compiler);
   }
 }

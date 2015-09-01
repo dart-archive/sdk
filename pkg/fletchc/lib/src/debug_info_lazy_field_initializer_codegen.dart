@@ -32,7 +32,7 @@ import 'debug_info.dart';
 class DebugInfoLazyFieldInitializerCodegen
     extends LazyFieldInitializerCodegen {
   final DebugInfo debugInfo;
-  final FletchCompiler compiler;
+  final FletchCompilerImplementation compiler;
 
   // Regenerate the bytecode in a fresh buffer separately from the compiled
   // function. If we did not create a separate buffer, the bytecode would

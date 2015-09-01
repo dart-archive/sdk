@@ -34,11 +34,11 @@ import 'package:compiler/src/dart2jslib.dart' show
     CodegenRegistry,
     isPrivateName;
 
-import 'fletch_compiler.dart' show
-    FletchCompiler;
+import 'fletch_compiler_implementation.dart' show
+    FletchCompilerImplementation;
 
-export 'fletch_compiler.dart' show
-    FletchCompiler;
+export 'fletch_compiler_implementation.dart' show
+    FletchCompilerImplementation;
 
 import 'fletch_backend.dart' show
     FletchBackend;
@@ -61,7 +61,7 @@ export 'fletch_native_descriptor.dart' show
     FletchNativeDescriptor;
 
 class FletchContext {
-  final FletchCompiler compiler;
+  final FletchCompilerImplementation compiler;
 
   Map<String, FletchNativeDescriptor> nativeDescriptors;
 
