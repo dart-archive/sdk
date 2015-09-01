@@ -17,6 +17,8 @@ import '../primitives.dart' as primitives;
 import '../struct_layout.dart';
 
 const List<String> RESOURCES = const [
+  'Action.java',
+  'ActionPatch.java',
   'AnyNodePresenter.java',
   'ImmiRoot.java',
   'ImmiService.java',
@@ -60,9 +62,11 @@ void generate(String path, Map units, String outputDirectory) {
 }
 
 void _generateNodeFiles(String path, Map units, String outputDirectory) {
+  var actions = new _ActionsCollector();
   new _AnyNodeWriter(units).writeTo(outputDirectory);
   new _AnyNodePatchWriter(units).writeTo(outputDirectory);
   for (Unit unit in units.values) {
+    actions.collectMethodSignatures(unit);
     for (Struct node in unit.structs) {
       new _JavaNodeWriter(node).writeTo(outputDirectory);
       new _JavaNodePatchWriter(node).writeTo(outputDirectory);
@@ -73,6 +77,13 @@ void _generateNodeFiles(String path, Map units, String outputDirectory) {
     if (idlType == 'void') return;
     new _JavaPrimitivePatchWriter(idlType, javaType).writeTo(outputDirectory);
   });
+  for (var types in actions.methodSignatures.values) {
+    _JavaActionWriter.fromTypes(types.toList()).writeTo(outputDirectory);
+  }
+}
+
+class _ActionsCollector extends CodeGenerationVisitor {
+  _ActionsCollector() : super(null);
 }
 
 class _JavaVisitor extends CodeGenerationVisitor {
@@ -198,6 +209,111 @@ class _JavaPrimitivePatchWriter extends _JavaWriter {
   }
 }
 
+class _JavaActionWriter extends _JavaWriter {
+  Method method;
+  List<Type> types;
+  List<String> arguments;
+
+  _JavaActionWriter(this.method, this.types, this.arguments)
+      : super(null);
+
+  static _JavaActionWriter fromTypes(List<Type> types) {
+    int i = 0;
+    return new _JavaActionWriter(
+        null,
+        types,
+        types.map((_) => 'arg${i++}').toList());
+  }
+
+  static _JavaActionWriter fromMethod(Method method) {
+    return new _JavaActionWriter(
+        method,
+        method.arguments.map((f) => f.type).toList(),
+        method.arguments.map((f) => f.name).toList());
+  }
+
+  writeTo(String outputDirectory) {
+    bool boxedArguments = types.any((t) => t.isString);
+    writeHeader([
+      'fletch.ImmiServiceLayer',
+    ]);
+    writeln('public final class $className implements Action {');
+    writeln();
+    writeln('  // Public interface.');
+    writeln();
+    writeln('  public void dispatch($actionFormals) {');
+    writeln('    root.dispatch(new Runnable() {');
+    writeln('      @Override');
+    writeln('      public void run() {');
+    if (boxedArguments) {
+      String builder = actionArgsBuilder;
+      imports.add('fletch.MessageBuilder');
+      imports.add('fletch.$builder');
+      writeln('        int space = 48 + $builder.kSize;');
+      for (int i = 0; i < types.length; ++i) {
+        if (types[i].isString) {
+          writeln('        space += ${arguments[i]}.length();');
+        }
+      }
+      writeln('        MessageBuilder message = new MessageBuilder(space);');
+      writeln('        $builder args = new $builder();');
+      writeln('        message.initRoot(args, $builder.kSize);');
+      writeln('        args.setId(id);');
+      arguments.forEach((a) {
+        writeln('        args.set${camelize(a)}($a);');
+      });
+    }
+    write('        ImmiServiceLayer.dispatch${actionSuffix}Async(');
+    if (boxedArguments) {
+      write('args, ');
+    } else {
+      write('id, ');
+      arguments.forEach((a) { write('$a, '); });
+    }
+    writeln('null);');
+    writeln('      }');
+    writeln('    });');
+    writeln('  }');
+    writeln();
+    writeln('  // Package private implementation.');
+    writeln();
+    writeln('  $className(int id, ImmiRoot root) {');
+    writeln('    this.id = id;');
+    writeln('    this.root = root;');
+    writeln('  }');
+    writeln();
+    writeln('  private int id;');
+    writeln('  private ImmiRoot root;');
+    writeln('}');
+    super.writeTo(outputDirectory);
+  }
+
+  // Override className since we can't provide it in the constructor.
+  String get className => actionName;
+
+  String get actionFormals {
+    int i = 0;
+    return types.map((t) => 'final ${getTypeName(t)} arg${i++}').join(', ');
+  }
+
+  String get actionName {
+    return 'Action${actionSuffix}';
+  }
+
+  String get actionPatchName {
+    return 'ActionPatch<$actionName>';
+  }
+
+  String get actionSuffix {
+    if (types.isEmpty) return 'Void';
+    return types.map((t) => camelize(t.identifier)).join();
+  }
+
+  String get actionArgsBuilder {
+    return '${actionName}ArgsBuilder';
+  }
+}
+
 class _JavaNodeBaseWriter extends _JavaWriter {
   final String name;
   final String nodeName;
@@ -230,6 +346,8 @@ class _JavaNodePresenterWriter extends _JavaNodeBaseWriter {
 }
 
 class _JavaNodeWriter extends _JavaNodeBaseWriter {
+  Struct node;
+  Iterable<_JavaNodeWriter> actions;
 
   _JavaNodeWriter(Struct node)
       : super(node.name, '${node.name}Node') {
@@ -237,6 +355,8 @@ class _JavaNodeWriter extends _JavaNodeBaseWriter {
   }
 
   visitStruct(Struct node) {
+    this.node = node;
+    actions = node.methods.map(_JavaActionWriter.fromMethod);
     writeHeader([
       'fletch.${nodeName}Data',
     ]);
@@ -245,29 +365,30 @@ class _JavaNodeWriter extends _JavaNodeBaseWriter {
     writeln('  // Public interface.');
     writeln();
     forEachSlot(node, null, writeFieldGetter);
-    // TODO(zerny): Implement actions.
+    actions.forEach(writeActionGetter);
     writeln();
     writeln('  // Package private implementation.');
     writeln();
-    writeConstructorFromData(node);
+    writeConstructorFromData();
     writeln();
-    writeConstructorFromPatch(node);
+    writeConstructorFromPatch();
     writeln();
     forEachSlot(node, null, writeFieldBacking);
+    actions.forEach(writeActionBacking);
     writeln('}');
   }
 
-  writeConstructorFromData(Struct node) {
+  writeConstructorFromData() {
     writeln('  $nodeName(${nodeName}Data data, ImmiRoot root) {');
     forEachSlot(node, null, writeFieldInitializationFromData);
-    // TODO(zerny): Implement actions.
+    actions.forEach(writeActionInitializationFromData);
     writeln('  }');
   }
 
-  writeConstructorFromPatch(Struct node) {
+  writeConstructorFromPatch() {
     writeln('  $nodeName($patchName patch) {');
     forEachSlot(node, null, writeFieldInitializationFromPatch);
-    // TODO(zerny): Implement actions.
+    actions.forEach(writeActionInitializationFromPatch);
     writeln('  }');
   }
 
@@ -301,9 +422,34 @@ class _JavaNodeWriter extends _JavaNodeBaseWriter {
     String camelName = camelize(name);
     writeln('    $name = patch.get$camelName().getCurrent();');
   }
+
+  writeActionBacking(_JavaActionWriter action) {
+    String name = action.method.name;
+    writeln('  private ${action.actionName} $name;');
+  }
+
+  writeActionGetter(_JavaActionWriter action) {
+    String name = action.method.name;
+    String camelName = camelize(name);
+    writeln('  public ${action.actionName} get$camelName() { return $name; }');
+  }
+
+  writeActionInitializationFromData(_JavaActionWriter action) {
+    String name = action.method.name;
+    Strin camelName = camelize(name);
+    writeln('    $name = new ${action.actionName}(data.get$camelName(), root);');
+  }
+
+  writeActionInitializationFromPatch(_JavaActionWriter action) {
+    String name = action.method.name;
+    Strin camelName = camelize(name);
+    writeln('    $name = patch.get$camelName().getCurrent();');
+  }
 }
 
 class _JavaNodePatchWriter extends _JavaNodeBaseWriter {
+  Struct node;
+  Iterable<_JavaNodeWriter> actions;
 
   _JavaNodePatchWriter(Struct node)
       : super(node.name, '${node.name}Patch') {
@@ -311,6 +457,8 @@ class _JavaNodePatchWriter extends _JavaNodeBaseWriter {
   }
 
   visitStruct(Struct node) {
+    this.node = node;
+    actions = node.methods.map(_JavaActionWriter.fromMethod);
     writeHeader([
       'fletch.${patchName}Data',
       'fletch.${node.name}UpdateData',
@@ -338,6 +486,7 @@ class _JavaNodePatchWriter extends _JavaNodeBaseWriter {
     writeln('  public $nodeName getPrevious() { return previous; }');
     writeln();
     forEachSlot(node, null, writeFieldGetter);
+    actions.forEach(writeActionGetter);
     writeln();
     writeln('  @Override');
     writeln('  public void applyTo($presenterName presenter) {');
@@ -354,12 +503,13 @@ class _JavaNodePatchWriter extends _JavaNodeBaseWriter {
     writeln();
     writeConstructorIdentity();
     writeln();
-    writeConstructorFromData(node);
+    writeConstructorFromData();
     writeln();
     writeln('  private PatchType type;');
     writeln('  private $nodeName current;');
     writeln('  private $nodeName previous;');
     forEachSlot(node, null, writeFieldBacking);
+    actions.forEach(writeActionBacking);
     writeln('}');
   }
 
@@ -371,7 +521,7 @@ class _JavaNodePatchWriter extends _JavaNodeBaseWriter {
     writeln('  }');
   }
 
-  writeConstructorFromData(Struct node) {
+  writeConstructorFromData() {
     writeln('  $patchName(${patchName}Data data, $nodeName previous, ImmiRoot root) {');
     writeln('    this.previous = previous;');
     if (node.layout.slots.isNotEmpty || node.methods.isNotEmpty) {
@@ -381,6 +531,7 @@ class _JavaNodePatchWriter extends _JavaNodeBaseWriter {
       writeln('      int length = updates.size();');
       writeln('      int next = 0;');
       forEachSlot(node, null, writeFieldInitializationFromData);
+      actions.forEach(writeActionInitializationFromData);
       // TODO(zerny): Implement actions.
       writeln('      assert next == length;');
       writeln('      type = PatchType.UpdateNodePatch;');
@@ -412,6 +563,35 @@ class _JavaNodePatchWriter extends _JavaNodeBaseWriter {
     writeln('      if (next < length && updates.get(next).is$camelName()) {');
     writeln('        $name = new $patchTypeName(');
     writeln('            $dataGetter(), previous.get$camelName(), root);');
+    writeln('      } else {');
+    writeln('        $name = new $patchTypeName(previous.get$camelName());');
+    writeln('      }');
+  }
+
+  writeActionGetter(_JavaActionWriter action) {
+    String name = action.method.name;
+    String camelName = camelize(name);
+    writeln('  public ${action.actionPatchName} get$camelName() {');
+    writeln('    return $name;');
+    writeln('  }');
+  }
+
+  writeActionBacking(_JavaActionWriter action) {
+    String name = action.method.name;
+    writeln('  private ${action.actionPatchName} $name;');
+  }
+
+  writeActionInitializationFromData(_JavaActionWriter action) {
+    String name = action.method.name;
+    String camelName = camelize(name);
+    String actionName = action.actionName;
+    String patchTypeName = action.actionPatchName;
+    String dataGetter = 'updates.get(next++).get$camelName';
+    writeln('      if (next < length && updates.get(next).is$camelName()) {');
+    writeln('        $name = new $patchTypeName(');
+    writeln('            new $actionName($dataGetter(), root),');
+    writeln('            previous.get$camelName(),');
+    writeln('            root);');
     writeln('      } else {');
     writeln('        $name = new $patchTypeName(previous.get$camelName());');
     writeln('      }');
@@ -501,6 +681,13 @@ class _AnyNodePatchWriter extends _JavaNodeBaseWriter {
     writeln('      assert wasUpdated();');
     writeln('      presenter.patchNode(this);');
     writeln('    }');
+    writeln('  }');
+    writeln();
+    writeln('  public boolean is(java.lang.Class clazz) {');
+    writeln('    return clazz.isInstance(patch);');
+    writeln('  }');
+    writeln('  public <T> T as(java.lang.Class<T> clazz) {');
+    writeln('    return clazz.cast(patch);');
     writeln('  }');
     writeln();
     writeln('  // Package private implementation.');

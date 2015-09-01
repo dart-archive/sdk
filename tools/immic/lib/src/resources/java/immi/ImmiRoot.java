@@ -34,6 +34,13 @@ public final class ImmiRoot {
     this.presenter = presenter;
   }
 
+  void dispatch(Runnable event) {
+    event.run();
+    // TODO(zerny): Consider other strategies than eagerly requesting a refresh
+    // on each dispatch.
+    refresh();
+  }
+
   // Private implementation.
 
   // No assumptions are made on which thread patch application is performed on.

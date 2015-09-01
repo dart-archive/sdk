@@ -33,14 +33,25 @@ import android.support.v7.widget.DefaultItemAnimator;
 import immi.AnyNode;
 import immi.AnyNodePatch;
 import immi.AnyNodePresenter;
+import immi.DrawerNode;
+import immi.DrawerPatch;
 import immi.ImmiRoot;
 import immi.ImmiService;
 
 public class MainActivity extends Activity
     implements NavigationDrawerFragment.NavigationDrawerCallbacks, AnyNodePresenter {
 
-  public void presentNode(AnyNode node) {}
-  public void patchNode(AnyNodePatch patch) {}
+  public void presentNode(AnyNode node) {
+    DrawerNode drawer = node.as(DrawerNode.class);
+    drawer.getToggleLeft().dispatch();
+  }
+
+  public void patchNode(AnyNodePatch patch) {
+    DrawerPatch drawer = patch.as(DrawerPatch.class);
+    if (drawer.getLeftVisible().hasChanged()) {
+      // TODO(zerny): Toggle the drawer etc.
+    }
+  }
 
   /**
    * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
