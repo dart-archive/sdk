@@ -12,6 +12,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -74,8 +75,8 @@ public class MainActivity extends Activity
     recyclerView.setLayoutManager(layoutManager);
 
 
-    ImageLoader imageLoader =
-        ImageLoader.createWithBitmapFormatter(new ImageLoader.BitmapFormatter() {
+    ImageLoader imageLoader = ImageLoader.createWithBitmapFormatter(
+        new ImageLoader.BitmapFormatter() {
           @Override
           public Bitmap formatBitmap(Bitmap bitmap) {
             final Bitmap output =
@@ -87,10 +88,11 @@ public class MainActivity extends Activity
             canvas.drawOval(new RectF(0, 0, bitmap.getWidth(), bitmap.getHeight()), paint);
             return output;
           }
-        });
+        },
+        BitmapFactory.decodeResource(getResources(), R.drawable.dart_logo));
 
     RecyclerViewAdapter adapter = new RecyclerViewAdapter(new CommitList().commitList,
-                                                          imageLoader);
+        imageLoader);
     recyclerView.setAdapter(adapter);
 
     ImmiService immi = new ImmiService();

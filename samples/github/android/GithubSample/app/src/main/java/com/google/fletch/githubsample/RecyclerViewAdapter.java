@@ -19,6 +19,8 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
   List<Commit> commitList;
   ImageLoader imageLoader;
 
+  private static final int IMAGE_VIEW_DIMENSION_PX = 120;
+
   RecyclerViewAdapter(List<Commit> commitList, ImageLoader imageLoader) {
     this.commitList = commitList;
     this.imageLoader = imageLoader;
@@ -35,7 +37,8 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
   public void onBindViewHolder(CommitViewHolder holder, int position) {
     holder.author.setText(commitList.get(position).author);
     holder.title.setText(commitList.get(position).title);
-    imageLoader.loadImageFromUrl(holder.avatar, commitList.get(position).imageUrl);
+    imageLoader.loadImageFromUrl(holder.avatar, commitList.get(position).imageUrl,
+        IMAGE_VIEW_DIMENSION_PX, IMAGE_VIEW_DIMENSION_PX);
   }
 
   @Override

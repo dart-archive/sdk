@@ -14,6 +14,7 @@ import android.os.Looper;
 import android.util.LruCache;
 import android.widget.ImageView;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.net.URL;
@@ -23,26 +24,30 @@ public class ImageLoader {
 
   private LruCache<String, Bitmap> imageCache;
   private BitmapFormatter bitmapFormatter;
+  private Bitmap defaultBitmap;
 
-  private ImageLoader(BitmapFormatter bitmapFormatter) {
+  private ImageLoader(BitmapFormatter bitmapFormatter, Bitmap defaultBitmap) {
     this.bitmapFormatter = bitmapFormatter;
+    this.defaultBitmap = defaultBitmap;
     imageCache = new LruCache<String, Bitmap>(100);
   }
 
-  public ImageLoader() {
+  public ImageLoader(Bitmap defaultBitmap) {
     this(new BitmapFormatter() {
       @Override
       public Bitmap formatBitmap(Bitmap bitmap) {
         return bitmap;
       }
-    });
+    }, defaultBitmap);
   }
 
-  public static ImageLoader createWithBitmapFormatter(BitmapFormatter bitmapFormatter) {
-    return new ImageLoader(bitmapFormatter);
+  public static ImageLoader createWithBitmapFormatter(BitmapFormatter bitmapFormatter,
+                                                      Bitmap defaultBitmap) {
+    return new ImageLoader(bitmapFormatter, defaultBitmap);
   }
 
-  public void loadImageFromUrl(ImageView imageView, String url) {
+  public void loadImageFromUrl(
+      ImageView imageView, String url, int imageViewWidth, int imageViewHeight) {
     // This method should be called on the UI thread since it is setting the drawable on imageView.
     assert (Looper.getMainLooper() == Looper.myLooper());
 
@@ -52,12 +57,10 @@ public class ImageLoader {
       imageView.setImageBitmap((Bitmap) bitmap);
     } else {
       if (cancelPotentialWork(url, imageView)) {
-        final BitmapDownloadTask task = new BitmapDownloadTask(imageView);
+        final BitmapDownloadTask task =
+            new BitmapDownloadTask(imageView, imageViewWidth, imageViewHeight);
         final AsyncDrawable asyncDrawable =
-            new AsyncDrawable(imageView.getResources(),
-                              BitmapFactory.decodeResource(imageView.getResources(),
-                                                           R.drawable.dart_logo),
-                              task);
+            new AsyncDrawable(imageView.getResources(), defaultBitmap, task);
         imageView.setImageDrawable(asyncDrawable);
         task.execute(url);
       }
@@ -66,7 +69,7 @@ public class ImageLoader {
 
   public interface BitmapFormatter {
 
-    public Bitmap formatBitmap(Bitmap bitmap);
+    Bitmap formatBitmap(Bitmap bitmap);
   }
 
   private Bitmap getFromCache(String key) {
@@ -125,24 +128,58 @@ public class ImageLoader {
 
     public String url;
     public WeakReference<ImageView> imageViewReference;
+    public int imageViewHeight;
+    public int imageViewWidth;
 
-    public BitmapDownloadTask(ImageView view) {
+    public BitmapDownloadTask(ImageView view, int imageViewWidth, int imageViewHeight) {
       imageViewReference = new WeakReference<ImageView>(view);
+      this.imageViewHeight = imageViewHeight;
+      this.imageViewWidth = imageViewWidth;
     }
 
     @Override
     protected Bitmap doInBackground(String... params) {
       url = params[0];
       Bitmap bitmap = null;
-      try {
-        bitmap = BitmapFactory.decodeStream((InputStream) new URL(url).getContent());
-      } catch (Exception e) {
+
+      BitmapFactory.Options options = new BitmapFactory.Options();
+      options.inJustDecodeBounds = true;
+      try (InputStream sizeInputStream = (InputStream) new URL(url).getContent();
+           InputStream bitmapInputStream = (InputStream) new URL(url).getContent()) {
+
+        BitmapFactory.decodeStream(sizeInputStream, null, options);
+        options.inSampleSize = calculateInSampleSize(options, imageViewWidth, imageViewHeight);
+        options.inJustDecodeBounds = false;
+        bitmap = BitmapFactory.decodeStream(bitmapInputStream, null, options);
+
+        Bitmap formattedBitmap = bitmapFormatter.formatBitmap(bitmap);
+        putInCache(url, formattedBitmap);
+        return formattedBitmap;
+      } catch (IOException e) {
         e.printStackTrace();
+        return defaultBitmap;
+      }
+    }
+
+    private int calculateInSampleSize(
+        BitmapFactory.Options options, int requiredWidth, int requiredHeight) {
+      // Raw height and width of image
+      final int height = options.outHeight;
+      final int width = options.outWidth;
+
+      if (height > requiredHeight || width > requiredWidth) {
+
+        // Calculate ratios of height and width to requested height and width
+        final int heightRatio = Math.round((float) height / (float) requiredHeight);
+        final int widthRatio = Math.round((float) width / (float) requiredWidth);
+
+        // Choose the smallest ratio as inSampleSize value, this will guarantee
+        // a final image with both dimensions larger than or equal to the
+        // requested height and width.
+        return heightRatio < widthRatio ? heightRatio : widthRatio;
       }
 
-      Bitmap formattedBitmap = bitmapFormatter.formatBitmap(bitmap);
-      putInCache(url, formattedBitmap);
-      return formattedBitmap;
+      return 1;
     }
 
     @Override
