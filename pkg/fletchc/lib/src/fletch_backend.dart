@@ -104,6 +104,9 @@ import 'fletch_system_builder.dart' show
 import '../incremental_backend.dart' show
     IncrementalFletchBackend;
 
+import 'fletch_enqueuer.dart' show
+    FletchEnqueueTask;
+
 import 'class_debug_info.dart';
 import 'codegen_visitor.dart';
 import 'debug_info.dart';
@@ -1459,6 +1462,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
     }
     return super.onQueueEmpty(enqueuer, recentClasses);
   }
+
+  FletchEnqueueTask makeEnqueuer() => new FletchEnqueueTask(compiler);
 
   static bool isExactParameterMatch(
       FunctionSignature signature,

@@ -44,8 +44,6 @@ import 'fletch_context.dart';
 
 import '../fletch_system.dart';
 
-part 'fletch_compiler_hack.dart';
-
 const EXTRA_DART2JS_OPTIONS = const <String>[
     // TODO(ahe): This doesn't completely disable type inference. Investigate.
     '--disable-type-inference',
@@ -105,7 +103,7 @@ const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
       platforms: FLETCH_PLATFORM),
 };
 
-class FletchCompiler extends FletchCompilerHack {
+class FletchCompiler extends apiimpl.Compiler {
   final Map<String, LibraryInfo> fletchLibraries = <String, LibraryInfo>{};
 
   final Uri fletchVm;
@@ -132,7 +130,8 @@ class FletchCompiler extends FletchCompilerHack {
       this.fletchVm)
       : super(
           provider, outputProvider, handler, libraryRoot, packageRoot,
-          EXTRA_DART2JS_OPTIONS.toList()..addAll(options), environment);
+          EXTRA_DART2JS_OPTIONS.toList()..addAll(options), environment,
+          null, null, (FletchCompiler compiler) => new FletchBackend(compiler));
 
   FletchContext get context {
     if (internalContext == null) {
