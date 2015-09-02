@@ -27,10 +27,6 @@
       '<@(common_gcc_cflags_c)',
     ],
 
-    'LK_PROJECT%': 'vexpress-a9-test',
-
-    'LK_CPU%': 'cortex-a9',
-
     'lk_path': '<(DEPTH)/../third_party/lk',
 
     'conditions': [
@@ -406,7 +402,6 @@
         'defines': [
           'FLETCH32',
           'FLETCH_TARGET_ARM',
-          'FLETCH_LK_PROJECT=<(LK_PROJECT)',
         ],
 
         'target_conditions': [
@@ -417,10 +412,7 @@
              ],
 
             'cflags': [
-              '-mcpu=<(LK_CPU)',
               '-mthumb',
-              '-include',
-              'build-<(LK_PROJECT)/config.h',
               '-Wno-unused-function',
             ],
 
