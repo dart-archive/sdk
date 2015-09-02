@@ -50,15 +50,24 @@ class StoreBuffer {
       : current_chunk_(empty ? NULL : new StoreBufferChunk()),
         last_chunk_(current_chunk_),
         number_of_chunks_(empty ? 0 : 1),
-        number_of_chunks_in_last_gc_(empty ? 0 : 1) {}
+        number_of_chunks_at_last_compaction_(empty ? 0 : 1) {}
 
   ~StoreBuffer();
 
+  // This method automatically deduplicates entries after a 2x growth.
+  // It can only be used if it is guaranteed that no other thread
+  // accesses any heap objects in the store buffer.
+  //
+  // The [object] being inserted must be a mutable heap object.
   void Insert(HeapObject* object) {
     bool is_full = current_chunk_->Insert(object);
     if (is_full) {
-      current_chunk_ = new StoreBufferChunk(current_chunk_);
-      number_of_chunks_++;
+      if (ShouldDeduplicate()) {
+        Deduplicate();
+      } else {
+        current_chunk_ = new StoreBufferChunk(current_chunk_);
+        number_of_chunks_++;
+      }
     }
   }
 
@@ -80,7 +89,7 @@ class StoreBuffer {
   // If the references from mutable to immutable heap have doubled since
   // the last GC we will signal that another Mutable GC would be good.
   bool ShouldDeduplicate() {
-    return number_of_chunks_ > 2 * number_of_chunks_in_last_gc_;
+    return number_of_chunks_ >= 2 * number_of_chunks_at_last_compaction_;
   }
 
   bool is_empty() const {
@@ -89,20 +98,25 @@ class StoreBuffer {
            current_chunk_->is_empty();
   }
 
+  // The number of bytes used by the storebuffer at the moment.
+  int Used() const {
+    return number_of_chunks_ * sizeof(StoreBufferChunk);
+  }
+
  private:
   StoreBufferChunk* TakeChunks() {
     StoreBufferChunk* chunk = current_chunk_;
     current_chunk_ = NULL;
     last_chunk_ = NULL;
     number_of_chunks_ = 0;
-    number_of_chunks_in_last_gc_ = 0;
+    number_of_chunks_at_last_compaction_ = 0;
     return chunk;
   }
 
   StoreBufferChunk* current_chunk_;
   StoreBufferChunk* last_chunk_;
   int number_of_chunks_;
-  int number_of_chunks_in_last_gc_;
+  int number_of_chunks_at_last_compaction_;
 };
 
 // Records pointers to an immutable space.

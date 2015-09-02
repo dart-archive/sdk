@@ -39,7 +39,8 @@ StoreBuffer::~StoreBuffer() {
 
 void StoreBuffer::Prepend(StoreBuffer* store_buffer) {
   number_of_chunks_ += store_buffer->number_of_chunks_;
-  number_of_chunks_in_last_gc_ += store_buffer->number_of_chunks_in_last_gc_;
+  number_of_chunks_at_last_compaction_ +=
+      store_buffer->number_of_chunks_at_last_compaction_;
 
   StoreBufferChunk* last = store_buffer->last_chunk_;
   ASSERT(last->next() == NULL);
@@ -119,7 +120,7 @@ void StoreBuffer::Deduplicate() {
   write->next_ = NULL;
   last_chunk_ = write;
   number_of_chunks_ = written_chunks;
-  number_of_chunks_in_last_gc_ = written_chunks;
+  number_of_chunks_at_last_compaction_ = written_chunks;
 
   // Tag class pointers again.
   read = current_chunk_;
@@ -175,7 +176,7 @@ void StoreBuffer::ReplaceAfterMutableGC(StoreBuffer* new_store_buffer) {
     current = next;
   }
   number_of_chunks_ = new_store_buffer->number_of_chunks_;
-  number_of_chunks_in_last_gc_ = number_of_chunks_;
+  number_of_chunks_at_last_compaction_ = number_of_chunks_;
   last_chunk_ = new_store_buffer->last_chunk_;
   ASSERT(last_chunk_->next() == NULL);
   current_chunk_ = new_store_buffer->TakeChunks();
