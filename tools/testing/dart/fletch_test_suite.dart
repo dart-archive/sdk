@@ -94,6 +94,7 @@ class FletchTestSuite extends TestSuite {
         configuration).then((_) {
       return io.ServerSocket.bind(io.InternetAddress.LOOPBACK_IP_V4, 0);
     }).then((io.ServerSocket server) {
+      bool enableCustomEnqueuer = configuration["enable_custom_enqueuer"];
       return io.Process.start(
           runtimeConfiguration.dartBinary,
           ['-Dfletch-vm=$buildDir/fletch-vm',
@@ -106,6 +107,7 @@ class FletchTestSuite extends TestSuite {
            '-c',
            '-ppackage/',
            '-Dtest.fletch_test_suite.port=${server.port}',
+           '-Dfletchc.use-custom-enqueuer=$enableCustomEnqueuer',
            '$testSuiteDir/fletch_test_suite.dart']).then((io.Process process) {
              process.exitCode.then((_) {
                helperProgramExited = true;

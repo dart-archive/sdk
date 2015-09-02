@@ -167,8 +167,13 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
   QueueFilter get filter => compiler.enqueuerFilter;
 
   void forgetElement(Element element) {
-    // TODO(ahe): Implement
-    print("FletchEnqueuer.forgetElement isn't implemented");
+    newlyEnqueuedElements.remove(element);
+    // TODO(ahe): Make sure that the incremental compiler
+    // (library_updater.dart) registers classes with schema changes as having
+    // been instantiated.
+    _instantiatedClasses.remove(element);
+    _enqueuedElements.remove(element);
+    _processedElements.remove(element);
   }
 
   void registerInstantiatedType(
