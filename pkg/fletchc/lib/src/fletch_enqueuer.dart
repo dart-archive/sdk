@@ -46,15 +46,17 @@ import 'fletch_compiler_implementation.dart' show
 
 part 'enqueuer_mixin.dart';
 
+// TODO(ahe): Delete this constant when FletchEnqueuer is complete.
 const bool useCustomEnqueuer = const bool.fromEnvironment(
     "fletchc.use-custom-enqueuer", defaultValue: false);
 
+// TODO(ahe): Delete this method when FletchEnqueuer is complete.
 CodegenEnqueuer makeCodegenEnqueuer(FletchCompilerImplementation compiler) {
   ItemCompilationContextCreator itemCompilationContextCreator =
       compiler.backend.createItemCompilationContext;
   return useCustomEnqueuer
       ? new FletchEnqueuer(compiler, itemCompilationContextCreator)
-      : new CodegenEnqueuer(compiler, itemCompilationContextCreator);
+      : new TransitionalFletchEnqueuer(compiler, itemCompilationContextCreator);
 }
 
 /// Custom enqueuer for Fletch.
@@ -83,6 +85,30 @@ class FletchEnqueueTask extends CompilerTask implements EnqueueTask {
   void forgetElement(Element element) {
     resolution.forgetElement(element);
     codegen.forgetElement(element);
+  }
+}
+
+// TODO(ahe): Delete this class when FletchEnqueuer is complete.
+class TransitionalFletchEnqueuer extends CodegenEnqueuer {
+  final Set<Element> _processedElements = new Set<Element>();
+
+  TransitionalFletchEnqueuer(
+      FletchCompilerImplementation compiler,
+      ItemCompilationContextCreator itemCompilationContextCreator)
+      : super(compiler, itemCompilationContextCreator);
+
+  bool isProcessed(Element member) {
+    return member.isAbstract || _processedElements.contains(member);
+  }
+
+  void applyImpact(Element element, WorldImpact worldImpact) {
+    assert(isProcessed(element) || worldImpact == null);
+    _processedElements.add(element);
+  }
+
+  void forgetElement(Element element) {
+    super.forgetElement(element);
+    _processedElements.remove(element);
   }
 }
 
@@ -198,13 +224,7 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
   }
 
   void applyImpact(Element element, WorldImpact worldImpact) {
-    // TODO(ahe): Copied from Enqueuer.
-    worldImpact.dynamicInvocations.forEach(registerDynamicInvocation);
-    worldImpact.dynamicGetters.forEach(registerDynamicGetter);
-    worldImpact.dynamicSetters.forEach(registerDynamicSetter);
-    worldImpact.staticUses.forEach(registerStaticUse);
-    worldImpact.checkedTypes.forEach(registerIsCheck);
-    worldImpact.closurizedFunctions.forEach(registerGetOfStaticFunction);
+    assert(worldImpact == null);
   }
 
   void registerDynamicGetter(UniverseSelector selector) {

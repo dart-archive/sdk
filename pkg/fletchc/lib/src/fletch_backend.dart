@@ -105,8 +105,7 @@ import '../incremental_backend.dart' show
     IncrementalFletchBackend;
 
 import 'fletch_enqueuer.dart' show
-    FletchEnqueueTask,
-    useCustomEnqueuer;
+    FletchEnqueueTask;
 
 import 'class_debug_info.dart';
 import 'codegen_visitor.dart';
@@ -727,7 +726,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
             element, "Uninimplemented element kind: ${element.kind}");
       }
 
-      return const WorldImpact();
+      return null;
     });
   }
 
@@ -766,11 +765,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
       codegenExternalFunction(function, codegen);
     } else {
       codegen.compile();
-    }
-
-    if (!useCustomEnqueuer) {
-      // TODO(ahe): Don't do this.
-      compiler.enqueuer.codegen.generatedCode[function.declaration] = null;
     }
 
     if (functionBuilder.isInstanceMember && !function.isGenerativeConstructor) {
