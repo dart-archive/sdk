@@ -245,9 +245,12 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
 
   bool inUserCode(element, {bool assumeInUserCode: false}) => true;
 
-  void reportVerboseInfo(Spannable node, String message) {
+  void reportVerboseInfo(
+      Spannable node,
+      String message,
+      {bool forceVerbose: false}) {
     // TODO(johnniwinther): Use super.reportVerboseInfo once added.
-    if (verbose) {
+    if (forceVerbose || verbose) {
       MessageTemplate template = MessageTemplate.TEMPLATES[MessageKind.GENERIC];
       reportDiagnostic(
           node, template.message({'text': message}, true), api.Diagnostic.HINT);

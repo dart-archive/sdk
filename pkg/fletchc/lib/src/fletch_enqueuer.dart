@@ -19,7 +19,11 @@ import 'package:compiler/src/dart2jslib.dart' show
     WorkItem,
     WorldImpact;
 
+import 'package:compiler/src/util/util.dart' show
+    Hashing;
+
 import 'package:compiler/src/universe/universe.dart' show
+    CallStructure,
     Universe,
     UniverseSelector;
 
@@ -34,6 +38,7 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionElement,
     LibraryElement,
     LocalFunctionElement,
+    Name,
     TypedElement;
 
 import 'fletch_compiler_implementation.dart' show
@@ -114,10 +119,10 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
 
   final Queue<Element> _pendingEnqueuedElements = new Queue<Element>();
 
-  final Set<UniverseSelector> _enqueuedSelectors = new Set<UniverseSelector>();
+  final Set<UntypedSelector> _enqueuedSelectors = new Set<UntypedSelector>();
 
-  final Queue<UniverseSelector> _pendingSelectors =
-      new Queue<UniverseSelector>();
+  final Queue<UntypedSelector> _pendingSelectors =
+      new Queue<UntypedSelector>();
 
   final Set<Element> _processedElements = new Set<Element>();
 
@@ -214,13 +219,14 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
     if (_enqueuedElements.add(element)) {
       _pendingEnqueuedElements.addLast(element);
       newlyEnqueuedElements.add(element);
+      compiler.reportVerboseInfo(element, "enqueued this", forceVerbose: true);
     }
   }
 
   Element _enqueueApplicableMembers(
       ClassElement cls,
-      UniverseSelector selector) {
-    Element member = cls.lookupByName(selector.selector.memberName);
+      UntypedSelector selector) {
+    Element member = cls.lookupByName(selector.name);
     if (member != null && task.resolution.isProcessed(member)) {
       // TODO(ahe): Check if selector applies; Don't consult resolution.
       _enqueueElement(member);
@@ -230,7 +236,8 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
   void _enqueueInstanceMethods() {
     while (!_pendingInstantiatedClasses.isEmpty) {
       ClassElement cls = _pendingInstantiatedClasses.removeFirst();
-      for (UniverseSelector selector in _enqueuedSelectors) {
+      compiler.reportVerboseInfo(cls, "was instantiated", forceVerbose: true);
+      for (UntypedSelector selector in _enqueuedSelectors) {
         // TODO(ahe): As we iterate over _enqueuedSelectors, we may end up
         // processing calling _enqueueApplicableMembers twice for newly
         // instantiated classes. Once here, and then once more in the while
@@ -239,17 +246,78 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
       }
     }
     while (!_pendingSelectors.isEmpty) {
-      UniverseSelector selector = _pendingSelectors.removeFirst();
+      UntypedSelector selector = _pendingSelectors.removeFirst();
+      compiler.reportVerboseInfo(
+          null, "$selector was called", forceVerbose: true);
       for (ClassElement cls in _instantiatedClasses) {
         _enqueueApplicableMembers(cls, selector);
       }
     }
   }
 
-  void _enqueueDynamicSelector(UniverseSelector selector) {
+  void _enqueueDynamicSelector(UniverseSelector universeSelector) {
+    UntypedSelector selector =
+        new UntypedSelector.fromUniverseSelector(universeSelector);
     if (_enqueuedSelectors.add(selector)) {
       _pendingSelectors.add(selector);
-      newlySeenSelectors.add(selector);
+      newlySeenSelectors.add(universeSelector);
     }
+  }
+}
+
+/// Represents information about a call site.
+///
+/// This class differ from [UniverseSelector] in two key areas:
+///
+/// 1. Implements `operator ==` (and is thus suitable for use in a [Set])
+/// 2. Has no type mask
+class UntypedSelector {
+  final Name name;
+
+  final bool isGetter;
+
+  final bool isSetter;
+
+  final CallStructure structure;
+
+  final int hashCode;
+
+  UntypedSelector(
+      this.name,
+      this.isGetter,
+      this.isSetter,
+      this.structure,
+      this.hashCode);
+
+  factory UntypedSelector.fromUniverseSelector(UniverseSelector selector) {
+    if (selector.mask != null) {
+      throw new ArgumentError("[selector] has non-null type mask");
+    }
+    Name name = selector.selector.memberName;
+    CallStructure structure = selector.selector.callStructure;
+    bool isGetter = selector.selector.isGetter;
+    bool isSetter = selector.selector.isSetter;
+    int hash = Hashing.mixHashCodeBits(name.hashCode, structure.hashCode);
+    hash = Hashing.mixHashCodeBits(hash, isSetter.hashCode);
+    hash = Hashing.mixHashCodeBits(hash, isGetter.hashCode);
+    return new UntypedSelector(name, isGetter, isSetter, structure, hash);
+  }
+
+  bool operator ==(other) {
+    if (other is UntypedSelector) {
+      return name == other.name &&
+          isGetter == other.isGetter && isSetter == other.isSetter &&
+          structure == other.structure;
+    } else {
+      return false;
+    }
+  }
+
+  String toString() {
+    return
+        'UntypedSelector($name, '
+        '${isGetter ? "getter, " : ""}'
+        '${isSetter ? "setter, " : ""}'
+        '$structure)';
   }
 }
