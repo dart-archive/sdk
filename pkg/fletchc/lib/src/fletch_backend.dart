@@ -127,6 +127,7 @@ import '../fletch_system.dart';
 const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<int, FletchFunction>(),
     const PersistentMap<Element, FletchFunction>(),
+    const PersistentMap<ConstructorElement, FletchFunction>(),
     const PersistentMap<int, FletchClass>(),
     const PersistentMap<ClassElement, FletchClass>(),
     const <FletchConstant>[]);
@@ -148,10 +149,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
   /// [compilePendingConstructorInitializers].
   final Queue<FletchFunctionBuilder> pendingConstructorInitializers =
       new Queue<FletchFunctionBuilder>();
-
-  // TODO(ahe): This should be moved to [FletchSystem].
-  final Map<ConstructorElement, FletchFunctionBuilder> constructors =
-      <ConstructorElement, FletchFunctionBuilder>{};
 
   final Set<FunctionElement> externals = new Set<FunctionElement>();
 
@@ -584,22 +581,16 @@ class FletchBackend extends Backend with ResolutionCallbacks
   FletchFunctionBase getConstructorInitializerFunction(
       ConstructorElement constructor) {
     assert(constructor.isDeclaration);
-    FletchFunctionBuilder functionBuilder = constructors[constructor];
-    if (functionBuilder != null) return functionBuilder;
+    constructor = constructor.implementation;
+    FletchFunctionBase base =
+        systemBuilder.lookupConstructorInitializerByElement(constructor);
+    if (base != null) return base;
 
-    ClassElement classElement = constructor.enclosingClass;
-    ConstructorElement implementation = constructor.implementation;
+    FletchFunctionBuilder builder = systemBuilder.newConstructorInitializer(
+        constructor);
+    pendingConstructorInitializers.addFirst(builder);
 
-    functionBuilder = systemBuilder.newFunctionBuilderWithSignature(
-        implementation.name,
-        implementation,
-        implementation.functionSignature,
-        null,
-        kind: FletchFunctionKind.INITIALIZER_LIST);
-    constructors[constructor] = functionBuilder;
-    pendingConstructorInitializers.addFirst(functionBuilder);
-
-    return functionBuilder;
+    return builder;
   }
 
   FletchFunctionBuilder createFletchFunctionBuilder(FunctionElement function) {
@@ -684,7 +675,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
           element,
           classBuilder,
           compiler);
-      expectedBytecodes = constructors[element.declaration].assembler.bytecodes;
+      expectedBytecodes = currentSystem.lookupConstructorInitializerByElement(
+          element).bytecodes;
     } else {
       codegen = new DebugInfoFunctionCodegen(
           debugInfo,
@@ -1281,14 +1273,13 @@ class FletchBackend extends Backend with ResolutionCallbacks
   /// See [compilePendingConstructorInitializers] for an overview of how
   /// constructor initializer and bodies are compiled.
   void compileConstructorInitializer(FletchFunctionBuilder functionBuilder) {
-    ConstructorElement implementation = functionBuilder.element;
-    ConstructorElement constructor = implementation.declaration;
-    compiler.withCurrentElement(implementation, () {
-      assert(implementation.isImplementation);
-      assert(constructor.isDeclaration);
-      assert(functionBuilder == constructors[constructor]);
+    ConstructorElement constructor = functionBuilder.element;
+    assert(constructor.isImplementation);
+    compiler.withCurrentElement(constructor, () {
+      assert(functionBuilder ==
+          systemBuilder.lookupConstructorInitializerByElement(constructor));
       context.compiler.reportVerboseInfo(
-          implementation, 'Compiling constructor initializer $implementation');
+          constructor, 'Compiling constructor initializer $constructor');
 
       TreeElements elements = constructor.resolvedAst.elements;
 
@@ -1298,10 +1289,10 @@ class FletchBackend extends Backend with ResolutionCallbacks
       CodegenRegistry registry = new CodegenRegistry(compiler, elements);
 
       FletchClassBuilder classBuilder =
-          registerClassElement(constructor.enclosingClass);
+          registerClassElement(constructor.enclosingClass.declaration);
 
       ClosureEnvironment closureEnvironment =
-          createClosureEnvironment(implementation, elements);
+          createClosureEnvironment(constructor, elements);
 
       ConstructorCodegen codegen = new ConstructorCodegen(
           functionBuilder,
@@ -1309,14 +1300,14 @@ class FletchBackend extends Backend with ResolutionCallbacks
           elements,
           registry,
           closureEnvironment,
-          implementation,
+          constructor,
           classBuilder);
 
       codegen.compile();
 
       if (compiler.verbose) {
         context.compiler.reportVerboseInfo(
-            implementation, functionBuilder.verboseToString());
+            constructor, functionBuilder.verboseToString());
       }
     });
   }

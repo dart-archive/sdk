@@ -17,6 +17,7 @@ import 'package:compiler/src/constants/values.dart' show
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
+    ConstructorElement,
     Element,
     FunctionElement,
     FunctionSignature;
@@ -58,6 +59,10 @@ class FletchSystemBuilder {
 
   final Map<ClassElement, FletchClassBuilder> _classBuildersByElement =
       <ClassElement, FletchClassBuilder>{};
+
+  final Map<ConstructorElement, FletchFunctionBuilder>
+      _newConstructorInitializers =
+          <ConstructorElement, FletchFunctionBuilder>{};
 
   // TODO(ajohnsen): By function/class?
   final Map<Element, List<FunctionElement>> _replaceUsage =
@@ -136,6 +141,27 @@ class FletchSystemBuilder {
 
   FletchFunctionBuilder lookupFunctionBuilderByElement(Element element) {
     return _functionBuildersByElement[element];
+  }
+
+  FletchFunctionBase lookupConstructorInitializerByElement(
+      ConstructorElement element) {
+    assert(element.isImplementation);
+    FletchFunction function =
+        predecessorSystem.lookupConstructorInitializerByElement(element);
+    if (function != null) return function;
+    return _newConstructorInitializers[element];
+  }
+
+  FletchFunctionBuilder newConstructorInitializer(ConstructorElement element) {
+    assert(element.isImplementation);
+    FletchFunctionBuilder builder = newFunctionBuilderWithSignature(
+        element.name,
+        element,
+        element.functionSignature,
+        null,
+        kind: FletchFunctionKind.INITIALIZER_LIST);
+    _newConstructorInitializers[element] = builder;
+    return builder;
   }
 
   void forgetFunction(FletchFunction function) {
@@ -474,9 +500,20 @@ class FletchSystemBuilder {
           });
     });
 
+    PersistentMap<ConstructorElement, FletchFunction>
+        constructorInitializersByElement =
+            predecessorSystem.constructorInitializersByElement;
+
+    _newConstructorInitializers.forEach((element, builder) {
+      constructorInitializersByElement =
+          constructorInitializersByElement.insert(
+              element, functionsById[builder.functionId]);
+    });
+
     return new FletchSystem(
         functionsById,
         functionsByElement,
+        constructorInitializersByElement,
         classesById,
         classesByElement,
         constants);

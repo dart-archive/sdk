@@ -6,6 +6,7 @@ library fletchc.fletch_system;
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
+    ConstructorElement,
     Element,
     FieldElement,
     FunctionSignature;
@@ -161,6 +162,9 @@ class FletchSystem {
   final PersistentMap<int, FletchFunction> functionsById;
   final PersistentMap<Element, FletchFunction> functionsByElement;
 
+  final PersistentMap<ConstructorElement, FletchFunction>
+      constructorInitializersByElement;
+
   // classesByElement is a subset of classesById: Some classes do not
   // have an element reference.
   final PersistentMap<int, FletchClass> classesById;
@@ -172,6 +176,7 @@ class FletchSystem {
   const FletchSystem(
       this.functionsById,
       this.functionsByElement,
+      this.constructorInitializersByElement,
       this.classesById,
       this.classesByElement,
       this.constants);
@@ -188,6 +193,11 @@ class FletchSystem {
 
   Iterable<FletchFunction> functionsWhere(bool f(FletchFunction function)) {
     return functionsById.values.where(f);
+  }
+
+  FletchFunction lookupConstructorInitializerByElement(
+      ConstructorElement element) {
+    return constructorInitializersByElement[element];
   }
 
   FletchClass lookupClassById(int classId) {
