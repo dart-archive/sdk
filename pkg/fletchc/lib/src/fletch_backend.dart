@@ -105,7 +105,8 @@ import '../incremental_backend.dart' show
     IncrementalFletchBackend;
 
 import 'fletch_enqueuer.dart' show
-    FletchEnqueueTask;
+    FletchEnqueueTask,
+    useCustomEnqueuer;
 
 import 'class_debug_info.dart';
 import 'codegen_visitor.dart';
@@ -767,8 +768,10 @@ class FletchBackend extends Backend with ResolutionCallbacks
       codegen.compile();
     }
 
-    // TODO(ahe): Don't do this.
-    compiler.enqueuer.codegen.generatedCode[function.declaration] = null;
+    if (!useCustomEnqueuer) {
+      // TODO(ahe): Don't do this.
+      compiler.enqueuer.codegen.generatedCode[function.declaration] = null;
+    }
 
     if (functionBuilder.isInstanceMember && !function.isGenerativeConstructor) {
       // Inject the function into the method table of the 'holderClass' class.

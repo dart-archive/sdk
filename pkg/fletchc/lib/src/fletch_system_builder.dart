@@ -264,7 +264,9 @@ class FletchSystemBuilder {
     // Create all new FletchFunctions.
     List<FletchFunction> functions = <FletchFunction>[];
     for (FletchFunctionBuilder builder in _newFunctions) {
-      functions.add(builder.finalizeFunction(context, commands));
+      context.compiler.withCurrentElement(builder.element, () {
+        functions.add(builder.finalizeFunction(context, commands));
+      });
     }
 
     // Create all new FletchClasses.
