@@ -87,8 +87,11 @@ Service::~Service() {
 }
 
 void Service::NotifyResult(ServiceRequest* request) {
+  // Check if it is current, before setting has_result. When has_result is set,
+  // there is a chance the receiving thread will free 'request'.
+  bool is_current = Thread::IsCurrent(&request->thread);
   request->has_result = true;
-  if (Thread::IsCurrent(&request->thread)) return;
+  if (is_current) return;
   ScopedMonitorLock lock(result_monitor_);
   result_monitor_->NotifyAll();
 }
