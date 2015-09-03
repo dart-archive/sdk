@@ -8,9 +8,6 @@
 [ ($compiler == fletchc || $runtime == fletchc) && $host_checked ]
 regress_14348_test: Crash
 
-[ ($compiler == fletchc || $runtime == fletchc) && $arch == ia32 ]
-bit_shift_test: RuntimeError
-
 [ $compiler == fletchc || $runtime == fletchc ]
 abstract_runtime_error_test/01: RuntimeError
 abstract_runtime_error_test/02: RuntimeError
