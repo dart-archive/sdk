@@ -16,6 +16,13 @@ rule gyp-lk
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 
+rule gyp-mbed
+  command = $
+    GYP_CROSSCOMPILE=1 $
+    ../third_party/gyp/gyp --depth=. -Imbed_targets.gypi $
+        -Goutput_dir=out $
+        --format=ninja fletch.gyp
+
 build $
     out/DebugIA32/build.ninja $
     out/DebugIA32Asan/build.ninja $
@@ -92,5 +99,22 @@ build lk: phony$
     out/DebugLK/build.ninja $
     out/ReleaseLK/build.ninja $
 
+build $
+    out/DebugMBED/build.ninja $
+    out/ReleaseMBED/build.ninja: $
+    gyp-mbed $
+        common.gypi $
+        mbed_targets.gypi $
+        fletch.gyp $
+        src/double_conversion.gyp $
+        src/shared/shared.gyp $
+        src/tools/driver/driver.gyp $
+        src/vm/vm.gyp $
+        tests/service_tests/service_tests.gyp $
+        samples/todomvc/todomvc.gyp
+
+build mbed: phony$
+    out/DebugMBED/build.ninja $
+    out/ReleaseMBED/build.ninja $
 
 default gyp

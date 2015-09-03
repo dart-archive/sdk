@@ -29,6 +29,8 @@
 
     'lk_path': '<(DEPTH)/../third_party/lk',
 
+    'mbed_path': '<(DEPTH)/../third_party/mbed/build/',
+
     'conditions': [
       [ 'OS=="linux"', {
         'third_party_libs_path%': '<(DEPTH)/third_party/libs/linux',
@@ -445,6 +447,74 @@
 
             # The 'fletch_ia32' target will define IA32 as the target. Since
             # the host should still target ARM, undefine it.
+            'defines!': [
+              'FLETCH_TARGET_IA32',
+            ],
+          }],
+        ],
+      },
+
+      'fletch_mbed': {
+        'abstract': 1,
+
+        'defines': [
+          'FLETCH32',
+          'FLETCH_TARGET_ARM',
+          'FLETCH_THUMB_ONLY',
+        ],
+
+        'target_conditions': [
+          ['_toolset=="target"', {
+            'defines': [
+              # Fake define intercepted by cc_wrapper.py to change the
+              # compiler binary to an ARM cross compiler.
+              'FLETCH_MBED',
+            ],
+
+            'defines!': [
+              'FLETCH_TARGET_OS_POSIX',
+              'FLETCH_TARGET_OS_LINUX',
+              'FLETCH_TARGET_OS_MACOS',
+            ],
+
+            'defines': [
+              'FLETCH_TARGET_OS_MBED',
+            ],
+
+            'cflags': [
+              '-mcpu=cortex-m4',
+              '-mthumb',
+              '-mfloat-abi=softfp',
+              '-fno-common',
+            ],
+
+            # Use the gnu language dialect to get math.h constants
+            'cflags_c': [
+              '--std=gnu99',
+            ],
+
+            # Use the gnu language dialect to get math.h constants
+            'cflags_cc': [
+              '--std=gnu++11',
+            ],
+
+            'include_dirs': [
+              '<(mbed_path)/rtos/TARGET_CORTEX_M',
+            ],
+
+            'ldflags': [
+              '-L<(third_party_libs_path)/arm',
+              # Fake define intercepted by cc_wrapper.py.
+              '-L/FLETCH_MBED',
+              '-static-libstdc++',
+            ],
+          }],
+
+          ['_toolset=="host"', {
+            # Compile host targets as IA32, to get same word size.
+            'inherit_from': [ 'fletch_ia32' ],
+
+            # Undefine IA32 target and using existing ARM target.
             'defines!': [
               'FLETCH_TARGET_IA32',
             ],

@@ -53,11 +53,21 @@ class Chunk {
   Space* owner_;
   const uword base_;
   const uword limit_;
+#ifdef FLETCH_TARGET_OS_MBED
+  const uword allocated_;
+#endif
 
   Chunk* next_;
 
+
+#ifdef FLETCH_TARGET_OS_MBED
+  Chunk(Space* owner, uword base, uword size, uword allocated)
+      : owner_(owner), base_(base), limit_(base + size), allocated_(allocated)
+  { }
+#else
   Chunk(Space* owner, uword base, uword size)
       : owner_(owner), base_(base), limit_(base + size) { }
+#endif
 
   ~Chunk();
 

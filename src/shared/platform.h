@@ -13,6 +13,8 @@
 #include "src/shared/platform_posix.h"
 #elif defined(FLETCH_TARGET_OS_LK)
 #include "src/shared/platform_lk.h"
+#elif defined(FLETCH_TARGET_OS_MBED)
+#include "src/shared/platform_mbed.h"
 #else
 #error "Platform not implemented for target os."
 #endif
