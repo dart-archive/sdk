@@ -199,7 +199,12 @@ NATIVE(SmiBitShr) {
   Object* y = arguments[1];
   if (!y->IsSmi()) return Failure::wrong_argument_type();
   word y_value = Smi::cast(y)->value();
-  return Smi::FromWord(x->value() >> y_value);
+  word x_value = x->value();
+  // If the shift amount is larger than the word size we shift by the
+  // word size minus 1. This is safe since Smis only use word-size minus
+  // 1 bits in any case.
+  word shift = (y_value >= kBitsPerWord) ? (kBitsPerWord - 1) : y_value;
+  return Smi::FromWord(x_value >> shift);
 }
 
 NATIVE(SmiBitShl) {

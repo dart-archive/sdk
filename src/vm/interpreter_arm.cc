@@ -818,6 +818,11 @@ void InterpreterGeneratorARM::InvokeBitShr(const char* fallback) {
   // Untag and shift.
   __ asr(R0, R0, Immediate(1));
   __ asr(R1, R1, Immediate(1));
+  __ cmp(R1, Immediate(32));
+  Label shift;
+  __ b(LT, &shift);
+  __ ldr(R1, Immediate(31));
+  __ Bind(&shift);
   __ asr(R0, R0, R1);
 
   // Retag and store.

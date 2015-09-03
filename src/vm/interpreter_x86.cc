@@ -802,6 +802,11 @@ void InterpreterGeneratorX86::InvokeBitShr(const char* fallback) {
   // Untag the smis and do the shift.
   __ sarl(EAX, Immediate(1));
   __ sarl(ECX, Immediate(1));
+  __ cmpl(ECX, Immediate(32));
+  Label shift;
+  __ j(LESS, &shift);
+  __ movl(ECX, Immediate(31));
+  __ Bind(&shift);
   __ sarl_cl(EAX);
 
   // Re-tag the resulting smi. No need to check for overflow

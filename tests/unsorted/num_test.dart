@@ -10,6 +10,7 @@ main() {
   testInheritance();
   testDiv();
   testIntDoubleConfusion();
+  testSmiShr();
 }
 
 buildLargeInteger() {
@@ -52,4 +53,12 @@ testIntDoubleConfusion() {
   var x = 2.0;
   var y = 20;
   Expect.notEquals(x, y);
+}
+
+testSmiShr() {
+  var x = 4000000;
+  Expect.equals(0, x >> 32);
+  Expect.equals(0, x >> 42);
+  Expect.equals(0, x >> 64);
+  Expect.equals(0, x >> 75);
 }
