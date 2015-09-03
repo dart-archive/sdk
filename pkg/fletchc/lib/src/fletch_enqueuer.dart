@@ -21,6 +21,7 @@ import 'package:compiler/src/dart2jslib.dart' show
 
 import 'package:compiler/src/universe/universe.dart' show
     CallStructure,
+    Selector,
     Universe,
     UniverseSelector;
 
@@ -79,10 +80,6 @@ class FletchEnqueueTask extends CompilerTask implements EnqueueTask {
       super(compiler) {
     codegen.task = this;
     resolution.task = this;
-    if (codegen is! TransitionalFletchEnqueuer) {
-      FletchEnqueuer fletchEnqueuer = codegen;
-      fletchEnqueuer.dynamicCallEnqueuer.task = this;
-    }
     codegen.nativeEnqueuer = compiler.backend.nativeCodegenEnqueuer(codegen);
 
     resolution.nativeEnqueuer =
@@ -157,7 +154,7 @@ class TransitionalFletchEnqueuer extends CodegenEnqueuer
 
   Queue<Element> get _pendingEnqueuedElements => notImplemented;
 
-  void _enqueueElement(Element element) => notImplemented;
+  void _enqueueElement(element, selector) => notImplemented;
 }
 
 class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
@@ -221,12 +218,17 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
     dynamicCallEnqueuer.registerInstantiatedType(type);
   }
 
+  // TODO(ahe): Remove this method.
   void registerStaticUse(Element element) {
-    _enqueueElement(element);
+    _enqueueElement(
+        element,
+        new UniverseSelector(new Selector.fromElement(element), null));
   }
 
+  // TODO(ahe): Remove this method.
   void addToWorkList(Element element) {
-    _enqueueElement(element);
+    _enqueueElement(
+        element, new UniverseSelector(new Selector.fromElement(element), null));
   }
 
   void forEach(void f(WorkItem work)) {
@@ -275,7 +277,7 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
     dynamicCallEnqueuer.enqueueSelector(selector);
   }
 
-  void _enqueueElement(Element element) {
+  void _enqueueElement(Element element, UniverseSelector selector) {
     if (_enqueuedElements.add(element)) {
       _pendingEnqueuedElements.addLast(element);
       newlyEnqueuedElements.add(element);

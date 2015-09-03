@@ -7,11 +7,9 @@ library fletchc.dynamic_call_enqueuer;
 import 'dart:collection' show
     Queue;
 
-import 'package:compiler/src/dart2jslib.dart' show
-    EnqueueTask;
-
 import 'package:compiler/src/universe/universe.dart' show
     CallStructure,
+    Selector,
     UniverseSelector;
 
 import 'package:compiler/src/dart_types.dart' show
@@ -20,6 +18,7 @@ import 'package:compiler/src/dart_types.dart' show
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     Element,
+    FunctionElement,
     Name;
 
 import 'package:compiler/src/util/util.dart' show
@@ -27,6 +26,8 @@ import 'package:compiler/src/util/util.dart' show
 
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
+
+typedef void ElementUsage(Element element, UniverseSelector selector);
 
 /// Implements the dynamic part of the tree-shaking algorithm.
 ///
@@ -40,14 +41,11 @@ class DynamicCallEnqueuer {
   final Queue<ClassElement> pendingInstantiatedClasses =
       new Queue<ClassElement>();
 
-  final Set<UntypedSelector> enqueuedSelectors = new Set<UntypedSelector>();
+  final Set<Selector> enqueuedSelectors = new Set<Selector>();
 
-  final Queue<UntypedSelector> pendingSelectors =
-      new Queue<UntypedSelector>();
+  final Queue<Selector> pendingSelectors = new Queue<Selector>();
 
   final Set<UniverseSelector> newlySeenSelectors;
-
-  EnqueueTask task;
 
   DynamicCallEnqueuer(FletchCompilerImplementation compiler)
       : compiler = compiler,
@@ -62,20 +60,34 @@ class DynamicCallEnqueuer {
 
   void enqueueApplicableMembers(
       ClassElement cls,
-      UntypedSelector selector,
-      void enqueueElement(Element element)) {
-    Element member = cls.lookupByName(selector.name);
-    if (member != null && task.resolution.isProcessed(member)) {
-      // TODO(ahe): Check if selector applies; Don't consult resolution.
-      enqueueElement(member);
+      Selector selector,
+      ElementUsage enqueueElement) {
+    Element member = cls.lookupByName(selector.memberName);
+    if (member == null) return;
+    if (!member.isInstanceMember) return;
+    if (selector.isGetter) {
+      if (member.isField || member.isGetter) {
+        enqueueElement(member, new UniverseSelector(selector, null));
+      } else {
+        // Tear-off.
+        compiler.reportVerboseInfo(
+            member, "enqueued as tear-off", forceVerbose: true);
+        enqueueElement(member, new UniverseSelector(selector, null));
+      }
+    } else if (selector.isSetter) {
+      if (member.isField || member.isSetter) {
+        enqueueElement(member, new UniverseSelector(selector, null));
+      }
+    } else if (member.isFunction && selector.signatureApplies(member)) {
+      enqueueElement(member, new UniverseSelector(selector, null));
     }
   }
 
-  void enqueueInstanceMethods(void enqueueElement(Element element)) {
+  void enqueueInstanceMethods(ElementUsage enqueueElement) {
     while (!pendingInstantiatedClasses.isEmpty) {
       ClassElement cls = pendingInstantiatedClasses.removeFirst();
       compiler.reportVerboseInfo(cls, "was instantiated", forceVerbose: true);
-      for (UntypedSelector selector in enqueuedSelectors) {
+      for (Selector selector in enqueuedSelectors) {
         // TODO(ahe): As we iterate over enqueuedSelectors, we may end up
         // processing calling _enqueueApplicableMembers twice for newly
         // instantiated classes. Once here, and then once more in the while
@@ -84,7 +96,7 @@ class DynamicCallEnqueuer {
       }
     }
     while (!pendingSelectors.isEmpty) {
-      UntypedSelector selector = pendingSelectors.removeFirst();
+      Selector selector = pendingSelectors.removeFirst();
       compiler.reportVerboseInfo(
           null, "$selector was called", forceVerbose: true);
       for (ClassElement cls in instantiatedClasses) {
@@ -94,8 +106,8 @@ class DynamicCallEnqueuer {
   }
 
   void enqueueSelector(UniverseSelector universeSelector) {
-    UntypedSelector selector =
-        new UntypedSelector.fromUniverseSelector(universeSelector);
+    assert(universeSelector.mask == null);
+    Selector selector = universeSelector.selector;
     if (enqueuedSelectors.add(selector)) {
       pendingSelectors.add(selector);
       newlySeenSelectors.add(universeSelector);
@@ -107,62 +119,5 @@ class DynamicCallEnqueuer {
     // (library_updater.dart) registers classes with schema changes as having
     // been instantiated.
     instantiatedClasses.remove(element);
-  }
-}
-
-/// Represents information about a call site.
-///
-/// This class differ from [UniverseSelector] in two key areas:
-///
-/// 1. Implements `operator ==` (and is thus suitable for use in a [Set])
-/// 2. Has no type mask
-class UntypedSelector {
-  final Name name;
-
-  final bool isGetter;
-
-  final bool isSetter;
-
-  final CallStructure structure;
-
-  final int hashCode;
-
-  UntypedSelector(
-      this.name,
-      this.isGetter,
-      this.isSetter,
-      this.structure,
-      this.hashCode);
-
-  factory UntypedSelector.fromUniverseSelector(UniverseSelector selector) {
-    if (selector.mask != null) {
-      throw new ArgumentError("[selector] has non-null type mask");
-    }
-    Name name = selector.selector.memberName;
-    CallStructure structure = selector.selector.callStructure;
-    bool isGetter = selector.selector.isGetter;
-    bool isSetter = selector.selector.isSetter;
-    int hash = Hashing.mixHashCodeBits(name.hashCode, structure.hashCode);
-    hash = Hashing.mixHashCodeBits(hash, isSetter.hashCode);
-    hash = Hashing.mixHashCodeBits(hash, isGetter.hashCode);
-    return new UntypedSelector(name, isGetter, isSetter, structure, hash);
-  }
-
-  bool operator ==(other) {
-    if (other is UntypedSelector) {
-      return name == other.name &&
-          isGetter == other.isGetter && isSetter == other.isSetter &&
-          structure == other.structure;
-    } else {
-      return false;
-    }
-  }
-
-  String toString() {
-    return
-        'UntypedSelector($name, '
-        '${isGetter ? "getter, " : ""}'
-        '${isSetter ? "setter, " : ""}'
-        '$structure)';
   }
 }
