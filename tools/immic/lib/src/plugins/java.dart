@@ -167,8 +167,16 @@ class _JavaWriter extends _JavaVisitor {
     return _TYPES[type.identifier];
   }
 
+  String getNodeDataTypeName(Type type) {
+    if (type.isList && type.elementType.isNode) return 'NodeDataList';
+    if (type.isList) return '${getNonListTypeName(type)}DataList';
+    if (type.isNode) return 'NodeData';
+    assert(type.resolved != null);
+    return '${type.identifier}NodeData';
+  }
+
   String getPatchTypeName(Type type) {
-    if (type.isList) return 'ListPatch';
+    if (type.isList) return 'ListPatch<${getNonListTypeName(type)}>';
     if (type.isNode) return 'AnyNodePatch';
     if (type.resolved != null) {
       return "${type.identifier}Patch";
@@ -405,16 +413,25 @@ class _JavaNodeWriter extends _JavaNodeBaseWriter {
   writeFieldInitializationFromData(Type type, String name) {
     String camelName = camelize(name);
     String typeName = getTypeName(type);
-    write('    $name = ');
     if (type.isList) {
-      // TODO(zerny): Implement list support.
+      String typeName = getNonListTypeName(type);
+      String dataName = getNodeDataTypeName(type);
+      imports.add('fletch.$dataName');
       imports.add('java.util.Collections');
       imports.add('java.util.ArrayList');
-      writeln('Collections.unmodifiableList(new ArrayList());');
+      writeln('    {');
+      writeln('      $dataName dataList = data.get$camelName();');
+      writeln('      int length = dataList.size();');
+      writeln('      List<$typeName> list = new ArrayList<$typeName>(length);');
+      writeln('      for (int i = 0; i < length; ++i) {');
+      writeln('        list.add(new $typeName(dataList.get(i), root));');
+      writeln('      }');
+      writeln('      $name = Collections.unmodifiableList(list);');
+      writeln('    }');
     } else if (type.isNode || type.resolved != null) {
-      writeln('new $typeName(data.get$camelName(), root);');
+      writeln('    $name = new $typeName(data.get$camelName(), root);');
     } else {
-      writeln('data.get$camelName();');
+      writeln('    $name = data.get$camelName();');
     }
   }
 
@@ -624,9 +641,15 @@ class _AnyNodeWriter extends _JavaNodeBaseWriter {
     writeln('  }');
     writeln();
     writeln('  $nodeName(NodeData data, ImmiRoot root) {');
+    writeln('    node = fromData(data, root);');
+    writeln('  }');
+    writeln();
+    writeln('  static Node fromData(NodeData data, ImmiRoot root) {');
     units.values.forEach(visit);
     writeln('    throw new RuntimeException("Invalid node-type tag");');
     writeln('  }');
+    writeln();
+    writeln('  Node getNode() { return node; }');
     writeln();
     writeln('  private Node node;');
     writeln('}');
@@ -637,10 +660,8 @@ class _AnyNodeWriter extends _JavaNodeBaseWriter {
   }
 
   visitStruct(Struct node) {
-    writeln('    if (data.is${node.name}()) {');
-    writeln('      node = new ${node.name}Node(data.get${node.name}(), root);');
-    writeln('      return;');
-    writeln('    }');
+    write('    if (data.is${node.name}())');
+    writeln(' return new ${node.name}Node(data.get${node.name}(), root);');
   }
 }
 
@@ -698,10 +719,19 @@ class _AnyNodePatchWriter extends _JavaNodeBaseWriter {
     writeln('  }');
     writeln();
     writeln('  $patchName(');
-    writeln('      NodePatchData data,');
-    writeln('      $nodeName previous,');
-    writeln('      ImmiRoot root) {');
+    writeln('        NodePatchData data,');
+    writeln('        $nodeName previous,');
+    writeln('        ImmiRoot root) {');
+    writeln('    Node node = previous == null ? null : previous.getNode();');
+    writeln('    patch = fromData(data, node, root);');
+    writeln('    current = new AnyNode(patch.getCurrent());');
     writeln('    this.previous = previous;');
+    writeln('  }');
+    writeln();
+    writeln('  static NodePatch fromData(');
+    writeln('      NodePatchData data,');
+    writeln('      Node previous,');
+    writeln('      ImmiRoot root) {');
     // Create the patch based on the concrete type-tag.
     units.values.forEach(visit);
     writeln('    throw new RuntimeException("Unknown node-patch tag");');
@@ -723,14 +753,11 @@ class _AnyNodePatchWriter extends _JavaNodeBaseWriter {
     String nodeName = '${name}Node';
     writeln('    if (data.is$name()) {');
     writeln('      $nodeName typedPrevious = null;');
-    writeln('      if (previous != null && previous.is($nodeName.class)) {');
-    writeln('        typedPrevious = previous.as($nodeName.class);');
+    writeln('      if (previous instanceof $nodeName) {');
+    writeln('        typedPrevious = ($nodeName)previous;');
     writeln('      }');
-    writeln('      $patchName typedPatch =');
-    writeln('          new $patchName(data.get$name(), typedPrevious, root);');
-    writeln('      current = new AnyNode(typedPatch.getCurrent());');
-    writeln('      patch = typedPatch;');
-    writeln('      return;');
+    writeln('      return new $patchName(');
+    writeln('          data.get$name(), typedPrevious, root);');
     writeln('    }');
   }
 }

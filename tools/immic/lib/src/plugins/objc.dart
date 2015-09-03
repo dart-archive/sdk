@@ -940,11 +940,12 @@ class _ImplementationVisitor extends _ObjCVisitor {
     writeln('- (int)countDelta { return 0; }');
     writeln('- (int)applyTo:(NSMutableArray*)outArray');
     writeln('          with:(NSArray*)inArray {');
-    writeln('  for (int i = 0; i < self.updates.count; ++i) {');
+    writeln('  int length = self.updates.count;');
+    writeln('  for (int i = 0; i < length; ++i) {');
     writeln('    id <NodePatch> patch = self.updates[i];');
     writeln('    [outArray addObject:patch.current];');
     writeln('  }');
-    writeln('  return self.updates.count;');
+    writeln('  return length;');
     writeln('}');
     writeln('@end');
     writeln();
