@@ -4,7 +4,8 @@
 
 library fletchc.fletch_enqueuer;
 
-import 'dart:collection' show Queue;
+import 'dart:collection' show
+    Queue;
 
 import 'package:compiler/src/dart2jslib.dart' show
     CodegenEnqueuer,
@@ -18,9 +19,6 @@ import 'package:compiler/src/dart2jslib.dart' show
     ResolutionEnqueuer,
     WorkItem,
     WorldImpact;
-
-import 'package:compiler/src/util/util.dart' show
-    Hashing;
 
 import 'package:compiler/src/universe/universe.dart' show
     CallStructure,
@@ -43,6 +41,9 @@ import 'package:compiler/src/elements/elements.dart' show
 
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
+
+import 'dynamic_call_enqueuer.dart' show
+    DynamicCallEnqueuer;
 
 part 'enqueuer_mixin.dart';
 
@@ -73,7 +74,10 @@ class FletchEnqueueTask extends CompilerTask implements EnqueueTask {
       super(compiler) {
     codegen.task = this;
     resolution.task = this;
-
+    if (codegen is FletchEnqueuer) {
+      FletchEnqueuer fletchEnqueuer = codegen;
+      fletchEnqueuer.dynamicCallEnqueuer.task = this;
+    }
     codegen.nativeEnqueuer = compiler.backend.nativeCodegenEnqueuer(codegen);
 
     resolution.nativeEnqueuer =
@@ -134,31 +138,20 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
 
   final Set<Element> newlyEnqueuedElements;
 
-  final Set<UniverseSelector> newlySeenSelectors;
-
-  final Set<ClassElement> _instantiatedClasses = new Set<ClassElement>();
-
-  final Queue<ClassElement> _pendingInstantiatedClasses =
-      new Queue<ClassElement>();
-
   final Set<Element> _enqueuedElements = new Set<Element>();
 
   final Queue<Element> _pendingEnqueuedElements = new Queue<Element>();
 
-  final Set<UntypedSelector> _enqueuedSelectors = new Set<UntypedSelector>();
-
-  final Queue<UntypedSelector> _pendingSelectors =
-      new Queue<UntypedSelector>();
-
   final Set<Element> _processedElements = new Set<Element>();
+
+  final DynamicCallEnqueuer dynamicCallEnqueuer;
 
   FletchEnqueuer(
       FletchCompilerImplementation compiler,
       this.itemCompilationContextCreator)
       : compiler = compiler,
         newlyEnqueuedElements = compiler.cacheStrategy.newSet(),
-        newlySeenSelectors = compiler.cacheStrategy.newSet();
-
+        dynamicCallEnqueuer = new DynamicCallEnqueuer(compiler);
 
   bool get queueIsEmpty => _pendingEnqueuedElements.isEmpty;
 
@@ -166,24 +159,22 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
 
   QueueFilter get filter => compiler.enqueuerFilter;
 
+  Set<UniverseSelector> get newlySeenSelectors {
+    return dynamicCallEnqueuer.newlySeenSelectors;
+  }
+
   void forgetElement(Element element) {
     newlyEnqueuedElements.remove(element);
-    // TODO(ahe): Make sure that the incremental compiler
-    // (library_updater.dart) registers classes with schema changes as having
-    // been instantiated.
-    _instantiatedClasses.remove(element);
     _enqueuedElements.remove(element);
     _processedElements.remove(element);
+    dynamicCallEnqueuer.forgetElement(element);
   }
 
   void registerInstantiatedType(
       InterfaceType type,
       Registry registry,
       {bool mirrorUsage: false}) {
-    ClassElement cls = type.element.declaration;
-    if (_instantiatedClasses.add(cls)) {
-      _pendingInstantiatedClasses.addLast(cls);
-    }
+    dynamicCallEnqueuer.registerInstantiatedType(type);
   }
 
   void registerStaticUse(Element element) {
@@ -205,7 +196,7 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
           filter.processWorkItem(f, workItem);
           _processedElements.add(element);
         }
-        _enqueueInstanceMethods();
+        dynamicCallEnqueuer.enqueueInstanceMethods(_enqueueElement);
       } while (!queueIsEmpty);
       // TODO(ahe): Pass recentClasses?
       compiler.backend.onQueueEmpty(this, null);
@@ -225,7 +216,7 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
   bool isProcessed(Element member) => _processedElements.contains(member);
 
   void registerDynamicInvocation(UniverseSelector selector) {
-    _enqueueDynamicSelector(selector);
+    dynamicCallEnqueuer.enqueueSelector(selector);
   }
 
   void applyImpact(Element element, WorldImpact worldImpact) {
@@ -233,11 +224,11 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
   }
 
   void registerDynamicGetter(UniverseSelector selector) {
-    _enqueueDynamicSelector(selector);
+    dynamicCallEnqueuer.enqueueSelector(selector);
   }
 
   void registerDynamicSetter(UniverseSelector selector) {
-    _enqueueDynamicSelector(selector);
+    dynamicCallEnqueuer.enqueueSelector(selector);
   }
 
   void _enqueueElement(Element element) {
@@ -246,103 +237,5 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
       newlyEnqueuedElements.add(element);
       compiler.reportVerboseInfo(element, "enqueued this", forceVerbose: true);
     }
-  }
-
-  Element _enqueueApplicableMembers(
-      ClassElement cls,
-      UntypedSelector selector) {
-    Element member = cls.lookupByName(selector.name);
-    if (member != null && task.resolution.isProcessed(member)) {
-      // TODO(ahe): Check if selector applies; Don't consult resolution.
-      _enqueueElement(member);
-    }
-  }
-
-  void _enqueueInstanceMethods() {
-    while (!_pendingInstantiatedClasses.isEmpty) {
-      ClassElement cls = _pendingInstantiatedClasses.removeFirst();
-      compiler.reportVerboseInfo(cls, "was instantiated", forceVerbose: true);
-      for (UntypedSelector selector in _enqueuedSelectors) {
-        // TODO(ahe): As we iterate over _enqueuedSelectors, we may end up
-        // processing calling _enqueueApplicableMembers twice for newly
-        // instantiated classes. Once here, and then once more in the while
-        // loop below.
-        _enqueueApplicableMembers(cls, selector);
-      }
-    }
-    while (!_pendingSelectors.isEmpty) {
-      UntypedSelector selector = _pendingSelectors.removeFirst();
-      compiler.reportVerboseInfo(
-          null, "$selector was called", forceVerbose: true);
-      for (ClassElement cls in _instantiatedClasses) {
-        _enqueueApplicableMembers(cls, selector);
-      }
-    }
-  }
-
-  void _enqueueDynamicSelector(UniverseSelector universeSelector) {
-    UntypedSelector selector =
-        new UntypedSelector.fromUniverseSelector(universeSelector);
-    if (_enqueuedSelectors.add(selector)) {
-      _pendingSelectors.add(selector);
-      newlySeenSelectors.add(universeSelector);
-    }
-  }
-}
-
-/// Represents information about a call site.
-///
-/// This class differ from [UniverseSelector] in two key areas:
-///
-/// 1. Implements `operator ==` (and is thus suitable for use in a [Set])
-/// 2. Has no type mask
-class UntypedSelector {
-  final Name name;
-
-  final bool isGetter;
-
-  final bool isSetter;
-
-  final CallStructure structure;
-
-  final int hashCode;
-
-  UntypedSelector(
-      this.name,
-      this.isGetter,
-      this.isSetter,
-      this.structure,
-      this.hashCode);
-
-  factory UntypedSelector.fromUniverseSelector(UniverseSelector selector) {
-    if (selector.mask != null) {
-      throw new ArgumentError("[selector] has non-null type mask");
-    }
-    Name name = selector.selector.memberName;
-    CallStructure structure = selector.selector.callStructure;
-    bool isGetter = selector.selector.isGetter;
-    bool isSetter = selector.selector.isSetter;
-    int hash = Hashing.mixHashCodeBits(name.hashCode, structure.hashCode);
-    hash = Hashing.mixHashCodeBits(hash, isSetter.hashCode);
-    hash = Hashing.mixHashCodeBits(hash, isGetter.hashCode);
-    return new UntypedSelector(name, isGetter, isSetter, structure, hash);
-  }
-
-  bool operator ==(other) {
-    if (other is UntypedSelector) {
-      return name == other.name &&
-          isGetter == other.isGetter && isSetter == other.isSetter &&
-          structure == other.structure;
-    } else {
-      return false;
-    }
-  }
-
-  String toString() {
-    return
-        'UntypedSelector($name, '
-        '${isGetter ? "getter, " : ""}'
-        '${isSetter ? "setter, " : ""}'
-        '$structure)';
   }
 }
