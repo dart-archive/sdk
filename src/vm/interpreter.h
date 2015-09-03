@@ -81,6 +81,8 @@ class Interpreter {
   TargetYieldResult target_yield_result() const { return target_yield_result_; }
 
  private:
+  InterruptKind HandleBailout();
+
   Process* const process_;
   InterruptKind interruption_;
   TargetYieldResult target_yield_result_;

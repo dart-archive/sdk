@@ -1019,8 +1019,7 @@ void Interpreter::Run() {
     result = InterpretFast(process_, &target_yield_result_);
   }
   if (result < 0) {
-    Engine engine(process_);
-    interruption_ = engine.Interpret(&target_yield_result_);
+    interruption_ = HandleBailout();
   } else {
     interruption_ = static_cast<InterruptKind>(result);
   }
@@ -1028,6 +1027,19 @@ void Interpreter::Run() {
   process_->ReleaseLookupCache();
   process_->StoreErrno();
   ASSERT(interruption_ != kReady);
+}
+
+Interpreter::InterruptKind Interpreter::HandleBailout() {
+#if !defined(FLETCH_ENABLE_LIVE_CODING) && \
+    (defined(FLETCH_TARGET_IA32) || defined(FLETCH_TARGET_ARM))
+  // When live coding is disabled on a fully supported platform, we don't
+  // need to bundle in the slow interpreter.
+  FATAL("Unsupported bailout from native interpreter");
+  return kTerminate;
+#else
+  Engine engine(process_);
+  return engine.Interpret(&target_yield_result_);
+#endif
 }
 
 // -------------------- Native interpreter support --------------------

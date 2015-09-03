@@ -246,6 +246,7 @@
       ],
       'sources': [
         'main.cc',
+        'main_simple.cc',
       ],
     },
     {
