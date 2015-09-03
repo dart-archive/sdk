@@ -87,22 +87,14 @@ Service::~Service() {
 }
 
 void Service::NotifyResult(ServiceRequest* request) {
-  // Check if it is current, before setting has_result. When has_result is set,
-  // there is a chance the receiving thread will free 'request'.
-  bool is_current = Thread::IsCurrent(&request->thread);
-  request->has_result = true;
-  if (is_current) return;
   ScopedMonitorLock lock(result_monitor_);
+  request->has_result = true;
   result_monitor_->NotifyAll();
 }
 
 void Service::WaitForResult(ServiceRequest* request) {
-  // Double-checked locking to avoid monitors in the case where the calling
-  // thread is used by the Scheduler to handle the message.
-  if (!request->has_result) {
-    ScopedMonitorLock lock(result_monitor_);
-    while (!request->has_result) result_monitor_->Wait();
-  }
+  ScopedMonitorLock lock(result_monitor_);
+  while (!request->has_result) result_monitor_->Wait();
 }
 
 void Service::Invoke(int id, void* buffer, int size) {
