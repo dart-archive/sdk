@@ -90,7 +90,7 @@ public final class ImmiRoot {
   private Runnable requestReset = new Runnable() {
     @Override
     public void run() {
-      ImmiServiceLayer.refreshAsync(id, null);
+      ImmiServiceLayer.resetAsync(id, null);
     }
   };
 

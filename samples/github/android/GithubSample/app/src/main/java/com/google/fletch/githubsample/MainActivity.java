@@ -10,6 +10,7 @@ import android.app.ActionBar;
 import android.app.ActivityOptions;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -30,6 +31,8 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.DefaultItemAnimator;
 
+import com.google.fletch.immisamples.Drawer;
+
 import immi.AnyNode;
 import immi.AnyNodePatch;
 import immi.AnyNodePresenter;
@@ -41,73 +44,93 @@ import immi.ImmiService;
 public class MainActivity extends Activity
     implements NavigationDrawerFragment.NavigationDrawerCallbacks, AnyNodePresenter {
 
-  public void presentNode(AnyNode node) {
-    DrawerNode drawer = node.as(DrawerNode.class);
-    drawer.getToggleLeft().dispatch();
-  }
-
-  public void patchNode(AnyNodePatch patch) {
-    DrawerPatch drawer = patch.as(DrawerPatch.class);
-    if (drawer.getLeftVisible().hasChanged()) {
-      // TODO(zerny): Toggle the drawer etc.
+  private final class CenterPresenter implements AnyNodePresenter {
+    public CenterPresenter(Context context) {
+      this.context = context;
     }
+
+    @Override
+    public void present(AnyNode node) {
+      RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+      // As long as the adapter does not cause size changes, this is set to true to gain performance.
+      recyclerView.setHasFixedSize(true);
+      recyclerView.setItemAnimator(new DefaultItemAnimator());
+      recyclerView.setLayoutManager(new LinearLayoutManager(context));
+
+      ImageLoader imageLoader = ImageLoader.createWithBitmapFormatter(
+          new ImageLoader.BitmapFormatter() {
+            @Override
+            public Bitmap formatBitmap(Bitmap bitmap) {
+              final Bitmap output =
+                  Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
+              final Canvas canvas = new Canvas(output);
+              final Paint paint = new Paint();
+              paint.setAntiAlias(true);
+              paint.setShader(new BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
+              canvas.drawOval(new RectF(0, 0, bitmap.getWidth(), bitmap.getHeight()), paint);
+              return output;
+            }
+          },
+          BitmapFactory.decodeResource(getResources(), R.drawable.dart_logo));
+
+      recyclerView.setAdapter(
+          new RecyclerViewAdapter(new CommitList().commitList, imageLoader));
+    }
+
+    @Override
+    public void patch(AnyNodePatch patch) {}
+
+    private Context context;
   }
 
-  /**
-   * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
-   */
-  private NavigationDrawerFragment navigationDrawerFragment;
+  private final class LeftPresenter extends Drawer.PanePresenter {
+    @Override
+    public Drawer.PaneFragment getPaneFragment() {
+      return (Drawer.PaneFragment)getFragmentManager().findFragmentById(R.id.navigation_drawer);
+    }
+
+    @Override public void present(AnyNode node) {}
+    @Override public void patch(AnyNodePatch patch) {}
+  }
+
+  @Override
+  public void present(AnyNode node) {
+    drawer.present(node.as(DrawerNode.class));
+  }
+
+  @Override
+  public void patch(AnyNodePatch patch) {
+    patch.as(DrawerPatch.class).applyTo(drawer);
+  }
 
   /**
    * Used to store the last screen title. For use in {@link #restoreActionBar()}.
    */
   private CharSequence title;
 
+  private Drawer drawer;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    navigationDrawerFragment = (NavigationDrawerFragment)
-        getFragmentManager().findFragmentById(R.id.navigation_drawer);
     title = getTitle();
 
-    // Set up the drawer.
-    navigationDrawerFragment.setUp(
-        R.id.navigation_drawer,
-        (DrawerLayout) findViewById(R.id.drawer_layout));
+    drawer = new Drawer(
+        (DrawerLayout)findViewById(R.id.drawer_layout),
+        new LeftPresenter(),
+        new CenterPresenter(this),
+        null);
 
-    RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
-    // As long as the adapter does not cause size changes, this is set to true to gain performance.
-    recyclerView.setHasFixedSize(true);
-    recyclerView.setItemAnimator(new DefaultItemAnimator());
-
-    LinearLayoutManager layoutManager = new LinearLayoutManager(this);
-    recyclerView.setLayoutManager(layoutManager);
-
-
-    ImageLoader imageLoader = ImageLoader.createWithBitmapFormatter(
-        new ImageLoader.BitmapFormatter() {
-          @Override
-          public Bitmap formatBitmap(Bitmap bitmap) {
-            final Bitmap output =
-                Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
-            final Canvas canvas = new Canvas(output);
-            final Paint paint = new Paint();
-            paint.setAntiAlias(true);
-            paint.setShader(new BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
-            canvas.drawOval(new RectF(0, 0, bitmap.getWidth(), bitmap.getHeight()), paint);
-            return output;
-          }
-        },
-        BitmapFactory.decodeResource(getResources(), R.drawable.dart_logo));
-
-    RecyclerViewAdapter adapter = new RecyclerViewAdapter(new CommitList().commitList,
-        imageLoader);
-    recyclerView.setAdapter(adapter);
-
+    // Create an immi service and attach a root graph.
     ImmiService immi = new ImmiService();
     ImmiRoot root = immi.registerPresenter(this, "DrawerPresenter");
+
+    // If we are restoring, reset the presentation graph to get a complete graph.
+    if (savedInstanceState != null) root.reset();
+
+    // Initiate presentation.
     root.refresh();
   }
 
@@ -144,7 +167,7 @@ public class MainActivity extends Activity
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
-    if (!navigationDrawerFragment.isDrawerOpen()) {
+    if (!drawer.getLeftVisible()) {
       // Only show items in the action bar relevant to this screen
       // if the drawer is not showing. Otherwise, let the drawer
       // decide what to show in the action bar.

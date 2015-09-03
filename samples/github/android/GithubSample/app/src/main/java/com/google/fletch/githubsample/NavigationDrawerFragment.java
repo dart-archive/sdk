@@ -26,12 +26,14 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.google.fletch.immisamples.Drawer;
+
 /**
  * Fragment used for managing interactions for and presentation of a navigation drawer.
  * See the <a href="https://developer.android.com/design/patterns/navigation-drawer.html#Interaction">
  * design guidelines</a> for a complete explanation of the behaviors implemented here.
  */
-public class NavigationDrawerFragment extends Fragment {
+public class NavigationDrawerFragment extends Drawer.PaneFragment {
 
   /**
    * Remember the position of the selected item.
@@ -118,15 +120,26 @@ public class NavigationDrawerFragment extends Fragment {
     return mDrawerLayout != null && mDrawerLayout.isDrawerOpen(mFragmentContainerView);
   }
 
+  @Override
+  public void setOpenedState(boolean open) {
+    if (open) {
+      mDrawerLayout.openDrawer(mFragmentContainerView);
+    } else {
+      mDrawerLayout.closeDrawer(mFragmentContainerView);
+    }
+  }
+
   /**
    * Users of this fragment must call this method to set up the navigation drawer interactions.
    *
-   * @param fragmentId   The android:id of this fragment in its activity's layout.
    * @param drawerLayout The DrawerLayout containing this fragment's UI.
+   * @param presenter    The Drawer.PanePresenter associated with this fragment.
    */
-  public void setUp(int fragmentId, DrawerLayout drawerLayout) {
-    mFragmentContainerView = getActivity().findViewById(fragmentId);
+  @Override
+  public void setup(DrawerLayout drawerLayout, Drawer.PanePresenter presenter) {
+    mFragmentContainerView = getView();
     mDrawerLayout = drawerLayout;
+    mPresenter = presenter;
 
     // set a custom shadow that overlays the main content when the drawer opens
     mDrawerLayout.setDrawerShadow(R.drawable.drawer_shadow, GravityCompat.START);
@@ -151,7 +164,7 @@ public class NavigationDrawerFragment extends Fragment {
         if (!isAdded()) {
           return;
         }
-
+        mPresenter.close();
         getActivity().invalidateOptionsMenu(); // calls onPrepareOptionsMenu()
       }
 
@@ -161,7 +174,7 @@ public class NavigationDrawerFragment extends Fragment {
         if (!isAdded()) {
           return;
         }
-
+        mPresenter.open();
         if (!mUserLearnedDrawer) {
           // The user manually opened the drawer; store this flag to prevent auto-showing
           // the navigation drawer automatically in the future.
@@ -247,7 +260,10 @@ public class NavigationDrawerFragment extends Fragment {
 
   @Override
   public boolean onOptionsItemSelected(MenuItem item) {
-    if (mDrawerToggle.onOptionsItemSelected(item)) {
+    if (item.getItemId() == android.R.id.home) {
+      // We don't use ActionBarDrawerToggle.onOptionsItemSelected
+      // and instead let the presentation graph control toggles.
+      mPresenter.toggle();
       return true;
     }
 
@@ -283,4 +299,6 @@ public class NavigationDrawerFragment extends Fragment {
      */
     void onNavigationDrawerItemSelected(int position);
   }
+
+  private Drawer.PanePresenter mPresenter;
 }

@@ -346,10 +346,7 @@ class _JavaNodePresenterWriter extends _JavaNodeBaseWriter {
   visitStruct(Struct node) {
     writeHeader();
     write('public interface $presenterName');
-    writeln(' extends NodePresenter<$nodeName, $patchName> {');
-    writeln('  void present$name($nodeName node);');
-    writeln('  void patch$name($patchName patch);');
-    writeln('}');
+    writeln(' extends NodePresenter<$nodeName, $patchName> {}');
   }
 }
 
@@ -509,10 +506,10 @@ class _JavaNodePatchWriter extends _JavaNodeBaseWriter {
     writeln('  public void applyTo($presenterName presenter) {');
     writeln('    if (!hasChanged()) return;');
     writeln('    if (wasReplaced()) {');
-    writeln('      presenter.presentNode(current);');
+    writeln('      presenter.present(current);');
     writeln('    } else {');
     writeln('      assert wasUpdated();');
-    writeln('      presenter.patchNode(this);');
+    writeln('      presenter.patch(this);');
     writeln('    }');
     writeln('  }');
     writeln();
@@ -697,10 +694,10 @@ class _AnyNodePatchWriter extends _JavaNodeBaseWriter {
     writeln('  public void applyTo($presenterName presenter) {');
     writeln('    if (!hasChanged()) return;');
     writeln('    if (wasReplaced()) {');
-    writeln('      presenter.presentNode(current);');
+    writeln('      presenter.present(current);');
     writeln('    } else {');
     writeln('      assert wasUpdated();');
-    writeln('      presenter.patchNode(this);');
+    writeln('      presenter.patch(this);');
     writeln('    }');
     writeln('  }');
     writeln();

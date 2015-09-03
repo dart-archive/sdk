@@ -6,7 +6,4 @@
 
 package immi;
 
-public interface AnyNodePresenter extends NodePresenter<AnyNode, AnyNodePatch> {
-  void presentNode(AnyNode node);
-  void patchNode(AnyNodePatch patch);
-}
+public interface AnyNodePresenter extends NodePresenter<AnyNode, AnyNodePatch> {}
