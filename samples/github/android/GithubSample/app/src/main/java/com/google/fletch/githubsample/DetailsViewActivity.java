@@ -5,20 +5,28 @@
 package com.google.fletch.githubsample;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-public class DetailsViewActivity extends Activity{
+public class DetailsViewActivity extends Activity {
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_details);
     getActionBar().hide();
-    configureCard();
+
+    Intent intent = getIntent();
+    configureCard(
+        (Bitmap) intent.getParcelableExtra("bitmap"),
+        intent.getStringExtra("Title"),
+        intent.getStringExtra("Author"),
+        intent.getStringExtra("Details"));
   }
 
   @Override
@@ -36,20 +44,14 @@ public class DetailsViewActivity extends Activity{
     finishAfterTransition();
   }
 
-  private void configureCard() {
+  private void configureCard(Bitmap bitmap, String title, String author, String details) {
     ImageView avatar = (ImageView) findViewById(R.id.details_avatar);
-    avatar.setImageResource(R.drawable.dart_logo);
-    TextView title = (TextView) findViewById(R.id.details_title);
-    title.setText("Title");
-    TextView author = (TextView) findViewById(R.id.details_author);
-    author.setText("Author");
-    TextView details = (TextView) findViewById(R.id.details);
-    details.setText("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus non ex " +
-        "facilisis, consequat velit cursus, ullamcorper felis. Sed efficitur est felis, mollis " +
-        "aliquam dui dictum id. Phasellus commodo id arcu in dignissim. Vivamus ut eros ligula. " +
-        "Curabitur a odio turpis. Aliquam non elit urna. Mauris posuere sagittis justo quis " +
-        "pretium. Pellentesque fringilla felis nec metus lacinia, at finibus sapien cursus. " +
-        "Phasellus facilisis sed libero sit amet laoreet. Proin risus dui, molestie sit amet " +
-        "consequat vel, malesuada sit amet quam. Donec eu posuere nisi.");
+    avatar.setImageBitmap(bitmap);
+    TextView titleView = (TextView) findViewById(R.id.details_title);
+    titleView.setText(title);
+    TextView authorView = (TextView) findViewById(R.id.details_author);
+    authorView.setText(author);
+    TextView detailsView = (TextView) findViewById(R.id.details);
+    detailsView.setText(details);
   }
 }

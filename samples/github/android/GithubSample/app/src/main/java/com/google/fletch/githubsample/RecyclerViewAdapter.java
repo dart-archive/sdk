@@ -39,6 +39,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
     holder.title.setText(commitList.get(position).title);
     imageLoader.loadImageFromUrl(holder.avatar, commitList.get(position).imageUrl,
         IMAGE_VIEW_DIMENSION_PX, IMAGE_VIEW_DIMENSION_PX);
+    holder.cardView.setCommitItem(commitList.get(position));
   }
 
   @Override
@@ -53,14 +54,14 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 
   public static class CommitViewHolder extends RecyclerView.ViewHolder {
 
-    CardView cardView;
+    CommitCardView cardView;
     TextView author;
     TextView title;
     ImageView avatar;
 
     public CommitViewHolder(View itemView) {
       super(itemView);
-      cardView = (CardView)itemView.findViewById(R.id.card_view);
+      cardView = (CommitCardView)itemView.findViewById(R.id.card_view);
       author = (TextView)itemView.findViewById(R.id.author);
       title = (TextView)itemView.findViewById(R.id.title);
       avatar = (ImageView)itemView.findViewById(R.id.avatar);

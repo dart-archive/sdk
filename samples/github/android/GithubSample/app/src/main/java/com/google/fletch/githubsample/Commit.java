@@ -4,17 +4,16 @@
 
 package com.google.fletch.githubsample;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class Commit {
   String title;
   String author;
+  String details;
   String imageUrl;
 
-  Commit(String title, String author, String imageUrl){
+  Commit(String title, String author, String details, String imageUrl) {
     this.title = title;
     this.author = author;
+    this.details = details;
     this.imageUrl = imageUrl;
   }
 }

@@ -19,7 +19,9 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
+
 import android.transition.Explode;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -30,6 +32,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.DefaultItemAnimator;
+import android.widget.ImageView;
 
 import com.google.fletch.immisamples.Drawer;
 
@@ -195,6 +198,17 @@ public class MainActivity extends Activity
 
   public void showDetails(View view) {
     Intent intent = new Intent(this, DetailsViewActivity.class);
+    Commit commitItem = ((CommitCardView) view).getCommitItem();
+    intent.putExtra("Title", commitItem.title);
+    intent.putExtra("Author", commitItem.author);
+    intent.putExtra("Details", commitItem.details);
+
+    // TODO(zarah): Assess the performance of this. If it turns out to be too inefficient to send
+    // over bitmaps, make the image cache accessible and send the image url instead.
+    Bitmap bitmap =
+        ((BitmapDrawable)((ImageView) view.findViewById(R.id.avatar)).getDrawable()).getBitmap();
+    intent.putExtra("bitmap", bitmap);
+
     ActivityOptions options =
         ActivityOptions.makeSceneTransitionAnimation(this, view, "transition_card");
     getWindow().setExitTransition(new Explode());
