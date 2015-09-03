@@ -269,6 +269,10 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void InvokeNative(bool yield);
   void InvokeStatic(bool unfolded);
 
+  void ConditionalStore(Register reg_if_eq,
+                        Register reg_if_ne,
+                        const Address& address);
+
   void CheckStackOverflow(int size);
 
   void Dispatch(int size);
@@ -1018,8 +1022,7 @@ void InterpreterGeneratorARM::DoAllocateBoxed() {
 void InterpreterGeneratorARM::DoNegate() {
   LoadLocal(R1, 0);
   __ cmp(R1, R10);
-  __ str(EQ, R11, Address(R6, 0));
-  __ str(NE, R10, Address(R6, 0));
+  ConditionalStore(R11, R10, Address(R6, 0));
   Dispatch(kNegateLength);
 }
 
@@ -1161,8 +1164,7 @@ void InterpreterGeneratorARM::DoIdentical() {
 
   __ Bind(&fast_case);
   __ cmp(R1, R0);
-  __ str(EQ, R10, Address(R6, -kWordSize));
-  __ str(NE, R11, Address(R6, -kWordSize));
+  ConditionalStore(R10, R11, Address(R6, -kWordSize));
   Drop(1);
   Dispatch(kIdenticalLength);
 
@@ -1179,8 +1181,7 @@ void InterpreterGeneratorARM::DoIdenticalNonNumeric() {
   LoadLocal(R0, 0);
   LoadLocal(R1, 1);
   __ cmp(R0, R1);
-  __ str(EQ, R10, Address(R6, -kWordSize));
-  __ str(NE, R11, Address(R6, -kWordSize));
+  ConditionalStore(R10, R11, Address(R6, -kWordSize));
   Drop(1);
   Dispatch(kIdenticalNonNumericLength);
 }
@@ -1230,8 +1231,7 @@ void InterpreterGeneratorARM::DoIntrinsicObjectEquals() {
   LoadLocal(R0, 0);
   LoadLocal(R1, 1);
   __ cmp(R0, R1);
-  __ str(EQ, R10, Address(R6, -kWordSize));
-  __ str(NE, R11, Address(R6, -kWordSize));
+  ConditionalStore(R10, R11, Address(R6, -kWordSize));
   Drop(1);
   Dispatch(kInvokeMethodLength);
 }
@@ -1439,8 +1439,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
     // we've found a target method.
     Label found;
     __ tst(R0, R0);
-    __ str(EQ, R11, Address(R6, 0));
-    __ str(NE, R10, Address(R6, 0));
+    ConditionalStore(R11, R10, Address(R6, 0));
     Dispatch(kInvokeTestLength);
   } else {
     // Compute and push the return address on the stack.
@@ -1521,9 +1520,9 @@ void InterpreterGeneratorARM::InvokeMethodFast(bool test) {
   if (test) {
     const int32 kMax = reinterpret_cast<int32>(
         Smi::FromWord(Smi::kMaxPortableValue));
-    __ cmp(R9, Immediate(kMax));
-    __ str(EQ, R11, Address(R6, 0));  // Store false.
-    __ str(NE, R10, Address(R6, 0));  // Store true.
+    __ ldr(R3, Immediate(kMax));
+    __ cmp(R9, R3);
+    ConditionalStore(R11, R10, Address(R6, 0));  // Store true.
     Dispatch(kInvokeTestLength);
   } else {
     // Found the right target method.
@@ -1934,6 +1933,18 @@ void InterpreterGeneratorARM::InvokeCompare(const char* fallback,
   StoreLocal(R10, 1);
   Drop(1);
   Dispatch(5);
+}
+
+void InterpreterGeneratorARM::ConditionalStore(Register reg_if_eq,
+                                               Register reg_if_ne,
+                                               const Address& address) {
+  Label if_ne, done;
+  __ b(NE, &if_ne);
+  __ str(reg_if_eq, address);
+  __ b(&done);
+  __ Bind(&if_ne);
+  __ str(reg_if_ne, address);
+  __ Bind(&done);
 }
 
 void InterpreterGeneratorARM::CheckStackOverflow(int size) {
