@@ -5,6 +5,7 @@
 library servicec.errors;
 
 enum CompilerError {
+  syntax,
   undefinedService,
-  syntax
+  unexpectedToken
 }

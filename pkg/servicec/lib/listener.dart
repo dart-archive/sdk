@@ -64,7 +64,7 @@ abstract class Listener {
     return tokens;
   }
 
-  Token endFunctionDeclaration(Token tokens) {
+  Token endFunctionDeclaration(Token tokens, int count) {
     return tokens;
   }
 
@@ -81,14 +81,6 @@ abstract class Listener {
   }
 
   Token endType(Token tokens) {
-    return tokens;
-  }
-
-  Token beginFormalParameters(Token tokens) {
-    return tokens;
-  }
-
-  Token endFormalParameters(Token tokens, int count) {
     return tokens;
   }
 
@@ -171,9 +163,9 @@ class DebugListener implements Listener {
     return debugSubject.beginFunctionDeclaration(tokens);
   }
 
-  Token endFunctionDeclaration(Token tokens) {
-    print("end function declaration");
-    return debugSubject.endFunctionDeclaration(tokens);
+  Token endFunctionDeclaration(Token tokens, int count) {
+    print("end function declaration; count = $count");
+    return debugSubject.endFunctionDeclaration(tokens, count);
   }
 
   Token beginMemberDeclaration(Token tokens) {
@@ -194,16 +186,6 @@ class DebugListener implements Listener {
   Token endType(Token tokens) {
     print("end type");
     return debugSubject.endType(tokens);
-  }
-
-  Token beginFormalParameters(Token tokens) {
-    print("begin formal parameters");
-    return debugSubject.beginFormalParameters(tokens);
-  }
-
-  Token endFormalParameters(Token tokens, int count) {
-    print("end formal parameters");
-    return debugSubject.endFormalParameters(tokens, count);
   }
 
   Token beginFormalParameter(Token tokens) {

@@ -114,9 +114,20 @@ class Parser {
     tokens = listener.beginFunctionDeclaration(tokens);
     tokens = parseType(tokens);
     tokens = parseIdentifier(tokens);
-    tokens = parseFormalParameters(tokens);
+    tokens = expect('(', tokens);
+    int count = 0;
+    if (!optional(')', tokens)) {
+      tokens = parseFormalParameter(tokens);
+      ++count;
+      while (optional(',', tokens)) {
+        tokens = tokens.next;
+        tokens = parseFormalParameter(tokens);
+        ++count;
+      }
+    }
+    tokens = expect(')', tokens);
     tokens = expect(';', tokens);
-    tokens = listener.endFunctionDeclaration(tokens);
+    tokens = listener.endFunctionDeclaration(tokens, count);
     return tokens;
   }
 
@@ -140,27 +151,6 @@ class Parser {
       tokens = listener.expectedType(tokens);
     }
     tokens = listener.endType(tokens);
-    return tokens;
-  }
-
-  /// Formal parameters contain an open parenthesis, zero or more parameter
-  /// declarations separated by commas, and a closing parenthesis.
-  ///
-  /// <formal-params> ::= '(' (<formal-param> (',' <formal-param>)*)? ')'
-  Token parseFormalParameters(Token tokens) {
-    tokens = listener.beginFormalParameters(tokens);
-    tokens = expect('(', tokens);
-    int count = 0;
-    if (!optional(')', tokens)) {
-      tokens = parseFormalParameter(tokens);
-      while (optional(',', tokens)) {
-        tokens = tokens.next;
-        tokens = parseFormalParameter(tokens);
-        ++count;
-      }
-    }
-    tokens = expect(')', tokens);
-    tokens = listener.endFormalParameters(tokens, count);
     return tokens;
   }
 
