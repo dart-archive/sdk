@@ -79,7 +79,7 @@ class FletchEnqueueTask extends CompilerTask implements EnqueueTask {
       super(compiler) {
     codegen.task = this;
     resolution.task = this;
-    if (codegen is FletchEnqueuer) {
+    if (codegen is! TransitionalFletchEnqueuer) {
       FletchEnqueuer fletchEnqueuer = codegen;
       fletchEnqueuer.dynamicCallEnqueuer.task = this;
     }
@@ -98,7 +98,8 @@ class FletchEnqueueTask extends CompilerTask implements EnqueueTask {
 }
 
 // TODO(ahe): Delete this class when FletchEnqueuer is complete.
-class TransitionalFletchEnqueuer extends CodegenEnqueuer {
+class TransitionalFletchEnqueuer extends CodegenEnqueuer
+    implements FletchEnqueuer {
   final Set<Element> _processedElements = new Set<Element>();
 
   TransitionalFletchEnqueuer(
@@ -149,6 +150,14 @@ class TransitionalFletchEnqueuer extends CodegenEnqueuer {
     queue.add(workItem);
     return true;
   }
+
+  DynamicCallEnqueuer get dynamicCallEnqueuer => notImplemented;
+
+  Set<Element> get _enqueuedElements => notImplemented;
+
+  Queue<Element> get _pendingEnqueuedElements => notImplemented;
+
+  void _enqueueElement(Element element) => notImplemented;
 }
 
 class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {

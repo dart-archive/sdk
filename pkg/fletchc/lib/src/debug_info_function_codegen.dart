@@ -25,6 +25,9 @@ import 'codegen_visitor.dart';
 import 'fletch_function_builder.dart' show
     FletchFunctionBuilder;
 
+import 'fletch_registry.dart' show
+    FletchRegistry;
+
 import 'fletch_context.dart';
 import 'function_codegen.dart';
 import 'debug_info.dart';
@@ -43,7 +46,7 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
                            FletchFunctionBuilder functionBuilder,
                            FletchContext context,
                            TreeElements elements,
-                           Registry registry,
+                           FletchRegistry registry,
                            ClosureEnvironment closureEnvironment,
                            FunctionElement function,
                            this.compiler)

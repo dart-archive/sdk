@@ -28,6 +28,9 @@ import 'lazy_field_initializer_codegen.dart';
 
 import 'codegen_visitor.dart';
 
+import 'fletch_registry.dart' show
+    FletchRegistry;
+
 class ConstructorCodegen extends CodegenVisitor {
   final FletchClassBuilder classBuilder;
 
@@ -41,7 +44,7 @@ class ConstructorCodegen extends CodegenVisitor {
   ConstructorCodegen(FletchFunctionBuilder functionBuilder,
                      FletchContext context,
                      TreeElements elements,
-                     Registry registry,
+                     FletchRegistry registry,
                      ClosureEnvironment closureEnvironment,
                      ConstructorElement constructor,
                      this.classBuilder)

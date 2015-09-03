@@ -17,6 +17,9 @@ import 'fletch_context.dart';
 import 'fletch_function_builder.dart' show
     FletchFunctionBuilder;
 
+import 'fletch_registry.dart' show
+    FletchRegistry;
+
 import 'closure_environment.dart';
 
 import 'codegen_visitor.dart';
@@ -26,7 +29,7 @@ class LazyFieldInitializerCodegen extends CodegenVisitor {
   LazyFieldInitializerCodegen(FletchFunctionBuilder functionBuilder,
                               FletchContext context,
                               TreeElements elements,
-                              Registry registry,
+                              FletchRegistry registry,
                               ClosureEnvironment closureEnvironment,
                               FieldElement field)
       : super(functionBuilder, context, elements, registry,

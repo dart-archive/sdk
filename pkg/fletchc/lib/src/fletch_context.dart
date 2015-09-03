@@ -59,8 +59,8 @@ import 'fletch_selector.dart' show
 export 'fletch_native_descriptor.dart' show
     FletchNativeDescriptor;
 
-import 'fletch_codegen_registry.dart' show
-    FletchCodegenRegistry;
+import 'fletch_registry.dart' show
+    FletchRegistry;
 
 class FletchContext {
   final FletchCompilerImplementation compiler;
@@ -201,9 +201,8 @@ class FletchContext {
     backend.registerClassElement(classElement);
     // TODO(ahe): This should not be required. Also, instantiate type,
     // not class.
-    var registry = new FletchCodegenRegistry(
-        compiler,
-        classElement.resolvedAst.elements);
+    FletchRegistry registry =
+        new FletchRegistry(compiler, classElement.resolvedAst.elements);
     registry.registerInstantiatedClass(classElement);
   }
 

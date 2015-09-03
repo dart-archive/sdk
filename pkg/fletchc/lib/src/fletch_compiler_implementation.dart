@@ -38,8 +38,8 @@ import 'package:compiler/src/dart2jslib.dart' show
 import 'package:compiler/src/util/util.dart' show
     Spannable;
 
-import 'fletch_codegen_registry.dart' show
-    FletchCodegenRegistry;
+import 'fletch_registry.dart' show
+    FletchRegistry;
 
 import 'fletch_function_builder.dart';
 import 'debug_info.dart';
@@ -137,7 +137,8 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
           EXTRA_DART2JS_OPTIONS.toList()..addAll(options), environment,
           null, null, FletchBackend.newInstance) {
     CodegenRegistry global = globalDependencies;
-    globalDependencies = new FletchCodegenRegistry(this, global.treeElements);
+    globalDependencies =
+        new FletchRegistry(this, global.treeElements).asRegistry;
   }
 
   FletchContext get context {

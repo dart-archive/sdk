@@ -17,6 +17,9 @@ import 'fletch_context.dart';
 import 'fletch_function_builder.dart' show
     FletchFunctionBuilder;
 
+import 'fletch_registry.dart' show
+    FletchRegistry;
+
 import 'closure_environment.dart';
 
 import 'codegen_visitor.dart';
@@ -28,7 +31,7 @@ class FunctionCodegen extends CodegenVisitor {
   FunctionCodegen(FletchFunctionBuilder functionBuilder,
                   FletchContext context,
                   TreeElements elements,
-                  Registry registry,
+                  FletchRegistry registry,
                   ClosureEnvironment closureEnvironment,
                   FunctionElement function)
       : super(functionBuilder, context, elements, registry,

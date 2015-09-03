@@ -18,8 +18,8 @@ import 'package:compiler/src/elements/elements.dart' show
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
 
-import 'fletch_codegen_registry.dart' show
-    FletchCodegenRegistry;
+import 'fletch_registry.dart' show
+    FletchRegistry;
 
 // TODO(ahe): Implement CodegenWorkItem?
 class FletchCodegenWorkItem extends CodegenWorkItem {
@@ -47,7 +47,9 @@ class FletchCodegenWorkItem extends CodegenWorkItem {
   WorldImpact run(Compiler compiler, CodegenEnqueuer world) {
     if (world.isProcessed(element)) return null;
 
-    registry = new FletchCodegenRegistry(compiler, resolutionTree);
+    registry = new FletchRegistry(compiler, resolutionTree).asRegistry;
     return compiler.codegen(this, world);
   }
+
+  FletchRegistry get fletchRegistry => registry as FletchRegistry;
 }

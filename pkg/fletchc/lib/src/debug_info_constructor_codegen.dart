@@ -28,6 +28,9 @@ import 'fletch_function_builder.dart' show
 import 'fletch_class_builder.dart' show
     FletchClassBuilder;
 
+import 'fletch_registry.dart' show
+    FletchRegistry;
+
 import 'fletch_context.dart';
 import 'constructor_codegen.dart';
 import 'lazy_field_initializer_codegen.dart';
@@ -48,7 +51,7 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
                               FletchFunctionBuilder functionBuilder,
                               FletchContext context,
                               TreeElements elements,
-                              Registry registry,
+                              FletchRegistry registry,
                               ClosureEnvironment closureEnvironment,
                               ConstructorElement constructor,
                               FletchClassBuilder classBuilder,

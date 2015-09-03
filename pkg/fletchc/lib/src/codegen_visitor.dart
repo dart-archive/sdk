@@ -58,8 +58,8 @@ import 'closure_environment.dart';
 import '../incremental/fletchc_incremental.dart' show
     IncrementalCompilationFailed; // TODO(ahe): Remove this import.
 
-import 'fletch_codegen_registry.dart' show
-    FletchCodegenRegistry;
+import 'fletch_registry.dart' show
+    FletchRegistry;
 
 enum VisitState {
   Value,
@@ -164,7 +164,7 @@ abstract class CodegenVisitor
 
   final FletchContext context;
 
-  final FletchCodegenRegistry registry;
+  final FletchRegistry registry;
 
   final ClosureEnvironment closureEnvironment;
 

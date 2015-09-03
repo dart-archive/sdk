@@ -24,6 +24,9 @@ import 'fletch_context.dart';
 import 'fletch_function_builder.dart' show
     FletchFunctionBuilder;
 
+import 'fletch_registry.dart' show
+    FletchRegistry;
+
 import 'closure_environment.dart';
 import 'codegen_visitor.dart';
 import 'lazy_field_initializer_codegen.dart';
@@ -47,7 +50,7 @@ class DebugInfoLazyFieldInitializerCodegen
                                        FletchFunctionBuilder functionBuilder,
                                        FletchContext context,
                                        TreeElements elements,
-                                       Registry registry,
+                                       FletchRegistry registry,
                                        ClosureEnvironment closureEnvironment,
                                        FieldElement field,
                                        this.compiler,

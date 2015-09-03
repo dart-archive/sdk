@@ -105,8 +105,8 @@ import '../incremental_backend.dart' show
 import 'fletch_enqueuer.dart' show
     FletchEnqueueTask;
 
-import 'fletch_codegen_registry.dart' show
-    FletchCodegenRegistry;
+import 'fletch_registry.dart' show
+    FletchRegistry;
 
 import 'fletch_codegen_work_item.dart' show
     FletchCodegenWorkItem;
@@ -242,9 +242,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
     classBuilder = systemBuilder.newClassBuilder(
         element, superclass, builtinClasses.contains(element));
 
-    // TODO(ajohnsen): Currently, the FletchCodegenRegistry does not enqueue
-    // fields.  This is a workaround, where we basically add getters for all
-    // fields.
+    // TODO(ajohnsen): Currently, the FletchRegistry does not enqueue fields.
+    // This is a workaround, where we basically add getters for all fields.
     classBuilder.updateImplicitAccessors(this);
 
     Element callMember = element.lookupLocalMember(
@@ -279,9 +278,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
   bool methodNeedsRti(FunctionElement function) => false;
 
-  void enqueueHelpers(
-      ResolutionEnqueuer world,
-      FletchCodegenRegistry registry) {
+  void enqueueHelpers(ResolutionEnqueuer world, incomingRegistry) {
+    FletchRegistry registry = incomingRegistry;
     compiler.patchAnnotationClass = patchAnnotationClass;
 
     FunctionElement findHelper(String name, [LibraryElement library]) {
@@ -335,7 +333,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       // TODO(ahe): Register in ResolutionCallbacks. The 3 lines below should
       // not happen at this point in time.
       classImpl.ensureResolved(compiler);
-      world.registerInstantiatedType(classImpl.rawType, registry);
+      world.registerInstantiatedType(classImpl.rawType, registry.asRegistry);
       // TODO(ahe): This is a hack to let both the world and the codegen know
       // about the instantiated type.
       if (forCodegen) {
@@ -401,7 +399,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
   void onElementResolved(Element element, TreeElements elements) {
     if (alwaysEnqueue.contains(element)) {
-      var registry = new FletchCodegenRegistry(compiler, elements);
+      var registry = new FletchRegistry(compiler, elements);
       registry.registerStaticInvocation(element);
     }
   }
@@ -725,7 +723,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
         // For a generative constructor, this means compile the constructor
         // body. See [compilePendingConstructorInitializers] for an overview of
         // how constructor initializers and constructor bodies are compiled.
-        codegenFunction(element, work.resolutionTree, work.registry);
+        codegenFunction(element, work.resolutionTree, work.fletchRegistry);
       } else {
         compiler.internalError(
             element, "Uninimplemented element kind: ${element.kind}");
@@ -738,7 +736,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
   void codegenFunction(
       FunctionElement function,
       TreeElements elements,
-      Registry registry) {
+      FletchRegistry registry) {
     registry.registerStaticInvocation(fletchSystemEntry);
 
     ClosureEnvironment closureEnvironment = createClosureEnvironment(
@@ -963,8 +961,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
     FunctionElement function = value.element;
     createTearoffClass(createFletchFunctionBuilder(function));
     // Be sure to actually enqueue the function for compilation.
-    var registry =
-        new FletchCodegenRegistry(compiler, function.resolvedAst.elements);
+    FletchRegistry registry =
+        new FletchRegistry(compiler, function.resolvedAst.elements);
     registry.registerStaticInvocation(function);
   }
 
@@ -1238,7 +1236,9 @@ class FletchBackend extends Backend with ResolutionCallbacks
     return element;
   }
 
-  int compileLazyFieldInitializer(FieldElement field, Registry registry) {
+  int compileLazyFieldInitializer(
+      FieldElement field,
+      FletchRegistry registry) {
     int index = context.getStaticFieldIndex(field, null);
 
     if (field.initializer == null) return index;
@@ -1289,8 +1289,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
       // TODO(ahe): We shouldn't create a registry, but we have to as long as
       // the enqueuer doesn't support elements with more than one compilation
       // artifact.
-      FletchCodegenRegistry registry =
-          new FletchCodegenRegistry(compiler, elements);
+      FletchRegistry registry =
+          new FletchRegistry(compiler, elements);
 
       FletchClassBuilder classBuilder =
           registerClassElement(constructor.enclosingClass.declaration);
