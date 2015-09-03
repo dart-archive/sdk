@@ -31,11 +31,15 @@ import 'package:compiler/src/util/uri_extras.dart' show
     relativize;
 
 import 'package:compiler/src/dart2jslib.dart' show
+    CodegenRegistry,
     MessageKind,
     MessageTemplate;
 
 import 'package:compiler/src/util/util.dart' show
     Spannable;
+
+import 'fletch_codegen_registry.dart' show
+    FletchCodegenRegistry;
 
 import 'fletch_function_builder.dart';
 import 'debug_info.dart';
@@ -131,7 +135,10 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
       : super(
           provider, outputProvider, handler, libraryRoot, packageRoot,
           EXTRA_DART2JS_OPTIONS.toList()..addAll(options), environment,
-          null, null, FletchBackend.newInstance);
+          null, null, FletchBackend.newInstance) {
+    CodegenRegistry global = globalDependencies;
+    globalDependencies = new FletchCodegenRegistry(this, global.treeElements);
+  }
 
   FletchContext get context {
     if (internalContext == null) {

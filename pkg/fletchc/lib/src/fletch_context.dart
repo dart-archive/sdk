@@ -31,7 +31,6 @@ import 'package:compiler/src/constants/values.dart' show
     FunctionConstantValue;
 
 import 'package:compiler/src/dart2jslib.dart' show
-    CodegenRegistry,
     isPrivateName;
 
 import 'fletch_compiler_implementation.dart' show
@@ -59,6 +58,9 @@ import 'fletch_selector.dart' show
 
 export 'fletch_native_descriptor.dart' show
     FletchNativeDescriptor;
+
+import 'fletch_codegen_registry.dart' show
+    FletchCodegenRegistry;
 
 class FletchContext {
   final FletchCompilerImplementation compiler;
@@ -199,7 +201,7 @@ class FletchContext {
     backend.registerClassElement(classElement);
     // TODO(ahe): This should not be required. Also, instantiate type,
     // not class.
-    var registry = new CodegenRegistry(
+    var registry = new FletchCodegenRegistry(
         compiler,
         classElement.resolvedAst.elements);
     registry.registerInstantiatedClass(classElement);

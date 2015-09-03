@@ -13,8 +13,6 @@ import 'dart:collection' show
 import 'package:compiler/src/dart2jslib.dart' show
     Backend,
     BackendConstantEnvironment,
-    CodegenRegistry,
-    CodegenWorkItem,
     Compiler,
     CompilerTask,
     ConstantCompilerTask,
@@ -106,6 +104,12 @@ import '../incremental_backend.dart' show
 
 import 'fletch_enqueuer.dart' show
     FletchEnqueueTask;
+
+import 'fletch_codegen_registry.dart' show
+    FletchCodegenRegistry;
+
+import 'fletch_codegen_work_item.dart' show
+    FletchCodegenWorkItem;
 
 import 'class_debug_info.dart';
 import 'codegen_visitor.dart';
@@ -238,8 +242,9 @@ class FletchBackend extends Backend with ResolutionCallbacks
     classBuilder = systemBuilder.newClassBuilder(
         element, superclass, builtinClasses.contains(element));
 
-    // TODO(ajohnsen): Currently, the CodegenRegistry does not enqueue fields.
-    // This is a workaround, where we basically add getters for all fields.
+    // TODO(ajohnsen): Currently, the FletchCodegenRegistry does not enqueue
+    // fields.  This is a workaround, where we basically add getters for all
+    // fields.
     classBuilder.updateImplicitAccessors(this);
 
     Element callMember = element.lookupLocalMember(
@@ -276,7 +281,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
   void enqueueHelpers(
       ResolutionEnqueuer world,
-      CodegenRegistry registry) {
+      FletchCodegenRegistry registry) {
     compiler.patchAnnotationClass = patchAnnotationClass;
 
     FunctionElement findHelper(String name, [LibraryElement library]) {
@@ -396,7 +401,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
   void onElementResolved(Element element, TreeElements elements) {
     if (alwaysEnqueue.contains(element)) {
-      var registry = new CodegenRegistry(compiler, elements);
+      var registry = new FletchCodegenRegistry(compiler, elements);
       registry.registerStaticInvocation(element);
     }
   }
@@ -708,7 +713,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     return debugInfo;
   }
 
-  WorldImpact codegen(CodegenWorkItem work) {
+  WorldImpact codegen(FletchCodegenWorkItem work) {
     Element element = work.element.implementation;
     return compiler.withCurrentElement(element, () {
       context.compiler.reportVerboseInfo(element, 'Compiling $element');
@@ -958,7 +963,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
     FunctionElement function = value.element;
     createTearoffClass(createFletchFunctionBuilder(function));
     // Be sure to actually enqueue the function for compilation.
-    var registry = new CodegenRegistry(compiler, function.resolvedAst.elements);
+    var registry =
+        new FletchCodegenRegistry(compiler, function.resolvedAst.elements);
     registry.registerStaticInvocation(function);
   }
 
@@ -1283,7 +1289,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
       // TODO(ahe): We shouldn't create a registry, but we have to as long as
       // the enqueuer doesn't support elements with more than one compilation
       // artifact.
-      CodegenRegistry registry = new CodegenRegistry(compiler, elements);
+      FletchCodegenRegistry registry =
+          new FletchCodegenRegistry(compiler, elements);
 
       FletchClassBuilder classBuilder =
           registerClassElement(constructor.enclosingClass.declaration);

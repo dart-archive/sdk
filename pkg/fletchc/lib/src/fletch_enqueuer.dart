@@ -9,7 +9,6 @@ import 'dart:collection' show
 
 import 'package:compiler/src/dart2jslib.dart' show
     CodegenEnqueuer,
-    CodegenWorkItem,
     Compiler,
     CompilerTask,
     EnqueueTask,
@@ -39,11 +38,17 @@ import 'package:compiler/src/elements/elements.dart' show
     Name,
     TypedElement;
 
+import 'package:compiler/src/util/util.dart' show
+    SpannableAssertionFailure;
+
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
 
 import 'dynamic_call_enqueuer.dart' show
     DynamicCallEnqueuer;
+
+import 'fletch_codegen_work_item.dart' show
+    FletchCodegenWorkItem;
 
 part 'enqueuer_mixin.dart';
 
@@ -106,13 +111,43 @@ class TransitionalFletchEnqueuer extends CodegenEnqueuer {
   }
 
   void applyImpact(Element element, WorldImpact worldImpact) {
-    assert(isProcessed(element) || worldImpact == null);
+    assert(worldImpact == null);
     _processedElements.add(element);
   }
 
   void forgetElement(Element element) {
     super.forgetElement(element);
     _processedElements.remove(element);
+  }
+
+  bool internalAddToWorkList(Element element) {
+    // This is a copy of CodegenEnqueuer.internalAddToWorkList except that it
+    // uses FletchCodegenWorkItem.
+
+    // Don't generate code for foreign elements.
+    if (compiler.backend.isForeign(element)) return false;
+
+    // Codegen inlines field initializers. It only needs to generate
+    // code for checked setters.
+    if (element.isField && element.isInstanceMember) {
+      if (!compiler.enableTypeAssertions
+          || element.enclosingElement.isClosure) {
+        return false;
+      }
+    }
+
+    if (compiler.hasIncrementalSupport && !isProcessed(element)) {
+      newlyEnqueuedElements.add(element);
+    }
+
+    if (queueIsClosed) {
+      throw new SpannableAssertionFailure(element,
+          "Codegen work list is closed. Trying to add $element");
+    }
+    FletchCodegenWorkItem workItem = new FletchCodegenWorkItem(
+        compiler, element, itemCompilationContextCreator());
+    queue.add(workItem);
+    return true;
   }
 }
 
@@ -191,7 +226,7 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
         while (!queueIsEmpty) {
           Element element = _pendingEnqueuedElements.removeFirst();
           if (element.isField) continue;
-          CodegenWorkItem workItem = new CodegenWorkItem(
+          FletchCodegenWorkItem workItem = new FletchCodegenWorkItem(
               compiler, element, itemCompilationContextCreator());
           filter.processWorkItem(f, workItem);
           _processedElements.add(element);

@@ -21,7 +21,6 @@ import 'package:compiler/src/constants/expressions.dart' show
     TypeConstantExpression;
 
 import 'package:compiler/src/dart2jslib.dart' show
-    CodegenRegistry,
     MessageKind,
     Registry;
 
@@ -58,6 +57,9 @@ import 'closure_environment.dart';
 
 import '../incremental/fletchc_incremental.dart' show
     IncrementalCompilationFailed; // TODO(ahe): Remove this import.
+
+import 'fletch_codegen_registry.dart' show
+    FletchCodegenRegistry;
 
 enum VisitState {
   Value,
@@ -162,7 +164,7 @@ abstract class CodegenVisitor
 
   final FletchContext context;
 
-  final CodegenRegistry registry;
+  final FletchCodegenRegistry registry;
 
   final ClosureEnvironment closureEnvironment;
 
