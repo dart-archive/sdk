@@ -57,8 +57,21 @@ testIntDoubleConfusion() {
 
 testSmiShr() {
   var x = 4000000;
+  var y = -x;
   Expect.equals(0, x >> 32);
+  Expect.equals(-1, y >> 32);
   Expect.equals(0, x >> 42);
+  Expect.equals(-1, y >> 42);
   Expect.equals(0, x >> 64);
+  Expect.equals(-1, y >> 64);
   Expect.equals(0, x >> 75);
+  Expect.equals(-1, y >> 75);
+  x = 1 << 50;
+  y = -x;
+  Expect.equals(0, x >> 51);
+  Expect.equals(-1, y >> 51);
+  Expect.equals(0, x >> 64);
+  Expect.equals(-1, y >> 64);
+  Expect.equals(0, x >> 75);
+  Expect.equals(-1, y >> 75);
 }

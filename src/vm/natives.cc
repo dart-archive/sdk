@@ -372,6 +372,12 @@ NATIVE(MintBitShr) {
   Object* y = arguments[1];
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
+  // For values larger than or equal to 64 the shift will
+  // misbehave and perform a shift with 'y_value % 64'.
+  // Therefore, we deal with those cases explicitly here.
+  if (y_value >= 64) {
+    return process->ToInteger(x->value() < 0 ? -1 : 0);
+  }
   return process->ToInteger(x->value() >> y_value);
 }
 
