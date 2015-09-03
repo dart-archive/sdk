@@ -29,6 +29,7 @@
                 android:layout_alignParentLeft="true"
                 android:layout_alignParentTop="true"
                 android:layout_marginRight="20dp"
+                android:transitionName="transition_image"
                 />
 
             <TextView
@@ -39,6 +40,7 @@
                 android:layout_alignParentTop="true"
                 android:textSize="20sp"
                 android:textAppearance="@android:style/TextAppearance.Material.Title"
+                android:transitionName="transition_title"
                 />
 
             <TextView
@@ -48,6 +50,7 @@
                 android:layout_toRightOf="@+id/details_avatar"
                 android:layout_below="@+id/details_title"
                 android:textAppearance="@android:style/TextAppearance.Material.Body1"
+                android:transitionName="transition_author"
                 />
 
             <TextView

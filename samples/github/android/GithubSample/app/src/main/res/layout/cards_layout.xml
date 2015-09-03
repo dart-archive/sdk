@@ -17,6 +17,8 @@
         card_view:cardCornerRadius="1dp"
         card_view:cardElevation="3dp"
         android:transitionName="transition_card"
+        android:foreground="?android:attr/selectableItemBackground"
+        android:clickable="true"
         >
 
         <RelativeLayout

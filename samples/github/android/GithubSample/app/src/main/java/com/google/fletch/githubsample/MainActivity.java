@@ -23,6 +23,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 
 import android.transition.Explode;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -209,8 +210,12 @@ public class MainActivity extends Activity
         ((BitmapDrawable)((ImageView) view.findViewById(R.id.avatar)).getDrawable()).getBitmap();
     intent.putExtra("bitmap", bitmap);
 
+    // TODO(zarah): Find a way to transition the card smoothly as well.
     ActivityOptions options =
-        ActivityOptions.makeSceneTransitionAnimation(this, view, "transition_card");
+        ActivityOptions.makeSceneTransitionAnimation(this,
+            Pair.create(view.findViewById(R.id.avatar), "transition_image"),
+            Pair.create(view.findViewById(R.id.author), "transition_author"),
+            Pair.create(view.findViewById(R.id.title), "transition_title"));
     getWindow().setExitTransition(new Explode());
     startActivity(intent, options.toBundle());
   }
