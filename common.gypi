@@ -27,7 +27,7 @@
       '<@(common_gcc_cflags_c)',
     ],
 
-    'lk_path': '<(DEPTH)/../third_party/lk',
+    'lk_path': '<(DEPTH)/third_party/lk/lk-downstream',
 
     'mbed_path': '<(DEPTH)/../third_party/mbed/build/',
 
@@ -399,6 +399,7 @@
         'defines': [
           'FLETCH32',
           'FLETCH_TARGET_ARM',
+          'FLETCH_THUMB_ONLY',
         ],
 
         'target_conditions': [
@@ -422,7 +423,7 @@
             ],
 
             'include_dirs': [
-              '<(lk_path)/',
+              '<(lk_path)/../out',
               '<(lk_path)/include/',
               '<(lk_path)/arch/arm/include/',
               '<(lk_path)/lib/libm/include/',

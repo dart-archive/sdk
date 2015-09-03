@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_ARM) && !defined(FLETCH_THUMB_ONLY)
+#if defined(FLETCH_TARGET_ARM)
 
 #include "src/shared/bytecodes.h"
 #include "src/shared/names.h"
@@ -2005,4 +2005,4 @@ void InterpreterGeneratorARM::RestoreState() {
 
 }  // namespace fletch
 
-#endif  // defined(FLETCH_TARGET_ARM) && !defined(FLETCH_THUMB_ONLY)
+#endif  // defined(FLETCH_TARGET_ARM)

@@ -10,8 +10,7 @@ namespace fletch {
 class Process;
 class TargetYieldResult;
 
-#if (defined(FLETCH_TARGET_IA32) || defined(FLETCH_TARGET_ARM)) && \
-    !defined(FLETCH_THUMB_ONLY)
+#if defined(FLETCH_TARGET_IA32) || defined(FLETCH_TARGET_ARM)
 
 // For the platforms that have a native interpreter this function is
 // generated as the native interpreter entry point. The native

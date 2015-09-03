@@ -61,7 +61,7 @@
             'cflags': [
               '-mcpu=cortex-a9',
               '-include',
-              'build-vexpress-a9-test/config.h',
+              'build-vexpress-a9-fletch/config.h',
             ],
           }],
         ],
