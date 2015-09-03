@@ -17,6 +17,16 @@
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
       ],
+      'conditions': [
+        [ 'OS=="mac"', {
+          'dependencies': [
+            '../shared/shared.gyp:copy_asan#host',
+          ],
+          'sources': [
+            '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
+          ],
+        }],
+      ],
       'sources': [
         'android_print_interceptor.h',
         'debug_info.cc',
@@ -215,6 +225,16 @@
       'dependencies': [
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
+      ],
+      'conditions': [
+        [ 'OS=="mac"', {
+          'dependencies': [
+            '../shared/shared.gyp:copy_asan#host',
+          ],
+          'sources': [
+            '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
+          ],
+        }],
       ],
       'sources': [
         'assembler_arm64_linux.cc',

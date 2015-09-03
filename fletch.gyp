@@ -3,10 +3,6 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 {
-  'variables': {
-    'mac_asan_dylib': '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
-  },
-
   'targets': [
     {
       'target_name': 'fletch-vm',
@@ -47,7 +43,6 @@
       'dependencies': [
         'src/shared/shared.gyp:shared_cc_tests',
         'src/vm/vm.gyp:vm_cc_tests',
-        'copy_asan',
       ],
     },
     {
@@ -62,41 +57,6 @@
         'tests/service_tests/service_tests.gyp:service_performance_test',
         'tests/service_tests/service_tests.gyp:service_conformance_test',
         'samples/todomvc/todomvc.gyp:todomvc_sample',
-        'copy_asan',
-      ],
-    },
-    {
-      'target_name': 'copy_asan',
-      'type': 'none',
-      'conditions': [
-        [ 'OS=="mac"', {
-          'copies': [
-            {
-              # The asan dylib file sets its install name as
-              # @executable_path/..., and by copying to PRODUCT_DIR, we avoid
-              # having to set DYLD_LIBRARY_PATH.
-              'destination': '<(PRODUCT_DIR)',
-              'files': [
-                'third_party/clang/mac/lib/clang/3.7.0/'
-                'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
-              ],
-            },
-          ],
-        }, { # OS!="mac"
-          'actions': [
-            {
-              'action_name': 'touch_asan_dylib',
-              'inputs': [
-              ],
-              'outputs': [
-                '<(mac_asan_dylib)',
-              ],
-              'action': [
-                'touch', '<@(_outputs)'
-              ],
-            },
-          ],
-        }],
       ],
     },
     {

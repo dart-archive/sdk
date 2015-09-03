@@ -31,13 +31,9 @@
 
     'conditions': [
       [ 'OS=="linux"', {
-        'clang_asan_rt_path%': '.',
         'third_party_libs_path%': '<(DEPTH)/third_party/libs/linux',
       }],
       [ 'OS=="mac"', {
-        'clang_asan_rt_path%':
-          '<(DEPTH)/third_party/clang/mac/lib/clang/3.7.0/'
-          'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
         'third_party_libs_path%': '<(DEPTH)/third_party/libs/mac',
         # TODO(zerny): Redirect stderr to work around gyp regarding a non-empty
         # stderr as a failed command. This should be replaced by a custom script
@@ -45,7 +41,6 @@
         'ios_sdk_path%': '<!(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)',
       }],
       [ 'OS=="win"', {
-        'clang_asan_rt_path%': '.',
         'third_party_libs_path%': '<(DEPTH)/third_party/libs/win',
       }],
     ],

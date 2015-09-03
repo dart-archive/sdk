@@ -92,6 +92,16 @@
       'sources': [
         'natives_to_json.cc',
       ],
+      'conditions': [
+        [ 'OS=="mac"', {
+          'dependencies': [
+            'copy_asan#host',
+          ],
+          'sources': [
+            '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
+          ],
+        }],
+      ],
     },
     {
       'target_name': 'natives_json',
@@ -118,5 +128,28 @@
         }
       ],
     }
+  ],
+  'conditions': [
+    [ 'OS=="mac"', {
+      'targets': [
+        {
+          'target_name': 'copy_asan',
+          'type': 'none',
+          'toolsets': ['host'],
+          'copies': [
+            {
+              # The asan dylib file sets its install name as
+              # @executable_path/..., and by copying to PRODUCT_DIR, we avoid
+              # having to set DYLD_LIBRARY_PATH.
+              'destination': '<(PRODUCT_DIR)',
+              'files': [
+                '../../third_party/clang/mac/lib/clang/3.7.0/'
+                'lib/darwin/libclang_rt.asan_osx_dynamic.dylib',
+              ],
+            },
+          ],
+        },
+      ]
+    }]
   ],
 }
