@@ -6,6 +6,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/fletch_runner.c \
+	$(LOCAL_DIR)/missing.c \
 
 MODULE_INCLUDES += $(FLETCH_BASE)/include
 

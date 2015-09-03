@@ -9,29 +9,6 @@
 #include <fletch_api.h>
 #include <endian.h>
 
-union IEEEl2bits {
-	long double	e;
-	struct {
-#if LITTLE_ENDIAN
-		unsigned int	manl	:32;
-		unsigned int	manh	:20;
-		unsigned int	exp	:11;
-		unsigned int	sign	:1;
-#else
-		unsigned int		sign	:1;
-		unsigned int		exp	:11;
-		unsigned int		manh	:20;
-		unsigned int		manl	:32;
-#endif
-	} bits;
-};
-
-int __signbit(double val) {
-  union IEEEl2bits as_bits;
-  as_bits.e = val;
-  return as_bits.bits.sign;
-}
-
 int read_snapshot(unsigned char** snapshot) {
     printf("READY TO READ SNAPSHOT DATA.\n");
     printf("STEP1: size.\n");

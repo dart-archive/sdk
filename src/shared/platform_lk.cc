@@ -19,44 +19,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// LK currently lacks an implementation for abort.
-extern "C" {
-void abort() {
-  printf("Aborted (c-call).");
-  while (true) {}
-}
-
-// Guard implementation from libcxx. See
-//   http://llvm.org/svn/llvm-project/libcxxabi/trunk/src/cxa_guard.cpp
-// This should be moved to LK.
-
-// A 32-bit, 4-byte-aligned static data value. The least significant 2 bits must
-// be statically initialized to 0.
-typedef unsigned guard_type;
-
-// Test the lowest bit.
-inline bool is_initialized(guard_type* guard_object) {
-  return (*guard_object) & 1;
-}
-
-inline void set_initialized(guard_type* guard_object) {
-  *guard_object |= 1;
-}
-
-int __cxa_guard_acquire(guard_type* guard_object) {
-  return !is_initialized(guard_object);
-}
-
-void __cxa_guard_release(guard_type* guard_object) {
-  *guard_object = 0;
-  set_initialized(guard_object);
-}
-
-void __cxa_guard_abort(guard_type* guard_object) {
-  *guard_object = 0;
-}
-}
-
 namespace fletch {
 
 void GetPathOfExecutable(char* path, size_t path_length) {
@@ -180,17 +142,17 @@ bool VirtualMemory::Uncommit(uword address, int size) {
 }
 
 void Platform::Exit(int exit_code) {
-  printf("Exited with code %d.", exit_code);
+  printf("Exited with code %d.\n", exit_code);
   while (true) {}
 }
 
 void Platform::ScheduleAbort() {
-  printf("Aborted (scheduled)");
+  printf("Aborted (scheduled)\n");
   while (true) {}
 }
 
 void Platform::ImmediateAbort() {
-  printf("Aborted (immediate)");
+  printf("Aborted (immediate)\n");
   while (true) {}
 }
 
