@@ -535,11 +535,6 @@ class StringToDoubleConverter {
                       bool read_as_double,
                       int* processed_characters_count) const;
 
-  double StringToIeeeOnAsciiBuffer(char* buffer,
-                                   int length,
-                                   bool read_as_double,
-                                   int* processed_characters_count) const;
-
   DISALLOW_IMPLICIT_CONSTRUCTORS(StringToDoubleConverter);
 };
 

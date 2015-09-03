@@ -59,8 +59,12 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/weak_pointer.cc \
 	../../../third_party/double-conversion/src/bignum-dtoa.cc \
 	../../../third_party/double-conversion/src/bignum.cc \
+	../../../third_party/double-conversion/src/cached-powers.cc \
 	../../../third_party/double-conversion/src/diy-fp.cc \
 	../../../third_party/double-conversion/src/double-conversion.cc \
+	../../../third_party/double-conversion/src/fast-dtoa.cc \
+	../../../third_party/double-conversion/src/fixed-dtoa.cc \
+	../../../third_party/double-conversion/src/strtod.cc \
 
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
   LOCAL_CFLAGS += -DFLETCH_TARGET_ARM

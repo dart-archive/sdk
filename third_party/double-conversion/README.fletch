@@ -1,8 +1,0 @@
-The version of the double-conversion library used by Fletch
-is the minimal branch that favors size over speed:
-
-https://github.com/floitschG/double-conversion/tree/minimal
-
-Current revision:
-
-3ed2ad34faae8005d3d10159d2e789da6cc371d0
