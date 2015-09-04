@@ -139,103 +139,69 @@ class ErrorHandlingListener extends Listener {
   }
 
   Token endType(Token tokens) {
-    if (tokens is ErrorToken) {
-      // Clean the stack.
-      popNodeIf((node) => node is IdentifierNode);
-      tokens = endRecovery(tokens);
-    } else {
-      IdentifierNode identifier = popNode();
-      pushNode(new TypeNode(identifier));
-    }
+    if (tokens is ErrorToken) return recoverType(tokens);
+
+    IdentifierNode identifier = popNode();
+    pushNode(new TypeNode(identifier));
     return tokens;
   }
 
   // Definition level nodes.
   Token endFormalParameter(Token tokens) {
-    if (tokens is ErrorToken) {
-      // Clean the stack.
-      popNodeIf((node) => node is IdentifierNode);
-      popNodeIf((node) => node is TypeNode);
-      tokens = endRecovery(tokens);
-    } else {
-      IdentifierNode identifier = popNode();
-      TypeNode type = popNode();
-      pushNode(new FormalParameterNode(type, identifier));
-    }
+    if (tokens is ErrorToken) return recoverFormalParameter(tokens);
+
+    IdentifierNode identifier = popNode();
+    TypeNode type = popNode();
+    pushNode(new FormalParameterNode(type, identifier));
     return tokens;
   }
 
   Token endFunctionDeclaration(Token tokens, count) {
-    if (tokens is ErrorToken) {
-      // Clean the stack.
-      popNodesWhile((node) => node is FormalParameterNode);
-      popNodeIf((node) => node is IdentifierNode);
-      popNodeIf((node) => node is TypeNode);
-      tokens = endRecovery(tokens);
-    } else {
-      List<Node> formalParameters = popNodes(count);
-      IdentifierNode identifier = popNode();
-      TypeNode type = popNode();
-      pushNode(
-          new FunctionDeclarationNode(type, identifier, formalParameters));
-    }
+    if (tokens is ErrorToken) return recoverFunctionDeclaration(tokens);
+
+    List<Node> formalParameters = popNodes(count);
+    IdentifierNode identifier = popNode();
+    TypeNode type = popNode();
+    pushNode(new FunctionDeclarationNode(type, identifier, formalParameters));
     return tokens;
   }
 
   Token endMemberDeclaration(Token tokens) {
-    if (tokens is ErrorToken) {
-      // Clean the stack.
-      popNodeIf((node) => node is IdentifierNode);
-      popNodeIf((node) => node is TypeNode);
-      tokens = endRecovery(tokens);
-    } else {
-      IdentifierNode identifier = popNode();
-      TypeNode type = popNode();
-      pushNode(new MemberDeclarationNode(type, identifier));
-    }
+    if (tokens is ErrorToken) return recoverMemberDeclaration(tokens);
+
+    IdentifierNode identifier = popNode();
+    TypeNode type = popNode();
+    pushNode(new MemberDeclarationNode(type, identifier));
     return tokens;
   }
 
   // Top-level nodes.
   Token endService(Token tokens, int count) {
-    if (tokens is ErrorToken) {
-      // Clean the stack.
-      popNodesWhile((node) => node is FunctionDeclarationNode);
-      popNodeIf((node) => node is IdentifierNode);
-      tokens = endRecovery(tokens);
-    } else {
-      List<Node> functionDeclarations = popNodes(count);
-      IdentifierNode identifier = popNode();
-      pushNode(new ServiceNode(identifier, functionDeclarations));
-    }
     topLevelScopeStart = null;
+    if (tokens is ErrorToken) return recoverService(tokens);
+
+    List<Node> functionDeclarations = popNodes(count);
+    IdentifierNode identifier = popNode();
+    pushNode(new ServiceNode(identifier, functionDeclarations));
     return tokens;
   }
 
   Token endStruct(Token tokens, int count) {
-    if (tokens is ErrorToken) {
-      // Clean the stack.
-      popNodesWhile((node) => node is MemberDeclarationNode);
-      popNodeIf((node) => node is IdentifierNode);
-      tokens = endRecovery(tokens);
-    } else {
-      List<Node> memberDeclarations = popNodes(count);
-      IdentifierNode identifier = popNode();
-      pushNode(new StructNode(identifier, memberDeclarations));
-    }
     topLevelScopeStart = null;
+    if (tokens is ErrorToken) return recoverStruct(tokens);
+
+    List<Node> memberDeclarations = popNodes(count);
+    IdentifierNode identifier = popNode();
+    pushNode(new StructNode(identifier, memberDeclarations));
     return tokens;
   }
 
   // Highest-level node.
   Token endCompilationUnit(Token tokens, int count) {
-    if (tokens is ErrorToken) {
-      popNodesWhile((node) => node is TopLevelDefinitionNode);
-      tokens = endRecovery(tokens);
-    } else {
-      List<Node> topLevelDefinitions = popNodes(count);
-      pushNode(new CompilationUnitNode(topLevelDefinitions));
-    }
+    if (tokens is ErrorToken) return recoverCompilationUnit(tokens);
+
+    List<Node> topLevelDefinitions = popNodes(count);
+    pushNode(new CompilationUnitNode(topLevelDefinitions));
     return tokens;
   }
 
@@ -268,7 +234,49 @@ class ErrorHandlingListener extends Listener {
     return tokens;
   }
 
-  /// Ends the recovery process, if one is in place.
+  // Recovery methods.
+  Token recoverType(Token tokens) {
+    popNodeIf((node) => node is IdentifierNode);
+    return endRecovery(tokens);
+  }
+
+  Token recoverFormalParameter(Token tokens) {
+    popNodeIf((node) => node is IdentifierNode);
+    popNodeIf((node) => node is TypeNode);
+    return endRecovery(tokens);
+  }
+
+  Token recoverFunctionDeclaration(Token tokens) {
+    popNodesWhile((node) => node is FormalParameterNode);
+    popNodeIf((node) => node is IdentifierNode);
+    popNodeIf((node) => node is TypeNode);
+    return endRecovery(tokens);
+  }
+
+  Token recoverMemberDeclaration(Token tokens) {
+    popNodeIf((node) => node is IdentifierNode);
+    popNodeIf((node) => node is TypeNode);
+    return endRecovery(tokens);
+  }
+
+  Token recoverService(Token tokens) {
+    popNodesWhile((node) => node is FunctionDeclarationNode);
+    popNodeIf((node) => node is IdentifierNode);
+    return endRecovery(tokens);
+  }
+
+  Token recoverStruct(Token tokens) {
+    popNodesWhile((node) => node is MemberDeclarationNode);
+    popNodeIf((node) => node is IdentifierNode);
+    return endRecovery(tokens);
+  }
+
+  Token recoverCompilationUnit(Token tokens) {
+    popNodesWhile((node) => node is TopLevelDefinitionNode);
+    return endRecovery(tokens);
+  }
+
+  /// End the recovery process if one is in place.
   Token endRecovery(Token tokens) {
     if (tokens is RecoverToken) {
       tokens = tokens.next;
@@ -279,6 +287,7 @@ class ErrorHandlingListener extends Listener {
   /// It is necessary when the token is not an ErrorToken.
   Token injectErrorIfNecessary(Token tokens) {
     if (tokens is ErrorToken) return tokens;
+
     tokens = injectUnmatchedTokenIfNecessary(tokens);
     tokens = injectUnexpectedEOFTokenIfNecessary(tokens);
     tokens = injectUnexpectedTokenIfNecessary(tokens);
