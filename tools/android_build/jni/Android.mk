@@ -6,9 +6,15 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := fletch-library
-LOCAL_CFLAGS := -DFLETCH32 -DFLETCH_TARGET_OS_POSIX -DFLETCH_TARGET_OS_LINUX \
-  -DFLETCH_ENABLE_FFI -DFLETCH_ENABLE_PRINT_INTERCEPTORS -DANDROID \
-  -I$(LOCAL_PATH)/../../../ -std=c++11
+LOCAL_CFLAGS := \
+  -DFLETCH32 \
+  -DFLETCH_TARGET_OS_POSIX \
+  -DFLETCH_TARGET_OS_LINUX \
+  -DFLETCH_ENABLE_FFI \
+  -DFLETCH_ENABLE_PRINT_INTERCEPTORS \
+  -DFLETCH_ENABLE_LIVE_CODING \
+  -DANDROID \
+  -I$(LOCAL_PATH)/../../../ -std=gnu++11
 
 LOCAL_SRC_FILES := \
 	../../../src/shared/assert.cc \
@@ -57,6 +63,7 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/thread_posix.cc \
 	../../../src/vm/unicode.cc \
 	../../../src/vm/weak_pointer.cc \
+	../../../src/vm/void_hash_table.cc \
 	../../../third_party/double-conversion/src/bignum-dtoa.cc \
 	../../../third_party/double-conversion/src/bignum.cc \
 	../../../third_party/double-conversion/src/cached-powers.cc \

@@ -5,9 +5,7 @@
 #ifndef SRC_VM_VOID_HASH_TABLE_H_
 #define SRC_VM_VOID_HASH_TABLE_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
+#include "src/shared/globals.h"
 #include "src/shared/assert.h"
 
 namespace fletch {
