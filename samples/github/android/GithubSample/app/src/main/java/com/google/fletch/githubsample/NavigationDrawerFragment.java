@@ -7,7 +7,6 @@ package com.google.fletch.githubsample;
 
 import android.app.Activity;
 import android.app.ActionBar;
-import android.app.Fragment;
 import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -21,8 +20,6 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -80,9 +77,6 @@ public class NavigationDrawerFragment extends Drawer.PaneFragment {
       mCurrentSelectedPosition = savedInstanceState.getInt(STATE_SELECTED_POSITION);
       mFromSavedInstanceState = true;
     }
-
-    // Select either the default item (0) or the last selected item.
-    selectItem(mCurrentSelectedPosition);
   }
 
   @Override
@@ -97,27 +91,15 @@ public class NavigationDrawerFragment extends Drawer.PaneFragment {
                            Bundle savedInstanceState) {
     mDrawerListView = (ListView) inflater.inflate(
         R.layout.fragment_navigation_drawer, container, false);
-    mDrawerListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-      @Override
-      public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        selectItem(position);
-      }
-    });
-    mDrawerListView.setAdapter(new ArrayAdapter<String>(
-        getActionBar().getThemedContext(),
-        android.R.layout.simple_list_item_activated_1,
-        android.R.id.text1,
-        new String[]{
-            getString(R.string.title_section1),
-            getString(R.string.title_section2),
-            getString(R.string.title_section3),
-        }));
-    mDrawerListView.setItemChecked(mCurrentSelectedPosition, true);
     return mDrawerListView;
   }
 
   public boolean isDrawerOpen() {
     return mDrawerLayout != null && mDrawerLayout.isDrawerOpen(mFragmentContainerView);
+  }
+
+  public void setupMenu(com.google.fletch.immisamples.Menu menu) {
+    menu.setListView(mDrawerListView);
   }
 
   @Override
@@ -203,19 +185,6 @@ public class NavigationDrawerFragment extends Drawer.PaneFragment {
     });
 
     mDrawerLayout.setDrawerListener(mDrawerToggle);
-  }
-
-  private void selectItem(int position) {
-    mCurrentSelectedPosition = position;
-    if (mDrawerListView != null) {
-      mDrawerListView.setItemChecked(position, true);
-    }
-    if (mDrawerLayout != null) {
-      mDrawerLayout.closeDrawer(mFragmentContainerView);
-    }
-    if (mCallbacks != null) {
-      mCallbacks.onNavigationDrawerItemSelected(position);
-    }
   }
 
   @Override

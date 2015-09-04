@@ -44,6 +44,8 @@ import immi.DrawerNode;
 import immi.DrawerPatch;
 import immi.ImmiRoot;
 import immi.ImmiService;
+import immi.MenuNode;
+import immi.MenuPatch;
 
 public class MainActivity extends Activity
     implements NavigationDrawerFragment.NavigationDrawerCallbacks, AnyNodePresenter {
@@ -88,13 +90,30 @@ public class MainActivity extends Activity
   }
 
   private final class LeftPresenter extends Drawer.PanePresenter {
-    @Override
-    public Drawer.PaneFragment getPaneFragment() {
-      return (Drawer.PaneFragment)getFragmentManager().findFragmentById(R.id.navigation_drawer);
+    LeftPresenter(com.google.fletch.immisamples.Menu menu) {
+      this.menu = menu;
+      fragment =
+          (NavigationDrawerFragment)getFragmentManager().findFragmentById(R.id.navigation_drawer);
+      fragment.setupMenu(menu);
     }
 
-    @Override public void present(AnyNode node) {}
-    @Override public void patch(AnyNodePatch patch) {}
+    @Override
+    public Drawer.PaneFragment getPaneFragment() {
+      return fragment;
+    }
+
+    @Override
+    public void present(AnyNode node) {
+      menu.present(node.as(MenuNode.class));
+    }
+
+    @Override
+    public void patch(AnyNodePatch patch) {
+      menu.patch(patch.as(MenuPatch.class));
+    }
+
+    private NavigationDrawerFragment fragment;
+    private com.google.fletch.immisamples.Menu menu;
   }
 
   @Override
@@ -113,6 +132,7 @@ public class MainActivity extends Activity
   private CharSequence title;
 
   private Drawer drawer;
+  private com.google.fletch.immisamples.Menu menu;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -121,9 +141,14 @@ public class MainActivity extends Activity
 
     title = getTitle();
 
+    menu = new com.google.fletch.immisamples.Menu(
+        this,
+        android.R.layout.simple_list_item_activated_1,
+        android.R.id.text1);
+
     drawer = new Drawer(
         (DrawerLayout)findViewById(R.id.drawer_layout),
-        new LeftPresenter(),
+        new LeftPresenter(menu),
         new CenterPresenter(this),
         null);
 
