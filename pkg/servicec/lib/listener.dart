@@ -5,6 +5,7 @@
 library servicec.listener;
 
 import 'package:compiler/src/scanner/scannerlib.dart' show
+    ErrorToken,
     Token;
 
 import 'errors.dart' show
@@ -101,120 +102,150 @@ abstract class Listener {
   Token expected(String string, Token tokens);
 }
 
+enum LogLevel { DEBUG, INFO }
+
 /// Used for debugging other listeners.
 class DebugListener implements Listener {
-  Listener debugSubject;
-  List<CompilerError> errors;
+  List<CompilerError> errors;  // Dummy required by interface.
 
-  DebugListener(this.debugSubject);
+  Listener debugSubject;
+  LogLevel logLevel;
+  int scope;
+
+  DebugListener(this.debugSubject, [this.logLevel = LogLevel.DEBUG])
+    : scope = 0;
+
+  void beginScope() { ++scope; }
+  void endScope() { --scope; }
+
+  void log(String string) {
+    print("${"  " * scope}$string");
+  }
+
+  void logBeginScope(String nodeName) {
+    String prefix = logLevel == LogLevel.INFO ? "begin " : "";
+    log("$prefix$nodeName");
+    beginScope();
+  }
+
+  void logEndScope(String nodeName, [String summary = ""]) {
+    if (logLevel == LogLevel.DEBUG) {
+      if (summary != "") log("$summary");
+      endScope();
+    } else {
+      endScope();
+      log("end $nodeName; $summary");
+    }
+  }
 
   Token beginCompilationUnit(Token tokens) {
-    print("begin unit");
+    logBeginScope("unit");
     return debugSubject.beginCompilationUnit(tokens);
   }
 
   Token endCompilationUnit(Token tokens, int count) {
-    print("end unit; count = $count");
+    logEndScope("unit", "top-level declarations count = $count");
     return debugSubject.endCompilationUnit(tokens, count);
   }
 
   Token beginTopLevelDeclaration(Token tokens) {
-    print("begin top-level declaration");
+    logBeginScope("top-level declaration");
     return debugSubject.beginTopLevelDeclaration(tokens);
   }
 
   Token endTopLevelDeclaration(Token tokens) {
-    print("end top-level declaration");
+    logEndScope("top-level declaration");
     return debugSubject.endTopLevelDeclaration(tokens);
   }
 
   Token beginService(Token tokens) {
-    print("begin service");
+    logBeginScope("service");
     return debugSubject.beginService(tokens);
   }
 
   Token endService(Token tokens, int count) {
-    print("end service; count = $count");
+    logEndScope("service", "functions count = $count");
     return debugSubject.endService(tokens, count);
   }
 
   Token beginStruct(Token tokens) {
-    print("begin struct");
+    logBeginScope("struct");
     return debugSubject.beginStruct(tokens);
   }
 
   Token endStruct(Token tokens, int count) {
-    print("end struct; count = $count");
+    logEndScope("struct", "members count = $count");
     return debugSubject.endStruct(tokens, count);
   }
 
   Token beginIdentifier(Token tokens) {
-    print("begin identifier");
+    String identifierValue = tokens is! ErrorToken ? " [${tokens.value}]" : "";
+    logBeginScope("indentifier$identifierValue");
     return debugSubject.beginIdentifier(tokens);
   }
 
   Token endIdentifier(Token tokens) {
-    print("end identifier");
+    logEndScope("identifier");
     return debugSubject.endIdentifier(tokens);
   }
 
   Token beginFunctionDeclaration(Token tokens) {
-    print("begin function declaration");
+    logBeginScope("function declaration");
     return debugSubject.beginFunctionDeclaration(tokens);
   }
 
   Token endFunctionDeclaration(Token tokens, int count) {
-    print("end function declaration; count = $count");
+    logEndScope("function declaration", "formal parameters count = $count");
     return debugSubject.endFunctionDeclaration(tokens, count);
   }
 
   Token beginMemberDeclaration(Token tokens) {
-    print("begin member declaration");
+    logBeginScope("member declaration");
     return debugSubject.beginMemberDeclaration(tokens);
   }
 
   Token endMemberDeclaration(Token tokens) {
-    print("end member declaration");
+    logEndScope("member declaration");
     return debugSubject.endMemberDeclaration(tokens);
   }
 
   Token beginType(Token tokens) {
-    print("begin type");
+    logBeginScope("type");
     return debugSubject.beginType(tokens);
   }
 
   Token endType(Token tokens) {
-    print("end type");
+    logEndScope("type");
     return debugSubject.endType(tokens);
   }
 
   Token beginFormalParameter(Token tokens) {
-    print("begin formal parameter");
+    logBeginScope("formal parameter");
     return debugSubject.beginFormalParameter(tokens);
   }
 
   Token endFormalParameter(Token tokens) {
-    print("end formal parameter");
+    logEndScope("formal parameter");
     return debugSubject.endFormalParameter(tokens);
   }
 
   Token expectedTopLevelDeclaration(Token tokens) {
-    print("error: $tokens is not a top-level declaration");
+    log("error: $tokens is not a top-level declaration");
     return debugSubject.expectedTopLevelDeclaration(tokens);
   }
 
   Token expectedIdentifier(Token tokens) {
-    print("error: $tokens is not an identifier");
+    log("error: $tokens is not an identifier");
     return debugSubject.expectedIdentifier(tokens);
   }
 
   Token expectedType(Token tokens) {
-    print("error: $tokens is not a type");
+    log("error: $tokens is not a type");
     return debugSubject.expectedType(tokens);
   }
 
   Token expected(String string, Token tokens) {
-    print("error: $tokens is not the symbol $string");
+    log("error: $tokens is not the symbol $string");
     return debugSubject.expected(string, tokens);
   }
 }
