@@ -1,6 +1,26 @@
 #!/bin/sh
 
-(cd third_party/lk; make -j4 DEBUG=1)
+if [ "$1" == "-m" ]; then
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+(cd ${DIR}/../../third_party/lk; make -j4 DEBUG=1)
+shift
+fi
+
+if [ "$1" == "-h" ]; then
+echo "Usage: $0 <options> <snapshotfile>"
+echo
+echo "Options:"
+echo
+echo "-m   trigger built of lk first"
+echo "-h   print this message"
+echo
+exit 0
+fi
+
+if [ -z "$1" -o ! -s "$1" ]; then
+echo "$0: Expecting a snapshot file as fist argument."
+exit 1
+fi
 
 SIZE=$(cat $1 | wc -c)
 PIPEDIR=$(mktemp -d)
