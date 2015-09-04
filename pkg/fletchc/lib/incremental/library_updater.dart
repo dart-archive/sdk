@@ -934,25 +934,6 @@ class LibraryUpdater extends FletchFeatures {
           "Unable to add static fields:\n  ${newStaticFields.join(',\n  ')}");
     }
 
-    // Run through all compiled methods and see if they may apply to
-    // newlySeenSelectors.
-    for (Element e in enqueuer.codegen.generatedCode.keys) {
-      if (e.isFunction && !e.isConstructor &&
-          (e as dynamic).functionSignature.hasOptionalParameters) {
-        for (UniverseSelector selector in enqueuer.codegen.newlySeenSelectors) {
-          // TODO(ahe): Group selectors by name at this point for improved
-          // performance.
-          if (e.isInstanceMember &&
-              selector.selector.applies(e, compiler.world)) {
-            // TODO(ahe): Don't use
-            // enqueuer.codegen.newlyEnqueuedElements directly like
-            // this, make a copy.
-            enqueuer.codegen.newlyEnqueuedElements.add(e);
-          }
-        }
-      }
-    }
-
     backend.assembleProgram();
 
     List<Command> commands = <Command>[const commands_lib.PrepareForChanges()];

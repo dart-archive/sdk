@@ -162,8 +162,6 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
 
   final FletchCompilerImplementation compiler;
 
-  final Map generatedCode = new Map();
-
   bool queueIsClosed = false;
 
   bool hasEnqueuedReflectiveElements = false;
@@ -177,8 +175,6 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
 
   final Universe universe = new Universe();
 
-  final Set<Element> newlyEnqueuedElements;
-
   final Set<Element> _enqueuedElements = new Set<Element>();
 
   final Queue<Element> _pendingEnqueuedElements = new Queue<Element>();
@@ -191,7 +187,6 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
       FletchCompilerImplementation compiler,
       this.itemCompilationContextCreator)
       : compiler = compiler,
-        newlyEnqueuedElements = compiler.cacheStrategy.newSet(),
         dynamicCallEnqueuer = new DynamicCallEnqueuer(compiler);
 
   bool get queueIsEmpty => _pendingEnqueuedElements.isEmpty;
@@ -200,12 +195,7 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
 
   QueueFilter get filter => compiler.enqueuerFilter;
 
-  Set<UniverseSelector> get newlySeenSelectors {
-    return dynamicCallEnqueuer.newlySeenSelectors;
-  }
-
   void forgetElement(Element element) {
-    newlyEnqueuedElements.remove(element);
     _enqueuedElements.remove(element);
     _processedElements.remove(element);
     dynamicCallEnqueuer.forgetElement(element);
@@ -255,8 +245,7 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
   }
 
   void logSummary(log(message)) {
-    log('Compiled ${generatedCode.length} methods.');
-    nativeEnqueuer.logSummary(log);
+    // TODO(ahe): Implement this.
   }
 
   bool isProcessed(Element member) => _processedElements.contains(member);
@@ -280,7 +269,6 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
   void _enqueueElement(Element element, UniverseSelector selector) {
     if (_enqueuedElements.add(element)) {
       _pendingEnqueuedElements.addLast(element);
-      newlyEnqueuedElements.add(element);
       compiler.reportVerboseInfo(element, "enqueued this", forceVerbose: true);
     }
   }

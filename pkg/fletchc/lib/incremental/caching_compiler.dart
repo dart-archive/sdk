@@ -82,9 +82,6 @@ Future<Compiler> reuseCompiler(
         ..enqueuer.codegen.hasEnqueuedReflectiveElements = false
         ..enqueuer.codegen.hasEnqueuedReflectiveStaticFields = false
         ..compilationFailed = false;
-    compiler.enqueuer.codegen
-        ..newlyEnqueuedElements.clear()
-        ..newlySeenSelectors.clear();
 
     if (reuseLibrary == null) {
       reuseLibrary = (LibraryElement library) {

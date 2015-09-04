@@ -45,11 +45,7 @@ class DynamicCallEnqueuer {
 
   final Queue<Selector> pendingSelectors = new Queue<Selector>();
 
-  final Set<UniverseSelector> newlySeenSelectors;
-
-  DynamicCallEnqueuer(FletchCompilerImplementation compiler)
-      : compiler = compiler,
-        newlySeenSelectors = compiler.cacheStrategy.newSet();
+  DynamicCallEnqueuer(this.compiler);
 
   void registerInstantiatedType(InterfaceType type) {
     ClassElement cls = type.element.declaration;
@@ -110,7 +106,6 @@ class DynamicCallEnqueuer {
     Selector selector = universeSelector.selector;
     if (enqueuedSelectors.add(selector)) {
       pendingSelectors.add(selector);
-      newlySeenSelectors.add(universeSelector);
     }
   }
 
