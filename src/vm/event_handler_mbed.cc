@@ -9,21 +9,21 @@
 namespace fletch {
 
 EventHandler::EventHandler()
-    : monitor_(Platform::CreateMonitor()),
+    : monitor_(NULL),
       fd_(-1),
       read_fd_(-1),
       write_fd_(-1) {
 }
 
-EventHandler::~EventHandler() {
-  delete monitor_;
-}
+EventHandler::~EventHandler() { }
 
 void* RunEventHandler(void* peer) {
+  UNIMPLEMENTED();
   return NULL;
 }
 
 int EventHandler::GetEventHandler() {
+  UNIMPLEMENTED();
   return -1;
 }
 
