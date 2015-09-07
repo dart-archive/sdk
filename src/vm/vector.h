@@ -91,12 +91,14 @@ class Vector {
     if (size_ == capacity_) {
       Grow();
     }
-    At(size_++) = t;
+    size_++;
+    At(size_ - 1) = t;
   }
 
   T PopBack() {
     ASSERT(!IsEmpty());
-    T t = At(--size_);
+    T t = At(size_ - 1);
+    size_--;
 #ifdef DEBUG
     uint8* base = reinterpret_cast<uint8*>(backing_ + size_);
     memset(base, 0xbb, sizeof(T));
