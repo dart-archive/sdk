@@ -83,7 +83,7 @@ public class MainActivity extends Activity implements AnyNodePresenter {
   public boolean onOptionsItemSelected(MenuItem item) {
     int id = item.getItemId();
     if (id == R.id.login) {
-      Toast.makeText(this, "Login not implemented yet.", Toast.LENGTH_SHORT).show();
+      startActivity(new Intent(this, LoginActivity.class));j
       return true;
     }
     return super.onOptionsItemSelected(item);
