@@ -346,23 +346,32 @@ class _Mint extends _IntBase {
   @fletch.native external num operator -();
 
   @fletch.native num operator +(other) {
-    // TODO(kasperl): Check error.
+    if (fletch.nativeError == fletch.wrongArgumentType && other is _Mint) {
+      throw new UnimplementedError("Overflow to big integer");
+    }
     return other._addFromInteger(this);
   }
 
   @fletch.native num operator -(other) {
-    // TODO(kasperl): Check error.
+    if (fletch.nativeError == fletch.wrongArgumentType && other is _Mint) {
+      throw new UnimplementedError("Overflow to big integer");
+    }
     return other._subFromInteger(this);
   }
 
   @fletch.native num operator *(other) {
-    // TODO(kasperl): Check error.
+    if (fletch.nativeError == fletch.wrongArgumentType && other is _Mint) {
+      throw new UnimplementedError("Overflow to big integer");
+    }
     return other._mulFromInteger(this);
   }
 
   @fletch.native num operator %(other) {
     switch (fletch.nativeError) {
       case fletch.wrongArgumentType:
+        if (other is _Mint) {
+          throw new UnimplementedError("Overflow to big integer");
+        }
         return other._modFromInteger(this);
       case fletch.indexOutOfBounds:
         throw new IntegerDivisionByZeroException();
@@ -377,6 +386,9 @@ class _Mint extends _IntBase {
   @fletch.native int operator ~/(other) {
     switch (fletch.nativeError) {
       case fletch.wrongArgumentType:
+        if (other is _Mint) {
+          throw new UnimplementedError("Overflow to big integer");
+        }
         return other._truncDivFromInteger(this);
       case fletch.indexOutOfBounds:
         throw new IntegerDivisionByZeroException();

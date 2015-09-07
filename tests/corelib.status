@@ -39,6 +39,8 @@ double_floor_test: RuntimeError
 double_round_test: RuntimeError
 double_truncate_test: RuntimeError
 integer_to_radix_string_test: RuntimeError
+num_sign_test: RuntimeError
+regexp/regexp_test: RuntimeError
 
 # Object.runtimeType / type check
 collection_length_test: CompileTimeError

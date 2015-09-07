@@ -143,17 +143,39 @@ class Utils {
 #endif
   }
 
+  static int HighestBit(int64 v) {
+    uint64 x = static_cast<uint64>((v > 0) ? v : -v);
+    uint64 t;
+    int r = 0;
+    if ((t = x >> 32) != 0) { x = t; r += 32; }
+    if ((t = x >> 16) != 0) { x = t; r += 16; }
+    if ((t = x >> 8) != 0) { x = t; r += 8; }
+    if ((t = x >> 4) != 0) { x = t; r += 4; }
+    if ((t = x >> 2) != 0) { x = t; r += 2; }
+    if (x > 1) r += 1;
+    return r;
+  }
+
+  static bool Signed64BitMulMightOverflow(int64 lhs, int64 rhs) {
+    return (Utils::HighestBit(lhs) + Utils::HighestBit(rhs)) >= 62;
+  }
+
   static bool SignedMulOverflow(word lhs, word rhs, word* val) {
 #if FLETCH_HAS_BUILTIN_SMULL_OVERFLOW
     return __builtin_smull_overflow(lhs, rhs, val);
 #else
-    // TODO(ajohnsen): This does now really work on x64.
+#ifdef FLETCH64
+    if (Signed64BitMulMightOverflow(lhs, rhs)) return true;
+    *val = lhs * rhs;
+    return false;
+#else
     word res = lhs * rhs;
     bool overflow = (res != static_cast<int64>(lhs) * rhs);
     if (overflow) return true;
     *val = res;
     return false;
-#endif
+#endif  // FLETCH64
+#endif  // FLETCH_HAS_BUILTIN_SMULL_OVERFLOW
   }
 
   // Read a 32-bit integer from the buffer, as little endian.

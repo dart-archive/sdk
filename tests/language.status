@@ -378,6 +378,7 @@ deferred_type_dependency_test/as: RuntimeError
 deferred_type_dependency_test/is: RuntimeError
 deferred_type_dependency_test/none: RuntimeError
 deferred_type_dependency_test/type_annotation: RuntimeError
+deopt_smi_op_test: RuntimeError # Overflow to bigint.
 duplicate_implements_test/03: RuntimeError
 duplicate_implements_test/04: RuntimeError
 dynamic_prefix_core_test/01: Fail
@@ -890,6 +891,7 @@ typedef_is_test: RuntimeError
 variable_declaration_metadata_test/06: RuntimeError
 variable_declaration_metadata_test/08: RuntimeError
 vm/allocation_sinking_vm_test: CompileTimeError
+vm/canonicalization_preserves_deopt_test: RuntimeError  # Overflow to bigint
 vm/debug_break_enabled_vm_test/01: CompileTimeError
 vm/debug_break_enabled_vm_test/none: CompileTimeError
 vm/issue21220_vm_test: RuntimeError
@@ -899,6 +901,7 @@ vm/no_such_method_error_message_vm_test: RuntimeError
 vm/optimized_await_regress_test: RuntimeError
 vm/optimized_guarded_field_isolates_test: CompileTimeError
 vm/reflect_core_vm_test: CompileTimeError
+vm/regress_22693_vm_test: RuntimeError  # Overflow to bigint
 vm/regress_23117_vm_test: RuntimeError
 vm/regress_23238_test: RuntimeError
 vm/reusable_boxes_test: CompileTimeError

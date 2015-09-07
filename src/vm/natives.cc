@@ -282,8 +282,12 @@ NATIVE(MintAdd) {
   Object* y = arguments[1];
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
-  // TODO(kasperl): Check for overflow.
-  return process->ToInteger(x->value() + y_value);
+  int64 x_value = x->value();
+  int64 result = x_value + y_value;
+  if ((x_value < 0) != (y_value < 0) || (result < 0) == (x_value < 0)) {
+    return process->ToInteger(result);
+  }
+  return Failure::wrong_argument_type();
 }
 
 NATIVE(MintSub) {
@@ -291,8 +295,12 @@ NATIVE(MintSub) {
   Object* y = arguments[1];
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
-  // TODO(kasperl): Check for overflow.
-  return process->ToInteger(x->value() - y_value);
+  int64 x_value = x->value();
+  int64 result = x_value - y_value;
+  if ((x_value < 0) == (y_value < 0) || (result < 0) == (x_value < 0)) {
+    return process->ToInteger(result);
+  }
+  return Failure::wrong_argument_type();
 }
 
 NATIVE(MintMul) {
@@ -300,8 +308,11 @@ NATIVE(MintMul) {
   Object* y = arguments[1];
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
-  // TODO(kasperl): Check for overflow.
-  return process->ToInteger(x->value() * y_value);
+  int64 x_value = x->value();
+  if (Utils::Signed64BitMulMightOverflow(x_value, y_value)) {
+    return Failure::wrong_argument_type();
+  }
+  return process->ToInteger(x_value * y_value);
 }
 
 NATIVE(MintMod) {
@@ -309,13 +320,16 @@ NATIVE(MintMod) {
   Object* y = arguments[1];
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
-  if (y_value == 0 ||
-      (y_value == -1 && x->value() == (-1LL << 63))) {
+  if (y_value == 0) {
     return Failure::index_out_of_bounds();
   }
-  int64 result = x->value() % y_value;
-  if (result < 0) result += (y_value > 0) ? y_value : -y_value;
-  return process->ToInteger(result);
+  int64 x_value = x->value();
+  if (x_value != INT64_MIN || y_value != -1) {
+    int64 result = x_value % y_value;
+    if (result < 0) result += (y_value > 0) ? y_value : -y_value;
+    return process->ToInteger(result);
+  }
+  return Failure::wrong_argument_type();
 }
 
 NATIVE(MintDiv) {
@@ -331,11 +345,14 @@ NATIVE(MintTruncDiv) {
   Object* y = arguments[1];
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
-  if (y_value == 0 ||
-      (y_value == -1 && x->value() == (-1LL << 63))) {
+  if (y_value == 0) {
     return Failure::index_out_of_bounds();
   }
-  return process->ToInteger(x->value() / y_value);
+  int64 x_value = x->value();
+  if (x_value != INT64_MIN || y_value != -1) {
+    return process->ToInteger(x_value / y_value);
+  }
+  return Failure::wrong_argument_type();
 }
 
 NATIVE(MintBitNot) {
