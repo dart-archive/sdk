@@ -78,7 +78,7 @@ void Scheduler::UnscheduleProgram(Program* program) {
   program->set_scheduler(NULL);
 }
 
-void Scheduler::StopProgram(Program* program, bool from_scheduler_thread) {
+void Scheduler::StopProgram(Program* program) {
   ASSERT(program->scheduler() == this);
 
   {
@@ -103,7 +103,6 @@ void Scheduler::StopProgram(Program* program, bool from_scheduler_thread) {
         if (threads_[i] != NULL) count++;
         PreemptThreadProcess(i);
       }
-      if (from_scheduler_thread) count--;
       if (count == sleeping_threads_) break;
       pause_monitor_->Wait();
     }
@@ -349,12 +348,22 @@ void Scheduler::ExitWith(Program* program,
                          int exit_code,
                          bool from_scheduler_thread) {
   shutdown_ = exit_code;
-  StopProgram(program, from_scheduler_thread);
+  if (from_scheduler_thread) {
+    ScopedMonitorLock locker(pause_monitor_);
+    sleeping_threads_++;
+    pause_monitor_->NotifyAll();
+  }
+  StopProgram(program);
   // TODO(ajohnsen): Handle multiple programs.
   program->program_state()->set_paused_processes_head(NULL);
   program->DeleteAllProcesses();
   processes_ = 0;
   ResumeProgram(program);
+  if (from_scheduler_thread) {
+    ScopedMonitorLock locker(pause_monitor_);
+    sleeping_threads_--;
+    pause_monitor_->NotifyAll();
+  }
 }
 
 void Scheduler::ExitAtUncaughtExceptionInternal(Process* process,

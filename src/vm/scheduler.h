@@ -39,7 +39,7 @@ class Scheduler {
   void ScheduleProgram(Program* program, Process* main_process);
   void UnscheduleProgram(Program* program);
 
-  void StopProgram(Program* program, bool from_scheduler_thread = false);
+  void StopProgram(Program* program);
   void ResumeProgram(Program* program);
 
   void PauseGcThread();
