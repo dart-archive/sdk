@@ -32,7 +32,7 @@ FLETCH_EXPORT FletchProgram FletchLoadSnapshot(unsigned char* snapshot,
 FLETCH_EXPORT void FletchDeleteProgram(FletchProgram program);
 
 // Start a process at main, from the program.
-FLETCH_EXPORT int FletchRunMain(FletchProgram program);
+FLETCH_EXPORT void FletchRunMain(FletchProgram program);
 
 // Load the snapshot from the file, load the program from the
 // snapshot, start a process from that program, and run main in that

@@ -37,7 +37,7 @@ static Program* LoadSnapshot(List<uint8> bytes) {
   return NULL;
 }
 
-static int RunProgram(Program* program) {
+static bool RunProgram(Program* program) {
 #if defined(__ANDROID__)
   // TODO(zerny): Consider making print interceptors part of the public API.
   Print::RegisterPrintInterceptor(new AndroidPrintInterceptor());
@@ -48,21 +48,21 @@ static int RunProgram(Program* program) {
 #endif  // FLETCH_ENABLE_LIVE_CODING
   Process* process = program->ProcessSpawnForMain();
   scheduler.ScheduleProgram(program, process);
-  int result = scheduler.Run();
+  bool success = scheduler.Run();
   scheduler.UnscheduleProgram(program);
 #if defined(__ANDROID__)
   Print::UnregisterPrintInterceptors();
 #endif
-  return result;
+  return success;
 }
 
 static void RunShapshotFromFile(const char* path) {
   List<uint8> bytes = Platform::LoadFile(path);
   Program* program = LoadSnapshot(bytes);
   bytes.Delete();
-  int result = RunProgram(program);
+  bool success = RunProgram(program);
   delete program;
-  if (result != 0) FATAL1("Failed to run snapshot: %s\n", path);
+  if (!success) FATAL1("Failed to run snapshot: %s\n", path);
 }
 
 static void WaitForDebuggerConnection(int port) {
@@ -100,9 +100,10 @@ FletchProgram FletchLoadSnapshot(unsigned char* snapshot, int length) {
   return reinterpret_cast<FletchProgram>(program);
 }
 
-int FletchRunMain(FletchProgram raw_program) {
+void FletchRunMain(FletchProgram raw_program) {
   fletch::Program* program = reinterpret_cast<fletch::Program*>(raw_program);
-  return fletch::RunProgram(program);
+  bool success = fletch::RunProgram(program);
+  if (!success) FATAL("Failed to run program.\n");
 }
 
 void FletchDeleteProgram(FletchProgram raw_program) {

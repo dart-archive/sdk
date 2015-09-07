@@ -90,18 +90,6 @@ void Program::DeleteProcess(Process* process) {
   delete process;
 }
 
-void Program::DeleteAllProcesses() {
-  ScopedLock locker(process_list_mutex_);
-
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    Process* next = current->process_list_next();
-    delete current;
-    current = next;
-  }
-  process_list_head_ = NULL;
-}
-
 void Program::VisitProcesses(ProcessVisitor* visitor) {
   Process* current = process_list_head_;
   while (current != NULL) {

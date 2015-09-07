@@ -18,11 +18,11 @@
 
 namespace fletch {
 
-static int RunSession(Connection* connection) {
+static bool RunSession(Connection* connection) {
   Session session(connection);
   session.Initialize();
   session.StartMessageProcessingThread();
-  int result = session.ProcessRun();
+  bool result = session.ProcessRun();
   session.JoinMessageProcessingThread();
   return result;
 }
@@ -97,20 +97,17 @@ static int Main(int argc, char** argv) {
     printUsage();
     exit(1);
   }
+  bool success = true;
   bool interactive = true;
-
-  int result = 0;
 
   // Check if we're passed an snapshot file directly.
   if (runSnapshot) {
     List<uint8> bytes = Platform::LoadFile(input);
     if (IsSnapshot(bytes)) {
       FletchProgram program = FletchLoadSnapshot(bytes.data(), bytes.length());
-      result = FletchRunMain(program);
+      FletchRunMain(program);
       FletchDeleteProgram(program);
       interactive = false;
-    } else {
-      FATAL("File is not a snapshot.");
     }
     bytes.Delete();
   }
@@ -120,11 +117,11 @@ static int Main(int argc, char** argv) {
   // compiler process.
   if (interactive) {
     Connection* connection = WaitForCompilerConnection(host, port);
-    result = RunSession(connection);
+    success = RunSession(connection);
   }
 
   FletchTearDown();
-  return result;
+  return success ? 0 : 1;
 }
 
 }  // namespace fletch

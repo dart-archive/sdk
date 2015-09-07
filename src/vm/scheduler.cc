@@ -32,7 +32,6 @@ Scheduler::Scheduler()
       foreign_threads_(0),
       startup_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
-      shutdown_(-1),
       pause_(false),
       current_processes_(new Atomic<Process*>[max_threads_]),
       gc_thread_(NULL) {
@@ -258,7 +257,7 @@ bool Scheduler::EnqueueProcess(Process* process, Port* port) {
   return true;
 }
 
-int Scheduler::Run() {
+bool Scheduler::Run() {
   gc_thread_ = new GCThread();
   gc_thread_->StartThread();
 
@@ -313,8 +312,7 @@ int Scheduler::Run() {
   delete gc_thread_;
   gc_thread_ = NULL;
 
-  if (shutdown_ != -1) return shutdown_;
-  return 0;
+  return true;
 }
 
 void Scheduler::ExitAtTermination(Process* process,
@@ -333,59 +331,18 @@ void Scheduler::ExitAtTermination(Process* process,
 }
 
 void Scheduler::ExitAtUncaughtException(Process* process) {
-  ExitAtUncaughtExceptionInternal(process, false);
+  ASSERT(process->state() == Process::kUncaughtException);
+  Platform::Exit(255);
 }
 
 void Scheduler::ExitAtCompileTimeError(Process* process) {
-  ExitAtCompileTimeErrorInternal(process, false);
+  ASSERT(process->state() == Process::kCompileTimeError);
+  Platform::Exit(254);
 }
 
 void Scheduler::ExitAtBreakpoint(Process* process) {
-  ExitAtBreakpointInternal(process, false);
-}
-
-void Scheduler::ExitWith(Program* program,
-                         int exit_code,
-                         bool from_scheduler_thread) {
-  shutdown_ = exit_code;
-  if (from_scheduler_thread) {
-    ScopedMonitorLock locker(pause_monitor_);
-    sleeping_threads_++;
-    pause_monitor_->NotifyAll();
-  }
-  StopProgram(program);
-  // TODO(ajohnsen): Handle multiple programs.
-  program->program_state()->set_paused_processes_head(NULL);
-  program->DeleteAllProcesses();
-  processes_ = 0;
-  ResumeProgram(program);
-  if (from_scheduler_thread) {
-    ScopedMonitorLock locker(pause_monitor_);
-    sleeping_threads_--;
-    pause_monitor_->NotifyAll();
-  }
-}
-
-void Scheduler::ExitAtUncaughtExceptionInternal(Process* process,
-                                                bool from_scheduler_thread) {
-  ASSERT(process->state() == Process::kUncaughtException);
-  ExitWith(process->program(),
-           kUncaughtExceptionExitCode,
-           from_scheduler_thread);
-}
-
-void Scheduler::ExitAtCompileTimeErrorInternal(Process* process,
-                                               bool from_scheduler_thread) {
-  ASSERT(process->state() == Process::kCompileTimeError);
-  ExitWith(process->program(),
-           kCompileTimeErrorExitCode,
-           from_scheduler_thread);
-}
-
-void Scheduler::ExitAtBreakpointInternal(Process* process,
-                                         bool from_scheduler_thread) {
   ASSERT(process->state() == Process::kBreakPoint);
-  ExitWith(process->program(), kBreakPointExitCode, from_scheduler_thread);
+  Platform::Exit(0);
 }
 
 void Scheduler::RescheduleProcess(Process* process,
@@ -700,7 +657,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->UncaughtException(process)) {
-      ExitAtUncaughtExceptionInternal(process, true);
+      ExitAtUncaughtException(process);
     }
     return NULL;
   }
@@ -711,7 +668,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->CompileTimeError(process)) {
-      ExitAtCompileTimeErrorInternal(process, true);
+      ExitAtCompileTimeError(process);
     }
     return NULL;
   }
