@@ -6,7 +6,11 @@ library fletchc.verbs.servicec_verb;
 
 import 'infrastructure.dart';
 
+import '../driver/exit_codes.dart' show
+    DART_VM_EXITCODE_COMPILE_TIME_ERROR;
+
 import 'package:servicec/compiler.dart' as servicec;
+import 'package:servicec/errors.dart' as errors;
 
 import 'documentation.dart' show
     servicecDocumentation;
@@ -46,9 +50,20 @@ Future<int> compileTask(String fileName) async {
   // TODO(stanm): take directory as argument
   String outputDirectory = "/tmp/servicec-out";
 
-  await servicec.compile(fileName, outputDirectory);
+  List<errors.CompilerError> compilerErrors =
+    await servicec.compile(fileName, outputDirectory);
 
   print("Compiled $fileName to $outputDirectory");
+
+  int length = compilerErrors.length;
+  if (length > 0) {
+    bool plural = length != 1;
+    print("Number of errors: $length");
+    for (errors.CompilerError compilerError in compilerErrors) {
+      print("$compilerError");
+    }
+    return DART_VM_EXITCODE_COMPILE_TIME_ERROR;
+  }
 
   return 0;
 }
