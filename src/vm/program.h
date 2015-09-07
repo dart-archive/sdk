@@ -170,6 +170,7 @@ class Program {
   Process* SpawnProcess();
   Process* ProcessSpawnForMain();
   void DeleteProcess(Process* process);
+  void DeleteAllProcesses();
 
   // This function should only be called once the program has been stopped.
   void VisitProcesses(ProcessVisitor* visitor);

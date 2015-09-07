@@ -618,10 +618,10 @@ void Session::IteratePointers(PointerVisitor* visitor) {
   }
 }
 
-bool Session::ProcessRun() {
+int Session::ProcessRun() {
   bool process_started = false;
   bool has_result = false;
-  bool result = false;
+  int result = 0;
   while (true) {
     MainThreadResumeKind resume_kind;
     main_thread_monitor_->Lock();
@@ -633,10 +633,10 @@ bool Session::ProcessRun() {
     switch (resume_kind) {
       case kError:
         ASSERT(!debugging_);
-        return false;
+        return kUncaughtExceptionExitCode;
       case kSnapshotDone:
         ASSERT(!debugging_);
-        return true;
+        return 0;
       case kProcessRun:
         process_started = true;
 
@@ -658,7 +658,7 @@ bool Session::ProcessRun() {
           program()->DeleteProcess(process_);
         }
         Print::UnregisterPrintInterceptors();
-        if (!process_started) return true;
+        if (!process_started) return 0;
         if (has_result) return result;
         break;
       case kUnknown:
