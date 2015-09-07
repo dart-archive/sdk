@@ -5,7 +5,7 @@
 import 'package:github_sample/src/github_mock.dart';
 
 main() {
-  var mock = new GithubMock.invertedForTesting(8321);
+  var mock = new GithubMock('127.0.0.1', 8321);
   mock.verbose = true;
   mock.run();
 }

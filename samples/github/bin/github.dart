@@ -13,7 +13,7 @@ import 'package:immi_samples/menu.dart';
 import 'package:immi_samples/login_presenter.dart';
 
 main() {
-  var server = new Server.invertedForTesting(8321);
+  var server = new Server('127.0.0.1', 8321);
   var user = server.getUser('dart-lang');
   var repo = user.getRepository('fletch');
 
