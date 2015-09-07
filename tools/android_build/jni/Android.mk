@@ -28,8 +28,8 @@ LOCAL_SRC_FILES := \
 	../../../src/shared/utils.cc \
 	../../../src/vm/android_print_interceptor.cc \
 	../../../src/vm/debug_info.cc \
-	../../../src/vm/event_handler_posix.cc \
 	../../../src/vm/event_handler_linux.cc \
+	../../../src/vm/event_handler_posix.cc \
 	../../../src/vm/ffi.cc \
 	../../../src/vm/ffi_linux.cc \
 	../../../src/vm/ffi_posix.cc \
@@ -57,13 +57,15 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/service_api_impl.cc \
 	../../../src/vm/session.cc \
 	../../../src/vm/snapshot.cc \
+	../../../src/vm/sort.cc \
 	../../../src/vm/stack_walker.cc \
 	../../../src/vm/storebuffer.cc \
 	../../../src/vm/thread_pool.cc \
 	../../../src/vm/thread_posix.cc \
 	../../../src/vm/unicode.cc \
-	../../../src/vm/weak_pointer.cc \
+	../../../src/vm/vector.cc \
 	../../../src/vm/void_hash_table.cc \
+	../../../src/vm/weak_pointer.cc \
 	../../../third_party/double-conversion/src/bignum-dtoa.cc \
 	../../../third_party/double-conversion/src/bignum.cc \
 	../../../third_party/double-conversion/src/cached-powers.cc \
