@@ -118,9 +118,7 @@ abstract class PosixSystem implements System {
   ForeignFunction get _open;
   ForeignFunction get _lseek;
 
-  int socket() {
-    return _retry(() => _socket.icall$3(AF_INET, SOCK_STREAM, 0));
-  }
+  int socket() => _socket.icall$3Retry(AF_INET, SOCK_STREAM, 0);
 
   InternetAddress lookup(String host) {
     ForeignMemory node = new ForeignMemory.fromString(host);
@@ -129,10 +127,8 @@ abstract class PosixSystem implements System {
     // TODO(ajohnsen): Allow IPv6 results.
     hints.ai_family = AF_INET;
     Struct result = new Struct(1);
-    int status = _retry(() => _getaddrinfo.icall$4(node,
-                                                   ForeignPointer.NULL,
-                                                   hints,
-                                                   result));
+    int status = _getaddrinfo.icall$4Retry(
+        node, ForeignPointer.NULL, hints, result);
     AddrInfo start = new AddrInfo.fromAddress(result.getField(0));
     AddrInfo info = start;
     var address;
@@ -156,7 +152,7 @@ abstract class PosixSystem implements System {
       address = new _InternetAddress(bytes);
       break;
     }
-    _freeaddrinfo.icall$1(start);
+    _freeaddrinfo.icall$1Retry(start);
     node.free();
     hints.free();
     result.free();
@@ -181,18 +177,18 @@ abstract class PosixSystem implements System {
     }
     flags |= O_CLOEXEC;
     ForeignMemory cPath = new ForeignMemory.fromString(path);
-    int fd = _retry(() => _open.icall$2(cPath, flags));
+    int fd = _open.icall$2Retry(cPath, flags);
     cPath.free();
     return fd;
   }
 
   int lseek(int fd, int offset, int whence) {
-    return _retry(() => _lseek.Lcall$wLw(fd, offset, whence));
+    return _lseek.Lcall$wLwRetry(fd, offset, whence);
   }
 
   TempFile mkstemp(String path) {
     ForeignMemory cPath = new ForeignMemory.fromString(path + "XXXXXX");
-    int result = _retry(() => _mkstemp.icall$1(cPath));
+    int result = _mkstemp.icall$1Retry(cPath);
     if (result != -1) {
       var bytes = new List(cPath.length - 1);
       cPath.copyBytesToList(bytes, 0, cPath.length - 1, 0);
@@ -204,44 +200,39 @@ abstract class PosixSystem implements System {
 
   int access(String path) {
     ForeignMemory cPath = new ForeignMemory.fromString(path);
-    int result = _retry(() => _access.icall$2(cPath, 0));
+    int result = _access.icall$2Retry(cPath, 0);
     cPath.free();
     return result;
   }
 
   int unlink(String path) {
     ForeignMemory cPath = new ForeignMemory.fromString(path);
-    int result = _retry(() => _unlink.icall$1(cPath));
+    int result = _unlink.icall$1Retry(cPath);
     cPath.free();
     return result;
   }
 
   int bind(int fd, _InternetAddress address, int port) {
     ForeignMemory sockaddr = _createSocketAddress(address, port);
-    int status = _retry(() => _bind.icall$3(fd, sockaddr, sockaddr.length));
+    int status = _bind.icall$3Retry(fd, sockaddr, sockaddr.length);
     sockaddr.free();
     return status;
   }
 
   int listen(int fd) {
-    return _retry(() => _listen.icall$2(fd, 128));
+    return _listen.icall$2Retry(fd, 128);
   }
 
   int setsockopt(int fd, int level, int optname, int value) {
     Struct32 opt = new Struct32(1);
     opt.setField(0, value);
-    int result = _retry(() => _setsockopt.icall$5(fd,
-                                                  level,
-                                                  optname,
-                                                  opt,
-                                                  opt.length));
+    int result = _setsockopt.icall$5Retry(fd, level, optname, opt, opt.length);
     opt.free();
     return result;
   }
 
   int accept(int fd) {
-    return _retry(() => _accept.icall$3(fd, ForeignPointer.NULL,
-                                        ForeignPointer.NULL));
+    return _accept.icall$3Retry(fd, ForeignPointer.NULL, ForeignPointer.NULL);
   }
 
   int port(int fd) {
@@ -249,7 +240,7 @@ abstract class PosixSystem implements System {
     var sockaddr = new ForeignMemory.allocated(LENGTH);
     var addrlen = new ForeignMemory.allocated(4);
     addrlen.setInt32(0, LENGTH);
-    int status = _retry(() => _getsockname.icall$3(fd, sockaddr, addrlen));
+    int status = _getsockname.icall$3Retry(fd, sockaddr, addrlen);
     int port = -1;
     if (status == 0) {
       port = sockaddr.getUint8(2) << 8;
@@ -262,20 +253,20 @@ abstract class PosixSystem implements System {
 
   int connect(int fd, _InternetAddress address, int port) {
     ForeignMemory sockaddr = _createSocketAddress(address, port);
-    int status = _retry(() => _connect.icall$3(fd, sockaddr, sockaddr.length));
+    int status = _connect.icall$3Retry(fd, sockaddr, sockaddr.length);
     sockaddr.free();
     return status;
   }
 
   int setBlocking(int fd, bool blocking) {
-    int flags = _retry(() => _fcntl.icall$3(fd, F_GETFL, 0));
+    int flags = _fcntl.icall$3Retry(fd, F_GETFL, 0);
     if (flags == -1) return -1;
     if (blocking) {
       flags &= ~O_NONBLOCK;
     } else {
       flags |= O_NONBLOCK;
     }
-    return _retry(() => _fcntl.icall$3(fd, F_SETFL, flags));
+    return _fcntl.icall$3Retry(fd, F_SETFL, flags);
   }
 
   int setReuseaddr(int fd) {
@@ -283,19 +274,19 @@ abstract class PosixSystem implements System {
   }
 
   int setCloseOnExec(int fd, bool closeOnExec) {
-    int flags = _retry(() => _fcntl.icall$3(fd, F_GETFD, 0));
+    int flags = _fcntl.icall$3Retry(fd, F_GETFD, 0);
     if (flags == -1) return -1;
     if (closeOnExec) {
       flags |= FD_CLOEXEC;
     } else {
       flags &= ~FD_CLOEXEC;
     }
-    return _retry(() => _fcntl.icall$3(fd, F_SETFD, flags));
+    return _fcntl.icall$3Retry(fd, F_SETFD, flags);
   }
 
   int available(int fd) {
     Struct result = new Struct(1);
-    int status = _retry(() => _ioctl.icall$3(fd, FIONREAD, result));
+    int status = _ioctl.icall$3Retry(fd, FIONREAD, result);
     int available = result.getWord(0);
     result.free();
     if (status == -1) return status;
@@ -305,13 +296,13 @@ abstract class PosixSystem implements System {
   int read(int fd, var buffer, int offset, int length) {
     _rangeCheck(buffer, offset, length);
     var address = buffer.getForeign().address + offset;
-    return _retry(() => _read.icall$3(fd, address, length));
+    return _read.icall$3Retry(fd, address, length);
   }
 
   int write(int fd, var buffer, int offset, int length) {
     _rangeCheck(buffer, offset, length);
     var address = buffer.getForeign().address + offset;
-    return _retry(() => _write.icall$3(fd, address, length));
+    return _write.icall$3Retry(fd, address, length);
   }
 
   void memcpy(var dest,
@@ -321,22 +312,22 @@ abstract class PosixSystem implements System {
               int length) {
     var destAddress = dest.getForeign().address + destOffset;
     var srcAddress = src.getForeign().address + srcOffset;
-    _memcpy.icall$3(destAddress, srcAddress, length);
+    _memcpy.icall$3Retry(destAddress, srcAddress, length);
   }
 
   int shutdown(int fd, int how) {
-    return _retry(() => _shutdown.icall$2(fd, how));
+    return _shutdown.icall$2Retry(fd, how);
   }
 
   int close(int fd) {
-    return _retry(() => _close.icall$1(fd));
+    return _close.icall$1Retry(fd);
   }
 
   void sleep(int milliseconds) {
     Timespec timespec = new Timespec();
     timespec.tv_sec = milliseconds ~/ 1000;
     timespec.tv_nsec = (milliseconds % 1000) * 1000000;
-    int result = _retry(() => _nanosleep.icall$2(timespec, timespec));
+    int result = _nanosleep.icall$2Retry(timespec, timespec);
     timespec.free();
     if (result != 0) throw "Failed to call 'nanosleep': ${errno()}";
   }
@@ -372,13 +363,5 @@ abstract class PosixSystem implements System {
     sockaddr.setUint8(2, port >> 8);
     sockaddr.setUint8(3, port & 0xFF);
     return sockaddr;
-  }
-
-  int _retry(Function f) {
-    int value;
-    while ((value = f()) == -1) {
-      if (Foreign.errno != Errno.EINTR) break;
-    }
-    return value;
   }
 }

@@ -53,6 +53,21 @@ class ForeignFunction extends Foreign {
 
   ForeignFunction.fromAddress(int value) : super._(value);
 
+  /// Helper function for retrying functions that follow the POSIX-convention
+  /// of returning `-1` and setting `errno` to `EINTR`.
+  ///
+  /// The function [f] will be retried as long as it is returning returning
+  /// `-1` and `errno` is `EINTR`. When that is not the case the return value
+  /// will be the return value of `f`.
+  static int retry(Function f) {
+    const EINTR = 4;
+    int value;
+    while ((value = f()) == -1) {
+      if (Foreign.errno != EINTR) break;
+    }
+    return value;
+  }
+
   // Support for calling foreign functions that return
   // integers.
   int icall$0() => _icall$0(_value);
@@ -74,6 +89,22 @@ class ForeignFunction extends Foreign {
                     _convert(a3), _convert(a4), _convert(a5));
   }
 
+  // Support for calling foreign functions that return
+  // integers. The functions with the suffix `Retry` can be used for calling
+  // functions that follow functions that follow the POSIX-convention
+  // of returning `-1` and setting `errno` to `EINTR` when they where
+  // interrupted and should be retried.
+  int icall$0Retry() => retry(() => icall$0());
+  int icall$1Retry(a0) => retry(() => icall$1(a0));
+  int icall$2Retry(a0, a1) => retry(() => icall$2(a0, a1));
+  int icall$3Retry(a0, a1, a2) => retry(() => icall$3(a0, a1, a2));
+  int icall$4Retry(a0, a1, a2, a3) => retry(() => icall$4(a0, a1, a2, a3));
+  int icall$5Retry(a0, a1, a2, a3, a4) {
+    return retry(() => icall$5(a0, a1, a2, a3, a4));
+  }
+  int icall$6Retry(a0, a1, a2, a3, a4, a5) {
+    return retry(() => icall$6(a0, a1, a2, a3, a4, a5));
+  }
   // Support for calling foreign functions that return
   // machine words -- typically pointers -- encapulated in
   // the given foreign object arguments.
@@ -142,11 +173,10 @@ class ForeignFunction extends Foreign {
   //    * a 64 bit int
   //    * a word
   int Lcall$wLw(a0, a1, a2) {
-    return _Lcall$wLw(_value,
-                      _convert(a0),
-                      _convert(a1),
-                      _convert(a2));
+    return _Lcall$wLw(_value, _convert(a0), _convert(a1), _convert(a2));
   }
+
+  int Lcall$wLwRetry(a0, a1, a2) => retry(() => Lcall$wLw(a0, a1, a2));
 
   @fletch.native external static int _icall$0(int address);
   @fletch.native external static int _icall$1(int address, a0);

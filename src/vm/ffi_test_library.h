@@ -35,6 +35,20 @@ EXPORT int ifun5(int a, int b, int c, int d, int e);
 
 EXPORT int ifun6(int a, int b, int c, int d, int e, int f);
 
+EXPORT int ifun0EINTR();
+
+EXPORT int ifun1EINTR(int a);
+
+EXPORT int ifun2EINTR(int a, int b);
+
+EXPORT int ifun3EINTR(int a, int b, int c);
+
+EXPORT int ifun4EINTR(int a, int b, int c, int d);
+
+EXPORT int ifun5EINTR(int a, int b, int c, int d, int e);
+
+EXPORT int ifun6EINTR(int a, int b, int c, int d, int e, int f);
+
 EXPORT void vfun0();
 
 EXPORT void vfun1(int a);

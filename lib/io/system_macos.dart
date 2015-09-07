@@ -86,21 +86,13 @@ class MacOSSystem extends PosixSystem {
     int status = 0;
     if (read) {
       _kEvent.filter = EVFILT_READ;
-      status = _retry(() => _kevent.icall$6(eh,
-                                            _kEvent,
-                                            1,
-                                            ForeignPointer.NULL,
-                                            0,
-                                            ForeignPointer.NULL));
+      status = _kevent.icall$6Retry(
+          eh, _kEvent, 1, ForeignPointer.NULL, 0, ForeignPointer.NULL);
     }
     if (status != -1 && write) {
       _kEvent.filter = EVFILT_WRITE;
-      status = _retry(() => _kevent.icall$6(eh,
-                                            _kEvent,
-                                            1,
-                                            ForeignPointer.NULL,
-                                            0,
-                                            ForeignPointer.NULL));
+      status = _kevent.icall$6Retry(
+          eh, _kEvent, 1, ForeignPointer.NULL, 0, ForeignPointer.NULL);
     }
     return status;
   }

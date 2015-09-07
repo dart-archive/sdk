@@ -143,7 +143,7 @@ class PiMemoryMappedGPIO extends _GPIOBase implements GPIO {
 
     // Open /dev/mem to get to the physical memory.
     var devMem = new ForeignMemory.fromString('/dev/mem');
-    _fd = _open.icall$2(devMem, oRDWR | oSync);
+    _fd = _open.icall$2Retry(devMem, oRDWR | oSync);
     devMem.free();
 
     // From /usr/include/x86_64-linux-gnu/bits/mman-linux.h.
@@ -381,7 +381,7 @@ class SysfsGPIO extends _GPIOBase implements GPIO {
     _checkTracked(pin);
     var f = _tracked[pin];
     // Always seek to the beginning of the file before reading.
-    _lseek.icall$3(f.fd, 0, 0);
+    _lseek.icall$3Retry(f.fd, 0, 0);
     var result = new Uint8List.view(f.read(1))[0] == 0x31;  // '1';
     return result;
   }
@@ -442,7 +442,7 @@ class SysfsGPIO extends _GPIOBase implements GPIO {
     pollfd.setUint32(pollfdFdOffset, _tracked[pin].fd);
     pollfd.setUint16(pollfdEventsOffset, pollpriFlag);
     pollfd.setUint16(pollfdReventsOffset, 0);
-    var rc = _poll.icall$3(pollfd, 1, timeout);
+    var rc = _poll.icall$3Retry(pollfd, 1, timeout);
     pollfd.free();
     if (rc < 0) throw "poll failed";
     return getPin(pin);

@@ -6,6 +6,7 @@
 // There are no tests in this file, but we keep this to have a single place
 // for functionality that we want to test in the FFI implementation.
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -73,6 +74,69 @@ int ifun5(int a, int b, int c, int d, int e) {
 }
 
 int ifun6(int a, int b, int c, int d, int e, int f) {
+  return a + b + c + d + e + f;
+}
+
+int ifun0EINTR() {
+  static int count = 0;
+  if (count++ < 10) {
+    errno = EINTR;
+    return -1;
+  }
+  return 0;
+}
+
+int ifun1EINTR(int a) {
+  static int count = 0;
+  if (count++ < 10) {
+    errno = EINTR;
+    return -1;
+  }
+  return a;
+}
+
+int ifun2EINTR(int a, int b) {
+  static int count = 0;
+  if (count++ < 10) {
+    errno = EINTR;
+    return -1;
+  }
+  return a + b;
+}
+
+int ifun3EINTR(int a, int b, int c) {
+  static int count = 0;
+  if (count++ < 10) {
+    errno = EINTR;
+    return -1;
+  }
+  return a + b + c;
+}
+
+int ifun4EINTR(int a, int b, int c, int d) {
+  static int count = 0;
+  if (count++ < 10) {
+    errno = EINTR;
+    return -1;
+  }
+  return a + b + c + d;
+}
+
+int ifun5EINTR(int a, int b, int c, int d, int e) {
+  static int count = 0;
+  if (count++ < 10) {
+    errno = EINTR;
+    return -1;
+  }
+  return a + b + c + d + e;
+}
+
+int ifun6EINTR(int a, int b, int c, int d, int e, int f) {
+  static int count = 0;
+  if (count++ < 10) {
+    errno = EINTR;
+    return -1;
+  }
   return a + b + c + d + e + f;
 }
 
