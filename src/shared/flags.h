@@ -43,6 +43,8 @@ namespace fletch {
       "Log decoding")                                  \
   BOOLEAN(debug, print_program_statistics, false,      \
       "Print statistics about the program")            \
+  BOOLEAN(debug, print_heap_statistics, false,         \
+      "Print heap statistics before GC")               \
   BOOLEAN(release, verbose, false,                     \
       "Verbose output")                                \
   BOOLEAN(debug, print_flags, false,                   \

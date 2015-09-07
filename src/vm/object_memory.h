@@ -106,6 +106,9 @@ class Space {
     return result + (top() - last()->base());
   }
 
+  // Returns the total size of allocated chunks.
+  int Size();
+
   // Iterate over all objects in this space.
   void IterateObjects(HeapObjectVisitor* visitor);
 
@@ -264,6 +267,10 @@ class ObjectMemory {
   static void Setup();
   static void TearDown();
 
+  static uword Allocated() {
+    return allocated_;
+  }
+
  private:
   // Low-level access to the page table associated with a given
   // address.
@@ -279,6 +286,8 @@ class ObjectMemory {
   static PageDirectory* page_directories_[1 << 13];
 #endif
   static Mutex* mutex_;    // Mutex used for synchronized chunk allocation.
+
+  static Atomic<uword> allocated_;
 
   friend class Space;
 };

@@ -66,6 +66,17 @@ void Space::Flush() {
   }
 }
 
+int Space::Size() {
+  int result = 0;
+  Chunk* chunk = first();
+  while (chunk != NULL) {
+    result += chunk->size();
+    chunk = chunk->next();
+  }
+  ASSERT(Used() <= result);
+  return result;
+}
+
 uword Space::TryAllocate(int size) {
   uword new_top = top_ + size;
   // Make sure there is room for chunk end sentinel.
@@ -76,8 +87,6 @@ uword Space::TryAllocate(int size) {
   }
 
   if (!is_empty()) {
-    // Update the accounting.
-    used_ += top() - last()->base();
     // Make the last chunk consistent with a sentinel.
     Flush();
   }
@@ -94,12 +103,13 @@ uword Space::AllocateInNewChunk(int size) {
 
   Chunk* chunk = ObjectMemory::AllocateChunk(this, chunk_size);
   if (chunk != NULL) {
+    // Link it into the space.
+    Append(chunk);
+
+    // Update limits.
     allocation_budget_ -= chunk->size();
     top_ = chunk->base();
     limit_ = chunk->limit();
-
-    // Link it into the space.
-    Append(chunk);
 
     // Allocate.
     uword result = TryAllocate(size);
@@ -171,6 +181,8 @@ void Space::Append(Chunk* chunk) {
   if (is_empty()) {
     first_ = last_ = chunk;
   } else {
+    // Update the accounting.
+    used_ += top() - last()->base();
     last_->set_next(chunk);
     last_ = chunk;
   }
@@ -289,10 +301,11 @@ PageDirectory ObjectMemory::page_directory_;
 #else
 PageDirectory* ObjectMemory::page_directories_[1 << 13];
 #endif
-
+Atomic<uword> ObjectMemory::allocated_;
 
 void ObjectMemory::Setup() {
   mutex_ = Platform::CreateMutex();
+  allocated_ = 0;
 #ifdef FLETCH32
   page_directory_.Clear();
 #else
@@ -342,7 +355,7 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
 #ifdef FLETCH_TARGET_OS_MBED
   uword allocated = reinterpret_cast<uword>(memory);
   uword base = (allocated / kPageSize + 1) * kPageSize;
-  Chunk* chunk = new Chunk(owner, base , size, allocated);
+  Chunk* chunk = new Chunk(owner, base, size, allocated);
 #else
   uword base = reinterpret_cast<uword>(memory);
   Chunk* chunk = new Chunk(owner, base, size);
@@ -351,6 +364,7 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   chunk->Scramble();
 #endif
   SetSpaceForPages(chunk->base(), chunk->limit(), owner);
+  allocated_ += size;
   return chunk;
 }
 
@@ -359,6 +373,7 @@ void ObjectMemory::FreeChunk(Chunk* chunk) {
   chunk->Scramble();
 #endif
   SetSpaceForPages(chunk->base(), chunk->limit(), NULL);
+  allocated_ -= chunk->size();
   delete chunk;
 }
 

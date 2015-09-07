@@ -350,6 +350,10 @@ Object* Process::NewStack(int length) {
 void Process::CollectMutableGarbage() {
   TakeChildHeaps();
 
+  if (Flags::print_heap_statistics) {
+    PrintMemoryInfo();
+  }
+
   Space* from = heap_.space();
   Space* to = new Space(from->Used() / 10);
   StoreBuffer sb;
@@ -461,6 +465,27 @@ int Process::CollectGarbageAndChainStacks() {
 void Process::ValidateHeaps(ImmutableHeap* immutable_heap) {
   ProcessHeapValidatorVisitor v(program()->heap(), immutable_heap);
   v.VisitProcess(this);
+}
+
+void Process::PrintMemoryInfo() {
+  uword heap_used = heap_.space()->Used();
+  uword immutable_used = immutable_heap_->space()->Used();
+  uword program_used = program()->heap()->space()->Used();
+  uword heap_size = heap_.space()->Size();
+  uword immutable_size = immutable_heap_->space()->Size();
+  uword program_size = program()->heap()->space()->Size();
+  Print::Error(
+      "Pre-Process-GC(%p): \t%lu/%lu, \t%lu/%lu, \t%lu/%lu, \t%lu/%lu/%lu\n",
+      this,
+      heap_used,
+      heap_size,
+      immutable_used,
+      immutable_size,
+      program_used,
+      program_size,
+      heap_used + immutable_used + program_used,
+      heap_size + immutable_size + program_size,
+      ObjectMemory::Allocated());
 }
 
 static void IteratePortQueuePointers(PortQueue* queue,
