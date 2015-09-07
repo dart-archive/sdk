@@ -7,23 +7,22 @@
 
 #ifdef FLETCH_ENABLE_LIVE_CODING
 
-#include <vector>
-
+#include "src/shared/assert.h"
 #include "src/shared/globals.h"
 #include "src/shared/utils.h"
 
 #include "src/vm/hash_set.h"
 #include "src/vm/object.h"
+#include "src/vm/vector.h"
 
 namespace fletch {
 
-typedef std::vector<Class*> ClassVector;
-typedef std::vector<Function*> FunctionVector;
+typedef Vector<Class*> ClassVector;
+typedef Vector<Function*> FunctionVector;
 
 class Range {
  public:
-  typedef std::vector<Range> List;
-  typedef List::iterator ListIterator;
+  typedef Vector<Range> List;
 
   Range(int begin, int end)
       : begin_(begin), end_(end) {
@@ -141,8 +140,8 @@ class SelectorRow {
       ASSERT(classes_[i] != clazz);
     }
 #endif
-    classes_.push_back(clazz);
-    methods_.push_back(method);
+    classes_.PushBack(clazz);
+    methods_.PushBack(method);
     variants_++;
   }
 
@@ -154,14 +153,15 @@ class SelectorRow {
     return a.begin() < b.begin();
   }
 
-  static bool Compare(SelectorRow* a, SelectorRow* b) {
-    int a_size = a->ComputeTableSize();
-    int b_size = b->ComputeTableSize();
+  static bool Compare(SelectorRow* const* a, SelectorRow* const* b) {
+    int a_size = (*a)->ComputeTableSize();
+    int b_size = (*b)->ComputeTableSize();
+
     // Sort by decreasing sizes (first) and decreasing begin index.
     // According to the litterature, this leads to fewer holes and
     // faster row offset computation.
     return (a_size == b_size)
-        ? a->begin() > b->begin()
+        ? (*a)->begin() > (*b)->begin()
         : a_size > b_size;
   }
 
@@ -191,7 +191,7 @@ class RowFitter {
  public:
   RowFitter() : single_range_start_index_(0), limit_(0) {
     // TODO(ajohnsen): Let the last range be implicit?
-    free_slots_.push_back(Range(0, INT_MAX));
+    free_slots_.PushBack(Range(0, INT_MAX));
   }
 
   int limit() const { return limit_; }

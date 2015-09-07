@@ -6,9 +6,6 @@
 
 #include "src/vm/program_folder.h"
 
-#include <algorithm>
-#include <vector>
-
 #include "src/shared/bytecodes.h"
 #include "src/shared/flags.h"
 #include "src/shared/names.h"
@@ -18,6 +15,7 @@
 #include "src/vm/heap.h"
 #include "src/vm/program.h"
 #include "src/vm/selector_row.h"
+#include "src/vm/vector.h"
 
 namespace fletch {
 
@@ -76,7 +74,7 @@ class ProgramTableRewriter {
     SelectorRowMap::ConstIterator end = selector_rows_.End();
 
     // Compute the sizes of the dispatch tables.
-    std::vector<SelectorRow*> table_rows;
+    Vector<SelectorRow*> table_rows;
     int linear_size = 0;
     for (it = selector_rows_.Begin(); it != end; ++it) {
       SelectorRow* row = it->second;
@@ -84,14 +82,14 @@ class ProgramTableRewriter {
       if (kind == SelectorRow::LINEAR) {
         linear_size = row->SetLinearOffset(linear_size);
       } else {
-        table_rows.push_back(row);
+        table_rows.PushBack(row);
       }
     }
     linear_size_ = linear_size;
 
     // Sort the table rows according to size.
     if (table_rows.size() == 0) return;
-    std::sort(table_rows.begin(), table_rows.end(), SelectorRow::Compare);
+    table_rows.Sort(SelectorRow::Compare);
 
     // We add a fake header entry at the start of the vtable to deal
     // with noSuchMethod.
@@ -179,7 +177,7 @@ class ProgramTableRewriter {
     Class* clazz = Class::cast(Function::ConstantForBytecode(bcp));
     unsigned index = AddAndRewrite(&class_map_, clazz, new_bcp);
     if (index >= class_vector_.size()) {
-      class_vector_.push_back(clazz);
+      class_vector_.PushBack(clazz);
       ASSERT(class_vector_[index] == clazz);
     }
   }

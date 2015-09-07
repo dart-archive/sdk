@@ -6,8 +6,6 @@
 
 #include "src/vm/selector_row.h"
 
-#include <algorithm>
-
 #include "src/shared/bytecodes.h"
 #include "src/shared/names.h"
 #include "src/shared/selectors.h"
@@ -48,34 +46,34 @@ SelectorRow::Kind SelectorRow::Finalize() {
 
   // TODO(ajohnsen): Waste to double sort. Consider single iteration to find
   // largest, swap with begin, and then begin-sort.
-  std::sort(ranges_.begin(), ranges_.end(), RangeSizeCompare);
-  std::sort(++ranges_.begin(), ranges_.end(), RangeBeginCompare);
+  ranges_.Sort(RangeSizeCompare);
+  ranges_.Sort(RangeBeginCompare, 1, ranges_.size() - 1);
 
   return TABLE;
 }
 
 void SelectorRow::AddToRanges(Range range) {
-  auto it = ranges_.begin();
-  while (it != ranges_.end()) {
-    if (!it->Overlap(range)) {
-      it++;
-    } else if (it->Contains(range)) {
+  size_t i = 0;
+  while (i != ranges_.size()) {
+    if (!ranges_[i].Overlap(range)) {
+      i++;
+    } else if (ranges_[i].Contains(range)) {
       // Already covered.
       return;
     } else {
       // Expand range, remove current and continue with updated range. This
       // handles the case where two ranges may come immediately after each
       // other.
-      if (it->begin() < range.begin()) {
-        range.set_begin(it->begin());
+      if (ranges_[i].begin() < range.begin()) {
+        range.set_begin(ranges_[i].begin());
       }
-      if (range.end() < it->end()) {
-        range.set_end(it->end());
+      if (range.end() < ranges_[i].end()) {
+        range.set_end(ranges_[i].end());
       }
-      it = ranges_.erase(it);
+      ranges_.Remove(i);
     }
   }
-  ranges_.push_back(range);
+  ranges_.PushBack(range);
 }
 
 void SelectorRow::FillTable(Program* program, Array* table) {
@@ -156,7 +154,7 @@ int RowFitter::FitRowWithSingleRange(SelectorRow* row) {
   ASSERT(row->kind() == SelectorRow::TABLE);
   ASSERT(row->ranges().size() == 1);
 
-  Range range = row->ranges().front();
+  Range range = row->ranges().Front();
 
   size_t index = single_range_start_index_;
 
@@ -201,11 +199,10 @@ int RowFitter::FindOffset(const Range::List& ranges,
                           int min_row_index,
                           size_t* result_slot_index) {
   ASSERT(single_range_start_index_ == 0);
-  const Range largest_range = ranges.front();
+  const Range largest_range = ranges.Front();
 
   size_t index = 0;
   size_t length = free_slots_.size() - 1;
-
   int min_start = 0;
 
   while (index < length) {
@@ -329,8 +326,8 @@ void RowFitter::UpdateFreeSlots(int offset,
     slot_index = FitInFreeSlot(range, slot_index);
   }
 
-  for (auto i : free_slots_) {
-    ASSERT(i.begin() < i.end());
+  for (size_t i = 0; i < free_slots_.size(); i++) {
+    ASSERT(free_slots_[i].begin() < free_slots_[i].end());
   }
 }
 
@@ -339,8 +336,7 @@ size_t RowFitter::FitInFreeSlot(const Range range, size_t slot_index) {
   ASSERT(slot.Contains(range));
   if (slot.begin() < range.begin()) {
     if (slot.end() > range.end()) {
-      Range::ListIterator it = free_slots_.begin() + slot_index;
-      free_slots_.insert(it, Range(slot.begin(), range.begin()));
+      free_slots_.Insert(slot_index, Range(slot.begin(), range.begin()));
       slot_index++;
       free_slots_[slot_index].set_begin(range.end());
     } else {
@@ -349,8 +345,7 @@ size_t RowFitter::FitInFreeSlot(const Range range, size_t slot_index) {
     }
   } else if (slot.end() <= range.end()) {
     ASSERT(slot.IsSame(range));
-    Range::ListIterator it = free_slots_.begin() + slot_index;
-    free_slots_.erase(it);
+    free_slots_.Remove(slot_index);
   } else {
     slot.set_begin(range.end());
   }
