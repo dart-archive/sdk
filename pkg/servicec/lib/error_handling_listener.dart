@@ -82,6 +82,13 @@ class ErrorHandlingListener extends Listener {
     : nodeStack = <Node>[],
       super();
 
+  /// The [Node] representing the parsed IDL file.
+  Node get parsedUnitNode {
+    assert(nodeStack.length == 1);
+    assert(topNode() is CompilationUnitNode);
+    return popNode();
+  }
+
   // Stack interface.
   void pushNode(Node node) {
     nodeStack.add(node);

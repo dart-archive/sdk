@@ -25,6 +25,9 @@ import 'listener.dart' show
     DebugListener,
     Listener;
 
+import 'validator.dart' show
+    validate;
+
 import 'error_handling_listener.dart' show
     ErrorHandlingListener;
 
@@ -53,9 +56,14 @@ Future<List<CompilerError>> compileInput(
   Scanner scanner = new Scanner(input);
   Token tokens = scanner.tokenize();
 
-  Listener listener = new ErrorHandlingListener();
+  ErrorHandlingListener listener = new ErrorHandlingListener();
   Parser parser = new Parser(new DebugListener(listener));
-  Token unit = parser.parseUnit(tokens);
+  parser.parseUnit(tokens);
+
+  List<CompilerError> errors = listener.errors;
+  if (errors.isEmpty) {
+    errors = validate(listener.parsedUnitNode);
+  }
 
   // TODO(stanm): validate
 
@@ -65,7 +73,7 @@ Future<List<CompilerError>> compileInput(
 
   // TODO(stanm): write files
 
-  return listener.errors;
+  return errors;
 }
 
 void createDirectories(String outputDirectory, Target target) {

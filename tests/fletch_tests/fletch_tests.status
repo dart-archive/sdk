@@ -24,7 +24,6 @@ incremental/call_named_arguments_2: Fail
 incremental/multiple_libraries: Fail
 
 # Functionality not implemented yet
-servicec/empty_input: Fail
 servicec/unmatched_curly_3: Fail
 servicec/unmatched_curly_4: Fail
 servicec/unmatched_curly_5: Fail
