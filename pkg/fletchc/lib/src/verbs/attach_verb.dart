@@ -7,17 +7,13 @@ library fletchc.verbs.attach_verb;
 import 'infrastructure.dart';
 
 import 'dart:io' show
-    InternetAddress,
-    Socket,
-    SocketException;
-
-import '../driver/driver_commands.dart' show
-    handleSocketErrors;
-
-import '../../commands.dart' as commands_lib;
+    InternetAddress;
 
 import 'documentation.dart' show
     attachDocumentation;
+
+import '../driver/developer.dart' show
+    attachToVm;
 
 const Verb attachVerb = const Verb(
     attach, attachDocumentation, requiresSession: true,
@@ -67,39 +63,6 @@ class AttachTask extends SharedTask {
 }
 
 Future<int> attachTask(String host, int port) async {
-  Socket socket = await Socket.connect(host, port).catchError(
-      (SocketException error) {
-        String message = error.message;
-        if (error.osError != null) {
-          message = error.osError.message;
-        }
-        throwFatalError(
-            DiagnosticKind.socketConnectError,
-            address: '$host:$port', message: message);
-      }, test: (e) => e is SocketException);
-  String remotePort = "?";
-  try {
-    remotePort = "${socket.remotePort}";
-  } catch (_) {
-    // Ignored, socket.remotePort may fail if the socket was closed on the
-    // other side.
-  }
-
-  SessionState sessionState = SessionState.current;
-
-  Session session =
-      new Session(handleSocketErrors(socket, "vmSocket"),
-                  sessionState.compiler,
-                  sessionState.stdoutSink,
-                  sessionState.stderrSink,
-                  null);
-
-  // Enable debugging as a form of handshake.
-  await session.runCommand(const commands_lib.Debugging());
-
-  print("Connected to Fletch VM on TCP socket ${socket.port} -> $remotePort");
-
-  sessionState.session = session;
-
+  await attachToVm(host, port, SessionState.current);
   return 0;
 }

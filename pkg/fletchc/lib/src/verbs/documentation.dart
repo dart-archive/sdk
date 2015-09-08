@@ -107,6 +107,11 @@ const String xRunDocumentation = """
    x-run     Run the compiled code on the Fletch VM
 """;
 
+const String runDocumentation = """
+   run [file FILE]
+             Run FILE on the Fletch VM. Compile FILE if neeed.
+""";
+
 const String endDocumentation = """
    x-end session NAME
              End the named session

@@ -10,6 +10,9 @@ import 'infrastructure.dart' show
     TargetKind,
     VerbContext;
 
+import 'run_verb.dart' show
+    runVerb;
+
 import 'debug_verb.dart' show
     debugVerb;
 
@@ -90,20 +93,21 @@ class Verb {
 /// used to print an error message.
 const Map<String, Verb> commonVerbs = const <String, Verb>{
   "help": helpVerb,
-  "show": showVerb
+  "run": runVerb,
 };
 
 /// Uncommon verbs aren't displayed in the normal help screen.
 ///
 /// These verbs are displayed when running `fletch help all`.
 const Map<String, Verb> uncommonVerbs = const <String, Verb>{
-  "compile-and-run": compileAndRunVerb,
-  "debug": debugVerb,
-  "shutdown": shutdownVerb,
-  "create": createVerb,
-  "compile": compileVerb,
   "attach": attachVerb,
-  "x-run": xRunVerb,
+  "compile": compileVerb,
+  "compile-and-run": compileAndRunVerb,
+  "create": createVerb,
+  "debug": debugVerb,
+  "show": showVerb,
+  "shutdown": shutdownVerb,
   "x-end": endVerb,
+  "x-run": xRunVerb,
   "x-servicec": servicecVerb,
 };

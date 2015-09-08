@@ -45,6 +45,12 @@ import '../../incremental/fletchc_incremental.dart' show
 export '../../incremental/fletchc_incremental.dart' show
     IncrementalCompiler;
 
+import '../../fletch_vm.dart' show
+    FletchVm;
+
+export '../../fletch_vm.dart' show
+    FletchVm;
+
 final Map<String, UserSession> internalSessions = <String, UserSession>{};
 
 String internalCurrentSession = "default";
@@ -145,6 +151,8 @@ class SessionState {
   Uri script;
 
   Session session;
+
+  FletchVm fletchVm;
 
   SessionState(this.name, this.compilerHelper, this.compiler);
 
