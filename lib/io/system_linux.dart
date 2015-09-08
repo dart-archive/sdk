@@ -39,7 +39,7 @@ class EpollEvent extends ForeignMemory {
   // epoll_event is packed on ia32/x64, but not on arm.
   static int eventSize = Foreign.architecture == Foreign.ARM ? 8 : 4;
 
-  EpollEvent() : super.allocatedFinalize(eventSize + 8);
+  EpollEvent() : super.allocatedFinalized(eventSize + 8);
 
   int get events => getInt32(0);
   void set events(int value) {

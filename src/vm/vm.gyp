@@ -65,6 +65,8 @@
         'lookup_cache.cc',
         'lookup_cache.h',
         'native_interpreter.h',
+        'native_process.cc',
+        'native_process_disabled.cc',
         'natives.cc',
         'natives_posix.cc',
         'natives_lk.cc',

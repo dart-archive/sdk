@@ -7,6 +7,7 @@
 // code defined outside the VM.
 library dart.fletch.ffi;
 
+import 'dart:convert' show UTF8;
 import 'dart:_fletch_system' as fletch;
 import 'dart:fletch';
 
@@ -17,16 +18,17 @@ class Foreign {
 
   static const int UNKNOWN = 0;
 
-  static const int LINUX   = 1;
-  static const int MACOS   = 2;
+  static const int LINUX = 1;
+  static const int MACOS = 2;
   static const int ANDROID = 3;
 
-  static const int IA32    = 1;
-  static const int X64     = 2;
-  static const int ARM     = 3;
+  static const int IA32 = 1;
+  static const int X64 = 2;
+  static const int ARM = 3;
 
   // TODO(kasperl): Not quite sure where this fits in.
   static final int bitsPerMachineWord = _bitsPerMachineWord();
+  static final int machineWordSize = bitsPerMachineWord ~/ 8;
   static final int platform = _platform();
   static final int architecture = _architecture();
 
@@ -45,7 +47,6 @@ class Foreign {
   @fletch.native external static int _platform();
   @fletch.native external static int _architecture();
   @fletch.native external static int _convertPort(Port port);
-
 }
 
 class ForeignFunction extends Foreign {
@@ -76,17 +77,20 @@ class ForeignFunction extends Foreign {
   int icall$3(a0, a1, a2) {
     return _icall$3(_value, _convert(a0), _convert(a1), _convert(a2));
   }
+
   int icall$4(a0, a1, a2, a3) {
-    return _icall$4(_value, _convert(a0), _convert(a1), _convert(a2),
-                    _convert(a3));
+    return _icall$4(
+        _value, _convert(a0), _convert(a1), _convert(a2), _convert(a3));
   }
+
   int icall$5(a0, a1, a2, a3, a4) {
     return _icall$5(_value, _convert(a0), _convert(a1), _convert(a2),
-                    _convert(a3), _convert(a4));
+        _convert(a3), _convert(a4));
   }
+
   int icall$6(a0, a1, a2, a3, a4, a5) {
     return _icall$6(_value, _convert(a0), _convert(a1), _convert(a2),
-                    _convert(a3), _convert(a4), _convert(a5));
+        _convert(a3), _convert(a4), _convert(a5));
   }
 
   // Support for calling foreign functions that return
@@ -112,31 +116,37 @@ class ForeignFunction extends Foreign {
     p._value = _pcall$0(_value);
     return p;
   }
+
   ForeignPointer pcall$1(ForeignPointer p, a0) {
     p._value = _pcall$1(_value, a0);
     return p;
   }
+
   ForeignPointer pcall$2(ForeignPointer p, a0, a1) {
     p._value = _pcall$2(_value, _convert(a0), _convert(a1));
     return p;
   }
+
   ForeignPointer pcall$3(ForeignPointer p, a0, a1, a2) {
     p._value = _pcall$3(_value, _convert(a0), _convert(a1), _convert(a2));
     return p;
   }
+
   ForeignPointer pcall$4(ForeignPointer p, a0, a1, a2, a3) {
-    p._value = _pcall$4(_value, _convert(a0), _convert(a1), _convert(a2),
-                        _convert(a3));
+    p._value = _pcall$4(
+        _value, _convert(a0), _convert(a1), _convert(a2), _convert(a3));
     return p;
   }
+
   ForeignPointer pcall$5(ForeignPointer p, a0, a1, a2, a3, a4) {
     p._value = _pcall$5(_value, _convert(a0), _convert(a1), _convert(a2),
-                        _convert(a3), _convert(a4));
+        _convert(a3), _convert(a4));
     return p;
   }
+
   ForeignPointer pcall$6(ForeignPointer p, a0, a1, a2, a3, a4, a5) {
     p._value = _pcall$6(_value, _convert(a0), _convert(a1), _convert(a2),
-                        _convert(a3), _convert(a4), _convert(a5));
+        _convert(a3), _convert(a4), _convert(a5));
     return p;
   }
 
@@ -144,25 +154,31 @@ class ForeignFunction extends Foreign {
   void vcall$0() {
     _vcall$0(_value);
   }
+
   void vcall$1(a0) {
     _vcall$1(_value, _convert(a0));
   }
+
   void vcall$2(a0, a1) {
     _vcall$2(_value, _convert(a0), _convert(a1));
   }
+
   void vcall$3(a0, a1, a2) {
     _vcall$3(_value, _convert(a0), _convert(a1), _convert(a2));
   }
+
   void vcall$4(a0, a1, a2, a3) {
-    _vcall$4(_value, _convert(a0), _convert(a1), _convert(a2),_convert(a3));
+    _vcall$4(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3));
   }
+
   void vcall$5(a0, a1, a2, a3, a4) {
     _vcall$5(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
-             _convert(a4));
+        _convert(a4));
   }
+
   void vcall$6(a0, a1, a2, a3, a4, a5) {
     _vcall$6(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
-             _convert(a4), _convert(a5));
+        _convert(a4), _convert(a5));
   }
 
   // TODO(ricow): this is insanely specific and only used for rseek.
@@ -214,7 +230,6 @@ class ForeignPointer extends Foreign {
   ForeignPointer() : super._(0);
 
   static final ForeignPointer NULL = new ForeignPointer();
-
 }
 
 class ForeignLibrary extends ForeignPointer {
@@ -264,84 +279,78 @@ class ForeignMemory extends ForeignPointer {
 
   int get length => _length;
 
-  ForeignMemory.fromAddress(int address, this._length) :
-      _markedForFinalization = false,
-      super.fromAddress(address);
+  ForeignMemory.fromAddress(int address, this._length)
+      : _markedForFinalization = false,
+        super.fromAddress(address);
 
-  ForeignMemory.fromForeignPointer(ForeignPointer pointer, this._length) :
-      _markedForFinalization = false,
-      super.fromAddress(pointer.address);
+  ForeignMemory.fromForeignPointer(ForeignPointer pointer, this._length)
+      : _markedForFinalization = false,
+        super.fromAddress(pointer.address);
 
   ForeignMemory.allocated(this._length) {
     _value = _allocate(_length);
     _markedForFinalization = false;
   }
 
-  ForeignMemory.allocatedFinalize(this._length) {
+  ForeignMemory.allocatedFinalized(this._length) {
     _value = _allocate(_length);
     _markForFinalization();
     _markedForFinalization = true;
   }
 
-  factory ForeignMemory.fromString(String str) {
-    var memory = new ForeignMemory.allocated(str.length + 1);
-    for (int i = 0; i < str.length; i++) {
-      memory.setUint8(i, str.codeUnitAt(i));
+  // We utf8 encode the string first to support non-ascii characters.
+  // NOTE: This is not the correct string encoding for Windows.
+  factory ForeignMemory.fromStringAsUTF8(String str) {
+    List<int> encodedString = UTF8.encode(str);
+    var memory = new ForeignMemory.allocated(encodedString.length + 1);
+    for (int i = 0; i < encodedString.length; i++) {
+      memory.setUint8(i, encodedString[i]);
     }
+    memory.setUint8(encodedString.length, 0); // '\0' terminate string
     return memory;
   }
 
-  void setFinalize() {
+  void setFinalized() {
     if (_markedForFinalization) return;
     _markForFinalization();
     _markedForFinalization = true;
   }
 
-  int getInt8(int offset)
-      => _getInt8(_computeAddress(offset, 1));
-  int getInt16(int offset)
-      => _getInt16(_computeAddress(offset, 2));
-  int getInt32(int offset)
-      => _getInt32(_computeAddress(offset, 4));
-  int getInt64(int offset)
-      => _getInt64(_computeAddress(offset, 8));
+  int getInt8(int offset) => _getInt8(_computeAddress(offset, 1));
+  int getInt16(int offset) => _getInt16(_computeAddress(offset, 2));
+  int getInt32(int offset) => _getInt32(_computeAddress(offset, 4));
+  int getInt64(int offset) => _getInt64(_computeAddress(offset, 8));
 
-  int setInt8(int offset, int value)
-      => _setInt8(_computeAddress(offset, 1), value);
-  int setInt16(int offset, int value)
-      => _setInt16(_computeAddress(offset, 2), value);
-  int setInt32(int offset, int value)
-      => _setInt32(_computeAddress(offset, 4), value);
-  int setInt64(int offset, int value)
-      => _setInt64(_computeAddress(offset, 8), value);
+  int setInt8(int offset, int value) =>
+      _setInt8(_computeAddress(offset, 1), value);
+  int setInt16(int offset, int value) =>
+      _setInt16(_computeAddress(offset, 2), value);
+  int setInt32(int offset, int value) =>
+      _setInt32(_computeAddress(offset, 4), value);
+  int setInt64(int offset, int value) =>
+      _setInt64(_computeAddress(offset, 8), value);
 
-  int getUint8(int offset)
-      => _getUint8(_computeAddress(offset, 1));
-  int getUint16(int offset)
-      => _getUint16(_computeAddress(offset, 2));
-  int getUint32(int offset)
-      => _getUint32(_computeAddress(offset, 4));
-  int getUint64(int offset)
-      => _getUint64(_computeAddress(offset, 8));
+  int getUint8(int offset) => _getUint8(_computeAddress(offset, 1));
+  int getUint16(int offset) => _getUint16(_computeAddress(offset, 2));
+  int getUint32(int offset) => _getUint32(_computeAddress(offset, 4));
+  int getUint64(int offset) => _getUint64(_computeAddress(offset, 8));
 
-  int setUint8(int offset, int value)
-      => _setUint8(_computeAddress(offset, 1), value);
-  int setUint16(int offset, int value)
-      => _setUint16(_computeAddress(offset, 2), value);
-  int setUint32(int offset, int value)
-      => _setUint32(_computeAddress(offset, 4), value);
-  int setUint64(int offset, int value)
-      => _setUint64(_computeAddress(offset, 8), value);
+  int setUint8(int offset, int value) =>
+      _setUint8(_computeAddress(offset, 1), value);
+  int setUint16(int offset, int value) =>
+      _setUint16(_computeAddress(offset, 2), value);
+  int setUint32(int offset, int value) =>
+      _setUint32(_computeAddress(offset, 4), value);
+  int setUint64(int offset, int value) =>
+      _setUint64(_computeAddress(offset, 8), value);
 
-  double getFloat32(int offset)
-      => _getFloat32(_computeAddress(offset, 4));
-  double getFloat64(int offset)
-      => _getFloat64(_computeAddress(offset, 8));
+  double getFloat32(int offset) => _getFloat32(_computeAddress(offset, 4));
+  double getFloat64(int offset) => _getFloat64(_computeAddress(offset, 8));
 
-  double setFloat32(int offset, double value)
-      => _setFloat32(_computeAddress(offset, 4), value);
-  double setFloat64(int offset, double value)
-      => _setFloat64(_computeAddress(offset, 8), value);
+  double setFloat32(int offset, double value) =>
+      _setFloat32(_computeAddress(offset, 4), value);
+  double setFloat64(int offset, double value) =>
+      _setFloat64(_computeAddress(offset, 8), value);
 
   // Helper for checking bounds and computing derived
   // addresses for memory address functionality.
@@ -382,12 +391,15 @@ class ForeignMemory extends ForeignPointer {
   @fletch.native static int _setInt8(int address, int value) {
     throw new ArgumentError();
   }
+
   @fletch.native static int _setInt16(int address, int value) {
     throw new ArgumentError();
   }
+
   @fletch.native static int _setInt32(int address, int value) {
     throw new ArgumentError();
   }
+
   @fletch.native static int _setInt64(int address, int value) {
     throw new ArgumentError();
   }
@@ -400,12 +412,15 @@ class ForeignMemory extends ForeignPointer {
   @fletch.native static int _setUint8(int address, int value) {
     throw new ArgumentError();
   }
+
   @fletch.native static int _setUint16(int address, int value) {
     throw new ArgumentError();
   }
+
   @fletch.native static int _setUint32(int address, int value) {
     throw new ArgumentError();
   }
+
   @fletch.native static int _setUint64(int address, int value) {
     throw new ArgumentError();
   }
@@ -416,7 +431,79 @@ class ForeignMemory extends ForeignPointer {
   @fletch.native static double _setFloat32(int address, double value) {
     throw new ArgumentError();
   }
+
   @fletch.native static double _setFloat64(int address, double value) {
     throw new ArgumentError();
   }
+}
+
+class Struct extends ForeignMemory {
+  final wordSize;
+  int get numFields => length ~/ wordSize;
+
+  Struct(int fields)
+      : this.wordSize = Foreign.machineWordSize,
+        super.allocated(fields * Foreign.machineWordSize);
+
+  Struct.finalized(int fields)
+      : this.wordSize = Foreign.machineWordSize,
+        super.allocatedFinalized(fields * Foreign.machineWordSize);
+
+  Struct.fromAddress(int address, int fields)
+      : this.wordSize = Foreign.machineWordSize,
+        super.fromAddress(address, fields * Foreign.machineWordSize);
+
+  Struct.withWordSize(int fields, wordSize)
+      : this.wordSize = wordSize,
+        super.allocated(fields * wordSize);
+
+  Struct.withWordSizeFinalized(int fields, wordSize)
+      : this.wordSize = wordSize,
+        super.allocatedFinalized(fields * wordSize);
+
+  Struct.fromAddressWithWordSize(int address, int fields, wordSize)
+      : this.wordSize = wordSize,
+        super.fromAddress(address, fields * wordSize);
+
+  int getWord(int byteOffset) {
+    switch (wordSize) {
+      case 4:
+        return getInt32(byteOffset);
+      case 8:
+        return getInt64(byteOffset);
+      default:
+        throw "Unsupported machine word size.";
+    }
+  }
+
+  int setWord(int byteOffset, int value) {
+    switch (wordSize) {
+      case 4:
+        return setInt32(byteOffset, value);
+      case 8:
+        return setInt64(byteOffset, value);
+      default:
+        throw "Unsupported machine word size.";
+    }
+  }
+
+  int getField(int fieldOffset) => getWord(fieldOffset * wordSize);
+
+  void setField(int fieldOffset, int value) {
+    setWord(fieldOffset * wordSize, value);
+  }
+}
+
+class Struct32 extends Struct {
+  Struct32(int fields) : super.withWordSize(fields, 4);
+  Struct32.finalized(int fields) : super.withWordSizeFinalized(fields, 4);
+  Struct32.fromAddress(int address, int fields)
+      : super.fromAddressWithWordSize(address, fields, 4);
+}
+
+class Struct64 extends Struct {
+  Struct64(int fields) : super.withWordSize(fields, 8);
+  Struct64.finalized(int fields) : super.withWordSizeFinalized(fields, 8);
+  Struct64.fromAddress(int address, int fields)
+      : super.fromAddressWithWordSize(address, fields, 8);
 }

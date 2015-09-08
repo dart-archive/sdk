@@ -62,6 +62,7 @@ final TEST_SUITE_DIRECTORIES = [
     new Path('tests/isolate'),
     new Path('tests/unsorted'),
     new Path('tests/lib'),
+    new Path('tests/os'),
     new Path('samples'),
 ];
 

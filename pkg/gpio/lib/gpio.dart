@@ -142,7 +142,7 @@ class PiMemoryMappedGPIO extends _GPIOBase implements GPIO {
     const int oSync = 0x101000;  // O_SYNC
 
     // Open /dev/mem to get to the physical memory.
-    var devMem = new ForeignMemory.fromString('/dev/mem');
+    var devMem = new ForeignMemory.fromStringAsUTF8('/dev/mem');
     _fd = _open.icall$2Retry(devMem, oRDWR | oSync);
     devMem.free();
 

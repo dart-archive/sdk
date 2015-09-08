@@ -16,6 +16,7 @@ main() {
   testFailingLibraryLookups();
   testDefaultLibraryLookups();
   testPCallAndMemory();
+  testStruct();
 }
 
 checkOutOfBoundsThrows(function) {
@@ -375,7 +376,7 @@ testDefaultLibraryLookups() {
 testAllocate(bool finalized) {
   int length = 10;
   ForeignMemory memory = finalized
-    ? new ForeignMemory.allocatedFinalize(length)
+    ? new ForeignMemory.allocatedFinalized(length)
     : new ForeignMemory.allocated(length);
   Expect.isTrue(memory.address != 0);
   Expect.throws(() => memory.getUint8(-100), isRangeError);
@@ -427,4 +428,106 @@ testAllocate(bool finalized) {
     memory.free();
     memory.free();  // Free'ing multiple times is okay.
   }
+}
+
+testStruct() {
+  // Please see the expected values in the ffi_test_library.c file (obvious
+  // from the code below, but that is where they are defined).
+  // For all memory returning functions we expect there to be 4 values of the
+  // type we are working on.
+  var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
+  ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
+  ForeignPointer p = new ForeignPointer();
+  var memuint32 = fl.lookup('memuint32');
+  var foreignPointer = memuint32.pcall$0(p);
+  var struct32 = new Struct32.fromAddress(foreignPointer.address, 4);
+  Expect.equals(struct32.address, foreignPointer.address);
+  Expect.equals(0, struct32.getField(0));
+  Expect.equals(0, struct32.getWord(0));
+  Expect.equals(1, struct32.getField(1));
+  Expect.equals(1, struct32.getWord(4));
+  Expect.equals(65536, struct32.getField(2));
+  Expect.equals(65536, struct32.getWord(8));
+  Expect.equals(-1, struct32.getField(3));
+  Expect.equals(-1, struct32.getWord(12));
+  struct32.setField(2, 1);
+  Expect.equals(0, struct32.getField(0));
+  Expect.equals(1, struct32.getField(1));
+  Expect.equals(1, struct32.getField(2));
+  Expect.equals(-1, struct32.getField(3));
+  checkOutOfBoundsThrows(() => struct32.getField(4));
+  checkOutOfBoundsThrows(() => struct32.getWord(13));
+  // Reset field 2 to original value to use when testing with Struct
+  // below.
+  struct32.setField(2, 65536);
+
+  var memint64 = fl.lookup('memint64');
+  foreignPointer = memint64.pcall$0(p);
+  var struct64 = new Struct64.fromAddress(foreignPointer.address, 4);
+  Expect.equals(struct64.address, foreignPointer.address);
+  Expect.equals(0, struct64.getField(0));
+  Expect.equals(0, struct64.getWord(0));
+  Expect.equals(-1, struct64.getField(1));
+  Expect.equals(-1, struct64.getWord(8));
+  Expect.equals(9223372036854775807, struct64.getField(2));
+  Expect.equals(9223372036854775807, struct64.getWord(16));
+  Expect.equals(-9223372036854775808, struct64.getField(3));
+  Expect.equals(-9223372036854775808, struct64.getWord(24));
+  struct64.setField(1, 9223372036854775806);
+  Expect.equals(0, struct64.getField(0));
+  Expect.equals(9223372036854775806, struct64.getField(1));
+  Expect.equals(9223372036854775807, struct64.getField(2));
+  Expect.equals(-9223372036854775808, struct64.getField(3));
+  checkOutOfBoundsThrows(() => struct64.getField(4));
+  checkOutOfBoundsThrows(() => struct64.getWord(25));
+  // Reset field 1 to original value to use when testing with Struct
+  // below.
+  struct64.setField(1, -1);
+
+  // Do a test using the platform specific word size.
+  var memint;
+  var expected;
+  if (Foreign.machineWordSize == 4) {
+    memint = fl.lookup('memuint32');
+    expected = struct32;
+  } else {
+    assert(Foreign.machineWordSize == 8);
+    memint = fl.lookup('memint64');
+    expected = struct64;
+  }
+  foreignPointer = memint.pcall$0(p);
+  var struct = new Struct.fromAddress(foreignPointer.address, 4);
+  Expect.equals(struct.address, foreignPointer.address);
+  Expect.equals(expected.getField(0), struct.getField(0));
+  Expect.equals(expected.getWord(0 * expected.wordSize),
+      struct.getWord(0 * struct.wordSize));
+  Expect.equals(expected.getField(1), struct.getField(1));
+  Expect.equals(expected.getWord(1 * expected.wordSize),
+      struct.getWord(1 * struct.wordSize));
+  Expect.equals(expected.getField(2), struct.getField(2));
+  Expect.equals(expected.getWord(2 * expected.wordSize),
+      struct.getWord(2 * struct.wordSize));
+  Expect.equals(expected.getField(3), struct.getField(3));
+  Expect.equals(expected.getWord(3 * expected.wordSize),
+      struct.getWord(3 * struct.wordSize));
+  struct.setField(1, 42);
+  Expect.equals(expected.getField(0), struct.getField(0));
+  Expect.equals(42, struct.getField(1));
+  Expect.equals(expected.getField(2), struct.getField(2));
+  Expect.equals(expected.getField(3), struct.getField(3));
+  checkOutOfBoundsThrows(() => struct.getField(4));
+  checkOutOfBoundsThrows(() => struct.getWord(3 * struct.wordSize + 1));
+
+  // Check misaligned write and read.
+  struct.setWord(struct.wordSize ~/ 2, 42);
+  Expect.equals(42, struct.getWord(struct.wordSize ~/ 2));
+  struct64.setWord(4, 42);
+  Expect.equals(42, struct64.getWord(4));
+  struct32.setWord(2, 42);
+  Expect.equals(42, struct32.getWord(2));
+
+  struct.free();
+  struct64.free();
+  struct32.free();
+  fl.close();
 }

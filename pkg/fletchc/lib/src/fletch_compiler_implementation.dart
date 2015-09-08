@@ -105,6 +105,12 @@ const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
       category: "Shared",
       documented: false,
       platforms: FLETCH_PLATFORM),
+
+  "fletch.os": const LibraryInfo(
+      "os/os.dart",
+      category: "Shared",
+      documented: false,
+      platforms: FLETCH_PLATFORM),
 };
 
 class FletchCompilerImplementation extends apiimpl.Compiler {

@@ -36,7 +36,7 @@ class MacOSAddrInfo extends AddrInfo {
 }
 
 class KEvent extends Struct {
-  KEvent() : super.finalize(6);
+  KEvent() : super.finalized(6);
 
   void clear() {
     for (int i = 0; i < length; i += wordSize) setWord(i, 0);

@@ -117,7 +117,7 @@ abstract class _TypedData {
   final int lengthInBytes;
 
   _TypedData._create(int sizeInBytes)
-    : _foreign = new ForeignMemory.allocatedFinalize(sizeInBytes),
+    : _foreign = new ForeignMemory.allocatedFinalized(sizeInBytes),
       offsetInBytes = 0,
       lengthInBytes = sizeInBytes;
 

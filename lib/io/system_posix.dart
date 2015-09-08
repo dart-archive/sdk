@@ -121,7 +121,7 @@ abstract class PosixSystem implements System {
   int socket() => _socket.icall$3Retry(AF_INET, SOCK_STREAM, 0);
 
   InternetAddress lookup(String host) {
-    ForeignMemory node = new ForeignMemory.fromString(host);
+    ForeignMemory node = new ForeignMemory.fromStringAsUTF8(host);
     // TODO(ajohnsen): Actually apply hints.
     AddrInfo hints = new AddrInfo();
     // TODO(ajohnsen): Allow IPv6 results.
@@ -176,7 +176,7 @@ abstract class PosixSystem implements System {
       if (!append) flags = flags | O_TRUNC;
     }
     flags |= O_CLOEXEC;
-    ForeignMemory cPath = new ForeignMemory.fromString(path);
+    ForeignMemory cPath = new ForeignMemory.fromStringAsUTF8(path);
     int fd = _open.icall$2Retry(cPath, flags);
     cPath.free();
     return fd;
@@ -187,7 +187,7 @@ abstract class PosixSystem implements System {
   }
 
   TempFile mkstemp(String path) {
-    ForeignMemory cPath = new ForeignMemory.fromString(path + "XXXXXX");
+    ForeignMemory cPath = new ForeignMemory.fromStringAsUTF8(path + "XXXXXX");
     int result = _mkstemp.icall$1Retry(cPath);
     if (result != -1) {
       var bytes = new List(cPath.length - 1);
@@ -199,14 +199,14 @@ abstract class PosixSystem implements System {
   }
 
   int access(String path) {
-    ForeignMemory cPath = new ForeignMemory.fromString(path);
+    ForeignMemory cPath = new ForeignMemory.fromStringAsUTF8(path);
     int result = _access.icall$2Retry(cPath, 0);
     cPath.free();
     return result;
   }
 
   int unlink(String path) {
-    ForeignMemory cPath = new ForeignMemory.fromString(path);
+    ForeignMemory cPath = new ForeignMemory.fromStringAsUTF8(path);
     int result = _unlink.icall$1Retry(cPath);
     cPath.free();
     return result;

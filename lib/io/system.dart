@@ -93,63 +93,6 @@ abstract class System {
   @fletch.native external static int _incrementPortRef(Port port);
 }
 
-final int hostWordSize = Foreign.bitsPerMachineWord ~/ 8;
-
-class Struct extends ForeignMemory {
-  final wordSize;
-
-  Struct(int fields)
-      : this.wordSize = hostWordSize,
-        super.allocated(fields * hostWordSize);
-
-  Struct.finalize(int fields)
-      : this.wordSize = hostWordSize,
-        super.allocatedFinalize(fields * hostWordSize);
-
-  Struct.fromAddress(int address, int fields)
-      : this.wordSize = hostWordSize,
-        super.fromAddress(address, fields * hostWordSize);
-
-  Struct.withWordSize(int fields, wordSize)
-      : this.wordSize = wordSize,
-        super.allocated(fields * wordSize);
-
-  Struct.withWordSizeFinalize(int fields, wordSize)
-      : this.wordSize = wordSize,
-        super.allocatedFinalize(fields * wordSize);
-
-  int getWord(int byteOffset) {
-    switch (wordSize) {
-      case 4: return getInt32(byteOffset);
-      case 8: return getInt64(byteOffset);
-      default: throw "Unsupported machine word size.";
-    }
-  }
-
-  int setWord(int byteOffset, int value) {
-    switch (wordSize) {
-      case 4: return setInt32(byteOffset, value);
-      case 8: return setInt64(byteOffset, value);
-      default: throw "Unsupported machine word size.";
-    }
-  }
-
-  int getField(int fieldOffset) => getWord(fieldOffset * wordSize);
-
-  void setField(int fieldOffset, int value) {
-    setWord(fieldOffset * wordSize, value);
-  }
-}
-
-class Struct32 extends Struct {
-  Struct32(int fields) : super.withWordSize(fields, 4);
-}
-
-class Struct64 extends Struct {
-  Struct64(int fields) : super.withWordSize(fields, 8);
-  Struct64.finalize(int fields) : super.withWordSizeFinalize(fields, 8);
-}
-
 class _InternetAddress extends InternetAddress {
   final List<int> _bytes;
   _InternetAddress(this._bytes);

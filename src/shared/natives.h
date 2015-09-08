@@ -234,6 +234,8 @@ namespace fletch {
                                                                          \
   N(IsImmutable,                 "<none>", "_isImmutable")               \
   N(IdentityHashCode,            "<none>", "_identityHashCode")          \
+                                                                         \
+  N(NativeProcessSpawnDetached,  "NativeProcess", "_spawnDetached")      \
 
 enum Native {
 #define N(e, c, n) k##e,
