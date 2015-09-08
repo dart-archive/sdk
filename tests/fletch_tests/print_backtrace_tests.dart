@@ -8,7 +8,7 @@ import 'dart:io';
 
 import 'package:expect/expect.dart';
 
-import 'package:fletchc/src/verbs/run_verb.dart';
+import 'package:fletchc/src/verbs/x_run_verb.dart';
 
 import 'package:fletchc/src/verbs/infrastructure.dart';
 
@@ -88,7 +88,7 @@ simulateVmCrash() async {
   state.session = new MockSessionProxy(nullForever().iterator);
 
   try {
-    await runTask(null, state);
+    await xRunTask(null, state);
     throw "expected InputError";
   } on InputError catch (e) {
     Expect.equals(DiagnosticKind.internalError, e.kind);

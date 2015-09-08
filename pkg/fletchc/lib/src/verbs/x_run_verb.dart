@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.verbs.run_verb;
+library fletchc.verbs.x_run_verb;
 
 import 'infrastructure.dart';
 
@@ -28,32 +28,32 @@ import '../diagnostic.dart' show
     throwInternalError;
 
 import 'documentation.dart' show
-    runDocumentation;
+    xRunDocumentation;
 
-const Verb runVerb =
-    const Verb(run, runDocumentation, requiresSession: true);
+const Verb xRunVerb =
+    const Verb(xRun, xRunDocumentation, requiresSession: true);
 
-Future<int> run(AnalyzedSentence sentence, VerbContext context) async {
+Future<int> xRun(AnalyzedSentence sentence, VerbContext context) async {
   // This is asynchronous, but we don't await the result so we can respond to
   // other requests.
-  context.performTaskInWorker(new RunTask());
+  context.performTaskInWorker(new XRunTask());
 
   return null;
 }
 
-class RunTask extends SharedTask {
+class XRunTask extends SharedTask {
   // Keep this class simple, see note in superclass.
 
-  const RunTask();
+  const XRunTask();
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return runTask(commandSender, SessionState.current);
+    return xRunTask(commandSender, SessionState.current);
   }
 }
 
-Future<int> runTask(CommandSender commandSender, SessionState state) async {
+Future<int> xRunTask(CommandSender commandSender, SessionState state) async {
   List<FletchDelta> compilationResults = state.compilationResults;
   Session session = state.session;
   if (session == null) {

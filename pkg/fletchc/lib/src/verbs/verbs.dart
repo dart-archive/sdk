@@ -34,8 +34,8 @@ import 'compile_verb.dart' show
 import 'attach_verb.dart' show
     attachVerb;
 
-import 'run_verb.dart' show
-    runVerb;
+import 'x_run_verb.dart' show
+    xRunVerb;
 
 import 'x_end_verb.dart' show
     endVerb;
@@ -103,7 +103,7 @@ const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "create": createVerb,
   "compile": compileVerb,
   "attach": attachVerb,
-  "x-run": runVerb,
+  "x-run": xRunVerb,
   "x-end": endVerb,
   "x-servicec": servicecVerb,
 };

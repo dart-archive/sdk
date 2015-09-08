@@ -103,7 +103,7 @@ const String attachDocumentation = """
              Attach to Fletch VM on the given socket
 """;
 
-const String runDocumentation = """
+const String xRunDocumentation = """
    x-run     Run the compiled code on the Fletch VM
 """;
 
