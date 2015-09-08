@@ -57,7 +57,6 @@ Future<int> compileTask(String fileName) async {
 
   int length = compilerErrors.length;
   if (length > 0) {
-    bool plural = length != 1;
     print("Number of errors: $length");
     for (errors.CompilerError compilerError in compilerErrors) {
       print("$compilerError");
