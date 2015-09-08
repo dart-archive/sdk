@@ -21,10 +21,6 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.internalError:
       throw new StateError("No example for $kind");
 
-    case DiagnosticKind.verbRequiresSession:
-      return <Example>[new CommandLineExample(
-            <String>['compile', 'file', 'file.dart'])];
-
     case DiagnosticKind.verbRequiresNoSession:
       return <Example>[
           new CommandLineExample(
@@ -63,8 +59,6 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.noSuchSession:
       return <Example>[
-          new CommandLineExample(
-              <String>['compile', 'file', 'file.dart', 'in', 'session', 'foo']),
           new CommandLineExample(
               <String>['x-end', 'session', 'foo'])];
 

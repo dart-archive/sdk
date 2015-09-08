@@ -12,10 +12,13 @@ import 'documentation.dart' show
 const Verb createVerb = const Verb(
     create, createDocumentation, requiresTargetSession: true);
 
-Future<int> create(AnalyzedSentence sentence, VerbContext context) async {
+Future<int> create(AnalyzedSentence sentence, VerbContext context) {
+  return createSessionInContext(sentence.targetName, context);
+}
+
+Future<int> createSessionInContext(String name, VerbContext context) async {
   IsolatePool pool = context.pool;
   ClientController client = context.client;
-  String name = sentence.targetName;
 
   Future<IsolateController> allocateWorker() async {
     IsolateController worker =

@@ -10,7 +10,6 @@ import 'diagnostic.dart' show
 
 enum DiagnosticKind {
   internalError,
-  verbRequiresSession,
   verbRequiresNoSession,
   verbRequiresSessionTarget,
   verbRequiresTarget,
@@ -56,10 +55,6 @@ String getMessage(DiagnosticKind kind) {
   switch (kind) {
     case DiagnosticKind.internalError:
       return "Internal error: ${DiagnosticParameter.message}";
-
-    case DiagnosticKind.verbRequiresSession:
-      return "Can't perform '${DiagnosticParameter.verb}' without a session. "
-          "Try adding 'in session SESSION_NAME'";
 
     case DiagnosticKind.verbRequiresNoSession:
       return "Can't perform '${DiagnosticParameter.verb}' in a session. "

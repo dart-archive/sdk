@@ -47,6 +47,10 @@ export '../../incremental/fletchc_incremental.dart' show
 
 final Map<String, UserSession> internalSessions = <String, UserSession>{};
 
+String internalCurrentSession = "default";
+
+String get currentSession => internalCurrentSession;
+
 Future<UserSession> createSession(
     String name,
     Future<IsolateController> allocateWorker()) async {
@@ -56,6 +60,8 @@ Future<UserSession> createSession(
   }
   session = new UserSession(name, await allocateWorker());
   internalSessions[name] = session;
+  // TODO(ahe): We need a command to switch to another session.
+  internalCurrentSession = name;
   return session;
 }
 

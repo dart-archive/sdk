@@ -44,20 +44,22 @@ export '../driver/driver_commands.dart' show
 import '../driver/session_manager.dart' show
     FletchCompiler,
     FletchDelta,
-    Session,
     IncrementalCompiler,
     IsolateController,
+    Session,
     SessionState,
-    UserSession;
+    UserSession,
+    currentSession;
 
 export '../driver/session_manager.dart' show
     FletchCompiler,
     FletchDelta,
-    Session,
     IncrementalCompiler,
     IsolateController,
+    Session,
     SessionState,
-    UserSession;
+    UserSession,
+    currentSession;
 
 export '../diagnostic.dart' show
     DiagnosticKind,
@@ -182,15 +184,11 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
     }
   }
 
-  UserSession session;
+  String sessionName;
   if (sessionTarget != null) {
-    String sessionName = sessionTarget.name;
-    session = lookupSession(sessionName);
-    if (session == null) {
-      throwFatalError(DiagnosticKind.noSuchSession, sessionName: sessionName);
-    }
+    sessionName = sessionTarget.name;
   } else if (verb.verb.requiresSession) {
-    throwFatalError(DiagnosticKind.verbRequiresSession, verb: verb);
+    sessionName = currentSession;
   }
 
   String targetName;
@@ -199,7 +197,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
   }
 
   return new AnalyzedSentence(
-      verb, target, targetName, preposition, trailing, session,
+      verb, target, targetName, preposition, trailing, sessionName,
       sentence.arguments, sentence.programName);
 }
 
@@ -245,7 +243,7 @@ class AnalyzedSentence {
 
   final List<String> trailing;
 
-  final UserSession session;
+  final String sessionName;
 
   // TODO(ahe): Remove when compile-and-run is removed.
   final List<String> arguments;
@@ -259,7 +257,7 @@ class AnalyzedSentence {
       this.targetName,
       this.preposition,
       this.trailing,
-      this.session,
+      this.sessionName,
       this.arguments,
       this.programName);
 
