@@ -41,6 +41,7 @@ for socket in $(xargs < $fletch_file) ; do
       ps -w -w -o args= -p $pid
       if [ $kill ]; then
         kill -TERM $pid
+        : > $fletch_file
       fi
     done
   fi

@@ -84,7 +84,7 @@ if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
     ninja -C out/ReleaseIA32
 
     # Kill the persistent process
-    ./tools/persistent_process_info.sh --kill; : > .fletch
+    ./tools/persistent_process_info.sh --kill
 
     SNAPSHOT="$DIR/$ANDROID_PROJ/app/src/main/res/raw/${PROJ}_snapshot"
     mkdir -p `dirname "$SNAPSHOT"`

@@ -47,4 +47,5 @@ cd $FLETCH_DIR
 ninja -C out/ReleaseIA32
 mkdir -p $DIR/TodoMVC/app/src/main/res/raw
 
+./tools/persistent_process_info.sh --kill
 ./out/ReleaseIA32/fletch compile-and-run -o $DIR/TodoMVC/app/src/main/res/raw/todomvc_snapshot $DIR/../todomvc.dart

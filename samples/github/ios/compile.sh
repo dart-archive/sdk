@@ -51,5 +51,7 @@ $IMMIC --package "$FLETCH_PKG_DIR" --out "$IMMI_GEN_DIR" "$TARGET_DIR/lib/$PROJ.
 mkdir -p "$SERVICE_GEN_DIR"
 $SERVICEC --out "$SERVICE_GEN_DIR" "$IMMI_GEN_DIR/idl/immi_service.idl"
 
+cd $FLETCH_DIR
+./tools/persistent_process_info.sh --kill
 exec $FLETCH compile-and-run -o "$DIR/$PROJ.snapshot" \
      "$TARGET_BUILD_DIR/bin/$PROJ.dart"
