@@ -26,6 +26,10 @@ class Vector {
       , size_(0)
       , capacity_(kInitialCapacity) { }
 
+  ~Vector() {
+    delete[] backing_;
+  }
+
   Reference operator[](SizeType index) { return At(index); }
 
   ConstReference operator[](SizeType index) const { return At(index); }

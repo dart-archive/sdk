@@ -22,6 +22,10 @@ VoidHashTable::VoidHashTable(size_t pair_size)
     AllocateBacking(kInitialCapacity);
 }
 
+VoidHashTable::~VoidHashTable() {
+  delete[] backing_;
+}
+
 void VoidHashTable::AllocateBacking(size_t capacity) {
   size_t length = entry_size_ * capacity + sizeof(hash_t);
   backing_ = new char[length];

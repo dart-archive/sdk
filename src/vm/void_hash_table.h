@@ -13,6 +13,7 @@ namespace fletch {
 class VoidHashTable {
  public:
   explicit VoidHashTable(size_t value_size);
+  ~VoidHashTable();
 
   char* Find(const void* key);
 
