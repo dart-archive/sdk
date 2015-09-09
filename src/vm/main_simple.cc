@@ -39,11 +39,11 @@ static int Main(int argc, char** argv) {
   FletchProgram program = FletchLoadSnapshot(bytes.data(), bytes.length());
   bytes.Delete();
 
-  FletchRunMain(program);
+  int result = FletchRunMain(program);
   FletchDeleteProgram(program);
 
   FletchTearDown();
-  return 0;
+  return result;
 }
 
 }  // namespace fletch

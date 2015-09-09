@@ -20,6 +20,10 @@ class Process;
 class Program;
 class ThreadState;
 
+const int kCompileTimeErrorExitCode = 254;
+const int kUncaughtExceptionExitCode = 255;
+const int kBreakPointExitCode = 0;
+
 class ProcessVisitor {
  public:
   virtual ~ProcessVisitor() { }
@@ -61,7 +65,7 @@ class Scheduler {
   // Continue a process that is stopped at a break point.
   void ProcessContinue(Process* process);
 
-  bool Run();
+  int Run();
 
   // There are 4 reasons for the interpretation of a process to be interrupted:
   //   * termination
@@ -94,10 +98,14 @@ class Scheduler {
   ProcessQueue* startup_queue_;
 
   Monitor* pause_monitor_;
+  Atomic<int> shutdown_;
+  Atomic<Program*> shutdown_program_;
   Atomic<bool> pause_;
   Atomic<Process*>* current_processes_;
 
   GCThread* gc_thread_;
+
+  void ExitWith(Program* program, int exit_code);
 
   void DeleteProcessAndMergeHeaps(Process* process, ThreadState* thread_state);
   void RescheduleProcess(Process* process, ThreadState* state, bool terminate);

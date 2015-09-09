@@ -208,11 +208,24 @@ class ScopedMonitorLock {
   }
 
   ~ScopedMonitorLock() { monitor_->Unlock(); }
+
  private:
   Monitor* const monitor_;
   DISALLOW_COPY_AND_ASSIGN(ScopedMonitorLock);
 };
 
+class ScopedMonitorUnlock {
+ public:
+  explicit ScopedMonitorUnlock(Monitor* monitor) : monitor_(monitor) {
+    monitor_->Unlock();
+  }
+
+  ~ScopedMonitorUnlock() { monitor_->Lock(); }
+
+ private:
+  Monitor* const monitor_;
+  DISALLOW_COPY_AND_ASSIGN(ScopedMonitorUnlock);
+};
 
 inline Mutex* Platform::CreateMutex() {
   return new Mutex();

@@ -109,11 +109,9 @@ int64_t Session::PopInteger() {
 }
 
 void Session::SignalMainThread(MainThreadResumeKind kind) {
-  main_thread_monitor_->Lock();
   while (main_thread_resume_kind_ != kUnknown) main_thread_monitor_->Wait();
   main_thread_resume_kind_ = kind;
-  main_thread_monitor_->Notify();
-  main_thread_monitor_->Unlock();
+  main_thread_monitor_->NotifyAll();
 }
 
 void Session::SendDartValue(Object* value) {
@@ -189,6 +187,8 @@ void Session::SendStackTrace(Stack* stack) {
 void Session::ProcessMessages() {
   while (true) {
     Connection::Opcode opcode = connection_->Receive();
+
+    ScopedMonitorLock scoped_lock(main_thread_monitor_);
 
     switch (opcode) {
       case Connection::kConnectionError: {
@@ -291,6 +291,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessBacktraceRequest: {
+        if (program()->scheduler() == NULL) return;
         StoppedGcThreadScope scope(program()->scheduler());
         Stack* stack = process_->stack();
         SendStackTrace(stack);
@@ -298,6 +299,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessFiberBacktraceRequest: {
+        if (program()->scheduler() == NULL) return;
         StoppedGcThreadScope scope(program()->scheduler());
         int64 fiber_id = connection_->ReadInt64();
         Stack* stack = Stack::cast(MapLookupById(fibers_map_id_, fiber_id));
@@ -307,6 +309,7 @@ void Session::ProcessMessages() {
 
       case Connection::kProcessLocal:
       case Connection::kProcessLocalStructure: {
+        if (program()->scheduler() == NULL) return;
         StoppedGcThreadScope scope(program()->scheduler());
         int frame = connection_->ReadInt();
         int slot = connection_->ReadInt();
@@ -321,6 +324,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessRestartFrame: {
+        if (program()->scheduler() == NULL) return;
         {
           StoppedGcThreadScope scope(program()->scheduler());
           int frame = connection_->ReadInt();
@@ -364,6 +368,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessAddFibersToMap: {
+        if (program()->scheduler() == NULL) return;
         StoppedGcThreadScope scope(program()->scheduler());
         // TODO(ager): Potentially optimize this to not require a full
         // process GC to locate the live stacks?
@@ -618,32 +623,34 @@ void Session::IteratePointers(PointerVisitor* visitor) {
   }
 }
 
-bool Session::ProcessRun() {
+int Session::ProcessRun() {
   bool process_started = false;
   bool has_result = false;
-  bool result = false;
+  int result = 0;
+  ScopedMonitorLock scoped_lock(main_thread_monitor_);
   while (true) {
     MainThreadResumeKind resume_kind;
-    main_thread_monitor_->Lock();
     while (main_thread_resume_kind_ == kUnknown) main_thread_monitor_->Wait();
     resume_kind = main_thread_resume_kind_;
     main_thread_resume_kind_ = kUnknown;
-    main_thread_monitor_->Notify();
-    main_thread_monitor_->Unlock();
+    main_thread_monitor_->NotifyAll();
     switch (resume_kind) {
       case kError:
         ASSERT(!debugging_);
-        return false;
+        return kUncaughtExceptionExitCode;
       case kSnapshotDone:
         ASSERT(!debugging_);
-        return true;
+        return 0;
       case kProcessRun:
         process_started = true;
 
         {
           Scheduler scheduler;
           scheduler.ScheduleProgram(program_, process_);
-          result = scheduler.Run();
+          {
+            ScopedMonitorUnlock scoped_unlock(main_thread_monitor_);
+            result = scheduler.Run();
+          }
           scheduler.UnscheduleProgram(program_);
         }
 
@@ -658,7 +665,7 @@ bool Session::ProcessRun() {
           program()->DeleteProcess(process_);
         }
         Print::UnregisterPrintInterceptors();
-        if (!process_started) return true;
+        if (!process_started) return 0;
         if (has_result) return result;
         break;
       case kUnknown:

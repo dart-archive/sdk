@@ -39,7 +39,7 @@ class Session {
   void IteratePointers(PointerVisitor* visitor);
 
   // High-level operations.
-  bool ProcessRun();
+  int ProcessRun();
   bool WriteSnapshot(const char* path);
   void CollectGarbage();
 
