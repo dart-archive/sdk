@@ -346,34 +346,39 @@ class _Mint extends _IntBase {
   @fletch.native external num operator -();
 
   @fletch.native num operator +(other) {
-    if (fletch.nativeError == fletch.wrongArgumentType && other is _Mint) {
-      throw new UnimplementedError("Overflow to big integer");
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        return other._addFromInteger(this);
+      case fletch.indexOutOfBounds:
+        throw new UnimplementedError("Overflow to big integer");
     }
-    return other._addFromInteger(this);
   }
 
   @fletch.native num operator -(other) {
-    if (fletch.nativeError == fletch.wrongArgumentType && other is _Mint) {
-      throw new UnimplementedError("Overflow to big integer");
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        return other._subFromInteger(this);
+      case fletch.indexOutOfBounds:
+        throw new UnimplementedError("Overflow to big integer");
     }
-    return other._subFromInteger(this);
   }
 
   @fletch.native num operator *(other) {
-    if (fletch.nativeError == fletch.wrongArgumentType && other is _Mint) {
-      throw new UnimplementedError("Overflow to big integer");
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        return other._mulFromInteger(this);
+      case fletch.indexOutOfBounds:
+        throw new UnimplementedError("Overflow to big integer");
     }
-    return other._mulFromInteger(this);
   }
 
   @fletch.native num operator %(other) {
     switch (fletch.nativeError) {
       case fletch.wrongArgumentType:
-        if (other is _Mint) {
-          throw new UnimplementedError("Overflow to big integer");
-        }
         return other._modFromInteger(this);
       case fletch.indexOutOfBounds:
+        throw new UnimplementedError("Overflow to big integer");
+      case fletch.illegalState:
         throw new IntegerDivisionByZeroException();
     }
   }
@@ -386,11 +391,10 @@ class _Mint extends _IntBase {
   @fletch.native int operator ~/(other) {
     switch (fletch.nativeError) {
       case fletch.wrongArgumentType:
-        if (other is _Mint) {
-          throw new UnimplementedError("Overflow to big integer");
-        }
         return other._truncDivFromInteger(this);
       case fletch.indexOutOfBounds:
+        throw new UnimplementedError("Overflow to big integer");
+      case fletch.illegalState:
         throw new IntegerDivisionByZeroException();
     }
   }
@@ -418,12 +422,12 @@ class _Mint extends _IntBase {
   }
 
   @fletch.native int operator <<(other) {
-    if (fletch.nativeError == fletch.wrongArgumentType && other is _Mint) {
-      // TODO(ajohnsen): Add bigint support.
-      throw new UnimplementedError("Overflow to big integer");
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        return other._bitShlFromInteger(this);
+      case fletch.indexOutOfBounds:
+        throw new UnimplementedError("Overflow to big integer");
     }
-    // TODO(kasperl): Check error.
-    return other._bitShlFromInteger(this);
   }
 
   @fletch.native bool operator ==(other) {

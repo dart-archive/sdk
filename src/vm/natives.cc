@@ -287,7 +287,7 @@ NATIVE(MintAdd) {
   if ((x_value < 0) != (y_value < 0) || (result < 0) == (x_value < 0)) {
     return process->ToInteger(result);
   }
-  return Failure::wrong_argument_type();
+  return Failure::index_out_of_bounds();
 }
 
 NATIVE(MintSub) {
@@ -300,7 +300,7 @@ NATIVE(MintSub) {
   if ((x_value < 0) == (y_value < 0) || (result < 0) == (x_value < 0)) {
     return process->ToInteger(result);
   }
-  return Failure::wrong_argument_type();
+  return Failure::index_out_of_bounds();
 }
 
 NATIVE(MintMul) {
@@ -310,7 +310,7 @@ NATIVE(MintMul) {
   int64 y_value = LargeInteger::cast(y)->value();
   int64 x_value = x->value();
   if (Utils::Signed64BitMulMightOverflow(x_value, y_value)) {
-    return Failure::wrong_argument_type();
+    return Failure::index_out_of_bounds();
   }
   return process->ToInteger(x_value * y_value);
 }
@@ -321,7 +321,7 @@ NATIVE(MintMod) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   if (y_value == 0) {
-    return Failure::index_out_of_bounds();
+    return Failure::illegal_state();
   }
   int64 x_value = x->value();
   if (x_value != INT64_MIN || y_value != -1) {
@@ -329,7 +329,7 @@ NATIVE(MintMod) {
     if (result < 0) result += (y_value > 0) ? y_value : -y_value;
     return process->ToInteger(result);
   }
-  return Failure::wrong_argument_type();
+  return Failure::index_out_of_bounds();
 }
 
 NATIVE(MintDiv) {
@@ -346,13 +346,13 @@ NATIVE(MintTruncDiv) {
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
   if (y_value == 0) {
-    return Failure::index_out_of_bounds();
+    return Failure::illegal_state();
   }
   int64 x_value = x->value();
   if (x_value != INT64_MIN || y_value != -1) {
     return process->ToInteger(x_value / y_value);
   }
-  return Failure::wrong_argument_type();
+  return Failure::index_out_of_bounds();
 }
 
 NATIVE(MintBitNot) {
