@@ -29,6 +29,8 @@ import '../service_tests/service_tests.dart' as service_tests;
 
 import '../servicec/servicec_tests.dart' as servicec_tests;
 
+import '../fletchc/end_to_end.dart' as end_to_end;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -51,6 +53,13 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
 
   'verbs/helpTextFormat': verbs.testHelpTextFormatCompliance,
 
+  // Slow tests, should run early so we don't wait for them.
+  'service_tests/*': service_tests.listTests,
+
+  // Slow tests, should run early so we don't wait for them
+  'servicec/*': servicec_tests.listTests,
+
+  // Slow tests, should run early so we don't wait for them.
   'incremental/*': incremental.listTests,
 
   'controlStream/testControlStream': controlStream.testControlStream,
@@ -73,7 +82,5 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
       print_backtrace.simulateBadBacktraceHack,
   'print_backtrace/simulateBadBacktrace': print_backtrace.simulateBadBacktrace,
 
-  'service_tests/*': service_tests.listTests,
-
-  'servicec/*': servicec_tests.listTests,
+  'end_to_end': end_to_end.test,
 };
