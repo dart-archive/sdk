@@ -6,25 +6,25 @@ library servicec.node;
 
 // Highest-level node.
 class CompilationUnitNode extends Node {
-  List<Node> topLevelDefinitions;
+  List<Node> topLevelDeclarations;
 
-  CompilationUnitNode(this.topLevelDefinitions);
+  CompilationUnitNode(this.topLevelDeclarations);
 }
 
 // Top-level nodes.
-abstract class TopLevelDefinitionNode extends NamedNode {
-  TopLevelDefinitionNode(IdentifierNode identifier)
+abstract class TopLevelDeclarationNode extends NamedNode {
+  TopLevelDeclarationNode(IdentifierNode identifier)
     : super(identifier);
 }
 
-class ServiceNode extends TopLevelDefinitionNode {
+class ServiceNode extends TopLevelDeclarationNode {
   List<Node> functionDeclarations;
 
   ServiceNode(IdentifierNode identifier, this.functionDeclarations)
     : super(identifier);
 }
 
-class StructNode extends TopLevelDefinitionNode {
+class StructNode extends TopLevelDeclarationNode {
   List<Node> memberDeclarations;
 
   StructNode(IdentifierNode identifier, this.memberDeclarations)

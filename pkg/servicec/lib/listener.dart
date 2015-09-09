@@ -16,10 +16,7 @@ import 'keyword.dart' show
 
 /// Identity listener: methods just propagate the argument.
 abstract class Listener {
-  List<CompilerError> errors;
-
-  Listener()
-    : errors = <CompilerError>[];
+  Iterable<CompilerError> get errors;
 
   Token beginCompilationUnit(Token tokens) {
     return tokens;
@@ -106,7 +103,7 @@ enum LogLevel { DEBUG, INFO }
 
 /// Used for debugging other listeners.
 class DebugListener implements Listener {
-  List<CompilerError> errors;  // Dummy required by interface.
+  Iterable<CompilerError> get errors => debugSubject.errors;
 
   Listener debugSubject;
   LogLevel logLevel;

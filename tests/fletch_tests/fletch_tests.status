@@ -23,14 +23,6 @@ incremental/call_named_arguments_2: Fail
 # Missing support for multiple libraries
 incremental/multiple_libraries: Fail
 
-# Functionality not implemented yet
-servicec/unmatched_curly_3: Fail
-servicec/unmatched_curly_4: Fail
-servicec/unmatched_curly_5: Fail
-servicec/unmatched_curly_6: Fail
-servicec/unmatched_curly_7: Fail
-servicec/unmatched_curly_8: Fail
-
 [ $arch != ia32 && $arch != x64 ]
 
 service_tests/*: Skip

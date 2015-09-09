@@ -23,7 +23,7 @@ List<CompilerError> validate(CompilationUnitNode compilationUnit) {
 }
 
 bool hasAtLeastOneService(CompilationUnitNode compilationUnit) {
-  for (Node node in compilationUnit.topLevelDefinitions) {
+  for (Node node in compilationUnit.topLevelDeclarations) {
     if (node is ServiceNode) return true;
   }
   return false;

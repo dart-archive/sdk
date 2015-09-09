@@ -30,33 +30,45 @@ List<InputTest> SERVICEC_TESTS = <InputTest>[
     new Failure('empty_input', [CompilerError.undefinedService]),
     new Success('empty_service'),
     new Failure('missing_semicolon',
-                [CompilerError.syntax, CompilerError.syntax]),
-    new Failure('mistyped_keyword', [CompilerError.syntax]),
+                [CompilerError.badFunctionDeclaration,
+                 CompilerError.badMemberDeclaration]),
+    new Failure('mistyped_keyword',
+                [CompilerError.badTopLevelDeclaration]),
     new Success('painter_service'),
-    new Failure('unfinished_struct', [CompilerError.syntax]),
+    new Failure('unfinished_struct',
+                [CompilerError.badStructDefinition]),
     new Failure('unmatched_curly',
-                [CompilerError.syntax, CompilerError.syntax]),
+                [CompilerError.badServiceDefinition,
+                 CompilerError.badMemberDeclaration]),
     new Failure('unmatched_curly_2',
-                [CompilerError.syntax, CompilerError.syntax]),
+                [CompilerError.badServiceDefinition,
+                 CompilerError.badMemberDeclaration]),
     new Failure('unmatched_curly_3',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
+                [CompilerError.badFunctionDeclaration,
+                 CompilerError.badServiceDefinition,
+                 CompilerError.badMemberDeclaration]),
     new Failure('unmatched_curly_4',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
+                [CompilerError.badFunctionDeclaration,
+                 CompilerError.badServiceDefinition,
+                 CompilerError.badMemberDeclaration]),
     new Failure('unmatched_curly_5',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
+                [CompilerError.badFunctionDeclaration,
+                 CompilerError.badServiceDefinition,
+                 CompilerError.badMemberDeclaration]),
     new Failure('unmatched_curly_6',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
+                [CompilerError.badFunctionDeclaration,
+                 CompilerError.badServiceDefinition,
+                 CompilerError.badMemberDeclaration]),
     new Failure('unmatched_curly_7',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
+                [CompilerError.badFunctionDeclaration,
+                 CompilerError.badServiceDefinition,
+                 CompilerError.badMemberDeclaration]),
     new Failure('unmatched_curly_8',
-                [CompilerError.syntax, CompilerError.syntax,
-                 CompilerError.syntax]),
-    new Failure('unmatched_parenthesis', [CompilerError.syntax])
+                [CompilerError.badFunctionDeclaration,
+                 CompilerError.badServiceDefinition,
+                 CompilerError.badMemberDeclaration]),
+    new Failure('unmatched_parenthesis',
+                [CompilerError.badFunctionDeclaration])
 ];
 
 /// Absolute path to the build directory used by test.py.
@@ -93,7 +105,7 @@ class Success extends InputTest {
 
   Future perform() async {
     try {
-      List<CompilerError> compilerErrors =
+      Iterable<CompilerError> compilerErrors =
         await servicec.compileInput(input,
                                     name,
                                     outputDirectory,
@@ -115,7 +127,7 @@ class Failure extends InputTest {
 
   Future perform() async {
     List<CompilerError> compilerErrors =
-      await servicec.compileInput(input, name, outputDirectory);
+      (await servicec.compileInput(input, name, outputDirectory)).toList();
 
     int length = min(errors.length, compilerErrors.length);
     for (int i = 0; i < length; ++i) {

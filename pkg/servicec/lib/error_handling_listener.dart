@@ -5,15 +5,23 @@
 library servicec.error_handling_listener;
 
 import 'package:compiler/src/scanner/scannerlib.dart' show
-    EOF_TOKEN,
+    CLOSE_CURLY_BRACKET_INFO,
+    EOF_INFO,
     ErrorToken,
     KeywordToken,
+    SEMICOLON_INFO,
     Token,
     UnmatchedToken,
     closeBraceInfoFor;
 
 import 'errors.dart' show
-    CompilerError;
+    CompilerError,
+    ErrorNode,
+    FunctionDeclarationErrorNode,
+    MemberDeclarationErrorNode,
+    ServiceErrorNode,
+    StructErrorNode,
+    TopLevelDeclarationErrorNode;
 
 import 'keyword.dart' show
     Keyword;
@@ -32,7 +40,7 @@ import 'node.dart' show
     NodeStack,
     ServiceNode,
     StructNode,
-    TopLevelDefinitionNode,
+    TopLevelDeclarationNode,
     TypeNode,
     TypedNamedNode;
 
@@ -58,13 +66,12 @@ class UnknownKeywordErrorToken extends ErrorToken {
 }
 
 class UnexpectedToken extends ErrorToken {
-  Token token;
-
   UnexpectedToken(Token token)
-      : this.token = token,
-        super(token.charOffset);
+      : super(token.charOffset) {
+    next = token;
+  }
 
-  String get assertionMessage => 'Unexpected token $token.';
+  String get assertionMessage => 'Unexpected token $next.';
 }
 
 class UnexpectedEOFToken extends UnexpectedToken {
@@ -77,10 +84,14 @@ class UnexpectedEOFToken extends UnexpectedToken {
 class ErrorHandlingListener extends Listener {
   Token topLevelScopeStart;
   List<Node> nodeStack;
+  List<ErrorNode> _errors;
 
   ErrorHandlingListener()
-    : nodeStack = <Node>[],
+    : _errors = <ErrorNode>[],
+      nodeStack = <Node>[],
       super();
+
+  Iterable<CompilerError> get errors => _errors.map((e) => e.tag);
 
   /// The [Node] representing the parsed IDL file.
   Node get parsedUnitNode {
@@ -184,7 +195,6 @@ class ErrorHandlingListener extends Listener {
 
   // Top-level nodes.
   Token endService(Token tokens, int count) {
-    topLevelScopeStart = null;
     if (tokens is ErrorToken) return recoverService(tokens);
 
     List<Node> functionDeclarations = popNodes(count);
@@ -194,7 +204,6 @@ class ErrorHandlingListener extends Listener {
   }
 
   Token endStruct(Token tokens, int count) {
-    topLevelScopeStart = null;
     if (tokens is ErrorToken) return recoverStruct(tokens);
 
     List<Node> memberDeclarations = popNodes(count);
@@ -203,19 +212,23 @@ class ErrorHandlingListener extends Listener {
     return tokens;
   }
 
+  Token endTopLevelDeclaration(Token tokens) {
+    topLevelScopeStart = null;
+    return (tokens is ErrorToken) ? recoverTopLevelDeclaration(tokens) : tokens;
+  }
+
   // Highest-level node.
   Token endCompilationUnit(Token tokens, int count) {
     if (tokens is ErrorToken) return recoverCompilationUnit(tokens);
 
-    List<Node> topLevelDefinitions = popNodes(count);
-    pushNode(new CompilationUnitNode(topLevelDefinitions));
+    List<Node> topLevelDeclarations = popNodes(count);
+    pushNode(new CompilationUnitNode(topLevelDeclarations));
     return tokens;
   }
 
   // Error handling.
   Token expectedTopLevelDeclaration(Token tokens) {
-    errors.add(CompilerError.syntax);
-    return injectToken(new UnknownKeywordErrorToken(tokens), tokens);
+    return injectErrorIfNecessary(tokens);
   }
 
   Token expectedIdentifier(Token tokens) {
@@ -227,113 +240,115 @@ class ErrorHandlingListener extends Listener {
   }
 
   Token expected(String string, Token tokens) {
-    if (tokens is UnmatchedToken && braceMatches(string, tokens)) {
-      // The match of the unmatched token is found
-      tokens = tokens.next;
-      tokens = injectToken(new RecoverToken(tokens), tokens);
-    } else if (tokens is UnexpectedToken && string == tokens.token.value) {
-      // The previously unexpected token is expected now
-      tokens = tokens.next.next;
-      tokens = injectToken(new RecoverToken(tokens), tokens);
-    } else {
-      tokens = injectErrorIfNecessary(tokens);
-    }
-    return tokens;
+    return injectUnexpectedTokenIfNecessary(tokens);
   }
 
   // Recovery methods.
   Token recoverType(Token tokens) {
     popNodeIf((node) => node is IdentifierNode);
-    return endRecovery(tokens);
+    return tokens;
   }
 
   Token recoverFormalParameter(Token tokens) {
     popNodeIf((node) => node is IdentifierNode);
     popNodeIf((node) => node is TypeNode);
-    return endRecovery(tokens);
+    return tokens;
   }
 
   Token recoverFunctionDeclaration(Token tokens) {
-    popNodesWhile((node) => node is FormalParameterNode);
-    popNodeIf((node) => node is IdentifierNode);
-    popNodeIf((node) => node is TypeNode);
-    return endRecovery(tokens);
+    List<Node> formalParameters =
+      popNodesWhile((node) => node is FormalParameterNode);
+    Node identifier = popNodeIf((node) => node is IdentifierNode);
+    Node type = popNodeIf((node) => node is TypeNode);
+    if (formalParameters.isNotEmpty || identifier != null || type != null) {
+      FunctionDeclarationErrorNode error =
+        new FunctionDeclarationErrorNode(tokens);
+      pushNode(error);
+      _errors.add(error);
+      return consumeDeclarationLine(tokens);
+    } else {
+      // Declaration was never started, so don't end it.
+      return tokens;
+    }
   }
 
   Token recoverMemberDeclaration(Token tokens) {
-    popNodeIf((node) => node is IdentifierNode);
-    popNodeIf((node) => node is TypeNode);
-    return endRecovery(tokens);
+    Node identifier = popNodeIf((node) => node is IdentifierNode);
+    Node type = popNodeIf((node) => node is TypeNode);
+    if (identifier != null || type != null) {
+      MemberDeclarationErrorNode error = new MemberDeclarationErrorNode(tokens);
+      pushNode(error);
+      _errors.add(error);
+      return consumeDeclarationLine(tokens);
+    } else {
+      // Declaration was never started, so don't end it.
+      return tokens;
+    }
   }
 
   Token recoverService(Token tokens) {
     popNodesWhile((node) => node is FunctionDeclarationNode);
     popNodeIf((node) => node is IdentifierNode);
-    return endRecovery(tokens);
+    ServiceErrorNode error = new ServiceErrorNode(tokens);
+    pushNode(error);
+    _errors.add(error);
+    return consumeTopLevelDeclaration(tokens);
   }
 
   Token recoverStruct(Token tokens) {
     popNodesWhile((node) => node is MemberDeclarationNode);
     popNodeIf((node) => node is IdentifierNode);
-    return endRecovery(tokens);
+    StructErrorNode error = new StructErrorNode(tokens);
+    pushNode(error);
+    _errors.add(error);
+    return consumeTopLevelDeclaration(tokens);
+  }
+
+  Token recoverTopLevelDeclaration(Token tokens) {
+    TopLevelDeclarationErrorNode error =
+      new TopLevelDeclarationErrorNode(tokens);
+    pushNode(error);
+    _errors.add(error);
+    return consumeTopLevelDeclaration(tokens);
   }
 
   Token recoverCompilationUnit(Token tokens) {
-    popNodesWhile((node) => node is TopLevelDefinitionNode);
-    return endRecovery(tokens);
+    popNodesWhile((node) => node is TopLevelDeclarationNode);
+    return tokens;
   }
 
-  /// End the recovery process if one is in place.
-  Token endRecovery(Token tokens) {
-    if (tokens is RecoverToken) {
+  Token consumeDeclarationLine(Token tokens) {
+    do {
       tokens = tokens.next;
-    }
-    return tokens;
+    } while (!isEndOfDeclarationLine(tokens) &&
+             !isEndOfTopLevelDeclaration(tokens));
+    return isEndOfDeclarationLine(tokens) ? tokens.next : tokens;
   }
 
-  /// It is necessary when the token is not an ErrorToken.
+  Token consumeTopLevelDeclaration(Token tokens) {
+    do {
+      tokens = tokens.next;
+    } while (!isEndOfTopLevelDeclaration(tokens));
+    return (tokens.info == CLOSE_CURLY_BRACKET_INFO) ? tokens.next : tokens;
+  }
+
+  bool isEndOfDeclarationLine(Token tokens) {
+    // TODO(stanm): Newline?
+    return tokens.info == SEMICOLON_INFO;
+  }
+
+  bool isEndOfTopLevelDeclaration(Token tokens) {
+    return (tokens.info == CLOSE_CURLY_BRACKET_INFO ||
+            tokens.info == EOF_INFO ||
+            isTopLevelKeyword(tokens));
+  }
+
   Token injectErrorIfNecessary(Token tokens) {
-    if (tokens is ErrorToken) return tokens;
-
-    tokens = injectUnmatchedTokenIfNecessary(tokens);
-    tokens = injectUnexpectedEOFTokenIfNecessary(tokens);
-    tokens = injectUnexpectedTokenIfNecessary(tokens);
-    return tokens;
-  }
-
-  // It is necessary when the token is either 'service' or 'struct' but it is
-  // unexpected.
-  Token injectUnmatchedTokenIfNecessary(Token tokens) {
-    if (isTopLevelKeyword(tokens)) {
-      errors.add(CompilerError.syntax);
-      tokens = injectToken(new UnmatchedToken(topLevelScopeStart), tokens);
-    }
-    return tokens;
-  }
-
-  Token injectUnexpectedEOFTokenIfNecessary(Token tokens) {
-    if (tokens.kind == EOF_TOKEN) {
-      errors.add(CompilerError.syntax);
-      tokens = injectToken(new UnexpectedEOFToken(tokens), tokens);
-    }
-    return tokens;
+    return injectUnexpectedTokenIfNecessary(tokens);
   }
 
   Token injectUnexpectedTokenIfNecessary(Token tokens) {
-    if (tokens is! ErrorToken) {
-      errors.add(CompilerError.syntax);
-      // This solves the problem if there is a missing token; however, we should
-      // also solve the problem if there is an extra token, and the problem if
-      // the token is just the wrong token. Maybe return a 3-tuple of options?:
-      // (UnnecessaryToken, MistypedToken, MissingToken)
-      tokens = injectToken(new UnexpectedToken(tokens), tokens);
-    }
-    return tokens;
-  }
-
-  Token injectToken(Token next, Token tokens) {
-    next.next = tokens;
-    return next;
+    return (tokens is ErrorToken) ? tokens : new UnexpectedToken(tokens);
   }
 }
 

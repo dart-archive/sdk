@@ -35,7 +35,7 @@ import 'scanner.dart' show
     Scanner;
 
 // Temporary output type
-Future<List<CompilerError>> compile(
+Future<Iterable<CompilerError>> compile(
     String path,
     String outputDirectory,
     {Target target: Target.ALL}) async {
@@ -44,7 +44,7 @@ Future<List<CompilerError>> compile(
 }
 
 // Temporary output type
-Future<List<CompilerError>> compileInput(
+Future<Iterable<CompilerError>> compileInput(
     String input,
     String path,
     String outputDirectory,
@@ -60,7 +60,7 @@ Future<List<CompilerError>> compileInput(
   Parser parser = new Parser(new DebugListener(listener));
   parser.parseUnit(tokens);
 
-  List<CompilerError> errors = listener.errors;
+  Iterable<CompilerError> errors = listener.errors;
   if (errors.isEmpty) {
     errors = validate(listener.parsedUnitNode);
   }

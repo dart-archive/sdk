@@ -15,7 +15,8 @@ import "package:compiler/src/scanner/scannerlib.dart" show
     STRING_INFO,
     StringScanner,
     StringToken,
-    Token;
+    Token,
+    UnmatchedToken;
 
 import "keyword.dart" as own;
 
@@ -49,6 +50,13 @@ class Scanner extends StringScanner {
       super.appendKeywordToken(keyword);
     } else {
       super.appendSubstringToken(info, start, asciiOnly, extraOffset);
+    }
+  }
+
+  void appendErrorToken(ErrorToken token) {
+    // Ignore unmatched tokens, since we handle them in a different way.
+    if (token is! UnmatchedToken) {
+      super.appendErrorToken(token);
     }
   }
 }
