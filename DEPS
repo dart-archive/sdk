@@ -7,7 +7,7 @@ vars = {
   # NOTE: This revision will be used for looking at
   #   gs://chromium-browser-clang/Mac/clang-<rev>-1.tgz
   #   gs://chromium-browser-clang/Linux_x64/clang-<rev>-1.tgz
-  "clang_rev": "239765",
+  "clang_rev": "245965",
 
   "github_url": "https://github.com/%s.git",
 
