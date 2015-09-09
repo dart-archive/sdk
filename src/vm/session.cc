@@ -639,7 +639,6 @@ int Session::ProcessRun() {
         ASSERT(!debugging_);
         return kUncaughtExceptionExitCode;
       case kSnapshotDone:
-        ASSERT(!debugging_);
         return 0;
       case kProcessRun:
         process_started = true;
