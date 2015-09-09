@@ -26,7 +26,8 @@ class ThreadIdentifier {
   }
 
   void Join() {
-    UNIMPLEMENTED();
+    int retcode;
+    thread_join(thread_, &retcode, INFINITE_TIME);
   }
 
  private:
