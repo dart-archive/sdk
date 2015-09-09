@@ -21,7 +21,14 @@
         android:clickable="true"
         >
 
+        <ProgressBar
+            android:id="@+id/card_loading"
+            android:layout_height="70dp"
+            android:layout_width="match_parent"
+            android:padding="20dp"/>
+
         <RelativeLayout
+            android:id="@+id/card_loaded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="10dp"

@@ -33,6 +33,10 @@ public class CommitCardView extends CardView {
     this.node = node;
   }
 
+  public boolean isReady() {
+    return node != null;
+  }
+
   public String getTitle() { return node.getMessage(); }
   public String getAuthor() { return node.getAuthor(); }
   public String getDetails() { return node.getMessage(); }

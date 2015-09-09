@@ -22,7 +22,7 @@ public abstract class SlidingWindow<T extends RecyclerView.ViewHolder>
    * Implementors must implement this method instead of onBindViewHolder(T, int).
    *
    * @param holder ViewHolder being recycled.
-   * @param node Node to use for repopulating the view.
+   * @param node Node to use for repopulating the view or null if the data is unavailable.
    */
   public abstract void onBindViewHolder(T holder, AnyNode node);
 
@@ -37,11 +37,8 @@ public abstract class SlidingWindow<T extends RecyclerView.ViewHolder>
       shiftUp(position);
     }
     int adjusted = viewPositionToWindowIndex(position);
-    if (adjusted < 0) {
-      // TODO(zerny): Insert a spinner.
-      return;
-    }
-    onBindViewHolder(holder, root.getWindow().get(adjusted));
+    AnyNode node = adjusted < 0 ? null : root.getWindow().get(adjusted);
+    onBindViewHolder(holder, node);
   }
 
   @Override
@@ -91,8 +88,9 @@ public abstract class SlidingWindow<T extends RecyclerView.ViewHolder>
         for (ListPatch.RegionPatch region : patch.getWindow().getRegions()) {
           if (!region.isUpdate()) continue;
           int start = windowIndexToViewPosition(region.getIndex());
-          int count = windowIndexToViewPosition(region.getCount());
-          notifyItemRangeChanged(start, count);
+          if (start < previousCount) {
+            notifyItemRangeChanged(start, start + region.getCount());
+          }
         }
         if (currentCount > previousCount) {
           notifyItemRangeInserted(previousCount, currentCount - previousCount);
@@ -131,7 +129,7 @@ public abstract class SlidingWindow<T extends RecyclerView.ViewHolder>
   private int windowIndexToViewPosition(int index) {
     int delta = index - windowOffset();
     if (delta < 0) delta += windowCount();
-    return windowCount() + delta;
+    return windowStart() + delta;
   }
 
   private int viewPositionToWindowIndex(int position) {

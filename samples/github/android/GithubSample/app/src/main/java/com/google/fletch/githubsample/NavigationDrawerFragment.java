@@ -64,10 +64,13 @@ public class NavigationDrawerFragment extends Drawer.PaneFragment {
 
   @Override
   public void setOpenedState(boolean open) {
+    // TODO(zerny): getView might return null here!? Reintroduce setup of the view in setup(...).
+    View view = getView();
+    if (view == null) return;
     if (open) {
-      drawerLayout.openDrawer(getView());
+      drawerLayout.openDrawer(view);
     } else {
-      drawerLayout.closeDrawer(getView());
+      drawerLayout.closeDrawer(view);
     }
   }
 

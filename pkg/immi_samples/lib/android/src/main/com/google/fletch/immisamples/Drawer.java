@@ -96,11 +96,11 @@ public class Drawer implements DrawerPresenter {
   public boolean isReady() { return root != null; }
 
   public boolean getLeftVisible() {
-    return root.getLeftVisible();
+    return isReady() && root.getLeftVisible();
   }
 
   public boolean getRightVisible() {
-    return root.getRightVisible();
+    return isReady() && root.getRightVisible();
   }
 
   public void setLeftVisible(boolean leftVisible) {
@@ -112,11 +112,11 @@ public class Drawer implements DrawerPresenter {
   }
 
   public void toggleLeft() {
-    root.getToggleLeft().dispatch();
+    if (isReady()) root.getToggleLeft().dispatch();
   }
 
   public void toggleRight() {
-    root.getToggleRight().dispatch();
+    if (isReady()) root.getToggleRight().dispatch();
   }
 
   @Override

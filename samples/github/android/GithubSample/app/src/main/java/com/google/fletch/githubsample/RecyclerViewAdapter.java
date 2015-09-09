@@ -4,12 +4,12 @@
 
 package com.google.fletch.githubsample;
 
-import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.google.fletch.immisamples.SlidingWindow;
@@ -36,8 +36,10 @@ public class RecyclerViewAdapter extends SlidingWindow<RecyclerViewAdapter.Commi
 
   @Override
   public void onBindViewHolder(CommitViewHolder holder, AnyNode node) {
-    // TODO(zerny): Should this population be moved to the CommitViewCard?
+    holder.setLoading(node == null);
+    if (node == null) return;
     CommitCardView commitView = holder.cardView;
+    // TODO(zerny): Should this population be moved to the CommitViewCard?
     commitView.setCommitNode(node.as(CommitNode.class));
     holder.author.setText(commitView.getAuthor());
     holder.title.setText(commitView.getTitle());
@@ -53,6 +55,8 @@ public class RecyclerViewAdapter extends SlidingWindow<RecyclerViewAdapter.Commi
   public static class CommitViewHolder extends RecyclerView.ViewHolder {
 
     CommitCardView cardView;
+    ProgressBar loadingView;
+    View loadedView;
     TextView author;
     TextView title;
     ImageView avatar;
@@ -60,9 +64,25 @@ public class RecyclerViewAdapter extends SlidingWindow<RecyclerViewAdapter.Commi
     public CommitViewHolder(View itemView) {
       super(itemView);
       cardView = (CommitCardView)itemView.findViewById(R.id.card_view);
+      loadingView = (ProgressBar)itemView.findViewById(R.id.card_loading);
+      loadedView = itemView.findViewById(R.id.card_loaded);
       author = (TextView)itemView.findViewById(R.id.author);
       title = (TextView)itemView.findViewById(R.id.title);
       avatar = (ImageView)itemView.findViewById(R.id.avatar);
+      setLoading(true);
     }
+
+    public void setLoading(boolean loading) {
+      this.loading = loading;
+      if (loading) {
+        loadedView.setVisibility(View.GONE);
+        loadingView.setVisibility(View.VISIBLE);
+      } else {
+        loadedView.setVisibility(View.VISIBLE);
+        loadingView.setVisibility(View.GONE);
+      }
+    }
+
+    private boolean loading;
   }
 }
