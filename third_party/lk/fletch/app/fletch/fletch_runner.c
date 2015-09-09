@@ -8,61 +8,75 @@
 #include <app.h>
 #include <fletch_api.h>
 #include <endian.h>
+#include <kernel/thread.h>
 
-int read_snapshot(unsigned char** snapshot) {
-    printf("READY TO READ SNAPSHOT DATA.\n");
-    printf("STEP1: size.\n");
-    char size_buf[10];
-    int pos = 0;
-    while ((size_buf[pos++] = getchar()) != '\n') {
-      putchar(size_buf[pos-1]);
+int ReadSnapshot(unsigned char** snapshot) {
+  printf("READY TO READ SNAPSHOT DATA.\n");
+  printf("STEP1: size.\n");
+  char size_buf[10];
+  int pos = 0;
+  while ((size_buf[pos++] = getchar()) != '\n') {
+    putchar(size_buf[pos-1]);
+  }
+  if (pos > 9) abort();
+  size_buf[pos] = 0;
+  int size = atoi(size_buf);
+  unsigned char* result = malloc(size);
+  printf("\nSTEP2: reading snapshot of %d bytes.\n", size);
+  int status = 0;
+  for (pos = 0; pos < size; pos++, status++) {
+    result[pos] = getchar();
+    if (status == 1024) {
+      putchar('.');
+      status = 0;
     }
-    if (pos > 9) abort();
-    size_buf[pos] = 0;
-    int size = atoi(size_buf);
-    unsigned char* result = malloc(size);
-    printf("\nSTEP2: reading snapshot of %d bytes.\n", size);
-    int status = 0;
-    for (pos = 0; pos < size; pos++, status++) {
-      result[pos] = getchar();
-      if (status == 1024) {
-	putchar('.');
-	status = 0;
-      }	
-    }
-    printf("\nSNAPSHOT READ.\n");
-    *snapshot = result;
-    return size;
+  }
+  printf("\nSNAPSHOT READ.\n");
+  *snapshot = result;
+  return size;
 }
-	    
-void run_snapshot(unsigned char* snapshot, int size) {
-    printf("STARTING fletch-vm...\n");
-    FletchSetup();
-    printf("LOADING snapshot...\n");
-    FletchProgram program = FletchLoadSnapshot(snapshot, size);
-    free(snapshot);
-    printf("RUNNING program...\n");
-    FletchRunMain(program);
-    printf("DELETING program...\n");
-    FletchDeleteProgram(program);
-    printf("TEARING DOWN fletch-vm...\n");
-    FletchTearDown();
+
+int RunSnapshot(unsigned char* snapshot, int size) {
+  printf("STARTING fletch-vm...\n");
+  FletchSetup();
+  printf("LOADING snapshot...\n");
+  FletchProgram program = FletchLoadSnapshot(snapshot, size);
+  free(snapshot);
+  printf("RUNNING program...\n");
+  int result = FletchRunMain(program);
+  printf("DELETING program...\n");
+  FletchDeleteProgram(program);
+  printf("TEARING DOWN fletch-vm...\n");
+  FletchTearDown();
+  return result;
 }
 
 #if defined(WITH_LIB_CONSOLE)
 #include <lib/console.h>
 
-static int fletch_runner(int argc, const cmd_args *argv)
-{
-    unsigned char* snapshot;
-    int length  = read_snapshot(&snapshot);
-    run_snapshot(snapshot, length);
+int Run(void* ptr) {
+  unsigned char* snapshot;
+  int length = ReadSnapshot(&snapshot);
+  return RunSnapshot(snapshot, length);
+}
 
-    return 0;
+static int FletchRunner(int argc, const cmd_args *argv) {
+  // TODO(ajohnsen): Investigate if we can use the 'shell' thread instaed of
+  // the Dart main thread. Currently, we get stack overflows (into the kernel)
+  // when using the shell thread.
+  thread_t* thread = thread_create(
+      "Dart main thread", Run, NULL, DEFAULT_PRIORITY,
+      8192 /* DEFAULT_STACK_SIZE */);
+  thread_resume(thread);
+
+  int retcode;
+  thread_join(thread, &retcode, INFINITE_TIME);
+
+  return retcode;
 }
 
 STATIC_COMMAND_START
-{ "fletch", "fletch vm", &fletch_runner },
+{ "fletch", "fletch vm", &FletchRunner },
 STATIC_COMMAND_END(fletchrunner);
 #endif
 
