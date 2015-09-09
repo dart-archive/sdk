@@ -93,6 +93,8 @@ public class Drawer implements DrawerPresenter {
     }
   }
 
+  public boolean isReady() { return root != null; }
+
   public boolean getLeftVisible() {
     return root.getLeftVisible();
   }

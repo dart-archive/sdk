@@ -51,6 +51,11 @@ public class ImageLoader {
     // This method should be called on the UI thread since it is setting the drawable on imageView.
     assert (Looper.getMainLooper() == Looper.myLooper());
 
+    if (url == null || url.isEmpty()) {
+      imageView.setImageBitmap(defaultBitmap);
+      return;
+    }
+
     Bitmap bitmap = getFromCache(url);
     if (bitmap != null) {
       cancelPotentialWork(url, imageView);

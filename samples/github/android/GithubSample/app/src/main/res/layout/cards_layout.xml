@@ -43,6 +43,7 @@
                 android:layout_toRightOf="@+id/avatar"
                 android:layout_alignParentTop="true"
                 android:textSize="20sp"
+                android:maxLines="1"
                 android:textAppearance="@android:style/TextAppearance.Material.Title"
                 />
 
@@ -52,6 +53,7 @@
                 android:id="@+id/author"
                 android:layout_toRightOf="@+id/avatar"
                 android:layout_below="@+id/title"
+                android:maxLines="1"
                 android:textAppearance="@android:style/TextAppearance.Material.Body1"
                 />
 

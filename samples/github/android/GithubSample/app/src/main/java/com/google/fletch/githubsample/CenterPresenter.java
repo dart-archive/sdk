@@ -16,18 +16,17 @@ import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 
+import com.google.fletch.immisamples.SlidingWindow;
+
 import immi.AnyNode;
 import immi.AnyNodePatch;
 import immi.AnyNodePresenter;
+import immi.SlidingWindowNode;
+import immi.SlidingWindowPatch;
 
 public final class CenterPresenter implements AnyNodePresenter {
 
   public CenterPresenter(Activity activity) {
-    this.activity = activity;
-  }
-
-  @Override
-  public void present(AnyNode node) {
     RecyclerView recyclerView = (RecyclerView) activity.findViewById(R.id.recycler_view);
     // As long as the adapter does not cause size changes, this is set to true to gain performance.
     recyclerView.setHasFixedSize(true);
@@ -50,12 +49,19 @@ public final class CenterPresenter implements AnyNodePresenter {
         },
         BitmapFactory.decodeResource(activity.getResources(), R.drawable.dart_logo));
 
-    recyclerView.setAdapter(
-        new RecyclerViewAdapter(new CommitList().commitList, imageLoader));
+    presenter = new RecyclerViewAdapter(imageLoader);
+    recyclerView.setAdapter(presenter);
   }
 
   @Override
-  public void patch(AnyNodePatch patch) {}
+  public void present(AnyNode node) {
+    presenter.present(node.as(SlidingWindowNode.class));
+  }
 
-  private Activity activity;
+  @Override
+  public void patch(AnyNodePatch patch) {
+    presenter.patch(patch.as(SlidingWindowPatch.class));
+  }
+
+  private SlidingWindow presenter;
 }

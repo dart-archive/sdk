@@ -9,18 +9,13 @@ import android.app.Activity;
 import android.app.ActionBar;
 import android.app.ActivityOptions;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 
 import android.transition.Explode;
-import android.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.support.v4.widget.DrawerLayout;
-import android.widget.ImageView;
-import android.widget.Toast;
 
 import com.google.fletch.immisamples.Drawer;
 
@@ -68,7 +63,7 @@ public class MainActivity extends Activity implements AnyNodePresenter {
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
-    if (!drawer.getLeftVisible()) {
+    if (!drawer.isReady() || !drawer.getLeftVisible()) {
       // Only show items in the action bar relevant to this screen
       // if the drawer is not showing. Otherwise, let the drawer
       // decide what to show in the action bar.
@@ -83,7 +78,7 @@ public class MainActivity extends Activity implements AnyNodePresenter {
   public boolean onOptionsItemSelected(MenuItem item) {
     int id = item.getItemId();
     if (id == R.id.login) {
-      startActivity(new Intent(this, LoginActivity.class));j
+      startActivity(new Intent(this, LoginActivity.class));
       return true;
     }
     return super.onOptionsItemSelected(item);
@@ -97,23 +92,8 @@ public class MainActivity extends Activity implements AnyNodePresenter {
 
   public void showDetails(View view) {
     Intent intent = new Intent(this, DetailsViewActivity.class);
-    Commit commitItem = ((CommitCardView) view).getCommitItem();
-    intent.putExtra("Title", commitItem.title);
-    intent.putExtra("Author", commitItem.author);
-    intent.putExtra("Details", commitItem.details);
-
-    // TODO(zarah): Assess the performance of this. If it turns out to be too inefficient to send
-    // over bitmaps, make the image cache accessible and send the image url instead.
-    Bitmap bitmap =
-        ((BitmapDrawable)((ImageView) view.findViewById(R.id.avatar)).getDrawable()).getBitmap();
-    intent.putExtra("bitmap", bitmap);
-
-    // TODO(zarah): Find a way to transition the card smoothly as well.
-    ActivityOptions options =
-        ActivityOptions.makeSceneTransitionAnimation(this,
-            Pair.create(view.findViewById(R.id.avatar), "transition_image"),
-            Pair.create(view.findViewById(R.id.author), "transition_author"),
-            Pair.create(view.findViewById(R.id.title), "transition_title"));
+    CommitCardView commitView = (CommitCardView) view;
+    ActivityOptions options = commitView.prepareShowDetails(this, intent);
     getWindow().setExitTransition(new Explode());
     startActivity(intent, options.toBundle());
   }

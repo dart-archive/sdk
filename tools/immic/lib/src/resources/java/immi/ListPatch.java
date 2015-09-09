@@ -26,8 +26,14 @@ public final class ListPatch<N extends Node> implements Patch {
   public List<N> getCurrent() { return current; }
   public List<N> getPrevious() { return previous; }
 
+  public List<RegionPatch> getRegions() { return regions; }
+
   public static abstract class RegionPatch {
     public int getIndex() { return index; }
+    public abstract int getCount();
+    public boolean isRemove() { return false; }
+    public boolean isInsert() { return false; }
+    public boolean isUpdate() { return false; }
 
     RegionPatch(int index) {
       this.index = index;
@@ -55,7 +61,8 @@ public final class ListPatch<N extends Node> implements Patch {
   }
 
   public static class RemovePatch extends RegionPatch {
-    public int getCount() { return count; }
+    @Override public int getCount() { return count; }
+    @Override public boolean isRemove() { return false; }
 
     int delta() { return -count; }
 
@@ -70,6 +77,8 @@ public final class ListPatch<N extends Node> implements Patch {
   }
 
   public static class InsertPatch extends RegionPatch {
+    @Override public int getCount() { return nodes.size(); }
+    @Override public boolean isInsert() { return true; }
 
     int delta() { return nodes.size(); }
 
@@ -100,6 +109,8 @@ public final class ListPatch<N extends Node> implements Patch {
   }
 
   public static class UpdatePatch extends RegionPatch {
+    @Override public int getCount() { return updates.size(); }
+    @Override public boolean isUpdate() { return true; }
 
     int delta() { return 0; }
 

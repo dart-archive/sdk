@@ -12,17 +12,18 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import java.util.List;
+import com.google.fletch.immisamples.SlidingWindow;
 
-public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.CommitViewHolder>{
+import immi.AnyNode;
+import immi.CommitNode;
 
-  List<Commit> commitList;
+public class RecyclerViewAdapter extends SlidingWindow<RecyclerViewAdapter.CommitViewHolder> {
+
   ImageLoader imageLoader;
 
   private static final int IMAGE_VIEW_DIMENSION_PX = 120;
 
-  RecyclerViewAdapter(List<Commit> commitList, ImageLoader imageLoader) {
-    this.commitList = commitList;
+  RecyclerViewAdapter(ImageLoader imageLoader) {
     this.imageLoader = imageLoader;
   }
 
@@ -34,17 +35,14 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
   }
 
   @Override
-  public void onBindViewHolder(CommitViewHolder holder, int position) {
-    holder.author.setText(commitList.get(position).author);
-    holder.title.setText(commitList.get(position).title);
-    imageLoader.loadImageFromUrl(holder.avatar, commitList.get(position).imageUrl,
+  public void onBindViewHolder(CommitViewHolder holder, AnyNode node) {
+    // TODO(zerny): Should this population be moved to the CommitViewCard?
+    CommitCardView commitView = holder.cardView;
+    commitView.setCommitNode(node.as(CommitNode.class));
+    holder.author.setText(commitView.getAuthor());
+    holder.title.setText(commitView.getTitle());
+    imageLoader.loadImageFromUrl(holder.avatar, commitView.getImageUrl(),
         IMAGE_VIEW_DIMENSION_PX, IMAGE_VIEW_DIMENSION_PX);
-    holder.cardView.setCommitItem(commitList.get(position));
-  }
-
-  @Override
-  public int getItemCount() {
-    return commitList.size();
   }
 
   @Override
