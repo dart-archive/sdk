@@ -14,7 +14,9 @@ ImmutableHeap::ImmutableHeap()
       outstanding_parts_(0),
       unmerged_parts_(NULL),
       immutable_allocation_limit_(0),
-      consumed_memory_(0) {
+      unmerged_allocated_(0),
+      outstanding_parts_allocated_(0),
+      outstanding_parts_budget_(0) {
   UpdateLimitAfterImmutableGC(0);
 }
 
@@ -61,25 +63,63 @@ void ImmutableHeap::UpdateLimitAfterImmutableGC(int mutable_size_at_last_gc) {
   // unnecessary immutable GCs and therefore also unnecessary storebuffer
   // compactions.
   //
-  // TODO(kustermann): Once we have de-duplication of storebuffer entries, we
-  //   * might want to reduce this division factor
-  //   * might want to use a different metric than the mutable heap size
-  //     (preferable the number of pointers to immutable space - the size of the
-  //      root set).
+  // TODO(kustermann): We might want to use a different metric than the mutable
+  // heap size (preferable the number of pointers to immutable space - the
+  // size of the root set).
   immutable_allocation_limit_ =
-      Utils::Maximum(limit, mutable_size_at_last_gc / 2);
+      Utils::Maximum(limit, mutable_size_at_last_gc / 10);
+}
+
+int ImmutableHeap::EstimatedUsed() {
+  ScopedLock locker(heap_mutex_);
+
+  int merged_used = heap_.space()->Used();
+
+  int unmerged_used = 0;
+  Part* current = unmerged_parts_;
+  while (current != NULL) {
+    unmerged_used += current->heap()->space()->Used();
+    current = current->next();
+  }
+
+  // This overapproximates used memory of outstanding parts.
+  int outstanding_used =
+      outstanding_parts_allocated_ + outstanding_parts_budget_;
+
+  return merged_used + unmerged_used + outstanding_used;
+}
+
+int ImmutableHeap::EstimatedSize() {
+  ScopedLock locker(heap_mutex_);
+
+  int merged_size = heap_.space()->Size();
+
+  int unmerged_size = 0;
+  Part* current = unmerged_parts_;
+  while (current != NULL) {
+    unmerged_size += current->heap()->space()->Size();
+    current = current->next();
+  }
+
+  // This overapproximates used memory of outstanding parts.
+  int outstanding_size =
+      outstanding_parts_allocated_ + outstanding_parts_budget_;
+
+  return merged_size + unmerged_size + outstanding_size;
 }
 
 void ImmutableHeap::MergeParts() {
   ScopedLock locker(heap_mutex_);
 
   ASSERT(outstanding_parts_ == 0);
+  ASSERT(outstanding_parts_allocated_ == 0);
+  ASSERT(outstanding_parts_budget_ == 0);
   while (HasUnmergedParts()) {
     Part* part = RemoveUnmergedPart();
     heap_.MergeInOtherHeap(part->heap());
     delete part;
   }
-  consumed_memory_ = 0;
+  unmerged_allocated_ = 0;
 }
 
 void ImmutableHeap::IterateProgramPointers(PointerVisitor* visitor) {
@@ -98,10 +138,14 @@ ImmutableHeap::Part* ImmutableHeap::AcquirePart() {
   if (HasUnmergedParts()) {
     part = RemoveUnmergedPart();
     part->heap()->space()->SetAllocationBudget(budget);
+    part->set_budget(budget);
     part->ResetUsed();
   } else {
     part = new Part(NULL, budget);
   }
+
+  outstanding_parts_allocated_ += part->used();
+  outstanding_parts_budget_ += part->budget();
 
   outstanding_parts_++;
   return part;
@@ -113,15 +157,18 @@ bool ImmutableHeap::ReleasePart(Part* part) {
   outstanding_parts_--;
 
   part->heap()->Flush();
-  AddUnmergedPart(part);
 
   int limit = immutable_allocation_limit_;
   int diff = part->NewlyAllocated();
   ASSERT(diff >= 0);
-  int new_consumed_memory = consumed_memory_ + diff;
-  bool gc = consumed_memory_ < limit && limit < new_consumed_memory;
+  int new_allocated_memory = unmerged_allocated_ + diff;
+  bool gc = unmerged_allocated_ < limit && limit < new_allocated_memory;
+  unmerged_allocated_ = new_allocated_memory;
 
-  consumed_memory_ += diff;
+  outstanding_parts_allocated_ -= part->used();
+  outstanding_parts_budget_ -= part->budget();
+  AddUnmergedPart(part);
+
   return gc;
 }
 

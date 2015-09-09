@@ -469,10 +469,10 @@ void Process::ValidateHeaps(ImmutableHeap* immutable_heap) {
 
 void Process::PrintMemoryInfo() {
   uword heap_used = heap_.space()->Used();
-  uword immutable_used = immutable_heap_->space()->Used();
-  uword program_used = program()->heap()->space()->Used();
   uword heap_size = heap_.space()->Size();
-  uword immutable_size = immutable_heap_->space()->Size();
+  uword immutable_used = program()->immutable_heap()->EstimatedUsed();
+  uword immutable_size = program()->immutable_heap()->EstimatedSize();
+  uword program_used = program()->heap()->space()->Used();
   uword program_size = program()->heap()->space()->Size();
   Print::Error(
       "Pre-Process-GC(%p): \t%lu/%lu, \t%lu/%lu, \t%lu/%lu, \t%lu/%lu/%lu\n",

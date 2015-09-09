@@ -15,20 +15,31 @@ class ImmutableHeap {
   class Part {
    public:
     Part(Part* next, int budget)
-        : heap_(NULL, budget), used_original_(0), next_(next) {}
+        : heap_(NULL, budget),
+          budget_(budget),
+          used_original_(0),
+          next_(next) {
+    }
 
     Heap* heap() { return &heap_; }
 
-    int Used() { return used_original_; }
-    void ResetUsed() { used_original_ = heap_.space()->Used(); }
+    int budget() { return budget_; }
+    void set_budget(int new_budget) { budget_ = new_budget; }
 
-    int NewlyAllocated() { return heap_.space()->Used() - Used(); }
+    int used() { return used_original_; }
+
+    void ResetUsed() {
+      used_original_ = heap_.space()->Used();
+    }
+
+    int NewlyAllocated() { return heap_.space()->Used() - used_original_; }
 
     Part* next() { return next_; }
     void set_next(Part* next) { next_ = next; }
 
    private:
     Heap heap_;
+    int budget_;
     int used_original_;
     Part* next_;
   };
@@ -73,6 +84,14 @@ class ImmutableHeap {
   //   * all cached parts were merged via [MergeParts]
   void UpdateLimitAfterImmutableGC(int mutable_size_at_last_gc);
 
+  // The number of used bytes at the moment. Note that this is an over
+  // approximation.
+  int EstimatedUsed();
+
+  // The total size of the immutable heap at the moment. Note that this is an
+  // over approximation.
+  int EstimatedSize();
+
  private:
   bool HasUnmergedParts() { return unmerged_parts_ != NULL; }
   void AddUnmergedPart(Part* part);
@@ -88,8 +107,15 @@ class ImmutableHeap {
   // The limit of bytes we give out before a immutable GC should happen.
   int immutable_allocation_limit_;
 
-  // The amount of memory consumed by outstanding parts/unmerged parts.
-  int consumed_memory_;
+  // The amount of memory consumed by unmerged parts.
+  int unmerged_allocated_;
+
+  // The allocated memory and budget of all outstanding parts.
+  //
+  // Adding these two number gives an overapproximation of used memory by
+  // oustanding parts.
+  int outstanding_parts_allocated_;
+  int outstanding_parts_budget_;
 };
 
 }  // namespace fletch
