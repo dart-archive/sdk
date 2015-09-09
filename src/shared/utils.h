@@ -156,6 +156,12 @@ class Utils {
     return r;
   }
 
+  static int BitLength(int64 value) {
+    // Flip bits if negative (-1 becomes 0).
+    value ^= value >> 63;
+    return (value == 0) ? 0 : (Utils::HighestBit(value) + 1);
+  }
+
   static bool Signed64BitMulMightOverflow(int64 lhs, int64 rhs) {
     return (Utils::HighestBit(lhs) + Utils::HighestBit(rhs)) >= 62;
   }

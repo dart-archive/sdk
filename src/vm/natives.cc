@@ -403,7 +403,11 @@ NATIVE(MintBitShl) {
   Object* y = arguments[1];
   if (!y->IsLargeInteger()) return Failure::wrong_argument_type();
   int64 y_value = LargeInteger::cast(y)->value();
-  if (y_value >= 64) return Failure::wrong_argument_type();
+  int64 x_value = x->value();
+  int x_bit_length = Utils::BitLength(x_value);
+  if (x_bit_length + y_value >= 64) {
+    return Failure::wrong_argument_type();
+  }
   return process->ToInteger(x->value() << y_value);
 }
 
