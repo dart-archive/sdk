@@ -251,7 +251,7 @@ class Process {
   void StoreErrno();
   void RestoreErrno();
 
-  RandomLCG* random() { return &random_; }
+  RandomXorShift* random() { return &random_; }
 
   StoreBuffer* store_buffer() { return &store_buffer_; }
 
@@ -284,7 +284,7 @@ class Process {
   void set_process_list_prev(Process* process) { process_list_prev_ = process; }
   Process* process_list_prev() { return process_list_prev_; }
 
-  RandomLCG random_;
+  RandomXorShift random_;
 
   Heap heap_;
   Heap* immutable_heap_;

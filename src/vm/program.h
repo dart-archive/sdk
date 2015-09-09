@@ -229,7 +229,7 @@ class Program {
     return OFFSET_OF(Program, vtable_);
   }
 
-  RandomLCG* random() { return &random_; }
+  RandomXorShift* random() { return &random_; }
 
   void PrepareProgramGC(bool disable_heap_validation_before_gc = false);
   void PerformProgramGC(Space* to, PointerVisitor* visitor);
@@ -250,7 +250,7 @@ class Program {
   Mutex* process_list_mutex_;
   Process* process_list_head_;
 
-  RandomLCG random_;
+  RandomXorShift random_;
 
   Heap heap_;
   ImmutableHeap immutable_heap_;
