@@ -16,7 +16,7 @@ const Verb compileVerb = const Verb(
     requiredTarget: TargetKind.FILE);
 
 Future<int> compile(AnalyzedSentence sentence, VerbContext context) {
-  String script = sentence.targetName;
+  Uri script = sentence.targetUri;
 
   // This is asynchronous, but we don't await the result so we can respond to
   // other requests.
@@ -28,7 +28,7 @@ Future<int> compile(AnalyzedSentence sentence, VerbContext context) {
 class CompileTask extends SharedTask {
   // Keep this class simple, see note in superclass.
 
-  final String script;
+  final Uri script;
 
   const CompileTask(this.script);
 
@@ -39,6 +39,6 @@ class CompileTask extends SharedTask {
   }
 }
 
-Future<int> compileTask(String script) {
+Future<int> compileTask(Uri script) {
   return developer.compile(script, SessionState.current);
 }

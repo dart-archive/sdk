@@ -10,8 +10,17 @@ import 'infrastructure.dart' show
     TargetKind,
     VerbContext;
 
-import 'run_verb.dart' show
-    runVerb;
+import 'attach_verb.dart' show
+    attachVerb;
+
+import 'compile_and_run_verb.dart' show
+    compileAndRunVerb;
+
+import 'compile_verb.dart' show
+    compileVerb;
+
+import 'create_verb.dart' show
+    createVerb;
 
 import 'debug_verb.dart' show
     debugVerb;
@@ -19,29 +28,20 @@ import 'debug_verb.dart' show
 import 'help_verb.dart' show
     helpVerb;
 
+import 'run_verb.dart' show
+    runVerb;
+
 import 'show_verb.dart' show
     showVerb;
-
-import 'compile_and_run_verb.dart' show
-    compileAndRunVerb;
 
 import 'shutdown_verb.dart' show
     shutdownVerb;
 
-import 'create_verb.dart' show
-    createVerb;
-
-import 'compile_verb.dart' show
-    compileVerb;
-
-import 'attach_verb.dart' show
-    attachVerb;
+import 'x_end_verb.dart' show
+    endVerb;
 
 import 'x_run_verb.dart' show
     xRunVerb;
-
-import 'x_end_verb.dart' show
-    endVerb;
 
 import 'x_servicec_verb.dart' show
     servicecVerb;

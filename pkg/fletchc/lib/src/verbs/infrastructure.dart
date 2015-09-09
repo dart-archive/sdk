@@ -192,14 +192,22 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
   }
 
   String targetName;
+  Uri targetUri;
   if (target is NamedTarget) {
     targetName = target.name;
+    if (target.kind == TargetKind.FILE) {
+      targetUri = fileUri(targetName);
+    }
   }
 
+  Uri programName =
+      sentence.programName == null ? null : fileUri(sentence.programName);
   return new AnalyzedSentence(
       verb, target, targetName, preposition, trailing, sessionName,
-      sentence.arguments, sentence.programName);
+      sentence.arguments, programName, targetUri);
 }
+
+Uri fileUri(String path) => Uri.base.resolveUri(new Uri.file(path));
 
 abstract class VerbContext {
   final ClientController client;
@@ -248,8 +256,10 @@ class AnalyzedSentence {
   // TODO(ahe): Remove when compile-and-run is removed.
   final List<String> arguments;
 
-  // TODO(ahe): Remove when compile-and-run is removed.
-  final String programName;
+  final Uri programName;
+
+  /// Value of 'file NAME' converted to a Uri (main target, no preposition).
+  final Uri targetUri;
 
   AnalyzedSentence(
       this.verb,
@@ -259,7 +269,8 @@ class AnalyzedSentence {
       this.trailing,
       this.sessionName,
       this.arguments,
-      this.programName);
+      this.programName,
+      this.targetUri);
 
   Future<int> performVerb(VerbContext context) {
     return verb.verb.perform(this, context);

@@ -15,6 +15,8 @@ import '../driver/developer.dart' show
 
 import '../driver/developer.dart' as developer;
 
+import '../driver/exit_codes.dart' as exit_codes;
+
 const Verb runVerb =
     const Verb(
         run, runDocumentation, requiresSession: true,
@@ -24,7 +26,7 @@ Future<int> run(AnalyzedSentence sentence, VerbContext context) async {
   // This is asynchronous, but we don't await the result so we can respond to
   // other requests.
   context.performTaskInWorker(
-      new RunTask(sentence.programName, sentence.targetName));
+      new RunTask(sentence.programName, sentence.targetUri));
 
   return null;
 }
@@ -32,9 +34,9 @@ Future<int> run(AnalyzedSentence sentence, VerbContext context) async {
 class RunTask extends SharedTask {
   // Keep this class simple, see note in superclass.
 
-  final String programName;
+  final Uri programName;
 
-  final String script;
+  final Uri script;
 
   const RunTask(this.programName, this.script);
 
@@ -48,8 +50,8 @@ class RunTask extends SharedTask {
 Future<int> runTask(
     CommandSender commandSender,
     SessionState state,
-    String programName,
-    String script) async {
+    Uri programName,
+    Uri script) async {
   List<FletchDelta> compilationResults = state.compilationResults;
   Session session = state.session;
   if (compilationResults.isEmpty || script != null) {

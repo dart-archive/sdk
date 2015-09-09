@@ -12,17 +12,18 @@ import 'package:fletchc/src/driver/session_manager.dart';
 
 import 'package:fletchc/src/driver/developer.dart';
 
-String guessFletchProgramName() {
-  Uri dartVmUri =
-      Uri.base.resolveUri(new Uri.file(Platform.resolvedExecutable));
-  return dartVmUri.resolve('fletch').toFilePath();
+import 'package:fletchc/src/verbs/infrastructure.dart' show fileUri;
+
+Uri guessFletchProgramName() {
+  Uri dartVmUri = fileUri(Platform.resolvedExecutable);
+  return dartVmUri.resolve('fletch');
 }
 
 main(List<String> arguments) async {
   SessionState state = createSessionState("test");
-  String fletchProgramName = guessFletchProgramName();
+  Uri fletchProgramName = guessFletchProgramName();
   for (String script in arguments) {
-    await compile(script, state);
+    await compile(fileUri(script), state);
     await attachToLocalVm(fletchProgramName, state);
 
     state.stdoutSink.attachCommandSender(stdout.add);

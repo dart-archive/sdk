@@ -54,8 +54,9 @@ import '../../bytecodes.dart' show
 import '../diagnostic.dart' show
     throwInternalError;
 
-Future<Null> attachToLocalVm(String programName, SessionState state) async {
-  state.fletchVm = await FletchVm.start("$programName-vm");
+Future<Null> attachToLocalVm(Uri programName, SessionState state) async {
+  String fletchVmPath = programName.resolve("fletch-vm").toFilePath();
+  state.fletchVm = await FletchVm.start(fletchVmPath);
   await attachToVm(state.fletchVm.host, state.fletchVm.port, state);
 }
 
@@ -96,37 +97,29 @@ Future<Null> attachToVm(
   sessionState.session = session;
 }
 
-Uri resolveUserInputFile(String script) {
-  // TODO(ahe): Get base from current directory of C++ client. Also, this
-  // method should probably be moved to infrastructure.dart or something.
-  return Uri.base.resolve(script);
-}
-
-Future<int> compile(String script, SessionState state) async {
+Future<int> compile(Uri script, SessionState state) async {
   Uri firstScript = state.script;
   List<FletchDelta> previousResults = state.compilationResults;
-  Uri newScript = resolveUserInputFile(script);
-
   IncrementalCompiler compiler = state.compiler;
 
   FletchDelta newResult;
   try {
     if (previousResults.isEmpty) {
-      state.script = newScript;
-      await compiler.compile(newScript);
+      state.script = script;
+      await compiler.compile(script);
       newResult = compiler.computeInitialDelta();
     } else {
       try {
-        print("Compiling difference from $firstScript to $newScript");
+        print("Compiling difference from $firstScript to $script");
         newResult = await compiler.compileUpdates(
-            previousResults.last.system, <Uri, Uri>{firstScript: newScript},
+            previousResults.last.system, <Uri, Uri>{firstScript: script},
             logTime: print, logVerbose: print);
       } on IncrementalCompilationFailed catch (error) {
         print(error);
         print("Attempting full compile...");
         state.resetCompiler();
-        state.script = newScript;
-        await compiler.compile(newScript);
+        state.script = script;
+        await compiler.compile(script);
         newResult = compiler.computeInitialDelta();
       }
     }
