@@ -232,7 +232,8 @@ def StepsTargetRunner(debug_log, system, mode, arch):
               debug_log=debug_log,
               configuration=configuration)
 
-          RunWithCoreDumpArchiving(run, build_dir, build_conf)
+          #RunWithCoreDumpArchiving(run, build_dir, build_conf)
+          run()
   finally:
     if os.path.exists(tarball):
       os.remove(tarball)
