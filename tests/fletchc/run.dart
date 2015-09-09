@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.test.end_to_end;
+library fletchc.test.run;
 
 import 'dart:async';
 
@@ -33,5 +33,4 @@ main(List<String> arguments) async {
   }
 }
 
-// TODO(ahe): Pass a few file names to main.
-Future<Null> test() => main(<String>[]);
+Future<Null> test() => main(<String>['tests/language/application_test.dart']);

@@ -29,7 +29,7 @@ import '../service_tests/service_tests.dart' as service_tests;
 
 import '../servicec/servicec_tests.dart' as servicec_tests;
 
-import '../fletchc/end_to_end.dart' as end_to_end;
+import '../fletchc/run.dart' as run;
 
 typedef Future NoArgFuture();
 
@@ -82,5 +82,5 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
       print_backtrace.simulateBadBacktraceHack,
   'print_backtrace/simulateBadBacktrace': print_backtrace.simulateBadBacktrace,
 
-  'end_to_end': end_to_end.test,
+  'run': run.test,
 };

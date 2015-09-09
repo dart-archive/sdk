@@ -108,8 +108,6 @@ Socket handleSocketErrors(Socket socket, String name) {
     // other side.
   }
   String info = "$name ${socket.port} -> $remotePort";
-  // TODO(ahe): Remove the following line when things get more stable.
-  Zone.ROOT.print(info);
   socket.done.catchError(makeErrorHandler(info));
   return socket;
 }
