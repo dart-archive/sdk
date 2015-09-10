@@ -1,0 +1,5 @@
+Service.podspec
+libfletch.so
+libfletch.dylib
+conformance.snapshot
+ConformanceService.jar

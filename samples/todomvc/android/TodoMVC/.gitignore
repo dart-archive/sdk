@@ -1,6 +1,14 @@
 .gradle
 /local.properties
+/.idea/runConfigurations.xml
 /.idea/workspace.xml
 /.idea/libraries
 .DS_Store
 /build
+/captures
+
+/app/src/main/java/fletch
+/app/src/main/res/raw/todomvc_snapshot
+libfletch.so
+gdbserver
+gdb.setup
