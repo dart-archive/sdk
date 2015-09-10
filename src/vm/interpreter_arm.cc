@@ -375,7 +375,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   Dispatch(0);
 
   __ Bind(&overflow);
-  __ ldr(R7, Address(R4, Process::ProgramOffset()));
+  __ ldr(R7, Address(R4, Process::kProgramOffset));
   __ ldr(R7, Address(R7, Program::raw_stack_overflow_offset()));
   DoThrowAfterSaveState();
 
@@ -432,7 +432,7 @@ void InterpreterGeneratorARM::DoLoadBoxed() {
 
 void InterpreterGeneratorARM::DoLoadStatic() {
   __ ldr(R0, Address(R5, 1));
-  __ ldr(R1, Address(R4, Process::StaticsOffset()));
+  __ ldr(R1, Address(R4, Process::kStaticsOffset));
   __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R1, Operand(R0, TIMES_4)));
   Push(R0);
@@ -441,7 +441,7 @@ void InterpreterGeneratorARM::DoLoadStatic() {
 
 void InterpreterGeneratorARM::DoLoadStaticInit() {
   __ ldr(R0, Address(R5, 1));
-  __ ldr(R1, Address(R4, Process::StaticsOffset()));
+  __ ldr(R1, Address(R4, Process::kStaticsOffset));
   __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R1, Operand(R0, TIMES_4)));
 
@@ -492,7 +492,7 @@ void InterpreterGeneratorARM::DoLoadFieldWide() {
 
 void InterpreterGeneratorARM::DoLoadConst() {
   __ ldr(R0, Address(R5, 1));
-  __ ldr(R1, Address(R4, Process::ProgramOffset()));
+  __ ldr(R1, Address(R4, Process::kProgramOffset));
   __ ldr(R2, Address(R1, Program::ConstantsOffset()));
   __ add(R2, R2, Immediate(Array::kSize - HeapObject::kTag));
   __ ldr(R3, Address(R2, Operand(R0, TIMES_4)));
@@ -530,7 +530,7 @@ void InterpreterGeneratorARM::DoStoreBoxed() {
 void InterpreterGeneratorARM::DoStoreStatic() {
   LoadLocal(R2, 0);
   __ ldr(R0, Address(R5, 1));
-  __ ldr(R1, Address(R4, Process::StaticsOffset()));
+  __ ldr(R1, Address(R4, Process::kStaticsOffset));
   __ add(R3, R1, Immediate(Array::kSize - HeapObject::kTag));
   __ str(R2, Address(R3, Operand(R0, TIMES_4)));
 
@@ -1033,7 +1033,7 @@ void InterpreterGeneratorARM::DoNegate() {
 
 void InterpreterGeneratorARM::DoStackOverflowCheck() {
   __ ldr(R0, Address(R5, 1));
-  __ ldr(R1, Address(R4, Process::StackLimitOffset()));
+  __ ldr(R1, Address(R4, Process::kStackLimitOffset));
   __ add(R3, R6, Operand(R0, TIMES_4));
   __ cmp(R1, R3);
   __ b(LS, &check_stack_overflow_);
@@ -1416,7 +1416,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   __ eor(R3, R2, R7);
   __ ldr(R0, Immediate(LookupCache::kPrimarySize - 1));
   __ and_(R0, R3, R0);
-  __ ldr(R3, Address(R4, Process::PrimaryLookupCacheOffset()));
+  __ ldr(R3, Address(R4, Process::kPrimaryLookupCacheOffset));
   __ add(R0, R3, Operand(R0, LSL, 4));
 
   // Validate the primary entry.
@@ -1458,7 +1458,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   }
 
   __ Bind(&smi);
-  __ ldr(R3, Address(R4, Process::ProgramOffset()));
+  __ ldr(R3, Address(R4, Process::kProgramOffset));
   __ ldr(R2, Address(R3, Program::smi_class_offset()));
   __ b(&probe);
 
@@ -1485,7 +1485,7 @@ void InterpreterGeneratorARM::InvokeMethodFast(bool test) {
   // Get the dispatch table and form a pointer to the first element
   // corresponding to this invoke bytecode.
   __ ldr(R7, Address(R5, 1));
-  __ ldr(R1, Address(R4, Process::ProgramOffset()));
+  __ ldr(R1, Address(R4, Process::kProgramOffset));
   __ ldr(R2, Address(R1, Program::DispatchTableOffset()));
   __ add(R3, R2, Immediate(Array::kSize - HeapObject::kTag));
   __ add(R7, R3, Operand(R7, TIMES_4));
@@ -1566,7 +1566,7 @@ void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
   __ ldr(R7, Address(R5, 1));
 
   // Fetch the virtual table from the program.
-  __ ldr(R1, Address(R4, Process::ProgramOffset()));
+  __ ldr(R1, Address(R4, Process::kProgramOffset));
   __ ldr(R1, Address(R1, Program::VTableOffset()));
 
   if (!test) {
@@ -1640,7 +1640,7 @@ void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
   }
 
   __ Bind(&smi);
-  __ ldr(R2, Address(R4, Process::ProgramOffset()));
+  __ ldr(R2, Address(R4, Process::kProgramOffset));
   __ ldr(R2, Address(R2, Program::smi_class_offset()));
   __ b(&dispatch);
 
@@ -1656,7 +1656,7 @@ void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
     // Invalid entry: Use the noSuchMethod entry from entry zero of
     // the virtual table.
     __ Bind(&invalid);
-    __ ldr(R1, Address(R4, Process::ProgramOffset()));
+    __ ldr(R1, Address(R4, Process::kProgramOffset));
     __ ldr(R1, Address(R1, Program::VTableOffset()));
     __ ldr(R1, Address(R1, Array::kSize - HeapObject::kTag));
     __ b(&validated);
@@ -1735,7 +1735,7 @@ void InterpreterGeneratorARM::InvokeStatic(bool unfolded) {
     __ ldr(R0, Address(R5, Operand(R1, TIMES_1)));
   } else {
     __ ldr(R1, Address(R5, 1));
-    __ ldr(R2, Address(R4, Process::ProgramOffset()));
+    __ ldr(R2, Address(R4, Process::kProgramOffset));
     __ ldr(R3, Address(R2, Program::StaticMethodsOffset()));
     __ add(R3, R3, Immediate(Array::kSize - HeapObject::kTag));
     __ ldr(R0, Address(R3, Operand(R1, TIMES_4)));
@@ -1758,7 +1758,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     __ ldr(R7, Address(R5, Operand(R0, TIMES_1)));
   } else {
     __ ldr(R0, Address(R5, 1));
-    __ ldr(R1, Address(R4, Process::ProgramOffset()));
+    __ ldr(R1, Address(R4, Process::kProgramOffset));
     __ ldr(R1, Address(R1, Program::ClassesOffset()));
     __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
     __ ldr(R7, Address(R1, Operand(R0, TIMES_4)));
@@ -1953,7 +1953,7 @@ void InterpreterGeneratorARM::ConditionalStore(Register reg_if_eq,
 }
 
 void InterpreterGeneratorARM::CheckStackOverflow(int size) {
-  __ ldr(R1, Address(R4, Process::StackLimitOffset()));
+  __ ldr(R1, Address(R4, Process::kStackLimitOffset));
   __ cmp(R1, R6);
   if (size == 0) {
     __ b(LS, &check_stack_overflow_0_);
@@ -1982,7 +1982,7 @@ void InterpreterGeneratorARM::SaveState() {
   Push(R5);
 
   // Update top in the stack. Ugh. Complicated.
-  __ ldr(R5, Address(R4, Process::CoroutineOffset()));
+  __ ldr(R5, Address(R4, Process::kCoroutineOffset));
   __ ldr(R5, Address(R5, Coroutine::kStackOffset - HeapObject::kTag));
   __ sub(R6, R6, R5);
   __ sub(R6, R6, Immediate(Stack::kSize - HeapObject::kTag));
@@ -1992,14 +1992,14 @@ void InterpreterGeneratorARM::SaveState() {
 
 void InterpreterGeneratorARM::RestoreState() {
   // Load the current stack pointer into R6.
-  __ ldr(R6, Address(R4, Process::CoroutineOffset()));
+  __ ldr(R6, Address(R4, Process::kCoroutineOffset));
   __ ldr(R6, Address(R6, Coroutine::kStackOffset - HeapObject::kTag));
   __ ldr(R5, Address(R6, Stack::kTopOffset - HeapObject::kTag));
   __ add(R6, R6, Immediate(Stack::kSize - HeapObject::kTag));
   __ add(R6, R6, Operand(R5, TIMES_2));
 
   // Load constants into registers.
-  __ ldr(R10, Address(R4, Process::ProgramOffset()));
+  __ ldr(R10, Address(R4, Process::kProgramOffset));
   __ ldr(R11, Address(R10, Program::false_object_offset()));
   __ ldr(R8, Address(R10, Program::null_object_offset()));
   __ ldr(R10, Address(R10, Program::true_object_offset()));

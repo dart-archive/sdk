@@ -932,4 +932,21 @@ NATIVE(ProcessQueueGetChannel) {
   return process->program()->null_object();
 }
 
+class StaticAssertHelper {
+  static_assert(
+      Process::kProgramOffset == OFFSET_OF(Process, program_), "program_");
+  static_assert(
+      Process::kStaticsOffset == OFFSET_OF(Process, statics_), "statics_");
+  static_assert(
+      Process::kCoroutineOffset == OFFSET_OF(Process, coroutine_),
+      "coroutine_");
+  static_assert(
+      Process::kStackLimitOffset == OFFSET_OF(Process, stack_limit_),
+      "stack_limit_");
+  static_assert(
+      Process::kPrimaryLookupCacheOffset ==
+          OFFSET_OF(Process, primary_lookup_cache_),
+     "primary_lookup_cache_");
+};
+
 }  // namespace fletch

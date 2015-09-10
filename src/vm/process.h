@@ -240,13 +240,20 @@ class Process {
 
   ProcessQueue* process_queue() const { return queue_; }
 
-  static uword CoroutineOffset() { return OFFSET_OF(Process, coroutine_); }
-  static uword StackLimitOffset() { return OFFSET_OF(Process, stack_limit_); }
-  static uword ProgramOffset() { return OFFSET_OF(Process, program_); }
-  static uword StaticsOffset() { return OFFSET_OF(Process, statics_); }
-  static uword PrimaryLookupCacheOffset() {
-    return OFFSET_OF(Process, primary_lookup_cache_);
-  }
+#ifdef FLETCH32
+  static const uword k64BitPadding = 0;
+#else
+  static const uword k64BitPadding = 4;
+#endif
+  static const uword kProgramOffset =
+      k64BitPadding + sizeof(RandomLCG) + sizeof(Heap) + sizeof(StoreBuffer) +
+      2 * sizeof(void*);
+  static const uword kStaticsOffset = kProgramOffset + sizeof(void*);
+  static const uword kCoroutineOffset = kStaticsOffset + sizeof(void*);
+  static const uword kStackLimitOffset = kCoroutineOffset + sizeof(void*);
+  static const uword kPrimaryLookupCacheOffset = kStackLimitOffset +
+      k64BitPadding + sizeof(Atomic<Object**>) + sizeof(Atomic<State>) +
+      sizeof(Atomic<ThreadState*>);
 
   void StoreErrno();
   void RestoreErrno();
@@ -269,6 +276,7 @@ class Process {
   friend class Interpreter;
   friend class Engine;
   friend class Program;
+  friend class StaticAssertHelper;
 
   // Creation and deletion of processes is managed by a [Program].
   explicit Process(Program* program);
