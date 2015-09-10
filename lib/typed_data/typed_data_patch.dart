@@ -22,7 +22,7 @@ class _Uint8List extends _TypedList implements Uint8List {
 
   _Uint8List(int length) : super._create(length);
 
-  _Uint8List._fromList(List<int> elements)
+  _Uint8List.fromList(List<int> elements)
       : super._create(elements.length) {
     this.setRange(0, elements.length, elements);
   }
@@ -55,7 +55,7 @@ class _Uint16List extends _TypedList implements Uint16List {
   _Uint16List(int length)
        : super._create(length * _elementSizeInBytes);
 
-  _Uint16List._fromList(List<int> elements)
+  _Uint16List.fromList(List<int> elements)
       : super._create(elements.length * _elementSizeInBytes) {
     this.setRange(0, elements.length, elements);
   }
@@ -91,7 +91,7 @@ class _Uint32List extends _TypedList implements Uint32List {
   _Uint32List(int length)
       : super._create(length * _elementSizeInBytes);
 
-  _Uint32List._fromList(List<int> elements)
+  _Uint32List.fromList(List<int> elements)
       : super._create(elements.length * _elementSizeInBytes) {
     this.setRange(0, elements.length, elements);
   }

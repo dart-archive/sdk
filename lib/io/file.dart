@@ -23,8 +23,8 @@ class File {
       throw new ArgumentError("Invalid open mode: $mode");
     }
     int fd = sys.open(path,
-                      mode == READ || mode == WRITE,
-                      mode == WRITE || mode == WRITE_ONLY,
+                      mode == APPEND || mode == READ || mode == WRITE,
+                      mode == APPEND || mode == WRITE || mode == WRITE_ONLY,
                       mode == APPEND);
     if (fd == -1) throw new FileException("Failed to open file '$path'");
     return new File._(path, fd);

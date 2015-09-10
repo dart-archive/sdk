@@ -173,11 +173,15 @@ abstract class PosixSystem implements System {
     }
     if (write || append) {
       flags |= O_CREAT;
-      if (!append) flags = flags | O_TRUNC;
+      if (append) {
+        flags = flags | O_APPEND;
+      } else {
+        flags = flags | O_TRUNC;
+      }
     }
     flags |= O_CLOEXEC;
     ForeignMemory cPath = new ForeignMemory.fromStringAsUTF8(path);
-    int fd = _open.icall$2Retry(cPath, flags);
+    int fd = _open.icall$3Retry(cPath, flags, 0666);
     cPath.free();
     return fd;
   }

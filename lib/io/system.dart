@@ -26,6 +26,7 @@ const int O_WRONLY  = 1;
 const int O_RDWR    = 2;
 const int O_CREAT   = 64;
 const int O_TRUNC   = 512;
+const int O_APPEND  = 1024;
 const int O_CLOEXEC = 524288;
 
 const int SHUT_RD   = 0;
