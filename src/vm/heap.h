@@ -18,7 +18,7 @@ class ExitReference;
 // Heap represents the container for all HeapObjects.
 class Heap {
  public:
-  explicit Heap(RandomXorShift* random, int maximum_initial_size = 0);
+  explicit Heap(RandomLCG* random, int maximum_initial_size = 0);
   ~Heap();
 
   // Allocate raw object.
@@ -105,7 +105,7 @@ class Heap {
     return space()->needs_garbage_collection();
   }
 
-  RandomXorShift* random() { return random_; }
+  RandomLCG* random() { return random_; }
 
   void AddWeakPointer(HeapObject* object, WeakPointerCallback callback);
   void RemoveWeakPointer(HeapObject* object);
@@ -126,12 +126,12 @@ class Heap {
 
   Object* AllocateRawClass(int size);
 
-  void set_random(RandomXorShift* random) {
+  void set_random(RandomLCG* random) {
     random_ = random;
   }
 
   // Used for initializing identity hash codes for immutable objects.
-  RandomXorShift* random_;
+  RandomLCG* random_;
   Space* space_;
   // Linked list of weak pointers to heap objects in this heap.
   WeakPointer* weak_pointers_;

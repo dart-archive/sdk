@@ -7,7 +7,6 @@
 #include <stddef.h>
 
 #include "src/shared/assert.h"
-#include "src/shared/random.h"
 
 namespace fletch {
 
@@ -54,7 +53,20 @@ static size_t MaskLessThan(size_t max) {
   return max >> 1;
 }
 
-static RandomXorShift* random = NULL;
+/* Certified random numbers */
+static uint32_t x = 42;
+static uint32_t y = 103;
+static uint32_t z = 31415926;
+static uint32_t w = 8310;
+
+// Xorshift random number.
+static size_t RandomNumber() {
+  uint32_t t = x ^ (x << 11);
+  x = y;
+  y = z;
+  z = w;
+  return w = w ^ (w >> 19) ^ t ^ (t >> 8);
+}
 
 // Pick median of 3.  First the candidates are placed as 1.........23.  On
 // exit they have been sorted into S(mallest), M(edian) and (Largest) and they
@@ -62,10 +74,9 @@ static RandomXorShift* random = NULL;
 // and the pivot is placed in the top partition.
 void ChoosePivot(uint8* left, uint8* pivot, size_t element_size,
                  VoidCompare compare, size_t mask) {
-  if (random == NULL) random = new RandomXorShift();
-  uint8* one = left + (1 + (random->NextUInt32() & mask)) * element_size;
-  uint8* two = left + (1 + (random->NextUInt32() & mask)) * element_size;
-  uint8* three = left + (1 + (random->NextUInt32() & mask)) * element_size;
+  uint8* one = left + (1 + (RandomNumber() & mask)) * element_size;
+  uint8* two = left + (1 + (RandomNumber() & mask)) * element_size;
+  uint8* three = left + (1 + (RandomNumber() & mask)) * element_size;
 
   // Move three pivot candidates to the ends.
   Swap(left, one, element_size);
