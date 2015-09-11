@@ -41,14 +41,21 @@ public class MainActivity extends Activity implements AnyNodePresenter {
         null);
 
     // Create an immi service and attach a root graph.
-    ImmiService immi = new ImmiService();
-    ImmiRoot root = immi.registerPresenter(this, "DrawerPresenter");
+    final ImmiService immi = new ImmiService();
+    final ImmiRoot root = immi.registerPresenter(this, "DrawerPresenter");
 
     // If we are restoring, reset the presentation graph to get a complete graph.
     if (savedInstanceState != null) root.reset();
 
-    // Initiate presentation.
-    root.refresh();
+    // Ensure that we have a mock server running.
+    // Once confirmed, initiate the initial graph refresh.
+    new GithubMockServer().ensureServer(this, new GithubMockServer.EnsureServerCallback() {
+      @Override
+      public void handle(int port) {
+        // TODO(zerny): We should dynamically configure which port the server is on.
+        root.refresh();
+      }
+    });
   }
 
   @Override

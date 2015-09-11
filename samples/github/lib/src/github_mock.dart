@@ -48,9 +48,27 @@ class _ConnectionInvertedImpl implements _Connection {
   }
 }
 
+abstract class DataStorage {
+  ByteBuffer readResponseFile(String resource);
+}
+
+class FileDataStorage implements DataStorage {
+  String _dataDir = 'samples/github/lib/src/github_mock_data';
+
+  ByteBuffer readResponseFile(String resource) {
+    String path = '$_dataDir/$resource.data';
+    if (File.existsAsFile(path)) {
+      File file = new File.open(path);
+      return file.read(file.length);
+    }
+    return null;
+  }
+}
+
 class GithubMock {
   final int delay;
   bool verbose = false;
+  DataStorage dataStorage = new FileDataStorage();
   _Connection _connection;
   static const String _requestSuffix = ' HTTP/1.1';
 
@@ -117,24 +135,20 @@ class GithubMock {
       return;
     }
 
-    var response = _readResponseFile(request.substring(start, end));
-    socket.write(response);
-    socket.close();
-  }
-
-  String _dataDir = 'samples/github/lib/src/github_mock_data';
-
-  ByteBuffer _readResponseFile(String resource) {
+    String resource = request.substring(start, end);
     int code = 200;
-    String path = '$_dataDir/$resource.data';
-    if (!File.existsAsFile(path)) {
+    var response = dataStorage.readResponseFile(resource);
+
+    if (response == null) {
       code = 404;
-      path = '$_dataDir/404.data';
+      response = dataStorage.readResponseFile('404');
     }
+
     if (verbose) {
       print('Response $code on request for $resource');
     }
-    File file = new File.open(path);
-    return file.read(file.length);
+
+    socket.write(response);
+    socket.close();
   }
 }

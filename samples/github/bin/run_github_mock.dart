@@ -3,9 +3,11 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'package:github_sample/src/github_mock.dart';
+import 'package:github_sample/src/github_mock_data.dart';
 
 main() {
   var mock = new GithubMock('127.0.0.1', 8321);
+  mock.dataStorage = new ByteMapDataStorage();
   mock.verbose = true;
   mock.run();
 }
