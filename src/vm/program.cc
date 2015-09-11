@@ -66,11 +66,6 @@ Process* Program::ProcessSpawnForMain() {
     PrintStatistics();
   }
 
-#ifdef DEBUG
-  // TODO(ager): GC for testing only.
-  CollectGarbage();
-#endif
-
   Process* process = SpawnProcess();
   Function* entry = process->entry();
   int main_arity = process->main_arity();
