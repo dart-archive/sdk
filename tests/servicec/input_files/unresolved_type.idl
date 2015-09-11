@@ -9,11 +9,11 @@ service Painter {
 }
 
 struct Circle {
-  int32 radius;
+  int radius;  // There is no int type, just int8, int16, etc.
   Point2d position;
 }
 
 struct Point2d {
-  int32 x;
-  int32 y;
+  int x;  // There is no int type, just int8, int16, etc.
+  int y;  // There is no int type, just int8, int16, etc.
 }

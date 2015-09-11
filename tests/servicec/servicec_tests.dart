@@ -68,7 +68,11 @@ List<InputTest> SERVICEC_TESTS = <InputTest>[
                  CompilerError.badServiceDefinition,
                  CompilerError.badMemberDeclaration]),
     new Failure('unmatched_parenthesis',
-                [CompilerError.badFunctionDeclaration])
+                [CompilerError.badFunctionDeclaration]),
+    new Failure('unresolved_type',
+                [CompilerError.unresolvedType,
+                 CompilerError.unresolvedType,
+                 CompilerError.unresolvedType])
 ];
 
 /// Absolute path to the build directory used by test.py.
@@ -111,7 +115,7 @@ class Success extends InputTest {
                                     outputDirectory,
                                     target: target);
 
-      Expect.equals(compilerErrors.length, 0, "Expected no errors");
+      Expect.equals(0, compilerErrors.length, "Expected no errors");
       await checkOutputDirectoryStructure(outputDirectory, target);
     } finally {
       nukeDirectory(outputDirectory);

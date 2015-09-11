@@ -152,7 +152,9 @@ class ErrorHandlingListener extends Listener {
 
   // Simplest concrete nodes.
   Token beginIdentifier(Token tokens) {
-    pushNode(new IdentifierNode(tokens.stringValue));
+    if (tokens is ErrorToken) return tokens;
+
+    pushNode(new IdentifierNode(tokens.value));
     return tokens;
   }
 

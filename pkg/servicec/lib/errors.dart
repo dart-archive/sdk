@@ -10,7 +10,8 @@ import 'node.dart' show
     Node,
     ServiceNode,
     StructNode,
-    TopLevelDeclarationNode;
+    TopLevelDeclarationNode,
+    NodeVisitor;
 
 import 'package:compiler/src/scanner/scannerlib.dart' show
     Token;
@@ -21,7 +22,10 @@ enum CompilerError {
   badServiceDefinition,
   badStructDefinition,
   badTopLevelDeclaration,
-  undefinedService
+  internalCompilerError,
+  multipleDefinition,
+  undefinedService,
+  unresolvedType
 }
 
 // Error nodes.
@@ -48,6 +52,10 @@ class TopLevelDeclarationErrorNode extends TopLevelDeclarationNode
     this.begin = begin;
     tag = CompilerError.badTopLevelDeclaration;
   }
+
+  void accept(NodeVisitor visitor) {
+    throw new InternalCompilerError("TopLevelDeclarationErrorNode visited");
+  }
 }
 
 class FunctionDeclarationErrorNode extends FunctionDeclarationNode
@@ -70,4 +78,11 @@ class MemberDeclarationErrorNode extends MemberDeclarationNode with ErrorNode {
 class ErrorNode {
   Token begin;
   CompilerError tag;
+}
+
+class InternalCompilerError extends Error {
+  String message;
+  InternalCompilerError(this.message);
+
+  String toString() => "InternalCompilerError: $message";
 }
