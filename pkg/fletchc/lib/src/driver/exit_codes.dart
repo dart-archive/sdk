@@ -20,7 +20,3 @@ const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
 /// uncaught exception. This is recognized by out test runner (test.dart) as
 /// status `RuntimeError`.
 const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
-
-/// Exit code used by the fletch-vm to report a memory leak.
-// TODO(ahe): Elaborate on this
-const int MEMORY_LEAK_EXITCODE = 23;

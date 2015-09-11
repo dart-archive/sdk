@@ -13,8 +13,7 @@ import 'test_runner.dart' show
 import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
     COMPILER_EXITCODE_CRASH,
     DART_VM_EXITCODE_COMPILE_TIME_ERROR,
-    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION,
-    MEMORY_LEAK_EXITCODE;
+    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
 
 abstract class DecodeExitCode {
   int get exitCode;
@@ -34,9 +33,6 @@ abstract class DecodeExitCode {
 
       case DART_VM_EXITCODE_UNCAUGHT_EXCEPTION:
         return Expectation.RUNTIME_ERROR;
-
-      case MEMORY_LEAK_EXITCODE:
-        return Expectation.MEMORY_LEAK;
 
       case -15:
         return hasTimedOut ? Expectation.TIMEOUT : Expectation.CRASH;
