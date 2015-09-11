@@ -82,7 +82,9 @@ if [[ $# -eq 0 ]] || [[ "$1" == "http" ]]; then
     for f in `find . -type f -name *\\\\.data`; do
 	key=`echo $f | cut -b 3- | cut -d . -f 1`
 	echo "'$key': const <int>[" >> $DATA_FILE
-	od -A n -t d1 $f | sed 's/\([^ ]\) /\1,/g' | sed 's/$/,/' >> $DATA_FILE
+	od -A n -t d1 $f |\
+          sed 's/\([^ ]\) /\1,/g' |\
+          sed 's/\([^ ]\)$/\1,/' >> $DATA_FILE
 	echo "]," >> $DATA_FILE
     done
     echo "};" >> $DATA_FILE
