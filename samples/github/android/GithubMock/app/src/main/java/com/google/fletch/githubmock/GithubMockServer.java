@@ -97,9 +97,9 @@ public class GithubMockServer extends Service {
       final int bufferSize = 256;
       byte[] buffer = new byte[bufferSize];
       final ByteArrayOutputStream bytes = new ByteArrayOutputStream(stream.available());
-      int length = 0;
-      for (int count = stream.read(buffer, length, bufferSize); count >= 0; length += count) {
-        bytes.write(buffer, length, count);
+      int bytesRead;
+      while ((bytesRead = stream.read(buffer, 0, bufferSize)) >= 0) {
+        bytes.write(buffer, 0, bytesRead);
       }
       Thread dartThread = new Thread(new DartRunner(bytes.toByteArray()));
       dartThread.start();

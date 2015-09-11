@@ -6,6 +6,7 @@ package com.google.fletch.githubsample;
 
 import android.app.Application;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -27,12 +28,15 @@ public class MainApplication extends Application {
       return;
     }
     // Load snapshot and start dart code on a separate thread.
-    InputStream snapshotStream = getResources().openRawResource(R.raw.github_snapshot);
-    try {
-      int available = snapshotStream.available();
-      byte[] snapshot = new byte[available];
-      snapshotStream.read(snapshot);
-      Thread dartThread = new Thread(new DartRunner(snapshot));
+    try (InputStream stream = getResources().openRawResource(R.raw.github_snapshot)) {
+      final int bufferSize = 256;
+      byte[] buffer = new byte[bufferSize];
+      final ByteArrayOutputStream bytes = new ByteArrayOutputStream(stream.available());
+      int bytesRead;
+      while ((bytesRead = stream.read(buffer, 0, bufferSize)) >= 0) {
+        bytes.write(buffer, 0, bytesRead);
+      }
+      Thread dartThread = new Thread(new DartRunner(bytes.toByteArray()));
       dartThread.start();
     } catch (IOException e) {
       System.err.println("Failed to start Dart service from snapshot.");
