@@ -34,6 +34,9 @@ FLETCH_EXPORT void FletchDeleteProgram(FletchProgram program);
 // Start a process at main, from the program.
 FLETCH_EXPORT int FletchRunMain(FletchProgram program);
 
+// Start multiple processes at main, from the programs.
+FLETCH_EXPORT int FletchRunMultipleMain(int count, FletchProgram* programs);
+
 // Load the snapshot from the file, load the program from the
 // snapshot, start a process from that program, and run main in that
 // process.
