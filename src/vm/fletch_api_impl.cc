@@ -63,7 +63,7 @@ static int RunProgram(Program* program) {
   return RunScheduler(&scheduler);
 }
 
-static void RunShapshotFromFile(const char* path) {
+static void RunSnapshotFromFile(const char* path) {
   List<uint8> bytes = Platform::LoadFile(path);
   Program* program = LoadSnapshot(bytes);
   bytes.Delete();
@@ -127,7 +127,7 @@ void FletchDeleteProgram(FletchProgram raw_program) {
 }
 
 void FletchRunSnapshotFromFile(const char* path) {
-  fletch::RunShapshotFromFile(path);
+  fletch::RunSnapshotFromFile(path);
 }
 
 void FletchAddDefaultSharedLibrary(const char* library) {
