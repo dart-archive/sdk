@@ -261,6 +261,7 @@ bool Scheduler::EnqueueProcess(Process* process, Port* port) {
 }
 
 int Scheduler::Run() {
+  thread_pool_.Start();
   gc_thread_->StartThread();
 
   static const bool kProfile = Flags::profile;

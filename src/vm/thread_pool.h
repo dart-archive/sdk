@@ -22,8 +22,10 @@ class ThreadPool {
   // Try to start a new thread. The ThreadPool will only start a new thread
   // if less than the ThreadPools max_threads and threads_limit threads are
   // running. Returns false if the check failed and the method should be
-  // retried.
+  // retried. If called before [Start], the threads will be delayed until then.
   bool TryStartThread(Runable run, void* data, int threads_limit);
+
+  void Start();
 
   void JoinAll();
 
@@ -34,6 +36,7 @@ class ThreadPool {
   const int max_threads_;
   Atomic<int> threads_;
   ThreadInfo* thread_info_;
+  bool started_;
 
   static void* RunThread(void* arg);
   void ThreadDone();
