@@ -12,7 +12,7 @@
 
 namespace fletch {
 
-Heap::Heap(RandomLCG* random, int maximum_initial_size)
+Heap::Heap(RandomXorShift* random, int maximum_initial_size)
     : random_(random), space_(NULL), weak_pointers_(NULL) {
   space_ = new Space(maximum_initial_size);
   AdjustAllocationBudget();

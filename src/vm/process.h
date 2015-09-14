@@ -243,7 +243,7 @@ class Process {
   void StoreErrno();
   void RestoreErrno();
 
-  RandomLCG* random() { return &random_; }
+  RandomXorShift* random() { return &random_; }
 
   StoreBuffer* store_buffer() { return &store_buffer_; }
 
@@ -296,7 +296,7 @@ class Process {
   // code in this process.
   LookupCache::Entry* primary_lookup_cache_;
 
-  RandomLCG random_;
+  RandomXorShift random_;
 
   Heap heap_;
   Heap* immutable_heap_;

@@ -9,27 +9,39 @@
 
 namespace fletch {
 
-// This class implements a LCG (Linear Congruential Generator) pseudo random
-// number generator.
+// This class implements Xorshift+
 //
 // It has the following properties:
-//  - it has only a 32-bit state
-//  - it is guaranteed to cycle through every possible 32-bit integer
-class RandomLCG {
+//  - it has 128-bit state
+//  - it is guaranteed to cycle through every possible 128-bit state (except 0).
+//  - it doesn't systematically fail the BigCrush tests.
+//  - on Intel hardware it is slightly faster than Xorshift* and LCG generators.
+//  - it doesn't need multiply instructions.  Note that the Cortex M0/M1 has
+//    only 32x32->32 bit multiply, no 32x32->64 bit mul instruction.
+class RandomXorShift {
  public:
-  static const uint64 A = 1103515245;
-  static const uint64 C = 12345;
+  // Starting at zero would make it fail, and starting with very few bits set
+  // is also not good, so we guard against zero seeds.
+  explicit RandomXorShift(uint32 seed)
+    : s0_(seed ^ 314159265)
+    , s1_(271828182) { }
 
-  explicit RandomLCG(uint32 seed) : state_(seed) {}
+  RandomXorShift() : s0_(314159265), s1_(271828182) { }
 
   uint32 NextUInt32() {
-    uint64 state = state_;
-    state_ = static_cast<uint32>(state * A + C);
-    return state_;
+    uint64 x = s0_;
+    uint64 const y = s1_;
+    s0_ = y;
+    x ^= x << 23;
+    x ^= x >> 17;
+    x ^= y ^ (y >> 26);
+    s1_ = x;
+    return x + y;
   }
 
  private:
-  uint32 state_;
+  uint64 s0_;
+  uint64 s1_;
 };
 
 }  // namespace fletch

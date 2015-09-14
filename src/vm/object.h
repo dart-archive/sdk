@@ -602,7 +602,7 @@ class Instance: public HeapObject {
   // NOTE: This method will also initialize the idendity hash code to 0.
   inline void set_immutable(bool immutable);
 
-  inline Smi* LazyIdentityHashCode(RandomLCG* random);
+  inline Smi* LazyIdentityHashCode(RandomXorShift* random);
 
   // Sizing.
   inline static int AllocationSize(int number_of_fields) {
@@ -638,7 +638,7 @@ class Instance: public HeapObject {
  protected:
   inline void Initialize(int size, Object* init_value);
 
-  inline void InitializeIdentityHashCode(RandomLCG* random);
+  inline void InitializeIdentityHashCode(RandomXorShift* random);
   inline void SetIdentityHashCode(Smi* smi);
   inline Smi* IdentityHashCode();
   inline uint32 FlagsBits();
@@ -1430,7 +1430,7 @@ void Instance::set_immutable(bool immutable) {
   at_put(kFlagsOffset, reinterpret_cast<Smi*>(flags));
 }
 
-Smi* Instance::LazyIdentityHashCode(RandomLCG* random) {
+Smi* Instance::LazyIdentityHashCode(RandomXorShift* random) {
   Smi* hash_code = IdentityHashCode();
   if (hash_code->value() == 0) {
     InitializeIdentityHashCode(random);
@@ -1446,7 +1446,7 @@ void Instance::Initialize(int size, Object* null) {
   }
 }
 
-void Instance::InitializeIdentityHashCode(RandomLCG* random) {
+void Instance::InitializeIdentityHashCode(RandomXorShift* random) {
   // Taking the most significant FlagsHashCodeField size bits of a
   // random number might be 0. So we keep getting random numbers until
   // we've received a non-0 value.
