@@ -240,14 +240,6 @@ class Process {
 
   ProcessQueue* process_queue() const { return queue_; }
 
-  static uword CoroutineOffset() { return OFFSET_OF(Process, coroutine_); }
-  static uword StackLimitOffset() { return OFFSET_OF(Process, stack_limit_); }
-  static uword ProgramOffset() { return OFFSET_OF(Process, program_); }
-  static uword StaticsOffset() { return OFFSET_OF(Process, statics_); }
-  static uword PrimaryLookupCacheOffset() {
-    return OFFSET_OF(Process, primary_lookup_cache_);
-  }
-
   void StoreErrno();
   void RestoreErrno();
 
@@ -265,6 +257,14 @@ class Process {
     }
   }
 
+  // If you add an offset here, remember to add the corresponding static_assert
+  // in process.cc.
+  static const uword kCoroutineOffset = 0;
+  static const uword kStackLimitOffset = kCoroutineOffset + sizeof(void*);
+  static const uword kProgramOffset = kStackLimitOffset + sizeof(void*);
+  static const uword kStaticsOffset = kProgramOffset + sizeof(void*);
+  static const uword kPrimaryLookupCacheOffset = kStaticsOffset + sizeof(void*);
+
  private:
   friend class Interpreter;
   friend class Engine;
@@ -272,7 +272,7 @@ class Process {
 
   // Creation and deletion of processes is managed by a [Program].
   explicit Process(Program* program);
-  virtual ~Process();
+  ~Process();
 
   void UpdateStackLimit();
 
@@ -284,24 +284,26 @@ class Process {
   void set_process_list_prev(Process* process) { process_list_prev_ = process; }
   Process* process_list_prev() { return process_list_prev_; }
 
-  RandomLCG random_;
-
-  Heap heap_;
-  Heap* immutable_heap_;
-  StoreBuffer store_buffer_;
-  Program* program_;
-  Array* statics_;
-
+  // Put these first so they can be accessed from the interpreter without
+  // issues around object layout.
   Coroutine* coroutine_;
   Atomic<Object**> stack_limit_;
-
-  Atomic<State> state_;
-  Atomic<ThreadState*> thread_state_;
+  Program* program_;
+  Array* statics_;
 
   // We need extremely fast access to the primary lookup cache, so we
   // store a reference to it in the process whenever we're interpreting
   // code in this process.
   LookupCache::Entry* primary_lookup_cache_;
+
+  RandomLCG random_;
+
+  Heap heap_;
+  Heap* immutable_heap_;
+  StoreBuffer store_buffer_;
+
+  Atomic<State> state_;
+  Atomic<ThreadState*> thread_state_;
 
   List<List<int> > cooked_stack_deltas_;
 

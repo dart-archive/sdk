@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <stdlib.h>
 
+#include "src/shared/assert.h"
 #include "src/shared/bytecodes.h"
 #include "src/shared/flags.h"
 #include "src/shared/names.h"
@@ -133,16 +134,16 @@ ThreadState::~ThreadState() {
 }
 
 Process::Process(Program* program)
-    : random_(program->random()->NextUInt32() + 1),
-      heap_(&random_, 4 * KB),
-      immutable_heap_(NULL),
+    : coroutine_(NULL),
+      stack_limit_(NULL),
       program_(program),
       statics_(NULL),
-      coroutine_(NULL),
-      stack_limit_(NULL),
+      primary_lookup_cache_(NULL),
+      random_(program->random()->NextUInt32() + 1),
+      heap_(&random_, 4 * KB),
+      immutable_heap_(NULL),
       state_(kSleeping),
       thread_state_(NULL),
-      primary_lookup_cache_(NULL),
       next_(NULL),
       queue_(NULL),
       queue_next_(NULL),
@@ -154,6 +155,20 @@ Process::Process(Program* program)
       process_list_prev_(NULL),
       errno_cache_(0),
       debug_info_(NULL) {
+  // These asserts need to hold when running on the target, but they don't need
+  // to hold on the host (the build machine, where the interpreter-generating
+  // program runs).  We put these asserts here on the assumption that the
+  // interpreter-generating program will not instantiate this class.
+  static_assert(kCoroutineOffset == offsetof(Process, coroutine_),
+      "coroutine_");
+  static_assert(kStackLimitOffset == offsetof(Process, stack_limit_),
+      "stack_limit_");
+  static_assert(kProgramOffset == offsetof(Process, program_), "program_");
+  static_assert(kStaticsOffset == offsetof(Process, statics_), "statics_");
+  static_assert(
+      kPrimaryLookupCacheOffset == offsetof(Process, primary_lookup_cache_),
+      "primary_lookup_cache_");
+
   Array* static_fields = program->static_fields();
   int length = static_fields->length();
   statics_ = Array::cast(NewArray(length));

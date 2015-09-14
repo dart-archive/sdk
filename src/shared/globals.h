@@ -98,15 +98,6 @@ const int GB = KB * KB * KB;
   ((sizeof(array) / sizeof(*(array))) /                     \
   static_cast<size_t>(!(sizeof(array) % sizeof(*(array)))))
 
-// The expression OFFSET_OF(type, field) computes the byte-offset of
-// the specified field relative to the containing type. This doesn't
-// use 0 or NULL, which causes a problem with the compiler warnings we
-// have enabled (which is also why 'offsetof' doesn't seem to work).
-// The workaround is to use the non-zero value kDoubleSize.
-#define OFFSET_OF(type, field) \
-  (reinterpret_cast<uword>(&(reinterpret_cast<type*>(kDoubleSize)->field)) - \
-     kDoubleSize)
-
 // The USE(x) template is used to silence C++ compiler warnings issued
 // for unused variables.
 template <typename T>

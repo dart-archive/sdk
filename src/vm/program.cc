@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "src/shared/assert.h"
 #include "src/shared/flags.h"
 #include "src/shared/globals.h"
 #include "src/shared/names.h"
@@ -34,20 +35,27 @@ void ProgramState::AddPausedProcess(Process* process) {
 }
 
 Program::Program()
-    : process_list_mutex_(Platform::CreateMutex()),
+    :
+#define CONSTRUCTOR_NULL(type, name, CamelName) name##_(NULL),
+      ROOTS_DO(CONSTRUCTOR_NULL)
+#undef CONSTRUCTOR_NULL
+      process_list_mutex_(Platform::CreateMutex()),
       process_list_head_(NULL),
       random_(0),
       heap_(&random_),
       scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
-      classes_(NULL),
-      constants_(NULL),
-      static_methods_(NULL),
       static_fields_(NULL),
-      dispatch_table_(NULL),
-      vtable_(NULL),
       is_compact_(false) {
+  // These asserts need to hold when running on the target, but they don't need
+  // to hold on the host (the build machine, where the interpreter-generating
+  // program runs).  We put these asserts here on the assumption that the
+  // interpreter-generating program will not instantiate this class.
+#define ASSERT_OFFSET(type, name, CamelName) \
+    static_assert(k##CamelName##Offset == offsetof(Program, name##_), #name);
+  ROOTS_DO(ASSERT_OFFSET)
+#undef ASSERT_OFFSET
 }
 
 Program::~Program() {

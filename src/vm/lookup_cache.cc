@@ -10,6 +10,14 @@ LookupCache::LookupCache()
     : primary_(new Entry[kPrimarySize]),
       secondary_(new Entry[kSecondarySize]) {
   Clear();
+  // These asserts need to hold when running on the target, but they don't need
+  // to hold on the host (the build machine, where the interpreter-generating
+  // program runs).  We put these asserts here on the assumption that the
+  // interpreter-generating program will not instantiate this class.
+  static_assert(kClassOffset == offsetof(Entry, clazz), "clazz");
+  static_assert(kSelectorOffset == offsetof(Entry, selector), "selector");
+  static_assert(kTargetOffset == offsetof(Entry, target), "target");
+  static_assert(kTagOffset == offsetof(Entry, tag), "tag");
 }
 
 LookupCache::~LookupCache() {

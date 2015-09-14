@@ -24,43 +24,48 @@ class Scheduler;
 class Session;
 
 // Defines all the roots in the program heap.
-#define ROOTS_DO(V)                              \
-  V(Instance, null_object)                       \
-  V(Instance, false_object)                      \
-  V(Instance, true_object)                       \
-  V(Instance, sentinel_object)                   \
-  /* Global literals up to this line */          \
-  V(Array, empty_array)                          \
-  V(OneByteString, empty_string)                 \
-  V(Class, meta_class)                           \
-  V(Class, smi_class)                            \
-  V(Class, boxed_class)                          \
-  V(Class, large_integer_class)                  \
-  V(Class, num_class)                            \
-  V(Class, bool_class)                           \
-  V(Class, int_class)                            \
-  V(Class, one_byte_string_class)                \
-  V(Class, two_byte_string_class)                \
-  V(Class, object_class)                         \
-  V(Class, array_class)                          \
-  V(Class, function_class)                       \
-  V(Class, byte_array_class)                     \
-  V(Class, double_class)                         \
-  V(Class, stack_class)                          \
-  V(Class, coroutine_class)                      \
-  V(Class, port_class)                           \
-  V(Class, foreign_function_class)               \
-  V(Class, foreign_memory_class)                 \
-  V(Class, initializer_class)                    \
-  V(Class, constant_list_class)                  \
-  V(Class, constant_byte_list_class)             \
-  V(Class, constant_map_class)                   \
-  V(HeapObject, raw_retry_after_gc)              \
-  V(HeapObject, raw_wrong_argument_type)         \
-  V(HeapObject, raw_index_out_of_bounds)         \
-  V(HeapObject, raw_illegal_state)               \
-  V(HeapObject, raw_stack_overflow)              \
-  V(Object, native_failure_result)
+#define ROOTS_DO(V)                                             \
+  V(Instance, null_object, NullObject)                          \
+  V(Instance, false_object, FalseObject)                        \
+  V(Instance, true_object, TrueObject)                          \
+  V(Instance, sentinel_object, SentinelObject)                  \
+  /* Global literals up to this line */                         \
+  V(Array, empty_array, EmptyArray)                             \
+  V(OneByteString, empty_string, EmptyString)                   \
+  V(Class, meta_class, MetaClass)                               \
+  V(Class, smi_class, SmiClass)                                 \
+  V(Class, boxed_class, BoxedClass)                             \
+  V(Class, large_integer_class, LargeIntegerClass)              \
+  V(Class, num_class, NumClass)                                 \
+  V(Class, bool_class, BoolClass)                               \
+  V(Class, int_class, IntClass)                                 \
+  V(Class, one_byte_string_class, OneByteStringClass)           \
+  V(Class, two_byte_string_class, TwoByteStringClass)           \
+  V(Class, object_class, ObjectClass)                           \
+  V(Class, array_class, ArrayClass)                             \
+  V(Class, function_class, FunctionClass)                       \
+  V(Class, byte_array_class, ByteArrayClass)                    \
+  V(Class, double_class, DoubleClass)                           \
+  V(Class, stack_class, StackClass)                             \
+  V(Class, coroutine_class, CoroutineClass)                     \
+  V(Class, port_class, PortClass)                               \
+  V(Class, foreign_function_class, ForeignFunctionClass)        \
+  V(Class, foreign_memory_class, ForeignMemoryClass)            \
+  V(Class, initializer_class, InitializerClass)                 \
+  V(Class, constant_list_class, ConstantListClass)              \
+  V(Class, constant_byte_list_class, ConstantByteListClass)     \
+  V(Class, constant_map_class, ConstantMapClass)                \
+  V(HeapObject, raw_retry_after_gc, RawRetryAfterGc)            \
+  V(HeapObject, raw_wrong_argument_type, RawWrongArgumentType)  \
+  V(HeapObject, raw_index_out_of_bounds, RawIndexOutOfBounds)   \
+  V(HeapObject, raw_illegal_state, RawIllegalState)             \
+  V(HeapObject, raw_stack_overflow, RawStackOverflow)           \
+  V(Object, native_failure_result, NativeFailureResult)         \
+  V(Array, classes, Classes)                                    \
+  V(Array, constants, Constants)                                \
+  V(Array, static_methods, StaticMethods)                       \
+  V(Array, dispatch_table, DispatchTable)                       \
+  V(Array, vtable, VTable)                                      \
 
 class ProgramState {
  public:
@@ -99,15 +104,12 @@ class Program {
   int main_arity() const { return main_arity_; }
   void set_main_arity(int value) { main_arity_ = value; }
 
-  Array* classes() const { return classes_; }
   void set_classes(Array* classes) { classes_ = classes; }
   Class* class_at(int index) const { return Class::cast(classes_->get(index)); }
 
-  Array* constants() const { return constants_; }
   void set_constants(Array* constants) { constants_ = constants; }
   Object* constant_at(int index) const { return constants_->get(index); }
 
-  Array* static_methods() const { return static_methods_; }
   void set_static_methods(Array* static_methods) {
     static_methods_ = static_methods;
   }
@@ -120,12 +122,10 @@ class Program {
     static_fields_ = static_fields;
   }
 
-  Array* dispatch_table() const { return dispatch_table_; }
   void set_dispatch_table(Array* dispatch_table) {
     dispatch_table_ = dispatch_table;
   }
 
-  Array* vtable() const { return vtable_; }
   void set_vtable(Array* vtable) {
     vtable_ = vtable;
   }
@@ -208,26 +208,20 @@ class Program {
   void SetupDispatchTableIntrinsics();
 
   // Root objects.
-#define ROOT_ACCESSOR(type, name)                                       \
+ private:
+#define DECLARE_ENUM(type, name, CamelName)                     \
+  k##CamelName##Index,
+  enum {
+    ROOTS_DO(DECLARE_ENUM)
+  kNumberOfRoots};
+#undef DECLARE_ENUM
+
+ public:
+#define ROOT_ACCESSOR(type, name, CamelName)                            \
   type* name() const { return name##_; }                                \
-  static int name##_offset() { return OFFSET_OF(Program, name##_); }
+  static const int k##CamelName##Offset = sizeof(void*) * k##CamelName##Index;
   ROOTS_DO(ROOT_ACCESSOR)
 #undef ROOT_ACCESSOR
-
-  static int ClassesOffset() { return OFFSET_OF(Program, classes_); }
-  static int ConstantsOffset() { return OFFSET_OF(Program, constants_); }
-
-  static int StaticMethodsOffset() {
-    return OFFSET_OF(Program, static_methods_);
-  }
-
-  static int DispatchTableOffset() {
-    return OFFSET_OF(Program, dispatch_table_);
-  }
-
-  static int VTableOffset() {
-    return OFFSET_OF(Program, vtable_);
-  }
 
   RandomLCG* random() { return &random_; }
 
@@ -245,6 +239,10 @@ class Program {
   // Chaining of all processes of this program.
   void AddToProcessList(Process* process);
   void RemoveFromProcessList(Process* process);
+
+#define ROOT_DECLARATION(type, name, CamelName) type* name##_;
+  ROOTS_DO(ROOT_DECLARATION)
+#undef ROOT_DECLARATION
 
   // Chained doubly linked list of all processes protected by a lock.
   Mutex* process_list_mutex_;
@@ -266,22 +264,10 @@ class Program {
   Function* entry_;
   int main_arity_;
 
-  Array* classes_;
-  Array* constants_;
-  Array* static_methods_;
   Array* static_fields_;
 
-  Array* dispatch_table_;
-  Array* vtable_;
-
   bool is_compact_;
-
-#define ROOT_DECLARATION(type, name) type* name##_;
-  ROOTS_DO(ROOT_DECLARATION)
-#undef ROOT_DECLARATION
 };
-
-#undef ROOTS_DO
 
 }  // namespace fletch
 

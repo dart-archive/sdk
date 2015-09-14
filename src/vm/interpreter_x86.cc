@@ -364,8 +364,8 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   Dispatch(0);
 
   __ Bind(&overflow);
-  __ movl(EBX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EBX, Address(EBX, Program::raw_stack_overflow_offset()));
+  __ movl(EBX, Address(EBP, Process::kProgramOffset));
+  __ movl(EBX, Address(EBX, Program::kRawStackOverflowOffset));
   DoThrowAfterSaveState();
 
   // Intrinsic failure: Just invoke the method.
@@ -421,7 +421,7 @@ void InterpreterGeneratorX86::DoLoadBoxed() {
 
 void InterpreterGeneratorX86::DoLoadStatic() {
   __ movl(EAX, Address(ESI, 1));
-  __ movl(EBX, Address(EBP, Process::StaticsOffset()));
+  __ movl(EBX, Address(EBP, Process::kStaticsOffset));
   __ movl(EAX, Address(EBX, EAX, TIMES_4, Array::kSize - HeapObject::kTag));
   Push(EAX);
   Dispatch(kLoadStaticLength);
@@ -429,7 +429,7 @@ void InterpreterGeneratorX86::DoLoadStatic() {
 
 void InterpreterGeneratorX86::DoLoadStaticInit() {
   __ movl(EAX, Address(ESI, 1));
-  __ movl(EBX, Address(EBP, Process::StaticsOffset()));
+  __ movl(EBX, Address(EBP, Process::kStaticsOffset));
   __ movl(EAX, Address(EBX, EAX, TIMES_4, Array::kSize - HeapObject::kTag));
 
   Label done;
@@ -477,8 +477,8 @@ void InterpreterGeneratorX86::DoLoadFieldWide() {
 
 void InterpreterGeneratorX86::DoLoadConst() {
   __ movl(EAX, Address(ESI, 1));
-  __ movl(EBX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EBX, Address(EBX, Program::ConstantsOffset()));
+  __ movl(EBX, Address(EBP, Process::kProgramOffset));
+  __ movl(EBX, Address(EBX, Program::kConstantsOffset));
   __ movl(EAX, Address(EBX, EAX, TIMES_4, Array::kSize - HeapObject::kTag));
   Push(EAX);
   Dispatch(kLoadConstLength);
@@ -514,7 +514,7 @@ void InterpreterGeneratorX86::DoStoreBoxed() {
 void InterpreterGeneratorX86::DoStoreStatic() {
   LoadLocal(ECX, 0);
   __ movl(EAX, Address(ESI, 1));
-  __ movl(EBX, Address(EBP, Process::StaticsOffset()));
+  __ movl(EBX, Address(EBP, Process::kStaticsOffset));
   __ movl(Address(EBX, EAX, TIMES_4, Array::kSize - HeapObject::kTag), ECX);
 
   AddToStoreBufferSlow(EBX, ECX);
@@ -549,22 +549,22 @@ void InterpreterGeneratorX86::DoStoreFieldWide() {
 }
 
 void InterpreterGeneratorX86::DoLoadLiteralNull() {
-  __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(EAX, Program::null_object_offset()));
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kNullObjectOffset));
   Push(EAX);
   Dispatch(1);
 }
 
 void InterpreterGeneratorX86::DoLoadLiteralTrue() {
-  __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(EAX, Program::true_object_offset()));
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kTrueObjectOffset));
   Push(EAX);
   Dispatch(1);
 }
 
 void InterpreterGeneratorX86::DoLoadLiteralFalse() {
-  __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(EAX, Program::false_object_offset()));
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kFalseObjectOffset));
   Push(EAX);
   Dispatch(1);
 }
@@ -872,8 +872,8 @@ void InterpreterGeneratorX86::DoBranchWide() {
 void InterpreterGeneratorX86::DoBranchIfTrueWide() {
   Label branch;
   Pop(EBX);
-  __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(EAX, Program::true_object_offset()));
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kTrueObjectOffset));
   __ cmpl(EBX, EAX);
   __ j(EQUAL, &branch);
   Dispatch(kBranchIfTrueWideLength);
@@ -887,8 +887,8 @@ void InterpreterGeneratorX86::DoBranchIfTrueWide() {
 void InterpreterGeneratorX86::DoBranchIfFalseWide() {
   Label branch;
   Pop(EBX);
-  __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(EAX, Program::true_object_offset()));
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kTrueObjectOffset));
   __ cmpl(EBX, EAX);
   __ j(NOT_EQUAL, &branch);
   Dispatch(kBranchIfFalseWideLength);
@@ -911,8 +911,8 @@ void InterpreterGeneratorX86::DoBranchBackIfTrue() {
 
   Label branch;
   Pop(EBX);
-  __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(EAX, Program::true_object_offset()));
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kTrueObjectOffset));
   __ cmpl(EBX, EAX);
   __ j(EQUAL, &branch);
   Dispatch(kBranchBackIfTrueLength);
@@ -928,8 +928,8 @@ void InterpreterGeneratorX86::DoBranchBackIfFalse() {
 
   Label branch;
   Pop(EBX);
-  __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(EAX, Program::true_object_offset()));
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kTrueObjectOffset));
   __ cmpl(EBX, EAX);
   __ j(NOT_EQUAL, &branch);
   Dispatch(kBranchBackIfFalseLength);
@@ -952,8 +952,8 @@ void InterpreterGeneratorX86::DoBranchBackIfTrueWide() {
 
   Label branch;
   Pop(EBX);
-  __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(EAX, Program::true_object_offset()));
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kTrueObjectOffset));
   __ cmpl(EBX, EAX);
   __ j(EQUAL, &branch);
   Dispatch(kBranchBackIfTrueWideLength);
@@ -969,8 +969,8 @@ void InterpreterGeneratorX86::DoBranchBackIfFalseWide() {
 
   Label branch;
   Pop(EBX);
-  __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(EAX, Program::true_object_offset()));
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kTrueObjectOffset));
   __ cmpl(EBX, EAX);
   __ j(NOT_EQUAL, &branch);
   Dispatch(kBranchBackIfFalseWideLength);
@@ -1033,11 +1033,11 @@ void InterpreterGeneratorX86::DoAllocateBoxed() {
 void InterpreterGeneratorX86::DoNegate() {
   Label store;
   LoadLocal(EBX, 0);
-  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(ECX, Program::true_object_offset()));
+  __ movl(ECX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(ECX, Program::kTrueObjectOffset));
   __ cmpl(EBX, EAX);
   __ j(NOT_EQUAL, &store);
-  __ movl(EAX, Address(ECX, Program::false_object_offset()));
+  __ movl(EAX, Address(ECX, Program::kFalseObjectOffset));
   __ Bind(&store);
   StoreLocal(EAX, 0);
   Dispatch(kNegateLength);
@@ -1045,7 +1045,7 @@ void InterpreterGeneratorX86::DoNegate() {
 
 void InterpreterGeneratorX86::DoStackOverflowCheck() {
   __ movl(EAX, Address(ESI, 1));
-  __ movl(EBX, Address(EBP, Process::StackLimitOffset()));
+  __ movl(EBX, Address(EBP, Process::kStackLimitOffset));
   __ leal(ECX, Address(EDI, EAX, TIMES_4));
   __ cmpl(ECX, EBX);
   __ j(ABOVE_EQUAL, &check_stack_overflow_);
@@ -1106,8 +1106,8 @@ void InterpreterGeneratorX86::DoSubroutineReturn() {
 }
 
 void InterpreterGeneratorX86::DoProcessYield() {
-  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EBX, Address(ECX, Program::null_object_offset()));
+  __ movl(ECX, Address(EBP, Process::kProgramOffset));
+  __ movl(EBX, Address(ECX, Program::kNullObjectOffset));
   LoadLocal(EAX, 0);
   __ sarl(EAX, Immediate(1));
   __ addl(ESI, Immediate(kProcessYieldLength));
@@ -1116,8 +1116,8 @@ void InterpreterGeneratorX86::DoProcessYield() {
 }
 
 void InterpreterGeneratorX86::DoCoroutineChange() {
-  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(ECX, Program::null_object_offset()));
+  __ movl(ECX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(ECX, Program::kNullObjectOffset));
 
   LoadLocal(EBX, 0);  // Load argument.
   LoadLocal(EDX, 1);  // Load coroutine.
@@ -1172,19 +1172,19 @@ void InterpreterGeneratorX86::DoIdentical() {
   __ j(EQUAL, &bail_out);
 
   __ Bind(&fast_case);
-  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
+  __ movl(ECX, Address(EBP, Process::kProgramOffset));
 
   Label true_case;
   __ cmpl(EBX, EAX);
   __ j(EQUAL, &true_case);
 
-  __ movl(EAX, Address(ECX, Program::false_object_offset()));
+  __ movl(EAX, Address(ECX, Program::kFalseObjectOffset));
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(kIdenticalLength);
 
   __ Bind(&true_case);
-  __ movl(EAX, Address(ECX, Program::true_object_offset()));
+  __ movl(EAX, Address(ECX, Program::kTrueObjectOffset));
 
   Label done;
   __ Bind(&done);
@@ -1203,19 +1203,19 @@ void InterpreterGeneratorX86::DoIdentical() {
 void InterpreterGeneratorX86::DoIdenticalNonNumeric() {
   LoadLocal(EAX, 0);
   LoadLocal(EBX, 1);
-  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
+  __ movl(ECX, Address(EBP, Process::kProgramOffset));
 
   Label true_case;
   __ cmpl(EAX, EBX);
   __ j(EQUAL, &true_case);
 
-  __ movl(EAX, Address(ECX, Program::false_object_offset()));
+  __ movl(EAX, Address(ECX, Program::kFalseObjectOffset));
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(kIdenticalNonNumericLength);
 
   __ Bind(&true_case);
-  __ movl(EAX, Address(ECX, Program::true_object_offset()));
+  __ movl(EAX, Address(ECX, Program::kTrueObjectOffset));
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(kIdenticalNonNumericLength);
@@ -1267,18 +1267,18 @@ void InterpreterGeneratorX86::DoIntrinsicObjectEquals() {
   Label true_case;
   LoadLocal(EAX, 0);
   LoadLocal(EBX, 1);
-  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
+  __ movl(ECX, Address(EBP, Process::kProgramOffset));
 
   __ cmpl(EAX, EBX);
   __ j(EQUAL, &true_case);
 
-  __ movl(EAX, Address(ECX, Program::false_object_offset()));
+  __ movl(EAX, Address(ECX, Program::kFalseObjectOffset));
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(kInvokeMethodLength);
 
   __ Bind(&true_case);
-  __ movl(EAX, Address(ECX, Program::true_object_offset()));
+  __ movl(EAX, Address(ECX, Program::kTrueObjectOffset));
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(kInvokeMethodLength);
@@ -1433,8 +1433,8 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
     __ movl(EBX, Address(ESI, EAX, TIMES_1));
   } else {
     __ movl(EAX, Address(ESI, 1));
-    __ movl(EBX, Address(EBP, Process::ProgramOffset()));
-    __ movl(EBX, Address(EBX, Program::ClassesOffset()));
+    __ movl(EBX, Address(EBP, Process::kProgramOffset));
+    __ movl(EBX, Address(EBX, Program::kClassesOffset));
     __ movl(EBX, Address(EBX, EAX, TIMES_4, Array::kSize - HeapObject::kTag));
   }
 
@@ -1614,23 +1614,23 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
   __ xorl(EAX, EDX);
   __ andl(EAX, Immediate(LookupCache::kPrimarySize - 1));
   __ shll(EAX, Immediate(4));
-  __ movl(ECX, Address(EBP, Process::PrimaryLookupCacheOffset()));
+  __ movl(ECX, Address(EBP, Process::kPrimaryLookupCacheOffset));
   __ addl(EAX, ECX);
 
   // Validate the primary entry.
-  __ cmpl(EBX, Address(EAX, OFFSET_OF(LookupCache::Entry, clazz)));
+  __ cmpl(EBX, Address(EAX, LookupCache::kClassOffset));
   __ j(NOT_EQUAL, &miss);
-  __ cmpl(EDX, Address(EAX, OFFSET_OF(LookupCache::Entry, selector)));
+  __ cmpl(EDX, Address(EAX, LookupCache::kSelectorOffset));
   __ j(NOT_EQUAL, &miss);
 
   // At this point, we've got our hands on a valid lookup cache entry.
   Label intrinsified;
   __ Bind(&finish);
   if (test) {
-    __ movl(EAX, Address(EAX, OFFSET_OF(LookupCache::Entry, tag)));
+    __ movl(EAX, Address(EAX, LookupCache::kTagOffset));
   } else {
-    __ movl(EBX, Address(EAX, OFFSET_OF(LookupCache::Entry, tag)));
-    __ movl(EAX, Address(EAX, OFFSET_OF(LookupCache::Entry, target)));
+    __ movl(EBX, Address(EAX, LookupCache::kTagOffset));
+    __ movl(EAX, Address(EAX, LookupCache::kTargetOffset));
     __ cmpl(EBX, Immediate(1));
     __ j(ABOVE, &intrinsified);
   }
@@ -1639,16 +1639,16 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
     // Materialize either true or false depending on whether or not
     // we've found a target method.
     Label found;
-    __ movl(EBX, Address(EBP, Process::ProgramOffset()));
+    __ movl(EBX, Address(EBP, Process::kProgramOffset));
     __ testl(EAX, EAX);
     __ j(NOT_ZERO, &found);
 
-    __ movl(EAX, Address(EBX, Program::false_object_offset()));
+    __ movl(EAX, Address(EBX, Program::kFalseObjectOffset));
     StoreLocal(EAX, 0);
     Dispatch(kInvokeTestLength);
 
     __ Bind(&found);
-    __ movl(EAX, Address(EBX, Program::true_object_offset()));
+    __ movl(EAX, Address(EBX, Program::kTrueObjectOffset));
     StoreLocal(EAX, 0);
     Dispatch(kInvokeTestLength);
   } else {
@@ -1663,8 +1663,8 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
   }
 
   __ Bind(&smi);
-  __ movl(EBX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EBX, Address(EBX, Program::smi_class_offset()));
+  __ movl(EBX, Address(EBP, Process::kProgramOffset));
+  __ movl(EBX, Address(EBX, Program::kSmiClassOffset));
   __ jmp(&probe);
 
   if (!test) {
@@ -1686,8 +1686,8 @@ void InterpreterGeneratorX86::InvokeMethodFast(bool test) {
   // Get the dispatch table and form a pointer to the first element
   // corresponding to this invoke bytecode.
   __ movl(EDX, Address(ESI, 1));
-  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EBX, Address(ECX, Program::DispatchTableOffset()));
+  __ movl(ECX, Address(EBP, Process::kProgramOffset));
+  __ movl(EBX, Address(ECX, Program::kDispatchTableOffset));
   __ leal(EDX, Address(EBX, EDX, TIMES_4, Array::kSize - HeapObject::kTag));
 
   // Get the receiver from the stack.
@@ -1726,13 +1726,13 @@ void InterpreterGeneratorX86::InvokeMethodFast(bool test) {
             Immediate(reinterpret_cast<int32>(
                 Smi::FromWord(Smi::kMaxPortableValue))));
     __ j(EQUAL, &false_case);
-    __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-    __ movl(EAX, Address(EAX, Program::true_object_offset()));
+    __ movl(EAX, Address(EBP, Process::kProgramOffset));
+    __ movl(EAX, Address(EAX, Program::kTrueObjectOffset));
     __ jmp(&done);
 
     __ Bind(&false_case);
-    __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-    __ movl(EAX, Address(EAX, Program::false_object_offset()));
+    __ movl(EAX, Address(EBP, Process::kProgramOffset));
+    __ movl(EAX, Address(EAX, Program::kFalseObjectOffset));
 
     __ Bind(&done);
     StoreLocal(EAX, 0);
@@ -1765,7 +1765,7 @@ void InterpreterGeneratorX86::InvokeMethodFast(bool test) {
   }
 
   __ Bind(&smi);
-  __ movl(EBX, Address(ECX, Program::smi_class_offset()));
+  __ movl(EBX, Address(ECX, Program::kSmiClassOffset));
   __ jmp(&probe);
 }
 
@@ -1774,8 +1774,8 @@ void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {
   __ movl(EDX, Address(ESI, 1));
 
   // Fetch the virtual table from the program.
-  __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-  __ movl(ECX, Address(ECX, Program::VTableOffset()));
+  __ movl(ECX, Address(EBP, Process::kProgramOffset));
+  __ movl(ECX, Address(ECX, Program::kVTableOffset));
 
   if (!test) {
     // Compute the arity from the selector.
@@ -1823,8 +1823,8 @@ void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {
   Label validated, intrinsified;
   if (test) {
     // Valid entry: The answer is true.
-    __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-    __ movl(EAX, Address(EAX, Program::true_object_offset()));
+    __ movl(EAX, Address(EBP, Process::kProgramOffset));
+    __ movl(EAX, Address(EAX, Program::kTrueObjectOffset));
     StoreLocal(EAX, 0);
     Dispatch(kInvokeTestLength);
   } else {
@@ -1848,15 +1848,15 @@ void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {
   }
 
   __ Bind(&smi);
-  __ movl(EBX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EBX, Address(EBX, Program::smi_class_offset()));
+  __ movl(EBX, Address(EBP, Process::kProgramOffset));
+  __ movl(EBX, Address(EBX, Program::kSmiClassOffset));
   __ jmp(&dispatch);
 
   if (test) {
     // Invalid entry: The answer is false.
     __ Bind(&invalid);
-    __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-    __ movl(EAX, Address(EAX, Program::false_object_offset()));
+    __ movl(EAX, Address(EBP, Process::kProgramOffset));
+    __ movl(EAX, Address(EAX, Program::kFalseObjectOffset));
     StoreLocal(EAX, 0);
     Dispatch(kInvokeTestLength);
   } else {
@@ -1866,8 +1866,8 @@ void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {
     // Invalid entry: Use the noSuchMethod entry from entry zero of
     // the virtual table.
     __ Bind(&invalid);
-    __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-    __ movl(ECX, Address(ECX, Program::VTableOffset()));
+    __ movl(ECX, Address(EBP, Process::kProgramOffset));
+    __ movl(ECX, Address(ECX, Program::kVTableOffset));
     __ movl(ECX, Address(ECX, Array::kSize - HeapObject::kTag));
     __ jmp(&validated);
   }
@@ -1879,8 +1879,8 @@ void InterpreterGeneratorX86::InvokeStatic(bool unfolded) {
     __ movl(EAX, Address(ESI, EAX, TIMES_1));
   } else {
     __ movl(EAX, Address(ESI, 1));
-    __ movl(EBX, Address(EBP, Process::ProgramOffset()));
-    __ movl(EBX, Address(EBX, Program::StaticMethodsOffset()));
+    __ movl(EBX, Address(EBP, Process::kProgramOffset));
+    __ movl(EBX, Address(EBX, Program::kStaticMethodsOffset));
     __ movl(EAX, Address(EBX, EAX, TIMES_4, Array::kSize - HeapObject::kTag));
   }
 
@@ -1907,15 +1907,15 @@ void InterpreterGeneratorX86::InvokeCompare(const char* fallback,
   __ cmpl(EBX, EAX);
   __ j(condition, &true_case);
 
-  __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(EAX, Program::false_object_offset()));
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kFalseObjectOffset));
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(5);
 
   __ Bind(&true_case);
-  __ movl(EAX, Address(EBP, Process::ProgramOffset()));
-  __ movl(EAX, Address(EAX, Program::true_object_offset()));
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kTrueObjectOffset));
   StoreLocal(EAX, 1);
   Drop(1);
   Dispatch(5);
@@ -1979,8 +1979,8 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
 
   if (yield) {
     // Set the result to null and drop the arguments.
-    __ movl(ECX, Address(EBP, Process::ProgramOffset()));
-    __ movl(ECX, Address(ECX, Program::null_object_offset()));
+    __ movl(ECX, Address(EBP, Process::kProgramOffset));
+    __ movl(ECX, Address(ECX, Program::kNullObjectOffset));
     __ movl(Address(EBX, 0), ECX);
     __ movl(EDI, EBX);
 
@@ -2023,7 +2023,7 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
 }
 
 void InterpreterGeneratorX86::CheckStackOverflow(int size) {
-  __ movl(EBX, Address(EBP, Process::StackLimitOffset()));
+  __ movl(EBX, Address(EBP, Process::kStackLimitOffset));
   __ cmpl(EDI, EBX);
   if (size == 0) {
     __ j(ABOVE_EQUAL, &check_stack_overflow_0_);
@@ -2051,7 +2051,7 @@ void InterpreterGeneratorX86::SaveState() {
   Push(ESI);
 
   // Update top in the stack. Ugh. Complicated.
-  __ movl(ECX, Address(EBP, Process::CoroutineOffset()));
+  __ movl(ECX, Address(EBP, Process::kCoroutineOffset));
   __ movl(ECX, Address(ECX, Coroutine::kStackOffset - HeapObject::kTag));
   __ subl(EDI, ECX);
   __ subl(EDI, Immediate(Stack::kSize - HeapObject::kTag));
@@ -2061,7 +2061,7 @@ void InterpreterGeneratorX86::SaveState() {
 
 void InterpreterGeneratorX86::RestoreState() {
   // Load the current stack pointer into edi.
-  __ movl(EDI, Address(EBP, Process::CoroutineOffset()));
+  __ movl(EDI, Address(EBP, Process::kCoroutineOffset));
   __ movl(EDI, Address(EDI, Coroutine::kStackOffset - HeapObject::kTag));
   __ movl(ECX, Address(EDI, Stack::kTopOffset - HeapObject::kTag));
   __ leal(EDI, Address(EDI, ECX, TIMES_2, Stack::kSize - HeapObject::kTag));

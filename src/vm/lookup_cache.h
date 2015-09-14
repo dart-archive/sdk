@@ -18,6 +18,13 @@ class LookupCache {
   static const int kPrimarySize = 4096;
   static const int kSecondarySize = 2111;
 
+  // If you add an offset here, remember to add the corresponding static_assert
+  // in lookup_cache.cc.
+  static const int kClassOffset = 0;
+  static const int kSelectorOffset = kClassOffset + sizeof(word);
+  static const int kTargetOffset = kSelectorOffset + sizeof(word);
+  static const int kTagOffset = kTargetOffset + sizeof(word);
+
   struct Entry {
     Class* clazz;
     word selector;
