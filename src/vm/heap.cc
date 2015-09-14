@@ -91,7 +91,7 @@ void Heap::TryDeallocInteger(LargeInteger* object) {
   TryDealloc(object, LargeInteger::AllocationSize());
 }
 
-Object* Heap::CreateDouble(Class* the_class, double value) {
+Object* Heap::CreateDouble(Class* the_class, fletch_double value) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::DOUBLE_TYPE);
   int size = Double::AllocationSize();

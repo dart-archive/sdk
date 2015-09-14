@@ -1115,8 +1115,10 @@ Object* HandleIdentical(Process* process, Object* left, Object* right) {
   if (left == right) {
     identical = true;
   } else if (left->IsDouble() && right->IsDouble()) {
-    uint64 left_value = bit_cast<uint64>(Double::cast(left)->value());
-    uint64 right_value = bit_cast<uint64>(Double::cast(right)->value());
+    fletch_double_as_uint left_value =
+        bit_cast<fletch_double_as_uint>(Double::cast(left)->value());
+    fletch_double_as_uint right_value =
+        bit_cast<fletch_double_as_uint>(Double::cast(right)->value());
     identical = (left_value == right_value);
   } else if (left->IsLargeInteger() && right->IsLargeInteger()) {
     int64 left_value = LargeInteger::cast(left)->value();

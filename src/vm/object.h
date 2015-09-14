@@ -362,7 +362,7 @@ class LargeInteger : public HeapObject {
   void LargeIntegerShortPrint();
 
   static int AllocationSize() {
-    return Utils::RoundUp(kSize + sizeof(int64), kPointerSize);
+    return Utils::RoundUp(kSize, kPointerSize);
   }
 
   int LargeIntegerSize() { return AllocationSize(); }
@@ -370,6 +370,9 @@ class LargeInteger : public HeapObject {
   int AlternativeSize() {
     return ComputeAlternativeSize(HeapObject::kSize, sizeof(int64));
   }
+
+  static const int kValueOffset = HeapObject::kSize;
+  static const int kSize = kValueOffset + sizeof(int64);
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(LargeInteger);
@@ -379,8 +382,8 @@ class LargeInteger : public HeapObject {
 class Double : public HeapObject {
  public:
   // [value]: double value.
-  inline double value();
-  inline void set_value(double value);
+  inline fletch_double value();
+  inline void set_value(fletch_double value);
 
   // Casting.
   static inline Double* cast(Object* object);
@@ -395,14 +398,17 @@ class Double : public HeapObject {
 
   // Sizing.
   static int AllocationSize() {
-    return Utils::RoundUp(kSize + sizeof(double), kPointerSize);
+    return Utils::RoundUp(kSize, kPointerSize);
   }
 
   int DoubleSize() { return AllocationSize(); }
 
   int AlternativeSize() {
-    return ComputeAlternativeSize(HeapObject::kSize, sizeof(double));
+    return ComputeAlternativeSize(HeapObject::kSize, sizeof(fletch_double));
   }
+
+  static const int kValueOffset = HeapObject::kSize;
+  static const int kSize = kValueOffset + sizeof(fletch_double);
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(Double);
@@ -425,6 +431,7 @@ class Boxed : public HeapObject {
 
   static const int kValueOffset = HeapObject::kSize;
   static const int kSize = kValueOffset + kPointerSize;
+
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(Boxed);
 };
@@ -1849,11 +1856,11 @@ Object* Function::ConstantForBytecode(uint8* bcp) {
 // Inlined LargeInteger functions.
 
 int64 LargeInteger::value() {
-  return *reinterpret_cast<int64*>(address() + HeapObject::kSize);
+  return *reinterpret_cast<int64*>(address() + kValueOffset);
 }
 
 void LargeInteger::set_value(int64 value) {
-  *reinterpret_cast<int64*>(address() + HeapObject::kSize) = value;
+  *reinterpret_cast<int64*>(address() + kValueOffset) = value;
 }
 
 LargeInteger* LargeInteger::cast(Object* object) {
@@ -1863,12 +1870,12 @@ LargeInteger* LargeInteger::cast(Object* object) {
 
 // Inlined Double functions.
 
-double Double::value() {
-  return *reinterpret_cast<double*>(address() + HeapObject::kSize);
+fletch_double Double::value() {
+  return *reinterpret_cast<fletch_double*>(address() + kValueOffset);
 }
 
-void Double::set_value(double value) {
-  *reinterpret_cast<double*>(address() + HeapObject::kSize) = value;
+void Double::set_value(fletch_double value) {
+  *reinterpret_cast<fletch_double*>(address() + kValueOffset) = value;
 }
 
 Double* Double::cast(Object* object) {

@@ -460,7 +460,7 @@ NATIVE(DoubleAdd) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double y_value = Double::cast(y)->value();
+  fletch_double y_value = Double::cast(y)->value();
   return process->NewDouble(x->value() + y_value);
 }
 
@@ -468,7 +468,7 @@ NATIVE(DoubleSub) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double y_value = Double::cast(y)->value();
+  fletch_double y_value = Double::cast(y)->value();
   return process->NewDouble(x->value() - y_value);
 }
 
@@ -476,7 +476,7 @@ NATIVE(DoubleMul) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double y_value = Double::cast(y)->value();
+  fletch_double y_value = Double::cast(y)->value();
   return process->NewDouble(x->value() * y_value);
 }
 
@@ -484,7 +484,7 @@ NATIVE(DoubleMod) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double y_value = Double::cast(y)->value();
+  fletch_double y_value = Double::cast(y)->value();
   return process->NewDouble(fmod(x->value(), y_value));
 }
 
@@ -492,7 +492,7 @@ NATIVE(DoubleDiv) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double y_value = Double::cast(y)->value();
+  fletch_double y_value = Double::cast(y)->value();
   return process->NewDouble(x->value() / y_value);
 }
 
@@ -500,7 +500,7 @@ NATIVE(DoubleTruncDiv) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double y_value = Double::cast(y)->value();
+  fletch_double y_value = Double::cast(y)->value();
   if (y_value == 0) return Failure::index_out_of_bounds();
   return process->NewInteger(static_cast<int64>(x->value() / y_value));
 }
@@ -509,7 +509,7 @@ NATIVE(DoubleEqual) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double y_value = static_cast<double>(Double::cast(y)->value());
+  fletch_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() == y_value);
 }
 
@@ -517,7 +517,7 @@ NATIVE(DoubleLess) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double y_value = static_cast<double>(Double::cast(y)->value());
+  fletch_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() < y_value);
 }
 
@@ -525,7 +525,7 @@ NATIVE(DoubleLessEqual) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double y_value = static_cast<double>(Double::cast(y)->value());
+  fletch_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() <= y_value);
 }
 
@@ -533,7 +533,7 @@ NATIVE(DoubleGreater) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double y_value = static_cast<double>(Double::cast(y)->value());
+  fletch_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() > y_value);
 }
 
@@ -541,22 +541,24 @@ NATIVE(DoubleGreaterEqual) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double y_value = static_cast<double>(Double::cast(y)->value());
+  fletch_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() >= y_value);
 }
 
 NATIVE(DoubleIsNaN) {
-  double d = Double::cast(arguments[0])->value();
-  return ToBool(process, isnan(d));
+  fletch_double d = Double::cast(arguments[0])->value();
+  return ToBool(process, isnan(static_cast<double>(d)));
 }
 
 NATIVE(DoubleIsNegative) {
-  double d = Double::cast(arguments[0])->value();
+  // TODO(ajohnsen): Okay to always use double version?
+  double d = static_cast<double>(Double::cast(arguments[0])->value());
   return ToBool(process, (signbit(d) != 0) && !isnan(d));
 }
 
 NATIVE(DoubleCeil) {
-  double value = Double::cast(arguments[0])->value();
+  // TODO(ajohnsen): Okay to always use double version?
+  double value = static_cast<double>(Double::cast(arguments[0])->value());
   if (isnan(value) || isinf(value)) return Failure::index_out_of_bounds();
   return process->ToInteger(static_cast<int64>(ceil(value)));
 }
@@ -567,7 +569,8 @@ NATIVE(DoubleCeilToDouble) {
 }
 
 NATIVE(DoubleRound) {
-  double value = Double::cast(arguments[0])->value();
+  // TODO(ajohnsen): Okay to always use double version?
+  double value = static_cast<double>(Double::cast(arguments[0])->value());
   if (isnan(value) || isinf(value)) return Failure::index_out_of_bounds();
   return process->ToInteger(static_cast<int64>(round(value)));
 }
@@ -578,7 +581,8 @@ NATIVE(DoubleRoundToDouble) {
 }
 
 NATIVE(DoubleFloor) {
-  double value = Double::cast(arguments[0])->value();
+  // TODO(ajohnsen): Okay to always use double version?
+  double value = static_cast<double>(Double::cast(arguments[0])->value());
   if (isnan(value) || isinf(value)) return Failure::index_out_of_bounds();
   return process->ToInteger(static_cast<int64>(floor(value)));
 }
@@ -589,7 +593,8 @@ NATIVE(DoubleFloorToDouble) {
 }
 
 NATIVE(DoubleTruncate) {
-  double value = Double::cast(arguments[0])->value();
+  // TODO(ajohnsen): Okay to always use double version?
+  double value = static_cast<double>(Double::cast(arguments[0])->value());
   if (isnan(value) || isinf(value)) return Failure::index_out_of_bounds();
   return process->ToInteger(static_cast<int64>(trunc(value)));
 }
@@ -607,7 +612,8 @@ NATIVE(DoubleRemainder) {
 }
 
 NATIVE(DoubleToInt) {
-  double d = Double::cast(arguments[0])->value();
+  // TODO(ajohnsen): Okay to always use double version?
+  double d = static_cast<double>(Double::cast(arguments[0])->value());
   if (isinf(d) || isnan(d)) return Failure::index_out_of_bounds();
   // TODO(ager): Handle large doubles that are out of int64 range.
   int64 result = static_cast<int64>(trunc(d));
@@ -769,7 +775,7 @@ NATIVE(DoubleParse) {
   NATIVE(name) {                                                \
     Object* x = arguments[0];                                   \
     if (!x->IsDouble()) return Failure::wrong_argument_type();  \
-    double d = Double::cast(x)->value();                        \
+    fletch_double d = Double::cast(x)->value();                 \
     return process->NewDouble(method(d));                       \
   }
 
@@ -788,8 +794,8 @@ NATIVE(DoubleAtan2) {
   if (!x->IsDouble()) return Failure::wrong_argument_type();
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double x_value = Double::cast(x)->value();
-  double y_value = Double::cast(y)->value();
+  fletch_double x_value = Double::cast(x)->value();
+  fletch_double y_value = Double::cast(y)->value();
   return process->NewDouble(atan2(x_value, y_value));
 }
 
@@ -798,8 +804,8 @@ NATIVE(DoublePow) {
   if (!x->IsDouble()) return Failure::wrong_argument_type();
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  double x_value = Double::cast(x)->value();
-  double y_value = Double::cast(y)->value();
+  fletch_double x_value = Double::cast(x)->value();
+  fletch_double y_value = Double::cast(y)->value();
   return process->NewDouble(pow(x_value, y_value));
 }
 
@@ -968,7 +974,7 @@ NATIVE(IdentityHashCode) {
   } else if (object->IsSmi() || object->IsLargeInteger()) {
     return object;
   } else if (object->IsDouble()) {
-    double value = Double::cast(object)->value();
+    fletch_double value = Double::cast(object)->value();
     return process->ToInteger(static_cast<int64>(value));
   } else {
     return Instance::cast(object)->LazyIdentityHashCode(process->random());

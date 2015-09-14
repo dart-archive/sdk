@@ -113,7 +113,7 @@ class Process {
                                       int selector);
 
   Object* NewArray(int length);
-  Object* NewDouble(double value);
+  Object* NewDouble(fletch_double value);
   Object* NewInteger(int64 value);
 
   // Attempt to deallocate the large integer object. If the large integer
