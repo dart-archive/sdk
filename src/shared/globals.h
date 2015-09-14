@@ -41,14 +41,6 @@ typedef long long int int64;  // NOLINT
 typedef long long unsigned uint64;  // NOLINT
 #endif
 
-#ifdef FLETCH_TARGET_OS_LK
-typedef float fletch_double;
-typedef uint32 fletch_double_as_uint;
-#else
-typedef double fletch_double;
-typedef uint64 fletch_double_as_uint;
-#endif
-
 // Byte sizes.
 const int kWordSize = sizeof(word);
 const int kDoubleSize = sizeof(double);  // NOLINT

@@ -37,30 +37,23 @@ static Program* LoadSnapshot(List<uint8> bytes) {
   return NULL;
 }
 
-static void EnqueueProgramInScheduler(Program* program, Scheduler* scheduler) {
-#ifdef FLETCH_ENABLE_LIVE_CODING
-  ProgramFolder::FoldProgramByDefault(program);
-#endif  // FLETCH_ENABLE_LIVE_CODING
-  Process* process = program->ProcessSpawnForMain();
-  scheduler->ScheduleProgram(program, process);
-}
-
-static int RunScheduler(Scheduler* scheduler) {
+static int RunProgram(Program* program) {
 #if defined(__ANDROID__)
   // TODO(zerny): Consider making print interceptors part of the public API.
   Print::RegisterPrintInterceptor(new AndroidPrintInterceptor());
 #endif
-  int result = scheduler->Run();
+  Scheduler scheduler;
+#ifdef FLETCH_ENABLE_LIVE_CODING
+  ProgramFolder::FoldProgramByDefault(program);
+#endif  // FLETCH_ENABLE_LIVE_CODING
+  Process* process = program->ProcessSpawnForMain();
+  scheduler.ScheduleProgram(program, process);
+  int result = scheduler.Run();
+  scheduler.UnscheduleProgram(program);
 #if defined(__ANDROID__)
   Print::UnregisterPrintInterceptors();
 #endif
   return result;
-}
-
-static int RunProgram(Program* program) {
-  Scheduler scheduler;
-  EnqueueProgramInScheduler(program, &scheduler);
-  return RunScheduler(&scheduler);
 }
 
 static void RunSnapshotFromFile(const char* path) {
@@ -110,15 +103,6 @@ FletchProgram FletchLoadSnapshot(unsigned char* snapshot, int length) {
 int FletchRunMain(FletchProgram raw_program) {
   fletch::Program* program = reinterpret_cast<fletch::Program*>(raw_program);
   return fletch::RunProgram(program);
-}
-
-int FletchRunMultipleMain(int count, FletchProgram* programs) {
-  fletch::Scheduler scheduler;
-  for (int i = 0; i < count; i++) {
-    fletch::EnqueueProgramInScheduler(
-        reinterpret_cast<fletch::Program*>(programs[i]), &scheduler);
-  }
-  return fletch::RunScheduler(&scheduler);
 }
 
 void FletchDeleteProgram(FletchProgram raw_program) {

@@ -11,8 +11,7 @@ ThreadPool::ThreadPool(int max_threads)
     : monitor_(Platform::CreateMonitor()),
       max_threads_(max_threads),
       threads_(0),
-      thread_info_(NULL),
-      started_(false) {
+      thread_info_(NULL) {
 }
 
 ThreadPool::~ThreadPool() {
@@ -47,21 +46,11 @@ bool ThreadPool::TryStartThread(Runable run, void* data, int threads_limit) {
   info->data = data;
 
   ScopedMonitorLock locker(monitor_);
+  info->thread = Thread::Run(RunThread, info);
   info->next = thread_info_;
   thread_info_ = info;
-  if (started_) info->thread = Thread::Run(RunThread, info);
 
   return true;
-}
-
-void ThreadPool::Start() {
-  ScopedMonitorLock locker(monitor_);
-  ThreadInfo* info = thread_info_;
-  while (info != NULL) {
-    info->thread = Thread::Run(RunThread, info);
-    info = info->next;
-  }
-  started_ = true;
 }
 
 void ThreadPool::JoinAll() {

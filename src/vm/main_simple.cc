@@ -25,29 +25,22 @@ static int Main(int argc, char** argv) {
   Flags::ExtractFromCommandLine(&argc, argv);
   FletchSetup();
 
-  int program_count = argc - 1;
-
-  FletchProgram* programs = new FletchProgram[program_count];
-
-  for (int i = 0; i < program_count; i++) {
-    // Handle the arguments.
-    const char* input = argv[i + 1];
-    List<uint8> bytes = Platform::LoadFile(input);
-    if (!IsSnapshot(bytes)) {
-      FATAL("The input file is not a fletch snapshot.");
-    }
-
-    FletchProgram program = FletchLoadSnapshot(bytes.data(), bytes.length());
-    programs[i] = program;
+  if (argc != 2) {
+    FATAL("Precisely one argument is required, the snapshot.");
   }
 
-  int result = FletchRunMultipleMain(program_count, programs);
-
-  for (int i = 0; i < program_count; i++) {
-    FletchDeleteProgram(programs[i]);
+  // Handle the arguments.
+  const char* input = argv[1];
+  List<uint8> bytes = Platform::LoadFile(input);
+  if (!IsSnapshot(bytes)) {
+    FATAL("The input file is not a fletch snapshot.");
   }
 
-  delete[] programs;
+  FletchProgram program = FletchLoadSnapshot(bytes.data(), bytes.length());
+  bytes.Delete();
+
+  int result = FletchRunMain(program);
+  FletchDeleteProgram(program);
 
   FletchTearDown();
   return result;

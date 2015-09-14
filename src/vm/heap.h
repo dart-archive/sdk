@@ -42,7 +42,7 @@ class Heap {
   void TryDeallocInteger(LargeInteger* object);
 
   // Allocate double.
-  Object* CreateDouble(Class* the_class, fletch_double value);
+  Object* CreateDouble(Class* the_class, double value);
 
   // Allocate boxed.
   Object* CreateBoxed(Class* the_class, Object* value);
