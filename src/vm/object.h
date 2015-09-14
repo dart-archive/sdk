@@ -1143,7 +1143,7 @@ InstanceFormat::InstanceFormat(Type type,
 }
 
 const InstanceFormat InstanceFormat::heap_integer_format() {
-  return InstanceFormat(LARGE_INTEGER_TYPE, LargeInteger::kSize, true, true);
+  return InstanceFormat(LARGE_INTEGER_TYPE, HeapObject::kSize, true, true);
 }
 
 const InstanceFormat InstanceFormat::byte_array_format() {
@@ -1151,7 +1151,7 @@ const InstanceFormat InstanceFormat::byte_array_format() {
 }
 
 const InstanceFormat InstanceFormat::double_format() {
-  return InstanceFormat(DOUBLE_TYPE, Double::kSize, true, true);
+  return InstanceFormat(DOUBLE_TYPE, HeapObject::kSize, true, true);
 }
 
 const InstanceFormat InstanceFormat::boxed_format() {
