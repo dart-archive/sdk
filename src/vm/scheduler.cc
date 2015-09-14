@@ -36,7 +36,7 @@ Scheduler::Scheduler()
       shutdown_program_(NULL),
       pause_(false),
       current_processes_(new Atomic<Process*>[max_threads_]),
-      gc_thread_(NULL) {
+      gc_thread_(new GCThread()) {
   for (int i = 0; i < max_threads_; i++) {
     threads_[i] = NULL;
     current_processes_[i] = NULL;
@@ -49,6 +49,7 @@ Scheduler::~Scheduler() {
   delete[] current_processes_;
   delete[] threads_;
   delete startup_queue_;
+  delete gc_thread_;
   ThreadState* current = temporary_thread_states_;
   while (current != NULL) {
     ThreadState* next = current->next_idle_thread();
@@ -260,7 +261,6 @@ bool Scheduler::EnqueueProcess(Process* process, Port* port) {
 }
 
 int Scheduler::Run() {
-  gc_thread_ = new GCThread();
   gc_thread_->StartThread();
 
   static const bool kProfile = Flags::profile;
@@ -320,8 +320,6 @@ int Scheduler::Run() {
   preempt_monitor_->Unlock();
 
   gc_thread_->StopThread();
-  delete gc_thread_;
-  gc_thread_ = NULL;
 
   if (shutdown_ != -1) return shutdown_;
   return 0;
