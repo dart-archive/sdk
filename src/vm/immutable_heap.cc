@@ -42,11 +42,11 @@ ImmutableHeap::Part* ImmutableHeap::RemoveUnmergedPart() {
   return part;
 }
 
-void ImmutableHeap::UpdateLimitAfterImmutableGC(uword mutable_size_at_last_gc) {
+void ImmutableHeap::UpdateLimitAfterImmutableGC(int mutable_size_at_last_gc) {
   ASSERT(outstanding_parts_ == 0 && unmerged_parts_ == NULL);
 
   // Without knowing anything, we use the default [Space] size.
-  uword limit = number_of_hw_threads_ * Space::kDefaultMinimumChunkSize;
+  int limit = number_of_hw_threads_ * Space::kDefaultMinimumChunkSize;
 
   // If we know the size of what survived during the last immutable GC we
   // make sure the limit is at least that high - thereby making this a 2x
@@ -70,12 +70,12 @@ void ImmutableHeap::UpdateLimitAfterImmutableGC(uword mutable_size_at_last_gc) {
       Utils::Maximum(limit, mutable_size_at_last_gc / 10);
 }
 
-uword ImmutableHeap::EstimatedUsed() {
+int ImmutableHeap::EstimatedUsed() {
   ScopedLock locker(heap_mutex_);
 
-  uword merged_used = heap_.space()->Used();
+  int merged_used = heap_.space()->Used();
 
-  uword unmerged_used = 0;
+  int unmerged_used = 0;
   Part* current = unmerged_parts_;
   while (current != NULL) {
     unmerged_used += current->heap()->space()->Used();
@@ -83,18 +83,18 @@ uword ImmutableHeap::EstimatedUsed() {
   }
 
   // This overapproximates used memory of outstanding parts.
-  uword outstanding_used =
+  int outstanding_used =
       outstanding_parts_allocated_ + outstanding_parts_budget_;
 
   return merged_used + unmerged_used + outstanding_used;
 }
 
-uword ImmutableHeap::EstimatedSize() {
+int ImmutableHeap::EstimatedSize() {
   ScopedLock locker(heap_mutex_);
 
-  uword merged_size = heap_.space()->Size();
+  int merged_size = heap_.space()->Size();
 
-  uword unmerged_size = 0;
+  int unmerged_size = 0;
   Part* current = unmerged_parts_;
   while (current != NULL) {
     unmerged_size += current->heap()->space()->Size();
@@ -102,7 +102,7 @@ uword ImmutableHeap::EstimatedSize() {
   }
 
   // This overapproximates used memory of outstanding parts.
-  uword outstanding_size =
+  int outstanding_size =
       outstanding_parts_allocated_ + outstanding_parts_budget_;
 
   return merged_size + unmerged_size + outstanding_size;
@@ -158,10 +158,10 @@ bool ImmutableHeap::ReleasePart(Part* part) {
 
   part->heap()->Flush();
 
-  uword limit = immutable_allocation_limit_;
+  int limit = immutable_allocation_limit_;
   int diff = part->NewlyAllocated();
   ASSERT(diff >= 0);
-  uword new_allocated_memory = unmerged_allocated_ + diff;
+  int new_allocated_memory = unmerged_allocated_ + diff;
   bool gc = unmerged_allocated_ < limit && limit < new_allocated_memory;
   unmerged_allocated_ = new_allocated_memory;
 

@@ -19,7 +19,7 @@ class Process;
 class Space;
 class StoreBuffer;
 
-const uword kPageSize = 4 * KB;
+const int kPageSize = 4 * KB;
 
 // A chunk represents a block of memory provided by ObjectMemory.
 class Chunk {
@@ -82,32 +82,32 @@ class Chunk {
 // Space is a chain of chunks. It supports allocation and traversal.
 class Space {
  public:
-  static const uword kDefaultMinimumChunkSize = 4 * KB;
-  static const uword kDefaultMaximumChunkSize = 256 * KB;
+  static const int kDefaultMinimumChunkSize = 4 * KB;
+  static const int kDefaultMaximumChunkSize = 256 * KB;
 
-  explicit Space(uword maximum_initial_size = 0);
+  explicit Space(int maximum_initial_size = 0);
 
   ~Space();
 
   // Allocate raw object.
-  uword Allocate(uword size);
+  uword Allocate(int size);
 
   // Rewind allocation top by size bytes if location is equal to current
   // allocation top.
-  void TryDealloc(uword location, uword size);
+  void TryDealloc(uword location, int size);
 
   // Flush will make the current chunk consistent for iteration.
   void Flush();
 
   // Returns the total size of allocated objects.
-  uword Used() {
-    uword result = used_;
+  int Used() {
+    int result = used_;
     if (is_empty()) return result;
     return result + (top() - last()->base());
   }
 
   // Returns the total size of allocated chunks.
-  uword Size();
+  int Size();
 
   // Iterate over all objects in this space.
   void IterateObjects(HeapObjectVisitor* visitor);
@@ -127,7 +127,7 @@ class Space {
   // Adjust the allocation budget based on the current heap size.
   void AdjustAllocationBudget();
 
-  void SetAllocationBudget(uword new_budget);
+  void SetAllocationBudget(int new_budget);
 
   // Tells whether garbage collection is needed.
   bool needs_garbage_collection() { return allocation_budget_ <= 0; }
@@ -147,7 +147,7 @@ class Space {
 
   bool is_empty() const { return first_ == NULL; }
 
-  static uword DefaultChunkSize(uword heap_size) {
+  static int DefaultChunkSize(int heap_size) {
     // We return a value between kDefaultMinimumChunkSize and
     // kDefaultMaximumChunkSize - and try to keep the chunks smaller than 20% of
     // the heap.
@@ -159,8 +159,8 @@ class Space {
  private:
   friend class NoAllocationFailureScope;
 
-  uword TryAllocate(uword size);
-  uword AllocateInNewChunk(uword size);
+  uword TryAllocate(int size);
+  uword AllocateInNewChunk(int size);
 
   void Append(Chunk* chunk);
 
@@ -173,10 +173,10 @@ class Space {
 
   Chunk* first_;  // First chunk in this space.
   Chunk* last_;   // Last chunk in this space.
-  uword used_;  // Allocated bytes, excluding last chunk.
+  int used_;  // Allocated bytes, excluding last chunk.
   uword top_;  // Allocation top in last chunk.
   uword limit_;  // Allocation limit in last chunk.
-  uword allocation_budget_;  // Budget before needing a GC.
+  int allocation_budget_;  // Budget before needing a GC.
   int no_allocation_nesting_;
 };
 
@@ -232,7 +232,7 @@ class ObjectMemory {
   // Allocate a new chunk for a given space. All chunk sizes are
   // rounded up the page size and the allocated memory is aligned
   // to a page boundary.
-  static Chunk* AllocateChunk(Space* space, uword size);
+  static Chunk* AllocateChunk(Space* space, int size);
 
   // Release the chunk.
   static void FreeChunk(Chunk* chunk);

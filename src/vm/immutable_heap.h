@@ -14,7 +14,7 @@ class ImmutableHeap {
  public:
   class Part {
    public:
-    Part(Part* next, uword budget)
+    Part(Part* next, int budget)
         : heap_(NULL, budget),
           budget_(budget),
           used_original_(0),
@@ -23,24 +23,24 @@ class ImmutableHeap {
 
     Heap* heap() { return &heap_; }
 
-    uword budget() { return budget_; }
+    int budget() { return budget_; }
     void set_budget(int new_budget) { budget_ = new_budget; }
 
-    uword used() { return used_original_; }
+    int used() { return used_original_; }
 
     void ResetUsed() {
       used_original_ = heap_.space()->Used();
     }
 
-    uword NewlyAllocated() { return heap_.space()->Used() - used_original_; }
+    int NewlyAllocated() { return heap_.space()->Used() - used_original_; }
 
     Part* next() { return next_; }
     void set_next(Part* next) { next_ = next; }
 
    private:
     Heap heap_;
-    uword budget_;
-    uword used_original_;
+    int budget_;
+    int used_original_;
     Part* next_;
   };
 
@@ -82,15 +82,15 @@ class ImmutableHeap {
   // This method can only be called if
   //   * all acquired parts were released again
   //   * all cached parts were merged via [MergeParts]
-  void UpdateLimitAfterImmutableGC(uword mutable_size_at_last_gc);
+  void UpdateLimitAfterImmutableGC(int mutable_size_at_last_gc);
 
   // The number of used bytes at the moment. Note that this is an over
   // approximation.
-  uword EstimatedUsed();
+  int EstimatedUsed();
 
   // The total size of the immutable heap at the moment. Note that this is an
   // over approximation.
-  uword EstimatedSize();
+  int EstimatedSize();
 
  private:
   bool HasUnmergedParts() { return unmerged_parts_ != NULL; }
@@ -105,17 +105,17 @@ class ImmutableHeap {
   Part* unmerged_parts_;
 
   // The limit of bytes we give out before a immutable GC should happen.
-  uword immutable_allocation_limit_;
+  int immutable_allocation_limit_;
 
   // The amount of memory consumed by unmerged parts.
-  uword unmerged_allocated_;
+  int unmerged_allocated_;
 
   // The allocated memory and budget of all outstanding parts.
   //
   // Adding these two number gives an overapproximation of used memory by
   // oustanding parts.
-  uword outstanding_parts_allocated_;
-  uword outstanding_parts_budget_;
+  int outstanding_parts_allocated_;
+  int outstanding_parts_budget_;
 };
 
 }  // namespace fletch
