@@ -5,23 +5,23 @@
 library servicec.errors;
 
 import 'node.dart' show
-    FunctionDeclarationNode,
-    MemberDeclarationNode,
+    FunctionNode,
+    MemberNode,
     Node,
     ServiceNode,
     StructNode,
-    TopLevelDeclarationNode,
+    TopLevelNode,
     NodeVisitor;
 
 import 'package:compiler/src/scanner/scannerlib.dart' show
     Token;
 
 enum CompilerError {
-  badFunctionDeclaration,
-  badMemberDeclaration,
+  badFunction,
+  badMember,
   badServiceDefinition,
   badStructDefinition,
-  badTopLevelDeclaration,
+  badTopLevel,
   internalCompilerError,
   multipleDefinition,
   undefinedService,
@@ -45,33 +45,33 @@ class StructErrorNode extends StructNode with ErrorNode {
   }
 }
 
-class TopLevelDeclarationErrorNode extends TopLevelDeclarationNode
+class TopLevelErrorNode extends TopLevelNode
     with ErrorNode {
-  TopLevelDeclarationErrorNode(Token begin)
+  TopLevelErrorNode(Token begin)
     : super(null) {
     this.begin = begin;
-    tag = CompilerError.badTopLevelDeclaration;
+    tag = CompilerError.badTopLevel;
   }
 
   void accept(NodeVisitor visitor) {
-    throw new InternalCompilerError("TopLevelDeclarationErrorNode visited");
+    throw new InternalCompilerError("TopLevelErrorNode visited");
   }
 }
 
-class FunctionDeclarationErrorNode extends FunctionDeclarationNode
+class FunctionErrorNode extends FunctionNode
     with ErrorNode {
-  FunctionDeclarationErrorNode(Token begin)
+  FunctionErrorNode(Token begin)
     : super(null, null, null) {
     this.begin = begin;
-    tag = CompilerError.badFunctionDeclaration;
+    tag = CompilerError.badFunction;
   }
 }
 
-class MemberDeclarationErrorNode extends MemberDeclarationNode with ErrorNode {
-  MemberDeclarationErrorNode(Token begin)
+class MemberErrorNode extends MemberNode with ErrorNode {
+  MemberErrorNode(Token begin)
     : super(null, null) {
     this.begin = begin;
-    tag = CompilerError.badMemberDeclaration;
+    tag = CompilerError.badMember;
   }
 }
 

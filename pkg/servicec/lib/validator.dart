@@ -6,25 +6,25 @@ library servicec.validator;
 
 import 'node.dart' show
     CompilationUnitNode,
-    FormalParameterNode,
-    FunctionDeclarationNode,
+    FormalNode,
+    FunctionNode,
     IdentifierNode,
-    MemberDeclarationNode,
+    MemberNode,
     NamedNode,
     Node,
     RecursiveVisitor,
     ServiceNode,
     StructNode,
-    TopLevelDeclarationNode,
+    TopLevelNode,
     TypeNode;
 
 import 'errors.dart' show
     CompilerError,
     ErrorNode,
-    FunctionDeclarationErrorNode,
+    FunctionErrorNode,
     StructErrorNode,
     ServiceErrorNode,
-    TopLevelDeclarationErrorNode;
+    TopLevelErrorNode;
 
 import 'types.dart' show
     isPrimitiveType;
@@ -72,16 +72,16 @@ class Validator extends RecursiveVisitor {
     leaveStructScope(struct);
   }
 
-  void visitFunctionDeclaration(FunctionDeclarationNode functionDeclaration) {
-    enterFunctionDeclarationScope(functionDeclaration);
-    checkIsNotError(functionDeclaration);
-    super.visitFunctionDeclaration(functionDeclaration);
-    leaveFunctionDeclarationScope(functionDeclaration);
+  void visitFunction(FunctionNode function) {
+    enterFunctionScope(function);
+    checkIsNotError(function);
+    super.visitFunction(function);
+    leaveFunctionScope(function);
   }
 
-  void visitMemberDeclaration(MemberDeclarationNode memberDeclaration) {
-    checkIsNotError(memberDeclaration);
-    super.visitMemberDeclaration(memberDeclaration);
+  void visitMember(MemberNode member) {
+    checkIsNotError(member);
+    super.visitMember(member);
   }
 
   void visitType(TypeNode type) {
@@ -106,7 +106,7 @@ class Validator extends RecursiveVisitor {
   }
 
   void checkHasAtLeastOneService(CompilationUnitNode compilationUnit) {
-    for (Node node in compilationUnit.topLevelDeclarations) {
+    for (Node node in compilationUnit.topLevels) {
       if (node is ServiceNode) {
         return;
       }
@@ -116,39 +116,36 @@ class Validator extends RecursiveVisitor {
 
   // Scope management.
   void enterCompilationUnitScope(CompilationUnitNode compilationUnit) {
-    compilationUnit.topLevelDeclarations.forEach(addTopLevelDeclarationSymbol);
+    compilationUnit.topLevels.forEach(addTopLevelSymbol);
   }
 
   void enterServiceScope(ServiceNode service) {
-    service.functionDeclarations.forEach(addPropertyDeclarationSymbol);
+    service.functions.forEach(addPropertySymbol);
   }
 
   void enterStructScope(StructNode struct) {
-    struct.memberDeclarations.forEach(addPropertyDeclarationSymbol);
+    struct.members.forEach(addPropertySymbol);
   }
 
-  void enterFunctionDeclarationScope(
-      FunctionDeclarationNode functionDeclaration) {
-    functionDeclaration.formalParameters.forEach(addFormalParameterSymbol);
+  void enterFunctionScope(FunctionNode function) {
+    function.formals.forEach(addFormalSymbol);
   }
 
 
   void leaveCompilationUnitScope(CompilationUnitNode compilationUnit) {
-    compilationUnit.topLevelDeclarations.forEach(
-        removeTopLevelDeclarationSymbol);
+    compilationUnit.topLevels.forEach(removeTopLevelSymbol);
   }
 
   void leaveServiceScope(ServiceNode service) {
-    service.functionDeclarations.forEach(removePropertyDeclarationSymbol);
+    service.functions.forEach(removePropertySymbol);
   }
 
   void leaveStructScope(StructNode struct) {
-    struct.memberDeclarations.forEach(removePropertyDeclarationSymbol);
+    struct.members.forEach(removePropertySymbol);
   }
 
-  void leaveFunctionDeclarationScope(
-      FunctionDeclarationNode functionDeclaration) {
-    functionDeclaration.formalParameters.forEach(removeFormalParameterSymbol);
+  void leaveFunctionScope(FunctionNode function) {
+    function.formals.forEach(removeFormalSymbol);
   }
 
   // Symbol table management.
@@ -156,7 +153,7 @@ class Validator extends RecursiveVisitor {
     return environment.structs.contains(identifier);
   }
 
-  void addTopLevelDeclarationSymbol(TopLevelDeclarationNode node) {
+  void addTopLevelSymbol(TopLevelNode node) {
     if (node is ServiceNode) {
       addSymbol(environment.services, node);
     } else if (node is StructNode) {
@@ -164,15 +161,15 @@ class Validator extends RecursiveVisitor {
     }
   }
 
-  void addPropertyDeclarationSymbol(NamedNode node) {
+  void addPropertySymbol(NamedNode node) {
     addSymbol(environment.properties, node);
   }
 
-  void addFormalParameterSymbol(FormalParameterNode node) {
-    addSymbol(environment.parameters, node);
+  void addFormalSymbol(FormalNode node) {
+    addSymbol(environment.formals, node);
   }
 
-  void removeTopLevelDeclarationSymbol(TopLevelDeclarationNode node) {
+  void removeTopLevelSymbol(TopLevelNode node) {
     if (node is ServiceNode) {
       removeSymbol(environment.services, node);
     } else if (node is StructNode) {
@@ -180,12 +177,12 @@ class Validator extends RecursiveVisitor {
     }
   }
 
-  void removePropertyDeclarationSymbol(NamedNode node) {
+  void removePropertySymbol(NamedNode node) {
     removeSymbol(environment.properties, node);
   }
 
-  void removeFormalParameterSymbol(FormalParameterNode node) {
-    removeSymbol(environment.parameters, node);
+  void removeFormalSymbol(FormalNode node) {
+    removeSymbol(environment.formals, node);
   }
 
   void addSymbol(Set<IdentifierNode> symbols, NamedNode node) {
@@ -205,12 +202,12 @@ class Environment {
   Set<IdentifierNode> services;
   Set<IdentifierNode> structs;
   Set<IdentifierNode> properties;
-  Set<IdentifierNode> parameters;
+  Set<IdentifierNode> formals;
 
   Environment()
     : services = new Set<IdentifierNode>(),
       structs = new Set<IdentifierNode>(),
       properties = new Set<IdentifierNode>(),
-      parameters = new Set<IdentifierNode>();
+      formals = new Set<IdentifierNode>();
 }
 

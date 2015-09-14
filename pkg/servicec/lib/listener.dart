@@ -26,11 +26,11 @@ abstract class Listener {
     return tokens;
   }
 
-  Token beginTopLevelDeclaration(Token tokens) {
+  Token beginTopLevel(Token tokens) {
     return tokens;
   }
 
-  Token endTopLevelDeclaration(Token tokens) {
+  Token endTopLevel(Token tokens) {
     return tokens;
   }
 
@@ -58,19 +58,19 @@ abstract class Listener {
     return tokens;
   }
 
-  Token beginFunctionDeclaration(Token tokens) {
+  Token beginFunction(Token tokens) {
     return tokens;
   }
 
-  Token endFunctionDeclaration(Token tokens, int count) {
+  Token endFunction(Token tokens, int count) {
     return tokens;
   }
 
-  Token beginMemberDeclaration(Token tokens) {
+  Token beginMember(Token tokens) {
     return tokens;
   }
 
-  Token endMemberDeclaration(Token tokens) {
+  Token endMember(Token tokens) {
     return tokens;
   }
 
@@ -82,15 +82,15 @@ abstract class Listener {
     return tokens;
   }
 
-  Token beginFormalParameter(Token tokens) {
+  Token beginFormal(Token tokens) {
     return tokens;
   }
 
-  Token endFormalParameter(Token tokens) {
+  Token endFormal(Token tokens) {
     return tokens;
   }
 
-  Token expectedTopLevelDeclaration(Token tokens);
+  Token expectedTopLevel(Token tokens);
 
   Token expectedIdentifier(Token tokens);
 
@@ -145,14 +145,14 @@ class DebugListener implements Listener {
     return debugSubject.endCompilationUnit(tokens, count);
   }
 
-  Token beginTopLevelDeclaration(Token tokens) {
+  Token beginTopLevel(Token tokens) {
     logBeginScope("top-level declaration");
-    return debugSubject.beginTopLevelDeclaration(tokens);
+    return debugSubject.beginTopLevel(tokens);
   }
 
-  Token endTopLevelDeclaration(Token tokens) {
+  Token endTopLevel(Token tokens) {
     logEndScope("top-level declaration");
-    return debugSubject.endTopLevelDeclaration(tokens);
+    return debugSubject.endTopLevel(tokens);
   }
 
   Token beginService(Token tokens) {
@@ -186,24 +186,24 @@ class DebugListener implements Listener {
     return debugSubject.endIdentifier(tokens);
   }
 
-  Token beginFunctionDeclaration(Token tokens) {
+  Token beginFunction(Token tokens) {
     logBeginScope("function declaration");
-    return debugSubject.beginFunctionDeclaration(tokens);
+    return debugSubject.beginFunction(tokens);
   }
 
-  Token endFunctionDeclaration(Token tokens, int count) {
+  Token endFunction(Token tokens, int count) {
     logEndScope("function declaration", "formal parameters count = $count");
-    return debugSubject.endFunctionDeclaration(tokens, count);
+    return debugSubject.endFunction(tokens, count);
   }
 
-  Token beginMemberDeclaration(Token tokens) {
+  Token beginMember(Token tokens) {
     logBeginScope("member declaration");
-    return debugSubject.beginMemberDeclaration(tokens);
+    return debugSubject.beginMember(tokens);
   }
 
-  Token endMemberDeclaration(Token tokens) {
+  Token endMember(Token tokens) {
     logEndScope("member declaration");
-    return debugSubject.endMemberDeclaration(tokens);
+    return debugSubject.endMember(tokens);
   }
 
   Token beginType(Token tokens) {
@@ -216,19 +216,19 @@ class DebugListener implements Listener {
     return debugSubject.endType(tokens);
   }
 
-  Token beginFormalParameter(Token tokens) {
+  Token beginFormal(Token tokens) {
     logBeginScope("formal parameter");
-    return debugSubject.beginFormalParameter(tokens);
+    return debugSubject.beginFormal(tokens);
   }
 
-  Token endFormalParameter(Token tokens) {
+  Token endFormal(Token tokens) {
     logEndScope("formal parameter");
-    return debugSubject.endFormalParameter(tokens);
+    return debugSubject.endFormal(tokens);
   }
 
-  Token expectedTopLevelDeclaration(Token tokens) {
+  Token expectedTopLevel(Token tokens) {
     log("error: $tokens is not a top-level declaration");
-    return debugSubject.expectedTopLevelDeclaration(tokens);
+    return debugSubject.expectedTopLevel(tokens);
   }
 
   Token expectedIdentifier(Token tokens) {

@@ -17,11 +17,11 @@ import 'package:compiler/src/scanner/scannerlib.dart' show
 import 'errors.dart' show
     CompilerError,
     ErrorNode,
-    FunctionDeclarationErrorNode,
-    MemberDeclarationErrorNode,
+    FunctionErrorNode,
+    MemberErrorNode,
     ServiceErrorNode,
     StructErrorNode,
-    TopLevelDeclarationErrorNode;
+    TopLevelErrorNode;
 
 import 'keyword.dart' show
     Keyword;
@@ -31,16 +31,16 @@ import 'listener.dart' show
 
 import 'node.dart' show
     CompilationUnitNode,
-    FormalParameterNode,
-    FunctionDeclarationNode,
+    FormalNode,
+    FunctionNode,
     IdentifierNode,
-    MemberDeclarationNode,
+    MemberNode,
     NamedNode,
     Node,
     NodeStack,
     ServiceNode,
     StructNode,
-    TopLevelDeclarationNode,
+    TopLevelNode,
     TypeNode,
     TypedNamedNode;
 
@@ -167,31 +167,31 @@ class ErrorHandlingListener extends Listener {
   }
 
   // Definition level nodes.
-  Token endFormalParameter(Token tokens) {
-    if (tokens is ErrorToken) return recoverFormalParameter(tokens);
+  Token endFormal(Token tokens) {
+    if (tokens is ErrorToken) return recoverFormal(tokens);
 
     IdentifierNode identifier = popNode();
     TypeNode type = popNode();
-    pushNode(new FormalParameterNode(type, identifier));
+    pushNode(new FormalNode(type, identifier));
     return tokens;
   }
 
-  Token endFunctionDeclaration(Token tokens, count) {
-    if (tokens is ErrorToken) return recoverFunctionDeclaration(tokens);
+  Token endFunction(Token tokens, count) {
+    if (tokens is ErrorToken) return recoverFunction(tokens);
 
-    List<Node> formalParameters = popNodes(count);
+    List<Node> formals = popNodes(count);
     IdentifierNode identifier = popNode();
     TypeNode type = popNode();
-    pushNode(new FunctionDeclarationNode(type, identifier, formalParameters));
+    pushNode(new FunctionNode(type, identifier, formals));
     return tokens;
   }
 
-  Token endMemberDeclaration(Token tokens) {
-    if (tokens is ErrorToken) return recoverMemberDeclaration(tokens);
+  Token endMember(Token tokens) {
+    if (tokens is ErrorToken) return recoverMember(tokens);
 
     IdentifierNode identifier = popNode();
     TypeNode type = popNode();
-    pushNode(new MemberDeclarationNode(type, identifier));
+    pushNode(new MemberNode(type, identifier));
     return tokens;
   }
 
@@ -199,37 +199,37 @@ class ErrorHandlingListener extends Listener {
   Token endService(Token tokens, int count) {
     if (tokens is ErrorToken) return recoverService(tokens);
 
-    List<Node> functionDeclarations = popNodes(count);
+    List<Node> functions = popNodes(count);
     IdentifierNode identifier = popNode();
-    pushNode(new ServiceNode(identifier, functionDeclarations));
+    pushNode(new ServiceNode(identifier, functions));
     return tokens;
   }
 
   Token endStruct(Token tokens, int count) {
     if (tokens is ErrorToken) return recoverStruct(tokens);
 
-    List<Node> memberDeclarations = popNodes(count);
+    List<Node> members = popNodes(count);
     IdentifierNode identifier = popNode();
-    pushNode(new StructNode(identifier, memberDeclarations));
+    pushNode(new StructNode(identifier, members));
     return tokens;
   }
 
-  Token endTopLevelDeclaration(Token tokens) {
+  Token endTopLevel(Token tokens) {
     topLevelScopeStart = null;
-    return (tokens is ErrorToken) ? recoverTopLevelDeclaration(tokens) : tokens;
+    return (tokens is ErrorToken) ? recoverTopLevel(tokens) : tokens;
   }
 
   // Highest-level node.
   Token endCompilationUnit(Token tokens, int count) {
     if (tokens is ErrorToken) return recoverCompilationUnit(tokens);
 
-    List<Node> topLevelDeclarations = popNodes(count);
-    pushNode(new CompilationUnitNode(topLevelDeclarations));
+    List<Node> topLevels = popNodes(count);
+    pushNode(new CompilationUnitNode(topLevels));
     return tokens;
   }
 
   // Error handling.
-  Token expectedTopLevelDeclaration(Token tokens) {
+  Token expectedTopLevel(Token tokens) {
     return injectErrorIfNecessary(tokens);
   }
 
@@ -251,20 +251,18 @@ class ErrorHandlingListener extends Listener {
     return tokens;
   }
 
-  Token recoverFormalParameter(Token tokens) {
+  Token recoverFormal(Token tokens) {
     popNodeIf((node) => node is IdentifierNode);
     popNodeIf((node) => node is TypeNode);
     return tokens;
   }
 
-  Token recoverFunctionDeclaration(Token tokens) {
-    List<Node> formalParameters =
-      popNodesWhile((node) => node is FormalParameterNode);
+  Token recoverFunction(Token tokens) {
+    List<Node> formals = popNodesWhile((node) => node is FormalNode);
     Node identifier = popNodeIf((node) => node is IdentifierNode);
     Node type = popNodeIf((node) => node is TypeNode);
-    if (formalParameters.isNotEmpty || identifier != null || type != null) {
-      FunctionDeclarationErrorNode error =
-        new FunctionDeclarationErrorNode(tokens);
+    if (formals.isNotEmpty || identifier != null || type != null) {
+      FunctionErrorNode error = new FunctionErrorNode(tokens);
       pushNode(error);
       _errors.add(error);
       return consumeDeclarationLine(tokens);
@@ -274,11 +272,11 @@ class ErrorHandlingListener extends Listener {
     }
   }
 
-  Token recoverMemberDeclaration(Token tokens) {
+  Token recoverMember(Token tokens) {
     Node identifier = popNodeIf((node) => node is IdentifierNode);
     Node type = popNodeIf((node) => node is TypeNode);
     if (identifier != null || type != null) {
-      MemberDeclarationErrorNode error = new MemberDeclarationErrorNode(tokens);
+      MemberErrorNode error = new MemberErrorNode(tokens);
       pushNode(error);
       _errors.add(error);
       return consumeDeclarationLine(tokens);
@@ -289,48 +287,46 @@ class ErrorHandlingListener extends Listener {
   }
 
   Token recoverService(Token tokens) {
-    popNodesWhile((node) => node is FunctionDeclarationNode);
+    popNodesWhile((node) => node is FunctionNode);
     popNodeIf((node) => node is IdentifierNode);
     ServiceErrorNode error = new ServiceErrorNode(tokens);
     pushNode(error);
     _errors.add(error);
-    return consumeTopLevelDeclaration(tokens);
+    return consumeTopLevel(tokens);
   }
 
   Token recoverStruct(Token tokens) {
-    popNodesWhile((node) => node is MemberDeclarationNode);
+    popNodesWhile((node) => node is MemberNode);
     popNodeIf((node) => node is IdentifierNode);
     StructErrorNode error = new StructErrorNode(tokens);
     pushNode(error);
     _errors.add(error);
-    return consumeTopLevelDeclaration(tokens);
+    return consumeTopLevel(tokens);
   }
 
-  Token recoverTopLevelDeclaration(Token tokens) {
-    TopLevelDeclarationErrorNode error =
-      new TopLevelDeclarationErrorNode(tokens);
+  Token recoverTopLevel(Token tokens) {
+    TopLevelErrorNode error = new TopLevelErrorNode(tokens);
     pushNode(error);
     _errors.add(error);
-    return consumeTopLevelDeclaration(tokens);
+    return consumeTopLevel(tokens);
   }
 
   Token recoverCompilationUnit(Token tokens) {
-    popNodesWhile((node) => node is TopLevelDeclarationNode);
+    popNodesWhile((node) => node is TopLevelNode);
     return tokens;
   }
 
   Token consumeDeclarationLine(Token tokens) {
     do {
       tokens = tokens.next;
-    } while (!isEndOfDeclarationLine(tokens) &&
-             !isEndOfTopLevelDeclaration(tokens));
+    } while (!isEndOfDeclarationLine(tokens) && !isEndOfTopLevel(tokens));
     return isEndOfDeclarationLine(tokens) ? tokens.next : tokens;
   }
 
-  Token consumeTopLevelDeclaration(Token tokens) {
+  Token consumeTopLevel(Token tokens) {
     do {
       tokens = tokens.next;
-    } while (!isEndOfTopLevelDeclaration(tokens));
+    } while (!isEndOfTopLevel(tokens));
     return (tokens.info == CLOSE_CURLY_BRACKET_INFO) ? tokens.next : tokens;
   }
 
@@ -339,7 +335,7 @@ class ErrorHandlingListener extends Listener {
     return tokens.info == SEMICOLON_INFO;
   }
 
-  bool isEndOfTopLevelDeclaration(Token tokens) {
+  bool isEndOfTopLevel(Token tokens) {
     return (tokens.info == CLOSE_CURLY_BRACKET_INFO ||
             tokens.info == EOF_INFO ||
             isTopLevelKeyword(tokens));

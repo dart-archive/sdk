@@ -29,7 +29,7 @@ class Parser {
     tokens = listener.beginCompilationUnit(tokens);
     int count = 0;
     while (valid(tokens)) {
-      tokens = parseTopLevelDeclaration(tokens);
+      tokens = parseTopLevel(tokens);
       ++count;
     }
     tokens = listener.endCompilationUnit(tokens, count);
@@ -39,17 +39,17 @@ class Parser {
   /// A top-level declaration is a service or a struct.
   ///
   /// <top-level-declaration> ::= <service> | <struct>
-  Token parseTopLevelDeclaration(Token tokens) {
-    tokens = listener.beginTopLevelDeclaration(tokens);
+  Token parseTopLevel(Token tokens) {
+    tokens = listener.beginTopLevel(tokens);
     final String value = tokens.stringValue;
     if (identical(value, 'service')) {
       tokens = parseService(tokens);
     } else if (identical(value, 'struct')) {
       tokens = parseStruct(tokens);
     } else {
-      tokens = listener.expectedTopLevelDeclaration(tokens);
+      tokens = listener.expectedTopLevel(tokens);
     }
-    tokens = listener.endTopLevelDeclaration(tokens);
+    tokens = listener.endTopLevel(tokens);
     return tokens;
   }
 
@@ -64,7 +64,7 @@ class Parser {
     int count = 0;
     if (valid(tokens)) {
       while (!optional('}', tokens)) {
-        tokens = parseFunctionDeclaration(tokens);
+        tokens = parseFunction(tokens);
         if (!valid(tokens)) break;  // Don't count unsuccessful declarations
         ++count;
       }
@@ -85,7 +85,7 @@ class Parser {
     int count = 0;
     if (valid(tokens)) {
       while (!optional('}', tokens)) {
-        tokens = parseMemberDeclaration(tokens);
+        tokens = parseMember(tokens);
         if (!valid(tokens)) break;  // Don't count unsuccessful declarations
         ++count;
       }
@@ -110,36 +110,36 @@ class Parser {
   /// and a semicolon.
   ///
   /// <func-decl> ::= <type> <identifier> <formal-params> ';'
-  Token parseFunctionDeclaration(Token tokens) {
-    tokens = listener.beginFunctionDeclaration(tokens);
+  Token parseFunction(Token tokens) {
+    tokens = listener.beginFunction(tokens);
     tokens = parseType(tokens);
     tokens = parseIdentifier(tokens);
     tokens = expect('(', tokens);
     int count = 0;
     if (!optional(')', tokens)) {
-      tokens = parseFormalParameter(tokens);
+      tokens = parseFormal(tokens);
       ++count;
       while (optional(',', tokens)) {
         tokens = tokens.next;
-        tokens = parseFormalParameter(tokens);
+        tokens = parseFormal(tokens);
         ++count;
       }
     }
     tokens = expect(')', tokens);
     tokens = expect(';', tokens);
-    tokens = listener.endFunctionDeclaration(tokens, count);
+    tokens = listener.endFunction(tokens, count);
     return tokens;
   }
 
   /// A member contains a type, an identifier, and a semicolon.
   ///
   /// <member-decl> ::= <type> <identifier> ';'
-  Token parseMemberDeclaration(Token tokens) {
-    tokens = listener.beginMemberDeclaration(tokens);
+  Token parseMember(Token tokens) {
+    tokens = listener.beginMember(tokens);
     tokens = parseType(tokens);
     tokens = parseIdentifier(tokens);
     tokens = expect(';', tokens);
-    tokens = listener.endMemberDeclaration(tokens);
+    tokens = listener.endMember(tokens);
     return tokens;
   }
 
@@ -154,14 +154,14 @@ class Parser {
     return tokens;
   }
 
-  /// A parameter contains a type and an identifier.
+  /// A formal contains a type and an identifier.
   ///
   /// <param> ::= <type> <identifier>
-  Token parseFormalParameter(Token tokens) {
-    tokens = listener.beginFormalParameter(tokens);
+  Token parseFormal(Token tokens) {
+    tokens = listener.beginFormal(tokens);
     tokens = parseType(tokens);
     tokens = parseIdentifier(tokens);
-    tokens = listener.endFormalParameter(tokens);
+    tokens = listener.endFormal(tokens);
     return tokens;
   }
 

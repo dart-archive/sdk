@@ -6,9 +6,9 @@ library servicec.node;
 
 // Highest-level node.
 class CompilationUnitNode extends Node {
-  List<Node> topLevelDeclarations;
+  List<Node> topLevels;
 
-  CompilationUnitNode(this.topLevelDeclarations);
+  CompilationUnitNode(this.topLevels);
 
   void accept(NodeVisitor visitor) {
     visitor.visitCompilationUnit(this);
@@ -16,15 +16,15 @@ class CompilationUnitNode extends Node {
 }
 
 // Top-level nodes.
-abstract class TopLevelDeclarationNode extends NamedNode {
-  TopLevelDeclarationNode(IdentifierNode identifier)
+abstract class TopLevelNode extends NamedNode {
+  TopLevelNode(IdentifierNode identifier)
     : super(identifier);
 }
 
-class ServiceNode extends TopLevelDeclarationNode {
-  List<Node> functionDeclarations;
+class ServiceNode extends TopLevelNode {
+  List<Node> functions;
 
-  ServiceNode(IdentifierNode identifier, this.functionDeclarations)
+  ServiceNode(IdentifierNode identifier, this.functions)
     : super(identifier);
 
   void accept(NodeVisitor visitor) {
@@ -32,10 +32,10 @@ class ServiceNode extends TopLevelDeclarationNode {
   }
 }
 
-class StructNode extends TopLevelDeclarationNode {
-  List<Node> memberDeclarations;
+class StructNode extends TopLevelNode {
+  List<Node> members;
 
-  StructNode(IdentifierNode identifier, this.memberDeclarations)
+  StructNode(IdentifierNode identifier, this.members)
     : super(identifier);
 
   void accept(NodeVisitor visitor) {
@@ -44,34 +44,32 @@ class StructNode extends TopLevelDeclarationNode {
 }
 
 // Definition level nodes.
-class FunctionDeclarationNode extends TypedNamedNode {
-  List<Node> formalParameters;
+class FunctionNode extends TypedNamedNode {
+  List<Node> formals;
 
-  FunctionDeclarationNode(TypeNode type,
-                          IdentifierNode identifier,
-                          this.formalParameters)
+  FunctionNode(TypeNode type, IdentifierNode identifier, this.formals)
     : super(type, identifier);
 
   void accept(NodeVisitor visitor) {
-    visitor.visitFunctionDeclaration(this);
+    visitor.visitFunction(this);
   }
 }
 
-class FormalParameterNode extends TypedNamedNode {
-  FormalParameterNode(TypeNode type, IdentifierNode identifier)
+class FormalNode extends TypedNamedNode {
+  FormalNode(TypeNode type, IdentifierNode identifier)
     : super(type, identifier);
 
   void accept(NodeVisitor visitor) {
-    visitor.visitFormalParameter(this);
+    visitor.visitFormal(this);
   }
 }
 
-class MemberDeclarationNode extends TypedNamedNode {
-  MemberDeclarationNode(TypeNode type, IdentifierNode identifier)
+class MemberNode extends TypedNamedNode {
+  MemberNode(TypeNode type, IdentifierNode identifier)
   : super(type, identifier);
 
   void accept(NodeVisitor visitor) {
-    visitor.visitMemberDeclaration(this);
+    visitor.visitMember(this);
   }
 }
 
@@ -123,54 +121,50 @@ abstract class NodeVisitor {
   void visitCompilationUnit(CompilationUnitNode compilationUnit);
   void visitService(ServiceNode service);
   void visitStruct(StructNode struct);
-  void visitFunctionDeclaration(FunctionDeclarationNode functionDeclaration);
-  void visitFormalParameter(FormalParameterNode formalParameter);
-  void visitMemberDeclaration(MemberDeclarationNode memberDeclaration);
+  void visitFunction(FunctionNode function);
+  void visitFormal(FormalNode formal);
+  void visitMember(MemberNode member);
   void visitType(TypeNode type);
   void visitIdentifier(IdentifierNode identifier);
 }
 
 abstract class RecursiveVisitor extends NodeVisitor {
   void visitCompilationUnit(CompilationUnitNode compilationUnit) {
-    for (TopLevelDeclarationNode topLevelDeclaration in
-        compilationUnit.topLevelDeclarations) {
-      topLevelDeclaration.accept(this);
+    for (TopLevelNode topLevel in compilationUnit.topLevels) {
+      topLevel.accept(this);
     }
   }
 
   void visitService(ServiceNode service) {
     service.identifier.accept(this);
-    for (FunctionDeclarationNode functionDeclaration in
-        service.functionDeclarations) {
-      functionDeclaration.accept(this);
+    for (FunctionNode function in service.functions) {
+      function.accept(this);
     }
   }
 
   void visitStruct(StructNode struct) {
     struct.identifier.accept(this);
-    for (MemberDeclarationNode memberDeclaration in
-        struct.memberDeclarations) {
-      memberDeclaration.accept(this);
+    for (MemberNode member in struct.members) {
+      member.accept(this);
     }
   }
 
-  void visitFunctionDeclaration(FunctionDeclarationNode functionDeclaration) {
-    functionDeclaration.type.accept(this);
-    functionDeclaration.identifier.accept(this);
-    for (FormalParameterNode formalParameter in
-        functionDeclaration.formalParameters) {
-      formalParameter.accept(this);
+  void visitFunction(FunctionNode function) {
+    function.type.accept(this);
+    function.identifier.accept(this);
+    for (FormalNode formal in function.formals) {
+      formal.accept(this);
     }
   }
 
-  void visitMemberDeclaration(MemberDeclarationNode memberDeclaration) {
-    memberDeclaration.type.accept(this);
-    memberDeclaration.identifier.accept(this);
+  void visitMember(MemberNode member) {
+    member.type.accept(this);
+    member.identifier.accept(this);
   }
 
-  void visitFormalParameter(FormalParameterNode formalParameter) {
-    formalParameter.type.accept(this);
-    formalParameter.identifier.accept(this);
+  void visitFormal(FormalNode formal) {
+    formal.type.accept(this);
+    formal.identifier.accept(this);
   }
 
   void visitType(TypeNode type) {
