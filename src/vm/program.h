@@ -181,7 +181,7 @@ class Program {
   Object* CreateArrayWith(int capacity, Object* initial_value);
   Object* CreateByteArray(int capacity);
   Object* CreateClass(int fields);
-  Object* CreateDouble(double value);
+  Object* CreateDouble(fletch_double value);
   Object* CreateFunction(int arity,
                          List<uint8> bytes,
                          int number_of_literals);

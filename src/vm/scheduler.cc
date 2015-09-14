@@ -36,7 +36,7 @@ Scheduler::Scheduler()
       shutdown_program_(NULL),
       pause_(false),
       current_processes_(new Atomic<Process*>[max_threads_]),
-      gc_thread_(NULL) {
+      gc_thread_(new GCThread()) {
   for (int i = 0; i < max_threads_; i++) {
     threads_[i] = NULL;
     current_processes_[i] = NULL;
@@ -49,6 +49,7 @@ Scheduler::~Scheduler() {
   delete[] current_processes_;
   delete[] threads_;
   delete startup_queue_;
+  delete gc_thread_;
   ThreadState* current = temporary_thread_states_;
   while (current != NULL) {
     ThreadState* next = current->next_idle_thread();
@@ -260,13 +261,12 @@ bool Scheduler::EnqueueProcess(Process* process, Port* port) {
 }
 
 int Scheduler::Run() {
-  gc_thread_ = new GCThread();
+  thread_pool_.Start();
   gc_thread_->StartThread();
 
   static const bool kProfile = Flags::profile;
   static const uint64 kProfileIntervalUs = Flags::profile_interval;
-  // Start initial thread.
-  while (!thread_pool_.TryStartThread(RunThread, this, 1)) { }
+
   int thread_index = 0;
   uint64 next_preempt = GetNextPreemptTime();
   // If profile is disabled, next_preempt will always be less than next_profile.
@@ -321,8 +321,6 @@ int Scheduler::Run() {
   preempt_monitor_->Unlock();
 
   gc_thread_->StopThread();
-  delete gc_thread_;
-  gc_thread_ = NULL;
 
   if (shutdown_ != -1) return shutdown_;
   return 0;
@@ -407,17 +405,20 @@ uint64 Scheduler::GetNextPreemptTime() {
 void Scheduler::EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
                                                Process* process) {
   ASSERT(process != NULL);
-  int thread_id = 0;
-  if (thread_state != NULL) {
-    thread_id = thread_state->thread_id();
-  } else if (thread_count_ == 0) {
+
+  if (thread_count_ == 0 || thread_state == NULL) {
+    // No running threads, use the startup_queue_.
     bool was_empty;
     while (!startup_queue_->TryEnqueue(process, &was_empty)) { }
-    return;
+  } else {
+    int thread_id = thread_count_ - 1;
+    if (thread_state != NULL) {
+      thread_id = thread_state->thread_id() + 1;
+    }
+    // If we were able to enqueue on an idle thread, no need to spawn a new one.
+    if (EnqueueOnAnyThread(process, thread_id)) return;
   }
 
-  // If we were able to enqueue on an idle thread, no need to spawn a new one.
-  if (EnqueueOnAnyThread(process, thread_id + 1)) return;
   // Start a worker thread, if less than [processes_] threads are running.
   while (!thread_pool_.TryStartThread(RunThread, this, processes_)) { }
 }

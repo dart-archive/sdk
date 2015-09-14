@@ -410,6 +410,8 @@
              ],
 
             'cflags': [
+              '-mfloat-abi=softfp',
+              '-mfpu=fpv4-sp-d16',
               '-mthumb',
               '-Wno-unused-function',
             ],

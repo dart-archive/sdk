@@ -133,7 +133,7 @@ Object* Program::CreateClass(int fields) {
   return klass;
 }
 
-Object* Program::CreateDouble(double value) {
+Object* Program::CreateDouble(fletch_double value) {
   return heap()->CreateDouble(double_class(), value);
 }
 

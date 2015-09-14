@@ -269,7 +269,7 @@ Object* Process::NewArray(int length) {
   return result;
 }
 
-Object* Process::NewDouble(double value) {
+Object* Process::NewDouble(fletch_double value) {
   Class* double_class = program()->double_class();
   Object* result = immutable_heap_->CreateDouble(double_class, value);
   return result;

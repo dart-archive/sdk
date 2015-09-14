@@ -126,6 +126,7 @@ void EchoInThread(void* data) {
 static void RunThreadTests() {
   const int kThreadCount = 32;
   fletch::ThreadPool thread_pool(kThreadCount);
+  thread_pool.Start();
   for (int i = 0; i < kThreadCount; i++) {
     while (!thread_pool.TryStartThread(EchoInThread,
                                        reinterpret_cast<void*>(i),
