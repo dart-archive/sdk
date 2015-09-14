@@ -346,13 +346,67 @@ Object* Process::NewStack(int length) {
   return result;
 }
 
+struct HeapUsage {
+  uint64 timestamp;
+  uword process_used;
+  uword process_size;
+  uword immutable_used;
+  uword immutable_size;
+  uword program_used;
+  uword program_size;
+
+  uword TotalUsed() { return process_used + immutable_used + program_used; }
+  uword TotalSize() { return process_used + immutable_size + program_size; }
+};
+
+static void GetHeapUsage(Process* process, HeapUsage* heap_usage) {
+  heap_usage->timestamp = Platform::GetMicroseconds();
+  heap_usage->process_used = process->heap()->space()->Used();
+  heap_usage->process_size = process->heap()->space()->Size();
+  heap_usage->immutable_used =
+      process->program()->immutable_heap()->EstimatedUsed();
+  heap_usage->immutable_size =
+      process->program()->immutable_heap()->EstimatedSize();
+  heap_usage->program_used = process->program()->heap()->space()->Used();
+  heap_usage->program_size = process->program()->heap()->space()->Size();
+}
+
+void PrintProcessGCInfo(Process* process, HeapUsage* before, HeapUsage* after) {
+  static int count = 0;
+  if ((count & 0xF) == 0) {
+    Print::Error(
+        "Program-GC-Info, \tElapsed, \tProcess use/size, \tImmutable use/size,"
+        " \tProgram use/size, \tTotal heap\n");
+  }
+  Print::Error(
+      "Process-GC(%i, %p): "
+      "\t%lli us, "
+      "\t%lu/%lu -> %lu/%lu, "
+      "\t%lu/%lu, "
+      "\t%lu/%lu, "
+      "\t%lu/%lu -> %lu/%lu\n",
+      count++,
+      process,
+      after->timestamp - before->timestamp,
+      before->process_used,
+      before->process_size,
+      after->process_used,
+      after->process_size,
+      after->immutable_used,
+      after->immutable_size,
+      after->program_used,
+      after->program_size,
+      before->TotalUsed(),
+      before->TotalSize(),
+      after->TotalUsed(),
+      after->TotalSize());
+}
 
 void Process::CollectMutableGarbage() {
   TakeChildHeaps();
 
-  if (Flags::print_heap_statistics) {
-    PrintMemoryInfo();
-  }
+  HeapUsage usage_before;
+  GetHeapUsage(this, &usage_before);
 
   Space* from = heap_.space();
   Space* to = new Space(from->Used() / 10);
@@ -374,6 +428,12 @@ void Process::CollectMutableGarbage() {
   set_ports(Port::CleanupPorts(from, ports()));
   heap_.ReplaceSpace(to);
   UpdateStackLimit();
+
+  if (Flags::print_heap_statistics) {
+    HeapUsage usage_after;
+    GetHeapUsage(this, &usage_after);
+    PrintProcessGCInfo(this, &usage_before, &usage_after);
+  }
 }
 
 // Helper class for copying HeapObjects and chaining stacks for a
@@ -465,27 +525,6 @@ int Process::CollectGarbageAndChainStacks() {
 void Process::ValidateHeaps(ImmutableHeap* immutable_heap) {
   ProcessHeapValidatorVisitor v(program()->heap(), immutable_heap);
   v.VisitProcess(this);
-}
-
-void Process::PrintMemoryInfo() {
-  uword heap_used = heap_.space()->Used();
-  uword heap_size = heap_.space()->Size();
-  uword immutable_used = program()->immutable_heap()->EstimatedUsed();
-  uword immutable_size = program()->immutable_heap()->EstimatedSize();
-  uword program_used = program()->heap()->space()->Used();
-  uword program_size = program()->heap()->space()->Size();
-  Print::Error(
-      "Pre-Process-GC(%p): \t%lu/%lu, \t%lu/%lu, \t%lu/%lu, \t%lu/%lu/%lu\n",
-      this,
-      heap_used,
-      heap_size,
-      immutable_used,
-      immutable_size,
-      program_used,
-      program_size,
-      heap_used + immutable_used + program_used,
-      heap_size + immutable_size + program_size,
-      ObjectMemory::Allocated());
 }
 
 static void IteratePortQueuePointers(PortQueue* queue,

@@ -153,8 +153,6 @@ class Process {
 
   void ValidateHeaps(ImmutableHeap* immutable_heap);
 
-  void PrintMemoryInfo();
-
   // Iterate all pointers reachable from this process object.
   void IterateRoots(PointerVisitor* visitor);
 

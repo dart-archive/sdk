@@ -32,7 +32,7 @@ Chunk::~Chunk() {
 #endif
 }
 
-Space::Space(int maximum_initial_size)
+Space::Space(uword maximum_initial_size)
     : first_(NULL),
       last_(NULL),
       used_(0),
@@ -40,7 +40,7 @@ Space::Space(int maximum_initial_size)
       limit_(0),
       no_allocation_nesting_(0) {
   if (maximum_initial_size > 0) {
-    int size = Utils::Minimum(maximum_initial_size, kDefaultMaximumChunkSize);
+    uword size = Utils::Minimum(maximum_initial_size, kDefaultMaximumChunkSize);
     Chunk* chunk = ObjectMemory::AllocateChunk(this, size);
     if (chunk == NULL) FATAL1("Failed to allocate %d bytes.\n", size);
     Append(chunk);
@@ -66,8 +66,8 @@ void Space::Flush() {
   }
 }
 
-int Space::Size() {
-  int result = 0;
+uword Space::Size() {
+  uword result = 0;
   Chunk* chunk = first();
   while (chunk != NULL) {
     result += chunk->size();
@@ -77,7 +77,7 @@ int Space::Size() {
   return result;
 }
 
-uword Space::TryAllocate(int size) {
+uword Space::TryAllocate(uword size) {
   uword new_top = top_ + size;
   // Make sure there is room for chunk end sentinel.
   if (new_top < limit_) {
@@ -94,10 +94,10 @@ uword Space::TryAllocate(int size) {
   return 0;
 }
 
-uword Space::AllocateInNewChunk(int size) {
+uword Space::AllocateInNewChunk(uword size) {
   // Allocate new chunk that is big enough to fit the object.
-  int default_chunk_size = DefaultChunkSize(Used());
-  int chunk_size = size >= default_chunk_size
+  uword default_chunk_size = DefaultChunkSize(Used());
+  uword chunk_size = size >= default_chunk_size
       ? (size + kPointerSize)  // Make sure there is room for sentinel.
       : default_chunk_size;
 
@@ -120,7 +120,7 @@ uword Space::AllocateInNewChunk(int size) {
   return 0;
 }
 
-uword Space::Allocate(int size) {
+uword Space::Allocate(uword size) {
   ASSERT(size >= HeapObject::kSize);
   ASSERT(Utils::IsAligned(size, kPointerSize));
   uword result = TryAllocate(size);
@@ -129,16 +129,16 @@ uword Space::Allocate(int size) {
   return AllocateInNewChunk(size);
 }
 
-void Space::TryDealloc(uword location, int size) {
+void Space::TryDealloc(uword location, uword size) {
   if (top_ == location) top_ -= size;
 }
 
 void Space::AdjustAllocationBudget() {
-  int used = Used();
+  uword used = Used();
   allocation_budget_ = Utils::Maximum(DefaultChunkSize(used), used);
 }
 
-void Space::SetAllocationBudget(int new_budget) {
+void Space::SetAllocationBudget(uword new_budget) {
   allocation_budget_ = new_budget;
 }
 
@@ -335,7 +335,7 @@ void Chunk::Scramble() {
 }
 #endif
 
-Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
+Chunk* ObjectMemory::AllocateChunk(Space* owner, uword size) {
   ASSERT(owner != NULL);
 
   size = Utils::RoundUp(size, kPageSize);

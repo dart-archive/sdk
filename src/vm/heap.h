@@ -87,7 +87,7 @@ class Heap {
   void Flush() { space_->Flush(); }
 
   // Returns the number of bytes allocated in the space.
-  int Used() { return space_->Used(); }
+  uword Used() { return space_->Used(); }
 
   Space* space() { return space_; }
 
