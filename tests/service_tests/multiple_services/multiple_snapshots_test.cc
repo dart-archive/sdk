@@ -41,8 +41,8 @@ static void* DartThreadEntry(void* argv) {
   programs[0] = FletchLoadSnapshotFromFile(paths[1]);
   programs[1] = FletchLoadSnapshotFromFile(paths[2]);
   FletchRunMultipleMain(2, programs);
-  delete programs[0];
-  delete programs[1];
+  FletchDeleteProgram(programs[0]);
+  FletchDeleteProgram(programs[1]);
   FletchTearDown();
   ChangeStatusAndNotify(kDone);
   return NULL;
