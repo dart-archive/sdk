@@ -93,7 +93,7 @@ Port* Port::CleanupPorts(Space* from, Port* head) {
   return head;
 }
 
-void Port::WeakCallback(HeapObject* object) {
+void Port::WeakCallback(HeapObject* object, Heap* heap) {
   Instance* instance = Instance::cast(object);
   ASSERT(instance->IsPort());
   Object* field = instance->GetInstanceField(0);

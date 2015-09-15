@@ -41,6 +41,7 @@ UNIMPLEMENTED_NATIVE(ForeignLibraryClose)
 
 UNIMPLEMENTED_NATIVE(ForeignAllocate)
 UNIMPLEMENTED_NATIVE(ForeignFree)
+UNIMPLEMENTED_NATIVE(ForeignDecreaseMemoryUsage);
 UNIMPLEMENTED_NATIVE(ForeignMarkForFinalization)
 
 UNIMPLEMENTED_NATIVE(ForeignBitsPerWord)

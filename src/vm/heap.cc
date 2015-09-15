@@ -13,16 +13,20 @@
 namespace fletch {
 
 Heap::Heap(RandomXorShift* random, int maximum_initial_size)
-    : random_(random), space_(NULL), weak_pointers_(NULL) {
+    : random_(random), space_(NULL), weak_pointers_(NULL), foreign_memory_(0) {
   space_ = new Space(maximum_initial_size);
   AdjustAllocationBudget();
 }
 
 Heap::Heap(Space* existing_space, WeakPointer* weak_pointers)
-    : random_(NULL), space_(existing_space), weak_pointers_(weak_pointers) { }
+    : random_(NULL),
+      space_(existing_space),
+      weak_pointers_(weak_pointers),
+      foreign_memory_(0) { }
 
 Heap::~Heap() {
-  WeakPointer::ForceCallbacks(&weak_pointers_);
+  WeakPointer::ForceCallbacks(&weak_pointers_, this);
+  ASSERT(foreign_memory_ == 0);
   delete space_;
 }
 
@@ -231,6 +235,15 @@ Object* Heap::CreateFunction(Class* the_class,
   return Function::cast(result);
 }
 
+void Heap::AllocatedForeignMemory(int size) {
+  foreign_memory_ += size;
+}
+
+void Heap::FreedForeignMemory(int size) {
+  foreign_memory_ -= size;
+  ASSERT(foreign_memory_ >= 0);
+}
+
 void Heap::ReplaceSpace(Space* space) {
   delete space_;
   space_ = space;
@@ -259,10 +272,12 @@ void Heap::MergeInOtherHeap(Heap* heap) {
 
   WeakPointer* other_weak_pointers = heap->TakeWeakPointers();
   WeakPointer::PrependWeakPointers(&weak_pointers_, other_weak_pointers);
+
+  foreign_memory_ += heap->foreign_memory_;
+  heap->foreign_memory_ = 0;
 }
 
-void Heap::AddWeakPointer(HeapObject* object,
-                          WeakPointerCallback callback) {
+void Heap::AddWeakPointer(HeapObject* object, WeakPointerCallback callback) {
   weak_pointers_ = new WeakPointer(object, callback, weak_pointers_);
 }
 
@@ -271,7 +286,7 @@ void Heap::RemoveWeakPointer(HeapObject* object) {
 }
 
 void Heap::ProcessWeakPointers() {
-  WeakPointer::Process(space(), &weak_pointers_);
+  WeakPointer::Process(space(), &weak_pointers_, this);
 }
 
 }  // namespace fletch

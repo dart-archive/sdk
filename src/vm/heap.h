@@ -77,6 +77,10 @@ class Heap {
                          List<uint8> bytecodes,
                          int number_of_literals);
 
+  void AllocatedForeignMemory(int size);
+
+  void FreedForeignMemory(int size);
+
   // Iterate over all objects in the heap.
   void IterateObjects(HeapObjectVisitor* visitor) {
     space_->IterateObjects(visitor);
@@ -107,6 +111,8 @@ class Heap {
 
   RandomXorShift* random() { return random_; }
 
+  int used_foreign_memory() { return foreign_memory_; }
+
   void AddWeakPointer(HeapObject* object, WeakPointerCallback callback);
   void RemoveWeakPointer(HeapObject* object);
   void ProcessWeakPointers();
@@ -135,6 +141,8 @@ class Heap {
   Space* space_;
   // Linked list of weak pointers to heap objects in this heap.
   WeakPointer* weak_pointers_;
+  // The number of bytes of foreign memory heap objects are holding on to.
+  int foreign_memory_;
 };
 
 // Helper class for copying HeapObjects.

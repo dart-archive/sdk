@@ -9,9 +9,10 @@ namespace fletch {
 
 class HeapObject;
 class Space;
+class Heap;
 class PointerVisitor;
 
-typedef void (*WeakPointerCallback)(HeapObject* object);
+typedef void (*WeakPointerCallback)(HeapObject* object, Heap* heap);
 
 class WeakPointer {
  public:
@@ -19,8 +20,8 @@ class WeakPointer {
               WeakPointerCallback callback,
               WeakPointer* next);
 
-  static void Process(Space* garbage_space, WeakPointer** pointers);
-  static void ForceCallbacks(WeakPointer** pointers);
+  static void Process(Space* garbage_space, WeakPointer** pointers, Heap* heap);
+  static void ForceCallbacks(WeakPointer** pointers, Heap* heap);
   static void Remove(WeakPointer** pointers, HeapObject* object);
   static void PrependWeakPointers(WeakPointer** pointers,
                                   WeakPointer* to_be_prepended);

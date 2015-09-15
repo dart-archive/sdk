@@ -41,7 +41,6 @@ testPCallAndMemory() {
   Expect.equals(memory.getInt32(12), 4);
   checkOutOfBoundsThrows(() => memory.getInt32(16));
   memory.free();
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
 
   var pcall1 = fl.lookup('pfun1');
   foreignPointer = pcall1.pcall$1(p, 42);

@@ -770,10 +770,12 @@ void Process::UnregisterFinalizer(HeapObject* object) {
   heap()->RemoveWeakPointer(object);
 }
 
-void Process::FinalizeForeign(HeapObject* foreign) {
+void Process::FinalizeForeign(HeapObject* foreign, Heap* heap) {
   Instance* instance = Instance::cast(foreign);
   word value = AsForeignWord(instance->GetInstanceField(0));
+  word length = AsForeignWord(instance->GetInstanceField(1));
   free(reinterpret_cast<void*>(value));
+  heap->FreedForeignMemory(length);
 }
 
 #ifdef DEBUG
@@ -909,10 +911,12 @@ NATIVE(ProcessQueueGetMessage) {
       object = process->ToInteger(address);
       if (object == Failure::retry_after_gc()) return object;
       foreign->SetInstanceField(0, object);
-      foreign->SetInstanceField(1, Smi::FromWord(queue->size()));
+      int size = queue->size();
+      foreign->SetInstanceField(1, Smi::FromWord(size));
       process->RecordStore(foreign, object);
       if (kind == PortQueue::FOREIGN_FINALIZED) {
         process->RegisterFinalizer(foreign, Process::FinalizeForeign);
+        process->heap()->AllocatedForeignMemory(size);
       }
       result = foreign;
       break;

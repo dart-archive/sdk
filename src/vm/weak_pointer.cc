@@ -19,7 +19,9 @@ WeakPointer::WeakPointer(HeapObject* object,
       prev_(NULL),
       next_(next) { }
 
-void WeakPointer::Process(Space* garbage_space, WeakPointer** pointers) {
+void WeakPointer::Process(Space* garbage_space,
+                          WeakPointer** pointers,
+                          Heap* heap) {
   WeakPointer* new_list = NULL;
   WeakPointer* previous = NULL;
   WeakPointer* current = *pointers;
@@ -35,7 +37,7 @@ void WeakPointer::Process(Space* garbage_space, WeakPointer** pointers) {
       } else {
         if (current->next_ != NULL) current->next_->prev_ = previous;
         if (previous != NULL) previous->next_ = current->next_;
-        current->callback_(current_object);
+        current->callback_(current_object, heap);
         delete current;
       }
     } else {
@@ -47,11 +49,11 @@ void WeakPointer::Process(Space* garbage_space, WeakPointer** pointers) {
   *pointers = new_list;
 }
 
-void WeakPointer::ForceCallbacks(WeakPointer** pointers) {
+void WeakPointer::ForceCallbacks(WeakPointer** pointers, Heap* heap) {
   WeakPointer* current = *pointers;
   while (current != NULL) {
     WeakPointer* temp = current->next_;
-    current->callback_(current->object_);
+    current->callback_(current->object_, heap);
     delete current;
     current = temp;
   }

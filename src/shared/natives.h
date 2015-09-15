@@ -172,6 +172,7 @@ namespace fletch {
                                                                          \
   N(ForeignLCallwLw,             "ForeignFunction", "_Lcall$wLw")        \
                                                                          \
+  N(ForeignDecreaseMemoryUsage,  "ForeignMemory", "_decreaseMemoryUsage")\
   N(ForeignMarkForFinalization,  "ForeignMemory", "_markForFinalization")\
   N(ForeignAllocate,             "ForeignMemory", "_allocate")           \
   N(ForeignFree,                 "ForeignMemory", "_free")               \

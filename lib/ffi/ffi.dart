@@ -294,7 +294,7 @@ class ForeignMemory extends ForeignPointer {
 
   ForeignMemory.allocatedFinalized(this._length) {
     _value = _allocate(_length);
-    _markForFinalization();
+    _markForFinalization(_length);
     _markedForFinalization = true;
   }
 
@@ -312,7 +312,7 @@ class ForeignMemory extends ForeignPointer {
 
   void setFinalized() {
     if (_markedForFinalization) return;
-    _markForFinalization();
+    _markForFinalization(_length);
     _markedForFinalization = true;
   }
 
@@ -374,14 +374,20 @@ class ForeignMemory extends ForeignPointer {
   }
 
   void free() {
-    if (_length > 0) _free(_value);
+    if (_length > 0) {
+      if (_markedForFinalization) {
+        _decreaseMemoryUsage(_length);
+      }
+      _free(_value);
+    }
     _value = 0;
     _length = 0;
   }
 
+  @fletch.native external static void _decreaseMemoryUsage(int length);
   @fletch.native external static int _allocate(int length);
   @fletch.native external static void _free(int address);
-  @fletch.native external void _markForFinalization();
+  @fletch.native external void _markForFinalization(int length);
 
   @fletch.native external static int _getInt8(int address);
   @fletch.native external static int _getInt16(int address);

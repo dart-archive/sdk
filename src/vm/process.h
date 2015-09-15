@@ -232,7 +232,7 @@ class Process {
   void RegisterFinalizer(HeapObject* object, WeakPointerCallback callback);
   void UnregisterFinalizer(HeapObject* object);
 
-  static void FinalizeForeign(HeapObject* foreign);
+  static void FinalizeForeign(HeapObject* foreign, Heap* heap);
 
   // This is used in order to return a retry after gc failure on every other
   // call to the GC native that is used for testing only.
