@@ -234,7 +234,9 @@ char* VoidHashTable::Erase(const char* entry) {
 void VoidHashTable::Clear() {
   if (size_ == 0) return;
   delete[] backing_;
+#ifdef DEBUG
   mutations_++;
+#endif
   mask_ = kInitialCapacity - 1;
   size_ = 0;
   AllocateBacking(kInitialCapacity);
