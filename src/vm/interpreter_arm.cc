@@ -1812,38 +1812,27 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     // Load class of object we want to test immutability of.
     __ ldr(R0, Address(R2, HeapObject::kClassOffset - HeapObject::kTag));
 
-    // Load instance format & handle the four cases:
-    //  - boxed => not immutable
-    //  - array => not immutable
-    //  - Instance => check runtime-tracked bit
-    //  - otherwise => immutable
-
-    // NOTE: Our goal is to test whether a value is a [Boxed], an [Array] or an
-    // [Instance]. We cannot just compare the [InstanceFormat], since
-    // it contains varying information (e.g. size of the instance).
-    // But we can take the non-varying parts of the [InstanceFormat], namely the
-    // [TypeField].
-    uword mask = InstanceFormat::TypeField::mask();
-    uword instance_mask = InstanceFormat::instance_format(0).as_uword() & mask;
-    uword boxed_mask = InstanceFormat::boxed_format().as_uword() & mask;
-    uword array_mask = InstanceFormat::array_format().as_uword() & mask;
+    // Load instance format & handle the three cases:
+    //  - never immutable (based on instance format) => not immutable
+    //  - always immutable (based on instance format) => immutable
+    //  - else (only instances) => check runtime-tracked bit
+    uword mask = InstanceFormat::ImmutableField::mask();
+    uword always_immutable_mask = InstanceFormat::ImmutableField::encode(
+        InstanceFormat::ALWAYS_IMMUTABLE);
+    uword never_immutable_mask = InstanceFormat::ImmutableField::encode(
+        InstanceFormat::NEVER_IMMUTABLE);
 
     __ ldr(R0, Address(R0, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ ldr(R1, Immediate(mask));
     __ and_(R0, R0, R1);
 
-    // If this is a Boxed, we bail out.
-    __ cmp(R0, Immediate(boxed_mask));
+    // If this is type never immutable we continue the loop.
+    __ cmp(R0, Immediate(never_immutable_mask));
     __ b(EQ, &loop_with_mutable_field);
 
-    // If this is an Array, we bail out.
-    __ cmp(R0, Immediate(array_mask));
-    __ b(EQ, &loop_with_mutable_field);
-
-    // If this is not an Instance, we consider it immutable.
-    __ ldr(R1, Immediate(instance_mask));
-    __ cmp(R0, R1);
-    __ b(NE, &loop_with_immutable_field);
+    // If this is type is always immutable we continue the loop.
+    __ cmp(R0, Immediate(always_immutable_mask));
+    __ b(EQ, &loop_with_immutable_field);
 
     // Else, we must have an Instance and check the runtime-tracked
     // immutable bit.

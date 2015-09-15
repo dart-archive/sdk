@@ -32,6 +32,7 @@ namespace fletch {
 //         Array
 //         ByteArray
 //         Stack
+//         OneByteString
 //         TwoByteString
 //       Instance
 //         Coroutine
@@ -149,7 +150,8 @@ class Smi: public Object {
 
 // The instance format describes how an instance of a class looks.
 // The bit format of the word is as follows:
-//   [MSB...10] Contains the non variable size of the instance.
+//   [MSB...12] Contains the non variable size of the instance.
+//   [11-10]    Whether it is always/never/maybe immutable.
 //   [9-7]      The marker of the instance.
 //   [6]        Tells whether all pointers are in the non variable part.
 //   [5]        Tells whether the object has a variable part.
@@ -182,6 +184,12 @@ class InstanceFormat {
     FOREIGN_FUNCTION_MARKER = 5,
     FOREIGN_MEMORY_MARKER   = 6,
     NO_MARKER               = 7  // Else marker.
+  };
+
+  enum Immutable {
+    ALWAYS_IMMUTABLE        = 0,
+    NEVER_IMMUTABLE         = 1,
+    MAYBE_IMMUTABLE         = 2,
   };
 
   // Factory functions.
@@ -231,6 +239,10 @@ class InstanceFormat {
     return MarkerField::decode(as_uword());
   }
 
+  Immutable immutable() {
+    return ImmutableField::decode(as_uword());
+  }
+
   Smi* as_smi() { return value_; }
 
   // Leave LSB for Smi tag.
@@ -238,7 +250,8 @@ class InstanceFormat {
   class HasVariablePartField: public BoolField<5> {};
   class OnlyPointersInFixedPartField: public BoolField<6> {};
   class MarkerField: public BitField<Marker, 7, 3>{};
-  class FixedSizeField: public BitField<int, 10, 31-10> {};
+  class ImmutableField: public BitField<Immutable, 10, 12-10> {};
+  class FixedSizeField: public BitField<int, 12, 31-12> {};
 
  private:
   // Constructor only used by factory functions.
@@ -246,6 +259,7 @@ class InstanceFormat {
                                  int fixed_size,
                                  bool has_variable_part,
                                  bool only_pointers_in_fixed_part,
+                                 Immutable immutable,
                                  Marker marker);
 
   // Exclusive access to Class contructing from Smi.
@@ -1128,42 +1142,51 @@ InstanceFormat::InstanceFormat(Type type,
                                int fixed_size,
                                bool has_variable_part,
                                bool only_pointers_in_fixed_part,
+                               Immutable immutable,
                                Marker marker = NO_MARKER) {
   ASSERT(Utils::IsAligned(fixed_size, kPointerSize));
   uword v = TypeField::encode(type)
       | HasVariablePartField::encode(has_variable_part)
       | OnlyPointersInFixedPartField::encode(only_pointers_in_fixed_part)
       | MarkerField::encode(marker)
+      | ImmutableField::encode(immutable)
       | FixedSizeField::encode(fixed_size / kPointerSize);
   value_ = Smi::cast(reinterpret_cast<Smi*>(v));
   ASSERT(type == this->type());
   ASSERT(fixed_size == this->fixed_size());
   ASSERT(only_pointers_in_fixed_part == this->only_pointers_in_fixed_part());
+  ASSERT(immutable == this->immutable());
   ASSERT(has_variable_part == this->has_variable_part());
 }
 
 const InstanceFormat InstanceFormat::heap_integer_format() {
-  return InstanceFormat(LARGE_INTEGER_TYPE, HeapObject::kSize, true, true);
+  return InstanceFormat(
+      LARGE_INTEGER_TYPE, HeapObject::kSize, true, true, ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::byte_array_format() {
-  return InstanceFormat(BYTE_ARRAY_TYPE, ByteArray::kSize, true, true);
+  return InstanceFormat(
+      BYTE_ARRAY_TYPE, ByteArray::kSize, true, true, ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::double_format() {
-  return InstanceFormat(DOUBLE_TYPE, HeapObject::kSize, true, true);
+  return InstanceFormat(
+      DOUBLE_TYPE, HeapObject::kSize, true, true, ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::boxed_format() {
-  return InstanceFormat(BOXED_TYPE, Boxed::kSize, false, true);
+  return InstanceFormat(
+      BOXED_TYPE, Boxed::kSize, false, true, NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::initializer_format() {
-  return InstanceFormat(INITIALIZER_TYPE, Initializer::kSize, false, true);
+  return InstanceFormat(
+      INITIALIZER_TYPE, Initializer::kSize, false, true, NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::function_format() {
-  return InstanceFormat(FUNCTION_TYPE, Function::kSize, true, false);
+  return InstanceFormat(
+      FUNCTION_TYPE, Function::kSize, true, false, ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::instance_format(int number_of_fields,
@@ -1172,37 +1195,44 @@ const InstanceFormat InstanceFormat::instance_format(int number_of_fields,
                         Instance::AllocationSize(number_of_fields),
                         false,
                         true,
+                        MAYBE_IMMUTABLE,
                         marker);
 }
 
 const InstanceFormat InstanceFormat::class_format() {
-  return InstanceFormat(CLASS_TYPE, Class::AllocationSize(), false, true);
+  return InstanceFormat(
+      CLASS_TYPE, Class::AllocationSize(), false, true, ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::smi_format() {
-  return InstanceFormat(IMMEDIATE_TYPE, 0, false, false);
+  return InstanceFormat(IMMEDIATE_TYPE, 0, false, false, ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::num_format() {
   // TODO(ager): This is not really an immediate type. It is an
   // abstract class and therefore doesn't have any instances.
-  return InstanceFormat(IMMEDIATE_TYPE, 0, false, false);
+  return InstanceFormat(
+      IMMEDIATE_TYPE, 0, false, false, NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::one_byte_string_format() {
-  return InstanceFormat(ONE_BYTE_STRING_TYPE, OneByteString::kSize, true, true);
+  return InstanceFormat(
+      ONE_BYTE_STRING_TYPE, OneByteString::kSize, true, true, ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::two_byte_string_format() {
-  return InstanceFormat(TWO_BYTE_STRING_TYPE, TwoByteString::kSize, true, true);
+  return InstanceFormat(
+      TWO_BYTE_STRING_TYPE, TwoByteString::kSize, true, true, ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::array_format() {
-  return InstanceFormat(ARRAY_TYPE, Array::kSize, true, false);
+  return InstanceFormat(
+      ARRAY_TYPE, Array::kSize, true, false, NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::stack_format() {
-  return InstanceFormat(STACK_TYPE, Stack::kSize, true, false);
+  return InstanceFormat(
+      STACK_TYPE, Stack::kSize, true, false, NEVER_IMMUTABLE);
 }
 
 // Inlined Object functions.
@@ -1357,10 +1387,14 @@ bool Object::IsImmutable() {
   if (IsSmi()) return true;
 
   ASSERT(IsHeapObject());
-  if (IsBoxed()) return false;
-  if (IsArray()) return false;
-  if (IsInstance()) return Instance::cast(this)->get_immutable();
-  return true;
+
+  InstanceFormat::Immutable immutable =
+      HeapObject::cast(this)->format().immutable();
+  if (immutable == InstanceFormat::ALWAYS_IMMUTABLE) return true;
+  if (immutable == InstanceFormat::NEVER_IMMUTABLE) return false;
+
+  ASSERT(IsInstance());
+  return Instance::cast(this)->get_immutable();
 }
 
 // Inlined Smi functions.
