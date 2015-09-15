@@ -63,10 +63,15 @@ static int RunProgram(Program* program) {
   return RunScheduler(&scheduler);
 }
 
-static void RunSnapshotFromFile(const char* path) {
+static Program* LoadSnapshotFromFile(const char* path) {
   List<uint8> bytes = Platform::LoadFile(path);
   Program* program = LoadSnapshot(bytes);
   bytes.Delete();
+  return program;
+}
+
+static void RunSnapshotFromFile(const char* path) {
+  Program* program = LoadSnapshotFromFile(path);
   int result = RunProgram(program);
   delete program;
   if (result != 0) FATAL1("Failed to run snapshot: %s\n", path);
@@ -98,6 +103,12 @@ void FletchTearDown() {
 
 void FletchWaitForDebuggerConnection(int port) {
   fletch::WaitForDebuggerConnection(port);
+}
+
+FletchProgram FletchLoadSnapshotFromFile(const char* path) {
+  fletch::Program* program = fletch::LoadSnapshotFromFile(path);
+  if (program == NULL) FATAL("Failed to load snapshot from file.\n");
+  return reinterpret_cast<FletchProgram>(program);
 }
 
 FletchProgram FletchLoadSnapshot(unsigned char* snapshot, int length) {

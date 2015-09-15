@@ -19,33 +19,60 @@ class ServiceRegistry {
   ServiceRegistry() : monitor_(Platform::CreateMonitor()), service_(NULL) { }
 
   ~ServiceRegistry() {
-    delete service_;
+    while (service_ != NULL) {
+      Service* tmp = service_;
+      service_ = service_->next();
+      delete tmp;
+    }
     delete monitor_;
   }
 
   void Register(Service* service) {
     ScopedMonitorLock lock(monitor_);
-    delete service_;
+    ASSERT(service->next() == NULL);
+    service->set_next(service_);
     service_ = service;
     monitor_->NotifyAll();
   }
 
-  void Unregister(Service* service) {
+  bool Unregister(Service* service) {
     ScopedMonitorLock lock(monitor_);
-    ASSERT(service_ == service);
-    delete service_;
-    service_ = NULL;
+    ASSERT(service != NULL);
+    if (service_ == service) {
+      service_ = service->next();
+    } else {
+      Service* prev = service_;
+      while (prev != NULL && prev->next() != service) {
+        prev = prev->next();
+      }
+      if (prev == NULL) {
+        FATAL1("Failed to unregister service: %s\n", service->name());
+      }
+      prev->set_next(service->next());
+    }
+    delete service;
+    return true;
   }
 
   Service* LookupService(const char* name) {
     ScopedMonitorLock lock(monitor_);
-    while (service_ == NULL || strcmp(name, service_->name()) != 0) {
+    Service* service;
+    while ((service = FindService(name)) == NULL) {
       monitor_->Wait();
     }
-    return service_;
+    return service;
   }
 
  private:
+  Service* FindService(const char* name) {
+    for (Service* next = service_; next != NULL; next = next->next()) {
+      if (strcmp(name, next->name()) == 0) {
+        return next;
+      }
+    }
+    return NULL;
+  }
+
   Monitor* monitor_;
   Service* service_;
 };

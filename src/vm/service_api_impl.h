@@ -36,6 +36,9 @@ class Service {
 
   char* name() const { return name_; }
 
+  Service* next() const { return next_; }
+  void set_next(Service* next) { next_ = next; }
+
  private:
   friend void PostResultToService(char* buffer);
 
@@ -46,6 +49,7 @@ class Service {
 
   char* const name_;
   Port* const port_;
+  Service* next_;
 };
 
 }  // namespace fletch

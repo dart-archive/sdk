@@ -28,6 +28,8 @@ NO_LINTING = (
     r"^tests[\\\/]service_tests[\\\/]conformance[\\\/]java[\\\/]jni[\\\/].*",
     r"^tests[\\\/]service_tests[\\\/]performance[\\\/]cc[\\\/].*",
     r"^tests[\\\/]service_tests[\\\/]performance[\\\/]java[\\\/]jni[\\\/].*",
+    r"^tests[\\\/]service_tests[\\\/]multiple_services[\\\/]cc[\\\/].*",
+    r"^tests[\\\/]service_tests[\\\/]multiple_services[\\\/]java[\\\/]jni[\\\/].*",
     r"^third_party[\\\/]double-conversion[\\\/]src[\\\/].*",
     r"^tools[\\\/]immic[\\\/]lib[\\\/]src[\\\/]resources[\\\/]objc[\\\/].*",
     r"^tools[\\\/]servicec[\\\/]lib[\\\/]src[\\\/]resources[\\\/]cc[\\\/].*",

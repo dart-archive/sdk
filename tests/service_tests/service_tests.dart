@@ -13,6 +13,7 @@ import 'dart:async' show
 import 'package:expect/expect.dart' show
     Expect;
 
+import 'multiple_services/multiple_services_tests.dart' as multiple;
 import '../../samples/todomvc/todomvc_service_tests.dart' as todomvc;
 
 List<ServiceTest> SERVICE_TESTS = <ServiceTest>[
@@ -30,7 +31,7 @@ List<ServiceTest> SERVICE_TESTS = <ServiceTest>[
         'cc/unicode.cc',
     ]),
     todomvc.serviceTest,
-];
+]..addAll(multiple.serviceTests);
 
 const String thisDirectory = 'tests/service_tests';
 
@@ -269,19 +270,26 @@ class BuildSnapshotRule extends Rule {
   }
 }
 
-class RunSnapshotRule extends Rule {
+class RunSnapshotsRule extends Rule {
   final String executable;
-  final String snapshot;
+  final List<String> snapshots;
 
-  RunSnapshotRule(this.executable, this.snapshot);
+  RunSnapshotsRule(this.executable, this.snapshots);
 
   Future<Null> build() {
     Map<String, String> env;
     if (isMacOS && isAsan) {
       env = <String, String>{'DYLD_LIBRARY_PATH': buildDirectory};
     }
-    return Rule.runCommand(executable, [snapshot], env);
+    return Rule.runCommand(executable, snapshots, env);
   }
+}
+
+class RunSnapshotRule extends RunSnapshotsRule {
+  String get snapshot => snapshots[0];
+
+  RunSnapshotRule(String executable, String snapshot)
+      : super(executable, [snapshot]);
 }
 
 // Test entry point.

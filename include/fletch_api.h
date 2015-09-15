@@ -28,6 +28,9 @@ FLETCH_EXPORT void FletchWaitForDebuggerConnection(int port);
 FLETCH_EXPORT FletchProgram FletchLoadSnapshot(unsigned char* snapshot,
                                                int length);
 
+// Load the snapshot from the file and load the program from the snapshot.
+FLETCH_EXPORT FletchProgram FletchLoadSnapshotFromFile(const char* path);
+
 // Delete a program.
 FLETCH_EXPORT void FletchDeleteProgram(FletchProgram program);
 
