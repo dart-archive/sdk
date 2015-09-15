@@ -103,7 +103,8 @@ void PostResultToService(char* buffer) {
 Service::Service(char* name, Port* port)
     : result_monitor_(Platform::CreateMonitor()),
       name_(name),
-      port_(port) {
+      port_(port),
+      next_(NULL) {
   port_->IncrementRef();
 }
 
