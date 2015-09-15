@@ -80,6 +80,8 @@ public final class ListPatch<N extends Node> implements Patch {
     @Override public int getCount() { return nodes.size(); }
     @Override public boolean isInsert() { return true; }
 
+    public List<Node> getNodes() { return nodes; }
+
     int delta() { return nodes.size(); }
 
     int apply(List<Node> output) {
@@ -111,6 +113,8 @@ public final class ListPatch<N extends Node> implements Patch {
   public static class UpdatePatch extends RegionPatch {
     @Override public int getCount() { return updates.size(); }
     @Override public boolean isUpdate() { return true; }
+
+    public List<NodePatch> getUpdates() { return updates; }
 
     int delta() { return 0; }
 
