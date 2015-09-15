@@ -89,7 +89,7 @@ public abstract class SlidingWindow<T extends RecyclerView.ViewHolder>
           if (!region.isUpdate()) continue;
           int start = windowIndexToViewPosition(region.getIndex());
           if (start < previousCount) {
-            notifyItemRangeChanged(start, start + region.getCount());
+            notifyItemRangeChanged(start, region.getCount());
           }
         }
         if (currentCount > previousCount) {
