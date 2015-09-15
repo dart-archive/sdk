@@ -12,21 +12,130 @@ const patch = "patch";
   }
 }
 
-// TODO(ajohnsen): Implement.
+
+// Implements the same XorShift+ algorithm as random.h.  Splits 64 bit values
+// into three 23 bit parts, in order to keep everything in smis.
 class _Random implements Random {
-  _Random([int seed]);
+  // The lower parts are exactly 23 bits, and the top part is 18 bits, making
+  // 64 bits in all.
+  static const kBitsPerPart = 23;
+  static const kLowMask = (1 << kBitsPerPart) - 1;
+  static const kMediumMask = (1 << (kBitsPerPart * 2)) - 1;
+
+  _Random([int seed]) {
+    if (seed == null) seed = 0;
+    seed ^= 314159265;
+    _s0_0 = seed & kLowMask;
+    _s0_1 = (seed >> kBitsPerPart) & kLowMask;
+    _s0_2 = (seed >> (kBitsPerPart * 2)) & kLowMask;
+    _s1_0 = 271828182 & kLowMask;
+    _s1_1 = 271828182 >> kBitsPerPart;
+    _s1_2 = 0;
+    _y0 = 0;
+    _y1 = 0;
+    _y2 = 0;
+  }
 
   bool nextBool() {
-    return false;
+    _nextInt64();
+    // Use the lowest bit of x + y.
+    return ((_s1_0 + _y0) & 1) != 0;
   }
 
+  // TODO(erikcorry): A native helper could just put the bits in the mantissa
+  // and avoid the floating point divisions.
+  // Returns uniformly distributed doubles in [0..1[.
   double nextDouble() {
-    return 0.0;
+    _nextInt64();
+    // Use x + y as the mantissa.
+    const kMantissaBits = 52;  // Enough for double.
+    int mantissa = (_s1_0 + _y0) & kLowMask;
+    mantissa += ((_s1_1 + _y1) & kLowMask) << kBitsPerPart;
+    int mantissa_top =
+        (_s1_2 + _y2) & ((1 << (kMantissaBits - 2 * kBitsPerPart)) - 1);
+    mantissa += mantissa_top << (2 * kBitsPerPart);
+    return mantissa / (1 << kMantissaBits);
   }
 
-  int nextInt([int max]) {
-    return 0;
+  // There are some 64 bit assumptions here.  Probably won't work for larger
+  // numbers when we support them.
+  int nextInt(int max) {
+    int mask = max - 1;
+    bool is_power_of_2 = (mask & max) == 0;
+    if (!is_power_of_2) {
+      // Bit smearing.
+      mask |= mask >> 32;
+      mask |= mask >> 16;
+      mask |= mask >> 8;
+      mask |= mask >> 4;
+      mask |= mask >> 2;
+      mask |= mask >> 1;
+    }
+    // Implementation with no modulus operation.  For max values that are not
+    // powers of 2, this may run more than one iteration, but < 2 on average.
+    while (true) {
+      _nextInt64();
+      int answer = (_s1_0 + _y0) & mask;
+      if (mask > kLowMask) {
+        answer += ((_s1_1 + _y1) & (mask >> kBitsPerPart)) << kBitsPerPart;
+        if (mask > kMediumMask) {
+          int shift = 2 * kBitsPerPart;
+          answer += ((_s1_2 + _y2) & (mask >> shift)) << shift;
+        }
+      }
+      if (answer < max) return answer;
+    }
   }
+
+  int _nextInt64() {
+    // uint64 x = s0.
+    int x0 = _s0_0;
+    int x1 = _s0_1;
+    int x2 = _s0_2;
+    // uint64 y = s1.
+    _y0 = _s1_0;
+    _y1 = _s1_1;
+    _y2 = _s1_2;
+    // s0 = y.
+    _s0_0 = _y0;
+    _s0_1 = _y1;
+    _s0_2 = _y2;
+    // Here and a few more places we assume that each part is 23 bits.
+    // x ^= x << 23.
+    x2 = (x2 ^ x1) & 0x3ffff;
+    x1 ^= x0;
+    // x ^= x >> 17.
+    x0 ^= x0 >> 17;
+    x0 ^= (x1 & 0x1ffff) << 6;
+    x1 ^= x1 >> 17;
+    x1 ^= (x2 & 0x1ffff) << 6;
+    x2 ^= x2 >> 17;
+    // x ^= y.
+    x0 ^= _y0;
+    x1 ^= _y1;
+    x2 ^= _y2;
+    // x ^= y >> 26.
+    x0 ^= _y1 >> 3;
+    x0 ^= (_y2 & 7) << 20;
+    x1 ^= _y2 >> 3;
+    // s1 = x.
+    _s1_0 = x0;
+    _s1_1 = x1;
+    _s1_2 = x2;
+  }
+
+  // Y from most recent call.
+  int _y0;
+  int _y1;
+  int _y2;
+  // Actual PRNG state, in smis.
+  int _s0_0;  // Low bits.
+  int _s0_1;  // Medium bits.
+  int _s0_2;  // High bits.
+  // S1 is also the most recent x.
+  int _s1_0;  // Low bits.
+  int _s1_1;  // Medium bits.
+  int _s1_2;  // High bits.
 }
 
 @patch double sin(num x) => _sin(x.toDouble());
