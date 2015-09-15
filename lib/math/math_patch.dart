@@ -87,7 +87,7 @@ class _Random implements Random {
     }
   }
 
-  int _nextInt64() {
+  void _nextInt64() {
     // uint64 x = s0.
     int x0 = _s0_0;
     int x1 = _s0_1;
