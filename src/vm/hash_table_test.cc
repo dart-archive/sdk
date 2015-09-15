@@ -71,6 +71,15 @@ TEST_CASE(STRING_MAP) {
 
     EXPECT_EQ(it->second, "fizz");
   }
+
+  EXPECT_EQ(map1.size(), 2u);
+  map1.Clear();
+  EXPECT_EQ(map1.size(), 0u);
+  EXPECT(map1.Begin() == map1.End());
+  map1.Insert({"baz", "fizz"});
+  EXPECT_EQ(map1.size(), 1u);
+  EXPECT_EQ(map1.Find("baz")->second, "fizz");
+  EXPECT(map1.Find("foo") == map1.End());
 }
 
 TEST_CASE(STRING_SET) {
@@ -122,6 +131,15 @@ TEST_CASE(STRING_SET) {
     Set::ConstIterator it = set1.Find("baz");
     EXPECT(it != set1.End());
   }
+
+  EXPECT_EQ(set1.size(), 2u);
+  set1.Clear();
+  EXPECT_EQ(set1.size(), 0u);
+  EXPECT(set1.Begin() == set1.End());
+  set1.Insert("baz");
+  EXPECT_EQ(set1.size(), 1u);
+  EXPECT_EQ(*set1.Find("baz"), "baz");
+  EXPECT(set1.Find("foo") == set1.End());
 }
 
 typedef HashMap<intptr_t, int> IntInt;

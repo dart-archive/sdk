@@ -25,6 +25,8 @@ class VoidHashTable {
 
   void Swap(VoidHashTable& other);
 
+  void Clear();
+
   // Used to implement the [] operator.  Returns address of value part of
   // key-value pair.
   char* LookUp(const void* key);

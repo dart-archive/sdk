@@ -160,6 +160,10 @@ class UnorderedHashTable {
     return Iterator(map_, map_.backing_end());
   }
 
+  inline void Clear() {
+    map_.Clear();
+  }
+
  protected:
   VoidHashTable map_;
 };

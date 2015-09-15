@@ -231,4 +231,13 @@ char* VoidHashTable::Erase(const char* entry) {
   return position;
 }
 
+void VoidHashTable::Clear() {
+  if (size_ == 0) return;
+  delete[] backing_;
+  mutations_++;
+  mask_ = kInitialCapacity - 1;
+  size_ = 0;
+  AllocateBacking(kInitialCapacity);
+}
+
 }  // namespace fletch.
