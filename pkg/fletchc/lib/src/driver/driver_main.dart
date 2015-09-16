@@ -70,11 +70,15 @@ import '../shared_command_infrastructure.dart' show
     headerSize,
     toUint8ListView;
 
+import 'developer.dart' show
+    combineTasks,
+    allocateWorker;
+
 import 'session_manager.dart' show
     lookupSession;
 
 import '../verbs/create_verb.dart' show
-    createSessionInContext;
+    CreateSessionTask;
 
 Function gracefulShutdown;
 
@@ -236,17 +240,16 @@ Future<Null> handleVerb(
     client.parseArguments(arguments);
     String sessionName = client.sentence.sessionName;
     UserSession session;
+    SharedTask initializer;
     if (sessionName != null) {
       session = lookupSession(sessionName);
       if (session == null) {
-        DriverVerbContext context =
-            new DriverVerbContext(client, pool, session, isLastAction: false);
-        await createSessionInContext(sessionName, context);
-        session = lookupSession(sessionName);
-        assert(session != null);
+        session = await createSession(sessionName, () => allocateWorker(pool));
+        initializer = new CreateSessionTask(sessionName);
       }
     }
-    DriverVerbContext context = new DriverVerbContext(client, pool, session);
+    DriverVerbContext context =
+        new DriverVerbContext(client, pool, session, initializer: initializer);
     return await client.sentence.performVerb(context);
   }
 
@@ -269,23 +272,21 @@ Future<Null> handleVerb(
 }
 
 class DriverVerbContext extends VerbContext {
-  /// True if [client] should be closed after [performTaskInWorker].
-  final bool isLastAction;
+  SharedTask initializer;
 
   DriverVerbContext(
       ClientController client,
       IsolatePool pool,
       UserSession session,
-      {this.isLastAction: true})
+      {this.initializer})
       : super(client, pool, session);
 
   DriverVerbContext copyWithSession(UserSession session) {
-    return new DriverVerbContext(
-        client, pool, session, isLastAction: isLastAction);
+    return new DriverVerbContext(client, pool, session);
   }
 
   Future<Null> performTaskInWorker(SharedTask task) {
-    return session.worker.performTask(task, client, isLastAction: isLastAction);
+    return session.worker.performTask(combineTasks(initializer, task), client);
   }
 }
 
@@ -444,9 +445,6 @@ class IsolateController {
   /// Subscription for errors from [isolate].
   StreamSubscription errorSubscription;
 
-  /// Subscription for commands from client.
-  StreamSubscription clientSubscription;
-
   IsolateController(this.isolate);
 
   /// Begin a session with the worker isolate.
@@ -473,7 +471,7 @@ class IsolateController {
   /// vice versa.  The returned future normally completes when the worker
   /// isolate sends DriverCommand.ClosePort, or if the isolate is killed due to
   /// DriverCommand.Signal arriving through client.commands.
-  Future<Null> attachClient(ClientController client, bool isLastAction) async {
+  Future<Null> attachClient(ClientController client) async {
     errorSubscription.onData((errorList) {
       String error = errorList[0];
       String stackTrace = errorList[1];
@@ -492,30 +490,18 @@ class IsolateController {
         workerSendPort.send([command.code.index, command.data]);
       }
     }
-    if (clientSubscription == null) {
-      // TODO(ahe): Add onDone event handler to detach the client.
-      clientSubscription = client.commands.listen(handleCommand);
-    }
+    // TODO(ahe): Add onDone event handler to detach the client.
+    client.commands.listen(handleCommand);
 
     while (await workerCommands.moveNext()) {
       Command command = workerCommands.current;
       switch (command.code) {
         case DriverCommand.ClosePort:
-          if (isLastAction) {
-            workerReceivePort.close();
-          } else {
-            return;
-          }
+          workerReceivePort.close();
           break;
 
         case DriverCommand.EventLoopStarted:
           eventLoopStarted = true;
-          break;
-
-        case DriverCommand.ExitCode:
-          if (isLastAction) {
-            client.sendCommand(command);
-          }
           break;
 
         default:
@@ -550,10 +536,9 @@ class IsolateController {
   Future<Null> performTask(
       SharedTask task,
       ClientController client,
-      { /// This is the last action performed in [client].
-        bool isLastAction: true,
-        /// End this session and return this isolate to the pool.
-        bool endSession: false}) async {
+      {
+       /// End this session and return this isolate to the pool.
+       bool endSession: false}) async {
     ClientLogger log = client.log;
 
     client.enqueCommandToWorker(new Command(DriverCommand.PerformTask, task));
@@ -562,7 +547,7 @@ class IsolateController {
     // `this`.  Also, Intercept the signal command and potentially kill the
     // isolate (the isolate needs to tell if it is interuptible or needs to be
     // killed, an example of the latter is, if compiler is running).
-    await attachClient(client, isLastAction);
+    await attachClient(client);
     // The verb (which was performed in the worker) is done.
     log.note("After attachClient.");
 
@@ -574,9 +559,6 @@ class IsolateController {
     } else {
       await detachClient();
     }
-
-    if (!isLastAction) return;
-    clientSubscription = null;
     client.endSession();
 
     try {

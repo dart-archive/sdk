@@ -31,12 +31,17 @@ import '../../commands.dart' show
     Debugging;
 
 import '../verbs/infrastructure.dart' show
+    Command,
     CommandSender,
     DiagnosticKind,
     FletchCompiler,
     FletchDelta,
     IncrementalCompiler,
+    IsolateController,
+    IsolatePool,
     Session,
+    SharedTask,
+    StreamIterator,
     throwFatalError;
 
 import '../../incremental/fletchc_incremental.dart' show
@@ -352,4 +357,42 @@ Future<int> compileAndAttachToLocalVmThen(
     state.detachCommandSender();
   }
   return exitCode;
+}
+
+Future<IsolateController> allocateWorker(IsolatePool pool) async {
+  IsolateController worker =
+      new IsolateController(await pool.getIsolate(exitOnError: false));
+  await worker.beginSession();
+  return worker;
+}
+
+SharedTask combineTasks(SharedTask task1, SharedTask task2) {
+  if (task1 == null) return task2;
+  if (task2 == null) return task1;
+  return new CombinedTask(task1, task2);
+}
+
+class CombinedTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
+
+  final SharedTask task1;
+
+  final SharedTask task2;
+
+  const CombinedTask(this.task1, this.task2);
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<Command> commandIterator) {
+    return invokeCombinedTasks(commandSender, commandIterator, task1, task2);
+  }
+}
+
+Future<int> invokeCombinedTasks(
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator,
+    SharedTask task1,
+    SharedTask task2) async {
+  await task1(commandSender, commandIterator);
+  return task2(commandSender, commandIterator);
 }
