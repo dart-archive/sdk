@@ -565,7 +565,29 @@ static void WriteFully(int fd, uint8* data, ssize_t length) {
 
 static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   WriteBuffer buffer;
-  buffer.WriteInt(argc);
+  buffer.WriteInt(argc + 2);  // Also current directory, and absolute path to
+                              // program.
+
+  char* path = static_cast<char*>(malloc(MAXPATHLEN + 1));
+  if (path == NULL) {
+    Die("%s: malloc failed: %s", path, strerror(errno));
+  }
+
+  if (getcwd(path, MAXPATHLEN + 1) == NULL) {
+    Die("%s: getcwd failed: %s", path, strerror(errno));
+  }
+  buffer.WriteInt(strlen(path));
+  buffer.WriteString(path);
+
+  // argv[0] is the name of the executable before path search. But the driver
+  // needs the absolute location provided by GetPathOfExecutable.
+  GetPathOfExecutable(path, MAXPATHLEN + 1);
+  buffer.WriteInt(strlen(path));
+  buffer.WriteString(path);
+
+  free(path);
+  path = NULL;
+
   for (int i = 0; i < argc; i++) {
     buffer.WriteInt(strlen(argv[i]));
     buffer.WriteString(argv[i]);

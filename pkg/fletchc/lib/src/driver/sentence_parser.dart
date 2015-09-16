@@ -25,11 +25,15 @@ Sentence parseSentence(
 
 class SentenceParser {
   final String programName;
+  final String shortProgramName;
+  final String currentDirectory;
   Words tokens;
 
   SentenceParser(Iterable<String> tokens, bool includesProgramName)
-      : programName = includesProgramName ? tokens.first : null,
-        tokens = new Words(tokens.skip(includesProgramName ? 1 : 0));
+      : currentDirectory = includesProgramName ? tokens.first : null,
+        programName = includesProgramName ? tokens.skip(1).first : null,
+        shortProgramName = includesProgramName ? tokens.skip(2).first : null,
+        tokens = new Words(tokens.skip(includesProgramName ? 3 : 0));
 
   Sentence parseSentence() {
     ResolvedVerb verb;
