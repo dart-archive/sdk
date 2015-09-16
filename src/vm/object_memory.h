@@ -125,7 +125,11 @@ class Space {
   inline bool Includes(uword address) const;
 
   // Adjust the allocation budget based on the current heap size.
-  void AdjustAllocationBudget();
+  void AdjustAllocationBudget(int used_outside_space);
+
+  void IncreaseAllocationBudget(int size);
+
+  void DecreaseAllocationBudget(int size);
 
   void SetAllocationBudget(int new_budget);
 

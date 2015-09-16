@@ -53,7 +53,7 @@ void ImmutableHeap::UpdateLimitAfterImmutableGC(int mutable_size_at_last_gc) {
   // growth strategy.
   Space* merged_space = heap_.space();
   if (merged_space != NULL && !merged_space->is_empty()) {
-    limit = Utils::Maximum(limit, merged_space->Used());
+    limit = Utils::Maximum(limit, heap_.UsedTotal());
   }
 
   // We introduce a constraint here to allow the size of mutable heaps to guide
@@ -73,12 +73,12 @@ void ImmutableHeap::UpdateLimitAfterImmutableGC(int mutable_size_at_last_gc) {
 int ImmutableHeap::EstimatedUsed() {
   ScopedLock locker(heap_mutex_);
 
-  int merged_used = heap_.space()->Used();
+  int merged_used = heap_.UsedTotal();
 
   int unmerged_used = 0;
   Part* current = unmerged_parts_;
   while (current != NULL) {
-    unmerged_used += current->heap()->space()->Used();
+    unmerged_used += current->heap()->UsedTotal();
     current = current->next();
   }
 

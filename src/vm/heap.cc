@@ -237,11 +237,13 @@ Object* Heap::CreateFunction(Class* the_class,
 
 void Heap::AllocatedForeignMemory(int size) {
   foreign_memory_ += size;
+  space()->DecreaseAllocationBudget(size);
 }
 
 void Heap::FreedForeignMemory(int size) {
   foreign_memory_ -= size;
   ASSERT(foreign_memory_ >= 0);
+  space()->IncreaseAllocationBudget(size);
 }
 
 void Heap::ReplaceSpace(Space* space) {

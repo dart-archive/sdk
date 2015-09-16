@@ -123,9 +123,9 @@ uword Space::AllocateInNewChunk(int size) {
 uword Space::Allocate(int size) {
   ASSERT(size >= HeapObject::kSize);
   ASSERT(Utils::IsAligned(size, kPointerSize));
+  if (!in_no_allocation_failure_scope() && needs_garbage_collection()) return 0;
   uword result = TryAllocate(size);
   if (result != 0) return result;
-  if (!in_no_allocation_failure_scope() && needs_garbage_collection()) return 0;
   return AllocateInNewChunk(size);
 }
 
@@ -133,9 +133,17 @@ void Space::TryDealloc(uword location, int size) {
   if (top_ == location) top_ -= size;
 }
 
-void Space::AdjustAllocationBudget() {
-  int used = Used();
+void Space::AdjustAllocationBudget(int used_outside_space) {
+  int used = Used() + used_outside_space;
   allocation_budget_ = Utils::Maximum(DefaultChunkSize(used), used);
+}
+
+void Space::IncreaseAllocationBudget(int size) {
+  allocation_budget_ += size;
+}
+
+void Space::DecreaseAllocationBudget(int size) {
+  allocation_budget_ -= size;
 }
 
 void Space::SetAllocationBudget(int new_budget) {

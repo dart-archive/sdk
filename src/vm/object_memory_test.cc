@@ -44,6 +44,9 @@ TEST_CASE(Space_PrependSpace) {
     Space* space = new Space(32);
     Space* space2 = new Space(32);
 
+    space->AdjustAllocationBudget(0);
+    space2->AdjustAllocationBudget(0);
+
     space->Allocate(8);
     uword space2_object = space2->Allocate(8);
     space2->PrependSpace(space);
@@ -57,6 +60,9 @@ TEST_CASE(Space_PrependSpace) {
   {
     Space* space = new Space(32);
     Space* space2 = new Space();
+
+    space->AdjustAllocationBudget(0);
+    space2->AdjustAllocationBudget(0);
 
     uword space_object = space->Allocate(8);
     space2->PrependSpace(space);

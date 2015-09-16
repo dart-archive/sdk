@@ -29,10 +29,12 @@ class ImmutableHeap {
     int used() { return used_original_; }
 
     void ResetUsed() {
-      used_original_ = heap_.space()->Used();
+      used_original_ = heap_.UsedTotal();
     }
 
-    int NewlyAllocated() { return heap_.space()->Used() - used_original_; }
+    int NewlyAllocated() {
+      return heap_.UsedTotal() - used_original_;
+    }
 
     Part* next() { return next_; }
     void set_next(Part* next) { next_ = next; }

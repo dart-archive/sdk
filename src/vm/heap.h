@@ -93,6 +93,9 @@ class Heap {
   // Returns the number of bytes allocated in the space.
   int Used() { return space_->Used(); }
 
+  // Returns the number of bytes allocated in the space and via foreign memory.
+  int UsedTotal() { return space_->Used() + foreign_memory_; }
+
   Space* space() { return space_; }
 
   void ReplaceSpace(Space* space);
@@ -100,9 +103,6 @@ class Heap {
   WeakPointer* TakeWeakPointers();
 
   void MergeInOtherHeap(Heap* heap);
-
-  // Adjust the allocation budget based on the current heap size.
-  void AdjustAllocationBudget() { space()->AdjustAllocationBudget(); }
 
   // Tells whether garbage collection is needed.
   bool needs_garbage_collection() {
@@ -131,6 +131,11 @@ class Heap {
   Object* CreateTwoByteStringInternal(Class* the_class, int length, bool clear);
 
   Object* AllocateRawClass(int size);
+
+  // Adjust the allocation budget based on the current heap size.
+  void AdjustAllocationBudget() {
+    space()->AdjustAllocationBudget(foreign_memory_);
+  }
 
   void set_random(RandomXorShift* random) {
     random_ = random;
