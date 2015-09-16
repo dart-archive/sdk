@@ -25,6 +25,9 @@ import 'create_verb.dart' show
 import 'debug_verb.dart' show
     debugVerb;
 
+import 'export_verb.dart' show
+    exportVerb;
+
 import 'help_verb.dart' show
     helpVerb;
 
@@ -56,6 +59,10 @@ class Verb {
   /// True if this verb needs "in session NAME".
   final bool requiresSession;
 
+  /// True if this verb needs "to file NAME".
+  // TODO(ahe): Should be "to uri NAME".
+  final bool requiresToUri;
+
   /// True if this verb requires a session target (that is, "session NAME"
   /// without "in").
   final bool requiresTargetSession;
@@ -73,6 +80,7 @@ class Verb {
       this.perform,
       this.documentation,
       {this.requiresSession: false,
+       this.requiresToUri: false,
        this.allowsTrailing: false,
        bool requiresTargetSession: false,
        TargetKind requiredTarget,
@@ -105,6 +113,7 @@ const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "compile-and-run": compileAndRunVerb,
   "create": createVerb,
   "debug": debugVerb,
+  "export": exportVerb,
   "show": showVerb,
   "shutdown": shutdownVerb,
   "x-end": endVerb,

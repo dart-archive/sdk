@@ -128,6 +128,21 @@ List<Example> getExamples(DiagnosticKind kind) {
                        'tcp_socket', exampleAddress],
               <String>['debug', 'attach', 'in', 'session', 'foo'])];
 
+    case DiagnosticKind.missingToFile:
+      return <Example>[
+          new CommandLineExample(
+              <String>['export'])];
+
+    case DiagnosticKind.expectedToPreposition:
+      return <Example>[
+          new CommandLineExample(
+              <String>['export', 'in', 'all'])];
+
+    case DiagnosticKind.expectedFileTarget:
+      return <Example>[
+          new CommandLineExample(
+              <String>['export', 'to', 'all'])];
+
     case DiagnosticKind.noFile:
       // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.
       return <Example>[new CommandLineExample(<String>['compile-and-run'])];

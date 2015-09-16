@@ -2,57 +2,63 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.verbs.run_verb;
+library fletchc.verbs.export_verb;
 
 import 'infrastructure.dart';
 
 import 'documentation.dart' show
-    runDocumentation;
+    exportDocumentation;
 
 import '../driver/developer.dart' show
     compileAndAttachToLocalVmThen;
 
 import '../driver/developer.dart' as developer;
 
-const Verb runVerb =
+const Verb exportVerb =
     const Verb(
-        run, runDocumentation, requiresSession: true,
+        export, exportDocumentation, requiresSession: true,
+        requiresToUri: true,
         supportedTargets: const <TargetKind>[TargetKind.FILE]);
 
-Future<int> run(AnalyzedSentence sentence, VerbContext context) async {
+Future<int> export(AnalyzedSentence sentence, VerbContext context) async {
   // This is asynchronous, but we don't await the result so we can respond to
   // other requests.
   context.performTaskInWorker(
-      new RunTask(sentence.programName, sentence.targetUri));
+      new ExportTask(
+          sentence.programName, sentence.targetUri, sentence.toTargetUri));
 
   return null;
 }
 
-class RunTask extends SharedTask {
+class ExportTask extends SharedTask {
   // Keep this class simple, see note in superclass.
 
   final Uri programName;
 
   final Uri script;
 
-  const RunTask(this.programName, this.script);
+  final Uri snapshot;
+
+  const ExportTask(this.programName, this.script, this.snapshot);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return runTask(commandSender, SessionState.current, programName, script);
+    return exportTask(
+        commandSender, SessionState.current, programName, script, snapshot);
   }
 }
 
-Future<int> runTask(
+Future<int> exportTask(
     CommandSender commandSender,
     SessionState state,
     Uri programName,
-    Uri script) {
+    Uri script,
+    Uri snapshot) async {
   return compileAndAttachToLocalVmThen(
       commandSender,
       state,
       programName,
       script,
-      () => developer.run(state));
+      () => developer.export(state, snapshot));
 }

@@ -24,6 +24,9 @@ enum DiagnosticKind {
   socketConnectError,
   attachToVmBeforeRun,
   compileBeforeRun,
+  missingToFile,
+  expectedToPreposition,
+  expectedFileTarget,
 
   // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
   noFile,
@@ -119,10 +122,24 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.compileBeforeRun:
       return "No program to run. Try running 'fletch compile'";
 
+    case DiagnosticKind.missingToFile:
+      // TODO(ahe): Should be: "Try adding to [FILE_NAME] to the command line"
+      // with perhaps "'FILE_NAME'" instead of "[FILE_NAME]".
+      return "No destination file provided. "
+          "Try adding 'to file FILE_NAME' to the command line";
+
+    case DiagnosticKind.expectedToPreposition:
+      // TODO(lukechurch): Review UX.
+      return "Expected 'to' but got '${DiagnosticParameter.preposition}'";
+
+    case DiagnosticKind.expectedFileTarget:
+      // TODO(lukechurch): Review UX.
+      return "Expected a file but got '${DiagnosticParameter.target}'";
+
     case DiagnosticKind.noFile:
       // TODO(ahe): Remove this message when compile_and_run_verb.dart is
       // removed.
-      return "No file  provided. Try adding 'FILE_NAME' to the command line";
+      return "No file provided. Try adding 'FILE_NAME' to the command line";
 
     case DiagnosticKind.unknownOption:
       return "Unknown option: '${DiagnosticParameter.userInput}'";

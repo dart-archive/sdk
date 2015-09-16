@@ -9,6 +9,7 @@ import 'messages.dart' show
     getMessage;
 
 import 'driver/sentence_parser.dart' show
+    Preposition,
     ResolvedVerb,
     Target;
 
@@ -44,6 +45,9 @@ class DiagnosticParameter {
 
   static const DiagnosticParameter address = const DiagnosticParameter(
       DiagnosticParameterType.string, 'address');
+
+  static const DiagnosticParameter preposition = const DiagnosticParameter(
+      DiagnosticParameterType.preposition, 'preposition');
 }
 
 enum DiagnosticParameterType {
@@ -51,6 +55,7 @@ enum DiagnosticParameterType {
   verb,
   sessionName,
   target,
+  preposition,
 }
 
 class Diagnostic {
@@ -91,6 +96,13 @@ class Diagnostic {
           Target target = value;
           // TODO(ahe): Improve this conversion.
           stringValue = target.toString();
+          break;
+
+        case DiagnosticParameterType.preposition:
+          Preposition preposition = value;
+          // TODO(ahe): Improve this conversion.
+          stringValue =
+              preposition.kind.toString().split('.').last.toLowerCase();
           break;
       }
       formattedMessage = formattedMessage.replaceAll('$parameter', stringValue);
@@ -162,7 +174,8 @@ void throwFatalError(
      String sessionName,
      Target target,
      String address,
-     String userInput}) {
+     String userInput,
+     Preposition preposition}) {
   Map<DiagnosticParameter, dynamic> arguments =
       <DiagnosticParameter, dynamic>{};
   if (message != null) {
@@ -182,6 +195,9 @@ void throwFatalError(
   }
   if (userInput != null) {
     arguments[DiagnosticParameter.userInput] = userInput;
+  }
+  if (preposition != null) {
+    arguments[DiagnosticParameter.preposition] = preposition;
   }
   throw new InputError(kind, arguments);
 }

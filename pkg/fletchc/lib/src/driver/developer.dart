@@ -31,6 +31,7 @@ import '../../commands.dart' show
     Debugging;
 
 import '../verbs/infrastructure.dart' show
+    CommandSender,
     DiagnosticKind,
     FletchCompiler,
     FletchDelta,
@@ -58,6 +59,7 @@ Future<Null> attachToLocalVm(Uri programName, SessionState state) async {
   String fletchVmPath = programName.resolve("fletch-vm").toFilePath();
   state.fletchVm = await FletchVm.start(fletchVmPath);
   await attachToVm(state.fletchVm.host, state.fletchVm.port, state);
+  await state.session.disableVMStandardOutput();
 }
 
 Future<Null> attachToVm(
@@ -285,4 +287,69 @@ Future<Null> printBacktraceHack(Session session, FletchSystem system) async {
   if (isBadBacktrace) {
     throwInternalError("COMPILER BUG in above stacktrace");
   }
+}
+
+Future<int> export(SessionState state, Uri snapshot) async {
+  List<FletchDelta> compilationResults = state.compilationResults;
+  Session session = state.session;
+  state.session = null;
+
+  for (FletchDelta delta in compilationResults) {
+    await session.applyDelta(delta);
+  }
+
+  await session.writeSnapshot(snapshot.toFilePath());
+  await session.shutdown();
+
+  return 0;
+}
+
+Future<int> compileAndAttachToLocalVmThen(
+    CommandSender commandSender,
+    SessionState state,
+    Uri programName,
+    Uri script,
+    Future<int> action()) async {
+  bool startedVm = false;
+  List<FletchDelta> compilationResults = state.compilationResults;
+  Session session = state.session;
+  if (compilationResults.isEmpty || script != null) {
+    if (script == null) {
+      throwFatalError(DiagnosticKind.noFileTarget);
+    }
+    int exitCode = await compile(script, state);
+    if (exitCode != 0) return exitCode;
+    compilationResults = state.compilationResults;
+    assert(compilationResults != null);
+  }
+  if (session == null) {
+    startedVm = true;
+    await attachToLocalVm(programName, state);
+    state.fletchVm.stdoutLines.listen((String line) {
+      commandSender.sendStdout("$line\n");
+    });
+    state.fletchVm.stderrLines.listen((String line) {
+      commandSender.sendStderr("$line\n");
+    });
+    session = state.session;
+    assert(session != null);
+  }
+
+  state.attachCommandSender(commandSender);
+
+  int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
+  try {
+    exitCode = await action();
+  } catch (error, trace) {
+    print(error);
+    if (trace != null) {
+      print(trace);
+    }
+  } finally {
+    if (startedVm) {
+      exitCode = await state.fletchVm.exitCode;
+    }
+    state.detachCommandSender();
+  }
+  return exitCode;
 }

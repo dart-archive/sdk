@@ -121,3 +121,7 @@ const String servicecDocumentation = """
    x-servicec file FILE
              Compile service IDL file named FILE to custom fletch interface
 """;
+
+const String exportDocumentation = """
+   export [file DARTFILE] to file SNAPSHOT
+""";

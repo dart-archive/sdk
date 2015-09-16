@@ -127,7 +127,22 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
     throwInternalError("Can't use '$target' with '$verb'");
   }
 
-  if (sessionTarget != null) {
+  Uri toTargetUri;
+  if (verb.verb.requiresToUri) {
+    if (preposition == null) {
+      throwFatalError(DiagnosticKind.missingToFile);
+    }
+    if (preposition.kind != PrepositionKind.TO) {
+      throwFatalError(
+          DiagnosticKind.expectedToPreposition, preposition: preposition);
+    }
+    if (preposition.target.kind != TargetKind.FILE) {
+      throwFatalError(
+          DiagnosticKind.expectedFileTarget, target: preposition.target);
+    }
+    NamedTarget target = preposition.target;
+    toTargetUri = fileUri(target.name);
+  } else if (sessionTarget != null) {
     if (!verb.verb.requiresSession) {
       throwFatalError(
           DiagnosticKind.verbRequiresNoSession, verb: verb,
@@ -204,7 +219,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
       sentence.programName == null ? null : fileUri(sentence.programName);
   return new AnalyzedSentence(
       verb, target, targetName, preposition, trailing, sessionName,
-      sentence.arguments, programName, targetUri);
+      sentence.arguments, programName, targetUri, toTargetUri);
 }
 
 Uri fileUri(String path) => Uri.base.resolveUri(new Uri.file(path));
@@ -261,6 +276,9 @@ class AnalyzedSentence {
   /// Value of 'file NAME' converted to a Uri (main target, no preposition).
   final Uri targetUri;
 
+  /// Value of 'to file NAME' converted to a Uri.
+  final Uri toTargetUri;
+
   AnalyzedSentence(
       this.verb,
       this.target,
@@ -270,7 +288,8 @@ class AnalyzedSentence {
       this.sessionName,
       this.arguments,
       this.programName,
-      this.targetUri);
+      this.targetUri,
+      this.toTargetUri);
 
   Future<int> performVerb(VerbContext context) {
     return verb.verb.perform(this, context);
