@@ -20,6 +20,7 @@
 		DA313FB01AD665A6000089F9 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DA313FAF1AD665A6000089F9 /* Images.xcassets */; };
 		DA313FB31AD665A6000089F9 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = DA313FB11AD665A6000089F9 /* LaunchScreen.xib */; };
 		DA313FBF1AD665A7000089F9 /* githubTests.m in Sources */ = {isa = PBXBuildFile; fileRef = DA313FBE1AD665A7000089F9 /* githubTests.m */; };
+		DAC37B8D1BA807CD00104EA8 /* github_mock_service.snapshot in Resources */ = {isa = PBXBuildFile; fileRef = DAC37B8C1BA807CD00104EA8 /* github_mock_service.snapshot */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,6 +57,7 @@
 		DA313FB81AD665A7000089F9 /* githubTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = githubTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA313FBD1AD665A7000089F9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DA313FBE1AD665A7000089F9 /* githubTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = githubTests.m; sourceTree = "<group>"; };
+		DAC37B8C1BA807CD00104EA8 /* github_mock_service.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; name = github_mock_service.snapshot; path = ../github_mock_service.snapshot; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +101,7 @@
 		DA155C221B6A2F6100022EA8 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				DAC37B8C1BA807CD00104EA8 /* github_mock_service.snapshot */,
 				2D6E8DC61B283A6300FED492 /* dart-logo.png */,
 				DA155C231B6A2FAA00022EA8 /* github.snapshot */,
 			);
@@ -179,7 +182,6 @@
 			buildConfigurationList = DA313FC21AD665A7000089F9 /* Build configuration list for PBXNativeTarget "github" */;
 			buildPhases = (
 				48134BAA573371C7D5CB82A7 /* Check Pods Manifest.lock */,
-				DAEE2EA71AD677EF00945914 /* ShellScript */,
 				DA313F9B1AD665A6000089F9 /* Sources */,
 				DA313F9C1AD665A6000089F9 /* Frameworks */,
 				DA313F9D1AD665A6000089F9 /* Resources */,
@@ -256,6 +258,7 @@
 			files = (
 				DA313FAE1AD665A6000089F9 /* Main.storyboard in Resources */,
 				DA313FB31AD665A6000089F9 /* LaunchScreen.xib in Resources */,
+				DAC37B8D1BA807CD00104EA8 /* github_mock_service.snapshot in Resources */,
 				2D6E8DC71B283A6300FED492 /* dart-logo.png in Resources */,
 				DA313FB01AD665A6000089F9 /* Images.xcassets in Resources */,
 				DA155C241B6A2FAA00022EA8 /* github.snapshot in Resources */,
@@ -301,19 +304,6 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods/Pods-resources.sh\"\n";
 			showEnvVarsInLog = 0;
-		};
-		DAEE2EA71AD677EF00945914 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = ./compile.sh;
 		};
 /* End PBXShellScriptBuildPhase section */
 

@@ -7,6 +7,7 @@
 #include "include/fletch_api.h"
 #include "include/service_api.h"
 
+#include "github_mock.h"
 #include "immi_service.h"
 
 @interface AppDelegate ()
@@ -26,20 +27,24 @@ static int debugPortNumber = 8123;
     FletchWaitForDebuggerConnection(debugPortNumber);
     NSLog(@"Debugger connected.");
   } else {
-    // Get the path for the snapshot in the main application bundle.
-    NSBundle* mainBundle = [NSBundle mainBundle];
-    NSString* snapshot =
-        [mainBundle pathForResource:@"github" ofType:@"snapshot"];
-    // Read the snapshot and pass it to fletch.
-    NSData* data = [[NSData alloc] initWithContentsOfFile:snapshot];
-    unsigned char* bytes =
-        reinterpret_cast<unsigned char*>(const_cast<void*>(data.bytes));
-    NSLog(@"Fletch execution started\n");
-    FletchProgram program = FletchLoadSnapshot(bytes, data.length);
-    FletchRunMain(program);
-    FletchDeleteProgram(program);
-    NSLog(@"Fletch execution terminated\n");
+    FletchProgram programs[2];
+    programs[0] = [AppDelegate loadSnapshot:@"github"];
+    programs[1] = [AppDelegate loadSnapshot:@"github_mock_service"];
+    FletchRunMultipleMain(2, programs);
+    FletchDeleteProgram(programs[0]);
+    FletchDeleteProgram(programs[1]);
   }
+}
+
++ (FletchProgram)loadSnapshot:(NSString*)name {
+  // Get the path for the snapshot in the main application bundle.
+  NSBundle* mainBundle = [NSBundle mainBundle];
+  NSString* snapshot = [mainBundle pathForResource:name ofType:@"snapshot"];
+  // Read the snapshot and pass it to fletch.
+  NSData* data = [[NSData alloc] initWithContentsOfFile:snapshot];
+  unsigned char* bytes =
+      reinterpret_cast<unsigned char*>(const_cast<void*>(data.bytes));
+  return FletchLoadSnapshot(bytes, data.length);
 }
 
 - (BOOL)application:(UIApplication*)application
@@ -54,7 +59,8 @@ static int debugPortNumber = 8123;
   dispatch_async(queue, ^() {
     [AppDelegate loadAndRunDartSnapshot];
   });
-  // Setup the service.
+  // Setup the services.
+  GithubMockServer::setup();
   ImmiServiceLayer::setup();
   return YES;
 }
@@ -90,9 +96,11 @@ static int debugPortNumber = 8123;
 - (void)applicationWillTerminate:(UIApplication*)application {
   // Called when the application is about to terminate. Save data if
   // appropriate. See also applicationDidEnterBackground:.
+  GithubMockServer::stop();
 
   // Tear down the service API structures and Fletch.
   ImmiServiceLayer::tearDown();
+  GithubMockServer::tearDown();
   ServiceApiTearDown();
   FletchTearDown();
 }

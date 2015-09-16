@@ -14,7 +14,6 @@
 PROJ=github
 ANDROID_PROJ=GithubMock
 DART_FILE=bin/github_mock_service.dart
-IDL_FILE=lib/src/github_mock.idl
 
 set -ue
 
@@ -40,13 +39,14 @@ DART="$FLETCH_DIR/out/ReleaseIA32/dart"
 SERVICEC="$DART $FLETCH_DIR/tools/servicec/bin/servicec.dart"
 FLETCH="$FLETCH_DIR/out/ReleaseIA32/fletch"
 
+MOCK_SERVER_SNAPSHOT="$TARGET_DIR/github_mock_service.snapshot"
+
 set -x
 
 # Compile dart service file.
 if [[ $# -eq 0 ]] || [[ "$1" == "service" ]]; then
     rm -rf "$SERVICE_GEN_DIR"
-    mkdir -p "$SERVICE_GEN_DIR"
-    $SERVICEC --out "$SERVICE_GEN_DIR" "$TARGET_DIR/$IDL_FILE"
+    $DIR/../compile_mock_service.sh service
 
     # TODO(zerny): Change the servicec output directory structure to allow easy
     # referencing from Android Studio.
@@ -74,32 +74,15 @@ if [[ $# -eq 0 ]] || [[ "$1" == "fletch" ]]; then
     cp -R libs/* $JNI_LIBS_DIR/
 fi
 
-if [[ $# -eq 0 ]] || [[ "$1" == "http" ]]; then
-    DATA_DIR=$TARGET_DIR/lib/src/github_mock_data
-    DATA_FILE=$TARGET_DIR/lib/src/github_mock.data
-    echo "const Map<String, List<int>> resources = const <String, List<int>> {" > $DATA_FILE
-    cd $DATA_DIR
-    for f in `find . -type f -name *\\\\.data`; do
-	key=`echo $f | cut -b 3- | cut -d . -f 1`
-	echo "'$key': const <int>[" >> $DATA_FILE
-	od -A n -t d1 $f |\
-          sed 's/\([^ ]\) /\1,/g' |\
-          sed 's/\([^ ]\)$/\1,/' >> $DATA_FILE
-	echo "]," >> $DATA_FILE
-    done
-    echo "};" >> $DATA_FILE
+# TODO(zerny): should this always recompile the mock data and snapshot?
+if [[ $# -eq 0 ]] && [[ ! -f "$MOCK_SERVER_SNAPSHOT" ]]; then
+    $DIR/../compile_mock_service.sh
 fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
-    cd $FLETCH_DIR
-    ninja -C out/ReleaseIA32
-
-    # Kill the persistent process
-    ./tools/persistent_process_info.sh --kill
-
     SNAPSHOT="$DIR/$ANDROID_PROJ/app/src/main/res/raw/snapshot"
     mkdir -p `dirname "$SNAPSHOT"`
-    $FLETCH compile-and-run -o "$SNAPSHOT" "$TARGET_BUILD_DIR/$DART_FILE"
+    cp "$MOCK_SERVER_SNAPSHOT" "$SNAPSHOT"
 fi
 
 set +x

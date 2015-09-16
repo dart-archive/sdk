@@ -10,6 +10,8 @@
 #import "ImmiSamples/MenuPresenter.h"
 #import "ImmiSamples/SlidingWindowPresenter.h"
 
+#import "github_mock.h"
+
 @interface CenterPresenter : NSObject <ViewPresenter, NodePresenter>
 @property CommitListPresenter* presenter;
 - (id)init:(UIStoryboard*)storyboard;
@@ -102,6 +104,10 @@
 
 - (void)viewDidLoad {
   [super viewDidLoad];
+
+  // Ensure that the github mock server is running.
+  // TODO(zerny): Dynamically configure the http port.
+  GithubMockServer::start(8321);
 
   UIStoryboard* storyboard =
       [UIStoryboard storyboardWithName:@"Main" bundle:nil];
