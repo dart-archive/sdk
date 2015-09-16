@@ -106,6 +106,9 @@ Future<Null> attachToVm(
 
 Future<int> compile(Uri script, SessionState state) async {
   Uri firstScript = state.script;
+  if (!const bool.fromEnvironment("fletchc.enable-incremental-compilation")) {
+    state.resetCompiler();
+  }
   List<FletchDelta> previousResults = state.compilationResults;
   IncrementalCompiler compiler = state.compiler;
 
