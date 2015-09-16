@@ -5,6 +5,7 @@
 package com.google.fletch.githubsample;
 
 import android.app.Activity;
+import android.app.FragmentTransaction;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
@@ -12,9 +13,6 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Shader;
-import android.support.v7.widget.DefaultItemAnimator;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 
 import com.google.fletch.immisamples.SlidingWindow;
 
@@ -27,11 +25,7 @@ import immi.SlidingWindowPatch;
 public final class CenterPresenter implements AnyNodePresenter {
 
   public CenterPresenter(Activity activity) {
-    RecyclerView recyclerView = (RecyclerView) activity.findViewById(R.id.recycler_view);
-    // As long as the adapter does not cause size changes, this is set to true to gain performance.
-    recyclerView.setHasFixedSize(true);
-    recyclerView.setItemAnimator(new DefaultItemAnimator());
-    recyclerView.setLayoutManager(new LinearLayoutManager(activity));
+    this.activity = activity;
 
     ImageLoader imageLoader = ImageLoader.createWithBitmapFormatter(
         new ImageLoader.BitmapFormatter() {
@@ -49,19 +43,26 @@ public final class CenterPresenter implements AnyNodePresenter {
         },
         BitmapFactory.decodeResource(activity.getResources(), R.drawable.dart_logo));
 
-    presenter = new RecyclerViewAdapter(imageLoader);
-    recyclerView.setAdapter(presenter);
+    commitListPresenter = new CommitListAdapter(imageLoader);
   }
 
   @Override
   public void present(AnyNode node) {
-    presenter.present(node.as(SlidingWindowNode.class));
+    RecyclerViewFragment recyclerViewFragment = new RecyclerViewFragment();
+    recyclerViewFragment.setRecyclerViewAdapter(commitListPresenter);
+
+    FragmentTransaction transaction = activity.getFragmentManager().beginTransaction();
+    transaction.add(R.id.container, recyclerViewFragment);
+    transaction.addToBackStack(null);
+    transaction.commit();
+    commitListPresenter.present(node.as(SlidingWindowNode.class));
   }
 
   @Override
   public void patch(AnyNodePatch patch) {
-    presenter.patch(patch.as(SlidingWindowPatch.class));
+    commitListPresenter.patch(patch.as(SlidingWindowPatch.class));
   }
 
-  private SlidingWindow presenter;
+  private Activity activity;
+  private SlidingWindow commitListPresenter;
 }

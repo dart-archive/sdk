@@ -17,13 +17,13 @@ import com.google.fletch.immisamples.SlidingWindow;
 import immi.AnyNode;
 import immi.CommitNode;
 
-public class RecyclerViewAdapter extends SlidingWindow<RecyclerViewAdapter.CommitViewHolder> {
+public class CommitListAdapter extends SlidingWindow<CommitListAdapter.CommitViewHolder> {
 
   ImageLoader imageLoader;
 
   private static final int IMAGE_VIEW_DIMENSION_PX = 120;
 
-  RecyclerViewAdapter(ImageLoader imageLoader) {
+  CommitListAdapter(ImageLoader imageLoader) {
     this.imageLoader = imageLoader;
   }
 
