@@ -16,11 +16,14 @@ products on top of it.
 
 To try out Fletch, you need to first
 [build it](https://github.com/dart-lang/fletch/wiki/Building).
-Once you have working `fletch-vm` and `fletch` executables, running Dart
-code on top of it is as easy as typing:
 
-    $ fletch compile-and-run hello.dart
+Once you have working `fletch-vm` and `fletch` executables in an
+`out/<platform>` directory, you can run Dart code on top of it by typing:
 
+<pre><code>$ <strong>fletch run hello.dart</strong></code></pre>
+
+There are more details about the fletch command line program on the
+[wiki pages](https://github.com/dart-lang/fletch/wiki/Fletch-Command-Line).
 
 ## Contributing
 
