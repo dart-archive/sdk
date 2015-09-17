@@ -314,11 +314,12 @@ static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
 
 // Stores the package root in 'buffer'. The value of 'fletch_root' must be the
 // absolute path of '.../fletch-repo/fletch/' (including trailing slash).
-static void ComputePackageRoot(
+static void ComputePackageSpec(
     char* buffer, size_t buffer_length,
     const char* fletch_root, size_t fletch_root_length) {
   StrCpy(buffer, buffer_length, fletch_root, fletch_root_length);
-  StrCat(buffer, buffer_length, "package/", sizeof("package/"));
+  StrCat(buffer, buffer_length,
+         "pkg/fletchc/.packages", sizeof("pkg/fletchc/.packages"));
   // 'buffer' is now, for example, "fletch-repo/fletch/package/".
 }
 
@@ -353,7 +354,8 @@ static void ExecDaemon(
     const char** argv);
 
 static void StartDriverDaemon() {
-  const char* argv[7];
+  const int kMaxArgv = 6;
+  const char* argv[kMaxArgv];
 
   char fletch_root[MAXPATHLEN + 1];
   ComputeFletchRoot(fletch_root, sizeof(fletch_root));
@@ -361,17 +363,24 @@ static void StartDriverDaemon() {
   char vm_path[MAXPATHLEN + 1];
   ComputeDartVmPath(vm_path, sizeof(vm_path));
 
-  char package_root[MAXPATHLEN + 1];
-  ComputePackageRoot(
-      package_root, sizeof(package_root), fletch_root, sizeof(fletch_root));
+  char package_spec[MAXPATHLEN + 1];
+  ComputePackageSpec(
+      package_spec, sizeof(package_spec), fletch_root, sizeof(fletch_root));
 
-  argv[0] = vm_path;
-  argv[1] = "-c";
-  argv[2] = "-p";
-  argv[3] = package_root;
-  argv[4] = "package:fletchc/src/driver/driver_main.dart";
-  argv[5] = fletch_config_file;
-  argv[6] = NULL;
+  char package_option[sizeof("--packages=") + MAXPATHLEN + 1];
+  StrCpy(package_option, sizeof(package_option),
+         "--packages=", sizeof("--packages="));
+  StrCat(package_option, sizeof(package_option),
+         package_spec, sizeof(package_spec));
+
+  int argc = 0;
+  argv[argc++] = vm_path;
+  argv[argc++] = "-c";
+  argv[argc++] = package_option;
+  argv[argc++] = "package:fletchc/src/driver/driver_main.dart";
+  argv[argc++] = fletch_config_file;
+  argv[argc++] = NULL;
+  if (argc > kMaxArgv) Die("Internal error: increase argv size");
 
   int file_descriptors[2];
   if (pipe(file_descriptors) != 0) {
