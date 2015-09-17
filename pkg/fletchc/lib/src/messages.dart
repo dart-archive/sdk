@@ -29,9 +29,6 @@ enum DiagnosticKind {
   expectedFileTarget,
 
   // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
-  noFile,
-
-  // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
   unknownOption,
 
   // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
@@ -65,12 +62,12 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.verbRequiresSessionTarget:
       return "Can't perform '${DiagnosticParameter.verb}' without a session "
-          "target. Try adding 'session SESSION_NAME'";
+          "target. Try adding 'session <SESSION_NAME>' to the commmand line";
 
     case DiagnosticKind.verbRequiresTarget:
       // TODO(lukechurch): Revisit this to improve suggestion text.
       return "Can't perform '${DiagnosticParameter.verb}' without a target. "
-          "Try adding a thing or group of things.";
+          "Try adding a thing or group of things";
 
     case DiagnosticKind.verbRequiresFileTarget:
       // TODO(ahe): Be more explicit about what is wrong with the target.
@@ -99,8 +96,7 @@ String getMessage(DiagnosticKind kind) {
           "'${DiagnosticParameter.sessionName}'.";
 
     case DiagnosticKind.noFileTarget:
-      return "No file provided. "
-          "Try adding 'file FILE_NAME' to the command line";
+      return "No file provided. Try adding <FILE_NAME> to the command line";
 
     case DiagnosticKind.noTcpSocketTarget:
       return "No TCP socket provided. "
@@ -123,10 +119,8 @@ String getMessage(DiagnosticKind kind) {
       return "No program to run. Try running 'fletch compile'";
 
     case DiagnosticKind.missingToFile:
-      // TODO(ahe): Should be: "Try adding to [FILE_NAME] to the command line"
-      // with perhaps "'FILE_NAME'" instead of "[FILE_NAME]".
       return "No destination file provided. "
-          "Try adding 'to file FILE_NAME' to the command line";
+          "Try adding 'to <FILE_NAME>' to the command line";
 
     case DiagnosticKind.expectedToPreposition:
       // TODO(lukechurch): Review UX.
@@ -135,11 +129,6 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.expectedFileTarget:
       // TODO(lukechurch): Review UX.
       return "Expected a file but got '${DiagnosticParameter.target}'";
-
-    case DiagnosticKind.noFile:
-      // TODO(ahe): Remove this message when compile_and_run_verb.dart is
-      // removed.
-      return "No file provided. Try adding 'FILE_NAME' to the command line";
 
     case DiagnosticKind.unknownOption:
       return "Unknown option: '${DiagnosticParameter.userInput}'";

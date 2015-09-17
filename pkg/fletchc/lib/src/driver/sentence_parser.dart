@@ -55,7 +55,7 @@ class SentenceParser {
     }
     return new Sentence(
         verb, preposition, target, tailPreposition, trailing,
-        programName,
+        currentDirectory, programName,
         // TODO(ahe): Get rid of the following argument:
         tokens.originalInput.skip(1).toList());
   }
@@ -121,6 +121,10 @@ class SentenceParser {
     Target makeTarget(TargetKind kind) {
       tokens.consume();
       return new Target(kind);
+    }
+
+    if (looksLikeAUri(word)) {
+      return new NamedTarget(TargetKind.FILE, parseName());
     }
 
     switch (word) {
@@ -237,6 +241,14 @@ class SentenceParser {
     String name = tokens.current;
     tokens.consume();
     return name;
+  }
+
+  /// Returns true if [word] looks like it is a (relative) URI.
+  bool looksLikeAUri(String word) {
+    return
+        word != null &&
+        !word.startsWith("-") &&
+        word.contains(".");
   }
 }
 
@@ -383,6 +395,9 @@ class Sentence {
   /// Any tokens found after this sentence.
   final List<String> trailing;
 
+  /// The current directory of the C++ client.
+  final String currentDirectory;
+
   // TODO(ahe): Get rid of this.
   final String programName;
 
@@ -395,6 +410,7 @@ class Sentence {
       this.target,
       this.tailPreposition,
       this.trailing,
+      this.currentDirectory,
       this.programName,
       this.arguments);
 

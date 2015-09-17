@@ -218,6 +218,7 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
       String file,
       int position,
       FletchSystem currentSystem) {
+    // TODO(ahe): [file] should be a Uri.
     Uri uri = Uri.base.resolve(file);
     CompilationUnitElementX unit = compilationUnitForUri(uri);
     if (unit == null) return null;
@@ -234,6 +235,7 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
   }
 
   int positionInFileFromPattern(String file, int line, String pattern) {
+    // TODO(ahe): [file] should be a Uri.
     Uri uri = Uri.base.resolve(file);
     SourceFile sourceFile = getSourceFile(provider, uri);
     if (sourceFile == null) return null;
@@ -250,6 +252,7 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
   }
 
   int positionInFile(String file, int line, int column) {
+    // TODO(ahe): [file] should be a Uri.
     Uri uri = Uri.base.resolve(file);
     SourceFile sourceFile = getSourceFile(provider, uri);
     if (sourceFile == null) return null;

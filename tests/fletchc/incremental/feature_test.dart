@@ -514,7 +514,7 @@ class TestSession extends Session {
   static Future<TestSession> spawnVm(
       IncrementalCompiler compiler,
       {String testName}) async {
-    String vmPath = guessFletchVm(null).toFilePath();
+    String vmPath = guessFletchVm(null, Uri.base).toFilePath();
 
     List<Future> futures = <Future>[];
     void recordFuture(String name, Future future) {
