@@ -23,7 +23,6 @@ namespace fletch {
   N(Coroutine,              "Coroutine")                \
   N(Port,                   "Port")                     \
   N(ForeignMemory,          "ForeignMemory")            \
-  N(ForeignFunction,        "ForeignFunction")          \
   N(OneByteString,          "_OneByteString")           \
   N(TwoByteString,          "_TwoByteString")           \
                                                         \

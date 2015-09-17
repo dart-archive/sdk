@@ -74,8 +74,6 @@ class Object {
   inline bool IsStack();
   inline bool IsCoroutine();
   inline bool IsPort();
-  inline bool IsForeignFunction();
-  inline bool IsForeignMemory();
 
   // - based on marker field in class.
   inline bool IsNull();
@@ -181,9 +179,7 @@ class InstanceFormat {
     FALSE_MARKER            = 2,
     COROUTINE_MARKER        = 3,
     PORT_MARKER             = 4,
-    FOREIGN_FUNCTION_MARKER = 5,
-    FOREIGN_MEMORY_MARKER   = 6,
-    NO_MARKER               = 7  // Else marker.
+    NO_MARKER               = 5  // Else marker.
   };
 
   enum Immutable {
@@ -1351,18 +1347,6 @@ bool Object::IsPort() {
   if (IsSmi()) return false;
   HeapObject* h = HeapObject::cast(this);
   return h->format().marker() == InstanceFormat::PORT_MARKER;
-}
-
-bool Object::IsForeignFunction() {
-  if (IsSmi()) return false;
-  HeapObject* h = HeapObject::cast(this);
-  return h->format().marker() == InstanceFormat::FOREIGN_FUNCTION_MARKER;
-}
-
-bool Object::IsForeignMemory() {
-  if (IsSmi()) return false;
-  HeapObject* h = HeapObject::cast(this);
-  return h->format().marker() == InstanceFormat::FOREIGN_MEMORY_MARKER;
 }
 
 bool Object::IsNull() {

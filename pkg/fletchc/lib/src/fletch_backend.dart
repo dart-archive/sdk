@@ -357,7 +357,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
     loadClass("bool", compiler.coreLibrary, true);
     loadClass("Port", fletchLibrary, true);
     loadClass("ForeignMemory", fletchFFILibrary, true);
-    loadClass("ForeignPointer", fletchFFILibrary, true);
 
     growableListClass =
         loadClass(growableListName, fletchSystemLibrary).element;
