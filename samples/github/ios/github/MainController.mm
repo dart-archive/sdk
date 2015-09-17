@@ -12,8 +12,11 @@
 
 #import "github_mock.h"
 
-@interface CenterPresenter : NSObject <ViewPresenter, NodePresenter>
-@property CommitListPresenter* presenter;
+@interface AnyNodePresenter : NSObject <ViewPresenter, NodePresenter>
+@property CommitListPresenter* commitListPresenter;
+@property LoginPresenter* loginPresenter;
+@property MenuPresenter* menuPresenter;
+@property id<ViewPresenter> currentPresenter;
 - (id)init:(UIStoryboard*)storyboard;
 @end
 
@@ -22,80 +25,58 @@
 - (id)init:(UIStoryboard*)storyboard;
 @end
 
-@interface RightPresenter : NSObject <ViewPresenter, NodePresenter>
-@property LoginPresenter* presenter;
-- (id)init:(UIStoryboard*)storyboard;
-@end
-
 @interface MainController () <NodePresenter, DrawerPresenter>
 @property ImmiRoot* immiRoot;
 @property DrawerPresenter* drawerPresenter;
-@property CenterPresenter* centerPresenter;
-@property LeftPresenter* leftPresenter;
-@property RightPresenter* rightPresenter;
+@property AnyNodePresenter* centerPresenter;
+@property AnyNodePresenter* leftPresenter;
 @end
 
-@implementation CenterPresenter
+@implementation AnyNodePresenter
 
 - (id)init:(UIStoryboard*)storyboard {
-  self.presenter = [storyboard
-      instantiateViewControllerWithIdentifier:@"CommitListPresenter"];
-  return self;
-}
-
-- (void)presentNode:(Node*)node {
-  [self.presenter presentSlidingWindow:[node as:SlidingWindowNode.class]];
-}
-
-- (void)patchNode:(NodePatch*)patch {
-  [self.presenter patchSlidingWindow:[patch as:SlidingWindowPatch.class]];
-}
-
-- (UIViewController*)viewController {
-  return [self.presenter viewController];
-}
-
-@end
-
-@implementation LeftPresenter
-
-- (id)init:(UIStoryboard*)storyboard {
-  self.presenter =
-      [storyboard instantiateViewControllerWithIdentifier:@"MenuPresenter"];
-  return self;
-}
-
-- (void)presentNode:(Node*)node {
-  [self.presenter presentMenu:[node as:MenuNode.class]];
-}
-
-- (void)patchNode:(NodePatch*)patch {
-  [self.presenter patchMenu:[patch as:MenuPatch.class]];
-}
-
-- (UIViewController*)viewController {
-  return [self.presenter viewController];
-}
-@end
-
-@implementation RightPresenter
-
-- (id)init:(UIStoryboard*)storyboard {
-  self.presenter =
+  self.commitListPresenter =
+    [storyboard instantiateViewControllerWithIdentifier:@"CommitListPresenter"];
+  self.loginPresenter =
     [storyboard instantiateViewControllerWithIdentifier:@"LoginPresenter"];
+  self.menuPresenter =
+    [storyboard instantiateViewControllerWithIdentifier:@"MenuPresenter"];
   return self;
 }
 
 - (void)presentNode:(Node*)node {
-  [self.presenter presentLogin:[node as:LoginNode.class]];
+  if ([node is:SlidingWindowNode.class]) {
+    self.currentPresenter = self.commitListPresenter;
+    [self.commitListPresenter
+       presentSlidingWindow:[node as:SlidingWindowNode.class]];
+  } else if ([node is:LoginNode.class]) {
+    self.currentPresenter = self.loginPresenter;
+    [self.loginPresenter presentLogin:[node as:LoginNode.class]];
+  } else if ([node is:MenuNode.class]) {
+    self.currentPresenter = self.menuPresenter;
+    [self.menuPresenter presentMenu:[node as:MenuNode.class]];
+  } else {
+    abort();
+  }
 }
 
 - (void)patchNode:(NodePatch*)patch {
-  [self.presenter patchLogin:[patch as:LoginPatch.class]];
+  if ([patch is:SlidingWindowPatch.class]) {
+    SlidingWindowPatch* p = [patch as:SlidingWindowPatch.class];
+    [p applyTo:self.commitListPresenter];
+  } else if ([patch is:LoginPatch.class]) {
+    LoginPatch* p = [patch as:LoginPatch.class];
+    [p applyTo:self.loginPresenter];
+  } else if ([patch is:MenuPatch.class]) {
+    MenuPatch* p = [patch as:MenuPatch.class];
+    [p applyTo:self.menuPresenter];
+  } else {
+    abort();
+  }
 }
 
 - (UIViewController*)viewController {
-  return [self.presenter viewController];
+  return [self.currentPresenter viewController];
 }
 
 @end
@@ -112,9 +93,9 @@
   UIStoryboard* storyboard =
       [UIStoryboard storyboardWithName:@"Main" bundle:nil];
 
-  self.centerPresenter = [[CenterPresenter alloc] init:storyboard];
-  self.leftPresenter = [[LeftPresenter alloc] init:storyboard];
-  self.rightPresenter = [[RightPresenter alloc] init:storyboard];
+  self.centerPresenter = [[AnyNodePresenter alloc] init:storyboard];
+  self.leftPresenter = [[AnyNodePresenter alloc] init:storyboard];
+  self.rightPresenter = [[AnyNodePresenter alloc] init:storyboard];
 
   // Create a drawer presenter do to the interpretation work.
   self.drawerPresenter =
