@@ -18,14 +18,18 @@ import 'package:compiler/src/scanner/scannerlib.dart' show
 
 enum CompilerError {
   badFunction,
+  badTypeParameter,
+  badListType,
   badMember,
+  badPointerType,
   badServiceDefinition,
+  badSimpleType,
   badStructDefinition,
   badTopLevel,
-  internalCompilerError,
+  expectedPointerOrPrimitive,
+  expectedPrimitiveFormal,
   multipleDefinition,
-  undefinedService,
-  unresolvedType
+  undefinedService
 }
 
 // Error nodes.

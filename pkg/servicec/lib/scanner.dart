@@ -5,6 +5,7 @@
 library servicec.scanner;
 
 import "package:compiler/src/scanner/scannerlib.dart" show
+    GT_INFO,
     EOF_INFO,
     ErrorToken,
     IDENTIFIER_INFO,
@@ -58,6 +59,12 @@ class Scanner extends StringScanner {
     if (token is! UnmatchedToken) {
       super.appendErrorToken(token);
     }
+  }
+
+  void appendGtGt(PrecedenceInfo info) {
+    // There is no shift operator in the IDL, so treat >> as > >.
+    appendGt(GT_INFO);
+    appendGt(GT_INFO);
   }
 }
 

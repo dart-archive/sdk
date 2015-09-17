@@ -18,6 +18,7 @@ import 'errors.dart' show
     CompilerError,
     ErrorNode,
     FunctionErrorNode,
+    InternalCompilerError,
     MemberErrorNode,
     ServiceErrorNode,
     StructErrorNode,
@@ -30,19 +31,27 @@ import 'listener.dart' show
     Listener;
 
 import 'node.dart' show
+    BeginTypeMarker,
     CompilationUnitNode,
     FormalNode,
     FunctionNode,
     IdentifierNode,
+    ListType,
     MemberNode,
     NamedNode,
     Node,
     NodeStack,
+    PointerType,
     ServiceNode,
+    SimpleType,
     StructNode,
     TopLevelNode,
     TypeNode,
     TypedNamedNode;
+
+import 'stack.dart' show
+    NodeStack,
+    Popper;
 
 /// Signifies that the parser reached a point of error recovery. Use this token
 /// if resetting the state to a normal one requires multiple steps.
@@ -81,62 +90,39 @@ class UnexpectedEOFToken extends UnexpectedToken {
   String get assertionMessage => 'Unexpected end of file.';
 }
 
+
+
 class ErrorHandlingListener extends Listener {
   Token topLevelScopeStart;
-  List<Node> nodeStack;
+  NodeStack stack;
   List<ErrorNode> _errors;
+
+  Popper<TopLevelNode> topLevelPopper;
+  Popper<FunctionNode> functionPopper;
+  Popper<FormalNode> formalPopper;
+  Popper<MemberNode> memberPopper;
+  Popper<TypeNode> typePopper;
+  Popper<IdentifierNode> identifierPopper;
 
   ErrorHandlingListener()
     : _errors = <ErrorNode>[],
-      nodeStack = <Node>[],
-      super();
+      stack = new NodeStack(),
+      super() {
+    topLevelPopper = new Popper<TopLevelNode>(stack);
+    functionPopper = new Popper<FunctionNode>(stack);
+    formalPopper = new Popper<FormalNode>(stack);
+    memberPopper = new Popper<MemberNode>(stack);
+    typePopper = new Popper<TypeNode>(stack);
+    identifierPopper = new Popper<IdentifierNode>(stack);
+  }
 
   Iterable<CompilerError> get errors => _errors.map((e) => e.tag);
 
   /// The [Node] representing the parsed IDL file.
   Node get parsedUnitNode {
-    assert(nodeStack.length == 1);
-    assert(topNode() is CompilationUnitNode);
-    return popNode();
-  }
-
-  // Stack interface.
-  void pushNode(Node node) {
-    nodeStack.add(node);
-  }
-
-  Node popNode() {
-    return nodeStack.removeLast();
-  }
-
-  /// Returns the top of the stack or [null] if the stack is empty.
-  Node topNode() {
-    return nodeStack.isNotEmpty ? nodeStack.last : null;
-  }
-
-  /// Pops an element of the stack if the top passes the [test].
-  Node popNodeIf(bool test(Node node)) {
-    return test(topNode()) ? popNode() : null;
-  }
-
-  /// Pops the top [count] elements from the stack. Maintains the order in which
-  /// the nodes were pushed, rather than returning them in a FILO fashion.
-  List<Node> popNodes(int count) {
-    int newLength = nodeStack.length - count;
-    List<Node> nodes = nodeStack.sublist(newLength);
-    nodeStack.length = newLength;
-    return nodes;
-  }
-
-  /// Pops elements from the stack until they stop passing the [test]. Nodes are
-  /// returned in reverse order than the one in which they were pushed: FILO
-  /// fashion.
-  List<Node> popNodesWhile(bool test(Node node)) {
-    List<Node> nodes = <Node>[];
-    while (test(topNode())) {
-      nodes.add(popNode());
-    }
-    return nodes;
+    assert(stack.size == 1);
+    assert(stack.topNode() is CompilationUnitNode);
+    return stack.popNode();
   }
 
   // Top-level nodes.
@@ -154,15 +140,48 @@ class ErrorHandlingListener extends Listener {
   Token beginIdentifier(Token tokens) {
     if (tokens is ErrorToken) return tokens;
 
-    pushNode(new IdentifierNode(tokens.value));
+    stack.pushNode(new IdentifierNode(tokens.value));
+    return tokens;
+  }
+
+  Token handleSimpleType(Token tokens) {
+    if (tokens is ErrorToken) return tokens;
+
+    IdentifierNode identifier = stack.popNode();
+    stack.pushNode(new SimpleType(identifier));
+    return tokens;
+  }
+
+  Token handlePointerType(Token tokens) {
+    if (tokens is ErrorToken) return tokens;
+
+    IdentifierNode identifier = stack.popNode();
+    stack.pushNode(new PointerType(identifier));
+    return tokens;
+  }
+
+  Token handleListType(Token tokens) {
+    if (tokens is ErrorToken) return tokens;
+
+    TypeNode typeParameter = stack.popNode();
+    IdentifierNode identifier = stack.popNode();
+    stack.pushNode(new ListType(identifier, typeParameter));
+    return tokens;
+  }
+
+  Token beginType(Token tokens) {
+    stack.pushNode(new BeginTypeMarker());
     return tokens;
   }
 
   Token endType(Token tokens) {
     if (tokens is ErrorToken) return recoverType(tokens);
 
-    IdentifierNode identifier = popNode();
-    pushNode(new TypeNode(identifier));
+    TypeNode type = stack.popNode();
+    if (stack.popNode() is! BeginTypeMarker) {
+      throw new InternalCompilerError("Missing BeginTypeMarker");
+    }
+    stack.pushNode(type);
     return tokens;
   }
 
@@ -170,28 +189,28 @@ class ErrorHandlingListener extends Listener {
   Token endFormal(Token tokens) {
     if (tokens is ErrorToken) return recoverFormal(tokens);
 
-    IdentifierNode identifier = popNode();
-    TypeNode type = popNode();
-    pushNode(new FormalNode(type, identifier));
+    IdentifierNode identifier = stack.popNode();
+    TypeNode type = stack.popNode();
+    stack.pushNode(new FormalNode(type, identifier));
     return tokens;
   }
 
   Token endFunction(Token tokens, count) {
     if (tokens is ErrorToken) return recoverFunction(tokens);
 
-    List<Node> formals = popNodes(count);
-    IdentifierNode identifier = popNode();
-    TypeNode type = popNode();
-    pushNode(new FunctionNode(type, identifier, formals));
+    List<FormalNode> formals = formalPopper.popNodes(count);
+    IdentifierNode identifier = stack.popNode();
+    TypeNode type = stack.popNode();
+    stack.pushNode(new FunctionNode(type, identifier, formals));
     return tokens;
   }
 
   Token endMember(Token tokens) {
     if (tokens is ErrorToken) return recoverMember(tokens);
 
-    IdentifierNode identifier = popNode();
-    TypeNode type = popNode();
-    pushNode(new MemberNode(type, identifier));
+    IdentifierNode identifier = stack.popNode();
+    TypeNode type = stack.popNode();
+    stack.pushNode(new MemberNode(type, identifier));
     return tokens;
   }
 
@@ -199,18 +218,18 @@ class ErrorHandlingListener extends Listener {
   Token endService(Token tokens, int count) {
     if (tokens is ErrorToken) return recoverService(tokens);
 
-    List<Node> functions = popNodes(count);
-    IdentifierNode identifier = popNode();
-    pushNode(new ServiceNode(identifier, functions));
+    List<FunctionNode> functions = functionPopper.popNodes(count);
+    IdentifierNode identifier = stack.popNode();
+    stack.pushNode(new ServiceNode(identifier, functions));
     return tokens;
   }
 
   Token endStruct(Token tokens, int count) {
     if (tokens is ErrorToken) return recoverStruct(tokens);
 
-    List<Node> members = popNodes(count);
-    IdentifierNode identifier = popNode();
-    pushNode(new StructNode(identifier, members));
+    List<MemberNode> members = memberPopper.popNodes(count);
+    IdentifierNode identifier = stack.popNode();
+    stack.pushNode(new StructNode(identifier, members));
     return tokens;
   }
 
@@ -223,8 +242,8 @@ class ErrorHandlingListener extends Listener {
   Token endCompilationUnit(Token tokens, int count) {
     if (tokens is ErrorToken) return recoverCompilationUnit(tokens);
 
-    List<Node> topLevels = popNodes(count);
-    pushNode(new CompilationUnitNode(topLevels));
+    List<TopLevelNode> topLevels = topLevelPopper.popNodes(count);
+    stack.pushNode(new CompilationUnitNode(topLevels));
     return tokens;
   }
 
@@ -247,23 +266,27 @@ class ErrorHandlingListener extends Listener {
 
   // Recovery methods.
   Token recoverType(Token tokens) {
-    popNodeIf((node) => node is IdentifierNode);
+    // TODO(stanm): remove the clueless popping of nodes. In the next CL we have
+    // a more controlled tear-down of a type and we will not need to call this.
+    // It will simplify the implementation of popNodesWhile.
+    stack.popNodesWhile((node) => node is! BeginTypeMarker, null);
+    stack.popNode();  // Pop the marker too.
     return tokens;
   }
 
   Token recoverFormal(Token tokens) {
-    popNodeIf((node) => node is IdentifierNode);
-    popNodeIf((node) => node is TypeNode);
+    identifierPopper.popNodeIfMatching();
+    typePopper.popNodeIfMatching();
     return tokens;
   }
 
   Token recoverFunction(Token tokens) {
-    List<Node> formals = popNodesWhile((node) => node is FormalNode);
-    Node identifier = popNodeIf((node) => node is IdentifierNode);
-    Node type = popNodeIf((node) => node is TypeNode);
+    List<FormalNode> formals = formalPopper.popNodesWhileMatching();
+    IdentifierNode identifier = identifierPopper.popNodeIfMatching();
+    TypeNode type = typePopper.popNodeIfMatching();
     if (formals.isNotEmpty || identifier != null || type != null) {
       FunctionErrorNode error = new FunctionErrorNode(tokens);
-      pushNode(error);
+      stack.pushNode(error);
       _errors.add(error);
       return consumeDeclarationLine(tokens);
     } else {
@@ -273,11 +296,11 @@ class ErrorHandlingListener extends Listener {
   }
 
   Token recoverMember(Token tokens) {
-    Node identifier = popNodeIf((node) => node is IdentifierNode);
-    Node type = popNodeIf((node) => node is TypeNode);
+    IdentifierNode identifier = identifierPopper.popNodeIfMatching();
+    TypeNode type = typePopper.popNodeIfMatching();
     if (identifier != null || type != null) {
       MemberErrorNode error = new MemberErrorNode(tokens);
-      pushNode(error);
+      stack.pushNode(error);
       _errors.add(error);
       return consumeDeclarationLine(tokens);
     } else {
@@ -287,32 +310,32 @@ class ErrorHandlingListener extends Listener {
   }
 
   Token recoverService(Token tokens) {
-    popNodesWhile((node) => node is FunctionNode);
-    popNodeIf((node) => node is IdentifierNode);
+    functionPopper.popNodesWhileMatching();
+    identifierPopper.popNodeIfMatching();
     ServiceErrorNode error = new ServiceErrorNode(tokens);
-    pushNode(error);
+    stack.pushNode(error);
     _errors.add(error);
     return consumeTopLevel(tokens);
   }
 
   Token recoverStruct(Token tokens) {
-    popNodesWhile((node) => node is MemberNode);
-    popNodeIf((node) => node is IdentifierNode);
+    memberPopper.popNodesWhileMatching();
+    identifierPopper.popNodeIfMatching();
     StructErrorNode error = new StructErrorNode(tokens);
-    pushNode(error);
+    stack.pushNode(error);
     _errors.add(error);
     return consumeTopLevel(tokens);
   }
 
   Token recoverTopLevel(Token tokens) {
     TopLevelErrorNode error = new TopLevelErrorNode(tokens);
-    pushNode(error);
+    stack.pushNode(error);
     _errors.add(error);
     return consumeTopLevel(tokens);
   }
 
   Token recoverCompilationUnit(Token tokens) {
-    popNodesWhile((node) => node is TopLevelNode);
+    topLevelPopper.popNodesWhileMatching();
     return tokens;
   }
 

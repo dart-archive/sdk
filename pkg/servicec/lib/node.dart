@@ -4,9 +4,13 @@
 
 library servicec.node;
 
+import 'errors.dart' show
+    ErrorNode,
+    InternalCompilerError;
+
 // Highest-level node.
 class CompilationUnitNode extends Node {
-  List<Node> topLevels;
+  List<TopLevelNode> topLevels;
 
   CompilationUnitNode(this.topLevels);
 
@@ -22,7 +26,7 @@ abstract class TopLevelNode extends NamedNode {
 }
 
 class ServiceNode extends TopLevelNode {
-  List<Node> functions;
+  List<FunctionNode> functions;
 
   ServiceNode(IdentifierNode identifier, this.functions)
     : super(identifier);
@@ -33,7 +37,7 @@ class ServiceNode extends TopLevelNode {
 }
 
 class StructNode extends TopLevelNode {
-  List<Node> members;
+  List<MemberNode> members;
 
   StructNode(IdentifierNode identifier, this.members)
     : super(identifier);
@@ -45,7 +49,7 @@ class StructNode extends TopLevelNode {
 
 // Definition level nodes.
 class FunctionNode extends TypedNamedNode {
-  List<Node> formals;
+  List<FormalNode> formals;
 
   FunctionNode(TypeNode type, IdentifierNode identifier, this.formals)
     : super(type, identifier);
@@ -60,7 +64,7 @@ class FormalNode extends TypedNamedNode {
     : super(type, identifier);
 
   void accept(NodeVisitor visitor) {
-    visitor.visitFormal(this);
+    // TODO(stanm): add visitFormal in NodeVisitor
   }
 }
 
@@ -74,12 +78,38 @@ class MemberNode extends TypedNamedNode {
 }
 
 // Simplest concrete nodes.
-class TypeNode extends NamedNode {
+abstract class TypeNode extends NamedNode {
   TypeNode(IdentifierNode identifier)
+    : super(identifier);
+}
+
+class SimpleType extends TypeNode {
+  SimpleType(IdentifierNode identifier)
     : super(identifier);
 
   void accept(NodeVisitor visitor) {
-    visitor.visitType(this);
+    visitor.visitSimpleType(this);
+  }
+}
+
+class PointerType extends TypeNode {
+  PointerType(IdentifierNode identifier)
+    : super(identifier);
+
+  void accept(NodeVisitor visitor) {
+    visitor.visitPointerType(this);
+  }
+}
+
+class ListType extends TypeNode {
+  TypeNode typeParameter;
+
+  ListType(IdentifierNode identifier, this.typeParameter)
+    : super(identifier);
+
+  void accept(NodeVisitor visitor) {
+    visitor.visitListType(this);
+    visitor.visitTypeParameter(typeParameter);
   }
 }
 
@@ -96,6 +126,17 @@ class IdentifierNode extends Node {
   void accept(NodeVisitor visitor) {
     visitor.visitIdentifier(this);
   }
+}
+
+// Marker nodes.
+abstract class MarkerNode extends Node {
+  void accept(NodeVisitor visitor) {
+    throw new InternalCompilerError("MarkerNode visited");
+  }
+}
+
+/// Marks a point on the stack where type parsing was started.
+class BeginTypeMarker extends MarkerNode {
 }
 
 // Abstract nodes.
@@ -122,9 +163,19 @@ abstract class NodeVisitor {
   void visitService(ServiceNode service);
   void visitStruct(StructNode struct);
   void visitFunction(FunctionNode function);
-  void visitFormal(FormalNode formal);
   void visitMember(MemberNode member);
-  void visitType(TypeNode type);
+
+  // Structural/syntactic classification of types.
+  void visitSimpleType(SimpleType type);
+  void visitPointerType(PointerType type);
+  void visitListType(ListType type);
+
+  // Functional/semantic classification of types.
+  void visitTypeParameter(TypeNode type);
+  void visitReturnType(TypeNode type);
+  void visitSingleFormal(FormalNode formal);
+  void visitPrimitiveFormal(FormalNode formal);
+
   void visitIdentifier(IdentifierNode identifier);
 }
 
@@ -150,10 +201,18 @@ abstract class RecursiveVisitor extends NodeVisitor {
   }
 
   void visitFunction(FunctionNode function) {
-    function.type.accept(this);
+    visitReturnType(function.type);
+
+    // Ensure formal parameters are either a single pointer to a user-defined
+    // type, or a list of primitives.
+    int length = function.formals.length;
     function.identifier.accept(this);
-    for (FormalNode formal in function.formals) {
-      formal.accept(this);
+    if (length == 1) {
+      visitSingleFormal(function.formals[0]);
+    } else if (length > 1) {
+      for (FormalNode formal in function.formals) {
+        visitPrimitiveFormal(formal);
+      }
     }
   }
 
@@ -162,16 +221,23 @@ abstract class RecursiveVisitor extends NodeVisitor {
     member.identifier.accept(this);
   }
 
-  void visitFormal(FormalNode formal) {
-    formal.type.accept(this);
-    formal.identifier.accept(this);
+  void visitReturnType(TypeNode type) {
+    type.accept(this);
   }
 
-  void visitType(TypeNode type) {
-    type.identifier.accept(this);
+  void visitSimpleType(SimpleType type) {
+    // No op.
+  }
+
+  void visitPointerType(PointerType pointer) {
+    // No op.
+  }
+
+  void visitListType(ListType list) {
+    // No op.
   }
 
   void visitIdentifier(IdentifierNode identifier) {
-    // No-op.
+    // No op.
   }
 }

@@ -145,10 +145,17 @@ class Parser {
 
   Token parseType(Token tokens) {
     tokens = listener.beginType(tokens);
-    if (isValidTypeReference(tokens)) {
-      tokens = parseIdentifier(tokens);
+    tokens = parseIdentifier(tokens);
+    if (optional('*', tokens)) {
+      tokens = tokens.next;
+      tokens = listener.handlePointerType(tokens);
+    } else if (optional('<', tokens)) {
+      tokens = tokens.next;
+      tokens = parseType(tokens);
+      tokens = expect('>', tokens);
+      tokens = listener.handleListType(tokens);
     } else {
-      tokens = listener.expectedType(tokens);
+      tokens = listener.handleSimpleType(tokens);
     }
     tokens = listener.endType(tokens);
     return tokens;
@@ -163,11 +170,6 @@ class Parser {
     tokens = parseIdentifier(tokens);
     tokens = listener.endFormal(tokens);
     return tokens;
-  }
-
-  bool isValidTypeReference(Token tokens) {
-    final kind = tokens.kind;
-    return kind == IDENTIFIER_TOKEN;
   }
 
   bool isValidIdentifier(Token tokens) {

@@ -2,18 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// This is valid input.
-service Painter {
-  void draw(Circle* c);
-  void refresh();
+service Foo {
+  // Invalid: The arguments should be either all primitive or a single one of
+  // pointer type.
+  Baz* bar(String baz);
 }
 
-struct Circle {
-  int32 radius;
-  Point2d position;
-}
-
-struct Point2d {
-  int32 x;
-  int32 y;
+struct Baz {
+  List<Baz> keks;
 }

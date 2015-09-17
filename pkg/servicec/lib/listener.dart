@@ -82,6 +82,18 @@ abstract class Listener {
     return tokens;
   }
 
+  Token handleSimpleType(Token tokens) {
+    return tokens;
+  }
+
+  Token handlePointerType(Token tokens) {
+    return tokens;
+  }
+
+  Token handleListType(Token tokens) {
+    return tokens;
+  }
+
   Token beginFormal(Token tokens) {
     return tokens;
   }
@@ -214,6 +226,21 @@ class DebugListener implements Listener {
   Token endType(Token tokens) {
     logEndScope("type");
     return debugSubject.endType(tokens);
+  }
+
+  Token handleSimpleType(Token tokens) {
+    log("Simple type");
+    return debugSubject.handleSimpleType(tokens);
+  }
+
+  Token handlePointerType(Token tokens) {
+    log("Pointer type");
+    return debugSubject.handlePointerType(tokens);
+  }
+
+  Token handleListType(Token tokens) {
+    log("List type");
+    return debugSubject.handleListType(tokens);
   }
 
   Token beginFormal(Token tokens) {

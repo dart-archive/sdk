@@ -9,11 +9,14 @@ import 'node.dart' show
     FormalNode,
     FunctionNode,
     IdentifierNode,
+    ListType,
     MemberNode,
     NamedNode,
     Node,
+    PointerType,
     RecursiveVisitor,
     ServiceNode,
+    SimpleType,
     StructNode,
     TopLevelNode,
     TypeNode;
@@ -27,7 +30,9 @@ import 'errors.dart' show
     TopLevelErrorNode;
 
 import 'types.dart' show
-    isPrimitiveType;
+    isPrimitiveType,
+    isStringType,
+    isListType;
 
 // Validation functions.
 List<CompilerError> validate(CompilationUnitNode compilationUnit) {
@@ -51,6 +56,7 @@ class Validator extends RecursiveVisitor {
     visitCompilationUnit(compilationUnit);
   }
 
+  // Visit methods.
   void visitCompilationUnit(CompilationUnitNode compilationUnit) {
     enterCompilationUnitScope(compilationUnit);
     checkHasAtLeastOneService(compilationUnit);
@@ -79,13 +85,39 @@ class Validator extends RecursiveVisitor {
     leaveFunctionScope(function);
   }
 
+  void visitReturnType(TypeNode type) {
+    checkIsPointerOrPrimitive(type);
+  }
+
+  void visitSingleFormal(FormalNode formal) {
+    checkIsPointerOrPrimitive(formal.type);
+  }
+
+  void visitPrimitiveFormal(FormalNode formal) {
+    checkIsPrimitiveFormal(formal);
+  }
+
   void visitMember(MemberNode member) {
     checkIsNotError(member);
     super.visitMember(member);
   }
 
-  void visitType(TypeNode type) {
-    checkTypeResolves(type);
+  void visitSimpleType(SimpleType type) {
+    checkIsSimpleType(type);
+  }
+
+  void visitPointerType(PointerType type) {
+    checkIsPointerType(type);
+  }
+
+  void visitListType(ListType type) {
+    checkIsListType(type);
+  }
+
+  void visitTypeParameter(TypeNode type) {
+    if (!isInnerListType(type)) {
+      errors.add(CompilerError.badTypeParameter);
+    }
   }
 
   // Checks.
@@ -99,12 +131,6 @@ class Validator extends RecursiveVisitor {
     }
   }
 
-  void checkTypeResolves(TypeNode type) {
-    if (!isPrimitiveType(type) && !lookupStructSymbol(type.identifier)) {
-      errors.add(CompilerError.unresolvedType);
-    }
-  }
-
   void checkHasAtLeastOneService(CompilationUnitNode compilationUnit) {
     for (Node node in compilationUnit.topLevels) {
       if (node is ServiceNode) {
@@ -112,6 +138,64 @@ class Validator extends RecursiveVisitor {
       }
     }
     errors.add(CompilerError.undefinedService);
+  }
+
+  bool typeResolvesToStruct(TypeNode type) {
+    return environment.structs.contains(type.identifier);
+  }
+
+  void checkIsPointerOrPrimitive(TypeNode type) {
+    if (!isPointerOrPrimitive(type)) {
+      errors.add(CompilerError.expectedPointerOrPrimitive);
+    }
+  }
+
+  bool isPointerOrPrimitive(TypeNode type) {
+    return
+      type is PointerType && typeResolvesToStruct(type) ||
+      isPrimitiveType(type);
+  }
+
+  void checkIsPrimitiveFormal(FormalNode formal) {
+    if (!isPrimitiveType(formal.type)) {
+      errors.add(CompilerError.expectedPrimitiveFormal);
+    }
+  }
+
+  void checkIsSimpleType(SimpleType type) {
+    if (!isSimpleType(type)) {
+      errors.add(CompilerError.badSimpleType);
+    }
+  }
+
+  bool isSimpleType(SimpleType type) {
+    return (typeResolvesToStruct(type) ||
+            isPrimitiveType(type) ||
+            isStringType(type));
+  }
+
+  void checkIsPointerType(PointerType type) {
+    if (!isPointerType(type)) {
+      errors.add(CompilerError.badPointerType);
+    }
+  }
+
+  bool isPointerType(PointerType type) {
+    return typeResolvesToStruct(type);
+  }
+
+  void checkIsListType(ListType type) {
+    if (!isListType(type)) {
+      errors.add(CompilerError.badListType);
+    }
+  }
+
+  bool isInnerListType(TypeNode type) {
+    return isStructType(type) || isPrimitiveType(type) || isStringType(type);
+  }
+
+  bool isStructType(TypeNode type) {
+    return type is SimpleType && typeResolvesToStruct(type);
   }
 
   // Scope management.

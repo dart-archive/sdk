@@ -50,7 +50,7 @@ Future<int> compileTask(String fileName) async {
   // TODO(stanm): take directory as argument
   String outputDirectory = "/tmp/servicec-out";
 
-  List<errors.CompilerError> compilerErrors =
+  Iterable<errors.CompilerError> compilerErrors =
     await servicec.compile(fileName, outputDirectory);
 
   print("Compiled $fileName to $outputDirectory");

@@ -4,7 +4,7 @@
 
 // This is valid input.
 service Painter {
-  void draw(Circle c);
+  void draw(Circle* c);
   void refresh();
 }
 
