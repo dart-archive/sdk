@@ -11,6 +11,9 @@
 #endif
 
 #include <assert.h>
+#ifdef static_assert
+#undef static_assert
+#endif
 
 #include "src/shared/globals.h"
 

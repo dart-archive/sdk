@@ -30,7 +30,8 @@ mkfifo "$PIPEDIR/qemu.in" "$PIPEDIR/qemu.out"
 
 echo "Starting qemu..."
 qemu-system-arm -machine vexpress-a9 -m 2 -kernel third_party/lk/out/build-vexpress-a9-fletch/lk.elf -nographic -serial pipe:$PIPEDIR/qemu &
-PID=$1
+PID=$!
+echo "Started with PID $PID"
 
 echo "Waiting for qemu to come up..."
 grep -qe "entering main console loop" $PIPEDIR/qemu.out
@@ -50,7 +51,17 @@ grep -qe "STEP2" $PIPEDIR/qemu.out
 echo "Sending snapshot..."
 cat $1 >$PIPEDIR/qemu.in
 
-echo "Showing results..."
-cat $PIPEDIR/qemu.out
+KEY=$'TEARING DOWN fletch-vm...\r'
+while IFS='' read -r line; do
+  echo "$line"
+  if [ "$line" = "$KEY" ]; then
+    break;
+  fi
+done < $PIPEDIR/qemu.out
+
+read -r line< $PIPEDIR/qemu.out
+echo "$line"
+
 kill $PID
 
+exit ${line:11:-1}

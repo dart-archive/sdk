@@ -47,6 +47,7 @@ int RunSnapshot(unsigned char* snapshot, int size) {
   printf("DELETING program...\n");
   FletchDeleteProgram(program);
   printf("TEARING DOWN fletch-vm...\n");
+  printf("EXIT CODE: %i\n", result);
   FletchTearDown();
   return result;
 }

@@ -4,11 +4,11 @@ https://github.com/travisg/lk
 
 that contains the fletch specific parts to build a fletch vm that can run as
 an app within the LK kernel. To build, you need to checkout the LK sources
-to lk-downstream, e.g.
+to lk-downstream, in the third_party/lk directory, e.g.
 
-git checkout https://github.com/travisg/lk.git lk-downstream
+git clone https://github.com/travisg/lk.git lk-downstream
 
-Next, run 
+Next, in third_party/lk, run
 
 make
 
@@ -16,4 +16,5 @@ to build the default target for qemu emulation or, e.g.,
 
 make PROJECT=stm32746g-eval2-fletch
 
-to build for the stm32746g evaluation board.
+to build for the stm32746g evaluation board. Other project names are available
+as .mk files in third_party/lk/fletch/project
