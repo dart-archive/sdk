@@ -163,7 +163,11 @@ NATIVE(ForeignFree) {
 }
 
 NATIVE(ForeignDecreaseMemoryUsage) {
-  int size = static_cast<int>(AsForeignWord(arguments[0]));
+  HeapObject* foreign = HeapObject::cast(arguments[0]);
+  int size = static_cast<int>(AsForeignWord(arguments[1]));
+  // For immutable objects that have been marked as finalized, we should never
+  // manually free it, hence the following assert.
+  ASSERT(!foreign->IsImmutable());
   process->heap()->FreedForeignMemory(size);
   return process->program()->null_object();
 }
@@ -171,7 +175,11 @@ NATIVE(ForeignDecreaseMemoryUsage) {
 NATIVE(ForeignMarkForFinalization) {
   HeapObject* foreign = HeapObject::cast(arguments[0]);
   int size = static_cast<int>(AsForeignWord(arguments[1]));
-  process->heap()->AllocatedForeignMemory(size);
+  if (foreign->IsImmutable()) {
+    process->immutable_heap()->AllocatedForeignMemory(size);
+  } else {
+    process->heap()->AllocatedForeignMemory(size);
+  }
   process->RegisterFinalizer(foreign, Process::FinalizeForeign);
   return process->program()->null_object();
 }

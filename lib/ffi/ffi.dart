@@ -384,7 +384,7 @@ class ForeignMemory extends ForeignPointer {
     _length = 0;
   }
 
-  @fletch.native external static void _decreaseMemoryUsage(int length);
+  @fletch.native external void _decreaseMemoryUsage(int length);
   @fletch.native external static int _allocate(int length);
   @fletch.native external static void _free(int address);
   @fletch.native external void _markForFinalization(int length);
