@@ -1118,8 +1118,8 @@ class _ImplementationVisitor extends _ObjCVisitor {
     });
     // TODO(zerny): Support lists of primitive types.
     writeln("""
-id createNode(const NodeData& data, ImmiRoot* root) {
-  return [Node createNode:data inGraph:root];
+Node* createNode(const NodeData& data, ImmiRoot* root) {
+  return [[Node alloc] initWith:data inGraph:root];
 }
 
 template<typename T>
