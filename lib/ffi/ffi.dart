@@ -321,7 +321,7 @@ abstract class UnsafeMemory extends Foreign {
   }
 
   @fletch.native external static int _allocate(int length);
-  @fletch.native external void _markForFinalization();
+  @fletch.native external void _markForFinalization(int length);
 
   @fletch.native external static int _getInt8(int address);
   @fletch.native external static int _getInt16(int address);
@@ -385,14 +385,14 @@ class ImmutableForeignMemory extends UnsafeMemory {
 
   factory ImmutableForeignMemory.fromAddressFinalized(int address, int length) {
     var memory = new ImmutableForeignMemory.fromAddress(address, length);
-    memory._markForFinalization();
+    memory._markForFinalization(length);
     return memory;
   }
 
   factory ImmutableForeignMemory.allocatedFinalized(int length) {
     var memory = new ImmutableForeignMemory.fromAddress(
         UnsafeMemory._allocate(length), length);
-    memory._markForFinalization();
+    memory._markForFinalization(length);
     return memory;
   }
 
@@ -421,7 +421,7 @@ class ForeignMemory extends UnsafeMemory {
   ForeignMemory.fromAddress(this.address, this.length);
 
   ForeignMemory.fromAddressFinalized(this.address, this.length) {
-    _markForFinalization();
+    _markForFinalization(length);
     _markedForFinalization = true;
   }
 
@@ -432,7 +432,7 @@ class ForeignMemory extends UnsafeMemory {
   ForeignMemory.allocatedFinalized(int length)
       : address = UnsafeMemory._allocate(length),
         length = length {
-    _markForFinalization();
+    _markForFinalization(length);
     _markedForFinalization = true;
   }
 
