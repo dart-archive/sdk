@@ -12,10 +12,6 @@ export 'dart:async' show
     Future,
     StreamIterator;
 
-// Don't export this.
-import 'package:compiler/src/filenames.dart' show
-    appendSlash;
-
 // Don't export most of these.
 import '../driver/sentence_parser.dart' show
     NamedTarget,
@@ -97,10 +93,6 @@ export 'verbs.dart' show
     Verb;
 
 AnalyzedSentence analyzeSentence(Sentence sentence) {
-  Uri base = Uri.base;
-  if (sentence.currentDirectory != null) {
-    base = fileUri(appendSlash(sentence.currentDirectory), base);
-  }
   ResolvedVerb verb = sentence.verb;
 
   Preposition preposition = sentence.preposition;
@@ -149,7 +141,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
           DiagnosticKind.expectedFileTarget, target: preposition.target);
     }
     NamedTarget target = preposition.target;
-    toTargetUri = fileUri(target.name, base);
+    toTargetUri = fileUri(target.name);
   } else if (sessionTarget != null) {
     if (!verb.verb.requiresSession) {
       throwFatalError(
@@ -219,18 +211,18 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
   if (target is NamedTarget) {
     targetName = target.name;
     if (target.kind == TargetKind.FILE) {
-      targetUri = fileUri(targetName, base);
+      targetUri = fileUri(targetName);
     }
   }
 
   Uri programName =
-      sentence.programName == null ? null : fileUri(sentence.programName, base);
+      sentence.programName == null ? null : fileUri(sentence.programName);
   return new AnalyzedSentence(
       verb, target, targetName, preposition, trailing, sessionName,
-      sentence.arguments, base, programName, targetUri, toTargetUri);
+      sentence.arguments, programName, targetUri, toTargetUri);
 }
 
-Uri fileUri(String path, Uri base) => base.resolveUri(new Uri.file(path));
+Uri fileUri(String path) => Uri.base.resolveUri(new Uri.file(path));
 
 abstract class VerbContext {
   final ClientController client;
@@ -279,9 +271,6 @@ class AnalyzedSentence {
   // TODO(ahe): Remove when compile-and-run is removed.
   final List<String> arguments;
 
-  /// The current working directory of the C++ client.
-  final Uri base;
-
   final Uri programName;
 
   /// Value of 'file NAME' converted to a Uri (main target, no preposition).
@@ -298,7 +287,6 @@ class AnalyzedSentence {
       this.trailing,
       this.sessionName,
       this.arguments,
-      this.base,
       this.programName,
       this.targetUri,
       this.toTargetUri);

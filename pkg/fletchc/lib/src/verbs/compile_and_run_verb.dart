@@ -50,10 +50,7 @@ import 'documentation.dart' show
     compileAndRunDocumentation;
 
 const Verb compileAndRunVerb =
-    const Verb(
-        compileAndRun, compileAndRunDocumentation,
-        allowsTrailing: true,
-        supportedTargets: const <TargetKind>[TargetKind.FILE]);
+    const Verb(compileAndRun, compileAndRunDocumentation, allowsTrailing: true);
 
 Future<int> compileAndRun(
     AnalyzedSentence sentence,
@@ -66,11 +63,11 @@ Future<int> compileAndRun(
   }
 
   if (options.script == null) {
-    throwFatalError(DiagnosticKind.noFileTarget);
+    throwFatalError(DiagnosticKind.noFile);
   }
 
-  CompileAndRunTask task = new CompileAndRunTask(
-      '${sentence.programName}-vm', options, sentence.base);
+  CompileAndRunTask task =
+      new CompileAndRunTask('${sentence.programName}-vm', options);
 
   // Create a temporary worker/session.
   IsolateController worker =
@@ -92,28 +89,23 @@ class CompileAndRunTask extends SharedTask {
 
   final Options options;
 
-  final Uri base;
-
-  const CompileAndRunTask(this.fletchVm, this.options, this.base);
+  const CompileAndRunTask(this.fletchVm, this.options);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return compileAndRunTask(
-        fletchVm, options, base, commandSender, commandIterator);
+    return compileAndRunTask(fletchVm, options, commandSender, commandIterator);
   }
 }
 
 Future<int> compileAndRunTask(
     String fletchVm,
     Options options,
-    Uri base,
     CommandSender commandSender,
     StreamIterator<Command> commandIterator) async {
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   FletchCompiler compilerHelper = new FletchCompiler(
-      currentDirectory: base,
       options: compilerOptions,
       packageRoot: options.packageRootPath,
       script: options.script,
@@ -192,8 +184,7 @@ Future<int> compileAndRunTask(
   await session.applyDelta(fletchDelta);
 
   if (options.snapshotPath != null) {
-    Uri snapshotUri = fileUri(options.snapshotPath, base);
-    await session.writeSnapshot(snapshotUri.toFilePath());
+    await session.writeSnapshot(options.snapshotPath);
   } else if (options.testDebugger) {
     await session.testDebugger(options.testDebuggerCommands);
   } else {

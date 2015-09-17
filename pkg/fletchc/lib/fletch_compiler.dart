@@ -76,15 +76,8 @@ class FletchCompiler {
        @StringOrUri patchRoot,
        @StringOrUri script,
        @StringOrUri fletchVm,
-       @StringOrUri currentDirectory,
        List<String> options,
        Map<String, dynamic> environment}) {
-    Uri base = _computeValidatedUri(
-        currentDirectory, name: 'currentDirectory', ensureTrailingSlash: true);
-    if (base == null) {
-      base = Uri.base;
-    }
-
     if (options == null) {
       options = <String>[];
     }
@@ -92,8 +85,7 @@ class FletchCompiler {
     final bool isVerbose = apiimpl.Compiler.hasOption(options, '--verbose');
 
     if (provider == null) {
-      provider = new CompilerSourceFileProvider()
-          ..cwd = base;
+      provider = new CompilerSourceFileProvider();
     }
 
     if (handler == null) {
@@ -111,11 +103,10 @@ class FletchCompiler {
     }
 
     if (libraryRoot == null  && _SDK_DIR != null) {
-      libraryRoot = base.resolve(appendSlash(_SDK_DIR));
+      libraryRoot = Uri.base.resolve(appendSlash(_SDK_DIR));
     }
     libraryRoot = _computeValidatedUri(
-        libraryRoot, name: 'libraryRoot', ensureTrailingSlash: true,
-        base: base);
+        libraryRoot, name: 'libraryRoot', ensureTrailingSlash: true);
     if (libraryRoot == null) {
       libraryRoot = _guessLibraryRoot();
       if (libraryRoot == null) {
@@ -128,30 +119,27 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
           "[libraryRoot]: Dart SDK library not found in '$libraryRoot'.");
     }
 
-    script = _computeValidatedUri(script, name: 'script', base: base);
+    script = _computeValidatedUri(script, name: 'script');
 
     packageRoot = _computeValidatedUri(
-        packageRoot, name: 'packageRoot', ensureTrailingSlash: true,
-        base: base);
+        packageRoot, name: 'packageRoot', ensureTrailingSlash: true);
     if (packageRoot == null) {
       if (script != null) {
         packageRoot = script.resolve('packages/');
       } else {
-        packageRoot = base.resolve('packages/');
+        packageRoot = Uri.base.resolve('packages/');
       }
     }
 
     fletchVm = guessFletchVm(
         _computeValidatedUri(
-            fletchVm, name: 'fletchVm', ensureTrailingSlash: false,
-            base: base),
-        base);
+            fletchVm, name: 'fletchVm', ensureTrailingSlash: false));
 
     if (patchRoot == null  && _PATCH_ROOT != null) {
-      patchRoot = base.resolve(appendSlash(_PATCH_ROOT));
+      patchRoot = Uri.base.resolve(appendSlash(_PATCH_ROOT));
     }
     patchRoot = _computeValidatedUri(
-        patchRoot, name: 'patchRoot', ensureTrailingSlash: true, base: base);
+        patchRoot, name: 'patchRoot', ensureTrailingSlash: true);
     if (patchRoot == null) {
       patchRoot = _guessPatchRoot(libraryRoot);
       if (patchRoot == null) {
@@ -188,7 +176,6 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   }
 
   Future<FletchDelta> run([@StringOrUri script]) async {
-    // TODO(ahe): Need a base argument.
     script = _computeValidatedUri(script, name: 'script');
     if (script == null) {
       script = this.script;
@@ -274,11 +261,7 @@ bool _looksLikeLibraryRoot(Uri uri) {
 Uri _computeValidatedUri(
     @StringOrUri stringOrUri,
     {String name,
-     bool ensureTrailingSlash: false,
-     Uri base}) {
-  if (base == null) {
-    base = Uri.base;
-  }
+     bool ensureTrailingSlash: false}) {
   assert(name != null);
   if (stringOrUri == null) {
     return null;
@@ -286,9 +269,9 @@ Uri _computeValidatedUri(
     if (ensureTrailingSlash) {
       stringOrUri = appendSlash(stringOrUri);
     }
-    return base.resolve(stringOrUri);
+    return Uri.base.resolve(stringOrUri);
   } else if (stringOrUri is Uri) {
-    return base.resolveUri(stringOrUri);
+    return Uri.base.resolveUri(stringOrUri);
   } else {
     throw new ArgumentError("[$name] should be a String or a Uri.");
   }

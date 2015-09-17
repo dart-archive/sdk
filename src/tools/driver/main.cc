@@ -283,10 +283,7 @@ static void ComputeFletchRoot(char* buffer, size_t buffer_length) {
 static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
   char* dart_vm_env = getenv(dart_vm_env_name);
   if (dart_vm_env != NULL) {
-    if (realpath(dart_vm_env, buffer) == NULL) {
-      Die("%s: realpath of '%s' failed: %s", program_name, dart_vm_env,
-          strerror(errno));
-    }
+    StrCpy(buffer, buffer_length, dart_vm_env, strlen(dart_vm_env) + 1);
     return;
   }
 
@@ -430,13 +427,7 @@ static void ExecDaemon(
     int child_stdout,
     int child_stderr,
     const char** argv) {
-  Close(STDIN_FILENO);
-
-  // Change directory to '/' to ensure that we use the client's working
-  // directory.
-  if (TEMP_FAILURE_RETRY(chdir("/")) == -1) {
-    Die("%s: 'chdir(\"/\")' failed: %s", program_name, strerror(errno));
-  }
+  Close(STDOUT_FILENO);
 
   // Calling fork one more time to create an indepent processs. This prevents
   // zombie processes, and ensures the server can continue running in the
@@ -598,21 +589,11 @@ static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   buffer.WriteString(path);
 
   // argv[0] is the name of the executable before path search. But the driver
-  // needs the absolute location provided by GetPathOfExecutable/realpath.
-  char* relative_path = static_cast<char*>(malloc(MAXPATHLEN + 1));
-  if (relative_path == NULL) {
-    Die("%s: malloc failed: %s", relative_path, strerror(errno));
-  }
-  GetPathOfExecutable(relative_path, MAXPATHLEN + 1);
-  if (realpath(relative_path, path) == NULL) {
-    Die("%s: realpath of '%s' failed: %s", program_name, relative_path,
-        strerror(errno));
-  }
+  // needs the absolute location provided by GetPathOfExecutable.
+  GetPathOfExecutable(path, MAXPATHLEN + 1);
   buffer.WriteInt(strlen(path));
   buffer.WriteString(path);
 
-  free(relative_path);
-  relative_path = NULL;
   free(path);
   path = NULL;
 

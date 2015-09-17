@@ -17,8 +17,6 @@ const Verb createVerb = const Verb(
     create, createDocumentation, requiresTargetSession: true);
 
 Future<int> create(AnalyzedSentence sentence, VerbContext context) async {
-  // TODO(ahe): packageRoot should be a user-configurable option.
-  Uri packageRoot = sentence.base.resolve('package/');
   IsolatePool pool = context.pool;
   String name = sentence.targetName;
 
@@ -26,7 +24,7 @@ Future<int> create(AnalyzedSentence sentence, VerbContext context) async {
 
   context = context.copyWithSession(session);
 
-  await context.performTaskInWorker(new CreateSessionTask(name, packageRoot));
+  await context.performTaskInWorker(new CreateSessionTask(name));
 
   return 0;
 }
@@ -36,20 +34,18 @@ class CreateSessionTask extends SharedTask {
 
   final String name;
 
-  final Uri packageRoot;
-
-  const CreateSessionTask(this.name, this.packageRoot);
+  const CreateSessionTask(this.name);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return createSessionTask(name, packageRoot);
+    return createSessionTask(name);
   }
 }
 
-Future<int> createSessionTask(String name, packageRoot) {
+Future<int> createSessionTask(String name) {
   assert(SessionState.internalCurrent == null);
-  SessionState.internalCurrent = createSessionState(name, packageRoot);
+  SessionState.internalCurrent = createSessionState(name);
   print("Created session '$name'.");
   return new Future<int>.value(0);
 }
