@@ -11,10 +11,10 @@ import 'dart:convert' show UTF8;
 import 'dart:_fletch_system' as fletch;
 import 'dart:fletch';
 
-class Foreign {
-  int _value;
+abstract class Foreign {
+  int get address;
 
-  Foreign._(this._value);
+  const Foreign();
 
   static const int UNKNOWN = 0;
 
@@ -36,7 +36,7 @@ class Foreign {
 
   // Helper for converting the argument to a machine word.
   int _convert(argument) {
-    if (argument is Foreign) return argument._value;
+    if (argument is Foreign) return argument.address;
     if (argument is Port) return _convertPort(argument);
     if (argument is int) return argument;
     throw new ArgumentError();
@@ -50,9 +50,8 @@ class Foreign {
 }
 
 class ForeignFunction extends Foreign {
-  int get address => _value;
-
-  ForeignFunction.fromAddress(int value) : super._(value);
+  final int address;
+  const ForeignFunction.fromAddress(this.address);
 
   /// Helper function for retrying functions that follow the POSIX-convention
   /// of returning `-1` and setting `errno` to `EINTR`.
@@ -71,25 +70,25 @@ class ForeignFunction extends Foreign {
 
   // Support for calling foreign functions that return
   // integers.
-  int icall$0() => _icall$0(_value);
-  int icall$1(a0) => _icall$1(_value, _convert(a0));
-  int icall$2(a0, a1) => _icall$2(_value, _convert(a0), _convert(a1));
+  int icall$0() => _icall$0(address);
+  int icall$1(a0) => _icall$1(address, _convert(a0));
+  int icall$2(a0, a1) => _icall$2(address, _convert(a0), _convert(a1));
   int icall$3(a0, a1, a2) {
-    return _icall$3(_value, _convert(a0), _convert(a1), _convert(a2));
+    return _icall$3(address, _convert(a0), _convert(a1), _convert(a2));
   }
 
   int icall$4(a0, a1, a2, a3) {
     return _icall$4(
-        _value, _convert(a0), _convert(a1), _convert(a2), _convert(a3));
+        address, _convert(a0), _convert(a1), _convert(a2), _convert(a3));
   }
 
   int icall$5(a0, a1, a2, a3, a4) {
-    return _icall$5(_value, _convert(a0), _convert(a1), _convert(a2),
+    return _icall$5(address, _convert(a0), _convert(a1), _convert(a2),
         _convert(a3), _convert(a4));
   }
 
   int icall$6(a0, a1, a2, a3, a4, a5) {
-    return _icall$6(_value, _convert(a0), _convert(a1), _convert(a2),
+    return _icall$6(address, _convert(a0), _convert(a1), _convert(a2),
         _convert(a3), _convert(a4), _convert(a5));
   }
 
@@ -112,72 +111,60 @@ class ForeignFunction extends Foreign {
   // Support for calling foreign functions that return
   // machine words -- typically pointers -- encapulated in
   // the given foreign object arguments.
-  ForeignPointer pcall$0(ForeignPointer p) {
-    p._value = _pcall$0(_value);
-    return p;
-  }
+  ForeignPointer pcall$0() =>
+      new ForeignPointer(_pcall$0(address));
 
-  ForeignPointer pcall$1(ForeignPointer p, a0) {
-    p._value = _pcall$1(_value, a0);
-    return p;
-  }
+  ForeignPointer pcall$1(a0) =>
+      new ForeignPointer(_pcall$1(address, a0));
 
-  ForeignPointer pcall$2(ForeignPointer p, a0, a1) {
-    p._value = _pcall$2(_value, _convert(a0), _convert(a1));
-    return p;
-  }
+  ForeignPointer pcall$2(a0, a1) =>
+      new ForeignPointer(_pcall$2(address, _convert(a0), _convert(a1)));
 
-  ForeignPointer pcall$3(ForeignPointer p, a0, a1, a2) {
-    p._value = _pcall$3(_value, _convert(a0), _convert(a1), _convert(a2));
-    return p;
-  }
+  ForeignPointer pcall$3(a0, a1, a2) =>
+      new ForeignPointer(_pcall$3(address, _convert(a0), _convert(a1),
+                                  _convert(a2)));
 
-  ForeignPointer pcall$4(ForeignPointer p, a0, a1, a2, a3) {
-    p._value = _pcall$4(
-        _value, _convert(a0), _convert(a1), _convert(a2), _convert(a3));
-    return p;
-  }
+  ForeignPointer pcall$4(a0, a1, a2, a3) =>
+      new ForeignPointer(_pcall$4(address, _convert(a0), _convert(a1),
+                                  _convert(a2), _convert(a3)));
 
-  ForeignPointer pcall$5(ForeignPointer p, a0, a1, a2, a3, a4) {
-    p._value = _pcall$5(_value, _convert(a0), _convert(a1), _convert(a2),
-        _convert(a3), _convert(a4));
-    return p;
-  }
+  ForeignPointer pcall$5(a0, a1, a2, a3, a4) =>
+      new ForeignPointer(_pcall$5(address, _convert(a0), _convert(a1),
+                                  _convert(a2), _convert(a3), _convert(a4)));
 
-  ForeignPointer pcall$6(ForeignPointer p, a0, a1, a2, a3, a4, a5) {
-    p._value = _pcall$6(_value, _convert(a0), _convert(a1), _convert(a2),
-        _convert(a3), _convert(a4), _convert(a5));
-    return p;
-  }
+  ForeignPointer pcall$6(a0, a1, a2, a3, a4, a5) =>
+      new ForeignPointer(_pcall$6(address, _convert(a0), _convert(a1),
+                                  _convert(a2), _convert(a3), _convert(a4),
+                                  _convert(a5)));
 
   // Support for calling foreign functions with no return value.
   void vcall$0() {
-    _vcall$0(_value);
+    _vcall$0(address);
   }
 
   void vcall$1(a0) {
-    _vcall$1(_value, _convert(a0));
+    _vcall$1(address, _convert(a0));
   }
 
   void vcall$2(a0, a1) {
-    _vcall$2(_value, _convert(a0), _convert(a1));
+    _vcall$2(address, _convert(a0), _convert(a1));
   }
 
   void vcall$3(a0, a1, a2) {
-    _vcall$3(_value, _convert(a0), _convert(a1), _convert(a2));
+    _vcall$3(address, _convert(a0), _convert(a1), _convert(a2));
   }
 
   void vcall$4(a0, a1, a2, a3) {
-    _vcall$4(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3));
+    _vcall$4(address, _convert(a0), _convert(a1), _convert(a2), _convert(a3));
   }
 
   void vcall$5(a0, a1, a2, a3, a4) {
-    _vcall$5(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
+    _vcall$5(address, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
         _convert(a4));
   }
 
   void vcall$6(a0, a1, a2, a3, a4, a5) {
-    _vcall$6(_value, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
+    _vcall$6(address, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
         _convert(a4), _convert(a5));
   }
 
@@ -189,7 +176,7 @@ class ForeignFunction extends Foreign {
   //    * a 64 bit int
   //    * a word
   int Lcall$wLw(a0, a1, a2) {
-    return _Lcall$wLw(_value, _convert(a0), _convert(a1), _convert(a2));
+    return _Lcall$wLw(address, _convert(a0), _convert(a1), _convert(a2));
   }
 
   int Lcall$wLwRetry(a0, a1, a2) => retry(() => Lcall$wLw(a0, a1, a2));
@@ -225,11 +212,10 @@ class ForeignFunction extends Foreign {
 }
 
 class ForeignPointer extends Foreign {
-  int get address => _value;
-  ForeignPointer.fromAddress(int address) : super._(address);
-  ForeignPointer() : super._(0);
+  final int address;
+  const ForeignPointer(this.address);
 
-  static final ForeignPointer NULL = new ForeignPointer();
+  static const ForeignPointer NULL = const ForeignPointer(0);
 }
 
 class ForeignLibrary extends ForeignPointer {
@@ -237,14 +223,14 @@ class ForeignLibrary extends ForeignPointer {
   /// linked in to the main Fletch binary.
   static ForeignLibrary main = new ForeignLibrary.fromName(null);
 
-  ForeignLibrary.fromAddress(int address) : super.fromAddress(address);
+  const ForeignLibrary.fromAddress(int address) : super(address);
 
   factory ForeignLibrary.fromName(String name) {
     return new ForeignLibrary.fromAddress(_lookupLibrary(name));
   }
 
   ForeignFunction lookup(String name) {
-    return new ForeignFunction.fromAddress(_lookupFunction(_value, name));
+    return new ForeignFunction.fromAddress(_lookupFunction(address, name));
   }
 
   /// Provides a platform specific location for a library relative to the
@@ -254,7 +240,7 @@ class ForeignLibrary extends ForeignPointer {
   @fletch.native external static String bundleLibraryName(String libraryName);
 
   void close() {
-    _closeLibrary(_value);
+    _closeLibrary(address);
   }
 
   @fletch.native static int _lookupLibrary(String name) {
@@ -262,59 +248,20 @@ class ForeignLibrary extends ForeignPointer {
     throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
   }
 
-  @fletch.native static int _lookupFunction(int _value, String name) {
+  @fletch.native static int _lookupFunction(int address, String name) {
     var error = fletch.nativeError;
     throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
   }
 
-  @fletch.native static int _closeLibrary(int _value) {
+  @fletch.native static int _closeLibrary(int address) {
     var error = fletch.nativeError;
     throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
   }
 }
 
-class ForeignMemory extends ForeignPointer {
-  int _length;
-  bool _markedForFinalization;
-
-  int get length => _length;
-
-  ForeignMemory.fromAddress(int address, this._length)
-      : _markedForFinalization = false,
-        super.fromAddress(address);
-
-  ForeignMemory.fromForeignPointer(ForeignPointer pointer, this._length)
-      : _markedForFinalization = false,
-        super.fromAddress(pointer.address);
-
-  ForeignMemory.allocated(this._length) {
-    _value = _allocate(_length);
-    _markedForFinalization = false;
-  }
-
-  ForeignMemory.allocatedFinalized(this._length) {
-    _value = _allocate(_length);
-    _markForFinalization(_length);
-    _markedForFinalization = true;
-  }
-
-  // We utf8 encode the string first to support non-ascii characters.
-  // NOTE: This is not the correct string encoding for Windows.
-  factory ForeignMemory.fromStringAsUTF8(String str) {
-    List<int> encodedString = UTF8.encode(str);
-    var memory = new ForeignMemory.allocated(encodedString.length + 1);
-    for (int i = 0; i < encodedString.length; i++) {
-      memory.setUint8(i, encodedString[i]);
-    }
-    memory.setUint8(encodedString.length, 0); // '\0' terminate string
-    return memory;
-  }
-
-  void setFinalized() {
-    if (_markedForFinalization) return;
-    _markForFinalization(_length);
-    _markedForFinalization = true;
-  }
+abstract class UnsafeMemory extends Foreign {
+  int get length;
+  const UnsafeMemory();
 
   int getInt8(int offset) => _getInt8(_computeAddress(offset, 1));
   int getInt16(int offset) => _getInt16(_computeAddress(offset, 2));
@@ -355,8 +302,8 @@ class ForeignMemory extends ForeignPointer {
   // Helper for checking bounds and computing derived
   // addresses for memory address functionality.
   int _computeAddress(int offset, int n) {
-    if (offset < 0 || offset + n > _length) throw new IndexError(offset, this);
-    return _value + offset;
+    if (offset < 0 || offset + n > length) throw new IndexError(offset, this);
+    return address + offset;
   }
 
   void copyBytesToList(List<int> list, int from, int to, int listOffset) {
@@ -373,21 +320,8 @@ class ForeignMemory extends ForeignPointer {
     }
   }
 
-  void free() {
-    if (_length > 0) {
-      if (_markedForFinalization) {
-        _decreaseMemoryUsage(_length);
-      }
-      _free(_value);
-    }
-    _value = 0;
-    _length = 0;
-  }
-
-  @fletch.native external void _decreaseMemoryUsage(int length);
   @fletch.native external static int _allocate(int length);
-  @fletch.native external static void _free(int address);
-  @fletch.native external void _markForFinalization(int length);
+  @fletch.native external void _markForFinalization();
 
   @fletch.native external static int _getInt8(int address);
   @fletch.native external static int _getInt16(int address);
@@ -443,6 +377,93 @@ class ForeignMemory extends ForeignPointer {
   }
 }
 
+class ImmutableForeignMemory extends UnsafeMemory {
+  final int address;
+  final int length;
+
+  const ImmutableForeignMemory.fromAddress(this.address, this.length);
+
+  factory ImmutableForeignMemory.fromAddressFinalized(int address, int length) {
+    var memory = new ImmutableForeignMemory.fromAddress(address, length);
+    memory._markForFinalization();
+    return memory;
+  }
+
+  factory ImmutableForeignMemory.allocatedFinalized(int length) {
+    var memory = new ImmutableForeignMemory.fromAddress(
+        UnsafeMemory._allocate(length), length);
+    memory._markForFinalization();
+    return memory;
+  }
+
+  const ImmutableForeignMemory.allocated(int length)
+      : address = UnsafeMemory._allocate(length),
+        length = length;
+
+  // We utf8 encode the string first to support non-ascii characters.
+  // NOTE: This is not the correct string encoding for Windows.
+  factory ImmutableForeignMemory.fromStringAsUTF8(String str) {
+    List<int> encodedString = UTF8.encode(str);
+    var memory = new ImmutableForeignMemory.allocated(encodedString.length + 1);
+    for (int i = 0; i < encodedString.length; i++) {
+      memory.setUint8(i, encodedString[i]);
+    }
+    memory.setUint8(encodedString.length, 0); // '\0' terminate string
+    return memory;
+  }
+}
+
+class ForeignMemory extends UnsafeMemory {
+  int address;
+  int length;
+  bool _markedForFinalization = false;
+
+  ForeignMemory.fromAddress(this.address, this.length);
+
+  ForeignMemory.fromAddressFinalized(this.address, this.length) {
+    _markForFinalization();
+    _markedForFinalization = true;
+  }
+
+  ForeignMemory.allocated(int length)
+      : address = UnsafeMemory._allocate(length),
+        length = length;
+
+  ForeignMemory.allocatedFinalized(int length)
+      : address = UnsafeMemory._allocate(length),
+        length = length {
+    _markForFinalization();
+    _markedForFinalization = true;
+  }
+
+  // We utf8 encode the string first to support non-ascii characters.
+  // NOTE: This is not the correct string encoding for Windows.
+  factory ForeignMemory.fromStringAsUTF8(String str) {
+    List<int> encodedString = UTF8.encode(str);
+    var memory = new ForeignMemory.allocated(encodedString.length + 1);
+    for (int i = 0; i < encodedString.length; i++) {
+      memory.setUint8(i, encodedString[i]);
+    }
+    memory.setUint8(encodedString.length, 0); // '\0' terminate string
+    return memory;
+  }
+
+  void free() {
+    if (length > 0) {
+      if (_markedForFinalization) {
+        _decreaseMemoryUsage(length);
+      }
+      _free(address);
+    }
+    address = 0;
+    length = 0;
+  }
+
+  @fletch.native external void _decreaseMemoryUsage(int length);
+  @fletch.native external static void _free(int address);
+}
+
+// NOTE We could make this a view on a memory object instead.
 class Struct extends ForeignMemory {
   final wordSize;
   int get numFields => length ~/ wordSize;

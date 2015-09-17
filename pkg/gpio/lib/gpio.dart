@@ -154,7 +154,7 @@ class PiMemoryMappedGPIO extends _GPIOBase implements GPIO {
     ForeignPointer p = new ForeignPointer();
     _addr = _mmap.pcall$6(p, 0, _blockSize, protRead | protWrite, mapShared,
                           _fd, _baseAddressModel2 + _baseAddressGPIOOffset);
-    _mem = new ForeignMemory.fromForeignPointer(_addr, _blockSize);
+    _mem = new ForeignMemory.fromAddress(_addr.address, _blockSize);
   }
 
   void setMode(int pin, Mode mode) {

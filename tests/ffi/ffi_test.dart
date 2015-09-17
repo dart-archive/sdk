@@ -3,48 +3,75 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch.ffi';
+import 'dart:fletch';
 import "package:expect/expect.dart";
 
 bool isRangeError(e) => e is RangeError;
 bool isArgumentError(e) => e is ArgumentError;
 
+var freeFunc = ForeignLibrary.main.lookup('free');
+
 main() {
-  testAllocate(false);
-  testAllocate(true);
+  // Not finalized, not immutable.
+  testAllocate(false, false);
+  // Finalized, not immutable.
+  testAllocate(true, false);
+  // Not finalized, immutable.
+  testAllocate(false, true);
+  // Finalized, immutable.
+  testAllocate(true, true);
 
   testVAndICall();
   testFailingLibraryLookups();
   testDefaultLibraryLookups();
-  testPCallAndMemory();
+  testPCallAndMemory(true);
+  testPCallAndMemory(false);
   testStruct();
+
+  testImmutablePassing(false);
+  testImmutablePassing(true);
 }
 
 checkOutOfBoundsThrows(function) {
   Expect.throws(function, (e) => e is RangeError);
 }
 
-testPCallAndMemory() {
+testPCallAndMemory(bool immutable) {
+  fromPointer(ForeignPointer pointer, int length) {
+    if (immutable) {
+      return new ImmutableForeignMemory.fromAddress(pointer.address, length);
+    }
+    return new ForeignMemory.fromAddress(pointer.address, length);
+  }
+
+  freeMem(memory) {
+    if (immutable) {
+      freeFunc.vcall$1(memory.address);
+    } else {
+      memory.free();
+    }
+  }
+
   // Please see the expected values in the ffi_test_library.c file (obvious
   // from the code below, but that is where they are defined).
   // For all memory returning functions we expect there to be 4 values of the
   // type we are working on.
   var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
   ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
-  ForeignPointer p = new ForeignPointer();
   var pcall0 = fl.lookup('pfun0');
-  var foreignPointer = pcall0.pcall$0(p);
-  var memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  var foreignPointer = pcall0.pcall$0();
+  var memory = fromPointer(foreignPointer, 16);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getInt32(0), 1);
   Expect.equals(memory.getInt32(4), 2);
   Expect.equals(memory.getInt32(8), 3);
   Expect.equals(memory.getInt32(12), 4);
   checkOutOfBoundsThrows(() => memory.getInt32(16));
-  memory.free();
+  freeMem(memory);
 
   var pcall1 = fl.lookup('pfun1');
-  foreignPointer = pcall1.pcall$1(p, 42);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  foreignPointer = pcall1.pcall$1(42);
+  memory = fromPointer(foreignPointer, 16);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getInt32(0), 42);
   Expect.equals(memory.getInt32(4), 42);
@@ -55,65 +82,65 @@ testPCallAndMemory() {
   Expect.equals(memory.getInt32(4), 42);
   Expect.equals(memory.getInt32(8), -1);
   Expect.equals(memory.getInt32(12), 42);
-  memory.free();
+  freeMem(memory);
 
   var pcall2 = fl.lookup('pfun2');
-  foreignPointer = pcall2.pcall$2(p, 42, 43);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  foreignPointer = pcall2.pcall$2(42, 43);
+  memory = fromPointer(foreignPointer, 16);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getInt32(0), 42);
   Expect.equals(memory.getInt32(4), 43);
   Expect.equals(memory.getInt32(8), 42);
   Expect.equals(memory.getInt32(12), 43);
-  memory.free();
+  freeMem(memory);
 
   var pcall3 = fl.lookup('pfun3');
-  foreignPointer = pcall3.pcall$3(p, 42, 43, 44);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  foreignPointer = pcall3.pcall$3(42, 43, 44);
+  memory = fromPointer(foreignPointer, 16);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getInt32(0), 42);
   Expect.equals(memory.getInt32(4), 43);
   Expect.equals(memory.getInt32(8), 44);
   Expect.equals(memory.getInt32(12), 43);
-  memory.free();
+  freeMem(memory);
 
   var pcall4 = fl.lookup('pfun4');
-  foreignPointer = pcall4.pcall$4(p, 42, 43, 44, 45);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  foreignPointer = pcall4.pcall$4(42, 43, 44, 45);
+  memory = fromPointer(foreignPointer, 16);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getInt32(0), 42);
   Expect.equals(memory.getInt32(4), 43);
   Expect.equals(memory.getInt32(8), 44);
   Expect.equals(memory.getInt32(12), 45);
-  memory.free();
+  freeMem(memory);
 
   var pcall5 = fl.lookup('pfun5');
-  foreignPointer = pcall5.pcall$5(p, 42, 43, 44, 45, 46);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  foreignPointer = pcall5.pcall$5(42, 43, 44, 45, 46);
+  memory = fromPointer(foreignPointer, 16);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getInt32(0), 42);
   Expect.equals(memory.getInt32(4), 43);
   Expect.equals(memory.getInt32(8), 44);
   Expect.equals(memory.getInt32(12), 45 + 46);
-  memory.free();
+  freeMem(memory);
 
   var pcall6 = fl.lookup('pfun6');
-  foreignPointer = pcall6.pcall$6(p, 42, 43, 44, 45, 46, 47);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  foreignPointer = pcall6.pcall$6(42, 43, 44, 45, 46, 47);
+  memory = fromPointer(foreignPointer, 16);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getInt32(0), 42);
   Expect.equals(memory.getInt32(4), 43);
   Expect.equals(memory.getInt32(8), 44);
   Expect.equals(memory.getInt32(12), 45 + 46 + 47);
-  memory.free();
+  freeMem(memory);
 
   // All tetsts below here is basically sanity checking that we correctly
   // convert the values to and from c, and that we can also set and read
   // back values correctly.
 
   var memint8 = fl.lookup('memint8');
-  foreignPointer = memint8.pcall$0(p);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 4);
+  foreignPointer = memint8.pcall$0();
+  memory = fromPointer(foreignPointer, 4);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getInt8(0), -1);
   Expect.equals(memory.getInt8(1), -128);
@@ -134,11 +161,11 @@ testPCallAndMemory() {
   Expect.equals(memory.getUint8(2), 100);
   Expect.equals(memory.getUint8(3), 100);
   checkOutOfBoundsThrows(() => memory.getUint8(4));
-  memory.free();
+  freeMem(memory);
 
   var memint16 = fl.lookup('memint16');
-  foreignPointer = memint16.pcall$0(p);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 8);
+  foreignPointer = memint16.pcall$0();
+  memory = fromPointer(foreignPointer, 8);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getInt16(0), 32767);
   Expect.equals(memory.getInt16(2), -32768);
@@ -150,11 +177,11 @@ testPCallAndMemory() {
   Expect.equals(memory.getInt16(4), 0);
   Expect.equals(memory.getInt16(6), -1);
   checkOutOfBoundsThrows(() => memory.getInt16(8));
-  memory.free();
+  freeMem(memory);
 
   var memuint16 = fl.lookup('memuint16');
-  foreignPointer = memuint16.pcall$0(p);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 8);
+  foreignPointer = memuint16.pcall$0();
+  memory = fromPointer(foreignPointer, 8);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getUint16(0), 0);
   Expect.equals(memory.getUint16(2), 32767);
@@ -166,11 +193,11 @@ testPCallAndMemory() {
   Expect.equals(memory.getUint16(4), 32768);
   Expect.equals(memory.getUint16(6), 1);
   checkOutOfBoundsThrows(() => memory.getUint16(8));
-  memory.free();
+  freeMem(memory);
 
   var memuint32 = fl.lookup('memuint32');
-  foreignPointer = memuint32.pcall$0(p);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  foreignPointer = memuint32.pcall$0();
+  memory = fromPointer(foreignPointer, 16);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getUint32(0), 0);
   Expect.equals(memory.getUint32(4), 1);
@@ -182,11 +209,11 @@ testPCallAndMemory() {
   Expect.equals(memory.getUint32(8), 1);
   Expect.equals(memory.getUint32(12), 4294967295);
   checkOutOfBoundsThrows(() => memory.getUint32(16));
-  memory.free();
+  freeMem(memory);
 
   var memint64 = fl.lookup('memint64');
-  foreignPointer = memint64.pcall$0(p);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 32);
+  foreignPointer = memint64.pcall$0();
+  memory = fromPointer(foreignPointer, 32);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getInt64(0), 0);
   Expect.equals(memory.getInt64(8), -1);
@@ -199,11 +226,11 @@ testPCallAndMemory() {
   Expect.equals(memory.getInt64(16), 9223372036854775807);
   Expect.equals(memory.getInt64(24), -9223372036854775808);
   checkOutOfBoundsThrows(() => memory.getInt64(25));
-  memory.free();
+  freeMem(memory);
 
   var memfloat32 = fl.lookup('memfloat32');
-  foreignPointer = memfloat32.pcall$0(p);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 16);
+  foreignPointer = memfloat32.pcall$0();
+  memory = fromPointer(foreignPointer, 16);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.approxEquals(memory.getFloat32(0), 0);
   Expect.approxEquals(memory.getFloat32(4), 1.175494e-38, 0.01);
@@ -215,11 +242,11 @@ testPCallAndMemory() {
   Expect.approxEquals(memory.getFloat32(8), 3.402823e+38);
   Expect.equals(memory.getFloat32(12), 4);
   checkOutOfBoundsThrows(() => memory.getFloat32(16));
-  memory.free();
+  freeMem(memory);
 
   var memfloat64 = fl.lookup('memfloat64');
-  foreignPointer = memfloat64.pcall$0(p);
-  memory = new ForeignMemory.fromForeignPointer(foreignPointer, 32);
+  foreignPointer = memfloat64.pcall$0();
+  memory = fromPointer(foreignPointer, 32);
   Expect.equals(memory.address, foreignPointer.address);
   Expect.equals(memory.getFloat64(0), 0);
   Expect.approxEquals(memory.getFloat64(8), 1.79769e+308);
@@ -231,7 +258,7 @@ testPCallAndMemory() {
   Expect.approxEquals(memory.getFloat64(16), -1.79769e+308);
   Expect.approxEquals(memory.getFloat64(24), 1.79769e+308);
   checkOutOfBoundsThrows(() => memory.getFloat64(25));
-  memory.free();
+  freeMem(memory);
 
   fl.close();
 }
@@ -372,11 +399,26 @@ testDefaultLibraryLookups() {
   Expect.isTrue(ForeignLibrary.main.lookup('qsort') is ForeignFunction);
 }
 
-testAllocate(bool finalized) {
+testAllocate(bool finalized, bool immutable) {
+  freeMem(memory) {
+    if (immutable) {
+      freeFunc.vcall$1(memory.address);
+    } else {
+      memory.free();
+    }
+  }
+
   int length = 10;
-  ForeignMemory memory = finalized
-    ? new ForeignMemory.allocatedFinalized(length)
-    : new ForeignMemory.allocated(length);
+  var memory;
+  if (immutable) {
+    memory = finalized
+        ? new ImmutableForeignMemory.allocatedFinalized(length)
+        : new ImmutableForeignMemory.allocated(length);
+  } else {
+    memory = finalized
+        ? new ForeignMemory.allocatedFinalized(length)
+        : new ForeignMemory.allocated(length);
+  }
   Expect.isTrue(memory.address != 0);
   Expect.throws(() => memory.getUint8(-100), isRangeError);
   Expect.throws(() => memory.getUint8(-1), isRangeError);
@@ -424,8 +466,30 @@ testAllocate(bool finalized) {
   Expect.equals(2.0, memory.getFloat64(0));
 
   if (!finalized) {
-    memory.free();
-    memory.free();  // Free'ing multiple times is okay.
+    freeMem(memory);
+    if (!immutable) memory.free();  // Free'ing multiple times is okay.
+  }
+}
+
+void otherProcess(ImmutableForeignMemory memory) {
+  Expect.equals(42.0, memory.getFloat32(0));
+}
+
+void otherProcessNonFinalized(ImmutableForeignMemory memory) {
+  Expect.equals(42.0, memory.getFloat32(0));
+  freeFunc.vcall$1(memory.address);
+}
+
+testImmutablePassing(finalized) {
+  var length = 10;
+  var memory = finalized
+      ? new ImmutableForeignMemory.allocatedFinalized(length)
+      : new ImmutableForeignMemory.allocated(length);
+  memory.setFloat32(0, 42.0);
+  if (finalized) {
+    Process.spawn(otherProcess, memory);
+  } else {
+    Process.spawn(otherProcessNonFinalized, memory);
   }
 }
 
@@ -436,9 +500,8 @@ testStruct() {
   // type we are working on.
   var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
   ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
-  ForeignPointer p = new ForeignPointer();
   var memuint32 = fl.lookup('memuint32');
-  var foreignPointer = memuint32.pcall$0(p);
+  var foreignPointer = memuint32.pcall$0();
   var struct32 = new Struct32.fromAddress(foreignPointer.address, 4);
   Expect.equals(struct32.address, foreignPointer.address);
   Expect.equals(0, struct32.getField(0));
@@ -461,7 +524,7 @@ testStruct() {
   struct32.setField(2, 65536);
 
   var memint64 = fl.lookup('memint64');
-  foreignPointer = memint64.pcall$0(p);
+  foreignPointer = memint64.pcall$0();
   var struct64 = new Struct64.fromAddress(foreignPointer.address, 4);
   Expect.equals(struct64.address, foreignPointer.address);
   Expect.equals(0, struct64.getField(0));
@@ -494,7 +557,7 @@ testStruct() {
     memint = fl.lookup('memint64');
     expected = struct64;
   }
-  foreignPointer = memint.pcall$0(p);
+  foreignPointer = memint.pcall$0();
   var struct = new Struct.fromAddress(foreignPointer.address, 4);
   Expect.equals(struct.address, foreignPointer.address);
   Expect.equals(expected.getField(0), struct.getField(0));

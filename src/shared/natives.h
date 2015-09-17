@@ -173,35 +173,36 @@ namespace fletch {
   N(ForeignLCallwLw,             "ForeignFunction", "_Lcall$wLw")        \
                                                                          \
   N(ForeignDecreaseMemoryUsage,  "ForeignMemory", "_decreaseMemoryUsage")\
-  N(ForeignMarkForFinalization,  "ForeignMemory", "_markForFinalization")\
-  N(ForeignAllocate,             "ForeignMemory", "_allocate")           \
+  N(ForeignMarkForFinalization,  "UnsafeMemory", "_markForFinalization") \
+  N(ForeignAllocate,             "UnsafeMemory", "_allocate")            \
+                                                                         \
+  N(ForeignGetInt8,              "UnsafeMemory", "_getInt8")             \
+  N(ForeignGetInt16,             "UnsafeMemory", "_getInt16")            \
+  N(ForeignGetInt32,             "UnsafeMemory", "_getInt32")            \
+  N(ForeignGetInt64,             "UnsafeMemory", "_getInt64")            \
+                                                                         \
+  N(ForeignSetInt8,              "UnsafeMemory", "_setInt8")             \
+  N(ForeignSetInt16,             "UnsafeMemory", "_setInt16")            \
+  N(ForeignSetInt32,             "UnsafeMemory", "_setInt32")            \
+  N(ForeignSetInt64,             "UnsafeMemory", "_setInt64")            \
+                                                                         \
+  N(ForeignGetUint8,             "UnsafeMemory", "_getUint8")            \
+  N(ForeignGetUint16,            "UnsafeMemory", "_getUint16")           \
+  N(ForeignGetUint32,            "UnsafeMemory", "_getUint32")           \
+  N(ForeignGetUint64,            "UnsafeMemory", "_getUint64")           \
+                                                                         \
+  N(ForeignSetUint8,             "UnsafeMemory", "_setUint8")            \
+  N(ForeignSetUint16,            "UnsafeMemory", "_setUint16")           \
+  N(ForeignSetUint32,            "UnsafeMemory", "_setUint32")           \
+  N(ForeignSetUint64,            "UnsafeMemory", "_setUint64")           \
+                                                                         \
+  N(ForeignGetFloat32,           "UnsafeMemory", "_getFloat32")          \
+  N(ForeignGetFloat64,           "UnsafeMemory", "_getFloat64")          \
+                                                                         \
+  N(ForeignSetFloat32,           "UnsafeMemory", "_setFloat32")          \
+  N(ForeignSetFloat64,           "UnsafeMemory", "_setFloat64")          \
+                                                                         \
   N(ForeignFree,                 "ForeignMemory", "_free")               \
-                                                                         \
-  N(ForeignGetInt8,              "ForeignMemory", "_getInt8")            \
-  N(ForeignGetInt16,             "ForeignMemory", "_getInt16")           \
-  N(ForeignGetInt32,             "ForeignMemory", "_getInt32")           \
-  N(ForeignGetInt64,             "ForeignMemory", "_getInt64")           \
-                                                                         \
-  N(ForeignSetInt8,              "ForeignMemory", "_setInt8")            \
-  N(ForeignSetInt16,             "ForeignMemory", "_setInt16")           \
-  N(ForeignSetInt32,             "ForeignMemory", "_setInt32")           \
-  N(ForeignSetInt64,             "ForeignMemory", "_setInt64")           \
-                                                                         \
-  N(ForeignGetUint8,             "ForeignMemory", "_getUint8")           \
-  N(ForeignGetUint16,            "ForeignMemory", "_getUint16")          \
-  N(ForeignGetUint32,            "ForeignMemory", "_getUint32")          \
-  N(ForeignGetUint64,            "ForeignMemory", "_getUint64")          \
-                                                                         \
-  N(ForeignSetUint8,             "ForeignMemory", "_setUint8")           \
-  N(ForeignSetUint16,            "ForeignMemory", "_setUint16")          \
-  N(ForeignSetUint32,            "ForeignMemory", "_setUint32")          \
-  N(ForeignSetUint64,            "ForeignMemory", "_setUint64")          \
-                                                                         \
-  N(ForeignGetFloat32,           "ForeignMemory", "_getFloat32")         \
-  N(ForeignGetFloat64,           "ForeignMemory", "_getFloat64")         \
-                                                                         \
-  N(ForeignSetFloat32,           "ForeignMemory", "_setFloat32")         \
-  N(ForeignSetFloat64,           "ForeignMemory", "_setFloat64")         \
                                                                          \
   N(StringLength,                "_StringBase", "length")                \
                                                                          \
