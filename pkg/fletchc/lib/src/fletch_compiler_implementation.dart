@@ -32,6 +32,7 @@ import 'package:compiler/src/util/uri_extras.dart' show
 
 import 'package:compiler/src/dart2jslib.dart' show
     CodegenRegistry,
+    Message,
     MessageKind,
     MessageTemplate;
 
@@ -269,6 +270,19 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
       reportDiagnostic(
           node, template.message({'text': message}, true), api.Diagnostic.HINT);
     }
+  }
+
+  void reportError(
+      Spannable node,
+      MessageKind messageKind,
+      [Map arguments = const {}]) {
+    if (messageKind == MessageKind.MIRRORS_LIBRARY_NOT_SUPPORT_BY_BACKEND) {
+      const String noMirrors =
+          "Fletch doesn't support 'dart:mirrors'. See https://goo.gl/Kwrd0O";
+      messageKind = MessageKind.GENERIC;
+      arguments = {'text': noMirrors};
+    }
+    super.reportError(node, messageKind, arguments);
   }
 }
 

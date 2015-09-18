@@ -45,9 +45,9 @@ regress_r21715_test: RuntimeError
 
 # Object.runtimeType / type check
 collection_length_test: CompileTimeError
-iterable_fold_test: CompileTimeError
+iterable_fold_test: RuntimeError
 iterable_generate_test: RuntimeError
-iterable_reduce_test: CompileTimeError
+iterable_reduce_test: RuntimeError
 iterable_to_list_test: RuntimeError
 iterable_to_set_test: RuntimeError
 linked_hash_map_from_iterable_test: RuntimeError
@@ -60,6 +60,7 @@ map_test: RuntimeError
 map_values2_test: RuntimeError
 map_values3_test: RuntimeError
 map_values4_test: RuntimeError
+null_test: RuntimeError
 
 # Isolate/Ports
 bool_from_environment_default_value_test: CompileTimeError
@@ -125,7 +126,6 @@ iterable_return_type_test/none: RuntimeError
 list_test/01: RuntimeError
 list_test/none: RuntimeError
 list_unmodifiable_test: CompileTimeError
-null_test: CompileTimeError
 num_clamp_test: RuntimeError
 num_parse_test/01: RuntimeError
 num_parse_test/none: RuntimeError

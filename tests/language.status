@@ -402,9 +402,6 @@ external_test/10: CompileTimeError
 external_test/13: CompileTimeError
 external_test/20: CompileTimeError
 external_test/25: MissingCompileTimeError
-f_bounded_equality_test: CompileTimeError
-f_bounded_quantification4_test: CompileTimeError
-f_bounded_quantification5_test: CompileTimeError
 factory2_negative_test: Fail
 factory3_test: RuntimeError
 factory_negative_test: Fail
@@ -422,7 +419,6 @@ field_initialization_order_test: RuntimeError
 final_field_initialization_order_test: RuntimeError
 final_super_field_set_test/01: RuntimeError
 first_class_types_constants_test: RuntimeError
-first_class_types_libraries_test: CompileTimeError
 first_class_types_literals_test/01: RuntimeError
 first_class_types_literals_test/02: RuntimeError
 first_class_types_literals_test/03: RuntimeError
@@ -436,7 +432,6 @@ first_class_types_literals_test/10: RuntimeError
 first_class_types_literals_test/11: RuntimeError
 first_class_types_literals_test/12: RuntimeError
 first_class_types_literals_test/none: RuntimeError
-first_class_types_test: CompileTimeError
 fixed_type_variable2_test/01: RuntimeError
 fixed_type_variable2_test/02: RuntimeError
 fixed_type_variable2_test/03: RuntimeError
@@ -507,7 +502,6 @@ function_type_alias7_test/02: MissingCompileTimeError
 function_type_alias_test: RuntimeError
 generic2_test: RuntimeError
 generic_closure_test: RuntimeError
-generic_creation_test: CompileTimeError
 generic_deep_test: RuntimeError
 generic_field_mixin2_test: RuntimeError
 generic_field_mixin3_test: RuntimeError
@@ -705,7 +699,6 @@ mixin_mixin7_test: RuntimeError
 mixin_mixin_bound2_test: RuntimeError
 mixin_mixin_bound_test: RuntimeError
 mixin_only_for_rti_test: RuntimeError
-mixin_regress_13688_test: CompileTimeError
 mixin_super_bound2_test: CompileTimeError
 mixin_super_constructor_named_test/01: MissingCompileTimeError
 mixin_super_constructor_positionals_test/01: MissingCompileTimeError
@@ -741,7 +734,6 @@ no_such_method_test: CompileTimeError
 not_enough_positional_arguments_test/01: CompileTimeError
 not_enough_positional_arguments_test/02: CompileTimeError
 not_enough_positional_arguments_test/05: CompileTimeError
-null2_test: CompileTimeError
 null_is2_test: RuntimeError
 null_test/none: CompileTimeError
 nullaware_opt_test: RuntimeError
@@ -908,6 +900,16 @@ vm/reusable_boxes_test: CompileTimeError
 vm/type_cast_vm_test: RuntimeError
 vm/type_vm_test: RuntimeError
 vm/typed_data_polymorphic_view_test: RuntimeError
+
+# Object.runtimeType isn't implemented
+f_bounded_equality_test: RuntimeError
+f_bounded_quantification4_test: RuntimeError
+f_bounded_quantification5_test: RuntimeError
+first_class_types_libraries_test: RuntimeError
+first_class_types_test: RuntimeError
+generic_creation_test: RuntimeError
+mixin_regress_13688_test: RuntimeError
+null2_test: RuntimeError
 
 [ $compiler == fletchc ]
 

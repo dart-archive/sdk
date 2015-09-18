@@ -1279,6 +1279,14 @@ abstract class CodegenVisitor
           node.selector.asIdentifier().source,
           element.library);
     }
+    if (selector.name == "runtimeType") {
+      // TODO(ahe): Implement runtimeType.
+      generateUnimplementedError(
+          node,
+          "'runtimeType' isn't supported in Fletch. See https://goo.gl/ELH6Zc");
+      applyVisitState();
+      return;
+    }
     visitForValue(receiver);
     invokeGetter(node, selector);
     applyVisitState();
