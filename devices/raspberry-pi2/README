@@ -1,0 +1,15 @@
+This README is only to run the prepare-image.sh script from the fletch repository.
+Here you have to build the fletch-vm and fletch-agent.snapshot file manually and copy
+them to the 'data' directory before running the scripts.
+
+To do this type:
+
+fletch-vm:
+
+$ cd <dir of fletch directory in fletch repository>
+$ ninja -C out/DebugXARM
+$ cp out/DebugXARM/fletch-vm devices/raspberry-pi2/data
+
+fletch-agent.snapshot (requires a fletch build):
+
+$ ./out/ReleaseIA32/fletch export pkg/fletch_agent/bin/agent.dart to file devices/raspberry-pi2/data/fletch-agent.snapshot

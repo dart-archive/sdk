@@ -181,7 +181,8 @@ abstract class PosixSystem implements System {
     }
     flags |= O_CLOEXEC;
     ForeignMemory cPath = new ForeignMemory.fromStringAsUTF8(path);
-    int fd = _open.icall$3Retry(cPath, flags, 0666);
+    int mode = 6 << 6 | 6 << 3 | 6; // octal 0666
+    int fd = _open.icall$3Retry(cPath, flags, mode);
     cPath.free();
     return fd;
   }

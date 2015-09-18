@@ -16,15 +16,8 @@ class Logger {
   final String _path;
   final bool _logToStdout;
 
-  factory Logger(String prefix, String path, {stdout: true}) {
-    if (!path.endsWith('/')) {
-      path = '${path}/';
-    }
-    if (!File.existsAsFile(path)) {
-      throw 'Cannot create logger at path: $path';
-    }
-    path = path + 'agent.log';
-    return new Logger._(prefix, path, stdout);
+  factory Logger(String prefix, String logPath, {stdout: true}) {
+    return new Logger._(prefix, logPath, stdout);
   }
 
   const Logger._(this._prefix, this._path, this._logToStdout);
@@ -51,29 +44,95 @@ class Logger {
 }
 
 class AgentContext {
+  static final ForeignFunction _getenv = ForeignLibrary.main.lookup('getenv');
+
+  static String _getEnv(String varName) {
+    var arg = new ForeignMemory.fromStringAsUTF8(varName);
+    var ptr = _getenv.pcall$1(arg);
+    if (ptr.address == 0) return null;
+    var cstring = new ForeignCString.fromForeignPointer(ptr);
+    return cstring.toString();
+  }
+
+  // Agent specific info.
+  final String ip;
+  final int    port;
+  final String pidFile;
+  final Logger logger;
+
+  // Fletch-vm path and args.
   final String vmBinPath;
   final String vmLogDir;
   final String vmPidDir;
-  final Logger logger;
 
-  const AgentContext(
-      this.vmBinPath, this.vmLogDir, this. vmPidDir, this.logger);
+  factory AgentContext() {
+    String ip = _getEnv('AGENT_IP');
+    if (ip == null) {
+      ip = '0.0.0.0';
+    }
+    int port;
+    try {
+      String portStr = _getEnv('AGENT_PORT');
+      port = int.parse(portStr);
+    } catch (_) {
+      port = 12121; // default
+    }
+    String logFile = _getEnv('AGENT_LOG_FILE');
+    if (logFile == null) {
+      print('Agent requires a valid log file. Please specify file path in '
+          'the AGENT_LOG_FILE environment variable.');
+      Process.exit();
+    }
+    var logger = new Logger('Agent', logFile);
+    String pidFile = _getEnv('AGENT_PID_FILE');
+    if (pidFile == null) {
+      logger.error('Agent requires a valid pid file. Please specify file path '
+          'in the AGENT_PID_FILE environment variable.');
+      Process.exit();
+    }
+    String vmBinPath = _getEnv('FLETCH_VM');
+    String vmLogDir = _getEnv('VM_LOG_DIR');
+    String vmPidDir = _getEnv('VM_PID_DIR');
+
+    logger.info('Agent log file: $logFile');
+    logger.info('Agent pid file: $pidFile');
+    logger.info('Vm path: $vmBinPath');
+    logger.info('Log path: $vmLogDir');
+    logger.info('Run path: $vmPidDir');
+
+    // Make sure we have a fletch-vm binary we can use for launching a vm.
+    if (!File.existsAsFile(vmBinPath)) {
+      logger.error('Cannot find fletch vm at path: $vmBinPath');
+      Process.exit();
+    }
+    // Make sure we have a valid log directory.
+    if (!File.existsAsFile(vmLogDir)) {
+      logger.error('Cannot find log directory: $vmLogDir');
+      Process.exit();
+    }
+    // Make sure we have a valid pid directory.
+    if (!File.existsAsFile(vmPidDir)) {
+      logger.error('Cannot find directory: $vmPidDir in which to write pid');
+      Process.exit();
+    }
+    return new AgentContext._(
+        ip, port, pidFile, logger, vmBinPath, vmLogDir, vmPidDir);
+  }
+
+  const AgentContext._(this.ip, this.port, this.pidFile, this.logger,
+      this.vmBinPath, this.vmLogDir, this. vmPidDir);
 }
 
 class Agent {
-  final String host;
-  final int port;
   final AgentContext _context;
-  final Logger _logger;
 
-  Agent(this.host, this.port, String vmBinPath, String vmLogDir,
-      String vmPidDir, Logger logger)
-      : _logger = logger,
-        _context = new AgentContext(vmBinPath, vmLogDir, vmPidDir, logger);
+  Agent(this._context);
 
   void start() {
-    _logger.info('starting server on $host:$port');
-    var socket = new ServerSocket(host, port);
+    var ip = _context.ip;
+    var port = _context.port;
+    _context.logger.info('starting server on $ip:$port');
+    var socket = new ServerSocket(ip, port);
     // We have to make a final reference to the context to not have the
     // containing instance passed into the closure given to spawnAccept.
     final detachedContext = _context;
@@ -242,71 +301,36 @@ class CommandHandler {
 }
 
 void main(List<String> arguments) {
-  // Startup the agent listening on specified port.
+  // The agent context will initialize itself from the runtime environment.
+  var context = new AgentContext();
 
-  // TODO(wibling): the below should be command line arguments, but passing
-  // arguments to a fletch programs is not currently supported, so hardcoding
-  // for now.
-  int port = 12121;
-  String host = '0.0.0.0';
-  String vmBinPath = '/usr/local/google/home/wibling/fletch/fletch-vm';
-  String vmLogDir = '/var/log/fletch/';
-  String vmPidDir = '/var/run/fletch';  // no end / to check code works
+  // Write the program's pid to the pid file if set.
+  _writePid(context.pidFile);
 
-  var logger = new Logger('Agent', vmLogDir);
-  logger.info('Vm path: $vmBinPath');
-  logger.info('Log path: $vmLogDir');
-  logger.info('Run path: $vmPidDir');
-
-  for (var argument in arguments) {
-    var parts = argument.split('=');
-    if (parts[0] == '--port') {
-      if (parts.length != 2) {
-        print('Invalid flag: $argument\n');
-        printUsage();
-      }
-      port = int.parse(parts[1]);
-    } else if (parts[0] == '--host') {
-      if (parts.length != 2) {
-        print('Invalid flag: $argument\n');
-        printUsage();
-      }
-      host = parts[1];
-    } else if (parts[0] == '--vm') {
-      if (parts.length != 2) {
-        print('Invalid flag: $argument\n');
-        printUsage();
-      }
-      vmBinPath = parts[1];
-    }
-  }
-  // Make sure we have a fletch-vm binary we can use for launching a vm.
-  if (!File.existsAsFile(vmBinPath)) {
-    logger.error('Cannot find fletch vm at path: $vmBinPath');
-    Process.exit();
-  }
-  // Make sure we have a valid log directory.
-  if (!File.existsAsFile(vmLogDir)) {
-    logger.error('Cannot find log directory: $vmLogDir');
-    Process.exit();
-  }
-  // Make sure we have a valid pid directory.
-  if (!File.existsAsFile(vmPidDir)) {
-    logger.error('Cannot find directory: $vmPidDir in which to write pid');
-    Process.exit();
-  }
-
-  // Run fletch agent on given host address and port.
-  var agent = new Agent(host, port, vmBinPath, vmLogDir, vmPidDir, logger);
+  // Run fletch agent on given ip address and port.
+  var agent = new Agent(context);
   agent.start();
 }
 
+void _writePid(String pidFilePath) {
+  final ForeignFunction _getpid = ForeignLibrary.main.lookup('getpid');
+
+  int pid = _getpid.icall$0();
+  List<int> encodedPid = UTF8.encode('$pid');
+  ByteBuffer buffer = new Uint8List.fromList(encodedPid).buffer;
+  var pidFile = new File.open(pidFilePath, mode: File.WRITE);
+  try {
+    pidFile.write(buffer);
+  } finally {
+    pidFile.close();
+  }
+}
 void printUsage() {
   print('Usage:');
   print('The Fletch agent supports the following flags');
   print('');
   print('  --port: specify the port on which to listen, default: 12121');
-  print('  --host: specify the ip address on which to listen, default: 0.0.0.0');
+  print('  --ip: specify the ip address on which to listen, default: 0.0.0.0');
   print('  --vm: specify the path to the vm binary, default: /opt/fletch/bin/fletch-vm.');
   print('');
   Process.exit();

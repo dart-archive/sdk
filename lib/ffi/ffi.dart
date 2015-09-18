@@ -115,7 +115,7 @@ class ForeignFunction extends Foreign {
       new ForeignPointer(_pcall$0(address));
 
   ForeignPointer pcall$1(a0) =>
-      new ForeignPointer(_pcall$1(address, a0));
+      new ForeignPointer(_pcall$1(address, _convert(a0)));
 
   ForeignPointer pcall$2(a0, a1) =>
       new ForeignPointer(_pcall$2(address, _convert(a0), _convert(a1)));
@@ -533,4 +533,25 @@ class Struct64 extends Struct {
   Struct64.finalized(int fields) : super.withWordSizeFinalized(fields, 8);
   Struct64.fromAddress(int address, int fields)
       : super.fromAddressWithWordSize(address, fields, 8);
+}
+
+class ForeignCString extends ForeignMemory {
+  static final ForeignFunction _strlen = ForeignLibrary.main.lookup('strlen');
+
+  factory ForeignCString.fromForeignPointer(ForeignPointer ptr) {
+    int length = _strlen.icall$1(ptr);
+    return new ForeignCString._(ptr, length + 1);
+  }
+
+  ForeignCString._(Foreign ptr, int length)
+      : super.fromAddress(ptr.address, length);
+
+  String toString() {
+    // Don't include the '\0' character in the encoded string.
+    var encodedString = new List(length - 1);
+    for (int i = 0; i < length - 1; ++i) {
+      encodedString.add(getUint8(i));
+    }
+    return UTF8.decode(encodedString);
+ }
 }
