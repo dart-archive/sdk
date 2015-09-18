@@ -23,6 +23,16 @@ rule gyp-mbed
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 
+rule update-version-gyp
+  command = $
+    python tools/update_version_gyp.py version.gyp
+
+build $
+    version.gyp $
+    : update-version-gyp $
+        .git/HEAD $
+        tools/update_version_gyp.py
+
 build $
     out/DebugIA32/build.ninja $
     out/DebugIA32Asan/build.ninja $
@@ -48,6 +58,7 @@ build $
     out/ReleaseXARM64/build.ninja: $
     gyp $
         common.gypi $
+        version.gyp $
         default_targets.gypi $
         fletch.gyp $
         src/double_conversion.gyp $
@@ -86,6 +97,7 @@ build $
     out/ReleaseLK/build.ninja: $
     gyp-lk $
         common.gypi $
+        version.gyp $
         lk_targets.gypi $
         fletch.gyp $
         src/double_conversion.gyp $
@@ -104,6 +116,7 @@ build $
     out/ReleaseMBED/build.ninja: $
     gyp-mbed $
         common.gypi $
+        version.gyp $
         mbed_targets.gypi $
         fletch.gyp $
         src/double_conversion.gyp $

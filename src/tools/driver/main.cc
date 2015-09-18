@@ -25,6 +25,7 @@
 #include "src/shared/native_socket.h"
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
+#include "src/shared/version.h"
 #include "src/tools/driver/connection.h"
 #include "src/tools/driver/platform.h"
 
@@ -354,7 +355,7 @@ static void ExecDaemon(
     const char** argv);
 
 static void StartDriverDaemon() {
-  const int kMaxArgv = 6;
+  const int kMaxArgv = 7;
   const char* argv[kMaxArgv];
 
   char fletch_root[MAXPATHLEN + 1];
@@ -373,10 +374,23 @@ static void StartDriverDaemon() {
   StrCat(package_option, sizeof(package_option),
          package_spec, sizeof(package_spec));
 
+  const char define_version[] = "-Dfletch.version=";
+  const char* version = GetVersion();
+  int version_option_length = sizeof(define_version) + strlen(version) + 1;
+  char* version_option = static_cast<char*>(malloc(version_option_length));
+  if (version_option == NULL) {
+    Die("%s: malloc failed: %s", program_name, strerror(errno));
+  }
+  StrCpy(version_option, version_option_length,
+         define_version, sizeof(define_version));
+  StrCat(version_option, version_option_length,
+         version, strlen(version) + 1);
+
   int argc = 0;
   argv[argc++] = vm_path;
   argv[argc++] = "-c";
   argv[argc++] = package_option;
+  argv[argc++] = version_option;
   argv[argc++] = "package:fletchc/src/driver/driver_main.dart";
   argv[argc++] = fletch_config_file;
   argv[argc++] = NULL;
@@ -579,7 +593,7 @@ static void SendArgv(DriverConnection* connection, int argc, char** argv) {
 
   char* path = static_cast<char*>(malloc(MAXPATHLEN + 1));
   if (path == NULL) {
-    Die("%s: malloc failed: %s", path, strerror(errno));
+    Die("%s: malloc failed: %s", program_name, strerror(errno));
   }
 
   if (getcwd(path, MAXPATHLEN + 1) == NULL) {

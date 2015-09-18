@@ -39,3 +39,4 @@ packages
 /third_party/bin/mac/dart
 /third_party/bin/linux/dart
 /third_party/bin/linux/dart-arm
+/version.gyp

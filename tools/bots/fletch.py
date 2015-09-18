@@ -8,6 +8,7 @@
 Buildbot steps for fletch testing
 """
 
+import datetime
 import glob
 import os
 import re
@@ -327,10 +328,16 @@ class PersistentFletchDaemon(object):
 
   def __enter__(self):
     print "Starting new persistent fletch daemon"
+    version = None
+    if os.environ.has_key('BUILDBOT_REVISION'):
+      version = os.environ['BUILDBOT_REVISION']
+    else:
+      version = "local build %s" % str(datetime.datetime.now())
     self._persistent = subprocess.Popen(
       ['%s/dart' % self._configuration['build_dir'],
        '-c',
        '--packages=pkg/fletchc/.packages',
+       '-Dfletch.version=%s' % version,
        'package:fletchc/src/driver/driver_main.dart',
        './.fletch'],
       stdout=self._log_file,
