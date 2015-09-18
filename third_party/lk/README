@@ -3,18 +3,16 @@ This directory is a split repo overlay for the LK kernel found at
 https://github.com/travisg/lk
 
 that contains the fletch specific parts to build a fletch vm that can run as
-an app within the LK kernel. To build, you need to checkout the LK sources
-to lk-downstream, in the third_party/lk directory, e.g.
+an app within the LK kernel. The kernel is located in
+'third_party/lk/lk-downstream'.
 
-git clone https://github.com/travisg/lk.git lk-downstream
+To build a image containing the fletch VM, run, in third_party/lk,
 
-Next, in third_party/lk, run
-
-make
+  make
 
 to build the default target for qemu emulation or, e.g.,
 
-make PROJECT=stm32746g-eval2-fletch
+  make PROJECT=stm32746g-eval2-fletch
 
 to build for the stm32746g evaluation board. Other project names are available
 as .mk files in third_party/lk/fletch/project

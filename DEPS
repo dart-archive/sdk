@@ -30,6 +30,8 @@ vars = {
   "path_tag": "@1.3.6",
   "charcode_tag": "@1.1.0",
 
+  "lk_rev": "@e0bca35bd38b3d035dffcec1acafaa0a61c35aac",
+
   # We use mirrors of all github repos to guarantee reproducibility and
   # consistency between what users see and what the bots see.
   # We need the mirrors to not have 100+ bots pulling github constantly.
@@ -68,7 +70,10 @@ deps = {
       (Var("github_url") % "polux/persistent") + Var("persistent_rev"),
 
   "third_party/crypto":
-      (Var("github_mirror") % "crypto") + Var("crypto_rev")
+      (Var("github_mirror") % "crypto") + Var("crypto_rev"),
+
+  "fletch/third_party/lk/lk-downstream":
+      (Var("github_url") % "travisg/lk") + Var("lk_rev"),
 }
 
 # To include Mac deps on other OSes, add this to your .gclient file:
