@@ -55,7 +55,7 @@ class SentenceParser {
     }
     return new Sentence(
         verb, preposition, target, tailPreposition, trailing,
-        programName,
+        currentDirectory, programName,
         // TODO(ahe): Get rid of the following argument:
         tokens.originalInput.skip(1).toList());
   }
@@ -383,6 +383,9 @@ class Sentence {
   /// Any tokens found after this sentence.
   final List<String> trailing;
 
+  /// The current directory of the C++ client.
+  final String currentDirectory;
+
   // TODO(ahe): Get rid of this.
   final String programName;
 
@@ -395,6 +398,7 @@ class Sentence {
       this.target,
       this.tailPreposition,
       this.trailing,
+      this.currentDirectory,
       this.programName,
       this.arguments);
 

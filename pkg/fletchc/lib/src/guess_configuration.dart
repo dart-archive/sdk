@@ -22,7 +22,7 @@ bool _looksLikeFletchVm(Uri uri) {
 }
 
 
-Uri guessFletchVm(Uri fletchVm) {
+Uri guessFletchVm(Uri fletchVm, Uri base) {
   if (fletchVm == null && _FLETCH_VM != null) {
     fletchVm = Uri.base.resolve(_FLETCH_VM);
   } else {

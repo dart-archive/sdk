@@ -66,8 +66,8 @@ Future<int> compileAndRun(
     throwFatalError(DiagnosticKind.noFile);
   }
 
-  CompileAndRunTask task =
-      new CompileAndRunTask('${sentence.programName}-vm', options);
+  CompileAndRunTask task = new CompileAndRunTask(
+      '${sentence.programName}-vm', options, sentence.base);
 
   // Create a temporary worker/session.
   IsolateController worker =
@@ -89,23 +89,28 @@ class CompileAndRunTask extends SharedTask {
 
   final Options options;
 
-  const CompileAndRunTask(this.fletchVm, this.options);
+  final Uri base;
+
+  const CompileAndRunTask(this.fletchVm, this.options, this.base);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return compileAndRunTask(fletchVm, options, commandSender, commandIterator);
+    return compileAndRunTask(
+        fletchVm, options, base, commandSender, commandIterator);
   }
 }
 
 Future<int> compileAndRunTask(
     String fletchVm,
     Options options,
+    Uri base,
     CommandSender commandSender,
     StreamIterator<Command> commandIterator) async {
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   FletchCompiler compilerHelper = new FletchCompiler(
+      currentDirectory: base,
       options: compilerOptions,
       packageRoot: options.packageRootPath,
       script: options.script,
@@ -184,7 +189,8 @@ Future<int> compileAndRunTask(
   await session.applyDelta(fletchDelta);
 
   if (options.snapshotPath != null) {
-    await session.writeSnapshot(options.snapshotPath);
+    Uri snapshotUri = fileUri(options.snapshotPath, base);
+    await session.writeSnapshot(snapshotUri.toFilePath());
   } else if (options.testDebugger) {
     await session.testDebugger(options.testDebuggerCommands);
   } else {

@@ -245,7 +245,9 @@ Future<Null> handleVerb(
       session = lookupSession(sessionName);
       if (session == null) {
         session = await createSession(sessionName, () => allocateWorker(pool));
-        initializer = new CreateSessionTask(sessionName);
+        // TODO(ahe): packageRoot should be a user configurable option.
+        Uri packageRoot = client.sentence.base.resolve('package/');
+        initializer = new CreateSessionTask(sessionName, packageRoot);
       }
     }
     DriverVerbContext context =

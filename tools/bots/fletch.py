@@ -334,12 +334,12 @@ class PersistentFletchDaemon(object):
     else:
       version = "local build %s" % str(datetime.datetime.now())
     self._persistent = subprocess.Popen(
-      ['%s/dart' % self._configuration['build_dir'],
+      [os.path.join(os.path.abspath(self._configuration['build_dir']), 'dart'),
        '-c',
-       '--packages=pkg/fletchc/.packages',
+       '--packages=%s' % os.path.abspath('pkg/fletchc/.packages'),
        '-Dfletch.version=%s' % version,
        'package:fletchc/src/driver/driver_main.dart',
-       './.fletch'],
+       os.path.abspath('./.fletch')],
       stdout=self._log_file,
       stderr=subprocess.STDOUT,
       close_fds=True,
@@ -347,7 +347,11 @@ class PersistentFletchDaemon(object):
       # down in response to a signal, the persistent process will kill its
       # process group to ensure that any processes it has spawned also exit. If
       # we don't use a new process group, that will also kill this process.
-      preexec_fn=os.setsid)
+      preexec_fn=os.setsid,
+      # We change the current directory of the persistent process to ensure
+      # that we read files relative to the C++ client's current directory, not
+      # the persistent process'.
+      cwd='/')
 
     while not self._log_file.tell():
       # We're waiting for the persistent process to write a line on stdout. It
