@@ -421,7 +421,7 @@ class FletchSessionMirror {
   }
 
   void printLoggedCommands(BytesOutputSink sink, String executable) {
-    sink.writeln("Previous commands in this sesssion:");
+    sink.writeln("Previous commands in this session:");
     for (List<String> command in internalLoggedCommands) {
       sink.writeText(executable);
       for (String argument in command) {
@@ -437,6 +437,10 @@ class FletchSessionMirror {
 }
 
 Future<Null> main(List<String> arguments) async {
+  // Setting [sessionCount] to the current time in milliseconds ensures that it
+  // is highly unlikely that reproduction commands conflicts with an existing
+  // session in a persistent process that wasn't killed.
+  sessionCount = new DateTime.now().millisecondsSinceEpoch;
   String executable = arguments.first;
   String script = arguments[1];
   arguments = arguments.skip(2).toList();
