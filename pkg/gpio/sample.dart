@@ -7,24 +7,16 @@ import 'package:gpio/gpio.dart';
 main(List<String> args) {
   const int led = 4;
   const int button = 17;
-  /* args passing to fletch VM is not suppported
-  if (args.length == 0) {
-    print('testSysfs');
-    testSysfs(led, button);
-  } else if (args[0] == 'mm') {
-    print('testMemoryMapped');
-    testMemoryMapped(led, button);
-  } else {
-    print('testMemoryMappedPullUpPullDown');
-    testMemoryMappedPullUpPullDown(27);
-  }
-  */
-  testMemoryMapped(led, button);
+
+  // Un-comment calling one of the samples.
+
+  //testMemoryMapped(led, button);
   //testMemoryMappedPullUpPullDown(27);
   //testSysfs(led, button);
   //testSysfsWithTimeout(led, button);
 }
 
+// Use memory mapped GPIO to turn on the led when the button is pressed.
 void testMemoryMapped(int led, int button) {
   var gpio = new PiMemoryMappedGPIO();
   gpio.setMode(led, Mode.output);
@@ -49,6 +41,9 @@ void testMemoryMappedPullUpPullDown(int pin) {
   print('With floating: ${gpio.getPin(pin)}');
 }
 
+// Use sysfs GPIO to turn on the led when the button is pressed.
+//
+// This code is using a tight loop.
 void testSysfs(int led, int button) {
   var gpio = new SysfsGPIO();
   gpio.exportPin(led);
@@ -65,6 +60,9 @@ void testSysfs(int led, int button) {
   }
 }
 
+// Use sysfs GPIO to turn on the led when the button is pressed.
+//
+// This code is waiting to the button state to change.
 void testSysfsWithTimeout(int led, int button) {
   var gpio = new SysfsGPIO();
   gpio.exportPin(led);

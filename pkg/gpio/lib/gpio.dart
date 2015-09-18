@@ -144,6 +144,9 @@ class PiMemoryMappedGPIO extends _GPIOBase implements GPIO {
     // Open /dev/mem to get to the physical memory.
     var devMem = new ForeignMemory.fromStringAsUTF8('/dev/mem');
     _fd = _open.icall$2Retry(devMem, oRDWR | oSync);
+    if (_fd < 0) {
+      throw new GPIOException("Failed to open '/dev/mem'", Foreign.errno);
+    }
     devMem.free();
 
     // From /usr/include/x86_64-linux-gnu/bits/mman-linux.h.
@@ -151,8 +154,7 @@ class PiMemoryMappedGPIO extends _GPIOBase implements GPIO {
     const int protWrite = 0x2;  // PROT_WRITE.
     const int mapShared = 0x01;  // MAP_SHARED.
 
-    ForeignPointer p = new ForeignPointer();
-    _addr = _mmap.pcall$6(p, 0, _blockSize, protRead | protWrite, mapShared,
+    _addr = _mmap.pcall$6(0, _blockSize, protRead | protWrite, mapShared,
                           _fd, _baseAddressModel2 + _baseAddressGPIOOffset);
     _mem = new ForeignMemory.fromAddress(_addr.address, _blockSize);
   }
@@ -474,5 +476,18 @@ class SysfsGPIO extends _GPIOBase implements GPIO {
     if (!isTracked(pin)) return;
     _exportUnexport(false, pin);
     _untrack(pin);  // This is no longer tracked.
+  }
+}
+
+/// Exceptions thrown by GPIO.
+class GPIOException implements Exception {
+  /// Exception message.
+  final String message;
+  /// OS error number if any.
+  final int errno;
+  const GPIOException(this.message, [this.errno]);
+  String toString() {
+    if (errno == null) return message;
+    return '$message (error ${errno})';
   }
 }
