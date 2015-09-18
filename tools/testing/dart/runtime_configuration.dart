@@ -53,7 +53,7 @@ class RuntimeConfiguration {
         return new FletchdRuntimeConfiguration();
 
       case 'fletchvm':
-        return new FletchVMRuntimeConfiguration();
+        return new FletchVMRuntimeConfiguration(configuration);
 
       case 'fletch_warnings':
         return new FletchWarningsRuntimeConfiguration(configuration);
@@ -213,7 +213,9 @@ class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
 }
 
 class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
-  FletchVMRuntimeConfiguration();
+  Map configuration;
+
+  FletchVMRuntimeConfiguration(this.configuration);
 
   List<Command> computeRuntimeCommands(
       TestSuite suite,
@@ -228,6 +230,14 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
       throw "Fletch VM cannot run files of type '$type'.";
     }
     var argumentsUnfold = ["-Xunfold-program"]..addAll(arguments);
+
+    if (configuration['system'] == 'lk') {
+      return <Command>[
+          commandBuilder.getVmCommand(
+              "tools/lk/run_snapshot_lk_qemu.sh",
+              arguments,
+              environmentOverrides)];
+    }
 
     // NOTE: We assume that `fletch-vm` behaves the same as invoking
     // the DartVM in terms of exit codes.
