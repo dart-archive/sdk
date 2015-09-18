@@ -31,6 +31,12 @@ mkfifo "$PIPEDIR/qemu.in" "$PIPEDIR/qemu.out"
 echo "Starting qemu..."
 qemu-system-arm -machine vexpress-a9 -m 2 -kernel third_party/lk/out/build-vexpress-a9-fletch/lk.elf -nographic -serial pipe:$PIPEDIR/qemu &
 PID=$!
+function cleanup {
+  echo "Killing $PID"
+  kill $PID
+}
+trap cleanup EXIT
+
 echo "Started with PID $PID"
 
 echo "Waiting for qemu to come up..."
@@ -51,17 +57,23 @@ grep -qe "STEP2" $PIPEDIR/qemu.out
 echo "Sending snapshot..."
 cat $1 >$PIPEDIR/qemu.in
 
-KEY=$'TEARING DOWN fletch-vm...\r'
 while IFS='' read -r line; do
   echo "$line"
-  if [ "$line" = "$KEY" ]; then
+  if [ "$line" = $'TEARING DOWN fletch-vm...\r' ]; then
     break;
+  fi
+  if [ "$line" = $'Aborted (immediate)\r' ]; then
+    exit 253;
+  fi
+  if [ "$line" = $'Aborted (scheduled)\r' ]; then
+    exit 253;
+  fi
+  if [[ "$line" =~ "HALT: spinning forever..."* ]]; then
+    exit 253;
   fi
 done < $PIPEDIR/qemu.out
 
 read -r line< $PIPEDIR/qemu.out
 echo "$line"
-
-kill $PID
 
 exit ${line:11:-1}

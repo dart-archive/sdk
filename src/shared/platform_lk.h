@@ -78,7 +78,7 @@ class MonitorImpl {
     // TODO(herhut): This is not really since epoch.
     status_t status = sem_timedwait(&sem_, microseconds_since_epoch);
     mutex_acquire(&mutex_);
-    return status == ERR_TIMED_OUT;
+    return status != ERR_TIMED_OUT;
   }
 
   int Notify() {

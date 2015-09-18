@@ -261,6 +261,8 @@ bool Scheduler::EnqueueProcess(Process* process, Port* port) {
 }
 
 int Scheduler::Run() {
+  preempt_monitor_->Lock();
+
   thread_pool_.Start();
   gc_thread_->StartThread();
 
@@ -274,8 +276,6 @@ int Scheduler::Run() {
       ? Platform::GetMicroseconds() + kProfileIntervalUs
       : UINT64_MAX;
   uint64 next_timeout = Utils::Minimum(next_preempt, next_profile);
-
-  preempt_monitor_->Lock();
   while (processes_ > 0) {
     // If we didn't time out, we were interrupted. In that case, continue.
     if (!preempt_monitor_->WaitUntil(next_timeout)) continue;

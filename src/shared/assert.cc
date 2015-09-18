@@ -27,6 +27,7 @@ void DynamicAssertionHelper::Fail(const char* format, ...) {
   va_start(arguments, format);
   fprintf(stderr, "%s:%d: error: ", file_, line_);
   vfprintf(stderr, format, arguments);
+  fprintf(stderr, "\n");
   va_end(arguments);
 #endif  // FLETCH_SUPPORT_PRINT_INTERCEPTORS
 
