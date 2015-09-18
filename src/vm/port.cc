@@ -139,9 +139,13 @@ NATIVE(PortSend) {
       port->Unlock();
       return Failure::wrong_argument_type();
     }
-    // Return the locked port. This will allow the scheduler to
-    // schedule the owner of the port, while it's still alive.
-    return reinterpret_cast<Object*>(port);
+
+    if (port_process != process) {
+      // If sending to another process, return the locked port. This will allow
+      // the scheduler to schedule the owner of the port, while it's still
+      // alive.
+      return reinterpret_cast<Object*>(port);
+    }
   }
   port->Unlock();
   return process->program()->null_object();
