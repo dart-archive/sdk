@@ -42,6 +42,10 @@ import 'package:compiler/src/util/util.dart' show
 import 'fletch_registry.dart' show
     FletchRegistry;
 
+import 'please_report_crash.dart' show
+    crashReportRequested,
+    requestBugReportOnCompilerCrashMessage;
+
 import 'fletch_function_builder.dart';
 import 'debug_info.dart';
 import 'find_position_visitor.dart';
@@ -273,6 +277,11 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
       reportDiagnostic(
           node, template.message({'text': message}, true), api.Diagnostic.HINT);
     }
+  }
+
+  void pleaseReportCrash() {
+    crashReportRequested = true;
+    print(requestBugReportOnCompilerCrashMessage);
   }
 
   void reportError(

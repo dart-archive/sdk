@@ -80,6 +80,10 @@ import 'session_manager.dart' show
 import '../verbs/create_verb.dart' show
     CreateSessionTask;
 
+import '../please_report_crash.dart' show
+    crashReportRequested,
+    requestBugReportOnOtherCrashMessage;
+
 Function gracefulShutdown;
 
 class DriverCommandTransformerBuilder
@@ -235,6 +239,7 @@ Future<Null> handleVerb(
     List<String> arguments,
     ClientController client,
     IsolatePool pool) async {
+  crashReportRequested = false;
 
   Future<int> performVerb() async {
     client.parseArguments(arguments);
@@ -261,6 +266,10 @@ Future<Null> handleVerb(
       handleLateError: client.log.error)
       .catchError(client.reportErrorToClient, test: (e) => e is InputError)
       .catchError((error, StackTrace stackTrace) {
+        if (!crashReportRequested) {
+          client.printLineOnStderr(requestBugReportOnOtherCrashMessage);
+          crashReportRequested = true;
+        }
         client.printLineOnStderr('$error');
         if (stackTrace != null) {
           client.printLineOnStderr('$stackTrace');
@@ -416,6 +425,10 @@ class ClientController {
   }
 
   int reportErrorToClient(InputError error, StackTrace stackTrace) {
+    if (!crashReportRequested) {
+      printLineOnStderr(requestBugReportOnOtherCrashMessage);
+      crashReportRequested = true;
+    }
     printLineOnStderr(error.asDiagnostic().formatMessage());
     if (error.kind == DiagnosticKind.internalError) {
       printLineOnStderr('$stackTrace');
@@ -447,6 +460,8 @@ class IsolateController {
   /// Subscription for errors from [isolate].
   StreamSubscription errorSubscription;
 
+  bool crashReportRequested = false;
+
   IsolateController(this.isolate);
 
   /// Begin a session with the worker isolate.
@@ -474,9 +489,14 @@ class IsolateController {
   /// isolate sends DriverCommand.ClosePort, or if the isolate is killed due to
   /// DriverCommand.Signal arriving through client.commands.
   Future<Null> attachClient(ClientController client) async {
+    crashReportRequested = false;
     errorSubscription.onData((errorList) {
       String error = errorList[0];
       String stackTrace = errorList[1];
+      if (!crashReportRequested) {
+        client.printLineOnStderr(requestBugReportOnOtherCrashMessage);
+        crashReportRequested = true;
+      }
       client.printLineOnStderr(error);
       if (stackTrace != null) {
         client.printLineOnStderr(stackTrace);
