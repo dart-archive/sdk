@@ -73,7 +73,7 @@ class LPS25H {
   }
 
 
-  /// Read the current preasure value.
+  /// Read the current pressure value.
   double readPressure() {
     return _signed24(
         _device.readByte(_pressOutH), _device.readByte(_pressOutL),
