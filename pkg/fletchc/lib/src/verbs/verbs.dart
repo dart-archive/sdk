@@ -99,6 +99,7 @@ class Verb {
 const Map<String, Verb> commonVerbs = const <String, Verb>{
   "help": helpVerb,
   "run": runVerb,
+  "export": exportVerb,
 };
 
 /// Uncommon verbs aren't displayed in the normal help screen.
@@ -110,7 +111,6 @@ const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "compile-and-run": compileAndRunVerb,
   "create": createVerb,
   "debug": debugVerb,
-  "export": exportVerb,
   "shutdown": shutdownVerb,
   "x-end": endVerb,
   "x-run": xRunVerb,

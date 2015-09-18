@@ -4,6 +4,10 @@
 
 library fletchc.verbs.documentation;
 
+const String synopsis = """
+Usage: fletch <action> [<argument>]...
+   Where <action> is one of the following:""";
+
 const String debugDocumentation = """
    debug
              Start an interactive debug session
@@ -11,15 +15,15 @@ const String debugDocumentation = """
    debug backtrace
              Print the current stack trace
 
-   debug break LOCATION
-             Set a breakpoint at LOCATION. LOCATION must have one of the formats
-             methodName@bytecodeIndex or filename:line:column
+   debug break <location>
+             Set a breakpoint at <location>. <Location> must have one of the
+             formats methodName@bytecodeIndex or filename:line:column
 
    debug continue
              Resume execution of a program when at a breakpoint
 
-   debug delete-breakpoint n
-             Delete breakpoint with id n
+   debug delete-breakpoint <n>
+             Delete breakpoint with id <n>
 
    debug disasm
              Print bytecodes for the selected frame
@@ -30,8 +34,8 @@ const String debugDocumentation = """
    debug finish
              Finish execution of the current frame
 
-   debug frame n
-             Select frame n in the stack trace
+   debug frame <n>
+             Select frame <n> in the stack trace
 
    debug list
              Print source listing for the selected frame
@@ -39,10 +43,10 @@ const String debugDocumentation = """
    debug list breakpoints
              Print a list of all breakpoints
 
-   debug print name
+   debug print <name>
              Print the value of the local variable with the given name
 
-   debug print *name
+   debug print *<name>
              Print the structure of the local variable with the given name
 
    debug print-all
@@ -71,8 +75,7 @@ const String debugDocumentation = """
 """;
 
 const String helpDocumentation = """
-   help      Display this information.
-             Use 'fletch help all' for a list of all actions
+   help all  List all commands
 """;
 
 const String compileAndRunDocumentation = """
@@ -86,38 +89,43 @@ const String shutdownDocumentation = """
 """;
 
 const String createDocumentation = """
-   create    Create something
+   create session <name>
+             Create a new session with the given name
 """;
 
 const String compileDocumentation = """
-   compile file FILE
-             Compile file named FILE
+   compile <file> [in session <name>]
+             Compile <file>
 """;
 
 const String attachDocumentation = """
-   attach tcp_socket [HOST:]PORT
+   attach tcp_socket [<host>:]<port>
              Attach to Fletch VM on the given socket
 """;
 
 const String xRunDocumentation = """
-   x-run     Run the compiled code on the Fletch VM
+   x-run     DEPRECATED use 'run' instead: Run the compiled code on
+             the Fletch VM
 """;
 
 const String runDocumentation = """
-   run [file FILE]
-             Run FILE on the Fletch VM. Compile FILE if neeed.
+   run [<file>]
+             Run <file> on the Fletch VM. Compile <file> if neeed. If no <file>
+             is given, run the previously compiled file.
 """;
 
 const String endDocumentation = """
-   x-end session NAME
+   x-end session <name>
              End the named session
 """;
 
 const String servicecDocumentation = """
-   x-servicec file FILE
-             Compile service IDL file named FILE to custom fletch interface
+   x-servicec <file>
+             Compile service IDL file named <file> to custom fletch interface
 """;
 
 const String exportDocumentation = """
-   export [file DARTFILE] to file SNAPSHOT
+   export [<dartfile>] to <snapshot>
+             Compile <dartfile> and create a snapshot in <snapshot>. If no
+             <dartfile> is given, export the previously compiled file
 """;

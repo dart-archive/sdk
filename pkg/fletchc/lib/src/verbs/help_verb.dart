@@ -11,7 +11,8 @@ import 'verbs.dart' show
     uncommonVerbs;
 
 import 'documentation.dart' show
-    helpDocumentation;
+    helpDocumentation,
+    synopsis;
 
 const Verb helpVerb =
     const Verb(
@@ -32,11 +33,9 @@ Future<int> help(AnalyzedSentence sentence, _) async {
 }
 
 String generateHelpText(bool showAllVerbs) {
-  List<String> helpStrings = <String>[];
-  bool isFirst = true;
+  List<String> helpStrings = <String>[synopsis];
   addVerb(String name, Verb verb) {
-    if (!isFirst) helpStrings.add("");
-    isFirst = false;
+    helpStrings.add("");
     List<String> lines = verb.documentation.trimRight().split("\n");
     for (int i = 0; i < lines.length; i++) {
       String line = lines[i];
@@ -49,15 +48,26 @@ String generateHelpText(bool showAllVerbs) {
       helpStrings.add(lines[i]);
     }
   }
-  commonVerbs.forEach(addVerb);
-  if (helpStrings.length > 20) {
+  List<String> names = <String>[]..addAll(commonVerbs.keys);
+  if (showAllVerbs) {
+    names.addAll(uncommonVerbs.keys);
+  }
+  if (showAllVerbs) {
+    names.sort();
+  }
+  for (String name in names) {
+    Verb verb = commonVerbs[name];
+    if (verb == null) {
+      verb = uncommonVerbs[name];
+    }
+    addVerb(name, verb);
+  }
+
+  if (!showAllVerbs && helpStrings.length > 20) {
     throw new StateError(
         "More than 20 lines in the combined documentation of [commonVerbs]. "
         "The documentation may scroll out of view:\n${helpStrings.join('\n')}."
         "Can you shorten the documentation?");
-  }
-  if (showAllVerbs) {
-    uncommonVerbs.forEach(addVerb);
   }
   return helpStrings.join("\n");
 }
