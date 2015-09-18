@@ -93,8 +93,14 @@ import '../diagnostic.dart' show
 import '../driver/session_manager.dart' show
     lookupSession; // Don't export this.
 
+import 'verbs.dart' show
+    Verb;
+
 export 'verbs.dart' show
     Verb;
+
+import 'documentation.dart' show
+    helpDocumentation;
 
 AnalyzedSentence analyzeSentence(Sentence sentence) {
   Uri base = Uri.base;
@@ -102,6 +108,16 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
     base = fileUri(appendSlash(sentence.currentDirectory), base);
   }
   ResolvedVerb verb = sentence.verb;
+
+  if (sentence.target != null && sentence.target.kind == TargetKind.HELP) {
+    Verb contextHelp = new Verb((_,__) async {
+      print(verb.verb.documentation);
+      return 0;
+    }, null);
+    return new AnalyzedSentence(
+      new ResolvedVerb(verb.name, contextHelp), null, null, null, null, null,
+      null, null, null, null, null);
+  }
 
   Preposition preposition = sentence.preposition;
   if (preposition == null) {

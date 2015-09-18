@@ -215,6 +215,9 @@ class SentenceParser {
       case "toggle":
         return makeNamedTarget(TargetKind.TOGGLE);
 
+      case "help":
+        return makeTarget(TargetKind.HELP);
+
       default:
         return new ErrorTarget(
             "Expected 'session(s)', 'class(s)', 'method(s)', 'file(s)', "
@@ -348,6 +351,7 @@ enum TargetKind {
   PRINT,
   PRINT_ALL,
   TOGGLE,
+  HELP,
 }
 
 class NamedTarget extends Target {
