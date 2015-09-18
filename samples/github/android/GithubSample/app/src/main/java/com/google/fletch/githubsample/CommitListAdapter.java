@@ -28,9 +28,18 @@ public class CommitListAdapter extends SlidingWindow<CommitListAdapter.CommitVie
   }
 
   @Override
-  public CommitViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+  public CommitViewHolder onCreateViewHolder(final ViewGroup parent, int viewType) {
     View view =
         LayoutInflater.from(parent.getContext()).inflate(R.layout.cards_layout, parent, false);
+
+    ((CommitCardView) view.findViewById(R.id.card_view))
+        .setOnClickListener(new View.OnClickListener() {
+          @Override
+          public void onClick(View v) {
+            toggle(((RecyclerView) parent).getChildPosition(v));
+          }
+        });
+
     return new CommitViewHolder(view);
   }
 
@@ -81,6 +90,10 @@ public class CommitListAdapter extends SlidingWindow<CommitListAdapter.CommitVie
         loadedView.setVisibility(View.VISIBLE);
         loadingView.setVisibility(View.GONE);
       }
+    }
+
+    public CommitCardView getCardView() {
+      return cardView;
     }
 
     private boolean loading;

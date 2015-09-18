@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    >
 
-    <com.google.fletch.githubsample.CommitCardView
-        android:id="@+id/card_view"
+<com.google.fletch.githubsample.CommitCardView
+        xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:card_view="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/card_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginRight="10dp"
@@ -21,20 +19,20 @@
         android:clickable="true"
         >
 
-        <ProgressBar
+    <ProgressBar
             android:id="@+id/card_loading"
             android:layout_height="70dp"
             android:layout_width="match_parent"
             android:padding="20dp"/>
 
-        <RelativeLayout
+    <RelativeLayout
             android:id="@+id/card_loaded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="10dp"
             >
 
-            <ImageView
+        <ImageView
                 android:layout_width="60dp"
                 android:layout_height="60dp"
                 android:id="@+id/avatar"
@@ -43,7 +41,7 @@
                 android:layout_marginRight="20dp"
                 />
 
-            <TextView
+        <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/title"
@@ -54,7 +52,7 @@
                 android:textAppearance="@android:style/TextAppearance.Material.Title"
                 />
 
-            <TextView
+        <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/author"
@@ -64,8 +62,7 @@
                 android:textAppearance="@android:style/TextAppearance.Material.Body1"
                 />
 
-        </RelativeLayout>
+    </RelativeLayout>
 
-    </com.google.fletch.githubsample.CommitCardView>
+</com.google.fletch.githubsample.CommitCardView>
 
-</LinearLayout>

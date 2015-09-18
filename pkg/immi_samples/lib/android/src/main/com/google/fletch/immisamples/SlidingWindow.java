@@ -101,6 +101,10 @@ public abstract class SlidingWindow<T extends RecyclerView.ViewHolder>
     });
   }
 
+  public void toggle(int index) {
+    root.getToggle().dispatch(index);
+  }
+
   private void calculateBufferSizes() {
     // TODO(zerny): Caclulate this based on the views.
     int cellCount = 10;
@@ -126,7 +130,7 @@ public abstract class SlidingWindow<T extends RecyclerView.ViewHolder>
     refreshDisplay(start, start + bufferCount);
   }
 
-  private int windowIndexToViewPosition(int index) {
+  public int windowIndexToViewPosition(int index) {
     int delta = index - windowOffset();
     if (delta < 0) delta += windowCount();
     return windowStart() + delta;

@@ -97,14 +97,5 @@ public class MainActivity extends Activity implements AnyNodePresenter {
     actionBar.setTitle(getTitle());
   }
 
-  public void showDetails(View view) {
-    CommitCardView commitView = (CommitCardView) view;
-    if (!commitView.isReady()) return;
-    Intent intent = new Intent(this, DetailsViewActivity.class);
-    ActivityOptions options = commitView.prepareShowDetails(this, intent);
-    getWindow().setExitTransition(new Explode());
-    startActivity(intent, options.toBundle());
-  }
-
   private Drawer drawer;
 }
