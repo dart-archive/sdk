@@ -34,9 +34,6 @@ import 'help_verb.dart' show
 import 'run_verb.dart' show
     runVerb;
 
-import 'show_verb.dart' show
-    showVerb;
-
 import 'shutdown_verb.dart' show
     shutdownVerb;
 
@@ -114,7 +111,6 @@ const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "create": createVerb,
   "debug": debugVerb,
   "export": exportVerb,
-  "show": showVerb,
   "shutdown": shutdownVerb,
   "x-end": endVerb,
   "x-run": xRunVerb,

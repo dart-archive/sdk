@@ -192,7 +192,11 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
             throwFatalError(
                 DiagnosticKind.verbRequiresSessionTarget, verb: verb);
           } else {
-            throwFatalError(DiagnosticKind.verbRequiresTarget, verb: verb);
+            // TODO(ahe): Turn into a DiagnosticKind when we actually have a
+            // verb that can provoke this error.
+            throwInternalError(
+                "Can't perform '$verb' without a target. "
+                "Try adding a thing or group of things.");
           }
           break;
       }

@@ -12,7 +12,6 @@ enum DiagnosticKind {
   internalError,
   verbRequiresNoSession,
   verbRequiresSessionTarget,
-  verbRequiresTarget,
   verbRequiresFileTarget,
   verbRequiresSocketTarget,
   verbDoesNotSupportTarget,
@@ -63,11 +62,6 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.verbRequiresSessionTarget:
       return "Can't perform '${DiagnosticParameter.verb}' without a session "
           "target. Try adding 'session <SESSION_NAME>' to the commmand line";
-
-    case DiagnosticKind.verbRequiresTarget:
-      // TODO(lukechurch): Revisit this to improve suggestion text.
-      return "Can't perform '${DiagnosticParameter.verb}' without a target. "
-          "Try adding a thing or group of things";
 
     case DiagnosticKind.verbRequiresFileTarget:
       // TODO(ahe): Be more explicit about what is wrong with the target.
