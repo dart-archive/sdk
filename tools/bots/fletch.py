@@ -454,11 +454,22 @@ class LinuxCoredumpArchiver(CoredumpArchiver):
   def __enter__(self):
     super(LinuxCoredumpArchiver, self).__enter__()
 
-    core_pattern = open('/proc/sys/kernel/core_pattern').read()
-    core_pattern_uses_pid = open('/proc/sys/kernel/core_uses_pid').read()
+    core_pattern_file = '/proc/sys/kernel/core_pattern'
+    core_pattern = open(core_pattern_file).read()
+    core_pattern_uses_pid_file = '/proc/sys/kernel/core_uses_pid'
+    core_pattern_uses_pid = open(core_pattern_uses_pid_file).read()
 
-    assert core_pattern.strip() == 'core', "core_pattern must be 'core'."
-    assert core_pattern_uses_pid.strip() == '1', "core_uses_pid must be '1'."
+    expected_core_pattern = 'core'
+    expected_core_pattern_uses_pid = '1'
+    if (core_pattern.strip() != expected_core_pattern or
+        core_pattern_uses_pid.strip() != expected_core_pattern_uses_pid):
+      message = ("Invalid core_pattern and/or core_uses_pid configuration. "
+          "The configuration of core dump handling is *not* correct for "
+          "a buildbot. The content of {0} must be '{1}' and the content "
+          "of {2} must be '{3}'."
+          .format(core_pattern_file, expected_core_pattern,
+                  core_pattern_uses_pid_file, expected_core_pattern_uses_pid))
+      raise Exception(message)
 
 class MacosCoredumpArchiver(CoredumpArchiver):
   def __init__(self, *args):
