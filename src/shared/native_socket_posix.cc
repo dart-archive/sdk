@@ -56,6 +56,12 @@ static struct sockaddr LookupAddress(const char* host, int port) {
   hints.ai_protocol = IPPROTO_TCP;
   struct addrinfo* info = NULL;
   int status = getaddrinfo(host, 0, &hints, &info);
+  if (status != 0) {
+    // We failed, try without AI_ADDRCONFIG. This can happen when looking up
+    // e.g. '::1', when there are no global IPv6 addresses.
+    hints.ai_flags = 0;
+    status = getaddrinfo(host, 0, &hints, &info);
+  }
   ASSERT(status == 0);
   for (struct addrinfo* c = info; c != NULL; c = c->ai_next) {
     if (c->ai_family == AF_INET) {
