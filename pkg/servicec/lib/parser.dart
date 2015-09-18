@@ -96,13 +96,11 @@ class Parser {
   }
 
   Token parseIdentifier(Token tokens) {
-    tokens = listener.beginIdentifier(tokens);
     if (isValidIdentifier(tokens)) {
-      tokens = tokens.next;
+      tokens = listener.handleIdentifier(tokens);
     } else {
       tokens = listener.expectedIdentifier(tokens);
     }
-    tokens = listener.endIdentifier(tokens);
     return tokens;
   }
 

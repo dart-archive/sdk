@@ -177,6 +177,8 @@ abstract class NodeVisitor {
   void visitPrimitiveFormal(FormalNode formal);
 
   void visitIdentifier(IdentifierNode identifier);
+
+  void visitError(ErrorNode error);
 }
 
 abstract class RecursiveVisitor extends NodeVisitor {
@@ -206,7 +208,7 @@ abstract class RecursiveVisitor extends NodeVisitor {
     // Ensure formal parameters are either a single pointer to a user-defined
     // type, or a list of primitives.
     int length = function.formals.length;
-    function.identifier.accept(this);
+    if (function.identifier != null) function.identifier.accept(this);
     if (length == 1) {
       visitSingleFormal(function.formals[0]);
     } else if (length > 1) {
@@ -217,12 +219,20 @@ abstract class RecursiveVisitor extends NodeVisitor {
   }
 
   void visitMember(MemberNode member) {
-    member.type.accept(this);
-    member.identifier.accept(this);
+    if (member.type != null) member.type.accept(this);
+    if (member.identifier != null) member.identifier.accept(this);
   }
 
   void visitReturnType(TypeNode type) {
     type.accept(this);
+  }
+
+  void visitSingleFormal(FormalNode formal) {
+    // No op.
+  }
+
+  void visitPrimitiveFormal(FormalNode formal) {
+    // No op.
   }
 
   void visitSimpleType(SimpleType type) {
@@ -238,6 +248,10 @@ abstract class RecursiveVisitor extends NodeVisitor {
   }
 
   void visitIdentifier(IdentifierNode identifier) {
+    // No op.
+  }
+
+  void visitError(ErrorNode error) {
     // No op.
   }
 }

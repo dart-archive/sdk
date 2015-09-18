@@ -5,12 +5,16 @@
 library servicec.errors;
 
 import 'node.dart' show
+    IdentifierNode,
     FunctionNode,
+    FormalNode,
+    ListType,
     MemberNode,
     Node,
     ServiceNode,
     StructNode,
     TopLevelNode,
+    TypeNode,
     NodeVisitor;
 
 import 'package:compiler/src/scanner/scannerlib.dart' show
@@ -21,6 +25,7 @@ enum CompilerError {
   badTypeParameter,
   badListType,
   badMember,
+  badFormal,
   badPointerType,
   badServiceDefinition,
   badSimpleType,
@@ -34,23 +39,26 @@ enum CompilerError {
 
 // Error nodes.
 class ServiceErrorNode extends ServiceNode with ErrorNode {
-  ServiceErrorNode(Token begin)
-    : super(null, null) {
+  ServiceErrorNode(IdentifierNode identifier,
+                   List<FunctionNode> functions,
+                   Token begin)
+    : super(identifier, functions) {
     this.begin = begin;
     tag = CompilerError.badServiceDefinition;
   }
 }
 
 class StructErrorNode extends StructNode with ErrorNode {
-  StructErrorNode(Token begin)
-    : super(null, null) {
+  StructErrorNode(IdentifierNode identifier,
+                  List<MemberNode> members,
+                  Token begin)
+    : super(identifier, members) {
     this.begin = begin;
     tag = CompilerError.badStructDefinition;
   }
 }
 
-class TopLevelErrorNode extends TopLevelNode
-    with ErrorNode {
+class TopLevelErrorNode extends TopLevelNode with ErrorNode {
   TopLevelErrorNode(Token begin)
     : super(null) {
     this.begin = begin;
@@ -58,24 +66,43 @@ class TopLevelErrorNode extends TopLevelNode
   }
 
   void accept(NodeVisitor visitor) {
-    throw new InternalCompilerError("TopLevelErrorNode visited");
+    visitor.visitError(this);
   }
 }
 
 class FunctionErrorNode extends FunctionNode
     with ErrorNode {
-  FunctionErrorNode(Token begin)
-    : super(null, null, null) {
+  FunctionErrorNode(TypeNode type,
+                    IdentifierNode identifier,
+                    List<FormalNode> formals,
+                    Token begin)
+    : super(type, identifier, formals) {
     this.begin = begin;
     tag = CompilerError.badFunction;
   }
 }
 
 class MemberErrorNode extends MemberNode with ErrorNode {
-  MemberErrorNode(Token begin)
-    : super(null, null) {
+  MemberErrorNode(TypeNode type, IdentifierNode identifier, Token begin)
+    : super(type, identifier) {
     this.begin = begin;
     tag = CompilerError.badMember;
+  }
+}
+
+class FormalErrorNode extends FormalNode with ErrorNode {
+  FormalErrorNode(TypeNode type, IdentifierNode identifier, Token begin)
+    : super(type, identifier) {
+    this.begin = begin;
+    tag = CompilerError.badFormal;
+  }
+}
+
+class ListTypeError extends ListType with ErrorNode {
+  ListTypeError(IdentifierNode identifier, TypeNode typeParameter, Token begin)
+    : super(identifier, typeParameter) {
+    this.begin = begin;
+    tag = CompilerError.badListType;
   }
 }
 

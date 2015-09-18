@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Painter {
-  void draw(Circle c);
+  void draw(Circle c);  // expected pointer or primtive
 }
 
 struct Circle  // unfinished struct definition

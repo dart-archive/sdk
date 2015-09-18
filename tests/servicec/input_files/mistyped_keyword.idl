@@ -2,16 +2,20 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-srevice Painter {  // did you mean 'service'?
+// There should be an 'undefined service' error, since the service is mistyped.
+
+// bad top-level declaration
+srevice Painter {
   void draw(Circle c);
 }
 
 struct Circle {
-  int radius;
+  int radius;  // bad simple type
   Point2d position;
 }
 
 struct Point2d {
-  int x;
-  int y;
+  int x;  // bad simple type
+  int y;  // bad simple type
 }
+

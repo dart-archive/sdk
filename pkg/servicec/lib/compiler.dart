@@ -60,10 +60,7 @@ Future<Iterable<CompilerError>> compileInput(
   Parser parser = new Parser(new DebugListener(listener));
   parser.parseUnit(tokens);
 
-  Iterable<CompilerError> errors = listener.errors;
-  if (errors.isEmpty) {
-    errors = validate(listener.parsedUnitNode);
-  }
+  Iterable<CompilerError> errors = validate(listener.parsedUnitNode);
 
   // TODO(stanm): validate
 

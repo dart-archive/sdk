@@ -90,10 +90,12 @@ class Validator extends RecursiveVisitor {
   }
 
   void visitSingleFormal(FormalNode formal) {
+    checkIsNotError(formal);
     checkIsPointerOrPrimitive(formal.type);
   }
 
   void visitPrimitiveFormal(FormalNode formal) {
+    checkIsNotError(formal);
     checkIsPrimitiveFormal(formal);
   }
 
@@ -111,6 +113,7 @@ class Validator extends RecursiveVisitor {
   }
 
   void visitListType(ListType type) {
+    checkIsNotError(type);
     checkIsListType(type);
   }
 
@@ -120,6 +123,10 @@ class Validator extends RecursiveVisitor {
     }
   }
 
+  void visitError(ErrorNode error) {
+    errors.add(error.tag);
+  }
+
   // Checks.
   void checkIsNotError(Node node) {
     // Using var as a work-around for compiler warnings about ErrorNode not
@@ -127,7 +134,7 @@ class Validator extends RecursiveVisitor {
     var dummy = node;
     if (dummy is ErrorNode) {
       ErrorNode error = dummy;
-      errors.add(error.tag);
+      visitError(error);
     }
   }
 

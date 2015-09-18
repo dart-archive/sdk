@@ -3,15 +3,15 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service DrawService {
-  void drawCircle(Circle circle)  // missing ';'
+  void drawCircle(Circle circle)  // bad function, expected pointer or primitive
 }
 
 struct Circle {
-  int radius;
-  Point2D position position;  // extra token 'position'
+  int radius;  // bad simple type
+  Point2D position position;  // bad member
 }
 
 struct Point2D {
-  int x;
-  int y;
+  int x;  // bad simple type
+  int y;  // bad simple type
 }

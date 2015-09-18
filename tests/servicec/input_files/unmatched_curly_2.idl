@@ -2,15 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// bad service
 service Painter {
-// unfinished service declaration (missing '}')
 
 struct Circle {
-  int radius;
-  Point2d position position;  // extra token 'position'
+  int radius;  // bad simple type
+  Point2d position position;  // bad member
 }
 
 struct Point2d {
-  int x;
-  int y;
+  int x;  // bad simple type
+  int y;  // bad simple type
 }

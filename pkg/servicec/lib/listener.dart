@@ -16,8 +16,6 @@ import 'keyword.dart' show
 
 /// Identity listener: methods just propagate the argument.
 abstract class Listener {
-  Iterable<CompilerError> get errors;
-
   Token beginCompilationUnit(Token tokens) {
     return tokens;
   }
@@ -50,11 +48,7 @@ abstract class Listener {
     return tokens;
   }
 
-  Token beginIdentifier(Token tokens) {
-    return tokens;
-  }
-
-  Token endIdentifier(Token tokens) {
+  Token handleIdentifier(Token tokens) {
     return tokens;
   }
 
@@ -115,8 +109,6 @@ enum LogLevel { DEBUG, INFO }
 
 /// Used for debugging other listeners.
 class DebugListener implements Listener {
-  Iterable<CompilerError> get errors => debugSubject.errors;
-
   Listener debugSubject;
   LogLevel logLevel;
   int scope;
@@ -187,15 +179,11 @@ class DebugListener implements Listener {
     return debugSubject.endStruct(tokens, count);
   }
 
-  Token beginIdentifier(Token tokens) {
-    String identifierValue = tokens is! ErrorToken ? " [${tokens.value}]" : "";
-    logBeginScope("indentifier$identifierValue");
-    return debugSubject.beginIdentifier(tokens);
-  }
-
-  Token endIdentifier(Token tokens) {
-    logEndScope("identifier");
-    return debugSubject.endIdentifier(tokens);
+  Token handleIdentifier(Token tokens) {
+    bool valid = tokens is! ErrorToken && tokens != null;
+    String identifierValue = valid ? " [${tokens.value}]" : "";
+    log("indentifier$identifierValue");
+    return debugSubject.handleIdentifier(tokens);
   }
 
   Token beginFunction(Token tokens) {
