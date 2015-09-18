@@ -2412,8 +2412,24 @@ abstract class CodegenVisitor
   }
 
   void visitIf(If node) {
+    ConstantExpression conditionConstant =
+        compileConstant(node.condition, isConst: false);
+
+    if (conditionConstant != null) {
+      BytecodeLabel end = new BytecodeLabel();
+      jumpInfo[node] = new JumpInfo(assembler.stackSize, null, end);
+      if (context.getConstantValue(conditionConstant).isTrue) {
+        doScopedStatement(node.thenPart);
+      } else if (node.hasElsePart) {
+        doScopedStatement(node.elsePart);
+      }
+      assembler.bind(end);
+      return;
+    }
+
     BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel ifFalse = new BytecodeLabel();
+
     visitForTest(node.condition, ifTrue, ifFalse);
     assembler.bind(ifTrue);
     if (node.hasElsePart) {
