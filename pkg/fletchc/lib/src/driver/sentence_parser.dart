@@ -123,6 +123,10 @@ class SentenceParser {
       return new Target(kind);
     }
 
+    if (looksLikeAUri(word)) {
+      return new NamedTarget(TargetKind.FILE, parseName());
+    }
+
     switch (word) {
       case "session":
         return makeNamedTarget(TargetKind.SESSION);
@@ -237,6 +241,14 @@ class SentenceParser {
     String name = tokens.current;
     tokens.consume();
     return name;
+  }
+
+  /// Returns true if [word] looks like it is a (relative) URI.
+  bool looksLikeAUri(String word) {
+    return
+        word != null &&
+        !word.startsWith("-") &&
+        word.contains(".");
   }
 }
 

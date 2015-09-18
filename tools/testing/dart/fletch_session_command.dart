@@ -127,7 +127,7 @@ class FletchSessionCommand implements Command {
         fletch.sessionMirror.isCreatedInPersistentProcess = true;
       }
       try {
-        await fletch.runInSession(["compile", "file", script]);
+        await fletch.runInSession(["compile", script]);
         String vmSocketAddress = await fletch.spawnVm();
         await fletch.runInSession(["attach", "tcp_socket", vmSocketAddress]);
         exitCode = await fletch.runInSession(["x-run"], checkExitCode: false);

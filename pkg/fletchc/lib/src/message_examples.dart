@@ -48,9 +48,14 @@ List<Example> getExamples(DiagnosticKind kind) {
           <String>['compile', 'session', 'foo', 'in', 'session', 'foo'])];
 
     case DiagnosticKind.verbRequiresSocketTarget:
-      return <Example>[new CommandLineExample(
-          <String>['create', 'session', 'foo'],
-          <String>['attach', 'in', 'session', 'foo', 'file', 'fisk'])];
+      return <Example>[
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['attach', 'in', 'session', 'foo', 'file', 'fisk']),
+          new CommandLineExample(
+              // Same as previous example, except with an implict file target.
+              <String>['create', 'session', 'foo'],
+              <String>['attach', 'in', 'session', 'foo', 'fisk.dart'])];
 
     case DiagnosticKind.verbDoesNotSupportTarget:
       return <Example>[new CommandLineExample(
@@ -68,9 +73,11 @@ List<Example> getExamples(DiagnosticKind kind) {
           <String>['create', 'session', 'foo'])];
 
     case DiagnosticKind.noFileTarget:
-      return <Example>[new CommandLineExample(
-          <String>['create', 'session', 'foo'],
-          <String>['compile', 'in', 'session', 'foo'])];
+      return <Example>[
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['compile', 'in', 'session', 'foo']),
+          new CommandLineExample(<String>['compile-and-run'])];
 
     case DiagnosticKind.noTcpSocketTarget:
       return <Example>[new CommandLineExample(
@@ -142,10 +149,6 @@ List<Example> getExamples(DiagnosticKind kind) {
       return <Example>[
           new CommandLineExample(
               <String>['export', 'to', 'all'])];
-
-    case DiagnosticKind.noFile:
-      // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.
-      return <Example>[new CommandLineExample(<String>['compile-and-run'])];
 
     case DiagnosticKind.unknownOption:
       // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.

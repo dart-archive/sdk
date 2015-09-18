@@ -50,7 +50,10 @@ import 'documentation.dart' show
     compileAndRunDocumentation;
 
 const Verb compileAndRunVerb =
-    const Verb(compileAndRun, compileAndRunDocumentation, allowsTrailing: true);
+    const Verb(
+        compileAndRun, compileAndRunDocumentation,
+        allowsTrailing: true,
+        supportedTargets: const <TargetKind>[TargetKind.FILE]);
 
 Future<int> compileAndRun(
     AnalyzedSentence sentence,
@@ -63,7 +66,7 @@ Future<int> compileAndRun(
   }
 
   if (options.script == null) {
-    throwFatalError(DiagnosticKind.noFile);
+    throwFatalError(DiagnosticKind.noFileTarget);
   }
 
   CompileAndRunTask task = new CompileAndRunTask(
