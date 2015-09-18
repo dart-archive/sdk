@@ -330,8 +330,7 @@ class PersistentFletchDaemon(object):
     self._persistent = subprocess.Popen(
       ['%s/dart' % self._configuration['build_dir'],
        '-c',
-       '-p',
-       './package/',
+       '--packages=pkg/fletchc/.packages',
        'package:fletchc/src/driver/driver_main.dart',
        './.fletch'],
       stdout=self._log_file,
