@@ -18,7 +18,7 @@ main(List<String> args) {
 
 // Use memory mapped GPIO to turn on the led when the button is pressed.
 void testMemoryMapped(int led, int button) {
-  var gpio = new PiMemoryMappedGPIO();
+  PiMemoryMappedGPIO gpio = new PiMemoryMappedGPIO();
   gpio.setMode(led, Mode.output);
   gpio.setMode(button, Mode.input);
   while (true) {
@@ -27,7 +27,7 @@ void testMemoryMapped(int led, int button) {
 }
 
 void testMemoryMappedPullUpPullDown(int pin) {
-  var gpio = new PiMemoryMappedGPIO();
+  PiMemoryMappedGPIO gpio = new PiMemoryMappedGPIO();
   gpio.setMode(pin, Mode.input);
   gpio.setPullUpDown(pin, PullUpDown.pullDown);
   print('With pull-down: ${gpio.getPin(pin)}');
@@ -45,7 +45,7 @@ void testMemoryMappedPullUpPullDown(int pin) {
 //
 // This code is using a tight loop.
 void testSysfs(int led, int button) {
-  var gpio = new SysfsGPIO();
+  SysfsGPIO gpio = new SysfsGPIO();
   gpio.exportPin(led);
   gpio.exportPin(button);
   print('Tracking: ${gpio.tracked()}');
@@ -64,7 +64,7 @@ void testSysfs(int led, int button) {
 //
 // This code is waiting to the button state to change.
 void testSysfsWithTimeout(int led, int button) {
-  var gpio = new SysfsGPIO();
+  SysfsGPIO gpio = new SysfsGPIO();
   gpio.exportPin(led);
   gpio.exportPin(button);
   print('Tracking: ${gpio.tracked()}');

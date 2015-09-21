@@ -9,15 +9,16 @@
 /// The library provide two ways of accessing the GPIO pins: direct access or
 /// access through a Sysfs driver.
 ///
-/// When direct access is used, the physical memory addresses where the
-/// SoC registers for the GPIO pins are mapped is accessed directly. This
+/// When direct access is used, the physical memory addresses, where the
+/// SoC registers for the GPIO pins are mapped, are accessed directly. This
 /// always require root access.
 ///
 /// When the Sysfs driver is used the filesystem under `/sys/class/gpio` is
-/// used root access is also required by default. However this can be changed
+/// used; root access is also required by default. However this can be changed
 /// through udev rules, e.g. by adding a file to ` /etc/udev/rules.d`.
+/// In addition the Sysfs driver supports state change notifications.
 ///
-/// Currently this has only been tested with a aspberry Pi 2.
+/// Currently this has only been tested with a Raspberry Pi 2.
 library gpio;
 
 import 'dart:typed_data';
@@ -37,7 +38,7 @@ enum Mode {
   input,
   /// GPIO pin output mode.
   output,
-  /// GPIO has other function than `input` and `output`. Most GPIO pins have
+  /// GPIO has other functions than `input` and `output`. Most GPIO pins have
   /// several special functions, so when receiving the mode this value can be
   /// returned. This value cannot be used when setting the mode.
   other
@@ -88,7 +89,7 @@ class _GPIOBase {
 /// The following code shows how to turn on GPIO pin 4:
 ///
 /// ```
-/// var gpio = new PiMemoryMappedGPIO();
+/// PiMemoryMappedGPIO gpio = new PiMemoryMappedGPIO();
 /// gpio.setMode(4, Mode.output);
 /// gpio.setPin(4, true));
 /// ```
@@ -96,7 +97,7 @@ class _GPIOBase {
 /// The following code shows how to read GPIO pin 17:
 ///
 /// ```
-/// var gpio = new PiMemoryMappedGPIO();
+/// PiMemoryMappedGPIO gpio = new PiMemoryMappedGPIO();
 /// gpio.setMode(17, Mode.input);
 /// print(gpio.getPin(17));
 /// ```
@@ -234,7 +235,7 @@ enum Trigger {
 /// The following code shows how to turn on GPIO pin 4:
 ///
 /// ```
-/// var gpio = new SysfsGPIO();
+/// SysfsGPIO gpio = new SysfsGPIO();
 /// gpio.exportPin(4);
 /// gpio.setMode(4, Mode.output);
 /// gpio.setPin(4, true));
@@ -243,17 +244,17 @@ enum Trigger {
 /// The following code shows how to read GPIO pin 17:
 ///
 /// ```
-/// var gpio = new SysfsGPIO();
+/// SysfsGPIO gpio = new SysfsGPIO();
 /// gpio.exportPin(17);
 /// gpio.setMode(17, Mode.input);
 /// print(gpio.getPin(17));
 /// ```
 ///
-/// The Sysfs Interface provide state change notifications. The following
+/// The Sysfs Interface provides state change notifications. The following
 /// code will echo the state of GPIO pin 17 to GPIO pin 4.
 ///
 /// ```
-/// var gpio = new SysfsGPIO();
+/// SysfsGPIO gpio = new SysfsGPIO();
 /// gpio.exportPin(4);
 /// gpio.setMode(4, Mode.output);
 /// gpio.exportPin(17);
@@ -280,7 +281,7 @@ class SysfsGPIO extends _GPIOBase implements GPIO {
   ByteBuffer _falling;
   ByteBuffer _both;
 
-  // Open value files for all tracked pins . Indexed by pin number.
+  // Open value files for all tracked pins. Indexed by pin number.
   List<File> _tracked;
 
   /// Create a GPIO controller using the GPIO Sysfs Interface.
