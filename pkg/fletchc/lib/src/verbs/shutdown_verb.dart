@@ -4,10 +4,15 @@
 
 library fletchc.verbs.shutdown_verb;
 
+import 'dart:io' show
+    Platform,
+    pid;
+
 import 'infrastructure.dart';
 
 import '../driver/driver_main.dart' show
-    gracefulShutdown;
+    gracefulShutdown,
+    mainArguments;
 
 import 'documentation.dart' show
     shutdownDocumentation;
@@ -15,6 +20,17 @@ import 'documentation.dart' show
 const Verb shutdownVerb = const Verb(shutdown, shutdownDocumentation);
 
 Future<int> shutdown(AnalyzedSentence sentence, _) {
+  List<String> commandLine = <String>[];
+  String dartVmPath =
+      Uri.base.resolveUri(new Uri.file(Platform.resolvedExecutable))
+      .toFilePath();
+  commandLine
+      ..add(dartVmPath)
+      ..addAll(Platform.executableArguments)
+      ..add('${Platform.script}')
+      ..addAll(mainArguments);
+  print("Shutting down Fletch background process $pid: "
+        "${commandLine.join(" ")}");
   gracefulShutdown();
   return new Future.value(0);
 }

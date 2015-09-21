@@ -86,6 +86,8 @@ import '../please_report_crash.dart' show
 
 Function gracefulShutdown;
 
+final List<String> mainArguments = <String>[];
+
 class DriverCommandTransformerBuilder
     extends CommandTransformerBuilder<Command> {
   Command makeCommand(int commandCode, ByteData payload) {
@@ -151,6 +153,7 @@ class ByteCommandSender extends CommandSender {
 }
 
 Future main(List<String> arguments) async {
+  mainArguments.addAll(arguments);
   File configFile = new File.fromUri(Uri.base.resolve(arguments.first));
   Directory tmpdir = Directory.systemTemp.createTempSync("fletch_driver");
 
@@ -162,6 +165,8 @@ Future main(List<String> arguments) async {
   }
 
   ServerSocket server;
+
+  Completer shutdown = new Completer();
 
   gracefulShutdown = () {
     try {
@@ -179,7 +184,11 @@ Future main(List<String> arguments) async {
     if (server != null) {
       server.close();
     }
+    if (!shutdown.isCompleted) {
+      shutdown.complete();
+    }
   };
+
 
   void handleSignal(StreamSubscription<ProcessSignal> subscription) {
     subscription.onData((ProcessSignal signal) {
@@ -193,6 +202,9 @@ Future main(List<String> arguments) async {
       // it will observe that it was killed due to a signal. There's no way to
       // fake that status using exit.
       Process.killPid(0, signal);
+    });
+    shutdown.future.then((_) {
+      subscription.cancel();
     });
   }
 

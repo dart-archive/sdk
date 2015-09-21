@@ -85,7 +85,7 @@ const String compileAndRunDocumentation = """
 """;
 
 const String shutdownDocumentation = """
-   shutdown  Terminate the background fletch compiler process
+   shutdown  Shut down the background Fletch process
 """;
 
 const String createDocumentation = """
@@ -121,7 +121,7 @@ const String endDocumentation = """
 
 const String servicecDocumentation = """
    x-servicec <file>
-             Compile service IDL file named <file> to custom fletch interface
+             Compile service IDL file named <file> to custom Fletch interface
 """;
 
 const String exportDocumentation = """
