@@ -30,6 +30,7 @@ import 'package:compiler/src/dart_types.dart' show
     InterfaceType;
 
 import 'package:compiler/src/elements/elements.dart' show
+    AstElement,
     ClassElement,
     ConstructorElement,
     Element,
@@ -39,7 +40,11 @@ import 'package:compiler/src/elements/elements.dart' show
     Name,
     TypedElement;
 
+import 'package:compiler/src/resolution/resolution.dart' show
+    TreeElements;
+
 import 'package:compiler/src/util/util.dart' show
+    Hashing,
     SpannableAssertionFailure;
 
 import 'fletch_compiler_implementation.dart' show
@@ -50,6 +55,10 @@ import 'dynamic_call_enqueuer.dart' show
 
 import 'fletch_codegen_work_item.dart' show
     FletchCodegenWorkItem;
+
+import 'fletch_registry.dart' show
+    FletchRegistry,
+    FletchRegistryImplementation;
 
 part 'enqueuer_mixin.dart';
 
@@ -150,11 +159,13 @@ class TransitionalFletchEnqueuer extends CodegenEnqueuer
 
   DynamicCallEnqueuer get dynamicCallEnqueuer => notImplemented;
 
-  Set<Element> get _enqueuedElements => notImplemented;
+  Set<ElementUsage> get _enqueuedUsages => notImplemented;
 
-  Queue<Element> get _pendingEnqueuedElements => notImplemented;
+  Queue<ElementUsage> get _pendingEnqueuedUsages => notImplemented;
 
   void _enqueueElement(element, selector) => notImplemented;
+
+  void processQueue() => notImplemented;
 }
 
 class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
@@ -175,11 +186,10 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
 
   final Universe universe = new Universe();
 
-  final Set<Element> _enqueuedElements = new Set<Element>();
+  final Set<ElementUsage> _enqueuedUsages = new Set<ElementUsage>();
 
-  final Queue<Element> _pendingEnqueuedElements = new Queue<Element>();
-
-  final Set<Element> _processedElements = new Set<Element>();
+  final Queue<ElementUsage> _pendingEnqueuedUsages =
+      new Queue<ElementUsage>();
 
   final DynamicCallEnqueuer dynamicCallEnqueuer;
 
@@ -189,15 +199,14 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
       : compiler = compiler,
         dynamicCallEnqueuer = new DynamicCallEnqueuer(compiler);
 
-  bool get queueIsEmpty => _pendingEnqueuedElements.isEmpty;
+  bool get queueIsEmpty => _pendingEnqueuedUsages.isEmpty;
 
   bool get isResolutionQueue => false;
 
   QueueFilter get filter => compiler.enqueuerFilter;
 
   void forgetElement(Element element) {
-    _enqueuedElements.remove(element);
-    _processedElements.remove(element);
+    _enqueuedUsages.remove(element);
     dynamicCallEnqueuer.forgetElement(element);
   }
 
@@ -210,27 +219,36 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
 
   // TODO(ahe): Remove this method.
   void registerStaticUse(Element element) {
-    _enqueueElement(
-        element,
-        new UniverseSelector(new Selector.fromElement(element), null));
+    _enqueueElement(element, null);
   }
 
   // TODO(ahe): Remove this method.
   void addToWorkList(Element element) {
-    _enqueueElement(
-        element, new UniverseSelector(new Selector.fromElement(element), null));
+    _enqueueElement(element, null);
   }
 
-  void forEach(void f(WorkItem work)) {
+  // TODO(ahe): Remove this method.
+  void forEach(_) {
+    processQueue();
+  }
+
+  void processQueue() {
     do {
       do {
         while (!queueIsEmpty) {
-          Element element = _pendingEnqueuedElements.removeFirst();
-          if (element.isField) continue;
-          FletchCodegenWorkItem workItem = new FletchCodegenWorkItem(
-              compiler, element, itemCompilationContextCreator());
-          filter.processWorkItem(f, workItem);
-          _processedElements.add(element);
+          ElementUsage usage = _pendingEnqueuedUsages.removeFirst();
+          AstElement element = usage.element;
+          TreeElements treeElements = element.resolvedAst.elements;
+          FletchRegistry registry =
+              new FletchRegistryImplementation(compiler, treeElements);
+          Selector selector = usage.selector;
+          if (selector != null) {
+            compiler.context.backend.compileElementUsage(
+                element, selector, treeElements, registry);
+          } else {
+            compiler.context.backend.compileElement(
+                element, treeElements, registry);
+          }
         }
         dynamicCallEnqueuer.enqueueInstanceMethods(_enqueueElement);
       } while (!queueIsEmpty);
@@ -248,8 +266,6 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
     // TODO(ahe): Implement this.
   }
 
-  bool isProcessed(Element member) => _processedElements.contains(member);
-
   void registerDynamicInvocation(UniverseSelector selector) {
     dynamicCallEnqueuer.enqueueSelector(selector);
   }
@@ -266,10 +282,37 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
     dynamicCallEnqueuer.enqueueSelector(selector);
   }
 
-  void _enqueueElement(Element element, UniverseSelector selector) {
-    if (_enqueuedElements.add(element)) {
-      _pendingEnqueuedElements.addLast(element);
-      compiler.reportVerboseInfo(element, "enqueued this", forceVerbose: true);
+  void _enqueueElement(Element element, Selector selector) {
+    if (selector != null) {
+      _enqueueElement(element, null);
     }
+    ElementUsage usage = new ElementUsage(element, selector);
+    if (_enqueuedUsages.add(usage)) {
+      _pendingEnqueuedUsages.addLast(usage);
+      if (!element.library.isPlatformLibrary &&
+          !element.library.isInternalLibrary) {
+        compiler.reportVerboseInfo(element, "called as $selector");
+      }
+    }
+  }
+}
+
+class ElementUsage {
+  final AstElement element;
+
+  /// If selector is [null], this represents that [element] needs to be
+  /// compiled.
+  final Selector selector;
+
+  final int hashCode;
+
+  ElementUsage(element, selector)
+      : element = element,
+        selector = selector,
+        hashCode = Hashing.mixHashCodeBits(element.hashCode, selector.hashCode);
+
+  bool operator ==(other) {
+    return other is ElementUsage &&
+        element == other.element && selector == other.selector;
   }
 }

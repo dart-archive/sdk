@@ -19,15 +19,25 @@ import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     Element,
     FunctionElement,
+    LibraryElement,
     Name;
-
-import 'package:compiler/src/util/util.dart' show
-    Hashing;
 
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
 
-typedef void ElementUsage(Element element, UniverseSelector selector);
+/// True if enqueuing of system libraries should be reported in verbose mode.
+const bool logSystemLibraries =
+    const bool.fromEnvironment("fletchc.logSystemLibraries");
+
+typedef void ElementUsage(Element element, Selector selector);
+
+/// Returns true if enqueuing of [element] should be reported in verbose
+/// mode. See [logSystemLibraries].
+bool shouldReportEnqueuingOfElement(Element element) {
+  if (logSystemLibraries) return true;
+  LibraryElement library = element.library;
+  return !library.isPlatformLibrary && !library.isInternalLibrary;
+}
 
 /// Implements the dynamic part of the tree-shaking algorithm.
 ///
@@ -63,26 +73,27 @@ class DynamicCallEnqueuer {
     if (!member.isInstanceMember) return;
     if (selector.isGetter) {
       if (member.isField || member.isGetter) {
-        enqueueElement(member, new UniverseSelector(selector, null));
+        enqueueElement(member, selector);
       } else {
         // Tear-off.
-        compiler.reportVerboseInfo(
-            member, "enqueued as tear-off", forceVerbose: true);
-        enqueueElement(member, new UniverseSelector(selector, null));
+        compiler.reportVerboseInfo(member, "enqueued as tear-off");
+        enqueueElement(member, selector);
       }
     } else if (selector.isSetter) {
       if (member.isField || member.isSetter) {
-        enqueueElement(member, new UniverseSelector(selector, null));
+        enqueueElement(member, selector);
       }
     } else if (member.isFunction && selector.signatureApplies(member)) {
-      enqueueElement(member, new UniverseSelector(selector, null));
+      enqueueElement(member, selector);
     }
   }
 
   void enqueueInstanceMethods(ElementUsage enqueueElement) {
     while (!pendingInstantiatedClasses.isEmpty) {
       ClassElement cls = pendingInstantiatedClasses.removeFirst();
-      compiler.reportVerboseInfo(cls, "was instantiated", forceVerbose: true);
+      if (shouldReportEnqueuingOfElement(cls)) {
+        compiler.reportVerboseInfo(cls, "was instantiated");
+      }
       for (Selector selector in enqueuedSelectors) {
         // TODO(ahe): As we iterate over enqueuedSelectors, we may end up
         // processing calling _enqueueApplicableMembers twice for newly
@@ -93,8 +104,6 @@ class DynamicCallEnqueuer {
     }
     while (!pendingSelectors.isEmpty) {
       Selector selector = pendingSelectors.removeFirst();
-      compiler.reportVerboseInfo(
-          null, "$selector was called", forceVerbose: true);
       for (ClassElement cls in instantiatedClasses) {
         enqueueApplicableMembers(cls, selector, enqueueElement);
       }

@@ -103,7 +103,8 @@ import '../incremental_backend.dart' show
     IncrementalFletchBackend;
 
 import 'fletch_enqueuer.dart' show
-    FletchEnqueueTask;
+    FletchEnqueueTask,
+    useCustomEnqueuer;
 
 import 'fletch_registry.dart' show
     FletchRegistry;
@@ -711,10 +712,24 @@ class FletchBackend extends Backend with ResolutionCallbacks
   }
 
   WorldImpact codegen(FletchCodegenWorkItem work) {
-    Element element = work.element.implementation;
-    return compiler.withCurrentElement(element, () {
-      context.compiler.reportVerboseInfo(element, 'Compiling $element');
+    assert(!useCustomEnqueuer);
+    // TODO(ahe): This method should always throw when [useCustomEnqueuer] is
+    // the default behavior.
+    compileElement(work.element, work.resolutionTree, work.fletchRegistry);
+    return null;
+  }
 
+  /// Invoked by [FletchEnqueuer] once per element that needs to be compiled.
+  ///
+  /// This is used to generate the bytecodes for [declaration].
+  void compileElement(
+      AstElement declaration,
+      TreeElements treeElements,
+      FletchRegistry registry) {
+    AstElement element = declaration.implementation;
+    compiler.withCurrentElement(element, () {
+      assert(declaration.isDeclaration);
+      context.compiler.reportVerboseInfo(element, 'Compiling $element');
       if (element.isFunction ||
           element.isGetter ||
           element.isSetter ||
@@ -722,13 +737,49 @@ class FletchBackend extends Backend with ResolutionCallbacks
         // For a generative constructor, this means compile the constructor
         // body. See [compilePendingConstructorInitializers] for an overview of
         // how constructor initializers and constructor bodies are compiled.
-        codegenFunction(element, work.resolutionTree, work.fletchRegistry);
+        codegenFunction(element, treeElements, registry);
+      } else if (element.isField) {
+        assert(useCustomEnqueuer);
+        context.compiler.reportVerboseInfo(
+            element, "Asked to compile a field, but don't know how");
       } else {
         compiler.internalError(
             element, "Uninimplemented element kind: ${element.kind}");
       }
+    });
+  }
 
-      return null;
+  /// Invoked by [FletchEnqueuer] once per [selector] that may invoke
+  /// [declaration].
+  ///
+  /// This is used to generate stubs for [declaration].
+  void compileElementUsage(
+      AstElement declaration,
+      Selector selector,
+      TreeElements treeElements,
+      FletchRegistry registry) {
+    AstElement element = declaration.implementation;
+    compiler.withCurrentElement(element, () {
+      assert(declaration.isDeclaration);
+      context.compiler.reportVerboseInfo(element, 'Compiling $element');
+      if (!element.isInstanceMember) {
+        // No stub needed. Optional arguments are handled at call-site.
+      } else if (element.isFunction) {
+        FletchFunctionBase function = getFunctionForElement(element);
+        CallStructure callStructure = selector.callStructure;
+        FunctionSignature signature = function.signature;
+        if (callStructure.signatureApplies(signature) &&
+            !isExactParameterMatch(signature, callStructure)) {
+          context.compiler.reportVerboseInfo(
+              element, 'Adding stub for $selector', forceVerbose: true);
+          createParameterStubFor(function, selector);
+        }
+      } else if (element.isGetter || element.isSetter) {
+        // No stub needed.
+      } else {
+        context.compiler.reportVerboseInfo(
+            element, "Asked to compile this, but don't know how");
+      }
     });
   }
 
@@ -1076,6 +1127,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
   }
 
   void createTearoffStubs() {
+    // TODO(ahe): Remove this method when [useCustomEnqueuer] is the default
+    // behavior.
     List<FletchFunctionBuilder> functions = systemBuilder.getNewFunctions();
     int length = functions.length;
     for (int i = 0; i < length; i++) {
@@ -1083,6 +1136,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
       if (!function.isInstanceMember || function.isAccessor) continue;
       String name = function.name;
       if (compiler.codegenWorld.getterInvocationsByName(name) != null) {
+        // Custom enqueuer doesn't provide getterInvocationsByName.
+        assert(!useCustomEnqueuer);
         createTearoffGetterForFunction(function);
       }
     }
@@ -1120,6 +1175,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
   }
 
   int assembleProgram() {
+    // TODO(ahe): This method should always throw when [useCustomEnqueuer] is
+    // the default behavior.
     createTearoffStubs();
     createParameterMatchingStubs();
 
