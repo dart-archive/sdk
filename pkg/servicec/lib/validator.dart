@@ -11,7 +11,6 @@ import 'node.dart' show
     IdentifierNode,
     ListType,
     MemberNode,
-    NamedNode,
     Node,
     PointerType,
     RecursiveVisitor,
@@ -81,7 +80,19 @@ class Validator extends RecursiveVisitor {
   void visitFunction(FunctionNode function) {
     enterFunctionScope(function);
     checkIsNotError(function);
-    super.visitFunction(function);
+
+    visitReturnType(function.returnType);
+    // Ensure formal parameters are either a single pointer to a user-defined
+    // type, or a list of primitives.
+    int length = function.formals.length;
+    if (length == 1) {
+      visitSingleFormal(function.formals[0]);
+    } else if (length > 1) {
+      for (FormalNode formal in function.formals) {
+        visitPrimitiveFormal(formal);
+      }
+    }
+
     leaveFunctionScope(function);
   }
 
@@ -211,11 +222,11 @@ class Validator extends RecursiveVisitor {
   }
 
   void enterServiceScope(ServiceNode service) {
-    service.functions.forEach(addPropertySymbol);
+    service.functions.forEach(addFunctionSymbol);
   }
 
   void enterStructScope(StructNode struct) {
-    struct.members.forEach(addPropertySymbol);
+    struct.members.forEach(addMemberSymbol);
   }
 
   void enterFunctionScope(FunctionNode function) {
@@ -228,11 +239,11 @@ class Validator extends RecursiveVisitor {
   }
 
   void leaveServiceScope(ServiceNode service) {
-    service.functions.forEach(removePropertySymbol);
+    service.functions.forEach(removeFunctionSymbol);
   }
 
   void leaveStructScope(StructNode struct) {
-    struct.members.forEach(removePropertySymbol);
+    struct.members.forEach(removeMemberSymbol);
   }
 
   void leaveFunctionScope(FunctionNode function) {
@@ -246,46 +257,70 @@ class Validator extends RecursiveVisitor {
 
   void addTopLevelSymbol(TopLevelNode node) {
     if (node is ServiceNode) {
-      addSymbol(environment.services, node);
+      addServiceSymbol(node);
     } else if (node is StructNode) {
-      addSymbol(environment.structs, node);
+      addStructSymbol(node);
     }
   }
 
-  void addPropertySymbol(NamedNode node) {
-    addSymbol(environment.properties, node);
+  void addServiceSymbol(ServiceNode service) {
+    addSymbol(environment.services, service.identifier);
   }
 
-  void addFormalSymbol(FormalNode node) {
-    addSymbol(environment.formals, node);
+  void addStructSymbol(StructNode struct) {
+    addSymbol(environment.structs, struct.identifier);
+  }
+
+  void addFunctionSymbol(FunctionNode function) {
+    addSymbol(environment.properties, function.identifier);
+  }
+
+  void addMemberSymbol(MemberNode member) {
+    addSymbol(environment.properties, member.identifier);
+  }
+
+  void addFormalSymbol(FormalNode formal) {
+    addSymbol(environment.formals, formal.identifier);
   }
 
   void removeTopLevelSymbol(TopLevelNode node) {
     if (node is ServiceNode) {
-      removeSymbol(environment.services, node);
+      removeServiceSymbol(node);
     } else if (node is StructNode) {
-      removeSymbol(environment.structs, node);
+      removeStructSymbol(node);
     }
   }
 
-  void removePropertySymbol(NamedNode node) {
-    removeSymbol(environment.properties, node);
+  void removeServiceSymbol(ServiceNode service) {
+    removeSymbol(environment.services, service.identifier);
   }
 
-  void removeFormalSymbol(FormalNode node) {
-    removeSymbol(environment.formals, node);
+  void removeStructSymbol(StructNode struct) {
+    removeSymbol(environment.structs, struct.identifier);
   }
 
-  void addSymbol(Set<IdentifierNode> symbols, NamedNode node) {
-    if (symbols.contains(node.identifier)) {
+  void removeFunctionSymbol(FunctionNode function) {
+    removeSymbol(environment.properties, function.identifier);
+  }
+
+  void removeMemberSymbol(MemberNode member) {
+    removeSymbol(environment.properties, member.identifier);
+  }
+
+  void removeFormalSymbol(FormalNode formal) {
+    removeSymbol(environment.formals, formal.identifier);
+  }
+
+  void addSymbol(Set<IdentifierNode> symbols, IdentifierNode identifier) {
+    if (symbols.contains(identifier)) {
       errors.add(CompilerError.multipleDefinition);
     } else {
-      symbols.add(node.identifier);
+      symbols.add(identifier);
     }
   }
 
-  void removeSymbol(Set<IdentifierNode> symbols, NamedNode node) {
-    symbols.remove(node.identifier);
+  void removeSymbol(Set<IdentifierNode> symbols, IdentifierNode identifier) {
+    symbols.remove(identifier);
   }
 }
 
