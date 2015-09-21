@@ -3,12 +3,10 @@
 # BSD-style license that can be found in the LICENSE file.
 
 # This file contains a set of utilities functions used by other Python-based
-# scripts. Most of these utitlities are imported from tools/utils.py in the
-# Dart SDK.
+# scripts. Most of these utilities are imported from tools/utils.py in the Dart
+# SDK.
 
 import imp
-import platform
-import re
 import os
 
 imp.load_source(
@@ -38,8 +36,14 @@ def DartBinary():
 
     return os.path.join(dart_binary_prefix, os_path, dart_binary)
 
+# Import 'dart_utils' to create a name for the library that we can patch up.
 import dart_utils
 
+# Replace the version of DartBinary in dart_utils with our version. This means
+# that if a method in dart_utils calls DartBinary, it gets our version. In
+# addition, our version is also exported.
 dart_utils.DartBinary = DartBinary
 
+# Now that we have patched 'dart_utils', import it into our own scope. This
+# also means that we export everything from that library.
 from dart_utils import *
