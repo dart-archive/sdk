@@ -4,10 +4,7 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 import os
-import string
-import subprocess
 import sys
-
 import utils
 
 version_cc_template = """\
@@ -34,7 +31,7 @@ def Main():
   if os.path.isfile(version_cc):
     with open(version_cc, "r") as f:
       current_content = f.read()
-  version = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip()
+  version = utils.GetGitRevision()
   updated_content = version_cc_template % {"version": version}
   if (updated_content != current_content):
     with open(version_cc, 'w') as f:

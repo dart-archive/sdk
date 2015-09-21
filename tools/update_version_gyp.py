@@ -4,11 +4,8 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 import os
-import string
 import subprocess
 import sys
-
-import utils
 
 version_gyp_template = """\
 # Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file

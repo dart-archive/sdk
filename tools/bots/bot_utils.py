@@ -16,8 +16,13 @@ DART_DIR = os.path.abspath(
     os.path.normpath(os.path.join(__file__, '..', '..', '..')))
 
 def GetUtils():
-  '''Dynamically load the tools/utils.py python module.'''
-  return imp.load_source('utils', os.path.join(DART_DIR, 'tools', 'utils.py'))
+  '''Dynamically load the tools/utils python module.'''
+  f, filename, data = imp.find_module(
+    'utils', [os.path.join(DART_DIR, 'tools')])
+  module = imp.load_module('utils', f, filename, data)
+  if f:
+    f.close()
+  return module
 
 SYSTEM_RENAMES = {
   'win32': 'windows',

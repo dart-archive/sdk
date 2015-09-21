@@ -332,7 +332,7 @@ class PersistentFletchDaemon(object):
     if os.environ.has_key('BUILDBOT_REVISION'):
       version = os.environ['BUILDBOT_REVISION']
     else:
-      version = "local build %s" % str(datetime.datetime.now())
+      version = utils.GetGitRevision()
     self._persistent = subprocess.Popen(
       [os.path.join(os.path.abspath(self._configuration['build_dir']), 'dart'),
        '-c',
