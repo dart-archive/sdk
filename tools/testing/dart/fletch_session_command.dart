@@ -120,21 +120,11 @@ class FletchSessionCommand implements Command {
     int exitCode = COMPILER_EXITCODE_CRASH;
     bool endedSession = false;
     try {
-      if (!fletch.sessionMirror.isCreatedInPersistentProcess) {
-        int createSessionStatus = await fletch.run(
-            ["create", "session", fletch.sessionName], checkExitCode: false);
-        if (createSessionStatus != 0 && createSessionStatus != 1) {
-          throw new UnexpectedExitCode(
-              createSessionStatus, executable,
-              ["create", "session", fletch.sessionName]);
-        }
-        fletch.sessionMirror.isCreatedInPersistentProcess = true;
-      }
       try {
-        await fletch.runInSession(["compile", script]);
         String vmSocketAddress = await fletch.spawnVm();
         await fletch.runInSession(["attach", "tcp_socket", vmSocketAddress]);
-        exitCode = await fletch.runInSession(["x-run"], checkExitCode: false);
+        exitCode =
+            await fletch.runInSession(["run", script], checkExitCode: false);
       } finally {
         await fletch.shutdownVm(exitCode);
       }
@@ -413,10 +403,6 @@ class FletchSessionMirror {
   final int id;
 
   final List<List<String>> internalLoggedCommands = <List<String>>[];
-
-  /// When this object is created, its corresponding session in the fletch
-  /// driver process hasn't been created yet.
-  bool isCreatedInPersistentProcess = false;
 
   FletchSessionMirror(this.id);
 

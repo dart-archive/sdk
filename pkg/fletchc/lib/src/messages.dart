@@ -21,8 +21,6 @@ enum DiagnosticKind {
   noTcpSocketTarget,
   expectedAPortNumber,
   socketConnectError,
-  attachToVmBeforeRun,
-  compileBeforeRun,
   missingToFile,
   expectedToPreposition,
   expectedFileTarget,
@@ -32,6 +30,12 @@ enum DiagnosticKind {
 
   // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
   missingRequiredArgument,
+
+  // TODO(ahe): Remove when debug attach implicitly.
+  attachToVmBeforeRun,
+
+  // TODO(ahe): Remove when debug compile implicitly.
+  compileBeforeRun,
 }
 
 /// Returns the diagnostic message template for [kind]. A diagnostic message

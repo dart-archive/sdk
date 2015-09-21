@@ -101,9 +101,6 @@ List<Example> getExamples(DiagnosticKind kind) {
       return <Example>[
           new CommandLineExample(
               <String>['create', 'session', 'foo'],
-              <String>['x-run', 'in', 'session', 'foo']),
-          new CommandLineExample(
-              <String>['create', 'session', 'foo'],
               <String>['debug', 'in', 'session', 'foo']),
           new CommandLineExample(
               <String>['create', 'session', 'foo'],
@@ -114,11 +111,6 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.compileBeforeRun:
       return <Example>[
-          new CommandLineExample(
-              <String>['create', 'session', 'foo'],
-              <String>['attach', 'in', 'session', 'foo',
-                       'tcp_socket', exampleAddress],
-              <String>['x-run', 'in', 'session', 'foo']),
           new CommandLineExample(
               <String>['create', 'session', 'foo'],
               <String>['attach', 'in', 'session', 'foo',

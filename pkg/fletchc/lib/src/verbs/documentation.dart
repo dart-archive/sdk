@@ -103,11 +103,6 @@ const String attachDocumentation = """
              Attach to Fletch VM on the given socket
 """;
 
-const String xRunDocumentation = """
-   x-run     DEPRECATED use 'run' instead: Run the compiled code on
-             the Fletch VM
-""";
-
 const String runDocumentation = """
    run [<file>]
              Run <file> on the Fletch VM. Compile <file> if neeed. If no <file>

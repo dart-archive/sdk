@@ -8,11 +8,9 @@ import 'dart:io';
 
 import 'package:expect/expect.dart';
 
-import 'package:fletchc/src/verbs/x_run_verb.dart' show
-    xRunTask;
-
 import 'package:fletchc/src/driver/developer.dart' show
-    printBacktraceHack;
+    printBacktraceHack,
+    run;
 
 import 'package:fletchc/src/verbs/infrastructure.dart';
 
@@ -92,7 +90,7 @@ simulateVmCrash() async {
   state.session = new MockSessionProxy(nullForever().iterator);
 
   try {
-    await xRunTask(null, state);
+    await run(state);
     throw "expected InputError";
   } on InputError catch (e) {
     Expect.equals(DiagnosticKind.internalError, e.kind);

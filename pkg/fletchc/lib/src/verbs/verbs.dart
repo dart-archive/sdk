@@ -40,9 +40,6 @@ import 'shutdown_verb.dart' show
 import 'x_end_verb.dart' show
     endVerb;
 
-import 'x_run_verb.dart' show
-    xRunVerb;
-
 import 'x_servicec_verb.dart' show
     servicecVerb;
 
@@ -113,6 +110,5 @@ const Map<String, Verb> uncommonVerbs = const <String, Verb>{
   "debug": debugVerb,
   "shutdown": shutdownVerb,
   "x-end": endVerb,
-  "x-run": xRunVerb,
   "x-servicec": servicecVerb,
 };
