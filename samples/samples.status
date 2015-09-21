@@ -5,3 +5,6 @@
 [ ($runtime == fletchc || $runtime == fletchvm) && $clang && $asan]
 # ASAN detects memory leak in EventHandler implementation
 github/lib/src/tests/github_api_test: Pass, Crash
+
+[ $system == lk ]
+*: Skip, OK

@@ -989,3 +989,20 @@ no_main_test/01: CompileTimeError
 not_enough_positional_arguments_test/01: CompileTimeError
 not_enough_positional_arguments_test/05: CompileTimeError
 not_enough_positional_arguments_test/02: CompileTimeError
+
+[ $system == lk ]
+large_class_declaration_test: Pass, Crash # TODO(ajohnsen): Flaky?
+closure_cycles_test: Crash
+double_int_to_string_test: RuntimeError
+double_to_string_as_exponential3_test: RuntimeError
+double_to_string_as_exponential_test: RuntimeError
+double_to_string_as_fixed_test: RuntimeError
+double_to_string_as_precision3_test: RuntimeError
+double_to_string_as_precision_test: RuntimeError
+double_to_string_test: RuntimeError
+gc_test: Crash
+interceptor9_test: Crash
+intrinsified_methods_test: RuntimeError
+round_test: RuntimeError
+vm/optimized_guarded_field_test: Crash
+vm/typed_data_polymorphic_view_test: Crash

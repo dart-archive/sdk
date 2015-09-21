@@ -31,7 +31,8 @@ DEBUG_LOG=".debug.log"
 
 GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
 
-FLETCH_REGEXP = r'fletch-(linux|mac|windows)(-(debug|release|asan)-(x86))?'
+FLETCH_REGEXP = (r'fletch-(linux|mac|windows|lk)'
+                 r'(-(debug|release|asan)-(x86|arm))?')
 CROSS_REGEXP = r'cross-fletch-(linux)-(arm)'
 TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
 
@@ -76,6 +77,11 @@ def Main():
 
       if fletch_match:
         system = fletch_match.group(1)
+
+        if system == 'lk':
+          StepsLK(debug_log)
+          return
+
         modes = ['debug', 'release']
         archs = ['ia32', 'x64']
         asans = [False, True]
@@ -149,6 +155,35 @@ def StepsNormal(debug_log, system, modes, archs, asans):
             configuration=configuration)
 
         RunWithCoreDumpArchiving(run, build_dir, build_conf)
+
+def StepsLK(debug_log):
+  # We need the fletch daemon process to compile snapshots.
+  host_configuration = GetBuildConfigurations(
+      utils.GuessOS(), ['debug'], ['ia32'], [False])[0]
+
+  # Generate ninja files.
+  StepGyp()
+
+  StepBuild(host_configuration['build_conf'], host_configuration['build_dir']);
+
+  build_config = 'DebugLK'
+
+  with bot.BuildStep('Build %s' % build_config):
+    Run(['make', '-C', 'third_party/lk', '-j8'])
+
+  with bot.BuildStep('Test %s' % build_config):
+    # TODO(ajohnsen): This is kind of funky, as test.py tries to start the
+    # background process using -a and -m flags. We should maybe changed so
+    # test.py can have both a host and target configuration.
+    StepTest(
+      build_config,
+      'debug',
+      'ia32',
+      clang=False,
+      debug_log=debug_log,
+      system='lk',
+      snapshot_run=True,
+      configuration=host_configuration)
 
 def StepsCrossBuilder(debug_log, system, modes, arch):
   """This step builds XARM configurations and archives the results.
@@ -283,7 +318,7 @@ def StepBuild(build_config, build_dir, args=()):
 
 def StepTest(
     name, mode, arch, clang=True, asan=False, snapshot_run=False,
-    debug_log=None, configuration=None):
+    debug_log=None, configuration=None, system=None):
   step_name = '%s%s' % (name, '-snapshot' if snapshot_run else '')
   with bot.BuildStep('Test %s' % step_name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
@@ -293,6 +328,10 @@ def StepTest(
             '--run-gclient-hooks=0',
             '--build-before-testing=0',
             '--host-checked']
+
+    if system:
+      args.append('-s%s' % system)
+
     if snapshot_run:
       # We let the fletch compiler compile tests to snapshots.
       # Afterwards we run the snapshot with

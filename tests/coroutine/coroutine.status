@@ -4,3 +4,7 @@
 
 [ $compiler == none && $runtime == fletchc ]
 fib_spawn_program_gc_gc_on_delete_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
+
+[ $system == lk ]
+fib_spawn_program_gc_gc_on_delete_test: Fail # TODO(ajohnsen): LK scripts doesn't support -X flags.
+fiber_yield_channel_receive_test: Pass, Timeout
