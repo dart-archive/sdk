@@ -83,11 +83,15 @@ class FletchSessionCommand implements Command {
   int get maxNumRetries => 0;
 
   String get reproductionCommand {
+    var dartVm = Uri.parse(executable).resolve('dart');
     return "${Platform.executable} -c "
         "-D$isIncrementalCompilationEnabledFlag="
         "$isIncrementalCompilationEnabled "
         "tools/testing/dart/fletch_session_command.dart "
-        "$executable $script ${arguments.join(' ')}";
+        "$executable ${arguments.join(' ')}\n"
+        "OR\n"
+        "gdb -ex run --args "
+        "$dartVm -c -ppackage/ tests/fletchc/run.dart $script";
   }
 
   Future<FletchTestCommandOutput> run(
