@@ -24,7 +24,11 @@ fi
 
 SIZE=$(cat $1 | wc -c)
 PIPEDIR=$(mktemp -d)
-trap 'rm -rf "$PIPEDIR"' EXIT INT TERM HUP
+
+function cleanup_file {
+  rm -rf "$PIPEDIR"
+}
+trap cleanup_file EXIT INT TERM HUP
 
 mkfifo "$PIPEDIR/qemu.in" "$PIPEDIR/qemu.out"
 
@@ -32,10 +36,11 @@ echo "Starting qemu..."
 qemu-system-arm -machine vexpress-a9 -m 16 -kernel third_party/lk/out/build-vexpress-a9-fletch/lk.elf -nographic -serial pipe:$PIPEDIR/qemu &
 PID=$!
 function cleanup {
+  cleanup_file
   echo "Killing $PID"
   kill $PID
 }
-trap cleanup EXIT
+trap cleanup EXIT INT TERM HUP
 
 echo "Started with PID $PID"
 
