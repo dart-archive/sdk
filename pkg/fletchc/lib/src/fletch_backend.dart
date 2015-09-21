@@ -643,7 +643,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     DebugInfo debugInfo = new DebugInfo(function);
     AstElement element = function.element;
     if (element == null) return debugInfo;
-    List<Bytecode> expectedBytecodes;
+    List<Bytecode> expectedBytecodes = function.bytecodes;
     element = element.implementation;
     TreeElements elements = element.resolvedAst.elements;
     ClosureEnvironment closureEnvironment = createClosureEnvironment(
@@ -662,7 +662,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
           closureEnvironment,
           element,
           compiler);
-      expectedBytecodes = lazyFieldInitializers[element].assembler.bytecodes;
     } else if (function.isInitializerList) {
       ClassElement enclosingClass = element.enclosingClass;
       // TODO(ajohnsen): Don't depend on the class builder.
@@ -678,8 +677,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
           element,
           classBuilder,
           compiler);
-      expectedBytecodes = currentSystem.lookupConstructorInitializerByElement(
-          element).bytecodes;
     } else {
       codegen = new DebugInfoFunctionCodegen(
           debugInfo,
@@ -690,8 +687,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
           closureEnvironment,
           element,
           compiler);
-      expectedBytecodes =
-          currentSystem.lookupFunctionByElement(element.declaration).bytecodes;
     }
     if (isNative(element)) {
       compiler.withCurrentElement(element, () {

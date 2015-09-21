@@ -78,7 +78,6 @@ class FunctionCodegen extends CodegenVisitor {
       assembler.loadSlot(-2);
     }
 
-
     int i = 0;
     functionSignature.orderedForEachParameter((ParameterElement parameter) {
       int slot = i++ - parameterCount - 1;

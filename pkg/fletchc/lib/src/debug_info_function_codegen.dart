@@ -36,12 +36,6 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
   final FletchCompilerImplementation compiler;
   final DebugInfo debugInfo;
 
-  // Regenerate the bytecode in a fresh buffer separately from the compiled
-  // function. If we did not create a separate buffer, the bytecode would
-  // be appended to the compiled function assembler and we would get a compiled
-  // function with incorrect bytecode.
-  final BytecodeAssembler debugAssembler;
-
   DebugInfoFunctionCodegen(this.debugInfo,
                            FletchFunctionBuilder functionBuilder,
                            FletchContext context,
@@ -50,13 +44,10 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
                            ClosureEnvironment closureEnvironment,
                            FunctionElement function,
                            this.compiler)
-      : debugAssembler = new BytecodeAssembler(functionBuilder.arity),
-        super(functionBuilder, context, elements, registry,
+      : super(functionBuilder, context, elements, registry,
               closureEnvironment, function) {
     if (functionBuilder.isInstanceMember) pushVariableDeclaration(thisValue);
   }
-
-  BytecodeAssembler get assembler => debugAssembler;
 
   void recordDebugInfo(Node node) {
     debugInfo.addLocation(compiler, assembler.byteSize, node);

@@ -37,15 +37,6 @@ class DebugInfoLazyFieldInitializerCodegen
   final DebugInfo debugInfo;
   final FletchCompilerImplementation compiler;
 
-  // Regenerate the bytecode in a fresh buffer separately from the compiled
-  // function. If we did not create a separate buffer, the bytecode would
-  // be appended to the compiled function assembler and we would get a compiled
-  // function with incorrect bytecode.
-  final BytecodeAssembler debugAssembler;
-
-  // TODO(ajohnsen): Consider creating a DebugFletchFunctionBuilder instead of
-  // only intercepting the BytecodeAssembler, or simply replace the
-  // BytecodeAssembler in the FletchFunctionBuilder.
   DebugInfoLazyFieldInitializerCodegen(this.debugInfo,
                                        FletchFunctionBuilder functionBuilder,
                                        FletchContext context,
@@ -53,15 +44,9 @@ class DebugInfoLazyFieldInitializerCodegen
                                        FletchRegistry registry,
                                        ClosureEnvironment closureEnvironment,
                                        FieldElement field,
-                                       this.compiler,
-                                       [BytecodeAssembler assembler])
-      : debugAssembler = (assembler == null)
-            ? new BytecodeAssembler(functionBuilder.arity)
-            : assembler,
-        super(functionBuilder, context, elements, registry,
+                                       this.compiler)
+      : super(functionBuilder, context, elements, registry,
               closureEnvironment, field);
-
-  BytecodeAssembler get assembler => debugAssembler;
 
   void recordDebugInfo(Node node) {
     debugInfo.addLocation(compiler, assembler.byteSize, node);

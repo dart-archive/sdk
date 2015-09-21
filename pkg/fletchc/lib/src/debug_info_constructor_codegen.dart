@@ -41,12 +41,6 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
   final DebugInfo debugInfo;
   final FletchCompilerImplementation compiler;
 
-  // Regenerate the bytecode in a fresh buffer separately from the compiled
-  // function. If we did not create a separate buffer, the bytecode would
-  // be appended to the compiled function assembler and we would get a compiled
-  // function with incorrect bytecode.
-  final BytecodeAssembler debugAssembler;
-
   DebugInfoConstructorCodegen(this.debugInfo,
                               FletchFunctionBuilder functionBuilder,
                               FletchContext context,
@@ -56,11 +50,8 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
                               ConstructorElement constructor,
                               FletchClassBuilder classBuilder,
                               this.compiler)
-      : debugAssembler = new BytecodeAssembler(functionBuilder.arity),
-        super(functionBuilder, context, elements, registry,
+      : super(functionBuilder, context, elements, registry,
               closureEnvironment, constructor, classBuilder);
-
-  BytecodeAssembler get assembler => debugAssembler;
 
   LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
       FletchFunctionBuilder function,
@@ -74,8 +65,7 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
         null,
         context.backend.createClosureEnvironment(field, elements),
         field,
-        compiler,
-        assembler);
+        compiler);
   }
 
   void recordDebugInfo(Node node) {
