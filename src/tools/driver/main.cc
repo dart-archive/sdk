@@ -17,7 +17,6 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <sys/wait.h>
-#include <termios.h>
 #include <unistd.h>
 
 #include "src/shared/assert.h"
@@ -737,11 +736,6 @@ static int Main(int argc, char** argv) {
   SendArgv(connection, argc, argv);
 
   FlushAllStreams();
-
-  struct termios term;
-  tcgetattr(STDIN_FILENO, &term);
-  term.c_lflag &= ~(ICANON);
-  tcsetattr(STDIN_FILENO, TCSANOW, &term);
 
   int max_fd = Utils::Maximum(STDIN_FILENO, control_socket->FileDescriptor());
   max_fd = Utils::Maximum(max_fd, signal_pipe);
