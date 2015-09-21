@@ -98,6 +98,7 @@ class Verb {
 /// used to print an error message.
 const Map<String, Verb> commonVerbs = const <String, Verb>{
   "help": helpVerb,
+  "attach": attachVerb,
   "run": runVerb,
   "export": exportVerb,
 };
@@ -106,7 +107,6 @@ const Map<String, Verb> commonVerbs = const <String, Verb>{
 ///
 /// These verbs are displayed when running `fletch help all`.
 const Map<String, Verb> uncommonVerbs = const <String, Verb>{
-  "attach": attachVerb,
   "compile": compileVerb,
   "compile-and-run": compileAndRunVerb,
   "create": createVerb,
