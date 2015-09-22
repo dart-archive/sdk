@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ "$1" == "-m" ]; then
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
