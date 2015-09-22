@@ -23,6 +23,9 @@ import 'dart:io' show
     ServerSocket,
     Socket;
 
+import 'package:compiler/src/util/uri_extras.dart' show
+    relativize;
+
 import '../../fletch_compiler.dart' show
     FletchCompiler,
     StringOrUri;
@@ -139,7 +142,8 @@ Future<int> compileAndRunTask(
     port = int.parse(address[1]);
     print("Connecting to $host:$port");
   } else {
-    String vmPath = compilerHelper.fletchVm.toFilePath();
+    Uri vmUri = compilerHelper.fletchVm;
+    String vmPath = vmUri.toFilePath();
     if (compilerHelper.verbose) {
       print("Running '$vmPath'");
     }
@@ -148,7 +152,8 @@ Future<int> compileAndRunTask(
     futures.add(vm.exitCode.then((int value) {
       exitCode = value;
       if (exitCode != 0) {
-        print("Non-zero exit code from '$vmPath' ($exitCode).");
+        String relativeVmPath = relativize(base, vmUri, false);
+        print("Non-zero exit code from '$relativeVmPath' ($exitCode).");
       }
     }));
     trackSubscription(

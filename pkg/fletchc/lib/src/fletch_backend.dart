@@ -1407,7 +1407,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       Spannable spannable,
       String reason,
       FletchFunctionBuilder function) {
-    compiler.reportError(
+    compiler.reportHint(
         spannable, MessageKind.GENERIC, {'text': reason});
     var constString = constantSystem.createString(
         new DartString.literal(reason));

@@ -372,9 +372,11 @@ class VmCommand extends ProcessCommand {
 }
 
 class OutputDiffingVmCommand extends VmCommand {
+  final String buildDir;
   final List<int> expectedOutput;
 
-  OutputDiffingVmCommand._(String executable,
+  OutputDiffingVmCommand._(this.buildDir,
+                           String executable,
                            List<String> arguments,
                            Map<String, String> environmentOverrides,
                            this.expectedOutput)
@@ -382,11 +384,13 @@ class OutputDiffingVmCommand extends VmCommand {
 
   void _buildHashCode(HashCodeBuilder builder) {
     super._buildHashCode(builder);
+    builder.add(buildDir);
     builder.add(expectedOutput);
   }
 
   bool _equal(Command other) {
     if (other is OutputDiffingVmCommand) {
+      if (other.buildDir != buildDir) return false;
       if (other.expectedOutput.length != expectedOutput.length) return false;
       for (int i = 0; i < expectedOutput.length; i++) {
         if (other.expectedOutput[i] != expectedOutput[i]) return false;
@@ -674,11 +678,14 @@ class CommandBuilder {
     return _getUniqueCommand(command);
   }
 
-  VmCommand getOutputDiffingVmCommand(String executable, List<String> arguments,
+  VmCommand getOutputDiffingVmCommand(String buildDir,
+                                      String executable,
+                                      List<String> arguments,
                                       Map<String, String> environmentOverrides,
                                       List<int> expectedOutput) {
       var command = new OutputDiffingVmCommand._(
-          executable, arguments, environmentOverrides, expectedOutput);
+          buildDir, executable, arguments, environmentOverrides,
+          expectedOutput);
       return _getUniqueCommand(command);
   }
 
@@ -1585,16 +1592,19 @@ class OutputDiffingVmCommandOutputImpl extends VmCommandOutputImpl {
 
   Expectation result(TestCase testCase) {
 
+    List<String> expectedLines =
+        UTF8.decode(command.expectedOutput)
+            .replaceAll('out/ReleaseIA32', command.buildDir)
+            .split('\n');
+
+    List<String> stdoutLines = UTF8.decode(stdout).split('\n');
+
     void printExpectationDiagnosticsFailure() {
       if (_printedDiagnostics) return;
       _printedDiagnostics = true;
 
       diagnostics.add(
           'Matching debugger output with expectation file failed:');
-
-      List<String> expectedLines =
-          UTF8.decode(command.expectedOutput).split('\n');
-      List<String> stdoutLines = UTF8.decode(stdout).split('\n');
 
       var commonLines = math.min(expectedLines.length, stdoutLines.length);
       for (int i = 0; i < commonLines; i++) {
@@ -1614,6 +1624,16 @@ class OutputDiffingVmCommandOutputImpl extends VmCommandOutputImpl {
     }
 
     Expectation outcome = super.result(testCase);
+    if (expectedLines.length != stdoutLines.length) {
+      printExpectationDiagnosticsFailure();
+      return Expectation.OUTPUT_MISMATCH;
+    }
+    for (int i = 0; i < expectedLines.length; i++) {
+      if (expectedLines[i] != stdoutLines[i]) {
+        printExpectationDiagnosticsFailure();
+        return Expectation.OUTPUT_MISMATCH;
+      }
+    }
     if (outcome != Expectation.PASS) {
       if (!_printedDiagnostics) {
         _printedDiagnostics = true;
@@ -1621,17 +1641,6 @@ class OutputDiffingVmCommandOutputImpl extends VmCommandOutputImpl {
         diagnostics.add('Exit code was: $exitCode');
       }
       return outcome;
-    }
-    List<int> expected = command.expectedOutput;
-    if (expected.length != stdout.length) {
-      printExpectationDiagnosticsFailure();
-      return Expectation.FAIL;
-    }
-    for (int i = 0; i < expected.length; i++) {
-      if (expected[i] != stdout[i]) {
-        printExpectationDiagnosticsFailure();
-        return Expectation.FAIL;
-      }
     }
     return Expectation.PASS;
   }

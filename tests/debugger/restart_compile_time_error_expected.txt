@@ -19,3 +19,4 @@ Compile error
 Stack trace:
 > 0: main        	@fiskHest()
 > q
+Non-zero exit code from 'out/ReleaseIA32/fletch-vm' (254).

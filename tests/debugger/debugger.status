@@ -2,5 +2,6 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-restart_uncaught_exception_test: Fail, OK
+restart_uncaught_exception_test: RuntimeError, OK
 restart_compile_time_error_test: CompileTimeError, OK
+unsupported_hint_test: RuntimeError, OK

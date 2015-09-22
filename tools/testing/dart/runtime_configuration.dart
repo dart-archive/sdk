@@ -208,7 +208,8 @@ class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
     environment = environmentOverrides;
     return <Command>[
         commandBuilder.getOutputDiffingVmCommand(
-            executable, arguments, environment, expectedOutput)];
+            suite.buildDir, executable, arguments, environment,
+            expectedOutput)];
   }
 }
 

@@ -15,3 +15,4 @@ Uncaught exception:
 Stack trace:
 > 0: main    	@42
 > q
+Non-zero exit code from 'out/ReleaseIA32/fletch-vm' (255).
