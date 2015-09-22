@@ -44,7 +44,7 @@ regexp/regexp_test: RuntimeError
 regress_r21715_test: RuntimeError
 
 # Object.runtimeType / type check
-collection_length_test: CompileTimeError
+collection_length_test: RuntimeError
 iterable_fold_test: RuntimeError
 iterable_generate_test: RuntimeError
 iterable_reduce_test: RuntimeError

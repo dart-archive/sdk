@@ -410,7 +410,7 @@ factory_redirection3_cyclic_test/01: RuntimeError
 factory_redirection_test/04: RuntimeError
 factory_redirection_test/07: RuntimeError
 factory_redirection_test/09: RuntimeError
-factory_type_parameter2_test: CompileTimeError
+factory_type_parameter2_test: RuntimeError
 factory_type_parameter_test: RuntimeError
 fast_method_extraction_test: RuntimeError
 field_decl_missing_var_type_test/01: MissingCompileTimeError
@@ -519,7 +519,6 @@ generic_native_test: RuntimeError
 generic_object_type_test: RuntimeError
 generic_parameterized_extends_test: RuntimeError
 generic_test: RuntimeError
-getter_no_setter2_test/03: CompileTimeError
 getter_setter_in_lib_test: CompileTimeError
 if_null_assignment_behavior_test/01: RuntimeError
 if_null_assignment_behavior_test/02: RuntimeError
@@ -800,7 +799,7 @@ stacktrace_rethrow_error_test/withtraceparameter: RuntimeError
 stacktrace_rethrow_nonerror_test: RuntimeError
 stacktrace_test: RuntimeError
 static_getter_no_setter1_test/01: RuntimeError
-static_getter_no_setter2_test/01: CompileTimeError
+static_getter_no_setter2_test/01: RuntimeError
 static_getter_no_setter3_test/01: RuntimeError
 super_call4_test: CompileTimeError
 super_conditional_operator_test/17: RuntimeError
