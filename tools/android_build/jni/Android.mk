@@ -42,6 +42,7 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/interpreter.cc \
 	../../../src/vm/intrinsics.cc \
 	../../../src/vm/lookup_cache.cc \
+	../../../src/vm/log_print_interceptor.cc \
 	../../../src/vm/native_process.cc \
 	../../../src/vm/native_process_disabled.cc \
 	../../../src/vm/natives.cc \

@@ -98,6 +98,26 @@ bool Platform::StoreFile(const char* uri, List<uint8> bytes) {
   return true;
 }
 
+bool Platform::WriteText(const char* uri, const char* text, bool append) {
+  // Open the file.
+  FILE* file = fopen(uri, append ? "a" : "w");
+  if (file == NULL) {
+    // TODO(wibling): Does it make sense to write an error here? It seems it
+    // could go into a loop if it fails to open the log file and we then write
+    // again.
+    return false;
+  }
+  int len = strlen(text);
+  int result = fwrite(text, 1, len, file);
+  fclose(file);
+  if (result != len) {
+    // TODO(wibling): Same as above.
+    return false;
+  }
+
+  return true;
+}
+
 const char* Platform::GetTimeZoneName(int64_t seconds_since_epoch) {
   // We don't know, so return an empty string like V8 does.
   return "";
@@ -120,6 +140,11 @@ void Platform::ScheduleAbort() {
 
 void Platform::ImmediateAbort() {
   abort();
+}
+
+int Platform::GetPid() {
+  // For now just returning 0 here.
+  return 0;
 }
 
 VirtualMemory::VirtualMemory(int size) : size_(size) {

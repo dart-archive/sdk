@@ -76,8 +76,11 @@ namespace Platform {
   // Load file at 'uri'.
   List<uint8> LoadFile(const char* name);
 
-  // Store file at 'ur'.
+  // Store file at 'uri'.
   bool StoreFile(const char* uri, List<uint8> bytes);
+
+  // Write text to file, append if the bool append is true.
+  bool WriteText(const char* uri, const char* text, bool append);
 
   const char* GetTimeZoneName(int64_t seconds_since_epoch);
 
@@ -90,6 +93,8 @@ namespace Platform {
   void ScheduleAbort();
 
   void ImmediateAbort();
+
+  int GetPid();
 
   inline OperatingSystem OS() {
 #if defined(__ANDROID__)

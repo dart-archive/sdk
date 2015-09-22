@@ -62,6 +62,8 @@
         'interpreter.h',
         'intrinsics.cc',
         'intrinsics.h',
+        'log_print_interceptor.cc',
+        'log_print_interceptor.h',
         'lookup_cache.cc',
         'lookup_cache.h',
         'native_interpreter.h',

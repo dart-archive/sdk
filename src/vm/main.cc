@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <sys/param.h>
 
 #include "include/fletch_api.h"
 
@@ -15,6 +16,7 @@
 #include "src/shared/utils.h"
 
 #include "src/vm/session.h"
+#include "src/vm/log_print_interceptor.h"
 
 namespace fletch {
 
@@ -27,12 +29,24 @@ static int RunSession(Connection* connection) {
   return result;
 }
 
-static Connection* WaitForCompilerConnection(const char* host, int port) {
+static void WriteIntToFile(const char* dirPath, const char* ext, int value) {
+  char filePath[MAXPATHLEN + 1];
+  snprintf(filePath, sizeof(filePath), "%s/vm-%d.%s",
+      dirPath, Platform::GetPid(), ext);
+  char valueString[20];
+  snprintf(valueString, sizeof(valueString), "%d", value);
+  Platform::WriteText(filePath, valueString, false);
+}
+
+static Connection* WaitForCompilerConnection(
+    const char* host, int port, const char* runDir) {
   // Listen for new connections.
   ConnectionListener listener(host, port);
 
   Print::Out("Waiting for compiler on %s:%i\n", host, listener.Port());
-
+  if (runDir != NULL) {
+    WriteIntToFile(runDir, "port", listener.Port());
+  }
   return listener.Accept();
 }
 
@@ -66,6 +80,8 @@ static int Main(int argc, char** argv) {
 
   // Handle the arguments.
   const char* host = "127.0.0.1";
+  const char* runDir = NULL;
+  const char* logDir = NULL;
   int port = 0;
   const char* input = NULL;
 
@@ -82,6 +98,10 @@ static int Main(int argc, char** argv) {
     } else if (strncmp(argument, "--help", 6) == 0) {
       printUsage();
       exit(0);
+    } else if (strncmp(argument, "--log-dir=", 10) == 0) {
+      logDir = argument + 10;
+    } else if (strncmp(argument, "--run-dir=", 10) == 0) {
+      runDir = argument + 10;
     } else if (strncmp(argument, "-", 1) == 0) {
       Print::Out("Invalid option: %s.\n", argument);
       invalidOption = true;
@@ -101,6 +121,20 @@ static int Main(int argc, char** argv) {
 
   int result = 0;
 
+  // Check if we should add a log print interceptor.
+  int pid = Platform::GetPid();
+  if (logDir != NULL) {
+    // Generate a vm specific log name with the given path.
+    char logPath[MAXPATHLEN + 1];
+    snprintf(logPath, sizeof(logPath), "%s/vm-%d.log", logDir, pid);
+    Print::RegisterPrintInterceptor(new LogPrintInterceptor(logPath));
+  }
+
+  // Write the pid to a file if a run directory (e.g. /var/run/fletch) is set.
+  if (runDir != NULL) {
+    WriteIntToFile(runDir, "pid", pid);
+  }
+
   // Check if we're passed an snapshot file directly.
   if (runSnapshot) {
     List<uint8> bytes = Platform::LoadFile(input);
@@ -119,7 +153,9 @@ static int Main(int argc, char** argv) {
   // interactive programming session that talks to a separate
   // compiler process.
   if (interactive) {
-    Connection* connection = WaitForCompilerConnection(host, port);
+    // When interactive and a pid directory is specified write the port we are
+    // listening on to the file vm-<pid>.port in the pid directory.
+    Connection* connection = WaitForCompilerConnection(host, port, runDir);
     result = RunSession(connection);
   }
 
