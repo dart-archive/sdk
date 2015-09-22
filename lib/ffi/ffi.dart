@@ -550,7 +550,7 @@ class ForeignCString extends ForeignMemory {
     // Don't include the '\0' character in the encoded string.
     var encodedString = new List(length - 1);
     for (int i = 0; i < length - 1; ++i) {
-      encodedString.add(getUint8(i));
+      encodedString[i] = getUint8(i);
     }
     return UTF8.decode(encodedString);
  }
