@@ -20,8 +20,8 @@ Uri guessFletchProgramName() {
 }
 
 main(List<String> arguments) async {
-  Uri packageRoot = Uri.base.resolve("package/");
-  SessionState state = createSessionState("test", packageRoot);
+  Uri packages = Uri.base.resolve(".packages");
+  SessionState state = createSessionState("test", packages);
   Uri fletchProgramName = guessFletchProgramName();
   for (String script in arguments) {
     await compile(fileUri(script, Uri.base), state);

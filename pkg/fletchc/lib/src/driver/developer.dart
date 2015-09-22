@@ -143,12 +143,12 @@ Future<int> compile(Uri script, SessionState state) async {
   return 0;
 }
 
-SessionState createSessionState(String name, Uri packageRoot) {
+SessionState createSessionState(String name, Uri packageConfig) {
   // TODO(ahe): Allow user to specify dart2js options.
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   FletchCompiler compilerHelper = new FletchCompiler(
-      options: compilerOptions, packageRoot: packageRoot);
+      options: compilerOptions, packageConfig: packageConfig);
 
   return new SessionState(
       name, compilerHelper, compilerHelper.newIncrementalCompiler());

@@ -118,7 +118,7 @@ Future<int> compileAndRunTask(
   FletchCompiler compilerHelper = new FletchCompiler(
       currentDirectory: base,
       options: compilerOptions,
-      packageRoot: options.packageRootPath,
+      packageConfig: options.packageConfigPath,
       script: options.script,
       fletchVm: fletchVm);
   IncrementalCompiler compiler =

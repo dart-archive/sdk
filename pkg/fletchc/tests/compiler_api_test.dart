@@ -15,8 +15,8 @@ main(List<String> arguments) {
   Expect.throws(compiler.run, (e) => e is StateError);
 
   Expect.throws(
-      () => new FletchCompiler(packageRoot: 0),
-      (e) => e is ArgumentError && '$e'.contains("packageRoot"));
+      () => new FletchCompiler(packageConfig: 0),
+      (e) => e is ArgumentError && '$e'.contains("packageConfig"));
 
   Expect.throws(
       () => new FletchCompiler(libraryRoot: 0),

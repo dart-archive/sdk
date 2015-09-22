@@ -1,0 +1,24 @@
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+async_helper:pkg/async_helper/lib
+charcode:../third_party/charcode/lib
+compiler:../dart/pkg/compiler/lib
+crypto:../third_party/crypto/lib
+expect:../dart/pkg/expect/lib
+fletch_agent:pkg/fletch_agent/lib
+fletchc:pkg/fletchc/lib
+github_sample:samples/github/lib
+gpio:pkg/gpio/lib
+http:pkg/http/lib
+i2c:pkg/i2c/lib
+immi_samples:pkg/immi_samples/lib
+immutable:pkg/immutable/lib
+isolate:pkg/isolate/lib
+js_ast:../dart/pkg/js_ast/lib
+js_runtime:../dart/sdk/lib/_internal/js_runtime/lib/
+package_config:../third_party/package_config/lib
+path:../third_party/path/lib
+persistent:../third_party/persistent/lib/
+sdk_library_metadata:../dart/sdk/lib/_internal/sdk_library_metadata/lib/
+servicec:pkg/servicec/lib

@@ -16,9 +16,9 @@
 /// Then run this command:
 ///
 ///     cat messages.txt | \
-///       ./third_party/bin/$OS/dart -ppackage/ \
+///       ./third_party/bin/$OS/dart --packages=.packages/ \
 ///           tests/fletch_tests/fletch_test_suite.dart | \
-///       ./third_party/bin/$OS/dart -ppackage/ \
+///       ./third_party/bin/$OS/dart --packages=.packages \
 ///           tests/fletch_tests/test_suite_consumer.dart
 library fletch_tests.test_suite_consumer;
 

@@ -138,15 +138,15 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
       api.CompilerOutput outputProvider,
       api.CompilerDiagnostics handler,
       Uri libraryRoot,
-      Uri packageRoot,
+      Uri packageConfig,
       this.patchRoot,
       List<String> options,
       Map<String, dynamic> environment,
       this.fletchVm)
       : super(
-          provider, outputProvider, handler, libraryRoot, packageRoot,
+          provider, outputProvider, handler, libraryRoot, null,
           EXTRA_DART2JS_OPTIONS.toList()..addAll(options), environment,
-          null, null, FletchBackend.newInstance) {
+          packageConfig, null, FletchBackend.newInstance) {
     CodegenRegistry global = globalDependencies;
     globalDependencies =
         new FletchRegistry(this, global.treeElements).asRegistry;

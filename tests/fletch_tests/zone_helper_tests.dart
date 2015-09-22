@@ -163,9 +163,10 @@ testCompileTimeError() async {
     isolate.kill();
   }).asFuture();
 
+  // The call to spawnUri will pick up the default .packages packages config.
   isolate = await Isolate.spawnUri(
       fileWithCompileTimeError, <String>[], port.sendPort, paused: true,
-      checked: true, packageRoot: Uri.base.resolve(Platform.packageRoot));
+      checked: true);
 
   isolate.setErrorsFatal(true);
   isolate.addOnExitListener(exitPort.sendPort);

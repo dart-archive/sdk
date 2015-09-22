@@ -14,7 +14,7 @@ class Options {
   final bool debugging;
   final bool testDebugger;
   final String testDebuggerCommands;
-  final String packageRootPath;
+  final String packageConfigPath;
   final String attachArgument;
   final bool connectToExistingVm;
   final int existingVmPort;
@@ -26,7 +26,7 @@ class Options {
       this.debugging,
       this.testDebugger,
       this.testDebuggerCommands,
-      this.packageRootPath,
+      this.packageConfigPath,
       this.attachArgument,
       this.connectToExistingVm,
       this.existingVmPort,
@@ -42,7 +42,7 @@ class Options {
     bool debugging = false;
     bool testDebugger = false;
     String testDebuggerCommands = "";
-    String packageRootPath = "package/";
+    String packageConfigPath = ".packages";
     String attachArgument;
     bool connectToExistingVm = false;
     int existingVmPort = 0;
@@ -78,10 +78,9 @@ class Options {
           testDebugger = true;
           break;
 
-        case '-p':
-        case '--package-root':
-          packageRootPath = getRequiredArgument(
-              "The option '$option' requires a directory name.");
+        case '--packages':
+          packageConfigPath = getRequiredArgument(
+              "The option '$option' requires a file name.");
           break;
 
         case '-a':
@@ -100,9 +99,9 @@ class Options {
           break;
 
         default:
-          const String packageRootFlag = '--package-root=';
-          if (option.startsWith(packageRootFlag)) {
-            packageRootPath = option.substring(packageRootFlag.length);
+          const String packageConfigFlag = '--packages=';
+          if (option.startsWith(packageConfigFlag)) {
+            packageConfigPath = option.substring(packageConfigFlag.length);
             break;
           }
 
@@ -142,7 +141,7 @@ class Options {
 
     return new Options(
         script, snapshotPath, debugging, testDebugger, testDebuggerCommands,
-        packageRootPath, attachArgument, connectToExistingVm, existingVmPort,
+        packageConfigPath, attachArgument, connectToExistingVm, existingVmPort,
         defines);
   }
 }

@@ -71,7 +71,7 @@ class FletchCompiler {
        CompilerOutput outputProvider,
        CompilerDiagnostics handler,
        @StringOrUri libraryRoot,
-       @StringOrUri packageRoot,
+       @StringOrUri packageConfig,
        /// Location of fletch patch files.
        @StringOrUri patchRoot,
        @StringOrUri script,
@@ -130,21 +130,19 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
 
     script = _computeValidatedUri(script, name: 'script', base: base);
 
-    packageRoot = _computeValidatedUri(
-        packageRoot, name: 'packageRoot', ensureTrailingSlash: true,
-        base: base);
-    if (packageRoot == null) {
+    packageConfig = _computeValidatedUri(
+        packageConfig, name: 'packageConfig', base: base);
+    if (packageConfig == null) {
       if (script != null) {
-        packageRoot = script.resolve('packages/');
+        packageConfig = script.resolve('.packages');
       } else {
-        packageRoot = base.resolve('packages/');
+        packageConfig = base.resolve('.packages');
       }
     }
 
     fletchVm = guessFletchVm(
         _computeValidatedUri(
-            fletchVm, name: 'fletchVm', ensureTrailingSlash: false,
-            base: base),
+            fletchVm, name: 'fletchVm', base: base),
         base);
 
     if (patchRoot == null  && _PATCH_ROOT != null) {
@@ -173,14 +171,14 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
         outputProvider,
         handler,
         libraryRoot,
-        packageRoot,
+        packageConfig,
         patchRoot,
         options,
         environment,
         fletchVm);
 
     compiler.log("Using library root: $libraryRoot");
-    compiler.log("Using package root: $packageRoot");
+    compiler.log("Using package config: $packageConfig");
 
     var helper = new FletchCompiler._(compiler, script, isVerbose);
     compiler.helper = helper;
@@ -225,7 +223,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
       {List<String> options: const <String>[]}) {
     return new IncrementalCompiler(
         libraryRoot: _compiler.libraryRoot,
-        packageRoot: _compiler.packageRoot,
+        packageConfig: _compiler.packageConfig,
         inputProvider: _compiler.provider,
         diagnosticHandler: _compiler.handler,
         options: options,

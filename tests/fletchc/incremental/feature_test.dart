@@ -621,7 +621,7 @@ Future<Map<String, NoArgFuture>> listTests() {
 }
 
 class IncrementalTestHelper {
-  final Uri packageRoot;
+  final Uri packageConfig;
 
   final IoInputProvider inputProvider;
 
@@ -630,22 +630,22 @@ class IncrementalTestHelper {
   FletchSystem system;
 
   IncrementalTestHelper.internal(
-      this.packageRoot,
+      this.packageConfig,
       this.inputProvider,
       this.compiler);
 
   factory IncrementalTestHelper() {
-    Uri packageRoot = new Uri(scheme: PACKAGE_SCHEME, path: '/');
-    IoInputProvider inputProvider = new IoInputProvider(packageRoot);
+    Uri packageConfig = Uri.base.resolve('.packages');
+    IoInputProvider inputProvider = new IoInputProvider(packageConfig);
     FormattingDiagnosticHandler diagnosticHandler =
         new FormattingDiagnosticHandler(inputProvider);
     IncrementalCompiler compiler = new IncrementalCompiler(
-        packageRoot: packageRoot,
+        packageConfig: packageConfig,
         inputProvider: inputProvider,
         diagnosticHandler: diagnosticHandler,
         outputProvider: new OutputProvider());
     return new IncrementalTestHelper.internal(
-        packageRoot,
+        packageConfig,
         inputProvider,
         compiler);
   }
@@ -692,13 +692,13 @@ class IncrementalTestHelper {
 class IoInputProvider extends SourceFileProvider {
   final Map<Uri, String> sources = <Uri, String>{};
 
-  final Uri packageRoot;
+  final Uri packageConfig;
 
   final Map<Uri, Future> cachedSources = new Map<Uri, Future>();
 
   static final Map<Uri, String> cachedFiles = new Map<Uri, String>();
 
-  IoInputProvider(this.packageRoot);
+  IoInputProvider(this.packageConfig);
 
   Future readFromUri(Uri uri) {
     return cachedSources.putIfAbsent(uri, () {
@@ -709,7 +709,7 @@ class IoInputProvider extends SourceFileProvider {
         text = sources[uri];
       } else {
         if (uri.scheme == PACKAGE_SCHEME) {
-          throw "packages not supported";
+          throw "packages not supported $uri";
         }
         text = readCachedFile(uri);
         name = new File.fromUri(uri).path;

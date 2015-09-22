@@ -105,7 +105,7 @@ class FletchTestSuite extends TestSuite {
            '-Dtest.dart.build-clang=${configuration["clang"]}',
            '-Dtest.dart.build-asan=${configuration["asan"]}',
            '-c',
-           '-ppackage/',
+           '--packages=.packages',
            '-Dtest.fletch_test_suite.port=${server.port}',
            '-Dfletchc.use-custom-enqueuer=$enableCustomEnqueuer',
            '$testSuiteDir/fletch_test_suite.dart']).then((io.Process process) {

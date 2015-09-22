@@ -13,7 +13,7 @@ Future<Compiler> reuseCompiler(
      List<String> options: const [],
      Compiler cachedCompiler,
      Uri libraryRoot,
-     Uri packageRoot,
+     Uri packageConfig,
      bool packagesAreImmutable: false,
      Map<String, dynamic> environment,
      Future<bool> reuseLibrary(LibraryElement library)}) async {
@@ -61,7 +61,7 @@ Future<Compiler> reuseCompiler(
         outputProvider: outputProvider,
         handler: diagnosticHandler,
         libraryRoot: libraryRoot,
-        packageRoot: packageRoot,
+        packageConfig: packageConfig,
         options: options,
         environment: environment).backdoor.compilerImplementation;
     return compiler;
