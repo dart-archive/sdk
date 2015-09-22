@@ -49,7 +49,8 @@ class CreateSessionTask extends SharedTask {
 
 Future<int> createSessionTask(String name, packageRoot) {
   assert(SessionState.internalCurrent == null);
-  SessionState.internalCurrent = createSessionState(name, packageRoot);
-  print("Created session '$name'.");
+  SessionState state = createSessionState(name, packageRoot);
+  SessionState.internalCurrent = state;
+  state.log("Created session '$name'.");
   return new Future<int>.value(0);
 }

@@ -148,6 +148,8 @@ class SessionState {
 
   final List<FletchDelta> compilationResults = <FletchDelta>[];
 
+  final List<String> loggedMessages = <String>[];
+
   Uri script;
 
   Session session;
@@ -172,6 +174,16 @@ class SessionState {
   void detachCommandSender() {
     stdoutSink.detachCommandSender();
     stderrSink.detachCommandSender();
+  }
+
+  void log(message) {
+    loggedMessages.add("[$name: ${new DateTime.now()} $message]");
+  }
+
+  String flushLog() {
+    String result = loggedMessages.join("\n");
+    loggedMessages.clear();
+    return result;
   }
 
   static SessionState internalCurrent;

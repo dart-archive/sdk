@@ -67,10 +67,7 @@ Future<Null> attachToLocalVm(Uri programName, SessionState state) async {
   await state.session.disableVMStandardOutput();
 }
 
-Future<Null> attachToVm(
-    String host,
-    int port,
-    SessionState sessionState) async {
+Future<Null> attachToVm(String host, int port, SessionState state) async {
   Socket socket = await Socket.connect(host, port).catchError(
       (SocketException error) {
         String message = error.message;
@@ -89,19 +86,17 @@ Future<Null> attachToVm(
     // other side.
   }
 
-  Session session =
-      new Session(handleSocketErrors(socket, "vmSocket"),
-                  sessionState.compiler,
-                  sessionState.stdoutSink,
-                  sessionState.stderrSink,
-                  null);
+  Session session = new Session(
+      handleSocketErrors(socket, "vmSocket"), state.compiler, state.stdoutSink,
+      state.stderrSink, null);
 
   // Enable debugging as a form of handshake.
   await session.runCommand(const Debugging());
 
-  print("Connected to Fletch VM on TCP socket ${socket.port} -> $remotePort");
+  state.log(
+      "Connected to Fletch VM on TCP socket ${socket.port} -> $remotePort");
 
-  sessionState.session = session;
+  state.session = session;
 }
 
 Future<int> compile(Uri script, SessionState state) async {
@@ -143,7 +138,7 @@ Future<int> compile(Uri script, SessionState state) async {
   }
   state.addCompilationResult(newResult);
 
-  print("Compiled '$script' to ${newResult.commands.length} commands\n\n\n");
+  state.log("Compiled '$script' to ${newResult.commands.length} commands");
 
   return 0;
 }
@@ -177,19 +172,21 @@ Future<int> run(SessionState state) async {
   if (command == null) {
     await session.kill();
     await session.shutdown();
+    print(state.flushLog());
     throwInternalError("No command received from Fletch VM");
   }
+  bool flushLog = true;
   try {
     switch (command.code) {
       case CommandCode.UncaughtException:
-        print("Uncaught error");
+        state.log("Uncaught error");
         exitCode = exit_codes.DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
         await printBacktraceHack(session, compilationResults.last.system);
         // TODO(ahe): Need to continue to unwind stack.
         break;
 
       case CommandCode.ProcessCompileTimeError:
-        print("Compile-time error");
+        state.log("Compile-time error");
         exitCode = exit_codes.DART_VM_EXITCODE_COMPILE_TIME_ERROR;
         await printBacktraceHack(session, compilationResults.last.system);
         // TODO(ahe): Continue to unwind stack?
@@ -197,6 +194,7 @@ Future<int> run(SessionState state) async {
 
       case CommandCode.ProcessTerminated:
         exitCode = 0;
+        flushLog = false;
         break;
 
       default:
@@ -204,11 +202,15 @@ Future<int> run(SessionState state) async {
         break;
     }
   } finally {
+    if (flushLog) {
+      print(state.flushLog());
+    }
     // TODO(ahe): Do not shut down the session.
     await session.runCommand(const SessionEnd());
     bool done = false;
     Timer timer = new Timer(const Duration(seconds: 5), () {
       if (!done) {
+        print(state.flushLog());
         print("Timed out waiting for Fletch VM to shutdown; killing session");
         session.kill();
       }
