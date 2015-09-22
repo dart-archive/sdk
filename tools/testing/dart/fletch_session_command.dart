@@ -90,7 +90,7 @@ class FletchSessionCommand implements Command {
         "tools/testing/dart/fletch_session_command.dart "
         "$executable ${arguments.join(' ')}\n"
         "OR\n"
-        "gdb -ex run --args "
+        "gdb -ex 'follow-fork-mode child' -ex run --args "
         "$dartVm -c -ppackage/ tests/fletchc/run.dart $script";
   }
 
