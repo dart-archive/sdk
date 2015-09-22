@@ -85,13 +85,23 @@ public abstract class SlidingWindow<T extends RecyclerView.ViewHolder>
         root = patch.getCurrent();
         int previousCount = patch.getPrevious().getMinimumCount();
         int currentCount = patch.getCurrent().getMinimumCount();
+        boolean containsInserts = false;
+        boolean containsRemoves = false;
         for (ListPatch.RegionPatch region : patch.getWindow().getRegions()) {
-          if (!region.isUpdate()) continue;
+          if (!region.isUpdate()) {
+            containsInserts = containsInserts || region.isInsert();
+            containsRemoves = containsRemoves || region.isRemove();
+            continue;
+          }
           int start = windowIndexToViewPosition(region.getIndex());
           if (start < previousCount) {
             notifyItemRangeChanged(start, region.getCount());
           }
         }
+        // This patch routine assumes that the diff algorithm will not produce
+        // both an insertion and a deletion region in the same patch.
+        assert !containsInserts || !containsRemoves;
+
         if (currentCount > previousCount) {
           notifyItemRangeInserted(previousCount, currentCount - previousCount);
         } else if (previousCount > currentCount) {

@@ -30,6 +30,7 @@
 @property DrawerPresenter* drawerPresenter;
 @property AnyNodePresenter* centerPresenter;
 @property AnyNodePresenter* leftPresenter;
+@property AnyNodePresenter* rightPresenter;
 @end
 
 @implementation AnyNodePresenter

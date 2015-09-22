@@ -50,6 +50,8 @@ if [[ ! -d "$TARGET_PKG_DIR" ]]; then
     ln -s "$FLETCH_PKG_DIR" "$TARGET_PKG_DIR"
 fi
 
+ninja -C out/ReleaseIA32
+
 # Generate dart service file and other immi files with the compiler.
 if [[ $# -eq 0 ]] || [[ "$1" == "immi" ]]; then
     rm -rf "$IMMI_GEN_DIR"
@@ -66,7 +68,6 @@ fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "fletch" ]]; then
     cd $FLETCH_DIR
-    ninja -C out/ReleaseIA32
     ninja -C out/ReleaseXARM libfletch
     lipo -create -output "$DIR/libfletch.a" \
          out/ReleaseIA32/libfletch.a \
@@ -75,7 +76,6 @@ fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
     cd $FLETCH_DIR
-    ninja -C out/ReleaseIA32
     ./tools/persistent_process_info.sh --kill
     $FLETCH compile-and-run -o "$DIR/$PROJ.snapshot" \
             "$TARGET_BUILD_DIR/bin/$PROJ.dart"

@@ -9,6 +9,9 @@
 @property id<CellPresenter> cellPresenter;
 @property UITableView* tableView;
 
+// Is the TableView of this sliding window currently scrolling.
+@property bool scrolling;
+
 // Internal properties for updating the sliding-window display range.
 // These are not "presentation state" but are rather mostly-constant values
 // representing the physical dimensions of the screen.
@@ -34,6 +37,7 @@
 
 - (id)initWithCellPresenter:(id<CellPresenter>)presenter
                   tableView:(UITableView*)tableView {
+  self.scrolling = false;
   self.cellPresenter = presenter;
   self.tableView = tableView;
   [self setBufferParametersBasedOnViewSize];
@@ -51,16 +55,24 @@
 }
 
 - (void)presentSlidingWindow:(SlidingWindowNode*)node {
-  self.root = node;
-  [self refreshDisplayStart:0 end:self.bufferCount];
+  [self checkDisplayWindow:node];
+  dispatch_async(dispatch_get_main_queue(), ^{
+      [self presentOnMainThread:node];
+  });
 }
 
 - (void)patchSlidingWindow:(SlidingWindowPatch*)patch {
-
+  assert(patch.updated);
+  [self checkDisplayWindow:patch.current];
   dispatch_async(dispatch_get_main_queue(), ^{
-    self.root = patch.current;
-    [self patchOnMainThread:patch];
+      [self patchOnMainThread:patch];
   });
+}
+
+- (void)checkDisplayWindow:(SlidingWindowNode*)node {
+  if (node.window.count == 0) {
+    node.display(0, self.bufferCount);
+  }
 }
 
 - (NSInteger)tableView:(UITableView*)tableView
@@ -113,67 +125,105 @@
   self.root.display(start, end);
 }
 
-- (void)patchOnMainThread:(SlidingWindowPatch*)patch {
+// Adjust the scroll position if the visible rows are outside the window buffer.
+// Returns true if it is or if scroll position was adjusted.
+- (bool)adjustScrollPosition {
+  // TODO(zerny): Properly track the scroll position.
+  // If the current view is outside the visible view adjust the visible view.
+  if (!self.scrolling && self.tableView.indexPathsForVisibleRows.count > 0) {
+    int start = self.windowStart;
+    int end = self.windowEnd;
+    int row = [[self.tableView.indexPathsForVisibleRows objectAtIndex:0] row];
+    if (row < start || end <= row) {
+      // Adjust the start by buffer slack so we don't trigger a window shift.
+      if (start != 0) start += self.bufferSlack + 1;
+      NSIndexPath* path = [NSIndexPath indexPathForRow:start inSection:0];
+      [self.tableView reloadData];
+      if (start < end) {
+        [self.tableView scrollToRowAtIndexPath:path
+                              atScrollPosition:UITableViewScrollPositionTop
+                                      animated:NO];
+      }
+      return true;
+    }
+  }
+  return false;
+}
 
-  NSMutableArray* insertPaths = [[NSMutableArray alloc] init];
+- (void)presentOnMainThread:(SlidingWindowNode*)node {
+  self.root = node;
+  if ([self adjustScrollPosition]) return;
+  [self.tableView reloadData];
+}
+
+- (void)patchOnMainThread:(SlidingWindowPatch*)patch {
+  self.root = patch.current;
+  if ([self adjustScrollPosition]) return;
+
+  int previousCount = patch.previous.minimumCount;
+  int currentCount = patch.current.minimumCount;
+  assert(previousCount == [self.tableView numberOfRowsInSection:0]);
+
+  // The stable range is positions in the view both before and after the patch.
+  int stableCount = MIN(previousCount, currentCount);
+
+  // Independently track if insert or removes have been made.
+  bool containsInserts = false;
+  bool containsRemoves = false;
+
+  // Find an update ranges:
   NSMutableArray* updatePaths = [[NSMutableArray alloc] init];
-  NSMutableArray* removePaths = [[NSMutableArray alloc] init];
   for (int i = 0; i < patch.window.regions.count; ++i) {
     ListRegionPatch* region = patch.window.regions[i];
-
-    if (region.isRemove) {
-      ListRegionRemovePatch* remove = (id)region;
-
-      for (int j = 0; j < remove.count; ++j) {
-        int regionUpdateIndex =
-          [self windowIndexToTableIndex: region.index + j];
-
-
-        if (regionUpdateIndex >= self.root.minimumCount) {
-          // When reaching the end of the list we might have a case where we do
-          // not use the entire window. This has no effect on the UI table.
-          continue;
-        }
-
-        NSIndexPath* indexPath = [NSIndexPath indexPathForRow:regionUpdateIndex
-                                                    inSection:0];
-        [removePaths addObject:indexPath];
-      }
-    } else {
-      int regionLength;
-      if (region.isUpdate) {
-        ListRegionUpdatePatch* update = (id)region;
-        regionLength = update.updates.count;
-      } else {
-        assert(region.isInsert);
-        ListRegionInsertPatch* insert = (id)region;
-        regionLength = insert.nodes.count;
-      }
-
-      for (int j = 0; j < regionLength; ++j) {
-        int regionUpdateIndex =
-          [self windowIndexToTableIndex: region.index + j];
-
-        NSIndexPath* indexPath = [NSIndexPath indexPathForRow:regionUpdateIndex
-                                                    inSection:0];
-        if (regionUpdateIndex >= patch.minimumCount.previous) {
-          [insertPaths addObject:indexPath];
-        } else {
-          [updatePaths addObject:indexPath];
-        }
-      }
+    if (!region.isUpdate) {
+      containsInserts = containsInserts || region.isInsert;
+      containsRemoves = containsRemoves || region.isRemove;
+      continue;
+    }
+    ListRegionUpdatePatch* update = (id)region;
+    for (int j = 0; j < update.updates.count; ++j) {
+      int position = [self windowIndexToTableIndex:update.index + j];
+      if (position >= stableCount) continue;
+      [updatePaths addObject:[NSIndexPath indexPathForRow:position inSection:0]];
     }
   }
 
+  // This patch routine assumes that the diff algorithm will not produce
+  // both an insertion and a deletion region in the same patch.
+  assert(!containsInserts || !containsRemoves);
+
+  // Find either the insert or the remove positions:
+  NSMutableArray* insertPaths;
+  NSMutableArray* removePaths;
+  if (stableCount < currentCount) {
+    insertPaths = [[NSMutableArray alloc] init];
+    for (int i = stableCount; i < currentCount; ++i) {
+      [insertPaths addObject:[NSIndexPath indexPathForRow:i inSection:0]];
+    }
+  } else if (stableCount < previousCount) {
+    removePaths = [[NSMutableArray alloc] init];
+    for (int i = stableCount; i < previousCount; ++i) {
+      [removePaths addObject:[NSIndexPath indexPathForRow:i inSection:0]];
+    }
+  }
+
+  // Batch notify the table view of the changes.
   [self.tableView beginUpdates];
-  [self.tableView insertRowsAtIndexPaths:insertPaths
-                        withRowAnimation:UITableViewRowAnimationNone];
-  [self.tableView deleteRowsAtIndexPaths:removePaths
-                        withRowAnimation:UITableViewRowAnimationNone];
   [self.tableView reloadRowsAtIndexPaths:updatePaths
                         withRowAnimation:UITableViewRowAnimationNone];
+  if (insertPaths != nil) {
+    [self.tableView insertRowsAtIndexPaths:insertPaths
+                          withRowAnimation:UITableViewRowAnimationNone];
+  }
+  if (removePaths != nil) {
+    [self.tableView deleteRowsAtIndexPaths:removePaths
+                          withRowAnimation:UITableViewRowAnimationNone];
+  }
   [self.tableView endUpdates];
+
+  assert(currentCount == [self.tableView numberOfRowsInSection:0]);
 }
+
 - (int)windowIndexToTableIndex:(int)index {
   int indexDelta = index - self.root.windowOffset;
   if (indexDelta < 0) indexDelta += self.root.window.count;
@@ -220,4 +270,13 @@
   return [self.cellPresenter tableView:tableView
       estimatedHeightForRowAtIndexPath:indexPath];
 }
+
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView {
+  self.scrolling = true;
+}
+
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
+  self.scrolling = false;
+}
+
 @end
