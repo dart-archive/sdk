@@ -367,11 +367,7 @@ class PersistentFletchDaemon(object):
 
   def __enter__(self):
     print "Starting new persistent fletch daemon"
-    version = None
-    if os.environ.has_key('BUILDBOT_REVISION'):
-      version = os.environ['BUILDBOT_REVISION']
-    else:
-      version = utils.GetGitRevision()
+    version = utils.GetSemanticSDKVersion()
     self._persistent = subprocess.Popen(
       [os.path.join(os.path.abspath(self._configuration['build_dir']), 'dart'),
        '-c',

@@ -31,7 +31,7 @@ def Main():
   if os.path.isfile(version_cc):
     with open(version_cc, "r") as f:
       current_content = f.read()
-  version = utils.GetGitRevision()
+  version = utils.GetSemanticSDKVersion()
   updated_content = version_cc_template % {"version": version}
   if (updated_content != current_content):
     with open(version_cc, 'w') as f:

@@ -1,0 +1,38 @@
+# Fletch uses the same schema as the normal dart sdk for making releases.
+# We currently don't do any stable releases, but we still utilize the same
+# structure while working our way towards the first 0.1 stable release.
+#
+# This also means that we follow the same procedure as can be found here:
+# https://github.com/dart-lang/sdk/wiki/Branches-and-releases
+# for doing dev releases
+
+# The numbers are changed as follows:
+#
+#  * New release cycle has begun (i.e. stable release was just made):
+#     - increase MINOR by 1
+#     - set "PATCH 0"
+#     - set "PRERELEASE 0"
+#     - set "PRERELEASE_PATCH 0"
+#
+#  * Doing a push-to-trunk from master:
+#    (The first push-to-trunk in the release cycle will set PRERELEASE to 0)
+#     - increase PRERELEASE by 1
+#     - set "PRERELEASE_PATCH 0"
+#
+#  * Doing a cherry-pick to trunk:
+#     - increase PRERELEASE_PATCH by 1
+#
+#  * Making a stable release (i.e. new stable branch):
+#     - set "PRERELEASE 0"
+#     - set "PRERELEASE_PATCH 0"
+#    The new stable release version will sort higher than the prereleases.
+#
+#  * Making cherry-picks to stable channel
+#     - increase PATCH by 1
+#
+CHANNEL be
+MAJOR 0
+MINOR 1
+PATCH 0
+PRERELEASE 0
+PRERELEASE_PATCH 0
