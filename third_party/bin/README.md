@@ -59,8 +59,11 @@ their sha1 file needs to be checked into the repository.
 Before uploading one needs to ensure one has setup the correct
 `BOTO_CONFIG` environment variable pointing to a valid boto file which has
 permission to write to the GCS bucket.
-(Please note there might be issues about which version of gsutil is used -
-from `PATH` or `depot_tools`)
+Please note there might be issues about which version of gsutil is used -
+from `PATH` or `depot_tools`. Also note that you most likely will have to
+use `gsutil.py config` (with the `gsutil.py` from `depot_tools`) and neither
+`gcloud auth login` nor `gsutil config` to make authentication work with
+`upload_to_google_storage.py`.
 
 Then one needs to mark the binaries as executable (this executable bit will be
 preserved when downloading the binaries again -- it is stored via metadata on
