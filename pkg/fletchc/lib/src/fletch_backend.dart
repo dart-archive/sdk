@@ -1276,8 +1276,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
       // Nothing needed for now.
     } else if (element.library == fletchFFILibrary) {
       // Nothing needed for now.
-    } else if (element.library == fletchIOSystemLibrary) {
-      // Nothing needed for now.
     } else if (externals.contains(element)) {
       // Nothing needed for now.
     } else {

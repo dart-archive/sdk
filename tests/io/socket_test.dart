@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch.io' as io;
+import 'dart:fletch.os' as os;
 import 'dart:typed_data';
 
 import 'package:expect/expect.dart';
@@ -18,8 +19,8 @@ void main() {
 }
 
 void testLookup() {
-  io.InternetAddress address = io.lookup("127.0.0.1");
-  Expect.isTrue(address is io.InternetAddress);
+  os.InternetAddress address = io.lookup("127.0.0.1");
+  Expect.isTrue(address is os.InternetAddress);
 }
 
 void testBindListen() {

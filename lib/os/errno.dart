@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dart.fletch.io;
+part of dart.fletch.os;
 
 // TODO(ajohnsen): Errno's are platform dependent. Make them so.
 class Errno {

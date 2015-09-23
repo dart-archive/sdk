@@ -6,12 +6,11 @@ library dart.fletch.io;
 
 import 'dart:fletch';
 import 'dart:fletch.ffi';
+import 'dart:fletch.os';
 import 'dart:typed_data';
 
-// The system library exposes a static 'sys' object for all system calls.
-import 'dart:system';
+// The fletch.os library exposes a static 'sys' object for all system calls.
 
-part 'errno.dart';
 part 'file.dart';
 part 'socket.dart';
 
@@ -41,5 +40,3 @@ int setBlocking(int fd, bool blocking) => sys.setBlocking(fd, blocking);
 // TODO(ajohnsen): Take a Duration?
 void sleep(int milliseconds) => sys.sleep(milliseconds);
 Errno errno() => sys.errno();
-
-abstract class InternetAddress { }

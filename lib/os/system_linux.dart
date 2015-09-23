@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of system;
+part of dart.fletch.os;
 
 const int EPOLLIN       = 0x1;
 const int EPOLLOUT      = 0x4;

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dart.os;
+part of dart.fletch.os;
 
 class NativeProcess {
 
@@ -53,7 +53,7 @@ class NativeProcess {
   }
 
   @fletch.native static int _spawnDetached(int argumentsAddress) {
-    throw new ArgumentError();
+    throw new UnsupportedError('_spawnDetached');
   }
 }
 

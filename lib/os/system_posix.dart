@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of system;
+part of dart.fletch.os;
 
 const int AF_INET  = 2;
 const int AF_INET6 = 10;
