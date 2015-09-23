@@ -359,7 +359,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     loadClass("Port", fletchLibrary, true);
     loadClass("ForeignMemory", fletchFFILibrary, true);
 
-    if (const bool.fromEnvironment('fletch.enable-bigint')) {
+    if (context.enableBigint) {
       bigintClass = loadClass("_Bigint", compiler.coreLibrary).element;
       uint32DigitsClass =
           loadClass("_Uint32Digits", compiler.coreLibrary).element;

@@ -2,12 +2,6 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-# This tests uses MIN_INT64 as a constant. This is compiled as
-# -(MAX_INT64 + 1) which takes us in the bigint range for the values
-# we transmit to the fletch vm. This will work once we enable bigints
-# by default.
-ffi_test/01: RuntimeError
-
 # FFI is not supported on LK devices.
 [ $system == lk ]
 *: Skip, OK

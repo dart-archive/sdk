@@ -1442,8 +1442,7 @@ abstract class CodegenVisitor
       int value = node.value;
       assert(value >= 0);
       if (value > LITERAL_INT_MAX) {
-        if ((value < MIN_INT64 || value > MAX_INT64)
-            && !const bool.fromEnvironment('fletch.enable-bigint')) {
+        if ((value < MIN_INT64 || value > MAX_INT64) && !context.enableBigint) {
           generateUnimplementedError(
               node,
               'Program compiled without support for big integers');

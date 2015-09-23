@@ -80,6 +80,11 @@ class FletchContext {
 
   FletchBackend get backend => compiler.backend;
 
+  bool get enableBigint {
+    String enableBigintConstant = compiler.environment['fletch.enable-bigint'];
+    return enableBigintConstant != "false";
+  }
+
   void setNames(Map<String, String> names) {
     // Generate symbols of the values.
     for (String name in names.values) {

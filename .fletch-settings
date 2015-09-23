@@ -1,6 +1,12 @@
 // Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file",
 // for details. All rights reserved. Use of this source code is governed by a",
 // BSD-style license that can be found in the LICENSE.md file."],
+
+// The settings in this file are used during automated testing.
+// If you are considering adding settings to this file in order
+// to change the default behavior of the system you should reconsider.
+// There should only be settings in this file to *overwrite* the
+// defaults.
 {
 
   // Location of the packages configuration file (a relative URI)

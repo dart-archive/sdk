@@ -9,24 +9,6 @@
 regress_14348_test: Crash
 
 [ $compiler == fletchc || $runtime == fletchc ]
-
-# These tests use big integers. They pass once we turn on bigint support
-# by default.
-deopt_inlined_function_lazy_test: RuntimeError
-deopt_smi_op_test: RuntimeError
-guess_cid_test: RuntimeError
-identical_closure2_test: RuntimeError
-int2_test: RuntimeError
-left_shift_test: RuntimeError
-mint_arithmetic_test: RuntimeError
-mint_compares_test: RuntimeError
-number_identity_test: RuntimeError
-vm/canonicalization_preserves_deopt_test: RuntimeError
-vm/regress_14903_test: RuntimeError
-vm/regress_22693_vm_test: RuntimeError
-vm/regress_23117_vm_test: RuntimeError
-vm/regress_23238_test: RuntimeError
-
 abstract_runtime_error_test/01: RuntimeError
 abstract_runtime_error_test/02: RuntimeError
 arithmetic_test: RuntimeError

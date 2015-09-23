@@ -13,38 +13,6 @@ apply3_test: CompileTimeError
 apply4_test: RuntimeError
 apply_test: RuntimeError
 
-# These tests use big integers. They pass once we turn on bigint support
-# by default.
-big_integer_arith_vm_test/add: RuntimeError
-big_integer_arith_vm_test/div: RuntimeError
-big_integer_arith_vm_test/gcd: RuntimeError
-big_integer_arith_vm_test/mod: RuntimeError
-big_integer_arith_vm_test/modInv: RuntimeError
-big_integer_arith_vm_test/modPow: RuntimeError
-big_integer_arith_vm_test/mul: RuntimeError
-big_integer_arith_vm_test/negate: RuntimeError
-big_integer_arith_vm_test/none: RuntimeError
-big_integer_arith_vm_test/overflow: RuntimeError
-big_integer_arith_vm_test/shift: RuntimeError
-big_integer_arith_vm_test/sub: RuntimeError
-big_integer_arith_vm_test/trunDiv: RuntimeError
-big_integer_huge_mul_vm_test: RuntimeError
-bit_twiddling_bigint_test: RuntimeError
-bit_twiddling_test: RuntimeError
-int_ceil_test: RuntimeError
-int_ceil_to_double_test: RuntimeError
-int_floor_test: RuntimeError
-int_floor_to_double_test: RuntimeError
-int_round_test: RuntimeError
-int_round_to_double_test: RuntimeError
-int_to_int_test: RuntimeError
-int_truncate_test: RuntimeError
-int_truncate_to_double_test: RuntimeError
-integer_to_string_test/01: RuntimeError
-num_sign_test: RuntimeError
-regexp/regexp_test: RuntimeError
-regress_r21715_test: RuntimeError
-
 # int.parse not working for big integers.
 big_integer_parsed_arith_vm_test: RuntimeError
 big_integer_parsed_div_rem_vm_test: RuntimeError

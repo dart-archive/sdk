@@ -341,7 +341,7 @@ class FletchSystemBuilder {
       if (constant.isInt) {
         var value = constant.primitiveValue;
         if (value > maxInt64 || value < minInt64) {
-          assert(const bool.fromEnvironment('fletch.enable-bigint'));
+          assert(context.enableBigint);
           bool negative = value < 0;
           value = negative ? -value : value;
           var parts = new List();
