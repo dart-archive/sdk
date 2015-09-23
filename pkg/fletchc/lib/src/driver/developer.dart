@@ -12,6 +12,7 @@ import 'dart:convert' show
     JSON;
 
 import 'dart:io' show
+    InternetAddress,
     Socket,
     SocketException;
 
@@ -403,6 +404,37 @@ Future<int> invokeCombinedTasks(
     SharedTask task2) async {
   await task1(commandSender, commandIterator);
   return task2(commandSender, commandIterator);
+}
+
+Address parseAddress(String address) {
+  String host;
+  int port;
+  List<String> parts = address.split(":");
+  if (parts.length == 1) {
+    host = InternetAddress.LOOPBACK_IP_V4.address;
+    port = int.parse(
+        parts[0],
+        onError: (String source) {
+          host = source;
+          return 0;
+        });
+  } else {
+    host = parts[0];
+    port = int.parse(
+        parts[1],
+        onError: (String source) {
+          throwFatalError(
+              DiagnosticKind.expectedAPortNumber, userInput: source);
+        });
+  }
+  return new Address(host, port);
+}
+
+class Address {
+  final String host;
+  final int port;
+
+  const Address(this.host, this.port);
 }
 
 /// See ../verbs/documentation.dart for a definition of this format.

@@ -14,9 +14,21 @@ import 'package:fletchc/src/driver/developer.dart';
 
 import 'package:fletchc/src/verbs/infrastructure.dart' show fileUri;
 
+const String userVmAddress = const String.fromEnvironment("attachToVm");
+
 Uri guessFletchProgramName() {
   Uri dartVmUri = fileUri(Platform.resolvedExecutable, Uri.base);
   return dartVmUri.resolve('fletch');
+}
+
+Future<Null> attach(SessionState state) async {
+  if (userVmAddress == null) {
+    Uri fletchProgramName = guessFletchProgramName();
+    await attachToLocalVm(fletchProgramName, state);
+  } else {
+    Address address = parseAddress(userVmAddress);
+    await attachToVm(address.host, address.port, state);
+  }
 }
 
 main(List<String> arguments) async {
@@ -28,11 +40,9 @@ main(List<String> arguments) async {
         "bar": "baz",
       });
   SessionState state = createSessionState("test", settings);
-  Uri fletchProgramName = guessFletchProgramName();
   for (String script in arguments) {
     await compile(fileUri(script, Uri.base), state);
-    await attachToLocalVm(fletchProgramName, state);
-
+    await attach(state);
     state.stdoutSink.attachCommandSender(stdout.add);
     state.stderrSink.attachCommandSender(stderr.add);
 

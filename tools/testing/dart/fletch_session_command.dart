@@ -91,7 +91,13 @@ class FletchSessionCommand implements Command {
         "$executable ${arguments.join(' ')}\n"
         "OR\n"
         "gdb -ex 'follow-fork-mode child' -ex run --args "
-        "$dartVm -c -ppackage/ tests/fletchc/run.dart $script";
+        "$dartVm -c -ppackage/ tests/fletchc/run.dart $script\n"
+        "OR\n"
+        "In one terminal:\n"
+        "  gdb -ex run --args $executable --port=54321\n"
+        "In another terminal:\n"
+        "  $dartVm -c -ppackage/ -DattachToVm=54321 "
+        "tests/fletchc/run.dart $script";
   }
 
   Future<FletchTestCommandOutput> run(

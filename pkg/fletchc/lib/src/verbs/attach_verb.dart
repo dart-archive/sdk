@@ -6,42 +6,22 @@ library fletchc.verbs.attach_verb;
 
 import 'infrastructure.dart';
 
-import 'dart:io' show
-    InternetAddress;
-
 import 'documentation.dart' show
     attachDocumentation;
 
 import '../driver/developer.dart' show
-    attachToVm;
+    Address,
+    attachToVm,
+    parseAddress;
 
 const Verb attachVerb = const Verb(
     attach, attachDocumentation, requiresSession: true,
     requiredTarget: TargetKind.TCP_SOCKET);
 
 Future<int> attach(AnalyzedSentence sentence, VerbContext context) async {
-  List<String> address = sentence.targetName.split(":");
-  String host;
-  int port;
-  if (address.length == 1) {
-    host = InternetAddress.LOOPBACK_IP_V4.address;
-    port = int.parse(
-        address[0],
-        onError: (String source) {
-          host = source;
-          return 0;
-        });
-  } else {
-    host = address[0];
-    port = int.parse(
-        address[1],
-        onError: (String source) {
-          throwFatalError(
-              DiagnosticKind.expectedAPortNumber, userInput: source);
-        });
-  }
+  Address address = parseAddress(sentence.targetName);
 
-  await context.performTaskInWorker(new AttachTask(host, port));
+  await context.performTaskInWorker(new AttachTask(address.host, address.port));
 
   return null;
 }
