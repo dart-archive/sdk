@@ -218,6 +218,14 @@ abstract class CodegenVisitor
     return context.compileConstant(node, elements, isConst: isConst);
   }
 
+  ConstantExpression inspectConstant(
+      Node node,
+      {TreeElements elements,
+       bool isConst}) {
+    if (elements == null) elements = this.elements;
+    return context.inspectConstant(node, elements, isConst: isConst);
+  }
+
   int allocateConstantFromNode(Node node, {TreeElements elements}) {
     ConstantExpression expression = compileConstant(
         node,
@@ -603,7 +611,7 @@ abstract class CodegenVisitor
       Node right,
       BinaryOperator operator) {
     bool isConstNull(Node node) {
-      ConstantExpression expression = compileConstant(node, isConst: false);
+      ConstantExpression expression = inspectConstant(node, isConst: false);
       if (expression == null) return false;
       return context.getConstantValue(expression).isNull;
     }
@@ -2413,7 +2421,7 @@ abstract class CodegenVisitor
 
   void visitIf(If node) {
     ConstantExpression conditionConstant =
-        compileConstant(node.condition, isConst: false);
+        inspectConstant(node.condition, isConst: false);
 
     if (conditionConstant != null) {
       BytecodeLabel end = new BytecodeLabel();

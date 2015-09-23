@@ -224,14 +224,23 @@ class FletchContext {
       Node node,
       TreeElements elements,
       {bool isConst}) {
+    ConstantExpression expression =
+        inspectConstant(node, elements, isConst: isConst);
+    if (expression == null) return null;
+    ConstantValue value = getConstantValue(expression);
+    markConstantUsed(value);
+    return expression;
+  }
+
+  ConstantExpression inspectConstant(
+      Node node,
+      TreeElements elements,
+      {bool isConst}) {
     assert(isConst != null);
     // TODO(johnniwinther): Should be handled in resolution.
     ConstantExpression expression =
         compiler.resolver.constantCompiler.compileNode(
             node, elements, enforceConst: isConst);
-    if (expression == null) return null;
-    ConstantValue value = getConstantValue(expression);
-    markConstantUsed(value);
     return expression;
   }
 
