@@ -25,19 +25,10 @@ import 'package:compiler/src/elements/elements.dart' show
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
 
-/// True if enqueuing of system libraries should be reported in verbose mode.
-const bool logSystemLibraries =
-    const bool.fromEnvironment("fletchc.logSystemLibraries");
+import 'fletch_enqueuer.dart' show
+    shouldReportEnqueuingOfElement;
 
-typedef void ElementUsage(Element element, Selector selector);
-
-/// Returns true if enqueuing of [element] should be reported in verbose
-/// mode. See [logSystemLibraries].
-bool shouldReportEnqueuingOfElement(Element element) {
-  if (logSystemLibraries) return true;
-  LibraryElement library = element.library;
-  return !library.isPlatformLibrary && !library.isInternalLibrary;
-}
+typedef void ElementUsage(Element element, Selector selector, {bool tearOff});
 
 /// Implements the dynamic part of the tree-shaking algorithm.
 ///
@@ -54,6 +45,15 @@ class DynamicCallEnqueuer {
   final Set<Selector> enqueuedSelectors = new Set<Selector>();
 
   final Queue<Selector> pendingSelectors = new Queue<Selector>();
+
+  /// Set of functions that have been implicitly closurized aka tear-off.
+  final Set<FunctionElement> implicitClosurizations =
+      new Set<FunctionElement>();
+
+  /// Queue of functions that have been implicitly closurized aka tear-off and
+  /// have yet to be processed.
+  final Queue<FunctionElement> pendingImplicitClosurizations =
+      new Queue<FunctionElement>();
 
   DynamicCallEnqueuer(this.compiler);
 
@@ -77,7 +77,11 @@ class DynamicCallEnqueuer {
       } else {
         // Tear-off.
         compiler.reportVerboseInfo(member, "enqueued as tear-off");
+        // This lets the backend generate the tear-off getter because it is
+        // told that [member] is used as a getter.
         enqueueElement(member, selector);
+        // This registers [member] as an instantiated closure class.
+        enqueueTearOff(member);
       }
     } else if (selector.isSetter) {
       if (member.isField || member.isSetter) {
@@ -88,8 +92,21 @@ class DynamicCallEnqueuer {
     }
   }
 
+  void enqueueTearOffIfApplicable(
+      FunctionElement function,
+      Selector selector,
+      ElementUsage enqueueElement) {
+    if (selector.isClosureCall && selector.signatureApplies(function)) {
+      enqueueElement(function, selector, tearOff: true);
+    }
+  }
+
   void enqueueInstanceMethods(ElementUsage enqueueElement) {
-    while (!pendingInstantiatedClasses.isEmpty) {
+    // TODO(ahe): Implement a faster way to iterate through selectors. For
+    // example, use the same approach as dart2js uses where selectors are
+    // grouped by name. This applies both to enqueuedSelectors and
+    // pendingSelectors.
+    while (pendingInstantiatedClasses.isNotEmpty) {
       ClassElement cls = pendingInstantiatedClasses.removeFirst();
       if (shouldReportEnqueuingOfElement(cls)) {
         compiler.reportVerboseInfo(cls, "was instantiated");
@@ -102,10 +119,22 @@ class DynamicCallEnqueuer {
         enqueueApplicableMembers(cls, selector, enqueueElement);
       }
     }
-    while (!pendingSelectors.isEmpty) {
+    while (pendingImplicitClosurizations.isNotEmpty) {
+      FunctionElement function = pendingImplicitClosurizations.removeFirst();
+      if (shouldReportEnqueuingOfElement(function)) {
+        compiler.reportVerboseInfo(function, "was closurized");
+      }
+      for (Selector selector in enqueuedSelectors) {
+        enqueueTearOffIfApplicable(function, selector, enqueueElement);
+      }
+    }
+    while (pendingSelectors.isNotEmpty) {
       Selector selector = pendingSelectors.removeFirst();
       for (ClassElement cls in instantiatedClasses) {
         enqueueApplicableMembers(cls, selector, enqueueElement);
+      }
+      for (FunctionElement function in implicitClosurizations) {
+        enqueueTearOffIfApplicable(function, selector, enqueueElement);
       }
     }
   }
@@ -115,6 +144,12 @@ class DynamicCallEnqueuer {
     Selector selector = universeSelector.selector;
     if (enqueuedSelectors.add(selector)) {
       pendingSelectors.add(selector);
+    }
+  }
+
+  void enqueueTearOff(FunctionElement function) {
+    if (implicitClosurizations.add(function)) {
+      pendingImplicitClosurizations.add(function);
     }
   }
 

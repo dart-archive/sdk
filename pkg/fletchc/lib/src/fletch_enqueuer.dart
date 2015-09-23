@@ -66,6 +66,18 @@ part 'enqueuer_mixin.dart';
 const bool useCustomEnqueuer = const bool.fromEnvironment(
     "fletchc.use-custom-enqueuer", defaultValue: false);
 
+/// True if enqueuing of system libraries should be reported in verbose mode.
+const bool logSystemLibraries =
+    const bool.fromEnvironment("fletchc.logSystemLibraries");
+
+/// Returns true if enqueuing of [element] should be reported in verbose
+/// mode. See [logSystemLibraries].
+bool shouldReportEnqueuingOfElement(Element element) {
+  if (logSystemLibraries) return true;
+  LibraryElement library = element.library;
+  return !library.isInternalLibrary;
+}
+
 // TODO(ahe): Delete this method when FletchEnqueuer is complete.
 CodegenEnqueuer makeCodegenEnqueuer(FletchCompilerImplementation compiler) {
   ItemCompilationContextCreator itemCompilationContextCreator =
@@ -163,7 +175,7 @@ class TransitionalFletchEnqueuer extends CodegenEnqueuer
 
   Queue<ElementUsage> get _pendingEnqueuedUsages => notImplemented;
 
-  void _enqueueElement(element, selector) => notImplemented;
+  void _enqueueElement(element, selector, {tearOff}) => notImplemented;
 
   void processQueue() => notImplemented;
 }
@@ -242,7 +254,10 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
           FletchRegistry registry =
               new FletchRegistryImplementation(compiler, treeElements);
           Selector selector = usage.selector;
-          if (selector != null) {
+          if (usage.tearOff) {
+            compiler.context.backend.compileFunctionTearOffUsage(
+                element, selector, treeElements, registry);
+          } else if (selector != null) {
             compiler.context.backend.compileElementUsage(
                 element, selector, treeElements, registry);
           } else {
@@ -282,15 +297,19 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
     dynamicCallEnqueuer.enqueueSelector(selector);
   }
 
-  void _enqueueElement(Element element, Selector selector) {
+  void _enqueueElement(
+      Element element,
+      Selector selector,
+      {bool tearOff: false}) {
     if (selector != null) {
-      _enqueueElement(element, null);
+      _enqueueElement(element, null, tearOff: false);
+    } else {
+      assert(!tearOff);
     }
-    ElementUsage usage = new ElementUsage(element, selector);
+    ElementUsage usage = new ElementUsage(element, selector, tearOff);
     if (_enqueuedUsages.add(usage)) {
       _pendingEnqueuedUsages.addLast(usage);
-      if (!element.library.isPlatformLibrary &&
-          !element.library.isInternalLibrary) {
+      if (shouldReportEnqueuingOfElement(element)) {
         compiler.reportVerboseInfo(element, "called as $selector");
       }
     }
@@ -306,13 +325,19 @@ class ElementUsage {
 
   final int hashCode;
 
-  ElementUsage(element, selector)
+  final bool tearOff;
+
+  ElementUsage(Element element, Selector selector, bool tearOff)
       : element = element,
         selector = selector,
-        hashCode = Hashing.mixHashCodeBits(element.hashCode, selector.hashCode);
+        tearOff = tearOff,
+        hashCode = Hashing.mixHashCodeBits(
+            Hashing.mixHashCodeBits(element.hashCode, selector.hashCode),
+            tearOff.hashCode);
 
   bool operator ==(other) {
     return other is ElementUsage &&
-        element == other.element && selector == other.selector;
+        element == other.element && selector == other.selector &&
+        tearOff == other.tearOff;
   }
 }

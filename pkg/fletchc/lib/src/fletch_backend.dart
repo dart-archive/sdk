@@ -104,6 +104,7 @@ import '../incremental_backend.dart' show
 
 import 'fletch_enqueuer.dart' show
     FletchEnqueueTask,
+    shouldReportEnqueuingOfElement,
     useCustomEnqueuer;
 
 import 'fletch_registry.dart' show
@@ -771,10 +772,19 @@ class FletchBackend extends Backend with ResolutionCallbacks
         FletchFunctionBase function = getFunctionForElement(element);
         CallStructure callStructure = selector.callStructure;
         FunctionSignature signature = function.signature;
-        if (callStructure.signatureApplies(signature) &&
-            !isExactParameterMatch(signature, callStructure)) {
-          context.compiler.reportVerboseInfo(
-              element, 'Adding stub for $selector', forceVerbose: true);
+        if (selector.isGetter) {
+          if (shouldReportEnqueuingOfElement(element)) {
+            context.compiler.reportVerboseInfo(
+                element, 'Adding tear-off stub', forceVerbose: true);
+          }
+          createTearoffGetterForFunction(function);
+        } else if (selector.isCall &&
+                   callStructure.signatureApplies(signature) &&
+                   !isExactParameterMatch(signature, callStructure)) {
+          if (shouldReportEnqueuingOfElement(element)) {
+            context.compiler.reportVerboseInfo(
+                element, 'Adding stub for $selector', forceVerbose: true);
+          }
           createParameterStubFor(function, selector);
         }
       } else if (element.isGetter || element.isSetter) {
@@ -782,6 +792,27 @@ class FletchBackend extends Backend with ResolutionCallbacks
       } else {
         context.compiler.reportVerboseInfo(
             element, "Asked to compile this, but don't know how");
+      }
+    });
+  }
+
+  /// Invoked by [FletchEnqueuer] once per `call` [selector] that may invoke
+  /// [declaration] as an implicit closure aka tear-off.
+  ///
+  /// This is used to generate parameter stubs for the tear-off.
+  void compileFunctionTearOffUsage(
+      AstElement declaration,
+      Selector selector,
+      TreeElements treeElements,
+      FletchRegistry registry) {
+    AstElement element = declaration.implementation;
+    compiler.withCurrentElement(element, () {
+      assert(declaration.isDeclaration);
+      if (shouldReportEnqueuingOfElement(element)) {
+        context.compiler.reportVerboseInfo(
+            element, 'Need tear-off parameter stub $selector',
+            forceVerbose: true);
+        // TODO(ahe): Implement this.
       }
     });
   }
