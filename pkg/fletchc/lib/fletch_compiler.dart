@@ -223,6 +223,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
       {List<String> options: const <String>[]}) {
     return new IncrementalCompiler(
         libraryRoot: _compiler.libraryRoot,
+        patchRoot: _compiler.patchRoot,
         packageConfig: _compiler.packageConfig,
         inputProvider: _compiler.provider,
         diagnosticHandler: _compiler.handler,

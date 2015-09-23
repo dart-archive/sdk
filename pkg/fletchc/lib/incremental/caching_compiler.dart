@@ -13,6 +13,7 @@ Future<Compiler> reuseCompiler(
      List<String> options: const [],
      Compiler cachedCompiler,
      Uri libraryRoot,
+     Uri patchRoot,
      Uri packageConfig,
      bool packagesAreImmutable: false,
      Map<String, dynamic> environment,
@@ -61,6 +62,7 @@ Future<Compiler> reuseCompiler(
         outputProvider: outputProvider,
         handler: diagnosticHandler,
         libraryRoot: libraryRoot,
+        patchRoot: patchRoot,
         packageConfig: packageConfig,
         options: options,
         environment: environment).backdoor.compilerImplementation;
