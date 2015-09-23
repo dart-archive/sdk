@@ -44,6 +44,9 @@ import dart_utils
 # addition, our version is also exported.
 dart_utils.DartBinary = DartBinary
 
+# Replace DART_DIR to get the right cwd for git commands.
+dart_utils.DART_DIR = os.path.abspath(os.path.join(__file__, '..', '..'))
+
 # Now that we have patched 'dart_utils', import it into our own scope. This
 # also means that we export everything from that library.
 from dart_utils import *
