@@ -435,10 +435,20 @@ testAllocate(bool finalized, bool immutable) {
   Expect.throws(() => memory.setInt32(length - 3, 0), isRangeError);
   Expect.throws(() => memory.setInt64(length - 7, 0), isRangeError);
 
-  Expect.throws(() => memory.setUint32(0, 0.0), isArgumentError);
-  Expect.throws(() => memory.setUint32(0, new Object()), isArgumentError);
-  Expect.throws(() => memory.setFloat32(0, 0), isArgumentError);
-  Expect.throws(() => memory.setFloat32(0, new Object()), isArgumentError);
+  for (var value in [0.0, new Object(), '123']) {
+    Expect.throws(() => memory.setInt8(0, value), isArgumentError);
+    Expect.throws(() => memory.setInt16(0, value), isArgumentError);
+    Expect.throws(() => memory.setInt32(0, value), isArgumentError);
+    Expect.throws(() => memory.setInt64(0, value), isArgumentError);
+    Expect.throws(() => memory.setUint8(0, value), isArgumentError);
+    Expect.throws(() => memory.setUint16(0, value), isArgumentError);
+    Expect.throws(() => memory.setUint32(0, value), isArgumentError);
+    Expect.throws(() => memory.setUint64(0, value), isArgumentError);
+  }
+  for (var value in [0, new Object(), '123']) {
+    Expect.throws(() => memory.setFloat32(0, value), isArgumentError);
+    Expect.throws(() => memory.setFloat64(0, value), isArgumentError);
+  }
 
   Expect.equals(0, memory.getUint32(6));
 

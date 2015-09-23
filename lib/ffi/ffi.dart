@@ -42,11 +42,21 @@ abstract class Foreign {
     throw new ArgumentError();
   }
 
-  @fletch.native external static int _bitsPerMachineWord();
-  @fletch.native external static int _errno();
-  @fletch.native external static int _platform();
-  @fletch.native external static int _architecture();
-  @fletch.native external static int _convertPort(Port port);
+  @fletch.native static int _bitsPerMachineWord() {
+    throw new UnsupportedError('_bitsPerMachineWord');
+  }
+  @fletch.native static int _errno() {
+    throw new UnsupportedError('_errno');
+  }
+  @fletch.native static int _platform() {
+    throw new UnsupportedError('_platform');
+  }
+  @fletch.native static int _architecture() {
+    throw new UnsupportedError('_architecture');
+  }
+  @fletch.native static int _convertPort(Port port) {
+    throw new ArgumentError();
+  }
 }
 
 class ForeignFunction extends Foreign {
@@ -181,34 +191,78 @@ class ForeignFunction extends Foreign {
 
   int Lcall$wLwRetry(a0, a1, a2) => retry(() => Lcall$wLw(a0, a1, a2));
 
-  @fletch.native external static int _icall$0(int address);
-  @fletch.native external static int _icall$1(int address, a0);
-  @fletch.native external static int _icall$2(int address, a0, a1);
-  @fletch.native external static int _icall$3(int address, a0, a1, a2);
-  @fletch.native external static int _icall$4(int address, a0, a1, a2, a3);
-  @fletch.native external static int _icall$5(int address, a0, a1, a2, a3, a4);
-  @fletch.native external static int _icall$6(
-      int address, a0, a1, a2, a3, a4, a5);
+  @fletch.native static int _icall$0(int address) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _icall$1(int address, a0) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _icall$2(int address, a0, a1) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _icall$3(int address, a0, a1, a2) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _icall$4(int address, a0, a1, a2, a3) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _icall$5(int address, a0, a1, a2, a3, a4) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _icall$6(
+      int address, a0, a1, a2, a3, a4, a5) {
+    throw new ArgumentError();
+  }
 
-  @fletch.native external static int _pcall$0(int address);
-  @fletch.native external static int _pcall$1(int address, a0);
-  @fletch.native external static int _pcall$2(int address, a0, a1);
-  @fletch.native external static int _pcall$3(int address, a0, a1, a2);
-  @fletch.native external static int _pcall$4(int address, a0, a1, a2, a3);
-  @fletch.native external static int _pcall$5(int address, a0, a1, a2, a3, a4);
-  @fletch.native external static int _pcall$6(
-      int address, a0, a1, a2, a3, a4, a5);
+  @fletch.native static int _pcall$0(int address) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _pcall$1(int address, a0) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _pcall$2(int address, a0, a1) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _pcall$3(int address, a0, a1, a2) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _pcall$4(int address, a0, a1, a2, a3) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _pcall$5(int address, a0, a1, a2, a3, a4) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _pcall$6(
+      int address, a0, a1, a2, a3, a4, a5) {
+    throw new ArgumentError();
+  }
 
-  @fletch.native external static int _vcall$0(int address);
-  @fletch.native external static int _vcall$1(int address, a0);
-  @fletch.native external static int _vcall$2(int address, a0, a1);
-  @fletch.native external static int _vcall$3(int address, a0, a1, a2);
-  @fletch.native external static int _vcall$4(int address, a0, a1, a2, a3);
-  @fletch.native external static int _vcall$5(int address, a0, a1, a2, a3, a4);
-  @fletch.native external static int _vcall$6(
-      int address, a0, a1, a2, a3, a4, a5);
+  @fletch.native static int _vcall$0(int address) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _vcall$1(int address, a0) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _vcall$2(int address, a0, a1) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _vcall$3(int address, a0, a1, a2) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _vcall$4(int address, a0, a1, a2, a3) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _vcall$5(int address, a0, a1, a2, a3, a4) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _vcall$6(
+      int address, a0, a1, a2, a3, a4, a5) {
+    throw new ArgumentError();
+  }
 
-  @fletch.native external static int _Lcall$wLw(int address, a0, a1, a2);
+  @fletch.native static int _Lcall$wLw(int address, a0, a1, a2) {
+    throw new ArgumentError();
+  }
 }
 
 class ForeignPointer extends Foreign {
@@ -237,7 +291,9 @@ class ForeignLibrary extends ForeignPointer {
   /// location of the Fletch vm. Takes the name without lib in front and
   /// returns a platform specific path. Example, on linux, foobar_hash
   /// become PATH_TO_EXECUTABLE/lib/libfoobar_hash.so.
-  @fletch.native external static String bundleLibraryName(String libraryName);
+  @fletch.native static String bundleLibraryName(String libraryName) {
+    throw new ArgumentError();
+  }
 
   void close() {
     _closeLibrary(address);
@@ -320,58 +376,75 @@ abstract class UnsafeMemory extends Foreign {
     }
   }
 
-  @fletch.native external static int _allocate(int length);
-  @fletch.native external void _markForFinalization(int length);
+  @fletch.native static int _allocate(int length) {
+    throw new ArgumentError();
+  }
+  @fletch.native void _markForFinalization(int length) {
+    throw new ArgumentError();
+  }
 
-  @fletch.native external static int _getInt8(int address);
-  @fletch.native external static int _getInt16(int address);
-  @fletch.native external static int _getInt32(int address);
-  @fletch.native external static int _getInt64(int address);
+  @fletch.native static int _getInt8(int address) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _getInt16(int address) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _getInt32(int address) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _getInt64(int address) {
+    throw new ArgumentError();
+  }
 
   @fletch.native static int _setInt8(int address, int value) {
     throw new ArgumentError();
   }
-
   @fletch.native static int _setInt16(int address, int value) {
     throw new ArgumentError();
   }
-
   @fletch.native static int _setInt32(int address, int value) {
     throw new ArgumentError();
   }
-
   @fletch.native static int _setInt64(int address, int value) {
     throw new ArgumentError();
   }
 
-  @fletch.native external static int _getUint8(int address);
-  @fletch.native external static int _getUint16(int address);
-  @fletch.native external static int _getUint32(int address);
-  @fletch.native external static int _getUint64(int address);
+  @fletch.native static int _getUint8(int address) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _getUint16(int address) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _getUint32(int address) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _getUint64(int address) {
+    throw new ArgumentError();
+  }
 
   @fletch.native static int _setUint8(int address, int value) {
     throw new ArgumentError();
   }
-
   @fletch.native static int _setUint16(int address, int value) {
     throw new ArgumentError();
   }
-
   @fletch.native static int _setUint32(int address, int value) {
     throw new ArgumentError();
   }
-
   @fletch.native static int _setUint64(int address, int value) {
     throw new ArgumentError();
   }
 
-  @fletch.native external static double _getFloat32(int address);
-  @fletch.native external static double _getFloat64(int address);
+  @fletch.native static double _getFloat32(int address) {
+    throw new ArgumentError();
+  }
+  @fletch.native static double _getFloat64(int address) {
+    throw new ArgumentError();
+  }
 
   @fletch.native static double _setFloat32(int address, double value) {
     throw new ArgumentError();
   }
-
   @fletch.native static double _setFloat64(int address, double value) {
     throw new ArgumentError();
   }
@@ -459,8 +532,12 @@ class ForeignMemory extends UnsafeMemory {
     length = 0;
   }
 
-  @fletch.native external void _decreaseMemoryUsage(int length);
-  @fletch.native external static void _free(int address);
+  @fletch.native void _decreaseMemoryUsage(int length) {
+    throw new ArgumentError();
+  }
+  @fletch.native static void _free(int address) {
+    throw new ArgumentError();
+  }
 }
 
 // NOTE We could make this a view on a memory object instead.
