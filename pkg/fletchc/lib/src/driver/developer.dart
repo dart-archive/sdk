@@ -8,6 +8,9 @@ import 'dart:async' show
     Future,
     Timer;
 
+import 'dart:convert' show
+    JSON;
+
 import 'dart:io' show
     Socket,
     SocketException;
@@ -42,6 +45,7 @@ import '../verbs/infrastructure.dart' show
     Session,
     SharedTask,
     StreamIterator,
+    fileUri,
     throwFatalError;
 
 import '../../incremental/fletchc_incremental.dart' show
@@ -143,12 +147,15 @@ Future<int> compile(Uri script, SessionState state) async {
   return 0;
 }
 
-SessionState createSessionState(String name, Uri packageConfig) {
-  // TODO(ahe): Allow user to specify dart2js options.
+SessionState createSessionState(String name, Settings settings) {
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
+  compilerOptions.addAll(settings.options);
+  settings.constants.forEach((String key, value) {
+    compilerOptions.add("-D$key=$value");
+  });
   FletchCompiler compilerHelper = new FletchCompiler(
-      options: compilerOptions, packageConfig: packageConfig);
+      options: compilerOptions, packageConfig: settings.packages);
 
   return new SessionState(
       name, compilerHelper, compilerHelper.newIncrementalCompiler());
@@ -398,4 +405,103 @@ Future<int> invokeCombinedTasks(
     SharedTask task2) async {
   await task1(commandSender, commandIterator);
   return task2(commandSender, commandIterator);
+}
+
+/// See ../verbs/documentation.dart for a definition of this format.
+Settings parseSettings(String jsonLikeData, Uri settingsUri) {
+  String json = jsonLikeData.split("\n")
+      .where((String line) => !line.trim().startsWith("//")).join("\n");
+  var userSettings;
+  try {
+    userSettings = JSON.decode(json);
+  } on FormatException catch (e) {
+    throwFatalError(
+        DiagnosticKind.settingsNotJson, uri: settingsUri, message: e.message);
+  }
+  if (userSettings is! Map) {
+    throwFatalError(DiagnosticKind.settingsNotAMap, uri: settingsUri);
+  }
+  Uri packages;
+  final List<String> options = <String>[];
+  final Map<String, String> constants = <String, String>{};
+  userSettings.forEach((String key, value) {
+    switch (key) {
+      case "packages":
+        if (value != null) {
+          if (value is! String) {
+            throwFatalError(
+                DiagnosticKind.settingsPackagesNotAString, uri: settingsUri);
+          }
+          packages = fileUri(value, settingsUri);
+        }
+        break;
+
+      case "options":
+        if (value != null) {
+          if (value is! List) {
+            throwFatalError(
+                DiagnosticKind.settingsOptionsNotAList, uri: settingsUri);
+          }
+          for (var option in value) {
+            if (option is! String) {
+              throwFatalError(
+                  DiagnosticKind.settingsOptionNotAString, uri: settingsUri,
+                  userInput: '$option');
+            }
+            if (option.startsWith("-D")) {
+              throwFatalError(
+                  DiagnosticKind.settingsCompileTimeConstantAsOption,
+                  uri: settingsUri, userInput: '$option');
+            }
+            options.add(option);
+          }
+        }
+        break;
+
+      case "constants":
+        if (value != null) {
+          if (value is! Map) {
+            throwFatalError(
+                DiagnosticKind.settingsConstantsNotAMap, uri: settingsUri);
+          }
+          value.forEach((String key, value) {
+            if (value == null) {
+              // Ignore.
+            } else if (value is bool || value is int || value is String) {
+              constants[key] = '$value';
+            } else {
+              throwFatalError(
+                  DiagnosticKind.settingsUnrecognizedConstantValue,
+                  uri: settingsUri, userInput: key,
+                  additionalUserInput: '$value');
+            }
+          });
+        }
+        break;
+
+      default:
+        throwFatalError(
+            DiagnosticKind.settingsUnrecognizedKey, uri: settingsUri,
+            userInput: key);
+        break;
+    }
+  });
+  return new Settings(packages, options, constants);
+}
+
+class Settings {
+  final Uri packages;
+
+  final List<String> options;
+
+  final Map<String, String> constants;
+
+  const Settings(this.packages, this.options, this.constants);
+
+  String toString() {
+    return "Settings("
+        "packages: $packages, "
+        "options: $options, "
+        "constants: $constants)";
+  }
 }

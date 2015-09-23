@@ -4,21 +4,25 @@
 
 library fletchc.verbs.create_verb;
 
+import 'dart:io' show
+    File;
+
 import 'infrastructure.dart';
 
 import '../driver/developer.dart' show
+    Settings,
     allocateWorker,
-    createSessionState;
+    createSessionState,
+    parseSettings;
 
 import 'documentation.dart' show
     createDocumentation;
 
 const Verb createVerb = const Verb(
-    create, createDocumentation, requiresTargetSession: true);
+    create, createDocumentation, requiresTargetSession: true,
+    supportsWithUri: true);
 
 Future<int> create(AnalyzedSentence sentence, VerbContext context) async {
-  // TODO(ahe): packageConfig should be a user-configurable option.
-  Uri packageConfig = sentence.base.resolve('.packages');
   IsolatePool pool = context.pool;
   String name = sentence.targetName;
 
@@ -26,7 +30,8 @@ Future<int> create(AnalyzedSentence sentence, VerbContext context) async {
 
   context = context.copyWithSession(session);
 
-  await context.performTaskInWorker(new CreateSessionTask(name, packageConfig));
+  await context.performTaskInWorker(
+      new CreateSessionTask(name, sentence.withUri, sentence.base));
 
   return 0;
 }
@@ -36,21 +41,38 @@ class CreateSessionTask extends SharedTask {
 
   final String name;
 
-  final Uri packageConfig;
+  final Uri settingsUri;
 
-  const CreateSessionTask(this.name, this.packageConfig);
+  final Uri base;
+
+  const CreateSessionTask(this.name, this.settingsUri, this.base);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return createSessionTask(name, packageConfig);
+    return createSessionTask(name, settingsUri, base);
   }
 }
 
-Future<int> createSessionTask(String name, packageConfig) {
+Future<int> createSessionTask(String name, Uri settingsUri, Uri base) async {
   assert(SessionState.internalCurrent == null);
-  SessionState state = createSessionState(name, packageConfig);
+  Settings settings;
+  if (settingsUri == null) {
+    settingsUri = base.resolve('.fletch-settings');
+    if (!await new File.fromUri(settingsUri).exists()) {
+      settingsUri = null;
+    }
+  }
+  if (settingsUri != null) {
+    String jsonLikeData = await new File.fromUri(settingsUri).readAsString();
+    settings = parseSettings(jsonLikeData, settingsUri);
+  }
+  SessionState state = createSessionState(name, settings);
   SessionState.internalCurrent = state;
-  state.log("Created session '$name'.");
-  return new Future<int>.value(0);
+  if (settingsUri != null) {
+    state.log("created session with $settingsUri $settings");
+  } else {
+    state.log("created session");
+  }
+  return 0;
 }

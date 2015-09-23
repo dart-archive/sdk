@@ -116,7 +116,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
     }, null);
     return new AnalyzedSentence(
       new ResolvedVerb(verb.name, contextHelp), null, null, null, null, null,
-      null, null, null, null, null);
+      null, null, null, null, null, null);
   }
 
   Preposition preposition = sentence.preposition;
@@ -152,6 +152,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
   }
 
   Uri toTargetUri;
+  Uri withUri;
   if (verb.verb.requiresToUri) {
     if (preposition == null) {
       throwFatalError(DiagnosticKind.missingToFile);
@@ -173,7 +174,14 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
           sessionName: sessionTarget.name);
     }
   } else if (preposition != null) {
-    throwInternalError("Can't use '$preposition' with '$verb'");
+    if (verb.verb.supportsWithUri &&
+        preposition.kind == PrepositionKind.WITH &&
+        preposition.target.kind == TargetKind.FILE) {
+      NamedTarget target = preposition.target;
+      withUri = fileUri(target.name, base);
+    } else {
+      throwInternalError("Can't use '$preposition' with '$verb'");
+    }
   }
 
   if (verb.verb.requiredTarget != null) {
@@ -247,7 +255,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
       sentence.programName == null ? null : fileUri(sentence.programName, base);
   return new AnalyzedSentence(
       verb, target, targetName, preposition, trailing, sessionName,
-      sentence.arguments, base, programName, targetUri, toTargetUri);
+      sentence.arguments, base, programName, targetUri, toTargetUri, withUri);
 }
 
 Uri fileUri(String path, Uri base) => base.resolveUri(new Uri.file(path));
@@ -310,6 +318,9 @@ class AnalyzedSentence {
   /// Value of 'to file NAME' converted to a Uri.
   final Uri toTargetUri;
 
+  /// Value of 'with <URI>' converted to a Uri.
+  final Uri withUri;
+
   AnalyzedSentence(
       this.verb,
       this.target,
@@ -321,7 +332,8 @@ class AnalyzedSentence {
       this.base,
       this.programName,
       this.targetUri,
-      this.toTargetUri);
+      this.toTargetUri,
+      this.withUri);
 
   Future<int> performVerb(VerbContext context) {
     return verb.verb.perform(this, context);

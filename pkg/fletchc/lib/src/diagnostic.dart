@@ -43,11 +43,20 @@ class DiagnosticParameter {
   static const DiagnosticParameter userInput = const DiagnosticParameter(
       DiagnosticParameterType.string, 'userInput');
 
+  static const DiagnosticParameter additionalUserInput =
+      const DiagnosticParameter(
+          DiagnosticParameterType.string, 'additionalUserInput');
+
   static const DiagnosticParameter address = const DiagnosticParameter(
       DiagnosticParameterType.string, 'address');
 
   static const DiagnosticParameter preposition = const DiagnosticParameter(
       DiagnosticParameterType.preposition, 'preposition');
+
+  // TODO(ahe): This should probably be a more generalized location, for
+  // example, Spannable from dart2js.
+  static const DiagnosticParameter uri = const DiagnosticParameter(
+      DiagnosticParameterType.uri, 'uri');
 }
 
 enum DiagnosticParameterType {
@@ -56,6 +65,7 @@ enum DiagnosticParameterType {
   sessionName,
   target,
   preposition,
+  uri,
 }
 
 class Diagnostic {
@@ -81,6 +91,10 @@ class Diagnostic {
       switch (parameter.type) {
         case DiagnosticParameterType.string:
           stringValue = value;
+          break;
+
+        case DiagnosticParameterType.uri:
+          stringValue = '$value';
           break;
 
         case DiagnosticParameterType.verb:
@@ -175,7 +189,9 @@ void throwFatalError(
      Target target,
      String address,
      String userInput,
-     Preposition preposition}) {
+     String additionalUserInput,
+     Preposition preposition,
+     Uri uri}) {
   Map<DiagnosticParameter, dynamic> arguments =
       <DiagnosticParameter, dynamic>{};
   if (message != null) {
@@ -196,8 +212,14 @@ void throwFatalError(
   if (userInput != null) {
     arguments[DiagnosticParameter.userInput] = userInput;
   }
+  if (additionalUserInput != null) {
+    arguments[DiagnosticParameter.additionalUserInput] = additionalUserInput;
+  }
   if (preposition != null) {
     arguments[DiagnosticParameter.preposition] = preposition;
+  }
+  if (uri != null) {
+    arguments[DiagnosticParameter.uri] = uri;
   }
   throw new InputError(kind, arguments);
 }

@@ -16,10 +16,12 @@ const String invalidAddress = '$invalidIP:61366';
 
 const String exampleAddress = 'example.com:54321';
 
+const List<Example> untestable = const <Example>[const Untestable()];
+
 List<Example> getExamples(DiagnosticKind kind) {
   switch (kind) {
     case DiagnosticKind.internalError:
-      throw new StateError("No example for $kind");
+      return untestable;
 
     case DiagnosticKind.verbRequiresNoSession:
       return <Example>[
@@ -110,7 +112,7 @@ List<Example> getExamples(DiagnosticKind kind) {
               <String>['debug', 'backtrace', 'in', 'session', 'foo'])];
 
     case DiagnosticKind.compileBeforeRun:
-      return <Example>[
+      var examples = <Example>[
           new CommandLineExample(
               <String>['create', 'session', 'foo'],
               <String>['attach', 'in', 'session', 'foo',
@@ -121,6 +123,10 @@ List<Example> getExamples(DiagnosticKind kind) {
               <String>['attach', 'in', 'session', 'foo',
                        'tcp_socket', exampleAddress],
               <String>['debug', 'attach', 'in', 'session', 'foo'])];
+      // TODO(ahe): Need to mock up a VM socket to test this. But hopefully
+      // we'll get rid of this message before then, most commands should
+      // support auto-compiling.
+      return untestable;
 
     case DiagnosticKind.missingToFile:
       return <Example>[
@@ -146,6 +152,40 @@ List<Example> getExamples(DiagnosticKind kind) {
       // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.
       return <Example>[new CommandLineExample(
             <String>['compile-and-run', '-o'])];
+
+    case DiagnosticKind.settingsCompileTimeConstantAsOption:
+      return <Example>[new SettingsExample('{"options":["-Dfoo=bar"]}')];
+
+    case DiagnosticKind.settingsConstantsNotAMap:
+      return <Example>[new SettingsExample('{"constants":[]}')];
+
+    case DiagnosticKind.settingsNotAMap:
+      return <Example>[
+          new SettingsExample('""'),
+          new SettingsExample('null'),
+          new SettingsExample('1'),
+          new SettingsExample('[]')];
+
+    case DiagnosticKind.settingsNotJson:
+      return <Example>[
+          new SettingsExample(''),
+          new SettingsExample('{1:null}'),
+          new SettingsExample('...')];
+
+    case DiagnosticKind.settingsOptionNotAString:
+      return <Example>[new SettingsExample('{"options":[1]}')];
+
+    case DiagnosticKind.settingsOptionsNotAList:
+      return <Example>[new SettingsExample('{"options":1}')];
+
+    case DiagnosticKind.settingsPackagesNotAString:
+      return <Example>[new SettingsExample('{"packages":1}')];
+
+    case DiagnosticKind.settingsUnrecognizedConstantValue:
+      return <Example>[new SettingsExample('{"constants":{"key": []}}')];
+
+    case DiagnosticKind.settingsUnrecognizedKey:
+      return <Example>[new SettingsExample('{"fisk":null}')];
   }
 }
 
@@ -161,4 +201,14 @@ class CommandLineExample extends Example {
   final List<String> line3;
 
   const CommandLineExample(this.line1, [this.line2, this.line3]);
+}
+
+class SettingsExample extends Example {
+  final String data;
+
+  const SettingsExample(this.data);
+}
+
+class Untestable extends Example {
+  const Untestable();
 }

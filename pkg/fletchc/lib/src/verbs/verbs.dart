@@ -70,6 +70,9 @@ class Verb {
   /// Optional list of targets supported (but not required) by this verb.
   final List<TargetKind> supportedTargets;
 
+  /// True if this verb supports "with <URI>"
+  final bool supportsWithUri;
+
   const Verb(
       this.perform,
       this.documentation,
@@ -78,7 +81,8 @@ class Verb {
        this.allowsTrailing: false,
        bool requiresTargetSession: false,
        TargetKind requiredTarget,
-       this.supportedTargets})
+       this.supportedTargets,
+       this.supportsWithUri: false})
       : this.requiresTargetSession = requiresTargetSession,
         this.requiredTarget =
             requiresTargetSession ? TargetKind.SESSION : requiredTarget;

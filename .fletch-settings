@@ -1,0 +1,22 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file",
+// for details. All rights reserved. Use of this source code is governed by a",
+// BSD-style license that can be found in the LICENSE.md file."],
+{
+
+  // Location of the packages configuration file (a relative URI)
+  "packages": ".packages",
+
+  // A list of strings that are passed to the compiler
+  "options": [
+  ],
+
+  // Values of of compile-time constants, that is, the values of
+  // expression on these forms:
+  //
+  //   const bool.fromEnvironment("<name>")
+  //   const int.fromEnvironment("<name>")
+  //   const String.fromEnvironment("<name>")
+  //
+  "constants": {
+  }
+}

@@ -89,8 +89,30 @@ const String shutdownDocumentation = """
 """;
 
 const String createDocumentation = """
-   create session <name>
-             Create a new session with the given name
+   create session <name> [with <settings file>]
+             Create a new session with the given name.  Read settings from
+             <settings file> (defaults to '.fletch-settings').
+
+             Settings are written in JSON (comments allowed):
+
+               {
+                 // Location of the package configuration file (a relative URI)
+                 "packages": ".packages",
+
+                 // A list of strings that are passed to the compiler
+                 "options": ["--verbose"],
+
+                 // Values of of compile-time constants, that is, the values of
+                 // expressions like these:
+                 //
+                 //   const bool.fromEnvironment("<name>")
+                 //   const int.fromEnvironment("<name>")
+                 //   const String.fromEnvironment("<name>")
+                 //
+                 "constants": {
+                   "<name>": "<value>",
+                 }
+               }
 """;
 
 const String compileDocumentation = """

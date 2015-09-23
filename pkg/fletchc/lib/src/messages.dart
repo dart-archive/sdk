@@ -9,21 +9,30 @@ import 'diagnostic.dart' show
     DiagnosticParameter;
 
 enum DiagnosticKind {
+  expectedAPortNumber,
+  expectedFileTarget,
+  expectedToPreposition,
   internalError,
+  missingToFile,
+  noFileTarget,
+  noSuchSession,
+  noTcpSocketTarget,
+  sessionAlreadyExists,
+  settingsCompileTimeConstantAsOption,
+  settingsConstantsNotAMap,
+  settingsNotAMap,
+  settingsNotJson,
+  settingsOptionNotAString,
+  settingsOptionsNotAList,
+  settingsPackagesNotAString,
+  settingsUnrecognizedConstantValue,
+  settingsUnrecognizedKey,
+  socketConnectError,
+  verbDoesNotSupportTarget,
+  verbRequiresFileTarget,
   verbRequiresNoSession,
   verbRequiresSessionTarget,
-  verbRequiresFileTarget,
   verbRequiresSocketTarget,
-  verbDoesNotSupportTarget,
-  noSuchSession,
-  sessionAlreadyExists,
-  noFileTarget,
-  noTcpSocketTarget,
-  expectedAPortNumber,
-  socketConnectError,
-  missingToFile,
-  expectedToPreposition,
-  expectedFileTarget,
 
   // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
   unknownOption,
@@ -55,43 +64,50 @@ String getMessage(DiagnosticKind kind) {
   // Implementation note: Instead of directly writing `"#{parameterName}"` in
   // templates, use DiagnosticParameter to help reduce the chance of typos, and
   // to ensure all diagnostics can be processed by a third-party.
+
+  const DiagnosticParameter message = DiagnosticParameter.message;
+  const DiagnosticParameter verb = DiagnosticParameter.verb;
+  const DiagnosticParameter sessionName = DiagnosticParameter.sessionName;
+  const DiagnosticParameter target = DiagnosticParameter.target;
+  const DiagnosticParameter userInput = DiagnosticParameter.userInput;
+  const DiagnosticParameter additionalUserInput =
+      DiagnosticParameter.additionalUserInput;
+  const DiagnosticParameter address = DiagnosticParameter.address;
+  const DiagnosticParameter preposition = DiagnosticParameter.preposition;
+  const DiagnosticParameter uri = DiagnosticParameter.uri;
+
   switch (kind) {
     case DiagnosticKind.internalError:
-      return "Internal error: ${DiagnosticParameter.message}";
+      return "Internal error: $message";
 
     case DiagnosticKind.verbRequiresNoSession:
-      return "Can't perform '${DiagnosticParameter.verb}' in a session. "
-          "Try removing 'in session ${DiagnosticParameter.sessionName}'";
+      return "Can't perform '$verb' in a session. "
+          "Try removing 'in session $sessionName'";
 
     case DiagnosticKind.verbRequiresSessionTarget:
-      return "Can't perform '${DiagnosticParameter.verb}' without a session "
+      return "Can't perform '$verb' without a session "
           "target. Try adding 'session <SESSION_NAME>' to the commmand line";
 
     case DiagnosticKind.verbRequiresFileTarget:
       // TODO(ahe): Be more explicit about what is wrong with the target.
-      return "Can't perform '${DiagnosticParameter.verb}' without a file, "
-          "but got '${DiagnosticParameter.target}'";
+      return "Can't perform '$verb' without a file, but got '$target'";
 
     case DiagnosticKind.verbRequiresSocketTarget:
       // TODO(ahe): Be more explicit about what is wrong with the target.
-      return "Can't perform '${DiagnosticParameter.verb}' without a socket, "
-          "but got '${DiagnosticParameter.target}'";
+      return "Can't perform '$verb' without a socket, but got '$target'";
 
     case DiagnosticKind.verbDoesNotSupportTarget:
       // TODO(lukechurch): Review this error message.
-      return "'${DiagnosticParameter.verb}' does not support target "
-          "'${DiagnosticParameter.target}'";
+      return "'$verb' does not support target '$target'";
 
     case DiagnosticKind.noSuchSession:
       // TODO(lukechurch): Ensure UX repair text is good.
-      return "No session named: '${DiagnosticParameter.sessionName}'. "
-          "Try running 'fletch create session "
-          "${DiagnosticParameter.sessionName}'";
+      return "No session named: '$sessionName'. "
+          "Try running 'fletch create session $sessionName'";
 
     case DiagnosticKind.sessionAlreadyExists:
-      return "Can't create session named '${DiagnosticParameter.sessionName}'; "
-          "There already is a session named "
-          "'${DiagnosticParameter.sessionName}'.";
+      return "Can't create session named '$sessionName'; "
+          "There already is a session named '$sessionName'.";
 
     case DiagnosticKind.noFileTarget:
       return "No file provided. Try adding <FILE_NAME> to the command line";
@@ -101,13 +117,10 @@ String getMessage(DiagnosticKind kind) {
           "Try adding 'tcp_socket HOST:PORT' to the command line";
 
     case DiagnosticKind.expectedAPortNumber:
-      return
-          "Expected a port number, but got '${DiagnosticParameter.userInput}'";
+      return "Expected a port number, but got '$userInput'";
 
     case DiagnosticKind.socketConnectError:
-      return
-          "Unable to establish connection to "
-          "${DiagnosticParameter.address}: ${DiagnosticParameter.message}";
+      return "Unable to establish connection to $address: $message";
 
     case DiagnosticKind.attachToVmBeforeRun:
       return "Unable to run program without being attached to a VM. "
@@ -122,16 +135,45 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.expectedToPreposition:
       // TODO(lukechurch): Review UX.
-      return "Expected 'to' but got '${DiagnosticParameter.preposition}'";
+      return "Expected 'to' but got '$preposition'";
 
     case DiagnosticKind.expectedFileTarget:
       // TODO(lukechurch): Review UX.
-      return "Expected a file but got '${DiagnosticParameter.target}'";
+      return "Expected a file but got '$target'";
 
     case DiagnosticKind.unknownOption:
-      return "Unknown option: '${DiagnosticParameter.userInput}'";
+      return "Unknown option: '$userInput'";
 
     case DiagnosticKind.missingRequiredArgument:
-      return "Error in option: ${DiagnosticParameter.message}";
+      return "Error in option: $message";
+
+    case DiagnosticKind.settingsNotAMap:
+      return "$uri: isn't a map";
+
+    case DiagnosticKind.settingsNotJson:
+      return "$uri: unable decode as JSON: $message";
+
+    case DiagnosticKind.settingsPackagesNotAString:
+      return "$uri: 'packages' value isn't a String";
+
+    case DiagnosticKind.settingsOptionsNotAList:
+      return "$uri: 'options' value isn't a List";
+
+    case DiagnosticKind.settingsOptionNotAString:
+      return "$uri: found 'options' entry '$userInput' which isn't a string";
+
+    case DiagnosticKind.settingsCompileTimeConstantAsOption:
+      return "$uri: compile-time constants should be in "
+          "the 'constants' map, not in 'options': '$userInput'";
+
+    case DiagnosticKind.settingsConstantsNotAMap:
+      return "$uri: 'constants' value isn't a Map";
+
+    case DiagnosticKind.settingsUnrecognizedConstantValue:
+      return "$uri: found 'constant[$userInput]' value '$additionalUserInput' "
+          "isn't a bool, int, or String";
+
+    case DiagnosticKind.settingsUnrecognizedKey:
+      return "$uri: unexpected key '$userInput'";
   }
 }

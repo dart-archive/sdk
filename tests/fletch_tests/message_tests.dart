@@ -49,20 +49,18 @@ import 'package:fletchc/src/verbs/infrastructure.dart' show
     AnalyzedSentence,
     analyzeSentence;
 
+import 'package:fletchc/src/driver/developer.dart' show
+    parseSettings;
+
 final IsolatePool pool = new IsolatePool(isolateMain);
 
 Future<Null> main() async {
   for (DiagnosticKind kind in DiagnosticKind.values) {
     Expect.isNotNull(getMessage(kind));
-    if (kind == DiagnosticKind.internalError) continue;
 
     List<Example> examples = getExamples(kind);
     Expect.isNotNull(examples);
     Expect.isFalse(examples.isEmpty);
-    if (kind == DiagnosticKind.compileBeforeRun) {
-      // TODO(ahe): Need to mock up a VM socket to test this.
-      continue;
-    }
     int exampleCount = 1;
     for (Example example in examples) {
       print("\n\nTesting $kind ${exampleCount++}");
@@ -78,8 +76,27 @@ Future<Null> main() async {
 Future<Null> checkExample(DiagnosticKind kind, Example example) async {
   if (example is CommandLineExample) {
     await checkCommandLineExample(kind, example);
+  } else if (example is SettingsExample) {
+    checkSettingsExample(kind, example);
+  } else if (example is Untestable) {
+    // Ignored.
   } else {
     throw "Unknown kind of example: $example";
+  }
+}
+
+void checkSettingsExample(DiagnosticKind kind, SettingsExample example) {
+  Uri mockUri = new Uri(scheme: "org.dartlang.tests.mock");
+  try {
+    parseSettings(example.data, mockUri);
+    throw "Settings example: '${example.data}' "
+        "didn't produce the expected '$kind' error";
+  } on InputError catch (e) {
+    Expect.isNotNull(e);
+    Expect.equals(kind, e.kind, '$e');
+    // Ensure that the diagnostic can be turned into a formatted error message.
+    String message = e.asDiagnostic().formatMessage();
+    Expect.isNotNull(message);
   }
 }
 
