@@ -211,6 +211,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
   ClassElement smiClass;
   ClassElement mintClass;
   ClassElement growableListClass;
+  ClassElement bigintClass;
+  ClassElement uint32DigitsClass;
 
   FletchSystemBuilder systemBuilder;
 
@@ -358,6 +360,12 @@ class FletchBackend extends Backend with ResolutionCallbacks
     loadClass("bool", compiler.coreLibrary, true);
     loadClass("Port", fletchLibrary, true);
     loadClass("ForeignMemory", fletchFFILibrary, true);
+
+    if (const bool.fromEnvironment('fletch.enable-bigint')) {
+      bigintClass = loadClass("_Bigint", compiler.coreLibrary).element;
+      uint32DigitsClass =
+          loadClass("_Uint32Digits", compiler.coreLibrary).element;
+    }
 
     growableListClass =
         loadClass(growableListName, fletchSystemLibrary).element;

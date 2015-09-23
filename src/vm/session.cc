@@ -460,6 +460,41 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kPushNewBigInteger: {
+        bool negative = connection_->ReadBoolean();
+        int used = connection_->ReadInt();
+        int class_map = connection_->ReadInt();
+        int64 bigint_class_id = connection_->ReadInt64();
+        int64 uint32_digits_class_id = connection_->ReadInt64();
+
+        int rounded_used = (used & 1) == 0 ? used : used + 1;
+
+        // First two arguments for _Bigint allocation.
+        PushBoolean(negative);
+        PushNewInteger(used);
+
+        // Arguments for _Uint32Digits allocation.
+        PushNewInteger(rounded_used);
+        GC_AND_RETRY_ON_ALLOCATION_FAILURE(
+            object, program()->CreateByteArray(rounded_used * 4));
+        ByteArray* backing = ByteArray::cast(object);
+        for (int i = 0; i < used; i++) {
+          uint32 part = static_cast<uint32>(connection_->ReadInt());
+          uint8* part_address = backing->byte_address_for(i * 4);
+          *(reinterpret_cast<uint32*>(part_address)) = part;
+        }
+        Push(backing);
+        // _Uint32Digits allocation.
+        PushFromMap(class_map, uint32_digits_class_id);
+        PushNewInstance();
+
+        // _Bigint allocation.
+        PushFromMap(class_map, bigint_class_id);
+        PushNewInstance();
+
+        break;
+      }
+
       case Connection::kPushNewDouble: {
         PushNewDouble(connection_->ReadDouble());
         break;

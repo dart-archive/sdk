@@ -238,6 +238,10 @@ namespace fletch {
   N(IdentityHashCode,            "<none>", "_identityHashCode")          \
                                                                          \
   N(NativeProcessSpawnDetached,  "NativeProcess", "_spawnDetached")      \
+                                                                         \
+  N(Uint32DigitsAllocate,        "_Uint32Digits", "_allocate")           \
+  N(Uint32DigitsGet,             "_Uint32Digits", "_getUint32")          \
+  N(Uint32DigitsSet,             "_Uint32Digits", "_setUint32")          \
 
 enum Native {
 #define N(e, c, n) k##e,

@@ -90,6 +90,7 @@ NATIVE(SmiToMint) {
 
 NATIVE(SmiNegate) {
   Smi* x = Smi::cast(arguments[0]);
+  if (x->value() == Smi::kMinValue) return Failure::index_out_of_bounds();
   return Smi::FromWord(-x->value());
 }
 
@@ -274,6 +275,7 @@ NATIVE(MintToString) {
 
 NATIVE(MintNegate) {
   LargeInteger* x = LargeInteger::cast(arguments[0]);
+  if (x->value() == INT64_MIN) return Failure::index_out_of_bounds();
   return process->NewInteger(-x->value());
 }
 
@@ -406,7 +408,7 @@ NATIVE(MintBitShl) {
   int64 x_value = x->value();
   int x_bit_length = Utils::BitLength(x_value);
   if (x_bit_length + y_value >= 64) {
-    return Failure::wrong_argument_type();
+    return Failure::index_out_of_bounds();
   }
   return process->ToInteger(x->value() << y_value);
 }
@@ -1281,6 +1283,35 @@ NATIVE(SystemGetEventHandler) {
 NATIVE(IsImmutable) {
   Object* o = arguments[0];
   return ToBool(process, o->IsImmutable());
+}
+
+NATIVE(Uint32DigitsAllocate) {
+  Smi* length = Smi::cast(arguments[0]);
+  word byte_size = length->value() * 4;
+  return process->NewByteArray(byte_size);
+}
+
+NATIVE(Uint32DigitsGet) {
+  ByteArray* backing = ByteArray::cast(arguments[1]);
+  Smi* index = Smi::cast(arguments[2]);
+  word byte_index = index->value() * 4;
+  ASSERT(byte_index + 4 <= backing->length());
+  uint8* byte_address = backing->byte_address_for(byte_index);
+  return process->ToInteger(*reinterpret_cast<uint32*>(byte_address));
+}
+
+NATIVE(Uint32DigitsSet) {
+  ByteArray* backing = ByteArray::cast(arguments[1]);
+  Smi* index = Smi::cast(arguments[2]);
+  word byte_index = index->value() * 4;
+  ASSERT(byte_index + 4 <= backing->length());
+  uint8* byte_address = backing->byte_address_for(byte_index);
+  Object* object = arguments[3];
+  uint32 value = object->IsSmi()
+                 ? Smi::cast(object)->value()
+                 : LargeInteger::cast(object)->value();
+  *reinterpret_cast<uint32*>(byte_address) = value;
+  return process->program()->null_object();
 }
 
 }  // namespace fletch

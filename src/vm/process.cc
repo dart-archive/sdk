@@ -262,6 +262,11 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   return kStackCheckContinue;
 }
 
+Object* Process::NewByteArray(int length) {
+  Class* byte_array_class = program()->byte_array_class();
+  return heap_.CreateByteArray(byte_array_class, length);
+}
+
 Object* Process::NewArray(int length) {
   Class* array_class = program()->array_class();
   Object* null = program()->null_object();

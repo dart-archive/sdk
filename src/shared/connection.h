@@ -98,6 +98,7 @@ class Connection {
     kPushNull,
     kPushBoolean,
     kPushNewInteger,
+    kPushNewBigInteger,
     kPushNewDouble,
     kPushNewOneByteString,
     kPushNewTwoByteString,

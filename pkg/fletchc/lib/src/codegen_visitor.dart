@@ -161,6 +161,8 @@ abstract class CodegenVisitor
     implements SemanticSendVisitor, SemanticDeclarationVisitor {
   // A literal int can have up to 31 bits of information (32 minus sign).
   static const int LITERAL_INT_MAX = 0x3FFFFFFF;
+  static const int MAX_INT64 = (1 << 63) - 1;
+  static const int MIN_INT64 = -(1 << 63);
 
   final FletchContext context;
 
@@ -1440,8 +1442,15 @@ abstract class CodegenVisitor
       int value = node.value;
       assert(value >= 0);
       if (value > LITERAL_INT_MAX) {
-        int constId = allocateConstantFromNode(node);
-        assembler.loadConst(constId);
+        if ((value < MIN_INT64 || value > MAX_INT64)
+            && !const bool.fromEnvironment('fletch.enable-bigint')) {
+          generateUnimplementedError(
+              node,
+              'Program compiled without support for big integers');
+        } else {
+          int constId = allocateConstantFromNode(node);
+          assembler.loadConst(constId);
+        }
       } else {
         assembler.loadLiteral(value);
       }

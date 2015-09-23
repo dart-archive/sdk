@@ -142,6 +142,8 @@ class _DoubleImpl implements double {
 
   int toInt() => truncate();
 
+  num _toBigintOrDouble() => this;
+
   @fletch.native external String toString();
 
   String toStringAsExponential([int digits]) {

@@ -14,6 +14,8 @@ part 'map.dart';
 
 const native = "native";
 
+const enableBigint = const bool.fromEnvironment('fletch.enable-bigint');
+
 // These strings need to be kept in sync with the strings allocated
 // for the raw failure objects in src/vm/program.cc.
 const wrongArgumentType = "Wrong argument type.";

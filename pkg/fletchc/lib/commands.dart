@@ -665,6 +665,38 @@ class PushNewInteger extends Command {
   String valuesToString() => "$value";
 }
 
+class PushNewBigInteger extends Command {
+  final bool negative;
+  final List<int> parts;
+  final MapId classMap;
+  final int bigintClassId;
+  final int uint32DigitsClassId;
+
+  const PushNewBigInteger(this.negative,
+                          this.parts,
+                          this.classMap,
+                          this.bigintClassId,
+                          this.uint32DigitsClassId)
+      : super(CommandCode.PushNewBigInteger);
+
+  void internalAddTo(Sink<List<int>> sink, CommandBuffer<CommandCode> buffer) {
+    buffer
+        ..addUint8(negative ? 1 : 0)
+        ..addUint32(parts.length)
+        ..addUint32(classMap.index)
+        ..addUint64(bigintClassId)
+        ..addUint64(uint32DigitsClassId);
+    parts.forEach((part) => buffer.addUint32(part));
+    buffer.sendOn(sink, code);
+  }
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() {
+    return "$negative, $parts, $classMap, $bigintClassId, $uint32DigitsClassId";
+  }
+}
+
 class PushNewDouble extends Command {
   final double value;
 
@@ -1189,6 +1221,7 @@ enum CommandCode {
   PushNull,
   PushBoolean,
   PushNewInteger,
+  PushNewBigInteger,
   PushNewDouble,
   PushNewOneByteString,
   PushNewTwoByteString,

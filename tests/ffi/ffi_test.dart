@@ -218,13 +218,13 @@ testPCallAndMemory(bool immutable) {
   Expect.equals(memory.getInt64(0), 0);
   Expect.equals(memory.getInt64(8), -1);
   Expect.equals(memory.getInt64(16), 9223372036854775807);
-  Expect.equals(memory.getInt64(24), -9223372036854775808);
+  Expect.equals(memory.getInt64(24), -9223372036854775808); /// 01: ok
   memory.setInt64(8, 9223372036854775806);
   Expect.equals(memory.getInt64(0), 0);
   // TODO(ricow): Failure, need to investigate
   Expect.equals(memory.getInt64(8), 9223372036854775806);
   Expect.equals(memory.getInt64(16), 9223372036854775807);
-  Expect.equals(memory.getInt64(24), -9223372036854775808);
+  Expect.equals(memory.getInt64(24), -9223372036854775808); /// 01: ok
   checkOutOfBoundsThrows(() => memory.getInt64(25));
   freeMem(memory);
 
@@ -543,13 +543,13 @@ testStruct() {
   Expect.equals(-1, struct64.getWord(8));
   Expect.equals(9223372036854775807, struct64.getField(2));
   Expect.equals(9223372036854775807, struct64.getWord(16));
-  Expect.equals(-9223372036854775808, struct64.getField(3));
-  Expect.equals(-9223372036854775808, struct64.getWord(24));
+  Expect.equals(-9223372036854775808, struct64.getField(3)); /// 01: ok
+  Expect.equals(-9223372036854775808, struct64.getWord(24)); /// 01: ok
   struct64.setField(1, 9223372036854775806);
   Expect.equals(0, struct64.getField(0));
   Expect.equals(9223372036854775806, struct64.getField(1));
   Expect.equals(9223372036854775807, struct64.getField(2));
-  Expect.equals(-9223372036854775808, struct64.getField(3));
+  Expect.equals(-9223372036854775808, struct64.getField(3)); /// 01: ok
   checkOutOfBoundsThrows(() => struct64.getField(4));
   checkOutOfBoundsThrows(() => struct64.getWord(25));
   // Reset field 1 to original value to use when testing with Struct

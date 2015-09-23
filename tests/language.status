@@ -9,6 +9,24 @@
 regress_14348_test: Crash
 
 [ $compiler == fletchc || $runtime == fletchc ]
+
+# These tests use big integers. They pass once we turn on bigint support
+# by default.
+deopt_inlined_function_lazy_test: RuntimeError
+deopt_smi_op_test: RuntimeError
+guess_cid_test: RuntimeError
+identical_closure2_test: RuntimeError
+int2_test: RuntimeError
+left_shift_test: RuntimeError
+mint_arithmetic_test: RuntimeError
+mint_compares_test: RuntimeError
+number_identity_test: RuntimeError
+vm/canonicalization_preserves_deopt_test: RuntimeError
+vm/regress_14903_test: RuntimeError
+vm/regress_22693_vm_test: RuntimeError
+vm/regress_23117_vm_test: RuntimeError
+vm/regress_23238_test: RuntimeError
+
 abstract_runtime_error_test/01: RuntimeError
 abstract_runtime_error_test/02: RuntimeError
 arithmetic_test: RuntimeError
@@ -378,7 +396,6 @@ deferred_type_dependency_test/as: RuntimeError
 deferred_type_dependency_test/is: RuntimeError
 deferred_type_dependency_test/none: RuntimeError
 deferred_type_dependency_test/type_annotation: RuntimeError
-deopt_smi_op_test: RuntimeError # Overflow to bigint.
 duplicate_implements_test/03: RuntimeError
 duplicate_implements_test/04: RuntimeError
 dynamic_prefix_core_test/01: Fail
@@ -658,7 +675,6 @@ issue23244_test: CompileTimeError
 issue_1751477_test: RuntimeError
 issue_23914_test: CompileTimeError
 lazy_static3_test: RuntimeError
-left_shift_test: RuntimeError
 list_is_test: RuntimeError
 list_literal4_test: RuntimeError
 list_test: RuntimeError
@@ -682,7 +698,6 @@ metadata_test: CompileTimeError
 method_override4_test: RuntimeError
 method_override5_test: RuntimeError
 method_override_test: RuntimeError
-mint_compares_test: RuntimeError
 missing_part_of_tag_test/01: MissingCompileTimeError
 mixin_forwarding_constructor4_test/01: MissingCompileTimeError
 mixin_forwarding_constructor4_test/02: MissingCompileTimeError
@@ -882,19 +897,15 @@ typedef_is_test: RuntimeError
 variable_declaration_metadata_test/06: RuntimeError
 variable_declaration_metadata_test/08: RuntimeError
 vm/allocation_sinking_vm_test: CompileTimeError
-vm/canonicalization_preserves_deopt_test: RuntimeError  # Overflow to bigint
 vm/debug_break_enabled_vm_test/01: CompileTimeError
 vm/debug_break_enabled_vm_test/none: CompileTimeError
-vm/issue21220_vm_test: RuntimeError
+vm/issue21220_vm_test: CompileTimeError  # Int32x4 support
 vm/load_to_load_forwarding_vm_test: CompileTimeError
 vm/load_to_load_unaligned_forwarding_vm_test: CompileTimeError
 vm/no_such_method_error_message_vm_test: RuntimeError
 vm/optimized_await_regress_test: RuntimeError
 vm/optimized_guarded_field_isolates_test: CompileTimeError
 vm/reflect_core_vm_test: CompileTimeError
-vm/regress_22693_vm_test: RuntimeError  # Overflow to bigint
-vm/regress_23117_vm_test: RuntimeError
-vm/regress_23238_test: RuntimeError
 vm/reusable_boxes_test: CompileTimeError
 vm/type_cast_vm_test: RuntimeError
 vm/type_vm_test: RuntimeError

@@ -68,6 +68,9 @@ class FletchSystemBuilder {
   final Map<Element, List<FunctionElement>> _replaceUsage =
       <Element, List<FunctionElement>>{};
 
+  final int maxInt64 = (1 << 63) - 1;
+  final int minInt64 = -(1 << 63);
+
   FletchSystemBuilder(FletchSystem predecessorSystem)
       : this.predecessorSystem = predecessorSystem,
         this.functionIdStart = predecessorSystem.computeMaxFunctionId() + 1,
@@ -318,7 +321,32 @@ class FletchSystemBuilder {
       }
 
       if (constant.isInt) {
-        commands.add(new PushNewInteger(constant.primitiveValue));
+        var value = constant.primitiveValue;
+        if (value > maxInt64 || value < minInt64) {
+          assert(const bool.fromEnvironment('fletch.enable-bigint'));
+          bool negative = value < 0;
+          value = negative ? -value : value;
+          var parts = new List();
+          while (value != 0) {
+            parts.add(value & 0xffffffff);
+            value >>= 32;
+          }
+
+          // TODO(ajohnsen): Avoid usage of builders (should be FletchClass).
+          FletchClassBuilder bigintClassBuilder =
+              _classBuildersByElement[context.backend.bigintClass];
+          FletchClassBuilder uint32DigitsClassBuilder =
+              _classBuildersByElement[context.backend.uint32DigitsClass];
+
+          commands.add(new PushNewBigInteger(
+              negative,
+              parts,
+              MapId.classes,
+              bigintClassBuilder.classId,
+              uint32DigitsClassBuilder.classId));
+        } else {
+          commands.add(new PushNewInteger(constant.primitiveValue));
+        }
       } else if (constant.isDouble) {
         commands.add(new PushNewDouble(constant.primitiveValue));
       } else if (constant.isTrue) {

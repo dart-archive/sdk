@@ -6,6 +6,7 @@ library dart.core_patch;
 
 import 'dart:_fletch_system' as fletch;
 
+part 'bigint.dart';
 part 'case.dart';
 part 'double.dart';
 part 'int.dart';
@@ -16,7 +17,10 @@ const patch = "patch";
 
 @patch external bool identical(Object a, Object b);
 
-@patch int identityHashCode(Object object) => _identityHashCode(object);
+@patch int identityHashCode(Object object) {
+  if (object is int) return object;
+  return _identityHashCode(object);
+}
 
 @fletch.native external _identityHashCode(Object object);
 

@@ -112,6 +112,7 @@ class Process {
                                       Class* clazz,
                                       int selector);
 
+  Object* NewByteArray(int length);
   Object* NewArray(int length);
   Object* NewDouble(fletch_double value);
   Object* NewInteger(int64 value);
