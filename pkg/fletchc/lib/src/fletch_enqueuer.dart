@@ -75,7 +75,7 @@ const bool logSystemLibraries =
 bool shouldReportEnqueuingOfElement(Element element) {
   if (logSystemLibraries) return true;
   LibraryElement library = element.library;
-  return !library.isInternalLibrary;
+  return !library.isPlatformLibrary;
 }
 
 // TODO(ahe): Delete this method when FletchEnqueuer is complete.

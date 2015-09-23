@@ -809,8 +809,13 @@ class FletchBackend extends Backend with ResolutionCallbacks
         context.compiler.reportVerboseInfo(
             element, 'Need tear-off parameter stub $selector',
             forceVerbose: true);
-        // TODO(ahe): Implement this.
       }
+      FletchFunctionBase function =
+          systemBuilder.lookupFunctionByElement(element);
+      int tearOffStubId = systemBuilder.lookupTearOffById(function.functionId);
+      FletchFunctionBase tearOffStub =
+          systemBuilder.lookupFunction(tearOffStubId);
+      createParameterStubFor(tearOffStub, selector);
     });
   }
 
