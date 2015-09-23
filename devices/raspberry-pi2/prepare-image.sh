@@ -123,13 +123,17 @@ sudo -E cp $DATA_DIR/setup-agent.sh $MOUNT_DIR/opt/fletch/bin/
 check_success $? \
   "Failed to copy setup-agent.sh script to /opt/fletch/bin on $MOUNT_DIR"
 
-# Set file permissions on fletch-vm, agent snapshot, and setup script
+# Set file permissions to allow all to read or execute.
+sudo -E chmod 755 $MOUNT_DIR/etc/init.d/fletch-agent
+check_success $? "Failed to make fletch-agent executable for all"
+sudo -E chmod 644 $MOUNT_DIR/etc/default/fletch-agent
+check_success $? "Failed to make fletch-agent environment readable for all"
 sudo -E chmod 755 $MOUNT_DIR/opt/fletch/bin/fletch-vm
-check_success $? "Failed to make fletch-vm exectuable for all"
+check_success $? "Failed to make fletch-vm executable for all"
 sudo -E chmod 644 $MOUNT_DIR/opt/fletch/bin/fletch-agent.snapshot
 check_success $? "Failed to make fletch-agent.snapshot readable for all"
 sudo -E chmod 755 $MOUNT_DIR/opt/fletch/bin/setup-agent.sh
-check_success $? "Failed to make setup-agent.sh script exectuable for all"
+check_success $? "Failed to make setup-agent.sh script executable for all"
 
 # Update the service dependency files if needed. This is only done if the files
 # have not been modified from the original installation. If they have been 

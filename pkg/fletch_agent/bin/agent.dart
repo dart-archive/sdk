@@ -47,8 +47,14 @@ class AgentContext {
   static final ForeignFunction _getenv = ForeignLibrary.main.lookup('getenv');
 
   static String _getEnv(String varName) {
-    var arg = new ForeignMemory.fromStringAsUTF8(varName);
-    var ptr = _getenv.pcall$1(arg);
+    ForeignPointer ptr;
+    var arg;
+    try {
+      arg = new ForeignMemory.fromStringAsUTF8(varName);
+      ptr = _getenv.pcall$1(arg);
+    } finally {
+      arg.free();
+    }
     if (ptr.address == 0) return null;
     var cstring = new ForeignCString.fromForeignPointer(ptr);
     return cstring.toString();
@@ -156,6 +162,7 @@ class Agent {
 class CommandHandler {
   static const int SIGTERM = 15;
   static final ForeignFunction _kill = ForeignLibrary.main.lookup('kill');
+  static final ForeignFunction _unlink = ForeignLibrary.main.lookup('unlink');
 
   final Socket _socket;
   final AgentContext _context;
@@ -213,20 +220,83 @@ class CommandHandler {
   void _startVm() {
     int result = ReplyHeader.SUCCESS;
     ByteBuffer replyPayload;
+    int vmPid = 0;
     try {
-      int vmId  = NativeProcess.startDetached(_context.vmBinPath, null);
+      List<String> args =
+          ['--log-dir=${_context.vmLogDir}', '--run-dir=${_context.vmPidDir}'];
+      vmPid = NativeProcess.startDetached(_context.vmBinPath, args);
       replyPayload = new Uint16List(2).buffer;
-      writeUint16(replyPayload, 0, vmId);
-      // TODO(wibling): the -1 should be the vm's port.
-      writeUint16(replyPayload, 2, -1);
-      _context.logger.info('Started fletch vm with pid $vmId');
+      writeUint16(replyPayload, 0, vmPid);
+      // Find out what port the vm is listening on.
+      int port = _retrieveVmPort(vmPid);
+      writeUint16(replyPayload, 2, port);
+      _context.logger.info('Started fletch vm with pid $vmPid on port $port');
     } catch (e) {
       result = ReplyHeader.START_VM_FAILED;
       replyPayload = null;
       // TODO(wibling): could extend the result with caught error string.
       _context.logger.warn('Failed to start vm with error: $e');
+      if (vmPid > 0) {
+        // Kill the vm and remove any pid and port files.
+        _kill.icall$2(vmPid, SIGTERM);
+        _cleanUpVm(vmPid);
+      }
     }
     _sendReply(result, replyPayload);
+  }
+
+  int _retrieveVmPort(int vmPid) {
+    String portPath = '${_context.vmPidDir}/vm-$vmPid.port';
+    _context.logger.info('Reading port from $portPath for vm $vmPid');
+
+    // The fletch-vm will write the port it is listening on into the file
+    // specified by 'portPath' above. The agent waits for the file to be
+    // created (retries the File.open until it succeeds) and then reads the
+    // port from the file.
+    // To make sure we are reading a consistent value from the file, ie. the
+    // vm could have written a partial value at the time we read it, we continue
+    // reading the value from the file until we have read the same value from
+    // file in two consecutive reads.
+    // An alternative to the consecutive reading would be to use cooperative
+    // locking, but consecutive reading is not relying on the fletch-vm to
+    // behave.
+    // TODO(wibling): Look into passing a socket port to the fletch-vm and
+    // have it write the port to the socket. This allows the agent to just
+    // wait on the socket and wake up when it is ready.
+    int previousPort = -1;
+    var lastException;
+    for (int retries = 500; retries >= 0; --retries) {
+      int port = _tryReadPort(portPath, retries == 0);
+      // Check if we read the same port value twice in a row.
+      if (previousPort != -1 && previousPort == port) return port;
+      previousPort = port;
+      sleep(10);
+    }
+    throw 'Failed to read port for vm $vmPid';
+  }
+
+  int _tryReadPort(String portPath, bool lastAttempt) {
+    File portFile;
+    var data;
+    try {
+      portFile = new File.open(portPath);
+      data = portFile.read(10);
+    } on FileException catch (_) {
+      if (lastAttempt) rethrow;
+      return -1;
+    } finally {
+      if (portFile != null) portFile.close();
+    }
+    try {
+      if (data.lengthInBytes > 0) {
+        var portString = UTF8.decode(data.asUint8List().toList());
+        return int.parse(portString);
+      }
+    } on FormatException catch (_) {
+      if (lastAttempt) rethrow;
+    }
+    // Retry if no data was read.
+    return -1;
   }
 
   void _stopVm() {
@@ -248,8 +318,26 @@ class CommandHandler {
         result = ReplyHeader.SUCCESS;
         _context.logger.info('Stopped pid: $pid');
       }
+      // Always clean up independent of errors.
+      _cleanUpVm(pid);
     }
     _sendReply(result, null);
+  }
+
+  void _cleanUpVm(int pid) {
+    var portPath;
+    var pidPath;
+    try {
+      String fileName = '${_context.vmPidDir}/vm-$pid.port';
+      portPath = new ForeignMemory.fromStringAsUTF8(fileName);
+      _unlink.icall$1(portPath);
+      fileName = '${_context.vmPidDir}/vm-$pid.pid';
+      pidPath = new ForeignMemory.fromStringAsUTF8(fileName);
+      _unlink.icall$1(pidPath);
+    } finally {
+      if (portPath != null) portPath.free();
+      if (pidPath != null) pidPath.free();
+    }
   }
 
   void _listVms() {
