@@ -165,6 +165,8 @@ class FletchSystem {
   final PersistentMap<ConstructorElement, FletchFunction>
       constructorInitializersByElement;
 
+  final PersistentMap<int, int> tearoffsById;
+
   // classesByElement is a subset of classesById: Some classes do not
   // have an element reference.
   final PersistentMap<int, FletchClass> classesById;
@@ -177,6 +179,7 @@ class FletchSystem {
       this.functionsById,
       this.functionsByElement,
       this.constructorInitializersByElement,
+      this.tearoffsById,
       this.classesById,
       this.classesByElement,
       this.constants);
@@ -199,6 +202,13 @@ class FletchSystem {
       ConstructorElement element) {
     return constructorInitializersByElement[element];
   }
+
+  /// Map from the ID of a [FletchFunction] to the ID of its corresponding
+  /// tear-off [FletchFunction].
+  ///
+  /// To obtain the tear-off corresponding to an [Element], look up the
+  /// function in [functionsByElement].
+  int lookupTearOffById(int functionId) => tearoffsById[functionId];
 
   FletchClass lookupClassById(int classId) {
     return classesById[classId];

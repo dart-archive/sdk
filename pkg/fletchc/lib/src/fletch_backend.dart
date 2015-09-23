@@ -134,6 +134,7 @@ const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<int, FletchFunction>(),
     const PersistentMap<Element, FletchFunction>(),
     const PersistentMap<ConstructorElement, FletchFunction>(),
+    const PersistentMap<int, int>(),
     const PersistentMap<int, FletchClass>(),
     const PersistentMap<ClassElement, FletchClass>(),
     const <FletchConstant>[]);
@@ -175,10 +176,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
   // TODO(ahe): This should be moved to [FletchSystem].
   final Map<FieldElement, FletchFunctionBuilder> lazyFieldInitializers =
       <FieldElement, FletchFunctionBuilder>{};
-
-  // TODO(ahe): This should be moved to [FletchSystem].
-  final Map<FletchFunctionBase, FletchClassBuilder> tearoffClasses =
-      <FletchFunctionBase, FletchClassBuilder>{};
 
   final Map<int, int> getters = <int, int>{};
   final Map<int, int> setters = <int, int>{};
@@ -459,120 +456,120 @@ class FletchBackend extends Backend with ResolutionCallbacks
    * instance.
    */
   FletchClassBuilder createTearoffClass(FletchFunctionBase function) {
-    return tearoffClasses.putIfAbsent(function, () {
-      FunctionSignature signature = function.signature;
-      bool hasThis = function.isInstanceMember;
-      FletchClassBuilder tearoffClass = createCallableStubClass(
-          hasThis ? 1 : 0,
-          signature.parameterCount,
-          compiledObjectClass);
-
+    int functionId = systemBuilder.lookupTearOffById(function.functionId);
+    if (functionId != null) {
       FletchFunctionBuilder functionBuilder =
-          systemBuilder.newFunctionBuilderWithSignature(
-              'call',
-              null,
-              signature,
-              tearoffClass.classId);
+          systemBuilder.lookupFunction(functionId);
+      return systemBuilder.lookupClassBuilder(functionBuilder.memberOf);
+    }
+    FunctionSignature signature = function.signature;
+    bool hasThis = function.isInstanceMember;
+    FletchClassBuilder tearoffClass = createCallableStubClass(
+        hasThis ? 1 : 0,
+        signature.parameterCount,
+        compiledObjectClass);
 
-      BytecodeAssembler assembler = functionBuilder.assembler;
-      int argumentCount = signature.parameterCount;
-      if (hasThis) {
-        argumentCount++;
-        // If the tearoff has a 'this' value, load it. It's the only field
-        // in the tearoff class.
-        assembler
-            ..loadParameter(0)
-            ..loadField(0);
-      }
-      for (int i = 0; i < signature.parameterCount; i++) {
-        // The closure-class is at parameter index 0, so argument i is at
-        // i + 1.
-        assembler.loadParameter(i + 1);
-      }
-      int constId = functionBuilder.allocateConstantFromFunction(
-          function.functionId);
-      // TODO(ajohnsen): Create a tail-call bytecode, so we don't have to
-      // load all the arguments.
+    FletchFunctionBuilder functionBuilder =
+        systemBuilder.newTearOff(function, tearoffClass.classId);
+
+    BytecodeAssembler assembler = functionBuilder.assembler;
+    int argumentCount = signature.parameterCount;
+    if (hasThis) {
+      argumentCount++;
+      // If the tearoff has a 'this' value, load it. It's the only field
+      // in the tearoff class.
       assembler
-          ..invokeStatic(constId, argumentCount)
-          ..ret()
-          ..methodEnd();
-
-      String symbol = context.getCallSymbol(signature);
-      int id = context.getSymbolId(symbol);
-      int fletchSelector = FletchSelector.encodeMethod(
-          id,
-          signature.parameterCount);
-      tearoffClass.addToMethodTable(fletchSelector, functionBuilder);
-
-      if (!function.isInstanceMember) return tearoffClass;
-
-      ClassElement classElement =
-          systemBuilder.lookupClassBuilder(function.memberOf).element;
-      if (classElement == null) return tearoffClass;
-
-      // Create == function that tests for equality.
-      int isSelector = context.toFletchTearoffIsSelector(
-          function.name,
-          classElement);
-      tearoffClass.addIsSelector(isSelector);
-
-      FletchFunctionBuilder equal = systemBuilder.newFunctionBuilder(
-          FletchFunctionKind.NORMAL,
-          2);
-
-      BytecodeLabel isFalse = new BytecodeLabel();
-      equal.assembler
-        // First test for class. This ensures it's the exact function that
-        // we expect.
-        ..loadParameter(1)
-        ..invokeTest(isSelector, 0)
-        ..branchIfFalse(isFalse)
-        // Then test that the receiver is identical.
-        ..loadParameter(0)
-        ..loadField(0)
-        ..loadParameter(1)
-        ..loadField(0)
-        ..identicalNonNumeric()
-        ..branchIfFalse(isFalse)
-        ..loadLiteralTrue()
-        ..ret()
-        ..bind(isFalse)
-        ..loadLiteralFalse()
+          ..loadParameter(0)
+          ..loadField(0);
+    }
+    for (int i = 0; i < signature.parameterCount; i++) {
+      // The closure-class is at parameter index 0, so argument i is at
+      // i + 1.
+      assembler.loadParameter(i + 1);
+    }
+    int constId = functionBuilder.allocateConstantFromFunction(
+        function.functionId);
+    // TODO(ajohnsen): Create a tail-call bytecode, so we don't have to
+    // load all the arguments.
+    assembler
+        ..invokeStatic(constId, argumentCount)
         ..ret()
         ..methodEnd();
 
-      id = context.getSymbolId("==");
-      int equalsSelector = FletchSelector.encodeMethod(id, 1);
-      tearoffClass.addToMethodTable(equalsSelector, equal);
+    String symbol = context.getCallSymbol(signature);
+    int id = context.getSymbolId(symbol);
+    int fletchSelector = FletchSelector.encodeMethod(
+        id,
+        signature.parameterCount);
+    tearoffClass.addToMethodTable(fletchSelector, functionBuilder);
 
-      // Create hashCode getter. We simply add the object hashCode and the
-      // method id of the tearoff'ed function.
-      FletchFunctionBuilder hashCode = systemBuilder.newFunctionBuilder(
-          FletchFunctionKind.ACCESSOR,
-          1);
+    if (!function.isInstanceMember) return tearoffClass;
 
-      int hashCodeSelector = FletchSelector.encodeGetter(
-          context.getSymbolId("hashCode"));
+    ClassElement classElement =
+        systemBuilder.lookupClassBuilder(function.memberOf).element;
+    if (classElement == null) return tearoffClass;
 
-      // TODO(ajohnsen): Use plus, we plus is always enqueued. Consider using
-      // xor when we have a way to enqueue it from here.
-      int plusSelector = FletchSelector.encodeMethod(
-          context.getSymbolId("+"), 1);
+    // Create == function that tests for equality.
+    int isSelector = context.toFletchTearoffIsSelector(
+        function.name,
+        classElement);
+    tearoffClass.addIsSelector(isSelector);
 
-      hashCode.assembler
-        ..loadParameter(0)
-        ..loadField(0)
-        ..invokeMethod(hashCodeSelector, 0)
-        ..loadLiteral(function.functionId)
-        ..invokeMethod(plusSelector, 1)
-        ..ret()
-        ..methodEnd();
+    FletchFunctionBuilder equal = systemBuilder.newFunctionBuilder(
+        FletchFunctionKind.NORMAL,
+        2);
 
-      tearoffClass.addToMethodTable(hashCodeSelector, hashCode);
+    BytecodeLabel isFalse = new BytecodeLabel();
+    equal.assembler
+      // First test for class. This ensures it's the exact function that
+      // we expect.
+      ..loadParameter(1)
+      ..invokeTest(isSelector, 0)
+      ..branchIfFalse(isFalse)
+      // Then test that the receiver is identical.
+      ..loadParameter(0)
+      ..loadField(0)
+      ..loadParameter(1)
+      ..loadField(0)
+      ..identicalNonNumeric()
+      ..branchIfFalse(isFalse)
+      ..loadLiteralTrue()
+      ..ret()
+      ..bind(isFalse)
+      ..loadLiteralFalse()
+      ..ret()
+      ..methodEnd();
 
-      return tearoffClass;
-    });
+    id = context.getSymbolId("==");
+    int equalsSelector = FletchSelector.encodeMethod(id, 1);
+    tearoffClass.addToMethodTable(equalsSelector, equal);
+
+    // Create hashCode getter. We simply add the object hashCode and the
+    // method id of the tearoff'ed function.
+    FletchFunctionBuilder hashCode = systemBuilder.newFunctionBuilder(
+        FletchFunctionKind.ACCESSOR,
+        1);
+
+    int hashCodeSelector = FletchSelector.encodeGetter(
+        context.getSymbolId("hashCode"));
+
+    // TODO(ajohnsen): Use plus, we plus is always enqueued. Consider using
+    // xor when we have a way to enqueue it from here.
+    int plusSelector = FletchSelector.encodeMethod(
+        context.getSymbolId("+"), 1);
+
+    hashCode.assembler
+      ..loadParameter(0)
+      ..loadField(0)
+      ..invokeMethod(hashCodeSelector, 0)
+      ..loadLiteral(function.functionId)
+      ..invokeMethod(plusSelector, 1)
+      ..ret()
+      ..methodEnd();
+
+    tearoffClass.addToMethodTable(hashCodeSelector, hashCode);
+
+    return tearoffClass;
   }
 
   FletchFunctionBase getFunctionForElement(FunctionElement element) {

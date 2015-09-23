@@ -10,11 +10,6 @@ self/testNeverCompletes: Timeout # This is a test of this suite, timeout is expe
 incremental/stored_closure: Fail
 incremental/stored_instance_tearoff: Fail
 
-# Received PushFromMap command which referes to a non-existent map entry
-incremental/change_supertype: Fail
-incremental/remove_instance_method_super_access: Fail
-incremental/same_tokens_variant: Fail
-
 # Missing parameter stub
 incremental/call_instance_tear_off_named: Fail
 incremental/call_named_arguments_1: Fail

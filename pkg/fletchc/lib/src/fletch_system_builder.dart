@@ -68,6 +68,8 @@ class FletchSystemBuilder {
   final Map<Element, List<FunctionElement>> _replaceUsage =
       <Element, List<FunctionElement>>{};
 
+  final Map<int, int> _newTearoffsById = <int, int>{};
+
   final int maxInt64 = (1 << 63) - 1;
   final int minInt64 = -(1 << 63);
 
@@ -126,9 +128,11 @@ class FletchSystemBuilder {
   }
 
   FletchFunctionBase lookupFunction(int functionId) {
-    FletchFunction function = predecessorSystem.lookupFunctionById(functionId);
-    if (function != null) return function;
-    return _newFunctions[functionId];
+    if (functionId < functionIdStart) {
+      return predecessorSystem.lookupFunctionById(functionId);
+    } else {
+      return lookupFunctionBuilder(functionId);
+    }
   }
 
   FletchFunctionBuilder lookupFunctionBuilder(int functionId) {
@@ -136,10 +140,9 @@ class FletchSystemBuilder {
   }
 
   FletchFunctionBase lookupFunctionByElement(Element element) {
-    FletchFunction function =
-        predecessorSystem.lookupFunctionByElement(element);
+    FletchFunctionBase function = _functionBuildersByElement[element];
     if (function != null) return function;
-    return _functionBuildersByElement[element];
+    return predecessorSystem.lookupFunctionByElement(element);
   }
 
   FletchFunctionBuilder lookupFunctionBuilderByElement(Element element) {
@@ -149,10 +152,9 @@ class FletchSystemBuilder {
   FletchFunctionBase lookupConstructorInitializerByElement(
       ConstructorElement element) {
     assert(element.isImplementation);
-    FletchFunction function =
-        predecessorSystem.lookupConstructorInitializerByElement(element);
+    FletchFunctionBase function = _newConstructorInitializers[element];
     if (function != null) return function;
-    return _newConstructorInitializers[element];
+    return predecessorSystem.lookupConstructorInitializerByElement(element);
   }
 
   FletchFunctionBuilder newConstructorInitializer(ConstructorElement element) {
@@ -164,6 +166,22 @@ class FletchSystemBuilder {
         null,
         kind: FletchFunctionKind.INITIALIZER_LIST);
     _newConstructorInitializers[element] = builder;
+    return builder;
+  }
+
+  int lookupTearOffById(int functionId) {
+    int id = _newTearoffsById[functionId];
+    if (id != null) return id;
+    return predecessorSystem.lookupTearOffById(functionId);
+  }
+
+  FletchFunctionBuilder newTearOff(FletchFunctionBase function, int classId) {
+    FletchFunctionBuilder builder = newFunctionBuilderWithSignature(
+        'call',
+        null,
+        function.signature,
+        classId);
+    _newTearoffsById[function.functionId] = builder.functionId;
     return builder;
   }
 
@@ -372,14 +390,11 @@ class FletchSystemBuilder {
       } else if (constant.isFunction) {
         FunctionConstantValue value = constant;
         FunctionElement element = value.element;
-        // TODO(ajohnsen): Should not use the builder, but instead the base.
-        FletchFunctionBuilder function =
-            lookupFunctionBuilderByElement(element);
-        // TODO(ajohnsen): Avoid usage of tearoffClasses.
-        FletchClassBuilder tearoffClass =
-            context.backend.tearoffClasses[function];
+        FletchFunctionBase function = lookupFunctionByElement(element);
+        int tearoffId = lookupTearOffById(function.functionId);
+        FletchFunctionBase tearoff = lookupFunction(tearoffId);
         commands
-            ..add(new PushFromMap(MapId.classes, tearoffClass.classId))
+            ..add(new PushFromMap(MapId.classes, tearoff.memberOf))
             ..add(const PushNewInstance());
       } else if (constant.isConstructedObject) {
         ConstructedConstantValue value = constant;
@@ -540,10 +555,16 @@ class FletchSystemBuilder {
               element, functionsById[builder.functionId]);
     });
 
+    PersistentMap<int, int> tearoffsById = predecessorSystem.tearoffsById;
+    _newTearoffsById.forEach((int functionId, int stubId) {
+      tearoffsById = tearoffsById.insert(functionId, stubId);
+    });
+
     return new FletchSystem(
         functionsById,
         functionsByElement,
         constructorInitializersByElement,
+        tearoffsById,
         classesById,
         classesByElement,
         constants);
