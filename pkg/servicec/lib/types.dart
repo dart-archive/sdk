@@ -4,20 +4,62 @@
 
 library servicec.types;
 
-import 'node.dart'
-    show TypeNode;
+enum TypeKind {
+  VOID,
+  BOOL,
 
-// TODO(stanm): add these predicates as information on the type nodes.
-bool isPrimitiveType(TypeNode type) {
-  final List<String> primitiveTypes =
-    ["void", "bool", "uint8", "uint16", "int8", "int16", "int32", "int64"];
-  return primitiveTypes.contains(type.identifier.value);
+  UINT8,
+  UINT16,
+
+  INT8,
+  INT16,
+  INT32,
+  INT64,
+
+  FLOAT32,
+  FLOAT64,
+
+  STRING,
+  LIST,
+
+  STRUCT,
+  POINTER
 }
 
-bool isStringType(TypeNode type) {
-  return type.identifier.value == "String";
-}
+final List<TypeKind> primitiveTypes = [
+  TypeKind.VOID,
+  TypeKind.BOOL,
 
-bool isListType(TypeNode type) {
-  return type.identifier.value == "List";
+  TypeKind.UINT8,
+  TypeKind.UINT16,
+
+  TypeKind.INT8,
+  TypeKind.INT16,
+  TypeKind.INT32,
+  TypeKind.INT64,
+
+  TypeKind.FLOAT32,
+  TypeKind.FLOAT64
+];
+
+TypeKind lookupType(String identifier) {
+  Map<String, TypeKind> types = const {
+    'void'    : TypeKind.VOID,
+    'bool'    : TypeKind.BOOL,
+
+    'uint8'   : TypeKind.UINT8,
+    'uint16'  : TypeKind.UINT16,
+
+    'int8'    : TypeKind.INT8,
+    'int16'   : TypeKind.INT16,
+    'int32'   : TypeKind.INT32,
+    'int64'   : TypeKind.INT64,
+
+    'float32' : TypeKind.FLOAT32,
+    'float64' : TypeKind.FLOAT64,
+
+    'String'  : TypeKind.STRING,
+    'List'    : TypeKind.LIST,
+  };
+  return types[identifier];
 }

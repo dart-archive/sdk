@@ -28,11 +28,6 @@ import 'errors.dart' show
     ServiceErrorNode,
     TopLevelErrorNode;
 
-import 'types.dart' show
-    isPrimitiveType,
-    isStringType,
-    isListType;
-
 // Validation functions.
 List<CompilerError> validate(CompilationUnitNode compilationUnit) {
   Validator validator = new Validator();
@@ -96,17 +91,15 @@ class Validator extends RecursiveVisitor {
     leaveFunctionScope(function);
   }
 
-  void visitReturnType(TypeNode type) {
-    checkIsPointerOrPrimitive(type);
-  }
-
   void visitSingleFormal(FormalNode formal) {
     checkIsNotError(formal);
+    visitType(formal.type);
     checkIsPointerOrPrimitive(formal.type);
   }
 
   void visitPrimitiveFormal(FormalNode formal) {
     checkIsNotError(formal);
+    visitType(formal.type);
     checkIsPrimitiveFormal(formal);
   }
 
@@ -115,23 +108,34 @@ class Validator extends RecursiveVisitor {
     super.visitMember(member);
   }
 
+  void visitReturnType(TypeNode type) {
+    visitType(type);
+    checkIsPointerOrPrimitive(type);
+  }
+
+  void visitTypeParameter(TypeNode type) {
+    visitType(type);
+    checkTypeParameter(type);
+  }
+
   void visitSimpleType(SimpleType type) {
+    visitType(type);
     checkIsSimpleType(type);
   }
 
   void visitPointerType(PointerType type) {
+    visitType(type);
     checkIsPointerType(type);
   }
 
   void visitListType(ListType type) {
+    visitType(type);
     checkIsNotError(type);
     checkIsListType(type);
   }
 
-  void visitTypeParameter(TypeNode type) {
-    if (!isInnerListType(type)) {
-      errors.add(CompilerError.badTypeParameter);
-    }
+  void visitType(TypeNode type) {
+    type.resolve(environment.structs);
   }
 
   void visitError(ErrorNode error) {
@@ -158,62 +162,40 @@ class Validator extends RecursiveVisitor {
     errors.add(CompilerError.undefinedService);
   }
 
-  bool typeResolvesToStruct(TypeNode type) {
-    return environment.structs.contains(type.identifier);
-  }
-
   void checkIsPointerOrPrimitive(TypeNode type) {
-    if (!isPointerOrPrimitive(type)) {
+    if (!(type.isPointer() || type.isPrimitive())) {
       errors.add(CompilerError.expectedPointerOrPrimitive);
     }
   }
 
-  bool isPointerOrPrimitive(TypeNode type) {
-    return
-      type is PointerType && typeResolvesToStruct(type) ||
-      isPrimitiveType(type);
-  }
-
   void checkIsPrimitiveFormal(FormalNode formal) {
-    if (!isPrimitiveType(formal.type)) {
+    if (!formal.type.isPrimitive()) {
       errors.add(CompilerError.expectedPrimitiveFormal);
     }
   }
 
   void checkIsSimpleType(SimpleType type) {
-    if (!isSimpleType(type)) {
+    if (!(type.isPrimitive() || type.isString() || type.isStruct())) {
       errors.add(CompilerError.badSimpleType);
     }
   }
 
-  bool isSimpleType(SimpleType type) {
-    return (typeResolvesToStruct(type) ||
-            isPrimitiveType(type) ||
-            isStringType(type));
-  }
-
   void checkIsPointerType(PointerType type) {
-    if (!isPointerType(type)) {
+    if (!type.isPointer()) {
       errors.add(CompilerError.badPointerType);
     }
   }
 
-  bool isPointerType(PointerType type) {
-    return typeResolvesToStruct(type);
-  }
-
   void checkIsListType(ListType type) {
-    if (!isListType(type)) {
+    if (!type.isList()) {
       errors.add(CompilerError.badListType);
     }
   }
 
-  bool isInnerListType(TypeNode type) {
-    return isStructType(type) || isPrimitiveType(type) || isStringType(type);
-  }
-
-  bool isStructType(TypeNode type) {
-    return type is SimpleType && typeResolvesToStruct(type);
+  void checkTypeParameter(TypeNode type) {
+    if (!(type.isPrimitive() || type.isString() || type.isStruct())) {
+      errors.add(CompilerError.badTypeParameter);
+    }
   }
 
   // Scope management.
@@ -268,7 +250,7 @@ class Validator extends RecursiveVisitor {
   }
 
   void addStructSymbol(StructNode struct) {
-    addSymbol(environment.structs, struct.identifier);
+    environment.structs[struct.identifier] = struct;
   }
 
   void addFunctionSymbol(FunctionNode function) {
@@ -296,7 +278,7 @@ class Validator extends RecursiveVisitor {
   }
 
   void removeStructSymbol(StructNode struct) {
-    removeSymbol(environment.structs, struct.identifier);
+    environment.structs.remove(struct.identifier);
   }
 
   void removeFunctionSymbol(FunctionNode function) {
@@ -326,13 +308,13 @@ class Validator extends RecursiveVisitor {
 
 class Environment {
   Set<IdentifierNode> services;
-  Set<IdentifierNode> structs;
+  Map<IdentifierNode, StructNode> structs;
   Set<IdentifierNode> properties;
   Set<IdentifierNode> formals;
 
   Environment()
     : services = new Set<IdentifierNode>(),
-      structs = new Set<IdentifierNode>(),
+      structs = new Map<IdentifierNode, StructNode>(),
       properties = new Set<IdentifierNode>(),
       formals = new Set<IdentifierNode>();
 }

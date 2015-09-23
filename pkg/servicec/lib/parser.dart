@@ -145,7 +145,10 @@ class Parser {
     tokens = listener.beginType(tokens);
     tokens = parseIdentifier(tokens);
     if (optional('*', tokens)) {
+      // Push a simple type on the stack.
+      tokens = listener.handleSimpleType(tokens);
       tokens = tokens.next;
+      // Pop the simple type and push a pointer type.
       tokens = listener.handlePointerType(tokens);
     } else if (optional('<', tokens)) {
       tokens = tokens.next;

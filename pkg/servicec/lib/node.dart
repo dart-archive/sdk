@@ -8,6 +8,11 @@ import 'errors.dart' show
     ErrorNode,
     InternalCompilerError;
 
+import 'types.dart' show
+    TypeKind,
+    lookupType,
+    primitiveTypes;
+
 // Highest-level node.
 class CompilationUnitNode extends Node {
   List<TopLevelNode> topLevels;
@@ -87,27 +92,67 @@ abstract class TypeNode extends Node {
   IdentifierNode identifier;
 
   TypeNode(this.identifier);
+
+  bool isList() => false;
+  bool isPrimitive() => false;
+  bool isString() => false;
+  bool isStruct() => false;
+  bool isPointer() => false;
+
+  void resolve(Map<IdentifierNode, StructNode> structs);
 }
 
 class SimpleType extends TypeNode {
+  TypeKind _type;
+  StructNode _resolved;
+
   SimpleType(IdentifierNode identifier)
     : super(identifier);
 
   void accept(NodeVisitor visitor) {
     visitor.visitSimpleType(this);
   }
+
+  bool isPrimitive() => primitiveTypes.contains(_type);
+  bool isString() => TypeKind.STRING == _type;
+  bool isStruct() => TypeKind.STRUCT == _type;
+
+  void resolve(Map<IdentifierNode, StructNode> structs) {
+    _type = lookupType(identifier.value);
+    if (!isPrimitive() && !isString()) {
+      _resolved = structs[identifier];
+      if (null != _resolved) {
+        _type = TypeKind.STRUCT;
+      }
+    }
+  }
 }
 
 class PointerType extends TypeNode {
-  PointerType(IdentifierNode identifier)
-    : super(identifier);
+  TypeKind _type;
+  TypeNode pointee;
+
+  PointerType(TypeNode pointee)
+    : super(new IdentifierNode("${pointee.identifier}*")) {
+    this.pointee = pointee;
+  }
+
+  bool isPointer() => TypeKind.POINTER == _type;
 
   void accept(NodeVisitor visitor) {
     visitor.visitPointerType(this);
   }
+
+  void resolve(Map<IdentifierNode, StructNode> structs) {
+    pointee.resolve(structs);
+    if (pointee.isStruct()) {
+      _type = TypeKind.POINTER;
+    }
+  }
 }
 
 class ListType extends TypeNode {
+  TypeKind _type;
   TypeNode typeParameter;
 
   ListType(IdentifierNode identifier, this.typeParameter)
@@ -116,6 +161,13 @@ class ListType extends TypeNode {
   void accept(NodeVisitor visitor) {
     visitor.visitListType(this);
     visitor.visitTypeParameter(typeParameter);
+  }
+
+  bool isList() => TypeKind.LIST == _type;
+
+  void resolve(Map<IdentifierNode, StructNode> structs) {
+    _type = lookupType(identifier.value);
+    typeParameter.resolve(structs);
   }
 }
 
@@ -166,8 +218,6 @@ abstract class NodeVisitor {
   // Functional/semantic classification of types.
   void visitTypeParameter(TypeNode type);
   void visitReturnType(TypeNode type);
-  void visitSingleFormal(FormalNode formal);
-  void visitPrimitiveFormal(FormalNode formal);
 
   void visitIdentifier(IdentifierNode identifier);
 
@@ -214,14 +264,10 @@ abstract class RecursiveVisitor extends NodeVisitor {
   }
 
   void visitReturnType(TypeNode type) {
-    if (type != null) type.accept(this);
-  }
-
-  void visitSingleFormal(FormalNode formal) {
     // No op.
   }
 
-  void visitPrimitiveFormal(FormalNode formal) {
+  void visitTypeParameter(TypeNode type) {
     // No op.
   }
 

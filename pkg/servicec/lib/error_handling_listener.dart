@@ -171,10 +171,10 @@ class ErrorHandlingListener extends Listener {
   }
 
   Token handlePointerType(Token tokens) {
-    // An error cannot occur while parsing a pointer type.
+    if (tokens is ErrorToken) return tokens;
 
-    IdentifierNode identifier = stack.popNode();
-    stack.pushNode(new PointerType(identifier));
+    TypeNode pointee = stack.popNode();
+    stack.pushNode(new PointerType(pointee));
     return tokens;
   }
 
@@ -348,12 +348,9 @@ class ErrorHandlingListener extends Listener {
   }
 
   Token recoverService(Token tokens) {
-    print("DEBUG: ${stack.data}");
     List<FunctionNode> functions = functionPopper.popNodesWhileMatching();
     IdentifierNode identifier = identifierPopper.popNodeIfMatching();
-    print("DEBUG: ${stack.data}");
     stack.pushNode(new ServiceErrorNode(identifier, functions, tokens));
-    print("DEBUG: ${stack.data}");
     return consumeTopLevel(tokens);
   }
 
