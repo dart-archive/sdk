@@ -151,11 +151,9 @@ SessionState createSessionState(String name, Settings settings) {
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   compilerOptions.addAll(settings.options);
-  settings.constants.forEach((String key, value) {
-    compilerOptions.add("-D$key=$value");
-  });
   FletchCompiler compilerHelper = new FletchCompiler(
-      options: compilerOptions, packageConfig: settings.packages);
+      options: compilerOptions, packageConfig: settings.packages,
+      environment: settings.constants);
 
   return new SessionState(
       name, compilerHelper, compilerHelper.newIncrementalCompiler());
