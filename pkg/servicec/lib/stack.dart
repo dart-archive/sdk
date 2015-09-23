@@ -23,19 +23,6 @@ class NodeStack {
   Node topNode() {
     return data.isNotEmpty ? data.last : null;
   }
-
-  /// Pops elements from the stack until they stop passing the [test] and stores
-  /// them in [result]. Nodes are returned in reverse order than the one in
-  /// which they were pushed: FILO fashion.
-  List<Node> popNodesWhile(bool test(Node node), List<Node> allocation) {
-    // TODO(stanm): remove this, once popNodesWhile is not used outside
-    // stack.dart.
-    if (allocation == null) allocation = <Node>[];
-    while (test(topNode())) {
-      allocation.add(popNode());
-    }
-    return allocation;
-  }
 }
 
 class Popper<T extends Node> {

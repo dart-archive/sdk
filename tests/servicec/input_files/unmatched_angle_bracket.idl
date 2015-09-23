@@ -8,7 +8,7 @@ service Painter {
 
 struct Polygon {
   Point2d* center;
-  List<Point2d. nodes;  // bad member, bad list type
+  List<Point2d. nodes;  // bad field, bad list type
 }
 
 struct Point2d {

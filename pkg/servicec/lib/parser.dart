@@ -75,9 +75,9 @@ class Parser {
   }
 
   /// A struct contains the keyword, an identifier, and a body. The body is
-  /// enclosed in {} and contains zero or more member declarations.
+  /// enclosed in {} and contains zero or more field declarations.
   ///
-  /// <struct> ::= 'struct' <identifier> '{' <member-decl>* '}'
+  /// <struct> ::= 'struct' <identifier> '{' <field-decl>* '}'
   Token parseStruct(Token tokens) {
     tokens = listener.beginStruct(tokens);
     tokens = parseIdentifier(tokens.next);
@@ -129,15 +129,46 @@ class Parser {
     return tokens;
   }
 
-  /// A member contains a type, an identifier, and a semicolon.
-  ///
-  /// <member-decl> ::= <type> <identifier> ';'
+  // Parse a struct member that can be either a field or a union.
   Token parseMember(Token tokens) {
-    tokens = listener.beginMember(tokens);
+    final String value = tokens.stringValue;
+    if (identical(value, 'union')) {
+      tokens = parseUnion(tokens);
+    } else {
+      tokens = parseField(tokens);
+    }
+    return tokens;
+  }
+
+  /// A union contains the 'union' keyword and a list of fields, enclosed in
+  /// curly braces.
+  ///
+  /// <union> ::= 'union' '{' <field>* '}'
+  Token parseUnion(Token tokens) {
+    tokens = listener.beginUnion(tokens);
+    tokens = expect('{', tokens.next);
+    int count = 0;
+    if (valid(tokens)) {
+      while (!optional('}', tokens)) {
+        tokens = parseField(tokens);
+        if (!valid(tokens)) break;  // Don't count unsuccessful declarations
+        ++count;
+      }
+    }
+    tokens = expect('}', tokens);
+    tokens = listener.endUnion(tokens, count);
+    return tokens;
+  }
+
+  /// A field contains a type, an identifier, and a semicolon.
+  ///
+  /// <field-decl> ::= <type> <identifier> ';'
+  Token parseField(Token tokens) {
+    tokens = listener.beginField(tokens);
     tokens = parseType(tokens);
     tokens = parseIdentifier(tokens);
     tokens = expect(';', tokens);
-    tokens = listener.endMember(tokens);
+    tokens = listener.endField(tokens);
     return tokens;
   }
 

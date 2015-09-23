@@ -8,7 +8,7 @@ service Painter {
 
 struct Circle {
   int radius;  // bad simple type
-  Point2d position position;  // bad member
+  Point2d position position;  // bad field
 }
 
 struct Point2d {

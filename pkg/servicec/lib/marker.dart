@@ -28,8 +28,8 @@ class BeginFunctionMarker extends MarkerNode {
     : super(token);
 }
 
-class BeginMemberMarker extends MarkerNode {
-  BeginMemberMarker(Token token)
+class BeginFieldMarker extends MarkerNode {
+  BeginFieldMarker(Token token)
     : super(token);
 }
 
@@ -40,5 +40,10 @@ class BeginFormalMarker extends MarkerNode {
 
 class BeginTypeMarker extends MarkerNode {
   BeginTypeMarker(Token token)
+    : super(token);
+}
+
+class BeginUnionMarker extends MarkerNode {
+  BeginUnionMarker(Token token)
     : super(token);
 }

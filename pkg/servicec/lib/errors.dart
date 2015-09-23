@@ -9,13 +9,15 @@ import 'node.dart' show
     FunctionNode,
     FormalNode,
     ListType,
+    FieldNode,
     MemberNode,
     Node,
+    NodeVisitor,
     ServiceNode,
     StructNode,
     TopLevelNode,
     TypeNode,
-    NodeVisitor;
+    UnionNode;
 
 import 'package:compiler/src/scanner/scannerlib.dart' show
     Token;
@@ -24,16 +26,18 @@ enum CompilerError {
   badFunction,
   badTypeParameter,
   badListType,
-  badMember,
+  badField,
   badFormal,
   badPointerType,
   badServiceDefinition,
   badSimpleType,
   badStructDefinition,
   badTopLevel,
+  badUnion,
   expectedPointerOrPrimitive,
   expectedPrimitiveFormal,
   multipleDefinition,
+  multipleUnions,
   undefinedService
 }
 
@@ -82,11 +86,19 @@ class FunctionErrorNode extends FunctionNode
   }
 }
 
-class MemberErrorNode extends MemberNode with ErrorNode {
-  MemberErrorNode(TypeNode type, IdentifierNode identifier, Token begin)
+class UnionErrorNode extends UnionNode with ErrorNode {
+  UnionErrorNode(List<FieldNode> fields, Token begin)
+    : super(fields) {
+    this.begin = begin;
+    tag = CompilerError.badUnion;
+  }
+}
+
+class FieldErrorNode extends FieldNode with ErrorNode {
+  FieldErrorNode(TypeNode type, IdentifierNode identifier, Token begin)
     : super(type, identifier) {
     this.begin = begin;
-    tag = CompilerError.badMember;
+    tag = CompilerError.badField;
   }
 }
 

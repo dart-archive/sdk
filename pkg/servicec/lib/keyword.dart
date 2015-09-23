@@ -10,10 +10,12 @@ import "package:compiler/src/scanner/scannerlib.dart" as dart2js;
 class Keyword extends dart2js.Keyword {
   static const Keyword service = const Keyword("service");
   static const Keyword struct = const Keyword("struct");
+  static const Keyword union = const Keyword("union");
 
   static Map<String, Keyword> keywords = {
     "service": service,
-    "struct" : struct
+    "struct" : struct,
+    "union" : union
   };
 
   const Keyword(String syntax)

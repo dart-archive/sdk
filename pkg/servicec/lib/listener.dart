@@ -11,9 +11,6 @@ import 'package:compiler/src/scanner/scannerlib.dart' show
 import 'errors.dart' show
     CompilerError;
 
-import 'keyword.dart' show
-    Keyword;
-
 /// Identity listener: methods just propagate the argument.
 abstract class Listener {
   Token beginCompilationUnit(Token tokens) {
@@ -60,11 +57,19 @@ abstract class Listener {
     return tokens;
   }
 
-  Token beginMember(Token tokens) {
+  Token beginUnion(Token tokens) {
     return tokens;
   }
 
-  Token endMember(Token tokens) {
+  Token endUnion(Token tokens, int count) {
+    return tokens;
+  }
+
+  Token beginField(Token tokens) {
+    return tokens;
+  }
+
+  Token endField(Token tokens) {
     return tokens;
   }
 
@@ -175,7 +180,7 @@ class DebugListener implements Listener {
   }
 
   Token endStruct(Token tokens, int count) {
-    logEndScope("struct", "members count = $count");
+    logEndScope("struct", "fields count = $count");
     return debugSubject.endStruct(tokens, count);
   }
 
@@ -187,23 +192,33 @@ class DebugListener implements Listener {
   }
 
   Token beginFunction(Token tokens) {
-    logBeginScope("function declaration");
+    logBeginScope("function");
     return debugSubject.beginFunction(tokens);
   }
 
   Token endFunction(Token tokens, int count) {
-    logEndScope("function declaration", "formal parameters count = $count");
+    logEndScope("function", "formal parameters count = $count");
     return debugSubject.endFunction(tokens, count);
   }
 
-  Token beginMember(Token tokens) {
-    logBeginScope("member declaration");
-    return debugSubject.beginMember(tokens);
+  Token beginUnion(Token tokens) {
+    logBeginScope("union");
+    return debugSubject.beginUnion(tokens);
   }
 
-  Token endMember(Token tokens) {
-    logEndScope("member declaration");
-    return debugSubject.endMember(tokens);
+  Token endUnion(Token tokens, int count) {
+    logEndScope("union", "fields count = $count");
+    return debugSubject.endUnion(tokens, count);
+  }
+
+  Token beginField(Token tokens) {
+    logBeginScope("field");
+    return debugSubject.beginField(tokens);
+  }
+
+  Token endField(Token tokens) {
+    logEndScope("field");
+    return debugSubject.endField(tokens);
   }
 
   Token beginType(Token tokens) {

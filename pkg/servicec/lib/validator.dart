@@ -11,6 +11,7 @@ import 'node.dart' show
     IdentifierNode,
     ListType,
     MemberNode,
+    FieldNode,
     Node,
     PointerType,
     RecursiveVisitor,
@@ -18,7 +19,8 @@ import 'node.dart' show
     SimpleType,
     StructNode,
     TopLevelNode,
-    TypeNode;
+    TypeNode,
+    UnionNode;
 
 import 'errors.dart' show
     CompilerError,
@@ -68,6 +70,7 @@ class Validator extends RecursiveVisitor {
   void visitStruct(StructNode struct) {
     enterStructScope(struct);
     checkIsNotError(struct);
+    checkHasAtMostOneUnion(struct);
     super.visitStruct(struct);
     leaveStructScope(struct);
   }
@@ -103,9 +106,14 @@ class Validator extends RecursiveVisitor {
     checkIsPrimitiveFormal(formal);
   }
 
-  void visitMember(MemberNode member) {
-    checkIsNotError(member);
-    super.visitMember(member);
+  void visitUnion(UnionNode union) {
+    // TODO(stanm): checkIsNotError(union);
+    super.visitUnion(union);
+  }
+
+  void visitField(FieldNode field) {
+    checkIsNotError(field);
+    super.visitField(field);
   }
 
   void visitReturnType(TypeNode type) {
@@ -160,6 +168,16 @@ class Validator extends RecursiveVisitor {
       }
     }
     errors.add(CompilerError.undefinedService);
+  }
+
+  void checkHasAtMostOneUnion(StructNode struct) {
+    int count = 0;
+    for (MemberNode member in struct.members) {
+      if (member is UnionNode && ++count > 1) {
+        errors.add(CompilerError.multipleUnions);
+        return;
+      }
+    }
   }
 
   void checkIsPointerOrPrimitive(TypeNode type) {
@@ -258,7 +276,16 @@ class Validator extends RecursiveVisitor {
   }
 
   void addMemberSymbol(MemberNode member) {
-    addSymbol(environment.properties, member.identifier);
+    if (member is UnionNode) {
+      UnionNode union = member;
+      union.fields.forEach(addFieldSymbol);
+    } else {
+      addFieldSymbol(member);
+    }
+  }
+
+  void addFieldSymbol(FieldNode field) {
+    addSymbol(environment.properties, field.identifier);
   }
 
   void addFormalSymbol(FormalNode formal) {
@@ -286,7 +313,16 @@ class Validator extends RecursiveVisitor {
   }
 
   void removeMemberSymbol(MemberNode member) {
-    removeSymbol(environment.properties, member.identifier);
+    if (member is UnionNode) {
+      UnionNode union = member;
+      union.fields.forEach(removeFieldSymbol);
+    } else {
+      removeFieldSymbol(member);
+    }
+  }
+
+  void removeFieldSymbol(FieldNode field) {
+    removeSymbol(environment.properties, field.identifier);
   }
 
   void removeFormalSymbol(FormalNode formal) {

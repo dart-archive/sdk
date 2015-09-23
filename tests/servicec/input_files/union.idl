@@ -2,15 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// bad service
-service Painter {
-
-struct Circle {
-  int radius;  // bad simple type
-  Point2d position position;  // bad field
+service Foo {
+  void bar(Bar* bar);
 }
 
-struct Point2d {
-  int x;  // bad simple type
-  int y;  // bad simple type
+struct Bar {
+  union {
+    int32 baz;
+    int32 kek;
+  }
 }

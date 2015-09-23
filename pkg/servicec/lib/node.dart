@@ -77,14 +77,24 @@ class FormalNode extends Node {
   }
 }
 
-class MemberNode extends Node {
+class UnionNode extends MemberNode {
+  List<FieldNode> fields;
+
+  UnionNode(this.fields);
+
+  void accept(NodeVisitor visitor) {
+    visitor.visitUnion(this);
+  }
+}
+
+class FieldNode extends MemberNode {
   TypeNode type;
   IdentifierNode identifier;
 
-  MemberNode(this.type, this.identifier);
+  FieldNode(this.type, this.identifier);
 
   void accept(NodeVisitor visitor) {
-    visitor.visitMember(this);
+    visitor.visitField(this);
   }
 }
 
@@ -101,6 +111,11 @@ abstract class TypeNode extends Node {
 
   void resolve(Map<IdentifierNode, StructNode> structs);
 }
+
+// A node that can be the member of a struct.
+abstract class MemberNode extends Node {
+}
+
 
 class SimpleType extends TypeNode {
   TypeKind _type;
@@ -207,7 +222,8 @@ abstract class NodeVisitor {
   void visitService(ServiceNode service);
   void visitStruct(StructNode struct);
   void visitFunction(FunctionNode function);
-  void visitMember(MemberNode member);
+  void visitUnion(UnionNode field);
+  void visitField(FieldNode field);
 
   // Structural/syntactic classification of types.
   void visitSimpleType(SimpleType type);
@@ -258,9 +274,15 @@ abstract class RecursiveVisitor extends NodeVisitor {
     if (formal.identifier != null) formal.identifier.accept(this);
   }
 
-  void visitMember(MemberNode member) {
-    if (member.type != null) member.type.accept(this);
-    if (member.identifier != null) member.identifier.accept(this);
+  void visitUnion(UnionNode union) {
+    for (FieldNode field in union.fields) {
+      field.accept(this);
+    }
+  }
+
+  void visitField(FieldNode field) {
+    if (field.type != null) field.type.accept(this);
+    if (field.identifier != null) field.identifier.accept(this);
   }
 
   void visitReturnType(TypeNode type) {
