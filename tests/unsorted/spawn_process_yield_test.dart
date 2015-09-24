@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
-import 'dart:fletch.io' as io;
+import 'dart:fletch.os' as os;
 import 'package:expect/expect.dart';
 
 main() {
@@ -16,6 +16,6 @@ main() {
 
 run(Port port) {
   Expect.isTrue(port != null);
-  io.sleep(100);
+  os.sleep(100);
   port.send(port.id);
 }

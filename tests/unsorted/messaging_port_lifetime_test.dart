@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
-import 'dart:fletch.io';
+import 'dart:fletch.os' as os;
 
 import 'package:expect/expect.dart';
 
@@ -33,7 +33,7 @@ otherProcess(Port replyPort) {
   // Give the main process a bit of time to get rid of all its references to
   // the port that is now in the queue so that the only references left to
   // the port are in the queue.
-  sleep(10);
+  os.sleep(10);
   var forceGC = channel.receive();
   for (int i = 0; i < 3; i++) {
     var port = channel.receive();

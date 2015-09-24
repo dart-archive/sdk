@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:fletch';
-import 'dart:fletch.io';
 import 'dart:convert' show JSON, UTF8;
 
 import 'package:http/http.dart';

@@ -18,3 +18,7 @@ part 'system_macos.dart';
 part 'system_posix.dart';
 
 abstract class InternetAddress { }
+
+// TODO(ajohnsen): Take a Duration?
+void sleep(int milliseconds) => sys.sleep(milliseconds);
+Errno errno() => sys.errno();

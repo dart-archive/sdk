@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
-import 'dart:fletch.io';
+import 'dart:fletch.os' as os;
 
 import 'package:expect/expect.dart';
 
@@ -17,7 +17,7 @@ main() {
   Process.spawn(subProcess, port);
   // Wait while messages are enqueued and a program GC is forced with
   // messages in the queue.
-  sleep(100);
+  os.sleep(100);
   var replyPort = input.receive();
   Expect.equals(input.receive(), constList);
   replyPort.send(constList);

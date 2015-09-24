@@ -10,7 +10,7 @@
 /// Sense HAT.
 ///
 /// ```
-/// import 'dart:fletch.io';
+/// import 'dart:fletch.os' as os;
 /// import 'package:raspberry_pi/sense_hat.dart';
 ///
 /// void draw(hat, c1, c2, c3) {
@@ -33,11 +33,11 @@
 ///
 ///   while (true) {
 ///     draw(hat, Color.RED, Color.GREEN, Color.BLUE);
-///     sleep(200);
+///     os.sleep(200);
 ///     draw(hat, Color.GREEN, Color.BLUE, Color.RED);
-///     sleep(200);
+///     os.sleep(200);
 ///     draw(hat, Color.BLUE, Color.RED, Color.GREEN);
-///     sleep(200);
+///     os.sleep(200);
 ///     var temp = hat.readTemperature();
 ///     var humidity = hat.readHumidity();
 ///     var pressure = hat.readPressure();

@@ -4,7 +4,6 @@
 
 import 'dart:convert' show UTF8;
 import 'dart:fletch';
-import 'dart:fletch.io';
 import 'dart:fletch.ffi';
 import 'dart:typed_data';
 import 'dart:fletch.os';

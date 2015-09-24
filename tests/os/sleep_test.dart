@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:fletch.io' as io;
+import 'dart:fletch.os' as os;
 
 import 'package:expect/expect.dart';
 
@@ -10,7 +10,7 @@ void main() {
   // Sleep 200 ms.
   int ms = 200;
   Stopwatch stopwatch = new Stopwatch()..start();
-  io.sleep(ms);
+  os.sleep(ms);
   // There is a chance that it'll resume slightly early on some system, so we
   // just ensure that at least 50% of the time is spent sleeping.
   int elapsed = stopwatch.elapsedMilliseconds;

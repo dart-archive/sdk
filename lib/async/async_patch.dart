@@ -4,7 +4,7 @@
 
 import 'dart:_fletch_system' as fletch;
 import 'dart:fletch';
-import 'dart:fletch.io';
+import 'dart:fletch.os' as os;
 import 'dart:math';
 
 const patch = "patch";
@@ -89,7 +89,7 @@ class _FletchTimer implements Timer {
       Channel channel = new Channel();
       Port port = new Port(channel);
       Process.spawn((int milliseconds) {
-        sleep(milliseconds);
+        os.sleep(milliseconds);
         port.send(null);
       }, milliseconds);
       channel.receive();

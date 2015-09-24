@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
-import 'dart:fletch.io';
+import 'dart:fletch.os' as os;
 
 main() {
   var input = new Channel();
@@ -12,6 +12,6 @@ main() {
 }
 
 void sleepAndThenSend(Port port) {
-  sleep(100);
+  os.sleep(100);
   port.send(42);
 }

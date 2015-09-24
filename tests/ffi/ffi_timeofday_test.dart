@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch.ffi';
-import 'dart:fletch.io' as io;
+import 'dart:fletch.os' as os;
 import "package:expect/expect.dart";
 
 abstract class Timeval implements ForeignMemory {
@@ -38,7 +38,7 @@ main() {
   int start = timeval.tv_sec * 1000 + timeval.tv_usec ~/ 1000;
 
   int sleepTime = 300;
-  io.sleep(sleepTime);
+  os.sleep(sleepTime);
 
   Expect.equals(0, gettimeofday.icall$2(timeval, 0));
   int end = timeval.tv_sec * 1000 + timeval.tv_usec ~/ 1000;

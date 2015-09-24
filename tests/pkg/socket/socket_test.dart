@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:fletch.io' as io;
 import 'dart:fletch.os' as os;
 import 'dart:typed_data';
 
@@ -20,7 +19,7 @@ void main() {
 }
 
 void testLookup() {
-  os.InternetAddress address = io.lookup("127.0.0.1");
+  os.InternetAddress address = os.sys.lookup("127.0.0.1");
   Expect.isTrue(address is os.InternetAddress);
 }
 

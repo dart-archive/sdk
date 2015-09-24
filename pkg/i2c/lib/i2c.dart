@@ -11,6 +11,8 @@
 /// HAT.
 ///
 /// ```
+/// import 'dart:fletch.os' as os;
+///
 /// import 'package:i2c/i2c.dart';
 /// import 'package:i2c/devices/hts221.dart';
 /// import 'package:i2c/devices/lps25h.dart';
@@ -29,7 +31,7 @@
 ///     print('Temperature: ${hts221.readTemperature()}');
 ///     print('Humidity: ${hts221.readHumidity()}');
 ///     print('Pressure: ${lps25h.readPressure()}');
-///     io.sleep(1000);
+///     os.sleep(1000);
 ///   }
 /// }
 /// ```
@@ -37,7 +39,6 @@ library i2c;
 
 import 'dart:fletch';
 import 'dart:fletch.ffi';
-import 'dart:fletch.io' as io;
 
 import 'src/process_object.dart';
 
