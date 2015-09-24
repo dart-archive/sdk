@@ -3,9 +3,9 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
-import 'dart:fletch.os' as os;
 
 import 'package:expect/expect.dart';
+import 'package:os/os.dart' as os;
 
 main(arguments) {
   var forceGC = arguments.length == 1 ? arguments[0] : null;

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dart.fletch.os;
+part of os;
 
 const int AF_INET  = 2;
 const int AF_INET6 = 10;
@@ -17,14 +17,6 @@ const int F_SETFL = 4;
 const int O_NONBLOCK = 0x800;
 
 const int FD_CLOEXEC = 0x1;
-
-class Timespec extends Struct {
-  Timespec() : super(2);
-  int get tv_sec => getField(0);
-  int get tv_nsec => getField(1);
-  void set tv_sec(int value) => setField(0, value);
-  void set tv_nsec(int value) => setField(1, value);
-}
 
 // The AddrInfo class is platform specific. The name and address fields
 // are swapped on MacOS compared to Linux.
@@ -94,8 +86,6 @@ abstract class PosixSystem implements System {
       ForeignLibrary.main.lookup("memcpy");
   static final ForeignFunction _mkstemp =
       ForeignLibrary.main.lookup("mkstemp");
-  static final ForeignFunction _nanosleep =
-      ForeignLibrary.main.lookup("nanosleep");
   static final ForeignFunction _read =
       ForeignLibrary.main.lookup("read");
   static final ForeignFunction _setsockopt =
@@ -328,14 +318,7 @@ abstract class PosixSystem implements System {
     return _close.icall$1Retry(fd);
   }
 
-  void sleep(int milliseconds) {
-    Timespec timespec = new Timespec();
-    timespec.tv_sec = milliseconds ~/ 1000;
-    timespec.tv_nsec = (milliseconds % 1000) * 1000000;
-    int result = _nanosleep.icall$2Retry(timespec, timespec);
-    timespec.free();
-    if (result != 0) throw "Failed to call 'nanosleep': ${errno()}";
-  }
+  void sleep(int milliseconds) => os.sleep(milliseconds);
 
   Errno errno() {
     return Errno.from(Foreign.errno);

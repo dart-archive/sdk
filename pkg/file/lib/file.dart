@@ -3,8 +3,9 @@
 // BSD-style license that can be found in the LICENSE.md file.
 library file;
 
-import 'dart:fletch.os';
 import 'dart:typed_data';
+
+import 'package:os/os.dart';
 
 class File {
   static const int READ       = 0;

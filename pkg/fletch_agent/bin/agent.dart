@@ -6,9 +6,9 @@ import 'dart:convert' show UTF8;
 import 'dart:fletch';
 import 'dart:fletch.ffi';
 import 'dart:typed_data';
-import 'dart:fletch.os';
 
 import 'package:file/file.dart';
+import 'package:os/os.dart';
 import 'package:socket/socket.dart';
 
 import '../lib/messages.dart';

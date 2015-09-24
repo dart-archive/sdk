@@ -229,8 +229,8 @@ namespace fletch {
   N(PortSendList,                "Port", "_sendList")                    \
   N(PortSendExit,                "Port", "_sendExit")                    \
                                                                          \
-  N(SystemGetEventHandler,       "System", "_getEventHandler")           \
-  N(SystemIncrementPortRef,      "System", "_incrementPortRef")          \
+  N(SystemGetEventHandler,       "EventHandler", "_getEventHandler")     \
+  N(SystemIncrementPortRef,      "EventHandler", "_incrementPortRef")    \
                                                                          \
   N(ServiceRegister,             "<none>", "register")                   \
                                                                          \

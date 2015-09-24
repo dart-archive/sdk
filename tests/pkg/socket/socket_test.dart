@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:fletch.os' as os;
 import 'dart:typed_data';
 
 import 'package:expect/expect.dart';
+import 'package:os/os.dart' as os;
 import 'package:socket/socket.dart';
 
 void main() {

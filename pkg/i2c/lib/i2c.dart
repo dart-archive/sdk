@@ -11,11 +11,10 @@
 /// HAT.
 ///
 /// ```
-/// import 'dart:fletch.os' as os;
-///
 /// import 'package:i2c/i2c.dart';
 /// import 'package:i2c/devices/hts221.dart';
 /// import 'package:i2c/devices/lps25h.dart';
+/// import 'package:os/os.dart' as os;
 ///
 /// main() {
 ///   // The Raspberry Pi 2 has I2C bus 1.

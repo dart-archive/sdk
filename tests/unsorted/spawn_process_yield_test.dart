@@ -3,8 +3,9 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
-import 'dart:fletch.os' as os;
+
 import 'package:expect/expect.dart';
+import 'package:os/os.dart' as os;
 
 main() {
   Channel channel = new Channel();

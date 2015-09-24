@@ -18,6 +18,7 @@ immutable:pkg/immutable/lib
 isolate:pkg/isolate/lib
 js_ast:../dart/pkg/js_ast/lib
 js_runtime:../dart/sdk/lib/_internal/js_runtime/lib/
+os:pkg/os/lib
 package_config:../third_party/package_config/lib
 path:../third_party/path/lib
 persistent:../third_party/persistent/lib/

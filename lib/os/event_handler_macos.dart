@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,28 +15,8 @@ const int EV_ONESHOT  = 0x10;
 const int EV_CLEAR    = 0x20;
 const int EV_EOF      = 0x8000;
 
-class MacOSAddrInfo extends AddrInfo {
-  MacOSAddrInfo() : super._();
-  MacOSAddrInfo.fromAddress(int address) : super._fromAddress(address);
-
-  get ai_canonname {
-    int offset = _addrlenOffset + wordSize;
-    return getWord(offset);
-  }
-
-  ForeignMemory get ai_addr {
-    int offset = _addrlenOffset + wordSize * 2;
-    return new ForeignMemory.fromAddress(getWord(offset), ai_addrlen);
-  }
-
-  AddrInfo get ai_next {
-    int offset = _addrlenOffset + wordSize * 3;
-    return new MacOSAddrInfo.fromAddress(getWord(offset));
-  }
-}
-
-class KEvent extends Struct {
-  KEvent() : super.finalized(6);
+class _KEvent extends Struct {
+  _KEvent() : super.finalized(6);
 
   void clear() {
     for (int i = 0; i < length; i += wordSize) setWord(i, 0);
@@ -65,12 +45,12 @@ class KEvent extends Struct {
   }
 }
 
-class MacOSSystem extends PosixSystem {
+class MacOSEventHandler extends EventHandler {
   static final ForeignFunction _kevent = ForeignLibrary.main.lookup("kevent");
   static final ForeignFunction _lseekMac = ForeignLibrary.main.lookup("lseek");
   static final ForeignFunction _openMac = ForeignLibrary.main.lookup("open");
 
-  final KEvent _kEvent = new KEvent();
+  final _KEvent _kEvent = new _KEvent();
 
   int get FIONREAD => 0x4004667f;
 
@@ -82,7 +62,7 @@ class MacOSSystem extends PosixSystem {
   ForeignFunction get _open => _openMac;
 
   int _setEvents(bool read, bool write) {
-    int eh = System.eventHandler;
+    int eh = EventHandler.eventHandler;
     int status = 0;
     if (read) {
       _kEvent.filter = EVFILT_READ;
@@ -109,7 +89,7 @@ class MacOSSystem extends PosixSystem {
     _kEvent.clear();
     _kEvent.ident = fd;
     _kEvent.flags = EV_ADD | EV_ONESHOT;
-    _kEvent.udata = System._incrementPortRef(port);
+    _kEvent.udata = EventHandler._incrementPortRef(port);
     return _setEvents((mask & READ_EVENT) != 0, (mask & WRITE_EVENT) != 0);
   }
 }

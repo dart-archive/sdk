@@ -4,21 +4,35 @@
 
 library dart.fletch.os;
 
+import 'dart:_fletch_system' as fletch;
 import 'dart:fletch';
 import 'dart:fletch.ffi';
-import 'dart:typed_data';
-import 'dart:_fletch_system' as fletch;
 
-part 'errno.dart';
 part 'native_process.dart';
-part 'system.dart';
-part 'system_android.dart';
-part 'system_linux.dart';
-part 'system_macos.dart';
-part 'system_posix.dart';
+part 'event_handler.dart';
+part 'event_handler_linux.dart';
+part 'event_handler_macos.dart';
 
-abstract class InternetAddress { }
+final ForeignFunction _nanosleep = ForeignLibrary.main.lookup("nanosleep");
 
-// TODO(ajohnsen): Take a Duration?
-void sleep(int milliseconds) => sys.sleep(milliseconds);
-Errno errno() => sys.errno();
+class _Timespec extends Struct {
+  _Timespec() : super(2);
+  int get tv_sec => getField(0);
+  int get tv_nsec => getField(1);
+  void set tv_sec(int value) => setField(0, value);
+  void set tv_nsec(int value) => setField(1, value);
+}
+
+// Sleep is still here and not in package:os, as it is used in async_patch.dart.
+void sleep(int milliseconds) {
+  _Timespec timespec = new _Timespec();
+  timespec.tv_sec = milliseconds ~/ 1000;
+  timespec.tv_nsec = (milliseconds % 1000) * 1000000;
+  int result;
+  try {
+    result = _nanosleep.icall$2Retry(timespec, timespec);
+  } finally {
+    timespec.free();
+  }
+  if (result != 0) throw "Failed to call 'nanosleep': ${Foreign.errno}";
+}

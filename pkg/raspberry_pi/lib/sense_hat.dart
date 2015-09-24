@@ -10,7 +10,7 @@
 /// Sense HAT.
 ///
 /// ```
-/// import 'dart:fletch.os' as os;
+/// import 'package:os/os.dart' as os;
 /// import 'package:raspberry_pi/sense_hat.dart';
 ///
 /// void draw(hat, c1, c2, c3) {

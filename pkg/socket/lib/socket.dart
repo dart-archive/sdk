@@ -5,8 +5,10 @@
 library socket;
 
 import 'dart:fletch';
-import 'dart:fletch.os';
+import 'dart:fletch.os' as os;
 import 'dart:typed_data';
+
+import 'package:os/os.dart';
 
 class _SocketBase {
   int _fd = -1;
@@ -14,7 +16,7 @@ class _SocketBase {
   Port _port;
 
   void _addSocketToEventHandler() {
-    if (sys.addToEventHandler(_fd) == -1) {
+    if (os.eventHandler.addToEventHandler(_fd) == -1) {
       _error("Failed to assign socket to event handler");
     }
     _channel = new Channel();
@@ -22,7 +24,7 @@ class _SocketBase {
   }
 
   int _waitFor(int mask) {
-    sys.setPortForNextEvent(_fd, _port, mask);
+    os.eventHandler.setPortForNextEvent(_fd, _port, mask);
     return _channel.receive();
   }
 
@@ -61,8 +63,8 @@ class Socket extends _SocketBase {
       _error("Failed to connect to $host:$port");
     }
     _addSocketToEventHandler();
-    int events = _waitFor(WRITE_EVENT);
-    if (events != WRITE_EVENT) {
+    int events = _waitFor(os.WRITE_EVENT);
+    if (events != os.WRITE_EVENT) {
       _error("Failed to connect to $host:$port");
     }
   }
@@ -93,15 +95,15 @@ class Socket extends _SocketBase {
     ByteBuffer buffer = new Uint8List(bytes).buffer;
     int offset = 0;
     while (offset < bytes) {
-      int events = _waitFor(READ_EVENT);
+      int events = _waitFor(os.READ_EVENT);
       int read = 0;
-      if ((events & READ_EVENT) != 0) {
+      if ((events & os.READ_EVENT) != 0) {
         read = sys.read(_fd, buffer, offset, bytes - offset);
       }
-      if (read == 0 || (events & CLOSE_EVENT) != 0) {
+      if (read == 0 || (events & os.CLOSE_EVENT) != 0) {
         if (offset + read < bytes) return null;
       }
-      if (read < 0 || (events & ERROR_EVENT) != 0) {
+      if (read < 0 || (events & os.ERROR_EVENT) != 0) {
         _error("Failed to read from socket");
       }
       offset += read;
@@ -115,16 +117,16 @@ class Socket extends _SocketBase {
    * Returns `null` if the socket was closed for reading.
    */
   ByteBuffer readNext() {
-    int events = _waitFor(READ_EVENT);
+    int events = _waitFor(os.READ_EVENT);
     int read = 0;
     ByteBuffer buffer;
-    if ((events & READ_EVENT) != 0) {
+    if ((events & os.READ_EVENT) != 0) {
       int available = this.available;
       buffer = new Uint8List(available).buffer;
       read = sys.read(_fd, buffer, 0, available);
     }
-    if (read == 0 && (events & CLOSE_EVENT) != 0) return null;
-    if (read < 0 || (events & ERROR_EVENT) != 0) {
+    if (read == 0 && (events & os.CLOSE_EVENT) != 0) return null;
+    if (read < 0 || (events & os.ERROR_EVENT) != 0) {
       _error("Failed to read from socket");
     }
     return buffer;
@@ -143,8 +145,8 @@ class Socket extends _SocketBase {
       }
       offset += wrote;
       if (offset == bytes) return;
-      int events = _waitFor(WRITE_EVENT);
-      if ((events & ERROR_EVENT) != 0) {
+      int events = _waitFor(os.WRITE_EVENT);
+      if ((events & os.ERROR_EVENT) != 0) {
         _error("Failed to write to socket");
       }
     }
@@ -220,8 +222,8 @@ class ServerSocket extends _SocketBase {
   }
 
   int _accept() {
-    int events = _waitFor(READ_EVENT);
-    if (events != READ_EVENT) {
+    int events = _waitFor(os.READ_EVENT);
+    if (events != os.READ_EVENT) {
       _error("Server socket closed while receiving socket");
     }
     int client = sys.accept(_fd);

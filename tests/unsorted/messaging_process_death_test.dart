@@ -3,7 +3,8 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
-import 'dart:fletch.os' as os;
+
+import 'package:os/os.dart' as os;
 
 main() {
   var input = new Channel();

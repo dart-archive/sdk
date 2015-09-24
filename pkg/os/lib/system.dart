@@ -2,12 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dart.fletch.os;
-
-const int READ_EVENT        = 1 << 0;
-const int WRITE_EVENT       = 1 << 1;
-const int CLOSE_EVENT       = 1 << 2;
-const int ERROR_EVENT       = 1 << 3;
+part of os;
 
 const int O_RDONLY  = 0;
 const int O_WRONLY  = 1;
@@ -35,7 +30,7 @@ System getSystem() {
     case Foreign.MACOS:
       return new MacOSSystem();
     default:
-      throw "Unsupported system for dart:fletch.os";
+      throw "Unsupported system ${Foreign.platform}";
   }
 }
 
@@ -69,21 +64,9 @@ abstract class System {
   void sleep(int milliseconds);
   void memcpy(var dest, int destOffset, var src, int srcOffset, int length);
   Errno errno();
-
-  int addToEventHandler(int fd);
-  int setPortForNextEvent(int fd, Port port, int mask);
-
   int setBlocking(int fd, bool blocking);
   int setReuseaddr(int fd);
   int setCloseOnExec(int fd, bool closeOnExec);
-
-  static int eventHandler = _getEventHandler();
-  @fletch.native static int _getEventHandler() {
-    throw new UnsupportedError('_getEventHandler');
-  }
-  @fletch.native static int _incrementPortRef(Port port) {
-    throw new UnsupportedError('_incrementPortRef');
-  }
 }
 
 class _InternetAddress extends InternetAddress {
