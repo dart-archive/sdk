@@ -3,8 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
+  // Multiple formals should all have primitive types.
+  void bar(int32 baz, Bar* zap);
 }
 
 struct Bar {
-  List<Bar baz;
 }

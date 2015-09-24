@@ -3,8 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-  String bar(Baz* baz);  // The return type should be a primitive or a pointer.
+  Bar bar();  // A struct is not a valid return type.
 }
 
-struct Baz {
+struct Bar {
 }

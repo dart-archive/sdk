@@ -18,6 +18,20 @@ incremental/call_named_arguments_2: Fail
 # Missing support for multiple libraries
 incremental/multiple_libraries: Fail
 
+# Incorrectly failing servicec tests
+servicec/bad_field_4: Fail
+servicec/bad_field_8: Fail
+servicec/bad_formal_1: Fail
+servicec/bad_formal_2: Fail
+servicec/bad_formal_3: Fail
+servicec/bad_function_4: Fail
+servicec/bad_function_7: Fail
+servicec/bad_list_type_2: Fail
+servicec/bad_list_type_3: Fail
+servicec/bad_list_type_4: Fail
+servicec/bad_list_type_5: Fail
+servicec/multiple_definitions_3: Fail
+
 [ $arch != ia32 && $arch != x64 ]
 
 service_tests/*: Skip

@@ -331,7 +331,7 @@ class Validator extends RecursiveVisitor {
 
   void addSymbol(Set<IdentifierNode> symbols, IdentifierNode identifier) {
     if (symbols.contains(identifier)) {
-      errors.add(CompilerError.multipleDefinition);
+      errors.add(CompilerError.multipleDefinitions);
     } else {
       symbols.add(identifier);
     }

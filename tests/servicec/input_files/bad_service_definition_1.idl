@@ -3,8 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-}
+// Unfinished service declaration.
 
-struct Bar {
-  List<Bar baz;
+service Bar {
 }

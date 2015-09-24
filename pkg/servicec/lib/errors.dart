@@ -23,20 +23,20 @@ import 'package:compiler/src/scanner/scannerlib.dart' show
     Token;
 
 enum CompilerError {
-  badFunction,
-  badTypeParameter,
-  badListType,
   badField,
   badFormal,
+  badFunction,
+  badListType,
   badPointerType,
   badServiceDefinition,
   badSimpleType,
   badStructDefinition,
   badTopLevel,
+  badTypeParameter,
   badUnion,
   expectedPointerOrPrimitive,
   expectedPrimitiveFormal,
-  multipleDefinition,
+  multipleDefinitions,
   multipleUnions,
   undefinedService
 }

@@ -5,6 +5,8 @@
 service Foo {
 }
 
-struct Bar {
-  List<Bar baz;
+srevice Bar {
+}
+
+struct Baz {
 }

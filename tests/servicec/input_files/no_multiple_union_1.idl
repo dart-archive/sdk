@@ -6,5 +6,20 @@ service Foo {
 }
 
 struct Bar {
-  List<Bar baz;
+  U1 union1;
+  U2 union2;
+}
+
+struct U1 {
+  union {
+    int32 baz;
+    uint8 zap;
+  }
+}
+
+struct U2 {
+  union {
+    int64 pop;
+    int16 win;
+  }
 }

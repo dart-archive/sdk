@@ -3,9 +3,5 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-  List<int32> bar(Baz* baz);  // The return type should be a primitive or a
-                              // pointer.
-}
-
-struct Baz {
+  List<int32> bar();  // List is not a valid return type.
 }

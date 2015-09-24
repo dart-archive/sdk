@@ -2,9 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// !! Test currently fails.
 service Foo {
 }
 
 struct Bar {
-  List<Bar baz;
+  int32 x;
+  union {
+    int32 x;
+    int32 y;
+  }
 }

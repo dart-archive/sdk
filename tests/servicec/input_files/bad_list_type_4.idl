@@ -3,10 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-  Baz* bar(Baz* baz);
 }
 
-struct Baz {
-  // Invalid type parameter. Use boxing to achieve this.
-  List<List<int32>> keks;
+struct Bar {
+  List List List Baz*>>> baz;  // Bad list type
 }
