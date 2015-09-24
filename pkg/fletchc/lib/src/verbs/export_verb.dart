@@ -24,8 +24,7 @@ Future<int> export(AnalyzedSentence sentence, VerbContext context) async {
   // This is asynchronous, but we don't await the result so we can respond to
   // other requests.
   context.performTaskInWorker(
-      new ExportTask(
-          sentence.programName, sentence.targetUri, sentence.toTargetUri));
+      new ExportTask(sentence.targetUri, sentence.toTargetUri));
 
   return null;
 }
@@ -33,32 +32,28 @@ Future<int> export(AnalyzedSentence sentence, VerbContext context) async {
 class ExportTask extends SharedTask {
   // Keep this class simple, see note in superclass.
 
-  final Uri programName;
-
   final Uri script;
 
   final Uri snapshot;
 
-  const ExportTask(this.programName, this.script, this.snapshot);
+  const ExportTask(this.script, this.snapshot);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
     return exportTask(
-        commandSender, SessionState.current, programName, script, snapshot);
+        commandSender, SessionState.current, script, snapshot);
   }
 }
 
 Future<int> exportTask(
     CommandSender commandSender,
     SessionState state,
-    Uri programName,
     Uri script,
     Uri snapshot) async {
   return compileAndAttachToLocalVmThen(
       commandSender,
       state,
-      programName,
       script,
       () => developer.export(state, snapshot));
 }

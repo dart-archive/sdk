@@ -21,9 +21,11 @@ bool _looksLikeFletchVm(Uri uri) {
   return new File.fromUri(uri.resolve(expectedFile)).existsSync();
 }
 
-
-Uri guessFletchVm(Uri fletchVm, Uri base) {
+Uri guessFletchVm(Uri fletchVm) {
   if (fletchVm == null && _FLETCH_VM != null) {
+    // Use Uri.base here because _FLETCH_VM is a constant relative to the
+    // location of where the Dart VM was started, not relative to the C++
+    // client.
     fletchVm = Uri.base.resolve(_FLETCH_VM);
   } else {
     Uri uri = executable.resolve('fletch-vm');

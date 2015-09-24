@@ -141,9 +141,7 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
     }
 
     fletchVm = guessFletchVm(
-        _computeValidatedUri(
-            fletchVm, name: 'fletchVm', base: base),
-        base);
+        _computeValidatedUri(fletchVm, name: 'fletchVm', base: base));
 
     if (patchRoot == null  && _PATCH_ROOT != null) {
       patchRoot = base.resolve(appendSlash(_PATCH_ROOT));

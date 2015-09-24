@@ -16,15 +16,11 @@ import 'package:fletchc/src/verbs/infrastructure.dart' show fileUri;
 
 const String userVmAddress = const String.fromEnvironment("attachToVm");
 
-Uri guessFletchProgramName() {
-  Uri dartVmUri = fileUri(Platform.resolvedExecutable, Uri.base);
-  return dartVmUri.resolve('fletch');
-}
+const String exportTo = const String.fromEnvironment("snapshot");
 
 Future<Null> attach(SessionState state) async {
   if (userVmAddress == null) {
-    Uri fletchProgramName = guessFletchProgramName();
-    await attachToLocalVm(fletchProgramName, state);
+    await attachToLocalVm(state);
   } else {
     Address address = parseAddress(userVmAddress);
     await attachToVm(address.host, address.port, state);
@@ -46,7 +42,11 @@ main(List<String> arguments) async {
     state.stdoutSink.attachCommandSender(stdout.add);
     state.stderrSink.attachCommandSender(stderr.add);
 
-    await run(state);
+    if (exportTo != null) {
+      await export(state, fileUri(exportTo, Uri.base));
+    } else {
+      await run(state);
+    }
   }
 }
 

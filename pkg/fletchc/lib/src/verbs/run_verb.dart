@@ -22,8 +22,7 @@ const Verb runVerb =
 Future<int> run(AnalyzedSentence sentence, VerbContext context) async {
   // This is asynchronous, but we don't await the result so we can respond to
   // other requests.
-  context.performTaskInWorker(
-      new RunTask(sentence.programName, sentence.targetUri));
+  context.performTaskInWorker(new RunTask(sentence.targetUri));
 
   return null;
 }
@@ -31,28 +30,24 @@ Future<int> run(AnalyzedSentence sentence, VerbContext context) async {
 class RunTask extends SharedTask {
   // Keep this class simple, see note in superclass.
 
-  final Uri programName;
-
   final Uri script;
 
-  const RunTask(this.programName, this.script);
+  const RunTask(this.script);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return runTask(commandSender, SessionState.current, programName, script);
+    return runTask(commandSender, SessionState.current, script);
   }
 }
 
 Future<int> runTask(
     CommandSender commandSender,
     SessionState state,
-    Uri programName,
     Uri script) {
   return compileAndAttachToLocalVmThen(
       commandSender,
       state,
-      programName,
       script,
       () => developer.run(state));
 }

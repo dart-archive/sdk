@@ -65,8 +65,11 @@ import '../../bytecodes.dart' show
 import '../diagnostic.dart' show
     throwInternalError;
 
-Future<Null> attachToLocalVm(Uri programName, SessionState state) async {
-  String fletchVmPath = programName.resolve("fletch-vm").toFilePath();
+import '../guess_configuration.dart' show
+    guessFletchVm;
+
+Future<Null> attachToLocalVm(SessionState state) async {
+  String fletchVmPath = guessFletchVm(null).toFilePath();
   state.fletchVm = await FletchVm.start(fletchVmPath);
   await attachToVm(state.fletchVm.host, state.fletchVm.port, state);
   await state.session.disableVMStandardOutput();
@@ -321,7 +324,6 @@ Future<int> export(SessionState state, Uri snapshot) async {
 Future<int> compileAndAttachToLocalVmThen(
     CommandSender commandSender,
     SessionState state,
-    Uri programName,
     Uri script,
     Future<int> action()) async {
   bool startedVm = false;
@@ -338,7 +340,7 @@ Future<int> compileAndAttachToLocalVmThen(
   }
   if (session == null) {
     startedVm = true;
-    await attachToLocalVm(programName, state);
+    await attachToLocalVm(state);
     state.fletchVm.stdoutLines.listen((String line) {
       commandSender.sendStdout("$line\n");
     });
