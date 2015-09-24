@@ -50,6 +50,9 @@ class FletchVmSession {
   bool _connectionIsDead = false;
   bool _drainedIncomingCommands = false;
 
+  // TODO(ahe): Get rid of this. See also issue 67.
+  bool silent = false;
+
   FletchVmSession(Socket vmSocket,
                   Sink<List<int>> stdoutSink,
                   Sink<List<int>> stderrSink)
@@ -64,7 +67,7 @@ class FletchVmSession {
   }
 
   void writeStdout(String s) {
-    if (stdoutSink != null) stdoutSink.add(UTF8.encode(s));
+    if (!silent && stdoutSink != null) stdoutSink.add(UTF8.encode(s));
   }
 
   void writeStdoutLine(String s) => writeStdout("$s\n");
@@ -283,6 +286,7 @@ class Session extends FletchVmSession {
       case CommandCode.ProcessTerminated:
         running = false;
         writeStdoutLine('### process terminated');
+        // TODO(ahe): Let the caller terminate the session. See issue 67.
         await terminateSession();
         break;
       default:
