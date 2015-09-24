@@ -770,7 +770,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
         CallStructure callStructure = selector.callStructure;
         FunctionSignature signature = function.signature;
         if (selector.isGetter) {
-          if (shouldReportEnqueuingOfElement(element)) {
+          if (shouldReportEnqueuingOfElement(compiler, element)) {
             context.compiler.reportVerboseInfo(
                 element, 'Adding tear-off stub', forceVerbose: true);
           }
@@ -778,7 +778,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
         } else if (selector.isCall &&
                    callStructure.signatureApplies(signature) &&
                    !isExactParameterMatch(signature, callStructure)) {
-          if (shouldReportEnqueuingOfElement(element)) {
+          if (shouldReportEnqueuingOfElement(compiler, element)) {
             context.compiler.reportVerboseInfo(
                 element, 'Adding stub for $selector', forceVerbose: true);
           }
@@ -805,7 +805,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     AstElement element = declaration.implementation;
     compiler.withCurrentElement(element, () {
       assert(declaration.isDeclaration);
-      if (shouldReportEnqueuingOfElement(element)) {
+      if (shouldReportEnqueuingOfElement(compiler, element)) {
         context.compiler.reportVerboseInfo(
             element, 'Need tear-off parameter stub $selector',
             forceVerbose: true);

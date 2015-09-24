@@ -72,10 +72,9 @@ const bool logSystemLibraries =
 
 /// Returns true if enqueuing of [element] should be reported in verbose
 /// mode. See [logSystemLibraries].
-bool shouldReportEnqueuingOfElement(Element element) {
+bool shouldReportEnqueuingOfElement(Compiler compiler, Element element) {
   if (logSystemLibraries) return true;
-  LibraryElement library = element.library;
-  return !library.isPlatformLibrary;
+  return compiler.inUserCode(element);
 }
 
 // TODO(ahe): Delete this method when FletchEnqueuer is complete.
@@ -309,7 +308,7 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
     ElementUsage usage = new ElementUsage(element, selector, tearOff);
     if (_enqueuedUsages.add(usage)) {
       _pendingEnqueuedUsages.addLast(usage);
-      if (shouldReportEnqueuingOfElement(element)) {
+      if (shouldReportEnqueuingOfElement(compiler, element)) {
         compiler.reportVerboseInfo(element, "called as $selector");
       }
     }

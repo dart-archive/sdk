@@ -108,7 +108,7 @@ class DynamicCallEnqueuer {
     // pendingSelectors.
     while (pendingInstantiatedClasses.isNotEmpty) {
       ClassElement cls = pendingInstantiatedClasses.removeFirst();
-      if (shouldReportEnqueuingOfElement(cls)) {
+      if (shouldReportEnqueuingOfElement(compiler, cls)) {
         compiler.reportVerboseInfo(cls, "was instantiated");
       }
       for (Selector selector in enqueuedSelectors) {
@@ -121,7 +121,7 @@ class DynamicCallEnqueuer {
     }
     while (pendingImplicitClosurizations.isNotEmpty) {
       FunctionElement function = pendingImplicitClosurizations.removeFirst();
-      if (shouldReportEnqueuingOfElement(function)) {
+      if (shouldReportEnqueuingOfElement(compiler, function)) {
         compiler.reportVerboseInfo(function, "was closurized");
       }
       for (Selector selector in enqueuedSelectors) {

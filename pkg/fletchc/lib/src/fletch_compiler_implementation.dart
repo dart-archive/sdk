@@ -152,6 +152,8 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
         new FletchRegistry(this, global.treeElements).asRegistry;
   }
 
+  bool get showPackageWarnings => true;
+
   FletchContext get context {
     if (internalContext == null) {
       internalContext = new FletchContext(this);
@@ -264,8 +266,6 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
     if (line >= sourceFile.lineStarts.length) return null;
     return sourceFile.lineStarts[line] + column;
   }
-
-  bool inUserCode(element, {bool assumeInUserCode: false}) => true;
 
   void reportVerboseInfo(
       Spannable node,
