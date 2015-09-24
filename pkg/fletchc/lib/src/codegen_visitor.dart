@@ -316,6 +316,10 @@ abstract class CodegenVisitor
     registry.registerInstantiatedClass(klass);
   }
 
+  void registerIsCheck(DartType type) {
+    registry.registerIsCheck(type);
+  }
+
   void invokeMethod(Node node, Selector selector) {
     registerDynamicInvocation(selector);
     String symbol = context.getSymbolFromSelector(selector);
@@ -811,6 +815,8 @@ abstract class CodegenVisitor
           diagnosticLocation, "Unhandled type test for malformed $type.");
       return;
     }
+
+    registerIsCheck(type);
 
     if (type.isDynamic) {
       assembler.pop();

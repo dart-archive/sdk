@@ -25,7 +25,8 @@ import 'package:compiler/src/dart2jslib.dart' show
     isPrivateName;
 
 import 'package:compiler/src/dart_types.dart' show
-    DartType;
+    DartType,
+    InterfaceType;
 
 import 'package:compiler/src/tree/tree.dart' show
     DartString,
@@ -1053,6 +1054,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
   }
 
   void createParameterMatchingStubs() {
+    // TODO(ahe): Remove this method when [useCustomEnqueuer] is the default
+    // behavior.
     List<FletchFunctionBuilder> functions = systemBuilder.getNewFunctions();
     int length = functions.length;
     for (int i = 0; i < length; i++) {
@@ -1210,16 +1213,42 @@ class FletchBackend extends Backend with ResolutionCallbacks
     });
   }
 
+  void compileTypeTest(ClassElement element, InterfaceType type) {
+    assert(element.isDeclaration);
+    int fletchSelector = context.toFletchIsSelector(type.element);
+    FletchClassBuilder builder =
+        systemBuilder.lookupClassBuilderByElement(element);
+    if (builder != null) {
+      context.compiler.reportVerboseInfo(
+          element, 'Adding is-selector for $type', forceVerbose: true);
+      builder.addIsSelector(fletchSelector);
+    }
+  }
+
   int assembleProgram() {
-    // TODO(ahe): This method should always throw when [useCustomEnqueuer] is
-    // the default behavior.
+    if (useCustomEnqueuer) {
+      assembleProgramWithCustomEnqueuer();
+    } else {
+      assembleProgramWithOldEnqueuer();
+    }
+    return 0;
+  }
+
+  void assembleProgramWithCustomEnqueuer() {
+    // TODO(ahe): Remove method when [useCustomEnqueuer] is the default
+    // behavior.
+    print("Using custom enqueuer");
+  }
+
+  void assembleProgramWithOldEnqueuer() {
+    // TODO(ahe): Remove method when [useCustomEnqueuer] is the default
+    // behavior.
     createTearoffStubs();
     createParameterMatchingStubs();
 
     for (FletchClassBuilder classBuilder in systemBuilder.getNewClasses()) {
       classBuilder.createIsEntries(this);
     }
-    return 0;
   }
 
   FletchDelta computeDelta() {

@@ -31,13 +31,17 @@ import 'fletch_class_builder.dart' show
 import 'fletch_registry.dart' show
     FletchRegistry;
 
+import 'debug_registry.dart' show
+    DebugRegistry;
+
 import 'fletch_context.dart';
 import 'constructor_codegen.dart';
 import 'lazy_field_initializer_codegen.dart';
 import 'debug_info_lazy_field_initializer_codegen.dart';
 import 'debug_info.dart';
 
-class DebugInfoConstructorCodegen extends ConstructorCodegen {
+class DebugInfoConstructorCodegen extends ConstructorCodegen
+    with DebugRegistry {
   final DebugInfo debugInfo;
   final FletchCompilerImplementation compiler;
 
@@ -81,12 +85,6 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen {
     super.popVariableDeclaration(element);
     debugInfo.popScope(assembler.byteSize);
   }
-
-  void registerDynamicInvocation(Selector selector) { }
-  void registerDynamicGetter(Selector selector) { }
-  void registerDynamicSetter(Selector selector) { }
-  void registerStaticInvocation(FunctionElement function) { }
-  void registerInstantiatedClass(ClassElement klass) { }
 
   void doFieldInitializerSet(Send node, FieldElement field) {
     recordDebugInfo(node);

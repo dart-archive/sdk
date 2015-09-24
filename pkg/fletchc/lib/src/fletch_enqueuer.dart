@@ -51,7 +51,8 @@ import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
 
 import 'dynamic_call_enqueuer.dart' show
-    DynamicCallEnqueuer;
+    DynamicCallEnqueuer,
+    UsageRecorder;
 
 import 'fletch_codegen_work_item.dart' show
     FletchCodegenWorkItem;
@@ -177,9 +178,18 @@ class TransitionalFletchEnqueuer extends CodegenEnqueuer
   void _enqueueElement(element, selector, {tearOff}) => notImplemented;
 
   void processQueue() => notImplemented;
+
+  void recordElementUsage(element, selector, {tearOff}) => notImplemented;
+
+  void recordTypeTest(element, type) => notImplemented;
+
+  Set<TypeTest> get _typeTests => notImplemented;
+
+  Queue<TypeTest> get _pendingTypeTests => notImplemented;
 }
 
-class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
+class FletchEnqueuer extends EnqueuerMixin
+    implements CodegenEnqueuer, UsageRecorder {
   final ItemCompilationContextCreator itemCompilationContextCreator;
 
   final FletchCompilerImplementation compiler;
@@ -202,6 +212,10 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
   final Queue<ElementUsage> _pendingEnqueuedUsages =
       new Queue<ElementUsage>();
 
+  final Set<TypeTest> _typeTests = new Set<TypeTest>();
+
+  final Queue<TypeTest> _pendingTypeTests = new Queue<TypeTest>();
+
   final DynamicCallEnqueuer dynamicCallEnqueuer;
 
   FletchEnqueuer(
@@ -210,7 +224,9 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
       : compiler = compiler,
         dynamicCallEnqueuer = new DynamicCallEnqueuer(compiler);
 
-  bool get queueIsEmpty => _pendingEnqueuedUsages.isEmpty;
+  bool get queueIsEmpty {
+    return _pendingEnqueuedUsages.isEmpty && _pendingTypeTests.isEmpty;
+  }
 
   bool get isResolutionQueue => false;
 
@@ -247,24 +263,30 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
     do {
       do {
         while (!queueIsEmpty) {
-          ElementUsage usage = _pendingEnqueuedUsages.removeFirst();
-          AstElement element = usage.element;
-          TreeElements treeElements = element.resolvedAst.elements;
-          FletchRegistry registry =
-              new FletchRegistryImplementation(compiler, treeElements);
-          Selector selector = usage.selector;
-          if (usage.tearOff) {
-            compiler.context.backend.compileFunctionTearOffUsage(
-                element, selector, treeElements, registry);
-          } else if (selector != null) {
-            compiler.context.backend.compileElementUsage(
-                element, selector, treeElements, registry);
-          } else {
-            compiler.context.backend.compileElement(
-                element, treeElements, registry);
+          if (!_pendingEnqueuedUsages.isEmpty) {
+            ElementUsage usage = _pendingEnqueuedUsages.removeFirst();
+            AstElement element = usage.element;
+            TreeElements treeElements = element.resolvedAst.elements;
+            FletchRegistry registry =
+                new FletchRegistryImplementation(compiler, treeElements);
+            Selector selector = usage.selector;
+            if (usage.tearOff) {
+              compiler.context.backend.compileFunctionTearOffUsage(
+                  element, selector, treeElements, registry);
+            } else if (selector != null) {
+              compiler.context.backend.compileElementUsage(
+                  element, selector, treeElements, registry);
+            } else {
+              compiler.context.backend.compileElement(
+                  element, treeElements, registry);
+            }
+          }
+          if (!_pendingTypeTests.isEmpty) {
+            TypeTest test = _pendingTypeTests.removeFirst();
+            compiler.context.backend.compileTypeTest(test.element, test.type);
           }
         }
-        dynamicCallEnqueuer.enqueueInstanceMethods(_enqueueElement);
+        dynamicCallEnqueuer.enqueueInstanceMethods(this);
       } while (!queueIsEmpty);
       // TODO(ahe): Pass recentClasses?
       compiler.backend.onQueueEmpty(this, null);
@@ -296,6 +318,10 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
     dynamicCallEnqueuer.enqueueSelector(selector);
   }
 
+  void registerIsCheck(DartType type) {
+    dynamicCallEnqueuer.enqueueTypeTest(type);
+  }
+
   void _enqueueElement(
       Element element,
       Selector selector,
@@ -311,6 +337,21 @@ class FletchEnqueuer extends EnqueuerMixin implements CodegenEnqueuer {
       if (shouldReportEnqueuingOfElement(compiler, element)) {
         compiler.reportVerboseInfo(element, "called as $selector");
       }
+    }
+  }
+
+  void recordElementUsage(
+      Element element,
+      Selector selector,
+      {bool tearOff: false}) {
+    _enqueueElement(element, selector, tearOff: tearOff);
+  }
+
+  void recordTypeTest(ClassElement element, InterfaceType type) {
+    compiler.reportVerboseInfo(element, "type test $type");
+    TypeTest test = new TypeTest(element, type);
+    if (_typeTests.add(test)) {
+      _pendingTypeTests.addLast(test);
     }
   }
 }
@@ -338,5 +379,22 @@ class ElementUsage {
     return other is ElementUsage &&
         element == other.element && selector == other.selector &&
         tearOff == other.tearOff;
+  }
+}
+
+class TypeTest {
+  final ClassElement element;
+
+  final InterfaceType type;
+
+  final int hashCode;
+
+  TypeTest(ClassElement element, InterfaceType type)
+      : element = element,
+        type = type,
+        hashCode = Hashing.mixHashCodeBits(element.hashCode, type.hashCode);
+
+  bool operator ==(other) {
+    return other is TypeTest && element == other.element && type == other.type;
   }
 }

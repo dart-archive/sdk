@@ -28,11 +28,14 @@ import 'fletch_function_builder.dart' show
 import 'fletch_registry.dart' show
     FletchRegistry;
 
+import 'debug_registry.dart' show
+    DebugRegistry;
+
 import 'fletch_context.dart';
 import 'function_codegen.dart';
 import 'debug_info.dart';
 
-class DebugInfoFunctionCodegen extends FunctionCodegen {
+class DebugInfoFunctionCodegen extends FunctionCodegen with DebugRegistry {
   final FletchCompilerImplementation compiler;
   final DebugInfo debugInfo;
 
@@ -62,12 +65,6 @@ class DebugInfoFunctionCodegen extends FunctionCodegen {
     super.popVariableDeclaration(element);
     debugInfo.popScope(assembler.byteSize);
   }
-
-  void registerDynamicInvocation(Selector selector) { }
-  void registerDynamicGetter(Selector selector) { }
-  void registerDynamicSetter(Selector selector) { }
-  void registerStaticInvocation(FunctionElement function) { }
-  void registerInstantiatedClass(ClassElement klass) { }
 
   void callIsSelector(
       Node node,

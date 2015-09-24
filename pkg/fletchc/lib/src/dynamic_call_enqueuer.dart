@@ -13,7 +13,9 @@ import 'package:compiler/src/universe/universe.dart' show
     UniverseSelector;
 
 import 'package:compiler/src/dart_types.dart' show
-    InterfaceType;
+    DartType,
+    InterfaceType,
+    TypeKind;
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
@@ -28,7 +30,11 @@ import 'fletch_compiler_implementation.dart' show
 import 'fletch_enqueuer.dart' show
     shouldReportEnqueuingOfElement;
 
-typedef void ElementUsage(Element element, Selector selector, {bool tearOff});
+abstract class UsageRecorder {
+  void recordElementUsage(Element element, Selector selector, {bool tearOff});
+
+  void recordTypeTest(ClassElement element, InterfaceType type);
+}
 
 /// Implements the dynamic part of the tree-shaking algorithm.
 ///
@@ -55,6 +61,10 @@ class DynamicCallEnqueuer {
   final Queue<FunctionElement> pendingImplicitClosurizations =
       new Queue<FunctionElement>();
 
+  final Set<InterfaceType> typeTests = new Set<InterfaceType>();
+
+  final Queue<InterfaceType> pendingTypeTests = new Queue<InterfaceType>();
+
   DynamicCallEnqueuer(this.compiler);
 
   void registerInstantiatedType(InterfaceType type) {
@@ -67,41 +77,60 @@ class DynamicCallEnqueuer {
   void enqueueApplicableMembers(
       ClassElement cls,
       Selector selector,
-      ElementUsage enqueueElement) {
+      UsageRecorder recorder) {
     Element member = cls.lookupByName(selector.memberName);
     if (member == null) return;
     if (!member.isInstanceMember) return;
     if (selector.isGetter) {
       if (member.isField || member.isGetter) {
-        enqueueElement(member, selector);
+        recorder.recordElementUsage(member, selector);
       } else {
         // Tear-off.
         compiler.reportVerboseInfo(member, "enqueued as tear-off");
         // This lets the backend generate the tear-off getter because it is
         // told that [member] is used as a getter.
-        enqueueElement(member, selector);
+        recorder.recordElementUsage(member, selector);
         // This registers [member] as an instantiated closure class.
         enqueueTearOff(member);
       }
     } else if (selector.isSetter) {
       if (member.isField || member.isSetter) {
-        enqueueElement(member, selector);
+        recorder.recordElementUsage(member, selector);
       }
     } else if (member.isFunction && selector.signatureApplies(member)) {
-      enqueueElement(member, selector);
+      recorder.recordElementUsage(member, selector);
     }
   }
 
   void enqueueTearOffIfApplicable(
       FunctionElement function,
       Selector selector,
-      ElementUsage enqueueElement) {
+      UsageRecorder recorder) {
     if (selector.isClosureCall && selector.signatureApplies(function)) {
-      enqueueElement(function, selector, tearOff: true);
+      recorder.recordElementUsage(function, selector, tearOff: true);
     }
   }
 
-  void enqueueInstanceMethods(ElementUsage enqueueElement) {
+  void enqueueApplicableTypeTests(
+      ClassElement cls,
+      InterfaceType type,
+      UsageRecorder recorder) {
+    while (cls != null) {
+      if (cls == type.element) {
+        recorder.recordTypeTest(cls, type);
+        return;
+      }
+      for (DartType supertype in cls.interfaces) {
+        if (supertype.element == type.element) {
+          recorder.recordTypeTest(cls, type);
+          return;
+        }
+      }
+      cls = cls.superclass;
+    }
+  }
+
+  void enqueueInstanceMethods(UsageRecorder recorder) {
     // TODO(ahe): Implement a faster way to iterate through selectors. For
     // example, use the same approach as dart2js uses where selectors are
     // grouped by name. This applies both to enqueuedSelectors and
@@ -116,7 +145,10 @@ class DynamicCallEnqueuer {
         // processing calling _enqueueApplicableMembers twice for newly
         // instantiated classes. Once here, and then once more in the while
         // loop below.
-        enqueueApplicableMembers(cls, selector, enqueueElement);
+        enqueueApplicableMembers(cls, selector, recorder);
+      }
+      for (InterfaceType type in typeTests) {
+        enqueueApplicableTypeTests(cls, type, recorder);
       }
     }
     while (pendingImplicitClosurizations.isNotEmpty) {
@@ -125,17 +157,25 @@ class DynamicCallEnqueuer {
         compiler.reportVerboseInfo(function, "was closurized");
       }
       for (Selector selector in enqueuedSelectors) {
-        enqueueTearOffIfApplicable(function, selector, enqueueElement);
+        enqueueTearOffIfApplicable(function, selector, recorder);
       }
+      // TODO(ahe): Also enqueue type tests here.
     }
     while (pendingSelectors.isNotEmpty) {
       Selector selector = pendingSelectors.removeFirst();
       for (ClassElement cls in instantiatedClasses) {
-        enqueueApplicableMembers(cls, selector, enqueueElement);
+        enqueueApplicableMembers(cls, selector, recorder);
       }
       for (FunctionElement function in implicitClosurizations) {
-        enqueueTearOffIfApplicable(function, selector, enqueueElement);
+        enqueueTearOffIfApplicable(function, selector, recorder);
       }
+    }
+    while(!pendingTypeTests.isEmpty) {
+      InterfaceType type = pendingTypeTests.removeFirst();
+      for (ClassElement cls in instantiatedClasses) {
+        enqueueApplicableTypeTests(cls, type, recorder);
+      }
+      // TODO(ahe): Also enqueue type tests for closures.
     }
   }
 
@@ -158,5 +198,25 @@ class DynamicCallEnqueuer {
     // (library_updater.dart) registers classes with schema changes as having
     // been instantiated.
     instantiatedClasses.remove(element);
+  }
+
+  void enqueueTypeTest(DartType type) {
+    type = type.asRaw();
+    switch (type.kind) {
+      case TypeKind.INTERFACE:
+        enqueueRawInterfaceType(type);
+        break;
+
+      default:
+        // Ignored.
+        break;
+    }
+  }
+
+  void enqueueRawInterfaceType(InterfaceType type) {
+    assert(type.isRaw);
+    if (typeTests.add(type)) {
+      pendingTypeTests.add(type);
+    }
   }
 }

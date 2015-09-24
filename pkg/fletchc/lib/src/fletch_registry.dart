@@ -78,11 +78,14 @@ abstract class FletchRegistry {
     world.registerInstantiatedType(type, this.asRegistry);
   }
 
+  void registerIsCheck(DartType type) {
+    world.registerIsCheck(type);
+  }
 }
 
 @proxy
 class FletchRegistryImplementation extends FletchRegistry
-implements CodegenRegistry {
+    implements CodegenRegistry {
   final TreeElements treeElements;
 
   FletchRegistryImplementation(

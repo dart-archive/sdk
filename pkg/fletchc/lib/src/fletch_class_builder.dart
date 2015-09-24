@@ -172,6 +172,8 @@ class FletchNewClassBuilder extends FletchClassBuilder {
   }
 
   void createIsEntries(FletchBackend backend) {
+    // TODO(ahe): Remove this method when [useCustomEnqueuer] is the default
+    // behavior.
     if (element == null) return;
 
     Set superclasses = new Set();
