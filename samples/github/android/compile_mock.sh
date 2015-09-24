@@ -20,17 +20,14 @@ set -ue
 DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 FLETCH_DIR="$(cd "$DIR/../../.." && pwd)"
-FLETCH_PKG_DIR="$FLETCH_DIR/package"
 
 # TODO(zerny): Support other modes than Release in tools/android_build/jni/Android.mk
 TARGET_MODE=Release
 TARGET_DIR="$(cd "$DIR/.." && pwd)"
-TARGET_BUILD_DIR="$TARGET_DIR"
+TARGET_GEN_DIR="$TARGET_DIR/generated"
+TARGET_PKG_FILE="$TARGET_DIR/.packages"
 
-# TODO(zerny): Create a project specific package directory.
-TARGET_PKG_DIR=$FLETCH_PKG_DIR #"$TARGET_BUILD_DIR/packages"
-
-SERVICE_GEN_DIR="$TARGET_PKG_DIR/service"
+SERVICE_GEN_DIR="$TARGET_GEN_DIR/service"
 
 JAVA_DIR=$DIR/$ANDROID_PROJ/app/src/main/java/fletch
 JNI_LIBS_DIR=$DIR/$ANDROID_PROJ/app/src/main/jniLibs

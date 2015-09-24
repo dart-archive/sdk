@@ -7,6 +7,8 @@ library http;
 import 'dart:collection';
 import 'dart:typed_data';
 
+import 'package:socket/socket.dart';
+
 ByteBuffer stringToByteBuffer(String str) {
   Uint8List list = new Uint8List(str.length);
   for (int i = 0; i < list.length; i++) {

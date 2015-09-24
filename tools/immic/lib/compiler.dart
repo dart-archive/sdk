@@ -21,15 +21,24 @@ import 'src/plugins/java.dart' as java;
 
 import 'package:path/path.dart' show join, dirname;
 
+import 'package:package_config/discovery.dart';
+
 const List<String> RESOURCES = const [
   "Immi.podspec",
 ];
 
-class ImportResolverWithPackageRoot implements ImportResolver<String> {
-  final String packageDirectory;
+class ImportResolverWithPackageFile implements ImportResolver<String> {
+  final String packagesFile;
   final Set<String> visited = new Set();
+  Packages packages;
 
-  ImportResolverWithPackageRoot(this.packageDirectory);
+  ImportResolverWithPackageFile(this.packagesFile);
+
+  Future<Null> loadFile() async {
+    if (packagesFile == null) return;
+    packages = await loadPackagesFile(
+        new Uri(scheme: "file", path: packagesFile));
+  }
 
   Future<String> read(String importPath) async {
     List<int> bytes = new File(importPath).readAsBytesSync();
@@ -39,7 +48,11 @@ class ImportResolverWithPackageRoot implements ImportResolver<String> {
   String resolve(Import import, String unitPath) {
     String importPath;
     if (import.package != null) {
-      importPath = p.join(packageDirectory, import.package, import.path);
+      if (packages == null) {
+        throw "Unable to import from packages. "
+            + "Please specify a file with --packages";
+      }
+      importPath = packages.resolve(pkg(import.package, import.path)).path;
     } else {
       importPath = p.join(p.dirname(unitPath), import.path);
     }
@@ -48,16 +61,27 @@ class ImportResolverWithPackageRoot implements ImportResolver<String> {
     visited.add(importPath);
     return importPath;
   }
+
+  Uri pkg(String packageName, String packagePath) {
+    var path;
+    if (packagePath.startsWith('/')) {
+      path = "$packageName$packagePath";
+    } else {
+      path = "$packageName/$packagePath";
+    }
+    return new Uri(scheme: "package", path: path);
+  }
 }
 
 void compile(String path,
              String outputDirectory,
-             String packageDirectory) async {
+             String packagesFile) async {
   List<int> bytes = new File(path).readAsBytesSync();
   String input = UTF8.decode(bytes);
   Unit topUnit = parseUnit(input);
-  Map<String, Unit> units = await parseImports(
-      topUnit, new ImportResolverWithPackageRoot(packageDirectory), path);
+  var importResolver = new ImportResolverWithPackageFile(packagesFile);
+  await importResolver.loadFile();
+  Map<String, Unit> units = await parseImports(topUnit, importResolver, path);
 
   resolve(units);
 

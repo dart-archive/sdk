@@ -21,8 +21,8 @@ android {
 
     sourceSets {
         main {
-            java.srcDir '../../../../../package/immi/java'
-            java.srcDir '../../../../../package/immi_samples/android/src/main'
+            java.srcDir '../../../generated/immi/java'
+            java.srcDir '../../../../../pkg/immi_samples/lib/android/src/main'
         }
     }
 }

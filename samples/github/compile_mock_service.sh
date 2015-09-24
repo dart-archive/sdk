@@ -17,12 +17,16 @@ DATA_FILE="$DIR/lib/src/github_mock.data"
 IDL_FILE="$DIR/lib/src/github_mock.idl"
 MOCK_FILE="$DIR/bin/github_mock_service.dart"
 SNAPSHOT_FILE="$DIR/github_mock_service.snapshot"
+PKG_FILE="$DIR/.packages"
 
 DART="$FLETCH_DIR/out/ReleaseIA32/dart"
 FLETCH="$FLETCH_DIR/out/ReleaseIA32/fletch"
 SERVICEC="$DART $FLETCH_DIR/tools/servicec/bin/servicec.dart"
 
-SERVICE_GEN_DIR="$FLETCH_DIR/package/service"
+SERVICE_GEN_DIR="$DIR/generated/service"
+
+cd $FLETCH_DIR
+ninja -C out/ReleaseIA32
 
 if [[ $# -eq 0 ]] || [[ "$1" == "data" ]]; then
     cd $DATA_DIR
@@ -48,7 +52,6 @@ fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
     cd $FLETCH_DIR
-    ninja -C out/ReleaseIA32
     ./tools/persistent_process_info.sh --kill
-    $FLETCH compile-and-run -o "$SNAPSHOT_FILE" "$MOCK_FILE"
+    $FLETCH compile-and-run --packages="$PKG_FILE" -o "$SNAPSHOT_FILE" "$MOCK_FILE"
 fi

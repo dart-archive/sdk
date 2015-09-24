@@ -30,11 +30,11 @@ FLETCH_DIR="$(cd "$DIR/../../.." && pwd)"
 FLETCH_PKG_DIR="$FLETCH_DIR/package"
 
 TARGET_DIR="$(cd "$DIR/.." && pwd)"
-TARGET_BUILD_DIR="$TARGET_DIR"
-TARGET_PKG_DIR="$TARGET_BUILD_DIR/packages"
+TARGET_GEN_DIR="$TARGET_DIR/generated"
+TARGET_PKG_FILE="$TARGET_DIR/.packages"
 
-IMMI_GEN_DIR="$TARGET_PKG_DIR/immi"
-SERVICE_GEN_DIR="$TARGET_PKG_DIR/service"
+IMMI_GEN_DIR="$TARGET_GEN_DIR/immi"
+SERVICE_GEN_DIR="$TARGET_GEN_DIR/service"
 
 DART="$FLETCH_DIR/out/ReleaseIA32/dart"
 IMMIC="$DART $FLETCH_DIR/tools/immic/bin/immic.dart"
@@ -45,18 +45,13 @@ MOCK_SERVER_SNAPSHOT="$TARGET_DIR/github_mock_service.snapshot"
 
 set -x
 
-# TODO(zerny): Create a project specific package directory.
-if [[ ! -d "$TARGET_PKG_DIR" ]]; then
-    ln -s "$FLETCH_PKG_DIR" "$TARGET_PKG_DIR"
-fi
-
 ninja -C out/ReleaseIA32
 
 # Generate dart service file and other immi files with the compiler.
 if [[ $# -eq 0 ]] || [[ "$1" == "immi" ]]; then
     rm -rf "$IMMI_GEN_DIR"
     mkdir -p "$IMMI_GEN_DIR"
-    $IMMIC --package "$FLETCH_PKG_DIR" --out "$IMMI_GEN_DIR" "$TARGET_DIR/lib/$PROJ.immi"
+    $IMMIC --packages "$TARGET_PKG_FILE" --out "$IMMI_GEN_DIR" "$TARGET_DIR/lib/$PROJ.immi"
 
     rm -rf "$SERVICE_GEN_DIR"
     mkdir -p "$SERVICE_GEN_DIR"
@@ -77,8 +72,8 @@ fi
 if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
     cd $FLETCH_DIR
     ./tools/persistent_process_info.sh --kill
-    $FLETCH compile-and-run -o "$DIR/$PROJ.snapshot" \
-            "$TARGET_BUILD_DIR/bin/$PROJ.dart"
+    $FLETCH compile-and-run --packages "$TARGET_PKG_FILE" -o "$DIR/$PROJ.snapshot" \
+            "$TARGET_DIR/bin/$PROJ.dart"
 fi
     
 # Ensure that we have a mock server.

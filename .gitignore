@@ -34,8 +34,7 @@ packages
 /jniLibs/
 /samples/buildbot/java/
 /samples/todomvc/java/
-/package/immi/
-/package/service/
+/samples/github/generated/
 /third_party/bin/mac/dart
 /third_party/bin/linux/dart
 /third_party/bin/linux/dart-arm

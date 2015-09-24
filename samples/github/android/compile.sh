@@ -20,18 +20,15 @@ set -ue
 DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 FLETCH_DIR="$(cd "$DIR/../../.." && pwd)"
-FLETCH_PKG_DIR="$FLETCH_DIR/package"
 
 # TODO(zerny): Support other modes than Release in tools/android_build/jni/Android.mk
 TARGET_MODE=Release
 TARGET_DIR="$(cd "$DIR/.." && pwd)"
-TARGET_BUILD_DIR="$TARGET_DIR"
+TARGET_GEN_DIR="$TARGET_DIR/generated"
+TARGET_PKG_FILE="$TARGET_DIR/.packages"
 
-# TODO(zerny): Create a project specific package directory.
-TARGET_PKG_DIR=$FLETCH_PKG_DIR #"$TARGET_BUILD_DIR/packages"
-
-IMMI_GEN_DIR="$TARGET_PKG_DIR/immi"
-SERVICE_GEN_DIR="$TARGET_PKG_DIR/service"
+IMMI_GEN_DIR="$TARGET_GEN_DIR/immi"
+SERVICE_GEN_DIR="$TARGET_GEN_DIR/service"
 
 JAVA_DIR=$DIR/$ANDROID_PROJ/app/src/main/java/fletch
 JNI_LIBS_DIR=$DIR/$ANDROID_PROJ/app/src/main/jniLibs
@@ -47,7 +44,7 @@ set -x
 if [[ $# -eq 0 ]] || [[ "$1" == "immi" ]]; then
     rm -rf "$IMMI_GEN_DIR"
     mkdir -p "$IMMI_GEN_DIR"
-    $IMMIC --package "$FLETCH_PKG_DIR" --out "$IMMI_GEN_DIR" "$TARGET_DIR/lib/$PROJ.immi"
+    $IMMIC --packages "$TARGET_PKG_FILE" --out "$IMMI_GEN_DIR" "$TARGET_DIR/lib/$PROJ.immi"
 
     rm -rf "$SERVICE_GEN_DIR"
     mkdir -p "$SERVICE_GEN_DIR"
@@ -88,7 +85,8 @@ if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
 
     SNAPSHOT="$DIR/$ANDROID_PROJ/app/src/main/res/raw/${PROJ}_snapshot"
     mkdir -p `dirname "$SNAPSHOT"`
-    $FLETCH compile-and-run -o "$SNAPSHOT" "$TARGET_BUILD_DIR/bin/$PROJ.dart"
+    $FLETCH compile-and-run --packages $TARGET_PKG_FILE -o "$SNAPSHOT" \
+        "$TARGET_DIR/bin/$PROJ.dart"
 fi
 
 set +x

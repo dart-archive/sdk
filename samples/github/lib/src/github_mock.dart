@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:fletch';
+import 'dart:fletch.os' as os;
 import 'dart:typed_data';
 
 import 'package:file/file.dart';
@@ -105,7 +106,7 @@ class GithubMock {
   }
 
   void _accept(Socket socket) {
-    if (delay > 0) sleep(delay);
+    if (delay > 0) os.sleep(delay);
     var data = new Uint8List.view(socket.readNext());
     var request = new String.fromCharCodes(data);
 

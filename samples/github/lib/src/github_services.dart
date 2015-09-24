@@ -43,7 +43,7 @@ getJson(Connection service, String resource) {
   request.headers["User-Agent"] = 'fletch';
   HttpResponse response = connection.send(request);
   if (response.statusCode != 200) {
-    throw 'Failed request: $resource on port $port';
+    throw 'Failed request: $resource on port ${service.port}';
   }
   return JSON.decode(UTF8.decode(response.body));
 }
