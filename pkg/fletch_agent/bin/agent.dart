@@ -10,6 +10,7 @@ import 'dart:typed_data';
 import 'dart:fletch.os';
 
 import 'package:file/file.dart';
+import 'package:socket/socket.dart';
 
 import '../lib/messages.dart';
 

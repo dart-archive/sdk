@@ -8,6 +8,7 @@ import 'dart:typed_data';
 
 import 'package:file/file.dart';
 import 'package:http/http.dart';
+import 'package:socket/socket.dart';
 
 abstract class _Connection {
   final String host;

@@ -2,7 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dart.fletch.io;
+library socket;
+
+import 'dart:fletch';
+import 'dart:fletch.os';
+import 'dart:typed_data';
 
 class _SocketBase {
   int _fd = -1;

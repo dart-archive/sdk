@@ -7,6 +7,7 @@ import 'dart:fletch.io';
 import 'dart:convert' show JSON, UTF8;
 
 import 'package:http/http.dart';
+import 'package:socket/socket.dart';
 
 abstract class Connection {
   final String host;

@@ -11,8 +11,6 @@ import 'dart:typed_data';
 
 // The fletch.os library exposes a static 'sys' object for all system calls.
 
-part 'socket.dart';
-
 int socket() => sys.socket();
 InternetAddress lookup(String host) => sys.lookup(host);
 int bind(int fd, InternetAddress address, int port) {

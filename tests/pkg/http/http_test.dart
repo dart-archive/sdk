@@ -3,11 +3,11 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
-import 'dart:fletch.io';
 import 'dart:typed_data';
 
 import 'package:expect/expect.dart';
 import 'package:http/http.dart';
+import 'package:socket/socket.dart';
 
 void main() {
   testGet();

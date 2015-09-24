@@ -23,3 +23,4 @@ path:../third_party/path/lib
 persistent:../third_party/persistent/lib/
 sdk_library_metadata:../dart/sdk/lib/_internal/sdk_library_metadata/lib/
 servicec:pkg/servicec/lib
+socket:pkg/socket/lib

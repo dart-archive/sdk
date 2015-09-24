@@ -7,6 +7,7 @@ import 'dart:fletch.os' as os;
 import 'dart:typed_data';
 
 import 'package:expect/expect.dart';
+import 'package:socket/socket.dart';
 
 void main() {
   testLookup();
@@ -24,13 +25,13 @@ void testLookup() {
 }
 
 void testBindListen() {
-  new io.ServerSocket("127.0.0.1", 0).close();
+  new ServerSocket("127.0.0.1", 0).close();
 }
 
 void testConnect() {
-  var server = new io.ServerSocket("127.0.0.1", 0);
+  var server = new ServerSocket("127.0.0.1", 0);
 
-  var socket = new io.Socket.connect("127.0.0.1", server.port);
+  var socket = new Socket.connect("127.0.0.1", server.port);
 
   var client = server.accept();
   Expect.isNotNull(client);
@@ -59,8 +60,8 @@ void validateBuffer(buffer, int length) {
 const CHUNK_SIZE = 256;
 
 void testReadWrite() {
-  var server = new io.ServerSocket("127.0.0.1", 0);
-  var socket = new io.Socket.connect("127.0.0.1", server.port);
+  var server = new ServerSocket("127.0.0.1", 0);
+  var socket = new Socket.connect("127.0.0.1", server.port);
   var client = server.accept();
 
   socket.write(createBuffer(CHUNK_SIZE));
@@ -77,7 +78,7 @@ void testReadWrite() {
   server.close();
 }
 
-void spawnAcceptCallback(io.Socket client) {
+void spawnAcceptCallback(Socket client) {
   validateBuffer(client.read(CHUNK_SIZE), CHUNK_SIZE);
   client.write(createBuffer(CHUNK_SIZE));
   Expect.equals(0, client.available);
@@ -86,8 +87,8 @@ void spawnAcceptCallback(io.Socket client) {
 }
 
 void testSpawnAccept() {
-  var server = new io.ServerSocket("127.0.0.1", 0);
-  var socket = new io.Socket.connect("127.0.0.1", server.port);
+  var server = new ServerSocket("127.0.0.1", 0);
+  var socket = new Socket.connect("127.0.0.1", server.port);
   server.spawnAccept(spawnAcceptCallback);
 
   socket.write(createBuffer(CHUNK_SIZE));
@@ -100,7 +101,7 @@ void testSpawnAccept() {
 
 const LARGE_CHUNK_SIZE = 128 * 1024;
 
-void largeChunkClient(io.Socket client) {
+void largeChunkClient(Socket client) {
   validateBuffer(client.read(LARGE_CHUNK_SIZE), LARGE_CHUNK_SIZE);
   client.write(createBuffer(LARGE_CHUNK_SIZE));
   Expect.equals(0, client.available);
@@ -109,8 +110,8 @@ void largeChunkClient(io.Socket client) {
 }
 
 void testLargeChunk() {
-  var server = new io.ServerSocket("127.0.0.1", 0);
-  var socket = new io.Socket.connect("127.0.0.1", server.port);
+  var server = new ServerSocket("127.0.0.1", 0);
+  var socket = new Socket.connect("127.0.0.1", server.port);
   server.spawnAccept(largeChunkClient);
 
   socket.write(createBuffer(LARGE_CHUNK_SIZE));
@@ -122,11 +123,11 @@ void testLargeChunk() {
   server.close();
 }
 
-bool isSocketException(e) => e is io.SocketException;
+bool isSocketException(e) => e is SocketException;
 
 void testShutdown() {
-  var server = new io.ServerSocket("127.0.0.1", 0);
-  var socket = new io.Socket.connect("127.0.0.1", server.port);
+  var server = new ServerSocket("127.0.0.1", 0);
+  var socket = new Socket.connect("127.0.0.1", server.port);
   var client = server.accept();
 
   socket.write(createBuffer(CHUNK_SIZE));
