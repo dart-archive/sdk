@@ -66,6 +66,7 @@ import '../diagnostic.dart' show
     throwInternalError;
 
 import '../guess_configuration.dart' show
+    executable,
     guessFletchVm;
 
 Future<Null> attachToLocalVm(SessionState state) async {
@@ -152,11 +153,18 @@ Future<int> compile(Uri script, SessionState state) async {
 }
 
 SessionState createSessionState(String name, Settings settings) {
+  if (settings == null) {
+    settings = new Settings(null, <String>[], <String, String>{});
+  }
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
   compilerOptions.addAll(settings.options);
+  Uri packageConfig = settings.packages;
+  if (packageConfig == null) {
+    packageConfig = executable.resolve("fletch-sdk.packages");
+  }
   FletchCompiler compilerHelper = new FletchCompiler(
-      options: compilerOptions, packageConfig: settings.packages,
+      options: compilerOptions, packageConfig: packageConfig,
       environment: settings.constants);
 
   return new SessionState(
