@@ -9,6 +9,8 @@ import 'dart:fletch.ffi';
 import 'dart:typed_data';
 import 'dart:fletch.os';
 
+import 'package:file/file.dart';
+
 import '../lib/messages.dart';
 
 class Logger {

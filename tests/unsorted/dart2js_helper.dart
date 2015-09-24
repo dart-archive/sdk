@@ -5,11 +5,11 @@
 library test.dart2js_helper;
 
 import 'dart:async';
-import 'dart:fletch.io';
 
 import 'package:async_helper/async_helper.dart';
 import 'package:compiler/compiler.dart';
 import 'package:expect/expect.dart';
+import 'package:file/file.dart';
 
 final mainScriptUri = new Uri(
     scheme: "org.dartlang.fletch",

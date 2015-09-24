@@ -3,10 +3,10 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch.ffi';
-import 'dart:fletch.io';
 import 'dart:fletch.os';
 
 import 'package:expect/expect.dart';
+import 'package:file/file.dart';
 
 void main() {
   testStartDetachedValid();

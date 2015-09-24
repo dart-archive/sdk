@@ -6,6 +6,7 @@ charcode:../third_party/charcode/lib
 compiler:../dart/pkg/compiler/lib
 crypto:../third_party/crypto/lib
 expect:../dart/pkg/expect/lib
+file:pkg/file/lib
 fletch_agent:pkg/fletch_agent/lib
 fletchc:pkg/fletchc/lib
 github_sample:samples/github/lib

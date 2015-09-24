@@ -21,10 +21,10 @@
 /// Currently this has only been tested with a Raspberry Pi 2.
 library gpio;
 
-import 'dart:typed_data';
-import 'dart:fletch.io';
-
 import 'dart:fletch.ffi';
+import 'dart:typed_data';
+
+import 'package:file/file.dart';
 
 // Foreign functions used.
 final ForeignFunction _open = ForeignLibrary.main.lookup('open');

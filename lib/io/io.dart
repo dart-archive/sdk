@@ -11,7 +11,6 @@ import 'dart:typed_data';
 
 // The fletch.os library exposes a static 'sys' object for all system calls.
 
-part 'file.dart';
 part 'socket.dart';
 
 int socket() => sys.socket();

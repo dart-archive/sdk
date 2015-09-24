@@ -6,6 +6,7 @@ import 'dart:fletch';
 import 'dart:fletch.io';
 import 'dart:typed_data';
 
+import 'package:file/file.dart';
 import 'package:http/http.dart';
 
 abstract class _Connection {
