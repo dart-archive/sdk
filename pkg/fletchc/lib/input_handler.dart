@@ -242,6 +242,7 @@ class InputHandler {
       // stream subscription.
       if (session.terminated) break;
     }
+    if (!session.terminated) await session.terminateSession();
     return 0;
   }
 }
