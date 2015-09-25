@@ -65,8 +65,6 @@ build $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
         src/vm/vm.gyp $
-        tests/service_tests/service_tests.gyp $
-        samples/todomvc/todomvc.gyp
 
 build gyp: phony$
     out/DebugIA32/build.ninja $
@@ -104,8 +102,6 @@ build $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
         src/vm/vm.gyp $
-        tests/service_tests/service_tests.gyp $
-        samples/todomvc/todomvc.gyp
 
 build lk: phony$
     out/DebugLK/build.ninja $
@@ -123,8 +119,6 @@ build $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
         src/vm/vm.gyp $
-        tests/service_tests/service_tests.gyp $
-        samples/todomvc/todomvc.gyp
 
 build mbed: phony$
     out/DebugMBED/build.ninja $
