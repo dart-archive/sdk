@@ -50,15 +50,15 @@ class _Uint32Digits {
   final int length;
   final _backing;
 
-  _Uint32Digits(int length)
+  const _Uint32Digits(int length)
       : this.length = length, _backing = _allocate(length);
 
   operator [](int index) => _getUint32(_backing, index);
   operator []=(int index, int value) => _setUint32(_backing, index, value);
 
   @fletch.native external static _allocate(int length);
-  @fletch.native external _getUint32(backing, int index);
-  @fletch.native external _setUint32(backing, int index, int value);
+  @fletch.native external static _getUint32(backing, int index);
+  @fletch.native external static _setUint32(backing, int index, int value);
 }
 
 // A big integer number is represented by a sign, an array of 32-bit unsigned
@@ -101,19 +101,24 @@ class _Bigint extends _IntBase {
   // Internal data structure. Do not reorder! The compiler relies on the order
   // of these fields.
   final bool _neg;
-  int _used;
+  final int _used;
   final _Uint32Digits _digits;
 
   // Factory returning an instance initialized with the given field values.
   // The 'digits' array is first clamped and 'used' is reduced accordingly.
   // A leading zero digit may be initialized to guarantee that digit pairs can
   // be processed as 64-bit values on 64-bit platforms.
-  _Bigint(this._neg, this._used, this._digits) {
-    while (_used > 0 && _digits[_used - 1] == 0) --_used;
-    if (_used > 0 && (_used & 1) != 0) {
+  const _Bigint(this._neg, int used, _Uint32Digits digits)
+      : _used = _computeUsed(used, digits),
+        _digits = digits;
+
+  static int _computeUsed(int used, _Uint32Digits digits) {
+    while (used > 0 && digits[used - 1] == 0) --used;
+    if (used > 0 && (used & 1) != 0) {
       // Set leading zero for 64-bit processing of digit pairs.
-      _digits[_used] = 0;
+      digits[used] = 0;
     }
+    return used;
   }
 
   // Factory returning an instance initialized to an integer value no larger

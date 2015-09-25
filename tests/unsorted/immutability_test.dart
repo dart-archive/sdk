@@ -42,6 +42,7 @@ main() {
   testImmutable('');
   testImmutable('hello world');
   testImmutable(1);
+  testImmutable(0xFFFFFFFFFFFFFFFF * 0xFFFF);  // Bigint
   testImmutable(1.1);
   testImmutable(true);
   testImmutable(false);

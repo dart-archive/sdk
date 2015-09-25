@@ -264,7 +264,7 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
 
 Object* Process::NewByteArray(int length) {
   Class* byte_array_class = program()->byte_array_class();
-  return heap_.CreateByteArray(byte_array_class, length);
+  return immutable_heap_->CreateByteArray(byte_array_class, length);
 }
 
 Object* Process::NewArray(int length) {
