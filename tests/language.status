@@ -1000,3 +1000,8 @@ number_identity2_test: Crash
 round_test: RuntimeError
 vm/optimized_guarded_field_test: Crash
 vm/typed_data_polymorphic_view_test: Crash
+bit_operations_test/01: Crash
+bit_operations_test/02: Crash
+bit_operations_test/03: Crash
+bit_operations_test/04: Crash
+bit_operations_test/none: Crash
