@@ -702,7 +702,7 @@ class IsolatePool {
   }
 
   void shutdown() {
-    while (!idleIsolates.isEmpty) {
+    while (idleIsolates.isNotEmpty) {
       idleIsolates.removeFirst().kill();
     }
   }

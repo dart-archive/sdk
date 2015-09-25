@@ -484,7 +484,7 @@ class TestSession extends Session {
     await stdoutFuture;
     List<String> stdoutLines = stdoutSink.takeLines();
     List<String> stderrLines = await stderrFuture;
-    if (!stdoutLines.isEmpty) {
+    if (stdoutLines.isNotEmpty) {
       sb.writeln("Problem #${++problemCount}:");
       sb.writeln("Unexpected stdout from fletch-vm:");
       for (String line in stdoutLines) {
@@ -492,7 +492,7 @@ class TestSession extends Session {
       }
       sb.writeln("");
     }
-    if (!stderrLines.isEmpty) {
+    if (stderrLines.isNotEmpty) {
       sb.writeln("Problem #${++problemCount}:");
       sb.writeln("Unexpected stderr from fletch-vm:");
       for (String line in stderrLines) {

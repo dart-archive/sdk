@@ -1562,7 +1562,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
   /// us to compile a generative constructor (see [codegen]), and track
   /// constructor initializers in a separate queue.
   void compilePendingConstructorInitializers() {
-    while (!pendingConstructorInitializers.isEmpty) {
+    while (pendingConstructorInitializers.isNotEmpty) {
       compileConstructorInitializer(
           pendingConstructorInitializers.removeLast());
     }

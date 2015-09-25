@@ -44,7 +44,7 @@ part of fletch.bytecodes;
   }
 
   String toStringExpression = formatString;
-  if (!fields.isEmpty) {
+  if (fields.isNotEmpty) {
     List<String> parts = formatString.split("%d");
     StringBuffer buffer = new StringBuffer();
     Iterator iterator = fields.iterator;
@@ -60,7 +60,7 @@ part of fletch.bytecodes;
   }
 
   String equals = '';
-  if (!fields.isEmpty) {
+  if (fields.isNotEmpty) {
     StringBuffer equalsBuffer =
         new StringBuffer('\n\n  operator==(Bytecode other) {\n');
     equalsBuffer.writeln('    if (!(super==(other))) return false;');
@@ -74,7 +74,7 @@ part of fletch.bytecodes;
   }
 
   String hashCode = '';
-  if (!fields.isEmpty) {
+  if (fields.isNotEmpty) {
     StringBuffer hashCodeBuffer =
         new StringBuffer('\n\n  int get hashCode {\n');
     hashCodeBuffer.writeln('    int value = super.hashCode;');

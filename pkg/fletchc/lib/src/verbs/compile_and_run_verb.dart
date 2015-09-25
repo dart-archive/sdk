@@ -63,7 +63,7 @@ Future<int> compileAndRun(
     VerbContext context) async {
   Options options = Options.parse(sentence.arguments);
 
-  if (!options.defines.isEmpty) {
+  if (options.defines.isNotEmpty) {
     print("Unsupported options: ${options.defines.join(' ')}");
     return DART_VM_EXITCODE_COMPILE_TIME_ERROR;
   }

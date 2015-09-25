@@ -127,7 +127,7 @@ class FletchWarningsOutputCommand extends CompilationCommandOutputImpl {
 
     var filteredStdout =
         UTF8.decode(stdout, allowMalformed: true).replaceAll(noLintFilter, "");
-    if (!filteredStdout.isEmpty) {
+    if (filteredStdout.isNotEmpty) {
       return Expectation.STATIC_WARNING;
     }
 

@@ -191,7 +191,7 @@ class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
     Map options = suite.readOptionsFromFile(new Path(testFile));
     String debuggerCommands = options["fletchDebuggerCommands"];
     String testDebuggerArgument = "--test-debugger";
-    if (!debuggerCommands.isEmpty) {
+    if (debuggerCommands.isNotEmpty) {
       testDebuggerArgument = "$testDebuggerArgument=$debuggerCommands";
     }
 

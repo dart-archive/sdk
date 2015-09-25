@@ -992,7 +992,7 @@ class _CompactLinkedHashMap<K, V>
   }
 
   void clear() {
-    if (!isEmpty) {
+    if (isNotEmpty) {
       _init(_index.length, _hashMask);
     }
   }
@@ -1275,7 +1275,7 @@ class _CompactLinkedHashSet<E>
   }
 
   void clear() {
-    if (!isEmpty) {
+    if (isNotEmpty) {
       _init(_index.length, _hashMask);
     }
   }

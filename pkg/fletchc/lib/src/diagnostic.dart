@@ -130,7 +130,7 @@ class Diagnostic {
       }
     }
 
-    if (!missingParameters.isEmpty) {
+    if (missingParameters.isNotEmpty) {
       throw """
 Error when formatting diagnostic:
   kind: $kind

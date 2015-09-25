@@ -735,7 +735,7 @@ class LookAhead extends Assertion {
       // we don't ever backtrack into a lookahead, but if we backtrack past
       // this point we have to undo any captures that happened in there.
       // Register a backtrack to do that before continuing.
-      if (_subtreeRegisters != null && !_subtreeRegisters.isEmpty) {
+      if (_subtreeRegisters != null && _subtreeRegisters.isNotEmpty) {
         undoCaptures = new MiniExpLabel();
         compiler.pushBacktrack(undoCaptures);
       }
@@ -992,7 +992,7 @@ class Quantifier extends MiniExpAst {
 
   bool get _saveAndRestoreRegisters {
     return _subtreeRegistersThatNeedSaving != null &&
-           !_subtreeRegistersThatNeedSaving.isEmpty;
+           _subtreeRegistersThatNeedSaving.isNotEmpty;
   }
 }
 

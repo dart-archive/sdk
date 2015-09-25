@@ -513,7 +513,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
     writeln(');');
     write('  public static native void ${name}Async(');
     visitArguments(node.arguments);
-    if (!node.arguments.isEmpty) write(', ');
+    if (node.arguments.isNotEmpty) write(', ');
     writeln('${camelName}Callback callback);');
   }
 
@@ -935,7 +935,7 @@ class _JniVisitor extends CcVisitor {
     writeReturnType(node.returnType);
     write(' JNICALL Java_fletch_${serviceName}_${name}(');
     write('JNIEnv* _env, jclass');
-    if (!node.arguments.isEmpty) write(', ');
+    if (node.arguments.isNotEmpty) write(', ');
     if (node.inputKind != InputKind.PRIMITIVES) {
       write('jobject ${node.arguments.single.name}');
     } else {
@@ -962,7 +962,7 @@ class _JniVisitor extends CcVisitor {
     write('JNIEXPORT void JNICALL ');
     write('Java_fletch_${serviceName}_${name}Async(');
     write('JNIEnv* _env, jclass');
-    if (!node.arguments.isEmpty) write(', ');
+    if (node.arguments.isNotEmpty) write(', ');
     if (node.inputKind != InputKind.PRIMITIVES) {
       write('jobject ${node.arguments.single.name}');
     } else {

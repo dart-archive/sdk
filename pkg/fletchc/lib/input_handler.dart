@@ -56,7 +56,7 @@ class InputHandler {
     previousLine = line;
     if (echo) session.writeStdoutLine(line);
     List<String> commandComponents =
-        line.split(' ').where((s) => !s.isEmpty).toList();
+        line.split(' ').where((s) => s.isNotEmpty).toList();
     String command = commandComponents[0];
     switch (command) {
       case 'help':
