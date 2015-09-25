@@ -32,7 +32,7 @@ DEBUG_LOG=".debug.log"
 GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
 
 FLETCH_REGEXP = (r'fletch-(linux|mac|windows|lk)'
-                 r'(-(debug|release|asan)-(x86|arm))?')
+                 r'(-(debug|release|asan)-(x86|arm))?(-sdk)?')
 CROSS_REGEXP = r'cross-fletch-(linux)-(arm)'
 TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
 
@@ -105,7 +105,10 @@ def Main():
           else:
             modes = [mode_or_asan]
             asans = [False]
-
+        sdk_build = fletch_match.group(5)
+        if sdk_build:
+          print 'TODO(ricow): bundle up'
+          return
         StepsNormal(debug_log, system, modes, archs, asans)
       elif cross_match:
         system = cross_match.group(1)

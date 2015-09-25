@@ -176,15 +176,16 @@ Future<int> run(SessionState state) async {
   Session session = state.session;
   state.session = null;
 
+  session.silent = true;
+
   for (FletchDelta delta in compilationResults) {
     await session.applyDelta(delta);
   }
 
-  await session.runCommand(const ProcessSpawnForMain());
+  await session.enableDebugger();
+  await session.spawnProcess();
+  var command = await session.debugRun();
 
-  await session.sendCommand(const ProcessRun());
-
-  var command = await session.readNextCommand(force: false);
   int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
   if (command == null) {
     await session.kill();
@@ -193,19 +194,24 @@ Future<int> run(SessionState state) async {
     throwInternalError("No command received from Fletch VM");
   }
   bool flushLog = true;
+  Future printTrace() async {
+    String list = await session.list();
+    print(session.debugState.formatStackTrace());
+    print(list);
+  }
   try {
     switch (command.code) {
       case CommandCode.UncaughtException:
         state.log("Uncaught error");
         exitCode = exit_codes.DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
-        await printBacktraceHack(session, compilationResults.last.system);
+        await printTrace();
         // TODO(ahe): Need to continue to unwind stack.
         break;
 
       case CommandCode.ProcessCompileTimeError:
         state.log("Compile-time error");
         exitCode = exit_codes.DART_VM_EXITCODE_COMPILE_TIME_ERROR;
-        await printBacktraceHack(session, compilationResults.last.system);
+        await printTrace();
         // TODO(ahe): Continue to unwind stack?
         break;
 
@@ -222,96 +228,23 @@ Future<int> run(SessionState state) async {
     if (flushLog) {
       print(state.flushLog());
     }
-    // TODO(ahe): Do not shut down the session.
-    await session.runCommand(const SessionEnd());
-    bool done = false;
-    Timer timer = new Timer(const Duration(seconds: 5), () {
-      if (!done) {
-        print(state.flushLog());
-        print("Timed out waiting for Fletch VM to shutdown; killing session");
-        session.kill();
-      }
-    });
-    await session.shutdown();
-    done = true;
-    timer.cancel();
+    if (!session.terminated) {
+      // TODO(ahe): Do not shut down the session.
+      bool done = false;
+      Timer timer = new Timer(const Duration(seconds: 5), () {
+        if (!done) {
+          print(state.flushLog());
+          print("Timed out waiting for Fletch VM to shutdown; killing session");
+          session.kill();
+        }
+      });
+      await session.terminateSession();
+      done = true;
+      timer.cancel();
+    }
   };
 
   return exitCode;
-}
-
-/// Prints a low-level stack trace like this:
-///
-/// ```
-/// @baz+6
-///  0: load const @0
-/// *5: throw
-///  6: return 1 0
-///  9: method end 9
-/// @bar+5
-/// *0: invoke static @0
-///  5: return 1 0
-///  8: method end 8
-/// ...
-/// ```
-///
-/// A line starting with `@` shows the name of the function followed by `+` and
-/// a bytecode index.
-///
-/// The following lines (until the next line starting with `@`) shows the
-/// bytecodes of the method where the current bytecode is marked with `*` (an
-/// asterisk).
-// TODO(ahe): Clearly this should use the class [Session], but need to
-// coordinate with ager first.
-Future<Null> printBacktraceHack(Session session, FletchSystem system) async {
-  ProcessBacktrace backtrace =
-      await session.runCommand(const ProcessBacktraceRequest());
-  if (backtrace == null) {
-    await session.kill();
-    await session.shutdown();
-    throwInternalError("No command received from Fletch VM");
-  }
-  bool isBadBacktrace = false;
-  for (int i = backtrace.frames - 1; i >= 0; i--) {
-    int id = backtrace.functionIds[i];
-    int stoppedPc = backtrace.bytecodeIndices[i];
-    FletchFunction function = system.lookupFunctionById(id);
-    if (function == null) {
-      print("#$id+$stoppedPc // COMPILER BUG!!!");
-      isBadBacktrace = true;
-      continue;
-    }
-    if (function.element != null &&
-        function.element.implementation.library.isInternalLibrary) {
-      // TODO(ahe): This hides implementation details, which should be a
-      // user-controlled option.
-      continue;
-    }
-    print("@${function.name}+$stoppedPc");
-
-    // The last bytecode is always a MethodEnd. It always contains its own
-    // index (at uint32Argument0). This is used by the Fletch VM when walking
-    // stacks (for example, during garbage collection). Here we use it to
-    // compute the maximum bytecode offset we need to print.
-    MethodEnd end = function.bytecodes.last;
-    int maxPadding = "${end.uint32Argument0}".length;
-    String padding = " " * maxPadding;
-    int pc = 0;
-    for (Bytecode bytecode in function.bytecodes) {
-      String prefix = "$padding$pc";
-      prefix = prefix.substring(prefix.length - maxPadding);
-      if (stoppedPc == pc + bytecode.size) {
-        prefix = "*$prefix";
-      } else {
-        prefix = " $prefix";
-      }
-      print("$prefix: $bytecode");
-      pc += bytecode.size;
-    }
-  }
-  if (isBadBacktrace) {
-    throwInternalError("COMPILER BUG in above stacktrace");
-  }
 }
 
 Future<int> export(SessionState state, Uri snapshot) async {
