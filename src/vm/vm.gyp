@@ -313,6 +313,12 @@
         'ffi_test_library.h',
         'ffi_test_library.c',
       ],
+      'cflags': ['-fPIC'],
+      'xcode_settings': {
+        'OTHER_CPLUSPLUSFLAGS': [
+          '-fPIC',
+        ],
+      },
     },
   ],
 }
