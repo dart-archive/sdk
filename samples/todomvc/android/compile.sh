@@ -32,7 +32,13 @@ out/ReleaseIA32Android/fletch_vm_library_generator > out/ReleaseIA32Android/obj/
 
 # Compile Fletch runtime and jni code into libfletch.so.
 cd $JAVA_DIR
-NDK_MODULE_PATH=. ndk-build
+CPUCOUNT=1
+if [[ $(uname) = 'Darwin' ]]; then
+    CPUCOUNT=$(sysctl -n hw.logicalcpu_max)
+else
+    CPUCOUNT=$(lscpu -p | grep -vc '^#')
+fi
+NDK_MODULE_PATH=. ndk-build -j$CPUCOUNT
 
 # Copy Java source and fletch library to the right places.
 mkdir -p $DIR/TodoMVC/app/src/main/java/fletch
