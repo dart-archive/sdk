@@ -16,6 +16,9 @@ import 'package:compiler/src/scanner/scannerlib.dart' show
 import 'listener.dart' show
     Listener;
 
+import 'scanner.dart' show
+    LF_TOKEN;
+
 /// Parser for the Dart service IDL, reusing the dart2js tokens.
 class Parser {
   Listener listener;
@@ -41,10 +44,9 @@ class Parser {
   /// <top-level-declaration> ::= <service> | <struct>
   Token parseTopLevel(Token tokens) {
     tokens = listener.beginTopLevel(tokens);
-    final String value = tokens.stringValue;
-    if (identical(value, 'service')) {
+    if (optional('service', tokens)) {
       tokens = parseService(tokens);
-    } else if (identical(value, 'struct')) {
+    } else if (optional('struct', tokens)) {
       tokens = parseStruct(tokens);
     } else {
       tokens = listener.expectedTopLevel(tokens);
@@ -59,7 +61,7 @@ class Parser {
   /// <service> ::= 'service' <identifier> '{' <func-decl>* '}'
   Token parseService(Token tokens) {
     tokens = listener.beginService(tokens);
-    tokens = parseIdentifier(tokens.next);
+    tokens = parseIdentifier(next(tokens));
     tokens = expect('{', tokens);
     int count = 0;
     if (valid(tokens)) {
@@ -80,7 +82,7 @@ class Parser {
   /// <struct> ::= 'struct' <identifier> '{' <field-decl>* '}'
   Token parseStruct(Token tokens) {
     tokens = listener.beginStruct(tokens);
-    tokens = parseIdentifier(tokens.next);
+    tokens = parseIdentifier(next(tokens));
     tokens = expect('{', tokens);
     int count = 0;
     if (valid(tokens)) {
@@ -96,8 +98,9 @@ class Parser {
   }
 
   Token parseIdentifier(Token tokens) {
-    if (isValidIdentifier(tokens)) {
-      tokens = listener.handleIdentifier(tokens);
+    Token trimmedTokens = skipNewLines(tokens);
+    if (isValidIdentifier(trimmedTokens)) {
+      tokens = listener.handleIdentifier(trimmedTokens);
     } else {
       tokens = listener.expectedIdentifier(tokens);
     }
@@ -118,7 +121,7 @@ class Parser {
       tokens = parseFormal(tokens);
       ++count;
       while (optional(',', tokens)) {
-        tokens = tokens.next;
+        tokens = next(tokens);
         tokens = parseFormal(tokens);
         ++count;
       }
@@ -131,8 +134,7 @@ class Parser {
 
   // Parse a struct member that can be either a field or a union.
   Token parseMember(Token tokens) {
-    final String value = tokens.stringValue;
-    if (identical(value, 'union')) {
+    if (optional('union', tokens)) {
       tokens = parseUnion(tokens);
     } else {
       tokens = parseField(tokens);
@@ -146,7 +148,7 @@ class Parser {
   /// <union> ::= 'union' '{' <field>* '}'
   Token parseUnion(Token tokens) {
     tokens = listener.beginUnion(tokens);
-    tokens = expect('{', tokens.next);
+    tokens = expect('{', next(tokens));
     int count = 0;
     if (valid(tokens)) {
       while (!optional('}', tokens)) {
@@ -178,11 +180,11 @@ class Parser {
     if (optional('*', tokens)) {
       // Push a simple type on the stack.
       tokens = listener.handleSimpleType(tokens);
-      tokens = tokens.next;
+      tokens = next(tokens);
       // Pop the simple type and push a pointer type.
       tokens = listener.handlePointerType(tokens);
     } else if (optional('<', tokens)) {
-      tokens = tokens.next;
+      tokens = next(tokens);
       tokens = parseType(tokens);
       tokens = expect('>', tokens);
       tokens = listener.handleListType(tokens);
@@ -205,27 +207,40 @@ class Parser {
   }
 
   bool isValidIdentifier(Token tokens) {
+    tokens = skipNewLines(tokens);
     return tokens.kind == IDENTIFIER_TOKEN;
+  }
+
+  Token skipNewLines(Token tokens) {
+    while (tokens.kind == LF_TOKEN) {
+      tokens = tokens.next;
+    }
+    return tokens;
   }
 
   /// Returns true if the [tokens] is a SymbolToken or a KeywordToken with
   /// stringValue [string].
   bool optional(String string, Token tokens) {
+    tokens = skipNewLines(tokens);
     return string == tokens.stringValue;
   }
 
   /// Checks that the [tokens] is a SymbolToken or a KeywordToken with
   /// stringValue [value].
   Token expect(String string, Token tokens) {
+    tokens = skipNewLines(tokens);
     if (string != tokens.stringValue) {
       tokens = listener.expected(string, tokens);
     } else {
-      tokens = tokens.next;
+      tokens = next(tokens);
     }
     return tokens;
   }
 
-  bool valid(Token token) {
-    return token.kind != EOF_TOKEN && token is! ErrorToken;
+  bool valid(Token tokens) {
+    tokens = skipNewLines(tokens);
+    return tokens.kind != EOF_TOKEN && tokens is! ErrorToken;
   }
+
+  Token next(Token tokens) => skipNewLines(skipNewLines(tokens).next);
 }

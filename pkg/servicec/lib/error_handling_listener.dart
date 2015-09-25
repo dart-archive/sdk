@@ -14,6 +14,9 @@ import 'package:compiler/src/scanner/scannerlib.dart' show
     UnmatchedToken,
     closeBraceInfoFor;
 
+import 'scanner.dart' show
+    LF_INFO;
+
 import 'errors.dart' show
     CompilerError,
     ErrorNode,
@@ -38,7 +41,8 @@ import 'marker.dart' show
     BeginFunctionMarker,
     BeginFieldMarker,
     BeginTypeMarker,
-    BeginUnionMarker;
+    BeginUnionMarker,
+    MarkerNode;
 
 import 'node.dart' show
     CompilationUnitNode,
@@ -338,11 +342,11 @@ class ErrorHandlingListener extends Listener {
     List<FormalNode> formals = formalPopper.popNodesWhileMatching();
     IdentifierNode identifier = identifierPopper.popNodeIfMatching();
     TypeNode type = typePopper.popNodeIfMatching();
-    Node marker = stack.popNode();
+    MarkerNode marker = stack.popNode();
     assert(marker is BeginFunctionMarker);
     if (formals.isNotEmpty || identifier != null || type != null) {
       stack.pushNode(new FunctionErrorNode(type, identifier, formals, tokens));
-      return consumeDeclarationLine(tokens);
+      return consumeDeclarationLine(marker.token);
     } else {
       // Declaration was never started, so don't end it.
       return tokens;
@@ -352,11 +356,11 @@ class ErrorHandlingListener extends Listener {
   Token recoverField(Token tokens) {
     IdentifierNode identifier = identifierPopper.popNodeIfMatching();
     TypeNode type = typePopper.popNodeIfMatching();
-    Node marker = stack.popNode();
+    MarkerNode marker = stack.popNode();
     assert(marker is BeginFieldMarker);
     if (identifier != null || type != null) {
       stack.pushNode(new FieldErrorNode(type, identifier, tokens));
-      return consumeDeclarationLine(tokens);
+      return consumeDeclarationLine(marker.token);
     } else {
       // Declaration was never started, so don't end it.
       return tokens;
@@ -410,8 +414,7 @@ class ErrorHandlingListener extends Listener {
   }
 
   bool isEndOfDeclarationLine(Token tokens) {
-    // TODO(stanm): Newline?
-    return tokens.info == SEMICOLON_INFO;
+    return tokens.info == SEMICOLON_INFO || tokens.info == LF_INFO;
   }
 
   bool isEndOfTopLevel(Token tokens) {
