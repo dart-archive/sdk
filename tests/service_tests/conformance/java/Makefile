@@ -17,7 +17,7 @@ endif
 ARCH=64
 FLETCH_BUILD=ReleaseX64
 
-CPPFLAGS=-m${ARCH} -I../../../../include -I${JAVA_HOME}/include ${PLATFORM_INCLUDES}
+CPPFLAGS=-fPIC -m${ARCH} -I../../../../include -I${JAVA_HOME}/include ${PLATFORM_INCLUDES}
 THIS_DIR=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 FLETCH_DIR=$(abspath ../../../..)
 FLETCH_BUILD_DIR=$(abspath ${FLETCH_DIR}/out/${FLETCH_BUILD})
@@ -125,10 +125,10 @@ fletch/Uint8ListBuilder.class: fletch/Uint8ListBuilder.java
 	$(JAVAC) $<
 
 jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/conformance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
-	g++ -m${ARCH} -shared -o $@ $^
+	g++ ${CPPFLAGS} -shared -o $@ $^
 
 jni/libfletch.jnilib: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/conformance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
-	g++ -m${ARCH} -framework CoreFoundation -shared -o $@ $^
+	g++ ${CPPFLAGS} -framework CoreFoundation -shared -o $@ $^
 
 conformance.snapshot: ../conformance_service_impl.dart
 	cd ${FLETCH_DIR}; ${FLETCH_BUILD_DIR}/fletch compile-and-run -o ${THIS_DIR}$@ ${THIS_DIR}$<
