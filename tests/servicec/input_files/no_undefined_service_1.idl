@@ -2,7 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-service Foo {
-  // String is not a valid return type.
-  String bar();  // expectedPointerOrPrimitive
+struct Foo {
+}
+
+service Bar {
 }

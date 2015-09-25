@@ -4,7 +4,7 @@
 
 service Foo {
   // Multiple formals should all have primitive types.
-  void bar(int32 baz, Bar* zap);
+  void bar(int32 baz, Bar* zap);  // expectedPrimitiveFormal
 }
 
 struct Bar {

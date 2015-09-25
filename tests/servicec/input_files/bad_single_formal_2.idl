@@ -3,5 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-  void bar(List<int32> baz);  // List is not a valid type for a formal.
+  // List is not a valid type for a formal.
+  void bar(List<int32> baz);  // expectedPointerOrPrimitive
 }

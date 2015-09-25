@@ -3,5 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-  List<int32> bar();  // List is not a valid return type.
+  // List is not a valid return type.
+  List<int32> bar();  // expectedPointerOrPrimitive
 }

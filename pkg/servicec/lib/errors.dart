@@ -41,6 +41,13 @@ enum CompilerError {
   undefinedService
 }
 
+// A reverse map from error names to errors.
+final Map<String, CompilerError> compilerErrorTypes =
+  new Map<String, CompilerError>.fromIterables(
+    CompilerError.values.map((value) => value.toString()),
+    CompilerError.values
+  );
+
 // Error nodes.
 class ServiceErrorNode extends ServiceNode with ErrorNode {
   ServiceErrorNode(IdentifierNode identifier,

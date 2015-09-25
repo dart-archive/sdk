@@ -6,5 +6,5 @@ service Foo {
 }
 
 struct Bar {
-  int32 baz  // Unfinished field declaration.
+  int32 baz  // badField
 }

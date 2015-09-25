@@ -3,7 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-  void bar(Bar baz);  // A struct is not a valid type for a formal.
+  // A struct is not a valid type for a formal.
+  void bar(Bar baz);  // expectedPointerOrPrimitive
 }
 
 struct Bar {

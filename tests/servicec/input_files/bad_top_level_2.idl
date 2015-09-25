@@ -5,6 +5,7 @@
 service Foo {
 }
 
+// badTopLevel
 srevice Bar {
 }
 

@@ -11,7 +11,7 @@ struct Bar {
     uint8 zap;
   }
 
-  union {
+  union {  // multipleUnions
     int64 pop;
     int16 win;
   }

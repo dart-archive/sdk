@@ -8,6 +8,6 @@ service Foo {
 struct Bar {
   union {
     int32 baz;
-    int32;  // Missing identifier.
+    int32;  // badField
   }
 }

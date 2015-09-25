@@ -8,6 +8,7 @@ service Foo {
 struct Bar {
 }
 
+// badTopLevel
 srtuct Baz {
   Bar zap;
 }
