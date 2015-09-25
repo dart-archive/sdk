@@ -38,7 +38,7 @@ messaging_program_gc_gc_on_delete_test: Fail
 messaging_program_gc_test: Crash
 messaging_benchmark_test: Slow, Pass
 random_test: Crash
-shared_immutable_data_test: Fail
+shared_immutable_data_test: Crash, Slow
 spawn_empty_test: Crash
 spawn_fib_test: Crash
 spawn_process_yield_negative_test: Fail
