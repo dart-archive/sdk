@@ -2,7 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-/// API for accessing the devices on the Raspberry Pi Sense HAT.
+/// API for accessing the devices on the Raspberry Pi Sense HAT add-on board.
+/// See: https://www.raspberrypi.org/products/sense-hat/.
 ///
 /// Currently this has only been tested with a Raspberry Pi 2 and the Sense HAT.
 ///
@@ -32,11 +33,11 @@
 ///   var hat = new SenseHat();
 ///
 ///   while (true) {
-///     draw(hat, Color.RED, Color.GREEN, Color.BLUE);
+///     draw(hat, Color.red, Color.green, Color.blue);
 ///     os.sleep(200);
-///     draw(hat, Color.GREEN, Color.BLUE, Color.RED);
+///     draw(hat, Color.green, Color.blue, Color.red);
 ///     os.sleep(200);
-///     draw(hat, Color.BLUE, Color.RED, Color.GREEN);
+///     draw(hat, Color.blue, Color.red, Color.green);
 ///     os.sleep(200);
 ///     var temp = hat.readTemperature();
 ///     var humidity = hat.readHumidity();
@@ -61,11 +62,11 @@ final ForeignFunction _mmap = ForeignLibrary.main.lookup('mmap');
 
 /// Pixel color.
 class Color {
-  static const RED = const Color(0xff, 0x00, 0x00);
-  static const GREEN = const Color(0x00, 0xff, 0x00);
-  static const BLUE = const Color(0x00, 0x000, 0xff);
-  static const BLACK = const Color(0x00, 0x00, 0x00);
-  static const WHITE = const Color(0xff, 0xff, 0xff);
+  static const red = const Color(0xff, 0x00, 0x00);
+  static const green = const Color(0x00, 0xff, 0x00);
+  static const blue = const Color(0x00, 0x000, 0xff);
+  static const black = const Color(0x00, 0x00, 0x00);
+  static const white = const Color(0xff, 0xff, 0xff);
 
   final int r;
   final int g;
@@ -79,7 +80,7 @@ class Color {
   String toString() => 'Color: R=$r, G=$g, B=$b';
 }
 
-/// Sense HAT 8x8 LED array
+/// Sense HAT 8x8 LED array.
 class SenseHatLEDArray {
   final height = 8;
   final width = 8;
@@ -88,7 +89,7 @@ class SenseHatLEDArray {
   var _fd;
   var _fbMem;
 
-  SenseHatLEDArray() {
+  SenseHatLEDArray._() {
     // From /usr/include/x86_64-linux-gnu/bits/fcntl-linux.h.
     const int oRDWR = 02;  // O_RDWR
     // Found from C code 'printf("%x\n", O_SYNC);'.
@@ -113,12 +114,40 @@ class SenseHatLEDArray {
   // Offset into the memory area for the pixel (x, y).
   int _offset(int x, int y) => x * bytesPerPixel + y * width * bytesPerPixel;
 
+  /// Set a pixel in the LED array.
+  ///
+  /// Set the pixel at position ([x], [y]) to the color [color].
   setPixel(int x, int y, Color color) {
-    if (x < 0 || x >= width || y < 0 || y >= height) throw new ArgumentError();
+    if (x < 0 || x >= width) throw new RangeError.range(x, 0, width, 'x');
+    if (y < 0 || y >= height) throw new RangeError.range(y, 0, height, 'y');
     _fbMem.setUint16(_offset(x, y), color._rgb565);
+  }
+
+  /// Clears the LED array.
+  ///
+  /// All the leds in the array is set to [color], which defaults to
+  /// [Color.black].
+  void clear([color = Color.black]) {
+    for (int x = 0; x < width; x++) {
+      for (int y = 0; y < height; y++) {
+        setPixel(x, y, color);
+      }
+    }
   }
 }
 
+/// API to the Raspberry Pi Sense HAT add-on board.
+///
+/// Instantiating this class will open the I2C bus to communicate with
+/// the devices for the board.
+///
+/// The properties [hts221], [lps25h] and [lsm9ds1] provide
+/// access to the sensor APIs. The property [ledArray] provide access to the
+/// 8 x 8 LED array.
+///
+/// For the most common sensor APIs, this object provide direct access to
+/// some of the measurements, e.g. through the methods [readTemperature] and
+/// [readHumidity].
 class SenseHat {
   SenseHatLEDArray _ledArray;
   HTS221 _hts221;
@@ -127,7 +156,7 @@ class SenseHat {
 
   /// Access to the a Raspberry Pi Sense HAT.
   SenseHat() {
-    _ledArray = new SenseHatLEDArray();
+    _ledArray = new SenseHatLEDArray._();
 
     // Connect to the I2C bus.
     var busAddress = new I2CBusAddress(1);
@@ -143,14 +172,32 @@ class SenseHat {
     _lsm9ds1.powerOn();
   }
 
+  /// API for the LED array.
   SenseHatLEDArray get ledArray => _ledArray;
-  HTS221 get hts221 => _hts221;
-  LPS25H get lps25h => _lps25h;
-  LSM9DS1 get lsm9ds1 => _lsm9ds1;
 
-  // Set a pixel in the Sense HAT 8x8 LED array.
+  /// Device API for the HTS221 temperature and humidity sensor.
+  HTS221 get temperatureHumiditySensor => _hts221;
+
+  /// Device API for the LPS25H pressure sensor.
+  LPS25H get pressureSensor => _lps25h;
+
+  /// Device API for the LSM9DS1 accelerometer, gyroscope and magnetometer
+  /// sensor.
+  LSM9DS1 get orientationSensor => _lsm9ds1;
+
+  /// Set a pixel in the Sense HAT 8x8 LED array.
+  ///
+  /// Set the pixel at position ([x], [y]) to the color [color].
   void setPixel(int x, int y, Color color) {
     _ledArray.setPixel(x, y, color);
+  }
+
+  /// Clears the LED array.
+  ///
+  /// All the leds in the array is set to [color], which defaults to
+  /// [Color.black].
+  void clear([color = Color.black]) {
+    _ledArray.clear();
   }
 
   /// Read the current temperature value.
@@ -180,4 +227,3 @@ class SenseHat {
   /// Read the current magnetometer measurement.
   MagnetMeasurement readMagnet() => _lsm9ds1.readMagnet();
 }
-
