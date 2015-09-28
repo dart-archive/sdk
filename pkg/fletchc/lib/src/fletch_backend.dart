@@ -1169,8 +1169,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     // TODO(ahe): Remove this method when [useCustomEnqueuer] is the default
     // behavior.
     List<FletchFunctionBuilder> functions = systemBuilder.getNewFunctions();
-    int length = functions.length;
-    for (int i = 0; i < length; i++) {
+    for (int i = 0; i < functions.length; i++) {
       FletchFunctionBuilder function = functions[i];
       if (!function.isInstanceMember || function.isAccessor) continue;
       String name = function.name;
@@ -1183,16 +1182,24 @@ class FletchBackend extends Backend with ResolutionCallbacks
   }
 
   void createTearoffGetterForFunction(FletchFunctionBuilder function) {
-    FletchClassBuilder tearoffClass = createTearoffClass(function);
     FletchFunctionBuilder getter = systemBuilder.newFunctionBuilder(
         FletchFunctionKind.ACCESSOR,
         1);
-    int constId = getter.allocateConstantFromClass(tearoffClass.classId);
-    getter.assembler
-        ..loadParameter(0)
-        ..allocate(constId, tearoffClass.fields)
-        ..ret()
-        ..methodEnd();
+    // If the getter is of 'call', return the instance instead.
+    if (function.name == 'call') {
+      getter.assembler
+          ..loadParameter(0)
+          ..ret()
+          ..methodEnd();
+    } else {
+      FletchClassBuilder tearoffClass = createTearoffClass(function);
+      int constId = getter.allocateConstantFromClass(tearoffClass.classId);
+      getter.assembler
+          ..loadParameter(0)
+          ..allocate(constId, tearoffClass.fields)
+          ..ret()
+          ..methodEnd();
+    }
     // If the name is private, we need the library.
     // Invariant: We only generate public stubs, e.g. 'call'.
     LibraryElement library;

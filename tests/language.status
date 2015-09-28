@@ -127,6 +127,7 @@ bit_operations_test/04: RuntimeError
 bit_operations_test/none: RuntimeError
 built_in_identifier_prefix_test: Fail
 built_in_identifier_test/01: CompileTimeError
+call_closurization_test.dart: Crash  # Issue 153
 call_function_apply_test: RuntimeError
 call_nonexistent_constructor_test/01: RuntimeError
 call_nonexistent_static_test/10: RuntimeError
