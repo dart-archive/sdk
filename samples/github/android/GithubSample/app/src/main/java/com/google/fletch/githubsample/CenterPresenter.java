@@ -6,6 +6,7 @@ package com.google.fletch.githubsample;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -77,10 +78,10 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
             if (commitPatch.getSelected().hasChanged()) {
               if (commitPatch.getSelected().getCurrent() == true) {
                 select(commitListPresenter.windowIndexToViewPosition(region.getIndex()));
-                replaceFragment(createDetailsFragment());
+                replaceFragment(createDetailsFragment(), true);
               } else {
                 deselect(selectedIndex);
-                replaceFragment(recyclerViewFragment);
+                replaceFragment(recyclerViewFragment, false);
               }
             }
           }
@@ -123,13 +124,18 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
   private void addFragment(Fragment fragment) {
     FragmentTransaction transaction = activity.getFragmentManager().beginTransaction();
     transaction.add(R.id.container, fragment);
-    transaction.addToBackStack(null);
     transaction.commit();
   }
 
-  private void replaceFragment(Fragment fragment) {
+  private void replaceFragment(Fragment fragment, boolean addToBackStack) {
     FragmentTransaction transaction = activity.getFragmentManager().beginTransaction();
     transaction.replace(R.id.container, fragment);
+    if (addToBackStack) {
+      transaction.addToBackStack(DETAILS_VIEW_BACK_STACK_ENTRY);
+    } else {
+      FragmentManager fm = activity.getFragmentManager();
+      fm.popBackStack(DETAILS_VIEW_BACK_STACK_ENTRY, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+    }
     transaction.commit();
   }
 
@@ -138,4 +144,6 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
   private SlidingWindow commitListPresenter;
   private ImageLoader imageLoader;
   private RecyclerViewFragment recyclerViewFragment;
+
+  static private final String DETAILS_VIEW_BACK_STACK_ENTRY = "details_card_view_back";
 }

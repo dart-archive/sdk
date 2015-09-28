@@ -42,10 +42,7 @@ public class MainActivity extends Activity implements AnyNodePresenter {
 
     // Create an immi service and attach a root graph.
     final ImmiService immi = new ImmiService();
-    final ImmiRoot root = immi.registerPresenter(this, "DrawerPresenter");
-
-    // If we are restoring, reset the presentation graph to get a complete graph.
-    if (savedInstanceState != null) root.reset();
+    root = immi.registerPresenter(this, "DrawerPresenter");
 
     // Ensure that we have a mock server running.
     // Once confirmed, initiate the initial graph refresh.
@@ -56,6 +53,13 @@ public class MainActivity extends Activity implements AnyNodePresenter {
         root.refresh();
       }
     });
+  }
+
+  // Reset the presentation-graph state when destroying the main activity.
+  @Override
+  protected void onDestroy() {
+    super.onDestroy();
+    root.reset();
   }
 
   @Override
@@ -98,4 +102,5 @@ public class MainActivity extends Activity implements AnyNodePresenter {
   }
 
   private Drawer drawer;
+  private ImmiRoot root;
 }
