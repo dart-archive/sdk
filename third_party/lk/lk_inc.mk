@@ -11,6 +11,6 @@ LKROOT := lk-downstream
 BUILDROOT ?= out
 
 # set the default project if no args are passed
-DEFAULT_PROJECT ?= vexpress-a9-fletch
+DEFAULT_PROJECT ?= qemu-virt-fletch
 
 #TOOLCHAIN_PREFIX := <relative path to toolchain>
