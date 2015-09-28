@@ -54,8 +54,7 @@ gyp_files = \
   fletch.gyp \
   src/double_conversion.gyp \
   src/shared/shared.gyp \
-  src/vm/vm.gyp \
-  tests/service_tests/service_tests.gyp
+  src/vm/vm.gyp
 
 out/ReleaseIA32/build.ninja out/DebugIA32/build.ninja out/ReleaseX64/build.ninja out/DebugX64/build.ninja: $(gyp_files)
 	$(quiet)ninja
