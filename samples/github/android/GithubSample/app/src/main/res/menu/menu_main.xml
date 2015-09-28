@@ -3,5 +3,6 @@
       tools:context=".MainActivity">
     <item android:id="@+id/login"
           android:title="@string/login"
+          android:visible="false"
           android:showAsAction="withText|ifRoom"/>
 </menu>

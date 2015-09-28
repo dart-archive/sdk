@@ -36,5 +36,12 @@ typedef id<ViewPresenter, NodePresenter> DynamicPresenter;
 - (void)toggleRight;
 
 - (void)addDrawerButtons:(UIViewController*)controller;
+- (void)addDrawerButtons:(UIViewController*)controller
+               leftTitle:(NSString*)leftTitle;
+- (void)addDrawerButtons:(UIViewController*)controller
+              rightTitle:(NSString*)rightTitle;
+- (void)addDrawerButtons:(UIViewController*)controller
+               leftTitle:(NSString*)leftTitle
+              rightTitle:(NSString*)rightTitle;
 
 @end
