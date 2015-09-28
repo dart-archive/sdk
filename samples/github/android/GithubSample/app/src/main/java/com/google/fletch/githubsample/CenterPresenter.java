@@ -78,7 +78,19 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
             if (commitPatch.getSelected().hasChanged()) {
               if (commitPatch.getSelected().getCurrent() == true) {
                 select(commitListPresenter.windowIndexToViewPosition(region.getIndex()));
+                final FragmentManager fm = activity.getFragmentManager();
+                final int stackSize = fm.getBackStackEntryCount();
                 replaceFragment(createDetailsFragment(), true);
+                // TODO(zerny): Drive the deselect via the presentation graph.
+                fm.addOnBackStackChangedListener(new FragmentManager.OnBackStackChangedListener() {
+                  @Override
+                  public void onBackStackChanged() {
+                    if (fm.getBackStackEntryCount() == stackSize) {
+                      if (selectedIndex >= 0) commitListPresenter.toggle(selectedIndex);
+                      fm.removeOnBackStackChangedListener(this);
+                    }
+                  }
+                });
               } else {
                 deselect(selectedIndex);
                 replaceFragment(recyclerViewFragment, false);
@@ -122,12 +134,16 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
   }
 
   private void addFragment(Fragment fragment) {
+    assert currentViewFragment == null;
+    currentViewFragment = fragment;
     FragmentTransaction transaction = activity.getFragmentManager().beginTransaction();
     transaction.add(R.id.container, fragment);
     transaction.commit();
   }
 
   private void replaceFragment(Fragment fragment, boolean addToBackStack) {
+    if (currentViewFragment == fragment) return;
+    currentViewFragment = fragment;
     FragmentTransaction transaction = activity.getFragmentManager().beginTransaction();
     transaction.replace(R.id.container, fragment);
     if (addToBackStack) {
@@ -144,6 +160,7 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
   private SlidingWindow commitListPresenter;
   private ImageLoader imageLoader;
   private RecyclerViewFragment recyclerViewFragment;
+  private Fragment currentViewFragment;
 
   static private final String DETAILS_VIEW_BACK_STACK_ENTRY = "details_card_view_back";
 }
