@@ -97,7 +97,7 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
   }
 
   private DetailsViewFragment createDetailsFragment() {
-    RecyclerView recyclerView = (RecyclerView) activity.findViewById(R.id.recycler_view);
+    RecyclerView recyclerView = recyclerViewFragment.getRecyclerView();
     CommitListAdapter.CommitViewHolder holder =
         (CommitListAdapter.CommitViewHolder) recyclerView.findViewHolderForPosition(selectedIndex);
     

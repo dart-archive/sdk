@@ -27,6 +27,10 @@ public class RecyclerViewFragment extends Fragment {
     return view;
   }
 
+  public RecyclerView getRecyclerView() {
+    return recyclerView;
+  }
+  
   public void setRecyclerViewAdapter(RecyclerView.Adapter adapter) {
     this.adapter = adapter;
   }
