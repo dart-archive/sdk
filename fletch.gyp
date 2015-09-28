@@ -32,6 +32,7 @@
       'toolsets': ['target'],
       'dependencies': [
         'src/tools/driver/driver.gyp:fletch',
+        'src/tools/driver/driver.gyp:fletch_for_sdk',
         'copy_dart#host',
       ],
     },
