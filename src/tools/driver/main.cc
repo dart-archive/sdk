@@ -422,6 +422,7 @@ static void StartDriverDaemon() {
     ExecDaemon(child_stdout, child_stderr, argv);
     UNREACHABLE();
   } else {
+    free(version_option);
     Close(child_stdout);
     Close(child_stderr);
     WaitForDaemonHandshake(pid, parent_stdout, parent_stderr);
