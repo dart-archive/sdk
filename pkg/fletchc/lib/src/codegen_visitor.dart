@@ -1224,6 +1224,32 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void doIfNotNull(Node receiver, void ifNotNull()) {
+    BytecodeLabel end = new BytecodeLabel();
+    visitForValue(receiver);
+    assembler.dup();
+    assembler.loadLiteralNull();
+    assembler.identicalNonNumeric();
+    assembler.branchIfTrue(end);
+    ifNotNull();
+    assembler.bind(end);
+  }
+
+  void visitIfNotNullDynamicPropertyInvoke(
+      Send node,
+      Node receiver,
+      NodeList arguments,
+      Selector selector,
+      _) {
+    doIfNotNull(receiver, () {
+      for (Node argument in arguments) {
+        visitForValue(argument);
+      }
+      invokeMethod(node, selector);
+    });
+    applyVisitState();
+  }
+
   void visitExpressionInvoke(
       Send node,
       Expression receiver,
@@ -1308,6 +1334,17 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void visitIfNotNullDynamicPropertyGet(
+      Send node,
+      Node receiver,
+      Selector selector,
+      _) {
+    doIfNotNull(receiver, () {
+      invokeGetter(node, selector);
+    });
+    applyVisitState();
+  }
+
   void visitThisPropertyGet(
       Send node,
       Selector selector,
@@ -1366,6 +1403,19 @@ abstract class CodegenVisitor
     visitForValue(receiver);
     visitForValue(rhs);
     invokeSetter(node, selector);
+    applyVisitState();
+  }
+
+  void visitIfNotNullDynamicPropertySet(
+      SendSet node,
+      Node receiver,
+      Selector selector,
+      Node rhs,
+      _) {
+    doIfNotNull(receiver, () {
+      visitForValue(rhs);
+      invokeSetter(node, selector);
+    });
     applyVisitState();
   }
 
@@ -1762,6 +1812,24 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void visitIfNotNullDynamicPropertyCompound(
+      Send node,
+      Node receiver,
+      AssignmentOperator operator,
+      Node rhs,
+      Selector getterSelector,
+      Selector setterSelector,
+      _) {
+    doIfNotNull(receiver, () {
+      doDynamicPropertyCompound(
+          node,
+          operator,
+          rhs,
+          getterSelector,
+          setterSelector);
+    });
+    applyVisitState();
+  }
 
   void visitThisPropertyCompound(
       Send node,
@@ -1919,6 +1987,41 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void visitIfNotNullDynamicPropertyPrefix(
+      Send node,
+      Node receiver,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _) {
+    doIfNotNull(receiver, () {
+      doDynamicPrefix(node, operator, getterSelector, setterSelector);
+    });
+    applyVisitState();
+  }
+
+  void doDynamicPostfix(
+      Send node,
+      Node receiver,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector) {
+    int receiverSlot = assembler.stackSize - 1;
+    assembler.loadSlot(receiverSlot);
+    invokeGetter(node, getterSelector);
+    // For postfix, keep local, unmodified version, to 'return' after store.
+    assembler.dup();
+    assembler.loadLiteral(1);
+    invokeMethod(node, getIncDecSelector(operator));
+    assembler.loadSlot(receiverSlot);
+    assembler.loadLocal(1);
+    invokeSetter(node, setterSelector);
+    assembler.popMany(2);
+    assembler.storeLocal(1);
+    // Pop receiver.
+    assembler.pop();
+  }
+
   void visitDynamicPropertyPostfix(
       Send node,
       Node receiver,
@@ -1935,21 +2038,22 @@ abstract class CodegenVisitor
       return;
     }
 
-    int receiverSlot = assembler.stackSize;
     visitForValue(receiver);
-    assembler.loadSlot(receiverSlot);
-    invokeGetter(node, getterSelector);
-    // For postfix, keep local, unmodified version, to 'return' after store.
-    assembler.dup();
-    assembler.loadLiteral(1);
-    invokeMethod(node, getIncDecSelector(operator));
-    assembler.loadSlot(receiverSlot);
-    assembler.loadLocal(1);
-    invokeSetter(node, setterSelector);
-    assembler.popMany(2);
-    assembler.storeLocal(1);
-    // Pop receiver.
-    assembler.pop();
+    doDynamicPostfix(node, receiver, operator, getterSelector, setterSelector);
+    applyVisitState();
+  }
+
+  void visitIfNotNullDynamicPropertyPostfix(
+      Send node,
+      Node receiver,
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
+      _) {
+    doIfNotNull(receiver, () {
+      doDynamicPostfix(
+          node,receiver, operator, getterSelector, setterSelector);
+    });
     applyVisitState();
   }
 
