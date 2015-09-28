@@ -27,13 +27,13 @@ time, mark, audio, video {
 
 body {
   padding:10px 50px 0 0;
-  font-family:"Helvetica Neue", Helvetica, Arial, sans-serif;
-	font-size: 14px;
-	color: #232323;
-	background-color: #FBFAF7;
-	margin: 0;
-	line-height: 1.8em;
-	-webkit-font-smoothing: antialiased;
+  font-family:Roboto, sans-serif;
+  font-size: 14px;
+  color: #232323;
+  background-color: #FFFFFF;
+  margin: 0;
+  line-height: 1.8em;
+  -webkit-font-smoothing: antialiased;
 
 }
 
@@ -47,9 +47,9 @@ p, ul, ol, table, dl {
 }
 
 h1, h2, h3 {
-	font-family: Arvo, Monaco, serif;
+  font-family: Monserrat, sans-serif;
   line-height:1.3;
-	font-weight: normal;
+  font-weight: normal;
 }
 
 h1,h2, h3 {
@@ -71,13 +71,12 @@ h3 {
 }
 
 h4, h5, h6 {
-	font-family: Arvo, Monaco, serif;
+	font-family: Roboto, sans-serif;
 	font-weight: 700;
 }
 
 a {
-  color:#C30000;
-  font-weight:200;
+  color:#428bca;
   text-decoration:none;
 }
 
@@ -163,19 +162,19 @@ p img {
 /* Code blocks */
 
 code, pre {
-	font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
+  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
   color:#000;
   font-size:14px;
 }
 
 pre {
-	padding: 4px 12px;
-  background: #FDFEFB;
+  padding: 4px 12px;
+  background: #F8F8F8;
   border-radius:4px;
-  border:1px solid #D7D8C8;
+  border:1px solid #E8E8E8;
   overflow: auto;
   overflow-y: hidden;
-	margin-bottom: 32px;
+  margin-bottom: 32px;
 }
 
 
@@ -193,8 +192,8 @@ table {
 
 th {
   font-family: 'Arvo', Helvetica, Arial, sans-serif;
-	font-size: 18px;
-	font-weight: normal;
+  font-size: 18px;
+  font-weight: normal;
   padding: 10px;
   background: #232323;
   color: #FDFEFB;
@@ -202,7 +201,7 @@ th {
 
 td {
   padding: 10px;
-	background: #ccc;
+  background: #ccc;
  }
 
 
@@ -215,105 +214,50 @@ td {
 /* Header */
 
 header {
-	background-color: #171717;
-	color: #FDFDFB;
+  background-color: #0084c5;
+  color: #FDFDFB;
   width:170px;
   float:left;
   position:fixed;
-	border: 1px solid #000;
-	-webkit-border-top-right-radius: 4px;
-	-webkit-border-bottom-right-radius: 4px;
-	-moz-border-radius-topright: 4px;
-	-moz-border-radius-bottomright: 4px;
-	border-top-right-radius: 4px;
-	border-bottom-right-radius: 4px;
-	padding: 34px 25px 22px 50px;
-	margin: 30px 25px 0 0;
-	-webkit-font-smoothing: antialiased;
+  border: 1px solid #000;
+  -webkit-border-top-right-radius: 4px;
+  -webkit-border-bottom-right-radius: 4px;
+  -moz-border-radius-topright: 4px;
+  -moz-border-radius-bottomright: 4px;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  padding: 20px 20px 20px 50px;
+  margin: 0 0 0 0;
+  -webkit-font-smoothing: antialiased;
 }
 
 p.header {
-	font-size: 16px;
+  font-size: 14px;
+  line-height: normal;
 }
 
 h1.header {
-	font-family: Arvo, sans-serif;
-	font-size: 30px;
-	font-weight: 300;
-	line-height: 1.3em;
-	border-bottom: none;
-	margin-top: 0;
+  font-family: Roboto, sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.3em;
+  border-bottom: none;
+  margin-top: 0;
 }
 
 
 h1.header, a.header, a.name, header a{
-	color: #fff;
+  color: #fff;
 }
 
 a.header {
-	text-decoration: underline;
+  text-decoration: underline;
 }
 
 a.name {
-	white-space: nowrap;
+  white-space: nowrap;
 }
 
-header ul {
-  list-style:none;
-  padding:0;
-}
-
-header li {
-	list-style-type: none;
-  width:132px;
-  height:15px;
-	margin-bottom: 12px;
-	line-height: 1em;
-	padding: 6px 6px 6px 7px;
-
-	background: #AF0011;
-	background: -moz-linear-gradient(top, #AF0011 0%, #820011 100%);
-  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#f8f8f8), color-stop(100%,#dddddd));
-  background: -webkit-linear-gradient(top, #AF0011 0%,#820011 100%);
-  background: -o-linear-gradient(top, #AF0011 0%,#820011 100%);
-  background: -ms-linear-gradient(top, #AF0011 0%,#820011 100%);
-  background: linear-gradient(top, #AF0011 0%,#820011 100%);
-
-	border-radius:4px;
-  border:1px solid #0D0D0D;
-
-	-webkit-box-shadow: inset 0px 1px 1px 0 rgba(233,2,38, 1);
-	box-shadow: inset 0px 1px 1px 0 rgba(233,2,38, 1);
-
-}
-
-header li:hover {
-	background: #C3001D;
-	background: -moz-linear-gradient(top, #C3001D 0%, #950119 100%);
-  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#f8f8f8), color-stop(100%,#dddddd));
-  background: -webkit-linear-gradient(top, #C3001D 0%,#950119 100%);
-  background: -o-linear-gradient(top, #C3001D 0%,#950119 100%);
-  background: -ms-linear-gradient(top, #C3001D 0%,#950119 100%);
-  background: linear-gradient(top, #C3001D 0%,#950119 100%);
-}
-
-a.buttons {
-	-webkit-font-smoothing: antialiased;
-	background: url(../images/arrow-down.png) no-repeat;
-	font-weight: normal;
-	text-shadow: rgba(0, 0, 0, 0.4) 0 -1px 0;
-	padding: 2px 2px 2px 22px;
-	height: 30px;
-}
-
-a.github {
-	background: url(../images/octocat-small.png) no-repeat 1px;
-}
-
-a.buttons:hover {
-	color: #fff;
-	text-decoration: none;
-}
 
 
 /* Section - for main page content */
