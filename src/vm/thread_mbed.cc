@@ -15,11 +15,11 @@
 
 namespace fletch {
 
-static const int kNumberOfFletchThreads = 2;
-static const int kFletchStackSize = 1024;
+static const int kNumberOfFletchThreads = 8;
+static const int kFletchStackSize = 4096;
 static const int kFletchStackSizeInWords = kFletchStackSize / sizeof(uint32_t);
 
-static osThreadDef_t mbed_thread_pool[FLETCH_NUMBER_OF_THREADS];
+static osThreadDef_t mbed_thread_pool[kNumberOfFletchThreads];
 static char mbed_thread_no = 0;
 static uint32_t mbed_stack[kNumberOfFletchThreads][kFletchStackSizeInWords];
 
@@ -29,11 +29,11 @@ bool Thread::IsCurrent(const ThreadIdentifier* thread) {
 
 ThreadIdentifier Thread::Run(RunSignature run, void* data) {
   int thread_no = mbed_thread_no++;
-  ASSERT(thread_no < FLETCH_NUMBER_OF_THREADS);
+  ASSERT(thread_no < kNumberOfFletchThreads);
   osThreadDef_t* threadDef = &(mbed_thread_pool[thread_no]);
   threadDef->pthread = reinterpret_cast<void (*)(const void*)>(run);
   threadDef->tpriority = osPriorityNormal;
-  threadDef->stacksize = FLETCH_STACK_SIZE;
+  threadDef->stacksize = kFletchStackSize;
   threadDef->stack_pointer = mbed_stack[thread_no];
 
   osThreadId thread = osThreadCreate(threadDef, data);

@@ -467,16 +467,13 @@
               # Fake define intercepted by cc_wrapper.py to change the
               # compiler binary to an ARM cross compiler.
               'FLETCH_MBED',
+              'FLETCH_TARGET_OS_MBED',
             ],
 
             'defines!': [
               'FLETCH_TARGET_OS_POSIX',
               'FLETCH_TARGET_OS_LINUX',
               'FLETCH_TARGET_OS_MACOS',
-            ],
-
-            'defines': [
-              'FLETCH_TARGET_OS_MBED',
             ],
 
             'cflags': [
