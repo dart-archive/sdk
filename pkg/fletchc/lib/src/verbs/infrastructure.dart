@@ -21,7 +21,7 @@ import '../driver/sentence_parser.dart' show
     NamedTarget,
     Preposition,
     PrepositionKind,
-    ResolvedVerb,
+    Verb,
     Sentence,
     Target,
     TargetKind;
@@ -93,11 +93,11 @@ import '../diagnostic.dart' show
 import '../driver/session_manager.dart' show
     lookupSession; // Don't export this.
 
-import 'verbs.dart' show
-    Verb;
+import 'actions.dart' show
+    Action;
 
-export 'verbs.dart' show
-    Verb;
+export 'actions.dart' show
+    Action;
 
 import 'documentation.dart' show
     helpDocumentation;
@@ -107,15 +107,16 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
   if (sentence.currentDirectory != null) {
     base = fileUri(appendSlash(sentence.currentDirectory), base);
   }
-  ResolvedVerb verb = sentence.verb;
+  Verb verb = sentence.verb;
+  Action action = verb.action;
 
   if (sentence.target != null && sentence.target.kind == TargetKind.HELP) {
-    Verb contextHelp = new Verb((_,__) async {
-      print(verb.verb.documentation);
+    Action contextHelp = new Action((_,__) async {
+      print(action.documentation);
       return 0;
     }, null);
     return new AnalyzedSentence(
-      new ResolvedVerb(verb.name, contextHelp), null, null, null, null, null,
+      new Verb(verb.name, contextHelp), null, null, null, null, null,
       null, null, null, null, null, null);
   }
 
@@ -139,21 +140,21 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
     sessionTarget = preposition.target;
   }
 
-  if (!verb.verb.allowsTrailing) {
+  if (!action.allowsTrailing) {
     if (trailing != null) {
       throwInternalError("Unexpected arguments: ${trailing.join(' ')}");
     }
   }
 
   if (target != null &&
-      verb.verb.requiredTarget == null &&
-      verb.verb.supportedTargets == null) {
+      action.requiredTarget == null &&
+      action.supportedTargets == null) {
     throwInternalError("Can't use '$target' with '$verb'");
   }
 
   Uri toTargetUri;
   Uri withUri;
-  if (verb.verb.requiresToUri) {
+  if (action.requiresToUri) {
     if (preposition == null) {
       throwFatalError(DiagnosticKind.missingToFile);
     }
@@ -168,13 +169,13 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
     NamedTarget target = preposition.target;
     toTargetUri = fileUri(target.name, base);
   } else if (sessionTarget != null) {
-    if (!verb.verb.requiresSession) {
+    if (!action.requiresSession) {
       throwFatalError(
           DiagnosticKind.verbRequiresNoSession, verb: verb,
           sessionName: sessionTarget.name);
     }
   } else if (preposition != null) {
-    if (verb.verb.supportsWithUri &&
+    if (action.supportsWithUri &&
         preposition.kind == PrepositionKind.WITH &&
         preposition.target.kind == TargetKind.FILE) {
       NamedTarget target = preposition.target;
@@ -184,9 +185,9 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
     }
   }
 
-  if (verb.verb.requiredTarget != null) {
+  if (action.requiredTarget != null) {
     if (target == null) {
-      switch (verb.verb.requiredTarget) {
+      switch (action.requiredTarget) {
         case TargetKind.TCP_SOCKET:
           throwFatalError(DiagnosticKind.noTcpSocketTarget);
           break;
@@ -196,7 +197,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
           break;
 
         default:
-          if (verb.verb.requiresTargetSession) {
+          if (action.requiresTargetSession) {
             throwFatalError(
                 DiagnosticKind.verbRequiresSessionTarget, verb: verb);
           } else {
@@ -208,8 +209,8 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
           }
           break;
       }
-    } else if (target.kind != verb.verb.requiredTarget) {
-      switch (verb.verb.requiredTarget) {
+    } else if (target.kind != action.requiredTarget) {
+      switch (action.requiredTarget) {
         case TargetKind.TCP_SOCKET:
           throwFatalError(
               DiagnosticKind.verbRequiresSocketTarget,
@@ -223,13 +224,13 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
           break;
 
         default:
-          throwInternalError("$verb requires a ${verb.verb.requiredTarget}");
+          throwInternalError("$verb requires a ${action.requiredTarget}");
       }
     }
   }
 
-  if (verb.verb.supportedTargets != null && target != null) {
-    if (!verb.verb.supportedTargets.contains(target.kind)) {
+  if (action.supportedTargets != null && target != null) {
+    if (!action.supportedTargets.contains(target.kind)) {
       throwFatalError(
           DiagnosticKind.verbDoesNotSupportTarget, verb: verb, target: target);
     }
@@ -238,7 +239,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
   String sessionName;
   if (sessionTarget != null) {
     sessionName = sessionTarget.name;
-  } else if (verb.verb.requiresSession) {
+  } else if (action.requiresSession) {
     sessionName = currentSession;
   }
 
@@ -292,7 +293,7 @@ abstract class SharedTask {
 }
 
 class AnalyzedSentence {
-  final ResolvedVerb verb;
+  final Verb verb;
 
   final Target target;
 
@@ -336,6 +337,6 @@ class AnalyzedSentence {
       this.withUri);
 
   Future<int> performVerb(VerbContext context) {
-    return verb.verb.perform(this, context);
+    return verb.action.perform(this, context);
   }
 }

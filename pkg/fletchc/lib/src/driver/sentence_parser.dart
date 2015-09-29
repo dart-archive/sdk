@@ -7,10 +7,10 @@ library fletchc.driver.sentence_parser;
 import 'dart:convert' show
     JSON;
 
-import '../verbs/verbs.dart' show
-    Verb,
-    commonVerbs,
-    uncommonVerbs;
+import '../verbs/actions.dart' show
+    Action,
+    commonActions,
+    uncommonActions;
 
 import '../verbs/infrastructure.dart' show
     AnalyzedSentence;
@@ -36,11 +36,11 @@ class SentenceParser {
         tokens = new Words(tokens.skip(includesProgramName ? 3 : 0));
 
   Sentence parseSentence() {
-    ResolvedVerb verb;
+    Verb verb;
     if (!tokens.isAtEof) {
       verb = parseVerb();
     } else {
-      verb = new ResolvedVerb("help", commonVerbs["help"]);
+      verb = new Verb("help", commonActions["help"]);
     }
     Preposition preposition = parsePrepositionOpt();
     Target target = parseTargetOpt();
@@ -60,26 +60,26 @@ class SentenceParser {
         tokens.originalInput.skip(1).toList());
   }
 
-  ResolvedVerb parseVerb() {
+  Verb parseVerb() {
     String name = tokens.current;
-    Verb verb = commonVerbs[name];
-    if (verb != null) {
+    Action action = commonActions[name];
+    if (action != null) {
       tokens.consume();
-      return new ResolvedVerb(name, verb);
+      return new Verb(name, action);
     }
-    verb = uncommonVerbs[name];
-    if (verb != null) {
+    action = uncommonActions[name];
+    if (action != null) {
       tokens.consume();
-      return new ResolvedVerb(name, verb);
+      return new Verb(name, action);
     }
-    return new ResolvedVerb(name, makeErrorVerb("Unknown argument: $name"));
+    return new Verb(name, makeErrorAction("Unknown argument: $name"));
   }
 
-  Verb makeErrorVerb(String message) {
+  Action makeErrorAction(String message) {
     return
-        new Verb((AnalyzedSentence sentence, context) {
+        new Action((AnalyzedSentence sentence, context) {
           print(message);
-          return commonVerbs["help"].perform(sentence, context)
+          return commonActions["help"].perform(sentence, context)
               .then((_) => 1);
         }, null);
   }
@@ -289,13 +289,13 @@ class Words {
   }
 }
 
-class ResolvedVerb {
+class Verb {
   final String name;
-  final Verb verb;
+  final Action action;
 
-  const ResolvedVerb(this.name, this.verb);
+  const Verb(this.name, this.action);
 
-  String toString() => "ResolvedVerb(${quoteString(name)})";
+  String toString() => "Verb(${quoteString(name)})";
 }
 
 class Preposition {
@@ -385,7 +385,7 @@ class ErrorTarget extends Target {
 /// `in session MySession` is a [Preposition] in tail position.
 class Sentence {
   /// For example, `create`.
-  final ResolvedVerb verb;
+  final Verb verb;
 
   /// For example, `in session MySession`
   final Preposition preposition;

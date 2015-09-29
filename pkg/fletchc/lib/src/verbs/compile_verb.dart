@@ -11,7 +11,7 @@ import '../driver/developer.dart' as developer;
 import 'documentation.dart' show
     compileDocumentation;
 
-const Verb compileVerb = const Verb(
+const Action compileAction = const Action(
     compile, compileDocumentation, requiresSession: true,
     requiredTarget: TargetKind.FILE);
 

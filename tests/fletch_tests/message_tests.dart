@@ -26,8 +26,8 @@ import 'package:fletchc/src/driver/sentence_parser.dart' show
     Sentence,
     parseSentence;
 
-import 'package:fletchc/src/verbs/verbs.dart' show
-    Verb;
+import 'package:fletchc/src/verbs/actions.dart' show
+    Action;
 
 import 'package:fletchc/src/driver/driver_main.dart' show
     ClientController,

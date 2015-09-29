@@ -10,7 +10,7 @@ import 'messages.dart' show
 
 import 'driver/sentence_parser.dart' show
     Preposition,
-    ResolvedVerb,
+    Verb,
     Target;
 
 export 'messages.dart' show
@@ -98,7 +98,7 @@ class Diagnostic {
           break;
 
         case DiagnosticParameterType.verb:
-          ResolvedVerb verb = value;
+          Verb verb = value;
           stringValue = verb.name;
           break;
 
@@ -184,7 +184,7 @@ void throwInternalError(String message) {
 void throwFatalError(
     DiagnosticKind kind,
     {String message,
-     ResolvedVerb verb,
+     Verb verb,
      String sessionName,
      Target target,
      String address,

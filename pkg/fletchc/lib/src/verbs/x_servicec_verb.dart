@@ -18,7 +18,7 @@ import 'documentation.dart' show
 import "package:compiler/src/util/uri_extras.dart" show
    relativize;
 
-const Verb servicecVerb = const Verb(
+const Action servicecAction = const Action(
     // A session is required for a worker.
     servicecAct, servicecDocumentation, requiresSession: true,
     requiredTarget: TargetKind.FILE);

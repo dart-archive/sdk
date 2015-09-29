@@ -14,8 +14,8 @@ import '../driver/developer.dart' show
 
 import '../driver/developer.dart' as developer;
 
-const Verb exportVerb =
-    const Verb(
+const Action exportAction =
+    const Action(
         export, exportDocumentation, requiresSession: true,
         requiresToUri: true,
         supportedTargets: const <TargetKind>[TargetKind.FILE]);

@@ -12,10 +12,10 @@ import 'package:expect/expect.dart';
 Future main() {
   Sentence sentence;
 
-  void checkVerb(String name) {
+  void checkAction(String name) {
     Expect.isNotNull(sentence.verb);
     Expect.stringEquals(name, sentence.verb.name);
-    print("Verb '$name' as expected.");
+    print("Action '$name' as expected.");
   }
 
   void checkTarget(TargetKind kind) {
@@ -39,7 +39,7 @@ Future main() {
 
   sentence = parseSentence([]);
   print(sentence);
-  checkVerb('help');
+  checkAction('help');
   Expect.isNull(sentence.preposition);
   checkNoTarget();
   Expect.isNull(sentence.tailPreposition);
@@ -47,7 +47,7 @@ Future main() {
 
   sentence = parseSentence(['not_a_verb']);
   print(sentence);
-  checkVerb('not_a_verb');
+  checkAction('not_a_verb');
   Expect.isNull(sentence.preposition);
   checkNoTarget();
   Expect.isNull(sentence.tailPreposition);
@@ -56,7 +56,7 @@ Future main() {
 
   sentence = parseSentence(['create', 'session', 'fisk']);
   print(sentence);
-  checkVerb('create');
+  checkAction('create');
   Expect.isNull(sentence.preposition);
   checkNamedTarget(TargetKind.SESSION, 'fisk');
   Expect.isNull(sentence.tailPreposition);
@@ -92,7 +92,7 @@ Future main() {
 
   sentence = parseSentence(['create', 'in', 'fisk']);
   print(sentence);
-  checkVerb('create');
+  checkAction('create');
   Expect.isNotNull(sentence.preposition);
   Expect.equals(PrepositionKind.IN, sentence.preposition.kind);
   Expect.isTrue(sentence.preposition.target is ErrorTarget);
@@ -102,7 +102,7 @@ Future main() {
 
   sentence = parseSentence(['create', 'in', 'fisk', 'fisk']);
   print(sentence);
-  checkVerb('create');
+  checkAction('create');
   Expect.isNotNull(sentence.preposition);
   Expect.equals(PrepositionKind.IN, sentence.preposition.kind);
   Expect.isTrue(sentence.preposition.target is ErrorTarget);
@@ -113,7 +113,7 @@ Future main() {
 
   sentence = parseSentence(['help', 'all']);
   print(sentence);
-  checkVerb('help');
+  checkAction('help');
   Expect.isNull(sentence.preposition);
   checkTarget(TargetKind.ALL);
   Expect.isNull(sentence.tailPreposition);

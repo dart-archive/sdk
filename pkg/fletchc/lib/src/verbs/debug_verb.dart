@@ -26,8 +26,8 @@ import '../driver/driver_commands.dart' show
 import 'package:fletchc/debug_state.dart' show
     Breakpoint;
 
-const Verb debugVerb =
-    const Verb(
+const Action debugAction =
+    const Action(
         debug,
         debugDocumentation,
         requiresSession: true,

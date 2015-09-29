@@ -17,7 +17,7 @@ import '../driver/driver_main.dart' show
 import 'documentation.dart' show
     shutdownDocumentation;
 
-const Verb shutdownVerb = const Verb(shutdown, shutdownDocumentation);
+const Action shutdownAction = const Action(shutdown, shutdownDocumentation);
 
 Future<int> shutdown(AnalyzedSentence sentence, _) {
   List<String> commandLine = <String>[];

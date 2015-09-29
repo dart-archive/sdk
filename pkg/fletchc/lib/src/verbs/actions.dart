@@ -11,42 +11,42 @@ import 'infrastructure.dart' show
     VerbContext;
 
 import 'attach_verb.dart' show
-    attachVerb;
+    attachAction;
 
 import 'compile_and_run_verb.dart' show
-    compileAndRunVerb;
+    compileAndRunAction;
 
 import 'compile_verb.dart' show
-    compileVerb;
+    compileAction;
 
 import 'create_verb.dart' show
-    createVerb;
+    createAction;
 
 import 'debug_verb.dart' show
-    debugVerb;
+    debugAction;
 
 import 'export_verb.dart' show
-    exportVerb;
+    exportAction;
 
 import 'help_verb.dart' show
-    helpVerb;
+    helpAction;
 
 import 'run_verb.dart' show
-    runVerb;
+    runAction;
 
 import 'shutdown_verb.dart' show
-    shutdownVerb;
+    shutdownAction;
 
 import 'x_end_verb.dart' show
-    endVerb;
+    endAction;
 
 import 'x_servicec_verb.dart' show
-    servicecVerb;
+    servicecAction;
 
-typedef Future<int> DoVerb(AnalyzedSentence sentence, VerbContext context);
+typedef Future<int> DoAction(AnalyzedSentence sentence, VerbContext context);
 
-class Verb {
-  final DoVerb perform;
+class Action {
+  final DoAction perform;
 
   final String documentation;
 
@@ -73,7 +73,7 @@ class Verb {
   /// True if this verb supports "with <URI>"
   final bool supportsWithUri;
 
-  const Verb(
+  const Action(
       this.perform,
       this.documentation,
       {this.requiresSession: false,
@@ -97,22 +97,22 @@ class Verb {
 /// lines.  The default terminal size is normally 80x24.  Two lines are used
 /// for the prompts before and after running fletch.  Another two lines may be
 /// used to print an error message.
-const Map<String, Verb> commonVerbs = const <String, Verb>{
-  "help": helpVerb,
-  "attach": attachVerb,
-  "run": runVerb,
-  "export": exportVerb,
+const Map<String, Action> commonActions = const <String, Action>{
+  "help": helpAction,
+  "attach": attachAction,
+  "run": runAction,
+  "export": exportAction,
 };
 
 /// Uncommon verbs aren't displayed in the normal help screen.
 ///
 /// These verbs are displayed when running `fletch help all`.
-const Map<String, Verb> uncommonVerbs = const <String, Verb>{
-  "compile": compileVerb,
-  "compile-and-run": compileAndRunVerb,
-  "create": createVerb,
-  "debug": debugVerb,
-  "shutdown": shutdownVerb,
-  "x-end": endVerb,
-  "x-servicec": servicecVerb,
+const Map<String, Action> uncommonActions = const <String, Action>{
+  "compile": compileAction,
+  "compile-and-run": compileAndRunAction,
+  "create": createAction,
+  "debug": debugAction,
+  "shutdown": shutdownAction,
+  "x-end": endAction,
+  "x-servicec": servicecAction,
 };

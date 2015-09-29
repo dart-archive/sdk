@@ -18,7 +18,7 @@ import '../driver/developer.dart' show
 import 'documentation.dart' show
     createDocumentation;
 
-const Verb createVerb = const Verb(
+const Action createAction = const Action(
     create, createDocumentation, requiresTargetSession: true,
     supportsWithUri: true);
 

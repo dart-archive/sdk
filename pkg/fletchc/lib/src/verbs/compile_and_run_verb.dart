@@ -52,8 +52,8 @@ import '../driver/exit_codes.dart' show
 import 'documentation.dart' show
     compileAndRunDocumentation;
 
-const Verb compileAndRunVerb =
-    const Verb(
+const Action compileAndRunAction =
+    const Action(
         compileAndRun, compileAndRunDocumentation,
         allowsTrailing: true,
         supportedTargets: const <TargetKind>[TargetKind.FILE]);

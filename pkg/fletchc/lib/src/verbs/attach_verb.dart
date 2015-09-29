@@ -14,7 +14,7 @@ import '../driver/developer.dart' show
     attachToVm,
     parseAddress;
 
-const Verb attachVerb = const Verb(
+const Action attachAction = const Action(
     attach, attachDocumentation, requiresSession: true,
     requiredTarget: TargetKind.TCP_SOCKET);
 

@@ -14,8 +14,8 @@ import '../driver/developer.dart' show
 
 import '../driver/developer.dart' as developer;
 
-const Verb runVerb =
-    const Verb(
+const Action runAction =
+    const Action(
         run, runDocumentation, requiresSession: true,
         supportedTargets: const <TargetKind>[TargetKind.FILE]);
 
