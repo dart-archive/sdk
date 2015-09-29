@@ -11,6 +11,9 @@ DATA_DIR=$SCRIPT_DIR/data
 # The caller must be provide the directory path to the mounted SD card.
 MOUNT_DIR=$1
 
+# Installation directory.
+INSTALL_DIR=/usr/lib/fletch-agent
+
 function check_success() {
   errcode=$1
   msg=$2
@@ -23,7 +26,7 @@ function check_success() {
 function setup_link() {
   link_name=$1
   runlevel="rc$2.d"
-  sudo -E rm -f $MOUNT_DIR/etc/$runlevel/$link_name 
+  sudo -E rm -f $MOUNT_DIR/etc/$runlevel/$link_name
   sudo -E ln -s -r -f \
       $MOUNT_DIR/etc/init.d/fletch-agent $MOUNT_DIR/etc/$runlevel/$link_name
   check_success $? \
@@ -67,7 +70,7 @@ function update_service_dependencies {
 function manual_agent_setup() {
   # grep found the differ word in the output, so ask user to run script.
   echo "Cannot setup agent automatically."
-  echo "Please run the command: /opt/fletch/bin/setup-agent.sh" \
+  echo "Please run the command: $INSTALL_DIR/bin/setup-agent.sh" \
        "once booted into the Raspberry Pi2."
   echo "Succesfully setup fletch on mounted SD card $MOUNT_DIR"
   exit 0
@@ -100,12 +103,12 @@ if [ ! -r $DATA_DIR/fletch-agent.snapshot ]; then
 fi
 
 # Create the destination directories on the mounted partition.
-sudo -E mkdir -p $MOUNT_DIR/opt/fletch/bin
-check_success $? "Failed to create /opt/fletch/bin directory on $MOUNT_DIR"
-sudo -E mkdir -p $MOUNT_DIR/var/log/fletch
-check_success $? "Failed to create /var/log/fletch directory on $MOUNT_DIR"
-sudo -E mkdir -p $MOUNT_DIR/var/run/fletch
-check_success $? "Failed to create /var/run/fletch directory on $MOUNT_DIR"
+sudo -E mkdir -p $MOUNT_DIR/$INSTALL_DIR/bin
+check_success $? "Failed to create $INSTALL_DIR/bin directory on $MOUNT_DIR"
+sudo -E mkdir -p $MOUNT_DIR/var/log/fletch-agent
+check_success $? "Failed to create /var/log/fletch-agent directory on $MOUNT_DIR"
+sudo -E mkdir -p $MOUNT_DIR/var/run/fletch-agent
+check_success $? "Failed to create /var/run/fletch-agent directory on $MOUNT_DIR"
 
 # Copy the files into the right places, we must run with sudo as the partition
 # has root as the owner.
@@ -114,25 +117,25 @@ check_success $? "Failed to copy fletch-agent to /etc/init.d on $MOUNT_DIR"
 sudo -E cp $DATA_DIR/fletch-agent.env $MOUNT_DIR/etc/default/fletch-agent
 check_success $? "Failed to copy fletch-agent environment file to /etc/default"\
   "on $MOUNT_DIR"
-sudo -E cp $DATA_DIR/fletch-vm $MOUNT_DIR/opt/fletch/bin/
-check_success $? "Failed to copy fletch-vm to /opt/fletch/bin on $MOUNT_DIR"
-sudo -E cp $DATA_DIR/fletch-agent.snapshot $MOUNT_DIR/opt/fletch/bin/
+sudo -E cp $DATA_DIR/fletch-vm $MOUNT_DIR/$INSTALL_DIR/bin/
+check_success $? "Failed to copy fletch-vm to $INSTALL_DIR/bin on $MOUNT_DIR"
+sudo -E cp $DATA_DIR/fletch-agent.snapshot $MOUNT_DIR/$INSTALL_DIR/bin/
 check_success $? \
-  "Failed to copy fletch-agent.snapshot to /opt/fletch/bin on $MOUNT_DIR"
-sudo -E cp $DATA_DIR/setup-agent.sh $MOUNT_DIR/opt/fletch/bin/
+  "Failed to copy fletch-agent.snapshot to $INSTALL_DIR/bin on $MOUNT_DIR"
+sudo -E cp $DATA_DIR/setup-agent.sh $MOUNT_DIR/$INSTALL_DIR/bin/
 check_success $? \
-  "Failed to copy setup-agent.sh script to /opt/fletch/bin on $MOUNT_DIR"
+  "Failed to copy setup-agent.sh script to $INSTALL_DIR/bin on $MOUNT_DIR"
 
 # Set file permissions to allow all to read or execute.
 sudo -E chmod 755 $MOUNT_DIR/etc/init.d/fletch-agent
 check_success $? "Failed to make fletch-agent executable for all"
 sudo -E chmod 644 $MOUNT_DIR/etc/default/fletch-agent
 check_success $? "Failed to make fletch-agent environment readable for all"
-sudo -E chmod 755 $MOUNT_DIR/opt/fletch/bin/fletch-vm
+sudo -E chmod 755 $MOUNT_DIR/$INSTALL_DIR/bin/fletch-vm
 check_success $? "Failed to make fletch-vm executable for all"
-sudo -E chmod 644 $MOUNT_DIR/opt/fletch/bin/fletch-agent.snapshot
+sudo -E chmod 644 $MOUNT_DIR/$INSTALL_DIR/bin/fletch-agent.snapshot
 check_success $? "Failed to make fletch-agent.snapshot readable for all"
-sudo -E chmod 755 $MOUNT_DIR/opt/fletch/bin/setup-agent.sh
+sudo -E chmod 755 $MOUNT_DIR/$INSTALL_DIR/bin/setup-agent.sh
 check_success $? "Failed to make setup-agent.sh script executable for all"
 
 # Update the service dependency files if needed. This is only done if the files

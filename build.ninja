@@ -30,7 +30,6 @@ rule update-version-gyp
 build $
     version.gyp $
     : update-version-gyp $
-        .git/HEAD $
         tools/update_version_gyp.py
 
 build $

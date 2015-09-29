@@ -1,0 +1,56 @@
+#!/usr/bin/make -f
+export DH_VERBOSE = 1
+
+# NOTE: In this file the coments try to use the name "host" for what
+# we are building for and "build" for what we are building on. See:
+# https://wiki.debian.org/CrossBuildPackagingGuidelines
+
+# Right now this is hardcoded to cross-complie for ARM and use the x64 build
+# to generate sanpshots
+BUILD_TYPE += ReleaseX64
+XBUILD_TYPE += ReleaseXARM
+
+# Temporary directory for collecting the files for the package.
+TMP_OUT = debian/tmp/out/fletch-agent
+
+# Used default for the steps which are not overridden below.
+%:
+	dh $@
+
+override_dh_auto_clean:
+	echo $(DEB_BUILD_OPTIONS)
+	rm -fr fletch/out
+	find . -name *.tmp -execdir rm -f {} \;
+	find . -name *.pyc -execdir rm -f {} \;
+	find . -name *.mk -execdir rm -f {} \;
+	find . -name *.Makefile -execdir rm -f {} \;
+
+override_dh_auto_configure:
+	cd fletch; \
+	ninja; \
+	cd ..
+
+# This will build Fletch for the build machine and cross-build Fletch
+# for the host machine. It will then build the fletch-agent snapshot
+# on the build machine and place it in the build directory for the
+# host machine.
+override_dh_auto_build:
+	cd fletch; \
+	ninja -C out/$(BUILD_TYPE); \
+	ninja -C out/$(XBUILD_TYPE); \
+	tools/persistent_process_info.sh -k; \
+	out/$(BUILD_TYPE)/fletch export pkg/fletch_agent/bin/agent.dart to out/$(XBUILD_TYPE)/fletch-agent.snapshot; \
+	cd ..
+
+# TODO(sgjesse): Make sure the executables are stripped.
+override_dh_strip:
+
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
+
+override_dh_auto_install:
+	mkdir -p $(TMP_OUT)/bin
+	cp -R fletch/out/$(XBUILD_TYPE)/fletch-vm $(TMP_OUT)/bin
+	cp -R fletch/out/$(XBUILD_TYPE)/fletch-agent.snapshot $(TMP_OUT)/bin
+	dh_install
+	dh_link
