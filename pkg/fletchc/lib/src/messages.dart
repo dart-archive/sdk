@@ -97,17 +97,15 @@ String getMessage(DiagnosticKind kind) {
       return "Can't perform '$verb' without a socket, but got '$target'";
 
     case DiagnosticKind.verbDoesNotSupportTarget:
-      // TODO(lukechurch): Review this error message.
-      return "'$verb' does not support target '$target'";
+      return "'$verb' can't be performed on '$target'";
 
     case DiagnosticKind.noSuchSession:
-      // TODO(lukechurch): Ensure UX repair text is good.
-      return "No session named: '$sessionName'. "
+      return "Couldn't find a session called '$sessionName'. "
           "Try running 'fletch create session $sessionName'";
 
     case DiagnosticKind.sessionAlreadyExists:
-      return "Can't create session named '$sessionName'; "
-          "There already is a session named '$sessionName'.";
+      return "Couldn't create session named '$sessionName'; "
+          "A session called $sessionName already exists.";
 
     case DiagnosticKind.noFileTarget:
       return "No file provided. Try adding <FILE_NAME> to the command line";
@@ -151,7 +149,7 @@ String getMessage(DiagnosticKind kind) {
       return "$uri: isn't a map";
 
     case DiagnosticKind.settingsNotJson:
-      return "$uri: unable decode as JSON: $message";
+      return "$uri: unable to decode as JSON: $message";
 
     case DiagnosticKind.settingsPackagesNotAString:
       return "$uri: 'packages' value isn't a String";
@@ -160,7 +158,7 @@ String getMessage(DiagnosticKind kind) {
       return "$uri: 'options' value isn't a List";
 
     case DiagnosticKind.settingsOptionNotAString:
-      return "$uri: found 'options' entry '$userInput' which isn't a string";
+      return "$uri: found 'options' entry '$userInput' which isn't a String";
 
     case DiagnosticKind.settingsCompileTimeConstantAsOption:
       return "$uri: compile-time constants should be in "
