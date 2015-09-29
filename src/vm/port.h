@@ -5,11 +5,11 @@
 #ifndef SRC_VM_PORT_H_
 #define SRC_VM_PORT_H_
 
-#include "src/shared/atomic.h"
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 
 #include "src/vm/object_memory.h"
+#include "src/vm/spinlock.h"
 
 namespace fletch {
 
@@ -29,10 +29,9 @@ class Port {
 
   Instance* channel() const { return channel_; }
 
-  // Spin lock implementation.
-  bool IsLocked() const { return lock_; }
-  void Lock() { while (lock_.exchange(true, kAcquire)) { } }
-  void Unlock() { lock_.store(false, kRelease); }
+  bool IsLocked() const { return spinlock_.IsLocked(); }
+  void Lock() { spinlock_.Lock(); }
+  void Unlock() { spinlock_.Unlock(); }
 
   // Increment the ref count. This function is thread safe.
   void IncrementRef();
@@ -60,8 +59,7 @@ class Port {
   Process* process_;
   Instance* channel_;
   Atomic<int> ref_count_;
-  Atomic<bool> lock_;
-
+  Spinlock spinlock_;
   // The ports are in a list in the process so that we can GC the channel
   // pointer.
   Port* next_;

@@ -17,7 +17,7 @@ Port::Port(Process* process, Instance* channel)
     : process_(process),
       channel_(channel),
       ref_count_(1),
-      lock_(false),
+      spinlock_(),
       next_(process->ports()) {
   ASSERT(process != NULL);
   ASSERT(Thread::IsCurrent(process->thread_state()->thread()));
