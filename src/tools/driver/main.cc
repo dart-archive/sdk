@@ -65,8 +65,6 @@ static int fletch_config_fd;
 
 static const char dart_vm_env_name[] = "DART_VM";
 
-static const char dart_vm_name[] = "dart";
-
 static int exit_code = COMPILER_CRASHED;
 
 static void WriteFully(int fd, uint8* data, ssize_t length);
@@ -267,10 +265,12 @@ static void ComputeFletchRoot(char* buffer, size_t buffer_length) {
   // "fletch-repo/fletch/out/$CONFIGURATION/fletch_driver".
   ParentDir(buffer);
   // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION".
-  ParentDir(buffer);
-  // 'buffer' is now, for example, "fletch-repo/fletch/out".
-  ParentDir(buffer);
-  // 'buffer' is now, for example, "fletch-repo/fletch".
+
+  // FLETCH_ROOT_DISTANCE gives the number of directories up that we find the
+  // root of the fletch checkout or sdk bundle.
+  for (int i = 0; i < FLETCH_ROOT_DISTANCE; i++) {
+    ParentDir(buffer);
+  }
 
   size_t length = strlen(buffer);
   if (length > 0 && buffer[length - 1] != '/') {
@@ -311,7 +311,7 @@ static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
     StrCat(buffer, buffer_length, "/", 2);
   }
 
-  StrCat(buffer, buffer_length, dart_vm_name, sizeof(dart_vm_name));
+  StrCat(buffer, buffer_length, DART_VM_NAME, sizeof(DART_VM_NAME));
   // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION/dart".
 }
 
@@ -322,7 +322,7 @@ static void ComputePackageSpec(
     const char* fletch_root, size_t fletch_root_length) {
   StrCpy(buffer, buffer_length, fletch_root, fletch_root_length);
   StrCat(buffer, buffer_length,
-         "pkg/fletchc/.packages", sizeof("pkg/fletchc/.packages"));
+         FLETCHC_PKG_FILE, sizeof(FLETCHC_PKG_FILE));
   // 'buffer' is now, for example, "fletch-repo/fletch/package/".
 }
 
@@ -357,7 +357,7 @@ static void ExecDaemon(
     const char** argv);
 
 static void StartDriverDaemon() {
-  const int kMaxArgv = 8;
+  const int kMaxArgv = 9;
   const char* argv[kMaxArgv];
 
   char fletch_root[MAXPATHLEN + 1];
@@ -369,7 +369,6 @@ static void StartDriverDaemon() {
   char package_spec[MAXPATHLEN + 1];
   ComputePackageSpec(
       package_spec, sizeof(package_spec), fletch_root, sizeof(fletch_root));
-
   char package_option[sizeof("--packages=") + MAXPATHLEN + 1];
   StrCpy(package_option, sizeof(package_option),
          "--packages=", sizeof("--packages="));
@@ -377,6 +376,7 @@ static void StartDriverDaemon() {
          package_spec, sizeof(package_spec));
 
   const char library_root[] = "-Dfletchc-library-root=" FLETCHC_LIBRARY_ROOT;
+  const char patch_root[] = "-Dfletchc-patch-root=" FLETCHC_PATCH_ROOT;
   const char define_version[] = "-Dfletch.version=";
   const char* version = GetVersion();
   int version_option_length = sizeof(define_version) + strlen(version) + 1;
@@ -395,6 +395,7 @@ static void StartDriverDaemon() {
   argv[argc++] = package_option;
   argv[argc++] = version_option;
   argv[argc++] = library_root;
+  argv[argc++] = patch_root;
   argv[argc++] = "package:fletchc/src/driver/driver_main.dart";
   argv[argc++] = fletch_config_file;
   argv[argc++] = NULL;
