@@ -436,12 +436,13 @@ class ClientController {
   }
 
   int reportErrorToClient(InputError error, StackTrace stackTrace) {
-    if (!crashReportRequested) {
+    bool isInternalError = error.kind == DiagnosticKind.internalError;
+    if (isInternalError && !crashReportRequested) {
       printLineOnStderr(requestBugReportOnOtherCrashMessage);
       crashReportRequested = true;
     }
     printLineOnStderr(error.asDiagnostic().formatMessage());
-    if (error.kind == DiagnosticKind.internalError) {
+    if (isInternalError) {
       printLineOnStderr('$stackTrace');
       return COMPILER_EXITCODE_CRASH;
     } else {
