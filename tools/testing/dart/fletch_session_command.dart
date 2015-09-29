@@ -38,6 +38,7 @@ import 'decode_exit_code.dart' show
     DecodeExitCode;
 
 import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
+    COMPILER_EXITCODE_CONNECTION_ERROR,
     COMPILER_EXITCODE_CRASH,
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
@@ -126,13 +127,23 @@ class FletchSessionCommand implements Command {
     int exitCode = COMPILER_EXITCODE_CRASH;
     bool endedSession = false;
     try {
+      String vmSocketAddress = await fletch.spawnVm();
+      Future vmTerminationFuture = fletch.shutdownVm(timeout);
       try {
-        String vmSocketAddress = await fletch.spawnVm();
         await fletch.runInSession(["attach", "tcp_socket", vmSocketAddress]);
         exitCode =
             await fletch.runInSession(["run", script], checkExitCode: false);
       } finally {
-        await fletch.shutdownVm(exitCode);
+        int vmExitCode = await vmTerminationFuture;
+        fletch.stderr.writeln("Fletch VM exitcode is $vmExitCode");
+        if (exitCode == COMPILER_EXITCODE_CONNECTION_ERROR) {
+          exitCode = vmExitCode;
+        } else if (exitCode != vmExitCode) {
+          if (!fletch.killedVmProcess || vmExitCode >= 0) {
+            throw new UnexpectedExitCode(
+                vmExitCode, "${fletch.executable}-vm", <String>[]);
+          }
+        }
       }
       if (!isIncrementalCompilationEnabled) {
         endedSession = true;
@@ -161,7 +172,7 @@ class FletchSessionCommand implements Command {
     }
 
     return new FletchTestCommandOutput(
-        this, exitCode, false,
+        this, exitCode, fletch.hasTimedOut,
         fletch.combinedStdout, fletch.combinedStderr, sw.elapsed, -1);
   }
 
@@ -280,6 +291,10 @@ class FletchSessionHelper {
 
   Future<int> vmExitCodeFuture;
 
+  bool killedVmProcess = false;
+
+  bool hasTimedOut = false;
+
   FletchSessionHelper(
       FletchSessionMirror sessionMirror,
       this.executable,
@@ -383,24 +398,26 @@ class FletchSessionHelper {
     return "${fletchVm.host}:${fletchVm.port}";
   }
 
-  Future<bool> shutdownVm(int expectedExitCode) async {
-    if (vmProcess == null) return;
+  Future<int> shutdownVm(int timeout) async {
+    if (vmProcess == null) return 0;
     bool done = false;
-    bool killed = false;
-    Timer timer = new Timer(const Duration(seconds: 5), () {
+    Timer timer;
+    timer = new Timer(new Duration(seconds: timeout), () {
       if (!done) {
-        vmProcess.kill(ProcessSignal.SIGKILL);
-        killed = true;
+        vmProcess.kill(ProcessSignal.SIGTERM);
+        killedVmProcess = true;
+        hasTimedOut = true;
+        timer = new Timer(const Duration(seconds: 5), () {
+          if (!done) {
+            vmProcess.kill(ProcessSignal.SIGKILL);
+          }
+        });
       }
     });
     int vmExitCode = await vmExitCodeFuture;
     done = true;
     timer.cancel();
-    if (vmExitCode != expectedExitCode) {
-      if (!killed || vmExitCode >= 0) {
-        throw new UnexpectedExitCode(vmExitCode, "$executable-vm", <String>[]);
-      }
-    }
+    return vmExitCode;
   }
 }
 

@@ -220,6 +220,11 @@ Future<int> run(SessionState state) async {
         flushLog = false;
         break;
 
+      case CommandCode.ConnectionError:
+        state.log("Error on connection to Fletch VM: ${command.error}");
+        exitCode = exit_codes.COMPILER_EXITCODE_CONNECTION_ERROR;
+        break;
+
       default:
         throwInternalError("Unexpected result from Fletch VM: '$command'");
         break;

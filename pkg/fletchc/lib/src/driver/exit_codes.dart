@@ -9,6 +9,10 @@ library fletchc.driver.exit_codes;
 
 /// Exit code to use when the compiler crashed. This is recognized by our test
 /// runner (test.dart) as status `Crash`.
+const COMPILER_EXITCODE_CONNECTION_ERROR = 252;
+
+/// Exit code to use when the compiler crashed. This is recognized by our test
+/// runner (test.dart) as status `Crash`.
 const COMPILER_EXITCODE_CRASH = 253;
 
 /// Exit code to use when the program running on the Fletch VM encounters a

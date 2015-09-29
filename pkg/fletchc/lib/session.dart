@@ -5,6 +5,10 @@
 library fletch.session;
 
 import 'dart:core' hide StackTrace;
+
+// TODO(ahe): https://github.com/dart-lang/fletch/issues/156
+import 'dart:core' as core show StackTrace;
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' hide exit;
@@ -52,6 +56,8 @@ class FletchVmSession {
 
   // TODO(ahe): Get rid of this. See also issue 67.
   bool silent = false;
+
+  Command connectionError = new ConnectionError("Connection is closed", null);
 
   FletchVmSession(Socket vmSocket,
                   Sink<List<int>> stdoutSink,
@@ -121,19 +127,17 @@ class FletchVmSession {
   /// Will read the next [Command] the fletch-vm sends to us.
   Future<Command> readNextCommand({bool force: true}) async {
     if (_drainedIncomingCommands) {
-      throw new StateError(
-          'Tried to read a command from the fletch-vm, but the connection is '
-          'already closed.');
+      return connectionError;
     }
 
-    _drainedIncomingCommands =
-        !await _commandReader.iterator.moveNext().catchError((error) {
-          _drainedIncomingCommands = true;
-          throw error;
+    _drainedIncomingCommands = !await _commandReader.iterator.moveNext()
+        .catchError((error, core.StackTrace trace) {
+          connectionError = new ConnectionError(error, trace);
+          return false;
         });
 
     if (_drainedIncomingCommands && force) {
-      throw new StateError('Expected response from fletch-vm but got EOF.');
+      return connectionError;
     }
 
     return _commandReader.iterator.current;
@@ -283,20 +287,32 @@ class Session extends FletchVmSession {
       case CommandCode.ProcessCompileTimeError:
         running = false;
         break;
+
       case CommandCode.ProcessTerminated:
         running = false;
         writeStdoutLine('### process terminated');
         // TODO(ahe): Let the caller terminate the session. See issue 67.
         await terminateSession();
         break;
-      default:
-        assert(response.code == CommandCode.ProcessBreakpoint);
+
+      case CommandCode.ConnectionError:
+        running = false;
+        await shutdown();
+        terminated = true;
+        break;
+
+      case CommandCode.ProcessBreakpoint:
         ProcessBreakpoint command = response;
         var function = fletchSystem.lookupFunctionById(command.functionId);
         debugState.topFrame = new StackFrame(
             function, command.bytecodeIndex, compiler, debugState);
         running = true;
         break;
+
+      default:
+        throw new StateError(
+            "Unhandled response from Fletch VM connection: ${response.code}");
+
     }
     return response;
   }

@@ -501,6 +501,7 @@ class IsolateController {
   /// isolate sends DriverCommand.ClosePort, or if the isolate is killed due to
   /// DriverCommand.Signal arriving through client.commands.
   Future<Null> attachClient(ClientController client) async {
+    eventLoopStarted = false;
     crashReportRequested = false;
     errorSubscription.onData((errorList) {
       String error = errorList[0];
