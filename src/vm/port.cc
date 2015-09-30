@@ -136,19 +136,31 @@ NATIVE(PortSend) {
   if (address == 0) return Failure::illegal_state();
 
   Port* port = reinterpret_cast<Port*>(address);
-  port->Lock();
-  Process* port_process = port->process();
-  if (port_process != NULL) {
-    port_process->mailbox()->Enqueue(port, message);
 
-    if (port_process != process) {
-      // If sending to another process, return the locked port. This will allow
-      // the scheduler to schedule the owner of the port, while it's still
-      // alive.
-      return reinterpret_cast<Object*>(port);
+  // We want to avoid holding a spinlock while doing an allocation, so:
+  //    * we do an early return if the destination process is not there
+  //    * we allocate (and possibly free) the message outside of the spinlock
+  //      region.
+  if (port->process() != NULL) {
+    Message* entry = Message::NewImmutableMessage(port, message);
+
+    port->Lock();
+    Process* port_process = port->process();
+    if (port_process != NULL) {
+      port_process->mailbox()->EnqueueEntry(entry);
+      entry = NULL;
+
+      if (port_process != process) {
+        // If sending to another process, return the locked port. This will
+        // allow the scheduler to schedule the owner of the port, while it's
+        // still alive.
+        return reinterpret_cast<Object*>(port);
+      }
     }
+    port->Unlock();
+
+    if (entry != NULL) delete entry;
   }
-  port->Unlock();
   return process->program()->null_object();
 }
 

@@ -56,6 +56,8 @@ class Message : public MailboxMessage<Message> {
 
   ~Message();
 
+  static Message* NewImmutableMessage(Port* port, Object* message);
+
   Port* port() const { return port_; }
   uword address() const { return value_; }
   int size() const { return SizeField::decode(kind_and_size_); }

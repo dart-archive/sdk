@@ -23,6 +23,18 @@ Message::~Message() {
   }
 }
 
+Message* Message::NewImmutableMessage(Port* port, Object* message) {
+  if (!message->IsHeapObject()) {
+    uword address = reinterpret_cast<uword>(message);
+    return new Message(port, address, 0, Message::IMMEDIATE);
+  } else if (message->IsImmutable()) {
+    uword address = reinterpret_cast<uword>(message);
+    return new Message(port, address, 0, Message::IMMUTABLE_OBJECT);
+  }
+  UNREACHABLE();
+  return NULL;
+}
+
 void Message::MergeChildHeaps(Process* destination_process) {
   ASSERT(kind() == Message::EXIT);
   ExitReference* ref = reinterpret_cast<ExitReference*>(address());
@@ -31,18 +43,7 @@ void Message::MergeChildHeaps(Process* destination_process) {
 }
 
 void MessageMailbox::Enqueue(Port* port, Object* message) {
-  Message* entry = NULL;
-  if (!message->IsHeapObject()) {
-    uword address = reinterpret_cast<uword>(message);
-    entry = new Message(port, address, 0, Message::IMMEDIATE);
-  } else if (message->IsImmutable()) {
-    uword address = reinterpret_cast<uword>(message);
-    entry = new Message(port, address, 0, Message::IMMUTABLE_OBJECT);
-  } else {
-    UNREACHABLE();
-  }
-
-  EnqueueEntry(entry);
+  EnqueueEntry(Message::NewImmutableMessage(port, message));
 }
 
 void MessageMailbox::EnqueueForeign(Port* port,
