@@ -20,7 +20,7 @@ vars = {
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_fletch_patches".
   # 2. update package revisions below.
-  "dart_rev": "@cf3538bfd89e491fd65d0ded305699df531fea75",
+  "dart_rev": "@3210196ad25894f9cce82f0f0fc0044c3ef8d5b1",
 
   # Please copy these package revisions from ../dart/DEPS when updating
   # dart_rev:

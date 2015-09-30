@@ -8,8 +8,11 @@ import 'dart:async' show
     EventSink;
 
 import 'package:sdk_library_metadata/libraries.dart' show
-    LIBRARIES,
-    LibraryInfo;
+    libraries,
+    LibraryInfo,
+    shared,
+    internal,
+    Category;
 
 import 'package:compiler/compiler_new.dart' as api;
 
@@ -77,43 +80,43 @@ const FLETCH_PLATFORM = 3;
 const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
   "_fletch_system": const LibraryInfo(
       "system/system.dart",
-      category: "Internal",
+      categories: internal,
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "fletch.ffi": const LibraryInfo(
       "ffi/ffi.dart",
-      category: "Shared",
+      categories: shared,
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "fletch": const LibraryInfo(
       "fletch/fletch.dart",
-      category: "Shared",
+      categories: shared,
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "fletch.io": const LibraryInfo(
       "io/io.dart",
-      category: "Shared",
+      categories: shared,
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "system": const LibraryInfo(
       "io/system.dart",
-      category: "Internal",
+      categories: internal,
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "service": const LibraryInfo(
       "service/service.dart",
-      category: "Shared",
+      categories: shared,
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "fletch.os": const LibraryInfo(
       "os/os.dart",
-      category: "Shared",
+      categories: shared,
       documented: false,
       platforms: FLETCH_PLATFORM),
 };
@@ -165,17 +168,17 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
 
   LibraryInfo lookupLibraryInfo(String name) {
     return fletchLibraries.putIfAbsent(name, () {
-      // Let FLETCH_LIBRARIES shadow LIBRARIES.
+      // Let FLETCH_LIBRARIES shadow libraries.
       if (FLETCH_LIBRARIES.containsKey(name)) {
         return computeFletchLibraryInfo(name);
       }
-      LibraryInfo info = LIBRARIES[name];
+      LibraryInfo info = libraries[name];
       if (info == null) {
         return computeFletchLibraryInfo(name);
       }
       return new LibraryInfo(
           info.path,
-          category: info.category,
+          categories: info.categories,
           dart2jsPath: info.dart2jsPath,
           dart2jsPatchPath: fletchPatchLibraryFor(name),
           implementation: info.implementation,
@@ -196,7 +199,7 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
         libraryRoot, patchRoot.resolve("lib/${info.path}"), false);
     return new LibraryInfo(
         '../$path',
-        category: info.category,
+        categories: info.categories,
         implementation: info.implementation,
         documented: info.documented,
         maturity: info.maturity,
