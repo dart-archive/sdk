@@ -140,7 +140,7 @@ void Service::Invoke(int id, void* buffer, int size) {
   request->thread = ThreadIdentifier();
   request->service = this;
   request->callback = NULL;
-  process->EnqueueForeign(port_, buffer, size, false);
+  process->mailbox()->EnqueueForeign(port_, buffer, size, false);
   process->program()->scheduler()->EnqueueProcess(process, port_);
   WaitForResult(request);
 }
@@ -161,7 +161,7 @@ void Service::InvokeAsync(int id,
   request->method_id = id;
   request->has_result = false;
   request->callback = reinterpret_cast<void*>(callback);
-  process->EnqueueForeign(port_, buffer, size, false);
+  process->mailbox()->EnqueueForeign(port_, buffer, size, false);
   process->program()->scheduler()->ResumeProcess(process);
   port_->Unlock();
 }

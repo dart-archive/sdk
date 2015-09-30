@@ -326,8 +326,7 @@ int Scheduler::Run() {
   return 0;
 }
 
-void Scheduler::ExitAtTermination(Process* process,
-                                  ThreadState* thread_state) {
+void Scheduler::ExitAtTermination(Process* process) {
   Program* program = process->program();
   program->DeleteProcess(process);
 
@@ -344,16 +343,19 @@ void Scheduler::ExitAtTermination(Process* process,
 void Scheduler::ExitAtUncaughtException(Process* process) {
   ASSERT(process->state() == Process::kUncaughtException);
   ExitWith(process->program(), kUncaughtExceptionExitCode);
+  ExitAtTermination(process);
 }
 
 void Scheduler::ExitAtCompileTimeError(Process* process) {
   ASSERT(process->state() == Process::kCompileTimeError);
   ExitWith(process->program(), kCompileTimeErrorExitCode);
+  ExitAtTermination(process);
 }
 
 void Scheduler::ExitAtBreakpoint(Process* process) {
   ASSERT(process->state() == Process::kBreakPoint);
   ExitWith(process->program(), kBreakPointExitCode);
+  ExitAtTermination(process);
 }
 
 void Scheduler::ExitWith(Program* program, int exit_code) {
@@ -368,7 +370,7 @@ void Scheduler::RescheduleProcess(Process* process,
                                   bool terminate) {
   ASSERT(process->state() == Process::kRunning);
   if (terminate) {
-    ExitAtTermination(process, state);
+    ExitAtTermination(process);
   } else {
     process->ChangeState(Process::kRunning, Process::kReady);
     EnqueueOnAnyThread(process, state->thread_id() + 1);
@@ -612,7 +614,7 @@ Process* Scheduler::InterpretProcess(Process* process,
 
   if (interpreter.IsYielded()) {
     process->ChangeState(Process::kRunning, Process::kYielding);
-    if (process->IsQueueEmpty()) {
+    if (process->mailbox()->IsEmpty()) {
       process->ChangeState(Process::kYielding, Process::kSleeping);
     } else {
       process->ChangeState(Process::kYielding, Process::kReady);
@@ -667,7 +669,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->ProcessTerminated(process)) {
-      ExitAtTermination(process, thread_state);
+      ExitAtTermination(process);
     }
     return NULL;
   }
@@ -678,7 +680,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->UncaughtException(process)) {
-      ExitWith(process->program(), kUncaughtExceptionExitCode);
+      ExitAtUncaughtException(process);
     }
     return NULL;
   }
@@ -689,7 +691,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->CompileTimeError(process)) {
-      ExitWith(process->program(), kCompileTimeErrorExitCode);
+      ExitAtCompileTimeError(process);
     }
     return NULL;
   }

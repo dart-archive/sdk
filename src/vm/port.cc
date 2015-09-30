@@ -139,7 +139,8 @@ NATIVE(PortSend) {
   port->Lock();
   Process* port_process = port->process();
   if (port_process != NULL) {
-    port_process->Enqueue(port, message);
+    port_process->mailbox()->Enqueue(port, message);
+
     if (port_process != process) {
       // If sending to another process, return the locked port. This will allow
       // the scheduler to schedule the owner of the port, while it's still
@@ -169,9 +170,9 @@ NATIVE(PortSendExit) {
     // will allow the scheduler to schedule the owner of the port,
     // while it's still alive.
     if (message->IsImmutable()) {
-      port_process->Enqueue(port, message);
+      port_process->mailbox()->Enqueue(port, message);
     } else {
-      port_process->EnqueueExit(process, port, message);
+      port_process->mailbox()->EnqueueExit(process, port, message);
     }
 
     return TargetYieldResult(port, true).AsObject();

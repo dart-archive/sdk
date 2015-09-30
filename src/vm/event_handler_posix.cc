@@ -73,7 +73,7 @@ void EventHandler::Send(Port* port, uword mask) {
   port->Lock();
   Process* port_process = port->process();
   if (port_process != NULL) {
-    port_process->Enqueue(port, message);
+    port_process->mailbox()->Enqueue(port, message);
     port_process->program()->scheduler()->ResumeProcess(port_process);
   }
   port->Unlock();

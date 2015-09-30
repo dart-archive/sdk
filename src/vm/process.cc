@@ -26,90 +26,6 @@ namespace fletch {
 static Object** kPreemptMarker = reinterpret_cast<Object**>(1);
 static Object** kProfileMarker = reinterpret_cast<Object**>(2);
 
-class ExitReference {
- public:
-  ExitReference(Process* exiting_process, Object* message)
-      : mutable_heap_(NULL, reinterpret_cast<WeakPointer*>(NULL)),
-        store_buffer_(true),
-        message_(message) {
-    mutable_heap_.MergeInOtherHeap(exiting_process->heap());
-    store_buffer_.Prepend(exiting_process->store_buffer());
-  }
-
-  Object* message() const { return message_; }
-
-  void VisitPointers(PointerVisitor* visitor) {
-    visitor->Visit(&message_);
-  }
-
-  Heap* mutable_heap() { return &mutable_heap_; }
-
-  StoreBuffer* store_buffer() { return &store_buffer_; }
-
- private:
-  Heap mutable_heap_;
-  StoreBuffer store_buffer_;
-  Object* message_;
-};
-
-class PortQueue {
- public:
-  enum Kind {
-    IMMEDIATE,
-    OBJECT,
-    FOREIGN,
-    FOREIGN_FINALIZED,
-    EXIT
-  };
-
-  PortQueue(Port* port, uword value, int size, Kind kind)
-      : port_(port),
-        value_(value),
-        next_(NULL),
-        kind_and_size_(KindField::encode(kind) | SizeField::encode(size)) {
-    port_->IncrementRef();
-  }
-
-  ~PortQueue() {
-    port_->DecrementRef();
-    if (kind() == EXIT) {
-      ExitReference* ref = reinterpret_cast<ExitReference*>(address());
-      delete ref;
-    }
-  }
-
-  Port* port() const { return port_; }
-  uword address() const { return value_; }
-  int size() const { return SizeField::decode(kind_and_size_); }
-  Kind kind() const { return KindField::decode(kind_and_size_); }
-
-  PortQueue* next() const { return next_; }
-  void set_next(PortQueue* next) { next_ = next; }
-
-  void VisitPointers(PointerVisitor* visitor) {
-    switch (kind()) {
-      case OBJECT:
-        visitor->Visit(reinterpret_cast<Object**>(&value_));
-        break;
-      case EXIT: {
-        ExitReference* ref = reinterpret_cast<ExitReference*>(address());
-        ref->VisitPointers(visitor);
-        break;
-      }
-      default:
-        break;
-    }
-  }
-
- private:
-  Port* port_;
-  uword value_;
-  PortQueue* next_;
-  class KindField: public BitField<Kind, 0, 3> { };
-  class SizeField: public BitField<int, 3, 32 - 3> { };
-  const int32 kind_and_size_;
-};
-
 ThreadState::ThreadState()
     : thread_id_(-1),
       queue_(new ProcessQueue()),
@@ -149,8 +65,6 @@ Process::Process(Program* program)
       queue_next_(NULL),
       queue_previous_(NULL),
       ports_(NULL),
-      last_message_(NULL),
-      current_message_(NULL),
       process_list_next_(NULL),
       process_list_prev_(NULL),
       errno_cache_(0),
@@ -181,24 +95,26 @@ Process::Process(Program* program)
 }
 
 Process::~Process() {
+  // [Cleanup] should've been called at this point. So we ASSERT the post
+  // conditions here.
+  ASSERT(ports_ == NULL);
+
+  heap_.ProcessWeakPointers();
+
   delete debug_info_;
 
   ASSERT(next_ == NULL);
   ASSERT(cooked_stack_deltas_.is_empty());
+}
+
+void Process::Cleanup() {
   // Clear out the process pointer from all the ports.
-  heap_.ProcessWeakPointers();
   ASSERT(immutable_heap_ == NULL);
   while (ports_ != NULL) {
     Port* next = ports_->next();
     ports_->OwnerProcessTerminating();
     ports_ = next;
   }
-  while (last_message_ != NULL) {
-    PortQueue* entry = last_message_;
-    last_message_ = entry->next();
-    delete entry;
-  }
-  ASSERT(last_message_ == NULL);
 }
 
 void Process::SetupExecutionStack() {
@@ -549,20 +465,12 @@ void Process::ValidateHeaps(ImmutableHeap* immutable_heap) {
   v.VisitProcess(this);
 }
 
-static void IteratePortQueuePointers(PortQueue* queue,
-                                     PointerVisitor* visitor) {
-  for (PortQueue* current = queue;
-       current != NULL;
-       current = current->next()) {
-     current->VisitPointers(visitor);
-  }
-}
-
 void Process::IterateRoots(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&statics_));
   visitor->Visit(reinterpret_cast<Object**>(&coroutine_));
   if (debug_info_ != NULL) debug_info_->VisitPointers(visitor);
-  IteratePortQueuesPointers(visitor);
+
+  mailbox_.IteratePointers(visitor);
 }
 
 void Process::IterateProgramPointers(PointerVisitor* visitor) {
@@ -571,12 +479,7 @@ void Process::IterateProgramPointers(PointerVisitor* visitor) {
   heap()->IterateObjects(&program_pointer_visitor);
   store_buffer_.IteratePointersToImmutableSpace(visitor);
   if (debug_info_ != NULL) debug_info_->VisitProgramPointers(visitor);
-  IteratePortQueuesPointers(visitor);
-}
-
-void Process::IteratePortQueuesPointers(PointerVisitor* visitor) {
-  IteratePortQueuePointers(last_message_, visitor);
-  IteratePortQueuePointers(current_message_, visitor);
+  mailbox_.IteratePointers(visitor);
 }
 
 void Process::TakeLookupCache() {
@@ -724,68 +627,6 @@ void Process::UpdateBreakpoints() {
   }
 }
 
-void Process::Enqueue(Port* port, Object* message) {
-  PortQueue* entry = NULL;
-  if (!message->IsHeapObject()) {
-    uword address = reinterpret_cast<uword>(message);
-    entry = new PortQueue(port, address, 0, PortQueue::IMMEDIATE);
-  } else if (message->IsImmutable()) {
-    uword address = reinterpret_cast<uword>(message);
-    entry = new PortQueue(port, address, 0, PortQueue::OBJECT);
-  } else {
-    UNREACHABLE();
-  }
-
-  EnqueueEntry(entry);
-}
-
-void Process::EnqueueForeign(Port* port,
-                             void* foreign,
-                             int size,
-                             bool finalized) {
-  PortQueue::Kind kind = finalized
-      ? PortQueue::FOREIGN_FINALIZED
-      : PortQueue::FOREIGN;
-  uword address = reinterpret_cast<uword>(foreign);
-  PortQueue* entry = new PortQueue(port, address, size, kind);
-  EnqueueEntry(entry);
-}
-
-void Process::EnqueueExit(Process* sender, Port* port, Object* message) {
-  // TODO(kasperl): Optimize this to avoid merging heaps if copying is cheaper.
-  uword address = reinterpret_cast<uword>(new ExitReference(sender, message));
-  PortQueue* entry = new PortQueue(port, address, 0, PortQueue::EXIT);
-  EnqueueEntry(entry);
-}
-
-bool Process::IsValidForEnqueue(Object* message) {
-  Space* space = program_->heap()->space();
-  return !message->IsHeapObject()
-      || message->IsPort()
-      || message->IsLargeInteger()
-      || space->Includes(HeapObject::cast(message)->address());
-}
-
-static PortQueue* Reverse(PortQueue* queue) {
-  PortQueue* previous = NULL;
-  while (queue != NULL) {
-    PortQueue* next = queue->next();
-    queue->set_next(previous);
-    previous = queue;
-    queue = next;
-  }
-  return previous;
-}
-
-void Process::TakeQueue() {
-  // Take the current queue.
-  ASSERT(Thread::IsCurrent(thread_state_.load()->thread()));
-  ASSERT(current_message_ == NULL);
-  PortQueue* last = last_message_;
-  while (!last_message_.compare_exchange_weak(last, NULL)) { }
-  current_message_ = Reverse(last);
-}
-
 void Process::RegisterFinalizer(HeapObject* object,
                                 WeakPointerCallback callback) {
   uword address = object->address();
@@ -829,43 +670,8 @@ void Process::RestoreErrno() {
   errno = errno_cache_;
 }
 
-void Process::AdvanceCurrentMessage() {
-  ASSERT(Thread::IsCurrent(thread_state_.load()->thread()));
-  ASSERT(current_message_ != NULL);
-  PortQueue* temp = current_message_;
-  current_message_ = current_message_->next();
-  delete temp;
-}
-
-// It's safe to call this method several times for the same ExitReference (e.g.
-// during GC and when processing the message in it). If the spaces were already
-// taken, this will be a NOP.
-static void TakeExitReferenceHeaps(ExitReference* ref,
-                                   Process* destination_process) {
-  destination_process->heap()->MergeInOtherHeap(ref->mutable_heap());
-  destination_process->store_buffer()->Prepend(ref->store_buffer());
-}
-
-static void TakePortQueueHeaps(PortQueue* queue, Process* destination_process) {
-  for (PortQueue* current = queue;
-       current != NULL;
-       current = current->next()) {
-    if (current->kind() == PortQueue::EXIT) {
-      ExitReference* ref = reinterpret_cast<ExitReference*>(current->address());
-      TakeExitReferenceHeaps(ref, destination_process);
-    }
-  }
-}
-
 void Process::TakeChildHeaps() {
-  TakePortQueueHeaps(current_message_, this);
-  TakePortQueueHeaps(last_message_, this);
-}
-
-PortQueue* Process::CurrentMessage() {
-  ASSERT(Thread::IsCurrent(thread_state_.load()->thread()));
-  if (current_message_ == NULL) TakeQueue();
-  return current_message_;
+  mailbox_.MergeAllChildHeaps(this);
 }
 
 void Process::UpdateStackLimit() {
@@ -877,15 +683,6 @@ void Process::UpdateStackLimit() {
   if (current_limit != kPreemptMarker) {
     Object** new_stack_limit = stack->Pointer(stack->length() - frame_size);
     stack_limit_.compare_exchange_strong(current_limit, new_stack_limit);
-  }
-}
-
-void Process::EnqueueEntry(PortQueue* entry) {
-  ASSERT(entry->next() == NULL);
-  PortQueue* last = last_message_;
-  while (true) {
-    entry->set_next(last);
-    if (last_message_.compare_exchange_weak(last, entry)) break;
   }
 }
 
@@ -923,18 +720,20 @@ LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
 }
 
 NATIVE(ProcessQueueGetMessage) {
-  PortQueue* queue = process->CurrentMessage();
-  PortQueue::Kind kind = queue->kind();
+  MessageMailbox* mailbox = process->mailbox();
+
+  Message* queue = mailbox->CurrentMessage();
+  Message::Kind kind = queue->kind();
   Object* result = Smi::FromWord(0);
 
   switch (kind) {
-    case PortQueue::IMMEDIATE:
-    case PortQueue::OBJECT:
+    case Message::IMMEDIATE:
+    case Message::IMMUTABLE_OBJECT:
       result = reinterpret_cast<Object*>(queue->address());
       break;
 
-    case PortQueue::FOREIGN:
-    case PortQueue::FOREIGN_FINALIZED: {
+    case Message::FOREIGN:
+    case Message::FOREIGN_FINALIZED: {
       Class* foreign_memory_class = process->program()->foreign_memory_class();
       ASSERT(foreign_memory_class->NumberOfInstanceFields() == 3);
       Object* object = process->NewInstance(foreign_memory_class);
@@ -949,7 +748,7 @@ NATIVE(ProcessQueueGetMessage) {
       int size = queue->size();
       foreign->SetInstanceField(1, Smi::FromWord(size));
       process->RecordStore(foreign, object);
-      if (kind == PortQueue::FOREIGN_FINALIZED) {
+      if (kind == Message::FOREIGN_FINALIZED) {
         process->RegisterFinalizer(foreign, Process::FinalizeForeign);
         process->heap()->AllocatedForeignMemory(size);
       }
@@ -957,10 +756,9 @@ NATIVE(ProcessQueueGetMessage) {
       break;
     }
 
-    case PortQueue::EXIT: {
-      ExitReference* ref = reinterpret_cast<ExitReference*>(queue->address());
-      TakeExitReferenceHeaps(ref, process);
-      result = ref->message();
+    case Message::EXIT: {
+      queue->MergeChildHeaps(process);
+      result = queue->ExitReferenceObject();
       break;
     }
 
@@ -968,20 +766,22 @@ NATIVE(ProcessQueueGetMessage) {
       UNREACHABLE();
   }
 
-  process->AdvanceCurrentMessage();
+  mailbox->AdvanceCurrentMessage();
   return result;
 }
 
 NATIVE(ProcessQueueGetChannel) {
-  PortQueue* queue = process->CurrentMessage();
+  MessageMailbox* mailbox = process->mailbox();
+
+  Message* queue = mailbox->CurrentMessage();
   // The channel for a port can die independently of the port. In that case
   // messages sent to the port can never be received. In that case we drop the
   // message when processing the message queue.
   while (queue != NULL) {
     Instance* channel = queue->port()->channel();
     if (channel != NULL) return channel;
-    process->AdvanceCurrentMessage();
-    queue = process->CurrentMessage();
+    mailbox->AdvanceCurrentMessage();
+    queue = mailbox->CurrentMessage();
   }
   return process->program()->null_object();
 }
