@@ -155,11 +155,8 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
     if (artifact.filename != null && artifact.mimeType != 'application/dart') {
       throw "Dart VM cannot run files of type '${artifact.mimeType}'.";
     }
-    String executable;
-    List<String> arguments;
-    Map<String, String> environment;
-    executable = '${suite.buildDir}/fletch';
-    environment = {
+    String executable = '${suite.buildDir}/fletch';
+    Map<String, String> environment = {
       'DART_VM': suite.dartVmBinaryFileName,
     };
 

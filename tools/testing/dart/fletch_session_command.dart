@@ -71,13 +71,15 @@ class FletchSessionCommand implements Command {
   final List<String> arguments;
   final Map<String, String> environmentOverrides;
   final bool isIncrementalCompilationEnabled;
+  final String snapshotFileName;
 
   FletchSessionCommand(
       this.executable,
       this.script,
       this.arguments,
       this.environmentOverrides,
-      this.isIncrementalCompilationEnabled);
+      this.isIncrementalCompilationEnabled,
+      {this.snapshotFileName});
 
   String get displayName => "fletch_session";
 
@@ -131,8 +133,14 @@ class FletchSessionCommand implements Command {
       Future vmTerminationFuture = fletch.shutdownVm(timeout);
       try {
         await fletch.runInSession(["attach", "tcp_socket", vmSocketAddress]);
-        exitCode =
-            await fletch.runInSession(["run", script], checkExitCode: false);
+        if (snapshotFileName != null) {
+          exitCode = await fletch.runInSession(
+              ["export", script, 'to', 'file', snapshotFileName],
+              checkExitCode: false);
+        } else {
+          exitCode =
+              await fletch.runInSession(["run", script], checkExitCode: false);
+        }
       } finally {
         int vmExitCode = await vmTerminationFuture;
         fletch.stderr.writeln("Fletch VM exitcode is $vmExitCode");

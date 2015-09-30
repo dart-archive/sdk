@@ -19,6 +19,9 @@ import 'test_suite.dart' show
     TestInformation,
     TestUtils;
 
+import 'fletch_session_command.dart' show
+    FletchSessionCommand;
+
 /// Grouping of a command with its expected result.
 class CommandArtifact {
   final List<Command> commands;
@@ -65,7 +68,9 @@ abstract class CompilerConfiguration {
       case 'fletchc':
         return new FletchCCompilerConfiguration(
             isDebug: isDebug, isChecked: isChecked,
-            isHostChecked: isHostChecked, useSdk: useSdk);
+            isHostChecked: isHostChecked, useSdk: useSdk,
+            isIncrementalCompilationEnabled:
+                configuration['enable_incremental_compilation']);
       case 'none':
         return new NoneCompilerConfiguration(
             isDebug: isDebug, isChecked: isChecked,
@@ -196,11 +201,14 @@ class Dart2xCompilerConfiguration extends CompilerConfiguration {
 }
 
 class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
+  final bool isIncrementalCompilationEnabled;
+
   FletchCCompilerConfiguration({
       bool isDebug,
       bool isChecked,
       bool isHostChecked,
-      bool useSdk})
+      bool useSdk,
+      this.isIncrementalCompilationEnabled: true})
       : super(
           'fletchc',
           isDebug: isDebug, isChecked: isChecked,
@@ -217,21 +225,18 @@ class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
       List basicArguments,
       Map<String, String> environmentOverrides) {
     String snapshotFileName = '$tempDir/fletch.snapshot';
-    basicArguments.insertAll(0, ['-o', snapshotFileName]);
-
     String executable = '$buildDir/fletch';
-    List<String> arguments = <String>['compile-and-run'];
     Map<String, String> environment = {
       'DART_VM' : '$buildDir/dart',
     }..addAll(environmentOverrides);
-    arguments.addAll(basicArguments);
 
-    // NOTE: We assume that `fletch` behaves the same as invoking
-    // the DartVM in terms of exit codes.
-    var commands = <Command>[
-        commandBuilder.getVmCommand(executable, arguments, environment)];
+    Command command = new FletchSessionCommand(
+        executable, basicArguments.first, basicArguments,
+        environment, isIncrementalCompilationEnabled,
+        snapshotFileName: snapshotFileName);
+
     return new CommandArtifact(
-        commands, snapshotFileName, 'application/fletch-snapshot');
+        <Command>[command], snapshotFileName, 'application/fletch-snapshot');
   }
 
   List<String> computeRuntimeArguments(
