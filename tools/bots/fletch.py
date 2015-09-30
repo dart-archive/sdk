@@ -79,6 +79,9 @@ def Main():
         system = fletch_match.group(1)
 
         if system == 'lk':
+          # TODO(ajohnsen): remove when we are back in shape
+          print 'Currently broken'
+          return
           StepsLK(debug_log)
           return
 
