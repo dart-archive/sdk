@@ -22,6 +22,7 @@ import uuid
 
 import bot
 import bot_utils
+import fletch_namer
 
 from os.path import dirname, join
 
@@ -110,9 +111,12 @@ def Main():
             asans = [False]
         sdk_build = fletch_match.group(5)
         if sdk_build:
-          print 'TODO(ricow): bundle up'
-          return
-        StepsNormal(debug_log, system, modes, archs, asans)
+          if system == 'linux':
+            StepsSDK(debug_log, system, modes, archs)
+          else:
+            print 'Mac is blocked on issues 127'
+        else:
+          StepsNormal(debug_log, system, modes, archs, asans)
       elif cross_match:
         system = cross_match.group(1)
         arch = cross_match.group(2)
@@ -131,6 +135,40 @@ def Main():
 
 
 #### Buildbot steps
+
+def StepsSDK(debug_log, system, modes, archs):
+  configurations = GetBuildConfigurations(system, modes, archs, [False],
+                                          no_clang=True)
+  StepGyp()
+  CrossCompile('linux', ['release'], 'xarm')
+  for configuration in configurations:
+    StepBuild(configuration['build_conf'], configuration['build_dir']);
+    StepsBundleSDK(configuration['build_dir'])
+    StepsArchiveSDK(configuration['build_dir'], system, configuration['mode'],
+                    configuration['arch'])
+
+def StepsBundleSDK(build_dir):
+  with bot.BuildStep('Bundle sdk %s' % build_dir):
+    Run(['tools/bundle_sdk.py', '--build_dir=%s' % build_dir])
+
+def StepsArchiveSDK(build_dir, system, mode, arch):
+  with bot.BuildStep('Archive bundle %s' % build_dir):
+    def CreateZip(directory, target_file):
+      with utils.ChangedWorkingDirectory(os.path.dirname(directory)):
+        command = ['zip', '-yrq9', target_file, os.path.basename(directory)]
+        Run(command)
+    sdk = os.path.join(build_dir, 'fletch-sdk')
+    zip_file = 'fletch-sdk.zip'
+    CreateZip(sdk, zip_file)
+    version = utils.GetSemanticSDKVersion()
+    name, _ = bot.GetBotName()
+    channel = bot_utils.GetChannelFromName(name)
+    namer = fletch_namer.FletchGCSNamer(channel)
+    gsutil = bot_utils.GSUtil()
+    gs_path = namer.fletch_sdk_zipfilepath(version, system, arch, mode)
+    http_path = gs_path.replace('gs://', 'http://storage.googleapis.com/')
+    gsutil.upload(os.path.join(build_dir, zip_file), gs_path, public=True)
+    print '@@@STEP_LINK@download@%s@@@' % http_path
 
 def StepsNormal(debug_log, system, modes, archs, asans):
   configurations = GetBuildConfigurations(system, modes, archs, asans)
@@ -201,13 +239,10 @@ def StepsCrossBuilder(debug_log, system, modes, arch):
   take care of downloading/extracting the build artifacts and executing tests.
   """
 
-  revision = os.environ['BUILDBOT_GOT_REVISION']
+  revision = os.environ.get('BUILDBOT_GOT_REVISION', '42')
   assert revision
 
-  for compiler_variant in GetCompilerVariants(system, arch):
-    for mode in modes:
-      build_conf = GetConfigurationName(mode, arch, compiler_variant, False)
-      StepBuild(build_conf, os.path.join('out', build_conf))
+  CrossCompile(system, modes, arch)
 
   tarball = TarballName(arch, revision)
   try:
@@ -226,6 +261,12 @@ def StepsCrossBuilder(debug_log, system, modes, arch):
   finally:
     if os.path.exists(tarball):
       os.remove(tarball)
+
+def CrossCompile(system, modes, arch):
+  for compiler_variant in GetCompilerVariants(system, arch):
+    for mode in modes:
+      build_conf = GetConfigurationName(mode, arch, compiler_variant, False)
+      StepBuild(build_conf, os.path.join('out', build_conf))
 
 def StepsTargetRunner(debug_log, system, mode, arch):
   """This step downloads XARM build artifacts and runs tests.
@@ -538,13 +579,13 @@ def RunWithCoreDumpArchiving(run, build_dir, build_conf):
   else:
     run()
 
-def GetBuildConfigurations(system, modes, archs, asans):
+def GetBuildConfigurations(system, modes, archs, asans, no_clang=False):
   configurations = []
 
   for asan in asans:
     for mode in modes:
       for arch in archs:
-        for compiler_variant in GetCompilerVariants(system, arch):
+        for compiler_variant in GetCompilerVariants(system, arch, no_clang):
           build_conf = GetConfigurationName(mode, arch, compiler_variant, asan)
           configurations.append({
             'build_conf': build_conf,
@@ -584,10 +625,12 @@ def ShouldSkipConfiguration(snapshot_run, configuration):
 
   return False
 
-def GetCompilerVariants(system, arch):
+def GetCompilerVariants(system, arch, no_clang=False):
   is_mac = system == 'mac'
   is_arm = arch in ['arm', 'xarm']
-  if is_mac:
+  if no_clang:
+    return ['']
+  elif is_mac:
     # gcc on mac is just an alias for clang.
     return ['Clang']
   elif is_arm:
