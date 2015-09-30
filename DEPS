@@ -124,6 +124,7 @@ hooks = [
       'dart-dependencies-fletch',
       '-d',
       '-r',
+      '-u',
       '--auto_platform',
       'fletch/third_party/bin',
     ],
