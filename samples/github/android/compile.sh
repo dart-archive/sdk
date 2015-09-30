@@ -87,12 +87,13 @@ fi
 if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
     # Kill the persistent process
     cd $FLETCH_DIR
-    ./tools/persistent_process_info.sh --kill
 
     SNAPSHOT="$DIR/$ANDROID_PROJ/app/src/main/res/raw/${PROJ}_snapshot"
     mkdir -p `dirname "$SNAPSHOT"`
-    $FLETCH compile-and-run --packages $TARGET_PKG_FILE -o "$SNAPSHOT" \
-        "$TARGET_DIR/bin/$PROJ.dart"
+    $DART -c --packages=.packages \
+          -Dsnapshot="$SNAPSHOT" \
+          -Dpackages="$TARGET_PKG_FILE" \
+          tests/fletchc/run.dart "$TARGET_DIR/bin/$PROJ.dart"
 fi
 
 set +x

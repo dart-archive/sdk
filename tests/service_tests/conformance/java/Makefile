@@ -131,7 +131,7 @@ jni/libfletch.jnilib: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o 
 	g++ ${CPPFLAGS} -framework CoreFoundation -shared -o $@ $^
 
 conformance.snapshot: ../conformance_service_impl.dart
-	cd ${FLETCH_DIR}; ${FLETCH_BUILD_DIR}/fletch compile-and-run -o ${THIS_DIR}$@ ${THIS_DIR}$<
+	cd ${FLETCH_DIR}; ${FLETCH_BUILD_DIR}/dart -c --packages=.packages -Dsnapshot=${THIS_DIR}$@ tests/fletchc/run.dart ${THIS_DIR}$<
 
 test: all
 	LD_LIBRARY_PATH=jni \

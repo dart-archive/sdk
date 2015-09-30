@@ -18,6 +18,8 @@ const String userVmAddress = const String.fromEnvironment("attachToVm");
 
 const String exportTo = const String.fromEnvironment("snapshot");
 
+const String userPackages = const String.fromEnvironment("packages");
+
 Future<Null> attach(SessionState state) async {
   if (userVmAddress == null) {
     await attachToLocalVm(state);
@@ -29,8 +31,8 @@ Future<Null> attach(SessionState state) async {
 
 main(List<String> arguments) async {
   Settings settings = new Settings(
-      fileUri(".packages", Uri.base),
-      ["-verbose"],
+      fileUri(userPackages == null ? ".packages" : userPackages, Uri.base),
+      ["--verbose"],
       <String, String>{
         "foo": "1",
         "bar": "baz",
