@@ -72,6 +72,8 @@ deps = {
 
   "fletch/third_party/lk/lk-downstream":
       (Var("github_url") % "travisg/lk") + Var("lk_rev"),
+
+  "wiki": (Var("github_url") % "dart-lang/fletch.wiki"),
 }
 
 # To include Mac deps on other OSes, add this to your .gclient file:
