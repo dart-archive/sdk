@@ -148,16 +148,6 @@ List<Example> getExamples(DiagnosticKind kind) {
           new CommandLineExample(
               <String>['export'])];
 
-    case DiagnosticKind.expectedToPreposition:
-      return <Example>[
-          new CommandLineExample(
-              <String>['export', 'in', 'all'])];
-
-    case DiagnosticKind.expectedFileTarget:
-      return <Example>[
-          new CommandLineExample(
-              <String>['export', 'to', 'all'])];
-
     case DiagnosticKind.unknownOption:
       // TODO(ahe): Remove this when compile_and_run_verb.dart is removed.
       return <Example>[new CommandLineExample(
@@ -204,6 +194,60 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.settingsDeviceAddressNotAString:
       return <Example>[new SettingsExample('{"device_address":1}')];
+
+    case DiagnosticKind.unknownAction:
+      return <Example>[
+          new CommandLineExample(<String>['blah']),
+          new CommandLineExample(<String>['--compile-and-run', 'test.dart']),
+          new CommandLineExample(<String>['test.dart'])];
+
+    case DiagnosticKind.extraArguments:
+      return <Example>[
+          new CommandLineExample(<String>['create', 'fisk'])];
+
+    case DiagnosticKind.cantPerformVerbIn:
+      return <Example>[
+          new CommandLineExample(<String>['create', 'in', 'classes'])];
+
+    case DiagnosticKind.cantPerformVerbTo:
+      return <Example>[
+          new CommandLineExample(<String>['create', 'to', 'classes'])];
+
+    case DiagnosticKind.cantPerformVerbWith:
+      return <Example>[
+          new CommandLineExample(<String>['create', 'with', 'classes'])];
+
+    case DiagnosticKind.duplicatedIn:
+      return <Example>[new CommandLineExample(
+            <String>['run', 'in', 'session', 'foo', 'in', 'session', 'foo'])];
+
+    case DiagnosticKind.duplicatedTo:
+      return <Example>[new CommandLineExample(
+            <String>['export', 'to', 'foo.dart', 'to', 'foo.dart'])];
+
+    case DiagnosticKind.duplicatedWith:
+      return <Example>[new CommandLineExample(
+            <String>['create', 'with', 'foo.txt', 'with', 'foo.txt'])];
+
+    case DiagnosticKind.verbDoesntSupportTarget:
+      return <Example>[new CommandLineExample(
+            <String>['shutdown', 'foo.txt'])];
+
+    case DiagnosticKind.verbRequiresNoToFile:
+      return <Example>[new CommandLineExample(
+            <String>['shutdown', 'to', 'foo.txt'])];
+
+    case DiagnosticKind.verbRequiresNoWithFile:
+      return <Example>[new CommandLineExample(
+            <String>['shutdown', 'with', 'foo.txt'])];
+
+    case DiagnosticKind.verbRequiresTarget:
+      // TODO(ahe): Add test for this.
+      return untestable;
+
+    case DiagnosticKind.verbRequiresTargetButGot:
+      // TODO(ahe): Add test for this.
+      return untestable;
   }
 }
 

@@ -13,7 +13,9 @@ import '../verbs/actions.dart' show
     uncommonActions;
 
 import '../verbs/infrastructure.dart' show
-    AnalyzedSentence;
+    AnalyzedSentence,
+    DiagnosticKind,
+    throwFatalError;
 
 Sentence parseSentence(
     Iterable<String> arguments,
@@ -42,9 +44,21 @@ class SentenceParser {
     } else {
       verb = new Verb("help", commonActions["help"]);
     }
-    Preposition preposition = parsePrepositionOpt();
-    Target target = parseTargetOpt();
-    Preposition tailPreposition = parsePrepositionOpt();
+    List<Preposition> prepositions = <Preposition>[];
+    List<Target> targets = <Target>[];
+    while (!tokens.isAtEof) {
+      Preposition preposition = parsePrepositionOpt();
+      if (preposition != null) {
+        prepositions.add(preposition);
+        continue;
+      }
+      Target target = parseTargetOpt();
+      if (target != null) {
+        targets.add(target);
+        continue;
+      }
+      break;
+    }
     List<String> trailing = <String>[];
     while (!tokens.isAtEof) {
       trailing.add(tokens.current);
@@ -54,7 +68,7 @@ class SentenceParser {
       trailing = null;
     }
     return new Sentence(
-        verb, preposition, target, tailPreposition, trailing,
+        verb, prepositions, targets, trailing,
         currentDirectory, programName,
         // TODO(ahe): Get rid of the following argument:
         tokens.originalInput.skip(1).toList());
@@ -72,16 +86,7 @@ class SentenceParser {
       tokens.consume();
       return new Verb(name, action);
     }
-    return new Verb(name, makeErrorAction("Unknown argument: $name"));
-  }
-
-  Action makeErrorAction(String message) {
-    return
-        new Action((AnalyzedSentence sentence, context) {
-          print(message);
-          return commonActions["help"].perform(sentence, context)
-              .then((_) => 1);
-        }, null);
+    return new ErrorVerb(name);
   }
 
   Preposition parsePrepositionOpt() {
@@ -295,7 +300,21 @@ class Verb {
 
   const Verb(this.name, this.action);
 
+  bool get isErroneous => false;
+
   String toString() => "Verb(${quoteString(name)})";
+}
+
+class ErrorVerb implements Verb {
+  final String name;
+
+  const ErrorVerb(this.name);
+
+  bool get isErroneous => true;
+
+  Action get action {
+    throwFatalError(DiagnosticKind.unknownAction, userInput: name);
+  }
 }
 
 class Preposition {
@@ -382,19 +401,16 @@ class ErrorTarget extends Target {
 ///   `create class MyClass in session MySession`
 ///
 /// In this example, `create` is a [Verb], `class MyClass` is a [Target], and
-/// `in session MySession` is a [Preposition] in tail position.
+/// `in session MySession` is a [Preposition].
 class Sentence {
   /// For example, `create`.
   final Verb verb;
 
   /// For example, `in session MySession`
-  final Preposition preposition;
+  final List<Preposition> prepositions;
 
   /// For example, `class MyClass`
-  final Target target;
-
-  /// For example, `in session MySession`
-  final Preposition tailPreposition;
+  final List<Target> targets;
 
   /// Any tokens found after this sentence.
   final List<String> trailing;
@@ -410,13 +426,12 @@ class Sentence {
 
   const Sentence(
       this.verb,
-      this.preposition,
-      this.target,
-      this.tailPreposition,
+      this.prepositions,
+      this.targets,
       this.trailing,
       this.currentDirectory,
       this.programName,
       this.arguments);
 
-  String toString() => "Sentence($verb, $preposition, $target)";
+  String toString() => "Sentence($verb, $prepositions, $targets)";
 }

@@ -21,10 +21,10 @@ import '../driver/sentence_parser.dart' show
     NamedTarget,
     Preposition,
     PrepositionKind,
-    Verb,
     Sentence,
     Target,
-    TargetKind;
+    TargetKind,
+    Verb;
 
 export '../driver/sentence_parser.dart' show
     TargetKind;
@@ -87,9 +87,6 @@ export '../driver/driver_main.dart' show
     ClientController,
     IsolatePool;
 
-import '../diagnostic.dart' show
-    throwInternalError; // TODO(ahe): Remove this.
-
 import '../driver/session_manager.dart' show
     lookupSession; // Don't export this.
 
@@ -103,86 +100,163 @@ import 'documentation.dart' show
     helpDocumentation;
 
 AnalyzedSentence analyzeSentence(Sentence sentence) {
+  if (sentence.verb.isErroneous) {
+    sentence.verb.action.perform(null, null);
+  }
   Uri base = Uri.base;
   if (sentence.currentDirectory != null) {
     base = fileUri(appendSlash(sentence.currentDirectory), base);
   }
   Verb verb = sentence.verb;
   Action action = verb.action;
-
-  if (sentence.target != null && sentence.target.kind == TargetKind.HELP) {
-    Action contextHelp = new Action((_,__) async {
-      print(action.documentation);
-      return 0;
-    }, null);
-    return new AnalyzedSentence(
-      new Verb(verb.name, contextHelp), null, null, null, null, null,
-      null, null, null, null, null, null);
-  }
-
-  Preposition preposition = sentence.preposition;
-  if (preposition == null) {
-    preposition = sentence.tailPreposition;
-  } else if (sentence.tailPreposition != null) {
-    throwInternalError(
-        "Can't use both '$preposition', and '${sentence.tailPreposition}'");
-  }
-
-  Target target = sentence.target;
-
   List<String> trailing = sentence.trailing;
 
-  NamedTarget sessionTarget;
+  for (Target target in sentence.targets) {
+    if (target.kind == TargetKind.HELP) {
+      Action contextHelp = new Action((_,__) async {
+        print(action.documentation);
+        return 0;
+      }, null);
+      return new AnalyzedSentence(
+        new Verb(verb.name, contextHelp), null, null, null, null, null, null,
+        null, null, null, null);
+    }
+  }
 
-  if (preposition != null &&
-      preposition.kind == PrepositionKind.IN &&
-      preposition.target.kind == TargetKind.SESSION) {
-    sessionTarget = preposition.target;
+  NamedTarget inSession;
+  Uri toUri;
+  Uri withUri;
+
+  /// Validates a preposition of kind `in`. For now, the only possible legal
+  /// target is of kind `session`. Store such as session in [inSession].
+  void checkInTarget(Preposition preposition) {
+    assert(preposition.kind == PrepositionKind.IN);
+    if (preposition.target.kind == TargetKind.SESSION) {
+      if (inSession != null) {
+        throwFatalError(
+            DiagnosticKind.duplicatedIn, preposition: preposition);
+      }
+      inSession = preposition.target;
+      if (!action.requiresSession) {
+        throwFatalError(
+            DiagnosticKind.verbRequiresNoSession,
+            verb: verb, sessionName: inSession.name);
+      }
+    } else {
+      throwFatalError(
+          DiagnosticKind.cantPerformVerbIn,
+          verb: verb, target: preposition.target);
+    }
+  }
+
+  /// Validates a preposition of kind `to`. For now, the only possible legal
+  /// target is of kind `file`. Store such a file in [toUri].
+  void checkToTarget(Preposition preposition) {
+    assert(preposition.kind == PrepositionKind.TO);
+    if (preposition.target.kind == TargetKind.FILE) {
+      if (toUri != null) {
+        throwFatalError(
+            DiagnosticKind.duplicatedTo, preposition: preposition);
+      }
+      NamedTarget target = preposition.target;
+      toUri = fileUri(target.name, base);
+      if (!action.requiresToUri) {
+        throwFatalError(
+            DiagnosticKind.verbRequiresNoToFile,
+            verb: verb, userInput: target.name);
+      }
+    } else {
+      throwFatalError(
+          DiagnosticKind.cantPerformVerbTo,
+          verb: verb, target: preposition.target);
+    }
+  }
+
+  /// Validates a preposition of kind `with`. For now, the only possible legal
+  /// target is of kind `file`. Store such a file in [withUri].
+  void checkWithTarget(Preposition preposition) {
+    assert(preposition.kind == PrepositionKind.WITH);
+    if (preposition.target.kind == TargetKind.FILE) {
+      if (withUri != null) {
+        throwFatalError(
+            DiagnosticKind.duplicatedWith, preposition: preposition);
+      }
+      NamedTarget target = preposition.target;
+      withUri = fileUri(target.name, base);
+      if (!action.supportsWithUri) {
+        throwFatalError(
+            DiagnosticKind.verbRequiresNoWithFile,
+            verb: verb, userInput: target.name);
+      }
+    } else {
+      throwFatalError(
+          DiagnosticKind.cantPerformVerbWith,
+          verb: verb, target: preposition.target);
+    }
+  }
+
+  Target target;
+  Target secondaryTarget;
+  Iterator<Target> targets = sentence.targets.iterator;
+  if (targets.moveNext()) {
+    target = targets.current;
+  }
+  if (targets.moveNext()) {
+    secondaryTarget = targets.current;
+  }
+  while (targets.moveNext()) {
+    throwFatalError(
+        DiagnosticKind.verbDoesNotSupportTarget, verb: verb, target: target);
+  }
+  if (secondaryTarget != null) {
+    if (secondaryTarget.kind == TargetKind.FILE) {
+      if (action.requiresToUri) {
+        NamedTarget target = secondaryTarget;
+        toUri = fileUri(target.name, base);
+      } else {
+        throwFatalError(
+            DiagnosticKind.verbRequiresNoToFile,
+            verb: verb, target: secondaryTarget);
+      }
+    } else {
+      throwFatalError(
+          DiagnosticKind.cantPerformVerbTo,
+          verb: verb, target: secondaryTarget);
+    }
+  }
+
+  for (Preposition preposition in sentence.prepositions) {
+    switch (preposition.kind) {
+      case PrepositionKind.IN:
+        checkInTarget(preposition);
+        break;
+
+      case PrepositionKind.TO:
+        checkToTarget(preposition);
+        break;
+
+      case PrepositionKind.WITH:
+        checkWithTarget(preposition);
+        break;
+    }
+  }
+
+  if (action.requiresToUri && toUri == null) {
+    throwFatalError(DiagnosticKind.missingToFile);
   }
 
   if (!action.allowsTrailing) {
     if (trailing != null) {
-      throwInternalError("Unexpected arguments: ${trailing.join(' ')}");
+      throwFatalError(
+          DiagnosticKind.extraArguments, userInput: trailing.join(' '));
     }
   }
 
   if (target != null &&
       action.requiredTarget == null &&
       action.supportedTargets == null) {
-    throwInternalError("Can't use '$target' with '$verb'");
-  }
-
-  Uri toTargetUri;
-  Uri withUri;
-  if (action.requiresToUri) {
-    if (preposition == null) {
-      throwFatalError(DiagnosticKind.missingToFile);
-    }
-    if (preposition.kind != PrepositionKind.TO) {
-      throwFatalError(
-          DiagnosticKind.expectedToPreposition, preposition: preposition);
-    }
-    if (preposition.target.kind != TargetKind.FILE) {
-      throwFatalError(
-          DiagnosticKind.expectedFileTarget, target: preposition.target);
-    }
-    NamedTarget target = preposition.target;
-    toTargetUri = fileUri(target.name, base);
-  } else if (sessionTarget != null) {
-    if (!action.requiresSession) {
-      throwFatalError(
-          DiagnosticKind.verbRequiresNoSession, verb: verb,
-          sessionName: sessionTarget.name);
-    }
-  } else if (preposition != null) {
-    if (action.supportsWithUri &&
-        preposition.kind == PrepositionKind.WITH &&
-        preposition.target.kind == TargetKind.FILE) {
-      NamedTarget target = preposition.target;
-      withUri = fileUri(target.name, base);
-    } else {
-      throwInternalError("Can't use '$preposition' with '$verb'");
-    }
+    throwFatalError(
+        DiagnosticKind.verbDoesntSupportTarget, verb: verb, target: target);
   }
 
   if (action.requiredTarget != null) {
@@ -201,11 +275,9 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
             throwFatalError(
                 DiagnosticKind.verbRequiresSessionTarget, verb: verb);
           } else {
-            // TODO(ahe): Turn into a DiagnosticKind when we actually have a
-            // verb that can provoke this error.
-            throwInternalError(
-                "Can't perform '$verb' without a target. "
-                "Try adding a thing or group of things.");
+            throwFatalError(
+                DiagnosticKind.verbRequiresTarget, verb: verb,
+                requiredTarget: action.requiredTarget);
           }
           break;
       }
@@ -214,17 +286,20 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
         case TargetKind.TCP_SOCKET:
           throwFatalError(
               DiagnosticKind.verbRequiresSocketTarget,
-              verb: verb, target: sentence.target);
+              verb: verb, target: target);
           break;
 
         case TargetKind.FILE:
           throwFatalError(
               DiagnosticKind.verbRequiresFileTarget,
-              verb: verb, target: sentence.target);
+              verb: verb, target: target);
           break;
 
         default:
-          throwInternalError("$verb requires a ${action.requiredTarget}");
+          throwFatalError(
+              DiagnosticKind.verbRequiresTargetButGot,
+              verb: verb, target: target,
+              requiredTarget: action.requiredTarget);
       }
     }
   }
@@ -237,8 +312,8 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
   }
 
   String sessionName;
-  if (sessionTarget != null) {
-    sessionName = sessionTarget.name;
+  if (inSession != null) {
+    sessionName = inSession.name;
   } else if (action.requiresSession) {
     sessionName = currentSession;
   }
@@ -255,8 +330,8 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
   Uri programName =
       sentence.programName == null ? null : fileUri(sentence.programName, base);
   return new AnalyzedSentence(
-      verb, target, targetName, preposition, trailing, sessionName,
-      sentence.arguments, base, programName, targetUri, toTargetUri, withUri);
+      verb, target, targetName, trailing, sessionName,
+      sentence.arguments, base, programName, targetUri, toUri, withUri);
 }
 
 Uri fileUri(String path, Uri base) => base.resolveUri(new Uri.file(path));
@@ -299,8 +374,6 @@ class AnalyzedSentence {
 
   final String targetName;
 
-  final Preposition preposition;
-
   final List<String> trailing;
 
   final String sessionName;
@@ -326,7 +399,6 @@ class AnalyzedSentence {
       this.verb,
       this.target,
       this.targetName,
-      this.preposition,
       this.trailing,
       this.sessionName,
       this.arguments,

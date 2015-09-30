@@ -56,11 +56,11 @@ final IsolatePool pool = new IsolatePool(isolateMain);
 
 Future<Null> main() async {
   for (DiagnosticKind kind in DiagnosticKind.values) {
-    Expect.isNotNull(getMessage(kind));
+    Expect.isNotNull(getMessage(kind), "$kind");
 
     List<Example> examples = getExamples(kind);
-    Expect.isNotNull(examples);
-    Expect.isFalse(examples.isEmpty);
+    Expect.isNotNull(examples, "$kind");
+    Expect.isFalse(examples.isEmpty, "$kind");
     int exampleCount = 1;
     for (Example example in examples) {
       print("\n\nTesting $kind ${exampleCount++}");
@@ -124,7 +124,7 @@ Future<Null> checkCommandLineExample(
   if (kind == DiagnosticKind.socketVmConnectError) {
     await mock.done;
     Sentence sentence = parseSentence(lastLine);
-    NamedTarget target = sentence.target;
+    NamedTarget target = sentence.targets.single;
     String message = mock.stderrMessages.single;
     String expectedMessage = new Diagnostic(
         kind, getMessage(kind),
