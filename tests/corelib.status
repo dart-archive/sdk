@@ -174,3 +174,6 @@ uri_parse_test: Crash
 uri_path_test: Crash
 uri_query_test: Crash
 uri_test: Crash
+
+[ $asan && $mode == debug ]
+regexp/global_test: Slow, Pass
