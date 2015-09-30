@@ -28,9 +28,10 @@ rule update-version-gyp
     python tools/update_version_gyp.py version.gyp
 
 build $
-    version.gyp $
-    : update-version-gyp $
-        tools/update_version_gyp.py
+    version.gyp: $
+    update-version-gyp $
+        tools/update_version_gyp.py $
+        .git/HEAD $
 
 build $
     out/DebugIA32/build.ninja $
