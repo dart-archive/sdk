@@ -33,7 +33,7 @@
       ],
       'defines': [
         'FLETCHC_LIBRARY_ROOT="../../../dart/sdk"',
-        'FLETCHC_PATCH_ROOT="../../lib"',
+        'FLETCHC_PATCH_ROOT="../.."',
         # How many directories up is the root, used for getting full path to
         # the .packages file for the compiler
         'FLETCH_ROOT_DISTANCE=2',

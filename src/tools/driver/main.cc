@@ -279,17 +279,7 @@ static void ComputeFletchRoot(char* buffer, size_t buffer_length) {
   }
 }
 
-// Stores the location of the Dart VM in 'buffer'.
-static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
-  char* dart_vm_env = getenv(dart_vm_env_name);
-  if (dart_vm_env != NULL) {
-    if (realpath(dart_vm_env, buffer) == NULL) {
-      Die("%s: realpath of '%s' failed: %s", program_name, dart_vm_env,
-          strerror(errno));
-    }
-    return;
-  }
-
+static void GetExecutableDir(char* buffer, size_t buffer_length) {
   // TODO(ahe): Fix lint problem: Do not use variable-length arrays.
   char resolved[buffer_length];  // NOLINT
   GetPathOfExecutable(buffer, buffer_length);
@@ -310,8 +300,29 @@ static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
     // Append trailing slash.
     StrCat(buffer, buffer_length, "/", 2);
   }
+}
 
+// Stores the location of the Dart VM in 'buffer'.
+static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
+  char* dart_vm_env = getenv(dart_vm_env_name);
+  if (dart_vm_env != NULL) {
+    if (realpath(dart_vm_env, buffer) == NULL) {
+      Die("%s: realpath of '%s' failed: %s", program_name, dart_vm_env,
+          strerror(errno));
+    }
+    return;
+  }
+
+  GetExecutableDir(buffer, buffer_length);
   StrCat(buffer, buffer_length, DART_VM_NAME, sizeof(DART_VM_NAME));
+  // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION/dart".
+}
+
+// Stores the location of the Fletch VM in 'buffer'.
+static void ComputeFletchVmPath(char* buffer, size_t buffer_length) {
+  GetExecutableDir(buffer, buffer_length);
+
+  StrCat(buffer, buffer_length, "fletch-vm", sizeof("fletch-vm"));
   // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION/dart".
 }
 
@@ -357,7 +368,7 @@ static void ExecDaemon(
     const char** argv);
 
 static void StartDriverDaemon() {
-  const int kMaxArgv = 9;
+  const int kMaxArgv = 10;
   const char* argv[kMaxArgv];
 
   char fletch_root[MAXPATHLEN + 1];
@@ -365,6 +376,15 @@ static void StartDriverDaemon() {
 
   char vm_path[MAXPATHLEN + 1];
   ComputeDartVmPath(vm_path, sizeof(vm_path));
+
+  char fletch_vm_path[MAXPATHLEN + 1];
+  ComputeFletchVmPath(fletch_vm_path, sizeof(fletch_vm_path));
+
+  char fletch_vm_option[sizeof("-Dfletch-vm=") + MAXPATHLEN + 1];
+  StrCpy(fletch_vm_option, sizeof(fletch_vm_option),
+         "-Dfletch-vm=", sizeof("-Dfletch-vm="));
+  StrCat(fletch_vm_option, sizeof(fletch_vm_option),
+         fletch_vm_path, sizeof(fletch_vm_path));
 
   char package_spec[MAXPATHLEN + 1];
   ComputePackageSpec(
@@ -376,7 +396,7 @@ static void StartDriverDaemon() {
          package_spec, sizeof(package_spec));
 
   const char library_root[] = "-Dfletchc-library-root=" FLETCHC_LIBRARY_ROOT;
-  const char patch_root[] = "-Dfletchc-patch-root=" FLETCHC_PATCH_ROOT;
+  const char patch_root[] = "-Dfletch-patch-root=" FLETCHC_PATCH_ROOT;
   const char define_version[] = "-Dfletch.version=";
   const char* version = GetVersion();
   int version_option_length = sizeof(define_version) + strlen(version) + 1;
@@ -392,6 +412,7 @@ static void StartDriverDaemon() {
   int argc = 0;
   argv[argc++] = vm_path;
   argv[argc++] = "-c";
+  argv[argc++] = fletch_vm_option;
   argv[argc++] = package_option;
   argv[argc++] = version_option;
   argv[argc++] = library_root;
