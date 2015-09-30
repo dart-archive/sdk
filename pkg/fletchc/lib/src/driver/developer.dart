@@ -69,6 +69,14 @@ import '../guess_configuration.dart' show
     executable,
     guessFletchVm;
 
+import 'package:fletch_agent/agent_connection.dart' show
+    AgentConnection,
+    AgentException,
+    VmData;
+import 'package:fletch_agent/messages.dart' show
+    AGENT_DEFAULT_PORT,
+    MessageDecodeException;
+
 Future<Socket> connect(
     String host,
     int port,
@@ -92,9 +100,37 @@ Future<Socket> connect(
 }
 
 Future<Null> startAndAttachViaAgent(SessionState state) async {
-  throwInternalError(
-      "Attaching to Fletch Agent not yet implemented. "
-      "Try removing \"device_address\" from the settings file.");
+  // TODO(wibling): need to make sure the agent is running.
+  // TODO(wibling): integrate with the FletchVm class, e.g. have a
+  // AgentFletchVm and LocalFletchVm that both share the same interface
+  // where the former is interacting with the agent.
+  assert(state.settings.deviceAddress != null);
+  String host = state.settings.deviceAddress.host;
+  int agentPort = state.settings.deviceAddress.port;
+  Socket socket = await connect(
+      host, agentPort, DiagnosticKind.socketAgentConnectError,
+      "agentSocket", state);
+  var agentConnection = new AgentConnection(socket);
+  VmData vmData;
+  try {
+    vmData = await agentConnection.startVm();
+  } on AgentException catch (error) {
+    throwFatalError(
+        DiagnosticKind.socketAgentReplyError,
+        address: '${socket.remoteAddress.host}:${socket.remotePort}',
+        message: error.message);
+  } on MessageDecodeException catch (error) {
+    throwFatalError(
+        DiagnosticKind.socketAgentReplyError,
+        address: '${socket.remoteAddress.host}:${socket.remotePort}',
+        message: error.message);
+  } finally {
+    socket.close();
+  }
+  state.fletchAgentVmId = vmData.id;
+  // The new fletch vm is running at the same host as the agent.
+  await attachToVm(host, vmData.port, state);
+  await state.session.disableVMStandardOutput();
 }
 
 Future<Null> startAndAttachDirectly(SessionState state) async {
@@ -482,8 +518,8 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
                 DiagnosticKind.settingsDeviceAddressNotAString,
                 uri: settingsUri, userInput: '$value');
           }
-          // TODO(wibling): Add defaultPort: agent.AGENT_DEFAULT_PORT.
-          deviceAddress = parseAddress(value);
+          deviceAddress =
+              parseAddress(value, defaultPort: AGENT_DEFAULT_PORT);
         }
         break;
 
