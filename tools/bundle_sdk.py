@@ -61,48 +61,56 @@ def CopyLibs(bundle_dir, build_dir):
 def CopyInternalPackages(bundle_dir, build_dir):
   internal_pkg = join(join(bundle_dir, 'internal'), 'pkg')
   makedirs(internal_pkg)
-  for v in ['fletchc', 'fletch_agent']:
+  for v in ['fletchc']:
     copytree(join('pkg', v), join(internal_pkg, v))
   fletchc = 'pkg/fletchc'
-  fixed_packages_file = join(join(internal_pkg, 'fletchc'), '.sdk_packages')
+  fixed_packages_file = join(join(internal_pkg, 'fletchc'), '.packages')
+  lines = []
   with open(join(fletchc, '.packages')) as f:
-    with open(fixed_packages_file, 'w') as generated:
-      for l in f.read().splitlines():
-        if l.startswith('#') or l.startswith('fletchc:lib'):
-          generated.write('%s\n' % l)
-        else:
-          components = l.split(':')
-          name = components[0]
-          relative_path = components[1]
-          source = join(fletchc, relative_path)
-          target = join(internal_pkg, name)
-          print 'copying %s to %s' % (source, target)
-          makedirs(target)
-          assert(source.endswith('lib'))
-          copytree(source, join(target, 'lib'))
-          generated.write('%s:../%s/lib\n' % (name, name))
+    lines = f.read().splitlines()
+  with open(fixed_packages_file, 'w') as generated:
+    for l in lines:
+      if l.startswith('#') or l.startswith('fletchc:lib'):
+        generated.write('%s\n' % l)
+      else:
+        components = l.split(':')
+        name = components[0]
+        relative_path = components[1]
+        source = join(fletchc, relative_path)
+        target = join(internal_pkg, name)
+        print 'copying %s to %s' % (source, target)
+        makedirs(target)
+        assert(source.endswith('lib'))
+        copytree(source, join(target, 'lib'))
+        generated.write('%s:../%s/lib\n' % (name, name))
 
 def CopyPackages(bundle_dir):
   target_dir = join(bundle_dir, 'pkg')
   makedirs(target_dir)
-  with open(join(join(bundle_dir, 'bin'), 'fletch-sdk.packages'), 'w') as p:
+  with open(join(join(bundle_dir, 'internal'), 'fletch-sdk.packages'), 'w') as p:
     for package in SDK_PACKAGES:
       copytree(join('pkg', package), join(target_dir, package))
-      p.write('%s:../pkg/%s\n' % (package, package))
+      p.write('%s:../pkg/%s/lib\n' % (package, package))
 
 def CopyPlatforms(bundle_dir):
   target_dir = join(bundle_dir, 'platforms')
   copytree('platforms', target_dir)
 
-def CreateAgentSnapshot(bundle_dir):
+def CreateSnapshot(dart_executable, dart_file, snapshot):
+  cmd = [dart_executable, '-c', '--packages=.packages',
+         '-Dsnapshot="%s"' % snapshot,
+         '-Dpackages=".packages"',
+         'tests/fletchc/run.dart', dart_file]
+  print 'Running %s' % ' '.join(cmd)
+  subprocess.check_call(' '.join(cmd), shell=True)
+
+def CreateAgentSnapshot(bundle_dir, build_dir):
   data_dir = join(join(bundle_dir, 'raspberry-pi2'), 'data')
   makedirs(data_dir)
+  dart = join(build_dir, 'dart')
   snapshot = join(data_dir, 'fletch-agent.snapshot')
   bin_snapshot = join(join(bundle_dir, 'bin'), 'fletch-agent.snapshot')
-  cmd = ['out/ReleaseIA32/fletch', 'export', 'pkg/fletch_agent/bin/agent.dart',
-         'to', snapshot]
-  print 'Running %s' % ' '.join(cmd)
-  subprocess.check_call(cmd)
+  CreateSnapshot(dart, 'pkg/fletch_agent/bin/agent.dart', snapshot)
   CopyFile(snapshot, bin_snapshot)
 
 def CopyAdditionalFiles(bundle_dir):
@@ -131,7 +139,7 @@ def Main():
     CopyPackages(sdk_temp)
     CopyPlatforms(sdk_temp)
     CopyArm(sdk_temp)
-    CreateAgentSnapshot(sdk_temp)
+    CreateAgentSnapshot(sdk_temp, build_dir)
     CopyAdditionalFiles(sdk_temp)
     sdk_dir = join(build_dir, 'fletch-sdk')
     EnsureDeleted(sdk_dir)
