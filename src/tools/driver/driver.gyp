@@ -32,7 +32,7 @@
         'driver',
       ],
       'defines': [
-        'FLETCHC_LIBRARY_ROOT="../../third_party/dart/sdk"',
+        'FLETCHC_LIBRARY_ROOT="../../../dart/sdk"',
         'FLETCHC_PATCH_ROOT="../.."',
         # How many directories up is the root, used for getting full path to
         # the .packages file for the compiler

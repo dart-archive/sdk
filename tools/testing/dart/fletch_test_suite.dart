@@ -98,7 +98,7 @@ class FletchTestSuite extends TestSuite {
       return io.Process.start(
           runtimeConfiguration.dartBinary,
           ['-Dfletch-vm=$buildDir/fletch-vm',
-           '-Ddart-sdk=third_party/dart/sdk/',
+           '-Ddart-sdk=../dart/sdk/',
            '-Dtest.dart.build-dir=$buildDir',
            '-Dtest.dart.build-arch=${configuration["arch"]}',
            '-Dtest.dart.build-system=${configuration["system"]}',

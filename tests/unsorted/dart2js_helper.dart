@@ -51,7 +51,7 @@ void run(Uri uri, String mainScript, bool isServer) {
   asyncStart();
   compile(
       uri,
-      Uri.base.resolve('third_party/dart/sdk/'),
+      Uri.base.resolve('../dart/sdk/'),
       new Uri(path: 'package/'),
       compilerInputProvider,
       diagnosticHandler,

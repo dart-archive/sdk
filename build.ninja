@@ -5,21 +5,21 @@
 rule gyp
   command = $
     GYP_CROSSCOMPILE=1 $
-    ./third_party/gyp/gyp --depth=. -Idefault_targets.gypi $
+    ../third_party/gyp/gyp --depth=. -Idefault_targets.gypi $
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 
 rule gyp-lk
   command = $
     GYP_CROSSCOMPILE=1 $
-    ./third_party/gyp/gyp --depth=. -Ilk_targets.gypi $
+    ../third_party/gyp/gyp --depth=. -Ilk_targets.gypi $
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 
 rule gyp-mbed
   command = $
     GYP_CROSSCOMPILE=1 $
-    ./third_party/gyp/gyp --depth=. -Imbed_targets.gypi $
+    ../third_party/gyp/gyp --depth=. -Imbed_targets.gypi $
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 
