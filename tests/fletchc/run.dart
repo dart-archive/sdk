@@ -12,6 +12,8 @@ import 'package:fletchc/src/driver/session_manager.dart';
 
 import 'package:fletchc/src/driver/developer.dart';
 
+import 'package:fletchc/src/driver/developer.dart' as developer;
+
 import 'package:fletchc/src/verbs/infrastructure.dart' show fileUri;
 
 const String userVmAddress = const String.fromEnvironment("attachToVm");
@@ -50,7 +52,7 @@ main(List<String> arguments) async {
     state.stderrSink.attachCommandSender(stderr.add);
 
     if (exportTo != null) {
-      await export(state, fileUri(exportTo, Uri.base));
+      await developer.export(state, fileUri(exportTo, Uri.base));
     } else {
       await run(state);
     }
@@ -58,3 +60,14 @@ main(List<String> arguments) async {
 }
 
 Future<Null> test() => main(<String>['tests/language/application_test.dart']);
+
+Future<Null> export(String script, String snapshot) async {
+    Settings settings = new Settings(
+        fileUri(".packages", Uri.base), <String>[], <String, String>{}, null);
+    SessionState state = createSessionState("test", settings);
+    await compile(fileUri(script, Uri.base), state);
+    await startAndAttachDirectly(state);
+    state.stdoutSink.attachCommandSender(stdout.add);
+    state.stderrSink.attachCommandSender(stderr.add);
+    await developer.export(state, fileUri(snapshot, Uri.base));
+}
