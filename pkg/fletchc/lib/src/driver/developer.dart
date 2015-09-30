@@ -69,7 +69,35 @@ import '../guess_configuration.dart' show
     executable,
     guessFletchVm;
 
-Future<Null> attachToLocalVm(SessionState state) async {
+Future<Socket> connect(
+    String host,
+    int port,
+    DiagnosticKind kind,
+    String socketDescription,
+    SessionState state) async {
+  // We are using .catchError rather than try/catch because we have seen
+  // incorrect stack traces using the latter.
+  Socket socket = await Socket.connect(host, port).catchError(
+      (SocketException error) {
+        String message = error.message;
+        if (error.osError != null) {
+          message = error.osError.message;
+        }
+        throwFatalError(kind, address: '$host:$port', message: message);
+      }, test: (e) => e is SocketException);
+  handleSocketErrors(socket, socketDescription, log: (String info) {
+    state.log("Connected to TCP $socketDescription  $info");
+  });
+  return socket;
+}
+
+Future<Null> startAndAttachViaAgent(SessionState state) async {
+  throwInternalError(
+      "Attaching to Fletch Agent not yet implemented. "
+      "Try removing \"device_address\" from the settings file.");
+}
+
+Future<Null> startAndAttachDirectly(SessionState state) async {
   String fletchVmPath = guessFletchVm(null).toFilePath();
   state.fletchVm = await FletchVm.start(fletchVmPath);
   await attachToVm(state.fletchVm.host, state.fletchVm.port, state);
@@ -77,33 +105,14 @@ Future<Null> attachToLocalVm(SessionState state) async {
 }
 
 Future<Null> attachToVm(String host, int port, SessionState state) async {
-  Socket socket = await Socket.connect(host, port).catchError(
-      (SocketException error) {
-        String message = error.message;
-        if (error.osError != null) {
-          message = error.osError.message;
-        }
-        throwFatalError(
-            DiagnosticKind.socketConnectError,
-            address: '$host:$port', message: message);
-      }, test: (e) => e is SocketException);
-  String remotePort = "?";
-  try {
-    remotePort = "${socket.remotePort}";
-  } catch (_) {
-    // Ignored, socket.remotePort may fail if the socket was closed on the
-    // other side.
-  }
+  Socket socket = await connect(
+      host, port, DiagnosticKind.socketVmConnectError, "vmSocket", state);
 
-  Session session = new Session(
-      handleSocketErrors(socket, "vmSocket"), state.compiler, state.stdoutSink,
+  Session session = new Session(socket, state.compiler, state.stdoutSink,
       state.stderrSink, null);
 
   // Enable debugging as a form of handshake.
   await session.runCommand(const Debugging());
-
-  state.log(
-      "Connected to Fletch VM on TCP socket ${socket.port} -> $remotePort");
 
   state.session = session;
 }
@@ -154,7 +163,7 @@ Future<int> compile(Uri script, SessionState state) async {
 
 SessionState createSessionState(String name, Settings settings) {
   if (settings == null) {
-    settings = new Settings(null, <String>[], <String, String>{});
+    settings = const Settings.empty();
   }
   List<String> compilerOptions = const bool.fromEnvironment("fletchc-verbose")
       ? <String>['--verbose'] : <String>[];
@@ -168,7 +177,7 @@ SessionState createSessionState(String name, Settings settings) {
       environment: settings.constants);
 
   return new SessionState(
-      name, compilerHelper, compilerHelper.newIncrementalCompiler());
+      name, compilerHelper, compilerHelper.newIncrementalCompiler(), settings);
 }
 
 Future<int> run(SessionState state) async {
@@ -267,12 +276,12 @@ Future<int> export(SessionState state, Uri snapshot) async {
   return 0;
 }
 
-Future<int> compileAndAttachToLocalVmThen(
+Future<int> compileAndAttachToVmThen(
     CommandSender commandSender,
     SessionState state,
     Uri script,
     Future<int> action()) async {
-  bool startedVm = false;
+  bool startedVmDirectly = false;
   List<FletchDelta> compilationResults = state.compilationResults;
   Session session = state.session;
   if (compilationResults.isEmpty || script != null) {
@@ -284,15 +293,21 @@ Future<int> compileAndAttachToLocalVmThen(
     compilationResults = state.compilationResults;
     assert(compilationResults != null);
   }
+
   if (session == null) {
-    startedVm = true;
-    await attachToLocalVm(state);
-    state.fletchVm.stdoutLines.listen((String line) {
-      commandSender.sendStdout("$line\n");
-    });
-    state.fletchVm.stderrLines.listen((String line) {
-      commandSender.sendStderr("$line\n");
-    });
+    if (state.settings.deviceAddress != null) {
+      await startAndAttachViaAgent(state);
+      // TODO(wibling): read stdout from agent.
+    } else {
+      startedVmDirectly = true;
+      await startAndAttachDirectly(state);
+      state.fletchVm.stdoutLines.listen((String line) {
+          commandSender.sendStdout("$line\n");
+        });
+      state.fletchVm.stderrLines.listen((String line) {
+          commandSender.sendStderr("$line\n");
+        });
+    }
     session = state.session;
     assert(session != null);
   }
@@ -308,7 +323,7 @@ Future<int> compileAndAttachToLocalVmThen(
       print(trace);
     }
   } finally {
-    if (startedVm) {
+    if (startedVmDirectly) {
       exitCode = await state.fletchVm.exitCode;
     }
     state.detachCommandSender();
@@ -354,7 +369,7 @@ Future<int> invokeCombinedTasks(
   return task2(commandSender, commandIterator);
 }
 
-Address parseAddress(String address) {
+Address parseAddress(String address, {int defaultPort: 0}) {
   String host;
   int port;
   List<String> parts = address.split(":");
@@ -364,7 +379,7 @@ Address parseAddress(String address) {
         parts[0],
         onError: (String source) {
           host = source;
-          return 0;
+          return defaultPort;
         });
   } else {
     host = parts[0];
@@ -383,6 +398,8 @@ class Address {
   final int port;
 
   const Address(this.host, this.port);
+
+  String toString() => "Address($host, $port)";
 }
 
 /// See ../verbs/documentation.dart for a definition of this format.
@@ -402,6 +419,7 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
   Uri packages;
   final List<String> options = <String>[];
   final Map<String, String> constants = <String, String>{};
+  Address deviceAddress;
   userSettings.forEach((String key, value) {
     switch (key) {
       case "packages":
@@ -457,6 +475,18 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         }
         break;
 
+      case "device_address":
+        if (value != null) {
+          if (value is! String) {
+            throwFatalError(
+                DiagnosticKind.settingsDeviceAddressNotAString,
+                uri: settingsUri, userInput: '$value');
+          }
+          // TODO(wibling): Add defaultPort: agent.AGENT_DEFAULT_PORT.
+          deviceAddress = parseAddress(value);
+        }
+        break;
+
       default:
         throwFatalError(
             DiagnosticKind.settingsUnrecognizedKey, uri: settingsUri,
@@ -464,7 +494,7 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         break;
     }
   });
-  return new Settings(packages, options, constants);
+  return new Settings(packages, options, constants, deviceAddress);
 }
 
 class Settings {
@@ -474,12 +504,19 @@ class Settings {
 
   final Map<String, String> constants;
 
-  const Settings(this.packages, this.options, this.constants);
+  final Address deviceAddress;
+
+  const Settings(
+      this.packages, this.options, this.constants, this.deviceAddress);
+
+  const Settings.empty()
+    : this(null, const <String>[], const <String, String>{}, null);
 
   String toString() {
     return "Settings("
         "packages: $packages, "
         "options: $options, "
-        "constants: $constants)";
+        "constants: $constants, "
+        "device_address: $deviceAddress)";
   }
 }

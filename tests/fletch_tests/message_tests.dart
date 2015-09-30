@@ -121,7 +121,7 @@ Future<Null> checkCommandLineExample(
     Expect.equals(0, mock.recordedExitCode);
   }
   MockClientController mock = await mockCommandLine(lastLine);
-  if (kind == DiagnosticKind.socketConnectError) {
+  if (kind == DiagnosticKind.socketVmConnectError) {
     await mock.done;
     Sentence sentence = parseSentence(lastLine);
     NamedTarget target = sentence.target;

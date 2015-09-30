@@ -10,7 +10,7 @@ import 'documentation.dart' show
     runDocumentation;
 
 import '../driver/developer.dart' show
-    compileAndAttachToLocalVmThen;
+    compileAndAttachToVmThen;
 
 import '../driver/developer.dart' as developer;
 
@@ -45,7 +45,7 @@ Future<int> runTask(
     CommandSender commandSender,
     SessionState state,
     Uri script) {
-  return compileAndAttachToLocalVmThen(
+  return compileAndAttachToVmThen(
       commandSender,
       state,
       script,

@@ -20,9 +20,11 @@ const String exportTo = const String.fromEnvironment("snapshot");
 
 const String userPackages = const String.fromEnvironment("packages");
 
+const String userAgentAddress = const String.fromEnvironment("agent");
+
 Future<Null> attach(SessionState state) async {
   if (userVmAddress == null) {
-    await attachToLocalVm(state);
+    await startAndAttachDirectly(state);
   } else {
     Address address = parseAddress(userVmAddress);
     await attachToVm(address.host, address.port, state);
@@ -30,13 +32,16 @@ Future<Null> attach(SessionState state) async {
 }
 
 main(List<String> arguments) async {
+  Address agentAddress =
+      userAgentAddress == null ? null : parseAddress(userAgentAddress);
   Settings settings = new Settings(
       fileUri(userPackages == null ? ".packages" : userPackages, Uri.base),
       ["--verbose"],
       <String, String>{
         "foo": "1",
         "bar": "baz",
-      });
+      },
+      agentAddress);
   SessionState state = createSessionState("test", settings);
   for (String script in arguments) {
     await compile(fileUri(script, Uri.base), state);

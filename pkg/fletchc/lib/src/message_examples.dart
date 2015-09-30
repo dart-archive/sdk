@@ -93,11 +93,26 @@ List<Example> getExamples(DiagnosticKind kind) {
               <String>['attach', 'in', 'session', 'foo',
                        'tcp_socket', '$invalidIP:fisk'])];
 
-    case DiagnosticKind.socketConnectError:
+    case DiagnosticKind.socketAgentConnectError:
+      // TODO(wibling): figure out how to test fletch agent failures to
+      // exercise this error.
+      return untestable;
+
+    case DiagnosticKind.socketAgentReplyError:
+      // TODO(wibling): figure out how to test fletch agent failures to
+      // exercise this error.
+      return untestable;
+
+    case DiagnosticKind.socketVmConnectError:
       return <Example>[new CommandLineExample(
             <String>['create', 'session', 'foo'],
             <String>['attach', 'in', 'session', 'foo',
                      'tcp_socket', invalidAddress])];
+
+    case DiagnosticKind.socketVmReplyError:
+      // TODO(wibling): figure out how to simulate fletch vm failures to
+      // exercise this error.
+      return untestable;
 
     case DiagnosticKind.attachToVmBeforeRun:
       return <Example>[
@@ -186,6 +201,9 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.settingsUnrecognizedKey:
       return <Example>[new SettingsExample('{"fisk":null}')];
+
+    case DiagnosticKind.settingsDeviceAddressNotAString:
+      return <Example>[new SettingsExample('{"device_address":1}')];
   }
 }
 

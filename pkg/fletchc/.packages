@@ -3,6 +3,7 @@
 # BSD-style license that can be found in the LICENSE.md file.
 charcode:../../../third_party/charcode/lib
 compiler:../../../dart/pkg/compiler/lib
+fletch_agent:../fletch_agent/lib
 fletchc:lib
 js_ast:../../../dart/pkg/js_ast/lib
 js_runtime:../../../dart/sdk/lib/_internal/js_runtime/lib

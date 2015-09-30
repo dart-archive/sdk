@@ -20,6 +20,7 @@ enum DiagnosticKind {
   sessionAlreadyExists,
   settingsCompileTimeConstantAsOption,
   settingsConstantsNotAMap,
+  settingsDeviceAddressNotAString,
   settingsNotAMap,
   settingsNotJson,
   settingsOptionNotAString,
@@ -27,7 +28,10 @@ enum DiagnosticKind {
   settingsPackagesNotAString,
   settingsUnrecognizedConstantValue,
   settingsUnrecognizedKey,
-  socketConnectError,
+  socketAgentConnectError,
+  socketAgentReplyError,
+  socketVmConnectError,
+  socketVmReplyError,
   verbDoesNotSupportTarget,
   verbRequiresFileTarget,
   verbRequiresNoSession,
@@ -117,8 +121,19 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.expectedAPortNumber:
       return "Expected a port number, but got '$userInput'";
 
-    case DiagnosticKind.socketConnectError:
-      return "Unable to establish connection to $address: $message";
+    case DiagnosticKind.socketAgentConnectError:
+      return "Unable to establish connection to Fletch Agent on "
+          "$address: $message";
+
+    case DiagnosticKind.socketVmConnectError:
+      return
+          "Unable to establish connection to Fletch VM on $address: $message";
+
+    case DiagnosticKind.socketAgentReplyError:
+      return "Received invalid reply from Fletch Agent on $address: $message";
+
+    case DiagnosticKind.socketVmReplyError:
+      return "Received invalid reply from Fletch VM on $address: $message";
 
     case DiagnosticKind.attachToVmBeforeRun:
       return "Unable to run program without being attached to a VM. "
@@ -173,5 +188,8 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.settingsUnrecognizedKey:
       return "$uri: unexpected key '$userInput'";
+
+    case DiagnosticKind.settingsDeviceAddressNotAString:
+      return "$uri: 'device_address' value '$userInput' isn't a String";
   }
 }
