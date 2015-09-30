@@ -8,6 +8,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
@@ -92,8 +93,8 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
                   }
                 });
               } else {
-                deselect(selectedIndex);
                 replaceFragment(recyclerViewFragment, false);
+                deselect(selectedIndex);
               }
             }
           }
@@ -126,18 +127,22 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
   private void select(int index) {
     assert (selectedIndex == -1);
     selectedIndex = index;
+    // TODO(zerny): Fix the "restore selected item" issue and enable rotation.
+    activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LOCKED);
   }
 
   private void deselect(int position) {
     assert(position == selectedIndex);
     selectedIndex = -1;
+    // TODO(zerny): Fix the "restore selected item" issue and enable rotation.
+    activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
   }
 
   private void addFragment(Fragment fragment) {
     assert currentViewFragment == null;
     currentViewFragment = fragment;
     FragmentTransaction transaction = activity.getFragmentManager().beginTransaction();
-    transaction.add(R.id.container, fragment);
+    transaction.replace(R.id.container, fragment);
     transaction.commit();
   }
 
