@@ -127,19 +127,19 @@ NATIVE(PortCreate) {
 NATIVE(PortSend) {
   Instance* instance = Instance::cast(arguments[0]);
   ASSERT(instance->IsPort());
+
+  Object* message = arguments[1];
+  if (!message->IsImmutable()) return Failure::wrong_argument_type();
+
   Object* field = instance->GetInstanceField(0);
   uword address = AsForeignWord(field);
   if (address == 0) return Failure::illegal_state();
+
   Port* port = reinterpret_cast<Port*>(address);
   port->Lock();
   Process* port_process = port->process();
   if (port_process != NULL) {
-    Object* message = arguments[1];
-    if (!port_process->Enqueue(port, message)) {
-      port->Unlock();
-      return Failure::wrong_argument_type();
-    }
-
+    port_process->Enqueue(port, message);
     if (port_process != process) {
       // If sending to another process, return the locked port. This will allow
       // the scheduler to schedule the owner of the port, while it's still
@@ -165,11 +165,12 @@ NATIVE(PortSendExit) {
   if (port_process != NULL && port_process != process) {
     Object* message = arguments[1];
 
-    // If the result is a simple object, we can just enqueue it as such.
-    if (!port_process->Enqueue(port, message)) {
-      // Enqueue the exit message and return the locked port. This
-      // will allow the scheduler to schedule the owner of the port,
-      // while it's still alive.
+    // Enqueue the exit message and return the locked port. This
+    // will allow the scheduler to schedule the owner of the port,
+    // while it's still alive.
+    if (message->IsImmutable()) {
+      port_process->Enqueue(port, message);
+    } else {
       port_process->EnqueueExit(process, port, message);
     }
 

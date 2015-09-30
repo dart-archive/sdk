@@ -208,8 +208,8 @@ class Process {
 
   // Thread-safe way of adding a 'message' at the end of the process'
   // message queue. Returns false if the object is of wrong type.
-  bool Enqueue(Port* port, Object* message);
-  bool EnqueueForeign(Port* port, void* foreign, int size, bool finalized);
+  void Enqueue(Port* port, Object* message);
+  void EnqueueForeign(Port* port, void* foreign, int size, bool finalized);
   void EnqueueExit(Process* sender, Port* port, Object* message);
 
   // Determine if it's possible to enqueue the given 'object' in the

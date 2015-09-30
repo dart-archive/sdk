@@ -724,7 +724,7 @@ void Process::UpdateBreakpoints() {
   }
 }
 
-bool Process::Enqueue(Port* port, Object* message) {
+void Process::Enqueue(Port* port, Object* message) {
   PortQueue* entry = NULL;
   if (!message->IsHeapObject()) {
     uword address = reinterpret_cast<uword>(message);
@@ -733,23 +733,13 @@ bool Process::Enqueue(Port* port, Object* message) {
     uword address = reinterpret_cast<uword>(message);
     entry = new PortQueue(port, address, 0, PortQueue::OBJECT);
   } else {
-    Space* space = program_->heap()->space();
-    if (!space->Includes(HeapObject::cast(message)->address())) return false;
-
-    // NOTE: The only case when we go into this else block is if [message] is
-    // mutable. The objects in program space should all be immutable, so
-    // [message] must be a mutable process heap message, in which case we
-    // return `false` and the caller can use [Process::EnqueueExit].
-    //
-    // Any other scenario must be a bug and will hit this UNREACHABLE().
     UNREACHABLE();
   }
 
   EnqueueEntry(entry);
-  return true;
 }
 
-bool Process::EnqueueForeign(Port* port,
+void Process::EnqueueForeign(Port* port,
                              void* foreign,
                              int size,
                              bool finalized) {
@@ -759,7 +749,6 @@ bool Process::EnqueueForeign(Port* port,
   uword address = reinterpret_cast<uword>(foreign);
   PortQueue* entry = new PortQueue(port, address, size, kind);
   EnqueueEntry(entry);
-  return true;
 }
 
 void Process::EnqueueExit(Process* sender, Port* port, Object* message) {
