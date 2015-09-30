@@ -95,7 +95,7 @@ class FletchSessionCommand implements Command {
         "$dartVm -c -ppackage/ tests/fletchc/run.dart $script\n"
         "OR\n"
         "In one terminal:\n"
-        "  gdb -ex run --args $executable --port=54321\n"
+        "  gdb -ex run --args $executable-vm --port=54321\n"
         "In another terminal:\n"
         "  $dartVm -c -ppackage/ -DattachToVm=54321 "
         "tests/fletchc/run.dart $script";
