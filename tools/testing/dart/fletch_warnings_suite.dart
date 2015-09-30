@@ -57,9 +57,9 @@ class FletchWarningsRuntimeConfiguration extends RuntimeConfiguration {
             dartBinary,
             <String>[
                 '--packages=.packages',  // For the VM.
-                '../dart/pkg/compiler/lib/src/dart2js.dart',
+                './third_party/dart/pkg/compiler/lib/src/dart2js.dart',
                 '--packages=.packages', // For dart2js.
-                '--library-root=../dart/sdk/',
+                '--library-root=third_party/dart/sdk/',
                 '--analyze-only',
                 '--show-package-warnings',
                 '--categories=Server']..addAll(arguments),

@@ -56,7 +56,7 @@ def CopyLibs(bundle_dir, build_dir):
   fletch_lib = join(internal, 'fletch_lib')
   dart_lib = join(internal, 'dart_lib')
   copytree('lib', join(fletch_lib, 'lib'))
-  copytree('../dart/sdk/lib', join(dart_lib, 'lib'))
+  copytree('third_party/dart/sdk/lib', join(dart_lib, 'lib'))
 
 def CopyInternalPackages(bundle_dir, build_dir):
   internal_pkg = join(join(bundle_dir, 'internal'), 'pkg')

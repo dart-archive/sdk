@@ -293,14 +293,14 @@ Uri _computeValidatedUri(
 }
 
 Uri _guessLibraryRoot() {
-  // When running from fletch-repo, [executable] is
+  // When running from fletch, [executable] is
   // ".../fletch-repo/fletch/out/$CONFIGURATION/dart", which means that the
-  // fletch-repo root is 3th parent directory (due to how URI resolution works,
+  // fletch root is 2th parent directory (due to how URI resolution works,
   // the filename ("dart") is removed before resolving, for example,
-  // ".../fletch-repo/fletch/out/$CONFIGURATION/../../../" becomes
-  // ".../fletch-repo/").
-  Uri fletchRepoRoot = executable.resolve('../../../');
-  Uri guess = fletchRepoRoot.resolve('dart/sdk/');
+  // ".../fletch-repo/fletch/out/$CONFIGURATION/../../" becomes
+  // ".../fletch-repo/fletch/").
+  Uri fletchRoot = executable.resolve('../../');
+  Uri guess = fletchRoot.resolve('third_party/dart/sdk/');
   if (_looksLikeLibraryRoot(guess)) {
     return _resolveSymbolicLinks(guess);
   }
@@ -316,7 +316,7 @@ Uri _guessLibraryRoot() {
 }
 
 Uri _guessPatchRoot(Uri libraryRoot) {
-  Uri guess = libraryRoot.resolve('../../fletch/');
+  Uri guess = libraryRoot.resolve('../../../');
   if (_looksLikePatchRoot(guess)) return guess;
   return null;
 }
