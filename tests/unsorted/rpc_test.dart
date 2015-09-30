@@ -5,6 +5,7 @@
 import 'dart:fletch';
 
 import 'package:expect/expect.dart';
+import 'package:immutable/immutable.dart';
 
 const List API = const [
   const RpcMethod('foo', arity: 0),
@@ -106,25 +107,27 @@ class RpcServer {
 
   void _processMessages() {
     while (true) {
-      List command = _channel.receive();
-      int opcode = command[0];
+      LinkedList command = _channel.receive();
+      int opcode = command.head;
       if (opcode == -1) return;
-      Port replyTo = command[1];
+      Port replyTo = command.tail.head;
       int arity = _api[opcode].arity;
       int args = command.length - 2;
       if (args != arity) throw "Bad arity";
+
+      LinkedList arguments = command.tail.tail;
       try {
         Function function = _functions[opcode];
         var result;
         switch (arity) {
           case 0: result = function(); break;
-          case 1: result = function(command[2]); break;
-          case 2: result = function(command[2], command[3]); break;
+          case 1: result = function(arguments.head); break;
+          case 2: result = function(arguments.head, arguments.tail.head); break;
           default: throw "Too many arguments.";
         }
-        replyTo.sendMultiple([0, result]);
+        replyTo.send(new LinkedList.fromList([0, result]));
       } catch (e) {
-        replyTo.sendMultiple([1, e]);
+        replyTo.send(new LinkedList.fromList([1, e]));
       }
     }
   }
@@ -175,16 +178,16 @@ class RpcClient {
   };
 
   void done() {
-    _port.sendMultiple([-1]);
+    _port.send(new LinkedList(-1, null));
   }
 
   _forward(List command) {
     Channel replyTo = new Channel();
     command[1] = new Port(replyTo);
-    _port.sendMultiple(command);
-    List reply = replyTo.receive();
-    var tag = reply[0];
-    var result = reply[1];
+    _port.send(new LinkedList.fromList(command));
+    LinkedList reply = replyTo.receive();
+    var tag = reply.head;
+    var result = reply.tail.head;
     if (tag == 1) throw result;
     return result;
   }
