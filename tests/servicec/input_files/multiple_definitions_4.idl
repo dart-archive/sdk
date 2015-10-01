@@ -4,5 +4,5 @@
 
 service Foo {
   void bar();
-  void bar();
+  void bar();  // multipleDefinitions
 }

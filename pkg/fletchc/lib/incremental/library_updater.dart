@@ -252,9 +252,9 @@ class LibraryUpdater extends FletchFeatures {
 
   /// When [true], updates must be applied (using [applyUpdates]) before the
   /// [compiler]'s state correctly reflects the updated program.
-  bool get hasPendingUpdates => !updates.isEmpty;
+  bool get hasPendingUpdates => updates.isNotEmpty;
 
-  bool get failed => !_failedUpdates.isEmpty;
+  bool get failed => _failedUpdates.isNotEmpty;
 
   /// Used as tear-off passed to [LibraryLoaderTask.resetAsync].
   Future<bool> reuseLibrary(LibraryElement library) {
@@ -477,7 +477,7 @@ class LibraryUpdater extends FletchFeatures {
         reuser = unableToReuse;
       }
       if (!reuser(diffToken, before, after)) {
-        assert(!_failedUpdates.isEmpty);
+        assert(_failedUpdates.isNotEmpty);
         continue;
       }
     }
@@ -838,7 +838,7 @@ class LibraryUpdater extends FletchFeatures {
     for (Update update in updates) {
       update.captureState();
     }
-    if (!_failedUpdates.isEmpty) {
+    if (_failedUpdates.isNotEmpty) {
       throw new IncrementalCompilationFailed(_failedUpdates.join('\n\n'));
     }
     for (ElementX element in _elementsToInvalidate) {
@@ -929,7 +929,7 @@ class LibraryUpdater extends FletchFeatures {
     Set<Element> newStaticFields =
         new Set<Element>.from(fletchContext.staticIndices.keys).difference(
             existingStaticFields);
-    if (!newStaticFields.isEmpty) {
+    if (newStaticFields.isNotEmpty) {
       throw new IncrementalCompilationFailed(
           "Unable to add static fields:\n  ${newStaticFields.join(',\n  ')}");
     }

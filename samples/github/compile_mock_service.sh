@@ -31,14 +31,14 @@ ninja -C out/ReleaseIA32
 if [[ $# -eq 0 ]] || [[ "$1" == "data" ]]; then
     cd $DATA_DIR
     echo "const Map<String, List<int>> resources = const <String, List<int>> {"\
-	 > $DATA_FILE
+         > $DATA_FILE
     for f in `find . -type f -name *\\\\.data`; do
-	key=`echo $f | cut -b 3- | cut -d . -f 1`
-	echo "'$key': const <int>[" >> $DATA_FILE
-	od -A n -t d1 $f |\
+        key=`echo $f | cut -b 3- | cut -d . -f 1`
+        echo "'$key': const <int>[" >> $DATA_FILE
+        od -A n -t d1 $f |\
             sed 's/\([^ ]\) /\1,/g' |\
             sed 's/\([^ ]\)$/\1,/' >> $DATA_FILE
-	echo "]," >> $DATA_FILE
+        echo "]," >> $DATA_FILE
     done
     echo "};" >> $DATA_FILE
 fi
@@ -52,6 +52,8 @@ fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
     cd $FLETCH_DIR
-    ./tools/persistent_process_info.sh --kill
-    $FLETCH compile-and-run --packages="$PKG_FILE" -o "$SNAPSHOT_FILE" "$MOCK_FILE"
+    $DART -c --packages=.packages \
+          -Dsnapshot="$SNAPSHOT_FILE" \
+          -Dpackages="$PKG_FILE" \
+          tests/fletchc/run.dart "$MOCK_FILE"
 fi

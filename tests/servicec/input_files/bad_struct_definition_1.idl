@@ -6,3 +6,4 @@ service Foo {
 }
 
 struct Bar {
+// badStructDefinition

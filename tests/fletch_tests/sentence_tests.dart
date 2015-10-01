@@ -12,67 +12,57 @@ import 'package:expect/expect.dart';
 Future main() {
   Sentence sentence;
 
-  void checkVerb(String name) {
+  void checkAction(String name) {
     Expect.isNotNull(sentence.verb);
     Expect.stringEquals(name, sentence.verb.name);
-    print("Verb '$name' as expected.");
+    print("Action '$name' as expected.");
   }
 
   void checkTarget(TargetKind kind) {
-    Expect.isNotNull(sentence.target);
-    Expect.equals(kind, sentence.target.kind);
+    Expect.isNotNull(sentence.targets.single);
+    Expect.equals(kind, sentence.targets.single.kind);
     print("Target '$kind' as expected.");
   }
 
   void checkNamedTarget(TargetKind kind, String name) {
-    Expect.isNotNull(sentence.target);
-    NamedTarget namedTarget = sentence.target;
+    Expect.isNotNull(sentence.targets.single);
+    NamedTarget namedTarget = sentence.targets.single;
     Expect.equals(kind, namedTarget.kind);
     Expect.stringEquals(name, namedTarget.name);
     print("NamedTarget '$kind $name' as expected.");
   }
 
   void checkNoTarget() {
-    Expect.isNull(sentence.target);
+    Expect.isTrue(sentence.targets.isEmpty);
     print("No target as expected.");
   }
 
   sentence = parseSentence([]);
   print(sentence);
-  checkVerb('help');
-  Expect.isNull(sentence.preposition);
+  checkAction('help');
+  Expect.isTrue(sentence.prepositions.isEmpty);
   checkNoTarget();
-  Expect.isNull(sentence.tailPreposition);
   Expect.isNull(sentence.trailing);
 
   sentence = parseSentence(['not_a_verb']);
   print(sentence);
-  checkVerb('not_a_verb');
-  Expect.isNull(sentence.preposition);
+  checkAction('not_a_verb');
+  Expect.isTrue(sentence.prepositions.isEmpty);
   checkNoTarget();
-  Expect.isNull(sentence.tailPreposition);
   Expect.isNotNull(sentence.trailing);
   Expect.listEquals(['not_a_verb'], sentence.trailing);
 
   sentence = parseSentence(['create', 'session', 'fisk']);
   print(sentence);
-  checkVerb('create');
-  Expect.isNull(sentence.preposition);
+  checkAction('create');
+  Expect.isTrue(sentence.prepositions.isEmpty);
   checkNamedTarget(TargetKind.SESSION, 'fisk');
-  Expect.isNull(sentence.tailPreposition);
   Expect.isNull(sentence.trailing);
 
-  void checkCreateFooInFisk(bool tail) {
+  void checkCreateFooInFisk() {
     Expect.isNotNull(sentence.verb);
     Expect.stringEquals('create', sentence.verb.name);
-    Preposition preposition;
-    if (tail) {
-      preposition = sentence.tailPreposition;
-      Expect.isNull(sentence.preposition);
-    } else {
-      preposition = sentence.preposition;
-      Expect.isNull(sentence.tailPreposition);
-    }
+    Preposition preposition = sentence.prepositions.single;
     Expect.isNotNull(preposition);
     Expect.equals(PrepositionKind.IN, preposition.kind);
     NamedTarget namedTarget = preposition.target;
@@ -84,39 +74,36 @@ Future main() {
   }
   sentence = parseSentence(['create', 'in', 'session', 'fisk', 'class', 'Foo']);
   print(sentence);
-  checkCreateFooInFisk(false);
+  checkCreateFooInFisk();
 
   sentence = parseSentence(['create', 'class', 'Foo', 'in', 'session', 'fisk']);
   print(sentence);
-  checkCreateFooInFisk(true);
+  checkCreateFooInFisk();
 
   sentence = parseSentence(['create', 'in', 'fisk']);
   print(sentence);
-  checkVerb('create');
-  Expect.isNotNull(sentence.preposition);
-  Expect.equals(PrepositionKind.IN, sentence.preposition.kind);
-  Expect.isTrue(sentence.preposition.target is ErrorTarget);
+  checkAction('create');
+  Expect.isNotNull(sentence.prepositions.single);
+  Expect.equals(PrepositionKind.IN, sentence.prepositions.single.kind);
+  Expect.isTrue(sentence.prepositions.single.target is ErrorTarget);
   checkNoTarget();
-  Expect.isNull(sentence.tailPreposition);
   Expect.isNull(sentence.trailing);
 
   sentence = parseSentence(['create', 'in', 'fisk', 'fisk']);
   print(sentence);
-  checkVerb('create');
-  Expect.isNotNull(sentence.preposition);
-  Expect.equals(PrepositionKind.IN, sentence.preposition.kind);
-  Expect.isTrue(sentence.preposition.target is ErrorTarget);
+  checkAction('create');
+  Expect.isNotNull(sentence.prepositions.single);
+  Expect.equals(PrepositionKind.IN, sentence.prepositions.single.kind);
+  Expect.isTrue(sentence.prepositions.single.target is ErrorTarget);
   checkNoTarget();
-  Expect.isNull(sentence.tailPreposition);
   Expect.isNotNull(sentence.trailing);
   Expect.listEquals(['fisk'], sentence.trailing);
 
   sentence = parseSentence(['help', 'all']);
   print(sentence);
-  checkVerb('help');
-  Expect.isNull(sentence.preposition);
+  checkAction('help');
+  Expect.isTrue(sentence.prepositions.isEmpty);
   checkTarget(TargetKind.ALL);
-  Expect.isNull(sentence.tailPreposition);
   Expect.isNull(sentence.trailing);
 
   return new Future.value();

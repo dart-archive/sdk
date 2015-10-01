@@ -62,7 +62,7 @@ void ProcessHeapValidatorVisitor::VisitProcess(Process* process) {
     process_heap->IterateObjects(&pointer_visitor);
     process_heap->VisitWeakObjectPointers(&validator);
     process->store_buffer()->IterateObjects(&pointer_visitor);
-    process->IteratePortQueuesPointers(&validator);
+    process->mailbox()->IteratePointers(&validator);
   }
 }
 

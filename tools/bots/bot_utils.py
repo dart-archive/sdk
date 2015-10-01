@@ -264,17 +264,6 @@ class GSUtil(object):
     self._layzCalculateGSUtilPath()
 
     env = dict(os.environ)
-    # If we're on the buildbot, we use a specific boto file.
-    user_name = os.environ.get(
-        'USERNAME' if sys.platform == 'win32' else 'USER', '')
-    if user_name == 'chrome-bot':
-      boto_config = {
-        'Linux': '/mnt/data/b/build/site_config/.boto',
-        'Darwin': '/Volumes/data/b/build/site_config/.boto',
-        'Windows': r'e:\b\build\site_config\.boto',
-      }[platform.system()]
-      env['AWS_CREDENTIAL_FILE'] = boto_config
-      env['BOTO_CONFIG'] = boto_config
 
     if GSUtil.GSUTIL_IS_SHELL_SCRIPT:
       gsutil_command = [GSUtil.GSUTIL_PATH]

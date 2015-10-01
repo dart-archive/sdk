@@ -3,5 +3,6 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-  String bar();  // String is not a valid return type.
+  // String is not a valid return type.
+  String bar();  // expectedPointerOrPrimitive
 }

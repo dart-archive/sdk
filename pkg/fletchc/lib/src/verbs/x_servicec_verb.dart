@@ -15,17 +15,19 @@ import 'package:servicec/errors.dart' as errors;
 import 'documentation.dart' show
     servicecDocumentation;
 
-const Verb servicecVerb = const Verb(
+import "package:compiler/src/util/uri_extras.dart" show
+   relativize;
+
+const Action servicecAction = const Action(
     // A session is required for a worker.
     servicecAct, servicecDocumentation, requiresSession: true,
     requiredTarget: TargetKind.FILE);
 
 Future<int> servicecAct(AnalyzedSentence sentence, VerbContext context) async {
-  String fileName = sentence.targetName;
-
   // This is asynchronous, but we don't await the result so we can respond to
   // other requests.
-  context.performTaskInWorker(new CompileTask(fileName));
+  context.performTaskInWorker(
+      new CompileTask(sentence.targetUri, sentence.base));
 
   return null;
 }
@@ -33,27 +35,30 @@ Future<int> servicecAct(AnalyzedSentence sentence, VerbContext context) async {
 class CompileTask extends SharedTask {
   // Keep this class simple, see note in superclass.
 
-  final String fileName;
+  final Uri base;
+  final Uri targetUri;
 
-  const CompileTask(this.fileName);
+  const CompileTask(this.targetUri, this.base);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return compileTask(fileName);
+    return compileTask(this.targetUri, this.base);
   }
 }
 
-Future<int> compileTask(String fileName) async {
-  print("Compiling $fileName...");
+Future<int> compileTask(Uri targetUri, Uri base) async {
+  String relativeName = relativize(base, targetUri, false);
+  print("Compiling $relativeName...");
 
   // TODO(stanm): take directory as argument
   String outputDirectory = "/tmp/servicec-out";
 
+  String fileName = targetUri.toFilePath();
   Iterable<errors.CompilerError> compilerErrors =
     await servicec.compile(fileName, outputDirectory);
 
-  print("Compiled $fileName to $outputDirectory");
+  print("Compiled $relativeName to $outputDirectory");
 
   int length = compilerErrors.length;
   if (length > 0) {

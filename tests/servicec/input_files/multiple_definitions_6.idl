@@ -3,5 +3,5 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-  void bar(int32 x, int32 x);
+  void bar(int32 x, int32 x);  // multipleDefinitions
 }

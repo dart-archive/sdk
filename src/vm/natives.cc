@@ -1292,8 +1292,8 @@ NATIVE(Uint32DigitsAllocate) {
 }
 
 NATIVE(Uint32DigitsGet) {
-  ByteArray* backing = ByteArray::cast(arguments[1]);
-  Smi* index = Smi::cast(arguments[2]);
+  ByteArray* backing = ByteArray::cast(arguments[0]);
+  Smi* index = Smi::cast(arguments[1]);
   word byte_index = index->value() * 4;
   ASSERT(byte_index + 4 <= backing->length());
   uint8* byte_address = backing->byte_address_for(byte_index);
@@ -1301,12 +1301,12 @@ NATIVE(Uint32DigitsGet) {
 }
 
 NATIVE(Uint32DigitsSet) {
-  ByteArray* backing = ByteArray::cast(arguments[1]);
-  Smi* index = Smi::cast(arguments[2]);
+  ByteArray* backing = ByteArray::cast(arguments[0]);
+  Smi* index = Smi::cast(arguments[1]);
   word byte_index = index->value() * 4;
   ASSERT(byte_index + 4 <= backing->length());
   uint8* byte_address = backing->byte_address_for(byte_index);
-  Object* object = arguments[3];
+  Object* object = arguments[2];
   uint32 value = object->IsSmi()
                  ? Smi::cast(object)->value()
                  : LargeInteger::cast(object)->value();

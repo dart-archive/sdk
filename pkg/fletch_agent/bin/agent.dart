@@ -5,10 +5,10 @@
 import 'dart:convert' show UTF8;
 import 'dart:fletch';
 import 'dart:fletch.ffi';
+import 'dart:fletch.os';
 import 'dart:typed_data';
 
 import 'package:file/file.dart';
-import 'package:os/os.dart';
 import 'package:socket/socket.dart';
 
 import '../lib/messages.dart';
@@ -83,7 +83,7 @@ class AgentContext {
       String portStr = _getEnv('AGENT_PORT');
       port = int.parse(portStr);
     } catch (_) {
-      port = 12121; // default
+      port = AGENT_DEFAULT_PORT; // default
     }
     String logFile = _getEnv('AGENT_LOG_FILE');
     if (logFile == null) {
@@ -171,8 +171,8 @@ class CommandHandler {
   RequestHeader _requestHeader;
 
   factory CommandHandler(Socket socket, AgentContext context) {
-    var bytes = socket.read(RequestHeader.WIRE_SIZE);
-    if (bytes == null || bytes.lengthInBytes < RequestHeader.WIRE_SIZE) {
+    var bytes = socket.read(RequestHeader.HEADER_SIZE);
+    if (bytes == null || bytes.lengthInBytes < RequestHeader.HEADER_SIZE) {
       throw 'Insufficient bytes (${bytes.length}) received in request.';
     }
     var header = new RequestHeader.fromBuffer(bytes);
@@ -185,7 +185,8 @@ class CommandHandler {
     if (_requestHeader.version > AGENT_VERSION) {
       _context.logger.warn('Received message with unsupported version '
           '${_requestHeader.version} and command ${_requestHeader.command}');
-      _sendReply(ReplyHeader.UNSUPPORTED_VERSION, null);
+      _sendReply(
+          new ReplyHeader(_requestHeader.id, ReplyHeader.UNSUPPORTED_VERSION));
     }
     switch (_requestHeader.command) {
       case RequestHeader.START_VM:
@@ -205,37 +206,31 @@ class CommandHandler {
         break;
       default:
         _context.logger.warn('Unknown command: ${_requestHeader.command}.');
-        _sendReply(ReplyHeader.UNKNOWN_COMMAND, null);
+        _sendReply(
+            new ReplyHeader(_requestHeader.id, ReplyHeader.UNKNOWN_COMMAND));
         break;
     }
   }
 
-  void _sendReply(int result, ByteBuffer payload) {
-    var replyHeader = new ReplyHeader(_requestHeader.id, result);
-    _socket.write(replyHeader.toBuffer);
-    if (payload != null) {
-      _socket.write(payload);
-    }
+  void _sendReply(ReplyHeader reply) {
+    _socket.write(reply.toBuffer());
     _socket.close();
   }
 
   void _startVm() {
-    int result = ReplyHeader.SUCCESS;
-    ByteBuffer replyPayload;
     int vmPid = 0;
+    var reply;
     try {
-      List<String> args =
-          ['--log-dir=${_context.vmLogDir}', '--run-dir=${_context.vmPidDir}'];
+      List<String> args = ['--log-dir=${_context.vmLogDir}',
+          '--run-dir=${_context.vmPidDir}', '--host=0.0.0.0'];
       vmPid = NativeProcess.startDetached(_context.vmBinPath, args);
-      replyPayload = new Uint16List(2).buffer;
-      writeUint16(replyPayload, 0, vmPid);
       // Find out what port the vm is listening on.
       int port = _retrieveVmPort(vmPid);
-      writeUint16(replyPayload, 2, port);
+      reply = new StartVmReply(
+          _requestHeader.id, ReplyHeader.SUCCESS, vmId: vmPid, vmPort: port);
       _context.logger.info('Started fletch vm with pid $vmPid on port $port');
     } catch (e) {
-      result = ReplyHeader.START_VM_FAILED;
-      replyPayload = null;
+      reply = new StartVmReply(_requestHeader.id, ReplyHeader.START_VM_FAILED);
       // TODO(wibling): could extend the result with caught error string.
       _context.logger.warn('Failed to start vm with error: $e');
       if (vmPid > 0) {
@@ -244,7 +239,7 @@ class CommandHandler {
         _cleanUpVm(vmPid);
       }
     }
-    _sendReply(result, replyPayload);
+    _sendReply(reply);
   }
 
   int _retrieveVmPort(int vmPid) {
@@ -302,28 +297,33 @@ class CommandHandler {
   }
 
   void _stopVm() {
-    int result;
+    if (_requestHeader.payloadLength != 4) {
+      _sendReply(
+          new StopVmReply(_requestHeader.id, ReplyHeader.INVALID_PAYLOAD));
+      return;
+    }
+    var reply;
     // Read in the vm id. It is only the first 2 bytes of the data sent.
     var pidBytes = _socket.read(4);
     if (pidBytes == null) {
-      result = ReplyHeader.INVALID_PAYLOAD;
+      reply = new StopVmReply(_requestHeader.id, ReplyHeader.INVALID_PAYLOAD);
       _context.logger.warn('Missing pid of the fletch vm to stop.');
     } else {
       // The vm id (aka. pid) is the first 2 bytes of the data sent.
       int pid = readUint16(pidBytes, 0);
       int err = _kill.icall$2(pid, SIGTERM);
       if (err != 0) {
-        result = ReplyHeader.UNKNOWN_VM_ID;
+        reply = new StopVmReply(_requestHeader.id, ReplyHeader.UNKNOWN_VM_ID);
         _context.logger.warn(
             'Failed to stop pid $pid with error: ${Foreign.errno}');
       } else {
-        result = ReplyHeader.SUCCESS;
+        reply = new StopVmReply(_requestHeader.id, ReplyHeader.SUCCESS);
         _context.logger.info('Stopped pid: $pid');
       }
       // Always clean up independent of errors.
       _cleanUpVm(pid);
     }
-    _sendReply(result, null);
+    _sendReply(reply);
   }
 
   void _cleanUpVm(int pid) {
@@ -343,50 +343,34 @@ class CommandHandler {
   }
 
   void _listVms() {
-    // TODO(wibling): implement this method.
-    var payload = new Uint32List(4).buffer;
-    // The number of vms (3) is the first 4 bytes of the payload.
-    writeUint32(payload, 0, 3);
-    // The actual vm id and port pairs follow (here we hardcode 3 pairs).
-    int offset = 4;
-    for (int i = 0; i < 3; ++i) {
-      int vmId = (i+2) * 1234;
-      int vmPort = (i+3) * 5432;
-      _context.logger.info('Found VM with id: $vmId, port: $vmPort');
-      writeUint16(payload, offset, vmId);
-      offset += 2;
-      writeUint16(payload, offset,  vmPort);
-      offset += 2;
-    }
-    _sendReply(ReplyHeader.SUCCESS, payload);
+    // TODO(wibling): implement this method. For now just hardcode some values.
+    _sendReply(
+        new ListVmsReply(_requestHeader.id, ReplyHeader.UNKNOWN_COMMAND));
   }
 
   void _upgradeVm() {
     int result;
     // TODO(wibling): implement this method.
-    // Read the length of the vm binary data.
-    ByteBuffer lengthBytes = _socket.read(4);
-    if (lengthBytes == null) {
+    var binary = _socket.read(_requestHeader.payloadLength);
+    if (binary == null) {
+      _context.logger.warn(
+          'Could not read VM binary of length ${_requestHeader.payloadLength}');
       result = ReplyHeader.INVALID_PAYLOAD;
-      _context.logger.warn('Missing length in upgradeVm message.');
     } else {
-      var length = readUint32(lengthBytes, 0);
       // TODO(wibling); stream the bytes from the socket to file and swap with
-      // current vm binary.
-      _context.logger.warn('Reading $length bytes and updating VM binary.');
-      var binary = _socket.read(length);
-      result = ReplyHeader.SUCCESS;
+      // current vm binary. For now we just return UNKNOWN_COMMAND.
+      _context.logger.warn('Read VM binary of ${binary.lengthInBytes} bytes.');
+      result = ReplyHeader.UNKNOWN_COMMAND;
     }
-    _sendReply(result, null);
+    _sendReply(new UpgradeVmReply(_requestHeader.id, result));
   }
 
   void _fletchVersion() {
     // TODO(wibling): implement this method, for now version is hardcoded to 1.
-    var payload = new Uint32List(1).buffer;
     int version = 1;
-    writeUint32(payload, 0, version);
     _context.logger.warn('Returning fletch version $version');
-    _sendReply(ReplyHeader.SUCCESS, payload);
+    _sendReply(new FletchVersionReply(
+        _requestHeader.id, ReplyHeader.SUCCESS, fletchVersion: version));
   }
 }
 
@@ -415,13 +399,16 @@ void _writePid(String pidFilePath) {
     pidFile.close();
   }
 }
+
 void printUsage() {
   print('Usage:');
   print('The Fletch agent supports the following flags');
   print('');
-  print('  --port: specify the port on which to listen, default: 12121');
+  print('  --port: specify the port on which to listen, default: '
+      '$AGENT_DEFAULT_PORT');
   print('  --ip: specify the ip address on which to listen, default: 0.0.0.0');
-  print('  --vm: specify the path to the vm binary, default: /opt/fletch/bin/fletch-vm.');
+  print('  --vm: specify the path to the vm binary, default: '
+      '/opt/fletch/bin/fletch-vm.');
   print('');
   Process.exit();
 }

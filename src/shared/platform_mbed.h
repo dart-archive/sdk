@@ -16,6 +16,71 @@
 
 #include "src/shared/globals.h"
 
+#ifdef DEBUG
+#define CHECK_AND_RETURN(expr) {                                               \
+  int status = expr;                                                           \
+  if (status != osOK) {                                                        \
+    char const *msg;                                                           \
+    switch (status) {                                                          \
+      case osErrorISR:                                                         \
+        msg = "osErrorISR";                                                    \
+        break;                                                                 \
+      case osErrorResource:                                                    \
+        msg = "osErrorResource";                                               \
+        break;                                                                 \
+      case osErrorParameter:                                                   \
+        msg = "osErrorParameter";                                              \
+        break;                                                                 \
+      case osErrorTimeoutResource:                                             \
+        msg = "osErrorTimeoutResource";                                        \
+        break;                                                                 \
+      default:                                                                 \
+        msg = "<other>";                                                       \
+    }                                                                          \
+    printf("System call failed: %s at %s:%d.\n", msg, __FILE__, __LINE__);     \
+    fflush(stdout);                                                            \
+    return status;                                                             \
+  }                                                                            \
+}
+
+#define CHECK_AND_FAIL(expr) {                                                 \
+  int status = expr;                                                           \
+  if (status != osOK) {                                                        \
+    char const *msg;                                                           \
+    switch (status) {                                                          \
+      case osErrorISR:                                                         \
+        msg = "osErrorISR";                                                    \
+        break;                                                                 \
+      case osErrorResource:                                                    \
+        msg = "osErrorResource";                                               \
+        break;                                                                 \
+      case osErrorParameter:                                                   \
+        msg = "osErrorParameter";                                              \
+        break;                                                                 \
+      case osErrorTimeoutResource:                                             \
+        msg = "osErrorTimeoutResource";                                        \
+        break;                                                                 \
+      default:                                                                 \
+        msg = "<other>";                                                       \
+    }                                                                          \
+    printf("System call failed: %s at %s:%d.\n", msg, __FILE__, __LINE__);     \
+    fflush(stdout);                                                            \
+    abort();                                                                   \
+  }                                                                            \
+}
+#else
+#define CHECK_AND_RETURN(expr) {                                               \
+  int status = expr;                                                           \
+  if (status != osOK) return status;                                           \
+}
+#define CHECK_AND_FAIL(expr) {                                                 \
+  int status = expr;                                                           \
+  if (status != osOK) {                                                        \
+    FATAL("System call failed.\n");                                            \
+  }                                                                            \
+}
+#endif
+
 namespace fletch {
 
 static const int kMutexSize = sizeof(int32_t) * 3;
@@ -31,11 +96,12 @@ class MutexImpl {
   MutexImpl() {
     memset((osMutex(mutex_def_))->mutex, 0, kMutexSize);
     mutex_ = osMutexCreate(osMutex(mutex_def_));
+    ASSERT(mutex_ != NULL);
   }
   ~MutexImpl() { osMutexDelete(mutex_); }
 
-  int Lock() { return osMutexWait(mutex_, 0); }
-  int TryLock() { return osMutexWait(mutex_, 1); }
+  int Lock() { return osMutexWait(mutex_, osWaitForever); }
+  int TryLock() { return osMutexWait(mutex_, 0); }
   int Unlock() { return osMutexRelease(mutex_); }
 
  private:
@@ -48,10 +114,14 @@ class MonitorImpl {
   MonitorImpl() {
     memset((osMutex(mutex_def_))->mutex, 0, kMutexSize);
     mutex_ = osMutexCreate(osMutex(mutex_def_));
+    ASSERT(mutex_ != NULL);
     memset((osMutex(internal_def_))->mutex, 0, kMutexSize);
     internal_ = osMutexCreate(osMutex(internal_def_));
+    ASSERT(internal_ != NULL);
     memset((osSemaphore(semaphore_def_))->semaphore, 0, kSemaphoreSize);
     semaphore_ = osSemaphoreCreate(osSemaphore(semaphore_def_), 0);
+    ASSERT(semaphore_ != NULL);
+    waiting_ = 0;
   }
 
   ~MonitorImpl() {
@@ -60,29 +130,33 @@ class MonitorImpl {
     osSemaphoreDelete(semaphore_);
   }
 
-  int Lock() { return osMutexWait(mutex_, 0); }
+  int Lock() { return osMutexWait(mutex_, osWaitForever); }
   int Unlock() { return osMutexRelease(mutex_); }
 
   int Wait() {
-    osMutexWait(internal_, 0);
+    CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
     waiting_++;
-    osMutexRelease(internal_);
-    osMutexRelease(mutex_);
-    osSemaphoreWait(semaphore_, 0);
-    osMutexWait(mutex_, 0);
-    // TODO(herhut): Check error codes.
-    return 0;
+    CHECK_AND_FAIL(osMutexRelease(internal_));
+    CHECK_AND_RETURN(osMutexRelease(mutex_));
+    int tokens = osSemaphoreWait(semaphore_, osWaitForever);
+    ASSERT(tokens > 0);  // There should have been at least one token.
+    CHECK_AND_RETURN(osMutexWait(mutex_, osWaitForever));
+    return osOK;
   }
 
   bool Wait(uint64 microseconds) {
-    osMutexWait(internal_, 0);
+    CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
     waiting_++;
-    osMutexRelease(internal_);
-    osMutexRelease(mutex_);
-    osSemaphoreWait(semaphore_, microseconds / 1000);
-    osMutexWait(mutex_, 0);
-    // TODO(herhut): Check error codes.
-    return 0;
+    CHECK_AND_FAIL(osMutexRelease(internal_));
+    CHECK_AND_FAIL(osMutexRelease(mutex_));
+    int tokens = osSemaphoreWait(semaphore_, microseconds / 1000);
+    if (tokens == 0) {  // Timeout occured.
+      CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
+      --waiting_;
+      CHECK_AND_FAIL(osMutexRelease(internal_));
+    }
+    CHECK_AND_RETURN(osMutexWait(mutex_, osWaitForever));
+    return osOK;
   }
 
   bool WaitUntil(uint64 microseconds_since_epoch) {
@@ -91,26 +165,25 @@ class MonitorImpl {
   }
 
   int Notify() {
-    osMutexWait(internal_, 0);
+    CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
     bool hasWaiting = waiting_ > 0;
     if (hasWaiting) --waiting_;
-    osMutexRelease(internal_);
+    CHECK_AND_FAIL(osMutexRelease(internal_));
     if (hasWaiting) {
-      osSemaphoreRelease(semaphore_);
+      CHECK_AND_FAIL(osSemaphoreRelease(semaphore_));
     }
-    // TODO(herhut): Check error codes.
-    return 0;
+    return osOK;
   }
 
   int NotifyAll() {
-    osMutexWait(internal_, 0);
+    CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
     int towake = waiting_;
     waiting_ = 0;
-    osMutexRelease(internal_);
+    CHECK_AND_FAIL(osMutexRelease(internal_));
     while (towake-- > 0) {
-      osSemaphoreRelease(semaphore_);
+      CHECK_AND_FAIL(osSemaphoreRelease(semaphore_));
     }
-    return 0;
+    return osOK;
   }
 
  private:

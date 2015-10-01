@@ -32,7 +32,8 @@ class ThreadIdentifier {
   //
   // A thread can only be joined once.
   void Join() {
-    UNIMPLEMENTED();
+    printf("ThreadIdentifier::Join is not supported on MBED.\n");
+    fflush(stdout);
   }
 
  private:

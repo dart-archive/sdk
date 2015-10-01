@@ -25,8 +25,7 @@ abstract class DecodeExitCode {
         return Expectation.PASS;
 
       case COMPILER_EXITCODE_CRASH:
-        // TODO(ahe): change this once issue #101 is fixed.
-        return hasTimedOut ? Expectation.TIMEOUT : Expectation.CRASH;
+        return Expectation.CRASH;
 
       case DART_VM_EXITCODE_COMPILE_TIME_ERROR:
         return Expectation.COMPILETIME_ERROR;

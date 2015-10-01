@@ -4,5 +4,5 @@
 
 service Foo {
   // Multiple formals should all have primitive types, regardless of position.
-  void bar(String baz, int32 zap);
+  void bar(String baz, int32 zap);  // expectedPrimitiveFormal
 }

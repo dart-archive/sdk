@@ -10,20 +10,60 @@
   },
   'targets': [
     {
-      'target_name': 'fletch',
-      'type': 'executable',
+      'target_name': 'driver',
+      'type': 'static_library',
       'toolsets': ['target'],
       'dependencies': [
         '../../shared/shared.gyp:fletch_shared',
       ],
       'sources': [
-        'main.cc',
-
         'connection.cc',
         'connection.h',
         'platform.h',
         'platform_linux.cc',
         'platform_macos.cc',
+      ],
+    },
+    {
+      'target_name': 'fletch',
+      'type': 'executable',
+      'toolsets': ['target'],
+      'dependencies': [
+        'driver',
+      ],
+      'defines': [
+        'FLETCHC_LIBRARY_ROOT="../../../dart/sdk"',
+        'FLETCHC_PATCH_ROOT="../.."',
+        # How many directories up is the root, used for getting full path to
+        # the .packages file for the compiler
+        'FLETCH_ROOT_DISTANCE=2',
+        'FLETCHC_PKG_FILE="pkg/fletchc/.packages"',
+        'DART_VM_NAME="dart"',
+      ],
+      'sources': [
+        'main.cc',
+      ],
+    },
+    # The same as fletch, but with paths relative to the location in
+    # the sdk.
+    {
+      'target_name': 'fletch_for_sdk',
+      'type': 'executable',
+      'toolsets': ['target'],
+      'dependencies': [
+        'driver',
+      ],
+      'defines': [
+        'FLETCHC_LIBRARY_ROOT="../internal/dart_lib"',
+        'FLETCHC_PATCH_ROOT="../internal/fletch_lib"',
+        # How many directories up is the root, used for getting full path to
+        # the .packages file for the compiler
+        'FLETCH_ROOT_DISTANCE=1',
+        'FLETCHC_PKG_FILE="internal/pkg/fletchc/.packages"',
+        'DART_VM_NAME="../internal/dart"',
+      ],
+      'sources': [
+        'main.cc',
       ],
     },
   ],

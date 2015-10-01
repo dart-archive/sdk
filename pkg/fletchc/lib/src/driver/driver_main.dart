@@ -436,12 +436,13 @@ class ClientController {
   }
 
   int reportErrorToClient(InputError error, StackTrace stackTrace) {
-    if (!crashReportRequested) {
+    bool isInternalError = error.kind == DiagnosticKind.internalError;
+    if (isInternalError && !crashReportRequested) {
       printLineOnStderr(requestBugReportOnOtherCrashMessage);
       crashReportRequested = true;
     }
     printLineOnStderr(error.asDiagnostic().formatMessage());
-    if (error.kind == DiagnosticKind.internalError) {
+    if (isInternalError) {
       printLineOnStderr('$stackTrace');
       return COMPILER_EXITCODE_CRASH;
     } else {
@@ -500,6 +501,7 @@ class IsolateController {
   /// isolate sends DriverCommand.ClosePort, or if the isolate is killed due to
   /// DriverCommand.Signal arriving through client.commands.
   Future<Null> attachClient(ClientController client) async {
+    eventLoopStarted = false;
     crashReportRequested = false;
     errorSubscription.onData((errorList) {
       String error = errorList[0];
@@ -702,7 +704,7 @@ class IsolatePool {
   }
 
   void shutdown() {
-    while (!idleIsolates.isEmpty) {
+    while (idleIsolates.isNotEmpty) {
       idleIsolates.removeFirst().kill();
     }
   }

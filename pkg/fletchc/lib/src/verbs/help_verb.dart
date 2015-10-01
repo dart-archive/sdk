@@ -6,66 +6,66 @@ library fletchc.verbs.help_verb;
 
 import 'infrastructure.dart';
 
-import 'verbs.dart' show
-    commonVerbs,
-    uncommonVerbs;
+import 'actions.dart' show
+    commonActions,
+    uncommonActions;
 
 import 'documentation.dart' show
     helpDocumentation,
     synopsis;
 
-const Verb helpVerb =
-    const Verb(
+const Action helpAction =
+    const Action(
         help, helpDocumentation,
         supportedTargets: const [ TargetKind.ALL ], allowsTrailing: true);
 
 Future<int> help(AnalyzedSentence sentence, _) async {
   int exitCode = 0;
-  bool showAllVerbs = sentence.target != null;
+  bool showAllActions = sentence.target != null;
   if (sentence.trailing != null) {
     exitCode = 1;
   }
   if (sentence.verb.name != "help") {
     exitCode = 1;
   }
-  print(generateHelpText(showAllVerbs));
+  print(generateHelpText(showAllActions));
   return exitCode;
 }
 
-String generateHelpText(bool showAllVerbs) {
+String generateHelpText(bool showAllActions) {
   List<String> helpStrings = <String>[synopsis];
-  addVerb(String name, Verb verb) {
+  addAction(String name, Action action) {
     helpStrings.add("");
-    List<String> lines = verb.documentation.trimRight().split("\n");
+    List<String> lines = action.documentation.trimRight().split("\n");
     for (int i = 0; i < lines.length; i++) {
       String line = lines[i];
       if (line.length > 80) {
         throw new StateError(
-            "Line ${i+1} of Verb '$name' is too long and may not be "
+            "Line ${i+1} of Action '$name' is too long and may not be "
             "visible in a normal terminal window: $line\n"
             "Please trim to 80 characters or fewer.");
       }
       helpStrings.add(lines[i]);
     }
   }
-  List<String> names = <String>[]..addAll(commonVerbs.keys);
-  if (showAllVerbs) {
-    names.addAll(uncommonVerbs.keys);
+  List<String> names = <String>[]..addAll(commonActions.keys);
+  if (showAllActions) {
+    names.addAll(uncommonActions.keys);
   }
-  if (showAllVerbs) {
+  if (showAllActions) {
     names.sort();
   }
   for (String name in names) {
-    Verb verb = commonVerbs[name];
-    if (verb == null) {
-      verb = uncommonVerbs[name];
+    Action action = commonActions[name];
+    if (action == null) {
+      action = uncommonActions[name];
     }
-    addVerb(name, verb);
+    addAction(name, action);
   }
 
-  if (!showAllVerbs && helpStrings.length > 20) {
+  if (!showAllActions && helpStrings.length > 20) {
     throw new StateError(
-        "More than 20 lines in the combined documentation of [commonVerbs]. "
+        "More than 20 lines in the combined documentation of [commonActions]. "
         "The documentation may scroll out of view:\n${helpStrings.join('\n')}."
         "Can you shorten the documentation?");
   }

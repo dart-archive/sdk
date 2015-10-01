@@ -99,15 +99,20 @@ Function makeErrorHandler(String info) {
   };
 }
 
-Socket handleSocketErrors(Socket socket, String name) {
+Socket handleSocketErrors(Socket socket, String name, {void log(String info)}) {
+  String host = "?";
   String remotePort = "?";
   try {
+    host = "${socket.remoteAddress.host}";
     remotePort = "${socket.remotePort}";
   } catch (_) {
     // Ignored, socket.remotePort may fail if the socket was closed on the
     // other side.
   }
-  String info = "$name ${socket.port} -> $remotePort";
+  String info = "$name ${socket.port} -> $host:$remotePort";
+  if (log != null) {
+    log(info);
+  }
   socket.done.catchError(makeErrorHandler(info));
   return socket;
 }

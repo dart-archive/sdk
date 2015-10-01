@@ -8,6 +8,6 @@ service Foo {
 struct Bar {
   union {
     int32 baz;
-    int32 zap // Unfinished field declaration.
+    int32 zap // badField
   }
 }

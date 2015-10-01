@@ -16,10 +16,17 @@ import "package:compiler/src/scanner/scannerlib.dart" show
     STRING_INFO,
     StringScanner,
     StringToken,
+    SymbolToken,
     Token,
     UnmatchedToken;
 
+import "package:compiler/src/util/characters.dart" show
+    $LF;
+
 import "keyword.dart" as own;
+
+const int LF_TOKEN = $LF;
+const PrecedenceInfo LF_INFO = const PrecedenceInfo('<new-line>', 0, LF_TOKEN);
 
 class Scanner extends StringScanner {
   Scanner(String input)
@@ -65,6 +72,14 @@ class Scanner extends StringScanner {
     // There is no shift operator in the IDL, so treat >> as > >.
     appendGt(GT_INFO);
     appendGt(GT_INFO);
+  }
+
+  void appendWhiteSpace(int next) {
+    super.appendWhiteSpace(next);
+    if (next == $LF) {
+      tail.next = new SymbolToken(LF_INFO, stringOffset);
+      tail = tail.next;
+    }
   }
 }
 

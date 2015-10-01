@@ -38,6 +38,7 @@ import 'decode_exit_code.dart' show
     DecodeExitCode;
 
 import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
+    COMPILER_EXITCODE_CONNECTION_ERROR,
     COMPILER_EXITCODE_CRASH,
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
@@ -70,13 +71,15 @@ class FletchSessionCommand implements Command {
   final List<String> arguments;
   final Map<String, String> environmentOverrides;
   final bool isIncrementalCompilationEnabled;
+  final String snapshotFileName;
 
   FletchSessionCommand(
       this.executable,
       this.script,
       this.arguments,
       this.environmentOverrides,
-      this.isIncrementalCompilationEnabled);
+      this.isIncrementalCompilationEnabled,
+      {this.snapshotFileName});
 
   String get displayName => "fletch_session";
 
@@ -84,20 +87,41 @@ class FletchSessionCommand implements Command {
 
   String get reproductionCommand {
     var dartVm = Uri.parse(executable).resolve('dart');
-    return "${Platform.executable} -c "
-        "-D$isIncrementalCompilationEnabledFlag="
-        "$isIncrementalCompilationEnabled "
-        "tools/testing/dart/fletch_session_command.dart "
-        "$executable ${arguments.join(' ')}\n"
-        "OR\n"
-        "gdb -ex 'follow-fork-mode child' -ex run --args "
-        "$dartVm -c -ppackage/ tests/fletchc/run.dart $script\n"
-        "OR\n"
-        "In one terminal:\n"
-        "  gdb -ex run --args $executable --port=54321\n"
-        "In another terminal:\n"
-        "  $dartVm -c -ppackage/ -DattachToVm=54321 "
-        "tests/fletchc/run.dart $script";
+    String incrementalFlag = "-D$isIncrementalCompilationEnabledFlag="
+        "$isIncrementalCompilationEnabled";
+
+    return """
+
+
+
+There are three ways to reproduce this error:
+
+  1. Run the test exactly as in this test framework. This is the hardest to
+     debug using gdb:
+
+    ${Platform.executable} -c $incrementalFlag \\
+       tools/testing/dart/fletch_session_command.dart $executable \\
+       ${arguments.join(' ')}
+
+
+  2. Run the helper program `tests/fletchc/run.dart` under `gdb` using
+     `follow-fork-mode child`. This can be confusing, but makes it easy to run
+     a reproduction command in a loop:
+
+    gdb -ex 'follow-fork-mode child' -ex run --args \\
+        $dartVm $incrementalFlag -c tests/fletchc/run.dart $script
+
+  3. Run the `fletch-vm` in gdb and attach to it via the helper program. This
+     is the easiest way to debug using both gdb and lldb. You need to start two
+     processes, each in their own terminal window:
+
+    gdb -ex run --args $executable-vm --port=54321
+
+    $dartVm $incrementalFlag -c -DattachToVm=54321 \\
+      tests/fletchc/run.dart $script
+
+
+""";
   }
 
   Future<FletchTestCommandOutput> run(
@@ -126,13 +150,29 @@ class FletchSessionCommand implements Command {
     int exitCode = COMPILER_EXITCODE_CRASH;
     bool endedSession = false;
     try {
+      String vmSocketAddress = await fletch.spawnVm();
+      Future vmTerminationFuture = fletch.shutdownVm(timeout);
       try {
-        String vmSocketAddress = await fletch.spawnVm();
         await fletch.runInSession(["attach", "tcp_socket", vmSocketAddress]);
-        exitCode =
-            await fletch.runInSession(["run", script], checkExitCode: false);
+        if (snapshotFileName != null) {
+          exitCode = await fletch.runInSession(
+              ["export", script, 'to', 'file', snapshotFileName],
+              checkExitCode: false);
+        } else {
+          exitCode =
+              await fletch.runInSession(["run", script], checkExitCode: false);
+        }
       } finally {
-        await fletch.shutdownVm(exitCode);
+        int vmExitCode = await vmTerminationFuture;
+        fletch.stderr.writeln("Fletch VM exitcode is $vmExitCode");
+        if (exitCode == COMPILER_EXITCODE_CONNECTION_ERROR) {
+          exitCode = vmExitCode;
+        } else if (exitCode != vmExitCode) {
+          if (!fletch.killedVmProcess || vmExitCode >= 0) {
+            throw new UnexpectedExitCode(
+                vmExitCode, "${fletch.executable}-vm", <String>[]);
+          }
+        }
       }
       if (!isIncrementalCompilationEnabled) {
         endedSession = true;
@@ -161,7 +201,7 @@ class FletchSessionCommand implements Command {
     }
 
     return new FletchTestCommandOutput(
-        this, exitCode, false,
+        this, exitCode, fletch.hasTimedOut,
         fletch.combinedStdout, fletch.combinedStderr, sw.elapsed, -1);
   }
 
@@ -280,6 +320,10 @@ class FletchSessionHelper {
 
   Future<int> vmExitCodeFuture;
 
+  bool killedVmProcess = false;
+
+  bool hasTimedOut = false;
+
   FletchSessionHelper(
       FletchSessionMirror sessionMirror,
       this.executable,
@@ -383,24 +427,26 @@ class FletchSessionHelper {
     return "${fletchVm.host}:${fletchVm.port}";
   }
 
-  Future<bool> shutdownVm(int expectedExitCode) async {
-    if (vmProcess == null) return;
+  Future<int> shutdownVm(int timeout) async {
+    if (vmProcess == null) return 0;
     bool done = false;
-    bool killed = false;
-    Timer timer = new Timer(const Duration(seconds: 5), () {
+    Timer timer;
+    timer = new Timer(new Duration(seconds: timeout), () {
       if (!done) {
-        vmProcess.kill(ProcessSignal.SIGKILL);
-        killed = true;
+        vmProcess.kill(ProcessSignal.SIGTERM);
+        killedVmProcess = true;
+        hasTimedOut = true;
+        timer = new Timer(const Duration(seconds: 5), () {
+          if (!done) {
+            vmProcess.kill(ProcessSignal.SIGKILL);
+          }
+        });
       }
     });
     int vmExitCode = await vmExitCodeFuture;
     done = true;
     timer.cancel();
-    if (vmExitCode != expectedExitCode) {
-      if (!killed || vmExitCode >= 0) {
-        throw new UnexpectedExitCode(vmExitCode, "$executable-vm", <String>[]);
-      }
-    }
+    return vmExitCode;
   }
 }
 

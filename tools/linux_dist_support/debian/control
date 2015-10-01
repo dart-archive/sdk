@@ -1,0 +1,11 @@
+Source: fletch
+Maintainer: Soren Gjesse <sgjesse@google.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 9)
+
+Package: fletch-agent
+Architecture: armhf
+Depends: ${misc:Depends}
+Description: Dart Fletch Agent

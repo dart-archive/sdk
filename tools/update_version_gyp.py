@@ -45,11 +45,11 @@ def Main():
   if os.path.isfile(version_gyp):
     with open(version_gyp, "r") as f:
       current_content = f.read()
-  ref = subprocess.check_output(
-    ["git", "rev-parse", "--symbolic-full-name", "HEAD"]).strip()
-  if (ref == "HEAD"):
-    ref = ".git/HEAD"
+  if os.path.isfile("tools/GIT_REVISION"):
+    ref = "tools/GIT_REVISION"
   else:
+    ref = subprocess.check_output(
+      ["git", "rev-parse", "--symbolic-full-name", "HEAD"]).strip()
     ref = ".git/%s" % ref
   updated_content = version_gyp_template % {"ref": ref}
   if updated_content != current_content:

@@ -128,6 +128,8 @@
 // Adjust the scroll position if the visible rows are outside the window buffer.
 // Returns true if it is or if scroll position was adjusted.
 - (bool)adjustScrollPosition {
+  // TODO(zerny): Identify "scroll to top" as scrolling and enable this again.
+  return false;
   // TODO(zerny): Properly track the scroll position.
   // If the current view is outside the visible view adjust the visible view.
   if (!self.scrolling && self.tableView.indexPathsForVisibleRows.count > 0) {

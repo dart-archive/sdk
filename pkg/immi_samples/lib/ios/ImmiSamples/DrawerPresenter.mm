@@ -106,11 +106,27 @@
 
 // TODO(zerny): This is not the right place or way to add buttons.
 - (void)addDrawerButtons:(UIViewController*)controller {
+  [self addDrawerButtons:controller leftTitle:@"Show" rightTitle:@"Show"];
+}
+
+- (void)addDrawerButtons:(UIViewController *)controller
+               leftTitle:(NSString*)leftTitle {
+  [self addDrawerButtons:controller leftTitle:leftTitle rightTitle:@"Show"];
+}
+
+- (void)addDrawerButtons:(UIViewController *)controller
+               rightTitle:(NSString*)rightTitle {
+  [self addDrawerButtons:controller leftTitle:@"Show" rightTitle:rightTitle];
+}
+
+- (void)addDrawerButtons:(UIViewController*)controller
+               leftTitle:(NSString*)leftTitle
+              rightTitle:(NSString*)rightTitle {
   if (![controller isKindOfClass:UINavigationController.class]) return;
   UINavigationController* nav = (UINavigationController*)controller;
   if (_leftPresenter.presenter != nil) {
     UIBarButtonItem* leftToggle =
-        [[UIBarButtonItem alloc] initWithTitle:@"Show"
+        [[UIBarButtonItem alloc] initWithTitle:leftTitle
                                          style:UIBarButtonItemStylePlain
                                         target:self
                                         action:@selector(toggleLeft)];
@@ -118,7 +134,7 @@
   }
   if (_rightPresenter.presenter != nil) {
     UIBarButtonItem* rightToggle =
-        [[UIBarButtonItem alloc] initWithTitle:@"Show"
+        [[UIBarButtonItem alloc] initWithTitle:rightTitle
                                          style:UIBarButtonItemStylePlain
                                         target:self
                                         action:@selector(toggleRight)];

@@ -226,7 +226,6 @@ namespace fletch {
                                                                          \
   N(PortCreate,                  "Port", "_create")                      \
   N(PortSend,                    "Port", "send")                         \
-  N(PortSendList,                "Port", "_sendList")                    \
   N(PortSendExit,                "Port", "_sendExit")                    \
                                                                          \
   N(SystemGetEventHandler,       "EventHandler", "_getEventHandler")     \

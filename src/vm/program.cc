@@ -90,6 +90,7 @@ Process* Program::ProcessSpawnForMain() {
 
 void Program::DeleteProcess(Process* process) {
   RemoveFromProcessList(process);
+  process->Cleanup();
   delete process;
 }
 
@@ -99,6 +100,7 @@ void Program::DeleteAllProcesses() {
   Process* current = process_list_head_;
   while (current != NULL) {
     Process* next = current->process_list_next();
+    current->Cleanup();
     delete current;
     current = next;
   }

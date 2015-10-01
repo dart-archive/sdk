@@ -96,7 +96,7 @@
 
   self.centerPresenter = [[AnyNodePresenter alloc] init:storyboard];
   self.leftPresenter = [[AnyNodePresenter alloc] init:storyboard];
-  self.rightPresenter = [[AnyNodePresenter alloc] init:storyboard];
+  self.rightPresenter = nil;
 
   // Create a drawer presenter do to the interpretation work.
   self.drawerPresenter =
@@ -151,7 +151,8 @@
 - (void)presentOnMainThread:(DrawerNode*)node {
   self.centerViewController =
       [self.drawerPresenter.centerPresenter viewController];
-  [self.drawerPresenter addDrawerButtons:self.centerViewController];
+  [self.drawerPresenter addDrawerButtons:self.centerViewController
+                               leftTitle:@"menu"];
   self.leftDrawerViewController =
       [self.drawerPresenter.leftPresenter viewController];
   self.rightDrawerViewController =

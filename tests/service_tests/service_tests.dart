@@ -16,6 +16,9 @@ import 'package:expect/expect.dart' show
 import 'multiple_services/multiple_services_tests.dart' as multiple;
 import '../../samples/todomvc/todomvc_service_tests.dart' as todomvc;
 
+import '../fletchc/run.dart' show
+    export;
+
 List<ServiceTest> SERVICE_TESTS = <ServiceTest>[
     new StandardServiceTest('conformance', ccSources: [
         'conformance_test.cc',
@@ -264,9 +267,8 @@ class BuildSnapshotRule extends Rule {
 
   BuildSnapshotRule(this.program, this.snapshot);
 
-  Future<Null> build() {
-    return Rule.runCommand(
-        fletchExecutable, ['compile-and-run', program, '-o', snapshot]);
+  Future<Null> build() async {
+    await export(program, snapshot);
   }
 }
 

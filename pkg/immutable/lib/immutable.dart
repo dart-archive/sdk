@@ -5,3 +5,4 @@
 library immutable;
 
 part 'src/red_black_tree.dart';
+part 'src/linked_list.dart';

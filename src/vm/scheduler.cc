@@ -281,6 +281,20 @@ int Scheduler::Run() {
     if (!preempt_monitor_->WaitUntil(next_timeout)) continue;
 
     if (shutdown_ != -1) {
+      // The following code can be viewed as if a separate thread is listening
+      // for shutdown signals and then acts on it (stop program, delete all
+      // processes).
+      //
+      // It is here (in a central place), in order to prevent multiple
+      // scheduler worker threads to race about shutting down at the same time.
+      // Yet we save having another thread just for shutting down.
+      //
+      // Using [StopProgram] will coordinate with scheduler worker threads,
+      // which might use [preempt_monitor_] to signal the main thread. This
+      // requires being able to take the [preempt_monitor_] lock. We therefore
+      // unlock [preempt_monitor_] during this work.
+      ScopedMonitorUnlock unlocker(preempt_monitor_);
+
       // TODO(ajohnsen): Handle multiple programs.
       Program* program = shutdown_program_;
       StopProgram(program);
@@ -326,8 +340,7 @@ int Scheduler::Run() {
   return 0;
 }
 
-void Scheduler::ExitAtTermination(Process* process,
-                                  ThreadState* thread_state) {
+void Scheduler::ExitAtTermination(Process* process) {
   Program* program = process->program();
   program->DeleteProcess(process);
 
@@ -344,16 +357,19 @@ void Scheduler::ExitAtTermination(Process* process,
 void Scheduler::ExitAtUncaughtException(Process* process) {
   ASSERT(process->state() == Process::kUncaughtException);
   ExitWith(process->program(), kUncaughtExceptionExitCode);
+  ExitAtTermination(process);
 }
 
 void Scheduler::ExitAtCompileTimeError(Process* process) {
   ASSERT(process->state() == Process::kCompileTimeError);
   ExitWith(process->program(), kCompileTimeErrorExitCode);
+  ExitAtTermination(process);
 }
 
 void Scheduler::ExitAtBreakpoint(Process* process) {
   ASSERT(process->state() == Process::kBreakPoint);
   ExitWith(process->program(), kBreakPointExitCode);
+  ExitAtTermination(process);
 }
 
 void Scheduler::ExitWith(Program* program, int exit_code) {
@@ -368,7 +384,7 @@ void Scheduler::RescheduleProcess(Process* process,
                                   bool terminate) {
   ASSERT(process->state() == Process::kRunning);
   if (terminate) {
-    ExitAtTermination(process, state);
+    ExitAtTermination(process);
   } else {
     process->ChangeState(Process::kRunning, Process::kReady);
     EnqueueOnAnyThread(process, state->thread_id() + 1);
@@ -612,7 +628,7 @@ Process* Scheduler::InterpretProcess(Process* process,
 
   if (interpreter.IsYielded()) {
     process->ChangeState(Process::kRunning, Process::kYielding);
-    if (process->IsQueueEmpty()) {
+    if (process->mailbox()->IsEmpty()) {
       process->ChangeState(Process::kYielding, Process::kSleeping);
     } else {
       process->ChangeState(Process::kYielding, Process::kReady);
@@ -667,7 +683,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->ProcessTerminated(process)) {
-      ExitAtTermination(process, thread_state);
+      ExitAtTermination(process);
     }
     return NULL;
   }
@@ -678,7 +694,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->UncaughtException(process)) {
-      ExitWith(process->program(), kUncaughtExceptionExitCode);
+      ExitAtUncaughtException(process);
     }
     return NULL;
   }
@@ -689,7 +705,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->CompileTimeError(process)) {
-      ExitWith(process->program(), kCompileTimeErrorExitCode);
+      ExitAtCompileTimeError(process);
     }
     return NULL;
   }

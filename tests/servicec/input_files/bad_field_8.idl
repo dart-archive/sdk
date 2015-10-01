@@ -8,6 +8,6 @@ service Foo {
 struct Bar {
   union {
     int32 baz;
-    zap;  // Missing type.
+    zap;  // badField
   }
 }

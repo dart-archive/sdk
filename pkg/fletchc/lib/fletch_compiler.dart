@@ -49,7 +49,8 @@ import 'src/guess_configuration.dart' show
     executable,
     guessFletchVm;
 
-const String _SDK_DIR = const String.fromEnvironment("dart-sdk");
+const String _LIBRARY_ROOT =
+    const String.fromEnvironment("fletchc-library-root");
 
 const String _PATCH_ROOT = const String.fromEnvironment("fletch-patch-root");
 
@@ -110,8 +111,8 @@ class FletchCompiler {
       outputProvider = new OutputProvider();
     }
 
-    if (libraryRoot == null  && _SDK_DIR != null) {
-      libraryRoot = base.resolve(appendSlash(_SDK_DIR));
+    if (libraryRoot == null  && _LIBRARY_ROOT != null) {
+      libraryRoot = executable.resolve(appendSlash(_LIBRARY_ROOT));
     }
     libraryRoot = _computeValidatedUri(
         libraryRoot, name: 'libraryRoot', ensureTrailingSlash: true,
@@ -144,7 +145,7 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
         _computeValidatedUri(fletchVm, name: 'fletchVm', base: base));
 
     if (patchRoot == null  && _PATCH_ROOT != null) {
-      patchRoot = base.resolve(appendSlash(_PATCH_ROOT));
+      patchRoot = executable.resolve(appendSlash(_PATCH_ROOT));
     }
     patchRoot = _computeValidatedUri(
         patchRoot, name: 'patchRoot', ensureTrailingSlash: true, base: base);

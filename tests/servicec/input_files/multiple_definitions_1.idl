@@ -7,5 +7,5 @@ service Foo {
 
 struct Bar {
   int32 x;
-  int32 x;
+  int32 x;  // multipleDefinitions
 }

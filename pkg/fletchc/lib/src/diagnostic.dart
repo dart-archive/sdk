@@ -10,8 +10,9 @@ import 'messages.dart' show
 
 import 'driver/sentence_parser.dart' show
     Preposition,
-    ResolvedVerb,
-    Target;
+    Target,
+    TargetKind,
+    Verb;
 
 export 'messages.dart' show
     DiagnosticKind;
@@ -39,6 +40,9 @@ class DiagnosticParameter {
 
   static const DiagnosticParameter target = const DiagnosticParameter(
       DiagnosticParameterType.target, 'target');
+
+  static const DiagnosticParameter requiredTarget = const DiagnosticParameter(
+      DiagnosticParameterType.target, 'requiredTarget');
 
   static const DiagnosticParameter userInput = const DiagnosticParameter(
       DiagnosticParameterType.string, 'userInput');
@@ -98,7 +102,7 @@ class Diagnostic {
           break;
 
         case DiagnosticParameterType.verb:
-          ResolvedVerb verb = value;
+          Verb verb = value;
           stringValue = verb.name;
           break;
 
@@ -122,21 +126,25 @@ class Diagnostic {
       formattedMessage = formattedMessage.replaceAll('$parameter', stringValue);
     });
 
-    Set<String> missingParameters = new Set<String>();
+    Set<String> usedParameters = new Set<String>();
     for (Match match in new RegExp("#{[^}]*}").allMatches(template)) {
       String parameter = match.group(0);
-      if (!suppliedParameters.contains(parameter)) {
-        missingParameters.add(parameter);
-      }
+      usedParameters.add(parameter);
     }
 
-    if (!missingParameters.isEmpty) {
+    Set<String> unusedParameters =
+        suppliedParameters.difference(usedParameters);
+    Set<String> missingParameters =
+        usedParameters.difference(suppliedParameters);
+
+    if (missingParameters.isNotEmpty || unusedParameters.isNotEmpty) {
       throw """
 Error when formatting diagnostic:
   kind: $kind
   template: $template
   arguments: $arguments
   missingParameters: ${missingParameters.join(', ')}
+  unusedParameters: ${unusedParameters.join(', ')}
   formattedMessage: $formattedMessage""";
     }
 
@@ -184,9 +192,10 @@ void throwInternalError(String message) {
 void throwFatalError(
     DiagnosticKind kind,
     {String message,
-     ResolvedVerb verb,
+     Verb verb,
      String sessionName,
      Target target,
+     TargetKind requiredTarget,
      String address,
      String userInput,
      String additionalUserInput,

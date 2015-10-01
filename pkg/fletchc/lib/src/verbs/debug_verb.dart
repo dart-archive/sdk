@@ -20,18 +20,22 @@ import 'documentation.dart' show
 import '../diagnostic.dart' show
     throwInternalError;
 
+import '../driver/developer.dart' show
+    compileAndAttachToVmThen;
+
 import '../driver/driver_commands.dart' show
     DriverCommand;
 
 import 'package:fletchc/debug_state.dart' show
     Breakpoint;
 
-const Verb debugVerb =
-    const Verb(
+const Action debugAction =
+    const Action(
         debug,
         debugDocumentation,
         requiresSession: true,
         supportedTargets: const [
+          TargetKind.FILE,
           TargetKind.RUN_TO_MAIN,
           TargetKind.BACKTRACE,
           TargetKind.BREAK,
@@ -119,6 +123,9 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
     case TargetKind.TOGGLE:
       task = new DebuggerTask(TargetKind.TOGGLE.index, sentence.targetName);
       break;
+    case TargetKind.FILE:
+      task = new DebuggerTask(TargetKind.FILE.index, sentence.targetUri);
+      break;
     default:
       throwInternalError("Unimplemented ${sentence.target}");
   }
@@ -166,6 +173,18 @@ class InteractiveDebuggerTask extends SharedTask {
   }
 }
 
+Future<int> runInteractiveDebuggerTask(
+    CommandSender commandSender,
+    SessionState state,
+    Uri script,
+    StreamIterator<Command> commandIterator) {
+  return compileAndAttachToVmThen(
+      commandSender,
+      state,
+      script,
+      () => interactiveDebuggerTask(commandSender, state, commandIterator));
+}
+
 Future<int> interactiveDebuggerTask(
     CommandSender commandSender,
     SessionState state,
@@ -199,7 +218,7 @@ Future<int> interactiveDebuggerTask(
 class DebuggerTask extends SharedTask {
   // Keep this class simple, see note in superclass.
   final int kind;
-  final String argument;
+  final argument;
 
   DebuggerTask(this.kind, [this.argument]);
 
@@ -248,6 +267,9 @@ class DebuggerTask extends SharedTask {
       case TargetKind.TOGGLE:
         return toggleDebuggerTask(
             commandSender, SessionState.current, argument);
+      case TargetKind.FILE:
+        return runInteractiveDebuggerTask(
+            commandSender, SessionState.current, argument, commandIterator);
 
       default:
         throwInternalError("Unimplemented ${TargetKind.values[kind]}");

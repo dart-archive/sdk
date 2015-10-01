@@ -127,6 +127,7 @@ bit_operations_test/04: RuntimeError
 bit_operations_test/none: RuntimeError
 built_in_identifier_prefix_test: Fail
 built_in_identifier_test/01: CompileTimeError
+call_closurization_test: RuntimeError  # Issue 153
 call_function_apply_test: RuntimeError
 call_nonexistent_constructor_test/01: RuntimeError
 call_nonexistent_static_test/10: RuntimeError
@@ -174,16 +175,6 @@ compile_time_constant_i_test: RuntimeError
 compile_time_constant_l_test: RuntimeError
 compile_time_constant_test/01: RuntimeError
 compound_assignment_operator_test: RuntimeError
-conditional_method_invocation_test/01: RuntimeError
-conditional_method_invocation_test/02: RuntimeError
-conditional_method_invocation_test/03: RuntimeError
-conditional_method_invocation_test/04: RuntimeError
-conditional_method_invocation_test/05: RuntimeError
-conditional_method_invocation_test/06: RuntimeError
-conditional_method_invocation_test/07: RuntimeError
-conditional_method_invocation_test/08: RuntimeError
-conditional_method_invocation_test/09: RuntimeError
-conditional_method_invocation_test/10: RuntimeError
 conditional_method_invocation_test/12: RuntimeError
 conditional_method_invocation_test/13: RuntimeError
 conditional_method_invocation_test/14: RuntimeError
@@ -192,15 +183,6 @@ conditional_method_invocation_test/16: RuntimeError
 conditional_method_invocation_test/17: RuntimeError
 conditional_method_invocation_test/18: RuntimeError
 conditional_method_invocation_test/19: RuntimeError
-conditional_method_invocation_test/none: RuntimeError
-conditional_property_access_test/01: RuntimeError
-conditional_property_access_test/02: RuntimeError
-conditional_property_access_test/03: RuntimeError
-conditional_property_access_test/04: RuntimeError
-conditional_property_access_test/05: RuntimeError
-conditional_property_access_test/06: RuntimeError
-conditional_property_access_test/07: RuntimeError
-conditional_property_access_test/08: RuntimeError
 conditional_property_access_test/10: RuntimeError
 conditional_property_access_test/11: RuntimeError
 conditional_property_access_test/12: RuntimeError
@@ -209,26 +191,6 @@ conditional_property_access_test/14: RuntimeError
 conditional_property_access_test/15: RuntimeError
 conditional_property_access_test/16: RuntimeError
 conditional_property_access_test/17: RuntimeError
-conditional_property_access_test/none: RuntimeError
-conditional_property_assignment_test/01: RuntimeError
-conditional_property_assignment_test/02: RuntimeError
-conditional_property_assignment_test/03: RuntimeError
-conditional_property_assignment_test/04: RuntimeError
-conditional_property_assignment_test/05: RuntimeError
-conditional_property_assignment_test/06: RuntimeError
-conditional_property_assignment_test/07: RuntimeError
-conditional_property_assignment_test/08: RuntimeError
-conditional_property_assignment_test/09: RuntimeError
-conditional_property_assignment_test/10: RuntimeError
-conditional_property_assignment_test/11: RuntimeError
-conditional_property_assignment_test/12: RuntimeError
-conditional_property_assignment_test/13: RuntimeError
-conditional_property_assignment_test/14: RuntimeError
-conditional_property_assignment_test/15: RuntimeError
-conditional_property_assignment_test/16: RuntimeError
-conditional_property_assignment_test/17: RuntimeError
-conditional_property_assignment_test/18: RuntimeError
-conditional_property_assignment_test/19: RuntimeError
 conditional_property_assignment_test/23: RuntimeError
 conditional_property_assignment_test/24: RuntimeError
 conditional_property_assignment_test/25: RuntimeError
@@ -242,23 +204,6 @@ conditional_property_assignment_test/32: RuntimeError
 conditional_property_assignment_test/33: RuntimeError
 conditional_property_assignment_test/34: RuntimeError
 conditional_property_assignment_test/35: RuntimeError
-conditional_property_assignment_test/none: RuntimeError
-conditional_property_increment_decrement_test/01: RuntimeError
-conditional_property_increment_decrement_test/02: RuntimeError
-conditional_property_increment_decrement_test/03: RuntimeError
-conditional_property_increment_decrement_test/04: RuntimeError
-conditional_property_increment_decrement_test/05: RuntimeError
-conditional_property_increment_decrement_test/06: RuntimeError
-conditional_property_increment_decrement_test/07: RuntimeError
-conditional_property_increment_decrement_test/08: RuntimeError
-conditional_property_increment_decrement_test/09: RuntimeError
-conditional_property_increment_decrement_test/10: RuntimeError
-conditional_property_increment_decrement_test/11: RuntimeError
-conditional_property_increment_decrement_test/12: RuntimeError
-conditional_property_increment_decrement_test/13: RuntimeError
-conditional_property_increment_decrement_test/14: RuntimeError
-conditional_property_increment_decrement_test/15: RuntimeError
-conditional_property_increment_decrement_test/16: RuntimeError
 conditional_property_increment_decrement_test/17: RuntimeError
 conditional_property_increment_decrement_test/18: RuntimeError
 conditional_property_increment_decrement_test/19: RuntimeError
@@ -283,7 +228,6 @@ conditional_property_increment_decrement_test/37: RuntimeError
 conditional_property_increment_decrement_test/38: RuntimeError
 conditional_property_increment_decrement_test/39: RuntimeError
 conditional_property_increment_decrement_test/40: RuntimeError
-conditional_property_increment_decrement_test/none: RuntimeError
 const_constructor_nonconst_field_test/01: MissingCompileTimeError
 const_dynamic_type_literal_test/01: RuntimeError
 const_error_multiply_initialized_test/02: CompileTimeError
@@ -832,7 +776,6 @@ syncstar_yield_test/none: RuntimeError
 syncstar_yieldstar_test: RuntimeError
 tearoff_basic_test: CompileTimeError
 tearoff_constructor_basic_test: CompileTimeError
-this_conditional_operator_test/none: RuntimeError
 this_test/01: RuntimeError
 this_test/03: RuntimeError
 this_test/05: RuntimeError
@@ -983,7 +926,6 @@ not_enough_positional_arguments_test/05: CompileTimeError
 not_enough_positional_arguments_test/02: CompileTimeError
 
 [ $system == lk ]
-large_class_declaration_test: Pass, Crash # TODO(ajohnsen): Flaky?
 closure_cycles_test: Crash
 double_int_to_string_test: RuntimeError
 double_to_string_as_exponential3_test: RuntimeError
@@ -995,6 +937,14 @@ double_to_string_test: RuntimeError
 gc_test: Crash
 interceptor9_test: Crash
 intrinsified_methods_test: RuntimeError
+large_class_declaration_test: Pass, Crash # TODO(ajohnsen): Flaky?
+nan_identical_test: Crash
+number_identity2_test: Crash
 round_test: RuntimeError
 vm/optimized_guarded_field_test: Crash
 vm/typed_data_polymorphic_view_test: Crash
+bit_operations_test/01: Crash
+bit_operations_test/02: Crash
+bit_operations_test/03: Crash
+bit_operations_test/04: Crash
+bit_operations_test/none: Crash

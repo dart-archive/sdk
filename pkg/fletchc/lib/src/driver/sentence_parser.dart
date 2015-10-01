@@ -7,13 +7,15 @@ library fletchc.driver.sentence_parser;
 import 'dart:convert' show
     JSON;
 
-import '../verbs/verbs.dart' show
-    Verb,
-    commonVerbs,
-    uncommonVerbs;
+import '../verbs/actions.dart' show
+    Action,
+    commonActions,
+    uncommonActions;
 
 import '../verbs/infrastructure.dart' show
-    AnalyzedSentence;
+    AnalyzedSentence,
+    DiagnosticKind,
+    throwFatalError;
 
 Sentence parseSentence(
     Iterable<String> arguments,
@@ -36,15 +38,27 @@ class SentenceParser {
         tokens = new Words(tokens.skip(includesProgramName ? 3 : 0));
 
   Sentence parseSentence() {
-    ResolvedVerb verb;
+    Verb verb;
     if (!tokens.isAtEof) {
       verb = parseVerb();
     } else {
-      verb = new ResolvedVerb("help", commonVerbs["help"]);
+      verb = new Verb("help", commonActions["help"]);
     }
-    Preposition preposition = parsePrepositionOpt();
-    Target target = parseTargetOpt();
-    Preposition tailPreposition = parsePrepositionOpt();
+    List<Preposition> prepositions = <Preposition>[];
+    List<Target> targets = <Target>[];
+    while (!tokens.isAtEof) {
+      Preposition preposition = parsePrepositionOpt();
+      if (preposition != null) {
+        prepositions.add(preposition);
+        continue;
+      }
+      Target target = parseTargetOpt();
+      if (target != null) {
+        targets.add(target);
+        continue;
+      }
+      break;
+    }
     List<String> trailing = <String>[];
     while (!tokens.isAtEof) {
       trailing.add(tokens.current);
@@ -54,34 +68,25 @@ class SentenceParser {
       trailing = null;
     }
     return new Sentence(
-        verb, preposition, target, tailPreposition, trailing,
+        verb, prepositions, targets, trailing,
         currentDirectory, programName,
         // TODO(ahe): Get rid of the following argument:
         tokens.originalInput.skip(1).toList());
   }
 
-  ResolvedVerb parseVerb() {
+  Verb parseVerb() {
     String name = tokens.current;
-    Verb verb = commonVerbs[name];
-    if (verb != null) {
+    Action action = commonActions[name];
+    if (action != null) {
       tokens.consume();
-      return new ResolvedVerb(name, verb);
+      return new Verb(name, action);
     }
-    verb = uncommonVerbs[name];
-    if (verb != null) {
+    action = uncommonActions[name];
+    if (action != null) {
       tokens.consume();
-      return new ResolvedVerb(name, verb);
+      return new Verb(name, action);
     }
-    return new ResolvedVerb(name, makeErrorVerb("Unknown argument: $name"));
-  }
-
-  Verb makeErrorVerb(String message) {
-    return
-        new Verb((AnalyzedSentence sentence, context) {
-          print(message);
-          return commonVerbs["help"].perform(sentence, context)
-              .then((_) => 1);
-        }, null);
+    return new ErrorVerb(name);
   }
 
   Preposition parsePrepositionOpt() {
@@ -289,13 +294,27 @@ class Words {
   }
 }
 
-class ResolvedVerb {
+class Verb {
   final String name;
-  final Verb verb;
+  final Action action;
 
-  const ResolvedVerb(this.name, this.verb);
+  const Verb(this.name, this.action);
 
-  String toString() => "ResolvedVerb(${quoteString(name)})";
+  bool get isErroneous => false;
+
+  String toString() => "Verb(${quoteString(name)})";
+}
+
+class ErrorVerb implements Verb {
+  final String name;
+
+  const ErrorVerb(this.name);
+
+  bool get isErroneous => true;
+
+  Action get action {
+    throwFatalError(DiagnosticKind.unknownAction, userInput: name);
+  }
 }
 
 class Preposition {
@@ -382,19 +401,16 @@ class ErrorTarget extends Target {
 ///   `create class MyClass in session MySession`
 ///
 /// In this example, `create` is a [Verb], `class MyClass` is a [Target], and
-/// `in session MySession` is a [Preposition] in tail position.
+/// `in session MySession` is a [Preposition].
 class Sentence {
   /// For example, `create`.
-  final ResolvedVerb verb;
+  final Verb verb;
 
   /// For example, `in session MySession`
-  final Preposition preposition;
+  final List<Preposition> prepositions;
 
   /// For example, `class MyClass`
-  final Target target;
-
-  /// For example, `in session MySession`
-  final Preposition tailPreposition;
+  final List<Target> targets;
 
   /// Any tokens found after this sentence.
   final List<String> trailing;
@@ -410,13 +426,12 @@ class Sentence {
 
   const Sentence(
       this.verb,
-      this.preposition,
-      this.target,
-      this.tailPreposition,
+      this.prepositions,
+      this.targets,
       this.trailing,
       this.currentDirectory,
       this.programName,
       this.arguments);
 
-  String toString() => "Sentence($verb, $preposition, $target)";
+  String toString() => "Sentence($verb, $prepositions, $targets)";
 }

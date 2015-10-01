@@ -51,7 +51,7 @@
         ],
       },
 
-      'fletch_lk_vexpress': {
+      'fletch_lk_qemu_virt': {
         'abstract': 1,
 
         'inherit_from': ['fletch_lk'],
@@ -59,25 +59,25 @@
         'target_conditions': [
           ['_toolset=="target"', {
             'cflags': [
-              '-mcpu=cortex-a9',
+              '-mcpu=cortex-a15',
               '-include',
-              'build-vexpress-a9-fletch/config.h',
+              'build-qemu-virt-fletch/config.h',
             ],
           }],
         ],
       },
 
-      'DebugLKVExpress': {
+      'DebugLKQemuVirt': {
         'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_lk_vexpress',
+          'fletch_base', 'fletch_debug', 'fletch_lk_qemu_virt',
           'fletch_disable_live_coding', 'fletch_disable_ffi',
           'fletch_disable_print_interceptors',
         ],
       },
 
-      'ReleaseLKVExpress': {
+      'ReleaseLKQemuVirt': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_lk_vexpress',
+          'fletch_base', 'fletch_release', 'fletch_lk_qemu_virt',
           'fletch_disable_live_coding', 'fletch_disable_ffi',
           'fletch_disable_print_interceptors',
         ],

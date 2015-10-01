@@ -56,21 +56,6 @@
 
   'target_defaults': {
 
-    'target_conditions': [
-      ['_type=="shared_library"', {
-        # Shared libraries on x64 require compilation with position
-        # independent code. Load-time relocation is not supported on
-        # x64. For simplicity we compile all shared libraries with
-        # position independent code.
-        'cflags': ['-fPIC'],
-        'xcode_settings': {
-          'OTHER_CPLUSPLUSFLAGS': [
-            '-fPIC',
-          ],
-        },
-      }],
-    ],
-
     'configurations': {
 
       'fletch_base': {
@@ -241,11 +226,21 @@
           '-L<(third_party_libs_path)/x64',
         ],
 
+        # Shared libraries on x64 require compilation with position
+        # independent code. Load-time relocation is not supported on
+        # x64. For simplicity we compile all x64 libraries with
+        # position independent code.
+        'cflags': ['-fPIC'],
+
         'xcode_settings': { # And ninja.
           'ARCHS': [ 'x86_64' ],
 
           'LIBRARY_SEARCH_PATHS': [
             '<(third_party_libs_path)/x64',
+          ],
+
+          'OTHER_CPLUSPLUSFLAGS': [
+            '-fPIC',
           ],
         },
       },
@@ -472,16 +467,13 @@
               # Fake define intercepted by cc_wrapper.py to change the
               # compiler binary to an ARM cross compiler.
               'FLETCH_MBED',
+              'FLETCH_TARGET_OS_MBED',
             ],
 
             'defines!': [
               'FLETCH_TARGET_OS_POSIX',
               'FLETCH_TARGET_OS_LINUX',
               'FLETCH_TARGET_OS_MACOS',
-            ],
-
-            'defines': [
-              'FLETCH_TARGET_OS_MBED',
             ],
 
             'cflags': [

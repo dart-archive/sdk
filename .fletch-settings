@@ -24,5 +24,9 @@
   //   const String.fromEnvironment("<name>")
   //
   "constants": {
-  }
+  },
+
+  // Address of the target device on which to run the Fletch VMs.
+  // If null then vms are started directly on localhost.
+  "device_address": null
 }

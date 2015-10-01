@@ -16,6 +16,9 @@ import 'driver_main.dart' show
 export 'driver_main.dart' show
     IsolateController;
 
+import 'developer.dart' show
+    Settings;
+
 import '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError,
@@ -156,7 +159,11 @@ class SessionState {
 
   FletchVm fletchVm;
 
-  SessionState(this.name, this.compilerHelper, this.compiler);
+  int fletchAgentVmId;
+
+  Settings settings;
+
+  SessionState(this.name, this.compilerHelper, this.compiler, this.settings);
 
   void addCompilationResult(FletchDelta delta) {
     compilationResults.add(delta);

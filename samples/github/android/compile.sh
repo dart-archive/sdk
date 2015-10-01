@@ -40,6 +40,8 @@ FLETCH="$FLETCH_DIR/out/ReleaseIA32/fletch"
 
 set -x
 
+(cd $FLETCH_DIR; ninja -C out/ReleaseIA32)
+
 # Generate dart service file and other immi files with the compiler.
 if [[ $# -eq 0 ]] || [[ "$1" == "immi" ]]; then
     rm -rf "$IMMI_GEN_DIR"
@@ -65,28 +67,33 @@ if [[ $# -eq 0 ]] || [[ "$1" == "fletch" ]]; then
     mkdir -p out/${TARGET_MODE}XARMAndroid/obj/src/vm/fletch_vm.gen
     mkdir -p out/${TARGET_MODE}IA32Android/obj/src/vm/fletch_vm.gen
     out/${TARGET_MODE}XARMAndroid/fletch_vm_library_generator > \
-	out/${TARGET_MODE}XARMAndroid/obj/src/vm/fletch_vm.gen/generated.S
+        out/${TARGET_MODE}XARMAndroid/obj/src/vm/fletch_vm.gen/generated.S
     out/${TARGET_MODE}IA32Android/fletch_vm_library_generator > \
-	out/${TARGET_MODE}IA32Android/obj/src/vm/fletch_vm.gen/generated.S
+        out/${TARGET_MODE}IA32Android/obj/src/vm/fletch_vm.gen/generated.S
 
     cd $SERVICE_GEN_DIR/java
-    NDK_MODULE_PATH=. ndk-build
+    CPUCOUNT=1
+    if [[ $(uname) = 'Darwin' ]]; then
+        CPUCOUNT=$(sysctl -n hw.logicalcpu_max)
+    else
+        CPUCOUNT=$(lscpu -p | grep -vc '^#')
+    fi
+    NDK_MODULE_PATH=. ndk-build -j$CPUCOUNT
 
     mkdir -p $JNI_LIBS_DIR
     cp -R libs/* $JNI_LIBS_DIR/
 fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
-    cd $FLETCH_DIR
-    ninja -C out/ReleaseIA32
-
     # Kill the persistent process
-    ./tools/persistent_process_info.sh --kill
+    cd $FLETCH_DIR
 
     SNAPSHOT="$DIR/$ANDROID_PROJ/app/src/main/res/raw/${PROJ}_snapshot"
     mkdir -p `dirname "$SNAPSHOT"`
-    $FLETCH compile-and-run --packages $TARGET_PKG_FILE -o "$SNAPSHOT" \
-        "$TARGET_DIR/bin/$PROJ.dart"
+    $DART -c --packages=.packages \
+          -Dsnapshot="$SNAPSHOT" \
+          -Dpackages="$TARGET_PKG_FILE" \
+          tests/fletchc/run.dart "$TARGET_DIR/bin/$PROJ.dart"
 fi
 
 set +x

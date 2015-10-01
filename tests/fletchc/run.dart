@@ -12,15 +12,21 @@ import 'package:fletchc/src/driver/session_manager.dart';
 
 import 'package:fletchc/src/driver/developer.dart';
 
+import 'package:fletchc/src/driver/developer.dart' as developer;
+
 import 'package:fletchc/src/verbs/infrastructure.dart' show fileUri;
 
 const String userVmAddress = const String.fromEnvironment("attachToVm");
 
 const String exportTo = const String.fromEnvironment("snapshot");
 
+const String userPackages = const String.fromEnvironment("packages");
+
+const String userAgentAddress = const String.fromEnvironment("agent");
+
 Future<Null> attach(SessionState state) async {
   if (userVmAddress == null) {
-    await attachToLocalVm(state);
+    await startAndAttachDirectly(state);
   } else {
     Address address = parseAddress(userVmAddress);
     await attachToVm(address.host, address.port, state);
@@ -28,13 +34,16 @@ Future<Null> attach(SessionState state) async {
 }
 
 main(List<String> arguments) async {
+  Address agentAddress =
+      userAgentAddress == null ? null : parseAddress(userAgentAddress);
   Settings settings = new Settings(
-      fileUri(".packages", Uri.base),
-      ["-verbose"],
+      fileUri(userPackages == null ? ".packages" : userPackages, Uri.base),
+      ["--verbose"],
       <String, String>{
         "foo": "1",
         "bar": "baz",
-      });
+      },
+      agentAddress);
   SessionState state = createSessionState("test", settings);
   for (String script in arguments) {
     await compile(fileUri(script, Uri.base), state);
@@ -43,7 +52,7 @@ main(List<String> arguments) async {
     state.stderrSink.attachCommandSender(stderr.add);
 
     if (exportTo != null) {
-      await export(state, fileUri(exportTo, Uri.base));
+      await developer.export(state, fileUri(exportTo, Uri.base));
     } else {
       await run(state);
     }
@@ -51,3 +60,14 @@ main(List<String> arguments) async {
 }
 
 Future<Null> test() => main(<String>['tests/language/application_test.dart']);
+
+Future<Null> export(String script, String snapshot) async {
+    Settings settings = new Settings(
+        fileUri(".packages", Uri.base), <String>[], <String, String>{}, null);
+    SessionState state = createSessionState("test", settings);
+    await compile(fileUri(script, Uri.base), state);
+    await startAndAttachDirectly(state);
+    state.stdoutSink.attachCommandSender(stdout.add);
+    state.stderrSink.attachCommandSender(stderr.add);
+    await developer.export(state, fileUri(snapshot, Uri.base));
+}

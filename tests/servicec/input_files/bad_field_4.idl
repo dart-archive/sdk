@@ -6,5 +6,5 @@ service Foo {
 }
 
 struct Bar {
-  baz;  // Missing type.
+  baz;  // badField
 }

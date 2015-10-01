@@ -32,6 +32,7 @@
       'toolsets': ['target'],
       'dependencies': [
         'src/tools/driver/driver.gyp:fletch',
+        'src/tools/driver/driver.gyp:fletch_for_sdk',
         'copy_dart#host',
       ],
     },
@@ -43,20 +44,6 @@
       'dependencies': [
         'src/shared/shared.gyp:shared_cc_tests',
         'src/vm/vm.gyp:vm_cc_tests',
-      ],
-    },
-    {
-      # The actual snapshots used in these tests are generated at test time.
-      # TODO(zerny): Compile these programs at test time and remove this target.
-      'target_name': 'snapshot_tests',
-      'type': 'none',
-      'toolsets': ['target'],
-      'dependencies': [
-        'src/vm/vm.gyp:fletch-vm',
-        'copy_dart#host',
-        'tests/service_tests/service_tests.gyp:service_performance_test',
-        'tests/service_tests/service_tests.gyp:service_conformance_test',
-        'samples/todomvc/todomvc.gyp:todomvc_sample',
       ],
     },
     {

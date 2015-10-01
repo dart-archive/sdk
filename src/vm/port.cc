@@ -17,7 +17,7 @@ Port::Port(Process* process, Instance* channel)
     : process_(process),
       channel_(channel),
       ref_count_(1),
-      lock_(false),
+      spinlock_(),
       next_(process->ports()) {
   ASSERT(process != NULL);
   ASSERT(Thread::IsCurrent(process->thread_state()->thread()));
@@ -127,27 +127,40 @@ NATIVE(PortCreate) {
 NATIVE(PortSend) {
   Instance* instance = Instance::cast(arguments[0]);
   ASSERT(instance->IsPort());
+
+  Object* message = arguments[1];
+  if (!message->IsImmutable()) return Failure::wrong_argument_type();
+
   Object* field = instance->GetInstanceField(0);
   uword address = AsForeignWord(field);
   if (address == 0) return Failure::illegal_state();
-  Port* port = reinterpret_cast<Port*>(address);
-  port->Lock();
-  Process* port_process = port->process();
-  if (port_process != NULL) {
-    Object* message = arguments[1];
-    if (!port_process->Enqueue(port, message)) {
-      port->Unlock();
-      return Failure::wrong_argument_type();
-    }
 
-    if (port_process != process) {
-      // If sending to another process, return the locked port. This will allow
-      // the scheduler to schedule the owner of the port, while it's still
-      // alive.
-      return reinterpret_cast<Object*>(port);
+  Port* port = reinterpret_cast<Port*>(address);
+
+  // We want to avoid holding a spinlock while doing an allocation, so:
+  //    * we do an early return if the destination process is not there
+  //    * we allocate (and possibly free) the message outside of the spinlock
+  //      region.
+  if (port->process() != NULL) {
+    Message* entry = Message::NewImmutableMessage(port, message);
+
+    port->Lock();
+    Process* port_process = port->process();
+    if (port_process != NULL) {
+      port_process->mailbox()->EnqueueEntry(entry);
+      entry = NULL;
+
+      if (port_process != process) {
+        // If sending to another process, return the locked port. This will
+        // allow the scheduler to schedule the owner of the port, while it's
+        // still alive.
+        return reinterpret_cast<Object*>(port);
+      }
     }
+    port->Unlock();
+
+    if (entry != NULL) delete entry;
   }
-  port->Unlock();
   return process->program()->null_object();
 }
 
@@ -165,12 +178,13 @@ NATIVE(PortSendExit) {
   if (port_process != NULL && port_process != process) {
     Object* message = arguments[1];
 
-    // If the result is a simple object, we can just enqueue it as such.
-    if (!port_process->Enqueue(port, message)) {
-      // Enqueue the exit message and return the locked port. This
-      // will allow the scheduler to schedule the owner of the port,
-      // while it's still alive.
-      port_process->EnqueueExit(process, port, message);
+    // Enqueue the exit message and return the locked port. This
+    // will allow the scheduler to schedule the owner of the port,
+    // while it's still alive.
+    if (message->IsImmutable()) {
+      port_process->mailbox()->Enqueue(port, message);
+    } else {
+      port_process->mailbox()->EnqueueExit(process, port, message);
     }
 
     return TargetYieldResult(port, true).AsObject();
@@ -178,44 +192,6 @@ NATIVE(PortSendExit) {
 
   port->Unlock();
   return Failure::illegal_state();
-}
-
-NATIVE(PortSendList) {
-  Instance* instance = Instance::cast(arguments[0]);
-  ASSERT(instance->IsPort());
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  if (address == 0) return Failure::illegal_state();
-
-  Instance* growable = Instance::cast(arguments[1]);
-  Smi* length = Smi::cast(growable->GetInstanceField(0));
-  Instance* fixed = Instance::cast(growable->GetInstanceField(1));
-  Array* array = Array::cast(fixed->GetInstanceField(0));
-  for (int i = 0; i < length->value(); i++) {
-    if (!process->IsValidForEnqueue(array->get(i))) {
-      return Failure::wrong_argument_type();
-    }
-  }
-
-  // Get hold of the port and the associated process.
-  Port* port = reinterpret_cast<Port*>(address);
-  port->Lock();
-  Process* port_process = port->process();
-  if (port_process == NULL) {
-    port->Unlock();
-    return process->program()->null_object();
-  }
-
-  port_process->Enqueue(port, arguments[2]);  // Sentinel.
-  port_process->Enqueue(port, length);
-  for (int i = 0; i < length->value(); i++) {
-    bool enqueued = port_process->Enqueue(port, array->get(i));
-    ASSERT(enqueued);
-  }
-
-  // Return the locked port. This will allow the scheduler to
-  // schedule the owner of the port, while it's still alive.
-  return reinterpret_cast<Object*>(port);
 }
 
 NATIVE(SystemIncrementPortRef) {

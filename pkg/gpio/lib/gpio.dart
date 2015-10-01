@@ -259,10 +259,11 @@ enum Trigger {
 /// gpio.setMode(4, Mode.output);
 /// gpio.exportPin(17);
 /// gpio.setMode(17, Mode.input);
-//  gpio.setTrigger(17, Trigger.both);
-/// gpio.setPin(4, gpio.getPin(17));
+/// gpio.setTrigger(17, Trigger.both);
+/// bool value = gpio.getPin(17)
+/// gpio.setPin(4, value);
 /// while (true) {
-///   var value = gpio.waitFor(17, -1);
+///   var value = gpio.waitFor(17, !value, -1);
 ///   gpio.setPin(4, value);
 /// }
 /// ```
@@ -416,13 +417,15 @@ class SysfsGPIO extends _GPIOBase implements GPIO {
     }
   }
 
-  /// Waits for a transition on the [pin] within the timeout [timeout].
+  /// Waits for the [pin] to achieve value [value] within the timeout
+  /// [timeout].
   ///
-  /// Specifying a negative value in `timeout` means an infinite timeout.
+  /// The `timeout` value is specified in milliseconds. Specifying a
+  /// negative value in `timeout` means an infinite timeout.
   ///
   /// Returns the value of `pin` after the transition, or `null` of a
   /// timeout occurred.
-  bool waitFor(int pin, int timeout) {
+  bool waitFor(int pin, bool value, int timeout) {
     _checkTracked(pin);
     // From /usr/include/asm-generic/poll.h:#define POLLPRI 0x0002
     // struct pollfd
@@ -439,16 +442,27 @@ class SysfsGPIO extends _GPIOBase implements GPIO {
     const int pollfdReventsOffset = 6;
     const int pollpriFlag = 0x0002;
 
-    var pollfd = new ForeignMemory.allocated(pollfdSize);
+    while (true) {
+      // Return if the pin has the requested value.
+      if (getPin(pin) == value) return value;
 
-    // Setup the pollfd structure.
-    pollfd.setUint32(pollfdFdOffset, _tracked[pin].fd);
-    pollfd.setUint16(pollfdEventsOffset, pollpriFlag);
-    pollfd.setUint16(pollfdReventsOffset, 0);
-    var rc = _poll.icall$3Retry(pollfd, 1, timeout);
-    pollfd.free();
-    if (rc < 0) throw "poll failed";
-    return getPin(pin);
+      // Wait for a transition.
+      var pollfd = new ForeignMemory.allocated(pollfdSize);
+
+      // Setup the pollfd structure.
+      pollfd.setUint32(pollfdFdOffset, _tracked[pin].fd);
+      pollfd.setUint16(pollfdEventsOffset, pollpriFlag);
+      pollfd.setUint16(pollfdReventsOffset, 0);
+      var rc = _poll.icall$3Retry(pollfd, 1, timeout);
+      var revents = pollfd.getUint16(pollfdReventsOffset);
+      pollfd.free();
+      if (rc < 0) throw "poll failed";
+
+      // If there is no event a timeout occurred.
+      if ((revents & pollpriFlag) == 0) {
+        return null;
+      }
+    }
   }
 
   void _exportUnexport(bool export, int pin) {

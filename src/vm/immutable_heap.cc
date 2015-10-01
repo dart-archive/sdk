@@ -162,7 +162,7 @@ bool ImmutableHeap::ReleasePart(Part* part) {
   int diff = part->NewlyAllocated();
   ASSERT(diff >= 0);
   int new_allocated_memory = unmerged_allocated_ + diff;
-  bool gc = unmerged_allocated_ < limit && limit < new_allocated_memory;
+  bool gc = unmerged_allocated_ < limit && limit <= new_allocated_memory;
   unmerged_allocated_ = new_allocated_memory;
 
   outstanding_parts_allocated_ -= part->used();

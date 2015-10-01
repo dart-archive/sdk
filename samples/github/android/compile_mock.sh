@@ -32,10 +32,6 @@ SERVICE_GEN_DIR="$TARGET_GEN_DIR/service"
 JAVA_DIR=$DIR/$ANDROID_PROJ/app/src/main/java/fletch
 JNI_LIBS_DIR=$DIR/$ANDROID_PROJ/app/src/main/jniLibs
 
-DART="$FLETCH_DIR/out/ReleaseIA32/dart"
-SERVICEC="$DART $FLETCH_DIR/tools/servicec/bin/servicec.dart"
-FLETCH="$FLETCH_DIR/out/ReleaseIA32/fletch"
-
 MOCK_SERVER_SNAPSHOT="$TARGET_DIR/github_mock_service.snapshot"
 
 set -x
@@ -60,12 +56,18 @@ if [[ $# -eq 0 ]] || [[ "$1" == "fletch" ]]; then
     mkdir -p out/${TARGET_MODE}XARMAndroid/obj/src/vm/fletch_vm.gen
     mkdir -p out/${TARGET_MODE}IA32Android/obj/src/vm/fletch_vm.gen
     out/${TARGET_MODE}XARMAndroid/fletch_vm_library_generator > \
-	out/${TARGET_MODE}XARMAndroid/obj/src/vm/fletch_vm.gen/generated.S
+        out/${TARGET_MODE}XARMAndroid/obj/src/vm/fletch_vm.gen/generated.S
     out/${TARGET_MODE}IA32Android/fletch_vm_library_generator > \
-	out/${TARGET_MODE}IA32Android/obj/src/vm/fletch_vm.gen/generated.S
+        out/${TARGET_MODE}IA32Android/obj/src/vm/fletch_vm.gen/generated.S
 
     cd $SERVICE_GEN_DIR/java
-    NDK_MODULE_PATH=. ndk-build
+    CPUCOUNT=1
+    if [[ $(uname) = 'Darwin' ]]; then
+        CPUCOUNT=$(sysctl -n hw.logicalcpu_max)
+    else
+        CPUCOUNT=$(lscpu -p | grep -vc '^#')
+    fi
+    NDK_MODULE_PATH=. ndk-build -j$CPUCOUNT
 
     mkdir -p $JNI_LIBS_DIR
     cp -R libs/* $JNI_LIBS_DIR/

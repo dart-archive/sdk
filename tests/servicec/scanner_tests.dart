@@ -23,6 +23,7 @@ import 'test.dart' show
     Test;
 
 import 'package:servicec/scanner.dart' show
+    LF_INFO,
     Scanner;
 
 import 'package:servicec/keyword.dart' show
@@ -39,7 +40,8 @@ service EmptyService {}
                   new KeywordToken(Keyword.keywords["service"], 0),
                   new StringToken.fromString(STRING_INFO, "EmptyService", 8),
                   new SymbolToken(OPEN_CURLY_BRACKET_INFO, 22),
-                  new SymbolToken(CLOSE_CURLY_BRACKET_INFO, 23)
+                  new SymbolToken(CLOSE_CURLY_BRACKET_INFO, 23),
+                  new SymbolToken(LF_INFO, 10)
                 ]),
 
     new Failure('unmatched_curly', '''

@@ -8,5 +8,5 @@ service Foo {
 struct Bar {
 }
 
-struct Bar {
+struct Bar {  // multipleDefinitions
 }

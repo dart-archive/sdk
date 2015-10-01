@@ -66,6 +66,9 @@
         'log_print_interceptor.h',
         'lookup_cache.cc',
         'lookup_cache.h',
+        'mailbox.h',
+        'message_mailbox.h',
+        'message_mailbox.cc',
         'native_interpreter.h',
         'native_process.cc',
         'native_process_disabled.cc',
@@ -313,6 +316,12 @@
         'ffi_test_library.h',
         'ffi_test_library.c',
       ],
+      'cflags': ['-fPIC'],
+      'xcode_settings': {
+        'OTHER_CPLUSPLUSFLAGS': [
+          '-fPIC',
+        ],
+      },
     },
   ],
 }

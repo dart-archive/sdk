@@ -17,6 +17,9 @@ messaging_port_lifetime_expose_gc_test: CompileTimeError # Issue(75): Driver doe
 messaging_process_die_early_gc_on_delete_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 messaging_program_gc_gc_on_delete_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 
+[ $arch == x64 ]
+shared_immutable_data_test: Pass, Slow
+
 [ $arch != ia32 ]
 dart2js_hello_world_test: Skip  # Rather big and slow test.
 dart2js_deltablue_test: Skip  # Rather big and slow test.
@@ -38,7 +41,7 @@ messaging_program_gc_gc_on_delete_test: Fail
 messaging_program_gc_test: Crash
 messaging_benchmark_test: Slow, Pass
 random_test: Crash
-shared_immutable_data_test: Fail
+shared_immutable_data_test: Crash, Slow
 spawn_empty_test: Crash
 spawn_fib_test: Crash
 spawn_process_yield_negative_test: Fail

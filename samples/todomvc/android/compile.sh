@@ -32,7 +32,13 @@ out/ReleaseIA32Android/fletch_vm_library_generator > out/ReleaseIA32Android/obj/
 
 # Compile Fletch runtime and jni code into libfletch.so.
 cd $JAVA_DIR
-NDK_MODULE_PATH=. ndk-build
+CPUCOUNT=1
+if [[ $(uname) = 'Darwin' ]]; then
+    CPUCOUNT=$(sysctl -n hw.logicalcpu_max)
+else
+    CPUCOUNT=$(lscpu -p | grep -vc '^#')
+fi
+NDK_MODULE_PATH=. ndk-build -j$CPUCOUNT
 
 # Copy Java source and fletch library to the right places.
 mkdir -p $DIR/TodoMVC/app/src/main/java/fletch
@@ -47,5 +53,7 @@ cd $FLETCH_DIR
 ninja -C out/ReleaseIA32
 mkdir -p $DIR/TodoMVC/app/src/main/res/raw
 
-./tools/persistent_process_info.sh --kill
-./out/ReleaseIA32/fletch compile-and-run -o $DIR/TodoMVC/app/src/main/res/raw/todomvc_snapshot $DIR/../todomvc.dart
+./out/ReleaseIA32/dart \
+  -c --packages=.packages \
+  -Dsnapshot="$DIR/TodoMVC/app/src/main/res/raw/todomvc_snapshot" \
+  tests/fletchc/run.dart "$DIR/../todomvc.dart"

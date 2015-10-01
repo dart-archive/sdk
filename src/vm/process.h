@@ -11,6 +11,7 @@
 #include "src/vm/debug_info.h"
 #include "src/vm/heap.h"
 #include "src/vm/lookup_cache.h"
+#include "src/vm/message_mailbox.h"
 #include "src/vm/program.h"
 #include "src/vm/storebuffer.h"
 #include "src/vm/thread.h"
@@ -21,7 +22,6 @@ class Engine;
 class Interpreter;
 class ImmutableHeap;
 class Port;
-class PortQueue;
 class ProcessQueue;
 class ProcessVisitor;
 
@@ -107,7 +107,7 @@ class Process {
 
   inline LookupCache::Entry* LookupEntry(Object* receiver, int selector);
 
-    // Lookup and update the primary cache entry.
+  // Lookup and update the primary cache entry.
   LookupCache::Entry* LookupEntrySlow(LookupCache::Entry* primary,
                                       Class* clazz,
                                       int selector);
@@ -206,26 +206,6 @@ class Process {
     thread_state_ = thread_state;
   }
 
-  // Thread-safe way of adding a 'message' at the end of the process'
-  // message queue. Returns false if the object is of wrong type.
-  bool Enqueue(Port* port, Object* message);
-  bool EnqueueForeign(Port* port, void* foreign, int size, bool finalized);
-  void EnqueueExit(Process* sender, Port* port, Object* message);
-
-  // Determine if it's possible to enqueue the given 'object' in the
-  // message queue of some process. If it's valid for this process, it's valid
-  // for all processes.
-  bool IsValidForEnqueue(Object* message);
-
-  // Thread-safe way of asking if the message queue of [this] process is empty.
-  bool IsQueueEmpty() const { return last_message_ == NULL; }
-
-  // Queue iteration. These methods should only be called from the thread
-  // currently owning the process.
-  void TakeQueue();
-  PortQueue* CurrentMessage();
-  void AdvanceCurrentMessage();
-
   void TakeChildHeaps();
 
   void RegisterFinalizer(HeapObject* object, WeakPointerCallback callback);
@@ -245,6 +225,8 @@ class Process {
   RandomXorShift* random() { return &random_; }
 
   StoreBuffer* store_buffer() { return &store_buffer_; }
+
+  MessageMailbox* mailbox() { return &mailbox_; }
 
   void RecordStore(HeapObject* object, Object* value) {
     if (value->IsHeapObject() && value->IsImmutable()) {
@@ -273,10 +255,14 @@ class Process {
   explicit Process(Program* program);
   ~Process();
 
-  void UpdateStackLimit();
+  // Must be called before deletion. After this method is done cleaning up,
+  // no other processes will be able to send messages or signals to this
+  // process.
+  // The process is therefore invisble for anything else and can be safely
+  // deleted.
+  void Cleanup();
 
-  // Put 'entry' at the end of the port's queue. This function is thread safe.
-  void EnqueueEntry(PortQueue* entry);
+  void UpdateStackLimit();
 
   void set_process_list_next(Process* process) { process_list_next_ = process; }
   Process* process_list_next() { return process_list_next_; }
@@ -322,11 +308,7 @@ class Process {
   // Linked list of ports owned by this process.
   Port* ports_;
 
-  // Pointer to the last PortQueue element of this process.
-  Atomic<PortQueue*> last_message_;
-
-  // Process-local list of PortQueue elements currently being processed.
-  PortQueue* current_message_;
+  MessageMailbox mailbox_;
 
   // Used for chaining all processes of a program. It is protected by a lock
   // in the program.

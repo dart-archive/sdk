@@ -1174,6 +1174,19 @@ class StringValue extends DartValue {
   String dartToString() => "'$value'";
 }
 
+class ConnectionError extends Command {
+  final error;
+
+  final StackTrace trace;
+
+  const ConnectionError(this.error, this.trace)
+      : super(CommandCode.ConnectionError);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "$error, $trace";
+}
+
 enum CommandCode {
   // Session opcodes.
   // TODO(ahe): Understand what "Session opcodes" mean and turn it into a

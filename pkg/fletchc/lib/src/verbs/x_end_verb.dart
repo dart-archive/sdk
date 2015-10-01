@@ -12,8 +12,8 @@ import '../driver/session_manager.dart' show
 import 'documentation.dart' show
     endDocumentation;
 
-const Verb endVerb =
-    const Verb(end, endDocumentation, requiresTargetSession: true);
+const Action endAction =
+    const Action(end, endDocumentation, requiresTargetSession: true);
 
 Future<int> end(AnalyzedSentence sentence, VerbContext context) async {
   String name = sentence.targetName;

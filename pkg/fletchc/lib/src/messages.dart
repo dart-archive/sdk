@@ -9,9 +9,14 @@ import 'diagnostic.dart' show
     DiagnosticParameter;
 
 enum DiagnosticKind {
+  cantPerformVerbIn,
+  cantPerformVerbTo,
+  cantPerformVerbWith,
+  duplicatedIn,
+  duplicatedTo,
+  duplicatedWith,
   expectedAPortNumber,
-  expectedFileTarget,
-  expectedToPreposition,
+  extraArguments,
   internalError,
   missingToFile,
   noFileTarget,
@@ -20,6 +25,7 @@ enum DiagnosticKind {
   sessionAlreadyExists,
   settingsCompileTimeConstantAsOption,
   settingsConstantsNotAMap,
+  settingsDeviceAddressNotAString,
   settingsNotAMap,
   settingsNotJson,
   settingsOptionNotAString,
@@ -27,12 +33,21 @@ enum DiagnosticKind {
   settingsPackagesNotAString,
   settingsUnrecognizedConstantValue,
   settingsUnrecognizedKey,
-  socketConnectError,
+  socketAgentConnectError,
+  socketAgentReplyError,
+  socketVmConnectError,
+  socketVmReplyError,
+  unknownAction,
   verbDoesNotSupportTarget,
+  verbDoesntSupportTarget,
   verbRequiresFileTarget,
   verbRequiresNoSession,
+  verbRequiresNoToFile,
+  verbRequiresNoWithFile,
   verbRequiresSessionTarget,
   verbRequiresSocketTarget,
+  verbRequiresTarget,
+  verbRequiresTargetButGot,
 
   // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
   unknownOption,
@@ -69,6 +84,7 @@ String getMessage(DiagnosticKind kind) {
   const DiagnosticParameter verb = DiagnosticParameter.verb;
   const DiagnosticParameter sessionName = DiagnosticParameter.sessionName;
   const DiagnosticParameter target = DiagnosticParameter.target;
+  const DiagnosticParameter requiredTarget = DiagnosticParameter.requiredTarget;
   const DiagnosticParameter userInput = DiagnosticParameter.userInput;
   const DiagnosticParameter additionalUserInput =
       DiagnosticParameter.additionalUserInput;
@@ -84,6 +100,15 @@ String getMessage(DiagnosticKind kind) {
       return "Can't perform '$verb' in a session. "
           "Try removing 'in session $sessionName'";
 
+    case DiagnosticKind.cantPerformVerbIn:
+      return "Can't perform '$verb' in '$target'";
+
+    case DiagnosticKind.cantPerformVerbTo:
+      return "Can't perform '$verb' to '$target'";
+
+    case DiagnosticKind.cantPerformVerbWith:
+      return "Can't perform '$verb' with '$target'";
+
     case DiagnosticKind.verbRequiresSessionTarget:
       return "Can't perform '$verb' without a session "
           "target. Try adding 'session <SESSION_NAME>' to the commmand line";
@@ -97,17 +122,15 @@ String getMessage(DiagnosticKind kind) {
       return "Can't perform '$verb' without a socket, but got '$target'";
 
     case DiagnosticKind.verbDoesNotSupportTarget:
-      // TODO(lukechurch): Review this error message.
-      return "'$verb' does not support target '$target'";
+      return "'$verb' can't be performed on '$target'";
 
     case DiagnosticKind.noSuchSession:
-      // TODO(lukechurch): Ensure UX repair text is good.
-      return "No session named: '$sessionName'. "
+      return "Couldn't find a session called '$sessionName'. "
           "Try running 'fletch create session $sessionName'";
 
     case DiagnosticKind.sessionAlreadyExists:
-      return "Can't create session named '$sessionName'; "
-          "There already is a session named '$sessionName'.";
+      return "Couldn't create session named '$sessionName'; "
+          "A session called $sessionName already exists.";
 
     case DiagnosticKind.noFileTarget:
       return "No file provided. Try adding <FILE_NAME> to the command line";
@@ -119,8 +142,19 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.expectedAPortNumber:
       return "Expected a port number, but got '$userInput'";
 
-    case DiagnosticKind.socketConnectError:
-      return "Unable to establish connection to $address: $message";
+    case DiagnosticKind.socketAgentConnectError:
+      return "Unable to establish connection to Fletch Agent on "
+          "$address: $message";
+
+    case DiagnosticKind.socketVmConnectError:
+      return
+          "Unable to establish connection to Fletch VM on $address: $message";
+
+    case DiagnosticKind.socketAgentReplyError:
+      return "Received invalid reply from Fletch Agent on $address: $message";
+
+    case DiagnosticKind.socketVmReplyError:
+      return "Received invalid reply from Fletch VM on $address: $message";
 
     case DiagnosticKind.attachToVmBeforeRun:
       return "Unable to run program without being attached to a VM. "
@@ -133,14 +167,6 @@ String getMessage(DiagnosticKind kind) {
       return "No destination file provided. "
           "Try adding 'to <FILE_NAME>' to the command line";
 
-    case DiagnosticKind.expectedToPreposition:
-      // TODO(lukechurch): Review UX.
-      return "Expected 'to' but got '$preposition'";
-
-    case DiagnosticKind.expectedFileTarget:
-      // TODO(lukechurch): Review UX.
-      return "Expected a file but got '$target'";
-
     case DiagnosticKind.unknownOption:
       return "Unknown option: '$userInput'";
 
@@ -151,7 +177,7 @@ String getMessage(DiagnosticKind kind) {
       return "$uri: isn't a map";
 
     case DiagnosticKind.settingsNotJson:
-      return "$uri: unable decode as JSON: $message";
+      return "$uri: unable to decode as JSON: $message";
 
     case DiagnosticKind.settingsPackagesNotAString:
       return "$uri: 'packages' value isn't a String";
@@ -160,7 +186,7 @@ String getMessage(DiagnosticKind kind) {
       return "$uri: 'options' value isn't a List";
 
     case DiagnosticKind.settingsOptionNotAString:
-      return "$uri: found 'options' entry '$userInput' which isn't a string";
+      return "$uri: found 'options' entry '$userInput' which isn't a String";
 
     case DiagnosticKind.settingsCompileTimeConstantAsOption:
       return "$uri: compile-time constants should be in "
@@ -175,5 +201,41 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.settingsUnrecognizedKey:
       return "$uri: unexpected key '$userInput'";
+
+    case DiagnosticKind.settingsDeviceAddressNotAString:
+      return "$uri: 'device_address' value '$userInput' isn't a String";
+
+    case DiagnosticKind.unknownAction:
+      return "'$userInput' isn't a supported action. Try running 'fletch help'";
+
+    case DiagnosticKind.extraArguments:
+      return "Unrecognized arguments: $userInput";
+
+    case DiagnosticKind.duplicatedIn:
+      return "More than one 'in' clause: $preposition";
+
+    case DiagnosticKind.duplicatedTo:
+      // TODO(ahe): This is getting a bit tedious by now. We really need to
+      // figure out if we need to require exact prepostions.
+      return "More than one 'to' clause: $preposition";
+
+    case DiagnosticKind.duplicatedWith:
+      return "More than one 'with' clause: $preposition";
+
+    case DiagnosticKind.verbDoesntSupportTarget:
+      return "Can't perform '$verb' with '$target'";
+
+    case DiagnosticKind.verbRequiresNoToFile:
+      return "Can't perform '$verb' to '$userInput'";
+
+    case DiagnosticKind.verbRequiresNoWithFile:
+      return "Can't perform '$verb' with '$userInput'";
+
+    case DiagnosticKind.verbRequiresTarget:
+      return "Can't perform '$verb' without '$requiredTarget'";
+
+    case DiagnosticKind.verbRequiresTargetButGot:
+      return "Can't perform '$verb' without '$requiredTarget', "
+          "but got: '$target'";
   }
 }

@@ -20,7 +20,7 @@ vars = {
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_fletch_patches".
   # 2. update package revisions below.
-  "dart_rev": "@cf3538bfd89e491fd65d0ded305699df531fea75",
+  "dart_rev": "@3210196ad25894f9cce82f0f0fc0044c3ef8d5b1",
 
   # Please copy these package revisions from ../dart/DEPS when updating
   # dart_rev:
@@ -28,7 +28,7 @@ vars = {
   "path_tag": "@1.3.6",
   "charcode_tag": "@1.1.0",
 
-  "lk_rev": "@e0bca35bd38b3d035dffcec1acafaa0a61c35aac",
+  "lk_rev": "@4895ead73951c1a75c4587e8082926251b3cfebf",
 
   # We use mirrors of all github repos to guarantee reproducibility and
   # consistency between what users see and what the bots see.
@@ -72,6 +72,8 @@ deps = {
 
   "fletch/third_party/lk/lk-downstream":
       (Var("github_url") % "travisg/lk") + Var("lk_rev"),
+
+  "wiki": (Var("github_url") % "dart-lang/fletch.wiki"),
 }
 
 # To include Mac deps on other OSes, add this to your .gclient file:
@@ -122,6 +124,7 @@ hooks = [
       'dart-dependencies-fletch',
       '-d',
       '-r',
+      '-u',
       '--auto_platform',
       'fletch/third_party/bin',
     ],

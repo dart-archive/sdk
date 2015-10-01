@@ -6,7 +6,9 @@ package com.google.fletch.githubsample;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
@@ -77,10 +79,22 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
             if (commitPatch.getSelected().hasChanged()) {
               if (commitPatch.getSelected().getCurrent() == true) {
                 select(commitListPresenter.windowIndexToViewPosition(region.getIndex()));
-                replaceFragment(createDetailsFragment());
+                final FragmentManager fm = activity.getFragmentManager();
+                final int stackSize = fm.getBackStackEntryCount();
+                replaceFragment(createDetailsFragment(), true);
+                // TODO(zerny): Drive the deselect via the presentation graph.
+                fm.addOnBackStackChangedListener(new FragmentManager.OnBackStackChangedListener() {
+                  @Override
+                  public void onBackStackChanged() {
+                    if (fm.getBackStackEntryCount() == stackSize) {
+                      if (selectedIndex >= 0) commitListPresenter.toggle(selectedIndex);
+                      fm.removeOnBackStackChangedListener(this);
+                    }
+                  }
+                });
               } else {
+                replaceFragment(recyclerViewFragment, false);
                 deselect(selectedIndex);
-                replaceFragment(recyclerViewFragment);
               }
             }
           }
@@ -96,7 +110,7 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
   }
 
   private DetailsViewFragment createDetailsFragment() {
-    RecyclerView recyclerView = (RecyclerView) activity.findViewById(R.id.recycler_view);
+    RecyclerView recyclerView = recyclerViewFragment.getRecyclerView();
     CommitListAdapter.CommitViewHolder holder =
         (CommitListAdapter.CommitViewHolder) recyclerView.findViewHolderForPosition(selectedIndex);
     
@@ -113,23 +127,36 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
   private void select(int index) {
     assert (selectedIndex == -1);
     selectedIndex = index;
+    // TODO(zerny): Fix the "restore selected item" issue and enable rotation.
+    activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LOCKED);
   }
 
   private void deselect(int position) {
     assert(position == selectedIndex);
     selectedIndex = -1;
+    // TODO(zerny): Fix the "restore selected item" issue and enable rotation.
+    activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
   }
 
   private void addFragment(Fragment fragment) {
+    assert currentViewFragment == null;
+    currentViewFragment = fragment;
     FragmentTransaction transaction = activity.getFragmentManager().beginTransaction();
-    transaction.add(R.id.container, fragment);
-    transaction.addToBackStack(null);
+    transaction.replace(R.id.container, fragment);
     transaction.commit();
   }
 
-  private void replaceFragment(Fragment fragment) {
+  private void replaceFragment(Fragment fragment, boolean addToBackStack) {
+    if (currentViewFragment == fragment) return;
+    currentViewFragment = fragment;
     FragmentTransaction transaction = activity.getFragmentManager().beginTransaction();
     transaction.replace(R.id.container, fragment);
+    if (addToBackStack) {
+      transaction.addToBackStack(DETAILS_VIEW_BACK_STACK_ENTRY);
+    } else {
+      FragmentManager fm = activity.getFragmentManager();
+      fm.popBackStack(DETAILS_VIEW_BACK_STACK_ENTRY, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+    }
     transaction.commit();
   }
 
@@ -138,4 +165,7 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
   private SlidingWindow commitListPresenter;
   private ImageLoader imageLoader;
   private RecyclerViewFragment recyclerViewFragment;
+  private Fragment currentViewFragment;
+
+  static private final String DETAILS_VIEW_BACK_STACK_ENTRY = "details_card_view_back";
 }

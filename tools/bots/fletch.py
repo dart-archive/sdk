@@ -22,6 +22,7 @@ import uuid
 
 import bot
 import bot_utils
+import fletch_namer
 
 from os.path import dirname, join
 
@@ -79,6 +80,9 @@ def Main():
         system = fletch_match.group(1)
 
         if system == 'lk':
+          # TODO(ajohnsen): remove when we are back in shape
+          print 'Currently broken'
+          return
           StepsLK(debug_log)
           return
 
@@ -107,9 +111,9 @@ def Main():
             asans = [False]
         sdk_build = fletch_match.group(5)
         if sdk_build:
-          print 'TODO(ricow): bundle up'
-          return
-        StepsNormal(debug_log, system, modes, archs, asans)
+          StepsSDK(debug_log, system, modes, archs)
+        else:
+          StepsNormal(debug_log, system, modes, archs, asans)
       elif cross_match:
         system = cross_match.group(1)
         arch = cross_match.group(2)
@@ -128,6 +132,126 @@ def Main():
 
 
 #### Buildbot steps
+
+def StepsSDK(debug_log, system, modes, archs):
+  configurations = GetBuildConfigurations(system, modes, archs, [False],
+                                          no_clang=True)
+  bot.Clobber(force=True)
+  StepGyp()
+
+  cross_mode = 'release'
+  cross_arch = 'xarm'
+  cross_system = 'linux'
+  # We only cross compile on linux
+  if system == 'linux':
+    StepsCreateDebianPackage()
+    StepsArchiveDebianPackage()
+    CrossCompile(cross_system, [cross_mode], cross_arch)
+    StepsArchiveCrossCompileBundle(cross_mode, cross_arch)
+  elif system == 'mac':
+     StepsGetArmBinaries(cross_mode, cross_arch)
+     StepsGetArmDeb()
+  for configuration in configurations:
+    StepBuild(configuration['build_conf'], configuration['build_dir']);
+    StepsBundleSDK(configuration['build_dir'])
+    StepsArchiveSDK(configuration['build_dir'], system, configuration['mode'],
+                    configuration['arch'])
+
+def StepsCreateDebianPackage():
+  Run(['python', os.path.join('tools', 'create_tarball.py')])
+  Run(['python', os.path.join('tools', 'create_debian_packages.py')])
+
+def StepsArchiveDebianPackage():
+  with bot.BuildStep('Archive arm agent dep'):
+    version = utils.GetSemanticSDKVersion()
+    namer = GetNamer()
+    gsutil = bot_utils.GSUtil()
+    deb_file = os.path.join('out', namer.arm_agent_filename(version))
+    gs_path = namer.arm_agent_filepath(version)
+    http_path = GetDownloadLink(gs_path)
+    gsutil.upload(deb_file, gs_path, public=True)
+    print '@@@STEP_LINK@download@%s@@@' % http_path
+
+def GetDownloadLink(gs_path):
+  return gs_path.replace('gs://', 'http://storage.googleapis.com/')
+
+def GetNamer():
+  name, _ = bot.GetBotName()
+  channel = bot_utils.GetChannelFromName(name)
+  return fletch_namer.FletchGCSNamer(channel)
+
+def StepsBundleSDK(build_dir):
+  with bot.BuildStep('Bundle sdk %s' % build_dir):
+    version = utils.GetSemanticSDKVersion()
+    namer = GetNamer()
+    deb_file = os.path.join('out', namer.arm_agent_filename(version))
+    Run(['tools/bundle_sdk.py', '--build_dir=%s' % build_dir,
+         '--deb_package=%s' % deb_file])
+
+def CreateZip(directory, target_file):
+  with utils.ChangedWorkingDirectory(os.path.dirname(directory)):
+    if os.path.exists(target_file):
+      os.remove(target_file)
+    command = ['zip', '-yrq9', target_file, os.path.basename(directory)]
+    Run(command)
+
+def Unzip(zip_file):
+  with utils.ChangedWorkingDirectory(os.path.dirname(zip_file)):
+    Run(['unzip', os.path.basename(zip_file)])
+
+def StepsGetArmBinaries(cross_mode, cross_arch):
+  with bot.BuildStep('Get arm binaries %s' % cross_mode):
+    build_conf = GetConfigurationName(cross_mode, cross_arch, '', False)
+    build_dir = os.path.join('out', build_conf)
+    version = utils.GetSemanticSDKVersion()
+    gsutil = bot_utils.GSUtil()
+    namer = GetNamer()
+    zip_file = os.path.join('out', namer.arm_binaries_zipfilename(cross_mode))
+    if os.path.exists(zip_file):
+      os.remove(zip_file)
+    if os.path.exists(build_dir):
+      shutil.rmtree(build_dir)
+    gs_path = namer.arm_binaries_zipfilepath(version, cross_mode)
+    gsutil.execute(['cp', gs_path, zip_file])
+    Unzip(zip_file)
+
+def StepsGetArmDeb():
+  with bot.BuildStep('Get agent deb'):
+    version = utils.GetSemanticSDKVersion()
+    gsutil = bot_utils.GSUtil()
+    namer = GetNamer()
+    deb_file = os.path.join('out', namer.arm_agent_filename(version))
+    gs_path = namer.arm_agent_filepath(version)
+    if os.path.exists(deb_file):
+      os.remove(deb_file)
+    gsutil.execute(['cp', gs_path, deb_file])
+
+def StepsArchiveCrossCompileBundle(cross_mode, cross_arch):
+  with bot.BuildStep('Archive arm binaries %s' % cross_mode):
+    build_conf = GetConfigurationName(cross_mode, cross_arch, '', False)
+    version = utils.GetSemanticSDKVersion()
+    namer = GetNamer()
+    gsutil = bot_utils.GSUtil()
+    zip_file = namer.arm_binaries_zipfilename(cross_mode)
+    CreateZip(os.path.join('out', build_conf), zip_file)
+    gs_path = namer.arm_binaries_zipfilepath(version, cross_mode)
+    http_path = GetDownloadLink(gs_path)
+    gsutil.upload(os.path.join('out', zip_file), gs_path, public=True)
+    print '@@@STEP_LINK@download@%s@@@' % http_path
+
+
+def StepsArchiveSDK(build_dir, system, mode, arch):
+  with bot.BuildStep('Archive bundle %s' % build_dir):
+    sdk = os.path.join(build_dir, 'fletch-sdk')
+    zip_file = 'fletch-sdk.zip'
+    CreateZip(sdk, zip_file)
+    version = utils.GetSemanticSDKVersion()
+    namer = GetNamer()
+    gsutil = bot_utils.GSUtil()
+    gs_path = namer.fletch_sdk_zipfilepath(version, system, arch, mode)
+    http_path = GetDownloadLink(gs_path)
+    gsutil.upload(os.path.join(build_dir, zip_file), gs_path, public=True)
+    print '@@@STEP_LINK@download@%s@@@' % http_path
 
 def StepsNormal(debug_log, system, modes, archs, asans):
   configurations = GetBuildConfigurations(system, modes, archs, asans)
@@ -198,13 +322,10 @@ def StepsCrossBuilder(debug_log, system, modes, arch):
   take care of downloading/extracting the build artifacts and executing tests.
   """
 
-  revision = os.environ['BUILDBOT_GOT_REVISION']
+  revision = os.environ.get('BUILDBOT_GOT_REVISION', '42')
   assert revision
 
-  for compiler_variant in GetCompilerVariants(system, arch):
-    for mode in modes:
-      build_conf = GetConfigurationName(mode, arch, compiler_variant, False)
-      StepBuild(build_conf, os.path.join('out', build_conf))
+  CrossCompile(system, modes, arch)
 
   tarball = TarballName(arch, revision)
   try:
@@ -223,6 +344,12 @@ def StepsCrossBuilder(debug_log, system, modes, arch):
   finally:
     if os.path.exists(tarball):
       os.remove(tarball)
+
+def CrossCompile(system, modes, arch):
+  for compiler_variant in GetCompilerVariants(system, arch):
+    for mode in modes:
+      build_conf = GetConfigurationName(mode, arch, compiler_variant, False)
+      StepBuild(build_conf, os.path.join('out', build_conf))
 
 def StepsTargetRunner(debug_log, system, mode, arch):
   """This step downloads XARM build artifacts and runs tests.
@@ -535,13 +662,13 @@ def RunWithCoreDumpArchiving(run, build_dir, build_conf):
   else:
     run()
 
-def GetBuildConfigurations(system, modes, archs, asans):
+def GetBuildConfigurations(system, modes, archs, asans, no_clang=False):
   configurations = []
 
   for asan in asans:
     for mode in modes:
       for arch in archs:
-        for compiler_variant in GetCompilerVariants(system, arch):
+        for compiler_variant in GetCompilerVariants(system, arch, no_clang):
           build_conf = GetConfigurationName(mode, arch, compiler_variant, asan)
           configurations.append({
             'build_conf': build_conf,
@@ -581,10 +708,12 @@ def ShouldSkipConfiguration(snapshot_run, configuration):
 
   return False
 
-def GetCompilerVariants(system, arch):
+def GetCompilerVariants(system, arch, no_clang=False):
   is_mac = system == 'mac'
   is_arm = arch in ['arm', 'xarm']
-  if is_mac:
+  if no_clang:
+    return ['']
+  elif is_mac:
     # gcc on mac is just an alias for clang.
     return ['Clang']
   elif is_arm:

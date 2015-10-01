@@ -5,6 +5,8 @@
 part of dart.core_patch;
 
 abstract class _IntBase implements int {
+  const _IntBase();
+
   bool get isNaN => false;
 
   bool get isNegative => this < 0;

@@ -368,14 +368,6 @@ class Process {
   @fletch.native external static Channel _queueGetChannel();
 }
 
-// The port list sentinel is sent as a prefix to the sequence
-// of messages sent using [Port.sendMultiple].
-class _PortListSentinel {
-  const _PortListSentinel();
-}
-
-const _portListSentinel = const _PortListSentinel();
-
 // Ports allow you to send messages to a channel. Ports are
 // are transferable and can be sent between processes.
 class Port {
@@ -392,22 +384,6 @@ class Port {
 
   // Send a message to the channel. Not blocking.
   @fletch.native void send(message) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
-        throw new ArgumentError();
-      case fletch.illegalState:
-        throw new StateError("Port is closed.");
-      default:
-        throw fletch.nativeError;
-    }
-  }
-
-  // Send multiple messages to the channel. Not blocking.
-  void sendMultiple(Iterable iterable) {
-    _sendList(iterable.toList(growable: true), _portListSentinel);
-  }
-
-  @fletch.native void _sendList(List list, sentinel) {
     switch (fletch.nativeError) {
       case fletch.wrongArgumentType:
         throw new ArgumentError();
@@ -464,13 +440,7 @@ class Channel {
       Fiber._yieldTo(receiver, next);
     }
 
-    var result = _dequeue();
-    if (identical(result, _portListSentinel)) {
-      int length = _dequeue();
-      result = new List(length);
-      for (int i = 0; i < length; i++) result[i] = _dequeue();
-    }
-    return result;
+    return _dequeue();
   }
 
   _enqueue(_ChannelEntry entry) {

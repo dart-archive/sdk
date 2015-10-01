@@ -71,11 +71,12 @@ fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
     cd $FLETCH_DIR
-    ./tools/persistent_process_info.sh --kill
-    $FLETCH compile-and-run --packages "$TARGET_PKG_FILE" -o "$DIR/$PROJ.snapshot" \
-            "$TARGET_DIR/bin/$PROJ.dart"
+    $DART -c --packages=.packages \
+          -Dsnapshot="$DIR/$PROJ.snapshot" \
+          -Dpackages="$TARGET_PKG_FILE" \
+          tests/fletchc/run.dart "$TARGET_DIR/bin/$PROJ.dart"
 fi
-    
+
 # Ensure that we have a mock server.
 if [[ $# -eq 0 ]] && [[ ! -f "$MOCK_SERVER_SNAPSHOT" ]]; then
     $DIR/../compile_mock_service.sh

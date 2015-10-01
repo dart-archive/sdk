@@ -10,12 +10,12 @@ import 'documentation.dart' show
     exportDocumentation;
 
 import '../driver/developer.dart' show
-    compileAndAttachToLocalVmThen;
+    compileAndAttachToVmThen;
 
 import '../driver/developer.dart' as developer;
 
-const Verb exportVerb =
-    const Verb(
+const Action exportAction =
+    const Action(
         export, exportDocumentation, requiresSession: true,
         requiresToUri: true,
         supportedTargets: const <TargetKind>[TargetKind.FILE]);
@@ -51,7 +51,7 @@ Future<int> exportTask(
     SessionState state,
     Uri script,
     Uri snapshot) async {
-  return compileAndAttachToLocalVmThen(
+  return compileAndAttachToVmThen(
       commandSender,
       state,
       script,

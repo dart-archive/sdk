@@ -52,8 +52,8 @@ import '../driver/exit_codes.dart' show
 import 'documentation.dart' show
     compileAndRunDocumentation;
 
-const Verb compileAndRunVerb =
-    const Verb(
+const Action compileAndRunAction =
+    const Action(
         compileAndRun, compileAndRunDocumentation,
         allowsTrailing: true,
         supportedTargets: const <TargetKind>[TargetKind.FILE]);
@@ -63,7 +63,7 @@ Future<int> compileAndRun(
     VerbContext context) async {
   Options options = Options.parse(sentence.arguments);
 
-  if (!options.defines.isEmpty) {
+  if (options.defines.isNotEmpty) {
     print("Unsupported options: ${options.defines.join(' ')}");
     return DART_VM_EXITCODE_COMPILE_TIME_ERROR;
   }
