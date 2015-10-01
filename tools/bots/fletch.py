@@ -111,10 +111,7 @@ def Main():
             asans = [False]
         sdk_build = fletch_match.group(5)
         if sdk_build:
-          if system == 'linux':
-            StepsSDK(debug_log, system, modes, archs)
-          else:
-            print 'Mac is blocked on issues 127'
+          StepsSDK(debug_log, system, modes, archs)
         else:
           StepsNormal(debug_log, system, modes, archs, asans)
       elif cross_match:
