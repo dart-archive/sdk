@@ -80,9 +80,6 @@ def Main():
         system = fletch_match.group(1)
 
         if system == 'lk':
-          # TODO(ajohnsen): remove when we are back in shape
-          print 'Currently broken'
-          return
           StepsLK(debug_log)
           return
 
@@ -296,6 +293,7 @@ def StepsLK(debug_log):
   build_config = 'DebugLK'
 
   with bot.BuildStep('Build %s' % build_config):
+    Run(['make', '-C', 'third_party/lk', 'clean'])
     Run(['make', '-C', 'third_party/lk', '-j8'])
 
   with bot.BuildStep('Test %s' % build_config):
