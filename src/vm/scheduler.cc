@@ -281,6 +281,20 @@ int Scheduler::Run() {
     if (!preempt_monitor_->WaitUntil(next_timeout)) continue;
 
     if (shutdown_ != -1) {
+      // The following code can be viewed as if a separate thread is listening
+      // for shutdown signals and then acts on it (stop program, delete all
+      // processes).
+      //
+      // It is here (in a central place), in order to prevent multiple
+      // scheduler worker threads to race about shutting down at the same time.
+      // Yet we save having another thread just for shutting down.
+      //
+      // Using [StopProgram] will coordinate with scheduler worker threads,
+      // which might use [preempt_monitor_] to signal the main thread. This
+      // requires being able to take the [preempt_monitor_] lock. We therefore
+      // unlock [preempt_monitor_] during this work.
+      ScopedMonitorUnlock unlocker(preempt_monitor_);
+
       // TODO(ajohnsen): Handle multiple programs.
       Program* program = shutdown_program_;
       StopProgram(program);
