@@ -10,9 +10,9 @@
   ],
 
   'variables': {
-    'LK_PROJECT%': 'vexpress-a9-test',
+    'LK_PROJECT%': 'qemu-virt-fletch',
 
-    'LK_CPU%': 'cortex-a9',
+    'LK_CPU%': 'cortex-a15',
   },
 
   'target_defaults': {
