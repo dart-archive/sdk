@@ -136,6 +136,7 @@ def Main():
 def StepsSDK(debug_log, system, modes, archs):
   configurations = GetBuildConfigurations(system, modes, archs, [False],
                                           no_clang=True)
+  bot.Clobber(force=True)
   StepGyp()
 
   cross_mode = 'release'
@@ -143,15 +144,33 @@ def StepsSDK(debug_log, system, modes, archs):
   cross_system = 'linux'
   # We only cross compile on linux
   if system == 'linux':
+    StepsCreateDebianPackage()
+    StepsArchiveDebianPackage()
     CrossCompile(cross_system, [cross_mode], cross_arch)
     StepsArchiveCrossCompileBundle(cross_mode, cross_arch)
   elif system == 'mac':
      StepsGetArmBinaries(cross_mode, cross_arch)
+     StepsGetArmDeb()
   for configuration in configurations:
     StepBuild(configuration['build_conf'], configuration['build_dir']);
     StepsBundleSDK(configuration['build_dir'])
     StepsArchiveSDK(configuration['build_dir'], system, configuration['mode'],
                     configuration['arch'])
+
+def StepsCreateDebianPackage():
+  Run(['python', os.path.join('tools', 'create_tarball.py')])
+  Run(['python', os.path.join('tools', 'create_debian_packages.py')])
+
+def StepsArchiveDebianPackage():
+  with bot.BuildStep('Archive arm agent dep'):
+    version = utils.GetSemanticSDKVersion()
+    namer = GetNamer()
+    gsutil = bot_utils.GSUtil()
+    deb_file = os.path.join('out', namer.arm_agent_filename(version))
+    gs_path = namer.arm_agent_filepath(version)
+    http_path = GetDownloadLink(gs_path)
+    gsutil.upload(deb_file, gs_path, public=True)
+    print '@@@STEP_LINK@download@%s@@@' % http_path
 
 def GetDownloadLink(gs_path):
   return gs_path.replace('gs://', 'http://storage.googleapis.com/')
@@ -163,7 +182,11 @@ def GetNamer():
 
 def StepsBundleSDK(build_dir):
   with bot.BuildStep('Bundle sdk %s' % build_dir):
-    Run(['tools/bundle_sdk.py', '--build_dir=%s' % build_dir])
+    version = utils.GetSemanticSDKVersion()
+    namer = GetNamer()
+    deb_file = os.path.join('out', namer.arm_agent_filename(version))
+    Run(['tools/bundle_sdk.py', '--build_dir=%s' % build_dir,
+         '--deb_package=%s' % deb_file])
 
 def CreateZip(directory, target_file):
   with utils.ChangedWorkingDirectory(os.path.dirname(directory)):
@@ -191,6 +214,17 @@ def StepsGetArmBinaries(cross_mode, cross_arch):
     gs_path = namer.arm_binaries_zipfilepath(version, cross_mode)
     gsutil.execute(['cp', gs_path, zip_file])
     Unzip(zip_file)
+
+def StepsGetArmDeb():
+  with bot.BuildStep('Get agent deb'):
+    version = utils.GetSemanticSDKVersion()
+    gsutil = bot_utils.GSUtil()
+    namer = GetNamer()
+    deb_file = os.path.join('out', namer.arm_agent_filename(version))
+    gs_path = namer.arm_agent_filepath(version)
+    if os.path.exists(deb_file):
+      os.remove(deb_file)
+    gsutil.execute(['cp', gs_path, deb_file])
 
 def StepsArchiveCrossCompileBundle(cross_mode, cross_arch):
   with bot.BuildStep('Archive arm binaries %s' % cross_mode):

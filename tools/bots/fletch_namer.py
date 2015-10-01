@@ -29,3 +29,10 @@ class FletchGCSNamer(bot_utils.GCSNamer):
   def arm_binaries_zipfilepath(self, revision, mode):
     return '/'.join([self.fletch_sdk_directory(revision),
         self.arm_binaries_zipfilename(mode)])
+
+  def arm_agent_filename(self, revision):
+    return 'fletch-agent_%s-1_armhf.deb' % revision
+
+  def arm_agent_filepath(self, revision):
+    return '/'.join([self.fletch_sdk_directory(revision),
+        self.arm_agent_filename(revision)])

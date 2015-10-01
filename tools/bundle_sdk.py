@@ -24,6 +24,7 @@ SDK_PACKAGES = ['file', 'fletch_agent', 'fletchc', 'gpio',
 def ParseOptions():
   parser = optparse.OptionParser()
   parser.add_option("--build_dir")
+  parser.add_option("--deb_package")
   (options, args) = parser.parse_args()
   return options
 
@@ -105,13 +106,15 @@ def CreateSnapshot(dart_executable, dart_file, snapshot):
   subprocess.check_call(' '.join(cmd), shell=True)
 
 def CreateAgentSnapshot(bundle_dir, build_dir):
-  platforms =join(bundle_dir, 'platforms')
+  platforms = join(bundle_dir, 'platforms')
   data_dir = join(platforms, 'raspberry-pi2', 'data')
   dart = join(build_dir, 'dart')
   snapshot = join(data_dir, 'fletch-agent.snapshot')
-  bin_snapshot = join(bundle_dir, 'bin', 'fletch-agent.snapshot')
   CreateSnapshot(dart, 'pkg/fletch_agent/bin/agent.dart', snapshot)
-  CopyFile(snapshot, bin_snapshot)
+
+def CopyArmDebPackage(bundle_dir, package):
+  target = join(bundle_dir, 'platforms', 'raspberry-pi2')
+  CopyFile(package, join(target, basename(package)))
 
 def CopyAdditionalFiles(bundle_dir):
   #TODO(mit): fix README and LICENSE
@@ -132,6 +135,7 @@ def Main():
   options = ParseOptions();
   print 'Creating sdk bundle for %s' % options.build_dir
   build_dir = options.build_dir
+  deb_package = options.deb_package
   with utils.TempDir() as sdk_temp:
     CopyBinaries(sdk_temp, build_dir)
     CopyInternalPackages(sdk_temp, build_dir)
@@ -140,6 +144,7 @@ def Main():
     CopyPlatforms(sdk_temp)
     CopyArm(sdk_temp)
     CreateAgentSnapshot(sdk_temp, build_dir)
+    CopyArmDebPackage(sdk_temp, deb_package)
     CopyAdditionalFiles(sdk_temp)
     sdk_dir = join(build_dir, 'fletch-sdk')
     EnsureDeleted(sdk_dir)

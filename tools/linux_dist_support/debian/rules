@@ -27,6 +27,8 @@ override_dh_auto_clean:
 
 override_dh_auto_configure:
 	cd fletch; \
+	mkdir .git; \
+	touch .git/HEAD; \
 	ninja; \
 	cd ..
 
