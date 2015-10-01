@@ -36,7 +36,7 @@ void Print::Out(const char* format, ...) {
   for (PrintInterceptor* interceptor = interceptor_;
        interceptor != NULL;
        interceptor = interceptor->next_) {
-    interceptor_->Out(message);
+    interceptor->Out(message);
   }
   free(message);
 #else
@@ -66,7 +66,7 @@ void Print::Error(const char* format, ...) {
   for (PrintInterceptor* interceptor = interceptor_;
        interceptor != NULL;
        interceptor = interceptor->next_) {
-     interceptor_->Error(message);
+     interceptor->Error(message);
   }
   free(message);
 #else
