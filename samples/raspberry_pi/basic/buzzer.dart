@@ -4,7 +4,8 @@
 //
 // A small buzzer example illustrating both input and output GPIO pins.
 //
-// For breadboard layout and connections to the Pi, see buzzer-schematic.png
+// For breadboard layout and connections to the Pi, see:
+// https://storage.googleapis.com/fletch-archive/images/buzzer-schematic.png
 
 import 'package:gpio/gpio.dart';
 
