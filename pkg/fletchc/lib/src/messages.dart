@@ -49,12 +49,6 @@ enum DiagnosticKind {
   verbRequiresTarget,
   verbRequiresTargetButGot,
 
-  // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
-  unknownOption,
-
-  // TODO(ahe): Remove when compile_and_run_verb.dart is removed.
-  missingRequiredArgument,
-
   // TODO(ahe): Remove when debug attach implicitly.
   attachToVmBeforeRun,
 
@@ -166,12 +160,6 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.missingToFile:
       return "No destination file provided. "
           "Try adding 'to <FILE_NAME>' to the command line";
-
-    case DiagnosticKind.unknownOption:
-      return "Unknown option: '$userInput'";
-
-    case DiagnosticKind.missingRequiredArgument:
-      return "Error in option: $message";
 
     case DiagnosticKind.settingsNotAMap:
       return "$uri: isn't a map";

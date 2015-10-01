@@ -119,7 +119,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
       }, null);
       return new AnalyzedSentence(
         new Verb(verb.name, contextHelp), null, null, null, null, null, null,
-        null, null, null, null);
+        null, null, null);
     }
   }
 
@@ -330,8 +330,8 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
   Uri programName =
       sentence.programName == null ? null : fileUri(sentence.programName, base);
   return new AnalyzedSentence(
-      verb, target, targetName, trailing, sessionName,
-      sentence.arguments, base, programName, targetUri, toUri, withUri);
+      verb, target, targetName, trailing, sessionName, base, programName,
+      targetUri, toUri, withUri);
 }
 
 Uri fileUri(String path, Uri base) => base.resolveUri(new Uri.file(path));
@@ -378,9 +378,6 @@ class AnalyzedSentence {
 
   final String sessionName;
 
-  // TODO(ahe): Remove when compile-and-run is removed.
-  final List<String> arguments;
-
   /// The current working directory of the C++ client.
   final Uri base;
 
@@ -401,7 +398,6 @@ class AnalyzedSentence {
       this.targetName,
       this.trailing,
       this.sessionName,
-      this.arguments,
       this.base,
       this.programName,
       this.targetUri,

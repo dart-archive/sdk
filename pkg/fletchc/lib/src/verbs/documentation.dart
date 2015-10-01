@@ -78,12 +78,6 @@ const String helpDocumentation = """
    help all  List all commands
 """;
 
-const String compileAndRunDocumentation = """
-   compile-and-run [options] dartfile
-             Compile and run dartfile in a temporary session.  This is a
-             provisionary feature that will be removed shortly
-""";
-
 const String shutdownDocumentation = """
    shutdown  Shut down the background Fletch process
 """;
