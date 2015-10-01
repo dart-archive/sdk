@@ -147,12 +147,11 @@ def CreateTarball(tarfilename):
       GenerateChangeLog(change_log, version)
       tar.add(change_log, arcname='%s/debian/changelog' % versiondir)
 
-      # For bleeding_edge add the GIT_REVISION file.
-      if utils.GetChannel() == 'be':
-        git_revision = join(temp_dir, 'GIT_REVISION')
-        GenerateGitRevision(git_revision, utils.GetGitRevision())
-        tar.add(git_revision,
-                arcname='%s/fletch/tools/GIT_REVISION' % versiondir)
+      # Add the GIT_REVISION file.
+      git_revision = join(temp_dir, 'GIT_REVISION')
+      GenerateGitRevision(git_revision, utils.GetGitRevision())
+      tar.add(git_revision,
+              arcname='%s/fletch/tools/GIT_REVISION' % versiondir)
 
 def Main():
   if HOST_OS != 'linux':
