@@ -59,12 +59,12 @@ def CopyLibs(bundle_dir, build_dir):
   copytree('../dart/sdk/lib', join(dart_lib, 'lib'))
 
 def CopyInternalPackages(bundle_dir, build_dir):
-  internal_pkg = join(join(bundle_dir, 'internal'), 'pkg')
+  internal_pkg = join(bundle_dir, 'internal', 'pkg')
   makedirs(internal_pkg)
   for v in ['fletchc']:
     copytree(join('pkg', v), join(internal_pkg, v))
   fletchc = 'pkg/fletchc'
-  fixed_packages_file = join(join(internal_pkg, 'fletchc'), '.packages')
+  fixed_packages_file = join(internal_pkg, 'fletchc', '.packages')
   lines = []
   with open(join(fletchc, '.packages')) as f:
     lines = f.read().splitlines()
@@ -87,7 +87,7 @@ def CopyInternalPackages(bundle_dir, build_dir):
 def CopyPackages(bundle_dir):
   target_dir = join(bundle_dir, 'pkg')
   makedirs(target_dir)
-  with open(join(join(bundle_dir, 'internal'), 'fletch-sdk.packages'), 'w') as p:
+  with open(join(bundle_dir, 'internal', 'fletch-sdk.packages'), 'w') as p:
     for package in SDK_PACKAGES:
       copytree(join('pkg', package), join(target_dir, package))
       p.write('%s:../pkg/%s/lib\n' % (package, package))
@@ -105,11 +105,11 @@ def CreateSnapshot(dart_executable, dart_file, snapshot):
   subprocess.check_call(' '.join(cmd), shell=True)
 
 def CreateAgentSnapshot(bundle_dir, build_dir):
-  data_dir = join(join(bundle_dir, 'raspberry-pi2'), 'data')
-  makedirs(data_dir)
+  platforms =join(bundle_dir, 'platforms')
+  data_dir = join(platforms, 'raspberry-pi2', 'data')
   dart = join(build_dir, 'dart')
   snapshot = join(data_dir, 'fletch-agent.snapshot')
-  bin_snapshot = join(join(bundle_dir, 'bin'), 'fletch-agent.snapshot')
+  bin_snapshot = join(bundle_dir, 'bin', 'fletch-agent.snapshot')
   CreateSnapshot(dart, 'pkg/fletch_agent/bin/agent.dart', snapshot)
   CopyFile(snapshot, bin_snapshot)
 
@@ -120,7 +120,7 @@ def CopyAdditionalFiles(bundle_dir):
 
 def CopyArm(bundle_dir):
   binaries = ['fletch-vm', 'natives.json']
-  raspberry = join(join(bundle_dir, 'platforms'), 'raspberry-pi2')
+  raspberry = join(bundle_dir, 'platforms', 'raspberry-pi2')
   bin_dir = join(raspberry, 'bin')
   makedirs(bin_dir)
   build_dir = 'out/ReleaseXARM'
