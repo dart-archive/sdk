@@ -21,6 +21,8 @@ from shutil import copyfile, copymode, copytree, rmtree
 SDK_PACKAGES = ['file', 'fletch_agent', 'fletchc', 'gpio',
                 'http', 'i2c', 'immutable', 'os', 'raspberry_pi', 'socket']
 
+SAMPLES = ['raspberry_pi']
+
 def ParseOptions():
   parser = optparse.OptionParser()
   parser.add_option("--build_dir")
@@ -129,7 +131,11 @@ def CopyArm(bundle_dir):
   build_dir = 'out/ReleaseXARM'
   for v in binaries:
     CopyFile(join(build_dir, v), join(bin_dir, v))
-  # TODO(ricow): add deb package
+
+def CopySamples(bundle_dir):
+  target = join(bundle_dir, 'samples')
+  for v in SAMPLES:
+    copytree(join('samples', v), join(target, v))
 
 def Main():
   options = ParseOptions();
@@ -145,6 +151,7 @@ def Main():
     CopyArm(sdk_temp)
     CreateAgentSnapshot(sdk_temp, build_dir)
     CopyArmDebPackage(sdk_temp, deb_package)
+    CopySamples(sdk_temp)
     CopyAdditionalFiles(sdk_temp)
     sdk_dir = join(build_dir, 'fletch-sdk')
     EnsureDeleted(sdk_dir)
