@@ -155,6 +155,8 @@ def StepsArchiveSDK(build_dir, system, mode, arch):
   with bot.BuildStep('Archive bundle %s' % build_dir):
     def CreateZip(directory, target_file):
       with utils.ChangedWorkingDirectory(os.path.dirname(directory)):
+        if os.path.exists(target_file):
+          os.remove(target_file)
         command = ['zip', '-yrq9', target_file, os.path.basename(directory)]
         Run(command)
     sdk = os.path.join(build_dir, 'fletch-sdk')
