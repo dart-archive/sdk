@@ -49,25 +49,25 @@ vars = {
 
 deps = {
   # Stuff needed for GYP to run.
-  "third_party/gyp":
+  "fletch/third_party/gyp":
       Var('chromium_git') + '/external/gyp.git' + Var("gyp_rev"),
 
-  "dart":
+  "fletch/third_party/dart":
       (Var("github_mirror") % "sdk") + Var("dart_rev"),
 
-  "third_party/package_config":
+  "fletch/third_party/package_config":
       (Var("github_mirror") % "package_config") + Var("package_config_tag"),
 
-  "third_party/charcode":
+  "fletch/third_party/charcode":
       (Var("github_mirror") % "charcode") + Var("charcode_tag"),
 
-  "third_party/path":
+  "fletch/third_party/path":
       (Var("github_mirror") % "path") + Var("path_tag"),
 
-  "third_party/persistent":
+  "fletch/third_party/persistent":
       (Var("github_url") % "polux/persistent") + Var("persistent_rev"),
 
-  "third_party/crypto":
+  "fletch/third_party/crypto":
       (Var("github_mirror") % "crypto") + Var("crypto_rev"),
 
   "fletch/third_party/lk/lk-downstream":
