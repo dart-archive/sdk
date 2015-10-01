@@ -20,4 +20,12 @@ class FletchGCSNamer(bot_utils.GCSNamer):
 
   def fletch_sdk_zipfilepath(self, revision, system, arch, mode):
     return '/'.join([self.fletch_sdk_directory(revision),
-      self.fletch_sdk_zipfilename(system, arch, mode)])
+        self.fletch_sdk_zipfilename(system, arch, mode)])
+
+  def arm_binaries_zipfilename(self, mode):
+    assert mode in bot_utils.Mode.ALL_MODES
+    return 'arm-binaries-%s.zip' %  mode
+
+  def arm_binaries_zipfilepath(self, revision, mode):
+    return '/'.join([self.fletch_sdk_directory(revision),
+        self.arm_binaries_zipfilename(mode)])

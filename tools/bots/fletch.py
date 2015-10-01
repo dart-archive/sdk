@@ -140,35 +140,85 @@ def StepsSDK(debug_log, system, modes, archs):
   configurations = GetBuildConfigurations(system, modes, archs, [False],
                                           no_clang=True)
   StepGyp()
-  CrossCompile('linux', ['release'], 'xarm')
+
+  cross_mode = 'release'
+  cross_arch = 'xarm'
+  cross_system = 'linux'
+  # We only cross compile on linux
+  if system == 'linux':
+    CrossCompile(cross_system, [cross_mode], cross_arch)
+    StepsArchiveCrossCompileBundle(cross_mode, cross_arch)
+  elif system == 'mac':
+     StepsGetArmBinaries(cross_mode, cross_arch)
   for configuration in configurations:
     StepBuild(configuration['build_conf'], configuration['build_dir']);
     StepsBundleSDK(configuration['build_dir'])
     StepsArchiveSDK(configuration['build_dir'], system, configuration['mode'],
                     configuration['arch'])
 
+def GetDownloadLink(gs_path):
+  return gs_path.replace('gs://', 'http://storage.googleapis.com/')
+
+def GetNamer():
+  name, _ = bot.GetBotName()
+  channel = bot_utils.GetChannelFromName(name)
+  return fletch_namer.FletchGCSNamer(channel)
+
 def StepsBundleSDK(build_dir):
   with bot.BuildStep('Bundle sdk %s' % build_dir):
     Run(['tools/bundle_sdk.py', '--build_dir=%s' % build_dir])
 
+def CreateZip(directory, target_file):
+  with utils.ChangedWorkingDirectory(os.path.dirname(directory)):
+    if os.path.exists(target_file):
+      os.remove(target_file)
+    command = ['zip', '-yrq9', target_file, os.path.basename(directory)]
+    Run(command)
+
+def Unzip(zip_file):
+  with utils.ChangedWorkingDirectory(os.path.dirname(zip_file)):
+    Run(['unzip', os.path.basename(zip_file)])
+
+def StepsGetArmBinaries(cross_mode, cross_arch):
+  with bot.BuildStep('Get arm binaries %s' % cross_mode):
+    build_conf = GetConfigurationName(cross_mode, cross_arch, '', False)
+    build_dir = os.path.join('out', build_conf)
+    version = utils.GetSemanticSDKVersion()
+    gsutil = bot_utils.GSUtil()
+    namer = GetNamer()
+    zip_file = os.path.join('out', namer.arm_binaries_zipfilename(cross_mode))
+    if os.path.exists(zip_file):
+      os.remove(zip_file)
+    if os.path.exists(build_dir):
+      shutil.rmtree(build_dir)
+    gs_path = namer.arm_binaries_zipfilepath(version, cross_mode)
+    gsutil.execute(['cp', gs_path, zip_file])
+    Unzip(zip_file)
+
+def StepsArchiveCrossCompileBundle(cross_mode, cross_arch):
+  with bot.BuildStep('Archive arm binaries %s' % cross_mode):
+    build_conf = GetConfigurationName(cross_mode, cross_arch, '', False)
+    version = utils.GetSemanticSDKVersion()
+    namer = GetNamer()
+    gsutil = bot_utils.GSUtil()
+    zip_file = namer.arm_binaries_zipfilename(cross_mode)
+    CreateZip(os.path.join('out', build_conf), zip_file)
+    gs_path = namer.arm_binaries_zipfilepath(version, cross_mode)
+    http_path = GetDownloadLink(gs_path)
+    gsutil.upload(os.path.join('out', zip_file), gs_path, public=True)
+    print '@@@STEP_LINK@download@%s@@@' % http_path
+
+
 def StepsArchiveSDK(build_dir, system, mode, arch):
   with bot.BuildStep('Archive bundle %s' % build_dir):
-    def CreateZip(directory, target_file):
-      with utils.ChangedWorkingDirectory(os.path.dirname(directory)):
-        if os.path.exists(target_file):
-          os.remove(target_file)
-        command = ['zip', '-yrq9', target_file, os.path.basename(directory)]
-        Run(command)
     sdk = os.path.join(build_dir, 'fletch-sdk')
     zip_file = 'fletch-sdk.zip'
     CreateZip(sdk, zip_file)
     version = utils.GetSemanticSDKVersion()
-    name, _ = bot.GetBotName()
-    channel = bot_utils.GetChannelFromName(name)
-    namer = fletch_namer.FletchGCSNamer(channel)
+    namer = GetNamer()
     gsutil = bot_utils.GSUtil()
     gs_path = namer.fletch_sdk_zipfilepath(version, system, arch, mode)
-    http_path = gs_path.replace('gs://', 'http://storage.googleapis.com/')
+    http_path = GetDownloadLink(gs_path)
     gsutil.upload(os.path.join(build_dir, zip_file), gs_path, public=True)
     print '@@@STEP_LINK@download@%s@@@' % http_path
 
