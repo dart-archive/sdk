@@ -11,7 +11,8 @@ import os
 
 imp.load_source(
   'utils.dart_utils',
-  os.path.join(os.path.dirname(__file__), '../../../dart/tools/utils.py'))
+  os.path.join(
+      os.path.dirname(__file__), '../../third_party/dart/tools/utils.py'))
 
 def DartBinary():
   tools_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))

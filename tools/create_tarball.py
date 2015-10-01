@@ -126,8 +126,6 @@ def CreateTarball(tarfilename):
   with tarfile.open(tarfilename, mode='w:gz') as tar:
     for f in listdir(FLETCH_DIR):
       tar.add(join(FLETCH_DIR, f), filter=Filter)
-    tar.add(join(REPO_DIR, 'third_party'), filter=Filter)
-    tar.add(join(REPO_DIR, 'dart'), filter=Filter)
     for f in listdir(join(FLETCH_DIR, debian_dir)):
       tar.add(join(FLETCH_DIR, debian_dir, f),
               arcname='%s/debian/%s' % (versiondir, f))

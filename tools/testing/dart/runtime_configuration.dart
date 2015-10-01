@@ -49,9 +49,6 @@ class RuntimeConfiguration {
             isIncrementalCompilationEnabled:
                 configuration['enable_incremental_compilation']);
 
-      case 'fletchd':
-        return new FletchdRuntimeConfiguration();
-
       case 'fletchvm':
         return new FletchVMRuntimeConfiguration(configuration);
 
@@ -164,49 +161,6 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
         new FletchSessionCommand(
             executable, script, basicArguments, environment,
             isIncrementalCompilationEnabled)];
-  }
-}
-
-class FletchdRuntimeConfiguration extends DartVmRuntimeConfiguration {
-  List<Command> computeRuntimeCommands(
-      StandardTestSuite suite,
-      CommandBuilder commandBuilder,
-      CommandArtifact artifact,
-      String script,
-      List<String> basicArguments,
-      Map<String, String> environmentOverrides) {
-    String script = artifact.filename;
-    String type = artifact.mimeType;
-    if (script != null && type != 'application/dart') {
-      throw "Dart VM cannot run files of type '$type'.";
-    }
-    String executable;
-    List<String> arguments;
-    Map<String, String> environment;
-
-    String testFile = basicArguments[0];
-    Map options = suite.readOptionsFromFile(new Path(testFile));
-    String debuggerCommands = options["fletchDebuggerCommands"];
-    String testDebuggerArgument = "--test-debugger";
-    if (debuggerCommands.isNotEmpty) {
-      testDebuggerArgument = "$testDebuggerArgument=$debuggerCommands";
-    }
-
-    List<String> fletchArguments =
-        <String>["compile-and-run", testDebuggerArgument];
-    fletchArguments.addAll(basicArguments);
-
-    String expectationFile =
-        testFile.replaceAll("_test.dart", "_expected.txt");
-    List<int> expectedOutput = new File(expectationFile).readAsBytesSync();
-
-    executable = "${suite.buildDir}/fletch";
-    arguments = fletchArguments;
-    environment = environmentOverrides;
-    return <Command>[
-        commandBuilder.getOutputDiffingVmCommand(
-            suite.buildDir, executable, arguments, environment,
-            expectedOutput)];
   }
 }
 

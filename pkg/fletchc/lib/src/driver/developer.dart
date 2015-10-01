@@ -216,7 +216,7 @@ SessionState createSessionState(String name, Settings settings) {
       name, compilerHelper, compilerHelper.newIncrementalCompiler(), settings);
 }
 
-Future<int> run(SessionState state) async {
+Future<int> run(SessionState state, {String testDebuggerCommands}) async {
   List<FletchDelta> compilationResults = state.compilationResults;
   Session session = state.session;
   state.session = null;
@@ -225,6 +225,13 @@ Future<int> run(SessionState state) async {
 
   for (FletchDelta delta in compilationResults) {
     await session.applyDelta(delta);
+  }
+
+  if (testDebuggerCommands != null) {
+    session.silent = false;
+    await session.testDebugger(testDebuggerCommands);
+    await session.shutdown();
+    return 0;
   }
 
   await session.enableDebugger();

@@ -13,7 +13,13 @@
 # and let us know why. If you're unsure about how to reach the authors, you're
 # welcome to file an issue at https://github.com/dart-lang/fletch/issues/new.
 
-fletch_file=.fletch
+# Using ~ instead of $HOME as this should match what the fletch command does
+# (it will fall back to getpwuid_r if HOME isn't defined).
+fletch_file=~/.fletch
+
+if [ -f "$FLETCH_SOCKET_FILE" ]; then
+  fletch_file="$FLETCH_SOCKET_FILE"
+fi
 
 for argument in "$@"; do
   case "$argument" in

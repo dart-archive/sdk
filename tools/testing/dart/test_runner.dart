@@ -371,36 +371,6 @@ class VmCommand extends ProcessCommand {
       : super._("vm", executable, arguments, environmentOverrides);
 }
 
-class OutputDiffingVmCommand extends VmCommand {
-  final String buildDir;
-  final List<int> expectedOutput;
-
-  OutputDiffingVmCommand._(this.buildDir,
-                           String executable,
-                           List<String> arguments,
-                           Map<String, String> environmentOverrides,
-                           this.expectedOutput)
-      : super._(executable, arguments, environmentOverrides);
-
-  void _buildHashCode(HashCodeBuilder builder) {
-    super._buildHashCode(builder);
-    builder.add(buildDir);
-    builder.add(expectedOutput);
-  }
-
-  bool _equal(Command other) {
-    if (other is OutputDiffingVmCommand) {
-      if (other.buildDir != buildDir) return false;
-      if (other.expectedOutput.length != expectedOutput.length) return false;
-      for (int i = 0; i < expectedOutput.length; i++) {
-        if (other.expectedOutput[i] != expectedOutput[i]) return false;
-      }
-      return super._equal(other);
-    }
-    return false;
-  }
-}
-
 class JSCommandlineCommand extends ProcessCommand {
   JSCommandlineCommand._(String displayName,
                          String executable,
@@ -676,17 +646,6 @@ class CommandBuilder {
                          Map<String, String> environmentOverrides) {
     var command = new VmCommand._(executable, arguments, environmentOverrides);
     return _getUniqueCommand(command);
-  }
-
-  VmCommand getOutputDiffingVmCommand(String buildDir,
-                                      String executable,
-                                      List<String> arguments,
-                                      Map<String, String> environmentOverrides,
-                                      List<int> expectedOutput) {
-      var command = new OutputDiffingVmCommand._(
-          buildDir, executable, arguments, environmentOverrides,
-          expectedOutput);
-      return _getUniqueCommand(command);
   }
 
   Command getJSCommandlineCommand(String displayName, executable, arguments,
@@ -1579,73 +1538,6 @@ class VmCommandOutputImpl extends CommandOutputImpl
       : super(command, exitCode, timedOut, stdout, stderr, time, false, pid);
 }
 
-class OutputDiffingVmCommandOutputImpl extends VmCommandOutputImpl {
-  OutputDiffingVmCommandOutputImpl(
-      OutputDiffingVmCommand command, int exitCode, bool timedOut,
-      List<int> stdout, List<int> stderr,
-      Duration time, int pid)
-      : super(command, exitCode, timedOut, stdout, stderr, time, pid);
-
-  OutputDiffingVmCommand get command => super.command;
-
-  bool _printedDiagnostics = false;
-
-  Expectation result(TestCase testCase) {
-
-    List<String> expectedLines =
-        UTF8.decode(command.expectedOutput)
-            .replaceAll('out/ReleaseIA32', command.buildDir)
-            .split('\n');
-
-    List<String> stdoutLines = UTF8.decode(stdout).split('\n');
-
-    void printExpectationDiagnosticsFailure() {
-      if (_printedDiagnostics) return;
-      _printedDiagnostics = true;
-
-      diagnostics.add(
-          'Matching debugger output with expectation file failed:');
-
-      var commonLines = math.min(expectedLines.length, stdoutLines.length);
-      for (int i = 0; i < commonLines; i++) {
-        if (expectedLines[i] != stdoutLines[i]) {
-          diagnostics.add('First mismatch on line $i:');
-          diagnostics.add('  Expected:');
-          diagnostics.add('    "${expectedLines[i]}"');
-          diagnostics.add('  Actual:');
-          diagnostics.add('    "${stdoutLines[i]}"');
-          diagnostics.add('');
-          break;
-        }
-      }
-      diagnostics.add(
-          'Expected ${expectedLines.length} lines, got ${stdoutLines.length} '
-          'lines.');
-    }
-
-    Expectation outcome = super.result(testCase);
-    if (expectedLines.length != stdoutLines.length) {
-      printExpectationDiagnosticsFailure();
-      return Expectation.OUTPUT_MISMATCH;
-    }
-    for (int i = 0; i < expectedLines.length; i++) {
-      if (expectedLines[i] != stdoutLines[i]) {
-        printExpectationDiagnosticsFailure();
-        return Expectation.OUTPUT_MISMATCH;
-      }
-    }
-    if (outcome != Expectation.PASS) {
-      if (!_printedDiagnostics) {
-        _printedDiagnostics = true;
-        diagnostics.add('Normal failure (not due to wrong expectation file)');
-        diagnostics.add('Exit code was: $exitCode');
-      }
-      return outcome;
-    }
-    return Expectation.PASS;
-  }
-}
-
 class CompilationCommandOutputImpl extends CommandOutputImpl {
   static const DART2JS_EXITCODE_CRASH = 253;
 
@@ -1771,9 +1663,6 @@ CommandOutput createCommandOutput(Command command,
     return new FletchWarningsOutputCommand(
         command, exitCode, timedOut, stdout, stderr,
         time, compilationSkipped);
-  } else if (command is OutputDiffingVmCommand) {
-    return new OutputDiffingVmCommandOutputImpl(
-        command, exitCode, timedOut, stdout, stderr, time, pid);
   } else if (command is VmCommand) {
     return new VmCommandOutputImpl(
         command, exitCode, timedOut, stdout, stderr, time, pid);

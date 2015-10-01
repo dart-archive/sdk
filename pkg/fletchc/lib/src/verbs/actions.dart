@@ -13,9 +13,6 @@ import 'infrastructure.dart' show
 import 'attach_verb.dart' show
     attachAction;
 
-import 'compile_and_run_verb.dart' show
-    compileAndRunAction;
-
 import 'compile_verb.dart' show
     compileAction;
 
@@ -109,7 +106,6 @@ const Map<String, Action> commonActions = const <String, Action>{
 /// These verbs are displayed when running `fletch help all`.
 const Map<String, Action> uncommonActions = const <String, Action>{
   "compile": compileAction,
-  "compile-and-run": compileAndRunAction,
   "create": createAction,
   "debug": debugAction,
   "shutdown": shutdownAction,

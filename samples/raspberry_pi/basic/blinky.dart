@@ -8,7 +8,7 @@
 import 'package:gpio/gpio.dart';
 import 'package:os/os.dart';
 
-main(List<String> args) {
+main() {
   // Constant for the Raspberry Pi 2 onboard green LED.
   const int led = 47;
 

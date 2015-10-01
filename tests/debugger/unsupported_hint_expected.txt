@@ -1,19 +1,11 @@
-tests/debugger/unsupported_hint_test.dart:7:9:
-Hint: 'runtimeType' isn't supported in Fletch. See https://goo.gl/ELH6Zc
-var x = 12.runtimeType;
-        ^^^^^^^^^^^^^^
 Starting session. Type 'help' for a list of commands.
 
 > r
 Uncaught exception:
 a OneByteString: "'runtimeType' isn't supported in Fletch. See https://goo.gl/ELH6Zc"
 
-tests/debugger/unsupported_hint_test.dart:7:9:
-Hint: 'runtimeType' isn't supported in Fletch. See https://goo.gl/ELH6Zc
-var x = 12.runtimeType;
-        ^^^^^^^^^^^^^^
 Stack trace:
 > 0: x lazy initializer	@12.runtimeType
   1: main              	@x
 > q
-Non-zero exit code from 'out/ReleaseIA32/fletch-vm' (255).
+Non-zero exit code from 'fletch-vm' (255).

@@ -6,6 +6,7 @@
 #include <libgen.h>
 #include <limits.h>
 #include <math.h>
+#include <pwd.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,11 +56,19 @@ static const int COMPILER_CRASHED = 253;
 
 static char* program_name = NULL;
 
+// The file where this program looks for the name of the socket for talking to
+// the persistent process. Controlled by user by setting environment variable
+// FLETCH_SOCKET_FILE.
 static char fletch_config_file[MAXPATHLEN];
 
+// The name of socket that was read from [fletch_config_file].
 static char fletch_socket_file[MAXPATHLEN];
 
 static const char fletch_config_name[] = ".fletch";
+
+static const char fletch_config_env_name[] = "FLETCH_SOCKET_FILE";
+
+static const char* fletch_config_location = NULL;
 
 static int fletch_config_fd;
 
@@ -76,6 +85,14 @@ void Die(const char* format, ...) {
   va_end(args);
   fprintf(stderr, "\n");
   exit(255);
+}
+
+static char* StrAlloc(size_t size) {
+  char* result = static_cast<char*>(calloc(size, sizeof(char)));
+  if (result == NULL) {
+    Die("%s: malloc failed: %s", program_name, strerror(errno));
+  }
+  return result;
 }
 
 static void StrCpy(
@@ -171,42 +188,56 @@ void ParentDir(char* directory) {
 //
 // * fletch_config_file
 //
-// We search for a file named fletch_config_name in the current directory. If
-// such a file doesn't exist, traverse parent directories until a file is
-// found. Stop traversing parent directories if its device is different from
-// current directory. If no file is found, assume it should be created in the
-// current directory.
+// We first look for an environment variable named FLETCH_SOCKET_FILE. If
+// defined, it gives the value of fletch_config_file.
+//
+// If FLETCH_SOCKET_FILE isn't defined, we look for the environment variable
+// HOME, if defined, the value of fletch_config_file becomes "${HOME}/.fletch".
+//
+// If HOME isn't defined, we find the user's home directory via getpwuid_r.
 static void DetectConfiguration() {
-  char cwd[MAXPATHLEN + 1];
-  char directory[MAXPATHLEN + 1];
-  char path[MAXPATHLEN + 1];
-
-  if (getcwd(cwd, sizeof(directory)) == NULL) {
-    Die("%s: Unable to read current directory: %s",
-        program_name, strerror(errno));
+  // First look for the environment variable FLETCH_SOCKET_FILE.
+  char* fletch_config_env = getenv(fletch_config_env_name);
+  if (fletch_config_env != NULL) {
+    fletch_config_location = fletch_config_env_name;
+    StrCpy(fletch_config_file, sizeof(fletch_config_file),
+           fletch_config_env, strlen(fletch_config_env) + 1);
+    return;
   }
-  // TODO(ahe): Use StrCat or StrCpy instead.
-  strncpy(directory, cwd, MAXPATHLEN);
 
-  dev_t starting_device = GetDevice(cwd);
+  // Then look for the environment variable HOME.
+  char* home_env = getenv("HOME");
+  if (home_env != NULL) {
+    fletch_config_location = "HOME";
+    FletchConfigFile(fletch_config_file, home_env);
+    return;
+  }
 
-  do {
-    FletchConfigFile(path, directory);
+  // Fall back to getpwuid_r for obtaining the home directory.
+  int pwd_buffer_size = sysconf(_SC_GETPW_R_SIZE_MAX);
+  if (pwd_buffer_size == -1) {
+    // On Linux, we can't guarantee a sensible return value. So let's assume
+    // that each char* in struct passwd are less than MAXPATHLEN. There are 5
+    // of those, and then one extra for null-termination and good measure.
+    pwd_buffer_size = MAXPATHLEN * 6;
+  }
+  char* pwd_buffer = StrAlloc(pwd_buffer_size);
 
-    if (FileExists(path)) {
-      // TODO(ahe): Use StrCat or StrCpy instead.
-      strncpy(fletch_config_file, path, MAXPATHLEN);
-      return;
-    }
-    if (strlen(directory) == 1) {
-      break;
-    }
-    ParentDir(directory);
-  } while (starting_device == GetDevice(directory));
-
-  FletchConfigFile(path, cwd);
-  // TODO(ahe): Use StrCat or StrCpy instead.
-  strncpy(fletch_config_file, path, MAXPATHLEN);
+  struct passwd pwd;
+  struct passwd* result = NULL;
+  int error_code =
+    getpwuid_r(getuid(), &pwd, pwd_buffer, pwd_buffer_size, &result);
+  if (error_code != 0) {
+    Die("%s: Unable to determine home directory: %s",
+        program_name, strerror(error_code));
+  }
+  if (result == NULL) {
+    Die("%s: Unable to determine home directory: Entry for user not found.",
+        program_name);
+  }
+  fletch_config_location = "/etc/passwd";
+  FletchConfigFile(fletch_config_file, pwd.pw_dir);
+  free(pwd_buffer);
 }
 
 // Opens and locks the config file named by fletch_config_file and initialize
@@ -215,8 +246,9 @@ static void LockConfigFile() {
   int fd = TEMP_FAILURE_RETRY(
       open(fletch_config_file, O_RDONLY | O_CREAT, S_IRUSR | S_IWUSR));
   if (fd == -1) {
-    Die("%s: Unable open '%s' failed: %s.", program_name, fletch_config_file,
-        strerror(errno));
+    Die("%s: Unable to open '%s' failed: %s.\nTry checking the value of '%s'.",
+        program_name, fletch_config_file, strerror(errno),
+        fletch_config_location);
   }
 
   if (TEMP_FAILURE_RETRY(flock(fd, LOCK_EX)) == -1) {
@@ -400,10 +432,7 @@ static void StartDriverDaemon() {
   const char define_version[] = "-Dfletch.version=";
   const char* version = GetVersion();
   int version_option_length = sizeof(define_version) + strlen(version) + 1;
-  char* version_option = static_cast<char*>(malloc(version_option_length));
-  if (version_option == NULL) {
-    Die("%s: malloc failed: %s", program_name, strerror(errno));
-  }
+  char* version_option = StrAlloc(version_option_length);
   StrCpy(version_option, version_option_length,
          define_version, sizeof(define_version));
   StrCat(version_option, version_option_length,
@@ -563,7 +592,7 @@ static void WaitForDaemonHandshake(
     int ready_count =
         TEMP_FAILURE_RETRY(select(max_fd + 1, &readfds, NULL, NULL, NULL));
     if (ready_count < 0) {
-      fprintf(stderr, "%s: select error: %s", program_name, strerror(errno));
+      fprintf(stderr, "%s: select error: %s\n", program_name, strerror(errno));
       break;
     } else if (ready_count == 0) {
       // Timeout, shouldn't happen.
@@ -624,10 +653,7 @@ static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   buffer.WriteInt(argc + 2);  // Also current directory, and absolute path to
                               // program.
 
-  char* path = static_cast<char*>(malloc(MAXPATHLEN + 1));
-  if (path == NULL) {
-    Die("%s: malloc failed: %s", program_name, strerror(errno));
-  }
+  char* path = StrAlloc(MAXPATHLEN + 1);
 
   if (getcwd(path, MAXPATHLEN + 1) == NULL) {
     Die("%s: getcwd failed: %s", path, strerror(errno));
@@ -637,10 +663,7 @@ static void SendArgv(DriverConnection* connection, int argc, char** argv) {
 
   // argv[0] is the name of the executable before path search. But the driver
   // needs the absolute location provided by GetPathOfExecutable/realpath.
-  char* relative_path = static_cast<char*>(malloc(MAXPATHLEN + 1));
-  if (relative_path == NULL) {
-    Die("%s: malloc failed: %s", relative_path, strerror(errno));
-  }
+  char* relative_path = StrAlloc(MAXPATHLEN + 1);
   GetPathOfExecutable(relative_path, MAXPATHLEN + 1);
   if (realpath(relative_path, path) == NULL) {
     Die("%s: realpath of '%s' failed: %s", program_name, relative_path,
@@ -777,7 +800,7 @@ static int Main(int argc, char** argv) {
     int ready_count =
         TEMP_FAILURE_RETRY(select(max_fd + 1, &readfds, NULL, NULL, NULL));
     if (ready_count < 0) {
-      fprintf(stderr, "%s: select error: %s", program_name, strerror(errno));
+      fprintf(stderr, "%s: select error: %s\n", program_name, strerror(errno));
       break;
     } else if (ready_count == 0) {
       // Timeout, shouldn't happen.

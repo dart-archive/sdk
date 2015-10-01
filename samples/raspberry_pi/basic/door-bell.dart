@@ -10,7 +10,7 @@
 import 'package:gpio/gpio.dart';
 import 'package:os/os.dart';
 
-main(List<String> args) {
+main() {
   // GPIO pin constants.
   const int button = 16;
   const int speaker = 21;
