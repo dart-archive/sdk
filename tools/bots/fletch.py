@@ -498,7 +498,7 @@ class PersistentFletchDaemon(object):
   def __enter__(self):
     print "Starting new persistent fletch daemon"
     version = utils.GetSemanticSDKVersion()
-    fletchrc = os.path.join(os.path.abspath(os.environ['HOME'], '.fletch'))
+    fletchrc = os.path.join(os.path.abspath(os.environ['HOME']), '.fletch')
     self._persistent = subprocess.Popen(
       [os.path.join(os.path.abspath(self._configuration['build_dir']), 'dart'),
        '-c',
