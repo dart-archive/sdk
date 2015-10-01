@@ -1,13 +1,15 @@
 This license applies to all parts of Fletch with the following exceptions:
 
-- All code in the [third_party](third_party/)
-  directory is externally maintained libraries with separate licenses.
+- All code in the /third_party/ directory is externally maintained libraries
+  with separate licenses.
 
 - All code with copyright "the Dart project authors" is copied from
-  http://dart.googlecode.com. Please see the
-  [Dart project LICENSE file](http://code.google.com/p/dart/source/browse/branches/bleeding_edge/dart/LICENSE)
-  and the [Dart project AUTHORS file](http://code.google.com/p/dart/source/browse/branches/bleeding_edge/dart/AUTHORS)
-  for details.
+    https://github.com/dart-lang/sdk.
+
+  For details, please see the Dart License file:
+    https://raw.githubusercontent.com/dart-lang/sdk/master/LICENSE
+  and the Dart project AUTHORS file:
+    https://raw.githubusercontent.com/dart-lang/sdk/master/AUTHORS
 
 ---
 
