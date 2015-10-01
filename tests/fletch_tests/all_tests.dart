@@ -29,6 +29,8 @@ import '../servicec/servicec_tests.dart' as servicec_tests;
 
 import '../fletchc/run.dart' as run;
 
+import '../debugger/debugger_tests.dart' as debugger_tests;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -59,6 +61,9 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
 
   // Slow tests, should run early so we don't wait for them.
   'incremental/*': incremental.listTests,
+
+  // Slow tests, should run early so we don't wait for them.
+  'debugger/*': debugger_tests.listTests,
 
   'controlStream/testControlStream': controlStream.testControlStream,
 

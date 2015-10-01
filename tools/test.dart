@@ -72,10 +72,6 @@ final DART_SDK_TEST_SUITE_DIRECTORIES = [
     new Path('tests/language'),
 ];
 
-final DEBUGGER_TEST_SUITE_DIRECTORIES = [
-    new Path('tests/debugger')
-];
-
 final CC_TEST_SUITE_DIRECTORIES = [
     new Path('tests/cc_tests')
 ];
@@ -210,14 +206,6 @@ void testConfigurations(List<Map> configurations) {
       print(conf);
       var suite_path = new Path(conf['suite_dir']);
       testSuites.add(new PKGTestSuite(conf, suite_path));
-    } else if (conf['runtime'] == 'fletchd') {
-      for (final testSuiteDir in DEBUGGER_TEST_SUITE_DIRECTORIES) {
-        final name = testSuiteDir.filename;
-        if (selectors.containsKey(name)) {
-          testSuites.add(
-            new StandardTestSuite.forDirectory(conf, testSuiteDir));
-        }
-      }
     } else if (conf['runtime'] == 'fletch_cc_tests') {
       for (final testSuiteDir in CC_TEST_SUITE_DIRECTORIES) {
         final name = testSuiteDir.filename;

@@ -1,11 +1,3 @@
-tests/debugger/restart_compile_time_error_test.dart:9:3:
-Error: Expected an expression, but got 'default'.
-  default;
-  ^^^^^^^
-tests/debugger/restart_compile_time_error_test.dart:14:3:
-Warning: Cannot resolve getter.
-  fiskHest();  // compile-time error
-  ^^^^^^^^
 Starting session. Type 'help' for a list of commands.
 
 > r
@@ -19,4 +11,4 @@ Compile error
 Stack trace:
 > 0: main        	@fiskHest()
 > q
-Non-zero exit code from 'out/ReleaseIA32/fletch-vm' (254).
+Non-zero exit code from 'fletch-vm' (254).
