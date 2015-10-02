@@ -23,13 +23,12 @@ main() {
   // Initialize button pin. Enable a button down trigger.
   gpio.exportPin(button);
   gpio.setMode(button, Mode.input);
-  gpio.setTrigger(button, Trigger.falling);
+  gpio.setTrigger(button, Trigger.both);
 
   // Continuously monitor button.
   while (true) {
     // Wait for button press.
-    // TODO(mit-mit): Update to new event API when it lands.
-    gpio.waitFor(button, -1);
+    gpio.waitFor(button, true, -1);
 
     // Sound bell
     for (var i = 1; i <= 3; i++) {
