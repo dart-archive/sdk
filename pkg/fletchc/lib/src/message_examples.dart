@@ -147,6 +147,19 @@ List<Example> getExamples(DiagnosticKind kind) {
           new CommandLineExample(
               <String>['export'])];
 
+    case DiagnosticKind.unknownOption:
+      return <Example>[
+          new CommandLineExample(<String>['help', '--fisk']),
+          new CommandLineExample(<String>['--compile-and-run', 'test.dart'])];
+
+    case DiagnosticKind.missingRequiredArgument:
+      return <Example>[new CommandLineExample(
+            <String>['run', '--test-debugger'])];
+
+    case DiagnosticKind.unexpectedArgument:
+      return <Example>[new CommandLineExample(
+            <String>['help', '--version=fisk'])];
+
     case DiagnosticKind.settingsCompileTimeConstantAsOption:
       return <Example>[new SettingsExample('{"options":["-Dfoo=bar"]}')];
 
@@ -187,7 +200,6 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.unknownAction:
       return <Example>[
           new CommandLineExample(<String>['blah']),
-          new CommandLineExample(<String>['--compile-and-run', 'test.dart']),
           new CommandLineExample(<String>['test.dart'])];
 
     case DiagnosticKind.extraArguments:
@@ -237,6 +249,10 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.verbRequiresTargetButGot:
       // TODO(ahe): Add test for this.
       return untestable;
+
+    case DiagnosticKind.expectedTargetButGot:
+      return <Example>[new CommandLineExample(
+            <String>['export', 'hello.dart', 'to', 'hello'])];
   }
 }
 

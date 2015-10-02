@@ -18,6 +18,7 @@ import 'package:compiler/src/filenames.dart' show
 
 // Don't export most of these.
 import '../driver/sentence_parser.dart' show
+    ErrorTarget,
     NamedTarget,
     Preposition,
     PrepositionKind,
@@ -96,13 +97,45 @@ import 'actions.dart' show
 export 'actions.dart' show
     Action;
 
+import 'options.dart' show
+    Options;
+
+export 'options.dart' show
+    Options;
+
 import 'documentation.dart' show
     helpDocumentation;
 
-AnalyzedSentence analyzeSentence(Sentence sentence) {
+import '../please_report_crash.dart' show
+    fletchVersion;
+
+void reportErroneousTarget(ErrorTarget target) {
+  throwFatalError(target.errorKind, userInput: target.userInput);
+}
+
+AnalyzedSentence helpSentence(String message) {
+  Future<int> printHelp(_,__) async {
+    print(message);
+    return 0;
+  }
+  Action contextHelp = new Action(printHelp, null);
+  return new AnalyzedSentence(
+      new Verb("?", contextHelp), null, null, null, null, null, null,
+      null, null, null);
+}
+
+AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
+  if (options != null && options.version) {
+    return helpSentence(fletchVersion);
+  }
   if (sentence.verb.isErroneous) {
     sentence.verb.action.perform(null, null);
   }
+  sentence.targets.where((Target t) => t.isErroneous)
+      .forEach(reportErroneousTarget);
+  sentence.prepositions.map((p) => p.target).where((Target t) => t.isErroneous)
+      .forEach(reportErroneousTarget);
+
   Uri base = Uri.base;
   if (sentence.currentDirectory != null) {
     base = fileUri(appendSlash(sentence.currentDirectory), base);
@@ -113,13 +146,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence) {
 
   for (Target target in sentence.targets) {
     if (target.kind == TargetKind.HELP) {
-      Action contextHelp = new Action((_,__) async {
-        print(action.documentation);
-        return 0;
-      }, null);
-      return new AnalyzedSentence(
-        new Verb(verb.name, contextHelp), null, null, null, null, null, null,
-        null, null, null);
+      return helpSentence(action.documentation);
     }
   }
 

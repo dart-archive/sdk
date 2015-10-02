@@ -16,8 +16,10 @@ enum DiagnosticKind {
   duplicatedTo,
   duplicatedWith,
   expectedAPortNumber,
+  expectedTargetButGot,
   extraArguments,
   internalError,
+  missingRequiredArgument,
   missingToFile,
   noFileTarget,
   noSuchSession,
@@ -37,7 +39,9 @@ enum DiagnosticKind {
   socketAgentReplyError,
   socketVmConnectError,
   socketVmReplyError,
+  unexpectedArgument,
   unknownAction,
+  unknownOption,
   verbDoesNotSupportTarget,
   verbDoesntSupportTarget,
   verbRequiresFileTarget,
@@ -161,6 +165,20 @@ String getMessage(DiagnosticKind kind) {
       return "No destination file provided. "
           "Try adding 'to <FILE_NAME>' to the command line";
 
+    case DiagnosticKind.unknownOption:
+      // TODO(lukechurch): Review UX.
+      return "Unknown option: '$userInput'";
+
+    case DiagnosticKind.missingRequiredArgument:
+      // TODO(lukechurch): Review UX
+      return "Option '${DiagnosticParameter.userInput}' needs an argument. "
+          "Is something missing from the command line?";
+
+    case DiagnosticKind.unexpectedArgument:
+      // TODO(lukechurch): Review UX
+      return "Option '${DiagnosticParameter.userInput}' doesn't take an "
+          "argument. Try removing '=' from the command line";
+
     case DiagnosticKind.settingsNotAMap:
       return "$uri: isn't a map";
 
@@ -225,5 +243,9 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.verbRequiresTargetButGot:
       return "Can't perform '$verb' without '$requiredTarget', "
           "but got: '$target'";
+
+    case DiagnosticKind.expectedTargetButGot:
+      return "Expected 'session(s)', 'class(s)', 'method(s)', 'file(s)', "
+          "or 'all', but got: '$userInput'. Did you mean 'file $userInput'";
   }
 }

@@ -224,9 +224,7 @@ class SentenceParser {
         return makeTarget(TargetKind.HELP);
 
       default:
-        return new ErrorTarget(
-            "Expected 'session(s)', 'class(s)', 'method(s)', 'file(s)', "
-            "or 'all', but got: ${quoteString(word)}.");
+        return new ErrorTarget(DiagnosticKind.expectedTargetButGot, word);
     }
   }
 
@@ -337,6 +335,8 @@ class Target {
 
   const Target(this.kind);
 
+  bool get isErroneous => false;
+
   String toString() => "Target($kind)";
 }
 
@@ -385,12 +385,15 @@ class NamedTarget extends Target {
 }
 
 class ErrorTarget extends Target {
-  final String message;
+  final DiagnosticKind errorKind;
+  final String userInput;
 
-  const ErrorTarget(this.message)
+  const ErrorTarget(this.errorKind, this.userInput)
       : super(null);
 
-  String toString() => "ErrorTarget(${quoteString(message)})";
+  bool get isErroneous => true;
+
+  String toString() => "ErrorTarget($errorKind, ${quoteString(userInput)})";
 }
 
 /// A sentence is a written command to fletch. Normally, this command is

@@ -8,140 +8,220 @@ import '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
 
+typedef R ArgumentParser<R>(String argument);
+
+enum OptionKind {
+  help,
+  verbose,
+  version,
+  testDebugger,
+  define,
+
+  /// Not an option
+  none,
+}
+
+const List<Option> supportedOptions = const <Option>[
+  const Option(OptionKind.help, const ['h', '?'], const ['help', 'usage']),
+  const Option(OptionKind.verbose, 'v', 'verbose'),
+  const Option(OptionKind.version, null, 'version'),
+  const Option(
+      OptionKind.testDebugger, null, 'test-debugger', requiresArgument: true,
+      parseArgument: parseCommaSeparatedList),
+];
+
+final Map<String, Option> shortOptions = computeShortOptions();
+
+final Map<String, Option> longOptions = computeLongOptions();
+
+const String StringOrList =
+    "Type of annotation object is either String or List<String>";
+
+class Option {
+  final OptionKind kind;
+
+  @StringOrList final shortName;
+
+  @StringOrList final longName;
+
+  final bool requiresArgument;
+
+  final ArgumentParser<dynamic> parseArgument;
+
+  final DiagnosticKind missingArgumentDiagnostic;
+
+  const Option(
+      this.kind,
+      this.shortName,
+      this.longName,
+      {this.requiresArgument: false,
+       this.parseArgument,
+       this.missingArgumentDiagnostic: DiagnosticKind.missingRequiredArgument});
+
+  String toString() {
+    return "Option($kind, $shortName, $longName, "
+        "requiresArgument: $requiresArgument, "
+        "missingArgumentDiagnostic: $missingArgumentDiagnostic)";
+  }
+}
+
+List<String> parseCommaSeparatedList(String argument) {
+  argument = argument.trim();
+  if (argument.isEmpty) return <String>[];
+  return argument.split(',').map((String e) => e.trim()).toList();
+}
+
+Map<String, Option> computeShortOptions() {
+  Map<String, Option> result = <String, Option>{};
+  for (Option option in supportedOptions) {
+    var shortName = option.shortName;
+    if (shortName == null) {
+      continue;
+    } else if (shortName is String) {
+      result[shortName] = option;
+    } else {
+      List<String> shortNames = shortName;
+      for (String name in shortNames) {
+        result[name] = option;
+      }
+    }
+  }
+  return result;
+}
+
+Map<String, Option> computeLongOptions() {
+  Map<String, Option> result = <String, Option>{};
+  for (Option option in supportedOptions) {
+    var longName = option.longName;
+    if (longName == null) {
+      continue;
+    } else if (longName is String) {
+      result[longName] = option;
+    } else {
+      List<String> longNames = longName;
+      for (String name in longNames) {
+        result[name] = option;
+      }
+    }
+  }
+  return result;
+}
+
 class Options {
-  final String script;
-  final String snapshotPath;
-  final bool debugging;
-  final bool testDebugger;
-  final String testDebuggerCommands;
-  final String packageConfigPath;
-  final String attachArgument;
-  final bool connectToExistingVm;
-  final int existingVmPort;
-  final List<String> defines;  // List of all -D options.
+  final bool help;
+  final bool verbose;
+  final bool version;
+  final List<String> testDebuggerCommands;
+  final Map<String, String> defines;
+  final List<String> nonOptionArguments;
 
   Options(
-      this.script,
-      this.snapshotPath,
-      this.debugging,
-      this.testDebugger,
+      this.help,
+      this.verbose,
+      this.version,
       this.testDebuggerCommands,
-      this.packageConfigPath,
-      this.attachArgument,
-      this.connectToExistingVm,
-      this.existingVmPort,
-      this.defines);
-
-  static final RegExp defineFlagPattern = new RegExp('^-D.+=.*\$');
+      this.defines,
+      this.nonOptionArguments);
 
   /// Parse [options] which is a list of command-line arguments, such as those
   /// passed to `main`.
   static Options parse(Iterable<String> options) {
-    String script;
-    String snapshotPath;
-    bool debugging = false;
-    bool testDebugger = false;
-    String testDebuggerCommands = "";
-    String packageConfigPath = ".packages";
-    String attachArgument;
-    bool connectToExistingVm = false;
-    int existingVmPort = 0;
-    List<String> defines = <String>[];
+    bool help = false;
+    bool verbose = false;
+    bool version = false;
+    List<String> testDebuggerCommands;
+    Map<String, String> defines = <String, String>{};
+    List<String> nonOptionArguments = <String>[];
 
     Iterator<String> iterator = options.iterator;
-    String getRequiredArgument(String errorMessage) {
-      if (iterator.moveNext()) {
-        return iterator.current;
-      } else {
-        // TODO(ahe): Improve error recovery.
-        throwFatalError(
-            DiagnosticKind.missingRequiredArgument,
-            message: errorMessage);
-      }
-    }
 
     while (iterator.moveNext()) {
-      String option = iterator.current;
-      switch (option) {
-        case '-o':
-        case '--out':
-          snapshotPath = getRequiredArgument(
-              "The option '$option' requires a file name.");
+      String optionString = iterator.current;
+      OptionKind kind;
+      var parsedArgument;
+      if (optionString.startsWith("-D")) {
+        // Define.
+        kind = OptionKind.define;
+      } else if (optionString.startsWith("-")) {
+        String name;
+        Option option;
+        String argument;
+        if (optionString.startsWith("--")) {
+          // Long option.
+          int equalIndex = optionString.indexOf("=", 2);
+          if (equalIndex != -1) {
+            argument = optionString.substring(equalIndex + 1);
+            name = optionString.substring(2, equalIndex);
+          } else {
+            name = optionString.substring(2);
+          }
+          option = longOptions[name];
+        } else {
+          // Short option.
+          name = optionString.substring(1);
+          option = shortOptions[name];
+        }
+
+        if (option == null) {
+          throwFatalError(
+              DiagnosticKind.unknownOption, userInput: optionString);
+        } else if (option.requiresArgument) {
+          if (argument == null && iterator.moveNext()) {
+            argument = iterator.current;
+            if (argument == "=") {
+              argument = null;
+              if (iterator.moveNext()) {
+                argument = iterator.current;
+              }
+            }
+          }
+          if (argument == null) {
+            // TODO(ahe): Improve error recovery, don't throw.
+            throwFatalError(option.missingArgumentDiagnostic, userInput: name);
+          }
+          parsedArgument = option.parseArgument == null
+              ? argument : option.parseArgument(argument);
+        } else if (argument != null) {
+          assert(!option.requiresArgument);
+          // TODO(ahe): Pass what should be removed as additionalUserInput, for
+          // example, if saying `--help=fisk`, [userInput] should be `help`,
+          // and [additionalUserInput] should be `=fisk`.
+          throwFatalError(DiagnosticKind.unexpectedArgument, userInput: name);
+        }
+        kind = option.kind;
+      } else {
+        nonOptionArguments.add(optionString);
+        kind = OptionKind.none;
+      }
+
+      switch (kind) {
+        case OptionKind.help:
+          help = true;
           break;
 
-        case '-d':
-        case '--debug':
-          debugging = true;
+        case OptionKind.verbose:
+          verbose = true;
           break;
 
-        case '--test-debugger':
-          testDebugger = true;
+        case OptionKind.version:
+          version = true;
           break;
 
-        case '--packages':
-          packageConfigPath = getRequiredArgument(
-              "The option '$option' requires a file name.");
+        case OptionKind.testDebugger:
+          testDebuggerCommands.addAll(parsedArgument);
           break;
 
-        case '-a':
-        case '--attach':
-          attachArgument = getRequiredArgument(
-              "The option '$option' requires host name and port number in the "
-              "form of host:port.");
+        case OptionKind.define:
+          testDebuggerCommands[parsedArgument.name] = parsedArgument.value;
           break;
 
-        // TODO(ahe): Remove this option (use --attach instead).
-        case '--port':
-          connectToExistingVm = true;
-          existingVmPort = int.parse(
-              getRequiredArgument(
-                  "The option '$option' requires a port number."));
-          break;
-
-        default:
-          const String packageConfigFlag = '--packages=';
-          if (option.startsWith(packageConfigFlag)) {
-            packageConfigPath = option.substring(packageConfigFlag.length);
-            break;
-          }
-
-          const String testDebuggerFlag = '--test-debugger=';
-          if (option.startsWith(testDebuggerFlag)) {
-            testDebugger = true;
-            testDebuggerCommands = option.substring(testDebuggerFlag.length);
-            break;
-          }
-
-          const String portFlag = '--port=';
-          if (option.startsWith(portFlag)) {
-            connectToExistingVm = true;
-            existingVmPort = int.parse(option.substring(portFlag.length));
-            break;
-          }
-
-          const String attachFlag = '--attach=';
-          if (option.startsWith(attachFlag)) {
-            attachArgument = option.substring(attachFlag.length);
-            break;
-          }
-
-          if (defineFlagPattern.firstMatch(option) != null) {
-            defines.add(option.substring(2));
-            break;
-          }
-
-          if (script != null || option.startsWith("-")) {
-            throwFatalError(DiagnosticKind.unknownOption, userInput: option);
-          }
-
-          script = option;
+        case OptionKind.none:
           break;
       }
     }
 
     return new Options(
-        script, snapshotPath, debugging, testDebugger, testDebuggerCommands,
-        packageConfigPath, attachArgument, connectToExistingVm, existingVmPort,
-        defines);
+        help, verbose, version, testDebuggerCommands, defines,
+        nonOptionArguments);
   }
 }

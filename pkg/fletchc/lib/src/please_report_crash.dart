@@ -4,9 +4,11 @@
 
 library fletchc.please_report_crash;
 
+const String fletchVersion = const String.fromEnvironment(
+    "fletch.version", defaultValue: "version information not available");
+
 bool crashReportRequested = false;
 
-// TODO(ahe): Include build ID.
 const String requestBugReportOnCompilerCrashMessage = """
 The Fletch compiler is broken.
 
@@ -21,11 +23,12 @@ Please include the following information:
 
 * the name and version of your operating system
 
+* the Fletch SDK version ($fletchVersion)
+
 * the entire message you see here (including the full stack trace
   below as well as the source location above)
 """;
 
-// TODO(ahe): Include build ID.
 const String requestBugReportOnOtherCrashMessage = """
 The Fletch program is broken and has crashed.
 
@@ -35,6 +38,8 @@ report this problem at https://github.com/dart-lang/fletch/issues/new
 Please include the following information:
 
 * the name and version of your operating system
+
+* the Fletch SDK version ($fletchVersion)
 
 * the entire message you see here (including the full stack trace below)
 """;

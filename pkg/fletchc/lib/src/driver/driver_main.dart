@@ -84,6 +84,9 @@ import '../please_report_crash.dart' show
     crashReportRequested,
     requestBugReportOnOtherCrashMessage;
 
+import '../verbs/options.dart' show
+    Options;
+
 Function gracefulShutdown;
 
 final List<String> mainArguments = <String>[];
@@ -425,12 +428,14 @@ class ClientController {
   }
 
   AnalyzedSentence parseArguments(List<String> arguments) {
-    Sentence sentence = parseSentence(arguments, includesProgramName: true);
+    Options options = Options.parse(arguments);
+    Sentence sentence =
+        parseSentence(options.nonOptionArguments, includesProgramName: true);
     /// [programName] is the canonicalized absolute path to the fletch
     /// executable (the C++ program).
     String programName = sentence.programName;
     String fletchVm = "$programName-vm";
-    this.sentence = analyzeSentence(sentence);
+    this.sentence = analyzeSentence(sentence, options);
     this.fletchVm = fletchVm;
     return this.sentence;
   }
