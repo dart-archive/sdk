@@ -131,8 +131,9 @@ def Main():
 #### Buildbot steps
 
 def StepsSDK(debug_log, system, modes, archs):
+  no_clang = system == 'linux'
   configurations = GetBuildConfigurations(system, modes, archs, [False],
-                                          no_clang=True)
+                                          no_clang=no_clang)
   bot.Clobber(force=True)
   StepGyp()
 
