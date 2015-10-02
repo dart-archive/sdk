@@ -89,6 +89,8 @@ class Process {
   int main_arity() { return program_->main_arity(); }
   Program* program() { return program_; }
   Array* statics() const { return statics_; }
+  Object* exception() const { return exception_; }
+  void set_exception(Object* object) { exception_ = object; }
   Heap* heap() { return &heap_; }
   Heap* immutable_heap() { return immutable_heap_; }
   void set_immutable_heap(Heap* heap) { immutable_heap_ = heap; }
@@ -244,7 +246,9 @@ class Process {
   static const uword kStackLimitOffset = kCoroutineOffset + sizeof(void*);
   static const uword kProgramOffset = kStackLimitOffset + sizeof(void*);
   static const uword kStaticsOffset = kProgramOffset + sizeof(void*);
-  static const uword kPrimaryLookupCacheOffset = kStaticsOffset + sizeof(void*);
+  static const uword kExceptionOffset = kStaticsOffset + sizeof(void*);
+  static const uword kPrimaryLookupCacheOffset =
+      kExceptionOffset + sizeof(void*);
 
  private:
   friend class Interpreter;
@@ -275,6 +279,7 @@ class Process {
   Atomic<Object**> stack_limit_;
   Program* program_;
   Array* statics_;
+  Object* exception_;
 
   // We need extremely fast access to the primary lookup cache, so we
   // store a reference to it in the process whenever we're interpreting

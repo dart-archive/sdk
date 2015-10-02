@@ -78,7 +78,7 @@ class Scheduler {
   // TODO(kustermann): Once we've made more progress on the design of a
   // multiprocess system, we should consider making an abstraction for these.
   void ExitAtTermination(Process* process);
-  void ExitAtUncaughtException(Process* process);
+  void ExitAtUncaughtException(Process* process, bool print_stack);
   void ExitAtCompileTimeError(Process* process);
   void ExitAtBreakpoint(Process* process);
 

@@ -354,8 +354,15 @@ void Scheduler::ExitAtTermination(Process* process) {
   }
 }
 
-void Scheduler::ExitAtUncaughtException(Process* process) {
+void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
   ASSERT(process->state() == Process::kUncaughtException);
+
+  if (print_stack) {
+    Object* exception = process->exception();
+    Print::Out("Uncaught exception:\n");
+    exception->Print();
+  }
+
   ExitWith(process->program(), kUncaughtExceptionExitCode);
   ExitAtTermination(process);
 }
@@ -602,6 +609,8 @@ Process* Scheduler::InterpretProcess(Process* process,
                                      Heap* immutable_heap,
                                      ThreadState* thread_state,
                                      bool* allocation_failure) {
+  ASSERT(process->exception()->IsNull());
+
   int thread_id = thread_state->thread_id();
   SetCurrentProcessForThread(thread_id, process);
 
@@ -694,7 +703,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->UncaughtException(process)) {
-      ExitAtUncaughtException(process);
+      ExitAtUncaughtException(process, true);
     }
     return NULL;
   }

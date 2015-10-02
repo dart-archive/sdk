@@ -330,6 +330,7 @@ void Instance::InstancePrint() {
   Print::Out("\n");
   Print::Out("  - class = ");
   get_class()->ShortPrint();
+  Print::Out("\n");
   int fields = get_class()->NumberOfInstanceFields();
   for (int i = 0; i < fields; i++) {
     Print::Out("  - @%d = ", i);

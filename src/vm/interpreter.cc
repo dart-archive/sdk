@@ -1141,28 +1141,35 @@ LookupCache::Entry* HandleLookupEntry(Process* process,
 }
 
 uint8* HandleThrow(Process* process, Object* exception, int* stack_delta) {
+  Coroutine* current = process->coroutine();
   while (true) {
-    uint8* catch_bcp = StackWalker::ComputeCatchBlock(process, stack_delta);
-    if (catch_bcp != NULL) return catch_bcp;
-
-    // Unwind the coroutine caller stack by one level.
-    Coroutine* current = process->coroutine();
-    if (!current->has_caller()) {
-      // Uncaught exception.
-      Print::Out("Uncaught exception:\n");
-      exception->Print();
-      return NULL;
+    // If we find a handler, we do a 2nd pass, unwind all coroutine stacks
+    // until the handler, make the unused coroutines/stacks GCable and return
+    // the handling bcp.
+    uint8* catch_bcp = StackWalker::ComputeCatchBlock(
+        process, current->stack(), stack_delta);
+    if (catch_bcp != NULL) {
+      Coroutine* unused = process->coroutine();
+      while (current != unused) {
+        Coroutine* caller = unused->caller();
+        unused->set_stack(process->program()->null_object());
+        unused->set_caller(unused);
+        unused = caller;
+      }
+      process->UpdateCoroutine(current);
+      return catch_bcp;
     }
 
-    Coroutine* caller = current->caller();
-    process->UpdateCoroutine(caller);
-
-    // Mark the coroutine that didn't catch the exception as 'done' and
-    // make sure to clear its stack reference so we don't unnecessarily
-    // hold onto the memory.
-    current->set_stack(process->program()->null_object());
-    current->set_caller(current);
+    if (!current->has_caller()) {
+      break;
+    }
+    current = current->caller();
   }
+
+  // If we haven't found a handler we leave the coroutine/stacks untouched and
+  // signal that the exception was uncaught.
+  process->set_exception(exception);
+  return NULL;
 }
 
 void HandleEnterNoSuchMethod(Process* process) {

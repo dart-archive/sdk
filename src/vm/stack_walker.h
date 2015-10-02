@@ -63,7 +63,9 @@ class StackWalker {
   int ComputeStackOffset(uint8* bcp, bool include_last = false);
 
   // Compute the top catch block.
-  static uint8* ComputeCatchBlock(Process* process, int* stack_delta);
+  static uint8* ComputeCatchBlock(Process* process,
+                                  Stack* stack,
+                                  int* stack_delta);
 
   // Manipulate the stack to restart frame |frame| when process continues.
   static void RestartFrame(Process* process, int frame);

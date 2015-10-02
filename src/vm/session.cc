@@ -329,6 +329,7 @@ void Session::ProcessMessages() {
           StoppedGcThreadScope scope(program()->scheduler());
           int frame = connection_->ReadInt();
           StackWalker::RestartFrame(process_, frame);
+          process_->set_exception(process_->program()->null_object());
         }
         ProcessContinue(process_);
         break;
@@ -348,7 +349,7 @@ void Session::ProcessMessages() {
               scheduler->ExitAtCompileTimeError(process_);
               break;
             case Process::kUncaughtException:
-              scheduler->ExitAtUncaughtException(process_);
+              scheduler->ExitAtUncaughtException(process_, false);
               break;
             default:
               UNREACHABLE();
