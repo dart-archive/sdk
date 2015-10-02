@@ -27,8 +27,8 @@ packages
 /tests/service_tests/service_tests.xcodeproj/
 /third_party/bin/linux/dart
 /third_party/bin/linux/dart-arm
-/third_party/bin/linux/qemu.tar.gz
-/third_party/bin/linux/qemu/
+/third_party/qemu/linux/qemu.tar.gz
+/third_party/qemu/linux/qemu/
 /third_party/bin/mac/dart
 /third_party/charcode/
 /third_party/crypto/
