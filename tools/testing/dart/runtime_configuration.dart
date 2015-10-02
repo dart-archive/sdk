@@ -47,7 +47,8 @@ class RuntimeConfiguration {
         return new FletchcRuntimeConfiguration(
             hostChecked: configuration['host_checked'],
             isIncrementalCompilationEnabled:
-                configuration['enable_incremental_compilation']);
+                configuration['enable_incremental_compilation'],
+            useSdk:configuration['use_sdk']);
 
       case 'fletchvm':
         return new FletchVMRuntimeConfiguration(configuration);
@@ -133,10 +134,12 @@ class DartVmRuntimeConfiguration extends RuntimeConfiguration {
 
 class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
   final bool isIncrementalCompilationEnabled;
+  final bool useSdk;
 
   FletchcRuntimeConfiguration(
     {bool hostChecked: true,
-     this.isIncrementalCompilationEnabled: true}) {
+     this.isIncrementalCompilationEnabled: true,
+     this.useSdk: false}) {
     if (!hostChecked) {
       throw "fletch only works with --host-checked option.";
     }
@@ -152,7 +155,8 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
     if (artifact.filename != null && artifact.mimeType != 'application/dart') {
       throw "Dart VM cannot run files of type '${artifact.mimeType}'.";
     }
-    String executable = '${suite.buildDir}/fletch';
+    String executable = useSdk ? '${suite.buildDir}/fletch-sdk/bin/fletch'
+                               : '${suite.buildDir}/fletch';
     Map<String, String> environment = {
       'DART_VM': suite.dartVmBinaryFileName,
     };
@@ -191,14 +195,15 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
               environmentOverrides)];
     }
 
+    var useSdk = configuration['use_sdk']
+    var fletchVM = useSdk ? "${suite.buildDir}/fletch-sdk/bin/fletch-vm"
+                          : "${suite.buildDir}/fletch-vm";
     // NOTE: We assume that `fletch-vm` behaves the same as invoking
     // the DartVM in terms of exit codes.
     return <Command>[
+        commandBuilder.getVmCommand(fletchVM, arguments, environmentOverrides),
         commandBuilder.getVmCommand(
-            "${suite.buildDir}/fletch-vm", arguments, environmentOverrides),
-        commandBuilder.getVmCommand(
-            "${suite.buildDir}/fletch-vm", argumentsUnfold,
-            environmentOverrides)];
+           fletchVM, argumentsUnfold, environmentOverrides)];
   }
 }
 

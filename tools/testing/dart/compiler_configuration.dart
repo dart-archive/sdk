@@ -172,7 +172,8 @@ class Dart2xCompilerConfiguration extends CompilerConfiguration {
           isHostChecked: isHostChecked, useSdk: useSdk);
 
   String computeCompilerPath(String buildDir) {
-    return '$buildDir/fletch-vm';
+    return useSdk ? '$buildDir/fletch-sdk/bin/fletch-vm'
+                  : '$buildDir/fletch-vm';
   }
 
   CompilationCommand computeCompilationCommand(
@@ -225,9 +226,12 @@ class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
       List basicArguments,
       Map<String, String> environmentOverrides) {
     String snapshotFileName = '$tempDir/fletch.snapshot';
-    String executable = '$buildDir/fletch';
+    String executable = useSdk ? '$buildDir/fletch-sdk/bin/fletch'
+                               : '$buildDir/fletch';
+    String dart = useSdk ? '$buildDir/fletch-sdk/internal/dart'
+                         : '$buildDir/dart';
     Map<String, String> environment = {
-      'DART_VM' : '$buildDir/dart',
+      'DART_VM' : dart,
     }..addAll(environmentOverrides);
 
     Command command = new FletchSessionCommand(

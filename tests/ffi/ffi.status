@@ -5,3 +5,6 @@
 # FFI is not supported on LK devices.
 [ $system == lk ]
 *: Skip, OK
+
+[ $use_sdk ]
+ffi_test: RuntimeError # We don't copy the ffi testing lib to the sdk
