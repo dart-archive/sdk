@@ -1244,6 +1244,15 @@ void HandleEnterNoSuchMethod(Process* process) {
     // Prepare for no such method. The code for invoking noSuchMethod is
     // located at the delta specified in the bytecode argument.
     state.Push(receiver);
+
+    // These 3 arguments are passed to
+    //     lib/core/core_patch.dart:Object._noSuchMethod()
+    //
+    // The number of arguments must be kept in sync with
+    //     pkg/fletchc/lib/src/fletch_backend.dart:
+    //       FletchBackend.codegenExternalNoSuchMethodTrampoline
+    state.Push(receiver);
+    state.Push(clazz);
     state.Push(selector_smi);
     state.Advance(state.ReadByte(1));
   }

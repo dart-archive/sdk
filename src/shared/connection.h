@@ -135,6 +135,7 @@ class Connection {
     kDouble,
     kString,
     kInstance,
+    kClass,
     kInstanceStructure
   };
 

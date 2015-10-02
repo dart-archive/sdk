@@ -25,6 +25,10 @@ import 'incremental/fletchc_incremental.dart'
 
 import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';
+
+// TODO(ahe): Get rid of this import.
+import 'src/fletch_backend.dart' show FletchBackend;
+import 'src/fletch_selector.dart' show FletchSelector;
 import 'debug_state.dart';
 
 import 'src/shared_command_infrastructure.dart' show
@@ -547,6 +551,12 @@ class Session extends FletchVmSession {
     return debugState.list();
   }
 
+  Future<String> exceptionAsString() async {
+    await getUncaughtException();
+    if (debugState.currentUncaughtException == null) return null;
+    return uncaughtExceptionToString(debugState.currentUncaughtException);
+  }
+
   Future<String> disasm() async {
     await getStackTrace();
     if (debugState.currentStackTrace == null) return null;
@@ -689,6 +699,19 @@ class Session extends FletchVmSession {
     return '$sb';
   }
 
+  String noSuchMethodErrorToString(List<DartValue> nsmFields) {
+    assert(nsmFields.length == 3);
+    DartValue receiver = nsmFields[0];
+    ClassValue receiverClass = nsmFields[1];
+    Integer receiverSelector = nsmFields[2];
+
+    String method =
+        fletchSystem.lookupSymbolBySelector(receiverSelector.value);
+    FletchClass klass = fletchSystem.lookupClassById(receiverClass.classId);
+    String name = klass.name;
+    return "NoSuchMethodError: Class '${name}' has no method named '$method'";
+  }
+
   Future<List<DartValue>> readInstanceStructureFields(
       InstanceStructure structure) async {
     List<DartValue> fields = <DartValue>[];
@@ -703,7 +726,20 @@ class Session extends FletchVmSession {
     if (exception is RemoteValue) {
       message = dartValueToString(exception.value);
     } else if (exception is RemoteInstance) {
-      message = instanceStructureToString(exception.instance, exception.fields);
+      InstanceStructure structure = exception.instance;
+      int classId = structure.classId;
+      FletchClass klass = fletchSystem.lookupClassById(classId);
+
+      FletchBackend backend = compiler.compiler.backend;
+      var fletchNoSuchMethodErrorClass = fletchSystem.lookupClassByElement(
+          backend.fletchNoSuchMethodErrorClass);
+
+      if (klass == fletchNoSuchMethodErrorClass) {
+        message = noSuchMethodErrorToString(exception.fields);
+      } else {
+        message = instanceStructureToString(
+            exception.instance, exception.fields);
+      }
     } else {
       throw new UnimplementedError();
     }

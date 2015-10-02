@@ -138,6 +138,10 @@ void Session::SendDartValue(Object* value) {
       buffer.WriteInt(str->get_char_code(i));
     }
     connection_->Send(Connection::kString, buffer);
+  } else if (value->IsClass()) {
+    Push(HeapObject::cast(value));
+    buffer.WriteInt64(MapLookupByObject(class_map_id_, Top()));
+    connection_->Send(Connection::kClass, buffer);
   } else if (value->IsTwoByteString()) {
     // TODO(ager): We should send the character data as 16-bit values
     // instead of 32-bit values.

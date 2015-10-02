@@ -32,6 +32,9 @@ abstract class Command {
       case CommandCode.Instance:
         int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new Instance(classId);
+      case CommandCode.Class:
+        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        return new ClassValue(classId);
       case CommandCode.Integer:
         int value = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new Integer(value);
@@ -1136,6 +1139,17 @@ class Instance extends DartValue {
   String dartToString() => "Instance of $classId";
 }
 
+class ClassValue extends DartValue {
+  final int classId;
+
+  const ClassValue(this.classId)
+      : super(CommandCode.Class);
+
+  String valuesToString() => "$classId";
+
+  String dartToString() => "Class with id $classId";
+}
+
 class Integer extends DartValue {
   final int value;
 
@@ -1284,6 +1298,7 @@ enum CommandCode {
   Double,
   String,
   Instance,
+  Class,
   InstanceStructure
 }
 

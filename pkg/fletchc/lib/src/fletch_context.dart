@@ -153,6 +153,7 @@ class FletchContext {
       int id = symbols.length;
       assert(id == symbolIds.length);
       symbols.add(symbol);
+      backend.systemBuilder.registerSymbol(symbol, id);
       return id;
     });
   }

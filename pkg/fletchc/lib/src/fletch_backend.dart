@@ -138,7 +138,8 @@ const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<int, int>(),
     const PersistentMap<int, FletchClass>(),
     const PersistentMap<ClassElement, FletchClass>(),
-    const <FletchConstant>[]);
+    const <FletchConstant>[],
+    const PersistentMap<int, String>());
 
 class FletchBackend extends Backend with ResolutionCallbacks
     implements IncrementalFletchBackend {
@@ -146,6 +147,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
   static const String constantListName = '_ConstantList';
   static const String constantByteListName = '_ConstantByteList';
   static const String constantMapName = '_ConstantMap';
+  static const String fletchNoSuchMethodErrorName = 'FletchNoSuchMethodError';
   static const String noSuchMethodName = '_noSuchMethod';
   static const String noSuchMethodTrampolineName = '_noSuchMethodTrampoline';
 
@@ -210,6 +212,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
   ClassElement smiClass;
   ClassElement mintClass;
   ClassElement growableListClass;
+  ClassElement fletchNoSuchMethodErrorClass;
   ClassElement bigintClass;
   ClassElement uint32DigitsClass;
 
@@ -371,6 +374,9 @@ class FletchBackend extends Backend with ResolutionCallbacks
     // Register list constructors to world.
     // TODO(ahe): Register growableListClass through ResolutionCallbacks.
     growableListClass.constructors.forEach(world.registerStaticUse);
+
+    fletchNoSuchMethodErrorClass =
+        loadClass(fletchNoSuchMethodErrorName, fletchSystemLibrary).element;
 
     // TODO(ajohnsen): Remove? String interpolation does not enqueue '+'.
     // Investigate what else it may enqueue, could be StringBuilder, and then
@@ -991,9 +997,12 @@ class FletchBackend extends Backend with ResolutionCallbacks
   void codegenExternalNoSuchMethodTrampoline(
       FunctionElement function,
       FunctionCodegen codegen) {
+    // NOTE: The number of arguments to the [noSuchMethodName] function must be
+    // kept in sync with:
+    //     src/vm/interpreter.cc:HandleEnterNoSuchMethod
     int id = context.getSymbolId(
         context.mangleName(noSuchMethodName, compiler.coreLibrary));
-    int fletchSelector = FletchSelector.encodeMethod(id, 1);
+    int fletchSelector = FletchSelector.encodeMethod(id, 3);
     BytecodeLabel skipGetter = new BytecodeLabel();
     codegen.assembler
         ..enterNoSuchMethod(skipGetter)

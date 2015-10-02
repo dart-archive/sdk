@@ -17,6 +17,9 @@ import 'package:persistent/persistent.dart' show
 import 'bytecodes.dart';
 import 'commands.dart';
 
+import 'src/fletch_selector.dart'
+    show FletchSelector;
+
 enum FletchFunctionKind {
   NORMAL,
   LAZY_FIELD_INITIALIZER,
@@ -175,6 +178,8 @@ class FletchSystem {
   // TODO(ajohnsen): Should it be a map?
   final List<FletchConstant> constants;
 
+  final PersistentMap<int, String> symbolByFletchSelectorId;
+
   const FletchSystem(
       this.functionsById,
       this.functionsByElement,
@@ -182,9 +187,14 @@ class FletchSystem {
       this.tearoffsById,
       this.classesById,
       this.classesByElement,
-      this.constants);
+      this.constants,
+      this.symbolByFletchSelectorId);
 
   bool get isEmpty => functionsById.isEmpty;
+
+  String lookupSymbolBySelector(int fletchSelector) {
+    return symbolByFletchSelectorId[FletchSelector.decodeId(fletchSelector)];
+  }
 
   FletchFunction lookupFunctionById(int functionId) {
     return functionsById[functionId];
