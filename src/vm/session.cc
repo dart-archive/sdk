@@ -307,6 +307,18 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kProcessUncaughtExceptionRequest: {
+        if (program()->scheduler() == NULL) return;
+        StoppedGcThreadScope scope(program()->scheduler());
+        Object* exception = process_->exception();
+        if (exception->IsInstance()) {
+          SendInstanceStructure(Instance::cast(exception));
+        } else {
+          SendDartValue(exception);
+        }
+        break;
+      }
+
       case Connection::kProcessLocal:
       case Connection::kProcessLocalStructure: {
         if (program()->scheduler() == NULL) return;

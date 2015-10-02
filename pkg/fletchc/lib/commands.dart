@@ -820,6 +820,19 @@ class ProcessFiberBacktraceRequest extends Command {
   String valuesToString() => "$fiber";
 }
 
+class ProcessUncaughtExceptionRequest extends Command {
+  const ProcessUncaughtExceptionRequest()
+      : super(CommandCode.ProcessUncaughtExceptionRequest);
+
+  /// Peer will respond with a [DartValue] or [InstanceStructure] and a number
+  /// of [DartValue]s.
+  ///
+  /// The number of responses is not fixed.
+  int get numberOfResponsesExpected => null;
+
+  String valuesToString() => '';
+}
+
 class ProcessBreakpoint extends Command {
   final int breakpointId;
   final int functionId;
@@ -1212,6 +1225,7 @@ enum CommandCode {
   ProcessBacktraceRequest,
   ProcessFiberBacktraceRequest,
   ProcessBacktrace,
+  ProcessUncaughtExceptionRequest,
   ProcessBreakpoint,
   ProcessLocal,
   ProcessLocalStructure,

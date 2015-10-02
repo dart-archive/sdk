@@ -76,6 +76,7 @@ class Connection {
     kProcessBacktraceRequest,
     kProcessFiberBacktraceRequest,
     kProcessBacktrace,
+    kProcessUncaughtExceptionRequest,
     kProcessBreakpoint,
     kProcessLocal,
     kProcessLocalStructure,

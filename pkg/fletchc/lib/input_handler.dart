@@ -127,7 +127,9 @@ class InputHandler {
       case 'c':
         if (checkRunning()) {
           Command response = await session.cont();
-          if (response is! ProcessTerminated) {
+          if (response is UncaughtException) {
+            await session.uncaughtException();
+          } else if (response is! ProcessTerminated) {
             await session.backtrace();
           }
         }
@@ -173,7 +175,9 @@ class InputHandler {
       case 'run':
         if (checkNotRunning()) {
           Command response = await session.debugRun();
-          if (response is! ProcessTerminated) {
+          if (response is UncaughtException) {
+            await session.uncaughtException();
+          } else if (response is! ProcessTerminated) {
             await session.backtrace();
           }
         }
@@ -181,7 +185,9 @@ class InputHandler {
       case 's':
         if (checkRunning()) {
           Command response = await session.step();
-          if (response is! ProcessTerminated) {
+          if (response is UncaughtException) {
+            await session.uncaughtException();
+          } else if (response is! ProcessTerminated) {
             await session.backtrace();
           }
         }
@@ -192,7 +198,9 @@ class InputHandler {
       case 'so':
         if (checkRunning()) {
           Command response = await session.stepOver();
-          if (response is! ProcessTerminated) {
+          if (response is UncaughtException) {
+            await session.uncaughtException();
+          } else if (response is! ProcessTerminated) {
             await session.backtrace();
           }
         }

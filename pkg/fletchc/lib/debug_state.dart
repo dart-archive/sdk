@@ -11,7 +11,33 @@ import 'session.dart';
 import 'src/debug_info.dart';
 import 'src/class_debug_info.dart';
 
+import 'commands.dart' show
+    DartValue,
+    InstanceStructure;
+
 part 'stack_trace.dart';
+
+/// A representation of a remote object.
+abstract class RemoteObject { }
+
+/// A representation of a remote instance.
+class RemoteInstance extends RemoteObject {
+  /// An [InstanceStructure] describing the remote instance.
+  final InstanceStructure instance;
+
+  /// The fields as [DartValue]s of the remote instance.
+  final List<DartValue> fields;
+
+  RemoteInstance(this.instance, this.fields);
+}
+
+/// A representation of a remote primitive value (i.e. used for non-instances).
+class RemoteValue extends RemoteObject {
+  /// A [DartValue] describing the remote object.
+  final DartValue value;
+
+  RemoteValue(this.value);
+}
 
 class Breakpoint {
   final String methodName;
@@ -33,6 +59,7 @@ class DebugState {
 
   bool showInternalFrames = false;
   StackFrame _topFrame;
+  RemoteObject currentUncaughtException;
   StackTrace _currentStackTrace;
   int currentFrame = 0;
   SourceLocation _currentLocation;
@@ -41,6 +68,7 @@ class DebugState {
 
   void reset() {
     _topFrame = null;
+    currentUncaughtException = null;
     _currentStackTrace = null;
     _currentLocation = null;
     currentFrame = 0;
