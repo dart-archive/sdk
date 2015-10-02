@@ -150,9 +150,10 @@ def Main():
     CopyPlatforms(sdk_temp)
     CopyArm(sdk_temp)
     CreateAgentSnapshot(sdk_temp, build_dir)
-    CopyArmDebPackage(sdk_temp, deb_package)
     CopySamples(sdk_temp)
     CopyAdditionalFiles(sdk_temp)
+    if deb_package:
+      CopyArmDebPackage(sdk_temp, deb_package)
     sdk_dir = join(build_dir, 'fletch-sdk')
     EnsureDeleted(sdk_dir)
     copytree(sdk_temp, sdk_dir)
