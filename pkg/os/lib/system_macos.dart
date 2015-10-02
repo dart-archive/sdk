@@ -34,6 +34,11 @@ class MacOSSystem extends PosixSystem {
 
   int get SO_REUSEADDR => 0x4;
 
+  // The size of fields and the struct used by uname.
+  // From /usr/include/sys/utsname.h
+  int get UTSNAME_LENGTH => 256;
+  int get SIZEOF_UTSNAME => 5 * UTSNAME_LENGTH;
+
   ForeignFunction get _lseek => _lseekMac;
   ForeignFunction get _open => _openMac;
 }

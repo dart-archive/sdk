@@ -98,12 +98,17 @@ abstract class PosixSystem implements System {
       ForeignLibrary.main.lookup("unlink");
   static final ForeignFunction _write =
       ForeignLibrary.main.lookup("write");
+  static final ForeignFunction _uname =
+      ForeignLibrary.main.lookup("uname");
 
   int get FIONREAD;
 
   int get SOL_SOCKET;
 
   int get SO_REUSEADDR;
+
+  int get UTSNAME_LENGTH;
+  int get SIZEOF_UTSNAME;
 
   ForeignFunction get _open;
   ForeignFunction get _lseek;
@@ -351,5 +356,35 @@ abstract class PosixSystem implements System {
     sockaddr.setUint8(2, port >> 8);
     sockaddr.setUint8(3, port & 0xFF);
     return sockaddr;
+  }
+
+  SystemInformation systemInformation() {
+    if (SIZEOF_UTSNAME == 0) {
+      throw new UnsupportedError(
+          'System information is not supported on this platform');
+    }
+    var utsname = new ForeignMemory.allocated(SIZEOF_UTSNAME);
+    int status = _uname.icall$1Retry(utsname);
+    if (status < 0) {
+      throw "Failed calling uname";
+    }
+    int address = utsname.address;
+    var fp = new ForeignPointer(address);
+    var operatingSystemName =
+        new ForeignCString.fromForeignPointer(fp).toString();
+    address += UTSNAME_LENGTH;
+    fp = new ForeignPointer(address);
+    var release = new ForeignCString.fromForeignPointer(fp).toString();;
+    address += UTSNAME_LENGTH;
+    fp = new ForeignPointer(address);
+    var version = new ForeignCString.fromForeignPointer(fp).toString();;
+    address += UTSNAME_LENGTH;
+    fp = new ForeignPointer(address);
+    var machine = new ForeignCString.fromForeignPointer(fp).toString();;
+    address += UTSNAME_LENGTH;
+    fp = new ForeignPointer(address);
+    var nodeName = new ForeignCString.fromForeignPointer(fp).toString();;
+    return new SystemInformation(operatingSystemName, release,
+                                 version, machine, nodeName);
   }
 }
