@@ -42,6 +42,10 @@ void EventHandler::Run() {
   UNIMPLEMENTED();
 }
 
+void EventHandler::ScheduleTimeout(int64 timeout, Port* port) {
+  UNIMPLEMENTED();
+}
+
 }  // namespace fletch
 
 #endif  // defined(FLETCH_TARGET_OS_LK)
