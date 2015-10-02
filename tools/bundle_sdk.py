@@ -18,10 +18,9 @@ from os import makedirs
 from os.path import join, exists, basename
 from shutil import copyfile, copymode, copytree, rmtree
 
-SDK_PACKAGES = ['file', 'gpio', 'http', 'i2c', 'immutable', 'os',
-                'raspberry_pi', 'socket']
+SDK_PACKAGES = ['file', 'gpio', 'http', 'i2c', 'os', 'raspberry_pi', 'socket']
 
-SAMPLES = ['raspberry_pi']
+SAMPLES = ['raspberry_pi', 'general']
 
 def ParseOptions():
   parser = optparse.OptionParser()
