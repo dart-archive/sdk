@@ -135,6 +135,8 @@ namespace fletch {
   N(StopwatchFrequency,          "Stopwatch", "_frequency")              \
   N(StopwatchNow,                "Stopwatch", "_now")                    \
                                                                          \
+  N(TimerScheduleTimeout,        "_FletchTimer", "_scheduleTimeout")     \
+                                                                         \
   N(ForeignLibraryLookup,        "ForeignLibrary", "_lookupLibrary")     \
   N(ForeignLibraryClose,         "ForeignLibrary", "_closeLibrary")      \
   N(ForeignLibraryGetFunction,   "ForeignLibrary", "_lookupFunction")    \

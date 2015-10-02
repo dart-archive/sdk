@@ -10,7 +10,6 @@ import 'dart:math';
 const patch = "patch";
 
 Channel _eventQueue;
-_FletchTimer _timers;
 int _numberOfEvents = 0;
 
 void _handleEvents() {
@@ -37,116 +36,69 @@ Channel _ensureEventQueue() {
   }
 }
 
-final int _maxWaitTimeInMilliseconds = 1000;
-
-final int _baseTime = new DateTime.now().millisecondsSinceEpoch;
-
 int get _currentTimestamp {
-  return new DateTime.now().millisecondsSinceEpoch - _baseTime;
+  return new DateTime.now().millisecondsSinceEpoch;
 }
 
-// TODO(ager): This is a pretty horrible implementation. We should get
-// this integrated with the event loop. For now this is enough to show
-// that we can implement async on top of our current primitives.
+// TODO(ajohnsen): We should create a heap-like structure in Dart, so we only
+// have one active port/channel per process.
 class _FletchTimer implements Timer {
   final int _milliseconds;
   var _callback;
   int _timestamp = 0;
   _FletchTimer _next;
   bool _isActive = true;
-  bool _hasActiveWaitFiber = false;
+  Channel _channel;
+  Port _port;
 
   bool get _isPeriodic => _milliseconds >= 0;
 
   _FletchTimer(this._timestamp, this._callback)
       : _milliseconds = -1 {
+    _channel = new Channel();
+    _port = new Port(_channel);
     _schedule();
-    _forkWaitFiber();
   }
 
   _FletchTimer.periodic(this._timestamp,
                         void callback(Timer timer),
                         this._milliseconds) {
     _callback = () { callback(this); };
+    _channel = new Channel();
+    _port = new Port(_channel);
     _schedule();
-    _forkWaitFiber();
-  }
-
-  void _forkWaitFiber() {
-    if (_timers != this) return;
-    assert(!_hasActiveWaitFiber);
-    _hasActiveWaitFiber = true;
-    Fiber.fork(() {
-      var milliseconds = _timestamp - _currentTimestamp;
-      if (milliseconds < 0) milliseconds = 0;
-      // Cap the sleep time so that a timer that is set way in the
-      // future will not cause the system to keep running if it is
-      // cancelled.
-      if (milliseconds > _maxWaitTimeInMilliseconds) {
-        milliseconds = _maxWaitTimeInMilliseconds;
-      }
-
-      Channel channel = new Channel();
-      Port port = new Port(channel);
-      Process.spawn((int milliseconds) {
-        os.sleep(milliseconds);
-        port.send(null);
-      }, milliseconds);
-      channel.receive();
-
-      _hasActiveWaitFiber = false;
-      _fireExpiredTimers();
-    });
-  }
-
-  void _fireExpiredTimers() {
-    // Skip cancelled timers.
-    while (_timers != null && !_timers._isActive) _timers = _timers._next;
-    if (_timers != null) {
-      // If first timer is expired, fire it and reschedule if it is
-      // periodic.
-      if (_currentTimestamp >= _timers._timestamp) {
-        _AsyncRun._scheduleImmediate(_timers._callback);
-        var current = _timers;
-        _timers = _timers._next;
-        if (current._isPeriodic) current._reschedule();
-      }
-      // Spin up a timer fiber if there isn't already one for
-      // the next timer to fire.
-      if (_timers != null && !_timers._hasActiveWaitFiber) {
-        _timers._forkWaitFiber();
-      }
-    }
   }
 
   void _schedule() {
-    var lastWithSmallerTimestamp = null;
-    for (_FletchTimer current = _timers;
-         current != null;
-         current = current._next) {
-      if (current._timestamp > _timestamp) break;
-      lastWithSmallerTimestamp = current;
-    }
-    if (lastWithSmallerTimestamp == null) {
-      _next = _timers;
-      _timers = this;
-    } else {
-      _next = lastWithSmallerTimestamp._next;
-      lastWithSmallerTimestamp._next = this;
-    }
+    Fiber.fork(() {
+      int value = _channel.receive();
+      if (value == 0 && _isActive) {
+        _callback();
+        if (_isPeriodic) {
+          _reschedule();
+        } else {
+          _isActive = false;
+        }
+      }
+    });
+    _scheduleTimeout(_timestamp, _port);
   }
 
   void _reschedule() {
     assert(_isPeriodic);
-    _timestamp = _currentTimestamp + _milliseconds;
+    _timestamp += _milliseconds;
     _schedule();
   }
 
   void cancel() {
+    _scheduleTimeout(-1, _port);
+    _port.send(-1);
     _isActive = false;
   }
 
   bool get isActive => _isActive;
+
+  @fletch.native external static void _scheduleTimeout(int timeout, Port port);
 }
 
 @patch class Timer {

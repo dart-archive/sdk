@@ -22,6 +22,7 @@ namespace fletch {
 EventHandler::EventHandler()
     : monitor_(Platform::CreateMonitor()),
       fd_(-1),
+      next_timeout_(INT64_MAX),
       read_fd_(-1),
       write_fd_(-1) {
 }
@@ -66,6 +67,71 @@ int EventHandler::GetEventHandler() {
   write_fd_ = fds[1];
   thread_ = Thread::Run(RunEventHandler, reinterpret_cast<void*>(this));
   return fd_;
+}
+
+void EventHandler::ScheduleTimeout(int64 timeout, Port* port) {
+  ASSERT(timeout != INT64_MAX);
+
+  // Be sure it's running.
+  GetEventHandler();
+
+  ScopedMonitorLock scoped_lock(monitor_);
+
+  auto it = timeouts_.Find(port);
+  if (it == timeouts_.End()) {
+    if (timeout == -1) return;
+    timeouts_[port] = timeout;
+    next_timeout_ = Utils::Minimum(next_timeout_, timeout);
+    // Be sure to mark the port as referenced.
+    port->IncrementRef();
+  } else if (timeout == -1) {
+    timeouts_.Erase(it);
+    // TODO(ajohnsen): We could consider a heap structure to avoid O(n) in this
+    // case?
+    int64 next_timeout = INT64_MAX;
+    for (auto it = timeouts_.Begin(); it != timeouts_.End(); ++it) {
+      next_timeout = Utils::Minimum(next_timeout, it->second);
+    }
+    next_timeout_ = next_timeout;
+    // The port is no longer "referenced" by the event manager.
+    port->DecrementRef();
+  } else {
+    timeouts_[port] = timeout;
+    next_timeout_ = Utils::Minimum(next_timeout_, timeout);
+  }
+  char b = 0;
+  write(write_fd_, &b, 1);
+}
+
+void EventHandler::HandleTimeouts() {
+  // Check timeouts.
+  int64 current_time = Platform::GetMicroseconds() / 1000;
+
+  ScopedMonitorLock scoped_lock(monitor_);
+  if (next_timeout_ > current_time) return;
+
+  int64 next_timeout = INT64_MAX;
+
+  // TODO(ajohnsen): We could consider a heap structure to avoid O(n^2) in
+  // this case?
+  // The following is O(n^2), because we can't continue iterating a hash-map
+  // once we have removed from it.
+  while (true) {
+    bool found = false;
+    for (auto it = timeouts_.Begin(); it != timeouts_.End(); ++it) {
+      if (it->second <= current_time) {
+        Send(it->first, 0);
+        timeouts_.Erase(it);
+        found = true;
+        break;
+      } else {
+        next_timeout = Utils::Minimum(next_timeout, it->second);
+      }
+    }
+    if (!found) break;
+  }
+
+  next_timeout_ = next_timeout;
 }
 
 void EventHandler::Send(Port* port, uword mask) {

@@ -174,10 +174,19 @@ class ScavengeVisitor: public PointerVisitor {
   Space* to_;
 };
 
-// Extract a raw void* pointer from [object].
+// Read [object] as an integer word value.
 //
 // [object] must be either a Smi or a LargeInteger.
 inline word AsForeignWord(Object* object) {
+  return object->IsSmi()
+      ? Smi::cast(object)->value()
+      : LargeInteger::cast(object)->value();
+}
+
+// Read [object] as an integer int64 value.
+//
+// [object] must be either a Smi or a LargeInteger.
+inline int64 AsForeignInt64(Object* object) {
   return object->IsSmi()
       ? Smi::cast(object)->value()
       : LargeInteger::cast(object)->value();
