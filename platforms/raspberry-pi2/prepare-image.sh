@@ -33,6 +33,37 @@ function setup_link() {
       "Failed to create symbolic link to fletch-agent in runlevel $level"
 }
 
+function check_service_dependencies {
+  distro=$1
+  sudo -E diff -q $DATA_DIR/depend.start.$distro \
+		  $MOUNT_DIR/etc/init.d/.depend.start \
+	| grep -q "differ"
+  if [ $? -eq 0 ]; then
+    # Not a match
+    return 1
+  fi
+  sudo -E diff -q $DATA_DIR/depend.stop.$distro \
+		  $MOUNT_DIR/etc/init.d/.depend.stop \
+	| grep -q "differ"
+  if [ $? -eq 0 ]; then
+    # Not a match
+    return 1
+  fi
+  # Both start and stop dependencies match our expectations. We can update
+  # them with fletch.
+  return 0
+}
+
+function copy_service_dependencies {
+  distro=$1
+  # The dependency files matched what we expected. Overwrite with updated
+  # copies.
+  sudo -E cp $DATA_DIR/depend.start.fletch.$distro \
+	     $MOUNT_DIR/etc/init.d/.depend.start
+  sudo -E cp $DATA_DIR/depend.stop.fletch.$distro \
+	     $MOUNT_DIR/etc/init.d/.depend.stop
+}
+
 function update_service_dependencies {
   # If the dependency files are already setup with the fletch-agent just return
   sudo -E grep -q fletch-agent $MOUNT_DIR/etc/init.d/.depend.start
@@ -44,27 +75,19 @@ function update_service_dependencies {
     fi
   fi
   # Check if we can update them (aka. overwrite them).
-  sudo -E diff -q $DATA_DIR/depend.start.orig \
-                  $MOUNT_DIR/etc/init.d/.depend.start \
-        | grep -q "differ"
+  check_service_dependencies "wheezy"
   if [ $? -eq 0 ]; then
-    # Cannot overwrite them
-    return 1
+    copy_service_dependencies "wheezy"
+    return 0
   fi
-  sudo -E diff -q $DATA_DIR/depend.stop.orig \
-                  $MOUNT_DIR/etc/init.d/.depend.stop \
-        | grep "differ"
+  # We didn't match wheezy, try jessie.
+  check_service_dependencies "jessie"
   if [ $? -eq 0 ]; then
-    return 1
+    copy_service_dependencies "jessie"
+    return 0
   fi
-
-  # The dependency files matched what we expected. Overwrite with updated
-  # copies.
-  sudo -E cp $DATA_DIR/depend.start.fletch \
-             $MOUNT_DIR/etc/init.d/.depend.start
-  sudo -E cp $DATA_DIR/depend.stop.fletch \
-             $MOUNT_DIR/etc/init.d/.depend.stop
-  return 0
+  # We cannot update the dependencies.
+  return 1
 }
 
 function manual_agent_setup() {
@@ -139,7 +162,7 @@ sudo -E chmod 755 $MOUNT_DIR/$INSTALL_DIR/bin/setup-agent.sh
 check_success $? "Failed to make setup-agent.sh script executable for all"
 
 # Update the service dependency files if needed. This is only done if the files
-# have not been modified from the original installation. If they have been 
+# have not been modified from the original installation. If they have been
 # modified we ask the user to run the /usr/sbin/update-rc.d script for the
 # fletch-agent once booted into the Raspberry Pi2 and reboot.
 update_service_dependencies
