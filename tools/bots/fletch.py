@@ -153,6 +153,26 @@ def StepsSDK(debug_log, system, modes, archs):
     StepsBundleSDK(configuration['build_dir'])
     StepsArchiveSDK(configuration['build_dir'], system, configuration['mode'],
                     configuration['arch'])
+  for configuration in configurations:
+    StepsTestSDK(debug_log, configuration)
+
+def StepsTestSDK(debug_log, configuration):
+  build_dir = configuration['build_dir']
+  sdk_dir = os.path.join(build_dir, 'fletch-sdk')
+  sdk_zip = os.path.join(build_dir, 'fletch-sdk.zip')
+  if os.path.exists(sdk_dir):
+    shutil.rmtree(sdk_dir)
+  Unzip(sdk_zip)
+  StepTest(
+    configuration['build_conf'],
+    configuration['mode'],
+    configuration['arch'],
+    clang=configuration['clang'],
+    asan=configuration['asan'],
+    snapshot_run=False,
+    debug_log=debug_log,
+    configuration=configuration,
+    use_sdk=True)
 
 def StepsCreateDebianPackage():
   Run(['python', os.path.join('tools', 'create_tarball.py')])
@@ -446,7 +466,7 @@ def StepBuild(build_config, build_dir, args=()):
 
 def StepTest(
     name, mode, arch, clang=True, asan=False, snapshot_run=False,
-    debug_log=None, configuration=None, system=None):
+    debug_log=None, configuration=None, system=None, use_sdk=False):
   step_name = '%s%s' % (name, '-snapshot' if snapshot_run else '')
   with bot.BuildStep('Test %s' % step_name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
@@ -466,6 +486,9 @@ def StepTest(
       #  - normal fletch VM
       #  - fletch VM with -Xunfold-program enabled
       args.extend(['-cfletchc', '-rfletchvm'])
+
+    if use_sdk:
+      args.append('--use-sdk')
 
     if asan:
       args.append('--asan')
