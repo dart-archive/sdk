@@ -7,9 +7,11 @@
 // code defined outside the VM.
 library dart.fletch.ffi;
 
-import 'dart:convert' show UTF8;
 import 'dart:_fletch_system' as fletch;
 import 'dart:fletch';
+import 'dart:typed_data';
+
+part 'utf.dart';
 
 abstract class Foreign {
   int get address;
@@ -476,7 +478,7 @@ class ImmutableForeignMemory extends UnsafeMemory {
   // We utf8 encode the string first to support non-ascii characters.
   // NOTE: This is not the correct string encoding for Windows.
   factory ImmutableForeignMemory.fromStringAsUTF8(String str) {
-    List<int> encodedString = UTF8.encode(str);
+    List<int> encodedString = _encodeUtf8(str);
     var memory = new ImmutableForeignMemory.allocated(encodedString.length + 1);
     for (int i = 0; i < encodedString.length; i++) {
       memory.setUint8(i, encodedString[i]);
@@ -512,7 +514,7 @@ class ForeignMemory extends UnsafeMemory {
   // We utf8 encode the string first to support non-ascii characters.
   // NOTE: This is not the correct string encoding for Windows.
   factory ForeignMemory.fromStringAsUTF8(String str) {
-    List<int> encodedString = UTF8.encode(str);
+    List<int> encodedString = _encodeUtf8(str);
     var memory = new ForeignMemory.allocated(encodedString.length + 1);
     for (int i = 0; i < encodedString.length; i++) {
       memory.setUint8(i, encodedString[i]);
@@ -629,6 +631,6 @@ class ForeignCString extends ForeignMemory {
     for (int i = 0; i < length - 1; ++i) {
       encodedString[i] = getUint8(i);
     }
-    return UTF8.decode(encodedString);
- }
+    return _decodeUtf8(encodedString);
+  }
 }
