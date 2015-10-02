@@ -195,7 +195,7 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
               environmentOverrides)];
     }
 
-    var useSdk = configuration['use_sdk']
+    var useSdk = configuration['use_sdk'];
     var fletchVM = useSdk ? "${suite.buildDir}/fletch-sdk/bin/fletch-vm"
                           : "${suite.buildDir}/fletch-vm";
     // NOTE: We assume that `fletch-vm` behaves the same as invoking
