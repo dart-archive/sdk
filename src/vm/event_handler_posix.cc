@@ -100,7 +100,7 @@ void EventHandler::ScheduleTimeout(int64 timeout, Port* port) {
     next_timeout_ = Utils::Minimum(next_timeout_, timeout);
   }
   char b = 0;
-  write(write_fd_, &b, 1);
+  TEMP_FAILURE_RETRY(write(write_fd_, &b, 1));
 }
 
 void EventHandler::HandleTimeouts() {

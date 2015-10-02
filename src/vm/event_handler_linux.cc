@@ -59,7 +59,7 @@ void EventHandler::Run() {
     if (event.data.fd == read_fd_) {
       if ((events & EPOLLIN) != 0) {
         char b;
-        read(read_fd_, &b, 1);
+        TEMP_FAILURE_RETRY(read(read_fd_, &b, 1));
         continue;
       } else {
         close(read_fd_);

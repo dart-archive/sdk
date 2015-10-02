@@ -56,7 +56,7 @@ void EventHandler::Run() {
     if (event.ident == static_cast<uintptr_t>(read_fd_)) {
       if ((flags & EV_EOF) == 0) {
         char b;
-        read(read_fd_, &b, 1);
+        TEMP_FAILURE_RETRY(read(read_fd_, &b, 1));
         continue;
       } else {
         close(read_fd_);
