@@ -170,9 +170,8 @@ String getMessage(DiagnosticKind kind) {
       return "Unknown option: '$userInput'";
 
     case DiagnosticKind.missingRequiredArgument:
-      // TODO(lukechurch): Review UX
-      return "Option '${DiagnosticParameter.userInput}' needs an argument. "
-          "Is something missing from the command line?";
+      // TODO(lukechurch): Consider a correction message.
+      return "Option '${DiagnosticParameter.userInput}' needs an argument";
 
     case DiagnosticKind.unexpectedArgument:
       // TODO(lukechurch): Review UX
