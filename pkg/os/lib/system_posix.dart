@@ -358,7 +358,7 @@ abstract class PosixSystem implements System {
     return sockaddr;
   }
 
-  SystemInformation systemInformation() {
+  SystemInformation info() {
     if (SIZEOF_UTSNAME == 0) {
       throw new UnsupportedError(
           'System information is not supported on this platform');
@@ -374,17 +374,17 @@ abstract class PosixSystem implements System {
         new ForeignCString.fromForeignPointer(fp).toString();
     address += UTSNAME_LENGTH;
     fp = new ForeignPointer(address);
-    var release = new ForeignCString.fromForeignPointer(fp).toString();;
+    var nodeName = new ForeignCString.fromForeignPointer(fp).toString();
     address += UTSNAME_LENGTH;
     fp = new ForeignPointer(address);
-    var version = new ForeignCString.fromForeignPointer(fp).toString();;
+    var release = new ForeignCString.fromForeignPointer(fp).toString();
     address += UTSNAME_LENGTH;
     fp = new ForeignPointer(address);
-    var machine = new ForeignCString.fromForeignPointer(fp).toString();;
+    var version = new ForeignCString.fromForeignPointer(fp).toString();
     address += UTSNAME_LENGTH;
     fp = new ForeignPointer(address);
-    var nodeName = new ForeignCString.fromForeignPointer(fp).toString();;
-    return new SystemInformation(operatingSystemName, release,
-                                 version, machine, nodeName);
+    var machine = new ForeignCString.fromForeignPointer(fp).toString();
+    return new SystemInformation(operatingSystemName, nodeName, release,
+                                 version, machine);
   }
 }

@@ -45,17 +45,17 @@ class TempFile {
 class SystemInformation {
   /// Operating system name (e.g., "Linux").
   final String operatingSystemName;
+  /// Name within "some implementation-defined network".
+  final String nodeName;
   /// Operating system release (e.g., "2.6.28")
   final String release;
   /// Operating system version.
   final String version;
   /// Hardware identifier.
   final String machine;
-  /// Name within "some implementation-defined network".
-  final String nodeName;
 
-  const SystemInformation(this.operatingSystemName, this.release, this.version,
-                          this.machine, this.nodeName);
+  const SystemInformation(this.operatingSystemName, this.nodeName, this.release,
+                          this.version, this.machine);
 
   toString() => '$operatingSystemName $release $version $machine $nodeName';
 }
@@ -85,7 +85,7 @@ abstract class System {
   int setBlocking(int fd, bool blocking);
   int setReuseaddr(int fd);
   int setCloseOnExec(int fd, bool closeOnExec);
-  SystemInformation systemInformation();
+  SystemInformation info();
 }
 
 class _InternetAddress extends InternetAddress {
