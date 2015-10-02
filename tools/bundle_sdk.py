@@ -45,12 +45,13 @@ def CopyBinaries(bundle_dir, build_dir):
   internal = join(bundle_dir, 'internal')
   makedirs(bin_dir)
   makedirs(internal)
-  for v in ['fletch-vm', 'natives.json']:
-    CopyFile(join(build_dir, v), join(bin_dir, v))
+  CopyFile(join(build_dir, 'fletch-vm'), join(bin_dir, 'fletch-vm'))
   # The driver for the sdk is specially named fletch_for_sdk.
   CopyFile(join(build_dir, 'fletch_for_sdk'), join(bin_dir, 'fletch'))
   # We move the dart vm to internal to not put it on the path of users
   CopyFile(join(build_dir, 'dart'), join(internal, 'dart'))
+  # natives.json is read relative to the dart binary
+  CopyFile(join(build_dir, 'natives.json'), join(internal, 'natives.json'))
 
 # We have two lib dependencies: the libs from the sdk and the libs dir with
 # patch files from the fletch repo.

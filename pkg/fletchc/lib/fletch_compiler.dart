@@ -199,7 +199,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   }
 
   Future _inititalizeContext() async {
-    Uri nativesJson = _compiler.fletchVm.resolve("natives.json");
+    Uri nativesJson = executable.resolve("natives.json");
     var data = await _compiler.callUserProvider(nativesJson);
     if (data is! String) {
       if (data.last == 0) {
