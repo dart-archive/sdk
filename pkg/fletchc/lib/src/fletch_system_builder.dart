@@ -73,6 +73,8 @@ class FletchSystemBuilder {
   final int maxInt64 = (1 << 63) - 1;
   final int minInt64 = -(1 << 63);
 
+  final Map<int, String> _symbolByFletchSelectorId = <int, String>{};
+
   FletchSystemBuilder(FletchSystem predecessorSystem)
       : this.predecessorSystem = predecessorSystem,
         this.functionIdStart = predecessorSystem.computeMaxFunctionId() + 1,
@@ -246,6 +248,10 @@ class FletchSystemBuilder {
       }
       return predecessorSystem.constants.length + _newConstants.length;
     });
+  }
+
+  void registerSymbol(String symbol, int fletchSelectorId) {
+    _symbolByFletchSelectorId[fletchSelectorId] = symbol;
   }
 
   FletchFunctionBase parameterStubFor(
@@ -560,6 +566,12 @@ class FletchSystemBuilder {
       tearoffsById = tearoffsById.insert(functionId, stubId);
     });
 
+    PersistentMap<int, String> symbolByFletchSelectorId =
+        predecessorSystem.symbolByFletchSelectorId;
+    _symbolByFletchSelectorId.forEach((int id, String name) {
+      symbolByFletchSelectorId = symbolByFletchSelectorId.insert(id, name);
+    });
+
     return new FletchSystem(
         functionsById,
         functionsByElement,
@@ -567,6 +579,7 @@ class FletchSystemBuilder {
         tearoffsById,
         classesById,
         classesByElement,
-        constants);
+        constants,
+        symbolByFletchSelectorId);
   }
 }

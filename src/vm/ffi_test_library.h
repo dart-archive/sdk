@@ -96,4 +96,6 @@ EXPORT void* memfloat32();
 
 EXPORT void* memfloat64();
 
+EXPORT void* memstring();
+
 #endif  // SRC_VM_FFI_TEST_LIBRARY_H_

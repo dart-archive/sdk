@@ -62,16 +62,12 @@ class Lights {
     }
   }
 
-  // Sets LED [ledNoEnable] to true, and all others to false.
+  // Sets LED [ledToEnable] to true, and all others to false.
   void _setLeds(int ledToEnable) {
     var state;
 
     for (int i = 0; i < leds.length; i++) {
-      if (i == ledToEnable)
-        state = true;
-      else
-        state = false;
-
+      bool state = (i == ledToEnable);
       _gpio.setPin(leds[i], state);
     }
   }

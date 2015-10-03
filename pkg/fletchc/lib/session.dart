@@ -25,6 +25,10 @@ import 'incremental/fletchc_incremental.dart'
 
 import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';
+
+// TODO(ahe): Get rid of this import.
+import 'src/fletch_backend.dart' show FletchBackend;
+import 'src/fletch_selector.dart' show FletchSelector;
 import 'debug_state.dart';
 
 import 'src/shared_command_infrastructure.dart' show
@@ -507,8 +511,13 @@ class Session extends FletchVmSession {
       return null;
     }
     int frame = debugState.actualCurrentFrameNumber;
-    await handleProcessStop(await runCommand(new ProcessRestartFrame(frame)));
-    await backtrace();
+    Command response = await handleProcessStop(
+        await runCommand(new ProcessRestartFrame(frame)));
+    if (response is UncaughtException) {
+      await uncaughtException();
+    } else {
+      await backtrace();
+    }
   }
 
   Future stepBytecode() async {
@@ -540,6 +549,12 @@ class Session extends FletchVmSession {
     await getStackTrace();
     if (debugState.currentStackTrace == null) return null;
     return debugState.list();
+  }
+
+  Future<String> exceptionAsString() async {
+    await getUncaughtException();
+    if (debugState.currentUncaughtException == null) return null;
+    return uncaughtExceptionToString(debugState.currentUncaughtException);
   }
 
   Future<String> disasm() async {
@@ -577,6 +592,21 @@ class Session extends FletchVmSession {
     return stackTrace;
   }
 
+  Future getUncaughtException() async {
+    if (debugState.currentUncaughtException == null) {
+      await sendCommand(const ProcessUncaughtExceptionRequest());
+      Command response = await readNextCommand();
+      if (response is DartValue) {
+        debugState.currentUncaughtException = new RemoteValue(response);
+      } else {
+        assert(response is InstanceStructure);
+        List<DartValue> fields = await readInstanceStructureFields(response);
+        debugState.currentUncaughtException =
+            new RemoteInstance(response, fields);
+      }
+    }
+  }
+
   Future getStackTrace() async {
     if (debugState.currentStackTrace == null) {
       ProcessBacktrace backtraceResponse =
@@ -584,6 +614,21 @@ class Session extends FletchVmSession {
       debugState.currentStackTrace =
           stackTraceFromBacktraceResponse(backtraceResponse);
     }
+  }
+
+  Future uncaughtException() async {
+    await exception();
+    await backtrace();
+  }
+
+  Future exception() async {
+    // TODO(ager): We should refactor this so that we never
+    // call exception from other debugger methods when the
+    // session has been terminated.
+    if (terminated) return null;
+    await getUncaughtException();
+    writeStdoutLine(
+        uncaughtExceptionToString(debugState.currentUncaughtException));
   }
 
   Future backtrace() async {
@@ -629,6 +674,78 @@ class Session extends FletchVmSession {
     }
   }
 
+  String instanceStructureToString(InstanceStructure structure,
+                                   List<DartValue> fields) {
+    int classId = structure.classId;
+    FletchClass klass = fletchSystem.lookupClassById(classId);
+
+    // TODO(fletchc-team): This should be more strict and a compiler bug
+    // should be reported to the user in order for us to get a bugreport.
+    if (klass == null) {
+      return 'Unknown (Fletch compiler was unable to find exception class)';
+    }
+
+    StringBuffer sb = new StringBuffer();
+    sb.writeln("Instance of '${klass.name}' {");
+    for (int i = 0; i < structure.fields; i++) {
+      DartValue value = fields[i];
+      String fieldName = debugState.lookupFieldName(klass, i);
+      if (fieldName == null) {
+        fieldName = '<unnamed>';
+      }
+      sb.writeln('  $fieldName: ${dartValueToString(value)}');
+    }
+    sb.write('}');
+    return '$sb';
+  }
+
+  String noSuchMethodErrorToString(List<DartValue> nsmFields) {
+    assert(nsmFields.length == 3);
+    DartValue receiver = nsmFields[0];
+    ClassValue receiverClass = nsmFields[1];
+    Integer receiverSelector = nsmFields[2];
+
+    String method =
+        fletchSystem.lookupSymbolBySelector(receiverSelector.value);
+    FletchClass klass = fletchSystem.lookupClassById(receiverClass.classId);
+    String name = klass.name;
+    return "NoSuchMethodError: Class '${name}' has no method named '$method'";
+  }
+
+  Future<List<DartValue>> readInstanceStructureFields(
+      InstanceStructure structure) async {
+    List<DartValue> fields = <DartValue>[];
+    for (int i = 0; i < structure.fields; i++) {
+      fields.add(await readNextCommand());
+    }
+    return fields;
+  }
+
+  String uncaughtExceptionToString(RemoteObject exception) {
+    String message;
+    if (exception is RemoteValue) {
+      message = dartValueToString(exception.value);
+    } else if (exception is RemoteInstance) {
+      InstanceStructure structure = exception.instance;
+      int classId = structure.classId;
+      FletchClass klass = fletchSystem.lookupClassById(classId);
+
+      FletchBackend backend = compiler.compiler.backend;
+      var fletchNoSuchMethodErrorClass = fletchSystem.lookupClassByElement(
+          backend.fletchNoSuchMethodErrorClass);
+
+      if (klass == fletchNoSuchMethodErrorClass) {
+        message = noSuchMethodErrorToString(exception.fields);
+      } else {
+        message = instanceStructureToString(
+            exception.instance, exception.fields);
+      }
+    } else {
+      throw new UnimplementedError();
+    }
+    return 'Uncaught exception: $message';
+  }
+
   Future printLocal(LocalValue local, [String name]) async {
     var actualFrameNumber = debugState.actualCurrentFrameNumber;
     Command response = await runCommand(
@@ -646,16 +763,8 @@ class Session extends FletchVmSession {
       writeStdoutLine(dartValueToString(response));
     } else {
       assert(response is InstanceStructure);
-      InstanceStructure structure = response;
-      int classId = structure.classId;
-      FletchClass klass = fletchSystem.lookupClassById(classId);
-      writeStdoutLine("Instance of '${klass.name}' {");
-      for (int i = 0; i < structure.fields; i++) {
-        DartValue value = await readNextCommand();
-        var fieldName = debugState.lookupFieldName(klass, i);
-        writeStdoutLine('  $fieldName: ${dartValueToString(value)}');
-      }
-      writeStdoutLine('}');
+      List<DartValue> fields = await readInstanceStructureFields(response);
+      writeStdoutLine(instanceStructureToString(response, fields));
     }
   }
 

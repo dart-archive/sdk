@@ -6,6 +6,7 @@
 #define SRC_VM_EVENT_HANDLER_H_
 
 #include "src/shared/globals.h"
+#include "src/vm/hash_map.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
@@ -27,6 +28,8 @@ class EventHandler {
 
   int GetEventHandler();
 
+  void ScheduleTimeout(int64 timeout, Port* port);
+
   Monitor* monitor() const { return monitor_; }
 
   int Create();
@@ -37,8 +40,13 @@ class EventHandler {
   int fd_;
   ThreadIdentifier thread_;
 
+  HashMap<Port*, int64> timeouts_;
+  int64 next_timeout_;
+
   int read_fd_;
   int write_fd_;
+
+  void HandleTimeouts();
 
   void Send(Port* port, uword mask);
 };

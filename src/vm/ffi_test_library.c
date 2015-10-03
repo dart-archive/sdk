@@ -7,6 +7,7 @@
 // for functionality that we want to test in the FFI implementation.
 
 #include <errno.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -305,4 +306,8 @@ void* memfloat64() {
   *(data + 2) = -1.79769e+308;
   *(data + 3) = 4;
   return data;
+}
+
+void* memstring() {
+  return strdup("dart");
 }

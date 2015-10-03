@@ -245,17 +245,26 @@ Future<int> run(SessionState state, {String testDebuggerCommands}) async {
     print(state.flushLog());
     throwInternalError("No command received from Fletch VM");
   }
+
   bool flushLog = true;
+
+  Future printException() async {
+    String exception = await session.exceptionAsString();
+    print(exception);
+  }
+
   Future printTrace() async {
     String list = await session.list();
     print(session.debugState.formatStackTrace());
     print(list);
   }
+
   try {
     switch (command.code) {
       case CommandCode.UncaughtException:
         state.log("Uncaught error");
         exitCode = exit_codes.DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+        await printException();
         await printTrace();
         // TODO(ahe): Need to continue to unwind stack.
         break;

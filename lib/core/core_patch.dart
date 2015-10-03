@@ -30,8 +30,10 @@ const patch = "patch";
   @patch int get hashCode => _identityHashCode(this);
 
   @patch noSuchMethod(Invocation invocation) {
-    // TODO(kasperl): Extract information from the invocation
-    // so we can construct the right NoSuchMethodError.
+    if (invocation is fletch.FletchInvocation) {
+      throw invocation.asNoSuchMethodError;
+    }
+    // TODO(ahe): Get rid of this call.
     fletch.unresolved("<unknown>");
   }
 
@@ -39,7 +41,12 @@ const patch = "patch";
   // trampoline and it is passed the selector. The arguments
   // to the original call are still present on the stack, so
   // it is possible to dig them out if need be.
-  _noSuchMethod(selector) => noSuchMethod(null);
+  _noSuchMethod(receiver, receiverClass, receiverSelector) {
+    // NOTE: The number and type of arguments here must be kept in sync with:
+    //     src/vm/interpreter.cc:HandleEnterNoSuchMethod
+    return noSuchMethod(new fletch.FletchInvocation(
+        receiver, receiverClass, receiverSelector));
+  }
 
   // The noSuchMethod trampoline is automatically generated
   // by the compiler. It calls the noSuchMethod helper and

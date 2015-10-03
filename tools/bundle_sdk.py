@@ -18,10 +18,9 @@ from os import makedirs
 from os.path import join, exists, basename
 from shutil import copyfile, copymode, copytree, rmtree
 
-SDK_PACKAGES = ['file', 'fletch_agent', 'fletchc', 'gpio',
-                'http', 'i2c', 'immutable', 'os', 'raspberry_pi', 'socket']
+SDK_PACKAGES = ['file', 'gpio', 'http', 'i2c', 'os', 'raspberry_pi', 'socket']
 
-SAMPLES = ['raspberry_pi']
+SAMPLES = ['raspberry_pi', 'general']
 
 def ParseOptions():
   parser = optparse.OptionParser()
@@ -45,12 +44,13 @@ def CopyBinaries(bundle_dir, build_dir):
   internal = join(bundle_dir, 'internal')
   makedirs(bin_dir)
   makedirs(internal)
-  for v in ['fletch-vm', 'natives.json']:
-    CopyFile(join(build_dir, v), join(bin_dir, v))
+  CopyFile(join(build_dir, 'fletch-vm'), join(bin_dir, 'fletch-vm'))
   # The driver for the sdk is specially named fletch_for_sdk.
   CopyFile(join(build_dir, 'fletch_for_sdk'), join(bin_dir, 'fletch'))
   # We move the dart vm to internal to not put it on the path of users
   CopyFile(join(build_dir, 'dart'), join(internal, 'dart'))
+  # natives.json is read relative to the dart binary
+  CopyFile(join(build_dir, 'natives.json'), join(internal, 'natives.json'))
 
 # We have two lib dependencies: the libs from the sdk and the libs dir with
 # patch files from the fletch repo.
@@ -150,9 +150,10 @@ def Main():
     CopyPlatforms(sdk_temp)
     CopyArm(sdk_temp)
     CreateAgentSnapshot(sdk_temp, build_dir)
-    CopyArmDebPackage(sdk_temp, deb_package)
     CopySamples(sdk_temp)
     CopyAdditionalFiles(sdk_temp)
+    if deb_package:
+      CopyArmDebPackage(sdk_temp, deb_package)
     sdk_dir = join(build_dir, 'fletch-sdk')
     EnsureDeleted(sdk_dir)
     copytree(sdk_temp, sdk_dir)

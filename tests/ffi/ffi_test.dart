@@ -27,6 +27,7 @@ main() {
   testPCallAndMemory(true);
   testPCallAndMemory(false);
   testStruct();
+  testForeignCString();
 
   testImmutablePassing(false);
   testImmutablePassing(true);
@@ -602,4 +603,27 @@ testStruct() {
   struct64.free();
   struct32.free();
   fl.close();
+}
+
+testForeignCString() {
+  var memory = new ForeignMemory.allocated(100);
+  memory.setUint8(0, 65);
+  memory.setUint8(1, 0);
+  Expect.equals(
+      'A', new ForeignCString.fromForeignPointer(memory).toString());
+  memory.setUint8(0, 0xc3);
+  memory.setUint8(1, 0x98);
+  memory.setUint8(2, 0);
+  Expect.equals(
+      'Ø', new ForeignCString.fromForeignPointer(memory).toString());
+  memory.free();
+
+  var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
+  ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
+  var memstring = fl.lookup('memstring');
+  var foreignPointer = memstring.pcall$0();
+  Expect.equals(
+      'dart', new ForeignCString.fromForeignPointer(foreignPointer).toString());
+  memory = new ForeignMemory.fromAddress(foreignPointer.address, 5);
+  memory.free();
 }

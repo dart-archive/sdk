@@ -205,9 +205,11 @@ int StackWalker::ComputeStackOffset(uint8* end_bcp, bool include_last) {
   return stack_offset;
 }
 
-uint8* StackWalker::ComputeCatchBlock(Process* process, int* stack_delta) {
+uint8* StackWalker::ComputeCatchBlock(Process* process,
+                                      Stack* stack,
+                                      int* stack_delta) {
   int delta = 0;
-  StackWalker walker(process, process->stack());
+  StackWalker walker(process, stack);
   while (walker.MoveNext()) {
     Function* function = walker.function();
     delta += 1 + walker.frame_size();

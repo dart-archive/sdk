@@ -4,13 +4,14 @@
 
 library dart.system;
 
-import 'dart:_internal';
+import 'dart:_internal' hide Symbol;
 import 'dart:collection';
 import 'dart:fletch';
 import 'dart:math';
 
 part 'list.dart';
 part 'map.dart';
+part 'nsm.dart';
 
 const native = "native";
 

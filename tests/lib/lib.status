@@ -44,6 +44,7 @@ async/stream_subscription_cancel_test: CompileTimeError
 async/stream_timeout_test: CompileTimeError
 async/stream_transform_test: CompileTimeError
 async/stream_transformation_broadcast_test: CompileTimeError
+async/stream_type_test: RuntimeError
 async/timer_cancel1_test: CompileTimeError
 async/timer_cancel2_test: CompileTimeError
 async/timer_cancel_test: CompileTimeError

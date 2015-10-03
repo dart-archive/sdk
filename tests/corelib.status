@@ -151,6 +151,7 @@ double_round4_test: RuntimeError
 double_round_to_double2_test: RuntimeError
 double_round_to_double_test: RuntimeError
 double_truncate_to_double_test: RuntimeError
+int_parse_radix_test/01: Crash
 int_parse_radix_test/02: Crash
 int_parse_radix_test/none: Crash
 iterable_fold_test: Crash
@@ -168,5 +169,5 @@ toInt_test: RuntimeError
 uri_base_test: Crash
 uri_parse_test: Crash
 
-[ $asan && $mode == debug ]
+[ $mode == debug ]
 regexp/global_test: Slow, Pass

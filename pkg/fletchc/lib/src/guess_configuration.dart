@@ -17,7 +17,7 @@ Uri get executable {
 
 bool _looksLikeFletchVm(Uri uri) {
   if (!new File.fromUri(uri).existsSync()) return false;
-  String expectedFile = 'natives.json';
+  String expectedFile = 'fletch';
   return new File.fromUri(uri.resolve(expectedFile)).existsSync();
 }
 

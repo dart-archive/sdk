@@ -36,6 +36,11 @@ class LinuxSystem extends PosixSystem {
 
   int get SO_REUSEADDR => 2;
 
+  // The size of fields and the struct used by uname.
+  // From /usr/include/sys/utsname.h
+  int get UTSNAME_LENGTH => 65;
+  int get SIZEOF_UTSNAME => 6 * UTSNAME_LENGTH;
+
   ForeignFunction get _lseek => _lseekLinux;
   ForeignFunction get _open => _openLinux;
 }

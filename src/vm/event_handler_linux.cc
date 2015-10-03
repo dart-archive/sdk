@@ -31,24 +31,47 @@ int EventHandler::Create() {
 
 void EventHandler::Run() {
   struct epoll_event event;
-  event.events = EPOLLHUP | EPOLLRDHUP;
+  event.events = EPOLLHUP | EPOLLRDHUP | EPOLLIN;
   event.data.fd = read_fd_;
   epoll_ctl(fd_, EPOLL_CTL_ADD, read_fd_, &event);
   while (true) {
-    int status = epoll_wait(fd_, &event, 1, -1);
-    if (status != 1) continue;
-
-    if (event.data.fd == read_fd_) {
-      close(read_fd_);
-      close(fd_);
-
+    int64 next_timeout;
+    {
       ScopedMonitorLock locker(monitor_);
-      fd_ = -1;
-      monitor_->Notify();
-      return;
+      next_timeout = next_timeout_;
     }
 
+    if (next_timeout == INT64_MAX) {
+      next_timeout = -1;
+    } else {
+      next_timeout -= Platform::GetMicroseconds() / 1000;
+      if (next_timeout < 0) next_timeout = 0;
+    }
+
+    int status = epoll_wait(fd_, &event, 1, next_timeout);
+
+    HandleTimeouts();
+
+    if (status != 1) continue;
+
     int events = event.events;
+
+    if (event.data.fd == read_fd_) {
+      if ((events & EPOLLIN) != 0) {
+        char b;
+        TEMP_FAILURE_RETRY(read(read_fd_, &b, 1));
+        continue;
+      } else {
+        close(read_fd_);
+        close(fd_);
+
+        ScopedMonitorLock locker(monitor_);
+        fd_ = -1;
+        monitor_->Notify();
+        return;
+      }
+    }
+
     word mask = 0;
     if ((events & EPOLLIN) != 0) mask |= READ_EVENT;
     if ((events & EPOLLOUT) != 0) mask |= WRITE_EVENT;

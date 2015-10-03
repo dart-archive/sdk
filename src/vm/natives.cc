@@ -1314,4 +1314,15 @@ NATIVE(Uint32DigitsSet) {
   return process->program()->null_object();
 }
 
+NATIVE(TimerScheduleTimeout) {
+  int64 timeout = AsForeignInt64(arguments[0]);
+  Instance* instance = Instance::cast(arguments[1]);
+  ASSERT(instance->IsPort());
+  Object* field = instance->GetInstanceField(0);
+  uword address = AsForeignWord(field);
+  Port* port = reinterpret_cast<Port*>(address);
+  process->program()->event_handler()->ScheduleTimeout(timeout, port);
+  return process->program()->null_object();
+}
+
 }  // namespace fletch

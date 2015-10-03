@@ -54,6 +54,7 @@ Process::Process(Program* program)
       stack_limit_(NULL),
       program_(program),
       statics_(NULL),
+      exception_(program->null_object()),
       primary_lookup_cache_(NULL),
       random_(program->random()->NextUInt32() + 1),
       heap_(&random_, 4 * KB),
@@ -79,6 +80,8 @@ Process::Process(Program* program)
       "stack_limit_");
   static_assert(kProgramOffset == offsetof(Process, program_), "program_");
   static_assert(kStaticsOffset == offsetof(Process, statics_), "statics_");
+  static_assert(kExceptionOffset == offsetof(Process, exception_),
+      "exception_");
   static_assert(
       kPrimaryLookupCacheOffset == offsetof(Process, primary_lookup_cache_),
       "primary_lookup_cache_");
@@ -468,6 +471,7 @@ void Process::ValidateHeaps(ImmutableHeap* immutable_heap) {
 void Process::IterateRoots(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&statics_));
   visitor->Visit(reinterpret_cast<Object**>(&coroutine_));
+  visitor->Visit(reinterpret_cast<Object**>(&exception_));
   if (debug_info_ != NULL) debug_info_->VisitPointers(visitor);
 
   mailbox_.IteratePointers(visitor);
@@ -479,6 +483,7 @@ void Process::IterateProgramPointers(PointerVisitor* visitor) {
   heap()->IterateObjects(&program_pointer_visitor);
   store_buffer_.IteratePointersToImmutableSpace(visitor);
   if (debug_info_ != NULL) debug_info_->VisitProgramPointers(visitor);
+  visitor->Visit(&exception_);
   mailbox_.IteratePointers(visitor);
 }
 

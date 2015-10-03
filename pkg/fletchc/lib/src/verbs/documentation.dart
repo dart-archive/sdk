@@ -6,7 +6,10 @@ library fletchc.verbs.documentation;
 
 const String synopsis = """
 Usage: fletch <action> [<argument>]...
-   Where <action> is one of the following:""";
+Manages interactions with the fletch compiler and runtime.
+Example: fletch run sample.dart
+
+<action> is one of the following:""";
 
 const String debugDocumentation = """
    debug

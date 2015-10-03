@@ -47,6 +47,7 @@ import 'package:fletchc/src/driver/driver_commands.dart' show
 
 import 'package:fletchc/src/verbs/infrastructure.dart' show
     AnalyzedSentence,
+    Options,
     analyzeSentence;
 
 import 'package:fletchc/src/driver/developer.dart' show
@@ -123,7 +124,8 @@ Future<Null> checkCommandLineExample(
   MockClientController mock = await mockCommandLine(lastLine);
   if (kind == DiagnosticKind.socketVmConnectError) {
     await mock.done;
-    Sentence sentence = parseSentence(lastLine);
+    Options options = Options.parse(lastLine);
+    Sentence sentence = parseSentence(options.nonOptionArguments);
     NamedTarget target = sentence.targets.single;
     String message = mock.stderrMessages.single;
     String expectedMessage = new Diagnostic(
@@ -149,7 +151,6 @@ Future<Null> checkCommandLineExample(
 
 Future<MockClientController> mockCommandLine(List<String> arguments) async {
   print("Command line: ${arguments.join(' ')}");
-  Sentence sentence = parseSentence(arguments, includesProgramName: false);
   MockClientController client = new MockClientController();
   await handleVerb(arguments, client, pool);
   return client;
@@ -241,8 +242,9 @@ class MockClientController implements ClientController {
   }
 
   AnalyzedSentence parseArguments(List<String> arguments) {
-    Sentence sentence = parseSentence(arguments);
-    this.sentence = analyzeSentence(sentence);
+    Options options = Options.parse(arguments);
+    Sentence sentence = parseSentence(options.nonOptionArguments);
+    this.sentence = analyzeSentence(sentence, null);
     return this.sentence;
   }
 

@@ -8,6 +8,7 @@
 
 #include <sys/event.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "src/vm/thread.h"
@@ -25,21 +26,48 @@ void EventHandler::Run() {
   event.filter = EVFILT_READ;
   kevent(fd_, &event, 1, NULL, 0, NULL);
   while (true) {
-    int status = kevent(fd_, NULL, 0, &event, 1, NULL);
-    if (status != 1) continue;
-
-    if (event.ident == static_cast<uintptr_t>(read_fd_)) {
-      close(read_fd_);
-      close(fd_);
+    int64 next_timeout;
+    {
       ScopedMonitorLock locker(monitor_);
-      fd_ = -1;
-      monitor_->Notify();
-      return;
+      next_timeout = next_timeout_;
     }
+
+    timespec ts;
+    timespec* interval = NULL;
+
+    if (next_timeout != INT64_MAX) {
+      next_timeout -= Platform::GetMicroseconds() / 1000;
+      if (next_timeout < 0) next_timeout = 0;
+      ts.tv_sec = next_timeout / 1000;
+      ts.tv_nsec = (next_timeout % 1000) * 1000000;
+      interval = &ts;
+    }
+
+    int status = kevent(fd_, NULL, 0, &event, 1, interval);
+
+    HandleTimeouts();
+
+    if (status != 1) continue;
 
     int filter = event.filter;
     int flags = event.flags;
     int fflags = event.fflags;
+
+    if (event.ident == static_cast<uintptr_t>(read_fd_)) {
+      if ((flags & EV_EOF) == 0) {
+        char b;
+        TEMP_FAILURE_RETRY(read(read_fd_, &b, 1));
+        continue;
+      } else {
+        close(read_fd_);
+        close(fd_);
+        ScopedMonitorLock locker(monitor_);
+        fd_ = -1;
+        monitor_->Notify();
+        return;
+      }
+    }
+
     word mask = 0;
     if (filter == EVFILT_READ) {
       mask = READ_EVENT;

@@ -9,10 +9,7 @@ import 'dart:async' show
 
 import 'package:sdk_library_metadata/libraries.dart' show
     libraries,
-    LibraryInfo,
-    shared,
-    internal,
-    Category;
+    LibraryInfo;
 
 import 'package:compiler/compiler_new.dart' as api;
 
@@ -80,43 +77,43 @@ const FLETCH_PLATFORM = 3;
 const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
   "_fletch_system": const LibraryInfo(
       "system/system.dart",
-      categories: internal,
+      categories: "",
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "fletch.ffi": const LibraryInfo(
       "ffi/ffi.dart",
-      categories: shared,
+      categories: "Client,Server,Embedded",
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "fletch": const LibraryInfo(
       "fletch/fletch.dart",
-      categories: shared,
+      categories: "Client,Server,Embedded",
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "fletch.io": const LibraryInfo(
       "io/io.dart",
-      categories: shared,
+      categories: "Client,Server,Embedded",
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "system": const LibraryInfo(
       "io/system.dart",
-      categories: internal,
+      categories: "",
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "service": const LibraryInfo(
       "service/service.dart",
-      categories: shared,
+      categories: "Client,Server,Embedded",
       documented: false,
       platforms: FLETCH_PLATFORM),
 
   "fletch.os": const LibraryInfo(
       "os/os.dart",
-      categories: shared,
+      categories: "Client,Server,Embedded",
       documented: false,
       platforms: FLETCH_PLATFORM),
 };
@@ -178,7 +175,7 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
       }
       return new LibraryInfo(
           info.path,
-          categories: info.categories,
+          categories: info.categoriesString,
           dart2jsPath: info.dart2jsPath,
           dart2jsPatchPath: fletchPatchLibraryFor(name),
           implementation: info.implementation,
@@ -199,7 +196,7 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
         libraryRoot, patchRoot.resolve("lib/${info.path}"), false);
     return new LibraryInfo(
         '../$path',
-        categories: info.categories,
+        categories: info.categoriesString,
         implementation: info.implementation,
         documented: info.documented,
         maturity: info.maturity,

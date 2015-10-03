@@ -32,6 +32,9 @@ abstract class Command {
       case CommandCode.Instance:
         int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new Instance(classId);
+      case CommandCode.Class:
+        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        return new ClassValue(classId);
       case CommandCode.Integer:
         int value = CommandBuffer.readInt64FromBuffer(buffer, 0);
         return new Integer(value);
@@ -820,6 +823,19 @@ class ProcessFiberBacktraceRequest extends Command {
   String valuesToString() => "$fiber";
 }
 
+class ProcessUncaughtExceptionRequest extends Command {
+  const ProcessUncaughtExceptionRequest()
+      : super(CommandCode.ProcessUncaughtExceptionRequest);
+
+  /// Peer will respond with a [DartValue] or [InstanceStructure] and a number
+  /// of [DartValue]s.
+  ///
+  /// The number of responses is not fixed.
+  int get numberOfResponsesExpected => null;
+
+  String valuesToString() => '';
+}
+
 class ProcessBreakpoint extends Command {
   final int breakpointId;
   final int functionId;
@@ -1123,6 +1139,17 @@ class Instance extends DartValue {
   String dartToString() => "Instance of $classId";
 }
 
+class ClassValue extends DartValue {
+  final int classId;
+
+  const ClassValue(this.classId)
+      : super(CommandCode.Class);
+
+  String valuesToString() => "$classId";
+
+  String dartToString() => "Class with id $classId";
+}
+
 class Integer extends DartValue {
   final int value;
 
@@ -1212,6 +1239,7 @@ enum CommandCode {
   ProcessBacktraceRequest,
   ProcessFiberBacktraceRequest,
   ProcessBacktrace,
+  ProcessUncaughtExceptionRequest,
   ProcessBreakpoint,
   ProcessLocal,
   ProcessLocalStructure,
@@ -1270,6 +1298,7 @@ enum CommandCode {
   Double,
   String,
   Instance,
+  Class,
   InstanceStructure
 }
 

@@ -138,6 +138,10 @@ void Session::SendDartValue(Object* value) {
       buffer.WriteInt(str->get_char_code(i));
     }
     connection_->Send(Connection::kString, buffer);
+  } else if (value->IsClass()) {
+    Push(HeapObject::cast(value));
+    buffer.WriteInt64(MapLookupByObject(class_map_id_, Top()));
+    connection_->Send(Connection::kClass, buffer);
   } else if (value->IsTwoByteString()) {
     // TODO(ager): We should send the character data as 16-bit values
     // instead of 32-bit values.
@@ -307,6 +311,18 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kProcessUncaughtExceptionRequest: {
+        if (program()->scheduler() == NULL) return;
+        StoppedGcThreadScope scope(program()->scheduler());
+        Object* exception = process_->exception();
+        if (exception->IsInstance()) {
+          SendInstanceStructure(Instance::cast(exception));
+        } else {
+          SendDartValue(exception);
+        }
+        break;
+      }
+
       case Connection::kProcessLocal:
       case Connection::kProcessLocalStructure: {
         if (program()->scheduler() == NULL) return;
@@ -329,6 +345,7 @@ void Session::ProcessMessages() {
           StoppedGcThreadScope scope(program()->scheduler());
           int frame = connection_->ReadInt();
           StackWalker::RestartFrame(process_, frame);
+          process_->set_exception(process_->program()->null_object());
         }
         ProcessContinue(process_);
         break;
@@ -348,7 +365,7 @@ void Session::ProcessMessages() {
               scheduler->ExitAtCompileTimeError(process_);
               break;
             case Process::kUncaughtException:
-              scheduler->ExitAtUncaughtException(process_);
+              scheduler->ExitAtUncaughtException(process_, false);
               break;
             default:
               UNREACHABLE();
