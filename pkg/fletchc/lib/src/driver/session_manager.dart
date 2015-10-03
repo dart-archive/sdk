@@ -165,6 +165,8 @@ class SessionState {
 
   SessionState(this.name, this.compilerHelper, this.compiler, this.settings);
 
+  bool get hasRemoteVm => fletchAgentVmId != null;
+
   void addCompilationResult(FletchDelta delta) {
     compilationResults.add(delta);
   }

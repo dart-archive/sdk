@@ -21,7 +21,8 @@ import '../diagnostic.dart' show
     throwInternalError;
 
 import '../driver/developer.dart' show
-    compileAndAttachToVmThen;
+    handleSignal,
+    compileAndAttachToVmThenDeprecated;
 
 import '../driver/driver_commands.dart' show
     DriverCommand;
@@ -136,7 +137,8 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
 
 Future<Null> readCommands(
     StreamIterator<Command> commandIterator,
-    StreamController stdinController) async {
+    StreamController stdinController,
+    SessionState state) async {
   while (await commandIterator.moveNext()) {
     Command command = commandIterator.current;
     switch (command.code) {
@@ -149,7 +151,8 @@ Future<Null> readCommands(
         break;
 
       case DriverCommand.Signal:
-        throwInternalError("Unimplemented");
+        int signalNumber = command.data;
+        handleSignal(state, signalNumber);
         break;
 
       default:
@@ -178,7 +181,7 @@ Future<int> runInteractiveDebuggerTask(
     SessionState state,
     Uri script,
     StreamIterator<Command> commandIterator) {
-  return compileAndAttachToVmThen(
+  return compileAndAttachToVmThenDeprecated(
       commandSender,
       state,
       script,
@@ -206,7 +209,12 @@ Future<int> interactiveDebuggerTask(
 
   // Start event loop.
   StreamController stdinController = new StreamController();
-  readCommands(commandIterator, stdinController);
+  readCommands(commandIterator, stdinController, state);
+
+  // Notify controlling isolate (driver_main) that the event loop
+  // [readCommands] has been started, and commands like DriverCommand.Signal
+  // will be honored.
+  commandSender.sendEventLoopStarted();
 
   var inputStream = stdinController.stream
       .transform(UTF8.decoder)

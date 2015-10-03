@@ -19,6 +19,8 @@ void printUsage() {
       'START_VM (0)');
   print('  --pid: specify the pid of the vm to stop, only used when cmd=1 '
       '(STOP_VM)');
+  print('  --signal: specify which signal to send to the vm. Requires the '
+      '--pid option to be specified.');
   print('');
   exit(1);
 }
@@ -31,6 +33,7 @@ void main(List<String> arguments) async {
   int cmd = RequestHeader.START_VM;
   int id = 1; // The default id used.
   int pid;
+  int signal;
   Socket socket;
 
   void checkSuccess(ReplyHeader header) {
@@ -80,6 +83,11 @@ void main(List<String> arguments) async {
         printUsage();
       }
       port = int.parse(parts[1]);
+    } else if (parts[0] == '--signal') {
+      if (parts.length != 2) {
+        printUsage();
+      }
+      signal = int.parse(parts[1]);
     }
   }
   var request;
@@ -111,6 +119,20 @@ void main(List<String> arguments) async {
       break;
     case RequestHeader.FLETCH_VERSION:
       await connection.fletchVesion();
+      break;
+    case RequestHeader.SIGNAL_VM:
+      if (pid == null) {
+        print('Please specify which pid to stop with --pid=<pid>');
+        printUsage();
+        exit(1);
+      }
+      if (signal == null) {
+        print('Please specify the signal to send to pid.');
+        printUsage();
+        exit(1);
+      }
+      await connection.signalVm(pid, signal);
+      print('Send signal $signal to VM: id=$pid');
       break;
     default:
       print('Invalid command: $cmd');

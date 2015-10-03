@@ -13,6 +13,7 @@ import 'dart:convert' show
 
 import 'dart:io' show
     InternetAddress,
+    Process,
     Socket,
     SocketException;
 
@@ -29,6 +30,7 @@ import 'session_manager.dart' show
     SessionState;
 
 import 'driver_commands.dart' show
+    DriverCommand,
     handleSocketErrors;
 
 import '../../commands.dart' show
@@ -99,36 +101,47 @@ Future<Socket> connect(
   return socket;
 }
 
-Future<Null> startAndAttachViaAgent(SessionState state) async {
+Future<AgentConnection> connectToAgent(SessionState state) async {
   // TODO(wibling): need to make sure the agent is running.
-  // TODO(wibling): integrate with the FletchVm class, e.g. have a
-  // AgentFletchVm and LocalFletchVm that both share the same interface
-  // where the former is interacting with the agent.
   assert(state.settings.deviceAddress != null);
   String host = state.settings.deviceAddress.host;
   int agentPort = state.settings.deviceAddress.port;
   Socket socket = await connect(
       host, agentPort, DiagnosticKind.socketAgentConnectError,
       "agentSocket", state);
-  var agentConnection = new AgentConnection(socket);
+  return new AgentConnection(socket);
+}
+
+void disconnectFromAgent(AgentConnection connection) {
+  assert(connection.socket != null);
+  connection.socket.close();
+}
+
+Future<Null> startAndAttachViaAgent(SessionState state) async {
+  // TODO(wibling): integrate with the FletchVm class, e.g. have a
+  // AgentFletchVm and LocalFletchVm that both share the same interface
+  // where the former is interacting with the agent.
+  AgentConnection connection = await connectToAgent(state);
   VmData vmData;
   try {
-    vmData = await agentConnection.startVm();
+    vmData = await connection.startVm();
   } on AgentException catch (error) {
     throwFatalError(
         DiagnosticKind.socketAgentReplyError,
-        address: '${socket.remoteAddress.host}:${socket.remotePort}',
+        address: '${connection.socket.remoteAddress.host}:'
+            '${connection.socket.remotePort}',
         message: error.message);
   } on MessageDecodeException catch (error) {
     throwFatalError(
         DiagnosticKind.socketAgentReplyError,
-        address: '${socket.remoteAddress.host}:${socket.remotePort}',
+        address: '${connection.socket.remoteAddress.host}:'
+            '${connection.socket.remotePort}',
         message: error.message);
   } finally {
-    socket.close();
+    disconnectFromAgent(connection);
   }
   state.fletchAgentVmId = vmData.id;
-  // The new fletch vm is running at the same host as the agent.
+  String host = state.settings.deviceAddress.host;
   await attachToVm(host, vmData.port, state);
   await state.session.disableVMStandardOutput();
 }
@@ -328,7 +341,9 @@ Future<int> export(SessionState state, Uri snapshot) async {
   return 0;
 }
 
-Future<int> compileAndAttachToVmThen(
+// TODO(wibling): refactor the debug_verb to not set up its own event handler
+// and get rid of this deprecated compileAndAttachToVmThenDeprecated method.
+Future<int> compileAndAttachToVmThenDeprecated(
     CommandSender commandSender,
     SessionState state,
     Uri script,
@@ -381,6 +396,126 @@ Future<int> compileAndAttachToVmThen(
     state.detachCommandSender();
   }
   return exitCode;
+}
+
+Future<int> compileAndAttachToVmThen(
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator,
+    SessionState state,
+    Uri script,
+    Future<int> action()) async {
+  bool startedVmDirectly = false;
+  List<FletchDelta> compilationResults = state.compilationResults;
+  Session session = state.session;
+  if (compilationResults.isEmpty || script != null) {
+    if (script == null) {
+      throwFatalError(DiagnosticKind.noFileTarget);
+    }
+    int exitCode = await compile(script, state);
+    if (exitCode != 0) return exitCode;
+    compilationResults = state.compilationResults;
+    assert(compilationResults != null);
+  }
+
+  if (session == null) {
+    if (state.settings.deviceAddress != null) {
+      await startAndAttachViaAgent(state);
+      // TODO(wibling): read stdout from agent.
+    } else {
+      startedVmDirectly = true;
+      await startAndAttachDirectly(state);
+      state.fletchVm.stdoutLines.listen((String line) {
+          commandSender.sendStdout("$line\n");
+        });
+      state.fletchVm.stderrLines.listen((String line) {
+          commandSender.sendStderr("$line\n");
+        });
+    }
+    session = state.session;
+    assert(session != null);
+  }
+
+  state.attachCommandSender(commandSender);
+
+  // Setup a handler for incoming commands while the current task is executing.
+  readCommands(commandIterator, state);
+
+  // Notify controlling isolate (driver_main) that the event loop
+  // [readCommands] has been started, and commands like DriverCommand.Signal
+  // will be honored.
+  commandSender.sendEventLoopStarted();
+
+  int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
+  try {
+    exitCode = await action();
+  } catch (error, trace) {
+    print(error);
+    if (trace != null) {
+      print(trace);
+    }
+  } finally {
+    if (startedVmDirectly) {
+      exitCode = await state.fletchVm.exitCode;
+    }
+    state.detachCommandSender();
+  }
+  return exitCode;
+}
+
+Future<Null> readCommands(
+    StreamIterator<Command> commandIterator, SessionState state) async {
+  while (await commandIterator.moveNext()) {
+    Command command = commandIterator.current;
+    switch (command.code) {
+      case DriverCommand.Signal:
+        int signalNumber = command.data;
+        handleSignal(state, signalNumber);
+        break;
+      default:
+        state.log("Unhandled command from client: $command");
+    }
+  }
+}
+
+void handleSignal(SessionState state, int signalNumber) {
+  state.log("Received signal $signalNumber");
+  if (!state.hasRemoteVm && state.fletchVm == null) {
+    // This can happen if a user has attached to a vm using the "attach" verb
+    // in which case we don't forward the signal to the vm.
+    // TODO(wibling): Determine how to interpret the signal for the persistent
+    // process.
+    return;
+  }
+  if (state.hasRemoteVm) {
+    signalAgentVm(state, signalNumber);
+  } else {
+    assert(state.fletchVm.process != null);
+    int vmPid = state.fletchVm.process.pid;
+    Process.runSync("kill", ["-$signalNumber", "$vmPid"]);
+  }
+}
+
+Future signalAgentVm(SessionState state, int signalNumber) async {
+  AgentConnection connection = await connectToAgent(state);
+  try {
+    await connection.signalVm(state.fletchAgentVmId, signalNumber);
+  } on AgentException catch (error) {
+    // Not sure if this is fatal. It happens when the vm is not found, ie.
+    // already dead.
+    throwFatalError(
+        DiagnosticKind.socketAgentReplyError,
+        address: '${connection.socket.remoteAddress.host}:'
+            '${connection.socket.remotePort}',
+        message: error.message);
+  } on MessageDecodeException catch (error) {
+    throwFatalError(
+        DiagnosticKind.socketAgentReplyError,
+        address: '${connection.socket.remoteAddress.host}:'
+            '${connection.socket.remotePort}',
+        message: error.message);
+  } finally {
+    disconnectFromAgent(connection);
+  }
 }
 
 Future<IsolateController> allocateWorker(IsolatePool pool) async {

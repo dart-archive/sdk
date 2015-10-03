@@ -37,16 +37,19 @@ class RunTask extends SharedTask {
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return runTask(commandSender, SessionState.current, script);
+    return runTask(
+        commandSender, commandIterator, SessionState.current, script);
   }
 }
 
 Future<int> runTask(
     CommandSender commandSender,
+    StreamIterator<Command> commandIterator,
     SessionState state,
     Uri script) {
   return compileAndAttachToVmThen(
       commandSender,
+      commandIterator,
       state,
       script,
       () => developer.run(state));
