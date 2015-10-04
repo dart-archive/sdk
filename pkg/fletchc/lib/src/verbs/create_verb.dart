@@ -4,16 +4,13 @@
 
 library fletchc.verbs.create_verb;
 
-import 'dart:io' show
-    File;
-
 import 'infrastructure.dart';
 
 import '../driver/developer.dart' show
     Settings,
     allocateWorker,
     createSessionState,
-    parseSettings;
+    createSettings;
 
 import 'documentation.dart' show
     createDocumentation;
@@ -50,23 +47,20 @@ class CreateSessionTask extends SharedTask {
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return createSessionTask(name, settingsUri, base);
+    return createSessionTask(
+        commandSender, commandIterator, name, settingsUri, base);
   }
 }
 
-Future<int> createSessionTask(String name, Uri settingsUri, Uri base) async {
+Future<int> createSessionTask(
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator,
+    String name,
+    Uri settingsUri,
+    Uri base) async {
   assert(SessionState.internalCurrent == null);
-  Settings settings;
-  if (settingsUri == null) {
-    settingsUri = base.resolve('.fletch-settings');
-    if (!await new File.fromUri(settingsUri).exists()) {
-      settingsUri = null;
-    }
-  }
-  if (settingsUri != null) {
-    String jsonLikeData = await new File.fromUri(settingsUri).readAsString();
-    settings = parseSettings(jsonLikeData, settingsUri);
-  }
+  Settings settings = await createSettings(
+      name, settingsUri, base, commandSender, commandIterator);
   SessionState state = createSessionState(name, settings);
   SessionState.internalCurrent = state;
   if (settingsUri != null) {

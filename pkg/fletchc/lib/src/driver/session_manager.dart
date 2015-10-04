@@ -56,7 +56,8 @@ export '../../fletch_vm.dart' show
 
 final Map<String, UserSession> internalSessions = <String, UserSession>{};
 
-String internalCurrentSession = "default";
+// TODO(ahe): We need a command to switch to another session.
+String internalCurrentSession = "local";
 
 String get currentSession => internalCurrentSession;
 
@@ -69,8 +70,6 @@ Future<UserSession> createSession(
   }
   session = new UserSession(name, await allocateWorker());
   internalSessions[name] = session;
-  // TODO(ahe): We need a command to switch to another session.
-  internalCurrentSession = name;
   return session;
 }
 

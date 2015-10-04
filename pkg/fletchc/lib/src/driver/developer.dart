@@ -9,9 +9,12 @@ import 'dart:async' show
     Timer;
 
 import 'dart:convert' show
-    JSON;
+    JSON,
+    JsonEncoder,
+    UTF8;
 
 import 'dart:io' show
+    File,
     InternetAddress,
     Process,
     Socket,
@@ -48,7 +51,6 @@ import '../verbs/infrastructure.dart' show
     Session,
     SharedTask,
     StreamIterator,
-    fileUri,
     throwFatalError;
 
 import '../../incremental/fletchc_incremental.dart' show
@@ -78,6 +80,9 @@ import 'package:fletch_agent/agent_connection.dart' show
 import 'package:fletch_agent/messages.dart' show
     AGENT_DEFAULT_PORT,
     MessageDecodeException;
+
+import 'package:compiler/src/util/uri_extras.dart' show
+    relativize;
 
 Future<Socket> connect(
     String host,
@@ -208,6 +213,106 @@ Future<int> compile(Uri script, SessionState state) async {
   state.log("Compiled '$script' to ${newResult.commands.length} commands");
 
   return 0;
+}
+
+Future<Settings> readSettings(Uri uri) async {
+  if (await new File.fromUri(uri).exists()) {
+    String jsonLikeData = await new File.fromUri(uri).readAsString();
+    return parseSettings(jsonLikeData, uri);
+  } else {
+    return null;
+  }
+}
+
+Future<Settings> createSettings(
+    String sessionName,
+    Uri uri,
+    Uri base,
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator) async {
+  bool userProvidedSettings = uri != null;
+  if (!userProvidedSettings) {
+    Uri implicitSettingsUri = base.resolve('.fletch-settings');
+    if (await new File.fromUri(implicitSettingsUri).exists()) {
+      uri = implicitSettingsUri;
+    }
+  }
+
+  Settings settings = new Settings.empty();
+  if (uri != null) {
+    String jsonLikeData = await new File.fromUri(uri).readAsString();
+    settings = parseSettings(jsonLikeData, uri);
+  }
+  if (userProvidedSettings) return settings;
+
+  Uri packagesUri;
+  Address address;
+  switch (sessionName) {
+    case "remote":
+      uri = base.resolve("remote.fletch-settings");
+      Settings remoteSettings = await readSettings(uri);
+      if (remoteSettings != null) return remoteSettings;
+      packagesUri = executable.resolve("fletch-sdk.packages");
+      address = await readAddressFromUser(commandSender, commandIterator);
+      if (address == null) {
+        // Assume user aborted data entry.
+        return settings;
+      }
+      break;
+
+    case "local":
+      uri = base.resolve("local.fletch-settings");
+      Settings localSettings = await readSettings(uri);
+      if (localSettings != null) return localSettings;
+      // TODO(ahe): Use mock packages here.
+      packagesUri = executable.resolve("fletch-sdk.packages");
+      break;
+
+    default:
+      return settings;
+  }
+
+  if (!await new File.fromUri(packagesUri).exists()) {
+    packagesUri = null;
+  }
+  settings = settings.copyWith(packages: packagesUri, deviceAddress: address);
+  print("Created settings file '${relativize(base, uri, false)}'");
+  await new File.fromUri(uri).writeAsString(
+      "${const JsonEncoder.withIndent('  ').convert(settings)}\n");
+  return settings;
+}
+
+Future<Address> readAddressFromUser(
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator) async {
+  commandSender.sendEventLoopStarted();
+  commandSender.sendStdout("Please enter IP address of remote device: ");
+  while (await commandIterator.moveNext()) {
+    Command command = commandIterator.current;
+    switch (command.code) {
+      case DriverCommand.Stdin:
+        if (command.data.length == 0) {
+          // TODO(ahe): It may be safe to return null here, but we need to
+          // check how this interacts with the debugger's InputHandler.
+          throwInternalError("Unexpected end of input");
+        }
+        // TODO(ahe): This assumes that the user's input arrives as one
+        // message. It is relatively safe to assume this for a normal terminal
+        // session because we use canonical input processing (Unix line
+        // buffering), but it doesn't work in general. So we should fix that.
+        String line = UTF8.decode(command.data).trim();
+        return parseAddress(line, defaultPort: AGENT_DEFAULT_PORT);
+
+      case DriverCommand.Signal:
+        // Send an empty line as the user didn't hit enter.
+        commandSender.sendStdout("\n");
+        // Assume user aborted data entry.
+        return null;
+
+      default:
+        throwInternalError("Unexpected ${command.code}");
+    }
+  }
 }
 
 SessionState createSessionState(String name, Settings settings) {
@@ -587,6 +692,8 @@ class Address {
   const Address(this.host, this.port);
 
   String toString() => "Address($host, $port)";
+
+  String toJson() => "$host:$port";
 }
 
 /// See ../verbs/documentation.dart for a definition of this format.
@@ -615,7 +722,7 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
             throwFatalError(
                 DiagnosticKind.settingsPackagesNotAString, uri: settingsUri);
           }
-          packages = fileUri(value, settingsUri);
+          packages = settingsUri.resolve(value);
         }
         break;
 
@@ -699,11 +806,40 @@ class Settings {
   const Settings.empty()
     : this(null, const <String>[], const <String, String>{}, null);
 
+  Settings copyWith({
+      Uri packages,
+      List<String> options,
+      Map<String, String> constants,
+      Address deviceAddress}) {
+    if (packages == null) {
+      packages = this.packages;
+    }
+    if (options == null) {
+      options = this.options;
+    }
+    if (constants == null) {
+      constants = this.constants;
+    }
+    if (deviceAddress == null) {
+      deviceAddress = this.deviceAddress;
+    }
+    return new Settings(packages, options, constants, deviceAddress);
+  }
+
   String toString() {
     return "Settings("
         "packages: $packages, "
         "options: $options, "
         "constants: $constants, "
         "device_address: $deviceAddress)";
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      "packages": "$packages",
+      "options": options,
+      "constants": constants,
+      "device_address": deviceAddress,
+    };
   }
 }
