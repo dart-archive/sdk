@@ -8,6 +8,6 @@ library helloSample;
 import 'package:os/os.dart';
 
 main() {
-  SystemInformation si = sys.systemInformation();
+  SystemInformation si = sys.info();
   print('Hello from ${si.operatingSystemName} running on ${si.nodeName}.');
 }
