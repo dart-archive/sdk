@@ -24,6 +24,7 @@ enum DiagnosticKind {
   noFileTarget,
   noSuchSession,
   noTcpSocketTarget,
+  quitTakesNoArguments,
   sessionAlreadyExists,
   settingsCompileTimeConstantAsOption,
   settingsConstantsNotAMap,
@@ -246,5 +247,8 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.expectedTargetButGot:
       return "Expected 'session(s)', 'class(s)', 'method(s)', 'file(s)', "
           "or 'all', but got: '$userInput'. Did you mean 'file $userInput'";
+
+    case DiagnosticKind.quitTakesNoArguments:
+      return "Unexpected arguments. Try running 'fletch quit'";
   }
 }

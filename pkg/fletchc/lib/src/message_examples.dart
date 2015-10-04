@@ -253,6 +253,9 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.expectedTargetButGot:
       return <Example>[new CommandLineExample(
             <String>['export', 'hello.dart', 'to', 'hello'])];
+
+    case DiagnosticKind.quitTakesNoArguments:
+      return <Example>[new CommandLineExample(<String>['quit', '-v'])];
   }
 }
 
