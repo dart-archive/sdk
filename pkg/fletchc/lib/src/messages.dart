@@ -9,6 +9,7 @@ import 'diagnostic.dart' show
     DiagnosticParameter;
 
 enum DiagnosticKind {
+  busySession,
   cantPerformVerbIn,
   cantPerformVerbTo,
   cantPerformVerbWith,
@@ -40,6 +41,7 @@ enum DiagnosticKind {
   socketAgentReplyError,
   socketVmConnectError,
   socketVmReplyError,
+  terminatedSession,
   unexpectedArgument,
   unknownAction,
   unknownOption,
@@ -250,5 +252,11 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.quitTakesNoArguments:
       return "Unexpected arguments. Try running 'fletch quit'";
+
+    case DiagnosticKind.busySession:
+      return "Session '$sessionName' is in use, please try again shortly";
+
+    case DiagnosticKind.terminatedSession:
+      return "Session '$sessionName' was terminated";
   }
 }

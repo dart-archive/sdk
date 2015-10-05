@@ -256,6 +256,14 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.quitTakesNoArguments:
       return <Example>[new CommandLineExample(<String>['quit', '-v'])];
+
+    case DiagnosticKind.busySession:
+      // TODO(ahe): Add test for this.
+      return untestable;
+
+    case DiagnosticKind.terminatedSession:
+      // TODO(ahe): Add test for this.
+      return untestable;
   }
 }
 
