@@ -1,42 +1,31 @@
-# Fletch runtime for Dart
+# The Fletch project
 
-Fletch is an **experimental** runtime for Dart that makes it possible to
-implement highly concurrent programs in the Dart programming language. To make
-it easier to reason about such programs, Fletch comes with a virtual machine
-implementation that encourages synchronous operations over asynchronous ones -
-and enables lots of user-level threads to be blocked without holding on to too
-many resources.
+Fletch is an **experimental** project to enable highly productive development
+for devices. It is powered by the [Dart language](https://www.dartlang.org/docs/dart-up-and-running/ch02.html)
+and a fast, lean runtime.
 
 Fletch is very much incomplete. We'd be very happy to hear about things that
-work well and areas that need more work, but don't expect to be able to build
-products on top of it.
-
+work well and areas that need more work (see feedback below). Also note that
+in the current state this is shared to enable experimentation and feedback,
+so don't expect to be able to build complete products on top of it.
 
 ## Trying it out
 
-To try out Fletch, you need to first
-[build it](https://github.com/dart-lang/fletch/wiki/Building).
+To try out Fletch for embedded device development, please see the
+[Fletch site](http://dart-lang.github.io/fletch/).
 
-Once you have working `fletch-vm` and `fletch` executables in an
-`out/<platform>` directory, you can run Dart code on top of it by typing:
+For details on Fletch Services for Android or iOS, please see the [Fletch Services wiki page](https://github.com/dart-lang/fletch/wiki/Dart-Services-IDL).
 
-<pre><code>$ <strong>fletch run hello.dart</strong></code></pre>
-
-There are more details about the fletch command line program on the
-[wiki pages](https://github.com/dart-lang/fletch/wiki/Fletch-Command-Line).
-
-## Contributing
+## Feedback & contributing
 
 To give us feedback, please
 [file issues on GitHub](https://github.com/dart-lang/fletch/issues)
 or join our
-[mailing list](https://groups.google.com/forum/#!forum/fletch)
-and post there. We also welcome contributions; just sign our
-[CLA](https://developers.google.com/open-source/cla/individual), fork our
-repository, and start sending us pull requests.
+[discussion group](https://groups.google.com/forum/#!forum/fletch-discuss)
+and post there.
 
+For code contributions, please see the [Contributing page](https://github.com/dart-lang/fletch/wiki/Contributing).
 
 ## License
 
-The Fletch runtime for Dart is available under the *Modified BSD license*. For
-all the details, see the separate [license](LICENSE.md) file.
+Please see the [license file](https://github.com/dart-lang/fletch/blob/master/LICENSE.md).
