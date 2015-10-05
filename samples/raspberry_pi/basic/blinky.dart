@@ -6,21 +6,20 @@
 // Raspberry Pi 2 activity LED.
 
 import 'package:gpio/gpio.dart';
+import 'package:raspberry_pi/raspberry_pi.dart';
 import 'package:os/os.dart';
 
 main() {
-  // Constant for the Raspberry Pi 2 onboard green LED.
-  const int led = 47;
-
-  // Initialize gpio and configure the pin.
-  PiMemoryMappedGPIO gpio = new PiMemoryMappedGPIO();
-  gpio.setMode(led, Mode.output);
+  // Initialize Raspberry Pi and configure the activity LED to be GPIO
+  // controlled.
+  RaspberryPi pi = new RaspberryPi();
+  pi.leds.activityLED.setMode(OnboardLEDMode.gpio);
 
   // Turn LED on and off in a continuous loop.
   while (true) {
-    gpio.setPin(led, true);
+    pi.leds.activityLED.on();
     sleep(500);
-    gpio.setPin(led, false);
+    pi.leds.activityLED.off();
     sleep(500);
   }
 }
