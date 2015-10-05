@@ -41,7 +41,7 @@ messaging_process_die_early_test: Crash
 messaging_program_gc_gc_on_delete_test: Fail
 messaging_program_gc_test: RuntimeError
 messaging_single_receiver_test: Crash
-random_test: Crash
+random_test: Pass, Crash
 shared_immutable_data_test: Crash, Slow
 spawn_empty_test: Crash
 spawn_fib_test: Crash
