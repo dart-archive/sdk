@@ -21,6 +21,8 @@ import 'developer.dart' show
 
 import '../diagnostic.dart' show
     DiagnosticKind,
+    DiagnosticParameter,
+    InputError,
     throwFatalError,
     throwInternalError;
 
@@ -100,7 +102,18 @@ class UserSession {
 
   final IsolateController worker;
 
+  bool hasActiveWorkerTask = false;
+
   UserSession(this.name, this.worker);
+
+  void kill(void printLineOnStderr(String line)) {
+    worker.isolate.kill();
+    internalSessions.remove(name);
+    InputError error = new InputError(
+        DiagnosticKind.terminatedSession,
+        <DiagnosticParameter, dynamic>{DiagnosticParameter.sessionName: name});
+    printLineOnStderr(error.asDiagnostic().formatMessage());
+  }
 }
 
 typedef void SendBytesFunction(List<int> bytes);

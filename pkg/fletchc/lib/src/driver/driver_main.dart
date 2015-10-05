@@ -313,7 +313,19 @@ class DriverVerbContext extends VerbContext {
   }
 
   Future<Null> performTaskInWorker(SharedTask task) {
-    return session.worker.performTask(combineTasks(initializer, task), client);
+    if (session.worker.isolate.wasKilled) {
+      throwInternalError(
+          "session ${session.name}: worker isolate terminated unexpectedly");
+    }
+    if (session.hasActiveWorkerTask) {
+      throwFatalError(DiagnosticKind.busySession, sessionName: session.name);
+    }
+    session.hasActiveWorkerTask = true;
+    return session.worker.performTask(
+        combineTasks(initializer, task), client, userSession: session)
+        .whenComplete(() {
+          session.hasActiveWorkerTask = false;
+        });
   }
 }
 
@@ -507,7 +519,9 @@ class IsolateController {
   /// vice versa.  The returned future normally completes when the worker
   /// isolate sends DriverCommand.ClosePort, or if the isolate is killed due to
   /// DriverCommand.Signal arriving through client.commands.
-  Future<Null> attachClient(ClientController client) async {
+  Future<Null> attachClient(
+      ClientController client,
+      UserSession userSession) async {
     eventLoopStarted = false;
     crashReportRequested = false;
     errorSubscription.onData((errorList) {
@@ -521,12 +535,21 @@ class IsolateController {
       if (stackTrace != null) {
         client.printLineOnStderr(stackTrace);
       }
+      if (userSession != null) {
+        userSession.kill(client.printLineOnStderr);
+      } else {
+        isolate.kill();
+      }
       workerReceivePort.close();
     });
     errorSubscription.resume();
     handleCommand(Command command) {
       if (command.code == DriverCommand.Signal && !eventLoopStarted) {
-        isolate.kill();
+        if (userSession != null) {
+          userSession.kill(client.printLineOnStderr);
+        } else {
+          isolate.kill();
+        }
         workerReceivePort.close();
       } else {
         workerSendPort.send([command.code.index, command.data]);
@@ -579,6 +602,7 @@ class IsolateController {
       SharedTask task,
       ClientController client,
       {
+       UserSession userSession,
        /// End this session and return this isolate to the pool.
        bool endSession: false}) async {
     ClientLogger log = client.log;
@@ -589,7 +613,7 @@ class IsolateController {
     // `this`.  Also, Intercept the signal command and potentially kill the
     // isolate (the isolate needs to tell if it is interuptible or needs to be
     // killed, an example of the latter is, if compiler is running).
-    await attachClient(client);
+    await attachClient(client, userSession);
     // The verb (which was performed in the worker) is done.
     log.note("After attachClient.");
 
