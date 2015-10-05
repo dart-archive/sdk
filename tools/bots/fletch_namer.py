@@ -36,3 +36,6 @@ class FletchGCSNamer(bot_utils.GCSNamer):
   def arm_agent_filepath(self, revision):
     return '/'.join([self.fletch_sdk_directory(revision),
         self.arm_agent_filename(revision)])
+
+  def version_filepath(self, revision):
+    return '/'.join([self.fletch_sdk_directory(revision), 'VERSION'])

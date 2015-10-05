@@ -828,7 +828,7 @@ class Settings {
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      "packages": "$packages",
+      "packages": packages == null ? null : "$packages",
       "options": options,
       "constants": constants,
       "device_address": deviceAddress,
