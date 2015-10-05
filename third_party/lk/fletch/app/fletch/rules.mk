@@ -4,6 +4,8 @@ FLETCH_BASE := $(BUILDROOT)/../../../
 
 MODULE := $(LOCAL_DIR)
 
+MODULE_DEPS += lib/libm
+
 MODULE_SRCS += \
 	$(LOCAL_DIR)/fletch_runner.c \
 	$(LOCAL_DIR)/missing.c \

@@ -40,6 +40,7 @@
         'event_handler_mbed.cc',
         'ffi.cc',
         'ffi_disabled.cc',
+        'ffi_static.cc',
         'ffi.h',
         'ffi_linux.cc',
         'ffi_macos.cc',

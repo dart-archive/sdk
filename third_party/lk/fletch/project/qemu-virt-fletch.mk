@@ -8,7 +8,6 @@ MEMSIZE := 0x1000000  # 16MB
 MODULES += \
 	app/shell \
 	app/fletch \
-	lib/libm \
 	lib/evlog
 
 GLOBAL_DEFINES += WITH_KERNEL_EVLOG=1

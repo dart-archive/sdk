@@ -17,6 +17,7 @@
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_mbed',
           'fletch_disable_live_coding', 'fletch_disable_ffi', 
+          'fletch_disable_native_processes',
           'fletch_disable_print_interceptors'],
       },
 
@@ -24,6 +25,7 @@
         'inherit_from': [
           'fletch_base', 'fletch_debug', 'fletch_mbed', 
           'fletch_disable_live_coding', 'fletch_disable_ffi', 
+          'fletch_disable_native_processes',
           'fletch_disable_print_interceptors'],
       },
     },

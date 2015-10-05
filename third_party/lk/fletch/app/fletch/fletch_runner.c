@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
@@ -9,6 +11,51 @@
 #include <fletch_api.h>
 #include <endian.h>
 #include <kernel/thread.h>
+#include <lib/gfx.h>
+#include <dev/display.h>
+
+typedef struct {
+  const char* const name;
+  const void* const ptr;
+} StaticFFISymbol;
+
+int FFITestMagicMeat() { return 0xbeef; }
+int FFITestMagicVeg() { return 0x1eaf; }
+
+#if WITH_LIB_GFX
+/*
+ * Simple framebuffer stuff.
+ */
+gfx_surface* GetFullscreenSurface() {
+  struct display_info info;
+  display_get_info(&info);
+
+  return gfx_create_surface_from_display(&info);
+}
+
+int GetWidth(gfx_surface* surface) { return surface->width; }
+int GetHeight(gfx_surface* surface) { return surface->height; }
+
+#define LIB_GFX_EXPORTS 7
+#else  // WITH_LIB_GFX
+#define LIB_GFX_EXPORTS 0
+#endif  // WITH_LIB_GFX
+
+StaticFFISymbol table[] = { {"magic_meat", &FFITestMagicMeat},
+                            {"magic_veg", &FFITestMagicVeg},
+#if WITH_LIB_GFX
+                            {"gfx_create", &GetFullscreenSurface},
+                            {"gfx_width", &GetWidth},
+                            {"gfx_height", &GetHeight},
+                            {"gfx_destroy", &gfx_surface_destroy},
+                            {"gfx_pixel", &gfx_putpixel},
+                            {"gfx_clear", &gfx_clear},
+                            {"gfx_flush", &gfx_flush},
+#endif  // WITH_LIB_GFX
+};
+
+const void* const fletch_ffi_table_start = table;
+const void* const fletch_ffi_table_end = table + 2 + LIB_GFX_EXPORTS;
 
 int ReadSnapshot(unsigned char** snapshot) {
   printf("READY TO READ SNAPSHOT DATA.\n");
