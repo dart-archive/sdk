@@ -81,8 +81,7 @@ import 'package:fletch_agent/messages.dart' show
     AGENT_DEFAULT_PORT,
     MessageDecodeException;
 
-import 'package:compiler/src/util/uri_extras.dart' show
-    relativize;
+Uri configFileUri;
 
 Future<Socket> connect(
     String host,
@@ -228,6 +227,7 @@ Future<Settings> createSettings(
     String sessionName,
     Uri uri,
     Uri base,
+    Uri configFileUri,
     CommandSender commandSender,
     StreamIterator<Command> commandIterator) async {
   bool userProvidedSettings = uri != null;
@@ -249,7 +249,7 @@ Future<Settings> createSettings(
   Address address;
   switch (sessionName) {
     case "remote":
-      uri = base.resolve("remote.fletch-settings");
+      uri = configFileUri.resolve("remote.fletch-settings");
       Settings remoteSettings = await readSettings(uri);
       if (remoteSettings != null) return remoteSettings;
       packagesUri = executable.resolve("fletch-sdk.packages");
@@ -261,7 +261,7 @@ Future<Settings> createSettings(
       break;
 
     case "local":
-      uri = base.resolve("local.fletch-settings");
+      uri = configFileUri.resolve("local.fletch-settings");
       Settings localSettings = await readSettings(uri);
       if (localSettings != null) return localSettings;
       // TODO(ahe): Use mock packages here.
@@ -276,7 +276,7 @@ Future<Settings> createSettings(
     packagesUri = null;
   }
   settings = settings.copyWith(packages: packagesUri, deviceAddress: address);
-  print("Created settings file '${relativize(base, uri, false)}'");
+  print("Created settings file '$uri'");
   await new File.fromUri(uri).writeAsString(
       "${const JsonEncoder.withIndent('  ').convert(settings)}\n");
   return settings;
@@ -360,11 +360,8 @@ Future<int> run(SessionState state, {String testDebuggerCommands}) async {
   if (command == null) {
     await session.kill();
     await session.shutdown();
-    print(state.flushLog());
     throwInternalError("No command received from Fletch VM");
   }
-
-  bool flushLog = true;
 
   Future printException() async {
     String exception = await session.exceptionAsString();
@@ -396,7 +393,6 @@ Future<int> run(SessionState state, {String testDebuggerCommands}) async {
 
       case CommandCode.ProcessTerminated:
         exitCode = 0;
-        flushLog = false;
         break;
 
       case CommandCode.ConnectionError:
@@ -409,15 +405,11 @@ Future<int> run(SessionState state, {String testDebuggerCommands}) async {
         break;
     }
   } finally {
-    if (flushLog) {
-      print(state.flushLog());
-    }
     if (!session.terminated) {
       // TODO(ahe): Do not shut down the session.
       bool done = false;
       Timer timer = new Timer(const Duration(seconds: 5), () {
         if (!done) {
-          print(state.flushLog());
           print("Timed out waiting for Fletch VM to shutdown; killing session");
           session.kill();
         }

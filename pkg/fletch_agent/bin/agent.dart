@@ -350,7 +350,10 @@ class CommandHandler {
     } else {
       int pid = readUint16(pidBytes, 0);
       int signal = readUint16(pidBytes, 2);
-      int err = _kill.icall$2(pid, signal);
+      // TODO(wibling): Hack to make ctrl-c work for stopping spawed vms work
+      // on Raspbian wheezy. For some unknown reason SIGINT doesn't work so we
+      // map SIGINT to SIGTERM as a workaround.
+      int err = _kill.icall$2(pid, signal == 2 ? 15 : signal);
       if (err != 0) {
         reply = new SignalVmReply(_requestHeader.id, ReplyHeader.UNKNOWN_VM_ID);
         _context.logger.warn('Failed to send signal %signal to  pid $pid with '

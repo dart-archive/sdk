@@ -24,6 +24,9 @@ shared_immutable_data_test: Pass, Slow
 dart2js_hello_world_test: Skip  # Rather big and slow test.
 dart2js_deltablue_test: Skip  # Rather big and slow test.
 
+[ $system != lk ]
+static_ffi_test: Skip
+
 [ $system == lk ]
 dart2js_deltablue_test: Crash
 dart2js_hello_world_test: Crash

@@ -43,6 +43,9 @@ import 'x_servicec_verb.dart' show
 import 'quit_verb.dart' show
     quitAction;
 
+import 'show_verb.dart' show
+    showAction;
+
 typedef Future<int> DoAction(AnalyzedSentence sentence, VerbContext context);
 
 class Action {
@@ -115,4 +118,5 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "x-end": endAction,
   "x-servicec": servicecAction,
   "quit": quitAction,
+  "show": showAction,
 };

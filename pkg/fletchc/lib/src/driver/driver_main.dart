@@ -71,8 +71,9 @@ import '../shared_command_infrastructure.dart' show
     toUint8ListView;
 
 import 'developer.dart' show
+    allocateWorker,
     combineTasks,
-    allocateWorker;
+    configFileUri;
 
 import 'session_manager.dart' show
     lookupSession;
@@ -157,7 +158,8 @@ class ByteCommandSender extends CommandSender {
 
 Future main(List<String> arguments) async {
   mainArguments.addAll(arguments);
-  File configFile = new File.fromUri(Uri.base.resolve(arguments.first));
+  configFileUri = Uri.base.resolve(arguments.first);
+  File configFile = new File.fromUri(configFileUri);
   Directory tmpdir = Directory.systemTemp.createTempSync("fletch_driver");
 
   File socketFile = new File("${tmpdir.path}/socket");
@@ -265,8 +267,8 @@ Future<Null> handleVerb(
       session = lookupSession(sessionName);
       if (session == null) {
         session = await createSession(sessionName, () => allocateWorker(pool));
-        initializer =
-            new CreateSessionTask(sessionName, null, client.sentence.base);
+        initializer = new CreateSessionTask(
+            sessionName, null, client.sentence.base, configFileUri);
       }
     }
     DriverVerbContext context =

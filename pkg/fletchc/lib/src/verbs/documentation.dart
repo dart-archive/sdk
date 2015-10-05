@@ -148,3 +148,8 @@ const String quitDocumentation = """
    quit      Quits the fletch background process. Warning: will terminate all
              fletch sessions currently running
 """;
+
+const String showDocumentation = """
+   show log [in session <name>]
+             Display log for given session
+""";

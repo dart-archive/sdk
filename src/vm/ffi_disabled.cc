@@ -25,8 +25,8 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
   return NULL;
 }
 
-DefaultLibraryEntry *ForeignFunctionInterface::libraries_ = NULL;
-Mutex *ForeignFunctionInterface::mutex_ = NULL;
+DefaultLibraryEntry* ForeignFunctionInterface::libraries_ = NULL;
+Mutex* ForeignFunctionInterface::mutex_ = NULL;
 
 #define UNIMPLEMENTED_NATIVE(name) \
   NATIVE(name)  {                  \

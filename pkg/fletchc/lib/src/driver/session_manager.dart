@@ -188,11 +188,7 @@ class SessionState {
     loggedMessages.add("[$name: ${new DateTime.now()} $message]");
   }
 
-  String flushLog() {
-    String result = loggedMessages.join("\n");
-    loggedMessages.clear();
-    return result;
-  }
+  String getLog() => loggedMessages.join("\n");
 
   static SessionState internalCurrent;
 

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef FLETCH_ENABLE_FFI
+#ifdef FLETCH_ENABLE_NATIVE_PROCESSES
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -230,4 +230,4 @@ NATIVE(NativeProcessSpawnDetached) {
 
 }  // namespace fletch
 
-#endif  // FLETCH_ENABLE_FFI
+#endif  // FLETCH_ENABLE_NATIVE_PROCESSES

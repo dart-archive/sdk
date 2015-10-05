@@ -170,6 +170,7 @@ class CcRule extends Rule {
     arguments.add('-DFLETCH_ENABLE_FFI');
     arguments.add('-DFLETCH_ENABLE_LIVE_CODING');
     arguments.add('-DFLETCH_ENABLE_PRINT_INTERCEPTORS');
+    arguments.add('-DFLETCH_ENABLE_NATIVE_PROCESSES');
     if (buildArchitecture == 'ia32') {
       arguments.add('-m32');
       arguments.add('-DFLETCH32');
