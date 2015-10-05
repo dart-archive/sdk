@@ -143,3 +143,8 @@ const String exportDocumentation = """
              Compile <dartfile> and create a snapshot in <snapshot>. If no
              <dartfile> is given, export the previously compiled file
 """;
+
+const String quitDocumentation = """
+   quit      Quits the fletch background process. Warning: will terminate all
+             fletch sessions currently running
+""";

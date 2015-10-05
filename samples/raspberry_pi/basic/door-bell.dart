@@ -8,6 +8,7 @@
 // https://storage.googleapis.com/fletch-archive/images/buzzer-schematic.png
 
 import 'package:gpio/gpio.dart';
+import 'package:raspberry_pi/raspberry_pi.dart';
 import 'package:os/os.dart';
 
 main() {
@@ -15,12 +16,13 @@ main() {
   const int button = 16;
   const int speaker = 21;
 
-  // Initialize GPIO and speaker pin.
-  SysfsGPIO gpio = new SysfsGPIO();
+  // Initialize Raspberry Pi and configure the pins.
+  RaspberryPi pi = new RaspberryPi();
+  SysfsGPIO gpio = pi.sysfsGPIO;
+
+  // Initialize pins.
   gpio.exportPin(speaker);
   gpio.setMode(speaker, Mode.output);
-
-  // Initialize button pin. Enable a button down trigger.
   gpio.exportPin(button);
   gpio.setMode(button, Mode.input);
   gpio.setTrigger(button, Trigger.both);

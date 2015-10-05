@@ -113,6 +113,7 @@ class RequestHeader {
   static const int LIST_VMS = 2;
   static const int UPGRADE_VM = 3;
   static const int FLETCH_VERSION = 4;
+  static const int SIGNAL_VM = 5;
 
   // Wire size (bytes) of the RequestHeader.
   static const int HEADER_SIZE = 12;
@@ -319,6 +320,45 @@ class FletchVersionRequest extends RequestHeader {
   // A FletchVersionRequest has no payload so just use parent's toBuffer method.
 }
 
+class SignalVmRequest extends RequestHeader {
+  final int vmPid;
+  final int signal;
+
+  SignalVmRequest(this.vmPid, this.signal)
+      : super(RequestHeader.SIGNAL_VM, payloadLength: 4);
+
+  SignalVmRequest.withHeader(RequestHeader header, this.vmPid, this.signal)
+      : super(
+            RequestHeader.SIGNAL_VM,
+            version: header.version,
+            id: header.id,
+            reserved: header.reserved);
+
+  factory SignalVmRequest.fromBuffer(ByteBuffer buffer) {
+    if (buffer.lengthInBytes < RequestHeader.HEADER_SIZE + 4) {
+      throw new MessageDecodeException(
+          'Insufficient data for a SignalVmRequest: ${buffer.asUint8List()}');
+    }
+    RequestHeader header = new RequestHeader.fromBuffer(buffer);
+    if (header.command != RequestHeader.SIGNAL_VM ||
+        header.payloadLength != 4) {
+      throw new MessageDecodeException(
+          "Invalid SignalVmRequest: ${buffer.asUint8List()}");
+    }
+    int vmPid = readUint16(buffer, RequestHeader.HEADER_SIZE);
+    int signal = readUint16(buffer, RequestHeader.HEADER_SIZE + 2);
+    return new SignalVmRequest.withHeader(header, vmPid, signal);
+  }
+
+  ByteBuffer toBuffer() {
+    var buffer = new Uint8List(RequestHeader.HEADER_SIZE + 4).buffer;
+    _writeHeader(buffer);
+    writeUint16(buffer, RequestHeader.HEADER_SIZE, vmPid);
+    writeUint16(buffer, RequestHeader.HEADER_SIZE + 2, signal);
+    return buffer;
+  }
+}
+
 class ReplyHeader {
   /// Error codes.
   static const int SUCCESS = 0;
@@ -408,8 +448,12 @@ class StopVmReply extends ReplyHeader {
   StopVmReply(int id, int result) : super(id, result);
 
   factory StopVmReply.fromBuffer(ByteBuffer buffer) {
-    // The STOP_VM reply has no payload, just parse the header and return.
-    return new ReplyHeader.fromBuffer(buffer);
+    ReplyHeader header = new ReplyHeader.fromBuffer(buffer);
+    if (header.payloadLength != 0) {
+      throw new MessageDecodeException(
+          "Invalid payload length in StopVmReply: ${buffer.asUint8List()}");
+    }
+    return new StopVmReply(header.id, header.result);
   }
 
   // The STOP_VM reply has no payload, so leverage parent's toBuffer method.
@@ -455,8 +499,12 @@ class UpgradeVmReply extends ReplyHeader {
   UpgradeVmReply(int id, int result) : super(id, result);
 
   factory UpgradeVmReply.fromBuffer(ByteBuffer buffer) {
-    // The UPGRADE_VM reply has no payload, just parse the header and return.
-    return new ReplyHeader.fromBuffer(buffer);
+    ReplyHeader header = new ReplyHeader.fromBuffer(buffer);
+    if (header.payloadLength != 0) {
+      throw new MessageDecodeException(
+          "Invalid payload length in UpgradeVmReply: ${buffer.asUint8List()}");
+    }
+    return new UpgradeVmReply(header.id, header.result);
   }
 
   // The UPGRADE_VM reply has no payload, so leverage parent's toBuffer method.
@@ -496,6 +544,23 @@ class FletchVersionReply extends ReplyHeader {
     }
     return buffer;
   }
+}
+
+class SignalVmReply extends ReplyHeader {
+  SignalVmReply(int id, int result)
+      : super(id, result);
+
+  factory SignalVmReply.fromBuffer(ByteBuffer buffer) {
+    ReplyHeader header = new ReplyHeader.fromBuffer(buffer);
+    if (header.payloadLength != 0) {
+      throw new MessageDecodeException(
+          "Invalid payload length in SignalVmReply: ${buffer.asUint8List()}");
+    }
+    return new SignalVmReply(header.id, header.result);
+  }
+
+  // The SIGNAL_VM reply has no payload, so leverage parent's toBuffer method.
+  // TODO(wibling): Figure out how to return exitcode from vm on exit.
 }
 
 // Utility methods to read and write 16 and 32 bit entities from/to big endian.

@@ -9,10 +9,14 @@ import 'dart:async' show
     Timer;
 
 import 'dart:convert' show
-    JSON;
+    JSON,
+    JsonEncoder,
+    UTF8;
 
 import 'dart:io' show
+    File,
     InternetAddress,
+    Process,
     Socket,
     SocketException;
 
@@ -29,6 +33,7 @@ import 'session_manager.dart' show
     SessionState;
 
 import 'driver_commands.dart' show
+    DriverCommand,
     handleSocketErrors;
 
 import '../../commands.dart' show
@@ -46,7 +51,6 @@ import '../verbs/infrastructure.dart' show
     Session,
     SharedTask,
     StreamIterator,
-    fileUri,
     throwFatalError;
 
 import '../../incremental/fletchc_incremental.dart' show
@@ -77,6 +81,9 @@ import 'package:fletch_agent/messages.dart' show
     AGENT_DEFAULT_PORT,
     MessageDecodeException;
 
+import 'package:compiler/src/util/uri_extras.dart' show
+    relativize;
+
 Future<Socket> connect(
     String host,
     int port,
@@ -99,36 +106,47 @@ Future<Socket> connect(
   return socket;
 }
 
-Future<Null> startAndAttachViaAgent(SessionState state) async {
+Future<AgentConnection> connectToAgent(SessionState state) async {
   // TODO(wibling): need to make sure the agent is running.
-  // TODO(wibling): integrate with the FletchVm class, e.g. have a
-  // AgentFletchVm and LocalFletchVm that both share the same interface
-  // where the former is interacting with the agent.
   assert(state.settings.deviceAddress != null);
   String host = state.settings.deviceAddress.host;
   int agentPort = state.settings.deviceAddress.port;
   Socket socket = await connect(
       host, agentPort, DiagnosticKind.socketAgentConnectError,
       "agentSocket", state);
-  var agentConnection = new AgentConnection(socket);
+  return new AgentConnection(socket);
+}
+
+void disconnectFromAgent(AgentConnection connection) {
+  assert(connection.socket != null);
+  connection.socket.close();
+}
+
+Future<Null> startAndAttachViaAgent(SessionState state) async {
+  // TODO(wibling): integrate with the FletchVm class, e.g. have a
+  // AgentFletchVm and LocalFletchVm that both share the same interface
+  // where the former is interacting with the agent.
+  AgentConnection connection = await connectToAgent(state);
   VmData vmData;
   try {
-    vmData = await agentConnection.startVm();
+    vmData = await connection.startVm();
   } on AgentException catch (error) {
     throwFatalError(
         DiagnosticKind.socketAgentReplyError,
-        address: '${socket.remoteAddress.host}:${socket.remotePort}',
+        address: '${connection.socket.remoteAddress.host}:'
+            '${connection.socket.remotePort}',
         message: error.message);
   } on MessageDecodeException catch (error) {
     throwFatalError(
         DiagnosticKind.socketAgentReplyError,
-        address: '${socket.remoteAddress.host}:${socket.remotePort}',
+        address: '${connection.socket.remoteAddress.host}:'
+            '${connection.socket.remotePort}',
         message: error.message);
   } finally {
-    socket.close();
+    disconnectFromAgent(connection);
   }
   state.fletchAgentVmId = vmData.id;
-  // The new fletch vm is running at the same host as the agent.
+  String host = state.settings.deviceAddress.host;
   await attachToVm(host, vmData.port, state);
   await state.session.disableVMStandardOutput();
 }
@@ -195,6 +213,106 @@ Future<int> compile(Uri script, SessionState state) async {
   state.log("Compiled '$script' to ${newResult.commands.length} commands");
 
   return 0;
+}
+
+Future<Settings> readSettings(Uri uri) async {
+  if (await new File.fromUri(uri).exists()) {
+    String jsonLikeData = await new File.fromUri(uri).readAsString();
+    return parseSettings(jsonLikeData, uri);
+  } else {
+    return null;
+  }
+}
+
+Future<Settings> createSettings(
+    String sessionName,
+    Uri uri,
+    Uri base,
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator) async {
+  bool userProvidedSettings = uri != null;
+  if (!userProvidedSettings) {
+    Uri implicitSettingsUri = base.resolve('.fletch-settings');
+    if (await new File.fromUri(implicitSettingsUri).exists()) {
+      uri = implicitSettingsUri;
+    }
+  }
+
+  Settings settings = new Settings.empty();
+  if (uri != null) {
+    String jsonLikeData = await new File.fromUri(uri).readAsString();
+    settings = parseSettings(jsonLikeData, uri);
+  }
+  if (userProvidedSettings) return settings;
+
+  Uri packagesUri;
+  Address address;
+  switch (sessionName) {
+    case "remote":
+      uri = base.resolve("remote.fletch-settings");
+      Settings remoteSettings = await readSettings(uri);
+      if (remoteSettings != null) return remoteSettings;
+      packagesUri = executable.resolve("fletch-sdk.packages");
+      address = await readAddressFromUser(commandSender, commandIterator);
+      if (address == null) {
+        // Assume user aborted data entry.
+        return settings;
+      }
+      break;
+
+    case "local":
+      uri = base.resolve("local.fletch-settings");
+      Settings localSettings = await readSettings(uri);
+      if (localSettings != null) return localSettings;
+      // TODO(ahe): Use mock packages here.
+      packagesUri = executable.resolve("fletch-sdk.packages");
+      break;
+
+    default:
+      return settings;
+  }
+
+  if (!await new File.fromUri(packagesUri).exists()) {
+    packagesUri = null;
+  }
+  settings = settings.copyWith(packages: packagesUri, deviceAddress: address);
+  print("Created settings file '${relativize(base, uri, false)}'");
+  await new File.fromUri(uri).writeAsString(
+      "${const JsonEncoder.withIndent('  ').convert(settings)}\n");
+  return settings;
+}
+
+Future<Address> readAddressFromUser(
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator) async {
+  commandSender.sendEventLoopStarted();
+  commandSender.sendStdout("Please enter IP address of remote device: ");
+  while (await commandIterator.moveNext()) {
+    Command command = commandIterator.current;
+    switch (command.code) {
+      case DriverCommand.Stdin:
+        if (command.data.length == 0) {
+          // TODO(ahe): It may be safe to return null here, but we need to
+          // check how this interacts with the debugger's InputHandler.
+          throwInternalError("Unexpected end of input");
+        }
+        // TODO(ahe): This assumes that the user's input arrives as one
+        // message. It is relatively safe to assume this for a normal terminal
+        // session because we use canonical input processing (Unix line
+        // buffering), but it doesn't work in general. So we should fix that.
+        String line = UTF8.decode(command.data).trim();
+        return parseAddress(line, defaultPort: AGENT_DEFAULT_PORT);
+
+      case DriverCommand.Signal:
+        // Send an empty line as the user didn't hit enter.
+        commandSender.sendStdout("\n");
+        // Assume user aborted data entry.
+        return null;
+
+      default:
+        throwInternalError("Unexpected ${command.code}");
+    }
+  }
 }
 
 SessionState createSessionState(String name, Settings settings) {
@@ -328,7 +446,9 @@ Future<int> export(SessionState state, Uri snapshot) async {
   return 0;
 }
 
-Future<int> compileAndAttachToVmThen(
+// TODO(wibling): refactor the debug_verb to not set up its own event handler
+// and get rid of this deprecated compileAndAttachToVmThenDeprecated method.
+Future<int> compileAndAttachToVmThenDeprecated(
     CommandSender commandSender,
     SessionState state,
     Uri script,
@@ -381,6 +501,126 @@ Future<int> compileAndAttachToVmThen(
     state.detachCommandSender();
   }
   return exitCode;
+}
+
+Future<int> compileAndAttachToVmThen(
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator,
+    SessionState state,
+    Uri script,
+    Future<int> action()) async {
+  bool startedVmDirectly = false;
+  List<FletchDelta> compilationResults = state.compilationResults;
+  Session session = state.session;
+  if (compilationResults.isEmpty || script != null) {
+    if (script == null) {
+      throwFatalError(DiagnosticKind.noFileTarget);
+    }
+    int exitCode = await compile(script, state);
+    if (exitCode != 0) return exitCode;
+    compilationResults = state.compilationResults;
+    assert(compilationResults != null);
+  }
+
+  if (session == null) {
+    if (state.settings.deviceAddress != null) {
+      await startAndAttachViaAgent(state);
+      // TODO(wibling): read stdout from agent.
+    } else {
+      startedVmDirectly = true;
+      await startAndAttachDirectly(state);
+      state.fletchVm.stdoutLines.listen((String line) {
+          commandSender.sendStdout("$line\n");
+        });
+      state.fletchVm.stderrLines.listen((String line) {
+          commandSender.sendStderr("$line\n");
+        });
+    }
+    session = state.session;
+    assert(session != null);
+  }
+
+  state.attachCommandSender(commandSender);
+
+  // Setup a handler for incoming commands while the current task is executing.
+  readCommands(commandIterator, state);
+
+  // Notify controlling isolate (driver_main) that the event loop
+  // [readCommands] has been started, and commands like DriverCommand.Signal
+  // will be honored.
+  commandSender.sendEventLoopStarted();
+
+  int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
+  try {
+    exitCode = await action();
+  } catch (error, trace) {
+    print(error);
+    if (trace != null) {
+      print(trace);
+    }
+  } finally {
+    if (startedVmDirectly) {
+      exitCode = await state.fletchVm.exitCode;
+    }
+    state.detachCommandSender();
+  }
+  return exitCode;
+}
+
+Future<Null> readCommands(
+    StreamIterator<Command> commandIterator, SessionState state) async {
+  while (await commandIterator.moveNext()) {
+    Command command = commandIterator.current;
+    switch (command.code) {
+      case DriverCommand.Signal:
+        int signalNumber = command.data;
+        handleSignal(state, signalNumber);
+        break;
+      default:
+        state.log("Unhandled command from client: $command");
+    }
+  }
+}
+
+void handleSignal(SessionState state, int signalNumber) {
+  state.log("Received signal $signalNumber");
+  if (!state.hasRemoteVm && state.fletchVm == null) {
+    // This can happen if a user has attached to a vm using the "attach" verb
+    // in which case we don't forward the signal to the vm.
+    // TODO(wibling): Determine how to interpret the signal for the persistent
+    // process.
+    return;
+  }
+  if (state.hasRemoteVm) {
+    signalAgentVm(state, signalNumber);
+  } else {
+    assert(state.fletchVm.process != null);
+    int vmPid = state.fletchVm.process.pid;
+    Process.runSync("kill", ["-$signalNumber", "$vmPid"]);
+  }
+}
+
+Future signalAgentVm(SessionState state, int signalNumber) async {
+  AgentConnection connection = await connectToAgent(state);
+  try {
+    await connection.signalVm(state.fletchAgentVmId, signalNumber);
+  } on AgentException catch (error) {
+    // Not sure if this is fatal. It happens when the vm is not found, ie.
+    // already dead.
+    throwFatalError(
+        DiagnosticKind.socketAgentReplyError,
+        address: '${connection.socket.remoteAddress.host}:'
+            '${connection.socket.remotePort}',
+        message: error.message);
+  } on MessageDecodeException catch (error) {
+    throwFatalError(
+        DiagnosticKind.socketAgentReplyError,
+        address: '${connection.socket.remoteAddress.host}:'
+            '${connection.socket.remotePort}',
+        message: error.message);
+  } finally {
+    disconnectFromAgent(connection);
+  }
 }
 
 Future<IsolateController> allocateWorker(IsolatePool pool) async {
@@ -452,6 +692,8 @@ class Address {
   const Address(this.host, this.port);
 
   String toString() => "Address($host, $port)";
+
+  String toJson() => "$host:$port";
 }
 
 /// See ../verbs/documentation.dart for a definition of this format.
@@ -480,7 +722,7 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
             throwFatalError(
                 DiagnosticKind.settingsPackagesNotAString, uri: settingsUri);
           }
-          packages = fileUri(value, settingsUri);
+          packages = settingsUri.resolve(value);
         }
         break;
 
@@ -564,11 +806,40 @@ class Settings {
   const Settings.empty()
     : this(null, const <String>[], const <String, String>{}, null);
 
+  Settings copyWith({
+      Uri packages,
+      List<String> options,
+      Map<String, String> constants,
+      Address deviceAddress}) {
+    if (packages == null) {
+      packages = this.packages;
+    }
+    if (options == null) {
+      options = this.options;
+    }
+    if (constants == null) {
+      constants = this.constants;
+    }
+    if (deviceAddress == null) {
+      deviceAddress = this.deviceAddress;
+    }
+    return new Settings(packages, options, constants, deviceAddress);
+  }
+
   String toString() {
     return "Settings("
         "packages: $packages, "
         "options: $options, "
         "constants: $constants, "
         "device_address: $deviceAddress)";
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      "packages": "$packages",
+      "options": options,
+      "constants": constants,
+      "device_address": deviceAddress,
+    };
   }
 }

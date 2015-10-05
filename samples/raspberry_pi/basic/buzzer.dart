@@ -8,14 +8,16 @@
 // https://storage.googleapis.com/fletch-archive/images/buzzer-schematic.png
 
 import 'package:gpio/gpio.dart';
+import 'package:raspberry_pi/raspberry_pi.dart';
 
 main() {
   // GPIO pin constants.
   const int button = 16;
   const int speaker = 21;
 
-  // Initialize GPIO and configure the pins.
-  PiMemoryMappedGPIO gpio = new PiMemoryMappedGPIO();
+  // Initialize Raspberry Pi and configure the pins.
+  RaspberryPi pi = new RaspberryPi();
+  PiMemoryMappedGPIO gpio = pi.memoryMappedGPIO;
   gpio.setMode(button, Mode.input);
   gpio.setMode(speaker, Mode.output);
 

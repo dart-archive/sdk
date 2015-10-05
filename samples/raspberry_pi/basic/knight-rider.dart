@@ -12,16 +12,20 @@
 // https://storage.googleapis.com/fletch-archive/images/k-r-schematic.png
 
 import 'package:gpio/gpio.dart';
+import 'package:raspberry_pi/raspberry_pi.dart';
 import 'package:os/os.dart';
 
 main() {
+  // Initialize Raspberry Pi
+  RaspberryPi pi = new RaspberryPi();
+
   // Array constant containing the GPIO pins of the connected LEDs.
   // You can add more LEDs simply by extending the list. Make sure
   // the pins are listed in the order the LEDs are connected.
   List<int> leds = [26, 19, 13, 6];
 
   // Initialize the lights controller class.
-  Lights lights = new Lights(leds);
+  Lights lights = new Lights(pi.memoryMappedGPIO, leds);
   lights.init();
 
   // Alternate between running left and right in a continuous loop.
@@ -33,10 +37,10 @@ main() {
 }
 
 class Lights {
-  List<int> leds;
-  PiMemoryMappedGPIO _gpio = new PiMemoryMappedGPIO();
+  final GPIO _gpio;
+  final List<int> leds;
 
-  Lights(this.leds);
+  Lights(this._gpio, this.leds);
 
   // Initializes GPIO and configures the pins.
   void init() {

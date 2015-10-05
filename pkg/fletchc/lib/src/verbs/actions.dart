@@ -40,6 +40,9 @@ import 'x_end_verb.dart' show
 import 'x_servicec_verb.dart' show
     servicecAction;
 
+import 'quit_verb.dart' show
+    quitAction;
+
 typedef Future<int> DoAction(AnalyzedSentence sentence, VerbContext context);
 
 class Action {
@@ -111,4 +114,5 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "shutdown": shutdownAction,
   "x-end": endAction,
   "x-servicec": servicecAction,
+  "quit": quitAction,
 };

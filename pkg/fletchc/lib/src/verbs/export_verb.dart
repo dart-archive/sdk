@@ -42,17 +42,19 @@ class ExportTask extends SharedTask {
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
     return exportTask(
-        commandSender, SessionState.current, script, snapshot);
+        commandSender, commandIterator, SessionState.current, script, snapshot);
   }
 }
 
 Future<int> exportTask(
     CommandSender commandSender,
+    StreamIterator<Command> commandIterator,
     SessionState state,
     Uri script,
     Uri snapshot) async {
   return compileAndAttachToVmThen(
       commandSender,
+      commandIterator,
       state,
       script,
       () => developer.export(state, snapshot));

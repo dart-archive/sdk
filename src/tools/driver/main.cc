@@ -241,8 +241,9 @@ static void DetectConfiguration() {
 }
 
 // Opens and locks the config file named by fletch_config_file and initialize
-// the variable fletch_config_fd.
-static void LockConfigFile() {
+// the variable fletch_config_fd. If use_blocking is true, this method will
+// block until the lock is obtained.
+static void LockConfigFile(bool use_blocking) {
   int fd = TEMP_FAILURE_RETRY(
       open(fletch_config_file, O_RDONLY | O_CREAT, S_IRUSR | S_IWUSR));
   if (fd == -1) {
@@ -251,9 +252,15 @@ static void LockConfigFile() {
         fletch_config_location);
   }
 
-  if (TEMP_FAILURE_RETRY(flock(fd, LOCK_EX)) == -1) {
-    Die("%s: flock '%s' failed: %s.", program_name, fletch_config_file,
-        strerror(errno));
+  int operation = LOCK_EX;
+  if (!use_blocking) {
+    operation |= LOCK_NB;
+  }
+  if (TEMP_FAILURE_RETRY(flock(fd, operation)) == -1) {
+    if (use_blocking || errno != EWOULDBLOCK) {
+      Die("%s: flock '%s' failed: %s.", program_name, fletch_config_file,
+          strerror(errno));
+    }
   }
 
   fletch_config_fd = fd;
@@ -272,8 +279,8 @@ static void ReadDriverConfig() {
     ssize_t bytes = TEMP_FAILURE_RETRY(
         read(fletch_config_fd, fletch_socket_file + offset, length - offset));
     if (bytes < 0) {
-      Die("%s: error reading from child process: %s",
-          program_name, strerror(errno));
+      Die("%s: Unable to read from '%s'. Failed with error: %s",
+          program_name, fletch_config_file, strerror(errno));
     } else if (bytes == 0) {
       break;  // End of file.
     }
@@ -756,11 +763,99 @@ static void HandleSignal(int signal_pipe, DriverConnection* connection) {
   connection->Send(DriverConnection::kSignal, buffer);
 }
 
+static int CheckedSystem(const char* command) {
+  int exit_status = system(command);
+  if (exit_status == -1) {
+    Die("%s: system(%s) failed with error: %s",
+        program_name, command, strerror(errno));
+  }
+  if (WIFSIGNALED(exit_status)) {
+    // command exited due to signal, for example, the user pressed Ctrl-C. In
+    // that case, we should also exit.
+    Exit(-WTERMSIG(exit_status));
+  }
+  return exit_status;
+}
+
+// Kills the persistent process. First tries SIGTERM, then SIGKILL if the
+// process hasn't exited after 2 seconds.
+// The process is identified using lsof on the Dart VM binary.
+static int QuitCommand() {
+  char* vm_path = StrAlloc(MAXPATHLEN + 1);
+  int command_length = 2 * MAXPATHLEN + 1;
+  char* command = StrAlloc(command_length);
+  ComputeDartVmPath(vm_path, MAXPATHLEN + 1);
+  // TODO(ahe): pgrep -f package:fletchc/src/driver/driver_main.dart would
+  // probably be better.
+  const char lsof[] = "lsof -t -- ";
+  const char dev_null[] = "> /dev/null";
+  const char kill[] = "| xargs kill";
+  const char lsof_repeat[] = "lsof -t +r2m%n -- ";
+  const char kill9[] = "| xargs -n1 kill -9";
+
+  StrCpy(command, command_length, lsof, sizeof(lsof));
+  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
+  StrCat(command, command_length, dev_null, sizeof(dev_null));
+
+  // lsof -t -- <Dart VM> > /dev/null
+  if (CheckedSystem(command) != 0) {
+    // Remove the socket location file.
+    unlink(fletch_config_file);
+
+    printf("Background process wasn't running\n");
+
+    // lsof returns 0 if it listed processes.
+    return 0;
+  }
+
+  StrCpy(command, command_length, lsof, sizeof(lsof));
+  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
+  StrCat(command, command_length, kill, sizeof(kill));
+
+  // lsof -t -- <Dart VM> | xargs kill
+  CheckedSystem(command);
+
+  // Wait two seconds for the process to exit gracefully.
+  sleep(2);
+
+  // Remove the socket location file.
+  unlink(fletch_config_file);
+
+  StrCpy(command, command_length, lsof, sizeof(lsof));
+  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
+  StrCat(command, command_length, dev_null, sizeof(dev_null));
+
+  // lsof -t -- <Dart VM> > /dev/null
+  if (CheckedSystem(command) != 0) {
+    printf("Background process exited\n");
+
+    // lsof returns 0 if it listed processes.
+    return 0;
+  }
+
+  printf("The background process didn't quit after 2 seconds. "
+         "Attempting forced quit.\n");
+
+  StrCpy(command, command_length, lsof_repeat, sizeof(lsof_repeat));
+  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
+  StrCat(command, command_length, kill9, sizeof(kill9));
+
+  // lsof -t +r2m%n -- <Dart VM> | xargs -n1 kill -9
+  CheckedSystem(command);
+  printf("Forced quit succeeded\n");
+  return 0;
+}
+
 static int Main(int argc, char** argv) {
   program_name = argv[0];
   DetectConfiguration();
-  LockConfigFile();
+  bool is_quit_command = (argc == 2 && strcmp("quit", argv[1]) == 0);
+  LockConfigFile(!is_quit_command);
   ReadDriverConfig();
+
+  if (is_quit_command) {
+    return QuitCommand();
+  }
 
   Socket* control_socket = Connect();
 

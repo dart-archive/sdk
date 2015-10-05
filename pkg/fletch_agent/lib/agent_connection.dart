@@ -48,6 +48,18 @@ class AgentConnection {
     }
   }
 
+  Future signalVm(int vmId, int signal) async {
+    var request = new SignalVmRequest(vmId, signal);
+    var replyBuffer = await sendRequest(request);
+    var reply = new SignalVmReply.fromBuffer(replyBuffer);
+    if (reply.result == ReplyHeader.UNKNOWN_VM_ID) {
+      throw new AgentException('Could not signal VM. Unknown vm id: $vmId');
+    } else if (reply.result != ReplyHeader.SUCCESS) {
+      throw new AgentException(
+          'Failed to signal VM with unexpected error: ${reply.result}');
+    }
+  }
+
   Future<List<int>> listVms() async {
     throw new AgentException('Not implemented');
   }

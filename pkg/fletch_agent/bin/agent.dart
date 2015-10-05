@@ -162,7 +162,13 @@ class Agent {
 }
 
 class CommandHandler {
+  static const int SIGHUB = 1;
+  static const int SIGINT = 2;
+  static const int SIGQUIT = 3;
+  static const int SIGKILL = 9;
   static const int SIGTERM = 15;
+  static const List<int> TERMINATION_SIGNALS =
+      const [SIGHUB, SIGINT, SIGQUIT, SIGKILL, SIGTERM];
   static final ForeignFunction _kill = ForeignLibrary.main.lookup('kill');
   static final ForeignFunction _unlink = ForeignLibrary.main.lookup('unlink');
 
@@ -203,6 +209,9 @@ class CommandHandler {
         break;
       case RequestHeader.FLETCH_VERSION:
         _fletchVersion();
+        break;
+      case RequestHeader.SIGNAL_VM:
+        _signalVm();
         break;
       default:
         _context.logger.warn('Unknown command: ${_requestHeader.command}.');
@@ -322,6 +331,38 @@ class CommandHandler {
       }
       // Always clean up independent of errors.
       _cleanUpVm(pid);
+    }
+    _sendReply(reply);
+  }
+
+  void _signalVm() {
+    if (_requestHeader.payloadLength != 4) {
+      _sendReply(
+          new SignalVmReply(_requestHeader.id, ReplyHeader.INVALID_PAYLOAD));
+      return;
+    }
+    var reply;
+    // Read in the vm id and the signal to send.
+    var pidBytes = _socket.read(4);
+    if (pidBytes == null) {
+      reply = new SignalVmReply(_requestHeader.id, ReplyHeader.INVALID_PAYLOAD);
+      _context.logger.warn('Missing pid of the fletch vm to signal.');
+    } else {
+      int pid = readUint16(pidBytes, 0);
+      int signal = readUint16(pidBytes, 2);
+      int err = _kill.icall$2(pid, signal);
+      if (err != 0) {
+        reply = new SignalVmReply(_requestHeader.id, ReplyHeader.UNKNOWN_VM_ID);
+        _context.logger.warn('Failed to send signal %signal to  pid $pid with '
+            'error: ${Foreign.errno}');
+      } else {
+        reply = new SignalVmReply(_requestHeader.id, ReplyHeader.SUCCESS);
+        _context.logger.info('Sent signal $signal to pid: $pid');
+        // Only cleanup if a termination signal was delivered.
+        if (TERMINATION_SIGNALS.contains(signal)) {
+          _cleanUpVm(pid);
+        }
+      }
     }
     _sendReply(reply);
   }
