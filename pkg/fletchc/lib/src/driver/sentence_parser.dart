@@ -223,6 +223,9 @@ class SentenceParser {
       case "help":
         return makeTarget(TargetKind.HELP);
 
+      case "log":
+        return makeTarget(TargetKind.LOG);
+
       default:
         return new ErrorTarget(DiagnosticKind.expectedTargetButGot, word);
     }
@@ -341,36 +344,37 @@ class Target {
 }
 
 enum TargetKind {
-  SESSION,
-  CLASS,
-  METHOD,
-  FILE,
-  TCP_SOCKET,
-  SESSIONS,
-  CLASSES,
-  METHODS,
-  FILES,
   ALL,
-  RUN_TO_MAIN,
   BACKTRACE,
-  CONTINUE,
   BREAK,
-  LIST,
-  DISASM,
-  FRAME,
+  CLASS,
+  CLASSES,
+  CONTINUE,
   DELETE_BREAKPOINT,
-  LIST_BREAKPOINTS,
-  STEP,
-  STEP_OVER,
+  DISASM,
   FIBERS,
+  FILE,
+  FILES,
   FINISH,
-  RESTART,
-  STEP_BYTECODE,
-  STEP_OVER_BYTECODE,
+  FRAME,
+  HELP,
+  LIST,
+  LIST_BREAKPOINTS,
+  LOG,
+  METHOD,
+  METHODS,
   PRINT,
   PRINT_ALL,
+  RESTART,
+  RUN_TO_MAIN,
+  SESSION,
+  SESSIONS,
+  STEP,
+  STEP_BYTECODE,
+  STEP_OVER,
+  STEP_OVER_BYTECODE,
+  TCP_SOCKET,
   TOGGLE,
-  HELP,
 }
 
 class NamedTarget extends Target {

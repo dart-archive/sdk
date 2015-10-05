@@ -153,6 +153,7 @@ There are three ways to reproduce this error:
       String vmSocketAddress = await fletch.spawnVm();
       Future vmTerminationFuture = fletch.shutdownVm(timeout);
       try {
+        await fletch.runInSession(["show", "log"]);
         await fletch.runInSession(["attach", "tcp_socket", vmSocketAddress]);
         if (snapshotFileName != null) {
           exitCode = await fletch.runInSession(

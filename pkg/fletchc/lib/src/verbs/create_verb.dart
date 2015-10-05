@@ -9,6 +9,7 @@ import 'infrastructure.dart';
 import '../driver/developer.dart' show
     Settings,
     allocateWorker,
+    configFileUri,
     createSessionState,
     createSettings;
 
@@ -28,7 +29,8 @@ Future<int> create(AnalyzedSentence sentence, VerbContext context) async {
   context = context.copyWithSession(session);
 
   await context.performTaskInWorker(
-      new CreateSessionTask(name, sentence.withUri, sentence.base));
+      new CreateSessionTask(
+          name, sentence.withUri, sentence.base, configFileUri));
 
   return 0;
 }
@@ -42,13 +44,16 @@ class CreateSessionTask extends SharedTask {
 
   final Uri base;
 
-  const CreateSessionTask(this.name, this.settingsUri, this.base);
+  final Uri configFileUri;
+
+  const CreateSessionTask(
+      this.name, this.settingsUri, this.base, this.configFileUri);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
     return createSessionTask(
-        commandSender, commandIterator, name, settingsUri, base);
+        commandSender, commandIterator, name, settingsUri, base, configFileUri);
   }
 }
 
@@ -57,10 +62,11 @@ Future<int> createSessionTask(
     StreamIterator<Command> commandIterator,
     String name,
     Uri settingsUri,
-    Uri base) async {
+    Uri base,
+    Uri configFileUri) async {
   assert(SessionState.internalCurrent == null);
   Settings settings = await createSettings(
-      name, settingsUri, base, commandSender, commandIterator);
+      name, settingsUri, base, configFileUri, commandSender, commandIterator);
   SessionState state = createSessionState(name, settings);
   SessionState.internalCurrent = state;
   if (settingsUri != null) {
