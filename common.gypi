@@ -27,7 +27,7 @@
       '<@(common_gcc_cflags_c)',
     ],
 
-    'lk_path': '<(DEPTH)/third_party/lk/lk-downstream',
+    'LK_PATH%': 'third_party/lk/lk-downstream',
 
     'mbed_path': '<(DEPTH)/../third_party/mbed/build/',
 
@@ -421,11 +421,12 @@
             ],
 
             'include_dirs': [
-              '<(lk_path)/../out',
-              '<(lk_path)/include/',
-              '<(lk_path)/arch/arm/include/',
-              '<(lk_path)/lib/libm/include/',
-              '<(lk_path)/arch/arm/arm/include',
+              '<(DEPTH)/<(LK_PATH)/../out',
+              '<(DEPTH)/<(LK_PATH)/../../out',
+              '<(DEPTH)/<(LK_PATH)/include/',
+              '<(DEPTH)/<(LK_PATH)/arch/arm/include/',
+              '<(DEPTH)/<(LK_PATH)/lib/libm/include/',
+              '<(DEPTH)/<(LK_PATH)/arch/arm/arm/include',
             ],
 
             'ldflags': [
