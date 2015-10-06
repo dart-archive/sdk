@@ -20,11 +20,32 @@ no Windows support).
 If you just want to get a look at what Fletch programs look like, take a peek at
 our [samples page](samples.html).
 
+* [What you will need](#what-you-will-need)
 * [Installing the SDK](#installing-the-sdk)
 * [Running your first program](#running-your-first-program)
 * [Preparing your Raspberry Pi 2](#preparing-your-raspberry-pi-2)
-* [Running on the Raspberry Pi 2](#running-on-the-raspberry-pi)
+* [Running on the Raspberry Pi 2](#running-on-the-raspberry-pi-2)
 * [Next steps](#next-steps)
+
+## What you will need
+
+To develop embedded programs with Fletch, you will need the following:
+
+* A developer PC where you write the programs
+
+* A Raspberry Pi 2 embedded computer for running the programs
+
+* A MicroSD card and some kind of SD card reader to hold the operating system for
+ the Raspberry Pi 2
+
+* An extra network plug on your developer PC, or a USB network adapter + an
+ Ethernet cable you can connect between your developer PC and your Raspberry Pi
+ 2
+
+* Optional: A breadboard and a collection of components for running some of
+ the samples (will be discussed later)
+
+![What you need photo](https://storage.googleapis.com/fletch-archive/images/setup.jpg)
 
 ## Installing the SDK
 
@@ -62,10 +83,11 @@ cd $HOME/fletch-sdk/samples/general/
 fletch run hello.dart
 ~~~
 
-You should see output that looks like this on your screen:
+You should see a message that says ```Created settings file...```, and then a
+message like this (the machine name in the end will be different):
 
 ~~~
-Hello from Darwin running on ‘michael-pc2’
+Hello from Darwin running on michael-pc2.
 ~~~
 
 Try to open `hello.dart` in your favorite editor. We recommend the [Atom

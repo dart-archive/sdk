@@ -60,7 +60,8 @@ b _setLeds
 r
 ~~~
 
-We are now inside the _setLeds method. Let's see what the initial state is: Type ```p```. You should see this output
+We are now inside the _setLeds method. Let's see what the initial state is: Type
+```p```. You should see this output
 
 ~~~
 ledToEnable: 0
@@ -70,5 +71,19 @@ this: Instance of 'Lights'
 
 Try to step a few more times (with the ```s``` command), and then print out the
 local variable again (with the ```p``` command). You should see ledToEnable
-increment up to the numner of LEDs you have, and then you should see it start
+increment up to the number of LEDs you have, and then you should see it start
 decrementing. Pretty neat right!?
+
+## Resetting Fletch
+
+The Fletch tool maintains a long-running background process on your developer
+PC. This manages the sessions, and the local VM.
+
+If the Fletch process state gets corrupted, you can shut it down using this
+command:
+
+```
+fletch quit
+```
+
+It will be restarted automatically the next time you run a program.

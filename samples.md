@@ -5,8 +5,8 @@ layout: page
 
 # Fletch project samples
 
-We have a number of sample programs available in the ```/samples/``` folder.
-Let’s take a look at the code, and get familiar with the platform.
+We have a number of sample programs available in the ```/samples/raspberry_pi```
+folder. Let’s take a look at the code, and get familiar with the platform.
 
 
 * [The 'hello world' of embedded: Blink an LED](#blinky)
@@ -18,8 +18,9 @@ Let’s take a look at the code, and get familiar with the platform.
 
 Embedded devices are most commonly used to collect data and perform some kind of
 control task via attached sensors and output devices such as LEDs. Take a look
-at the ```blinky.dart``` program located in the ```/samples/basic/``` folder.
-This blinks the Raspberry Pi on-board LED.
+at the ```blinky.dart``` program located in the
+```/samples/raspberry_pi/basic/``` folder. This blinks the Raspberry Pi on-board
+LED.
 
 First the program initializes the RaspberryPi helper object:
 
@@ -53,7 +54,7 @@ We will be communicating with the components on the breadboard using a
 [GPIO](https://en.wikipedia.org/wiki/General-purpose_input/output) (general
 purpose input/output) interface. First we need to configure the GPIO pins for
 the components we wired up (full runnable code located in
-```/samples/basic/buzzer.dart```):
+```/samples/raspberry_pi/basic/buzzer.dart```):
 
 ~~~
 import 'package:gpio/gpio.dart';
@@ -149,8 +150,9 @@ We are going to build a small running light. Remember
 Rider show? Let's try to [replicate those
 lights](https://storage.googleapis.com/fletch-archive/images/knight-rider.mp4).
 
-The full program is available in ```/samples/basic/knight-rider.dart```. Let's
-step through how it's built.
+The full program is available in
+```/samples/raspberry_pi/basic/knight-rider.dart```. Let's step through how it's
+built.
 
 First we will create a ```Lights``` helper class. This class will contain all
 the core functionality required for managing the LEDs on the breadboard that we
