@@ -34,6 +34,7 @@ enum CompilerError {
   badTopLevel,
   badTypeParameter,
   badUnion,
+  cyclicStruct,
   expectedPointerOrPrimitive,
   expectedPrimitiveFormal,
   multipleDefinitions,

@@ -120,6 +120,7 @@ abstract class MemberNode extends Node {
 class SimpleType extends TypeNode {
   TypeKind _type;
   StructNode _resolved;
+  StructNode get resolved => _resolved;
 
   SimpleType(IdentifierNode identifier)
     : super(identifier);
@@ -248,14 +249,14 @@ abstract class RecursiveVisitor extends NodeVisitor {
   }
 
   void visitService(ServiceNode service) {
-    service.identifier.accept(this);
+    if (service.identifier != null) service.identifier.accept(this);
     for (FunctionNode function in service.functions) {
       function.accept(this);
     }
   }
 
   void visitStruct(StructNode struct) {
-    struct.identifier.accept(this);
+    if (struct.identifier != null) struct.identifier.accept(this);
     for (MemberNode member in struct.members) {
       member.accept(this);
     }

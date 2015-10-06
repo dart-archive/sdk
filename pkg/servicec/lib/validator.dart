@@ -30,6 +30,9 @@ import 'errors.dart' show
     ServiceErrorNode,
     TopLevelErrorNode;
 
+import 'dart:collection' show
+    Queue;
+
 // Validation functions.
 List<CompilerError> validate(CompilationUnitNode compilationUnit) {
   Validator validator = new Validator();
@@ -42,14 +45,17 @@ List<CompilerError> validate(CompilationUnitNode compilationUnit) {
 class Validator extends RecursiveVisitor {
   List<CompilerError> errors;
   Environment environment;
+  StructGraph structGraph;
 
   Validator()
     : errors = <CompilerError>[],
       environment = new Environment(),
+      structGraph = new StructGraph(),
       super();
 
   void process(CompilationUnitNode compilationUnit) {
     visitCompilationUnit(compilationUnit);
+    errors.addAll(structGraph.findCycles());
   }
 
   // Visit methods.
@@ -72,6 +78,7 @@ class Validator extends RecursiveVisitor {
     checkIsNotError(struct);
     checkHasAtMostOneUnion(struct);
     super.visitStruct(struct);
+    structGraph.add(struct);
     leaveStructScope(struct);
   }
 
@@ -353,5 +360,119 @@ class Environment {
       structs = new Map<IdentifierNode, StructNode>(),
       properties = new Set<IdentifierNode>(),
       formals = new Set<IdentifierNode>();
+}
+
+class _GraphNode {
+  _GraphNodeState state = _GraphNodeState.UNVISITED;
+  StructNode struct;
+
+  _GraphNode(this.struct);
+
+  bool get isNotVisited => _GraphNodeState.UNVISITED == state;
+
+  bool operator ==(_GraphNode other) {
+    return struct == other.struct;
+  }
+  int get hashCode => struct.hashCode;
+
+  String toString() => "Node[${struct.identifier.value}, ${state.toString()}]";
+}
+
+enum _GraphNodeState {
+  VISITED,
+  VISITING,
+  UNVISITED
+}
+
+class StructGraph {
+  Set<_GraphNode> nodes;
+  Map<_GraphNode, Set<_GraphNode>> neighbours;
+
+  StructGraph()
+    : nodes = new Set<_GraphNode>(),
+      neighbours = new Map<_GraphNode, Set<_GraphNode>>();
+
+  void add(StructNode struct) {
+    for (MemberNode member in struct.members) {
+      if (member is FieldNode) {
+        addStructField(struct, member);
+      } else {
+        UnionNode union = member;
+        union.fields.forEach((field) => addStructField(struct, field));
+      }
+    }
+  }
+
+  // Helper function.
+  void addStructField(StructNode struct, FieldNode field) {
+    TypeNode type = field.type;
+    if (type != null && type.isStruct()) {
+      SimpleType simpleType = type;
+      addLink(struct, simpleType.resolved);
+    }
+  }
+
+  void addLink(StructNode from, StructNode to) {
+    _GraphNode fromNode = addNodeIfNew(from);
+    _GraphNode toNode = addNodeIfNew(to);
+    neighbours[fromNode].add(toNode);
+  }
+
+  _GraphNode addNodeIfNew(StructNode node) {
+    _GraphNode result = nodes.firstWhere(
+        (graphNode) => graphNode.struct == node,
+        orElse: () => null);
+    if (null == result) {
+      result = new _GraphNode(node);
+      nodes.add(result);
+      neighbours[result] = new Set<_GraphNode>();
+    }
+    return result;
+  }
+
+  // 1) 0 -> 0 is a trivial cycle
+  // 2) 0 -> 1 -> 0 is (probably) the most common cycle in real code
+  // 3) 0 -> 1 -> 2 -> 1 is a cycle reachable from 0, but not containing 0
+  // 4) 0 -> 1 -> 0 + 1 -> 2 -> 1 are two cycles reachable from 0
+  // 5) 0 -> 1 -> 0 + 1 -> 2 -> 0 are two cycles reachable from 0
+  // 6) 0 -> 1 -> 2 + 0 -> 2 is a DAG and not a cycle
+  List<CompilerError> findCycles() {
+    List<CompilerError> errors = <CompilerError>[];
+    List<_GraphNode> stack = new List<_GraphNode>();
+    stack.addAll(nodes);
+    while (stack.isNotEmpty) {
+      _GraphNode node = stack.last;
+      switch (node.state) {
+        case _GraphNodeState.UNVISITED:
+          node.state = _GraphNodeState.VISITING;
+          for (_GraphNode neighbour in neighbours[node]) {
+            switch (neighbour.state) {
+              case _GraphNodeState.UNVISITED:
+                // The `neighbour` hasn't been seen yet - add to stack.
+                stack.add(neighbour);
+                break;
+              case _GraphNodeState.VISITING:
+                // The `neighbour` is in the current route from the root to the
+                // `node` - there is a cycle.
+                errors.add(CompilerError.cyclicStruct);
+                break;
+              case _GraphNodeState.VISITED:
+                // The `neighbour` has already been searched - ignore.
+                break;
+            }
+          }
+          break;
+        case _GraphNodeState.VISITING:
+          node.state = _GraphNodeState.VISITED;
+          stack.removeLast();
+          break;
+        case _GraphNodeState.VISITED:
+          // In this case the graph is a DAG.
+          stack.removeLast();
+          break;
+      }
+    }
+    return errors;
+  }
 }
 
