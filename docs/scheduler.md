@@ -4,7 +4,8 @@
 Main() {
   S <- new Scheduler()
   S.SpawnProcess()
-  S.RunThread()
+  for T in S.Threads:
+    S.RunThread(T)  # Call by each thread
 }
 ```
 
@@ -36,7 +37,7 @@ RunThread(T) {
     if Processes = 0: break
     while True {
       P <- DequeueFromThread(T)
-      while P != Null: P <= Execute(P, T)
+      while P != Null: P <- Execute(P, T)
     }
   }
 }
@@ -149,8 +150,8 @@ TryEnqueueOnIdleThread(P) {
     T <- IdleThreads.Pop()  # Is really a CAS, linked-list through Threads
     if T = Null: return False
     Success, WasEmpty <- T.TryEnqueue(P)
-    if !Success: continue
     T.Wakeup()
+    if !Success: continue
     return True
   }
 }
@@ -231,7 +232,7 @@ TryDequeue() {
   INVARIANT(H unreachable from other threads)
   if Tail = H: Tail <- Null
   Next <- H.Next
-  if next != Null: Next.Previous <- Null
+  if Next != Null: Next.Previous <- Null
   H.ChangeState(Queued, Running)
   H.OwnerThread <- Null
   H.Next <- Null
@@ -340,11 +341,11 @@ ChangeState(From, To) {
   }
   S <- State
   while True {
-    if From = Yielding {
+    if S = Yielding {
       S <- State
       continue
     }
-    if S = From: break;
+    if S != From: break;
     if State.CompareAndSwap(S, To): return True
     S <- State
   }
