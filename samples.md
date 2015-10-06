@@ -9,10 +9,25 @@ We have a number of sample programs available in the ```/samples/raspberry_pi```
 folder. Let’s take a look at the code, and get familiar with the platform.
 
 
-* [The 'hello world' of embedded: Blink an LED](#blinky)
-* [Controlling GPIO input and output pins](#buzzer)
-* [Using GPIO events](#door-bell)
-* [Structuring larger programs with classes](#knight-rider)
+* [blinky.dart](#blinky)
+  * The 'hello world' of embedded: Blink an LED
+  * Requires a Raspberry Pi 2
+
+* [buzzer.dart](#buzzer)
+  * Controlling GPIO input and output pins
+  * Requires a Raspberry Pi 2 and some components
+
+* [door-bell.dart](#door-bell)
+  * Using GPIO events
+  * Requires a Raspberry Pi 2 and some components
+
+* [knight-rider.dart](#knight-rider)
+  * Structuring larger programs with classes
+  * Requires a Raspberry Pi 2 and some components
+
+* [accelerometer.dart](#sense-hat-accelerometer)
+  * Communicating with a 'Sense HAT shield'
+  * Requires a Raspberry Pi 2 and a [Sense HAT](https://www.raspberrypi.org/products/sense-hat/)
 
 ## Blinky ##
 
@@ -48,7 +63,8 @@ Let's expand on the previous sample by wiring up a small custom circuit. We will
 use a [breadboard](http://www.instructables.com/id/How-to-use-a-breadboard/) for
 fast iteration.
 
-Start by building a circuit resembling [this schematic](https://storage.googleapis.com/fletch-archive/images/buzzer-schematic.png).
+Start by building a circuit resembling [this
+schematic](https://storage.googleapis.com/fletch-archive/images/buzzer-schematic.png).
 
 We will be communicating with the components on the breadboard using a
 [GPIO](https://en.wikipedia.org/wiki/General-purpose_input/output) (general
@@ -236,6 +252,111 @@ main() {
   while (true) {
     lights.runLightLeft(waitTime);
     lights.runLightRight(waitTime);
+  }
+}
+~~~
+
+## Sense HAT Accelerometer
+
+In the above samples we connected a breadboard to our Raspberry Pi 2 as a way of
+extending it. Another way of extending is adding a 'shield'. These are add-ons
+that are plugged on top of the Raspberry. One such shield is the Sense HAT, a
+shield that contains an LED matrix display and large collection of sensors such
+as a gyroscope, an accelerometer, and a humidity sensor. The Sense HAT is so
+powerful that it will be [going into
+space!](https://www.raspberrypi.org/blog/astro-pi/)
+
+![Sense HAT photo](https://storage.googleapis.com/fletch-archive/images/sense-hat.jpg)
+
+In this sample we are going to use the accelerometer to sense which direction
+the board is pointing in, and then display that direction using the LED matrix
+display. Full code is in
+```/samples/raspberry_pi/sense_hat/accelerometer/accelerometer.dart```.
+
+We start with a helper function that will draw a color bar on the display. It
+will take a direction argument (north, west, etc.), and a segment number from 0
+to 3 telling it how far from the center it should draw. Calling it with segment
+1 and north, for example, will draw this bar show on the left, and segment 0 and
+east will draw the bar shown on the right:
+
+~~~
+_ _ _ _ _ _ _ _          _ _ _ _ _ _ _ _
+_ _ _ _ _ _ _ _          _ _ _ _ _ _ _ _
+_ _ x x x x _ _          _ _ _ _ _ _ _ _
+_ _ _ _ _ _ _ _          _ _ _ _ x _ _ _
+_ _ _ _ _ _ _ _          _ _ _ _ x _ _ _
+_ _ _ _ _ _ _ _          _ _ _ _ _ _ _ _
+_ _ _ _ _ _ _ _          _ _ _ _ _ _ _ _
+_ _ _ _ _ _ _ _          _ _ _ _ _ _ _ _
+~~~
+
+The implementation of the function is here:
+
+~~~
+void drawSegment(SenseHatLEDArray ledArray,
+                 Direction direction,
+                 int segment,
+                 {Color color}) {
+  const defaultSegmentColor =
+      const <Color>[Color.white, Color.green, Color.blue, Color.red];
+
+  if (color == null) color = defaultSegmentColor[segment];
+  var length = (segment + 1) * 2;
+  var info = segmentData[direction];
+  var x = info.origin.x + info.direction.x * segment;
+  var y = info.origin.y + info.direction.y * segment;
+  for (int i = 0; i < length; i++) {
+    ledArray.setPixel(x, y, color);
+    x += info.step.x;
+    y += info.step.y;
+  }
+}
+~~~
+
+This function uses ```ledArray.setPixel``` to manage the LED display. This
+method is implemented by the Fletch Sense HAT library (see
+```/pkg/raspberry_pi/lib/sense_hat.dart```), which provides a convenient
+interface for the Sense HAT.
+
+We will use the same library to read from the accelerometer:
+
+~~~
+while (true) {
+  // Read the accelerometer and update the display it one of the values
+  // changed.
+  var accel = hat.readAccel();
+  var p = trimValue(accel.pitch);
+  var r = trimValue(accel.roll);
+  if (p != pitch || r != roll) {
+    pitch = p;
+    roll = r;
+    draw();
+  }
+}
+~~~
+
+Lastly, we connect the reading of the pitch and roll values to drawing of a
+directional bar in the draw function:
+
+~~~
+void draw() {
+  hat.clear();
+  if (pitch == 0 && roll == 0) {
+    drawSegment(hat.ledArray, Direction.north, 0);
+    drawSegment(hat.ledArray, Direction.south, 0);
+  } else {
+    if (pitch != 0) {
+      drawSegment(
+        hat.ledArray,
+        pitch < 0 ? Direction.north : Direction.south,
+        pitch.abs());
+    }
+    if (roll != 0) {
+      drawSegment(
+        hat.ledArray,
+        roll < 0 ? Direction.west : Direction.east,
+        roll.abs());
+    }
   }
 }
 ~~~
