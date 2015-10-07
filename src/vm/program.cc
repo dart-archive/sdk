@@ -349,6 +349,33 @@ void Program::RemoveFromProcessList(Process* process) {
   process->set_process_list_prev(NULL);
 }
 
+struct ImmutableHeapUsage {
+  uint64 timestamp = 0;
+  uword immutable_used = 0;
+  uword immutable_size = 0;
+};
+
+static void GetImmutableHeapUsage(Heap* heap, ImmutableHeapUsage* heap_usage) {
+  heap_usage->timestamp = Platform::GetMicroseconds();
+  heap_usage->immutable_used = heap->space()->Used();
+  heap_usage->immutable_size = heap->space()->Size();
+}
+
+static void PrintImmutableGCInfo(ImmutableHeapUsage* before,
+                                 ImmutableHeapUsage* after) {
+  static int count = 0;
+  Print::Error(
+      "Immutable-GC(%i): "
+      "\t%lli us, "
+      "\t%lu/%lu -> %lu/%lu\n",
+      count++,
+      after->timestamp - before->timestamp,
+      before->immutable_used,
+      before->immutable_size,
+      after->immutable_used,
+      after->immutable_size);
+}
+
 void Program::CollectImmutableGarbage() {
   Scheduler* scheduler = this->scheduler();
   ASSERT(scheduler != NULL);
@@ -363,6 +390,11 @@ void Program::CollectImmutableGarbage() {
 
   if (Flags::validate_heaps) {
     ValidateHeapsAreConsistent();
+  }
+
+  ImmutableHeapUsage usage_before;
+  if (Flags::print_heap_statistics) {
+    GetImmutableHeapUsage(immutable_heap()->heap(), &usage_before);
   }
 
   // Pass 1: Storebuffer compaction.
@@ -403,6 +435,12 @@ void Program::CollectImmutableGarbage() {
     heap->ReplaceSpace(to);
 
     immutable_heap()->UpdateLimitAfterImmutableGC(process_heap_sizes);
+  }
+
+  if (Flags::print_heap_statistics) {
+    ImmutableHeapUsage usage_after;
+    GetImmutableHeapUsage(immutable_heap()->heap(), &usage_after);
+    PrintImmutableGCInfo(&usage_before, &usage_after);
   }
 
   if (Flags::validate_heaps) {
