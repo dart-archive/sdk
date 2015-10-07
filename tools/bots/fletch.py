@@ -156,6 +156,7 @@ def StepsSDK(debug_log, system, modes, archs):
                     configuration['arch'])
   for configuration in configurations:
     StepsTestSDK(debug_log, configuration)
+    StepsSanityChecking(configuration['build_dir'])
 
 def StepsTestSDK(debug_log, configuration):
   build_dir = configuration['build_dir']
@@ -174,6 +175,20 @@ def StepsTestSDK(debug_log, configuration):
     debug_log=debug_log,
     configuration=configuration,
     use_sdk=True)
+
+def StepsSanityChecking(build_dir):
+  sdk_dir = os.path.join(build_dir, 'fletch-sdk')
+  version = utils.GetSemanticSDKVersion()
+  fletch = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch')
+  fletch_version = subprocess.check_output([fletch, '--version']).strip()
+  if fletch_version != version:
+    raise Exception('Version mismatch, VERSION file has %s, fletch has %s' %
+                    (version, fletch_version))
+  fletch_vm = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch')
+  fletch_vm_version = subprocess.check_output([fletch_vm, '--version']).strip()
+  if fletch_vm_version != version:
+    raise Exception('Version mismatch, VERSION file has %s, fletch vm has %s' %
+                    (version, fletch_vm_version))
 
 def StepsCreateDebianPackage():
   Run(['python', os.path.join('tools', 'create_tarball.py')])
