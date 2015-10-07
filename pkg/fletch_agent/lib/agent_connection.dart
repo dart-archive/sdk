@@ -69,7 +69,14 @@ class AgentConnection {
   }
 
   Future<int> fletchVesion() async {
-    throw new AgentException('Not implemented');
+    var request = new FletchVersionRequest();
+    var replyBuffer = await sendRequest(request);
+    var reply = new FletchVersionReply.fromBuffer(replyBuffer);
+    if (reply.result != ReplyHeader.SUCCESS) {
+      throw new AgentException('Failed to retrive Fletch version '
+          'with unexpected error: ${reply.result}');
+    }
+    return reply.fletchVersion;
   }
 
   Future<ByteBuffer> sendRequest(RequestHeader request) async {

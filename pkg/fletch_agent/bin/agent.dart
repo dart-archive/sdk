@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+library fletch_agent.agent;
+
 import 'dart:convert' show UTF8;
 import 'dart:fletch';
 import 'dart:fletch.ffi';
@@ -29,12 +31,12 @@ class Logger {
   void error(String msg) => _write('$_prefix ERROR: $msg');
 
   void _write(String msg) {
+    msg  = '${new DateTime.now().toString()} $msg';
+    if (_logToStdout) {
+      print(msg);
+    }
     File log;
     try {
-      msg  = '${new DateTime.now().toString()} $msg';
-      if (_logToStdout) {
-        print(msg);
-      }
       log = new File.open(_path, mode: File.APPEND);
       var encoded = UTF8.encode('$msg\n');
       var data = new Uint8List.fromList(encoded);
@@ -178,8 +180,10 @@ class CommandHandler {
 
   factory CommandHandler(Socket socket, AgentContext context) {
     var bytes = socket.read(RequestHeader.HEADER_SIZE);
-    if (bytes == null || bytes.lengthInBytes < RequestHeader.HEADER_SIZE) {
-      throw 'Insufficient bytes (${bytes.length}) received in request.';
+    if (bytes == null) {
+      throw 'Connection closed by peer';
+    } else if (bytes.lengthInBytes < RequestHeader.HEADER_SIZE) {
+      throw 'Insufficient bytes ($bytes.lengthInBytes) received in request';
     }
     var header = new RequestHeader.fromBuffer(bytes);
     return new CommandHandler._(socket, context, header);
@@ -356,7 +360,7 @@ class CommandHandler {
       int err = _kill.icall$2(pid, signal == 2 ? 15 : signal);
       if (err != 0) {
         reply = new SignalVmReply(_requestHeader.id, ReplyHeader.UNKNOWN_VM_ID);
-        _context.logger.warn('Failed to send signal %signal to  pid $pid with '
+        _context.logger.warn('Failed to send signal $signal to  pid $pid with '
             'error: ${Foreign.errno}');
       } else {
         reply = new SignalVmReply(_requestHeader.id, ReplyHeader.SUCCESS);

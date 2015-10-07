@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+library fletch_agent.client;
+
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -9,23 +11,20 @@ import '../lib/messages.dart';
 import '../lib/agent_connection.dart';
 
 void printUsage() {
-  print('Usage:');
-  print('The Fletch agent command line client supports the following flags');
-  print('');
-  print('  --port: specify the port on which to connect, default: 12121');
-  print('  --host: specify the ip address on which to connect, default: '
-      '127.0.0.1');
-  print('  --cmd: specify the command to send to the Fletch agent, default: '
-      'START_VM (0)');
-  print('  --pid: specify the pid of the vm to stop, only used when cmd=1 '
-      '(STOP_VM)');
-  print('  --signal: specify which signal to send to the vm. Requires the '
-      '--pid option to be specified.');
-  print('');
+  print('''
+Usage:
+The Fletch agent command line client supports the following flags:
+
+  --port:   the port on which to connect, default: 12121
+  --host:   the ip address on which to connect, default: 127.0.0.1
+  --cmd:    the command to send to the Fletch agent, default: 0 (START_VM)
+  --pid:    the pid of the vm to stop, only used when --cmd=1 (STOP_VM)
+  --signal: which signal to send to the vm. Requires the --pid option to
+            be specified.''');
   exit(1);
 }
 
-// Small dart program to issue commands to the fletch agent.
+/// Small dart program to issue commands to the fletch agent.
 void main(List<String> arguments) async {
   // Startup the agent listening on specified port.
   int port = 12121;
@@ -91,7 +90,13 @@ void main(List<String> arguments) async {
     }
   }
   var request;
-  socket = await Socket.connect(host, port);
+  try {
+    socket = await Socket.connect(host, port);
+  } on SocketException catch (error) {
+    print('Could not connect to Fletch Agent on \'$host:$port\'. '
+        'Received error: $error');
+    printUsage();
+  }
   var connection = new AgentConnection(socket);
   switch (cmd) {
     case RequestHeader.START_VM:
@@ -118,7 +123,8 @@ void main(List<String> arguments) async {
       await connection.UpgradeVm(vmBinary);
       break;
     case RequestHeader.FLETCH_VERSION:
-      await connection.fletchVesion();
+      int version = await connection.fletchVesion();
+      print('Fletch Agent Version $version');
       break;
     case RequestHeader.SIGNAL_VM:
       if (pid == null) {
