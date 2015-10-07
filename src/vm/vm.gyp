@@ -33,6 +33,7 @@
         'debug_info.h',
         'debug_info_no_live_coding.h',
         'event_handler.h',
+        'event_handler.cc',
         'event_handler_posix.cc',
         'event_handler_linux.cc',
         'event_handler_macos.cc',

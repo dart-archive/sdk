@@ -15,16 +15,29 @@
 
 namespace fletch {
 
-int EventHandler::Create() {
-  return kqueue();
+void EventHandler::Create() {
+  int* fds = new int[2];
+  if (pipe(fds) != 0) FATAL("Failed to start the event handler pipe\n");
+  int status = fcntl(fds[0], F_SETFD, FD_CLOEXEC);
+  if (status == -1) FATAL("Failed making read pipe close on exec.");
+  status = fcntl(fds[1], F_SETFD, FD_CLOEXEC);
+  if (status == -1) FATAL("Failed making write pipe close on exec.");
+
+  id_ = kqueue();
+  if (id_ == -1) FATAL("Failed creating kqueue instance.");
+
+  struct kevent event = {};
+  event.ident = fds[0];
+  event.flags = EV_ADD;
+  event.filter = EVFILT_READ;
+  kevent(id_, &event, 1, NULL, 0, NULL);
+
+  data_ = reinterpret_cast<void*>(fds);
 }
 
 void EventHandler::Run() {
-  struct kevent event = {};
-  event.ident = read_fd_;
-  event.flags = EV_ADD;
-  event.filter = EVFILT_READ;
-  kevent(fd_, &event, 1, NULL, 0, NULL);
+  int* fds = reinterpret_cast<int*>(data_);
+
   while (true) {
     int64 next_timeout;
     {
@@ -43,7 +56,8 @@ void EventHandler::Run() {
       interval = &ts;
     }
 
-    int status = kevent(fd_, NULL, 0, &event, 1, interval);
+    struct kevent event;
+    int status = kevent(id_, NULL, 0, &event, 1, interval);
 
     HandleTimeouts();
 
@@ -53,19 +67,21 @@ void EventHandler::Run() {
     int flags = event.flags;
     int fflags = event.fflags;
 
-    if (event.ident == static_cast<uintptr_t>(read_fd_)) {
-      if ((flags & EV_EOF) == 0) {
-        char b;
-        TEMP_FAILURE_RETRY(read(read_fd_, &b, 1));
-        continue;
-      } else {
-        close(read_fd_);
-        close(fd_);
+    if (event.ident == static_cast<uintptr_t>(fds[0])) {
+      if (!running_) {
         ScopedMonitorLock locker(monitor_);
-        fd_ = -1;
+        close(id_);
+        close(fds[0]);
+        close(fds[1]);
+        delete[] fds;
+        data_ = NULL;
         monitor_->Notify();
         return;
       }
+
+      char b;
+      TEMP_FAILURE_RETRY(read(fds[0], &b, 1));
+      continue;
     }
 
     word mask = 0;

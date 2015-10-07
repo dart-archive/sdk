@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'dart:async';
 import 'dart:fletch';
 
 import 'package:expect/expect.dart';
-import 'package:os/os.dart' as os;
 
 List constList = const [1, 2, 3];
 
@@ -17,13 +17,14 @@ main() {
   Process.spawn(subProcess, port);
   // Wait while messages are enqueued and a program GC is forced with
   // messages in the queue.
-  os.sleep(100);
-  var replyPort = input.receive();
-  Expect.equals(input.receive(), constList);
-  replyPort.send(constList);
-  for (int i = 0; i < 10; i++) {
-    Expect.equals(i, input.receive());
-  }
+  new Timer(const Duration(milliseconds: 100), () {
+    var replyPort = input.receive();
+    Expect.equals(input.receive(), constList);
+    replyPort.send(constList);
+    for (int i = 0; i < 10; i++) {
+      Expect.equals(i, input.receive());
+    }
+  });
 }
 
 subProcess(Port replyPort) {

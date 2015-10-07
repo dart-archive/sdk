@@ -410,6 +410,7 @@
               '-mfpu=fpv4-sp-d16',
               '-mthumb',
               '-Wno-unused-function',
+              '-Wno-error=multichar',
             ],
 
             'cflags_c': [

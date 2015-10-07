@@ -6,44 +6,63 @@
 
 #include "src/vm/event_handler.h"
 
+#include <kernel/event.h>
+
+#include "src/shared/utils.h"
+#include "src/vm/object.h"
+#include "src/vm/port.h"
+#include "src/vm/process.h"
+#include "src/vm/scheduler.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
 
-EventHandler::EventHandler()
-    : monitor_(NULL),
-      fd_(-1),
-      read_fd_(-1),
-      write_fd_(-1) {
+void EventHandler::Create() {
+  ASSERT(data_ == NULL);
+  event_t* event = new event_t;
+  event_init(event, false, EVENT_FLAG_AUTOUNSIGNAL);
+  id_ = -1;
+  data_ = reinterpret_cast<void*>(event);
 }
 
-EventHandler::~EventHandler() { }
-
-void* RunEventHandler(void* peer) {
-  UNIMPLEMENTED();
-  return NULL;
-}
-
-int EventHandler::GetEventHandler() {
-  UNIMPLEMENTED();
-  return -1;
-}
-
-void EventHandler::Send(Port* port, uword mask) {
-  UNIMPLEMENTED();
-}
-
-int EventHandler::Create() {
-  UNIMPLEMENTED();
-  return 0;
+void EventHandler::Interrupt() {
+  if (event_signal(reinterpret_cast<event_t*>(data_), false) != NO_ERROR) {
+    FATAL("Failed to signal event in event handler");
+  }
 }
 
 void EventHandler::Run() {
-  UNIMPLEMENTED();
-}
+  while (true) {
+    int64 next_timeout;
+    {
+      ScopedMonitorLock locker(monitor_);
+      next_timeout = next_timeout_;
+    }
 
-void EventHandler::ScheduleTimeout(int64 timeout, Port* port) {
-  UNIMPLEMENTED();
+    if (next_timeout == INT64_MAX) {
+      next_timeout = -1;
+    } else {
+      next_timeout -= Platform::GetMicroseconds() / 1000;
+      if (next_timeout < 0) next_timeout = 0;
+    }
+
+    event_wait_timeout(reinterpret_cast<event_t*>(data_), next_timeout);
+
+    {
+      ScopedMonitorLock scoped_lock(monitor_);
+
+      if (!running_) {
+        event_t* event = reinterpret_cast<event_t*>(data_);
+        event_destroy(event);
+        delete event;
+        data_ = NULL;
+        monitor_->Notify();
+        return;
+      }
+    }
+
+    HandleTimeouts();
+  }
 }
 
 }  // namespace fletch

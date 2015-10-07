@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'dart:async';
 import 'dart:fletch';
 
 import 'package:expect/expect.dart';
-import 'package:os/os.dart' as os;
 
 main() {
   Channel channel = new Channel();
@@ -18,7 +18,8 @@ main() {
 
 run(Port port) {
   Expect.isTrue(port != null);
-  os.sleep(100);
-  port.send(0);
+  new Timer(const Duration(milliseconds: 10), () {
+    port.send(0);
+  });
 }
 
